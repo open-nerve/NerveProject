@@ -65,7 +65,7 @@ func TestCollaborationSnapshot(t *testing.T) {
 				}
 			}
 			projects := activitySnapshotProjects{issueProjects: issueProjects{projects: project.Provide(w.pool, nil).IssueProjects}, inspect: inspect}
-			plainLocks := issueapp.NewLocks(projects, store, authorizerOn(w.pool), versionReadOnly{}, versionReadOnly{})
+			plainLocks := issueapp.NewLocks(projects, store, authorizerOn(w.pool), versionReadOnly{}, versionReadOnly{}, attachmentCounterOn(w.pool))
 			readTx := postgres.NewTxManager(w.pool, 2*time.Second, postgres.ReadOnlySnapshot())
 			rows := collaborationSnapshotRows{Store: store, inspect: inspect}
 			execute := func(locks issueapp.Locks) (any, error) {
@@ -121,7 +121,7 @@ func TestCollaborationSnapshot(t *testing.T) {
 					t.Fatal(err)
 				}
 			}}
-			locks := issueapp.NewLocks(projects, wrapped, authorizerOn(w.pool), versionReadOnly{}, versionReadOnly{})
+			locks := issueapp.NewLocks(projects, wrapped, authorizerOn(w.pool), versionReadOnly{}, versionReadOnly{}, attachmentCounterOn(w.pool))
 			during, err := execute(locks)
 			expectedChecks := 2
 			if kind == "comments" || kind == "activities" {

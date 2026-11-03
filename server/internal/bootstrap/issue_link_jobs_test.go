@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"reflect"
+	"slices"
 	"testing"
 	"time"
 	"uuid"
@@ -28,8 +29,9 @@ func TestIssueLinkSubscriberRegistration(t *testing.T) {
 		t.Fatal(err)
 	}
 	// The production subscriber must be constructible before issue.New.
-	subscribers := issue.Subscribers(issueInserter{client: client})
-	if len(subscribers) != 2 || subscribers[0].Name != "crawl_on_link_change" || !reflect.DeepEqual(subscribers[0].Types, []string{"issue.link_created", "issue.link_updated"}) {
+	subscribers := issue.Subscribers(issue.Provide(pool, nil), issueInserter{client: client})
+	index := slices.IndexFunc(subscribers, func(s shared.EventSubscriber) bool { return s.Name == "crawl_on_link_change" })
+	if index < 0 || !reflect.DeepEqual(subscribers[index].Types, []string{"issue.link_created", "issue.link_updated"}) {
 		t.Fatalf("production subscribers=%+v; want unique link change consumer", subscribers)
 	}
 	d, err := newDispatcher(eventTypes(), subscribers)
@@ -102,7 +104,7 @@ func TestLinkJobCommitRollback(t *testing.T) {
 		t.Fatal(err)
 	}
 	store := issuepg.New(w.pool)
-	locks := issueapp.NewLocks(issueProjects{projects: project.Provide(w.pool, nil).IssueProjects}, store, authorizerOn(w.pool), newWriteGate(testIssueConfig.WriteGate), postgres.NewTxManager(w.pool, 2*time.Second))
+	locks := issueapp.NewLocks(issueProjects{projects: project.Provide(w.pool, nil).IssueProjects}, store, authorizerOn(w.pool), newWriteGate(testIssueConfig.WriteGate), postgres.NewTxManager(w.pool, 2*time.Second), attachmentCounterOn(w.pool))
 	for _, scenario := range []string{"commit created", "commit updated", "rollback", "title only", "created missing url", "created duplicate url", "updated duplicate url", "created nil url", "updated nil url", "enqueue error", "second fails"} {
 		t.Run(scenario, func(t *testing.T) {
 			item := w.newWorkItem(t)
@@ -121,7 +123,7 @@ func TestLinkJobCommitRollback(t *testing.T) {
 			}
 			before, _ := linkJobRows(t, observer, item, linkID)
 			sentinel := errors.New("publication rejected")
-			subscribers := issue.Subscribers(issueInserter{client: client})
+			subscribers := issue.Subscribers(issue.Provide(w.pool, nil), issueInserter{client: client})
 			var published shared.Event
 			var caller context.Context
 			var transaction pgx.Tx

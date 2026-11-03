@@ -112,7 +112,7 @@ func TestCollaborationRollsBackPortFailures(t *testing.T) {
 			}
 			store := issuepg.New(w.pool)
 			projects := issueProjects{projects: project.Provide(w.pool, nil).IssueProjects}
-			locks := issueapp.NewLocks(projects, store, authorizerOn(w.pool), newWriteGate(testIssueConfig.WriteGate), postgres.NewTxManager(w.pool, 2*time.Second))
+			locks := issueapp.NewLocks(projects, store, authorizerOn(w.pool), newWriteGate(testIssueConfig.WriteGate), postgres.NewTxManager(w.pool, 2*time.Second), attachmentCounterOn(w.pool))
 			ctx := shared.WithActor(pgtest.Soon(t), shared.Actor{UserID: w.ids["bob"]})
 			for _, port := range operation.ports {
 				t.Run(port, func(t *testing.T) {
@@ -122,7 +122,7 @@ func TestCollaborationRollsBackPortFailures(t *testing.T) {
 					var err error
 					switch operation.name {
 					case "createIssueComment":
-						_, err = issueapp.NewCreateIssueComment(issueapp.CreateIssueCommentDeps{Events: discardIssueEvents{}, Locks: locks, Comments: wrapped, Members: projects, Sanitizer: content.NewSanitizer(), Clock: clock.System{}}).Execute(ctx, id, mentionHTML(w.ids["walt"]))
+						_, err = issueapp.NewCreateIssueComment(issueapp.CreateIssueCommentDeps{Events: discardIssueEvents{}, Locks: locks, Comments: wrapped, Members: projects, Sanitizer: content.NewSanitizer(), Clock: clock.System{}}).Execute(ctx, id, domain.NewComment{HTML: mentionHTML(w.ids["walt"])})
 					case "updateIssueComment":
 						_, err = issueapp.NewUpdateIssueComment(issueapp.UpdateIssueCommentDeps{Events: discardIssueEvents{}, Locks: locks, Comments: wrapped, Members: projects, Sanitizer: content.NewSanitizer(), Clock: clock.System{}}).Execute(ctx, comment.ID, mentionHTML(w.ids["walt"]))
 					case "deleteIssueComment":

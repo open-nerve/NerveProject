@@ -42,6 +42,7 @@ func subgroupParameters(in app.ListRead) (gen.SubgroupIssuesParams, error) {
 	}
 	return gen.SubgroupIssuesParams{
 		GroupBy: string(q.GroupBy), GroupKey: q.GroupKey, SubGroupBy: string(q.SubGroupBy), SubGroupKey: q.SubGroupKey,
+		AttachmentIds: p.AttachmentIds, AttachmentCounts: p.AttachmentCounts,
 		ActorID: p.ActorID, Relation: p.Relation, RelationUserID: p.RelationUserID,
 		OrderKey: p.OrderKey, Descending: p.Descending, PageSize: p.PageSize,
 		HasCursor: p.HasCursor, CursorNull: p.CursorNull, CursorID: p.CursorID, CursorNum: p.CursorNum, CursorText: p.CursorText,

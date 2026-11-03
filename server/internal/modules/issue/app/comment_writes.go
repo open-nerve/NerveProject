@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"time"
 	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/domain"
@@ -10,12 +11,13 @@ import (
 
 // UpdateIssueCommentDeps are the ports a comment edit consumes.
 type UpdateIssueCommentDeps struct {
-	Events    shared.EventPublisher
-	Locks     Locks
-	Comments  CommentUpdater
-	Members   ProjectMembers
-	Sanitizer HTMLSanitizer
-	Clock     Clock
+	ContentBindings ContentBinding
+	Events          shared.EventPublisher
+	Locks           Locks
+	Comments        CommentUpdater
+	Members         ProjectMembers
+	Sanitizer       HTMLSanitizer
+	Clock           Clock
 }
 
 // UpdateIssueComment edits only the caller's own visible comment.
@@ -52,7 +54,20 @@ func (u *UpdateIssueComment) Execute(ctx context.Context, id uuid.UUID, html str
 		if h.issue.ArchivedAt != nil {
 			return domain.ErrIssueArchived
 		}
+		q := ContentBindRequest{ActorID: actor.UserID,
+			Host:     ContentHost{WorkspaceID: h.issue.WorkspaceID, ProjectID: h.issue.ProjectID, IssueID: h.issue.ID, CommentID: current.ID},
+			ImageIDs: clean.Identity.AssetImageIDs()}
 		if current.HTML == clean.HTML {
+			// A legacy body can name a private preparation despite being unchanged.
+			if len(q.ImageIDs) > 0 {
+				at, err := u.d.ContentBindings.LockContent(ctx, q)
+				if err != nil {
+					return err
+				}
+				if err := u.d.ContentBindings.BindContent(ctx, q, at); err != nil {
+					return err
+				}
+			}
 			return embedCommentReactions(ctx, u.d.Comments, []domain.Comment{current}, func(rows []domain.Comment) { current = rows[0] })
 		}
 		targets, err := visibleMentionSubscribers(ctx, u.d.Members, h.issue, actor.UserID, clean.Identity.MentionIDs)
@@ -60,7 +75,15 @@ func (u *UpdateIssueComment) Execute(ctx context.Context, id uuid.UUID, html str
 			return err
 		}
 		oldHTML := current.HTML
-		at := u.d.Clock.Now()
+		var at time.Time
+		if len(q.ImageIDs) > 0 {
+			at, err = u.d.ContentBindings.LockContent(ctx, q)
+			if err != nil {
+				return err
+			}
+		} else {
+			at = u.d.Clock.Now()
+		}
 		current.HTML, current.Text, current.EditedAt, current.UpdatedAt = clean.HTML, clean.Text, &at, at
 		if err := u.d.Comments.MarkChanged(ctx, ChangedRows{IDs: []uuid.UUID{h.issue.ID}, By: actor.UserID, At: at}); err != nil {
 			return err
@@ -71,6 +94,11 @@ func (u *UpdateIssueComment) Execute(ctx context.Context, id uuid.UUID, html str
 		}
 		if err := u.d.Comments.UpdateComment(ctx, CommentWrite{Comment: current, By: actor.UserID, At: at}); err != nil {
 			return err
+		}
+		if len(q.ImageIDs) > 0 {
+			if err := u.d.ContentBindings.BindContent(ctx, q, at); err != nil {
+				return err
+			}
 		}
 		if err := embedCommentReactions(ctx, u.d.Comments, []domain.Comment{current}, func(rows []domain.Comment) { current = rows[0] }); err != nil {
 			return err

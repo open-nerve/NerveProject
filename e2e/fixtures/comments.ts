@@ -9,11 +9,12 @@ export async function createIssueComment(
   api: Api,
   token: string,
   issueId: string,
-  html: string
+  html: string,
+  attachmentIds?: string[]
 ): Promise<components["schemas"]["IssueComment"]> {
   const { data, error, response } = await api.POST("/api/v0/issues/{issue_id}/comments", {
     params: { path: { issue_id: issueId } },
-    body: { comment_html: html },
+    body: { comment_html: html, ...(attachmentIds === undefined ? {} : { attachment_ids: attachmentIds }) },
     headers: bearer(token),
   });
   expect(response.status, `create a comment on ${issueId}: ${JSON.stringify(error)}`).toBe(201);

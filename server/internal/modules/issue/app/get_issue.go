@@ -11,17 +11,18 @@ import (
 // GetIssue reads a work item: GET /api/v0/issues/{issue_id} (M4 design
 // 5.1).
 type GetIssue struct {
-	locks Locks
+	locks  Locks
+	readTx shared.TxManager
 }
 
 // NewGetIssue returns the use case.
-func NewGetIssue(locks Locks) *GetIssue {
-	return &GetIssue{locks: locks}
+func NewGetIssue(locks Locks, readTx shared.TxManager) *GetIssue {
+	return &GetIssue{locks: locks, readTx: readTx}
 }
 
 // Execute reads the undeleted work item id, archived or not, with its
 // assignees and labels, and decides issue.read on it for the caller,
-// without a lock or a transaction (Locks.see): a work item that is not
+// in one read-only snapshot without a row lock (Locks.see): a work item that is not
 // there, whose project the caller does not see, or that the guest rule
 // hides from him, is issue.not_found; a role that may not read it,
 // forbidden. The answer is the work item as he sees it (Locks.seen).
@@ -30,9 +31,17 @@ func (u *GetIssue) Execute(ctx context.Context, id uuid.UUID) (domain.Issue, err
 	if err != nil {
 		return domain.Issue{}, err
 	}
-	i, grant, err := u.locks.see(ctx, actor, id, domain.ActionRead)
+	var out domain.Issue
+	err = u.readTx.WithinTx(ctx, func(ctx context.Context) error {
+		i, grant, err := u.locks.see(ctx, actor, id, domain.ActionRead)
+		if err != nil {
+			return err
+		}
+		out, err = u.locks.seenOne(ctx, actor.UserID, grant, i)
+		return err
+	})
 	if err != nil {
 		return domain.Issue{}, err
 	}
-	return u.locks.seenOne(ctx, actor.UserID, grant, i)
+	return out, nil
 }

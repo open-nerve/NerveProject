@@ -44,6 +44,7 @@ type ListDirectories struct {
 	Projects          []VisibleProject
 	States            []ListState
 	Labels, Assignees []ListName
+	AttachmentCounts  []AttachmentCount
 }
 
 // ListRead carries a validated query, its caller and independently selected

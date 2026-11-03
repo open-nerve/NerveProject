@@ -15,6 +15,12 @@ type AssetHost = app.AssetHost
 type AssetParent = app.AssetParent
 type AssetIntent = app.AssetIntent
 
+type ContentHost = app.ContentHost
+type ContentBindRequest = app.ContentBindRequest
+type ContentBinding = app.ContentBinding
+type DraftAssetRequest = app.DraftAssetRequest
+type DraftAssetTransfer = app.DraftAssetTransfer
+
 const (
 	AssetRead    = app.AssetRead
 	AssetPrepare = app.AssetPrepare

@@ -14,6 +14,7 @@ import (
 // Bootstrap opens storage first, then constructs the module once all owners
 // are available. Storage remains owned by bootstrap until HTTP and jobs stop.
 type Deps struct {
+	Events       shared.EventPublisher
 	Files        config.FilesConfig
 	RuntimeNow   func() time.Time
 	Transfer     *httpadapter.Deps
@@ -42,7 +43,7 @@ func New(d Deps) (*Module, error) {
 	if d.PurgeAfter <= 0 {
 		return nil, errors.New("asset retention must be positive")
 	}
-	if d.Ports.store == nil || d.Parents == nil || d.Objects == nil || d.Inventory == nil || d.Temporary == nil || d.JobTx == nil || d.ReadTx == nil || d.UploadSigner == nil || d.ReadSigner == nil || d.Sealing.Inspector == nil || d.Sealing.Reader == nil || d.Sealing.Sealer == nil || d.Sealing.Validator == nil {
+	if d.Events == nil || d.Ports.store == nil || d.Parents == nil || d.Objects == nil || d.Inventory == nil || d.Temporary == nil || d.JobTx == nil || d.ReadTx == nil || d.UploadSigner == nil || d.ReadSigner == nil || d.Sealing.Inspector == nil || d.Sealing.Reader == nil || d.Sealing.Sealer == nil || d.Sealing.Validator == nil {
 		return nil, errors.New("asset module lacks lifecycle dependencies")
 	}
 	if d.RuntimeNow == nil {
@@ -64,10 +65,11 @@ func New(d Deps) (*Module, error) {
 	files := d.Files
 	cleanup := app.NewCleanup(app.CleanupDeps{Rows: d.Ports.store, Locks: d.Ports.store, Writer: d.Ports.store, Parents: d.Parents, Objects: d.Objects, Inventory: d.Inventory, Temporary: d.Temporary, Tx: d.JobTx, Clock: d.Access.Clock, RuntimeNow: d.RuntimeNow, Batch: files.CleanupBatch, Budget: files.CleanupBudget, OperationTimeout: files.OperationTimeout, PurgeAfter: d.PurgeAfter})
 	deletion := app.NewDeleteScope(app.DeleteScopeDeps{Rows: d.Ports.store, Locks: d.Ports.store, Writer: d.Ports.store, Tx: d.JobTx, Batch: files.CleanupBatch, Budget: files.CleanupBudget})
+	publication := app.AttachmentPublication{Writer: d.Ports.store, Events: d.Events}
 	uc := httpadapter.UseCases{
-		Duplicate:      app.NewDuplicate(app.DuplicateDeps{Rows: d.Ports.store, Creator: d.Ports.store, Writer: d.Ports.store, Access: access, Storage: d.Sealing, SizeLimit: files.SizeLimit, OperationTimeout: files.OperationTimeout, RuntimeNow: d.RuntimeNow}),
-		Delete:         app.NewDelete(app.DeleteDeps{Rows: d.Ports.store, Writer: d.Ports.store, Access: access}),
-		Complete:       app.NewComplete(app.CompleteDeps{Rows: d.Ports.store, Writer: d.Ports.store, Access: access, Storage: d.Sealing, SizeLimit: files.SizeLimit, OperationTimeout: files.OperationTimeout, RuntimeNow: d.RuntimeNow}),
+		Duplicate:      app.NewDuplicate(app.DuplicateDeps{Publication: publication, Rows: d.Ports.store, Creator: d.Ports.store, Writer: d.Ports.store, Access: access, Storage: d.Sealing, SizeLimit: files.SizeLimit, OperationTimeout: files.OperationTimeout, RuntimeNow: d.RuntimeNow}),
+		Delete:         app.NewDelete(app.DeleteDeps{Events: d.Events, Rows: d.Ports.store, Writer: d.Ports.store, Access: access}),
+		Complete:       app.NewComplete(app.CompleteDeps{Publication: publication, Rows: d.Ports.store, Writer: d.Ports.store, Access: access, Storage: d.Sealing, SizeLimit: files.SizeLimit, OperationTimeout: files.OperationTimeout, RuntimeNow: d.RuntimeNow}),
 		Prepare:        app.NewPrepare(app.PrepareDeps{Access: access, Rows: d.Ports.store, Signer: d.UploadSigner, Budget: files, SizeLimit: files.SizeLimit, UploadTTL: files.UploadTTL, RuntimeNow: d.RuntimeNow}),
 		Get:            app.NewGet(app.GetDeps{Rows: d.Ports.store, Hosts: d.Access.Hosts, ReadTx: d.ReadTx}),
 		ResolveContent: app.NewResolveContent(app.ResolveContentDeps{Rows: d.Ports.store, Access: access, Signer: d.ReadSigner, RuntimeNow: d.RuntimeNow}),

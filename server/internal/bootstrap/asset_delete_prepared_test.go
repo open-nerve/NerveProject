@@ -18,8 +18,8 @@ func TestAssetDeletePrepared(t *testing.T) {
 			name = "uploaded"
 		}
 		t.Run(name, func(t *testing.T) {
-			prepared := prepareAssetHTTP(t, w, "bob", "ISSUE_ATTACHMENT", assetScopeBody("issue", item), "delete.txt", "text/plain", 3)
-			putAssetHTTP(t, w, prepared, []byte("old"), 204)
+			prepared := prepareAssetHTTP(t, w, "bob", "ISSUE_DESCRIPTION", assetScopeBody("issue", item), "delete.png", "image/png", len(assetTestPNG(t)))
+			putAssetHTTP(t, w, prepared, assetTestPNG(t), 204)
 			if uploaded {
 				assetAPICall(t, w, "bob", "POST", completeAssetPath(prepared.Asset.ID), `{}`, 200)
 			}
@@ -37,7 +37,7 @@ func TestAssetDeletePrepared(t *testing.T) {
 			if err != nil || deleted.DeletedAt == nil || deleted.DeletedByID == nil || *deleted.DeletedByID != w.ids["bob"] || !deleted.UpdatedAt.Equal(*deleted.DeletedAt) || !reflect.DeepEqual(before.Metadata, deleted.Metadata) || deleted.Uploaded != uploaded {
 				t.Fatalf("deletion forgot objects/audit: %+v %v", deleted, err)
 			}
-			assetAPICall(t, w, "bob", "DELETE", path, "", 404)
+			assetAPICall(t, w, "bob", "DELETE", path, "", 204)
 			again, err := assetpg.New(w.pool).FindAsset(t.Context(), prepared.Asset.ID)
 			if err != nil || !reflect.DeepEqual(again, deleted) {
 				t.Fatalf("repeat changed original tombstone: %+v %v", again, err)
@@ -56,10 +56,8 @@ func TestAssetDeletePrepared(t *testing.T) {
 		})
 	}
 	t.Run("bound fixture is refused without changing its row", func(t *testing.T) {
-		prepared := uploadedAssetHTTP(t, w, "bob", "ISSUE_ATTACHMENT", assetScopeBody("issue", item), "bound.txt", "text/plain", []byte("old"))
-		if _, err := w.pool.Exec(t.Context(), "UPDATE file_assets SET bound_at=clock_timestamp() WHERE id=$1", prepared.Asset.ID); err != nil {
-			t.Fatal(err)
-		}
+		prepared := uploadedAssetHTTP(t, w, "bob", "ISSUE_DESCRIPTION", assetScopeBody("issue", item), "bound.png", "image/png", assetTestPNG(t))
+		bindDescriptionForT3(t, w, item, prepared.Asset.ID)
 		before, err := assetpg.New(w.pool).FindAsset(t.Context(), prepared.Asset.ID)
 		if err != nil {
 			t.Fatal(err)

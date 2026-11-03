@@ -46,6 +46,11 @@ it("narrowsDisplayVocabularyAndMemberScope", () => {
   });
 });
 
+it.each(["attachment_count", "-attachment_count"])("preserves attachment order %s in both list scopes", (order_by) => {
+  expect(projectListQuery({}, { order_by }).order_by).toBe(order_by);
+  expect(memberListQuery({}, { order_by }, "assigned").order_by).toBe(order_by);
+});
+
 it("F01 preserves subscriber filters on readback", () => {
   expect(toProjectFilters(toFilterExpression({ subscriber_id: ["me"] }))).toEqual({ subscriber_id: ["me"] });
 });

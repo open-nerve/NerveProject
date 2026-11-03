@@ -9,9 +9,12 @@ WITH projects AS (
     SELECT * FROM ROWS FROM(unnest(sqlc.arg(label_ids)::uuid[]), unnest(sqlc.arg(label_keys)::text[])) AS l(id, name_key)
 ), assignees AS (
     SELECT * FROM ROWS FROM(unnest(sqlc.arg(assignee_ids)::uuid[]), unnest(sqlc.arg(assignee_keys)::text[])) AS a(id, name_key)
+), attachments AS (
+    SELECT * FROM ROWS FROM(unnest(sqlc.arg(attachment_ids)::uuid[]), unnest(sqlc.arg(attachment_counts)::bigint[])) AS a(id, attachment_count)
 ), filtered AS MATERIALIZED (
-    SELECT i.id, p.own_only, s.name_key AS state_key
+    SELECT i.id, p.own_only, coalesce(a.attachment_count,0)::bigint AS attachment_count, s.name_key AS state_key
     FROM issues i JOIN projects p ON p.id = i.project_id JOIN states s ON s.id = i.state_id
+    LEFT JOIN attachments a ON a.id = i.id
     WHERE i.deleted_at IS NULL AND (i.archived_at IS NOT NULL) = sqlc.arg(archived)::boolean
       AND (NOT p.own_only OR i.created_by_id = sqlc.arg(actor_id)::uuid)
       AND (sqlc.arg(sub_issues)::boolean OR i.parent_id IS NULL)
@@ -39,7 +42,7 @@ WITH projects AS (
 ), counted AS (
     SELECT f.*, count(*) OVER () AS total FROM filtered f
 ), source_keys AS (
-    SELECT f.id, f.own_only, f.total, i.created_at, i.updated_at, i.start_date, i.target_date, i.priority,
+    SELECT f.id, f.own_only, f.total, f.attachment_count, i.created_at, i.updated_at, i.start_date, i.target_date, i.priority,
            CASE WHEN sqlc.arg(order_key)::text='sort_order' THEN pg_catalog.float8send(i.sort_order) END AS bits,
            CASE WHEN sqlc.arg(order_key)::text='sub_issues_count' THEN
                (SELECT count(*) FROM issues c WHERE c.parent_id=i.id AND c.deleted_at IS NULL AND c.archived_at IS NULL
@@ -53,7 +56,7 @@ WITH projects AS (
            END AS k_text
     FROM counted f JOIN issues i ON i.id=f.id
 ), numeric_keys AS (
-    SELECT s.id, s.own_only, s.total, s.child_count, s.link_count, s.k_text,
+    SELECT s.id, s.own_only, s.total, s.child_count, s.link_count, s.attachment_count, s.k_text,
            CASE sqlc.arg(order_key)::text
              WHEN 'sort_order' THEN ((CASE WHEN get_byte(s.bits,0)>=128 THEN -1 ELSE 1 END)::bigint *
                  ((get_byte(s.bits,0)&127)::bigint*72057594037927936::bigint + get_byte(s.bits,1)::bigint*281474976710656::bigint
@@ -67,6 +70,7 @@ WITH projects AS (
              WHEN 'priority' THEN (CASE s.priority WHEN 'urgent' THEN 4 WHEN 'high' THEN 3 WHEN 'medium' THEN 2 WHEN 'low' THEN 1 ELSE 0 END)::numeric
              WHEN 'sub_issues_count' THEN s.child_count::numeric
              WHEN 'link_count' THEN s.link_count::numeric
+             WHEN 'attachment_count' THEN s.attachment_count::numeric
            END AS k_num
     FROM source_keys s
 ), keyed AS (
@@ -115,6 +119,7 @@ SELECT i.id, i.workspace_id, i.project_id, i.sequence_id, i.name, i.state_id, i.
        coalesce(k.child_count,(SELECT count(*) FROM issues c WHERE c.parent_id=i.id AND c.deleted_at IS NULL AND c.archived_at IS NULL
                               AND (NOT k.own_only OR c.created_by_id=sqlc.arg(actor_id)::uuid)))::bigint AS sub_issues_count,
        coalesce(k.link_count,(SELECT count(*) FROM issue_links l WHERE l.issue_id=i.id AND l.deleted_at IS NULL))::bigint AS link_count,
+       k.attachment_count::bigint AS attachment_count,
        coalesce((SELECT array_agg(a.assignee_id ORDER BY a.assignee_id) FROM issue_assignees a WHERE a.issue_id=i.id AND a.deleted_at IS NULL),'{}'::uuid[])::uuid[] AS assignee_ids,
        coalesce((SELECT array_agg(l.label_id ORDER BY l.label_id) FROM issue_labels l WHERE l.issue_id=i.id AND l.deleted_at IS NULL),'{}'::uuid[])::uuid[] AS label_ids
 FROM ranked k JOIN issues i ON i.id=k.id

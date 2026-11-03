@@ -53,7 +53,7 @@ func TestAssetCompleteRaces(t *testing.T) {
 			}
 			w.contract.CheckResponse(t, firstRequest, loser.res)
 			after, err := assetpg.New(w.pool).FindAsset(t.Context(), prepared.Asset.ID)
-			if err != nil || !reflect.DeepEqual(after, published) {
+			if err != nil || !reflect.DeepEqual(after, published) || after.BoundAt == nil || attachmentActivityCount(t, w, item) != 1 {
 				t.Fatalf("loser overwrote final/metadata/audit: %+v %v", after, err)
 			}
 			for _, key := range []domain.ObjectKey{first.key, second.key} {

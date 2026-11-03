@@ -24,7 +24,7 @@ type AccessDeps struct {
 type Access struct{ d AccessDeps }
 type AccessHeld struct {
 	Hosts  []Host
-	Assets []domain.Asset
+	Assets map[uuid.UUID]domain.Asset
 	At     time.Time
 }
 
@@ -32,7 +32,7 @@ func NewAccess(d AccessDeps) *Access { return &Access{d: d} }
 
 // Within is the asset module's transaction boundary. Its callback belongs to
 // this module; owner modules supply capabilities, never arbitrary callbacks.
-func (a *Access) Within(ctx context.Context, actor shared.Actor, requests []HostRequest, assetIDs []uuid.UUID, fn func(context.Context, AccessHeld) error) error {
+func (a *Access) Within(ctx context.Context, actor shared.Actor, requests []HostRequest, assets []AssetAccessRequest, fn func(context.Context, AccessHeld) error) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -41,6 +41,10 @@ func (a *Access) Within(ctx context.Context, actor shared.Actor, requests []Host
 	}
 	if len(requests) == 0 || fn == nil {
 		return domain.ErrInvalidAsset
+	}
+	assetIDs, references, err := accessAssetReferences(requests, assets)
+	if err != nil {
+		return err
 	}
 	h := AccessHeld{Hosts: make([]Host, 0, len(requests))}
 	var workspaceIDs, projectIDs, draftIDs []uuid.UUID
@@ -61,12 +65,6 @@ func (a *Access) Within(ctx context.Context, actor shared.Actor, requests []Host
 		draftIDs = append(draftIDs, host.DraftID)
 	}
 	workspaceIDs, projectIDs, draftIDs = orderedIDs(workspaceIDs), orderedIDs(projectIDs), orderedIDs(draftIDs)
-	for _, id := range assetIDs {
-		if id == uuid.Nil() {
-			return domain.ErrInvalidAsset
-		}
-	}
-	assetIDs = orderedIDs(assetIDs)
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -106,20 +104,13 @@ func (a *Access) Within(ctx context.Context, actor shared.Actor, requests []Host
 			return domain.ErrAssetNotFound
 		}
 		if len(assetIDs) > 0 {
-			var err error
-			h.Assets, err = a.d.Assets.LockAssets(ctx, assetIDs)
+			rows, err := a.d.Assets.LockAssets(ctx, assetIDs)
 			if err != nil {
 				return err
 			}
-			got := make([]uuid.UUID, 0, len(h.Assets))
-			for _, row := range h.Assets {
-				if row.Placement.UserID != actor.UserID || row.DeletedAt != nil {
-					return domain.ErrAssetNotFound
-				}
-				got = append(got, row.ID)
-			}
-			if len(got) != len(assetIDs) || !slices.Equal(orderedIDs(got), assetIDs) {
-				return domain.ErrAssetNotFound
+			h.Assets, err = checkAccessAssets(actor, requests, h.Hosts, references, rows)
+			if err != nil {
+				return err
 			}
 		}
 		if err := ctx.Err(); err != nil {

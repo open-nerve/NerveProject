@@ -42,6 +42,21 @@ it("latestServerVersionWinsAcrossAnswerOrder", () => {
   accept({ ...issueOf("x"), name: "old", updated_at: version(1) });
   expect(tab.app.issue.issues.getIssueById("x")?.name).toBe("new");
 });
+
+it("attachment count changes invalidate held pages and survive a late old response", async () => {
+  const binding = list();
+  const before = { ...issueOf("x"), state_id: "A", attachment_count: 1, updated_at: version(1) };
+  const page = { total: 1, groups: [{ key: "A", total: 1, data: [before], next_cursor: null }] };
+  await load(binding, page);
+  expect(binding.group("A")?.stale).toBe(false);
+  const reading = await requestedIssue(tab.nerve, () => binding.fetchFirst(), ["GET", "/api/v0/projects/A/issues"]);
+  accept({ ...before, attachment_count: 3, updated_at: version(2) });
+  expect(binding.group("A")?.stale).toBe(true);
+  reading.call.answer(json(200, page));
+  await reading.promise;
+  expect(tab.app.issue.issues.getIssueById("x")?.attachment_count).toBe(3);
+  expect(binding.group("A")?.stale).toBe(true);
+});
 it("listKeepsConfirmedDescription", () => {
   accept({ ...issueDetailOf("x"), updated_at: version(1) });
   accept({ ...issueOf("x"), name: "new", updated_at: version(2) });

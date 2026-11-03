@@ -12,6 +12,15 @@ func collaborationMatrixRows() []matrixRow {
 	list := toWorkItem(http.MethodGet, "/comments", "")
 	create := toWorkItem(http.MethodPost, "/comments", `{"comment_html":"<p>New comment</p>"}`)
 	rows := []matrixRow{
+		{op: "getIssueAttachments", columns: issueColumns, request: toWorkItem(http.MethodGet, "/attachments", ""), cells: onAWorkItem(cellOK, cellOK, cellOK, cellOK)},
+		{op: "getIssueAttachments", variant: "archived", columns: archivedColumns, request: toWorkItem(http.MethodGet, "/attachments", ""), cells: issueRows.ofArchived(cellOK, cellForbidden)},
+		{op: "getCommentAttachments", columns: issueColumns, request: func(c caller, s seeded) (string, string, string) {
+			return http.MethodGet, commentPath(s.comment(projectOf(c), issueOf(c))) + "/attachments", ""
+		}, cells: commentCells(onAWorkItem(cellOK, cellOK, cellOK, cellOK))},
+		{op: "getCommentAttachments", variant: "archived", columns: archivedColumns, request: func(c caller, s seeded) (string, string, string) {
+			return http.MethodGet, commentPath(s.comment(projectOf(c), issueOf(c))) + "/attachments", ""
+		}, cells: commentCells(issueRows.ofArchived(cellOK, cellForbidden))},
+
 		{op: "createIssue", variant: "description", write: true, columns: issueColumns, request: toProject(http.MethodPost, "/issues", `{"name":"Description","description_html":"<p>Rich</p>"}`), cells: onTheIssues(cellCreated, cellCreated, cellForbidden)},
 		{op: "updateIssue", variant: "description", write: true, columns: issueColumns, request: toWorkItem(http.MethodPatch, "", `{"description_html":"<p>Rich</p>"}`), cells: onAWorkItem(cellOK, cellOK, cellOK, cellForbidden)},
 		{op: "updateIssue", variant: "skip description", write: true, columns: issueColumns, request: toWorkItem(http.MethodPatch, "", `{"description_html":"<p></p>","skip_activity":true}`), cells: onAWorkItem(cellOK, cellOK, cellOK, cellForbidden)},

@@ -19,7 +19,7 @@ func TestAssetSharedGateInterleaving(t *testing.T) {
 				c.Issue.WriteGate = config.WriteGateConfig{PerProject: 1, MaxQueue: 0, MaxWait: time.Second}
 			}, &requestQueries{})
 			item := w.newWorkItem(t)
-			file := uploadedAssetHTTP(t, w, "bob", "ISSUE_ATTACHMENT", assetScopeBody("issue", item), "gate.txt", "text/plain", []byte("gate"))
+			file := uploadedAssetHTTP(t, w, "bob", "ISSUE_DESCRIPTION", assetScopeBody("issue", item), "gate.png", "image/png", assetTestPNG(t))
 			content := "/api/v0/assets/" + file.Asset.ID.String() + "/content"
 			issuePath := "/api/v0/issues/" + item.String()
 			firstMethod, firstPath, firstBody, firstWant := "PATCH", issuePath, `{"name":"Gate owner"}`, 200

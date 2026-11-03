@@ -94,7 +94,7 @@ func TestRelationListReadSnapshot(t *testing.T) {
 	dirs := issueProjects{projects: project.Provide(one, nil).IssueProjects}
 	store := issuepg.New(one)
 	tx := &checkedListSnapshot{t: t, pool: one, tx: postgres.NewTxManager(one, 3*time.Second, postgres.ReadOnlySnapshot())}
-	u := issueapp.NewListIssueRelations(issueapp.ListIssueRelationsDeps{Locks: issueapp.NewLocks(dirs, store, authorizerOn(one), versionReadOnly{}, versionReadOnly{}), Relations: store, Projects: dirs, ReadTx: tx})
+	u := issueapp.NewListIssueRelations(issueapp.ListIssueRelationsDeps{Locks: issueapp.NewLocks(dirs, store, authorizerOn(one), versionReadOnly{}, versionReadOnly{}, attachmentCounterOn(one)), Relations: store, Projects: dirs, ReadTx: tx})
 	ctx, cancel := context.WithTimeout(shared.WithActor(context.Background(), shared.Actor{UserID: w.ids["walt"]}), 5*time.Second)
 	defer cancel()
 	rows, err := u.Execute(ctx, source)

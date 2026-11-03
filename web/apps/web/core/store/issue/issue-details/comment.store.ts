@@ -1,5 +1,5 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
-import type { CommentReaction, IssueComment, IssueCommentCreate } from "@nerve/api-client";
+import type { CommentReaction, IssueComment, IssueCommentCreate, IssueCommentUpdate } from "@nerve/api-client";
 import { SessionChangedError } from "@/lib/auth/token-manager";
 import { compareIssueTime } from "@/lib/issue-order";
 import { upserted } from "@/lib/reconciled";
@@ -122,7 +122,11 @@ export class IssueCommentStore {
       ws,
       project,
       id,
-      () => this.root.commentApi.createIssueComment(id, { comment_html: body.comment_html }),
+      () =>
+        this.root.commentApi.createIssueComment(id, {
+          comment_html: body.comment_html,
+          attachment_ids: body.attachment_ids,
+        }),
       (answer, held) => {
         this.validate([answer], id);
         return { ...held, data: merged(held.data, [answer]) };
@@ -133,7 +137,7 @@ export class IssueCommentStore {
     project: string,
     id: string,
     commentId: string,
-    body: IssueCommentCreate
+    body: IssueCommentUpdate
   ): Promise<IssueComment> =>
     this.write(
       ws,

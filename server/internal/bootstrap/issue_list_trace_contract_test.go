@@ -17,7 +17,8 @@ func TestIssueListTraceArguments(t *testing.T) {
 	id := uuid.NewV7()
 	n, s := int64(math.MaxInt64), "cursor"
 	input := []any{nil, id, &id, &n, &s, int32(51), true, "text", []uuid.UUID{id}, []bool{true}, []string{"A"},
-		(*uuid.UUID)(nil), (*int64)(nil), (*string)(nil), []uuid.UUID(nil), []bool(nil), []string(nil), []uuid.UUID{}, []bool{}, []string{}}
+		(*uuid.UUID)(nil), (*int64)(nil), (*string)(nil), []uuid.UUID(nil), []bool(nil), []string(nil), []uuid.UUID{}, []bool{}, []string{},
+		[]int64{math.MaxInt64, 9007199254740993}, []int64(nil), []int64{}}
 	copy, err := copyListArgs(input)
 	if err != nil || !reflect.DeepEqual(input, copy) {
 		t.Fatalf("typed replay %v: %#v", err, copy)
@@ -26,6 +27,10 @@ func TestIssueListTraceArguments(t *testing.T) {
 	input[8].([]uuid.UUID)[0] = id
 	input[9].([]bool)[0] = false
 	input[10].([]string)[0] = s
+	input[20].([]int64)[0] = 0
+	if got := copy[20].([]int64); got[0] != math.MaxInt64 || got[1] != 9007199254740993 {
+		t.Fatal("captured integer counts aliased or rounded", got)
+	}
 	if *copy[2].(*uuid.UUID) == id || *copy[3].(*int64) != math.MaxInt64 || *copy[4].(*string) != "cursor" || copy[8].([]uuid.UUID)[0] == id || !copy[9].([]bool)[0] || copy[10].([]string)[0] != "A" {
 		t.Fatal("captured pointers/arrays alias the caller")
 	}
@@ -56,7 +61,7 @@ func TestIssueListTraceBoundary(t *testing.T) {
 	}
 	route := newIssueRoute(t, pool, postgres.NewTxManager(pool, 0))
 	ctx = context.WithValue(context.Background(), listRequestKey{}, "member")
-	_, rec := route.sendContext(ctx, http.MethodGet, memberIssuesPath(w, "alice")+"?relation=created", w.ids["bob"], "")
+	_, rec := route.sendContext(ctx, http.MethodGet, memberIssuesPath(w, "alice")+"?relation=created&order_by=-attachment_count", w.ids["bob"], "")
 	if rec.Code != 200 {
 		t.Fatal(rec.Code, rec.Body)
 	}

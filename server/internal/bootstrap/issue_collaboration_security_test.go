@@ -85,7 +85,7 @@ func TestCollaborationSecurity(t *testing.T) {
 		store := issuepg.New(one)
 		projects := issueProjects{projects: project.Provide(one, nil).IssueProjects}
 		resources := &collaborationWriteResources{}
-		locks := issueapp.NewLocks(projects, store, authorizerOn(one), resources, resources)
+		locks := issueapp.NewLocks(projects, store, authorizerOn(one), resources, resources, attachmentCounterOn(one))
 		edit := issueapp.NewUpdateIssueComment(issueapp.UpdateIssueCommentDeps{Events: discardIssueEvents{}, Locks: locks, Comments: store, Members: projects, Sanitizer: content.NewSanitizer(), Clock: clock.System{}})
 		remove := issueapp.NewDeleteIssueComment(issueapp.DeleteIssueCommentDeps{Events: discardIssueEvents{}, Locks: locks, Comments: store, Clock: clock.System{}})
 		ctx := shared.WithActor(pgtest.Soon(t), shared.Actor{UserID: w.ids["bob"]})

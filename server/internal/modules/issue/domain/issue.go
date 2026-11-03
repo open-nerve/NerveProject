@@ -85,6 +85,8 @@ type Issue struct {
 	SubIssuesCount int
 	// Live links, independent of their creator or metadata state.
 	LinkCount int64
+	// Uploaded, bound, live ordinary attachments, projected by their owner.
+	AttachmentCount int64
 }
 
 // HiddenFrom reports whether the guest rule hides i from the account actor,

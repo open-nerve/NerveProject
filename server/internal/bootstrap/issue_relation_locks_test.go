@@ -129,7 +129,7 @@ func TestDeleteRelationChecksBothLockedProjects(t *testing.T) {
 			projects := issueProjects{projects: project.Provide(w.pool, nil).IssueProjects}
 			authorizer := &relationCountingAuthorizer{Authorizer: authorizerOn(w.pool)}
 			tx := requestTx(w.pool)
-			locks := issueapp.NewLocks(projects, store, authorizer, newWriteGate(config.WriteGateConfig{PerProject: 1, MaxQueue: 1, MaxWait: time.Second}), tx)
+			locks := issueapp.NewLocks(projects, store, authorizer, newWriteGate(config.WriteGateConfig{PerProject: 1, MaxQueue: 1, MaxWait: time.Second}), tx, attachmentCounterOn(w.pool))
 			remove := issueapp.NewDeleteIssueRelation(issueapp.DeleteIssueRelationDeps{Events: discardIssueEvents{}, Locks: locks, Relations: store, Clock: clock.System{}})
 			ctx := shared.WithActor(pgtest.Soon(t), shared.Actor{UserID: w.ids["alice"]})
 			result := make(chan error, 1)

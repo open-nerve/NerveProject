@@ -26,7 +26,7 @@ func (u *Get) Execute(ctx context.Context, id uuid.UUID) (domain.Asset, error) {
 	var row domain.Asset
 	err = u.d.ReadTx.WithinTx(ctx, func(ctx context.Context) error {
 		var err error
-		row, err = ownedAsset(ctx, u.d.Rows, actor, id)
+		row, err = accessibleAsset(ctx, u.d.Rows, actor, id, ReadAsset)
 		if err != nil {
 			return err
 		}
@@ -60,13 +60,14 @@ func (u *ResolveContent) Execute(ctx context.Context, id uuid.UUID) (domain.Sign
 	if err != nil {
 		return domain.SignedRequest{}, err
 	}
-	before, err := ownedAsset(ctx, u.d.Rows, actor, id)
+	before, err := accessibleAsset(ctx, u.d.Rows, actor, id, ReadAsset)
 	if err != nil {
 		return domain.SignedRequest{}, err
 	}
 	var signed domain.SignedRequest
-	err = u.d.Access.Within(ctx, actor, []HostRequest{{Scope: before.Placement.Scope, Intent: ReadAsset}}, []uuid.UUID{id}, func(ctx context.Context, held AccessHeld) error {
-		row := held.Assets[0]
+	request := HostRequest{Scope: before.Placement.Scope, Intent: ReadAsset}
+	err = u.d.Access.Within(ctx, actor, []HostRequest{request}, []AssetAccessRequest{{ID: id, Host: request}}, func(ctx context.Context, held AccessHeld) error {
+		row := held.Assets[id]
 		if err := currentAsset(before, row, held.Hosts[0]); err != nil {
 			return err
 		}
@@ -91,12 +92,12 @@ func contentExpiry(now time.Time) time.Time {
 	return expires
 }
 
-func ownedAsset(ctx context.Context, rows AssetReader, actor shared.Actor, id uuid.UUID) (domain.Asset, error) {
+func accessibleAsset(ctx context.Context, rows AssetReader, actor shared.Actor, id uuid.UUID, intent AccessIntent) (domain.Asset, error) {
 	row, err := rows.FindAsset(ctx, id)
 	if err != nil {
 		return domain.Asset{}, err
 	}
-	if row.Placement.UserID != actor.UserID || row.DeletedAt != nil {
+	if !assetVisibleFor(row, actor, intent) {
 		return domain.Asset{}, domain.ErrAssetNotFound
 	}
 	return row, nil

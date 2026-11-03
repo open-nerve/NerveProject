@@ -9,6 +9,7 @@ import (
 	"image/color"
 	"image/png"
 	"net/http"
+	"net/url"
 	"reflect"
 	"strings"
 	"testing"
@@ -34,7 +35,15 @@ func readAssetHTTP(t *testing.T, w issueWorld, actor string, id uuid.UUID) (*htt
 		URL string `json:"url"`
 	}
 	decodeAnswer(t, assetAPICall(t, w, actor, "GET", "/api/v0/assets/"+id.String()+"/content", "", 200), &content)
-	res, data := send(t, newRequest(t, "GET", w.base+content.URL, "", nil))
+	base, err := url.Parse(w.base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	address, err := base.Parse(content.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	res, data := send(t, newRequest(t, "GET", address.String(), "", nil))
 	if res.StatusCode != 200 {
 		t.Fatalf("signed GET = %d %s", res.StatusCode, data)
 	}
@@ -78,7 +87,7 @@ func TestAssetCompleteRealBytes(t *testing.T) {
 				t.Fatal(err)
 			}
 			digest := sha256.Sum256(tc.data)
-			if got.ID != prepared.Asset.ID || got.State != "uploaded" || got.IsBound || !row.Uploaded || row.Metadata.Final == nil || row.Metadata.Staging == nil || len(row.Metadata.Candidates) != 0 ||
+			if got.ID != prepared.Asset.ID || got.State != "uploaded" || got.IsBound != (tc.purpose == "ISSUE_ATTACHMENT") || !row.Uploaded || row.Metadata.Final == nil || row.Metadata.Staging == nil || len(row.Metadata.Candidates) != 0 ||
 				row.Metadata.Final.Key.Kind() != 'o' || row.Metadata.Final.Key.AssetID() != row.ID || row.Metadata.Final.SHA256 != hex.EncodeToString(digest[:]) || row.Metadata.Final.ETag == "" {
 				t.Fatalf("not a verified immutable result: API=%s row=%+v", body, row)
 			}

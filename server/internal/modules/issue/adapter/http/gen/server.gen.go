@@ -77,33 +77,37 @@ func (e IssueListGroupField) Valid() bool {
 
 // Defines values for IssueListOrder.
 const (
-	IssueListOrderAssigneeName        IssueListOrder = "assignee_name"
-	IssueListOrderCreatedAt           IssueListOrder = "created_at"
-	IssueListOrderLabelName           IssueListOrder = "label_name"
-	IssueListOrderLinkCount           IssueListOrder = "link_count"
-	IssueListOrderMinusAssigneeName   IssueListOrder = "-assignee_name"
-	IssueListOrderMinusCreatedAt      IssueListOrder = "-created_at"
-	IssueListOrderMinusLabelName      IssueListOrder = "-label_name"
-	IssueListOrderMinusLinkCount      IssueListOrder = "-link_count"
-	IssueListOrderMinusPriority       IssueListOrder = "-priority"
-	IssueListOrderMinusStartDate      IssueListOrder = "-start_date"
-	IssueListOrderMinusStateName      IssueListOrder = "-state_name"
-	IssueListOrderMinusSubIssuesCount IssueListOrder = "-sub_issues_count"
-	IssueListOrderMinusTargetDate     IssueListOrder = "-target_date"
-	IssueListOrderMinusUpdatedAt      IssueListOrder = "-updated_at"
-	IssueListOrderPriority            IssueListOrder = "priority"
-	IssueListOrderSortOrder           IssueListOrder = "sort_order"
-	IssueListOrderStartDate           IssueListOrder = "start_date"
-	IssueListOrderStateName           IssueListOrder = "state_name"
-	IssueListOrderSubIssuesCount      IssueListOrder = "sub_issues_count"
-	IssueListOrderTargetDate          IssueListOrder = "target_date"
-	IssueListOrderUpdatedAt           IssueListOrder = "updated_at"
+	IssueListOrderAssigneeName         IssueListOrder = "assignee_name"
+	IssueListOrderAttachmentCount      IssueListOrder = "attachment_count"
+	IssueListOrderCreatedAt            IssueListOrder = "created_at"
+	IssueListOrderLabelName            IssueListOrder = "label_name"
+	IssueListOrderLinkCount            IssueListOrder = "link_count"
+	IssueListOrderMinusAssigneeName    IssueListOrder = "-assignee_name"
+	IssueListOrderMinusAttachmentCount IssueListOrder = "-attachment_count"
+	IssueListOrderMinusCreatedAt       IssueListOrder = "-created_at"
+	IssueListOrderMinusLabelName       IssueListOrder = "-label_name"
+	IssueListOrderMinusLinkCount       IssueListOrder = "-link_count"
+	IssueListOrderMinusPriority        IssueListOrder = "-priority"
+	IssueListOrderMinusStartDate       IssueListOrder = "-start_date"
+	IssueListOrderMinusStateName       IssueListOrder = "-state_name"
+	IssueListOrderMinusSubIssuesCount  IssueListOrder = "-sub_issues_count"
+	IssueListOrderMinusTargetDate      IssueListOrder = "-target_date"
+	IssueListOrderMinusUpdatedAt       IssueListOrder = "-updated_at"
+	IssueListOrderPriority             IssueListOrder = "priority"
+	IssueListOrderSortOrder            IssueListOrder = "sort_order"
+	IssueListOrderStartDate            IssueListOrder = "start_date"
+	IssueListOrderStateName            IssueListOrder = "state_name"
+	IssueListOrderSubIssuesCount       IssueListOrder = "sub_issues_count"
+	IssueListOrderTargetDate           IssueListOrder = "target_date"
+	IssueListOrderUpdatedAt            IssueListOrder = "updated_at"
 )
 
 // Valid indicates whether the value is a known member of the IssueListOrder enum.
 func (e IssueListOrder) Valid() bool {
 	switch e {
 	case IssueListOrderAssigneeName:
+		return true
+	case IssueListOrderAttachmentCount:
 		return true
 	case IssueListOrderCreatedAt:
 		return true
@@ -112,6 +116,8 @@ func (e IssueListOrder) Valid() bool {
 	case IssueListOrderLinkCount:
 		return true
 	case IssueListOrderMinusAssigneeName:
+		return true
+	case IssueListOrderMinusAttachmentCount:
 		return true
 	case IssueListOrderMinusCreatedAt:
 		return true
@@ -222,6 +228,22 @@ func (e ListMemberIssuesParamsRelation) Valid() bool {
 	}
 }
 
+// Attachment defines model for Attachment.
+type Attachment struct {
+	ContentType string                       `json:"content_type"`
+	CreatedAt   time.Time                    `json:"created_at"`
+	CreatedByID nullable.Nullable[uuid.UUID] `json:"created_by_id"`
+	ID          uuid.UUID                    `json:"id"`
+	Name        string                       `json:"name"`
+	Size        int64                        `json:"size"`
+}
+
+// AttachmentPage defines model for AttachmentPage.
+type AttachmentPage struct {
+	Data       []Attachment              `json:"data"`
+	NextCursor nullable.Nullable[string] `json:"next_cursor"`
+}
+
 // CommentReaction defines model for CommentReaction.
 type CommentReaction struct {
 	ActorID   uuid.UUID `json:"actor_id"`
@@ -300,6 +322,9 @@ type Issue struct {
 
 	// AssigneeIds The accounts it is assigned to, by id; one who has left the project since is still one.
 	AssigneeIds []uuid.UUID `json:"assignee_ids"`
+
+	// AttachmentCount Uploaded, bound, undeleted ordinary issue attachments, read in the same snapshot.
+	AttachmentCount int64 `json:"attachment_count"`
 
 	// CompletedAt When it was put in a state of the completed group; null in any other state.
 	CompletedAt nullable.Nullable[time.Time] `json:"completed_at"`
@@ -387,7 +412,9 @@ type IssueComment struct {
 
 // IssueCommentCreate defines model for IssueCommentCreate.
 type IssueCommentCreate struct {
-	CommentHTML string `json:"comment_html"`
+	// AttachmentIds Completed ordinary new_comment preparations of this caller and work item; omission is an empty list. IDs use lowercase hyphenated UUID spelling; other spellings answer 400 before the use case.
+	AttachmentIds *[]string `json:"attachment_ids,omitempty"`
+	CommentHTML   string    `json:"comment_html"`
 }
 
 // IssueCommentPage defines model for IssueCommentPage.
@@ -396,6 +423,11 @@ type IssueCommentPage struct {
 
 	// NextCursor The cursor of the next page; null on the last page.
 	NextCursor nullable.Nullable[externalRef0.NextCursor] `json:"next_cursor"`
+}
+
+// IssueCommentUpdate defines model for IssueCommentUpdate.
+type IssueCommentUpdate struct {
+	CommentHTML string `json:"comment_html"`
 }
 
 // IssueCreate defines model for IssueCreate.
@@ -435,6 +467,9 @@ type IssueDetail struct {
 
 	// AssigneeIds The accounts it is assigned to, by id; one who has left the project since is still one.
 	AssigneeIds []uuid.UUID `json:"assignee_ids"`
+
+	// AttachmentCount Uploaded, bound, undeleted ordinary issue attachments, read in the same snapshot.
+	AttachmentCount int64 `json:"attachment_count"`
 
 	// CompletedAt When it was put in a state of the completed group; null in any other state.
 	CompletedAt nullable.Nullable[time.Time] `json:"completed_at"`
@@ -699,8 +734,35 @@ type Slug = string
 // Problem RFC 9457 problem details (v0 design 3.5). `title` is the HTTP status phrase, `detail` explains this occurrence, and clients branch on `code`. Must match httpserver.Problem; the platform's contract test checks it.
 type Problem = externalRef0.Problem
 
+// GetDraftAttachmentsParams defines parameters for GetDraftAttachments.
+type GetDraftAttachmentsParams struct {
+	// Limit The page size, 1–100; 50 when absent. Outside that range the answer is 422 validation_failed on limit.
+	Limit *externalRef0.Limit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Cursor The next_cursor of the page before; absent for the first page. A cursor that does not decode, has an unknown version or a payload of another shape than this list's, or is not spelled as the server writes it is 400 bad_request on cursor.
+	Cursor *externalRef0.Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
+
+// GetCommentAttachmentsParams defines parameters for GetCommentAttachments.
+type GetCommentAttachmentsParams struct {
+	// Limit The page size, 1–100; 50 when absent. Outside that range the answer is 422 validation_failed on limit.
+	Limit *externalRef0.Limit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Cursor The next_cursor of the page before; absent for the first page. A cursor that does not decode, has an unknown version or a payload of another shape than this list's, or is not spelled as the server writes it is 400 bad_request on cursor.
+	Cursor *externalRef0.Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
+
 // ListIssueActivitiesParams defines parameters for ListIssueActivities.
 type ListIssueActivitiesParams struct {
+	// Limit The page size, 1–100; 50 when absent. Outside that range the answer is 422 validation_failed on limit.
+	Limit *externalRef0.Limit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Cursor The next_cursor of the page before; absent for the first page. A cursor that does not decode, has an unknown version or a payload of another shape than this list's, or is not spelled as the server writes it is 400 bad_request on cursor.
+	Cursor *externalRef0.Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
+
+// GetIssueAttachmentsParams defines parameters for GetIssueAttachments.
+type GetIssueAttachmentsParams struct {
 	// Limit The page size, 1–100; 50 when absent. Outside that range the answer is 422 validation_failed on limit.
 	Limit *externalRef0.Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
@@ -857,7 +919,7 @@ type ListMemberIssuesParamsRelation string
 type UpdateDraftJSONRequestBody = DraftUpdate
 
 // UpdateIssueCommentJSONRequestBody defines body for UpdateIssueComment for application/json ContentType.
-type UpdateIssueCommentJSONRequestBody = IssueCommentCreate
+type UpdateIssueCommentJSONRequestBody = IssueCommentUpdate
 
 // AddCommentReactionJSONRequestBody defines body for AddCommentReaction for application/json ContentType.
 type AddCommentReactionJSONRequestBody = ReactionCreate
@@ -900,6 +962,9 @@ type ServerInterface interface {
 	// UpdateDraft Replace fields of your issue draft
 	// (PATCH /api/v0/drafts/{draft_id})
 	UpdateDraft(w http.ResponseWriter, r *http.Request, draftID DraftID)
+	// GetDraftAttachments List ordinary draft attachments
+	// (GET /api/v0/drafts/{draft_id}/attachments)
+	GetDraftAttachments(w http.ResponseWriter, r *http.Request, draftID uuid.UUID, params GetDraftAttachmentsParams)
 	// PublishDraft Publish your stored issue draft
 	// (POST /api/v0/drafts/{draft_id}/publish)
 	PublishDraft(w http.ResponseWriter, r *http.Request, draftID DraftID)
@@ -909,6 +974,9 @@ type ServerInterface interface {
 	// UpdateIssueComment Edit a comment as its author
 	// (PATCH /api/v0/issue-comments/{comment_id})
 	UpdateIssueComment(w http.ResponseWriter, r *http.Request, commentID uuid.UUID)
+	// GetCommentAttachments List ordinary comment attachments
+	// (GET /api/v0/issue-comments/{comment_id}/attachments)
+	GetCommentAttachments(w http.ResponseWriter, r *http.Request, commentID uuid.UUID, params GetCommentAttachmentsParams)
 	// AddCommentReaction Add the caller's reaction
 	// (POST /api/v0/issue-comments/{comment_id}/reactions)
 	AddCommentReaction(w http.ResponseWriter, r *http.Request, commentID uuid.UUID)
@@ -942,6 +1010,9 @@ type ServerInterface interface {
 	// ArchiveIssue Archive a work item
 	// (POST /api/v0/issues/{issue_id}/archive)
 	ArchiveIssue(w http.ResponseWriter, r *http.Request, issueID IssueID)
+	// GetIssueAttachments List ordinary issue attachments
+	// (GET /api/v0/issues/{issue_id}/attachments)
+	GetIssueAttachments(w http.ResponseWriter, r *http.Request, issueID uuid.UUID, params GetIssueAttachmentsParams)
 	// ListIssueComments List comments on a visible work item
 	// (GET /api/v0/issues/{issue_id}/comments)
 	ListIssueComments(w http.ResponseWriter, r *http.Request, issueID IssueID, params ListIssueCommentsParams)
@@ -1091,6 +1162,61 @@ func (siw *ServerInterfaceWrapper) UpdateDraft(w http.ResponseWriter, r *http.Re
 	handler.ServeHTTP(w, r)
 }
 
+// GetDraftAttachments operation middleware
+func (siw *ServerInterfaceWrapper) GetDraftAttachments(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "draft_id" -------------
+	var draftID uuid.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "draft_id", r.PathValue("draft_id"), &draftID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "draft_id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetDraftAttachmentsParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetDraftAttachments(w, r, draftID, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // PublishDraft operation middleware
 func (siw *ServerInterfaceWrapper) PublishDraft(w http.ResponseWriter, r *http.Request) {
 
@@ -1160,6 +1286,61 @@ func (siw *ServerInterfaceWrapper) UpdateIssueComment(w http.ResponseWriter, r *
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateIssueComment(w, r, commentID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetCommentAttachments operation middleware
+func (siw *ServerInterfaceWrapper) GetCommentAttachments(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "comment_id" -------------
+	var commentID uuid.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "comment_id", r.PathValue("comment_id"), &commentID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "comment_id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetCommentAttachmentsParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetCommentAttachments(w, r, commentID, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1484,6 +1665,61 @@ func (siw *ServerInterfaceWrapper) ArchiveIssue(w http.ResponseWriter, r *http.R
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ArchiveIssue(w, r, issueID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetIssueAttachments operation middleware
+func (siw *ServerInterfaceWrapper) GetIssueAttachments(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "issue_id" -------------
+	var issueID uuid.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "issue_id", r.PathValue("issue_id"), &issueID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "issue_id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetIssueAttachmentsParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetIssueAttachments(w, r, issueID, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -2763,6 +2999,9 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 		ErrorHandlerFunc:   options.ErrorHandlerFunc,
 	}
 
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/issues/{issue_id}/attachments", wrapper.GetIssueAttachments)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/issue-comments/{comment_id}/attachments", wrapper.GetCommentAttachments)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/drafts/{draft_id}/attachments", wrapper.GetDraftAttachments)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/workspaces/{slug}/issue-search", wrapper.SearchIssues)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/workspaces/{slug}/drafts", wrapper.ListDrafts)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/workspaces/{slug}/drafts", wrapper.CreateDraft)
@@ -2947,6 +3186,53 @@ func (response UpdateDraftdefaultApplicationProblemPlusJSONResponse) VisitUpdate
 	return err
 }
 
+type GetDraftAttachmentsRequestObject struct {
+	DraftID uuid.UUID `json:"draft_id"`
+	Params  GetDraftAttachmentsParams
+}
+
+type GetDraftAttachmentsResponseObject interface {
+	VisitGetDraftAttachmentsResponse(w http.ResponseWriter) error
+}
+
+type GetDraftAttachments200JSONResponse AttachmentPage
+
+func (response GetDraftAttachments200JSONResponse) VisitGetDraftAttachmentsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetDraftAttachmentsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response GetDraftAttachmentsdefaultApplicationProblemPlusJSONResponse) VisitGetDraftAttachmentsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type PublishDraftRequestObject struct {
 	DraftID DraftID `json:"draft_id"`
 }
@@ -3063,6 +3349,53 @@ type UpdateIssueCommentdefaultApplicationProblemPlusJSONResponse struct {
 }
 
 func (response UpdateIssueCommentdefaultApplicationProblemPlusJSONResponse) VisitUpdateIssueCommentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCommentAttachmentsRequestObject struct {
+	CommentID uuid.UUID `json:"comment_id"`
+	Params    GetCommentAttachmentsParams
+}
+
+type GetCommentAttachmentsResponseObject interface {
+	VisitGetCommentAttachmentsResponse(w http.ResponseWriter) error
+}
+
+type GetCommentAttachments200JSONResponse AttachmentPage
+
+func (response GetCommentAttachments200JSONResponse) VisitGetCommentAttachmentsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCommentAttachmentsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response GetCommentAttachmentsdefaultApplicationProblemPlusJSONResponse) VisitGetCommentAttachmentsResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -3550,6 +3883,53 @@ type ArchiveIssuedefaultApplicationProblemPlusJSONResponse struct {
 }
 
 func (response ArchiveIssuedefaultApplicationProblemPlusJSONResponse) VisitArchiveIssueResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetIssueAttachmentsRequestObject struct {
+	IssueID uuid.UUID `json:"issue_id"`
+	Params  GetIssueAttachmentsParams
+}
+
+type GetIssueAttachmentsResponseObject interface {
+	VisitGetIssueAttachmentsResponse(w http.ResponseWriter) error
+}
+
+type GetIssueAttachments200JSONResponse AttachmentPage
+
+func (response GetIssueAttachments200JSONResponse) VisitGetIssueAttachmentsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetIssueAttachmentsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response GetIssueAttachmentsdefaultApplicationProblemPlusJSONResponse) VisitGetIssueAttachmentsResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -4508,6 +4888,9 @@ type StrictServerInterface interface {
 	// UpdateDraft Replace fields of your issue draft
 	// (PATCH /api/v0/drafts/{draft_id})
 	UpdateDraft(ctx context.Context, request UpdateDraftRequestObject) (UpdateDraftResponseObject, error)
+	// GetDraftAttachments List ordinary draft attachments
+	// (GET /api/v0/drafts/{draft_id}/attachments)
+	GetDraftAttachments(ctx context.Context, request GetDraftAttachmentsRequestObject) (GetDraftAttachmentsResponseObject, error)
 	// PublishDraft Publish your stored issue draft
 	// (POST /api/v0/drafts/{draft_id}/publish)
 	PublishDraft(ctx context.Context, request PublishDraftRequestObject) (PublishDraftResponseObject, error)
@@ -4517,6 +4900,9 @@ type StrictServerInterface interface {
 	// UpdateIssueComment Edit a comment as its author
 	// (PATCH /api/v0/issue-comments/{comment_id})
 	UpdateIssueComment(ctx context.Context, request UpdateIssueCommentRequestObject) (UpdateIssueCommentResponseObject, error)
+	// GetCommentAttachments List ordinary comment attachments
+	// (GET /api/v0/issue-comments/{comment_id}/attachments)
+	GetCommentAttachments(ctx context.Context, request GetCommentAttachmentsRequestObject) (GetCommentAttachmentsResponseObject, error)
 	// AddCommentReaction Add the caller's reaction
 	// (POST /api/v0/issue-comments/{comment_id}/reactions)
 	AddCommentReaction(ctx context.Context, request AddCommentReactionRequestObject) (AddCommentReactionResponseObject, error)
@@ -4550,6 +4936,9 @@ type StrictServerInterface interface {
 	// ArchiveIssue Archive a work item
 	// (POST /api/v0/issues/{issue_id}/archive)
 	ArchiveIssue(ctx context.Context, request ArchiveIssueRequestObject) (ArchiveIssueResponseObject, error)
+	// GetIssueAttachments List ordinary issue attachments
+	// (GET /api/v0/issues/{issue_id}/attachments)
+	GetIssueAttachments(ctx context.Context, request GetIssueAttachmentsRequestObject) (GetIssueAttachmentsResponseObject, error)
 	// ListIssueComments List comments on a visible work item
 	// (GET /api/v0/issues/{issue_id}/comments)
 	ListIssueComments(ctx context.Context, request ListIssueCommentsRequestObject) (ListIssueCommentsResponseObject, error)
@@ -4736,6 +5125,33 @@ func (sh *strictHandler) UpdateDraft(w http.ResponseWriter, r *http.Request, dra
 	}
 }
 
+// GetDraftAttachments operation middleware
+func (sh *strictHandler) GetDraftAttachments(w http.ResponseWriter, r *http.Request, draftID uuid.UUID, params GetDraftAttachmentsParams) {
+	var request GetDraftAttachmentsRequestObject
+
+	request.DraftID = draftID
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetDraftAttachments(ctx, request.(GetDraftAttachmentsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetDraftAttachments")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetDraftAttachmentsResponseObject); ok {
+		if err := validResponse.VisitGetDraftAttachmentsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // PublishDraft operation middleware
 func (sh *strictHandler) PublishDraft(w http.ResponseWriter, r *http.Request, draftID DraftID) {
 	var request PublishDraftRequestObject
@@ -4814,6 +5230,33 @@ func (sh *strictHandler) UpdateIssueComment(w http.ResponseWriter, r *http.Reque
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(UpdateIssueCommentResponseObject); ok {
 		if err := validResponse.VisitUpdateIssueCommentResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetCommentAttachments operation middleware
+func (sh *strictHandler) GetCommentAttachments(w http.ResponseWriter, r *http.Request, commentID uuid.UUID, params GetCommentAttachmentsParams) {
+	var request GetCommentAttachmentsRequestObject
+
+	request.CommentID = commentID
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetCommentAttachments(ctx, request.(GetCommentAttachmentsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetCommentAttachments")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetCommentAttachmentsResponseObject); ok {
+		if err := validResponse.VisitGetCommentAttachmentsResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -5123,6 +5566,33 @@ func (sh *strictHandler) ArchiveIssue(w http.ResponseWriter, r *http.Request, is
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(ArchiveIssueResponseObject); ok {
 		if err := validResponse.VisitArchiveIssueResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetIssueAttachments operation middleware
+func (sh *strictHandler) GetIssueAttachments(w http.ResponseWriter, r *http.Request, issueID uuid.UUID, params GetIssueAttachmentsParams) {
+	var request GetIssueAttachmentsRequestObject
+
+	request.IssueID = issueID
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetIssueAttachments(ctx, request.(GetIssueAttachmentsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetIssueAttachments")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetIssueAttachmentsResponseObject); ok {
+		if err := validResponse.VisitGetIssueAttachmentsResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

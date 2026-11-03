@@ -28,7 +28,7 @@ func counts(id uuid.UUID) map[uuid.UUID]app.SubIssueCount {
 
 // A read of a work item, getIssue's and getIssueByIdentifier's, answers the
 // number of its sub-items the caller sees (M4 design 3.4, 3.9), counted
-// after the decision, outside any transaction, by its grant: every one,
+// after the decision, in the same read snapshot, by its grant: every one,
 // or only his own when the guest rule hides others' from him
 // (Grant.OwnOnly), as from alice, a guest of web who reads her own work
 // item. Every one when web shows its guests every work item.
@@ -42,13 +42,13 @@ func TestAReadCountsTheSubItemsTheCallerSees(t *testing.T) {
 		get, w, id := newGet()
 		w.issues.issue.By, w.issues.counts, w.auth.grants = alice, counts(id), []shared.Grant{tt.grant}
 		got, err := get.Execute(as(alice), id)
-		if err != nil || got.SubIssuesCount != tt.want || w.log.calls[len(w.log.calls)-1] != counted(id)+" outside tx" {
+		if err != nil || got.SubIssuesCount != tt.want || w.log.calls[len(w.log.calls)-1] != counted(id) {
 			t.Errorf("%s: getIssue = %+v, %v after %q; want %d sub-items, counted last", tt.name, got, err, w.log.calls, tt.want)
 		}
 		byIdentifier, b, bid := newGetByIdentifier()
 		b.issues.issue.By, b.issues.counts, b.auth.grants = alice, counts(bid), []shared.Grant{{}, tt.grant}
 		got, err = byIdentifier.Execute(as(alice), "acme", "WEB-7")
-		if err != nil || got.SubIssuesCount != tt.want || b.log.calls[len(b.log.calls)-1] != counted(bid)+" outside tx" {
+		if err != nil || got.SubIssuesCount != tt.want || b.log.calls[len(b.log.calls)-1] != counted(bid) {
 			t.Errorf("%s: getIssueByIdentifier = %+v, %v after %q; want %d sub-items, counted last", tt.name, got, err, b.log.calls, tt.want)
 		}
 	}
@@ -57,7 +57,7 @@ func TestAReadCountsTheSubItemsTheCallerSees(t *testing.T) {
 // An answer names the work item's parent only when the caller sees it (M4
 // design 3.4, 3.9): alice reads her own work item 7, under parent. When the
 // guest rule hides others' work items from her (Grant.OwnOnly), the parent
-// is read after the count, as the count is, outside any transaction, in
+// is read after the count, as the count is, in the same read snapshot, in
 // one read, and one carol made, or one the read does not find, is answered
 // as none; her own is named. When she sees every work item it is named,
 // and nothing more is read. Her change of the work item as a workspace
@@ -84,9 +84,9 @@ func TestAnAnswerNamesTheParentTheCallerSees(t *testing.T) {
 			w.issues.others = map[uuid.UUID]domain.Issue{parent: {ID: parent, WorkspaceID: acme, ProjectID: web, CreatedByID: tt.by}}
 		}
 		got, err := get.Execute(as(alice), id)
-		want := []string{counted(id) + " outside tx"}
+		want := []string{counted(id)}
 		if tt.reads {
-			want = append(want, read+" outside tx")
+			want = append(want, read)
 		}
 		if calls := w.log.calls[len(w.log.calls)-len(want):]; err != nil || !reflect.DeepEqual(got.ParentID, tt.want) ||
 			!slices.Equal(calls, want) {

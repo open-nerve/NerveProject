@@ -186,7 +186,7 @@ func linkRaceTitleRoute(t *testing.T, w issueWorld, clock *linkReadClock) module
 	if err != nil {
 		t.Fatal(err)
 	}
-	subscribers := issue.Subscribers(issueInserter{client: client})
+	subscribers := issue.Subscribers(issue.Provide(w.pool, nil), issueInserter{client: client})
 	subscribers = append(subscribers, shared.EventSubscriber{Name: "observe title transaction", Types: []string{"issue.link_updated"}, Handle: func(ctx context.Context, e shared.Event) error {
 		if _, ok := postgres.Tx(ctx); !ok {
 			return fmt.Errorf("title publication lost original transaction")

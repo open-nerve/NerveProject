@@ -51,6 +51,9 @@ func (l Locks) seen(ctx context.Context, actor uuid.UUID, g grants, items ...dom
 	if err := hideParents(ctx, l.issues, actor, out, guarded); err != nil {
 		return nil, err
 	}
+	if err := projectAttachments(ctx, l.attachments, out); err != nil {
+		return nil, err
+	}
 	return out, nil
 }
 

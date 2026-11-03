@@ -10,7 +10,7 @@ import {
 import { bearer } from "../../fixtures/auth";
 import { fileWorld } from "../../fixtures/file-world";
 import { createIssue } from "../../fixtures/issues";
-import { fileContent, storedFile } from "../../fixtures/storage";
+import { fileContent, filePixel, readFile, storedFile } from "../../fixtures/storage";
 import { expect, test } from "../../fixtures/test";
 
 test("F13 (API): preparation ownership and current host rights govern every operation; source denial precedes target denial, and issued capabilities keep their stated expiry", async ({
@@ -21,7 +21,20 @@ test("F13 (API): preparation ownership and current host rights govern every oper
   await inviteAndAccept(api, w.owner.token, w.workspace.slug, w.other, 15);
   await addProjectMembers(api, w.owner.token, w.project.id, [{ member_id: w.other.id, role: 15 }]);
   const ownIssue = await createIssue(api, w.other.token, w.project.id, { name: "Member's file" });
-  const asset = await storedFile(api, w.other.token, "ISSUE_ATTACHMENT", { kind: "issue", id: ownIssue.id });
+  const shared = await storedFile(api, w.other.token, "ISSUE_ATTACHMENT", { kind: "issue", id: ownIssue.id });
+  expect(shared.is_bound).toBe(true);
+  expect(await readFile(api, w.owner.token, shared.id)).toEqual(Buffer.from("real attachment bytes"));
+  // An uploaded but never referenced image remains a private preparation.
+  const asset = await storedFile(
+    api,
+    w.other.token,
+    "ISSUE_DESCRIPTION",
+    { kind: "issue", id: ownIssue.id },
+    filePixel,
+    "image/png",
+    "unreferenced.png"
+  );
+  expect(asset.is_bound).toBe(false);
   const headers = bearer(w.owner.token);
   const get = (id: string) => api.GET("/api/v0/assets/{id}", { params: { path: { id } }, headers });
   const hidden = await get(asset.id);
@@ -95,6 +108,6 @@ test("F13 (API): preparation ownership and current host rights govern every oper
   expect(bothDenied.error?.code).toBe("asset.not_found");
   const retained = await fetch(issued.url, { credentials: "omit" });
   expect(retained.status).toBe(200);
-  expect(Buffer.from(await retained.arrayBuffer())).toEqual(Buffer.from("real attachment bytes"));
+  expect(Buffer.from(await retained.arrayBuffer())).toEqual(filePixel);
   expect(Date.parse(issued.expires_at)).toBeGreaterThan(Date.now());
 });

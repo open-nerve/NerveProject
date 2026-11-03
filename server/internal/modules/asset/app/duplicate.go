@@ -10,6 +10,7 @@ import (
 )
 
 type DuplicateDeps struct {
+	Publication      AttachmentPublication
 	Rows             AssetReader
 	Creator          AssetCreator
 	Writer           MetadataWriter
@@ -31,15 +32,15 @@ func (u *Duplicate) Execute(ctx context.Context, sourceID uuid.UUID, in domain.D
 	if err != nil {
 		return domain.Asset{}, err
 	}
-	before, err := ownedAsset(ctx, u.d.Rows, actor, sourceID)
+	before, err := accessibleAsset(ctx, u.d.Rows, actor, sourceID, ReadAsset)
 	if err != nil {
 		return domain.Asset{}, err
 	}
 	var source, target domain.Asset
 	var candidate domain.Candidate
 	requests := []HostRequest{{Scope: before.Placement.Scope, Intent: ReadAsset}, {Scope: in.Scope, Intent: PrepareAsset}}
-	err = u.d.Access.Within(ctx, actor, requests, []uuid.UUID{sourceID}, func(ctx context.Context, held AccessHeld) error {
-		source = held.Assets[0]
+	err = u.d.Access.Within(ctx, actor, requests, []AssetAccessRequest{{ID: sourceID, Host: requests[0]}}, func(ctx context.Context, held AccessHeld) error {
+		source = held.Assets[sourceID]
 		if err := currentPlacement(before, source, held.Hosts[0]); err != nil {
 			return err
 		}
@@ -87,11 +88,8 @@ func (u *Duplicate) Execute(ctx context.Context, sourceID uuid.UUID, in domain.D
 func (u *Duplicate) finish(ctx context.Context, actor shared.Actor, source, target domain.Asset, candidate domain.Candidate, verified verifiedObject, externalErr error) (domain.Asset, error) {
 	var result domain.Asset
 	requests := []HostRequest{{Scope: source.Placement.Scope, Intent: ReadAsset}, {Scope: target.Placement.Scope, Intent: PrepareAsset}}
-	err := u.d.Access.Within(ctx, actor, requests, []uuid.UUID{source.ID, target.ID}, func(ctx context.Context, held AccessHeld) error {
-		currentSource, currentTarget := held.Assets[0], held.Assets[1]
-		if currentSource.ID != source.ID {
-			currentSource, currentTarget = currentTarget, currentSource
-		}
+	err := u.d.Access.Within(ctx, actor, requests, []AssetAccessRequest{{ID: source.ID, Host: requests[0]}, {ID: target.ID, Host: requests[1]}}, func(ctx context.Context, held AccessHeld) error {
+		currentSource, currentTarget := held.Assets[source.ID], held.Assets[target.ID]
 		if err := currentPlacement(source, currentSource, held.Hosts[0]); err != nil {
 			return err
 		}
@@ -112,6 +110,10 @@ func (u *Duplicate) finish(ctx context.Context, actor shared.Actor, source, targ
 		}
 		var err error
 		result, err = u.d.Writer.SaveAsset(ctx, currentTarget)
+		if err != nil {
+			return err
+		}
+		result, err = u.d.Publication.Bind(ctx, result, actor.UserID, held.At)
 		return err
 	})
 	if err != nil {

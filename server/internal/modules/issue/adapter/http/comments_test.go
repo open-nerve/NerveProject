@@ -17,20 +17,32 @@ import (
 )
 
 type fakeCommentCreate struct {
-	actor, id uuid.UUID
-	html      string
-	calls     int
-	err       error
-	reactions []domain.CommentReaction
+	actor, id   uuid.UUID
+	html        string
+	attachments []uuid.UUID
+	calls       int
+	err         error
+	reactions   []domain.CommentReaction
 }
 
-func (f *fakeCommentCreate) Execute(ctx context.Context, id uuid.UUID, html string) (domain.Comment, error) {
+func (f *fakeCommentCreate) Execute(ctx context.Context, id uuid.UUID, in domain.NewComment) (domain.Comment, error) {
+	f.attachments = in.AttachmentIDs
+	return f.result(ctx, id, in.HTML)
+}
+
+func (f *fakeCommentCreate) result(ctx context.Context, id uuid.UUID, html string) (domain.Comment, error) {
 	a, err := shared.RequireActor(ctx)
 	if err != nil {
 		return domain.Comment{}, err
 	}
 	f.actor, f.id, f.html, f.calls = a.UserID, id, html, f.calls+1
 	return domain.Comment{ID: bobComment, IssueID: id, ActorID: a.UserID, HTML: html, Text: "secret", CreatedAt: created, UpdatedAt: created, Reactions: f.reactions}, f.err
+}
+
+type fakeCommentUpdate fakeCommentCreate
+
+func (f *fakeCommentUpdate) Execute(ctx context.Context, id uuid.UUID, html string) (domain.Comment, error) {
+	return (*fakeCommentCreate)(f).result(ctx, id, html)
 }
 
 type fakeCommentList struct {

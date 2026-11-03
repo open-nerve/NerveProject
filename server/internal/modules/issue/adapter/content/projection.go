@@ -12,7 +12,7 @@ import (
 
 func (s *Sanitizer) project(clean string) domain.RichText {
 	text := strings.Join(strings.Fields(stdhtml.UnescapeString(s.textPolicy.Sanitize(clean))), " ")
-	result := domain.RichText{HTML: clean, Text: text, Identity: domain.ContentIdentity{Text: text, MentionIDs: []uuid.UUID{}, Links: []string{}, Checked: []bool{}}}
+	result := domain.RichText{HTML: clean, Text: text, Identity: domain.ContentIdentity{Text: text, MentionIDs: []uuid.UUID{}, Links: []string{}, Checked: []bool{}, Images: []string{}}}
 	root, err := html.Parse(strings.NewReader(clean))
 	if err != nil {
 		return result
@@ -32,7 +32,10 @@ func (s *Sanitizer) project(clean string) domain.RichText {
 						result.HasMention = true
 					}
 				}
-			case "img", "image-component":
+			case "image-component":
+				result.HasImage = true
+				result.Identity.Images = append(result.Identity.Images, attrs["src"])
+			case "img":
 				result.HasImage = true
 			case "a":
 				if href, ok := attrs["href"]; ok {

@@ -103,7 +103,7 @@ func testIssueLinkPrecheckResources(t *testing.T) {
 	store := issuepg.New(one)
 	projects := issueProjects{projects: project.Provide(one, nil).IssueProjects}
 	resources := &collaborationWriteResources{}
-	locks := issueapp.NewLocks(projects, store, authorizerOn(one), resources, resources)
+	locks := issueapp.NewLocks(projects, store, authorizerOn(one), resources, resources, attachmentCounterOn(one))
 	before := collaborationState(t, w)
 	held := lockedTables(t, w.pool, issueTables, "EXCLUSIVE")
 	for _, who := range []string{"walt", "wanda", "olga"} {

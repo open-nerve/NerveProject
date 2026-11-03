@@ -83,6 +83,8 @@ export function issueSortKey(issue: Issue, order: IssueListOrder, catalog: Issue
       return exactCount(issue.sub_issues_count);
     case "link_count":
       return exactCount(issue.link_count);
+    case "attachment_count":
+      return exactCount(issue.attachment_count);
     case "sort_order":
       if (!Number.isFinite(issue.sort_order)) throw new Error("Invalid issue sort order");
       return issue.sort_order;

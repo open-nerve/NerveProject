@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"time"
 	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/domain"
@@ -10,12 +11,13 @@ import (
 
 // CreateIssueCommentDeps are the ports a comment creation consumes.
 type CreateIssueCommentDeps struct {
-	Events    shared.EventPublisher
-	Locks     Locks
-	Comments  CommentCreator
-	Members   ProjectMembers
-	Sanitizer HTMLSanitizer
-	Clock     Clock
+	ContentBindings ContentBinding
+	Events          shared.EventPublisher
+	Locks           Locks
+	Comments        CommentCreator
+	Members         ProjectMembers
+	Sanitizer       HTMLSanitizer
+	Clock           Clock
 }
 
 // CreateIssueComment creates a work item's comment under its project's lock.
@@ -24,15 +26,15 @@ type CreateIssueComment struct{ d CreateIssueCommentDeps }
 func NewCreateIssueComment(d CreateIssueCommentDeps) *CreateIssueComment {
 	return &CreateIssueComment{d: d}
 }
-func (u *CreateIssueComment) Execute(ctx context.Context, id uuid.UUID, html string) (domain.Comment, error) {
+func (u *CreateIssueComment) Execute(ctx context.Context, id uuid.UUID, in domain.NewComment) (domain.Comment, error) {
 	actor, err := shared.RequireActor(ctx)
 	if err != nil {
 		return domain.Comment{}, err
 	}
-	if err := domain.CheckCommentHTML(html); err != nil {
+	if err := domain.CheckNewComment(in); err != nil {
 		return domain.Comment{}, err
 	}
-	clean := u.d.Sanitizer.Clean(html)
+	clean := u.d.Sanitizer.Clean(in.HTML)
 	if clean.EmptyComment() {
 		return domain.Comment{}, domain.RequiredComment()
 	}
@@ -48,8 +50,21 @@ func (u *CreateIssueComment) Execute(ctx context.Context, id uuid.UUID, html str
 		if err != nil {
 			return err
 		}
-		at := u.d.Clock.Now()
-		created = domain.Comment{ID: uuid.NewV7(), WorkspaceID: h.issue.WorkspaceID, ProjectID: h.issue.ProjectID, IssueID: id, ActorID: actor.UserID, HTML: clean.HTML, Text: clean.Text, CreatedAt: at, UpdatedAt: at, Reactions: []domain.CommentReaction{}}
+		commentID := uuid.NewV7()
+		q := ContentBindRequest{ActorID: actor.UserID, NewComment: true,
+			Host:     ContentHost{WorkspaceID: h.issue.WorkspaceID, ProjectID: h.issue.ProjectID, IssueID: id, CommentID: commentID},
+			ImageIDs: clean.Identity.AssetImageIDs(), AttachmentIDs: in.AttachmentIDs}
+		bind := len(q.ImageIDs) > 0 || len(q.AttachmentIDs) > 0
+		var at time.Time
+		if bind {
+			at, err = u.d.ContentBindings.LockContent(ctx, q)
+			if err != nil {
+				return err
+			}
+		} else {
+			at = u.d.Clock.Now()
+		}
+		created = domain.Comment{ID: commentID, WorkspaceID: h.issue.WorkspaceID, ProjectID: h.issue.ProjectID, IssueID: id, ActorID: actor.UserID, HTML: clean.HTML, Text: clean.Text, CreatedAt: at, UpdatedAt: at, Reactions: []domain.CommentReaction{}}
 		if err := u.d.Comments.MarkChanged(ctx, ChangedRows{IDs: []uuid.UUID{id}, By: actor.UserID, At: at}); err != nil {
 			return err
 		}
@@ -59,6 +74,11 @@ func (u *CreateIssueComment) Execute(ctx context.Context, id uuid.UUID, html str
 		}
 		if err := u.d.Comments.InsertComment(ctx, CommentWrite{Comment: created, By: actor.UserID, At: at}); err != nil {
 			return err
+		}
+		if bind {
+			if err := u.d.ContentBindings.BindContent(ctx, q, at); err != nil {
+				return err
+			}
 		}
 		return u.d.Events.Publish(ctx, stamp.commentEvent(domain.EventCommentCreated, created.ID, nil, eventPtr(created.HTML)))
 	})

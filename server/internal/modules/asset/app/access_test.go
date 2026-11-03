@@ -86,15 +86,16 @@ type accessClock struct {
 
 func (c accessClock) Now() time.Time { _ = c.r.step(c.name); return time.Unix(c.at, 0) }
 func accessID(i byte) uuid.UUID      { var id uuid.UUID; id[15] = i; return id }
-func accessFixture() (*Access, *accessRecording, shared.Actor, []HostRequest, []uuid.UUID) {
+func accessFixture() (*Access, *accessRecording, shared.Actor, []HostRequest, []AssetAccessRequest) {
 	r := &accessRecording{hosts: map[uuid.UUID]Host{}, failure: errors.New("injected dependency failure")}
 	actor := shared.Actor{UserID: accessID(20)}
 	requests := []HostRequest{{Scope: domain.Scope{Kind: domain.ScopeDraft, ID: accessID(9)}, Intent: ReadAsset}, {Scope: domain.Scope{Kind: domain.ScopeDraft, ID: accessID(2)}, Intent: PrepareAsset}}
 	r.hosts[accessID(9)] = Host{Scope: requests[0].Scope, WorkspaceID: accessID(8), ProjectID: accessID(6), DraftID: accessID(9)}
 	r.hosts[accessID(2)] = Host{Scope: requests[1].Scope, WorkspaceID: accessID(1), ProjectID: accessID(3), DraftID: accessID(2)}
-	ids := []uuid.UUID{accessID(12), accessID(10), accessID(12)}
-	for _, id := range []uuid.UUID{accessID(10), accessID(12)} {
-		r.rows = append(r.rows, domain.Asset{ID: id, Placement: domain.Placement{UserID: actor.UserID}})
+	ids := []AssetAccessRequest{{ID: accessID(12), Host: requests[1]}, {ID: accessID(10), Host: requests[0]}, {ID: accessID(12), Host: requests[1]}}
+	for n, id := range []uuid.UUID{accessID(10), accessID(12)} {
+		h := r.hosts[requests[n].Scope.ID]
+		r.rows = append(r.rows, domain.Asset{ID: id, Purpose: domain.DraftIssueAttachment, Placement: domain.Placement{UserID: actor.UserID, Scope: h.Scope, WorkspaceID: h.WorkspaceID, ProjectID: h.ProjectID, DraftID: h.DraftID}})
 	}
 	a := NewAccess(AccessDeps{Hosts: r, Workspaces: accessParents{r, "W"}, Projects: accessParents{r, "P"}, Drafts: accessParents{r, "D"}, Assets: r, Caller: r, Gate: r, Tx: r, CredentialClock: accessClock{r, "credential-clock", 11}, Clock: accessClock{r, "audit-clock", 29}})
 	return a, r, actor, requests, ids
@@ -178,6 +179,7 @@ func TestAssetAccessDeduplicatesParentsWithoutChangingRefusalOrder(t *testing.T)
 	h.WorkspaceID = accessID(8)
 	h.ProjectID = accessID(6)
 	r.hosts[accessID(2)] = h
+	r.rows[1].Placement.WorkspaceID, r.rows[1].Placement.ProjectID = h.WorkspaceID, h.ProjectID
 	slices.Reverse(q)
 	if err := a.Within(t.Context(), actor, q, ids, func(context.Context, AccessHeld) error { return nil }); err != nil {
 		t.Fatal(err)

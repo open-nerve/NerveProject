@@ -187,7 +187,7 @@ func projectDeletionPublisher(t *testing.T, pool *pgxpool.Pool, observers ...sha
 	if err != nil {
 		t.Fatal(err)
 	}
-	subscribers := append(issue.Subscribers(issueInserter{client: client}), asset.Subscribers(asset.Provide(pool), assetInserter{client: client})...)
+	subscribers := append(issue.Subscribers(issue.Provide(pool, nil), issueInserter{client: client}), asset.Subscribers(asset.Provide(pool), assetInserter{client: client})...)
 	subscribers = append(subscribers, observers...)
 	d, err := newDispatcher(eventTypes(), subscribers)
 	if err != nil {

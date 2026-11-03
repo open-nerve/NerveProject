@@ -193,7 +193,7 @@ func TestActivityPagesReadSnapshot(t *testing.T) {
 			t.Fatal(err)
 		}
 	}}
-	locks := issueapp.NewLocks(projects, wrapped, authorizerOn(w.pool), versionReadOnly{}, versionReadOnly{})
+	locks := issueapp.NewLocks(projects, wrapped, authorizerOn(w.pool), versionReadOnly{}, versionReadOnly{}, attachmentCounterOn(w.pool))
 	list := issueapp.NewListIssueActivities(issueapp.ListIssueActivitiesDeps{Locks: locks, Projects: projects, Activities: activitySnapshotRows{Store: store, inspect: inspect}, ReadTx: postgres.NewTxManager(w.pool, 2*time.Second, postgres.ReadOnlySnapshot())})
 	ctx := shared.WithActor(pgtest.Soon(t), shared.Actor{UserID: w.ids["alice"]})
 	page, err := list.Execute(ctx, id, nil, nil)

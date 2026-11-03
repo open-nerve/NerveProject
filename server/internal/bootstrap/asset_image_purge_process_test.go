@@ -33,11 +33,7 @@ func TestImagePurgeProcess(t *testing.T) {
 			w.age(t, old, 61, true)
 			w.age(t, young, 59, true)
 			beforeYoung, beforeLive := imageGroupSnapshot(t, young), imageGroupSnapshot(t, live)
-			if _, err := w.pool.Exec(t.Context(), `CREATE TABLE image_purge_calls (
- n bigint GENERATED ALWAYS AS IDENTITY, process integer, mode text, after_id uuid, cutoff timestamptz,
- committed_after uuid, failed boolean)`); err != nil {
-				t.Fatal(err)
-			}
+			createImagePurgeObservation(t, w.pool)
 			if mode == "page_failed" {
 				if _, err := w.pool.Exec(t.Context(), fmt.Sprintf(`CREATE FUNCTION reject_process_image() RETURNS trigger LANGUAGE plpgsql AS $$
  BEGIN IF OLD.id='%s'::uuid THEN RAISE EXCEPTION 'image page delete failed'; END IF; RETURN OLD; END $$;
@@ -131,7 +127,16 @@ func imagePurgeJob(t *testing.T, pool *pgxpool.Pool, id int64) (purgeResult, str
 	return result, state
 }
 
-func imagePurgeProcess(t *testing.T, w imageRetentionWorld, mode string, id int64, now time.Time) int {
+func createImagePurgeObservation(t *testing.T, pool *pgxpool.Pool) {
+	t.Helper()
+	if _, err := pool.Exec(t.Context(), `CREATE TABLE image_purge_calls (
+ n bigint GENERATED ALWAYS AS IDENTITY, process integer, mode text, after_id uuid, cutoff timestamptz,
+ committed_after uuid, failed boolean)`); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func imagePurgeProcess(t *testing.T, w imageRetentionWorld, mode string, id int64, now time.Time, extraEnv ...string) int {
 	t.Helper()
 	executable, err := os.Executable()
 	if err != nil {
@@ -142,6 +147,7 @@ func imagePurgeProcess(t *testing.T, w imageRetentionWorld, mode string, id int6
 	cmd := exec.CommandContext(ctx, executable, "-test.run=^TestImagePurgeProcess$", "-test.timeout=25s", "-test.v")
 	cmd.Env = append(os.Environ(), imageProcessMode+"="+mode, "NERVE_TEST_IMAGE_PURGE_DB="+w.dbURL,
 		"NERVE_TEST_IMAGE_PURGE_JOB="+strconv.FormatInt(id, 10), "NERVE_TEST_IMAGE_PURGE_NOW="+now.Format(time.RFC3339Nano))
+	cmd.Env = append(cmd.Env, extraEnv...)
 	output, err := cmd.CombinedOutput()
 	if err != nil || ctx.Err() != nil {
 		t.Fatalf("image purge child %s failed: %v\n%s", mode, err, output)

@@ -1,8 +1,8 @@
 # M5：文件
 
-> 状态：P1–P3已完成集成和归档。P3 noff main5807a0d6的CI41591764345全绿；P4 spec/plan预检通过，T1–T12全部资料图片API、五轮交错、F5–F7与双存储、清理恢复和冷统计容量通过，T13七项与准确产品CI已全绿，T14整审通过、最终文档CI待核，见[re-38](../../reviews/re-38-M5P4预检.md)。
+> 状态：P1–P4已完成集成和归档。P4已完成：noff main 0f93100a，CI 41641099230 三job全绿，2301份原始文件归档核验并正常清理分支/worktree；P5 T1–T13完成，检查点e60aa333的CI 41712958828三项全绿；一次整审唯一Minor已修正复核。最终CI两次触及整包预算，完整诊断后局部调整测试编排预算，新提交CI及集成归档仍待验证。见[P4阶段记录](reviews/P4-profile-images-review.md#22-t15最终集成归档与p5预检)和[P5阶段记录](reviews/P5-issue-assets-review.md)。
 > 起点：`main@3db22f06ad9e82a483c05c8078801af00a5cae02`（M4 最终 main CI 41397218533，三个作业成功）。
-> 设计、P1–P3分支均已合入并归档；当前工作分支codex/m5-p4。负责人2026-11-02已授权按既有节奏连续推进，常规设计、预检、实现、deep-review、`--no-ff`集成、CI和归档无需逐次询问。重大风险、架构回归或关键分歧，先提交已完成工作，再上报。
+> 设计、P1–P4分支均已合入并归档；当前工作分支codex/m5-p5。负责人2026-11-02已授权按既有节奏连续推进，常规设计、预检、实现、deep-review、`--no-ff`集成、CI和归档无需逐次询问。重大风险、架构回归或关键分歧，先提交已完成工作，再上报。
 
 ## 1. 目标、范围与输入
 
@@ -108,7 +108,7 @@ asset 表合入的同一阶段更新真实删除 fixture、目录/外键守卫�
 收益是协议遗漏或对象故障不会丢掉唯一恢复依据；代价是相关父墓碑在对象故障时继续保留，不能靠 CASCADE 按时强删。所有对象 I/O 在事务外，父 owner 小端口与 asset 自有 SQL 在 bootstrap 接合；完整协议、锁图和前进证明在 [P2 spec](specs/P2-assets.md) 及其 access/recovery/protected-purge 子合同固定，完整预检记录见 [re-34](../../reviews/re-34-M5P2预检.md)。[问题、探针与已批准方案](reviews/P2-purge-contract-decision.md)保留替代 C（全锁内 owner 协议，无数据库兜底）和未采纳理由。
 
 
-**P4引用合同（T1–T12内部能力、完整owner API、五轮交错、双驱动、清理恢复及千引用已验证，完整门禁/整审/集成待T13–T15）：** 三owner分别加入四个图片引用即时NO ACTION FK与索引，project另有cover-01..29互斥字段。owner事务拥有账号首锁和W/P授权、收齐old/new资产集合；asset端口只锁/改自有行，最后锁后一个At。新项目先锁/校验准备件，INSERT一次写最终cover，再迁移asset范围，任何失败全部回滚。所有返回资料/组织/项目的操作统一在现有授权边界内CPU签发，公开邀请只沿原MAC链接证明固定logo，不开放任意资产读取；成员头像不在W锁后锁目标账号。批量读取保留整集合，资产按全局UUID顺序、每SQL至多1000条；T12冷统计1000/1001引用最终race实测611/560ms，14/15条SQL，保持零存储I/O。
+**P4引用合同（实现、完整门禁、整审、准确分支/main CI及归档清理均完成，证据见P4阶段记录§22）：** 三owner分别加入四个图片引用即时NO ACTION FK与索引，project另有cover-01..29互斥字段。owner事务拥有账号首锁和W/P授权、收齐old/new资产集合；asset端口只锁/改自有行，最后锁后一个At。新项目先锁/校验准备件，INSERT一次写最终cover，再迁移asset范围，任何失败全部回滚。所有返回资料/组织/项目的操作统一在现有授权边界内CPU签发，公开邀请只沿原MAC链接证明固定logo，不开放任意资产读取；成员头像不在W锁后锁目标账号。批量读取保留整集合，资产按全局UUID顺序、每SQL至多1000条；T12冷统计1000/1001引用最终race实测611/560ms，14/15条SQL，保持零存储I/O。
 
 反向引用清理页最多min(batch,1000)：候选先读，identity→workspace→project各自有序锁行并按当前引用条件解除，再由asset复核cutoff/metadata并DELETE，一次提交，删0也按扫描位置前进。保留原asset→issue→project→workspace→identity顺序、父保护及未知FK负例；目录逐一核四条反向边和具名解除者，无通用NO ACTION豁免。完整边界、代价和验收见[P4主spec](specs/P4-profile-images.md)、[绑定/读取](specs/P4-image-access.md)、[引用清理](specs/P4-reference-purge.md)。
 
@@ -195,7 +195,9 @@ S3来源主机使用DNS或IPv4；浏览器CSP不能精确允许IPv6字面量，�
 
 总序继承 M4：无连接进入写门 → workspace 稳定边界 → project（跨项目升序）→ issue/评论/草稿既有锁序 → asset（UUID 升序）。获取 asset 锁后不追逐另一个项目/宿主锁；观察到宿主变化返回冲突并重新发起。确认封存和复制的存储 I/O 在事务之外，最终提交必须重验父范围和权限。
 
-草稿发布复用当前 `W(S) → P(N) → D(U)`，然后创建工作项并锁资产迁移。迁移资产的 draft_id 清空、issue_id 填新 ID、用途由 draft 对应到 issue，时间/操作者与创建/软删草稿一致。竞争发布、改项目、上传完成、父删除都要实锁交错测试，不能靠固定 sleep。
+草稿发布复用当前 `W(S) → P(N) → D(U)`，先执行唯一创建核心的 prepare（相关校验、清洗和事务内序号分配，尚未写业务行），再收齐全部活资产及当前引用并按 UUID 顺序锁定；最后一把资产锁后读取唯一 At，再 write 工作项、迁移资产、软删草稿及发事件。迁移资产的 draft_id 清空、issue_id 填新 ID、用途由 draft 对应到 issue，时间/操作者与创建/软删草稿一致。竞争发布、改项目、上传完成、父删除都要实锁交错测试，不能靠固定 sleep。
+
+草稿保存保持 M4 的结构400与业务值延后校验，资产校验只消费同一清洗器的图片投影，不改写原 payload。迁移实现显式依赖已有事件发布器，全部资产写成功后按 UUID 发普通附件 added；issue 消费端口不变，动态仍在同一事务。
 
 ## 8. 内容、历史与附件计数
 
@@ -207,7 +209,11 @@ S3来源主机使用DNS或IPv4；浏览器CSP不能精确允许IPv6字面量，�
 
 `Issue.attachment_count` 只数该工作项活的 `ISSUE_ATTACHMENT`，不把描述图片、评论附件或草稿准备件算入。追加 ±attachment_count 排序和“附件”显示项时同时更新 SQL、游标比较器、生成 DTO、store 与界面；不先返回虚假 0。计数批量读取，不做每项一次查询；跨请求新增/删除仍可能影响游标位置，与 link_count 边界一致。
 
+所有返回 Issue 的读取将已授权结果与附件计数放在同一只读快照。详情、按编号读取、直接子项列表原先没有事务，P5 复用已有 ReadTx，在首个宿主读取前进入；列表、关系和搜索沿已有快照，写返回沿原写事务。计数只接收最终返回的去重 ID，不查 lookahead；group/subgroup 合并各 cell 后批量统计。创建核心与 Locks.seen、Listing 各自显式注入小接口，不用 nil 或端口错误回落为 0。代价是三处旧读取增加一个短只读事务；拒绝顺序、不取写闸门和行锁的约束保持有效。
+
 资产新增/删除工作项附件时产生具名事件 `asset.attachment_added` / `asset.attachment_deleted`，共享事件 envelope 的 Entity 指向 asset、Project/Workspace/Actor/OccurredAt 真实，Changes 带关联 issue ID；同一事务投递或拒绝。是否展示工作项动态由 P5 按 M4 的动作规则固定：每次真实增删各一条，重复 complete/delete 无额外行。项目批量清理不制造逐个用户动作动态。通知/Webhook 收到精确事件责任交接，不先实现通知。
+
+**P5落实（T1–T12及本地七项已验证，准确CI和整审待执行）：** 评论附件走独立分页端点，创建最多100个attachment_ids；计数由asset在相同读取快照提供完整非零目录给issue SQL排序，普通页批量计返回ID，不跨模块JOIN、不保存冗余计数。草稿迁移保留已有bound，当前正文所用描述才新增绑定；从未引用的准备图片继续私有、可删和原7天清理，不能因发布自动公开。P5落实API/生成类型/比较器和现有store消费，P6/P7按§12挂页面；详见[P5主spec](specs/P5-issue-assets.md)、[绑定合同](specs/P5-content-binding.md)、[读取合同](specs/P5-attachment-reads.md)。
 
 ## 9. 前端与视觉
 
@@ -314,14 +320,15 @@ P1 起第一个实现提交更新关键词 phase 与到期例外；纯设计分�
 | P1 | 已完成：noff main 85dc4087，CI 41471671630 全绿，792 文件归档核验并清理 | [spec](specs/P1-local-storage.md) / [plan](plans/P1-local-storage.md) / [阶段记录](reviews/P1-local-storage-review.md) / [整审](../../reviews/re-33-M5P1整体审核.md) |
 | P2 | 已完成：noff main2d1bcf0c，CI41556463795全绿，2191文件归档核验并清理 | [spec](specs/P2-assets.md) / [plan](plans/P2-assets.md) / [整审](../../reviews/re-35-M5P2整体审核.md) / [阶段记录](reviews/P2-assets-review.md) / [裁定](reviews/P2-purge-contract-decision.md) |
 | P3 | 已完成：noff main5807a0d6，CI41591764345全绿，2251文件归档核验并清理 | [spec](specs/P3-s3-storage.md) / [plan](plans/P3-s3-storage.md) / [预检](../../reviews/re-36-M5P3预检.md) / [阶段记录](reviews/P3-s3-storage-review.md) |
-| P4 | T1–T12实现与验收完成，T13七项与准确产品CI已全绿，T14整审通过、最终文档CI待核；基线main5807a0d6 | [spec](specs/P4-profile-images.md) / [plan](plans/P4-profile-images.md) / [预检](../../reviews/re-38-M5P4预检.md) / [阶段记录](reviews/P4-profile-images-review.md) |
-| P5–P8、closeout | 未开始 | 待前置阶段完成后逐段展开 |
+| P4 | 已完成：noff main0f93100a，CI41641099230全绿，2301文件归档核验并清理 | [spec](specs/P4-profile-images.md) / [plan](plans/P4-profile-images.md) / [整审](../../reviews/re-39-M5P4整体审核.md) / [阶段记录](reviews/P4-profile-images-review.md) |
+| P5 | T1–T13与一次整审修正已完成，检查点CI全绿；最终提交CI/集成归档待T14/T15 | [spec](specs/P5-issue-assets.md) / [plan](plans/P5-issue-assets.md) / [预检](../../reviews/re-40-M5P5预检.md) / [整审](../../reviews/re-41-M5P5整体审核.md) / [阶段记录](reviews/P5-issue-assets-review.md) |
+| P6–P8、closeout | 未开始 | 待前置阶段完成后逐段展开 |
 
 当前可自行决定的局部取舍及代价：编辑器只处理图片，普通文件走附件区；预设封面使用稳定编号，不上传构建素材副本；描述图片保留到宿主删除，代价是占用空间；封存复制增加一次存储操作，换取确认后字节不被旧 PUT 改写。以上均在既定文件模块范围内，设计预检已核对一致性，具体实现按阶段合同验证。
 
 设计审查已修正的衔接：复用已有用途 MAC；保持 M4 的安全 URL 清洗合同；业务 JSON 仍 no-store；签名/传输使用运行时钟；外部操作记录放入有界 storage_metadata，不增加业务表。
 
-P1 的预算/MAC/Range 精确常数已写入通过预检的 spec。仍须在后续对应 spec 预检确定而不能在实现里猜：P2 完整状态表、锁图、清理宽限和 owner 端口；P3已锁SDK/测试服务版本并完成真实Nerve/浏览器/恢复，精确最终CI及集成归档已完成，见P3阶段记录§19；P4绑定/读取/反向清理合同已通过预检；P5 评论分页和精确事件/动态合同。若事实证明既定架构无法满足安全或一致性要求，提交当前文档和证据后上报。
+P1预算/MAC/Range、P2状态表/锁图/清理/owner端口、P3 SDK与双存储合同、P4绑定/读取/反向清理合同均已随实现验证并归档，见各阶段记录。P5三份spec已通过预检；T1–T12已证明内容身份、绑定/迁移、精确事件/动态、分页、真实计数与完整全局排序、三宿主调用方及权限/字节/清理/容量，T13本地七门禁及准确检查点CI已闭环，一次整审唯一Minor已修正复核；最终提交CI与集成归档待T14/T15。若事实证明既定架构无法满足安全或一致性要求，提交当前文档和证据后上报。
 
 ## 16. 协议核验来源
 

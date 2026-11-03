@@ -6,7 +6,7 @@ import { draftDeleted } from "../../fixtures/issues";
 import { fileContent, readFile, storedFile } from "../../fixtures/storage";
 import { expect, test } from "../../fixtures/test";
 
-test("F14 (API): comment and draft deletion stamp their files, preparation deletion preserves recoverable bytes, and live neighbors stay unchanged", async ({
+test("F14 (API): comment and draft deletion stamp their files without changing live neighbors; bound attachment deletion is idempotent and preserves recoverable bytes", async ({
   api,
   db,
 }, info) => {
@@ -60,7 +60,7 @@ test("F14 (API): comment and draft deletion stamp their files, preparation delet
   const deleted = await snapshot();
   expect(
     (await api.DELETE("/api/v0/assets/{id}", { params: { path: { id: neighbor.id } }, headers })).response.status
-  ).toBe(404);
+  ).toBe(204);
   expect(await snapshot()).toEqual(deleted);
   expect(
     await db.query(

@@ -29,7 +29,7 @@ import { closedWithin } from "../../fixtures/dialogs";
 import { sentHeld } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 
-test("I4 (API): all twenty-one orders traverse real second and terminal pages with distinct keys; calendar ranges AND and missing dates stay separate", async ({
+test("I4 (API): all ordering words traverse real second and terminal pages with distinct keys or UUID ties; calendar ranges AND and missing dates stay separate", async ({
   api,
 }, info) => {
   const admin = await newAccount(api, info, "admin");
@@ -95,7 +95,7 @@ test("I4 (API): all twenty-one orders traverse real second and terminal pages wi
   expect(instantKey(uq.updated_at) < instantKey(up.updated_at)).toBe(true);
   expect(instantKey(up.updated_at) < instantKey(ur.updated_at)).toBe(true);
   // Independent expected identities: no production comparator and no list response as the oracle.
-  // All three have zero links: only the fixture UUIDs determine these ties.
+  // All three have zero links and attachments: only the fixture UUIDs determine these ties.
   // Never sort the server response when asserting any order.
   const idOrder = [p.id, q.id, r.id].toSorted();
   const orders = {
@@ -120,8 +120,10 @@ test("I4 (API): all twenty-one orders traverse real second and terminal pages wi
     "-sub_issues_count": [p.id, r.id, q.id],
     link_count: idOrder,
     "-link_count": idOrder.toReversed(),
+    attachment_count: idOrder,
+    "-attachment_count": idOrder.toReversed(),
   } satisfies Record<IssueListOrder, string[]>;
-  expect(Object.keys(orders)).toHaveLength(21);
+  expect(Object.keys(orders)).toHaveLength(23);
   await (Object.keys(orders) as IssueListOrder[]).reduce(async (before, order_by) => {
     await before;
     await test.step(`${order_by}: second page, terminal page, exact identities`, async () => {
@@ -137,6 +139,7 @@ test("I4 (API): all twenty-one orders traverse real second and terminal pages wi
           page.data?.[0]?.id === p.id ? 2 : page.data?.[0]?.id === r.id ? 1 : 0
         );
         expect(page.data?.[0]?.link_count).toBe(0);
+        expect(page.data?.[0]?.attachment_count).toBe(0);
         cursor = page.next_cursor ?? undefined;
       }, Promise.resolve());
       expect(seen).toEqual(wanted);

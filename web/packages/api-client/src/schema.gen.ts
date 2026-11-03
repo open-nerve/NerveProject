@@ -34,15 +34,15 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Read private asset metadata
-         * @description Reads the asset and its current host authorization in one read-only snapshot. A missing, deleted or invisible host and another applicant's asset all answer asset.not_found. No storage key or capability is returned.
+         * Read authorized asset metadata
+         * @description Reads the asset and its current host authorization in one read-only snapshot. Bound issue, comment and draft content follows its host's read permission; unbound preparations and profile images remain applicant-only. Missing, deleted or invisible assets and hosts answer asset.not_found. No storage key or capability is returned.
          */
         get: operations["getAsset"];
         put?: never;
         post?: never;
         /**
-         * Delete a private unbound preparation
-         * @description Rechecks its applicant and current host write permission, then records a tombstone without deleting objects synchronously or forgetting recovery records. Repeated deletion answers asset.not_found. Bound assets cannot be removed through this endpoint.
+         * Delete an authorized attachment or private preparation
+         * @description Rechecks current host removal permission. Unbound preparations remain applicant-only; bound ordinary attachments follow their host's permission. Records a tombstone without deleting objects synchronously or forgetting recovery records. Repeated authorized deletion on a still-visible host returns 204 with the original audit data. A missing or invisible host still answers asset.not_found. Bound description and profile images cannot be removed through this endpoint.
          */
         delete: operations["deleteAsset"];
         options?: never;
@@ -63,7 +63,7 @@ export interface paths {
         put?: never;
         /**
          * Verify and publish immutable content
-         * @description Commits an independent candidate before inspecting, validating and sealing the uploaded bytes without database resources. Rechecks current host write permission and the candidate lease before publishing. Repeated authorized confirmation returns the existing result without changing its audit data. Failed or losing candidates remain recoverable; a storage failure does not mean the object is absent. asset.busy and asset.storage_unavailable include Retry-After of one second.
+         * @description Commits an independent candidate before inspecting, validating and sealing the uploaded bytes without database resources. Rechecks current host write permission and the candidate lease before publishing. Only the applicant may confirm. Ordinary attachments on existing issue, comment or draft hosts bind in the final transaction; description and new-comment preparations remain unbound. Repeated authorized confirmation returns the existing result without changing its audit data, except that a legacy uploaded ordinary attachment receives its first binding on a valid retry. Failed or losing candidates remain recoverable; a storage failure does not mean the object is absent. asset.busy and asset.storage_unavailable include Retry-After of one second.
          */
         post: operations["completeAsset"];
         delete?: never;
@@ -84,8 +84,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Copy verified content to a new private preparation
-         * @description Authorizes the source for reading before the destination for preparation. Commits a new pending target and an independent candidate, then validates and seals real bytes without database resources. Rechecks both scopes and source identity before publishing. A failed copy remains recoverable. Every request creates a distinct target; repeating after a lost response can create an extra preparation, reclaimed by the ordinary expiry rule.
+         * Copy authorized content to a new asset
+         * @description Authorizes the source for reading before the destination for preparation. Commits a new pending target and an independent candidate, then validates and seals real bytes without database resources. Rechecks both scopes and source identity before publishing. A failed copy remains recoverable. Ordinary attachments on existing issue, comment or draft hosts bind in the final transaction; description and new-comment preparations stay private. Every request creates a distinct target; repeating after a lost response can create an extra attachment. Only unbound preparations are reclaimed by the ordinary preparation expiry rule.
          */
         post: operations["duplicateAsset"];
         delete?: never;
@@ -105,7 +105,7 @@ export interface paths {
         };
         /**
          * Sign a read of completed content
-         * @description Rechecks the applicant's credential and current host authorization before signing an uploaded asset's immutable final object. Does not write database rows. Expiry is the next UTC whole hour, or the following hour when fewer than five minutes remain. Attachments always download; verified image purposes can display inline. A previously issued URL remains a bearer capability until its expiry even if permission is subsequently revoked.
+         * @description Rechecks the caller's credential, asset visibility and current host read permission before signing an uploaded asset's immutable final object. Bound issue, comment and draft content follows host permissions; unbound preparations and profile images remain applicant-only. Does not write database rows. Expiry is the next UTC whole hour, or the following hour when fewer than five minutes remain. Attachments always download; verified image purposes can display inline. A previously issued URL remains a bearer capability until its expiry even if permission is subsequently revoked.
          */
         get: operations["resolveAssetContent"];
         put?: never;
@@ -1052,6 +1052,72 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v0/issues/{issue_id}/attachments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                issue_id: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * List ordinary issue attachments
+         * @description Reads the visible host and its uploaded, bound, undeleted ordinary attachments in one snapshot. Drafts are private to their owner. UUID ascending pages include metadata only, without URLs or storage keys. The host-specific v1 cursor is canonical unpadded base64url JSON. Unknown or repeated parameters and malformed cursors answer 400; integer limits outside 1..100 answer 422. The default limit is 50.
+         */
+        get: operations["getIssueAttachments"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v0/issue-comments/{comment_id}/attachments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                comment_id: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * List ordinary comment attachments
+         * @description Reads the visible host and its uploaded, bound, undeleted ordinary attachments in one snapshot. Drafts are private to their owner. UUID ascending pages include metadata only, without URLs or storage keys. The host-specific v1 cursor is canonical unpadded base64url JSON. Unknown or repeated parameters and malformed cursors answer 400; integer limits outside 1..100 answer 422. The default limit is 50.
+         */
+        get: operations["getCommentAttachments"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v0/drafts/{draft_id}/attachments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draft_id: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * List ordinary draft attachments
+         * @description Reads the visible host and its uploaded, bound, undeleted ordinary attachments in one snapshot. Drafts are private to their owner. UUID ascending pages include metadata only, without URLs or storage keys. The host-specific v1 cursor is canonical unpadded base64url JSON. Unknown or repeated parameters and malformed cursors answer 400; integer limits outside 1..100 answer 422. The default limit is 50.
+         */
+        get: operations["getDraftAttachments"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v0/workspaces/{slug}/drafts": {
         parameters: {
             query?: never;
@@ -1165,7 +1231,7 @@ export interface paths {
         put?: never;
         /**
          * Create a work item in a project
-         * @description For the project's admins and members; not in an archived project (project.archived). The name, without the white space around it, has 1–255 characters, without NUL, and is stored so; at most 100 assignees and 100 labels, each named once; the start date not after the target date (validation_failed), checked before the project is looked at. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but may not create work items in, forbidden; both are answered before the project is locked, and with the project locked the role is decided again. Then the state, when it is given, is one of the project's, not its triage state; each assignee is an active member of the project who is not its guest; each label is one of the project's; the parent, when it is given, is a work item of the project that is not archived and that the caller sees (validation_failed, every problem at once). Left out, the state is the project's default, the priority none, and the assignee the project's default assignee while he is still an active member of it who is not its guest, else no one. The work item takes the project's next number, never used again, also after a deletion; it comes after its state's work items, archived ones too: its sort order is their greatest plus 10000, or 65535 for the state's first; in a state of the completed group it is completed at its creation. The caller and the assignees subscribe to it; its activity says it was created, and assigned to each assignee. Every row it writes is the caller's, at one moment. A project with too many writes on its work items at once answers server_busy, with Retry-After: try again then.
+         * @description Canonical asset IDs in description images must belong to this final work item. A new item has no existing asset scope, so references to another item or draft answer asset.not_found and roll back its sequence. For the project's admins and members; not in an archived project (project.archived). The name, without the white space around it, has 1–255 characters, without NUL, and is stored so; at most 100 assignees and 100 labels, each named once; the start date not after the target date (validation_failed), checked before the project is looked at. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but may not create work items in, forbidden; both are answered before the project is locked, and with the project locked the role is decided again. Then the state, when it is given, is one of the project's, not its triage state; each assignee is an active member of the project who is not its guest; each label is one of the project's; the parent, when it is given, is a work item of the project that is not archived and that the caller sees (validation_failed, every problem at once). Left out, the state is the project's default, the priority none, and the assignee the project's default assignee while he is still an active member of it who is not its guest, else no one. The work item takes the project's next number, never used again, also after a deletion; it comes after its state's work items, archived ones too: its sort order is their greatest plus 10000, or 65535 for the state's first; in a state of the completed group it is completed at its creation. The caller and the assignees subscribe to it; its activity says it was created, and assigned to each assignee. Every row it writes is the caller's, at one moment. A project with too many writes on its work items at once answers server_busy, with Retry-After: try again then.
          */
         post: operations["createIssue"];
         delete?: never;
@@ -1200,7 +1266,7 @@ export interface paths {
         head?: never;
         /**
          * Change a work item
-         * @description For the admins and members of its project. The fields given change and the others stay; a list given is the work item's new list, empty for none. The values follow createIssue's rules, but for the order of the dates (validation_failed), checked before the work item is looked at. A work item that does not exist, is deleted, whose project the caller does not see, or that he did not create as a guest who sees only his own (getIssue) answers issue.not_found, whatever his role may do; one whose project he sees but whose work items he may not change, forbidden; both are answered before the project is locked, and with the project locked the role is decided again. A work item of an archived project cannot be changed (project.archived), nor then an archived work item (issue.archived), even by a change that changes nothing. Then the state, when it changes, is one of the project's, not its triage state; each account the work item is newly assigned to is an active member of the project who is not its guest, while one it keeps stays assigned whatever has become of him; each label added is one of the project's; the start date the work item then has is not after its target date, each as given or, not given, as it is: at start_date when the start date alone is given, else at target_date; the parent, when it changes to a work item, is one of the project's that is not archived and that the caller sees, and neither the work item nor one under it (validation_failed, every problem at once). A change that changes nothing writes nothing, and the work item is answered as it is. Otherwise the work item is changed last by the caller; moved into a state of the completed group, it is completed at the change, and moved into another, not completed; the accounts newly assigned subscribe to it; its activity says what changed: the name, the parent, the priority, the state, the start and the target dates, and each label and each assignee added and removed. Every row it writes is the caller's, at one moment. A project with too many writes on its work items at once answers server_busy, with Retry-After: try again then.
+         * @description Description image references are checked after host authorization and archival rules. New references must be uploaded preparations of this author, purpose and full host; other members may retain bound images of this host. Invalid references answer asset.not_found, unfinished ones asset.not_uploaded. Even an unchanged body validates its references; binding a legitimate legacy preparation preserves the issue audit and versions. Removing an image never unbinds its historical asset. For the admins and members of its project. The fields given change and the others stay; a list given is the work item's new list, empty for none. The values follow createIssue's rules, but for the order of the dates (validation_failed), checked before the work item is looked at. A work item that does not exist, is deleted, whose project the caller does not see, or that he did not create as a guest who sees only his own (getIssue) answers issue.not_found, whatever his role may do; one whose project he sees but whose work items he may not change, forbidden; both are answered before the project is locked, and with the project locked the role is decided again. A work item of an archived project cannot be changed (project.archived), nor then an archived work item (issue.archived), even by a change that changes nothing. Then the state, when it changes, is one of the project's, not its triage state; each account the work item is newly assigned to is an active member of the project who is not its guest, while one it keeps stays assigned whatever has become of him; each label added is one of the project's; the start date the work item then has is not after its target date, each as given or, not given, as it is: at start_date when the start date alone is given, else at target_date; the parent, when it changes to a work item, is one of the project's that is not archived and that the caller sees, and neither the work item nor one under it (validation_failed, every problem at once). A change that changes nothing writes nothing, and the work item is answered as it is. Otherwise the work item is changed last by the caller; moved into a state of the completed group, it is completed at the change, and moved into another, not completed; the accounts newly assigned subscribe to it; its activity says what changed: the name, the parent, the priority, the state, the start and the target dates, and each label and each assignee added and removed. Every row it writes is the caller's, at one moment. A project with too many writes on its work items at once answers server_busy, with Retry-After: try again then.
          */
         patch: operations["updateIssue"];
         trace?: never;
@@ -1299,7 +1365,7 @@ export interface paths {
         head?: never;
         /**
          * Edit a comment as its author
-         * @description Uses issue_comment.write for project admins, members and guests, then checks the comment author before the write gate and again under the project lock. Missing or hidden comments and parent work items answer issue.comment_not_found before issue.not_author. Only the comment author can edit, even for project admins. Project archiving refuses before issue archiving, and both refuse before unchanged sanitized HTML. Identical sanitized HTML writes nothing and preserves edited_at. Changed HTML sets edited_at and updated_at together, updates the work item and subscribes newly mentioned visible members without removing subscriptions. No activity is created. Busy projects answer 503 with Retry-After.
+         * @description Uses issue_comment.write for project admins, members and guests, then checks the comment author before the write gate and again under the project lock. Missing or hidden comments and parent work items answer issue.comment_not_found before issue.not_author. Only the comment author can edit, even for project admins. Project archiving refuses before issue archiving, and both refuse before unchanged sanitized HTML. Identical sanitized HTML preserves comment audit and edited_at, but still validates and binds any legacy unbound image references. Changed HTML sets edited_at and updated_at together, updates the work item and subscribes newly mentioned visible members without removing subscriptions. No activity is created. Images must be completed descriptions of this same comment; unbound preparations remain private to their applicant. Binding, the comment write and its event share one transaction and moment. This body only changes HTML; attachments use their independent endpoints. Busy projects answer 503 with Retry-After.
          */
         patch: operations["updateIssueComment"];
         trace?: never;
@@ -1539,7 +1605,7 @@ export interface paths {
         put?: never;
         /**
          * Create a comment on a visible work item
-         * @description For the project's admins, members and guests who can read the work item. Missing or hidden work items answer issue.not_found before forbidden. The project is locked first and the decision repeated. An archived project refuses with project.archived before an archived issue with issue.archived. Sanitized content must contain text, a mention or image; otherwise validation_failed on comment_html, required. At most 500000 Unicode characters before sanitization. The caller and active mentioned members who can read it automatically subscribe. Existing subscriptions keep their identity and timestamps. All new rows have one writer and moment; this creates no activity or issue_mentions. Busy projects answer 503 server_busy with Retry-After.
+         * @description For the project's admins, members and guests who can read the work item. Missing or hidden work items answer issue.not_found before forbidden. The project is locked first and the decision repeated. An archived project refuses with project.archived before an archived issue with issue.archived. Sanitized content must contain text, a mention or image; otherwise validation_failed on comment_html, required. At most 500000 Unicode characters before sanitization. The caller and active mentioned members who can read it automatically subscribe. Existing subscriptions keep their identity and timestamps. All new rows have one writer and moment; this creates no activity or issue_mentions. Current HTML images and attachment_ids must name completed new_comment preparations of this caller and work item, with description and attachment purposes respectively. The whole set is validated before writing; comment creation, binding and its event commit together. Unlisted preparations remain private and unbound. Attachments alone do not satisfy the nonempty-comment rule. Busy projects answer 503 server_busy with Retry-After.
          */
         post: operations["createIssueComment"];
         delete?: never;
@@ -2526,6 +2592,11 @@ export interface components {
             label_ids: string[];
             /**
              * Format: int64
+             * @description Uploaded, bound, undeleted ordinary issue attachments, read in the same snapshot.
+             */
+            attachment_count: number;
+            /**
+             * Format: int64
              * @description The number of undeleted links, regardless of creator or metadata state.
              */
             link_count: number;
@@ -2549,6 +2620,22 @@ export interface components {
         /** @description Work items, all of them, without pages. */
         IssueCollection: {
             data: components["schemas"]["Issue"][];
+        };
+        Attachment: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            content_type: string;
+            /** Format: int64 */
+            size: number;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: uuid */
+            created_by_id: string | null;
+        };
+        AttachmentPage: {
+            data: components["schemas"]["Attachment"][];
+            next_cursor: string | null;
         };
         /** @description Unfinished issue input. Saving checks structure, not create semantics. */
         IssueDraftPayload: {
@@ -2645,6 +2732,11 @@ export interface components {
             label_ids: string[];
             /**
              * Format: int64
+             * @description Uploaded, bound, undeleted ordinary issue attachments, read in the same snapshot.
+             */
+            attachment_count: number;
+            /**
+             * Format: int64
              * @description The number of undeleted links, regardless of creator or metadata state.
              */
             link_count: number;
@@ -2671,7 +2763,7 @@ export interface components {
          */
         IssueListGroupField: "state_id" | "state_group" | "priority" | "label_id" | "assignee_id" | "created_by_id" | "target_date" | "project_id";
         /** @enum {string} */
-        IssueListOrder: "created_at" | "-created_at" | "updated_at" | "-updated_at" | "start_date" | "-start_date" | "target_date" | "-target_date" | "priority" | "-priority" | "state_name" | "-state_name" | "label_name" | "-label_name" | "assignee_name" | "-assignee_name" | "sub_issues_count" | "-sub_issues_count" | "link_count" | "-link_count" | "sort_order";
+        IssueListOrder: "created_at" | "-created_at" | "updated_at" | "-updated_at" | "start_date" | "-start_date" | "target_date" | "-target_date" | "priority" | "-priority" | "state_name" | "-state_name" | "label_name" | "-label_name" | "assignee_name" | "-assignee_name" | "sub_issues_count" | "-sub_issues_count" | "link_count" | "-link_count" | "attachment_count" | "-attachment_count" | "sort_order";
         IssueListSubgroup: {
             key: string;
             /** Format: int64 */
@@ -2773,7 +2865,7 @@ export interface components {
             /** @description 1–100 work items of the project, each named once, to put under the work item. */
             sub_issue_ids: string[];
         };
-        IssueCommentCreate: {
+        IssueCommentUpdate: {
             comment_html: string;
         };
         CommentReaction: {
@@ -2913,6 +3005,11 @@ export interface components {
         IssueCommentPage: {
             data: components["schemas"]["IssueComment"][];
             next_cursor: components["schemas"]["NextCursor"];
+        };
+        IssueCommentCreate: {
+            comment_html: string;
+            /** @description Completed ordinary new_comment preparations of this caller and work item; omission is an empty list. IDs use lowercase hyphenated UUID spelling; other spellings answer 400 before the use case. */
+            attachment_ids?: string[];
         };
         /**
          * @description A relation's type as one of its work items reads it: relates_to and duplicate read the same from both; the work item blocked_by another reads as blocking from it.
@@ -3134,6 +3231,8 @@ export type LabelUpdate = components['schemas']['LabelUpdate'];
 export type IssuePriority = components['schemas']['IssuePriority'];
 export type Issue = components['schemas']['Issue'];
 export type IssueCollection = components['schemas']['IssueCollection'];
+export type Attachment = components['schemas']['Attachment'];
+export type AttachmentPage = components['schemas']['AttachmentPage'];
 export type IssueDraftPayload = components['schemas']['IssueDraftPayload'];
 export type Draft = components['schemas']['Draft'];
 export type DraftPage = components['schemas']['DraftPage'];
@@ -3149,7 +3248,7 @@ export type IssueListPage = components['schemas']['IssueListPage'];
 export type IssueCreate = components['schemas']['IssueCreate'];
 export type IssueUpdate = components['schemas']['IssueUpdate'];
 export type SubIssuesAdd = components['schemas']['SubIssuesAdd'];
-export type IssueCommentCreate = components['schemas']['IssueCommentCreate'];
+export type IssueCommentUpdate = components['schemas']['IssueCommentUpdate'];
 export type CommentReaction = components['schemas']['CommentReaction'];
 export type IssueComment = components['schemas']['IssueComment'];
 export type ReactionCreate = components['schemas']['ReactionCreate'];
@@ -3167,6 +3266,7 @@ export type IssueLink = components['schemas']['IssueLink'];
 export type IssueLinkCollection = components['schemas']['IssueLinkCollection'];
 export type IssueLinkCreate = components['schemas']['IssueLinkCreate'];
 export type IssueCommentPage = components['schemas']['IssueCommentPage'];
+export type IssueCommentCreate = components['schemas']['IssueCommentCreate'];
 export type IssueRelationType = components['schemas']['IssueRelationType'];
 export type IssueRelation = components['schemas']['IssueRelation'];
 export type IssueRelationCollection = components['schemas']['IssueRelationCollection'];
@@ -3231,7 +3331,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Metadata visible to its applicant. */
+            /** @description Metadata visible under the asset and host permissions. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -3254,7 +3354,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Preparation deleted; objects remain subject to their safe retention periods. */
+            /** @description Asset deleted or already deleted; objects remain subject to their safe retention periods. */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -3306,7 +3406,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description A new uploaded, unbound asset with its own immutable object. */
+            /** @description A new uploaded asset with its own immutable object and binding appropriate to its purpose and host. */
             201: {
                 headers: {
                     [name: string]: unknown;
@@ -4801,6 +4901,90 @@ export interface operations {
             default: components["responses"]["Problem"];
         };
     };
+    getIssueAttachments: {
+        parameters: {
+            query?: {
+                /** @description The page size, 1–100; 50 when absent. Outside that range the answer is 422 validation_failed on limit. */
+                limit?: components["parameters"]["Limit"];
+                /** @description The next_cursor of the page before; absent for the first page. A cursor that does not decode, has an unknown version or a payload of another shape than this list's, or is not spelled as the server writes it is 400 bad_request on cursor. */
+                cursor?: components["parameters"]["Cursor"];
+            };
+            header?: never;
+            path: {
+                issue_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A page of attachment metadata. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttachmentPage"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getCommentAttachments: {
+        parameters: {
+            query?: {
+                /** @description The page size, 1–100; 50 when absent. Outside that range the answer is 422 validation_failed on limit. */
+                limit?: components["parameters"]["Limit"];
+                /** @description The next_cursor of the page before; absent for the first page. A cursor that does not decode, has an unknown version or a payload of another shape than this list's, or is not spelled as the server writes it is 400 bad_request on cursor. */
+                cursor?: components["parameters"]["Cursor"];
+            };
+            header?: never;
+            path: {
+                comment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A page of attachment metadata. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttachmentPage"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getDraftAttachments: {
+        parameters: {
+            query?: {
+                /** @description The page size, 1–100; 50 when absent. Outside that range the answer is 422 validation_failed on limit. */
+                limit?: components["parameters"]["Limit"];
+                /** @description The next_cursor of the page before; absent for the first page. A cursor that does not decode, has an unknown version or a payload of another shape than this list's, or is not spelled as the server writes it is 400 bad_request on cursor. */
+                cursor?: components["parameters"]["Cursor"];
+            };
+            header?: never;
+            path: {
+                draft_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A page of attachment metadata. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttachmentPage"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
     listDrafts: {
         parameters: {
             query?: {
@@ -5297,7 +5481,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["IssueCommentCreate"];
+                "application/json": components["schemas"]["IssueCommentUpdate"];
             };
         };
         responses: {

@@ -61,6 +61,8 @@ const orders: IssueListOrder[] = [
   "-sub_issues_count",
   "link_count",
   "-link_count",
+  "attachment_count",
+  "-attachment_count",
   "sort_order",
 ];
 const names: Record<string, string> = {

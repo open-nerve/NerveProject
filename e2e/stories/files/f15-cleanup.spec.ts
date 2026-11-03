@@ -5,7 +5,15 @@ import path from "node:path";
 import { bearer, login } from "../../fixtures/auth";
 import { archiveWatermark, completedPeriodicJobs } from "../../fixtures/auto-archive";
 import { fileWorld } from "../../fixtures/file-world";
-import { fileContent, prepareFile, readFile, sendFile, storedFile, waitForFileSafety } from "../../fixtures/storage";
+import {
+  fileContent,
+  filePixel,
+  prepareFile,
+  readFile,
+  sendFile,
+  storedFile,
+  waitForFileSafety,
+} from "../../fixtures/storage";
 import { clockTest as test, expect } from "../../fixtures/test";
 
 test.use({
@@ -45,9 +53,11 @@ test("F15 (API): +61 business days cannot expire a runtime upload; process resta
   const unbound = await storedFile(
     api,
     w.owner.token,
-    "ISSUE_ATTACHMENT",
+    "ISSUE_DESCRIPTION",
     { kind: "issue", id: w.issue.id },
-    Buffer.from("seven day preparation")
+    filePixel,
+    "image/png",
+    "seven-day-preparation.png"
   );
   const originalKeys = await db.query<{ id: string; key: string }>(
     "SELECT id, storage_metadata->'final'->>'key' AS key FROM file_assets WHERE id=ANY($1::uuid[]) ORDER BY id",
@@ -118,9 +128,7 @@ test("F15 (API): +61 business days cannot expire a runtime upload; process resta
   ).toEqual([{ is_deleted: true, deleted_by_id: null, staging: null, final: true }]);
   const kept = originalKeys.find(({ id }) => id === unbound.id);
   if (!kept) throw new Error("missing unbound final proof");
-  expect(await readPhysicalFile(path.join(root, "objects", kept.key, "data"))).toEqual(
-    Buffer.from("seven day preparation")
-  );
+  expect(await readPhysicalFile(path.join(root, "objects", kept.key, "data"))).toEqual(filePixel);
   expect(await readFile(api, w.owner.token, recent.id)).toEqual(Buffer.from("recent live bytes"));
   expect(
     (await api.GET("/api/v0/assets/{id}", { params: { path: { id: recent.id } }, headers: bearer(w.owner.token) })).data

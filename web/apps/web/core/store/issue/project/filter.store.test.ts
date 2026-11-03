@@ -30,6 +30,39 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+it.each(["attachment_count", "-attachment_count"] as const)(
+  "round trips the attachment order %s through project preferences",
+  async (order_by) => {
+    const { app, nerve } = tab;
+    const store = app.issue.projectIssuesFilter;
+    const initial = preferencesOf();
+    const loading = await requestedIssue(nerve, () => store.fetchFilters("ws", "A"), [
+      "GET",
+      "/api/v0/me/projects/A/preferences",
+    ]);
+    loading.call.answer(json(200, initial));
+    await loading.promise;
+    const patch = await requestedIssue(
+      nerve,
+      () => store.updateFilters("ws", "A", EIssueFilterType.DISPLAY_FILTERS, { order_by }),
+      ["PATCH", "/api/v0/me/projects/A/preferences"]
+    );
+    const display_filters = { ...initial.display_filters, order_by };
+    expect(patch.call.body).toEqual({ display_filters });
+    patch.call.answer(json(200, preferencesOf({ display_filters })));
+    await patch.promise;
+    expect(store.getIssueFilters("A")?.displayFilters?.order_by).toBe(order_by);
+    const list = await requestedIssue(
+      nerve,
+      () => app.issue.projectIssues.fetchIssues("ws", "A", "init-loader", { limit: 20 }),
+      ["GET", "/api/v0/projects/A/issues"]
+    );
+    expect(list.call.query.order_by).toBe(order_by);
+    list.call.answer(json(200, { total: 0, data: [], next_cursor: null }));
+    await list.promise;
+  }
+);
+
 it("writesOneWholePreferenceField using the last confirmed answer", async () => {
   const { app, nerve } = tab;
   const store = app.issue.projectIssuesFilter;

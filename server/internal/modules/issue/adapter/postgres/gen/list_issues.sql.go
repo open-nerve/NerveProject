@@ -21,53 +21,56 @@ WITH projects AS (
     SELECT id, name_key FROM ROWS FROM(unnest($7::uuid[]), unnest($8::text[])) AS l(id, name_key)
 ), assignees AS (
     SELECT id, name_key FROM ROWS FROM(unnest($9::uuid[]), unnest($10::text[])) AS a(id, name_key)
+), attachments AS (
+    SELECT id, attachment_count FROM ROWS FROM(unnest($11::uuid[]), unnest($12::bigint[])) AS a(id, attachment_count)
 ), filtered AS MATERIALIZED (
-    SELECT i.id, p.own_only, s.name_key AS state_key,
+    SELECT i.id, p.own_only, coalesce(a.attachment_count,0)::bigint AS attachment_count, s.name_key AS state_key,
            i.created_at, i.updated_at, i.start_date, i.target_date, i.priority, i.sort_order
     FROM issues i JOIN projects p ON p.id = i.project_id JOIN states s ON s.id = i.state_id
-    WHERE i.deleted_at IS NULL AND (i.archived_at IS NOT NULL) = $11::boolean
+    LEFT JOIN attachments a ON a.id = i.id
+    WHERE i.deleted_at IS NULL AND (i.archived_at IS NOT NULL) = $13::boolean
       AND (NOT p.own_only OR i.created_by_id = $1::uuid)
-      AND ($12::boolean OR i.parent_id IS NULL)
-      AND (coalesce(cardinality($13::uuid[]),0)=0 OR i.project_id=ANY($13::uuid[]))
-      AND (coalesce(cardinality($14::uuid[]),0)=0 OR i.state_id=ANY($14::uuid[]))
-      AND (coalesce(cardinality($15::text[]),0)=0 OR s.state_group=ANY($15::text[]))
-      AND (coalesce(cardinality($16::text[]),0)=0 OR i.priority=ANY($16::text[]))
-      AND (coalesce(cardinality($17::uuid[]),0)=0 OR i.created_by_id=ANY($17::uuid[]))
-      AND (coalesce(cardinality($18::uuid[]),0)=0 OR EXISTS(SELECT 1 FROM issue_mentions m WHERE m.issue_id=i.id AND m.deleted_at IS NULL AND m.mention_id=ANY($18::uuid[])))
-      AND (coalesce(cardinality($19::uuid[]),0)=0 OR EXISTS(SELECT 1 FROM issue_subscribers s WHERE s.issue_id=i.id AND s.deleted_at IS NULL AND s.subscriber_id=ANY($19::uuid[])))
-      AND ((coalesce(cardinality($20::uuid[]),0)=0 AND NOT $21::boolean)
-           OR EXISTS(SELECT 1 FROM issue_labels l WHERE l.issue_id=i.id AND l.deleted_at IS NULL AND l.label_id=ANY($20::uuid[]))
-           OR ($21::boolean AND NOT EXISTS(SELECT 1 FROM issue_labels l WHERE l.issue_id=i.id AND l.deleted_at IS NULL)))
+      AND ($14::boolean OR i.parent_id IS NULL)
+      AND (coalesce(cardinality($15::uuid[]),0)=0 OR i.project_id=ANY($15::uuid[]))
+      AND (coalesce(cardinality($16::uuid[]),0)=0 OR i.state_id=ANY($16::uuid[]))
+      AND (coalesce(cardinality($17::text[]),0)=0 OR s.state_group=ANY($17::text[]))
+      AND (coalesce(cardinality($18::text[]),0)=0 OR i.priority=ANY($18::text[]))
+      AND (coalesce(cardinality($19::uuid[]),0)=0 OR i.created_by_id=ANY($19::uuid[]))
+      AND (coalesce(cardinality($20::uuid[]),0)=0 OR EXISTS(SELECT 1 FROM issue_mentions m WHERE m.issue_id=i.id AND m.deleted_at IS NULL AND m.mention_id=ANY($20::uuid[])))
+      AND (coalesce(cardinality($21::uuid[]),0)=0 OR EXISTS(SELECT 1 FROM issue_subscribers s WHERE s.issue_id=i.id AND s.deleted_at IS NULL AND s.subscriber_id=ANY($21::uuid[])))
       AND ((coalesce(cardinality($22::uuid[]),0)=0 AND NOT $23::boolean)
-           OR EXISTS(SELECT 1 FROM issue_assignees a WHERE a.issue_id=i.id AND a.deleted_at IS NULL AND a.assignee_id=ANY($22::uuid[]))
-           OR ($23::boolean AND NOT EXISTS(SELECT 1 FROM issue_assignees a WHERE a.issue_id=i.id AND a.deleted_at IS NULL)))
-      AND NOT EXISTS(SELECT 1 FROM ROWS FROM(unnest($24::boolean[]), unnest($25::text[]), unnest($26::text[])) AS d(none, lo, hi)
+           OR EXISTS(SELECT 1 FROM issue_labels l WHERE l.issue_id=i.id AND l.deleted_at IS NULL AND l.label_id=ANY($22::uuid[]))
+           OR ($23::boolean AND NOT EXISTS(SELECT 1 FROM issue_labels l WHERE l.issue_id=i.id AND l.deleted_at IS NULL)))
+      AND ((coalesce(cardinality($24::uuid[]),0)=0 AND NOT $25::boolean)
+           OR EXISTS(SELECT 1 FROM issue_assignees a WHERE a.issue_id=i.id AND a.deleted_at IS NULL AND a.assignee_id=ANY($24::uuid[]))
+           OR ($25::boolean AND NOT EXISTS(SELECT 1 FROM issue_assignees a WHERE a.issue_id=i.id AND a.deleted_at IS NULL)))
+      AND NOT EXISTS(SELECT 1 FROM ROWS FROM(unnest($26::boolean[]), unnest($27::text[]), unnest($28::text[])) AS d(none, lo, hi)
                      WHERE NOT (CASE WHEN d.none THEN i.start_date IS NULL ELSE i.start_date IS NOT NULL AND (d.lo='' OR i.start_date>=NULLIF(d.lo,'')::date) AND (d.hi='' OR i.start_date<=NULLIF(d.hi,'')::date) END))
-      AND NOT EXISTS(SELECT 1 FROM ROWS FROM(unnest($27::boolean[]), unnest($28::text[]), unnest($29::text[])) AS d(none, lo, hi)
+      AND NOT EXISTS(SELECT 1 FROM ROWS FROM(unnest($29::boolean[]), unnest($30::text[]), unnest($31::text[])) AS d(none, lo, hi)
                      WHERE NOT (CASE WHEN d.none THEN i.target_date IS NULL ELSE i.target_date IS NOT NULL AND (d.lo='' OR i.target_date>=NULLIF(d.lo,'')::date) AND (d.hi='' OR i.target_date<=NULLIF(d.hi,'')::date) END))
-      AND ($30::text = ''
-           OR ($30::text='created' AND i.created_by_id=$31::uuid)
-           OR ($30::text='assigned' AND EXISTS(SELECT 1 FROM issue_assignees a WHERE a.issue_id=i.id AND a.deleted_at IS NULL AND a.assignee_id=$31::uuid))
-           OR ($30::text='subscribed' AND EXISTS(SELECT 1 FROM issue_subscribers s WHERE s.issue_id=i.id AND s.deleted_at IS NULL AND s.subscriber_id=$31::uuid)))
+      AND ($32::text = ''
+           OR ($32::text='created' AND i.created_by_id=$33::uuid)
+           OR ($32::text='assigned' AND EXISTS(SELECT 1 FROM issue_assignees a WHERE a.issue_id=i.id AND a.deleted_at IS NULL AND a.assignee_id=$33::uuid))
+           OR ($32::text='subscribed' AND EXISTS(SELECT 1 FROM issue_subscribers s WHERE s.issue_id=i.id AND s.deleted_at IS NULL AND s.subscriber_id=$33::uuid)))
 ), counted AS (
-    SELECT f.id, f.own_only, f.state_key, f.created_at, f.updated_at, f.start_date, f.target_date, f.priority, f.sort_order, count(*) OVER () AS total FROM filtered f
+    SELECT f.id, f.own_only, f.attachment_count, f.state_key, f.created_at, f.updated_at, f.start_date, f.target_date, f.priority, f.sort_order, count(*) OVER () AS total FROM filtered f
 ), source_keys AS (
-    SELECT f.id, f.own_only, f.total, f.created_at, f.updated_at, f.start_date, f.target_date, f.priority,
-           CASE WHEN $32::text='sort_order' THEN pg_catalog.float8send(f.sort_order) END AS bits,
-           CASE WHEN $32::text='sub_issues_count' THEN
+    SELECT f.id, f.own_only, f.total, f.attachment_count, f.created_at, f.updated_at, f.start_date, f.target_date, f.priority,
+           CASE WHEN $34::text='sort_order' THEN pg_catalog.float8send(f.sort_order) END AS bits,
+           CASE WHEN $34::text='sub_issues_count' THEN
                (SELECT count(*) FROM issues c WHERE c.parent_id=f.id AND c.deleted_at IS NULL AND c.archived_at IS NULL
                 AND (NOT f.own_only OR c.created_by_id=$1::uuid)) END AS child_count,
-           CASE WHEN $32::text='link_count' THEN
+           CASE WHEN $34::text='link_count' THEN
                (SELECT count(*) FROM issue_links l WHERE l.issue_id=f.id AND l.deleted_at IS NULL) END AS link_count,
-           CASE $32::text
+           CASE $34::text
              WHEN 'state_name' THEN f.state_key
              WHEN 'label_name' THEN (SELECT min(l.name_key COLLATE "C") FROM issue_labels r JOIN labels l ON l.id=r.label_id WHERE r.issue_id=f.id AND r.deleted_at IS NULL)
              WHEN 'assignee_name' THEN (SELECT min(a.name_key COLLATE "C") FROM issue_assignees r JOIN assignees a ON a.id=r.assignee_id WHERE r.issue_id=f.id AND r.deleted_at IS NULL)
            END AS k_text
     FROM counted f
 ), numeric_keys AS (
-    SELECT s.id, s.own_only, s.total, s.child_count, s.link_count, s.k_text,
-           CASE $32::text
+    SELECT s.id, s.own_only, s.total, s.child_count, s.link_count, s.attachment_count, s.k_text,
+           CASE $34::text
              WHEN 'sort_order' THEN ((CASE WHEN get_byte(s.bits,0)>=128 THEN -1 ELSE 1 END)::bigint *
                  ((get_byte(s.bits,0)&127)::bigint*72057594037927936::bigint + get_byte(s.bits,1)::bigint*281474976710656::bigint
                  + get_byte(s.bits,2)::bigint*1099511627776::bigint + get_byte(s.bits,3)::bigint*4294967296::bigint
@@ -80,32 +83,33 @@ WITH projects AS (
              WHEN 'priority' THEN (CASE s.priority WHEN 'urgent' THEN 4 WHEN 'high' THEN 3 WHEN 'medium' THEN 2 WHEN 'low' THEN 1 ELSE 0 END)::numeric
              WHEN 'sub_issues_count' THEN s.child_count::numeric
              WHEN 'link_count' THEN s.link_count::numeric
+             WHEN 'attachment_count' THEN s.attachment_count::numeric
            END AS k_num
     FROM source_keys s
 ), keyed AS (
-    SELECT n.id, n.own_only, n.total, n.child_count, n.link_count, n.k_text, n.k_num, (n.k_num IS NULL AND n.k_text IS NULL) AS k_null FROM numeric_keys n
+    SELECT n.id, n.own_only, n.total, n.child_count, n.link_count, n.attachment_count, n.k_text, n.k_num, (n.k_num IS NULL AND n.k_text IS NULL) AS k_null FROM numeric_keys n
 ), ranked AS (
-    SELECT k.id, k.own_only, k.total, k.child_count, k.link_count, k.k_text, k.k_num, k.k_null, row_number() OVER (
+    SELECT k.id, k.own_only, k.total, k.child_count, k.link_count, k.attachment_count, k.k_text, k.k_num, k.k_null, row_number() OVER (
         ORDER BY k.k_null,
-                 CASE WHEN NOT $33::boolean THEN k.k_num END ASC,
-                 CASE WHEN $33::boolean THEN k.k_num END DESC,
-                 CASE WHEN NOT $33::boolean THEN k.k_text END COLLATE "C" ASC,
-                 CASE WHEN $33::boolean THEN k.k_text END COLLATE "C" DESC,
-                 CASE WHEN NOT $33::boolean THEN k.id END ASC,
-                 CASE WHEN $33::boolean THEN k.id END DESC) AS page_position
+                 CASE WHEN NOT $35::boolean THEN k.k_num END ASC,
+                 CASE WHEN $35::boolean THEN k.k_num END DESC,
+                 CASE WHEN NOT $35::boolean THEN k.k_text END COLLATE "C" ASC,
+                 CASE WHEN $35::boolean THEN k.k_text END COLLATE "C" DESC,
+                 CASE WHEN NOT $35::boolean THEN k.id END ASC,
+                 CASE WHEN $35::boolean THEN k.id END DESC) AS page_position
     FROM keyed k
-    WHERE NOT $34::boolean OR
-          (k.k_null AND NOT $35::boolean) OR
-          (k.k_null=$35::boolean AND
-           (CASE WHEN $33::boolean THEN
-               (k.k_num<$36::bigint::numeric OR k.k_text COLLATE "C"<$37::text COLLATE "C")
-             ELSE (k.k_num>$36::bigint::numeric OR k.k_text COLLATE "C">$37::text COLLATE "C") END
-            OR ((k.k_null OR k.k_num=$36::bigint::numeric OR k.k_text COLLATE "C"=$37::text COLLATE "C")
-                AND CASE WHEN $33::boolean THEN k.id<$38::uuid ELSE k.id>$38::uuid END)))
+    WHERE NOT $36::boolean OR
+          (k.k_null AND NOT $37::boolean) OR
+          (k.k_null=$37::boolean AND
+           (CASE WHEN $35::boolean THEN
+               (k.k_num<$38::bigint::numeric OR k.k_text COLLATE "C"<$39::text COLLATE "C")
+             ELSE (k.k_num>$38::bigint::numeric OR k.k_text COLLATE "C">$39::text COLLATE "C") END
+            OR ((k.k_null OR k.k_num=$38::bigint::numeric OR k.k_text COLLATE "C"=$39::text COLLATE "C")
+                AND CASE WHEN $35::boolean THEN k.id<$40::uuid ELSE k.id>$40::uuid END)))
 ), paged AS MATERIALIZED (
     -- Carry the one authoritative order through the page's full projection.
-    SELECT id, own_only, total, child_count, link_count, k_text, k_num, k_null, page_position FROM ranked WHERE page_position <= $39::integer
-    LIMIT $39::integer
+    SELECT id, own_only, total, child_count, link_count, attachment_count, k_text, k_num, k_null, page_position FROM ranked WHERE page_position <= $41::integer
+    LIMIT $41::integer
 )
 SELECT i.id, i.workspace_id, i.project_id, i.sequence_id, i.name, i.state_id, i.priority,
        i.start_date, i.target_date, i.parent_id, i.sort_order, i.completed_at, i.archived_at,
@@ -116,6 +120,7 @@ SELECT i.id, i.workspace_id, i.project_id, i.sequence_id, i.name, i.state_id, i.
        coalesce(k.child_count,(SELECT count(*) FROM issues c WHERE c.parent_id=i.id AND c.deleted_at IS NULL AND c.archived_at IS NULL
                               AND (NOT k.own_only OR c.created_by_id=$1::uuid)))::bigint AS sub_issues_count,
        coalesce(k.link_count,(SELECT count(*) FROM issue_links l WHERE l.issue_id=i.id AND l.deleted_at IS NULL))::bigint AS link_count,
+       k.attachment_count::bigint AS attachment_count,
        coalesce((SELECT array_agg(a.assignee_id ORDER BY a.assignee_id) FROM issue_assignees a WHERE a.issue_id=i.id AND a.deleted_at IS NULL),'{}'::uuid[])::uuid[] AS assignee_ids,
        coalesce((SELECT array_agg(l.label_id ORDER BY l.label_id) FROM issue_labels l WHERE l.issue_id=i.id AND l.deleted_at IS NULL),'{}'::uuid[])::uuid[] AS label_ids
 FROM paged k JOIN issues i ON i.id=k.id
@@ -133,6 +138,8 @@ type FlatIssuesParams struct {
 	LabelKeys         []string
 	AssigneeIds       []uuid.UUID
 	AssigneeKeys      []string
+	AttachmentIds     []uuid.UUID
+	AttachmentCounts  []int64
 	Archived          bool
 	SubIssues         bool
 	FilterProjects    []uuid.UUID
@@ -165,35 +172,36 @@ type FlatIssuesParams struct {
 }
 
 type FlatIssuesRow struct {
-	ID             uuid.UUID
-	WorkspaceID    uuid.UUID
-	ProjectID      uuid.UUID
-	SequenceID     int32
-	Name           string
-	StateID        uuid.UUID
-	Priority       string
-	StartDate      *time.Time
-	TargetDate     *time.Time
-	ParentID       *uuid.UUID
-	SortOrder      float64
-	CompletedAt    *time.Time
-	ArchivedAt     *time.Time
-	CreatedByID    *uuid.UUID
-	UpdatedByID    *uuid.UUID
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
-	Total          int64
-	GroupKey       string
-	GroupTotal     int64
-	SubGroupKey    string
-	SubgroupTotal  int64
-	CellTotal      int64
-	NameKey        string
-	NameNull       bool
-	SubIssuesCount int64
-	LinkCount      int64
-	AssigneeIds    []uuid.UUID
-	LabelIds       []uuid.UUID
+	ID              uuid.UUID
+	WorkspaceID     uuid.UUID
+	ProjectID       uuid.UUID
+	SequenceID      int32
+	Name            string
+	StateID         uuid.UUID
+	Priority        string
+	StartDate       *time.Time
+	TargetDate      *time.Time
+	ParentID        *uuid.UUID
+	SortOrder       float64
+	CompletedAt     *time.Time
+	ArchivedAt      *time.Time
+	CreatedByID     *uuid.UUID
+	UpdatedByID     *uuid.UUID
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+	Total           int64
+	GroupKey        string
+	GroupTotal      int64
+	SubGroupKey     string
+	SubgroupTotal   int64
+	CellTotal       int64
+	NameKey         string
+	NameNull        bool
+	SubIssuesCount  int64
+	LinkCount       int64
+	AttachmentCount int64
+	AssigneeIds     []uuid.UUID
+	LabelIds        []uuid.UUID
 }
 
 // Directories are paired arrays, already scoped in the same read snapshot.
@@ -210,6 +218,8 @@ func (q *Queries) FlatIssues(ctx context.Context, arg FlatIssuesParams) ([]FlatI
 		arg.LabelKeys,
 		arg.AssigneeIds,
 		arg.AssigneeKeys,
+		arg.AttachmentIds,
+		arg.AttachmentCounts,
 		arg.Archived,
 		arg.SubIssues,
 		arg.FilterProjects,
@@ -275,6 +285,7 @@ func (q *Queries) FlatIssues(ctx context.Context, arg FlatIssuesParams) ([]FlatI
 			&i.NameNull,
 			&i.SubIssuesCount,
 			&i.LinkCount,
+			&i.AttachmentCount,
 			&i.AssigneeIds,
 			&i.LabelIds,
 		); err != nil {

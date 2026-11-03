@@ -2,14 +2,30 @@ package httpadapter
 
 import (
 	"context"
+	"fmt"
+	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/http/gen"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/domain"
+	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver/bodyshape"
 )
 
 // CreateIssueComment serves POST /api/v0/issues/{issue_id}/comments.
 func (h handler) CreateIssueComment(ctx context.Context, req gen.CreateIssueCommentRequestObject) (gen.CreateIssueCommentResponseObject, error) {
-	c, err := h.uc.CreateIssueComment.Execute(ctx, req.IssueID, req.Body.CommentHTML)
+	in := domain.NewComment{HTML: req.Body.CommentHTML}
+	if req.Body.AttachmentIds != nil {
+		// Keep the original spelling until this boundary; UUID.UnmarshalJSON
+		// would otherwise silently normalize upper-case and compact values.
+		in.AttachmentIDs = make([]uuid.UUID, len(*req.Body.AttachmentIds))
+		for n, raw := range *req.Body.AttachmentIds {
+			id, err := uuid.Parse(raw)
+			if err != nil || id.String() != raw {
+				return nil, &bodyshape.Error{Fields: []bodyshape.FieldError{{Field: fmt.Sprintf("attachment_ids[%d]", n), Code: "invalid_format"}}}
+			}
+			in.AttachmentIDs[n] = id
+		}
+	}
+	c, err := h.uc.CreateIssueComment.Execute(ctx, req.IssueID, in)
 	if err != nil {
 		return nil, err
 	}

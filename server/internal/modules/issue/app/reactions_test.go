@@ -97,7 +97,7 @@ func TestIssueReactions(t *testing.T) {
 			_, _, w, f, id := newReaction()
 			w.auth.grants = []shared.Grant{ownOnly}
 			w.auth.answers = []error{shared.Forbidden()}
-			locks := app.NewLocks(w.project, w.issues, w.auth, fakeGate{log: w.log}, fakeTx{log: w.log})
+			locks := app.NewLocks(w.project, w.issues, w.auth, fakeGate{log: w.log}, fakeTx{log: w.log}, noIssueAttachments{})
 			d := app.AddIssueReactionDeps{Events: discardEvents{}, Locks: locks, Reactions: f, Clock: clockAt{at: clockNow, log: w.log}}
 			a, r := app.NewAddIssueReaction(d), app.NewRemoveIssueReaction(d)
 			var e error

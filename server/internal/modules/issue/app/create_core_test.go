@@ -55,11 +55,19 @@ func (r *coreRows) Clean(string) domain.RichText {
 }
 func (r *coreRows) Publish(_ context.Context, e shared.Event) error { r.event = e; return nil }
 
+func (r *coreRows) CountIssueAttachments(_ context.Context, ids []uuid.UUID) ([]AttachmentCount, error) {
+	rows := make([]AttachmentCount, len(ids))
+	for n, id := range ids {
+		rows[n].IssueID = id
+	}
+	return rows, nil
+}
+
 // A second clock reading or returning a separate At would split the draft's
 // eventual deletion time from the actual issue, child rows, version and event.
 func TestCreateCoreReturnsItsWriteMoment(t *testing.T) {
 	r := &coreRows{at: time.Date(2044, 5, 6, 7, 8, 9, 123456000, time.UTC)}
-	core := NewIssueCreation(IssueCreationDeps{Issues: r, States: r, Sequences: r, Clock: r, Sanitizer: r, Events: r})
+	core := NewIssueCreation(IssueCreationDeps{Attachments: r, Issues: r, States: r, Sequences: r, Clock: r, Sanitizer: r, Events: r})
 	in, err := domain.CheckNewIssue(domain.NewIssue{Name: "Hi"})
 	if err != nil {
 		t.Fatal(err)
@@ -77,5 +85,27 @@ func TestCreateCoreReturnsItsWriteMoment(t *testing.T) {
 	}
 	if got.ID != r.row.ID || got.Name != "stored projection" || r.row.By != actor || r.subscribers.By != actor || r.version.OwnedByID != actor || r.event.ActorID == nil || *r.event.ActorID != actor {
 		t.Fatalf("result=%+v rows=%+v", got, r)
+	}
+}
+
+func TestCreateCorePreparationDoesNotReadClockOrWriteRows(t *testing.T) {
+	r := &coreRows{at: time.Date(2044, 5, 6, 7, 8, 9, 0, time.UTC)}
+	u := NewIssueCreation(IssueCreationDeps{Attachments: r, Issues: r, States: r, Sequences: r, Clock: r, Sanitizer: r, Events: r})
+	in, err := domain.CheckNewIssue(domain.NewIssue{Name: "Prepared"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	actor, project, workspace := uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
+	p, err := u.prepareLocked(context.Background(), actor, project, held{project: LockedProject{WorkspaceID: workspace}}, in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r.clockReads != 0 || r.row.ID != uuid.Nil() || p.row.ID == uuid.Nil() || !p.row.At.IsZero() || p.row.CompletedAt != nil {
+		t.Fatalf("preparation wrote or read clock: %+v %+v", r, p)
+	}
+	at := r.at.Add(48 * time.Hour)
+	got, err := u.writePreparedAt(context.Background(), p, at)
+	if err != nil || r.clockReads != 0 || got.ID != p.row.ID || r.row.SequenceID != 7 || !r.row.At.Equal(at) || !r.event.OccurredAt.Equal(at) || r.row.CompletedAt == nil || !r.row.CompletedAt.Equal(at) {
+		t.Fatalf("separate creation graph or time: %+v %v %+v", got, err, r)
 	}
 }

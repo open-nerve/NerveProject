@@ -28,7 +28,7 @@ func assetOwners(w issueWorld) assetHostAccess {
 	auth := access.New(access.Deps{WorkspaceRoles: wp.WorkspaceRoles, ProjectAccess: accessProjects{projects: pp.ProjectAccess}})
 	ws := workspace.New(workspace.Deps{Pool: w.pool, Authorizer: auth})
 	pr := project.New(project.Deps{Pool: w.pool, Authorizer: auth})
-	is := issue.New(issue.Deps{Pool: w.pool, Authorizer: auth, Projects: issueProjects{projects: pp.IssueProjects}, Workspaces: issueWorkspaces{directory: wp.WorkspaceDirectory}})
+	is := issue.New(issue.Deps{AttachmentReader: attachmentCounterOn(w.pool), AttachmentCounter: attachmentCounterOn(w.pool), Pool: w.pool, Authorizer: auth, Projects: issueProjects{projects: pp.IssueProjects}, Workspaces: issueWorkspaces{directory: wp.WorkspaceDirectory}})
 	return assetHostAccess{ws.AssetAccess(), pr.AssetAccess(), is.AssetAccess()}
 }
 

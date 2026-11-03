@@ -150,6 +150,11 @@ export function linkCreatedRow(url: string): ActivityRow {
   return activityRow("created", "link", null, url, "created a link");
 }
 
+/** Attachment activity carries its asset identity, without copying file metadata. */
+export function attachmentCreatedRow(): ActivityRow {
+  return activityRow("created", "attachment", null, null, "added an attachment");
+}
+
 /** A link URL change; a title-only write has no activity row. */
 export function linkUpdatedRow(old: string, url: string): ActivityRow {
   return activityRow("updated", "link", old, url, "updated a link");

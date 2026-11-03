@@ -34,8 +34,8 @@ var (
 	webSeven  = domain.Issue{ID: uuid.MustParse("0199a2b4-0000-7000-8000-0000000000e7"), WorkspaceID: acmeID, ProjectID: webID, SequenceID: 7,
 		Name: "Fix the login", DescriptionHTML: "<p>Seven</p>", StateID: stateID, Priority: domain.PriorityHigh, StartDate: &startDay, TargetDate: &targetDay, ParentID: &webSixID,
 		SortOrder: 75535.5, CompletedAt: &completed, ArchivedAt: &archived, AssigneeIDs: []uuid.UUID{bobID}, LabelIDs: []uuid.UUID{bugID},
-		SubIssuesCount: 2, LinkCount: 9007199254740993, CreatedByID: &aliceID, UpdatedByID: &bobID, CreatedAt: created, UpdatedAt: updated}
-	webSevenJSON = `{"archived_at":"2026-10-17T10:00:30.123456Z","assignee_ids":["0199a2b4-0000-7000-8000-000000000002"],` +
+		SubIssuesCount: 2, AttachmentCount: 9007199254740993, LinkCount: 9007199254740993, CreatedByID: &aliceID, UpdatedByID: &bobID, CreatedAt: created, UpdatedAt: updated}
+	webSevenJSON = `{"archived_at":"2026-10-17T10:00:30.123456Z","assignee_ids":["0199a2b4-0000-7000-8000-000000000002"],"attachment_count":9007199254740993,` +
 		`"completed_at":"2026-10-17T10:00:00.123455999Z","created_at":"2026-10-17T10:00:00.123456Z",` +
 		`"created_by_id":"0199a2b4-0000-7000-8000-000000000001","id":"0199a2b4-0000-7000-8000-0000000000e7",` +
 		`"label_ids":["0199a2b4-0000-7000-8000-0000000000d1"],"link_count":9007199254740993,"name":"Fix the login","parent_id":"0199a2b4-0000-7000-8000-0000000000e6",` +
@@ -45,7 +45,7 @@ var (
 		`"updated_by_id":"0199a2b4-0000-7000-8000-000000000002","workspace_id":"0199a2b4-0000-7000-8000-00000000000a"}`
 	webEight = domain.Issue{ID: uuid.MustParse("0199a2b4-0000-7000-8000-0000000000e8"), WorkspaceID: acmeID, ProjectID: webID, SequenceID: 8,
 		Name: "Fix", DescriptionHTML: "<p></p>", StateID: stateID, Priority: domain.PriorityNone, SortOrder: 65535, CreatedAt: created, UpdatedAt: created}
-	webEightJSON = `{"archived_at":null,"assignee_ids":[],"completed_at":null,"created_at":"2026-10-17T10:00:00.123456Z",` +
+	webEightJSON = `{"archived_at":null,"assignee_ids":[],"attachment_count":0,"completed_at":null,"created_at":"2026-10-17T10:00:00.123456Z",` +
 		`"created_by_id":null,"id":"0199a2b4-0000-7000-8000-0000000000e8","label_ids":[],"link_count":0,"name":"Fix","parent_id":null,"priority":"none",` +
 		`"project_id":"0199a2b4-0000-7000-8000-0000000000a1","sequence_id":8,"sort_order":65535,"start_date":null,` +
 		`"state_id":"0199a2b4-0000-7000-8000-0000000000c1","sub_issues_count":0,"target_date":null,"updated_at":"2026-10-17T10:00:00.123456Z",` +

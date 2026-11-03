@@ -8,8 +8,8 @@ SHELL := /bin/bash
 
 DEV_COMPOSE := docker compose -f deploy/compose.dev.yaml
 GOLANGCI_LINT_VERSION := 2.13.2
-# go test 的期限覆盖整个包；组合套件的累计运行需独立于单个请求/锁等待期限。
-GO_TEST_TIMEOUT ?= 15m
+# go test 的期限覆盖整个包；605 个组合测试的累计运行需独立于单个请求/锁等待期限。
+GO_TEST_TIMEOUT ?= 20m
 BIN_DIR := $(CURDIR)/bin
 GOLANGCI_LINT := $(BIN_DIR)/golangci-lint
 

@@ -151,16 +151,21 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 		a.close()
 		return nil, err
 	}
-	events, err := newDispatcher(eventTypes(), slices.Concat(issue.Subscribers(issueInserter{client: inserter}), asset.Subscribers(assetPorts, assetInserter{client: inserter})))
+	events, err := newDispatcher(eventTypes(), slices.Concat(issue.Subscribers(issuePorts, issueInserter{client: inserter}), asset.Subscribers(assetPorts, assetInserter{client: inserter})))
 	if err != nil {
 		a.close()
 		return nil, err
 	}
 	projectWrites := newWriteGate(cfg.Issue.WriteGate)
 	issueTx := newIssueJobTx(pool, cfg)
+	attachmentReads := asset.NewAttachmentReads(assetPorts)
+	issueAttachmentReads := issueAttachments{reader: attachmentReads, counter: attachmentReads, catalog: attachmentReads}
 	issues := issue.New(issue.Deps{
-		DraftAssets: issueDraftAssets{assets: assetPorts.DraftAssets},
-		Outbound:    outboundClient, Logger: logger,
+		AttachmentReader: issueAttachmentReads, AttachmentCounter: issueAttachmentReads, AttachmentCatalog: issueAttachmentReads,
+		ContentBindings:    issueContentBindings{bindings: asset.NewContentBindings(assetPorts, businessClock)},
+		DraftAssetTransfer: issueDraftAssetTransfer{assets: asset.NewDraftAssetTransfer(assetPorts, businessClock, events)},
+		DraftAssets:        issueDraftAssets{assets: assetPorts.DraftAssets},
+		Outbound:           outboundClient, Logger: logger,
 		Events: events,
 		Pool:   pool, Tx: busyTx{tx: issueTx}, JobTx: issueTx, ArchivePolicies: projectPorts.ArchivePolicies, AutoArchiveInterval: cfg.Issue.AutoArchiveInterval, TrimVersionsInterval: cfg.Issue.TrimVersionsInterval,
 		DeleteBatch: cfg.Issue.DeleteBatch, DeleteBudget: cfg.Issue.DeleteBudget, RuntimeNow: time.Now,
@@ -221,7 +226,7 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 		a.close()
 		return nil, err
 	}
-	files, err := asset.New(asset.Deps{Files: cfg.Files, RuntimeNow: assets.runtimeNow, Transfer: assets.transfer, Sealing: assets.sealing, Ports: assetPorts, Objects: assets.store, Inventory: assets.store, Temporary: assets.store, JobTx: tx,
+	files, err := asset.New(asset.Deps{Events: events, Files: cfg.Files, RuntimeNow: assets.runtimeNow, Transfer: assets.transfer, Sealing: assets.sealing, Ports: assetPorts, Objects: assets.store, Inventory: assets.store, Temporary: assets.store, JobTx: tx,
 		PurgeAfter: cfg.Cleanup.PurgeAfter,
 		ReadTx:     postgres.NewTxManager(pool, cfg.Database.CommitTimeout, postgres.ReadOnlySnapshot()), UploadSigner: assets.store, ReadSigner: assets.store,
 		Parents: assetParentReader{workspaces: workspacePorts.AssetParents, projects: projectPorts.AssetParents, issues: issuePorts.AssetParents},

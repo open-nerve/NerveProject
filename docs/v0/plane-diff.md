@@ -333,7 +333,7 @@ M4/P6 已实现的差异以 [P6 review](M4-issue-core/reviews/P6-issue-events-re
 | 归档 | 工作项、迭代、模块、项目的归档与恢复，以及项目级自动归档 | 规则一致（见 v0-design 5.5）；归档和恢复改为 `POST .../archive` 和 `POST .../unarchive` 两个动作接口；列表通过 `?archived=true` 查询已归档的对象 |
 | 描述、评论的长度 | 没有同一边界规则 | `description_html`、`comment_html` 各最多 500000 个 Unicode 字符，默认请求体仍为 1 MiB（M4/P4） |
 | 描述与清洗 | 异步动态/版本与宽泛输入 | `issue/adapter/content` 唯一清洗策略，app 小接口、domain 纯值；创建默认 `<p></p>`，保存后的描述、提及、关注、动态、版本同事务；旧工作项不伪造初版（M4/P4，A1） |
-| `skip_activity` | 沿旧字符串标志跳过动态 | 仅 JSON boolean；出现（含 false）只能与描述一起且不能带其他 patch 字段。true 且纯文本、按顺序保留重复的 user mention UUID、`a[href]`、checkbox checked 均相同时，只写清洗 HTML/stripped 并同步提及资格，不改主审计、不写动态/版本；false 或内容标识变化是普通保存。只改格式可不留审计是已批准代价，图片 src 投影留 M5（M4/P4） |
+| `skip_activity` | 沿旧字符串标志跳过动态 | 仅 JSON boolean；出现（含 false）只能与描述一起且不能带其他 patch 字段。true 且纯文本、按顺序保留重复的 user mention UUID、`a[href]`、checkbox checked 均相同时，只写清洗 HTML/stripped 并同步提及资格，不改主审计、不写动态/版本；false 或内容标识变化是普通保存。只改格式可不留审计是已批准代价，M4/P4预留的图片src投影已由M5/P5加入：image-component[src]按顺序保留重复并参与同一比较，规范UUID才进入内部引用校验；当前引用在同一事务验证/绑定，未改变的旧HTML也不绕过权限 |
 | 空评论 | 服务端接受 | 清洗后无文字且无 mention/image 节点，422 `comment_html/required`（M4/P4） |
 | 改、删别人的评论 | 项目管理员可以改、删 | 仅作者编辑；作者或项目管理员删除，其他人 403 `issue.not_author`；隐藏先统一子资源 404，项目归档先于工作项归档 409，归档先于相同 HTML 无改动（M4/P4） |
 | 表情的值与归属 | 任意文本；重复 400 | 十进制格式 `^[0-9]{1,7}(-[0-9]{1,7}){0,15}$` 且 ≤128 字符；自己的重复 409，删除只找自己的活行，无该行 404；评论表情不推进 issue/comment 审计（M4/P4） |
@@ -477,3 +477,26 @@ no-shadow全仓清零并升error；死成员按原脚本逐行追生产、测试
 只读对照Plane db/models/user.py:69/78、workspace.py:124、project.py:102：四个图片外键nullable、删除SET_NULL，并保留旧URL回退。Nerve保留所属nullable UUID字段，以即时NO ACTION和每列索引阻止资产被误删；由owner显式条件解除失效引用，清理和精确目录证明在P4/T4完成，不靠SET_NULL或关闭约束绕过。user/workspace/project各自的00035–00037迁移和sqlc scope负责本表，无跨模块SQL。
 
 项目预设保存稳定cover-01..29，与上传UUID互斥，不保存构建URL或运行时签名；省略保留、null清对应侧、选择非空一侧清另一侧。T1–T12字段、原子绑定、所有owner响应中的授权URL、实际双驱动字节、保留期和进程恢复均已验收；项目只POST一次，不用前端补PATCH。29张素材及页面仍在P6，整阶段门禁/整审/集成另由T13–T15核验。
+
+
+## 九、M5/P5 内容资产、计数与迁移（T1–T12）
+
+只读对照Plane `apps/api/plane/utils/content_validator.py`的image-component/src允许集合与`app/views/issue/base.py`的迁移保存分支。Nerve继续保留既有安全URL和raw img清洗，在同一Sanitizer结果上投影image-component的有序src，缺src记空值、重复和位置保留。只改格式/合法block ID不改变身份；换图、换序、增删重复图片不能用skip_activity隐藏动态或版本。
+
+内部引用候选仅规范小写连字符UUID，不把远程源或URL中的UUID当成资产授权；raw img只保留既有HasImage含义。实际绑定/宿主权限与API审计由T3–T12证明，后端保存不抓取远程源；页面非资产源占位和不发远程请求留P7，本条不宣称已启用图片上传界面。
+
+P5/T2新增具名内容绑定/草稿完整集合端口：owner持父锁后资产按全局UUID分页锁定，专用SQL修改归属/绑定，原SaveAsset不扩权；草稿发布迁移全部完成的活件，但未引用描述继续私有。此处为端口和数据库层证据，API联动/真实字节留后续Task，见[P5阶段记录](M5-files/reviews/P5-issue-assets-review.md#9-t2完整集合绑定与草稿迁移)。
+
+P5/T3接通已有宿主普通附件的最终事务绑定、按宿主授权的读取/复制/删除和精确工作项附件事件；描述、新评论准备件与资料图片保持私有边界。旧uploaded未绑附件需合法重试首次绑定；重复确认/删除不增加动态或覆盖审计。动态仅保存资产ID，不复制私有文件名/key/URL，subscriber失败或COMMIT失败整体回滚，父删除不制造逐件动作。真实API字节、锁、权限与两种存储回归见[P5阶段记录](M5-files/reviews/P5-issue-assets-review.md#10-t3附件发布权限与事务事件)；正文保存/评论创建/草稿发布消费仍由后续Task负责。
+
+P5/T4附件读取按Nerve已批准合同提供三种宿主的有界元数据分页，owner授权与资产事实共享只读快照；列表不签发URL或访问磁盘。计数只消费已授权ID/项目目录，通过asset小端口分1000查询，目录按issue UUID跨项目归并，不跨模块JOIN、不增加冗余计数列。Plane的asset/v2下载接口仍仅作交互参考，Nerve附件列表不复用下载URL或把上传完成等同于已绑定可见。实际排序消费和全部Issue计数响应仍由T5/T8负责。
+
+P5/T5工作项正文通过当前引用集合原子绑定；已绑定历史图片保留，未变化的旧HTML也不能绕过资产权限，skip_activity不吞换图/换序。全部Issue响应通过asset小端口得到真实普通附件计数，详情/编号/直接子项读取复用现有只读快照；跨模块事务仍由owner持有，目录批量查询不下沉到issue SQL。唯一创建核心拆为准备和按At写入，直接创建拒绝其他宿主图片、序号可回滚；草稿迁移调用图、评论接入与全局附件排序分别由T6–T8完成。
+
+P5/T6评论创建将当前正文图片与明确attachment_ids合并为一次锁定集合，预分配最终评论ID后同事务写评论、绑定和原事件；其他准备件保持私有，失败可重试且不消费部分文件。创建最多100个规范UUID，PATCH只改HTML，普通附件沿独立接口增删；新数组不改变M4的非空正文规则，评论附件不生成工作项附件动态。评论列表的reactions聚合与附件分页保持分责，编辑移除图片也不解绑历史；没有把Plane旧attachments整体替换行为移植到新协议。
+
+P5/T7草稿保存沿M4结构约束，原JSON不标准化，仅以清洗投影校验引用；换项目迁移完整活集合，包括pending。发布在唯一创建事务中迁移全部已完成文件，pending先拒绝；当前和历史图片保留绑定，从未引用的准备图片继续私有并保留原清理年龄。普通附件迁入后按UUID写一次工作项动态；不采用发布后再搬文件或按当前HTML清理历史图的做法。
+
+P5/T8附件排序沿M4完整目录与快照读取模式：asset提供完整非零计数目录，Issue SQL接收内存UUID/bigint数组，在权限/业务过滤后全局排序再分页；没有跨模块表JOIN或常驻冗余计数。0为有效整数，正反向UUID平局规则和int64游标精度保持；目录错误整体失败。前端变化指纹纳入附件计数，旧回包不能覆写新计数，列表菜单留P7实现。
+
+截至T12，上述端口的工作项/评论/草稿API调用、两存储真实字节、权限交错及历史删除恢复已完成验证，不再是仅端口的预留。冷统计HTTP覆盖1000/1001/10000项和1001项目，最大10007项非零目录仍在原5秒client/15秒API期限内；代价是仅附件排序需要完整内存目录，不承诺无限规模。容量使用明确标记的内部批量fixture，不冒称真实上传数据。阶段完整门禁、整审、准确分支/main CI另记于[P5阶段记录](M5-files/reviews/P5-issue-assets-review.md)。

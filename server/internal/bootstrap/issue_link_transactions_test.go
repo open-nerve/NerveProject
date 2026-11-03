@@ -185,7 +185,7 @@ func TestIssueLinkWriteRollback(t *testing.T) {
 			}
 			store := issuepg.New(w.pool)
 			projects := issueProjects{projects: project.Provide(w.pool, nil).IssueProjects}
-			locks := issueapp.NewLocks(projects, store, authorizerOn(w.pool), newWriteGate(testIssueConfig.WriteGate), postgres.NewTxManager(w.pool, 2*time.Second))
+			locks := issueapp.NewLocks(projects, store, authorizerOn(w.pool), newWriteGate(testIssueConfig.WriteGate), postgres.NewTxManager(w.pool, 2*time.Second), attachmentCounterOn(w.pool))
 			ctx := shared.WithActor(pgtest.Soon(t), shared.Actor{UserID: w.ids["alice"]})
 			writePort := map[string]string{"createIssueLink": "InsertLink", "updateIssueLink": "UpdateLink", "deleteIssueLink": "DeleteLink"}[operation]
 			for _, port := range []string{"MarkChanged", writePort, "InsertActivities", "Publish"} {

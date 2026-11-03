@@ -53,8 +53,8 @@ func newCreate() (*app.CreateIssue, *world) {
 	w.issues = &fakeIssues{log: log, greatest: map[uuid.UUID]float64{done.ID: 85535}}
 	w.auth = &fakeAuthorizer{log: log}
 	w.profiles = fakeProfiles{log: log, names: map[uuid.UUID]string{alice: "Alice", bob: "bob", carol: "Carol C.", gus: "gus"}}
-	w.locks = app.NewLocks(w.project, w.issues, w.auth, fakeGate{}, fakeTx{log: log})
-	uc := app.NewCreateIssue(app.CreateIssueDeps{Locks: w.locks, Creation: app.NewIssueCreation(app.IssueCreationDeps{Events: discardEvents{}, Sanitizer: descriptionSanitizer{}, Issues: w.issues, Sequences: w.project, States: w.project, Labels: w.project,
+	w.locks = app.NewLocks(w.project, w.issues, w.auth, fakeGate{}, fakeTx{log: log}, noIssueAttachments{})
+	uc := app.NewCreateIssue(app.CreateIssueDeps{Locks: w.locks, Creation: app.NewIssueCreation(app.IssueCreationDeps{Attachments: noIssueAttachments{}, Events: discardEvents{}, Sanitizer: descriptionSanitizer{}, Issues: w.issues, Sequences: w.project, States: w.project, Labels: w.project,
 		Members: w.project, Profiles: w.profiles, Clock: clockAt{at: clockNow, log: log}})})
 	return uc, w
 }
@@ -88,7 +88,7 @@ func created(id, state uuid.UUID, asked, labelsAsked, assignees, labels, subscri
 	if len(labelsAsked) > 0 {
 		calls = append(calls, line("Labels", web, labelsAsked))
 	}
-	calls = append(calls, line("Next", web), "Now", line("GreatestSortOrder", web, state), line("InsertIssue", id))
+	calls = append(calls, line("Next", web), line("GreatestSortOrder", web, state), "Now", line("InsertIssue", id))
 	if len(assignees) > 0 {
 		calls = append(calls, line("InsertAssignees", assignees))
 	}
