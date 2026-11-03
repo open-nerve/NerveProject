@@ -1,6 +1,6 @@
 # P6 预检：公开项目非成员封面的读取生命期
 
-> PC1 待负责人决策。分支 `codex/m5-p6`，基线 `c59cedf337c5c5654bef2f0cbb33407ff04ced26`。仅提交预检材料，没有修改产品；P6 未预检通过、未实现。P5 已独立 noff 集成，main CI/归档继续，不依赖此决策。
+> PC1 已裁定 A（负责人 2026-11-04）：补齐现有观察器并做联合回归。分支 `codex/m5-p6`，基线 `c59cedf337c5c5654bef2f0cbb33407ff04ced26`。仅提交预检材料，没有修改产品；合同正同步复核，P6 未实现。P5 已独立 noff 集成，main CI/归档继续。
 
 ## 已确认事实
 
@@ -10,7 +10,7 @@ M4 的 PermissionReads 只在有效项目角色存在时设置项目签名。对
 
 P6 草案要求图片旧生命期在可见性丢失后永久终止，同时仅沿既有 IssueRootStore 失效入口。不能靠渲染时再查当前存在解决 ABA：恢复后旧 token 又会通过当前存在检查。也不能让项目非成员获得工作项角色、只在图片组件额外观察一份权限、或恢复被 M4 R06 排除的旧详情。
 
-## 建议方案 A
+## 已批准方案 A
 
 在既有 PermissionReads 的项目失效事实中补齐“当前项目可见，但无工作项角色”的状态。可见性仍由 ProjectStore 规范 getter 给出，按工作区匹配；只存可比较签名和水位，不缓存实体。IssueRootStore 保持唯一所有者和订阅入口，UserPermissionStore、服务端授权、ProjectStore R06 的事实选择保持原合同。有效角色仍单独判定，签名的存在只决定旧读是否过时，绝不能作工作项可读/可写证明。
 
@@ -30,7 +30,7 @@ P6 暂时对公开项目非成员仅显示中性/预设封面，延后其自定�
 
 ## 需要决策的边界
 
-这是对 M4 共享失效事实范围的扩展，影响所有订阅者；按负责人“跨模块协同调整先提交再上报”的纪律，在正式版本化材料后请负责人决定 A 或 B。P5预算及集成是独立工作；P6产品实现保持未开始。
+这是对 M4 共享失效事实范围的扩展，影响所有订阅者；材料已在 f9bdfb07 提交并推送，负责人随后选择 A，允许先同步 M4/M5 设计及 P6 合同，再按计划实现并做联合回归。P5预算及集成是独立工作；P6产品实现保持未开始。
 
 ## 真实 store 联合复核补证
 
@@ -47,4 +47,10 @@ p6-real-permission-probe-actual.log / -receipt.json 保存1.598秒行为复现�
 
 原件位于本 worktree `.superpowers/sdd/P6-profile-upload/precheck/`；其中 `p6-precheck-probe-evidence.json` 固定十份证据的 SHA/bytes，`source-copy-manifest.json` 核验从 P5 现场复制的全部预检材料。P5 原始归档另保留未经改写的报告和首次配置错误。实际 store 探针源码 SHA-256 为 `1dda80f7c29cb4742cf508b06105f2f4455c5f3b80795a0811d52da312ac0c57`，有效行为失败日志为 `73a5d3e3243934e18a48bf3839c710335a3da873cd60d2cd018c36933b940ecd`。
 
-方案 A 只修改 `core/store/issue/permission-reads.ts` 的事实签名及其测试与 P6 接入；不修改 UserPermissionStore 的授权角色、不修改 ProjectStore R06 的规范来源、不修改后端项目可见规则。不是把“可见项目”升级为“可读工作项”。先修订 [M4 §3.22 权限读取水位](../../M4-issue-core/M4-design.md)、[M5 §9](../M5-design.md#9-前端与视觉)、主 spec、接口合同和 plan，再开始产品实现。
+方案 A 只修改 `core/store/issue/permission-reads.ts` 的事实签名及其测试与 P6 接入；不修改 UserPermissionStore 的授权角色、不修改 ProjectStore R06 的规范来源、不修改后端项目可见规则。先修订 [M4 §3.22 权限读取水位](../../M4-issue-core/M4-design.md)、[M5 §9](../M5-design.md#9-前端与视觉)、主 spec、接口合同和 plan，再开始产品实现。
+
+## 裁定后的执行约束
+
+保持 IssueRootStore 唯一失效所有者；PermissionReads 以 ProjectStore 当前规范 getter 和工作区匹配形成可见性签名，有效工作项角色仍独立判定。无角色的可见项目不再与缺席共用 undefined 签名；不缓存另一份实体、不新加观察器、不把新签名当授权。若缺席后恢复，旧 token 永久过时，新生命期须重新获取宿主事实。
+
+T2 增加真实 root/ProjectStore 的非成员缺席恢复、旧 token/新 token、角色权限保持和无关范围回归；T3 证明封面卸载与迟到答复不能复活；T12 用删除可见性签名的单点变异检验真实断言。原 R06 目录/详情正反交错、成员/guest 收窄、无变化目录及 root 退休同时保留。批准方案不等于这些测试已经运行或通过。

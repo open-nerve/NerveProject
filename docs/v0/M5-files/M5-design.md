@@ -1,6 +1,6 @@
 # M5：文件
 
-> 状态：P1–P4已完成集成归档；P5 T1–T14完成，最终分支6d14c965的CI 41728335065三项全绿，E2E 364/364。已noff集成为main c59cedf3，CI 41733981570及归档清理待核。P6只准备预检文档，PC1公开项目非成员读取失效的跨模块范围待负责人裁定，未实施。见[P5阶段记录](reviews/P5-issue-assets-review.md)和[P6预检](../../reviews/re-42-M5P6预检.md)。
+> 状态：P1–P4已完成集成归档；P5 T1–T14完成，最终分支6d14c965的CI 41728335065三项全绿，E2E 364/364。已noff集成为main c59cedf3，CI 41733981570及归档清理待核。P6只准备预检文档，PC1公开项目非成员读取失效已获负责人批准A，正同步合同与预检，未实施。见[P5阶段记录](reviews/P5-issue-assets-review.md)和[P6预检](../../reviews/re-42-M5P6预检.md)。
 > 起点：`main@3db22f06ad9e82a483c05c8078801af00a5cae02`（M4 最终 main CI 41397218533，三个作业成功）。
 > 设计、P1–P4分支均已合入并归档；P5已noff合入main并等待独立CI；当前文档工作分支codex/m5-p6。负责人2026-11-02已授权按既有节奏连续推进，常规设计、预检、实现、deep-review、`--no-ff`集成、CI和归档无需逐次询问。重大风险、架构回归或关键分歧，先提交已完成工作，再上报。
 
@@ -219,6 +219,8 @@ S3来源主机使用DNS或IPv4；浏览器CSP不能精确允许IPv6字面量，�
 
 P6 新 AssetService 作为当前会话 API client 的消费者；旧 FileService 随 P7 最后编辑器/评论调用者迁移一并删除；不在模块顶层 new 带会话实例。原始 PUT 使用不带业务认证的独立传输器，支持 AbortSignal、准备/上传/确认阶段进度、超时和可区分的拒绝；独立 fetch 不提供字节进度，不能编造百分比；取消不能吞错后继续 complete。store 以 session/loginId + workspace/project/issue/draft/comment scope 管理，复用 IssueRootStore 的权限失效入口，不另造平行权限缓存。
 
+**P6 PC1（负责人 2026-11-04 批准 A）：** 复用 IssueRootStore 时，现有 PermissionReads 同时记录规范项目可见性与现有有效角色的变化，补齐 member_role=null 的合法封面消费者；工作区匹配、当前 ProjectStore 事实和原 R06 规则仍是来源。目录缺席使旧生命周期永久失效，恢复后须新读；水位不是工作项授权，UserPermissionStore 和后端权限不变。不得另建 Asset 权限观察器或用历史详情复活封面；T2/T3/T12 联合回归及行为变异后验收，见[决策记录](reviews/P6-public-project-lifetime-decision.md)。
+
 保持现有路由 key，上传进度/弹窗在所属子树内；unmount 取消请求和 debounce，代次不符的进度、成功、失败均不能更新新宿主。SWR key 含 loginId，缓存 URL 包含到期时间，撤权清掉已解析地址。请求中按钮与关闭行为、拒绝保留、成功关闭、返回焦点和读屏通知按 M3 规则。
 
 头像/封面控件从只读 Plane 源码对照恢复，用新合同，不恢复旧上传地址或旧弹窗类名。项目保留预设和随机选择：制作本项目自己的 29 个静态封面（稳定 `cover-01` 至 `cover-29`，具体视觉允许实现者决定），登记 SOURCES；随机只在用户主动选择时选一个稳定 ID，不在后端/渲染时不停变。预设无需上传副本；自定义封面先上传准备件，再随创建一次绑定。不能保存 Vite hash 路径。
@@ -322,14 +324,14 @@ P1 起第一个实现提交更新关键词 phase 与到期例外；纯设计分�
 | P3 | 已完成：noff main5807a0d6，CI41591764345全绿，2251文件归档核验并清理 | [spec](specs/P3-s3-storage.md) / [plan](plans/P3-s3-storage.md) / [预检](../../reviews/re-36-M5P3预检.md) / [阶段记录](reviews/P3-s3-storage-review.md) |
 | P4 | 已完成：noff main0f93100a，CI41641099230全绿，2301文件归档核验并清理 | [spec](specs/P4-profile-images.md) / [plan](plans/P4-profile-images.md) / [整审](../../reviews/re-39-M5P4整体审核.md) / [阶段记录](reviews/P4-profile-images-review.md) |
 | P5 | T1–T14完成，最终分支CI全绿；已noff合入c59cedf3，main CI/归档待T15 | [spec](specs/P5-issue-assets.md) / [plan](plans/P5-issue-assets.md) / [预检](../../reviews/re-40-M5P5预检.md) / [整审](../../reviews/re-41-M5P5整体审核.md) / [阶段记录](reviews/P5-issue-assets-review.md) |
-| P6 | 文档预检待决PC1，未实施 | [spec](specs/P6-profile-upload.md) / [plan](plans/P6-profile-upload.md) / [预检](../../reviews/re-42-M5P6预检.md) / [决策](reviews/P6-public-project-lifetime-decision.md) |
+| P6 | PC1已批准A，文档预检复核中，未实施 | [spec](specs/P6-profile-upload.md) / [plan](plans/P6-profile-upload.md) / [预检](../../reviews/re-42-M5P6预检.md) / [决策](reviews/P6-public-project-lifetime-decision.md) |
 | P7–P8、closeout | 未开始 | 待前置阶段完成后逐段展开 |
 
 当前可自行决定的局部取舍及代价：编辑器只处理图片，普通文件走附件区；预设封面使用稳定编号，不上传构建素材副本；描述图片保留到宿主删除，代价是占用空间；封存复制增加一次存储操作，换取确认后字节不被旧 PUT 改写。以上均在既定文件模块范围内，设计预检已核对一致性，具体实现按阶段合同验证。
 
 设计审查已修正的衔接：复用已有用途 MAC；保持 M4 的安全 URL 清洗合同；业务 JSON 仍 no-store；签名/传输使用运行时钟；外部操作记录放入有界 storage_metadata，不增加业务表。
 
-P1预算/MAC/Range、P2状态表/锁图/清理/owner端口、P3 SDK与双存储合同、P4绑定/读取/反向清理合同均已随实现验证并归档，见各阶段记录。P5三份spec已通过预检；T1–T12已证明内容身份、绑定/迁移、精确事件/动态、分页、真实计数与完整全局排序、三宿主调用方及权限/字节/清理/容量，T13本地七门禁及准确检查点CI已闭环，一次整审唯一Minor已修正复核；最终提交6d14c965的CI已全绿；已noff合入c59cedf3，main CI与归档仍待T15。P6预检发现共享项目失效范围不足，PC1材料已版本化，未裁定前不实施。若事实证明既定架构无法满足安全或一致性要求，提交当前文档和证据后上报。
+P1预算/MAC/Range、P2状态表/锁图/清理/owner端口、P3 SDK与双存储合同、P4绑定/读取/反向清理合同均已随实现验证并归档，见各阶段记录。P5三份spec已通过预检；T1–T12已证明内容身份、绑定/迁移、精确事件/动态、分页、真实计数与完整全局排序、三宿主调用方及权限/字节/清理/容量，T13本地七门禁及准确检查点CI已闭环，一次整审唯一Minor已修正复核；最终提交6d14c965的CI已全绿；已noff合入c59cedf3，main CI与归档仍待T15。P6预检发现共享项目失效范围不足，PC1已批准A，正在同步设计及文档预检；产品未实施。若事实证明既定架构无法满足安全或一致性要求，提交当前文档和证据后上报。
 
 ## 16. 协议核验来源
 

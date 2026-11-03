@@ -1,7 +1,7 @@
 # M5/P6：资料图片上传与展示
 
-> 预检待决 PC1，未实施。分支 `codex/m5-p6`，基线 `main@c59cedf337c5c5654bef2f0cbb33407ff04ced26`。P5 最终分支 CI 已全绿、已 noff 集成；main CI 及归档仍在独立收尾。此时只保存预检文档，产品实施须等待 PC1 决策及 P5 收尾完成。
-> PC1 的复现、方案 A/B 及代价见[决策记录](../reviews/P6-public-project-lifetime-decision.md)；当前草案不能作为已通过预检的实施合同。
+> PC1 已批准 A，合同同步复核中，未实施。分支 `codex/m5-p6`，基线 `main@c59cedf337c5c5654bef2f0cbb33407ff04ced26`。P5 最终分支 CI 已全绿、已 noff 集成；main CI 及归档仍在独立收尾。产品实施须等待本次预检复核及 P5 收尾完成。
+> PC1 的复现、方案 A/B 及代价见[决策记录](../reviews/P6-public-project-lifetime-decision.md)；方案 A 已批准，文档复核结束前仍不声称预检通过。
 > 依据 M5 设计 §3、§5–6、§9、§11–12、P4 已实现的资料引用合同及 P5 的准备件隐私。执行沿连续授权：主控局部决定并记代价，重大风险先提交再上报。
 
 ## 1. 目标、边界与决定
@@ -39,6 +39,8 @@ UploadSession 状态至少含 idle、selected、preparing、uploading、confirmi
 ## 3. 生命周期和图片读取
 
 上传的不可变目标包含登录所属 root、user/workspace/project UUID。组件须由既有路由 key 隔离，资源在 effect cleanup 释放；Back/Forward、关弹窗、目标切换、退出/换账号、撤权和 root.dispose 均终止旧生命期。失权后恢复权限也不能让旧请求有效（ABA）。个人资料不因无关项目权限变更而取消；工作区图标不因另一个项目变化而取消；项目封面跟随本项目/所在工作区及有效权限。工作区写只允许 role20；新建项目 role15/20；已有项目写按现有项目管理权限与 archived 规则，后端最终裁决。
+
+**PC1 已批准 A：** 现有 PermissionReads 的项目事实签名必须区分“规范 getter 可见、工作区匹配但无有效工作项角色”和“缺席”。失去当前可见性时推进原项目水位并经 IssueRootStore 通知覆盖资源；重新出现不能使旧 token 有效，新活动项须重新读取证明。有效角色、guest 范围和业务写权限继续独立检查；不能由非空签名推出工作项可读。无变化目录/无关项目不触发失效，ProjectStore R06 事实选择保持。实际 root/ProjectStore、图片资源和页面三个层次分别验证，不以孤立伪 store 代替联合回归。
 
 只共享同一个 root 中当前仍被视图引用的图片来源读取：当前用户、工作区目录、单项目或某工作区成员列表。共享项只有 in-flight、失效代次、引用数、错误/加载状态，实体事实仍属于既有 User/Workspace/Project/WorkspaceMember store；最后引用释放后移除活动项。每个视图自身拥有取消/到期计时及 URL 展示证明。IssueRootStore 统一回调失效，禁止第二套权限监听。
 

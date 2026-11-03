@@ -1,6 +1,6 @@
 # M5/P6 资料图片上传与展示 Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans 按 Task 内联实施；不用逐 Task 新派实现者/审者。完成后一次 fresh whole-branch review。本计划已在 `codex/m5-p6` 版本化，基线 `c59cedf337c5c5654bef2f0cbb33407ff04ced26`；[PC1](../reviews/P6-public-project-lifetime-decision.md)待决，未通过预检、未实施。P5 main CI 和归档另行收尾，T1 尚不可启动。
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans 按 Task 内联实施；不用逐 Task 新派实现者/审者。完成后一次 fresh whole-branch review。本计划已在 `codex/m5-p6` 版本化，基线 `c59cedf337c5c5654bef2f0cbb33407ff04ced26`；[PC1](../reviews/P6-public-project-lifetime-decision.md)已批准 A，预检复核中、未实施。P5 main CI 和归档另行收尾，T1 尚不可启动。
 
 **Goal:** 资料图片真实上传、宿主绑定、权限/到期展示和可访问交互。
 **Architecture:** AssetService 处理会话 JSON；独立 fetch 只传 File；视图持有上传，IssueRootStore 统一使生命周期失效。图片读由当前宿主 store 调和，活动来源读合并但不复制权限或实体事实。
@@ -11,7 +11,7 @@
 
 - 根目录 main，codex/m5-p6 worktree；plane/refer 只读，不在其中运行 git；详细中文提交，系统 /usr/bin/git push，--no-ff 集成。
 - 不操作已有容器/Docker；容器套件串行、Go 跨包 -p 1；自己不用的临时容器按精确归属回收，禁止 prune 其他项目。
-- 不加依赖/后端协议/表，不改 shared ModalCore/动效；现有权限观察器是否扩展由 PC1 决策，未获裁定前保持原合同；业务 DTO 直接用生成类型。单文件约400行，既有大文件只拆本次职责，不借题重构。
+- 不加依赖/后端协议/表，不改 shared ModalCore/动效；仅按已批准 PC1 扩展现有 PermissionReads 的规范项目可见性签名，IssueRootStore 仍唯一所有者，不新加平行观察器；业务 DTO 直接用生成类型。单文件约400行，既有大文件只拆本次职责，不借题重构。
 - 只支持 JPEG/PNG/WebP/GIF，File.type 为空拒绝；大小正且≤当前 file_size_limit，raw PUT 15分钟有限预算、credentials omit、redirect error、no-referrer；展示阶段进度，无虚假百分比。
 - URL/expiry 不持久化到业务字段；user/workspace/project/member 每种图片重新授权走宿主，当前事实和失效代次独立核对。前端撤权不声称可撤销已发出的 S3 capability。
 - 新建项目一次 POST 绑定，清除 null/省略不同；固定29封面 cover-01…cover-29，自制 SVG 登记来源，无随机渲染或 Vite URL 入库。
@@ -29,6 +29,8 @@
 
 ## 文件与接口
 
+未带仓库前缀的 core/ 与 helpers/ 路径均相对 `web/apps/web/`；app/ 同样相对该 web 应用，e2e/ 与 tools/ 相对仓库根。
+
 接口只在 P6-image-lifecycle.md 声明，Task 不抄实现体。新服务 asset.service.ts；lib/asset-upload.ts；store/asset/{root.store,upload-session,scope-lifetime,profile-images}.ts；hooks/use-profile-image.ts；components/assets/{image-picker,image-upload-modal,profile-image}.tsx。正式实现时同目录新增对应 .test.ts(x)。UserStore 局部改用 Reconciled，不改变公共原语；RootStore 注入唯一会话 API。
 
 既有显示消费者以正式预检保存的完整 rg 清单逐项映射：个人设置/引导/用户菜单/侧栏、工作区菜单/设置/选择器、项目创建/设置/卡片、成员表/下拉/作者/历史/评论/资料页及其复用头像。M6/M7 尚未接通页面只换通用呈现来源，不新增它们的 API 或功能。
@@ -44,11 +46,11 @@
 
 ## Task 2（T2）：上传会话与统一权限失效
 
-**Files:** 新 store/asset/root.store.ts、upload-session.ts、scope-lifetime.ts 及测试；修改 core/store/root.store.ts/.test.ts。
+**Files:** 新 core/store/asset/root.store.ts、upload-session.ts、scope-lifetime.ts 及测试；修改 core/store/root.store.ts/.test.ts、core/store/issue/permission-reads.ts；新增 core/store/issue/permission-reads.test.ts，回归 issue/root.store.test.ts 和 project/project.store.visibility.test.ts。
 **Interfaces:** 消费 T1；产出 createUpload、UploadSession 和 root.dispose 接线；宿主写留调用页面。
 
-- [ ] Step 1：真实 deferred promise 测试四用途scope、大小/MIME拒绝、双击仅一链、逐阶段 retry、object_missing 新 prepare、旧成功/失败/进度、select 替换、scope/路由/root 退休及权限 ABA；user 不受无关 project 影响，workspace 不受别的 project 影响。
-- [ ] Step 2：`pnpm --filter web exec vitest run core/store/asset core/store/root.store.test.ts`，取得断言 RED 后实现；每个await核生命周期，只经 IssueRootStore.registerResource 接入。
+- [ ] Step 1：真实 deferred promise 测试四用途scope、大小/MIME拒绝、双击仅一链、逐阶段 retry、object_missing 新 prepare、旧成功/失败/进度、select 替换、scope/路由/root 退休及权限 ABA；user 不受无关 project 影响，workspace 不受别的 project 影响。实际 RootStore/ProjectStore 驱动公开非成员完整目录缺席/恢复：旧 token 永久 false、新 token current，资源 invalidate 一次；有效角色仍 undefined，受限 issue 仍拒绝，成员/guest 收窄和无变化目录/无关范围保持。
+- [ ] Step 2：`pnpm --filter web exec vitest run core/store/asset core/store/root.store.test.ts core/store/issue/permission-reads.test.ts core/store/issue/root.store.test.ts core/store/project`，取得断言 RED 后实现；沿 PC1 扩展现有观察器项目签名，仍只经 IssueRootStore.registerResource 接入，每个await核生命周期。不改 UserPermissionStore 或 ProjectStore 的事实算法。
 - [ ] Step 3：GREEN；取消/重复dispose释放 objectURL/AbortController，无 cleanup DELETE、无旧 owner callback；单改取消后继续 complete 与删除代次检查应各导致行为失败，恢复 SHA。types/lint 后提交 `feat(M5/P6): 约束上传的会话与权限生命期`。
 
 ## Task 3（T3）：宿主图片到期与读取调和
@@ -56,7 +58,7 @@
 **Files:** 新 store/asset/profile-images.ts/.test.ts、hooks/use-profile-image.ts/.test.ts、components/assets/profile-image.tsx/.test.tsx；修改 store/user/index.ts/.test.ts；root asset 生命周期接线。
 **Interfaces:** 产出 ProfileImageSource、useProfileImage、ProfileImage/ProfileAvatar；消费现有 owner store 和 Reconciled，不增通用权限框架。
 
-- [ ] Step 1：deferred 与受控时钟复现旧 /me read 覆盖较新 avatar/cover write；同源多头像只读一次、两个workspace同member不共享授权、失权立即无img、ABA旧读失效、expiry/background/invalid新expiry、onError仅一次、最后引用释放、重复cleanup与新image旧error。
+- [ ] Step 1：deferred 与受控时钟复现旧 /me read 覆盖较新 avatar/cover write；同源多头像只读一次、两个workspace同member不共享授权、失权立即无img；公开项目非成员经实际ProjectStore接受缺席/恢复后旧封面读取不能发布，新读取才可显示；ABA旧读失效、expiry/background/invalid新expiry、onError仅一次、最后引用释放、重复cleanup与新image旧error。
 - [ ] Step 2：`pnpm --filter web exec vitest run core/store/asset core/hooks/use-profile-image.test.ts core/components/assets/profile-image.test.tsx core/store/user/index.test.ts core/lib/reconciled.test.ts`，RED 后实现局部调和及活动来源合并。
 - [ ] Step 3：GREEN；原 UserStore 全测试/退出引导、ProjectStore目录事实回归；变异绕过expiry、使用memberMap裸地址、直接旧read覆盖write均须真实失败。记录来源读取成本与无无限重试，提交 `feat(M5/P6): 按宿主权限刷新过期资料图片`。
 
@@ -71,7 +73,7 @@
 
 ## Task 5（T5）：个人资料与引导
 
-**Files:** settings/profile/content/pages/general/form.tsx、onboarding/steps/profile/root.tsx 及原测试；settings/profile/sidebar/header.tsx、workspace/sidebar/user-menu-root.tsx、onboarding/switch-account-dropdown.tsx、home/widgets/empty-states/no-projects.tsx。
+**Files:** settings/profile/content/pages/general/form.tsx、onboarding/steps/profile/root.tsx 及原测试；新增 workspace/sidebar/user-menu-root.test.tsx；settings/profile/sidebar/header.tsx、workspace/sidebar/user-menu-root.tsx、onboarding/switch-account-dropdown.tsx、home/widgets/empty-states/no-projects.tsx。
 **Interfaces:** 单独 UserUpdate.avatar_asset_id/cover_image_asset_id 绑定或null；读统一 ProfileImageSource self。
 
 - [ ] Step 1：既有页面测试加入头像/封面独立上传/移除，名字表单不误清图片、上传不提前提交引导；绑定失败保留ready件重试不PUT，两个图片控件和并发读/写正确，换账号旧回调无toast/跳步。
@@ -139,12 +141,12 @@
 
 - [ ] Step 1：三个浏览器各真实file input/drop、rawFile传输、取消、焦点/aria；按prepare/PUT/complete/owner四边界保持真实请求暂停，换账号/Back/Forward/换workspace/项目/撤权恢复，恢复旧成功/失败后无错误绑定/旧图。
 - [ ] Step 2：`make build build-s3-fixture` 后 `cd e2e && pnpm exec playwright test --config=playwright.m5-profile.config.ts --workers=1`；expiry注入标明只测UI，图片每来源仅一次自动再读，manualretry只读。
-- [ ] Step 3：至少8个有效行为变异：带凭据、取消后complete、漏lifecheck、旧read覆盖write、expiry失效、memberMap当权限、双POST、自动retry循环；逐SHA恢复。跑全部受影响unit/类型/格式；保存原件与容器清理，提交 `test(M5/P6): 证明上传迟到结果与可访问交互边界`。
+- [ ] Step 3：至少9个有效行为变异：带凭据、取消后complete、漏lifecheck、删除PC1非成员可见事实、旧read覆盖write、expiry失效、memberMap当权限、双POST、自动retry循环；逐SHA恢复。跑全部受影响unit/类型/格式；保存原件与容器清理，提交 `test(M5/P6): 证明上传迟到结果与可访问交互边界`。
 
 ## Task 13（T13）：完整门禁与检查点
 
 - [ ] Step 1：逐项A1–A6、消费者清单、设计/plane-diff/handoff处理结果；P7删包责任保持open，旧未使用成员实测，不因历史数字机械删除。
-- [ ] Step 2：串行 make gen-check、make lint-go、GOFLAGS=-p=1 make test、make lint-web、make knip、make test-web、make build && make e2e；每项原exit/输入hash/缓存/skip记录，非仅聚焦代替全门禁。
+- [ ] Step 2：串行 make gen-check、make lint-go、GOFLAGS=-p=1 make test、make lint-web、make knip、make test-web、make e2e（已依赖完整build及build-s3-fixture）；每项原exit/输入hash/缓存/skip记录，非仅聚焦代替全门禁。
 - [ ] Step 3：详细中文检查点提交/system push，准确HEAD server/web/e2e三项全绿；失败自行取原生插件/已登录浏览器日志，按现有规则处理，不放宽超时/断言。
 
 ## Task 14（T14）：整分支 deep-review
@@ -159,6 +161,6 @@
 - [ ] Step 2：准确main CI三项全绿后归档全部ignored原件/raw失败/浏览器/变异/审者；hash/bytes/mode/membership/unknown=0；origin/main..branch=0后正常清远端、本地和worktree，归档再次核。
 - [ ] Step 3：下一codex/m5-p7独立worktree回填A8/阶段事实；P7 spec/plan一次builder预检，包含最后旧FileService/services删除、编辑器/附件与计数控件，不提前标M5完成。
 
-## 预检自查（PC1 待决，未通过）
+## 预检自查（PC1 已裁定，复核中）
 
 A1→T1/T2/T11；A2→T2/T4/T12；A3→T3/T10/T12；A4→T5/T11；A5→T6–T9/T11；A6→T11/T12；A7→T13/T14；A8→T15。15 Tasks。正式版核每个源码路径/接口、角色集合、字段拼写、测试命令、builder重要问题及阶段顺序后，才可写“预检通过”。

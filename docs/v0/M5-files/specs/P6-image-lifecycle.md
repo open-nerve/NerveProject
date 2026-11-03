@@ -1,6 +1,6 @@
 # M5/P6 接口与文件边界
 
-与[主 spec](P6-profile-upload.md)同属未通过预检草案，PC1 待负责人裁定；现有 PermissionReads 的扩展边界须由[决策记录](../reviews/P6-public-project-lifetime-decision.md)落实后再执行。实体类型一律 import @nerve/api-client；以下类型仅为前端生命周期/呈现状态，不镜像服务端实体或角色枚举。
+与[主 spec](P6-profile-upload.md)同属预检复核中的合同；PC1 已批准 A，现有 PermissionReads 的扩展边界按[决策记录](../reviews/P6-public-project-lifetime-decision.md)落实。实体类型一律 import @nerve/api-client；以下类型仅为前端生命周期/呈现状态，不镜像服务端实体或角色枚举。
 
 ## 1. 服务与传输
 
@@ -14,7 +14,7 @@ class AssetService {
 }
 ```
 
-沿 unwrap 传递 API problem；上传预览沿被选择的本地 File，绑定后由 owner DTO 显示。prepare/complete 的具体路由取当前 OpenAPI。后续 P7 才加入其实际用到的 content/delete/duplicate/list 方法，P6 不堆未使用方法，也不拿他人图片 ID 作授权。
+沿 unwrap 传递 API problem；上传预览沿被选择的本地 File，绑定后由 owner DTO 显示。prepare 为 POST /api/v0/assets，complete 为 POST /api/v0/assets/{id}/complete 且 body={}，具体结构直接取当前 OpenAPI。后续 P7 才加入其实际用到的 content/delete/duplicate/list 方法，P6 不堆未使用方法，也不拿他人图片 ID 作授权。
 
 新增 `core/lib/asset-upload.ts`：
 
@@ -60,7 +60,7 @@ class RootAssetStore {
 
 组件负责宿主写，UploadSession 不知道 UserUpdate/ProjectCreate，避免文件模块吞并宿主职责。start 只可在 selected/prepare-failed；retryComplete 只可在持有 prepared 的 PUT 不确定/confirm-failed；restart 明确申请新 ID；错误不吞成成功，undefined 只代表调用所属生命期已结束。重复 start 共享当前 promise，不发双链。选择新文件先结束旧链，准备件不自动删除。
 
-scope-lifetime 是实现细节，唯一权限输入为 root 的规范 store getter，唯一失效订阅为 IssueRootStore.registerResource。注册的 affects 对 user 恒 false；workspace/new_project 对自身 workspace 和 memberOnly 角色变化有效、对别的 project 无效；project 对本 project/所在 workspace 有效。dispose 同时注销；用户取消与权限失效区分。任何启动/await 后再次核当前有效角色及 archive 写限制。权限 ABA 由原统一失效订阅的单调生命期阻止，不给 PermissionReads 复制另一套实体事实。
+scope-lifetime 是实现细节，唯一权限输入为 root 的规范 store getter，唯一失效订阅为 IssueRootStore.registerResource。注册的 affects 对 user 恒 false；workspace/new_project 对自身 workspace 和 memberOnly 角色变化有效、对别的 project 无效；project 对本 project/所在 workspace 有效。dispose 同时注销；用户取消与权限失效区分。任何启动/await 后再次核当前有效角色及 archive 写限制。权限 ABA 由统一失效订阅的单调生命期阻止；按 PC1 在现有 PermissionReads.snapshot 的项目签名中加入规范可见但无角色的状态，ProjectStore 返回项目必须与当前工作区匹配，缺席仍是 undefined。保留原有效角色、member_role、guest_view_all_features 的语义变化，不复制实体或目录；不得将新签名用于授权。公开非成员封面读取不调用 assertProjectReadable，但必须核规范可见性；工作项接口和上传写仍执行原权限判定。
 
 RootStore.asset 在 issue 构造后创建，dispose 释放图片/上传活动项；issue.retire 的资源 dispose 与 asset.dispose 可重复调用而不抛错。旧 editorAssetStore 留给 P7，不让它引用新资料会话。
 
