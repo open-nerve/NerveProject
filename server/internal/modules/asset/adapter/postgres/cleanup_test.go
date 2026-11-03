@@ -89,7 +89,7 @@ func (w assetWorld) cleanup(objects cleanupObjects, facts parentFacts, now time.
 	return app.NewCleanup(w.cleanupDeps(objects, facts, now))
 }
 func (w assetWorld) cleanupDeps(objects cleanupObjects, facts parentFacts, now time.Time) app.CleanupDeps {
-	return app.CleanupDeps{Rows: w.store, Locks: w.store, Writer: w.store, Parents: facts, Objects: objects, Inventory: objects, Temporary: objects, Tx: postgres.NewTxManager(w.pool, time.Second), Clock: cleanupClock(now), RuntimeNow: func() time.Time { return w.now }, Batch: 2, Budget: time.Second, OperationTimeout: time.Second}
+	return app.CleanupDeps{Rows: w.store, Locks: w.store, Writer: w.store, Parents: facts, Objects: objects, Inventory: objects, Temporary: objects, Tx: postgres.NewTxManager(w.pool, time.Second), Clock: cleanupClock(now), RuntimeNow: func() time.Time { return w.now }, Batch: 2, Budget: time.Second, OperationTimeout: time.Second, PurgeAfter: 60 * 24 * time.Hour}
 }
 
 func TestAssetPurgePreservesObjects(t *testing.T) {

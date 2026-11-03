@@ -111,7 +111,7 @@ func TestAssetSweepRestarts(t *testing.T) {
 	var logs lockedBuffer
 	start := func(s *local.Store, listing assetapp.ObjectLister, business time.Time) *jobs.Runner {
 		t.Helper()
-		uc := assetapp.NewCleanup(assetapp.CleanupDeps{Rows: rows, Locks: rows, Writer: rows, Parents: noCleanupParents{}, Objects: s, Inventory: listing, Temporary: s, Tx: postgres.NewTxManager(pool, time.Second), Clock: clockAt(business), RuntimeNow: runtimeNow, Batch: 2, Budget: time.Second, OperationTimeout: time.Second})
+		uc := assetapp.NewCleanup(assetapp.CleanupDeps{Rows: rows, Locks: rows, Writer: rows, Parents: noCleanupParents{}, Objects: s, Inventory: listing, Temporary: s, Tx: postgres.NewTxManager(pool, time.Second), Clock: clockAt(business), RuntimeNow: runtimeNow, Batch: 2, Budget: time.Second, OperationTimeout: time.Second, PurgeAfter: 60 * 24 * time.Hour})
 		r, err := jobs.New(pool, jobs.Config{DefaultWorkers: 1, PeriodicWorkers: 1, ShutdownTimeout: 100 * time.Millisecond, Logger: slog.New(slog.NewTextHandler(&logs, nil))}, []jobs.Job{{Worker: jobs.Register(assetriver.NewCleanupWorker(uc, time.Second))}}, []string{assetriver.CleanupKind})
 		if err != nil {
 			t.Fatal(err)

@@ -34,13 +34,14 @@ type StorageMetadata struct {
 
 ## 2. 两种时钟与固定参数
 
-业务时钟只控制：`created_at < businessNow-7d` 的 pending 或未绑定 uploaded 准备件过期；`deleted_at < businessNow-60d` 的墓碑 purge。严格小于；边界相等不删除。过期标记使用本次业务时间，父删除沿用父原 At/By；内部 metadata 回收不覆写原删除审计。
+业务时钟只控制：`created_at < businessNow-7d` 的 pending 或未绑定 uploaded 准备件过期；`deleted_at < businessNow-cleanup.purge_after` 的墓碑 purge。保留期沿用 M4 既有配置，默认60天，不能把默认值另写成文件回收常量。最终对象与物理行使用同一配置、严格小于；边界相等不删除。过期标记使用本次业务时间，父删除沿用父原 At/By；内部 metadata 回收不覆写原删除审计。
 
 运行时钟控制：签名有效期、I/O deadline、候选 lease、安全宽限、对象/临时文件年龄、worker 预算和调度。进程内预算用 monotonic duration，持久期限保存 UTC runtime 时间，重启后重新比较；业务 offset 不得影响它们。
 
 | 参数 | 默认 / 合法范围 | 用途 |
 |---|---|---|
 | files.upload_ttl | 15m / 10s–15m | 仅新上传；短值供显式配置及端到端期限验收 |
+| cleanup.purge_after | 1440h / 正时长，沿用既有配置校验 | 已删除final对象与数据库墓碑的统一保留期，由bootstrap注入；没有另设files保留期 |
 | files.operation_timeout | 10s / 1s–10s | 一次业务 complete/duplicate 的整个外部 I/O 段总预算（非每步重置） |
 | candidate lease | 固定 30s | 从记录候选时起；外部段必须在 lease 内开始，最终提交也必须未过期 |
 | candidate settle grace | 固定 30s | LeaseUntil+30s 之后才可认领回收候选 |
@@ -70,8 +71,8 @@ type StorageMetadata struct {
 
 - live uploaded：仅可回收安全期已过的 staging、败选候选，final 始终保留。
 - live pending：仅可回收 lease+grace 已过候选；staging 保留到准备件过期或删除，不能因上传 token 过期就禁止之前已完成上传的确认。
-- deleted：候选/staging 仍满足 runtime 安全期才回收；final 到严格 60 天墓碑期限后回收。bound 的描述图片保留到 owner 删除，不因本文提前加引用垃圾回收；P2 无公开 bound 入口。
-- 物理资产行：严格超过 60 天且 staging/final/candidates 全空才 DELETE；SQL 自身含该条件，不能仅靠 app 判断。保护父 FK 到这一刻才解除。
+- deleted：候选/staging 仍满足 runtime 安全期才回收；final 到严格超过配置墓碑期限（默认60天）后回收。bound 的描述图片保留到 owner 删除，不因本文提前加引用垃圾回收；P2 无公开 bound 入口。
+- 物理资产行：严格超过同一配置期限且 staging/final/candidates 全空才 DELETE；SQL 自身含传入cutoff及空记录条件，不能仅靠 app 判断。保护父 FK 到这一刻才解除。
 
 资产自己的周期任务不在持资产锁之后取 owner 锁。读取一页资产 scope → owner 的只读批量删除事实（每种≤batch）→ 锁资产核仍是同一 scope/revision → 应用真实父删除 At/By。父删除不可恢复；scope/revision 已变则跳过到下一轮，不沿旧事实删新宿主。owner 端口只读自己表，包含墓碑的真实 deleted_at/updated_by，不能以 now 伪造。NO ACTION 保证对应父未被物理丢掉；无父事实是异常，不猜成“已删”。
 

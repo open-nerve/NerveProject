@@ -25,6 +25,7 @@ type Deps struct {
 	UploadSigner app.UploadSigner
 	ReadSigner   app.ReadSigner
 	Sealing      app.SealingDeps
+	PurgeAfter   time.Duration
 }
 type Module struct {
 	transfer                       *httpadapter.Transfer
@@ -35,6 +36,9 @@ type Module struct {
 }
 
 func New(d Deps) (*Module, error) {
+	if d.PurgeAfter <= 0 {
+		return nil, errors.New("asset retention must be positive")
+	}
 	if d.Ports.store == nil || d.Parents == nil || d.Objects == nil || d.Inventory == nil || d.Temporary == nil || d.JobTx == nil || d.ReadTx == nil || d.UploadSigner == nil || d.ReadSigner == nil || d.Sealing.Inspector == nil || d.Sealing.Reader == nil || d.Sealing.Sealer == nil || d.Sealing.Validator == nil {
 		return nil, errors.New("asset module lacks lifecycle dependencies")
 	}
@@ -45,7 +49,7 @@ func New(d Deps) (*Module, error) {
 	d.Access.Assets = d.Ports.store
 	access := app.NewAccess(d.Access)
 	files := d.Transfer.Files
-	cleanup := app.NewCleanup(app.CleanupDeps{Rows: d.Ports.store, Locks: d.Ports.store, Writer: d.Ports.store, Parents: d.Parents, Objects: d.Objects, Inventory: d.Inventory, Temporary: d.Temporary, Tx: d.JobTx, Clock: d.Access.Clock, RuntimeNow: d.Transfer.RuntimeNow, Batch: files.CleanupBatch, Budget: files.CleanupBudget, OperationTimeout: files.OperationTimeout})
+	cleanup := app.NewCleanup(app.CleanupDeps{Rows: d.Ports.store, Locks: d.Ports.store, Writer: d.Ports.store, Parents: d.Parents, Objects: d.Objects, Inventory: d.Inventory, Temporary: d.Temporary, Tx: d.JobTx, Clock: d.Access.Clock, RuntimeNow: d.Transfer.RuntimeNow, Batch: files.CleanupBatch, Budget: files.CleanupBudget, OperationTimeout: files.OperationTimeout, PurgeAfter: d.PurgeAfter})
 	deletion := app.NewDeleteScope(app.DeleteScopeDeps{Rows: d.Ports.store, Locks: d.Ports.store, Writer: d.Ports.store, Tx: d.JobTx, Batch: files.CleanupBatch, Budget: files.CleanupBudget})
 	uc := httpadapter.UseCases{
 		Duplicate:      app.NewDuplicate(app.DuplicateDeps{Rows: d.Ports.store, Creator: d.Ports.store, Writer: d.Ports.store, Access: access, Storage: d.Sealing, SizeLimit: files.SizeLimit, OperationTimeout: files.OperationTimeout, RuntimeNow: d.Transfer.RuntimeNow}),

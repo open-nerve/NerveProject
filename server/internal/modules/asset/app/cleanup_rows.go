@@ -23,7 +23,7 @@ func (u *Cleanup) cleanRow(ctx context.Context, snapshot domain.Asset, facts map
 			return nil
 		}
 		changed := applyDeletionFacts(&a, facts, cutoff)
-		claimed, altered := claimObjects(&a, cutoff, u.d.RuntimeNow())
+		claimed, altered := claimObjects(&a, cutoff.Add(-u.d.PurgeAfter), u.d.RuntimeNow())
 		keys = claimed
 		changed = changed || altered
 		if changed {
@@ -105,7 +105,7 @@ func markDeleted(a *domain.Asset, stamp DeletionStamp) bool {
 	a.UpdatedByID = stamp.By
 	return true
 }
-func claimObjects(a *domain.Asset, businessNow, runtimeNow time.Time) ([]domain.ObjectKey, bool) {
+func claimObjects(a *domain.Asset, purgeCutoff, runtimeNow time.Time) ([]domain.ObjectKey, bool) {
 	var keys []domain.ObjectKey
 	changed := false
 	claim := func(record *domain.ObjectRecord, allowed bool) {
@@ -119,7 +119,7 @@ func claimObjects(a *domain.Asset, businessNow, runtimeNow time.Time) ([]domain.
 		}
 	}
 	claim(a.Metadata.Staging, a.DeletedAt != nil || a.Uploaded)
-	claim(a.Metadata.Final, a.DeletedAt != nil && a.DeletedAt.Before(businessNow.Add(-60*24*time.Hour)))
+	claim(a.Metadata.Final, a.DeletedAt != nil && a.DeletedAt.Before(purgeCutoff))
 	for i := range a.Metadata.Candidates {
 		claim(&a.Metadata.Candidates[i].ObjectRecord, true)
 	}

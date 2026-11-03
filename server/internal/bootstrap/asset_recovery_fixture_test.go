@@ -28,7 +28,7 @@ func recoverAssetRows(t *testing.T, w issueWorld, at time.Time) {
 	}()
 	rows := assetpg.New(w.pool)
 	parents := assetParentReader{workspaces: workspace.Provide(w.pool, protectedAssetReferences()).AssetParents, projects: project.Provide(w.pool, protectedAssetReferences()).AssetParents, issues: issue.Provide(w.pool, protectedAssetReferences()).AssetParents}
-	uc := assetapp.NewCleanup(assetapp.CleanupDeps{Rows: rows, Locks: rows, Writer: rows, Parents: parents, Objects: objects, Inventory: objects, Temporary: objects, Tx: postgres.NewTxManager(w.pool, time.Second), Clock: clockAt(at), RuntimeNow: time.Now, Batch: 2, Budget: time.Second, OperationTimeout: time.Second})
+	uc := assetapp.NewCleanup(assetapp.CleanupDeps{Rows: rows, Locks: rows, Writer: rows, Parents: parents, Objects: objects, Inventory: objects, Temporary: objects, Tx: postgres.NewTxManager(w.pool, time.Second), Clock: clockAt(at), RuntimeNow: time.Now, Batch: 2, Budget: time.Second, OperationTimeout: time.Second, PurgeAfter: 60 * 24 * time.Hour})
 	var cursor assetapp.SweepCursor
 	for page := 0; page < 100; page++ {
 		r, err := uc.Execute(t.Context(), cursor)

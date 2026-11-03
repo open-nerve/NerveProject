@@ -39,7 +39,7 @@
 - 业务父 FK `file_assets_{workspace,project,issue,comment,draft_issue,user}_fk` 即时、非 deferred NO ACTION；审计 FK 为 SET NULL。每个父列有无条件索引，不能只给活行建索引。deleted_at/created_at/ID 分页索引与 metadata 有界 CHECK、revision 非负一起验。
 - SQL CHECK 必须真正拒绝缺字段/JSON null/未知 schema_version/非数组/第四候选，不能让 SQL NULL 的 CHECK 三值逻辑放过。Go 同时验证 key 所属资产、角色与唯一性，故障记录不对外开放。
 
-存储状态的精确 shape、30s lease/30s宽限、两时钟及恢复见 recovery；它覆盖对 object metadata 的所有写。
+存储状态的精确 shape、30s lease/30s宽限、两时钟及恢复见 recovery；它覆盖对 object metadata 的所有写。 墓碑与final对象统一沿用既有cleanup.purge_after（默认60天），不是两个独立保留期。
 
 ### 2.3 API、DTO 与错误目录
 

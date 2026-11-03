@@ -40,13 +40,14 @@ type CleanupDeps struct {
 	RuntimeNow               func() time.Time
 	Batch                    int
 	Budget, OperationTimeout time.Duration
+	PurgeAfter               time.Duration
 }
 type Cleanup struct{ d CleanupDeps }
 
 func NewCleanup(d CleanupDeps) *Cleanup { return &Cleanup{d: d} }
 func (u *Cleanup) Execute(ctx context.Context, cursor SweepCursor) (SweepResult, error) {
 	result := SweepResult{Cursor: cursor}
-	if u.d.Batch < 1 || u.d.Batch > 1000 || u.d.Budget <= 0 || u.d.OperationTimeout <= 0 || u.d.Inventory == nil || u.d.Temporary == nil {
+	if u.d.Batch < 1 || u.d.Batch > 1000 || u.d.Budget <= 0 || u.d.OperationTimeout <= 0 || u.d.PurgeAfter <= 0 || u.d.Inventory == nil || u.d.Temporary == nil {
 		return result, errors.New("invalid asset cleanup configuration")
 	}
 	if cursor.Version == 0 {

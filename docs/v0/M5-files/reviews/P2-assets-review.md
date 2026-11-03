@@ -22,7 +22,7 @@ A1–A12均保持未完成。T1提供用途/范围/父组合、metadata≤3候�
 
 ## 4. 整分支审查
 
-未开始；T13执行。
+T13进行中。一次新鲜整分支审查以85dc4087..b2c90cdb为范围，主控继续逻辑、集成、测试三个视角复核。当前确认I1非默认保留期不一致，已完成真实性质红绿及受影响race；最终整审结论、修复后完整门禁和准确CI仍待完成。
 
 ## 5. 与plan差异
 
@@ -182,3 +182,11 @@ T10已补齐API故事和首次完整本地七项，T11真实交错/资源/回滚
 - 首次E2E在全局数据库启动处等待端口绑定10秒超时，退出码2、用例未开始；只读Docker检查仍可连接。没有改代码、配置或Docker，原样重试`make e2e`退出码0，341个用例通过，141.18秒。首轮日志/报告与重试报告分别保存，不能把启动失败说成用例失败或省略。
 - `task-12-seven-receipt.json`汇总两次命令的原始结果、输入和失败；`task-12-mutations-verified.json`是60项有效变异逐条索引。T13若修改产品，按实际影响重新验证，这份门禁只证明上述输入。
 - T10远端CI41545110572准确HEAD为79d183da35c3bce9d7403507cc23247ddd4385d3：web125618688079、server125618688453、e2e125624356333均success，原始公开元数据`task-10-checkpoint-jobs-8.json`。T12检查点的CI另行核验，不由旧绿替代。
+
+## 19. T13 I1：统一非默认文件保留期
+
+- 独立审查发现final对象回收将60天写成常量，而M4既有`cleanup.purge_after`是全局可配置保留期。真实local文件与已接线River复现：配置90天时61天final已丢；配置1天时2天final仍在并挡住父行清理。原件`task-13-retention-red3.log`（8.970秒）两项均命中实物性质断言。首轮夹具用bob删除alice工作项正确403，仅记录夹具失败；改为实际作者alice。另一次复现用短调度，永久测试改为原调度和真实事务InsertTx入队，未修改生产配置范围。
+- 固定业务时钟的真实PG/local反例覆盖1天、90天各自cutoff前1微秒、相等、后1微秒；原常量使3项断言红（`task-13-retention-boundary-red.log`，2.156秒）。
+- 根因修复沿用既有单一配置：bootstrap将同一`Cleanup.PurgeAfter`传入asset构造及CleanupDeps，final按持久游标的业务时刻减该时长、严格Before认领。未新设files保留期、未改变配置范围、SQL、外键或owner权限/清理端口。设计/spec/plan先同步“60天为默认值”。这属于已批准联合清理范围内的局部接线修正；代价是调用者必须显式提供正时长，缺失时拒绝构造/执行，不能偷偷回退到默认。
+- `TestAssetConfiguredRetentionWired`真实上传/确认/删除、资产cleanup及父purge同时验证非默认值；只在存储夹具中调整墓碑年龄和已空闲对象SafeAfter，不冒称证明签名实际到期。`TestAssetConfiguredRetentionBoundary`证明对象与SQL行采用一致严格边界。两组绿：PG1.998秒、bootstrap7.403秒。
+- 受影响的asset清理/保留期/删除/父行/游标与bootstrap使用`-p 1 -race -count=1`串行通过，PG6.557秒、bootstrap29.397秒；原件`task-13-retention-race.log`。修复后的完整七项和准确远端CI另行补录。

@@ -18,7 +18,7 @@
 - plane/refer只读且不在其内跑git；不动既有容器/Docker，不stash/clean/reset--hard/force，不取凭据，不全局安装。容器套件一次一个。
 - 手写文件约400行内；现有gen、集中契约/目录和已存在大文件按原例外，新增逻辑按职责拆分，不为行数把耦合隐藏。
 - T1改tools/keywords.json phase=M5/P2，核到期例外；不可只延长until。P6/P7尚未到期的旧文件消费者不提前删除。
-- 四份spec所有固定值通用：候选≤3、metadata≤16KiB；上传15m(10s–15m)、外部段10s(1s–10s)、lease30s+grace30s；准备件7d、墓碑严格>60d；cleanup1h/100/10s；orphan/tmp真实24h；图片头≤1MiB、边≤16384、像素≤40,000,000。
+- 四份spec所有固定值通用：候选≤3、metadata≤16KiB；上传15m(10s–15m)、外部段10s(1s–10s)、lease30s+grace30s；准备件7d、墓碑严格超过既有cleanup.purge_after（默认60d）；cleanup1h/100/10s；orphan/tmp真实24h；图片头≤1MiB、边≤16384、像素≤40,000,000。
 - scope/user_id/父列与权限矩阵逐值一致；P2不绑定、不加attachment_count、不发假附件动态，不修改existingM4权限谓词。
 - 新错误同Task进`web/apps/web/core/lib/error-messages.ts`及en/zh-CN errors.json，运行make test-web；前端实体仅用生成类型。
 - SQL仅本模块sqlc；端口由消费方声明；Tx由ctx传递，不在owner间传业务闭包；同一实例write gate注入issue和asset。
@@ -199,7 +199,7 @@ T10完整门禁补齐：六个API加入既有权限矩阵及目标目录负例�
 
 - [ ] Step 1：按deep-review完整读取基线85dc4087至最终候选，三视角顺序核逻辑、集成、测试；包括全部purge caller、父目录、shared gate/账户首锁、暂停后对象、权限矩阵和生成协议。
 - [ ] Step 2：按executing-plans/requesting-code-review要求安排一次新鲜完整分支审查；按范围给资料，不重复发相同未改动范围。主控裁定后局部问题修复/必要回归/复审，原始失败不删；重大新分歧先提交上报。
-- [ ] Step 3：有新产品改动重验受影响与必要完整门禁；最终准确branch CI全绿。阶段review补全七节，A1–A11据实勾选，A12 main/归档部分待T14。
+- [ ] Step 3：有新产品改动重验受影响与必要完整门禁；最终准确branch CI全绿。I1非默认保留期按M4既有cleanup.purge_after单一配置修正final回收接线，真实local/River复现90d/1d及固定业务时钟严格边界；不新增配置或改变父清理协议。阶段review补全七节，A1–A11据实勾选，A12 main/归档部分待T14。
 - [ ] Step 4：提交最终文档并核其准确CI；不把文档前产品CI写成最后HEAD通过。
 
 ## Task 14（T14）：已授权集成、main CI和下一阶段
