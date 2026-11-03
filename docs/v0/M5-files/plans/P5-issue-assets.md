@@ -148,10 +148,10 @@ issue新增app/content_asset_ports.go、attachment_ports.go、attachments.go、a
 **Files:** bootstrap/asset_attachment_capacity_test.go、issue/PG计数容量测试；.superpowers证据与阶段review。
 **Interfaces:** 冷统计1000/1001/10000有附件项与1001项目分批，不改变5秒客户端/15秒API期限；SQL数/内存目录规模完整记录。
 
-- [ ] Step 1：TestAttachmentCapacity冷库，零/重叠/多project/guest/两方向/group/cell；query前不ANALYZE；普通页只查返回ID，附件排序完整目录，取消后资源复用。
-- [ ] Step 2：至少15行为变异：申请者隔离、用途、父链、uploaded、bound、deleted过滤、src次序、skip图片比较、source授权、全集合锁、发布原子性、重复事件、1000截断、page后sort、精确cursor；每项真实失败/恢复SHA/最终GREEN，不靠编译错。
-- [ ] Step 3：受影响完整asset/issue/arch包race、关键交错五轮及完整gen/lint；Expected全绿，原件/计数与复用输入范围可验证。
-- [ ] Step 4：写明局部裁定和代价、未声称的页面/存储品牌，提交 `test(M5/P5): 证明附件容量与安全性质`。
+- [x] Step 1：TestAttachmentCapacity冷库，零/重叠/多project/guest/两方向/group/cell；query前不ANALYZE；普通页只查返回ID，附件排序完整目录，取消后资源复用。
+- [x] Step 2：至少15行为变异：申请者隔离、用途、父链、uploaded、bound、deleted过滤、src次序、skip图片比较、source授权、全集合锁、发布原子性、重复事件、1000截断、page后sort、精确cursor；每项真实失败/恢复SHA/最终GREEN，不靠编译错。
+- [x] Step 3：受影响完整asset/issue/arch包race、关键交错五轮及完整gen/lint；Expected全绿，原件/计数与复用输入范围可验证。
+- [x] Step 4：写明局部裁定和代价、未声称的页面/存储品牌，提交 `test(M5/P5): 证明附件容量与安全性质`。
 
 ## Task 13（T13）：完整七门禁与产品检查点
 
