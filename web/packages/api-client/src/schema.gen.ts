@@ -34,15 +34,15 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Read private asset metadata
-         * @description Reads the asset and its current host authorization in one read-only snapshot. A missing, deleted or invisible host and another applicant's asset all answer asset.not_found. No storage key or capability is returned.
+         * Read authorized asset metadata
+         * @description Reads the asset and its current host authorization in one read-only snapshot. Bound issue, comment and draft content follows its host's read permission; unbound preparations and profile images remain applicant-only. Missing, deleted or invisible assets and hosts answer asset.not_found. No storage key or capability is returned.
          */
         get: operations["getAsset"];
         put?: never;
         post?: never;
         /**
-         * Delete a private unbound preparation
-         * @description Rechecks its applicant and current host write permission, then records a tombstone without deleting objects synchronously or forgetting recovery records. Repeated deletion answers asset.not_found. Bound assets cannot be removed through this endpoint.
+         * Delete an authorized attachment or private preparation
+         * @description Rechecks current host removal permission. Unbound preparations remain applicant-only; bound ordinary attachments follow their host's permission. Records a tombstone without deleting objects synchronously or forgetting recovery records. Repeated authorized deletion on a still-visible host returns 204 with the original audit data. A missing or invisible host still answers asset.not_found. Bound description and profile images cannot be removed through this endpoint.
          */
         delete: operations["deleteAsset"];
         options?: never;
@@ -63,7 +63,7 @@ export interface paths {
         put?: never;
         /**
          * Verify and publish immutable content
-         * @description Commits an independent candidate before inspecting, validating and sealing the uploaded bytes without database resources. Rechecks current host write permission and the candidate lease before publishing. Repeated authorized confirmation returns the existing result without changing its audit data. Failed or losing candidates remain recoverable; a storage failure does not mean the object is absent. asset.busy and asset.storage_unavailable include Retry-After of one second.
+         * @description Commits an independent candidate before inspecting, validating and sealing the uploaded bytes without database resources. Rechecks current host write permission and the candidate lease before publishing. Only the applicant may confirm. Ordinary attachments on existing issue, comment or draft hosts bind in the final transaction; description and new-comment preparations remain unbound. Repeated authorized confirmation returns the existing result without changing its audit data, except that a legacy uploaded ordinary attachment receives its first binding on a valid retry. Failed or losing candidates remain recoverable; a storage failure does not mean the object is absent. asset.busy and asset.storage_unavailable include Retry-After of one second.
          */
         post: operations["completeAsset"];
         delete?: never;
@@ -84,8 +84,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Copy verified content to a new private preparation
-         * @description Authorizes the source for reading before the destination for preparation. Commits a new pending target and an independent candidate, then validates and seals real bytes without database resources. Rechecks both scopes and source identity before publishing. A failed copy remains recoverable. Every request creates a distinct target; repeating after a lost response can create an extra preparation, reclaimed by the ordinary expiry rule.
+         * Copy authorized content to a new asset
+         * @description Authorizes the source for reading before the destination for preparation. Commits a new pending target and an independent candidate, then validates and seals real bytes without database resources. Rechecks both scopes and source identity before publishing. A failed copy remains recoverable. Ordinary attachments on existing issue, comment or draft hosts bind in the final transaction; description and new-comment preparations stay private. Every request creates a distinct target; repeating after a lost response can create an extra attachment. Only unbound preparations are reclaimed by the ordinary preparation expiry rule.
          */
         post: operations["duplicateAsset"];
         delete?: never;
@@ -105,7 +105,7 @@ export interface paths {
         };
         /**
          * Sign a read of completed content
-         * @description Rechecks the applicant's credential and current host authorization before signing an uploaded asset's immutable final object. Does not write database rows. Expiry is the next UTC whole hour, or the following hour when fewer than five minutes remain. Attachments always download; verified image purposes can display inline. A previously issued URL remains a bearer capability until its expiry even if permission is subsequently revoked.
+         * @description Rechecks the caller's credential, asset visibility and current host read permission before signing an uploaded asset's immutable final object. Bound issue, comment and draft content follows host permissions; unbound preparations and profile images remain applicant-only. Does not write database rows. Expiry is the next UTC whole hour, or the following hour when fewer than five minutes remain. Attachments always download; verified image purposes can display inline. A previously issued URL remains a bearer capability until its expiry even if permission is subsequently revoked.
          */
         get: operations["resolveAssetContent"];
         put?: never;
@@ -3231,7 +3231,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Metadata visible to its applicant. */
+            /** @description Metadata visible under the asset and host permissions. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -3254,7 +3254,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Preparation deleted; objects remain subject to their safe retention periods. */
+            /** @description Asset deleted or already deleted; objects remain subject to their safe retention periods. */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -3306,7 +3306,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description A new uploaded, unbound asset with its own immutable object. */
+            /** @description A new uploaded asset with its own immutable object and binding appropriate to its purpose and host. */
             201: {
                 headers: {
                     [name: string]: unknown;

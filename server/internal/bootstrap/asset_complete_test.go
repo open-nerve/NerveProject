@@ -78,7 +78,7 @@ func TestAssetCompleteRealBytes(t *testing.T) {
 				t.Fatal(err)
 			}
 			digest := sha256.Sum256(tc.data)
-			if got.ID != prepared.Asset.ID || got.State != "uploaded" || got.IsBound || !row.Uploaded || row.Metadata.Final == nil || row.Metadata.Staging == nil || len(row.Metadata.Candidates) != 0 ||
+			if got.ID != prepared.Asset.ID || got.State != "uploaded" || got.IsBound != (tc.purpose == "ISSUE_ATTACHMENT") || !row.Uploaded || row.Metadata.Final == nil || row.Metadata.Staging == nil || len(row.Metadata.Candidates) != 0 ||
 				row.Metadata.Final.Key.Kind() != 'o' || row.Metadata.Final.Key.AssetID() != row.ID || row.Metadata.Final.SHA256 != hex.EncodeToString(digest[:]) || row.Metadata.Final.ETag == "" {
 				t.Fatalf("not a verified immutable result: API=%s row=%+v", body, row)
 			}

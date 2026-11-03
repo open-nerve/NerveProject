@@ -22,6 +22,13 @@ type HostRequest struct {
 	Intent AccessIntent
 }
 
+// AssetAccessRequest binds each locked row to its semantic owner request.
+// Duplicate source and target authorization must never depend on UUID order.
+type AssetAccessRequest struct {
+	ID   uuid.UUID
+	Host HostRequest
+}
+
 type Host struct {
 	Scope                                               domain.Scope
 	WorkspaceID, ProjectID, IssueID, CommentID, DraftID uuid.UUID

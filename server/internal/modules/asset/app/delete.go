@@ -9,6 +9,7 @@ import (
 )
 
 type DeleteDeps struct {
+	Events shared.EventPublisher
 	Rows   AssetReader
 	Writer MetadataWriter
 	Access *Access
@@ -22,21 +23,28 @@ func (u *Delete) Execute(ctx context.Context, id uuid.UUID) error {
 	if err != nil {
 		return err
 	}
-	before, err := ownedAsset(ctx, u.d.Rows, actor, id)
+	before, err := accessibleAsset(ctx, u.d.Rows, actor, id, RemoveAsset)
 	if err != nil {
 		return err
 	}
-	return u.d.Access.Within(ctx, actor, []HostRequest{{Scope: before.Placement.Scope, Intent: RemoveAsset}}, []uuid.UUID{id}, func(ctx context.Context, held AccessHeld) error {
-		row := held.Assets[0]
+	request := HostRequest{Scope: before.Placement.Scope, Intent: RemoveAsset}
+	return u.d.Access.Within(ctx, actor, []HostRequest{request}, []AssetAccessRequest{{ID: id, Host: request}}, func(ctx context.Context, held AccessHeld) error {
+		row := held.Assets[id]
 		if err := currentPlacement(before, row, held.Hosts[0]); err != nil {
 			return err
 		}
-		if row.BoundAt != nil {
+		if row.DeletedAt != nil {
+			return nil
+		}
+		if row.BoundAt != nil && !row.IsOrdinaryAttachment() {
 			return domain.ErrAssetBound
 		}
 		row.DeletedAt, row.DeletedByID = &held.At, &actor.UserID
 		row.UpdatedAt, row.UpdatedByID = held.At, &actor.UserID
-		_, err := u.d.Writer.SaveAsset(ctx, row)
-		return err
+		deleted, err := u.d.Writer.SaveAsset(ctx, row)
+		if err != nil {
+			return err
+		}
+		return publishAttachmentChange(ctx, u.d.Events, deleted, actor.UserID, held.At, false)
 	})
 }

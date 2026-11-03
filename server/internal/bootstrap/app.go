@@ -151,7 +151,7 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 		a.close()
 		return nil, err
 	}
-	events, err := newDispatcher(eventTypes(), slices.Concat(issue.Subscribers(issueInserter{client: inserter}), asset.Subscribers(assetPorts, assetInserter{client: inserter})))
+	events, err := newDispatcher(eventTypes(), slices.Concat(issue.Subscribers(issuePorts, issueInserter{client: inserter}), asset.Subscribers(assetPorts, assetInserter{client: inserter})))
 	if err != nil {
 		a.close()
 		return nil, err
@@ -221,7 +221,7 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 		a.close()
 		return nil, err
 	}
-	files, err := asset.New(asset.Deps{Files: cfg.Files, RuntimeNow: assets.runtimeNow, Transfer: assets.transfer, Sealing: assets.sealing, Ports: assetPorts, Objects: assets.store, Inventory: assets.store, Temporary: assets.store, JobTx: tx,
+	files, err := asset.New(asset.Deps{Events: events, Files: cfg.Files, RuntimeNow: assets.runtimeNow, Transfer: assets.transfer, Sealing: assets.sealing, Ports: assetPorts, Objects: assets.store, Inventory: assets.store, Temporary: assets.store, JobTx: tx,
 		PurgeAfter: cfg.Cleanup.PurgeAfter,
 		ReadTx:     postgres.NewTxManager(pool, cfg.Database.CommitTimeout, postgres.ReadOnlySnapshot()), UploadSigner: assets.store, ReadSigner: assets.store,
 		Parents: assetParentReader{workspaces: workspacePorts.AssetParents, projects: projectPorts.AssetParents, issues: issuePorts.AssetParents},

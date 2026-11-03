@@ -237,10 +237,10 @@ type ServerInterface interface {
 	// CreateAsset Prepare a private upload
 	// (POST /api/v0/assets)
 	CreateAsset(w http.ResponseWriter, r *http.Request)
-	// DeleteAsset Delete a private unbound preparation
+	// DeleteAsset Delete an authorized attachment or private preparation
 	// (DELETE /api/v0/assets/{id})
 	DeleteAsset(w http.ResponseWriter, r *http.Request, id AssetID)
-	// GetAsset Read private asset metadata
+	// GetAsset Read authorized asset metadata
 	// (GET /api/v0/assets/{id})
 	GetAsset(w http.ResponseWriter, r *http.Request, id AssetID)
 	// CompleteAsset Verify and publish immutable content
@@ -249,7 +249,7 @@ type ServerInterface interface {
 	// ResolveAssetContent Sign a read of completed content
 	// (GET /api/v0/assets/{id}/content)
 	ResolveAssetContent(w http.ResponseWriter, r *http.Request, id AssetID)
-	// DuplicateAsset Copy verified content to a new private preparation
+	// DuplicateAsset Copy authorized content to a new asset
 	// (POST /api/v0/assets/{id}/duplicate)
 	DuplicateAsset(w http.ResponseWriter, r *http.Request, id AssetID)
 }
@@ -824,10 +824,10 @@ type StrictServerInterface interface {
 	// CreateAsset Prepare a private upload
 	// (POST /api/v0/assets)
 	CreateAsset(ctx context.Context, request CreateAssetRequestObject) (CreateAssetResponseObject, error)
-	// DeleteAsset Delete a private unbound preparation
+	// DeleteAsset Delete an authorized attachment or private preparation
 	// (DELETE /api/v0/assets/{id})
 	DeleteAsset(ctx context.Context, request DeleteAssetRequestObject) (DeleteAssetResponseObject, error)
-	// GetAsset Read private asset metadata
+	// GetAsset Read authorized asset metadata
 	// (GET /api/v0/assets/{id})
 	GetAsset(ctx context.Context, request GetAssetRequestObject) (GetAssetResponseObject, error)
 	// CompleteAsset Verify and publish immutable content
@@ -836,7 +836,7 @@ type StrictServerInterface interface {
 	// ResolveAssetContent Sign a read of completed content
 	// (GET /api/v0/assets/{id}/content)
 	ResolveAssetContent(ctx context.Context, request ResolveAssetContentRequestObject) (ResolveAssetContentResponseObject, error)
-	// DuplicateAsset Copy verified content to a new private preparation
+	// DuplicateAsset Copy authorized content to a new asset
 	// (POST /api/v0/assets/{id}/duplicate)
 	DuplicateAsset(ctx context.Context, request DuplicateAssetRequestObject) (DuplicateAssetResponseObject, error)
 }

@@ -53,16 +53,17 @@ type ListSettings interface {
 
 // Provided are the adapters bootstrap builds before wiring consuming modules.
 type Provided struct {
-	AssetParents AssetParents
-	IssueCascade Cascade
-	ListSettings ListSettings
-	Purger       *app.Purger
+	attachmentChanges app.AttachmentEventStore
+	AssetParents      AssetParents
+	IssueCascade      Cascade
+	ListSettings      ListSettings
+	Purger            *app.Purger
 }
 
 // Provide builds issue's adapters for the other modules.
 func Provide(pool *pgxpool.Pool, protected []postgres.ProtectedReference) Provided {
 	store := postgresadapter.NewPurgeStore(pool, protected)
-	return Provided{AssetParents: store, Purger: app.NewPurger([]app.PurgeStep{
+	return Provided{attachmentChanges: store, AssetParents: store, Purger: app.NewPurger([]app.PurgeStep{
 		{Table: "comment_reactions", Delete: store.PurgeCommentReactions},
 		{Table: "issue_reactions", Delete: store.PurgeIssueReactions},
 		{Table: "issue_mentions", Delete: store.PurgeIssueMentions},

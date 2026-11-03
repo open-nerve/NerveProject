@@ -56,10 +56,10 @@ issue新增app/content_asset_ports.go、attachment_ports.go、attachments.go、a
 **Files:** asset/app/access.go/read.go/complete.go/duplicate.go/delete.go及publication事件职责文件；asset/domain纯规则；issue/app/attachment_events.go/domain活动；两模块module_events.go/module.go、bootstrap/event目录/组合根及新测试；API问题码和必要文案。
 **Interfaces:** 用具名资产访问请求绑定ID与HostRequest，完整父锁顺序不变；Event attachment_added/deleted严格遵主spec§2.4，asset.EventTypes()声明两类型并加入bootstrap.eventTypes，issue subscriber只消费当前事务与P(N)能力。
 
-- [ ] Step 1：TestAttachmentPublication / TestBoundAssetAccess / TestAttachmentEvents真实API/PG：已有宿主三附件complete绑定、new_comment不绑、旧uploaded未绑重试一次、重复/并发确认、成员读别人活附件、准备/资料仍私有、已绑定描述禁止删、附件删除幂等与首次审计。
-- [ ] Step 2：运行`cd server && go test -p 1 ./internal/modules/asset/... ./internal/modules/issue/app ./internal/bootstrap -run 'Test(AttachmentPublication|BoundAssetAccess|AttachmentEvents)' -count=1`记录RED，完成资格纯规则、关联授权与事件/动态接线；不能去掉全局applicant后任意放行。
-- [ ] Step 3：相同命令GREEN；subscriber/COMMIT故障全部回滚，重复complete/delete无额外动态，父清理无逐件事件；opaque错误不回显filename/key/私有ID。
-- [ ] Step 4：完整asset app、事件合同、旧P2/P4权限与真实存储回归、gen/lint；提交 `feat(M5/P5): 接通附件发布权限与事务事件`。
+- [x] Step 1：TestAttachmentPublication / TestBoundAssetAccess / TestAttachmentEvents真实API/PG：已有宿主三附件complete绑定、new_comment不绑、旧uploaded未绑重试一次、重复/并发确认、成员读别人活附件、准备/资料仍私有、已绑定描述禁止删、附件删除幂等与首次审计。
+- [x] Step 2：运行`cd server && go test -p 1 ./internal/modules/asset/... ./internal/modules/issue/app ./internal/bootstrap -run 'Test(AttachmentPublication|BoundAssetAccess|AttachmentEvents)' -count=1`记录RED，完成资格纯规则、关联授权与事件/动态接线；不能去掉全局applicant后任意放行。
+- [x] Step 3：相同命令GREEN；subscriber/COMMIT故障全部回滚，重复complete/delete无额外动态，父清理无逐件事件；opaque错误不回显filename/key/私有ID。
+- [x] Step 4：完整asset app、事件合同、旧P2/P4权限与真实存储回归、gen/lint；提交 `feat(M5/P5): 接通附件发布权限与事务事件`。
 
 ## Task 4（T4）：分页列表与批量计数读取端口
 

@@ -48,7 +48,7 @@ func TestAssetDuplicateAuthorizationAndBytes(t *testing.T) {
 				var got preparedAssetAnswer
 				decodeAnswer(t, assetAPICall(t, w, "alice", "POST", duplicateAssetPath(source.Asset.ID), body, 201), &got.Asset)
 				target, err := assetpg.New(w.pool).FindAsset(t.Context(), got.Asset.ID)
-				if err != nil || got.Asset.ID == source.Asset.ID || got.Asset.Name != "same.txt" || got.Asset.State != "uploaded" || got.Asset.IsBound || !target.Uploaded || target.Metadata.Final == nil || target.Metadata.Final.Key == before.Metadata.Final.Key || target.Metadata.Origin != domain.OriginCopy || target.Metadata.Staging != nil || len(target.Metadata.Candidates) != 0 || target.UploadExpiresAt != nil || target.Placement.IssueID != items[pair[1]] || target.Metadata.Final.SHA256 != before.Metadata.Final.SHA256 {
+				if err != nil || got.Asset.ID == source.Asset.ID || got.Asset.Name != "same.txt" || got.Asset.State != "uploaded" || !got.Asset.IsBound || !target.Uploaded || target.Metadata.Final == nil || target.Metadata.Final.Key == before.Metadata.Final.Key || target.Metadata.Origin != domain.OriginCopy || target.Metadata.Staging != nil || len(target.Metadata.Candidates) != 0 || target.UploadExpiresAt != nil || target.Placement.IssueID != items[pair[1]] || target.Metadata.Final.SHA256 != before.Metadata.Final.SHA256 {
 					t.Fatalf("not an independent completed copy: %+v %v", target, err)
 				}
 				if seen[target.Metadata.Final.Key] {
@@ -68,7 +68,7 @@ func TestAssetDuplicateAuthorizationAndBytes(t *testing.T) {
 	}
 	t.Run("both sides authorize in source first order", func(t *testing.T) {
 		item := w.newWorkItem(t)
-		alice := uploadedAssetHTTP(t, w, "alice", "ISSUE_ATTACHMENT", assetScopeBody("issue", item), "private.png", "image/png", assetTestPNG(t))
+		alice := uploadedAssetHTTP(t, w, "alice", "ISSUE_DESCRIPTION", assetScopeBody("issue", item), "private.png", "image/png", assetTestPNG(t))
 		bob := uploadedAssetHTTP(t, w, "bob", "ISSUE_ATTACHMENT", assetScopeBody("issue", item), "own.png", "image/png", assetTestPNG(t))
 		secret := createdProjectFrom(t, w.contract, w.base, w.tokens["alice"], "acme", `{"name":"Secret","identifier":"SECRET","network":0}`)
 		w.makeMember(t, "bob", secret, 15)
