@@ -1052,6 +1052,72 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v0/issues/{issue_id}/attachments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                issue_id: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * List ordinary issue attachments
+         * @description Reads the visible host and its uploaded, bound, undeleted ordinary attachments in one snapshot. Drafts are private to their owner. UUID ascending pages include metadata only, without URLs or storage keys. The host-specific v1 cursor is canonical unpadded base64url JSON. Unknown or repeated parameters and malformed cursors answer 400; integer limits outside 1..100 answer 422. The default limit is 50.
+         */
+        get: operations["getIssueAttachments"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v0/issue-comments/{comment_id}/attachments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                comment_id: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * List ordinary comment attachments
+         * @description Reads the visible host and its uploaded, bound, undeleted ordinary attachments in one snapshot. Drafts are private to their owner. UUID ascending pages include metadata only, without URLs or storage keys. The host-specific v1 cursor is canonical unpadded base64url JSON. Unknown or repeated parameters and malformed cursors answer 400; integer limits outside 1..100 answer 422. The default limit is 50.
+         */
+        get: operations["getCommentAttachments"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v0/drafts/{draft_id}/attachments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draft_id: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * List ordinary draft attachments
+         * @description Reads the visible host and its uploaded, bound, undeleted ordinary attachments in one snapshot. Drafts are private to their owner. UUID ascending pages include metadata only, without URLs or storage keys. The host-specific v1 cursor is canonical unpadded base64url JSON. Unknown or repeated parameters and malformed cursors answer 400; integer limits outside 1..100 answer 422. The default limit is 50.
+         */
+        get: operations["getDraftAttachments"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v0/workspaces/{slug}/drafts": {
         parameters: {
             query?: never;
@@ -2550,6 +2616,22 @@ export interface components {
         IssueCollection: {
             data: components["schemas"]["Issue"][];
         };
+        Attachment: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            content_type: string;
+            /** Format: int64 */
+            size: number;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: uuid */
+            created_by_id: string | null;
+        };
+        AttachmentPage: {
+            data: components["schemas"]["Attachment"][];
+            next_cursor: string | null;
+        };
         /** @description Unfinished issue input. Saving checks structure, not create semantics. */
         IssueDraftPayload: {
             name?: string;
@@ -3134,6 +3216,8 @@ export type LabelUpdate = components['schemas']['LabelUpdate'];
 export type IssuePriority = components['schemas']['IssuePriority'];
 export type Issue = components['schemas']['Issue'];
 export type IssueCollection = components['schemas']['IssueCollection'];
+export type Attachment = components['schemas']['Attachment'];
+export type AttachmentPage = components['schemas']['AttachmentPage'];
 export type IssueDraftPayload = components['schemas']['IssueDraftPayload'];
 export type Draft = components['schemas']['Draft'];
 export type DraftPage = components['schemas']['DraftPage'];
@@ -4796,6 +4880,90 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["IssueCollection"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getIssueAttachments: {
+        parameters: {
+            query?: {
+                /** @description The page size, 1–100; 50 when absent. Outside that range the answer is 422 validation_failed on limit. */
+                limit?: components["parameters"]["Limit"];
+                /** @description The next_cursor of the page before; absent for the first page. A cursor that does not decode, has an unknown version or a payload of another shape than this list's, or is not spelled as the server writes it is 400 bad_request on cursor. */
+                cursor?: components["parameters"]["Cursor"];
+            };
+            header?: never;
+            path: {
+                issue_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A page of attachment metadata. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttachmentPage"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getCommentAttachments: {
+        parameters: {
+            query?: {
+                /** @description The page size, 1–100; 50 when absent. Outside that range the answer is 422 validation_failed on limit. */
+                limit?: components["parameters"]["Limit"];
+                /** @description The next_cursor of the page before; absent for the first page. A cursor that does not decode, has an unknown version or a payload of another shape than this list's, or is not spelled as the server writes it is 400 bad_request on cursor. */
+                cursor?: components["parameters"]["Cursor"];
+            };
+            header?: never;
+            path: {
+                comment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A page of attachment metadata. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttachmentPage"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getDraftAttachments: {
+        parameters: {
+            query?: {
+                /** @description The page size, 1–100; 50 when absent. Outside that range the answer is 422 validation_failed on limit. */
+                limit?: components["parameters"]["Limit"];
+                /** @description The next_cursor of the page before; absent for the first page. A cursor that does not decode, has an unknown version or a payload of another shape than this list's, or is not spelled as the server writes it is 400 bad_request on cursor. */
+                cursor?: components["parameters"]["Cursor"];
+            };
+            header?: never;
+            path: {
+                draft_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A page of attachment metadata. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttachmentPage"];
                 };
             };
             default: components["responses"]["Problem"];

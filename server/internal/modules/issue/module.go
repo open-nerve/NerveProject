@@ -116,11 +116,12 @@ type (
 
 // Deps are what bootstrap gives the module (M4 design 6.6, step 6).
 type Deps struct {
-	DraftAssets app.DraftAssets
-	Outbound    *outbound.Client
-	Logger      *slog.Logger
-	Events      shared.EventPublisher
-	Pool        *pgxpool.Pool
+	AttachmentReader app.AttachmentReader
+	DraftAssets      app.DraftAssets
+	Outbound         *outbound.Client
+	Logger           *slog.Logger
+	Events           shared.EventPublisher
+	Pool             *pgxpool.Pool
 	// Tx are the transactions of the module's writes, each of which waits
 	// for a lock at most issue.write_lock_timeout (bootstrap/gate.go).
 	Tx shared.TxManager
@@ -174,6 +175,8 @@ func New(d Deps) *Module {
 	store := postgresadapter.New(d.Pool)
 	locks := app.NewLocks(d.Projects, store, d.Authorizer, d.WriteGate, d.Tx)
 	draftLocks := app.NewDraftLocks(locks, d.Workspaces, d.Projects, store)
+	assetAccess := app.NewAssetAccess(app.AssetAccessDeps{Locks: locks, Drafts: draftLocks, Comments: store, Projects: d.Projects})
+	attachments := app.GetAttachmentsDeps{Access: assetAccess, Rows: d.AttachmentReader, ReadTx: d.ReadTx}
 	sanitizer := content.NewSanitizer()
 	listing := app.NewListing(app.ListingDeps{Rows: store, States: d.Projects, Labels: d.Projects, Assignees: store, Profiles: d.Profiles, Issues: store})
 	archive := app.ArchiveIssueDeps{Events: d.Events, Locks: locks, Issues: store, States: d.Projects, Clock: d.Clock}
@@ -182,10 +185,13 @@ func New(d Deps) *Module {
 		Profiles: d.Profiles, Clock: d.Clock, Sanitizer: sanitizer,
 	})
 	return &Module{
-		assets: app.NewAssetAccess(app.AssetAccessDeps{Locks: locks, Drafts: draftLocks, Comments: store, Projects: d.Projects}), deleteRows: app.NewDeleteRows(app.DeleteRowsDeps{Rows: store, Relations: app.NewRelationDeletions(store, d.Projects), Remaining: store, Tx: d.JobTx, RuntimeNow: d.RuntimeNow, Batch: d.DeleteBatch, Budget: d.DeleteBudget}), deleteBudget: d.DeleteBudget, logger: d.Logger,
+		assets: assetAccess, deleteRows: app.NewDeleteRows(app.DeleteRowsDeps{Rows: store, Relations: app.NewRelationDeletions(store, d.Projects), Remaining: store, Tx: d.JobTx, RuntimeNow: d.RuntimeNow, Batch: d.DeleteBatch, Budget: d.DeleteBudget}), deleteBudget: d.DeleteBudget, logger: d.Logger,
 		trimVersions: app.NewTrimVersions(app.TrimVersionsDeps{Projects: d.Projects, Gate: d.Projects, Rows: store, Tx: d.JobTx}), trimVersionsInterval: d.TrimVersionsInterval,
 		crawlLink: app.NewCrawlLink(app.CrawlLinkDeps{Crawler: crawler.New(d.Outbound, d.Logger), Links: store}), autoArchive: app.NewAutoArchive(app.AutoArchiveDeps{Policies: d.ArchivePolicies, Projects: d.Projects, States: d.Projects, Issues: store, Tx: d.JobTx, Clock: d.Clock, Events: d.Events}), autoArchiveInterval: d.AutoArchiveInterval,
 		uc: httpadapter.UseCases{
+			GetIssueAttachments:     app.NewGetAttachments("issue", attachments),
+			GetCommentAttachments:   app.NewGetAttachments("comment", attachments),
+			GetDraftAttachments:     app.NewGetAttachments("draft", attachments),
 			SearchIssues:            app.NewSearchIssues(app.SearchIssuesDeps{ReadTx: d.ReadTx, Authorizer: d.Authorizer, Workspaces: d.Workspaces, Projects: d.Projects, Identifiers: d.Projects, Issues: store, Locks: locks, Rows: store}),
 			PublishDraft:            app.NewPublishDraft(app.PublishDraftDeps{Locks: draftLocks, Decoder: httpadapter.IssueCreatePayloadDecoder{}, Creation: creation, Drafts: store}),
 			ListDrafts:              app.NewListDrafts(app.ListDraftsDeps{ReadTx: d.ReadTx, Locks: draftLocks, Workspaces: d.Workspaces, Projects: d.Projects, Drafts: store}),

@@ -158,9 +158,11 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 	}
 	projectWrites := newWriteGate(cfg.Issue.WriteGate)
 	issueTx := newIssueJobTx(pool, cfg)
+	attachmentReads := asset.NewAttachmentReads(assetPorts)
 	issues := issue.New(issue.Deps{
-		DraftAssets: issueDraftAssets{assets: assetPorts.DraftAssets},
-		Outbound:    outboundClient, Logger: logger,
+		AttachmentReader: issueAttachments{reader: attachmentReads, counter: attachmentReads, catalog: attachmentReads},
+		DraftAssets:      issueDraftAssets{assets: assetPorts.DraftAssets},
+		Outbound:         outboundClient, Logger: logger,
 		Events: events,
 		Pool:   pool, Tx: busyTx{tx: issueTx}, JobTx: issueTx, ArchivePolicies: projectPorts.ArchivePolicies, AutoArchiveInterval: cfg.Issue.AutoArchiveInterval, TrimVersionsInterval: cfg.Issue.TrimVersionsInterval,
 		DeleteBatch: cfg.Issue.DeleteBatch, DeleteBudget: cfg.Issue.DeleteBudget, RuntimeNow: time.Now,

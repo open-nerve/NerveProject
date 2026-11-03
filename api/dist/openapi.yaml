@@ -1670,6 +1670,102 @@ paths:
                 $ref: '#/components/schemas/IssueCollection'
         default:
           $ref: '#/components/responses/Problem'
+  /api/v0/issues/{issue_id}/attachments:
+    parameters:
+      - name: issue_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: getIssueAttachments
+      tags:
+        - issue
+      summary: List ordinary issue attachments
+      description: Reads the visible host and its uploaded, bound, undeleted ordinary attachments in one snapshot. Drafts are private to their owner. UUID ascending pages include metadata only, without URLs or storage keys. The host-specific v1 cursor is canonical unpadded base64url JSON. Unknown or repeated parameters and malformed cursors answer 400; integer limits outside 1..100 answer 422. The default limit is 50.
+      security:
+        - bearer: []
+      x-problem-codes:
+        - validation_failed
+        - issue.not_found
+        - forbidden
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: A page of attachment metadata.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AttachmentPage'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/issue-comments/{comment_id}/attachments:
+    parameters:
+      - name: comment_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: getCommentAttachments
+      tags:
+        - issue
+      summary: List ordinary comment attachments
+      description: Reads the visible host and its uploaded, bound, undeleted ordinary attachments in one snapshot. Drafts are private to their owner. UUID ascending pages include metadata only, without URLs or storage keys. The host-specific v1 cursor is canonical unpadded base64url JSON. Unknown or repeated parameters and malformed cursors answer 400; integer limits outside 1..100 answer 422. The default limit is 50.
+      security:
+        - bearer: []
+      x-problem-codes:
+        - validation_failed
+        - issue.comment_not_found
+        - forbidden
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: A page of attachment metadata.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AttachmentPage'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/drafts/{draft_id}/attachments:
+    parameters:
+      - name: draft_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: getDraftAttachments
+      tags:
+        - issue
+      summary: List ordinary draft attachments
+      description: Reads the visible host and its uploaded, bound, undeleted ordinary attachments in one snapshot. Drafts are private to their owner. UUID ascending pages include metadata only, without URLs or storage keys. The host-specific v1 cursor is canonical unpadded base64url JSON. Unknown or repeated parameters and malformed cursors answer 400; integer limits outside 1..100 answer 422. The default limit is 50.
+      security:
+        - bearer: []
+      x-problem-codes:
+        - validation_failed
+        - issue.draft_not_found
+        - forbidden
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: A page of attachment metadata.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AttachmentPage'
+        default:
+          $ref: '#/components/responses/Problem'
   /api/v0/workspaces/{slug}/drafts:
     parameters:
       - $ref: '#/components/parameters/Slug'
@@ -4718,6 +4814,51 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Issue'
+    Attachment:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - name
+        - content_type
+        - size
+        - created_at
+        - created_by_id
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        content_type:
+          type: string
+        size:
+          type: integer
+          format: int64
+          minimum: 0
+        created_at:
+          type: string
+          format: date-time
+        created_by_id:
+          type:
+            - string
+            - 'null'
+          format: uuid
+    AttachmentPage:
+      type: object
+      additionalProperties: false
+      required:
+        - data
+        - next_cursor
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Attachment'
+        next_cursor:
+          type:
+            - string
+            - 'null'
     IssueDraftPayload:
       description: Unfinished issue input. Saving checks structure, not create semantics.
       type: object

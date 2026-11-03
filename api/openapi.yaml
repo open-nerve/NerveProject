@@ -117,6 +117,12 @@ paths:
     $ref: 'modules/project.yaml#/paths/~1api~1v0~1labels~1{label_id}'
   /api/v0/workspaces/{slug}/issue-search:
     $ref: 'modules/issue.yaml#/paths/~1api~1v0~1workspaces~1{slug}~1issue-search'
+  /api/v0/issues/{issue_id}/attachments:
+    $ref: 'modules/issue.yaml#/paths/~1api~1v0~1issues~1{issue_id}~1attachments'
+  /api/v0/issue-comments/{comment_id}/attachments:
+    $ref: 'modules/issue.yaml#/paths/~1api~1v0~1issue-comments~1{comment_id}~1attachments'
+  /api/v0/drafts/{draft_id}/attachments:
+    $ref: 'modules/issue.yaml#/paths/~1api~1v0~1drafts~1{draft_id}~1attachments'
   /api/v0/workspaces/{slug}/drafts:
     $ref: 'modules/issue.yaml#/paths/~1api~1v0~1workspaces~1{slug}~1drafts'
   /api/v0/drafts/{draft_id}:

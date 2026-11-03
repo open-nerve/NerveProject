@@ -66,10 +66,10 @@ issue新增app/content_asset_ports.go、attachment_ports.go、attachments.go、a
 **Files:** asset/app/attachment_reads.go、postgres/attachments.go/queries/attachments.sql；issue/app/attachments.go/attachment_ports.go、domain attachment_cursor.go、HTTP attachments.go；api/modules/issue.yaml及Go/TS生成；bootstrap接线与tests。
 **Interfaces:** spec读取§1的AttachmentReader/AttachmentCounter/AttachmentCountCatalog；三个GetAttachments用例复用当前read snapshot/owner权限，内部请求limit+1。
 
-- [ ] Step 1：TestAttachmentLists / TestAttachmentCounts / TestAttachmentCursor覆盖50/100与101分页、宿主错cursor、unknown字段400、已删/未上传/未绑/描述过滤、完整两页scope、另一作者附件、SQL/端口故障不是空页。
-- [ ] Step 2：`cd server && go test -p 1 ./internal/modules/asset/adapter/postgres ./internal/modules/issue/domain ./internal/modules/issue/app ./internal/bootstrap -run 'TestAttachment(Lists|Counts|Cursor)' -count=1`记录RED后实现端口/路由与生成合同。
-- [ ] Step 3：GREEN及归档/权限旧回归；GET零DML/零存储I/O，同快照先授权再查资产；1001 IDs无截断且无N+1。
-- [ ] Step 4：完整契约/架构、gen/lint与前端类型，提交 `feat(M5/P5): 提供有界附件列表和真实批量计数`。
+- [x] Step 1：TestAttachmentLists / TestAttachmentCounts / TestAttachmentCursor覆盖50/100与101分页、宿主错cursor、unknown字段400、已删/未上传/未绑/描述过滤、完整两页scope、另一作者附件、SQL/端口故障不是空页。
+- [x] Step 2：`cd server && go test -p 1 ./internal/modules/asset/adapter/postgres ./internal/modules/issue/domain ./internal/modules/issue/app ./internal/bootstrap -run 'TestAttachment(Lists|Counts|Cursor)' -count=1`记录RED后实现端口/路由与生成合同。
+- [x] Step 3：GREEN及归档/权限旧回归；GET零DML/零存储I/O，同快照先授权再查资产；1001 IDs无截断且无N+1。
+- [x] Step 4：完整契约/架构、gen/lint与前端类型，提交 `feat(M5/P5): 提供有界附件列表和真实批量计数`。
 
 ## Task 5（T5）：工作项正文绑定与全部Issue出口
 

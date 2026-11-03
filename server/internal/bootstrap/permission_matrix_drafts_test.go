@@ -20,6 +20,10 @@ func draftMatrixRows() []matrixRow {
 		}
 	}
 	rows := []matrixRow{
+		{op: "getDraftAttachments", request: func(c caller, s seeded) (string, string, string) {
+			return http.MethodGet, draftPath(s.drafts[workspaceOf(c)+"/"+string(c)]) + "/attachments", ""
+		}, cells: workspaceCells(cellOK, cellOK, cellForbidden, cellDraftNotFound, cellDraftNotFound, cellDraftNotFound)},
+
 		{op: "publishDraft", write: true, prepare: prepareDraftPublisher, request: func(c caller, s seeded) (string, string, string) {
 			return "POST", publishPath(s.drafts[workspaceOf(c)+"/"+string(c)]), ""
 		}, cells: workspaceCells(cellCreated, cellCreated, cellForbidden, cellDraftNotFound, cellDraftNotFound, cellDraftNotFound)},

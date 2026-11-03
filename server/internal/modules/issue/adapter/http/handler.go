@@ -141,6 +141,9 @@ type SearchIssuesUseCase interface {
 
 // UseCases are the use cases behind the module's operations.
 type UseCases struct {
+	GetIssueAttachments     GetAttachmentsUseCase
+	GetCommentAttachments   GetAttachmentsUseCase
+	GetDraftAttachments     GetAttachmentsUseCase
 	SearchIssues            SearchIssuesUseCase
 	PublishDraft            PublishDraftUseCase
 	ListDrafts              ListDraftsUseCase
@@ -184,7 +187,7 @@ type UseCases struct {
 // middlewares; api.Errors answers binding, decoding and handler errors.
 // Every operation needs a token.
 func Register(router *httpserver.Router, api *httpserver.API, uc UseCases) {
-	strict := gen.NewStrictHandlerWithOptions(handler{uc: uc}, []gen.StrictMiddlewareFunc{withListQuery}, gen.StrictHTTPServerOptions{
+	strict := gen.NewStrictHandlerWithOptions(handler{uc: uc}, []gen.StrictMiddlewareFunc{withListQuery, withAttachmentQuery}, gen.StrictHTTPServerOptions{
 		RequestErrorHandlerFunc:  api.Errors.BodyError,
 		ResponseErrorHandlerFunc: api.Errors.Write,
 	})
