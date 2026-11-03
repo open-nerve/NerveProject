@@ -82,3 +82,23 @@ func (p workspaceImageReader) ReadWorkspaceImages(ctx context.Context, refs []wo
 	}
 	return out, nil
 }
+
+type memberAvatarReader struct{ images asset.ImageReader }
+
+func (p memberAvatarReader) ReadMemberAvatars(ctx context.Context, refs []workspace.MemberAvatarReference) (map[uuid.UUID]workspace.ImageURL, error) {
+	var query []asset.ImageReference
+	for _, ref := range refs {
+		if ref.AssetID != nil {
+			query = append(query, asset.ImageReference{AssetID: *ref.AssetID, Purpose: assetdomain.UserAvatar, UserID: ref.UserID})
+		}
+	}
+	images, err := p.images.ReadBoundImages(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[uuid.UUID]workspace.ImageURL, len(images))
+	for id, image := range images {
+		out[id] = workspace.ImageURL{URL: image.URL, ExpiresAt: image.ExpiresAt}
+	}
+	return out, nil
+}

@@ -128,10 +128,11 @@ type InvitationPreview struct {
 	// Role A member's role in a workspace, 5 guest, 15 member, 20 admin.
 	Role WorkspaceRole `json:"role"`
 
-	// WorkspaceLogoURL Null until uploads arrive (M5).
-	WorkspaceLogoURL nullable.Nullable[string] `json:"workspace_logo_url"`
-	WorkspaceName    string                    `json:"workspace_name"`
-	WorkspaceSlug    string                    `json:"workspace_slug"`
+	// WorkspaceLogoURL A signed URL for this invitation's fixed workspace logo; null if unavailable.
+	WorkspaceLogoURL          nullable.Nullable[string]    `json:"workspace_logo_url"`
+	WorkspaceLogoURLExpiresAt nullable.Nullable[time.Time] `json:"workspace_logo_url_expires_at"`
+	WorkspaceName             string                       `json:"workspace_name"`
+	WorkspaceSlug             string                       `json:"workspace_slug"`
 }
 
 // InvitationResponse defines model for InvitationResponse.
@@ -142,9 +143,10 @@ type InvitationResponse struct {
 
 // MemberUser A member's public profile, embedded in the membership: the one way v0 shows other accounts (M3 design 5.2).
 type MemberUser struct {
-	// AvatarURL Null until uploads arrive (M5).
-	AvatarURL   nullable.Nullable[string] `json:"avatar_url"`
-	DisplayName string                    `json:"display_name"`
+	// AvatarURL A signed URL for the member's current valid avatar; null if unavailable.
+	AvatarURL          nullable.Nullable[string]    `json:"avatar_url"`
+	AvatarURLExpiresAt nullable.Nullable[time.Time] `json:"avatar_url_expires_at"`
+	DisplayName        string                       `json:"display_name"`
 
 	// Email The member's address for a caller who is an admin or a member; null for a guest.
 	Email     nullable.Nullable[string] `json:"email"`

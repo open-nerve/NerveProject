@@ -85,9 +85,7 @@ func newAdminRace(t *testing.T) adminRace {
 // change is updateWorkspaceMember over members, with project's cascade,
 // identity's profiles and the Authorizer as bootstrap wires them.
 func (r adminRace) change(members workspaceapp.MemberUpdater) *workspaceapp.UpdateWorkspaceMember {
-	return workspaceapp.NewUpdateWorkspaceMember(members, cascadeOn(r.pool),
-		workspaceProfiles{profiles: identity.Provide(r.pool).PublicProfiles},
-		authorizerOn(r.pool), postgres.NewTxManager(r.pool, 2*time.Second), clocktest.At(time.Now()))
+	return workspaceapp.NewUpdateWorkspaceMember(workspaceapp.UpdateMemberDeps{Members: members, Projects: cascadeOn(r.pool), Profiles: workspaceProfiles{profiles: identity.Provide(r.pool).PublicProfiles}, Auth: authorizerOn(r.pool), Tx: postgres.NewTxManager(r.pool, 2*time.Second), Clock: clocktest.At(time.Now()), Caller: imageFixtureCaller{pool: r.pool}, Images: imageFixtureReader{}})
 }
 
 // roles are alice's and bob's roles in acme.

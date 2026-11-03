@@ -14,28 +14,28 @@ import (
 )
 
 func (f *invitationsFixture) get() *app.GetWorkspaceInvitation {
-	return app.NewGetWorkspaceInvitation(f.invitations, f.mac)
+	return app.NewGetWorkspaceInvitation(app.GetInvitationDeps{Invitations: f.invitations, MAC: f.mac, Images: noWorkspaceImages{}, Tx: f.tx})
 }
 
 // The link shows the invitation's role, whether it was declined, and its
 // workspace's name and slug: the token checked by the MAC, then the
-// invitation read, without a transaction and without a caller. Two
+// invitation read, then its workspace and invitation share locks, without a caller. Two
 // workspaces; a pending and a declined invitation.
 func TestGetWorkspaceInvitationShowsTheLinksInvitation(t *testing.T) {
 	for _, tt := range []struct {
 		inv  domain.Invitation
 		want domain.InvitationPreview
 	}{
-		{carolToAcme, domain.InvitationPreview{ID: carolToAcme.ID, Role: shared.RoleMember, WorkspaceName: "Acme", WorkspaceSlug: "acme"}},
-		{daveToAcme, domain.InvitationPreview{ID: daveToAcme.ID, Role: shared.RoleGuest, Declined: true, WorkspaceName: "Acme", WorkspaceSlug: "acme"}},
-		{erinToBeta, domain.InvitationPreview{ID: erinToBeta.ID, Role: shared.RoleAdmin, WorkspaceName: "Beta", WorkspaceSlug: "beta"}},
+		{carolToAcme, domain.InvitationPreview{WorkspaceID: acme.ID, ID: carolToAcme.ID, Role: shared.RoleMember, WorkspaceName: "Acme", WorkspaceSlug: "acme"}},
+		{daveToAcme, domain.InvitationPreview{WorkspaceID: acme.ID, ID: daveToAcme.ID, Role: shared.RoleGuest, Declined: true, WorkspaceName: "Acme", WorkspaceSlug: "acme"}},
+		{erinToBeta, domain.InvitationPreview{WorkspaceID: beta.ID, ID: erinToBeta.ID, Role: shared.RoleAdmin, WorkspaceName: "Beta", WorkspaceSlug: "beta"}},
 	} {
 		f := newInvitations()
 		got, err := f.get().Execute(context.Background(), tt.inv.ID, tokenOf(f.mac, tt.inv.ID))
 		if err != nil || got != tt.want {
 			t.Errorf("%s: Execute() = %+v, %v; want %+v", tt.inv.Email, got, err, tt.want)
 		}
-		if want := []string{"Verify " + tt.inv.ID.String(), "InvitationPreview " + tt.inv.ID.String() + " outside tx"}; !slices.Equal(f.log.calls, want) {
+		if want := []string{"Verify " + tt.inv.ID.String(), "InvitationPreview " + tt.inv.ID.String() + " outside tx", "ShareWorkspace " + tt.inv.WorkspaceID.String(), "ShareInvitationPreview " + tt.inv.ID.String()}; !slices.Equal(f.log.calls, want) {
 			t.Errorf("%s: calls = %q, want %q", tt.inv.Email, f.log.calls, want)
 		}
 	}

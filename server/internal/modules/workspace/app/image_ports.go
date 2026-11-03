@@ -38,3 +38,12 @@ type ImageReader interface {
 type ImageWorkspaceSharer interface {
 	ShareImageWorkspaces(context.Context, []uuid.UUID) ([]uuid.UUID, error)
 }
+
+// MemberAvatarReference comes only from a workspace-authorized public profile.
+type MemberAvatarReference struct {
+	UserID  uuid.UUID
+	AssetID *uuid.UUID
+}
+type MemberAvatarReader interface {
+	ReadMemberAvatars(context.Context, []MemberAvatarReference) (map[uuid.UUID]ImageURL, error)
+}

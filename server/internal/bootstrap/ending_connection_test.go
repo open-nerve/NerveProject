@@ -41,7 +41,7 @@ func newWorkspaceRouteWithPublisher(t *testing.T, pool *pgxpool.Pool, tx shared.
 	projects := project.New(project.Deps{Events: events, Pool: pool, Tx: tx, Clock: clock.System{}, Authorizer: auth,
 		Workspaces: projectWorkspaces{directory: provided.WorkspaceDirectory}, Members: provided.WorkspaceMembers,
 		Issues: issue.Provide(pool, nil).IssueCascade, ListSettings: projectListSettings{settings: issue.Provide(pool, nil).ListSettings}})
-	return newRoute(t, workspace.New(workspace.Deps{Events: events, Pool: pool, Tx: tx, Clock: clock.System{}, Logger: slog.New(slog.DiscardHandler),
+	return newRoute(t, workspace.New(workspace.Deps{CallerLock: imageFixtureCaller{pool: pool}, Images: imageFixtureReader{}, MemberAvatars: imageFixtureReader{}, Events: events, Pool: pool, Tx: tx, Clock: clock.System{}, Logger: slog.New(slog.DiscardHandler),
 		Authorizer: auth, Accounts: workspaceAccounts{accounts: identityPorts.Accounts},
 		Profiles: workspaceProfiles{profiles: identityPorts.PublicProfiles}, Projects: projects.Cascade()}).Register)
 }

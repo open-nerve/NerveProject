@@ -181,7 +181,7 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 		ListSettings: projectListSettings{settings: issuePorts.ListSettings},
 	})
 	ws := workspace.New(workspace.Deps{
-		ImageBindings: workspaceImageBindings{bindings: imageBindings}, Images: workspaceImageReader{images: imageReader},
+		ImageBindings: workspaceImageBindings{bindings: imageBindings}, Images: workspaceImageReader{images: imageReader}, MemberAvatars: memberAvatarReader{images: imageReader},
 		Events: events,
 		Pool:   pool, Tx: tx, Clock: businessClock, Logger: logger, Authorizer: authorizer,
 		Accounts:        workspaceAccounts{accounts: identityPorts.Accounts},

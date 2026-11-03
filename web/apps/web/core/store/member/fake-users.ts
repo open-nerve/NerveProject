@@ -17,6 +17,7 @@ export function userOf(name: string): MemberUser {
     first_name: name,
     last_name: "Doe",
     avatar_url: null,
+    avatar_url_expires_at: null,
     email: `${name}@example.com`,
   };
 }

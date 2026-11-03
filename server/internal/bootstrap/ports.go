@@ -46,7 +46,7 @@ func (p workspaceProfiles) PublicProfiles(ctx context.Context, ids []uuid.UUID) 
 	}
 	out := make([]workspace.PublicProfile, len(profiles))
 	for i, profile := range profiles {
-		out[i] = workspace.PublicProfile{ID: profile.ID, Email: profile.Email, FirstName: profile.FirstName, LastName: profile.LastName, DisplayName: profile.DisplayName}
+		out[i] = workspace.PublicProfile{AvatarAssetID: profile.AvatarAssetID, ID: profile.ID, Email: profile.Email, FirstName: profile.FirstName, LastName: profile.LastName, DisplayName: profile.DisplayName}
 	}
 	return out, nil
 }

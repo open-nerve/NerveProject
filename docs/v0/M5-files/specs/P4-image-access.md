@@ -87,9 +87,9 @@ owner拿到用户资料的头像引用时不锁“目标用户”账号：M3已�
 | project Get/List | 原可见性预检收齐候选 → 无连接进入相同项目gate → Tx内CallerLock → W(S) → P(S)全部UUID升序 → 原权限/过滤重读 → 批量cover |
 | project Create/Update | §2 |
 | project Archive/Unarchive/Join | CallerLock第一把；原W/成员/P锁、授权与变更结束后读取最终project并签cover，commit后再返回；不改变原动作权限与归档语义 |
-| public GetInvitation | 首先MAC验证（错误token仍零查询）→ 无锁预读邀请的workspace → Tx内W(S) → 重新读同一未删/未accepted邀请及有效workspace → 固定logo签发；没有actor时不造账号锁，不接收任意资产ID |
+| public GetInvitation | 首先MAC验证（错误token仍零查询）→ 无锁预读邀请的workspace → Tx内W(S) → 邀请行S并重读同一未删/未accepted邀请及有效workspace → 固定logo签发；没有actor时不造账号锁，不接收任意资产ID |
 
-公开邀请预览是M3已有的“有效链接持有者可看工作区名/slug/logo”的窄能力，OpenAPI原字段明确待M5；它不授予workspace.read，也不开放generic资产API。删除/接受邀请及workspace删除都持W(N)，因此先撤销提交则新预览404，先签发则撤销等提交。被忽略但未删除的链接保持M3现有预览语义。复制、猜测UUID、错误token、指向另一workspace的伪造请求均不能得到图片。
+公开邀请预览是M3已有的“有效链接持有者可看工作区名/slug/logo”的窄能力，OpenAPI原字段明确待M5；它不授予workspace.read，也不开放generic资产API。M3的修改/撤回/忽略邀请实际持W(S)+邀请U，接受和workspace删除持W(N)，账户停用还可不锁该工作区而删除发给它的邀请。预览因此必须在W(S)后持固定邀请行S，直到图片签发事务提交；只持W(S)不足以保护邀请有效性。先撤销提交则锁下重读404，先锁定有效邀请并签发则撤销等提交。新ShareInvitationPreview固定查询只锁邀请表，不改任何既有写用例的锁型/顺序；错token仍在全部数据库访问前拒绝。被忽略但未删除的链接保持M3现有预览语义。复制、猜测UUID、错误token、指向另一workspace的伪造请求均不能得到图片。
 
 所有签发读取都使用短写事务（只行锁、无DML），不能把readonly snapshot当成可线性签发的替代。列表先预读候选IDs，在锁下只返回仍可见且属于候选集合的行；期间新加入的workspace/project留到下一次请求，不追新锁。保持现有名称/ID排序、整集合响应及归档过滤，不截前N条；不把已不可见行残留在DTO。单目标不可见仍原owner404。项目ID升序共享锁在owner自有SQL执行；读操作永不升级为N。
 

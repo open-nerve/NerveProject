@@ -113,6 +113,7 @@ const InvitationMACPurpose = "workspace-invitation"
 
 // Deps are what bootstrap gives the module (M3 design 6.6, step 5).
 type Deps struct {
+	MemberAvatars app.MemberAvatarReader
 	Images        app.ImageReader
 	ImageBindings app.ImageBindings
 	Events        shared.EventPublisher
@@ -165,8 +166,8 @@ func New(d Deps) *Module {
 		UpdateWorkspace:   app.NewUpdateWorkspace(app.UpdateWorkspaceDeps{Workspaces: store, Auth: d.Authorizer, Caller: d.CallerLock, Images: d.Images, Bindings: d.ImageBindings, Tx: d.Tx, Clock: d.Clock}),
 		DeleteWorkspace:   app.NewDeleteWorkspace(store, d.Projects, d.Authorizer, d.Tx, d.Clock, d.Events, d.Logger),
 		Leave:             app.NewLeaveWorkspace(store, d.Profiles, d.Projects, d.Authorizer, d.Tx, d.Clock),
-		ListMembers:       app.NewListWorkspaceMembers(store, d.Profiles, d.Authorizer),
-		UpdateMember:      app.NewUpdateWorkspaceMember(store, d.Projects, d.Profiles, d.Authorizer, d.Tx, d.Clock),
+		ListMembers:       app.NewListWorkspaceMembers(app.ListMembersDeps{Members: store, Profiles: d.Profiles, Auth: d.Authorizer, Caller: d.CallerLock, Images: d.MemberAvatars, Tx: d.Tx, Clock: d.Clock}),
+		UpdateMember:      app.NewUpdateWorkspaceMember(app.UpdateMemberDeps{Members: store, Projects: d.Projects, Profiles: d.Profiles, Auth: d.Authorizer, Caller: d.CallerLock, Images: d.MemberAvatars, Tx: d.Tx, Clock: d.Clock}),
 		RemoveMember:      app.NewRemoveWorkspaceMember(store, d.Profiles, d.Projects, d.Authorizer, d.Tx, d.Clock),
 		CheckSlug:         app.NewCheckSlug(store),
 		GetPreferences:    app.NewGetWorkspacePreferences(store, d.Authorizer),
@@ -175,10 +176,10 @@ func New(d Deps) *Module {
 		CreateInvitations: app.NewCreateWorkspaceInvitations(app.CreateInvitationsDeps{
 			Caller: d.CallerLock, Invitations: store, Profiles: d.Profiles, Auth: d.Authorizer, Tx: d.Tx, Clock: d.Clock, MAC: d.InvitationMAC,
 		}),
-		GetInvitation:    app.NewGetWorkspaceInvitation(store, d.InvitationMAC),
+		GetInvitation:    app.NewGetWorkspaceInvitation(app.GetInvitationDeps{Invitations: store, Images: d.Images, Tx: d.Tx, MAC: d.InvitationMAC}),
 		UpdateInvitation: app.NewUpdateWorkspaceInvitation(store, d.Authorizer, d.Tx, d.Clock, d.InvitationMAC),
 		DeleteInvitation: app.NewDeleteWorkspaceInvitation(store, d.Authorizer, d.Tx, d.Clock),
-		AcceptInvitation: app.NewAcceptWorkspaceInvitation(app.AcceptInvitationDeps{
+		AcceptInvitation: app.NewAcceptWorkspaceInvitation(app.AcceptInvitationDeps{Caller: d.CallerLock, Images: d.Images,
 			Accounts: d.Accounts, Invitations: store, Projects: d.Projects, Tx: d.Tx, Clock: d.Clock, MAC: d.InvitationMAC,
 		}),
 		DeclineInvitation: app.NewDeclineWorkspaceInvitation(d.Accounts, store, d.Tx, d.Clock, d.InvitationMAC),

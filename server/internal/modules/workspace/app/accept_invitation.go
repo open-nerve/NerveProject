@@ -11,6 +11,8 @@ import (
 
 // AcceptInvitationDeps are AcceptWorkspaceInvitation's collaborators.
 type AcceptInvitationDeps struct {
+	Caller      CallerLock
+	Images      ImageReader
 	Accounts    Accounts
 	Invitations InvitationAccepter
 	Projects    ProjectCascade
@@ -22,6 +24,8 @@ type AcceptInvitationDeps struct {
 // AcceptWorkspaceInvitation makes the caller a member by an invitation to
 // his address: POST /api/v0/workspace-invitations/{invitation_id}/accept.
 type AcceptWorkspaceInvitation struct {
+	caller      CallerLock
+	images      ImageReader
 	invitations InvitationAccepter
 	projects    ProjectCascade
 	tx          shared.TxManager
@@ -31,7 +35,7 @@ type AcceptWorkspaceInvitation struct {
 
 // NewAcceptWorkspaceInvitation returns the use case.
 func NewAcceptWorkspaceInvitation(d AcceptInvitationDeps) *AcceptWorkspaceInvitation {
-	return &AcceptWorkspaceInvitation{invitations: d.Invitations, projects: d.Projects, tx: d.Tx, clock: d.Clock,
+	return &AcceptWorkspaceInvitation{caller: d.Caller, images: d.Images, invitations: d.Invitations, projects: d.Projects, tx: d.Tx, clock: d.Clock,
 		responder: responder{accounts: d.Accounts, invitations: d.Invitations, tokens: invitationTokens{mac: d.MAC}}}
 }
 
@@ -53,6 +57,9 @@ func (u *AcceptWorkspaceInvitation) Execute(ctx context.Context, id uuid.UUID, t
 	}
 	var joined domain.Workspace
 	err = u.tx.WithinTx(ctx, func(ctx context.Context) error {
+		if err := u.caller.LockCaller(ctx, actor, u.clock.Now()); err != nil {
+			return err
+		}
 		account, inv, err := u.responder.lock(ctx, actor, id, u.invitations.LockWorkspace)
 		if err != nil {
 			return err
@@ -82,6 +89,11 @@ func (u *AcceptWorkspaceInvitation) Execute(ctx context.Context, id uuid.UUID, t
 			return err
 		}
 		joined.Role = role
+		list, err := withWorkspaceImages(ctx, u.images, []domain.Workspace{joined})
+		if err != nil {
+			return err
+		}
+		joined = list[0]
 		return nil
 	})
 	if err != nil {

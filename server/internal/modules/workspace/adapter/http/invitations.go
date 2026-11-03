@@ -42,13 +42,14 @@ func (h handler) GetWorkspaceInvitation(ctx context.Context, req gen.GetWorkspac
 	if err != nil {
 		return nil, err
 	}
+	logo, expires := imageReply(p.Logo)
 	return gen.GetWorkspaceInvitation200JSONResponse{
 		ID:               p.ID,
 		Role:             gen.WorkspaceRole(p.Role),
 		Declined:         p.Declined,
 		WorkspaceName:    p.WorkspaceName,
 		WorkspaceSlug:    p.WorkspaceSlug,
-		WorkspaceLogoURL: nullable.NewNullNullable[string](), // M5
+		WorkspaceLogoURL: logo, WorkspaceLogoURLExpiresAt: expires,
 	}, nil
 }
 

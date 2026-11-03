@@ -19,7 +19,7 @@ import (
 func newUpdateMember() (*app.UpdateWorkspaceMember, *membersFixture, *fakeTx) {
 	f := newMembers()
 	tx := &fakeTx{}
-	return app.NewUpdateWorkspaceMember(f.workspaces, f.projects, f.profiles, f.auth, tx, clockAt{at: clockNow}), f, tx
+	return updateWorkspaceMember(f.workspaces, f.projects, f.profiles, f.auth, tx, clockAt{at: clockNow}, f.log), f, tx
 }
 
 // lockedMemberCalls are the calls up to the decision on the membership m
@@ -56,7 +56,7 @@ func TestUpdateWorkspaceMemberLocksThenDecidesThenWrites(t *testing.T) {
 		if err != nil || !sameMembers([]domain.Member{got}, []domain.Member{withUser(want, true)}) {
 			t.Errorf("to %d: Execute() = %+v, %v; want %+v", tt.role, got, err, withUser(want, true))
 		}
-		wantCalls := slices.Concat(lockedMemberCalls(alice, bobInAcme),
+		wantCalls := slices.Concat([]string{callerImageCall(alice)}, lockedMemberCalls(alice, bobInAcme),
 			[]string{fmt.Sprintf("UpdateMemberRole %s to %d by %s at %s", bobInAcme.ID, tt.role, alice.ID, at)}, tt.cascade,
 			[]string{fmt.Sprintf("PublicProfiles %v", []uuid.UUID{bob.ID})})
 		if !slices.Equal(f.log.calls, wantCalls) || tx.calls != 1 {
@@ -163,6 +163,9 @@ func TestUpdateWorkspaceMemberRefusals(t *testing.T) {
 		if tt.calls == nil {
 			wantTx = 0
 		}
+		if tt.calls != nil {
+			tt.calls = append([]string{callerImageCall(tt.user)}, tt.calls...)
+		}
 		if !slices.Equal(f.log.calls, tt.calls) || tx.calls != wantTx {
 			t.Errorf("%s: calls = %q in %d transactions, want %q in %d", tt.name, f.log.calls, tx.calls, tt.calls, wantTx)
 		}
@@ -208,7 +211,7 @@ func TestUpdateWorkspaceMemberFailsWithinTheTransaction(t *testing.T) {
 		if tt.want != nil && !errors.Is(err, tt.want) {
 			t.Errorf("%s failing: Execute() = %v, want %v", tt.name, err, tt.want)
 		}
-		if !slices.Equal(f.log.calls, tt.calls) {
+		if !slices.Equal(f.log.calls, append([]string{callerImageCall(alice)}, tt.calls...)) {
 			t.Errorf("%s failing: calls\n%q\nwant\n%q", tt.name, f.log.calls, tt.calls)
 		}
 	}

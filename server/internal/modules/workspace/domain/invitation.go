@@ -34,6 +34,9 @@ func (i Invitation) Responded() bool {
 // design 3.8, 5.2): the invitation's role, whether it was declined, and its
 // workspace's name and slug. Never the address invited (decision 1).
 type InvitationPreview struct {
+	WorkspaceID   uuid.UUID
+	LogoAssetID   *uuid.UUID
+	Logo          *ImageURL
 	ID            uuid.UUID
 	Role          shared.Role
 	Declined      bool

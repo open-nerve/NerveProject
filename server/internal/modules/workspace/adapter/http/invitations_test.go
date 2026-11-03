@@ -284,7 +284,7 @@ func TestGetWorkspaceInvitation(t *testing.T) {
 	inv := &fakeInvitations{preview: domain.InvitationPreview{ID: carolInvited.ID, Role: shared.RoleMember, Declined: true,
 		WorkspaceName: "Acme", WorkspaceSlug: "acme"}}
 	h := newServer(t, fakes{invitations: inv})
-	want := `{"declined":true,"id":"0199a2b4-0000-7000-8000-0000000000c1","role":15,"workspace_logo_url":null,` +
+	want := `{"declined":true,"id":"0199a2b4-0000-7000-8000-0000000000c1","role":15,"workspace_logo_url":null,"workspace_logo_url_expires_at":null,` +
 		`"workspace_name":"Acme","workspace_slug":"acme"}`
 	for _, token := range []string{"", "alice", "mallory"} {
 		if res, body := do(t, h, request(http.MethodGet, carolsLink, token, "")); res.StatusCode != http.StatusOK || body != want+"\n" {

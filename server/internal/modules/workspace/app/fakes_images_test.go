@@ -54,3 +54,15 @@ func updateWorkspace(store *fakeWorkspaces, auth shared.Authorizer, tx shared.Tx
 func callerImageCall(user app.AccountState) string {
 	return fmt.Sprintf("LockCaller %s session %s token %s at %s", user.ID, uuid.Nil(), uuid.Nil(), clockNow.Format(time.RFC3339Nano))
 }
+
+func (noWorkspaceImages) ReadMemberAvatars(_ context.Context, refs []app.MemberAvatarReference) (map[uuid.UUID]app.ImageURL, error) {
+	for _, ref := range refs {
+		if ref.AssetID != nil {
+			return nil, fmt.Errorf("unexpected avatar in no-image fixture")
+		}
+	}
+	return nil, nil
+}
+func updateWorkspaceMember(store app.MemberUpdater, projects app.ProjectCascade, profiles app.MemberProfiles, auth shared.Authorizer, tx shared.TxManager, clock app.Clock, log *callLog) *app.UpdateWorkspaceMember {
+	return app.NewUpdateWorkspaceMember(app.UpdateMemberDeps{Members: store, Projects: projects, Profiles: profiles, Auth: auth, Tx: tx, Clock: clock, Caller: &fakeCallerLock{log: log}, Images: noWorkspaceImages{}})
+}

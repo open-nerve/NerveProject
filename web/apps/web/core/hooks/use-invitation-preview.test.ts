@@ -77,6 +77,7 @@ describe("useInvitationPreview", () => {
       workspace_name: "Acme",
       workspace_slug: "acme",
       workspace_logo_url: null,
+    workspace_logo_url_expires_at: null,
     };
     useInvitationPreview("i-dan", "nrv_inv_dan");
     const shown = track(Promise.all(fake.handed.map(({ key, fetcher }) => key && fetcher(key))));

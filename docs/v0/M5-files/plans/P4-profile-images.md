@@ -1,7 +1,7 @@
 # M5 / P4 资料图片与引用实施计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-> 预检通过，T1–T6实现与聚焦回归完成，T7待实施。一次fresh builder check及主控plan自检完成；基线main5807a0d6，CI41591764345全绿，P3已归档清理。分支codex/m5-p4，worktree为`/Users/xiaoruan/project/nerve-project/.codex/worktress/codex/m5-p4`。连续推进授权有效；按T7接续，重大新风险先提交后上报。
+> 预检通过，T1–T7实现与聚焦回归完成，T8待实施。一次fresh builder check及主控plan自检完成；基线main5807a0d6，CI41591764345全绿，P3已归档清理。分支codex/m5-p4，worktree为`/Users/xiaoruan/project/nerve-project/.codex/worktress/codex/m5-p4`。连续推进授权有效；按T8接续，重大新风险先提交后上报。
 
 **Goal:** 用户/工作区/项目的图片引用、一次项目创建绑定及授权图片URL真实工作，完成F5–F7 API。
 
@@ -110,12 +110,12 @@
 
 **Files:** workspace app/list_members.go/update_member.go/get_invitation.go/accept_invitation.go及image_reads.go；identity PublicProfiles查询；workspace HTTP/members.go/invitations.go/API；bootstrap/ports.go（workspaceProfiles）和asset_images.go。
 
-**Interfaces:** MemberAvatarReference{UserID,AssetID}批量转换；只拿调用者CredentialLock，PublicProfiles不锁目标用户。公开预览仍MAC链接能力，W(S)内重读有效邀请/固定workspace后签logo。
+**Interfaces:** MemberAvatarReference{UserID,AssetID}批量转换；只拿调用者CredentialLock，PublicProfiles不锁目标用户。公开预览仍MAC链接能力，W(S)→邀请行S内重读有效邀请/固定workspace后签logo（ShareInvitationPreview，修正原先对撤回锁型的误判）。
 
-- [ ] Step 1：TestMemberAvatarReplies/TestInvitationImagePreview：成员列表/改角色/接受邀请分别返回真实图片；guest邮箱仍null；已停用目标用户资料沿M3规则可见；预览wrong token零查询，指名另一资产无接口，撤销/accepted/workspace删除404，被忽略未删仍可预览。
-- [ ] Step 2：RED后接现有owner授权，不复制角色谓词；Accept/UpdateMember在已有cascade之后、commit之前签；加CallerLock只能在原W/P锁前。所有原邀请/成员失败仍原样回滚。
-- [ ] Step 3：`cd server && go test -p 1 ./internal/modules/workspace/... ./internal/bootstrap -run '^Test(MemberAvatar|InvitationImage|AcceptWorkspaceInvitation|GetWorkspaceInvitation|UpdateWorkspaceMember|ListWorkspaceMembers)' -count=1`；Expected命中GREEN；实际W后取目标账号锁的变异须在T10复现，不能只按字符串查代码。
-- [ ] Step 4：生成/受影响race/lint；提交 `feat(M5/P4): 为成员资料和邀请预览接入授权图片`。
+- [x] Step 1：TestMemberAvatarReplies/TestInvitationImagePreview：成员列表/改角色/接受邀请分别返回真实图片；guest邮箱仍null；已停用目标用户资料沿M3规则可见；预览wrong token零查询，指名另一资产无接口，撤销/accepted/workspace删除404，被忽略未删仍可预览。
+- [x] Step 2：RED后接现有owner授权，不复制角色谓词；Accept/UpdateMember在已有cascade之后、commit之前签；加CallerLock只能在原W/P锁前。所有原邀请/成员失败仍原样回滚。
+- [x] Step 3：`cd server && go test -p 1 ./internal/modules/workspace/... ./internal/bootstrap -run '^Test(MemberAvatar|InvitationImage|AcceptWorkspaceInvitation|GetWorkspaceInvitation|UpdateWorkspaceMember|ListWorkspaceMembers)' -count=1`；Expected命中GREEN；实际W后取目标账号锁的变异须在T10复现，不能只按字符串查代码。
+- [x] Step 4：生成/受影响race/lint；提交 `feat(M5/P4): 为成员资料和邀请预览接入授权图片`。
 
 ## Task 8（T8）：项目封面与一次创建
 
@@ -145,7 +145,7 @@
 
 **Interfaces:** 消费T5–T9完整HTTP路由及P2既有prepared API；不通过测试SQL制造已绑定功能成功。
 
-- [ ] Step 1：TestImageCredentialRace/TestImageParentRace/TestMemberAvatarLockOrder/TestInvitationImageRace/TestProjectCoverCreateRace：各自设置两方向先后、反序UUID，观察实际等待锁；reset/deactivate、workspace撤权/删除、project私有化/归档/撤权、target profile替换/停用、invitation撤销/accepted、双创建抢同准备件。
+- [ ] Step 1：TestImageCredentialRace/TestImageParentRace/TestMemberAvatarLockOrder/TestInvitationImageRace/TestProjectCoverCreateRace：各自设置两方向先后、反序UUID，观察实际等待锁；reset/deactivate、workspace撤权/删除、project私有化/归档/撤权、target profile替换/停用、invitation撤销/accepted/收件账户停用删邀请（含收件人尚非该工作区成员）、双创建抢同准备件。
 - [ ] Step 2：让对应性质缺失时实际RED，修复局部接线/断言根因；新增架构分歧先提交。owner隐藏/不存在的code/body/headers逐值比较，双图片隐藏优先不因输入排序改变；当前引用不受旧申请者限制。
 - [ ] Step 3：`cd server && go test ./internal/bootstrap -run '^Test(ImageCredentialRace|ImageParentRace|MemberAvatarLockOrder|InvitationImageRace|ProjectCoverCreateRace|ImageAuth)' -race -count=5 -v`；Expected所有具名每个五轮通过、无40P01、没有skip/0 tests；PID/连接/gate证据有实际输出。
 - [ ] Step 4：断言存储I/O计数0、取消后连接与gate可再用，读取审计不变；提交 `test(M5/P4): 覆盖图片授权撤销和原子绑定的真实交错`。

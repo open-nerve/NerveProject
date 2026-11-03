@@ -22,11 +22,13 @@ type Membership struct {
 // MemberUser is a member's public profile as another member sees it (M3
 // design 5.2): Email is nil for a caller whose role may not see it.
 type MemberUser struct {
-	ID          uuid.UUID
-	DisplayName string
-	FirstName   string
-	LastName    string
-	Email       *string
+	AvatarAssetID *uuid.UUID
+	Avatar        *ImageURL
+	ID            uuid.UUID
+	DisplayName   string
+	FirstName     string
+	LastName      string
+	Email         *string
 }
 
 // Member is a membership with its member's profile: WorkspaceMember.

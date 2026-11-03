@@ -30,6 +30,7 @@ describe("previewInvitation", () => {
       workspace_name: "Acme",
       workspace_slug: "acme",
       workspace_logo_url: null,
+    workspace_logo_url_expires_at: null,
     };
     const shown = track(previewInvitation(nerve.client(), "i-dan", "nrv_inv_dan"));
     await until(() => nerve.calls.length === 1, "the preview");

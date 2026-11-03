@@ -60,10 +60,10 @@ func TestEachWriteReadsTheClockUnderItsLock(t *testing.T) {
 			cascadeCalls(alice, acme))},
 		{"updateWorkspaceMember", func() ([]string, error) {
 			f := newMembers()
-			_, err := app.NewUpdateWorkspaceMember(f.workspaces, f.projects, f.profiles, f.auth, &fakeTx{}, clockAt{clockNow, f.log}).
+			_, err := updateWorkspaceMember(f.workspaces, f.projects, f.profiles, f.auth, &fakeTx{}, clockAt{clockNow, f.log}, f.log).
 				Execute(as(alice), bobInAcme.ID, shared.RoleGuest)
 			return f.log.calls, err
-		}, append(lockedMemberCalls(alice, bobInAcme), "Now",
+		}, append(slices.Concat([]string{"Now", callerImageCall(alice)}, lockedMemberCalls(alice, bobInAcme)), "Now",
 			fmt.Sprintf("UpdateMemberRole %s to %d by %s at %s", bobInAcme.ID, shared.RoleGuest, alice.ID, at),
 			fmt.Sprintf("DemoteToGuest %s %s by %s at %s", acme.ID, bob.ID, alice.ID, at),
 			fmt.Sprintf("PublicProfiles %v", []uuid.UUID{bob.ID}))},
@@ -104,20 +104,20 @@ func TestEachWriteReadsTheClockUnderItsLock(t *testing.T) {
 			fmt.Sprintf("DeleteInvitation %s by %s at %s", daveToAcme.ID, alice.ID, at))},
 		{"acceptWorkspaceInvitation", func() ([]string, error) {
 			f := responding(frankToAcme)
-			_, err := app.NewAcceptWorkspaceInvitation(app.AcceptInvitationDeps{Accounts: f.accounts, Invitations: f.invitations,
+			_, err := app.NewAcceptWorkspaceInvitation(app.AcceptInvitationDeps{Caller: &fakeCallerLock{log: f.log}, Images: noWorkspaceImages{}, Accounts: f.accounts, Invitations: f.invitations,
 				Projects: f.projects, Tx: f.tx, Clock: clockAt{clockNow, f.log}, MAC: f.mac}).
 				Execute(as(frank), frankToAcme.ID, tokenOf(f.mac, frankToAcme.ID))
 			return f.log.calls, err
-		}, append(respondedCalls(frank, frankToAcme, "LockWorkspace"), "Now", "MemberOf "+acme.ID.String()+" "+frank.ID.String(),
+		}, append(slices.Insert(acceptedCalls(frank, frankToAcme, "LockWorkspace"), 1, "Now"), "Now", "MemberOf "+acme.ID.String()+" "+frank.ID.String(),
 			fmt.Sprintf("CreateMember %s in %s as %d by %s at %s", frank.ID, acme.ID, shared.RoleMember, frank.ID, at),
 			fmt.Sprintf("AcceptInvitation %s by %s at %s", frankToAcme.ID, frank.ID, at), "WorkspaceByID "+acme.ID.String())},
 		{"acceptWorkspaceInvitation, restoring a guest", func() ([]string, error) {
 			f := responding(erinToAcme)
-			_, err := app.NewAcceptWorkspaceInvitation(app.AcceptInvitationDeps{Accounts: f.accounts, Invitations: f.invitations,
+			_, err := app.NewAcceptWorkspaceInvitation(app.AcceptInvitationDeps{Caller: &fakeCallerLock{log: f.log}, Images: noWorkspaceImages{}, Accounts: f.accounts, Invitations: f.invitations,
 				Projects: f.projects, Tx: f.tx, Clock: clockAt{clockNow, f.log}, MAC: f.mac}).
 				Execute(as(erin), erinToAcme.ID, tokenOf(f.mac, erinToAcme.ID))
 			return f.log.calls, err
-		}, append(respondedCalls(erin, erinToAcme, "LockWorkspace"), "Now", "MemberOf "+acme.ID.String()+" "+erin.ID.String(),
+		}, append(slices.Insert(acceptedCalls(erin, erinToAcme, "LockWorkspace"), 1, "Now"), "Now", "MemberOf "+acme.ID.String()+" "+erin.ID.String(),
 			fmt.Sprintf("RestoreMember %s as %d by %s at %s", erinInAcme.ID, shared.RoleGuest, erin.ID, at),
 			fmt.Sprintf("DemoteToGuest %s %s by %s at %s", acme.ID, erin.ID, erin.ID, at),
 			fmt.Sprintf("AcceptInvitation %s by %s at %s", erinToAcme.ID, erin.ID, at), "WorkspaceByID "+acme.ID.String())},

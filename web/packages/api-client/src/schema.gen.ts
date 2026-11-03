@@ -2069,8 +2069,10 @@ export interface components {
             display_name: string;
             first_name: string;
             last_name: string;
-            /** @description Null until uploads arrive (M5). */
+            /** @description A signed URL for the member's current valid avatar; null if unavailable. */
             avatar_url: string | null;
+            /** Format: date-time */
+            avatar_url_expires_at: string | null;
             /** @description The member's address for a caller who is an admin or a member; null for a guest. */
             email: string | null;
         };
@@ -2145,8 +2147,10 @@ export interface components {
             declined: boolean;
             workspace_name: string;
             workspace_slug: string;
-            /** @description Null until uploads arrive (M5). */
+            /** @description A signed URL for this invitation's fixed workspace logo; null if unavailable. */
             workspace_logo_url: string | null;
+            /** Format: date-time */
+            workspace_logo_url_expires_at: string | null;
         };
         WorkspaceInvitationUpdate: {
             role: components["schemas"]["WorkspaceRole"];

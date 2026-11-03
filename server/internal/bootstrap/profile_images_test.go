@@ -80,14 +80,24 @@ func checkImageReply(t *testing.T, w issueWorld, body, field string, id uuid.UUI
 	var reply map[string]json.RawMessage
 	decodeAnswer(t, body, &reply)
 	var gotID uuid.UUID
+	if err := json.Unmarshal(reply[field+"_asset_id"], &gotID); err != nil || gotID != id {
+		t.Fatalf("wrong %s reference in %s: %v", field, body, err)
+	}
+	checkSignedImageReply(t, w, body, field, data)
+}
+
+func checkSignedImageReply(t *testing.T, w issueWorld, body, field string, data []byte) {
+	t.Helper()
+	var reply map[string]json.RawMessage
+	decodeAnswer(t, body, &reply)
 	var address string
 	var expires time.Time
-	for key, target := range map[string]any{field + "_asset_id": &gotID, field + "_url": &address, field + "_url_expires_at": &expires} {
+	for key, target := range map[string]any{field + "_url": &address, field + "_url_expires_at": &expires} {
 		if err := json.Unmarshal(reply[key], target); err != nil {
 			t.Fatalf("%s missing/invalid in %s: %v", key, body, err)
 		}
 	}
-	if gotID != id || address == "" || !expires.After(time.Now()) || expires.After(time.Now().Add(65*time.Minute)) {
+	if address == "" || !expires.After(time.Now()) || expires.After(time.Now().Add(65*time.Minute)) {
 		t.Fatalf("invalid image response %s", body)
 	}
 	u, err := url.Parse(address)

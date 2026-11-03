@@ -12,6 +12,8 @@ import (
 // UpdateWorkspaceMember changes a member's role: PATCH
 // /api/v0/workspace-members/{workspace_member_id}.
 type UpdateWorkspaceMember struct {
+	caller   CallerLock
+	images   MemberAvatarReader
 	members  MemberUpdater
 	projects ProjectCascade
 	profiles MemberProfiles
@@ -20,10 +22,19 @@ type UpdateWorkspaceMember struct {
 	clock    Clock
 }
 
-// NewUpdateWorkspaceMember returns the use case.
-func NewUpdateWorkspaceMember(members MemberUpdater, projects ProjectCascade, profiles MemberProfiles, auth shared.Authorizer,
-	tx shared.TxManager, clock Clock) *UpdateWorkspaceMember {
-	return &UpdateWorkspaceMember{members: members, projects: projects, profiles: profiles, auth: auth, tx: tx, clock: clock}
+type UpdateMemberDeps struct {
+	Members  MemberUpdater
+	Projects ProjectCascade
+	Profiles MemberProfiles
+	Auth     shared.Authorizer
+	Caller   CallerLock
+	Images   MemberAvatarReader
+	Tx       shared.TxManager
+	Clock    Clock
+}
+
+func NewUpdateWorkspaceMember(d UpdateMemberDeps) *UpdateWorkspaceMember {
+	return &UpdateWorkspaceMember{members: d.Members, projects: d.Projects, profiles: d.Profiles, auth: d.Auth, caller: d.Caller, images: d.Images, tx: d.Tx, clock: d.Clock}
 }
 
 // Execute checks role, then in one transaction (M3 design 3.6): the
@@ -48,6 +59,9 @@ func (u *UpdateWorkspaceMember) Execute(ctx context.Context, id uuid.UUID, role 
 	}
 	var updated domain.Member
 	err = u.tx.WithinTx(ctx, func(ctx context.Context) error {
+		if err := u.caller.LockCaller(ctx, actor, u.clock.Now()); err != nil {
+			return err
+		}
 		m, err := lockedMember(ctx, u.members, id)
 		if err != nil {
 			return err
@@ -72,7 +86,15 @@ func (u *UpdateWorkspaceMember) Execute(ctx context.Context, id uuid.UUID, role 
 			}
 		}
 		updated, err = u.withProfile(ctx, m, grant.WorkspaceRole)
-		return err
+		if err != nil {
+			return err
+		}
+		images, err := withMemberAvatars(ctx, u.images, []domain.Member{updated})
+		if err != nil {
+			return err
+		}
+		updated = images[0]
+		return nil
 	})
 	if err != nil {
 		return domain.Member{}, err

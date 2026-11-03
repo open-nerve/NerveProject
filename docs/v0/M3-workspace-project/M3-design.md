@@ -157,7 +157,7 @@ M3 是第一个有多个业务模块、第一次跨模块协作的里程碑，�
 | 工作项的计数：项目的 `intake_count`（M7）、`total_issues` 一类，工作区成员的 `draft_issue_count`（M4） | 3 | 不定义，删掉前端的读取，由产生它的 M 加回 |
 | `Project.is_favorite`（M7 的收藏） | 3 | 不定义。项目卡片上的收藏按钮、建项目之后"加入收藏"的一步（`core/components/projects/create/root.tsx:53`）、`project.store.ts` 的 `addProjectToFavorites`、`removeProjectFromFavorites` 和 `favoriteProjectIds` getter（`:228-245`，没有读者，成为死代码），以及 `favorite.store.ts:284-287` 移除收藏时把 `projectMap[…].is_favorite` 置为假的项目分支（`Project` 没有这个字段，不删就编译不过），在 P8b 删除，M7 随收藏的接口加回（13.2）。旧 `ProjectService` 中三个收藏方法本来就没有调用方，一并删除 |
 
-**M5/P4接续合同（分任务实施中）：** workspace logo、project自定义/预设封面和成员头像由owner现有权限返回短期URL/期限；项目一次POST原子绑定。全部同DTO出口和既有MAC邀请预览均纳入，OrganizationSize响应收紧为既有六值或null。读取账号第一把、W→P→asset，成员目标账号不倒序锁；公开预览仍仅固定workspace图标能力。新增四条反向FK均即时NO ACTION，由identity→workspace→project条件解除，再删除eligible资产，目录逐项证明且不豁免未知边。详见[M5/P4三份合同](../M5-files/specs/P4-profile-images.md)，M3原null规则是实施前状态，M5输入交接仍开放。
+**M5/P4接续合同（分任务实施中）：** workspace logo、project自定义/预设封面和成员头像由owner现有权限返回短期URL/期限；项目一次POST原子绑定。全部同DTO出口和既有MAC邀请预览均纳入，OrganizationSize响应收紧为既有六值或null。读取账号第一把、W→P→asset，成员目标账号不倒序锁；公开预览仍仅固定workspace图标能力，MAC通过后按W(S)→该邀请S→asset序签发，以兼容撤回持W(S)+邀请U及停用按邮箱直接删邀请的既有协议。新增四条反向FK均即时NO ACTION，由identity→workspace→project条件解除，再删除eligible资产，目录逐项证明且不豁免未知边。详见[M5/P4三份合同](../M5-files/specs/P4-profile-images.md)，M3原null规则是实施前状态，M5输入交接仍开放。
 
 ### 3.3 模块划分与跨模块的协作
 - **三个模块**，照总体设计 6.2：
@@ -1530,6 +1530,7 @@ R06 的来源记录只包含项目 ID、工作区 ID、最后有效归档类别�
   7. 停用与接受邀请（P6；Codex S1，B 原来不在工作区 W，A 是 W 的管理员，W 有项目 P）：
      - (a) 接受先锁住 B 的账户行，停用等待；接受提交之后停用的列举含 W，B 在 W 的成员关系被停用。
      - (b) 在 (a) 的接受提交之后、停用拿到 W 的锁之前，B 的另一个事务锁住 W、把 A 改为成员（S1 的第 5 步）：停用等 W 的锁，之后 B 是 W 唯一的管理员而 W 还有别的成员，409 `workspace.sole_admin`，数据库不变。
+       - M5/P4起，返回成员头像的改角色操作先拿调用者账号N并复核凭据；此处停用已经持有账号锁，改角色等待停用提交后401，A保持管理员。旧(b)的W等待交错不再可达；`TestAnAdmittedAdminsWriteAndHisDeactivation`改验真实users等待及未到工作区写入，T10补完整凭据双方向。
      - (c) 同样的位置，B 的另一个事务锁住 W（S）和自己的工作区成员行、加入 P（S1 的第 6 步）：停用锁工作区时等它（方案 E，17.4；与 13、14 相同），之后 `EndMemberships` 的列举含 P，B 在 P 的成员关系被停用；W 仍有管理员 A。
      - (d) 停用先锁住账户行：接受等待，之后在锁下读到账户已停用，401，没有新的成员关系。
      - (e) B 在 W 有以前的（无效的）成员行，(a) 和 (d) 各再跑一次：接受恢复那一行而不是插入，结果相同（恢复与插入一样串行在账户行上）。
