@@ -34,7 +34,7 @@ type DraftAssetTransfer interface {
 
 两阶段端口不把可变行对象/DB连接交回调用者。Lock在既有ctx里收齐并按全局UUID锁定，检查完整集合，返回最后锁后唯一业务At；Bind/Move同ctx重验锁下条件、保留申请者/created时间、按At写归属/用途/bound与updated，并增加storage_revision。新评论Host.CommentID是预分配最终ID，NewComment使原范围固定为同issue的new_comment，不能由客户端自由指定。
 
-LockContent只核所列当前图片+普通附件集合；旧已绑定历史图片不解除。重复ID按UUID去重锁一次，但正文ContentIdentity仍保留重复。每SQL最多1000 ID，全请求集合不得截断；任一缺失/未完成/用途/父链/申请者失败整体回滚。Bind在INSERT宿主后执行，不能靠延迟FK提交半成品。
+LockContent只核所列当前图片+普通附件集合；旧已绑定历史图片不解除。重复ID按UUID去重锁一次，但正文ContentIdentity仍保留重复。每SQL最多1000 ID，全请求集合不得截断；任一缺失/未完成/用途/父链/申请者失败整体回滚。零UUID虽然是规范UUID拼写，但不是有效资产，绑定端返回asset.not_found，不能将其过滤掉冒充非资产源。Bind在INSERT宿主后执行，不能靠延迟FK提交半成品。
 
 LockDraftAssets在D(U)保护下分页遍历全部活资产、合并ImageIDs后全局UUID顺序加锁，单页1000，直到真实耗尽；保存/改项目包括pending、uploaded，并验证ImageIDs为本草稿已完成的描述图片。Publish存在任一尚未成功发布的活资产即asset.not_uploaded，不能默默丢件；已经成功发布的资产携带待回收竞争候选不阻止发布。MoveDraftAssets的issueID：保存/改项目为Nil，更新父项目并只绑定ImageIDs涉及的描述图片；发布为新IssueID，清draft_id、换scope=issue、用途两种draft→issue；普通附件、当前ImageIDs中的描述才在bound_at为空时设置At，已有bound_at保持，未引用过且不在当前ImageIDs的描述保持null（不自动公开、不重置7天年龄）。已删除资产不复活，原草稿父引用留作回收证据。草稿路径只调用这组完整集合端口，不再额外调用LockContent造成第二次加锁/读钟。
 

@@ -333,7 +333,7 @@ M4/P6 已实现的差异以 [P6 review](M4-issue-core/reviews/P6-issue-events-re
 | 归档 | 工作项、迭代、模块、项目的归档与恢复，以及项目级自动归档 | 规则一致（见 v0-design 5.5）；归档和恢复改为 `POST .../archive` 和 `POST .../unarchive` 两个动作接口；列表通过 `?archived=true` 查询已归档的对象 |
 | 描述、评论的长度 | 没有同一边界规则 | `description_html`、`comment_html` 各最多 500000 个 Unicode 字符，默认请求体仍为 1 MiB（M4/P4） |
 | 描述与清洗 | 异步动态/版本与宽泛输入 | `issue/adapter/content` 唯一清洗策略，app 小接口、domain 纯值；创建默认 `<p></p>`，保存后的描述、提及、关注、动态、版本同事务；旧工作项不伪造初版（M4/P4，A1） |
-| `skip_activity` | 沿旧字符串标志跳过动态 | 仅 JSON boolean；出现（含 false）只能与描述一起且不能带其他 patch 字段。true 且纯文本、按顺序保留重复的 user mention UUID、`a[href]`、checkbox checked 均相同时，只写清洗 HTML/stripped 并同步提及资格，不改主审计、不写动态/版本；false 或内容标识变化是普通保存。只改格式可不留审计是已批准代价，图片 src 投影留 M5（M4/P4） |
+| `skip_activity` | 沿旧字符串标志跳过动态 | 仅 JSON boolean；出现（含 false）只能与描述一起且不能带其他 patch 字段。true 且纯文本、按顺序保留重复的 user mention UUID、`a[href]`、checkbox checked 均相同时，只写清洗 HTML/stripped 并同步提及资格，不改主审计、不写动态/版本；false 或内容标识变化是普通保存。只改格式可不留审计是已批准代价，M4/P4预留的图片src投影已由M5/P5 T1加入：image-component[src]按顺序保留重复并参与同一比较，规范UUID才进入内部引用候选，绑定/权限由后续Task实现 |
 | 空评论 | 服务端接受 | 清洗后无文字且无 mention/image 节点，422 `comment_html/required`（M4/P4） |
 | 改、删别人的评论 | 项目管理员可以改、删 | 仅作者编辑；作者或项目管理员删除，其他人 403 `issue.not_author`；隐藏先统一子资源 404，项目归档先于工作项归档 409，归档先于相同 HTML 无改动（M4/P4） |
 | 表情的值与归属 | 任意文本；重复 400 | 十进制格式 `^[0-9]{1,7}(-[0-9]{1,7}){0,15}$` 且 ≤128 字符；自己的重复 409，删除只找自己的活行，无该行 404；评论表情不推进 issue/comment 审计（M4/P4） |
@@ -477,3 +477,10 @@ no-shadow全仓清零并升error；死成员按原脚本逐行追生产、测试
 只读对照Plane db/models/user.py:69/78、workspace.py:124、project.py:102：四个图片外键nullable、删除SET_NULL，并保留旧URL回退。Nerve保留所属nullable UUID字段，以即时NO ACTION和每列索引阻止资产被误删；由owner显式条件解除失效引用，清理和精确目录证明在P4/T4完成，不靠SET_NULL或关闭约束绕过。user/workspace/project各自的00035–00037迁移和sqlc scope负责本表，无跨模块SQL。
 
 项目预设保存稳定cover-01..29，与上传UUID互斥，不保存构建URL或运行时签名；省略保留、null清对应侧、选择非空一侧清另一侧。T1–T12字段、原子绑定、所有owner响应中的授权URL、实际双驱动字节、保留期和进程恢复均已验收；项目只POST一次，不用前端补PATCH。29张素材及页面仍在P6，整阶段门禁/整审/集成另由T13–T15核验。
+
+
+## 九、M5/P5 有序图片内容身份（T1）
+
+只读对照Plane `apps/api/plane/utils/content_validator.py`的image-component/src允许集合与`app/views/issue/base.py`的迁移保存分支。Nerve继续保留既有安全URL和raw img清洗，在同一Sanitizer结果上投影image-component的有序src，缺src记空值、重复和位置保留。只改格式/合法block ID不改变身份；换图、换序、增删重复图片不能用skip_activity隐藏动态或版本。
+
+内部引用候选仅规范小写连字符UUID，不把远程源或URL中的UUID当成资产授权；raw img只保留既有HasImage含义。实际绑定/宿主权限与API审计证明留P5后续Task，页面非资产源占位和不发远程请求留P7，本条不宣称已启用图片上传界面。

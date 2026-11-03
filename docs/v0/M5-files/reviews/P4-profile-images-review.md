@@ -210,3 +210,5 @@ Go以GOFLAGS=-p=1串行容器包、-count=1且非-short执行：61个实际测�
 下一段[主spec](../specs/P5-issue-assets.md)、[plan](../plans/P5-issue-assets.md)、[re-40预检](../../../reviews/re-40-M5P5预检.md)已准备；一次builder check的H1按原准备件隐私边界修正。P5尚未实施，M5整体完成项和输入handoff仍保持open。原P4-M1与P3-M1继续P8。
 
 集成编排的局部决定：等待准确main CI时先在相同已验证tree建立P5隔离worktree及安装锁定工具，未实施产品；原生工具不能指定负责人要求的worktress路径，故用系统git。代价是若CI需改产品就必须同步P5基线；本次main首轮通过，无此变更。正式P5预检回填发生于P4归档清理之后。
+
+T15续接核验原件在归档根`continuation/`：首次脚本把git默认quoted中文路径误判为非docs，改用-z解析后严格docs-only核验通过；未更改产品或冻结payload。首次失败与修正验证器、最终task-done收据均保留。
