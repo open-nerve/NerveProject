@@ -264,7 +264,7 @@ func TestNewAppCrawlJobCatalog(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer pool.Close()
-	module := issue.New(issue.Deps{Pool: pool, AutoArchiveInterval: time.Hour, TrimVersionsInterval: time.Hour, DeleteBatch: 1000, DeleteBudget: 45 * time.Second, RuntimeNow: time.Now, Logger: slog.New(slog.DiscardHandler)})
+	module := issue.New(issue.Deps{AttachmentReader: attachmentCounterOn(pool), AttachmentCounter: attachmentCounterOn(pool), Pool: pool, AutoArchiveInterval: time.Hour, TrimVersionsInterval: time.Hour, DeleteBatch: 1000, DeleteBudget: 45 * time.Second, RuntimeNow: time.Now, Logger: slog.New(slog.DiscardHandler)})
 	definitions := module.Jobs()
 	var periodic int
 	for _, job := range definitions {

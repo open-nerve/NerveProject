@@ -29,6 +29,7 @@ export const issueOf = (id: string, projectId = "A", workspaceId = "id-ws"): Iss
   assignee_ids: [],
   sub_issues_count: 0,
   link_count: 0,
+  attachment_count: 0,
   parent_id: null,
   created_at: "2026-10-28T00:00:00Z",
   updated_at: "2026-10-28T00:00:00Z",

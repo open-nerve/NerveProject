@@ -18,12 +18,12 @@ import (
 // alice, who reads it, is neither.
 func newGet() (*app.GetIssue, *world, uuid.UUID) {
 	_, w := newCreate()
-	w.locks = app.NewLocks(w.project, w.issues, w.auth, fakeGate{log: w.log}, fakeTx{log: w.log})
+	w.locks = app.NewLocks(w.project, w.issues, w.auth, fakeGate{log: w.log}, fakeTx{log: w.log}, noIssueAttachments{})
 	id := uuid.NewV7()
 	w.issues.issue = &app.IssueRow{ID: id, WorkspaceID: acme, ProjectID: web, SequenceID: 7, Name: "Fix", StateID: backlog.ID,
 		Priority: domain.PriorityHigh, SortOrder: 65535, By: carol, At: clockNow}
 	w.issues.assignees, w.issues.labels = []uuid.UUID{bob}, []uuid.UUID{bug}
-	return app.NewGetIssue(w.locks), w, id
+	return app.NewGetIssue(w.locks, fakeTx{log: w.log}), w, id
 }
 
 // readIssue is newGet's work item id as a read answers it.
@@ -33,7 +33,7 @@ func readIssue(id uuid.UUID) domain.Issue {
 		UpdatedAt: clockNow}
 }
 
-// A read, outside any transaction, without a lock and outside the write
+// A read, in one read-only snapshot, without a lock and outside the write
 // gate (M4 design 3.5, 11.11): the work item, then the decision on
 // issue.read in its project, of its workspace, then the count of its
 // sub-items; the answer is the work item as read, with the number of its
@@ -48,7 +48,7 @@ func TestGetIssueReadsTheWorkItem(t *testing.T) {
 		t.Errorf("Execute() = %+v, %v; want %+v", got, err, want)
 	}
 	if calls := []string{line("GetIssue", id, "outside tx"), line("Authorize", alice, domain.ActionRead, acme, web, "outside tx"),
-		counted(id) + " outside tx"}; !slices.Equal(w.log.calls, calls) {
+		counted(id) + " outside tx"}; !slices.Equal(w.log.calls, readCalls(calls)) {
 		t.Errorf("calls:\n%q\nwant\n%q", w.log.calls, calls)
 	}
 }
@@ -84,7 +84,7 @@ func TestGetIssueRefusals(t *testing.T) {
 				t.Errorf("Execute() = %+v, %v; want no work item and %v", got, err, tt.want)
 			}
 			calls := []string{line("GetIssue", id, "outside tx"), decided, counted(id) + " outside tx"}[:tt.calls]
-			if !slices.Equal(w.log.calls, calls) {
+			if !slices.Equal(w.log.calls, readCalls(calls)) {
 				t.Errorf("calls:\n%q\nwant\n%q", w.log.calls, calls)
 			}
 		})

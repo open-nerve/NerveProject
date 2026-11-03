@@ -42,7 +42,7 @@ func TestListingHistoricalAssignees(t *testing.T) {
 	one := poolOfOne(t, w.pool.Config().ConnString())
 	projects := issueProjects{projects: project.Provide(one, nil).IssueProjects}
 	store := issuepostgres.New(one)
-	listing := issueapp.NewListing(issueapp.ListingDeps{Rows: store, States: projects, Labels: projects, Assignees: store, Profiles: issueProfiles{profiles: identity.Provide(one).PublicProfiles}, Issues: store})
+	listing := issueapp.NewListing(issueapp.ListingDeps{Attachments: attachmentCounterOn(one), Rows: store, States: projects, Labels: projects, Assignees: store, Profiles: issueProfiles{profiles: identity.Provide(one).PublicProfiles}, Issues: store})
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	err := postgres.NewTxManager(one, 3*time.Second, postgres.ReadOnlySnapshot()).WithinTx(ctx, func(ctx context.Context) error {

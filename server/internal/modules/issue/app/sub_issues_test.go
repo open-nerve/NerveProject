@@ -14,7 +14,7 @@ import (
 
 // listOver is listSubIssues over w's ports.
 func listOver(w *world) *app.ListSubIssues {
-	return app.NewListSubIssues(w.locks, w.issues)
+	return app.NewListSubIssues(w.locks, w.issues, fakeTx{log: w.log})
 }
 
 // addOver is addSubIssues over w's ports.
@@ -34,7 +34,7 @@ func sorted(ids []uuid.UUID) []uuid.UUID {
 	return slices.SortedFunc(slices.Values(ids), uuid.UUID.Compare)
 }
 
-// A list of sub-items, outside any transaction and without a lock (M4
+// A list of sub-items, in one read-only snapshot and without a lock (M4
 // design 3.4, 3.9): web's work item 7, alice's, read and issue.read
 // decided on it, as getIssue does, archived or not (3.8); then its
 // sub-items, anyone's for web's admin, only hers for a guest who sees only
@@ -77,7 +77,7 @@ func TestListSubIssuesReadsTheSubItemsTheCallerSees(t *testing.T) {
 		}
 		calls := []string{line("GetIssue", id, "outside tx"), line("Authorize", alice, domain.ActionRead, acme, web, "outside tx"),
 			line("SubIssues", id, tt.whose, "outside tx"), counted(ids...) + " outside tx"}
-		if !slices.Equal(w.log.calls, calls) {
+		if !slices.Equal(w.log.calls, readCalls(calls)) {
 			t.Errorf("%s: calls:\n%q\nwant\n%q", tt.name, w.log.calls, calls)
 		}
 	}
@@ -123,7 +123,7 @@ func TestListSubIssuesRefusals(t *testing.T) {
 			}
 			calls := []string{line("GetIssue", asked, "outside tx"), line("Authorize", alice, domain.ActionRead, acme, web, "outside tx"),
 				line("SubIssues", id, "anyone's", "outside tx"), counted(k.up.ID) + " outside tx"}[:tt.calls]
-			if !slices.Equal(w.log.calls, calls) {
+			if !slices.Equal(w.log.calls, readCalls(calls)) {
 				t.Errorf("calls:\n%q\nwant\n%q", w.log.calls, calls)
 			}
 		})

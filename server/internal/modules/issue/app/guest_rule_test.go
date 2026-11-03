@@ -69,7 +69,7 @@ func TestTheGuestRuleHidesAnothersWorkItemFromAReader(t *testing.T) {
 			if tt.want == nil {
 				calls = append(calls, counted(id)+" outside tx")
 			}
-			if !slices.Equal(w.log.calls, calls) {
+			if !slices.Equal(w.log.calls, readCalls(calls)) {
 				t.Errorf("calls:\n%q\nwant\n%q", w.log.calls, calls)
 			}
 		})

@@ -43,6 +43,8 @@ domain.Issue.AttachmentCount int64，API required/非负；集中在Locks.seen�
 
 普通排序：既有SQL产生分页结果后，所有实际返回Issue按去重ID一次批量补计数；group/subgroup所有返回cell合并，不能一页/一行一次查询。
 
+详情、按编号读取和直接子项列表显式注入现有ReadTx，在首个宿主/目录读取前建立只读REPEATABLE READ；权限、工作项、子项计数、附件计数共用其context。原列表/关系/搜索沿已有ReadTx，写返回沿原写事务。所有投影计数只用已授权且实际输出的ID，不含lookahead；空输出不查。asset补全合法缺项0，issue消费端要求完整、唯一、非负且没有额外ID；端口失败或畸形结果整体失败，不伪装0。
+
 attachment_count排序：在同一snapshot先通过ProjectAttachmentCounts取得所有授权项目的非零目录（每页1000、完整遍历），用成对UUID/bigint数组加入ListRead.Directories.AttachmentCounts；Flat/Groups/Subgroups三套SQL在filtered→source_keys阶段LEFT JOIN这个内存目录并coalesce0，之后再排序和游标分页。它与states/labels/assignees目录相同，不是跨模块表JOIN。全局排序不能先分页再排序，也不能只统计第一批1000。
 
 目录可能包含授权项目内guest看不到的issueID；它们仅在服务器快照内作为数据，最终issue过滤仍统一HiddenFrom/OwnOnly对应SQL，绝不能把原目录返回/记日志/用作总数。counts本身不授予可见性。读错/重复ID/负数/非升序目录作为内部协议错误整体失败，不能默默覆盖。

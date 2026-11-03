@@ -45,12 +45,13 @@ type IssueListGroup struct {
 }
 
 type ListingDeps struct {
-	Rows      ListRows
-	States    ListStateCatalog
-	Labels    ListLabelCatalog
-	Assignees AssigneeDirectory
-	Profiles  PublicProfiles
-	Issues    IssueReader
+	Attachments AttachmentCounter
+	Rows        ListRows
+	States      ListStateCatalog
+	Labels      ListLabelCatalog
+	Assignees   AssigneeDirectory
+	Profiles    PublicProfiles
+	Issues      IssueReader
 }
 
 // Listing assembles a list inside the read snapshot provided by its caller.
@@ -168,6 +169,9 @@ func (l *Listing) issues(ctx context.Context, input ListingInput, rows []ListRec
 		}
 	}
 	if err := hideParents(ctx, l.deps.Issues, input.ActorID, items, guarded); err != nil {
+		return nil, err
+	}
+	if err := projectAttachments(ctx, l.deps.Attachments, items); err != nil {
 		return nil, err
 	}
 	return items, nil

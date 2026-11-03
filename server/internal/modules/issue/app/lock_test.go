@@ -16,8 +16,8 @@ import (
 // write with refuse, when set: the use cases' creation and update over
 // them.
 func gated(w *world, refuse error) (*app.CreateIssue, *app.UpdateIssue) {
-	w.locks = app.NewLocks(w.project, w.issues, w.auth, fakeGate{log: w.log, refuse: refuse}, fakeTx{log: w.log})
-	create := app.NewCreateIssue(app.CreateIssueDeps{Locks: w.locks, Creation: app.NewIssueCreation(app.IssueCreationDeps{Events: discardEvents{}, Sanitizer: descriptionSanitizer{}, Issues: w.issues, Sequences: w.project, States: w.project,
+	w.locks = app.NewLocks(w.project, w.issues, w.auth, fakeGate{log: w.log, refuse: refuse}, fakeTx{log: w.log}, noIssueAttachments{})
+	create := app.NewCreateIssue(app.CreateIssueDeps{Locks: w.locks, Creation: app.NewIssueCreation(app.IssueCreationDeps{Attachments: noIssueAttachments{}, Events: discardEvents{}, Sanitizer: descriptionSanitizer{}, Issues: w.issues, Sequences: w.project, States: w.project,
 		Labels: w.project, Members: w.project, Profiles: w.profiles, Clock: clockAt{at: clockNow, log: w.log}})})
 	update := app.NewUpdateIssue(app.UpdateIssueDeps{Events: discardEvents{}, Sanitizer: descriptionSanitizer{}, Locks: w.locks, Issues: w.issues, States: w.project, Labels: w.project, Members: w.project,
 		Profiles: w.profiles, Clock: clockAt{at: clockNow, log: w.log}})

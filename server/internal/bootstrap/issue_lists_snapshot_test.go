@@ -51,9 +51,9 @@ func TestIssueListReadSnapshot(t *testing.T) {
 	auth := access.New(access.Deps{WorkspaceRoles: workspaces.WorkspaceRoles, ProjectAccess: accessProjects{projects: projects.ProjectAccess}})
 	dirs := issueProjects{projects: projects.IssueProjects}
 	store := issuepg.New(one)
-	listing := issueapp.NewListing(issueapp.ListingDeps{Rows: store, States: dirs, Labels: dirs, Assignees: store, Profiles: issueProfiles{profiles: identity.Provide(one).PublicProfiles}, Issues: store})
+	listing := issueapp.NewListing(issueapp.ListingDeps{Attachments: attachmentCounterOn(one), Rows: store, States: dirs, Labels: dirs, Assignees: store, Profiles: issueProfiles{profiles: identity.Provide(one).PublicProfiles}, Issues: store})
 	tx := &checkedListSnapshot{t: t, pool: one, tx: postgres.NewTxManager(one, 3*time.Second, postgres.ReadOnlySnapshot())}
-	u := issueapp.NewListIssues(issueapp.ListIssuesDeps{ReadTx: tx, Locks: issueapp.NewLocks(dirs, store, auth, nil, nil), Listing: listing})
+	u := issueapp.NewListIssues(issueapp.ListIssuesDeps{ReadTx: tx, Locks: issueapp.NewLocks(dirs, store, auth, nil, nil, attachmentCounterOn(one)), Listing: listing})
 	ctx, cancel := context.WithTimeout(shared.WithActor(context.Background(), shared.Actor{UserID: w.ids["walt"]}), 5*time.Second)
 	defer cancel()
 	for _, raw := range []map[string][]string{nil, {"group_by": {"label_id"}}, {"group_by": {"label_id"}, "sub_group_by": {"assignee_id"}}} {
@@ -95,7 +95,7 @@ func TestMemberIssueReadSnapshot(t *testing.T) {
 	auth := access.New(access.Deps{WorkspaceRoles: workspaces.WorkspaceRoles, ProjectAccess: accessProjects{projects: projects.ProjectAccess}})
 	dirs := issueProjects{projects: projects.IssueProjects}
 	store := issuepg.New(one)
-	listing := issueapp.NewListing(issueapp.ListingDeps{Rows: store, States: dirs, Labels: dirs, Assignees: store, Profiles: issueProfiles{profiles: identity.Provide(one).PublicProfiles}, Issues: store})
+	listing := issueapp.NewListing(issueapp.ListingDeps{Attachments: attachmentCounterOn(one), Rows: store, States: dirs, Labels: dirs, Assignees: store, Profiles: issueProfiles{profiles: identity.Provide(one).PublicProfiles}, Issues: store})
 	tx := &checkedListSnapshot{t: t, pool: one, tx: postgres.NewTxManager(one, 3*time.Second, postgres.ReadOnlySnapshot())}
 	u := issueapp.NewListMemberIssues(issueapp.ListMemberIssuesDeps{ReadTx: tx, Authorizer: auth, Workspaces: issueWorkspaces{directory: workspaces.WorkspaceDirectory}, Members: issueMembers{members: workspaces.WorkspaceMemberDirectory}, Projects: dirs, Listing: listing})
 	ctx, cancel := context.WithTimeout(shared.WithActor(context.Background(), shared.Actor{UserID: w.ids["walt"]}), 5*time.Second)

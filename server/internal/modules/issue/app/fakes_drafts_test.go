@@ -135,7 +135,7 @@ func newDraftWorld() *draftWorld {
 	return &draftWorld{log: log, auth: &fakeAuthorizer{log: log}, p: &draftProjects{fakeProject: &fakeProject{log: log}, rows: map[uuid.UUID]uuid.UUID{web: acme}}, w: draftWorkspace{log: log, found: true}, s: &draftStore{log: log, found: true, row: domain.Draft{ID: uuid.NewV7(), WorkspaceID: acme, ProjectID: &web, CreatedByID: alice, Payload: []byte(`{"name":"unfinished"}`), CreatedAt: earlier, UpdatedAt: earlier}}}
 }
 func (w *draftWorld) locks() app.DraftLocks {
-	return app.NewDraftLocks(app.NewLocks(w.p, nil, w.auth, fakeGate{log: w.log}, fakeTx{log: w.log}), w.w, w.p, w.s)
+	return app.NewDraftLocks(app.NewLocks(w.p, nil, w.auth, fakeGate{log: w.log}, fakeTx{log: w.log}, noIssueAttachments{}), w.w, w.p, w.s)
 }
 func (w *draftWorld) update() *app.UpdateDraft {
 	return app.NewUpdateDraft(app.UpdateDraftDeps{Locks: w.locks(), Drafts: w.s, Clock: clockAt{at: clockNow, log: w.log}})

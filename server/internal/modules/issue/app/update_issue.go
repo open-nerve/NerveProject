@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"time"
 	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/domain"
@@ -12,15 +13,16 @@ import (
 
 // UpdateIssueDeps are what updateIssue reads and writes through.
 type UpdateIssueDeps struct {
-	Events    shared.EventPublisher
-	Locks     Locks
-	Issues    IssueUpdater
-	States    StateCatalog
-	Labels    LabelCatalog
-	Members   ProjectMembers
-	Profiles  PublicProfiles
-	Clock     Clock
-	Sanitizer HTMLSanitizer
+	ContentBindings ContentBinding
+	Events          shared.EventPublisher
+	Locks           Locks
+	Issues          IssueUpdater
+	States          StateCatalog
+	Labels          LabelCatalog
+	Members         ProjectMembers
+	Profiles        PublicProfiles
+	Clock           Clock
+	Sanitizer       HTMLSanitizer
 }
 
 // UpdateIssue changes a work item: PATCH /api/v0/issues/{issue_id} (M4
@@ -89,11 +91,24 @@ func (u *UpdateIssue) Execute(ctx context.Context, id uuid.UUID, p domain.IssueP
 			return err
 		}
 		c := domain.ChangesOf(answered, p)
+		q := ContentBindRequest{ActorID: actor.UserID, Host: ContentHost{WorkspaceID: h.issue.WorkspaceID, ProjectID: h.issue.ProjectID, IssueID: id}}
 		if p.DescriptionHTML != nil {
 			change := domain.CompareDescription(u.d.Sanitizer.Clean(h.issue.DescriptionHTML), u.d.Sanitizer.Clean(*p.DescriptionHTML), p.SkipActivity != nil && *p.SkipActivity)
 			c.Description = &change
+			q.ImageIDs = change.Content.Identity.AssetImageIDs()
 		}
 		if c.None() {
+			// An unchanged legacy body can still contain an unbound reference.
+			// Validate it even though no issue version or activity is written.
+			if len(q.ImageIDs) > 0 {
+				at, err := u.d.ContentBindings.LockContent(ctx, q)
+				if err != nil {
+					return err
+				}
+				if err := u.d.ContentBindings.BindContent(ctx, q, at); err != nil {
+					return err
+				}
+			}
 			updated, err = u.d.Locks.seenOne(ctx, actor.UserID, h.grant, h.issue)
 			return err
 		}
@@ -105,9 +120,29 @@ func (u *UpdateIssue) Execute(ctx context.Context, id uuid.UUID, p domain.IssueP
 		if err != nil {
 			return err
 		}
-		s := stamp{workspace: h.issue.WorkspaceID, project: h.issue.ProjectID, issue: id, by: actor.UserID, at: u.d.Clock.Now()}
-		if err := u.write(ctx, s, h.issue, c, n, relations); err != nil {
+		var at time.Time
+		if len(q.ImageIDs) > 0 {
+			at, err = u.d.ContentBindings.LockContent(ctx, q)
+			if err != nil {
+				return err
+			}
+		} else {
+			at = u.d.Clock.Now()
+		}
+		s := stamp{workspace: h.issue.WorkspaceID, project: h.issue.ProjectID, issue: id, by: actor.UserID, at: at}
+		event, err := u.write(ctx, s, h.issue, c, n, relations)
+		if err != nil {
 			return err
+		}
+		if len(q.ImageIDs) > 0 {
+			if err := u.d.ContentBindings.BindContent(ctx, q, at); err != nil {
+				return err
+			}
+		}
+		if event != nil {
+			if err := u.d.Events.Publish(ctx, *event); err != nil {
+				return err
+			}
 		}
 		if updated, err = readBack(ctx, u.d.Issues, id); err != nil {
 			return err
@@ -221,18 +256,18 @@ func labelNames(labels []LabelRef, ids []uuid.UUID) ([]domain.Named, error) {
 // order of M4 design 3.5: its fields; its assignees' rows, those removed
 // then those added; its labels' rows, the same; its subscribers', the
 // accounts added; its activity's.
-func (u *UpdateIssue) write(ctx context.Context, s stamp, i domain.Issue, c domain.Changes, n named, relations descriptionRelations) error {
+func (u *UpdateIssue) write(ctx context.Context, s stamp, i domain.Issue, c domain.Changes, n named, relations descriptionRelations) (*shared.Event, error) {
 	if c.Description != nil && c.Description.Write && !c.Description.Changed {
 		clean := c.Description.Content
 		if err := u.d.Issues.WriteDescription(ctx, DescriptionWrite{IssueID: i.ID, HTML: clean.HTML, Text: clean.Text}); err != nil {
-			return err
+			return nil, err
 		}
 		if len(relations.subscribers) > 0 {
 			if err := u.d.Issues.InsertSubscribers(ctx, s.links(relations.subscribers)); err != nil {
-				return err
+				return nil, err
 			}
 		}
-		return writeMentions(ctx, u.d.Issues, s, relations.mentions)
+		return nil, writeMentions(ctx, u.d.Issues, s, relations.mentions)
 	}
 	// Preserve the lock-time description, including a legacy NULL stripped value.
 	f := IssueFields{SortOrder: i.SortOrder, ID: i.ID, Name: i.Name, StateID: i.StateID, Priority: i.Priority, StartDate: i.StartDate, TargetDate: i.TargetDate,
@@ -266,36 +301,37 @@ func (u *UpdateIssue) write(ctx context.Context, s stamp, i domain.Issue, c doma
 		f.TargetDate, activity.TargetDate = c.TargetDate.To, &domain.Changed[*shared.Date]{Old: i.TargetDate, New: c.TargetDate.To}
 	}
 	if err := u.d.Issues.UpdateIssue(ctx, f); err != nil {
-		return err
+		return nil, err
 	}
 	if err := u.relink(ctx, s, c.Assignees, u.d.Issues.RemoveAssignees, u.d.Issues.InsertAssignees); err != nil {
-		return err
+		return nil, err
 	}
 	if err := u.relink(ctx, s, c.Labels, u.d.Issues.RemoveLabels, u.d.Issues.InsertLabels); err != nil {
-		return err
+		return nil, err
 	}
 	if targets := ascending(slices.Concat(c.Assignees.Added, relations.subscribers)); len(targets) > 0 {
 		if err := u.d.Issues.InsertSubscribers(ctx, s.links(targets)); err != nil {
-			return err
+			return nil, err
 		}
 	}
 	if err := writeMentions(ctx, u.d.Issues, s, relations.mentions); err != nil {
-		return err
+		return nil, err
 	}
 	accounts, err := assignees(ctx, u.d.Profiles, slices.Concat(c.Assignees.Added, c.Assignees.Removed))
 	if err != nil {
-		return err
+		return nil, err
 	}
 	activity.AssigneesAdded, activity.AssigneesRemoved = accounts[:len(c.Assignees.Added)], accounts[len(c.Assignees.Added):]
 	if err := writeUpdateActivities(ctx, u.d.Issues, s, activity); err != nil {
-		return err
+		return nil, err
 	}
 	if c.Description != nil && c.Description.Changed {
 		if err := saveDescriptionVersion(ctx, u.d.Issues, s, c.Description.Content); err != nil {
-			return err
+			return nil, err
 		}
 	}
-	return u.d.Events.Publish(ctx, s.event(domain.EventIssueUpdated, updatedChanges(activity, c.SortOrder)))
+	event := s.event(domain.EventIssueUpdated, updatedChanges(activity, c.SortOrder))
+	return &event, nil
 }
 
 // relink removes the rows of d's removed ids, then inserts those of its

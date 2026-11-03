@@ -317,6 +317,9 @@ type Issue struct {
 	// AssigneeIds The accounts it is assigned to, by id; one who has left the project since is still one.
 	AssigneeIds []uuid.UUID `json:"assignee_ids"`
 
+	// AttachmentCount Uploaded, bound, undeleted ordinary issue attachments, read in the same snapshot.
+	AttachmentCount int64 `json:"attachment_count"`
+
 	// CompletedAt When it was put in a state of the completed group; null in any other state.
 	CompletedAt nullable.Nullable[time.Time] `json:"completed_at"`
 	CreatedAt   time.Time                    `json:"created_at"`
@@ -451,6 +454,9 @@ type IssueDetail struct {
 
 	// AssigneeIds The accounts it is assigned to, by id; one who has left the project since is still one.
 	AssigneeIds []uuid.UUID `json:"assignee_ids"`
+
+	// AttachmentCount Uploaded, bound, undeleted ordinary issue attachments, read in the same snapshot.
+	AttachmentCount int64 `json:"attachment_count"`
 
 	// CompletedAt When it was put in a state of the completed group; null in any other state.
 	CompletedAt nullable.Nullable[time.Time] `json:"completed_at"`

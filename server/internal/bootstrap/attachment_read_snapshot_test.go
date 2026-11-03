@@ -23,6 +23,7 @@ import (
 
 type attachmentSnapshotTrace struct {
 	gate     *gate
+	pauseSQL string
 	mu       sync.Mutex
 	queries  []string
 	err      error
@@ -45,7 +46,11 @@ func (p *attachmentSnapshotTrace) TraceQueryStart(ctx context.Context, c *pgx.Co
 		p.multiple = true
 	}
 	p.mu.Unlock()
-	if strings.HasPrefix(d.SQL, "-- name: ListAttachments :many") {
+	pauseSQL := p.pauseSQL
+	if pauseSQL == "" {
+		pauseSQL = "ListAttachments"
+	}
+	if strings.HasPrefix(d.SQL, "-- name: "+pauseSQL+" :many") {
 		err := p.gate.wait(ctx)
 		p.mu.Lock()
 		p.err = err

@@ -1,6 +1,6 @@
 # M5：文件
 
-> 状态：P1–P4已完成集成和归档。P4已完成：noff main 0f93100a，CI 41641099230 三job全绿，2301份原始文件归档核验并正常清理分支/worktree；P5预检已完成，T1–T4内容身份、完整集合绑定/迁移、附件发布权限与事务事件、分页读取和计数端口通过；T5待实施。见[P4阶段记录](reviews/P4-profile-images-review.md#22-t15最终集成归档与p5预检)和[P5预检](../../reviews/re-40-M5P5预检.md)。
+> 状态：P1–P4已完成集成和归档。P4已完成：noff main 0f93100a，CI 41641099230 三job全绿，2301份原始文件归档核验并正常清理分支/worktree；P5预检已完成，T1–T5内容身份、完整集合绑定/迁移、附件发布权限与事务事件、分页读取、工作项正文绑定与真实计数通过；T6待实施。见[P4阶段记录](reviews/P4-profile-images-review.md#22-t15最终集成归档与p5预检)和[P5阶段记录](reviews/P5-issue-assets-review.md)。
 > 起点：`main@3db22f06ad9e82a483c05c8078801af00a5cae02`（M4 最终 main CI 41397218533，三个作业成功）。
 > 设计、P1–P4分支均已合入并归档；当前工作分支codex/m5-p5。负责人2026-11-02已授权按既有节奏连续推进，常规设计、预检、实现、deep-review、`--no-ff`集成、CI和归档无需逐次询问。重大风险、架构回归或关键分歧，先提交已完成工作，再上报。
 
@@ -207,9 +207,11 @@ S3来源主机使用DNS或IPv4；浏览器CSP不能精确允许IPv6字面量，�
 
 `Issue.attachment_count` 只数该工作项活的 `ISSUE_ATTACHMENT`，不把描述图片、评论附件或草稿准备件算入。追加 ±attachment_count 排序和“附件”显示项时同时更新 SQL、游标比较器、生成 DTO、store 与界面；不先返回虚假 0。计数批量读取，不做每项一次查询；跨请求新增/删除仍可能影响游标位置，与 link_count 边界一致。
 
+所有返回 Issue 的读取将已授权结果与附件计数放在同一只读快照。详情、按编号读取、直接子项列表原先没有事务，P5 复用已有 ReadTx，在首个宿主读取前进入；列表、关系和搜索沿已有快照，写返回沿原写事务。计数只接收最终返回的去重 ID，不查 lookahead；group/subgroup 合并各 cell 后批量统计。创建核心与 Locks.seen、Listing 各自显式注入小接口，不用 nil 或端口错误回落为 0。代价是三处旧读取增加一个短只读事务；拒绝顺序、不取写闸门和行锁的约束保持有效。
+
 资产新增/删除工作项附件时产生具名事件 `asset.attachment_added` / `asset.attachment_deleted`，共享事件 envelope 的 Entity 指向 asset、Project/Workspace/Actor/OccurredAt 真实，Changes 带关联 issue ID；同一事务投递或拒绝。是否展示工作项动态由 P5 按 M4 的动作规则固定：每次真实增删各一条，重复 complete/delete 无额外行。项目批量清理不制造逐个用户动作动态。通知/Webhook 收到精确事件责任交接，不先实现通知。
 
-**P5预检落点（T1内容身份已验证，绑定/读取/迁移仍待后续Task）：** 评论附件走独立分页端点，创建最多100个attachment_ids；计数由asset在相同读取快照提供完整非零目录给issue SQL排序，普通页批量计返回ID，不跨模块JOIN、不保存冗余计数。草稿迁移保留已有bound，当前正文所用描述才新增绑定；从未引用的准备图片继续私有、可删和原7天清理，不能因发布自动公开。P5落实API/生成类型/比较器和现有store消费，P6/P7按§12挂页面；详见[P5主spec](specs/P5-issue-assets.md)、[绑定合同](specs/P5-content-binding.md)、[读取合同](specs/P5-attachment-reads.md)。
+**P5预检落点（T1–T5已验证，评论绑定、草稿调用方迁移及计数排序仍待后续Task）：** 评论附件走独立分页端点，创建最多100个attachment_ids；计数由asset在相同读取快照提供完整非零目录给issue SQL排序，普通页批量计返回ID，不跨模块JOIN、不保存冗余计数。草稿迁移保留已有bound，当前正文所用描述才新增绑定；从未引用的准备图片继续私有、可删和原7天清理，不能因发布自动公开。P5落实API/生成类型/比较器和现有store消费，P6/P7按§12挂页面；详见[P5主spec](specs/P5-issue-assets.md)、[绑定合同](specs/P5-content-binding.md)、[读取合同](specs/P5-attachment-reads.md)。
 
 ## 9. 前端与视觉
 
@@ -317,14 +319,14 @@ P1 起第一个实现提交更新关键词 phase 与到期例外；纯设计分�
 | P2 | 已完成：noff main2d1bcf0c，CI41556463795全绿，2191文件归档核验并清理 | [spec](specs/P2-assets.md) / [plan](plans/P2-assets.md) / [整审](../../reviews/re-35-M5P2整体审核.md) / [阶段记录](reviews/P2-assets-review.md) / [裁定](reviews/P2-purge-contract-decision.md) |
 | P3 | 已完成：noff main5807a0d6，CI41591764345全绿，2251文件归档核验并清理 | [spec](specs/P3-s3-storage.md) / [plan](plans/P3-s3-storage.md) / [预检](../../reviews/re-36-M5P3预检.md) / [阶段记录](reviews/P3-s3-storage-review.md) |
 | P4 | 已完成：noff main0f93100a，CI41641099230全绿，2301文件归档核验并清理 | [spec](specs/P4-profile-images.md) / [plan](plans/P4-profile-images.md) / [整审](../../reviews/re-39-M5P4整体审核.md) / [阶段记录](reviews/P4-profile-images-review.md) |
-| P5 | T1–T4已验证，T5待实施；一次builder check H1已修正 | [spec](specs/P5-issue-assets.md) / [plan](plans/P5-issue-assets.md) / [预检](../../reviews/re-40-M5P5预检.md) / [阶段记录](reviews/P5-issue-assets-review.md) |
+| P5 | T1–T5已验证，T6待实施；一次builder check H1已修正 | [spec](specs/P5-issue-assets.md) / [plan](plans/P5-issue-assets.md) / [预检](../../reviews/re-40-M5P5预检.md) / [阶段记录](reviews/P5-issue-assets-review.md) |
 | P6–P8、closeout | 未开始 | 待前置阶段完成后逐段展开 |
 
 当前可自行决定的局部取舍及代价：编辑器只处理图片，普通文件走附件区；预设封面使用稳定编号，不上传构建素材副本；描述图片保留到宿主删除，代价是占用空间；封存复制增加一次存储操作，换取确认后字节不被旧 PUT 改写。以上均在既定文件模块范围内，设计预检已核对一致性，具体实现按阶段合同验证。
 
 设计审查已修正的衔接：复用已有用途 MAC；保持 M4 的安全 URL 清洗合同；业务 JSON 仍 no-store；签名/传输使用运行时钟；外部操作记录放入有界 storage_metadata，不增加业务表。
 
-P1预算/MAC/Range、P2状态表/锁图/清理/owner端口、P3 SDK与双存储合同、P4绑定/读取/反向清理合同均已随实现验证并归档，见各阶段记录。P5评论独立分页50/100、精确事务事件/动态、同快照资产计数目录与草稿迁移合同已通过预检，尚待实施证明，见三份P5 spec。若事实证明既定架构无法满足安全或一致性要求，提交当前文档和证据后上报。
+P1预算/MAC/Range、P2状态表/锁图/清理/owner端口、P3 SDK与双存储合同、P4绑定/读取/反向清理合同均已随实现验证并归档，见各阶段记录。P5三份spec已通过预检；T1–T5已证明内容身份、绑定/迁移能力、精确事件/动态、分页和计数端口及工作项调用方，评论绑定、草稿调用方、排序与阶段联合验收仍待后续Task。若事实证明既定架构无法满足安全或一致性要求，提交当前文档和证据后上报。
 
 ## 16. 协议核验来源
 

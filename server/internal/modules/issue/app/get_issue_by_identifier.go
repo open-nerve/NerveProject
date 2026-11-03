@@ -16,6 +16,7 @@ type GetIssueByIdentifier struct {
 
 // GetIssueByIdentifierDeps are the use case's ports.
 type GetIssueByIdentifierDeps struct {
+	ReadTx     shared.TxManager
 	Locks      Locks
 	Workspaces WorkspaceDirectory
 	Projects   ProjectIdentifiers
@@ -32,7 +33,7 @@ func NewGetIssueByIdentifier(d GetIssueByIdentifierDeps) *GetIssueByIdentifier {
 // is workspace.not_found. Then the work item identifier names: its
 // project's identifier, compared folded with the workspace's undeleted
 // projects' (domain.MatchIdentifier), and its number in that project. It
-// reads the work item as getIssue does, without a lock or a transaction
+// reads the work item as getIssue does, in one read-only snapshot without a row lock
 // (Locks.see): an identifier that is no identifier, that names no
 // project, or a number no undeleted work item of it has, is
 // issue.not_found as one whose project the caller does not see, or that
@@ -44,6 +45,19 @@ func (u *GetIssueByIdentifier) Execute(ctx context.Context, slug, identifier str
 	if err != nil {
 		return domain.Issue{}, err
 	}
+	var out domain.Issue
+	err = u.d.ReadTx.WithinTx(ctx, func(ctx context.Context) error {
+		var err error
+		out, err = u.read(ctx, actor, slug, identifier)
+		return err
+	})
+	if err != nil {
+		return domain.Issue{}, err
+	}
+	return out, nil
+}
+
+func (u *GetIssueByIdentifier) read(ctx context.Context, actor shared.Actor, slug, identifier string) (domain.Issue, error) {
 	workspaceID, found, err := u.d.Workspaces.WorkspaceBySlug(ctx, slug)
 	switch {
 	case err != nil:

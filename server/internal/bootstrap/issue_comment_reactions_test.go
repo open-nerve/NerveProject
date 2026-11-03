@@ -211,7 +211,7 @@ func TestCommentReactionReadSnapshotAndRollback(t *testing.T) {
 	old := addCommentReaction(t, w, "bob", c.ID, "128077")
 	store := issuepg.New(w.pool)
 	projects := issueProjects{projects: project.Provide(w.pool, nil).IssueProjects}
-	locks := issueapp.NewLocks(projects, store, authorizerOn(w.pool), newWriteGate(testIssueConfig.WriteGate), postgres.NewTxManager(w.pool, 2*time.Second))
+	locks := issueapp.NewLocks(projects, store, authorizerOn(w.pool), newWriteGate(testIssueConfig.WriteGate), postgres.NewTxManager(w.pool, 2*time.Second), attachmentCounterOn(w.pool))
 	ctx := shared.WithActor(pgtest.Soon(t), shared.Actor{UserID: w.ids["alice"]})
 	// A separately committed change after the directory/page read is invisible
 	// to the batch reaction read of this list's repeatable-read transaction.

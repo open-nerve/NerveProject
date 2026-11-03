@@ -162,7 +162,7 @@ func TestCreateCommentHiddenGuestNeverEntersGate(t *testing.T) {
 	_, w, f, id := newComment()
 	w.auth.grants = []shared.Grant{ownOnly}
 	w.auth.answers = []error{shared.Forbidden()}
-	locks := app.NewLocks(w.project, w.issues, w.auth, fakeGate{log: w.log}, fakeTx{log: w.log})
+	locks := app.NewLocks(w.project, w.issues, w.auth, fakeGate{log: w.log}, fakeTx{log: w.log}, noIssueAttachments{})
 	uc := app.NewCreateIssueComment(app.CreateIssueCommentDeps{Events: discardEvents{}, Locks: locks, Comments: f, Members: w.project, Sanitizer: content.NewSanitizer(), Clock: clockAt{at: clockNow, log: w.log}})
 	_, err := uc.Execute(as(alice), id, "<p>Hidden</p>")
 	wantRefused(t, err, domain.ErrIssueNotFound)

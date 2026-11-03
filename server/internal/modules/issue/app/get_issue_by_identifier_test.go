@@ -72,14 +72,14 @@ func newGetByIdentifier() (*app.GetIssueByIdentifier, byIdentifier, uuid.UUID) {
 	_, w, id := newGet()
 	b := byIdentifier{world: w, projects: &fakeIdentifiers{log: w.log, projects: []app.ProjectIdentifier{{ID: ops, Identifier: "OPS"},
 		{ID: web, Identifier: "WEB"}}}}
-	uc := app.NewGetIssueByIdentifier(app.GetIssueByIdentifierDeps{Locks: w.locks, Workspaces: &fakeWorkspaces{log: w.log, slug: "acme", id: acme},
+	uc := app.NewGetIssueByIdentifier(app.GetIssueByIdentifierDeps{ReadTx: fakeTx{log: w.log}, Locks: w.locks, Workspaces: &fakeWorkspaces{log: w.log, slug: "acme", id: acme},
 		Projects: b.projects, Issues: &fakeNumbers{log: w.log, project: web, number: 7, id: id}})
 	return uc, b, id
 }
 
 // identified are the calls of alice's read of web's work item number in
 // acme, read as id: acme by its slug and the decision in it, outside any
-// transaction and without a lock; acme's projects' identifiers; web's work
+// snapshot and without a row lock; acme's projects' identifiers; web's work
 // item of the number; then the work item, and the decision on it, as
 // getIssue reads it.
 func identified(number int, id uuid.UUID) []string {
@@ -99,7 +99,7 @@ func TestGetIssueByIdentifierReadsTheWorkItem(t *testing.T) {
 		if want := readIssue(id); err != nil || !reflect.DeepEqual(got, want) {
 			t.Errorf("Execute(%s) = %+v, %v; want %+v", tt.identifier, got, err, want)
 		}
-		if calls := append(identified(7, id), counted(id)+" outside tx"); !slices.Equal(b.log.calls, calls) {
+		if calls := append(identified(7, id), counted(id)+" outside tx"); !slices.Equal(b.log.calls, readCalls(calls)) {
 			t.Errorf("%s: calls:\n%q\nwant\n%q", tt.identifier, b.log.calls, calls)
 		}
 	}
@@ -162,7 +162,7 @@ func TestGetIssueByIdentifierRefusals(t *testing.T) {
 			if tt.calls > 0 {
 				calls[0] = line("WorkspaceBySlug", tt.slug, "outside tx")
 			}
-			if !slices.Equal(b.log.calls, calls) {
+			if !slices.Equal(b.log.calls, readCalls(calls)) {
 				t.Errorf("calls:\n%q\nwant\n%q", b.log.calls, calls)
 			}
 		})

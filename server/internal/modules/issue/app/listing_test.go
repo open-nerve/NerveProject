@@ -84,7 +84,7 @@ func listingFixture(t *testing.T) (*app.Listing, *listingPorts, app.ListingInput
 	f := &listingPorts{t: t, ctx: context.WithValue(context.Background(), inTxKey{}, true), pids: []uuid.UUID{web},
 		states: []app.StateRef{{ID: backlog.ID, Name: "BACKlog", Group: "backlog"}, {ID: done.ID, Name: "Unused", Group: "completed"}},
 		labels: []app.LabelRef{{ID: uuid.NewV7(), Name: "ÄZ"}}, assignees: []uuid.UUID{carol, bob}, pages: [][]app.ListRecord{nil}}
-	l := app.NewListing(app.ListingDeps{Rows: f, States: f, Labels: f, Assignees: f, Profiles: f, Issues: f})
+	l := app.NewListing(app.ListingDeps{Attachments: noIssueAttachments{}, Rows: f, States: f, Labels: f, Assignees: f, Profiles: f, Issues: f})
 	return l, f, app.ListingInput{ActorID: alice, Projects: []app.VisibleProject{{ID: web, OwnOnly: true}}, Query: domain.ListQuery{Order: "sort_order", Limit: 1, Filters: domain.ListFilters{SubIssues: true}}}
 }
 func listRecord(id uuid.UUID, parent *uuid.UUID) app.ListRecord {

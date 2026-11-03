@@ -93,7 +93,7 @@ func TestPublishDraftPrecheckProjectDeletion(t *testing.T) {
 			if !tc.deleted {
 				w.auth.answers = []error{nil, shared.ErrNotVisible}
 			}
-			locks := app.NewDraftLocks(app.NewLocks(p, nil, w.auth, fakeGate{log: w.log}, fakeTx{log: w.log}), w.w, p, w.s)
+			locks := app.NewDraftLocks(app.NewLocks(p, nil, w.auth, fakeGate{log: w.log}, fakeTx{log: w.log}, noIssueAttachments{}), w.w, p, w.s)
 			decoder := &refusingPayload{}
 			uc := app.NewPublishDraft(app.PublishDraftDeps{Locks: locks, Decoder: decoder, Drafts: w.s})
 			_, err := uc.Execute(as(alice), w.s.row.ID)

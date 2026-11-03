@@ -28,17 +28,18 @@ import (
 // first (decide). issue.New builds one Locks for every use case: none
 // holds an Authorizer, a write gate or a transaction of its own.
 type Locks struct {
-	projects ProjectGate
-	issues   IssueReader
-	auth     shared.Authorizer
-	gate     WriteGate
-	tx       shared.TxManager
+	projects    ProjectGate
+	issues      IssueReader
+	auth        shared.Authorizer
+	gate        WriteGate
+	tx          shared.TxManager
+	attachments AttachmentCounter
 }
 
 // NewLocks returns the locks over project's gate, the work items' reads,
-// the Authorizer, the write gate and the transactions.
-func NewLocks(projects ProjectGate, issues IssueReader, auth shared.Authorizer, gate WriteGate, tx shared.TxManager) Locks {
-	return Locks{projects: projects, issues: issues, auth: auth, gate: gate, tx: tx}
+// the Authorizer, the write gate, write transactions and output attachment counts.
+func NewLocks(projects ProjectGate, issues IssueReader, auth shared.Authorizer, gate WriteGate, tx shared.TxManager, attachments AttachmentCounter) Locks {
+	return Locks{projects: projects, issues: issues, auth: auth, gate: gate, tx: tx, attachments: attachments}
 }
 
 // write is a write on the work-item side, as Locks takes its lock: the

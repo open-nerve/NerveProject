@@ -181,10 +181,10 @@ func snapshotListUseCases(w issueWorld, p *listSnapshotProbe) (*issueapp.ListIss
 	dirs := snapshotListProjects{issueProjects{projects: projects.IssueProjects}, p}
 	store := snapshotListRows{issuepg.New(w.pool), p}
 	auth := snapshotListAuth{authorizerOn(w.pool), p}
-	listing := issueapp.NewListing(issueapp.ListingDeps{Rows: store, States: dirs, Labels: dirs, Assignees: store,
+	listing := issueapp.NewListing(issueapp.ListingDeps{Attachments: attachmentCounterOn(w.pool), Rows: store, States: dirs, Labels: dirs, Assignees: store,
 		Profiles: snapshotListProfiles{issueProfiles{profiles: identity.Provide(w.pool).PublicProfiles}, p}, Issues: store})
 	tx := postgres.NewTxManager(w.pool, 3*time.Second, postgres.ReadOnlySnapshot())
-	return issueapp.NewListIssues(issueapp.ListIssuesDeps{ReadTx: tx, Locks: issueapp.NewLocks(dirs, store, auth, nil, nil), Listing: listing}),
+	return issueapp.NewListIssues(issueapp.ListIssuesDeps{ReadTx: tx, Locks: issueapp.NewLocks(dirs, store, auth, nil, nil, attachmentCounterOn(w.pool)), Listing: listing}),
 		issueapp.NewListMemberIssues(issueapp.ListMemberIssuesDeps{ReadTx: tx, Authorizer: auth, Projects: dirs, Listing: listing,
 			Workspaces: snapshotListWorkspace{issueWorkspaces{directory: workspaces.WorkspaceDirectory}, p},
 			Members:    snapshotListMembers{issueMembers{members: workspaces.WorkspaceMemberDirectory}, p}})

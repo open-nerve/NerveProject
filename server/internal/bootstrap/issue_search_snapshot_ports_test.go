@@ -48,6 +48,6 @@ func snapshotSearchUseCase(w issueWorld, p *listSnapshotProbe) *issueapp.SearchI
 	return issueapp.NewSearchIssues(issueapp.SearchIssuesDeps{
 		ReadTx: postgres.NewTxManager(w.pool, 3*time.Second, postgres.ReadOnlySnapshot()), Authorizer: auth,
 		Workspaces: snapshotListWorkspace{issueWorkspaces{directory: workspaces.WorkspaceDirectory}, p},
-		Projects:   dirs, Identifiers: dirs, Issues: store, Locks: issueapp.NewLocks(dirs, store, auth, nil, nil), Rows: store,
+		Projects:   dirs, Identifiers: dirs, Issues: store, Locks: issueapp.NewLocks(dirs, store, auth, nil, nil, attachmentCounterOn(w.pool)), Rows: store,
 	})
 }

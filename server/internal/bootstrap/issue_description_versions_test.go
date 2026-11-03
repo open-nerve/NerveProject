@@ -230,7 +230,7 @@ func TestDescriptionVersionsReadSnapshot(t *testing.T) {
 			t.Fatal(err)
 		}
 	}}
-	locks := issueapp.NewLocks(projects, wrapped, authorizerOn(w.pool), versionReadOnly{}, versionReadOnly{})
+	locks := issueapp.NewLocks(projects, wrapped, authorizerOn(w.pool), versionReadOnly{}, versionReadOnly{}, attachmentCounterOn(w.pool))
 	list := issueapp.NewListDescriptionVersions(issueapp.ListDescriptionVersionsDeps{Locks: locks, Versions: store, ReadTx: postgres.NewTxManager(w.pool, 2*time.Second, postgres.ReadOnlySnapshot())})
 	ctx := shared.WithActor(pgtest.Soon(t), shared.Actor{UserID: w.ids["alice"]})
 	page, err := list.Execute(ctx, id, nil, nil)
@@ -243,7 +243,7 @@ func TestDescriptionVersionsReadSnapshot(t *testing.T) {
 	// A detail has no transaction dependency and takes no write gate or row lock.
 	fresh := w.newWorkItem(t)
 	detail := savedVersion(t, w, fresh)
-	locks = issueapp.NewLocks(projects, store, authorizerOn(w.pool), versionReadOnly{}, versionReadOnly{})
+	locks = issueapp.NewLocks(projects, store, authorizerOn(w.pool), versionReadOnly{}, versionReadOnly{}, attachmentCounterOn(w.pool))
 	get := issueapp.NewGetDescriptionVersion(issueapp.GetDescriptionVersionDeps{Locks: locks, Versions: store})
 	got, err := get.Execute(ctx, detail.ID)
 	if err != nil || got.ID != detail.ID {

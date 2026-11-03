@@ -116,12 +116,14 @@ type (
 
 // Deps are what bootstrap gives the module (M4 design 6.6, step 6).
 type Deps struct {
-	AttachmentReader app.AttachmentReader
-	DraftAssets      app.DraftAssets
-	Outbound         *outbound.Client
-	Logger           *slog.Logger
-	Events           shared.EventPublisher
-	Pool             *pgxpool.Pool
+	AttachmentCounter app.AttachmentCounter
+	ContentBindings   app.ContentBinding
+	AttachmentReader  app.AttachmentReader
+	DraftAssets       app.DraftAssets
+	Outbound          *outbound.Client
+	Logger            *slog.Logger
+	Events            shared.EventPublisher
+	Pool              *pgxpool.Pool
 	// Tx are the transactions of the module's writes, each of which waits
 	// for a lock at most issue.write_lock_timeout (bootstrap/gate.go).
 	Tx shared.TxManager
@@ -134,7 +136,7 @@ type Deps struct {
 	DeleteBudget         time.Duration
 	RuntimeNow           func() time.Time
 	// ReadTx supplies independent, read-only repeatable-read transactions for
-	// collaboration lists. The first target read, authorization, directories
+	// issue details and lists. The first target read, authorization, directories
 	// and list queries must all use its context; never call such a list from
 	// an existing write transaction, which WithinTx would join unchanged.
 	ReadTx shared.TxManager
@@ -173,16 +175,16 @@ type Module struct {
 // registered or injected after it (M4 design 6.6).
 func New(d Deps) *Module {
 	store := postgresadapter.New(d.Pool)
-	locks := app.NewLocks(d.Projects, store, d.Authorizer, d.WriteGate, d.Tx)
+	locks := app.NewLocks(d.Projects, store, d.Authorizer, d.WriteGate, d.Tx, d.AttachmentCounter)
 	draftLocks := app.NewDraftLocks(locks, d.Workspaces, d.Projects, store)
 	assetAccess := app.NewAssetAccess(app.AssetAccessDeps{Locks: locks, Drafts: draftLocks, Comments: store, Projects: d.Projects})
 	attachments := app.GetAttachmentsDeps{Access: assetAccess, Rows: d.AttachmentReader, ReadTx: d.ReadTx}
 	sanitizer := content.NewSanitizer()
-	listing := app.NewListing(app.ListingDeps{Rows: store, States: d.Projects, Labels: d.Projects, Assignees: store, Profiles: d.Profiles, Issues: store})
+	listing := app.NewListing(app.ListingDeps{Attachments: d.AttachmentCounter, Rows: store, States: d.Projects, Labels: d.Projects, Assignees: store, Profiles: d.Profiles, Issues: store})
 	archive := app.ArchiveIssueDeps{Events: d.Events, Locks: locks, Issues: store, States: d.Projects, Clock: d.Clock}
 	creation := app.NewIssueCreation(app.IssueCreationDeps{Events: d.Events,
 		Issues: store, Sequences: d.Projects, States: d.Projects, Labels: d.Projects, Members: d.Projects,
-		Profiles: d.Profiles, Clock: d.Clock, Sanitizer: sanitizer,
+		Profiles: d.Profiles, Clock: d.Clock, Sanitizer: sanitizer, Attachments: d.AttachmentCounter, ContentBindings: d.ContentBindings,
 	})
 	return &Module{
 		assets: assetAccess, deleteRows: app.NewDeleteRows(app.DeleteRowsDeps{Rows: store, Relations: app.NewRelationDeletions(store, d.Projects), Remaining: store, Tx: d.JobTx, RuntimeNow: d.RuntimeNow, Batch: d.DeleteBatch, Budget: d.DeleteBudget}), deleteBudget: d.DeleteBudget, logger: d.Logger,
@@ -218,17 +220,17 @@ func New(d Deps) *Module {
 			CreateIssueComment:      app.NewCreateIssueComment(app.CreateIssueCommentDeps{Events: d.Events, Locks: locks, Comments: store, Members: d.Projects, Sanitizer: sanitizer, Clock: d.Clock}),
 			ListIssueComments:       app.NewListIssueComments(app.ListIssueCommentsDeps{Locks: locks, Comments: store, ReadTx: d.ReadTx}),
 			CreateIssue:             app.NewCreateIssue(app.CreateIssueDeps{Locks: locks, Creation: creation}),
-			GetIssue:                app.NewGetIssue(locks),
+			GetIssue:                app.NewGetIssue(locks, d.ReadTx),
 			GetIssueByIdentifier: app.NewGetIssueByIdentifier(app.GetIssueByIdentifierDeps{
-				Locks: locks, Workspaces: d.Workspaces, Projects: d.Projects, Issues: store,
+				Locks: locks, Workspaces: d.Workspaces, Projects: d.Projects, Issues: store, ReadTx: d.ReadTx,
 			}),
 			UpdateIssue: app.NewUpdateIssue(app.UpdateIssueDeps{Events: d.Events,
-				Locks: locks, Issues: store, States: d.Projects, Labels: d.Projects, Members: d.Projects, Profiles: d.Profiles, Clock: d.Clock, Sanitizer: sanitizer,
+				Locks: locks, Issues: store, States: d.Projects, Labels: d.Projects, Members: d.Projects, Profiles: d.Profiles, Clock: d.Clock, Sanitizer: sanitizer, ContentBindings: d.ContentBindings,
 			}),
 			DeleteIssue:        app.NewDeleteIssue(app.DeleteIssueDeps{Events: d.Events, Locks: locks, Rows: store, Relations: app.NewRelationDeletions(store, d.Projects), Clock: d.Clock}),
 			ArchiveIssue:       app.NewArchiveIssue(archive),
 			UnarchiveIssue:     app.NewUnarchiveIssue(archive),
-			ListSubIssues:      app.NewListSubIssues(locks, store),
+			ListSubIssues:      app.NewListSubIssues(locks, store, d.ReadTx),
 			AddSubIssues:       app.NewAddSubIssues(app.AddSubIssuesDeps{Events: d.Events, Locks: locks, Issues: store, Clock: d.Clock}),
 			ListIssueRelations: app.NewListIssueRelations(app.ListIssueRelationsDeps{Locks: locks, Relations: store, Projects: d.Projects, ReadTx: d.ReadTx}),
 			CreateIssueRelations: app.NewCreateIssueRelations(app.CreateIssueRelationsDeps{Events: d.Events,

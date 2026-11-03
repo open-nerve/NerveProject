@@ -15,15 +15,16 @@ import (
 type ListSubIssues struct {
 	locks  Locks
 	issues SubIssueLister
+	readTx shared.TxManager
 }
 
 // NewListSubIssues returns the use case.
-func NewListSubIssues(locks Locks, issues SubIssueLister) *ListSubIssues {
-	return &ListSubIssues{locks: locks, issues: issues}
+func NewListSubIssues(locks Locks, issues SubIssueLister, readTx shared.TxManager) *ListSubIssues {
+	return &ListSubIssues{locks: locks, issues: issues, readTx: readTx}
 }
 
 // Execute reads the work item id and decides issue.read on it for the
-// caller, as getIssue does, without a lock or a transaction (Locks.see),
+// caller, as getIssue does, in one read-only snapshot without a row lock (Locks.see),
 // with its refusals; then its undeleted, unarchived direct sub-items that
 // he sees, those he created when the guest rule hides others' from him
 // (Grant.OwnOnly), in the order of their creation, each as he sees it
@@ -33,6 +34,19 @@ func (u *ListSubIssues) Execute(ctx context.Context, id uuid.UUID) ([]domain.Iss
 	if err != nil {
 		return nil, err
 	}
+	var out []domain.Issue
+	err = u.readTx.WithinTx(ctx, func(ctx context.Context) error {
+		var err error
+		out, err = u.read(ctx, actor, id)
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (u *ListSubIssues) read(ctx context.Context, actor shared.Actor, id uuid.UUID) ([]domain.Issue, error) {
 	i, grant, err := u.locks.see(ctx, actor, id, domain.ActionRead)
 	if err != nil {
 		return nil, err

@@ -76,10 +76,12 @@ issue新增app/content_asset_ports.go、attachment_ports.go、attachments.go、a
 **Files:** issue/app/create_core.go/create_issue.go/update_issue.go/seen.go/listing.go、domain/issue.go、HTTP DTO、module.go；api/modules/issue.yaml及生成物、web受影响fixture；bootstrap/issue_content_assets_test.go/issue_attachment_projection_test.go。
 **Interfaces:** 产出create_core私有prepareLocked/writePreparedAt，保持唯一创建逻辑；Issue.AttachmentCount int64，所有API通过T4 AttachmentCounter填真实值，不留临时0实现；NewLocks在原五参数后增加attachments AttachmentCounter，所有生产/测试构造者同时接线。IssueCreationDeps及ListingDeps新增AttachmentCounter依赖，禁止nil回落假0。
 
-- [ ] Step 1：TestIssueContentAssets / TestIssueAttachmentProjection：同宿主新/历史图、别人的已绑图可保留、跨宿主/用途/未上传404或既有码、skip图片变更真实版本动态；审计每个Issue出口包括关系内嵌/搜索/批量与member列表。
-- [ ] Step 2：`cd server && go test -p 1 ./internal/modules/issue/... ./internal/bootstrap -run 'Test(IssueContentAssets|IssueAttachmentProjection|Description)' -count=1`取得RED后接线；直接新建Issue不能引用另一Issue/draft图片；readBack/seen/Listing补同批统计。
-- [ ] Step 3：GREEN；正文/资产/版本/subscriber/commit逐点回滚；真实count仅ISSUE_ATTACHMENT，完整Issue合同和旧M4创建/更新/列表回归。
-- [ ] Step 4：生成、lint及TS类型/相关fixture测试，提交 `feat(M5/P5): 原子绑定工作项图片并返回真实附件计数`。
+**读取边界落实：** GetIssue、GetIssueByIdentifier、ListSubIssues 显式增加 ReadTx 依赖并从首读进入既有只读快照；其余读/写沿既有事务。新增真实交错验证授权、Issue 审计与附件计数同快照，同时保留不占写闸门、不取行锁及权限拒绝顺序回归。此项落实预检的真实计数同快照合同，不扩张资产所有权或架构守卫。
+
+- [x] Step 1：TestIssueContentAssets / TestIssueAttachmentProjection：同宿主新/历史图、别人的已绑图可保留、跨宿主/用途/未上传404或既有码、skip图片变更真实版本动态；审计每个Issue出口包括关系内嵌/搜索/批量与member列表。
+- [x] Step 2：`cd server && go test -p 1 ./internal/modules/issue/... ./internal/bootstrap -run 'Test(IssueContentAssets|IssueAttachmentProjection|Description)' -count=1`取得RED后接线；直接新建Issue不能引用另一Issue/draft图片；readBack/seen/Listing补同批统计。
+- [x] Step 3：GREEN；正文/资产/版本/subscriber/commit逐点回滚；真实count仅ISSUE_ATTACHMENT，完整Issue合同和旧M4创建/更新/列表回归。
+- [x] Step 4：生成、lint及TS类型/相关fixture测试，提交 `feat(M5/P5): 原子绑定工作项图片并返回真实附件计数`。
 
 ## Task 6（T6）：评论准备件与创建原子性
 

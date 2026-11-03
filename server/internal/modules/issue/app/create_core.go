@@ -13,15 +13,17 @@ import (
 
 // IssueCreationDeps are the ports used while the caller holds the project lock.
 type IssueCreationDeps struct {
-	Events    shared.EventPublisher
-	Issues    IssueCreator
-	Sequences Sequences
-	States    StateCatalog
-	Labels    LabelCatalog
-	Members   ProjectMembers
-	Profiles  PublicProfiles
-	Clock     Clock
-	Sanitizer HTMLSanitizer
+	Attachments     AttachmentCounter
+	ContentBindings ContentBinding
+	Events          shared.EventPublisher
+	Issues          IssueCreator
+	Sequences       Sequences
+	States          StateCatalog
+	Labels          LabelCatalog
+	Members         ProjectMembers
+	Profiles        PublicProfiles
+	Clock           Clock
+	Sanitizer       HTMLSanitizer
 }
 
 // IssueCreation writes a checked new issue within its caller's transaction.
@@ -44,41 +46,83 @@ type checked struct {
 	labelNames            []domain.Named
 }
 
+// preparedIssue has its final identity and checked graph, but no write time.
+// Both ordinary creation and draft publication consume this one preparation.
+type preparedIssue struct {
+	row     IssueRow
+	checked checked
+	content domain.RichText
+}
+
 // createLocked requires pure domain validation and the project's write lock.
 // Its returned moment is the sole clock reading used by all of its writes.
 func (u *IssueCreation) createLocked(ctx context.Context, actorID, projectID uuid.UUID, h held, in domain.NewIssue) (domain.Issue, time.Time, error) {
+	p, err := u.prepareLocked(ctx, actorID, projectID, h, in)
+	if err != nil {
+		return domain.Issue{}, time.Time{}, err
+	}
+	q := ContentBindRequest{ActorID: actorID, Host: ContentHost{WorkspaceID: p.row.WorkspaceID, ProjectID: projectID, IssueID: p.row.ID}, ImageIDs: p.content.Identity.AssetImageIDs()}
+	var at time.Time
+	if len(q.ImageIDs) > 0 {
+		at, err = u.d.ContentBindings.LockContent(ctx, q)
+		if err != nil {
+			return domain.Issue{}, time.Time{}, err
+		}
+	} else {
+		at = u.d.Clock.Now()
+	}
+	created, err := u.writePreparedAt(ctx, p, at)
+	if err != nil {
+		return domain.Issue{}, time.Time{}, err
+	}
+	if len(q.ImageIDs) > 0 {
+		if err := u.d.ContentBindings.BindContent(ctx, q, at); err != nil {
+			return domain.Issue{}, time.Time{}, err
+		}
+	}
+	items := []domain.Issue{created}
+	if err := projectAttachments(ctx, u.d.Attachments, items); err != nil {
+		return domain.Issue{}, time.Time{}, err
+	}
+	return items[0], at, nil
+}
+
+func (u *IssueCreation) prepareLocked(ctx context.Context, actorID, projectID uuid.UUID, h held, in domain.NewIssue) (preparedIssue, error) {
 	project := h.project
 	if project.Archived {
-		return domain.Issue{}, time.Time{}, domain.ErrProjectArchived
+		return preparedIssue{}, domain.ErrProjectArchived
 	}
 	c, err := u.check(ctx, h, actorID, projectID, in)
 	if err != nil {
-		return domain.Issue{}, time.Time{}, err
+		return preparedIssue{}, err
 	}
 	clean := u.d.Sanitizer.Clean(*in.DescriptionHTML)
 	mentions, subscribers, err := descriptionTargets(ctx, u.d.Members, domain.Issue{ProjectID: projectID, CreatedByID: &actorID}, clean.Identity.MentionIDs)
 	if err != nil {
-		return domain.Issue{}, time.Time{}, err
+		return preparedIssue{}, err
 	}
 	c.mentions, c.subscribers = mentions, subscribers
 	sequence, err := u.d.Sequences.Next(ctx, projectID)
 	if err != nil {
-		return domain.Issue{}, time.Time{}, err
+		return preparedIssue{}, err
 	}
-	now := u.d.Clock.Now()
 	greatest, err := u.d.Issues.GreatestSortOrder(ctx, projectID, c.state.ID)
 	if err != nil {
-		return domain.Issue{}, time.Time{}, err
+		return preparedIssue{}, err
 	}
 	row := IssueRow{ID: uuid.NewV7(), WorkspaceID: project.WorkspaceID, ProjectID: projectID, SequenceID: sequence, Name: in.Name,
 		StateID: c.state.ID, Priority: *in.Priority, StartDate: in.StartDate, TargetDate: in.TargetDate, ParentID: c.parent,
 		DescriptionHTML: clean.HTML, DescriptionStripped: &clean.Text,
-		SortOrder: domain.SortOrderAfter(greatest), CompletedAt: domain.CompletedAt(c.state.Group, now), By: actorID, At: now}
-	if err := u.write(ctx, row, c, clean); err != nil {
-		return domain.Issue{}, time.Time{}, err
+		SortOrder: domain.SortOrderAfter(greatest), By: actorID}
+	return preparedIssue{row: row, checked: c, content: clean}, nil
+}
+
+func (u *IssueCreation) writePreparedAt(ctx context.Context, p preparedIssue, at time.Time) (domain.Issue, error) {
+	p.row.At, p.row.CompletedAt = at, domain.CompletedAt(p.checked.state.Group, at)
+	if err := u.write(ctx, p.row, p.checked, p.content); err != nil {
+		return domain.Issue{}, err
 	}
-	created, err := readBack(ctx, u.d.Issues, row.ID)
-	return created, now, err
+	return readBack(ctx, u.d.Issues, p.row.ID)
 }
 
 // check checks the dependent rows of in, by the caller actor, under h, his

@@ -112,7 +112,7 @@ func TestCollaborationRollsBackPortFailures(t *testing.T) {
 			}
 			store := issuepg.New(w.pool)
 			projects := issueProjects{projects: project.Provide(w.pool, nil).IssueProjects}
-			locks := issueapp.NewLocks(projects, store, authorizerOn(w.pool), newWriteGate(testIssueConfig.WriteGate), postgres.NewTxManager(w.pool, 2*time.Second))
+			locks := issueapp.NewLocks(projects, store, authorizerOn(w.pool), newWriteGate(testIssueConfig.WriteGate), postgres.NewTxManager(w.pool, 2*time.Second), attachmentCounterOn(w.pool))
 			ctx := shared.WithActor(pgtest.Soon(t), shared.Actor{UserID: w.ids["bob"]})
 			for _, port := range operation.ports {
 				t.Run(port, func(t *testing.T) {
