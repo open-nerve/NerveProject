@@ -1,6 +1,6 @@
 # M5 / P3 S3 存储合同
 
-> 预检通过，实施尚未开始；见[re-36](../../../reviews/re-36-M5P3预检.md)。对应 M5-design §5.4、§12 P3；基线为 P2 noff main `2d1bcf0c88270db7f08b92a25f135f20f6c7ec7c`，准确 main CI 41556463795 三 job 全绿（341 E2E、14.3m），P2已归档校验并清理。当前分支codex/m5-p3，按负责人连续授权从T1实施。预检探针不等于本阶段实现验收。
+> 预检通过，T1配置与秘密读取已完成，T2待开始；见[re-36](../../../reviews/re-36-M5P3预检.md)。对应 M5-design §5.4、§12 P3；基线为 P2 noff main `2d1bcf0c88270db7f08b92a25f135f20f6c7ec7c`，准确 main CI 41556463795 三 job 全绿（341 E2E、14.3m），P2已归档校验并清理。当前分支codex/m5-p3，按负责人连续授权逐Task实施。预检探针不等于本阶段实现验收。
 
 ## 1. 目的、范围和方案
 
@@ -32,7 +32,7 @@
 | access_key_id / secret_access_key | 各恰有一个值或同名 `_file` 来源；值最长256/4096字节，拒绝控制字符和空白 |
 | session_token | 可选，值或 `_file` 二选一；最长16384字节，同样拒绝控制字符/空白；不自动刷新 |
 
-直接秘密值通过 `NERVE_FILES__S3__...` 注入；YAML 只允许空默认值或 `_file` 路径，非空内联秘密拒绝。文件仅在 S3 组合时读取，按各上限+2字节检测超限，最多移除末尾一个 LF 或 CRLF；空文件、超限、目录和读取失败均报配置键及类别，不带值/路径。值与文件同时声明始终拒绝，不能按优先级默默忽略。local 不要求 S3 完整配置、不读取 S3 文件；活动 S3 配置错误不得 fallback 到 local。所有凭据/文件路径 LogValue 只输出是否已设置，SDK/HTTP 错误也不能泄露签名 query、Authorization、secret 或 token。
+直接秘密值通过 `NERVE_FILES__S3__...` 注入；YAML 只允许空默认值或 `_file` 路径，非空内联秘密拒绝。文件仅在 S3 组合时读取，允许内容上限外最多一个LF/CRLF；实际读取最多上限+3字节（额外1字节用于判超限），最多移除末尾一个 LF 或 CRLF；空文件、超限、目录和读取失败均报配置键及类别，不带值/路径。值与文件同时声明始终拒绝（包括未启用S3时），不能按优先级默默忽略。local 不要求 S3 完整配置、不读取 S3 文件；活动 S3 配置错误不得 fallback 到 local。所有凭据/文件路径 LogValue 只输出是否已设置，SDK/HTTP 错误也不能泄露签名 query、Authorization、secret 或 token。
 
 官方 `EndpointResolverV2` 按配置计算实际 bucket endpoint；出站 HTTP 守卫与 CSP 共用其规范化 origin。路径/host 在签名之后不修改。独立 HTTP Transport 使用系统 TLS、`Proxy=nil`、拒绝所有重定向，限制请求到该唯一 origin；SDK `RetryMaxAttempts=1`。每次操作继承 caller context，并受 operation_timeout 限制；不得沿用 credential-free link preview 的 outbound.Get。Close 释放自有空闲连接。
 

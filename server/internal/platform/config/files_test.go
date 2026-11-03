@@ -21,7 +21,7 @@ func TestFilesConfigurationBudgets(t *testing.T) {
 			t.Fatal(err)
 		}
 		want := FilesConfig{
-			UploadTTL: 15 * time.Minute, OperationTimeout: 10 * time.Second, CleanupInterval: time.Hour, CleanupBatch: 100, CleanupBudget: 10 * time.Second, SizeLimit: 5242880, Driver: "local", Local: LocalFilesConfig{Root: "./data/files"},
+			UploadTTL: 15 * time.Minute, OperationTimeout: 10 * time.Second, CleanupInterval: time.Hour, CleanupBatch: 100, CleanupBudget: 10 * time.Second, SizeLimit: 5242880, Driver: "local", Local: LocalFilesConfig{Root: "./data/files"}, S3: S3FilesConfig{PathStyle: true},
 			MinTransferBytesPerSecond: 131072, TransferGrace: 15 * time.Second, TransferIdleTimeout: 30 * time.Second,
 			MaxTransferDuration: 15 * time.Minute, MaxConcurrentTransfers: 16, TransferRate: BucketConfig{PerMinute: 60, Burst: 20}}
 		if cfg.Files != want {
@@ -86,7 +86,7 @@ func TestFilesConfigurationBudgets(t *testing.T) {
 		for _, tc := range []struct{ value, key string }{
 			{"SIZE_LIMIT=0", "size_limit"}, {"SIZE_LIMIT=-1", "size_limit"}, {"SIZE_LIMIT=104857601", "size_limit"},
 			{"SIZE_LIMIT=1.5", "size_limit"}, {"SIZE_LIMIT=9223372036854775808", "size_limit"},
-			{"DRIVER=s3", "driver"}, {"LOCAL__ROOT=", "local.root"},
+			{"DRIVER=unknown", "driver"}, {"LOCAL__ROOT=", "local.root"},
 			{"MIN_TRANSFER_BYTES_PER_SECOND=1023", "min_transfer_bytes_per_second"},
 			{"MIN_TRANSFER_BYTES_PER_SECOND=1073741825", "min_transfer_bytes_per_second"},
 			{"MIN_TRANSFER_BYTES_PER_SECOND=1.5", "min_transfer_bytes_per_second"},

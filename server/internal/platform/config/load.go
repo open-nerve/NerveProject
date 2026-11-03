@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/go-viper/mapstructure/v2"
-	"github.com/knadh/koanf/parsers/yaml"
 	"github.com/knadh/koanf/providers/env/v2"
 	"github.com/knadh/koanf/providers/rawbytes"
 	"github.com/knadh/koanf/v2"
@@ -66,7 +65,7 @@ func Load(src Sources) (Config, error) {
 		if err != nil {
 			return Config{}, fmt.Errorf("read built-in %s: %w", name, err)
 		}
-		if err := k.Load(rawbytes.Provider(data), yaml.Parser()); err != nil {
+		if err := k.Load(rawbytes.Provider(data), filesYAMLParser()); err != nil {
 			return Config{}, fmt.Errorf("parse built-in %s: %w", name, err)
 		}
 	}
@@ -128,7 +127,7 @@ func loadFileIfExists(k *koanf.Koanf, path string) error {
 	if err != nil {
 		return fmt.Errorf("load %s: %w", path, err)
 	}
-	if err := k.Load(rawbytes.Provider(data), yaml.Parser()); err != nil {
+	if err := k.Load(rawbytes.Provider(data), filesYAMLParser()); err != nil {
 		return fmt.Errorf("load %s: %w", path, err)
 	}
 	return nil

@@ -1,7 +1,7 @@
 # M5 / P3 S3 存储实施计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-> 预检通过，T1尚未开始，见[re-36](../../../reviews/re-36-M5P3预检.md)。worktree为`/Users/xiaoruan/project/nerve-project/.codex/worktress/codex/m5-p3`；基线main2d1bcf0c、CI41556463795三job全绿，P2归档清理完成。负责人连续授权常规 M5 推进；新重大风险/分歧先提交再上报。
+> 预检通过，T1已完成，T2待开始，见[re-36](../../../reviews/re-36-M5P3预检.md)。worktree为`/Users/xiaoruan/project/nerve-project/.codex/worktress/codex/m5-p3`；基线main2d1bcf0c、CI41556463795三job全绿，P2归档清理完成。负责人连续授权常规 M5 推进；新重大风险/分歧先提交再上报。
 
 **Goal：** 为既有资产用例接入真实 S3 私有存储，完成 F4、部署配置和 local 回归。
 
@@ -42,15 +42,15 @@
 
 ## Task 1（T1）：活动驱动配置与显式秘密
 
-**Files：** 修改config/files.go、load.go、configs/config.yaml、tools/keywords.json；新增config/files_s3.go、files_s3_test.go、bootstrap/assets_secrets.go、assets_secrets_test.go。
+**Files：** 修改config/files.go、load.go、configs/config.yaml、tools/keywords.json；新增config/files_s3.go、files_s3_yaml.go、files_s3_test.go、bootstrap/assets_secrets.go、assets_secrets_test.go；同步configs/embed_test.go和原配置测试的合法驱动/默认值。
 
 **Interfaces：** 产出上述S3FilesConfig和loadS3Credentials；不读取SDK/外部存储，local默认不读S3秘密文件。
 
-- [ ] Step 1：写TestFilesS3Config/TestS3CredentialSources RED：`local+空S3=>valid`、`s3+缺endpoint=>error`、ID/secret/token边界及+1、双来源、YAML非空秘密、未知键、prefix越界、日志不含值/文件路径；文件空/目录/不可读/超限、LF/CRLF成功。
-- [ ] Step 2：`cd server && go test ./internal/platform/config ./internal/bootstrap -run 'Test(FilesS3Config|S3CredentialSources)$' -count=1`；先确认具名失败；缺类型编译RED后仍补行为RED，不把编译失败记性质变异。
-- [ ] Step 3：按spec §3实现配置/默认path_style/只读秘密helper，keys phase=M5/P3并核到期例外；保持原loader未知键/null拒绝和日志遮盖。
-- [ ] Step 4：同命令GREEN，再完整config、bootstrap秘密/生命周期相关测试；分别移除双来源拒绝、遮盖检查做2个实际性质变异并恢复hash；make lint-go。
-- [ ] Step 5：记录证据与`feat(M5/P3): 增加显式 S3 配置及受限秘密读取`提交。
+- [x] Step 1：写TestFilesS3Config/TestS3CredentialSources RED：`local+空S3=>valid`、`s3+缺endpoint=>error`、ID/secret/token边界及+1、双来源、YAML非空秘密、未知键、prefix越界、日志不含值/文件路径；文件空/目录/不可读/超限、LF/CRLF成功。
+- [x] Step 2：`cd server && go test ./internal/platform/config ./internal/bootstrap -run 'Test(FilesS3Config|S3CredentialSources)$' -count=1`；先确认具名失败；缺类型编译RED后仍补行为RED，不把编译失败记性质变异。
+- [x] Step 3：按spec §3实现配置/默认path_style/只读秘密helper，keys phase=M5/P3并核到期例外；保持原loader未知键/null拒绝和日志遮盖。
+- [x] Step 4：同命令GREEN，再完整config、bootstrap秘密/生命周期相关测试；分别移除双来源拒绝、遮盖检查做2个实际性质变异并恢复hash；make lint-go。
+- [x] Step 5：记录证据与`feat(M5/P3): 增加显式 S3 配置及受限秘密读取`提交。
 
 ## Task 2（T2）：SDK客户端、桶能力和自有测试服务
 

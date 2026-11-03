@@ -112,7 +112,7 @@ func TestBuiltInProfiles(t *testing.T) {
 				},
 				Files: config.FilesConfig{
 					UploadTTL: 15 * time.Minute, OperationTimeout: 10 * time.Second, CleanupInterval: time.Hour, CleanupBatch: 100, CleanupBudget: 10 * time.Second,
-					SizeLimit: 5 << 20, Driver: "local", Local: config.LocalFilesConfig{Root: "./data/files"},
+					SizeLimit: 5 << 20, Driver: "local", Local: config.LocalFilesConfig{Root: "./data/files"}, S3: config.S3FilesConfig{PathStyle: true},
 					MinTransferBytesPerSecond: 128 << 10, TransferGrace: 15 * time.Second,
 					TransferIdleTimeout: 30 * time.Second, MaxTransferDuration: 15 * time.Minute,
 					MaxConcurrentTransfers: 16, TransferRate: config.BucketConfig{PerMinute: 60, Burst: 20},
