@@ -14,18 +14,26 @@ import (
 
 // User is an account as the API shows it.
 type User struct {
-	AvatarAssetID     *uuid.UUID
-	CoverImageAssetID *uuid.UUID
-	ID                uuid.UUID
-	Email             string
-	FirstName         string
-	LastName          string
-	DisplayName       string
-	Timezone          string
-	CreatedAt         time.Time
+	Avatar, CoverImage *ImageURL
+	AvatarAssetID      *uuid.UUID
+	CoverImageAssetID  *uuid.UUID
+	ID                 uuid.UUID
+	Email              string
+	FirstName          string
+	LastName           string
+	DisplayName        string
+	Timezone           string
+	CreatedAt          time.Time
 }
 
-// UserPatch is a partial update of an account: a nil field stays as it is.
+// ImageURL is a short-lived read capability, never persisted on the account.
+type ImageURL struct {
+	URL       string
+	ExpiresAt time.Time
+}
+
+// UserPatch is a partial update: nil text stays; image Set flags distinguish
+// omission from clearing a nullable reference.
 // The e-mail address is not in it: only the administrator's command changes
 // it (M2 decision 1).
 type UserPatch struct {

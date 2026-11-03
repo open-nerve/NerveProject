@@ -139,6 +139,8 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 	workspacePorts := workspace.Provide(pool, protected)
 	projectPorts := project.Provide(pool, protected)
 	issuePorts := issue.Provide(pool, protected)
+	imageBindings := asset.NewImageBindings(assetPorts, businessClock)
+	imageReader := asset.NewImageReader(assetPorts, assets.store, assets.runtimeNow)
 	assetPurger := asset.NewPurger(assetPorts, assetImageReferences{identityPorts.ImageReferences, workspacePorts.ImageReferences, projectPorts.ImageReferences}, tx)
 	authorizer := access.New(access.Deps{
 		WorkspaceRoles: workspacePorts.WorkspaceRoles,
@@ -189,6 +191,8 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 		CreationEnabled: cfg.Workspace.CreationEnabled,
 	})
 	ident, err := identity.New(identity.Deps{
+		ImageBindings:   profileImageBindings{bindings: imageBindings},
+		Images:          profileImageReader{images: imageReader},
 		Pool:            pool,
 		Tx:              tx,
 		Clock:           businessClock,

@@ -34,10 +34,12 @@ type SignupInvitation = app.SignupInvitation
 
 // Deps are what bootstrap builds for the module.
 type Deps struct {
-	Pool   *pgxpool.Pool
-	Tx     shared.TxManager
-	Clock  app.Clock
-	Logger *slog.Logger
+	ImageBindings app.ImageBindings
+	Images        app.ImageReader
+	Pool          *pgxpool.Pool
+	Tx            shared.TxManager
+	Clock         app.Clock
+	Logger        *slog.Logger
 	// SignupPolicy is auth.signup_enabled (M2 decision 2) and, while that is
 	// off, the check of the invitation a registration names (M3 design
 	// 3.8).
@@ -119,8 +121,8 @@ func New(d Deps) (*Module, error) {
 			}),
 			Refresh:  app.NewRefresh(app.RefreshDeps{Sessions: store, Tx: d.Tx, Issuance: issuance, Clock: d.Clock, Logger: d.Logger}),
 			Logout:   app.NewLogout(store, d.Clock, d.Logger),
-			GetMe:    app.NewGetMe(store),
-			UpdateMe: app.NewUpdateMe(store, d.Clock),
+			GetMe:    app.NewGetMe(app.GetMeDeps{Users: store, Images: d.Images, Lock: lock, Tx: d.Tx, Clock: d.Clock}),
+			UpdateMe: app.NewUpdateMe(app.UpdateMeDeps{Users: store, Bindings: d.ImageBindings, Images: d.Images, Lock: lock, Tx: d.Tx, Clock: d.Clock}),
 			ChangePassword: app.NewChangePassword(app.ChangePasswordDeps{
 				Accounts: store, Lock: lock, Passwords: store, Sessions: store, Hasher: hasher,
 				Rules: rules, Tx: d.Tx, Clock: d.Clock, Logger: d.Logger,

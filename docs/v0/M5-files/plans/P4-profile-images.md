@@ -1,7 +1,7 @@
 # M5 / P4 资料图片与引用实施计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-> 预检通过，T1–T4实现与聚焦回归完成，T5待实施。一次fresh builder check及主控plan自检完成；基线main5807a0d6，CI41591764345全绿，P3已归档清理。分支codex/m5-p4，worktree为`/Users/xiaoruan/project/nerve-project/.codex/worktress/codex/m5-p4`。连续推进授权有效；按T5接续，重大新风险先提交后上报。
+> 预检通过，T1–T5实现与聚焦回归完成，T6待实施。一次fresh builder check及主控plan自检完成；基线main5807a0d6，CI41591764345全绿，P3已归档清理。分支codex/m5-p4，worktree为`/Users/xiaoruan/project/nerve-project/.codex/worktress/codex/m5-p4`。连续推进授权有效；按T6接续，重大新风险先提交后上报。
 
 **Goal:** 用户/工作区/项目的图片引用、一次项目创建绑定及授权图片URL真实工作，完成F5–F7 API。
 
@@ -90,10 +90,10 @@
 
 **Interfaces:** NewUpdateMe改用明确Deps（Users、Bindings、Images、CredentialLock、Tx、Clock）；GetMe接同样的读取/凭据/事务依赖。PublicProfile增加AvatarAssetID但不签发，既有DisplayNames调用者映射保持。
 
-- [ ] Step 1：TestProfileImages完整认证API：准备→真实PUT→complete→PATCH两图→GET实物；省略保留/null清除、当前ID重复不写资产、另一用户/另一purpose/7天过期拒绝；注入资产/owner/Signer/commit失败保持旧值、candidate未绑定。
-- [ ] Step 2：RED后接T2/T3，CredentialLock为第一把、当前User在锁下读，At同一；HTTP加入三态ID和URL到期对，x-problem-codes及错误中英文映射随实际码，不加手工DTO。
-- [ ] Step 3：`make gen`；`cd server && go test -p 1 ./internal/modules/identity/... ./internal/bootstrap -run '^Test(ProfileImages|UpdateMe|GetMe|Provided|Contract)' -count=1`；Expected全部命中GREEN、完整旧identity回归无新失败。
-- [ ] Step 4：更新生成类型引起的既有TS测试数据为真实null字段，不用as any；lint-go、受影响test-web；提交 `feat(M5/P4): 打通个人头像与封面的原子更新和读取`。
+- [x] Step 1：TestProfileImages完整认证API：准备→真实PUT→complete→PATCH两图→GET实物；省略保留/null清除、当前ID重复不写资产、另一用户/另一purpose/7天过期拒绝；注入资产/owner/Signer/commit失败保持旧值、candidate未绑定。
+- [x] Step 2：RED后接T2/T3，CredentialLock为第一把、当前User在锁下读，At同一；HTTP加入三态ID和URL到期对，x-problem-codes及错误中英文映射随实际码，不加手工DTO。
+- [x] Step 3：`make gen`；`cd server && go test -p 1 ./internal/modules/identity/... ./internal/bootstrap -run '^Test(ProfileImages|UpdateMe|GetMe|Provided|PublicOperations|APIRoutes|OperationsThatNeed|BodiesThat|TheAnswerToABroken|ParametersThat|EveryProblem)' -count=1`；Expected全部命中GREEN、完整旧identity回归无新失败。
+- [x] Step 4：更新生成类型引起的既有TS测试数据为真实null字段，不用as any；lint-go、受影响test-web；提交 `feat(M5/P4): 打通个人头像与封面的原子更新和读取`。
 
 ## Task 6（T6）：工作区图标与目录响应
 

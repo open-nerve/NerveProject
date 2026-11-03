@@ -53,3 +53,8 @@ P2已有资产表、生成AssetPurpose和真实业务/字节两段协议；按§
 ## 处理结果（M5/P3 T7）
 
 §2的S3 CSP来源已由webui.Options接收实际签名origin，仅img/connect精确扩展；local旧policy与其他安全头保持。三浏览器F4、CORS负例及实际通配变异证明边界；IPv6字面量因浏览器CSP不兼容在配置时拒绝，DNS可解析到IPv6。§5的独立S3世界与Go辅助程序补齐实物SHA、失败回收。证据见[P3阶段记录§14](../reviews/P3-s3-storage-review.md)。头像封面UI、反向引用、services删除和会话分代尚未到期，本交接保持open；大文件/慢流及阶段全量门禁也不由本Task提前代签。
+
+
+## 处理结果：M5/P4 T5（局部）
+
+§1的两个用户反向字段、三态更新和签名URL/到期对已在真实API接通；锁下账户与资产一笔更新，签名或提交失败整笔回滚。PublicProfiles提供头像引用事实，成员头像仍由P4/T7接入。证据见[P4阶段记录§12](../reviews/P4-profile-images-review.md#12-t5用户资料的原子图片与真实读取)。本交接仍open：P6上传控件和会话store、P7旧services清理、P8最终验收尚未完成，当前聚焦验证不能代签后续工作。

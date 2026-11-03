@@ -1,6 +1,6 @@
 # M5 / P4 阶段评审记录
 
-> 预检通过，T1–T4字段/绑定/读取/反向清理及聚焦回归完成；T5待实施。分支codex/m5-p4，基线main5807a0d6e369c486e98e4cb00389d8b309322221；P3已全绿归档。三份spec/15任务plan和[re-38预检](../../../reviews/re-38-M5P4预检.md)为当前依据。
+> 预检通过，T1–T5字段/绑定/读取/反向清理及用户API聚焦回归完成；T6待实施。分支codex/m5-p4，基线main5807a0d6e369c486e98e4cb00389d8b309322221；P3已全绿归档。三份spec/15任务plan和[re-38预检](../../../reviews/re-38-M5P4预检.md)为当前依据。
 
 ## 1. 评审方式
 
@@ -20,7 +20,7 @@
 
 ## 4. 整分支发现与处理
 
-T1–T4已实施，整审及修复待T14。不能把builder check的无重要问题写成代码无缺陷。
+T1–T5已实施，整审及修复待T14。不能把builder check的无重要问题写成代码无缺陷。
 
 ## 5. 实现与plan差异
 
@@ -71,3 +71,14 @@ T4首次两轮数据库执行因Docker启动/端口映射/套接字故障未进�
 真实故障测试进一步复现pgtest在容器已分配但启动失败、以及模板数据库初始化失败时遗留容器。局部修复保留失败容器句柄，在失败返回前关闭连接池、用独立有界context删除自己的容器和匿名卷，清理错误与原因合并保留；成功时仍沿原共享容器/Ryuk生命周期。两条RED均实际泄漏，GREEN均在函数返回前确认清除。此修复响应本轮资源清理要求；不改生产数据库、容器布局或P3的S3故障合同。后续按本轮session/精确ID核对回收，不做全局清理。
 
 证据均在阶段workspace：task-4-purge-red、task-4-final-focused（28个具名主测试，race20.140s）、task-4-final-arch-pgtest（完整架构与pgtest，race22.931s）、task-4-pg-cleanup-red/green、task-4-mutations.json及每项日志；格式修正后的具名race回归42.422s（task-4-green-4；其中archtest因过滤无命中，不计架构证据），随后完整archtest/pgtest再次全绿22.335s（task-4-full-arch-pgtest），最终4270源输入稳定；lint16.299s零问题。提交后生成核验见task-4-gen-check。Docker逐ID盘点、排除项、删除回执及后核验保存为docker-*.json，不将环境失败计为产品RED。
+
+
+## 12. T5用户资料的原子图片与真实读取
+
+GetMe与UpdateMe使用明确消费依赖，自己账号/凭据先锁，锁下读取当前引用；更新一次收齐两图旧新ID，用资产最后锁后的同一At写用户和资产，响应签发在commit前。省略保留、null解除、当前ID重复不写资产；PublicProfiles只新增头像ID事实，不签发，成员出口由T7继续。HTTP使用生成三态UUID和真实URL/到期对，既有四个资产错误码声明并沿用已有中英文文案；M2设计同步说明读取事务边界。
+
+真实API行为RED4.300s：旧PATCH拒绝新增图片字段。GREEN经准备→真实PUT→complete→双图PATCH→GET字节，核URL的精确签名过期、引用/bound/审计、重复与替换/清空；他人、过期、删除、用途、pending及两字段隐藏优先均拒绝且数据库不变。真实owner、第二资产、Signer、deferred commit四种故障使用户和全部四资产快照整体回滚，故障移除后同请求成功。GET审计触发器证明不写用户/资产；失效引用只回答空URL/到期。app层另验顺序、At、事务上下文和端口原错/零返回，不能代替真实回滚。
+
+最终4279个源输入逐hash稳定：完整identity及archtest带race66.301s；四个完整程序图片测试、七项路由/错误合同及三个既有PAT账户测试带race20.869s；受影响Web五文件64测试1.934s、完整web类型9.470s、Go lint1.934s均通过。生成物按Makefile在提交后再核gen-check。首次测试数据漏新字段、PublicProfile结构转换、HTTP新错误码覆盖和Web依赖未构建的失败均保留；没有把编译或准备失败当产品RED。旧HTTP精确快照与所有User测试数据已按新协议更新，无as any/新增依赖。
+
+阶段workspace保存task-5-api-red、task-5-final-identity/bootstrap/web/types/lint及receipts/inputs、task-5-gen-check；docker-task-5-reaped.json核从日志得到的22个自有容器全部消失，20个已有开发/业务容器保留。完整七项与分支CI仍留T13；本任务不声称整个P4、页面或S3图片故事完成。

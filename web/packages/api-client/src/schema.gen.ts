@@ -211,7 +211,7 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * Change the caller's names and time zone
+         * Change the caller's names, time zone and profile images
          * @description Changes the fields sent and leaves the others. The e-mail address cannot change here: the server's administrator changes it with `nerve users set-email`, which signs every session out.
          */
         patch: operations["updateMe"];
@@ -1808,14 +1808,32 @@ export interface components {
             display_name: string;
             /** @description An IANA time zone name. */
             user_timezone: string;
-            /** @description Null until uploads arrive (M5). */
+            /** Format: uuid */
+            avatar_asset_id: string | null;
+            /** Format: uuid */
+            cover_image_asset_id: string | null;
+            /** @description Short-lived authorized image URL, or null if no live bound image exists. */
             avatar_url: string | null;
-            /** @description Null until uploads arrive (M5). */
+            /** Format: date-time */
+            avatar_url_expires_at: string | null;
+            /** @description Short-lived authorized image URL, or null if no live bound image exists. */
             cover_image_url: string | null;
+            /** Format: date-time */
+            cover_image_url_expires_at: string | null;
             /** Format: date-time */
             created_at: string;
         };
         UserUpdate: {
+            /**
+             * Format: uuid
+             * @description Omit to keep; null to remove; a completed own USER_AVATAR preparation to replace.
+             */
+            avatar_asset_id?: string | null;
+            /**
+             * Format: uuid
+             * @description Omit to keep; null to remove; a completed own USER_COVER preparation to replace.
+             */
+            cover_image_asset_id?: string | null;
             /** @description At most 255 characters, without a web address. */
             first_name?: string;
             /** @description At most 255 characters, without a web address. */

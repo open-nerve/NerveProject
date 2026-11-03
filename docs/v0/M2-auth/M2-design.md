@@ -340,7 +340,7 @@ M2 是第一个做真实业务的里程碑，也是前端第一次对接新接�
     - 事务里的语句带请求的 `context`，期限到了就取消。`COMMIT` 和 `ROLLBACK` 都在 `context.WithoutCancel(ctx)` 下执行，另有自己的短期限 `database.commit_timeout`（默认 2 秒）。
     - 这样请求期限约束的是语句：语句都已做完的事务，不会因为请求期限在提交时被取消，`TxManager` 的事务不会因此"已提交却答 500"。回滚也不被取消，失败的事务不会把连接留在不确定的状态。`ROLLBACK` 本身失败（例如连接断了）是基础设施的故障：`WithinTx` 返回的错误包住这次失败，只保留领域错误的文字、不保留它的身份，所以接口答 500 并记 ERROR 日志，而不是用领域错误的答复把故障盖住。
     - `COMMIT` 已经发出、却在自己的期限内没有回应时，**结果未知**：数据库可能已经提交，也可能没有。接口答 500，记 ERROR 日志。这是数据库的故障，与请求期限无关；续期遇到它的后果见 3.5 的第 4 种情况。
-    - 这条规则只管 `TxManager` 的事务。不开事务的单条写入（6.4：资料和偏好的 PATCH、退出、撤销 PAT、`last_used`）在语句执行中被取消时，数据库可能已经提交而接口答 500。这无害：PATCH 重试写的是同样的值；退出和撤销 PAT 重试时，要的状态已经达到（204 或 404）；`last_used` 本来就是尽力而为。
+    - 这条规则只管 `TxManager` 的事务。不开事务的单条写入（6.4：偏好的 PATCH、退出、撤销 PAT、`last_used`；M5/P4后资料PATCH已纳入事务）在语句执行中被取消时，数据库可能已经提交而接口答 500。这无害：PATCH 重试写的是同样的值；退出和撤销 PAT 重试时，要的状态已经达到（204 或 404）；`last_used` 本来就是尽力而为。
     - 测试：语句做完之后取消请求的 `context`，事务仍然提交；语句失败之后取消，回滚仍然完成，连接回到池里可以再用。
 
 ### 3.7 签名密钥
@@ -1013,7 +1013,7 @@ users
 | `POST /api/v0/auth/refresh` | `refreshTokens` | 公开 | `RefreshRequest {refresh_token}` | 200 `AuthTokens` | 401 `identity.refresh_token_invalid` |
 | `POST /api/v0/auth/logout` | `logout` | 公开 | `LogoutRequest {refresh_token}` | 204 | 无。令牌未知、已过期、已撤销、不是当前一代时也返回 204，不泄露它的状态（3.5） |
 | `GET /api/v0/me` | `getMe` | bearer | — | 200 `User` | — |
-| `PATCH /api/v0/me` | `updateMe` | bearer | `UserUpdate` | 200 `User` | 422 `validation_failed` |
+| `PATCH /api/v0/me` | `updateMe` | bearer | `UserUpdate` | 200 `User` | 422 `validation_failed`；M5/P4新增404 `asset.not_found`、409 `asset.not_uploaded`/`asset.bound`/`asset.scope_changed` |
 | `POST /api/v0/me/change-password` | `changePassword` | bearer | `ChangePasswordRequest {current_password, new_password}` | 204 | 422 `validation_failed`（新密码不合规）；422 `identity.current_password_incorrect`；503 `server_busy` |
 | `POST /api/v0/me/deactivate` | `deactivateMe` | bearer | — | 204 | 无。M3 加入"唯一管理员"时的错误码（13.2） |
 | `GET /api/v0/me/profile` | `getProfile` | bearer | — | 200 `Profile` | — |
@@ -1181,7 +1181,8 @@ modules/identity/
   - 管理员重置密码（锁）：改哈希、撤销会话、撤销 PAT；
   - 管理员修改邮箱（锁）：改邮箱、撤销会话；
   - 恢复（锁）：`is_active`。
-- **单条语句的写入**不开事务：资料和偏好的 PATCH、退出、撤销 PAT、`last_used`。它们在执行中被取消时可能已提交却答 500，这无害（3.6）。
+- **M5/P4资料图片接入**：`GET/PATCH /me`在同一短事务先取自己的账户N锁并重验凭据；PATCH收齐旧新两图、有序资产锁后的同一时刻更新用户/绑定及旧件软删，响应图片URL在提交前CPU签发，错误整体回滚。GET不写业务记录；具体边界见[M5/P4绑定与读取](../M5-files/specs/P4-image-access.md)。
+- **单条语句的写入**不开事务：偏好的 PATCH、退出、撤销 PAT、`last_used`。它们在执行中被取消时可能已提交却答 500，这无害（3.6）。
 
 ### 6.5 配置
 `server/configs/config.yaml` 新增（test、prod 的覆盖值写在注释中）：

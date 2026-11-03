@@ -6,11 +6,12 @@ import "uuid"
 // through identity.PublicProfiles (workspace's MemberProfiles), without a
 // lock and whatever the account's state (M3 design 6.5).
 type PublicProfile struct {
-	ID          uuid.UUID
-	Email       string
-	FirstName   string
-	LastName    string
-	DisplayName string
+	AvatarAssetID *uuid.UUID
+	ID            uuid.UUID
+	Email         string
+	FirstName     string
+	LastName      string
+	DisplayName   string
 }
 
 // AccountState is an account's state as another module reads it through

@@ -334,12 +334,16 @@ paths:
       operationId: updateMe
       tags:
         - identity
-      summary: Change the caller's names and time zone
+      summary: Change the caller's names, time zone and profile images
       description: 'Changes the fields sent and leaves the others. The e-mail address cannot change here: the server''s administrator changes it with `nerve users set-email`, which signs every session out.'
       security:
         - bearer: []
       x-problem-codes:
         - validation_failed
+        - asset.not_found
+        - asset.not_uploaded
+        - asset.bound
+        - asset.scope_changed
       requestBody:
         required: true
         content:
@@ -3240,8 +3244,12 @@ components:
         - last_name
         - display_name
         - user_timezone
+        - avatar_asset_id
+        - cover_image_asset_id
         - avatar_url
+        - avatar_url_expires_at
         - cover_image_url
+        - cover_image_url_expires_at
         - created_at
       properties:
         id:
@@ -3259,16 +3267,36 @@ components:
         user_timezone:
           description: An IANA time zone name.
           type: string
+        avatar_asset_id:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        cover_image_asset_id:
+          type:
+            - string
+            - 'null'
+          format: uuid
         avatar_url:
-          description: Null until uploads arrive (M5).
+          description: Short-lived authorized image URL, or null if no live bound image exists.
           type:
             - string
             - 'null'
+        avatar_url_expires_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
         cover_image_url:
-          description: Null until uploads arrive (M5).
+          description: Short-lived authorized image URL, or null if no live bound image exists.
           type:
             - string
             - 'null'
+        cover_image_url_expires_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
         created_at:
           type: string
           format: date-time
@@ -3276,6 +3304,18 @@ components:
       type: object
       additionalProperties: false
       properties:
+        avatar_asset_id:
+          description: Omit to keep; null to remove; a completed own USER_AVATAR preparation to replace.
+          type:
+            - string
+            - 'null'
+          format: uuid
+        cover_image_asset_id:
+          description: Omit to keep; null to remove; a completed own USER_COVER preparation to replace.
+          type:
+            - string
+            - 'null'
+          format: uuid
         first_name:
           description: At most 255 characters, without a web address.
           type: string

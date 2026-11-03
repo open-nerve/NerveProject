@@ -204,18 +204,19 @@ func (q *Queries) LockUserForCredentials(ctx context.Context, id uuid.UUID) (Loc
 }
 
 const publicProfiles = `-- name: PublicProfiles :many
-SELECT id, email, first_name, last_name, display_name
+SELECT id, email, first_name, last_name, display_name, avatar_asset_id
 FROM users
 WHERE id = ANY ($1::uuid[])
 ORDER BY id
 `
 
 type PublicProfilesRow struct {
-	ID          uuid.UUID
-	Email       string
-	FirstName   string
-	LastName    string
-	DisplayName string
+	ID            uuid.UUID
+	Email         string
+	FirstName     string
+	LastName      string
+	DisplayName   string
+	AvatarAssetID *uuid.UUID
 }
 
 // MemberProfiles (M3 design 6.5): the public profile of each account of ids, deactivated ones too, by id. No lock: a
@@ -235,6 +236,7 @@ func (q *Queries) PublicProfiles(ctx context.Context, ids []uuid.UUID) ([]Public
 			&i.FirstName,
 			&i.LastName,
 			&i.DisplayName,
+			&i.AvatarAssetID,
 		); err != nil {
 			return nil, err
 		}
