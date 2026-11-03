@@ -1,7 +1,7 @@
 # M5 / P3 S3 存储实施计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-> 预检通过，T1已完成，T2待开始，见[re-36](../../../reviews/re-36-M5P3预检.md)。worktree为`/Users/xiaoruan/project/nerve-project/.codex/worktress/codex/m5-p3`；基线main2d1bcf0c、CI41556463795三job全绿，P2归档清理完成。负责人连续授权常规 M5 推进；新重大风险/分歧先提交再上报。
+> 预检通过，T1/T2已完成，T3待开始，见[re-36](../../../reviews/re-36-M5P3预检.md)。worktree为`/Users/xiaoruan/project/nerve-project/.codex/worktress/codex/m5-p3`；基线main2d1bcf0c、CI41556463795三job全绿，P2归档清理完成。负责人连续授权常规 M5 推进；新重大风险/分歧先提交再上报。
 
 **Goal：** 为既有资产用例接入真实 S3 私有存储，完成 F4、部署配置和 local 回归。
 
@@ -35,7 +35,7 @@
 - config新增`S3FilesConfig`与`FilesConfig.S3`，字段对应spec，PathStyle bool；秘密文件读取在bootstrap `loadS3Credentials(config.S3FilesConfig) (s3Credentials,error)`，返回三字符串，仅该helper读文件；config只验证源/格式与遮盖。
 - 新`asset/adapter/s3/{store,config,transport,errors,presign,inspect,read,seal,delete,inventory}.go`，按职责拆；Config{Endpoint,Region,Bucket,Prefix,AccessKeyID,SecretAccessKey,SessionToken string; UsePathStyle bool; SizeLimit int64; OperationTimeout time.Duration}，Deps{RuntimeNow func()time.Time}；`New(context.Context,Config,Deps)(*Store,error)`、`Origin() string`、`Close() error`。
 - 方法完全沿用app签名：SignUpload(ctx,domain.UploadGrant)(domain.SignedRequest,error)、SignRead(ctx,domain.ReadGrant)(domain.SignedRequest,error)、Inspect(ctx,domain.ObjectKey)(domain.ObjectInfo,error)、Open(ctx,key,etag)(io.ReadCloser,error)、Seal(ctx,source,target,etag)(domain.ObjectInfo,error)、Delete(ctx,key)error、List(ctx,token string,limit int)(app.ObjectPage,error)、SweepTemporary(ctx,cutoff time.Time,limit int,token string)(next string,removed int,err error)。不向app提供大Storage接口。
-- 新测试专用`platform/s3test/{service,bucket}.go`：`New(t testing.TB)*Service`自有90s启动/30s回收；`NewBucket(t testing.TB)*Bucket`返回Endpoint/Region/Name/AccessKeyID/SecretAccessKey，prefix由每世界生成；`Bucket.Client()*s3.Client`只用于测试实物断言。测试helper不是产品导入；真实数据面ready使用独立测试key后清理，不污染生产构造的只读约定。
+- 新测试专用`platform/s3test/{service,bucket}.go`：`New(t testing.TB)*Service`自有90s启动/30s回收；`Service.NewBucket(t testing.TB)*Bucket`返回Endpoint/Region/Name/AccessKeyID/SecretAccessKey，prefix由每世界生成；`Bucket.Client()*s3.Client`只用于测试实物断言。测试helper不是产品导入；真实数据面ready使用独立测试key后清理，不污染生产构造的只读约定。
 - bootstrap newAssets改为`newAssets(context.Context,config.FilesConfig,*identity.Keys,*slog.Logger)(assetComponents,error)`；factory与调用者同步。assetComponents内部store聚合现有小端口，transfer为`*assethttp.Deps`可空，origin string；close归原app所有。
 - asset.Deps新增`Files config.FilesConfig`和`RuntimeNow func()time.Time`，Transfer改可空`*httpadapter.Deps`；New仅在非空时建raw handler，Register仅在其存在时注册；业务用例统一取Files/RuntimeNow。
 - webui `Options{StorageOrigin string}`、`Handler(fs.FS,Options)(http.Handler,error)`；`contentSecurityPolicy(index []byte,origin string) string`只接受已验证origin，调用者处理构造错误。
@@ -54,15 +54,15 @@
 
 ## Task 2（T2）：SDK客户端、桶能力和自有测试服务
 
-**Files：** 新s3/store.go、config.go、transport.go、errors.go及对应_test；新platform/s3test/service.go、bucket.go、service_test.go；server/go.mod/go.sum；archtest/rules_test.go、rules_cases_test.go、binary_test.go明确将新s3test纳入测试专用包限制，生产导入负例保留。
+**Files：** 新s3/store.go、config.go、transport.go、errors.go及对应_test；新platform/s3test/service.go、bucket.go、service_test.go；server/go.mod/go.sum；config/files_s3.go导出同一纯格式验证；archtest/rules_test.go、rules_cases_test.go、binary_test.go明确将新s3test纳入测试专用包限制，生产导入负例保留。
 
 **Interfaces：** 产出New/Origin/Close与s3test Service/Bucket；使用T1值映射，生产只读构造。HTTP测试注入只在包内，不给运行配置加跳过TLS/Dial开关。
 
-- [ ] Step 1：TestS3Startup、TestS3TransportBoundary、TestS3ServiceLifecycle断言未版本化成功，Enabled/Suspended/403/未知失败、一次总预算超时、取消关闭；设HTTP_PROXY仍只直达准许origin，301/307不能触发第二server；path-style/virtual-host/带点桶/端口解析与实际请求一致。
-- [ ] Step 2：先运行具名RED；首次消费上述精确SDK版本更新server模块，必要testcontainers-go由已有v0.44.0间接转直接但不升级；保存go.mod diff。
-- [ ] Step 3：按官方resolver、显式StaticCredentialsProvider、独占transport和RetryMaxAttempts=1实现构造；错误只留操作/类别/status及可识别context，不泄露SDK/url.Error原文；fixture固定digest、随机数据、真实就绪及失败回收。
-- [ ] Step 4：`cd server && go test ./internal/modules/asset/adapter/s3 ./internal/platform/s3test -run 'TestS3(Startup|TransportBoundary|ServiceLifecycle)$' -count=1` GREEN；版本化旧字节反例、redirect越界和秘密泄露3个性质变异；受影响race、archtest与lint。
-- [ ] Step 5：提交`feat(M5/P3): 接入受限 S3 客户端与真实存储夹具`，记录镜像与模块校验；不把只读启动检查称为全部协议证明。
+- [x] Step 1：TestS3Startup、TestS3TransportBoundary、TestS3ServiceLifecycle断言未版本化成功，Enabled/Suspended/403/未知失败、一次总预算超时、取消关闭；设HTTP_PROXY仍只直达准许origin，301/307不能触发第二server；path-style/virtual-host/带点桶/端口解析与实际请求一致。
+- [x] Step 2：先运行具名RED；首次消费上述精确SDK版本更新server模块，必要testcontainers-go由已有v0.44.0间接转直接但不升级；保存go.mod diff。
+- [x] Step 3：按官方resolver、显式StaticCredentialsProvider、独占transport和RetryMaxAttempts=1实现构造；错误只留操作/类别/status及可识别context，不泄露SDK/url.Error原文；fixture固定digest、随机数据、真实就绪及失败回收。
+- [x] Step 4：`cd server && go test ./internal/modules/asset/adapter/s3 ./internal/platform/s3test -run 'TestS3(Startup|TransportBoundary|ServiceLifecycle)$' -count=1` GREEN；版本化旧字节反例、redirect越界和秘密泄露3个性质变异；受影响race、archtest与lint。
+- [x] Step 5：提交`feat(M5/P3): 接入受限 S3 客户端与真实存储夹具`，记录镜像与模块校验；不把只读启动检查称为全部协议证明。
 
 ## Task 3（T3）：精确期限和浏览器可用的预签请求
 

@@ -60,6 +60,16 @@ func (c S3FilesConfig) ValidateCredentials() error {
 	return errors.Join(errs...)
 }
 
+// Validate also serves explicit adapter construction, so it obeys the same
+// format rules as deployment configuration. No I/O occurs.
+func (c S3FilesConfig) Validate() error {
+	var errs []error
+	c.validate(func(key, format string, args ...any) {
+		errs = append(errs, fmt.Errorf("%s: %s", key, fmt.Sprintf(format, args...)))
+	})
+	return errors.Join(errs...)
+}
+
 func (c S3FilesConfig) validateCredentials(required bool, fail func(string, string, ...any)) {
 	for _, s := range []struct {
 		key, value, file string

@@ -1,6 +1,6 @@
 # M5 / P3 S3 存储合同
 
-> 预检通过，T1配置与秘密读取已完成，T2待开始；见[re-36](../../../reviews/re-36-M5P3预检.md)。对应 M5-design §5.4、§12 P3；基线为 P2 noff main `2d1bcf0c88270db7f08b92a25f135f20f6c7ec7c`，准确 main CI 41556463795 三 job 全绿（341 E2E、14.3m），P2已归档校验并清理。当前分支codex/m5-p3，按负责人连续授权逐Task实施。预检探针不等于本阶段实现验收。
+> 预检通过，T1配置/秘密读取及T2客户端/夹具已完成，T3待开始；见[re-36](../../../reviews/re-36-M5P3预检.md)。对应 M5-design §5.4、§12 P3；基线为 P2 noff main `2d1bcf0c88270db7f08b92a25f135f20f6c7ec7c`，准确 main CI 41556463795 三 job 全绿（341 E2E、14.3m），P2已归档校验并清理。当前分支codex/m5-p3，按负责人连续授权逐Task实施。预检探针不等于本阶段实现验收。
 
 ## 1. 目的、范围和方案
 
@@ -16,6 +16,7 @@
 - bootstrap 只在自身内部聚合这些接口；各用例仍分别接收小端口。`asset.Deps` 显式接收 Files/RuntimeNow，local raw transfer 为可选的 HTTP 依赖，业务配置不再从 raw transfer 反取。S3 不构造本地 MAC、目录或 raw handler；asset 模块不判断驱动字符串。单一 gate、权限、River 和 DB 实例不变。
 - `New(ctx, Config, Deps) (*Store,error)` 有界只读初始化；`Close() error` 由组合根在 HTTP/jobs 停止后调用。构造中途失败释放自建 transport；不持有 DB 连接。取消/超时、关闭和错误日志均须可证明，不把 SDK 请求结束等同服务端已经停止。
 - 直接模块精确锁定：`github.com/aws/aws-sdk-go-v2 v1.47.5`、`.../credentials v1.20.13`、`.../service/s3 v1.114.6`。必要间接模块：`aws/protocol/eventstream v1.7.25`、`internal/configsources v1.5.8`、`internal/endpoints/v2 v2.8.8`、`internal/v4a v1.5.8`、`service/internal/accept-encoding v1.13.23`、`checksum v1.11.9`、`presigned-url v1.14.8`、`s3shared v1.20.8`、`github.com/aws/smithy-go v1.28.7`（省略前缀的条目均属 `github.com/aws/aws-sdk-go-v2/`）。不引入 aws/config 或 JS AWS SDK。
+- 直接构造与部署配置共用platform/config的纯S3格式验证；该依赖只在adapter边界，app/domain不导入config。现有测试依赖testcontainers-go v0.44.0、moby/api v1.55.0、containerd/errdefs v1.0.0因显式夹具、loopback端口类型和Docker实际NotFound验证转为直接声明，版本不变、未增加其他模块；s3test及子包明确禁止进入生产导入/二进制。
 - SDK 第一次实际消费时再改 `server/go.mod/go.sum`。测试专用 `server/tools/s3fixture` 消费同三版本及必要间接模块，按需改 tools 模块；Node 用既有 testcontainers，将现有传递依赖 `testcontainers 12.1.0` 声明为 e2e 同版 devDependency。设计先点名，不能安装未列出的库。
 
 ## 3. 配置、秘密和启动
