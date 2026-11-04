@@ -1,6 +1,6 @@
 # M5/P7a：草稿准备件恢复协议
 
-> 2026-11-04：负责人已批准[方案 A](../reviews/P7-draft-preparation-recovery-decision.md)：增加作者恢复入口，拆为 P7a 协议、P7b 页面。预检完成后，负责人已授权从 T1 实施。分支 `codex/m5-p7a`；正式 main 基线 `963636757fe5c5a8c10d5781b43d1481ba6f32a2`，P6准确main CI41833460144全绿、归档/清理完成；新协议一次fresh builder及主控预检通过。T1 已完成，T2 进行中，产品验收按证据回填。
+> 2026-11-04：负责人已批准[方案 A](../reviews/P7-draft-preparation-recovery-decision.md)：增加作者恢复入口，拆为 P7a 协议、P7b 页面。预检完成后，负责人已授权从 T1 实施。分支 `codex/m5-p7a`；正式 main 基线 `963636757fe5c5a8c10d5781b43d1481ba6f32a2`，P6准确main CI41833460144全绿、归档/清理完成；新协议一次fresh builder及主控预检通过。T1–T4 已完成，T5 进行中，产品验收按证据回填。
 
 ## 1. 目标、范围与选择
 
@@ -76,10 +76,10 @@ P7a 的真实 HTTP 测试必须按客户端不知道新 ID 的视角：准备/�
 
 ## 6. 验收与任务映射
 
-- [ ] A1 API/生成类型/严格参数及无敏感字段正确；页大小和规范游标含跨草稿拒绝（T1/T2）。
-- [ ] A2 作者、管理员非作者、member/guest/退出/父删除、不存在同形、null 项目、邻域隔离及现有 draft/asset 错误顺序保持（T2/T4）。
-- [ ] A3 真实 prepare 失去回答、duplicate 目标已建后失败，通过列表发现未知 ID、明确 DELETE 后发布；重开读取、同名文件不混同、已绑定历史图受保护（T3）。
-- [ ] A4 分页51/101+完整性、只读快照、分页间新增/删除、complete/delete/move/publish 两顺序及取消释放，无锁序/事件/计数回归（T1/T4）。
+- [x] A1 API/生成类型/严格参数及无敏感字段正确；页大小和规范游标含跨草稿拒绝（T1/T2）。
+- [x] A2 作者、管理员非作者、member/guest/退出/父删除、不存在同形、null 项目、邻域隔离及现有 draft/asset 错误顺序保持（T2/T4）。
+- [x] A3 真实 prepare 失去回答、duplicate 目标已建后失败，通过列表发现未知 ID、明确 DELETE 后发布；重开读取、同名文件不混同、已绑定历史图受保护（T3）。
+- [x] A4 分页51/101+完整性、只读快照、分页间新增/删除、complete/delete/move/publish 两顺序及取消释放，无锁序/事件/计数回归（T1/T4）。
 - [ ] A5 必要行为 RED/GREEN/变异与恢复、全部七门禁、一次整分支 deep-review 修复和准确最终分支 CI（T5/T6）。
 - [ ] A6 --no-ff、准确 main CI、证据全量归档/正常清理；P7b 正式基线 spec/plan 预检，保留全部页面与旧链删除责任（T7）。
 

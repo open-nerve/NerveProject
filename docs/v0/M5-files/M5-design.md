@@ -1,6 +1,6 @@
 # M5：文件
 
-> 状态：P1–P6已完成集成归档。P6已完成T1–T15及A1–A8：一次整分支deep-review及唯一局部修复闭环，最终分支8e46ab55的CI41828756305、noff main96363675的CI41833460144均三job全绿；6,861文件归档逐hash/bytes/mode/membership核验，正常清理分支/worktree后再次核验通过。P7恢复缺口已批准A，拆P7a协议/P7b页面；P7a预检通过、未实施，P7b为延后草案。M5总体仍未完成。见[P6评审§22](reviews/P6-profile-upload-review.md#22-t15准确main全绿与归档清理)。
+> 状态：P1–P6已完成集成归档。P6已完成T1–T15及A1–A8：一次整分支deep-review及唯一局部修复闭环，最终分支8e46ab55的CI41828756305、noff main96363675的CI41833460144均三job全绿；6,861文件归档逐hash/bytes/mode/membership核验，正常清理分支/worktree后再次核验通过。P7恢复缺口已批准A，拆P7a协议/P7b页面；P7a已获准实施，T1–T3完成、T4进行中，P7b为延后草案。M5总体仍未完成。见[P6评审§22](reviews/P6-profile-upload-review.md#22-t15准确main全绿与归档清理)。
 > 起点：`main@3db22f06ad9e82a483c05c8078801af00a5cae02`（M4 最终 main CI 41397218533，三个作业成功）。
 PC2 已批准 A：[工作区更新的迟到回包](reviews/P6-workspace-write-lifetime-decision.md)。
 > 设计、P1–P5分支均已合入并归档；P5的预算裁定及后续main CI已经闭环（见首行与P5记录），当前实施分支codex/m5-p6。负责人2026-11-02已授权按既有节奏连续推进，常规设计、预检、实现、deep-review、`--no-ff`集成、CI和归档无需逐次询问。重大风险、架构回归或关键分歧，先提交已完成工作，再上报。
@@ -339,7 +339,7 @@ P1 起第一个实现提交更新关键词 phase 与到期例外；纯设计分�
 | P4 | 已完成：noff main0f93100a，CI41641099230全绿，2301文件归档核验并清理 | [spec](specs/P4-profile-images.md) / [plan](plans/P4-profile-images.md) / [整审](../../reviews/re-39-M5P4整体审核.md) / [阶段记录](reviews/P4-profile-images-review.md) |
 | P5 | 已完成；最终main f5f4ce94、CI41772399410三job全绿，5053文件归档核验且三组分支/worktree清理完成 | [spec](specs/P5-issue-assets.md) / [plan](plans/P5-issue-assets.md) / [预检](../../reviews/re-40-M5P5预检.md) / [整审](../../reviews/re-41-M5P5整体审核.md) / [阶段记录](reviews/P5-issue-assets-review.md) |
 | P6 | 已完成：整审/局部修复、准确最终分支及main CI全绿，6,861文件归档验证并正常清理 | [spec](specs/P6-profile-upload.md) / [plan](plans/P6-profile-upload.md) / [完成证据](reviews/P6-profile-upload-review.md#22-t15准确main全绿与归档清理) |
-| P7a | 已批准A、七Task spec/plan及一次fresh builder预检通过；未实施 | [spec](specs/P7a-draft-preparations.md) / [plan](plans/P7a-draft-preparations.md) / [预检](../../reviews/re-47-M5P7a预检.md) / [决策](reviews/P7-draft-preparation-recovery-decision.md) |
+| P7a | 已批准A并完成预检；T1–T3完成、T4进行中，未集成 | [spec](specs/P7a-draft-preparations.md) / [plan](plans/P7a-draft-preparations.md) / [预检](../../reviews/re-47-M5P7a预检.md) / [决策](reviews/P7-draft-preparation-recovery-decision.md) |
 | P7b | 延后文档草案已同步恢复UI与复制编排；正式基线/预检等P7a集成，未实施 | [spec](specs/P7b-content-assets.md) / [plan](plans/P7b-content-assets.md) / [原预检](../../reviews/re-46-M5P7预检.md) |
 | P8、closeout | 未开始 | 待前置阶段完成后逐段展开 |
 

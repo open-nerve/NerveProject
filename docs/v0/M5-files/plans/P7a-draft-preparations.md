@@ -1,6 +1,6 @@
 # M5/P7a 草稿准备件恢复协议 Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans 逐 Task 内联执行，不逐 Task 新派实现者/审者；阶段末一次 fresh whole-branch deep-review。2026-11-04 负责人已授权按预检合同实施，T1 已完成，T2 进行中。分支 `codex/m5-p7a`，main 基线 `963636757fe5c5a8c10d5781b43d1481ba6f32a2`；P6准确main CI41833460144及归档/清理前置已核；本阶段预检通过；产品验收随各任务记录。
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans 逐 Task 内联执行，不逐 Task 新派实现者/审者；阶段末一次 fresh whole-branch deep-review。2026-11-04 负责人已授权按预检合同实施，T1–T4 已完成，T5 进行中。分支 `codex/m5-p7a`，main 基线 `963636757fe5c5a8c10d5781b43d1481ba6f32a2`；P6准确main CI41833460144及归档/清理前置已核；本阶段预检通过；产品验收随各任务记录。
 
 **Goal:** 作者能经有界私有查询找回草稿未绑定准备件 ID，沿既有 DELETE 明确丢弃后恢复发布。
 **Architecture:** asset app 声明窄读取端口，现有 owner Host.Inspect 和 file_assets 查询共用 ReadTx；API 复用 Asset DTO，生成客户端；不改草稿完整性/清理/写锁协议。
@@ -47,18 +47,18 @@
 **Files:** bootstrap/asset_draft_preparations_test.go及按职责拆分的新恢复测试；e2e/stories/files/f10-draft-preparations.spec.ts；复用现有资产/草稿HTTP fixture，必要受控存储故障helper。
 **Interfaces:** 真实 prepare/duplicate/new list/既有DELETE/draft publish；客户端不知道ID，SQL只做结果断言；无浏览器页面实现。
 
-- [ ] Step 1：HTTP prepare已提交但客户端丢弃答案，publish原asset.not_uploaded，重新读取列表找到且只选该pending，DELETE204后publish成功；两同名文件以ID区分，不误删邻域/另一标签页准备件。重复确认/删除无重复事件、计数或任务。
-- [ ] Step 2：duplicate创建target后让已有封存适配器明确失败，客户端只得错误；从目标draft列表发现pending，检查来源文件仍可读，丢弃后publish成功。完成但未绑定描述图也可列，当前/历史已绑定图不可列、其DELETE仍asset.bound；null项目草稿读取恢复后选项目发布。不能仅用已知ID重复旧P5测试。
-- [ ] Step 3：`go test -p 1 -count=1 -run '^TestDraftAssetPreparations' ./internal/bootstrap`；`make build` 后 `pnpm --dir e2e exec playwright test stories/files/f10-draft-preparations.spec.ts --project=chromium --workers=1`。实际API恢复、无页面完成声称；记录HTTP/DB/字节证据，提交 `test(M5/P7a): 证明未知准备件可发现并恢复发布`。
+- [x] Step 1：HTTP prepare已提交但客户端丢弃答案，publish原asset.not_uploaded，重新读取列表找到且只选该pending，DELETE204后publish成功；两同名文件以ID区分，不误删邻域/另一标签页准备件。重复确认/删除无重复事件、计数或任务。
+- [x] Step 2：duplicate创建target后让已有封存适配器明确失败，客户端只得错误；从目标draft列表发现pending，检查来源文件仍可读，丢弃后publish成功。完成但未绑定描述图也可列，当前/历史已绑定图不可列、其DELETE仍asset.bound；null项目草稿读取恢复后选项目发布。不能仅用已知ID重复旧P5测试。
+- [x] Step 3：`go test -p 1 -count=1 -run '^TestDraftAssetPreparations' ./internal/bootstrap`；`make build` 后 `pnpm --dir e2e exec playwright test stories/files/f10-draft-preparations.spec.ts --project=chromium --workers=1`。实际API恢复、无页面完成声称；记录HTTP/DB/字节证据，提交 `test(M5/P7a): 证明未知准备件可发现并恢复发布`。
 
 ## Task 4（T4）：快照、权限与并发退路
 
 **Files:** bootstrap/asset_draft_preparations_snapshot_test.go、asset_draft_preparations_concurrency_test.go；现有 draft_assets/asset_duplicate/asset_http_security 回归按实际影响；纯断言/暂停helper。
 **Interfaces:** 同ReadTx/真实PID事务暂停点，已有owner/asset写API；不添加测试专用生产路由。
 
-- [ ] Step 1：在host读取后暂停，用第二连接完成撤权/删除/换项目/发布；当前页只能呈现一致的旧快照，下一页/重读按新状态拒绝或新范围。用户退出/停用、草稿作者降guest/恢复、其他工作区/草稿无扰；新API404不影响旧API403。取消暂停读后连接可复用，不固定sleep假定锁已到。
-- [ ] Step 2：列表读旧unbound后，描述图绑定再DELETE仍asset.bound；普通附件先complete绑定后按原授权DELETE仍可204，两种用途分列，不改旧写合同。DELETE先成功后complete/迟到PUT不复活；pending使publish拒绝、显式丢弃后publish与并发新prepare仍以D(U)次序裁定；分页中新增/删除/过界cursor不会跨作者或无限重复。确认查询无新写锁、存储I/O、事件/计数变化；P5双发布/迁移/清理原合同回归。
-- [ ] Step 3：`go test -p 1 -race -count=5 -run '^TestDraftAssetPreparations' ./internal/bootstrap` 串行；独立变异漏作者/漏unbound、授权和rows分事务、R1吞全部错误、cursor不绑draft各有有效断言失败并恢复SHA。环境失败单列。提交 `test(M5/P7a): 约束准备件权限快照和交错行为`。
+- [x] Step 1：在host读取后暂停，用第二连接完成撤权/删除/换项目/发布；当前页只能呈现一致的旧快照，下一页/重读按新状态拒绝或新范围。用户退出/停用、草稿作者降guest/恢复、其他工作区/草稿无扰；新API404不影响旧API403。取消暂停读后连接可复用，不固定sleep假定锁已到。
+- [x] Step 2：列表读旧unbound后，描述图绑定再DELETE仍asset.bound；普通附件先complete绑定后按原授权DELETE仍可204，两种用途分列，不改旧写合同。DELETE先成功后complete/迟到PUT不复活；pending使publish拒绝、显式丢弃后publish与并发新prepare仍以D(U)次序裁定；分页中新增/删除/过界cursor不会跨作者或无限重复。确认查询无新写锁、存储I/O、事件/计数变化；P5双发布/迁移/清理原合同回归。
+- [x] Step 3：`go test -p 1 -race -count=5 -run '^TestDraftAssetPreparations' ./internal/bootstrap` 串行；独立变异漏作者/漏unbound、授权和rows分事务、R1吞全部错误、cursor不绑draft各有有效断言失败并恢复SHA。环境失败单列。提交 `test(M5/P7a): 约束准备件权限快照和交错行为`。
 
 ## Task 5（T5）：七门禁、证据与检查点 CI
 

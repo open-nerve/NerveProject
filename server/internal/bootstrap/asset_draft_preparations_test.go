@@ -164,15 +164,19 @@ func TestDraftAssetPreparationsPrivate(t *testing.T) {
 }
 
 func TestDraftAssetPreparationsDatabaseFailure(t *testing.T) {
-	w := newIssueWorld(t)
-	d := createDraftHTTP(t, w, "alice", `{"payload":{}}`)
-	// Fault injection in this isolated database: an owner/query failure is 500,
-	// never an empty page or a resource-concealing 404.
-	if _, err := w.pool.Exec(t.Context(), "ALTER TABLE file_assets RENAME TO unavailable_assets"); err != nil {
-		t.Fatal(err)
-	}
-	raw := assetAPICall(t, w, "alice", "GET", preparationsPath(d.ID), "", 500)
-	if problemCode(t, []byte(raw)) != "internal_error" {
-		t.Fatal(raw)
+	for _, table := range []string{"file_assets", "draft_issues"} {
+		t.Run(table, func(t *testing.T) {
+			w := newIssueWorld(t)
+			d := createDraftHTTP(t, w, "alice", `{"payload":{}}`)
+			// Fault injection in this isolated database: owner and row-query
+			// failures are 500, never empty pages or resource-concealing 404s.
+			if _, err := w.pool.Exec(t.Context(), "ALTER TABLE "+table+" RENAME TO unavailable_rows"); err != nil {
+				t.Fatal(err)
+			}
+			raw := assetAPICall(t, w, "alice", "GET", preparationsPath(d.ID), "", 500)
+			if problemCode(t, []byte(raw)) != "internal_error" {
+				t.Fatal(raw)
+			}
+		})
 	}
 }
