@@ -5,7 +5,7 @@ import { AssetService } from "@/services/asset.service";
 import { SessionChangedError } from "@/lib/auth/token-manager";
 import type { RootStore } from "@/store/root.store";
 import { CommentPreparations } from "./comment-preparations";
-import { matchesContent } from "./content-target";
+import { contentTarget, matchesContent } from "./content-target";
 import { AttachmentResource, type ContentConfirmation } from "./attachment-resource";
 import { ContentReads } from "./content-reads";
 import { DraftPreparationsResource } from "./draft-preparations-resource";
@@ -91,6 +91,16 @@ export class RootAssetStore {
       view,
       () => new CommentPreparations(view, (id, signal) => this.inspect(view, id, "attachment", signal), ids, changed)
     );
+  }
+  async duplicateImage(view: ContentView, sourceID: string, signal: AbortSignal): Promise<Asset> {
+    this.root.issue.assertActive();
+    if (this.disposed || !this.views.has(view) || !view.canWrite("description") || signal.aborted)
+      throw new SessionChangedError();
+    const asset = await this.service.duplicate(sourceID, contentTarget(view.host, "description"), signal);
+    if (!view.canWrite("description") || signal.aborted) throw new SessionChangedError();
+    if (asset.state !== "uploaded" || !matchesContent(asset, view.host, "description"))
+      throw new Error("Invalid duplicated image");
+    return asset;
   }
   attachments(view: ContentView, confirmed?: (receipt: ContentConfirmation) => void): AttachmentResource {
     const host = view.host;

@@ -17,7 +17,10 @@ class ReadLease implements ContentReadLease {
   private disposed = false;
   private readonly ended: ContentSnapshot = { status: "unavailable", stamp: -1 };
   private readonly subscriptions = new Set<() => void>();
-  constructor(private readonly entry: ContentReadEntry) {
+  constructor(
+    private readonly entry: ContentReadEntry,
+    private readonly onRelease: () => void
+  ) {
     entry.retain();
   }
   getSnapshot = (): ContentSnapshot => (this.disposed ? this.ended : this.entry.snapshot);
@@ -45,21 +48,32 @@ class ReadLease implements ContentReadLease {
     for (const changed of this.subscriptions) this.entry.listeners.delete(changed);
     this.subscriptions.clear();
     this.entry.release();
+    this.onRelease();
   }
 }
 export class ContentReads {
   private readonly entries = new Map<string, ContentReadEntry>();
   private readonly downloads = new Map<string, Promise<void>>();
   private ended = false;
+  private leases = 0;
   constructor(
     private readonly view: ContentView,
     private readonly service: AssetService
   ) {
     view.signal.addEventListener("abort", this.dispose, { once: true });
+  }
+  private listen(): void {
     if (typeof window !== "undefined") {
       window.addEventListener("focus", this.wake);
       window.addEventListener("online", this.wake);
       document.addEventListener("visibilitychange", this.wake);
+    }
+  }
+  private unlisten(): void {
+    if (typeof window !== "undefined") {
+      window.removeEventListener("focus", this.wake);
+      window.removeEventListener("online", this.wake);
+      document.removeEventListener("visibilitychange", this.wake);
     }
   }
   private wake = () => {
@@ -105,7 +119,10 @@ export class ContentReads {
   }
   acquire(id: string): ContentReadLease {
     const entry = this.entry(id);
-    const lease = new ReadLease(entry);
+    if (this.leases++ === 0) this.listen();
+    const lease = new ReadLease(entry, () => {
+      if (--this.leases === 0) this.unlisten();
+    });
     void entry.resolve().catch(() => undefined);
     return lease;
   }
@@ -131,10 +148,6 @@ export class ContentReads {
     this.entries.clear();
     this.downloads.clear();
     this.view.signal.removeEventListener("abort", this.dispose);
-    if (typeof window !== "undefined") {
-      window.removeEventListener("focus", this.wake);
-      window.removeEventListener("online", this.wake);
-      document.removeEventListener("visibilitychange", this.wake);
-    }
+    this.unlisten();
   };
 }

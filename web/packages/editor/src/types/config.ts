@@ -4,6 +4,32 @@
  * See the LICENSE file for details.
  */
 
+export type ImageTransferPhase = "queued" | "preparing" | "uploading" | "confirming";
+export type ImageOperation = { signal: AbortSignal; onPhase: (phase: ImageTransferPhase) => void };
+export type EditorImageSnapshot =
+  | { phase: "loading" | "unavailable" }
+  | { phase: "error"; message: string }
+  | { phase: "ready"; url: string; expiresAt: string };
+export type EditorImageRead = {
+  getSnapshot: () => EditorImageSnapshot;
+  subscribe: (changed: () => void) => () => void;
+  loaded: () => void;
+  failed: () => void;
+  retry: () => void;
+  dispose: () => void;
+};
+export type EditorImages = {
+  signal: AbortSignal;
+  read: (id: string) => EditorImageRead;
+  download: (id: string, signal: AbortSignal) => Promise<void>;
+  write?: {
+    upload: (nodeID: string, file: File, operation: ImageOperation) => Promise<string>;
+    retryUpload: (nodeID: string, operation: ImageOperation) => Promise<string>;
+    duplicate: (nodeID: string, sourceID: string, operation: ImageOperation) => Promise<string>;
+    cancel: (nodeID: string) => void;
+    maxBytes: number;
+  };
+};
 export type TFileHandler = {
   assetsUploadStatus: Record<string, number>; // blockId => progress percentage
   delete: (assetSrc: string) => Promise<void>;

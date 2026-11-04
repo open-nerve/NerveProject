@@ -112,9 +112,9 @@ T3与T5衔接：命令确认收据先发布给稳定host再触发权威重读；
 **Files:** 新hooks/editor/use-editor-assets.ts及按节点队列小文件/测试；editor/src/types/config.ts声明EditorImages/EditorImageRead等端口并导出；新类型暂与旧TFileHandler并存至T8原子迁移，不做旧协议适配器。
 **Interfaces:** useEditorAssets(view|undefined)→EditorImages|undefined，完整签名见editor spec§1；ContentReadLease投影稳定快照；UploadSession负责恢复，包不访问RootStore。
 
-- [ ] Step 1：两个节点同ID共享读取且各自dispose，旧句柄error不影响新view；同node换File、最多2并发/第3排队、排队前取消、10图界限由入口验证；retry保留同prepareID；source copy拒绝/目标拒绝/网络未知不自动重试；迟到id不回传给新节点。
-- [ ] Step 2：`pnpm --filter web exec vitest run core/hooks/editor/use-editor-assets.test.tsx core/store/asset` RED→GREEN。T7先实现独立新端口及测试，不更换真实页面、不启用旧wrapper图片；普通错误翻译投影不包含签名URL。
-- [ ] Step 3：切root/route/editor释放全部session/queue/lease，P6回归；类型/格式/零warning，提交 `feat(M5/P7b): 提供编辑器内容图片适配接口`。
+- [x] Step 1：两个节点同ID共享读取且各自dispose，旧句柄error不影响新view；同node换File、最多2并发/第3排队、排队前取消、10图界限由入口验证；retry保留同prepareID；source copy拒绝/目标拒绝/网络未知不自动重试；迟到id不回传给新节点。
+- [x] Step 2：`pnpm --filter web exec vitest run core/hooks/editor/use-editor-assets.test.tsx core/store/asset` RED→GREEN。T7先实现独立新端口及测试，不更换真实页面、不启用旧wrapper图片；普通错误翻译投影不包含签名URL。
+- [x] Step 3：切root/route/editor释放全部session/queue/lease，P6回归；类型/格式/零warning，提交 `feat(M5/P7b): 提供编辑器内容图片适配接口`。
 
 ## Task 8（T8）：编辑器包和全部 wrapper 迁移
 

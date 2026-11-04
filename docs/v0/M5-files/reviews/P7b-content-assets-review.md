@@ -10,7 +10,7 @@
 
 ## 2. 验收状态
 
-A1–A8全部开放，T1–T6已实现，尚待页面与阶段联合验收。P5/P7a的API、P6的上传及权限回归仅为前置；P7b真实页面、三浏览器、local/S3、有效变异和完整七门禁必须在本阶段新运行。
+A1–A8全部开放，T1–T7已实现，尚待页面与阶段联合验收。P5/P7a的API、P6的上传及权限回归仅为前置；P7b真实页面、三浏览器、local/S3、有效变异和完整七门禁必须在本阶段新运行。
 
 ## 3. 局部裁定
 
@@ -73,3 +73,7 @@ T6实现与验证：新评论的普通准备件仅保留资产ID，fresh view重
 局部接口为现有评论命令链的可选同步onConfirmed，不改变通用读取/权限或增加第二命令；准备件资源仅持有当前view的元数据，本地移除选择不DELETE。修复恢复字段ARIA和双host重复创建器DOM ID；两个既有E2E选择器同步为带实例后缀，实际E2E由T13/T14执行。新增lite wrapper submitDisabled只控制按钮可用状态，不冒充传输忙态。
 
 首轮回调RED、缺附件控件RED及输入恢复RED原件完整；最终评论/owner286项、前一轮相关471项通过（有重叠，不相加），9项准备件资源边界通过。类型首次失败因共享types的dist尚未重建，重建后通过；两个测试未用导入已删除，34文件零warning。1382翻译引用/中英键同步通过；完整make test-web18/18（2缓存）通过，web原输出另存。证据t6-confirm-*、files-*、lifetimes-*、input-restore-*、preparations、comments-final、types-final、lint-final、i18n、sync、web。
+
+T7实现与验证：包声明EditorImages小接口，应用hook按editor/view持有节点操作，至多两条传输、排队取消、同节点换File、失败保留同prepare供明确确认、复制拒绝/未知不重发。读句柄稳定投影现有ContentReads，下载沿有限原始字节路径；只读宿主无write，普通附件不冒充正文图。root/view/editor退休终止上传、读取及下载，成功后释放session/preview。16项实际RootStore/hook测试及资源/P6联合238项通过，受影响附件/评论/详情101项通过（与前组有重叠）；编辑器构建、前端类型、8文件零warning通过。
+
+局部修复：最后一个图片读租约释放后，既有ContentReads的wake监听仍常驻；新增实际监听移除断言RED后，改由首/末租约安装/卸载，未增加timer或改变错误预算。翻译函数引用变化不再重建能力；一期类型声明漏括号和fixture翻译函数不稳定导致的失败原件保留。证据t7-red、green/green2、regression、release-red/green、consumers、editor-build、types-final、lint-final。T7没有启用页面旧wrapper，包与wrapper原子迁移在T8。
