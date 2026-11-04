@@ -23,6 +23,7 @@ type Props = {
   handleSubmit: (event: React.MouseEvent<HTMLButtonElement, MouseEvent>) => void;
   isCommentEmpty: boolean;
   isSubmitting: boolean;
+  submitDisabled?: boolean;
   showSubmitButton: boolean;
   editorRef: EditorRefApi | null;
   submitButtonText?: string;
@@ -35,6 +36,7 @@ export function IssueCommentToolbar(props: Props) {
     handleSubmit,
     isCommentEmpty,
     isSubmitting,
+    submitDisabled = false,
     showSubmitButton,
     editorRef,
     submitButtonText = "common.comment",
@@ -116,7 +118,7 @@ export function IssueCommentToolbar(props: Props) {
               variant="primary"
               className="px-2.5 py-1.5 text-11"
               onClick={handleSubmit}
-              disabled={isSubmitButtonDisabled}
+              disabled={submitDisabled || isSubmitButtonDisabled}
               loading={isSubmitting}
             >
               {t(submitButtonText)}

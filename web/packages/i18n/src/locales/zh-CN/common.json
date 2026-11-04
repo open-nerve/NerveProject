@@ -72,7 +72,18 @@
       "keep": "保存我的修改",
       "save": "保存保留的输入",
       "latest": "使用最新已保存内容",
-      "read_only": "未保存的输入仍被保留，但此工作项现在只允许读取。"
+      "read_only": "未保存的输入仍被保留，但此工作项现在只允许读取。",
+      "keep_editing": "继续编辑我的内容"
+    },
+    "comment": {
+      "files": "这条评论的附件",
+      "cancel_upload": "取消此文件选择",
+      "unverified": "尚未核准的已选文件",
+      "remove_selection": "移出选择",
+      "limit": "一条评论最多附带 100 个普通附件。",
+      "unknown": "评论可能已经保存，请先重新读取并检查评论，再决定是否重新发送。",
+      "verify": "重新读取评论核对",
+      "allow_resend": "已核对，允许再次发送"
     }
   },
   "image_upload": {

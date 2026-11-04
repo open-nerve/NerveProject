@@ -21,6 +21,7 @@ import { calculateTimeAgo, cn, renderFormattedDate, renderFormattedTime } from "
 // components
 import { LiteTextEditor } from "@/components/editor/lite-text";
 // local imports
+import { CommentAttachments } from "../attachments";
 import { CommentReactions } from "../comment-reaction";
 import { CommentCardEditForm } from "./edit-form";
 import { EmojiReactionPicker } from "@nerve/propel/emoji-reaction";
@@ -152,7 +153,7 @@ export const CommentCardDisplay = observer(function CommentCardDisplay(props: TC
           </div>
         )}
       </div>
-      {isEditing && setIsEditing ? (
+      {!disabled && isEditing && setIsEditing ? (
         <CommentCardEditForm
           activityOperations={activityOperations}
           comment={comment}
@@ -191,6 +192,13 @@ export const CommentCardDisplay = observer(function CommentCardDisplay(props: TC
           )}
         </>
       )}
+      <CommentAttachments
+        workspaceSlug={workspaceSlug}
+        projectId={projectId}
+        issueId={comment.issue_id}
+        commentId={comment.id}
+        disabled={disabled}
+      />
     </div>
   );
 });

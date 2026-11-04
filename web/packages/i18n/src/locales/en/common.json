@@ -72,7 +72,18 @@
       "keep": "Save my changes",
       "save": "Save preserved input",
       "latest": "Use latest saved content",
-      "read_only": "Your unsaved input is preserved, but this work item is now read-only."
+      "read_only": "Your unsaved input is preserved, but this work item is now read-only.",
+      "keep_editing": "Keep editing my text"
+    },
+    "comment": {
+      "files": "Files for this comment",
+      "cancel_upload": "Cancel this file selection",
+      "unverified": "Unverified selected file",
+      "remove_selection": "Remove selection",
+      "limit": "A comment can include up to 100 ordinary attachments.",
+      "unknown": "The comment may have been saved. Read the comments and check before sending again.",
+      "verify": "Read comments to check",
+      "allow_resend": "I checked; allow another submission"
     }
   },
   "image_upload": {

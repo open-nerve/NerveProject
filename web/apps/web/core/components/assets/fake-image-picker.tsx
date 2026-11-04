@@ -27,20 +27,20 @@ export async function pickerDOM<T extends { app: RootStore }>(tab: T) {
   let sequence = 0;
   const create = vi.spyOn(URL, "createObjectURL").mockImplementation(() => `blob:selection-${++sequence}`);
   const revoke = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
-  const button = (name: string) => {
-    const result = [...document.querySelectorAll<HTMLButtonElement>("button")].find(
+  const button = (name: string, within: ParentNode = document) => {
+    const result = [...within.querySelectorAll<HTMLButtonElement>("button")].find(
       (b) => b.textContent === name || b.getAttribute("aria-label") === name
     );
     expect(result, `button ${name}`).toBeDefined();
     return result!;
   };
-  const select = async (files = [imageFile()]) => {
-    const input = document.querySelector<HTMLInputElement>('input[type="file"]');
+  const select = async (files = [imageFile()], within: ParentNode = document) => {
+    const input = within.querySelector<HTMLInputElement>('input[type="file"]');
     expect(input).not.toBeNull();
     Object.defineProperty(input!, "files", { configurable: true, value: files });
     await act(async () => input!.dispatchEvent(new Event("change", { bubbles: true })));
   };
-  const click = (name: string) => act(async () => button(name).click());
+  const click = (name: string, within: ParentNode = document) => act(async () => button(name, within).click());
   const dispose = async () => {
     await act(async () => renderer.unmount());
     tab.app.dispose();

@@ -127,7 +127,7 @@ for (const workspaceAdmin of [false, true]) {
       await expect(page.getByRole("menuitem", { name: "Delete", exact: true })).toHaveCount(0);
       await page.keyboard.press("Escape");
     }
-    const commentEditor = page.locator(`[id="editor-container-add_comment_${own.id}"] [contenteditable="true"]`);
+    const commentEditor = page.locator(`[id^="editor-container-add_comment_${own.id}_"] [contenteditable="true"]`);
     await expect(commentEditor).toBeVisible();
     await c12Evidence(page, "B10", `own-only-${workspaceAdmin ? "workspace-admin" : "guest"}`);
     await commentEditor.fill("Guest contribution");

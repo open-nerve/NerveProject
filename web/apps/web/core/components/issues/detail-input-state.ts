@@ -13,6 +13,9 @@ export type RetainedForm = {
   rejectedRevision?: number;
   error?: unknown;
   unknown?: boolean;
+  verified?: boolean;
+  editing?: boolean;
+  focusAfterRead?: boolean;
 };
 type Receipt = { kind: "uploaded" | "deleted"; id: string };
 class LocalInput<T> {

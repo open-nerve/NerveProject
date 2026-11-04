@@ -30,7 +30,10 @@ vi.mock("@nerve/i18n", () => ({
   useTranslation: () => ({ t: (key: string, args?: { name: string }) => (args ? `${key}: ${args.name}` : key) }),
 }));
 vi.mock("@nerve/propel/toast", () => import("@/lib/fake-toast"));
-vi.mock("@/hooks/store/use-issue-detail", () => ({ useIssueDetail: () => binding.tab!.app.issue.issueDetail }));
+vi.mock("@/hooks/store/use-issue-detail", async (original) => ({
+  ...(await original<typeof import("@/hooks/store/use-issue-detail")>()),
+  useIssueDetail: () => binding.tab!.app.issue.issueDetail,
+}));
 vi.mock("@/hooks/store/use-workspace", () => ({ useWorkspace: () => binding.tab!.app.workspaceRoot }));
 vi.mock("@/hooks/store/use-project", () => ({ useProject: () => binding.tab!.app.projectRoot.project }));
 vi.mock("@/hooks/store/use-member", () => ({

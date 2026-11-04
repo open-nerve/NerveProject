@@ -16,6 +16,12 @@ import type { TCommentsOperations } from "@nerve/types";
 import { cn, isCommentEmpty, isComposing } from "@nerve/utils";
 // components
 import { LiteTextEditor } from "@/components/editor/lite-text";
+import { useCommentView } from "../use-comment-content";
+import { useCommentFieldError } from "../use-comment-field-error";
+import { useCommentInput } from "../use-comment-input";
+import { CommentInputFeedback } from "../input-feedback";
+import { PreservedInput } from "@/components/editor/use-confirmed-autosave";
+import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { followInSession } from "@/lib/in-session";
 import { SessionChangedError } from "@/lib/auth/token-manager";
 import { useFormRefusal } from "@/lib/form-refusal";
@@ -46,6 +52,9 @@ export const CommentCardEditForm = observer(function CommentCardEditForm(props: 
     workspaceId,
     workspaceSlug,
   } = props;
+  const input = useCommentInput(`edit:${comment.id}`, comment.comment_html);
+  const view = useCommentView(workspaceSlug, projectId, comment.issue_id, comment.id);
+  const detail = useIssueDetail();
   // refs
   const editorRef = useRef<EditorRefApi>(null);
   const sending = useRef(false);
@@ -63,44 +72,65 @@ export const CommentCardEditForm = observer(function CommentCardEditForm(props: 
     watch,
     setValue,
   } = useForm<IssueCommentUpdate>({
-    defaultValues: { comment_html: comment?.comment_html },
+    defaultValues: { comment_html: input.value.html },
     shouldFocusError: false,
   });
   const formRef = useRefusedFocus<HTMLFormElement>(submitCount);
+  useCommentFieldError(input.value.error, setError);
   const commentHTML = watch("comment_html");
 
   const isEmpty = isCommentEmpty(commentHTML);
   const isEditorReadyToDiscard = editorRef.current?.isEditorReadyToDiscard();
   const isSubmitButtonDisabled = isSubmitting || !isEditorReadyToDiscard;
-  const isDisabled = isSubmitting || isEmpty || isSubmitButtonDisabled;
+  const isDisabled =
+    isSubmitting ||
+    isEmpty ||
+    isSubmitButtonDisabled ||
+    input.conflict ||
+    input.value.unknown ||
+    !view?.canWrite("description");
 
   const onEnter = async (formData: IssueCommentUpdate) => {
     const current = capture();
     if (
       !current() ||
       sending.current ||
+      input.conflict ||
+      input.value.unknown ||
+      !view?.canWrite("description") ||
       isCommentEmpty(formData.comment_html) ||
       !editorRef.current?.isEditorReadyToDiscard()
     )
       return;
     sending.current = true;
+    input.begin();
     setSubmitting(true);
     clearErrors("comment_html");
-    await followInSession(() => activityOperations.updateComment(comment.id, formData), {
-      done: (answer) => {
-        if (!current()) return;
-        editorRef.current?.setEditorValue(answer.comment_html);
-        readOnlyEditorRef?.setEditorValue(answer.comment_html);
-        setToast({ type: TOAST_TYPE.SUCCESS, title: t("common.success"), message: t("issue.comments.update.success") });
-        setIsEditing(false);
-      },
-      failed: (error) => {
-        if (current() && !(error instanceof SessionChangedError))
-          refusal(error, (field, message) => setError(field, { type: "server", message }));
-      },
-    });
+    await followInSession(
+      () =>
+        activityOperations.updateComment(comment.id, formData, (answer) => {
+          if (!current() || !view.current) return;
+          input.confirmed(answer.comment_html);
+          editorRef.current?.setEditorValue(answer.comment_html);
+          readOnlyEditorRef?.setEditorValue(answer.comment_html);
+          setToast({
+            type: TOAST_TYPE.SUCCESS,
+            title: t("common.success"),
+            message: t("issue.comments.update.success"),
+          });
+          setIsEditing(false);
+        }),
+      {
+        failed: (error) => {
+          if (current() && !(error instanceof SessionChangedError)) {
+            input.failed(error);
+            refusal(error, (field, message) => setError(field, { type: "server", message }));
+          }
+        },
+      }
+    );
     sending.current = false;
-    setSubmitting(false);
+    if (current()) setSubmitting(false);
   };
 
   return (
@@ -115,9 +145,9 @@ export const CommentCardEditForm = observer(function CommentCardEditForm(props: 
         }
       }}
     >
-      <div inert={isSubmitting}>
+      <div inert={isSubmitting || !view?.canWrite("description")}>
         <LiteTextEditor
-          editable
+          editable={!!view?.canWrite("description")}
           editorProps={{
             attributes: {
               role: "textbox",
@@ -134,7 +164,11 @@ export const CommentCardEditForm = observer(function CommentCardEditForm(props: 
           id={comment.id}
           initialValue={commentHTML ?? ""}
           value={null}
-          onChange={(_json, comment_html) => setValue("comment_html", comment_html)}
+          onChange={(_json, comment_html) => {
+            input.change(comment_html);
+            clearErrors("comment_html");
+            setValue("comment_html", comment_html);
+          }}
           onEnterKeyPress={(e) => void handleSubmit(onEnter)(e)}
           isSubmitting={isSubmitting}
           showSubmitButton={false}
@@ -158,6 +192,28 @@ export const CommentCardEditForm = observer(function CommentCardEditForm(props: 
           </p>
         )}
       </div>
+      {input.conflict && (
+        <PreservedInput
+          conflict
+          keepEditing
+          resume={input.keep}
+          discard={() => {
+            input.confirmed(comment.comment_html);
+            setValue("comment_html", comment.comment_html);
+            editorRef.current?.setEditorValue(comment.comment_html);
+            setIsEditing(false);
+          }}
+        />
+      )}
+      {!isSubmitting && (
+        <CommentInputFeedback
+          value={input.value}
+          current={() => capture()() && !!view?.current}
+          verify={() => detail.comment.fetchComments(workspaceSlug, projectId!, comment.issue_id)}
+          verified={input.verify}
+          allowResend={input.allowResend}
+        />
+      )}
       <div className="flex gap-2 self-end">
         {!isEmpty && (
           <button
@@ -182,6 +238,7 @@ export const CommentCardEditForm = observer(function CommentCardEditForm(props: 
             isSubmitting ? "" : "hover:bg-danger-subtle-hover"
           )}
           onClick={() => {
+            input.confirmed(comment.comment_html);
             setIsEditing(false);
             editorRef.current?.setEditorValue(comment.comment_html ?? "<p></p>");
           }}

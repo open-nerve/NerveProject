@@ -6,6 +6,7 @@
 
 import type { IssueComment } from "@nerve/api-client";
 
+import { useIssueDetailInput } from "@/hooks/use-issue-detail-input";
 import { useRef, useState } from "react";
 import { useWorkspace } from "@/hooks/store/use-workspace";
 import { observer } from "mobx-react";
@@ -30,7 +31,22 @@ type TCommentCard = {
 export const CommentCard = observer(function CommentCard(props: TCommentCard) {
   const { workspaceSlug, comment, activityOperations, ends, showCopyLinkOption, disabled = false, projectId } = props;
   // states
-  const [isEditing, setIsEditing] = useState(false);
+  const [localEditing, setLocalEditing] = useState(false);
+  const retained = useIssueDetailInput()?.form(`edit:${comment?.id}`);
+  const isEditing = retained?.read()?.editing ?? localEditing;
+  const setIsEditing = (editing: boolean) => {
+    if (comment)
+      retained?.store({
+        ...(retained.read() ?? {
+          html: comment.comment_html,
+          baseHTML: comment.comment_html,
+          attachmentIDs: [],
+          revision: 0,
+        }),
+        editing,
+      });
+    setLocalEditing(editing);
+  };
   // refs
   const readOnlyEditorRef = useRef<EditorRefApi>(null);
   // derived values

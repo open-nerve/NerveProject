@@ -1,9 +1,11 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
-import type { ApiClient } from "@nerve/api-client";
+import type { ApiClient, Asset } from "@nerve/api-client";
 import { AttachmentService } from "@/services/attachment.service";
 import { AssetService } from "@/services/asset.service";
 import { SessionChangedError } from "@/lib/auth/token-manager";
 import type { RootStore } from "@/store/root.store";
+import { CommentPreparations } from "./comment-preparations";
+import { matchesContent } from "./content-target";
 import { AttachmentResource, type ContentConfirmation } from "./attachment-resource";
 import { ContentReads } from "./content-reads";
 import { DraftPreparationsResource } from "./draft-preparations-resource";
@@ -71,6 +73,24 @@ export class RootAssetStore {
       { once: true }
     );
     return child;
+  }
+  async inspect(view: ContentView, id: string, use: ContentUse, signal?: AbortSignal): Promise<Asset> {
+    if (this.disposed || !this.views.has(view) || !view.current) throw new SessionChangedError();
+    const asset = await this.service.read(id, signal ?? view.signal);
+    if (!view.current) throw new SessionChangedError();
+    if (asset.id !== id || asset.state !== "uploaded" || !matchesContent(asset, view.host, use))
+      throw new Error("Invalid content asset");
+    return asset;
+  }
+  commentPreparations(
+    view: ContentView,
+    ids: readonly string[],
+    changed: (ids: string[]) => void
+  ): CommentPreparations {
+    return this.own(
+      view,
+      () => new CommentPreparations(view, (id, signal) => this.inspect(view, id, "attachment", signal), ids, changed)
+    );
   }
   attachments(view: ContentView, confirmed?: (receipt: ContentConfirmation) => void): AttachmentResource {
     const host = view.host;

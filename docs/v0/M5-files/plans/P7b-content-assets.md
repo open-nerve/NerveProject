@@ -98,13 +98,14 @@ T3与T5衔接：命令确认收据先发布给稳定host再触发权威重读；
 ## Task 6（T6）：评论普通附件与一次原子发表
 
 **Files:** components/comments/{comment-create,card/edit-form,card/display}.tsx、issues/issue-detail/issue-activity/helper.tsx及评论测试；只删本Task实际替换的bulk绑定链，图片端口整体迁移由T8/T9。
+**局部接口补充：** 新评论准备件小资源与纯表单输入hook；现有comment.store/root.store、TCommentsOperations沿同一命令链传递可选同步onConfirmed，先记录成功再执行原owner刷新，不改通用读取/权限语义。
 **Interfaces:** new_comment ContentView→COMMENT_ATTACHMENT准备件；IssueCommentCreate.attachment_ids≤100和comment_html一次POST；已有comment AttachmentResource独立列表，CommentUpdate不加不存在的附件字段。
 
 **跨卸载责任：** 评论创建及编辑的未提交HTML、已确认准备件ID/选择、已知拒绝或未知结果提示接T5 host状态；暂时权威重读失败仍保留，两表单独立。旧view结束，fresh owner及资产核验成功后才允许发送；重挂载不自动POST。Step1必须包含“未发送评论/失败编辑→另一个普通附件complete或DELETE→pending/读取拒绝→只读重试→内容仍在且命令次数不变”。
 
-- [ ] Step 1：新评论未发送私有件、两个表单不混用、普通附件与正文图片集合不混、101拒绝、未完成不能发送、同tick双发一次；已知拒绝保留文稿/IDs，网络与无Problem502未知结果提示先核评论列表，刷新只能GET。已有作者新增/删除，管理员可删不代表能新增，非作者无控件且服务端仍拒绝。
-- [ ] Step 2：`pnpm --filter web exec vitest run core/components/comments core/store/issue/issue-details` RED→GREEN；移除成功后FileService bulk status。comment-only附件不影响issue attachment_count，空正文仍遵守原非空合同。
-- [ ] Step 3：评论成功后的清表单/焦点和活动刷新、删除评论中旧附件回答、换issue/账号联合回归；提交 `feat(M5/P7b): 原子绑定评论附件并保留拒绝状态`。
+- [x] Step 1：新评论未发送私有件、两个表单不混用、普通附件与正文图片集合不混、101拒绝、未完成不能发送、同tick双发一次；已知拒绝保留文稿/IDs，网络与无Problem502未知结果提示先核评论列表，刷新只能GET。已有作者新增/删除，管理员可删不代表能新增，非作者无控件且服务端仍拒绝。
+- [x] Step 2：`pnpm --filter web exec vitest run core/components/comments core/store/issue/issue-details` RED→GREEN；移除成功后FileService bulk status。comment-only附件不影响issue attachment_count，空正文仍遵守原非空合同。
+- [x] Step 3：评论成功后的清表单/焦点和活动刷新、删除评论中旧附件回答、换issue/账号联合回归；提交 `feat(M5/P7b): 原子绑定评论附件并保留拒绝状态`。
 
 ## Task 7（T7）：应用侧编辑器图片端口
 

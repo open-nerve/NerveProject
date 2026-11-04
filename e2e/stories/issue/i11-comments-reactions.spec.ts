@@ -122,7 +122,7 @@ test("I11 (page): real comment input ignores IME and empty submission, retains a
   const seed = await issueListProject(api, info);
   const issue = await createIssue(api, seed.member.token, seed.project.id, { name: "Comment input" });
   const watch = await openIssueDetail(page, seed, issue);
-  const editor = page.locator(`[id="editor-container-add_comment_${issue.id}"] [contenteditable="true"]`);
+  const editor = page.locator(`[id^="editor-container-add_comment_${issue.id}_"] [contenteditable="true"]`);
   const submit = page.getByRole("button", { name: "Comment", exact: true });
   await expect(editor).toBeVisible();
   await expect(editor).toHaveClass(/prose-brand/);

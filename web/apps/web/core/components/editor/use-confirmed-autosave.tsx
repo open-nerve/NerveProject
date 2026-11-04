@@ -250,13 +250,29 @@ export function useConfirmedAutosave<T>({
   return { value, change, failure, retry, replaceWith, replacing, conflict, needsResume, resume, discard };
 }
 
-export function PreservedInput({ conflict, resume, discard }: { conflict: boolean; resume(): void; discard(): void }) {
+export function PreservedInput({
+  conflict,
+  resume,
+  discard,
+  keepEditing = false,
+}: {
+  conflict: boolean;
+  resume(): void;
+  discard(): void;
+  keepEditing?: boolean;
+}) {
   const { t } = useTranslation();
   return (
     <div role="status" className="space-x-2 text-13">
       <span>{t(conflict ? "content_files.input.conflict" : "content_files.input.preserved")}</span>
       <button type="button" onClick={resume}>
-        {t(conflict ? "content_files.input.keep" : "content_files.input.save")}
+        {t(
+          keepEditing
+            ? "content_files.input.keep_editing"
+            : conflict
+              ? "content_files.input.keep"
+              : "content_files.input.save"
+        )}
       </button>
       <button type="button" onClick={discard}>
         {t("content_files.input.latest")}

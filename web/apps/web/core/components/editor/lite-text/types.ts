@@ -16,6 +16,7 @@ export type LiteTextEditorWrapperProps = MakeOptional<
   projectId?: string;
   showSubmitButton?: boolean;
   isSubmitting?: boolean;
+  submitDisabled?: boolean;
   showToolbarInitially?: boolean;
   parentClassName?: string;
 } & (

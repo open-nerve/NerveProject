@@ -62,13 +62,13 @@ export const useWorkItemCommentOperations = (
       });
     },
     // Forms own confirmation, clearing and refusal; preserve the native command result.
-    createComment: async (body) => {
+    createComment: async (body, onConfirmed) => {
       const { ws, project, id } = scope();
-      return detail.createComment(ws, project, id, body);
+      return detail.createComment(ws, project, id, body, onConfirmed);
     },
-    updateComment: async (commentId, body) => {
+    updateComment: async (commentId, body, onConfirmed) => {
       const { ws, project, id } = scope();
-      return detail.updateComment(ws, project, id, commentId, body);
+      return detail.updateComment(ws, project, id, commentId, body, onConfirmed);
     },
     removeComment: (commentId) =>
       follow(async () => {

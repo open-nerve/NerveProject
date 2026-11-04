@@ -40,6 +40,7 @@ export const LiteTextEditor = React.forwardRef(function LiteTextEditor(
     projectId,
     showSubmitButton = true,
     isSubmitting = false,
+    submitDisabled = false,
     showToolbarInitially = true,
     parentClassName = "",
     placeholder = t("issue.comments.placeholder"),
@@ -145,6 +146,7 @@ export const LiteTextEditor = React.forwardRef(function LiteTextEditor(
             handleSubmit={(e) => rest.onEnterKeyPress?.(e)}
             isCommentEmpty={isEmpty}
             isSubmitting={isSubmitting}
+            submitDisabled={submitDisabled}
             editorRef={editorRef}
             showSubmitButton={showSubmitButton}
             submitButtonText="common.comment"

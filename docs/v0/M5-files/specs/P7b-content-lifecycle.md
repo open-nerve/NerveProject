@@ -113,3 +113,9 @@ RootAssetStore以`attachments(view,onConfirmed?)`、`content(view)`、`draftPrep
 IssueVerification仅增加`isMissing(id)`只读查询，直接暴露已存在且当前identity相符的missing结论；pending、uncertain、权限水位及通用调和语义均不变。Host以最终401/403/404或规范删除结论退休输入，重新可见时创建新实例。详情与peek都直接投影该读取错误，retry只重读owner。
 
 附件区沿现有widget开合，数字直接取Issue.attachment_count；实际打开且规范详情可读才创建view/resource。删除框向现有IssueDetailModals登记一份可释放的UI占用，阻止底下peek响应Escape/外部点击，不新增共享弹窗控制器。占用标识使用Symbol，避免可观察集合增强对象后删除身份不一致。成功收据在详情条件子树外、peek自身portal内部显示；归档只读同时消费路由参数、规范Issue和规范Project状态。
+
+### T6 评论确认与输入局部接口
+
+现有评论create/update在规范owner重读后才resolve，期间表单可能已卸载。沿T3相同确认边界，为现有评论命令增加可选同步`onConfirmed(IssueComment)`：服务器成功且原权限token核准、规范评论已receive之后，原刷新之前调用。表单只在自身当前scope中清输入/记成功；旧scope回调无效。Promise仍沿原刷新和确认语义，不改PermissionReads、IssueVerification、队列、DetailResource或服务端API。该接口在TCommentsOperations→已有helper→IssueDetail→IssueCommentStore同一现有调用链传递，不新增旁路观察器。
+
+新评论准备件资源只在当前view持有Asset元数据，host输入只保留ID；新view用AssetService.read逐项核用途/new_comment宿主/uploaded/unbound后才允许POST。移除所选项只是本地选择，不DELETE。未知POST先显式重读完整评论集合，再由用户明确允许再次发送；不按正文/文件名猜已发表记录。普通附件与正文图片仍独立集合。

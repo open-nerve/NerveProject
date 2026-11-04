@@ -10,7 +10,7 @@
 
 ## 2. 验收状态
 
-A1–A8全部开放，T1–T4已实现，尚待页面与阶段联合验收。P5/P7a的API、P6的上传及权限回归仅为前置；P7b真实页面、三浏览器、local/S3、有效变异和完整七门禁必须在本阶段新运行。
+A1–A8全部开放，T1–T6已实现，尚待页面与阶段联合验收。P5/P7a的API、P6的上传及权限回归仅为前置；P7b真实页面、三浏览器、local/S3、有效变异和完整七门禁必须在本阶段新运行。
 
 ## 3. 局部裁定
 
@@ -67,3 +67,9 @@ T5实现与验证：真实详情/peek接入附件区，首屏50/总数51、guest
 局部根因修复与反例：新增只读isMissing查询供消费已有404结论，不改变IssueVerification状态机；详情/peek原仅按路由标记归档，改为同时消费规范owner归档状态；新增弹窗占用最初使用普通对象，被MobX集合增强后无法按原身份释放，独立两份占用与真实取消→Escape均RED，改为Symbol保持身份；已知保存拒绝与并发基准冲突同时出现时，通用Retry不再绕过明确选择。上述失败原件t5-archive-red、t5-dialog-release/identity-red、t5-conflict-action-red均保留。
 
 首次宿主测试中，自动响应器提前答复旧Issue和空项目页；修正测试seed独立回答与guest的workspace角色（workspace admin有有效管理员权限），没有放宽产品授权。首次lint只有一个未用导入，已删；最终18个修改源码零warning、类型、1373翻译引用与中英键同步通过。证据t5-host-green4、t5-components、t5-types-2、t5-lint-2、t5-i18n(-sync)、t5-test-web和完整web输出。沿T4的中性图标/独立按钮视觉差异，详情和peek共用附件控件，不复制网络算法。
+
+T6实现与验证：新评论的普通准备件仅保留资产ID，fresh view重新读元数据；HTML和attachment_ids一次POST，没有bulk绑定。未知网络/非Problem502先GET评论与资产，再由用户明确允许重发；已知422保留文稿、字段错误与IDs。已有评论独立附件区区分作者新增、管理员删除和非作者读取，不影响工作项附件数。真实RootStore/IssueDetailHost交错覆盖未发送评论与失败编辑同时经过普通附件complete、owner pending/503、只读重试后恢复，两host隔离，已确认回调先于原owner刷新。成功后清表单和重新挂载后的焦点有回归。
+
+局部接口为现有评论命令链的可选同步onConfirmed，不改变通用读取/权限或增加第二命令；准备件资源仅持有当前view的元数据，本地移除选择不DELETE。修复恢复字段ARIA和双host重复创建器DOM ID；两个既有E2E选择器同步为带实例后缀，实际E2E由T13/T14执行。新增lite wrapper submitDisabled只控制按钮可用状态，不冒充传输忙态。
+
+首轮回调RED、缺附件控件RED及输入恢复RED原件完整；最终评论/owner286项、前一轮相关471项通过（有重叠，不相加），9项准备件资源边界通过。类型首次失败因共享types的dist尚未重建，重建后通过；两个测试未用导入已删除，34文件零warning。1382翻译引用/中英键同步通过；完整make test-web18/18（2缓存）通过，web原输出另存。证据t6-confirm-*、files-*、lifetimes-*、input-restore-*、preparations、comments-final、types-final、lint-final、i18n、sync、web。
