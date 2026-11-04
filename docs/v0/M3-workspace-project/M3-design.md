@@ -1180,6 +1180,9 @@ modules/access/
 前端先做数据层（P8a 工作区一侧、P8b 项目一侧，第 12 节），再做页面（P9–P11）：两段把 M3 的全部类型、service、store 和两个包装层挂载时的取数迁到新接口，页面的 Phase 加入故事时，挂载路径上已经没有旧接口的请求（3.1、第 12 节）。
 
 ### 7.1 按会话分代（总体设计 7.7；M2 交接第 3 节）
+
+**M5/P6 PC3（负责人批准A）：** 资料图片共享既有CURRENT_USER/WORKSPACES/PROJECT/WORKSPACE_MEMBERS会话读取入口。宿主store经组合根的小接口发布实际读取完成，图片仅维护在途和视图证明；同一有效代次的在途读可加入，旧缓存不算新授权，旧完成不覆盖新证明。SWR继续管理页面请求，Reconciled继续管理事实，IssueRootStore继续唯一管理权限代次；workspaces-list-fetch守卫保持。详见[P6协议](../M5-files/specs/P6-image-lifecycle.md#pc3共享宿主读取与完成证明负责人批准a)。
+
 - **service 按代建**：M3 的 service 都是生成的客户端之上的薄封装，构造时接收这一代的 `ApiClient`，由 store 在构造时建（`ApiTokenStore` 的写法，`core/store/user/api-token.store.ts`）。M2 交接列出的 10 处模块级实例在 P8a（`WorkspaceService` 的 8 处）、P8b（`ProjectService`、`ProjectMemberService` 各 1 处）全部消失；只调公开操作的（注册页和邀请页查看邀请，`getWorkspaceInvitation`）用 `publicClient`，可以是模块级的。
 - **`RootStore` 的释放**：M3 是第一个接上注册在沿用对象上的反应的 M，按总体设计 7.7 给 `RootStore` 加上 `dispose()`，由 `store-context.tsx` 在换代时调用旧的一代。要释放的只有 `project_filter.store.ts:63` 观察 `router.workspaceSlug` 的 `reaction`：store 保存它返回的释放函数，`dispose()` 调用它。单元测试：换代之后改路由，旧一代的反应不再运行。`cycle_filter`、`module_filter` 的同类反应和 `issue/root.store.ts:170` 的 `autorun` 属于 M4、M6，照同一写法由它们接上（13.2）。`issue_calendar_view` 的反应只观察本代的资料，不用释放（总体设计 7.7；P8a 评审记录第 3 节 T12）。
 - **SWR 键**：会话的取数都带 `loginId`，经 `useSessionSWR`、`sessionKey`（`core/lib/use-session-swr.ts`、`core/lib/session-key.ts`，P8a），键的形状是 `[取数的名称, loginId, ...取数的参数]`（例如 `["WORKSPACE_MEMBERS", loginId, slug]`）。fetcher 返回 store 方法的 Promise（M2 交接第 2 节"注意"）。经 `publicClient` 的公开操作只取决于它的输入，键就是它的输入，不带 `loginId`（查看邀请的链接，`useInvitationPreview`，P8a）；这是唯一的例外。绕过 `useSessionSWR` 的会话取数由 oxlint 静态地发现（根目录 `.oxlintrc.json` 按路径限制从 `swr` 导入，P8a 的 spec 附录 A.6 列出范围）。（M3/P8a 的修订按控制者的裁定 A6 改写这一条。）

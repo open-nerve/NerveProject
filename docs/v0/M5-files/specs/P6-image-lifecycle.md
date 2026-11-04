@@ -110,3 +110,15 @@ T4的useProfileUpload是视图拥有资源的薄hook：effect创建，关闭/目
 ProfileImage / ProfileAvatar / ProjectCover 是呈现组件，接受明确 source 与原 alt/fallback/size/className；不接受没有 scope/expiry 的任意用户能力 URL。WorkspaceLogo 的已登录调用方传 workspace 身份，公开邀请调用方使用明确 public-preview 分支；避免 optional prop 使老裸 URL 默默绕过新合同。
 
 新增 `web/apps/web/helpers/project-covers.ts` 与 `app/assets/project-covers/cover-01.svg`…`cover-29.svg` / SOURCES.md。导出 `PROJECT_COVERS` 稳定 ID+静态 URL 集合和 `projectCoverURL(id: string | null): string | undefined`；不重复后端枚举校验逻辑、不把 URI 当 DTO。预设选择类型只 Pick<ProjectCreate/ProjectUpdate> 的现有字段，省略/清除/单一选中状态由表单显式表达。
+
+## PC3：共享宿主读取与完成证明（负责人批准A）
+
+图片不创建独立的profile-image网络查询键。工作区复用useWorkspacesFetch/WORKSPACES；成员复用useWorkspaceMembersFetch/WORKSPACE_MEMBERS；个人和项目分别把既有CURRENT_USER、PROJECT读取提取为无额外业务取数的薄hook，由原页面和图片共同使用。原页面参数、DTO、权限决定和错误传播保持；使用0去重窗口允许同键恢复权限后重读，在途请求仍由SWR合并。
+
+图片消费侧声明ObserveProfileRead小接口：接收self/workspace/project/member宿主身份与实际读取函数，返回该函数原结果/错误。RootStore统一接线；宿主store在规范读取的边界发布开始与完成，接口只观察完成，不合并/排队宿主HTTP、不改变Reconciled。这样非页面的既有合法读取也不能让图片永远停在旧请求的错误里，宿主store仍拥有数据事实，SWR仍拥有页面请求。
+
+ProfileImages仅保留在途宿主请求和当前视图的证明；同宿主较新的读取取代旧完成，旧成功/失败不能撤销新证明。开始时捕获现有PermissionReads代次，完成时再次核对root、scope和规范源；新视图可加入同一有效代次的在途请求，但已经完成的SWR缓存不是新授权。最后引用释放移除图片活动项，在途宿主读取可继续服务其他页面；root退休清空观察状态。
+
+工作区图标的读取证明只核身份/目录存在性水位，不把其他项目变化或不影响可见性的成员角色变化当作图标撤权；成员头像仍核成员授权水位，项目仍核PC1规范可见性和现有权限水位。使用既有PermissionReads的窄查询，不加第二个权限观察器。view卸载、失权又恢复后旧view始终无效；新view须有当前有效的读取完成。
+
+到期/错误/手动重试均请求当前宿主hook重新验证，图片通知只合并同宿主的同时刷新意图，不自建取数函数。一次错误自动刷新预算和明确重试保持；已有在途读取可复用时不重复mutate。新视图/恢复权限不能因SWR同键缓存而一直没有证明；当前失败不得自动循环。
