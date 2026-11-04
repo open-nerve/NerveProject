@@ -71,3 +71,14 @@ T5最终完整make test-web 18/18通过（17缓存，web实际3318项）；源�
 ## 9. T6 PC2 暂停：工作区写回的权限事实
 
 实际RootStore四场景探针2 failed/2 passed：权限20→15后迟到PATCH把角色恢复20并令新上传可写；20→15→20后迟到PATCH覆盖新logo。原上传仍正确失效；移除与同slug新UUID控制组通过。产品实现尚未开始，按跨模块纪律保存当前工作并上报；推荐在WorkspaceRootStore发布边界接入现有IssueRootStore的权限代次，小接口由组合根接线，不修改通用Reconciled或增加观察器。完整范围、代价、原始证据与待决定事项见[PC2](P6-workspace-write-lifetime-decision.md)。T6–T15未完成，未运行本轮七门禁或推送/合并产品检查点。
+
+
+## 10. T6 PC2 基础修复与联合回归
+
+负责人批准A后，先以6da66e0d同步M3/M4/M5和P6合同。WorkspaceRootStore声明WorkspaceWriteScope小接口，由RootStore接到IssueRootStore的工作区身份/成员权限代次；原观察器和权限getter不变，没有依赖asset控件或修改公共Reconciled。更新在进入队列前捕获UUID/role和代次，发送前、成功/失败交付、发布后均核对；过时给undefined，当前普通拒绝原样抛出，原工作区资料表单不对undefined发成功toast。
+
+重放检查未经修改的目录答复里的UUID/slug/role，保留尚未发布的新成员事实；否则先用旧整行盖掉新角色，观察器便永远看不到这次变化。工作区范围只含本工作区身份和成员水位，其他工作区、项目或工作项变化不会误失效。已有移除/同slug新UUID不插入的行为保持。
+
+实际RootStore新增17项：原四场景、guest降级/恢复、成员关系移除恢复、排队、root退休/迟到拒绝、未知scope、无关变化、正常已确认写与目录重放，以及guest→admin的直接事实校验。首轮有4项测试把受控时间的每次新值误当固定应答，修正固定expiry后取得13failed/3passed的行为RED；补充guest→admin也取得1failed/16passed后修复。最终20文件293项联合回归通过，完整前端18/18（17缓存，web实际3336项），类型/格式与13个修改文件零warning通过，输入4466个前后一致。首次lint因workspace目录的非空断言规则拒绝8处测试断言，改用明确不存在就抛错的夹具，不新增豁免。
+
+三项变异分别取消有效期检查、取消原目录role检查、恢复undefined结果成功toast，均产生AssertionError，源码逐SHA还原；原件见t6-pc2-mutations.json与t6-pc2-*.log。初始PC2实验原件仍保留。此处完成基础发布修复，T6真实工作区图标页面接线和联合UI回归继续；PC2整体页面验收及阶段A1–A8不提前关闭。

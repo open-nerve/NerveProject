@@ -93,12 +93,14 @@ export const WorkspaceDetails = observer(function WorkspaceDetails() {
     };
 
     await followInSession(() => updateWorkspace(workspace.slug, payload), {
-      done: () =>
-        setToast({
-          title: t("toast.success"),
-          type: TOAST_TYPE.SUCCESS,
-          message: t("workspace_settings.settings.general.updated"),
-        }),
+      done: (updated) => {
+        if (updated)
+          setToast({
+            title: t("toast.success"),
+            type: TOAST_TYPE.SUCCESS,
+            message: t("workspace_settings.settings.general.updated"),
+          });
+      },
       failed: toastRefusal,
     });
     setIsLoading(false);

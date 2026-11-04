@@ -40,7 +40,7 @@ const to =
 async function preferencesStore() {
   const nerve = new FakeNerve();
   const api = nerve.client();
-  const workspaceRoot = new WorkspaceRootStore(fakeRoot({ router: new RouterStore() }), api);
+  const workspaceRoot = new WorkspaceRootStore(fakeRoot({ router: new RouterStore() }), api, () => () => true);
   await loadWorkspaces(nerve, workspaceRoot, [workspaceOf("acme"), workspaceOf("beta")]);
   nerve.calls.length = 0;
   return { nerve, api, store: workspaceRoot.preferences };

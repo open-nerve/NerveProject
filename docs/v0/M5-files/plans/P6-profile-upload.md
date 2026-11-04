@@ -88,7 +88,7 @@ PC2 已批准 A：[工作区更新的迟到回包](../reviews/P6-workspace-write
 **Files:** workspace/settings/workspace-details.tsx/.test.tsx、workspace/logo.tsx 及测试、workspace/sidebar/{dropdown-item,workspace-menu-root}.tsx、settings/workspace/sidebar/header.tsx、power-k/menus/workspaces.tsx、settings/profile/sidebar/workspace-options.tsx；同步account/auth-forms/auth-header.tsx的public-preview直接调用形状，完整邀请行为仍归T10。
 **Interfaces:** WorkspaceUpdate.logo_asset_id；workspace source UUID，不把slug作为资源身份。
 
-- [ ] PC2先行：按已批准A修复WorkspaceRootStore的调用/排队/回包发布及原始目录重放。新增store/workspace/write-lifetime.test.ts，先保留四场景复现并扩展20→5/同UUID恢复/失败迟到/root退休/排队/旧读重放/无关范围；小接口由root.store.ts接IssueRootStore的窄工作区查询，PermissionReads仍唯一观察者。updateWorkspace过时返回undefined，现有普通资料表单不显示完成toast；原有有效拒绝仍抛出。联合workspace/issue/root/reconciled回归与删除发布检查的行为变异通过后，继续下列T6页面步骤。允许本Task拆成PC2修复与页面两个提交。
+- [x] PC2先行：按已批准A修复WorkspaceRootStore的调用/排队/回包发布及原始目录重放。新增store/workspace/write-lifetime.test.ts，先保留四场景复现并扩展20→5/同UUID恢复/失败迟到/root退休/排队/旧读重放/无关范围；小接口由root.store.ts接IssueRootStore的窄工作区查询，PermissionReads仍唯一观察者。updateWorkspace过时返回undefined，现有普通资料表单不显示完成toast；原有有效拒绝仍抛出。联合workspace/issue/root/reconciled回归与删除发布检查的行为变异通过后，继续下列T6页面步骤。允许本Task拆成PC2修复与页面两个提交。
 - [ ] Step 1：管理员替换/null清除，15/5只读无控件，失败保留原图，跨工作区/同slug新UUID/失权恢复旧回包不能复活；菜单多logo并发过期只刷新一次目录；地址刷新不重置未保存资料字段，真正切换工作区仍同步表单。
 - [ ] Step 2：`pnpm --filter web exec vitest run core/components/workspace core/components/settings/workspace core/store/workspace` RED→GREEN；WorkspaceLogo不保留裸URL绕过新入口，公开邀请适配在T10同时完成前不推检查点。
 - [ ] Step 3：工作区导航/菜单及权限回归、类型lint，提交 `feat(M5/P6): 接通管理员工作区图标与安全展示`。

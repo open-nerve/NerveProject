@@ -208,7 +208,7 @@ export async function projectTab(here: Listed, elsewhere: Listed) {
   const nerve = new FakeNerve();
   const api = nerve.client();
   const router = new RouterStore();
-  const workspaceRoot = new WorkspaceRootStore(fakeRoot({ router }), api);
+  const workspaceRoot = new WorkspaceRootStore(fakeRoot({ router }), api, () => () => true);
   const projectRoot = new ProjectRootStore(fakeRoot({ router, workspaceRoot }), api);
   // after the stores, whose reactions follow the address (the projects page's filters)
   router.setQuery({ workspaceSlug: here.workspace.slug, projectId: here.projects?.[0]?.id });

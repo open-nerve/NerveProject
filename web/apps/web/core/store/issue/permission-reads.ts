@@ -78,6 +78,13 @@ export class PermissionReads {
   capture(): number {
     return this.serial;
   }
+  /** Only this workspace's identity and membership, independent of its project and issue changes. */
+  currentWorkspace(serial: number, workspaceID: string): boolean {
+    return (
+      (this.watermarks.get(key(workspaceID, "workspace")) ?? 0) <= serial &&
+      (this.watermarks.get(key(workspaceID, "member")) ?? 0) <= serial
+    );
+  }
   current(serial: number, workspaceID: string | undefined, projectIDs: readonly string[], member = false): boolean {
     if (!workspaceID && !projectIDs.length) return serial >= this.serial;
     if (workspaceID && (this.watermarks.get(key(workspaceID, "workspace")) ?? 0) > serial) return false;

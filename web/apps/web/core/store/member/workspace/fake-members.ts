@@ -65,7 +65,7 @@ export async function memberStore() {
   const router = new RouterStore();
   router.setQuery({ workspaceSlug: "acme" });
   const user = new UserStore(fakeRoot({ router }), api);
-  const workspaceRoot = new WorkspaceRootStore(fakeRoot({ router }), api);
+  const workspaceRoot = new WorkspaceRootStore(fakeRoot({ router }), api, () => () => true);
   await loadWorkspaces(nerve, workspaceRoot, [workspaceOf("acme"), workspaceOf("globex")]);
   nerve.calls.length = 0;
   const users: Record<string, MemberUser> = {};

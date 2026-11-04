@@ -28,7 +28,7 @@ function setUp() {
   const nerve = new FakeNerve();
   const api = nerve.client();
   const router = new RouterStore();
-  const store = new WorkspaceRootStore(fakeRoot({ router }), api);
+  const store = new WorkspaceRootStore(fakeRoot({ router }), api, () => () => true);
   return { nerve, api, router, store };
 }
 
@@ -121,7 +121,7 @@ describe("WorkspaceRootStore, the list", () => {
   });
 
   it("checks a slug while a change is out: a check, a read, does not wait for it", async () => {
-    const { nerve, store } = setUp();
+    const { nerve, store } = await loaded();
     const checked: unknown[] = [];
     await fetchedWhileChangeIsOut(
       nerve,

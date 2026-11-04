@@ -87,7 +87,7 @@ const IN_PROJECTS: {
 async function setUp() {
   const nerve = new FakeNerve();
   const router = new RouterStore();
-  const workspaceRoot = new WorkspaceRootStore(fakeRoot({ router }), nerve.client());
+  const workspaceRoot = new WorkspaceRootStore(fakeRoot({ router }), nerve.client(), () => () => true);
   const permissions = new UserPermissionStore(fakeRoot({ router, workspaceRoot }));
   const listed = IDENTITIES.flatMap(({ role }) => (role ? [workspaceOf(`ws-${role}`, { role })] : []));
   await loadWorkspaces(nerve, workspaceRoot, listed);
@@ -153,7 +153,7 @@ describe("UserPermissionStore, in a workspace", () => {
 
   it("allows nothing before the list is fetched", () => {
     const router = new RouterStore();
-    const workspaceRoot = new WorkspaceRootStore(fakeRoot({ router }), new FakeNerve().client());
+    const workspaceRoot = new WorkspaceRootStore(fakeRoot({ router }), new FakeNerve().client(), () => () => true);
     const permissions = new UserPermissionStore(fakeRoot({ router, workspaceRoot }));
     expect(permissions.getWorkspaceRoleByWorkspaceSlug("ws-20")).toBeUndefined();
     expect(permissions.allowPermissions(CHECKS.anyone, WORKSPACE, "ws-20")).toBe(false);

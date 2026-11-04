@@ -27,7 +27,7 @@ export async function permissionsOver(workspaces: Workspace[], projects: Project
   const nerve = new FakeNerve();
   const api = nerve.client();
   const router = new RouterStore();
-  const workspaceRoot = new WorkspaceRootStore(fakeRoot({ router }), api);
+  const workspaceRoot = new WorkspaceRootStore(fakeRoot({ router }), api, () => () => true);
   const projectRoot = new ProjectRootStore(fakeRoot({ router, workspaceRoot }), api);
   const permissions = new UserPermissionStore(fakeRoot({ router, workspaceRoot, projectRoot }));
   await loadWorkspaces(nerve, workspaceRoot, workspaces);

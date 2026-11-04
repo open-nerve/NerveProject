@@ -92,6 +92,12 @@ describe("WorkspaceDetails", () => {
     expect(page.updateWorkspace.mock.calls).toEqual([["acme", { name: "Acme", timezone: "UTC" }]]);
   });
 
+  it("says nothing when the workspace write returns no current result", async () => {
+    page.updateWorkspace.mockResolvedValueOnce(undefined);
+    await update();
+    expect(toasts).toEqual([]);
+  });
+
   it("shows nerve's reason when it refuses", async () => {
     page.updateWorkspace.mockRejectedValueOnce(refusal(403, "forbidden"));
     await update();
