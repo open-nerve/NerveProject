@@ -12,7 +12,9 @@ import { Menu } from "@headlessui/react";
 import { EUserPermissions, ROLE_DETAILS } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import type { Workspace } from "@nerve/api-client";
-import { cn, getFileURL } from "@nerve/utils";
+import { cn } from "@nerve/utils";
+
+import { WorkspaceLogo } from "../logo";
 
 type TProps = {
   workspace: Workspace;
@@ -50,21 +52,11 @@ const SidebarDropdownItem = observer(function SidebarDropdownItem(props: TProps)
       >
         <div className="flex items-center justify-between gap-1 rounded-sm p-1 text-13 text-primary">
           <div className="relative flex w-[80%] items-center justify-start gap-2.5">
-            <span
-              className={`relative flex h-8 w-8 flex-shrink-0 items-center justify-center border-subtle p-2 text-14 font-medium uppercase ${
-                !workspace?.logo_url && "rounded-md bg-[#026292] text-on-color"
-              }`}
-            >
-              {workspace?.logo_url && workspace.logo_url !== "" ? (
-                <img
-                  src={getFileURL(workspace.logo_url)}
-                  className="absolute top-0 left-0 h-full w-full rounded-sm object-cover"
-                  alt={t("workspace_logo")}
-                />
-              ) : (
-                (workspace?.name?.[0] ?? "...")
-              )}
-            </span>
+            <WorkspaceLogo
+              source={{ kind: "workspace", workspaceID: workspace.id }}
+              name={workspace.name}
+              classNames="h-8 w-8 border-subtle text-14 font-medium"
+            />
             <div className="w-[inherit]">
               <div
                 className={`truncate text-left text-13 font-medium text-ellipsis ${workspaceSlug === workspace.slug ? "" : "text-secondary"}`}

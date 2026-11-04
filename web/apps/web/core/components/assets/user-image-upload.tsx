@@ -4,9 +4,8 @@ import { observer } from "mobx-react";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 import { useUser } from "@/hooks/store/user";
-import { useProfileImage } from "@/hooks/use-profile-image";
 import { ImageUploadModal } from "./image-upload-modal";
-import { ProfileImage } from "./profile-image";
+import { ProfileImage, ProfileImageRetry } from "./profile-image";
 
 /** Only the selected account field is saved. Names and onboarding completion belong to their own forms. */
 type Props = { image: "avatar" | "cover"; preview?: ReactNode; showLabel?: boolean };
@@ -15,7 +14,6 @@ export const UserImageUpload = observer(function UserImageUpload({ image, previe
   const { t } = useTranslation();
   const { data: user, updateCurrentUser } = useUser();
   const source = { kind: "self", image } as const;
-  const read = useProfileImage(source);
   const title = t(image === "avatar" ? "image_upload.change_avatar" : "image_upload.change_cover");
   return (
     <>
@@ -35,21 +33,7 @@ export const UserImageUpload = observer(function UserImageUpload({ image, previe
           {title}
         </Button>
       )}
-      {read.error !== undefined && (
-        <Button
-          type="button"
-          variant="secondary"
-          size="sm"
-          disabled={read.loading}
-          onClick={() => {
-            void read.retry().catch(() => {
-              /* The image reader retains its refusal for another explicit attempt. */
-            });
-          }}
-        >
-          {t("image_upload.retry_image")}
-        </Button>
-      )}
+      <ProfileImageRetry source={source} />
       <ImageUploadModal
         isOpen={open}
         title={title}

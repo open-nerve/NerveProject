@@ -3,6 +3,8 @@ import type { ReactNode } from "react";
 import { observer } from "mobx-react";
 import { Avatar, type AvatarProps } from "@makeplane/propel/components/avatar";
 import { cn } from "@nerve/utils";
+import { useTranslation } from "@nerve/i18n";
+import { Button } from "@nerve/propel/button";
 import type { ProfileImageSource } from "@/store/asset/profile-images";
 import { useProfileImage } from "@/hooks/use-profile-image";
 
@@ -51,5 +53,27 @@ export const ProfileAvatar = observer(function ProfileAvatar({ source, className
         />
       )}
     </span>
+  );
+});
+
+/** Kept outside the image so consumers can put the picture inside another button without nesting controls. */
+export const ProfileImageRetry = observer(function ProfileImageRetry({ source }: { source: ProfileImageSource }) {
+  const image = useProfileImage(source);
+  const { t } = useTranslation();
+  if (image.error === undefined) return null;
+  return (
+    <Button
+      type="button"
+      variant="secondary"
+      size="sm"
+      disabled={image.loading}
+      onClick={() => {
+        void image.retry().catch(() => {
+          /* The reader retains the refusal for another explicit attempt. */
+        });
+      }}
+    >
+      {t("image_upload.retry_image")}
+    </Button>
   );
 });

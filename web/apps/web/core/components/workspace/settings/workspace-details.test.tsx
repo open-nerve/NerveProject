@@ -39,6 +39,9 @@ vi.mock("@/components/global/timezone-select", () => ({
 }));
 vi.mock("@/components/workspace/delete-workspace-section", () => ({ DeleteWorkspaceSection: () => null }));
 vi.mock("@/lib/auth/api-client", () => import("@/lib/auth/fake-tab"));
+vi.mock("@/components/workspace/logo", () => ({ WorkspaceLogo: () => null }));
+vi.mock("@/components/assets/image-upload-modal", () => ({ ImageUploadModal: () => null }));
+vi.mock("@/components/assets/profile-image", () => ({ ProfileImageRetry: () => null }));
 vi.mock("@nerve/ui", () => import("@/lib/fake-controls"));
 vi.mock("@makeplane/propel/components/input", () => import("@/lib/fake-controls"));
 vi.mock("@nerve/propel/button", () => import("@/lib/fake-controls"));

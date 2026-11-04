@@ -47,7 +47,12 @@ export const AuthHeader = observer(function AuthHeader(props: TAuthHeader) {
           <div className="relative inline-flex items-center gap-2">
             {t("common.join")}{" "}
             <WorkspaceLogo
-              logo={current.workspace_logo_url}
+              key={JSON.stringify([invitationId, token])}
+              source={{
+                kind: "public-preview",
+                url: current.workspace_logo_url,
+                expiresAt: current.workspace_logo_url_expires_at,
+              }}
               name={current.workspace_name}
               classNames="size-9 flex-shrink-0"
             />{" "}

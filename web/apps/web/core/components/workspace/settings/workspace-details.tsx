@@ -22,8 +22,11 @@ import { Button } from "@nerve/propel/button";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type { OrganizationSize, Workspace, WorkspaceUpdate } from "@nerve/api-client";
 import { CustomSelect } from "@nerve/ui";
-import { cn, getFileURL, validateWorkspaceName } from "@nerve/utils";
+import { cn, validateWorkspaceName } from "@nerve/utils";
 // components
+import { WorkspaceLogo } from "@/components/workspace/logo";
+import { ImageUploadModal } from "@/components/assets/image-upload-modal";
+import { ProfileImageRetry } from "@/components/assets/profile-image";
 import { TimezoneSelect } from "@/components/global/timezone-select";
 // hooks
 import { useWorkspace } from "@/hooks/store/use-workspace";
@@ -46,7 +49,7 @@ type TWorkspaceForm = Required<Pick<WorkspaceUpdate, "name" | "timezone">> & {
 };
 
 /** The form's values for a workspace; a size the form does not offer (none was given) shows as none. */
-const formValues = (workspace: Workspace): TWorkspaceForm => ({
+const formValues = (workspace: Pick<Workspace, "name" | "organization_size" | "timezone">): TWorkspaceForm => ({
   name: workspace.name,
   organization_size: ORGANIZATION_SIZE.find((size) => size === workspace.organization_size) ?? null,
   timezone: workspace.timezone,
@@ -55,6 +58,7 @@ const formValues = (workspace: Workspace): TWorkspaceForm => ({
 export const WorkspaceDetails = observer(function WorkspaceDetails() {
   // states
   const [isLoading, setIsLoading] = useState(false);
+  const [imageWorkspace, setImageWorkspace] = useState<string>();
   // router: the address's workspace, as the caller's list has it (the wrapper shows the page once it has)
   const { workspaceSlug } = useParams();
   // store hooks
@@ -111,31 +115,60 @@ export const WorkspaceDetails = observer(function WorkspaceDetails() {
     void copyLink(workspace.slug, t("workspace_settings.settings.general.url_copied"));
   };
 
+  const workspaceID = workspace?.id;
+  const workspaceName = workspace?.name;
+  const workspaceSize = workspace?.organization_size;
+  const workspaceZone = workspace?.timezone;
   useEffect(() => {
-    if (workspace) reset(formValues(workspace));
-  }, [workspace, reset]);
+    if (workspaceID && workspaceName !== undefined && workspaceZone !== undefined)
+      reset(formValues({ name: workspaceName, organization_size: workspaceSize ?? null, timezone: workspaceZone }));
+  }, [workspaceID, workspaceName, workspaceSize, workspaceZone, reset]);
+  useEffect(() => setImageWorkspace(undefined), [workspaceID]);
 
   const isAdmin = allowPermissions([EUserPermissions.ADMIN], EUserPermissionsLevel.WORKSPACE, workspaceSlug);
 
   if (!workspace) return null;
+  const logoLabel = t(
+    workspace.logo_asset_id
+      ? "workspace_settings.settings.general.edit_logo"
+      : "workspace_settings.settings.general.upload_logo"
+  );
+  const logo = (
+    <WorkspaceLogo
+      source={{ kind: "workspace", workspaceID: workspace.id }}
+      name={workspace.name}
+      classNames="size-14 text-24"
+    />
+  );
 
   return (
     <>
+      <ImageUploadModal
+        key={workspace.id}
+        isOpen={imageWorkspace === workspace.id}
+        title={logoLabel}
+        target={{ purpose: "WORKSPACE_LOGO", scope: { kind: "workspace", id: workspace.id } }}
+        currentImage={logo}
+        canRemove={!!workspace.logo_asset_id}
+        onSubmit={async (asset) => {
+          await updateWorkspace(workspace.slug, { logo_asset_id: asset?.id ?? null });
+        }}
+        onClose={() => setImageWorkspace(undefined)}
+      />
       <div ref={formRef} className={cn("flex w-full flex-col gap-y-7", { "opacity-60": !isAdmin })}>
         <div className="flex items-center gap-5">
           <div className="flex shrink-0 flex-col gap-1">
-            {workspace.logo_url ? (
-              <div className="relative flex size-14">
-                <img
-                  src={getFileURL(workspace.logo_url)}
-                  className="absolute top-0 left-0 size-full rounded-md object-cover"
-                  alt=""
-                />
-              </div>
+            {isAdmin ? (
+              <button
+                type="button"
+                aria-label={logoLabel}
+                className="rounded-md focus-visible:outline-2 focus-visible:outline-accent-strong"
+                onClick={() => setImageWorkspace(workspace.id)}
+              >
+                {logo}
+              </button>
             ) : (
-              <div className="relative grid size-14 place-items-center rounded-md bg-accent-primary text-24 text-on-color uppercase">
-                {workspace.name.charAt(0)}
-              </div>
+              logo
             )}
           </div>
           <div className="flex flex-col gap-1">
@@ -143,6 +176,16 @@ export const WorkspaceDetails = observer(function WorkspaceDetails() {
             <button type="button" onClick={handleCopyUrl} className="text-left text-body-xs-regular tracking-tight">{`${
               typeof window !== "undefined" && window.location.origin.replace("http://", "").replace("https://", "")
             }/${workspace.slug}`}</button>
+            {isAdmin && (
+              <button
+                type="button"
+                className="text-left text-caption-sm-medium text-accent-primary"
+                onClick={() => setImageWorkspace(workspace.id)}
+              >
+                {logoLabel}
+              </button>
+            )}
+            <ProfileImageRetry source={{ kind: "workspace", workspaceID: workspace.id }} />
           </div>
         </div>
         <div className="flex flex-col gap-7">

@@ -1,6 +1,6 @@
 # M5/P6 资料图片上传与展示阶段记录
 
-> 分支 `codex/m5-p6`，实施基线 `main@f5f4ce9431e7fb360363bf169da33487cf9b864f`。P5 已完整收尾，P6 预检提交 ab9f86b8；当前 T1–T5 完成，PC2已批准A，T6修复接续，未关闭 A1–A8。按连续授权推进，一次整分支 deep-review 后集成；重大风险先提交上报。
+> 分支 `codex/m5-p6`，实施基线 `main@f5f4ce9431e7fb360363bf169da33487cf9b864f`。P5 已完整收尾，P6 预检提交 ab9f86b8；当前 T1–T6 完成，PC2按A完成基础与页面回归，T7接续，未关闭 A1–A8。按连续授权推进，一次整分支 deep-review 后集成；重大风险先提交上报。
 
 ## 1. 输入与范围
 
@@ -20,7 +20,7 @@ T1：JSON资产prepare/complete用生成DTO及当前ApiClient；raw PUT保持原
 
 ## 4. 尚未完成
 
-T6–T15及A1–A8继续；没有声称逐Task单元测试等于真实页面、完整P6或M5完成。
+T7–T15及A1–A8继续；没有声称逐Task单元测试等于真实页面、完整P6或M5完成。
 
 ## 5. T2 上传会话与统一权限失效
 
@@ -82,3 +82,14 @@ T5最终完整make test-web 18/18通过（17缓存，web实际3318项）；源�
 实际RootStore新增17项：原四场景、guest降级/恢复、成员关系移除恢复、排队、root退休/迟到拒绝、未知scope、无关变化、正常已确认写与目录重放，以及guest→admin的直接事实校验。首轮有4项测试把受控时间的每次新值误当固定应答，修正固定expiry后取得13failed/3passed的行为RED；补充guest→admin也取得1failed/16passed后修复。最终20文件293项联合回归通过，完整前端18/18（17缓存，web实际3336项），类型/格式与13个修改文件零warning通过，输入4466个前后一致。首次lint因workspace目录的非空断言规则拒绝8处测试断言，改用明确不存在就抛错的夹具，不新增豁免。
 
 三项变异分别取消有效期检查、取消原目录role检查、恢复undefined结果成功toast，均产生AssertionError，源码逐SHA还原；原件见t6-pc2-mutations.json与t6-pc2-*.log。初始PC2实验原件仍保留。此处完成基础发布修复，T6真实工作区图标页面接线和联合UI回归继续；PC2整体页面验收及阶段A1–A8不提前关闭。
+
+
+## 11. T6 工作区图标与联合页面验收
+
+工作区设置管理员通过原图标按钮/文字入口更换或移除，复用ImageUploadModal并只PATCH logo_asset_id；成员/访客保持目录允许的只读图标，没有文件控件。目标按workspace UUID，弹窗随目标变化清理；PC2作用于实际页面绑定，失权再恢复/同slug新UUID的迟到成功不恢复旧图或旧弹窗，跨工作区迟到绑定不影响当前页面。拒绝保留原图与已完成文件，重试仅PATCH。
+
+表单原先按整个workspace对象reset，新增真实DOM测试复现仅logo URL刷新就将“Local draft”清为“ws”。现改为只依workspace ID及name/organization_size/timezone重置，图标上传/移除/能力刷新保持脏字段，服务器资料变化及真实切换工作区仍同步。该修正遵守预检已记录的局部决定，不调整共享表单库。
+
+WorkspaceLogo收紧为明确workspace身份或public-preview，全部六个直接调用点与手绘下拉图标同时迁移；未知身份仅占位，不接裸URL兼容分支。三个图标/两个工作区真实读取共享一轮目录请求及一轮到期刷新。公开邀请分支不依赖登录store，URL需有效expiry，过期/图片失败即卸载；AuthHeader当段适配接口与link key。邀请的完整有界重读/切换/取消仍由T10完成，不能把此处薄显示测试当成A3全部验收。ProfileImageRetry抽成明确的独立按钮，个人和工作区复用，避免把按钮塞进可能嵌在菜单按钮中的图片。
+
+新增页面首次6failed/2passed（5个缺失入口及真实脏表单重置）；图标两项行为RED后全部通过。22项聚焦、37文件315项受影响回归、最终完整前端18/18通过（17缓存，web实际3346项），4468输入hash一致。类型、13文件格式/零warning通过，原数组索引key警告改为三处明确测试消费者，不放宽规则。最终阶段门禁、三浏览器和deep-review仍按T11–T15执行。

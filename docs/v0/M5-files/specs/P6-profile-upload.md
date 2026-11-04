@@ -1,6 +1,6 @@
 # M5/P6：资料图片上传与展示
 
-> 预检通过，T1–T5 完成；PC2已批准A，T6修复工作区写发布后继续。分支 `codex/m5-p6`，初始基线c59cedf3，实施基线已同步到 `main@f5f4ce9431e7fb360363bf169da33487cf9b864f`。P5 与两次集成修复已完成准确 main CI、全部证据归档及分支/worktree清理，见[P5 收尾记录](../reviews/P5-issue-assets-review.md#222-最终main全绿与归档清理)。
+> 预检通过，T1–T6 完成；PC2按A完成基础与页面回归，继续T7。分支 `codex/m5-p6`，初始基线c59cedf3，实施基线已同步到 `main@f5f4ce9431e7fb360363bf169da33487cf9b864f`。P5 与两次集成修复已完成准确 main CI、全部证据归档及分支/worktree清理，见[P5 收尾记录](../reviews/P5-issue-assets-review.md#222-最终main全绿与归档清理)。
 > PC1 的复现、已批准方案 A 及代价见[决策记录](../reviews/P6-public-project-lifetime-decision.md)；M4/M5设计、spec、plan与联合回归落点已同步，原角色授权和ProjectStore R06保持。
 PC2 已批准 A：[工作区更新的迟到回包](../reviews/P6-workspace-write-lifetime-decision.md)。
 > 依据 M5 设计 §3、§5–6、§9、§11–12、P4 已实现的资料引用合同及 P5 的准备件隐私。执行沿连续授权：主控局部决定并记代价，重大风险先提交再上报。
