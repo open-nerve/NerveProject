@@ -22,7 +22,7 @@ SOLID：消费方声明Inspect-only和List-only小接口，domain只处理纯游
 
 ## 3. Local Fix：F1 全零草稿UUID返回500
 
-审者评级Minor；主控按新增私有入口“不可存在资源同形拒绝”的实际合同，将其作为必须修复的功能边界处理，不因无越权就保留错误分类。
+审者评级Minor；主控复定为Important功能边界，按新增私有入口“不可存在资源同形拒绝”的实际合同，将其作为必须修复的功能边界处理，不因无越权就保留错误分类。
 
 位置：`server/internal/modules/asset/app/draft_preparations.go:47`（审查候选行号）。生成绑定可解析全零UUID；无cursor时domain decoder早退成功；应用用例未拦截，进入现有issue AssetAccess.read的内部前置检查，返回原始`invalid issue asset request`，最终HTTP为500。普通不可能存在的ID被报成系统故障，可能引起无意义重试及日志噪声；未发现泄露或数据更改路径。
 
@@ -37,3 +37,5 @@ SOLID：消费方声明Inspect-only和List-only小接口，domain只处理纯游
 ## 5. 合并判断
 
 审者原结论With fixes；没有Structural或NeedsDecision项。主控F1局部修复与有效RED/GREEN已闭环，没有延后minor。修复前七门禁全通过（E2E385/385）；修复后完整门禁与准确最终分支CI仍为集成前置，不能以本报告替代它们或main CI。当前尚未合并。
+
+主控最终本地复验：F1修复后七门禁全部通过，完整E2E385/385，证据见[P7a阶段记录§12](../v0/M5-files/reviews/P7a-draft-preparations-review.md#12-最终本地交付收据)。没有待修审查项；准确最终分支CI和main集成仍分别核验。

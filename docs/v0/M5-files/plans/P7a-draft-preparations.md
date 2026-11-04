@@ -1,6 +1,6 @@
 # M5/P7a 草稿准备件恢复协议 Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans 逐 Task 内联执行，不逐 Task 新派实现者/审者；阶段末一次 fresh whole-branch deep-review。2026-11-04 负责人已授权按预检合同实施，T1–T4 已完成，T5 进行中。分支 `codex/m5-p7a`，main 基线 `963636757fe5c5a8c10d5781b43d1481ba6f32a2`；P6准确main CI41833460144及归档/清理前置已核；本阶段预检通过；产品验收随各任务记录。
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans 逐 Task 内联执行，不逐 Task 新派实现者/审者；阶段末一次 fresh whole-branch deep-review。2026-11-04 负责人已授权按预检合同实施，T1–T4 已完成；本地七门禁与整审修复完成，准确最终分支CI待核。分支 `codex/m5-p7a`，main 基线 `963636757fe5c5a8c10d5781b43d1481ba6f32a2`；P6准确main CI41833460144及归档/清理前置已核；本阶段预检通过；产品验收随各任务记录。
 
 **Goal:** 作者能经有界私有查询找回草稿未绑定准备件 ID，沿既有 DELETE 明确丢弃后恢复发布。
 **Architecture:** asset app 声明窄读取端口，现有 owner Host.Inspect 和 file_assets 查询共用 ReadTx；API 复用 Asset DTO，生成客户端；不改草稿完整性/清理/写锁协议。
@@ -62,14 +62,14 @@
 
 ## Task 5（T5）：七门禁、证据与检查点 CI
 
-- [ ] Step 1：A1–A4逐项证据，生成物/错误code/唯一读取/无存储依赖/无写副作用核对，P7b接收合同更新；所有raw、失败、输入清单和容器前后快照保留。
-- [ ] Step 2：串行 `make gen-check`、`make lint-go`、`GOFLAGS=-p=1 make test`、`make lint-web`、`make knip`、`make test-web`、`make e2e`；完整exit/cache/skip和前后输入hash。无新页面，不为这个纯协议新增三浏览器页面矩阵；既有完整E2E仍为门禁。
+- [x] Step 1：A1–A4逐项证据，生成物/错误code/唯一读取/无存储依赖/无写副作用核对，P7b接收合同更新；所有raw、失败、输入清单和容器前后快照保留。
+- [x] Step 2：串行 `make gen-check`、`make lint-go`、`GOFLAGS=-p=1 make test`、`make lint-web`、`make knip`、`make test-web`、`make e2e`；完整exit/cache/skip和前后输入hash。无新页面，不为这个纯协议新增三浏览器页面矩阵；既有完整E2E仍为门禁。
 - [ ] Step 3：详细中文检查点提交/system push，准确HEAD server/web/e2e全绿；用已连接GitHub日志查失败。W11保持已知一次重跑纪律，不自改CI预算掩盖故障。
 
 ## Task 6（T6）：一次整分支 deep-review 与修复
 
-- [ ] Step 1：冻结正式main基线..候选HEAD，fresh reviewer读完整手写diff和调用链、五Review Focus/所有Ruling、真实证据；三视角报告保存docs/reviews下一编号，生成物核源。T1–T4产品冻结后，该只读审查可与T5门禁/CI并行；待门禁完成才进入修复及最终判定，不以审查替代测试。
-- [ ] Step 2：主控逐条裁定，局部问题根因修复、必要RED/GREEN及受影响回归；新架构问题先提交上报。不得重复同范围再派审者替代处理，DeclinedToJudge具名闭环。
+- [x] Step 1：冻结正式main基线..候选HEAD，fresh reviewer读完整手写diff和调用链、五Review Focus/所有Ruling、真实证据；三视角报告保存docs/reviews下一编号，生成物核源。T1–T4产品冻结后，该只读审查可与T5门禁/CI并行；待门禁完成才进入修复及最终判定，不以审查替代测试。
+- [x] Step 2：主控逐条裁定，局部问题根因修复、必要RED/GREEN及受影响回归；新架构问题先提交上报。不得重复同范围再派审者替代处理，DeclinedToJudge具名闭环。
 - [ ] Step 3：最终本地门禁覆盖当前输入；准确最终分支CI全绿后关闭A5，明确P7b页面尚未实现，handoffs保持open。
 
 ## Task 7（T7）：集成归档与 P7b 正式预检
