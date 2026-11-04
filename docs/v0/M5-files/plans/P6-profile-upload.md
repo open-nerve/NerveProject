@@ -1,6 +1,6 @@
 # M5/P6 资料图片上传与展示 Implementation Plan
 
-> 预检通过，T1–T6完成；PC2按A完成基础与页面回归，继续T7。**For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans 按 Task 内联实施；不用逐 Task 新派实现者/审者。完成后一次 fresh whole-branch review。本计划在 `codex/m5-p6`，初始基线c59cedf3，实施基线已noff同步 `main@f5f4ce9431e7fb360363bf169da33487cf9b864f`；[PC1](../reviews/P6-public-project-lifetime-decision.md)已批准 A并同步合同。P5准确main CI及归档清理已完成，按连续授权从T1执行。
+> 预检通过，T1–T7完成；PC2按A完成基础与页面回归，继续T8。**For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans 按 Task 内联实施；不用逐 Task 新派实现者/审者。完成后一次 fresh whole-branch review。本计划在 `codex/m5-p6`，初始基线c59cedf3，实施基线已noff同步 `main@f5f4ce9431e7fb360363bf169da33487cf9b864f`；[PC1](../reviews/P6-public-project-lifetime-decision.md)已批准 A并同步合同。P5准确main CI及归档清理已完成，按连续授权从T1执行。
 
 PC2 已批准 A：[工作区更新的迟到回包](../reviews/P6-workspace-write-lifetime-decision.md)。
 **Goal:** 资料图片真实上传、宿主绑定、权限/到期展示和可访问交互。
@@ -98,9 +98,9 @@ PC2 已批准 A：[工作区更新的迟到回包](../reviews/P6-workspace-write
 **Files:** 新 helpers/project-covers.ts/.test.ts、app/assets/project-covers/cover-01.svg…cover-29.svg/SOURCES.md；新增 components/assets/project-cover-picker.tsx/.test.tsx。
 **Interfaces:** 产出稳定 PROJECT_COVERS、projectCoverURL 与只携现有DTO封面字段的选择值；本地预设不上传。
 
-- [ ] Step 1：完整29唯一ID、每个资源可构建、未知ID占位；未选择/上传/预设/显式清除状态不混淆；随机仅点击一次、rerender不变、不持久化路径、切预设取消旧上传链。
-- [ ] Step 2：`pnpm --filter web exec vitest run helpers/project-covers.test.ts core/components/assets/project-cover-picker.test.tsx` RED→GREEN；创建自制SVG并登记，视觉检查不同尺寸/对比。
-- [ ] Step 3：构建核所有29资源、无第三方标志/外部请求，提交 `feat(M5/P6): 提供稳定编号的项目预设封面`。
+- [x] Step 1：完整29唯一ID、每个资源可构建、未知ID占位；未选择/上传/预设/显式清除状态不混淆；随机仅点击一次、rerender不变、不持久化路径、切预设取消旧上传链。
+- [x] Step 2：`pnpm --filter web exec vitest run helpers/project-covers.test.ts core/components/assets/project-cover-picker.test.tsx` RED→GREEN；创建自制SVG并登记，视觉检查不同尺寸/对比。
+- [x] Step 3：构建核所有29资源、无第三方标志/外部请求，提交 `feat(M5/P6): 提供稳定编号的项目预设封面`。
 
 ## Task 8（T8）：新建项目一次绑定
 

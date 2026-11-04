@@ -1,0 +1,10 @@
+<!-- Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900">
+  <defs>
+    <linearGradient id="field" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#765036"/><stop offset="1" stop-color="#382924"/></linearGradient>
+    <linearGradient id="shade" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#08131f" stop-opacity=".12"/><stop offset="1" stop-color="#08131f" stop-opacity=".32"/></linearGradient>
+  </defs>
+  <path fill="url(#field)" d="M0 0H1600V900H0Z"/>
+  <rect x="-180" y="142" width="310" height="1000" rx="155" fill="#765036" opacity="0.8" transform="rotate(-16 800 450)"/><rect x="170" y="212" width="310" height="1000" rx="155" fill="#d9a263" opacity="0.3" transform="rotate(-16 800 450)"/><rect x="520" y="282" width="310" height="1000" rx="155" fill="#765036" opacity="0.8" transform="rotate(-16 800 450)"/><rect x="870" y="352" width="310" height="1000" rx="155" fill="#d9a263" opacity="0.3" transform="rotate(-16 800 450)"/><rect x="1220" y="422" width="310" height="1000" rx="155" fill="#765036" opacity="0.8" transform="rotate(-16 800 450)"/><rect x="1570" y="492" width="310" height="1000" rx="155" fill="#d9a263" opacity="0.3" transform="rotate(-16 800 450)"/>
+  <path fill="url(#shade)" d="M0 0H1600V900H0Z"/>
+</svg>

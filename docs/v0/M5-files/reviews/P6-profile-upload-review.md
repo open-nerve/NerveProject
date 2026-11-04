@@ -1,6 +1,6 @@
 # M5/P6 资料图片上传与展示阶段记录
 
-> 分支 `codex/m5-p6`，实施基线 `main@f5f4ce9431e7fb360363bf169da33487cf9b864f`。P5 已完整收尾，P6 预检提交 ab9f86b8；当前 T1–T6 完成，PC2按A完成基础与页面回归，T7接续，未关闭 A1–A8。按连续授权推进，一次整分支 deep-review 后集成；重大风险先提交上报。
+> 分支 `codex/m5-p6`，实施基线 `main@f5f4ce9431e7fb360363bf169da33487cf9b864f`。P5 已完整收尾，P6 预检提交 ab9f86b8；当前 T1–T7 完成，PC2按A完成基础与页面回归，T8接续，未关闭 A1–A8。按连续授权推进，一次整分支 deep-review 后集成；重大风险先提交上报。
 
 ## 1. 输入与范围
 
@@ -20,7 +20,7 @@ T1：JSON资产prepare/complete用生成DTO及当前ApiClient；raw PUT保持原
 
 ## 4. 尚未完成
 
-T7–T15及A1–A8继续；没有声称逐Task单元测试等于真实页面、完整P6或M5完成。
+T8–T15及A1–A8继续；没有声称逐Task单元测试等于真实页面、完整P6或M5完成。
 
 ## 5. T2 上传会话与统一权限失效
 
@@ -93,3 +93,13 @@ T5最终完整make test-web 18/18通过（17缓存，web实际3318项）；源�
 WorkspaceLogo收紧为明确workspace身份或public-preview，全部六个直接调用点与手绘下拉图标同时迁移；未知身份仅占位，不接裸URL兼容分支。三个图标/两个工作区真实读取共享一轮目录请求及一轮到期刷新。公开邀请分支不依赖登录store，URL需有效expiry，过期/图片失败即卸载；AuthHeader当段适配接口与link key。邀请的完整有界重读/切换/取消仍由T10完成，不能把此处薄显示测试当成A3全部验收。ProfileImageRetry抽成明确的独立按钮，个人和工作区复用，避免把按钮塞进可能嵌在菜单按钮中的图片。
 
 新增页面首次6failed/2passed（5个缺失入口及真实脏表单重置）；图标两项行为RED后全部通过。22项聚焦、37文件315项受影响回归、最终完整前端18/18通过（17缓存，web实际3346项），4468输入hash一致。类型、13文件格式/零warning通过，原数组索引key警告改为三处明确测试消费者，不放宽规则。最终阶段门禁、三浏览器和deep-review仍按T11–T15执行。
+
+## 12. T7 稳定预设与主动选择
+
+29张SVG为OpenNerve自制，稳定cover-01…cover-29，SOURCES逐一登记图形与来源；无外部图片、脚本、字体或品牌。PROJECT_COVERS只把编号解析为显示URL，未知值不给随机fallback。选择器的受控值直接取生成ProjectCreate的两个封面字段，初始省略/上传UUID/预设/两个null分别保留；只有主动随机点击才抽取编号。预设或清除先取消旧上传，原PUT迟到不再complete；绑定中或范围退休无操作。
+
+行为RED为9failed/13passed，含无图、无入口、选中态和旧链取消；后续42项组件/映射测试通过。首次GREEN仅Vitest内联本地SVG的测试假设失败，修正测试对本地内联形式的识别，不改变应用assetsInlineLimit:0。真实应用build通过11/11（9缓存）；因T8/T9尚未消费新模块，另用隔离Vite入口构建29个SVG，逐字节与原件相同，总32601字节，详见t7-cover-build.json。此证据不替代接线后的页面构建。
+
+1440宽截图目视全部29张16:9与4:1裁剪；390窄屏检查前8张，文字对比清楚，无横向溢出，58个img全部解码为1600×900。原件t7-covers-desktop.png/mobile.png及t7-playwright-cli保留；CLI默认Chromium版本未缓存，使用已有Chrome，无安装。预览页唯一404是favicon.ico；旧CLI文档network命令不被本机版本支持，未把它算作页面网络验收。自有临时预览HTTP进程与浏览器已关闭。
+
+翻译全引用守卫发现T6遗漏两条图标按钮文案，补齐en/zh-CN且保留RED。1332引用守卫、类型、格式、4文件零warning及完整前端18/18通过（15缓存）。当前原始web测试与收据保存于t7-web-tests.log/t7-*-receipt.json；图片选择、创建和保存页面仍由T8/T9完成，A1–A8保持开放。

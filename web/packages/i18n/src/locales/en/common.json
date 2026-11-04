@@ -641,5 +641,11 @@
       "next": "Next",
       "create_first_project": "Create your first project"
     }
+  },
+  "project_cover": {
+    "presets": "Preset covers",
+    "preset": "Cover",
+    "random": "Random cover",
+    "remove": "Remove cover"
   }
 }

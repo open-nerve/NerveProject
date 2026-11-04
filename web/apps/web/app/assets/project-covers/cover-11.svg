@@ -1,0 +1,10 @@
+<!-- Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900">
+  <defs>
+    <linearGradient id="field" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#354b68"/><stop offset="1" stop-color="#15273b"/></linearGradient>
+    <linearGradient id="shade" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#08131f" stop-opacity=".12"/><stop offset="1" stop-color="#08131f" stop-opacity=".32"/></linearGradient>
+  </defs>
+  <path fill="url(#field)" d="M0 0H1600V900H0Z"/>
+  <path d="M-120 700 Q424 40 760 540 T1740 400 V1000 H-120Z" fill="#354b68"/><path d="M-100 960 Q426 280 940 690 T1740 540 V1000Z" fill="#9cb4d3" opacity=".28"/>
+  <path fill="url(#shade)" d="M0 0H1600V900H0Z"/>
+</svg>
