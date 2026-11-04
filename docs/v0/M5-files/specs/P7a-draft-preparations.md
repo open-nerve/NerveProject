@@ -1,6 +1,6 @@
 # M5/P7a：草稿准备件恢复协议
 
-> 2026-11-04：负责人已批准[方案 A](../reviews/P7-draft-preparation-recovery-decision.md)：增加作者恢复入口，拆为 P7a 协议、P7b 页面。预检完成后，负责人已授权从 T1 实施。分支 `codex/m5-p7a`；正式 main 基线 `963636757fe5c5a8c10d5781b43d1481ba6f32a2`，P6准确main CI41833460144全绿、归档/清理完成；新协议一次fresh builder及主控预检通过。当前 T1 进行中，产品验收按证据回填。
+> 2026-11-04：负责人已批准[方案 A](../reviews/P7-draft-preparation-recovery-decision.md)：增加作者恢复入口，拆为 P7a 协议、P7b 页面。预检完成后，负责人已授权从 T1 实施。分支 `codex/m5-p7a`；正式 main 基线 `963636757fe5c5a8c10d5781b43d1481ba6f32a2`，P6准确main CI41833460144全绿、归档/清理完成；新协议一次fresh builder及主控预检通过。T1 已完成，T2 进行中，产品验收按证据回填。
 
 ## 1. 目标、范围与选择
 

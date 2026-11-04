@@ -31,17 +31,18 @@ type DeleteUseCase interface {
 	Execute(context.Context, uuid.UUID) error
 }
 type UseCases struct {
-	Duplicate      DuplicateUseCase
-	Delete         DeleteUseCase
-	Prepare        PrepareUseCase
-	Get            GetUseCase
-	Complete       CompleteUseCase
-	ResolveContent ResolveContentUseCase
+	ListDraftPreparations ListDraftPreparationsUseCase
+	Duplicate             DuplicateUseCase
+	Delete                DeleteUseCase
+	Prepare               PrepareUseCase
+	Get                   GetUseCase
+	Complete              CompleteUseCase
+	ResolveContent        ResolveContentUseCase
 }
 type handler struct{ uc UseCases }
 
 func Register(router *httpserver.Router, api *httpserver.API, uc UseCases) {
-	strict := gen.NewStrictHandlerWithOptions(handler{uc: uc}, nil, gen.StrictHTTPServerOptions{
+	strict := gen.NewStrictHandlerWithOptions(handler{uc: uc}, []gen.StrictMiddlewareFunc{withPreparationQuery}, gen.StrictHTTPServerOptions{
 		RequestErrorHandlerFunc: api.Errors.BodyError,
 		ResponseErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
 			api.Errors.Write(w, r, assetBusinessError(err))

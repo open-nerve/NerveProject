@@ -1,6 +1,6 @@
 # M5/P7a 草稿准备件恢复协议 Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans 逐 Task 内联执行，不逐 Task 新派实现者/审者；阶段末一次 fresh whole-branch deep-review。2026-11-04 负责人已授权按预检合同实施，当前 T1 进行中。分支 `codex/m5-p7a`，main 基线 `963636757fe5c5a8c10d5781b43d1481ba6f32a2`；P6准确main CI41833460144及归档/清理前置已核；本阶段预检通过；产品验收随各任务记录。
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans 逐 Task 内联执行，不逐 Task 新派实现者/审者；阶段末一次 fresh whole-branch deep-review。2026-11-04 负责人已授权按预检合同实施，T1 已完成，T2 进行中。分支 `codex/m5-p7a`，main 基线 `963636757fe5c5a8c10d5781b43d1481ba6f32a2`；P6准确main CI41833460144及归档/清理前置已核；本阶段预检通过；产品验收随各任务记录。
 
 **Goal:** 作者能经有界私有查询找回草稿未绑定准备件 ID，沿既有 DELETE 明确丢弃后恢复发布。
 **Architecture:** asset app 声明窄读取端口，现有 owner Host.Inspect 和 file_assets 查询共用 ReadTx；API 复用 Asset DTO，生成客户端；不改草稿完整性/清理/写锁协议。
@@ -29,9 +29,9 @@
 **Files:** 新 `server/internal/modules/asset/domain/draft_preparations.go`、`app/draft_preparations.go`、`adapter/postgres/draft_preparations.go`、`queries/draft_preparations.sql` 及对应测试；sqlc生成物；tools/keywords.json；阶段review。
 **Interfaces:** spec§3/4 的 DraftPreparationQuery/Reader/Page、PreparationHostReader、ListDraftPreparations.Execute；既有 shared cursor/PageSize、Store.queries、decodeAsset。
 
-- [ ] Step 1：表驱动纯规则与实际 ReadTx/fake host/rows 覆盖规范游标/跨draft/空值、limit、RequireActor、Host拒绝不查rows、错误不吞、同ctx与不依赖写接口。实际仓储覆盖51/101+行、非时间顺序UUID、pending/uploaded、bound/deleted/other actor/other draft/null项目过滤，使用现有fixture和带注释的隔离仓储数据。
-- [ ] Step 2：`go test -p 1 -count=1 ./internal/modules/asset/domain ./internal/modules/asset/app ./internal/modules/asset/adapter/postgres`（cwd server）。先保留有区分度断言失败，再实现；SQL仅file_assets，最多limit+1，模块依赖守卫保持。generated SQL只由make gen生成。
-- [ ] Step 3：同命令GREEN，去掉actor过滤和同快照各一个有效变异/恢复SHA；核scope/用途/全父链、损坏记录错误；详细中文提交 `feat(M5/P7a): 增加草稿准备件有界读取用例`。
+- [x] Step 1：表驱动纯规则与实际 ReadTx/fake host/rows 覆盖规范游标/跨draft/空值、limit、RequireActor、Host拒绝不查rows、错误不吞、同ctx与不依赖写接口。实际仓储覆盖51/101+行、非时间顺序UUID、pending/uploaded、bound/deleted/other actor/other draft/null项目过滤，使用现有fixture和带注释的隔离仓储数据。
+- [x] Step 2：`go test -p 1 -count=1 ./internal/modules/asset/domain ./internal/modules/asset/app ./internal/modules/asset/adapter/postgres`（cwd server）。先保留有区分度断言失败，再实现；SQL仅file_assets，最多limit+1，模块依赖守卫保持。generated SQL只由make gen生成。
+- [x] Step 3：同命令GREEN，去掉actor过滤和同快照各一个有效变异/恢复SHA；核scope/用途/全父链、损坏记录错误；详细中文提交 `feat(M5/P7a): 增加草稿准备件有界读取用例`。
 
 ## Task 2（T2）：契约、HTTP 与现有组合根接线
 

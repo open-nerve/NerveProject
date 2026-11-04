@@ -1,6 +1,6 @@
 # M5/P7a 阶段评审记录
 
-> 2026-11-04：按负责人已批准A同步合同并通过预检；现已获准实施，当前 T1 进行中。分支codex/m5-p7a；main基线963636757fe5c5a8c10d5781b43d1481ba6f32a2，P6准确main CI41833460144及归档/清理前置已核；预检通过，实施证据见下。
+> 2026-11-04：按负责人已批准A同步合同并通过预检；现已获准实施，T1 已完成，T2 进行中。分支codex/m5-p7a；main基线963636757fe5c5a8c10d5781b43d1481ba6f32a2，P6准确main CI41833460144及归档/清理前置已核；预检通过，实施证据见下。
 
 ## 1. 范围与方式
 
@@ -27,8 +27,17 @@ A1–A6待各任务闭环；原预检时无新API、产品修改、依赖安装�
 
 P7b承接内容附件、编辑器、恢复UI、普通/草稿复制结果、计数显示和旧services包删除；P8/closeout承接最终F1–F18、默认部署/容量、P3-M1/P4-M1、全仓warning规则/死成员、具名旧copyMarkdownToClipboard风险与所有handoffs最终关闭。输入handoffs现仍open。
 
-## 6. T1 实施记录（进行中）
+## 6. T1 实施记录
 
 - R7：准备件同时要求申请归属 `user_id` 与创建者 `created_by_id` 为当前作者；沿用既有私有资产所有权，不把审计字段独自当授权。代价是异常或迁移后两者不一致的记录不会暴露，仓储测试分别验证两种不一致。宿主返回的 scope/draft 必须与请求一致，错配返回既有 scope_changed，拒绝继续行查询。
 - 已有游标、应用用例及实际 PostgreSQL 仓储行为 RED/GREEN；原始证据 `.superpowers/sdd/P7a-draft-preparations/`。最初缺声明/fixture 字节参数导致的编译失败不算 RED；有效 RED 为 `t1-domain-app-red-second` 与 `t1-store-red`。
 - `t1-host-identity-red` 与 `t1-snapshot-mutation` 均实际断言失败并精确 SHA 恢复。首次作者变异文本匹配未命中，未运行测试，不计有效变异；重做记录另存。
+
+- T1 提交 `bb1313a2`；关闭任务的完整三包 `go test -p 1 -count=1` 通过（37.789 秒），4538 个非文档输入前后相同，无测试缓存。`t1-full-green.json`/raw 保存；移除作者过滤使真实仓储返回多余行而失败（`t1-actor-mutation-v2`），源 SQL 与 sqlc 生成物 SHA 精确恢复。
+
+## 7. T2 实施记录（进行中）
+
+- 新路径通过模块 YAML 和总入口 `api/openapi.yaml` 引入；生成 Go/TS/汇总契约。R8：plan 文件清单未列总入口与权限矩阵，将其按既有契约流程纳入；不改守卫或豁免。代价是新增操作必须持续保持矩阵覆盖，已由现有守卫实际检出缺行。
+- HTTP 可运行空桩取得 `t2-http-red` 真实断言失败后，接入 T1 用例与严格查询参数中间件，未提交桩。`t2-http-green-matrix-red` 的唯一失败是矩阵缺行；补入新操作六角色行。首次定向矩阵命令漏选 prepare 子用例，失败属于测试选择器错误，不算行为 RED，完整日志保留后修正命令。
+- HTTP/契约与矩阵分别于 `t2-http-and-contract-green-v2`、`t2-permission-matrix-green` 通过。模块 HTTP TestMain 另准确检出新端点三个声明错误码尚未经本包 CheckResponse 验证，补既有错误映射表，不豁免。架构与平台契约检查通过，源输入稳定。
+- 文档预检提交 `e52d38ea` 的 CI41839754475 已全绿，仅证明旧产品树；本阶段产品尚待独立 CI。
