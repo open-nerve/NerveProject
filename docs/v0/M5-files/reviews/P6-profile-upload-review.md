@@ -1,6 +1,6 @@
 # M5/P6 资料图片上传与展示阶段记录
 
-> 分支 `codex/m5-p6`，实施基线 `main@f5f4ce9431e7fb360363bf169da33487cf9b864f`。P5 已完整收尾，P6 预检提交 ab9f86b8；当前 T1–T3 完成，未关闭 A1–A8。按连续授权推进，一次整分支 deep-review 后集成；重大风险先提交上报。
+> 分支 `codex/m5-p6`，实施基线 `main@f5f4ce9431e7fb360363bf169da33487cf9b864f`。P5 已完整收尾，P6 预检提交 ab9f86b8；当前 T1–T4 完成，未关闭 A1–A8。按连续授权推进，一次整分支 deep-review 后集成；重大风险先提交上报。
 
 ## 1. 输入与范围
 
@@ -20,7 +20,7 @@ T1：JSON资产prepare/complete用生成DTO及当前ApiClient；raw PUT保持原
 
 ## 4. 尚未完成
 
-T4–T15及A1–A8继续；没有声称逐Task单元测试等于真实页面、完整P6或M5完成。
+T5–T15及A1–A8继续；没有声称逐Task单元测试等于真实页面、完整P6或M5完成。
 
 ## 5. T2 上传会话与统一权限失效
 
@@ -45,3 +45,13 @@ UserStore.data改为只读Reconciled投影，旧/me回包不得覆盖已确认�
 失败原件不覆写：跨工作区测试最初respond误答成员DTO给工作区接口，限制为members端点后修正；呈现单测mock不是observable，使用同值新source触发真实props渲染后验证卸载；types中的Avatar不允许className和Map泛型错误分别由外层span承载样式与明确cache类型修正。SWR2.4.2在JSDOM中将visibility事件当作其setTimeout.bind的delay产生Node TimeoutNaNWarning，trace指向锁定依赖的initFocus，不是产品计时器；原warn保留，不更换依赖或压制诊断。
 
 局部裁定：内部拆为宿主投影、读取组与视图lease，不复制实体；工作区请求共享，但授权范围证明分别计代。代价是新范围在已有请求发出后挂载时需再读一次，仍同时最多一条该来源请求。hook增加onLoad用于成功图片恢复错误额度；可观察生命期与计时器分别由store和view拥有。hook的DOM测试扩展名按实际JSX改为.test.tsx，计划命令同步。T3只提供读取与retry接口，页面控件、公开邀请和完整消费者迁移继续由后续Task交付，A1–A8不提前关闭。
+
+## 7. T4 原生图片选择与弹窗
+
+先读Plane个人/工作区图片弹窗，保留预览、替换、移除、取消与上传保存的布局语义；按已批准设计改用原生file/drop和当前上传会话，不引入dropzone、旧FileService、render内objectURL或延迟reset。ImagePicker处理单文件输入、拖放的多文件/目录/文本拒绝、稳定错误文案和阶段提示；prepare失败重试、PUT不确定后先确认、object_missing另申请、ready绑定失败不重传均走原UploadSession。宿主写仍经页面提供的小回调，UI成功反馈另经当前生命期检查。
+
+useProfileUpload把资源分配与释放限定到视图effect；ImageUploadModal仅组合此hook、现有ModalCore及内容组件。上传/绑定均禁重复提交、Escape与背景关闭，明确取消上传能中止链并保留窗口；正常关闭/成功恢复触发器焦点，unmount释放预览和中止传输，迟到绑定成功不关闭新视图。取消聚焦曾早于输入重新启用、资源退休曾聚焦旧错误提示，两项均有真实DOM RED/GREEN修复。
+
+图片内容骨架13项RED；最初弹窗RED是测试夹具尚未载入HeadlessUI的JSDOM动画替身，不算行为证据，保留原件。之后真实ModalCore四项通过；隐去弹窗和删除unmount资源释放两个单点变异分别产生AssertionError，完整还原SHA，见t4-mutations.json。初次关闭等待把所有动画帧包在同一个act中阻止React提交，改为条件/期限约束下逐帧提交，不改产品动画或固定sleep。最新受影响7文件80项通过；类型、格式及修改文件零warning通过。首次types的vi.fn构造/调用联合推断已改为明确函数签名。
+
+新增en/zh-CN各33个键逐叶一致且非空；现有i18n-keys守卫1324处引用通过。局部裁定把资源创建放入可复用useProfileUpload，内容组件只消费资源；代价是嵌入创建页的调用者须同样使用hook并连接onBusyChange/busyBinding。T5起页面接线与T11/T12真实浏览器仍待完成，A1–A8保持开放。

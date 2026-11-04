@@ -1,4 +1,43 @@
 {
+  "image_upload": {
+    "choose": "选择或替换图片",
+    "drop": "将一张图片拖放到这里",
+    "preview": "已选图片预览",
+    "formats": "支持 JPEG、PNG、WebP 和 GIF；大小须符合当前服务器的上传限制。",
+    "upload_save": "上传并保存",
+    "save": "保存图片",
+    "remove": "移除图片",
+    "cancel_upload": "取消上传",
+    "check_upload": "检查上传结果",
+    "upload_again": "重新上传",
+    "retry": "重试上传",
+    "phases": {
+      "idle": "请选择图片。",
+      "selected": "图片已选好，可以上传。",
+      "preparing": "正在准备上传…",
+      "uploading": "正在上传图片…",
+      "confirming": "正在检查上传结果…",
+      "ready": "图片已上传。",
+      "binding": "正在保存图片…",
+      "failed": "图片处理未完成，请查看提示。",
+      "cancelled": "已取消上传，可以重新选择图片。",
+      "disposed": "当前操作已失效。"
+    },
+    "errors": {
+      "multiple": "请一次选择一张图片。",
+      "directory": "请选择图片文件，不能选择文件夹。",
+      "not_file": "请拖放图片文件。",
+      "type": "请选择文件类型明确的 JPEG、PNG、WebP 或 GIF 图片。",
+      "size": "请选择非空图片，并确保大小未超过当前服务器的限制。",
+      "unavailable": "尚未取得上传大小限制，请刷新页面后重试。",
+      "network": "上传连接中断，请先检查图片是否已传完，再决定是否重新上传。",
+      "http": "存储服务拒绝了上传，请先检查上传结果。",
+      "timeout": "上传超时，请先检查图片是否已传完，再决定是否重新上传。",
+      "cancelled": "已取消上传。",
+      "expired": "上传链接已过期，请先检查上传结果，必要时重新上传。",
+      "invalid-grant": "上传链接无法使用，请先检查上传结果后再重试。"
+    }
+  },
   "submit": "提交",
   "cancel": "取消",
   "loading": "加载中",

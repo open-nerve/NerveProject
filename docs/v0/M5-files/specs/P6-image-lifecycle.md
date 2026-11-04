@@ -97,6 +97,8 @@ UserStore.data 改为现有 Reconciled<User> 的投影；fetchCurrentUser 仍等
 
 新增 `core/components/assets/image-picker.tsx`、`image-upload-modal.tsx`：ImagePicker 是无业务 owner 写的内容区，输入 UploadSession、busyBinding、选中结果与取消/提交回调；modal wrapper 只负责现有 ModalCore、标题/描述/焦点及关闭约束。新建项目在已有创建弹窗内嵌同一内容区/封面选择，不再叠第二个上传弹窗，从源头避免父级 Escape 抢关闭；创建表单提交/关闭须同时考虑上传和 owner POST 状态。清除旧 300ms reset 回调，按现有弹窗实例生命期重置，不改 shared ModalCore/useKeypress。
 
+T4的useProfileUpload是视图拥有资源的薄hook：effect创建，关闭/目标更换/unmount时dispose，StrictMode重放重新获得资源。ImagePicker接收该资源，不替父视图处理生命周期；它只编排传输和调用onSubmit(Asset|null)，具体User/Workspace/Project写归页面。onSubmit仅返回宿主写的Promise；成功关闭等UI反馈走受当前资源、操作代次与mounted检查保护的onSaved。onBusyChange把整条操作的忙状态交给外层弹窗/创建表单，busyBinding接收外部宿主写状态；T8同时接这两个输入，不能只看upload.busy。取消上传保持窗口并聚焦重新启用的文件输入；失效范围不再主动聚焦旧控件。
+
 ProfileImage / ProfileAvatar / ProjectCover 是呈现组件，接受明确 source 与原 alt/fallback/size/className；不接受没有 scope/expiry 的任意用户能力 URL。WorkspaceLogo 的已登录调用方传 workspace 身份，公开邀请调用方使用明确 public-preview 分支；避免 optional prop 使老裸 URL 默默绕过新合同。
 
 新增 `web/apps/web/helpers/project-covers.ts` 与 `app/assets/project-covers/cover-01.svg`…`cover-29.svg` / SOURCES.md。导出 `PROJECT_COVERS` 稳定 ID+静态 URL 集合和 `projectCoverURL(id: string | null): string | undefined`；不重复后端枚举校验逻辑、不把 URI 当 DTO。预设选择类型只 Pick<ProjectCreate/ProjectUpdate> 的现有字段，省略/清除/单一选中状态由表单显式表达。

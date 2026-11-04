@@ -1,6 +1,6 @@
 # M5/P6 资料图片上传与展示 Implementation Plan
 
-> 预检通过，T1–T3完成，继续T4。**For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans 按 Task 内联实施；不用逐 Task 新派实现者/审者。完成后一次 fresh whole-branch review。本计划在 `codex/m5-p6`，初始基线c59cedf3，实施基线已noff同步 `main@f5f4ce9431e7fb360363bf169da33487cf9b864f`；[PC1](../reviews/P6-public-project-lifetime-decision.md)已批准 A并同步合同。P5准确main CI及归档清理已完成，按连续授权从T1执行。
+> 预检通过，T1–T4完成，继续T5。**For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans 按 Task 内联实施；不用逐 Task 新派实现者/审者。完成后一次 fresh whole-branch review。本计划在 `codex/m5-p6`，初始基线c59cedf3，实施基线已noff同步 `main@f5f4ce9431e7fb360363bf169da33487cf9b864f`；[PC1](../reviews/P6-public-project-lifetime-decision.md)已批准 A并同步合同。P5准确main CI及归档清理已完成，按连续授权从T1执行。
 
 **Goal:** 资料图片真实上传、宿主绑定、权限/到期展示和可访问交互。
 **Architecture:** AssetService 处理会话 JSON；独立 fetch 只传 File；视图持有上传，IssueRootStore 统一使生命周期失效。图片读由当前宿主 store 调和，活动来源读合并但不复制权限或实体事实。
@@ -69,9 +69,9 @@
 **Files:** 新 components/assets/image-picker.tsx/.test.tsx、image-upload-modal.tsx/.test.tsx；en/zh-CN 新文案；不改 shared ModalCore。
 **Interfaces:** 消费 UploadSession 与 scope 结果；产出原生 file/drop 内容组件和 ModalCore 薄包装；宿主确认busy与上传busy分开。
 
-- [ ] Step 1：键盘选择、单文件drop、多文件/目录/空MIME/超限拒绝、预览替换/revoke、可读状态/role alert、上传中Escape/背景不关、明确取消上传、owner绑定中双击/关闭拒绝、成功/拒绝/卸载焦点。
-- [ ] Step 2：`pnpm --filter web exec vitest run core/components/assets` RED→GREEN；原生事件，无新包，无 render 内 createObjectURL，无固定sleep或延迟reset。
-- [ ] Step 3：类型/格式/双语言键/修改文件零warning；提交 `feat(M5/P6): 提供可取消且可访问的图片选择控件`。
+- [x] Step 1：键盘选择、单文件drop、多文件/目录/空MIME/超限拒绝、预览替换/revoke、可读状态/role alert、上传中Escape/背景不关、明确取消上传、owner绑定中双击/关闭拒绝、成功/拒绝/卸载焦点。
+- [x] Step 2：`pnpm --filter web exec vitest run core/components/assets` RED→GREEN；原生事件，无新包，无 render 内 createObjectURL，无固定sleep或延迟reset。
+- [x] Step 3：类型/格式/双语言键/修改文件零warning；提交 `feat(M5/P6): 提供可取消且可访问的图片选择控件`。
 
 ## Task 5（T5）：个人资料与引导
 
