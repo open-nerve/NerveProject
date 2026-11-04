@@ -1,6 +1,6 @@
 # M5/P7a 阶段评审记录
 
-> 2026-11-04：按负责人已批准A同步合同，当前仅预检，产品未实施。分支codex/m5-p7a；main基线963636757fe5c5a8c10d5781b43d1481ba6f32a2，P6准确main CI41833460144及归档/清理前置已核；预检通过，产品未实施。
+> 2026-11-04：按负责人已批准A同步合同并通过预检；现已获准实施，当前 T1 进行中。分支codex/m5-p7a；main基线963636757fe5c5a8c10d5781b43d1481ba6f32a2，P6准确main CI41833460144及归档/清理前置已核；预检通过，实施证据见下。
 
 ## 1. 范围与方式
 
@@ -8,7 +8,7 @@
 
 ## 2. 当前验收
 
-A1–A6均未完成；尚无新API、产品修改、依赖安装或P7a产品测试。原P7准备时只运行既有TestDraftAssetTransferPublicationStates三个子项，通过且1707个Go输入稳定；它证明原发布合同，不能当新恢复入口验证。
+A1–A6待各任务闭环；原预检时无新API、产品修改、依赖安装或P7a产品测试。原P7准备时只运行既有TestDraftAssetTransferPublicationStates三个子项，通过且1707个Go输入稳定；它证明原发布合同，不能当新恢复入口验证。
 
 ## 3. 局部裁定
 
@@ -26,3 +26,9 @@ A1–A6均未完成；尚无新API、产品修改、依赖安装或P7a产品测�
 ## 5. 后续接收
 
 P7b承接内容附件、编辑器、恢复UI、普通/草稿复制结果、计数显示和旧services包删除；P8/closeout承接最终F1–F18、默认部署/容量、P3-M1/P4-M1、全仓warning规则/死成员、具名旧copyMarkdownToClipboard风险与所有handoffs最终关闭。输入handoffs现仍open。
+
+## 6. T1 实施记录（进行中）
+
+- R7：准备件同时要求申请归属 `user_id` 与创建者 `created_by_id` 为当前作者；沿用既有私有资产所有权，不把审计字段独自当授权。代价是异常或迁移后两者不一致的记录不会暴露，仓储测试分别验证两种不一致。宿主返回的 scope/draft 必须与请求一致，错配返回既有 scope_changed，拒绝继续行查询。
+- 已有游标、应用用例及实际 PostgreSQL 仓储行为 RED/GREEN；原始证据 `.superpowers/sdd/P7a-draft-preparations/`。最初缺声明/fixture 字节参数导致的编译失败不算 RED；有效 RED 为 `t1-domain-app-red-second` 与 `t1-store-red`。
+- `t1-host-identity-red` 与 `t1-snapshot-mutation` 均实际断言失败并精确 SHA 恢复。首次作者变异文本匹配未命中，未运行测试，不计有效变异；重做记录另存。

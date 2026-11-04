@@ -1,6 +1,6 @@
 # M5/P7a 草稿准备件恢复协议 Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans 逐 Task 内联执行，不逐 Task 新派实现者/审者；阶段末一次 fresh whole-branch deep-review。本轮仅文档与预检，暂不实施。分支 `codex/m5-p7a`，main 基线 `963636757fe5c5a8c10d5781b43d1481ba6f32a2`；P6准确main CI41833460144及归档/清理前置已核；本阶段预检通过，产品未实施。
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans 逐 Task 内联执行，不逐 Task 新派实现者/审者；阶段末一次 fresh whole-branch deep-review。2026-11-04 负责人已授权按预检合同实施，当前 T1 进行中。分支 `codex/m5-p7a`，main 基线 `963636757fe5c5a8c10d5781b43d1481ba6f32a2`；P6准确main CI41833460144及归档/清理前置已核；本阶段预检通过；产品验收随各任务记录。
 
 **Goal:** 作者能经有界私有查询找回草稿未绑定准备件 ID，沿既有 DELETE 明确丢弃后恢复发布。
 **Architecture:** asset app 声明窄读取端口，现有 owner Host.Inspect 和 file_assets 查询共用 ReadTx；API 复用 Asset DTO，生成客户端；不改草稿完整性/清理/写锁协议。
@@ -14,7 +14,7 @@
 - 新文件约400行以内，生成物例外；现有大文件只拆本次职责。七个可独立验收 Task；跨模块新风险先提交再上报。
 - Task 用真实行为断言记录 RED/GREEN；缺模块、编译失败、环境失败不算 RED。生成物先改源再 make gen，代码稳定后串行门禁；保留完整 raw/输入hash/cache/skip/变异恢复SHA。
 - 数据库套件一次一个，跨包 -p 1；只清理本阶段明确拥有的临时容器，禁止操作既有容器/Docker或 prune。
-- 本轮不得实现、安装依赖、改 tools/keywords.json phase；获准实施后首个产品提交phase=M5/P7，P7a/P7b共用这个既有数字阶段值，不改PHASE_RE。P7b才迁移旧链及到期例外，不把P7a当最后旧消费者迁完；既有until仍按实际期限处理，不延期掩盖。
+- 预检阶段未实现、安装依赖或改 phase；现已获准实施，首个产品提交phase=M5/P7，P7a/P7b共用这个既有数字阶段值，不改PHASE_RE。P7b才迁移旧链及到期例外，不把P7a当最后旧消费者迁完；既有until仍按实际期限处理，不延期掩盖。
 
 ## Review Focus
 

@@ -1,6 +1,6 @@
 # M5/P7a：草稿准备件恢复协议
 
-> 2026-11-04：负责人已批准[方案 A](../reviews/P7-draft-preparation-recovery-decision.md)：增加作者恢复入口，拆为 P7a 协议、P7b 页面。本次只同步文档和完成预检，不实施。分支 `codex/m5-p7a`；正式 main 基线 `963636757fe5c5a8c10d5781b43d1481ba6f32a2`，P6准确main CI41833460144全绿、归档/清理完成；新协议一次fresh builder及主控预检通过。产品验收均未完成。
+> 2026-11-04：负责人已批准[方案 A](../reviews/P7-draft-preparation-recovery-decision.md)：增加作者恢复入口，拆为 P7a 协议、P7b 页面。预检完成后，负责人已授权从 T1 实施。分支 `codex/m5-p7a`；正式 main 基线 `963636757fe5c5a8c10d5781b43d1481ba6f32a2`，P6准确main CI41833460144全绿、归档/清理完成；新协议一次fresh builder及主控预检通过。当前 T1 进行中，产品验收按证据回填。
 
 ## 1. 目标、范围与选择
 
@@ -14,7 +14,7 @@
 
 `GET /api/v0/drafts/{draft_id}/asset-preparations`，operationId `listDraftAssetPreparations`，归属 `api/modules/asset.yaml` 及 asset HTTP adapter。业务路径在 draft 下不转移表的所有权，不改 issue 模块路由。参数复用既有 `limit`、`cursor`；新 schema `DraftAssetPreparationPage`：`{data: Asset[], next_cursor: string|null}`，空页为 `[]`，只复用已存在的公开 Asset DTO，不公开内部 metadata、key、候选对象、upload/content URL 或令牌。
 
-返回当前 actor 在该活草稿、当前工作区/项目范围内，`scope_kind=draft`、两种 `DRAFT_ISSUE_*` 用途、`created_by_id=actor`、`bound_at IS NULL`、`deleted_at IS NULL` 的资产。pending 与 uploaded 都包括；uploaded 表示已完成但尚未绑定的描述图片等，不能误称都是废文件。已绑定附件、当前或历史正文已绑定图片、其他草稿/作者、迁出为 issue 的资产均不返回。`is_bound` 恒为 false，状态仍由现有 Asset DTO 转换，不能手工构造另一套状态。
+返回当前 actor 在该活草稿、当前工作区/项目范围内，`scope_kind=draft`、两种 `DRAFT_ISSUE_*` 用途、`user_id=actor` 且 `created_by_id=actor`、`bound_at IS NULL`、`deleted_at IS NULL` 的资产。pending 与 uploaded 都包括；uploaded 表示已完成但尚未绑定的描述图片等，不能误称都是废文件。已绑定附件、当前或历史正文已绑定图片、其他草稿/作者、迁出为 issue 的资产均不返回。`is_bound` 恒为 false，状态仍由现有 Asset DTO 转换，不能手工构造另一套状态。
 
 作者须仍满足现有 DraftLocks 的工作区成员/活宿主条件；管理员没有查看他人准备件的特权。无项目草稿合法；草稿关联项目的存在性沿 owner 现有规则，不额外要求作者加入该项目，不将项目可见性当工作项权限。已删除草稿/工作区/项目、失去工作区资格、非作者与随机不存在 UUID 均为 `404 asset.not_found`，不泄露文件名或草稿存在性。无有效会话为 401。
 
@@ -83,7 +83,7 @@ P7a 的真实 HTTP 测试必须按客户端不知道新 ID 的视角：准备/�
 - [ ] A5 必要行为 RED/GREEN/变异与恢复、全部七门禁、一次整分支 deep-review 修复和准确最终分支 CI（T5/T6）。
 - [ ] A6 --no-ff、准确 main CI、证据全量归档/正常清理；P7b 正式基线 spec/plan 预检，保留全部页面与旧链删除责任（T7）。
 
-证据入口：[阶段记录](../reviews/P7a-draft-preparations-review.md)。当前只有只读预检和既有单元合同复验；所有产品验收空白。P6 历史通过结果不能替代本端点测试，P7a 不领取 P7b 页面/浏览器交互完成。
+证据入口：[阶段记录](../reviews/P7a-draft-preparations-review.md)。预检记录保持为历史证据；产品验证按各 Task 新增，不以既有结果替代。P6 历史通过结果不能替代本端点测试，P7a 不领取 P7b 页面/浏览器交互完成。
 
 ## 7. 风险及未完成责任
 
