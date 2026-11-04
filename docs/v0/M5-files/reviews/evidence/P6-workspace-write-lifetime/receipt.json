@@ -1,0 +1,15 @@
+{
+  "exit_code": 1,
+  "seconds": 1.478343875,
+  "inputs": 4466,
+  "unchanged": true,
+  "command": [
+    "pnpm",
+    "--filter",
+    "web",
+    "exec",
+    "vitest",
+    "run",
+    "core/store/workspace/p6-binding-lifetime.probe.test.ts"
+  ]
+}

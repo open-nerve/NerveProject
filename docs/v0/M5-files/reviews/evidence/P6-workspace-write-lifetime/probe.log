@@ -1,0 +1,82 @@
+
+ RUN  v4.1.11 /Users/xiaoruan/project/nerve-project/.codex/worktress/codex/m5-p6/web/apps/web
+
+stdout | core/store/workspace/p6-binding-lifetime.probe.test.ts > late logo binding cannot replace newer workspace permission facts: downgraded
+P6 binding fact probe {"transition":"downgraded","expectedRole":15,"actualRole":20,"expectedLogo":null,"actualLogo":"old-upload","oldUploadCurrent":false,"newUploadCurrent":true}
+
+stdout | core/store/workspace/p6-binding-lifetime.probe.test.ts > late logo binding cannot replace newer workspace permission facts: role-aba
+P6 binding fact probe {"transition":"role-aba","expectedRole":20,"actualRole":20,"expectedLogo":"new-picture","actualLogo":"old-upload","oldUploadCurrent":false,"newUploadCurrent":true}
+
+ ❯ core/store/workspace/p6-binding-lifetime.probe.test.ts (4 tests | 2 failed) 227ms
+   × late logo binding cannot replace newer workspace permission facts: downgraded 218ms
+   × late logo binding cannot replace newer workspace permission facts: role-aba 3ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  core/store/workspace/p6-binding-lifetime.probe.test.ts > late logo binding cannot replace newer workspace permission facts: downgraded
+AssertionError: expected 20 to be 15 // Object.is equality
+
+- Expected
++ Received
+
+- 15
++ 20
+
+ ❯ core/store/workspace/p6-binding-lifetime.probe.test.ts:51:38
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  core/store/workspace/p6-binding-lifetime.probe.test.ts > late logo binding cannot replace newer workspace permission facts: downgraded
+AssertionError: expected 'old-upload' to be null // Object.is equality
+
+- Expected:
+null
+
++ Received:
+"old-upload"
+
+ ❯ core/store/workspace/p6-binding-lifetime.probe.test.ts:52:47
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  core/store/workspace/p6-binding-lifetime.probe.test.ts > late logo binding cannot replace newer workspace permission facts: downgraded
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ core/store/workspace/p6-binding-lifetime.probe.test.ts:53:64
+     51|     expect.soft(shown?.role ?? null).toBe(transition === "removed" ? n…
+     52|     expect.soft(shown?.logo_asset_id ?? null).toBe(transition === "rem…
+     53|     if (transition === "downgraded") expect(newUpload.current).toBe(fa…
+       |                                                                ^
+     54|   }
+     55| );
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+ FAIL  core/store/workspace/p6-binding-lifetime.probe.test.ts > late logo binding cannot replace newer workspace permission facts: role-aba
+AssertionError: expected 'old-upload' to be 'new-picture' // Object.is equality
+
+Expected: "new-picture"
+Received: "old-upload"
+
+ ❯ core/store/workspace/p6-binding-lifetime.probe.test.ts:52:47
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 2 passed (4)
+   Start at  14:36:07
+   Duration  960ms (transform 269ms, setup 11ms, import 671ms, tests 227ms, environment 0ms)
+
+undefined
+/Users/xiaoruan/project/nerve-project/.codex/worktress/codex/m5-p6/web/apps/web:
+[ERR_PNPM_RECURSIVE_EXEC_FIRST_FAIL] Command failed with exit code 1: vitest run core/store/workspace/p6-binding-lifetime.probe.test.ts

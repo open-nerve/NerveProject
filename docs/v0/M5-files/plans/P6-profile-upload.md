@@ -1,7 +1,8 @@
 # M5/P6 资料图片上传与展示 Implementation Plan
 
-> 预检通过，T1–T5完成，继续T6。**For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans 按 Task 内联实施；不用逐 Task 新派实现者/审者。完成后一次 fresh whole-branch review。本计划在 `codex/m5-p6`，初始基线c59cedf3，实施基线已noff同步 `main@f5f4ce9431e7fb360363bf169da33487cf9b864f`；[PC1](../reviews/P6-public-project-lifetime-decision.md)已批准 A并同步合同。P5准确main CI及归档清理已完成，按连续授权从T1执行。
+> 预检通过，T1–T5完成；T6复现PC2，暂停依赖实施，等待跨模块方案裁定。**For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans 按 Task 内联实施；不用逐 Task 新派实现者/审者。完成后一次 fresh whole-branch review。本计划在 `codex/m5-p6`，初始基线c59cedf3，实施基线已noff同步 `main@f5f4ce9431e7fb360363bf169da33487cf9b864f`；[PC1](../reviews/P6-public-project-lifetime-decision.md)已批准 A并同步合同。P5准确main CI及归档清理已完成，按连续授权从T1执行。
 
+PC2 暂停材料：[工作区更新的迟到回包](../reviews/P6-workspace-write-lifetime-decision.md)。
 **Goal:** 资料图片真实上传、宿主绑定、权限/到期展示和可访问交互。
 **Architecture:** AssetService 处理会话 JSON；独立 fetch 只传 File；视图持有上传，IssueRootStore 统一使生命周期失效。图片读由当前宿主 store 调和，活动来源读合并但不复制权限或实体事实。
 **Tech Stack:** 已锁 React/MobX/SWR/Vitest/Playwright、File/fetch 与既有 Go local/S3 服务；无新依赖。

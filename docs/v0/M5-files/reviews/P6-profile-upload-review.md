@@ -1,6 +1,6 @@
 # M5/P6 资料图片上传与展示阶段记录
 
-> 分支 `codex/m5-p6`，实施基线 `main@f5f4ce9431e7fb360363bf169da33487cf9b864f`。P5 已完整收尾，P6 预检提交 ab9f86b8；当前 T1–T5 完成，未关闭 A1–A8。按连续授权推进，一次整分支 deep-review 后集成；重大风险先提交上报。
+> 分支 `codex/m5-p6`，实施基线 `main@f5f4ce9431e7fb360363bf169da33487cf9b864f`。P5 已完整收尾，P6 预检提交 ab9f86b8；当前 T1–T5 完成，T6复现PC2并暂停待裁定，未关闭 A1–A8。按连续授权推进，一次整分支 deep-review 后集成；重大风险先提交上报。
 
 ## 1. 输入与范围
 
@@ -66,3 +66,8 @@ useProfileUpload把资源分配与释放限定到视图effect；ImageUploadModal
 T5最终完整make test-web 18/18通过（17缓存，web实际3318项）；源输入4465个前后hash一致。最终类型检查、15文件格式、13个修改TS文件零warning通过；i18n-keys核1327个引用。首次误用了不存在的prettier/check-types命令，未安装依赖，改用仓库oxfmt/check:types；第一次lint的顺序UI循环改为显式调用两个相同小操作，未增加豁免。初始失败、后续两次完整回归与最终收据全部保留。
 
 局部裁定：同一UserImageUpload只拥有账号字段写与弹窗状态；通用内容仍不认识宿主。现有名字表单SSR测试在图片边界使用替身，新增DOM页面测试验证实际图片链，避免把测试兼容逻辑写入产品。代价是通用图片组件与页面集成均需保留覆盖，不能以SSR字段测试替代真实上传验收。阶段A1–A8仍开放。
+
+
+## 9. T6 PC2 暂停：工作区写回的权限事实
+
+实际RootStore四场景探针2 failed/2 passed：权限20→15后迟到PATCH把角色恢复20并令新上传可写；20→15→20后迟到PATCH覆盖新logo。原上传仍正确失效；移除与同slug新UUID控制组通过。产品实现尚未开始，按跨模块纪律保存当前工作并上报；推荐在WorkspaceRootStore发布边界接入现有IssueRootStore的权限代次，小接口由组合根接线，不修改通用Reconciled或增加观察器。完整范围、代价、原始证据与待决定事项见[PC2](P6-workspace-write-lifetime-decision.md)。T6–T15未完成，未运行本轮七门禁或推送/合并产品检查点。
