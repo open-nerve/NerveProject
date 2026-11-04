@@ -50,7 +50,6 @@ export interface IUserStore {
   signUp: (credentials: RegisterRequest) => Promise<void>;
   signOut: () => Promise<void>;
   // computed
-  canPerformAnyCreateAction: boolean;
   projectsWithCreatePermissions: { [projectId: string]: TUserPermissions };
 }
 
@@ -97,7 +96,6 @@ export class UserStore implements IUserStore {
       signUp: action,
       signOut: action,
       // computed
-      canPerformAnyCreateAction: computed,
       projectsWithCreatePermissions: computed,
     });
   }
@@ -183,13 +181,8 @@ export class UserStore implements IUserStore {
     const roles: { [projectId: string]: TUserPermissions } = {};
     for (const projectId of this.store.projectRoot.project.joinedProjectIds) {
       const role = this.permission.getProjectRoleByWorkspaceSlugAndProjectId(workspaceSlug, projectId);
-      if (role !== undefined && role >= EUserPermissions.MEMBER) roles[projectId] = role;
+      if (role === EUserPermissions.MEMBER || role === EUserPermissions.ADMIN) roles[projectId] = role;
     }
     return roles;
-  }
-
-  /** @description whether the caller may create in any project of the current workspace */
-  get canPerformAnyCreateAction() {
-    return Object.keys(this.projectsWithCreatePermissions).length > 0;
   }
 }

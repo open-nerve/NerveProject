@@ -196,13 +196,11 @@ describe("UserStore, the projects the caller may create in", () => {
     );
     const user = new UserStore(fakeRoot({ router, workspaceRoot, projectRoot }), api);
     expect(user.projectsWithCreatePermissions).toEqual({ [pa.id]: 20, [pm.id]: 15 });
-    expect(user.canPerformAnyCreateAction).toBe(true);
 
     // at beta's address, its project, where his role is the admin's (beta's admin); none at an address of no workspace
     router.setQuery({ workspaceSlug: beta.slug });
     expect(user.projectsWithCreatePermissions).toEqual({ [lab.id]: 20 });
     router.setQuery({});
     expect(user.projectsWithCreatePermissions).toEqual({});
-    expect(user.canPerformAnyCreateAction).toBe(false);
   });
 });

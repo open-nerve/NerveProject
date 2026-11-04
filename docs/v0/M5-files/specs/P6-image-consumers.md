@@ -81,7 +81,7 @@
 
 当前components/hooks中资料URL仅两处具名用途：`assets/project-cover.tsx`判断规范项目是否有自定义图后交给ProfileImage，不直接展示URL；新增`account/auth-forms/invitation-logo.tsx`接公开邀请预览及expiry，按链接管理有限重读。后者和编辑器rich/lite的两处宿主透传均已追加审读。无裸成员URL命中，不增加M6/M7接口、关键词或lint豁免。
 
-实际RootStore的成员/历史/mention呈现验证跨工作区全局缓存、当前来源合并、guest、目录缺席、inactive、到期与失权隐藏；邀请十项DOM验证公开key/无Authorization、到期/后台恢复、有限自动重读及显式重试、同URL重新加载、旧事件/链接ABA/取消与StrictMode。三浏览器完整网络与字节仍由T11/T12完成。详见[阶段记录§15](../reviews/P6-profile-upload-review.md#15-t10-成员图片消费者和公开邀请)。
+实际RootStore的成员/历史/mention呈现验证跨工作区全局缓存、当前来源合并、guest、目录缺席、inactive、到期与失权隐藏；邀请十项DOM验证公开key/无Authorization、到期/后台恢复、有限自动重读及显式重试、同URL重新加载、旧事件/链接ABA/取消与StrictMode。T11/T12已完成三浏览器完整网络与字节，见[阶段记录§16–17](../reviews/P6-profile-upload-review.md#16-t11-真实页面双存储与字节)。详见[阶段记录§15](../reviews/P6-profile-upload-review.md#15-t10-成员图片消费者和公开邀请)。
 
 ## 基线原始命中
 

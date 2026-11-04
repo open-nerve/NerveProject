@@ -1,6 +1,6 @@
 # M5/P6 资料图片上传与展示 Implementation Plan
 
-> 预检通过，T1–T12完成；PC2按A完成基础与页面回归，继续T13。**For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans 按 Task 内联实施；不用逐 Task 新派实现者/审者。完成后一次 fresh whole-branch review。本计划在 `codex/m5-p6`，初始基线c59cedf3，实施基线已noff同步 `main@f5f4ce9431e7fb360363bf169da33487cf9b864f`；[PC1](../reviews/P6-public-project-lifetime-decision.md)已批准 A并同步合同。P5准确main CI及归档清理已完成，按连续授权从T1执行。
+> 实施前预检曾通过，T1–T12完成；PC2按A完成基础与页面回归，T13在PC3目录读取冲突处暂停，待负责人决定。**For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans 按 Task 内联实施；不用逐 Task 新派实现者/审者。完成后一次 fresh whole-branch review。本计划在 `codex/m5-p6`，初始基线c59cedf3，实施基线已noff同步 `main@f5f4ce9431e7fb360363bf169da33487cf9b864f`；[PC1](../reviews/P6-public-project-lifetime-decision.md)已批准 A并同步合同。P5准确main CI及归档清理已完成，按连续授权从T1执行。
 
 PC2 已批准 A：[工作区更新的迟到回包](../reviews/P6-workspace-write-lifetime-decision.md)。
 **Goal:** 资料图片真实上传、宿主绑定、权限/到期展示和可访问交互。
@@ -149,7 +149,9 @@ PC2 已批准 A：[工作区更新的迟到回包](../reviews/P6-workspace-write
 
 ## Task 13（T13）：完整门禁与检查点
 
-- [ ] Step 1：逐项A1–A6、消费者清单、设计/plane-diff/handoff处理结果；P7删包责任保持open，旧未使用成员实测，不因历史数字机械删除。
+停点：[PC3目录读取冲突](../reviews/P6-directory-read-decision.md)已复现，A3重新开放；方案未实施。完整Go通过，lint-web仍由架构守卫拒绝，后续门禁与推送未进行。
+
+- [x] Step 1：逐项A1–A6、消费者清单、设计/plane-diff/handoff处理结果；P7删包责任保持open，旧未使用成员实测，不因历史数字机械删除。
 - [ ] Step 2：串行 make gen-check、make lint-go、GOFLAGS=-p=1 make test、make lint-web、make knip、make test-web、make e2e（已依赖完整build及build-s3-fixture）；每项原exit/输入hash/缓存/skip记录，非仅聚焦代替全门禁。
 - [ ] Step 3：详细中文检查点提交/system push，准确HEAD server/web/e2e三项全绿；失败自行取原生插件/已登录浏览器日志，按现有规则处理，不放宽超时/断言。
 
@@ -167,4 +169,4 @@ PC2 已批准 A：[工作区更新的迟到回包](../reviews/P6-workspace-write
 
 ## 预检自查（已通过）
 
-A1→T1/T2/T11；A2→T2/T4/T12；A3→T3/T10/T12；A4→T5/T11；A5→T6–T9/T11；A6→T11/T12；A7→T13/T14；A8→T15。15 Tasks。源码路径/接口、角色集合、字段拼写、测试命令、builder唯一问题与跨Task接口已核；实际源码与126项宿主基线一致，P5准确main CI及归档清理前置满足。完整收据见[预检§7](../../../reviews/re-42-M5P6预检.md#7-最终基线与执行前预检通过)。P6八项验收仍全未完成。
+A1→T1/T2/T11；A2→T2/T4/T12；A3→T3/T10/T12；A4→T5/T11；A5→T6–T9/T11；A6→T11/T12；A7→T13/T14；A8→T15。15 Tasks。源码路径/接口、角色集合、字段拼写、测试命令、builder唯一问题与跨Task接口已核；实际源码与126项宿主基线一致，P5准确main CI及归档清理前置满足。完整收据见[预检§7](../../../reviews/re-42-M5P6预检.md#7-最终基线与执行前预检通过)。该预检时点P6八项验收均未完成；实施后的当前状态以主spec和阶段记录为准。

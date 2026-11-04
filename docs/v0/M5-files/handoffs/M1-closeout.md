@@ -60,3 +60,9 @@ P2复制接口先检查源准备件申请者及宿主可见性，再检查目标
 ## 处理结果（M5/P5 T13核对）
 
 绑定后的六类内容资产可以由宿主合法成员读取；复制仍先证明源可读，再核目标可写，源隐藏与不存在一致。local/S3的F11真实字节、双项目方向和T10源404优先于目标403的行为变异已验证，见[P5记录§16–20](../reviews/P5-issue-assets-review.md#20-t13验收与交接核对)。这没有放开资料图片或未绑定准备件，也不代表P7编辑器消费者已接通。预设素材、中性图标、死成员与warning责任仍归P6–P8，本页保持open。
+
+## 处理结果（M5/P6 T13核对）
+
+项目封面已端到端实现29张自制SVG、稳定编号、主动随机和一次项目POST绑定，原构建URL/先建后补写不再进入资料流程；F7 local/S3及三浏览器页面均核实际字节/引用。消费清单56文件去除旧裸URL，新的图片显示仅依当前宿主与范围。死成员扫描使用附录A脚本和当前TypeScript，移除本段已改UserStore中仅测试读取的canPerformAnyCreateAction，保留仍有生产消费者的projectsWithCreatePermissions；其余本段命中均给具体调用链，见[P6评审§18](../reviews/P6-profile-upload-review.md#18-t13-验收与清理核对)。
+
+旧FileService/EditorAssetStore及services包仍由P7迁移最后消费者并删除；附件图标、中性素材与全仓告警类别最后由P8核验。本交接保持open，历史48条不直接作为当前删除名单。

@@ -1,6 +1,6 @@
 # M5/P6 资料图片上传与展示阶段记录
 
-> 分支 `codex/m5-p6`，实施基线 `main@f5f4ce9431e7fb360363bf169da33487cf9b864f`。P5 已完整收尾，P6 预检提交 ab9f86b8；当前 T1–T12 完成，PC2按A完成基础与页面回归，T11接续，未关闭 A1–A8。按连续授权推进，一次整分支 deep-review 后集成；重大风险先提交上报。
+> 分支 `codex/m5-p6`，实施基线 `main@f5f4ce9431e7fb360363bf169da33487cf9b864f`。P5 已完整收尾，P6 预检提交 ab9f86b8；当前 T1–T12 完成，PC2按A完成基础与页面回归，A1/A2/A4–A6已挂证据；T13发现PC3后A3重新开放，当前暂停待负责人决定，A7/A8仍开放。按连续授权推进，一次整分支 deep-review 后集成；重大风险先提交上报。
 
 ## 1. 输入与范围
 
@@ -13,6 +13,8 @@
 T1：JSON资产prepare/complete用生成DTO及当前ApiClient；raw PUT保持原File和签名URL，拒绝协议相对/带userinfo/fragment/控制字符及重复或额外头。首个终态决定取消/15分钟超时，释放监听、定时器和响应体，不把存储错误内容带入应用错误。初始骨架46 failed/1 passed，最小实现及两个测试数据形状修正后47/47；类型检查中的表驱动union推断错误已修正，原日志保留。修改四文件oxlint零warning；完整前端第一次回归发现路由扫描把协议相对检测字面量当导航地址，改为逐字符判定并保留守卫。最终make test-web 18/18通过（17缓存、web3214项实际运行），类型与四文件格式复核通过；收据接续台账，不将首次失败删除。真实浏览器Cookie隔离和页面上传留T11/T12。
 
 ## 3. 局部裁定与代价
+
+- T13重新实测死成员，只移除无调用getter；原生DOM完整标识符的遥测误报按精确词形修正，未放宽目录架构守卫、未新增exception。理由及正反样本见§18–19；代价是关键词守卫仍需对未来原生标识符保留真实反例，不以改名隐藏命中。PC3属于跨模块读取职责冲突，单独提交待负责人决定。
 
 - 跨任务接口按预检§7的三项决定执行：T3能力/T7预设/T9组合分段交付；T6共享logo props当段同步调用方；工作区能力刷新不重置未保存资料。各项正反行为由对应Task验收。
 - raw PUT用有限时长独立fetch，阶段进度不伪造字节百分比；代价是无法显示线性上传百分比。前端终止不能撤回服务端已接收写，宿主绑定仍归页面。
@@ -154,3 +156,38 @@ Chromium/Firefox/WebKit各14项、合计42/42通过（112.7秒）；本阶段独
 首轮三浏览器34/42：旧读正在重新授权时测试错误地要求立即显示新图，修正为响应交付后核最新绑定；WebKit调试协议缺Cookie和File正文，新增只用于P6的原样HTTP转发观察fixture，从实际接收端核验，未跳过任何浏览器。额外端口及在途连接finally释放。此前背景modal aria-hidden定位失败、取消中断原件及所有trace/report均保留。原件见E6 t12-three-second-report/results、t12-three-browsers-second、t12-container-cleanup.json；既有容器集合前后完全相同。
 
 九个定向变异全部取得行为AssertionError：携业务凭据、忽略取消、卸载不释放生命期、删除PC1非成员可见事实、忽略expiry、取全局成员缓存、旧用户读覆盖新写、创建双POST、允许连续错误自动刷新。每项准确源码SHA恢复、退出码和选中用例见t12-mutations.json及原始日志。恢复后87文件856项受影响回归通过；类型、九文件格式、八个实际lint输入零warning/error通过（配置按仓库oxlint默认忽略）。4525输入前后hash一致。完整七门禁、终审和集成继续T13–T15，未提前关闭A7/A8。
+
+## 18. T13 验收与清理核对
+
+| 验收 | 已有证据及边界 |
+| --- | --- |
+| A1 | T1原grant/File/取消/超时/重定向单元，T2阶段恢复；T11 local/S3七页面的API/DB/实物，T12三浏览器接收端Cookie对照和原正文。 |
+| A2 | T2/T4实际RootStore和DOM生命周期；T6 PC2的293项联合与三项变异；T12三边界取消、账号切换、跨工作区项目Back/Forward、真实角色ABA旧成功/403、objectURL及监听清理；容器前后集合一致。 |
+| A3 | 上述T3/T10/T12证据仍保留；T13补验发现与页面目录读的PC3冲突，本项重新开放，见§19。 |
+| A4 | T5个人和引导控件/拒绝保留，T11 F5 local/S3独立字段、同名异字节、重载重登录和移除；T12旧读新写最终新图及磁盘字节。 |
+| A5 | T6工作区图标、T7自制29素材、T8一次创建和T9设置/卡片；T11 F6/F7 local/S3及T12三浏览器，成员列表真实头像、guest只读/脱敏目录原行为保持。 |
+| A6 | T12独立配置三浏览器各14项真实控件，原生File/DataTransfer、alert/aria-live/焦点、取消和迟到回包；T11三宿主各local/S3字节。 |
+| A7 | 本节七门禁与准确分支CI待完成，T14整分支deep-review待完成，不提前标完成。 |
+| A8 | T15准确main CI、归档及分支/worktree清理和P7预检待完成。 |
+
+旧成员扫描实际执行M1附录A三脚本，仅将TypeScript加载路径换为仓库当前安装；全量/领域/本段交集原件在E6 t13-deadsym。全仓814 member/335 prop/2 export命中，M5域44条；不是44个必须删掉的产品成员。P6改动生产文件的18条中，两条为同一UserStore.canPerformAnyCreateAction的接口和实现，只有旧测试读取，已连computed登记和专用断言移除，原角色/工作区矩阵仍保留且9项通过。仍使用的projectsWithCreatePermissions按明确MEMBER/ADMIN集合判断，功能集合不变。
+
+剩余16条逐项归属：
+
+- project-cover.tsx的source.kind透传ProfileImage→useProfileImage→ImageSource判别来源，不能删。
+- dropdowns/member/base.tsx两支selection的multiple/value/onChange共六条，通过`{...selection}`传CustomSelect，分别提供单/多选契约。
+- upload-session.ts三支target.purpose随`...this.target`进入AssetService.prepare和生成NewAsset，服务端用途必需。
+- progress-stats/assignee.tsx的id/title/completed/total由cycles/modules的progress-stats构造distribution数组并消费，数组元素被脚本误判为组件直接prop。
+- workspace-menu-root.tsx的open/close由Headless UI Menu的render callback提供，属于库调用参数。
+
+M5域其余测试记录参数/fake-assets只为实际测试使用，不假称生产死代码；未改动的旧file-upload/FileService、editor资产类型与types/file，以及旧CoverImage/propel empty-state透传项留P7/P8逐调用链清理，未机械删除历史48条。M1/M2/M3交接均已记录本段完成子项与剩余责任，整体保持open；M4附件/编辑器与首CLI投递责任未越阶段提前关闭。消费者列表原始命中保留作基线，新增实施核验不抹历史。
+
+## 19. T13 完整门禁与PC3停点
+
+串行完整门禁实际结果：gen-check exit0/5.634秒；lint-go两模块0 issues、exit0/14.759秒；GOFLAGS=-p=1 make test exit0/991.595秒，61个实际测试包、21个无测试包，-count=1无结果缓存，bootstrap641.209秒。4525个非文档输入前后hash一致。常规Go命令不打印逐用例skip；三个既有规模入口仍由NERVE_LIST_SCALE/NERVE_MEASURE_SCALE/NERVE_PURGE_SCALE显式开启，本次不冒称完成规模验收。
+
+lint-web在关键词步骤exit2：四处命中。素材说明已删除不必要的旧品牌名；遥测规则精确排除原生DOM完整标识符webkitGetAsEntry中的sEntry子串，增加正反样本，SDK及带额外前后缀的用法仍命中，无新增exception。原生API在当前TypeScript lib.dom.d.ts中声明，目录拒绝行为不改。23项选择控件/UserStore回归通过，四文件格式通过；首次SOURCES格式未通过及后续修正均记录。初次Go门禁后仅tools/keywords.json和SOURCES.md字节变化，准确前后hash见t13-post-gates-source-delta.json，不把旧4525输入说成当前完全相同。
+
+剩余workspaces-list-fetch命中为真实架构冲突，原规则逐值保持，未加豁免。实际RootStore/SWR/DOM的两条探针复现重复GET，以及两条成功响应后图片仍陷入错误占位。问题来自P6的独立图片请求键与M3目录读取并行，详见[PC3事实、方案及代价](P6-directory-read-decision.md)。A3重新开放；T13尚未完成、knip/test-web/完整e2e尚未由本轮runner执行，T14整分支deep-review及T15未开始。
+
+原件包括t13-gates.json/runner、每项完整日志和输入hash、t13-pc3-probe-second及源码、t13-keywords-after-local、t13-local-cleanup-final、t13-sources-format、t13-post-gates-source-delta。首轮探针漏开fake timers是夹具错误，不算产品RED；原件保留。测试结束后20个既有容器逐ID均在，新增遗留0，见t13-container-cleanup.json。按03§1先提交已完成工作再上报；七门禁未齐，不推送产品检查点、不合并，也不宣称PC3已修复。
