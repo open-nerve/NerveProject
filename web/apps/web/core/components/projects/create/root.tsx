@@ -71,7 +71,7 @@ const ProjectCreationFields = observer(function ProjectCreationFields({
     setValue,
     getValues,
     watch,
-    formState: { isSubmitting, submitCount },
+    formState: { isSubmitting, submitCount, errors },
   } = methods;
   const { isMobile } = usePlatformOS();
   const formRef = useRefusedFocus<HTMLFormElement>(submitCount);
@@ -150,6 +150,11 @@ const ProjectCreationFields = observer(function ProjectCreationFields({
       />
       <form ref={formRef} onSubmit={onSubmit} className="px-3">
         <div className="mt-9 space-y-6 pb-5">
+          {errors.root?.creation?.message && (
+            <p role="alert" className="text-body-sm-regular text-danger-primary">
+              {errors.root.creation.message}
+            </p>
+          )}
           {coverOpen && upload && upload.current && (
             <CreateProjectCover
               upload={upload}

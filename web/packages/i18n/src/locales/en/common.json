@@ -112,6 +112,7 @@
   "add_project": "Add project",
   "create_project": "Create project",
   "project_created_successfully": "Project created successfully",
+  "project_creation_unknown": "We couldn't confirm whether the project was created. Check your project list before retrying. Your form and cover have been kept.",
   "project_cover_image_alt": "Project cover image",
   "name_is_required": "Name is required",
   "title_should_be_less_than_255_characters": "Title should be less than 255 characters",

@@ -13,6 +13,7 @@ import { useProjectRefusal } from "@/components/project/project-refusal";
 import { useProject } from "@/hooks/store/use-project";
 // lib
 import { followInSession } from "@/lib/in-session";
+import { errorMessageKey } from "@/lib/error-messages";
 
 /** A creation form's values: the fields of ProjectCreate the form asks for, no lead until one is picked. */
 export type ProjectCreationForm = Pick<
@@ -25,7 +26,8 @@ export type ProjectCreationForm = Pick<
 /**
  * Creates a project of the workspace from a creation form's values (M3 design 2 P1, 7.6): the fields of ProjectCreate
  * the form has, a lead only once picked; shows nerve's refusal under the fields it names (the form's setError), else
- * in a toast (useProjectRefusal); says so once created. Gives the project created, or undefined when it was not, or
+ * in a toast (useProjectRefusal); keeps unknown results on the form for verification before retry. Gives the project
+ * created, or undefined when it was refused or its result is unknown, or
  * when the tab moved to another account meanwhile: the page is that account's then, and goes no further (M3 design
  * 7.1).
  */
@@ -59,7 +61,10 @@ export function useCreateProject(): (
         setToast({ type: TOAST_TYPE.SUCCESS, title: t("success"), message: t("project_created_successfully") });
       },
       failed: (error) => {
-        if (current()) showRefusal(error, (field, message) => setError(field, { type: "server", message }));
+        if (!current()) return;
+        if (errorMessageKey(error) === "errors.unknown") {
+          setError("root.creation", { type: "unknown", message: t("project_creation_unknown") });
+        } else showRefusal(error, (field, message) => setError(field, { type: "server", message }));
       },
     });
     return created;

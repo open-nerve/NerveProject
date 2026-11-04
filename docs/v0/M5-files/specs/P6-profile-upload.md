@@ -1,6 +1,6 @@
 # M5/P6：资料图片上传与展示
 
-> 实施前预检曾通过，T1–T12完成；PC2按A完成基础与页面回归，PC3按A修复并通过联合回归，T13本地门禁全绿，准确分支CI待核。分支 `codex/m5-p6`，初始基线c59cedf3，实施基线已同步到 `main@f5f4ce9431e7fb360363bf169da33487cf9b864f`。P5 与两次集成修复已完成准确 main CI、全部证据归档及分支/worktree清理，见[P5 收尾记录](../reviews/P5-issue-assets-review.md#222-最终main全绿与归档清理)。
+> 实施前预检曾通过，T1–T12完成；PC2按A完成基础与页面回归，PC3按A修复并通过联合回归，T13本地门禁全绿，一次整分支deep-review的唯一局部问题已修复，最终本地3475项Web/381项E2E/42项三浏览器通过，准确最终分支CI待核。分支 `codex/m5-p6`，初始基线c59cedf3，实施基线已同步到 `main@f5f4ce9431e7fb360363bf169da33487cf9b864f`。P5 与两次集成修复已完成准确 main CI、全部证据归档及分支/worktree清理，见[P5 收尾记录](../reviews/P5-issue-assets-review.md#222-最终main全绿与归档清理)。
 > PC1 的复现、已批准方案 A 及代价见[决策记录](../reviews/P6-public-project-lifetime-decision.md)；M4/M5设计、spec、plan与联合回归落点已同步，原角色授权和ProjectStore R06保持。
 PC2 已批准 A：[工作区更新的迟到回包](../reviews/P6-workspace-write-lifetime-decision.md)。
 > 依据 M5 设计 §3、§5–6、§9、§11–12、P4 已实现的资料引用合同及 P5 的准备件隐私。执行沿连续授权：主控局部决定并记代价，重大风险先提交再上报。
@@ -88,7 +88,7 @@ UploadSession 状态至少含 idle、selected、preparing、uploading、confirmi
 - [ ] A7 局部测试、必要行为变异、七项本地门禁、一次整分支 deep-review 与修复复核、准确最终分支 CI 全绿。
 - [ ] A8 --no-ff 后准确 main CI 全绿，原始证据归档并核 hash/bytes/mode/membership/unknown=0，正常清理，准备 P7 预检。
 
-A1–A6已挂证据；A3的[PC3目录读取冲突](../reviews/P6-directory-read-decision.md)已按A修复，30项共享读取回归、三类行为变异和三浏览器42项通过（[评审§20](../reviews/P6-profile-upload-review.md#20-pc3批准a后的联合修复)）。原A1–A6证据映射见[评审§18](../reviews/P6-profile-upload-review.md#18-t13-验收与清理核对)；A7/A8保持开放。
+A1–A6已挂证据；A3的[PC3目录读取冲突](../reviews/P6-directory-read-decision.md)已按A修复，34项共享读取回归、三类行为变异及完成去重窗口变异、三浏览器42项通过（[评审§20](../reviews/P6-profile-upload-review.md#20-pc3批准a后的联合修复)）。原A1–A6证据映射见[评审§18](../reviews/P6-profile-upload-review.md#18-t13-验收与清理核对)；一次终审及局部修复见[评审§21](../reviews/P6-profile-upload-review.md#21-t14整分支终审与一次局部修复)，准确最终CI及集成完成前A7/A8保持开放。
 
 F5–F7 正向数据经 API，SQL 只断言/明确故障夹具；到期 UI 测试可将宿主响应的 expires_at 限为已过去时刻，但须标明是界面失效注入，不冒称服务端真实签名 TTL 已被修改。P1/P3 已有真实签名期限合同保持。至少覆盖上传后 ready 但 bind 拒绝、完成超时后重试旧 ID、PUT object_missing 后新 prepare、预设替换正在上传文件、同名不同字节、两个工作区同头像、权限撤销恢复后的旧响应和卸载双次清理。
 

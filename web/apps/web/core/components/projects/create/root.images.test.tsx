@@ -216,29 +216,50 @@ it("upload busy blocks submit and Escape; selecting a preset cancels it before a
   expect(tab.nerve.calls.filter((c) => c.path.endsWith("/complete"))).toHaveLength(0);
 });
 
-it("double submit before React commits only sends one POST, blocks close, and unknown response never retries itself", async () => {
-  let held: Call | undefined;
-  tab.nerve.respond = (call) =>
-    call.method === "POST" && call.path.endsWith("/projects") ? (held = call) : tab.answer(call);
-  await render();
-  await tab.name();
-  const form = document.querySelector("form");
-  if (!form) throw new Error("form absent");
-  await act(async () => {
-    form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
-    form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
-  });
-  await act(async () => until(() => !!held, "held create"));
-  await act(async () => document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })));
-  await tab.click("close");
-  expect(close).not.toHaveBeenCalled();
-  expect(tab.creations()).toHaveLength(1);
-  await act(async () => held?.fail());
-  await waitForPickerDOM(() => toasts.length > 0, "uncertain response");
-  await act(async () => vi.advanceTimersByTimeAsync(10_000));
-  expect(tab.creations()).toHaveLength(1);
-  expect(next).not.toHaveBeenCalled();
-});
+it.each(["network", "unrecognized response"])(
+  "double submit sends one POST; %s asks for verification and keeps the form and ready cover",
+  async (failure) => {
+    let held: Call | undefined;
+    tab.nerve.respond = (call) =>
+      call.method === "POST" && call.path.endsWith("/projects") ? (held = call) : tab.answer(call);
+    await render();
+    await tab.name();
+    await upload();
+    const form = document.querySelector("form");
+    if (!form) throw new Error("form absent");
+    await act(async () => {
+      form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+      form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    });
+    await act(async () => until(() => !!held, "held create"));
+    await act(async () => document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })));
+    await tab.click("close");
+    expect(close).not.toHaveBeenCalled();
+    expect(tab.creations()).toHaveLength(1);
+    await act(async () => (failure === "network" ? held?.fail() : held?.answer(new Response(null, { status: 502 }))));
+    await waitForPickerDOM(() => toasts.length > 0 || !!document.querySelector('[role="alert"]'), "uncertain response");
+    expect(document.querySelector('[role="alert"]')?.textContent).toBe("project_creation_unknown");
+    expect(toasts).toEqual([]);
+    expect(document.querySelector<HTMLInputElement>('input[name="name"]')?.value).toBe("Fresh");
+    expect(document.querySelector('img[src="blob:selection-1"]')).not.toBeNull();
+    await act(async () => vi.advanceTimersByTimeAsync(10_000));
+    expect(tab.creations()).toHaveLength(1);
+    expect(next).not.toHaveBeenCalled();
+    expect(tab.puts).toHaveLength(1);
+    expect(tab.nerve.calls.filter((c) => c.path.endsWith("/complete"))).toHaveLength(1);
+    // After checking the project list, the user may explicitly decide to submit again.
+    tab.nerve.respond = tab.answer;
+    await tab.submit();
+    await waitForPickerDOM(() => next.mock.calls.length === 1, "explicit creation retry");
+    expect(document.querySelector('[role="alert"]')).toBeNull();
+    expect(tab.creations().map((c) => (c.body as Record<string, unknown>).cover_image_asset_id)).toEqual([
+      "asset-1",
+      "asset-1",
+    ]);
+    expect(tab.puts).toHaveLength(1);
+    expect(tab.nerve.calls.filter((c) => c.path.endsWith("/complete"))).toHaveLength(1);
+  }
+);
 
 it.each(["unmount", "other-workspace", "same-slug-new-id", "role-aba"])(
   "late success after %s cannot toast or advance the new form",

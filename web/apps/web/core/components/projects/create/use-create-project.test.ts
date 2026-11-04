@@ -6,6 +6,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Project } from "@nerve/api-client";
 import { heldChange, lateSettlingsAnswering, signedIn, switchAccount } from "@/lib/auth/fake-tab";
+import { SessionUnavailableError } from "@/lib/auth/token-manager";
 import { refusal, underFields } from "@/lib/fake-refusal";
 import { toasts } from "@/lib/fake-toast";
 import { projectOf } from "@/store/project/fake-projects";
@@ -128,6 +129,11 @@ describe("useCreateProject", () => {
       message: "errors.validation_failed",
     },
     { refused: "a guest's creation", error: refusal(403, "forbidden"), message: "errors.forbidden" },
+    {
+      refused: "unavailable credentials before sending",
+      error: new SessionUnavailableError(1000),
+      message: "errors.unreachable",
+    },
   ])("shows nerve's reason for $refused in a toast", async ({ error, message }) => {
     page.createProject.mockRejectedValueOnce(error);
     expect(await create()).toBeUndefined();

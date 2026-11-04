@@ -1,6 +1,6 @@
 # M5/P6 资料图片上传与展示阶段记录
 
-> 分支 `codex/m5-p6`，实施基线 `main@f5f4ce9431e7fb360363bf169da33487cf9b864f`。P5 已完整收尾，P6 预检提交 ab9f86b8；当前 T1–T12 完成，PC2按A完成基础与页面回归，A1/A2/A4–A6已挂证据；T13发现PC3后A3重新开放，当前暂停待负责人决定，A7/A8仍开放。按连续授权推进，一次整分支 deep-review 后集成；重大风险先提交上报。
+> 分支 `codex/m5-p6`，实施基线 `main@f5f4ce9431e7fb360363bf169da33487cf9b864f`。P5 已完整收尾，P6 的 PC1/PC2/PC3 均按批准 A 实施并有联合回归，A1–A6已挂证据。一次整分支 deep-review 发现的创建结果未知提示已局部修复，当前验证和准确最终分支CI见§21；A7/A8在最终CI与集成归档前保持开放。按连续授权推进，重大风险先提交上报。
 
 ## 1. 输入与范围
 
@@ -14,7 +14,7 @@ T1：JSON资产prepare/complete用生成DTO及当前ApiClient；raw PUT保持原
 
 ## 3. 局部裁定与代价
 
-- T13重新实测死成员，只移除无调用getter；原生DOM完整标识符的遥测误报按精确词形修正，未放宽目录架构守卫、未新增exception。理由及正反样本见§18–19；代价是关键词守卫仍需对未来原生标识符保留真实反例，不以改名隐藏命中。PC3属于跨模块读取职责冲突，单独提交待负责人决定。
+- T13重新实测死成员，只移除无调用getter；原生DOM完整标识符的遥测误报按精确词形修正，未放宽目录架构守卫、未新增exception。理由及正反样本见§18–19；代价是关键词守卫仍需对未来原生标识符保留真实反例，不以改名隐藏命中。PC3曾作为跨模块读取职责冲突单独提交，负责人已批准A，修复及联合回归见§20。
 
 - 跨任务接口按预检§7的三项决定执行：T3能力/T7预设/T9组合分段交付；T6共享logo props当段同步调用方；工作区能力刷新不重置未保存资料。各项正反行为由对应Task验收。
 - raw PUT用有限时长独立fetch，阶段进度不伪造字节百分比；代价是无法显示线性上传百分比。前端终止不能撤回服务端已接收写，宿主绑定仍归页面。
@@ -213,3 +213,26 @@ T13完整E2E首轮371/381，10项失败原件完整保留于pc3-full-report/pc3-
 首轮完整E2E的10个失败连同相关S2入口共15项已全部通过（32.921秒），真实点击无force，原S2请求数量断言保持；新主链接与同级按钮不再互相遮挡。最新完整Web3473项、lint/knip/build通过，4529输入稳定；证据pc3-e2e-fixes、pc3-final-eighth-*和pc3-web-test-logs-eighth。最新三浏览器及完整E2E在同一冻结源码上继续。
 
 T13最终本地收据：完整E2E381/381（165.394秒），最新三浏览器42/42（113.995秒），完整Web3473项（18任务、17缓存、web实际重跑），最新gen-check5.396秒；整分支oxlint191文件零warning/error，格式192文件通过。最新编译后webui包-count=1通过（0.643秒），Go业务/SQL/API/配置的原完整测试输入不变，原61包全套与lint结果按t13-go-reuse-final.json复用；bootstrap静态页面测试用固定MapFS，实际新嵌入页面由本次381项E2E验证。非文档4529输入逐项核验；56消费者中仅卡片布局修改，其余55 SHA保持，卡片规范source无裸URL。20个既有容器全在，新遗留0。原件pc3-full-e2e-second、pc3-three-third-browsers、t13-final-gen-check、t13-branch-lint、t13-webui-embedding、t13-consumer-recheck-accepted、t13-container-cleanup-accepted及verify-task13.py。当前未完成整分支终审或main集成，准确分支CI另核。
+
+## 21. T14整分支终审与一次局部修复
+
+[唯一fresh deep-review](../../../reviews/re-45-M5P6整体审核.md)固定基线f5f4ce94至候选4ffadeb0，审阅255变更文件、56消费者、五项Review Focus及28条既有Ruling，并独立核对九组4529输入。结论1项P2/Major Local Fix，0 Critical/Minor/Structural/Needs Decision；Declined to judge无。原审查没有运行测试，修复后的核验由主控完成，不把它写成第二次独立审查。
+
+F1根因是非幂等创建POST结果未知仍显示通用“请重试”。现仅在`errorMessageKey=errors.unknown`时呈现表单内持久`role=alert`，中英文提示先检查是否已创建，再决定重试；已填字段/ready封面保留。明确的字段/权限Problem及发送前SessionUnavailable保持原分类，无自动POST/PUT/complete。代价是无法识别Problem的回答也先要求检查项目列表；不改共享错误接口、后端协议或权限规则。
+
+真实表单先取得缺提示AssertionError，再修复GREEN；增加无Problem的502和凭据不可用相邻场景，53项聚焦通过。原同刻双提交/忙时关闭断言保留；未知结果等待后仍一次POST，封面预览和ID保留，明确重试只追加创建POST、不再上传。E6原件`t14-unknown-{red,green,boundaries-green}`，未把未变字段逐个重测或纯静态检查冒称新行为实验。
+
+| 最终本地门禁 | 证据与实际结果 |
+| --- | --- |
+| gen-check | `t14-final-gen-check`，exit0，3.226秒 |
+| Go lint/完整Go | `t14-go-reuse.json`逐hash核1884相关输入不变，复用T13完整61包991.595秒及Go lint；原61实际测试包/21无测试包且无结果缓存，不声称旧Go加载了新UI |
+| lint-web/knip | `t14-final-lint-web/knip`，54静态任务通过；11.598/1.950秒 |
+| test-web | `t14-final-test-web`，18任务；web实际311文件3475项，33.902秒；各包原始turbo日志在`t14-web-test-logs/`，缓存如实保留 |
+| build/embedding | `t14-final-build/embedding`，最新UI编译与嵌入包-count=1通过，6.218/1.044秒 |
+| 三浏览器 | `t14-final-three-browsers`，42/42、113.263秒；原始报告/trace在`t14-three-report/results` |
+| 完整E2E | `t14-final-full-e2e`，381/381、165.255秒；报告`t14-full-report`，raw仍在e2e/test-results，旧全量raw已移动至`before-t14-full-test-results`保留 |
+| 分支lint/格式 | `t14-branch-lint`，191实际lint文件0warning/error、192格式文件通过 |
+
+全部最新receipt匹配4529非文档输入；相对候选仅6文件变化，既有56消费者与PC3变异源码不变。测试退出瞬间Ryuk尚在自动关闭，原21条快照保留；后续只读核验已回到20既有容器，新遗留0，无手工容器操作。`verify-final.py --local`通过。
+
+准确最终分支CI须在本次提交后核验，T14/A7保持最后CI门；main集成/归档/P7预检继续T15。待准确CI通过的状态写入E6收据与ledger，并在下一阶段文档回填，避免为记录自身提交SHA不断制造新的候选；未通过前不能合并。M5整体与P7/P8尚未完成。

@@ -1,6 +1,6 @@
 # M5/P6 资料图片上传与展示 Implementation Plan
 
-> 实施前预检曾通过，T1–T12完成；PC2按A完成基础与页面回归，PC3按A修复并通过联合回归，T13本地门禁全绿，准确分支CI待核。**For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans 按 Task 内联实施；不用逐 Task 新派实现者/审者。完成后一次 fresh whole-branch review。本计划在 `codex/m5-p6`，初始基线c59cedf3，实施基线已noff同步 `main@f5f4ce9431e7fb360363bf169da33487cf9b864f`；[PC1](../reviews/P6-public-project-lifetime-decision.md)已批准 A并同步合同。P5准确main CI及归档清理已完成，按连续授权从T1执行。
+> 实施前预检曾通过，T1–T12完成；PC2按A完成基础与页面回归，PC3按A修复并通过联合回归，T13本地门禁全绿，一次整分支deep-review的唯一局部问题已修复，最终本地3475项Web/381项E2E/42项三浏览器通过，准确最终分支CI待核。**For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans 按 Task 内联实施；不用逐 Task 新派实现者/审者。完成后一次 fresh whole-branch review。本计划在 `codex/m5-p6`，初始基线c59cedf3，实施基线已noff同步 `main@f5f4ce9431e7fb360363bf169da33487cf9b864f`；[PC1](../reviews/P6-public-project-lifetime-decision.md)已批准 A并同步合同。P5准确main CI及归档清理已完成，按连续授权从T1执行。
 
 PC2 已批准 A：[工作区更新的迟到回包](../reviews/P6-workspace-write-lifetime-decision.md)。
 **Goal:** 资料图片真实上传、宿主绑定、权限/到期展示和可访问交互。
@@ -167,8 +167,8 @@ PC2 已批准 A：[工作区更新的迟到回包](../reviews/P6-workspace-write
 
 ## Task 14（T14）：整分支 deep-review
 
-- [ ] Step 1：冻结真实基线到候选HEAD，一次fresh reviewer读完整变更手写文件、调用链、全部Review Focus、局部裁定与输入证据；生成物核源。
-- [ ] Step 2：主控按实际影响分级，一次局部修复与必要RED/GREEN/受影响回归；Minor具名去向，重要架构问题先提交上报；不派重复同范围审者。
+- [x] Step 1：冻结真实基线到候选HEAD，一次fresh reviewer读完整变更手写文件、调用链、全部Review Focus、局部裁定与输入证据；生成物核源。
+- [x] Step 2：主控按实际影响分级，一次局部修复与必要RED/GREEN/受影响回归；Minor具名去向，重要架构问题先提交上报；不派重复同范围审者。
 - [ ] Step 3：报告入docs/reviews下一编号，最终提交/push准确CI全绿，关闭A7。
 
 ## Task 15（T15）：main 集成归档与 P7 预检
