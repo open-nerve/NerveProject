@@ -68,7 +68,7 @@
 
 ## Task 6（T6）：一次整分支 deep-review 与修复
 
-- [ ] Step 1：冻结正式main基线..候选HEAD，fresh reviewer读完整手写diff和调用链、五Review Focus/所有Ruling、真实证据；三视角报告保存docs/reviews下一编号，生成物核源。
+- [ ] Step 1：冻结正式main基线..候选HEAD，fresh reviewer读完整手写diff和调用链、五Review Focus/所有Ruling、真实证据；三视角报告保存docs/reviews下一编号，生成物核源。T1–T4产品冻结后，该只读审查可与T5门禁/CI并行；待门禁完成才进入修复及最终判定，不以审查替代测试。
 - [ ] Step 2：主控逐条裁定，局部问题根因修复、必要RED/GREEN及受影响回归；新架构问题先提交上报。不得重复同范围再派审者替代处理，DeclinedToJudge具名闭环。
 - [ ] Step 3：最终本地门禁覆盖当前输入；准确最终分支CI全绿后关闭A5，明确P7b页面尚未实现，handoffs保持open。
 

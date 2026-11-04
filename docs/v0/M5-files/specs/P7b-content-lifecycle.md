@@ -18,6 +18,8 @@ content(id: string, signal?: AbortSignal): Promise<Content>;
 
 各自为 GET/DELETE `/api/v0/assets/{id}`、POST `/api/v0/assets/{id}/duplicate`、GET `/api/v0/assets/{id}/content`。listDraftPreparations消费P7a新增 GET `/api/v0/drafts/{draft_id}/asset-preparations`，limit50、最多100，直接用生成类型；只有draft view可用。无下载参数；DuplicateAsset 为 purpose/scope/name?，重发会生成新资产。所有拒绝保持现有 unwrap/Problem，不把 404 当空数组或成功。
 
+P7a实施接收：生成operation为`listDraftAssetPreparations`，返回`DraftAssetPreparationPage`；省略cursor读取首屏，后续只原样传递非null的next_cursor，不传空字符串或跨draft复用。两种草稿用途、pending/uploaded且未绑定均可返回；每页重验，跨页没有冻结快照。实际恢复、权限及交错证据见[P7a阶段记录](../reviews/P7a-draft-preparations-review.md#10-t5-全部门禁与接收核对)，正式开工仍以P7a集成后的基线预检为准。
+
 AttachmentService.list(target, cursor?, signal?): Promise<AttachmentPage>，其中 target 为 `{kind:"issue"|"comment"|"draft"; id:string}`，分别调用 `/api/v0/issues/{issue_id}/attachments`、`/api/v0/issue-comments/{comment_id}/attachments`、`/api/v0/drafts/{draft_id}/attachments`。请求 `limit:50`；服务端最大100，UUID升序。Attachment 六字段直接消费；分页无 URL，next_cursor=null 才到底。
 
 ## 2. 宿主视图与唯一失效来源
