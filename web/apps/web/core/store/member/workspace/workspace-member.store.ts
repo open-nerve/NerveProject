@@ -107,7 +107,11 @@ export class WorkspaceMemberStore implements IWorkspaceMemberStore {
   /** The changes of the memberships and the invitations, sent one at a time. */
   private readonly changes = oneAtATime();
 
-  constructor(_memberRoot: Pick<IMemberRootStore, "memberMap">, _rootStore: RootStore, api: ApiClient) {
+  constructor(
+    _memberRoot: Pick<IMemberRootStore, "memberMap">,
+    private readonly _rootStore: RootStore,
+    api: ApiClient
+  ) {
     makeObservable(this, {
       // computed
       workspaceMemberIds: computed,
@@ -247,14 +251,15 @@ export class WorkspaceMemberStore implements IWorkspaceMemberStore {
    * cut (Reconciled.fetch).
    * @returns {Promise<Memberships | undefined>}
    */
-  fetchWorkspaceMembers = async (workspace: Pick<Workspace, "id" | "slug">): Promise<Memberships | undefined> => {
-    const memberships = await this.members.fetch(workspace.id, async () => {
-      const listed = await this.service.list(workspace.slug);
-      return Object.fromEntries(listed.map((membership) => [membership.member.id, membership]));
+  fetchWorkspaceMembers = (workspace: Pick<Workspace, "id" | "slug">): Promise<Memberships | undefined> =>
+    this._rootStore.observeProfileRead({ kind: "member", id: workspace.id }, async () => {
+      const memberships = await this.members.fetch(workspace.id, async () => {
+        const listed = await this.service.list(workspace.slug);
+        return Object.fromEntries(listed.map((membership) => [membership.member.id, membership]));
+      });
+      if (memberships) this.shareProfiles(Object.values(memberships));
+      return memberships;
     });
-    if (memberships) this.shareProfiles(Object.values(memberships));
-    return memberships;
-  };
 
   /** The members' profiles of memberships join the users the other stores read. */
   private shareProfiles(memberships: WorkspaceMember[]): void {

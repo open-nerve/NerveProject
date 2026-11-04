@@ -103,7 +103,14 @@ export const LiteTextEditor = React.forwardRef(function LiteTextEditor(
               searchCallback: fetchMentions,
               scope: mentionScope,
               renderError: (error, retry) => <EditorMentionsError error={error} retry={retry} />,
-              renderComponent: EditorMentionsRoot,
+              renderComponent: (mention) => (
+                <EditorMentionsRoot
+                  {...mention}
+                  workspaceID={workspaceId}
+                  workspaceSlug={workspaceSlug}
+                  projectId={projectId}
+                />
+              ),
               getMentionedEntityDetails: (id) => ({
                 display_name: getUserDetails(id)?.display_name ?? "",
               }),

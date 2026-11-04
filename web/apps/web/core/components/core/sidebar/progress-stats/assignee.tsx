@@ -6,9 +6,9 @@
 
 import { observer } from "mobx-react";
 // nerve imports
-import { Avatar } from "@makeplane/propel/components/avatar";
+import { useRouteWorkspace } from "@/hooks/use-route-workspace";
+import { ProfileAvatar } from "@/components/assets/profile-image";
 import { useTranslation } from "@nerve/i18n";
-import { getFileURL } from "@nerve/utils";
 // assets
 import emptyMembers from "@/app/assets/empty-state/empty_members.svg?url";
 import userImage from "@/app/assets/user.png?url";
@@ -18,7 +18,6 @@ import { SingleProgressStats } from "@/components/core/sidebar/single-progress-s
 export type TAssigneeData = {
   id: string | undefined;
   title: string | undefined;
-  avatar_url: string | undefined;
   completed: number;
   total: number;
 }[];
@@ -29,6 +28,7 @@ type TAssigneeStatComponent = {
 
 export const AssigneeStatComponent = observer(function AssigneeStatComponent(props: TAssigneeStatComponent) {
   const { distribution } = props;
+  const imageWorkspace = useRouteWorkspace();
   const { t } = useTranslation();
   return (
     <div>
@@ -40,10 +40,10 @@ export const AssigneeStatComponent = observer(function AssigneeStatComponent(pro
                 key={assignee?.id}
                 title={
                   <div className="flex items-center gap-2">
-                    <Avatar
+                    <ProfileAvatar
                       alt={assignee?.title ?? undefined}
                       fallback={assignee?.title?.[0]?.toUpperCase()}
-                      src={getFileURL(assignee?.avatar_url ?? "")}
+                      source={{ kind: "member", workspaceID: imageWorkspace?.id ?? "", memberID: assignee.id }}
                       size="xs"
                     />
                     <span>{assignee?.title ?? ""}</span>

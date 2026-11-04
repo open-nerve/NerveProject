@@ -6,21 +6,22 @@
 
 import { observer } from "mobx-react";
 // nerve imports
-import { Avatar } from "@makeplane/propel/components/avatar";
+import { ProfileAvatar } from "@/components/assets/profile-image";
 import { useTranslation } from "@nerve/i18n";
 import type { DescriptionVersionOption } from "./root";
 import { CustomMenu } from "@nerve/ui";
-import { calculateTimeAgo, getFileURL } from "@nerve/utils";
+import { calculateTimeAgo } from "@nerve/utils";
 // hooks
 import { useMember } from "@/hooks/store/use-member";
 
 type Props = {
+  workspaceID: string | undefined;
   onClick: (versionId: string) => void;
   version: DescriptionVersionOption;
 };
 
 export const DescriptionVersionsDropdownItem = observer(function DescriptionVersionsDropdownItem(props: Props) {
-  const { onClick, version } = props;
+  const { onClick, version, workspaceID } = props;
   // store hooks
   const { getUserDetails } = useMember();
   // derived values
@@ -31,11 +32,11 @@ export const DescriptionVersionsDropdownItem = observer(function DescriptionVers
   return (
     <CustomMenu.MenuItem key={version.id} className="flex items-center gap-1" onClick={() => onClick(version.id)}>
       <span className="flex-shrink-0">
-        <Avatar
+        <ProfileAvatar
           alt={versionCreator?.display_name ?? t("common.deactivated_user")}
           fallback={(versionCreator?.display_name ?? t("common.deactivated_user"))?.[0]?.toUpperCase()}
           size="2xs"
-          src={getFileURL(versionCreator?.avatar_url ?? "")}
+          source={{ kind: "member", workspaceID: workspaceID ?? "", memberID: version.ownerId }}
         />
       </span>
       <p className="flex items-center gap-1.5 text-11 text-secondary">

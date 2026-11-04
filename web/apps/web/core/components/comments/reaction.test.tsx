@@ -1,9 +1,11 @@
 // @vitest-environment jsdom
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
+import { StoreContext } from "@/lib/store-context";
+import type { RootStore } from "@/store/root.store";
+import { seedAccount } from "@/store/user/fake-account";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { MemoryRouter } from "react-router";
-import { runInAction } from "mobx";
 import { observer } from "mobx-react";
 import type { CommentReaction } from "@nerve/api-client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
@@ -16,8 +18,14 @@ import { useWorkItemCommentOperations } from "../issues/issue-detail/issue-activ
 import { CommentCard } from "./card/root";
 const binding = vi.hoisted(() => ({ tab: undefined as Awaited<ReturnType<typeof issueStoreTab>> | undefined }));
 vi.stubGlobal("localStorage", { getItem: () => null, setItem: () => {}, removeItem: () => {} });
-vi.mock("@/lib/auth/api-client", () => ({ tokenManager: { state: { loginId: "one" } }, publicClient: {} }));
-vi.mock("@/lib/store-context", () => ({ rootStore: undefined }));
+vi.mock("@/lib/auth/api-client", () => ({
+  tokenManager: { state: { status: "signed-in", loginId: "one" }, start: async () => {}, subscribe: () => () => {} },
+  publicClient: {},
+}));
+vi.mock("@/lib/store-context", async () => ({
+  rootStore: undefined,
+  StoreContext: (await import("react")).createContext<RootStore | undefined>(undefined),
+}));
 vi.mock("@nerve/i18n", () => ({
   useTranslation: () => ({ t: (key: string, args?: { name: string }) => (args ? `${key}: ${args.name}` : key) }),
 }));
@@ -25,7 +33,9 @@ vi.mock("@nerve/propel/toast", () => import("@/lib/fake-toast"));
 vi.mock("@/hooks/store/use-issue-detail", () => ({ useIssueDetail: () => binding.tab!.app.issue.issueDetail }));
 vi.mock("@/hooks/store/use-workspace", () => ({ useWorkspace: () => binding.tab!.app.workspaceRoot }));
 vi.mock("@/hooks/store/use-project", () => ({ useProject: () => binding.tab!.app.projectRoot.project }));
-vi.mock("@/hooks/store/use-member", () => ({ useMember: () => ({ getUserDetails: () => userOf("Ann") }) }));
+vi.mock("@/hooks/store/use-member", () => ({
+  useMember: () => ({ workspace: binding.tab!.app.memberRoot.workspace, getUserDetails: () => userOf("Ann") }),
+}));
 vi.mock("@/hooks/store/user", () => ({
   useUser: () => binding.tab!.app.user,
   useUserPermissions: () => binding.tab!.app.user.permission,
@@ -77,9 +87,7 @@ beforeEach(async () => {
   vi.spyOn(Element.prototype, "getAnimations").mockReturnValue([]);
   binding.tab = await issueStoreTab();
   vi.spyOn(binding.tab.app.issue.issueDetail.comment, "refreshAfterChange").mockResolvedValue();
-  runInAction(() => {
-    binding.tab!.app.user.data = accountOf("actor");
-  });
+  await seedAccount(binding.tab!.nerve, binding.tab!.app.user, accountOf("actor"));
   binding.tab.app.issue.issues.acceptRead(issueDetailOf("x"), binding.tab.app.issue.captureRead());
   host = document.createElement("div");
   document.body.append(host);
@@ -103,9 +111,11 @@ async function loaded(reactions = [mine, theirs], disabled = false) {
   tab.nerve.calls.length = 0;
   await act(async () =>
     root.render(
-      <MemoryRouter>
-        <Card disabled={disabled} />
-      </MemoryRouter>
+      <StoreContext.Provider value={binding.tab!.app}>
+        <MemoryRouter>
+          <Card disabled={disabled} />
+        </MemoryRouter>
+      </StoreContext.Provider>
     )
   );
 }

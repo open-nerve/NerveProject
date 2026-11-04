@@ -30,7 +30,9 @@
           "company_size": {
             "select_a_range": "Select organization size"
           }
-        }
+        },
+        "edit_logo": "Change workspace icon",
+        "upload_logo": "Upload workspace icon"
       },
       "members": {
         "title": "Members",

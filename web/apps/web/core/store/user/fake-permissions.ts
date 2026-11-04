@@ -10,7 +10,7 @@
 import { vi } from "vitest";
 import type { Project, ProjectRole, Workspace, WorkspaceRole } from "@nerve/api-client";
 import { FakeNerve } from "@/lib/auth/fake-nerve";
-import { fakeRoot } from "@/store/fake-root";
+import { fakeRoot, withoutImageObservation } from "@/store/fake-root";
 import { ProjectRootStore } from "@/store/project";
 import { loadProjects, projectOf } from "@/store/project/fake-projects";
 import { RouterStore } from "@/store/router.store";
@@ -27,9 +27,18 @@ export async function permissionsOver(workspaces: Workspace[], projects: Project
   const nerve = new FakeNerve();
   const api = nerve.client();
   const router = new RouterStore();
-  const workspaceRoot = new WorkspaceRootStore(fakeRoot({ router }), api);
-  const projectRoot = new ProjectRootStore(fakeRoot({ router, workspaceRoot }), api);
-  const permissions = new UserPermissionStore(fakeRoot({ router, workspaceRoot, projectRoot }));
+  const workspaceRoot = new WorkspaceRootStore(
+    fakeRoot({ observeProfileRead: withoutImageObservation, router }),
+    api,
+    () => () => true
+  );
+  const projectRoot = new ProjectRootStore(
+    fakeRoot({ observeProfileRead: withoutImageObservation, router, workspaceRoot }),
+    api
+  );
+  const permissions = new UserPermissionStore(
+    fakeRoot({ observeProfileRead: withoutImageObservation, router, workspaceRoot, projectRoot })
+  );
   await loadWorkspaces(nerve, workspaceRoot, workspaces);
   const listedIn = (workspaceId: string) => projects.filter((held) => held.workspace_id === workspaceId);
   await workspaces.reduce<Promise<unknown>>(

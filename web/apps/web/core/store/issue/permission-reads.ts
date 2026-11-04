@@ -11,7 +11,7 @@ type Fact = {
 const key = (workspaceID: string, kind: Fact["kind"], projectID?: string) =>
   JSON.stringify([workspaceID, kind, projectID ?? null]);
 
-/** Metadata for one issue root only: observe semantic permissions, never duplicate entities or directories. */
+/** One root's visibility/permission generations, never an authorization grant or an entity cache. */
 export class PermissionReads {
   private serial = 0;
   private readonly watermarks = observable.map<string, number>();
@@ -48,7 +48,7 @@ export class PermissionReads {
           kind: "project",
           projectID,
           signature:
-            project && effective !== undefined
+            project?.workspace_id === workspace.id
               ? JSON.stringify([
                   effective,
                   project.member_role,
@@ -77,6 +77,17 @@ export class PermissionReads {
   }
   capture(): number {
     return this.serial;
+  }
+  /** Directory visibility alone; membership roles and unrelated projects do not hide workspace logos. */
+  currentWorkspaceIdentity(serial: number, workspaceID: string): boolean {
+    return (this.watermarks.get(key(workspaceID, "workspace")) ?? 0) <= serial;
+  }
+  /** Only this workspace's identity and membership, independent of its project and issue changes. */
+  currentWorkspace(serial: number, workspaceID: string): boolean {
+    return (
+      this.currentWorkspaceIdentity(serial, workspaceID) &&
+      (this.watermarks.get(key(workspaceID, "member")) ?? 0) <= serial
+    );
   }
   current(serial: number, workspaceID: string | undefined, projectIDs: readonly string[], member = false): boolean {
     if (!workspaceID && !projectIDs.length) return serial >= this.serial;

@@ -1,0 +1,55 @@
+/** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { json } from "@/lib/auth/fake-nerve";
+import { track, until } from "@/lib/auth/fake-time";
+import { assetTab } from "@/store/asset/fake-assets";
+import { loadWorkspaces } from "./fake-workspaces";
+
+vi.mock("@/lib/auth/api-client", () => ({ tokenManager: {}, publicClient: {} }));
+vi.mock("@/lib/store-context", () => ({ rootStore: {} }));
+let tab: Awaited<ReturnType<typeof assetTab>>;
+beforeEach(async () => {
+  vi.useFakeTimers();
+  tab = await assetTab();
+  tab.nerve.respond = undefined;
+});
+afterEach(() => {
+  tab.app.dispose();
+  vi.unstubAllGlobals();
+  vi.useRealTimers();
+});
+
+it.each(["downgraded", "removed", "same-slug-new-id", "role-aba"])(
+  "late logo binding cannot replace newer workspace permission facts: %s",
+  async (transition) => {
+    const { app, nerve, workspace } = tab;
+    const target = { purpose: "WORKSPACE_LOGO", scope: { kind: "workspace", id: workspace.id } } as const;
+    const oldUpload = app.asset.createUpload(target);
+    const binding = track(app.workspaceRoot.updateWorkspace(workspace.slug, { logo_asset_id: "old-upload" }));
+    await until(() => nerve.calls.length === 1, "old binding request");
+    const pending = nerve.calls[0]!;
+    const member = { ...workspace, role: 15 as const };
+    const recreated = { ...workspace, id: "new-workspace", logo_asset_id: "new-picture" };
+    const recovered = { ...workspace, logo_asset_id: "new-picture" };
+    const current = transition === "downgraded" ? member : transition === "same-slug-new-id" ? recreated : recovered;
+    await loadWorkspaces(nerve, app.workspaceRoot, transition === "downgraded" || transition === "role-aba" ? [member] : []);
+    expect(oldUpload.current).toBe(false);
+    if (transition === "same-slug-new-id" || transition === "role-aba")
+      await loadWorkspaces(nerve, app.workspaceRoot, [current]);
+    pending.answer(json(200, {
+      ...workspace,
+      logo_asset_id: "old-upload",
+      logo_url: "/static/old-capability",
+      logo_url_expires_at: new Date(Date.now() + 60_000).toISOString(),
+    }));
+    await until(() => binding.settled, "late binding response");
+    expect(binding.error).toBeUndefined();
+    expect(oldUpload.current).toBe(false);
+    const shown = app.workspaceRoot.getWorkspaceBySlug(workspace.slug);
+    const newUpload = app.asset.createUpload(target);
+    console.info("P6 binding fact probe", JSON.stringify({ transition, expectedRole: transition === "removed" ? null : current.role, actualRole: shown?.role ?? null, expectedLogo: transition === "removed" ? null : current.logo_asset_id, actualLogo: shown?.logo_asset_id ?? null, oldUploadCurrent: oldUpload.current, newUploadCurrent: newUpload.current }));
+    expect.soft(shown?.role ?? null).toBe(transition === "removed" ? null : current.role);
+    expect.soft(shown?.logo_asset_id ?? null).toBe(transition === "removed" ? null : current.logo_asset_id);
+    if (transition === "downgraded") expect(newUpload.current).toBe(false);
+  }
+);

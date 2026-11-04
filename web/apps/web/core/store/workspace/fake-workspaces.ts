@@ -7,7 +7,7 @@
 
 import type { Workspace } from "@nerve/api-client";
 import type { FakeNerve } from "@/lib/auth/fake-nerve";
-import { answered } from "@/lib/auth/fake-nerve";
+import { answered, json } from "@/lib/auth/fake-nerve";
 import type { IWorkspaceRootStore } from "@/store/workspace";
 
 /** A workspace of the caller's, as nerve lists it: the slug names it; a member's, unless fields say otherwise. */
@@ -38,4 +38,22 @@ export function loadWorkspaces(nerve: FakeNerve, store: IWorkspaceRootStore, wor
     { data: workspaces },
     "the list"
   );
+}
+
+/** Mounted views may start other reads as roles change; answer only this directory and keep their responder. */
+export async function refreshWorkspacesWhileMounted(
+  nerve: FakeNerve,
+  store: IWorkspaceRootStore,
+  workspaces: Workspace[]
+) {
+  const previous = nerve.respond;
+  nerve.respond = (call) => {
+    if (call.method === "GET" && call.path === "/api/v0/workspaces") call.answer(json(200, { data: workspaces }));
+    else previous?.(call);
+  };
+  try {
+    return await store.fetchWorkspaces();
+  } finally {
+    nerve.respond = previous;
+  }
 }

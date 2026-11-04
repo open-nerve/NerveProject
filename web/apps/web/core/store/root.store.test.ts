@@ -103,7 +103,7 @@ describe("RootStore", () => {
     const x = new RootStore(nerve.client());
     const y = new RootStore(nerve.client(), x);
     const stores = Object.keys(x) as (keyof typeof x)[];
-    expect(stores).toHaveLength(23);
+    expect(stores).toHaveLength(25);
     for (const name of stores) {
       if (PAGE_STORES.includes(name)) expect(y[name], name).toBe(x[name]);
       else expect(y[name], name).not.toBe(x[name]);

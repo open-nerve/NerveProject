@@ -1,7 +1,7 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
+import { seedAccount } from "@/store/user/fake-account";
 import type { CommentReaction, IssueComment } from "@nerve/api-client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { runInAction } from "mobx";
 import { accountOf } from "@/store/member/fake-users";
 import { json, noContent, problem } from "@/lib/auth/fake-nerve";
 import { until, track } from "@/lib/auth/fake-time";
@@ -22,9 +22,7 @@ beforeEach(async () => {
   vi.useFakeTimers();
   tab = await issueStoreTab();
   vi.spyOn(store(), "refreshAfterChange").mockResolvedValue();
-  runInAction(() => {
-    tab.app.user.data = accountOf("actor");
-  });
+  await seedAccount(tab.nerve, tab.app.user, accountOf("actor"));
 });
 afterEach(() => {
   tab.app.dispose();

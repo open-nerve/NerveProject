@@ -30,7 +30,9 @@
           "company_size": {
             "select_a_range": "选择组织规模"
           }
-        }
+        },
+        "edit_logo": "更换工作区图标",
+        "upload_logo": "上传工作区图标"
       },
       "members": {
         "title": "成员",

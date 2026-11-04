@@ -1180,6 +1180,11 @@ modules/access/
 前端先做数据层（P8a 工作区一侧、P8b 项目一侧，第 12 节），再做页面（P9–P11）：两段把 M3 的全部类型、service、store 和两个包装层挂载时的取数迁到新接口，页面的 Phase 加入故事时，挂载路径上已经没有旧接口的请求（3.1、第 12 节）。
 
 ### 7.1 按会话分代（总体设计 7.7；M2 交接第 3 节）
+
+**M5/P6 PC3（负责人批准A）：** 资料图片共享既有CURRENT_USER/WORKSPACES/PROJECT/WORKSPACE_MEMBERS会话读取入口。宿主store经组合根的小接口发布实际读取完成，图片仅维护在途和视图证明；同一有效代次的在途读可加入，旧缓存不算新授权，旧完成不覆盖新证明。SWR继续管理页面请求，Reconciled继续管理事实，IssueRootStore继续唯一管理权限代次；workspaces-list-fetch守卫保持。详见[P6协议](../M5-files/specs/P6-image-lifecycle.md#pc3共享宿主读取与完成证明负责人批准a)。
+
+为保持既定的失败占位与明确重试，四个共享宿主hook关闭SWR隐式reconnect重读；图片仍由expiry/focus/online检查决定一次到期刷新，页面挂载、身份变化及显式mutate仍读取。useSessionSWR仅新增可关闭reconnect的窄选项，其他会话请求策略保持。代价：仅网络恢复本身不再独立触发这四种宿主读取，等待上述实际读取条件；避免网络事件绕过图片重试预算。
+
 - **service 按代建**：M3 的 service 都是生成的客户端之上的薄封装，构造时接收这一代的 `ApiClient`，由 store 在构造时建（`ApiTokenStore` 的写法，`core/store/user/api-token.store.ts`）。M2 交接列出的 10 处模块级实例在 P8a（`WorkspaceService` 的 8 处）、P8b（`ProjectService`、`ProjectMemberService` 各 1 处）全部消失；只调公开操作的（注册页和邀请页查看邀请，`getWorkspaceInvitation`）用 `publicClient`，可以是模块级的。
 - **`RootStore` 的释放**：M3 是第一个接上注册在沿用对象上的反应的 M，按总体设计 7.7 给 `RootStore` 加上 `dispose()`，由 `store-context.tsx` 在换代时调用旧的一代。要释放的只有 `project_filter.store.ts:63` 观察 `router.workspaceSlug` 的 `reaction`：store 保存它返回的释放函数，`dispose()` 调用它。单元测试：换代之后改路由，旧一代的反应不再运行。`cycle_filter`、`module_filter` 的同类反应和 `issue/root.store.ts:170` 的 `autorun` 属于 M4、M6，照同一写法由它们接上（13.2）。`issue_calendar_view` 的反应只观察本代的资料，不用释放（总体设计 7.7；P8a 评审记录第 3 节 T12）。
 - **SWR 键**：会话的取数都带 `loginId`，经 `useSessionSWR`、`sessionKey`（`core/lib/use-session-swr.ts`、`core/lib/session-key.ts`，P8a），键的形状是 `[取数的名称, loginId, ...取数的参数]`（例如 `["WORKSPACE_MEMBERS", loginId, slug]`）。fetcher 返回 store 方法的 Promise（M2 交接第 2 节"注意"）。经 `publicClient` 的公开操作只取决于它的输入，键就是它的输入，不带 `loginId`（查看邀请的链接，`useInvitationPreview`，P8a）；这是唯一的例外。绕过 `useSessionSWR` 的会话取数由 oxlint 静态地发现（根目录 `.oxlintrc.json` 按路径限制从 `swr` 导入，P8a 的 spec 附录 A.6 列出范围）。（M3/P8a 的修订按控制者的裁定 A6 改写这一条。）
@@ -1245,6 +1250,8 @@ modules/access/
 较早完整目录在等待期间若接受了新详情，其空集合或缺少该项目的结果也必须在发布前与新事实协调；只有仍可见、同工作区、同归档类别的事实可补入。协调与发布之间不能再让新事实丢失。随后新发的完整目录仍可凭真实缺席撤销可见性；侧栏、目录、按编号查询与详情共用协调后的结果。R39以接受观察器立即释放旧目录和真实IssueRootStore联合红绿覆盖该反向时序。
 
 R06 的来源记录只包含项目 ID、工作区 ID、最后有效归档类别和应答顺序，以及已取目录的工作区键；不复制 `Project`，也不是工作项权限水位。新类别的正面事实随后缺席时，不得回退到旧类别副本。详情、目录投影、侧栏和按编号查询共用此判定。异步写在真正发送时观察原项目事实；事实中途改变（包括消失后恢复）就不把旧确认写回缓存，成功/失败均释放临时观察。项目成员的角色/增删经同一个 `withCurrentProject` 边界，退出及侧栏排序亦同；返回值仍是服务器对该操作的实际回答。内容完全相同的目录、失败目录或无关范围不使写入失效；新事实已经取代旧事实时，宁可保留新事实，后续有效读取再反映该次服务器写入，不能用旧整对象覆盖它。请求发出时记录已接受目录、详情和完整写确认的来源顺序，包含在该应答触发的观察器内立即发出的请求；较早的目录或详情不能覆盖之后的新正面事实。确认重放遇到更晚的独立事实时，用该事实替换相应项目，或按缺席剔除，不能只跳过旧修改而留下旧原始行。永久删除仍按服务器确认的删除处理。
+
+**M5/P6 PC2（负责人2026-11-04批准A）：** 工作区普通资料与logo更新在调用时捕获当前workspace UUID及权限有效期，排队后发送、异步成功/失败、规范缓存发布和旧读上的确认重放均不得越过原有效期。WorkspaceRootStore声明小的工作区写有效性接口，由RootStore接到既有IssueRootStore/PermissionReads；范围只含本工作区身份/成员权限及root生命期，不含无关项目变化，不增观察器/权限缓存，不依赖asset控件。已观察到权限变化后即使恢复同角色，旧结果仍过时。未知工作区不发写；过时的成功/失败返回undefined，普通有效范围内的拒绝仍原样抛出，调用页面不对undefined提示成功。已发送写可能服务端成功，不自动重发。有效范围的已确认写仍与旧读调和，但重放须尊重原始目录回答的工作区UUID/role：不能先覆掉新角色再等观察器发现变化。通用Reconciled、既有授权角色与服务端协议不变；移除/同slug新UUID、20→15/5→20、旧读/新写、排队/退休/迟到拒绝及无关范围联合回归。见[PC2决策](../M5-files/reviews/P6-workspace-write-lifetime-decision.md)。
 
 ### 7.4 落点、新手引导、邀请页与注册页
 - **落点**（3.14，P8a）：`AuthenticationWrapper` 取 `GET /api/v0/workspaces`（SWR 键带 `loginId`），按"上次的工作区仍在列表中 → 它；否则最早创建的 → 它；一个都没有 → `/create-workspace`"算出，纯函数有 vitest。M2 为"完成引导的用户直接去 `/create-workspace`"写的分支改为这条规则。四处 `await fetchCurrentUserSettings()` 删除（M2 交接第 2 节）。切换工作区、创建工作区、接受邀请之后经 `PATCH /api/v0/me/profile` 写 `last_workspace_id`（P9）。

@@ -93,7 +93,7 @@ export const WorkspaceMenuRoot = observer(function WorkspaceMenuRoot() {
               >
                 <div className="flex flex-grow items-center gap-2 truncate">
                   <WorkspaceLogo
-                    logo={activeWorkspace?.logo_url}
+                    source={{ kind: "workspace", workspaceID: activeWorkspace?.id }}
                     name={activeWorkspace?.name}
                     classNames="border border-subtle rounded-md size-7"
                   />

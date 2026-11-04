@@ -45,7 +45,7 @@ export const WorkspaceSettingsSidebarHeader = observer(function WorkspaceSetting
       <div className="mt-1.5 flex items-center justify-between gap-2 px-5 py-0.5">
         <div className="flex items-center gap-2 truncate">
           <WorkspaceLogo
-            logo={workspace?.logo_url}
+            source={{ kind: "workspace", workspaceID: workspace?.id }}
             name={workspace?.name}
             classNames="shrink-0 size-8 border border-subtle"
           />

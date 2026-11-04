@@ -8,6 +8,7 @@ import type { Project } from "@nerve/api-client";
 import { useLabel } from "@/hooks/store/use-label";
 import { useMember } from "@/hooks/store/use-member";
 import { useProject } from "@/hooks/store/use-project";
+import { useProjectRead } from "@/hooks/use-project-read";
 import { useProjectPreferences } from "@/hooks/store/use-project-preferences";
 import { useProjectState } from "@/hooks/store/use-project-state";
 import { useWorkspace } from "@/hooks/store/use-workspace";
@@ -40,14 +41,14 @@ export type ProjectAccess =
  */
 export function useProjectFetch(workspaceSlug: string | undefined, projectId: string): ProjectAccess {
   const { getWorkspaceBySlug } = useWorkspace();
-  const { getProjectById, fetchProject } = useProject();
+  const { getProjectById } = useProject();
   const { fetchNavigation } = useProjectPreferences();
   const { fetchProjectLabels } = useLabel();
   const {
     project: { fetchProjectMembers },
   } = useMember();
   const { fetchProjectStates } = useProjectState();
-  const read = useSessionSWR(["PROJECT", projectId], (id) => fetchProject(id));
+  const read = useProjectRead(projectId);
   const workspace = workspaceSlug === undefined ? null : getWorkspaceBySlug(workspaceSlug);
   const held = getProjectById(projectId);
   const project = held && held.workspace_id === workspace?.id ? held : undefined;

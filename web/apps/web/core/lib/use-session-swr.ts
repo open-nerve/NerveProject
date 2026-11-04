@@ -17,7 +17,8 @@ export type SessionFetch = readonly [name: string, ...args: (string | undefined)
  * (the app's revalidateOnMount: true) and as its key changes (the app's revalidateIfStale: true, for a key SWR has an
  * answer of), not when the tab regains focus, and a refusal is not retried: the page shows it, with its own retry
  * where it has one. A list may shorten only the deduping interval: a restored permission needs a new read even
- * immediately after an invalidated one, while requests still in flight remain deduplicated.
+ * immediately after an invalidated one, while requests still in flight remain deduplicated. Capability owners may
+ * disable SWR's reconnect read: their image lifetime refreshes on expiry, preserving the explicit retry budget.
  */
 const SESSION_FETCH: SWRConfiguration = { revalidateOnFocus: false, shouldRetryOnError: false };
 
@@ -31,14 +32,12 @@ const SESSION_FETCH: SWRConfiguration = { revalidateOnFocus: false, shouldRetryO
 export function useSessionSWR<T>(
   fetch: SessionFetch | null,
   fetcher: (...args: string[]) => Promise<T>,
-  config?: Pick<SWRConfiguration, "dedupingInterval">
+  config?: Pick<SWRConfiguration, "dedupingInterval"> & { revalidateOnReconnect?: false }
 ): SWRResponse<T> {
   const session = useSession();
-  return useSWR(
-    fetch && sessionKey(session, ...fetch),
-    ([, , ...args]: SessionKey) => fetcher(...args),
-    config?.dedupingInterval === undefined
-      ? SESSION_FETCH
-      : { ...SESSION_FETCH, dedupingInterval: config.dedupingInterval }
-  );
+  return useSWR(fetch && sessionKey(session, ...fetch), ([, , ...args]: SessionKey) => fetcher(...args), {
+    ...SESSION_FETCH,
+    ...(config?.dedupingInterval === undefined ? {} : { dedupingInterval: config.dedupingInterval }),
+    ...(config?.revalidateOnReconnect === false ? { revalidateOnReconnect: false } : {}),
+  });
 }

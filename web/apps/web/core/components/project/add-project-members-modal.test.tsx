@@ -29,6 +29,7 @@ const acme = [
   membershipOf("gus", { role: 5 }),
 ];
 const page = vi.hoisted(() => ({ bulkAddMembersToProject: vi.fn(), onClose: vi.fn() }));
+vi.mock("@/hooks/use-profile-image", () => import("@/lib/fake-profile-image"));
 vi.mock("@/hooks/store/use-member", () => ({
   useMember: () => ({
     project: {
@@ -115,3 +116,5 @@ describe("AddProjectMembersModal", () => {
     }
   );
 });
+
+vi.mock("@/hooks/store/use-project", () => ({ useProject: () => ({ getProjectById: () => web }) }));

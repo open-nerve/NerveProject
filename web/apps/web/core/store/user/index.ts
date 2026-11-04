@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import { action, makeObservable, observable, runInAction, computed } from "mobx";
+import { action, makeObservable, observable, computed } from "mobx";
 // nerve imports
 import type {
   ApiClient,
@@ -18,8 +18,8 @@ import { EUserPermissions } from "@nerve/constants";
 import type { TUserPermissions } from "@nerve/types";
 // lib
 import { tokenManager } from "@/lib/auth/api-client";
-import { SessionChangedError } from "@/lib/auth/token-manager";
 import { oneAtATime } from "@/lib/one-at-a-time";
+import { Reconciled } from "@/lib/reconciled";
 // store
 import type { RootStore } from "@/store/root.store";
 import type { IUserPermissionStore } from "@/store/user/permissions.store";
@@ -36,7 +36,7 @@ import { ApiTokenStore } from "./api-token.store";
 
 export interface IUserStore {
   // observables
-  data: User | undefined;
+  readonly data: User | undefined;
   // store observables
   userProfile: IUserProfileStore;
   permission: IUserPermissionStore;
@@ -50,13 +50,15 @@ export interface IUserStore {
   signUp: (credentials: RegisterRequest) => Promise<void>;
   signOut: () => Promise<void>;
   // computed
-  canPerformAnyCreateAction: boolean;
   projectsWithCreatePermissions: { [projectId: string]: TUserPermissions };
 }
 
 export class UserStore implements IUserStore {
   // observables
-  data: User | undefined = undefined;
+  private readonly account = new Reconciled<User>();
+  get data(): User | undefined {
+    return this.account.value;
+  }
   // store observables
   userProfile: IUserProfileStore;
   permission: IUserPermissionStore;
@@ -81,7 +83,7 @@ export class UserStore implements IUserStore {
     // observables
     makeObservable(this, {
       // model observables
-      data: observable,
+      data: computed,
       userProfile: observable,
       permission: observable,
       apiTokens: observable,
@@ -94,7 +96,6 @@ export class UserStore implements IUserStore {
       signUp: action,
       signOut: action,
       // computed
-      canPerformAnyCreateAction: computed,
       projectsWithCreatePermissions: computed,
     });
   }
@@ -107,23 +108,18 @@ export class UserStore implements IUserStore {
    * through it.
    * @returns {Promise<User | undefined>}
    */
-  fetchCurrentUser = async (): Promise<User | undefined> => {
-    await tokenManager.start();
-    if (tokenManager.state.status !== "signed-in") return undefined;
-    try {
-      const [user] = await Promise.all([this.userService.currentUser(), this.userProfile.fetchUserProfile()]);
-      runInAction(() => {
-        this.data = user;
+  fetchCurrentUser = (): Promise<User | undefined> =>
+    this.store.observeProfileRead({ kind: "self" }, async () => {
+      await tokenManager.start();
+      if (tokenManager.state.status !== "signed-in") return undefined;
+      return this.account.fetch(async () => {
+        const [user] = await Promise.all([this.userService.currentUser(), this.userProfile.fetchUserProfile()]);
+        return user;
       });
-      return user;
-    } catch (error) {
-      if (error instanceof SessionChangedError) return undefined;
-      throw error;
-    }
-  };
+    });
 
   /**
-   * @description updates the account's names or time zone; fails, writing nothing, when nerve refuses. An update
+   * @description updates the account's fields, including its profile images; fails, writing nothing, when nerve refuses. An update
    * is sent once the one before it is answered, or has failed: nerve applies them in the order they were made, and
    * the answer to the last one is the account nerve holds.
    * @returns {Promise<User>}
@@ -131,10 +127,7 @@ export class UserStore implements IUserStore {
   updateCurrentUser = (data: UserUpdate): Promise<User> =>
     this.changes(async () => {
       const user = await this.userService.updateCurrentUser(data);
-      runInAction(() => {
-        this.data = user;
-      });
-      return user;
+      return this.account.receive(user, (_held, answer) => answer);
     });
 
   changePassword = async (payload: ChangePasswordRequest): Promise<void> => {
@@ -189,13 +182,8 @@ export class UserStore implements IUserStore {
     const roles: { [projectId: string]: TUserPermissions } = {};
     for (const projectId of this.store.projectRoot.project.joinedProjectIds) {
       const role = this.permission.getProjectRoleByWorkspaceSlugAndProjectId(workspaceSlug, projectId);
-      if (role !== undefined && role >= EUserPermissions.MEMBER) roles[projectId] = role;
+      if (role === EUserPermissions.MEMBER || role === EUserPermissions.ADMIN) roles[projectId] = role;
     }
     return roles;
-  }
-
-  /** @description whether the caller may create in any project of the current workspace */
-  get canPerformAnyCreateAction() {
-    return Object.keys(this.projectsWithCreatePermissions).length > 0;
   }
 }

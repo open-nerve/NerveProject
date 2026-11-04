@@ -6,8 +6,7 @@
 
 import { observer } from "mobx-react";
 // nerve imports
-import { Avatar } from "@makeplane/propel/components/avatar";
-import { getFileURL } from "@nerve/utils";
+import { ProfileAvatar } from "@/components/assets/profile-image";
 // hooks
 import { useUser } from "@/hooks/store/user";
 
@@ -18,10 +17,10 @@ export const ProfileSettingsSidebarHeader = observer(function ProfileSettingsSid
   return (
     <div className="flex shrink-0 items-center gap-2">
       <div className="shrink-0">
-        <Avatar
+        <ProfileAvatar
           alt={currentUser?.display_name}
           fallback={currentUser?.display_name?.[0]?.toUpperCase()}
-          src={getFileURL(currentUser?.avatar_url ?? "")}
+          source={{ kind: "self", image: "avatar" }}
           size="lg"
         />
       </div>

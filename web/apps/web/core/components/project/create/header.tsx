@@ -4,12 +4,13 @@
  * See the LICENSE file for details.
  */
 
-import { useState } from "react";
+import { useState, type RefObject } from "react";
 import { Controller, useFormContext } from "react-hook-form";
 // nerve imports
 import { useTranslation } from "@nerve/i18n";
 import { EmojiPicker, EmojiIconPickerTypes, Logo } from "@nerve/propel/emoji-icon-picker";
 import { CloseOutline } from "@makeplane/propel/icons";
+import { Button } from "@nerve/propel/button";
 // components
 import { CoverImage } from "@/components/common/cover-image";
 import { logoPropsOf } from "@/components/project/logo-props";
@@ -17,10 +18,15 @@ import type { ProjectCreationForm } from "@/components/projects/create/use-creat
 
 type Props = {
   handleClose: () => void;
+  onEditCover: () => void;
+  coverURL?: string;
+  busy: boolean;
+  canEditCover: boolean;
+  coverButtonRef: RefObject<HTMLButtonElement | null>;
 };
 
 function ProjectCreateHeader(props: Props) {
-  const { handleClose } = props;
+  const { handleClose, onEditCover, coverURL, busy, canEditCover, coverButtonRef } = props;
   const {
     control,
     setValue,
@@ -33,17 +39,29 @@ function ProjectCreateHeader(props: Props) {
   return (
     <div className="group relative h-44 w-full rounded-lg">
       <CoverImage
-        src={undefined}
+        src={coverURL}
         showDefaultWhenEmpty
         alt={t("project_cover_image_alt")}
         className="absolute top-0 left-0 h-full w-full rounded-lg"
       />
       <div className="absolute top-2 right-2 p-2">
-        <button type="button" onClick={handleClose} disabled={isSubmitting} aria-label={t("close")}>
+        <button type="button" onClick={handleClose} disabled={busy || isSubmitting} aria-label={t("close")}>
           <CloseOutline className="h-5 w-5 text-on-color" />
         </button>
       </div>
-      <div className="absolute -bottom-[22px] left-3">
+      <div className="absolute right-3 bottom-3">
+        <Button
+          ref={coverButtonRef}
+          type="button"
+          variant="secondary"
+          size="sm"
+          disabled={busy || !canEditCover}
+          onClick={onEditCover}
+        >
+          {t("image_upload.change_cover")}
+        </Button>
+      </div>
+      <div className="absolute -bottom-[22px] left-3" inert={busy}>
         <Controller
           name="logo_props"
           control={control}

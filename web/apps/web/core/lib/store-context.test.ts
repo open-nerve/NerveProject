@@ -12,6 +12,8 @@ import type { GlobalViewStore } from "@/store/global-view.store";
 import type { RootStore } from "@/store/root.store";
 import { projectOf, loadProjects } from "@/store/project/fake-projects";
 import { loadWorkspaces, workspaceOf } from "@/store/workspace/fake-workspaces";
+import { accountOf } from "@/store/member/fake-users";
+import { seedAccount } from "@/store/user/fake-account";
 
 // Each session of the tab has its own RootStore (M2 design 7.1: a tab never writes as the wrong account):
 // store-context.tsx builds one for the session the app loaded with, and a new one, with a client bound to the
@@ -128,14 +130,14 @@ afterEach(() => {
 
 describe("store-context", () => {
   it("isolates archived and profile preferences across real session replacement", async () => {
-    const { storage, context, SessionChangedError, signedIn, follow } = await load();
+    const { storage, nerve, context, SessionChangedError, signedIn, follow } = await load();
     vi.stubGlobal("window", { localStorage: storage.tab("page") });
-    const { runInAction } = await import("mobx");
     await signedIn();
+    nerve.respond = (call) => {
+      if (call.path === REFRESH) call.answer(json(200, nerve.tokens()));
+    };
     const x = context.rootStore;
-    runInAction(() => {
-      x.user.data = { id: "account-x" } as typeof x.user.data;
-    });
+    await seedAccount(nerve, x.user, { ...accountOf("x"), id: "account-x" });
     await x.issue.archivedIssuesFilter.fetchFilters("ws", "project");
     await x.issue.profileIssuesFilter.fetchFilters("ws", "target");
     await x.issue.archivedIssuesFilter.updateFilterExpression("ws", "project", { priority__in: "high" });
@@ -165,9 +167,7 @@ describe("store-context", () => {
     expect(y).not.toBe(x);
     expect(y.issue.archivedIssuesFilter.getIssueFilters("project", "ws")).toBeUndefined();
     expect(y.issue.profileIssuesFilter.getIssueFilters("target", "ws")).toBeUndefined();
-    runInAction(() => {
-      y.user.data = { id: "account-y" } as typeof y.user.data;
-    });
+    await seedAccount(nerve, y.user, { ...accountOf("y"), id: "account-y" });
     await y.issue.archivedIssuesFilter.fetchFilters("ws", "project");
     await y.issue.profileIssuesFilter.fetchFilters("ws", "target");
     expect(y.issue.archivedIssuesFilter.getIssueFilters("project", "ws")?.richFilters).toEqual({

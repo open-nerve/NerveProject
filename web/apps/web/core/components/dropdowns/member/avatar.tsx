@@ -6,9 +6,10 @@
 
 import { observer } from "mobx-react";
 import type { ComponentType, SVGProps } from "react";
-import { Avatar } from "@makeplane/propel/components/avatar";
+import { ProfileAvatar } from "@/components/assets/profile-image";
+import { useRouteWorkspace } from "@/hooks/use-route-workspace";
 import { MembersOutline } from "@makeplane/propel/icons";
-import { cn, getFileURL } from "@nerve/utils";
+import { cn } from "@nerve/utils";
 // hooks
 import { AvatarGroupOverflow } from "@/components/common/avatar-group-overflow";
 import { useMember } from "@/hooks/store/use-member";
@@ -20,6 +21,7 @@ type AvatarProps = {
 
 export const ButtonAvatars = observer(function ButtonAvatars(props: AvatarProps) {
   const { userIds, icon: Icon } = props;
+  const imageWorkspace = useRouteWorkspace();
   // store hooks
   const { getUserDetails } = useMember();
 
@@ -32,9 +34,9 @@ export const ButtonAvatars = observer(function ButtonAvatars(props: AvatarProps)
 
             if (!userDetails) return;
             return (
-              <Avatar
+              <ProfileAvatar
                 key={userId}
-                src={getFileURL(userDetails.avatar_url)}
+                source={{ kind: "member", workspaceID: imageWorkspace?.id ?? "", memberID: userId }}
                 alt={userDetails.display_name}
                 fallback={userDetails.display_name?.[0]?.toUpperCase()}
               />
@@ -46,8 +48,8 @@ export const ButtonAvatars = observer(function ButtonAvatars(props: AvatarProps)
     if (userIds) {
       const userDetails = getUserDetails(userIds);
       return (
-        <Avatar
-          src={getFileURL(userDetails?.avatar_url ?? "")}
+        <ProfileAvatar
+          source={{ kind: "member", workspaceID: imageWorkspace?.id ?? "", memberID: userIds }}
           alt={userDetails?.display_name}
           fallback={userDetails?.display_name?.[0]?.toUpperCase()}
           size="xs"

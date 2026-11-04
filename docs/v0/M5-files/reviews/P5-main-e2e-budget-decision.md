@@ -1,6 +1,6 @@
 # P5 main E2E 作业预算：一次重跑后的停点
 
-> **负责人已批准 A（2026-11-04），实施与验证中。** 基线 main 为 `ce29aa00076130e2e805f50e2de08fc5d3ca2375`，本修复分支 `codex/m5-p5-ci-budget`。P5 功能与清理恢复夹具修复已合入；原main CI未全绿，分支/worktree和证据保留。P6 的 PC1 方案 A 已同步设计、spec、plan，产品尚未实施。
+> **负责人已批准 A（2026-11-04），实施、验证及归档清理已完成。** 原基线main `ce29aa00076130e2e805f50e2de08fc5d3ca2375`，原修复分支 `codex/m5-p5-ci-budget`；最终main f5f4ce94及CI41772399410全绿，完成收据见§6。P6已同步最终基线、预检通过，T1待开始。
 
 ## 1. 为什么停下来
 
@@ -26,7 +26,7 @@
 - 01:11:59.662：日志输出364 passed（17.4m），距job开始20分4.662秒。
 - 01:12:00.488：日志记录作业被取消。
 
-GitHub作业页的公开注解明确写明 **“The job has exceeded the maximum execution time of 20m0s”**，已保存原HTML。`.github/workflows/ci.yml` 的 `jobs.e2e.timeout-minutes` 当前确为20。由此可确认第二轮的取消原因是整个作业预算不足，不是W11再次失败或新用例断言失败。W11根因仍未修复，重跑通过不能替代其根因证明。
+GitHub作业页的公开注解明确写明 **“The job has exceeded the maximum execution time of 20m0s”**，已保存原HTML。失败时`.github/workflows/ci.yml` 的 `jobs.e2e.timeout-minutes` 确为20。由此可确认第二轮的取消原因是整个作业预算不足，不是W11再次失败或新用例断言失败。W11根因仍未修复，重跑通过不能替代其根因证明。
 
 GitHub在第二轮为已成功的server/web分配了新job身份126312433250/126312371600，但保留原执行时间；再次下载的日志与首轮逐字节一致，未重新执行这两项。
 
@@ -60,8 +60,8 @@ GitHub在第二轮为已成功的server/web分配了新job身份126312433250/126
 
 ## 5. 本机证据入口
 
-- 修复原件：`/Users/xiaoruan/project/nerve-project/.codex/worktress/codex/m5-p5-ci-purge/.superpowers/sdd/P5-ci-purge-resume/`，重点为 `main-ci-attempt-1-failure.json`、`main-ci-attempt-2-failure.json`、`main-ci-rerun-request.json`。
-- P6预检副本：`.superpowers/sdd/P6-profile-upload/precheck/p5-ci-budget/source-copy-manifest.json`，列出全部文件、字节、SHA及mode。原件尚未归档到稳定目录，因为main验收未通过。
+- 原停点证据现位于主项目`.superpowers/sdd/M5-P5-ci-purge-20261104/payload/superpowers/sdd/P5-ci-purge-resume/`，重点为 `main-ci-attempt-1-failure.json`、`main-ci-attempt-2-failure.json`、`main-ci-rerun-request.json`。
+- 本预算修复现位于`.superpowers/sdd/M5-P5-e2e-budget-20261104/payload/superpowers/sdd/P5-e2e-budget/`；P6预检副本的`precheck/p5-ci-budget/source-copy-manifest.json`仍保留当时的源路径、字节、SHA及mode，旧源路径按[P5归档映射](P5-issue-assets-review.md#222-最终main全绿与归档清理)解析，不改写原manifest。
 - [清理恢复修复与执行收据](P5-ci-purge-resume.md)、[该修复独立审查](../../../reviews/re-43-M5P5集成修复审核.md)。
 
 ## 6. 批准后的执行记录
@@ -70,7 +70,9 @@ GitHub在第二轮为已成功的server/web分配了新job身份126312433250/126
 
 - [x] T1：从准确main新建隔离worktree，只将E2E作业总上限20改为25分钟，加实测依据注释。
 - [x] T2：核工作流结构、全量差异、未变输入和证据；一次fresh整分支deep-review及主控复核，0 Critical/0 Important/0 Minor，见[re-44](../../../reviews/re-44-M5P5作业预算审核.md)。
-- [ ] T3：准确最终分支CI三项全绿，再按连续授权noff合入main，确认准确main CI三项全绿。
-- [ ] T4：P5及两次集成修复全部原件归档核验后正常清理；P6同步最终main，回填验收并从T1继续。
+- [x] T3：准确最终分支CI三项全绿，再按连续授权noff合入main，确认准确main CI三项全绿。
+- [x] T4：P5及两次集成修复全部原件归档核验后正常清理；P6同步最终main，回填验收并从T1继续。
 
 局部裁定：这是单一工作流预算调整，复用逐SHA不变的产品、测试和依赖验证，完整远端分支/main CI仍各跑一次；不新增复制配置常量的测试，不重跑未受影响的本地大套件。原有20分钟失败、W11失败及重跑通过原件全部保留，不能把扩大预算写成W11根因修复。实现和验证台账保存在 `.superpowers/sdd/P5-e2e-budget/`，后续准确身份与归档收据回填P6阶段记录。
+
+最终分支 `86f8cfe98f07fa2fa750a50f4290f4fff5192bd1` 的CI41768721385 attempt1成功，364/364、16.7分钟；noff main `f5f4ce9431e7fb360363bf169da33487cf9b864f` 的[CI41772399410](https://github.com/open-nerve/NerveProject/actions/runs/41772399410) attempt1三job成功，364/364、13.7分钟、W11通过且正常收尾。本修复81文件836100字节逐hash/bytes/mode/membership归档，unknown=0；三组分支/worktree均普通清理、归档再核通过。完整身份、原件新根和5053文件总收据见[P5§22.2](P5-issue-assets-review.md#222-最终main全绿与归档清理)，P6预检见[re-42§7](../../../reviews/re-42-M5P6预检.md#7-最终基线与执行前预检通过)。

@@ -1,0 +1,17 @@
+{
+  "head": "240fc7dd74733a7f8e9620ea78ac0c624efb151d",
+  "source_path": "web/apps/web/core/store/workspace/p6-binding-lifetime.probe.test.ts",
+  "source_sha256": "2fe0c6071ad99572a02fec7dcdcdd97d24210c28bfc43afc37d9b42f8db51905",
+  "inputs_manifest_sha256": "cde455ab9ac46614f59044047ac507d9e03f512fe57fb04d8290b1806c6396ff",
+  "outcome": {
+    "failed": [
+      "downgraded",
+      "role-aba"
+    ],
+    "passed": [
+      "removed",
+      "same-slug-new-id"
+    ]
+  },
+  "product_changed": false
+}

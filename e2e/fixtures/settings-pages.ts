@@ -35,10 +35,14 @@ export async function answerTo(page: Page, method: string, path: string, act: ()
  * pathname predicate, including queries, so it stops no other request, and stays for the page's life: a route removed while the page sends its next
  * request can leave that request waiting for good.
  */
-export async function bodiesSentTo(page: Page, method: string, path: string): Promise<unknown[]> {
+export async function bodiesSentTo(
+  page: Page,
+  method: string,
+  path: string | ((pathname: string) => boolean)
+): Promise<unknown[]> {
   const bodies: unknown[] = [];
   await page.route(
-    (url) => url.pathname === path,
+    (url) => (typeof path === "string" ? url.pathname === path : path(url.pathname)),
     async (route: Route) => {
       if (route.request().method() === method) bodies.push(route.request().postDataJSON());
       await route.fallback();
@@ -70,14 +74,14 @@ export async function sentTo(
 export async function holdAnswer(
   page: Page,
   method: string,
-  path: string,
+  path: string | ((pathname: string) => boolean),
   count = 1,
   received?: () => void
 ): Promise<() => Promise<void>> {
   const released = deferred();
   let held = 0;
   await page.route(
-    (url) => url.pathname === path,
+    (url) => (typeof path === "string" ? url.pathname === path : path(url.pathname)),
     async (route: Route) => {
       if (held >= count || route.request().method() !== method) {
         await route.fallback();

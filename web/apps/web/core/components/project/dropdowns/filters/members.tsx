@@ -9,10 +9,10 @@ import { sortBy } from "lodash-es";
 import { observer } from "mobx-react";
 // nerve ui
 import { useTranslation } from "@nerve/i18n";
-import { Avatar } from "@makeplane/propel/components/avatar";
+import { useRouteWorkspace } from "@/hooks/use-route-workspace";
+import { ProfileAvatar } from "@/components/assets/profile-image";
 import { Loader } from "@nerve/ui";
 // components
-import { getFileURL } from "@nerve/utils";
 import { FilterHeader, FilterOption } from "@/components/issues/issue-layouts/filters";
 // hooks
 import { useMember } from "@/hooks/store/use-member";
@@ -30,6 +30,7 @@ type Props = {
 /** A filter of the projects by workspace members, who lead them or are their members. */
 export const FilterMembers = observer(function FilterMembers(props: Props) {
   const { title, appliedFilters, handleUpdate, memberIds, searchQuery } = props;
+  const imageWorkspace = useRouteWorkspace();
   // states
   const [itemsToRender, setItemsToRender] = useState(5);
   const [previewEnabled, setPreviewEnabled] = useState(true);
@@ -82,10 +83,10 @@ export const FilterMembers = observer(function FilterMembers(props: Props) {
                       isChecked={!!appliedFilters?.includes(member.id)}
                       onClick={() => handleUpdate(member.id)}
                       icon={
-                        <Avatar
+                        <ProfileAvatar
                           alt={member.display_name}
                           fallback={member.display_name?.[0]?.toUpperCase()}
-                          src={getFileURL(member.avatar_url)}
+                          source={{ kind: "member", workspaceID: imageWorkspace?.id ?? "", memberID: member.id }}
                           size="xs"
                         />
                       }

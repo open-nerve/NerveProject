@@ -19,7 +19,7 @@ import {
 } from "@makeplane/propel/icons";
 // nerve imports
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
-import { Avatar } from "@makeplane/propel/components/avatar";
+import { ProfileAvatar } from "@/components/assets/profile-image";
 import { Button } from "@nerve/propel/button";
 import { Logo } from "@nerve/propel/emoji-icon-picker";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
@@ -27,7 +27,7 @@ import type { Project } from "@nerve/api-client";
 import type { TContextMenuItem } from "@nerve/ui";
 import { ContextMenu } from "@nerve/ui";
 import { useTranslation } from "@nerve/i18n";
-import { cn, getFileURL, renderFormattedDate } from "@nerve/utils";
+import { cn, renderFormattedDate } from "@nerve/utils";
 // hooks
 import { useMember } from "@/hooks/store/use-member";
 import { useUserPermissions } from "@/hooks/store/user";
@@ -35,7 +35,7 @@ import { useCopyProjectLink } from "@/hooks/use-copy-link";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 // local imports
 import { AvatarGroupOverflow } from "@/components/common/avatar-group-overflow";
-import { CoverImage } from "@/components/common/cover-image";
+import { ProjectCover } from "@/components/assets/project-cover";
 import { DeleteProjectModal } from "./delete-project-modal";
 import { JoinProjectModal } from "./join-project-modal";
 import { ArchiveRestoreProjectModal } from "./archive-restore-modal";
@@ -153,182 +153,193 @@ export const ProjectCard = observer(function ProjectCard(props: Props) {
           archive={false}
         />
       )}
-      <Link
+      <article
+        aria-label={project.name}
         ref={projectCardRef}
-        to={`/${workspaceSlug}/projects/${project.id}/issues`}
-        onClick={(e) => {
-          if (!isMemberOfProject || isArchived) {
-            e.preventDefault();
-            e.stopPropagation();
-            if (!isArchived) setJoinProjectModal(true);
-          }
-        }}
-        data-prevent-progress={!isMemberOfProject || isArchived}
-        className={cn(
-          "group/project-card flex w-full flex-col justify-between overflow-hidden rounded-lg border border-subtle bg-layer-2 transition-all duration-300 hover:border-strong hover:shadow-raised-200"
-        )}
+        className="group/project-card relative isolate flex w-full flex-col justify-between overflow-hidden rounded-lg border border-subtle bg-layer-2 transition-all duration-300 hover:border-strong hover:shadow-raised-200"
       >
         <ContextMenu parentRef={projectCardRef} items={MENU_ITEMS} />
-        <div className="relative h-[118px] w-full rounded-t">
-          <div className="absolute inset-0 z-[1] bg-gradient-to-t from-black/60 to-transparent" />
+        <Link
+          to={`/${workspaceSlug}/projects/${project.id}/issues`}
+          aria-label={project.name}
+          className="block rounded-lg focus-visible:outline-2 focus-visible:outline-offset-[-2px]"
+          data-prevent-progress={!isMemberOfProject || isArchived}
+          onClick={(event) => {
+            if (!isMemberOfProject || isArchived) {
+              event.preventDefault();
+              if (!isArchived) setJoinProjectModal(true);
+            }
+          }}
+        >
+          <div className="relative h-[118px] w-full rounded-t">
+            <div className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-t from-black/60 to-transparent" />
 
-          <CoverImage
-            src={project.cover_image_url ?? undefined}
-            showDefaultWhenEmpty
-            alt={project.name}
-            className="absolute top-0 left-0 h-full w-full rounded-t"
-          />
+            <ProjectCover
+              source={{ kind: "project", workspaceID: project.workspace_id, projectID: project.id }}
+              alt={project.name}
+              className="absolute top-0 left-0 h-full w-full rounded-t"
+            />
 
-          <div className="absolute bottom-4 z-[1] flex h-10 w-full items-center justify-between gap-3 px-4">
-            <div className="flex flex-grow items-center gap-2.5 truncate">
-              <div className="grid h-9 w-9 flex-shrink-0 place-items-center rounded-sm bg-white/10">
-                <Logo logo={project.logo_props} size={18} />
-              </div>
+            <div
+              className={cn("absolute bottom-4 z-[1] flex h-10 w-full items-center justify-between gap-3 px-4", {
+                "pr-[52px]": !isArchived,
+              })}
+            >
+              <div className="flex flex-grow items-center gap-2.5 truncate">
+                <div className="grid h-9 w-9 flex-shrink-0 place-items-center rounded-sm bg-white/10">
+                  <Logo logo={project.logo_props} size={18} />
+                </div>
 
-              <div className="flex w-full flex-col justify-between gap-0.5 truncate">
-                <h3 className="truncate font-semibold text-on-color">{project.name}</h3>
-                <span className="flex items-center gap-1.5">
-                  <p className="text-11 font-medium text-on-color">{project.identifier} </p>
-                  {project.network === 0 && <LockOutline className="h-2.5 w-2.5 text-on-color" />}
-                </span>
+                <div className="flex w-full flex-col justify-between gap-0.5 truncate">
+                  <h3 className="truncate font-semibold text-on-color">{project.name}</h3>
+                  <span className="flex items-center gap-1.5">
+                    <p className="text-11 font-medium text-on-color">{project.identifier} </p>
+                    {project.network === 0 && <LockOutline className="h-2.5 w-2.5 text-on-color" />}
+                  </span>
+                </div>
               </div>
             </div>
-
-            {!isArchived && (
-              <div data-prevent-progress className="flex h-full flex-shrink-0 items-center gap-2">
-                <button
-                  className="flex h-6 w-6 items-center justify-center rounded-sm bg-white/10"
-                  aria-label={t("copy_link")}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    handleCopyText();
-                  }}
-                >
-                  <LinkOutline className="h-3 w-3 text-on-color" />
-                </button>
-              </div>
-            )}
           </div>
-        </div>
 
+          <div
+            className={cn("flex h-[104px] w-full flex-col justify-between rounded-b-sm p-4", {
+              "opacity-90": isArchived,
+            })}
+          >
+            <p className="line-clamp-2 text-13 break-words text-tertiary">
+              {project.description && project.description.trim() !== ""
+                ? project.description
+                : `${t("common.created_on")} ${renderFormattedDate(project.created_at)}`}
+            </p>
+          </div>
+        </Link>
+        {!isArchived && (
+          <div
+            data-prevent-progress
+            className="pointer-events-none absolute top-0 right-4 z-[2] flex h-[118px] items-end pb-6"
+          >
+            <button
+              type="button"
+              className="pointer-events-auto flex h-6 w-6 items-center justify-center rounded-sm bg-white/10"
+              aria-label={t("copy_link")}
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                handleCopyText();
+              }}
+            >
+              <LinkOutline className="h-3 w-3 text-on-color" />
+            </button>
+          </div>
+        )}
         <div
-          className={cn("flex h-[104px] w-full flex-col justify-between rounded-b-sm p-4", {
+          className={cn("absolute inset-x-4 bottom-4 z-[2] flex items-center justify-between", {
             "opacity-90": isArchived,
           })}
         >
-          <p className="line-clamp-2 text-13 break-words text-tertiary">
-            {project.description && project.description.trim() !== ""
-              ? project.description
-              : `${t("common.created_on")} ${renderFormattedDate(project.created_at)}`}
-          </p>
-          <div className="item-center flex justify-between">
-            <div className="flex items-center justify-center gap-2">
-              <Tooltip
-                label={
-                  projectMembersIds.length
-                    ? t("project_dialogs.members_count", { count: projectMembersIds.length })
-                    : t("project_dialogs.no_member_yet")
-                }
-                layout="stacked"
-                disabled={isMobile}
-              >
-                {projectMembersIds.length > 0 ? (
-                  <div className="flex cursor-pointer items-center gap-2 text-secondary">
-                    <AvatarGroupOverflow size="xs">
-                      {projectMembersIds.map((memberId) => {
-                        const member = getUserDetails(memberId);
-                        if (!member) return null;
-                        return (
-                          <Avatar
-                            key={member.id}
-                            alt={member.display_name}
-                            fallback={member.display_name?.[0]?.toUpperCase()}
-                            src={getFileURL(member.avatar_url)}
-                          />
-                        );
-                      })}
-                    </AvatarGroupOverflow>
-                  </div>
-                ) : (
-                  <span className="text-13 text-placeholder italic">{t("project_dialogs.no_member_yet")}</span>
-                )}
-              </Tooltip>
-              {isArchived && (
-                <div className="text-11 font-medium text-placeholder">{t("project_dialogs.archived")}</div>
-              )}
-            </div>
-            {isArchived ? (
-              hasAdminRole && (
-                <div className="flex items-center justify-center gap-2">
-                  <button
-                    type="button"
-                    className="flex items-center justify-center text-11 font-medium text-placeholder hover:text-secondary"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setRestoreProject(true);
-                    }}
-                  >
-                    <div className="flex items-center gap-1.5">
-                      <RestoreOutline className="h-3.5 w-3.5" />
-                      {t("restore")}
-                    </div>
-                  </button>
-                  <button
-                    type="button"
-                    className="flex items-center justify-center text-11 font-medium text-placeholder hover:text-secondary"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setDeleteProjectModal(true);
-                    }}
-                    aria-label={t("delete")}
-                  >
-                    <DeleteOutline className="h-3.5 w-3.5" />
-                  </button>
+          <div className="flex items-center justify-center gap-2">
+            <Tooltip
+              label={
+                projectMembersIds.length
+                  ? t("project_dialogs.members_count", { count: projectMembersIds.length })
+                  : t("project_dialogs.no_member_yet")
+              }
+              layout="stacked"
+              disabled={isMobile}
+            >
+              {projectMembersIds.length > 0 ? (
+                <div className="flex cursor-pointer items-center gap-2 text-secondary">
+                  <AvatarGroupOverflow size="xs">
+                    {projectMembersIds.map((memberId) => {
+                      const member = getUserDetails(memberId);
+                      if (!member) return null;
+                      return (
+                        <ProfileAvatar
+                          key={member.id}
+                          alt={member.display_name}
+                          fallback={member.display_name?.[0]?.toUpperCase()}
+                          source={{ kind: "member", workspaceID: project.workspace_id, memberID: member.id }}
+                        />
+                      );
+                    })}
+                  </AvatarGroupOverflow>
                 </div>
-              )
-            ) : (
-              <>
-                {isMemberOfProject &&
-                  (hasAdminRole || hasMemberRole ? (
-                    <Link
-                      className="flex items-center justify-center rounded-sm p-1 text-placeholder hover:bg-layer-1 hover:text-secondary"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                      }}
-                      to={`/${workspaceSlug}/settings/projects/${project.id}`}
-                      aria-label={t("project_dialogs.settings_link", { name: project.name })}
-                    >
-                      <SettingsOutline className="h-3.5 w-3.5" />
-                    </Link>
-                  ) : (
-                    <span className="flex items-center gap-1 text-13 text-placeholder">
-                      <TickOutline className="h-3.5 w-3.5" />
-                      {t("project_dialogs.joined")}
-                    </span>
-                  ))}
-                {!isMemberOfProject && (
-                  <div className="flex items-center">
-                    <Button
-                      variant="link"
-                      className="!p-0 font-semibold"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setJoinProjectModal(true);
-                      }}
-                    >
-                      {t("common.join")}
-                    </Button>
-                  </div>
-                )}
-              </>
-            )}
+              ) : (
+                <span className="text-13 text-placeholder italic">{t("project_dialogs.no_member_yet")}</span>
+              )}
+            </Tooltip>
+            {isArchived && <div className="text-11 font-medium text-placeholder">{t("project_dialogs.archived")}</div>}
           </div>
+          {isArchived ? (
+            hasAdminRole && (
+              <div className="flex items-center justify-center gap-2">
+                <button
+                  type="button"
+                  className="flex items-center justify-center text-11 font-medium text-placeholder hover:text-secondary"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setRestoreProject(true);
+                  }}
+                >
+                  <div className="flex items-center gap-1.5">
+                    <RestoreOutline className="h-3.5 w-3.5" />
+                    {t("restore")}
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  className="flex items-center justify-center text-11 font-medium text-placeholder hover:text-secondary"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setDeleteProjectModal(true);
+                  }}
+                  aria-label={t("delete")}
+                >
+                  <DeleteOutline className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            )
+          ) : (
+            <>
+              {isMemberOfProject &&
+                (hasAdminRole || hasMemberRole ? (
+                  <Link
+                    className="flex items-center justify-center rounded-sm p-1 text-placeholder hover:bg-layer-1 hover:text-secondary"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                    }}
+                    to={`/${workspaceSlug}/settings/projects/${project.id}`}
+                    aria-label={t("project_dialogs.settings_link", { name: project.name })}
+                  >
+                    <SettingsOutline className="h-3.5 w-3.5" />
+                  </Link>
+                ) : (
+                  <span className="flex items-center gap-1 text-13 text-placeholder">
+                    <TickOutline className="h-3.5 w-3.5" />
+                    {t("project_dialogs.joined")}
+                  </span>
+                ))}
+              {!isMemberOfProject && (
+                <div className="flex items-center">
+                  <Button
+                    variant="link"
+                    className="!p-0 font-semibold"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setJoinProjectModal(true);
+                    }}
+                  >
+                    {t("common.join")}
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
         </div>
-      </Link>
+      </article>
     </>
   );
 });

@@ -39,6 +39,9 @@ vi.mock("@/components/global/timezone-select", () => ({
 }));
 vi.mock("@/components/workspace/delete-workspace-section", () => ({ DeleteWorkspaceSection: () => null }));
 vi.mock("@/lib/auth/api-client", () => import("@/lib/auth/fake-tab"));
+vi.mock("@/components/workspace/logo", () => ({ WorkspaceLogo: () => null }));
+vi.mock("@/components/assets/image-upload-modal", () => ({ ImageUploadModal: () => null }));
+vi.mock("@/components/assets/profile-image", () => ({ ProfileImageRetry: () => null }));
 vi.mock("@nerve/ui", () => import("@/lib/fake-controls"));
 vi.mock("@makeplane/propel/components/input", () => import("@/lib/fake-controls"));
 vi.mock("@nerve/propel/button", () => import("@/lib/fake-controls"));
@@ -90,6 +93,12 @@ describe("WorkspaceDetails", () => {
   it("sends no size while the workspace has none and none was picked", async () => {
     await update();
     expect(page.updateWorkspace.mock.calls).toEqual([["acme", { name: "Acme", timezone: "UTC" }]]);
+  });
+
+  it("says nothing when the workspace write returns no current result", async () => {
+    page.updateWorkspace.mockResolvedValueOnce(undefined);
+    await update();
+    expect(toasts).toEqual([]);
   });
 
   it("shows nerve's reason when it refuses", async () => {

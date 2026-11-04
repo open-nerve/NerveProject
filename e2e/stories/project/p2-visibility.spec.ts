@@ -205,7 +205,7 @@ test("P2 (page): the projects page shows a member the public project to join and
   await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
   const watch = await watchPage(page);
   await page.goto(`/${slug}/projects`);
-  const card = page.getByRole("link", { name: /Web/ });
+  const card = page.getByRole("article", { name: "Web", exact: true });
   await expect(card).toBeVisible();
   await expect(page.getByRole("link", { name: /Secret/ })).toHaveCount(0);
 
@@ -225,7 +225,10 @@ test("P2 (page): the projects page shows a member the public project to join and
 
   // A join nerve refuses: the admin deletes Gone while its dialog is open. The page says nerve's reason, and the
   // dialog stays open, Join enabled again: it closes of itself only once joined. Cancel closes it.
-  await page.getByRole("link", { name: /Gone/ }).getByRole("button", { name: "Join", exact: true }).click();
+  await page
+    .getByRole("article", { name: "Gone", exact: true })
+    .getByRole("button", { name: "Join", exact: true })
+    .click();
   await expect(modalDialog(page)).toHaveAccessibleName("Join Project?");
   const deleted = await api.DELETE("/api/v0/projects/{project_id}", {
     params: { path: { project_id: gone.id } },

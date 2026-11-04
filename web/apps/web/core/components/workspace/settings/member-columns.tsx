@@ -17,7 +17,8 @@ import type { User, WorkspaceMember, WorkspaceRole } from "@nerve/api-client";
 // nerve ui
 import { CustomMenu, CustomSelect } from "@nerve/ui";
 // helpers
-import { getFileURL } from "@nerve/utils";
+import { ProfileImage } from "@/components/assets/profile-image";
+import { useWorkspace } from "@/hooks/store/use-workspace";
 // hooks
 import { useUser, useUserPermissions } from "@/hooks/store/user";
 // local imports
@@ -37,11 +38,12 @@ type AccountTypeProps = {
   workspaceSlug: string;
 };
 
-export function NameColumn(props: NameProps) {
+export const NameColumn = observer(function NameColumn(props: NameProps) {
   const { rowData, workspaceSlug, isAdmin, currentUser, setRemoveMemberModal } = props;
   const { t } = useTranslation();
   // derived values
-  const { avatar_url, display_name, email, first_name, id, last_name } = rowData.member;
+  const imageWorkspace = useWorkspace().getWorkspaceBySlug(workspaceSlug);
+  const { display_name, email, first_name, id, last_name } = rowData.member;
   const isSuspended = rowData.is_active === false;
 
   return (
@@ -54,21 +56,14 @@ export function NameColumn(props: NameProps) {
                 <div className="rounded-full bg-layer-1">
                   <DeactivatedUserOutline className="size-6 text-placeholder" />
                 </div>
-              ) : avatar_url && avatar_url.trim() !== "" ? (
-                <Link to={`/${workspaceSlug}/profile/${id}`}>
-                  <span className="relative flex size-6 items-center justify-center rounded-full text-on-color capitalize">
-                    <img
-                      src={getFileURL(avatar_url)}
-                      className="absolute top-0 left-0 h-full w-full rounded-full object-cover"
-                      alt={display_name || (email ?? undefined)}
-                    />
-                  </span>
-                </Link>
               ) : (
                 <Link to={`/${workspaceSlug}/profile/${id}`}>
-                  <span className="relative flex size-6 items-center justify-center rounded-full bg-layer-3 text-11 text-tertiary capitalize">
-                    {(email ?? display_name ?? "?")[0]}
-                  </span>
+                  <ProfileImage
+                    source={{ kind: "member", workspaceID: imageWorkspace?.id ?? "", memberID: id }}
+                    alt={display_name || email || ""}
+                    className="relative flex size-6 items-center justify-center rounded-full bg-layer-3 object-cover text-11 text-tertiary capitalize"
+                    fallback={(email ?? display_name ?? "?")[0]}
+                  />
                 </Link>
               )}
               <span className={isSuspended ? "text-placeholder" : ""}>
@@ -97,7 +92,7 @@ export function NameColumn(props: NameProps) {
       )}
     </Disclosure>
   );
-}
+});
 
 export const AccountTypeColumn = observer(function AccountTypeColumn(props: AccountTypeProps) {
   const { rowData, workspaceSlug } = props;

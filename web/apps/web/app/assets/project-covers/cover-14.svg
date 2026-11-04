@@ -1,0 +1,10 @@
+<!-- Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900">
+  <defs>
+    <linearGradient id="field" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#705337"/><stop offset="1" stop-color="#3a2c21"/></linearGradient>
+    <linearGradient id="shade" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#08131f" stop-opacity=".12"/><stop offset="1" stop-color="#08131f" stop-opacity=".32"/></linearGradient>
+  </defs>
+  <path fill="url(#field)" d="M0 0H1600V900H0Z"/>
+  <path d="M-100 270 C424 30 766 1000 1700 260" fill="none" stroke="#d0b37a" stroke-opacity="0.130" stroke-width="18"/><path d="M-100 334 C424 84 766 957 1700 317" fill="none" stroke="#d0b37a" stroke-opacity="0.155" stroke-width="22"/><path d="M-100 398 C424 138 766 914 1700 374" fill="none" stroke="#d0b37a" stroke-opacity="0.180" stroke-width="26"/><path d="M-100 462 C424 192 766 871 1700 431" fill="none" stroke="#d0b37a" stroke-opacity="0.205" stroke-width="30"/><path d="M-100 526 C424 246 766 828 1700 488" fill="none" stroke="#d0b37a" stroke-opacity="0.230" stroke-width="34"/><path d="M-100 590 C424 300 766 785 1700 545" fill="none" stroke="#d0b37a" stroke-opacity="0.255" stroke-width="38"/><path d="M-100 654 C424 354 766 742 1700 602" fill="none" stroke="#d0b37a" stroke-opacity="0.280" stroke-width="42"/>
+  <path fill="url(#shade)" d="M0 0H1600V900H0Z"/>
+</svg>

@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
+import { seedAccount } from "@/store/user/fake-account";
 import { act, type ReactNode } from "react";
 import { createMemoryRouter, RouterProvider, useParams } from "react-router";
 import { SWRConfig } from "swr";
-import { runInAction } from "mobx";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { RootStore } from "@/store/root.store";
 import { issueDetailOf } from "@/store/issue/fake-issues";
@@ -75,9 +75,7 @@ beforeEach(async () => {
   bound.app = tab.app;
   toasts.length = 0;
   router = undefined;
-  runInAction(() => {
-    tab.app.user.data = accountOf("alice");
-  });
+  await seedAccount(tab.nerve, tab.app.user, accountOf("alice"));
   tab.nerve.respond = (call) => {
     if (call.method !== "GET") return;
     if (/^\/api\/v0\/issues\/[^/]+$/.test(call.path)) call.answer(json(200, archived(call.path.split("/").at(-1)!)));
@@ -241,9 +239,7 @@ it("an old archived deletion cannot navigate away or close the next route's conf
 });
 
 it("a non-creator project member can restore archived detail but cannot delete it", async () => {
-  runInAction(() => {
-    tab.app.user.data = accountOf("other");
-  });
+  await seedAccount(tab.nerve, tab.app.user, accountOf("other"));
   await role(15);
   await mount();
   await openMenu();

@@ -7,8 +7,8 @@
 import { Command } from "cmdk";
 import { observer } from "mobx-react";
 
-import { Avatar } from "@makeplane/propel/components/avatar";
-import { getFileURL } from "@nerve/utils";
+import { useRouteWorkspace } from "@/hooks/use-route-workspace";
+import { ProfileAvatar } from "@/components/assets/profile-image";
 // hooks
 import { useMember } from "@/hooks/store/use-member";
 // local imports
@@ -22,6 +22,7 @@ type Props = {
 
 export const PowerKMembersMenu = observer(function PowerKMembersMenu(props: Props) {
   const { handleSelect, userIds, value } = props;
+  const imageWorkspace = useRouteWorkspace();
   // store hooks
   const { getUserDetails } = useMember();
 
@@ -35,10 +36,10 @@ export const PowerKMembersMenu = observer(function PowerKMembersMenu(props: Prop
           <PowerKModalCommandItem
             key={memberId}
             iconNode={
-              <Avatar
+              <ProfileAvatar
                 alt={memberDetails?.display_name}
                 fallback={memberDetails?.display_name?.[0]?.toUpperCase()}
-                src={getFileURL(memberDetails?.avatar_url ?? "")}
+                source={{ kind: "member", workspaceID: imageWorkspace?.id ?? "", memberID: memberId }}
                 size="xs"
               />
             }

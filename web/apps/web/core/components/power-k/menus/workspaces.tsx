@@ -23,7 +23,11 @@ export function PowerKWorkspacesMenu({ workspaces, onSelect }: Props) {
       items={workspaces}
       getKey={(workspace) => workspace.id}
       getIconNode={(workspace) => (
-        <WorkspaceLogo logo={workspace.logo_url} name={workspace.name} classNames="shrink-0" />
+        <WorkspaceLogo
+          source={{ kind: "workspace", workspaceID: workspace.id }}
+          name={workspace.name}
+          classNames="shrink-0"
+        />
       )}
       getValue={(workspace) => workspace.name}
       getLabel={(workspace) => workspace.name}

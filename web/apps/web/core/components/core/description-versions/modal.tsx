@@ -7,7 +7,7 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { observer } from "mobx-react";
 // nerve imports
-import { Avatar } from "@makeplane/propel/components/avatar";
+import { ProfileAvatar } from "@/components/assets/profile-image";
 import type { EditorRefApi } from "@nerve/editor";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
@@ -17,7 +17,7 @@ import type { DescriptionVersionOption } from "./root";
 import { followInSession } from "@/lib/in-session";
 import { useRefusalMessage } from "@/hooks/use-refusal-toast";
 import { EModalPosition, EModalWidth, Loader, ModalCore, ModalTitle } from "@nerve/ui";
-import { calculateTimeAgo, cn, getFileURL } from "@nerve/utils";
+import { calculateTimeAgo, cn } from "@nerve/utils";
 // components
 import { RichTextEditor } from "@/components/editor/rich-text";
 // hooks
@@ -138,11 +138,11 @@ export const DescriptionVersionsModal = observer(function DescriptionVersionsMod
             <p className="flex items-center gap-1">
               {t("description_versions.edited_by")}
               <span className="flex-shrink-0">
-                <Avatar
+                <ProfileAvatar
                   alt={versionCreator?.display_name || t("common.deactivated_user")}
                   fallback={(versionCreator?.display_name || t("common.deactivated_user"))[0]?.toUpperCase()}
                   size="2xs"
-                  src={getFileURL(versionCreator?.avatar_url ?? "")}
+                  source={{ kind: "member", workspaceID: workspaceId, memberID: activeVersionDetails?.ownerId ?? "" }}
                 />
               </span>
             </p>

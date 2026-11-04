@@ -1,4 +1,6 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
+import { accountOf } from "@/store/member/fake-users";
+import { seedAccount } from "@/store/user/fake-account";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { runInAction } from "mobx";
 import { FakeNerve, answered, json, problem } from "@/lib/auth/fake-nerve";
@@ -701,9 +703,7 @@ it("sends the confirmed member fields after local preference save and reload", a
   });
   const id = "019a0000-0000-7000-8000-000000000001";
   try {
-    runInAction(() => {
-      app.user.data = { id: "viewer" } as NonNullable<typeof app.user.data>;
-    });
+    await seedAccount(nerve, app.user, { ...accountOf("viewer"), id: "viewer" });
     await app.issue.profileIssuesFilter.updateFilterExpression("ws", "actor", {
       and: [{ state_id__in: id }, { created_by_id__in: id }, { priority__in: "high" }, { project_id__in: id }],
     });

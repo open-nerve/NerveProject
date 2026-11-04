@@ -1,4 +1,46 @@
 {
+  "image_upload": {
+    "choose": "Choose or replace image",
+    "drop": "Drag and drop one image here",
+    "preview": "Selected image preview",
+    "formats": "JPEG, PNG, WebP or GIF. Your server's upload size limit applies.",
+    "upload_save": "Upload and save",
+    "save": "Save image",
+    "remove": "Remove image",
+    "cancel_upload": "Cancel upload",
+    "check_upload": "Check upload",
+    "upload_again": "Upload again",
+    "retry": "Retry upload",
+    "phases": {
+      "idle": "Select an image.",
+      "selected": "Ready to upload.",
+      "preparing": "Preparing upload…",
+      "uploading": "Uploading image…",
+      "confirming": "Checking upload…",
+      "ready": "Image uploaded.",
+      "binding": "Saving image…",
+      "failed": "The image needs your attention.",
+      "cancelled": "Upload cancelled. You can choose another image.",
+      "disposed": "This action is no longer available."
+    },
+    "errors": {
+      "multiple": "Choose one image at a time.",
+      "directory": "Choose an image file, not a folder.",
+      "not_file": "Drop an image file here.",
+      "type": "Choose a JPEG, PNG, WebP or GIF image with a known file type.",
+      "size": "Choose a non-empty image within this server's file size limit.",
+      "unavailable": "The upload limit is not available yet. Reload the page and try again.",
+      "network": "The upload connection failed. Check whether the image arrived before uploading again.",
+      "http": "Storage refused the upload. Check its status before uploading again.",
+      "timeout": "The upload timed out. Check whether the image arrived before uploading again.",
+      "cancelled": "Upload cancelled.",
+      "expired": "The upload link expired. Check its status, then upload again if needed.",
+      "invalid-grant": "The upload link could not be used. Check its status, then try again."
+    },
+    "change_avatar": "Change avatar",
+    "change_cover": "Change cover",
+    "retry_image": "Retry image"
+  },
   "submit": "Submit",
   "cancel": "Cancel",
   "loading": "Loading",
@@ -70,6 +112,7 @@
   "add_project": "Add project",
   "create_project": "Create project",
   "project_created_successfully": "Project created successfully",
+  "project_creation_unknown": "We couldn't confirm whether the project was created. Check your project list before retrying. Your form and cover have been kept.",
   "project_cover_image_alt": "Project cover image",
   "name_is_required": "Name is required",
   "title_should_be_less_than_255_characters": "Title should be less than 255 characters",
@@ -599,5 +642,12 @@
       "next": "Next",
       "create_first_project": "Create your first project"
     }
+  },
+  "project_cover": {
+    "presets": "Preset covers",
+    "preset": "Cover",
+    "random": "Random cover",
+    "remove": "Remove cover",
+    "upload": "Upload image"
   }
 }

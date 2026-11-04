@@ -8,18 +8,21 @@ import type { User } from "@nerve/api-client";
 import { ApiError } from "@/lib/api-error";
 import { FakeNerve, json, noContent, problem } from "@/lib/auth/fake-nerve";
 import { track, until } from "@/lib/auth/fake-time";
-import { fakeRoot } from "@/store/fake-root";
+import { fakeRoot, withoutImageObservation } from "@/store/fake-root";
 import { projectOf, projectTab } from "@/store/project/fake-projects";
 import type { RootStore } from "@/store/root.store";
 import { UserStore } from "@/store/user";
 import { workspaceOf } from "@/store/workspace/fake-workspaces";
+import { profileOf } from "./fake-account";
+import { accountOf } from "@/store/member/fake-users";
 
 // The account's changes (names, time zone) against a fake nerve that answers each when the test says: a change goes
 // out once the one before it is answered or has failed, so nerve applies them in the order they were made and the
 // last answer is what nerve holds. The store gets its session's client from RootStore; of the token manager it
 // imports, the deactivation reads the tab's session and ends it (tab).
 const tab = vi.hoisted(() => ({
-  state: { loginId: "x" },
+  state: { loginId: "x", status: "signed-in" },
+  start: async () => {},
   endSession: vi.fn<(loginId: string | undefined) => Promise<boolean>>(),
 }));
 vi.mock("@/lib/auth/api-client", () => ({ tokenManager: tab, publicClient: {} }));
@@ -51,6 +54,67 @@ afterEach(() => {
 });
 
 describe("UserStore.updateCurrentUser", () => {
+  it.each([false, true])(
+    "keeps confirmed avatar and cover writes when an older current-user read answers, initiallyLoaded=%s",
+    async (initiallyLoaded) => {
+      const nerve = new FakeNerve();
+      const store = new UserStore(fakeRoot({ observeProfileRead: withoutImageObservation }), nerve.client());
+      const original = accountOf("Ada");
+      if (initiallyLoaded) {
+        const initial = track(store.updateCurrentUser({ first_name: "Ada" }));
+        await until(() => nerve.calls.length === 1, "seed current account");
+        nerve.calls[0]!.answer(json(200, original));
+        await until(() => initial.settled, "seed accepted");
+      }
+      const at = nerve.calls.length;
+      const old = track(store.fetchCurrentUser());
+      await until(() => nerve.calls.length === at + 2, "user and profile refresh");
+      expect(nerve.calls.slice(at).map((call) => call.path)).toEqual([ME, "/api/v0/me/profile"]);
+      const avatar = {
+        ...original,
+        avatar_asset_id: "avatar-new",
+        avatar_url: "/static/avatar-new",
+        avatar_url_expires_at: "2026-11-04T08:00:00Z",
+      };
+      const first = track(store.updateCurrentUser({ avatar_asset_id: "avatar-new" }));
+      await until(() => nerve.calls.length === at + 3, "avatar write");
+      nerve.calls[at + 2]!.answer(json(200, avatar));
+      await until(() => first.settled, "avatar accepted");
+      const latest = {
+        ...avatar,
+        cover_image_asset_id: "cover-new",
+        cover_image_url: "/static/cover-new",
+        cover_image_url_expires_at: "2026-11-04T08:00:00Z",
+      };
+      const second = track(store.updateCurrentUser({ cover_image_asset_id: "cover-new" }));
+      await until(() => nerve.calls.length === at + 4, "cover write");
+      nerve.calls[at + 3]!.answer(json(200, latest));
+      await until(() => second.settled, "cover accepted");
+      nerve.calls[at]!.answer(json(200, original));
+      nerve.calls[at + 1]!.answer(json(200, profileOf()));
+      await until(() => old.settled, "old user read");
+      expect(old.value).toEqual(latest);
+      expect(store.data).toEqual(latest);
+    }
+  );
+
+  it("a read superseded by a newer fetch returns no proof and cannot overwrite it", async () => {
+    const nerve = new FakeNerve();
+    const store = new UserStore(fakeRoot({ observeProfileRead: withoutImageObservation }), nerve.client());
+    const old = track(store.fetchCurrentUser());
+    await until(() => nerve.calls.length === 2, "first user read");
+    const fresh = track(store.fetchCurrentUser());
+    await until(() => nerve.calls.length === 4, "new user read");
+    const current = { ...accountOf("Ada"), avatar_asset_id: "current" };
+    nerve.calls[2]!.answer(json(200, current));
+    nerve.calls[3]!.answer(json(200, profileOf()));
+    await until(() => fresh.settled, "current read accepted");
+    nerve.calls[0]!.answer(json(200, accountOf("Ada")));
+    nerve.calls[1]!.answer(json(200, profileOf()));
+    await until(() => old.settled, "superseded read");
+    expect(old.value).toBeUndefined();
+    expect(store.data).toEqual(current);
+  });
   it("sends a change once nerve has answered the one before it", async () => {
     const { nerve, store, first, second } = await twoChanges();
 
@@ -103,7 +167,9 @@ describe("UserStore.deactivateAccount", () => {
     tab.endSession.mockReset();
     tab.endSession.mockResolvedValue(ended);
     const nerve = new FakeNerve();
-    const deactivated = track(new UserStore(fakeRoot({}), nerve.client()).deactivateAccount());
+    const deactivated = track(
+      new UserStore(fakeRoot({ observeProfileRead: withoutImageObservation }), nerve.client()).deactivateAccount()
+    );
     await until(() => nerve.calls.length === 1, "the deactivation");
     expect([nerve.calls[0]?.method, nerve.calls[0]?.path]).toEqual(["POST", "/api/v0/me/deactivate"]);
     // the session the tab is in when nerve answers: still x, or y once another tab has moved it; the store ends x
@@ -130,15 +196,16 @@ describe("UserStore, the projects the caller may create in", () => {
       { workspace: acme, projects: [pa, pm, pg, seen] },
       { workspace: beta, projects: [lab] }
     );
-    const user = new UserStore(fakeRoot({ router, workspaceRoot, projectRoot }), api);
+    const user = new UserStore(
+      fakeRoot({ observeProfileRead: withoutImageObservation, router, workspaceRoot, projectRoot }),
+      api
+    );
     expect(user.projectsWithCreatePermissions).toEqual({ [pa.id]: 20, [pm.id]: 15 });
-    expect(user.canPerformAnyCreateAction).toBe(true);
 
     // at beta's address, its project, where his role is the admin's (beta's admin); none at an address of no workspace
     router.setQuery({ workspaceSlug: beta.slug });
     expect(user.projectsWithCreatePermissions).toEqual({ [lab.id]: 20 });
     router.setQuery({});
     expect(user.projectsWithCreatePermissions).toEqual({});
-    expect(user.canPerformAnyCreateAction).toBe(false);
   });
 });

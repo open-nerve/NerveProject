@@ -8,7 +8,7 @@
 
 import type { MemberUser, WorkspaceInvitation, WorkspaceMember } from "@nerve/api-client";
 import { FakeNerve } from "@/lib/auth/fake-nerve";
-import { fakeRoot } from "@/store/fake-root";
+import { fakeRoot, withoutImageObservation } from "@/store/fake-root";
 import { userOf } from "@/store/member/fake-users";
 import { WorkspaceMemberStore } from "@/store/member/workspace/workspace-member.store";
 import { RouterStore } from "@/store/router.store";
@@ -64,11 +64,19 @@ export async function memberStore() {
   const api = nerve.client();
   const router = new RouterStore();
   router.setQuery({ workspaceSlug: "acme" });
-  const user = new UserStore(fakeRoot({ router }), api);
-  const workspaceRoot = new WorkspaceRootStore(fakeRoot({ router }), api);
+  const user = new UserStore(fakeRoot({ observeProfileRead: withoutImageObservation, router }), api);
+  const workspaceRoot = new WorkspaceRootStore(
+    fakeRoot({ observeProfileRead: withoutImageObservation, router }),
+    api,
+    () => () => true
+  );
   await loadWorkspaces(nerve, workspaceRoot, [workspaceOf("acme"), workspaceOf("globex")]);
   nerve.calls.length = 0;
   const users: Record<string, MemberUser> = {};
-  const store = new WorkspaceMemberStore({ memberMap: users }, fakeRoot({ router, user, workspaceRoot }), api);
+  const store = new WorkspaceMemberStore(
+    { memberMap: users },
+    fakeRoot({ observeProfileRead: withoutImageObservation, router, user, workspaceRoot }),
+    api
+  );
   return { nerve, api, user, users, store };
 }

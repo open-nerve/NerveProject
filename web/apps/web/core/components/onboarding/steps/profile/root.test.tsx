@@ -34,6 +34,8 @@ vi.mock("@/hooks/store/user", () => ({
 vi.mock("@/lib/auth/api-client", () => import("@/lib/auth/fake-tab"));
 vi.mock("@nerve/propel/button", () => import("@/lib/fake-controls"));
 vi.mock("@nerve/propel/toast", () => import("@/lib/fake-toast"));
+vi.mock("@/components/assets/profile-image", () => ({ ProfileImage: () => null }));
+vi.mock("@/components/assets/user-image-upload", () => ({ UserImageUpload: () => null }));
 vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
 
 /** Renders the step, and submits the names as its form would; settles once the step has. */

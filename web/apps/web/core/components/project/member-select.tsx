@@ -8,13 +8,13 @@ import React from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
 import { Ban } from "lucide-react";
-import { Avatar } from "@makeplane/propel/components/avatar";
+import { ProfileAvatar } from "@/components/assets/profile-image";
+import { useRouteWorkspace } from "@/hooks/use-route-workspace";
 import { useTranslation } from "@nerve/i18n";
 import { EUserProjectRoles } from "@nerve/types";
 // nerve ui
 import { CustomSearchSelect } from "@nerve/ui";
 // helpers
-import { getFileURL } from "@nerve/utils";
 // hooks
 import { useMember } from "@/hooks/store/use-member";
 
@@ -27,6 +27,7 @@ type Props = {
 export const MemberSelect = observer(function MemberSelect(props: Props) {
   const { value, onChange, isDisabled = false } = props;
   const { t } = useTranslation();
+  const imageWorkspace = useRouteWorkspace();
   // router
   const { projectId } = useParams();
   // store hooks
@@ -48,10 +49,10 @@ export const MemberSelect = observer(function MemberSelect(props: Props) {
         query: `${memberDetails?.member.display_name}`,
         content: (
           <div className="flex items-center gap-2">
-            <Avatar
+            <ProfileAvatar
               alt={memberDetails?.member.display_name}
               fallback={memberDetails?.member.display_name?.[0]?.toUpperCase()}
-              src={getFileURL(memberDetails?.member.avatar_url)}
+              source={{ kind: "member", workspaceID: imageWorkspace?.id ?? "", memberID: memberDetails.member.id }}
               size="xs"
             />
             {memberDetails?.member.display_name}
@@ -68,10 +69,14 @@ export const MemberSelect = observer(function MemberSelect(props: Props) {
       label={
         <div className="flex h-3.5 items-center gap-2">
           {selectedOption && (
-            <Avatar
+            <ProfileAvatar
               alt={selectedOption.member?.display_name}
               fallback={selectedOption.member?.display_name?.[0]?.toUpperCase()}
-              src={getFileURL(selectedOption.member?.avatar_url)}
+              source={{
+                kind: "member",
+                workspaceID: imageWorkspace?.id ?? "",
+                memberID: selectedOption.member?.id ?? "",
+              }}
               size="xs"
             />
           )}

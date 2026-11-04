@@ -2,15 +2,15 @@
  * Copyright (c) 2026-present OpenNerve
  * SPDX-License-Identifier: AGPL-3.0-only
  */
+import { seedAccount } from "@/store/user/fake-account";
 
-import { runInAction } from "mobx";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ProjectMember, ProjectMembersAdd } from "@nerve/api-client";
 import { ApiError } from "@/lib/api-error";
 import { FakeNerve, answered, json, noContent, problem } from "@/lib/auth/fake-nerve";
 import { settle, track, until } from "@/lib/auth/fake-time";
 import { fetchedWhileChangeIsOut, inTurn, sent } from "@/store/fake-queue";
-import { fakeRoot } from "@/store/fake-root";
+import { fakeRoot, withoutImageObservation } from "@/store/fake-root";
 import { ProjectMemberStore } from "@/store/member/project/project-member.store";
 import { accountOf, userOf } from "@/store/member/fake-users";
 import {
@@ -54,12 +54,14 @@ async function memberStore() {
     { workspace: acme, projects: [web, ops] },
     { workspace: beta, projects: [lab] }
   );
-  const user = new UserStore(fakeRoot({ router }), api);
-  runInAction(() => {
-    user.data = { ...accountOf("ann"), created_at: "2026-09-01T09:00:00Z" };
-  });
+  const user = new UserStore(fakeRoot({ observeProfileRead: withoutImageObservation, router }), api);
+  await seedAccount(nerve, user, { ...accountOf("ann"), created_at: "2026-09-01T09:00:00Z" });
   const users = Object.fromEntries(["ann", "bob", "cat", "dee"].map((name) => [`u-${name}`, userOf(name)]));
-  const store = new ProjectMemberStore({ memberMap: users }, fakeRoot({ router, user, projectRoot }), api);
+  const store = new ProjectMemberStore(
+    { memberMap: users },
+    fakeRoot({ observeProfileRead: withoutImageObservation, router, user, projectRoot }),
+    api
+  );
   return { nerve, api, projects: projectRoot.project, store };
 }
 

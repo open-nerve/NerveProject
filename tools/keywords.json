@@ -1,5 +1,5 @@
 {
-  "phase": "M5/P5",
+  "phase": "M5/P6",
   "rules": [
     {
       "id": "deploy-files",
@@ -1223,13 +1223,13 @@
     {
       "id": "unsplash-telemetry",
       "phase": "M1/P3",
-      "why": "Unsplash 封面（封面选择只留静态图和上传；原来每次打开选择器都会请求 /api/unsplash/）、实例开关 has_unsplash_configured；遥测：应用里已没有遥测 SDK，这条规则防止 PostHog、Sentry、Intercom 和实例的 is_telemetry_enabled 回来（M1 设计 2.2、7.4）。posthog、intercom 两条命中样本取自 Plane 接入这两个 SDK 的写法",
+      "why": "Unsplash 封面（封面选择只留静态图和上传；原来每次打开选择器都会请求 /api/unsplash/）、实例开关 has_unsplash_configured；遥测：应用里已没有遥测 SDK，这条规则防止 PostHog、Sentry、Intercom 和实例的 is_telemetry_enabled 回来（M1 设计 2.2、7.4）。posthog、intercom 两条命中样本取自 Plane 接入这两个 SDK 的写法；完整 DOM 标识符 webkitGetAsEntry 中的 sEntry 不是遥测，其他前后缀及 SDK 用法仍须命中",
       "files": {
         "source": "^(?:web/.*\\.(?:[cm]?[jt]sx?|json)|web/apps/web/\\.env\\.example|turbo\\.json)$",
         "flags": ""
       },
       "content": {
-        "source": "unsplash|posthog|telemetry|sentry|intercom",
+        "source": "unsplash|posthog|telemetry|(?!(?<=\\bwebkitGetA)sentry\\b)sentry|intercom",
         "flags": "i"
       },
       "samples": {
@@ -1238,11 +1238,17 @@
           "import posthog from \"posthog-js\";",
           "  is_telemetry_enabled: boolean;",
           "    \"VITE_SENTRY_DSN\",",
-          "import { IntercomProvider } from \"react-use-intercom\";"
+          "import { IntercomProvider } from \"react-use-intercom\";",
+          "Sentry.init();",
+          "const webkitGetAsEntrySentry = true;",
+          "const webkitGetAsEntryAdapter = true;",
+          "mywebkitGetAsEntry();"
         ],
         "miss": [
           "              <Tabs variant=\"contained\" defaultValue=\"images\">",
-          "export const DEFAULT_COVER_IMAGE_URL = STATIC_COVER_IMAGES.IMAGE_1;"
+          "export const DEFAULT_COVER_IMAGE_URL = STATIC_COVER_IMAGES.IMAGE_1;",
+          "item.webkitGetAsEntry?.()?.isDirectory",
+          "{ webkitGetAsEntry: () => ({ isDirectory: true }) }"
         ],
         "files": {
           "hit": [

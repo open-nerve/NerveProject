@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
+import { seedAccount } from "@/store/user/fake-account";
 import { act, type ReactNode } from "react";
 import { MemoryRouter } from "react-router";
 import { SWRConfig } from "swr";
-import { runInAction } from "mobx";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { RootStore } from "@/store/root.store";
 import { accountOf } from "@/store/member/fake-users";
@@ -60,9 +60,7 @@ beforeEach(async () => {
   localStorage.clear();
   tab = await issueSelectionTab();
   bound.app = tab.app;
-  runInAction(() => {
-    tab.app.user.data = accountOf("alice");
-  });
+  await seedAccount(tab.nerve, tab.app.user, accountOf("alice"));
   await tab.app.state.fetchProjectStates("A");
   tab.nerve.calls.length = 0;
   toasts.length = 0;

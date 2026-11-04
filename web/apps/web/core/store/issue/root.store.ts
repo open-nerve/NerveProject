@@ -265,6 +265,11 @@ export class IssueRootStore {
       member,
     });
   }
+  /** A workspace owner's write uses the same permission history, without project or issue deletion watermarks. */
+  captureWorkspaceWrite(workspaceID: string): () => boolean {
+    const permission = this.permissionReads.capture();
+    return () => this.active && this.permissionReads.currentWorkspace(permission, workspaceID);
+  }
   isReadCurrent(token: IssueReadToken, projectIDs: string[], workspaceID?: string): boolean {
     return (
       this.active &&

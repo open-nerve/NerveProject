@@ -28,6 +28,8 @@ const caller = vi.hoisted(() => {
   const held: { permissions?: IUserPermissionStore } = {};
   return held;
 });
+vi.mock("@/hooks/use-profile-image", () => import("@/lib/fake-profile-image"));
+vi.mock("@/components/assets/project-cover", () => ({ ProjectCover: () => null }));
 vi.mock("@/hooks/store/user", () => ({ useUserPermissions: () => caller.permissions }));
 vi.mock("@/hooks/store/use-member", () => ({ useMember: () => ({ getUserDetails: () => undefined }) }));
 vi.mock("./delete-project-modal", () => ({ DeleteProjectModal: () => null }));

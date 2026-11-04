@@ -8,7 +8,7 @@ import { toasts } from "@/lib/fake-toast";
 import type { Profile } from "@nerve/api-client";
 import { ProfileStore } from "@/store/user/profile.store";
 import { UserStore } from "@/store/user";
-import { fakeRoot } from "@/store/fake-root";
+import { fakeRoot, withoutImageObservation } from "@/store/fake-root";
 import { accountOf } from "@/store/member/fake-users";
 import type { TPowerKCommandConfig, TPowerKContext } from "@/components/power-k/core/types";
 import { usePowerKPreferencesCommands } from "./preferences-commands";
@@ -57,7 +57,7 @@ beforeEach(() => {
   toasts.length = 0;
   vi.stubGlobal("window", { location: { reload: ui.reload } });
   nerve = new FakeNerve();
-  user = new UserStore(fakeRoot({}), nerve.client());
+  user = new UserStore(fakeRoot({ observeProfileRead: withoutImageObservation }), nerve.client());
   profile = new ProfileStore(nerve.client());
   renderToStaticMarkup(<Consumer />);
 });

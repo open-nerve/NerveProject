@@ -8,10 +8,10 @@ import { useMemo, useState } from "react";
 import { sortBy } from "lodash-es";
 import { observer } from "mobx-react";
 // nerve ui
-import { Avatar } from "@makeplane/propel/components/avatar";
+import { useRouteWorkspace } from "@/hooks/use-route-workspace";
+import { ProfileAvatar } from "@/components/assets/profile-image";
 import { Loader } from "@nerve/ui";
 // components
-import { getFileURL } from "@nerve/utils";
 import { FilterHeader, FilterOption } from "@/components/issues/issue-layouts/filters";
 // hooks
 import { useMember } from "@/hooks/store/use-member";
@@ -26,6 +26,7 @@ type Props = {
 
 export const FilterAssignees = observer(function FilterAssignees(props: Props) {
   const { appliedFilters, handleUpdate, memberIds, searchQuery } = props;
+  const imageWorkspace = useRouteWorkspace();
   // states
   const [itemsToRender, setItemsToRender] = useState(5);
   const [previewEnabled, setPreviewEnabled] = useState(true);
@@ -77,10 +78,10 @@ export const FilterAssignees = observer(function FilterAssignees(props: Props) {
                       isChecked={!!appliedFilters?.includes(member.id)}
                       onClick={() => handleUpdate(member.id)}
                       icon={
-                        <Avatar
+                        <ProfileAvatar
                           alt={member.display_name}
                           fallback={member.display_name?.[0]?.toUpperCase()}
-                          src={getFileURL(member.avatar_url)}
+                          source={{ kind: "member", workspaceID: imageWorkspace?.id ?? "", memberID: member.id }}
                           size="xs"
                         />
                       }

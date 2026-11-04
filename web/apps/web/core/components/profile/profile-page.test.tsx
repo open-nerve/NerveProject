@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
+import { seedAccount } from "@/store/user/fake-account";
 import { act, useEffect, type ReactNode } from "react";
 import { createMemoryRouter, RouterProvider, useParams } from "react-router";
 import { SWRConfig } from "swr";
-import { runInAction } from "mobx";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { COLLECTION_OPERATOR, EIssuesStoreType, FILTER_FIELD_TYPE, type TProfileViews } from "@nerve/types";
 import type { RootStore } from "@/store/root.store";
@@ -97,9 +97,7 @@ beforeEach(async () => {
   bound.app = tab.app;
   respondList = undefined;
   toasts.length = 0;
-  runInAction(() => {
-    tab.app.user.data = accountOf("alice");
-  });
+  await seedAccount(tab.nerve, tab.app.user, accountOf("alice"));
   await tab.app.state.fetchProjectStates("A");
   tab.nerve.respond = (call) => {
     if (call.method !== "GET") return;

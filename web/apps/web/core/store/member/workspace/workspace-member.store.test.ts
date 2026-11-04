@@ -2,8 +2,8 @@
  * Copyright (c) 2026-present OpenNerve
  * SPDX-License-Identifier: AGPL-3.0-only
  */
+import { seedAccount } from "@/store/user/fake-account";
 
-import { runInAction } from "mobx";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { WorkspaceMember } from "@nerve/api-client";
 import { ApiError } from "@/lib/api-error";
@@ -85,15 +85,13 @@ describe("WorkspaceMemberStore, the members", () => {
     // nerve's order is not the names'
     await load(nerve, store, [dee, cat, bob, ann]);
     expect(store.getWorkspaceMemberIds("acme")).toEqual(["u-ann", "u-bob", "u-cat", "u-Dee"]);
-    runInAction(() => {
-      user.data = {
-        ...accountOf("bob"),
-        ...bob.member,
-        email: "bob@example.com",
-        user_timezone: "UTC",
-        cover_image_url: null,
-        created_at: "2026-09-01T09:00:00Z",
-      };
+    await seedAccount(nerve, user, {
+      ...accountOf("bob"),
+      ...bob.member,
+      email: "bob@example.com",
+      user_timezone: "UTC",
+      cover_image_url: null,
+      created_at: "2026-09-01T09:00:00Z",
     });
     expect(store.getWorkspaceMemberIds("acme")).toEqual(["u-bob", "u-ann", "u-cat", "u-Dee"]);
   });

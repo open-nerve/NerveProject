@@ -11,6 +11,7 @@ import { ProjectAppliedFiltersList } from "./root";
 // language, and each button that removes a filter, or one of its values. The bar renders on the server, with a
 // stand-in for the workspace's members (bob) and for the language, which says each key (fake-i18n.ts).
 
+vi.mock("@/hooks/use-profile-image", () => import("@/lib/fake-profile-image"));
 vi.mock("@/hooks/store/use-member", () => ({
   useMember: () => ({
     workspace: { getWorkspaceMemberDetails: () => ({ member: { display_name: "bob", avatar_url: null } }) },
@@ -48,3 +49,5 @@ describe("the bar of the projects' filters applied", () => {
     expect(bar).toContain("common.clear_all");
   });
 });
+
+vi.mock("@/hooks/use-route-workspace", () => ({ useRouteWorkspace: () => ({ id: "w-acme" }) }));

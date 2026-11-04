@@ -1,3 +1,4 @@
+import type { ObserveProfileRead } from "./asset/image-owner-read";
 /**
  * Copyright (c) 2023-present Plane Software, Inc. and contributors
  * SPDX-License-Identifier: AGPL-3.0-only
@@ -17,6 +18,7 @@ import { StateStore } from "@/store/state.store";
 import type { ICommandPaletteStore } from "@/store/command-palette.store";
 import { CommandPaletteStore } from "@/store/command-palette.store";
 import { WorkspaceRootStore } from "@/store/workspace";
+import { RootAssetStore } from "@/store/asset/root.store";
 // stores
 import type { ICycleStore } from "./cycle.store";
 import { CycleStore } from "./cycle.store";
@@ -69,6 +71,7 @@ export class RootStore {
   projectView: IProjectViewStore;
   globalView: IGlobalViewStore;
   issue: IIssueRootStore;
+  asset: RootAssetStore;
   state: IStateStore;
   label: ILabelStore;
   router: IRouterStore;
@@ -82,6 +85,8 @@ export class RootStore {
   editorAssetStore: IEditorAssetStore;
   workItemFilters: IWorkItemFilterStore;
   powerK: IPowerKStore;
+
+  observeProfileRead: ObserveProfileRead = (owner, read) => this.asset.images.observe(owner, read);
 
   /**
    * The stores of one session, the one api is bound to: store-context.tsx builds a RootStore for each session
@@ -97,7 +102,9 @@ export class RootStore {
     this.instance = before?.instance ?? new InstanceStore();
     this.user = new UserStore(this, api);
     this.theme = before?.theme ?? new ThemeStore();
-    this.workspaceRoot = new WorkspaceRootStore(this, api);
+    this.workspaceRoot = new WorkspaceRootStore(this, api, (workspaceID) =>
+      this.issue.captureWorkspaceWrite(workspaceID)
+    );
     this.projectRoot = new ProjectRootStore(this, api);
     this.memberRoot = new MemberRootStore(this, api);
     this.cycle = new CycleStore(this);
@@ -107,6 +114,7 @@ export class RootStore {
     this.projectView = new ProjectViewStore(this);
     this.globalView = new GlobalViewStore(this);
     this.issue = new IssueRootStore(this, api);
+    this.asset = new RootAssetStore(this, api);
     this.state = new StateStore(this, api);
     this.label = new LabelStore(this, api);
     this.projectInbox = new ProjectInboxStore(this);
@@ -126,6 +134,7 @@ export class RootStore {
    */
   dispose(): void {
     this.issue.retire();
+    this.asset.dispose();
     this.projectRoot.projectFilter.dispose();
   }
 }

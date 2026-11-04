@@ -1,6 +1,6 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
+import { seedAccount } from "@/store/user/fake-account";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { runInAction } from "mobx";
 import { json, problem } from "@/lib/auth/fake-nerve";
 import { until, track } from "@/lib/auth/fake-time";
 import { accountOf } from "@/store/member/fake-users";
@@ -111,9 +111,7 @@ function replies(kind: Kind, readRefused = false, writeRefused = false) {
 beforeEach(async () => {
   vi.useFakeTimers();
   tab = await issueStoreTab();
-  runInAction(() => {
-    tab.app.user.data = accountOf("actor");
-  });
+  await seedAccount(tab.nerve, tab.app.user, accountOf("actor"));
   tab.app.issue.issues.acceptRead(item, tab.app.issue.captureRead());
   tab.app.issue.issues.acceptRead(issueDetailOf("child"), tab.app.issue.captureRead());
   await open();

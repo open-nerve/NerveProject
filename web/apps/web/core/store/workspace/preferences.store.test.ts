@@ -10,7 +10,7 @@ import { ApiError } from "@/lib/api-error";
 import { FakeNerve, answered, json, problem } from "@/lib/auth/fake-nerve";
 import { settle, track, until } from "@/lib/auth/fake-time";
 import { fetchedWhileChangeIsOut, inTurn } from "@/store/fake-queue";
-import { fakeRoot } from "@/store/fake-root";
+import { fakeRoot, withoutImageObservation } from "@/store/fake-root";
 import { RouterStore } from "@/store/router.store";
 import { WorkspaceRootStore } from "@/store/workspace";
 import { loadWorkspaces, workspaceOf } from "@/store/workspace/fake-workspaces";
@@ -40,7 +40,11 @@ const to =
 async function preferencesStore() {
   const nerve = new FakeNerve();
   const api = nerve.client();
-  const workspaceRoot = new WorkspaceRootStore(fakeRoot({ router: new RouterStore() }), api);
+  const workspaceRoot = new WorkspaceRootStore(
+    fakeRoot({ observeProfileRead: withoutImageObservation, router: new RouterStore() }),
+    api,
+    () => () => true
+  );
   await loadWorkspaces(nerve, workspaceRoot, [workspaceOf("acme"), workspaceOf("beta")]);
   nerve.calls.length = 0;
   return { nerve, api, store: workspaceRoot.preferences };

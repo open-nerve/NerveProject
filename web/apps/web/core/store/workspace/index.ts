@@ -20,6 +20,9 @@ import { WorkspacePreferencesStore } from "./preferences.store";
 import type { IWebhookStore } from "./webhook.store";
 import { WebhookStore } from "./webhook.store";
 
+/** Capture a monotonic permission lifetime. The composition root supplies the existing permission owner. */
+export type WorkspaceWriteScope = (workspaceID: string) => () => boolean;
+
 export interface IWorkspaceRootStore {
   /**
    * The caller's workspaces, in nerve's order (by name, then id) but for those created or joined since nerve listed
@@ -35,7 +38,7 @@ export interface IWorkspaceRootStore {
   checkWorkspaceSlug: (slug: string) => Promise<SlugAvailability>;
   // crud actions
   createWorkspace: (data: WorkspaceCreate) => Promise<Workspace>;
-  updateWorkspace: (workspaceSlug: string, data: WorkspaceUpdate) => Promise<Workspace>;
+  updateWorkspace: (workspaceSlug: string, data: WorkspaceUpdate) => Promise<Workspace | undefined>;
   deleteWorkspace: (workspace: Pick<Workspace, "id" | "slug">) => Promise<void>;
   leaveWorkspace: (workspace: Pick<Workspace, "id" | "slug">) => Promise<void>;
   acceptInvitation: (invitationId: string, token: string) => Promise<Workspace>;
@@ -62,7 +65,11 @@ export class WorkspaceRootStore implements IWorkspaceRootStore {
   preferences: IWorkspacePreferencesStore;
   webhook: IWebhookStore;
 
-  constructor(_rootStore: RootStore, api: ApiClient) {
+  constructor(
+    private readonly _rootStore: RootStore,
+    api: ApiClient,
+    private readonly captureWrite: WorkspaceWriteScope
+  ) {
     makeObservable(this, {
       // computed
       currentWorkspace: computed,
@@ -104,7 +111,8 @@ export class WorkspaceRootStore implements IWorkspaceRootStore {
    * it shows, or undefined for a fetch a newer one overtook or a change of session cut (Reconciled.fetch)
    * @returns {Promise<Workspace[] | undefined>}
    */
-  fetchWorkspaces = (): Promise<Workspace[] | undefined> => this.list.fetch(() => this.service.list());
+  fetchWorkspaces = (): Promise<Workspace[] | undefined> =>
+    this._rootStore.observeProfileRead({ kind: "workspace" }, () => this.list.fetch(() => this.service.list()));
 
   /**
    * @description whether slug can name a new workspace, or why not (reserved, taken, invalid)
@@ -125,16 +133,39 @@ export class WorkspaceRootStore implements IWorkspaceRootStore {
     });
 
   /**
-   * @description changes a workspace's name, organization size or time zone; the list then has nerve's answer.
-   * Fails, changing nothing, when nerve refuses.
-   * @returns {Promise<Workspace>}
+   * Changes the named fields in the initiating workspace's permission lifetime. Unknown or retired scopes give
+   * undefined without publishing success or failure; current refusals still reject. A sent write may have succeeded
+   * on the server even when its delayed answer can no longer describe this view.
    */
-  updateWorkspace = (workspaceSlug: string, data: WorkspaceUpdate): Promise<Workspace> =>
-    this.changes(async () => {
-      const workspace = await this.service.update(workspaceSlug, data);
-      this.list.confirm(replaced(workspace));
-      return workspace;
+  updateWorkspace = async (workspaceSlug: string, data: WorkspaceUpdate): Promise<Workspace | undefined> => {
+    const source = this.getWorkspaceBySlug(workspaceSlug);
+    if (!source) return undefined;
+    const permissionCurrent = this.captureWrite(source.id);
+    const current = () => {
+      const held = this.getWorkspaceBySlug(workspaceSlug);
+      return permissionCurrent() && held?.id === source.id && held.role === source.role;
+    };
+    return this.changes(async () => {
+      if (!current()) return undefined;
+      try {
+        const workspace = await this.service.update(workspaceSlug, data);
+        if (!current() || workspace.id !== source.id) return undefined;
+        this.list.confirm((held, answered) => {
+          if (!current()) return held;
+          // The observer has not seen this incoming directory yet. Do not hide its new membership facts by replay.
+          if (answered) {
+            const original = answered.find((row) => row.id === source.id);
+            if (!original || original.slug !== source.slug || original.role !== source.role) return held;
+          }
+          return replaced(workspace)(held);
+        });
+        return current() ? workspace : undefined;
+      } catch (error) {
+        if (!current()) return undefined;
+        throw error;
+      }
     });
+  };
 
   /**
    * @description deletes a workspace, which then leaves the list, and with it what the stores keep of it, by its id

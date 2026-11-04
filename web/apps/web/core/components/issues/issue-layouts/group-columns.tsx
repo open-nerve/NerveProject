@@ -5,7 +5,7 @@ import { EIconSize, ISSUE_PRIORITIES, STATE_GROUPS } from "@nerve/constants";
 import { Logo } from "@nerve/propel/emoji-icon-picker";
 import { PriorityIcon, StateGroupIcon } from "@nerve/propel/icons";
 import type { GroupByColumnTypes, IGroupByColumn } from "@nerve/types";
-import { getFileURL } from "@nerve/utils";
+import { ProfileAvatar } from "@/components/assets/profile-image";
 import { rootStore } from "@/lib/store-context";
 
 type ColumnScope = {
@@ -142,6 +142,9 @@ function memberIds(scope: ColumnScope): string[] {
       : [];
 }
 function memberColumns(scope: ColumnScope, assignee: boolean): IGroupByColumn[] {
+  const workspaceID = scope.workspaceSlug
+    ? rootStore.workspaceRoot.getWorkspaceBySlug(scope.workspaceSlug)?.id
+    : undefined;
   return memberIds(scope).flatMap((id) => {
     const member = rootStore.memberRoot.getUserDetails(id);
     return member
@@ -150,10 +153,10 @@ function memberColumns(scope: ColumnScope, assignee: boolean): IGroupByColumn[] 
             id,
             name: member.display_name,
             icon: (
-              <Avatar
+              <ProfileAvatar
                 alt={member.display_name}
                 fallback={member.display_name?.[0]?.toUpperCase()}
-                src={getFileURL(member.avatar_url ?? "")}
+                source={{ kind: "member", workspaceID: workspaceID ?? "", memberID: id }}
                 size="xs"
               />
             ),

@@ -1,6 +1,6 @@
 # M5/P5：工作项、评论与草稿资产
 
-> 预检及T1–T12实现验证完成；T13本地七项已闭环，完整E2E 364/364通过，原容器20/新增遗留0。准确检查点CI、整审和集成待后续步骤。分支codex/m5-p5，准确基线main 0f93100a05304d26b074790633b5659285813156；P4 main CI 41641099230全绿且归档清理已完成。一次builder check的H1已按既有准备件隐私合同修正，见[预检](../../../reviews/re-40-M5P5预检.md)。
+> P5 已完成：T1–T15、本地七门禁、整审及两次集成修复闭环，最终main `f5f4ce9431e7fb360363bf169da33487cf9b864f` 的CI41772399410全绿；5053份原件归档核验并正常清理三组分支/worktree，原容器20/新增遗留0，见[收尾记录](../reviews/P5-issue-assets-review.md#222-最终main全绿与归档清理)。原分支codex/m5-p5、基线main 0f93100a05304d26b074790633b5659285813156。一次builder check的H1闭环见[预检](../../../reviews/re-40-M5P5预检.md)。
 > 主合同：[内容与绑定](P5-content-binding.md)、[附件读取与计数](P5-attachment-reads.md)共同构成 spec。依据 M5 设计 §3、§6–8、§12 和 M4-closeout M5-01/02/03。
 
 ## 1. 目标和范围
@@ -66,8 +66,8 @@ issue 的同步 subscriber 在原事务写一条 attachment 动态并 MarkChange
 - [x] A5 所有 Issue 出口真实附件计数，三类列表/两方向/跨页/分组/成员关系和游标精度；1000/1001及10000计数目录冷库容量证据。证据：[阶段记录§12、§15、§19](../reviews/P5-issue-assets-review.md#20-t13验收与交接核对)。
 - [x] A6 事件/动态精确一次、rollback零行、父删除与60天清理/失败恢复/邻域，目录守卫保持严格。证据：[阶段记录§10、§18–19](../reviews/P5-issue-assets-review.md#20-t13验收与交接核对)。
 - [x] A7 F8–F15的API/DB/字节边界及至少15个定向行为变异通过；本任务容器及时核验回收，原有容器保留。T9–T12聚焦故事、删除图与变异，加T13完整364故事复验及原20容器/新增遗留0，证据：[阶段记录§16–20](../reviews/P5-issue-assets-review.md#20-t13验收与交接核对)。
-- [ ] A8 最终本地七门禁、一次fresh deep-review与主控修复复核、准确最终HEAD三job CI全绿。
-- [ ] A9 --no-ff准确main CI全绿、全部原件归档hash/bytes/mode/membership/unknown=0并正常清理，P6预检准备完成。
+- [x] A8 最终本地七门禁、一次fresh deep-review与主控修复复核、准确最终HEAD三job CI全绿。证据：[阶段记录§21.2](../reviews/P5-issue-assets-review.md#212-最终预算复验与分支门禁闭环)。
+- [x] A9 --no-ff准确main CI全绿、全部原件归档hash/bytes/mode/membership/unknown=0并正常清理，P6预检准备完成。证据：[收尾记录§22.2](../reviews/P5-issue-assets-review.md#222-最终main全绿与归档清理)、[P6预检§7](../../../reviews/re-42-M5P6预检.md#7-最终基线与执行前预检通过)。
 
 ## 4. 交接与代价
 
