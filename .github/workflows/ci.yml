@@ -78,7 +78,8 @@ jobs:
     needs: [server, web]
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    # 完整故事约17–18分钟，另留安装、浏览器、构建与收尾时间。
+    timeout-minutes: 25
     env:
       # 写进 bin/nerve 的版本号，与默认值不同，S3 由此确认 make build 的注入生效
       VERSION: 0.0.0-ci.${{ github.run_number }}
