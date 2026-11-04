@@ -1,6 +1,6 @@
 # M5/P6 资料图片上传与展示 Implementation Plan
 
-> 预检通过，T1待开始。**For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans 按 Task 内联实施；不用逐 Task 新派实现者/审者。完成后一次 fresh whole-branch review。本计划在 `codex/m5-p6`，初始基线c59cedf3，实施基线已noff同步 `main@f5f4ce9431e7fb360363bf169da33487cf9b864f`；[PC1](../reviews/P6-public-project-lifetime-decision.md)已批准 A并同步合同。P5准确main CI及归档清理已完成，按连续授权从T1执行。
+> 预检通过，T1完成，继续T2。**For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans 按 Task 内联实施；不用逐 Task 新派实现者/审者。完成后一次 fresh whole-branch review。本计划在 `codex/m5-p6`，初始基线c59cedf3，实施基线已noff同步 `main@f5f4ce9431e7fb360363bf169da33487cf9b864f`；[PC1](../reviews/P6-public-project-lifetime-decision.md)已批准 A并同步合同。P5准确main CI及归档清理已完成，按连续授权从T1执行。
 
 **Goal:** 资料图片真实上传、宿主绑定、权限/到期展示和可访问交互。
 **Architecture:** AssetService 处理会话 JSON；独立 fetch 只传 File；视图持有上传，IssueRootStore 统一使生命周期失效。图片读由当前宿主 store 调和，活动来源读合并但不复制权限或实体事实。
@@ -40,9 +40,9 @@
 **Files:** 新 core/services/asset.service.ts/.test.ts、core/lib/asset-upload.ts/.test.ts；tools/keywords.json；P6 review。
 **Interfaces:** 产出 AssetService.prepare/complete 和 putAsset，直接消费生成 NewAsset/PreparedAsset/Asset；失败分类见子合同。
 
-- [ ] Step 1：服务测试实际记录 URL/body/signal 与 problem 原值；传输测试覆盖local根相对地址与S3绝对地址、同源/跨源、签名query原值、重复/额外headers与原File、2xx/403/500、网络、过期/非法 grant、父取消/超时竞争、redirect 拒绝。不能在 jsdom 声称已验证浏览器 Cookie，真实证据在 T11/T12。
-- [ ] Step 2：`pnpm --filter web exec vitest run core/services/asset.service.test.ts core/lib/asset-upload.test.ts` 记录行为 RED 后最小实现；phase=M5/P6。
-- [ ] Step 3：相同命令 GREEN，取消后无挂监听/计时器，错误不包含签名 query；受影响 types/lint/格式，提交 `feat(M5/P6): 接入独立文件直传与资产确认`。
+- [x] Step 1：服务测试实际记录 URL/body/signal 与 problem 原值；传输测试覆盖local根相对地址与S3绝对地址、同源/跨源、签名query原值、重复/额外headers与原File、2xx/403/500、网络、过期/非法 grant、父取消/超时竞争、redirect 拒绝。不能在 jsdom 声称已验证浏览器 Cookie，真实证据在 T11/T12。
+- [x] Step 2：`pnpm --filter web exec vitest run core/services/asset.service.test.ts core/lib/asset-upload.test.ts` 记录行为 RED 后最小实现；phase=M5/P6。
+- [x] Step 3：相同命令 GREEN，取消后无挂监听/计时器，错误不包含签名 query；受影响 types/lint/格式，提交 `feat(M5/P6): 接入独立文件直传与资产确认`。
 
 ## Task 2（T2）：上传会话与统一权限失效
 
