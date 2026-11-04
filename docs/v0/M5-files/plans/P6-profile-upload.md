@@ -1,6 +1,6 @@
 # M5/P6 资料图片上传与展示 Implementation Plan
 
-> 预检通过，T1–T11完成；PC2按A完成基础与页面回归，继续T12。**For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans 按 Task 内联实施；不用逐 Task 新派实现者/审者。完成后一次 fresh whole-branch review。本计划在 `codex/m5-p6`，初始基线c59cedf3，实施基线已noff同步 `main@f5f4ce9431e7fb360363bf169da33487cf9b864f`；[PC1](../reviews/P6-public-project-lifetime-decision.md)已批准 A并同步合同。P5准确main CI及归档清理已完成，按连续授权从T1执行。
+> 预检通过，T1–T12完成；PC2按A完成基础与页面回归，继续T13。**For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans 按 Task 内联实施；不用逐 Task 新派实现者/审者。完成后一次 fresh whole-branch review。本计划在 `codex/m5-p6`，初始基线c59cedf3，实施基线已noff同步 `main@f5f4ce9431e7fb360363bf169da33487cf9b864f`；[PC1](../reviews/P6-public-project-lifetime-decision.md)已批准 A并同步合同。P5准确main CI及归档清理已完成，按连续授权从T1执行。
 
 PC2 已批准 A：[工作区更新的迟到回包](../reviews/P6-workspace-write-lifetime-decision.md)。
 **Goal:** 资料图片真实上传、宿主绑定、权限/到期展示和可访问交互。
@@ -143,9 +143,9 @@ PC2 已批准 A：[工作区更新的迟到回包](../reviews/P6-workspace-write
 **Files:** 新 e2e/stories/files/f16-profile-upload-lifetime.spec.ts、f17-profile-upload-accessibility.spec.ts、playwright.m5-profile.config.ts；相关受影响unit；只在P6config扩展本阶段三浏览器，不扩张默认CI全部浏览器。
 **Interfaces:** 按条件等待/有期限阻塞网络，不固定sleep；复用签名能力/ownerAPI，不伪造服务端TTL配置。
 
-- [ ] Step 1：三个浏览器各真实file input/drop、rawFile传输、取消、焦点/aria；按prepare/PUT/complete/owner四边界保持真实请求暂停，换账号/Back/Forward/换workspace/项目/撤权恢复，恢复旧成功/失败后无错误绑定/旧图。
-- [ ] Step 2：`make build build-s3-fixture` 后 `cd e2e && pnpm exec playwright test --config=playwright.m5-profile.config.ts --workers=1`；expiry注入标明只测UI，图片每来源仅一次自动再读，manualretry只读。
-- [ ] Step 3：至少9个有效行为变异：带凭据、取消后complete、漏lifecheck、删除PC1非成员可见事实、旧read覆盖write、expiry失效、memberMap当权限、双POST、自动retry循环；逐SHA恢复。跑全部受影响unit/类型/格式；保存原件与容器清理，提交 `test(M5/P6): 证明上传迟到结果与可访问交互边界`。
+- [x] Step 1：三个浏览器各真实file input/drop、rawFile传输、取消、焦点/aria；按prepare/PUT/complete/owner四边界保持真实请求暂停，换账号/Back/Forward/换workspace/项目/撤权恢复，恢复旧成功/失败后无错误绑定/旧图。
+- [x] Step 2：`make build build-s3-fixture` 后 `cd e2e && pnpm exec playwright test --config=playwright.m5-profile.config.ts --workers=1`；expiry注入标明只测UI，图片每来源仅一次自动再读，manualretry只读。
+- [x] Step 3：至少9个有效行为变异：带凭据、取消后complete、漏lifecheck、删除PC1非成员可见事实、旧read覆盖write、expiry失效、memberMap当权限、双POST、自动retry循环；逐SHA恢复。跑全部受影响unit/类型/格式；保存原件与容器清理，提交 `test(M5/P6): 证明上传迟到结果与可访问交互边界`。
 
 ## Task 13（T13）：完整门禁与检查点
 

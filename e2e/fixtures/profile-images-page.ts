@@ -66,7 +66,10 @@ export async function profileImagePage(world: PageFileStoryWorld, info: TestInfo
         async () => (await fetch("/api/v0/instance?image-cookie-probe=1", { credentials: "include" })).status
       )
     ).toBe(200);
-    expect((await (await sent).allHeaders()).cookie).toContain("nerve_image_cookie_probe=present");
+    const headers = world.wire
+      ? world.wire.requests.find((request) => request.method === "GET" && request.path === "/api/v0/instance")?.headers
+      : await (await sent).allHeaders();
+    expect(headers?.cookie).toContain("nerve_image_cookie_probe=present");
   };
   const select = async (bytes = filePixel) => {
     await page
@@ -103,13 +106,17 @@ export async function profileImagePage(world: PageFileStoryWorld, info: TestInfo
     const put = puts[ordinal];
     if (!put) throw new Error("Missing raw PUT");
     expect(put.url()).toBe(new URL(prepared.upload.url, baseURL).href);
-    const headers = await put.allHeaders();
+    const received = world.wire?.requests.filter((request) => request.method === "PUT")[ordinal];
+    const headers = received?.headers ?? (await put.allHeaders());
     expect(headers.authorization).toBeUndefined();
     expect(headers.cookie).toBeUndefined();
     expect(headers.referer).toBeUndefined();
     expect(headers["content-type"]).toBe("image/png");
-    expect((await put.sizes()).requestBodySize).toBe(bytes.length);
-    expect(put.postDataBuffer()).toEqual(bytes);
+    if (world.wire) {
+      expect(received).toBeDefined();
+      expect(received?.headers["content-length"]).toBe(String(bytes.length));
+    } else expect((await put.sizes()).requestBodySize).toBe(bytes.length);
+    expect(received?.body ?? put.postDataBuffer()).toEqual(bytes);
     expect((await put.response())?.status()).toBe(world.uploadStatus);
     const completions = calls("POST", `/api/v0/assets/${prepared.asset.id}/complete`);
     expect(completions).toHaveLength(1);

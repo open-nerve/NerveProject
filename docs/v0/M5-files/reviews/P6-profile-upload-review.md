@@ -1,6 +1,6 @@
 # M5/P6 资料图片上传与展示阶段记录
 
-> 分支 `codex/m5-p6`，实施基线 `main@f5f4ce9431e7fb360363bf169da33487cf9b864f`。P5 已完整收尾，P6 预检提交 ab9f86b8；当前 T1–T11 完成，PC2按A完成基础与页面回归，T11接续，未关闭 A1–A8。按连续授权推进，一次整分支 deep-review 后集成；重大风险先提交上报。
+> 分支 `codex/m5-p6`，实施基线 `main@f5f4ce9431e7fb360363bf169da33487cf9b864f`。P5 已完整收尾，P6 预检提交 ab9f86b8；当前 T1–T12 完成，PC2按A完成基础与页面回归，T11接续，未关闭 A1–A8。按连续授权推进，一次整分支 deep-review 后集成；重大风险先提交上报。
 
 ## 1. 输入与范围
 
@@ -143,4 +143,14 @@ F5–F7 Chromium七项全部通过：个人头像/封面分别上传、同名不
 
 每条链核原请求JSON、URL和query不变、正文大小/原字节/MIME、无Authorization/Cookie/Referer；同源控制fetch确实携测试HttpOnly Cookie。已绑定资产实际下载字节、DB最终key/SHA/标记与local磁盘或S3对象检查一致；重复complete后整行不变。项目双击只创建一行，资料字段各自独立，旧API/pageError/CSP/意外API失败为0。原件见E6 t11-sixth-report、t11-sixth-results和t11-pages-sixth收据，4520输入不变，七项70.4秒（含独立S3启动清理）。容器集合前后相同，自有PG/reaper/S3均无遗留，未操作既有容器。
 
-首次至第五次失败保留：个人路径、引导双入口、JSON流式正文观察、旧建议namespace、浏览器未暴露Content-Length、访客原布局成员GET和访客设置拒绝页，均已按实际合同修正测试。正文核requestBodySize及原bytes，不依赖浏览器调试协议必然暴露自动头；Cookie对照保持。访客M3脱敏目录GET本来允许，图片资源不得额外枚举，原spec措辞已校正；不改M3布局或授权。新增负例等待实际只读/拒绝页完成，避免早期零元素假阳性。首次lint两处no-shadow命名已改，无规则豁免；最终类型、格式和六文件零warning收据保留。三浏览器生命周期和阶段A1–A8继续T12–T15，不以此七项替代最终门禁。
+首次至第五次失败保留：个人路径、引导双入口、JSON流式正文观察、旧建议namespace、浏览器未暴露Content-Length、访客原布局成员GET和访客设置拒绝页，均已按实际合同修正测试。正文核requestBodySize及原bytes，不依赖浏览器调试协议必然暴露自动头；Cookie对照保持。访客M3脱敏目录GET本来允许，图片资源不得额外枚举，原spec措辞已校正；不改M3布局或授权。新增负例等待实际只读/拒绝页完成，避免早期零元素假阳性。首次lint两处no-shadow命名已改，无规则豁免；最终类型、格式和六文件零warning收据保留。三浏览器生命周期和阶段A1–A8继续T13–T15，不以此七项替代最终门禁。
+
+## 17. T12 三浏览器生命周期、可访问性和变异
+
+Chromium/Firefox/WebKit各14项、合计42/42通过（112.7秒）；本阶段独立配置含F5–F7 local、F16和F17，未扩大默认CI浏览器范围。真实prepare/PUT/complete三边界暂停后取消，旧链不再绑定，新选择成功；Back/Forward跨工作区和项目、另页换账号均终止旧资源。工作区管理员实际20→15→20，真实旧PATCH成功和403分别迟到，新的目录和图片不被覆写；恢复后再次打开弹窗核当前图片。个人旧读取跨新写返回后仍为新头像，DB和实物红色PNG一致。
+
+真实File输入和原生DataTransfer拖放、双文件/类型错误、alert及焦点、aria-live阶段、busy禁止Escape、明确取消、重新选择、关闭后焦点归还在三浏览器一致。到期仅注入浏览器时间及宿主DTO期限，服务端签名TTL未改变：旧img卸载、一次自动读取、再次无效停止、手动只读恢复。无重放上传或owner写。T11双存储原件继续有效，T12更严格地用真实接收端观察local Cookie对照、Content-Length/原正文/MIME与无Authorization/Cookie/Referer；S3仍用原URL/独立fixture，不改传输。
+
+首轮三浏览器34/42：旧读正在重新授权时测试错误地要求立即显示新图，修正为响应交付后核最新绑定；WebKit调试协议缺Cookie和File正文，新增只用于P6的原样HTTP转发观察fixture，从实际接收端核验，未跳过任何浏览器。额外端口及在途连接finally释放。此前背景modal aria-hidden定位失败、取消中断原件及所有trace/report均保留。原件见E6 t12-three-second-report/results、t12-three-browsers-second、t12-container-cleanup.json；既有容器集合前后完全相同。
+
+九个定向变异全部取得行为AssertionError：携业务凭据、忽略取消、卸载不释放生命期、删除PC1非成员可见事实、忽略expiry、取全局成员缓存、旧用户读覆盖新写、创建双POST、允许连续错误自动刷新。每项准确源码SHA恢复、退出码和选中用例见t12-mutations.json及原始日志。恢复后87文件856项受影响回归通过；类型、九文件格式、八个实际lint输入零warning/error通过（配置按仓库oxlint默认忽略）。4525输入前后hash一致。完整七门禁、终审和集成继续T13–T15，未提前关闭A7/A8。

@@ -4,7 +4,8 @@ import { pageFileStory } from "../../fixtures/file-story";
 import { expectDecoded, profileImagePage, redPixel } from "../../fixtures/profile-images-page";
 import { answerTo } from "../../fixtures/settings-pages";
 import { filePixel } from "../../fixtures/storage";
-import { expect, test } from "../../fixtures/test";
+import { expect } from "../../fixtures/test";
+import { test } from "../../fixtures/profile-image-wire";
 import { anotherBrowser } from "../../fixtures/workspace-pages";
 
 pageFileStory(
@@ -91,16 +92,11 @@ pageFileStory(
 
 test("F5 (page): onboarding avatar binds without completing or submitting the profile step", async ({
   api,
-  db,
-  nerve,
+  imageWorld,
   page,
 }, info) => {
-  const image = await profileImagePage(
-    { api, db, nerve, page, baseURL: nerve.baseURL, uploadStatus: 204 },
-    info,
-    false
-  );
-  await page.goto(`${nerve.baseURL}/onboarding`);
+  const image = await profileImagePage(imageWorld, info, false);
+  await page.goto("/onboarding");
   await page.getByRole("button", { name: "Change avatar", exact: true }).first().click();
   await image.select();
   expect(

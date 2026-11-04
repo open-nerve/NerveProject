@@ -4,6 +4,7 @@ import type { Api } from "./api";
 import type { Database } from "./db";
 import { s3Test } from "./s3-world";
 import { test } from "./test";
+import { test as pageTest, type ImageWire } from "./profile-image-wire";
 import type { Nerve } from "./server";
 import type { S3Bucket } from "./s3";
 
@@ -28,12 +29,13 @@ export interface PageFileStoryWorld extends FileStoryWorld {
   nerve: Nerve;
   baseURL: string;
   bucket?: S3Bucket;
+  wire?: ImageWire;
 }
 
 /** The actual application page, unchanged upload grants and owned storage from the existing fixtures. */
 export function pageFileStory(name: string, run: (world: PageFileStoryWorld, info: TestInfo) => Promise<void>) {
-  test(`${name} [local]`, async ({ api, db, nerve, page }, info) => {
-    await run({ api, db, nerve, page, baseURL: nerve.baseURL, uploadStatus: 204 }, info);
+  pageTest(`${name} [local]`, async ({ imageWorld }, info) => {
+    await run(imageWorld, info);
   });
   s3Test(`${name} [s3]`, async ({ s3World, page }, info) => {
     await run({ ...s3World, page, baseURL: s3World.nerve.baseURL, uploadStatus: 200 }, info);

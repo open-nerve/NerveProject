@@ -74,14 +74,14 @@ export async function sentTo(
 export async function holdAnswer(
   page: Page,
   method: string,
-  path: string,
+  path: string | ((pathname: string) => boolean),
   count = 1,
   received?: () => void
 ): Promise<() => Promise<void>> {
   const released = deferred();
   let held = 0;
   await page.route(
-    (url) => url.pathname === path,
+    (url) => (typeof path === "string" ? url.pathname === path : path(url.pathname)),
     async (route: Route) => {
       if (held >= count || route.request().method() !== method) {
         await route.fallback();
