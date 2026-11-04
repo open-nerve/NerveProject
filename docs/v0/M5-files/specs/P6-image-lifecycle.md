@@ -82,6 +82,7 @@ type ProfileImageView = {
   error: unknown;
   retry(): Promise<void>;
   onError(): void;
+  onLoad(): void;
 };
 function useProfileImage(source: ProfileImageSource): ProfileImageView;
 ```

@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
+import { seedAccount } from "@/store/user/fake-account";
 import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { runInAction } from "mobx";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { json, noContent, problem } from "@/lib/auth/fake-nerve";
 import { until } from "@/lib/auth/fake-time";
@@ -63,9 +63,7 @@ beforeEach(async () => {
   toasts.length = 0;
   binding.tab = await issueStoreTab();
   vi.spyOn(binding.tab.app.issue.issues, "refreshAuthoritative").mockResolvedValue(issueDetailOf("x"));
-  runInAction(() => {
-    binding.tab!.app.user.data = accountOf("actor");
-  });
+  await seedAccount(binding.tab!.nerve, binding.tab!.app.user, accountOf("actor"));
   container = document.createElement("div");
   document.body.append(container);
   renderer = createRoot(container);

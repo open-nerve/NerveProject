@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
+import { seedAccount } from "@/store/user/fake-account";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { MemoryRouter } from "react-router";
-import { runInAction } from "mobx";
 import { observer } from "mobx-react";
 import type { CommentReaction } from "@nerve/api-client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
@@ -77,9 +77,7 @@ beforeEach(async () => {
   vi.spyOn(Element.prototype, "getAnimations").mockReturnValue([]);
   binding.tab = await issueStoreTab();
   vi.spyOn(binding.tab.app.issue.issueDetail.comment, "refreshAfterChange").mockResolvedValue();
-  runInAction(() => {
-    binding.tab!.app.user.data = accountOf("actor");
-  });
+  await seedAccount(binding.tab!.nerve, binding.tab!.app.user, accountOf("actor"));
   binding.tab.app.issue.issues.acceptRead(issueDetailOf("x"), binding.tab.app.issue.captureRead());
   host = document.createElement("div");
   document.body.append(host);

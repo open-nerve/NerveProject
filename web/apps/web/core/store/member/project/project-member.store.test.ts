@@ -2,8 +2,8 @@
  * Copyright (c) 2026-present OpenNerve
  * SPDX-License-Identifier: AGPL-3.0-only
  */
+import { seedAccount } from "@/store/user/fake-account";
 
-import { runInAction } from "mobx";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ProjectMember, ProjectMembersAdd } from "@nerve/api-client";
 import { ApiError } from "@/lib/api-error";
@@ -55,9 +55,7 @@ async function memberStore() {
     { workspace: beta, projects: [lab] }
   );
   const user = new UserStore(fakeRoot({ router }), api);
-  runInAction(() => {
-    user.data = { ...accountOf("ann"), created_at: "2026-09-01T09:00:00Z" };
-  });
+  await seedAccount(nerve, user, { ...accountOf("ann"), created_at: "2026-09-01T09:00:00Z" });
   const users = Object.fromEntries(["ann", "bob", "cat", "dee"].map((name) => [`u-${name}`, userOf(name)]));
   const store = new ProjectMemberStore({ memberMap: users }, fakeRoot({ router, user, projectRoot }), api);
   return { nerve, api, projects: projectRoot.project, store };

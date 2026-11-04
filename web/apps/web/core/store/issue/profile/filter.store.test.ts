@@ -1,6 +1,6 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
+import { seedAccount } from "@/store/user/fake-account";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { runInAction } from "mobx";
 import { EIssueFilterType } from "@nerve/constants";
 import { accountOf } from "@/store/member/fake-users";
 import { issueStoreTab, issuePageOf, requestedIssue } from "../fake-issues";
@@ -17,9 +17,7 @@ const tabs: Awaited<ReturnType<typeof issueStoreTab>>[] = [];
 async function profileTab(account = "alice") {
   const tab = await issueStoreTab();
   tabs.push(tab);
-  runInAction(() => {
-    tab.app.user.data = { ...accountOf(account), id: account };
-  });
+  await seedAccount(tab.nerve, tab.app.user, { ...accountOf(account), id: account });
   return tab;
 }
 beforeEach(() => {

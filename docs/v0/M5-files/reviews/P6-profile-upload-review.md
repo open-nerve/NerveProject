@@ -1,6 +1,6 @@
 # M5/P6 资料图片上传与展示阶段记录
 
-> 分支 `codex/m5-p6`，实施基线 `main@f5f4ce9431e7fb360363bf169da33487cf9b864f`。P5 已完整收尾，P6 预检提交 ab9f86b8；当前 T1–T2 完成，未关闭 A1–A8。按连续授权推进，一次整分支 deep-review 后集成；重大风险先提交上报。
+> 分支 `codex/m5-p6`，实施基线 `main@f5f4ce9431e7fb360363bf169da33487cf9b864f`。P5 已完整收尾，P6 预检提交 ab9f86b8；当前 T1–T3 完成，未关闭 A1–A8。按连续授权推进，一次整分支 deep-review 后集成；重大风险先提交上报。
 
 ## 1. 输入与范围
 
@@ -20,7 +20,7 @@ T1：JSON资产prepare/complete用生成DTO及当前ApiClient；raw PUT保持原
 
 ## 4. 尚未完成
 
-T3–T15及A1–A8继续；没有声称T1单元测试等于真实页面、完整P6或M5完成。
+T4–T15及A1–A8继续；没有声称逐Task单元测试等于真实页面、完整P6或M5完成。
 
 ## 5. T2 上传会话与统一权限失效
 
@@ -31,3 +31,17 @@ T3–T15及A1–A8继续；没有声称T1单元测试等于真实页面、完整
 两项行为变异分别取消显式cancel和删除选择代次检查，均由真实断言拦截；源码逐SHA恢复。完整make test-web 18/18通过（17缓存，web实际运行），163项受影响回归接task-done收据；类型、格式和11个修改文件oxlint零warning。第一次types发现项目ES版本没有Promise.withResolvers、联合目标拷贝丢失关联，分别使用普通Promise停车和保留联合类型的分步副本修正；不改目标平台或放宽类型。原失败和变异日志全部保留。
 
 新增只读current/recovery明确UI重试入口，绑定后同时核readyAsset身份；选错新文件时旧选择被释放，需重新选择。路由的真正effect cleanup与宿主绑定反馈在后续页面任务联合验收，T2不冒称页面已接通。
+
+## 6. T3 宿主图片读取与到期展示
+
+UserStore.data改为只读Reconciled投影，旧/me回包不得覆盖已确认的头像/封面写；首次未加载也覆盖此交错。原有测试的直接data赋值通过真实PATCH应答初始化，生产代码不加测试setter。最初3项并发性质RED，调和后既有账号/退出与47文件804项调用方回归通过。
+
+活动图片读取按self、工作区目录、单项目、工作区成员列表合并；每个活动权限范围独立持有读取证明，URL始终投影当前规范DTO，不使用memberMap，不增权限观察器。公开非成员项目经实际ProjectStore缺席/恢复，在store和真实React/SWR两层均使旧请求失效，原工作项角色保持undefined。最后引用移除、StrictMode清理重放、源切换、失败有界重试和到期/visibility/focus/online重新核时间均有实测。个人头像/封面共用一次/me加既有profile请求；成员头像同工作区共享一次成员列表，跨工作区分别读取；空图/未知宿主/预设不自行取目录。
+
+最初图片骨架8 failed/1 passed。补充RED揭示重新渲染已隐藏过期图但漏刷新、后来挂载者过早完成等待、新范围被共享请求失败挡住，均由对应行为断言修复。呈现组件移除完整img，保持头像原有尺寸、initials和tooltip；不以去掉src替代卸载。网络error只重新授权一次，旧回调不影响新图，实际onLoad后恢复额度；返回无效expiry则留占位和可手动重试状态。
+
+三项单点变异分别绕过未来expiry、改用全局memberMap和恢复旧read直接覆盖write，均产生AssertionError而非编译失败，三文件逐SHA还原；见t3-mutations.json与原日志。受影响15文件210项通过；完整make test-web 18/18通过（17缓存，web296文件3293项实际运行）。最终异步read分为入口与执行方法，明确先发布pending再通知loading，保持原门禁且聚焦复验接task-done；类型、格式及修改文件零warning收据保留。
+
+失败原件不覆写：跨工作区测试最初respond误答成员DTO给工作区接口，限制为members端点后修正；呈现单测mock不是observable，使用同值新source触发真实props渲染后验证卸载；types中的Avatar不允许className和Map泛型错误分别由外层span承载样式与明确cache类型修正。SWR2.4.2在JSDOM中将visibility事件当作其setTimeout.bind的delay产生Node TimeoutNaNWarning，trace指向锁定依赖的initFocus，不是产品计时器；原warn保留，不更换依赖或压制诊断。
+
+局部裁定：内部拆为宿主投影、读取组与视图lease，不复制实体；工作区请求共享，但授权范围证明分别计代。代价是新范围在已有请求发出后挂载时需再读一次，仍同时最多一条该来源请求。hook增加onLoad用于成功图片恢复错误额度；可观察生命期与计时器分别由store和view拥有。hook的DOM测试扩展名按实际JSX改为.test.tsx，计划命令同步。T3只提供读取与retry接口，页面控件、公开邀请和完整消费者迁移继续由后续Task交付，A1–A8不提前关闭。

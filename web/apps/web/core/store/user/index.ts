@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import { action, makeObservable, observable, runInAction, computed } from "mobx";
+import { action, makeObservable, observable, computed } from "mobx";
 // nerve imports
 import type {
   ApiClient,
@@ -18,8 +18,8 @@ import { EUserPermissions } from "@nerve/constants";
 import type { TUserPermissions } from "@nerve/types";
 // lib
 import { tokenManager } from "@/lib/auth/api-client";
-import { SessionChangedError } from "@/lib/auth/token-manager";
 import { oneAtATime } from "@/lib/one-at-a-time";
+import { Reconciled } from "@/lib/reconciled";
 // store
 import type { RootStore } from "@/store/root.store";
 import type { IUserPermissionStore } from "@/store/user/permissions.store";
@@ -36,7 +36,7 @@ import { ApiTokenStore } from "./api-token.store";
 
 export interface IUserStore {
   // observables
-  data: User | undefined;
+  readonly data: User | undefined;
   // store observables
   userProfile: IUserProfileStore;
   permission: IUserPermissionStore;
@@ -56,7 +56,10 @@ export interface IUserStore {
 
 export class UserStore implements IUserStore {
   // observables
-  data: User | undefined = undefined;
+  private readonly account = new Reconciled<User>();
+  get data(): User | undefined {
+    return this.account.value;
+  }
   // store observables
   userProfile: IUserProfileStore;
   permission: IUserPermissionStore;
@@ -81,7 +84,7 @@ export class UserStore implements IUserStore {
     // observables
     makeObservable(this, {
       // model observables
-      data: observable,
+      data: computed,
       userProfile: observable,
       permission: observable,
       apiTokens: observable,
@@ -110,20 +113,14 @@ export class UserStore implements IUserStore {
   fetchCurrentUser = async (): Promise<User | undefined> => {
     await tokenManager.start();
     if (tokenManager.state.status !== "signed-in") return undefined;
-    try {
+    return this.account.fetch(async () => {
       const [user] = await Promise.all([this.userService.currentUser(), this.userProfile.fetchUserProfile()]);
-      runInAction(() => {
-        this.data = user;
-      });
       return user;
-    } catch (error) {
-      if (error instanceof SessionChangedError) return undefined;
-      throw error;
-    }
+    });
   };
 
   /**
-   * @description updates the account's names or time zone; fails, writing nothing, when nerve refuses. An update
+   * @description updates the account's fields, including its profile images; fails, writing nothing, when nerve refuses. An update
    * is sent once the one before it is answered, or has failed: nerve applies them in the order they were made, and
    * the answer to the last one is the account nerve holds.
    * @returns {Promise<User>}
@@ -131,10 +128,7 @@ export class UserStore implements IUserStore {
   updateCurrentUser = (data: UserUpdate): Promise<User> =>
     this.changes(async () => {
       const user = await this.userService.updateCurrentUser(data);
-      runInAction(() => {
-        this.data = user;
-      });
-      return user;
+      return this.account.receive(user, (_held, answer) => answer);
     });
 
   changePassword = async (payload: ChangePasswordRequest): Promise<void> => {

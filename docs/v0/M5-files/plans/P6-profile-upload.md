@@ -1,6 +1,6 @@
 # M5/P6 资料图片上传与展示 Implementation Plan
 
-> 预检通过，T1–T2完成，继续T3。**For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans 按 Task 内联实施；不用逐 Task 新派实现者/审者。完成后一次 fresh whole-branch review。本计划在 `codex/m5-p6`，初始基线c59cedf3，实施基线已noff同步 `main@f5f4ce9431e7fb360363bf169da33487cf9b864f`；[PC1](../reviews/P6-public-project-lifetime-decision.md)已批准 A并同步合同。P5准确main CI及归档清理已完成，按连续授权从T1执行。
+> 预检通过，T1–T3完成，继续T4。**For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans 按 Task 内联实施；不用逐 Task 新派实现者/审者。完成后一次 fresh whole-branch review。本计划在 `codex/m5-p6`，初始基线c59cedf3，实施基线已noff同步 `main@f5f4ce9431e7fb360363bf169da33487cf9b864f`；[PC1](../reviews/P6-public-project-lifetime-decision.md)已批准 A并同步合同。P5准确main CI及归档清理已完成，按连续授权从T1执行。
 
 **Goal:** 资料图片真实上传、宿主绑定、权限/到期展示和可访问交互。
 **Architecture:** AssetService 处理会话 JSON；独立 fetch 只传 File；视图持有上传，IssueRootStore 统一使生命周期失效。图片读由当前宿主 store 调和，活动来源读合并但不复制权限或实体事实。
@@ -55,14 +55,14 @@
 
 ## Task 3（T3）：宿主图片到期与读取调和
 
-**Files:** 新 store/asset/profile-images.ts/.test.ts、hooks/use-profile-image.ts/.test.ts、components/assets/profile-image.tsx/.test.tsx；修改 store/user/index.ts/.test.ts；root asset 生命周期接线。
+**Files:** 新 store/asset/profile-images.ts/.test.ts、hooks/use-profile-image.ts/.test.tsx、components/assets/profile-image.tsx/.test.tsx；修改 store/user/index.ts/.test.ts；root asset 生命周期接线。
 **Interfaces:** 产出 ProfileImageSource、useProfileImage、ProfileImage/ProfileAvatar；消费现有 owner store 和 Reconciled，不增通用权限框架。
 
 预设资源由T7产出，T3先完成项目能力读取及空图/预设不额外GET；T9组合预设映射和能力展示，不在T3加入临时映射或前向导入。
 
-- [ ] Step 1：deferred 与受控时钟复现旧 /me read 覆盖较新 avatar/cover write；同源多头像只读一次、两个workspace同member不共享授权、失权立即无img；公开项目非成员经实际ProjectStore接受缺席/恢复后旧封面读取不能发布，新读取才可显示；ABA旧读失效、expiry/background/invalid新expiry、onError仅一次、最后引用释放、重复cleanup与新image旧error。
-- [ ] Step 2：`pnpm --filter web exec vitest run core/store/asset core/hooks/use-profile-image.test.ts core/components/assets/profile-image.test.tsx core/store/user/index.test.ts core/lib/reconciled.test.ts`，RED 后实现局部调和及活动来源合并。
-- [ ] Step 3：GREEN；原 UserStore 全测试/退出引导、ProjectStore目录事实回归；变异绕过expiry、使用memberMap裸地址、直接旧read覆盖write均须真实失败。记录来源读取成本与无无限重试，提交 `feat(M5/P6): 按宿主权限刷新过期资料图片`。
+- [x] Step 1：deferred 与受控时钟复现旧 /me read 覆盖较新 avatar/cover write；同源多头像只读一次、两个workspace同member不共享授权、失权立即无img；公开项目非成员经实际ProjectStore接受缺席/恢复后旧封面读取不能发布，新读取才可显示；ABA旧读失效、expiry/background/invalid新expiry、onError仅一次、最后引用释放、重复cleanup与新image旧error。
+- [x] Step 2：`pnpm --filter web exec vitest run core/store/asset core/hooks/use-profile-image.test.tsx core/components/assets/profile-image.test.tsx core/store/user/index.test.ts core/lib/reconciled.test.ts`，RED 后实现局部调和及活动来源合并。
+- [x] Step 3：GREEN；原 UserStore 全测试/退出引导、ProjectStore目录事实回归；变异绕过expiry、使用memberMap裸地址、直接旧read覆盖write均须真实失败。记录来源读取成本与无无限重试，提交 `feat(M5/P6): 按宿主权限刷新过期资料图片`。
 
 ## Task 4（T4）：通用图片选择内容与弹窗
 

@@ -1,6 +1,6 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
+import { seedAccount } from "@/store/user/fake-account";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { runInAction } from "mobx";
 import { json, problem } from "@/lib/auth/fake-nerve";
 import { heldChange } from "@/lib/auth/fake-tab";
 import { track, until } from "@/lib/auth/fake-time";
@@ -51,9 +51,7 @@ function facts() {
 beforeEach(async () => {
   vi.useFakeTimers();
   tab = await issueStoreTab();
-  runInAction(() => {
-    tab.app.user.data = accountOf("actor");
-  });
+  await seedAccount(tab.nerve, tab.app.user, accountOf("actor"));
   for (const issue of [parent, child, issueDetailOf("other")])
     tab.app.issue.issues.acceptRead(issue, tab.app.issue.captureRead());
   tab.nerve.respond = (call) => {

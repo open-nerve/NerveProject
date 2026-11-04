@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
+import { seedAccount } from "@/store/user/fake-account";
 import { act, createContext, useContext, useMemo } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { observer } from "mobx-react";
-import { runInAction } from "mobx";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { IssueDetail, ProjectRole, WorkspaceRole } from "@nerve/api-client";
 import type { TPowerKCommandConfig, TPowerKContext } from "@/components/power-k/core/types";
@@ -104,9 +104,7 @@ beforeEach(async () => {
   vi.useFakeTimers();
   auth.state.loginId = "commands-login";
   tab = await issueStoreTab();
-  runInAction(() => {
-    tab.app.user.data = accountOf("actor");
-  });
+  await seedAccount(tab.nerve, tab.app.user, accountOf("actor"));
   clipboard = heldChange<void>();
   write = vi.fn(() => clipboard.sent);
   Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText: write } });

@@ -4,8 +4,10 @@ import { AssetService } from "@/services/asset.service";
 import { SessionChangedError } from "@/lib/auth/token-manager";
 import type { RootStore } from "@/store/root.store";
 import { UploadSession, type ProfileUploadTarget } from "./upload-session";
+import { ProfileImages } from "./profile-images";
 
 export class RootAssetStore {
+  readonly images: ProfileImages;
   private readonly service: AssetService;
   private readonly uploads = new Set<UploadSession>();
   private disposed = false;
@@ -14,6 +16,7 @@ export class RootAssetStore {
     api: ApiClient
   ) {
     this.service = new AssetService(api);
+    this.images = new ProfileImages(root);
   }
   createUpload(target: ProfileUploadTarget): UploadSession {
     this.root.issue.assertActive();
@@ -26,5 +29,6 @@ export class RootAssetStore {
     if (this.disposed) return;
     this.disposed = true;
     for (const upload of this.uploads) upload.dispose();
+    this.images.dispose();
   }
 }

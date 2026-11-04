@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
+import { seedAccount } from "@/store/user/fake-account";
 import React, { act, useImperativeHandle, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { runInAction } from "mobx";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { json, problem } from "@/lib/auth/fake-nerve";
 import { until } from "@/lib/auth/fake-time";
@@ -117,9 +117,7 @@ beforeEach(async () => {
   binding.ready = true;
   binding.tab = await issueStoreTab();
   vi.spyOn(binding.tab.app.issue.issueDetail.comment, "refreshAfterChange").mockResolvedValue();
-  runInAction(() => {
-    binding.tab!.app.user.data = accountOf("actor");
-  });
+  await seedAccount(binding.tab!.nerve, binding.tab!.app.user, accountOf("actor"));
   for (const id of ["x", "other"])
     binding.tab.app.issue.issues.acceptRead(issueDetailOf(id), binding.tab.app.issue.captureRead());
   container = document.createElement("div");

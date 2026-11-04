@@ -1,6 +1,6 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
+import { seedAccount } from "@/store/user/fake-account";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { runInAction } from "mobx";
 import { workItemFiltersAdapter } from "@nerve/shared-state";
 import { toProjectFilters } from "@/lib/issue-filters";
 import { EIssueFilterType } from "@nerve/constants";
@@ -391,9 +391,7 @@ it.each([false, true])(
       },
     });
     const { app, nerve } = tab;
-    runInAction(() => {
-      app.user.data = accountOf("alice");
-    });
+    await seedAccount(nerve, app.user, accountOf("alice"));
     const first = await requestedIssue(nerve, () => app.issue.projectIssuesFilter.fetchFilters("ws", "A"), [
       "GET",
       "/api/v0/me/projects/A/preferences",

@@ -3,22 +3,28 @@ import { configure, runInAction } from "mobx";
 import { expect, it, vi } from "vitest";
 import { FakeNerve } from "@/lib/auth/fake-nerve";
 import { RootStore } from "@/store/root.store";
+import { accountOf } from "@/store/member/fake-users";
+import { seedAccount } from "@/store/user/fake-account";
 
 vi.mock("@/lib/auth/api-client", () => ({ tokenManager: {}, publicClient: {} }));
 vi.mock("@/lib/store-context", () => ({ rootStore: {} }));
 
-it("computedScopeClearsEmptyCatalogs and the signed-out user", () => {
-  const app = new RootStore(new FakeNerve().client());
+it("computedScopeClearsEmptyCatalogs and the signed-out user", async () => {
+  vi.useFakeTimers();
+  const nerve = new FakeNerve();
+  let app = new RootStore(nerve.client());
+  await seedAccount(nerve, app.user, { ...accountOf("user"), id: "user" });
   runInAction(() => {
-    app.user.data = { id: "user" } as NonNullable<typeof app.user.data>;
     app.memberRoot.memberMap = { user: { id: "user" } as never };
     app.router.setQuery({ workspaceSlug: "ws", projectId: "A", userId: "user" });
   });
   expect(app.issue.currentUserId).toBe("user");
   expect(app.issue.memberMap?.user).toBeDefined();
   expect(app.issue.projectId).toBe("A");
+  // Signing out creates a new root; the retired account is never mutated into another session's state.
+  app.dispose();
+  app = new RootStore(nerve.client(), app);
   runInAction(() => {
-    app.user.data = undefined;
     app.memberRoot.memberMap = {};
     app.router.setQuery({});
   });
@@ -28,6 +34,7 @@ it("computedScopeClearsEmptyCatalogs and the signed-out user", () => {
   expect(app.issue.stateMap).toEqual({});
   expect(app.issue.labelMap).toEqual({});
   app.dispose();
+  vi.useRealTimers();
 });
 
 it("rootConstructionMakesNoStrictModeWarning", () => {
