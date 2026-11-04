@@ -184,6 +184,8 @@ M5域其余测试记录参数/fake-assets只为实际测试使用，不假称生
 
 ## 19. T13 完整门禁与PC3停点
 
+以下是d028709f停点时的历史记录；已批准修复的当前结果见§20。
+
 串行完整门禁实际结果：gen-check exit0/5.634秒；lint-go两模块0 issues、exit0/14.759秒；GOFLAGS=-p=1 make test exit0/991.595秒，61个实际测试包、21个无测试包，-count=1无结果缓存，bootstrap641.209秒。4525个非文档输入前后hash一致。常规Go命令不打印逐用例skip；三个既有规模入口仍由NERVE_LIST_SCALE/NERVE_MEASURE_SCALE/NERVE_PURGE_SCALE显式开启，本次不冒称完成规模验收。
 
 lint-web在关键词步骤exit2：四处命中。素材说明已删除不必要的旧品牌名；遥测规则精确排除原生DOM完整标识符webkitGetAsEntry中的sEntry子串，增加正反样本，SDK及带额外前后缀的用法仍命中，无新增exception。原生API在当前TypeScript lib.dom.d.ts中声明，目录拒绝行为不改。23项选择控件/UserStore回归通过，四文件格式通过；首次SOURCES格式未通过及后续修正均记录。初次Go门禁后仅tools/keywords.json和SOURCES.md字节变化，准确前后hash见t13-post-gates-source-delta.json，不把旧4525输入说成当前完全相同。
@@ -191,3 +193,17 @@ lint-web在关键词步骤exit2：四处命中。素材说明已删除不必要�
 剩余workspaces-list-fetch命中为真实架构冲突，原规则逐值保持，未加豁免。实际RootStore/SWR/DOM的两条探针复现重复GET，以及两条成功响应后图片仍陷入错误占位。问题来自P6的独立图片请求键与M3目录读取并行，详见[PC3事实、方案及代价](P6-directory-read-decision.md)。A3重新开放；T13尚未完成、knip/test-web/完整e2e尚未由本轮runner执行，T14整分支deep-review及T15未开始。
 
 原件包括t13-gates.json/runner、每项完整日志和输入hash、t13-pc3-probe-second及源码、t13-keywords-after-local、t13-local-cleanup-final、t13-sources-format、t13-post-gates-source-delta。首轮探针漏开fake timers是夹具错误，不算产品RED；原件保留。测试结束后20个既有容器逐ID均在，新增遗留0，见t13-container-cleanup.json。按03§1先提交已完成工作再上报；七门禁未齐，不推送产品检查点、不合并，也不宣称PC3已修复。
+
+## 20. PC3批准A后的联合修复（进行中）
+
+负责人已批准复用既有读取入口。设计/spec/plan先提交5c370f01；四类图片分别共享CURRENT_USER、WORKSPACES、PROJECT、WORKSPACE_MEMBERS既有会话键。图片侧声明小的ObserveProfileRead接口，由RootStore接到真实宿主读取边界，只观察开始/完成；HTTP与数据事实仍归既有hook/store，Reconciled和目录架构守卫不改。较新真实读取能授权当前图片，旧成功/失败/undefined不能覆盖新证明；完成缓存不能代替新视图授权，同一有效权限代次的在途读取可共享。工作区图标仅核身份水位，成员/项目仍核既有权限水位。
+
+正式四类宿主12项行为先RED后GREEN，补齐新旧成功/失败交错、完成缓存、新成员scope、无关角色/项目变化共26项。根store新增接线字段导致旧计数断言失败，按实际25字段并保留逐字段会话隔离检查。53项边界通过；第一次类型检查仅测试Map和联合Promise推导问题，已修正。三类变异分别破坏同键、旧完成屏障、权限代次，全部行为失败并逐SHA恢复；首轮权限变异停在等待超时，后改为可见请求数断言再次证明，不冒称首轮为AssertionError。
+
+完整门禁还发现测试注释触发既有关键词、P6独立browser配置未登记脚本、内部类型多余export，均局部修正，不加豁免。完整web首轮3447通过/18失败：观察器额外microtask改变原请求启动顺序，已取消额外调度；既有评论/筛选mock补足member入口；项目角色夹具按自己端点答复并允许图片并发，避免“全局只多一个请求”的假设。80项受影响回归全绿，完整门禁与三浏览器复验继续，A3/T13尚待最终收据。
+
+原件在ignored阶段目录的pc3-formal-red-second、pc3-formal-green-second、pc3-boundaries、pc3-types、pc3-full-failures-first/second、pc3-mutations系列和pc3-gates系列。每次失败与源码快照/输入hash均保留。Go/API/Go测试输入逐hash与T13完整Go成功时不变，沿用991.595秒完整Go及两模块零issue结果，范围与差异见pc3-go-evidence-reuse.json；不声称PC3后重新执行Go全套。
+
+三浏览器PC3首轮39通过/3失败，三次均为F16过期恢复：SWR在online事件隐式重取共享宿主，绕过明确重试并使按钮消失。trace和数据库/截图全保留。四种真实页面hook新增行为RED（每种实际GET2次，预期1），修复后30项共享读取回归及共58项联合回归通过。为保持既定的失败占位与明确重试，四个共享宿主hook关闭SWR隐式reconnect重读；图片仍由expiry/focus/online检查决定一次到期刷新，页面挂载、身份变化及显式mutate仍读取。useSessionSWR仅新增可关闭reconnect的窄选项，其他会话请求策略保持。代价：仅网络恢复本身不再独立触发这四种宿主读取，等待上述实际读取条件；避免网络事件绕过图片重试预算。原件pc3-three-browsers、pc3-reconnect-red-page-hooks、pc3-reconnect-green；未改F16断言/期限。
+
+PC3最终三浏览器42/42通过（113.584秒），4529输入不变；过期恢复原F16断言未改。最新完整web311文件3469项通过，其他包结果经18个turbo任务通过（17缓存、web实际重跑）；lint-web54任务通过（36缓存），knip与构建通过，38个本次TS文件零warning/error且格式通过。三类变异重新在当前实现下行为失败并逐SHA恢复。原件pc3-final-seventh-*、pc3-web-test-logs-seventh、pc3-scoped-lint-final、pc3-mutations-reconnect、pc3-three-second-browsers；它们逐项匹配当前4529输入。Go复用最终差异见pc3-go-evidence-reuse-accepted.json。A3关闭，完整E2E/远端CI/终审/集成仍待办。

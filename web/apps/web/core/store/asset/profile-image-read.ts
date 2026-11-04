@@ -55,68 +55,8 @@ export class ImageReadEntry {
   }
 }
 
-/** Owns only the in-flight owner read. DTOs stay in their original reconciled stores. */
+/** Active views and a coalesced revalidation intent; the canonical hook owns the request. */
 export class ImageReadGroup {
   readonly entries = new Map<string, ImageReadEntry>();
-  private pending: Promise<void> | undefined;
-  async read(entry: ImageReadEntry): Promise<void> {
-    if (!entry.lifetime.current) return;
-    if (this.pending) {
-      try {
-        await this.pending;
-      } catch (error) {
-        // A newly acquired scope was not part of the failed read and still needs its first attempt.
-        if (entry.attempted) throw error;
-      }
-      // A scope acquired after dispatch was not authorized by that request.
-      return this.read(entry);
-    }
-    if (entry.attempted && !entry.requested) return;
-    const pending = this.fetch(entry);
-    this.pending = pending;
-    try {
-      await pending;
-    } finally {
-      if (this.pending === pending) this.pending = undefined;
-    }
-  }
-  private async fetch(entry: ImageReadEntry): Promise<void> {
-    // Publish pending before any observable loading notification can reenter read().
-    await Promise.resolve();
-    const active = [...this.entries.values()].filter((item) => item.lifetime.current);
-    if (!active.length) return;
-    runInAction(() => {
-      for (const item of active) {
-        item.attempted = true;
-        item.requested = false;
-        item.loading = true;
-        item.error = undefined;
-        item.proof = false;
-        for (const [projection] of item.projections) item.change(projection, { armed: undefined });
-      }
-    });
-    try {
-      if (!active.some((item) => item.lifetime.current)) return;
-      const answer = await entry.source.read();
-      if (answer === undefined || answer === null) throw new Error("Image owner read was superseded or unavailable");
-      runInAction(() => {
-        for (const item of active)
-          if (item.lifetime.current) {
-            item.proof = true;
-            item.version++;
-          }
-      });
-    } catch (error) {
-      const current = active.filter((item) => item.lifetime.current);
-      runInAction(() => {
-        for (const item of current) item.error = error;
-      });
-      if (current.length) throw error;
-    } finally {
-      runInAction(() => {
-        for (const item of active) item.loading = false;
-      });
-    }
-    return;
-  }
+  refreshing: Promise<void> | undefined;
 }

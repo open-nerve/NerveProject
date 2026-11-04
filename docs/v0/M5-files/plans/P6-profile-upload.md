@@ -12,7 +12,7 @@ PC2 已批准 A：[工作区更新的迟到回包](../reviews/P6-workspace-write
 
 - 根目录 main，codex/m5-p6 worktree；plane/refer 只读，不在其中运行 git；详细中文提交，系统 /usr/bin/git push，--no-ff 集成。
 - 不操作已有容器/Docker；容器套件串行、Go 跨包 -p 1；自己不用的临时容器按精确归属回收，禁止 prune 其他项目。
-- 不加依赖/后端协议/表，不改 shared ModalCore/动效；仅按已批准 PC1 扩展现有 PermissionReads 的规范项目可见性签名，IssueRootStore 仍唯一所有者，不新加平行观察器；业务 DTO 直接用生成类型。单文件约400行，既有大文件只拆本次职责，不借题重构。
+- 不加依赖/后端协议/表，不改 shared ModalCore/动效；按已批准PC1补可见性签名、PC2校验工作区写、PC3复用宿主读及身份水位窄查询，IssueRootStore 仍唯一所有者，不新加平行观察器；业务 DTO 直接用生成类型。单文件约400行，既有大文件只拆本次职责，不借题重构。
 - 只支持 JPEG/PNG/WebP/GIF，File.type 为空拒绝；大小正且≤当前 file_size_limit，raw PUT 15分钟有限预算、credentials omit、redirect error、no-referrer；展示阶段进度，无虚假百分比。
 - URL/expiry 不持久化到业务字段；user/workspace/project/member 每种图片重新授权走宿主，当前事实和失效代次独立核对。前端撤权不声称可撤销已发出的 S3 capability。
 - 新建项目一次 POST 绑定，清除 null/省略不同；固定29封面 cover-01…cover-29，自制 SVG 登记来源，无随机渲染或 Vite URL 入库。
@@ -149,7 +149,7 @@ PC2 已批准 A：[工作区更新的迟到回包](../reviews/P6-workspace-write
 
 ## Task 13（T13）：完整门禁与检查点
 
-停点：[PC3目录读取冲突](../reviews/P6-directory-read-decision.md)已复现并批准A，A3待联合回归关闭。完整Go通过，修复前lint-web由架构守卫拒绝。以下PC3步骤完成后续跑门禁。
+停点：[PC3目录读取冲突](../reviews/P6-directory-read-decision.md)已复现并批准A，A3联合回归已关闭；完整Go原证据经输入hash核对复用，PC3前端门禁及42项三浏览器通过，完整E2E进行中。修复前失败原件保留。
 
 - [x] Step 1：逐项A1–A6、消费者清单、设计/plane-diff/handoff处理结果；P7删包责任保持open，旧未使用成员实测，不因历史数字机械删除。
 - [ ] Step 2：串行 make gen-check、make lint-go、GOFLAGS=-p=1 make test、make lint-web、make knip、make test-web、make e2e（已依赖完整build及build-s3-fixture）；每项原exit/输入hash/缓存/skip记录，非仅聚焦代替全门禁。
@@ -160,9 +160,9 @@ PC2 已批准 A：[工作区更新的迟到回包](../reviews/P6-workspace-write
 **Files:** store/asset/{profile-image-read,profile-images,image-source}.ts；hooks/use-profile-image.ts、use-workspaces-fetch.ts、use-workspace-members-fetch.ts；新增hooks/use-current-user-fetch.ts、use-project-read.ts；authentication-wrapper.tsx和use-project-fetch.ts消费提取hook；store/root.store.ts和user/workspace/project/member-workspace的读取边界；permission-reads.ts的身份窄查询及实际测试。
 **Interfaces:** 图片消费侧ObserveProfileRead<T>(source, read:()=>Promise<T>):Promise<T>，source只标self/workspace/projectID/memberWorkspaceID；RootStore组合接线，结果原样返回。ProfileImages记录在途与每视图证明，不调用HTTP；ImageSource只投影规范源。四个canonical hook保留既有会话键。PermissionReads补身份水位查询供工作区图标，不改角色判定。
 
-- [ ] PC3-1：先将原两条探针转为正式行为回归，扩展四宿主与页面并发、已完成缓存/在途加入、较新成功/失败取代、共享失权ABA、卸载/root退休，记录真实RED，不能只测无关键词命中。
-- [ ] PC3-2：实现小读取观察接口及RootStore接线；四宿主读取边界发布真实完成，提取/复用canonical hook，删除图片独立读取方法和profile-image键。共享刷新仅合并通知，不建立新HTTP所有者。原单元夹具按新的host驱动合同更新，既有授权反例保留。
-- [ ] PC3-3：实际workspace/issue/project/member/user与hook联合回归GREEN；定向去掉同键复用、旧完成屏障、权限代次分别应行为失败并逐SHA恢复；三浏览器P6及受影响单元/类型/lint/格式通过，原目录守卫逐值不变。
+- [x] PC3-1：先将原两条探针转为正式行为回归，扩展四宿主与页面并发、已完成缓存/在途加入、较新成功/失败取代、共享失权ABA、卸载/root退休，记录真实RED，不能只测无关键词命中。
+- [x] PC3-2：实现小读取观察接口及RootStore接线；四宿主读取边界发布真实完成，提取/复用canonical hook，删除图片独立读取方法和profile-image键。共享刷新仅合并通知，不建立新HTTP所有者。原单元夹具按新的host驱动合同更新，既有授权反例保留。
+- [x] PC3-3：实际workspace/issue/project/member/user与hook联合回归GREEN；定向去掉同键复用、旧完成屏障、权限代次分别应行为失败并逐SHA恢复；三浏览器P6及受影响单元/类型/lint/格式通过，原目录守卫逐值不变。
 - [ ] PC3-4：修订A3证据和阶段状态，中文提交；完成本轮七门禁及准确分支CI，再执行T14/T15。不重复无关已绿套件，复用时逐hash明确输入差异及不受影响范围。
 
 ## Task 14（T14）：整分支 deep-review

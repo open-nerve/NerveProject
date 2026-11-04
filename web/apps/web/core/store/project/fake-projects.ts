@@ -17,7 +17,7 @@ import type {
   Workspace,
 } from "@nerve/api-client";
 import { FakeNerve, answered } from "@/lib/auth/fake-nerve";
-import { fakeRoot } from "@/store/fake-root";
+import { fakeRoot, withoutImageObservation } from "@/store/fake-root";
 import { userOf } from "@/store/member/fake-users";
 import type { IProjectMemberDetails } from "@/store/member/project/project-member.store";
 import { ProjectRootStore } from "@/store/project";
@@ -208,8 +208,15 @@ export async function projectTab(here: Listed, elsewhere: Listed) {
   const nerve = new FakeNerve();
   const api = nerve.client();
   const router = new RouterStore();
-  const workspaceRoot = new WorkspaceRootStore(fakeRoot({ router }), api, () => () => true);
-  const projectRoot = new ProjectRootStore(fakeRoot({ router, workspaceRoot }), api);
+  const workspaceRoot = new WorkspaceRootStore(
+    fakeRoot({ observeProfileRead: withoutImageObservation, router }),
+    api,
+    () => () => true
+  );
+  const projectRoot = new ProjectRootStore(
+    fakeRoot({ observeProfileRead: withoutImageObservation, router, workspaceRoot }),
+    api
+  );
   // after the stores, whose reactions follow the address (the projects page's filters)
   router.setQuery({ workspaceSlug: here.workspace.slug, projectId: here.projects?.[0]?.id });
   await loadWorkspaces(nerve, workspaceRoot, [here.workspace, elsewhere.workspace]);

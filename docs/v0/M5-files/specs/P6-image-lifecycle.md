@@ -95,7 +95,7 @@ type ProfileImageView = {
 function useProfileImage(source: ProfileImageSource): ProfileImageView;
 ```
 
-RootAssetStore 提供所需的图片来源活动项；精确内部 lease API 由实施者按该职责选择，不公开泛型事务/策略框架。来源分组为 self、workspace-directory、project ID、workspace-members ID；memberID/图片字段仅决定当前 DTO 的投影，不能导致每头像一次目录请求。一个 source 的最初视图获得时创建读取生命期，SWR key 含 loginId、来源组与该生命期代次，fetcher 只经当前 owner store；到期/失败手动刷新仍按该 key 合并。最后视图释放、root 退休或权限失效终止旧读，不保留无消费者的长期 Map。
+RootAssetStore 提供所需的图片来源活动项；精确内部 lease API 由实施者按该职责选择，不公开泛型事务/策略框架。来源分组为 self、workspace-directory、project ID、workspace-members ID；memberID/图片字段仅决定当前 DTO 的投影，不能导致每头像一次目录请求。一个 source 的最初视图获得时创建图片读取生命期；按PC3复用含loginId的既有宿主SWR key，权限代次仅留在图片证明中。fetcher只经当前owner store，到期/错误/手动刷新仍通过同一hook。最后视图释放或权限失效移除图片活动项，宿主在途观察于真实读取完成时移除，root退休清空；不保留无消费者的长期缓存。
 
 ProfileImageView.url 只能来自当前有权 DTO 的签名字段或项目稳定预设映射。source/role/expiry 每次渲染再核；状态改变须触发观察者重渲染，不能只是定时器里改非 observable 标记。onError 对同一来源响应版本仅一次刷新，旧 img 的迟到 error 不作用于新版本。url 无效时卸载 img；不能只删 src 而仍保留旧像素。公开邀请 useInvitationPreview 保留 link key，用独立薄 expiry 显示入口，不接登录 resource。
 
@@ -122,3 +122,5 @@ ProfileImages仅保留在途宿主请求和当前视图的证明；同宿主较�
 工作区图标的读取证明只核身份/目录存在性水位，不把其他项目变化或不影响可见性的成员角色变化当作图标撤权；成员头像仍核成员授权水位，项目仍核PC1规范可见性和现有权限水位。使用既有PermissionReads的窄查询，不加第二个权限观察器。view卸载、失权又恢复后旧view始终无效；新view须有当前有效的读取完成。
 
 到期/错误/手动重试均请求当前宿主hook重新验证，图片通知只合并同宿主的同时刷新意图，不自建取数函数。一次错误自动刷新预算和明确重试保持；已有在途读取可复用时不重复mutate。新视图/恢复权限不能因SWR同键缓存而一直没有证明；当前失败不得自动循环。
+
+为保持既定的失败占位与明确重试，四个共享宿主hook关闭SWR隐式reconnect重读；图片仍由expiry/focus/online检查决定一次到期刷新，页面挂载、身份变化及显式mutate仍读取。useSessionSWR仅新增可关闭reconnect的窄选项，其他会话请求策略保持。代价：仅网络恢复本身不再独立触发这四种宿主读取，等待上述实际读取条件；避免网络事件绕过图片重试预算。

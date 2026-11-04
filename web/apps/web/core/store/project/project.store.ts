@@ -272,16 +272,17 @@ export class ProjectStore implements IProjectStore {
     this.fetchDirectory(workspace, true);
 
   /** @description reads the project alone, as the caller sees it (a page of the project), as fetchProjects */
-  fetchProject = async (projectId: string): Promise<Project | null | undefined> => {
-    const directories = this.captureFacts();
-    const project = await this.details.fetch(projectId, async () => {
-      const answer = await this.service.get(projectId);
-      return this.afterFacts(answer, directories).project;
+  fetchProject = (projectId: string): Promise<Project | null | undefined> =>
+    this.rootStore.observeProfileRead({ kind: "project", id: projectId }, async () => {
+      const directories = this.captureFacts();
+      const project = await this.details.fetch(projectId, async () => {
+        const answer = await this.service.get(projectId);
+        return this.afterFacts(answer, directories).project;
+      });
+      if (project && this.details.get(projectId) === project)
+        this.notePresence(project, this.details.answeredAt(projectId));
+      return project;
     });
-    if (project && this.details.get(projectId) === project)
-      this.notePresence(project, this.details.answeredAt(projectId));
-    return project;
-  };
 
   /** @description whether identifier can name a new project of the workspace */
   checkProjectIdentifier = (workspaceSlug: string, identifier: string): Promise<IdentifierAvailability> =>

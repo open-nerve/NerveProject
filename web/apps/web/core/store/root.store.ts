@@ -1,3 +1,4 @@
+import type { ObserveProfileRead } from "./asset/image-owner-read";
 /**
  * Copyright (c) 2023-present Plane Software, Inc. and contributors
  * SPDX-License-Identifier: AGPL-3.0-only
@@ -84,6 +85,8 @@ export class RootStore {
   editorAssetStore: IEditorAssetStore;
   workItemFilters: IWorkItemFilterStore;
   powerK: IPowerKStore;
+
+  observeProfileRead: ObserveProfileRead = (owner, read) => this.asset.images.observe(owner, read);
 
   /**
    * The stores of one session, the one api is bound to: store-context.tsx builds a RootStore for each session

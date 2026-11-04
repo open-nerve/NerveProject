@@ -220,6 +220,8 @@ S3来源主机使用DNS或IPv4；浏览器CSP不能精确允许IPv6字面量，�
 
 **M5/P6 PC3（负责人批准A）：** 资料图片共享既有CURRENT_USER/WORKSPACES/PROJECT/WORKSPACE_MEMBERS会话读取入口。宿主store经组合根的小接口发布实际读取完成，图片仅维护在途和视图证明；同一有效代次的在途读可加入，旧缓存不算新授权，旧完成不覆盖新证明。SWR继续管理页面请求，Reconciled继续管理事实，IssueRootStore继续唯一管理权限代次；workspaces-list-fetch守卫保持。详见[P6协议](specs/P6-image-lifecycle.md#pc3共享宿主读取与完成证明负责人批准a)。
 
+为保持既定的失败占位与明确重试，四个共享宿主hook关闭SWR隐式reconnect重读；图片仍由expiry/focus/online检查决定一次到期刷新，页面挂载、身份变化及显式mutate仍读取。useSessionSWR仅新增可关闭reconnect的窄选项，其他会话请求策略保持。代价：仅网络恢复本身不再独立触发这四种宿主读取，等待上述实际读取条件；避免网络事件绕过图片重试预算。
+
 
 P6 新 AssetService 作为当前会话 API client 的消费者；旧 FileService 随 P7 最后编辑器/评论调用者迁移一并删除；不在模块顶层 new 带会话实例。原始 PUT 使用不带业务认证的独立传输器，支持 AbortSignal、准备/上传/确认阶段进度、超时和可区分的拒绝；独立 fetch 不提供字节进度，不能编造百分比；取消不能吞错后继续 complete。store 以 session/loginId + workspace/project/issue/draft/comment scope 管理，复用 IssueRootStore 的权限失效入口，不另造平行权限缓存。
 

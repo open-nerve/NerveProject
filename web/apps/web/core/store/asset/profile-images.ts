@@ -4,13 +4,15 @@ import type { RootStore } from "@/store/root.store";
 import { SessionChangedError } from "@/lib/auth/token-manager";
 import { ImageSource, type ProfileImageSource } from "./image-source";
 import { ImageReadEntry, ImageReadGroup } from "./profile-image-read";
+import { imageOwnerKey, type ObserveProfileRead } from "./image-owner-read";
 export type { ProfileImageSource } from "./image-source";
 
 export class ProfileImageLease {
   private disposed = false;
   constructor(
     private readonly source: ImageSource,
-    private readonly entry: ImageReadEntry
+    private readonly entry: ImageReadEntry,
+    private readonly owner: ProfileImages
   ) {
     makeObservable<ProfileImageLease, "disposed">(this, { disposed: observable });
     entry.add(source.projection);
@@ -55,10 +57,13 @@ export class ProfileImageLease {
   private get state() {
     return this.entry.projections.get(this.source.projection);
   }
-  async read(): Promise<void> {
+  get needsRead(): boolean {
+    return this.canRead && (!this.entry.attempted || this.entry.requested);
+  }
+  async read(revalidate: () => Promise<unknown>): Promise<void> {
     if (!this.canRead) return;
     try {
-      await this.entry.group.read(this.entry);
+      await this.owner.read(this.entry, revalidate);
     } catch (error) {
       if (this.current) throw error;
     }
@@ -112,6 +117,7 @@ export class ProfileImageLease {
 
 export class ProfileImages {
   private readonly groups = new Map<string, ImageReadGroup>();
+  private readonly pending = new Map<string, { serial: number; promise: Promise<unknown> }>();
   private generation = 0;
   private disposed = false;
   constructor(private readonly root: RootStore) {}
@@ -133,13 +139,89 @@ export class ProfileImages {
       });
       owner.entries.set(source.entry, created);
       entry = created;
+      const pending = this.pending.get(source.group);
+      if (pending && source.currentAt(pending.serial)) this.begin(created);
     }
-    return new ProfileImageLease(source, entry);
+    return new ProfileImageLease(source, entry, this);
+  }
+  /** Returns the host's original result/error. Only the latest actual read can publish image proof. */
+  observe: ObserveProfileRead = (owner, read) => {
+    const key = imageOwnerKey(owner);
+    const serial = this.root.issue.permissionReads.capture();
+    const request = { serial, promise: read() };
+    this.pending.set(key, request);
+    const finished = request.promise
+      .then(
+        (answer) => {
+          this.finish(
+            key,
+            request,
+            answer === undefined || answer === null
+              ? new Error("Image owner read was superseded or unavailable")
+              : undefined
+          );
+          return answer;
+        },
+        (error: unknown) => {
+          this.finish(key, request, error);
+          throw error;
+        }
+      )
+      .finally(() => {
+        if (this.pending.get(key) === request) this.pending.delete(key);
+      });
+    request.promise = finished;
+    for (const entry of this.groups.get(key)?.entries.values() ?? [])
+      if (entry.lifetime.current && entry.source.currentAt(request.serial)) this.begin(entry);
+    return finished;
+  };
+  private begin(entry: ImageReadEntry): void {
+    runInAction(() => {
+      entry.attempted = true;
+      entry.requested = false;
+      entry.loading = true;
+      entry.error = undefined;
+      entry.proof = false;
+      for (const [projection] of entry.projections) entry.change(projection, { armed: undefined });
+    });
+  }
+  private finish(key: string, request: { serial: number }, error: unknown): void {
+    if (this.disposed || this.pending.get(key) !== request) return;
+    runInAction(() => {
+      for (const entry of this.groups.get(key)?.entries.values() ?? []) {
+        if (!entry.lifetime.current || !entry.source.currentAt(request.serial)) continue;
+        entry.loading = false;
+        entry.error = error;
+        entry.proof = error === undefined;
+        if (entry.proof) entry.version++;
+      }
+    });
+  }
+  async read(entry: ImageReadEntry, revalidate: () => Promise<unknown>): Promise<void> {
+    if (!entry.lifetime.current) return;
+    const pending = this.pending.get(entry.source.group);
+    if (pending && entry.source.currentAt(pending.serial)) {
+      await pending.promise;
+      return;
+    }
+    if (entry.attempted && !entry.requested) return;
+    const group = entry.group;
+    if (group.refreshing) return group.refreshing;
+    const refreshing = Promise.resolve()
+      .then(revalidate)
+      .then(() => undefined);
+    group.refreshing = refreshing;
+    try {
+      await refreshing;
+    } finally {
+      if (group.refreshing === refreshing) group.refreshing = undefined;
+    }
   }
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true;
     for (const group of this.groups.values()) for (const entry of group.entries.values()) entry.lifetime.dispose();
     this.groups.clear();
+    this.pending.clear();
   }
 }

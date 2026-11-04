@@ -16,5 +16,8 @@ import { useSessionSWR } from "@/lib/use-session-swr";
  */
 export function useWorkspacesFetch(wanted = true): SWRResponse<Workspace[] | undefined> {
   const { fetchWorkspaces } = useWorkspace();
-  return useSessionSWR(wanted ? ["WORKSPACES"] : null, () => fetchWorkspaces());
+  return useSessionSWR(wanted ? ["WORKSPACES"] : null, () => fetchWorkspaces(), {
+    dedupingInterval: 0,
+    revalidateOnReconnect: false,
+  });
 }

@@ -16,6 +16,11 @@ vi.mock("@/hooks/store/use-project-inbox", () => ({
 }));
 vi.mock("@/hooks/store/use-member", () => ({
   useMember: () => ({
+    workspace: {
+      fetchWorkspaceMembers: () => {
+        throw new Error("Empty avatars must not load members");
+      },
+    },
     getUserDetails: (id: string) => ({ display_name: id === "ada" ? "Ada" : "Bob", avatar_url: "" }),
   }),
 }));

@@ -8,7 +8,7 @@ import type { ProjectRole, WorkspaceRole } from "@nerve/api-client";
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { FakeNerve, noContent } from "@/lib/auth/fake-nerve";
 import { inTurn } from "@/store/fake-queue";
-import { fakeRoot } from "@/store/fake-root";
+import { fakeRoot, withoutImageObservation } from "@/store/fake-root";
 import { projectOf } from "@/store/project/fake-projects";
 import { RouterStore } from "@/store/router.store";
 import { permissionsOver } from "@/store/user/fake-permissions";
@@ -87,8 +87,14 @@ const IN_PROJECTS: {
 async function setUp() {
   const nerve = new FakeNerve();
   const router = new RouterStore();
-  const workspaceRoot = new WorkspaceRootStore(fakeRoot({ router }), nerve.client(), () => () => true);
-  const permissions = new UserPermissionStore(fakeRoot({ router, workspaceRoot }));
+  const workspaceRoot = new WorkspaceRootStore(
+    fakeRoot({ observeProfileRead: withoutImageObservation, router }),
+    nerve.client(),
+    () => () => true
+  );
+  const permissions = new UserPermissionStore(
+    fakeRoot({ observeProfileRead: withoutImageObservation, router, workspaceRoot })
+  );
   const listed = IDENTITIES.flatMap(({ role }) => (role ? [workspaceOf(`ws-${role}`, { role })] : []));
   await loadWorkspaces(nerve, workspaceRoot, listed);
   return { router, permissions };
@@ -153,8 +159,14 @@ describe("UserPermissionStore, in a workspace", () => {
 
   it("allows nothing before the list is fetched", () => {
     const router = new RouterStore();
-    const workspaceRoot = new WorkspaceRootStore(fakeRoot({ router }), new FakeNerve().client(), () => () => true);
-    const permissions = new UserPermissionStore(fakeRoot({ router, workspaceRoot }));
+    const workspaceRoot = new WorkspaceRootStore(
+      fakeRoot({ observeProfileRead: withoutImageObservation, router }),
+      new FakeNerve().client(),
+      () => () => true
+    );
+    const permissions = new UserPermissionStore(
+      fakeRoot({ observeProfileRead: withoutImageObservation, router, workspaceRoot })
+    );
     expect(permissions.getWorkspaceRoleByWorkspaceSlug("ws-20")).toBeUndefined();
     expect(permissions.allowPermissions(CHECKS.anyone, WORKSPACE, "ws-20")).toBe(false);
   });

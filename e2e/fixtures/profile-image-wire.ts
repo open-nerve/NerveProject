@@ -3,7 +3,7 @@ import { promisify } from "node:util";
 import type { PageFileStoryWorld } from "./file-story";
 import { test as base } from "./test";
 
-export interface ImageWireRequest {
+interface ImageWireRequest {
   method: string;
   path: string;
   headers: {

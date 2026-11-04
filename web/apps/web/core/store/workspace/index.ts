@@ -66,7 +66,7 @@ export class WorkspaceRootStore implements IWorkspaceRootStore {
   webhook: IWebhookStore;
 
   constructor(
-    _rootStore: RootStore,
+    private readonly _rootStore: RootStore,
     api: ApiClient,
     private readonly captureWrite: WorkspaceWriteScope
   ) {
@@ -111,7 +111,8 @@ export class WorkspaceRootStore implements IWorkspaceRootStore {
    * it shows, or undefined for a fetch a newer one overtook or a change of session cut (Reconciled.fetch)
    * @returns {Promise<Workspace[] | undefined>}
    */
-  fetchWorkspaces = (): Promise<Workspace[] | undefined> => this.list.fetch(() => this.service.list());
+  fetchWorkspaces = (): Promise<Workspace[] | undefined> =>
+    this._rootStore.observeProfileRead({ kind: "workspace" }, () => this.list.fetch(() => this.service.list()));
 
   /**
    * @description whether slug can name a new workspace, or why not (reserved, taken, invalid)

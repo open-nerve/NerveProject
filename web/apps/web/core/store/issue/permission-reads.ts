@@ -78,10 +78,14 @@ export class PermissionReads {
   capture(): number {
     return this.serial;
   }
+  /** Directory visibility alone; membership roles and unrelated projects do not hide workspace logos. */
+  currentWorkspaceIdentity(serial: number, workspaceID: string): boolean {
+    return (this.watermarks.get(key(workspaceID, "workspace")) ?? 0) <= serial;
+  }
   /** Only this workspace's identity and membership, independent of its project and issue changes. */
   currentWorkspace(serial: number, workspaceID: string): boolean {
     return (
-      (this.watermarks.get(key(workspaceID, "workspace")) ?? 0) <= serial &&
+      this.currentWorkspaceIdentity(serial, workspaceID) &&
       (this.watermarks.get(key(workspaceID, "member")) ?? 0) <= serial
     );
   }

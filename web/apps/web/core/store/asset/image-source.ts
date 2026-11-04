@@ -1,6 +1,7 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 import type { RootStore } from "@/store/root.store";
 import type { AssetReadScope } from "./scope-lifetime";
+import { imageOwnerKey } from "./image-owner-read";
 
 export type ProfileImageSource =
   | { kind: "self"; image: "avatar" | "cover" }
@@ -25,12 +26,13 @@ export class ImageSource {
         : { ...source }
     );
     const current = this.source;
-    this.group =
-      current.kind === "self"
-        ? "self"
-        : current.kind === "workspace"
-          ? "workspace-directory"
-          : JSON.stringify([current.kind, current.kind === "project" ? current.projectID : current.workspaceID]);
+    this.group = imageOwnerKey(
+      current.kind === "project"
+        ? { kind: "project", id: current.projectID }
+        : current.kind === "member"
+          ? { kind: "member", id: current.workspaceID }
+          : current
+    );
     this.entry = JSON.stringify([this.group, current.kind === "self" ? null : current.workspaceID]);
     this.projection = current.kind === "self" ? current.image : current.kind === "member" ? current.memberID : "image";
     this.scope =
@@ -86,12 +88,13 @@ export class ImageSource {
       workspace && this.root.memberRoot.workspace.getMemberships(workspace.slug)?.[source.memberID]?.member;
     return member && { url: member.avatar_url, expiresAt: member.avatar_url_expires_at };
   }
-  read(): Promise<unknown> {
+  currentAt(serial: number): boolean {
+    if (!this.allowed) return false;
     const source = this.source;
-    if (source.kind === "self") return this.root.user.fetchCurrentUser();
-    if (source.kind === "workspace") return this.root.workspaceRoot.fetchWorkspaces();
-    if (source.kind === "project") return this.root.projectRoot.project.fetchProject(source.projectID);
-    const workspace = this.workspace;
-    return workspace ? this.root.memberRoot.workspace.fetchWorkspaceMembers(workspace) : Promise.resolve(undefined);
+    if (source.kind === "self") return true;
+    const permissions = this.root.issue.permissionReads;
+    if (source.kind === "workspace") return permissions.currentWorkspaceIdentity(serial, source.workspaceID);
+    if (source.kind === "member") return permissions.currentWorkspace(serial, source.workspaceID);
+    return permissions.current(serial, source.workspaceID, [source.projectID]);
   }
 }

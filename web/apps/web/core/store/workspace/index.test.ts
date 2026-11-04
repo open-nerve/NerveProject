@@ -9,7 +9,7 @@ import { ApiError } from "@/lib/api-error";
 import { FakeNerve, json, noContent, problem } from "@/lib/auth/fake-nerve";
 import { settle, track, until } from "@/lib/auth/fake-time";
 import { fetchedWhileChangeIsOut, inTurn } from "@/store/fake-queue";
-import { fakeRoot } from "@/store/fake-root";
+import { fakeRoot, withoutImageObservation } from "@/store/fake-root";
 import { RouterStore } from "@/store/router.store";
 import { WorkspaceRootStore } from "@/store/workspace";
 import { loadWorkspaces, workspaceOf } from "@/store/workspace/fake-workspaces";
@@ -28,7 +28,11 @@ function setUp() {
   const nerve = new FakeNerve();
   const api = nerve.client();
   const router = new RouterStore();
-  const store = new WorkspaceRootStore(fakeRoot({ router }), api, () => () => true);
+  const store = new WorkspaceRootStore(
+    fakeRoot({ observeProfileRead: withoutImageObservation, router }),
+    api,
+    () => () => true
+  );
   return { nerve, api, router, store };
 }
 

@@ -8,7 +8,7 @@ import type { User } from "@nerve/api-client";
 import { ApiError } from "@/lib/api-error";
 import { FakeNerve, json, noContent, problem } from "@/lib/auth/fake-nerve";
 import { track, until } from "@/lib/auth/fake-time";
-import { fakeRoot } from "@/store/fake-root";
+import { fakeRoot, withoutImageObservation } from "@/store/fake-root";
 import { projectOf, projectTab } from "@/store/project/fake-projects";
 import type { RootStore } from "@/store/root.store";
 import { UserStore } from "@/store/user";
@@ -58,7 +58,7 @@ describe("UserStore.updateCurrentUser", () => {
     "keeps confirmed avatar and cover writes when an older current-user read answers, initiallyLoaded=%s",
     async (initiallyLoaded) => {
       const nerve = new FakeNerve();
-      const store = new UserStore(fakeRoot({}), nerve.client());
+      const store = new UserStore(fakeRoot({ observeProfileRead: withoutImageObservation }), nerve.client());
       const original = accountOf("Ada");
       if (initiallyLoaded) {
         const initial = track(store.updateCurrentUser({ first_name: "Ada" }));
@@ -100,7 +100,7 @@ describe("UserStore.updateCurrentUser", () => {
 
   it("a read superseded by a newer fetch returns no proof and cannot overwrite it", async () => {
     const nerve = new FakeNerve();
-    const store = new UserStore(fakeRoot({}), nerve.client());
+    const store = new UserStore(fakeRoot({ observeProfileRead: withoutImageObservation }), nerve.client());
     const old = track(store.fetchCurrentUser());
     await until(() => nerve.calls.length === 2, "first user read");
     const fresh = track(store.fetchCurrentUser());
@@ -167,7 +167,9 @@ describe("UserStore.deactivateAccount", () => {
     tab.endSession.mockReset();
     tab.endSession.mockResolvedValue(ended);
     const nerve = new FakeNerve();
-    const deactivated = track(new UserStore(fakeRoot({}), nerve.client()).deactivateAccount());
+    const deactivated = track(
+      new UserStore(fakeRoot({ observeProfileRead: withoutImageObservation }), nerve.client()).deactivateAccount()
+    );
     await until(() => nerve.calls.length === 1, "the deactivation");
     expect([nerve.calls[0]?.method, nerve.calls[0]?.path]).toEqual(["POST", "/api/v0/me/deactivate"]);
     // the session the tab is in when nerve answers: still x, or y once another tab has moved it; the store ends x
@@ -194,7 +196,10 @@ describe("UserStore, the projects the caller may create in", () => {
       { workspace: acme, projects: [pa, pm, pg, seen] },
       { workspace: beta, projects: [lab] }
     );
-    const user = new UserStore(fakeRoot({ router, workspaceRoot, projectRoot }), api);
+    const user = new UserStore(
+      fakeRoot({ observeProfileRead: withoutImageObservation, router, workspaceRoot, projectRoot }),
+      api
+    );
     expect(user.projectsWithCreatePermissions).toEqual({ [pa.id]: 20, [pm.id]: 15 });
 
     // at beta's address, its project, where his role is the admin's (beta's admin); none at an address of no workspace

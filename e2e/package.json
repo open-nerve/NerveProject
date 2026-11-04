@@ -14,6 +14,7 @@
     "test:m4-detail": "playwright test --config=playwright.m4-detail.config.ts",
     "test:m4-collaboration": "playwright test --config=playwright.m4-collaboration.config.ts",
     "test:m5-s3": "playwright test --config=playwright.m5-s3.config.ts",
+    "test:m5-profile": "playwright test --config=playwright.m5-profile.config.ts",
     "test:m4-cleanup": "playwright test --config=playwright.m4-cleanup.config.ts"
   },
   "devDependencies": {

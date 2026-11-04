@@ -20,7 +20,7 @@ import { useUser, useUserProfile } from "@/hooks/store/user";
 import { tokenManager } from "@/lib/auth/api-client";
 import { useSession } from "@/lib/auth/use-session";
 import { isOnboarded, useLanding } from "@/lib/use-landing";
-import { useSessionSWR } from "@/lib/use-session-swr";
+import { useCurrentUserFetch } from "@/hooks/use-current-user-fetch";
 
 type TAuthenticationWrapper = {
   children: ReactNode;
@@ -53,7 +53,7 @@ export const AuthenticationWrapper = observer(function AuthenticationWrapper(pro
   const nextPath = searchParams.get("next_path")?.trim();
   // store hooks
   const session = useSession();
-  const { data: currentUser, fetchCurrentUser } = useUser();
+  const { data: currentUser } = useUser();
   const { data: currentProfile } = useUserProfile();
   // derived values
   const validNextPath = nextPath && isValidNextPath(nextPath) ? nextPath : undefined;
@@ -63,7 +63,7 @@ export const AuthenticationWrapper = observer(function AuthenticationWrapper(pro
   // A fetch cut by a change of session is no failure: fetchCurrentUser gives undefined, and the wrapper
   // renders again for the new session, with its new stores. The workspaces are fetched the same way, when the
   // landing needs them (useLanding).
-  const { error, mutate } = useSessionSWR(["CURRENT_USER"], () => fetchCurrentUser());
+  const { error, mutate } = useCurrentUserFetch();
   const landing = useLanding(pageType, validNextPath);
 
   if (session.status === "starting") return <Loading />;

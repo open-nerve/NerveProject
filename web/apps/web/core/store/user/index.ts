@@ -108,14 +108,15 @@ export class UserStore implements IUserStore {
    * through it.
    * @returns {Promise<User | undefined>}
    */
-  fetchCurrentUser = async (): Promise<User | undefined> => {
-    await tokenManager.start();
-    if (tokenManager.state.status !== "signed-in") return undefined;
-    return this.account.fetch(async () => {
-      const [user] = await Promise.all([this.userService.currentUser(), this.userProfile.fetchUserProfile()]);
-      return user;
+  fetchCurrentUser = (): Promise<User | undefined> =>
+    this.store.observeProfileRead({ kind: "self" }, async () => {
+      await tokenManager.start();
+      if (tokenManager.state.status !== "signed-in") return undefined;
+      return this.account.fetch(async () => {
+        const [user] = await Promise.all([this.userService.currentUser(), this.userProfile.fetchUserProfile()]);
+        return user;
+      });
     });
-  };
 
   /**
    * @description updates the account's fields, including its profile images; fails, writing nothing, when nerve refuses. An update

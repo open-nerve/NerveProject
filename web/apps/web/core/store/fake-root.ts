@@ -18,3 +18,6 @@ export function fakeRoot(siblings: Partial<RootStore>): RootStore {
   // The one cast of the tests' roots: a Partial is not a RootStore, and the proxy answers for the rest by failing.
   return root as RootStore;
 }
+
+/** Isolated host tests have no image consumer; tests with a real RootStore use the actual observer. */
+export const withoutImageObservation: RootStore["observeProfileRead"] = (_owner, read) => read();

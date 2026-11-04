@@ -3,8 +3,8 @@ import { act } from "react";
 import type { Project, ProjectUpdate } from "@nerve/api-client";
 import { profilePage } from "@/components/assets/fake-profile-page";
 import { json, type Call } from "@/lib/auth/fake-nerve";
-import { loadProjects, loadArchivedProjects } from "@/store/project/fake-projects";
-import { loadWorkspaces } from "@/store/workspace/fake-workspaces";
+import { loadProjects } from "@/store/project/fake-projects";
+import { refreshWorkspacesWhileMounted } from "@/store/workspace/fake-workspaces";
 
 export async function coverPage() {
   const tab = await profilePage();
@@ -31,25 +31,33 @@ export async function coverPage() {
       call.answer(json(200, project));
     } else tab.answer(call);
   };
-  const directory = async (rows: Project[]) => {
+  const directory = async (rows: Project[], archived = false) => {
     const previous = tab.nerve.respond;
-    tab.nerve.respond = undefined;
-    await act(async () => loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, rows));
-    tab.nerve.respond = previous;
+    tab.nerve.respond = (call) => {
+      if (call.method === "GET" && call.path === `/api/v0/workspaces/${tab.workspace.slug}/projects`)
+        call.answer(json(200, { data: rows }));
+      else previous?.(call);
+    };
+    try {
+      const store = tab.app.projectRoot.project;
+      await act(async () => {
+        await (archived ? store.fetchArchivedProjects : store.fetchProjects)(tab.workspace);
+      });
+    } finally {
+      tab.nerve.respond = previous;
+    }
   };
   tab.nerve.respond = undefined;
   await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, [project]);
   tab.nerve.respond = answer;
   const roles = async (workspaceRole: 5 | 15 | 20, memberRole: 5 | 15 | 20 | null, archived = false) => {
-    tab.nerve.respond = undefined;
     project = { ...project, member_role: memberRole, archived_at: archived ? new Date().toISOString() : null };
-    await act(async () =>
-      loadWorkspaces(tab.nerve, tab.app.workspaceRoot, [{ ...tab.workspace, role: workspaceRole }])
-    );
-    await act(async () =>
-      (archived ? loadArchivedProjects : loadProjects)(tab.nerve, tab.app.projectRoot.project, tab.workspace, [project])
-    );
-    tab.nerve.respond = answer;
+    await act(async () => {
+      await refreshWorkspacesWhileMounted(tab.nerve, tab.app.workspaceRoot, [
+        { ...tab.workspace, role: workspaceRole },
+      ]);
+    });
+    await directory([project], archived);
   };
   const name = async (value: string) => {
     const input = document.querySelector<HTMLInputElement>('input[name="name"]');

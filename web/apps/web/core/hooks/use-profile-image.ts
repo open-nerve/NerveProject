@@ -1,7 +1,10 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 import { useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { StoreContext } from "@/lib/store-context";
-import { useSessionSWR } from "@/lib/use-session-swr";
+import { useCurrentUserFetch } from "./use-current-user-fetch";
+import { useWorkspacesFetch } from "./use-workspaces-fetch";
+import { useProjectRead } from "./use-project-read";
+import { useWorkspaceMembersFetch } from "./use-workspace-members-fetch";
 import { ImageSource } from "@/store/asset/image-source";
 import type { ProfileImageLease, ProfileImageSource } from "@/store/asset/profile-images";
 import type { RootStore } from "@/store/root.store";
@@ -46,17 +49,29 @@ export function useProfileImage(source: ProfileImageSource): ProfileImageView {
     held.current?.root === root && held.current.identity === identity && enabled && held.current.lease.current
       ? held.current.lease
       : undefined;
-  const { mutate } = useSessionSWR(lease?.canRead ? ["profile-image", lease.key] : null, async () => lease?.read(), {
-    dedupingInterval: 0,
-  });
+  const kind = projection.source.kind;
+  const wanted = !!lease?.canRead;
+  const selfRead = useCurrentUserFetch(wanted && kind === "self");
+  const workspaceRead = useWorkspacesFetch(wanted && kind === "workspace");
+  const projectRead = useProjectRead(
+    wanted && projection.source.kind === "project" ? projection.source.projectID : undefined
+  );
+  const memberRead = useWorkspaceMembersFetch(wanted && kind === "member" ? (projection.workspace ?? null) : null);
+  const { mutate } =
+    kind === "self" ? selfRead : kind === "workspace" ? workspaceRead : kind === "project" ? projectRead : memberRead;
   const stamp = lease?.stamp;
   const url = lease?.url;
   const expiry = lease?.expiry;
   const refresh = useCallback(() => {
-    void mutate().catch(() => {
-      /* The current lease owns the displayed error. */
-    });
-  }, [mutate]);
+    void lease
+      ?.read(() => mutate())
+      .catch(() => {
+        /* The current lease owns the displayed error. */
+      });
+  }, [lease, mutate]);
+  useEffect(() => {
+    if (lease?.needsRead && !lease.loading && lease.error === undefined) refresh();
+  }, [lease, lease?.needsRead, lease?.loading, lease?.error, refresh]);
   useEffect(() => {
     if (!lease || !stamp) return;
     if (lease.expire(stamp)) {
@@ -92,7 +107,7 @@ export function useProfileImage(source: ProfileImageSource): ProfileImageView {
     error: lease?.error,
     retry: async () => {
       lease?.requestRetry();
-      await mutate();
+      await lease?.read(() => mutate());
     },
     onError: () => {
       if (lease && stamp && lease.fail(stamp)) refresh();
