@@ -38,9 +38,9 @@
 **Files:** api/modules/asset.yaml；新asset/adapter/http/draft_preparations.go；handler.go、module.go；相应HTTP/contract测试；api/dist、Go/TS生成物（web/packages/api-client/src/schema.gen.ts）；bootstrap新asset_draft_preparations_test.go。现有api-client export type *自动暴露类型，不改index.ts。
 **Interfaces:** GET /api/v0/drafts/{draft_id}/asset-preparations、operationId listDraftAssetPreparations、DraftAssetPreparationPage；生成严格handler消费新用例，AssetDTO复用。
 
-- [ ] Step 1：先写YAML再make gen，同Task实现handler/UseCases/module注入，不能提交临时空列表桩。真实HTTP覆盖200空/非空、401、非法参数400/422、owner/member/nonauthor-admin/guest、无项目、not_found同码体头（剔除每请求本来不同的request-id），无key/URL/token。
-- [ ] Step 2：`go test -p 1 -count=1 ./internal/modules/asset/adapter/http`；`go test -p 1 -count=1 -run 'Test(DraftAssetPreparations|AssetHost|IssueDraft)' ./internal/bootstrap`。RED须在可运行HTTP/行为断言上，记录before/after；R1只映新用例Host forbidden，存储/DB故障仍500，旧API403保持。
-- [ ] Step 3：make gen-check、受影响API契约和架构测试、Go lint；确认web仅生成类型，无未用手写service。提交 `feat(M5/P7a): 开放作者私有的准备件查询接口`。
+- [x] Step 1：先写YAML再make gen，同Task实现handler/UseCases/module注入，不能提交临时空列表桩。真实HTTP覆盖200空/非空、401、非法参数400/422、owner/member/nonauthor-admin/guest、无项目、not_found同码体头（剔除每请求本来不同的request-id），无key/URL/token。
+- [x] Step 2：`go test -p 1 -count=1 ./internal/modules/asset/adapter/http`；`go test -p 1 -count=1 -run 'Test(DraftAssetPreparations|AssetHost|IssueDraft)' ./internal/bootstrap`。RED须在可运行HTTP/行为断言上，记录before/after；R1只映新用例Host forbidden，存储/DB故障仍500，旧API403保持。
+- [x] Step 3：make gen-check、受影响API契约和架构测试、Go lint；确认web仅生成类型，无未用手写service。提交 `feat(M5/P7a): 开放作者私有的准备件查询接口`。
 
 ## Task 3（T3）：证明未知 ID 的真实恢复链
 

@@ -41,3 +41,12 @@ P7b承接内容附件、编辑器、恢复UI、普通/草稿复制结果、计�
 - HTTP 可运行空桩取得 `t2-http-red` 真实断言失败后，接入 T1 用例与严格查询参数中间件，未提交桩。`t2-http-green-matrix-red` 的唯一失败是矩阵缺行；补入新操作六角色行。首次定向矩阵命令漏选 prepare 子用例，失败属于测试选择器错误，不算行为 RED，完整日志保留后修正命令。
 - HTTP/契约与矩阵分别于 `t2-http-and-contract-green-v2`、`t2-permission-matrix-green` 通过。模块 HTTP TestMain 另准确检出新端点三个声明错误码尚未经本包 CheckResponse 验证，补既有错误映射表，不豁免。架构与平台契约检查通过，源输入稳定。
 - 文档预检提交 `e52d38ea` 的 CI41839754475 已全绿，仅证明旧产品树；本阶段产品尚待独立 CI。
+
+- T2 提交 `f9ff9473`：`t2-gen-check` 输入不变且通过，`t2-final-bootstrap` 通过；HTTP adapter 全包通过；Go lint 首轮仅导入分组错误，修正后主模块/工具模块均 0 issues。T2 完成，A1 的协议/参数/DTO 验证已具备；A2/A4 的撤权与并发责任留 T4。
+
+## 8. T3 恢复证明（进行中）
+
+- `TestDraftAssetPreparationsRecoverLostAnswer` 丢弃真实 prepare 成功回答，后续仅从新列表获 ID；两个同名准备件、另一草稿邻项、无项目草稿转项目、拒绝发布无写入、重复删除/确认无 audit/event/task 重复均有实际 HTTP 与数据库断言。
+- `TestDraftAssetPreparationsRecoverFailedCopy` 在真实封存已发生后返回受控错误，调用方仅收到 503；从列表发现 pending 后才用 SQL 断言恢复记录，删除并成功发布，来源字节不变。另有 uploaded 未绑定图片可列、正文当前/历史图片不列且仍受 asset.bound 保护。
+- `t3-recovery-baseline` 通过；`t3-pending-mutation` 临时漏掉 pending 后两个恢复用例均真实失败，SQL/生成物 SHA 精确恢复。E2E 在 local/S3 用同一故事验证丢失回答和 duplicate 目标已提交后图片校验失败，不依靠 SQL 或存储键发现 ID。
+- R9：T3 构建同时执行既有 `make build-s3-fixture`，因为 fileStory 复用现有 local/S3 双驱动夹具；没有新依赖或生产故障入口。代价是定向 E2E 多一次本地测试辅助程序构建。格式化沿仓库锁定 oxfmt；prettier 未安装的命令失败未触发安装，不计测试失败。
