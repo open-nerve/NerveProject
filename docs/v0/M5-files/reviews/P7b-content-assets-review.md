@@ -10,7 +10,7 @@
 
 ## 2. 验收状态
 
-A1–A8全部开放，T1–T3已实现，尚待页面与阶段联合验收。P5/P7a的API、P6的上传及权限回归仅为前置；P7b真实页面、三浏览器、local/S3、有效变异和完整七门禁必须在本阶段新运行。
+A1–A8全部开放，T1–T4已实现，尚待页面与阶段联合验收。P5/P7a的API、P6的上传及权限回归仅为前置；P7b真实页面、三浏览器、local/S3、有效变异和完整七门禁必须在本阶段新运行。
 
 ## 3. 局部裁定
 
@@ -54,3 +54,9 @@ T2实现与验证：UploadSession只消费小策略，资料策略保留P6权限
 T3实现与验证：406项聚焦回归通过，覆盖51文件/UUID协议顺序、首读与分页交错、重复cursor、DELETE确认/刷新分离、真实Issue计数权威重读、私有草稿准备件恢复、同资产多节点/跨view隔离/到期重读/错误额度/同步observer。普通宿主使用DetailResource、draft使用Reconciled；未改通用权限或调和语义。初版非法准备件误用SessionChangedError而被调和层静默处理，改为真实契约错误；确认后评论读取的fixture补全。同步ready→onError的真实重试遗漏有专用RED与修复。
 
 四项最终变异均为AssertionError并逐SHA恢复：晚到分页污染新cursor集合、短页被误当结束、复用过期URL、无限错误重试。第一版短页变异只造成等待期限失败，未冒称有效断言证明；补直接检查非null cursor后重跑，原件保留。类型与修改文件零warning通过；全前端18/18（17缓存，web新跑319文件3638测试）通过。原件t3-red/green-4/reentry-red/mutation2-receipt/types-2/lint-2/test-web及完整web输出；确认收据与本地输入跨卸载的页面联合证明仍由T5/T6/T9/T13完成。
+
+T4实现与验证：原生单文件选择/拖入、普通附件列表与中性图标、主动下载、薄ModalCore删除确认、逐ID草稿准备件恢复和effect拥有的view/upload hooks已接通；组件与资源208项通过，新增hook/控件21项通过（两组重叠，不相加）。同tick双击、防晚到结果、取消、上传不确定先confirm、删除拒绝不关框、确认后刷新失败只GET、未知删除先只读核验、焦点返回稳定重读按钮、StrictMode及宿主切换均有实际交互证明。
+
+只读对照根目录Plane附件root/list-item：保留附件区、文件名/大小与独立删除操作；按已批准合同使用中性图标和按钮，不保留长期签名href、不嵌套button、不按扩展名假装预览。准备件展示状态/用途/大小/创建时间，并明确另一标签页和已成附件风险。复用原fake-image-picker的DOM帮手，无第二套浏览器事件实现。
+
+初次列表/恢复RED因空行为组件尚未引入UI包，getAnimations测试spy未初始化，是fixture失败而非产品RED；修正初始化后重跑真实缺控件/请求断言，原件保留。最终修改12个源码文件零warning、类型、1364翻译引用与中英键同步通过；完整前端18/18（15缓存）通过。T4原件为picker-red/green、lists-red-2/green、components、hooks、types-2、lint-2、i18n(-sync)、test-web；后续T5/T6/T10再连接实际业务页面。

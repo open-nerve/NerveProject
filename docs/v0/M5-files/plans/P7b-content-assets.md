@@ -79,10 +79,10 @@ T3与T5衔接：命令确认收据先发布给稳定host再触发权威重读；
 **Files:** 新components/assets/attachments/{picker,list,item,delete-dialog}.tsx及草稿准备件恢复控件与测试、hooks/use-content-assets.ts；en/zh-CN文案；只读对照Plane对应附件文件。
 **Interfaces:** Attachments({view:ContentView,resource:AttachmentResource})组合；单个附件项消费生成Attachment与download动作；删除ModalCore薄包装。准备评论的Asset队列可由同一无网络列表呈现组件消费明确投影，不伪造成服务器已绑定列表。
 
-- [ ] Step 1：真实input/drop、单文件/目录/多个拒绝、阶段进度无假百分比、双击同链、明确取消、确认失败恢复、读刷新失败分离；删除拒绝保留dialog/文件，成功返回有效触发器，busy时Escape/背景不关闭；状态aria-live、错误role=alert且焦点可达。
+- [x] Step 1：真实input/drop、单文件/目录/多个拒绝、阶段进度无假百分比、双击同链、明确取消、确认失败恢复、读刷新失败分离；删除拒绝保留dialog/文件，成功返回有效触发器，busy时Escape/背景不关闭；状态aria-live、错误role=alert且焦点可达。
 - 恢复控件同Task验证pending/uploaded/时间/大小/用途，逐ID显式丢弃、另一标签页在途/已成附件的提示；已绑定描述图拒绝保留，普通附件沿原删除合同，不按文件名猜或后台全删。
-- [ ] Step 2：`pnpm --filter web exec vitest run core/components/assets/attachments core/store/asset` RED→GREEN。原生选择器、无新包；文件名和大小按原DTO，中性图标，无button嵌套button或下载链接持久能力；删除不使用finally无条件关闭。
-- [ ] Step 3：原ModalCore相关既有回归、类型/翻译/格式/零warning；提交 `feat(M5/P7b): 提供可访问的附件操作控件`。
+- [x] Step 2：`pnpm --filter web exec vitest run core/components/assets/attachments core/store/asset` RED→GREEN。原生选择器、无新包；文件名和大小按原DTO，中性图标，无button嵌套button或下载链接持久能力；删除不使用finally无条件关闭。
+- [x] Step 3：原ModalCore相关既有回归、类型/翻译/格式/零warning；提交 `feat(M5/P7b): 提供可访问的附件操作控件`。
 
 ## Task 5（T5）：工作项详情与 peek 附件
 

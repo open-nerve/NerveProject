@@ -1,4 +1,69 @@
 {
+  "content_files": {
+    "choose": "选择或更换文件",
+    "drop": "将一个文件拖到这里",
+    "upload": "上传文件",
+    "use_file": "使用已上传文件",
+    "retry_upload": "重试上传",
+    "check_upload": "检查上传结果",
+    "upload_again": "重新上传",
+    "cancel_upload": "取消上传",
+    "download": "下载",
+    "downloading": "正在下载…",
+    "remove": "删除文件",
+    "discard": "丢弃文件",
+    "confirm_delete": "删除文件",
+    "confirm_discard": "丢弃文件",
+    "delete_title": "删除附件",
+    "delete_warning": "这会删除当前附件中的文件，无法撤销。",
+    "unknown_delete": "删除结果尚不确定。请先读取最新状态，再明确选择是否重试。",
+    "verify": "核验最新状态",
+    "refresh": "重新读取文件",
+    "more": "加载更多",
+    "reading": "正在读取文件…",
+    "empty": "暂无附件。",
+    "phases": {
+      "idle": "请选择文件。",
+      "selected": "可以开始上传。",
+      "preparing": "正在申请上传…",
+      "uploading": "正在上传文件…",
+      "confirming": "正在确认上传…",
+      "ready": "文件已上传。",
+      "failed": "文件需要你处理。",
+      "cancelled": "已停止上传。这不会删除服务端已经收到的文件。",
+      "disposed": "此操作已失效。"
+    },
+    "errors": {
+      "name": "文件名需为 1–255 个字符，不能包含路径分隔符或控制字符。",
+      "multiple": "每次请选择一个文件。",
+      "directory": "请选择文件，不能选择文件夹。",
+      "not_file": "请拖入文件。",
+      "type": "文件类型无效。",
+      "size": "请选择非空且未超过当前服务端上传限制的文件。",
+      "unavailable": "暂时无法读取上传限制，请刷新页面后重试。",
+      "network": "连接中断，请先检查文件是否已收到，再决定是否重新上传。",
+      "http": "存储拒绝上传，请先检查上传结果。",
+      "timeout": "上传超时，请先检查文件是否已收到。",
+      "cancelled": "上传已停止。",
+      "expired": "上传链接已过期，请先检查结果再决定是否重新上传。",
+      "invalid-grant": "无法使用上传链接，请先检查结果再重试。"
+    },
+    "states": {
+      "pending": "尚未确认上传",
+      "uploaded": "已上传，等待保存"
+    },
+    "purposes": {
+      "DRAFT_ISSUE_DESCRIPTION": "草稿正文图片",
+      "DRAFT_ISSUE_ATTACHMENT": "草稿附件"
+    },
+    "preparations": {
+      "open": "检查草稿未完成文件",
+      "empty": "当前页没有未完成文件。",
+      "warning": "这些文件尚未绑定，可能正在另一标签页中使用。请只丢弃你明确选择删除的文件。",
+      "delete_title": "丢弃草稿文件",
+      "confirm_warning": "所选文件可能正在另一标签页上传，或已成为普通附件；丢弃会删除这个文件。已经保存到正文中的图片不能在这里丢弃。"
+    }
+  },
   "image_upload": {
     "choose": "选择或替换图片",
     "drop": "将一张图片拖放到这里",

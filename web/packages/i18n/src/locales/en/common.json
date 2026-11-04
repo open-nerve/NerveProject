@@ -1,4 +1,69 @@
 {
+  "content_files": {
+    "choose": "Choose or replace file",
+    "drop": "Drop one file here",
+    "upload": "Upload file",
+    "use_file": "Use uploaded file",
+    "retry_upload": "Retry upload",
+    "check_upload": "Check upload",
+    "upload_again": "Upload again",
+    "cancel_upload": "Cancel upload",
+    "download": "Download",
+    "downloading": "Downloading…",
+    "remove": "Delete file",
+    "discard": "Discard file",
+    "confirm_delete": "Delete file",
+    "confirm_discard": "Discard file",
+    "delete_title": "Delete attachment",
+    "delete_warning": "This removes the file from its current attachment. This action cannot be undone.",
+    "unknown_delete": "The deletion result is unknown. Read the latest status before explicitly trying again.",
+    "verify": "Check latest status",
+    "refresh": "Reload files",
+    "more": "Load more",
+    "reading": "Reading files…",
+    "empty": "No attachments.",
+    "phases": {
+      "idle": "Choose a file.",
+      "selected": "Ready to upload.",
+      "preparing": "Preparing upload…",
+      "uploading": "Uploading file…",
+      "confirming": "Checking upload…",
+      "ready": "File uploaded.",
+      "failed": "The file needs your attention.",
+      "cancelled": "Upload stopped. This does not delete any file already received.",
+      "disposed": "This action is no longer available."
+    },
+    "errors": {
+      "name": "Use a name of 1–255 characters without path separators or control characters.",
+      "multiple": "Choose one file at a time.",
+      "directory": "Choose a file, not a folder.",
+      "not_file": "Drop a file here.",
+      "type": "The file type is invalid.",
+      "size": "Choose a non-empty file within this server’s upload size limit.",
+      "unavailable": "The upload limit is not available. Reload the page and try again.",
+      "network": "The connection failed. Check whether the file arrived before uploading again.",
+      "http": "Storage refused the upload. Check its status before uploading again.",
+      "timeout": "The upload timed out. Check its status before uploading again.",
+      "cancelled": "Upload stopped.",
+      "expired": "The upload link expired. Check its status before uploading again.",
+      "invalid-grant": "The upload link could not be used. Check its status before uploading again."
+    },
+    "states": {
+      "pending": "Upload not confirmed",
+      "uploaded": "Uploaded, awaiting save"
+    },
+    "purposes": {
+      "DRAFT_ISSUE_DESCRIPTION": "Draft description image",
+      "DRAFT_ISSUE_ATTACHMENT": "Draft attachment"
+    },
+    "preparations": {
+      "open": "Review unfinished draft files",
+      "empty": "No unfinished files on this page.",
+      "warning": "These files are not attached yet. They may be in use in another tab. Discard only files you have chosen to remove.",
+      "delete_title": "Discard draft file",
+      "confirm_warning": "This file may be uploading in another tab or may already have become an attachment. Discarding deletes the selected file. A description image that has been saved cannot be discarded here."
+    }
+  },
   "image_upload": {
     "choose": "Choose or replace image",
     "drop": "Drag and drop one image here",
