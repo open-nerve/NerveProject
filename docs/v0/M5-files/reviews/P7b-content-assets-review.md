@@ -60,3 +60,10 @@ T4实现与验证：原生单文件选择/拖入、普通附件列表与中性�
 只读对照根目录Plane附件root/list-item：保留附件区、文件名/大小与独立删除操作；按已批准合同使用中性图标和按钮，不保留长期签名href、不嵌套button、不按扩展名假装预览。准备件展示状态/用途/大小/创建时间，并明确另一标签页和已成附件风险。复用原fake-image-picker的DOM帮手，无第二套浏览器事件实现。
 
 初次列表/恢复RED因空行为组件尚未引入UI包，getAnimations测试spy未初始化，是fixture失败而非产品RED；修正初始化后重跑真实缺控件/请求断言，原件保留。最终修改12个源码文件零warning、类型、1364翻译引用与中英键同步通过；完整前端18/18（15缓存）通过。T4原件为picker-red/green、lists-red-2/green、components、hooks、types-2、lint-2、i18n(-sync)、test-web；后续T5/T6/T10再连接实际业务页面。
+
+
+T5实现与验证：真实详情/peek接入附件区，首屏50/总数51、guest/归档只读、complete一次、只读刷新失败恢复、终态401/403/404、关闭peek晚回、删除busy防误关均有实际RootStore/页面交互。输入所有者跨pending保留标题和确认收据，StrictMode、422拒绝、基准冲突与明确选择、只读新owner显示规范文字均验证；临时读取失败不恢复旧上传能力。原链接/关系/子项/活动与owner回归764项通过，最终完整前端18/18（15缓存，web新跑326文件3692测试）通过。
+
+局部根因修复与反例：新增只读isMissing查询供消费已有404结论，不改变IssueVerification状态机；详情/peek原仅按路由标记归档，改为同时消费规范owner归档状态；新增弹窗占用最初使用普通对象，被MobX集合增强后无法按原身份释放，独立两份占用与真实取消→Escape均RED，改为Symbol保持身份；已知保存拒绝与并发基准冲突同时出现时，通用Retry不再绕过明确选择。上述失败原件t5-archive-red、t5-dialog-release/identity-red、t5-conflict-action-red均保留。
+
+首次宿主测试中，自动响应器提前答复旧Issue和空项目页；修正测试seed独立回答与guest的workspace角色（workspace admin有有效管理员权限），没有放宽产品授权。首次lint只有一个未用导入，已删；最终18个修改源码零warning、类型、1373翻译引用与中英键同步通过。证据t5-host-green4、t5-components、t5-types-2、t5-lint-2、t5-i18n(-sync)、t5-test-web和完整web输出。沿T4的中性图标/独立按钮视觉差异，详情和peek共用附件控件，不复制网络算法。

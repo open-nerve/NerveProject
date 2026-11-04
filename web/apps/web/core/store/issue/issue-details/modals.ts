@@ -1,5 +1,5 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
-import { makeAutoObservable } from "mobx";
+import { makeAutoObservable, runInAction } from "mobx";
 import type { IssueLink } from "@nerve/api-client";
 import type { TIssueRelationTypes, TWorkItemWidgets } from "@nerve/types";
 export type TIssueRelationModal = {
@@ -21,6 +21,7 @@ const initialCrud = (): TIssueCrudOperationState => ({
 /** Presentation state belongs to one mounted detail/peek, never to the entity cache. */
 export class IssueDetailModals {
   active = false;
+  private readonly contentDialogs = new Set<symbol>();
   relationKey: TIssueRelationTypes | null = null;
   issueLinkData: IssueLink | null = null;
   issueCrudOperationState = initialCrud();
@@ -38,6 +39,7 @@ export class IssueDetailModals {
   };
   retire = () => {
     this.active = false;
+    this.contentDialogs.clear();
     this.relationKey = null;
     this.issueLinkData = null;
     this.issueCrudOperationState = initialCrud();
@@ -50,6 +52,7 @@ export class IssueDetailModals {
   };
   get isAnyModalOpen() {
     return (
+      this.contentDialogs.size > 0 ||
       this.isCreateIssueModalOpen ||
       this.isIssueLinkModalOpen ||
       !!this.isParentIssueModalOpen ||
@@ -58,6 +61,14 @@ export class IssueDetailModals {
       !!this.isSubIssuesModalOpen
     );
   }
+  retainContentDialog = () => {
+    // Observable collections enhance object values; a primitive lease retains exact identity.
+    const token = Symbol("content-dialog");
+    if (this.active) this.contentDialogs.add(token);
+    return () => {
+      runInAction(() => this.contentDialogs.delete(token));
+    };
+  };
   setRelationKey = (value: TIssueRelationTypes | null) => {
     if (this.active) this.relationKey = value;
   };

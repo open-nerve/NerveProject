@@ -105,3 +105,11 @@ RootAssetStore以`attachments(view,onConfirmed?)`、`content(view)`、`draftPrep
 分页编排抽为`paged-content.ts`：issue/comment背后使用原DetailResource，draft背后使用原Reconciled，通用算法未改；`content-deletion.ts`集中逐ID防重、确认与未知结果核验。`content-target.ts`只负责六用途与scope映射，上传和读取共同消费，避免两份映射漂移。`content-read-entry.ts`持有同视图同资产的短期授权、计时器和错误额度，`content-reads.ts`管理租约、外部取消、主动下载及视图退出清理。单文件均小于400行；这些拆分没有新增授权事实源。
 
 未知DELETE在只读核验前禁止再次发送；完整列表与必要GET asset核验后，只允许用户再次明确操作。404也不伪造204确认（可能不可见），仍保留不确定提示。图片授权的ready通知可同步触发onError，完成中的promise必须先释放，避免误合并为已结束请求而漏掉唯一自动重试。
+
+### T5 输入接口与页面衔接
+
+`IssueDetailInputState`在原Host中只保存文字快照/表单ID/确认收据，`AutosaveRetention<T>`是自动保存消费方声明的纯输入端口；新view、请求与prepareSave闭包不进入快照。恢复时同基准的未尝试输入也先显示“保存保留的输入”，不因挂载自动写；继续键入仍沿原debounce，发生并发基准冲突则必须明确选择。拒绝过的revision只允许用户明确恢复；冲突期间不另外显示能绕过选择的通用重试按钮。只读的新owner显示规范文字并提示输入仍被保留，不能把本地修改显示成已保存正文。
+
+IssueVerification仅增加`isMissing(id)`只读查询，直接暴露已存在且当前identity相符的missing结论；pending、uncertain、权限水位及通用调和语义均不变。Host以最终401/403/404或规范删除结论退休输入，重新可见时创建新实例。详情与peek都直接投影该读取错误，retry只重读owner。
+
+附件区沿现有widget开合，数字直接取Issue.attachment_count；实际打开且规范详情可读才创建view/resource。删除框向现有IssueDetailModals登记一份可释放的UI占用，阻止底下peek响应Escape/外部点击，不新增共享弹窗控制器。占用标识使用Symbol，避免可观察集合增强对象后删除身份不一致。成功收据在详情条件子树外、peek自身portal内部显示；归档只读同时消费路由参数、规范Issue和规范Project状态。

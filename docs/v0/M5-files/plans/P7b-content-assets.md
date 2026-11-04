@@ -91,9 +91,9 @@ T3与T5衔接：命令确认收据先发布给稳定host再触发权威重读；
 
 **输入连续性补充（builder局部裁定）：** 增补`components/issues/detail-host.tsx`、新`detail-input-state.ts`及相邻context/hook、`title-input.tsx`与测试。IssueDetailHost在规范Issue条件子树外持有IssueDetailInputState，只保存资源spec§4.1列出的本地输入/基准/已确认收据；沿原host权限身份清理，不改PermissionReads。为T6/T9提供按表单/字段/commentID区分的状态槽，不提供owner DTO或网络能力。详情/peek两个实例不能串状态。T5加入真实RootStore的pending→成功/失败、标题dirty、确认收据先于卸载与只读重试测试，T6/T9再扩评论和正文。
 
-- [ ] Step 1：详情和peek真实宿主、只读/归档/访客拒绝入口、成功complete一次绑定、刷新失败只读重试；关闭peek/切工作项/Back后迟到回答不建列表、不toast；有51条时只首屏50但DTO count完整。
-- [ ] Step 2：`pnpm --filter web exec vitest run core/components/issues/issue-detail core/components/issues/peek-overview core/components/issues/issue-detail-widgets core/store/issue` RED→GREEN；未加载/不确定宿主不创建上传能力，已观察删除立即退出。
-- [ ] Step 3：原链接/子项/关系/活动与权限错误回归，记录Plane视觉行为差异；提交 `feat(M5/P7b): 接通工作项详情附件`。
+- [x] Step 1：详情和peek真实宿主、只读/归档/访客拒绝入口、成功complete一次绑定、刷新失败只读重试；关闭peek/切工作项/Back后迟到回答不建列表、不toast；有51条时只首屏50但DTO count完整。
+- [x] Step 2：`pnpm --filter web exec vitest run core/components/issues/issue-detail core/components/issues/peek-overview core/components/issues/issue-detail-widgets core/store/issue` RED→GREEN；未加载/不确定宿主不创建上传能力，已观察删除立即退出。
+- [x] Step 3：原链接/子项/关系/活动与权限错误回归，记录Plane视觉行为差异；提交 `feat(M5/P7b): 接通工作项详情附件`。
 
 ## Task 6（T6）：评论普通附件与一次原子发表
 

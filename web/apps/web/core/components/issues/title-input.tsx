@@ -5,7 +5,7 @@
  */
 
 import { useId, useState } from "react";
-import { AutosaveError, useConfirmedAutosave } from "@/components/editor/use-confirmed-autosave";
+import { AutosaveError, PreservedInput, useConfirmedAutosave } from "@/components/editor/use-confirmed-autosave";
 import { observer } from "mobx-react";
 import { Field, FieldError } from "@makeplane/propel/components/field";
 import { TextArea } from "@makeplane/propel/components/text-area";
@@ -16,6 +16,7 @@ import { cn } from "@nerve/utils";
 import type { TIssueOperations } from "./issue-detail";
 import { fieldErrorKeys } from "@/lib/error-messages";
 import { useRefusedFocus } from "@/lib/refused-focus";
+import { useIssueDetailInput } from "@/hooks/use-issue-detail-input";
 import { SessionChangedError } from "@/lib/auth/token-manager";
 
 type IssueTitleInputProps = {
@@ -49,11 +50,17 @@ const IssueTitleInputContent = observer(function IssueTitleInputContent(props: I
   const { t } = useTranslation();
   const [isLengthVisible, setIsLengthVisible] = useState(false);
   const inputId = useId();
+  const inputs = useIssueDetailInput();
+  const retention = inputs?.slot("title");
   const {
     value: title,
     change,
     failure,
     retry,
+    conflict,
+    needsResume,
+    resume,
+    discard,
   } = useConfirmedAutosave({
     initial: value ?? "",
     same: sameTitle,
@@ -72,13 +79,20 @@ const IssueTitleInputContent = observer(function IssueTitleInputContent(props: I
       : undefined,
     status: setIsSubmitting,
     disabled,
+    retention,
   });
   const currentFailure = failure?.error instanceof SessionChangedError ? undefined : failure;
   const fieldError = titleError(title) ?? fieldErrorKeys(currentFailure?.error).name;
   const fieldRef = useRefusedFocus<HTMLDivElement>(currentFailure);
   const length = Array.from(title).length;
 
-  if (disabled) return <div className="text-20 font-medium whitespace-pre-line">{title}</div>;
+  if (disabled)
+    return (
+      <>
+        <div className="text-20 font-medium whitespace-pre-line">{value}</div>
+        {needsResume && <p role="status">{t("content_files.input.read_only")}</p>}
+      </>
+    );
 
   return (
     <div className="flex flex-col gap-1.5" ref={fieldRef}>
@@ -122,14 +136,16 @@ const IssueTitleInputContent = observer(function IssueTitleInputContent(props: I
           /255
         </div>
       </div>
+      {needsResume && <PreservedInput conflict={conflict} resume={resume} discard={discard} />}
       {fieldError ? (
-        currentFailure && (
+        currentFailure &&
+        !needsResume && (
           <button type="button" onClick={retry}>
             {t("common.retry")}
           </button>
         )
       ) : (
-        <AutosaveError failure={failure} retry={retry} />
+        <AutosaveError failure={failure} retry={needsResume ? undefined : retry} />
       )}
     </div>
   );

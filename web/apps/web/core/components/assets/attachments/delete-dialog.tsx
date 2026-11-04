@@ -14,6 +14,7 @@ export type DeleteAttachmentProps = {
   remove(id: string): Promise<void>;
   verify?(): Promise<void>;
   onClose(): void;
+  onDialogOpened?(): () => void;
 };
 export const DeleteAttachmentDialog = observer(function DeleteAttachmentDialog({
   view,
@@ -23,8 +24,10 @@ export const DeleteAttachmentDialog = observer(function DeleteAttachmentDialog({
   remove,
   verify,
   onClose,
+  onDialogOpened,
 }: DeleteAttachmentProps) {
   const { t } = useTranslation();
+  useLayoutEffect(() => onDialogOpened?.(), [onDialogOpened]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
   const [verified, setVerified] = useState(false);

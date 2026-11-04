@@ -15,13 +15,17 @@ import { DeleteAttachmentDialog } from "./delete-dialog";
 export const Attachments = observer(function Attachments({
   view,
   resource,
+  readOnly = false,
+  onDialogOpened,
 }: {
   view: ContentView;
   resource: AttachmentResource;
+  readOnly?: boolean;
+  onDialogOpened?(): () => void;
 }) {
   const { t } = useTranslation();
   const root = useContext(StoreContext);
-  const upload = useContentUpload(view, "attachment");
+  const upload = useContentUpload(readOnly ? undefined : view, "attachment");
   const refresh = useRef<HTMLButtonElement>(null);
   const [selection, setSelection] = useState<{ resource: AttachmentResource; row: AttachmentRow }>();
   useEffect(() => {
@@ -60,7 +64,7 @@ export const Attachments = observer(function Attachments({
         rows={resource.rows}
         download={(id) => root.asset.content(view).download(id)}
         remove={
-          view.canRemoveAttachment()
+          !readOnly && view.canRemoveAttachment()
             ? (row) => {
                 refresh.current?.focus();
                 setSelection({ resource, row });
@@ -83,6 +87,7 @@ export const Attachments = observer(function Attachments({
       {selected && (
         <DeleteAttachmentDialog
           key={selected.id}
+          onDialogOpened={onDialogOpened}
           view={view}
           file={selected}
           uncertain={resource.uncertainIDs.includes(selected.id)}

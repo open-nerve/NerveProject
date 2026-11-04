@@ -62,6 +62,17 @@
       "warning": "These files are not attached yet. They may be in use in another tab. Discard only files you have chosen to remove.",
       "delete_title": "Discard draft file",
       "confirm_warning": "This file may be uploading in another tab or may already have become an attachment. Discarding deletes the selected file. A description image that has been saved cannot be discarded here."
+    },
+    "title": "Attachments",
+    "confirmed_upload": "File uploaded.",
+    "confirmed_delete": "File deleted.",
+    "input": {
+      "conflict": "This content changed while your input was preserved. Choose what to keep.",
+      "preserved": "Your unsaved input has been preserved. Save it when you are ready.",
+      "keep": "Save my changes",
+      "save": "Save preserved input",
+      "latest": "Use latest saved content",
+      "read_only": "Your unsaved input is preserved, but this work item is now read-only."
     }
   },
   "image_upload": {
