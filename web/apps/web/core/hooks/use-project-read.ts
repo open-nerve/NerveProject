@@ -5,7 +5,6 @@ import { useSessionSWR } from "@/lib/use-session-swr";
 export function useProjectRead(projectID: string | undefined) {
   const { fetchProject } = useProject();
   return useSessionSWR(projectID ? ["PROJECT", projectID] : null, (id) => fetchProject(id), {
-    dedupingInterval: 0,
     revalidateOnReconnect: false,
   });
 }

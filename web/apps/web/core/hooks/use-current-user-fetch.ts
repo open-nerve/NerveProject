@@ -5,7 +5,6 @@ import { useSessionSWR } from "@/lib/use-session-swr";
 export function useCurrentUserFetch(wanted = true) {
   const { fetchCurrentUser } = useUser();
   return useSessionSWR(wanted ? ["CURRENT_USER"] : null, () => fetchCurrentUser(), {
-    dedupingInterval: 0,
     revalidateOnReconnect: false,
   });
 }

@@ -113,7 +113,7 @@ ProfileImage / ProfileAvatar / ProjectCover 是呈现组件，接受明确 sourc
 
 ## PC3：共享宿主读取与完成证明（负责人批准A）
 
-图片不创建独立的profile-image网络查询键。工作区复用useWorkspacesFetch/WORKSPACES；成员复用useWorkspaceMembersFetch/WORKSPACE_MEMBERS；个人和项目分别把既有CURRENT_USER、PROJECT读取提取为无额外业务取数的薄hook，由原页面和图片共同使用。原页面参数、DTO、权限决定和错误传播保持；使用0去重窗口允许同键恢复权限后重读，在途请求仍由SWR合并。
+图片不创建独立的profile-image网络查询键。工作区复用useWorkspacesFetch/WORKSPACES；成员复用useWorkspaceMembersFetch/WORKSPACE_MEMBERS；个人和项目分别把既有CURRENT_USER、PROJECT读取提取为无额外业务取数的薄hook，由原页面和图片共同使用。原页面参数、DTO、权限决定和错误传播保持；保留原完成请求去重窗口与在途合并；图片的新生命期或恢复权限缺少当前证明时，通过既有mutate明确重读，不通过全局缩短窗口改变普通页面取数次数。
 
 图片消费侧声明ObserveProfileRead小接口：接收self/workspace/project/member宿主身份与实际读取函数，返回该函数原结果/错误。RootStore统一接线；宿主store在规范读取的边界发布开始与完成，接口只观察完成，不合并/排队宿主HTTP、不改变Reconciled。这样非页面的既有合法读取也不能让图片永远停在旧请求的错误里，宿主store仍拥有数据事实，SWR仍拥有页面请求。
 

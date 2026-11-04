@@ -20,7 +20,7 @@ T1：JSON资产prepare/complete用生成DTO及当前ApiClient；raw PUT保持原
 - raw PUT用有限时长独立fetch，阶段进度不伪造字节百分比；代价是无法显示线性上传百分比。前端终止不能撤回服务端已接收写，宿主绑定仍归页面。
 - 原件保留至准确main全绿和归档核验，覆盖通用skill的删除scratch建议；代价是临时证据空间。仅一次fresh整审，全部局部发现按负责人要求修复，不默认延期Minor。
 
-- T9保留Plane设置表单先选择、一次更新的顺序；准备件只在表单局部，卡片只读规范事实。切离上传页签结束其传输，避免隐藏busy；代价是回到上传时需要重新选择。卡片以覆盖链接与独立操作控件修正嵌套anchor，不改共享导航。
+- T9保留Plane设置表单先选择、一次更新的顺序；准备件只在表单局部，卡片只读规范事实。切离上传页签结束其传输，避免隐藏busy；代价是回到上传时需要重新选择。卡片以主链接与独立操作控件修正嵌套anchor，不改共享导航；T13完整E2E发现覆盖层遮挡点击后，主链接改为实际包住封面/标题/描述，操作控件为命名article内的同级元素。
 
 ## 4. 尚未完成
 
@@ -194,7 +194,7 @@ lint-web在关键词步骤exit2：四处命中。素材说明已删除不必要�
 
 原件包括t13-gates.json/runner、每项完整日志和输入hash、t13-pc3-probe-second及源码、t13-keywords-after-local、t13-local-cleanup-final、t13-sources-format、t13-post-gates-source-delta。首轮探针漏开fake timers是夹具错误，不算产品RED；原件保留。测试结束后20个既有容器逐ID均在，新增遗留0，见t13-container-cleanup.json。按03§1先提交已完成工作再上报；七门禁未齐，不推送产品检查点、不合并，也不宣称PC3已修复。
 
-## 20. PC3批准A后的联合修复（进行中）
+## 20. PC3批准A后的联合修复
 
 负责人已批准复用既有读取入口。设计/spec/plan先提交5c370f01；四类图片分别共享CURRENT_USER、WORKSPACES、PROJECT、WORKSPACE_MEMBERS既有会话键。图片侧声明小的ObserveProfileRead接口，由RootStore接到真实宿主读取边界，只观察开始/完成；HTTP与数据事实仍归既有hook/store，Reconciled和目录架构守卫不改。较新真实读取能授权当前图片，旧成功/失败/undefined不能覆盖新证明；完成缓存不能代替新视图授权，同一有效权限代次的在途读取可共享。工作区图标仅核身份水位，成员/项目仍核既有权限水位。
 
@@ -207,3 +207,7 @@ lint-web在关键词步骤exit2：四处命中。素材说明已删除不必要�
 三浏览器PC3首轮39通过/3失败，三次均为F16过期恢复：SWR在online事件隐式重取共享宿主，绕过明确重试并使按钮消失。trace和数据库/截图全保留。四种真实页面hook新增行为RED（每种实际GET2次，预期1），修复后30项共享读取回归及共58项联合回归通过。为保持既定的失败占位与明确重试，四个共享宿主hook关闭SWR隐式reconnect重读；图片仍由expiry/focus/online检查决定一次到期刷新，页面挂载、身份变化及显式mutate仍读取。useSessionSWR仅新增可关闭reconnect的窄选项，其他会话请求策略保持。代价：仅网络恢复本身不再独立触发这四种宿主读取，等待上述实际读取条件；避免网络事件绕过图片重试预算。原件pc3-three-browsers、pc3-reconnect-red-page-hooks、pc3-reconnect-green；未改F16断言/期限。
 
 PC3最终三浏览器42/42通过（113.584秒），4529输入不变；过期恢复原F16断言未改。最新完整web311文件3469项通过，其他包结果经18个turbo任务通过（17缓存、web实际重跑）；lint-web54任务通过（36缓存），knip与构建通过，38个本次TS文件零warning/error且格式通过。三类变异重新在当前实现下行为失败并逐SHA恢复。原件pc3-final-seventh-*、pc3-web-test-logs-seventh、pc3-scoped-lint-final、pc3-mutations-reconnect、pc3-three-second-browsers；它们逐项匹配当前4529输入。Go复用最终差异见pc3-go-evidence-reuse-accepted.json。A3关闭，完整E2E/远端CI/终审/集成仍待办。
+
+T13完整E2E首轮371/381，10项失败原件完整保留于pc3-full-report/pc3-full-results：五项S2显示0去重窗口增加/me/profile与目录读取；四项卡片操作暴露新覆盖层挡住标题/恢复按钮及旧测试仍要求按钮嵌在link内；一项P1键盘圈预期缺新增Change cover。局部修复保留原SWR窗口，图片新证明仍由needsRead→mutate保证；卡片主链接承载静态内容、按钮/设置链接同级，不以force click避开真实遮挡；P2按命名article定位同级控件，P1明确新增一次封面Tab停点。四条页面连续挂载测试最初未推进SWR的rAF，未产生RED；补足下一帧后恢复0窗口的实际变异4条行为失败并逐SHA恢复，原记录均保留。当前联合311项通过；最新完整门禁/三浏览器/E2E复验待收据。
+
+首轮完整E2E的10个失败连同相关S2入口共15项已全部通过（32.921秒），真实点击无force，原S2请求数量断言保持；新主链接与同级按钮不再互相遮挡。最新完整Web3473项、lint/knip/build通过，4529输入稳定；证据pc3-e2e-fixes、pc3-final-eighth-*和pc3-web-test-logs-eighth。最新三浏览器及完整E2E在同一冻结源码上继续。

@@ -24,6 +24,6 @@ export function useWorkspaceMembersFetch(
   return useSessionSWR(
     workspace && ["WORKSPACE_MEMBERS", workspace.id, workspace.slug],
     (id, slug) => fetchWorkspaceMembers({ id, slug }),
-    { dedupingInterval: 0, revalidateOnReconnect: false }
+    { revalidateOnReconnect: false }
   );
 }

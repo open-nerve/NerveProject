@@ -223,7 +223,7 @@ test("P1 (page): Tab goes round the creation dialog and nowhere else; the lead's
   // to the closed menu of Ops's card); the network's select is one stop, its button, which Space opens.
   await page.locator("#name").focus();
   expect((await tabCycle(page, page.getByRole("dialog"))).join(", ")).toBe(
-    "identifier, description, Public, Lead, Cancel, Create project, Close, Project icon, name"
+    "identifier, description, Public, Lead, Cancel, Create project, Close, Change cover, Project icon, name"
   );
   await page.locator("#description").press("Tab");
   await expect(page.getByRole("dialog").getByRole("button", { name: "Public" })).toBeFocused();

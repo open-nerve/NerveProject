@@ -294,3 +294,17 @@ it.each(["self", "workspace", "project", "member"] as const)(
     expect(container.querySelector("img")?.getAttribute("src")).toBe("/static/image");
   }
 );
+it.each(["self", "workspace", "project", "member"] as const)(
+  "PC3 consecutive %s page mounts retain the existing completed-request deduplication",
+  async (kind) => {
+    const source = sourceOf(kind);
+    await render(source, true, false);
+    await act(async () => queries(source)[0]!.answer(json(200, body(source))));
+    await act(async () => vi.advanceTimersByTimeAsync(1));
+    await render(source, false, false);
+    await render(source, true, false);
+    // SWR defers a cached mount's revalidation to the next animation frame.
+    await act(async () => vi.advanceTimersByTimeAsync(20));
+    expect(queries(source)).toHaveLength(1);
+  }
+);
