@@ -170,8 +170,8 @@ issue新增app/content_asset_ports.go、attachment_ports.go、attachments.go、a
 ## Task 15（T15）：集成归档及P6预检
 
 - [x] Step 1：核干净W/main、祖先和准确green HEAD，连续授权下--no-ff合入main、双父/树一致、system git push。
-- [ ] Step 2：准确main CI全绿，归档全部ignored台账/失败/raw/浏览器/审者/变异，hash/bytes/mode/membership/unknown=0；rev-list origin/main..branch=0后正常清远端、本地与worktree，归档再核。
-- [ ] Step 3：下一独立codex/m5-p6 worktree回填阶段和A9；准备P6上传传输器/会话store/资料页面spec/plan与一次builder check，M5整体完成和handoff仍未勾。
+- [x] Step 2：准确main CI全绿，归档全部ignored台账/失败/raw/浏览器/审者/变异，hash/bytes/mode/membership/unknown=0；rev-list origin/main..branch=0后正常清远端、本地与worktree，归档再核。
+- [x] Step 3：下一独立codex/m5-p6 worktree回填阶段和A9；准备P6上传传输器/会话store/资料页面spec/plan与一次builder check，M5整体完成和handoff仍未勾。
 
 ## 预检自查（已复核）
 

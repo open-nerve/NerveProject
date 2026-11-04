@@ -1,6 +1,6 @@
 # M5/P6 接口与文件边界
 
-与[主 spec](P6-profile-upload.md)同属预检复核中的合同；PC1 已批准 A，现有 PermissionReads 的扩展边界按[决策记录](../reviews/P6-public-project-lifetime-decision.md)落实。实体类型一律 import @nerve/api-client；以下类型仅为前端生命周期/呈现状态，不镜像服务端实体或角色枚举。
+与[主 spec](P6-profile-upload.md)同属已通过预检的合同；PC1 已批准 A，现有 PermissionReads 的扩展边界按[决策记录](../reviews/P6-public-project-lifetime-decision.md)落实。实体类型一律 import @nerve/api-client；以下类型仅为前端生命周期/呈现状态，不镜像服务端实体或角色枚举。
 
 ## 1. 服务与传输
 

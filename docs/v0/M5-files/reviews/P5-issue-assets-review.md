@@ -1,6 +1,6 @@
 # M5/P5 阶段评审记录
 
-> T1–T13完成，检查点e60aa333准确CI三项全绿；一次整审唯一Minor已修正复核，最终提交CI与集成归档待T14/T15。分支codex/m5-p5，基线main 0f93100a05304d26b074790633b5659285813156；P4精确main CI41641099230全绿并完成归档清理。
+> T1–T15已完成，最终main f5f4ce94的CI41772399410三项全绿；5053份原件归档核验，P5及两次修复分支/worktree正常清理，见§22.2。原分支codex/m5-p5，基线main 0f93100a05304d26b074790633b5659285813156。以下逐Task记录保留当时状态，不以历史待办覆盖末节完成收据。
 
 ## 1. 评审方式
 
@@ -309,7 +309,7 @@ Go AST 及实际二进制核实，bootstrap 顶层测试由 P1 的 462、P4 的 
 
 [最终分支CI 41728335065](https://github.com/open-nerve/NerveProject/actions/runs/41728335065) attempt1三作业及必需步骤全绿；server bootstrap770.858秒，web静态54/54、测试18/18、构建11/11任务通过；E2E364/364、16.7m，无重试，W11页面通过。新runner此轮耗时低于旧15m限制，不将此结果说成预算改动提升性能。`task-14-ci-final.json`固定准确run/jobs及三份完整日志hash/bytes；严格本地和CI核验后task-done14通过，A8关闭。
 
-## 22. T15集成与后续准备（进行中）
+## 22. T15集成与后续准备（已完成；以下先列历史过程）
 
 在根main和P5工作树均干净、origin身份及祖先核验后，按连续授权以--no-ff合入 `c59cedf337c5c5654bef2f0cbb33407ff04ced26`，双父为 `0f93100a05304d26b074790633b5659285813156` 与最终分支 `6d14c965fa63d1414aaf4a3480a21f7d3d76431f`；合并树与分支树均为 `0e8dd3f07fc2476fe4f39b5e41d6749f548605bf`。系统Git自动推送成功，[main CI 41733981570](https://github.com/open-nerve/NerveProject/actions/runs/41733981570)已启动，尚待最终状态。
 
@@ -320,3 +320,21 @@ Go AST 及实际二进制核实，bootstrap 顶层测试由 P1 的 462、P4 的 
 原main c59的server失败已由独立清理恢复夹具修复解决，生产合同不变；完整本地bootstrap、五轮race、有效行为变异、唯一fresh整审及准确修复分支CI均通过，见[修复收据](P5-ci-purge-resume.md)。修复已--no-ff合入main `ce29aa00076130e2e805f50e2de08fc5d3ca2375`。
 
 main CI41745515892首轮server/web通过，E2E遇已知W11；主控经原生GitHub插件自行重跑一次。第二轮W11及364项全部通过，但GitHub明确因20分钟job上限取消。两轮完整日志、报告、公开注解与准确身份已保存；按负责人“重跑也不过就停下来”要求，提交[仅将E2E作业总预算调整为25分钟的建议](P5-main-e2e-budget-decision.md)等待决定。没有改变配置、再重跑、归档或清理，A9及T15剩余步骤仍开放。P6已同步当前main并完成PC1合同澄清，产品尚未实施。
+
+### 22.2 最终main全绿与归档清理
+
+负责人随后批准预算方案A，仅将E2E作业总上限20改25分钟；[独立整审re-44](../../../reviews/re-44-M5P5作业预算审核.md)为0 Critical/0 Important/0 Minor。最终分支 `86f8cfe98f07fa2fa750a50f4290f4fff5192bd1` 的[CI41768721385](https://github.com/open-nerve/NerveProject/actions/runs/41768721385) attempt1三job及必需步骤成功，E2E364/364、16.7分钟。未经改变的生产、测试断言、单项期限与依赖逐SHA核验；本次没有性能改善或W11根因修复的声称。
+
+连续授权下以`--no-ff`合入并系统Git自动推送最终main `f5f4ce9431e7fb360363bf169da33487cf9b864f`；双父为 `ce29aa00076130e2e805f50e2de08fc5d3ca2375` 和上述预算分支，合并树 `d3fcffabdc79c7470921cead611a265ad665234f` 与分支相同。[准确main CI41772399410](https://github.com/open-nerve/NerveProject/actions/runs/41772399410) attempt1三job及必需步骤全部成功：server bootstrap867.012秒；web静态54/54、unit18/18、build11/11；E2E364/364、13.7分钟，W11通过且作业正常收尾。分支和main各自保存run/jobs及三份完整日志；没有用分支绿灯替代main。
+
+全部旧失败、预算停点、两份原始Playwright ZIP、单元/真实存储/变异/浏览器报告及审者原文保留。以下稳定归档根均位于主项目的`.superpowers/sdd/`；原worktree的`.superpowers/`映射为`payload/superpowers/`，其他保留根按`manifest.json`映射。
+
+| 稳定归档目录 | 文件数 | 字节数 | 主证据入口 |
+| --- | ---: | ---: | --- |
+| `M5-P5-integration-20261104` | 4757 | 402257836 | `payload/superpowers/sdd/P5-issue-assets/`，`task-15-ci-final.json`及三次integration收据 |
+| `M5-P5-ci-purge-20261104` | 215 | 47069027 | `payload/superpowers/sdd/P5-ci-purge-resume/`，原main两轮失败及最终`main-ci-final.json` |
+| `M5-P5-e2e-budget-20261104` | 81 | 836100 | `payload/superpowers/sdd/P5-e2e-budget/`，分支/main最终manifest与fresh审者原文 |
+
+合计5053文件、450162963字节；源与归档逐hash/bytes/mode及文件集合一致，unknown=0。核全部分支已被origin/main包含后，正常删除三组远端/本地分支和worktree，无force/stash/clean/reset；清理后再次核全部归档、根main/origin身份与远端分支消失。各归档根的`summary.json`、`cleanup.json`及预算归档根的`finalization.json`记录实际步骤，原20个容器逐ID保留、新增遗留0。源台账在复制前冻结，完成收据位于归档根外层，避免为回填状态修改原件。
+
+P6以`--no-ff`同步上述准确main，得到 `7e49ea54008344db8b7fc143f7153eca9d08772d`；唯一同名新增预算文档冲突保留main已批准版本。相对原126项宿主store基线仅三个后端测试和ci.yml变化，前端逐SHA不变；PC1已批准A、设计与接口同步、一次builder和主控预检闭环，见[re-42§7](../../../reviews/re-42-M5P6预检.md#7-最终基线与执行前预检通过)。A9和T15关闭；P6产品与M5总体完成标准仍未提前关闭。

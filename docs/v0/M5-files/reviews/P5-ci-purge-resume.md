@@ -1,6 +1,6 @@
 # P5 main CI：清理恢复测试的预算重试修复
 
-> 基线 `main@c59cedf337c5c5654bef2f0cbb33407ff04ced26`，分支 `codex/m5-p5-ci-purge`。main CI 41733981570 的 server 失败、web 成功、E2E 未运行。P5 未完成归档清理；P6 PC1 已批准 A，但产品实现等待此集成修复。
+> 修复及收尾已完成，最终main f5f4ce94的CI41772399410全绿，全部原件归档核验并清理，见§6。原基线 `main@c59cedf337c5c5654bef2f0cbb33407ff04ced26`，原分支 `codex/m5-p5-ci-purge`。以下保留原server失败及后续W11/预算停点过程。
 
 ## 1. 已知事实与根因验证
 
@@ -21,9 +21,9 @@
 - [x] T1：保存原main日志及输入，运行原场景基线；加入受控首轮预算耗尽场景，看到原观察断言的真实RED。
 - [x] T2：按实际持久阶段修复夹具；受控场景GREEN，原P4/P5清理恢复及River游标回归、race多轮和移除修复的行为变异验证；精确清理本次容器。
 - [x] T3：完整受影响bootstrap包、Go静态与架构核验；产品及前端输入逐SHA不变，未受影响的已通过全门禁有界复用；一次独立修复分支deep-review及主控复核，准确修复分支CI全绿。
-- [ ] T4：连续授权下noff合入main，准确main CI全绿后归档本修复和P5全部原件、正常清理已合并分支/worktree；P6同步新main基线后完成预检并从T1实施。
+- [x] T4：连续授权下noff合入main，准确main CI全绿后归档本修复和P5全部原件、正常清理已合并分支/worktree；P6同步新main基线后完成预检并从T1实施。
 
-T1–T3 已完成；T4 已 noff 合入 main，准确 main CI 的 E2E 首轮遇到已知 W11；一次重跑364/364通过，但job因20分钟上限取消。按负责人要求停下，待[预算决定](P5-main-e2e-budget-decision.md)，尚未归档清理。原始日志、输入hash、失败及恢复记录保存在修复工作树 `.superpowers/sdd/P5-ci-purge-resume/`，具体集成收据见下节。
+T1–T4已完成。T4曾因W11后的一次重跑仍触及20分钟作业上限停报；负责人随后批准[预算方案](P5-main-e2e-budget-decision.md)，新main验收与归档清理完成。原始日志、输入hash、失败及恢复记录现位于§6稳定归档；下文的旧worktree路径均为当时现场位置。
 
 ## 4. 局部裁定与验证台账
 
@@ -43,3 +43,9 @@ T1–T3 已完成；T4 已 noff 合入 main，准确 main CI 的 E2E 首轮遇�
 按既有 W11 规则，仅通过原生 GitHub 插件重跑 E2E 一次；attempt2 的 E2E job 为126312370586。GitHub将已成功的server/web分别映射为126312433250/126312371600，原始执行时间保留，重新读取的日志与首轮逐字节相同。首轮完整失败日志、run/jobs和21,919,197字节的原始Playwright报告（701个ZIP条目、CRC与公布SHA一致）均保留。未做W11专项排查、未改断言或预算。
 
 第二轮最终364 passed（17.4m），W11通过；GitHub注解确认job超过20m0s而取消，距开始20分4.662秒才输出全部通过。原始第二轮ZIP 2,750,153字节/670条目及SHA/CRC已核。没有第三次重跑；按负责人明确停点保留全部分支/worktree，并提交[25分钟作业预算建议](P5-main-e2e-budget-decision.md)等待决定。main仍未全绿，归档、清理及P6实施未开始。
+
+## 6. 最终集成与稳定归档
+
+上述停点之后，负责人批准仅将E2E job总上限改25分钟，独立整审及准确预算分支CI通过后，noff集成为main `f5f4ce9431e7fb360363bf169da33487cf9b864f`。[main CI41772399410](https://github.com/open-nerve/NerveProject/actions/runs/41772399410) attempt1三job成功，E2E364/364、13.7分钟，W11通过且正常收尾。
+
+本修复稳定归档为主项目`.superpowers/sdd/M5-P5-ci-purge-20261104/`，原证据映射到`payload/superpowers/sdd/P5-ci-purge-resume/`，215文件、47069027字节；hash/bytes/mode/membership全部一致、unknown=0，普通清理后再核通过。新main原件以`budget-`前缀保存，`main-ci-final.json`绑定最终身份，不覆盖旧ce29日志与两份ZIP。完整三次noff父/树、P5总归档5053文件及P6预检结论见[P5§22.2](P5-issue-assets-review.md#222-最终main全绿与归档清理)。原server失败与预算失败仍是历史失败，不由最终绿灯抹去。
