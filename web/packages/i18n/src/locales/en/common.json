@@ -646,6 +646,7 @@
     "presets": "Preset covers",
     "preset": "Cover",
     "random": "Random cover",
-    "remove": "Remove cover"
+    "remove": "Remove cover",
+    "upload": "Upload image"
   }
 }

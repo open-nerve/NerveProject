@@ -17,7 +17,7 @@ import { followInSession } from "@/lib/in-session";
 /** A creation form's values: the fields of ProjectCreate the form asks for, no lead until one is picked. */
 export type ProjectCreationForm = Pick<
   ProjectCreate,
-  "name" | "identifier" | "description" | "network" | "logo_props"
+  "name" | "identifier" | "description" | "network" | "logo_props" | "cover_image_asset_id" | "cover_builtin_id"
 > & {
   project_lead_id: string | null;
 };
@@ -32,13 +32,15 @@ export type ProjectCreationForm = Pick<
 export function useCreateProject(): (
   workspaceSlug: string,
   form: ProjectCreationForm,
-  setError: UseFormSetError<ProjectCreationForm>
+  setError: UseFormSetError<ProjectCreationForm>,
+  current: () => boolean
 ) => Promise<Project | undefined> {
   const { createProject } = useProject();
   const { t } = useTranslation();
   const showRefusal = useProjectRefusal();
 
-  return async (workspaceSlug, form, setError) => {
+  return async (workspaceSlug, form, setError, current) => {
+    if (!current()) return undefined;
     const data: ProjectCreate = {
       name: form.name,
       identifier: form.identifier,
@@ -46,14 +48,19 @@ export function useCreateProject(): (
       network: form.network,
       logo_props: form.logo_props,
       project_lead_id: form.project_lead_id ?? undefined,
+      cover_image_asset_id: form.cover_image_asset_id,
+      cover_builtin_id: form.cover_builtin_id,
     };
     let created: Project | undefined;
     await followInSession(() => createProject(workspaceSlug, data), {
       done: (project) => {
+        if (!current()) return;
         created = project;
         setToast({ type: TOAST_TYPE.SUCCESS, title: t("success"), message: t("project_created_successfully") });
       },
-      failed: (error) => showRefusal(error, (field, message) => setError(field, { type: "server", message })),
+      failed: (error) => {
+        if (current()) showRefusal(error, (field, message) => setError(field, { type: "server", message }));
+      },
     });
     return created;
   };

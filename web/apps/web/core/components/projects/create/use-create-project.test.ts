@@ -30,7 +30,7 @@ const form: ProjectCreationForm = {
   project_lead_id: null,
 };
 const web = projectOf("WEB", "w-acme", { member_role: 20 });
-const create = (values = form) => useCreateProject()("acme", values, page.setError);
+const create = (values = form, current = () => true) => useCreateProject()("acme", values, page.setError, current);
 
 beforeEach(() => {
   signedIn();
@@ -41,6 +41,42 @@ beforeEach(() => {
 });
 
 describe("useCreateProject", () => {
+  it.each([
+    {},
+    { cover_image_asset_id: "ready-cover" },
+    { cover_builtin_id: "cover-29" },
+    { cover_image_asset_id: null, cover_builtin_id: null },
+  ])("carries the explicit cover fields in the single creation: %s", async (cover) => {
+    await create({ ...form, ...cover });
+    expect(page.createProject).toHaveBeenCalledOnce();
+    const sent = JSON.parse(JSON.stringify(page.createProject.mock.calls[0]?.[1]));
+    expect(sent).toEqual({
+      name: form.name,
+      identifier: form.identifier,
+      description: form.description,
+      network: form.network,
+      logo_props: form.logo_props,
+      ...cover,
+    });
+  });
+
+  it.each(lateSettlingsAnswering(web))("suppresses late $settles after this form scope retired", async ({ settle }) => {
+    const answer = heldChange<Project>();
+    page.createProject.mockReturnValueOnce(answer.sent);
+    let current = true;
+    const sent = create(form, () => current);
+    current = false;
+    settle(answer);
+    expect(await sent).toBeUndefined();
+    expect([toasts, page.setError.mock.calls]).toEqual([[], []]);
+  });
+
+  it("a retired form does not send a creation", async () => {
+    expect(await create(form, () => false)).toBeUndefined();
+    expect(page.createProject).not.toHaveBeenCalled();
+    expect(toasts).toEqual([]);
+  });
+
   it("creates the project from the form's fields, no lead until one is picked, says so and gives it", async () => {
     expect(await create()).toBe(web);
     expect(page.createProject.mock.calls).toEqual([

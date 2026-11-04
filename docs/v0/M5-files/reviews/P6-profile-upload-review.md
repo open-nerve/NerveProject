@@ -1,6 +1,6 @@
 # M5/P6 资料图片上传与展示阶段记录
 
-> 分支 `codex/m5-p6`，实施基线 `main@f5f4ce9431e7fb360363bf169da33487cf9b864f`。P5 已完整收尾，P6 预检提交 ab9f86b8；当前 T1–T7 完成，PC2按A完成基础与页面回归，T8接续，未关闭 A1–A8。按连续授权推进，一次整分支 deep-review 后集成；重大风险先提交上报。
+> 分支 `codex/m5-p6`，实施基线 `main@f5f4ce9431e7fb360363bf169da33487cf9b864f`。P5 已完整收尾，P6 预检提交 ab9f86b8；当前 T1–T8 完成，PC2按A完成基础与页面回归，T9接续，未关闭 A1–A8。按连续授权推进，一次整分支 deep-review 后集成；重大风险先提交上报。
 
 ## 1. 输入与范围
 
@@ -20,7 +20,7 @@ T1：JSON资产prepare/complete用生成DTO及当前ApiClient；raw PUT保持原
 
 ## 4. 尚未完成
 
-T8–T15及A1–A8继续；没有声称逐Task单元测试等于真实页面、完整P6或M5完成。
+T9–T15及A1–A8继续；没有声称逐Task单元测试等于真实页面、完整P6或M5完成。
 
 ## 5. T2 上传会话与统一权限失效
 
@@ -103,3 +103,13 @@ WorkspaceLogo收紧为明确workspace身份或public-preview，全部六个直�
 1440宽截图目视全部29张16:9与4:1裁剪；390窄屏检查前8张，文字对比清楚，无横向溢出，58个img全部解码为1600×900。原件t7-covers-desktop.png/mobile.png及t7-playwright-cli保留；CLI默认Chromium版本未缓存，使用已有Chrome，无安装。预览页唯一404是favicon.ico；旧CLI文档network命令不被本机版本支持，未把它算作页面网络验收。自有临时预览HTTP进程与浏览器已关闭。
 
 翻译全引用守卫发现T6遗漏两条图标按钮文案，补齐en/zh-CN且保留RED。1332引用守卫、类型、格式、4文件零warning及完整前端18/18通过（15缓存）。当前原始web测试与收据保存于t7-web-tests.log/t7-*-receipt.json；图片选择、创建和保存页面仍由T8/T9完成，A1–A8保持开放。
+
+## 13. T8 一次创建绑定与表单生命期
+
+ProjectCreationForm直接包含生成DTO的两个封面字段，默认省略；prepare/PUT/complete完成只选入表单，创建唯一POST带资产ID或稳定预设编号，不补PATCH。CreateProjectCover是原ModalCore内的内容，复用T4/T7；上传busy和创建busy分开，真正创建前同步取得提交权，覆盖react-hook-form异步校验前双事件。保存封面不创建项目，宿主拒绝后仍持有ready准备件，再提交不重复传输。
+
+原表单300ms reset删除；创建表单、已创建后的feature-selection均按工作区UUID和打开状态拥有，关弹窗/Back即卸载上传。useCreateProject只在调用方范围仍有效时toast/字段错误/交付，未触碰服务端协议或ProjectStore的目录事实算法。预设/上传完成/取消返回选择入口焦点；撤权或换页不抢新页面焦点。取消替换会同时清掉旧自定义准备件ID，避免界面无图却静默绑定旧件；显式两个null仍保留。utils默认值原本就省略封面，不作无谓修改；默认emoji只在表单实例初始化时抽取。
+
+首轮六个hook行为RED；DOM初轮缺JSDOM ResizeObserver（14例环境失败，不算行为），补齐浏览器API替身后取得19failed/15passed，包括真实双POST。Modal新增3failed/1passed，证明关闭时旧PUT未abort、换工作区后旧feature步骤仍在；修复后通过。补充取消旧UUID2项、焦点3项、显式清除Escape1项均取得AssertionError再修复，原件保留。首轮types的vi.fn泛型与hook依赖lint已按实际类型/稳定回调修正，不加豁免。
+
+最终45聚焦项、364项受影响回归及完整前端18/18（web307文件3400项、17任务缓存）通过，类型/格式/修改14文件零warning与1333翻译引用守卫保留收据。真实应用bundle含29张SVG；详细读取/磁盘字节和三浏览器仍由T11/T12闭环，不将FakeNerve的页面DOM测试当真实网络验收。原始完整web输出见t8-web-tests.log；A1–A8仍开放。

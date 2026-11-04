@@ -646,6 +646,7 @@
     "presets": "预设封面",
     "preset": "封面",
     "random": "随机封面",
-    "remove": "移除封面"
+    "remove": "移除封面",
+    "upload": "上传图片"
   }
 }

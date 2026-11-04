@@ -4,20 +4,21 @@
  * See the LICENSE file for details.
  */
 
-import { useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type FormEvent } from "react";
 import { observer } from "mobx-react";
 import { FormProvider, useForm } from "react-hook-form";
-// components
+import { CoverImage } from "@/components/common/cover-image";
 import ProjectCommonAttributes from "@/components/project/create/common-attributes";
 import ProjectCreateHeader from "@/components/project/create/header";
 import ProjectCreateButtons from "@/components/project/create/project-create-buttons";
-// hooks
+import { useWorkspace } from "@/hooks/store/use-workspace";
+import { useProfileUpload } from "@/hooks/use-profile-upload";
 import useKeypress from "@/hooks/use-keypress";
 import { usePlatformOS } from "@/hooks/use-platform-os";
-// lib
+import { projectCoverURL } from "@/helpers/project-covers";
 import { useRefusedFocus } from "@/lib/refused-focus";
-// local imports
 import { ProjectAttributes } from "./attributes";
+import { CreateProjectCover } from "./cover";
 import { useCreateProject, type ProjectCreationForm } from "./use-create-project";
 import { getProjectFormValues } from "./utils";
 
@@ -28,63 +29,147 @@ export type TCreateProjectFormProps = {
 };
 
 export const CreateProjectForm = observer(function CreateProjectForm(props: TCreateProjectFormProps) {
-  const { workspaceSlug, onClose, handleNextStep } = props;
-  // hooks
+  const workspace = useWorkspace().getWorkspaceBySlug(props.workspaceSlug);
+  return <ProjectCreationFields key={workspace?.id ?? props.workspaceSlug} {...props} workspaceID={workspace?.id} />;
+});
+
+const ProjectCreationFields = observer(function ProjectCreationFields({
+  workspaceSlug,
+  workspaceID,
+  onClose,
+  handleNextStep,
+}: TCreateProjectFormProps & { workspaceID?: string }) {
   const create = useCreateProject();
-  // states
+  const upload = useProfileUpload(
+    { purpose: "PROJECT_COVER", scope: { kind: "new_project", id: workspaceID ?? "" } },
+    !!workspaceID
+  );
   const [shouldAutoSyncIdentifier, setShouldAutoSyncIdentifier] = useState(true);
-  // form info
+  const [defaults] = useState(getProjectFormValues);
+  const [coverOpen, setCoverOpen] = useState(false);
+  const [coverBusy, setCoverBusy] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const coverButton = useRef<HTMLButtonElement>(null);
+  const returnFocus = useRef(false);
+  const pending = useRef(false);
+  const coverPending = useRef(false);
+  const life = useRef<{ mounted: boolean; upload: typeof upload }>({ mounted: false, upload });
+  useLayoutEffect(() => {
+    life.current = { mounted: true, upload };
+    return () => {
+      life.current.mounted = false;
+    };
+  }, [upload]);
   const methods = useForm<ProjectCreationForm>({
-    defaultValues: getProjectFormValues(),
+    defaultValues: defaults,
     reValidateMode: "onChange",
     shouldFocusError: false,
   });
   const {
     handleSubmit,
-    reset,
     setError,
     setValue,
+    getValues,
+    watch,
     formState: { isSubmitting, submitCount },
   } = methods;
   const { isMobile } = usePlatformOS();
-  // the first field refused takes the focus once its message shows (useRefusedFocus), not react-hook-form's before
   const formRef = useRefusedFocus<HTMLFormElement>(submitCount);
-
-  // The form is busy until nerve has answered and the page has followed: created, the modal's next step.
-  const onSubmit = async (values: ProjectCreationForm) => {
-    const project = await create(workspaceSlug, values, setError);
-    if (project) handleNextStep(project.id);
+  const busy = creating || isSubmitting || coverBusy || !!upload?.busy;
+  const canCreate = () =>
+    !!upload?.current &&
+    !["selected", "preparing", "uploading", "confirming", "failed"].includes(upload.phase) &&
+    (!getValues("cover_image_asset_id") || getValues("cover_image_asset_id") === upload.readyAsset?.id);
+  const canSubmit = canCreate();
+  const assetID = watch("cover_image_asset_id");
+  const coverURL =
+    projectCoverURL(watch("cover_builtin_id")) ??
+    (assetID && assetID === upload?.readyAsset?.id ? upload?.previewURL : undefined);
+  const current = useCallback(
+    () => life.current.mounted && life.current.upload === upload && !!upload?.current,
+    [upload]
+  );
+  useLayoutEffect(() => {
+    if (coverOpen) returnFocus.current = true;
+    else if (!busy && returnFocus.current) {
+      returnFocus.current = false;
+      if (current()) coverButton.current?.focus({ preventScroll: true });
+    }
+  }, [coverOpen, busy, current, upload?.current]);
+  const setCoverBusyState = (value: boolean) => {
+    coverPending.current = value;
+    setCoverBusy(value);
   };
+  useEffect(() => {
+    if (upload && !upload.current) onClose();
+  }, [upload, upload?.current, onClose]);
 
+  const onSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (pending.current || coverPending.current || busy || !canCreate() || !current()) return;
+    // Acquire before react-hook-form's asynchronous validation, so two native submits cannot queue two POSTs.
+    pending.current = true;
+    setCreating(true);
+    void handleSubmit(async (values) => {
+      if (!current() || !canCreate()) return;
+      const project = await create(workspaceSlug, values, setError, current);
+      if (project && current()) handleNextStep(project.id);
+    })(event).finally(() => {
+      if (current()) {
+        pending.current = false;
+        setCreating(false);
+      }
+    });
+  };
   const handleClose = () => {
-    onClose();
-    setShouldAutoSyncIdentifier(true);
-    setTimeout(() => {
-      reset();
-    }, 300);
+    if (pending.current || coverPending.current || busy) return;
+    if (life.current.mounted) {
+      life.current.mounted = false;
+      upload?.dispose();
+      onClose();
+    }
   };
-
-  // While the creation is out the form cannot be closed (Escape, its close button, Cancel): nerve's answer is followed
-  // by the form that sent it.
   useKeypress("Escape", () => {
-    if (!isSubmitting) handleClose();
+    if (pending.current || coverPending.current || busy) return;
+    if (coverOpen) {
+      upload?.cancel();
+      if (getValues("cover_image_asset_id")) setValue("cover_image_asset_id", undefined, { shouldDirty: true });
+      setCoverOpen(false);
+    } else handleClose();
   });
 
   return (
     <FormProvider {...methods}>
-      <ProjectCreateHeader handleClose={handleClose} />
-
-      <form ref={formRef} onSubmit={handleSubmit(onSubmit)} className="px-3">
+      <ProjectCreateHeader
+        handleClose={handleClose}
+        coverButtonRef={coverButton}
+        onEditCover={() => setCoverOpen(true)}
+        coverURL={coverURL}
+        busy={busy}
+        canEditCover={!!upload?.current}
+      />
+      <form ref={formRef} onSubmit={onSubmit} className="px-3">
         <div className="mt-9 space-y-6 pb-5">
-          <ProjectCommonAttributes
-            setValue={setValue}
-            isMobile={isMobile}
-            shouldAutoSyncIdentifier={shouldAutoSyncIdentifier}
-            setShouldAutoSyncIdentifier={setShouldAutoSyncIdentifier}
-          />
-          <ProjectAttributes />
+          {coverOpen && upload && upload.current && (
+            <CreateProjectCover
+              upload={upload}
+              busyBinding={creating || isSubmitting}
+              onBusyChange={setCoverBusyState}
+              onClose={() => setCoverOpen(false)}
+              currentImage={<CoverImage src={coverURL} showDefaultWhenEmpty className="max-h-52 rounded-md" />}
+            />
+          )}
+          <fieldset disabled={creating || isSubmitting} className="space-y-6">
+            <ProjectCommonAttributes
+              setValue={setValue}
+              isMobile={isMobile}
+              shouldAutoSyncIdentifier={shouldAutoSyncIdentifier}
+              setShouldAutoSyncIdentifier={setShouldAutoSyncIdentifier}
+            />
+            <ProjectAttributes />
+          </fieldset>
         </div>
-        <ProjectCreateButtons handleClose={handleClose} />
+        <ProjectCreateButtons handleClose={handleClose} busy={busy} canSubmit={canSubmit} />
       </form>
     </FormProvider>
   );

@@ -1,6 +1,6 @@
 # M5/P6 资料图片上传与展示 Implementation Plan
 
-> 预检通过，T1–T7完成；PC2按A完成基础与页面回归，继续T8。**For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans 按 Task 内联实施；不用逐 Task 新派实现者/审者。完成后一次 fresh whole-branch review。本计划在 `codex/m5-p6`，初始基线c59cedf3，实施基线已noff同步 `main@f5f4ce9431e7fb360363bf169da33487cf9b864f`；[PC1](../reviews/P6-public-project-lifetime-decision.md)已批准 A并同步合同。P5准确main CI及归档清理已完成，按连续授权从T1执行。
+> 预检通过，T1–T8完成；PC2按A完成基础与页面回归，继续T9。**For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans 按 Task 内联实施；不用逐 Task 新派实现者/审者。完成后一次 fresh whole-branch review。本计划在 `codex/m5-p6`，初始基线c59cedf3，实施基线已noff同步 `main@f5f4ce9431e7fb360363bf169da33487cf9b864f`；[PC1](../reviews/P6-public-project-lifetime-decision.md)已批准 A并同步合同。P5准确main CI及归档清理已完成，按连续授权从T1执行。
 
 PC2 已批准 A：[工作区更新的迟到回包](../reviews/P6-workspace-write-lifetime-decision.md)。
 **Goal:** 资料图片真实上传、宿主绑定、权限/到期展示和可访问交互。
@@ -107,9 +107,9 @@ PC2 已批准 A：[工作区更新的迟到回包](../reviews/P6-workspace-write
 **Files:** projects/create/{root,use-create-project,utils}.ts(x)、project/create/{header,project-create-buttons}.tsx、project/create-project-modal.tsx 及原/新增测试。
 **Interfaces:** ProjectCreationForm 显式包含 cover_image_asset_id/cover_builtin_id 的省略与null；上传scope=new_project/workspaceUUID，创建仅一次POST。
 
-- [ ] Step 1：成功按所选值一次POST零PATCH，prepare/PUT/complete失败零Project POST；绑定拒绝重试不重传，上传busy与createbusy都不能双提交/隐式关闭；自定义切预设、移除、Back/换workspace、迟到成功及未知创建响应不自动再POST。
-- [ ] Step 2：`pnpm --filter web exec vitest run core/components/projects/create core/components/project/create-project-modal.test.tsx` RED→GREEN；封面选择内容内嵌原弹窗，移除本地旧300ms reset，维持后续feature-selection。
-- [ ] Step 3：既有project创建/标识冲突/lead候选与键盘回归，类型lint，提交 `feat(M5/P6): 在项目创建请求中一次绑定封面`。
+- [x] Step 1：成功按所选值一次POST零PATCH，prepare/PUT/complete失败零Project POST；绑定拒绝重试不重传，上传busy与createbusy都不能双提交/隐式关闭；自定义切预设、移除、Back/换workspace、迟到成功及未知创建响应不自动再POST。
+- [x] Step 2：`pnpm --filter web exec vitest run core/components/projects/create core/components/project/create-project-modal.test.tsx` RED→GREEN；封面选择内容内嵌原弹窗，移除本地旧300ms reset，维持后续feature-selection。
+- [x] Step 3：既有project创建/标识冲突/lead候选与键盘回归，类型lint，提交 `feat(M5/P6): 在项目创建请求中一次绑定封面`。
 
 ## Task 9（T9）：项目设置与卡片展示
 
