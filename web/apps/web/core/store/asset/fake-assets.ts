@@ -1,7 +1,7 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 import { runInAction } from "mobx";
 import { expect, vi } from "vitest";
-import type { Asset, Draft, IssueComment, IssueDetail, NewAsset, PreparedAsset } from "@nerve/api-client";
+import type { Asset, Attachment, Draft, IssueComment, IssueDetail, NewAsset, PreparedAsset } from "@nerve/api-client";
 import { answered, json, type Call } from "@/lib/auth/fake-nerve";
 import { until } from "@/lib/auth/fake-time";
 import { draftOf, issueCommentOf, issueDetailOf, issueStoreTab } from "@/store/issue/fake-issues";
@@ -144,4 +144,44 @@ export async function contentAssetTab() {
     draft: { kind: "draft", workspaceID: workspace.id, projectID: null, draftID: draft.id },
   } satisfies Record<"issue" | "new_comment" | "comment" | "draft", ContentHost>;
   return { ...tab, issue, comment, draft, hosts, readIssue, readComments, readDrafts };
+}
+
+export const attachmentOf = (id: string): Attachment => ({
+  id,
+  name: `${id}.txt`,
+  content_type: "text/plain",
+  size: 4,
+  created_at: "2026-11-01T00:00:00Z",
+  created_by_id: "u-actor",
+});
+export function contentAssetOf(id: string, host: ContentHost, use: "attachment" | "description"): Asset {
+  const purpose =
+    host.kind === "draft"
+      ? use === "attachment"
+        ? "DRAFT_ISSUE_ATTACHMENT"
+        : "DRAFT_ISSUE_DESCRIPTION"
+      : host.kind === "issue"
+        ? use === "attachment"
+          ? "ISSUE_ATTACHMENT"
+          : "ISSUE_DESCRIPTION"
+        : use === "attachment"
+          ? "COMMENT_ATTACHMENT"
+          : "COMMENT_DESCRIPTION";
+  return {
+    id,
+    purpose,
+    scope: {
+      kind: host.kind,
+      id: host.kind === "draft" ? host.draftID : host.kind === "comment" ? host.commentID : host.issueID,
+    },
+    name: `${id}.png`,
+    size: 4,
+    content_type: "image/png",
+    state: "uploaded",
+    is_bound: true,
+    width: 2,
+    height: 2,
+    created_at: "2026-11-01T00:00:00Z",
+    updated_at: "2026-11-01T00:00:00Z",
+  };
 }

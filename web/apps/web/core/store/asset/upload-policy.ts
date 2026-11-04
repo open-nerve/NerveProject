@@ -1,8 +1,8 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
-import type { NewAsset } from "@nerve/api-client";
 import type { RootStore } from "@/store/root.store";
 import { ScopeLifetime, type AssetReadScope } from "./scope-lifetime";
 import type { ContentUse, ContentView } from "./content-view";
+import { contentTarget } from "./content-target";
 import type { UploadPolicy } from "./upload-session";
 
 export type ProfileUploadTarget =
@@ -56,22 +56,8 @@ export function profileUploadPolicy(root: RootStore, input: ProfileUploadTarget)
 }
 
 export function contentUploadPolicy(root: RootStore, view: ContentView, use: ContentUse): UploadPolicy {
-  const host = view.host;
-  const purpose: NewAsset["purpose"] =
-    host.kind === "draft"
-      ? use === "attachment"
-        ? "DRAFT_ISSUE_ATTACHMENT"
-        : "DRAFT_ISSUE_DESCRIPTION"
-      : host.kind === "issue"
-        ? use === "attachment"
-          ? "ISSUE_ATTACHMENT"
-          : "ISSUE_DESCRIPTION"
-        : use === "attachment"
-          ? "COMMENT_ATTACHMENT"
-          : "COMMENT_DESCRIPTION";
-  const id = host.kind === "draft" ? host.draftID : host.kind === "comment" ? host.commentID : host.issueID;
   return {
-    target: { purpose, scope: { kind: host.kind, id } },
+    target: contentTarget(view.host, use),
     preview: use === "description",
     maxBytes: () => root.instance.config?.file_size_limit,
     current: () => view.canWrite(use),

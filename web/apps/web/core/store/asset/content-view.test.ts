@@ -53,6 +53,7 @@ it("administration does not allow adding files to another author's comment", asy
   expect(view.current).toBe(true);
   expect(view.canWrite("attachment")).toBe(false);
   expect(view.canWrite("description")).toBe(false);
+  expect(view.canRemoveAttachment()).toBe(true);
 });
 
 it.each(["issue", "project"])("keeps an archived %s readable but without content writes", async (kind) => {

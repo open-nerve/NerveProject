@@ -10,7 +10,7 @@
 
 ## 2. 验收状态
 
-A1–A8全部开放，T1–T2已实现，尚待页面与阶段联合验收。P5/P7a的API、P6的上传及权限回归仅为前置；P7b真实页面、三浏览器、local/S3、有效变异和完整七门禁必须在本阶段新运行。
+A1–A8全部开放，T1–T3已实现，尚待页面与阶段联合验收。P5/P7a的API、P6的上传及权限回归仅为前置；P7b真实页面、三浏览器、local/S3、有效变异和完整七门禁必须在本阶段新运行。
 
 ## 3. 局部裁定
 
@@ -50,3 +50,7 @@ T1实现与验证：已有ApiClient消费生成Asset/Content/AttachmentPage/Draf
 原件位于本worktree `.superpowers/sdd/P7b-content-assets/`：run-check.py记录每次命令、真实exit、耗时、准确HEAD及前后输入SHA清单。安装使用锁定pnpm且输入未改；基线make test-web为18/18全部缓存命中，不冒充新运行。既有phase=M5/P7按P7a/P7b共同数字阶段合同保持。
 
 T2实现与验证：UploadSession只消费小策略，资料策略保留P6权限；内容view使用唯一PermissionReads与规范owner。六用途、私有null项目草稿、guest评论、作者限制和永久撤回共187项通过；三项变异（取消后发布、误套封面管理员角色、ID返回复活）均触发AssertionError并核SHA恢复。替换选择时clear的同步observer可销毁会话，补重入后current检查根因修复，专用RED保留。初版四个评论用例失败源于fixture作者actor与实际账号u-actor不一致，修正fixture，不放宽权限。类型、14个修改源码文件零warning通过；全前端18/18（15缓存）通过。原件t2-selection-red、t2-green-2、t2-mutation-receipt、t2-types、t2-lint-2、t2-test-web。
+
+T3实现与验证：406项聚焦回归通过，覆盖51文件/UUID协议顺序、首读与分页交错、重复cursor、DELETE确认/刷新分离、真实Issue计数权威重读、私有草稿准备件恢复、同资产多节点/跨view隔离/到期重读/错误额度/同步observer。普通宿主使用DetailResource、draft使用Reconciled；未改通用权限或调和语义。初版非法准备件误用SessionChangedError而被调和层静默处理，改为真实契约错误；确认后评论读取的fixture补全。同步ready→onError的真实重试遗漏有专用RED与修复。
+
+四项最终变异均为AssertionError并逐SHA恢复：晚到分页污染新cursor集合、短页被误当结束、复用过期URL、无限错误重试。第一版短页变异只造成等待期限失败，未冒称有效断言证明；补直接检查非null cursor后重跑，原件保留。类型与修改文件零warning通过；全前端18/18（17缓存，web新跑319文件3638测试）通过。原件t3-red/green-4/reentry-red/mutation2-receipt/types-2/lint-2/test-web及完整web输出；确认收据与本地输入跨卸载的页面联合证明仍由T5/T6/T9/T13完成。

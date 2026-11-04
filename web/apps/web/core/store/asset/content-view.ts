@@ -74,6 +74,22 @@ export class ContentView implements DetailRegistration {
       workspace && this.root.user.permission.getProjectRoleByWorkspaceSlugAndProjectId(workspace.slug, host.projectID);
     return role === 15 || role === 20;
   }
+  canRemoveAttachment(): boolean {
+    if (this.canWrite("attachment")) return true;
+    const host = this.host;
+    if (!this.current || host.kind !== "comment") return false;
+    const issue = this.root.issue.issues.getIssueDetailById(host.issueID);
+    const project = this.root.projectRoot.project.getProjectById(host.projectID);
+    const workspace = this.workspace();
+    return (
+      !!issue &&
+      !issue.archived_at &&
+      !!project &&
+      !project.archived_at &&
+      !!workspace &&
+      this.root.user.permission.getProjectRoleByWorkspaceSlugAndProjectId(workspace.slug, host.projectID) === 20
+    );
+  }
   affects(workspaceID: string, projectID?: string): boolean {
     return this.host.workspaceID === workspaceID && (!projectID || this.host.projectID === projectID);
   }

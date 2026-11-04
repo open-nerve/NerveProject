@@ -97,3 +97,11 @@ T3发布确认结果后再触发权威重读；T5提供host输入所有者及标
 显示文件名、pending/uploaded、用途、大小、创建时间，明确“未绑定不等于可以自动删除，可能是另一标签页正在使用”。确认说明“所选文件可能正在另一标签页上传，或已成为普通附件；丢弃会删除这个文件”，配对应英文，不能承诺只删仍未绑定件。用户按ID逐项选择并确认丢弃，已有AssetService.remove执行；busy防重入、失败保留，confirmed204与后续刷新失败分开。未知DELETE先重读并必要read(id)核验，不以列表缺席独断删除成功，不自动重发；描述图已绑定返回asset.bound时保留并解释，普通附件按既有权限可删，不能删正文或恢复历史。
 
 本地取消/重新选文件只终止本链。丢回prepare回答、failed duplicate或刷新后没有已知ID时，仍从完整有界分页找到；不按文件名猜、不静默全删、不自动丢弃其他标签页。明确删除选中的pending后，重新检查当前正文/附件并让用户发布；新申请可让服务器继续拒绝，提供有限显式重读，不无限自动publish。此处使用P7a协议，不能只保留已知ID作为恢复实现。
+
+## 7. T3 局部实现分工
+
+RootAssetStore以`attachments(view,onConfirmed?)`、`content(view)`、`draftPreparations(view)`建立当前view子资源；content同view共享，跨view不共享。`ContentConfirmation`为uploaded（含Asset）或deleted（仅ID），回调在权威读取前发布。`canRemoveAttachment()`单独投影已有评论作者/项目管理员删除合同，不将可删提升为可新增。
+
+分页编排抽为`paged-content.ts`：issue/comment背后使用原DetailResource，draft背后使用原Reconciled，通用算法未改；`content-deletion.ts`集中逐ID防重、确认与未知结果核验。`content-target.ts`只负责六用途与scope映射，上传和读取共同消费，避免两份映射漂移。`content-read-entry.ts`持有同视图同资产的短期授权、计时器和错误额度，`content-reads.ts`管理租约、外部取消、主动下载及视图退出清理。单文件均小于400行；这些拆分没有新增授权事实源。
+
+未知DELETE在只读核验前禁止再次发送；完整列表与必要GET asset核验后，只允许用户再次明确操作。404也不伪造204确认（可能不可见），仍保留不确定提示。图片授权的ready通知可同步触发onError，完成中的promise必须先释放，避免误合并为已结束请求而漏掉唯一自动重试。

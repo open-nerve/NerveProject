@@ -68,9 +68,9 @@
 **Files:** 新store/asset/{attachment-resource,content-reads,draft-preparations-resource}.ts及测试；root.store持有/释放子资源。
 **Interfaces:** AttachmentResource接口、ContentReads.read/retry/acquire及ContentReadLease按资源spec§4/5，DraftPreparationsResource按§6；DetailResource/Reconciled只复用，不改变通用算法；issue/comment使用明确项目范围，私有draft资源由Reconciled与当前view调和，禁止再套项目成员角色，仍服从规范Draft被owner撤回的现有寿命。准备件独立于已绑定附件，未知DELETE先只读核验，不能以列表缺席冒称删除成功。
 
-- [ ] Step 1：51+附件、非名称/时间顺序UUID、首读与分页交错、重复cursor、同cursor双击、删除回包与旧首读、确认成功后刷新拒绝；读重试不再DELETE/PUT。多节点同asset、两个view同asset、expiry、后台恢复、重复error/旧load、实际load恢复预算、最后lease退出全部取消。
-- [ ] Step 2：`pnpm --filter web exec vitest run core/store/asset core/store/issue/issue-details` 记录RED后实现；issue附件后用现有refreshAuthoritative(afterWrite)和refreshAfterChange更新计数/活动，comment/draft不动issue count。readAsset必须验证真实purpose/host后才接content。
-- [ ] Step 3：GREEN；变异忽略晚到请求号、把页长度当总数、去掉expiry预算均失败；核current resource不能保留跨host capability，类型/格式；提交 `feat(M5/P7b): 管理附件分页与短期内容授权`。
+- [x] Step 1：51+附件、非名称/时间顺序UUID、首读与分页交错、重复cursor、同cursor双击、删除回包与旧首读、确认成功后刷新拒绝；读重试不再DELETE/PUT。多节点同asset、两个view同asset、expiry、后台恢复、重复error/旧load、实际load恢复预算、最后lease退出全部取消。
+- [x] Step 2：`pnpm --filter web exec vitest run core/store/asset core/store/issue/issue-details` 记录RED后实现；issue附件后用现有refreshAuthoritative(afterWrite)和refreshAfterChange更新计数/活动，comment/draft不动issue count。readAsset必须验证真实purpose/host后才接content。
+- [x] Step 3：GREEN；变异忽略晚到请求号、把页长度当总数、去掉expiry预算均失败；核current resource不能保留跨host capability，类型/格式；提交 `feat(M5/P7b): 管理附件分页与短期内容授权`。
 
 T3与T5衔接：命令确认收据先发布给稳定host再触发权威重读；pending造成规范Issue缺席时旧ContentView照常结束，不能让其错误覆盖已确认结果。读取重试只GET，完整输入所有权见资源spec§4.1，由T5实现；T3不私存旧Issue或改变通用读取算法。
 
