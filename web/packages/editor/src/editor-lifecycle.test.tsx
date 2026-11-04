@@ -2,6 +2,7 @@
 import { act, createElement } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { fakeEditorImages, SOURCE_IMAGE } from "./fake-editor-images";
 import { createEditor, destroyEditors } from "./editor-test-fixture";
 import { EditorBubbleMenu } from "@/components/menus/bubble-menu/root";
 import { LinkEditView } from "@/components/links/link-edit-view";
@@ -63,8 +64,8 @@ describe("the real editor's interactive hosts", () => {
 
   it("resizes a real image NodeView with keys and updates its consumer-provided language", async () => {
     const editor = await createEditor({
-      content:
-        '<image-component src="asset-1" width="200px" height="100px" aspectRatio="2" status="uploaded"></image-component>',
+      content: `<image-component src="${SOURCE_IMAGE}" width="200px" height="100px" aspectRatio="2" status="uploaded"></image-component>`,
+      images: fakeEditorImages().images,
     });
     const host = document.createElement("div");
     document.body.append(host);

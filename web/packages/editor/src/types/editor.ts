@@ -13,7 +13,7 @@ import type { TCustomComponentsMetaData } from "@nerve/utils";
 // extension types
 import type { TTextAlign } from "@/extensions";
 // types
-import type { TDisplayConfig, TEditorAsset, TExtensions, TFileHandler, TMentionHandler } from "@/types";
+import type { TDisplayConfig, TExtensions, EditorImages, TMentionHandler } from "@/types";
 import type { EditorLabels } from "./config";
 
 export type TEditorCommands =
@@ -110,7 +110,7 @@ export type IEditorProps = {
   editorClassName?: string;
   editorProps?: EditorProps;
   extensions?: Extensions;
-  fileHandler: TFileHandler;
+  images?: EditorImages;
   forwardedRef?: React.MutableRefObject<EditorRefApi | null>;
   getEditorMetaData: (htmlContent: string) => TCustomComponentsMetaData;
   handleEditorReady?: (value: boolean) => void;
@@ -118,7 +118,6 @@ export type IEditorProps = {
   initialValue: string;
   isTouchDevice?: boolean;
   mentionHandler: TMentionHandler;
-  onAssetChange?: (assets: TEditorAsset[]) => void;
   onEditorFocus?: () => void;
   onChange?: (json: object, html: string, options?: { isMigrationUpdate?: boolean }) => void;
   onEnterKeyPress?: (e?: any) => void;

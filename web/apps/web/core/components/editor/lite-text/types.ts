@@ -4,11 +4,11 @@
  * See the LICENSE file for details.
  */
 
-import type { ILiteTextEditorProps, TFileHandler } from "@nerve/editor";
+import type { ILiteTextEditorProps } from "@nerve/editor";
 import type { MakeOptional } from "@nerve/types";
 
 export type LiteTextEditorWrapperProps = MakeOptional<
-  Omit<ILiteTextEditorProps, "fileHandler" | "mentionHandler">,
+  Omit<ILiteTextEditorProps, "mentionHandler">,
   "disabledExtensions" | "getEditorMetaData"
 > & {
   workspaceSlug: string;
@@ -19,13 +19,4 @@ export type LiteTextEditorWrapperProps = MakeOptional<
   submitDisabled?: boolean;
   showToolbarInitially?: boolean;
   parentClassName?: string;
-} & (
-    | {
-        editable: false;
-      }
-    | {
-        editable: true;
-        uploadFile: TFileHandler["upload"];
-        duplicateFile: TFileHandler["duplicate"];
-      }
-  );
+};

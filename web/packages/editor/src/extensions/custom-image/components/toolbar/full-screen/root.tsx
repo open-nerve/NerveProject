@@ -5,16 +5,19 @@
  */
 
 import { FullScreenOutline } from "@makeplane/propel/icons";
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 // nerve imports
+import type { Editor } from "@tiptap/core";
+import { EditorLabelsContext } from "@/components/editor-labels";
 import { Tooltip } from "@nerve/propel/tooltip";
 // local imports
 import { ImageFullScreenModal } from "./modal";
 
 type Props = {
+  editor: Editor;
   image: {
     aspectRatio: number;
-    downloadSrc: string;
+    download: (signal: AbortSignal) => Promise<void>;
     src: string;
     width: string;
   };
@@ -23,28 +26,36 @@ type Props = {
 };
 
 export function ImageFullScreenActionRoot(props: Props) {
-  const { image, isTouchDevice, toggleToolbarViewStatus } = props;
+  const { image: labels } = useContext(EditorLabelsContext);
+  const { editor, image, isTouchDevice, toggleToolbarViewStatus } = props;
   // states
   const [isFullScreenEnabled, setIsFullScreenEnabled] = useState(false);
   // derived values
-  const { downloadSrc, src, width, aspectRatio } = image;
+  const { download, src, width, aspectRatio } = image;
 
   useEffect(() => {
     toggleToolbarViewStatus(isFullScreenEnabled);
   }, [isFullScreenEnabled, toggleToolbarViewStatus]);
 
+  useEffect(() => {
+    if (!isFullScreenEnabled) return;
+    editor.commands.addActiveDropbarExtension("image-viewer");
+    return () => {
+      if (!editor.isDestroyed) editor.commands.removeActiveDropbarExtension("image-viewer");
+    };
+  }, [editor, isFullScreenEnabled]);
+
   return (
     <>
       <ImageFullScreenModal
         aspectRatio={aspectRatio}
-        downloadSrc={downloadSrc}
+        download={download}
         isFullScreenEnabled={isFullScreenEnabled}
-        isTouchDevice={isTouchDevice}
         src={src}
         width={width}
         toggleFullScreenMode={setIsFullScreenEnabled}
       />
-      <Tooltip tooltipContent="View in full screen" disabled={isTouchDevice}>
+      <Tooltip tooltipContent={labels.fullScreen} disabled={isTouchDevice}>
         <button
           type="button"
           onClick={(e) => {
@@ -53,7 +64,7 @@ export function ImageFullScreenActionRoot(props: Props) {
             setIsFullScreenEnabled(true);
           }}
           className="grid h-full flex-shrink-0 place-items-center text-on-color/60 transition-colors hover:text-on-color"
-          aria-label="View image in full screen"
+          aria-label={labels.fullScreen}
         >
           <FullScreenOutline className="size-3" />
         </button>

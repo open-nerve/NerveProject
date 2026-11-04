@@ -10,7 +10,7 @@
 
 ## 2. 验收状态
 
-A1–A8全部开放，T1–T7已实现，尚待页面与阶段联合验收。P5/P7a的API、P6的上传及权限回归仅为前置；P7b真实页面、三浏览器、local/S3、有效变异和完整七门禁必须在本阶段新运行。
+A1–A8全部开放，T1–T8已实现，尚待页面与阶段联合验收。P5/P7a的API、P6的上传及权限回归仅为前置；P7b真实页面、三浏览器、local/S3、有效变异和完整七门禁必须在本阶段新运行。
 
 ## 3. 局部裁定
 
@@ -77,3 +77,9 @@ T6实现与验证：新评论的普通准备件仅保留资产ID，fresh view重
 T7实现与验证：包声明EditorImages小接口，应用hook按editor/view持有节点操作，至多两条传输、排队取消、同节点换File、失败保留同prepare供明确确认、复制拒绝/未知不重发。读句柄稳定投影现有ContentReads，下载沿有限原始字节路径；只读宿主无write，普通附件不冒充正文图。root/view/editor退休终止上传、读取及下载，成功后释放session/preview。16项实际RootStore/hook测试及资源/P6联合238项通过，受影响附件/评论/详情101项通过（与前组有重叠）；编辑器构建、前端类型、8文件零warning通过。
 
 局部修复：最后一个图片读租约释放后，既有ContentReads的wake监听仍常驻；新增实际监听移除断言RED后，改由首/末租约安装/卸载，未增加timer或改变错误预算。翻译函数引用变化不再重建能力；一期类型声明漏括号和fixture翻译函数不稳定导致的失败原件保留。证据t7-red、green/green2、regression、release-red/green、consumers、editor-build、types-final、lint-final。T7没有启用页面旧wrapper，包与wrapper原子迁移在T8。
+
+T8实现与验证：editor及Rich/Lite wrapper原子替换为可选EditorImages，删除TFileHandler、自动删除/恢复监听、假百分比及旧上传hook；旧use-editor-config随类型链提前删除，T12再删除其上游未使用服务。保留既有HTML往返、尺寸/对齐、全屏缩放/拖动/键盘与显式有限下载；外部img和无能力宿主仅占位，不加载URL。包内134项及应用相关97项通过，最终完整前端18/18（15缓存，web实际331文件3732测试）通过，54个修改源码零warning，类型与1401翻译引用/中英键同步通过。
+
+局部根因修复：拒绝文件批次在ProseMirror空文本粘贴前退出，保留未preventDefault的原生事件；禁图消费者仍保留随剪贴板携带的文字。延迟确认不产生独立Undo步骤，已确认节点通过当前editor内UUID记录恢复，内部真实移动与不可信剪贴板复制分别处理。权限abort立即终止节点操作，运行中转只读不写回；旧onLoad/onError核当前快照。StrictMode、换文件、删除节点晚回、未知复制真实卸载重挂不重试均有DOM/transaction证明。四项变异（伪造标记免复制、无限错误重读、旧图片事件、旧上传覆盖新文件）全部AssertionError并SHA恢复。
+
+T8原件为t8-red/first-green/green2/green3/lifetime-red/move-red、editor-all系列、final-editor、web-consumers、types-final、lint-final2、test-web2、i18n/sync与两份mutation receipt；早期错误路径、测试夹具签名、ref类型、lint及失败输出完整保留，不冒称产品断言RED。完整web日志另存。页面尚未启用，T9/T10接续；真实浏览器全屏、local/S3和阶段七门禁仍待T13/T14。

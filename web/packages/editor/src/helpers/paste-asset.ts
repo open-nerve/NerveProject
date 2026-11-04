@@ -6,7 +6,7 @@
 
 import { assetDuplicationHandlers } from "@/helpers/asset-duplication";
 
-// Marks the assets in HTML that a Nerve editor copied (text/nerve-editor-html) for duplication. Any page can write
+// Keeps valid identity references in copied HTML (text/nerve-editor-html); the transaction plugin duplicates them. Any page can write
 // that clipboard type, so the HTML is parsed in an inert document: nothing in it loads or runs. The editor parses
 // the result again, against its schema, when it pastes it.
 export const processAssetDuplication = (htmlContent: string): { processedHtml: string } => {

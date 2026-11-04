@@ -84,6 +84,33 @@
       "unknown": "The comment may have been saved. Read the comments and check before sending again.",
       "verify": "Read comments to check",
       "allow_resend": "I checked; allow another submission"
+    },
+    "image": {
+      "select": "Choose images",
+      "cancel": "Cancel",
+      "retry": "Retry",
+      "unavailable": "Image unavailable",
+      "loading": "Loading image",
+      "copyUnknown": "Copying may have created an unfinished file. Check the draft files before publishing; retrying may create another copy.",
+      "invalid": "Choose only JPEG, PNG, WebP or GIF images.",
+      "size": "The image is empty or exceeds the current file size limit.",
+      "name": "The image filename is invalid.",
+      "tooMany": "Choose up to 10 images at once.",
+      "queued": "Waiting to upload",
+      "preparing": "Preparing image",
+      "uploading": "Uploading image",
+      "confirming": "Confirming image",
+      "download": "Download image",
+      "downloading": "Downloading image",
+      "downloadFailed": "The image could not be downloaded. Try again.",
+      "fullScreen": "View image in full screen",
+      "close": "Close image viewer",
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out",
+      "align": "Align image",
+      "left": "Align left",
+      "center": "Align center",
+      "right": "Align right"
     }
   },
   "image_upload": {

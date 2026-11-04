@@ -15,7 +15,6 @@ import { getDescriptionPlaceholderI18n } from "@nerve/utils";
 // components
 import { RichTextEditor } from "@/components/editor/rich-text";
 // hooks
-import { useEditorAsset } from "@/hooks/store/use-editor-asset";
 import { useWorkspace } from "@/hooks/store/use-workspace";
 // local imports
 type TFormData = {
@@ -110,7 +109,6 @@ const DescriptionInputContent = observer(function DescriptionInputContent(props:
     disabledExtensions,
     editorRef,
     entityId,
-    fileAssetType,
     initialValue,
     issueSequenceId,
     onSubmit,
@@ -121,7 +119,6 @@ const DescriptionInputContent = observer(function DescriptionInputContent(props:
     workspaceSlug,
   } = props;
   const { getWorkspaceBySlug } = useWorkspace();
-  const { uploadEditorAsset, duplicateEditorAsset } = useEditorAsset();
   const workspaceDetails = getWorkspaceBySlug(workspaceSlug);
   const { t } = useTranslation();
   const initial = useMemo(
@@ -186,37 +183,6 @@ const DescriptionInputContent = observer(function DescriptionInputContent(props:
         }}
         placeholder={placeholder ?? ((isFocused, value) => t(getDescriptionPlaceholderI18n(isFocused, value)))}
         containerClassName={containerClassName}
-        uploadFile={async (blockId, file) => {
-          try {
-            const { asset_id } = await uploadEditorAsset({
-              blockId,
-              data: {
-                entity_identifier: entityId,
-                entity_type: fileAssetType,
-              },
-              file,
-              projectId,
-              workspaceSlug,
-            });
-            return asset_id;
-          } catch (error) {
-            console.log("Error in uploading asset:", error);
-            throw new Error("Asset upload failed. Please try again later.", { cause: error });
-          }
-        }}
-        duplicateFile={async (assetId: string) => {
-          try {
-            const { asset_id } = await duplicateEditorAsset({
-              assetId,
-              entityType: fileAssetType,
-              projectId,
-              workspaceSlug,
-            });
-            return asset_id;
-          } catch {
-            throw new Error("Asset duplication failed. Please try again later.");
-          }
-        }}
       />
       <AutosaveError failure={failure} retry={retry} />
     </>

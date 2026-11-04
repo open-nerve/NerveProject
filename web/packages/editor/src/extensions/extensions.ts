@@ -43,7 +43,7 @@ import { UniqueID } from "./unique-id/extension";
 type TArguments = Pick<
   IEditorProps,
   | "disabledExtensions"
-  | "fileHandler"
+  | "images"
   | "getEditorMetaData"
   | "isTouchDevice"
   | "mentionHandler"
@@ -59,7 +59,7 @@ export const CoreEditorExtensions = (args: TArguments): Extensions => {
   const {
     disabledExtensions,
     enableHistory,
-    fileHandler,
+    images,
     getEditorMetaData,
     isTouchDevice = false,
     mentionHandler,
@@ -112,9 +112,8 @@ export const CoreEditorExtensions = (args: TArguments): Extensions => {
     CustomCalloutExtension,
     UtilityExtension({
       disabledExtensions,
-      fileHandler,
+      images,
       getEditorMetaData,
-      isEditable: editable,
       isTouchDevice,
     }),
     UniqueID,
@@ -122,11 +121,9 @@ export const CoreEditorExtensions = (args: TArguments): Extensions => {
 
   if (!disabledExtensions.includes("image")) {
     extensions.push(
-      ImageExtension({
-        fileHandler,
-      }),
+      ImageExtension(),
       CustomImageExtension({
-        fileHandler,
+        images,
         isEditable: editable,
       })
     );

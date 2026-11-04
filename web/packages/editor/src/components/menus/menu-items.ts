@@ -275,7 +275,11 @@ export const getEditorMenuItems = (editor: Editor | null): EditorMenuItem<TEdito
     NumberedListItem(editor),
     QuoteItem(editor),
     TableItem(editor),
-    ImageItem(editor),
+    ...(editor.isEditable &&
+    editor.storage.imageComponent?.images?.write &&
+    !editor.storage.imageComponent.images.signal.aborted
+      ? [ImageItem(editor)]
+      : []),
     HorizontalRuleItem(editor),
     LinkItem(editor),
     TextColorItem(editor),

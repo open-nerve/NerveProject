@@ -4,7 +4,6 @@
  * See the LICENSE file for details.
  */
 
-import type { Editor } from "@tiptap/core";
 import { AlignCenterOutline, AlignLeftOutline, AlignRightOutline } from "@makeplane/propel/icons";
 import type { ComponentType, SVGProps } from "react";
 // local imports
@@ -20,8 +19,6 @@ export const DEFAULT_CUSTOM_IMAGE_ATTRIBUTES: TCustomImageAttributes = {
   [ECustomImageAttributeNames.ALIGNMENT]: "left",
   [ECustomImageAttributeNames.STATUS]: ECustomImageStatus.PENDING,
 };
-
-export const getImageComponentImageFileMap = (editor: Editor) => editor.storage.imageComponent?.fileMap;
 
 export const ensurePixelString = <TDefault>(
   value: Pixel | TDefault | number | undefined | null,
@@ -60,8 +57,3 @@ export const IMAGE_ALIGNMENT_OPTIONS: {
   },
 ];
 export const getImageBlockId = (id: string) => `editor-image-block-${id}`;
-
-export const isImageDuplicating = (status: ECustomImageStatus) => status === ECustomImageStatus.DUPLICATING;
-
-export const hasImageDuplicationFailed = (status: ECustomImageStatus) =>
-  status === ECustomImageStatus.DUPLICATION_FAILED;

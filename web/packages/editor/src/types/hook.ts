@@ -24,11 +24,10 @@ export type TEditorHookProps = TCoreHookProps &
   Pick<
     IEditorProps,
     | "autofocus"
-    | "fileHandler"
+    | "images"
     | "forwardedRef"
     | "id"
     | "mentionHandler"
-    | "onAssetChange"
     | "onChange"
     | "onTransaction"
     | "placeholder"

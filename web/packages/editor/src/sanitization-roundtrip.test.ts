@@ -3,18 +3,8 @@ import { Editor, type JSONContent } from "@tiptap/core";
 import { afterEach, expect, it } from "vitest";
 import { CoreEditorExtensions } from "@/extensions/extensions";
 import { CoreEditorProps } from "@/props";
-import type { TFileHandler, TMentionHandler } from "@/types";
+import type { TMentionHandler } from "@/types";
 
-const fileHandler: TFileHandler = {
-  assetsUploadStatus: {},
-  delete: async () => {},
-  getAssetDownloadSrc: async (path) => path,
-  getAssetSrc: async (path) => path,
-  restore: async () => {},
-  upload: async () => "asset-id",
-  duplicate: async () => "asset-id",
-  validation: { maxFileSize: 5 * 1024 * 1024 },
-};
 const mentionHandler: TMentionHandler = {
   getMentionedEntityDetails: () => ({ display_name: "Ada" }),
   renderComponent: () => null,
@@ -36,7 +26,6 @@ const createEditor = async (content: string | JSONContent, editable = false) => 
       disabledExtensions: [],
       editable,
       enableHistory: true,
-      fileHandler,
       mentionHandler,
       getEditorMetaData: () => ({ file_assets: [], user_mentions: [] }),
     }).map((extension) =>

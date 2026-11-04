@@ -123,7 +123,15 @@ export type TExtensionProps = Pick<IEditorProps, "disabledExtensions">;
 export function SlashCommands(props: TExtensionProps) {
   return Command.configure({
     suggestion: {
-      items: getSlashCommandFilteredSections(props),
+      items: ({ editor, query }) =>
+        getSlashCommandFilteredSections({
+          disabledExtensions:
+            editor.isEditable &&
+            editor.storage.imageComponent?.images?.write &&
+            !editor.storage.imageComponent.images.signal.aborted
+              ? props.disabledExtensions
+              : [...props.disabledExtensions, "image"],
+        })({ query }),
     },
   });
 }

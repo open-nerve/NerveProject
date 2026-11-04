@@ -30,23 +30,6 @@ export type EditorImages = {
     maxBytes: number;
   };
 };
-export type TFileHandler = {
-  assetsUploadStatus: Record<string, number>; // blockId => progress percentage
-  delete: (assetSrc: string) => Promise<void>;
-  getAssetDownloadSrc: (path: string) => Promise<string>;
-  getAssetSrc: (path: string) => Promise<string>;
-  restore: (assetSrc: string) => Promise<void>;
-  upload: (blockId: string, file: File) => Promise<string>;
-  duplicate: (assetId: string) => Promise<string>;
-  validation: {
-    /**
-     * @description max file size in bytes
-     * @example enter 5242880(5 * 1024 * 1024) for 5MB
-     */
-    maxFileSize: number;
-  };
-};
-
 type TEditorFontSize = "small-font" | "large-font" | "mobile-font";
 
 type TEditorLineSpacing = "regular" | "small" | "mobile-regular";
@@ -60,6 +43,34 @@ export type EditorColor = "gray" | "peach" | "pink" | "orange" | "green" | "ligh
 
 /** Consumer-supplied labels, shared with React NodeViews through the editor's context. */
 export type EditorLabels = {
+  image: Record<
+    | "select"
+    | "cancel"
+    | "retry"
+    | "unavailable"
+    | "loading"
+    | "copyUnknown"
+    | "invalid"
+    | "size"
+    | "name"
+    | "tooMany"
+    | "queued"
+    | "preparing"
+    | "uploading"
+    | "confirming"
+    | "download"
+    | "downloading"
+    | "downloadFailed"
+    | "fullScreen"
+    | "close"
+    | "zoomIn"
+    | "zoomOut"
+    | "align"
+    | "left"
+    | "center"
+    | "right",
+    string
+  >;
   continueWriting: string;
   resizeImage: string;
   tableRowOptions: string;

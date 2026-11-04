@@ -84,6 +84,33 @@
       "unknown": "评论可能已经保存，请先重新读取并检查评论，再决定是否重新发送。",
       "verify": "重新读取评论核对",
       "allow_resend": "已核对，允许再次发送"
+    },
+    "image": {
+      "select": "选择图片",
+      "cancel": "取消",
+      "retry": "重试",
+      "unavailable": "图片暂不可用",
+      "loading": "正在读取图片",
+      "copyUnknown": "复制可能已生成未完成文件。发布草稿前请检查文件；再次复制可能生成另一份副本。",
+      "invalid": "仅支持 JPEG、PNG、WebP 或 GIF 图片。",
+      "size": "图片为空或超过当前文件大小限制。",
+      "name": "图片文件名无效。",
+      "tooMany": "每次最多选择 10 张图片。",
+      "queued": "等待上传",
+      "preparing": "正在准备图片",
+      "uploading": "正在上传图片",
+      "confirming": "正在确认图片",
+      "download": "下载图片",
+      "downloading": "正在下载图片",
+      "downloadFailed": "图片下载失败，请重试。",
+      "fullScreen": "全屏查看图片",
+      "close": "关闭图片查看器",
+      "zoomIn": "放大",
+      "zoomOut": "缩小",
+      "align": "图片对齐",
+      "left": "左对齐",
+      "center": "居中对齐",
+      "right": "右对齐"
     }
   },
   "image_upload": {

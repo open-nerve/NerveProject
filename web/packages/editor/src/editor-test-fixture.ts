@@ -6,18 +6,7 @@ import { SideMenuExtension } from "@/extensions/side-menu";
 import { SlashCommands } from "@/extensions/slash-commands";
 import { CoreEditorProps } from "@/props";
 import { CORE_EXTENSIONS } from "@/constants/extension";
-import type { TExtensions, TFileHandler, TMentionHandler } from "@/types";
-
-export const fileHandler: TFileHandler = {
-  assetsUploadStatus: {},
-  delete: async () => {},
-  getAssetDownloadSrc: async (path) => path,
-  getAssetSrc: async (path) => path,
-  restore: async () => {},
-  upload: async () => "asset-id",
-  duplicate: async () => "asset-id",
-  validation: { maxFileSize: 5 * 1024 * 1024 },
-};
+import type { EditorImages, TExtensions, TMentionHandler } from "@/types";
 
 export const ADA = { id: "user-ada", display_name: "Ada", url: "/profile/user-ada" };
 
@@ -42,11 +31,13 @@ export const createEditor = async ({
   content = "",
   disabledExtensions = [],
   attributes,
+  images,
 }: {
   editable?: boolean;
   content?: string;
   disabledExtensions?: TExtensions[];
   attributes?: EditorProps["attributes"];
+  images?: EditorImages;
 } = {}) => {
   const element = document.createElement("div");
   document.body.append(element);
@@ -61,7 +52,7 @@ export const createEditor = async ({
         disabledExtensions,
         editable,
         enableHistory: true,
-        fileHandler,
+        images,
         getEditorMetaData,
         mentionHandler,
       }),

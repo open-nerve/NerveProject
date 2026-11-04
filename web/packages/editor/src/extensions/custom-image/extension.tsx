@@ -3,122 +3,56 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  * See the LICENSE file for details.
  */
-
 import { ReactNodeViewRenderer } from "@tiptap/react";
-import { v4 as uuidv4 } from "uuid";
-// constants
-import { ACCEPTED_IMAGE_MIME_TYPES } from "@/constants/config";
-// helpers
-import { isFileValid } from "@/helpers/file";
+import { v4 as uuid } from "uuid";
 import { insertEmptyParagraphAtNodeBoundaries } from "@/helpers/insert-empty-paragraph-at-node-boundary";
-// types
-import type { TFileHandler } from "@/types";
-// local imports
+import type { EditorImages } from "@/types";
 import type { CustomImageNodeViewProps } from "./components/node-view";
 import { CustomImageNodeView } from "./components/node-view";
 import { CustomImageExtensionConfig } from "./extension-config";
 import type { CustomImageExtensionOptions, CustomImageExtensionStorage } from "./types";
-import { ECustomImageAttributeNames, ECustomImageStatus } from "./types";
-import { getImageComponentImageFileMap } from "./utils";
-
-type Props = {
-  fileHandler: TFileHandler;
-  isEditable: boolean;
-};
-
-export function CustomImageExtension(options: Props) {
-  const { fileHandler, isEditable } = options;
-  // derived values
-  const { getAssetSrc, getAssetDownloadSrc, restore: restoreImageFn } = fileHandler;
-
+import { imageInputError, validateImages } from "./input";
+import { imagePaste } from "./paste";
+export function CustomImageExtension({ images, isEditable }: { images?: EditorImages; isEditable: boolean }) {
   return CustomImageExtensionConfig.extend<CustomImageExtensionOptions, CustomImageExtensionStorage>({
     selectable: isEditable,
     draggable: isEditable,
-
     addOptions() {
-      const upload = "upload" in fileHandler ? fileHandler.upload : undefined;
-      const duplicate = "duplicate" in fileHandler ? fileHandler.duplicate : undefined;
-      return {
-        ...this.parent?.(),
-        getImageDownloadSource: getAssetDownloadSrc,
-        getImageSource: getAssetSrc,
-        restoreImage: restoreImageFn,
-        uploadImage: upload,
-        duplicateImage: duplicate,
-      };
+      return { ...this.parent?.(), images };
     },
-
     addStorage() {
-      const maxFileSize = "validation" in fileHandler ? fileHandler.validation?.maxFileSize : 0;
-
-      return {
-        fileMap: new Map(),
-        maxFileSize,
-      };
+      return { fileMap: new Map(), completed: new Map(), images, inputError: undefined };
     },
-
     addCommands() {
       return {
         insertImageComponent:
           (props) =>
           ({ commands }) => {
-            // Early return if there's an invalid file being dropped
-            if (
-              props?.file &&
-              !isFileValid({
-                acceptedMimeTypes: ACCEPTED_IMAGE_MIME_TYPES,
-                file: props.file,
-                maxFileSize: this.storage.maxFileSize,
-                onError: (_error, message) => alert(message),
-              })
-            ) {
-              return false;
-            }
-
-            // generate a unique id for the image to keep track of dropped
-            // files' file data
-            const fileId = uuidv4();
-
-            const imageComponentImageFileMap = getImageComponentImageFileMap(this.editor);
-
-            if (imageComponentImageFileMap) {
-              if (props?.event === "drop" && props.file) {
-                imageComponentImageFileMap.set(fileId, {
-                  file: props.file,
-                  event: props.event,
-                });
-              } else if (props.event === "insert") {
-                imageComponentImageFileMap.set(fileId, {
-                  event: props.event,
-                  hasOpenedFileInputOnce: false,
-                });
-              }
-            }
-
-            const attributes = {
-              [ECustomImageAttributeNames.ID]: fileId,
-              [ECustomImageAttributeNames.STATUS]: ECustomImageStatus.PENDING,
-            };
-
-            if (props.pos) {
-              return commands.insertContentAt(props.pos, {
-                type: this.name,
-                attrs: attributes,
-              });
-            }
-            return commands.insertContent({
-              type: this.name,
-              attrs: attributes,
+            if (!this.editor.isEditable || !images?.write || images.signal.aborted) return false;
+            const error = props.file ? validateImages([props.file], images.write.maxBytes) : undefined;
+            imageInputError(this.editor, error);
+            if (error) return false;
+            const id = uuid();
+            this.storage.fileMap.set(id, {
+              file: props.file,
+              autoStart: !!props.file,
+              openPicker: props.event === "insert",
             });
+            const content = { type: this.name, attrs: { id, src: null, status: "pending" } };
+            return props.pos !== undefined
+              ? commands.insertContentAt(props.pos, content)
+              : commands.insertContent(content);
           },
       };
     },
-
     addKeyboardShortcuts() {
       return {
         ArrowDown: insertEmptyParagraphAtNodeBoundaries("down", this.name),
         ArrowUp: insertEmptyParagraphAtNodeBoundaries("up", this.name),
       };
+    },
+    addProseMirrorPlugins() {
+      return [imagePaste(this.editor, this.storage)];
     },
     addNodeView() {
       return ReactNodeViewRenderer((props) => (

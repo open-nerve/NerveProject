@@ -15,7 +15,7 @@ import { useEditorLabels } from "@/components/editor/use-editor-labels";
 import { EditorMentionsRoot } from "@/components/editor/embeds/mentions";
 import { EditorMentionsError } from "@/components/editor/mentions-error";
 // hooks
-import { useEditorConfig, useEditorMention } from "@/hooks/editor";
+import { useEditorMention } from "@/hooks/editor";
 import { useMember } from "@/hooks/store/use-member";
 import { useParseEditorContent } from "@/hooks/use-parse-editor-content";
 
@@ -25,7 +25,7 @@ export const RichTextEditor = forwardRef(function RichTextEditor(
 ) {
   const {
     containerClassName,
-    editable,
+    editable = true,
     workspaceSlug,
     workspaceId,
     projectId,
@@ -38,8 +38,6 @@ export const RichTextEditor = forwardRef(function RichTextEditor(
   const { getUserDetails } = members;
   // use editor mention
   const { fetchMentions, mentionScope } = useEditorMention({ workspaceSlug, projectId, editable, members });
-  // editor config
-  const { getEditorFileHandlers } = useEditorConfig();
   // parse content
   const { getEditorMetaData } = useParseEditorContent({
     projectId,
@@ -52,13 +50,6 @@ export const RichTextEditor = forwardRef(function RichTextEditor(
       ref={ref}
       disabledExtensions={disabledExtensions}
       editable={editable}
-      fileHandler={getEditorFileHandlers({
-        projectId,
-        uploadFile: editable ? props.uploadFile : async () => "",
-        duplicateFile: editable ? props.duplicateFile : async () => "",
-        workspaceId,
-        workspaceSlug,
-      })}
       getEditorMetaData={getEditorMetaData}
       mentionHandler={{
         searchCallback: fetchMentions,

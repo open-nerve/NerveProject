@@ -17,7 +17,7 @@ import { EditorMentionsRoot } from "@/components/editor/embeds/mentions";
 import { EditorMentionsError } from "@/components/editor/mentions-error";
 import { IssueCommentToolbar } from "@/components/editor/lite-text/toolbar";
 // hooks
-import { useEditorConfig, useEditorMention } from "@/hooks/editor";
+import { useEditorMention } from "@/hooks/editor";
 import { useMember } from "@/hooks/store/use-member";
 import { useParseEditorContent } from "@/hooks/use-parse-editor-content";
 // services
@@ -62,7 +62,6 @@ export const LiteTextEditor = React.forwardRef(function LiteTextEditor(
   // use editor mention
   const { fetchMentions, mentionScope } = useEditorMention({ workspaceSlug, projectId, editable, members });
   // editor config
-  const { getEditorFileHandlers } = useEditorConfig();
   // derived values
   const isEmpty = isCommentEmpty(props.initialValue);
 
@@ -87,13 +86,6 @@ export const LiteTextEditor = React.forwardRef(function LiteTextEditor(
             ref={ref}
             disabledExtensions={disabledExtensions}
             editable={editable}
-            fileHandler={getEditorFileHandlers({
-              projectId,
-              uploadFile: editable ? props.uploadFile : async () => "",
-              duplicateFile: editable ? props.duplicateFile : async () => "",
-              workspaceId,
-              workspaceSlug,
-            })}
             getEditorMetaData={getEditorMetaData}
             handleEditorReady={(ready) => {
               if (ready) {

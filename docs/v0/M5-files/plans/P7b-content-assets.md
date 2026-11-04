@@ -121,9 +121,9 @@ T3与T5衔接：命令确认收据先发布给稳定host再触发权威重读；
 **Files:** editor/src/types/{config,editor}.ts、extensions/{utility,custom-image/extension,custom-image/types}.ts(x)、custom-image/components/{node-view,block,uploader,upload-status}.tsx与toolbar；plugins/drop.ts、helpers/paste-asset.ts、constants/config.ts；删除plugins/file/与restorePublicImages无使用链。同步web Rich/Lite wrapper/types/use-editor-config替换及全部直接调用形状，既有editor测试夹具。
 **Interfaces:** IEditorProps.images?:EditorImages；同Task移除TFileHandler及必填旧props，unsupported consumer不给images；T9/T10再逐宿主启用。
 
-- [ ] Step 1：editor DOM/transaction测试：有效选择/拖入/粘贴、只读/无能力、纯PDF/混合PNG+PDF/目录/空MIME、伪造同文档已上传标记/非法src；删除节点后晚到upload/duplicate不插回；Undo/Redo已完成节点零新copy/restore/DELETE；期限变化不onChange。
-- [ ] Step 2：`pnpm --filter @nerve/editor exec vitest run` 与 `pnpm --filter web exec vitest run core/components/editor core/components/issues/editor-capabilities.test.tsx core/components/issues/autosave.test.tsx`。RED后同步迁移包+wrapper，read句柄useSyncExternalStore稳定快照，写操作号+abort双屏障；删除自动mount复制重试、旧假百分比、alert及旧file listener。
-- [ ] Step 3：GREEN；包扩展/清洗/稳定ID/Markdown/输入法原回归、所有wrapper类型；变异伪造标记免copy、onError无限循环、旧节点updateAttributes分别失败恢复。提交 `feat(M5/P7b): 替换编辑器图片协议并约束异步节点`。
+- [x] Step 1：editor DOM/transaction测试：有效选择/拖入/粘贴、只读/无能力、纯PDF/混合PNG+PDF/目录/空MIME、伪造同文档已上传标记/非法src；删除节点后晚到upload/duplicate不插回；Undo/Redo已完成节点零新copy/restore/DELETE；期限变化不onChange。
+- [x] Step 2：`pnpm --filter @nerve/editor exec vitest run` 与 `pnpm --filter web exec vitest run core/components/editor core/components/issues/editor-capabilities.test.tsx core/components/issues/autosave.test.tsx`。RED后同步迁移包+wrapper，read句柄useSyncExternalStore稳定快照，写操作号+abort双屏障；删除自动mount复制重试、旧假百分比、alert及旧file listener。
+- [x] Step 3：GREEN；包扩展/清洗/稳定ID/Markdown/输入法原回归、所有wrapper类型；变异伪造标记免copy、onError无限循环、旧节点updateAttributes分别失败恢复。提交 `feat(M5/P7b): 替换编辑器图片协议并约束异步节点`。
 
 ## Task 9（T9）：工作项、评论与历史正文图片
 

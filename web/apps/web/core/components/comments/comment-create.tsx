@@ -188,14 +188,6 @@ const CommentCreateForm = observer(function CommentCreateForm(props: TCommentCre
               }}
               isSubmitting={isSubmitting}
               submitDisabled={!preparations.ready || input.value.unknown}
-              uploadFile={async (blockId, file) => {
-                const { asset_id } = await activityOperations.uploadCommentAsset(blockId, file);
-                return asset_id;
-              }}
-              duplicateFile={async (assetId: string) => {
-                const { asset_id } = await activityOperations.duplicateCommentAsset(assetId);
-                return asset_id;
-              }}
               showToolbarInitially={showToolbarInitially}
               parentClassName="p-2"
               displayConfig={{
