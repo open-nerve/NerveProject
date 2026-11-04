@@ -4,6 +4,28 @@
  */
 
 export interface paths {
+    "/api/v0/drafts/{draft_id}/asset-preparations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draft_id: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * List the author's unbound draft preparations
+         * @description Reads the current draft authorization and its author's live unbound attachments and description images in one read-only snapshot. Includes pending uploads and completed but unbound images. Does not return storage keys or capabilities. Missing, deleted or unauthorized drafts answer asset.not_found; workspace administrators cannot read another author's preparations. Drafts without a project are supported. UUID ascending pages default to 50 rows, at most 100. The canonical v1 cursor is bound to this draft and list; each page rechecks authorization. Unknown or repeated parameters, malformed UUIDs, limits and cursors answer 400; integer limits outside 1..100 answer 422. Pages do not share a snapshot, so concurrent new preparations may require a fresh first page. This read reserves no state for a later delete or publish operation.
+         */
+        get: operations["listDraftAssetPreparations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v0/assets": {
         parameters: {
             query?: never;
@@ -1720,30 +1742,6 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        /** @enum {string} */
-        AssetPurpose: "USER_AVATAR" | "USER_COVER" | "WORKSPACE_LOGO" | "PROJECT_COVER" | "ISSUE_ATTACHMENT" | "ISSUE_DESCRIPTION" | "COMMENT_DESCRIPTION" | "COMMENT_ATTACHMENT" | "DRAFT_ISSUE_DESCRIPTION" | "DRAFT_ISSUE_ATTACHMENT";
-        AssetScope: {
-            /** @enum {string} */
-            kind: "user" | "workspace" | "project" | "new_project" | "issue" | "comment" | "new_comment" | "draft";
-            /**
-             * Format: uuid
-             * @description Host UUID; required except for user, which forbids this field. new_project names a workspace; new_comment names an issue.
-             */
-            id?: string;
-        };
-        NewAsset: {
-            purpose: components["schemas"]["AssetPurpose"];
-            scope: components["schemas"]["AssetScope"];
-            /** @description 1–255 Unicode characters, without path separators or control characters. */
-            name: string;
-            /**
-             * Format: int64
-             * @description Exact nonzero byte length; exceeding this instance's file_size_limit answers 413 asset.too_large.
-             */
-            size: number;
-            /** @description Canonical MIME without parameters. Image purposes accept only image/jpeg, image/png, image/webp and image/gif. */
-            content_type: string;
-        };
         /** @description One invalid field of a request. Clients show text looked up by `code`; `message` is an English explanation for developers. Must match httpserver.FieldError and the field codes of internal/shared. */
         FieldError: {
             /** @description The field's path in the request body, e.g. password or tags[1].name. A path longer than 256 bytes is cut short and ends with `…`. */
@@ -1768,6 +1766,17 @@ export interface components {
             /** @description The invalid fields of the request. */
             errors?: components["schemas"]["FieldError"][];
         };
+        /** @enum {string} */
+        AssetPurpose: "USER_AVATAR" | "USER_COVER" | "WORKSPACE_LOGO" | "PROJECT_COVER" | "ISSUE_ATTACHMENT" | "ISSUE_DESCRIPTION" | "COMMENT_DESCRIPTION" | "COMMENT_ATTACHMENT" | "DRAFT_ISSUE_DESCRIPTION" | "DRAFT_ISSUE_ATTACHMENT";
+        AssetScope: {
+            /** @enum {string} */
+            kind: "user" | "workspace" | "project" | "new_project" | "issue" | "comment" | "new_comment" | "draft";
+            /**
+             * Format: uuid
+             * @description Host UUID; required except for user, which forbids this field. new_project names a workspace; new_comment names an issue.
+             */
+            id?: string;
+        };
         Asset: {
             /** Format: uuid */
             id: string;
@@ -1786,6 +1795,25 @@ export interface components {
             updated_at: string;
             width: number | null;
             height: number | null;
+        };
+        /** @description The cursor of the next page; null on the last page. */
+        NextCursor: string | null;
+        DraftAssetPreparationPage: {
+            data: components["schemas"]["Asset"][];
+            next_cursor: components["schemas"]["NextCursor"];
+        };
+        NewAsset: {
+            purpose: components["schemas"]["AssetPurpose"];
+            scope: components["schemas"]["AssetScope"];
+            /** @description 1–255 Unicode characters, without path separators or control characters. */
+            name: string;
+            /**
+             * Format: int64
+             * @description Exact nonzero byte length; exceeding this instance's file_size_limit answers 413 asset.too_large.
+             */
+            size: number;
+            /** @description Canonical MIME without parameters. Image purposes accept only image/jpeg, image/png, image/webp and image/gif. */
+            content_type: string;
         };
         UploadHeader: {
             name: string;
@@ -1985,8 +2013,6 @@ export interface components {
             /** Format: date-time */
             created_at: string;
         };
-        /** @description The cursor of the next page; null on the last page. */
-        NextCursor: string | null;
         ApiTokenPage: {
             data: components["schemas"]["ApiToken"][];
             next_cursor: components["schemas"]["NextCursor"];
@@ -3118,11 +3144,11 @@ export interface components {
         };
     };
     parameters: {
-        AssetID: string;
         /** @description The page size, 1–100; 50 when absent. Outside that range the answer is 422 validation_failed on limit. */
         Limit: number;
         /** @description The next_cursor of the page before; absent for the first page. A cursor that does not decode, has an unknown version or a payload of another shape than this list's, or is not spelled as the server writes it is 400 bad_request on cursor. */
         Cursor: string;
+        AssetID: string;
         /** @description A workspace's slug, as in the web app's address. */
         Slug: string;
         /** @description An invitation's id (WorkspaceInvitation.id), the link's invitation_id. */
@@ -3147,12 +3173,14 @@ export interface components {
     headers: never;
     pathItems: never;
 }
-export type AssetPurpose = components['schemas']['AssetPurpose'];
-export type AssetScope = components['schemas']['AssetScope'];
-export type NewAsset = components['schemas']['NewAsset'];
 export type FieldError = components['schemas']['FieldError'];
 export type Problem = components['schemas']['Problem'];
+export type AssetPurpose = components['schemas']['AssetPurpose'];
+export type AssetScope = components['schemas']['AssetScope'];
 export type Asset = components['schemas']['Asset'];
+export type NextCursor = components['schemas']['NextCursor'];
+export type DraftAssetPreparationPage = components['schemas']['DraftAssetPreparationPage'];
+export type NewAsset = components['schemas']['NewAsset'];
 export type UploadHeader = components['schemas']['UploadHeader'];
 export type Upload = components['schemas']['Upload'];
 export type PreparedAsset = components['schemas']['PreparedAsset'];
@@ -3175,7 +3203,6 @@ export type Profile = components['schemas']['Profile'];
 export type OnboardingStepsUpdate = components['schemas']['OnboardingStepsUpdate'];
 export type ProfileUpdate = components['schemas']['ProfileUpdate'];
 export type ApiToken = components['schemas']['ApiToken'];
-export type NextCursor = components['schemas']['NextCursor'];
 export type ApiTokenPage = components['schemas']['ApiTokenPage'];
 export type ApiTokenCreate = components['schemas']['ApiTokenCreate'];
 export type ApiTokenCreated = components['schemas']['ApiTokenCreated'];
@@ -3280,9 +3307,9 @@ export type ProjectDisplayProperties = components['schemas']['ProjectDisplayProp
 export type ProjectPreferences = components['schemas']['ProjectPreferences'];
 export type ProjectPreferencesUpdate = components['schemas']['ProjectPreferencesUpdate'];
 export type ResponseProblem = components['responses']['Problem'];
-export type ParameterAssetId = components['parameters']['AssetID'];
 export type ParameterLimit = components['parameters']['Limit'];
 export type ParameterCursor = components['parameters']['Cursor'];
+export type ParameterAssetId = components['parameters']['AssetID'];
 export type ParameterSlug = components['parameters']['Slug'];
 export type ParameterInvitationId = components['parameters']['InvitationID'];
 export type ParameterProjectId = components['parameters']['ProjectID'];
@@ -3295,6 +3322,34 @@ export type ParameterRelationId = components['parameters']['RelationID'];
 export type ParameterIssueIdentifier = components['parameters']['IssueIdentifier'];
 export type $defs = Record<string, never>;
 export interface operations {
+    listDraftAssetPreparations: {
+        parameters: {
+            query?: {
+                /** @description The page size, 1–100; 50 when absent. Outside that range the answer is 422 validation_failed on limit. */
+                limit?: components["parameters"]["Limit"];
+                /** @description The next_cursor of the page before; absent for the first page. A cursor that does not decode, has an unknown version or a payload of another shape than this list's, or is not spelled as the server writes it is 400 bad_request on cursor. */
+                cursor?: components["parameters"]["Cursor"];
+            };
+            header?: never;
+            path: {
+                draft_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A page of private preparation metadata, without upload or read capabilities. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DraftAssetPreparationPage"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
     createAsset: {
         parameters: {
             query?: never;

@@ -20,6 +20,38 @@ tags:
   - name: asset
     description: Private file preparations and content capabilities.
 paths:
+  /api/v0/drafts/{draft_id}/asset-preparations:
+    parameters:
+      - name: draft_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: listDraftAssetPreparations
+      tags:
+        - asset
+      summary: List the author's unbound draft preparations
+      description: Reads the current draft authorization and its author's live unbound attachments and description images in one read-only snapshot. Includes pending uploads and completed but unbound images. Does not return storage keys or capabilities. Missing, deleted or unauthorized drafts answer asset.not_found; workspace administrators cannot read another author's preparations. Drafts without a project are supported. UUID ascending pages default to 50 rows, at most 100. The canonical v1 cursor is bound to this draft and list; each page rechecks authorization. Unknown or repeated parameters, malformed UUIDs, limits and cursors answer 400; integer limits outside 1..100 answer 422. Pages do not share a snapshot, so concurrent new preparations may require a fresh first page. This read reserves no state for a later delete or publish operation.
+      security:
+        - bearer: []
+      x-problem-codes:
+        - validation_failed
+        - asset.not_found
+        - asset.scope_changed
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: A page of private preparation metadata, without upload or read capabilities.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DraftAssetPreparationPage'
+        default:
+          $ref: '#/components/responses/Problem'
   /api/v0/assets:
     post:
       operationId: createAsset
@@ -3029,65 +3061,107 @@ components:
       type: http
       scheme: bearer
       description: An access token (JWT) from register, login or refresh, or a personal access token (nrv_pat_…).
+  parameters:
+    Limit:
+      name: limit
+      in: query
+      description: The page size, 1–100; 50 when absent. Outside that range the answer is 422 validation_failed on limit.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 50
+    Cursor:
+      name: cursor
+      in: query
+      description: The next_cursor of the page before; absent for the first page. A cursor that does not decode, has an unknown version or a payload of another shape than this list's, or is not spelled as the server writes it is 400 bad_request on cursor.
+      schema:
+        type: string
+    AssetID:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    Slug:
+      name: slug
+      in: path
+      required: true
+      description: A workspace's slug, as in the web app's address.
+      schema:
+        type: string
+    InvitationID:
+      name: invitation_id
+      in: path
+      required: true
+      description: An invitation's id (WorkspaceInvitation.id), the link's invitation_id.
+      schema:
+        type: string
+        format: uuid
+    ProjectID:
+      name: project_id
+      in: path
+      required: true
+      description: A project's id (Project.id).
+      schema:
+        type: string
+        format: uuid
+    ProjectMemberID:
+      name: project_member_id
+      in: path
+      required: true
+      description: A project membership's id (ProjectMember.id), not the member's account id.
+      schema:
+        type: string
+        format: uuid
+    StateID:
+      name: state_id
+      in: path
+      required: true
+      description: A state's id (State.id).
+      schema:
+        type: string
+        format: uuid
+    LabelID:
+      name: label_id
+      in: path
+      required: true
+      description: A label's id (Label.id).
+      schema:
+        type: string
+        format: uuid
+    DraftID:
+      name: draft_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    IssueID:
+      name: issue_id
+      in: path
+      required: true
+      description: A work item's id (IssueDetail.id).
+      schema:
+        type: string
+        format: uuid
+    RelationID:
+      name: relation_id
+      in: path
+      required: true
+      description: A relation's id (IssueRelation.id).
+      schema:
+        type: string
+        format: uuid
+    IssueIdentifier:
+      name: identifier
+      in: path
+      required: true
+      description: 'A work item''s identifier: its project''s identifier, in any case, a hyphen and its number (IssueDetail.sequence_id), as WEB-12.'
+      schema:
+        type: string
   schemas:
-    AssetPurpose:
-      type: string
-      enum:
-        - USER_AVATAR
-        - USER_COVER
-        - WORKSPACE_LOGO
-        - PROJECT_COVER
-        - ISSUE_ATTACHMENT
-        - ISSUE_DESCRIPTION
-        - COMMENT_DESCRIPTION
-        - COMMENT_ATTACHMENT
-        - DRAFT_ISSUE_DESCRIPTION
-        - DRAFT_ISSUE_ATTACHMENT
-    AssetScope:
-      type: object
-      additionalProperties: false
-      required:
-        - kind
-      properties:
-        kind:
-          type: string
-          enum:
-            - user
-            - workspace
-            - project
-            - new_project
-            - issue
-            - comment
-            - new_comment
-            - draft
-        id:
-          description: Host UUID; required except for user, which forbids this field. new_project names a workspace; new_comment names an issue.
-          type: string
-          format: uuid
-    NewAsset:
-      type: object
-      additionalProperties: false
-      required:
-        - purpose
-        - scope
-        - name
-        - size
-        - content_type
-      properties:
-        purpose:
-          $ref: '#/components/schemas/AssetPurpose'
-        scope:
-          $ref: '#/components/schemas/AssetScope'
-        name:
-          description: 1–255 Unicode characters, without path separators or control characters.
-          type: string
-        size:
-          description: Exact nonzero byte length; exceeding this instance's file_size_limit answers 413 asset.too_large.
-          type: integer
-          format: int64
-        content_type:
-          description: Canonical MIME without parameters. Image purposes accept only image/jpeg, image/png, image/webp and image/gif.
-          type: string
     FieldError:
       description: One invalid field of a request. Clients show text looked up by `code`; `message` is an English explanation for developers. Must match httpserver.FieldError and the field codes of internal/shared.
       type: object
@@ -3143,6 +3217,40 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/FieldError'
+    AssetPurpose:
+      type: string
+      enum:
+        - USER_AVATAR
+        - USER_COVER
+        - WORKSPACE_LOGO
+        - PROJECT_COVER
+        - ISSUE_ATTACHMENT
+        - ISSUE_DESCRIPTION
+        - COMMENT_DESCRIPTION
+        - COMMENT_ATTACHMENT
+        - DRAFT_ISSUE_DESCRIPTION
+        - DRAFT_ISSUE_ATTACHMENT
+    AssetScope:
+      type: object
+      additionalProperties: false
+      required:
+        - kind
+      properties:
+        kind:
+          type: string
+          enum:
+            - user
+            - workspace
+            - project
+            - new_project
+            - issue
+            - comment
+            - new_comment
+            - draft
+        id:
+          description: Host UUID; required except for user, which forbids this field. new_project names a workspace; new_comment names an issue.
+          type: string
+          format: uuid
     Asset:
       type: object
       additionalProperties: false
@@ -3199,6 +3307,48 @@ components:
             - integer
             - 'null'
           minimum: 1
+    NextCursor:
+      description: The cursor of the next page; null on the last page.
+      type:
+        - string
+        - 'null'
+    DraftAssetPreparationPage:
+      type: object
+      additionalProperties: false
+      required:
+        - data
+        - next_cursor
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Asset'
+        next_cursor:
+          $ref: '#/components/schemas/NextCursor'
+    NewAsset:
+      type: object
+      additionalProperties: false
+      required:
+        - purpose
+        - scope
+        - name
+        - size
+        - content_type
+      properties:
+        purpose:
+          $ref: '#/components/schemas/AssetPurpose'
+        scope:
+          $ref: '#/components/schemas/AssetScope'
+        name:
+          description: 1–255 Unicode characters, without path separators or control characters.
+          type: string
+        size:
+          description: Exact nonzero byte length; exceeding this instance's file_size_limit answers 413 asset.too_large.
+          type: integer
+          format: int64
+        content_type:
+          description: Canonical MIME without parameters. Image purposes accept only image/jpeg, image/png, image/webp and image/gif.
+          type: string
     UploadHeader:
       type: object
       additionalProperties: false
@@ -3608,11 +3758,6 @@ components:
         created_at:
           type: string
           format: date-time
-    NextCursor:
-      description: The cursor of the next page; null on the last page.
-      type:
-        - string
-        - 'null'
     ApiTokenPage:
       type: object
       additionalProperties: false
@@ -5975,106 +6120,6 @@ components:
         application/problem+json:
           schema:
             $ref: '#/components/schemas/Problem'
-  parameters:
-    AssetID:
-      name: id
-      in: path
-      required: true
-      schema:
-        type: string
-        format: uuid
-    Limit:
-      name: limit
-      in: query
-      description: The page size, 1–100; 50 when absent. Outside that range the answer is 422 validation_failed on limit.
-      schema:
-        type: integer
-        minimum: 1
-        maximum: 100
-        default: 50
-    Cursor:
-      name: cursor
-      in: query
-      description: The next_cursor of the page before; absent for the first page. A cursor that does not decode, has an unknown version or a payload of another shape than this list's, or is not spelled as the server writes it is 400 bad_request on cursor.
-      schema:
-        type: string
-    Slug:
-      name: slug
-      in: path
-      required: true
-      description: A workspace's slug, as in the web app's address.
-      schema:
-        type: string
-    InvitationID:
-      name: invitation_id
-      in: path
-      required: true
-      description: An invitation's id (WorkspaceInvitation.id), the link's invitation_id.
-      schema:
-        type: string
-        format: uuid
-    ProjectID:
-      name: project_id
-      in: path
-      required: true
-      description: A project's id (Project.id).
-      schema:
-        type: string
-        format: uuid
-    ProjectMemberID:
-      name: project_member_id
-      in: path
-      required: true
-      description: A project membership's id (ProjectMember.id), not the member's account id.
-      schema:
-        type: string
-        format: uuid
-    StateID:
-      name: state_id
-      in: path
-      required: true
-      description: A state's id (State.id).
-      schema:
-        type: string
-        format: uuid
-    LabelID:
-      name: label_id
-      in: path
-      required: true
-      description: A label's id (Label.id).
-      schema:
-        type: string
-        format: uuid
-    DraftID:
-      name: draft_id
-      in: path
-      required: true
-      schema:
-        type: string
-        format: uuid
-    IssueID:
-      name: issue_id
-      in: path
-      required: true
-      description: A work item's id (IssueDetail.id).
-      schema:
-        type: string
-        format: uuid
-    RelationID:
-      name: relation_id
-      in: path
-      required: true
-      description: A relation's id (IssueRelation.id).
-      schema:
-        type: string
-        format: uuid
-    IssueIdentifier:
-      name: identifier
-      in: path
-      required: true
-      description: 'A work item''s identifier: its project''s identifier, in any case, a hyphen and its number (IssueDetail.sequence_id), as WEB-12.'
-      schema:
-        type: string
 x-problem-codes:
   - bad_request
   - payload_too_large

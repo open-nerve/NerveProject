@@ -1,6 +1,6 @@
 # M5/P6：资料图片上传与展示
 
-> 实施前预检曾通过，T1–T12完成；PC2按A完成基础与页面回归，PC3按A修复并通过联合回归，T13本地门禁全绿，一次整分支deep-review的唯一局部问题已修复，最终本地3475项Web/381项E2E/42项三浏览器通过，准确最终分支CI待核。分支 `codex/m5-p6`，初始基线c59cedf3，实施基线已同步到 `main@f5f4ce9431e7fb360363bf169da33487cf9b864f`。P5 与两次集成修复已完成准确 main CI、全部证据归档及分支/worktree清理，见[P5 收尾记录](../reviews/P5-issue-assets-review.md#222-最终main全绿与归档清理)。
+> P6已完成T1–T15及A1–A8：一次整分支deep-review及唯一局部修复闭环，最终分支8e46ab55的CI41828756305、noff main96363675的CI41833460144均三job全绿；6,861文件归档逐hash/bytes/mode/membership核验，正常清理分支/worktree后再次核验通过。证据见[评审§22](../reviews/P6-profile-upload-review.md#22-t15准确main全绿与归档清理)。分支 `codex/m5-p6`，初始基线c59cedf3，实施基线已同步到 `main@f5f4ce9431e7fb360363bf169da33487cf9b864f`。P5 与两次集成修复已完成准确 main CI、全部证据归档及分支/worktree清理，见[P5 收尾记录](../reviews/P5-issue-assets-review.md#222-最终main全绿与归档清理)。
 > PC1 的复现、已批准方案 A 及代价见[决策记录](../reviews/P6-public-project-lifetime-decision.md)；M4/M5设计、spec、plan与联合回归落点已同步，原角色授权和ProjectStore R06保持。
 PC2 已批准 A：[工作区更新的迟到回包](../reviews/P6-workspace-write-lifetime-decision.md)。
 > 依据 M5 设计 §3、§5–6、§9、§11–12、P4 已实现的资料引用合同及 P5 的准备件隐私。执行沿连续授权：主控局部决定并记代价，重大风险先提交再上报。
@@ -85,10 +85,10 @@ UploadSession 状态至少含 idle、selected、preparing、uploading、confirmi
 - [x] A4 F5 个人资料/引导替换和移除、旧 read/new write 交错、拒绝保留、刷新与重登录经真实 API 和字节验收。
 - [x] A5 F6 管理员图标、成员/访客边界、成员列表头像、签名到期恢复；F7 一次项目创建绑定、29 个预设和手动随机、已有项目替换/清除。
 - [x] A6 F16/F17 在三浏览器验证真实控件、raw PUT、拖放、取消、焦点/读屏、Back/Forward 和迟到结果；local/S3 至少各一条真实资料上传页面，API/DB/磁盘或对象 hash 相符。
-- [ ] A7 局部测试、必要行为变异、七项本地门禁、一次整分支 deep-review 与修复复核、准确最终分支 CI 全绿。
-- [ ] A8 --no-ff 后准确 main CI 全绿，原始证据归档并核 hash/bytes/mode/membership/unknown=0，正常清理，准备 P7 预检。
+- [x] A7 局部测试、必要行为变异、七项本地门禁、一次整分支 deep-review 与修复复核、准确最终分支 CI 全绿。
+- [x] A8 --no-ff 后准确 main CI 全绿，原始证据归档并核 hash/bytes/mode/membership/unknown=0，正常清理，准备 P7 预检。
 
-A1–A6已挂证据；A3的[PC3目录读取冲突](../reviews/P6-directory-read-decision.md)已按A修复，34项共享读取回归、三类行为变异及完成去重窗口变异、三浏览器42项通过（[评审§20](../reviews/P6-profile-upload-review.md#20-pc3批准a后的联合修复)）。原A1–A6证据映射见[评审§18](../reviews/P6-profile-upload-review.md#18-t13-验收与清理核对)；一次终审及局部修复见[评审§21](../reviews/P6-profile-upload-review.md#21-t14整分支终审与一次局部修复)，准确最终CI及集成完成前A7/A8保持开放。
+A1–A6已挂证据；A3的[PC3目录读取冲突](../reviews/P6-directory-read-decision.md)已按A修复，34项共享读取回归、三类行为变异及完成去重窗口变异、三浏览器42项通过（[评审§20](../reviews/P6-profile-upload-review.md#20-pc3批准a后的联合修复)）。原A1–A6证据映射见[评审§18](../reviews/P6-profile-upload-review.md#18-t13-验收与清理核对)；一次终审及局部修复见[评审§21](../reviews/P6-profile-upload-review.md#21-t14整分支终审与一次局部修复)，准确最终分支/main CI及归档清理现见评审§22，A7/A8关闭。
 
 F5–F7 正向数据经 API，SQL 只断言/明确故障夹具；到期 UI 测试可将宿主响应的 expires_at 限为已过去时刻，但须标明是界面失效注入，不冒称服务端真实签名 TTL 已被修改。P1/P3 已有真实签名期限合同保持。至少覆盖上传后 ready 但 bind 拒绝、完成超时后重试旧 ID、PUT object_missing 后新 prepare、预设替换正在上传文件、同名不同字节、两个工作区同头像、权限撤销恢复后的旧响应和卸载双次清理。
 
@@ -99,3 +99,5 @@ F5–F7 正向数据经 API，SQL 只断言/明确故障夹具；到期 UI 测�
 - P5 ignored p6-transport-probe-results.json 为三浏览器隔离协议证据，归档时附 SHA/bytes；不是产品实现或 P6 通过证明。
 
 PC3实施合同以[生命周期补充](P6-image-lifecycle.md#pc3共享宿主读取与完成证明负责人批准a)为准：图片共享现有宿主查询键和实际读取完成证明，取代前文由图片独立发起宿主读取的接线；既有expiry/权限/重试目标保持。
+
+P7a准备期间最终回填：A1–A8全部关闭；准确分支/main CI、归档新根和正常清理证据见评审§22。原P7预检缺口已获A批准，拆为P7a协议/P7b页面；P7a完成预检、暂不实施，P7b正式预检待P7a集成，M5总体保持开放。

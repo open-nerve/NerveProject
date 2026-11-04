@@ -55,6 +55,12 @@ type deleteError struct{ err error }
 
 func (f deleteError) Execute(context.Context, uuid.UUID) error { return f.err }
 
+type preparationsError struct{ err error }
+
+func (f preparationsError) Execute(context.Context, uuid.UUID, *int, *string) (app.DraftPreparationPage, error) {
+	return app.DraftPreparationPage{}, f.err
+}
+
 // The adapter is the real system under test here; only use case results are
 // supplied. Host authorization itself is covered by the full application.
 func TestAssetBusinessProblemMapping(t *testing.T) {
@@ -65,13 +71,14 @@ func TestAssetBusinessProblemMapping(t *testing.T) {
 		status int
 		paths  []string
 	}{
-		{domain.ErrAssetNotFound, "asset.not_found", 404, []string{"prepare", "get", "content", "complete", "duplicate", "delete"}},
-		{domain.ErrAssetScopeChanged, "asset.scope_changed", 409, []string{"prepare", "get", "content", "complete", "duplicate", "delete"}},
+		{domain.ErrAssetNotFound, "asset.not_found", 404, []string{"prepare", "get", "content", "complete", "duplicate", "delete", "preparations"}},
+		{domain.ErrAssetScopeChanged, "asset.scope_changed", 409, []string{"prepare", "get", "content", "complete", "duplicate", "delete", "preparations"}},
 		{shared.Forbidden(), "forbidden", 403, []string{"prepare", "get", "content", "complete", "duplicate", "delete"}},
 		{domain.ErrAssetNotUploaded, "asset.not_uploaded", 409, []string{"content", "duplicate"}},
 		{domain.ErrAssetTooLarge, "asset.too_large", 413, []string{"prepare", "complete", "duplicate"}},
 		{domain.ErrAssetTypeUnsupported, "asset.type_unsupported", 415, []string{"prepare", "complete", "duplicate"}},
 		{shared.Invalid(shared.FieldError{Field: "name", Code: shared.FieldInvalidFormat, Message: "is invalid"}), "validation_failed", 422, []string{"prepare", "duplicate"}},
+		{shared.Invalid(shared.FieldError{Field: "limit", Code: shared.FieldInvalidFormat, Message: "is invalid"}), "validation_failed", 422, []string{"preparations"}},
 		{shared.ServerBusy(time.Second), "server_busy", 503, []string{"prepare", "content", "complete", "duplicate", "delete"}},
 		{shared.NewError(shared.KindForbidden, "issue.not_author", "Only the author may edit."), "issue.not_author", 403, []string{"prepare", "complete", "duplicate", "delete"}},
 		{shared.NewError(shared.KindConflict, "project.archived", "The project is archived."), "project.archived", 409, []string{"prepare", "complete", "duplicate", "delete"}},
@@ -92,8 +99,11 @@ func TestAssetBusinessProblemMapping(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				Register(router, api, UseCases{Duplicate: duplicateError{tc.err}, Delete: deleteError{tc.err}, Prepare: prepareError{tc.err}, Get: getError{tc.err}, Complete: getError{tc.err}, ResolveContent: contentError{tc.err}})
+				Register(router, api, UseCases{ListDraftPreparations: preparationsError{tc.err}, Duplicate: duplicateError{tc.err}, Delete: deleteError{tc.err}, Prepare: prepareError{tc.err}, Get: getError{tc.err}, Complete: getError{tc.err}, ResolveContent: contentError{tc.err}})
 				method, path, body := "GET", "/api/v0/assets/"+uuid.New().String(), ""
+				if operation == "preparations" {
+					path = "/api/v0/drafts/" + uuid.New().String() + "/asset-preparations"
+				}
 				if operation == "prepare" {
 					method, path, body = "POST", "/api/v0/assets", `{"purpose":"USER_AVATAR","scope":{"kind":"user"},"name":"x.png","size":3,"content_type":"image/png"}`
 				}

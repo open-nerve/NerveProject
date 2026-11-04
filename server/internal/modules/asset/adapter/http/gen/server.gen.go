@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -168,6 +169,14 @@ type Content struct {
 	URL       string    `json:"url"`
 }
 
+// DraftAssetPreparationPage defines model for DraftAssetPreparationPage.
+type DraftAssetPreparationPage struct {
+	Data []Asset `json:"data"`
+
+	// NextCursor The cursor of the next page; null on the last page.
+	NextCursor nullable.Nullable[externalRef0.NextCursor] `json:"next_cursor"`
+}
+
 // DuplicateAsset defines model for DuplicateAsset.
 type DuplicateAsset struct {
 	Name    *string      `json:"name,omitempty"`
@@ -223,6 +232,15 @@ type Problem = externalRef0.Problem
 // CompleteAssetJSONBody defines parameters for CompleteAsset.
 type CompleteAssetJSONBody = map[string]interface{}
 
+// ListDraftAssetPreparationsParams defines parameters for ListDraftAssetPreparations.
+type ListDraftAssetPreparationsParams struct {
+	// Limit The page size, 1–100; 50 when absent. Outside that range the answer is 422 validation_failed on limit.
+	Limit *externalRef0.Limit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Cursor The next_cursor of the page before; absent for the first page. A cursor that does not decode, has an unknown version or a payload of another shape than this list's, or is not spelled as the server writes it is 400 bad_request on cursor.
+	Cursor *externalRef0.Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
+
 // CreateAssetJSONRequestBody defines body for CreateAsset for application/json ContentType.
 type CreateAssetJSONRequestBody = NewAsset
 
@@ -252,6 +270,9 @@ type ServerInterface interface {
 	// DuplicateAsset Copy authorized content to a new asset
 	// (POST /api/v0/assets/{id}/duplicate)
 	DuplicateAsset(w http.ResponseWriter, r *http.Request, id AssetID)
+	// ListDraftAssetPreparations List the author's unbound draft preparations
+	// (GET /api/v0/drafts/{draft_id}/asset-preparations)
+	ListDraftAssetPreparations(w http.ResponseWriter, r *http.Request, draftID uuid.UUID, params ListDraftAssetPreparationsParams)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -407,6 +428,61 @@ func (siw *ServerInterfaceWrapper) DuplicateAsset(w http.ResponseWriter, r *http
 	handler.ServeHTTP(w, r)
 }
 
+// ListDraftAssetPreparations operation middleware
+func (siw *ServerInterfaceWrapper) ListDraftAssetPreparations(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "draft_id" -------------
+	var draftID uuid.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "draft_id", r.PathValue("draft_id"), &draftID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "draft_id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListDraftAssetPreparationsParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListDraftAssetPreparations(w, r, draftID, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 type UnescapedCookieParamError struct {
 	ParamName string
 	Err       error
@@ -527,6 +603,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 		ErrorHandlerFunc:   options.ErrorHandlerFunc,
 	}
 
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/drafts/{draft_id}/asset-preparations", wrapper.ListDraftAssetPreparations)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/assets", wrapper.CreateAsset)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v0/assets/{id}", wrapper.DeleteAsset)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/assets/{id}", wrapper.GetAsset)
@@ -819,6 +896,53 @@ func (response DuplicateAssetdefaultApplicationProblemPlusJSONResponse) VisitDup
 	return err
 }
 
+type ListDraftAssetPreparationsRequestObject struct {
+	DraftID uuid.UUID `json:"draft_id"`
+	Params  ListDraftAssetPreparationsParams
+}
+
+type ListDraftAssetPreparationsResponseObject interface {
+	VisitListDraftAssetPreparationsResponse(w http.ResponseWriter) error
+}
+
+type ListDraftAssetPreparations200JSONResponse DraftAssetPreparationPage
+
+func (response ListDraftAssetPreparations200JSONResponse) VisitListDraftAssetPreparationsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListDraftAssetPreparationsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response ListDraftAssetPreparationsdefaultApplicationProblemPlusJSONResponse) VisitListDraftAssetPreparationsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
 	// CreateAsset Prepare a private upload
@@ -839,6 +963,9 @@ type StrictServerInterface interface {
 	// DuplicateAsset Copy authorized content to a new asset
 	// (POST /api/v0/assets/{id}/duplicate)
 	DuplicateAsset(ctx context.Context, request DuplicateAssetRequestObject) (DuplicateAssetResponseObject, error)
+	// ListDraftAssetPreparations List the author's unbound draft preparations
+	// (GET /api/v0/drafts/{draft_id}/asset-preparations)
+	ListDraftAssetPreparations(ctx context.Context, request ListDraftAssetPreparationsRequestObject) (ListDraftAssetPreparationsResponseObject, error)
 }
 
 type StrictHandlerFunc func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error)
@@ -1048,6 +1175,33 @@ func (sh *strictHandler) DuplicateAsset(w http.ResponseWriter, r *http.Request, 
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(DuplicateAssetResponseObject); ok {
 		if err := validResponse.VisitDuplicateAssetResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListDraftAssetPreparations operation middleware
+func (sh *strictHandler) ListDraftAssetPreparations(w http.ResponseWriter, r *http.Request, draftID uuid.UUID, params ListDraftAssetPreparationsParams) {
+	var request ListDraftAssetPreparationsRequestObject
+
+	request.DraftID = draftID
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListDraftAssetPreparations(ctx, request.(ListDraftAssetPreparationsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListDraftAssetPreparations")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListDraftAssetPreparationsResponseObject); ok {
+		if err := validResponse.VisitListDraftAssetPreparationsResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

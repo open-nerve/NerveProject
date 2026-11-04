@@ -67,12 +67,13 @@ func New(d Deps) (*Module, error) {
 	deletion := app.NewDeleteScope(app.DeleteScopeDeps{Rows: d.Ports.store, Locks: d.Ports.store, Writer: d.Ports.store, Tx: d.JobTx, Batch: files.CleanupBatch, Budget: files.CleanupBudget})
 	publication := app.AttachmentPublication{Writer: d.Ports.store, Events: d.Events}
 	uc := httpadapter.UseCases{
-		Duplicate:      app.NewDuplicate(app.DuplicateDeps{Publication: publication, Rows: d.Ports.store, Creator: d.Ports.store, Writer: d.Ports.store, Access: access, Storage: d.Sealing, SizeLimit: files.SizeLimit, OperationTimeout: files.OperationTimeout, RuntimeNow: d.RuntimeNow}),
-		Delete:         app.NewDelete(app.DeleteDeps{Events: d.Events, Rows: d.Ports.store, Writer: d.Ports.store, Access: access}),
-		Complete:       app.NewComplete(app.CompleteDeps{Publication: publication, Rows: d.Ports.store, Writer: d.Ports.store, Access: access, Storage: d.Sealing, SizeLimit: files.SizeLimit, OperationTimeout: files.OperationTimeout, RuntimeNow: d.RuntimeNow}),
-		Prepare:        app.NewPrepare(app.PrepareDeps{Access: access, Rows: d.Ports.store, Signer: d.UploadSigner, Budget: files, SizeLimit: files.SizeLimit, UploadTTL: files.UploadTTL, RuntimeNow: d.RuntimeNow}),
-		Get:            app.NewGet(app.GetDeps{Rows: d.Ports.store, Hosts: d.Access.Hosts, ReadTx: d.ReadTx}),
-		ResolveContent: app.NewResolveContent(app.ResolveContentDeps{Rows: d.Ports.store, Access: access, Signer: d.ReadSigner, RuntimeNow: d.RuntimeNow}),
+		ListDraftPreparations: app.NewListDraftPreparations(app.ListDraftPreparationsDeps{Rows: d.Ports.store, Hosts: d.Access.Hosts, ReadTx: d.ReadTx}),
+		Duplicate:             app.NewDuplicate(app.DuplicateDeps{Publication: publication, Rows: d.Ports.store, Creator: d.Ports.store, Writer: d.Ports.store, Access: access, Storage: d.Sealing, SizeLimit: files.SizeLimit, OperationTimeout: files.OperationTimeout, RuntimeNow: d.RuntimeNow}),
+		Delete:                app.NewDelete(app.DeleteDeps{Events: d.Events, Rows: d.Ports.store, Writer: d.Ports.store, Access: access}),
+		Complete:              app.NewComplete(app.CompleteDeps{Publication: publication, Rows: d.Ports.store, Writer: d.Ports.store, Access: access, Storage: d.Sealing, SizeLimit: files.SizeLimit, OperationTimeout: files.OperationTimeout, RuntimeNow: d.RuntimeNow}),
+		Prepare:               app.NewPrepare(app.PrepareDeps{Access: access, Rows: d.Ports.store, Signer: d.UploadSigner, Budget: files, SizeLimit: files.SizeLimit, UploadTTL: files.UploadTTL, RuntimeNow: d.RuntimeNow}),
+		Get:                   app.NewGet(app.GetDeps{Rows: d.Ports.store, Hosts: d.Access.Hosts, ReadTx: d.ReadTx}),
+		ResolveContent:        app.NewResolveContent(app.ResolveContentDeps{Rows: d.Ports.store, Access: access, Signer: d.ReadSigner, RuntimeNow: d.RuntimeNow}),
 	}
 	return &Module{transfer: transfer, useCases: uc, cleanup: cleanup, deleteScope: deletion, cleanupInterval: files.CleanupInterval, cleanupBudget: files.CleanupBudget}, nil
 }

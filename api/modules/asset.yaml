@@ -4,6 +4,42 @@ info:
   title: Nerve asset API
   version: v0
 paths:
+  /api/v0/drafts/{draft_id}/asset-preparations:
+    parameters:
+      - name: draft_id
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+    get:
+      operationId: listDraftAssetPreparations
+      tags: [asset]
+      summary: List the author's unbound draft preparations
+      description: >-
+        Reads the current draft authorization and its author's live unbound
+        attachments and description images in one read-only snapshot. Includes
+        pending uploads and completed but unbound images. Does not return storage
+        keys or capabilities. Missing, deleted or unauthorized drafts answer
+        asset.not_found; workspace administrators cannot read another author's
+        preparations. Drafts without a project are supported.
+        UUID ascending pages default to 50 rows, at most 100. The canonical v1
+        cursor is bound to this draft and list; each page rechecks authorization.
+        Unknown or repeated parameters, malformed UUIDs, limits and cursors answer
+        400; integer limits outside 1..100 answer 422. Pages do not share a
+        snapshot, so concurrent new preparations may require a fresh first page.
+        This read reserves no state for a later delete or publish operation.
+      security: [{bearer: []}]
+      x-problem-codes: [validation_failed, asset.not_found, asset.scope_changed]
+      parameters:
+        - $ref: '../common.yaml#/components/parameters/Limit'
+        - $ref: '../common.yaml#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: A page of private preparation metadata, without upload or read capabilities.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/DraftAssetPreparationPage'}
+        default:
+          $ref: '#/components/responses/Problem'
   /api/v0/assets:
     post:
       operationId: createAsset
@@ -210,6 +246,15 @@ components:
           schema:
             $ref: '../common.yaml#/components/schemas/Problem'
   schemas:
+    DraftAssetPreparationPage:
+      type: object
+      additionalProperties: false
+      required: [data, next_cursor]
+      properties:
+        data:
+          type: array
+          items: {$ref: '#/components/schemas/Asset'}
+        next_cursor: {$ref: '../common.yaml#/components/schemas/NextCursor'}
     AssetPurpose:
       type: string
       enum: [USER_AVATAR, USER_COVER, WORKSPACE_LOGO, PROJECT_COVER, ISSUE_ATTACHMENT, ISSUE_DESCRIPTION, COMMENT_DESCRIPTION, COMMENT_ATTACHMENT, DRAFT_ISSUE_DESCRIPTION, DRAFT_ISSUE_ATTACHMENT]

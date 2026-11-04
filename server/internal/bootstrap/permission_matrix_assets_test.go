@@ -35,6 +35,15 @@ func assetMatrixRows() []matrixRow {
 		}
 	}
 	return []matrixRow{
+		{op: "listDraftAssetPreparations", request: func(c caller, s seeded) (string, string, string) {
+			return "GET", preparationsPath(s.drafts[workspaceOf(c)+"/"+string(c)]), ""
+		}, cells: cells(cellOK, cellOK, notFound), check: func(t *testing.T, _ caller, _ seeded, answer string) {
+			var page preparationPageHTTP
+			decodeAnswer(t, answer, &page)
+			if page.Data == nil || len(page.Data) != 0 || page.NextCursor != nil {
+				t.Fatal("empty private preparation list differs from its contract", answer)
+			}
+		}},
 		{op: "createAsset", write: true, request: func(c caller, s seeded) (string, string, string) {
 			return "POST", "/api/v0/assets", assetPrepareBody("WORKSPACE_LOGO", assetScopeBody("workspace", s.workspace(workspaceOf(c))), "logo.png", "image/png", 3)
 		}, cells: cells(cellCreated, cellForbidden, cellForbidden)},

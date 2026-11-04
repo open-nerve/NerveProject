@@ -29,6 +29,8 @@ tags:
   - name: asset
     description: Private file preparations and content capabilities.
 paths:
+  /api/v0/drafts/{draft_id}/asset-preparations:
+    $ref: 'modules/asset.yaml#/paths/~1api~1v0~1drafts~1{draft_id}~1asset-preparations'
   /api/v0/assets:
     $ref: 'modules/asset.yaml#/paths/~1api~1v0~1assets'
   /api/v0/assets/{id}:

@@ -38,6 +38,8 @@ LockContent只核所列当前图片+普通附件集合；旧已绑定历史图�
 
 LockDraftAssets在D(U)保护下分页遍历全部活资产、合并ImageIDs后全局UUID顺序加锁，单页1000，直到真实耗尽；保存/改项目包括pending、uploaded，并验证ImageIDs为本草稿已完成的描述图片。Publish存在任一尚未成功发布的活资产即asset.not_uploaded，不能默默丢件；已经成功发布的资产携带待回收竞争候选不阻止发布。MoveDraftAssets的issueID：保存/改项目为Nil，更新父项目并只绑定ImageIDs涉及的描述图片；发布为新IssueID，清draft_id、换scope=issue、用途两种draft→issue；普通附件、当前ImageIDs中的描述才在bound_at为空时设置At，已有bound_at保持，未引用过且不在当前ImageIDs的描述保持null（不自动公开、不重置7天年龄）。已删除资产不复活，原草稿父引用留作回收证据。草稿路径只调用这组完整集合端口，不再额外调用LockContent造成第二次加锁/读钟。
 
+**P7接收补充（2026-11-04，负责人批准A）：** 上述发布合同保持。未知ID的prepare/duplicate失败准备件由[P7a私有查询](P7a-draft-preparations.md)发现，P7b让作者逐项明确丢弃，复用既有DELETE，之后publish仍在锁下核全活集合。查询不绑定/删除、不提供发布许可，已绑定历史图不进入准备列表；不因恢复入口放宽pending拒绝、迁移集合或清理规则。P5完成记录保留，本补充不冒称P7新协议已实施。
+
 app/asset端口不可嵌套开事务，不取得更上层账号/工作区/项目锁，不执行存储I/O。内部SQL专用更新入口，与SaveAsset不可变scope合同分开。
 
 ## 2. 锁序与调用图
