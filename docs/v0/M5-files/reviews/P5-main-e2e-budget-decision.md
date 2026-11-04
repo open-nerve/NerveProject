@@ -1,6 +1,6 @@
 # P5 main E2E 作业预算：一次重跑后的停点
 
-> **等待负责人决定；尚未调整工作流。** 当前 main 为 `ce29aa00076130e2e805f50e2de08fc5d3ca2375`。P5 功能与清理恢复夹具修复已合入，main CI 尚未全绿，原分支/worktree和证据保留。P6 的 PC1 方案 A 已同步设计、spec、plan，产品尚未实施。
+> **负责人已批准 A（2026-11-04），实施与验证中。** 基线 main 为 `ce29aa00076130e2e805f50e2de08fc5d3ca2375`，本修复分支 `codex/m5-p5-ci-budget`。P5 功能与清理恢复夹具修复已合入；原main CI未全绿，分支/worktree和证据保留。P6 的 PC1 方案 A 已同步设计、spec、plan，产品尚未实施。
 
 ## 1. 为什么停下来
 
@@ -63,3 +63,14 @@ GitHub在第二轮为已成功的server/web分配了新job身份126312433250/126
 - 修复原件：`/Users/xiaoruan/project/nerve-project/.codex/worktress/codex/m5-p5-ci-purge/.superpowers/sdd/P5-ci-purge-resume/`，重点为 `main-ci-attempt-1-failure.json`、`main-ci-attempt-2-failure.json`、`main-ci-rerun-request.json`。
 - P6预检副本：`.superpowers/sdd/P6-profile-upload/precheck/p5-ci-budget/source-copy-manifest.json`，列出全部文件、字节、SHA及mode。原件尚未归档到稳定目录，因为main验收未通过。
 - [清理恢复修复与执行收据](P5-ci-purge-resume.md)、[该修复独立审查](../../../reviews/re-43-M5P5集成修复审核.md)。
+
+## 6. 批准后的执行记录
+
+负责人回复“批准，go”，授权实施上述 A 方案并完成 P5 收尾后继续 P6。此前等待决定的表述为裁定前快照。
+
+- [x] T1：从准确main新建隔离worktree，只将E2E作业总上限20改为25分钟，加实测依据注释。
+- [x] T2：核工作流结构、全量差异、未变输入和证据；一次fresh整分支deep-review及主控复核，0 Critical/0 Important/0 Minor，见[re-44](../../../reviews/re-44-M5P5作业预算审核.md)。
+- [ ] T3：准确最终分支CI三项全绿，再按连续授权noff合入main，确认准确main CI三项全绿。
+- [ ] T4：P5及两次集成修复全部原件归档核验后正常清理；P6同步最终main，回填验收并从T1继续。
+
+局部裁定：这是单一工作流预算调整，复用逐SHA不变的产品、测试和依赖验证，完整远端分支/main CI仍各跑一次；不新增复制配置常量的测试，不重跑未受影响的本地大套件。原有20分钟失败、W11失败及重跑通过原件全部保留，不能把扩大预算写成W11根因修复。实现和验证台账保存在 `.superpowers/sdd/P5-e2e-budget/`，后续准确身份与归档收据回填P6阶段记录。
