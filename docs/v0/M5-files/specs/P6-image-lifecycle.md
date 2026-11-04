@@ -44,6 +44,8 @@ class UploadSession {
   readonly readyAsset: Asset | undefined;
   readonly error: unknown;
   readonly busy: boolean;
+  readonly current: boolean;
+  readonly recovery: "prepare" | "confirm" | "restart" | undefined;
   select(file: File): void;
   start(): Promise<Asset | undefined>;
   retryComplete(): Promise<Asset | undefined>;
@@ -58,7 +60,7 @@ class RootAssetStore {
 }
 ```
 
-组件负责宿主写，UploadSession 不知道 UserUpdate/ProjectCreate，避免文件模块吞并宿主职责。start 只可在 selected/prepare-failed；retryComplete 只可在持有 prepared 的 PUT 不确定/confirm-failed；restart 明确申请新 ID；错误不吞成成功，undefined 只代表调用所属生命期已结束。重复 start 共享当前 promise，不发双链。选择新文件先结束旧链，准备件不自动删除。
+组件负责宿主写，UploadSession 不知道 UserUpdate/ProjectCreate，避免文件模块吞并宿主职责。start 只可在 selected/prepare-failed；retryComplete 只可在持有 prepared 的 PUT 不确定/confirm-failed；restart 明确申请新 ID；错误不吞成成功，undefined 只代表调用所属生命期已结束。重复 start 共享当前 promise，不发双链。选择新文件先结束旧链，准备件不自动删除。 current仅代表资源生命期仍有效；页面绑定后还须核对当前readyAsset是否仍是所绑定准备件，避免换选后旧回调覆盖新选择。recovery只表达显式重试入口，object_missing只能restart，不用错误文案推断阶段。非法选择结束旧选择并给出type/size/unavailable分类，任何预览分配均在选择事件中；未知实例限额时拒绝上传。
 
 scope-lifetime 是实现细节，唯一权限输入为 root 的规范 store getter，唯一失效订阅为 IssueRootStore.registerResource。注册的 affects 对 user 恒 false；workspace/new_project 对自身 workspace 和 memberOnly 角色变化有效、对别的 project 无效；project 对本 project/所在 workspace 有效。dispose 同时注销；用户取消与权限失效区分。任何启动/await 后再次核当前有效角色及 archive 写限制。权限 ABA 由统一失效订阅的单调生命期阻止；按 PC1 在现有 PermissionReads.snapshot 的项目签名中加入规范可见但无角色的状态，ProjectStore 返回项目必须与当前工作区匹配，缺席仍是 undefined。保留原有效角色、member_role、guest_view_all_features 的语义变化，不复制实体或目录；不得将新签名用于授权。公开非成员封面读取不调用 assertProjectReadable，但必须核规范可见性；工作项接口和上传写仍执行原权限判定。
 

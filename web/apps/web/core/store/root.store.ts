@@ -17,6 +17,7 @@ import { StateStore } from "@/store/state.store";
 import type { ICommandPaletteStore } from "@/store/command-palette.store";
 import { CommandPaletteStore } from "@/store/command-palette.store";
 import { WorkspaceRootStore } from "@/store/workspace";
+import { RootAssetStore } from "@/store/asset/root.store";
 // stores
 import type { ICycleStore } from "./cycle.store";
 import { CycleStore } from "./cycle.store";
@@ -69,6 +70,7 @@ export class RootStore {
   projectView: IProjectViewStore;
   globalView: IGlobalViewStore;
   issue: IIssueRootStore;
+  asset: RootAssetStore;
   state: IStateStore;
   label: ILabelStore;
   router: IRouterStore;
@@ -107,6 +109,7 @@ export class RootStore {
     this.projectView = new ProjectViewStore(this);
     this.globalView = new GlobalViewStore(this);
     this.issue = new IssueRootStore(this, api);
+    this.asset = new RootAssetStore(this, api);
     this.state = new StateStore(this, api);
     this.label = new LabelStore(this, api);
     this.projectInbox = new ProjectInboxStore(this);
@@ -126,6 +129,7 @@ export class RootStore {
    */
   dispose(): void {
     this.issue.retire();
+    this.asset.dispose();
     this.projectRoot.projectFilter.dispose();
   }
 }

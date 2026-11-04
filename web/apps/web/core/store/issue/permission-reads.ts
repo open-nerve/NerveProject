@@ -11,7 +11,7 @@ type Fact = {
 const key = (workspaceID: string, kind: Fact["kind"], projectID?: string) =>
   JSON.stringify([workspaceID, kind, projectID ?? null]);
 
-/** Metadata for one issue root only: observe semantic permissions, never duplicate entities or directories. */
+/** One root's visibility/permission generations, never an authorization grant or an entity cache. */
 export class PermissionReads {
   private serial = 0;
   private readonly watermarks = observable.map<string, number>();
@@ -48,7 +48,7 @@ export class PermissionReads {
           kind: "project",
           projectID,
           signature:
-            project && effective !== undefined
+            project?.workspace_id === workspace.id
               ? JSON.stringify([
                   effective,
                   project.member_role,

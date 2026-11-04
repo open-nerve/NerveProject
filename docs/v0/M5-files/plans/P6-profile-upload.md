@@ -1,6 +1,6 @@
 # M5/P6 资料图片上传与展示 Implementation Plan
 
-> 预检通过，T1完成，继续T2。**For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans 按 Task 内联实施；不用逐 Task 新派实现者/审者。完成后一次 fresh whole-branch review。本计划在 `codex/m5-p6`，初始基线c59cedf3，实施基线已noff同步 `main@f5f4ce9431e7fb360363bf169da33487cf9b864f`；[PC1](../reviews/P6-public-project-lifetime-decision.md)已批准 A并同步合同。P5准确main CI及归档清理已完成，按连续授权从T1执行。
+> 预检通过，T1–T2完成，继续T3。**For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans 按 Task 内联实施；不用逐 Task 新派实现者/审者。完成后一次 fresh whole-branch review。本计划在 `codex/m5-p6`，初始基线c59cedf3，实施基线已noff同步 `main@f5f4ce9431e7fb360363bf169da33487cf9b864f`；[PC1](../reviews/P6-public-project-lifetime-decision.md)已批准 A并同步合同。P5准确main CI及归档清理已完成，按连续授权从T1执行。
 
 **Goal:** 资料图片真实上传、宿主绑定、权限/到期展示和可访问交互。
 **Architecture:** AssetService 处理会话 JSON；独立 fetch 只传 File；视图持有上传，IssueRootStore 统一使生命周期失效。图片读由当前宿主 store 调和，活动来源读合并但不复制权限或实体事实。
@@ -49,9 +49,9 @@
 **Files:** 新 core/store/asset/root.store.ts、upload-session.ts、scope-lifetime.ts 及测试；修改 core/store/root.store.ts/.test.ts、core/store/issue/permission-reads.ts；新增 core/store/issue/permission-reads.test.ts，回归 issue/root.store.test.ts 和 project/project.store.visibility.test.ts。
 **Interfaces:** 消费 T1；产出 createUpload、UploadSession 和 root.dispose 接线；宿主写留调用页面。
 
-- [ ] Step 1：真实 deferred promise 测试四用途scope、大小/MIME拒绝、双击仅一链、逐阶段 retry、object_missing 新 prepare、旧成功/失败/进度、select 替换、scope/路由/root 退休及权限 ABA；user 不受无关 project 影响，workspace 不受别的 project 影响。实际 RootStore/ProjectStore 驱动公开非成员完整目录缺席/恢复：旧 token 永久 false、新 token current，资源 invalidate 一次；有效角色仍 undefined，受限 issue 仍拒绝，成员/guest 收窄和无变化目录/无关范围保持。
-- [ ] Step 2：`pnpm --filter web exec vitest run core/store/asset core/store/root.store.test.ts core/store/issue/permission-reads.test.ts core/store/issue/root.store.test.ts core/store/project`，取得断言 RED 后实现；沿 PC1 扩展现有观察器项目签名，仍只经 IssueRootStore.registerResource 接入，每个await核生命周期。不改 UserPermissionStore 或 ProjectStore 的事实算法。
-- [ ] Step 3：GREEN；取消/重复dispose释放 objectURL/AbortController，无 cleanup DELETE、无旧 owner callback；单改取消后继续 complete 与删除代次检查应各导致行为失败，恢复 SHA。types/lint 后提交 `feat(M5/P6): 约束上传的会话与权限生命期`。
+- [x] Step 1：真实 deferred promise 测试四用途scope、大小/MIME拒绝、双击仅一链、逐阶段 retry、object_missing 新 prepare、旧成功/失败/进度、select 替换、scope/路由/root 退休及权限 ABA；user 不受无关 project 影响，workspace 不受别的 project 影响。实际 RootStore/ProjectStore 驱动公开非成员完整目录缺席/恢复：旧 token 永久 false、新 token current，资源 invalidate 一次；有效角色仍 undefined，受限 issue 仍拒绝，成员/guest 收窄和无变化目录/无关范围保持。
+- [x] Step 2：`pnpm --filter web exec vitest run core/store/asset core/store/root.store.test.ts core/store/issue/permission-reads.test.ts core/store/issue/root.store.test.ts core/store/project`，取得断言 RED 后实现；沿 PC1 扩展现有观察器项目签名，仍只经 IssueRootStore.registerResource 接入，每个await核生命周期。不改 UserPermissionStore 或 ProjectStore 的事实算法。
+- [x] Step 3：GREEN；取消/重复dispose释放 objectURL/AbortController，无 cleanup DELETE、无旧 owner callback；单改取消后继续 complete 与删除代次检查应各导致行为失败，恢复 SHA。types/lint 后提交 `feat(M5/P6): 约束上传的会话与权限生命期`。
 
 ## Task 3（T3）：宿主图片到期与读取调和
 
