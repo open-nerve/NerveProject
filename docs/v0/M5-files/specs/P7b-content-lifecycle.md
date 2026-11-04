@@ -1,6 +1,6 @@
 # P7b 子合同：内容资源、上传与下载
 
-> 2026-11-05：正式预检通过，暂不实施。分支`codex/m5-p7b`，基线main`cf07c9fbe663b2e2c821c5988bb06933325b8ac1`；P7a准确main CI41869045846、全量归档及正常清理已核。一次独立builder发现的局部问题已修订合同并自检闭环，产品验收仍待实施。
+> 2026-11-05：正式预检通过，已获准从T1实施；阶段结束经deep-review、noff/main CI及归档后继续P8和M5收尾。分支`codex/m5-p7b`，基线main`cf07c9fbe663b2e2c821c5988bb06933325b8ac1`；P7a准确main CI41869045846、全量归档及正常清理已核。一次独立builder发现的局部问题已修订合同并自检闭环，产品验收仍待实施。
 
 本页与[主 spec](P7b-content-assets.md)一起接收恢复责任，只描述本阶段新增接口，P6 的资料行为保持。
 
@@ -19,7 +19,7 @@ content(id: string, signal?: AbortSignal): Promise<Content>;
 
 各自为 GET/DELETE `/api/v0/assets/{id}`、POST `/api/v0/assets/{id}/duplicate`、GET `/api/v0/assets/{id}/content`。listDraftPreparations消费P7a新增 GET `/api/v0/drafts/{draft_id}/asset-preparations`，limit50、最多100，直接用生成类型；只有draft view可用。无下载参数；DuplicateAsset 为 purpose/scope/name?，重发会生成新资产。所有拒绝保持现有 unwrap/Problem，不把 404 当空数组或成功。
 
-P7a实施接收：生成operation为`listDraftAssetPreparations`，返回`DraftAssetPreparationPage`；省略cursor读取首屏，后续只原样传递非null的next_cursor，不传空字符串或跨draft复用。两种草稿用途、pending/uploaded且未绑定均可返回；每页重验，跨页没有冻结快照。实际恢复、权限及交错证据见[P7a阶段记录](../reviews/P7a-draft-preparations-review.md#10-t5-全部门禁与接收核对)，P7a集成后的正式基线预检已完成；当前仍停在T1实施前。
+P7a实施接收：生成operation为`listDraftAssetPreparations`，返回`DraftAssetPreparationPage`；省略cursor读取首屏，后续只原样传递非null的next_cursor，不传空字符串或跨draft复用。两种草稿用途、pending/uploaded且未绑定均可返回；每页重验，跨页没有冻结快照。实际恢复、权限及交错证据见[P7a阶段记录](../reviews/P7a-draft-preparations-review.md#10-t5-全部门禁与接收核对)，P7a集成后的正式基线预检已完成；当前从T1实施，不以预检替代运行验收。
 
 AttachmentService.list(target, cursor?, signal?): Promise<AttachmentPage>，其中 target 为 `{kind:"issue"|"comment"|"draft"; id:string}`，分别调用 `/api/v0/issues/{issue_id}/attachments`、`/api/v0/issue-comments/{comment_id}/attachments`、`/api/v0/drafts/{draft_id}/attachments`。请求 `limit:50`；服务端最大100，UUID升序。Attachment 六字段直接消费；分页无 URL，next_cursor=null 才到底。
 

@@ -1,9 +1,9 @@
 # M5：文件
 
-> 状态：P1–P7a已完成。P7a整审及局部修复闭环，最终分支CI41859931318和noff maincf07c9fbe663b2e2c821c5988bb06933325b8ac1的CI41869045846均全绿；2,885文件全量归档核验并正常清理。P7b正式spec/plan预检通过，暂不实施；M5总体未完成。见[P7a完成证据](reviews/P7a-draft-preparations-review.md#13-t7-集成归档与接续)。
+> 状态：P1–P7a已完成。P7a整审及局部修复闭环，最终分支CI41859931318和noff maincf07c9fbe663b2e2c821c5988bb06933325b8ac1的CI41869045846均全绿；2,885文件全量归档核验并正常清理。P7b正式spec/plan预检通过，现从T1实施；随后连续推进P8及closeout，M5总体未完成。见[P7a完成证据](reviews/P7a-draft-preparations-review.md#13-t7-集成归档与接续)。
 > 起点：`main@3db22f06ad9e82a483c05c8078801af00a5cae02`（M4 最终 main CI 41397218533，三个作业成功）。
 PC2 已批准 A：[工作区更新的迟到回包](reviews/P6-workspace-write-lifetime-decision.md)。
-> 当前文档分支为`codex/m5-p7b`，根目录保持main。负责人2026-11-02已授权按既有节奏连续推进，常规设计、预检、实现、deep-review、`--no-ff`集成、CI和归档无需逐次询问；本轮按2026-11-05明确指示只完成P7b预检，不实施。重大风险、架构回归或关键分歧，先提交已完成工作，再上报。
+> 当前文档分支为`codex/m5-p7b`，根目录保持main。负责人2026-11-02已授权按既有节奏连续推进，常规设计、预检、实现、deep-review、`--no-ff`集成、CI和归档无需逐次询问；负责人2026-11-05进一步授权P7b实施、整审和既有节奏集成后连续推进P8及M5最终收尾。重大风险、架构回归或关键分歧，先提交已完成工作，再上报。
 
 ## 1. 目标、范围与输入
 
@@ -342,14 +342,14 @@ P1 起第一个实现提交更新关键词 phase 与到期例外；纯设计分�
 | P5 | 已完成；最终main f5f4ce94、CI41772399410三job全绿，5053文件归档核验且三组分支/worktree清理完成 | [spec](specs/P5-issue-assets.md) / [plan](plans/P5-issue-assets.md) / [预检](../../reviews/re-40-M5P5预检.md) / [整审](../../reviews/re-41-M5P5整体审核.md) / [阶段记录](reviews/P5-issue-assets-review.md) |
 | P6 | 已完成：整审/局部修复、准确最终分支及main CI全绿，6,861文件归档验证并正常清理 | [spec](specs/P6-profile-upload.md) / [plan](plans/P6-profile-upload.md) / [完成证据](reviews/P6-profile-upload-review.md#22-t15准确main全绿与归档清理) |
 | P7a | 已完成：noff main cf07c9fb、CI41869045846三job全绿，2,885文件归档核验及正常清理，P7b正式预检完成 | [spec](specs/P7a-draft-preparations.md) / [plan](plans/P7a-draft-preparations.md) / [完成证据](reviews/P7a-draft-preparations-review.md#13-t7-集成归档与接续) / [整审](../../reviews/re-48-M5P7a整体审核.md) |
-| P7b | 正式预检通过，基线cf07c9fb；16Task/8产品验收待实施，当前不实施 | [spec](specs/P7b-content-assets.md) / [plan](plans/P7b-content-assets.md) / [预检](../../reviews/re-49-M5P7b预检.md) / [阶段记录](reviews/P7b-content-assets-review.md) |
+| P7b | 正式预检通过，基线cf07c9fb；T1实施中，16Task/8产品验收按证据推进 | [spec](specs/P7b-content-assets.md) / [plan](plans/P7b-content-assets.md) / [预检](../../reviews/re-49-M5P7b预检.md) / [阶段记录](reviews/P7b-content-assets-review.md) |
 | P8、closeout | 未开始 | 待前置阶段完成后逐段展开 |
 
 当前可自行决定的局部取舍及代价：编辑器只处理图片，普通文件走附件区；预设封面使用稳定编号，不上传构建素材副本；描述图片保留到宿主删除，代价是占用空间；封存复制增加一次存储操作，换取确认后字节不被旧 PUT 改写。以上均在既定文件模块范围内，设计预检已核对一致性，具体实现按阶段合同验证。
 
 设计审查已修正的衔接：复用已有用途 MAC；保持 M4 的安全 URL 清洗合同；业务 JSON 仍 no-store；签名/传输使用运行时钟；外部操作记录放入有界 storage_metadata，不增加业务表。
 
-P1预算/MAC/Range、P2状态表/锁图/清理/owner端口、P3 SDK与双存储合同、P4绑定/读取/反向清理合同均已随实现验证并归档，见各阶段记录。P5 T1–T15完成：内容身份、绑定/迁移、精确事件/动态、分页、真实计数与完整全局排序、三宿主调用方及权限/字节/清理/容量均有证据，本地七门禁、整审和最终main CI闭环。集成期间修复测试夹具并按批准将E2E作业预算20改为25分钟；最终main f5f4ce94的CI41772399410三job成功、E2E364/364正常收尾。历史W11失败和超时原件全部保留，5053文件归档逐hash核验，三组分支/worktree清理且归档再核通过，见[P5§22.2](reviews/P5-issue-assets-review.md#222-最终main全绿与归档清理)。P6已完成T1–T15及A1–A8：一次整分支deep-review及唯一局部修复闭环，最终分支8e46ab55的CI41828756305、noff main96363675的CI41833460144均三job全绿；6,861文件归档逐hash/bytes/mode/membership核验，正常清理分支/worktree后再次核验通过。P7原预检缺口已批准A并拆P7a/P7b；P7a T1–T7完成，准确分支/main CI分别全绿，2,885文件归档核验及正常清理完成；P7b正式预检通过，当前不实施。若事实证明既定架构无法满足安全或一致性要求，提交当前文档和证据后上报。
+P1预算/MAC/Range、P2状态表/锁图/清理/owner端口、P3 SDK与双存储合同、P4绑定/读取/反向清理合同均已随实现验证并归档，见各阶段记录。P5 T1–T15完成：内容身份、绑定/迁移、精确事件/动态、分页、真实计数与完整全局排序、三宿主调用方及权限/字节/清理/容量均有证据，本地七门禁、整审和最终main CI闭环。集成期间修复测试夹具并按批准将E2E作业预算20改为25分钟；最终main f5f4ce94的CI41772399410三job成功、E2E364/364正常收尾。历史W11失败和超时原件全部保留，5053文件归档逐hash核验，三组分支/worktree清理且归档再核通过，见[P5§22.2](reviews/P5-issue-assets-review.md#222-最终main全绿与归档清理)。P6已完成T1–T15及A1–A8：一次整分支deep-review及唯一局部修复闭环，最终分支8e46ab55的CI41828756305、noff main96363675的CI41833460144均三job全绿；6,861文件归档逐hash/bytes/mode/membership核验，正常清理分支/worktree后再次核验通过。P7原预检缺口已批准A并拆P7a/P7b；P7a T1–T7完成，准确分支/main CI分别全绿，2,885文件归档核验及正常清理完成；P7b正式预检通过并从T1实施。若事实证明既定架构无法满足安全或一致性要求，提交当前文档和证据后上报。
 
 ## 16. 协议核验来源
 

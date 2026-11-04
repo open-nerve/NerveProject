@@ -1,8 +1,8 @@
 # M5/P7b 工作项附件与编辑器图片 Implementation Plan
 
-> 2026-11-05：正式预检通过，暂不实施。分支`codex/m5-p7b`，基线main`cf07c9fbe663b2e2c821c5988bb06933325b8ac1`；P7a准确main CI41869045846、全量归档及正常清理已核。一次独立builder发现的局部问题已修订合同并自检闭环，产品验收仍待实施。
+> 2026-11-05：正式预检通过，已获准从T1实施；阶段结束经deep-review、noff/main CI及归档后继续P8和M5收尾。分支`codex/m5-p7b`，基线main`cf07c9fbe663b2e2c821c5988bb06933325b8ac1`；P7a准确main CI41869045846、全量归档及正常清理已核。一次独立builder发现的局部问题已修订合同并自检闭环，产品验收仍待实施。
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans 逐Task内联实施；不逐Task新派实现者/审者，阶段末一次fresh whole-branch review。正式分支`codex/m5-p7b`已从main`cf07c9fbe663b2e2c821c5988bb06933325b8ac1`创建；一次fresh builder的局部问题已按现有owner和输入寿命补实，main CI、归档清理和文档自检前置已闭环，实施仍未开始。
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans 逐Task内联实施；不逐Task新派实现者/审者，阶段末一次fresh whole-branch review。正式分支`codex/m5-p7b`已从main`cf07c9fbe663b2e2c821c5988bb06933325b8ac1`创建；一次fresh builder的局部问题已按现有owner和输入寿命补实，main CI、归档清理和文档自检前置已闭环，实施已从T1开始。
 
 **Goal:** 工作项/评论/草稿附件与编辑器图片真实可用，列表计数/排序接通，旧文件调用链删净。
 **Architecture:** 当前会话 AssetService 与唯一 UploadSession 处理协议；ContentView 经 IssueRootStore 注册生命期，DetailResource/ContentReads 管已授权的当前资源；editor 包声明可选图片端口，应用适配，业务 HTML 只保存 UUID。宿主保存及草稿迁移沿现有原子 API。
@@ -50,9 +50,9 @@
 **Files:** 修改core/services/asset.service.ts；新attachment.service.ts/.test.ts、lib/asset-download.ts/.test.ts；回归lib/asset-upload.test.ts；tools/keywords.json；阶段review。
 **Interfaces:** AssetService.read/remove/duplicate/content/listDraftPreparations、AttachmentService.list、downloadAsset，签名见资源spec§1/5/6；准备件查询消费P7a生成DTO；原prepare/complete/putAsset不变。
 
-- [ ] Step 1：新增服务请求表驱动测试，断言四asset端点、三附件端点及准备件查询、limit50/cursor/path/signal、204、原Problem；source copy不转换为前端先取目标权限。下载用受控ReadableStream验证原URL/query、omit/redirect/no-referrer、精确字节、过短/过长、已过期、用户取消/超时、失败body回收、objectURL释放；不能用jsdom冒称真实Cookie验证。
-- [ ] Step 2：`pnpm --filter web exec vitest run core/services/asset.service.test.ts core/services/attachment.service.test.ts core/lib/asset-download.test.ts core/lib/asset-upload.test.ts`。先记录有效断言RED，再实现；phase=M5/P7。内容schema的正确类型名为生成的Content，不能写假AssetContent。
-- [ ] Step 3：同命令GREEN；API客户端及实际传输受影响测试、类型/格式/零warning；提交 `feat(M5/P7b): 补齐内容资产接口和有限下载`。
+- [x] Step 1：新增服务请求表驱动测试，断言四asset端点、三附件端点及准备件查询、limit50/cursor/path/signal、204、原Problem；source copy不转换为前端先取目标权限。下载用受控ReadableStream验证原URL/query、omit/redirect/no-referrer、精确字节、过短/过长、已过期、用户取消/超时、失败body回收、objectURL释放；不能用jsdom冒称真实Cookie验证。
+- [x] Step 2：`pnpm --filter web exec vitest run core/services/asset.service.test.ts core/services/attachment.service.test.ts core/lib/asset-download.test.ts core/lib/asset-upload.test.ts`。先记录有效断言RED，再实现；phase=M5/P7。内容schema的正确类型名为生成的Content，不能写假AssetContent。
+- [x] Step 3：同命令GREEN；API客户端及实际传输受影响测试、类型/格式/零warning；提交 `feat(M5/P7b): 补齐内容资产接口和有限下载`。
 
 ## Task 2（T2）：共享上传状态机与内容视图
 

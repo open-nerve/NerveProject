@@ -1,8 +1,16 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import type { Asset, NewAsset, PreparedAsset, Problem } from "@nerve/api-client";
+import type {
+  Asset,
+  Content,
+  DraftAssetPreparationPage,
+  DuplicateAsset,
+  NewAsset,
+  PreparedAsset,
+  Problem,
+} from "@nerve/api-client";
 import { ApiError } from "@/lib/api-error";
-import { FakeNerve, json } from "@/lib/auth/fake-nerve";
+import { FakeNerve, json, noContent } from "@/lib/auth/fake-nerve";
 import { settle, track, until } from "@/lib/auth/fake-time";
 import { SessionChangedError } from "@/lib/auth/token-manager";
 import { AssetService } from "./asset.service";
@@ -36,15 +44,29 @@ const prepared: PreparedAsset = {
     expires_at: "2026-11-04T00:10:00Z",
   },
 };
+type Answer = Asset | Content | DraftAssetPreparationPage | PreparedAsset | void;
+const copy: DuplicateAsset = {
+  purpose: "ISSUE_DESCRIPTION",
+  scope: { kind: "issue", id: "target-8" },
+  name: "copy.png",
+};
+const content: Content = { url: "/assets/storage/local/a?signature=secret", expires_at: "2026-11-05T01:00:00Z" };
+const draftPage: DraftAssetPreparationPage = {
+  data: [{ ...asset, purpose: "DRAFT_ISSUE_DESCRIPTION", scope: { kind: "draft", id: "draft-5" } }],
+  next_cursor: "opaque-next",
+};
 const operations: {
   name: string;
+  method: "POST" | "GET" | "DELETE";
   path: string;
-  body: NewAsset | Record<string, never>;
-  answer: Asset | PreparedAsset;
-  run: (service: AssetService, signal?: AbortSignal) => Promise<Asset | PreparedAsset>;
+  body?: NewAsset | DuplicateAsset | Record<string, never>;
+  query?: [string, string][];
+  answer: Answer;
+  run: (service: AssetService, signal?: AbortSignal) => Promise<Answer>;
 }[] = [
   {
     name: "prepare",
+    method: "POST",
     path: "/api/v0/assets",
     body: input,
     answer: prepared,
@@ -52,21 +74,70 @@ const operations: {
   },
   {
     name: "complete",
+    method: "POST",
     path: "/api/v0/assets/a-19/complete",
     body: {},
     answer: asset,
     run: (s: AssetService, signal?: AbortSignal) => s.complete("a-19", signal),
   },
+  {
+    name: "read",
+    method: "GET",
+    path: "/api/v0/assets/a-19",
+    answer: asset,
+    run: (s, signal) => s.read("a-19", signal),
+  },
+  {
+    name: "remove",
+    method: "DELETE",
+    path: "/api/v0/assets/a-19",
+    answer: undefined,
+    run: (s, signal) => s.remove("a-19", signal),
+  },
+  {
+    name: "duplicate source directly without a target preflight",
+    method: "POST",
+    path: "/api/v0/assets/a-19/duplicate",
+    body: copy,
+    answer: { ...asset, ...copy, id: "copy-20" },
+    run: (s, signal) => s.duplicate("a-19", copy, signal),
+  },
+  {
+    name: "content without a download query",
+    method: "GET",
+    path: "/api/v0/assets/a-19/content",
+    answer: content,
+    run: (s, signal) => s.content("a-19", signal),
+  },
+  {
+    name: "first preparation page",
+    method: "GET",
+    path: "/api/v0/drafts/draft-5/asset-preparations",
+    query: [["limit", "50"]],
+    answer: draftPage,
+    run: (s, signal) => s.listDraftPreparations("draft-5", undefined, signal),
+  },
+  {
+    name: "next preparation page",
+    method: "GET",
+    path: "/api/v0/drafts/draft-5/asset-preparations",
+    query: [
+      ["limit", "50"],
+      ["cursor", "opaque+cursor/=="],
+    ],
+    answer: { data: [], next_cursor: null },
+    run: (s, signal) => s.listDraftPreparations("draft-5", "opaque+cursor/==", signal),
+  },
 ];
 
 it.each(operations)(
   "$name sends the native JSON request and returns the generated response",
-  async ({ path, body, answer, run }) => {
+  async ({ method, path, body, query, answer, run }) => {
     const nerve = new FakeNerve();
-    nerve.respond = (call) => call.answer(json(200, answer));
+    nerve.respond = (call) => call.answer(answer === undefined ? noContent() : json(200, answer));
     const result = await settle(run(new AssetService(nerve.client())), "asset response");
     expect(nerve.calls).toHaveLength(1);
-    expect(nerve.calls[0]).toMatchObject({ method: "POST", path, body, queryEntries: [] });
+    expect(nerve.calls[0]).toMatchObject({ method, path, body, queryEntries: query ?? [] });
     expect(result.error).toBeUndefined();
     expect(result.value).toEqual(answer);
   }

@@ -1,6 +1,6 @@
 # M5/P7b 阶段评审记录
 
-> 2026-11-05：正式预检通过，暂不实施。分支`codex/m5-p7b`，基线main`cf07c9fbe663b2e2c821c5988bb06933325b8ac1`。P7a main CI 41869045846及归档/正常清理已核；
+> 2026-11-05：正式预检通过后已获准实施；预检历史结论保留，当前执行见§8。分支`codex/m5-p7b`，基线main`cf07c9fbe663b2e2c821c5988bb06933325b8ac1`。P7a main CI 41869045846及归档/正常清理已核；
 
 ## 1. 评审方式与范围
 
@@ -40,3 +40,11 @@ P7b T1–T13实现与证明F8–F12/F16/F17页面、准备件恢复、旧消费�
 ## 7. 限制与证据
 
 本轮没有实施、安装依赖或运行P7b产品测试，48个Step/8个产品验收仍空。预检只证明合同与实际入口可衔接，页面交错必须在实施中验证；若需要更改M4通用权限/读取语义，先提交证据上报。P7a完整归档/清理与准确CI见[P7a§13](P7a-draft-preparations-review.md#13-t7-集成归档与接续)。P7b原始builder与准备资料、当前preflight输入清单/receipt保存在本阶段ignored目录，实施后随阶段归档。
+
+## 8. 实施记录
+
+2026-11-05负责人授权从T1开始，P7b完成整审后按原节奏集成并继续P8/M5最终收尾。根目录仍main，现有codex/m5-p7b worktree执行；此前“暂不实施”是预检交付时点。阶段验收仍逐条等待实际证据。
+
+T1实现与验证：已有ApiClient消费生成Asset/Content/AttachmentPage/DraftAssetPreparationPage，原始字节下载独立fetch且有取消/期限/大小上限。首轮有效接口/下载断言RED，随后115/115聚焦测试通过；下载成功测试曾因jsdom FileReader任务与fake timers等待方式不符超时，修正测试为既有有期限settle，原失败完整保留。类型检查通过；修改8文件oxlint零warning；完整make test-web为18/18成功（17缓存，web实际重跑）。T1门禁收据在t1-types/t1-lint-2/t1-test-web及task-1-tests，产品输入前后不变。
+
+原件位于本worktree `.superpowers/sdd/P7b-content-assets/`：run-check.py记录每次命令、真实exit、耗时、准确HEAD及前后输入SHA清单。安装使用锁定pnpm且输入未改；基线make test-web为18/18全部缓存命中，不冒充新运行。既有phase=M5/P7按P7a/P7b共同数字阶段合同保持。

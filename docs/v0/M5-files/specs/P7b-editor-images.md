@@ -1,6 +1,6 @@
 # P7b 子合同：编辑器图片与宿主绑定
 
-> 2026-11-05：正式预检通过，暂不实施。分支`codex/m5-p7b`，基线main`cf07c9fbe663b2e2c821c5988bb06933325b8ac1`；P7a准确main CI41869045846、全量归档及正常清理已核。一次独立builder发现的局部问题已修订合同并自检闭环，产品验收仍待实施。
+> 2026-11-05：正式预检通过，已获准从T1实施；阶段结束经deep-review、noff/main CI及归档后继续P8和M5收尾。分支`codex/m5-p7b`，基线main`cf07c9fbe663b2e2c821c5988bb06933325b8ac1`；P7a准确main CI41869045846、全量归档及正常清理已核。一次独立builder发现的局部问题已修订合同并自检闭环，产品验收仍待实施。
 
 本页与[主 spec](P7b-content-assets.md)、[内容资源](P7b-content-lifecycle.md)一起接收恢复责任。包声明小接口，应用实现协议与授权；不得把业务服务导入 editor 包。
 
