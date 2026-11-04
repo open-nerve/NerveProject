@@ -1,6 +1,6 @@
 # M5/P6：资料图片上传与展示
 
-> PC1 已批准 A，合同同步复核中，未实施。分支 `codex/m5-p6`，基线 `main@c59cedf337c5c5654bef2f0cbb33407ff04ced26`。P5 最终分支 CI 已全绿、已 noff 集成；main CI 及归档仍在独立收尾。产品实施须等待本次预检复核及 P5 收尾完成。
+> PC1 已批准 A，合同已同步，未实施。分支 `codex/m5-p6`，初始基线c59cedf3，当前已同步 `main@ce29aa00076130e2e805f50e2de08fc5d3ca2375`。P5 main CI一次重跑364/364通过但job超时，等待[预算决定](../reviews/P5-main-e2e-budget-decision.md)及归档收尾；本次尚不启动产品实施。
 > PC1 的复现、方案 A/B 及代价见[决策记录](../reviews/P6-public-project-lifetime-decision.md)；方案 A 已批准，文档复核结束前仍不声称预检通过。
 > 依据 M5 设计 §3、§5–6、§9、§11–12、P4 已实现的资料引用合同及 P5 的准备件隐私。执行沿连续授权：主控局部决定并记代价，重大风险先提交再上报。
 

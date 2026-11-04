@@ -20,10 +20,10 @@
 
 - [x] T1：保存原main日志及输入，运行原场景基线；加入受控首轮预算耗尽场景，看到原观察断言的真实RED。
 - [x] T2：按实际持久阶段修复夹具；受控场景GREEN，原P4/P5清理恢复及River游标回归、race多轮和移除修复的行为变异验证；精确清理本次容器。
-- [ ] T3：完整受影响bootstrap包、Go静态与架构核验；产品及前端输入逐SHA不变，未受影响的已通过全门禁有界复用；一次独立修复分支deep-review及主控复核，准确修复分支CI全绿。
+- [x] T3：完整受影响bootstrap包、Go静态与架构核验；产品及前端输入逐SHA不变，未受影响的已通过全门禁有界复用；一次独立修复分支deep-review及主控复核，准确修复分支CI全绿。
 - [ ] T4：连续授权下noff合入main，准确main CI全绿后归档本修复和P5全部原件、正常清理已合并分支/worktree；P6同步新main基线后完成预检并从T1实施。
 
-当前 T1/T2 完成，T3 整包/独评/准确分支 CI 和 T4 集成尚待验收。原始日志、输入hash、失败及恢复记录保存在本工作树 `.superpowers/sdd/P5-ci-purge-resume/`。
+T1–T3 已完成；T4 已 noff 合入 main，准确 main CI 的 E2E 首轮遇到已知 W11；一次重跑364/364通过，但job因20分钟上限取消。按负责人要求停下，待[预算决定](P5-main-e2e-budget-decision.md)，尚未归档清理。原始日志、输入hash、失败及恢复记录保存在修复工作树 `.superpowers/sdd/P5-ci-purge-resume/`，具体集成收据见下节。
 
 ## 4. 局部裁定与验证台账
 
@@ -33,3 +33,13 @@
 - 仅三个 `_test.go` 文件有代码差异，未动生产清理、依赖、架构守卫或权限。原 P5 全门禁仅对未变更输入有界复用；本修复必须完整重跑 bootstrap、Go 静态/架构和准确分支/main CI。
 - 最终输入的两项行为变异均失败并逐 SHA 恢复；随后完整相关五轮 race 在 284.526 秒通过，三种内容进程场景、原图片提交/失败场景、内容文件保留、River 恢复、周期唯一性及运行时角色均覆盖。4434 个非文档输入每次运行前后不变，原 20 个容器逐 ID 保留、无新增遗留。证据为 `final-mutations.json`、`isolated-race-five-*` 与 `task-2-verified.json`；不能将此聚焦验证称为完整包或远端已通过。
 - 唯一 fresh 整分支审查 0 Critical/0 Important/0 Minor，主控三项未判断范围裁定与完整验证边界见 [re-43](../../../reviews/re-43-M5P5集成修复审核.md)。Go lint 29.597 秒零问题、架构 race 6.446 秒通过；完整 bootstrap 运行中。因本修复只有测试与文档变化，准确分支 CI 可与本机整包并行，全部通过前仍不合并。
+
+## 5. T3 与 T4 的执行收据
+
+完整本地 bootstrap 662.928 秒通过，602 个顶层测试、5830 条 PASS 记录，三个既有规模用例明确 skip。五份绿色收据与当前全部4434个非文档输入一致；相对 P5 最终基线只改变三个具名测试文件。最终候选 `defc89140ede7b38ec53730db71272007a869c41` 的[分支 CI 41740835449](https://github.com/open-nerve/NerveProject/actions/runs/41740835449) attempt1 三作业和必需步骤全绿，E2E364/364、16.4m、无重试；三份完整日志、run/jobs 原件由 `branch-ci-final.json` 固定 hash。此前“整包运行中”等表述保留为冻结代码时的历史记录。
+
+以 `--no-ff` 合入并由系统 Git 自动推送 main `ce29aa00076130e2e805f50e2de08fc5d3ca2375`，双父为原 main `c59cedf337c5c5654bef2f0cbb33407ff04ced26` 与上述候选，树逐值一致。准确[main CI 41745515892](https://github.com/open-nerve/NerveProject/actions/runs/41745515892) attempt1 的 server/web 成功；server bootstrap804.768秒。E2E终态cancelled，日志却已完整记录364项：W11第190行弹窗数量 expected1/received0、1failed/363passed（17.9m），随后make失败并被取消，不能仅归为安装或整包超时。
+
+按既有 W11 规则，仅通过原生 GitHub 插件重跑 E2E 一次；attempt2 的 E2E job 为126312370586。GitHub将已成功的server/web分别映射为126312433250/126312371600，原始执行时间保留，重新读取的日志与首轮逐字节相同。首轮完整失败日志、run/jobs和21,919,197字节的原始Playwright报告（701个ZIP条目、CRC与公布SHA一致）均保留。未做W11专项排查、未改断言或预算。
+
+第二轮最终364 passed（17.4m），W11通过；GitHub注解确认job超过20m0s而取消，距开始20分4.662秒才输出全部通过。原始第二轮ZIP 2,750,153字节/670条目及SHA/CRC已核。没有第三次重跑；按负责人明确停点保留全部分支/worktree，并提交[25分钟作业预算建议](P5-main-e2e-budget-decision.md)等待决定。main仍未全绿，归档、清理及P6实施未开始。

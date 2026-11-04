@@ -1,6 +1,6 @@
 # M5/P6 资料图片上传与展示 Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans 按 Task 内联实施；不用逐 Task 新派实现者/审者。完成后一次 fresh whole-branch review。本计划已在 `codex/m5-p6` 版本化，基线 `c59cedf337c5c5654bef2f0cbb33407ff04ced26`；[PC1](../reviews/P6-public-project-lifetime-decision.md)已批准 A，预检复核中、未实施。P5 main CI 和归档另行收尾，T1 尚不可启动。
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans 按 Task 内联实施；不用逐 Task 新派实现者/审者。完成后一次 fresh whole-branch review。本计划已在 `codex/m5-p6` 版本化，初始基线c59cedf3，当前已noff同步 `ce29aa00076130e2e805f50e2de08fc5d3ca2375`；[PC1](../reviews/P6-public-project-lifetime-decision.md)已批准 A并同步合同、未实施。P5 main CI一次重跑364/364通过但job超时，等待[预算决定](../reviews/P5-main-e2e-budget-decision.md)与归档，T1 尚不可启动。
 
 **Goal:** 资料图片真实上传、宿主绑定、权限/到期展示和可访问交互。
 **Architecture:** AssetService 处理会话 JSON；独立 fetch 只传 File；视图持有上传，IssueRootStore 统一使生命周期失效。图片读由当前宿主 store 调和，活动来源读合并但不复制权限或实体事实。

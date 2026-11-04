@@ -314,3 +314,9 @@ Go AST 及实际二进制核实，bootstrap 顶层测试由 P1 的 462、P4 的 
 在根main和P5工作树均干净、origin身份及祖先核验后，按连续授权以--no-ff合入 `c59cedf337c5c5654bef2f0cbb33407ff04ced26`，双父为 `0f93100a05304d26b074790633b5659285813156` 与最终分支 `6d14c965fa63d1414aaf4a3480a21f7d3d76431f`；合并树与分支树均为 `0e8dd3f07fc2476fe4f39b5e41d6749f548605bf`。系统Git自动推送成功，[main CI 41733981570](https://github.com/open-nerve/NerveProject/actions/runs/41733981570)已启动，尚待最终状态。
 
 与准确main同树建立codex/m5-p6，仅版本化预检文档及复制探针证据；没有安装依赖或实施P6。一次fresh builder发现PC1，经实际store复现后准备A/B上报。P5 main CI/归档独立继续；A9和T15剩余步骤未提前勾选，P6预检也未声称通过。原20容器仍逐ID保留，本次测试新增遗留0。
+
+### 22.1 集成测试修复与一次重跑后的预算停点
+
+原main c59的server失败已由独立清理恢复夹具修复解决，生产合同不变；完整本地bootstrap、五轮race、有效行为变异、唯一fresh整审及准确修复分支CI均通过，见[修复收据](P5-ci-purge-resume.md)。修复已--no-ff合入main `ce29aa00076130e2e805f50e2de08fc5d3ca2375`。
+
+main CI41745515892首轮server/web通过，E2E遇已知W11；主控经原生GitHub插件自行重跑一次。第二轮W11及364项全部通过，但GitHub明确因20分钟job上限取消。两轮完整日志、报告、公开注解与准确身份已保存；按负责人“重跑也不过就停下来”要求，提交[仅将E2E作业总预算调整为25分钟的建议](P5-main-e2e-budget-decision.md)等待决定。没有改变配置、再重跑、归档或清理，A9及T15剩余步骤仍开放。P6已同步当前main并完成PC1合同澄清，产品尚未实施。
