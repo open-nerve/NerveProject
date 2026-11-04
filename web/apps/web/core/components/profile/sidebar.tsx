@@ -12,8 +12,9 @@ import { useOutsideClickDetector } from "@nerve/hooks";
 import { useTranslation } from "@nerve/i18n";
 import { IconButton } from "@nerve/propel/icon-button";
 import { EditOutline } from "@makeplane/propel/icons";
+import { ProfileImage, ProfileImageRetry } from "@/components/assets/profile-image";
 import { Loader } from "@nerve/ui";
-import { renderFormattedDate, getFileURL } from "@nerve/utils";
+import { renderFormattedDate } from "@nerve/utils";
 // hooks
 import { useAppTheme } from "@/hooks/store/use-app-theme";
 import { useCommandPalette } from "@/hooks/store/use-command-palette";
@@ -81,17 +82,12 @@ export const ProfileSidebar = observer(function ProfileSidebar() {
       <div className="px-5 py-6">
         <div className="flex items-center gap-4">
           <div className="h-[52px] w-[52px] flex-shrink-0 rounded-sm">
-            {userData.avatar_url && userData.avatar_url !== "" ? (
-              <img
-                src={getFileURL(userData.avatar_url)}
-                alt={userData.display_name}
-                className="h-full w-full rounded-sm object-cover"
-              />
-            ) : (
-              <div className="flex h-[52px] w-[52px] items-center justify-center rounded-sm bg-accent-primary text-on-color capitalize">
-                {userData.first_name?.[0]}
-              </div>
-            )}
+            <ProfileImage
+              source={{ kind: "member", workspaceID: workspace?.id ?? "", memberID: userData.id }}
+              alt={userData.display_name}
+              className="flex h-full w-full items-center justify-center rounded-sm bg-accent-primary object-cover text-on-color capitalize"
+              fallback={userData.first_name?.[0]}
+            />
           </div>
           <div className="min-w-0">
             <h4 className="truncate text-16 font-semibold">
@@ -115,6 +111,7 @@ export const ProfileSidebar = observer(function ProfileSidebar() {
             </div>
           )}
         </div>
+        <ProfileImageRetry source={{ kind: "member", workspaceID: workspace?.id ?? "", memberID: userData.id }} />
         <div className="mt-6 flex items-center gap-4 text-13">
           <div className="w-2/5 flex-shrink-0 text-secondary">{t("profile.details.joined_on")}</div>
           <div className="w-3/5 font-medium break-words">{renderFormattedDate(profileMember.joinedAt)}</div>

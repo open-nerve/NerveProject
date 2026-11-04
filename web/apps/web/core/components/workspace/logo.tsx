@@ -9,7 +9,14 @@ import { useTranslation } from "@nerve/i18n";
 import { cn } from "@nerve/utils";
 import { ProfileImage } from "@/components/assets/profile-image";
 
-type PublicPreview = { kind: "public-preview"; url: string | null; expiresAt: string | null };
+type PublicPreview = {
+  kind: "public-preview";
+  url: string | null;
+  expiresAt: string | null;
+  onExpire?: () => void;
+  onError?: () => void;
+  onLoad?: () => void;
+};
 type Props = {
   source: { kind: "workspace"; workspaceID: string | undefined } | PublicPreview;
   name: string | undefined;
@@ -57,13 +64,20 @@ function PublicLogo({
   const [, redraw] = useState(0);
   const expiry = source.expiresAt ? Date.parse(source.expiresAt) : NaN;
   const valid = !!source.url && Number.isFinite(expiry) && expiry > Date.now() && stamp !== failed;
+  const { onExpire } = source;
   useEffect(() => {
-    if (!valid) return;
+    if (!source.url || stamp === failed) return;
+    if (!Number.isFinite(expiry) || expiry <= Date.now()) {
+      onExpire?.();
+      return;
+    }
     let timer: ReturnType<typeof setTimeout>;
     const check = () => {
       clearTimeout(timer);
-      if (expiry <= Date.now()) redraw((value) => value + 1);
-      else timer = setTimeout(check, Math.min(expiry - Date.now(), 2_147_483_647));
+      if (expiry <= Date.now()) {
+        redraw((value) => value + 1);
+        onExpire?.();
+      } else timer = setTimeout(check, Math.min(expiry - Date.now(), 2_147_483_647));
     };
     check();
     document.addEventListener("visibilitychange", check);
@@ -75,9 +89,19 @@ function PublicLogo({
       window.removeEventListener("focus", check);
       window.removeEventListener("online", check);
     };
-  }, [stamp, expiry, valid]);
+  }, [stamp, expiry, failed, source.url, onExpire]);
   return valid && source.url ? (
-    <img key={stamp} src={source.url} alt={alt} className={className} onError={() => setFailed(stamp)} />
+    <img
+      key={stamp}
+      src={source.url}
+      alt={alt}
+      className={className}
+      onError={() => {
+        setFailed(stamp);
+        source.onError?.();
+      }}
+      onLoad={source.onLoad}
+    />
   ) : (
     <span role="img" aria-label={alt} className={className}>
       {fallback}

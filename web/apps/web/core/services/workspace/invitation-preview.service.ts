@@ -13,10 +13,12 @@ import { unwrap } from "@/lib/api-error";
 export async function previewInvitation(
   client: ApiClient,
   invitationId: string,
-  token: string
+  token: string,
+  signal?: AbortSignal
 ): Promise<InvitationPreview> {
   return unwrap(
     await client.GET("/api/v0/workspace-invitations/{invitation_id}", {
+      signal,
       params: { path: { invitation_id: invitationId }, query: { token } },
     })
   );

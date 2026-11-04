@@ -32,6 +32,7 @@ const store = vi.hoisted(() => ({
   bulkAddMembersToProject: vi.fn((_projectId: string, _data: ProjectMembersAdd) => Promise.resolve([])),
   updateMemberRole: vi.fn((_projectId: string, _userId: string, _role: ProjectRole) => Promise.resolve()),
 }));
+vi.mock("@/hooks/use-profile-image", () => import("@/lib/fake-profile-image"));
 vi.mock("@/hooks/store/use-member", () => ({
   useMember: () => ({
     project: {
@@ -219,3 +220,7 @@ describe("what the members page offers", () => {
     expect([roleChoices(caller, membership), canRemove(caller, membership)]).toEqual([choices, removable]);
   });
 });
+
+vi.mock("@/hooks/store/use-workspace", () => ({
+  useWorkspace: () => ({ getWorkspaceBySlug: () => ({ id: "w-acme" }) }),
+}));

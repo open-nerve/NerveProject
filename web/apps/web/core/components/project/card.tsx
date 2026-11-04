@@ -19,7 +19,7 @@ import {
 } from "@makeplane/propel/icons";
 // nerve imports
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
-import { Avatar } from "@makeplane/propel/components/avatar";
+import { ProfileAvatar } from "@/components/assets/profile-image";
 import { Button } from "@nerve/propel/button";
 import { Logo } from "@nerve/propel/emoji-icon-picker";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
@@ -27,7 +27,7 @@ import type { Project } from "@nerve/api-client";
 import type { TContextMenuItem } from "@nerve/ui";
 import { ContextMenu } from "@nerve/ui";
 import { useTranslation } from "@nerve/i18n";
-import { cn, getFileURL, renderFormattedDate } from "@nerve/utils";
+import { cn, renderFormattedDate } from "@nerve/utils";
 // hooks
 import { useMember } from "@/hooks/store/use-member";
 import { useUserPermissions } from "@/hooks/store/user";
@@ -243,11 +243,11 @@ export const ProjectCard = observer(function ProjectCard(props: Props) {
                         const member = getUserDetails(memberId);
                         if (!member) return null;
                         return (
-                          <Avatar
+                          <ProfileAvatar
                             key={member.id}
                             alt={member.display_name}
                             fallback={member.display_name?.[0]?.toUpperCase()}
-                            src={getFileURL(member.avatar_url)}
+                            source={{ kind: "member", workspaceID: project.workspace_id, memberID: member.id }}
                           />
                         );
                       })}

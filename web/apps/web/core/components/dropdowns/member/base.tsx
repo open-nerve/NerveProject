@@ -8,7 +8,8 @@ import { observer } from "mobx-react";
 import type { ComponentType, SVGProps, ReactNode } from "react";
 import { useParams } from "react-router";
 import { useTranslation } from "@nerve/i18n";
-import { Avatar } from "@makeplane/propel/components/avatar";
+import { ProfileAvatar } from "@/components/assets/profile-image";
+import { useRouteWorkspace } from "@/hooks/use-route-workspace";
 import { ChevronDownOutline, DeactivatedUserOutline } from "@makeplane/propel/icons";
 // nerve imports
 import { EPillSize, EPillVariant, Pill } from "@nerve/propel/pill";
@@ -16,7 +17,7 @@ import type { MemberUser } from "@nerve/api-client";
 import type { ICustomSearchSelectOption } from "@nerve/types";
 import { CustomSearchSelect } from "@nerve/ui";
 // helpers
-import { cn, getFileURL, sortByCurrentUserThenSelected } from "@nerve/utils";
+import { cn, sortByCurrentUserThenSelected } from "@nerve/utils";
 // hooks
 import { useMember } from "@/hooks/store/use-member";
 import { useUser } from "@/hooks/store/user";
@@ -66,6 +67,7 @@ export const MemberDropdownBase = observer(function MemberDropdownBase(props: TM
     tooltipContent,
     value,
   } = props;
+  const imageWorkspace = useRouteWorkspace();
   // router
   const { workspaceSlug } = useParams();
   // store hooks
@@ -130,10 +132,10 @@ export const MemberDropdownBase = observer(function MemberDropdownBase(props: TM
               {suspended ? (
                 <DeactivatedUserOutline className="h-3.5 w-3.5 text-placeholder" />
               ) : (
-                <Avatar
+                <ProfileAvatar
                   alt={userDetails?.display_name}
                   fallback={userDetails?.display_name?.[0]?.toUpperCase()}
-                  src={getFileURL(userDetails?.avatar_url ?? "")}
+                  source={{ kind: "member", workspaceID: imageWorkspace?.id ?? "", memberID: userId }}
                   size="xs"
                 />
               )}

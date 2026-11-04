@@ -9,7 +9,8 @@ import { observer } from "mobx-react";
 import { useForm, Controller, useFieldArray } from "react-hook-form";
 // nerve imports
 import type { ProjectMembersAdd } from "@nerve/api-client";
-import { Avatar } from "@makeplane/propel/components/avatar";
+import { useProject } from "@/hooks/store/use-project";
+import { ProfileAvatar } from "@/components/assets/profile-image";
 import { Field, FieldError } from "@makeplane/propel/components/field";
 import { ROLE_DETAILS } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
@@ -18,7 +19,6 @@ import { AddOutline, ChevronDownOutline, CloseOutline } from "@makeplane/propel/
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { CustomSelect, CustomSearchSelect, EModalPosition, EModalWidth, ModalCore, ModalTitle } from "@nerve/ui";
 // helpers
-import { getFileURL } from "@nerve/utils";
 // hooks
 import { useMember } from "@/hooks/store/use-member";
 import { useRefusalToast } from "@/hooks/use-refusal-toast";
@@ -47,6 +47,7 @@ const defaultValues: FormValues = {
 
 export const AddProjectMembersModal = observer(function AddProjectMembersModal(props: Props) {
   const { isOpen, onClose, projectId } = props;
+  const imageWorkspaceID = useProject().getProjectById(projectId)?.workspace_id;
   // nerve hooks
   const { t } = useTranslation();
   // store hooks
@@ -121,10 +122,10 @@ export const AddProjectMembersModal = observer(function AddProjectMembersModal(p
         content: (
           <div className="flex w-full items-center gap-2">
             <div className="shrink-0 pt-0.5">
-              <Avatar
+              <ProfileAvatar
                 alt={memberDetails?.member.display_name}
                 fallback={memberDetails?.member.display_name?.[0]?.toUpperCase()}
-                src={getFileURL(memberDetails?.member.avatar_url)}
+                source={{ kind: "member", workspaceID: imageWorkspaceID ?? "", memberID: memberDetails.member.id }}
                 size="xs"
               />
             </div>
@@ -175,10 +176,10 @@ export const AddProjectMembersModal = observer(function AddProjectMembersModal(p
                               <span className="shadow-sm flex w-full items-center justify-between gap-1 rounded-md border border-subtle px-3 py-2 text-left text-13 text-secondary duration-300 hover:bg-layer-1 hover:text-primary focus:outline-none">
                                 {value && value !== "" ? (
                                   <div className="flex items-center gap-2">
-                                    <Avatar
+                                    <ProfileAvatar
                                       alt={selectedMember?.member.display_name}
                                       fallback={selectedMember?.member.display_name?.[0]?.toUpperCase()}
-                                      src={getFileURL(selectedMember?.member.avatar_url ?? "")}
+                                      source={{ kind: "member", workspaceID: imageWorkspaceID ?? "", memberID: value }}
                                       size="xs"
                                     />
                                     {selectedMember?.member.display_name}

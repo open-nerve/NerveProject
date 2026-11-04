@@ -13,6 +13,7 @@ import { MemberDropdownBase } from "./base";
 // the props it was given, on a desktop unless the test says a phone.
 
 const device = vi.hoisted(() => ({ isMobile: false }));
+vi.mock("@/hooks/use-profile-image", () => import("@/lib/fake-profile-image"));
 vi.mock("@nerve/ui", () => import("@/lib/fake-controls"));
 vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
 vi.mock("@/hooks/use-platform-os", () => ({ usePlatformOS: () => device }));
@@ -82,3 +83,5 @@ describe("MemberDropdownBase", () => {
     expect(shown.searchSelects[0]?.popperModifiers).toEqual([{ name: "preventOverflow", options: { padding: 12 } }]);
   });
 });
+
+vi.mock("@/hooks/use-route-workspace", () => ({ useRouteWorkspace: () => ({ id: "w-acme" }) }));

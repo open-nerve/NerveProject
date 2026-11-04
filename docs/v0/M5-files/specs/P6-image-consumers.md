@@ -75,6 +75,14 @@
 
 公共邀请保持独立预览生命周期；成员图不从跨工作区 memberMap 的裸URL授权。M6/M7只换既有头像叶子和投影；未接通领域页面验收归属保持。所有目标读取和上传失效仍沿已批准的PC1和IssueRootStore，不新增权限源。
 
+## T10 实施核验
+
+原清单49文件及7条透传链已逐项落实，56份最终源码SHA与逐行搜索结果见E6 `t10-consumer-audit.json`；原始基线命中保留如下，不能当作当前源码。T5/T6/T8/T9的self、workspace、project来源与T10的member来源已全部接通；9个ButtonAvatars调用方沿当前路由规范工作区，共享组件不再接收裸URL。成员表使用明确slug解析UUID，评论/历史作者/编辑器已传宿主身份，进度统计传成员ID；SwitcherLabel移除无调用方的URL分支，两处图标调用者保留。
+
+当前components/hooks中资料URL仅两处具名用途：`assets/project-cover.tsx`判断规范项目是否有自定义图后交给ProfileImage，不直接展示URL；新增`account/auth-forms/invitation-logo.tsx`接公开邀请预览及expiry，按链接管理有限重读。后者和编辑器rich/lite的两处宿主透传均已追加审读。无裸成员URL命中，不增加M6/M7接口、关键词或lint豁免。
+
+实际RootStore的成员/历史/mention呈现验证跨工作区全局缓存、当前来源合并、guest、目录缺席、inactive、到期与失权隐藏；邀请十项DOM验证公开key/无Authorization、到期/后台恢复、有限自动重读及显式重试、同URL重新加载、旧事件/链接ABA/取消与StrictMode。三浏览器完整网络与字节仍由T11/T12完成。详见[阶段记录§15](../reviews/P6-profile-upload-review.md#15-t10-成员图片消费者和公开邀请)。
+
 ## 基线原始命中
 
 ## web/apps/web/core/components/account/auth-forms/auth-header.tsx

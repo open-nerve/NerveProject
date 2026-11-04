@@ -7,9 +7,9 @@
 import { observer } from "mobx-react";
 import { CloseOutline } from "@makeplane/propel/icons";
 // nerve ui
-import { Avatar } from "@makeplane/propel/components/avatar";
+import { ProfileAvatar } from "@/components/assets/profile-image";
+import { useRouteWorkspace } from "@/hooks/use-route-workspace";
 // helpers
-import { getFileURL } from "@nerve/utils";
 // types
 import { useMember } from "@/hooks/store/use-member";
 
@@ -21,6 +21,7 @@ type Props = {
 
 export const AppliedMembersFilters = observer(function AppliedMembersFilters(props: Props) {
   const { handleRemove, values, editable } = props;
+  const imageWorkspace = useRouteWorkspace();
   // store hooks
   const {
     workspace: { getWorkspaceMemberDetails },
@@ -35,10 +36,10 @@ export const AppliedMembersFilters = observer(function AppliedMembersFilters(pro
 
         return (
           <div key={memberId} className="flex items-center gap-1 rounded-sm bg-layer-1 px-1.5 py-1 text-11">
-            <Avatar
+            <ProfileAvatar
               alt={memberDetails.display_name}
               fallback={memberDetails.display_name?.[0]?.toUpperCase()}
-              src={getFileURL(memberDetails.avatar_url)}
+              source={{ kind: "member", workspaceID: imageWorkspace?.id ?? "", memberID: memberId }}
               size="2xs"
             />
             <span className="normal-case">{memberDetails.display_name}</span>

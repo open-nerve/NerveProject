@@ -18,7 +18,8 @@ import {
   UserOutline,
 } from "@makeplane/propel/icons";
 // nerve imports
-import { Avatar } from "@makeplane/propel/components/avatar";
+import { useWorkspace } from "@/hooks/store/use-workspace";
+import { ProfileAvatar } from "@/components/assets/profile-image";
 import { Logo } from "@nerve/propel/emoji-icon-picker";
 import { PriorityIcon, StateGroupIcon } from "@nerve/propel/icons";
 import type { MemberUser, Project, State, Label } from "@nerve/api-client";
@@ -29,7 +30,6 @@ import {
   getAssigneeFilterConfig,
   getCreatedAtFilterConfig,
   getCreatedByFilterConfig,
-  getFileURL,
   getLabelFilterConfig,
   getMentionFilterConfig,
   getSubscriberFilterConfig,
@@ -68,6 +68,7 @@ export type TWorkItemFiltersConfig = {
 
 export const useWorkItemFiltersConfig = (props: TUseWorkItemFiltersConfigProps): TWorkItemFiltersConfig => {
   const { allowedFilters, labelIds, memberIds, projectIds, stateIds } = props;
+  const imageWorkspaceID = useWorkspace().getWorkspaceBySlug(props.workspaceSlug)?.id;
   const { t } = useTranslation();
   const meLabel = t("common.filter_options.me");
   const noneLabel = t("common.none");
@@ -195,15 +196,15 @@ export const useWorkItemFiltersConfig = (props: TUseWorkItemFiltersConfigProps):
           { id: "none", value: "none", label: noneLabel },
         ],
         getOptionIcon: (memberDetails) => (
-          <Avatar
+          <ProfileAvatar
             alt={memberDetails.display_name}
             fallback={memberDetails.display_name?.[0]?.toUpperCase()}
-            src={getFileURL(memberDetails.avatar_url)}
+            source={{ kind: "member", workspaceID: imageWorkspaceID ?? "", memberID: memberDetails.id }}
             size="2xs"
           />
         ),
       }),
-    [assigneeLabel, isFilterEnabled, members, meLabel, noneLabel]
+    [assigneeLabel, isFilterEnabled, members, meLabel, noneLabel, imageWorkspaceID]
   );
 
   // mention filter config
@@ -216,15 +217,15 @@ export const useWorkItemFiltersConfig = (props: TUseWorkItemFiltersConfigProps):
         members: members ?? [],
         additionalOptions: [{ id: "me", value: "me", label: meLabel }],
         getOptionIcon: (memberDetails) => (
-          <Avatar
+          <ProfileAvatar
             alt={memberDetails.display_name}
             fallback={memberDetails.display_name?.[0]?.toUpperCase()}
-            src={getFileURL(memberDetails.avatar_url)}
+            source={{ kind: "member", workspaceID: imageWorkspaceID ?? "", memberID: memberDetails.id }}
             size="2xs"
           />
         ),
       }),
-    [mentionLabel, isFilterEnabled, members, meLabel]
+    [mentionLabel, isFilterEnabled, members, meLabel, imageWorkspaceID]
   );
 
   // created by filter config
@@ -237,15 +238,15 @@ export const useWorkItemFiltersConfig = (props: TUseWorkItemFiltersConfigProps):
         members: members ?? [],
         additionalOptions: [{ id: "me", value: "me", label: meLabel }],
         getOptionIcon: (memberDetails) => (
-          <Avatar
+          <ProfileAvatar
             alt={memberDetails.display_name}
             fallback={memberDetails.display_name?.[0]?.toUpperCase()}
-            src={getFileURL(memberDetails.avatar_url)}
+            source={{ kind: "member", workspaceID: imageWorkspaceID ?? "", memberID: memberDetails.id }}
             size="2xs"
           />
         ),
       }),
-    [createdByLabel, isFilterEnabled, members, meLabel]
+    [createdByLabel, isFilterEnabled, members, meLabel, imageWorkspaceID]
   );
 
   const subscriberFilterConfig = useMemo(

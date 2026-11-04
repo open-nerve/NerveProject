@@ -124,3 +124,14 @@ ProjectCreationForm直接包含生成DTO的两个封面字段，默认省略；p
 ProjectCover只收明确project source，从当前ProjectStore选择事实；完整目录缺席覆盖旧详情和迟到详情。预设映射本地、未知编号占位、公开项目非成员预设零能力GET，自定义走T3授权图片读取。真实卡片测试还复现外层链接包住设置链接及按钮，改为独立原生主链接与操作控件，键盘入口保留。共享ProjectCoverEditor从创建控件提取，两处保持相同语义；切离上传页签取消隐藏传输及旧自定义准备件，保留预设/显式清除。
 
 初轮行为8failed/133passed；补充提交与交互守卫16failed/15passed后194项聚焦通过。17项真实DOM设置测试含双提交、拒绝重试、权限收窄/恢复、迟到成功/失败、取消换选、旧目录与链接结构；切页签单独1failed/16passed后GREEN。受影响455项/42文件通过。完整前端18/18（17缓存，web308文件3424项）通过；4512输入前后hash一致，原始输出见t9-web-tests.log。首次完整运行因测试夹具无后缀图片被导航守卫视作页面而失败，改为明确.png夹具，未改守卫；原失败、类型可空检查与no-shadow错误均保留。13文件格式/零warning、1333翻译引用、最终类型检查通过。真实浏览器和文件字节仍由T11/T12验收，A1–A8保持开放。
+
+
+## 15. T10 成员图片消费者和公开邀请
+
+全部既有头像消费者改用明确工作区UUID/memberID；当前路由消费使用useRouteWorkspace，传入slug/项目的宿主从规范store解析，历史作者沿root→dropdown→item透传，评论和编辑器保留各自宿主身份。进度统计仅投影成员ID，SwitcherLabel删去无使用者的URL属性/分支。跨工作区成员全局缓存不再充当图片事实，guest/未知成员占位，inactive沿原呈现规则；未新增M6/M7请求。56文件逐项SHA及零旧URL命中见E6 t10-consumer-audit.json；新增InvitationLogo是明确公开能力例外，ProjectCover只据规范字段决定走哪个显示入口。
+
+邀请预览保持原公开link key且不接登录resource。preview服务接收AbortSignal，hook按已提交的链接生命期取消旧请求并校验每次返回，StrictMode重放和链接ABA须重新取当前预览。WorkspaceLogo继续薄expiry显示，InvitationLogo只组合当前预览、有限错误/到期重读与显式按钮：一次自动尝试后须成功图片load才恢复额度，刷新仍给无效expiry或拒绝不会循环；相同URL允许显式/成功重读的新尝试，旧节点事件不能破坏新图。
+
+成员5项真实RED后通过；邀请初轮8failed/1passed，其中1项选择器误将应用加载标志当工作区图标，已改为精确alt，不计行为RED；其余到期重读/取消等7项真实失败。最终邀请10项、历史和mention宿主16项、58文件474项受影响验证通过。完整前端18/18（17缓存，web310文件3439项）通过；4516输入前后hash一致，原始输出t10-web-tests-final.log。首次全量7项失败均为两个旧组件测试未提供新增workspace图片边界，补实际workspace hook和仅呈现的image替身；评论测试保留实际RootStore provider。原输入/输出均保留。
+
+Knip发现T2测试夹具preparedAsset只有内部使用，去除多余export后通过；没有删除仍使用的函数。类型、62文件格式/零warning、1333翻译引用通过。首次Map的SWR Cache类型、非空断言、hook依赖及测试mock lint问题按既有规则修正，无豁免或配置变化。图片GET的真实Cookie、字节/绑定链与三浏览器继续由T11/T12验收，A1–A8尚不提前关闭。

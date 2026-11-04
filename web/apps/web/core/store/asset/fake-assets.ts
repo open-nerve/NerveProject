@@ -12,7 +12,7 @@ export const imageFile = (name = "picture.png", bytes = 4, type = "image/png") =
   new File([new Uint8Array(bytes)], name, { type });
 export const avatarTarget = { purpose: "USER_AVATAR", scope: { kind: "user" } } as const;
 
-export function preparedAsset(id: string, input: NewAsset): PreparedAsset {
+function preparedAsset(id: string, input: NewAsset): PreparedAsset {
   return {
     asset: {
       ...input,

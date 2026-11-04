@@ -1,8 +1,7 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 import { useCallback, useLayoutEffect, useMemo, useRef } from "react";
-import { Avatar } from "@makeplane/propel/components/avatar";
+import { ProfileAvatar } from "@/components/assets/profile-image";
 import type { TMentionSection, TMentionScope } from "@nerve/editor";
-import { getFileURL } from "@nerve/utils";
 import { useDetailScope } from "@/components/issues/issue-detail-widgets/use-detail-scope";
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { SessionChangedError } from "@/lib/auth/token-manager";
@@ -79,10 +78,10 @@ export function useEditorMention({ workspaceSlug, projectId, editable, members }
               entity_name: "user_mention",
               title: user.display_name,
               icon: (
-                <Avatar
+                <ProfileAvatar
                   alt={user.display_name}
                   fallback={user.display_name[0]?.toUpperCase()}
-                  src={getFileURL(user.avatar_url)}
+                  source={{ kind: "member", workspaceID: workspace.id, memberID: user.id }}
                   size="xs"
                 />
               ),

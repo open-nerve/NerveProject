@@ -9,7 +9,7 @@ import type { InvitationPreview } from "@nerve/api-client";
 import { useTranslation } from "@nerve/i18n";
 // components
 import { LogoSpinner } from "@/components/common/logo-spinner";
-import { WorkspaceLogo } from "@/components/workspace/logo";
+import { InvitationLogo } from "./invitation-logo";
 // helpers
 import { EAuthModes } from "@/helpers/authentication.helper";
 // hooks
@@ -38,7 +38,7 @@ export const AuthHeader = observer(function AuthHeader(props: TAuthHeader) {
   // nerve imports
   const { t } = useTranslation();
 
-  const { data: invitation, isLoading } = useInvitationPreview(invitationId, token);
+  const { data: invitation, isLoading, error, mutate } = useInvitationPreview(invitationId, token);
 
   const getHeaderSubHeader = (mode: EAuthModes, current: InvitationPreview | undefined) => {
     if (current) {
@@ -46,15 +46,11 @@ export const AuthHeader = observer(function AuthHeader(props: TAuthHeader) {
         header: (
           <div className="relative inline-flex items-center gap-2">
             {t("common.join")}{" "}
-            <WorkspaceLogo
+            <InvitationLogo
               key={JSON.stringify([invitationId, token])}
-              source={{
-                kind: "public-preview",
-                url: current.workspace_logo_url,
-                expiresAt: current.workspace_logo_url_expires_at,
-              }}
-              name={current.workspace_name}
-              classNames="size-9 flex-shrink-0"
+              invitation={current}
+              error={error}
+              reload={mutate}
             />{" "}
             {current.workspace_name}
           </div>

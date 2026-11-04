@@ -148,3 +148,7 @@ it("a refused description can be retried without restoring or closing", async ()
   expect(container.querySelector('[role="alert"]')).toBeNull();
   expect(container.querySelector('[role="dialog"]')).not.toBeNull();
 });
+
+vi.mock("@/hooks/store/use-workspace", () => ({
+  useWorkspace: () => ({ getWorkspaceBySlug: () => ({ id: "id-ws" }) }),
+}));

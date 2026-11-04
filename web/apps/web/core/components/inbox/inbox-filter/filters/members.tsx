@@ -8,12 +8,12 @@ import { useMemo, useState } from "react";
 import { sortBy } from "lodash-es";
 import { observer } from "mobx-react";
 // nerve types
-import { Avatar } from "@makeplane/propel/components/avatar";
+import { useRouteWorkspace } from "@/hooks/use-route-workspace";
+import { ProfileAvatar } from "@/components/assets/profile-image";
 import type { TInboxIssueFilterMemberKeys } from "@nerve/types";
 // nerve ui
 import { Loader } from "@nerve/ui";
 // components
-import { getFileURL } from "@nerve/utils";
 import { FilterHeader, FilterOption } from "@/components/issues/issue-layouts/filters";
 // hooks
 import { useMember } from "@/hooks/store/use-member";
@@ -29,6 +29,7 @@ type Props = {
 
 export const FilterMember = observer(function FilterMember(props: Props) {
   const { filterKey, label = "Members", memberIds, searchQuery } = props;
+  const imageWorkspace = useRouteWorkspace();
   // hooks
   const { inboxFilters, handleInboxIssueFilters } = useProjectInbox();
   const { getUserDetails } = useMember();
@@ -85,10 +86,10 @@ export const FilterMember = observer(function FilterMember(props: Props) {
                       isChecked={!!filterValue?.includes(member.id)}
                       onClick={() => handleInboxIssueFilters(filterKey, handleFilterValue(member.id))}
                       icon={
-                        <Avatar
+                        <ProfileAvatar
                           alt={member.display_name}
                           fallback={member.display_name?.[0]?.toUpperCase()}
-                          src={getFileURL(member.avatar_url)}
+                          source={{ kind: "member", workspaceID: imageWorkspace?.id ?? "", memberID: member.id }}
                           size="xs"
                         />
                       }

@@ -54,7 +54,6 @@ export const ModuleProgressStats = observer(function ModuleProgressStats(props: 
   const distributionAssigneeData: TAssigneeData = (distribution?.assignees || []).map((assignee) => ({
     id: assignee?.assignee_id || undefined,
     title: assignee?.display_name || undefined,
-    avatar_url: assignee?.avatar_url || undefined,
     completed: assignee.completed_issues,
     total: assignee.total_issues,
   }));

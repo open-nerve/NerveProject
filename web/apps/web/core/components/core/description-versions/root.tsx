@@ -1,5 +1,7 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 import { useLayoutEffect, useRef, useState } from "react";
+import { observer } from "mobx-react";
+import { useWorkspace } from "@/hooks/store/use-workspace";
 import { cn } from "@nerve/utils";
 import { useTranslation } from "@nerve/i18n";
 import { useSessionSWR } from "@/lib/use-session-swr";
@@ -37,7 +39,7 @@ export function DescriptionVersionsRoot(props: Props) {
     />
   );
 }
-function DescriptionVersionsContent(props: Props) {
+const DescriptionVersionsContent = observer(function DescriptionVersionsContent(props: Props) {
   const {
     className,
     entityInformation,
@@ -51,6 +53,7 @@ function DescriptionVersionsContent(props: Props) {
     projectId,
     workspaceSlug,
   } = props;
+  const workspaceID = useWorkspace().getWorkspaceBySlug(workspaceSlug)?.id;
   const { t } = useTranslation();
   const message = useRefusalMessage();
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -115,6 +118,7 @@ function DescriptionVersionsContent(props: Props) {
       )}
       <div className={cn(className)}>
         <DescriptionVersionsDropdown
+          workspaceID={workspaceID}
           disabled={!versions?.length}
           entityInformation={entityInformation}
           onVersionClick={setActiveId}
@@ -136,4 +140,4 @@ function DescriptionVersionsContent(props: Props) {
       </div>
     </>
   );
-}
+});

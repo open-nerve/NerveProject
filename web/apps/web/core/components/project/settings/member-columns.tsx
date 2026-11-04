@@ -13,7 +13,8 @@ import { ROLE_DETAILS } from "@nerve/constants";
 import type { ProjectRole } from "@nerve/api-client";
 import { useTranslation } from "@nerve/i18n";
 import { CustomMenu, CustomSelect } from "@nerve/ui";
-import { getFileURL } from "@nerve/utils";
+import { ProfileImage } from "@/components/assets/profile-image";
+import { useWorkspace } from "@/hooks/store/use-workspace";
 import type { IProjectMemberDetails } from "@/store/member/project/project-member.store";
 // local imports
 import { useProjectMembershipChanges } from "./use-project-membership-changes";
@@ -36,11 +37,12 @@ type AccountTypeProps = {
   projectId: string;
 };
 
-export function NameColumn(props: NameProps) {
+export const NameColumn = observer(function NameColumn(props: NameProps) {
   const { rowData, workspaceSlug, own, removable, setRemoveMemberModal } = props;
   const { t } = useTranslation();
   // derived values
-  const { avatar_url, display_name, email, first_name, id, last_name } = rowData.member;
+  const imageWorkspace = useWorkspace().getWorkspaceBySlug(workspaceSlug);
+  const { display_name, email, first_name, id, last_name } = rowData.member;
 
   return (
     <Disclosure>
@@ -48,23 +50,14 @@ export function NameColumn(props: NameProps) {
         <div className="group relative">
           <div className="flex w-72 items-center gap-2">
             <div className="flex flex-1 items-center gap-x-2 gap-y-2">
-              {avatar_url && avatar_url.trim() !== "" ? (
-                <Link to={`/${workspaceSlug}/profile/${id}`}>
-                  <span className="relative flex size-6 items-center justify-center rounded-full text-on-color capitalize">
-                    <img
-                      src={getFileURL(avatar_url)}
-                      className="absolute top-0 left-0 h-full w-full rounded-full object-cover"
-                      alt={display_name || (email ?? undefined)}
-                    />
-                  </span>
-                </Link>
-              ) : (
-                <Link to={`/${workspaceSlug}/profile/${id}`}>
-                  <span className="relative flex size-6 items-center justify-center rounded-full bg-layer-3 text-11 text-on-color capitalize">
-                    {(email ?? display_name ?? "?")[0]}
-                  </span>
-                </Link>
-              )}
+              <Link to={`/${workspaceSlug}/profile/${id}`}>
+                <ProfileImage
+                  source={{ kind: "member", workspaceID: imageWorkspace?.id ?? "", memberID: id }}
+                  alt={display_name || email || ""}
+                  className="relative flex size-6 items-center justify-center rounded-full bg-layer-3 object-cover text-11 text-tertiary capitalize"
+                  fallback={(email ?? display_name ?? "?")[0]}
+                />
+              </Link>
               {first_name} {last_name}
             </div>
             {(own || removable) && (
@@ -88,7 +81,7 @@ export function NameColumn(props: NameProps) {
       )}
     </Disclosure>
   );
-}
+});
 
 export const AccountTypeColumn = observer(function AccountTypeColumn(props: AccountTypeProps) {
   const { rowData, choices, projectId, workspaceSlug } = props;

@@ -8,6 +8,7 @@ import { heldChange } from "@/lib/auth/fake-tab";
 import { toasts } from "@/lib/fake-toast";
 import { ApiError } from "@/lib/api-error";
 import { DescriptionVersionsModal } from "./modal";
+vi.mock("@/hooks/use-profile-image", () => import("@/lib/fake-profile-image"));
 vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
 vi.mock("@nerve/propel/toast", () => import("@/lib/fake-toast"));
 vi.mock("@/lib/auth/api-client", () => ({ tokenManager: { state: { loginId: "one" } } }));

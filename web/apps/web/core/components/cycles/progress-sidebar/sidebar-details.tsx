@@ -10,11 +10,11 @@ import { observer } from "mobx-react";
 import { MembersOutline, UserAltOutline, WorkItemsOutline } from "@makeplane/propel/icons";
 // nerve types
 import { useTranslation } from "@nerve/i18n";
-import { Avatar } from "@makeplane/propel/components/avatar";
+import { useRouteWorkspace } from "@/hooks/use-route-workspace";
+import { ProfileAvatar } from "@/components/assets/profile-image";
 import { TextArea } from "@makeplane/propel/components/text-area";
 import type { ICycle } from "@nerve/types";
 // helpers
-import { getFileURL } from "@nerve/utils";
 // hooks
 import { AvatarGroupOverflow } from "@/components/common/avatar-group-overflow";
 import { useMember } from "@/hooks/store/use-member";
@@ -25,6 +25,7 @@ type Props = {
 
 export const CycleSidebarDetails = observer(function CycleSidebarDetails(props: Props) {
   const { cycleDetails } = props;
+  const imageWorkspace = useRouteWorkspace();
   // hooks
   const { getUserDetails } = useMember();
   const { t } = useTranslation();
@@ -56,10 +57,10 @@ export const CycleSidebarDetails = observer(function CycleSidebarDetails(props: 
           </div>
           <div className="flex w-3/5 items-center rounded-xs">
             <div className="flex items-center gap-2.5">
-              <Avatar
+              <ProfileAvatar
                 alt={cycleOwnerDetails?.display_name}
                 fallback={cycleOwnerDetails?.display_name?.[0]?.toUpperCase()}
-                src={getFileURL(cycleOwnerDetails?.avatar_url ?? "")}
+                source={{ kind: "member", workspaceID: imageWorkspace?.id ?? "", memberID: cycleDetails.owned_by_id }}
                 size="xs"
               />
               <span className="text-13 text-secondary">{cycleOwnerDetails?.display_name}</span>
@@ -80,11 +81,11 @@ export const CycleSidebarDetails = observer(function CycleSidebarDetails(props: 
                     {cycleDetails.assignee_ids.map((member) => {
                       const memberDetails = getUserDetails(member);
                       return (
-                        <Avatar
+                        <ProfileAvatar
                           key={memberDetails?.id}
                           alt={memberDetails?.display_name ?? ""}
                           fallback={memberDetails?.display_name?.[0]?.toUpperCase()}
-                          src={getFileURL(memberDetails?.avatar_url ?? "")}
+                          source={{ kind: "member", workspaceID: imageWorkspace?.id ?? "", memberID: member }}
                         />
                       );
                     })}

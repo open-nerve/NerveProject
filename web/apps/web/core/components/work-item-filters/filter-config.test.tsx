@@ -143,3 +143,6 @@ it("keeps the archived picker within its allowed native filters", async () => {
     "target_date",
   ]);
 });
+
+vi.mock("@/hooks/store/use-workspace", () => ({ useWorkspace: () => tab.app.workspaceRoot }));
+vi.mock("@/hooks/use-profile-image", () => import("@/lib/fake-profile-image"));

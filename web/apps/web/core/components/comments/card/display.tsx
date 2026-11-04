@@ -11,13 +11,13 @@ import { useEffect, useRef, useState } from "react";
 import { observer } from "mobx-react";
 import { useLocation } from "react-router";
 // nerve imports
-import { Avatar } from "@makeplane/propel/components/avatar";
+import { ProfileAvatar } from "@/components/assets/profile-image";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
 import type { EditorRefApi } from "@nerve/editor";
 import { useHashScroll } from "@nerve/hooks";
 import { useTranslation } from "@nerve/i18n";
 import type { TCommentsOperations } from "@nerve/types";
-import { calculateTimeAgo, cn, getFileURL, renderFormattedDate, renderFormattedTime } from "@nerve/utils";
+import { calculateTimeAgo, cn, renderFormattedDate, renderFormattedTime } from "@nerve/utils";
 // components
 import { LiteTextEditor } from "@/components/editor/lite-text";
 // local imports
@@ -65,7 +65,6 @@ export const CommentCardDisplay = observer(function CommentCardDisplay(props: TC
   // derived values
   const userDetails = getUserDetails(comment.actor_id);
   const displayName = userDetails?.display_name ?? t("common.deactivated_user");
-  const avatarUrl = userDetails?.avatar_url ?? null;
 
   const userReactions = activityOperations.userReactions(comment.id);
 
@@ -109,7 +108,12 @@ export const CommentCardDisplay = observer(function CommentCardDisplay(props: TC
   return (
     <div className="relative flex flex-col gap-2">
       <div className="relative mb-3 flex w-full items-center gap-2">
-        <Avatar alt={displayName} fallback={displayName?.[0]?.toUpperCase()} size="2xs" src={getFileURL(avatarUrl)} />
+        <ProfileAvatar
+          alt={displayName}
+          fallback={displayName?.[0]?.toUpperCase()}
+          size="2xs"
+          source={{ kind: "member", workspaceID: workspaceId, memberID: comment.actor_id }}
+        />
         <div className="flex flex-1 flex-wrap items-center gap-1">
           <div className="text-caption-sm-medium">{displayName}</div>
           <div className="text-caption-sm-regular text-tertiary">

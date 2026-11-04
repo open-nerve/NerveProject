@@ -1,6 +1,6 @@
 # M5/P6 资料图片上传与展示 Implementation Plan
 
-> 预检通过，T1–T9完成；PC2按A完成基础与页面回归，继续T10。**For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans 按 Task 内联实施；不用逐 Task 新派实现者/审者。完成后一次 fresh whole-branch review。本计划在 `codex/m5-p6`，初始基线c59cedf3，实施基线已noff同步 `main@f5f4ce9431e7fb360363bf169da33487cf9b864f`；[PC1](../reviews/P6-public-project-lifetime-decision.md)已批准 A并同步合同。P5准确main CI及归档清理已完成，按连续授权从T1执行。
+> 预检通过，T1–T10完成；PC2按A完成基础与页面回归，继续T11。**For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans 按 Task 内联实施；不用逐 Task 新派实现者/审者。完成后一次 fresh whole-branch review。本计划在 `codex/m5-p6`，初始基线c59cedf3，实施基线已noff同步 `main@f5f4ce9431e7fb360363bf169da33487cf9b864f`；[PC1](../reviews/P6-public-project-lifetime-decision.md)已批准 A并同步合同。P5准确main CI及归档清理已完成，按连续授权从T1执行。
 
 PC2 已批准 A：[工作区更新的迟到回包](../reviews/P6-workspace-write-lifetime-decision.md)。
 **Goal:** 资料图片真实上传、宿主绑定、权限/到期展示和可访问交互。
@@ -125,9 +125,9 @@ PC2 已批准 A：[工作区更新的迟到回包](../reviews/P6-workspace-write
 **Files:** 正式预检P6-image-consumers清单中全部头像/图标调用方；包括workspace/project/settings/member-columns、dropdowns/member/{avatar,base}、project/member-select、project/add-project-members-modal、profile/sidebar、comments/card/display、core/description-versions、editor/embeds/mentions/user及仍保留的通用筛选/显示；use-invitation-preview.ts/.test.ts、account/auth-forms/auth-header.tsx。
 **Interfaces:** 成员source必须明确workspaceUUID/memberUUID；public邀请沿现有link key与expires_at，不需资产UUID或登录。
 
-- [ ] Step 1：成员/自身/guest与inactive原语义、两个workspace同member旧全局缓存、私有project撤权/恢复、公开邀请过期/失效/更换、多个avatar同来源合并、旧onError不能刷新新图；确保没有新增未实现M6/M7请求。
-- [ ] Step 2：按完整清单逐个迁移到T3显示入口，测试当前可达caller与旧props适配；历史作者沿root/dropdown传工作区UUID，编辑器mention保留捕获范围，进度统计使用成员ID而非投影裸URL。SwitcherLabel删除无调用者的logo_url分支并核两处图标caller；直接裸URL命中须逐行归零或具名登记确为非资料外部资源，不增加关键词豁免。
-- [ ] Step 3：`pnpm --filter web exec vitest run core/components/dropdowns/member core/components/workspace core/components/project core/components/profile core/components/comments core/components/core/description-versions core/hooks/use-invitation-preview.test.ts core/hooks/work-item-filters`及全types/knip；提交 `feat(M5/P6): 统一有权成员头像与邀请图标的到期展示`。
+- [x] Step 1：成员/自身/guest与inactive原语义、两个workspace同member旧全局缓存、私有project撤权/恢复、公开邀请过期/失效/更换、多个avatar同来源合并、旧onError不能刷新新图；确保没有新增未实现M6/M7请求。
+- [x] Step 2：按完整清单逐个迁移到T3显示入口，测试当前可达caller与旧props适配；历史作者沿root/dropdown传工作区UUID，编辑器mention保留捕获范围，进度统计使用成员ID而非投影裸URL。SwitcherLabel删除无调用者的logo_url分支并核两处图标caller；直接裸URL命中须逐行归零或具名登记确为非资料外部资源，不增加关键词豁免。
+- [x] Step 3：`pnpm --filter web exec vitest run core/components/dropdowns/member core/components/workspace core/components/project core/components/profile core/components/comments core/components/core/description-versions core/hooks/use-invitation-preview.test.ts core/hooks/work-item-filters`及全types/knip；提交 `feat(M5/P6): 统一有权成员头像与邀请图标的到期展示`。
 
 ## Task 11（T11）：F5–F7 真实页面与双存储
 

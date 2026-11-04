@@ -5,27 +5,26 @@
  */
 
 import { observer } from "mobx-react";
-import { useParams, Link } from "react-router";
+import { Link } from "react-router";
 // nerve imports
-import { Avatar } from "@makeplane/propel/components/avatar";
+import { ProfileAvatar } from "@/components/assets/profile-image";
 import { ROLE_DETAILS } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { Popover } from "@nerve/propel/popover";
-import { cn, getFileURL } from "@nerve/utils";
+import { cn } from "@nerve/utils";
 // hooks
 import { useMember } from "@/hooks/store/use-member";
 import { useUser } from "@/hooks/store/user";
 
 type Props = {
   id: string;
+  workspaceID: string;
+  workspaceSlug: string;
+  projectId: string | undefined;
 };
 
 export const EditorUserMention = observer(function EditorUserMention(props: Props) {
-  const { id } = props;
-  // router
-  const { projectId } = useParams();
-  // params
-  const { workspaceSlug } = useParams();
+  const { id, workspaceID, workspaceSlug, projectId } = props;
   // store hooks
   const { data: currentUser } = useUser();
   const { t } = useTranslation();
@@ -63,10 +62,10 @@ export const EditorUserMention = observer(function EditorUserMention(props: Prop
           <div className="w-60 rounded-lg border-[0.5px] border-strong bg-surface-1 p-3 shadow-raised-200">
             <div className="flex items-center gap-3">
               <div className="grid size-10 flex-shrink-0 place-items-center">
-                <Avatar
+                <ProfileAvatar
                   alt={userDetails?.display_name}
                   fallback={userDetails?.display_name?.[0]?.toUpperCase()}
-                  src={getFileURL(userDetails?.avatar_url ?? "")}
+                  source={{ kind: "member", workspaceID: workspaceID, memberID: id }}
                   size="xl"
                 />
               </div>

@@ -18,6 +18,7 @@ import { DescriptionVersionsDropdownItem } from "./dropdown-item";
 import type { TDescriptionVersionEntityInformation } from "./root";
 
 type Props = {
+  workspaceID: string | undefined;
   disabled: boolean;
   entityInformation: TDescriptionVersionEntityInformation;
   onVersionClick: (versionId: string) => void;
@@ -25,7 +26,7 @@ type Props = {
 };
 
 export const DescriptionVersionsDropdown = observer(function DescriptionVersionsDropdown(props: Props) {
-  const { disabled, entityInformation, onVersionClick, versions } = props;
+  const { disabled, entityInformation, onVersionClick, versions, workspaceID } = props;
   // store hooks
   const { getUserDetails } = useMember();
   // derived values
@@ -60,7 +61,12 @@ export const DescriptionVersionsDropdown = observer(function DescriptionVersions
     >
       <p className="mb-1 text-11 font-medium text-tertiary">{t("description_versions.previously_edited_by")}</p>
       {versions?.map((version) => (
-        <DescriptionVersionsDropdownItem key={version.id} onClick={onVersionClick} version={version} />
+        <DescriptionVersionsDropdownItem
+          workspaceID={workspaceID}
+          key={version.id}
+          onClick={onVersionClick}
+          version={version}
+        />
       ))}
     </CustomMenu>
   );

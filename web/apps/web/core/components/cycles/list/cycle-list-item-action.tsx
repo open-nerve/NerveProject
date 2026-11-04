@@ -13,12 +13,13 @@ import { CalendarOutline, MembersOutline, ShowOutline, WorkItemsOutline } from "
 import { EUserPermissions, EUserPermissionsLevel, IS_FAVORITE_MENU_OPEN } from "@nerve/constants";
 import { useLocalStorage } from "@nerve/hooks";
 import { useTranslation } from "@nerve/i18n";
-import { Avatar } from "@makeplane/propel/components/avatar";
+import { useWorkspace } from "@/hooks/store/use-workspace";
+import { ProfileAvatar } from "@/components/assets/profile-image";
 import { setPromiseToast } from "@nerve/propel/toast";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
 import type { ICycle, TCycleGroups } from "@nerve/types";
 import { FavoriteStar } from "@nerve/ui";
-import { getDate, getFileURL, generateQueryParams } from "@nerve/utils";
+import { getDate, generateQueryParams } from "@nerve/utils";
 // components
 import { AvatarGroupOverflow } from "@/components/common/avatar-group-overflow";
 import { DateRangeDropdown } from "@/components/dropdowns/date-range";
@@ -50,6 +51,7 @@ const defaultValues: Partial<ICycle> = {
 
 export const CycleListItemAction = observer(function CycleListItemAction(props: Props) {
   const { workspaceSlug, projectId, cycleId, cycleDetails, parentRef, isActive = false } = props;
+  const imageWorkspace = useWorkspace().getWorkspaceBySlug(props.workspaceSlug);
   // router
   //states
   // hooks
@@ -239,11 +241,11 @@ export const CycleListItemAction = observer(function CycleListItemAction(props: 
                 {cycleDetails.assignee_ids?.map((assignee_id) => {
                   const member = getUserDetails(assignee_id);
                   return (
-                    <Avatar
+                    <ProfileAvatar
                       key={member?.id}
                       alt={member?.display_name}
                       fallback={member?.display_name?.[0]?.toUpperCase()}
-                      src={getFileURL(member?.avatar_url ?? "")}
+                      source={{ kind: "member", workspaceID: imageWorkspace?.id ?? "", memberID: assignee_id }}
                     />
                   );
                 })}

@@ -1,5 +1,7 @@
 // @vitest-environment jsdom
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
+import { StoreContext } from "@/lib/store-context";
+import type { RootStore } from "@/store/root.store";
 import { seedAccount } from "@/store/user/fake-account";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -16,8 +18,14 @@ import { useWorkItemCommentOperations } from "../issues/issue-detail/issue-activ
 import { CommentCard } from "./card/root";
 const binding = vi.hoisted(() => ({ tab: undefined as Awaited<ReturnType<typeof issueStoreTab>> | undefined }));
 vi.stubGlobal("localStorage", { getItem: () => null, setItem: () => {}, removeItem: () => {} });
-vi.mock("@/lib/auth/api-client", () => ({ tokenManager: { state: { loginId: "one" } }, publicClient: {} }));
-vi.mock("@/lib/store-context", () => ({ rootStore: undefined }));
+vi.mock("@/lib/auth/api-client", () => ({
+  tokenManager: { state: { status: "signed-in", loginId: "one" }, start: async () => {}, subscribe: () => () => {} },
+  publicClient: {},
+}));
+vi.mock("@/lib/store-context", async () => ({
+  rootStore: undefined,
+  StoreContext: (await import("react")).createContext<RootStore | undefined>(undefined),
+}));
 vi.mock("@nerve/i18n", () => ({
   useTranslation: () => ({ t: (key: string, args?: { name: string }) => (args ? `${key}: ${args.name}` : key) }),
 }));
@@ -96,9 +104,11 @@ async function setup(projectRole: ProjectRole, workspaceRole: WorkspaceRole, aut
 const render = (disabled = false) =>
   act(async () =>
     root.render(
-      <MemoryRouter>
-        <Card disabled={disabled} />
-      </MemoryRouter>
+      <StoreContext.Provider value={binding.tab!.app}>
+        <MemoryRouter>
+          <Card disabled={disabled} />
+        </MemoryRouter>
+      </StoreContext.Provider>
     )
   );
 const items = () => [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')];

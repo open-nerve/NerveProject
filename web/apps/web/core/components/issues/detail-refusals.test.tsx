@@ -181,3 +181,6 @@ it.each(["state", "member"])(
     expect(tab.nerve.calls[0]!.path).toBe(`/api/v0/projects/A/${kind === "state" ? "states" : "members"}`);
   }
 );
+
+vi.mock("@/hooks/store/use-workspace", () => ({ useWorkspace: () => tab.app.workspaceRoot }));
+vi.mock("@/hooks/use-profile-image", () => import("@/lib/fake-profile-image"));

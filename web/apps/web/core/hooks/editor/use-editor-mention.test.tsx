@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 import { observer } from "mobx-react";
-import { act } from "react";
+import { act, isValidElement } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { loadWorkspaces } from "@/store/workspace/fake-workspaces";
@@ -202,4 +202,16 @@ it("notifies an open popup across permission loss and recovery using the root wa
   expect(current()).toBe(false);
   expect(close).toHaveBeenCalled();
   stop();
+});
+
+it("suggestion images carry the captured workspace identity rather than a global avatar URL", async () => {
+  await render();
+  const read = await start("Bob");
+  await answer(read, [member("Bob")]);
+  const icon = (await read.promise)[0]!.items[0]!.icon;
+  expect(isValidElement<{ source: unknown }>(icon) && icon.props.source).toEqual({
+    kind: "member",
+    workspaceID: state.tab!.workspace.id,
+    memberID: "u-Bob",
+  });
 });

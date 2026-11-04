@@ -8,11 +8,11 @@ import { observer } from "mobx-react";
 import { useTranslation } from "@nerve/i18n";
 
 // nerve types
-import { Avatar } from "@makeplane/propel/components/avatar";
+import { ProfileAvatar } from "@/components/assets/profile-image";
+import { useRouteWorkspace } from "@/hooks/use-route-workspace";
 import { CloseOutline } from "@makeplane/propel/icons";
 import type { TInboxIssueFilterMemberKeys } from "@nerve/types";
 // helpers
-import { getFileURL } from "@nerve/utils";
 // hooks
 import { useMember } from "@/hooks/store/use-member";
 import { useProjectInbox } from "@/hooks/store/use-project-inbox";
@@ -27,6 +27,7 @@ export const InboxIssueAppliedFiltersMember = observer(function InboxIssueApplie
 ) {
   const { filterKey, label } = props;
   const { t } = useTranslation();
+  const imageWorkspace = useRouteWorkspace();
   // hooks
   const { inboxFilters, handleInboxIssueFilters } = useProjectInbox();
   const { getUserDetails } = useMember();
@@ -49,10 +50,10 @@ export const InboxIssueAppliedFiltersMember = observer(function InboxIssueApplie
         return (
           <div key={value} className="relative flex items-center gap-1 rounded-sm bg-layer-1 p-1 text-11">
             <div className="relative flex flex-shrink-0 items-center justify-center overflow-hidden">
-              <Avatar
+              <ProfileAvatar
                 alt={optionDetail.display_name}
                 fallback={optionDetail.display_name?.[0]?.toUpperCase()}
-                src={getFileURL(optionDetail.avatar_url)}
+                source={{ kind: "member", workspaceID: imageWorkspace?.id ?? "", memberID: value }}
                 size="2xs"
               />
             </div>

@@ -1,5 +1,7 @@
 // @vitest-environment jsdom
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
+import { StoreContext } from "@/lib/store-context";
+import type { RootStore } from "@/store/root.store";
 import { seedAccount } from "@/store/user/fake-account";
 import React, { act, useImperativeHandle, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -21,8 +23,14 @@ const binding = vi.hoisted(() => ({
   ready: true,
 }));
 vi.stubGlobal("localStorage", { getItem: () => null, setItem: () => {}, removeItem: () => {} });
-vi.mock("@/lib/auth/api-client", () => ({ tokenManager: { state: { loginId: "one" } }, publicClient: {} }));
-vi.mock("@/lib/store-context", () => ({ rootStore: undefined }));
+vi.mock("@/lib/auth/api-client", () => ({
+  tokenManager: { state: { status: "signed-in", loginId: "one" }, start: async () => {}, subscribe: () => () => {} },
+  publicClient: {},
+}));
+vi.mock("@/lib/store-context", async () => ({
+  rootStore: undefined,
+  StoreContext: (await import("react")).createContext<RootStore | undefined>(undefined),
+}));
 vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
 vi.mock("@nerve/propel/toast", () => import("@/lib/fake-toast"));
 vi.mock("@/hooks/store/use-issue-detail", () => ({ useIssueDetail: () => binding.tab!.app.issue.issueDetail }));
@@ -263,9 +271,11 @@ it("renders the native comment with nullable edited time and the member-director
   }
   await act(async () =>
     root.render(
-      <MemoryRouter>
-        <Card />
-      </MemoryRouter>
+      <StoreContext.Provider value={binding.tab!.app}>
+        <MemoryRouter>
+          <Card />
+        </MemoryRouter>
+      </StoreContext.Provider>
     )
   );
   expect(container.textContent).toContain("common.deactivated_user");

@@ -8,9 +8,9 @@ import { useState } from "react";
 import { observer } from "mobx-react";
 import { ClockOutline } from "@makeplane/propel/icons";
 // nerve imports
-import { Avatar } from "@makeplane/propel/components/avatar";
+import { ProfileAvatar } from "@/components/assets/profile-image";
 import { Row } from "@nerve/ui";
-import { cn, calculateTimeAgo, renderFormattedDate, renderFormattedTime, getFileURL } from "@nerve/utils";
+import { cn, calculateTimeAgo, renderFormattedDate, renderFormattedTime } from "@nerve/utils";
 // hooks
 import { useWorkspaceNotifications } from "@/hooks/store/notifications";
 import { useNotification } from "@/hooks/store/notifications/use-notification";
@@ -87,11 +87,11 @@ export const NotificationItem = observer(function NotificationItem(props: TNotif
       <div className="relative flex w-full gap-2">
         <div className="relative flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-layer-1">
           {notificationTriggeredBy && (
-            <Avatar
+            <ProfileAvatar
               alt={notificationTriggeredBy.display_name || notificationTriggeredBy?.first_name}
               fallback={(notificationTriggeredBy.display_name ||
                 notificationTriggeredBy?.first_name)?.[0]?.toUpperCase()}
-              src={getFileURL(notificationTriggeredBy.avatar_url)}
+              source={{ kind: "member", workspaceID: workspace.id, memberID: notificationTriggeredBy.id }}
               size="xl"
             />
           )}

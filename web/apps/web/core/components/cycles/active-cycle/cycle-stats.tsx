@@ -11,12 +11,13 @@ import { useTheme } from "next-themes";
 // headless ui
 import { Tab } from "@headlessui/react";
 // nerve imports
-import { Avatar } from "@makeplane/propel/components/avatar";
+import { useWorkspace } from "@/hooks/store/use-workspace";
+import { ProfileAvatar } from "@/components/assets/profile-image";
 import { useTranslation } from "@nerve/i18n";
 import type { ICycle } from "@nerve/types";
 // ui
 import { Loader } from "@nerve/ui";
-import { cn, getFileURL } from "@nerve/utils";
+import { cn } from "@nerve/utils";
 // assets
 import darkAssigneeAsset from "@/app/assets/empty-state/active-cycle/assignee-dark.webp?url";
 import lightAssigneeAsset from "@/app/assets/empty-state/active-cycle/assignee-light.webp?url";
@@ -39,6 +40,7 @@ export type ActiveCycleStatsProps = {
 
 export const ActiveCycleStats = observer(function ActiveCycleStats(props: ActiveCycleStatsProps) {
   const { cycle, cycleId } = props;
+  const imageWorkspace = useWorkspace().getWorkspaceBySlug(props.workspaceSlug);
   // local storage
   const { storedValue: tab, setValue: setTab } = useLocalStorage("activeCycleTab", "Assignees");
   // theme hook
@@ -123,10 +125,14 @@ export const ActiveCycleStats = observer(function ActiveCycleStats(props: Active
                         key={assignee.assignee_id}
                         title={
                           <div className="flex items-center gap-2">
-                            <Avatar
+                            <ProfileAvatar
                               alt={assignee?.display_name ?? undefined}
                               fallback={assignee?.display_name?.[0]?.toUpperCase()}
-                              src={getFileURL(assignee?.avatar_url ?? "")}
+                              source={{
+                                kind: "member",
+                                workspaceID: imageWorkspace?.id ?? "",
+                                memberID: assignee.assignee_id,
+                              }}
                               size="xs"
                             />
 
