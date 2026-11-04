@@ -1,7 +1,8 @@
 # M5/P7b 工作项附件与编辑器图片 Implementation Plan
 
-> **P7b 延后草案，未正式通过预检。** 负责人已批准[方案A](../reviews/P7-draft-preparation-recovery-decision.md)，先由[P7a](../specs/P7a-draft-preparations.md)交付恢复协议。本页已接收恢复与副本编排责任，当前不实施。
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans 逐Task内联实施；不逐Task新派实现者/审者，阶段末一次fresh whole-branch review。正式分支 `codex/m5-p7b` 尚未创建，正式基线等P7a最终main；原P7的一次builder问题已由批准A和局部裁定处理，本页面阶段仍须基于实际P7a API完成正式预检。
+> 2026-11-05：正式预检通过，暂不实施。分支`codex/m5-p7b`，基线main`cf07c9fbe663b2e2c821c5988bb06933325b8ac1`；P7a准确main CI41869045846、全量归档及正常清理已核。一次独立builder发现的局部问题已修订合同并自检闭环，产品验收仍待实施。
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans 逐Task内联实施；不逐Task新派实现者/审者，阶段末一次fresh whole-branch review。正式分支`codex/m5-p7b`已从main`cf07c9fbe663b2e2c821c5988bb06933325b8ac1`创建；一次fresh builder的局部问题已按现有owner和输入寿命补实，main CI、归档清理和文档自检前置已闭环，实施仍未开始。
 
 **Goal:** 工作项/评论/草稿附件与编辑器图片真实可用，列表计数/排序接通，旧文件调用链删净。
 **Architecture:** 当前会话 AssetService 与唯一 UploadSession 处理协议；ContentView 经 IssueRootStore 注册生命期，DetailResource/ContentReads 管已授权的当前资源；editor 包声明可选图片端口，应用适配，业务 HTML 只保存 UUID。宿主保存及草稿迁移沿现有原子 API。
@@ -24,7 +25,7 @@
 
 ## Review Focus
 
-1. complete/DELETE已执行但回复丢失，或确认成功后列表刷新失败：不能重复上传/重复删除，必须分离命令结果与只读核验（T1–T4/T13）。
+1. complete/DELETE已执行但回复丢失，或确认成功后列表刷新失败：不能重复上传/重复删除，必须分离命令结果与只读核验；权威重读卸载正文时保留未提交输入/已确认收据，旧view照常结束（T1–T6/T9/T13）。
 2. 工作项可见性、评论作者、私有无项目草稿、项目移动及权限A→B→A：不能用P6项目封面权限替代内容权限，旧能力不能恢复（T2/T3/T6/T10/T13）。
 3. 多节点同源、后台到期/重连、晚到onError、复制中Undo再Redo：请求有界，旧节点不能改新节点，不能自动重试非幂等复制（T3/T7/T8/T13）。
 4. 新评论准备/未知POST、草稿未保存/复制/发布失败：文稿和已完成准备件保留，不误绑、暗建宿主或按半完成状态提示成功（T6/T9/T10/T13）。
@@ -49,7 +50,7 @@
 **Files:** 修改core/services/asset.service.ts；新attachment.service.ts/.test.ts、lib/asset-download.ts/.test.ts；回归lib/asset-upload.test.ts；tools/keywords.json；阶段review。
 **Interfaces:** AssetService.read/remove/duplicate/content/listDraftPreparations、AttachmentService.list、downloadAsset，签名见资源spec§1/5/6；准备件查询消费P7a生成DTO；原prepare/complete/putAsset不变。
 
-- [ ] Step 1：新增服务请求表驱动测试，断言四asset端点、三附件端点、limit50/cursor/path/signal、204、原Problem；source copy不转换为前端先取目标权限。下载用受控ReadableStream验证原URL/query、omit/redirect/no-referrer、精确字节、过短/过长、已过期、用户取消/超时、失败body回收、objectURL释放；不能用jsdom冒称真实Cookie验证。
+- [ ] Step 1：新增服务请求表驱动测试，断言四asset端点、三附件端点及准备件查询、limit50/cursor/path/signal、204、原Problem；source copy不转换为前端先取目标权限。下载用受控ReadableStream验证原URL/query、omit/redirect/no-referrer、精确字节、过短/过长、已过期、用户取消/超时、失败body回收、objectURL释放；不能用jsdom冒称真实Cookie验证。
 - [ ] Step 2：`pnpm --filter web exec vitest run core/services/asset.service.test.ts core/services/attachment.service.test.ts core/lib/asset-download.test.ts core/lib/asset-upload.test.ts`。先记录有效断言RED，再实现；phase=M5/P7。内容schema的正确类型名为生成的Content，不能写假AssetContent。
 - [ ] Step 3：同命令GREEN；API客户端及实际传输受影响测试、类型/格式/零warning；提交 `feat(M5/P7b): 补齐内容资产接口和有限下载`。
 
@@ -58,18 +59,20 @@
 **Files:** 修改store/asset/{upload-session,root.store}.ts；新upload-policy.ts、content-view.ts及测试；profile策略从原实现提取，ScopeLifetime仍服务P6；回归store/root.store.test.ts和issue/permission-reads.test.ts。
 **Interfaces:** 原createUpload(ProfileUploadTarget)保持；openContent(ContentHost)→ContentView、createContentUpload(view,use)→UploadSession；消费侧UploadPolicy见资源spec§3。
 
-- [ ] Step 1：实际RootStore/FakeNerve覆盖六用途映射、名字/大小/MIME、草稿null项目、未知host零请求、普通附件不建预览、描述图片建并释放预览；P6四用途与ready/failed同步observer重入保持。分阶段暂停后失权/恢复/换issue/评论删除/草稿A→B→A，旧start/成功/失败/retry永久无效，无关范围不误杀。
+- [ ] Step 1：实际RootStore/FakeNerve覆盖六用途映射、名字/大小/MIME、草稿null项目、未知host零请求、普通附件不建预览、描述图片建并释放预览；P6四用途与ready/failed同步observer重入保持。分阶段暂停后失权/恢复/换issue/评论删除/草稿A→B→A，旧start/成功/失败/retry永久无效，其他工作区独立，issue/comment的无关项目不误杀；私有draft按既有owner集合范围失效，规范Draft撤回时结束view，重新读取后新建，不能私持旧DTO继续。
 - [ ] Step 2：`pnpm --filter web exec vitest run core/store/asset core/store/root.store.test.ts core/store/issue/permission-reads.test.ts core/store/issue/root.store.test.ts core/store/workspace`。RED后提取一份UploadSession算法；ContentView只经IssueRootStore注册，host观察仅身份/归属，无新角色观察器；每await及同步状态通知后核current。
 - [ ] Step 3：GREEN；单改取消后继续complete、内容使用项目封面权限、永久代次改成ID相等三变异分别AssertionError并恢复SHA；当前P6上传、PC1/PC2/PC3联合回归、类型/lint；提交 `feat(M5/P7b): 统一内容上传和宿主生命周期`。
 
 ## Task 3（T3）：分页附件与临时内容能力
 
 **Files:** 新store/asset/{attachment-resource,content-reads,draft-preparations-resource}.ts及测试；root.store持有/释放子资源。
-**Interfaces:** AttachmentResource接口、ContentReads.read/retry/acquire及ContentReadLease按资源spec§4/5，DraftPreparationsResource按§6；DetailResource/Reconciled只复用，不改变通用算法。准备件独立于已绑定附件，未知DELETE先只读核验，不能以列表缺席冒称删除成功。
+**Interfaces:** AttachmentResource接口、ContentReads.read/retry/acquire及ContentReadLease按资源spec§4/5，DraftPreparationsResource按§6；DetailResource/Reconciled只复用，不改变通用算法；issue/comment使用明确项目范围，私有draft资源由Reconciled与当前view调和，禁止再套项目成员角色，仍服从规范Draft被owner撤回的现有寿命。准备件独立于已绑定附件，未知DELETE先只读核验，不能以列表缺席冒称删除成功。
 
 - [ ] Step 1：51+附件、非名称/时间顺序UUID、首读与分页交错、重复cursor、同cursor双击、删除回包与旧首读、确认成功后刷新拒绝；读重试不再DELETE/PUT。多节点同asset、两个view同asset、expiry、后台恢复、重复error/旧load、实际load恢复预算、最后lease退出全部取消。
 - [ ] Step 2：`pnpm --filter web exec vitest run core/store/asset core/store/issue/issue-details` 记录RED后实现；issue附件后用现有refreshAuthoritative(afterWrite)和refreshAfterChange更新计数/活动，comment/draft不动issue count。readAsset必须验证真实purpose/host后才接content。
 - [ ] Step 3：GREEN；变异忽略晚到请求号、把页长度当总数、去掉expiry预算均失败；核current resource不能保留跨host capability，类型/格式；提交 `feat(M5/P7b): 管理附件分页与短期内容授权`。
+
+T3与T5衔接：命令确认收据先发布给稳定host再触发权威重读；pending造成规范Issue缺席时旧ContentView照常结束，不能让其错误覆盖已确认结果。读取重试只GET，完整输入所有权见资源spec§4.1，由T5实现；T3不私存旧Issue或改变通用读取算法。
 
 ## Task 4（T4）：附件选择、列表和删除确认
 
@@ -86,6 +89,8 @@
 **Files:** 新components/issues/issue-detail-widgets/attachments/{root,content}.tsx及测试；修改issues/issue-detail/main-content.tsx、peek-overview/issue-detail.tsx；issue-details/root.store只补已需要的widget入口。
 **Interfaces:** 已读取Issue的workspace/project/issue身份→ContentView(issue)，T4控件；沿现有IssueDetailHost与useDetailScope。
 
+**输入连续性补充（builder局部裁定）：** 增补`components/issues/detail-host.tsx`、新`detail-input-state.ts`及相邻context/hook、`title-input.tsx`与测试。IssueDetailHost在规范Issue条件子树外持有IssueDetailInputState，只保存资源spec§4.1列出的本地输入/基准/已确认收据；沿原host权限身份清理，不改PermissionReads。为T6/T9提供按表单/字段/commentID区分的状态槽，不提供owner DTO或网络能力。详情/peek两个实例不能串状态。T5加入真实RootStore的pending→成功/失败、标题dirty、确认收据先于卸载与只读重试测试，T6/T9再扩评论和正文。
+
 - [ ] Step 1：详情和peek真实宿主、只读/归档/访客拒绝入口、成功complete一次绑定、刷新失败只读重试；关闭peek/切工作项/Back后迟到回答不建列表、不toast；有51条时只首屏50但DTO count完整。
 - [ ] Step 2：`pnpm --filter web exec vitest run core/components/issues/issue-detail core/components/issues/peek-overview core/components/issues/issue-detail-widgets core/store/issue` RED→GREEN；未加载/不确定宿主不创建上传能力，已观察删除立即退出。
 - [ ] Step 3：原链接/子项/关系/活动与权限错误回归，记录Plane视觉行为差异；提交 `feat(M5/P7b): 接通工作项详情附件`。
@@ -94,6 +99,8 @@
 
 **Files:** components/comments/{comment-create,card/edit-form,card/display}.tsx、issues/issue-detail/issue-activity/helper.tsx及评论测试；只删本Task实际替换的bulk绑定链，图片端口整体迁移由T8/T9。
 **Interfaces:** new_comment ContentView→COMMENT_ATTACHMENT准备件；IssueCommentCreate.attachment_ids≤100和comment_html一次POST；已有comment AttachmentResource独立列表，CommentUpdate不加不存在的附件字段。
+
+**跨卸载责任：** 评论创建及编辑的未提交HTML、已确认准备件ID/选择、已知拒绝或未知结果提示接T5 host状态；暂时权威重读失败仍保留，两表单独立。旧view结束，fresh owner及资产核验成功后才允许发送；重挂载不自动POST。Step1必须包含“未发送评论/失败编辑→另一个普通附件complete或DELETE→pending/读取拒绝→只读重试→内容仍在且命令次数不变”。
 
 - [ ] Step 1：新评论未发送私有件、两个表单不混用、普通附件与正文图片集合不混、101拒绝、未完成不能发送、同tick双发一次；已知拒绝保留文稿/IDs，网络与无Problem502未知结果提示先核评论列表，刷新只能GET。已有作者新增/删除，管理员可删不代表能新增，非作者无控件且服务端仍拒绝。
 - [ ] Step 2：`pnpm --filter web exec vitest run core/components/comments core/store/issue/issue-details` RED→GREEN；移除成功后FileService bulk status。comment-only附件不影响issue attachment_count，空正文仍遵守原非空合同。
@@ -121,6 +128,8 @@
 
 **Files:** components/editor/rich-text/description-input/root.tsx；issues/issue-detail/main-content.tsx、peek-overview/issue-detail.tsx、comments相关表单/展示、core/description-versions消费者；autosave/editor-capabilities及评论测试。
 **Interfaces:** 宿主已读取→useEditorAssets；原工作项自动保存及评论create/update，历史只给只读images。移除本组旧EFileAssetType/uploadCommentAsset/duplicateCommentAsset props与方法。
+
+**跨卸载责任：** `use-confirmed-autosave.tsx`仅增加必要的受控输入衔接，状态所有者为T5 host，debounce/串行/确认算法不复制。失败revision、未保存正文及图片UUID在暂时owner缺席后可恢复；基准变化给冲突、拒绝revision不自动重试。传输中节点旧session/队列彻底结束，只保留输入与已知资产身份/未确认提示，新view重验后由用户明确继续。Step1加入失败正文、未保存标题、图片节点、并发新正文、读取失败后恢复及真实权限ABA清空的联合测试。
 
 - [ ] Step 1：ready前不保存UUID，成功后真实description_html/comment_html只含UUID；换图/调序产生新内容、URL刷新不触发PATCH、只补ID保持原迁移；正文拒绝保留，历史已移除图片仍可解析；评论图片不进普通attachment_ids，已发表再次编辑按commentID范围。
 - [ ] Step 2：`pnpm --filter web exec vitest run core/components/issues/autosave.test.tsx core/components/issues/editor-capabilities.test.tsx core/components/comments core/components/core/description-versions` RED→GREEN。保留原debounce取消/串行保存/dirty处理，不复用未知copyMarkdownToClipboard。
@@ -155,11 +164,13 @@
 
 ## Task 13（T13）：真实页面与交错反例
 
-**Files:** 新e2e/stories/asset/{f8-issue-attachments-page,f9-comment-files-page,f10-draft-files-page,f11-editor-images-page,f12-image-history-page,f16-content-lifetime-page}.spec.ts，复用fixtures/file及P6接收端观察；新playwright.m5-content.config.ts和package脚本/knip登记，必要纯断言helper。
+**Files:** 新e2e/stories/files/{f8-issue-attachments-page,f9-comment-files-page,f10-draft-files-page,f11-editor-images-page,f12-image-history-page,f16-content-lifetime-page}.spec.ts，复用fixtures/file-story.ts及P6接收端观察；新playwright.m5-content.config.ts和package脚本/knip登记，必要纯断言helper。
 **Interfaces:** API准备宿主/角色，真实页面File选择/粘贴/拖放→本地或既有S3 fixture；SQL只断言或明确故障注入，不直接造业务前置。
 
 - [ ] Step 1：F8全部动作与51分页、下载SHA和count排序；F9两评论私有准备/失败再发/未知响应；F10 null项目/换项目/发布与并发双发布、原P5事务失败证据逐输入核对并新增页面拒绝；F11伪造源/无权源/目标拒绝、Undo/Redo和普通文件不吞；F12换图/调序/历史/只补ID，真实HTML/API/DB断言。
 - F10另验证unknown prepare/failed duplicate后的恢复列表、明确丢弃/取消/另一标签页、普通副本最终Issue与草稿副本最终Draft，不用P7a API测试代替真实页面。
+- 用真实RootStore与详情/peek挂载链验证：未发送评论、失败正文/评论编辑及图片节点→同宿主普通附件complete/DELETE→规范Issue被pending撤回→读取成功/失败/显式重试。输入和确认结果保留，旧view/URL/请求终止，已确认命令和未知写均无自动重发；fresh正文与编辑基准冲突不覆盖；换宿主/权限ABA/root退休清空，另一详情实例不串数据。至少一个有效变异移除host输入保留后，断言必须以实际内容丢失失败；不得只用资源和编辑器孤立测试证明联合行为。
+- 同一联合链还须区分暂时读取故障与owner已确认删除/不可见（宿主读取401/403/404）：前者保留只读重试，后者退休输入状态，同ID重新可见也不复活；fresh owner只读时，未提交内容不得伪装成已保存正文。正文保存422仍保留原输入，不混淆读结论与写拒绝。
 - [ ] Step 2：`make build build-s3-fixture` 后 `pnpm --dir e2e exec playwright test --config=playwright.m5-content.config.ts --workers=1`，Chromium/Firefox/WebKit覆盖真实选择、键盘/读屏/焦点和主要交错；local与S3各实际上传/显示/下载，接收端核raw字节/凭据。expires_at响应注入仅证明UI到期，不冒称服务端真实TTL改变。
 - [ ] Step 3：至少10个有效变异：漏取消后complete、漏节点代次、项目可见即当issue权限、草稿ABA复活、未知POST自动再发、confirm后刷新重复命令、以loaded数代总数、伪剪贴板免copy、撤销发DELETE、到期无限再读。每项独立断言失败与恢复SHA，原失败报告全留；清本阶段确切拥有的临时资源，提交 `test(M5/P7b): 验证文件页面与宿主切换边界`。
 
@@ -183,8 +194,8 @@
 
 ## 预检自查
 
-- [ ] spec覆盖逐Task，所有A1–A8都有实现和证据落点。
-- [ ] 类型与生产/消费名字一致，所有实际路径/后端授权/无项目草稿边界核过，无悬空前向接口。
-- [ ] 五Review Focus均有明确反例，RED不是缺模块或编译失败，未知结果不自动重发。
-- [ ] 无新增依赖/协议/权限观察器，旧链删除和未来领域不启用可同时满足；全部跨任务边界可内联实施。
-- [ ] 正式基于P7a最终main复核，builder问题按既有事实/局部裁定/需负责人决策分类闭环；预检报告、真实新API与P7a归档前置齐全。
+- [x] spec覆盖逐Task，所有A1–A8都有实现和证据落点。
+- [x] 类型与生产/消费名字一致，所有实际路径/后端授权/无项目草稿边界核过，无悬空前向接口。
+- [x] 五Review Focus均有明确反例，RED不是缺模块或编译失败，未知结果不自动重发。
+- [x] 无新增依赖/协议/权限观察器，旧链删除和未来领域不启用可同时满足；全部跨任务边界可内联实施。
+- [x] 正式基于P7a最终main复核，builder问题按既有事实/局部裁定/需负责人决策分类闭环；预检报告、真实新API与P7a归档前置齐全。

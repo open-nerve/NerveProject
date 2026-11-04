@@ -1,6 +1,6 @@
 # M5/P7a 阶段评审记录
 
-> 2026-11-04：按负责人已批准A同步合同并通过预检；现已获准实施，T1–T4 已完成；本地七门禁与整审修复完成，准确最终分支CI待核。分支codex/m5-p7a；main基线963636757fe5c5a8c10d5781b43d1481ba6f32a2，P6准确main CI41833460144及归档/清理前置已核；预检通过，实施证据见下。
+> 2026-11-05：P7a T1–T7/A1–A6完成；开发基线963636757fe5c5a8c10d5781b43d1481ba6f32a2，最终候选756b90314009f00e487483729b5d19f76dbeb110、noff maincf07c9fbe663b2e2c821c5988bb06933325b8ac1的准确CI分别全绿。全量原件归档核验、分支/worktree正常清理及P7b正式预检完成。当前不实施P7b，M5总体仍未完成。
 
 ## 1. 范围与方式
 
@@ -8,7 +8,7 @@
 
 ## 2. 当前验收
 
-A1–A4已由T1–T4验证，A5/A6待完整门禁、整审及集成闭环；原预检时无新API、产品修改、依赖安装或P7a产品测试。原P7准备时只运行既有TestDraftAssetTransferPublicationStates三个子项，通过且1707个Go输入稳定；它证明原发布合同，不能当新恢复入口验证。
+A1–A4由T1–T4验证；A5由完整门禁、整审修复及准确最终分支CI闭环，A6由noff、准确mainCI、归档清理和P7b正式预检闭环（§13）；原预检时无新API、产品修改、依赖安装或P7a产品测试。原P7准备时只运行既有TestDraftAssetTransferPublicationStates三个子项，通过且1707个Go输入稳定；它证明原发布合同，不能当新恢复入口验证。
 
 ## 3. 局部裁定
 
@@ -81,7 +81,7 @@ R11：T1–T4产品冻结后，让一次只读整审与T5完整门禁/CI并行�
 
 ## 11. T6 一次整分支审查
 
-[re-48](../../../reviews/re-48-M5P7a整体审核.md)审查冻结范围96363675..ed1e2a49，41文件/37手写完整读取，生成物对源；未发现架构风险。唯一F1为全零draft UUID进入owner内部前置检查导致500。审者评Minor，主控按私有入口不存在同形合同列为本轮必须修复边界；修复不改owner或全局mapper，等待正在运行的门禁结束后实际RED/GREEN。
+[re-48](../../../reviews/re-48-M5P7a整体审核.md)审查冻结范围96363675..ed1e2a49，41文件/37手写完整读取，生成物对源；未发现架构风险。唯一F1为全零draft UUID进入owner内部前置检查导致500。审者评Minor，主控按私有入口不存在同形合同列为本轮必须修复边界；当时裁定修复不改owner或全局mapper，并在正在运行的门禁结束后完成实际RED/GREEN。
 
 R12：全零draft UUID在认证和分页参数校验后、事务前返回asset.not_found；不扩大错误捕获。理由是合法可解析但不可存在的资源ID不应成为服务端故障；代价是该入口将全零值按不存在处理，旧入口保持其原行为。最终准确分支CI合并检查点与修复后的验证，不为已知待修候选额外推送一轮CI。
 
@@ -89,7 +89,7 @@ Final Ruling：审者暂不判断的P7b实际页面行为继续留P7b，不计�
 
 首轮七门禁全部通过：gen-check 2.973秒、Go lint 1.290秒（两模块0 issues）、完整Go 998.744秒（bootstrap649.319秒）、web lint54任务/15缓存、knip通过、web test18任务/11缓存、完整E2E385/385（170.363秒）。每项4544输入稳定，raw/receipt完整保存。容器即时快照有一个临时件尚在退出，随后只读复核已自动消失：原20个全部在、新遗留0，未操作既有容器。
 
-F1有效RED：应用层观察到非法开启事务，真实HTTP得到500；随后三行入口检查修复，两层GREEN及其他准备件回归通过。定向domain包显示no tests to run，不冒称该次运行了domain测试；全门禁负责完整覆盖。没有扩大错误捕获、改写owner、放宽守卫或新增依赖。最终七门禁/准确候选CI待下述收据，T5/T6尚未关闭。
+F1有效RED：应用层观察到非法开启事务，真实HTTP得到500；随后三行入口检查修复，两层GREEN及其他准备件回归通过。定向domain包显示no tests to run，不冒称该次运行了domain测试；全门禁负责完整覆盖。没有扩大错误捕获、改写owner、放宽守卫或新增依赖。当时最终七门禁/准确候选CI尚待后续收据；现已由§12/§13闭环，原始时间顺序保留。
 
 
 ## 12. 最终本地交付收据
@@ -108,6 +108,22 @@ F1修复提交`7e041b472044409105eaa9322f2e0ad079ab5ee3`后，重新串行执行
 
 完整E2E385/385；Go使用-count=1、不使用测试结果缓存。Web任务的实际缓存数保留在各raw与.turbo日志；不把缓存命中说成全部重跑，也不从未开启-v的Go输出推断所有子测试零skip。两次全套、全部历史失败与有效变异、一次审者结论和F1 RED/GREEN均保存；未派第二同范围审者。
 
-A1–A4已验证，F1修复闭环，没有延后minor。A5仍有本次记录提交的准确最终分支CI门；T5检查点和T6最终CI合并核该候选，server/web/e2e全部成功后才在交付收据中关闭，不把旧预检CI或修复前结果作为凭据。随后持续授权下执行T7，main另跑准确CI。准确CI与清理结果在原件收据和P7b接续文档回填，避免为引用自身SHA不断生成新候选。
+A1–A4已验证，F1修复闭环，没有延后minor。本地复验记录时A5仍有本次记录提交的准确最终分支CI门；T5检查点和T6最终CI合并核该候选，server/web/e2e全部成功后才在交付收据中关闭，不把旧预检CI或修复前结果作为凭据。随后持续授权下执行T7，main另跑准确CI。准确CI与清理结果在原件收据和P7b接续文档回填，避免为引用自身SHA不断生成新候选。
 
 P7b页面、编辑器/完整副本交互、旧文件链删除与M5最终验收/handoffs继续开放。整审暂不判断的页面事项已由这个具名边界接收，P7a只交付恢复协议。
+
+## 13. T7 集成归档与接续
+
+2026-11-05再次获得明确授权后，准确候选`756b90314009f00e487483729b5d19f76dbeb110`的[分支CI41859931318](https://github.com/open-nerve/NerveProject/actions/runs/41859931318) attempt1三个作业均success；server126678612716、web126678613048、e2e126687761531。E2E日志为385/385，18.7分钟。GitHub Actions故障一度使run/job元数据不同步，原始状态和日志完整保存；交付校验首次拒绝且T5/T6未关闭，未据单一步骤成功合并。三作业与workflow一致后，原始七门禁日志SHA及4544输入重新核验，T5/T6关闭。
+
+根main原基线963636757fe5c5a8c10d5781b43d1481ba6f32a2与origin一致且干净。`--no-ff`合并生成`cf07c9fbe663b2e2c821c5988bb06933325b8ac1`，双父依次为原main与最终候选，完整tree`2752264a0d7e0117344ec3af740ef8e8d2813220`与候选完全相同；系统Git推送成功。[准确main CI41869045846](https://github.com/open-nerve/NerveProject/actions/runs/41869045846) attempt1三个作业均success，原始run/all-jobs与日志单独保存；没有用分支CI替代main结果。
+
+main E2E再次385/385通过，耗时19.0分钟；server126710759480、web126710759869、e2e126721692618的身份与必需步骤逐项核准。本次无需重跑，未改CI预算。
+
+main CI通过后已完成下述归档清理；P7b worktree从该main创建，仅准备spec/plan及预检。原生worktree工具不接受自定义路径，按用户硬规则使用Git落在`.codex/worktress/codex/m5-p7b`，主目录未切开发分支。P7b未安装依赖、未启动T1、无产品修改。其唯一fresh builder问题由原IssueDetailHost保留本地输入的局部合同补全，不改变M4权限或通用读取算法。
+
+归档根：`/Users/xiaoruan/project/nerve-project/.superpowers/sdd/M5-P7a-integration-20261105`。包含原P7改名前的准备台账、本阶段全部失败/变异/输入清单、两轮本地七门禁、审者报告、GitHub故障及准确branch/main CI、浏览器报告和全部.turbo原件；可重建依赖/构建产物另有明确排除清单。共2,885个文件、95,387,129字节、4,684个成员，逐SHA/bytes/mode/membership核对，unknown=0，源归档期间未改变。manifest SHA-256为`a941e831c48255c33ed9eddf6193211ae4db0e996eda9ab5d99ed36ac67521ae`。
+
+确认本地main=origin/main=cf07c9fbe663b2e2c821c5988bb06933325b8ac1，origin/main..origin/codex/m5-p7a为0后，正常删除远端分支、旧worktree及本地分支；未使用force/stash/clean/reset-hard。清理后从归档副本再次核对所有原件，结果一致。[清理收据](/Users/xiaoruan/project/nerve-project/.superpowers/sdd/M5-P7a-integration-20261105/cleanup-receipt.json)与[清单](/Users/xiaoruan/project/nerve-project/.superpowers/sdd/M5-P7a-integration-20261105/manifest.json)保留在冻结payload之外/入口，原件不再改写。
+
+P7b正式基线为该main，四份合同已接收真实P7a API、原DELETE边界、草稿owner寿命和输入连续性；一次fresh builder及主控局部裁定闭环，16Task/48开放Step/8开放验收、产品零变化/无依赖安装和文档链接自检通过，详见[re-49](../../../reviews/re-49-M5P7b预检.md)。T7最后完成收据在继任P7b worktree的同名P7a ledger接续登记，冻结归档保留清理前现场。P7b未启动T1，M5最终矩阵/交接继续开放。

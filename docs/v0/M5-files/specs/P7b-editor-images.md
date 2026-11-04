@@ -1,6 +1,7 @@
 # P7b 子合同：编辑器图片与宿主绑定
 
-> **P7b 延后草案。** 负责人已批准[方案A](../reviews/P7-draft-preparation-recovery-decision.md)，先由[P7a](P7a-draft-preparations.md)交付准备件恢复协议，再完成本阶段正式预检。当前不实施。
+> 2026-11-05：正式预检通过，暂不实施。分支`codex/m5-p7b`，基线main`cf07c9fbe663b2e2c821c5988bb06933325b8ac1`；P7a准确main CI41869045846、全量归档及正常清理已核。一次独立builder发现的局部问题已修订合同并自检闭环，产品验收仍待实施。
+
 本页与[主 spec](P7b-content-assets.md)、[内容资源](P7b-content-lifecycle.md)一起接收恢复责任。包声明小接口，应用实现协议与授权；不得把业务服务导入 editor 包。
 
 ## 1. 新图片能力替换旧 TFileHandler
@@ -60,6 +61,8 @@ HTML只含合法 image-component[src=UUID]，保持原尺寸/对齐和M4稳定ID
 ## 4. 宿主保存
 
 工作项详情/peek：图片ready后才将UUID入正文，沿现有自动保存/版本机制，失败保留编辑内容与明确重试；只读历史仅解析。换图/顺序变化不得带skip_activity逃过版本，运行URL变化不触发保存。只补合法ID的既定迁移语义与严格布尔保持。
+
+附件确认触发的权威重读会卸载正文。标题/正文/评论的未提交内容、编辑基准、失败revision和已确认资产身份按[内容资源§4.1](P7b-content-lifecycle.md#41-权威重读期间的输入与命令结果)交给现有详情host持有；包仍只消费图片小接口，不访问该host或owner store。旧图片请求/URL/队列照常结束；新view重新核资产后显式恢复编辑，重挂载不自动重试拒绝保存或未知复制，服务器正文变化时保留输入并提示冲突。
 
 新评论：host=new_comment、scope.id=issueID；普通附件ID和正文一并进入create，成功后清表单，失败保留。上传/复制未完成时禁发送。正文图片不混入attachment_ids。评论结果未知时提示“暂时无法确认评论是否已发送。请先检查评论列表，确认未发送后再重试。当前内容和附件已保留。”以及对应英文，不自动POST重发。已有评论仅作者编辑正文/新增附件，读取及管理员删除按实际权限分离。
 

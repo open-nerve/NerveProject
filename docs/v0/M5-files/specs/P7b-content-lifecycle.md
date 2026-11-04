@@ -1,6 +1,7 @@
 # P7b 子合同：内容资源、上传与下载
 
-> **P7b 延后草案。** 负责人已批准[方案A](../reviews/P7-draft-preparation-recovery-decision.md)，先由[P7a](P7a-draft-preparations.md)交付准备件恢复协议，再完成本阶段正式预检。当前不实施。
+> 2026-11-05：正式预检通过，暂不实施。分支`codex/m5-p7b`，基线main`cf07c9fbe663b2e2c821c5988bb06933325b8ac1`；P7a准确main CI41869045846、全量归档及正常清理已核。一次独立builder发现的局部问题已修订合同并自检闭环，产品验收仍待实施。
+
 本页与[主 spec](P7b-content-assets.md)一起接收恢复责任，只描述本阶段新增接口，P6 的资料行为保持。
 
 ## 1. 服务接口
@@ -18,7 +19,7 @@ content(id: string, signal?: AbortSignal): Promise<Content>;
 
 各自为 GET/DELETE `/api/v0/assets/{id}`、POST `/api/v0/assets/{id}/duplicate`、GET `/api/v0/assets/{id}/content`。listDraftPreparations消费P7a新增 GET `/api/v0/drafts/{draft_id}/asset-preparations`，limit50、最多100，直接用生成类型；只有draft view可用。无下载参数；DuplicateAsset 为 purpose/scope/name?，重发会生成新资产。所有拒绝保持现有 unwrap/Problem，不把 404 当空数组或成功。
 
-P7a实施接收：生成operation为`listDraftAssetPreparations`，返回`DraftAssetPreparationPage`；省略cursor读取首屏，后续只原样传递非null的next_cursor，不传空字符串或跨draft复用。两种草稿用途、pending/uploaded且未绑定均可返回；每页重验，跨页没有冻结快照。实际恢复、权限及交错证据见[P7a阶段记录](../reviews/P7a-draft-preparations-review.md#10-t5-全部门禁与接收核对)，正式开工仍以P7a集成后的基线预检为准。
+P7a实施接收：生成operation为`listDraftAssetPreparations`，返回`DraftAssetPreparationPage`；省略cursor读取首屏，后续只原样传递非null的next_cursor，不传空字符串或跨draft复用。两种草稿用途、pending/uploaded且未绑定均可返回；每页重验，跨页没有冻结快照。实际恢复、权限及交错证据见[P7a阶段记录](../reviews/P7a-draft-preparations-review.md#10-t5-全部门禁与接收核对)，P7a集成后的正式基线预检已完成；当前仍停在T1实施前。
 
 AttachmentService.list(target, cursor?, signal?): Promise<AttachmentPage>，其中 target 为 `{kind:"issue"|"comment"|"draft"; id:string}`，分别调用 `/api/v0/issues/{issue_id}/attachments`、`/api/v0/issue-comments/{comment_id}/attachments`、`/api/v0/drafts/{draft_id}/attachments`。请求 `limit:50`；服务端最大100，UUID升序。Attachment 六字段直接消费；分页无 URL，next_cursor=null 才到底。
 
@@ -41,6 +42,8 @@ ContentView 提供 `readonly host/current/signal`、`canWrite(use):boolean`、`d
 
 宿主存在性是 owner 事实，不是另一套权限算法。视图观察规范宿主身份/父范围是否仍匹配，出现缺席、评论删除、草稿项目改变或发布移除即结束；仅观察这些实体身份变化，不重复观察角色。草稿 UI 发出项目变更/发布前先 dispose，避免 React 批处理或请求排队错过中间状态。规范数据未加载不自动猜权限、不发上传；重新进入靠新 host 读取建立视图。若实现证实既有 owner 发布边界无法满足该合同，先保存证据并上报，不能放宽水位。
 
+私有草稿的资源不能把DetailResource的项目角色条件当草稿授权：asset ContentView可复用既有PermissionReads.currentWorkspace和registerResource，但当前规范Draft仍必须由WorkspaceDraftIssues提供；owner数据一旦不可读即结束视图，不私持旧DTO继续授权。草稿附件/准备件页可直接用既有Reconciled与view/current/请求号调和，不改DetailResource通用算法，也不另建角色observer。现有owner是工作区级集合，某些同工作区项目代次变化会使其暂时不可读；保留这项保守失效，重新读草稿后建新view，不宣称同工作区所有项目变化均无影响。
+
 后端为最终权限：普通工作项附件/正文写同 issue.update；新评论同 issue_comment.create；已有评论新增图片/附件只作者，删除普通附件按既有 comment remove 规则（作者或允许的项目管理员），不能把管理员可删当可编辑。可见 guest 可读自己的工作项/评论并按评论规则创建或修改自己的评论；不借项目可见性显示别人的隐藏工作项。归档项目/工作项可读不可写；私有草稿按现有 DraftLocks 作者/工作区/未删除项目合同，归档项目不额外禁止保存，发布重判目标创建权限。
 
 ## 3. 上传有限状态机
@@ -57,11 +60,25 @@ target 是生成 NewAsset 的 purpose/scope 子集；内容工厂唯一映射：
 
 ## 4. 附件资源与确认后刷新
 
-`AttachmentResource(view, service)` 提供 `rows:readonly Attachment[]`、`nextCursor:string|null|undefined`、`loading/error`、`load():Promise<void>`、`more():Promise<void>`、`retryRead():Promise<void>`、`remove(id):Promise<void>`、`afterUpload(asset):Promise<void>`、`dispose()`。DetailResource/Reconciled 管 DTO 的有效性与读写调和，view 管永久终止；请求号使旧首读/旧分页不能覆盖新列表。同一 cursor 只一在途；响应游标重复报可读错误、无自动循环，按 ID 去重且只按协议顺序展示。刷新从第一页重建，不将局部页标成完整集合。
+`AttachmentResource(view, service)` 提供 `rows:readonly Attachment[]`、`nextCursor:string|null|undefined`、`loading/error`、`load():Promise<void>`、`more():Promise<void>`、`retryRead():Promise<void>`、`remove(id):Promise<void>`、`afterUpload(asset):Promise<void>`、`dispose()`。既有DetailResource或Reconciled按宿主范围管DTO的有效性与读写调和，view 管永久终止；请求号使旧首读/旧分页不能覆盖新列表。同一 cursor 只一在途；响应游标重复报可读错误、无自动循环，按 ID 去重且只按协议顺序展示。刷新从第一页重建，不将局部页标成完整集合。
 
 新评论没有已发表列表端点：表单持有本视图已确认的普通准备件数组（Asset），≤100；移除仅从待发送集合去掉，取消交现有准备件 GC。发表成功后由新 comment view 读取服务端 AttachmentPage。禁止用已有 issue 的附件列表代替 comment 的列表。
 
 删除按目标 ID oneAtATime，204 才确认移除；拒绝保留列表/确认框，未知结果先重读列表，不自动重发。确认成功后 `DetailResource.refreshAfterConfirmation` 承担只读刷新，刷新失败用独立“重新读取”入口而不是把命令称为失败。issue 的普通附件增删还调用 `issue.issues.refreshAuthoritative(issueID,{afterWrite:true})` 和现有 `issueDetail.refreshAfterChange`，使详情、排序和活动重新核准；不手工±attachment_count，不把loaded页长度当总数。评论/草稿普通附件不改变 Issue.attachment_count。
+
+### 4.1 权威重读期间的输入与命令结果
+
+当前`IssueVerification.request`会把Issue标为pending，规范getter随即返回undefined；详情和peek据此卸载正文子树。省略afterWrite同样会进入pending，不能靠参数或旧DTO绕过。T5在现有`IssueDetailHost`作用域内持有一个小型`IssueDetailInputState`（建议文件`components/issues/detail-input-state.ts`及相邻context/hook），放在该条件子树之外。它只管理用户输入与已确认命令收据，不承担授权、网络读取或上传算法。
+
+状态随现有host的root、工作区/项目/issue与PermissionReads单调身份一起创建和退休；详情和peek各有独立实例，内部按表单/字段及commentID区分，不能把两份评论混在一起。只因权威读取pending/失败而暂时缺少规范Issue、但host权限身份未变时，保留未提交标题/正文、编辑基准和本地revision、dirty/已知拒绝、未发送或正在编辑的评论、选中的已确认准备件ID，以及已经确认的complete/DELETE结果。真实换路由/宿主、权限代次变化（含撤回再恢复）、root退休或关闭peek仍清空，不使用localStorage或模块全局Map延长寿命。
+
+这里的读取失败限于仍待核准的暂时故障；owner已确认宿主删除/不可见，或宿主读取最终返回401/403/404时，输入状态也永久退休。直接消费现有owner读取结论，不额外发请求或观察角色。之后即使同ID再次可见也新建状态。已知正文保存422等业务拒绝仍按原合同保留输入；fresh owner若只允许读，保留的未提交输入不得伪装成规范正文或恢复写能力。
+
+旧ContentView、UploadSession、节点请求、读句柄、签名URL、objectURL和定时器仍永久结束，不放进输入状态。未完成传输只保留用户输入和已知资产身份/未确认提示，不复活旧队列，不自动重发prepare/duplicate/评论POST/DELETE，也不因重挂载或“重新读取”重复已确认命令。需要重新选择文件或明确处理准备件时如实提示，不能把取消写成服务端删除。新规范Issue读取成功后才创建新view；保留的资产ID在当前view重新读取、核用途/宿主/状态后才能再次提交。读取失败时保留本地输入与独立只读重试入口，禁止继续写入。
+
+恢复输入先比较新规范正文与原编辑基准：没有并发变化才恢复待编辑内容；基准已变化时保留输入并提示冲突，由用户明确选择后再保存，不能自动覆盖新正文。已有自动保存的debounce、串行与确认语义保持，拒绝过的revision不因重挂载自动重试。该边界也覆盖评论编辑、标题与图片节点的未保存内容；能力URL和陈旧owner DTO不属于可恢复内容。
+
+T3发布确认结果后再触发权威重读；T5提供host输入所有者及标题衔接；T6接入评论表单；T9接入正文/图片恢复；T13以真实RootStore和详情/peek做联合反例，不能用各自孤立单测替代。若实现需要改变IssueVerification的uncertain、PermissionReads、DetailResource或Reconciled通用语义，先提交证据上报，不在此裁定内。
 
 ## 5. 内容能力与下载
 
@@ -75,7 +92,7 @@ target 是生成 NewAsset 的 purpose/scope 子集；内容工厂唯一映射：
 
 ## 6. 草稿准备件恢复
 
-`DraftPreparationsResource`只接受当前draft ContentView，消费P7a生成分页DTO；沿T3同一DetailResource/请求号原则管理rows/nextCursor/load/more/retryRead/dispose，不能另建授权观察器。它与已绑定AttachmentResource分开呈现，不能混成附件总数；当前页不等于全部准备件。入口由用户主动打开，也可在发布asset.not_uploaded后提示打开，不在每次键入或图片onError无界刷新。
+`DraftPreparationsResource`只接受当前draft ContentView，消费P7a生成分页DTO；沿T3同一资源调和/请求号原则，私有草稿不额外套项目角色管理rows/nextCursor/load/more/retryRead/dispose，不能另建授权观察器。它与已绑定AttachmentResource分开呈现，不能混成附件总数；当前页不等于全部准备件。入口由用户主动打开，也可在发布asset.not_uploaded后提示打开，不在每次键入或图片onError无界刷新。
 
 显示文件名、pending/uploaded、用途、大小、创建时间，明确“未绑定不等于可以自动删除，可能是另一标签页正在使用”。确认说明“所选文件可能正在另一标签页上传，或已成为普通附件；丢弃会删除这个文件”，配对应英文，不能承诺只删仍未绑定件。用户按ID逐项选择并确认丢弃，已有AssetService.remove执行；busy防重入、失败保留，confirmed204与后续刷新失败分开。未知DELETE先重读并必要read(id)核验，不以列表缺席独断删除成功，不自动重发；描述图已绑定返回asset.bound时保留并解释，普通附件按既有权限可删，不能删正文或恢复历史。
 
