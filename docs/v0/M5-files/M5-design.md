@@ -1,8 +1,8 @@
 # M5：文件
 
-> 状态：P1–P5已完成集成归档。P5最终main f5f4ce94的CI41772399410全绿，三组分支/worktree及5053件证据归档核验完成。P6的PC1方案A已批准，最终基线预检通过，T1–T5完成；T6复现PC2工作区迟到写覆盖新权限事实，暂停待裁定；P6/M5总体仍未完成。见[P5阶段记录](reviews/P5-issue-assets-review.md)和[P6阶段记录](reviews/P6-profile-upload-review.md)。
+> 状态：P1–P5已完成集成归档。P5最终main f5f4ce94的CI41772399410全绿，三组分支/worktree及5053件证据归档核验完成。P6的PC1方案A已批准，最终基线预检通过，T1–T5完成；PC2已批准A，T6先修复工作区写发布再继续；P6/M5总体仍未完成。见[P5阶段记录](reviews/P5-issue-assets-review.md)和[P6阶段记录](reviews/P6-profile-upload-review.md)。
 > 起点：`main@3db22f06ad9e82a483c05c8078801af00a5cae02`（M4 最终 main CI 41397218533，三个作业成功）。
-PC2 暂停材料：[工作区更新的迟到回包](reviews/P6-workspace-write-lifetime-decision.md)。
+PC2 已批准 A：[工作区更新的迟到回包](reviews/P6-workspace-write-lifetime-decision.md)。
 > 设计、P1–P4分支均已合入并归档；P5已noff合入main，因一次重跑仍未全绿，按负责人特定停点等待预算裁定；当前文档工作分支codex/m5-p6。负责人2026-11-02已授权按既有节奏连续推进，常规设计、预检、实现、deep-review、`--no-ff`集成、CI和归档无需逐次询问。重大风险、架构回归或关键分歧，先提交已完成工作，再上报。
 
 ## 1. 目标、范围与输入
@@ -222,6 +222,8 @@ P6 新 AssetService 作为当前会话 API client 的消费者；旧 FileService
 
 **P6 PC1（负责人 2026-11-04 批准 A）：** 复用 IssueRootStore 时，现有 PermissionReads 同时记录规范项目可见性与现有有效角色的变化，补齐 member_role=null 的合法封面消费者；工作区匹配、当前 ProjectStore 事实和原 R06 规则仍是来源。目录缺席使旧生命周期永久失效，恢复后须新读；水位不是工作项授权，UserPermissionStore 和后端权限不变。不得另建 Asset 权限观察器或用历史详情复活封面；T2/T3/T12 联合回归及行为变异后验收，见[决策记录](reviews/P6-public-project-lifetime-decision.md)。
 
+**M5/P6 PC2（负责人2026-11-04批准A）：** 工作区普通资料与logo更新在调用时捕获当前workspace UUID及权限有效期，排队后发送、异步成功/失败、规范缓存发布和旧读上的确认重放均不得越过原有效期。WorkspaceRootStore声明小的工作区写有效性接口，由RootStore接到既有IssueRootStore/PermissionReads；范围只含本工作区身份/成员权限及root生命期，不含无关项目变化，不增观察器/权限缓存，不依赖asset控件。已观察到权限变化后即使恢复同角色，旧结果仍过时。未知工作区不发写；过时的成功/失败返回undefined，普通有效范围内的拒绝仍原样抛出，调用页面不对undefined提示成功。已发送写可能服务端成功，不自动重发。有效范围的已确认写仍与旧读调和，但重放须尊重原始目录回答的工作区UUID/role：不能先覆掉新角色再等观察器发现变化。通用Reconciled、既有授权角色与服务端协议不变；移除/同slug新UUID、20→15/5→20、旧读/新写、排队/退休/迟到拒绝及无关范围联合回归。见[PC2决策](reviews/P6-workspace-write-lifetime-decision.md)。
+
 保持现有路由 key，上传进度/弹窗在所属子树内；unmount 取消请求和 debounce，代次不符的进度、成功、失败均不能更新新宿主。SWR key 含 loginId，缓存 URL 包含到期时间，撤权清掉已解析地址。请求中按钮与关闭行为、拒绝保留、成功关闭、返回焦点和读屏通知按 M3 规则。
 
 头像/封面控件从只读 Plane 源码对照恢复，用新合同，不恢复旧上传地址或旧弹窗类名。项目保留预设和随机选择：制作本项目自己的 29 个静态封面（稳定 `cover-01` 至 `cover-29`，具体视觉允许实现者决定），登记 SOURCES；随机只在用户主动选择时选一个稳定 ID，不在后端/渲染时不停变。预设无需上传副本；自定义封面先上传准备件，再随创建一次绑定。不能保存 Vite hash 路径。
@@ -325,14 +327,14 @@ P1 起第一个实现提交更新关键词 phase 与到期例外；纯设计分�
 | P3 | 已完成：noff main5807a0d6，CI41591764345全绿，2251文件归档核验并清理 | [spec](specs/P3-s3-storage.md) / [plan](plans/P3-s3-storage.md) / [预检](../../reviews/re-36-M5P3预检.md) / [阶段记录](reviews/P3-s3-storage-review.md) |
 | P4 | 已完成：noff main0f93100a，CI41641099230全绿，2301文件归档核验并清理 | [spec](specs/P4-profile-images.md) / [plan](plans/P4-profile-images.md) / [整审](../../reviews/re-39-M5P4整体审核.md) / [阶段记录](reviews/P4-profile-images-review.md) |
 | P5 | 已完成；最终main f5f4ce94、CI41772399410三job全绿，5053文件归档核验且三组分支/worktree清理完成 | [spec](specs/P5-issue-assets.md) / [plan](plans/P5-issue-assets.md) / [预检](../../reviews/re-40-M5P5预检.md) / [整审](../../reviews/re-41-M5P5整体审核.md) / [阶段记录](reviews/P5-issue-assets-review.md) |
-| P6 | PC1已批准A并同步合同；最终main基线预检通过，T1–T5完成；T6复现PC2工作区迟到写覆盖新权限事实，暂停待裁定 | [spec](specs/P6-profile-upload.md) / [plan](plans/P6-profile-upload.md) / [预检](../../reviews/re-42-M5P6预检.md) / [决策](reviews/P6-public-project-lifetime-decision.md) |
+| P6 | PC1已批准A并同步合同；最终main基线预检通过，T1–T5完成；PC2已批准A，T6先修复工作区写发布再继续 | [spec](specs/P6-profile-upload.md) / [plan](plans/P6-profile-upload.md) / [预检](../../reviews/re-42-M5P6预检.md) / [决策](reviews/P6-public-project-lifetime-decision.md) |
 | P7–P8、closeout | 未开始 | 待前置阶段完成后逐段展开 |
 
 当前可自行决定的局部取舍及代价：编辑器只处理图片，普通文件走附件区；预设封面使用稳定编号，不上传构建素材副本；描述图片保留到宿主删除，代价是占用空间；封存复制增加一次存储操作，换取确认后字节不被旧 PUT 改写。以上均在既定文件模块范围内，设计预检已核对一致性，具体实现按阶段合同验证。
 
 设计审查已修正的衔接：复用已有用途 MAC；保持 M4 的安全 URL 清洗合同；业务 JSON 仍 no-store；签名/传输使用运行时钟；外部操作记录放入有界 storage_metadata，不增加业务表。
 
-P1预算/MAC/Range、P2状态表/锁图/清理/owner端口、P3 SDK与双存储合同、P4绑定/读取/反向清理合同均已随实现验证并归档，见各阶段记录。P5 T1–T15完成：内容身份、绑定/迁移、精确事件/动态、分页、真实计数与完整全局排序、三宿主调用方及权限/字节/清理/容量均有证据，本地七门禁、整审和最终main CI闭环。集成期间修复测试夹具并按批准将E2E作业预算20改为25分钟；最终main f5f4ce94的CI41772399410三job成功、E2E364/364正常收尾。历史W11失败和超时原件全部保留，5053文件归档逐hash核验，三组分支/worktree清理且归档再核通过，见[P5§22.2](reviews/P5-issue-assets-review.md#222-最终main全绿与归档清理)。P6 PC1已批准A并同步设计、spec和plan；最终基线预检通过，T1–T5完成；T6复现PC2工作区迟到写覆盖新权限事实，暂停待裁定。若事实证明既定架构无法满足安全或一致性要求，提交当前文档和证据后上报。
+P1预算/MAC/Range、P2状态表/锁图/清理/owner端口、P3 SDK与双存储合同、P4绑定/读取/反向清理合同均已随实现验证并归档，见各阶段记录。P5 T1–T15完成：内容身份、绑定/迁移、精确事件/动态、分页、真实计数与完整全局排序、三宿主调用方及权限/字节/清理/容量均有证据，本地七门禁、整审和最终main CI闭环。集成期间修复测试夹具并按批准将E2E作业预算20改为25分钟；最终main f5f4ce94的CI41772399410三job成功、E2E364/364正常收尾。历史W11失败和超时原件全部保留，5053文件归档逐hash核验，三组分支/worktree清理且归档再核通过，见[P5§22.2](reviews/P5-issue-assets-review.md#222-最终main全绿与归档清理)。P6 PC1已批准A并同步设计、spec和plan；最终基线预检通过，T1–T5完成；PC2已批准A，T6先修复工作区写发布再继续。若事实证明既定架构无法满足安全或一致性要求，提交当前文档和证据后上报。
 
 ## 16. 协议核验来源
 

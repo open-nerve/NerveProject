@@ -66,6 +66,14 @@ scope-lifetime 是实现细节，唯一权限输入为 root 的规范 store gett
 
 RootStore.asset 在 issue 构造后创建，dispose 释放图片/上传活动项；issue.retire 的资源 dispose 与 asset.dispose 可重复调用而不抛错。旧 editorAssetStore 留给 P7，不让它引用新资料会话。
 
+### 2.1 宿主写发布（PC2 已批准 A）
+
+WorkspaceRootStore构造时接收其自身声明的`WorkspaceWriteScope = (workspaceID: string) => () => boolean`小接口，RootStore用IssueRootStore提供实现。回调只查询当前root及既有工作区身份/成员权限水位，不创建资源观察器，也不把项目/工作项变化算作工作区写失效。请求调用时捕获原workspace UUID和scope，不能在排到请求时换成新代次。
+
+`updateWorkspace`返回`Promise<Workspace | undefined>`；已知身份且scope有效才发请求，scope过时的成功/失败与未知身份给undefined；有效范围内的普通拒绝仍原样抛出。绑定控件同时保留原生命期检查；工作区资料表单的完成反馈仅在实际返回Workspace时执行。请求已经到服务端不保证可撤回，也不自动重发。
+
+确认发布与重放由该store控制。重放还核原始完整目录里的相同UUID和role，原回答已变为另一角色则保留原回答，不以旧整行遮掉这次权限事实。缺席不插入、同slug新UUID不替换；其他工作区/项目变化不影响。公共Reconciled不增加权限逻辑，不改现有角色授权。完整依据见[PC2](../reviews/P6-workspace-write-lifetime-decision.md)。
+
 ## 3. 图片显示资源
 
 新增 `core/store/asset/profile-images.ts`、`core/hooks/use-profile-image.ts`、`core/components/assets/profile-image.tsx`。
