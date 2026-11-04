@@ -35,7 +35,7 @@ import { useCopyProjectLink } from "@/hooks/use-copy-link";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 // local imports
 import { AvatarGroupOverflow } from "@/components/common/avatar-group-overflow";
-import { CoverImage } from "@/components/common/cover-image";
+import { ProjectCover } from "@/components/assets/project-cover";
 import { DeleteProjectModal } from "./delete-project-modal";
 import { JoinProjectModal } from "./join-project-modal";
 import { ArchiveRestoreProjectModal } from "./archive-restore-modal";
@@ -153,33 +153,33 @@ export const ProjectCard = observer(function ProjectCard(props: Props) {
           archive={false}
         />
       )}
-      <Link
+      <div
         ref={projectCardRef}
-        to={`/${workspaceSlug}/projects/${project.id}/issues`}
-        onClick={(e) => {
-          if (!isMemberOfProject || isArchived) {
-            e.preventDefault();
-            e.stopPropagation();
-            if (!isArchived) setJoinProjectModal(true);
-          }
-        }}
-        data-prevent-progress={!isMemberOfProject || isArchived}
-        className={cn(
-          "group/project-card flex w-full flex-col justify-between overflow-hidden rounded-lg border border-subtle bg-layer-2 transition-all duration-300 hover:border-strong hover:shadow-raised-200"
-        )}
+        className="group/project-card relative isolate flex w-full flex-col justify-between overflow-hidden rounded-lg border border-subtle bg-layer-2 transition-all duration-300 hover:border-strong hover:shadow-raised-200"
       >
         <ContextMenu parentRef={projectCardRef} items={MENU_ITEMS} />
+        <Link
+          to={`/${workspaceSlug}/projects/${project.id}/issues`}
+          aria-label={project.name}
+          className="absolute inset-0 z-[1] rounded-lg focus-visible:outline-2 focus-visible:outline-offset-[-2px]"
+          data-prevent-progress={!isMemberOfProject || isArchived}
+          onClick={(event) => {
+            if (!isMemberOfProject || isArchived) {
+              event.preventDefault();
+              if (!isArchived) setJoinProjectModal(true);
+            }
+          }}
+        />
         <div className="relative h-[118px] w-full rounded-t">
           <div className="absolute inset-0 z-[1] bg-gradient-to-t from-black/60 to-transparent" />
 
-          <CoverImage
-            src={project.cover_image_url ?? undefined}
-            showDefaultWhenEmpty
+          <ProjectCover
+            source={{ kind: "project", workspaceID: project.workspace_id, projectID: project.id }}
             alt={project.name}
             className="absolute top-0 left-0 h-full w-full rounded-t"
           />
 
-          <div className="absolute bottom-4 z-[1] flex h-10 w-full items-center justify-between gap-3 px-4">
+          <div className="pointer-events-none absolute bottom-4 z-[1] flex h-10 w-full items-center justify-between gap-3 px-4">
             <div className="flex flex-grow items-center gap-2.5 truncate">
               <div className="grid h-9 w-9 flex-shrink-0 place-items-center rounded-sm bg-white/10">
                 <Logo logo={project.logo_props} size={18} />
@@ -195,7 +195,10 @@ export const ProjectCard = observer(function ProjectCard(props: Props) {
             </div>
 
             {!isArchived && (
-              <div data-prevent-progress className="flex h-full flex-shrink-0 items-center gap-2">
+              <div
+                data-prevent-progress
+                className="pointer-events-auto relative z-[2] flex h-full flex-shrink-0 items-center gap-2"
+              >
                 <button
                   className="flex h-6 w-6 items-center justify-center rounded-sm bg-white/10"
                   aria-label={t("copy_link")}
@@ -222,7 +225,7 @@ export const ProjectCard = observer(function ProjectCard(props: Props) {
               ? project.description
               : `${t("common.created_on")} ${renderFormattedDate(project.created_at)}`}
           </p>
-          <div className="item-center flex justify-between">
+          <div className="item-center relative z-[2] flex justify-between">
             <div className="flex items-center justify-center gap-2">
               <Tooltip
                 label={
@@ -328,7 +331,7 @@ export const ProjectCard = observer(function ProjectCard(props: Props) {
             )}
           </div>
         </div>
-      </Link>
+      </div>
     </>
   );
 });

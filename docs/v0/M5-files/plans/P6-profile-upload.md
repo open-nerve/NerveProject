@@ -1,6 +1,6 @@
 # M5/P6 资料图片上传与展示 Implementation Plan
 
-> 预检通过，T1–T8完成；PC2按A完成基础与页面回归，继续T9。**For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans 按 Task 内联实施；不用逐 Task 新派实现者/审者。完成后一次 fresh whole-branch review。本计划在 `codex/m5-p6`，初始基线c59cedf3，实施基线已noff同步 `main@f5f4ce9431e7fb360363bf169da33487cf9b864f`；[PC1](../reviews/P6-public-project-lifetime-decision.md)已批准 A并同步合同。P5准确main CI及归档清理已完成，按连续授权从T1执行。
+> 预检通过，T1–T9完成；PC2按A完成基础与页面回归，继续T10。**For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans 按 Task 内联实施；不用逐 Task 新派实现者/审者。完成后一次 fresh whole-branch review。本计划在 `codex/m5-p6`，初始基线c59cedf3，实施基线已noff同步 `main@f5f4ce9431e7fb360363bf169da33487cf9b864f`；[PC1](../reviews/P6-public-project-lifetime-decision.md)已批准 A并同步合同。P5准确main CI及归档清理已完成，按连续授权从T1执行。
 
 PC2 已批准 A：[工作区更新的迟到回包](../reviews/P6-workspace-write-lifetime-decision.md)。
 **Goal:** 资料图片真实上传、宿主绑定、权限/到期展示和可访问交互。
@@ -116,9 +116,9 @@ PC2 已批准 A：[工作区更新的迟到回包](../reviews/P6-workspace-write
 **Files:** project/form.tsx、新form测试、project/use-update-project-details.ts/.test.ts、project/card.tsx/.test.tsx；必要的helpers/cover-image.helper.ts、common/cover-image.tsx仅清除本次过时注释/接口，不侵入其他外部URL用途。
 **Interfaces:** 已有ProjectUpdate单一非null或两个null；ProjectCover使用project source与稳定映射。
 
-- [ ] Step 1：管理员真实自定义/预设/清除，普通成员/guest只读、archived禁写；省略保持其他字段、绑定拒绝旧封面保持；完整目录移除后的旧详情/迟到详情不能显示图。
-- [ ] Step 2：`pnpm --filter web exec vitest run core/components/project/form.test.tsx core/components/project/card.test.tsx core/components/project/use-update-project-details.test.ts core/store/project` RED→GREEN。
-- [ ] Step 3：卡片/表单当前配置与权限回归，提交 `feat(M5/P6): 更新项目封面并保持目录权限事实`。
+- [x] Step 1：管理员真实自定义/预设/清除，普通成员/guest只读、archived禁写；省略保持其他字段、绑定拒绝旧封面保持；完整目录移除后的旧详情/迟到详情不能显示图。
+- [x] Step 2：`pnpm --filter web exec vitest run core/components/project/form.test.tsx core/components/project/card.test.tsx core/components/project/use-update-project-details.test.ts core/store/project` RED→GREEN。
+- [x] Step 3：卡片/表单当前配置与权限回归，提交 `feat(M5/P6): 更新项目封面并保持目录权限事实`。
 
 ## Task 10（T10）：全部既有头像消费者与邀请例外
 

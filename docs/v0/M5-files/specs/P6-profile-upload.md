@@ -73,7 +73,7 @@ UploadSession 状态至少含 idle、selected、preparing、uploading、confirmi
 
 个人资料头像、封面独立保存，UserUpdate 分别传 avatar_asset_id / cover_image_asset_id；清除传 null，省略不得误清其他字段。引导头像沿相同控件和服务，不提前提交整个引导流程。WorkspaceUpdate.logo_asset_id 同理，非管理员没有上传/删除入口；服务端拒绝保留原图与选择。
 
-项目封面三态：未选择（创建不传、更新省略）、预设 cover_builtin_id、上传 cover_image_asset_id；显式移除发送两个 null。自定义和预设不能同时非 null。新建项目取消当前自定义选择时同时清掉该准备件的表单ID，不能将已丢弃的旧UUID静默提交；显式清除的两个null不因关闭未使用的选择面板而变成省略。新建项目先完成准备件，CreateProjectForm 只用一个 ProjectCreate POST 带所选 ID，禁止先建项目再 PATCH。默认无持久封面，界面可以沿现有中性背景。制作本项目自己的 29 个 SVG 静态封面，稳定编号 cover-01…cover-29，SOURCES 标明自制来源；随机只响应用户主动操作，保存稳定 ID，不保存 Vite hash URL。已有项目设置与卡片由 DTO 解析同一映射，未知预设安全占位，不随机替换。
+项目封面三态：未选择（创建不传、更新省略）、预设 cover_builtin_id、上传 cover_image_asset_id；显式移除发送两个 null。自定义和预设不能同时非 null。新建项目取消当前自定义选择时同时清掉该准备件的表单ID，不能将已丢弃的旧UUID静默提交；显式清除的两个null不因关闭未使用的选择面板而变成省略。新建项目先完成准备件，CreateProjectForm 只用一个 ProjectCreate POST 带所选 ID，禁止先建项目再 PATCH。默认无持久封面，界面可以沿现有中性背景。制作本项目自己的 29 个 SVG 静态封面，稳定编号 cover-01…cover-29，SOURCES 标明自制来源；随机只响应用户主动操作，保存稳定 ID，不保存 Vite hash URL。已有项目设置保留先选择、随“更新项目”一次PATCH提交的交互，待保存封面不写入规范store；名称等未保存字段不因选择图片重置。卡片只读当前规范项目。设置与卡片由 DTO 解析同一映射，未知预设安全占位，不随机替换。切离上传页签取消该页签的未绑定选择及传输，迟到结果不再接入表单。
 
 所有新增文案 en/zh-CN 同步，修改文件 oxlint 零警告；不将旧警告上限调高。M5 全仓至少一个旧规则清零仍由 P8 总复核，不重复领取 M4 no-shadow。
 

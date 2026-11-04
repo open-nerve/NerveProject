@@ -6,10 +6,7 @@
 
 import DefaultCoverImage from "@/app/assets/cover-images/image_1.webp?url";
 
-/**
- * The cover shown where a project or a user has none of its own: nerve gives a project's and a user's
- * cover_image_url as null until uploads arrive (M5; M3 design 3.2).
- */
+/** Static fallback for an empty saved cover or a new project with no selected cover. */
 export const DEFAULT_COVER_IMAGE_URL = DefaultCoverImage;
 
 /** The cover's own URL, or the fallback when it has none. */

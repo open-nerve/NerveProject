@@ -24,7 +24,8 @@ vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
 
 const web = projectOf("WEB", "w-acme", { member_role: 20, description: "The site", timezone: "Asia/Shanghai" });
 const renamed: ProjectDetails = { ...projectDetailsOf(web), name: "Site", network: 0 };
-const update = (details = renamed) => useUpdateProjectDetails()(web, "acme", details, page.setError);
+const update = (details = renamed, current = () => true) =>
+  useUpdateProjectDetails()(web, "acme", details, page.setError, current);
 
 beforeEach(() => {
   signedIn();
@@ -148,4 +149,43 @@ describe("useUpdateProjectDetails", () => {
     await updated;
     expect([page.updateProject.mock.calls, underFields(page.setError), toasts]).toEqual([[], [], []]);
   });
+});
+
+it.each([
+  { cover_image_asset_id: "ready-file" },
+  { cover_builtin_id: "cover-29" },
+  { cover_image_asset_id: null, cover_builtin_id: null },
+])("binds only the explicit cover fields %j with the form fields", async (cover) => {
+  expect(await update({ ...renamed, ...cover })).toBe(true);
+  const sent = page.updateProject.mock.calls[0]?.[1];
+  expect(sent).toMatchObject(cover);
+  expect(Object.keys(sent).filter((key) => key.startsWith("cover_"))).toEqual(Object.keys(cover));
+});
+it("a retired form does not dispatch an identifier check or write", async () => {
+  expect(await update({ ...renamed, identifier: "SITE" }, () => false)).toBe(false);
+  expect(page.checkProjectIdentifier).not.toHaveBeenCalled();
+  expect(page.updateProject).not.toHaveBeenCalled();
+  expect(toasts).toEqual([]);
+});
+it("a retired form does not dispatch after the identifier check", async () => {
+  const answer = heldChange<{ available: boolean }>();
+  let current = true;
+  page.checkProjectIdentifier.mockReturnValueOnce(answer.sent);
+  const updated = update({ ...renamed, identifier: "SITE" }, () => current);
+  current = false;
+  answer.answer({ available: true });
+  expect(await updated).toBe(false);
+  expect(page.updateProject).not.toHaveBeenCalled();
+  expect(toasts).toEqual([]);
+});
+it.each(lateSettlings)("a retired form follows neither a late $settles nor its success", async ({ settle }) => {
+  const answer = heldChange<undefined>();
+  let current = true;
+  page.updateProject.mockReturnValueOnce(answer.sent);
+  const updated = update(renamed, () => current);
+  current = false;
+  settle(answer);
+  expect(await updated).toBe(false);
+  expect(toasts).toEqual([]);
+  expect(page.setError).not.toHaveBeenCalled();
 });

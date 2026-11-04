@@ -11,14 +11,15 @@ import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { useProject } from "@/hooks/store/use-project";
 // lib
 import { PROBLEM_MESSAGES } from "@/lib/error-messages";
-import { followInSession } from "@/lib/in-session";
+import { followInSession, sessionGuard } from "@/lib/in-session";
 // local imports
 import { useProjectRefusal, type ProjectFormField } from "./project-refusal";
 
 /** A project's general settings: the fields of ProjectUpdate its general page edits (M3 design 7.6). */
 export type ProjectDetails = Required<
   Pick<ProjectUpdate, "name" | "identifier" | "description" | "network" | "logo_props" | "timezone">
->;
+> &
+  Pick<ProjectUpdate, "cover_image_asset_id" | "cover_builtin_id">;
 
 /** A project's general settings as nerve last answered them. */
 export const projectDetailsOf = (project: Project): ProjectDetails => ({
@@ -41,13 +42,17 @@ export function useUpdateProjectDetails(): (
   project: Project,
   workspaceSlug: string,
   details: ProjectDetails,
-  setError: UseFormSetError<ProjectDetails>
-) => Promise<void> {
+  setError: UseFormSetError<ProjectDetails>,
+  current: () => boolean
+) => Promise<boolean> {
   const { updateProject, checkProjectIdentifier } = useProject();
   const { t } = useTranslation();
   const showRefusal = useProjectRefusal();
 
-  return (project, workspaceSlug, details, setError) => {
+  return async (project, workspaceSlug, details, setError, current) => {
+    const inSession = sessionGuard();
+    const active = () => inSession() && current();
+    let accepted = false;
     const underField = (field: ProjectFormField, message: string) => setError(field, { type: "server", message });
     const data: ProjectUpdate = {
       name: details.name,
@@ -56,11 +61,15 @@ export function useUpdateProjectDetails(): (
       network: details.network,
       logo_props: details.logo_props,
       timezone: details.timezone,
+      ...(details.cover_image_asset_id !== undefined ? { cover_image_asset_id: details.cover_image_asset_id } : {}),
+      ...(details.cover_builtin_id !== undefined ? { cover_builtin_id: details.cover_builtin_id } : {}),
     };
-    return followInSession(
-      async (): Promise<"updated" | "identifier_taken"> => {
+    await followInSession(
+      async (): Promise<"updated" | "identifier_taken" | "retired"> => {
+        if (!active()) return "retired";
         if (details.identifier !== project.identifier) {
           const { available } = await checkProjectIdentifier(workspaceSlug, details.identifier);
+          if (!active()) return "retired";
           if (!available) return "identifier_taken";
         }
         await updateProject(project.id, data);
@@ -68,19 +77,24 @@ export function useUpdateProjectDetails(): (
       },
       {
         done: (outcome) => {
+          if (!active() || outcome === "retired") return;
           if (outcome === "identifier_taken") {
             // said as nerve's refusal of an identifier taken is (useProjectRefusal)
             underField("identifier", t(PROBLEM_MESSAGES["project.identifier_taken"]));
             return;
           }
+          accepted = true;
           setToast({
             type: TOAST_TYPE.SUCCESS,
             title: t("toast.success"),
             message: t("project_settings.general.toast.success"),
           });
         },
-        failed: (error) => showRefusal(error, underField),
+        failed: (error) => {
+          if (active()) showRefusal(error, underField);
+        },
       }
     );
+    return accepted;
   };
 }
