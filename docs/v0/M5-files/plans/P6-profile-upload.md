@@ -1,6 +1,6 @@
 # M5/P6 资料图片上传与展示 Implementation Plan
 
-> 实施前预检曾通过，T1–T12完成；PC2按A完成基础与页面回归，PC3按A修复并通过联合回归，T13完整门禁收尾中。**For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans 按 Task 内联实施；不用逐 Task 新派实现者/审者。完成后一次 fresh whole-branch review。本计划在 `codex/m5-p6`，初始基线c59cedf3，实施基线已noff同步 `main@f5f4ce9431e7fb360363bf169da33487cf9b864f`；[PC1](../reviews/P6-public-project-lifetime-decision.md)已批准 A并同步合同。P5准确main CI及归档清理已完成，按连续授权从T1执行。
+> 实施前预检曾通过，T1–T12完成；PC2按A完成基础与页面回归，PC3按A修复并通过联合回归，T13本地门禁全绿，准确分支CI待核。**For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans 按 Task 内联实施；不用逐 Task 新派实现者/审者。完成后一次 fresh whole-branch review。本计划在 `codex/m5-p6`，初始基线c59cedf3，实施基线已noff同步 `main@f5f4ce9431e7fb360363bf169da33487cf9b864f`；[PC1](../reviews/P6-public-project-lifetime-decision.md)已批准 A并同步合同。P5准确main CI及归档清理已完成，按连续授权从T1执行。
 
 PC2 已批准 A：[工作区更新的迟到回包](../reviews/P6-workspace-write-lifetime-decision.md)。
 **Goal:** 资料图片真实上传、宿主绑定、权限/到期展示和可访问交互。
@@ -149,10 +149,10 @@ PC2 已批准 A：[工作区更新的迟到回包](../reviews/P6-workspace-write
 
 ## Task 13（T13）：完整门禁与检查点
 
-停点：[PC3目录读取冲突](../reviews/P6-directory-read-decision.md)已复现并批准A，A3联合回归已关闭；完整Go原证据经输入hash核对复用，PC3前端门禁及42项三浏览器通过，完整E2E进行中。修复前失败原件保留。
+停点：[PC3目录读取冲突](../reviews/P6-directory-read-decision.md)已复现并批准A，A3联合回归已关闭；完整Go原证据经输入hash核对复用，PC3前端门禁及42项三浏览器通过，最新完整E2E381项通过，准确分支CI待核。修复前失败原件保留。
 
 - [x] Step 1：逐项A1–A6、消费者清单、设计/plane-diff/handoff处理结果；P7删包责任保持open，旧未使用成员实测，不因历史数字机械删除。
-- [ ] Step 2：串行 make gen-check、make lint-go、GOFLAGS=-p=1 make test、make lint-web、make knip、make test-web、make e2e（已依赖完整build及build-s3-fixture）；每项原exit/输入hash/缓存/skip记录，非仅聚焦代替全门禁。
+- [x] Step 2：串行 make gen-check、make lint-go、GOFLAGS=-p=1 make test、make lint-web、make knip、make test-web、make e2e（已依赖完整build及build-s3-fixture）；每项原exit/输入hash/缓存/skip记录，非仅聚焦代替全门禁。
 - [ ] Step 3：详细中文检查点提交/system push，准确HEAD server/web/e2e三项全绿；失败自行取原生插件/已登录浏览器日志，按现有规则处理，不放宽超时/断言。
 
 ### T13 PC3修复步骤（负责人已批准A）
