@@ -119,6 +119,17 @@ func preparationRefusal(t *testing.T, w issueWorld, who string, id uuid.UUID) (s
 	return string(raw), headers
 }
 
+func TestDraftAssetPreparationsNilDraft(t *testing.T) {
+	w := newIssueWorld(t)
+	assetAPICall(t, w, "", "GET", preparationsPath(uuid.Nil()), "", 401)
+	assetAPICall(t, w, "alice", "GET", preparationsPath(uuid.Nil())+"?cursor=", "", 400)
+	got, headers := preparationRefusal(t, w, "alice", uuid.Nil())
+	absent, absentHeaders := preparationRefusal(t, w, "alice", uuid.NewV7())
+	if got != absent || !reflect.DeepEqual(headers, absentHeaders) {
+		t.Fatal("nil draft differs from an absent draft", got, absent, headers, absentHeaders)
+	}
+}
+
 func TestDraftAssetPreparationsPrivate(t *testing.T) {
 	w := newIssueWorld(t)
 	d := createDraftHTTP(t, w, "alice", `{"payload":{}}`)

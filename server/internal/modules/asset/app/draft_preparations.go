@@ -48,6 +48,9 @@ func (u *ListDraftPreparations) Execute(ctx context.Context, draftID uuid.UUID, 
 	if err != nil {
 		return DraftPreparationPage{}, err
 	}
+	if draftID == uuid.Nil() {
+		return DraftPreparationPage{}, domain.ErrAssetNotFound
+	}
 	page := DraftPreparationPage{Data: []domain.Asset{}}
 	err = u.d.ReadTx.WithinTx(ctx, func(ctx context.Context) error {
 		request := HostRequest{Scope: domain.Scope{Kind: domain.ScopeDraft, ID: draftID}, Intent: ReadAsset}

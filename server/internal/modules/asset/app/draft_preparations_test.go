@@ -103,6 +103,29 @@ func TestDraftPreparationsPage(t *testing.T) {
 	}
 }
 
+func TestDraftPreparationsNilDraft(t *testing.T) {
+	actor := shared.Actor{UserID: attachmentReadID(1)}
+	for _, tc := range []struct {
+		name string
+		ctx  context.Context
+		want error
+	}{
+		{"authenticated", shared.WithActor(t.Context(), actor), domain.ErrAssetNotFound},
+		{"unauthenticated", t.Context(), shared.Unauthenticated()},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			u := NewListDraftPreparations(ListDraftPreparationsDeps{ReadTx: preparationTxFunc(func(context.Context, func(context.Context) error) error {
+				t.Fatal("nil draft opened a transaction before rejection")
+				return nil
+			})})
+			page, err := u.Execute(tc.ctx, uuid.Nil(), nil, nil)
+			if !errors.Is(err, tc.want) || len(page.Data) != 0 || page.NextCursor != nil {
+				t.Fatalf("page=%+v err=%v want=%v", page, err, tc.want)
+			}
+		})
+	}
+}
+
 func TestDraftPreparationsRejectsBeforeReading(t *testing.T) {
 	actor := shared.Actor{UserID: attachmentReadID(1)}
 	draft := attachmentReadID(3)

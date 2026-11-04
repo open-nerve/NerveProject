@@ -22,6 +22,8 @@
 
 非法 UUID/非整数 limit/错误 cursor 为既有 400；limit 不在 1–100 为既有 422。参数失败在任何资源查询前处理且不包含宿主数据；默认 limit 50，最大 100。查询只使用标准认证/Problem/no-store 中间件，不增加存储网络访问、写锁、事件、任务、审计更新或使用计数。
 
+全零UUID可以解析但不能代表真实草稿；认证及分页/cursor校验后直接返回`404 asset.not_found`，不打开事务或进入owner。无会话仍优先401，错误分页参数仍400/422；不修改任何旧入口或把真实数据库错误改为404。
+
 ## 3. 排序、游标和快照
 
 UUID 升序，SQL `id > after_id ORDER BY id LIMIT limit+1`，多取一行仅判断还有下一页。游标为 `shared.EncodeCursor` 的规范 envelope，payload 固定 `{kind:"draft_asset_preparations",draft_id:<UUID>,after:<UUID>}`；解析同时核 kind、请求 draft_id、非零 after，拒绝其他列表、跨草稿、非规范编码、重复/未知字段。没有游标时 after 为零 UUID。游标不是授权凭据，每一页重验作者和宿主；修改合法 payload 只能改变起点，不能扩大范围。
