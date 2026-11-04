@@ -1,12 +1,15 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 import { runInAction } from "mobx";
 import { expect, vi } from "vitest";
-import type { Asset, NewAsset, PreparedAsset } from "@nerve/api-client";
-import { json, type Call } from "@/lib/auth/fake-nerve";
+import type { Asset, Draft, IssueComment, IssueDetail, NewAsset, PreparedAsset } from "@nerve/api-client";
+import { answered, json, type Call } from "@/lib/auth/fake-nerve";
 import { until } from "@/lib/auth/fake-time";
-import { issueStoreTab } from "@/store/issue/fake-issues";
+import { draftOf, issueCommentOf, issueDetailOf, issueStoreTab } from "@/store/issue/fake-issues";
+import { accountOf } from "@/store/member/fake-users";
+import { seedAccount } from "@/store/user/fake-account";
 import { loadProjects } from "@/store/project/fake-projects";
 import { loadWorkspaces } from "@/store/workspace/fake-workspaces";
+import type { ContentHost } from "./content-view";
 
 export const imageFile = (name = "picture.png", bytes = 4, type = "image/png") =>
   new File([new Uint8Array(bytes)], name, { type });
@@ -89,4 +92,56 @@ export async function assetTab() {
     return puts[count - 1]!;
   };
   return { ...tab, workspace, project, puts, answer, sent, assets };
+}
+
+/** Content owners enter the real canonical stores through their generated API clients. */
+export async function contentAssetTab() {
+  const tab = await assetTab();
+  const { app, nerve, workspace, project } = tab;
+  await seedAccount(nerve, app.user, accountOf("actor"));
+  const issue = issueDetailOf("issue-1", project.id);
+  const comment = { ...issueCommentOf("comment-1", issue.id), actor_id: app.issue.currentUserId! };
+  const draft = { ...draftOf("draft-1", workspace.id), project_id: null };
+  const readIssue = async (row: IssueDetail = issue) => {
+    const result = await answered(
+      nerve,
+      () => app.issue.issues.refreshAuthoritative(row.id),
+      ["GET", `/api/v0/issues/${row.id}`],
+      row,
+      "content issue"
+    );
+    expect(result.error).toBeUndefined();
+  };
+  const readComments = async (rows: IssueComment[] = [comment]) => {
+    const result = await answered(
+      nerve,
+      () => app.issue.issueDetail.comment.fetchComments(workspace.slug, project.id, issue.id),
+      ["GET", `/api/v0/issues/${issue.id}/comments`],
+      { data: rows, next_cursor: null },
+      "content comments"
+    );
+    expect(result.error).toBeUndefined();
+  };
+  const readDrafts = async (rows: Draft[] = [draft]) => {
+    const result = await answered(
+      nerve,
+      () => app.issue.workspaceDraftIssues.fetchIssues(workspace.slug),
+      ["GET", `/api/v0/workspaces/${workspace.slug}/drafts`],
+      { data: rows, total: rows.length, next_cursor: null },
+      "content drafts"
+    );
+    expect(result.error).toBeUndefined();
+  };
+  await readIssue();
+  await readComments();
+  await readDrafts();
+  nerve.calls.length = 0;
+  const scope = { workspaceID: workspace.id, projectID: project.id, issueID: issue.id };
+  const hosts = {
+    issue: { kind: "issue", ...scope },
+    new_comment: { kind: "new_comment", ...scope },
+    comment: { kind: "comment", ...scope, commentID: comment.id },
+    draft: { kind: "draft", workspaceID: workspace.id, projectID: null, draftID: draft.id },
+  } satisfies Record<"issue" | "new_comment" | "comment" | "draft", ContentHost>;
+  return { ...tab, issue, comment, draft, hosts, readIssue, readComments, readDrafts };
 }

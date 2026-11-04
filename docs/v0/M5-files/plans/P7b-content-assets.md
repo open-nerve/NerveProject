@@ -59,9 +59,9 @@
 **Files:** 修改store/asset/{upload-session,root.store}.ts；新upload-policy.ts、content-view.ts及测试；profile策略从原实现提取，ScopeLifetime仍服务P6；回归store/root.store.test.ts和issue/permission-reads.test.ts。
 **Interfaces:** 原createUpload(ProfileUploadTarget)保持；openContent(ContentHost)→ContentView、createContentUpload(view,use)→UploadSession；消费侧UploadPolicy见资源spec§3。
 
-- [ ] Step 1：实际RootStore/FakeNerve覆盖六用途映射、名字/大小/MIME、草稿null项目、未知host零请求、普通附件不建预览、描述图片建并释放预览；P6四用途与ready/failed同步observer重入保持。分阶段暂停后失权/恢复/换issue/评论删除/草稿A→B→A，旧start/成功/失败/retry永久无效，其他工作区独立，issue/comment的无关项目不误杀；私有draft按既有owner集合范围失效，规范Draft撤回时结束view，重新读取后新建，不能私持旧DTO继续。
-- [ ] Step 2：`pnpm --filter web exec vitest run core/store/asset core/store/root.store.test.ts core/store/issue/permission-reads.test.ts core/store/issue/root.store.test.ts core/store/workspace`。RED后提取一份UploadSession算法；ContentView只经IssueRootStore注册，host观察仅身份/归属，无新角色观察器；每await及同步状态通知后核current。
-- [ ] Step 3：GREEN；单改取消后继续complete、内容使用项目封面权限、永久代次改成ID相等三变异分别AssertionError并恢复SHA；当前P6上传、PC1/PC2/PC3联合回归、类型/lint；提交 `feat(M5/P7b): 统一内容上传和宿主生命周期`。
+- [x] Step 1：实际RootStore/FakeNerve覆盖六用途映射、名字/大小/MIME、草稿null项目、未知host零请求、普通附件不建预览、描述图片建并释放预览；P6四用途与ready/failed同步observer重入保持。分阶段暂停后失权/恢复/换issue/评论删除/草稿A→B→A，旧start/成功/失败/retry永久无效，其他工作区独立，issue/comment的无关项目不误杀；私有draft按既有owner集合范围失效，规范Draft撤回时结束view，重新读取后新建，不能私持旧DTO继续。
+- [x] Step 2：`pnpm --filter web exec vitest run core/store/asset core/store/root.store.test.ts core/store/issue/permission-reads.test.ts core/store/issue/root.store.test.ts core/store/workspace`。RED后提取一份UploadSession算法；ContentView只经IssueRootStore注册，host观察仅身份/归属，无新角色观察器；每await及同步状态通知后核current。
+- [x] Step 3：GREEN；单改取消后继续complete、内容使用项目封面权限、永久代次改成ID相等三变异分别AssertionError并恢复SHA；当前P6上传、PC1/PC2/PC3联合回归、类型/lint；提交 `feat(M5/P7b): 统一内容上传和宿主生命周期`。
 
 ## Task 3（T3）：分页附件与临时内容能力
 

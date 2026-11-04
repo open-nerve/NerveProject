@@ -4,7 +4,7 @@ import { loadProject, loadProjects, projectOf } from "@/store/project/fake-proje
 import { loadWorkspaces } from "@/store/workspace/fake-workspaces";
 import { track, until } from "@/lib/auth/fake-time";
 import { assetTab, avatarTarget, imageFile } from "./fake-assets";
-import type { ProfileUploadTarget } from "./upload-session";
+import type { ProfileUploadTarget } from "./upload-policy";
 
 vi.mock("@/lib/auth/api-client", () => ({ tokenManager: {}, publicClient: {} }));
 vi.mock("@/lib/store-context", () => ({ rootStore: {} }));

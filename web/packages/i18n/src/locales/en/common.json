@@ -24,6 +24,7 @@
       "disposed": "This action is no longer available."
     },
     "errors": {
+      "name": "Use a name of 1–255 characters without path separators or control characters.",
       "multiple": "Choose one image at a time.",
       "directory": "Choose an image file, not a folder.",
       "not_file": "Drop an image file here.",

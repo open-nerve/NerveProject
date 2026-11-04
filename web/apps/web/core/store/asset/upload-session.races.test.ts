@@ -181,3 +181,23 @@ it("retirement from the failed transition suppresses feedback to the old owner",
   expect(result.error).toBeUndefined();
   expect(upload.phase).toBe("disposed");
 });
+
+it("retirement while clearing a replacement cannot allocate a new preview in the disposed session", async () => {
+  const tab = await fixture();
+  const upload = tab.app.asset.createUpload(avatarTarget);
+  upload.select(imageFile());
+  const create = vi.spyOn(URL, "createObjectURL");
+  close.push(
+    reaction(
+      () => upload.phase,
+      (phase) => {
+        if (phase === "idle") upload.dispose();
+      }
+    )
+  );
+  upload.select(imageFile("replacement.png"));
+  expect(upload.phase).toBe("disposed");
+  expect(create).not.toHaveBeenCalled();
+  expect(upload.previewURL).toBeUndefined();
+  expect(tab.nerve.calls).toHaveLength(0);
+});

@@ -4,7 +4,7 @@ import { observer } from "mobx-react";
 import type { Asset } from "@nerve/api-client";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
-import { ImageSelectionError, type UploadSession } from "@/store/asset/upload-session";
+import { FileSelectionError, type UploadSession } from "@/store/asset/upload-session";
 import { UploadFailure } from "@/lib/asset-upload";
 import { errorMessageKey } from "@/lib/error-messages";
 
@@ -238,7 +238,7 @@ export const ImagePicker = observer(function ImagePicker(props: ImagePickerProps
 });
 
 function message(error: unknown): string {
-  if (error instanceof ImageSelectionError) return `image_upload.errors.${error.kind}`;
+  if (error instanceof FileSelectionError) return `image_upload.errors.${error.kind}`;
   if (error instanceof UploadFailure) return `image_upload.errors.${error.kind}`;
   return errorMessageKey(error);
 }
