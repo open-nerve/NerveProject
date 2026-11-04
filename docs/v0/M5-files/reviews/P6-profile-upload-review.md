@@ -1,6 +1,6 @@
 # M5/P6 资料图片上传与展示阶段记录
 
-> 分支 `codex/m5-p6`，实施基线 `main@f5f4ce9431e7fb360363bf169da33487cf9b864f`。P5 已完整收尾，P6 预检提交 ab9f86b8；当前 T1–T9 完成，PC2按A完成基础与页面回归，T10接续，未关闭 A1–A8。按连续授权推进，一次整分支 deep-review 后集成；重大风险先提交上报。
+> 分支 `codex/m5-p6`，实施基线 `main@f5f4ce9431e7fb360363bf169da33487cf9b864f`。P5 已完整收尾，P6 预检提交 ab9f86b8；当前 T1–T11 完成，PC2按A完成基础与页面回归，T11接续，未关闭 A1–A8。按连续授权推进，一次整分支 deep-review 后集成；重大风险先提交上报。
 
 ## 1. 输入与范围
 
@@ -135,3 +135,12 @@ ProjectCover只收明确project source，从当前ProjectStore选择事实；完
 成员5项真实RED后通过；邀请初轮8failed/1passed，其中1项选择器误将应用加载标志当工作区图标，已改为精确alt，不计行为RED；其余到期重读/取消等7项真实失败。最终邀请10项、历史和mention宿主16项、58文件474项受影响验证通过。完整前端18/18（17缓存，web310文件3439项）通过；4516输入前后hash一致，原始输出t10-web-tests-final.log。首次全量7项失败均为两个旧组件测试未提供新增workspace图片边界，补实际workspace hook和仅呈现的image替身；评论测试保留实际RootStore provider。原输入/输出均保留。
 
 Knip发现T2测试夹具preparedAsset只有内部使用，去除多余export后通过；没有删除仍使用的函数。类型、62文件格式/零warning、1333翻译引用通过。首次Map的SWR Cache类型、非空断言、hook依赖及测试mock lint问题按既有规则修正，无豁免或配置变化。图片GET的真实Cookie、字节/绑定链与三浏览器继续由T11/T12验收，A1–A8尚不提前关闭。
+
+
+## 16. T11 真实页面、双存储与字节
+
+F5–F7 Chromium七项全部通过：个人头像/封面分别上传、同名不同字节替换、刷新与新登录、清除；引导头像不提前提交profile；管理员工作区图标保持未保存名称，成员/访客只读，成员列表解码他人真实头像；项目准备件只随一次POST绑定，设置更换、29张预设全部解码、主动随机及清除。三个宿主各自都在local和S3完整走浏览器File→原grant PUT→complete→owner，local原URL是最终合同/static/local，未由fixture提前绝对化。
+
+每条链核原请求JSON、URL和query不变、正文大小/原字节/MIME、无Authorization/Cookie/Referer；同源控制fetch确实携测试HttpOnly Cookie。已绑定资产实际下载字节、DB最终key/SHA/标记与local磁盘或S3对象检查一致；重复complete后整行不变。项目双击只创建一行，资料字段各自独立，旧API/pageError/CSP/意外API失败为0。原件见E6 t11-sixth-report、t11-sixth-results和t11-pages-sixth收据，4520输入不变，七项70.4秒（含独立S3启动清理）。容器集合前后相同，自有PG/reaper/S3均无遗留，未操作既有容器。
+
+首次至第五次失败保留：个人路径、引导双入口、JSON流式正文观察、旧建议namespace、浏览器未暴露Content-Length、访客原布局成员GET和访客设置拒绝页，均已按实际合同修正测试。正文核requestBodySize及原bytes，不依赖浏览器调试协议必然暴露自动头；Cookie对照保持。访客M3脱敏目录GET本来允许，图片资源不得额外枚举，原spec措辞已校正；不改M3布局或授权。新增负例等待实际只读/拒绝页完成，避免早期零元素假阳性。首次lint两处no-shadow命名已改，无规则豁免；最终类型、格式和六文件零warning收据保留。三浏览器生命周期和阶段A1–A8继续T12–T15，不以此七项替代最终门禁。

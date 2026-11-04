@@ -1,6 +1,6 @@
 # M5：文件
 
-> 状态：P1–P5已完成集成归档。P5最终main f5f4ce94的CI41772399410全绿，三组分支/worktree及5053件证据归档核验完成。P6的PC1方案A已批准，最终基线预检通过，T1–T10完成；PC2按A完成基础与页面回归，T11接续；P6/M5总体仍未完成。见[P5阶段记录](reviews/P5-issue-assets-review.md)和[P6阶段记录](reviews/P6-profile-upload-review.md)。
+> 状态：P1–P5已完成集成归档。P5最终main f5f4ce94的CI41772399410全绿，三组分支/worktree及5053件证据归档核验完成。P6的PC1方案A已批准，最终基线预检通过，T1–T11完成；PC2按A完成基础与页面回归，T12接续；P6/M5总体仍未完成。见[P5阶段记录](reviews/P5-issue-assets-review.md)和[P6阶段记录](reviews/P6-profile-upload-review.md)。
 > 起点：`main@3db22f06ad9e82a483c05c8078801af00a5cae02`（M4 最终 main CI 41397218533，三个作业成功）。
 PC2 已批准 A：[工作区更新的迟到回包](reviews/P6-workspace-write-lifetime-decision.md)。
 > 设计、P1–P4分支均已合入并归档；P5已noff合入main，因一次重跑仍未全绿，按负责人特定停点等待预算裁定；当前文档工作分支codex/m5-p6。负责人2026-11-02已授权按既有节奏连续推进，常规设计、预检、实现、deep-review、`--no-ff`集成、CI和归档无需逐次询问。重大风险、架构回归或关键分歧，先提交已完成工作，再上报。
@@ -327,14 +327,14 @@ P1 起第一个实现提交更新关键词 phase 与到期例外；纯设计分�
 | P3 | 已完成：noff main5807a0d6，CI41591764345全绿，2251文件归档核验并清理 | [spec](specs/P3-s3-storage.md) / [plan](plans/P3-s3-storage.md) / [预检](../../reviews/re-36-M5P3预检.md) / [阶段记录](reviews/P3-s3-storage-review.md) |
 | P4 | 已完成：noff main0f93100a，CI41641099230全绿，2301文件归档核验并清理 | [spec](specs/P4-profile-images.md) / [plan](plans/P4-profile-images.md) / [整审](../../reviews/re-39-M5P4整体审核.md) / [阶段记录](reviews/P4-profile-images-review.md) |
 | P5 | 已完成；最终main f5f4ce94、CI41772399410三job全绿，5053文件归档核验且三组分支/worktree清理完成 | [spec](specs/P5-issue-assets.md) / [plan](plans/P5-issue-assets.md) / [预检](../../reviews/re-40-M5P5预检.md) / [整审](../../reviews/re-41-M5P5整体审核.md) / [阶段记录](reviews/P5-issue-assets-review.md) |
-| P6 | PC1已批准A并同步合同；最终main基线预检通过，T1–T10完成；PC2按A完成基础与页面回归，T11接续 | [spec](specs/P6-profile-upload.md) / [plan](plans/P6-profile-upload.md) / [预检](../../reviews/re-42-M5P6预检.md) / [决策](reviews/P6-public-project-lifetime-decision.md) |
+| P6 | PC1已批准A并同步合同；最终main基线预检通过，T1–T11完成；PC2按A完成基础与页面回归，T12接续 | [spec](specs/P6-profile-upload.md) / [plan](plans/P6-profile-upload.md) / [预检](../../reviews/re-42-M5P6预检.md) / [决策](reviews/P6-public-project-lifetime-decision.md) |
 | P7–P8、closeout | 未开始 | 待前置阶段完成后逐段展开 |
 
 当前可自行决定的局部取舍及代价：编辑器只处理图片，普通文件走附件区；预设封面使用稳定编号，不上传构建素材副本；描述图片保留到宿主删除，代价是占用空间；封存复制增加一次存储操作，换取确认后字节不被旧 PUT 改写。以上均在既定文件模块范围内，设计预检已核对一致性，具体实现按阶段合同验证。
 
 设计审查已修正的衔接：复用已有用途 MAC；保持 M4 的安全 URL 清洗合同；业务 JSON 仍 no-store；签名/传输使用运行时钟；外部操作记录放入有界 storage_metadata，不增加业务表。
 
-P1预算/MAC/Range、P2状态表/锁图/清理/owner端口、P3 SDK与双存储合同、P4绑定/读取/反向清理合同均已随实现验证并归档，见各阶段记录。P5 T1–T15完成：内容身份、绑定/迁移、精确事件/动态、分页、真实计数与完整全局排序、三宿主调用方及权限/字节/清理/容量均有证据，本地七门禁、整审和最终main CI闭环。集成期间修复测试夹具并按批准将E2E作业预算20改为25分钟；最终main f5f4ce94的CI41772399410三job成功、E2E364/364正常收尾。历史W11失败和超时原件全部保留，5053文件归档逐hash核验，三组分支/worktree清理且归档再核通过，见[P5§22.2](reviews/P5-issue-assets-review.md#222-最终main全绿与归档清理)。P6 PC1已批准A并同步设计、spec和plan；最终基线预检通过，T1–T10完成；PC2按A完成基础与页面回归，T11接续。若事实证明既定架构无法满足安全或一致性要求，提交当前文档和证据后上报。
+P1预算/MAC/Range、P2状态表/锁图/清理/owner端口、P3 SDK与双存储合同、P4绑定/读取/反向清理合同均已随实现验证并归档，见各阶段记录。P5 T1–T15完成：内容身份、绑定/迁移、精确事件/动态、分页、真实计数与完整全局排序、三宿主调用方及权限/字节/清理/容量均有证据，本地七门禁、整审和最终main CI闭环。集成期间修复测试夹具并按批准将E2E作业预算20改为25分钟；最终main f5f4ce94的CI41772399410三job成功、E2E364/364正常收尾。历史W11失败和超时原件全部保留，5053文件归档逐hash核验，三组分支/worktree清理且归档再核通过，见[P5§22.2](reviews/P5-issue-assets-review.md#222-最终main全绿与归档清理)。P6 PC1已批准A并同步设计、spec和plan；最终基线预检通过，T1–T11完成；PC2按A完成基础与页面回归，T12接续。若事实证明既定架构无法满足安全或一致性要求，提交当前文档和证据后上报。
 
 ## 16. 协议核验来源
 

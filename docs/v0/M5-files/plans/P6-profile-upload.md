@@ -1,6 +1,6 @@
 # M5/P6 资料图片上传与展示 Implementation Plan
 
-> 预检通过，T1–T10完成；PC2按A完成基础与页面回归，继续T11。**For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans 按 Task 内联实施；不用逐 Task 新派实现者/审者。完成后一次 fresh whole-branch review。本计划在 `codex/m5-p6`，初始基线c59cedf3，实施基线已noff同步 `main@f5f4ce9431e7fb360363bf169da33487cf9b864f`；[PC1](../reviews/P6-public-project-lifetime-decision.md)已批准 A并同步合同。P5准确main CI及归档清理已完成，按连续授权从T1执行。
+> 预检通过，T1–T11完成；PC2按A完成基础与页面回归，继续T12。**For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans 按 Task 内联实施；不用逐 Task 新派实现者/审者。完成后一次 fresh whole-branch review。本计划在 `codex/m5-p6`，初始基线c59cedf3，实施基线已noff同步 `main@f5f4ce9431e7fb360363bf169da33487cf9b864f`；[PC1](../reviews/P6-public-project-lifetime-decision.md)已批准 A并同步合同。P5准确main CI及归档清理已完成，按连续授权从T1执行。
 
 PC2 已批准 A：[工作区更新的迟到回包](../reviews/P6-workspace-write-lifetime-decision.md)。
 **Goal:** 资料图片真实上传、宿主绑定、权限/到期展示和可访问交互。
@@ -134,9 +134,9 @@ PC2 已批准 A：[工作区更新的迟到回包](../reviews/P6-workspace-write
 **Files:** e2e/stories/files/f5-profile-images-page.spec.ts、f6-workspace-logo-page.spec.ts、f7-project-cover-page.spec.ts；复用/扩展fixtures/file-story.ts、storage.ts、auth.ts、test.ts、s3-world.ts；不复制启动/清理框架。
 **Interfaces:** pageFileStory 的最小world包含api/db/nerve/baseURL/page和既有local/S3字节断言，普通函数后薄fixture。
 
-- [ ] Step 1：界面选真实File、PUT/complete/owner请求严格记录，最终DB引用、对象/磁盘hash相符；个人/工作区/项目至少各local成功、S3资料上传至少一完整页面。失败不能只看DOM文件名。
-- [ ] Step 2：构建后 `cd e2e && pnpm exec playwright test stories/files/f5-profile-images-page.spec.ts stories/files/f6-workspace-logo-page.spec.ts stories/files/f7-project-cover-page.spec.ts --project=chromium --workers=1`；重复确认后无双绑定，项目只有一创建，旧API请求0，真实同源Cookie探针与凭据隔离。
-- [ ] Step 3：保存report/trace、API/DB/bytes证据，核新增容器用完无遗留；提交 `test(M5/P6): 验证资料图片真实上传和一次绑定`。
+- [x] Step 1：界面选真实File、PUT/complete/owner请求严格记录，最终DB引用、对象/磁盘hash相符；个人/工作区/项目至少各local成功、S3资料上传至少一完整页面。失败不能只看DOM文件名。
+- [x] Step 2：构建后 `cd e2e && pnpm exec playwright test stories/files/f5-profile-images-page.spec.ts stories/files/f6-workspace-logo-page.spec.ts stories/files/f7-project-cover-page.spec.ts --project=chromium --workers=1`；重复确认后无双绑定，项目只有一创建，旧API请求0，真实同源Cookie探针与凭据隔离。
+- [x] Step 3：保存report/trace、API/DB/bytes证据，核新增容器用完无遗留；提交 `test(M5/P6): 验证资料图片真实上传和一次绑定`。
 
 ## Task 12（T12）：F16/F17 生命周期、可访问性和三浏览器
 

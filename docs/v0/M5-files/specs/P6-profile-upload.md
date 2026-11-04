@@ -1,6 +1,6 @@
 # M5/P6：资料图片上传与展示
 
-> 预检通过，T1–T8 完成；PC2按A完成基础与页面回归，继续T9。分支 `codex/m5-p6`，初始基线c59cedf3，实施基线已同步到 `main@f5f4ce9431e7fb360363bf169da33487cf9b864f`。P5 与两次集成修复已完成准确 main CI、全部证据归档及分支/worktree清理，见[P5 收尾记录](../reviews/P5-issue-assets-review.md#222-最终main全绿与归档清理)。
+> 预检通过，T1–T11 完成；PC2按A完成基础与页面回归，继续T12。分支 `codex/m5-p6`，初始基线c59cedf3，实施基线已同步到 `main@f5f4ce9431e7fb360363bf169da33487cf9b864f`。P5 与两次集成修复已完成准确 main CI、全部证据归档及分支/worktree清理，见[P5 收尾记录](../reviews/P5-issue-assets-review.md#222-最终main全绿与归档清理)。
 > PC1 的复现、已批准方案 A 及代价见[决策记录](../reviews/P6-public-project-lifetime-decision.md)；M4/M5设计、spec、plan与联合回归落点已同步，原角色授权和ProjectStore R06保持。
 PC2 已批准 A：[工作区更新的迟到回包](../reviews/P6-workspace-write-lifetime-decision.md)。
 > 依据 M5 设计 §3、§5–6、§9、§11–12、P4 已实现的资料引用合同及 P5 的准备件隐私。执行沿连续授权：主控局部决定并记代价，重大风险先提交再上报。
@@ -60,7 +60,7 @@ UploadSession 状态至少含 idle、selected、preparing、uploading、confirmi
 - 自己头像/封面由 /me DTO 和 UserStore 刷新；换图完成后侧栏/个人设置/引导一致。
 - 工作区图标由当前工作区目录及 WorkspaceRoot.fetchWorkspaces 刷新；成员/访客可读其所属目录的图标，只有管理员可写。
 - 项目封面由 ProjectStore.fetchProject / 当前目录事实读取；cover_builtin_id 走本地静态映射，不生成资产 URL。当前完整目录判项目缺席时旧详情不能作图片权限证据。
-- 成员头像只取当前 workspace memberships[memberID].member 的 avatar_url/expires_at；自己的头像可用自己的 /me。读取其他成员要求当前工作区 role15/20；guest 不因显示占位头像而发送禁止的成员 API。inactive 成员是否显示沿所在页面既有语义，不机械全删。MemberUser 不暴露 asset ID，禁止凭 UUID 拼他人资产读取入口。
+- 成员头像只取当前 workspace memberships[memberID].member 的 avatar_url/expires_at；自己的头像可用自己的 /me。读取其他成员要求当前工作区 role15/20；guest 不因图片占位新增成员图片授权读取；M3 页面布局已有的脱敏成员目录读取保持，不把它误判为图片新增请求。inactive 成员是否显示沿所在页面既有语义，不机械全删。MemberUser 不暴露 asset ID，禁止凭 UUID 拼他人资产读取入口。
 - 邀请预览是已有公开邀请能力的例外：用邀请标识及已有预览接口重新读 workspace_logo_url/expires_at，不能强求登录或复用登录会话图片租约；邀请更换/页面卸载取消，拒绝不无限重试。
 
 **M5/P6 PC2（负责人2026-11-04批准A）：** 工作区普通资料与logo更新在调用时捕获当前workspace UUID及权限有效期，排队后发送、异步成功/失败、规范缓存发布和旧读上的确认重放均不得越过原有效期。WorkspaceRootStore声明小的工作区写有效性接口，由RootStore接到既有IssueRootStore/PermissionReads；范围只含本工作区身份/成员权限及root生命期，不含无关项目变化，不增观察器/权限缓存，不依赖asset控件。已观察到权限变化后即使恢复同角色，旧结果仍过时。未知工作区不发写；过时的成功/失败返回undefined，普通有效范围内的拒绝仍原样抛出，调用页面不对undefined提示成功。已发送写可能服务端成功，不自动重发。有效范围的已确认写仍与旧读调和，但重放须尊重原始目录回答的工作区UUID/role：不能先覆掉新角色再等观察器发现变化。通用Reconciled、既有授权角色与服务端协议不变；移除/同slug新UUID、20→15/5→20、旧读/新写、排队/退休/迟到拒绝及无关范围联合回归。见[PC2决策](../reviews/P6-workspace-write-lifetime-decision.md)。
