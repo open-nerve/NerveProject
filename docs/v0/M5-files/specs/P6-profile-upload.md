@@ -85,7 +85,7 @@ UploadSession 状态至少含 idle、selected、preparing、uploading、confirmi
 - [x] A4 F5 个人资料/引导替换和移除、旧 read/new write 交错、拒绝保留、刷新与重登录经真实 API 和字节验收。
 - [x] A5 F6 管理员图标、成员/访客边界、成员列表头像、签名到期恢复；F7 一次项目创建绑定、29 个预设和手动随机、已有项目替换/清除。
 - [x] A6 F16/F17 在三浏览器验证真实控件、raw PUT、拖放、取消、焦点/读屏、Back/Forward 和迟到结果；local/S3 至少各一条真实资料上传页面，API/DB/磁盘或对象 hash 相符。
-- [ ] A7 局部测试、必要行为变异、七项本地门禁、一次整分支 deep-review 与修复复核、准确最终分支 CI 全绿。
+- [x] A7 局部测试、必要行为变异、七项本地门禁、一次整分支 deep-review 与修复复核、准确最终分支 CI 全绿。
 - [ ] A8 --no-ff 后准确 main CI 全绿，原始证据归档并核 hash/bytes/mode/membership/unknown=0，正常清理，准备 P7 预检。
 
 A1–A6已挂证据；A3的[PC3目录读取冲突](../reviews/P6-directory-read-decision.md)已按A修复，34项共享读取回归、三类行为变异及完成去重窗口变异、三浏览器42项通过（[评审§20](../reviews/P6-profile-upload-review.md#20-pc3批准a后的联合修复)）。原A1–A6证据映射见[评审§18](../reviews/P6-profile-upload-review.md#18-t13-验收与清理核对)；一次终审及局部修复见[评审§21](../reviews/P6-profile-upload-review.md#21-t14整分支终审与一次局部修复)，准确最终CI及集成完成前A7/A8保持开放。
@@ -99,3 +99,5 @@ F5–F7 正向数据经 API，SQL 只断言/明确故障夹具；到期 UI 测�
 - P5 ignored p6-transport-probe-results.json 为三浏览器隔离协议证据，归档时附 SHA/bytes；不是产品实现或 P6 通过证明。
 
 PC3实施合同以[生命周期补充](P6-image-lifecycle.md#pc3共享宿主读取与完成证明负责人批准a)为准：图片共享现有宿主查询键和实际读取完成证明，取代前文由图片独立发起宿主读取的接线；既有expiry/权限/重试目标保持。
+
+P7准备期间回填：最终分支8e46ab55的CI41828756305 attempt1三job全绿，完整E2E381项；已授权noff合入main96363675，main CI/归档尚未完成。A7关闭、A8保持开放，准确收据在P6原始台账t14-ci-summary.json。

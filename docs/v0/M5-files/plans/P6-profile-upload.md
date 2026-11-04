@@ -153,7 +153,7 @@ PC2 已批准 A：[工作区更新的迟到回包](../reviews/P6-workspace-write
 
 - [x] Step 1：逐项A1–A6、消费者清单、设计/plane-diff/handoff处理结果；P7删包责任保持open，旧未使用成员实测，不因历史数字机械删除。
 - [x] Step 2：串行 make gen-check、make lint-go、GOFLAGS=-p=1 make test、make lint-web、make knip、make test-web、make e2e（已依赖完整build及build-s3-fixture）；每项原exit/输入hash/缓存/skip记录，非仅聚焦代替全门禁。
-- [ ] Step 3：详细中文检查点提交/system push，准确HEAD server/web/e2e三项全绿；失败自行取原生插件/已登录浏览器日志，按现有规则处理，不放宽超时/断言。
+- [x] Step 3：详细中文检查点提交/system push，准确HEAD server/web/e2e三项全绿；失败自行取原生插件/已登录浏览器日志，按现有规则处理，不放宽超时/断言。
 
 ### T13 PC3修复步骤（负责人已批准A）
 
@@ -163,20 +163,22 @@ PC2 已批准 A：[工作区更新的迟到回包](../reviews/P6-workspace-write
 - [x] PC3-1：先将原两条探针转为正式行为回归，扩展四宿主与页面并发、已完成缓存/在途加入、较新成功/失败取代、共享失权ABA、卸载/root退休，记录真实RED，不能只测无关键词命中。
 - [x] PC3-2：实现小读取观察接口及RootStore接线；四宿主读取边界发布真实完成，提取/复用canonical hook，删除图片独立读取方法和profile-image键。共享刷新仅合并通知，不建立新HTTP所有者。原单元夹具按新的host驱动合同更新，既有授权反例保留。
 - [x] PC3-3：实际workspace/issue/project/member/user与hook联合回归GREEN；定向去掉同键复用、旧完成屏障、权限代次分别应行为失败并逐SHA恢复；三浏览器P6及受影响单元/类型/lint/格式通过，原目录守卫逐值不变。
-- [ ] PC3-4：修订A3证据和阶段状态，中文提交；完成本轮七门禁及准确分支CI，再执行T14/T15。不重复无关已绿套件，复用时逐hash明确输入差异及不受影响范围。
+- [x] PC3-4：修订A3证据和阶段状态，中文提交；完成本轮七门禁及准确分支CI，再执行T14/T15。不重复无关已绿套件，复用时逐hash明确输入差异及不受影响范围。
 
 ## Task 14（T14）：整分支 deep-review
 
 - [x] Step 1：冻结真实基线到候选HEAD，一次fresh reviewer读完整变更手写文件、调用链、全部Review Focus、局部裁定与输入证据；生成物核源。
 - [x] Step 2：主控按实际影响分级，一次局部修复与必要RED/GREEN/受影响回归；Minor具名去向，重要架构问题先提交上报；不派重复同范围审者。
-- [ ] Step 3：报告入docs/reviews下一编号，最终提交/push准确CI全绿，关闭A7。
+- [x] Step 3：报告入docs/reviews下一编号，最终提交/push准确CI全绿，关闭A7。
 
 ## Task 15（T15）：main 集成归档与 P7 预检
 
-- [ ] Step 1：核根main/W干净和祖先、准确green最终HEAD，连续授权下--no-ff，双父/树一致、system push。
+- [x] Step 1：核根main/W干净和祖先、准确green最终HEAD，连续授权下--no-ff，双父/树一致、system push。
 - [ ] Step 2：准确main CI三项全绿后归档全部ignored原件/raw失败/浏览器/变异/审者；hash/bytes/mode/membership/unknown=0；origin/main..branch=0后正常清远端、本地和worktree，归档再次核。
 - [ ] Step 3：下一codex/m5-p7独立worktree回填A8/阶段事实；P7 spec/plan一次builder预检，包含最后旧FileService/services删除、编辑器/附件与计数控件，不提前标M5完成。
 
 ## 预检自查（已通过）
 
 A1→T1/T2/T11；A2→T2/T4/T12；A3→T3/T10/T12；A4→T5/T11；A5→T6–T9/T11；A6→T11/T12；A7→T13/T14；A8→T15。15 Tasks。源码路径/接口、角色集合、字段拼写、测试命令、builder唯一问题与跨Task接口已核；实际源码与126项宿主基线一致，P5准确main CI及归档清理前置满足。完整收据见[预检§7](../../../reviews/re-42-M5P6预检.md#7-最终基线与执行前预检通过)。该预检时点P6八项验收均未完成；实施后的当前状态以主spec和阶段记录为准。
+
+P7准备回填：T13/T14最终8e46ab55的CI41828756305全绿，noff main96363675；T15后两步未关闭，main CI/归档独立继续，P7预检发现待决恢复合同。
