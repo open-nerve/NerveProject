@@ -36,7 +36,10 @@
       "cancelled": "已取消上传。",
       "expired": "上传链接已过期，请先检查上传结果，必要时重新上传。",
       "invalid-grant": "上传链接无法使用，请先检查上传结果后再重试。"
-    }
+    },
+    "change_avatar": "更换头像",
+    "change_cover": "更换封面",
+    "retry_image": "重新加载图片"
   },
   "submit": "提交",
   "cancel": "取消",

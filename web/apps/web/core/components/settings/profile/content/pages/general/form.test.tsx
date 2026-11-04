@@ -31,11 +31,12 @@ vi.mock("@/hooks/store/user", () => ({
   useUser: () => ({ data: undefined, updateCurrentUser: form.updateCurrentUser }),
 }));
 vi.mock("@/components/account/deactivate-account-modal", () => ({ DeactivateAccountModal: () => null }));
-vi.mock("@/components/common/cover-image", () => ({ CoverImage: () => null }));
 vi.mock("@/components/settings/boxed-control-item", () => ({ SettingsBoxedControlItem: () => null }));
 vi.mock("@/lib/auth/api-client", () => import("@/lib/auth/fake-tab"));
 vi.mock("@nerve/propel/button", () => import("@/lib/fake-controls"));
 vi.mock("@nerve/propel/toast", () => import("@/lib/fake-toast"));
+vi.mock("@/components/assets/profile-image", () => ({ ProfileImage: () => null }));
+vi.mock("@/components/assets/user-image-upload", () => ({ UserImageUpload: () => null }));
 vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
 
 const ada: User = {

@@ -8,12 +8,11 @@ import { useState, useEffect } from "react";
 import { observer } from "mobx-react";
 import { LogOutOutline, SettingsOutline } from "@makeplane/propel/icons";
 // nerve imports
-import { Avatar } from "@makeplane/propel/components/avatar";
+import { ProfileAvatar } from "@/components/assets/profile-image";
 import { useTranslation } from "@nerve/i18n";
 import { CustomMenu } from "@nerve/ui";
-import { getFileURL } from "@nerve/utils";
 // components
-import { CoverImage } from "@/components/common/cover-image";
+import { ProfileImage } from "@/components/assets/profile-image";
 import { AppSidebarItem } from "@/components/sidebar/sidebar-item";
 // hooks
 import { useAppTheme } from "@/hooks/store/use-app-theme";
@@ -48,10 +47,10 @@ export const UserMenuRoot = observer(function UserMenuRoot() {
           variant="button"
           item={{
             icon: (
-              <Avatar
+              <ProfileAvatar
                 alt={currentUser?.display_name}
                 fallback={currentUser?.display_name?.[0]?.toUpperCase()}
-                src={getFileURL(currentUser?.avatar_url ?? "")}
+                source={{ kind: "self", image: "avatar" }}
                 size="xs"
               />
             ),
@@ -67,20 +66,19 @@ export const UserMenuRoot = observer(function UserMenuRoot() {
       closeOnSelect
     >
       <div className="relative h-29 w-full rounded-lg">
-        <CoverImage
-          src={currentUser?.cover_image_url ?? undefined}
-          alt={currentUser?.display_name}
-          className="h-29 w-full rounded-lg"
-          showDefaultWhenEmpty
+        <ProfileImage
+          source={{ kind: "self", image: "cover" }}
+          alt={currentUser?.display_name ?? ""}
+          className="block h-29 w-full rounded-lg bg-layer-2 object-cover"
         />
         <div className="absolute inset-0 bg-layer-1/50" />
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
           <div className="flex flex-col items-center gap-y-2">
             <div>
-              <Avatar
+              <ProfileAvatar
                 alt={currentUser?.display_name}
                 fallback={currentUser?.display_name?.[0]?.toUpperCase()}
-                src={getFileURL(currentUser?.avatar_url ?? "")}
+                source={{ kind: "self", image: "avatar" }}
                 size="xl"
               />
             </div>

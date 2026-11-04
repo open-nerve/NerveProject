@@ -11,7 +11,9 @@ import { Field, FieldControl, FieldError } from "@makeplane/propel/components/fi
 import type { UserUpdate } from "@nerve/api-client";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
-import { cn, getFileURL } from "@nerve/utils";
+import { cn } from "@nerve/utils";
+import { ProfileImage } from "@/components/assets/profile-image";
+import { UserImageUpload } from "@/components/assets/user-image-upload";
 // hooks
 import { useUser } from "@/hooks/store/user";
 import { useRefusalToast } from "@/hooks/use-refusal-toast";
@@ -86,17 +88,18 @@ export const ProfileSetupStep = observer(function ProfileSetupStep({ onDone }: P
       {/* Header */}
       <CommonOnboardingHeader title={t("onboarding.profile.title")} description={t("onboarding.profile.description")} />
 
-      {/* Profile picture: shown, not uploaded, until the file storage (M5) */}
-      <div className="flex size-12 items-center justify-center rounded-full bg-accent-primary text-18 font-semibold text-on-color">
-        {user?.avatar_url ? (
-          <img
-            src={getFileURL(user.avatar_url)}
-            alt={user.display_name}
-            className="h-full w-full rounded-full object-cover"
-          />
-        ) : (
-          <>{watch("first_name")[0] ?? "R"}</>
-        )}
+      <div className="flex items-center gap-3">
+        <UserImageUpload
+          image="avatar"
+          preview={
+            <ProfileImage
+              source={{ kind: "self", image: "avatar" }}
+              alt={user?.display_name ?? ""}
+              className="flex size-12 items-center justify-center rounded-full bg-accent-primary object-cover text-18 font-semibold text-on-color"
+              fallback={watch("first_name")[0] ?? "R"}
+            />
+          }
+        />
       </div>
 
       <div className="flex w-full flex-col gap-6">

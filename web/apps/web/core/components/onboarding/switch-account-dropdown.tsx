@@ -9,7 +9,8 @@ import { observer } from "mobx-react";
 import { Menu, Transition } from "@headlessui/react";
 // nerve imports
 import { useTranslation } from "@nerve/i18n";
-import { cn, getFileURL } from "@nerve/utils";
+import { cn } from "@nerve/utils";
+import { ProfileImage } from "@/components/assets/profile-image";
 // hooks
 import { useUser } from "@/hooks/store/user";
 // components
@@ -41,15 +42,12 @@ export const SwitchAccountDropdown = observer(function SwitchAccountDropdown(pro
       <Menu as="div" className="relative">
         <Menu.Button className="z-10 flex items-center gap-x-2.5 rounded-lg bg-layer-1 px-2 py-1.5">
           <div className="flex size-6 items-center justify-center rounded-full bg-success-primary text-13 font-semibold text-on-color capitalize">
-            {user?.avatar_url ? (
-              <img
-                src={getFileURL(user?.avatar_url)}
-                alt={user?.display_name}
-                className="h-full w-full rounded-full object-cover"
-              />
-            ) : (
-              <>{fullName?.[0] ?? "R"}</>
-            )}
+            <ProfileImage
+              source={{ kind: "self", image: "avatar" }}
+              alt={user?.display_name ?? ""}
+              className="flex h-full w-full items-center justify-center rounded-full object-cover"
+              fallback={fullName?.[0] ?? "R"}
+            />
           </div>
           <span className="text-13 font-medium text-secondary">{displayName}</span>
         </Menu.Button>

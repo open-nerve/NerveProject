@@ -16,10 +16,10 @@ import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 
-import { getFileURL } from "@nerve/utils";
 // components
 import { DeactivateAccountModal } from "@/components/account/deactivate-account-modal";
-import { CoverImage } from "@/components/common/cover-image";
+import { ProfileImage } from "@/components/assets/profile-image";
+import { UserImageUpload } from "@/components/assets/user-image-upload";
 import { SettingsBoxedControlItem } from "@/components/settings/boxed-control-item";
 // hooks
 import { useUser } from "@/hooks/store/user";
@@ -104,31 +104,32 @@ export const GeneralProfileSettingsForm = observer(function GeneralProfileSettin
       <DeactivateAccountModal isOpen={deactivateAccountModal} onClose={() => setDeactivateAccountModal(false)} />
       <form ref={formRef} onSubmit={handleSubmit(onSubmit)} className="w-full">
         <div className="flex w-full flex-col gap-7">
-          {/* The picture and the cover are shown, not uploaded, until the file storage (M5, M2 design 3.2) */}
           <div className="relative h-44 w-full">
-            <CoverImage
-              src={user.cover_image_url ?? undefined}
-              className="h-44 w-full rounded-lg"
+            <ProfileImage
+              source={{ kind: "self", image: "cover" }}
+              className="block h-44 w-full rounded-lg bg-layer-2 object-cover"
               alt={currentUser?.first_name ?? t("cover_image_alt")}
             />
             <div className="absolute -bottom-6 left-6 flex items-end justify-between">
               <div className="flex gap-3">
                 <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-surface-2">
-                  {user.avatar_url ? (
-                    <div className="relative h-16 w-16 overflow-hidden">
-                      <img
-                        src={getFileURL(user.avatar_url)}
-                        className="absolute top-0 left-0 h-full w-full rounded-lg object-cover"
-                        alt={currentUser?.display_name}
+                  <UserImageUpload
+                    image="avatar"
+                    showLabel={false}
+                    preview={
+                      <ProfileImage
+                        source={{ kind: "self", image: "avatar" }}
+                        alt={currentUser?.display_name ?? ""}
+                        className="block h-16 w-16 rounded-lg bg-layer-1 object-cover"
+                        fallback={<UserOutline className="h-full w-full p-2 text-secondary" />}
                       />
-                    </div>
-                  ) : (
-                    <div className="h-16 w-16 rounded-md bg-layer-1 p-2">
-                      <UserOutline className="h-full w-full text-secondary" />
-                    </div>
-                  )}
+                    }
+                  />
                 </div>
               </div>
+            </div>
+            <div className="absolute right-3 bottom-3 flex gap-2">
+              <UserImageUpload image="cover" />
             </div>
           </div>
           <div className="item-center mt-6 flex justify-between">

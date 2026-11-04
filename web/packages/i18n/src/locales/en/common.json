@@ -36,7 +36,10 @@
       "cancelled": "Upload cancelled.",
       "expired": "The upload link expired. Check its status, then upload again if needed.",
       "invalid-grant": "The upload link could not be used. Check its status, then try again."
-    }
+    },
+    "change_avatar": "Change avatar",
+    "change_cover": "Change cover",
+    "retry_image": "Retry image"
   },
   "submit": "Submit",
   "cancel": "Cancel",

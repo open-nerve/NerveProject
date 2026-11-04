@@ -13,7 +13,8 @@ import { CloseOutline, MembersOutline, ProjectsOutline, TickOutline } from "@mak
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { useLocalStorage } from "@nerve/hooks";
 import { useTranslation } from "@nerve/i18n";
-import { cn, getFileURL } from "@nerve/utils";
+import { cn } from "@nerve/utils";
+import { ProfileImage } from "@/components/assets/profile-image";
 // hooks
 import { useCommandPalette } from "@/hooks/store/use-command-palette";
 import { useProject } from "@/hooks/store/use-project";
@@ -87,24 +88,16 @@ export const NoProjectsEmptyState = observer(function NoProjectsEmptyState() {
       id: "personalize-account",
       title: "home.empty.personalize_account.title",
       description: "home.empty.personalize_account.description",
-      icon:
-        currentUser?.avatar_url && currentUser?.avatar_url.trim() !== "" ? (
-          <Link to={`/${workspaceSlug}/profile/${currentUser?.id}`}>
-            <span className="relative flex size-4 items-center justify-center rounded-full p-4 text-on-color capitalize">
-              <img
-                src={getFileURL(currentUser?.avatar_url)}
-                className="absolute top-0 left-0 h-full w-full rounded-full object-cover"
-                alt={currentUser?.display_name || currentUser?.email}
-              />
-            </span>
-          </Link>
-        ) : (
-          <Link to={`/${workspaceSlug}/profile/${currentUser?.id}`}>
-            <span className="relative flex size-4 items-center justify-center rounded-full bg-[#028375] p-4 text-13 text-on-color capitalize">
-              {(currentUser?.email ?? currentUser?.display_name ?? "?")[0]}
-            </span>
-          </Link>
-        ),
+      icon: (
+        <Link to={`/${workspaceSlug}/profile/${currentUser?.id}`}>
+          <ProfileImage
+            source={{ kind: "self", image: "avatar" }}
+            alt={currentUser?.display_name || currentUser?.email || ""}
+            className="flex size-8 items-center justify-center rounded-full bg-[#028375] object-cover text-13 text-on-color capitalize"
+            fallback={(currentUser?.email ?? currentUser?.display_name ?? "?")[0]}
+          />
+        </Link>
+      ),
       flag: "visited_profile",
       cta: {
         text: "home.empty.personalize_account.cta",

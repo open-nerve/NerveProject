@@ -1,6 +1,6 @@
 # M5/P6 资料图片上传与展示 Implementation Plan
 
-> 预检通过，T1–T4完成，继续T5。**For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans 按 Task 内联实施；不用逐 Task 新派实现者/审者。完成后一次 fresh whole-branch review。本计划在 `codex/m5-p6`，初始基线c59cedf3，实施基线已noff同步 `main@f5f4ce9431e7fb360363bf169da33487cf9b864f`；[PC1](../reviews/P6-public-project-lifetime-decision.md)已批准 A并同步合同。P5准确main CI及归档清理已完成，按连续授权从T1执行。
+> 预检通过，T1–T5完成，继续T6。**For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans 按 Task 内联实施；不用逐 Task 新派实现者/审者。完成后一次 fresh whole-branch review。本计划在 `codex/m5-p6`，初始基线c59cedf3，实施基线已noff同步 `main@f5f4ce9431e7fb360363bf169da33487cf9b864f`；[PC1](../reviews/P6-public-project-lifetime-decision.md)已批准 A并同步合同。P5准确main CI及归档清理已完成，按连续授权从T1执行。
 
 **Goal:** 资料图片真实上传、宿主绑定、权限/到期展示和可访问交互。
 **Architecture:** AssetService 处理会话 JSON；独立 fetch 只传 File；视图持有上传，IssueRootStore 统一使生命周期失效。图片读由当前宿主 store 调和，活动来源读合并但不复制权限或实体事实。
@@ -78,9 +78,9 @@
 **Files:** settings/profile/content/pages/general/form.tsx、onboarding/steps/profile/root.tsx 及原测试；新增 workspace/sidebar/user-menu-root.test.tsx；settings/profile/sidebar/header.tsx、workspace/sidebar/user-menu-root.tsx、onboarding/switch-account-dropdown.tsx、home/widgets/empty-states/no-projects.tsx。
 **Interfaces:** 单独 UserUpdate.avatar_asset_id/cover_image_asset_id 绑定或null；读统一 ProfileImageSource self。
 
-- [ ] Step 1：既有页面测试加入头像/封面独立上传/移除，名字表单不误清图片、上传不提前提交引导；绑定失败保留ready件重试不PUT，两个图片控件和并发读/写正确，换账号旧回调无toast/跳步。
-- [ ] Step 2：`pnpm --filter web exec vitest run core/components/settings/profile core/components/onboarding core/components/workspace/sidebar/user-menu-root.test.tsx` RED→GREEN；复用T4，移除本次变成无用的裸URL/getFileURL导入。
-- [ ] Step 3：当前UserStore/引导/认证回归，记录实际 UI 与 payload，提交 `feat(M5/P6): 恢复个人头像封面与引导上传`。
+- [x] Step 1：既有页面测试加入头像/封面独立上传/移除，名字表单不误清图片、上传不提前提交引导；绑定失败保留ready件重试不PUT，两个图片控件和并发读/写正确，换账号旧回调无toast/跳步。
+- [x] Step 2：`pnpm --filter web exec vitest run core/components/settings/profile core/components/onboarding core/components/workspace/sidebar/user-menu-root.test.tsx` RED→GREEN；复用T4，移除本次变成无用的裸URL/getFileURL导入。
+- [x] Step 3：当前UserStore/引导/认证回归，记录实际 UI 与 payload，提交 `feat(M5/P6): 恢复个人头像封面与引导上传`。
 
 ## Task 6（T6）：工作区图标
 

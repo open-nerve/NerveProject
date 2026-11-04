@@ -23,7 +23,9 @@ export async function pickerTab() {
   const revoke = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
   const upload = tab.app.asset.createUpload(avatarTarget);
   const button = (name: string) => {
-    const result = [...document.querySelectorAll<HTMLButtonElement>("button")].find((b) => b.textContent === name);
+    const result = [...document.querySelectorAll<HTMLButtonElement>("button")].find(
+      (b) => b.textContent === name || b.getAttribute("aria-label") === name
+    );
     expect(result, `button ${name}`).toBeDefined();
     return result!;
   };
