@@ -17,6 +17,7 @@ import (
 )
 
 const imageProcessMode = "NERVE_TEST_IMAGE_PURGE_MODE"
+const imageProcessExpireFirst = "NERVE_TEST_IMAGE_PURGE_EXPIRE_FIRST"
 
 func TestImagePurgeProcess(t *testing.T) {
 	if mode := os.Getenv(imageProcessMode); mode != "" {
