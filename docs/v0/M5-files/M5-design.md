@@ -1,6 +1,6 @@
 # M5：文件
 
-> 状态：P1–P5已完成集成归档。P5最终main f5f4ce94的CI41772399410全绿，三组分支/worktree及5053件证据归档核验完成。P6的PC1方案A已批准，最终基线预检通过，T1–T12完成；PC2按A完成基础与页面回归，T13发现[PC3目录读取冲突](reviews/P6-directory-read-decision.md)，已按A修复并通过联合回归，T13本地门禁全绿，一次整分支deep-review的唯一局部问题已修复，最终本地3475项Web/381项E2E/42项三浏览器通过，准确最终分支CI41828756305全绿，已noff合入main96363675，准确main CI及归档待核；P6/M5总体仍未完成。见[P5阶段记录](reviews/P5-issue-assets-review.md)和[P6阶段记录](reviews/P6-profile-upload-review.md)。
+> 状态：P1–P6已完成集成归档。P6已完成T1–T15及A1–A8：一次整分支deep-review及唯一局部修复闭环，最终分支8e46ab55的CI41828756305、noff main96363675的CI41833460144均三job全绿；6,861文件归档逐hash/bytes/mode/membership核验，正常清理分支/worktree后再次核验通过。P7恢复缺口已批准A，拆P7a协议/P7b页面；P7a预检通过、未实施，P7b为延后草案。M5总体仍未完成。见[P6评审§22](reviews/P6-profile-upload-review.md#22-t15准确main全绿与归档清理)。
 > 起点：`main@3db22f06ad9e82a483c05c8078801af00a5cae02`（M4 最终 main CI 41397218533，三个作业成功）。
 PC2 已批准 A：[工作区更新的迟到回包](reviews/P6-workspace-write-lifetime-decision.md)。
 > 设计、P1–P5分支均已合入并归档；P5的预算裁定及后续main CI已经闭环（见首行与P5记录），当前实施分支codex/m5-p6。负责人2026-11-02已授权按既有节奏连续推进，常规设计、预检、实现、deep-review、`--no-ff`集成、CI和归档无需逐次询问。重大风险、架构回归或关键分歧，先提交已完成工作，再上报。
@@ -179,6 +179,7 @@ S3来源主机使用DNS或IPv4；浏览器CSP不能精确允许IPv6字面量，�
 | `DELETE /api/v0/assets/{id}` | 可删除的准备件/附件软删；已绑定的头像/封面须先经 owner 更新引用 |
 | `GET /api/v0/issues/{id}/attachments` | 仅活附件，游标分页；在 issue 授权快照内调用 asset 的列表端口 |
 | `GET /api/v0/drafts/{id}/attachments` | 作者的活草稿附件；最终路径须与已生成 draft 路由命名一致 |
+| `GET /api/v0/drafts/{draft_id}/asset-preparations` | P7a新增：当前作者的未绑定、未删除准备件元数据，pending/uploaded均可见，有界分页；无存储key或签名能力 |
 
 评论的附件作为评论 DTO 的受限列表或独立分页端点，由 P5 预检按现有评论分页上限选择并写死，不能出现一次加载无界文件集合。新评论提交携带已完成准备资产 ID；新项目/资料/工作区更新携带 asset ID（或 builtin ID），不接受任意 URL。
 
@@ -208,6 +209,8 @@ S3来源主机使用DNS或IPv4；浏览器CSP不能精确允许IPv6字面量，�
 
 删除编辑器节点仅修改文档，不立即删除对象，撤销/重做及历史版本仍能解析。已绑定的描述图片保留到宿主删除；v0 不为每次编辑做跨版本垃圾回收，代价是移除图片仍占存储。这一保守规则保护 M4 的历史版本，不把最近 20 个版本之外的裁剪等同于可以删除仍活宿主的图片。未绑定准备件可以按期限清理。
 
+**P7预检方案A（负责人2026-11-04批准）：** prepare回答丢失或duplicate已建pending后失败，作者可能不知道ID，却仍被P5“全部活资产完成”规则阻止发布。P7a补上述私有查询，复用Host.Inspect和同一只读快照，默认50/最大100、UUID游标绑定draft；新入口不可见/非作者/guest同形404，只在这个用例映射Host forbidden，保留旧API错误顺序。P7b展示准备件并允许用户指名确认后沿既有DELETE丢弃。不能自动全删、按名称猜、以本地取消冒充服务端删除，或在发布时跳过pending。已绑定历史图不列出、不放宽DELETE；存储恢复/NO ACTION/清理期限均保持。[协议spec](specs/P7a-draft-preparations.md)固定精确合同和并发限制。
+
 `Issue.attachment_count` 只数该工作项活的 `ISSUE_ATTACHMENT`，不把描述图片、评论附件或草稿准备件算入。追加 ±attachment_count 排序和“附件”显示项时同时更新 SQL、游标比较器、生成 DTO、store 与界面；不先返回虚假 0。计数批量读取，不做每项一次查询；跨请求新增/删除仍可能影响游标位置，与 link_count 边界一致。
 
 所有返回 Issue 的读取将已授权结果与附件计数放在同一只读快照。详情、按编号读取、直接子项列表原先没有事务，P5 复用已有 ReadTx，在首个宿主读取前进入；列表、关系和搜索沿已有快照，写返回沿原写事务。计数只接收最终返回的去重 ID，不查 lookahead；group/subgroup 合并各 cell 后批量统计。创建核心与 Locks.seen、Listing 各自显式注入小接口，不用 nil 或端口错误回落为 0。代价是三处旧读取增加一个短只读事务；拒绝顺序、不取写闸门和行锁的约束保持有效。
@@ -223,7 +226,7 @@ S3来源主机使用DNS或IPv4；浏览器CSP不能精确允许IPv6字面量，�
 为保持既定的失败占位与明确重试，四个共享宿主hook关闭SWR隐式reconnect重读；图片仍由expiry/focus/online检查决定一次到期刷新，页面挂载、身份变化及显式mutate仍读取。useSessionSWR仅新增可关闭reconnect的窄选项，其他会话请求策略保持。代价：仅网络恢复本身不再独立触发这四种宿主读取，等待上述实际读取条件；避免网络事件绕过图片重试预算。
 
 
-P6 新 AssetService 作为当前会话 API client 的消费者；旧 FileService 随 P7 最后编辑器/评论调用者迁移一并删除；不在模块顶层 new 带会话实例。原始 PUT 使用不带业务认证的独立传输器，支持 AbortSignal、准备/上传/确认阶段进度、超时和可区分的拒绝；独立 fetch 不提供字节进度，不能编造百分比；取消不能吞错后继续 complete。store 以 session/loginId + workspace/project/issue/draft/comment scope 管理，复用 IssueRootStore 的权限失效入口，不另造平行权限缓存。
+P6 新 AssetService 作为当前会话 API client 的消费者；旧 FileService 随 P7b 最后编辑器/评论调用者迁移一并删除；不在模块顶层 new 带会话实例。原始 PUT 使用不带业务认证的独立传输器，支持 AbortSignal、准备/上传/确认阶段进度、超时和可区分的拒绝；独立 fetch 不提供字节进度，不能编造百分比；取消不能吞错后继续 complete。store 以 session/loginId + workspace/project/issue/draft/comment scope 管理，复用 IssueRootStore 的权限失效入口，不另造平行权限缓存。
 
 **P6 PC1（负责人 2026-11-04 批准 A）：** 复用 IssueRootStore 时，现有 PermissionReads 同时记录规范项目可见性与现有有效角色的变化，补齐 member_role=null 的合法封面消费者；工作区匹配、当前 ProjectStore 事实和原 R06 规则仍是来源。目录缺席使旧生命周期永久失效，恢复后须新读；水位不是工作项授权，UserPermissionStore 和后端权限不变。不得另建 Asset 权限观察器或用历史详情复活封面；T2/T3/T12 联合回归及行为变异后验收，见[决策记录](reviews/P6-public-project-lifetime-decision.md)。
 
@@ -235,7 +238,9 @@ P6 新 AssetService 作为当前会话 API client 的消费者；旧 FileService
 
 附件图标替换 figma/pdf/csv/excel 第三方标志，使用现有图标或自制中性 SVG 并登记来源。不改 shared 动效/弹窗框架；如果发现新的跨模块基础库缺陷，按风险纪律处理。
 
-P7 最后旧文件消费者迁移时删除整个 `web/packages/services` 及包依赖；P6 不导入旧上传 helper，避免为提前删包而跨入编辑器实现；仍供 M6/M7 旧 APIService 使用的 URL 规范化连测试搬到 web 内，保持那些未实施功能的现状。死成员扫描重新运行，逐项核实真实消费者；不依据历史 48 个数量做机械删除。修改文件 oxlint 为零，并完成至少一个尚未清零规则的全仓清零，不能重复领取 M4 已清的 no-shadow。
+P7b 最后旧文件消费者迁移时删除整个 `web/packages/services` 及包依赖；P6 不导入旧上传 helper，避免为提前删包而跨入编辑器实现；仍供 M6/M7 旧 APIService 使用的 URL 规范化连测试搬到 web 内，保持那些未实施功能的现状。死成员扫描重新运行，逐项核实真实消费者；不依据历史 48 个数量做机械删除。修改文件 oxlint 为零，并完成至少一个尚未清零规则的全仓清零，不能重复领取 M4 已清的 no-shadow。
+
+P7b恢复列表明确区分pending与uploaded未绑定件，后者未必可丢弃；包括另一标签页仍在上传的文件，只能显式逐项操作。普通工作项含图副本仅在用户明确提交时创建一次真实目标草稿，逐图duplicate/保存后沿既有publish取得Issue；草稿副本止于Draft。失败/取消保留同一目标与恢复路径，未知创建/发布先核验，无图普通副本保持原直接create；不暗建宿主、不新增new_issue范围。
 
 公开旧 `copyMarkdownToClipboard` 不能直接复用；新消费者走已受控复制通道。若需要修复旧入口，成功/false/异常/无事件/卸载/换编辑器的监听释放与反馈一起测试，否则保持无消费者并把风险具名交接。
 
@@ -273,7 +278,8 @@ local/S3 共享适配器合同及最少浏览器场景；Chromium/Firefox/WebKit
 | P4 | 用户/工作区/项目真实引用字段、稳定预设封面 ID、一次创建绑定、资料 URL；organization_size 收紧 | F5–F7 API；所属迁移/事务回滚、旧引用回收、成员头像、非法/过期准备件 |
 | P5 | 工作项/评论/草稿引用、附件计数/排序、草稿迁移、图片清洗与内容标识、事件 | F8–F15 API+DB；并发双发布、历史/撤销图片、完整删除图与事务事件；架构守卫不放宽 |
 | P6 | 新上传传输器与会话 store、用户/工作区/项目页面和预设封面 | F5–F7/F16/F17 页面；真实上传、失败恢复、键盘/读屏、跨会话及跨路由迟到结果 |
-| P7 | 工作项/评论附件、草稿与编辑器图片页面、列表计数/排序/显示、旧文件消费者及 services 包删除 | F8–F12/F16/F17 页面；伪造剪贴板、取消/过期/重试、撤权、Back/Forward、旧复制入口条件 |
+| P7a | 草稿未绑定准备件私有查询、分页/快照/授权、未知ID发现及明确丢弃的API恢复证明 | F10协议补齐；prepare回答丢失、失败复制、非作者同形、显式DELETE后恢复发布，保持P5事务/清理 |
+| P7b | 工作项/评论附件、草稿恢复列表与编辑器图片页面、列表计数/排序/显示、旧文件消费者及 services 包删除 | F8–F12/F16/F17 页面；伪造剪贴板、取消/过期/重试、撤权、Back/Forward、普通/草稿副本最终结果 |
 | P8 | 文件全链路容量/清理演练、所有交接复核、死成员和 warning 收敛、默认部署演示与三浏览器验收 | F1–F18 最终矩阵、精确数据证据、deep-review、M6–M8 交接及收尾材料 |
 | closeout | 首次 noff 合收尾并等 main 绿，再补完成勾选/总体 9.4，经第二次 noff/main 绿，最终归档清理 | §14 每条证据、全部输入关闭、精确两轮 main CI 与归档清单 |
 
@@ -290,8 +296,8 @@ P1 起第一个实现提交更新关键词 phase 与到期例外；纯设计分�
 | 输入 | 条款落点 | 关闭阶段 |
 |---|---|---|
 | [M0-hardening-http-timeouts](handoffs/M0-hardening-http-timeouts.md) | §5.3、F2，逐请求读写期限和真实慢流 | P1/P3 |
-| [M1-P2-trim-content](handoffs/M1-P2-trim-content.md) | §3/§6/§9，四种当前事实、无 Page/企业类型、编辑器不吞非图片、文件限额、无 Unsplash | P7 |
-| [M1-P3-trim-platform](handoffs/M1-P3-trim-platform.md) | §3/§6/§9，资源类型和服务替换、现有 MIME/封面残留逐条复核 | P7 |
+| [M1-P2-trim-content](handoffs/M1-P2-trim-content.md) | §3/§6/§9，四种当前事实、无 Page/企业类型、编辑器不吞非图片、文件限额、无 Unsplash | P7b |
+| [M1-P3-trim-platform](handoffs/M1-P3-trim-platform.md) | §3/§6/§9，资源类型和服务替换、现有 MIME/封面残留逐条复核 | P7b |
 | [M1-closeout](handoffs/M1-closeout.md) | §9，死成员/prop、一个新 warning 清零、中性图标、自有预设封面和一次绑定、源复制权限 | P8 |
 | [M2-closeout](handoffs/M2-closeout.md) | §4/§5/§9/§11，identity FK、头像页面、上传中间件与 CSP、services 包删除、会话和 storage fixture | P8 |
 | [M3-closeout](handoffs/M3-closeout.md) | §4/§6/§9，logo/cover/avatar、organization_size、预设取舍、弹窗/焦点/可访问错误 | P8 |
@@ -332,15 +338,16 @@ P1 起第一个实现提交更新关键词 phase 与到期例外；纯设计分�
 | P3 | 已完成：noff main5807a0d6，CI41591764345全绿，2251文件归档核验并清理 | [spec](specs/P3-s3-storage.md) / [plan](plans/P3-s3-storage.md) / [预检](../../reviews/re-36-M5P3预检.md) / [阶段记录](reviews/P3-s3-storage-review.md) |
 | P4 | 已完成：noff main0f93100a，CI41641099230全绿，2301文件归档核验并清理 | [spec](specs/P4-profile-images.md) / [plan](plans/P4-profile-images.md) / [整审](../../reviews/re-39-M5P4整体审核.md) / [阶段记录](reviews/P4-profile-images-review.md) |
 | P5 | 已完成；最终main f5f4ce94、CI41772399410三job全绿，5053文件归档核验且三组分支/worktree清理完成 | [spec](specs/P5-issue-assets.md) / [plan](plans/P5-issue-assets.md) / [预检](../../reviews/re-40-M5P5预检.md) / [整审](../../reviews/re-41-M5P5整体审核.md) / [阶段记录](reviews/P5-issue-assets-review.md) |
-| P6 | PC1已批准A并同步合同；最终main基线预检通过，T1–T12完成；PC2按A完成基础与页面回归，T13发现[PC3目录读取冲突](reviews/P6-directory-read-decision.md)，已按A修复并通过联合回归，T13本地门禁全绿，一次整分支deep-review的唯一局部问题已修复，最终本地3475项Web/381项E2E/42项三浏览器通过，准确最终分支CI41828756305全绿，已noff合入main96363675，准确main CI及归档待核 | [spec](specs/P6-profile-upload.md) / [plan](plans/P6-profile-upload.md) / [预检](../../reviews/re-42-M5P6预检.md) / [决策](reviews/P6-public-project-lifetime-decision.md) |
-| P7 | 文档草案及一次builder预检已完成，Needs Decision：草稿未知ID未完成准备件阻止发布且现有API无法找回；未实施 | [spec](specs/P7-content-assets.md) / [plan](plans/P7-content-assets.md) / [预检](../../reviews/re-46-M5P7预检.md) / [决策](reviews/P7-draft-preparation-recovery-decision.md) |
+| P6 | 已完成：整审/局部修复、准确最终分支及main CI全绿，6,861文件归档验证并正常清理 | [spec](specs/P6-profile-upload.md) / [plan](plans/P6-profile-upload.md) / [完成证据](reviews/P6-profile-upload-review.md#22-t15准确main全绿与归档清理) |
+| P7a | 已批准A、七Task spec/plan及一次fresh builder预检通过；未实施 | [spec](specs/P7a-draft-preparations.md) / [plan](plans/P7a-draft-preparations.md) / [预检](../../reviews/re-47-M5P7a预检.md) / [决策](reviews/P7-draft-preparation-recovery-decision.md) |
+| P7b | 延后文档草案已同步恢复UI与复制编排；正式基线/预检等P7a集成，未实施 | [spec](specs/P7b-content-assets.md) / [plan](plans/P7b-content-assets.md) / [原预检](../../reviews/re-46-M5P7预检.md) |
 | P8、closeout | 未开始 | 待前置阶段完成后逐段展开 |
 
 当前可自行决定的局部取舍及代价：编辑器只处理图片，普通文件走附件区；预设封面使用稳定编号，不上传构建素材副本；描述图片保留到宿主删除，代价是占用空间；封存复制增加一次存储操作，换取确认后字节不被旧 PUT 改写。以上均在既定文件模块范围内，设计预检已核对一致性，具体实现按阶段合同验证。
 
 设计审查已修正的衔接：复用已有用途 MAC；保持 M4 的安全 URL 清洗合同；业务 JSON 仍 no-store；签名/传输使用运行时钟；外部操作记录放入有界 storage_metadata，不增加业务表。
 
-P1预算/MAC/Range、P2状态表/锁图/清理/owner端口、P3 SDK与双存储合同、P4绑定/读取/反向清理合同均已随实现验证并归档，见各阶段记录。P5 T1–T15完成：内容身份、绑定/迁移、精确事件/动态、分页、真实计数与完整全局排序、三宿主调用方及权限/字节/清理/容量均有证据，本地七门禁、整审和最终main CI闭环。集成期间修复测试夹具并按批准将E2E作业预算20改为25分钟；最终main f5f4ce94的CI41772399410三job成功、E2E364/364正常收尾。历史W11失败和超时原件全部保留，5053文件归档逐hash核验，三组分支/worktree清理且归档再核通过，见[P5§22.2](reviews/P5-issue-assets-review.md#222-最终main全绿与归档清理)。P6 PC1已批准A并同步设计、spec和plan；最终基线预检通过，T1–T12完成；PC2按A完成基础与页面回归，T13发现[PC3目录读取冲突](reviews/P6-directory-read-decision.md)，已按A修复并通过联合回归，T13本地门禁全绿，一次整分支deep-review的唯一局部问题已修复，最终本地3475项Web/381项E2E/42项三浏览器通过，准确最终分支CI41828756305全绿，已noff合入main96363675，准确main CI及归档待核。若事实证明既定架构无法满足安全或一致性要求，提交当前文档和证据后上报。
+P1预算/MAC/Range、P2状态表/锁图/清理/owner端口、P3 SDK与双存储合同、P4绑定/读取/反向清理合同均已随实现验证并归档，见各阶段记录。P5 T1–T15完成：内容身份、绑定/迁移、精确事件/动态、分页、真实计数与完整全局排序、三宿主调用方及权限/字节/清理/容量均有证据，本地七门禁、整审和最终main CI闭环。集成期间修复测试夹具并按批准将E2E作业预算20改为25分钟；最终main f5f4ce94的CI41772399410三job成功、E2E364/364正常收尾。历史W11失败和超时原件全部保留，5053文件归档逐hash核验，三组分支/worktree清理且归档再核通过，见[P5§22.2](reviews/P5-issue-assets-review.md#222-最终main全绿与归档清理)。P6已完成T1–T15及A1–A8：一次整分支deep-review及唯一局部修复闭环，最终分支8e46ab55的CI41828756305、noff main96363675的CI41833460144均三job全绿；6,861文件归档逐hash/bytes/mode/membership核验，正常清理分支/worktree后再次核验通过。P7原预检缺口已批准A并拆P7a/P7b，P7a预检通过且未实施，P7b正式预检等P7a最终main。若事实证明既定架构无法满足安全或一致性要求，提交当前文档和证据后上报。
 
 ## 16. 协议核验来源
 

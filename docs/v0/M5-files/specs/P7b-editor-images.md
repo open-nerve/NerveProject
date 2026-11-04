@@ -1,7 +1,7 @@
-# P7 子合同：编辑器图片与宿主绑定
+# P7b 子合同：编辑器图片与宿主绑定
 
-> **预检停点：Needs Decision。** 草稿失败准备件无法恢复的问题见[决策记录](../reviews/P7-draft-preparation-recovery-decision.md)。以下为未实施草案；其中“取消后即可发布”与“取消一律交GC”的组合不能作为有效合同，待负责人选择恢复方案后修订。
-本页与[主 spec](P7-content-assets.md)、[内容资源](P7-content-lifecycle.md)一起预检。包声明小接口，应用实现协议与授权；不得把业务服务导入 editor 包。
+> **P7b 延后草案。** 负责人已批准[方案A](../reviews/P7-draft-preparation-recovery-decision.md)，先由[P7a](P7a-draft-preparations.md)交付准备件恢复协议，再完成本阶段正式预检。当前不实施。
+本页与[主 spec](P7b-content-assets.md)、[内容资源](P7b-content-lifecycle.md)一起接收恢复责任。包声明小接口，应用实现协议与授权；不得把业务服务导入 editor 包。
 
 ## 1. 新图片能力替换旧 TFileHandler
 
@@ -53,7 +53,7 @@ HTML只含合法 image-component[src=UUID]，保持原尺寸/对齐和M4稳定ID
 - 有write且editable时才接图；只接四种已批准MIME、大小/名字按内容合同。文件选择和drop/paste共用校验。一次最多10图；混合普通文件整批拒绝并保持事件未处理，纯非图片不吞事件。目录、无 File、空MIME、SVG拒绝，错误role=alert；没有alert()。
 - 拖入已允许的图片时才preventDefault；选择/drop/paste不可触发重复上传。输入法组合键和既有快捷键合同保留。
 - 剪贴板 image-component 的src必须是UUID，不接受http/data/blob/javascript作为内部资产身份。自称“同一文档”“已上传”的剪贴板标记不可信；每次跨剪贴板插入的UUID图片均走服务器 duplicate，不能直接把源UUID保存到目标文稿。普通浏览器<img src=外部地址>沿M4清洗保持不自动加载，不借图片接线开放外部网络。
-- 复制服务先验证源再验证目标；源不可见与不存在相同404。新副本描述用途未绑定，只有目标宿主保存引用时绑定。失败不改src为原图；未知复制结果保留失败节点并提示可能已生成准备件，不在mount/重开/online自动重发。显式重试可能新增私有副本，未绑定件由GC回收。
+- 复制服务先验证源再验证目标；源不可见与不存在相同404。新副本描述用途未绑定，只有目标宿主保存引用时绑定。失败不改src为原图；未知复制结果保留失败节点并提示可能已生成准备件，不在mount/重开/online自动重发。显式重试可能新增私有副本；草稿宿主通过P7a恢复列表显示并允许明确丢弃，其他未绑定件按原GC。不能告知草稿用户仅取消节点就保证能发布。
 - Undo/Redo恢复已完成节点时复用其UUID，不再上传/复制/restore；移除正在上传/复制的节点取消本地操作，晚到回答不能重新插回。删除已绑定图片节点只改文稿，历史和undo仍能读；不调用DELETE。删除旧 TrackFileDeletion/TrackFileRestoration、restorePublicImages 及无使用类型，不能以noop填旧接口。
 - `getMarkDown`/`useCopyText`继续处理产品复制；`EditorRefApi.copyMarkdownToClipboard`保持无消费者并交P8核查，不借公开ref声明认为旧监听风险已关闭。
 
@@ -63,9 +63,11 @@ HTML只含合法 image-component[src=UUID]，保持原尺寸/对齐和M4稳定ID
 
 新评论：host=new_comment、scope.id=issueID；普通附件ID和正文一并进入create，成功后清表单，失败保留。上传/复制未完成时禁发送。正文图片不混入attachment_ids。评论结果未知时提示“暂时无法确认评论是否已发送。请先检查评论列表，确认未发送后再重试。当前内容和附件已保留。”以及对应英文，不自动POST重发。已有评论仅作者编辑正文/新增附件，读取及管理员删除按实际权限分离。
 
-草稿：打开已有Draft.id后提供图片能力和附件区，包括project_id=null。新表单按主spec显式保存草稿后再进入。项目变更/发布在任何请求发出前结束旧content view；当前传输进行时要求先等待完成或明确取消，不丢未保存文稿。先以既有draft update保存完整payload及project，再调用publish；后端迁移所有草稿资产，不在前端发逐个duplicate/move。返回后创建新的workitem view；失败新建原draft view重新读取授权，不恢复旧view。编辑草稿按既有字段合并/完整payload语义，不能覆盖并发较新草稿。
+草稿：打开已有Draft.id后提供图片能力和附件区，包括project_id=null。新表单按主spec显式保存草稿后再进入。项目变更/发布在任何请求发出前结束旧content view；当前传输进行时要求先等待完成或明确取消，不丢未保存文稿。取消不等于服务端pending已删；发布若报asset.not_uploaded，提供准备件恢复列表，由用户明确处理，回包丢失/复制失败也必须能找回。先以既有draft update保存完整payload及project，再调用publish；后端迁移所有草稿资产，不在前端发逐个duplicate/move。返回后创建新的workitem view；失败新建原draft view重新读取授权，不恢复旧view。编辑草稿按既有字段合并/完整payload语义，不能覆盖并发较新草稿。
 
-复制草稿/工作项的正文若含图片，不能直接将源UUID作为目标引用：先显式创建真实目标草稿（用户动作），逐图服务器duplicate并按原顺序替换，再保存目标payload；复制失败保留可重试的目标草稿及已完成映射，不能声称目标已完整复制。首次目标创建结果未知先核列表，不自动重复创建；不增加无宿主准备件。若现有UI没有该复制入口，不新增产品入口，仅保证实际已有消费者不能绕过源授权。
+实际普通副本入口位于工作项详情/项目quick-action，草稿副本位于workspace-draft：普通副本最终必须返回Issue，草稿副本最终返回Draft。打开弹窗不写数据库；只有用户明确提交含图副本时才建一次真实目标draft，逐图服务器duplicate并按原顺序替换，再保存目标完整payload。普通副本在同一次明确提交流程中调用现有publish，确认Issue后才关闭/toast/回调；草稿副本确认Draft后结束。无图普通副本保留原直接create路径，不能为此无端增加草稿。
+
+部分复制/保存/发布失败保留同一target draftID及已完成映射，重试复用目标；失败复制留下未知pending时从恢复列表明确丢弃。取消持久化后的流程须说明草稿已保留并给打开路径，不声称“没有创建任何内容”。unknown create/publish先核相应草稿/工作项列表与真实响应，不能自动重发创建或猜测成功实体；若不能确定，保留明确未确认状态和文稿。每个阶段仍核当前权限/视图；实际角色/字段/错误语义不变，不增加new_issue范围，不将源UUID直接保存为目标引用。
 
 ## 5. 必须可失败的反例
 

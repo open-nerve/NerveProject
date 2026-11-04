@@ -236,3 +236,25 @@ F1根因是非幂等创建POST结果未知仍显示通用“请重试”。现�
 全部最新receipt匹配4529非文档输入；相对候选仅6文件变化，既有56消费者与PC3变异源码不变。测试退出瞬间Ryuk尚在自动关闭，原21条快照保留；后续只读核验已回到20既有容器，新遗留0，无手工容器操作。`verify-final.py --local`通过。
 
 准确最终分支CI须在本次提交后核验，T14/A7保持最后CI门；main集成/归档/P7预检继续T15。待准确CI通过的状态写入E6收据与ledger，并在下一阶段文档回填，避免为记录自身提交SHA不断制造新的候选；未通过前不能合并。M5整体与P7/P8尚未完成。
+
+## 22. T15准确main全绿与归档清理
+
+前述待CI/待集成为当时快照。本节在后继codex/m5-p7a回填最终事实，P6现已完成T1–T15与A1–A8；M5总体、P7a/P7b/P8产品及全部最终交接仍未完成。
+
+最终候选`8e46ab55abeec79cd8672a44a0f2bee6fdd70339`的[分支CI41828756305](https://github.com/open-nerve/NerveProject/actions/runs/41828756305) attempt1三job成功，E2E381项/15.3m。持续授权下以--no-ff合入main `963636757fe5c5a8c10d5781b43d1481ba6f32a2`，双父依次为f5f4ce9431e7fb360363bf169da33487cf9b864f、8e46ab55abeec79cd8672a44a0f2bee6fdd70339，树与最终候选相同。系统git自动推送成功，没有提取凭据。
+
+[准确main CI41833460144](https://github.com/open-nerve/NerveProject/actions/runs/41833460144) attempt1全绿：server126586240091、web126586240277、e2e126595278463；E2E381项/14.4m，2026-11-04 13:29:20 UTC完成。没有将旧候选或分支CI冒充main；准确run/jobs和三份完整日志均保存。
+
+| main完整日志 | bytes | SHA256 |
+|---|---:|---|
+| t15-main-ci-server.log | 35044 | b8396b126d3a847b3dcad9244dbdc27d4bc9a1a60adb545643636f66031910f2 |
+| t15-main-ci-web.log | 22766 | 06d2d74f2937a6620c022e5f70fa11e2770b9f91c35da9f73bc0e401dc98ea9e |
+| t15-main-ci-e2e.log | 172594 | dc9bec8feae205654c010557828acf02bcb2c57fe58af7ef14a48adb360c12d9 |
+
+证据归档根为`/Users/xiaoruan/project/nerve-project/.superpowers/sdd/M5-P6-integration-20261104`。[manifest](/Users/xiaoruan/project/nerve-project/.superpowers/sdd/M5-P6-integration-20261104/manifest.json)记录原路径映射、每文件SHA/bytes/mode及完整成员集合：**6,861文件、1,111,353,607 bytes、unknown=0**，复制前后源文件不变、ignored成员不变；归档manifest为20,483,288 bytes，SHA256 `3a91090b49915b03d05f6f52bddf679890ccfd7cc4b049758394aca7b250a114`。
+
+旧P6 worktree下`.superpowers/`映到`payload/superpowers/`，因此本记录所有旧E6相对原件现位于`payload/superpowers/sdd/P6-profile-upload/`；e2e/test-results与各层.turbo保留原相对路径。失败报告、trace/数据库/截图、RED、变异/恢复SHA、旧门禁及fresh审者原件全保留，未以最新成功覆盖失败。node_modules、bin/build/dist/typegen为明列可再生项，不伪称这些依赖目录也归档。
+
+准确CI、双父/树和`origin/main..branch=0`核验后，先验证归档，再正常删除origin/codex/m5-p6、git worktree remove和git branch -d；未使用force/clean/stash/reset。根main干净，远端查询确认分支不存在，清理后归档再次逐项核验一致。[清理完成收据](/Users/xiaoruan/project/nerve-project/.superpowers/sdd/M5-P6-integration-20261104/completion-receipt.json)位于payload外，不改冻结原件。原P6 ledger冻结到归档前，T15最后清理/文档闭环收据由继任worktree的独立P6台账保存；不能冒称原冻结文件包含尚未发生的清理。
+
+P7原预检发现未知ID准备件会阻塞草稿发布，负责人明确批准A；上报88d5ae30与[re-46](../../../reviews/re-46-M5P7预检.md)保留。新[P7a spec](../specs/P7a-draft-preparations.md)/[plan](../plans/P7a-draft-preparations.md)为七Task协议阶段，一次fresh builder和主控静态预检完成，见[re-47](../../../reviews/re-47-M5P7a预检.md)。P7b已接收恢复UI、普通副本最终Issue/草稿副本最终Draft和原旧链删除责任，其正式基线/预检等P7a集成。本次不实施P7a/P7b，不提前标M5完成或关闭handoffs。

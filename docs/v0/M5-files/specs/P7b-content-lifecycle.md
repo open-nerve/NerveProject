@@ -1,7 +1,7 @@
-# P7 子合同：内容资源、上传与下载
+# P7b 子合同：内容资源、上传与下载
 
-> **预检停点：Needs Decision。** 草稿失败准备件无法恢复的问题见[决策记录](../reviews/P7-draft-preparation-recovery-decision.md)。以下为未实施草案；其中“取消后即可发布”与“取消一律交GC”的组合不能作为有效合同，待负责人选择恢复方案后修订。
-本页与[主 spec](P7-content-assets.md)一起预检，尚未实施。只描述本阶段新增接口，P6 的资料行为保持。
+> **P7b 延后草案。** 负责人已批准[方案A](../reviews/P7-draft-preparation-recovery-decision.md)，先由[P7a](P7a-draft-preparations.md)交付准备件恢复协议，再完成本阶段正式预检。当前不实施。
+本页与[主 spec](P7b-content-assets.md)一起接收恢复责任，只描述本阶段新增接口，P6 的资料行为保持。
 
 ## 1. 服务接口
 
@@ -9,13 +9,14 @@ AssetService 消费当前 root 注入的 ApiClient，直接返回生成类型，
 
 ```ts
 read(id: string, signal?: AbortSignal): Promise<Asset>;
+listDraftPreparations(draftID: string, cursor?: string, signal?: AbortSignal): Promise<DraftAssetPreparationPage>;
 remove(id: string, signal?: AbortSignal): Promise<void>;
 duplicate(id: string, input: DuplicateAsset, signal?: AbortSignal): Promise<Asset>;
 content(id: string, signal?: AbortSignal): Promise<Content>;
 // 原 prepare(NewAsset, signal?) / complete(id, signal?) 保持。
 ```
 
-各自为 GET/DELETE `/api/v0/assets/{id}`、POST `/api/v0/assets/{id}/duplicate`、GET `/api/v0/assets/{id}/content`。无下载参数；DuplicateAsset 为 purpose/scope/name?，重发会生成新资产。所有拒绝保持现有 unwrap/Problem，不把 404 当空数组或成功。
+各自为 GET/DELETE `/api/v0/assets/{id}`、POST `/api/v0/assets/{id}/duplicate`、GET `/api/v0/assets/{id}/content`。listDraftPreparations消费P7a新增 GET `/api/v0/drafts/{draft_id}/asset-preparations`，limit50、最多100，直接用生成类型；只有draft view可用。无下载参数；DuplicateAsset 为 purpose/scope/name?，重发会生成新资产。所有拒绝保持现有 unwrap/Problem，不把 404 当空数组或成功。
 
 AttachmentService.list(target, cursor?, signal?): Promise<AttachmentPage>，其中 target 为 `{kind:"issue"|"comment"|"draft"; id:string}`，分别调用 `/api/v0/issues/{issue_id}/attachments`、`/api/v0/issue-comments/{comment_id}/attachments`、`/api/v0/drafts/{draft_id}/attachments`。请求 `limit:50`；服务端最大100，UUID升序。Attachment 六字段直接消费；分页无 URL，next_cursor=null 才到底。
 
@@ -50,7 +51,7 @@ target 是生成 NewAsset 的 purpose/scope 子集；内容工厂唯一映射：
 
 一次选择一个普通附件；编辑器一次最多10张图片，每视图最多2个传输链，超量整批拒绝；队列启动前核同一节点与视图。错误阶段按 P6 恢复：尚未 prepare→重试申请；PUT/complete 不确定→先对同ID confirm；仅明确 object_missing 或用户明确重新申请才新 prepare。不能重放已封存 PUT。结果成功后列表刷新失败只重读，不重新传文件。
 
-已有 issue/comment/draft 的普通附件 complete 已原子绑定，ready 不能再发 owner PATCH；描述/new_comment 的 ready 仍私有，只有宿主正文保存或评论创建绑定。取消/卸载不能撤销已发送的服务端写、不自动 DELETE；就算旧 complete 在服务端成功，旧视图也不得发布，下一次新读取核真实结果。
+已有 issue/comment/draft 的普通附件 complete 已原子绑定，ready 不能再发 owner PATCH；描述/new_comment 的 ready 仍私有，只有宿主正文保存或评论创建绑定。取消/卸载不能撤销已发送的服务端写、不自动 DELETE；就算旧 complete 在服务端成功，旧视图也不得发布，下一次新读取核真实结果。草稿取消/重新申请后可能仍有pending，发布前按§6显式恢复；UploadSession不能暗自DELETE以修补未知ID。
 
 ## 4. 附件资源与确认后刷新
 
@@ -69,3 +70,11 @@ target 是生成 NewAsset 的 purpose/scope 子集；内容工厂唯一映射：
 `downloadAsset(input:{asset:Asset;content:Content},signal:AbortSignal):Promise<void>` 只在用户主动操作时调用，独立 fetch GET 原 capability，credentials omit、redirect error、referrerPolicy no-referrer，无业务 token；URL/expiry合法性校验复用已有传输规则的可共享纯函数，不能为了复用 PUT 写第二份含业务认证的 API client。单次下载15分钟预算、单视图同ID一个在途，流式读取累计不得超过 asset.size（最大104857600），结束必须精确等于声明字节，失败/取消立即cancel reader并释放监听/timer。Blob ObjectURL 用 asset.name 下载，动作完成/视图结束 revoke；onerror也回收，不用永久签名href。
 
 图片节点拿到的只是消费者声明的 URL/expiry 投影，不直接 import ApiClient/RootStore；下载调用应用端口。下载不在节点 mount 自动请求。内存容量的权衡见主spec，不新增缓存或持久化二进制。
+
+## 6. 草稿准备件恢复
+
+`DraftPreparationsResource`只接受当前draft ContentView，消费P7a生成分页DTO；沿T3同一DetailResource/请求号原则管理rows/nextCursor/load/more/retryRead/dispose，不能另建授权观察器。它与已绑定AttachmentResource分开呈现，不能混成附件总数；当前页不等于全部准备件。入口由用户主动打开，也可在发布asset.not_uploaded后提示打开，不在每次键入或图片onError无界刷新。
+
+显示文件名、pending/uploaded、用途、大小、创建时间，明确“未绑定不等于可以自动删除，可能是另一标签页正在使用”。确认说明“所选文件可能正在另一标签页上传，或已成为普通附件；丢弃会删除这个文件”，配对应英文，不能承诺只删仍未绑定件。用户按ID逐项选择并确认丢弃，已有AssetService.remove执行；busy防重入、失败保留，confirmed204与后续刷新失败分开。未知DELETE先重读并必要read(id)核验，不以列表缺席独断删除成功，不自动重发；描述图已绑定返回asset.bound时保留并解释，普通附件按既有权限可删，不能删正文或恢复历史。
+
+本地取消/重新选文件只终止本链。丢回prepare回答、failed duplicate或刷新后没有已知ID时，仍从完整有界分页找到；不按文件名猜、不静默全删、不自动丢弃其他标签页。明确删除选中的pending后，重新检查当前正文/附件并让用户发布；新申请可让服务器继续拒绝，提供有限显式重读，不无限自动publish。此处使用P7a协议，不能只保留已知ID作为恢复实现。
