@@ -18,6 +18,8 @@ export class ContentReadEntry {
   private version = 0;
   private ended = false;
   private automaticUsed = false;
+  /** The last renewal at expiry never reached a server, e.g. it ran on waking before the network was back. */
+  private unsent = false;
   private pending?: Promise<ContentRead>;
   private controller?: AbortController;
   private timer?: ReturnType<typeof setTimeout>;
@@ -51,12 +53,21 @@ export class ContentReadEntry {
     );
   }
   wake(): void {
-    if (!this.current || !this.leases || this.snapshot.status !== "ready") return;
-    if (Date.parse(this.snapshot.content.expires_at) > Date.now()) {
-      this.arm();
-      return;
-    }
-    void this.resolve(true).catch(() => undefined);
+    if (!this.current || !this.leases) return;
+    if (this.snapshot.status === "ready") {
+      if (Date.parse(this.snapshot.content.expires_at) > Date.now()) {
+        this.arm();
+        return;
+      }
+    } else if (!this.unsent) return;
+    this.renew();
+  }
+  private renew(): void {
+    this.unsent = false;
+    this.resolve(true).catch((error: unknown) => {
+      // A server's answer waits for an explicit retry; a request the network never carried waits for the next wake.
+      if (this.current && error instanceof TypeError) this.unsent = true;
+    });
   }
   resolve(force = false): Promise<ContentRead> {
     if (!this.current) return Promise.reject(new SessionChangedError());
@@ -82,6 +93,7 @@ export class ContentReadEntry {
         // A synchronous image event may request a new authorization from this notification.
         this.pending = undefined;
         this.controller = undefined;
+        this.unsent = false;
         this.publish({ status: "ready", stamp: version, asset, content });
         if (!current()) throw new SessionChangedError();
         this.arm();
@@ -130,6 +142,7 @@ export class ContentReadEntry {
     this.controller?.abort();
     this.controller = undefined;
     this.pending = undefined;
+    this.unsent = false;
     this.stopTimer();
     this.publish({ status: "unavailable", stamp: this.version });
   }

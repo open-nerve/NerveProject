@@ -167,8 +167,36 @@ it("expiry rejection stops automatic renewal until an explicit retry", async () 
   expect(lease.getSnapshot().error).toMatchObject({ status: 503 });
   const count = tab.nerve.calls.length;
   await vi.advanceTimersByTimeAsync(60_000);
+  // A server answered: neither a later focus nor a reconnect renews it; a renewal would start its read a task later.
   window.dispatchEvent(new Event("focus"));
+  window.dispatchEvent(new Event("online"));
+  await vi.advanceTimersByTimeAsync(10);
   expect(tab.nerve.calls).toHaveLength(count);
+  lease.dispose();
+  expect(vi.getTimerCount()).toBe(0);
+});
+it("a renewal the network never carried is tried again by each later wake until the grant is renewed", async () => {
+  const tab = await fixture();
+  const lease = tab.reads.acquire("a");
+  await until(() => lease.getSnapshot().status === "ready", "ready");
+  const respond = tab.nerve.respond!;
+  // The device wakes after the grant has expired: its timer fires before the network is back.
+  tab.nerve.respond = (call) => call.fail();
+  await vi.advanceTimersByTimeAsync(1001);
+  await until(() => lease.getSnapshot().status === "unavailable", "renewal failed offline");
+  expect(lease.getSnapshot().error).toBeInstanceOf(TypeError);
+  const offline = tab.nerve.calls.length;
+  // Still offline: one focus is one more attempt, and nothing is scheduled between wakes.
+  window.dispatchEvent(new Event("focus"));
+  await vi.advanceTimersByTimeAsync(10);
+  expect(tab.nerve.calls).toHaveLength(offline + 1);
+  await vi.advanceTimersByTimeAsync(60_000);
+  expect(tab.nerve.calls).toHaveLength(offline + 1);
+  // The network is back: the wake that reports it renews the grant without a click.
+  tab.nerve.respond = respond;
+  window.dispatchEvent(new Event("online"));
+  await until(() => lease.getSnapshot().status === "ready", "renewed after reconnect");
+  expect(tab.nerve.to("/api/v0/assets/a/content")).toHaveLength(2);
   lease.dispose();
   expect(vi.getTimerCount()).toBe(0);
 });
