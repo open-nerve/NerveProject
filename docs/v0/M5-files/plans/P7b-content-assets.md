@@ -168,12 +168,12 @@ T3与T5衔接：命令确认收据先发布给稳定host再触发权威重读；
 **Files:** 新e2e/stories/files/{f8-issue-attachments-page,f9-comment-files-page,f10-draft-files-page,f11-editor-images-page,f12-image-history-page,f16-content-lifetime-page}.spec.ts，复用fixtures/file-story.ts及P6接收端观察；新playwright.m5-content.config.ts和package脚本/knip登记，必要纯断言helper。
 **Interfaces:** API准备宿主/角色，真实页面File选择/粘贴/拖放→本地或既有S3 fixture；SQL只断言或明确故障注入，不直接造业务前置。
 
-- [ ] Step 1：F8全部动作与51分页、下载SHA和count排序；F9两评论私有准备/失败再发/未知响应；F10 null项目/换项目/发布与并发双发布、原P5事务失败证据逐输入核对并新增页面拒绝；F11伪造源/无权源/目标拒绝、Undo/Redo和普通文件不吞；F12换图/调序/历史/只补ID，真实HTML/API/DB断言。
+- [x] Step 1：F8全部动作与51分页、下载SHA和count排序；F9两评论私有准备/失败再发/未知响应；F10 null项目/换项目/发布与并发双发布、原P5事务失败证据逐输入核对并新增页面拒绝；F11伪造源/无权源/目标拒绝、Undo/Redo和普通文件不吞；F12换图/调序/历史/只补ID，真实HTML/API/DB断言。
 - F10另验证unknown prepare/failed duplicate后的恢复列表、明确丢弃/取消/另一标签页、普通副本最终Issue与草稿副本最终Draft，不用P7a API测试代替真实页面。
 - 用真实RootStore与详情/peek挂载链验证：未发送评论、失败正文/评论编辑及图片节点→同宿主普通附件complete/DELETE→规范Issue被pending撤回→读取成功/失败/显式重试。输入和确认结果保留，旧view/URL/请求终止，已确认命令和未知写均无自动重发；fresh正文与编辑基准冲突不覆盖；换宿主/权限ABA/root退休清空，另一详情实例不串数据。至少一个有效变异移除host输入保留后，断言必须以实际内容丢失失败；不得只用资源和编辑器孤立测试证明联合行为。
 - 同一联合链还须区分暂时读取故障与owner已确认删除/不可见（宿主读取401/403/404）：前者保留只读重试，后者退休输入状态，同ID重新可见也不复活；fresh owner只读时，未提交内容不得伪装成已保存正文。正文保存422仍保留原输入，不混淆读结论与写拒绝。
-- [ ] Step 2：`make build build-s3-fixture` 后 `pnpm --dir e2e exec playwright test --config=playwright.m5-content.config.ts --workers=1`，Chromium/Firefox/WebKit覆盖真实选择、键盘/读屏/焦点和主要交错；local与S3各实际上传/显示/下载，接收端核raw字节/凭据。expires_at响应注入仅证明UI到期，不冒称服务端真实TTL改变。
-- [ ] Step 3：至少10个有效变异：漏取消后complete、漏节点代次、项目可见即当issue权限、草稿ABA复活、未知POST自动再发、confirm后刷新重复命令、以loaded数代总数、伪剪贴板免copy、撤销发DELETE、到期无限再读。每项独立断言失败与恢复SHA，原失败报告全留；清本阶段确切拥有的临时资源，提交 `test(M5/P7b): 验证文件页面与宿主切换边界`。
+- [x] Step 2：`make build build-s3-fixture` 后 `pnpm --dir e2e exec playwright test --config=playwright.m5-content.config.ts --workers=1`，Chromium/Firefox/WebKit覆盖真实选择、键盘/读屏/焦点和主要交错；local与S3各实际上传/显示/下载，接收端核raw字节/凭据。expires_at响应注入仅证明UI到期，不冒称服务端真实TTL改变。
+- [x] Step 3：至少10个有效变异：漏取消后complete、漏节点代次、项目可见即当issue权限、草稿ABA复活、未知POST自动再发、confirm后刷新重复命令、以loaded数代总数、伪剪贴板免copy、撤销发DELETE、到期无限再读。每项独立断言失败与恢复SHA，原失败报告全留；清本阶段确切拥有的临时资源，提交 `test(M5/P7b): 验证文件页面与宿主切换边界`。
 
 ## Task 14（T14）：七门禁与准确检查点 CI
 
