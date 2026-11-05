@@ -45,17 +45,16 @@ export const IssueDetailsPage = observer(function IssueDetailsPage({ params }: P
   const { getProjectById } = useProject();
   const { toggleIssueDetailSidebar, issueDetailSidebarCollapsed } = useAppTheme();
 
-  const { data, isLoading, isValidating, error, mutate } = useOutletContext<IssueRouteRead>();
+  const { data, error, mutate, pending } = useOutletContext<IssueRouteRead>();
 
   // The identifier is parsed only by the server; the proven response chooses the project.
   const issueId = data?.id;
   const projectId = data?.project_id ?? "";
   const issue = getIssueById(issueId || "") || undefined;
   const project = (issue?.project_id && getProjectById(issue?.project_id)) || undefined;
-  // A warm SWR answer must not mount interactive children during the new route read. Once the read is proven, the
+  // Nothing interactive mounts before the visit's own lookup has answered (the layout's pending). Once it has, the
   // detail host stays mounted while a write withdraws the canonical item for a re-read: the host shows that state and
   // keeps the input it preserves, which replacing it here would destroy.
-  const pending = isLoading || isValidating;
   const pageTitle = project && issue ? `${project?.identifier}-${issue?.sequence_id} ${issue?.name}` : undefined;
 
   useEffect(() => {
