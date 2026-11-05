@@ -231,7 +231,9 @@ const CommentCreateForm = observer(function CommentCreateForm(props: TCommentCre
           current={() => capture()() && !!view?.current}
           verify={async () => {
             await detail.comment.fetchComments(workspaceSlug, projectId, entityId);
-            if (view?.current) await preparations.files?.load();
+            // The comment list is the check. The files show their own answer: one the unknown create bound stays
+            // unresolved there and blocks a resend, so it must not fail this verification.
+            if (view?.current) await preparations.files?.load().catch(() => undefined);
           }}
           verified={input.verify}
           allowResend={input.allowResend}

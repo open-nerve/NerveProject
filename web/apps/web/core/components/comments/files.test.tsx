@@ -120,6 +120,32 @@ it.each(["network", "proxy"] as const)(
     expect(posts()[1]!.body).toEqual({ comment_html: "<p>possibly sent</p>", attachment_ids: ["asset-1"] });
   }
 );
+it("an unknown create the server committed is verified by its comment list, and the file it bound blocks a resend", async () => {
+  await render();
+  await fill("<p>committed</p>");
+  await upload();
+  await enter();
+  await act(async () => until(() => posts().length === 1, "POST"));
+  // The server created the comment and bound the selected file; only its answer is lost.
+  tab.control.comments = () => [tab.comment, { ...tab.comment, id: "committed", comment_html: "<p>committed</p>" }];
+  tab.assets.set("asset-1", { ...tab.assets.get("asset-1")!, scope: { kind: "comment", id: "committed" } });
+  await act(async () => posts()[0]!.fail());
+  await waitForPickerDOM(
+    () => document.body.textContent?.includes("content_files.comment.unknown") ?? false,
+    "unknown result"
+  );
+  await tab.click("content_files.comment.verify");
+  await waitForPickerDOM(
+    () => document.body.textContent?.includes("content_files.comment.allow_resend") ?? false,
+    "verified by the comment list"
+  );
+  expect(document.body.textContent).toContain("content_files.comment.unverified");
+  await tab.click("content_files.comment.allow_resend");
+  await enter();
+  await act(async () => vi.advanceTimersByTimeAsync(100));
+  expect(posts()).toHaveLength(1);
+  expect(text()!.value).toBe("<p>committed</p>");
+});
 it("an unsent comment and selected IDs survive temporary owner failure, with fresh asset authorization and no POST", async () => {
   await render();
   await fill("<p>keep this draft</p>");
