@@ -15,6 +15,18 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+it("an editor destroyed in the task that built it leaves no table pass to run on its destroyed view", () => {
+  vi.useFakeTimers();
+  try {
+    // A host may replace its editor before the next task, e.g. when a capability it was built with changes.
+    void createEditor({ content: "<p>Before</p><table><tbody><tr><td><p>Cell</p></td></tr></tbody></table>" });
+    destroyEditors();
+    expect(() => vi.runOnlyPendingTimers()).not.toThrow();
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
 for (const kind of ["row", "column"] as const) {
   it(`updates the mounted ${kind} widget and its portal when the host language changes`, async () => {
     vi.stubGlobal(
