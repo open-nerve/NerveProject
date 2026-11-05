@@ -194,10 +194,20 @@ export class IssueDetailInputState implements DetailRegistration {
       ];
     });
   }
-  /** The kind of owner's last confirmed command, once: a later mount of the same control gets nothing. */
+  /** A content command began on this host: the notice describes only the most recent confirmed result. */
+  beginCommand(): void {
+    this.refocus = undefined;
+    runInAction(() => {
+      this.confirmed = [];
+    });
+  }
+  /**
+   * The kind of owner's last confirmed command, once, for the control that lost its focus to the remount: a later
+   * mount of the same control gets nothing, and the notice of that result has done its work.
+   */
   takeFocus(owner: string): Receipt["kind"] | undefined {
     const request = this.current && this.refocus?.owner === owner ? this.refocus : undefined;
-    if (request) this.refocus = undefined;
+    if (request) this.beginCommand();
     return request?.kind;
   }
 }

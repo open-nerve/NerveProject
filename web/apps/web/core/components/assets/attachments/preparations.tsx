@@ -95,7 +95,7 @@ export const DraftPreparations = observer(function DraftPreparations({
           discard
           uncertain={resource.uncertainIDs.includes(selected.id)}
           remove={(id) => resource.remove(id)}
-          verify={() => resource.retryRead()}
+          verify={() => resource.verifyDeletion()}
           onClose={() => setSelection(undefined)}
         />
       )}

@@ -54,6 +54,17 @@ it("keeps only local input and confirmed receipts through pending and a temporar
   expect(tab.inputs.takeFocus("other files")).toBeUndefined();
   expect(tab.inputs.takeFocus("files")).toBe("uploaded");
   expect(tab.inputs.takeFocus("files")).toBeUndefined();
+  // The control has its focus back: the notice of that result has done its work.
+  expect(tab.inputs.receipts).toEqual([]);
+});
+it("a new command ends the previous result's notice and its pending focus return", async () => {
+  const tab = await fixture();
+  tab.inputs.confirm({ kind: "uploaded", id: "uploaded-file" }, "files");
+  tab.inputs.beginCommand();
+  expect(tab.inputs.receipts).toEqual([]);
+  expect(tab.inputs.takeFocus("files")).toBeUndefined();
+  tab.inputs.confirm({ kind: "deleted", id: "deleted-file" }, "files");
+  expect(tab.inputs.receipts).toEqual([{ kind: "deleted", id: "deleted-file" }]);
 });
 it.each([401, 403, 404])(
   "a final owner %i retires local input permanently, even when the same ID returns",

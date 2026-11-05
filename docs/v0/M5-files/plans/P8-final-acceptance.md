@@ -75,9 +75,9 @@
 
 **Files:** 修改`core/store/asset/content-deletion.ts`、`core/components/assets/attachments/delete-dialog.tsx`、`core/components/issues/detail-host.tsx`；测试附件宿主`issue-detail-widgets/attachments/host.test.tsx`、`detail-host.test.tsx`；en/zh-CN文案。
 
-- [ ] Step 1：用例：DELETE回答丢失→核验得404：对话框只留关闭、说明不可见、无DELETE再发、关闭后无“删除未能确认”残留；核验得200照旧可显式再确认；收据在同宿主新命令开始或正文重挂载且焦点归还后清除、读屏只读一次。先看到再发DELETE与提示残留（RED）。
-- [ ] Step 2：实现§3第4条：`verify()`给出逐id结果（不可见的id离开`uncertain`），对话框据此只留关闭并说明（新增en/zh-CN键）；收据在`IssueDetailInputState.confirm()`开始新命令或`takeFocus()`归还焦点后的正文重挂载时清除。不伪造204/收据。变异“404仍留uncertain”“收据常驻”须被杀死。
-- [ ] Step 3：GREEN与受影响附件/宿主测试、i18n同步；提交`fix(M5/P8): 删除核验得404时结束未知状态，收据只报最近结果`。
+- [x] Step 1：用例：DELETE回答丢失→核验得404：对话框只留关闭、说明不可见、无DELETE再发、关闭后无“删除未能确认”残留；核验得200照旧可显式再确认；收据在同宿主新命令开始或正文重挂载且焦点归还后清除、读屏只读一次。先看到再发DELETE与提示残留（RED）。
+- [x] Step 2：实现§3第4条：`verify()`给出逐id结果（不可见的id离开`uncertain`），对话框据此只留关闭并说明（新增en/zh-CN键）；收据在`IssueDetailInputState.confirm()`开始新命令或`takeFocus()`归还焦点后的正文重挂载时清除。不伪造204/收据。变异“404仍留uncertain”“收据常驻”须被杀死。
+- [x] Step 3：GREEN与受影响附件/宿主测试、i18n同步；提交`fix(M5/P8): 删除核验得404时结束未知状态，收据只报最近结果`。
 
 ## Task 6（T6）：副本未知发布与详情弹窗的提示
 

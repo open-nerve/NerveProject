@@ -30,7 +30,12 @@ export class DraftPreparationsResource extends PagedContent<Asset> {
   remove(id: string): Promise<void> {
     return this.deletion.remove(id);
   }
-  override retryRead(): Promise<void> {
+  /** The read behind the refresh control also settles uncertain deletions. */
+  override async retryRead(): Promise<void> {
+    await this.deletion.verify();
+  }
+  /** The uncertain IDs still visible after a fresh read; only those may be deleted again explicitly. */
+  verifyDeletion(): Promise<ReadonlySet<string>> {
     return this.deletion.verify();
   }
   override dispose(): void {

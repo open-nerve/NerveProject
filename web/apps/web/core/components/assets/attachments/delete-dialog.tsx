@@ -12,7 +12,8 @@ export type DeleteAttachmentProps = {
   discard?: boolean;
   uncertain?: boolean;
   remove(id: string): Promise<void>;
-  verify?(): Promise<void>;
+  /** Reads the latest state; resolves to the uncertain IDs that are still visible. */
+  verify?(): Promise<ReadonlySet<string>>;
   onClose(): void;
   onDialogOpened?(): () => void;
 };
@@ -31,9 +32,12 @@ export const DeleteAttachmentDialog = observer(function DeleteAttachmentDialog({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
   const [verified, setVerified] = useState(false);
+  // The read found the file gone: nothing is left to delete, so the dialog only explains and closes.
+  const [gone, setGone] = useState(false);
   const pending = useRef(false);
   const mounted = useRef(false);
   const alert = useRef<HTMLParagraphElement>(null);
+  const notice = useRef<HTMLParagraphElement>(null);
   useEffect(() => {
     mounted.current = true;
     return () => {
@@ -43,17 +47,24 @@ export const DeleteAttachmentDialog = observer(function DeleteAttachmentDialog({
   useLayoutEffect(() => {
     if (error && view.current) alert.current?.focus({ preventScroll: true });
   }, [error, view]);
+  useLayoutEffect(() => {
+    if (gone && view.current) notice.current?.focus({ preventScroll: true });
+  }, [gone, view]);
   const perform = async (readOnly: boolean) => {
-    if (pending.current || !view.current || (!readOnly && uncertain && !verified)) return;
+    if (pending.current || gone || !view.current || (!readOnly && uncertain && !verified)) return;
     pending.current = true;
     setBusy(true);
     setError(undefined);
     try {
-      if (readOnly) await verify?.();
-      else await remove(file.id);
-      if (mounted.current && view.current) {
-        if (readOnly) setVerified(true);
-        else onClose();
+      if (readOnly) {
+        const visible = await verify?.();
+        if (mounted.current && view.current) {
+          if (visible?.has(file.id)) setVerified(true);
+          else setGone(true);
+        }
+      } else {
+        await remove(file.id);
+        if (mounted.current && view.current) onClose();
       }
     } catch (reason) {
       if (mounted.current && view.current) {
@@ -75,10 +86,18 @@ export const DeleteAttachmentDialog = observer(function DeleteAttachmentDialog({
       <div className="space-y-4 p-6">
         <ModalTitle>{t(discard ? "content_files.preparations.delete_title" : "content_files.delete_title")}</ModalTitle>
         <p className="text-13 break-words">{file.name}</p>
-        <p className="text-13 text-secondary">
-          {t(discard ? "content_files.preparations.confirm_warning" : "content_files.delete_warning")}
-        </p>
-        {uncertain && <p className="text-13 text-secondary">{t("content_files.unknown_delete")}</p>}
+        {gone ? (
+          <p ref={notice} tabIndex={-1} className="text-13 text-secondary">
+            {t("content_files.delete_gone")}
+          </p>
+        ) : (
+          <>
+            <p className="text-13 text-secondary">
+              {t(discard ? "content_files.preparations.confirm_warning" : "content_files.delete_warning")}
+            </p>
+            {uncertain && <p className="text-13 text-secondary">{t("content_files.unknown_delete")}</p>}
+          </>
+        )}
         {error && (
           <p ref={alert} role="alert" tabIndex={-1} className="text-13 text-danger-primary">
             {t(error)}
@@ -86,9 +105,9 @@ export const DeleteAttachmentDialog = observer(function DeleteAttachmentDialog({
         )}
         <div className="flex flex-wrap justify-end gap-2">
           <Button type="button" variant="secondary" disabled={busy} onClick={close}>
-            {t("cancel")}
+            {t(gone ? "close" : "cancel")}
           </Button>
-          {uncertain && verify && (
+          {!gone && uncertain && verify && (
             <Button
               type="button"
               variant="secondary"
@@ -100,16 +119,18 @@ export const DeleteAttachmentDialog = observer(function DeleteAttachmentDialog({
               {t("content_files.verify")}
             </Button>
           )}
-          <Button
-            type="button"
-            variant="error-fill"
-            disabled={busy || (uncertain && !verified)}
-            onClick={() => {
-              void perform(false);
-            }}
-          >
-            {t(discard ? "content_files.confirm_discard" : "content_files.confirm_delete")}
-          </Button>
+          {!gone && (
+            <Button
+              type="button"
+              variant="error-fill"
+              disabled={busy || (uncertain && !verified)}
+              onClick={() => {
+                void perform(false);
+              }}
+            >
+              {t(discard ? "content_files.confirm_discard" : "content_files.confirm_delete")}
+            </Button>
+          )}
         </div>
       </div>
     </ModalCore>

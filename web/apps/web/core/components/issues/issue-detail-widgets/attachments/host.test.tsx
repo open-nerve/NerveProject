@@ -2,7 +2,7 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 import { act, StrictMode, type ReactNode } from "react";
 import { SWRConfig } from "swr";
-import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, onTestFinished, vi } from "vitest";
 import { IssueDetailModals } from "@/store/issue/issue-details/modals";
 import type { RootStore } from "@/store/root.store";
 import { StoreContext } from "@/lib/store-context";
@@ -192,6 +192,96 @@ for (const kind of ["detail", "peek"] as const) {
     await act(async () => vi.advanceTimersByTimeAsync(100));
     expect(document.activeElement).toBe(chosen);
     chosen.remove();
+  });
+  it(`${kind}: an unknown deletion found gone leaves only Close, resends nothing and leaves no unknown notice`, async () => {
+    await render(kind);
+    await openFiles();
+    await tab.click("content_files.remove file-a.txt");
+    await waitForPickerDOM(() => !!document.querySelector('[role="dialog"]'), "dialog");
+    await tab.click("content_files.confirm_delete");
+    await act(async () => until(() => tab.nerve.to("/api/v0/assets/file-a").length === 1, "delete"));
+    await act(async () => tab.nerve.to("/api/v0/assets/file-a")[0]!.fail());
+    await waitForPickerDOM(() => !!document.querySelector('[role="alert"]'), "unknown");
+    page = { data: [], next_cursor: null };
+    const respond = tab.nerve.respond!;
+    tab.nerve.respond = (call) => {
+      if (call.path === "/api/v0/assets/file-a" && call.method === "GET") call.answer(problem(404, "asset.not_found"));
+      else respond(call);
+    };
+    await tab.click("content_files.verify");
+    await waitForPickerDOM(() => document.activeElement?.textContent === "content_files.delete_gone", "gone");
+    const dialog = document.querySelector('[role="dialog"]')!;
+    expect([...dialog.querySelectorAll("button")].map((button) => button.textContent)).toEqual(["close"]);
+    await tab.click("close", dialog);
+    await waitForPickerDOM(() => !document.querySelector('[role="dialog"]'), "closed");
+    expect(document.body.textContent).not.toContain("content_files.unknown_delete");
+    expect(document.body.textContent).not.toContain("content_files.confirmed_delete");
+    expect(document.body.textContent).not.toContain("file-a.txt");
+    expect(tab.nerve.to("/api/v0/assets/file-a").map((call) => call.method)).toEqual(["DELETE", "GET"]);
+  });
+  it(`${kind}: the confirmed notice is announced once and ends when the remounted widget takes the focus back`, async () => {
+    await render(kind);
+    await openFiles();
+    const shown: Node[] = [];
+    const watch = new MutationObserver((records) => {
+      for (const record of records)
+        for (const node of record.addedNodes)
+          if (node.textContent?.includes("content_files.confirmed_upload")) shown.push(node);
+    });
+    watch.observe(document.body, { childList: true, subtree: true, characterData: true });
+    let pending: Call | undefined;
+    core = (call) => {
+      pending = call;
+    };
+    await complete();
+    await waitForPickerDOM(() => !!pending, "canonical verification");
+    expect(document.body.textContent).toContain("content_files.confirmed_upload");
+    await act(async () => pending!.answer(json(200, tab.issue)));
+    await waitForPickerDOM(() => document.activeElement === document.querySelector('input[type="file"]'), "picker");
+    expect(document.body.textContent).not.toContain("content_files.confirmed_upload");
+    core = (call) => call.answer(json(200, tab.issue));
+    await act(async () => {
+      await tab.app.issue.issues.refreshAuthoritative(tab.issue.id, { afterWrite: true });
+    });
+    await waitForPickerDOM(() => !!document.querySelector('input[type="file"]'), "later remount");
+    expect(document.body.textContent).not.toContain("content_files.confirmed_upload");
+    watch.disconnect();
+    expect(shown).toHaveLength(1);
+  });
+  it(`${kind}: a new command on the host ends the notice whose focus the user had moved elsewhere`, async () => {
+    await render(kind);
+    await openFiles();
+    const elsewhere = document.body.appendChild(document.createElement("button"));
+    onTestFinished(() => elsewhere.remove());
+    let pending: Call | undefined;
+    core = (call) => {
+      pending = call;
+    };
+    await complete();
+    await waitForPickerDOM(() => !!pending, "upload re-read");
+    elsewhere.focus();
+    await act(async () => pending!.answer(json(200, tab.issue)));
+    await waitForPickerDOM(() => !!document.querySelector('input[type="file"]'), "remounted after upload");
+    expect(document.activeElement).toBe(elsewhere);
+    expect(document.body.textContent).toContain("content_files.confirmed_upload");
+    await tab.click("content_files.remove file-a.txt");
+    await waitForPickerDOM(() => !!document.querySelector('[role="dialog"]'), "dialog");
+    expect(document.body.textContent).toContain("content_files.confirmed_upload");
+    await tab.click("content_files.confirm_delete");
+    await act(async () => until(() => tab.nerve.to("/api/v0/assets/file-a").length === 1, "delete"));
+    expect(document.body.textContent).not.toContain("content_files.confirmed_upload");
+    pending = undefined;
+    await act(async () => tab.nerve.to("/api/v0/assets/file-a")[0]!.answer(noContent()));
+    await waitForPickerDOM(() => !!pending, "delete re-read");
+    elsewhere.focus();
+    await act(async () => pending!.answer(json(200, tab.issue)));
+    await waitForPickerDOM(() => !!document.querySelector('input[type="file"]'), "remounted after delete");
+    expect(document.activeElement).toBe(elsewhere);
+    expect(document.body.textContent).toContain("content_files.confirmed_delete");
+    await tab.select([new File(["next"], "next.txt", { type: "text/plain" })]);
+    await tab.click("content_files.upload");
+    await act(async () => until(() => tab.puts.length === 2, "second upload"));
+    expect(document.body.textContent).not.toContain("content_files.confirmed_delete");
   });
   it.each([401, 403, 404])(
     `${kind}: canonical %i clears retained input and receipts, and a later fresh owner never revives either`,

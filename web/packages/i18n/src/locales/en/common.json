@@ -18,6 +18,7 @@
     "delete_warning": "This removes the file from its current attachment. This action cannot be undone.",
     "unknown_delete": "The deletion result is unknown. Read the latest status before explicitly trying again.",
     "verify": "Check latest status",
+    "delete_gone": "This file is no longer visible, so there is nothing to delete.",
     "refresh": "Reload files",
     "more": "Load more",
     "reading": "Reading files…",
