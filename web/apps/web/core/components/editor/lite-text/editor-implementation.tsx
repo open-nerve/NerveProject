@@ -17,7 +17,7 @@ import { EditorMentionsRoot } from "@/components/editor/embeds/mentions";
 import { EditorMentionsError } from "@/components/editor/mentions-error";
 import { IssueCommentToolbar } from "@/components/editor/lite-text/toolbar";
 // hooks
-import { useEditorConfig, useEditorMention } from "@/hooks/editor";
+import { useEditorMention } from "@/hooks/editor";
 import { useMember } from "@/hooks/store/use-member";
 import { useParseEditorContent } from "@/hooks/use-parse-editor-content";
 // services
@@ -40,6 +40,7 @@ export const LiteTextEditor = React.forwardRef(function LiteTextEditor(
     projectId,
     showSubmitButton = true,
     isSubmitting = false,
+    submitDisabled = false,
     showToolbarInitially = true,
     parentClassName = "",
     placeholder = t("issue.comments.placeholder"),
@@ -54,14 +55,10 @@ export const LiteTextEditor = React.forwardRef(function LiteTextEditor(
   const members = useMember();
   const { getUserDetails } = members;
   // parse content
-  const { getEditorMetaData } = useParseEditorContent({
-    projectId,
-    workspaceSlug,
-  });
+  const { getEditorMetaData } = useParseEditorContent({ workspaceSlug });
   // use editor mention
   const { fetchMentions, mentionScope } = useEditorMention({ workspaceSlug, projectId, editable, members });
   // editor config
-  const { getEditorFileHandlers } = useEditorConfig();
   // derived values
   const isEmpty = isCommentEmpty(props.initialValue);
 
@@ -86,13 +83,6 @@ export const LiteTextEditor = React.forwardRef(function LiteTextEditor(
             ref={ref}
             disabledExtensions={disabledExtensions}
             editable={editable}
-            fileHandler={getEditorFileHandlers({
-              projectId,
-              uploadFile: editable ? props.uploadFile : async () => "",
-              duplicateFile: editable ? props.duplicateFile : async () => "",
-              workspaceId,
-              workspaceSlug,
-            })}
             getEditorMetaData={getEditorMetaData}
             handleEditorReady={(ready) => {
               if (ready) {
@@ -145,6 +135,7 @@ export const LiteTextEditor = React.forwardRef(function LiteTextEditor(
             handleSubmit={(e) => rest.onEnterKeyPress?.(e)}
             isCommentEmpty={isEmpty}
             isSubmitting={isSubmitting}
+            submitDisabled={submitDisabled}
             editorRef={editorRef}
             showSubmitButton={showSubmitButton}
             submitButtonText="common.comment"

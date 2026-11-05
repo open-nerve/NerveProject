@@ -9,7 +9,7 @@ import type { Issue, IssueDetail } from "@nerve/api-client";
 import type { SyntheticEvent } from "react";
 import { observer } from "mobx-react";
 // icons
-import { DueDateOutline, LinkOutline, StartDateOutline, ViewsOutline } from "@makeplane/propel/icons";
+import { AttachOutline, DueDateOutline, LinkOutline, StartDateOutline, ViewsOutline } from "@makeplane/propel/icons";
 // i18n
 import { useTranslation } from "@nerve/i18n";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
@@ -298,6 +298,21 @@ export const IssueProperties = observer(function IssueProperties(props: IIssuePr
             <LinkOutline className="h-3 w-3 flex-shrink-0" />
             <div className="text-caption-sm-regular">{issue.link_count}</div>
           </div>
+        </Tooltip>
+      </WithDisplayPropertiesHOC>
+
+      {/* attachments: information only, so a click still opens the work item like the rest of the row */}
+      <WithDisplayPropertiesHOC
+        displayProperties={displayProperties}
+        displayPropertyKey="attachment_count"
+        shouldRenderProperty={(properties) => !!properties.attachment_count && !!issue.attachment_count}
+      >
+        <Tooltip label={`${t("content_files.title")}: ${issue.attachment_count}`} disabled={isMobile}>
+          <span className={countClassName}>
+            <AttachOutline className="h-3 w-3 flex-shrink-0" aria-hidden="true" />
+            <span className="sr-only">{t("content_files.title")}</span>
+            <span className="text-caption-sm-regular">{issue.attachment_count}</span>
+          </span>
         </Tooltip>
       </WithDisplayPropertiesHOC>
 

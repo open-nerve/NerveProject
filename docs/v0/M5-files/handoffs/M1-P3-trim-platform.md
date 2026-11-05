@@ -31,3 +31,7 @@ M5 合并时：
 ## 处理结果（M5/P2）
 
 P2新增原生生成协议、六个业务操作及真实API文件故事；没有恢复Plane上传地址。现有前端服务、静态封面和资源枚举的替换/删净仍归P4/P6/P7，本交接保持open。证据见[P2阶段评审](../reviews/P2-assets-review.md)，整审/集成结果仍单独核验。
+
+## 处理结果（M5/P7b T12核对）
+
+`EFileAssetType`与旧文件类型已删除，资源用途由P2起生成的AssetPurpose表达，团队空间、Initiative等企业类型不在新接口中。最终逐项结论由M5收尾写入review，本页保持open。

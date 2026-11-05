@@ -1,5 +1,6 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 import type { PreparedAsset } from "@nerve/api-client";
+import { capabilityFailure } from "./asset-capability";
 
 export type UploadFailureKind = "network" | "http" | "timeout" | "cancelled" | "expired" | "invalid-grant";
 export class UploadFailure extends Error {
@@ -65,16 +66,7 @@ export async function putAsset(file: File, grant: PreparedAsset["upload"], signa
 function checkedHeaders(grant: PreparedAsset["upload"]): Headers {
   const invalid = () => new UploadFailure("invalid-grant");
   const { url, method, headers, expires_at: expiresAt } = grant;
-  if (method !== "PUT" || hasControl(url) || /[ \\#]/.test(url)) throw invalid();
-  const relative = url[0] === "/" && url[1] !== "/";
-  const authority = /^https?:\/\/([^/?#]+)/i.exec(url)?.[1];
-  if (!relative && (!authority || authority.includes("@"))) throw invalid();
-  try {
-    const parsed = new URL(url, "https://local.invalid");
-    if (!["http:", "https:"].includes(parsed.protocol) || parsed.username || parsed.password) throw invalid();
-  } catch {
-    throw invalid();
-  }
+  if (method !== "PUT") throw invalid();
   const header = headers[0];
   if (
     headers.length !== 1 ||
@@ -83,9 +75,8 @@ function checkedHeaders(grant: PreparedAsset["upload"]): Headers {
     hasControl(header.value)
   )
     throw invalid();
-  const expiry = Date.parse(expiresAt);
-  if (!Number.isFinite(expiry)) throw invalid();
-  if (expiry <= Date.now()) throw new UploadFailure("expired");
+  const failure = capabilityFailure(url, expiresAt);
+  if (failure) throw new UploadFailure(failure);
   try {
     return new Headers([[header.name, header.value]]);
   } catch {

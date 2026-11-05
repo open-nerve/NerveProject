@@ -107,6 +107,7 @@ test("I5 (API): two members retain different complete list settings; me follows 
     state: true,
     sub_issue_count: true,
     link: false,
+    attachment_count: true,
     created_on: true,
     updated_on: true,
   };
@@ -349,7 +350,7 @@ test("I5 (page): the toolbar saves started, me, none and two intersecting date r
   await expectListPageQuiet(page, watch);
 });
 
-test("I5 (page): all eleven display properties and layout, grouping, ordering and extra options save from their controls without losing untouched calendar values", async ({
+test("I5 (page): all twelve display properties and layout, grouping, ordering and extra options save from their controls without losing untouched calendar values", async ({
   api,
   db,
   page,
@@ -380,10 +381,11 @@ test("I5 (page): all eleven display properties and layout, grouping, ordering an
     ["state", "State"],
     ["sub_issue_count", "Sub-work item count"],
     ["link", "Link"],
+    ["attachment_count", "Attachments"],
     ["created_on", "Created on"],
     ["updated_on", "Updated on"],
   ];
-  await c12Evidence(page, "B07", "eleven-display-properties");
+  await c12Evidence(page, "B07", "twelve-display-properties");
   const expected = { ...initial.display_properties };
   const propertyGroup = panel.getByRole("button", { name: "Display Properties", exact: true }).locator("../..");
   await properties.reduce(async (before, [key, name]) => {

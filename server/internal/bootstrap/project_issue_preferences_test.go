@@ -14,10 +14,10 @@ import (
 )
 
 const defaultDisplay = `{"calendar":{"layout":"month","show_weekends":false},"group_by":null,"layout":"list","order_by":"-created_at","show_empty_groups":true,"sub_group_by":null,"sub_issue":true}`
-const defaultProperties = `{"assignee":true,"created_on":true,"due_date":true,"key":true,"labels":true,"link":true,"priority":true,"start_date":true,"state":true,"sub_issue_count":true,"updated_on":true}`
+const defaultProperties = `{"assignee":true,"attachment_count":true,"created_on":true,"due_date":true,"key":true,"labels":true,"link":true,"priority":true,"start_date":true,"state":true,"sub_issue_count":true,"updated_on":true}`
 const defaultIssueSettings = `"display_filters":` + defaultDisplay + `,"display_properties":` + defaultProperties + `,"filters":{},`
 const customDisplay = `{"layout":"calendar","group_by":"state_id","sub_group_by":"priority","order_by":"priority","sub_issue":false,"show_empty_groups":false,"calendar":{"layout":"week","show_weekends":true}}`
-const customProperties = `{"assignee":false,"start_date":true,"due_date":false,"labels":true,"key":false,"priority":true,"state":false,"sub_issue_count":true,"link":false,"created_on":true,"updated_on":false}`
+const customProperties = `{"assignee":false,"start_date":true,"due_date":false,"labels":true,"key":false,"priority":true,"state":false,"sub_issue_count":true,"link":false,"attachment_count":false,"created_on":true,"updated_on":false}`
 const customFilters = `{"priority":["high"],"label_id":[],"assignee_id":["me"],"start_date":["2026-10-01..2026-10-02","2026-10-04..2026-10-05"]}`
 
 func preferencesJSON(tab, hidden string, sort int, filters, display, properties string) string {

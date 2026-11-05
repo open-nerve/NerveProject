@@ -30,7 +30,6 @@ vi.mock("@/hooks/store/use-member", () => ({
 }));
 vi.mock("@/hooks/store/user", () => ({ useUser: () => binding.tab!.app.user }));
 vi.mock("@/hooks/use-platform-os", () => ({ usePlatformOS: () => ({ isMobile: false }) }));
-vi.mock("@/hooks/store/use-editor-asset", () => ({ useEditorAsset: () => ({}) }));
 vi.mock("@/components/comments/card/root", () => ({ CommentCard: () => <div data-comment /> }));
 let renderer: Root;
 let container: HTMLElement;

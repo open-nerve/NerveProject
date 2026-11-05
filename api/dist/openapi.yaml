@@ -6040,6 +6040,7 @@ components:
         - state
         - sub_issue_count
         - link
+        - attachment_count
         - created_on
         - updated_on
       properties:
@@ -6060,6 +6061,9 @@ components:
         sub_issue_count:
           type: boolean
         link:
+          type: boolean
+        attachment_count:
+          description: Whether lists show a work item's number of live ordinary attachments.
           type: boolean
         created_on:
           type: boolean

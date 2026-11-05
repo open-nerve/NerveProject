@@ -82,7 +82,8 @@ export const TableInsertPlugin = (editor: Editor): Plugin => {
     key: TABLE_INSERT_PLUGIN_KEY,
 
     view() {
-      setTimeout(updateAllTables, 0);
+      // The first pass waits a task for the rendered tables; a view destroyed before then has none left to update.
+      const firstPass = setTimeout(updateAllTables, 0);
 
       return {
         update(view, prevState) {
@@ -92,6 +93,7 @@ export const TableInsertPlugin = (editor: Editor): Plugin => {
           }
         },
         destroy() {
+          clearTimeout(firstPass);
           // Clean up all tables
           tableMap.forEach((_, tableElement) => {
             cleanupTable(tableElement);

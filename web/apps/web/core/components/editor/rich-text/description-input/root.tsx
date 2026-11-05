@@ -4,18 +4,19 @@
  * See the LICENSE file for details.
  */
 
-import { useImperativeHandle, useMemo } from "react";
-import { AutosaveError, useConfirmedAutosave } from "../../use-confirmed-autosave";
+import { useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { AutosaveError, PreservedInput, useConfirmedAutosave } from "../../use-confirmed-autosave";
+import { useDescriptionRetention } from "./retention";
+import { contentImageIDs, verifyEditorImages } from "@/hooks/editor/verify-images";
 import { observer } from "mobx-react";
 // nerve imports
-import type { EditorRefApi, TExtensions } from "@nerve/editor";
+import type { EditorImages, EditorRefApi, TExtensions } from "@nerve/editor";
 import { useTranslation } from "@nerve/i18n";
-import type { EFileAssetType, TNameDescriptionLoader } from "@nerve/types";
+import type { TNameDescriptionLoader } from "@nerve/types";
 import { getDescriptionPlaceholderI18n } from "@nerve/utils";
 // components
 import { RichTextEditor } from "@/components/editor/rich-text";
 // hooks
-import { useEditorAsset } from "@/hooks/store/use-editor-asset";
 import { useWorkspace } from "@/hooks/store/use-workspace";
 // local imports
 type TFormData = {
@@ -26,6 +27,7 @@ type TFormData = {
 export type DescriptionInputHandle = { restore: (confirm: () => Promise<string>) => Promise<void> };
 type Props = {
   autosaveRef?: React.Ref<DescriptionInputHandle>;
+  images?: EditorImages;
   prepareSubmit?: () => Props["onSubmit"];
   /**
    * @description Container class name, this will be used to add custom styles to the editor container
@@ -47,10 +49,6 @@ type Props = {
    * @description Entity ID, this will be used for file uploads and as the unique identifier for the entity
    */
   entityId: string;
-  /**
-   * @description File asset type, this will be used to upload the file to the editor
-   */
-  fileAssetType: EFileAssetType;
   /**
    * @description Initial value, pass the actual description to initialize the editor
    */
@@ -108,9 +106,9 @@ const DescriptionInputContent = observer(function DescriptionInputContent(props:
     containerClassName,
     disabled,
     disabledExtensions,
-    editorRef,
+    editorRef: givenEditorRef,
+    images,
     entityId,
-    fileAssetType,
     initialValue,
     issueSequenceId,
     onSubmit,
@@ -120,8 +118,10 @@ const DescriptionInputContent = observer(function DescriptionInputContent(props:
     swrDescription,
     workspaceSlug,
   } = props;
+  const ownedEditorRef = useRef<EditorRefApi>(null);
+  const editorRef = givenEditorRef ?? ownedEditorRef;
+  const retention = useDescriptionRetention(entityId);
   const { getWorkspaceBySlug } = useWorkspace();
-  const { uploadEditorAsset, duplicateEditorAsset } = useEditorAsset();
   const workspaceDetails = getWorkspaceBySlug(workspaceSlug);
   const { t } = useTranslation();
   const initial = useMemo(
@@ -135,6 +135,10 @@ const DescriptionInputContent = observer(function DescriptionInputContent(props:
     retry,
     replaceWith,
     replacing,
+    conflict,
+    needsResume,
+    resume,
+    discard,
   } = useConfirmedAutosave({
     initial,
     same: sameDescription,
@@ -147,7 +151,42 @@ const DescriptionInputContent = observer(function DescriptionInputContent(props:
       : undefined,
     status: setIsSubmitting,
     disabled,
+    retention,
+    canSave: (input) => !contentImageIDs(input.description_html).incomplete,
+    // Retained image identities are resent only after the current view verifies them (recover below).
+    resumesOnEdit: (input) => contentImageIDs(input.description_html).ids.length === 0,
   });
+  const [verifying, setVerifying] = useState(false);
+  const [imageFailure, setImageFailure] = useState(false);
+  // What the last committed render showed; a verification that outlives it must not resume newer input.
+  const current = useRef({ active: false, html: localDescription.description_html, images });
+  useLayoutEffect(() => {
+    current.current.html = localDescription.description_html;
+    current.current.images = images;
+  }, [localDescription.description_html, images]);
+  useLayoutEffect(() => {
+    const mounted = current.current;
+    mounted.active = true;
+    return () => {
+      mounted.active = false;
+    };
+  }, []);
+  const recover = async () => {
+    if (verifying) return;
+    const html = localDescription.description_html;
+    const live = () => current.current.active && current.current.images === images && current.current.html === html;
+    setVerifying(true);
+    setImageFailure(false);
+    try {
+      await verifyEditorImages(images, html);
+      if (live()) resume();
+    } catch {
+      if (live()) setImageFailure(true);
+    } finally {
+      if (current.current.active) setVerifying(false);
+    }
+  };
+  const unfinished = contentImageIDs(localDescription.description_html).incomplete;
 
   useImperativeHandle(
     autosaveRef,
@@ -170,12 +209,13 @@ const DescriptionInputContent = observer(function DescriptionInputContent(props:
     <>
       <RichTextEditor
         key={entityId}
-        editable={!disabled && !replacing}
+        editable={!disabled && !replacing && !verifying}
         ref={editorRef}
+        images={images}
         id={entityId}
         issueSequenceId={issueSequenceId}
         disabledExtensions={disabledExtensions}
-        initialValue={localDescription.description_html ?? "<p></p>"}
+        initialValue={(disabled ? initialValue : localDescription.description_html) ?? "<p></p>"}
         value={swrDescription ?? null}
         workspaceSlug={workspaceSlug}
         workspaceId={workspaceDetails.id}
@@ -186,39 +226,23 @@ const DescriptionInputContent = observer(function DescriptionInputContent(props:
         }}
         placeholder={placeholder ?? ((isFocused, value) => t(getDescriptionPlaceholderI18n(isFocused, value)))}
         containerClassName={containerClassName}
-        uploadFile={async (blockId, file) => {
-          try {
-            const { asset_id } = await uploadEditorAsset({
-              blockId,
-              data: {
-                entity_identifier: entityId,
-                entity_type: fileAssetType,
-              },
-              file,
-              projectId,
-              workspaceSlug,
-            });
-            return asset_id;
-          } catch (error) {
-            console.log("Error in uploading asset:", error);
-            throw new Error("Asset upload failed. Please try again later.", { cause: error });
-          }
-        }}
-        duplicateFile={async (assetId: string) => {
-          try {
-            const { asset_id } = await duplicateEditorAsset({
-              assetId,
-              entityType: fileAssetType,
-              projectId,
-              workspaceSlug,
-            });
-            return asset_id;
-          } catch {
-            throw new Error("Asset duplication failed. Please try again later.");
-          }
-        }}
       />
-      <AutosaveError failure={failure} retry={retry} />
+      {unfinished && !disabled && <p role="status">{t("content_files.image.unfinished")}</p>}
+      {imageFailure && <p role="alert">{t("content_files.image.unavailable")}</p>}
+      {needsResume && !disabled && (
+        <div inert={verifying}>
+          <PreservedInput
+            conflict={conflict}
+            resume={() => void recover()}
+            discard={() => {
+              discard();
+              editorRef.current?.setEditorValue(initialValue ?? "<p></p>", false);
+            }}
+          />
+        </div>
+      )}
+      {needsResume && disabled && <p role="status">{t("content_files.input.read_only")}</p>}
+      <AutosaveError failure={failure} retry={needsResume ? undefined : retry} />
     </>
   );
 });

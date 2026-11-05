@@ -40,6 +40,11 @@ export class IssueVerification {
   isUncertain(id: string): boolean {
     return this.records.has(id);
   }
+  /** A final owner read found no visible entity; consumers may retire local input without changing verification. */
+  isMissing(id: string): boolean {
+    const record = this.records.get(id);
+    return record?.identity === this.identity(id) && record.status === "missing";
+  }
   getError(id: string): unknown {
     const record = this.records.get(id);
     return record?.identity === this.identity(id) ? record.error : undefined;

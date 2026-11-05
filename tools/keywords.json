@@ -149,19 +149,19 @@
     },
     {
       "id": "services-files",
-      "phase": "M1/P1",
-      "why": "packages/services 只留 web 用到的地址工具和上传元数据工具，整包在 M5 删除；新的接口调用用生成的客户端。M2/P5 删掉了 Plane 的 axios 基类 api.service.ts 和令牌服务 developer/（PAT 改由 web 的 store 经生成的客户端调用）",
+      "phase": "M5/P7b",
+      "why": "Plane 的服务包 packages/services 已在 M5/P7b 整包删除：接口调用用生成的客户端，旧 APIService 的地址规范化移到 web/apps/web/core/lib/api-request-url.ts，上传元数据工具随旧文件链删除。这个目录再出现任何文件都是旧包回流（M1/P1 起逐步收缩，M2/P5 删掉 axios 基类和令牌服务）",
       "path": {
-        "source": "^web/packages/services/(?!(?:package\\.json|tsconfig\\.json|tsdown\\.config\\.ts|src/index\\.ts|src/helpers/(?:index|url|url\\.test)\\.ts|src/file/(?:index|helper)\\.ts)$)",
+        "source": "^web/packages/services/",
         "flags": ""
       },
       "samples": {
         "hit": [
-          "web/packages/services/src/issue/sites-issue.service.ts",
-          "web/packages/services/src/api.service.ts",
-          "web/packages/services/src/developer/api-token.service.ts"
+          "web/packages/services/package.json",
+          "web/packages/services/src/helpers/url.ts",
+          "web/packages/services/src/file/helper.ts"
         ],
-        "miss": ["web/packages/services/src/helpers/url.test.ts", "web/packages/services/src/file/helper.ts"]
+        "miss": ["web/apps/web/core/lib/api-request-url.ts", "web/apps/web/core/services/api.service.ts"]
       }
     },
     {

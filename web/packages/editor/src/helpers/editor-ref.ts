@@ -4,6 +4,7 @@
  * See the LICENSE file for details.
  */
 
+import { imageDocumentReady } from "@/extensions/custom-image/input";
 import type { Editor } from "@tiptap/core";
 import { DOMSerializer } from "@tiptap/pm/model";
 // nerve imports
@@ -12,7 +13,6 @@ import { convertHTMLToMarkdown } from "@nerve/utils";
 import { getEditorMenuItems } from "@/components/menus";
 // constants
 import { CORE_EXTENSIONS } from "@/constants/extension";
-import { CORE_EDITOR_META } from "@/constants/meta";
 // types
 import type { EditorRefApi, IEditorProps, TEditorCommands } from "@/types";
 // local imports
@@ -28,7 +28,7 @@ export const getEditorRefHelpers = (args: TArgs): EditorRefApi => {
   return {
     blur: () => editor?.commands.blur(),
     clearEditor: (emitUpdate = false) => {
-      editor?.chain().setMeta(CORE_EDITOR_META.SKIP_FILE_DELETION, true).clearContent(emitUpdate).run();
+      editor?.commands.clearContent(emitUpdate);
     },
     createSelectionAtCursorPosition: () => {
       if (!editor) return;
@@ -102,8 +102,6 @@ export const getEditorRefHelpers = (args: TArgs): EditorRefApi => {
     setEditorValue: (content, emitUpdate = false) => {
       editor
         ?.chain()
-        .setMeta(CORE_EDITOR_META.SKIP_FILE_DELETION, true)
-        .setMeta(CORE_EDITOR_META.INTENTIONAL_DELETION, true)
         .setContent(content, emitUpdate, {
           preserveWhitespace: true,
         })
@@ -164,7 +162,7 @@ export const getEditorRefHelpers = (args: TArgs): EditorRefApi => {
         editor.chain().focus().deleteRange({ from, to }).insertContent(contentHTML).run();
       }
     },
-    isEditorReadyToDiscard: () => editor?.storage?.utility?.uploadInProgress === false,
+    isEditorReadyToDiscard: () => !!editor && imageDocumentReady(editor),
     isMenuItemActive: (props) => {
       const { itemKey } = props;
       const editorItems = getEditorMenuItems(editor);

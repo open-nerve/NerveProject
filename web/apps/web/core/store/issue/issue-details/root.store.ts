@@ -8,6 +8,7 @@ import type {
   IssueUpdate,
   IssueLinkCreate,
   IssueLinkPatch,
+  IssueComment,
   IssueCommentCreate,
   IssueCommentUpdate,
 } from "@nerve/api-client";
@@ -213,15 +214,21 @@ export class IssueDetail implements IIssueDetail {
   // comment
   fetchComments = async (workspaceSlug: string, projectId: string, issueId: string, incremental = false) =>
     this.comment.fetchComments(workspaceSlug, projectId, issueId, incremental);
-  createComment = async (workspaceSlug: string, projectId: string, issueId: string, data: IssueCommentCreate) =>
-    this.comment.createComment(workspaceSlug, projectId, issueId, data);
+  createComment = async (
+    workspaceSlug: string,
+    projectId: string,
+    issueId: string,
+    data: IssueCommentCreate,
+    onConfirmed?: (answer: IssueComment) => void
+  ) => this.comment.createComment(workspaceSlug, projectId, issueId, data, onConfirmed);
   updateComment = async (
     workspaceSlug: string,
     projectId: string,
     issueId: string,
     commentId: string,
-    data: IssueCommentUpdate
-  ) => this.comment.updateComment(workspaceSlug, projectId, issueId, commentId, data);
+    data: IssueCommentUpdate,
+    onConfirmed?: (answer: IssueComment) => void
+  ) => this.comment.updateComment(workspaceSlug, projectId, issueId, commentId, data, onConfirmed);
   removeComment = async (workspaceSlug: string, projectId: string, issueId: string, commentId: string) =>
     this.comment.removeComment(workspaceSlug, projectId, issueId, commentId);
 

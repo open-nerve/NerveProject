@@ -3,307 +3,118 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  * See the LICENSE file for details.
  */
-
-import { AddOutline, CloseOutline, DownloadOutline, MinusOutline, NewTabOutline } from "@makeplane/propel/icons";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import ReactDOM from "react-dom";
-// nerve imports
-import { cn } from "@nerve/utils";
-
-const MIN_ZOOM = 0.5;
-const MAX_ZOOM = 2;
-const ZOOM_SPEED = 0.05;
-const ZOOM_STEPS = [0.5, 1, 1.5, 2];
-
+import { Dialog, DialogPanel } from "@headlessui/react";
+import { useContext, useEffect, useRef, useState } from "react";
+import { EditorLabelsContext } from "@/components/editor-labels";
+import { ImageDownloadAction } from "../download";
 type Props = {
   aspectRatio: number;
-  downloadSrc: string;
+  download: (signal: AbortSignal) => Promise<void>;
   isFullScreenEnabled: boolean;
-  isTouchDevice: boolean;
   src: string;
-  toggleFullScreenMode: (val: boolean) => void;
+  toggleFullScreenMode: (value: boolean) => void;
   width: string;
 };
-
-function ImageFullScreenModalWithoutPortal(props: Props) {
-  const { aspectRatio, isFullScreenEnabled, isTouchDevice, downloadSrc, src, toggleFullScreenMode, width } = props;
-  // refs
-  const dragStart = useRef({ x: 0, y: 0 });
-  const dragOffset = useRef({ x: 0, y: 0 });
-
-  const [magnification, setMagnification] = useState<number>(1);
-  const [initialMagnification, setInitialMagnification] = useState(1);
-  const [isDragging, setIsDragging] = useState(false);
-  const imgRef = useRef<HTMLImageElement | null>(null);
-
-  const widthInNumber = useMemo(() => {
-    if (!width) return 0;
-    return Number(width.replace("px", ""));
-  }, [width]);
-
-  const setImageRef = useCallback(
-    (node: HTMLImageElement | null) => {
-      if (!node || !isFullScreenEnabled) return;
-
-      imgRef.current = node;
-
-      const viewportWidth = window.innerWidth * 0.9;
-      const viewportHeight = window.innerHeight * 0.75;
-      const imageWidth = widthInNumber;
-      const imageHeight = imageWidth / aspectRatio;
-
-      const widthRatio = viewportWidth / imageWidth;
-      const heightRatio = viewportHeight / imageHeight;
-
-      setInitialMagnification(Math.min(widthRatio, heightRatio));
-      setMagnification(1);
-
-      // Reset image position
-      node.style.left = "0px";
-      node.style.top = "0px";
-    },
-    [isFullScreenEnabled, widthInNumber, aspectRatio]
-  );
-
-  const handleClose = useCallback(() => {
-    if (isDragging) return;
+export function ImageFullScreenModal({
+  aspectRatio,
+  download,
+  isFullScreenEnabled,
+  src,
+  toggleFullScreenMode,
+  width,
+}: Props) {
+  const { image: labels } = useContext(EditorLabelsContext);
+  const [zoom, setZoom] = useState(1);
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const drag = useRef<{ x: number; y: number; left: number; top: number } | undefined>(undefined);
+  const [panel, setPanel] = useState<HTMLElement | null>(null);
+  const close = () => {
     toggleFullScreenMode(false);
-    setMagnification(1);
-    setInitialMagnification(1);
-  }, [isDragging, toggleFullScreenMode]);
-
-  const handleMagnification = useCallback((direction: "increase" | "decrease") => {
-    setMagnification((prev) => {
-      // Find the appropriate target zoom level based on current magnification
-      let targetZoom: number;
-      if (direction === "increase") {
-        targetZoom = ZOOM_STEPS.find((step) => step > prev) ?? MAX_ZOOM;
-      } else {
-        // Reverse the array to find the next lower step
-        targetZoom = ZOOM_STEPS.findLast((step) => step < prev) ?? MIN_ZOOM;
-      }
-
-      // Reset position when zoom matches initial magnification
-      if (targetZoom === 1 && imgRef.current) {
-        imgRef.current.style.left = "0px";
-        imgRef.current.style.top = "0px";
-      }
-
-      return targetZoom;
-    });
-  }, []);
-
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      if (e.key === "Escape" || e.key === "+" || e.key === "=" || e.key === "-") {
-        e.preventDefault();
-        e.stopPropagation();
-
-        if (e.key === "Escape") handleClose();
-        if (e.key === "+" || e.key === "=") handleMagnification("increase");
-        if (e.key === "-") handleMagnification("decrease");
-      }
-    },
-    [handleClose, handleMagnification]
-  );
-
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (!imgRef.current) return;
-
-    const imgWidth = imgRef.current.offsetWidth * magnification;
-    const imgHeight = imgRef.current.offsetHeight * magnification;
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-
-    if (imgWidth > viewportWidth || imgHeight > viewportHeight) {
-      e.preventDefault();
-      e.stopPropagation();
-      setIsDragging(true);
-      dragStart.current = { x: e.clientX, y: e.clientY };
-      dragOffset.current = {
-        x: parseInt(imgRef.current.style.left || "0"),
-        y: parseInt(imgRef.current.style.top || "0"),
-      };
-    }
+    setZoom(1);
+    setOffset({ x: 0, y: 0 });
+    drag.current = undefined;
   };
-
-  const handleMouseMove = useCallback(
-    (e: MouseEvent) => {
-      if (!isDragging || !imgRef.current) return;
-
-      const dx = e.clientX - dragStart.current.x;
-      const dy = e.clientY - dragStart.current.y;
-
-      // Apply the scale factor to the drag movement
-      const scaledDx = dx / magnification;
-      const scaledDy = dy / magnification;
-
-      imgRef.current.style.left = `${dragOffset.current.x + scaledDx}px`;
-      imgRef.current.style.top = `${dragOffset.current.y + scaledDy}px`;
-    },
-    [isDragging, magnification]
-  );
-
-  const handleMouseUp = useCallback(() => {
-    if (!isDragging || !imgRef.current) return;
-    setIsDragging(false);
-  }, [isDragging]);
-
-  const handleWheel = useCallback(
-    (e: WheelEvent) => {
-      if (!imgRef.current || !isFullScreenEnabled) return;
-
-      e.preventDefault();
-
-      // Handle pinch-to-zoom
-      if (e.ctrlKey || e.metaKey) {
-        const delta = e.deltaY;
-        setMagnification((prev) => {
-          const newZoom = prev * (1 - delta * ZOOM_SPEED);
-          const clampedZoom = Math.min(Math.max(newZoom, MIN_ZOOM), MAX_ZOOM);
-
-          // Reset position when zoom matches initial magnification
-          if (clampedZoom === 1 && imgRef.current) {
-            imgRef.current.style.left = "0px";
-            imgRef.current.style.top = "0px";
-          }
-
-          return clampedZoom;
-        });
-        return;
-      }
-    },
-    [isFullScreenEnabled]
-  );
-
-  // Event listeners
+  const step = (direction: number) => {
+    const next = Math.max(0.5, Math.min(2, (direction > 0 ? Math.floor(zoom * 2) + 1 : Math.ceil(zoom * 2) - 1) / 2));
+    if (next === 1) setOffset({ x: 0, y: 0 });
+    setZoom(next);
+  };
   useEffect(() => {
-    if (!isFullScreenEnabled) return;
-
-    document.addEventListener("keydown", handleKeyDown);
-    window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("mouseup", handleMouseUp);
-    window.addEventListener("wheel", handleWheel, { passive: false });
-
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
-      window.removeEventListener("wheel", handleWheel);
+    const node = panel;
+    if (!isFullScreenEnabled || !node) return;
+    const wheel = (event: WheelEvent) => {
+      if (!event.ctrlKey && !event.metaKey) return;
+      event.preventDefault();
+      setZoom((value) => Math.max(0.5, Math.min(2, value * (1 - event.deltaY * 0.05))));
     };
-  }, [isFullScreenEnabled, handleKeyDown, handleMouseMove, handleMouseUp, handleWheel]);
-
-  if (!isFullScreenEnabled) return null;
-
+    node.addEventListener("wheel", wheel, { passive: false });
+    return () => node.removeEventListener("wheel", wheel);
+  }, [isFullScreenEnabled, panel]);
+  const baseWidth =
+    typeof window === "undefined"
+      ? parseFloat(width)
+      : Math.min(window.innerWidth * 0.9, window.innerHeight * 0.75 * aspectRatio);
   return (
-    <div
-      className={cn("pointer-events-none fixed inset-0 z-50 size-full bg-black/90 opacity-0 transition-opacity", {
-        "editor-image-full-screen-modal pointer-events-auto opacity-100": isFullScreenEnabled,
-        "cursor-default": !isDragging,
-        "cursor-grabbing": isDragging,
-      })}
-      role="dialog"
-      aria-modal="true"
-      aria-label="Fullscreen image viewer"
-    >
-      <div className="relative grid size-full place-items-center overflow-hidden">
-        <button type="button" aria-label="Close image viewer" onClick={handleClose} className="absolute inset-0" />
-        <button
-          type="button"
-          onClick={handleClose}
-          className="absolute top-10 right-10 z-10 grid size-8 place-items-center"
-          aria-label="Close image viewer"
-        >
-          <CloseOutline className="size-8 text-white/60 transition-colors hover:text-white" />
-        </button>
-        <img
-          ref={setImageRef}
-          src={src}
-          alt=""
-          className="read-only-image rounded-lg"
-          style={{
-            width: `${widthInNumber * initialMagnification}px`,
-            maxWidth: "none",
-            maxHeight: "none",
-            aspectRatio,
-            position: "relative",
-            transform: `scale(${magnification})`,
-            transformOrigin: "center",
-            transition: "width 0.2s ease, transform 0.2s ease",
+    <Dialog open={isFullScreenEnabled} onClose={close} className="relative z-[100]" aria-label={labels.fullScreen}>
+      <div className="fixed inset-0 bg-black/90" aria-hidden="true" />
+      <div className="fixed inset-0 grid place-items-center overflow-auto p-6">
+        <DialogPanel
+          ref={setPanel}
+          className="flex max-w-full flex-col items-center gap-4"
+          onKeyDown={(event) => {
+            if (!["+", "=", "-"].includes(event.key)) return;
+            event.preventDefault();
+            event.stopPropagation();
+            step(event.key === "-" ? -1 : 1);
           }}
-          onMouseDown={handleMouseDown}
-        />
-        <div className="fixed bottom-10 left-1/2 flex -translate-x-1/2 items-center justify-center gap-1 divide-x divide-subtle-1 rounded-md border border-subtle-1 bg-black py-2">
-          <div className="flex items-center">
-            <button
-              type="button"
-              onClick={(e) => {
-                if (isTouchDevice) {
-                  e.preventDefault();
-                  e.stopPropagation();
-                }
-                handleMagnification("decrease");
-              }}
-              className="grid size-6 place-items-center text-white/60 transition-colors duration-200 hover:text-white disabled:text-white/30"
-              disabled={magnification <= MIN_ZOOM}
-              aria-label="Zoom out"
-            >
-              <MinusOutline className="size-4" />
+        >
+          <button type="button" className="fixed top-10 right-10 z-10 text-white" onClick={close}>
+            {labels.close}
+          </button>
+          <img
+            alt=""
+            src={src}
+            referrerPolicy="no-referrer"
+            draggable={false}
+            className="read-only-image rounded-lg"
+            style={{
+              width: Number.isFinite(baseWidth) ? baseWidth : parseFloat(width),
+              maxWidth: "none",
+              maxHeight: "none",
+              objectFit: "contain",
+              aspectRatio,
+              transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})`,
+              touchAction: "none",
+            }}
+            onPointerDown={(event) => {
+              if (event.button !== 0) return;
+              event.preventDefault();
+              drag.current = { x: event.clientX, y: event.clientY, left: offset.x, top: offset.y };
+              event.currentTarget.setPointerCapture(event.pointerId);
+            }}
+            onPointerMove={(event) => {
+              const from = drag.current;
+              if (from) setOffset({ x: from.left + event.clientX - from.x, y: from.top + event.clientY - from.y });
+            }}
+            onPointerUp={() => {
+              drag.current = undefined;
+            }}
+            onPointerCancel={() => {
+              drag.current = undefined;
+            }}
+          />
+          <div className="fixed bottom-10 left-1/2 z-10 flex -translate-x-1/2 gap-4 rounded bg-black p-3 text-white">
+            <button type="button" disabled={zoom <= 0.5} onClick={() => step(-1)}>
+              {labels.zoomOut}
             </button>
-            <span className="w-12 text-center text-13 text-white">{Math.round(100 * magnification)}%</span>
-            <button
-              type="button"
-              onClick={(e) => {
-                if (isTouchDevice) {
-                  e.preventDefault();
-                  e.stopPropagation();
-                }
-                handleMagnification("increase");
-              }}
-              className="grid size-6 place-items-center text-white/60 transition-colors duration-200 hover:text-white disabled:text-white/30"
-              disabled={magnification >= MAX_ZOOM}
-              aria-label="Zoom in"
-            >
-              <AddOutline className="size-4" />
+            <span>{Math.round(zoom * 100)}%</span>
+            <button type="button" disabled={zoom >= 2} onClick={() => step(1)}>
+              {labels.zoomIn}
             </button>
+            <ImageDownloadAction download={download} />
           </div>
-          {!isTouchDevice && (
-            <button
-              type="button"
-              onClick={() => window.open(downloadSrc, "_blank", "noopener,noreferrer")}
-              className="grid size-8 flex-shrink-0 place-items-center text-white/60 transition-colors duration-200 hover:text-white"
-              aria-label="Download image"
-            >
-              <DownloadOutline className="size-4" />
-            </button>
-          )}
-          {!isTouchDevice && (
-            <button
-              type="button"
-              onClick={() => window.open(src, "_blank", "noopener,noreferrer")}
-              className="grid size-8 flex-shrink-0 place-items-center text-white/60 transition-colors duration-200 hover:text-white"
-              aria-label="Open image in new tab"
-            >
-              <NewTabOutline className="size-4" />
-            </button>
-          )}
-        </div>
+        </DialogPanel>
       </div>
-    </div>
+    </Dialog>
   );
-}
-
-export function ImageFullScreenModal(props: Props) {
-  if (!props.isFullScreenEnabled) return null;
-  let modal = <ImageFullScreenModalWithoutPortal {...props} />;
-  const portal = document.querySelector("#editor-portal");
-  if (portal) {
-    modal = ReactDOM.createPortal(modal, portal);
-  } else {
-    console.warn("Portal element #editor-portal not found. Rendering in document.body");
-    if (typeof document !== "undefined" && document.body) {
-      modal = ReactDOM.createPortal(modal, document.body);
-    }
-  }
-  return modal;
 }

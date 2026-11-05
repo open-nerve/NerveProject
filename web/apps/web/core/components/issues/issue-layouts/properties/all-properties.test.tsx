@@ -115,3 +115,51 @@ it.each([0, -1, Number.NaN, Number.MAX_SAFE_INTEGER + 1])(
     expect(host.querySelector("a")).toBeNull();
   }
 );
+async function renderAttachments(attachment_count: number, shown: boolean | undefined, activeLayout: string) {
+  await act(async () =>
+    root.render(
+      <MemoryRouter initialEntries={["/ws/projects/A/issues"]}>
+        <Routes>
+          <Route
+            path="/:workspaceSlug/*"
+            element={
+              <IssueProperties
+                issue={{ ...issueOf("files"), attachment_count }}
+                updateIssue={undefined}
+                displayProperties={{ attachment_count: shown }}
+                isReadOnly
+                className=""
+                activeLayout={activeLayout}
+              />
+            }
+          />
+        </Routes>
+      </MemoryRouter>
+    )
+  );
+}
+const attachmentChip = () =>
+  [...host.querySelectorAll(".sr-only")].find((node) => node.textContent === "content_files.title")?.parentElement;
+it.each([
+  [1, "list"],
+  [51, "list"],
+  [1, "kanban"],
+  [51, "kanban"],
+] as const)("shows the real attachment count %i on a %s row with a spoken name", async (count, layout) => {
+  await renderAttachments(count, true, layout);
+  const chip = attachmentChip()!;
+  expect(chip.textContent).toBe(`content_files.title${count}`);
+  expect(chip.querySelector("svg")?.getAttribute("aria-hidden")).toBe("true");
+  // The count is information, not a control: a click still reaches the row and opens the work item.
+  await act(async () => chip.click());
+  expect(rowClick).toHaveBeenCalledTimes(1);
+});
+it.each([
+  [0, true],
+  [51, false],
+  [51, undefined],
+] as const)("shows no attachment count for %i when the property is %s", async (count, shown) => {
+  await renderAttachments(count, shown, "list");
+  expect(attachmentChip()).toBeUndefined();
+  expect(host.textContent).not.toContain(String(count || "content_files"));
+});

@@ -10,6 +10,7 @@ import { clone, isNil } from "lodash-es";
 import { extractClosestEdge } from "@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge";
 import type { FC } from "react";
 import {
+  AttachOutline,
   CalendarOutline,
   DueDateOutline,
   LabelsOutline,
@@ -41,6 +42,7 @@ import { ISSUE_GROUP_BY_OPTIONS } from "@nerve/constants";
 // components
 import {
   SpreadsheetAssigneeColumn,
+  SpreadsheetAttachmentColumn,
   SpreadsheetCreatedOnColumn,
   SpreadsheetDueDateColumn,
   SpreadsheetLabelColumn,
@@ -271,6 +273,7 @@ export function getApproximateCardHeight(displayProperties: IIssueDisplayPropert
     "key",
     "sub_issue_count",
     "link",
+    "attachment_count",
     "created_on",
     "updated_on",
   ];
@@ -367,11 +370,13 @@ const SpreadSheetPropertyIconMap: Record<string, FC<ISvgIcons>> = {
   StartDateOutline: StartDateOutline,
   StateOutline: StateOutline,
   Link2: LinkOutline,
+  AttachOutline: AttachOutline,
   WorkItemsOutline: WorkItemsOutline,
 };
 
 export const SPREADSHEET_COLUMNS: { [key in keyof IIssueDisplayProperties]: TSpreadsheetColumn } = {
   assignee: SpreadsheetAssigneeColumn,
+  attachment_count: SpreadsheetAttachmentColumn,
   created_on: SpreadsheetCreatedOnColumn,
   due_date: SpreadsheetDueDateColumn,
   labels: SpreadsheetLabelColumn,

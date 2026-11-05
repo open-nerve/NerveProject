@@ -4,9 +4,10 @@
  * See the LICENSE file for details.
  */
 
-import { useEditorState, useEditor as useTiptapEditor } from "@tiptap/react";
+import { useEditor as useTiptapEditor } from "@tiptap/react";
 import { useImperativeHandle, useEffect, useLayoutEffect, useMemo } from "react";
 // extensions
+import { imageDocumentReady } from "@/extensions/custom-image/input";
 import { CoreEditorExtensions } from "@/extensions";
 // helpers
 import { getEditorRefHelpers } from "@/helpers/editor-ref";
@@ -26,7 +27,7 @@ export const useEditor = (props: TEditorHookProps) => {
     editorProps = defaultEditorProps,
     enableHistory,
     extensions = [],
-    fileHandler,
+    images,
     forwardedRef,
     getEditorMetaData,
     handleEditorReady,
@@ -34,7 +35,6 @@ export const useEditor = (props: TEditorHookProps) => {
     initialValue,
     isTouchDevice,
     mentionHandler,
-    onAssetChange,
     onChange,
     onEditorFocus,
     onTransaction,
@@ -64,7 +64,7 @@ export const useEditor = (props: TEditorHookProps) => {
           disabledExtensions,
           editable,
           enableHistory,
-          fileHandler,
+          images,
           getEditorMetaData,
           isTouchDevice,
           mentionHandler,
@@ -87,7 +87,7 @@ export const useEditor = (props: TEditorHookProps) => {
       onDestroy: () => handleEditorReady?.(false),
       onFocus: onEditorFocus,
     },
-    [editable]
+    [editable, images?.signal]
   );
 
   // With explicit recreation dependencies TipTap does not synchronize options on an ordinary render.
@@ -102,8 +102,7 @@ export const useEditor = (props: TEditorHookProps) => {
     // supported and value is undefined when the data from swr is not populated
     if (value == null) return;
     if (editor) {
-      const { uploadInProgress: isUploadInProgress } = editor.storage.utility;
-      if (!editor.isDestroyed && !isUploadInProgress) {
+      if (!editor.isDestroyed && imageDocumentReady(editor)) {
         try {
           editor.commands.setContent(value, false, {
             preserveWhitespace: true,
@@ -119,27 +118,6 @@ export const useEditor = (props: TEditorHookProps) => {
       }
     }
   }, [editor, value, id]);
-
-  // update assets upload status
-  useEffect(() => {
-    if (!editor) return;
-    const assetsUploadStatus = fileHandler.assetsUploadStatus;
-    editor.commands.updateAssetsUploadStatus?.(assetsUploadStatus);
-  }, [editor, fileHandler.assetsUploadStatus]);
-
-  // subscribe to assets list changes
-  const assetsList = useEditorState({
-    editor,
-    selector: ({ editor: currentEditor }) => ({
-      assets: currentEditor?.storage.utility?.assetsList ?? [],
-    }),
-  });
-  // trigger callback when assets list changes
-  useEffect(() => {
-    const assets = assetsList?.assets;
-    if (!assets || !onAssetChange) return;
-    onAssetChange(assets);
-  }, [assetsList?.assets, onAssetChange]);
 
   useImperativeHandle(
     forwardedRef,

@@ -7,7 +7,7 @@ import { observer } from "mobx-react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { issueDetailOf, issueLinkOf, issueStoreTab } from "@/store/issue/fake-issues";
 import { settle } from "@/lib/auth/fake-time";
-import { json } from "@/lib/auth/fake-nerve";
+import { json, type Call } from "@/lib/auth/fake-nerve";
 import { loadProjects } from "@/store/project/fake-projects";
 import * as detailHooks from "@/hooks/store/use-issue-detail";
 import { IssueDetailRoot } from "./issue-detail/root";
@@ -156,6 +156,46 @@ it("doesNotFinishAnOldHostsActionInTheNewScope", async () => {
     await action;
   });
   expect(next.isIssueLinkModalOpen).toBe(true);
+});
+// The canonical re-read after a write withdraws the item: the body, with every dialog drawn in it, unmounts.
+const withdrawn = async (id: string) => {
+  const rereads: Call[] = [];
+  const respond = tab.nerve.respond!;
+  tab.nerve.respond = (call) => (call.path === `/api/v0/issues/${id}` ? void rereads.push(call) : respond(call));
+  let reread!: Promise<unknown>;
+  await act(async () => {
+    reread = tab.app.issue.issues.refreshAuthoritative(id, { afterWrite: true });
+    await vi.advanceTimersByTimeAsync(0);
+  });
+  expect(rereads).toHaveLength(1);
+  expect(tab.app.issue.issues.getIssueById(id)).toBeUndefined();
+  return () =>
+    act(async () => {
+      tab.nerve.respond = respond;
+      rereads[0]!.answer(json(200, issueDetailOf(id)));
+      await reread;
+    });
+};
+it("a body withdrawn for a canonical re-read takes its open dialogs with it", async () => {
+  await render(detail("old"));
+  await act(async () => openAll(held.get("old")!));
+  expect(element.querySelector("button")?.textContent).toBe("old:true");
+  const reshow = await withdrawn("old");
+  expect(element.querySelector("button")).toBeNull();
+  await reshow();
+  // The body shown after the re-read opens none of the dialogs whose own form state went with the old body.
+  expect(element.querySelector("button")?.textContent).toBe("old:false");
+  expect(held.get("old")!.isAnyModalOpen).toBe(false);
+  expect(held.get("old")!.issueLinkData).toBeNull();
+});
+it("a peek whose item is withdrawn for a canonical re-read shows its body again with no dialog open", async () => {
+  tab.app.issue.issueDetail.setPeekIssue({ workspaceSlug: "ws", projectId: "A", issueId: "old" });
+  await render(<IssuePeekOverview hostScope="one" />);
+  await act(async () => openAll(held.get("peek-old")!));
+  const reshow = await withdrawn("old");
+  await reshow();
+  expect(held.get("peek-old")!.isAnyModalOpen).toBe(false);
+  expect(element.querySelector("button")?.textContent).toBe("peek-old:false");
 });
 it("permission ABA and StrictMode release local payloads without reviving a retired host", async () => {
   await render(<StrictMode>{detail("old")}</StrictMode>);

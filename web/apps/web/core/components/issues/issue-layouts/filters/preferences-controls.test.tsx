@@ -111,6 +111,7 @@ it("waits for confirmed property values and serializes two changes without losin
     "common.state",
     "issue.display.properties.sub_issue_count",
     "common.link",
+    "content_files.title",
     "common.sort.created_on",
     "common.sort.updated_on",
   ])
@@ -157,6 +158,28 @@ it("keeps other fields, null grouping, false and nested calendar settings when i
   });
   expect(button("issue.layouts.title.spreadsheet").getAttribute("aria-pressed")).toBe("true");
   expect(tab.nerve.calls.filter((call) => call.method === "GET" && call.path.endsWith("/issues"))).toHaveLength(1);
+});
+
+it("the attachments control saves the whole property set and a reloaded preference keeps it hidden", async () => {
+  await click("common.display");
+  expect(button("content_files.title").getAttribute("aria-pressed")).toBe("true");
+  await click("content_files.title");
+  await act(async () => until(() => patches().length === 1, "attachment property patch"));
+  const hidden = { ...initial.display_properties, attachment_count: false };
+  expect(patches()[0].body).toEqual({ display_properties: hidden });
+  expect(button("content_files.title").getAttribute("aria-pressed")).toBe("true");
+  await act(async () => patches()[0].answer(json(200, preferencesOf({ ...initial, display_properties: hidden }))));
+  expect(button("content_files.title").getAttribute("aria-pressed")).toBe("false");
+  const reload = await requestedIssue(tab.nerve, () => tab.app.issue.projectIssuesFilter.fetchFilters("ws", "A"), [
+    "GET",
+    "/api/v0/me/projects/A/preferences",
+  ]);
+  reload.call.answer(json(200, preferencesOf({ ...initial, display_properties: hidden })));
+  await act(async () => reload.promise);
+  expect(button("content_files.title").getAttribute("aria-pressed")).toBe("false");
+  // Showing or hiding a count never changes the server's list query.
+  expect(tab.nerve.calls.filter((call) => call.method === "GET" && call.path.endsWith("/issues"))).toHaveLength(1);
+  expect(fixture.toast).not.toHaveBeenCalled();
 });
 
 it("keeps the confirmed controls and shows one refusal when the save is rejected", async () => {

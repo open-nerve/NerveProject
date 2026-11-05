@@ -88,6 +88,7 @@ export function preferencesOf(fields: Partial<ProjectPreferences> = {}): Project
       state: true,
       sub_issue_count: true,
       link: true,
+      attachment_count: true,
       created_on: true,
       updated_on: true,
     },

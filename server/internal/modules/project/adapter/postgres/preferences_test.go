@@ -273,7 +273,7 @@ func TestEnsurePreferences(t *testing.T) {
 		"sort_order": "-3", "created_by_id": `"` + alice.String() + `"`, "updated_by_id": `"` + alice.String() + `"`, "created_at": stamp,
 		"updated_at": stamp, "deleted_at": "null", "filters": "{}",
 		"display_filters":    `{"layout": "list", "calendar": {"layout": "month", "show_weekends": false}, "group_by": null, "order_by": "-created_at", "sub_issue": true, "sub_group_by": null, "show_empty_groups": true}`,
-		"display_properties": `{"key": true, "link": true, "state": true, "labels": true, "assignee": true, "due_date": true, "priority": true, "created_on": true, "start_date": true, "updated_on": true, "sub_issue_count": true}`}
+		"display_properties": `{"key": true, "link": true, "state": true, "labels": true, "assignee": true, "due_date": true, "priority": true, "created_on": true, "start_date": true, "updated_on": true, "sub_issue_count": true, "attachment_count": true}`}
 	if got := columns(t, pool, "project_user_properties", carols); !maps.Equal(got, want) {
 		t.Errorf("carol's new settings: %v\nwant %v", got, want)
 	}

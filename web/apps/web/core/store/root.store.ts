@@ -24,8 +24,6 @@ import type { ICycleStore } from "./cycle.store";
 import { CycleStore } from "./cycle.store";
 import type { ICycleFilterStore } from "./cycle_filter.store";
 import { CycleFilterStore } from "./cycle_filter.store";
-import type { IEditorAssetStore } from "./editor/asset.store";
-import { EditorAssetStore } from "./editor/asset.store";
 import type { IFavoriteStore } from "./favorite.store";
 import { FavoriteStore } from "./favorite.store";
 import type { IGlobalViewStore } from "./global-view.store";
@@ -82,7 +80,6 @@ export class RootStore {
   projectInbox: IProjectInboxStore;
   workspaceNotification: IWorkspaceNotificationStore;
   favorite: IFavoriteStore;
-  editorAssetStore: IEditorAssetStore;
   workItemFilters: IWorkItemFilterStore;
   powerK: IPowerKStore;
 
@@ -120,7 +117,6 @@ export class RootStore {
     this.projectInbox = new ProjectInboxStore(this);
     this.workspaceNotification = new WorkspaceNotificationStore(this);
     this.favorite = new FavoriteStore(this);
-    this.editorAssetStore = new EditorAssetStore();
     this.workItemFilters = new WorkItemFilterStore();
     this.powerK = new PowerKStore();
   }

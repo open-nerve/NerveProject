@@ -5,10 +5,10 @@
  */
 
 import { useEffect, useRef } from "react";
+import { useIssueImages } from "@/hooks/editor/use-issue-images";
 import { observer } from "mobx-react";
 // nerve imports
 import type { EditorRefApi } from "@nerve/editor";
-import { EFileAssetType } from "@nerve/types";
 import type { TNameDescriptionLoader } from "@nerve/types";
 // components
 import { IssueDescriptionVersions } from "@/components/issues/issue-detail/description-versions";
@@ -68,6 +68,7 @@ export const PeekOverviewIssueDetails = observer(function PeekOverviewIssueDetai
 
   // derived values
   const issue = issueId ? getIssueDetailById(issueId) : undefined;
+  const { images } = useIssueImages(workspaceSlug, projectId, issueId);
 
   if (!issue || !issue.project_id) return <></>;
 
@@ -100,7 +101,7 @@ export const PeekOverviewIssueDetails = observer(function PeekOverviewIssueDetai
 
       <DescriptionInput
         autosaveRef={descriptionInputRef}
-        disabledExtensions={["image"]}
+        images={images}
         prepareSubmit={
           issueOperations.prepareUpdate
             ? () => {
@@ -118,7 +119,6 @@ export const PeekOverviewIssueDetails = observer(function PeekOverviewIssueDetai
         disabled={disabled || isArchived}
         editorRef={editorRef}
         entityId={issue.id}
-        fileAssetType={EFileAssetType.ISSUE_DESCRIPTION}
         initialValue={issueDescription}
         key={issue.id}
         onSubmit={async (value, isMigrationUpdate) => {

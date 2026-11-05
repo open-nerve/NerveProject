@@ -13,13 +13,11 @@ import { ETabIndices } from "@nerve/constants";
 import type { EditorRefApi } from "@nerve/editor";
 import { useTranslation } from "@nerve/i18n";
 
-import { EFileAssetType } from "@nerve/types";
 import { Loader } from "@nerve/ui";
 import { getDescriptionPlaceholderI18n, getTabIndex } from "@nerve/utils";
 // components
 import { RichTextEditor } from "@/components/editor/rich-text/editor";
 // hooks
-import { useEditorAsset } from "@/hooks/store/use-editor-asset";
 import { useProjectInbox } from "@/hooks/store/use-project-inbox";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 type TInboxIssueDescription = {
@@ -34,25 +32,14 @@ type TInboxIssueDescription = {
   ) => void;
   editorRef: RefObject<EditorRefApi | null>;
   onEnterKeyPress?: (e?: any) => void;
-  onAssetUpload?: (assetId: string) => void;
 };
 
 export const InboxIssueDescription = observer(function InboxIssueDescription(props: TInboxIssueDescription) {
-  const {
-    containerClassName,
-    workspaceSlug,
-    projectId,
-    workspaceId,
-    data,
-    handleData,
-    editorRef,
-    onEnterKeyPress,
-    onAssetUpload,
-  } = props;
+  const { containerClassName, workspaceSlug, projectId, workspaceId, data, handleData, editorRef, onEnterKeyPress } =
+    props;
   // i18n
   const { t } = useTranslation();
   // store hooks
-  const { uploadEditorAsset, duplicateEditorAsset } = useEditorAsset();
   const { loader } = useProjectInbox();
   const { isMobile } = usePlatformOS();
 
@@ -80,39 +67,6 @@ export const InboxIssueDescription = observer(function InboxIssueDescription(pro
       containerClassName={containerClassName}
       onEnterKeyPress={onEnterKeyPress}
       tabIndex={getIndex("description_html")}
-      uploadFile={async (blockId, file) => {
-        try {
-          const { asset_id } = await uploadEditorAsset({
-            blockId,
-            data: {
-              entity_identifier: data.id ?? "",
-              entity_type: EFileAssetType.ISSUE_DESCRIPTION,
-            },
-            file,
-            projectId,
-            workspaceSlug,
-          });
-          onAssetUpload?.(asset_id);
-          return asset_id;
-        } catch (error) {
-          console.log("Error in uploading work item asset:", error);
-          throw new Error("Asset upload failed. Please try again later.", { cause: error });
-        }
-      }}
-      duplicateFile={async (assetId: string) => {
-        try {
-          const { asset_id } = await duplicateEditorAsset({
-            assetId,
-            entityType: EFileAssetType.ISSUE_DESCRIPTION,
-            projectId,
-            workspaceSlug,
-          });
-          onAssetUpload?.(asset_id);
-          return asset_id;
-        } catch {
-          throw new Error("Asset duplication failed. Please try again later.");
-        }
-      }}
     />
   );
 });

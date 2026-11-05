@@ -4,6 +4,7 @@
  * See the LICENSE file for details.
  */
 
+import { ApiError } from "@/lib/api-error";
 import { useRef, useState } from "react";
 import { observer } from "mobx-react";
 import { createPortal } from "react-dom";
@@ -12,6 +13,7 @@ import type { EditorRefApi } from "@nerve/editor";
 import { useIssueSaveStatus } from "@/components/issues/use-issue-save-status";
 import { cn } from "@nerve/utils";
 // hooks
+import { ConfirmedContentNotice } from "../detail-host";
 import { useDetailScope } from "../issue-detail-widgets/use-detail-scope";
 import { useIssueDetail, useIssueDetailModals } from "@/hooks/store/use-issue-detail";
 import useKeypress from "@/hooks/use-keypress";
@@ -75,6 +77,18 @@ export const IssueView = observer(function IssueView(props: IIssueView) {
   } = detail;
   const { isAnyModalOpen } = useIssueDetailModals();
   const issue = getIssueById(issueId);
+  const archived =
+    is_archived ||
+    !!issue?.archived_at ||
+    !!detail.rootIssueStore.rootStore.projectRoot.project.getProjectById(projectId)?.archived_at;
+  const verification = detail.rootIssueStore.verification;
+  const missing = verification.isMissing(issueId);
+  const ownerError =
+    verification.getError(issueId) ??
+    (missing ? new ApiError(404, { status: 404, code: "not_found", title: "Not found" }) : undefined);
+  const visibleError = ownerError ?? error;
+  const loading = isLoading || (!issue && verification.isUncertain(issueId) && !ownerError);
+  const retryRead = ownerError ? () => detail.rootIssueStore.issues.refreshAuthoritative(issueId) : retry;
   // remove peek id
   const closePeek = (returnFocus: boolean) => {
     if (!capture()() || detail.peekIssue !== selection) return;
@@ -154,21 +168,22 @@ export const IssueView = observer(function IssueView(props: IIssueView) {
               "0px 4px 8px 0px rgba(0, 0, 0, 0.12), 0px 6px 12px 0px rgba(16, 24, 40, 0.12), 0px 1px 16px 0px rgba(16, 24, 40, 0.12)",
           }}
         >
-          {error ? (
+          <ConfirmedContentNotice />
+          {visibleError ? (
             <div className="relative h-screen w-full overflow-hidden">
               <IssuePeekOverviewError
                 removeRoutePeekId={removeRoutePeekId}
-                error={error}
-                retry={retry}
+                error={visibleError}
+                retry={retryRead}
                 workspaceSlug={workspaceSlug}
                 projectId={projectId}
                 issueId={issueId}
               />
             </div>
           ) : (
-            isLoading && <IssuePeekOverviewLoader removeRoutePeekId={removeRoutePeekId} />
+            loading && <IssuePeekOverviewLoader removeRoutePeekId={removeRoutePeekId} />
           )}
-          {!isLoading && !error && issue && (
+          {!loading && !visibleError && issue && (
             <>
               {/* header */}
               <IssuePeekOverviewHeader
@@ -197,7 +212,7 @@ export const IssueView = observer(function IssueView(props: IIssueView) {
                       issueId={issueId}
                       issueOperations={issueOperations}
                       disabled={disabled}
-                      isArchived={is_archived}
+                      isArchived={archived}
                       isSubmitting={isSubmitting}
                       setTitleStatus={setTitleStatus}
                       setDescriptionStatus={setDescriptionStatus}
@@ -208,7 +223,7 @@ export const IssueView = observer(function IssueView(props: IIssueView) {
                         workspaceSlug={workspaceSlug}
                         projectId={projectId}
                         issueId={issueId}
-                        disabled={disabled || is_archived}
+                        disabled={disabled || archived}
                       />
                     </div>
 
@@ -217,14 +232,14 @@ export const IssueView = observer(function IssueView(props: IIssueView) {
                       projectId={projectId}
                       issueId={issueId}
                       issueOperations={issueOperations}
-                      disabled={disabled || is_archived}
+                      disabled={disabled || archived}
                     />
 
                     <IssueActivity
                       workspaceSlug={workspaceSlug}
                       projectId={projectId}
                       issueId={issueId}
-                      disabled={is_archived}
+                      disabled={archived}
                     />
                   </div>
                 ) : (
@@ -238,7 +253,7 @@ export const IssueView = observer(function IssueView(props: IIssueView) {
                           issueId={issueId}
                           issueOperations={issueOperations}
                           disabled={disabled}
-                          isArchived={is_archived}
+                          isArchived={archived}
                           isSubmitting={isSubmitting}
                           setTitleStatus={setTitleStatus}
                           setDescriptionStatus={setDescriptionStatus}
@@ -249,7 +264,7 @@ export const IssueView = observer(function IssueView(props: IIssueView) {
                             workspaceSlug={workspaceSlug}
                             projectId={projectId}
                             issueId={issueId}
-                            disabled={disabled || is_archived}
+                            disabled={disabled || archived}
                           />
                         </div>
 
@@ -257,13 +272,13 @@ export const IssueView = observer(function IssueView(props: IIssueView) {
                           workspaceSlug={workspaceSlug}
                           projectId={projectId}
                           issueId={issueId}
-                          disabled={is_archived}
+                          disabled={archived}
                         />
                       </div>
                     </div>
                     <div
                       className={`vertical-scrollbar scrollbar-sm h-full !w-[400px] flex-shrink-0 overflow-hidden border-l border-subtle p-4 py-5 ${
-                        is_archived ? "pointer-events-none" : ""
+                        archived ? "pointer-events-none" : ""
                       }`}
                     >
                       <PeekOverviewProperties
@@ -271,7 +286,7 @@ export const IssueView = observer(function IssueView(props: IIssueView) {
                         projectId={projectId}
                         issueId={issueId}
                         issueOperations={issueOperations}
-                        disabled={disabled || is_archived}
+                        disabled={disabled || archived}
                       />
                     </div>
                   </div>

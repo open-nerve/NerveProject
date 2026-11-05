@@ -9,6 +9,7 @@ import { followInSession } from "@/lib/in-session";
 import { useRefusalMessage } from "@/hooks/use-refusal-toast";
 import { DescriptionVersionsDropdown } from "./dropdown";
 import { DescriptionVersionsModal } from "./modal";
+import type { EditorImages } from "@nerve/editor";
 
 /** Display metadata, not either domain's wire protocol. */
 export type DescriptionVersionOption = { id: string; ownerId: string; lastSavedAt: string };
@@ -19,6 +20,7 @@ export type TDescriptionVersionEntityInformation = {
   isRestoreDisabled: boolean;
 };
 type Props = {
+  images?: EditorImages;
   className?: string;
   entityInformation: TDescriptionVersionEntityInformation;
   scopeKey: string;
@@ -97,6 +99,7 @@ const DescriptionVersionsContent = observer(function DescriptionVersionsContent(
     <>
       {activeId && (
         <DescriptionVersionsModal
+          images={props.images}
           key={activeId}
           activeVersionDescription={html}
           activeVersionDetails={selected}

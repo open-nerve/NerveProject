@@ -3,124 +3,108 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  * See the LICENSE file for details.
  */
-
 import type { Editor } from "@tiptap/core";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
-// constants
-import { ACCEPTED_ATTACHMENT_MIME_TYPES, ACCEPTED_IMAGE_MIME_TYPES } from "@/constants/config";
-// types
-import type { TExtensions } from "@/types";
-
-type Props = {
-  disabledExtensions?: TExtensions[];
-  editor: Editor;
-};
-
-export const DropHandlerPlugin = (props: Props): Plugin => {
-  const { disabledExtensions, editor } = props;
-
+import { ACCEPTED_IMAGE_MIME_TYPES } from "@/constants/config";
+import { imageInputError, validateImages } from "@/extensions/custom-image/input";
+import type { EditorImages, TExtensions } from "@/types";
+type Props = { disabledExtensions?: TExtensions[]; editor: Editor; images?: EditorImages };
+export const DropHandlerPlugin = ({ disabledExtensions, editor, images }: Props): Plugin => {
+  const accept = (data: DataTransfer | null | undefined): File[] | undefined => {
+    if (
+      !editor.isEditable ||
+      !images?.write ||
+      images.signal.aborted ||
+      disabledExtensions?.includes("image") ||
+      !data?.files?.length
+    )
+      return;
+    const files = Array.from(data.files);
+    const ordinary = files.every((file) => file.type && !file.type.startsWith("image/"));
+    if (ordinary) return;
+    const directory = Array.from(data.items ?? []).some(
+      (item) => item.kind === "file" && (!item.getAsFile() || item.webkitGetAsEntry?.()?.isDirectory)
+    );
+    const error = directory ? "invalid" : validateImages(files, images.write.maxBytes);
+    imageInputError(editor, error);
+    return error ? undefined : files;
+  };
   return new Plugin({
     key: new PluginKey("drop-handler-plugin"),
     props: {
-      handlePaste: (view, event) => {
-        if (
-          editor.isEditable &&
-          event.clipboardData &&
-          event.clipboardData.files &&
-          event.clipboardData.files.length > 0
-        ) {
-          event.preventDefault();
-          const files = Array.from(event.clipboardData.files);
-          const acceptedFiles = files.filter(
-            (f) => ACCEPTED_IMAGE_MIME_TYPES.includes(f.type) || ACCEPTED_ATTACHMENT_MIME_TYPES.includes(f.type)
-          );
-
-          if (acceptedFiles.length) {
-            const pos = view.state.selection.from;
+      handleDOMEvents: {
+        paste(view, event) {
+          if (!event.clipboardData?.files?.length) return false;
+          if (
+            (!images?.write || disabledExtensions?.includes("image")) &&
+            ["text/nerve-editor-html", "text/html", "text/plain"].some((type) => event.clipboardData!.getData(type))
+          )
+            return false;
+          const files = accept(event.clipboardData);
+          // ProseMirror otherwise treats the file-only empty text slice as a paste and prevents the native event.
+          // Returning here leaves rejected files unprevented and bubbling to their owning consumer.
+          if (files) {
+            event.preventDefault();
             insertFilesSafely({
               disabledExtensions,
               editor,
-              files: acceptedFiles,
-              initialPos: pos,
+              files,
+              initialPos: view.state.selection.from,
               event: "drop",
             });
           }
           return true;
-        }
-        return false;
+        },
       },
-      handleDrop: (view, event, _slice, moved) => {
-        if (
-          editor.isEditable &&
-          !moved &&
-          event.dataTransfer &&
-          event.dataTransfer.files &&
-          event.dataTransfer.files.length > 0
-        ) {
-          event.preventDefault();
-          const files = Array.from(event.dataTransfer.files);
-          const acceptedFiles = files.filter(
-            (f) => ACCEPTED_IMAGE_MIME_TYPES.includes(f.type) || ACCEPTED_ATTACHMENT_MIME_TYPES.includes(f.type)
-          );
-
-          if (acceptedFiles.length) {
-            const coordinates = view.posAtCoords({
-              left: event.clientX,
-              top: event.clientY,
-            });
-
-            if (coordinates) {
-              const pos = coordinates.pos;
-              insertFilesSafely({
-                disabledExtensions,
-                editor,
-                files: acceptedFiles,
-                initialPos: pos,
-                event: "drop",
-              });
-            }
-            return true;
-          }
-        }
-        return false;
+      handlePaste(view, event) {
+        const files = accept(event.clipboardData);
+        if (!files) return false;
+        event.preventDefault();
+        return insertFilesSafely({
+          disabledExtensions,
+          editor,
+          files,
+          initialPos: view.state.selection.from,
+          event: "drop",
+        });
+      },
+      handleDrop(view, event, _slice, moved) {
+        if (moved) return false;
+        const files = accept(event.dataTransfer);
+        if (!files) return false;
+        const pos = view.posAtCoords({ left: event.clientX, top: event.clientY })?.pos;
+        if (pos === undefined) return false;
+        event.preventDefault();
+        return insertFilesSafely({ disabledExtensions, editor, files, initialPos: pos, event: "drop" });
       },
     },
   });
 };
-
-type InsertFilesSafelyArgs = {
+export function insertFilesSafely({
+  disabledExtensions,
+  editor,
+  files,
+  initialPos,
+  event,
+}: {
   disabledExtensions?: TExtensions[];
   editor: Editor;
   event: "insert" | "drop";
   files: File[];
   initialPos: number;
-  type?: "image";
-};
-
-export const insertFilesSafely = async (args: InsertFilesSafelyArgs) => {
-  const { disabledExtensions, editor, event, files, initialPos, type } = args;
+}): boolean {
+  const images = editor.storage.imageComponent?.images;
+  if (!editor.isEditable || !images?.write || images.signal.aborted || disabledExtensions?.includes("image"))
+    return false;
+  const error = validateImages(files, images.write.maxBytes);
+  imageInputError(editor, error);
+  if (error) return false;
   let pos = initialPos;
-
   for (const file of files) {
-    // safe insertion
-    const docSize = editor.state.doc.content.size;
-    pos = Math.min(pos, docSize);
-
-    try {
-      // insert the file at the current position when the caller or its MIME type makes it an image
-      const isImage = type === "image" || ACCEPTED_IMAGE_MIME_TYPES.includes(file.type);
-      if (isImage && !disabledExtensions?.includes("image")) {
-        editor.commands.insertImageComponent({
-          file,
-          pos,
-          event,
-        });
-      }
-    } catch (error) {
-      console.error(`Error while ${event}ing file:`, error);
-    }
-
-    // Move to the next position
-    pos += 1;
+    if (!ACCEPTED_IMAGE_MIME_TYPES.includes(file.type)) return false;
+    if (!editor.commands.insertImageComponent({ file, pos: Math.min(pos, editor.state.doc.content.size), event }))
+      return false;
+    pos++;
   }
-};
+  return true;
+}

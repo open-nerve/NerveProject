@@ -4,7 +4,10 @@
  * See the LICENSE file for details.
  */
 
-import { EditorContent } from "@tiptap/react";
+import type { ImageInputError } from "@/extensions/custom-image/input";
+import { useContext } from "react";
+import { EditorLabelsContext } from "@/components/editor-labels";
+import { EditorContent, useEditorState } from "@tiptap/react";
 import type { Editor } from "@tiptap/react";
 
 type Props = {
@@ -15,6 +18,11 @@ type Props = {
 
 export function EditorContentWrapper(props: Props) {
   const { editor, tabIndex, id } = props;
+  const labels = useContext(EditorLabelsContext);
+  const imageError = useEditorState({
+    editor,
+    selector: ({ editor: current }): ImageInputError | undefined => current?.storage.imageComponent?.inputError,
+  });
 
   return (
     <div
@@ -24,6 +32,7 @@ export function EditorContentWrapper(props: Props) {
       }}
     >
       <EditorContent editor={editor} id={id} />
+      {imageError && <p role="alert">{labels.image[imageError]}</p>}
     </div>
   );
 }

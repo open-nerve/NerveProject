@@ -82,6 +82,7 @@ export const ISSUE_DISPLAY_PROPERTIES_KEYS: (keyof IIssueDisplayProperties)[] = 
   "state",
   "sub_issue_count",
   "link",
+  "attachment_count",
   "created_on",
   "updated_on",
 ];
@@ -126,6 +127,7 @@ export const ISSUE_DISPLAY_PROPERTIES: {
     titleTranslationKey: "issue.display.properties.sub_issue_count",
   },
   { key: "link", titleTranslationKey: "common.link" },
+  { key: "attachment_count", titleTranslationKey: "content_files.title" },
   { key: "created_on", titleTranslationKey: "common.sort.created_on" },
   { key: "updated_on", titleTranslationKey: "common.sort.updated_on" },
 ];
@@ -140,6 +142,7 @@ export const SPREADSHEET_PROPERTY_LIST: (keyof IIssueDisplayProperties)[] = [
   "created_on",
   "updated_on",
   "link",
+  "attachment_count",
   "sub_issue_count",
 ];
 
@@ -224,6 +227,14 @@ export const SPREADSHEET_PROPERTY_DETAILS: {
     descendingOrderKey: "link_count",
     descendingOrderTitle: "Least",
     icon: "Link2",
+  },
+  attachment_count: {
+    i18n_title: "content_files.title",
+    ascendingOrderKey: "-attachment_count",
+    ascendingOrderTitle: "Most",
+    descendingOrderKey: "attachment_count",
+    descendingOrderTitle: "Least",
+    icon: "AttachOutline",
   },
   sub_issue_count: {
     i18n_title: "issue.display.properties.sub_issue",

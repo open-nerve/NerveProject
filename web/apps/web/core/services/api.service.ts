@@ -7,7 +7,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { AxiosInstance, AxiosRequestConfig } from "axios";
 import { create } from "axios";
-import { normalizeAPIRequestURL } from "@nerve/services";
+import { normalizeAPIRequestURL } from "@/lib/api-request-url";
 
 // The domains that do not use nerve's API yet (M3–M8) still call their old addresses through this class, and
 // nerve answers them 404 problem; each domain moves to the generated client when it gets its API (M2 design

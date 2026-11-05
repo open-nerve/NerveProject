@@ -4,5 +4,4 @@
  * See the LICENSE file for details.
  */
 
-export * from "./use-editor-config";
 export * from "./use-editor-mention";

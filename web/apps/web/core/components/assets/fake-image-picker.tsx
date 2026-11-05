@@ -2,6 +2,7 @@
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, vi } from "vitest";
+import type { RootStore } from "@/store/root.store";
 import { assetTab, avatarTarget, imageFile } from "@/store/asset/fake-assets";
 
 /** Let React commit between animation frames; stop at the condition with a bounded fake-time deadline. */
@@ -15,31 +16,35 @@ export async function waitForPickerDOM(done: () => boolean, what: string, remain
 /** Real upload session and transport edges, with native controls in JSDOM. */
 export async function pickerTab() {
   const tab = await assetTab();
+  return { ...(await pickerDOM(tab)), upload: tab.app.asset.createUpload(avatarTarget) };
+}
+
+/** Native controls shared by profile and content attachment tests. */
+export async function pickerDOM<T extends { app: RootStore }>(tab: T) {
   const container = document.createElement("div");
   document.body.append(container);
   const renderer = createRoot(container);
   let sequence = 0;
   const create = vi.spyOn(URL, "createObjectURL").mockImplementation(() => `blob:selection-${++sequence}`);
   const revoke = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
-  const upload = tab.app.asset.createUpload(avatarTarget);
-  const button = (name: string) => {
-    const result = [...document.querySelectorAll<HTMLButtonElement>("button")].find(
+  const button = (name: string, within: ParentNode = document) => {
+    const result = [...within.querySelectorAll<HTMLButtonElement>("button")].find(
       (b) => b.textContent === name || b.getAttribute("aria-label") === name
     );
     expect(result, `button ${name}`).toBeDefined();
     return result!;
   };
-  const select = async (files = [imageFile()]) => {
-    const input = document.querySelector<HTMLInputElement>('input[type="file"]');
+  const select = async (files = [imageFile()], within: ParentNode = document) => {
+    const input = within.querySelector<HTMLInputElement>('input[type="file"]');
     expect(input).not.toBeNull();
     Object.defineProperty(input!, "files", { configurable: true, value: files });
     await act(async () => input!.dispatchEvent(new Event("change", { bubbles: true })));
   };
-  const click = (name: string) => act(async () => button(name).click());
+  const click = (name: string, within: ParentNode = document) => act(async () => button(name, within).click());
   const dispose = async () => {
     await act(async () => renderer.unmount());
     tab.app.dispose();
     container.remove();
   };
-  return { ...tab, container, renderer, upload, create, revoke, select, button, click, dispose };
+  return { ...tab, container, renderer, create, revoke, select, button, click, dispose };
 }

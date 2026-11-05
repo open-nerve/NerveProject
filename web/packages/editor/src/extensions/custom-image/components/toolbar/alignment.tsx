@@ -4,13 +4,14 @@
  * See the LICENSE file for details.
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 // nerve imports
 import { useOutsideClickDetector } from "@nerve/hooks";
 import { ChevronDownOutline } from "@makeplane/propel/icons";
 import { Tooltip } from "@nerve/propel/tooltip";
 // local imports
 import type { TCustomImageAlignment } from "../../types";
+import { EditorLabelsContext } from "@/components/editor-labels";
 import { IMAGE_ALIGNMENT_OPTIONS } from "../../utils";
 
 type Props = {
@@ -21,6 +22,7 @@ type Props = {
 };
 
 export function ImageAlignmentAction(props: Props) {
+  const { image: labels } = useContext(EditorLabelsContext);
   const { activeAlignment, handleChange, isTouchDevice, toggleToolbarViewStatus } = props;
   // states
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -37,9 +39,10 @@ export function ImageAlignmentAction(props: Props) {
 
   return (
     <div ref={dropdownRef} className="relative h-full">
-      <Tooltip disabled={isTouchDevice} tooltipContent="Align">
+      <Tooltip disabled={isTouchDevice} tooltipContent={labels.align}>
         <button
           type="button"
+          aria-label={labels.align}
           className="flex h-full items-center gap-1 text-white/60 transition-colors hover:text-white"
           onClick={() => setIsDropdownOpen((prev) => !prev)}
         >
@@ -50,9 +53,10 @@ export function ImageAlignmentAction(props: Props) {
       {isDropdownOpen && (
         <div className="absolute top-full left-1/2 mt-0.5 flex h-7 -translate-x-1/2 items-center gap-2 rounded-sm bg-black/80 px-2">
           {IMAGE_ALIGNMENT_OPTIONS.map((option) => (
-            <Tooltip disabled={isTouchDevice} key={option.value} tooltipContent={option.label}>
+            <Tooltip disabled={isTouchDevice} key={option.value} tooltipContent={labels[option.value]}>
               <button
                 type="button"
+                aria-label={labels[option.value]}
                 className="grid h-full flex-shrink-0 place-items-center text-white/60 transition-colors hover:text-white"
                 onClick={() => {
                   handleChange(option.value);

@@ -99,6 +99,7 @@ async function mount(
     state: false,
     sub_issue_count: false,
     link: false,
+    attachment_count: false,
     created_on: false,
     updated_on: false,
   };

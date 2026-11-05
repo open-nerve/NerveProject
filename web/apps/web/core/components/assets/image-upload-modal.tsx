@@ -1,5 +1,5 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
-import type { ProfileUploadTarget } from "@/store/asset/upload-session";
+import type { ProfileUploadTarget } from "@/store/asset/upload-policy";
 import { useState, useEffect } from "react";
 import { observer } from "mobx-react";
 import { EModalWidth, ModalCore, ModalTitle } from "@nerve/ui";

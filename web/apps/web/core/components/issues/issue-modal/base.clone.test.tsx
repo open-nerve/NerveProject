@@ -8,10 +8,15 @@ import { EIssuesStoreType } from "@nerve/types";
 import { ApiError } from "@/lib/api-error";
 import { toasts } from "@/lib/fake-toast";
 import { issueOf, issueStoreTab } from "@/store/issue/fake-issues";
+import { StoreContext } from "@/lib/store-context";
 import type { IssueDescriptionEditor } from "./components/description-editor";
 import { CreateUpdateIssueModalBase } from "./base";
-vi.mock("@/lib/store-context", () => ({ rootStore: {} }));
+vi.mock("@/lib/store-context", async () => ({
+  rootStore: {},
+  StoreContext: (await import("react")).createContext(undefined),
+}));
 let tab: Awaited<ReturnType<typeof issueStoreTab>>;
+const withStore = (node: React.ReactNode) => <StoreContext.Provider value={tab.app}>{node}</StoreContext.Provider>;
 const boundary = vi.hoisted(() => ({ fetch: vi.fn(), create: vi.fn(), update: vi.fn() }));
 vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
 vi.mock("@nerve/propel/toast", () => import("@/lib/fake-toast"));
@@ -109,7 +114,7 @@ it("reads the independent clone source, locks the real project Controller and su
   const data = { name: "Cloned title", project_id: "A", state_id: "state" };
   const original = { ...data };
   const props = { data, sourceIssueId: "source", isOpen: true, onClose: vi.fn(), withDraftIssueWrapper: false };
-  await act(async () => root.render(<CreateUpdateIssueModalBase {...props} />));
+  await act(async () => root.render(withStore(<CreateUpdateIssueModalBase {...props} />)));
   await act(async () =>
     container.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }))
   );
@@ -143,7 +148,9 @@ it.each([
   { data: { name: "forced", project_id: "A" }, isProjectSelectionDisabled: true, disabled: true },
 ])("project selection follows actual FormRoot disabled state ($disabled)", async ({ disabled, ...props }) => {
   await act(async () =>
-    root.render(<CreateUpdateIssueModalBase {...props} isOpen onClose={() => {}} withDraftIssueWrapper={false} />)
+    root.render(
+      withStore(<CreateUpdateIssueModalBase {...props} isOpen onClose={() => {}} withDraftIssueWrapper={false} />)
+    )
   );
   expect(container.querySelector<HTMLSelectElement>("select")!.disabled).toBe(disabled);
 });
@@ -162,7 +169,9 @@ it.each(["create", "update"] as const)(
     const onClose = vi.fn();
     const data = { name: "keep my text", project_id: "A", ...(kind === "update" ? { id: "existing" } : {}) };
     await act(async () =>
-      root.render(<CreateUpdateIssueModalBase data={data} isOpen onClose={onClose} withDraftIssueWrapper={false} />)
+      root.render(
+        withStore(<CreateUpdateIssueModalBase data={data} isOpen onClose={onClose} withDraftIssueWrapper={false} />)
+      )
     );
     await act(async () =>
       container.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }))

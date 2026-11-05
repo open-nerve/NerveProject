@@ -24,10 +24,6 @@ export const CustomPlaceholderExtension = (args: TArgs) => {
 
       if (node.type.name === CORE_EXTENSIONS.HEADING) return `Heading ${node.attrs.level}`;
 
-      const isUploadInProgress = editor.storage.utility?.uploadInProgress;
-
-      if (isUploadInProgress) return "";
-
       const shouldHidePlaceholder =
         editor.isActive(CORE_EXTENSIONS.TABLE) ||
         editor.isActive(CORE_EXTENSIONS.CODE_BLOCK) ||

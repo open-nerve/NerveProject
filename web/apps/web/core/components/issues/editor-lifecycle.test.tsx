@@ -11,15 +11,18 @@ import { until } from "@/lib/auth/fake-time";
 import { toasts } from "@/lib/fake-toast";
 import type { RichTextEditor } from "@/components/editor/rich-text";
 import type { DescriptionVersionsRoot } from "@/components/core/description-versions";
+import { StoreContext } from "@/lib/store-context";
+import type { RootStore } from "@/store/root.store";
 import { IssueMainContent } from "./issue-detail/main-content";
 import { useIssueOperations } from "./issue-detail/use-issue-operations";
 
 vi.mock("@/lib/auth/api-client", () => ({ tokenManager: { state: { loginId: "editors" } }, publicClient: {} }));
 vi.mock("@/lib/auth/use-session", () => ({ useSession: () => ({ status: "signed-in", loginId: "editors" }) }));
-vi.mock("@/lib/store-context", () => ({ rootStore: {} }));
+vi.mock("@/lib/store-context", async () => ({
+  StoreContext: (await import("react")).createContext<RootStore | undefined>(undefined),
+}));
 vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
 vi.mock("@nerve/propel/toast", () => import("@/lib/fake-toast"));
-vi.mock("@/hooks/store/use-editor-asset", () => ({ useEditorAsset: () => ({}) }));
 vi.mock("@/hooks/store/use-workspace", () => ({ useWorkspace: () => tab.app.workspaceRoot }));
 vi.mock("@/hooks/store/user", () => ({ useUser: () => ({ data: undefined }) }));
 vi.mock("@/hooks/store/use-member", () => ({ useMember: () => ({ getUserDetails: () => undefined }) }));
@@ -102,9 +105,11 @@ beforeEach(async () => {
   renderer = createRoot(host);
   await act(async () =>
     renderer.render(
-      <SWRConfig value={{ provider: () => new Map() }}>
-        <Host />
-      </SWRConfig>
+      <StoreContext.Provider value={tab.app}>
+        <SWRConfig value={{ provider: () => new Map() }}>
+          <Host />
+        </SWRConfig>
+      </StoreContext.Provider>
     )
   );
 });

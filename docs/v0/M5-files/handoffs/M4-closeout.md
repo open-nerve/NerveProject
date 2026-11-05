@@ -79,3 +79,11 @@ M5-03已落实首表同步删除图、原At/By的事务内范围投递、目录�
 M5-01的全部Issue真实附件计数、全局排序、三类附件分页和已有store数据消费已接通；M5-02有序src、当前图片绑定、草稿完整集合换项目/发布及七处故障回滚、唯一发布、历史图片保留已验证。M5-03覆盖真实六用途资产、五种父删除、61/59天保留、物理权限故障/恢复与实际新OS进程继续River游标，目录守卫未放宽。原始证据及边界见[P5记录§20](../reviews/P5-issue-assets-review.md#20-t13验收与交接核对)。
 
 本页保持open：P7才开放工作项/评论/编辑器图片与列表控件，撤销重做、伪造剪贴板和换宿主迟到结果仍需页面验收；P8汇总最终清理与三浏览器证据。旧copyMarkdownToClipboard没有新增消费者，也未声称已修复。P5未新增投递任务CLI，M5-04完整原文继续保留。阶段七项、整审与集成另记，不能由本段API证据代签。
+
+## 处理结果（M5/P7b T12核对）
+
+上文列出的旧文件服务调用方已清零：评论创建在T6改为私有准备件加一次POST，编辑器在T7–T9改用EditorImages能力（`use-editor-config`在T8删除），M7未开放的收集箱创建弹窗在T12删去从未被调用的上传回调与bulk状态请求、不启用图片。旧FileService/FileUploadService、编辑器资产store与hook、`EFileAssetType`与旧文件类型、旧文件URL工具和services包全部删除；已开放页面的行为测试在生成客户端、原始传输和旧APIService三条通道上断言没有`/api/assets/v2`、bulk、旧restore或multipart。旧copyMarkdownToClipboard没有新增消费者，复制为Markdown时图片省略（签名读取不外泄），具名风险仍归P8。本页保持open。
+
+## 处理结果（M5/P7b T14核对）
+
+T13真实页面在M4的browse详情路由发现并修复两处，均在路由页面层，不改通用权限/读取算法（DetailResource、IssueVerification、权限观察器）：`370aba81`——路由以`!issue || pending`门控，写入后的规范重读把Issue标为pending时整页换成骨架屏，卸载IssueDetailHost及其保留输入，改为只在路由读取本身进行时显示骨架屏；`0d093f03`——以SWR瞬时isValidating代替“本次访问的读取已证实”，温缓存首帧挂载交互详情，重连重读已证实路由并卸载宿主，改为每次进入路由（含后退/前进）为一次访问、由其自发唯一lookup、应答前不挂载交互子树，并与M5设计§9的宿主读取一样关闭隐式reconnect重读（useSessionSWR增窄选项`revalidateOnMount: false`）。原生ID入口不变。T14门禁另修一处宿主状态归属：`5ff2e4a2`——`370aba81`后browse路由与peek一样在写后规范重读期间保留IssueDetailHost，宿主里的弹窗开关跨过了正文撤回，重读后正文重挂载即以空表单重开刚确认的链接/子项/关联弹窗；现弹窗开关随规范项在/不在换新，输入状态仍只随宿主scope。仍留给M4：写后重读期间弹窗表单卸载，其成功toast被跳过（M4详情页已如此，写入与列表正确）。本页保持open。

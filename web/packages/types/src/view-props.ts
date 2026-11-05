@@ -131,6 +131,7 @@ export interface IIssueDisplayProperties {
   state?: boolean;
   sub_issue_count?: boolean;
   link?: boolean;
+  attachment_count?: boolean;
   created_on?: boolean;
   updated_on?: boolean;
 }

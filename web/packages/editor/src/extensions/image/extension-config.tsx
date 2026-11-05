@@ -5,14 +5,8 @@
  */
 
 import { Image as BaseImageExtension } from "@tiptap/extension-image";
-// local imports
-import type { CustomImageExtensionOptions } from "../custom-image/types";
-import type { ImageExtensionStorage } from "./extension";
 
-export const ImageExtensionConfig = BaseImageExtension.extend<
-  Pick<CustomImageExtensionOptions, "getImageSource">,
-  ImageExtensionStorage
->({
+export const ImageExtensionConfig = BaseImageExtension.extend({
   addAttributes() {
     return {
       ...this.parent?.(),

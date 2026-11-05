@@ -44,6 +44,8 @@ type DisplayProperties struct {
 	State         bool `json:"state"`
 	SubIssueCount bool `json:"sub_issue_count"`
 	Link          bool `json:"link"`
-	CreatedOn     bool `json:"created_on"`
-	UpdatedOn     bool `json:"updated_on"`
+	// AttachmentCount shows a work item's number of live ordinary attachments.
+	AttachmentCount bool `json:"attachment_count"`
+	CreatedOn       bool `json:"created_on"`
+	UpdatedOn       bool `json:"updated_on"`
 }

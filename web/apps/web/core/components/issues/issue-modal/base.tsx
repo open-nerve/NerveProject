@@ -9,7 +9,7 @@ import type { Issue, Draft } from "@nerve/api-client";
 import type { IssueFormData, IssueDescriptionLoadState, IssueFormSubmitOptions } from "./types";
 import { ISSUE_FORM_FIELDS } from "./types";
 import { pick } from "lodash-es";
-import { useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
 // Nerve imports
@@ -19,6 +19,11 @@ import { SessionChangedError } from "@/lib/auth/token-manager";
 import { sessionGuard } from "@/lib/in-session";
 import { draftInput } from "@/services/issue/draft-input";
 import { draftFormData } from "./draft-form";
+import { TransferPendingError, useDraftContent } from "./draft-files";
+import { ContentCopy, CopyNotice, CopyUnconfirmedError } from "./content-copy";
+import { StoreContext } from "@/lib/store-context";
+import { joinUrlPath } from "@nerve/utils";
+import { problemCode } from "@/lib/api-error";
 import { useRefusalToast } from "@/hooks/use-refusal-toast";
 import { useDetailScope } from "@/components/issues/issue-detail-widgets/use-detail-scope";
 import { EIssuesStoreType } from "@nerve/types";
@@ -70,14 +75,23 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
   const [descriptionLoadState, setDescriptionLoadState] = useState<IssueDescriptionLoadState>("loading");
   const [descriptionAttempt, setDescriptionAttempt] = useState(0);
   const [isPending, setIsPending] = useState(false);
+  const [publishBlocked, setPublishBlocked] = useState(false);
   // store hooks
   const { t } = useTranslation();
   const refuse = useRefusalToast();
   const { workspaceSlug, projectId: routerProjectId, workItem } = useParams();
   const draftIssues = useWorkspaceDraftIssues();
+  const root = useContext(StoreContext);
+  // Only a copy can carry another host's images; it then goes through one real target draft.
+  const [copy] = useState(() =>
+    workspaceSlug && (sourceIssueId !== undefined || (props.isDraft && props.draftSeed !== undefined))
+      ? new ContentCopy(root, workspaceSlug)
+      : undefined
+  );
   const { fetchIssue } = useIssueDetail();
   const { allowedProjectIds } = useIssueModal();
   const { getProjectByIdentifier } = useProject();
+  const content = useDraftContent(workspaceSlug ?? "", isDraft ? data?.id : undefined);
   // current store details
   const { createIssue, updateIssue } = useIssuesActions(
     storeType === EIssuesStoreType.WORKSPACE_DRAFT ? EIssuesStoreType.DEFAULT : storeType
@@ -164,12 +178,31 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data?.project_id, projectId, isOpen, activeProjectId]);
 
+  /** Whether saving the stored draft changes its project; its content lifetime must end before that request. */
+  const movesProject = (payload: IssueFormData) => {
+    const held = isDraft && data?.id ? draftIssues.getIssueById(data.id, workspaceSlug) : undefined;
+    return !!held && Object.hasOwn(payload, "project_id") && (payload.project_id || null) !== held.project_id;
+  };
+  /** A move or publish waits until the user finishes or explicitly cancels the transfers on the wire. */
+  const assertSettled = () => {
+    if (content.settled()) return;
+    setToast({ type: TOAST_TYPE.ERROR, title: t("error"), message: t("content_files.draft.transfer_busy") });
+    throw new TransferPendingError();
+  };
+
   const handleCreateMoreToggleChange = (value: boolean) => {
     setCreateMore(value);
   };
 
   const finishClose = () => {
     descriptionRequest.current++;
+    if (copy?.target && workspaceSlug)
+      setToast({
+        type: TOAST_TYPE.INFO,
+        title: t("info"),
+        message: t("content_files.copy.kept_closed"),
+        actionItems: <a href={joinUrlPath(workspaceSlug, "drafts")}>{t("content_files.copy.open_drafts")}</a>,
+      });
 
     setActiveProjectId(null);
     setChangesMade(null);
@@ -182,18 +215,24 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
     options?: IssueFormSubmitOptions
   ): Promise<Issue | Draft | undefined> => {
     if (!workspaceSlug || (!is_draft_issue && !payload.project_id) || descriptionLoadState !== "ready") return;
+    // A seeded draft form submits only its edits; the seed holds the rest, images included.
+    const input = draftInput(payload, props.isDraft ? props.draftSeed : undefined);
+    const copying =
+      copy && ContentCopy.needed(input.payload.description_html) && draftIssues.canRead(workspaceSlug)
+        ? copy
+        : undefined;
+    if (copying?.blocked) throw new CopyUnconfirmedError();
 
     const session = sessionGuard();
     const current = formScope();
     const inSession = () => session() && current();
     try {
       let response: Issue | Draft | undefined;
-      // if draft issue, use draft issue store to create issue
-      if (is_draft_issue) {
-        response = await draftIssues.createIssue(
-          workspaceSlug,
-          draftInput(payload, props.isDraft ? props.draftSeed : undefined)
-        );
+      if (copying) {
+        if (!is_draft_issue && !payload.name?.trim()) return;
+        response = await copying.run(input, !is_draft_issue);
+      } else if (is_draft_issue) {
+        response = await draftIssues.createIssue(workspaceSlug, input);
       } else if (createIssue) {
         if (!payload.name?.trim()) return;
         response = await createIssue(payload.project_id!, {
@@ -236,9 +275,16 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
     const inSession = () => session() && current();
     try {
       let response: Draft | undefined;
-      if (isDraft)
-        response = await draftIssues.updateIssue(workspaceSlug, data.id, (held) => draftInput(payload, held.payload));
-      else if (updateIssue) {
+      if (isDraft) {
+        const moving = movesProject(payload);
+        if (moving) content.retire();
+        try {
+          response = await draftIssues.updateIssue(workspaceSlug, data.id, (held) => draftInput(payload, held.payload));
+        } catch (error) {
+          if (moving) content.restore();
+          throw error;
+        }
+      } else if (updateIssue) {
         const body = pick(
           payload,
           ISSUE_FORM_FIELDS.filter((field) => field !== "project_id")
@@ -266,15 +312,23 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
   };
   const executePublish = async (payload: IssueFormData) => {
     if (!workspaceSlug || !isDraft || !data?.id || descriptionLoadState !== "ready") return;
+    assertSettled();
     const current = formScope();
     const inSession = sessionGuard();
+    setPublishBlocked(false);
+    // Publishing moves every draft file on the server; this lifetime ends before the save that precedes it.
+    content.retire();
     try {
       await draftIssues.moveIssue(workspaceSlug, data.id, (held) => draftInput(payload, held.payload));
       if (!inSession() || !current()) return;
       setToast({ type: TOAST_TYPE.SUCCESS, title: t("success"), message: t("issue_created_successfully") });
       finishClose();
     } catch (error) {
-      if (inSession() && current()) refuse(error);
+      content.restore();
+      if (inSession() && current()) {
+        if (problemCode(error) === "asset.not_uploaded") setPublishBlocked(true);
+        refuse(error);
+      }
       throw error;
     }
   };
@@ -290,6 +344,7 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
     const session = sessionGuard();
     const current = formScope();
     const inSession = () => session() && current();
+    if (data?.id && movesProject(payload)) assertSettled();
     if (beforeFormSubmit) await beforeFormSubmit();
     if (!inSession()) throw new SessionChangedError();
     const response = !data?.id
@@ -371,6 +426,9 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
     modalTitle: modalTitle,
     primaryButtonText: primaryButtonText,
     isProjectSelectionDisabled: isProjectSelectionDisabled,
+    content,
+    publishBlocked,
+    notice: copy && workspaceSlug ? <CopyNotice copy={copy} slug={workspaceSlug} /> : undefined,
   };
 
   return (

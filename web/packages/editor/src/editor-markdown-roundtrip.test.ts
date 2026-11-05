@@ -7,7 +7,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { convertHTMLToMarkdown } from "@nerve/utils";
 import { getEditorRefHelpers } from "@/helpers/editor-ref";
 import { useEditor } from "@/hooks/use-editor";
-import { createEditor, destroyEditors, fileHandler, getEditorMetaData } from "./editor-test-fixture";
+import { createEditor, destroyEditors, getEditorMetaData } from "./editor-test-fixture";
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -101,7 +101,6 @@ it("the consumer hook parses pasted Markdown once and still accepts intentional 
       disabledExtensions: ["image"],
       enableHistory: true,
       initialValue: "",
-      fileHandler,
       getEditorMetaData,
       mentionHandler,
     });

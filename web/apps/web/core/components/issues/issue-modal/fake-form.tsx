@@ -10,6 +10,7 @@ import {
   type ComponentType,
 } from "react";
 import { createRoot } from "react-dom/client";
+import type React from "react";
 import { useFormContext } from "react-hook-form";
 import { afterEach, beforeEach, vi, type Mock } from "vitest";
 import type { Draft } from "@nerve/api-client";
@@ -20,12 +21,17 @@ import type { RichTextEditor } from "@/components/editor/rich-text";
 import { issueDetailOf, issueStoreTab, draftOf, requestedIssue } from "@/store/issue/fake-issues";
 import { json } from "@/lib/auth/fake-nerve";
 import { toasts } from "@/lib/fake-toast";
+import { StoreContext } from "@/lib/store-context";
+import type { RootStore } from "@/store/root.store";
 import { CreateUpdateIssueModalBase } from "./base";
 import { IssueFormRoot, type IssueFormProps } from "./form";
 import type { IssueFormValues } from "./types";
 
 vi.mock("@/lib/auth/api-client", () => ({ tokenManager: { state: { loginId: "form-login" } }, publicClient: {} }));
-vi.mock("@/lib/store-context", () => ({ rootStore: {} }));
+vi.mock("@/lib/store-context", async () => ({
+  rootStore: {},
+  StoreContext: (await import("react")).createContext<RootStore | undefined>(undefined),
+}));
 vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
 vi.mock("@nerve/propel/toast", () => import("@/lib/fake-toast"));
 // The project selector stays real; its decorative logo's browser font polling does not belong to jsdom's form owner.
@@ -39,7 +45,6 @@ vi.mock("@/hooks/store/use-project", () => ({ useProject: () => tab.app.projectR
 vi.mock("@/hooks/store/use-project-state", () => ({ useProjectState: () => tab.app.state }));
 vi.mock("@/hooks/store/use-workspace", () => ({ useWorkspace: () => tab.app.workspaceRoot }));
 vi.mock("@/hooks/store/workspace-draft", () => ({ useWorkspaceDraftIssues: () => tab.app.issue.workspaceDraftIssues }));
-vi.mock("@/hooks/store/use-editor-asset", () => ({ useEditorAsset: () => ({}) }));
 vi.mock("@/hooks/store/user", () => ({ useUserProfile: () => ({ data: { start_of_the_week: 1 } }) }));
 vi.mock("@/hooks/use-platform-os", () => ({ usePlatformOS: () => ({ isMobile: false }) }));
 vi.mock("@/hooks/use-issue-layout-store", () => ({ useIssueStoreType: () => EIssuesStoreType.PROJECT }));
@@ -207,7 +212,9 @@ function DialogHost() {
     </main>
   );
 }
-export const mountDialog = () => act(async () => root.render(<DialogHost />));
+/** The real root store under the form, as the application provides it. */
+const withStore = (node: React.ReactNode) => <StoreContext.Provider value={tab.app}>{node}</StoreContext.Provider>;
+export const mountDialog = () => act(async () => root.render(withStore(<DialogHost />)));
 export async function mountExisting(kind: "issue" | "draft") {
   let draft: Draft | undefined;
   if (kind === "draft") {
@@ -222,16 +229,18 @@ export async function mountExisting(kind: "issue" | "draft") {
   }
   await act(async () =>
     root.render(
-      kind === "draft" ? (
-        <CreateUpdateIssueModalBase isOpen isDraft draft={draft} onClose={close} onSubmit={confirmed} />
-      ) : (
-        <CreateUpdateIssueModalBase
-          isOpen
-          data={original()}
-          fetchIssueDetails={false}
-          onClose={close}
-          onSubmit={confirmed}
-        />
+      withStore(
+        kind === "draft" ? (
+          <CreateUpdateIssueModalBase isOpen isDraft draft={draft} onClose={close} onSubmit={confirmed} />
+        ) : (
+          <CreateUpdateIssueModalBase
+            isOpen
+            data={original()}
+            fetchIssueDetails={false}
+            onClose={close}
+            onSubmit={confirmed}
+          />
+        )
       )
     )
   );
@@ -239,13 +248,15 @@ export async function mountExisting(kind: "issue" | "draft") {
 export const mountNew = () =>
   act(async () =>
     root.render(
-      <CreateUpdateIssueModalBase
-        isOpen
-        data={{ name: "New", project_id: "A", description_html: "<p>New</p>" }}
-        fetchIssueDetails={false}
-        onClose={close}
-        onSubmit={confirmed}
-      />
+      withStore(
+        <CreateUpdateIssueModalBase
+          isOpen
+          data={{ name: "New", project_id: "A", description_html: "<p>New</p>" }}
+          fetchIssueDetails={false}
+          onClose={close}
+          onSubmit={confirmed}
+        />
+      )
     )
   );
 function Form({ overrides }: { overrides: Partial<IssueFormProps> }) {
@@ -268,7 +279,7 @@ function Form({ overrides }: { overrides: Partial<IssueFormProps> }) {
   );
 }
 export const mountForm = (overrides: Partial<IssueFormProps> = {}) =>
-  act(async () => root.render(<Form overrides={overrides} />));
+  act(async () => root.render(withStore(<Form overrides={overrides} />)));
 export const type = (selector: string, value: string) =>
   act(async () => {
     const input = host.querySelector<HTMLInputElement | HTMLTextAreaElement>(selector)!;

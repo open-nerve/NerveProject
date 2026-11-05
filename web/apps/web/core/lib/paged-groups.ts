@@ -121,9 +121,10 @@ export function decodePage(page: IssueListPage, meta: PageReadMeta, context: Lis
     if (!meta.first && !originalLower) throw new Error("Missing continuation boundary");
     const lower = meta.first ? null : copyBoundary(originalLower ?? null);
     const rows = data.map((issue): Row => {
-      // Both counts are checked even when this list sorts by another field.
+      // Every displayed count is checked even when this list sorts by another field.
       checkedTotal(issue.sub_issues_count);
       checkedTotal(issue.link_count);
+      checkedTotal(issue.attachment_count);
       compareIssueTime(issue.updated_at, issue.updated_at);
       return {
         id: issue.id,

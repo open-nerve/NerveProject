@@ -30,7 +30,10 @@ vi.mock("@nerve/i18n", () => ({
   useTranslation: () => ({ t: (key: string, args?: { name: string }) => (args ? `${key}: ${args.name}` : key) }),
 }));
 vi.mock("@nerve/propel/toast", () => import("@/lib/fake-toast"));
-vi.mock("@/hooks/store/use-issue-detail", () => ({ useIssueDetail: () => binding.tab!.app.issue.issueDetail }));
+vi.mock("@/hooks/store/use-issue-detail", async (original) => ({
+  ...(await original<typeof import("@/hooks/store/use-issue-detail")>()),
+  useIssueDetail: () => binding.tab!.app.issue.issueDetail,
+}));
 vi.mock("@/hooks/store/use-workspace", () => ({ useWorkspace: () => binding.tab!.app.workspaceRoot }));
 vi.mock("@/hooks/store/use-project", () => ({ useProject: () => binding.tab!.app.projectRoot.project }));
 vi.mock("@/hooks/store/use-member", () => ({
@@ -40,7 +43,6 @@ vi.mock("@/hooks/store/user", () => ({
   useUser: () => binding.tab!.app.user,
   useUserPermissions: () => binding.tab!.app.user.permission,
 }));
-vi.mock("@/hooks/store/use-editor-asset", () => ({ useEditorAsset: () => ({}) }));
 // The actual menu, permission store, comment commands and HTTP client remain in this consumer test.
 vi.mock("@/components/editor/lite-text", () => ({ LiteTextEditor: () => <div>Comment body</div> }));
 let root: Root, host: HTMLDivElement;
@@ -174,6 +176,7 @@ it("guestCommentsOwnVisibleIssue keeps author-only edit and delete independent o
 it("an archived comment has no edit, delete or create reaction trigger", async () => {
   await setup(20, 20, true);
   await render(true);
-  expect(host.querySelector("button")).toBeNull();
+  expect(host.querySelector('button[aria-haspopup="menu"]')).toBeNull();
+  expect([...host.querySelectorAll("button")].map((button) => button.textContent)).toEqual(["content_files.title"]);
   expect(binding.tab!.nerve.calls).toHaveLength(0);
 });

@@ -205,7 +205,14 @@ test("C12 (review): history Markdown copies literal punctuation and nested tasks
     description_html: original,
   });
   await updateIssue(api, other.token, issue.id, { description_html: "<p>Current revision</p>" });
+  const path = `/api/v0/issues/${issue.id}`;
+  // The editor first saves block identities for the revision written without them. Its debounced save must have
+  // answered before the paste, or the PATCH awaited below could be that save instead of the paste's.
+  const migrated = page.waitForResponse(
+    (response) => response.request().method() === "PATCH" && new URL(response.url()).pathname === path
+  );
   const watch = await openIssueDetail(page, seed, issue);
+  expect((await migrated).status()).toBe(200);
   const calls = await page.evaluateHandle(() => {
     const copied: string[] = [];
     Object.defineProperty(navigator, "clipboard", {
@@ -233,7 +240,7 @@ test("C12 (review): history Markdown copies literal punctuation and nested tasks
   // Substitute clipboard data on a synthetic paste event; the mounted parser and save path stay real.
   expect(
     (
-      await answerTo(page, "PATCH", `/api/v0/issues/${issue.id}`, () =>
+      await answerTo(page, "PATCH", path, () =>
         editor.evaluate((element, text) => {
           const clipboardData = new DataTransfer();
           clipboardData.setData("text/plain", text);

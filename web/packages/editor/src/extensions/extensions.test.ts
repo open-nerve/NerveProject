@@ -7,23 +7,12 @@ import type { Extensions } from "@tiptap/core";
 import { describe, expect, it } from "vitest";
 // local imports
 import { TOOLBAR_ITEMS } from "@/constants/common";
-import type { TExtensions, TFileHandler, TMentionHandler } from "@/types";
+import type { TExtensions, TMentionHandler } from "@/types";
 import { CoreEditorExtensions } from "./extensions";
 
 // What the two editor tasks of M1/P2 changed, asserted on the extension list every editor installs:
 // collaboration is gone, undo and redo stay local, the nodes the kept editors need are still there,
 // and the toolbar has one set of items now that the page editor is gone.
-
-const fileHandler: TFileHandler = {
-  assetsUploadStatus: {},
-  delete: async () => {},
-  getAssetDownloadSrc: async (path) => path,
-  getAssetSrc: async (path) => path,
-  restore: async () => {},
-  upload: async () => "asset-id",
-  duplicate: async () => "asset-id",
-  validation: { maxFileSize: 5 * 1024 * 1024 },
-};
 
 const mentionHandler: TMentionHandler = { renderComponent: () => null };
 
@@ -34,7 +23,6 @@ const buildExtensions = (overrides: TOverrides = {}): Extensions =>
     disabledExtensions: overrides.disabledExtensions ?? [],
     editable: overrides.editable ?? true,
     enableHistory: overrides.enableHistory ?? true,
-    fileHandler,
     getEditorMetaData: () => ({ file_assets: [], user_mentions: [] }),
     mentionHandler,
   });

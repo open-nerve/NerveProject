@@ -8,7 +8,7 @@ import { useLayoutEffect, useRef, useState } from "react";
 import { observer } from "mobx-react";
 // nerve imports
 import { ProfileAvatar } from "@/components/assets/profile-image";
-import type { EditorRefApi } from "@nerve/editor";
+import type { EditorImages, EditorRefApi } from "@nerve/editor";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 import { ChevronLeftOutline, ChevronRightOutline, CopyOutline } from "@makeplane/propel/icons";
@@ -27,6 +27,7 @@ import { IconButton } from "@nerve/propel/icon-button";
 import { useCopyText } from "@/hooks/use-copy-link";
 
 type Props = {
+  images?: EditorImages;
   activeVersionDescription: string | undefined;
   activeVersionDetails: DescriptionVersionOption | undefined;
   handleClose: () => void;
@@ -188,6 +189,7 @@ export const DescriptionVersionsModal = observer(function DescriptionVersionsMod
           )}
           {activeVersionId && activeVersionDescription !== undefined ? (
             <RichTextEditor
+              images={props.images}
               key={activeVersionId}
               editable={false}
               containerClassName="p-0 !pl-0 border-none"

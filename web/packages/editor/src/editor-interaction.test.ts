@@ -20,7 +20,8 @@ import type { EditorRefApi } from "@/types";
 // `editable` prop changes, useEditor destroys the editor and creates a new one, so "read-only, then
 // editable again" is two editors here as well.
 
-import { ADA, createEditor, destroyEditors, fileHandler, getEditorMetaData } from "./editor-test-fixture";
+import { fakeEditorImages, SOURCE_IMAGE } from "./fake-editor-images";
+import { ADA, createEditor, destroyEditors, getEditorMetaData } from "./editor-test-fixture";
 
 afterEach(() => {
   destroyEditors();
@@ -192,7 +193,7 @@ describe("a rich-text editor built like the kept ones", () => {
   });
 
   it("inserts an image from the toolbar, and keeps an uploaded image through a save", async () => {
-    const editor = await createEditor({ content: "<p>Screenshot:</p>" });
+    const editor = await createEditor({ content: "<p>Screenshot:</p>", images: fakeEditorImages().images });
     editor.commands.focus("end");
 
     refOf(editor).executeMenuItemCommand({ itemKey: "image", savedSelection: null });
@@ -216,13 +217,13 @@ describe("a rich-text editor built like the kept ones", () => {
   });
 
   it("pastes what a Nerve editor copied: the markup never reaches the live document, an uploaded image is duplicated", async () => {
-    const editor = await createEditor({ content: "<p>Notes</p>" });
+    const editor = await createEditor({ content: "<p>Notes</p>", images: fakeEditorImages().images });
     editor.commands.focus("end");
     // Any page can write the editor's clipboard type in its copy event. The <img> runs its handler as soon as its
     // markup becomes an element of the live document, attached or not.
     const copied =
       '<p>From the other editor</p><img src="x" onerror="window.pasted = true">' +
-      '<image-component src="asset-1" id="image-1" width="35%" alignment="center" status="uploaded"></image-component>';
+      `<image-component src="${SOURCE_IMAGE}" id="image-1" width="35%" alignment="center" status="uploaded"></image-component>`;
     const innerHTML = Object.getOwnPropertyDescriptor(Element.prototype, "innerHTML");
     const liveMarkup: string[] = [];
     vi.spyOn(Element.prototype, "innerHTML", "set").mockImplementation(function (this: Element, html: string) {
@@ -241,10 +242,11 @@ describe("a rich-text editor built like the kept ones", () => {
     expect(parse(editor.getHTML()).querySelector("[onerror]")).toBeNull();
     const images: ProseMirrorNode[] = [];
     editor.state.doc.descendants((node: ProseMirrorNode) => {
-      if (node.type.name === "imageComponent" && node.attrs.src === "asset-1") images.push(node);
+      if (node.type.name === "imageComponent" && node.attrs.src === null) images.push(node);
     });
     expect(images).toHaveLength(1);
-    expect(images[0].attrs.status).toBe("duplicating");
+    expect(images[0].attrs.status).toBe("pending");
+    expect(editor.storage.imageComponent.fileMap.get(images[0].attrs.id)?.sourceID).toBe(SOURCE_IMAGE);
     expect(images[0].attrs.id).toEqual(expect.any(String));
     expect(images[0].attrs.id).not.toBe("image-1");
   });
@@ -302,9 +304,10 @@ describe("a rich-text editor built like the kept ones", () => {
   });
 
   it("removes both image nodes and upload entry points when a consumer disables images, while keeping text", async () => {
-    const upload = vi.spyOn(fileHandler, "upload");
-    const duplicate = vi.spyOn(fileHandler, "duplicate");
-    const editor = await createEditor({ disabledExtensions: ["image"] });
+    const port = fakeEditorImages();
+    const upload = port.images.write!.upload;
+    const duplicate = port.images.write!.duplicate;
+    const editor = await createEditor({ disabledExtensions: ["image"], images: port.images });
     expect(editor.schema.nodes.image).toBeUndefined();
     expect(editor.schema.nodes.imageComponent).toBeUndefined();
     expect(getSlashCommandFilteredSections({ disabledExtensions: ["image"] })({ query: "image" })).toEqual([]);

@@ -11,6 +11,7 @@ import { observer } from "mobx-react";
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { ISSUE_RELATION_OPTIONS } from "@/components/relations";
 // local imports
+import { IssueAttachments } from "./attachments/root";
 import { LinksCollapsible } from "./links";
 import { RelationsCollapsible } from "./relations";
 import { SubIssuesCollapsible } from "./sub-issues";
@@ -41,6 +42,7 @@ export const IssueDetailWidgetCollapsibles = observer(function IssueDetailWidget
 
   return (
     <div className="flex flex-col">
+      <IssueAttachments issueId={issueId} disabled={disabled} />
       {shouldRenderSubIssues && (
         <SubIssuesCollapsible
           workspaceSlug={workspaceSlug}

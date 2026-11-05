@@ -16,6 +16,9 @@ import Page from "@/app/(all)/[workspaceSlug]/(projects)/browse/[workItem]/page"
 import IdEntry from "@/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/issues/(detail)/[issueId]/page";
 
 const bound = vi.hoisted(() => ({ app: undefined as RootStore | undefined }));
+// Every mount of the route's body, so that one committed with an earlier visit's answer shows even when it is replaced
+// before a later check.
+const bodies = vi.hoisted(() => ({ mounted: [] as string[] }));
 vi.mock("@/lib/store-context", async () => ({
   get rootStore() {
     return bound.app;
@@ -38,13 +41,18 @@ vi.mock("@/hooks/use-navigation-preferences", () => ({
 // a stateful popover; real body owners are covered by detail-host.test.tsx.
 vi.mock("@/components/issues/issue-modal/modal", () => ({ CreateUpdateIssueModal: () => null }));
 vi.mock("@/components/browse/workItem-detail", () => ({
-  WorkItemDetailRoot: ({ issueId }: { issueId: string }) => (
-    <main data-issue={issueId}>
-      <FiltersDropdown title="Body actions">
-        <span>Body {issueId}</span>
-      </FiltersDropdown>
-    </main>
-  ),
+  WorkItemDetailRoot: function MockBody({ issueId }: { issueId: string }) {
+    useEffect(() => {
+      bodies.mounted.push(issueId);
+    }, [issueId]);
+    return (
+      <main data-issue={issueId}>
+        <FiltersDropdown title="Body actions">
+          <span>Body {issueId}</span>
+        </FiltersDropdown>
+      </main>
+    );
+  },
 }));
 vi.mock("@/layouts/auth-layout/project-wrapper", () => ({
   ProjectAuthWrapper: ({ children }: { children: ReactNode }) => children,
@@ -98,6 +106,7 @@ beforeEach(async () => {
   holdIdentifier = false;
   holdCore = false;
   refusal = undefined;
+  bodies.mounted.length = 0;
   tab.nerve.calls.length = 0;
   tab.nerve.respond = (call) => {
     if (call.method !== "GET") return;
@@ -194,6 +203,8 @@ it.each([200, 403, 404])("a warm native ID waits for its current read before han
   await act(async () => until(() => cores().length > previousCoreReads, "warm ID revalidation"));
   expect(router.state.location.pathname).toBe(path);
   expect(lookupReads()).toHaveLength(previousLookups);
+  // Only the entry's own read is held: the browse route it leads to makes its lookup, and that lookup's reads, anew.
+  holdCore = false;
   await act(async () =>
     cores()
       .at(-1)!
@@ -270,13 +281,105 @@ it("withholds a warm route's body and header until its new lookup has finished",
     await vi.advanceTimersByTimeAsync(1);
   });
   holdIdentifier = true;
+  bodies.mounted.length = 0;
   await act(async () => router.navigate("/ws/browse/A-1"));
   await act(async () => until(() => lookupReads().length === 2, "return lookup"));
-  // The same SWR key still has data, but its previous answer is not the new route's read.
+  // The same SWR key still has data, but its previous answer is not the new route's read: no body mounted with it,
+  // not even before the lookup went out.
+  expect(bodies.mounted).toEqual([]);
   expect(trigger("Header")).toBeNull();
   expect(trigger("Body")).toBeNull();
   await act(async () => lookupReads()[1]!.answer(json(200, source("one"))));
   await ready();
+  expect(bodies.mounted).toEqual(["one"]);
+});
+it("mounts a visit's body only once that visit's own lookup has answered, Back and Forward included", async () => {
+  await mount();
+  await ready();
+  await act(async () => {
+    await router.navigate("/ws/browse/A-2");
+    await vi.advanceTimersByTimeAsync(1);
+  });
+  await ready("two");
+  holdIdentifier = true;
+  const sent = lookupReads().length;
+  bodies.mounted.length = 0;
+  // Back: SWR still holds the first visit's answer for this route, which is not the return's read.
+  await act(async () => {
+    await router.navigate(-1);
+    await vi.advanceTimersByTimeAsync(1);
+  });
+  await act(async () => until(() => lookupReads().length === sent + 1, "lookup of the return"));
+  expect(bodies.mounted).toEqual([]);
+  expect(trigger("Header")).toBeNull();
+  expect(trigger("Body")).toBeNull();
+  await act(async () =>
+    lookupReads()
+      .at(-1)!
+      .answer(json(200, source("one")))
+  );
+  await ready();
+  expect(bodies.mounted).toEqual(["one"]);
+  // Forward again: the same for the second route.
+  bodies.mounted.length = 0;
+  await act(async () => {
+    await router.navigate(1);
+    await vi.advanceTimersByTimeAsync(1);
+  });
+  await act(async () => until(() => lookupReads().length === sent + 2, "lookup of the forward visit"));
+  expect(bodies.mounted).toEqual([]);
+  await act(async () =>
+    lookupReads()
+      .at(-1)!
+      .answer(json(200, source("two")))
+  );
+  await ready("two");
+  expect(bodies.mounted).toEqual(["two"]);
+});
+it("does not read the proven route again on reconnect, so its detail host and the input it keeps stay mounted", async () => {
+  await mount();
+  await ready();
+  const body = document.querySelector("main");
+  const lookups = lookupReads().length;
+  await act(async () => {
+    window.dispatchEvent(new Event("online"));
+    await vi.advanceTimersByTimeAsync(30);
+  });
+  expect(lookupReads()).toHaveLength(lookups);
+  expect(document.querySelector("main")).toBe(body);
+  expect(bodies.mounted).toEqual(["one"]);
+});
+it("keeps the proven route's detail host mounted while a write withdraws its canonical item for a re-read", async () => {
+  await mount();
+  await ready();
+  await act(async () => {
+    trigger("Body")!.click();
+    await vi.advanceTimersByTimeAsync(30);
+  });
+  const body = document.querySelector("main");
+  const panel = trigger("Body")!.getAttribute("aria-controls")!;
+  const lookups = lookupReads().length;
+  holdCore = true;
+  const cores = tab.nerve.to("/api/v0/issues/one").length;
+  let reread!: Promise<unknown>;
+  await act(async () => {
+    reread = tab.app.issue.issues.refreshAuthoritative("one", { afterWrite: true });
+    await until(() => tab.nerve.to("/api/v0/issues/one").length > cores, "canonical re-read");
+  });
+  // The host inside owns the withdrawn presentation and the input it preserves; the route must not replace it.
+  expect(tab.app.issue.issues.getIssueById("one")).toBeUndefined();
+  expect(document.querySelector("main")).toBe(body);
+  expect(document.getElementById(panel)).not.toBeNull();
+  await act(async () => {
+    tab.nerve
+      .to("/api/v0/issues/one")
+      .at(-1)!
+      .answer(json(200, source("one")));
+    await reread;
+  });
+  expect(document.querySelector("main")).toBe(body);
+  expect(trigger("Body")!.getAttribute("aria-expanded")).toBe("true");
+  expect(lookupReads()).toHaveLength(lookups);
 });
 it("ends header state on permission ABA without restoring the old menu", async () => {
   await mount();

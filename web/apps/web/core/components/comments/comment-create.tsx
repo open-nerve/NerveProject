@@ -6,7 +6,7 @@
 
 import type { IssueCommentCreate } from "@nerve/api-client";
 
-import { useId, useRef, useState } from "react";
+import { useId, useLayoutEffect, useRef, useState } from "react";
 import { observer } from "mobx-react";
 import { useForm, Controller } from "react-hook-form";
 // nerve imports
@@ -18,10 +18,16 @@ import { LiteTextEditor } from "@/components/editor/lite-text";
 // hooks
 import { useWorkspace } from "@/hooks/store/use-workspace";
 // services
-import { FileService } from "@/services/file.service";
+import { useCommentView, useCommentPreparations } from "./use-comment-content";
+import { useEditorAssets } from "@/hooks/editor/use-editor-assets";
+import { contentImageIDs, verifyEditorImages } from "@/hooks/editor/verify-images";
+import { useCommentFieldError } from "./use-comment-field-error";
+import { useCommentInput } from "./use-comment-input";
+import { PreparedCommentFiles } from "./prepared-files";
+import { CommentInputFeedback } from "./input-feedback";
+import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { followInSession } from "@/lib/in-session";
 import { SessionChangedError } from "@/lib/auth/token-manager";
-import { useRefusalToast } from "@/hooks/use-refusal-toast";
 import { useFormRefusal } from "@/lib/form-refusal";
 import { useRefusedFocus } from "@/lib/refused-focus";
 import { useDetailScope } from "../issues/issue-detail-widgets/use-detail-scope";
@@ -37,9 +43,6 @@ type TCommentCreate = {
   onSubmitCallback?: (elementId: string) => void;
 };
 
-// services
-const fileService = new FileService();
-
 export const CommentCreate = observer(function CommentCreate(props: TCommentCreate) {
   return <CommentCreateForm key={`${props.workspaceSlug}:${props.projectId}:${props.entityId}`} {...props} />;
 });
@@ -54,13 +57,17 @@ const CommentCreateForm = observer(function CommentCreateForm(props: TCommentCre
     onSubmitCallback,
   } = props;
   // states
-  const [uploadedAssetIds, setUploadedAssetIds] = useState<string[]>([]);
+  const input = useCommentInput("new-comment", "<p></p>");
+  const view = useCommentView(workspaceSlug, projectId, entityId);
+  const images = useEditorAssets(view);
+  const preparations = useCommentPreparations(view, input.value.attachmentIDs, input.select);
+  const detail = useIssueDetail();
   // refs
   const editorRef = useRef<EditorRefApi>(null);
   const sending = useRef(false);
   const [isSubmitting, setSubmitting] = useState(false);
+  const [imageFailure, setImageFailure] = useState(false);
   const capture = useDetailScope(workspaceSlug, projectId, entityId);
-  const refusal = useRefusalToast();
   const formRefusal = useFormRefusal(["comment_html"], {});
   const errorId = useId();
   const { t } = useTranslation();
@@ -78,54 +85,78 @@ const CommentCreateForm = observer(function CommentCreateForm(props: TCommentCre
     reset,
   } = useForm<IssueCommentCreate>({
     defaultValues: {
-      comment_html: "<p></p>",
+      comment_html: input.value.html,
     },
     shouldFocusError: false,
   });
   const formRef = useRefusedFocus<HTMLFormElement>(submitCount);
+  useCommentFieldError(input.value.error, setError);
+  const { focused } = input;
+  const focusAfterRead = input.value.focusAfterRead;
+  useLayoutEffect(() => {
+    if (view?.current && focusAfterRead && editorRef.current?.isEditorReadyToDiscard()) {
+      editorRef.current.focus("end");
+      focused();
+    }
+  }, [view, focusAfterRead, focused]);
 
   const onSubmit = async (formData: IssueCommentCreate) => {
     const current = capture();
     if (
       !current() ||
       sending.current ||
+      !view?.canWrite("attachment") ||
+      !preparations.ready ||
+      input.value.unknown ||
       isCommentEmpty(formData.comment_html) ||
       !editorRef.current?.isEditorReadyToDiscard()
     )
       return;
+    const attachment_ids = preparations.files!.payload();
     sending.current = true;
     setSubmitting(true);
+    setImageFailure(false);
     clearErrors("comment_html");
-    await followInSession(() => activityOperations.createComment(formData), {
-      done: async (comment) => {
-        if (!current()) return;
-        reset({ comment_html: "<p></p>" });
-        editorRef.current?.clearEditor();
-        setUploadedAssetIds([]);
-        // Asset bookkeeping is a separate M5 follow-up; it cannot turn a confirmed comment into a failed create.
-        if (uploadedAssetIds.length)
-          await followInSession(
-            () =>
-              fileService.updateBulkProjectAssetsUploadStatus(workspaceSlug, projectId, entityId, {
-                asset_ids: uploadedAssetIds,
-              }),
-            {
-              failed: (error) => {
-                if (current() && !(error instanceof SessionChangedError)) refusal(error);
-              },
-            }
-          );
-        if (!current()) return;
-        setToast({ type: TOAST_TYPE.SUCCESS, title: t("common.success"), message: t("issue.comments.create.success") });
-        onSubmitCallback?.(comment.id);
-      },
-      failed: (error) => {
-        if (current() && !(error instanceof SessionChangedError))
-          formRefusal(error, (field, message) => setError(field, { type: "server", message }));
-      },
-    });
+    let verified = false;
+    try {
+      await verifyEditorImages(images, formData.comment_html);
+      verified = current() && view.current && view.canWrite("description");
+    } catch (error) {
+      if (current() && !(error instanceof SessionChangedError)) setImageFailure(true);
+    }
+    if (!verified) {
+      sending.current = false;
+      if (current()) setSubmitting(false);
+      return;
+    }
+    input.begin();
+    await followInSession(
+      () =>
+        activityOperations.createComment({ ...formData, attachment_ids }, (comment) => {
+          if (!current() || !view.current) return;
+          input.confirmed("<p></p>", true);
+          preparations.files!.clear();
+          preparations.upload?.cancel();
+          reset({ comment_html: "<p></p>" });
+          editorRef.current?.clearEditor();
+          setToast({
+            type: TOAST_TYPE.SUCCESS,
+            title: t("common.success"),
+            message: t("issue.comments.create.success"),
+          });
+          onSubmitCallback?.(comment.id);
+        }),
+      {
+        failed: (error) => {
+          if (current() && !(error instanceof SessionChangedError)) {
+            input.failed(error);
+            formRefusal(error, (field, message) => setError(field, { type: "server", message }));
+          }
+        },
+      }
+    );
     sending.current = false;
-    setSubmitting(false);
+    if (current()) setSubmitting(false);
   };
 
   if (!workspaceId) return null;
@@ -142,13 +173,14 @@ const CommentCreateForm = observer(function CommentCreateForm(props: TCommentCre
         }
       }}
     >
-      <div inert={isSubmitting}>
+      <div inert={isSubmitting || !view?.canWrite("attachment")}>
         <Controller
           name="comment_html"
           control={control}
           render={({ field: { value, onChange } }) => (
             <LiteTextEditor
-              editable
+              images={images}
+              editable={!!view?.canWrite("description")}
               editorProps={{
                 attributes: {
                   role: "textbox",
@@ -159,26 +191,21 @@ const CommentCreateForm = observer(function CommentCreateForm(props: TCommentCre
                 },
               }}
               workspaceId={workspaceId}
-              id={"add_comment_" + entityId}
-              value="<p></p>"
+              id={"add_comment_" + entityId + "_" + errorId}
+              value={null}
               workspaceSlug={workspaceSlug}
               projectId={projectId}
               onEnterKeyPress={(e) => void handleSubmit(onSubmit)(e)}
               ref={editorRef}
               initialValue={value ?? "<p></p>"}
               containerClassName="min-h-min"
-              onChange={(_json, comment_html) => onChange(comment_html)}
+              onChange={(_json, comment_html) => {
+                input.change(comment_html);
+                clearErrors("comment_html");
+                onChange(comment_html);
+              }}
               isSubmitting={isSubmitting}
-              uploadFile={async (blockId, file) => {
-                const { asset_id } = await activityOperations.uploadCommentAsset(blockId, file);
-                setUploadedAssetIds((prev) => [...prev, asset_id]);
-                return asset_id;
-              }}
-              duplicateFile={async (assetId: string) => {
-                const { asset_id } = await activityOperations.duplicateCommentAsset(assetId);
-                setUploadedAssetIds((prev) => [...prev, asset_id]);
-                return asset_id;
-              }}
+              submitDisabled={!preparations.ready || input.value.unknown}
               showToolbarInitially={showToolbarInitially}
               parentClassName="p-2"
               displayConfig={{
@@ -193,6 +220,25 @@ const CommentCreateForm = observer(function CommentCreateForm(props: TCommentCre
           </p>
         )}
       </div>
+      {contentImageIDs(input.value.html).incomplete && <p role="status">{t("content_files.image.unfinished")}</p>}
+      {imageFailure && <p role="alert">{t("content_files.image.unavailable")}</p>}
+      <div inert={isSubmitting}>
+        {preparations.files && <PreparedCommentFiles files={preparations.files} upload={preparations.upload} />}
+      </div>
+      {!isSubmitting && (
+        <CommentInputFeedback
+          value={input.value}
+          current={() => capture()() && !!view?.current}
+          verify={async () => {
+            await detail.comment.fetchComments(workspaceSlug, projectId, entityId);
+            // The comment list is the check. The files show their own answer: one the unknown create bound stays
+            // unresolved there and blocks a resend, so it must not fail this verification.
+            if (view?.current) await preparations.files?.load().catch(() => undefined);
+          }}
+          verified={input.verify}
+          allowResend={input.allowResend}
+        />
+      )}
     </form>
   );
 });

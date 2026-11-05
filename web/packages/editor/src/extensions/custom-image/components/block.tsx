@@ -3,371 +3,168 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  * See the LICENSE file for details.
  */
-
 import { NodeSelection } from "@tiptap/pm/state";
-import React, { useRef, useState, useCallback, useContext, useLayoutEffect, useEffect } from "react";
-// nerve imports
+import { useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { cn, isComposing } from "@nerve/utils";
 import { EditorLabelsContext } from "@/components/editor-labels";
-// local imports
-import { ECustomImageAttributeNames } from "../types";
-import type { Pixel, TCustomImageAttributes, TCustomImageSize } from "../types";
-import { ensurePixelString, getImageBlockId, isImageDuplicating } from "../utils";
+import { ensurePixelString, getImageBlockId } from "../utils";
+import type { TCustomImageSize } from "../types";
 import type { CustomImageNodeViewProps } from "./node-view";
 import { ImageToolbarRoot } from "./toolbar";
-import { ImageUploadStatus } from "./upload-status";
-
-const MIN_SIZE = 100;
-
-type CustomImageBlockProps = CustomImageNodeViewProps & {
-  editorContainer: HTMLDivElement | null;
-  imageFromFileSystem: string | undefined;
-  setEditorContainer: (editorContainer: HTMLDivElement | null) => void;
-  setFailedToLoadImage: (isError: boolean) => void;
-  src: string | undefined;
-  downloadSrc: string | undefined;
+type Props = CustomImageNodeViewProps & {
+  src: string;
+  loaded: () => void;
+  failed: () => void;
+  download: (signal: AbortSignal) => Promise<void>;
 };
-
-export function CustomImageBlock(props: CustomImageBlockProps) {
+const MIN_SIZE = 100;
+export function CustomImageBlock({
+  editor,
+  node,
+  getPos,
+  selected,
+  updateAttributes,
+  src,
+  loaded,
+  failed,
+  download,
+}: Props) {
   const labels = useContext(EditorLabelsContext);
-  // props
-  const {
-    editor,
-    editorContainer,
-    extension,
-    getPos,
-    imageFromFileSystem,
-    node,
-    selected,
-    setEditorContainer,
-    setFailedToLoadImage,
-    src: resolvedImageSrc,
-    downloadSrc: resolvedDownloadSrc,
-    updateAttributes,
-  } = props;
-  const {
-    width: nodeWidth,
-    height: nodeHeight,
-    aspectRatio: nodeAspectRatio,
-    src: imgNodeSrc,
-    alignment: nodeAlignment,
-    status,
-  } = node.attrs;
-  // states
+  const { width, height, aspectRatio, alignment } = node.attrs;
   const [size, setSize] = useState<TCustomImageSize>({
-    width: ensurePixelString(nodeWidth, "35%") ?? "35%",
-    height: ensurePixelString(nodeHeight, "auto") ?? "auto",
-    aspectRatio: nodeAspectRatio || null,
+    width: ensurePixelString(width, "35%") ?? "35%",
+    height: ensurePixelString(height, "auto") ?? "auto",
+    aspectRatio,
   });
-  const [isResizing, setIsResizing] = useState(false);
-  const [initialResizeComplete, setInitialResizeComplete] = useState(false);
-  // refs
-  const containerRef = useRef<HTMLDivElement>(null);
-  const containerRect = useRef<DOMRect | null>(null);
-  const imageRef = useRef<HTMLImageElement>(null);
-  const [hasErroredOnFirstLoad, setHasErroredOnFirstLoad] = useState(false);
-  const [hasTriedRestoringImageOnce, setHasTriedRestoringImageOnce] = useState(false);
-  // extension options
-  const isTouchDevice = !!(editor.storage.utility as { isTouchDevice?: boolean } | undefined)?.isTouchDevice;
-
-  const updateAttributesSafely = useCallback(
-    (attributes: Partial<TCustomImageAttributes>, errorMessage: string) => {
-      try {
-        updateAttributes(attributes);
-      } catch (error) {
-        console.error(`${errorMessage}:`, error);
-      }
-    },
-    [updateAttributes]
+  const container = useRef<HTMLDivElement>(null);
+  const rect = useRef<DOMRect | null>(null);
+  const [resizing, setResizing] = useState(false);
+  const current = useCallback(() => {
+    if (editor.isDestroyed || !editor.isEditable) return false;
+    const pos = getPos();
+    const actual = pos === undefined ? undefined : editor.state.doc.nodeAt(pos);
+    return actual?.attrs.id === node.attrs.id && actual?.attrs.src === node.attrs.src;
+  }, [editor, getPos, node.attrs.id, node.attrs.src]);
+  useLayoutEffect(
+    () =>
+      setSize({
+        width: ensurePixelString(width, "35%") ?? "35%",
+        height: ensurePixelString(height, "auto") ?? "auto",
+        aspectRatio,
+      }),
+    [width, height, aspectRatio]
   );
-
-  const handleImageLoad = useCallback(() => {
-    const img = imageRef.current;
-    if (!img) return;
-    let closestEditorContainer: HTMLDivElement | null = null;
-
-    if (editorContainer) {
-      closestEditorContainer = editorContainer;
-    } else {
-      closestEditorContainer = img.closest(".editor-container");
-      if (!closestEditorContainer) {
-        console.error("Editor container not found");
-        return;
-      }
-    }
-    if (!closestEditorContainer) {
-      console.error("Editor container not found");
-      return;
-    }
-
-    setEditorContainer(closestEditorContainer);
-    const aspectRatioCalculated = img.naturalWidth / img.naturalHeight;
-
-    if (nodeWidth === "35%") {
-      const editorWidth = closestEditorContainer.clientWidth;
-      const initialWidth = Math.max(editorWidth * 0.35, MIN_SIZE);
-      const initialHeight = initialWidth / aspectRatioCalculated;
-
-      const initialComputedSize: TCustomImageSize = {
-        width: `${Math.round(initialWidth)}px` satisfies Pixel,
-        height: `${Math.round(initialHeight)}px` satisfies Pixel,
-        aspectRatio: aspectRatioCalculated,
-      };
-      setSize(initialComputedSize);
-      updateAttributesSafely(
-        initialComputedSize,
-        "Failed to update attributes while initializing an image for the first time:"
-      );
-    } else {
-      // as the aspect ratio in not stored for old images, we need to update the attrs
-      // or if aspectRatioCalculated from the image's width and height doesn't match stored aspectRatio then also we'll update the attrs
-      if (!nodeAspectRatio || nodeAspectRatio !== aspectRatioCalculated) {
-        setSize((prevSize) => {
-          const newSize = { ...prevSize, aspectRatio: aspectRatioCalculated };
-          updateAttributesSafely(
-            newSize,
-            "Failed to update attributes while initializing images with width but no aspect ratio:"
-          );
-          return newSize;
-        });
-      }
-    }
-    setInitialResizeComplete(true);
-  }, [nodeWidth, updateAttributesSafely, editorContainer, nodeAspectRatio, setEditorContainer]);
-
-  // for real time resizing
-  useLayoutEffect(() => {
-    setSize((prevSize) => ({
-      ...prevSize,
-      width: ensurePixelString(nodeWidth) ?? "35%",
-      height: ensurePixelString(nodeHeight) ?? "auto",
-      aspectRatio: nodeAspectRatio,
-    }));
-  }, [nodeWidth, nodeHeight, nodeAspectRatio]);
-
-  const handleResize = useCallback(
-    (e: MouseEvent | TouchEvent) => {
-      if (!containerRef.current || !containerRect.current || !size.aspectRatio) return;
-
-      const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
-
-      if (nodeAlignment === "right") {
-        const newWidth = Math.max(containerRect.current.right - clientX, MIN_SIZE);
-        const newHeight = newWidth / size.aspectRatio;
-        setSize((prevSize) => ({ ...prevSize, width: `${newWidth}px`, height: `${newHeight}px` }));
-      } else {
-        const newWidth = Math.max(clientX - containerRect.current.left, MIN_SIZE);
-        const newHeight = newWidth / size.aspectRatio;
-        setSize((prevSize) => ({ ...prevSize, width: `${newWidth}px`, height: `${newHeight}px` }));
-      }
+  const resize = useCallback(
+    (event: MouseEvent | TouchEvent) => {
+      if (!rect.current || !size.aspectRatio) return;
+      const x = "touches" in event ? event.touches[0]!.clientX : event.clientX;
+      const nextWidth = Math.max(MIN_SIZE, alignment === "right" ? rect.current.right - x : x - rect.current.left);
+      setSize((previous) => ({ ...previous, width: `${nextWidth}px`, height: `${nextWidth / size.aspectRatio!}px` }));
     },
-    [nodeAlignment, size.aspectRatio]
+    [alignment, size.aspectRatio]
   );
-
-  const handleResizeEnd = useCallback(() => {
-    setIsResizing(false);
-    updateAttributesSafely(size, "Failed to update attributes at the end of resizing:");
-  }, [size, updateAttributesSafely]);
-
-  const resizeWithKeyboard = (amount: number) => {
-    if (!size.aspectRatio) return;
-    const width = Math.max(MIN_SIZE, parseFloat(size.width) + amount);
-    const resized: TCustomImageSize = { ...size, width: `${width}px`, height: `${width / size.aspectRatio}px` };
-    setSize(resized);
-    updateAttributesSafely(resized, "Failed to resize image:");
-  };
-
-  const handleResizeStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsResizing(true);
-
-    if (containerRef.current) {
-      containerRect.current = containerRef.current.getBoundingClientRect();
-    }
-  }, []);
-
+  const end = useCallback(() => {
+    setResizing(false);
+    if (current()) updateAttributes(size);
+  }, [current, size, updateAttributes]);
   useEffect(() => {
-    if (isResizing) {
-      window.addEventListener("mousemove", handleResize);
-      window.addEventListener("mouseup", handleResizeEnd);
-      window.addEventListener("mouseleave", handleResizeEnd);
-      window.addEventListener("touchmove", handleResize);
-      window.addEventListener("touchend", handleResizeEnd);
-
-      return () => {
-        window.removeEventListener("mousemove", handleResize);
-        window.removeEventListener("mouseup", handleResizeEnd);
-        window.removeEventListener("mouseleave", handleResizeEnd);
-        window.removeEventListener("touchmove", handleResize);
-        window.removeEventListener("touchend", handleResizeEnd);
-      };
-    }
-  }, [isResizing, handleResize, handleResizeEnd]);
-
-  const handleImageMouseDown = useCallback(
-    (e: React.MouseEvent) => {
-      e.stopPropagation();
-      if (isTouchDevice) {
-        e.preventDefault();
-        editor.commands.blur();
-      }
-      const pos = getPos();
-      if (pos === undefined) return;
-      const nodeSelection = NodeSelection.create(editor.state.doc, pos);
-      editor.view.dispatch(editor.state.tr.setSelection(nodeSelection));
-    },
-    [editor, getPos, isTouchDevice]
-  );
-
-  const isDuplicating = isImageDuplicating(status);
-  // show the image loader if the remote image's src or preview image from filesystem is not set yet (while loading the image post upload) (or)
-  // if the initial resize (from 35% width and "auto" height attrs to the actual size in px) is not complete
-  const showImageLoader =
-    (!resolvedImageSrc && !isDuplicating) || !initialResizeComplete || hasErroredOnFirstLoad || isDuplicating; // show the image upload status only when the resolvedImageSrc is not ready
-  const showUploadStatus = !resolvedImageSrc && !isDuplicating;
-  // show the image utils only if the remote image's (post upload) src is set and the initial resize is complete (but not while we're showing the preview imageFromFileSystem)
-  const showImageToolbar = resolvedImageSrc && resolvedDownloadSrc && initialResizeComplete && !isDuplicating;
-  // show the image resizer only if the editor is editable, the remote image's (post upload) src is set and the initial resize is complete (but not while we're showing the preview imageFromFileSystem)
-  const showImageResizer = editor.isEditable && resolvedImageSrc && initialResizeComplete && !isDuplicating;
-  // show the preview image from the file system if the remote image's src is not set
-  const displayedImageSrc = resolvedImageSrc || imageFromFileSystem;
-
+    if (!resizing) return;
+    window.addEventListener("mousemove", resize);
+    window.addEventListener("touchmove", resize);
+    window.addEventListener("mouseup", end);
+    window.addEventListener("touchend", end);
+    return () => {
+      window.removeEventListener("mousemove", resize);
+      window.removeEventListener("touchmove", resize);
+      window.removeEventListener("mouseup", end);
+      window.removeEventListener("touchend", end);
+    };
+  }, [resizing, resize, end]);
+  const byKeyboard = (amount: number) => {
+    if (!size.aspectRatio || !current()) return;
+    const nextWidth = Math.max(MIN_SIZE, parseFloat(size.width) + amount);
+    const next: TCustomImageSize = { ...size, width: `${nextWidth}px`, height: `${nextWidth / size.aspectRatio}px` };
+    setSize(next);
+    updateAttributes(next);
+  };
   return (
     <div
-      id={
-        node.attrs[ECustomImageAttributeNames.ID]
-          ? getImageBlockId(node.attrs[ECustomImageAttributeNames.ID])
-          : undefined
-      }
-      className={cn("w-fit max-w-full transition-all", {
-        "ml-[50%] -translate-x-1/2": nodeAlignment === "center",
-        "ml-[100%] -translate-x-full": nodeAlignment === "right",
+      id={node.attrs.id ? getImageBlockId(node.attrs.id) : undefined}
+      className={cn("w-fit max-w-full", {
+        "ml-[50%] -translate-x-1/2": alignment === "center",
+        "ml-[100%] -translate-x-full": alignment === "right",
       })}
     >
       <div
-        ref={containerRef}
+        ref={container}
         className="group/image-component relative inline-block max-w-full"
-        style={{
-          width: size.width,
-          ...(size.aspectRatio && { aspectRatio: size.aspectRatio }),
-        }}
+        style={{ width: size.width, aspectRatio: size.aspectRatio ?? undefined }}
       >
-        {showImageLoader && (
-          <div className="animate-pulse rounded-md bg-layer-1" style={{ width: size.width, height: size.height }} />
-        )}
         <img
-          onMouseDown={handleImageMouseDown}
-          ref={imageRef}
-          src={displayedImageSrc}
+          className="image-component block rounded-md"
           alt=""
-          onLoad={handleImageLoad}
-          onError={(_e) =>
-            void (async () => {
-              // for old image extension this command doesn't exist or if the image failed to load for the first time
-              if (!extension.options.restoreImage || hasTriedRestoringImageOnce) {
-                setFailedToLoadImage(true);
-                return;
-              }
-
-              try {
-                setHasErroredOnFirstLoad(true);
-                // this is a type error from tiptap, don't remove await until it's fixed
-                if (!imgNodeSrc) {
-                  throw new Error("No source image to restore from");
-                }
-                await extension.options.restoreImage?.(imgNodeSrc);
-                if (!imageRef.current) {
-                  throw new Error("Image reference not found");
-                }
-                if (!resolvedImageSrc) {
-                  throw new Error("No resolved image source available");
-                }
-                if (isTouchDevice) {
-                  const refreshedSrc = await extension.options.getImageSource?.(imgNodeSrc);
-                  imageRef.current.src = refreshedSrc;
-                } else {
-                  imageRef.current.src = resolvedImageSrc;
-                }
-              } catch (error) {
-                // if the image failed to even restore, then show the error state
-                setFailedToLoadImage(true);
-                console.error("Error while loading image", error);
-              } finally {
-                setHasErroredOnFirstLoad(false);
-                setHasTriedRestoringImageOnce(true);
-              }
-            })()
-          }
-          width={size.width}
-          className={cn("image-component block rounded-md", {
-            // hide the image while the background calculations of the image loader are in progress (to avoid flickering) and show the loader until then
-            hidden: showImageLoader,
-            "read-only-image": !editor.isEditable,
-            "loading-image opacity-80 blur-sm": !resolvedImageSrc,
-          })}
-          style={{
-            width: size.width,
-            ...(size.aspectRatio && { aspectRatio: size.aspectRatio }),
+          src={src}
+          referrerPolicy="no-referrer"
+          style={{ width: size.width, aspectRatio: size.aspectRatio ?? undefined }}
+          onLoad={(event) => {
+            loaded();
+            const img = event.currentTarget;
+            if (!img.naturalWidth || !img.naturalHeight) return;
+            const ratio = img.naturalWidth / img.naturalHeight;
+            const localWidth =
+              width === "35%"
+                ? Math.max(MIN_SIZE, (container.current?.closest(".editor-container")?.clientWidth ?? 0) * 0.35)
+                : parseFloat(size.width);
+            // Intrinsic size only affects this view. Resolving/loading a capability must never save the document.
+            setSize({ width: `${localWidth}px`, height: `${localWidth / ratio}px`, aspectRatio: ratio });
+          }}
+          onError={failed}
+          onMouseDown={(event) => {
+            event.stopPropagation();
+            const pos = getPos();
+            if (!editor.isDestroyed && pos !== undefined)
+              editor.view.dispatch(editor.state.tr.setSelection(NodeSelection.create(editor.state.doc, pos)));
           }}
         />
-        {showUploadStatus && node.attrs[ECustomImageAttributeNames.ID] && (
-          <ImageUploadStatus editor={editor} nodeId={node.attrs[ECustomImageAttributeNames.ID]} />
-        )}
-        {showImageToolbar && (
-          <ImageToolbarRoot
-            alignment={nodeAlignment ?? "left"}
-            editor={editor}
-            aspectRatio={size.aspectRatio === null ? 1 : size.aspectRatio}
-            downloadSrc={resolvedDownloadSrc}
-            handleAlignmentChange={(alignment) =>
-              updateAttributesSafely({ alignment }, "Failed to update attributes while changing alignment:")
-            }
-            isTouchDevice={isTouchDevice}
-            width={size.width}
-            src={resolvedImageSrc}
+        <ImageToolbarRoot
+          editor={editor}
+          alignment={alignment ?? "left"}
+          aspectRatio={size.aspectRatio ?? 1}
+          width={size.width}
+          src={src}
+          download={download}
+          handleAlignmentChange={(nextAlignment) => {
+            if (current()) updateAttributes({ alignment: nextAlignment });
+          }}
+          isTouchDevice={!!editor.storage.utility.isTouchDevice}
+        />
+        {selected && <div className="pointer-events-none absolute inset-0 bg-accent-primary/30" />}
+        {editor.isEditable && (
+          <button
+            type="button"
+            aria-label={labels.resizeImage}
+            className="absolute right-0 bottom-0 size-4 rounded-full bg-accent-primary focus-visible:outline-2"
+            onMouseDown={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              rect.current = container.current?.getBoundingClientRect() ?? null;
+              setResizing(true);
+            }}
+            onTouchStart={(event) => {
+              event.preventDefault();
+              rect.current = container.current?.getBoundingClientRect() ?? null;
+              setResizing(true);
+            }}
+            onClick={(event) => {
+              if (event.detail === 0) byKeyboard(10);
+            }}
+            onKeyDown={(event) => {
+              if (isComposing(event.nativeEvent) || !["ArrowLeft", "ArrowRight"].includes(event.key)) return;
+              event.preventDefault();
+              event.stopPropagation();
+              byKeyboard(event.key === "ArrowRight" ? 10 : -10);
+            }}
           />
-        )}
-        {selected && displayedImageSrc === resolvedImageSrc && (
-          <div className="pointer-events-none absolute inset-0 size-full bg-accent-primary/30" />
-        )}
-        {showImageResizer && (
-          <>
-            <div
-              className={cn(
-                "pointer-events-none absolute inset-0 rounded-md border-2 border-accent-strong transition-opacity duration-100 ease-in-out",
-                {
-                  "opacity-100": isResizing,
-                  "opacity-0 group-hover/image-component:opacity-100": !isResizing,
-                }
-              )}
-            />
-            <button
-              type="button"
-              aria-label={labels.resizeImage}
-              className={cn(
-                "absolute bottom-0 size-4 translate-y-1/2 rounded-full border-2 border-white bg-accent-primary transition-opacity duration-100 ease-in-out focus:opacity-100 focus-visible:outline-2 focus-visible:outline-accent-strong",
-                {
-                  "pointer-events-auto opacity-100": isResizing,
-                  "pointer-events-none opacity-0 group-hover/image-component:pointer-events-auto group-hover/image-component:opacity-100":
-                    !isResizing,
-                  "left-0 -translate-x-1/2 cursor-nesw-resize": nodeAlignment === "right",
-                  "right-0 translate-x-1/2 cursor-nwse-resize": nodeAlignment !== "right",
-                }
-              )}
-              onClick={(event) => {
-                if (event.detail === 0) resizeWithKeyboard(10);
-              }}
-              onMouseDown={handleResizeStart}
-              onTouchStart={handleResizeStart}
-              onKeyDown={(event) => {
-                if (isComposing(event.nativeEvent) || !["ArrowLeft", "ArrowRight"].includes(event.key)) return;
-                event.preventDefault();
-                event.stopPropagation();
-                resizeWithKeyboard(event.key === "ArrowRight" ? 10 : -10);
-              }}
-            />
-          </>
         )}
       </div>
     </div>

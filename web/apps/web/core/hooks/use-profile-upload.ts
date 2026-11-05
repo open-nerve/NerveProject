@@ -1,5 +1,6 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
-import type { ProfileUploadTarget, UploadSession } from "@/store/asset/upload-session";
+import type { UploadSession } from "@/store/asset/upload-session";
+import type { ProfileUploadTarget } from "@/store/asset/upload-policy";
 import { useContext, useLayoutEffect, useRef, useState } from "react";
 import { StoreContext } from "@/lib/store-context";
 import type { RootStore } from "@/store/root.store";

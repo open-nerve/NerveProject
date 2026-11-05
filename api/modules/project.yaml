@@ -1218,7 +1218,7 @@ components:
     ProjectDisplayProperties:
       type: object
       additionalProperties: false
-      required: [assignee, start_date, due_date, labels, key, priority, state, sub_issue_count, link, created_on, updated_on]
+      required: [assignee, start_date, due_date, labels, key, priority, state, sub_issue_count, link, attachment_count, created_on, updated_on]
       properties:
         assignee:
           type: boolean
@@ -1237,6 +1237,9 @@ components:
         sub_issue_count:
           type: boolean
         link:
+          type: boolean
+        attachment_count:
+          description: Whether lists show a work item's number of live ordinary attachments.
           type: boolean
         created_on:
           type: boolean

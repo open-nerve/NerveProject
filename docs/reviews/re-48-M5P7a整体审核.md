@@ -36,6 +36,8 @@ SOLID：消费方声明Inspect-only和List-only小接口，domain只处理纯游
 
 ## 5. 合并判断
 
-审者原结论With fixes；没有Structural或NeedsDecision项。主控F1局部修复与有效RED/GREEN已闭环，没有延后minor。修复前七门禁全通过（E2E385/385）；修复后完整门禁与准确最终分支CI仍为集成前置，不能以本报告替代它们或main CI。当前尚未合并。
+审者原结论With fixes；没有Structural或NeedsDecision项。主控F1局部修复与有效RED/GREEN已闭环，没有延后minor。修复前七门禁全通过（E2E385/385）；修复后完整门禁与准确最终分支CI仍为集成前置，不能以本报告替代它们或main CI。这份审查结论形成时尚未合并；最终集成证据见下。
 
-主控最终本地复验：F1修复后七门禁全部通过，完整E2E385/385，证据见[P7a阶段记录§12](../v0/M5-files/reviews/P7a-draft-preparations-review.md#12-最终本地交付收据)。没有待修审查项；准确最终分支CI和main集成仍分别核验。
+主控最终本地复验：F1修复后七门禁全部通过，完整E2E385/385，证据见[P7a阶段记录§12](../v0/M5-files/reviews/P7a-draft-preparations-review.md#12-最终本地交付收据)。没有待修审查项；当时准确最终分支CI和main集成仍待分别核验，最终结果见下。
+
+2026-11-05集成回填：最终候选756b90314009f00e487483729b5d19f76dbeb110的CI41859931318、noff maincf07c9fbe663b2e2c821c5988bb06933325b8ac1的CI41869045846分别三作业全绿；归档核验与正常清理完成，P7b正式预检完成且暂不实施。[完成证据](../v0/M5-files/reviews/P7a-draft-preparations-review.md#13-t7-集成归档与接续)。此为主控交付事实回填，没有增加第二次同范围审查。

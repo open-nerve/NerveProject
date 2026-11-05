@@ -11,7 +11,7 @@ import { observer } from "mobx-react";
 import type { EditorRefApi } from "@nerve/editor";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type { TNameDescriptionLoader } from "@nerve/types";
-import { EFileAssetType, EInboxIssueSource, EInboxIssueStatus } from "@nerve/types";
+import { EInboxIssueSource, EInboxIssueStatus } from "@nerve/types";
 // components
 import { IntakeDescriptionVersions } from "./description-versions";
 import { DescriptionInput } from "@/components/editor/rich-text/description-input";
@@ -138,7 +138,6 @@ export const InboxIssueMainContent = observer(function InboxIssueMainContent(pro
             disabled={!isEditable}
             editorRef={editorRef}
             entityId={issue.id}
-            fileAssetType={EFileAssetType.ISSUE_DESCRIPTION}
             initialValue={issue.description_html ?? "<p></p>"}
             key={issue.id}
             onSubmit={async (value, isMigrationUpdate) => {

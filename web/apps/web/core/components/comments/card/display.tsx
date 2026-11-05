@@ -20,7 +20,10 @@ import type { TCommentsOperations } from "@nerve/types";
 import { calculateTimeAgo, cn, renderFormattedDate, renderFormattedTime } from "@nerve/utils";
 // components
 import { LiteTextEditor } from "@/components/editor/lite-text";
+import { useCommentView } from "../use-comment-content";
+import { useEditorAssets } from "@/hooks/editor/use-editor-assets";
 // local imports
+import { CommentAttachments } from "../attachments";
 import { CommentReactions } from "../comment-reaction";
 import { CommentCardEditForm } from "./edit-form";
 import { EmojiReactionPicker } from "@nerve/propel/emoji-reaction";
@@ -54,6 +57,8 @@ export const CommentCardDisplay = observer(function CommentCardDisplay(props: TC
     renderQuickActions,
   } = props;
   const { t } = useTranslation();
+  const view = useCommentView(workspaceSlug, projectId, comment.issue_id, comment.id);
+  const images = useEditorAssets(view, true);
   // states
   const [highlightClassName, setHighlightClassName] = useState("");
   // state
@@ -152,7 +157,7 @@ export const CommentCardDisplay = observer(function CommentCardDisplay(props: TC
           </div>
         )}
       </div>
-      {isEditing && setIsEditing ? (
+      {!disabled && isEditing && setIsEditing ? (
         <CommentCardEditForm
           activityOperations={activityOperations}
           comment={comment}
@@ -166,6 +171,7 @@ export const CommentCardDisplay = observer(function CommentCardDisplay(props: TC
       ) : (
         <>
           <LiteTextEditor
+            images={images}
             editable={false}
             ref={readOnlyEditorRef}
             id={comment.id}
@@ -191,6 +197,13 @@ export const CommentCardDisplay = observer(function CommentCardDisplay(props: TC
           )}
         </>
       )}
+      <CommentAttachments
+        workspaceSlug={workspaceSlug}
+        projectId={projectId}
+        issueId={comment.issue_id}
+        commentId={comment.id}
+        disabled={disabled}
+      />
     </div>
   );
 });

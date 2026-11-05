@@ -3106,6 +3106,8 @@ export interface components {
             state: boolean;
             sub_issue_count: boolean;
             link: boolean;
+            /** @description Whether lists show a work item's number of live ordinary attachments. */
+            attachment_count: boolean;
             created_on: boolean;
             updated_on: boolean;
         };

@@ -4,27 +4,6 @@
  * See the LICENSE file for details.
  */
 
-/**
- * @description the URL of a file: asset paths are relative to this origin and absolute URLs stay as they are;
- * a null or empty path means there is no file
- * @param {string | null} path
- * @returns {string | undefined} the URL, or undefined when there is no file
- */
-export const getFileURL = (path: string | null): string | undefined => path || undefined;
-
-/**
- * @description this function returns the assetId from the asset source
- * @param {string} src
- * @returns {string} assetId
- */
-export const getAssetIdFromUrl = (src: string): string => {
-  // remove the last char if it is a slash
-  if (src.charAt(src.length - 1) === "/") src = src.slice(0, -1);
-  const sourcePaths = src.split("/");
-  const assetUrl = sourcePaths[sourcePaths.length - 1];
-  return assetUrl;
-};
-
 /** A CSV field (RFC 4180): quoted, its quotes doubled, when it holds a comma, a double quote, a CR or an LF. */
 const csvField = (field: string): string => (/[",\r\n]/.test(field) ? `"${field.replaceAll('"', '""')}"` : field);
 

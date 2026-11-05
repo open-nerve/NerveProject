@@ -65,6 +65,27 @@ it.each(["attachment_count", "-attachment_count"] as const)(
     await list.promise;
   }
 );
+it("shows attachment counts by default and keeps a hidden choice in a fresh member view", async () => {
+  const first = (await profileTab()).app.issue.profileIssuesFilter;
+  await first.fetchFilters("ws", "target");
+  expect(first.getIssueFilters("target")?.displayProperties?.attachment_count).toBe(true);
+  await first.updateFilters(
+    "ws",
+    undefined,
+    EIssueFilterType.DISPLAY_PROPERTIES,
+    { attachment_count: false },
+    "target"
+  );
+  const fresh = (await profileTab()).app.issue.profileIssuesFilter;
+  await fresh.fetchFilters("ws", "target");
+  expect(fresh.getIssueFilters("target")?.displayProperties).toMatchObject({ attachment_count: false, link: true });
+  const shown = (await profileTab()).app.issue.profileIssuesFilter;
+  await shown.fetchFilters("ws", "target");
+  await shown.updateFilters("ws", undefined, EIssueFilterType.DISPLAY_PROPERTIES, { attachment_count: true }, "target");
+  const again = (await profileTab()).app.issue.profileIssuesFilter;
+  await again.fetchFilters("ws", "target");
+  expect(again.getIssueFilters("target")?.displayProperties?.attachment_count).toBe(true);
+});
 it("cleans invalid stored fields while retaining a valid member project restriction", async () => {
   data.set(
     "issue_local_filters",

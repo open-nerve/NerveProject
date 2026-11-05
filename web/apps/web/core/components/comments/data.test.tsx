@@ -3,7 +3,7 @@
 import { StoreContext } from "@/lib/store-context";
 import type { RootStore } from "@/store/root.store";
 import { seedAccount } from "@/store/user/fake-account";
-import React, { act, useImperativeHandle, useState } from "react";
+import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { json, problem } from "@/lib/auth/fake-nerve";
@@ -33,7 +33,10 @@ vi.mock("@/lib/store-context", async () => ({
 }));
 vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
 vi.mock("@nerve/propel/toast", () => import("@/lib/fake-toast"));
-vi.mock("@/hooks/store/use-issue-detail", () => ({ useIssueDetail: () => binding.tab!.app.issue.issueDetail }));
+vi.mock("@/hooks/store/use-issue-detail", async (original) => ({
+  ...(await original<typeof import("@/hooks/store/use-issue-detail")>()),
+  useIssueDetail: () => binding.tab!.app.issue.issueDetail,
+}));
 vi.mock("@/hooks/store/use-workspace", () => ({ useWorkspace: () => binding.tab!.app.workspaceRoot }));
 vi.mock("@/hooks/store/use-project", () => ({ useProject: () => binding.tab!.app.projectRoot.project }));
 vi.mock("@/hooks/store/use-member", () => ({
@@ -43,60 +46,14 @@ vi.mock("@/hooks/store/user", () => ({
   useUser: () => binding.tab!.app.user,
   useUserPermissions: () => binding.tab!.app.user.permission,
 }));
-vi.mock("@/hooks/store/use-editor-asset", () => ({
-  useEditorAsset: () => ({ uploadEditorAsset: vi.fn(), duplicateEditorAsset: vi.fn() }),
-}));
-vi.mock("@/components/editor/lite-text", () => ({
-  LiteTextEditor: ({
-    id,
-    initialValue,
-    onChange,
-    isSubmitting,
-    onEnterKeyPress,
-    editorProps,
-    ref,
-  }: {
-    id: string;
-    initialValue: string;
-    onChange: (json: unknown, html: string) => void;
-    isSubmitting?: boolean;
-    onEnterKeyPress?: (event?: React.KeyboardEvent) => void;
-    editorProps?: { attributes: Record<string, string> };
-    ref?: React.Ref<{
-      clearEditor: () => void;
-      setEditorValue: (html: string) => void;
-      isEditorReadyToDiscard: () => boolean;
-    }>;
-  }) => {
-    const [text, setText] = useState(initialValue);
-    useImperativeHandle(ref, () => ({
-      clearEditor: () => setText(""),
-      setEditorValue: setText,
-      isEditorReadyToDiscard: () => binding.ready,
-    }));
-    return (
-      <textarea
-        {...editorProps?.attributes}
-        id={id}
-        data-editor
-        value={text}
-        disabled={isSubmitting}
-        onKeyDown={(event) => {
-          if (event.key === "Enter" && !event.shiftKey && !event.ctrlKey && !event.metaKey) onEnterKeyPress?.(event);
-        }}
-        onChange={(event) => {
-          setText(event.target.value);
-          onChange(undefined, event.target.value);
-        }}
-      />
-    );
-  },
+vi.mock("@/components/editor/lite-text", async () => ({
+  LiteTextEditor: (await import("./fake-comment-editor")).commentEditor(() => binding.ready),
 }));
 let root: Root;
 let container: HTMLElement;
 const finished = vi.fn();
 const edited = vi.fn();
-const comment = issueCommentOf("c-z");
+const comment = { ...issueCommentOf("c-z"), actor_id: "u-actor" };
 function Host({ id = "x", edit = false }: { id?: string; edit?: boolean }) {
   const operations = useWorkItemCommentOperations("ws", "A", id);
   return edit ? (
@@ -143,7 +100,14 @@ afterEach(async () => {
   binding.tab!.app.dispose();
   vi.useRealTimers();
 });
-const render = (id = "x", edit = false) => act(async () => root.render(<Host id={id} edit={edit} />));
+const render = (id = "x", edit = false) =>
+  act(async () =>
+    root.render(
+      <StoreContext.Provider value={binding.tab!.app}>
+        <Host id={id} edit={edit} />
+      </StoreContext.Provider>
+    )
+  );
 const fill = (value: string) =>
   act(async () => {
     const input = container.querySelector("textarea")!;

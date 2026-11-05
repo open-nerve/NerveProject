@@ -4,24 +4,15 @@
  * See the LICENSE file for details.
  */
 
-import type { IRichTextEditorProps, TFileHandler } from "@nerve/editor";
+import type { IRichTextEditorProps } from "@nerve/editor";
 import type { MakeOptional } from "@nerve/types";
 
 export type RichTextEditorWrapperProps = MakeOptional<
-  Omit<IRichTextEditorProps, "fileHandler" | "mentionHandler">,
+  Omit<IRichTextEditorProps, "mentionHandler">,
   "disabledExtensions" | "editable" | "getEditorMetaData"
 > & {
   workspaceSlug: string;
   workspaceId: string;
   projectId?: string;
   issueSequenceId?: number;
-} & (
-    | {
-        editable: false;
-      }
-    | {
-        editable: true;
-        uploadFile: TFileHandler["upload"];
-        duplicateFile: TFileHandler["duplicate"];
-      }
-  );
+};

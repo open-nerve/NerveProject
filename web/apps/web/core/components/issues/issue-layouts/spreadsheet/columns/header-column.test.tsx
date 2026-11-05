@@ -67,6 +67,7 @@ it.each([
   ["state", "state__name", "state_name", "-state_name"],
   ["due_date", "target_date", "-target_date", "target_date"],
   ["sub_issue_count", "sub_issues_count", "-sub_issues_count", "sub_issues_count"],
+  ["attachment_count", "attachment_count", "-attachment_count", "attachment_count"],
 ] as const)("%s menu sends the native order in both directions", async (property, held, first, second) => {
   await render(property, held);
   await choose(0);
@@ -87,4 +88,14 @@ it("confirmed aria-sort ignores global sorting keys and changes only with the co
   expect(host.querySelector("th")!.getAttribute("aria-sort")).toBe("descending");
   await render("labels", "-created_at"); // Another project has another confirmed preference.
   expect(host.querySelector("th")!.getAttribute("aria-sort")).toBe("none");
+});
+it.each([
+  ["-attachment_count", "descending"],
+  ["attachment_count", "ascending"],
+  ["-link_count", "none"],
+] as const)("the attachments column reports the confirmed order %s as %s", async (order, direction) => {
+  await render("attachment_count", order);
+  const header = host.querySelector("th")!;
+  expect(header.getAttribute("aria-sort")).toBe(direction);
+  expect(header.textContent).toContain("content_files.title");
 });

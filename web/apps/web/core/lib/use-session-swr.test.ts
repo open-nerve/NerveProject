@@ -87,6 +87,21 @@ it("allows only the list's deduping window to be shortened while preserving the 
   expect(swr.calls[0]?.[2]).toEqual({ revalidateOnFocus: false, shouldRetryOnError: false, dedupingInterval: 0 });
 });
 
+it("lets a route that makes its own read of each visit leave SWR's mount and reconnect reads out", () => {
+  useSessionSWR(["ROUTE", "ws", "A-1"], fetchList, {
+    dedupingInterval: 0,
+    revalidateOnMount: false,
+    revalidateOnReconnect: false,
+  });
+  expect(swr.calls[0]?.[2]).toEqual({
+    revalidateOnFocus: false,
+    shouldRetryOnError: false,
+    dedupingInterval: 0,
+    revalidateOnMount: false,
+    revalidateOnReconnect: false,
+  });
+});
+
 it("does not allow the narrow option to override the session refusal rules", () => {
   useSessionSWR(["ISSUE_LIST"], fetchList, {
     dedupingInterval: 0,

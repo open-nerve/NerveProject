@@ -98,7 +98,8 @@ export class IssueCommentStore {
     send: () => Promise<T>,
     confirm: (answer: T, value: Comments) => Comments,
     commentId?: string,
-    changesIssue = true
+    changesIssue = true,
+    onConfirmed?: (answer: T) => void
   ): Promise<T> {
     return this.root.enqueueIssueChanges(
       [id],
@@ -110,6 +111,8 @@ export class IssueCommentStore {
         this.current(token, ws, project);
         const initial: Comments = { data: [], complete: false };
         resource.receive(initial, token, (held) => confirm(answer, held ?? initial));
+        this.current(token, ws, project);
+        onConfirmed?.(answer);
         await this.refreshAfterChange(ws, project, id, changesIssue);
         await this.rootIssueDetail.activity.refreshAfterChange(ws, project, id);
         return answer;
@@ -117,7 +120,13 @@ export class IssueCommentStore {
       { workspaceSlug: ws, projectID: project }
     );
   }
-  createComment = (ws: string, project: string, id: string, body: IssueCommentCreate): Promise<IssueComment> =>
+  createComment = (
+    ws: string,
+    project: string,
+    id: string,
+    body: IssueCommentCreate,
+    onConfirmed?: (answer: IssueComment) => void
+  ): Promise<IssueComment> =>
     this.write(
       ws,
       project,
@@ -130,14 +139,18 @@ export class IssueCommentStore {
       (answer, held) => {
         this.validate([answer], id);
         return { ...held, data: merged(held.data, [answer]) };
-      }
+      },
+      undefined,
+      true,
+      onConfirmed
     );
   updateComment = (
     ws: string,
     project: string,
     id: string,
     commentId: string,
-    body: IssueCommentUpdate
+    body: IssueCommentUpdate,
+    onConfirmed?: (answer: IssueComment) => void
   ): Promise<IssueComment> =>
     this.write(
       ws,
@@ -149,7 +162,9 @@ export class IssueCommentStore {
         if (answer.id !== commentId) throw new SessionChangedError();
         return { ...held, data: merged(held.data, held.data.some((row) => row.id === commentId) ? [answer] : []) };
       },
-      commentId
+      commentId,
+      true,
+      onConfirmed
     );
   removeComment = (ws: string, project: string, id: string, commentId: string): Promise<void> =>
     this.write(

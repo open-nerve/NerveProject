@@ -25,12 +25,14 @@ vi.mock("@/lib/auth/api-client", () => ({
   publicClient: {},
 }));
 const binding = vi.hoisted(() => ({ app: undefined as unknown }));
-vi.mock("@/lib/store-context", () => ({
+vi.mock("@/lib/store-context", async () => ({
   get rootStore() {
     return binding.app;
   },
+  StoreContext: (await import("react")).createContext<unknown>(undefined),
 }));
 const { RootStore } = await import("@/store/root.store");
+const { StoreContext } = await import("@/lib/store-context");
 let app: InstanceType<typeof RootStore>;
 let nerve: FakeNerve;
 const ws = workspaceOf("ws");
@@ -78,7 +80,6 @@ vi.mock("@/hooks/store/use-issue-detail", () => ({ useIssueDetail: () => app.iss
 vi.mock("@/hooks/store/use-project", () => ({ useProject: () => app.projectRoot.project }));
 vi.mock("@/hooks/store/use-project-state", () => ({ useProjectState: () => app.state }));
 vi.mock("@/hooks/store/use-workspace", () => ({ useWorkspace: () => app.workspaceRoot }));
-vi.mock("@/hooks/store/use-editor-asset", () => ({ useEditorAsset: () => ({}) }));
 vi.mock("@/hooks/store/workspace-draft", () => ({
   useWorkspaceDraftIssues: () => ({
     moveIssue: vi.fn(),
@@ -184,7 +185,13 @@ async function render(source = "source", isOpen = true, withDraftIssueWrapper = 
     onClose: ui.close,
     withDraftIssueWrapper,
   };
-  await act(async () => root.render(<CreateUpdateIssueModalBase {...props} />));
+  await act(async () =>
+    root.render(
+      <StoreContext.Provider value={app}>
+        <CreateUpdateIssueModalBase {...props} />
+      </StoreContext.Provider>
+    )
+  );
 }
 async function title(value: string) {
   const input = container.querySelector<HTMLInputElement>("input[name=name]")!;

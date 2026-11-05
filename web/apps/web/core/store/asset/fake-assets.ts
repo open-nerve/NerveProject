@@ -1,12 +1,50 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 import { runInAction } from "mobx";
 import { expect, vi } from "vitest";
-import type { Asset, NewAsset, PreparedAsset } from "@nerve/api-client";
-import { json, type Call } from "@/lib/auth/fake-nerve";
+import type { Asset, Attachment, Draft, IssueComment, IssueDetail, NewAsset, PreparedAsset } from "@nerve/api-client";
+import { answered, json, type Call } from "@/lib/auth/fake-nerve";
 import { until } from "@/lib/auth/fake-time";
-import { issueStoreTab } from "@/store/issue/fake-issues";
+import { draftOf, issueCommentOf, issueDetailOf, issueStoreTab } from "@/store/issue/fake-issues";
+import { accountOf } from "@/store/member/fake-users";
+import { seedAccount } from "@/store/user/fake-account";
 import { loadProjects } from "@/store/project/fake-projects";
 import { loadWorkspaces } from "@/store/workspace/fake-workspaces";
+import { APIService } from "@/services/api.service";
+import type { ContentHost } from "./content-view";
+
+/** The old file transport: v2 asset routes and file-assets, bulk status, the old restore and multipart. */
+const legacyFilePath = /\/api\/assets\/v2|file-assets|bulk|\/restore\//;
+/**
+ * Watches every channel an opened page could use for files — the generated client, the raw transfer and the old
+ * axios services — so a test proves the page never speaks the old protocol instead of relying on missing strings.
+ * Read leaks() before mocks are restored.
+ */
+export function watchLegacyFileTraffic(tab: {
+  nerve: { calls: Call[] };
+  puts: { file: BodyInit | null | undefined }[];
+}) {
+  const spies = (["get", "post", "put", "patch", "delete", "request"] as const).map((method) =>
+    vi.spyOn(APIService.prototype, method)
+  );
+  return {
+    leaks(): string[] {
+      const old = spies.flatMap((spy) =>
+        (spy.mock.calls as unknown[][]).flatMap(([target, data]) => {
+          const config =
+            typeof target === "object" && target ? (target as { url?: unknown; data?: unknown }) : undefined;
+          const url = String(config ? config.url : target);
+          const body = config ? config.data : data;
+          return legacyFilePath.test(url) || body instanceof FormData ? [`old service ${url}`] : [];
+        })
+      );
+      const client = tab.nerve.calls
+        .filter((call) => legacyFilePath.test(call.path))
+        .map((call) => `client ${call.method} ${call.path}`);
+      const raw = tab.puts.filter((put) => put.file instanceof FormData).map(() => "multipart raw transfer");
+      return [...old, ...client, ...raw];
+    },
+  };
+}
 
 export const imageFile = (name = "picture.png", bytes = 4, type = "image/png") =>
   new File([new Uint8Array(bytes)], name, { type });
@@ -89,4 +127,96 @@ export async function assetTab() {
     return puts[count - 1]!;
   };
   return { ...tab, workspace, project, puts, answer, sent, assets };
+}
+
+/** Content owners enter the real canonical stores through their generated API clients. */
+export async function contentAssetTab() {
+  const tab = await assetTab();
+  const { app, nerve, workspace, project } = tab;
+  await seedAccount(nerve, app.user, accountOf("actor"));
+  const issue = issueDetailOf("issue-1", project.id);
+  const comment = { ...issueCommentOf("comment-1", issue.id), actor_id: app.issue.currentUserId! };
+  const draft = { ...draftOf("draft-1", workspace.id), project_id: null };
+  const readIssue = async (row: IssueDetail = issue) => {
+    const result = await answered(
+      nerve,
+      () => app.issue.issues.refreshAuthoritative(row.id),
+      ["GET", `/api/v0/issues/${row.id}`],
+      row,
+      "content issue"
+    );
+    expect(result.error).toBeUndefined();
+  };
+  const readComments = async (rows: IssueComment[] = [comment]) => {
+    const result = await answered(
+      nerve,
+      () => app.issue.issueDetail.comment.fetchComments(workspace.slug, project.id, issue.id),
+      ["GET", `/api/v0/issues/${issue.id}/comments`],
+      { data: rows, next_cursor: null },
+      "content comments"
+    );
+    expect(result.error).toBeUndefined();
+  };
+  const readDrafts = async (rows: Draft[] = [draft]) => {
+    const result = await answered(
+      nerve,
+      () => app.issue.workspaceDraftIssues.fetchIssues(workspace.slug),
+      ["GET", `/api/v0/workspaces/${workspace.slug}/drafts`],
+      { data: rows, total: rows.length, next_cursor: null },
+      "content drafts"
+    );
+    expect(result.error).toBeUndefined();
+  };
+  await readIssue();
+  await readComments();
+  await readDrafts();
+  nerve.calls.length = 0;
+  const scope = { workspaceID: workspace.id, projectID: project.id, issueID: issue.id };
+  const hosts = {
+    issue: { kind: "issue", ...scope },
+    new_comment: { kind: "new_comment", ...scope },
+    comment: { kind: "comment", ...scope, commentID: comment.id },
+    draft: { kind: "draft", workspaceID: workspace.id, projectID: null, draftID: draft.id },
+  } satisfies Record<"issue" | "new_comment" | "comment" | "draft", ContentHost>;
+  return { ...tab, issue, comment, draft, hosts, readIssue, readComments, readDrafts };
+}
+
+export const attachmentOf = (id: string): Attachment => ({
+  id,
+  name: `${id}.txt`,
+  content_type: "text/plain",
+  size: 4,
+  created_at: "2026-11-01T00:00:00Z",
+  created_by_id: "u-actor",
+});
+export function contentAssetOf(id: string, host: ContentHost, use: "attachment" | "description"): Asset {
+  const purpose =
+    host.kind === "draft"
+      ? use === "attachment"
+        ? "DRAFT_ISSUE_ATTACHMENT"
+        : "DRAFT_ISSUE_DESCRIPTION"
+      : host.kind === "issue"
+        ? use === "attachment"
+          ? "ISSUE_ATTACHMENT"
+          : "ISSUE_DESCRIPTION"
+        : use === "attachment"
+          ? "COMMENT_ATTACHMENT"
+          : "COMMENT_DESCRIPTION";
+  return {
+    id,
+    purpose,
+    scope: {
+      kind: host.kind,
+      id: host.kind === "draft" ? host.draftID : host.kind === "comment" ? host.commentID : host.issueID,
+    },
+    name: `${id}.png`,
+    size: 4,
+    content_type: "image/png",
+    state: "uploaded",
+    is_bound: true,
+    width: 2,
+    height: 2,
+    created_at: "2026-11-01T00:00:00Z",
+    updated_at: "2026-11-01T00:00:00Z",
+  };
 }

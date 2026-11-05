@@ -63,12 +63,12 @@ func TestIssuePreferencesValuesReachThePort(t *testing.T) {
 	uc := app.NewUpdateProjectPreferences(f.store, f.locks(), f.tx, clockAt{clockNow, f.log}, settings)
 	display := domain.DisplayFilters{Layout: "calendar", GroupBy: ptr("state_id"), SubGroupBy: ptr("priority"), OrderBy: "name", Calendar: domain.DisplayCalendar{Layout: "week", ShowWeekends: true}}
 	filters := domain.Filters{StateID: []string{"state"}, StateGroup: []string{"started"}, Priority: []string{"low"}, LabelID: []string{}, AssigneeID: []string{"me"}, CreatedByID: []string{"me"}, MentionID: []string{"me"}, SubscriberID: []string{"me"}, StartDate: []string{"none"}, TargetDate: []string{"2026-10-26"}}
-	properties := domain.DisplayProperties{Assignee: true, DueDate: true, Key: true, State: true, Link: true, UpdatedOn: true}
+	properties := domain.DisplayProperties{Assignee: true, DueDate: true, Key: true, State: true, Link: true, AttachmentCount: true, UpdatedOn: true}
 	patch := domain.PreferencesPatch{Filters: &filters, DisplayFilters: &display, DisplayProperties: &properties}
 	got, err := uc.Execute(as(bob), webID, patch)
 	wantF := map[string][]string{"state_id": {"state"}, "state_group": {"started"}, "priority": {"low"}, "label_id": {}, "assignee_id": {"me"}, "created_by_id": {"me"}, "mention_id": {"me"}, "subscriber_id": {"me"}, "start_date": {"none"}, "target_date": {"2026-10-26"}}
 	wantD := &app.ListDisplayFilters{Layout: "calendar", GroupBy: ptr("state_id"), SubGroupBy: ptr("priority"), OrderBy: "name", Calendar: app.ListCalendar{Layout: "week", ShowWeekends: true}}
-	wantP := map[string]bool{"assignee": true, "start_date": false, "due_date": true, "labels": false, "key": true, "priority": false, "state": true, "sub_issue_count": false, "link": true, "created_on": false, "updated_on": true}
+	wantP := map[string]bool{"assignee": true, "start_date": false, "due_date": true, "labels": false, "key": true, "priority": false, "state": true, "sub_issue_count": false, "link": true, "attachment_count": true, "created_on": false, "updated_on": true}
 	if err != nil || !reflect.DeepEqual(settings.filters, wantF) || !reflect.DeepEqual(settings.display, wantD) || !reflect.DeepEqual(settings.properties, wantP) || !reflect.DeepEqual(got.Filters, filters) || got.DisplayProperties != properties {
 		t.Fatalf("port=%+v answer=%+v err=%v", settings, got, err)
 	}

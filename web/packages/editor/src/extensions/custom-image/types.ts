@@ -6,7 +6,8 @@
 
 import type { Node } from "@tiptap/core";
 // types
-import type { TFileHandler } from "@/types";
+import type { EditorImages } from "@/types";
+import type { ImageInputError } from "./input";
 
 export enum ECustomImageAttributeNames {
   ID = "id",
@@ -32,10 +33,7 @@ export type TCustomImageAlignment = "left" | "center" | "right";
 
 export enum ECustomImageStatus {
   PENDING = "pending",
-  UPLOADING = "uploading",
   UPLOADED = "uploaded",
-  DUPLICATING = "duplicating",
-  DUPLICATION_FAILED = "duplication-failed",
 }
 
 export type TCustomImageAttributes = {
@@ -48,7 +46,7 @@ export type TCustomImageAttributes = {
   [ECustomImageAttributeNames.STATUS]: ECustomImageStatus;
 };
 
-type UploadEntity = ({ event: "insert" } | { event: "drop"; file: File }) & { hasOpenedFileInputOnce?: boolean };
+type ImagePending = { file?: File; sourceID?: string; autoStart: boolean; openPicker?: boolean };
 
 export type InsertImageComponentProps = {
   file?: File;
@@ -56,17 +54,12 @@ export type InsertImageComponentProps = {
   event: "insert" | "drop";
 };
 
-export type CustomImageExtensionOptions = {
-  getImageDownloadSource: TFileHandler["getAssetDownloadSrc"];
-  getImageSource: TFileHandler["getAssetSrc"];
-  restoreImage: TFileHandler["restore"];
-  uploadImage?: TFileHandler["upload"];
-  duplicateImage?: TFileHandler["duplicate"];
-};
-
+export type CustomImageExtensionOptions = { images?: EditorImages };
 export type CustomImageExtensionStorage = {
-  fileMap: Map<string, UploadEntity>;
-  maxFileSize: number;
+  fileMap: Map<string, ImagePending>;
+  completed: Map<string, string>;
+  images?: EditorImages;
+  inputError?: ImageInputError;
 };
 
 export type CustomImageExtensionType = Node<CustomImageExtensionOptions, CustomImageExtensionStorage>;

@@ -25,3 +25,8 @@ export function useIssueDetailModals() {
   if (!modals) throw new Error("Issue detail modals require their detail or peek host");
   return modals;
 }
+
+/** Comment cards can also render outside a peek; only an actual host supplies a modal owner. */
+export function useOptionalIssueDetailModals() {
+  return useContext(IssueDetailModalContext);
+}

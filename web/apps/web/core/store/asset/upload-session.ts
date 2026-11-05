@@ -1,16 +1,20 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 import { makeObservable, observable, runInAction } from "mobx";
-import type { Asset, PreparedAsset } from "@nerve/api-client";
+import type { Asset, NewAsset, PreparedAsset } from "@nerve/api-client";
 import { problemCode } from "@/lib/api-error";
 import { putAsset } from "@/lib/asset-upload";
 import type { AssetService } from "@/services/asset.service";
-import type { RootStore } from "@/store/root.store";
-import { ScopeLifetime, type AssetReadScope } from "./scope-lifetime";
 
-export type ProfileUploadTarget =
-  | { purpose: "USER_AVATAR" | "USER_COVER"; scope: { kind: "user" } }
-  | { purpose: "WORKSPACE_LOGO"; scope: { kind: "workspace"; id: string } }
-  | { purpose: "PROJECT_COVER"; scope: { kind: "project" | "new_project"; id: string } };
+/** The protocol consumes a purpose-specific policy; it does not decide host permissions. */
+export interface UploadPolicy {
+  readonly target: Pick<NewAsset, "purpose" | "scope">;
+  readonly preview: boolean;
+  current(): boolean;
+  subscribeEnd(end: () => void): () => void;
+  maxBytes(): number | undefined;
+  contentType(file: File): string;
+  accepts(file: File): boolean;
+}
 export type UploadPhase =
   | "idle"
   | "selected"
@@ -25,7 +29,7 @@ export type UploadPhase =
 export class UploadSession {
   phase: UploadPhase = "idle";
   error: unknown;
-  readonly target: ProfileUploadTarget;
+  readonly target: Readonly<Pick<NewAsset, "purpose" | "scope">>;
   private preview: string | undefined;
   private ready: Asset | undefined;
   private file: File | undefined;
@@ -34,15 +38,14 @@ export class UploadSession {
   private controller: AbortController | undefined;
   private revision = 0;
   private disposed = false;
-  private readonly lifetime: ScopeLifetime;
+  private readonly unsubscribe: () => void;
 
   constructor(
-    private readonly root: RootStore,
     private readonly service: AssetService,
-    target: ProfileUploadTarget,
+    private readonly policy: UploadPolicy,
     private readonly onDispose: () => void
   ) {
-    const owned = { ...target };
+    const owned = { ...policy.target };
     owned.scope = Object.freeze({ ...owned.scope });
     this.target = Object.freeze(owned);
     makeObservable<UploadSession, "preview" | "ready" | "disposed">(this, {
@@ -52,16 +55,10 @@ export class UploadSession {
       ready: observable.ref,
       disposed: observable,
     });
-    const scope = this.readScope();
-    this.lifetime = new ScopeLifetime(
-      root,
-      scope,
-      () => this.canWrite(scope),
-      () => this.dispose()
-    );
+    this.unsubscribe = policy.subscribeEnd(() => this.dispose());
   }
   get current(): boolean {
-    return !this.disposed && this.lifetime.current;
+    return !this.disposed && this.policy.current();
   }
   get busy(): boolean {
     return ["preparing", "uploading", "confirming"].includes(this.phase);
@@ -80,22 +77,25 @@ export class UploadSession {
   select(file: File): void {
     if (!this.current) return this.dispose();
     this.clear("idle");
-    const limit = this.root.instance.config?.file_size_limit;
+    if (!this.current) return this.dispose();
+    const limit = this.policy.maxBytes();
     const kind =
       !Number.isSafeInteger(limit) || !limit || limit < 1
         ? "unavailable"
-        : !["image/jpeg", "image/png", "image/webp", "image/gif"].includes(file.type)
+        : !this.policy.accepts(file)
           ? "type"
           : file.size < 1 || file.size > limit
             ? "size"
-            : undefined;
+            : !file.name || [...file.name].length > 255 || /[\p{Cc}/\\]/u.test(file.name)
+              ? "name"
+              : undefined;
     runInAction(() => {
       if (kind) {
-        this.error = new ImageSelectionError(kind);
+        this.error = new FileSelectionError(kind);
         this.phase = "failed";
       } else {
         this.file = file;
-        this.preview = URL.createObjectURL(file);
+        this.preview = this.policy.preview ? URL.createObjectURL(file) : undefined;
         this.phase = "selected";
       }
     });
@@ -159,7 +159,7 @@ export class UploadSession {
       if (mode === "prepare") {
         const file = this.file!;
         const prepared = await this.service.prepare(
-          { ...this.target, name: file.name, size: file.size, content_type: file.type },
+          { ...this.target, name: file.name, size: file.size, content_type: this.policy.contentType(file) },
           signal
         );
         if (!this.alive(revision)) return undefined;
@@ -194,30 +194,6 @@ export class UploadSession {
     }
   }
 
-  private readScope(): AssetReadScope {
-    const { scope } = this.target;
-    if (scope.kind === "user") return {};
-    return scope.kind === "project"
-      ? {
-          workspaceID: this.root.projectRoot.project.getProjectById(scope.id)?.workspace_id,
-          projectID: scope.id,
-          member: true,
-        }
-      : { workspaceID: scope.id, member: true };
-  }
-  private canWrite(scope: AssetReadScope): boolean {
-    if (this.target.scope.kind === "user") return true;
-    const workspace = this.root.workspaceRoot.workspaces?.find((row) => row.id === scope.workspaceID);
-    if (!workspace) return false;
-    if (this.target.scope.kind === "workspace") return workspace.role === 20;
-    if (this.target.scope.kind === "new_project") return workspace.role === 15 || workspace.role === 20;
-    const project = this.root.projectRoot.project.getProjectById(scope.projectID);
-    return (
-      project?.workspace_id === workspace.id &&
-      !project.archived_at &&
-      this.root.user.permission.getProjectRoleByWorkspaceSlugAndProjectId(workspace.slug, scope.projectID) === 20
-    );
-  }
   private clear(phase: UploadPhase): void {
     ++this.revision;
     this.controller?.abort();
@@ -242,14 +218,14 @@ export class UploadSession {
       this.disposed = true;
     });
     this.clear("disposed");
-    this.lifetime.dispose();
+    this.unsubscribe();
     this.onDispose();
   }
 }
 
-export class ImageSelectionError extends Error {
-  constructor(readonly kind: "type" | "size" | "unavailable") {
-    super(`Image selection ${kind}`);
-    this.name = "ImageSelectionError";
+export class FileSelectionError extends Error {
+  constructor(readonly kind: "type" | "size" | "name" | "unavailable") {
+    super(`File selection ${kind}`);
+    this.name = "FileSelectionError";
   }
 }

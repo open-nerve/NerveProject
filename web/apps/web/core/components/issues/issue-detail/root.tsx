@@ -5,7 +5,7 @@
  */
 
 import type { IssueUpdate } from "@nerve/api-client";
-import { IssueDetailHost } from "../detail-host";
+import { ConfirmedContentNotice, IssueDetailHost } from "../detail-host";
 import { useIssueOperations } from "./use-issue-operations";
 import { observer } from "mobx-react";
 // nerve imports
@@ -61,6 +61,10 @@ export const IssueDetailRoot = observer(function IssueDetailRoot(props: TIssueDe
 
   // issue details
   const issue = getIssueById(issueId);
+  const archived =
+    is_archived ||
+    !!issue?.archived_at ||
+    !!rootIssueStore.rootStore.projectRoot.project.getProjectById(projectId)?.archived_at;
   const uncertain = rootIssueStore.verification.isUncertain(issueId);
   const readError =
     subIssues.getError(issueId) ??
@@ -84,7 +88,8 @@ export const IssueDetailRoot = observer(function IssueDetailRoot(props: TIssueDe
   return (
     <>
       <IssueDetailHost workspaceSlug={workspaceSlug} projectId={projectId} issueId={issueId}>
-        {!issue && uncertain ? (
+        <ConfirmedContentNotice />
+        {!issue && uncertain && !rootIssueStore.verification.isMissing(issueId) ? (
           readError ? (
             <DetailResourceError
               error={readError}
@@ -115,7 +120,7 @@ export const IssueDetailRoot = observer(function IssueDetailRoot(props: TIssueDe
                 issueId={issueId}
                 issueOperations={issueOperations}
                 isEditable={isEditable}
-                isArchived={is_archived}
+                isArchived={archived}
               />
             </div>
             <div
@@ -127,7 +132,7 @@ export const IssueDetailRoot = observer(function IssueDetailRoot(props: TIssueDe
                 projectId={projectId}
                 issueId={issueId}
                 issueOperations={issueOperations}
-                isEditable={!is_archived && isEditable}
+                isEditable={!archived && isEditable}
               />
             </div>
           </div>
