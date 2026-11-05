@@ -67,9 +67,9 @@
 
 **Files:** 修改`core/components/editor/rich-text/description-input/root.tsx`（`recover()`与`editable`、`onChange`守卫）；测试`core/components/issues/body-images.test.tsx`（保留输入与图片的既有用例所在）。
 
-- [ ] Step 1：用例：恢复保留输入后插入新图片（上传中），点“保存保留的输入”：编辑器实例不变、上传不取消、核验期间不可编辑且可读出忙状态，上传完成后可再保存；核验失败/422时输入仍在。先看到上传被取消（RED）。
-- [ ] Step 2：实现§3第3条：核验期间以`inert`包裹并在`onChange`守卫`verifying`，不切换`editable`（`use-editor.ts`以`[editable, images.signal]`重建编辑器）；变异“核验时切换editable”须被杀死。
-- [ ] Step 3：受影响宿主/正文测试GREEN；提交`fix(M5/P8): 核验保留输入时不重建编辑器`。
+- [x] Step 1：用例：恢复保留输入后插入新图片（上传中），点“保存保留的输入”：编辑器实例不变、上传不取消、核验期间不可编辑且可读出忙状态，上传完成后可再保存；核验失败/422时输入仍在。先看到上传被取消（RED）。
+- [x] Step 2：实现§3第3条：核验期间以`inert`包裹并在`onChange`守卫`verifying`，不切换`editable`（`use-editor.ts`以`[editable, images.signal]`重建编辑器）；变异“核验时切换editable”须被杀死。
+- [x] Step 3：受影响宿主/正文测试GREEN；提交`fix(M5/P8): 核验保留输入时不重建编辑器`。
 
 ## Task 5（T5）：删除核验404出口与收据寿命
 

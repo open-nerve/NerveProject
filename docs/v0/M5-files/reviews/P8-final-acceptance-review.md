@@ -122,3 +122,9 @@ T3（re-50 F2）：传输原由节点视图持有，视图卸载即中止并`can
 
 传输RED（`t3-red-2`）：复制拖动与包裹块的传输被取消、Redo后无提示；上传拖动失败于上述id问题。GREEN 35/35（`t3-green-2`，含新增“确认只写回自己的节点”）。变异：“视图卸载即取消”杀死3例，“Redo后自动重发”杀死1例，“按开始时位置写回”起初存活——`paste.ts`按`completed`给同id节点补src掩盖了单图错误写入，新增两图用例（另一张在途图片移到原位置）后杀死（`t3-mut-start-position-2`）。编辑器包14文件145项、类型、改动文件oxlint 0/0与格式；重建后应用受影响19文件174项（`t3-web-affected`），i18n键同步与使用检查通过。应用适配`editor-assets.ts`无需改动。
 
+T4（re-50 F6）：`use-editor.ts`以`[editable, images.signal]`重建编辑器，“保存保留的输入”核验期间把`editable`切成false，旧编辑器随之销毁，`transfers.destroy()`中止恢复后新开始的上传、丢掉File；核验又把在途图片抛出的“未完成”显示成“图片不可用”。`description-input/root.tsx`改为：`editable`只看`disabled`与`replacing`，编辑器包在`display: contents`的容器里，核验期间`inert`并`aria-busy`（与评论表单提交期间的做法一致）；有未完成图片时点保存不核验，由既有“未完成”状态报告，传输完成后再点保存即核验并恢复自动保存。`onChange`不在核验期间丢弃：核验结果本就只在HTML未变时生效（`live()`），丢弃会让核验期间完成的上传只写进编辑器、不进本地描述。
+
+RED（`t4-red`）：两例都在第一处断言失败——上传中点保存后编辑器元素被换掉；核验等待读取时可编辑编辑器消失（`tab.editor()`为null）。GREEN首跑（`t4-green`）暴露两处测试自身步骤与既有界面不符：恢复后的保存被422拒绝时入口是“重试”而非“保存保留的输入”，被拒图片节点显示自身错误而不在DOM中带id——改为点重试、断言节点显示`errors.asset_not_found`并断言被扣住的读取正是该图片，产品代码未因此改动；`t4-green-2` 20/20。变异：“核验时切换editable”杀死2、“未完成也核验”杀死1、“去掉inert”杀死1、“去掉aria-busy”杀死1，源码SHA均恢复。`vitest related`覆盖root.tsx的28文件366项（`t4-web-related`）、应用类型（`t4-web-types`）、改动文件oxlint 0/0与格式、关键词检查通过。
+
+恢复版本（`replacing`）仍切换`editable`：恢复整体替换正文，在途传输本应随之结束；只有失败的恢复会多余地结束它们，而让恢复期间保持同一编辑器还需要`change()`接受恢复期间的传输写回（现由`owner.replacing`丢弃）——不属§3第3条，记入台账待最终审查评估。
+
