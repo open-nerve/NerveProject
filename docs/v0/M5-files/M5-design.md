@@ -225,6 +225,8 @@ S3来源主机使用DNS或IPv4；浏览器CSP不能精确允许IPv6字面量，�
 
 为保持既定的失败占位与明确重试，四个共享宿主hook关闭SWR隐式reconnect重读；图片仍由expiry/focus/online检查决定一次到期刷新，页面挂载、身份变化及显式mutate仍读取。useSessionSWR仅新增可关闭reconnect的窄选项，其他会话请求策略保持。代价：仅网络恢复本身不再独立触发这四种宿主读取，等待上述实际读取条件；避免网络事件绕过图片重试预算。
 
+**M5/P7b T13：** browse详情路由的读取拥有详情宿主及其保留的输入，同样关闭隐式reconnect重读；每次进入路由（含后退/前进）是一次访问，由访问自身以mutate发出唯一一次lookup，并关闭SWR的挂载读取（useSessionSWR再增一个窄选项`revalidateOnMount: false`），SWR温缓存中上一次访问的答案不当本次访问的读取，应答前不挂载交互子树。代价与上同：仅网络恢复不再刷新路由读取；页面挂载、身份变化与显式重试照常读取。
+
 
 P6 新 AssetService 作为当前会话 API client 的消费者；旧 FileService 随 P7b 最后编辑器/评论调用者迁移一并删除；不在模块顶层 new 带会话实例。原始 PUT 使用不带业务认证的独立传输器，支持 AbortSignal、准备/上传/确认阶段进度、超时和可区分的拒绝；独立 fetch 不提供字节进度，不能编造百分比；取消不能吞错后继续 complete。store 以 session/loginId + workspace/project/issue/draft/comment scope 管理，复用 IssueRootStore 的权限失效入口，不另造平行权限缓存。
 

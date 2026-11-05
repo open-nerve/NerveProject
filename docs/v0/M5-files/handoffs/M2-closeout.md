@@ -80,3 +80,7 @@ P2已有资产表、生成AssetPurpose和真实业务/字节两段协议；按§
 ## 处理结果（M5/P7b T12核对）
 
 §3完成：`web/packages/services`整包删除，任何`package.json`不再依赖`@nerve/services`，pnpm按仓库版本移除独有依赖`file-type`及其传递依赖（未手写锁文件）。地址规范化连同原单元测试移到`web/apps/web/core/lib/api-request-url.ts`，旧APIService只改导入位置、行为不变；上传元数据工具随旧文件链删除。规则`services-files`改为挡住该目录任何文件重新出现。`make knip`、`make lint-web`、`make test-web`通过，前端改动清单3.1对应行已改为已完成。其余各节的最终汇总仍由P8收尾，本页保持open。
+
+## 处理结果（M5/P7b T14核对）
+
+T13真实页面发现M2认证中间件的缺陷（不是本页的交接项，因属M2的代码在此记录）：401后续期一次，再以`options.fetch(copy)`重发请求副本；openapi-fetch交出的是冻结options对象上的浏览器原生fetch，以options为接收者调用时浏览器在副本发出前抛Illegal invocation，M2设计7.1的“续期一次并重发一次”在真实浏览器从未生效（单元测试的FakeNerve fetch是箭头函数，未暴露）。`86c9f9f6`取出后单独调用，FakeNerve客户端的fetch改为与浏览器一样拒绝非window接收者，六个既有重发用例RED→GREEN；F16页面故事在三浏览器证明一次401经续期重发后读取成功、输入与收据保留。按本地缺陷处理（单文件、无接口变更），可单独回退。本页其余各节不变，保持open。
