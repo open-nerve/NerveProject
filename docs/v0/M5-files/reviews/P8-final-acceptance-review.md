@@ -32,3 +32,80 @@ A1–A8全部开放。P1–P7b的阶段证据只作前置与目录来源；最�
 ## 5. 限制与证据
 
 预检只读源码与文档，没有安装依赖、运行产品测试、启动数据库或修改产品；页面、演练与演示的运行证据在实施中产生。原始builder报告与预检输入清单保存在本阶段ignored目录`.superpowers/sdd/P8-final-acceptance/`，随阶段归档。输入交接保持open，P8只写最终处理结果，closeout才关闭。
+
+## 6. T1 证据与交接目录
+
+### 6.1 F1–F18
+
+交付阶段按[M5设计§12](../M5-design.md#12-分阶段推进)；Go测试按文件归类（`server/internal/bootstrap/`下除注明者），最终以T12的`GOFLAGS=-p=1 make test`全量运行为准；故事均在`e2e/stories/files/`，其中用`fileStory`/`pageFileStory`注册的同时有`[local]`与`[s3]`变体（F4–F12、F16的大部分故事）。阶段记录中“F1–F7”也用作P7b整审发现编号，本目录只按用户故事编号归类。
+
+| F | 交付阶段 | 现有Go测试 | 现有故事 | P8最终落点 |
+|---|---|---|---|---|
+| F1 | P2 API、P3 S3、P6/P7b页面 | asset_lifecycle、asset_complete、asset_transfer、asset_contract | f1-upload（local；S3由F4与S3适配器合同覆盖） | T12：Go全量、默认e2e |
+| F2 | P1 local、P3 S3 | asset_transfer_slow（`TestRawStorageDefaultSlowUpload`）、asset_transfer、asset_mac；`modules/asset/adapter/http/{transfer,budget}`、`adapter/local/sign`、`adapter/s3/fault` | 无（设计即为Go慢流） | T10：local与S3慢流演练、页面慢流（Chromium限速）；T12重跑原测试 |
+| F3 | P1、P2 | asset_complete_races、asset_complete_failure、asset_complete_io；`adapter/local/seal`、`adapter/s3/object_real` | f3-publication | T12 |
+| F4 | P3 | `adapter/s3/*`（presign_integration、object_real、endpoint_origin、inventory、capacity、fault）、asset_s3_lifecycle、asset_s3_recovery | f4-s3-storage | T12：`m5-s3`三浏览器 |
+| F5 | P4 API、P6页面 | asset_image_account_first、asset_image_auth、asset_image_credentials、asset_image_references、asset_image_storage、asset_image_io | f5-profile-images、f5-profile-images-page | T12：默认e2e、`m5-profile`三浏览器 |
+| F6 | P4、P6 | asset_image_catalog、asset_image_member_races、asset_image_invitation_races、invitation_image_locks | f6-workspace-images、f6-workspace-logo-page | T12 |
+| F7 | P4、P6 | asset_image_creation_races、asset_image_parent_races | f7-project-covers、f7-project-cover-page | T12 |
+| F8 | P5 API、P7b页面 | attachment_access、attachment_lists、attachment_publication、attachment_events、attachment_rollback、attachment_transaction、attachment_read_effects、attachment_read_snapshot、asset_attachment_capacity | f8-issue-attachments、f8-issue-attachments-page | T12：默认e2e、`m5-content`三浏览器；T5回归 |
+| F9 | P5、P7b | asset_content、asset_content_read、asset_content_races、attachment_subscriber | f9-comment-assets、f9-comment-files-page | T12 |
+| F10 | P5、P7a、P7b | draft_assets、draft_assets_atomic、draft_assets_races、asset_draft_preparations（含concurrency/recovery/snapshot） | f10-draft-assets、f10-draft-files-page、f10-draft-preparations | T12；T6①回归 |
+| F11 | P5、P7b | asset_duplicate、asset_duplicate_races、asset_copy_content | f11-content-copy、f11-editor-images-page | T12；T2/T3回归 |
+| F12 | P5、P7b | asset_content_storage；`adapter/content/validate`、`adapter/postgres/{content_bindings,image_bindings,content_sets}` | f12-image-identity、f12-image-history-page | T12 |
+| F13 | P2、P5 | asset_access_ports、asset_host_matrix、asset_content_permissions、attachment_access、assets_credentials_interleaving、assets_membership_interleaving、assets_late_host_interleaving | f13-permissions | T12 |
+| F14 | P2、P5 | asset_deletion、asset_deletion_rollback、asset_content_deletion、assets_scope_rollback、asset_parent_ports、asset_parent_reader | f14-deletion | T10演练；T12 |
+| F15 | P2、P4、P5 | assets_cleanup、asset_purge、asset_purge_wiring、asset_retention、asset_content_retention、asset_image_retention、asset_content_purge_process、asset_image_purge_process；`adapter/postgres/cleanup_*` | f15-cleanup | T10演练；T12 |
+| F16 | P6、P7b | web单元（`core/store/asset`、`core/components/issues`宿主与详情） | f16-content-lifetime-page、f16-profile-upload-lifetime | T12：`m5-content`、`m5-profile`三浏览器；T3/T4回归 |
+| F17 | P6、P7b | web单元（附件对话框、上传控件） | f17-profile-upload-accessibility；P7b页面故事中的可访问性断言 | T12；T5回归 |
+| F18 | P8 | 关键词守卫、knip | 无 | T11默认部署演示、T7删除面、T11扫描 |
+
+缺口与补位：F2的S3慢速与页面慢速上传在[M0加固交接](../handoffs/M0-hardening-http-timeouts.md)中仍记为“后续阶段”，P3/P6/P7b没有补写结果，由T10补（S3演练中的慢PUT与Chromium限速的页面上传，后者大于1 MiB且超过15秒，独立config不进默认套件）；F18由T11新建；其余F在T12最终产品候选上重跑。
+
+### 6.2 输入交接逐条
+
+| 交接 | 条款 | 当前事实 | P8动作 |
+|---|---|---|---|
+| M0加固 | 逐请求放宽读写期限；不调大全局；慢体完成/不发体断开的测试；大小上限与413 | P1 raw路由已验证；P2业务JSON仍1 MiB/15秒 | T10补S3与页面慢流；T13写最终结果 |
+| M1-P2 | 无`PAGE_DESCRIPTION`；无`page_id` | P2表与生成用途无此二者，P7b删`EFileAssetType` | T13写最终结果 |
+| M1-P3 | 资源类型用生成类型；评论附件项目级；封面只内置/上传；编辑器附件结论；`file_size_limit`名称与策略 | 生成`AssetPurpose`；评论附件随项目；封面预设+上传；编辑器只处理图片、`ACCEPTED_ATTACHMENT_MIME_TYPES`已删；`files.size_limit`经实例配置下发 | T2细化粘贴语义；T13写最终结果 |
+| M1收尾 | 死成员/死prop | 历史48条不作当前名单 | T7按附录A `--rows M5`逐行闭环 |
+| | oxlint：改到的文件零警告、清一类规则、cap下调 | P7b改动文件零警告 | T8两条规则清零并设error；M5全期改动文件零警告 |
+| | 附件图标第三方标志 | 17个PNG无引用 | T7整目录删除 |
+| | 新建项目封面值 | P4/P6一次POST、稳定编号 | T13写最终结果 |
+| | 复制资源权限 | P2/P5源不可读与不存在同为404 | T13写最终结果 |
+| M2收尾 | §1头像封面（两列、签名地址、两处上传控件、关键词规则） | P4 API、P6页面 | T13写最终结果 |
+| | §2上传与中间件（>1 MiB/>15秒、`file_size_limit`执行、CSP、整程序测试） | P1/P3；`use-file-size.ts`已删，读取点为`core/hooks/editor/editor-assets.ts`的`root.instance.config.file_size_limit` | T10慢流；T13写最终结果与实际读取点 |
+| | §3删除`@nerve/services` | P7b完成 | T13写最终结果 |
+| | §4 stores按会话分代 | P6/P7b：`FileService`单例清零、SWR键带loginId | T13引证 |
+| | §5 `e2e/fixtures/storage.ts` | P2完成 | T13写最终结果 |
+| M3收尾 | §1图标封面头像 | P4/P6 | T13写最终结果 |
+| | §2 `organization_size` | P4响应收紧 | T13写最终结果 |
+| | §3附件确认框/弹窗、焦点轮廓、key布局与后退、可访问错误 | P6资料弹窗、P7b附件对话框与页面故事 | T5/T6修复；T12最终三浏览器；T13写明 |
+| M4收尾 | M5-01附件接口与页面 | P5/P7b | T12；T13写最终结果 |
+| | 旧复制入口具名风险 | 无产品调用方 | T7删除方法，T13写“已删除” |
+| | M5-02草稿同事务迁移与图片标识 | P5/P7b | T12；T13写最终结果 |
+| | M5-03删除图、事件与物理清理 | P2/P5 | T10演练；T13写最终结果与事件交接 |
+| | M5-04首个投递任务的CLI | 仍无投递任务的CLI，`NewInserter`只在服务组合 | T13原文转交M6/M7/M8 |
+| | P7b T14注记“链接/子项/关联提示被跳过” | 只有链接表单有成功提示 | T6修链接；T13更正注记 |
+
+每条都有落点，没有既未完成又无法转交的条款。
+
+### 6.3 承接项
+
+| 来源 | 项 | 落点 |
+|---|---|---|
+| re-50 §5 | F2拖动中传输被取消、F6保存保留输入重建编辑器 | T3、T4 |
+| | F3未知发布后“草稿已保留” | T6① |
+| | F4被拒文件批的原生粘贴 | T2 |
+| | F5删除核验404死路、F7a收据常驻 | T5 |
+| re-50 §6 | 新评论view在POST中途结束；时钟偏差；非图片拖放文字；`a.click()`后立即revoke；`attachment_ids: []` | 维持原裁定，T13在限制与交接中如实写明 |
+| | 每张评论卡一个ContentView与EditorAssets的成本 | T12实测（含图评论较多的详情页，记录请求数与耗时） |
+| | `t13-content-local-4`两项间歇 | T12隔离重复运行 |
+| P7b记录§9–§11 | M6/M7/M8领域接线 | T13交接 |
+| | P3-M1与S3夹具子进程吞错 | T9 |
+| | P4-M1 `WorkspacePatch.Logo` | T7 |
+| | 复制为Markdown省略图片（签名读取不外泄） | T13写为已知限制；旧复制方法T7删除 |
+| | M4链接提示 | T6② |
+| | testcontainers收割器竞态与Docker停顿 | 环境：同输入重跑并保留原件，不改预算 |
+| | CI apt慢与E2E作业时长逼近25分钟 | 观察并记录；调整预算或拆分作业须负责人批准 |
