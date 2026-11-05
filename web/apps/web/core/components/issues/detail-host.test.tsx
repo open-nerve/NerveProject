@@ -159,20 +159,20 @@ it("doesNotFinishAnOldHostsActionInTheNewScope", async () => {
 });
 // The canonical re-read after a write withdraws the item: the body, with every dialog drawn in it, unmounts.
 const withdrawn = async (id: string) => {
-  const held: Call[] = [];
+  const rereads: Call[] = [];
   const respond = tab.nerve.respond!;
-  tab.nerve.respond = (call) => (call.path === `/api/v0/issues/${id}` ? void held.push(call) : respond(call));
+  tab.nerve.respond = (call) => (call.path === `/api/v0/issues/${id}` ? void rereads.push(call) : respond(call));
   let reread!: Promise<unknown>;
   await act(async () => {
     reread = tab.app.issue.issues.refreshAuthoritative(id, { afterWrite: true });
     await vi.advanceTimersByTimeAsync(0);
   });
-  expect(held).toHaveLength(1);
+  expect(rereads).toHaveLength(1);
   expect(tab.app.issue.issues.getIssueById(id)).toBeUndefined();
   return () =>
     act(async () => {
       tab.nerve.respond = respond;
-      held[0]!.answer(json(200, issueDetailOf(id)));
+      rereads[0]!.answer(json(200, issueDetailOf(id)));
       await reread;
     });
 };
