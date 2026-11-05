@@ -17,11 +17,14 @@ export const Attachments = observer(function Attachments({
   resource,
   readOnly = false,
   onDialogOpened,
+  onBusyChange,
 }: {
   view: ContentView;
   resource: AttachmentResource;
   readOnly?: boolean;
   onDialogOpened?(): () => void;
+  /** Whether a transfer is on the wire; a host that moves or publishes must wait for it. */
+  onBusyChange?(busy: boolean): void;
 }) {
   const { t } = useTranslation();
   const root = useContext(StoreContext);
@@ -35,7 +38,13 @@ export const Attachments = observer(function Attachments({
   const selected = selection?.resource === resource ? selection.row : undefined;
   return (
     <div className="space-y-3">
-      {upload && <AttachmentPicker upload={upload} onUploaded={(asset) => resource.afterUpload(asset)} />}
+      {upload && (
+        <AttachmentPicker
+          upload={upload}
+          onUploaded={(asset) => resource.afterUpload(asset)}
+          onBusyChange={onBusyChange}
+        />
+      )}
       <div className="flex items-center justify-between">
         <p aria-live="polite" className="text-13 text-secondary">
           {resource.loading ? t("content_files.reading") : resource.rows.length === 0 ? t("content_files.empty") : null}

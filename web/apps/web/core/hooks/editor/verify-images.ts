@@ -14,6 +14,23 @@ export function contentImageIDs(html: string): { ids: string[]; incomplete: bool
   }
   return { ids: [...ids], incomplete };
 }
+/** The description without its images: another host's identities never become references of a new host. */
+export function withoutContentImages(html: string): string {
+  return rewriteImages(html, (node) => node.remove());
+}
+/** The description whose images refer to their server copies in the target host, in place. */
+export function withContentImages(html: string, copies: ReadonlyMap<string, string>): string {
+  return rewriteImages(html, (node) => {
+    const copy = copies.get(node.getAttribute("src") ?? "");
+    if (copy) node.setAttribute("src", copy);
+  });
+}
+function rewriteImages(html: string, change: (node: Element) => void): string {
+  if (typeof DOMParser === "undefined") return html;
+  const document = new DOMParser().parseFromString(html, "text/html");
+  for (const node of document.querySelectorAll("image-component")) change(node);
+  return document.body.innerHTML;
+}
 /** Explicit input recovery shares the current view's reads, error budget and cancellation. */
 export async function verifyEditorImages(images: EditorImages | undefined, html: string): Promise<void> {
   const { ids, incomplete } = contentImageIDs(html);

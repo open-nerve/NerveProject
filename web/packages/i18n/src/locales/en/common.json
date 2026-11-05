@@ -63,6 +63,22 @@
       "delete_title": "Discard draft file",
       "confirm_warning": "This file may be uploading in another tab or may already have become an attachment. Discarding deletes the selected file. A description image that has been saved cannot be discarded here."
     },
+    "draft": {
+      "files_after_save": "To add files or images, save this as a draft and open the draft again.",
+      "files_after_create": "Files and images can be added after the work item is created.",
+      "transfer_busy": "Wait for the uploads in progress to finish, or cancel them, before moving or publishing this draft.",
+      "publish_blocked": "Some files of this draft are unfinished. Review the unfinished draft files, discard the ones you no longer need, then publish again."
+    },
+    "copy": {
+      "kept": "A draft copy is kept in your drafts. Trying again continues with the same draft.",
+      "kept_closed": "The copy is kept in your drafts. Open your drafts to finish or delete it.",
+      "open_drafts": "Open drafts",
+      "unknown_create": "The draft copy may have been created. Check your drafts before trying again.",
+      "unknown_publish": "The work item may have been created from the draft copy. Check your drafts before trying again.",
+      "verify": "Check drafts",
+      "allow_retry": "I checked; allow another attempt",
+      "published": "The draft copy is no longer in your drafts. Check the project's work items before creating it again."
+    },
     "title": "Attachments",
     "confirmed_upload": "File uploaded.",
     "confirmed_delete": "File deleted.",

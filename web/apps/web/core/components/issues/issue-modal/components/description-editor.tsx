@@ -10,7 +10,7 @@ import { observer } from "mobx-react";
 import type { Control } from "react-hook-form";
 import { Controller } from "react-hook-form";
 // nerve imports
-import type { EditorRefApi } from "@nerve/editor";
+import type { EditorImages, EditorRefApi } from "@nerve/editor";
 import { useTranslation } from "@nerve/i18n";
 import { Loader } from "@nerve/ui";
 import { getDescriptionPlaceholderI18n } from "@nerve/utils";
@@ -23,6 +23,8 @@ type TIssueDescriptionEditorProps = {
   isDraft: boolean;
   descriptionHtmlData: string | undefined;
   editorRef: React.MutableRefObject<EditorRefApi | null>;
+  /** Only a stored draft's content lifetime grants images; other forms keep stored images inert. */
+  images?: EditorImages;
   submitBtnRef: React.MutableRefObject<HTMLButtonElement | null>;
   workspaceSlug: string;
   projectId: string | null;
@@ -35,6 +37,7 @@ export const IssueDescriptionEditor = observer(function IssueDescriptionEditor(p
     isDraft,
     descriptionHtmlData,
     editorRef,
+    images,
     submitBtnRef,
     workspaceSlug,
     projectId,
@@ -75,7 +78,7 @@ export const IssueDescriptionEditor = observer(function IssueDescriptionEditor(p
           render={({ field: { value } }) => (
             <RichTextEditor
               editable
-              disabledExtensions={["image"]}
+              images={images}
               id="issue-modal-editor"
               initialValue={value ?? ""}
               value={descriptionHtmlData}

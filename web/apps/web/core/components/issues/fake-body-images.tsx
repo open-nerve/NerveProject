@@ -218,8 +218,8 @@ export async function bodyImagesTab() {
     canonical: () => issue,
   };
 }
-const editor = () => document.querySelector<HTMLElement>('.tiptap[contenteditable="true"]');
-const paste = async (html?: string, files: File[] = []) => {
+export const editor = () => document.querySelector<HTMLElement>('.tiptap[contenteditable="true"]');
+export const paste = async (html?: string, files: File[] = []) => {
   const field = editor();
   expect(field).not.toBeNull();
   const event = new Event("paste", { bubbles: true, cancelable: true });

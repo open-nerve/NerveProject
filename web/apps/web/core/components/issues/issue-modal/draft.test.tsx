@@ -11,6 +11,8 @@ import { draftOf, issueDetailOf, issueStoreTab, requestedIssue } from "@/store/i
 import { toasts } from "@/lib/fake-toast";
 import { EIssuesStoreType } from "@nerve/types";
 import type { RichTextEditor } from "@/components/editor/rich-text";
+import { StoreContext } from "@/lib/store-context";
+import type { RootStore } from "@/store/root.store";
 import { CreateUpdateIssueModalBase } from "./base";
 import { DraftIssueBlock } from "../workspace-draft/draft-issue-block";
 import type { IssuesModalProps } from "./modal";
@@ -24,7 +26,10 @@ const ui = vi.hoisted(() => ({
 }));
 vi.stubGlobal("localStorage", { getItem: () => null, setItem: () => {}, removeItem: () => {} });
 vi.mock("@/lib/auth/api-client", () => ({ tokenManager: { state: { loginId: "draft-login" } }, publicClient: {} }));
-vi.mock("@/lib/store-context", () => ({ rootStore: undefined }));
+vi.mock("@/lib/store-context", async () => ({
+  rootStore: undefined,
+  StoreContext: (await import("react")).createContext<RootStore | undefined>(undefined),
+}));
 vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
 vi.mock("@nerve/propel/toast", () => import("@/lib/fake-toast"));
 vi.mock("react-router", () => ({ useParams: () => ({ workspaceSlug: "ws" }) }));
@@ -168,20 +173,23 @@ afterEach(async () => {
   tab.app.dispose();
   vi.useRealTimers();
 });
+const withStore = (node: React.ReactNode) => <StoreContext.Provider value={tab.app}>{node}</StoreContext.Provider>;
 const render = (draft: Draft | null = row, publish = false, wrapper = false) =>
   act(async () =>
     renderer.render(
-      <CreateUpdateIssueModalBase
-        isOpen
-        isDraft
-        draft={draft ?? undefined}
-        onClose={ui.close}
-        onSubmit={ui.confirmed}
-        fetchIssueDetails={false}
-        moveToIssue={publish}
-        withDraftIssueWrapper={wrapper}
-        storeType={EIssuesStoreType.WORKSPACE_DRAFT}
-      />
+      withStore(
+        <CreateUpdateIssueModalBase
+          isOpen
+          isDraft
+          draft={draft ?? undefined}
+          onClose={ui.close}
+          onSubmit={ui.confirmed}
+          fetchIssueDetails={false}
+          moveToIssue={publish}
+          withDraftIssueWrapper={wrapper}
+          storeType={EIssuesStoreType.WORKSPACE_DRAFT}
+        />
+      )
     )
   );
 async function input(selector: string, text: string) {
@@ -212,7 +220,7 @@ it("savesUnassignedDraftWithoutLosingUntouchedFields: empty name preserves unkno
   expect(tab.nerve.calls).toHaveLength(1);
 });
 it.each(["submit", "close"])("copying a native draft preserves its unresolved payload via %s", async (action) => {
-  await act(async () => renderer.render(<DraftIssueBlock workspaceSlug="ws" issueId="d" />));
+  await act(async () => renderer.render(withStore(<DraftIssueBlock workspaceSlug="ws" issueId="d" />)));
   await click("make-a-copy");
   await input('input[name="name"]', "Copied draft");
   if (action === "submit") await submit();
@@ -356,7 +364,7 @@ it("publishSavesThenSendsNoBody and confirmedPublishRetriesOnlyReads: confirmed 
 });
 
 it("editsAndDeletesAnUnassignedDraft: the actual row opens an unassigned draft and deletes it with workspace membership", async () => {
-  await act(async () => renderer.render(<DraftIssueBlock workspaceSlug="ws" issueId="d" />));
+  await act(async () => renderer.render(withStore(<DraftIssueBlock workspaceSlug="ws" issueId="d" />)));
   expect(container.textContent).toContain(row.payload.name);
   await act(async () =>
     container.querySelector("#issue-d")!.dispatchEvent(new MouseEvent("dblclick", { bubbles: true }))
@@ -380,7 +388,7 @@ it("editsAndDeletesAnUnassignedDraft: the actual row opens an unassigned draft a
   expect(container.querySelector("#issue-d")).toBeNull();
 });
 it.each([403, 422])("a refused draft deletion leaves the actual dialog and record present (%s)", async (status) => {
-  await act(async () => renderer.render(<DraftIssueBlock workspaceSlug="ws" issueId="d" />));
+  await act(async () => renderer.render(withStore(<DraftIssueBlock workspaceSlug="ws" issueId="d" />)));
   await click("delete");
   await click("confirm delete");
   await act(async () => until(() => tab.nerve.calls.length === 1, "refused delete"));

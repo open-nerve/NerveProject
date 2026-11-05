@@ -141,9 +141,9 @@ T3与T5衔接：命令确认收据先发布给稳定host再触发权威重读；
 **Files:** issues/issue-modal/{base,form,draft-form,draft-issue-layout,components/description-editor}.ts(x)、issues/workspace-draft/draft-issue-block.tsx；store/issue/workspace-draft/issue.store.ts只有必要宿主状态协作，不改通用权限或服务端事务；相应测试。
 **Interfaces:** Draft真实id+project_id可null→ContentView(draft)；WorkspaceDraftIssues.updateIssue/moveIssue；新普通表单无images，明确保存草稿后重开。
 
-- [ ] Step 1：新普通表单零asset请求/零暗建draft，已有无项目草稿能上传保存/重开；传输忙时切项目/发布需完成或明确取消；A→B→A旧read/complete/copy永失效。发布先保存完整payload再单次publish，成功移除旧draftview，失败保留并新建view重读。实际普通工作项/草稿副本入口分别最终Issue/Draft；明确提交才建一次target→按顺序dup→save，普通副本再publish；部分失败/取消保留同一目标和打开路径，重试不另建，unknown创建/发布先核列表。prepare回包丢失/failed duplicate/重新选文件/刷新后，通过P7a列表找到未知pending并显式丢弃才恢复发布，不把本地取消当服务端删除。
-- [ ] Step 2：`pnpm --filter web exec vitest run core/components/issues/issue-modal core/components/issues/workspace-draft core/store/issue/workspace-draft core/store/asset`。RED→GREEN，所有服务器迁移由既有API；不拿项目角色禁止私有draft。
-- [ ] Step 3：草稿原保存/全payload/项目清除/双发布/拒绝回归；变异切项目不退休旧view、前端publish后搬asset分别应失败；提交 `feat(M5/P7b): 接通草稿文件与原子发布页面`。
+- [x] Step 1：新普通表单零asset请求/零暗建draft，已有无项目草稿能上传保存/重开；传输忙时切项目/发布需完成或明确取消；A→B→A旧read/complete/copy永失效。发布先保存完整payload再单次publish，成功移除旧draftview，失败保留并新建view重读。实际普通工作项/草稿副本入口分别最终Issue/Draft；明确提交才建一次target→按顺序dup→save，普通副本再publish；部分失败/取消保留同一目标和打开路径，重试不另建，unknown创建/发布先核列表。prepare回包丢失/failed duplicate/重新选文件/刷新后，通过P7a列表找到未知pending并显式丢弃才恢复发布，不把本地取消当服务端删除。
+- [x] Step 2：`pnpm --filter web exec vitest run core/components/issues/issue-modal core/components/issues/workspace-draft core/store/issue/workspace-draft core/store/asset`。RED→GREEN，所有服务器迁移由既有API；不拿项目角色禁止私有draft。
+- [x] Step 3：草稿原保存/全payload/项目清除/双发布/拒绝回归；变异切项目不退休旧view、前端publish后搬asset分别应失败；提交 `feat(M5/P7b): 接通草稿文件与原子发布页面`。
 
 ## Task 11（T11）：真实附件计数、排序和显示偏好
 

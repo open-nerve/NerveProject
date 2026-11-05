@@ -42,6 +42,7 @@ import {
 // hooks
 import { useIssueModal } from "@/hooks/context/use-issue-modal";
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
+import { DraftFiles, type DraftContent } from "./draft-files";
 
 export interface IssueFormProps {
   data?: IssueFormData;
@@ -73,6 +74,11 @@ export interface IssueFormProps {
     loading: string;
   };
   isProjectSelectionDisabled?: boolean;
+  /** A stored draft's files and images; a form without it creates no file request. */
+  content?: DraftContent;
+  publishBlocked?: boolean;
+  /** The state of a command that outlives one submission, such as a kept copy. */
+  notice?: React.ReactNode;
 }
 
 export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormProps) {
@@ -103,6 +109,9 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
       loading: `${data?.id ? t("updating") : t("saving")}`,
     },
     isProjectSelectionDisabled = false,
+    content,
+    publishBlocked = false,
+    notice,
   } = props;
 
   // states
@@ -195,7 +204,10 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
 
   const handleMoveToProjects = async () => {
     if (!data?.id || !onPublish || isMoving || isSubmitting || isPending || descriptionLoadState !== "ready") return;
-    if (!editorRef.current?.isEditorReadyToDiscard()) return;
+    if (!editorRef.current?.isEditorReadyToDiscard()) {
+      setToast({ type: TOAST_TYPE.ERROR, title: t("error"), message: t("editor_is_not_ready_to_discard_changes") });
+      return;
+    }
     setIsMoving(true);
     try {
       await onPublish({
@@ -307,6 +319,7 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
                     isDraft={isDraft}
                     descriptionHtmlData={data?.description_html}
                     editorRef={editorRef}
+                    images={content?.images}
                     submitBtnRef={submitBtnRef}
                     workspaceSlug={workspaceSlug}
                     projectId={projectId}
@@ -314,6 +327,20 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
                   />
                 )}
               </div>
+              {content?.view ? (
+                <div className="px-5">
+                  <DraftFiles content={content} publishBlocked={publishBlocked} />
+                </div>
+              ) : (
+                !data?.id && (
+                  <p className="px-5 text-13 text-secondary">
+                    {canSaveDraft
+                      ? t("content_files.draft.files_after_save")
+                      : t("content_files.draft.files_after_create")}
+                  </p>
+                )
+              )}
+              {notice && <div className="px-5 text-13">{notice}</div>}
             </div>
             <div className="rounded-b-lg border-t-[0.5px] border-subtle bg-surface-1 px-4 py-3">
               <div className="pb-3">

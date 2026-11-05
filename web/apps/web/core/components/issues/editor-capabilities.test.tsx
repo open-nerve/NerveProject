@@ -131,9 +131,15 @@ it.each(["detail", "peek"] as const)("enables images at the canonical %s owner",
   expect(props.disabledExtensions ?? []).not.toContain("image");
   expect(props.images?.write).toBeDefined();
 });
-it.each(["create", "edit", "draft"] as const)("disables images at the actual %s description owner", async (kind) => {
-  expect((await render(kind)).disabledExtensions ?? []).toContain("image");
-});
+it.each(["create", "edit", "draft"] as const)(
+  "keeps stored images inert without granting uploads at the actual %s description owner",
+  async (kind) => {
+    // Without a stored draft's lifetime the form keeps image nodes, so neither copies nor edits drop them.
+    const props = await render(kind);
+    expect(props.disabledExtensions ?? []).not.toContain("image");
+    expect(props.images).toBeUndefined();
+  }
+);
 it("keeps the shared description default available to its other consumers", async () => {
   expect((await render("shared")).disabledExtensions ?? []).not.toContain("image");
 });
