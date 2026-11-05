@@ -151,3 +151,17 @@ T13记录提交为`e6e2bc15`。验收与证据逐项对应如下（证据标签�
 Step 2七门禁（串行、`run-check`收据，不改预算/workers/期限，未操作既有容器）：首轮`t14-*`中gen-check、lint-go、lint-web、knip、test-web通过，test因archtest发现T11迁移00038未登记到sqlc的project条目失败，e2e 415中9失败；逐项根因修复并各自单独提交——`dd60ef8a`（sqlc登记，make gen无生成物变化）、`5ff2e4a2`（I8/I9/I10确认后弹窗以空表单重开，见上文跨M修复）、`8d85db5a`（C12表格页面错误）、`55f2b487`（I11评论POST体与editor-loading detail变体按P7b合同更新，creation变体不变）。第二轮`t14-*-2`：e2e 415/415，lint-web因本人新测试的局部变量遮蔽（no-shadow）失败，`ae4e7440`改名；test只在`asset/adapter/postgres`一个包失败——testcontainers启动postgres时Docker API查询容器状态连续超时（context deadline exceeded），包内其余用例因缓存的启动失败即刻失败，该包随后单独运行通过（`t14-asset-postgres-alone`）。第三轮`t14-*-3`七项输入清单同一（digest `986993e2…`，前后不变）：gen-check、lint-go、test、lint-web、knip、test-web全部通过；e2e 414/415，F10页面[s3]变体在S3夹具启动阶段失败（16.3秒，远未到90秒期限，尚未执行业务步骤），原因只见“S3 child startup failed”——夹具子进程吞掉原错误（与P3-M1同类的诊断缺口），Docker事件缓冲已被其他项目容器的健康检查挤出，无法事后取证；与第二轮及P5 T13记录的Docker查询超时同类，按P5先例不改设置，以同一输入完整重跑`make e2e`（`t14-e2e-4`）415/415。最终同一输入（HEAD `ae4e7440`）七门禁：gen-check 4秒；lint-go 2秒；`GOFLAGS=-p=1 make test` 988秒（61个测试包、21个无测试包，-count=1，bootstrap 644秒）；lint-web 50任务/33缓存（web实际执行）；knip通过；test-web 16任务/15缓存（web实际执行337文件3815项，缓存项为相同输入的回放，如编辑器包135项来自第二轮实际执行）；e2e 415/415（205秒）。其他项目的15个容器前后名称与镜像一致，只有testcontainers自身的ryuk收割器短暂存在并自行退出。
 
 P8未完成事项（规格§5、M5设计）：M6/M7/M8领域接线、最终F1–F18矩阵与默认部署/容量演示、P3-M1清理错误诊断、P4-M1死字段、全仓新warning规则清零与死成员、复制为Markdown省略图片的具名风险、全仓旧第三方图标消费者核对、七个输入交接的最终关闭；另有T13记入T14/CI观察的两项间歇（`t13-content-local-4`）；M4既有：写后规范重读期间弹窗表单卸载，链接/子项/关联的成功toast被跳过（M4详情页已如此，写入与列表正确，交M4交接）。S3夹具子进程启动失败时应回传原错误（T14第三轮只见通用信息，扩充P3-M1）。
+
+## 10. T15 整分支审查与修复
+
+一次fresh whole-branch审查：冻结main基线`cf07c9fbe663b2e2c821c5988bb06933325b8ac1`..T14检查点`0716b12f77468159726bd6c8d6e6cf154809de24`（分支CI 42079747995三作业首次全绿），只读子代理（显式指定最强档`fable`）带计划Review Focus原文、全部局部Ruling、跨M修复清单，按逻辑/集成/测试三视角审查25个提交、298个文件，生成物逐一对源；报告见[re-50](../../../reviews/re-50-M5P7b整体审核.md)，审者原文`t15-review-raw.md`在ignored证据目录。没有逐Task派审者或第二个同范围审者。
+
+结论With fixes：五项Review Focus全部PASS；四处跨M修复（`86c9f9f6`、`370aba81`/`0d093f03`、`5ff2e4a2`、`8d85db5a`）判为页面、宿主或单文件层的根因修复，不改DetailResource、IssueVerification（仅新增只读`isMissing`）、PermissionReads或权限观察器。主控按效果复核后的处理：
+
+- F1（Important，维持）：设备休眠或断网超过内容读取期限后，到期计时器那次唯一续期常在网络恢复前发出、未送达，此后的online/focus/visibility唤醒只处理ready条目，页面图片停在“无法加载/重试”。`6baaf7bf`：网络未送达（TypeError）的到期续期由之后每个唤醒再试一次，服务端回答（含503）仍待显式重试；新用例先红后绿，变异“任何失败都可唤醒再试”起初存活，既有用例改为推进时间后断言即被杀死。
+- F7b：两个只有自身测试读取的`suspended` getter——knip看不到类成员，T14死成员扫描漏掉此类；按T14合同未完成项删除（`6058fe2b`），并对本阶段新增/修改文件的类成员补做读者扫描，再无无读者成员。
+- Minor F2–F6、F7a（传输中拖动图片块、未知发布后的“草稿已保留”提示、被拒文件批的原生粘贴、删除核验404后的死路、保存保留输入时重建编辑器、确认收据常驻）不在本阶段修改，交P8；审者暂不判断的8项逐条裁定维持，见re-50§6。
+
+T15七门禁（修复后HEAD `6058fe2b`，七项输入清单同一，digest `93f855b4…`前后不变）：gen-check、lint-go、lint-web（50任务/33缓存，web实际执行）、knip、test-web（16任务/15缓存，web实际执行337文件3816项）、e2e 415/415通过；`GOFLAGS=-p=1 make test`首跑只在`project/adapter/postgres`一包因testcontainers-go会话收割器容器在就绪检查中消失而失败（未执行业务断言，同M4/P7记录的Ryuk INFRA失败；Docker VM内存与磁盘无压力），按先例不改设置与期限，以同一输入完整重跑通过（`t15-test-2`，61个测试包，bootstrap 654秒）。其他项目的15个容器前后一致，测试容器全部由收割器清理。
+
+P8新增事项：上述Minor；测试设施在本阶段三次出现Docker侧停顿（第二轮Go包查询容器状态超时、第三轮S3夹具子进程启动失败、T15收割器消失），均未到业务步骤——`go test -p=1 ./...`各包共享一个testcontainers会话时收割器退出与复用之间的竞态及S3夹具子进程吞错（P3-M1）一并交P8测试设施故障演练。准确候选分支CI与main集成是T15 Step 3与T16的前置，本节写成时尚未合并，结果由T16回填。

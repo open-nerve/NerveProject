@@ -179,12 +179,12 @@ T3与T5衔接：命令确认收据先发布给稳定host再触发权威重读；
 
 - [x] Step 1：逐项A1–A6、完整消费者清单、死成员扫描、设计/plane-diff/handoff当前事实与文档链接。标明P8未完成事项，原始证据输入hash稳定。
 - [x] Step 2：串行 `make gen-check`、`make lint-go`、`GOFLAGS=-p=1 make test`、`make lint-web`、`make knip`、`make test-web`、`make e2e`；真实exit、完整raw、cache/skip、前后输入hash、容器快照。不得用聚焦测试替代全门禁，不改既定预算掩盖失败。
-- [ ] Step 3：中文检查点提交、system push，精确HEAD的server/web/e2e全绿。原生GitHub插件可取日志/重跑；W11按既有一次重跑规则，其他失败根因处理；资料P6回归不得失守。
+- [x] Step 3：中文检查点提交、system push，精确HEAD的server/web/e2e全绿。原生GitHub插件可取日志/重跑；W11按既有一次重跑规则，其他失败根因处理；资料P6回归不得失守。
 
 ## Task 15（T15）：一次整分支 deep-review 与修复
 
-- [ ] Step 1：冻结正式main基线..候选HEAD，一次fresh reviewer读完整手写文件与调用链、Review Focus/所有局部Ruling、全部消费者与证据；三视角报告保存docs/reviews下一编号，生成物核源。
-- [ ] Step 2：主控逐条裁定、局部根因修复及有区分度RED/GREEN/受影响回归；真实架构问题先提交上报，不用第二同范围审者替代修复判断；DeclinedToJudge必须具名解决。
+- [x] Step 1：冻结正式main基线..候选HEAD，一次fresh reviewer读完整手写文件与调用链、Review Focus/所有局部Ruling、全部消费者与证据；三视角报告保存docs/reviews下一编号，生成物核源。
+- [x] Step 2：主控逐条裁定、局部根因修复及有区分度RED/GREEN/受影响回归；真实架构问题先提交上报，不用第二同范围审者替代修复判断；DeclinedToJudge必须具名解决。
 - [ ] Step 3：最终本地七门禁证据与修改范围对应，中文提交/push准确HEAD CI全绿，A7闭环；阶段记录写明事实、限制和P8责任，不提前写main完成。
 
 ## Task 16（T16）：集成、归档与 P8 预检
