@@ -165,3 +165,7 @@ P8未完成事项（规格§5、M5设计）：M6/M7/M8领域接线、最终F1–
 T15七门禁（修复后HEAD `6058fe2b`，七项输入清单同一，digest `93f855b4…`前后不变）：gen-check、lint-go、lint-web（50任务/33缓存，web实际执行）、knip、test-web（16任务/15缓存，web实际执行337文件3816项）、e2e 415/415通过；`GOFLAGS=-p=1 make test`首跑只在`project/adapter/postgres`一包因testcontainers-go会话收割器容器在就绪检查中消失而失败（未执行业务断言，同M4/P7记录的Ryuk INFRA失败；Docker VM内存与磁盘无压力），按先例不改设置与期限，以同一输入完整重跑通过（`t15-test-2`，61个测试包，bootstrap 654秒）。其他项目的15个容器前后一致，测试容器全部由收割器清理。
 
 P8新增事项：上述Minor；测试设施在本阶段三次出现Docker侧停顿（第二轮Go包查询容器状态超时、第三轮S3夹具子进程启动失败、T15收割器消失），均未到业务步骤——`go test -p=1 ./...`各包共享一个testcontainers会话时收割器退出与复用之间的竞态及S3夹具子进程吞错（P3-M1）一并交P8测试设施故障演练。准确候选分支CI与main集成是T15 Step 3与T16的前置，本节写成时尚未合并，结果由T16回填。
+
+T15候选`f26630b6`的分支CI [42097010743](https://github.com/open-nerve/NerveProject/actions/runs/42097010743)：attempt1中server、web通过，e2e在25分钟作业期限处被取消——`playwright install --with-deps`一步因GitHub托管runner的Ubuntu apt镜像极慢耗时23分钟，故事未及运行；不改预算，原始元数据与日志保存后以`gh run rerun --failed`重跑。attempt2跑完414通过1失败（22.5分钟）后仍超作业期限被取消。失败的是M4故事C12（review）history Markdown：CI trace中故事等到的PATCH回包是编辑器给无块标识修订补data-id的迁移保存（防抖1.5秒），慢runner上它恰与粘贴同刻发出，故事随即重载，粘贴的防抖保存尚未发出。根因是故事把粘贴后第一个PATCH当成粘贴的保存；`6b9d8051`按同族cleanup-interactions的做法先等迁移保存应答再粘贴，产品不变。临时探针扣住迁移保存，“原顺序”确定性复现失败、“先等应答”通过（`t15-race-probe-red-2`，探针用后删除、副本随证据归档），修正后的故事连续3次通过（`t15-history-story-green`）。
+
+最终候选的门禁：受影响的gen-check、lint-go、lint-web、knip与e2e（415/415，205秒）在最终输入上重跑通过（`t15-*-2`）；Go全量（`t15-test-2`）与test-web（`t15-test-web`）复用——输入清单逐文件比对，与最终输入只差T15三份文档与这一个故事文件；e2e包没有`test`脚本，`make test-web`不运行故事，Go不读e2e（P5“精确替换限定复用”先例）。
