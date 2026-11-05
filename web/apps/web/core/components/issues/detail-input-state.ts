@@ -27,9 +27,6 @@ class LocalInput<T> {
   ) {
     makeObservable<LocalInput<T>, "value">(this, { value: observable.ref });
   }
-  get suspended(): boolean {
-    return this.owner.suspended;
-  }
   get canFlushOnUnmount(): boolean {
     return this.owner.canFlushOnUnmount;
   }
@@ -96,9 +93,6 @@ export class IssueDetailInputState implements DetailRegistration {
   }
   get current(): boolean {
     return this.active && !this.terminal && this.permissionCurrent() && !this.ownerInvalid();
-  }
-  get suspended(): boolean {
-    return this.current && !this.root.issues.getIssueDetailById(this.issueID);
   }
   get canFlushOnUnmount(): boolean {
     return (

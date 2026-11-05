@@ -41,7 +41,6 @@ it("keeps only local input and confirmed receipts through pending and a temporar
   const read = track(tab.app.issue.issues.refreshAuthoritative(tab.issue.id, { afterWrite: true }));
   expect(tab.app.issue.issues.getIssueDetailById(tab.issue.id)).toBeUndefined();
   expect(tab.inputs.current).toBe(true);
-  expect(slot.suspended).toBe(true);
   expect(slot.read()).toEqual(snapshot);
   await until(() => tab.nerve.to(`/api/v0/issues/${tab.issue.id}`).length === 1, "owner pending");
   tab.nerve.to(`/api/v0/issues/${tab.issue.id}`)[0]!.answer(problem(503, "server_busy"));
@@ -50,7 +49,6 @@ it("keeps only local input and confirmed receipts through pending and a temporar
   expect(slot.read()).toEqual(snapshot);
   expect(tab.inputs.receipts).toEqual([{ kind: "uploaded", id: "uploaded-file" }]);
   await tab.readIssue();
-  expect(slot.suspended).toBe(false);
   expect(slot.read()).toEqual(snapshot);
   // The focus the remount lost returns once, to the control that sent the command.
   expect(tab.inputs.takeFocus("other files")).toBeUndefined();
