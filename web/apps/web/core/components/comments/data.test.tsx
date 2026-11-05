@@ -46,9 +46,6 @@ vi.mock("@/hooks/store/user", () => ({
   useUser: () => binding.tab!.app.user,
   useUserPermissions: () => binding.tab!.app.user.permission,
 }));
-vi.mock("@/hooks/store/use-editor-asset", () => ({
-  useEditorAsset: () => ({ uploadEditorAsset: vi.fn(), duplicateEditorAsset: vi.fn() }),
-}));
 vi.mock("@/components/editor/lite-text", async () => ({
   LiteTextEditor: (await import("./fake-comment-editor")).commentEditor(() => binding.ready),
 }));

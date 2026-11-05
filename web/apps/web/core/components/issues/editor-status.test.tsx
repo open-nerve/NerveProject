@@ -11,7 +11,6 @@ import { IssueMainContent } from "./issue-detail/main-content";
 import type { TIssueOperations } from "./issue-detail/root";
 
 vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
-vi.mock("@/hooks/store/use-editor-asset", () => ({ useEditorAsset: () => ({}) }));
 vi.mock("@/hooks/store/use-workspace", () => ({
   useWorkspace: () => ({ getWorkspaceBySlug: () => ({ id: "id-ws" }) }),
 }));

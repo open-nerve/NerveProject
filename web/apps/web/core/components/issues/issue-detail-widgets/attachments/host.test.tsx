@@ -6,7 +6,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { IssueDetailModals } from "@/store/issue/issue-details/modals";
 import type { RootStore } from "@/store/root.store";
 import { StoreContext } from "@/lib/store-context";
-import { attachmentOf, contentAssetTab } from "@/store/asset/fake-assets";
+import { attachmentOf, contentAssetTab, watchLegacyFileTraffic } from "@/store/asset/fake-assets";
 import { pickerDOM, waitForPickerDOM } from "@/components/assets/fake-image-picker";
 import { json, noContent, problem, type Call } from "@/lib/auth/fake-nerve";
 import { until } from "@/lib/auth/fake-time";
@@ -53,6 +53,7 @@ vi.mock("@/components/issues/issue-detail-widgets/issue-detail-widget-modals", (
   IssueDetailWidgetModals: () => null,
 }));
 let tab: Awaited<ReturnType<typeof fixture>>;
+let legacy: ReturnType<typeof watchLegacyFileTraffic>;
 async function fixture() {
   return pickerDOM(await contentAssetTab());
 }
@@ -72,6 +73,7 @@ beforeEach(async () => {
   );
   vi.spyOn(Element.prototype, "getAnimations").mockReturnValue([]);
   tab = await fixture();
+  legacy = watchLegacyFileTraffic(tab);
   page = { data: [attachmentOf("file-a")], next_cursor: null };
   core = (call) => call.answer(json(200, tab.issue));
   tab.nerve.respond = (call) => {
@@ -86,10 +88,12 @@ beforeEach(async () => {
   };
 });
 afterEach(async () => {
+  const leaks = legacy.leaks();
   await tab?.dispose();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
   vi.useRealTimers();
+  expect(leaks).toEqual([]);
 });
 type Kind = "detail" | "peek";
 async function render(kind: Kind, strict = false) {

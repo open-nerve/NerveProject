@@ -514,3 +514,5 @@ P5/T8附件排序沿M4完整目录与快照读取模式：asset提供完整非�
 
 
 **M5/P7a 草稿恢复协议：** Nerve 新增作者私有的 `GET /api/v0/drafts/{draft_id}/asset-preparations`，在同一只读快照中发现 pending 和 uploaded 未绑定件，复用现有 Asset 元数据及 DELETE。申请回答丢失或复制目标已提交后失败，作者仍可找回 ID 并指名丢弃；不在发布时跳过未完成件，不根据文件名或前端取消自动删除。绑定描述图保留原保护，普通附件仍沿原删除规则；分页不预留未来写入状态。接口、两驱动 API 恢复与权限/快照证据见 [P7a 记录](M5-files/reviews/P7a-draft-preparations-review.md)，页面在 P7b 接续。
+
+**M5/P7b T12 旧文件链与服务包：** 迁完最后的消费者后删除Plane的旧文件调用链：FileService/FileUploadService（`/api/assets/v2`地址、预签名表单multipart、bulk状态与旧restore）、编辑器资产store与hook、`EFileAssetType`与旧文件类型、utils的旧文件URL与资产ID解析、`use-file-size`及其5MB回退常量，以及整个`packages/services`和它独有的`file-type`依赖。旧APIService的地址规范化连同单元测试移到`web/apps/web/core/lib/api-request-url.ts`，行为不变。M7未开放的收集箱创建弹窗删去从未被调用的上传回调和bulk状态请求，不启用图片；M6–M8其他未接通页面同样不提供图片能力、不发文件请求。编辑器元数据不再给图片构造旧地址：图片只有短期读取授权，复制为Markdown时省略图片，具名风险留P8。

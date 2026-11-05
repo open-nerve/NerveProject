@@ -32,7 +32,6 @@ type TInboxIssueDescription = {
   ) => void;
   editorRef: RefObject<EditorRefApi | null>;
   onEnterKeyPress?: (e?: any) => void;
-  onAssetUpload?: (assetId: string) => void;
 };
 
 export const InboxIssueDescription = observer(function InboxIssueDescription(props: TInboxIssueDescription) {

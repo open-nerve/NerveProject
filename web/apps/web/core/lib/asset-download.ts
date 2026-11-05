@@ -12,7 +12,7 @@ type DownloadFailureKind =
   | "http"
   | "network"
   | "download";
-export class DownloadFailure extends Error {
+class DownloadFailure extends Error {
   constructor(
     readonly kind: DownloadFailureKind,
     readonly status?: number

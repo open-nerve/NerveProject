@@ -80,7 +80,6 @@ vi.mock("@/hooks/store/use-issue-detail", () => ({ useIssueDetail: () => app.iss
 vi.mock("@/hooks/store/use-project", () => ({ useProject: () => app.projectRoot.project }));
 vi.mock("@/hooks/store/use-project-state", () => ({ useProjectState: () => app.state }));
 vi.mock("@/hooks/store/use-workspace", () => ({ useWorkspace: () => app.workspaceRoot }));
-vi.mock("@/hooks/store/use-editor-asset", () => ({ useEditorAsset: () => ({}) }));
 vi.mock("@/hooks/store/workspace-draft", () => ({
   useWorkspaceDraftIssues: () => ({
     moveIssue: vi.fn(),

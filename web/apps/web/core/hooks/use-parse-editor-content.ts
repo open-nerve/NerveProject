@@ -6,18 +6,16 @@
 
 import { useCallback } from "react";
 // helpers
-import { getEditorAssetSrc } from "@nerve/utils";
 import type { TCustomComponentsMetaData } from "@nerve/utils";
 // hooks
 import { useMember } from "@/hooks/store/use-member";
 
 type TArgs = {
-  projectId?: string;
   workspaceSlug: string;
 };
 
 export const useParseEditorContent = (args: TArgs) => {
-  const { projectId, workspaceSlug } = args;
+  const { workspaceSlug } = args;
   // store hooks
   const { getUserDetails } = useMember();
 
@@ -25,28 +23,6 @@ export const useParseEditorContent = (args: TArgs) => {
     (htmlContent: string): TCustomComponentsMetaData => {
       const parser = new DOMParser();
       const doc = parser.parseFromString(htmlContent, "text/html");
-      const filesMetaData: TCustomComponentsMetaData["file_assets"] = [];
-      // process image components
-      const imageComponents = doc.querySelectorAll("image-component");
-      imageComponents.forEach((element) => {
-        const src = element.getAttribute("src");
-        if (src) {
-          const assetSrc = src.startsWith("http")
-            ? src
-            : getEditorAssetSrc({
-                assetId: src,
-                projectId,
-                workspaceSlug,
-              });
-          if (assetSrc) {
-            filesMetaData.push({
-              id: src,
-              name: src,
-              url: assetSrc,
-            });
-          }
-        }
-      });
       // process user mentions
       const userMentions: TCustomComponentsMetaData["user_mentions"] = [];
       const mentionComponents = doc.querySelectorAll("mention-component");
@@ -68,11 +44,13 @@ export const useParseEditorContent = (args: TArgs) => {
       });
 
       return {
-        file_assets: filesMetaData,
+        // A content image has no stable address: its reads are short-lived grants that must never leave the page,
+        // so exported Markdown omits images (the copy-as-Markdown risk is named for P8).
+        file_assets: [],
         user_mentions: userMentions,
       };
     },
-    [getUserDetails, projectId, workspaceSlug]
+    [getUserDetails, workspaceSlug]
   );
 
   return {

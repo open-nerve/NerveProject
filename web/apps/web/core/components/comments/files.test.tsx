@@ -6,6 +6,7 @@ import type { RootStore } from "@/store/root.store";
 import { waitForPickerDOM } from "@/components/assets/fake-image-picker";
 import { json, problem } from "@/lib/auth/fake-nerve";
 import { until } from "@/lib/auth/fake-time";
+import { watchLegacyFileTraffic } from "@/store/asset/fake-assets";
 import { commentFilesTab } from "./fake-comment-files";
 vi.mock("@/lib/auth/api-client", () => ({ tokenManager: { state: { loginId: "host" } }, publicClient: {} }));
 vi.mock("@/lib/store-context", async () => ({
@@ -13,13 +14,13 @@ vi.mock("@/lib/store-context", async () => ({
 }));
 vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
 vi.mock("@nerve/propel/toast", () => import("@/lib/fake-toast"));
-vi.mock("@/hooks/store/use-editor-asset", () => ({ useEditorAsset: () => ({}) }));
 vi.mock("@/hooks/store/use-member", () => ({ useMember: () => ({ getUserDetails: () => undefined }) }));
 vi.mock("@/components/editor/lite-text", async () => ({
   LiteTextEditor: (await import("./fake-comment-editor")).commentEditor(),
 }));
 vi.mock("@/components/assets/profile-image", () => ({ ProfileAvatar: () => null }));
 let tab: Awaited<ReturnType<typeof commentFilesTab>>;
+let legacy: ReturnType<typeof watchLegacyFileTraffic>;
 beforeEach(async () => {
   vi.useFakeTimers();
   globalThis.IS_REACT_ACT_ENVIRONMENT = true;
@@ -33,12 +34,15 @@ beforeEach(async () => {
   );
   vi.spyOn(Element.prototype, "getAnimations").mockReturnValue([]);
   tab = await commentFilesTab();
+  legacy = watchLegacyFileTraffic(tab);
 });
 afterEach(async () => {
+  const leaks = legacy.leaks();
   await tab?.dispose();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
   vi.useRealTimers();
+  expect(leaks).toEqual([]);
 });
 const render = () => tab.render();
 const fill = (value: string) => tab.fill(value);

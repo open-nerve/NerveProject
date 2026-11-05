@@ -11,7 +11,6 @@ import { DescriptionInput } from "@/components/editor/rich-text/description-inpu
 import { IssueTitleInput } from "./title-input";
 
 vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
-vi.mock("@/hooks/store/use-editor-asset", () => ({ useEditorAsset: () => ({}) }));
 vi.mock("@/hooks/store/use-workspace", () => ({
   useWorkspace: () => ({ getWorkspaceBySlug: () => ({ id: "id-ws" }) }),
 }));

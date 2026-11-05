@@ -25,14 +25,10 @@ import { useWorkspace } from "@/hooks/store/use-workspace";
 import { useNavigate } from "react-router";
 import useKeypress from "@/hooks/use-keypress";
 import { usePlatformOS } from "@/hooks/use-platform-os";
-// services
-import { FileService } from "@/services/file.service";
 // local imports
 import { InboxIssueDescription } from "./issue-description";
 import { InboxIssueProperties } from "./issue-properties";
 import { InboxIssueTitle } from "./issue-title";
-
-const fileService = new FileService();
 
 type TInboxIssueCreateRoot = {
   workspaceSlug: string;
@@ -54,8 +50,6 @@ const defaultIssueData: Partial<IssueDetail> = {
 
 export const InboxIssueCreateRoot = observer(function InboxIssueCreateRoot(props: TInboxIssueCreateRoot) {
   const { workspaceSlug, projectId, handleModalClose } = props;
-  // states
-  const [uploadedAssetIds, setUploadedAssetIds] = useState<string[]>([]);
   // router
   const navigate = useNavigate();
   // refs
@@ -141,13 +135,7 @@ export const InboxIssueCreateRoot = observer(function InboxIssueCreateRoot(props
 
     await createInboxIssue(workspaceSlug, projectId, payload)
       // oxlint-disable-next-line promise/always-return
-      .then(async (res) => {
-        if (uploadedAssetIds.length > 0) {
-          await fileService.updateBulkProjectAssetsUploadStatus(workspaceSlug, projectId, res?.issue.id ?? "", {
-            asset_ids: uploadedAssetIds,
-          });
-          setUploadedAssetIds([]);
-        }
+      .then((res) => {
         if (!createMore) {
           navigate(`/${workspaceSlug}/projects/${projectId}/intake?currentTab=open&inboxIssueId=${res?.issue?.id}`);
           handleModalClose();
@@ -198,7 +186,6 @@ export const InboxIssueCreateRoot = observer(function InboxIssueCreateRoot(props
                 editorRef={descriptionEditorRef}
                 containerClassName="bg-layer-2 border-[0.5px] border-subtle-1 py-3 min-h-[150px]"
                 onEnterKeyPress={() => submitBtnRef?.current?.click()}
-                onAssetUpload={(assetId) => setUploadedAssetIds((prev) => [...prev, assetId])}
               />
               <InboxIssueProperties projectId={projectId} data={formData} handleData={handleFormData} />
             </div>

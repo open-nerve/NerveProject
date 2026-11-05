@@ -15,7 +15,7 @@
 | 来源提交 | Plane `02c19e1341d93141e8ad7b3278298adce208bafc`（`preview` 分支，`package.json` 中的版本是 1.4.2） |
 | 迁入方式 | M0/P5 用 `git archive` 按上面的完整提交复制。迁入时 13 个目录与 Plane 中对应目录的 git 树对象完全相同，之后的每一处改动都登记在本清单中（见 [P5 spec](M0-foundation/specs/P5-web-import.md) 2.3） |
 | 使用 | `apps/web` → `web/apps/web`；packages 中的 types、constants、ui、propel、editor、i18n、hooks、utils、shared-state、tailwind-config、typescript-config → `web/packages/<包名>`；`patches/react-color@2.19.3.patch` → 仓库根目录的 `patches/` |
-| 暂时使用 | `packages/services`：web 的 axios 基类和文件工具函数依赖它。M1/P1 删掉了其中没有调用方的 49 个文件；M2/P5 删掉了令牌服务和 Plane 的 axios 基类（`api.service.ts`、`developer/`，PAT 改由 web 的 store 经生成的客户端调用），只剩地址规范化（带单元测试）和上传文件的元数据工具；M5 重写文件的接口调用后，将它删除 |
+| 已删除（M5/P7b） | `packages/services`：web 的 axios 基类和文件工具函数曾依赖它。M1/P1 删掉了其中没有调用方的 49 个文件；M2/P5 删掉了令牌服务和 Plane 的 axios 基类（`api.service.ts`、`developer/`，PAT 改由 web 的 store 经生成的客户端调用），只剩地址规范化（带单元测试）和上传文件的元数据工具；M5/P7b 迁完文件的最后消费者后整包删除，地址规范化连同测试移到 `web/apps/web/core/lib/api-request-url.ts`，元数据工具与独有依赖 `file-type` 随旧文件链删除 |
 | 不使用 | `apps/admin`、`apps/space`、`apps/live`、`apps/api`、`apps/proxy`、`packages/logger`、`packages/decorators`、`packages/codemods`（已核实 web 及其依赖的包都不引用它们）；根目录的 `.npmrc`（pnpm 11 只从 `.npmrc` 读取认证和仓库地址，其中的其他设置都不起作用）；husky、lint-staged（Git 钩子）和 react-doctor |
 | 第三方依赖 | `@makeplane/propel` 0.3.0：Plane 发布在 npm 上的设计系统，AGPL-3.0-only，版本锁定（`pnpm-workspace.yaml` 的 catalog，不跟随发布更新）。tarball 的完整性哈希 `sha512-nGhiE42vLQVvv7NZOcQYKARJiTXyKDSSTcHOzPdtFpa+WkSz9B91jw6i+3Ikz5cpkv/aEKjOTJF+cByw2zv5ZQ==`（`pnpm-lock.yaml`）。源码：npm 上这个版本带 SLSA 来源证明，记录它由 `github.com/makeplane/propel` 的 `packages/propel`、提交 `0a31b1529c0f249a058e59ade313d8b34ea8f964` 经 `.github/workflows/release.yml` 构建；这个仓库不公开（M1/P5 时访问为 404）。包里的 source map 带着 1376 个源文件中 1375 个的全文。以后要自己修改设计令牌时，按 [M1 设计](M1-frontend-trim/M1-design.md) 3.10 评估并入源码 |
 
@@ -201,11 +201,11 @@
 | 认证、用户、实例配置、PAT；令牌管理器 | M2 | 已完成 |
 | 工作区、成员、邀请、项目、项目成员、项目归档、状态、标签、显示设置 | M3 | 已完成：数据层已对接（工作区一侧 M3/P8a，项目一侧 M3/P8b）；页面已对接（工作区的 M3/P9，项目的 M3/P10，状态和标签的设置页、访客看到的个人主页 M3/P11）；M3 的收尾重写了弹窗、加了离开工作区的入口、改了 M3 页面上英文和键盘的遗留（3.2 中"完成于 M3/收尾"的各行） |
 | 工作项、列表（分页和分组的新结构）、子任务、关联、链接、评论、表情回应、操作动态、搜索、历史版本、草稿、工作项归档 | M4 | 进行中；P10a–P15 已集成且 main CI 通过；证据见 3.4，P16 也已集成、main CI 全绿并归档清理（3.5），M4 总体收尾仍开放 |
-| 文件、附件、编辑器图片（上传改为 `{method, url, headers}` 形式的 PUT） | M5 | 计划中 |
+| 文件、附件、编辑器图片（上传改为 `{method, url, headers}` 形式的 PUT） | M5 | 进行中：P1–P7a 已集成；P7b 的页面、旧文件链删除在分支实现，门禁、整审与集成未完成 |
 | 迭代、模块（归属改为工作项字段）、迭代和模块归档 | M6 | 计划中 |
 | 通知、收集箱、视图、收藏、最近访问 | M7 | 计划中 |
 | Webhook 设置、接口调用日志 | M8 | 计划中 |
-| 删除对 `@nerve/services` 的依赖 | M5 | 计划中 |
+| 删除对 `@nerve/services` 的依赖 | M5 | 已完成（M5/P7b T12）：整包删除，地址规范化移入 web |
 
 ### 3.2 已知的结构性改动
 

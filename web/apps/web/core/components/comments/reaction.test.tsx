@@ -43,7 +43,6 @@ vi.mock("@/hooks/store/user", () => ({
   useUser: () => binding.tab!.app.user,
   useUserPermissions: () => binding.tab!.app.user.permission,
 }));
-vi.mock("@/hooks/store/use-editor-asset", () => ({ useEditorAsset: () => ({}) }));
 // Keep real reaction buttons, comment operations and stores; rich text is unrelated to reactions.
 vi.mock("@/components/editor/lite-text", () => ({ LiteTextEditor: () => <div>Comment body</div> }));
 let root: Root, host: HTMLDivElement;

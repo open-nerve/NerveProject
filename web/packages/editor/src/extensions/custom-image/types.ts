@@ -33,10 +33,7 @@ export type TCustomImageAlignment = "left" | "center" | "right";
 
 export enum ECustomImageStatus {
   PENDING = "pending",
-  UPLOADING = "uploading",
   UPLOADED = "uploaded",
-  DUPLICATING = "duplicating",
-  DUPLICATION_FAILED = "duplication-failed",
 }
 
 export type TCustomImageAttributes = {
@@ -49,7 +46,7 @@ export type TCustomImageAttributes = {
   [ECustomImageAttributeNames.STATUS]: ECustomImageStatus;
 };
 
-export type ImagePending = { file?: File; sourceID?: string; autoStart: boolean; openPicker?: boolean };
+type ImagePending = { file?: File; sourceID?: string; autoStart: boolean; openPicker?: boolean };
 
 export type InsertImageComponentProps = {
   file?: File;

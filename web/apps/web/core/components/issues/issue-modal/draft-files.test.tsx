@@ -5,7 +5,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { Draft } from "@nerve/api-client";
 import { EIssuesStoreType } from "@nerve/types";
 import type { RootStore } from "@/store/root.store";
-import { imageFile } from "@/store/asset/fake-assets";
+import { imageFile, watchLegacyFileTraffic } from "@/store/asset/fake-assets";
 import { toasts } from "@/lib/fake-toast";
 import { editor, paste } from "../fake-body-images";
 import { draftFilesTab } from "./fake-draft-files";
@@ -49,6 +49,7 @@ vi.mock("@nerve/ui", async (original) => ({
 }));
 
 let tab: Awaited<ReturnType<typeof draftFilesTab>>;
+let legacy: ReturnType<typeof watchLegacyFileTraffic>;
 beforeEach(async () => {
   vi.useFakeTimers();
   globalThis.IS_REACT_ACT_ENVIRONMENT = true;
@@ -68,13 +69,16 @@ beforeEach(async () => {
   });
   toasts.length = 0;
   tab = await draftFilesTab();
+  legacy = watchLegacyFileTraffic(tab);
   m.projects = [tab.project.id];
 });
 afterEach(async () => {
+  const leaks = legacy.leaks();
   await tab.dispose();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
   vi.useRealTimers();
+  expect(leaks).toEqual([]);
 });
 const image = (id: string) => `<image-component src="${id}"></image-component>`;
 type Node = { type: { name: string }; attrs: Record<string, unknown>; nodeSize: number };

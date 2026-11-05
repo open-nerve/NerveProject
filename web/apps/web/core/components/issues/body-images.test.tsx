@@ -4,7 +4,7 @@ import { act } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { RootStore } from "@/store/root.store";
 import { bodyImagesTab } from "./fake-body-images";
-import { contentAssetOf, imageFile } from "@/store/asset/fake-assets";
+import { contentAssetOf, imageFile, watchLegacyFileTraffic } from "@/store/asset/fake-assets";
 import { waitForPickerDOM } from "@/components/assets/fake-image-picker";
 import { json, problem, type Call } from "@/lib/auth/fake-nerve";
 import { loadProjects } from "@/store/project/fake-projects";
@@ -35,6 +35,7 @@ vi.mock("@/components/issues/issue-detail-widgets/issue-detail-widget-modals", (
   IssueDetailWidgetModals: () => null,
 }));
 let tab: Awaited<ReturnType<typeof bodyImagesTab>>;
+let legacy: ReturnType<typeof watchLegacyFileTraffic>;
 beforeEach(async () => {
   vi.useFakeTimers();
   globalThis.IS_REACT_ACT_ENVIRONMENT = true;
@@ -60,12 +61,15 @@ beforeEach(async () => {
     getBoundingClientRect: { configurable: true, value: () => unlaidOut.getBoundingClientRect() },
   });
   tab = await bodyImagesTab();
+  legacy = watchLegacyFileTraffic(tab);
 });
 afterEach(async () => {
+  const leaks = legacy.leaks();
   await tab?.dispose();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
   vi.useRealTimers();
+  expect(leaks).toEqual([]);
 });
 async function uploadImage() {
   await tab.paste(undefined, [imageFile()]);

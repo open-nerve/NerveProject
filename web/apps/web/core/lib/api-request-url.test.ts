@@ -5,7 +5,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { ensureAPITrailingSlash, normalizeAPIRequestURL } from "./url";
+import { ensureAPITrailingSlash, normalizeAPIRequestURL } from "./api-request-url";
 
 describe("ensureAPITrailingSlash", () => {
   it.each([
@@ -28,11 +28,11 @@ describe("normalizeAPIRequestURL", () => {
     expect(normalizeAPIRequestURL(signedUrl)).toBe(signedUrl);
   });
 
-  it("leaves already-slashed relative Django paths unchanged", () => {
-    expect(normalizeAPIRequestURL("/api/assets/v2/workspaces/acme/")).toBe("/api/assets/v2/workspaces/acme/");
+  it("leaves already-slashed relative paths unchanged", () => {
+    expect(normalizeAPIRequestURL("/api/workspaces/acme/")).toBe("/api/workspaces/acme/");
   });
 
-  it("adds a trailing slash to relative Django paths", () => {
-    expect(normalizeAPIRequestURL("/api/assets/v2/workspaces/acme")).toBe("/api/assets/v2/workspaces/acme/");
+  it("adds a trailing slash to relative paths", () => {
+    expect(normalizeAPIRequestURL("/api/workspaces/acme")).toBe("/api/workspaces/acme/");
   });
 });

@@ -5,11 +5,9 @@
  */
 
 /**
- * Ensures an API request URL has a trailing slash on its path component, preserving
- * the query string and hash. Required by the Django backend's `APPEND_SLASH` behavior
- * — under Kubernetes ingress, requests without a trailing slash can fail instead of
- * 301-redirecting. Intended to be applied by an axios request interceptor so callers
- * do not need to remember to add the slash.
+ * Ensures an API request URL has a trailing slash on its path component, preserving the query string and hash.
+ * The domains that still call their old addresses through APIService (M6–M8) were written for slash-terminated
+ * routes; the interceptor adds the slash so callers need not remember it.
  *
  * Examples:
  *   "/api/foo"             -> "/api/foo/"
@@ -29,9 +27,8 @@ export function ensureAPITrailingSlash(url: string): string {
 }
 
 /**
- * Same as `ensureAPITrailingSlash`, but leaves absolute URLs unchanged. API requests go to
- * relative paths on this origin, so an absolute URL is a signed S3/GCS upload URL; slashing
- * it invalidates the signature and 403s the upload.
+ * Same as `ensureAPITrailingSlash`, but leaves absolute URLs unchanged: API requests go to relative paths on this
+ * origin, so an absolute URL is a signed object-storage address, and adding a slash would invalidate its signature.
  */
 export function normalizeAPIRequestURL(url: string): string {
   if (/^[a-z][a-z\d+\-.]*:/i.test(url)) return url; // an absolute URL starts with its scheme

@@ -66,3 +66,7 @@ P2复制接口先检查源准备件申请者及宿主可见性，再检查目标
 项目封面已端到端实现29张自制SVG、稳定编号、主动随机和一次项目POST绑定，原构建URL/先建后补写不再进入资料流程；F7 local/S3及三浏览器页面均核实际字节/引用。消费清单56文件去除旧裸URL，新的图片显示仅依当前宿主与范围。死成员扫描使用附录A脚本和当前TypeScript，移除本段已改UserStore中仅测试读取的canPerformAnyCreateAction，保留仍有生产消费者的projectsWithCreatePermissions；其余本段命中均给具体调用链，见[P6评审§18](../reviews/P6-profile-upload-review.md#18-t13-验收与清理核对)。
 
 旧FileService/EditorAssetStore及services包仍由P7迁移最后消费者并删除；附件图标、中性素材与全仓告警类别最后由P8核验。本交接保持open，历史48条不直接作为当前删除名单。
+
+## 处理结果（M5/P7b T12核对）
+
+旧FileService/EditorAssetStore及services包已随最后消费者迁移而删除；编辑器内复制粘贴图片改由EditorImages在服务器复制（T7–T9），不再请求`/api/assets/v2`。附件图标、中性素材与全仓告警类别仍由P8核验，本交接保持open。

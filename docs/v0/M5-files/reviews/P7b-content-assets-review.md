@@ -10,7 +10,7 @@
 
 ## 2. 验收状态
 
-A1–A8全部开放，T1–T11已实现，尚待页面与阶段联合验收。P5/P7a的API、P6的上传及权限回归仅为前置；P7b真实页面、三浏览器、local/S3、有效变异和完整七门禁必须在本阶段新运行。
+A1–A8全部开放，T1–T12已实现，尚待页面与阶段联合验收。P5/P7a的API、P6的上传及权限回归仅为前置；P7b真实页面、三浏览器、local/S3、有效变异和完整七门禁必须在本阶段新运行。
 
 ## 3. 局部裁定
 
@@ -109,3 +109,12 @@ T11实现与验证：附件数直接取服务端`Issue.attachment_count`。列�
 测试：13项真实页面（`issue-layouts/attachment-count.test.tsx`：列表/看板/表格的0/1/51、偏好隐藏、表头双向排序与方向性ID tie、增删附件后的权威读使列表重读而行进出未加载页、另一列表带来新计数时重读、403/503不沿用旧值且只有确认重试显示新值、404经重读离开、成员跨项目视图），另有行属性7项、表头4项、显示菜单1项（保存整组并重载）、成员视图偏好1项、页解码1项；全部请求监测无逐行GET或附件列表读取。服务端：迁移00038的回填/默认/CHECK拒绝码/Down、HTTP 12键往返、bootstrap默认与自定义偏好、issue list_settings词表。Step2命令57文件860项、constants 10项通过。8项变异全部以断言失败并SHA恢复：零计数仍显示、忽略显示偏好、本地范围丢失选择、接受不安全计数、表格丢数字、行显示别的计数、排序方向对调；store fields去掉attachment_count的变异两次存活（权威读本身就会重读列表），补“另一列表带来新计数”测试后被杀。完整make test-web 18/18、web直接335文件3792测试、类型、17文件零warning、19文件格式、web lint 69等于上限、1416翻译引用与中英键同步、关键词、golangci-lint 0 issues通过，生成物重跑一致。
 
 局部裁定与原件：bootstrap首跑因命令遗漏项目的`-timeout=20m`，在Go默认10分钟处截断（当时运行中的测试才1s，非挂起），按Makefile的GO_TEST_TIMEOUT重跑623s通过，期间只有web文件变化。knip现报3个未用文件、2个导出、1个类型与3个枚举成员，均为旧文件链与T7/T8遗留、无T11新增，由T12（Step2含make knip）清除。T11原件t11-server-red、t11-server-green（bootstrap超时）、t11-server-bootstrap、t11-web-red、t11-web-green-1~8、t11-build-packages、t11-step2/-constants、t11-mut-1~8与5b/5c、t11-lint（无效路径）/-2/-3、t11-format（无效路径）/-2~4、t11-types/-2、t11-i18n-keys（无效路径）/-root、t11-i18n-sync、t11-keywords、t11-check-lint、t11-lint-go、t11-test-web、t11-web-all、t11-knip、t11-gen-repeat。真实浏览器、local/S3与三浏览器仍由T13验证。
+
+T11补正：T12的`make lint-web`发现e2e包类型检查失败——i5列表偏好与p8项目偏好两个端到端故事仍按11键构造并整体比较偏好，运行时toEqual也会因服务端返回12键失败。T11只跑了web包的类型检查。单独提交`ccc7369c`补键，i5显示菜单逐项切换加入“Attachments”，测试名与证据标签改为twelve；e2e类型检查通过，真实运行由T13完成。
+
+T12消费者清单与删除：重跑全仓rg（原件t12-consumers.txt，95处/34文件）并逐条归类。删除：FileService/FileUploadService、编辑器资产store与`useEditorAsset`（含14处测试死mock）、`use-file-size`与`MAX_FILE_SIZE`/`DANGEROUS_EXTENSIONS`、utils的`getEditorAssetSrc`/`getEditorAssetDownloadSrc`/`getFileURL`/`getAssetIdFromUrl`、`EFileAssetType`与`types/file.ts`、编辑器无人使用的`helpers/assets.ts`，以及整个`web/packages/services`与独有依赖`file-type`（锁文件由pnpm离线重算，只删file-type及其传递依赖，testcontainers条目去掉peer后缀、版本不变）。迁移：`normalizeAPIRequestURL`连同原单元测试移到`core/lib/api-request-url.ts`，APIService只改导入、行为不变，测试示例改为中性相对路径；`use-parse-editor-content`不再给图片造旧地址，复制为Markdown时省略图片（P8具名风险）。未来领域无能力：M7收集箱创建弹窗删去从未被调用的上传回调与bulk状态请求，不启用图片。T1–T10已迁：工作项/评论/草稿附件与正文图片。`TCommentsOperations`已无上传成员，`TFileHandler`在T8已删。
+
+行为测试：真实编辑器的收集箱创建测试粘贴图片后提交，断言旧APIService仅一次intake POST、生成客户端与原始传输零请求、正文无图片；`watchLegacyFileTraffic`接入附件宿主、评论文件、正文图片与草稿文件四个测试文件的afterEach，对三条通道断言无`/api/assets/v2`、file-assets、bulk、旧restore或multipart（50项通过）。两项变异均被杀：收集箱无条件发bulk、评论创建后补旧bulk绑定（报`old service /api/assets/v2/.../bulk/`）。
+
+门禁：`make knip`通过（顺带清掉T7/T8遗留：`DownloadFailure`/`useImageAvailable`/`ImagePending`改为模块内私有，`ECustomImageStatus`删去从未使用的UPLOADING/DUPLICATING/DUPLICATION_FAILED）；`make lint-web` 50/50（删除旧文件少了2条oxlint告警，web上限69→67）；`make test-web` 16/16（services包任务消失），web直接337文件3804测试；37个修改文件零warning且格式正确。root.store的store数量断言25→24。关键词：`services-files`规则由文件白名单改为挡住该目录任何文件，新注释中的品牌词改写；全仓旧名字只剩关键词守卫规则与样本（用来禁止回流），文档历史除外。plane-diff、前端改动清单3.1及M1/M1-P2/M1-P3/M2/M4交接已登记处理结果，各交接仍open。T12原件t12-consumers、t12-inbox-1~3、t12-mut-inbox、t12-legacy-1/-2、t12-mut-legacy、t12-pnpm-install、t12-build-packages/-editor、t12-knip-1/-2、t12-keywords-1/-2、t12-lint-web-1/-2、t12-test-web/-2、t12-web-all、t12-lint、t12-format，及T11补正的t11-fix-e2e-types。
+

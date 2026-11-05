@@ -55,10 +55,7 @@ export const LiteTextEditor = React.forwardRef(function LiteTextEditor(
   const members = useMember();
   const { getUserDetails } = members;
   // parse content
-  const { getEditorMetaData } = useParseEditorContent({
-    projectId,
-    workspaceSlug,
-  });
+  const { getEditorMetaData } = useParseEditorContent({ workspaceSlug });
   // use editor mention
   const { fetchMentions, mentionScope } = useEditorMention({ workspaceSlug, projectId, editable, members });
   // editor config

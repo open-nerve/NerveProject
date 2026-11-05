@@ -19,9 +19,6 @@ vi.mock("@/hooks/store/use-issue-detail", () => ({ useIssueDetail: () => tab.app
 vi.mock("@/hooks/store/use-project", () => ({ useProject: () => tab.app.projectRoot.project }));
 vi.mock("@/hooks/store/use-member", () => ({ useMember: () => ({ getUserDetails: () => undefined }) }));
 vi.mock("@/hooks/store/user", () => ({ useUser: () => tab.app.user }));
-vi.mock("@/hooks/store/use-editor-asset", () => ({
-  useEditorAsset: () => ({ uploadEditorAsset: vi.fn(), duplicateEditorAsset: vi.fn() }),
-}));
 let tab: Awaited<ReturnType<typeof issueStoreTab>>, root: Root, host: HTMLDivElement;
 const clipboardDescriptor = Object.getOwnPropertyDescriptor(navigator, "clipboard");
 let clipboard: ReturnType<typeof heldChange<void>>;

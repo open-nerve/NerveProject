@@ -76,3 +76,7 @@ P2已有资产表、生成AssetPurpose和真实业务/字节两段协议；按§
 §1个人资料/引导头像与封面通过新AssetService和原生File上传接通，独立资产字段更新、替换/移除、刷新/重登录及真实local/S3字节验收完成。§4本段新资料资源按loginId和权限代次持有；换账号、取消、权限ABA和旧读新写在真实页面与RootStore联合回归通过。§5继续复用普通storage函数和现有拥有资源的fixture，WebKit额外接收端观察不增加产品接口。详见[P6评审§16–18](../reviews/P6-profile-upload-review.md#16-t11-真实页面双存储与字节)。
 
 §3及旧文件服务剩余会话单例仍属于P7最后编辑器/评论消费者，不把本段局部迁移当整包删除；M5最终清理/门禁由P8汇总，本页保持open。
+
+## 处理结果（M5/P7b T12核对）
+
+§3完成：`web/packages/services`整包删除，任何`package.json`不再依赖`@nerve/services`，pnpm按仓库版本移除独有依赖`file-type`及其传递依赖（未手写锁文件）。地址规范化连同原单元测试移到`web/apps/web/core/lib/api-request-url.ts`，旧APIService只改导入位置、行为不变；上传元数据工具随旧文件链删除。规则`services-files`改为挡住该目录任何文件重新出现。`make knip`、`make lint-web`、`make test-web`通过，前端改动清单3.1对应行已改为已完成。其余各节的最终汇总仍由P8收尾，本页保持open。

@@ -11,7 +11,7 @@ const empty: EditorImageRead = {
   retry: () => {},
   dispose: () => {},
 };
-export function useImageAvailable(images: EditorImages | undefined) {
+function useImageAvailable(images: EditorImages | undefined) {
   const subscribe = useCallback(
     (changed: () => void) => {
       images?.signal.addEventListener("abort", changed);

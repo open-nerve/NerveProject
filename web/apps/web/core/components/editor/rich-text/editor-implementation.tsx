@@ -39,10 +39,7 @@ export const RichTextEditor = forwardRef(function RichTextEditor(
   // use editor mention
   const { fetchMentions, mentionScope } = useEditorMention({ workspaceSlug, projectId, editable, members });
   // parse content
-  const { getEditorMetaData } = useParseEditorContent({
-    projectId,
-    workspaceSlug,
-  });
+  const { getEditorMetaData } = useParseEditorContent({ workspaceSlug });
 
   return (
     <RichTextEditorWithRef

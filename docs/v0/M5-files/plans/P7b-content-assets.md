@@ -159,9 +159,9 @@ T3与T5衔接：命令确认收据先发布给稳定host再触发权威重读；
 **Files:** 删除core/services/{file,file-upload}.service.ts、store/editor/asset.store.ts、hooks/store/use-editor-asset.ts和旧config链；清root.store、TCommentsOperations、types/enums/file、utils旧file URL；inbox未开放消费者移除死上传回调但不启用；URL规范化移到core/lib/api-request-url.ts及原测试；删web/packages/services、package/catalog/pnpm-lock引用，knip.jsonc/tools/keywords.json过期例外。
 **Interfaces:** 旧APIService仅改导入位置，normalizeAPIRequestURL行为不变；所有其余文件调用者必须使用T1/T2/T7，未来领域没有images能力。原服务包独有file-type及其不再需要的锁依赖由pnpm移除，不手写伪锁文件。
 
-- [ ] Step 1：重跑完整rg消费者清单，逐条标迁移/删除/未来领域无能力；原URL规范化测试在新位置运行。行为测试断言未开放inbox不发文件请求，已开放页面没有/api/assets/v2、multipart、bulk-status、旧restore；不只靠无字符串通过。
-- [ ] Step 2：删除真实无消费者链并用仓库pnpm更新锁；`make knip`、`make lint-web`、`make test-web`。关键词旧例外删除，不推迟until；检查editor可选能力无假空返回，TFileHandler/EFileAssetType/旧service包命中0（文档历史除外）。
-- [ ] Step 3：实际依赖/import全仓复核与修改文件零warning，登记plane-diff及M1/M2/M4 handoff处理结果但status仍open；提交 `refactor(M5/P7b): 删除旧文件调用链和服务包`。
+- [x] Step 1：重跑完整rg消费者清单，逐条标迁移/删除/未来领域无能力；原URL规范化测试在新位置运行。行为测试断言未开放inbox不发文件请求，已开放页面没有/api/assets/v2、multipart、bulk-status、旧restore；不只靠无字符串通过。
+- [x] Step 2：删除真实无消费者链并用仓库pnpm更新锁；`make knip`、`make lint-web`、`make test-web`。关键词旧例外删除，不推迟until；检查editor可选能力无假空返回，TFileHandler/EFileAssetType/旧service包命中0（文档历史除外）。
+- [x] Step 3：实际依赖/import全仓复核与修改文件零warning，登记plane-diff及M1/M2/M4 handoff处理结果但status仍open；提交 `refactor(M5/P7b): 删除旧文件调用链和服务包`。
 
 ## Task 13（T13）：真实页面与交错反例
 

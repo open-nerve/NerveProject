@@ -16,7 +16,6 @@ vi.mock("@/lib/store-context", async () => ({
 }));
 vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
 vi.mock("@nerve/propel/toast", () => import("@/lib/fake-toast"));
-vi.mock("@/hooks/store/use-editor-asset", () => ({ useEditorAsset: () => ({}) }));
 vi.mock("@/hooks/store/use-member", () => ({ useMember: () => ({ getUserDetails: () => undefined }) }));
 vi.mock("@/components/editor/lite-text", async () => ({
   LiteTextEditor: (await import("./fake-comment-editor")).commentEditor(),

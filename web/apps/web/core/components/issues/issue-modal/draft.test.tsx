@@ -47,7 +47,6 @@ vi.mock("@/hooks/store/use-issue-detail", () => ({ useIssueDetail: () => tab.app
 vi.mock("@/hooks/store/use-project", () => ({ useProject: () => tab.app.projectRoot.project }));
 vi.mock("@/hooks/store/use-project-state", () => ({ useProjectState: () => tab.app.state }));
 vi.mock("@/hooks/store/use-workspace", () => ({ useWorkspace: () => tab.app.workspaceRoot }));
-vi.mock("@/hooks/store/use-editor-asset", () => ({ useEditorAsset: () => ({}) }));
 vi.mock("@/hooks/use-issue-layout-store", () => ({ useIssueStoreType: () => EIssuesStoreType.WORKSPACE_DRAFT }));
 vi.mock("@/hooks/use-issues-actions", () => ({
   useIssuesActions: () => ({ createIssue: ui.create, updateIssue: ui.update }),

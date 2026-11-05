@@ -25,3 +25,7 @@ M5 合并时：文件资源的接口没有 `PAGE_DESCRIPTION` 类型，表里没
 ## 处理结果（M5/P2）
 
 P2首张file_assets表没有page_id或页面资源用途；十种用途直接来自OpenAPI生成，F1逐一经真实PUT/complete/GET。旧前端资源类型的最终删除仍归P6/P7，本交接保持open。证据见[P2阶段评审](../reviews/P2-assets-review.md)，整审/集成结果仍单独核验。
+
+## 处理结果（M5/P7b T12核对）
+
+`EFileAssetType`与旧文件服务已整体删除，前端改用OpenAPI生成的AssetPurpose和内容宿主；新接口从未提供`PAGE_DESCRIPTION`。逐项结论由M5收尾写入review后再关闭，本页保持open。

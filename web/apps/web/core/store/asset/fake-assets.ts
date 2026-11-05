@@ -9,7 +9,42 @@ import { accountOf } from "@/store/member/fake-users";
 import { seedAccount } from "@/store/user/fake-account";
 import { loadProjects } from "@/store/project/fake-projects";
 import { loadWorkspaces } from "@/store/workspace/fake-workspaces";
+import { APIService } from "@/services/api.service";
 import type { ContentHost } from "./content-view";
+
+/** The old file transport: v2 asset routes and file-assets, bulk status, the old restore and multipart. */
+const legacyFilePath = /\/api\/assets\/v2|file-assets|bulk|\/restore\//;
+/**
+ * Watches every channel an opened page could use for files — the generated client, the raw transfer and the old
+ * axios services — so a test proves the page never speaks the old protocol instead of relying on missing strings.
+ * Read leaks() before mocks are restored.
+ */
+export function watchLegacyFileTraffic(tab: {
+  nerve: { calls: Call[] };
+  puts: { file: BodyInit | null | undefined }[];
+}) {
+  const spies = (["get", "post", "put", "patch", "delete", "request"] as const).map((method) =>
+    vi.spyOn(APIService.prototype, method)
+  );
+  return {
+    leaks(): string[] {
+      const old = spies.flatMap((spy) =>
+        (spy.mock.calls as unknown[][]).flatMap(([target, data]) => {
+          const config =
+            typeof target === "object" && target ? (target as { url?: unknown; data?: unknown }) : undefined;
+          const url = String(config ? config.url : target);
+          const body = config ? config.data : data;
+          return legacyFilePath.test(url) || body instanceof FormData ? [`old service ${url}`] : [];
+        })
+      );
+      const client = tab.nerve.calls
+        .filter((call) => legacyFilePath.test(call.path))
+        .map((call) => `client ${call.method} ${call.path}`);
+      const raw = tab.puts.filter((put) => put.file instanceof FormData).map(() => "multipart raw transfer");
+      return [...old, ...client, ...raw];
+    },
+  };
+}
 
 export const imageFile = (name = "picture.png", bytes = 4, type = "image/png") =>
   new File([new Uint8Array(bytes)], name, { type });
