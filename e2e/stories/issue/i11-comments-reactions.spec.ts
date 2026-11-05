@@ -165,7 +165,11 @@ test("I11 (page): real comment input ignores IME and empty submission, retains a
   await page.keyboard.insertText("Confirmed comment");
   await expect(editor).toHaveText("Confirmed comment");
   const held = await sentHeld(page, "POST", path, () => submit.dblclick());
-  expect(held.body).toEqual({ comment_html: expect.stringMatching(/^<p\b[^>]*>Confirmed comment<\/p>$/) });
+  // A new comment sends the files chosen for it (M5/P7b), here none, in the same single POST.
+  expect(held.body).toEqual({
+    comment_html: expect.stringMatching(/^<p\b[^>]*>Confirmed comment<\/p>$/),
+    attachment_ids: [],
+  });
   await c12Evidence(page, "B16", "comment-create-pending");
   await expect(submit).toBeDisabled();
   expect(watch.apiRequests.filter((request) => request === `POST ${path}`)).toHaveLength(2);

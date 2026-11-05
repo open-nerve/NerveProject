@@ -1,7 +1,7 @@
 import { c12Evidence } from "../../fixtures/c12-evidence";
 import { createHash } from "node:crypto";
 import { readdir, readFile } from "node:fs/promises";
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 import { expect, test } from "../../fixtures/test";
 import { issueListProject, openIssueList } from "../../fixtures/issue-list-page";
 import { openIssueDetail } from "../../fixtures/issue-detail-page";
@@ -270,12 +270,47 @@ test("C10 (page): a native callout saves and reopens without external images or 
   await expectQuietConsole(page, watch);
 });
 
+/** Pastes and then drops one PNG file into the editor, waiting for its focus to return after the paste target. */
+async function pasteAndDropImageFile(editor: Locator) {
+  await editor.evaluate((element) => {
+    const png = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII=";
+    const file = new File([Uint8Array.from(atob(png), (char) => char.charCodeAt(0))], "boundary.png", {
+      type: "image/png",
+    });
+    const clipboard = new DataTransfer();
+    clipboard.items.add(file);
+    // Firefox's synthetic ClipboardEvent ignores the constructor's clipboardData. Give every
+    // engine the same actual DataTransfer; editor handlers and persistence remain real.
+    const paste = new ClipboardEvent("paste", { bubbles: true, cancelable: true });
+    Object.defineProperty(paste, "clipboardData", { value: clipboard });
+    element.dispatchEvent(paste);
+    const dropped = new DataTransfer();
+    dropped.items.add(file);
+    const rect = element.getBoundingClientRect();
+    element.dispatchEvent(
+      new DragEvent("drop", {
+        dataTransfer: dropped,
+        clientX: rect.left + 5,
+        clientY: rect.top + 5,
+        bubbles: true,
+        cancelable: true,
+      })
+    );
+  });
+  // ProseMirror may briefly own a hidden paste target for a file without insertable text.
+  // Wait for its real focus restoration before sending the next, separate clipboard input.
+  await expect(editor).toBeFocused();
+}
+
+// M5/P7b gives an existing work item body images and attachments (their real-page stories are F8, F11 and F12); the
+// creation form still has no file host. Neither offers subscription, and a pasted document keeps only its text.
+const fileBoundary = {
+  detail:
+    "has image and attachment actions but no subscription action; a pasted document keeps its text without its image",
+  creation: "has no image, attachment or subscription action; image paste and drop make no upload",
+} as const;
 for (const owner of ["detail", "creation"] as const) {
-  test(`C12 (page): ${owner} has no image, attachment or subscription action; image paste and drop make no upload and text still saves`, async ({
-    api,
-    db,
-    page,
-  }, info) => {
+  test(`C12 (page): ${owner} ${fileBoundary[owner]} and text still saves`, async ({ api, db, page }, info) => {
     const seed = await issueListProject(api, info);
     const issue = await createIssue(api, seed.member.token, seed.project.id, { name: "Image boundary" });
     const watch =
@@ -293,41 +328,19 @@ for (const owner of ["detail", "creation"] as const) {
     await editor.pressSequentially("/");
     await expect(page.getByRole("button", { name: "Callout", exact: true })).toBeVisible();
     await editor.pressSequentially("image");
+    if (owner === "detail") {
+      await expect(page.getByRole("button", { name: "Image", exact: true })).toBeVisible();
+      await editor.press("Escape");
+    }
     await expect(page.locator("#slash-command")).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Image", exact: true })).toHaveCount(0);
     await editor.press("ControlOrMeta+a");
     await editor.press("Backspace");
+    // The detail's image files upload, which F11 proves; here only the creation form refuses them.
+    if (owner === "creation") await pasteAndDropImageFile(editor);
     await editor.evaluate((element) => {
-      const png = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII=";
-      const file = new File([Uint8Array.from(atob(png), (char) => char.charCodeAt(0))], "boundary.png", {
-        type: "image/png",
-      });
-      const clipboard = new DataTransfer();
-      clipboard.items.add(file);
-      // Firefox's synthetic ClipboardEvent ignores the constructor's clipboardData. Give every
-      // engine the same actual DataTransfer; editor handlers and persistence remain real.
-      const paste = new ClipboardEvent("paste", { bubbles: true, cancelable: true });
-      Object.defineProperty(paste, "clipboardData", { value: clipboard });
-      element.dispatchEvent(paste);
-      const dropped = new DataTransfer();
-      dropped.items.add(file);
-      const rect = element.getBoundingClientRect();
-      element.dispatchEvent(
-        new DragEvent("drop", {
-          dataTransfer: dropped,
-          clientX: rect.left + 5,
-          clientY: rect.top + 5,
-          bubbles: true,
-          cancelable: true,
-        })
-      );
-    });
-    // ProseMirror may briefly own a hidden paste target for a file without insertable text.
-    // Wait for its real focus restoration before sending the next, separate clipboard input.
-    await expect(editor).toBeFocused();
-    await editor.evaluate((element) => {
-      // A file clipboard is handled as a file. Separately paste document HTML, whose text remains
-      // available even though its image node is absent from the M4 editor schema.
+      // A file clipboard is handled as a file. Separately paste document HTML: its text remains, and its
+      // image, which names no asset of this work item, is neither inserted, loaded nor uploaded.
       const documentClipboard = new DataTransfer();
       const png = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII=";
       documentClipboard.setData("text/html", `<p>Kept paste text</p><img src="data:image/png;base64,${png}">`);
@@ -341,7 +354,9 @@ for (const owner of ["detail", "creation"] as const) {
     await expect(editor).toHaveText("Kept paste text plus typed");
     await c12Evidence(page, "B14", `${owner}-paste-keeps-text-without-upload`);
     await expect(editor.locator("img,input[type=file],image-component")).toHaveCount(0);
-    await expect(page.getByText("Attachments", { exact: true })).toHaveCount(0);
+    if (owner === "detail")
+      await expect(page.getByRole("button", { name: "Attachments 0", exact: true })).toBeVisible();
+    else await expect(page.getByText("Attachments", { exact: true })).toHaveCount(0);
     await expect(page.getByRole("button", { name: /^(un)?subscribe$/i })).toHaveCount(0);
     if (owner === "creation") {
       expect(
@@ -366,7 +381,11 @@ for (const owner of ["detail", "creation"] as const) {
           )[0]?.description_stripped
       )
       .toBe("Kept paste text plus typed");
-    expect(watch.apiRequests.filter((request) => /asset|upload|attachment|subscribe/i.test(request))).toEqual([]);
+    const fileRequests = watch.apiRequests.filter((request) => /asset|upload|attachment|subscribe/i.test(request));
+    // The detail reads its own attachment list; neither owner sends a file or subscription command.
+    expect(owner === "detail" ? fileRequests.filter((request) => !request.startsWith("GET ")) : fileRequests).toEqual(
+      []
+    );
     expect(watch.oldApiRequests).toEqual([]);
     expect(watch.apiFailures).toEqual([]);
     expect(watch.pageErrors).toEqual([]);
