@@ -25,32 +25,34 @@ export const IssueDetailHost = observer(function IssueDetailHost({
   const workspace = root.rootStore.workspaceRoot.getWorkspaceBySlug(workspaceSlug);
   const identity = root.permissionReads.identity(workspace?.id, [projectId], true);
   const error = root.verification.getError(issueId);
+  const present = !!root.issues.getIssueById(issueId);
   // A terminal canonical conclusion starts a new empty owner; temporary verification preserves this owner.
   const unavailable =
     root.verification.isMissing(issueId) ||
     (error instanceof ApiError && [401, 403, 404].includes(error.status)) ||
-    (!root.issues.getIssueById(issueId) && !root.verification.isUncertain(issueId));
+    (!present && !root.verification.isUncertain(issueId));
   const workspaceID = workspace?.id ?? "";
   const scope = JSON.stringify([workspaceSlug, workspaceID, projectId, issueId, identity, unavailable]);
   const owner = useMemo(
-    () => ({
-      root,
-      scope,
-      key: nextHost++,
-      modals: new IssueDetailModals(setLastWidgetAction),
-      inputs: new IssueDetailInputState(root, workspaceID, projectId, issueId),
-    }),
-    [root, scope, setLastWidgetAction, workspaceID, projectId, issueId]
+    () => ({ root, scope, key: nextHost++, inputs: new IssueDetailInputState(root, workspaceID, projectId, issueId) }),
+    [root, scope, workspaceID, projectId, issueId]
   );
-  const { modals, inputs } = owner;
+  // Dialogs are drawn in the body that a canonical re-read withdraws, and their forms end with it. Their switches
+  // end there too, so the body shown again opens none of them; only the input kept above outlives the withdrawal.
+  const body = useMemo(
+    () => ({ owner, present, modals: new IssueDetailModals(setLastWidgetAction) }),
+    [owner, present, setLastWidgetAction]
+  );
+  const { inputs } = owner;
+  const { modals } = body;
+  useLayoutEffect(() => {
+    inputs.activate();
+    return inputs.deactivate;
+  }, [inputs]);
   useLayoutEffect(() => {
     modals.activate();
-    inputs.activate();
-    return () => {
-      modals.retire();
-      inputs.deactivate();
-    };
-  }, [modals, inputs]);
+    return modals.retire;
+  }, [modals]);
   // Remount editor/dropdowns and child-local edit/delete payloads at the same boundary.
   return (
     <IssueDetailModalContext.Provider key={owner.key} value={modals}>
