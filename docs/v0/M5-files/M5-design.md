@@ -1,9 +1,9 @@
 # M5：文件
 
-> 状态：P1–P7a已完成。P7a整审及局部修复闭环，最终分支CI41859931318和noff maincf07c9fbe663b2e2c821c5988bb06933325b8ac1的CI41869045846均全绿；2,885文件全量归档核验并正常清理。P7b正式spec/plan预检通过，现从T1实施；随后连续推进P8及closeout，M5总体未完成。见[P7a完成证据](reviews/P7a-draft-preparations-review.md#13-t7-集成归档与接续)。
+> 状态：P1–P7b已完成。P7b整审及修复闭环，最终分支CI42109712732和noff main2b2c6f33e3a93536742d5f28b74eb959ba73d6d1的CI42115811156均全绿；7,397文件全量归档核验并正常清理。P8正式spec/plan预检通过，暂未实施；随后连续推进P8及closeout，M5总体未完成。见[P7b完成证据](reviews/P7b-content-assets-review.md#11-t16-集成归档与接续)与[P8预检](../../reviews/re-51-M5P8预检.md)。
 > 起点：`main@3db22f06ad9e82a483c05c8078801af00a5cae02`（M4 最终 main CI 41397218533，三个作业成功）。
 PC2 已批准 A：[工作区更新的迟到回包](reviews/P6-workspace-write-lifetime-decision.md)。
-> 当前文档分支为`codex/m5-p7b`，根目录保持main。负责人2026-11-02已授权按既有节奏连续推进，常规设计、预检、实现、deep-review、`--no-ff`集成、CI和归档无需逐次询问；负责人2026-11-05进一步授权P7b实施、整审和既有节奏集成后连续推进P8及M5最终收尾。重大风险、架构回归或关键分歧，先提交已完成工作，再上报。
+> 当前文档分支为`codex/m5-p8`，根目录保持main。负责人2026-11-02已授权按既有节奏连续推进，常规设计、预检、实现、deep-review、`--no-ff`集成、CI和归档无需逐次询问；负责人2026-11-05进一步授权P7b实施、整审和既有节奏集成后连续推进P8及M5最终收尾。重大风险、架构回归或关键分歧，先提交已完成工作，再上报。
 
 ## 1. 目标、范围与输入
 
@@ -344,8 +344,9 @@ P1 起第一个实现提交更新关键词 phase 与到期例外；纯设计分�
 | P5 | 已完成；最终main f5f4ce94、CI41772399410三job全绿，5053文件归档核验且三组分支/worktree清理完成 | [spec](specs/P5-issue-assets.md) / [plan](plans/P5-issue-assets.md) / [预检](../../reviews/re-40-M5P5预检.md) / [整审](../../reviews/re-41-M5P5整体审核.md) / [阶段记录](reviews/P5-issue-assets-review.md) |
 | P6 | 已完成：整审/局部修复、准确最终分支及main CI全绿，6,861文件归档验证并正常清理 | [spec](specs/P6-profile-upload.md) / [plan](plans/P6-profile-upload.md) / [完成证据](reviews/P6-profile-upload-review.md#22-t15准确main全绿与归档清理) |
 | P7a | 已完成：noff main cf07c9fb、CI41869045846三job全绿，2,885文件归档核验及正常清理，P7b正式预检完成 | [spec](specs/P7a-draft-preparations.md) / [plan](plans/P7a-draft-preparations.md) / [完成证据](reviews/P7a-draft-preparations-review.md#13-t7-集成归档与接续) / [整审](../../reviews/re-48-M5P7a整体审核.md) |
-| P7b | 正式预检通过，基线cf07c9fb；T1实施中，16Task/8产品验收按证据推进 | [spec](specs/P7b-content-assets.md) / [plan](plans/P7b-content-assets.md) / [预检](../../reviews/re-49-M5P7b预检.md) / [阶段记录](reviews/P7b-content-assets-review.md) |
-| P8、closeout | 未开始 | 待前置阶段完成后逐段展开 |
+| P7b | 已完成：noff main 2b2c6f33、CI42115811156三job全绿，7,397文件归档核验及正常清理，P8正式预检完成 | [spec](specs/P7b-content-assets.md) / [plan](plans/P7b-content-assets.md) / [预检](../../reviews/re-49-M5P7b预检.md) / [整审](../../reviews/re-50-M5P7b整体审核.md) / [完成证据](reviews/P7b-content-assets-review.md#11-t16-集成归档与接续) |
+| P8 | 正式预检通过，基线2b2c6f33；暂未实施，16Task/8产品验收待证据 | [spec](specs/P8-final-acceptance.md) / [plan](plans/P8-final-acceptance.md) / [预检](../../reviews/re-51-M5P8预检.md) / [阶段记录](reviews/P8-final-acceptance-review.md) |
+| closeout | 未开始 | 待P8完成后展开 |
 
 当前可自行决定的局部取舍及代价：编辑器只处理图片，普通文件走附件区；预设封面使用稳定编号，不上传构建素材副本；描述图片保留到宿主删除，代价是占用空间；封存复制增加一次存储操作，换取确认后字节不被旧 PUT 改写。以上均在既定文件模块范围内，设计预检已核对一致性，具体实现按阶段合同验证。
 
