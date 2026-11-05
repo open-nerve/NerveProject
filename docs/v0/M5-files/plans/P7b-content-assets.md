@@ -132,9 +132,9 @@ T3与T5衔接：命令确认收据先发布给稳定host再触发权威重读；
 
 **跨卸载责任：** `use-confirmed-autosave.tsx`仅增加必要的受控输入衔接，状态所有者为T5 host，debounce/串行/确认算法不复制。失败revision、未保存正文及图片UUID在暂时owner缺席后可恢复；基准变化给冲突、拒绝revision不自动重试。传输中节点旧session/队列彻底结束，只保留输入与已知资产身份/未确认提示，新view重验后由用户明确继续。Step1加入失败正文、未保存标题、图片节点、并发新正文、读取失败后恢复及真实权限ABA清空的联合测试。
 
-- [ ] Step 1：ready前不保存UUID，成功后真实description_html/comment_html只含UUID；换图/调序产生新内容、URL刷新不触发PATCH、只补ID保持原迁移；正文拒绝保留，历史已移除图片仍可解析；评论图片不进普通attachment_ids，已发表再次编辑按commentID范围。
-- [ ] Step 2：`pnpm --filter web exec vitest run core/components/issues/autosave.test.tsx core/components/issues/editor-capabilities.test.tsx core/components/comments core/components/core/description-versions` RED→GREEN。保留原debounce取消/串行保存/dirty处理，不复用未知copyMarkdownToClipboard。
-- [ ] Step 3：原工作项/评论完整受影响回归、类型/格式；提交 `feat(M5/P7b): 接通正文图片与只读历史`。
+- [x] Step 1：ready前不保存UUID，成功后真实description_html/comment_html只含UUID；换图/调序产生新内容、URL刷新不触发PATCH、只补ID保持原迁移；正文拒绝保留，历史已移除图片仍可解析；评论图片不进普通attachment_ids，已发表再次编辑按commentID范围。
+- [x] Step 2：`pnpm --filter web exec vitest run core/components/issues/autosave.test.tsx core/components/issues/editor-capabilities.test.tsx core/components/comments core/components/core/description-versions` RED→GREEN。保留原debounce取消/串行保存/dirty处理，不复用未知copyMarkdownToClipboard。
+- [x] Step 3：原工作项/评论完整受影响回归、类型/格式；提交 `feat(M5/P7b): 接通正文图片与只读历史`。
 
 ## Task 10（T10）：已有草稿附件、换项目与发布
 

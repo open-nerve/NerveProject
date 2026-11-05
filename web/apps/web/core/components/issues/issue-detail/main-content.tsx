@@ -5,11 +5,11 @@
  */
 
 import { useEffect, useRef } from "react";
+import { useIssueImages } from "@/hooks/editor/use-issue-images";
 import { observer } from "mobx-react";
 // nerve imports
 import type { EditorRefApi } from "@nerve/editor";
 import { useIssueSaveStatus } from "@/components/issues/use-issue-save-status";
-import { EFileAssetType } from "@nerve/types";
 // components
 import { IssueDescriptionVersions } from "@/components/issues/issue-detail/description-versions";
 import { DescriptionInput, type DescriptionInputHandle } from "@/components/editor/rich-text/description-input";
@@ -56,6 +56,7 @@ export const IssueMainContent = observer(function IssueMainContent(props: Props)
   const { setShowAlert } = useReloadConfirmations(isSubmitting === "submitting" || isSubmitting === "failed");
   // derived values
   const issue = issueId ? getIssueDetailById(issueId) : undefined;
+  const { images } = useIssueImages(workspaceSlug, projectId, issueId);
 
   useEffect(() => {
     setShowAlert(isSubmitting === "submitting" || isSubmitting === "failed");
@@ -96,7 +97,7 @@ export const IssueMainContent = observer(function IssueMainContent(props: Props)
 
         <DescriptionInput
           autosaveRef={descriptionInputRef}
-          disabledExtensions={["image"]}
+          images={images}
           prepareSubmit={
             issueOperations.prepareUpdate
               ? () => {
@@ -114,7 +115,6 @@ export const IssueMainContent = observer(function IssueMainContent(props: Props)
           disabled={isArchived || !isEditable}
           editorRef={editorRef}
           entityId={issue.id}
-          fileAssetType={EFileAssetType.ISSUE_DESCRIPTION}
           initialValue={issue.description_html}
           key={issue.id}
           onSubmit={async (value, isMigrationUpdate) => {

@@ -6,10 +6,12 @@ import { useForm } from "react-hook-form";
 import { SWRConfig } from "swr";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { EditorRefApi } from "@nerve/editor";
-import { EFileAssetType } from "@nerve/types";
 import type { RichTextEditor } from "@/components/editor/rich-text";
 import { DescriptionInput } from "@/components/editor/rich-text/description-input";
-import { issueDetailOf, issueStoreTab } from "@/store/issue/fake-issues";
+import { issueDetailOf } from "@/store/issue/fake-issues";
+import { contentAssetTab } from "@/store/asset/fake-assets";
+import { StoreContext } from "@/lib/store-context";
+import type { RootStore } from "@/store/root.store";
 import { json } from "@/lib/auth/fake-nerve";
 import { IssueMainContent } from "./issue-detail/main-content";
 import { PeekOverviewIssueDetails } from "./peek-overview/issue-detail";
@@ -19,7 +21,9 @@ import type { IssueFormValues } from "./issue-modal/types";
 
 vi.mock("@/lib/auth/api-client", () => ({ tokenManager: { state: { loginId: "capabilities" } }, publicClient: {} }));
 vi.mock("@/lib/auth/use-session", () => ({ useSession: () => ({ status: "signed-in", loginId: "capabilities" }) }));
-vi.mock("@/lib/store-context", () => ({ rootStore: {} }));
+vi.mock("@/lib/store-context", async () => ({
+  StoreContext: (await import("react")).createContext<RootStore | undefined>(undefined),
+}));
 vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
 vi.mock("@nerve/propel/toast", () => import("@/lib/fake-toast"));
 vi.mock("@/hooks/store/use-editor-asset", () => ({ useEditorAsset: () => ({}) }));
@@ -43,7 +47,7 @@ vi.mock("@/components/editor/rich-text", () => ({
   },
 }));
 let rendered: ComponentProps<typeof RichTextEditor> | undefined;
-let tab: Awaited<ReturnType<typeof issueStoreTab>>;
+let tab: Awaited<ReturnType<typeof contentAssetTab>>;
 let host: HTMLDivElement;
 let renderer: ReturnType<typeof createRoot>;
 const noop = () => {};
@@ -72,7 +76,6 @@ function Host({ kind }: { kind: HostKind }) {
         workspaceSlug="ws"
         projectId="A"
         entityId="x"
-        fileAssetType={EFileAssetType.ISSUE_DESCRIPTION}
         initialValue="<p>Other module</p>"
         onSubmit={async () => {}}
         setIsSubmitting={noop}
@@ -94,7 +97,7 @@ function Host({ kind }: { kind: HostKind }) {
 beforeEach(async () => {
   globalThis.IS_REACT_ACT_ENVIRONMENT = true;
   vi.useFakeTimers();
-  tab = await issueStoreTab();
+  tab = await contentAssetTab();
   tab.app.issue.issues.acceptRead(issueDetailOf("x"), tab.app.issue.captureRead());
   tab.nerve.respond = (call) => {
     if (call.method === "GET") call.answer(json(200, { data: [], next_cursor: null }));
@@ -113,20 +116,24 @@ afterEach(async () => {
 async function render(kind: HostKind) {
   await act(async () =>
     renderer.render(
-      <SWRConfig value={{ provider: () => new Map() }}>
-        <Host kind={kind} />
-      </SWRConfig>
+      <StoreContext.Provider value={tab.app}>
+        <SWRConfig value={{ provider: () => new Map() }}>
+          <Host kind={kind} />
+        </SWRConfig>
+      </StoreContext.Provider>
     )
   );
   expect(host.querySelector("[data-editor]")).not.toBeNull();
   return rendered!;
 }
-it.each(["detail", "peek", "create", "edit", "draft"] as const)(
-  "disables images at the actual %s description owner",
-  async (kind) => {
-    expect((await render(kind)).disabledExtensions ?? []).toContain("image");
-  }
-);
+it.each(["detail", "peek"] as const)("enables images at the canonical %s owner", async (kind) => {
+  const props = await render(kind);
+  expect(props.disabledExtensions ?? []).not.toContain("image");
+  expect(props.images?.write).toBeDefined();
+});
+it.each(["create", "edit", "draft"] as const)("disables images at the actual %s description owner", async (kind) => {
+  expect((await render(kind)).disabledExtensions ?? []).toContain("image");
+});
 it("keeps the shared description default available to its other consumers", async () => {
   expect((await render("shared")).disabledExtensions ?? []).not.toContain("image");
 });

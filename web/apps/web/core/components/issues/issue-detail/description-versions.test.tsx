@@ -10,10 +10,14 @@ import { descriptionVersionOf, issueDetailOf, issueStoreTab, requestedIssue } fr
 import { loadProjects } from "@/store/project/fake-projects";
 import type { DescriptionVersionsRoot } from "@/components/core/description-versions";
 import { IssueDescriptionVersions } from "./description-versions";
+import { StoreContext } from "@/lib/store-context";
+import type { RootStore } from "@/store/root.store";
 vi.stubGlobal("localStorage", { getItem: () => null, setItem: () => {}, removeItem: () => {} });
 vi.mock("@/lib/auth/api-client", () => ({ tokenManager: { state: { loginId: "one" } }, publicClient: {} }));
 vi.mock("@/lib/auth/use-session", () => ({ useSession: () => ({ status: "signed-in", loginId: "one" }) }));
-vi.mock("@/lib/store-context", () => ({ rootStore: undefined }));
+vi.mock("@/lib/store-context", async () => ({
+  StoreContext: (await import("react")).createContext<RootStore | undefined>(undefined),
+}));
 vi.mock("@/hooks/store/use-issue-detail", () => ({ useIssueDetail: () => tab.app.issue.issueDetail }));
 vi.mock("@/hooks/store/use-member", () => ({ useMember: () => ({ getUserDetails: () => undefined }) }));
 vi.mock("@/components/core/description-versions", () => ({
@@ -58,15 +62,17 @@ async function loadCore() {
 const render = (disabled = false) =>
   act(async () =>
     renderer.render(
-      <SWRConfig value={{ provider: () => cache }}>
-        <IssueDescriptionVersions
-          workspaceSlug="ws"
-          projectId="A"
-          issueId="x"
-          restoreDescription={async (confirm) => editor.current.setEditorValue(await confirm(), false)}
-          isRestoreDisabled={disabled}
-        />
-      </SWRConfig>
+      <StoreContext.Provider value={tab.app}>
+        <SWRConfig value={{ provider: () => cache }}>
+          <IssueDescriptionVersions
+            workspaceSlug="ws"
+            projectId="A"
+            issueId="x"
+            restoreDescription={async (confirm) => editor.current.setEditorValue(await confirm(), false)}
+            isRestoreDisabled={disabled}
+          />
+        </SWRConfig>
+      </StoreContext.Provider>
     )
   );
 async function loaded(disabled = false) {

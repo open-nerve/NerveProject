@@ -3,7 +3,7 @@
 import { act, useEffect, useState, type ComponentProps } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { EFileAssetType, type TNameDescriptionLoader } from "@nerve/types";
+import { type TNameDescriptionLoader } from "@nerve/types";
 import { heldChange, type HeldChange } from "@/lib/auth/fake-tab";
 import { ApiError } from "@/lib/api-error";
 import type { RichTextEditor } from "@/components/editor/rich-text";
@@ -104,7 +104,6 @@ function Harness({
           workspaceSlug="ws"
           projectId="A"
           entityId="x"
-          fileAssetType={EFileAssetType.ISSUE_DESCRIPTION}
           initialValue={confirmed}
           onSubmit={(body) => submit(body.description_html)}
           setIsSubmitting={setStatus}

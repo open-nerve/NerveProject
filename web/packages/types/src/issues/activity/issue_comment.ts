@@ -5,7 +5,6 @@
  */
 
 import type { IssueComment, IssueCommentCreate, IssueCommentUpdate } from "@nerve/api-client";
-import type { TFileSignedURLResponse } from "../../file";
 
 export type TCommentsOperations = {
   copyCommentLink: (commentId: string) => void;
@@ -16,8 +15,6 @@ export type TCommentsOperations = {
     onConfirmed?: (comment: IssueComment) => void
   ) => Promise<IssueComment>;
   removeComment: (commentId: string) => Promise<void>;
-  uploadCommentAsset: (blockId: string, file: File, commentId?: string) => Promise<TFileSignedURLResponse>;
-  duplicateCommentAsset: (assetId: string, commentId?: string) => Promise<{ asset_id: string }>;
   addCommentReaction: (commentId: string, reactionEmoji: string) => Promise<void>;
   deleteCommentReaction: (commentId: string, reactionEmoji: string) => Promise<void>;
   react: (commentId: string, reactionEmoji: string, userReactions: string[]) => Promise<void>;

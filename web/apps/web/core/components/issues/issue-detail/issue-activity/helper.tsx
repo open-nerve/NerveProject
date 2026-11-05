@@ -1,9 +1,8 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import { EFileAssetType, type TCommentsOperations } from "@nerve/types";
+import type { TCommentsOperations } from "@nerve/types";
 import { generateWorkItemLink } from "@nerve/utils";
-import { useEditorAsset } from "@/hooks/store/use-editor-asset";
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { useMember } from "@/hooks/store/use-member";
 import { useProject } from "@/hooks/store/use-project";
@@ -22,7 +21,6 @@ export const useWorkItemCommentOperations = (
   const detail = useIssueDetail();
   const { getProjectById } = useProject();
   const { getUserDetails } = useMember();
-  const { uploadEditorAsset, duplicateEditorAsset } = useEditorAsset();
   const { data: currentUser } = useUser();
   const { t } = useTranslation();
   const refusal = useRefusalToast();
@@ -75,32 +73,6 @@ export const useWorkItemCommentOperations = (
         const { ws, project, id } = scope();
         await detail.removeComment(ws, project, id, commentId);
       }, "issue.comments.remove.success"),
-    uploadCommentAsset: async (blockId, file, commentId) => {
-      const { ws, project } = scope();
-      const current = capture();
-      const answer = await uploadEditorAsset({
-        blockId,
-        data: { entity_identifier: commentId ?? "", entity_type: EFileAssetType.COMMENT_DESCRIPTION },
-        file,
-        projectId: project,
-        workspaceSlug: ws,
-      });
-      if (!current()) throw new SessionChangedError();
-      return answer;
-    },
-    duplicateCommentAsset: async (assetId, commentId) => {
-      const { ws, project } = scope();
-      const current = capture();
-      const answer = await duplicateEditorAsset({
-        assetId,
-        entityId: commentId || undefined,
-        entityType: EFileAssetType.COMMENT_DESCRIPTION,
-        projectId: project,
-        workspaceSlug: ws,
-      });
-      if (!current()) throw new SessionChangedError();
-      return answer;
-    },
     addCommentReaction: (commentId, reaction) =>
       follow(async () => {
         const { ws, project, id } = scope();

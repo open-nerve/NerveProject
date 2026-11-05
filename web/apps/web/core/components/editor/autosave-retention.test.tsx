@@ -76,6 +76,19 @@ it("retains an unattempted input across owner verification, without flushing or 
   expect(save).toHaveBeenCalledExactlyOnceWith("keep local");
   expect(host.querySelector("output")!.textContent).toBe("ready");
 });
+it("editing a preserved input on an unchanged base resumes the ordinary debounce", async () => {
+  await render(true);
+  await type("keep local");
+  canFlush = false;
+  await render(false);
+  canFlush = true;
+  await render(true);
+  expect(host.querySelector("output")!.textContent).toBe("preserved");
+  await type("keep local, amended");
+  await wait();
+  expect(save).toHaveBeenCalledExactlyOnceWith("keep local, amended");
+  expect(host.querySelector("output")!.textContent).toBe("ready");
+});
 it("preserves a refused revision and never retries it merely because the body mounts", async () => {
   save.mockRejectedValueOnce(new Error("refused"));
   await render(true);

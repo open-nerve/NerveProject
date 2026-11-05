@@ -19,6 +19,8 @@ import { LiteTextEditor } from "@/components/editor/lite-text";
 import { useWorkspace } from "@/hooks/store/use-workspace";
 // services
 import { useCommentView, useCommentPreparations } from "./use-comment-content";
+import { useEditorAssets } from "@/hooks/editor/use-editor-assets";
+import { contentImageIDs, verifyEditorImages } from "@/hooks/editor/verify-images";
 import { useCommentFieldError } from "./use-comment-field-error";
 import { useCommentInput } from "./use-comment-input";
 import { PreparedCommentFiles } from "./prepared-files";
@@ -57,12 +59,14 @@ const CommentCreateForm = observer(function CommentCreateForm(props: TCommentCre
   // states
   const input = useCommentInput("new-comment", "<p></p>");
   const view = useCommentView(workspaceSlug, projectId, entityId);
+  const images = useEditorAssets(view);
   const preparations = useCommentPreparations(view, input.value.attachmentIDs, input.select);
   const detail = useIssueDetail();
   // refs
   const editorRef = useRef<EditorRefApi>(null);
   const sending = useRef(false);
   const [isSubmitting, setSubmitting] = useState(false);
+  const [imageFailure, setImageFailure] = useState(false);
   const capture = useDetailScope(workspaceSlug, projectId, entityId);
   const formRefusal = useFormRefusal(["comment_html"], {});
   const errorId = useId();
@@ -110,9 +114,22 @@ const CommentCreateForm = observer(function CommentCreateForm(props: TCommentCre
       return;
     const attachment_ids = preparations.files!.payload();
     sending.current = true;
-    input.begin();
     setSubmitting(true);
+    setImageFailure(false);
     clearErrors("comment_html");
+    let verified = false;
+    try {
+      await verifyEditorImages(images, formData.comment_html);
+      verified = current() && view.current && view.canWrite("description");
+    } catch (error) {
+      if (current() && !(error instanceof SessionChangedError)) setImageFailure(true);
+    }
+    if (!verified) {
+      sending.current = false;
+      if (current()) setSubmitting(false);
+      return;
+    }
+    input.begin();
     await followInSession(
       () =>
         activityOperations.createComment({ ...formData, attachment_ids }, (comment) => {
@@ -162,6 +179,7 @@ const CommentCreateForm = observer(function CommentCreateForm(props: TCommentCre
           control={control}
           render={({ field: { value, onChange } }) => (
             <LiteTextEditor
+              images={images}
               editable={!!view?.canWrite("description")}
               editorProps={{
                 attributes: {
@@ -174,7 +192,7 @@ const CommentCreateForm = observer(function CommentCreateForm(props: TCommentCre
               }}
               workspaceId={workspaceId}
               id={"add_comment_" + entityId + "_" + errorId}
-              value="<p></p>"
+              value={null}
               workspaceSlug={workspaceSlug}
               projectId={projectId}
               onEnterKeyPress={(e) => void handleSubmit(onSubmit)(e)}
@@ -202,6 +220,8 @@ const CommentCreateForm = observer(function CommentCreateForm(props: TCommentCre
           </p>
         )}
       </div>
+      {contentImageIDs(input.value.html).incomplete && <p role="status">{t("content_files.image.unfinished")}</p>}
+      {imageFailure && <p role="alert">{t("content_files.image.unavailable")}</p>}
       <div inert={isSubmitting}>
         {preparations.files && <PreparedCommentFiles files={preparations.files} upload={preparations.upload} />}
       </div>

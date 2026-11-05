@@ -17,6 +17,8 @@ import { cn, isCommentEmpty, isComposing } from "@nerve/utils";
 // components
 import { LiteTextEditor } from "@/components/editor/lite-text";
 import { useCommentView } from "../use-comment-content";
+import { useEditorAssets } from "@/hooks/editor/use-editor-assets";
+import { contentImageIDs, verifyEditorImages } from "@/hooks/editor/verify-images";
 import { useCommentFieldError } from "../use-comment-field-error";
 import { useCommentInput } from "../use-comment-input";
 import { CommentInputFeedback } from "../input-feedback";
@@ -54,11 +56,13 @@ export const CommentCardEditForm = observer(function CommentCardEditForm(props: 
   } = props;
   const input = useCommentInput(`edit:${comment.id}`, comment.comment_html);
   const view = useCommentView(workspaceSlug, projectId, comment.issue_id, comment.id);
+  const images = useEditorAssets(view);
   const detail = useIssueDetail();
   // refs
   const editorRef = useRef<EditorRefApi>(null);
   const sending = useRef(false);
   const [isSubmitting, setSubmitting] = useState(false);
+  const [imageFailure, setImageFailure] = useState(false);
   const capture = useDetailScope(workspaceSlug, projectId, `${comment.issue_id}:${comment.id}:${isEditing}`);
   const refusal = useFormRefusal(["comment_html"], {});
   const errorId = useId();
@@ -103,9 +107,22 @@ export const CommentCardEditForm = observer(function CommentCardEditForm(props: 
     )
       return;
     sending.current = true;
-    input.begin();
     setSubmitting(true);
+    setImageFailure(false);
     clearErrors("comment_html");
+    let verified = false;
+    try {
+      await verifyEditorImages(images, formData.comment_html);
+      verified = current() && view.current && view.canWrite("description");
+    } catch (error) {
+      if (current() && !(error instanceof SessionChangedError)) setImageFailure(true);
+    }
+    if (!verified) {
+      sending.current = false;
+      if (current()) setSubmitting(false);
+      return;
+    }
+    input.begin();
     await followInSession(
       () =>
         activityOperations.updateComment(comment.id, formData, (answer) => {
@@ -147,6 +164,7 @@ export const CommentCardEditForm = observer(function CommentCardEditForm(props: 
     >
       <div inert={isSubmitting || !view?.canWrite("description")}>
         <LiteTextEditor
+          images={images}
           editable={!!view?.canWrite("description")}
           editorProps={{
             attributes: {
@@ -184,6 +202,8 @@ export const CommentCardEditForm = observer(function CommentCardEditForm(props: 
           </p>
         )}
       </div>
+      {contentImageIDs(input.value.html).incomplete && <p role="status">{t("content_files.image.unfinished")}</p>}
+      {imageFailure && <p role="alert">{t("content_files.image.unavailable")}</p>}
       {input.conflict && (
         <PreservedInput
           conflict

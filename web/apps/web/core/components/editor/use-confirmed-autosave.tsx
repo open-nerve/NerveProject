@@ -15,6 +15,8 @@ export function useConfirmedAutosave<T>({
   disabled = false,
   prepareSave,
   retention,
+  canSave,
+  resumesOnEdit,
 }: {
   initial: T;
   same: (left: T, right: T) => boolean;
@@ -23,12 +25,16 @@ export function useConfirmedAutosave<T>({
   disabled?: boolean;
   prepareSave?: () => (value: T) => Promise<void>;
   retention?: AutosaveRetention<T>;
+  canSave?: (value: T) => boolean;
+  /** False keeps preserved input paused while editing; only an explicit resume may send it. */
+  resumesOnEdit?: (value: T) => boolean;
 }) {
   const [owner] = useState(() => {
     const kept = retention?.read();
     const dirty = !!kept?.dirty && !same(kept.value, initial);
     return {
       active: false,
+      eligible: !canSave || canSave(dirty ? kept!.value : initial),
       value: dirty ? kept!.value : initial,
       confirmed: dirty ? kept!.confirmed : initial,
       latestBase: initial,
@@ -50,10 +56,10 @@ export function useConfirmedAutosave<T>({
   const [failure, setFailure] = useState(owner.failure);
   const [conflict, setConflict] = useState(owner.conflict);
   const [needsResume, setNeedsResume] = useState(owner.paused);
-  const latest = useRef({ save, status, same, disabled, prepareSave, retention });
+  const latest = useRef({ save, status, same, disabled, prepareSave, retention, canSave, resumesOnEdit });
   useLayoutEffect(() => {
-    latest.current = { save, status, same, disabled, prepareSave, retention };
-  }, [save, status, same, disabled, prepareSave, retention]);
+    latest.current = { save, status, same, disabled, prepareSave, retention, canSave, resumesOnEdit };
+  }, [save, status, same, disabled, prepareSave, retention, canSave, resumesOnEdit]);
   const remember = useCallback(() => {
     latest.current.retention?.store({
       value: owner.value,
@@ -90,6 +96,7 @@ export function useConfirmedAutosave<T>({
         !owner.replacing &&
         !owner.paused &&
         owner.dirty &&
+        owner.eligible &&
         owner.attempted !== owner.revision &&
         !latest.current.disabled &&
         (latest.current.retention?.canFlushOnUnmount ?? true)
@@ -127,6 +134,7 @@ export function useConfirmedAutosave<T>({
       owner.replacing ||
       owner.paused ||
       !owner.dirty ||
+      (latest.current.canSave && !latest.current.canSave(owner.value)) ||
       latest.current.disabled ||
       owner.attempted === owner.revision
     )
@@ -164,13 +172,15 @@ export function useConfirmedAutosave<T>({
       if (!owner.active || owner.replacing || latest.current.disabled || latest.current.same(next, owner.value)) return;
       owner.prepared = latest.current.prepareSave?.();
       owner.value = next;
+      owner.eligible = !latest.current.canSave || latest.current.canSave(next);
       owner.revision += 1;
       owner.dirty = owner.inFlight > 0 || !latest.current.same(next, owner.confirmed);
       setValue(next);
       fail(undefined);
       clearTimeout(owner.timer);
-      // Editing preserved input is allowed, but cannot silently resolve a changed canonical base.
-      if (!owner.conflict) pause(false);
+      // Editing preserved input is allowed, but cannot silently resolve a changed canonical base
+      // or resend what the caller must verify again first.
+      if (!owner.conflict && (latest.current.resumesOnEdit?.(next) ?? true)) pause(false);
       remember();
       latest.current.status(owner.dirty ? "submitting" : "saved");
       if (owner.dirty && !owner.paused) owner.timer = setTimeout(() => void send(), 1500);

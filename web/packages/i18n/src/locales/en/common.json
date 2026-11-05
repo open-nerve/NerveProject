@@ -110,7 +110,8 @@
       "align": "Align image",
       "left": "Align left",
       "center": "Align center",
-      "right": "Align right"
+      "right": "Align right",
+      "unfinished": "An image is unfinished. Finish it or remove its placeholder before saving. Any unfinished draft files must also be reviewed before publishing."
     }
   },
   "image_upload": {

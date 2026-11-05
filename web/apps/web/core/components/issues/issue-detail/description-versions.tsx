@@ -6,6 +6,7 @@ import { useMember } from "@/hooks/store/use-member";
 import { useSessionSWR } from "@/lib/use-session-swr";
 import { SessionChangedError } from "@/lib/auth/token-manager";
 import { useDetailScope } from "@/components/issues/issue-detail-widgets/use-detail-scope";
+import { useIssueImages } from "@/hooks/editor/use-issue-images";
 
 type Props = {
   workspaceSlug: string;
@@ -18,6 +19,7 @@ export const IssueDescriptionVersions = observer(function IssueDescriptionVersio
   const { workspaceSlug: ws, projectId: project, issueId: id, restoreDescription, isRestoreDisabled } = props;
   const { rootIssueStore: root, versions, issue } = useIssueDetail();
   const { getUserDetails } = useMember();
+  const { images } = useIssueImages(ws, project, id, true);
   const scope = useDetailScope(ws, project, id, true);
   const workspace = root.rootStore.workspaceRoot.getWorkspaceBySlug(ws);
   const item = issue.getIssueDetailById(id);
@@ -31,6 +33,7 @@ export const IssueDescriptionVersions = observer(function IssueDescriptionVersio
   if (!canRead || !item) return null;
   return (
     <DescriptionVersionsRoot
+      images={images}
       className="flex-shrink-0"
       scopeKey={identity}
       workspaceSlug={ws}

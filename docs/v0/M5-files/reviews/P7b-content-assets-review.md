@@ -83,3 +83,13 @@ T8实现与验证：editor及Rich/Lite wrapper原子替换为可选EditorImages�
 局部根因修复：拒绝文件批次在ProseMirror空文本粘贴前退出，保留未preventDefault的原生事件；禁图消费者仍保留随剪贴板携带的文字。延迟确认不产生独立Undo步骤，已确认节点通过当前editor内UUID记录恢复，内部真实移动与不可信剪贴板复制分别处理。权限abort立即终止节点操作，运行中转只读不写回；旧onLoad/onError核当前快照。StrictMode、换文件、删除节点晚回、未知复制真实卸载重挂不重试均有DOM/transaction证明。四项变异（伪造标记免复制、无限错误重读、旧图片事件、旧上传覆盖新文件）全部AssertionError并SHA恢复。
 
 T8原件为t8-red/first-green/green2/green3/lifetime-red/move-red、editor-all系列、final-editor、web-consumers、types-final、lint-final2、test-web2、i18n/sync与两份mutation receipt；早期错误路径、测试夹具签名、ref类型、lint及失败输出完整保留，不冒称产品断言RED。完整web日志另存。页面尚未启用，T9/T10接续；真实浏览器全屏、local/S3和阶段七门禁仍待T13/T14。
+
+T9实现与验证：工作项详情/peek正文、新建与编辑评论及描述历史统一经useIssueImages/useEditorAssets从已读取规范Issue取得view，历史只给只读images；删除这组旧fileAssetType与uploadCommentAsset/duplicateCommentAsset。正文只保存ready后的UUID，授权续期不PATCH；换图、调序为普通带版本编辑，不删除旧资产也不复制，只补块ID保持skip_activity迁移。评论图片不进attachment_ids，已发表评论按commentID范围编辑，保留评论须重新授权图片后才明确重发。
+
+拒绝或未完成正文由T5输入所有者跨卸载保留；含图片身份的保留稿继续编辑时保持暂停，只有明确保存在当前view重验图片后才resume，纯文字保留稿仍按T5随编辑恢复debounce。联合测试在详情与peek各自经过拒绝正文+未保存标题+图片节点、读取失败、并发新正文后恢复，再经真实项目权限ABA清空；peek失读按既有合同关闭，重开为新owner后核验输入已清。18项真实RootStore/Tiptap页面测试与7项保留端口测试通过，扩展后的Step2命令14文件106项通过。
+
+六项变异（描述不恢复、hook不恢复、无正文保留、无标题保留、全部当迁移、丢迁移标记）均AssertionError并SHA恢复；首个“编辑永不恢复”变异存活，补两项恢复钉住测试后再被杀死，存活原件保留。类型（types构建/包/web）、24文件零warning、25文件格式、web lint 69等于上限、1402翻译引用/中英键同步通过；完整make test-web18/18（17缓存，web实际重跑）通过，web直接运行332文件3751测试通过。
+
+局部根因修复：T9初版测试配置的全局resolve.mainFields让每个无exports依赖改走需vitest转换的ESM构建，整套transform由27s升至60s，满载下把use-issue-list-mount首例（测试体内动态导入root store）推过5s上限，两次完整运行复现、单独运行通过。四组变体实测确认唯一原因是mainFields，tiptap内联对该例无影响；改为仅把prosemirror-codemark别名到ESM入口（否则真实编辑器报“Adding different instances of a keyed plugin”）、仅内联@tiptap（其ESM默认导入CommonJS tippy.js，否则“tippy is not a function”），transform回到29.8s。另修三处完整回归根因：导航守卫拒绝fixture的/assets/storage字面量，改用fake-assets既有/static路径；editor-lifecycle的store-context mock缺StoreContext；editor-status部分fake缺rootIssueStore，useIssueImages改由useWorkspace解析workspace。
+
+执行者变更：Codex在T9未提交WIP时额度用尽（最后原件t9-preserved-edit-red，2026-11-04T20:19Z）；2026-11-05起Claude接手同一worktree、ledger与run-check.py原件规则，T15整审由fresh-context reviewer按deep-review执行。T9原件：Codex期t9-capability-red、first-green、targeted-green2、real-body系列、comment-reauth系列、comments-body-green、history-and-unmount、preserved-edit-red；接手后preserved-edit-green、after-resume-fix、mutation-never-resume（存活）、resume-pins-green、mutation-m1/m2/mj1/mj2/ms/mm、new-joint-swap-order-migration（RED）/new-tests-green、step2-green、types-build/web/pkg/web-3、lint-5、format-5、keywords、i18n(-sync)、web-lint-cap-3、regression-fixes、test-web/-2/-3（失败原件）、list-mount-alone、test-web-4、web-full。t9-lint-4/format-4为zsh未分词导致0文件的无效运行，由-5取代。真实浏览器、local/S3及阶段七门禁仍由T13/T14完成。
