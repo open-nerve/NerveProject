@@ -34,33 +34,65 @@ it.each([false, true])("only an editable consumer with images.write can insert: 
   expect(tab.editor.getHTML()).not.toContain("image-component");
   expect(tab.pending).toHaveLength(0);
 });
-it.each(["pdf", "mixed", "directory", "empty", "svg", "too-many"])(
-  "does not swallow rejected %s files or partially insert a batch",
+const ordinaryFile = () => new File(["pdf"], "doc.pdf", { type: "application/pdf" });
+it("leaves a clipboard of only ordinary files to ProseMirror, which pastes its text once", async () => {
+  const tab = await fixture();
+  await act(async () => {
+    pasteFiles(tab.editor, [ordinaryFile()], false, { "text/plain": "doc.pdf" });
+  });
+  expect(tab.editor.getText()).toBe("doc.pdf");
+  expect(tab.pending).toHaveLength(0);
+  expect(tab.editor.getHTML()).not.toContain("image-component");
+  expect(tab.host.querySelector('[role="alert"]')).toBeNull();
+});
+it.each(["mixed", "directory", "empty", "svg", "too-many"])(
+  "takes a rejected %s image batch whole: nothing is inserted, not even its text, and one alert explains it",
   async (kind) => {
     const tab = await fixture();
-    const pdf = new File(["pdf"], "doc.pdf", { type: "application/pdf" });
     const files =
-      kind === "pdf"
-        ? [pdf]
-        : kind === "mixed"
-          ? [nativeImage(), pdf]
-          : kind === "empty"
-            ? [new File(["png"], "image.png")]
-            : kind === "svg"
-              ? [new File(["svg"], "image.svg", { type: "image/svg+xml" })]
-              : kind === "too-many"
-                ? Array.from({ length: 11 }, nativeImage)
-                : [nativeImage()];
+      kind === "mixed"
+        ? [nativeImage(), ordinaryFile()]
+        : kind === "empty"
+          ? [new File(["png"], "image.png")]
+          : kind === "svg"
+            ? [new File(["svg"], "image.svg", { type: "image/svg+xml" })]
+            : kind === "too-many"
+              ? Array.from({ length: 11 }, nativeImage)
+              : [nativeImage()];
+    const names = files.map((file) => file.name).join("\n");
     let event!: Event;
     await act(async () => {
-      event = pasteFiles(tab.editor, files, kind === "directory");
+      event = pasteFiles(tab.editor, files, kind === "directory", {
+        "text/plain": names,
+        "text/html": `<p>${names}</p><img src="https://external.test/a.png">`,
+      });
     });
-    expect(event.defaultPrevented).toBe(false);
+    // Unprevented, the browser would paste that text and <img> natively, past ProseMirror's own paste handling.
+    expect(event.defaultPrevented).toBe(true);
     expect(tab.pending).toHaveLength(0);
+    expect(tab.editor.getText()).toBe("");
     expect(tab.editor.getHTML()).not.toContain("image-component");
-    if (kind !== "pdf") expect(tab.host.querySelector('[role="alert"]')).not.toBeNull();
+    expect(tab.host.querySelectorAll('[role="alert"]')).toHaveLength(1);
   }
 );
+it.each(["pdf", "mixed"])("a dropped %s batch stays unprevented for the page and is not inserted", async (kind) => {
+  const tab = await fixture();
+  const view = tab.editor.view;
+  vi.spyOn(view, "posAtCoords").mockReturnValue({ pos: 0, inside: -1 });
+  const files = kind === "pdf" ? [ordinaryFile()] : [nativeImage(), ordinaryFile()];
+  const event = new Event("drop", { bubbles: true, cancelable: true });
+  Object.defineProperties(event, {
+    dataTransfer: { value: { files, getData: () => "" } },
+    clientX: { value: 10 },
+    clientY: { value: 10 },
+    ctrlKey: { value: false },
+    altKey: { value: false },
+  });
+  await act(async () => view.dom.dispatchEvent(event));
+  expect(event.defaultPrevented).toBe(false);
+  expect(tab.pending).toHaveLength(0);
+  expect(tab.editor.getHTML()).not.toContain("image-component");
+});
 it("native image selection publishes only the confirmed ID, with busy feedback and no percentage", async () => {
   const tab = await fixture();
   await act(async () => {

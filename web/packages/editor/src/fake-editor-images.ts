@@ -101,7 +101,7 @@ export function imageClipboard(editor: Editor, html: string, kind = "text/nerve-
   editor.view.dom.dispatchEvent(event);
   return event;
 }
-export function pasteFiles(editor: Editor, files: File[], directory = false) {
+export function pasteFiles(editor: Editor, files: File[], directory = false, text: Record<string, string> = {}) {
   const event = new Event("paste", { bubbles: true, cancelable: true });
   Object.defineProperty(event, "clipboardData", {
     value: {
@@ -112,7 +112,7 @@ export function pasteFiles(editor: Editor, files: File[], directory = false) {
         getAsFile: () => file,
         webkitGetAsEntry: () => ({ isDirectory: directory }),
       })),
-      getData: () => "",
+      getData: (type: string) => text[type] ?? "",
     },
   });
   editor.view.dom.dispatchEvent(event);

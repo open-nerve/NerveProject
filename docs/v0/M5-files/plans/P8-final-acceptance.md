@@ -43,17 +43,17 @@
 
 **Files:** 新`docs/v0/M5-files/reviews/P8-final-acceptance-review.md`（阶段记录）；读P1–P7b阶段记录、各spec、七份输入交接、re-33至re-50。
 
-- [ ] Step 1：F1–F18逐条列出现有证据（阶段、测试/故事名、收据）与本阶段最终重跑落点（T10/T11/T12）；缺口写清由哪个Task补。七份输入交接逐条款列当前事实（代码/测试路径）与P8动作（已完成待最终核/本阶段修/具名转交），再列re-50 Minor、P7b记录§9–§10的P8项与T15/T16观察。
-- [ ] Step 2：核目录完整：每个F、每个条款、每个承接项恰好一个落点；无产品改动。链接用本阶段工作区的`doc-links.py`（预检时由会话脚本复制，记SHA-256；覆盖M5文档、re-31起报告、M6–M8交接、frontend-changes、plane-diff、v0-design、README，并按GitHub规则核锚点），现存的re-32→P1决策§3与re-41行号锚两处断链登记给T13。
-- [ ] Step 3：中文提交`docs(M5/P8): 固定最终验收与交接目录`。
+- [x] Step 1：F1–F18逐条列出现有证据（阶段、测试/故事名、收据）与本阶段最终重跑落点（T10/T11/T12）；缺口写清由哪个Task补。七份输入交接逐条款列当前事实（代码/测试路径）与P8动作（已完成待最终核/本阶段修/具名转交），再列re-50 Minor、P7b记录§9–§10的P8项与T15/T16观察。
+- [x] Step 2：核目录完整：每个F、每个条款、每个承接项恰好一个落点；无产品改动。链接用本阶段工作区的`doc-links.py`（预检时由会话脚本复制，记SHA-256；覆盖M5文档、re-31起报告、M6–M8交接、frontend-changes、plane-diff、v0-design、README，并按GitHub规则核锚点），现存的re-32→P1决策§3与re-41行号锚两处断链登记给T13。
+- [x] Step 3：中文提交`docs(M5/P8): 固定最终验收与交接目录`。
 
 ## Task 2（T2）：编辑器粘贴只在图片批时消费事件
 
 **Files:** 修改`web/packages/editor/src/plugins/drop.ts`；测试`src/editor-images.test.tsx`与`src/fake-editor-images.ts`（`pasteFiles`加文字载荷参数）；`docs/v0/M5-files/specs/P7b-editor-images.md` §3与§5两处措辞；`tools/keywords.json` phase。
 
-- [ ] Step 1：改写原用例“does not swallow rejected %s files”（:37-62）并新增：①只含非图片文件且附`text/plain`的粘贴，插件不处理，文字经ProseMirror插入恰好一次、无提示；②mixed/directory/empty/svg/too-many被拒批`defaultPrevented=true`、文档不变、`role=alert`恰好一次；③图片批照旧插入；④伪造`text/nerve-editor-html`仍不越权复制；⑤拖放的被拒/普通文件仍不拦下。先`pnpm --filter @nerve/editor exec vitest run src/editor-images.test.tsx`看到①②按断言失败（①文字未插入，②未拦下）。
-- [ ] Step 2：实现§3第1条：`accept`返回普通/拒绝/接受三态，`handleDOMEvents.paste`按三态分支，`handlePaste`与`handleDrop`不变；改写P7b编辑器子合同两处；phase=M5/P8。变异“被拒批不preventDefault”“普通批返回true”须被杀死。
-- [ ] Step 3：同命令GREEN，编辑器包全部测试与类型、oxlint零warning；提交`fix(M5/P8): 编辑器粘贴只在接受或拒绝图片批时消费事件`。
+- [x] Step 1：改写原用例“does not swallow rejected %s files”（:37-62）并新增：①只含非图片文件且附`text/plain`的粘贴，插件不处理，文字经ProseMirror插入恰好一次、无提示；②mixed/directory/empty/svg/too-many被拒批`defaultPrevented=true`、文档不变、`role=alert`恰好一次；③图片批照旧插入；④伪造`text/nerve-editor-html`仍不越权复制；⑤拖放的被拒/普通文件仍不拦下。先`pnpm --filter @nerve/editor exec vitest run src/editor-images.test.tsx`看到①②按断言失败（①文字未插入，②未拦下）。
+- [x] Step 2：实现§3第1条：`accept`返回普通/拒绝/接受三态，`handleDOMEvents.paste`按三态分支，`handlePaste`与`handleDrop`不变；改写P7b编辑器子合同两处；phase=M5/P8。变异“被拒批不preventDefault”“普通批返回true”须被杀死。
+- [x] Step 3：同命令GREEN，编辑器包全部测试与类型、oxlint零warning；提交`fix(M5/P8): 编辑器粘贴只在接受或拒绝图片批时消费事件`。
 
 ## Task 3（T3）：图片传输跨节点视图重建存活
 
