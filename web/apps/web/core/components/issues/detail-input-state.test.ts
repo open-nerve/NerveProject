@@ -37,7 +37,7 @@ it("keeps only local input and confirmed receipts through pending and a temporar
   const tab = await fixture();
   const slot = tab.inputs.slot("title");
   slot.store(snapshot);
-  tab.inputs.confirm({ kind: "uploaded", id: "uploaded-file" });
+  tab.inputs.confirm({ kind: "uploaded", id: "uploaded-file" }, "files");
   const read = track(tab.app.issue.issues.refreshAuthoritative(tab.issue.id, { afterWrite: true }));
   expect(tab.app.issue.issues.getIssueDetailById(tab.issue.id)).toBeUndefined();
   expect(tab.inputs.current).toBe(true);
@@ -52,6 +52,10 @@ it("keeps only local input and confirmed receipts through pending and a temporar
   await tab.readIssue();
   expect(slot.suspended).toBe(false);
   expect(slot.read()).toEqual(snapshot);
+  // The focus the remount lost returns once, to the control that sent the command.
+  expect(tab.inputs.takeFocus("other files")).toBeUndefined();
+  expect(tab.inputs.takeFocus("files")).toBe("uploaded");
+  expect(tab.inputs.takeFocus("files")).toBeUndefined();
 });
 it.each([401, 403, 404])(
   "a final owner %i retires local input permanently, even when the same ID returns",
@@ -81,8 +85,9 @@ it("permission ABA cannot revive an earlier host or its local edits", async () =
   await tab.readIssue();
   expect(tab.inputs.current).toBe(false);
   expect(slot.read()).toBeUndefined();
-  tab.inputs.confirm({ kind: "deleted", id: "old" });
+  tab.inputs.confirm({ kind: "deleted", id: "old" }, "files");
   expect(tab.inputs.receipts).toEqual([]);
+  expect(tab.inputs.takeFocus("files")).toBeUndefined();
   const fresh = new IssueDetailInputState(tab.app.issue, tab.workspace.id, tab.project.id, tab.issue.id);
   fresh.activate();
   close.push(() => fresh.deactivate());

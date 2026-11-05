@@ -1,5 +1,5 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
-import { useContext, useLayoutEffect, useState } from "react";
+import { useCallback, useContext, useLayoutEffect, useState } from "react";
 import { observer } from "mobx-react";
 import { useTranslation } from "@nerve/i18n";
 import { StoreContext } from "@/lib/store-context";
@@ -36,18 +36,21 @@ const CommentAttachmentContent = observer(function CommentAttachmentContent(prop
   const inputs = useIssueDetailInput();
   const view = useCommentView(props.workspaceSlug, props.projectId, props.issueId, props.commentId);
   const [held, setHeld] = useState<{ view: ContentView; resource: AttachmentResource }>();
+  const owner = `comment-attachments:${props.commentId}`;
   useLayoutEffect(() => {
     if (!view?.current) return;
-    const resource = root.asset.attachments(view, (receipt) => inputs?.confirm(receipt));
+    const resource = root.asset.attachments(view, (receipt) => inputs?.confirm(receipt, owner));
     setHeld({ view, resource });
     return () => resource.dispose();
-  }, [root, view, inputs]);
+  }, [root, view, inputs, owner]);
+  const takeFocus = useCallback(() => inputs?.takeFocus(owner), [inputs, owner]);
   return view?.current && held?.view === view ? (
     <Attachments
       view={view}
       resource={held.resource}
       readOnly={props.disabled}
       onDialogOpened={modals?.retainContentDialog}
+      takeFocus={takeFocus}
     />
   ) : null;
 });

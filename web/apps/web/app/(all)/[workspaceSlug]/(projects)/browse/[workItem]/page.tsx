@@ -52,9 +52,10 @@ export const IssueDetailsPage = observer(function IssueDetailsPage({ params }: P
   const projectId = data?.project_id ?? "";
   const issue = getIssueById(issueId || "") || undefined;
   const project = (issue?.project_id && getProjectById(issue?.project_id)) || undefined;
-  // A warm SWR answer must not mount interactive children during the new route read.
+  // A warm SWR answer must not mount interactive children during the new route read. Once the read is proven, the
+  // detail host stays mounted while a write withdraws the canonical item for a re-read: the host shows that state and
+  // keeps the input it preserves, which replacing it here would destroy.
   const pending = isLoading || isValidating;
-  const issueLoader = !issue || pending;
   const pageTitle = project && issue ? `${project?.identifier}-${issue?.sequence_id} ${issue?.name}` : undefined;
 
   useEffect(() => {
@@ -96,7 +97,7 @@ export const IssueDetailsPage = observer(function IssueDetailsPage({ params }: P
     );
   }
 
-  if (issueLoader) {
+  if (pending) {
     return (
       <Loader className="flex h-full gap-5 p-5">
         <div className="basis-2/3 space-y-2">

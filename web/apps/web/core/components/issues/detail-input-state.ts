@@ -59,6 +59,8 @@ export class IssueDetailInputState implements DetailRegistration {
   private readonly text = new Map<string, LocalInput<RetainedText>>();
   private readonly forms = new Map<string, LocalInput<RetainedForm>>();
   private confirmed: readonly Receipt[] = [];
+  /** The control whose confirmed command the canonical re-read unmounted; its next mount takes the focus back once. */
+  private refocus: { owner: string; kind: Receipt["kind"] } | undefined;
   private unregister?: () => void;
   private stopOwner?: () => void;
   epoch = 0;
@@ -140,6 +142,7 @@ export class IssueDetailInputState implements DetailRegistration {
     for (const form of this.forms.values()) form.clear();
     this.text.clear();
     this.forms.clear();
+    this.refocus = undefined;
     runInAction(() => {
       this.confirmed = [];
       ++this.epoch;
@@ -186,13 +189,21 @@ export class IssueDetailInputState implements DetailRegistration {
     }
     return form;
   }
-  confirm(receipt: Receipt): void {
+  /** owner names the control that sent the command, so that it can take back the focus a remount loses. */
+  confirm(receipt: Receipt, owner: string): void {
     if (!this.current) return;
+    this.refocus = { owner, kind: receipt.kind };
     runInAction(() => {
       this.confirmed = [
         ...this.confirmed.filter((value) => value.id !== receipt.id),
         { kind: receipt.kind, id: receipt.id },
       ];
     });
+  }
+  /** The kind of owner's last confirmed command, once: a later mount of the same control gets nothing. */
+  takeFocus(owner: string): Receipt["kind"] | undefined {
+    const request = this.current && this.refocus?.owner === owner ? this.refocus : undefined;
+    if (request) this.refocus = undefined;
+    return request?.kind;
   }
 }

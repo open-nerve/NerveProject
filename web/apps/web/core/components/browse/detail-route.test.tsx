@@ -278,6 +278,38 @@ it("withholds a warm route's body and header until its new lookup has finished",
   await act(async () => lookupReads()[1]!.answer(json(200, source("one"))));
   await ready();
 });
+it("keeps the proven route's detail host mounted while a write withdraws its canonical item for a re-read", async () => {
+  await mount();
+  await ready();
+  await act(async () => {
+    trigger("Body")!.click();
+    await vi.advanceTimersByTimeAsync(30);
+  });
+  const body = document.querySelector("main");
+  const panel = trigger("Body")!.getAttribute("aria-controls")!;
+  const lookups = lookupReads().length;
+  holdCore = true;
+  const cores = tab.nerve.to("/api/v0/issues/one").length;
+  let reread!: Promise<unknown>;
+  await act(async () => {
+    reread = tab.app.issue.issues.refreshAuthoritative("one", { afterWrite: true });
+    await until(() => tab.nerve.to("/api/v0/issues/one").length > cores, "canonical re-read");
+  });
+  // The host inside owns the withdrawn presentation and the input it preserves; the route must not replace it.
+  expect(tab.app.issue.issues.getIssueById("one")).toBeUndefined();
+  expect(document.querySelector("main")).toBe(body);
+  expect(document.getElementById(panel)).not.toBeNull();
+  await act(async () => {
+    tab.nerve
+      .to("/api/v0/issues/one")
+      .at(-1)!
+      .answer(json(200, source("one")));
+    await reread;
+  });
+  expect(document.querySelector("main")).toBe(body);
+  expect(trigger("Body")!.getAttribute("aria-expanded")).toBe("true");
+  expect(lookupReads()).toHaveLength(lookups);
+});
 it("ends header state on permission ABA without restoring the old menu", async () => {
   await mount();
   await ready();

@@ -1,5 +1,5 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
-import { useContext, useLayoutEffect, useState } from "react";
+import { useCallback, useContext, useLayoutEffect, useState } from "react";
 import { observer } from "mobx-react";
 import { useContentView } from "@/hooks/use-content-assets";
 import { useIssueDetail, useIssueDetailModals } from "@/hooks/store/use-issue-detail";
@@ -8,6 +8,7 @@ import { StoreContext } from "@/lib/store-context";
 import { Attachments } from "@/components/assets/attachments/root";
 import type { AttachmentResource } from "@/store/asset/attachment-resource";
 import type { ContentView } from "@/store/asset/content-view";
+const OWNER = "issue-attachments";
 export const IssueAttachmentsContent = observer(function IssueAttachmentsContent({
   issueId,
   disabled,
@@ -27,11 +28,18 @@ export const IssueAttachmentsContent = observer(function IssueAttachmentsContent
   const [held, setHeld] = useState<{ view: ContentView; resource: AttachmentResource }>();
   useLayoutEffect(() => {
     if (!view?.current) return;
-    const resource = root.asset.attachments(view, (receipt) => inputs?.confirm(receipt));
+    const resource = root.asset.attachments(view, (receipt) => inputs?.confirm(receipt, OWNER));
     setHeld({ view, resource });
     return () => resource.dispose();
   }, [root, view, inputs]);
+  const takeFocus = useCallback(() => inputs?.takeFocus(OWNER), [inputs]);
   return view?.current && held?.view === view ? (
-    <Attachments view={view} resource={held.resource} readOnly={disabled} onDialogOpened={modals.retainContentDialog} />
+    <Attachments
+      view={view}
+      resource={held.resource}
+      readOnly={disabled}
+      onDialogOpened={modals.retainContentDialog}
+      takeFocus={takeFocus}
+    />
   ) : null;
 });

@@ -162,6 +162,37 @@ for (const kind of ["detail", "peek"] as const) {
     expect(tab.nerve.calls.filter((c) => c.path.endsWith("/complete"))).toHaveLength(1);
     expect(tab.nerve.to("/api/v0/assets")).toHaveLength(1);
   });
+  it(`${kind}: a confirmed upload and deletion return the focus the re-read took to the remounted widget`, async () => {
+    await render(kind);
+    await openFiles();
+    await complete();
+    await waitForPickerDOM(() => !!document.querySelector('input[type="file"]'), "remounted picker");
+    await waitForPickerDOM(() => document.activeElement === document.querySelector('input[type="file"]'), "picker");
+    await tab.click("content_files.remove file-a.txt");
+    await waitForPickerDOM(() => !!document.querySelector('[role="dialog"]'), "dialog");
+    await tab.click("content_files.confirm_delete");
+    await act(async () => until(() => tab.nerve.to("/api/v0/assets/file-a").length === 1, "delete"));
+    await act(async () => tab.nerve.to("/api/v0/assets/file-a")[0]!.answer(noContent()));
+    await waitForPickerDOM(() => !document.querySelector('[role="dialog"]'), "confirmed");
+    await waitForPickerDOM(() => document.activeElement === tab.button("content_files.refresh"), "refresh");
+  });
+  it(`${kind}: a control chosen during the re-read keeps the focus when the widget remounts`, async () => {
+    await render(kind);
+    await openFiles();
+    let pending: Call | undefined;
+    core = (call) => {
+      pending = call;
+    };
+    await complete();
+    await waitForPickerDOM(() => !!pending, "canonical verification");
+    const chosen = document.body.appendChild(document.createElement("button"));
+    chosen.focus();
+    await act(async () => pending!.answer(json(200, tab.issue)));
+    await waitForPickerDOM(() => !!document.querySelector('input[type="file"]'), "remounted picker");
+    await act(async () => vi.advanceTimersByTimeAsync(100));
+    expect(document.activeElement).toBe(chosen);
+    chosen.remove();
+  });
   it.each([401, 403, 404])(
     `${kind}: canonical %i clears retained input and receipts, and a later fresh owner never revives either`,
     async (status) => {

@@ -1,5 +1,5 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
-import { useContext, useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { observer } from "mobx-react";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
@@ -18,6 +18,7 @@ export const Attachments = observer(function Attachments({
   readOnly = false,
   onDialogOpened,
   onBusyChange,
+  takeFocus,
 }: {
   view: ContentView;
   resource: AttachmentResource;
@@ -25,21 +26,41 @@ export const Attachments = observer(function Attachments({
   onDialogOpened?(): () => void;
   /** Whether a transfer is on the wire; a host that moves or publishes must wait for it. */
   onBusyChange?(busy: boolean): void;
+  /** The command a host re-read confirmed while it unmounted this widget, once, so that the focus it lost returns. */
+  takeFocus?(): "uploaded" | "deleted" | undefined;
 }) {
   const { t } = useTranslation();
   const root = useContext(StoreContext);
   const upload = useContentUpload(readOnly ? undefined : view, "attachment");
   const refresh = useRef<HTMLButtonElement>(null);
+  const picker = useRef<HTMLInputElement>(null);
   const [selection, setSelection] = useState<{ resource: AttachmentResource; row: AttachmentRow }>();
   useEffect(() => {
     void resource.load().catch(() => undefined);
   }, [resource]);
+  const [returning, setReturning] = useState<"uploaded" | "deleted">();
+  useLayoutEffect(() => {
+    if (!view.current) return;
+    const kind = takeFocus?.();
+    // Only the focus the remount lost returns: a control chosen meanwhile keeps it.
+    if (kind && focusLost()) setReturning(kind);
+  }, [view, takeFocus]);
+  const pickerExpected = !readOnly && view.canWrite("attachment");
+  useLayoutEffect(() => {
+    if (!returning) return;
+    const target = returning === "uploaded" && pickerExpected ? picker.current : refresh.current;
+    // The picker mounts with its upload session, a render after this widget; the reload control waits for the read.
+    if (!target || target.disabled) return;
+    setReturning(undefined);
+    if (focusLost()) target.focus({ preventScroll: true });
+  }, [returning, upload, pickerExpected, resource.loading]);
   if (!view.current) return null;
   const selected = selection?.resource === resource ? selection.row : undefined;
   return (
     <div className="space-y-3">
       {upload && (
         <AttachmentPicker
+          input={picker}
           upload={upload}
           onUploaded={(asset) => resource.afterUpload(asset)}
           onBusyChange={onBusyChange}
@@ -108,3 +129,4 @@ export const Attachments = observer(function Attachments({
     </div>
   );
 });
+const focusLost = () => !document.activeElement || document.activeElement === document.body;

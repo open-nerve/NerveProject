@@ -1,5 +1,5 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
-import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useId, useImperativeHandle, useLayoutEffect, useRef, useState, type Ref } from "react";
 import { observer } from "mobx-react";
 import type { Asset } from "@nerve/api-client";
 import { useTranslation } from "@nerve/i18n";
@@ -8,11 +8,14 @@ import { FileSelectionError, type UploadSession } from "@/store/asset/upload-ses
 import { UploadFailure } from "@/lib/asset-upload";
 import { errorMessageKey } from "@/lib/error-messages";
 export type AttachmentPickerProps = {
+  /** The file input, for a parent that returns focus to it. */
+  input?: Ref<HTMLInputElement>;
   upload: UploadSession;
   onUploaded(asset: Asset): Promise<void>;
   onBusyChange?(busy: boolean): void;
 };
 export const AttachmentPicker = observer(function AttachmentPicker({
+  input: parentInput,
   upload,
   onUploaded,
   onBusyChange,
@@ -20,6 +23,7 @@ export const AttachmentPicker = observer(function AttachmentPicker({
   const { t } = useTranslation();
   const id = useId();
   const input = useRef<HTMLInputElement>(null);
+  useImperativeHandle(parentInput, () => input.current!);
   const alert = useRef<HTMLParagraphElement>(null);
   const submit = useRef<HTMLButtonElement>(null);
   const life = useRef({ mounted: false, revision: 0 });
