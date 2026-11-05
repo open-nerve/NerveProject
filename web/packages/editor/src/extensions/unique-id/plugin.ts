@@ -120,10 +120,11 @@ export const createUniqueIDPlugin = (options: UniqueIDOptions) => {
         // or dropped content while holding `alt`
         // or content is dragged from another editor
         drop: (view, event) => {
-          if (dragSourceElement !== view.dom.parentElement || event.dataTransfer?.effectAllowed === "copy") {
-            dragSourceElement = null;
-            transformPasted = true;
-          }
+          // Each drop decides for itself. A paste another handler took never reached transformPasted, so the flag
+          // it set would otherwise strip the ids of a block moved inside this editor.
+          transformPasted =
+            dragSourceElement !== view.dom.parentElement || event.dataTransfer?.effectAllowed === "copy";
+          dragSourceElement = null;
 
           return false;
         },
