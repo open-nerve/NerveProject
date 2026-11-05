@@ -50,6 +50,7 @@ export type EditorLabels = {
     | "unavailable"
     | "loading"
     | "copyUnknown"
+    | "cancelled"
     | "invalid"
     | "size"
     | "name"

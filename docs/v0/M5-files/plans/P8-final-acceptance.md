@@ -59,9 +59,9 @@
 
 **Files:** 修改`extensions/custom-image/components/use-image-transfer.ts`、`extensions/custom-image/paste.ts`（必要时`core/hooks/editor/editor-assets.ts`）；测试`src/editor-images.test.tsx`、`core/hooks/editor/use-editor-assets.test.tsx`。
 
-- [ ] Step 1：用受控图片端口（`fake-editor-images.ts`）写用例：上传/复制进行中①拖动块越过视图匹配范围（沿`editor-images.test.tsx`现有`view.dragging`+drop技法，一次事务删加）②把块包进引用块再解除，传输不取消、新视图显示原阶段、完成后同一`id`节点得到`src`；③Undo撤掉插入：该任务结束时取消、结果不写回，Redo恢复的节点显示“传输已取消，请重新选择”且不自动重发；④节点被删除或换`id`时取消且结果不写回；⑤编辑器销毁与`images.signal`结束取消。先看到①②失败（取消被调用、新视图显示空选择）与③Redo后无提示。
-- [ ] Step 2：实现§3第2条：传输记录（控制器、阶段、结果）提到扩展存储（`custom-image/types.ts`的`CustomExtensionStorage`），视图卸载只解除订阅；当前任务结束时文档已无该节点才取消；完成按`id`与`src`为空定位写回；已取消id在Redo后显示可见状态（en/zh-CN）。应用适配`editor-assets.ts`只在测试证明需要时改。变异“视图销毁即取消”“按旧getPos写回”“Redo后自动重发”须被杀死。
-- [ ] Step 3：同命令与应用适配测试GREEN，编辑器包与`use-editor-assets`全部测试；提交`fix(M5/P8): 图片传输随节点而非节点视图存活`。
+- [x] Step 1：用受控图片端口（`fake-editor-images.ts`）写用例：上传/复制进行中①拖动块越过视图匹配范围（沿`editor-images.test.tsx`现有`view.dragging`+drop技法，一次事务删加）②把块包进引用块再解除，传输不取消、新视图显示原阶段、完成后同一`id`节点得到`src`；③Undo撤掉插入：该任务结束时取消、结果不写回，Redo恢复的节点显示“传输已取消，请重新选择”且不自动重发；④节点被删除或换`id`时取消且结果不写回；⑤编辑器销毁与`images.signal`结束取消。先看到①②失败（取消被调用、新视图显示空选择）与③Redo后无提示。
+- [x] Step 2：实现§3第2条：传输记录（控制器、阶段、结果）提到扩展存储（`custom-image/types.ts`的`CustomExtensionStorage`），视图卸载只解除订阅；当前任务结束时文档已无该节点才取消；完成按`id`与`src`为空定位写回；已取消id在Redo后显示可见状态（en/zh-CN）。应用适配`editor-assets.ts`只在测试证明需要时改。变异“视图销毁即取消”“按旧getPos写回”“Redo后自动重发”须被杀死。
+- [x] Step 3：同命令与应用适配测试GREEN，编辑器包与`use-editor-assets`全部测试；提交`fix(M5/P8): 图片传输随节点而非节点视图存活`。
 
 ## Task 4（T4）：核验保留输入不重建编辑器
 

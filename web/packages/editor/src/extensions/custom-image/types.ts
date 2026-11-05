@@ -8,6 +8,7 @@ import type { Node } from "@tiptap/core";
 // types
 import type { EditorImages } from "@/types";
 import type { ImageInputError } from "./input";
+import type { ImageTransfers } from "./transfers";
 
 export enum ECustomImageAttributeNames {
   ID = "id",
@@ -58,6 +59,8 @@ export type CustomImageExtensionOptions = { images?: EditorImages };
 export type CustomImageExtensionStorage = {
   fileMap: Map<string, ImagePending>;
   completed: Map<string, string>;
+  /** Transfers by node id, outliving the node views that show them. */
+  transfers: ImageTransfers;
   images?: EditorImages;
   inputError?: ImageInputError;
 };

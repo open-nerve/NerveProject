@@ -13,6 +13,7 @@ import { CustomImageExtensionConfig } from "./extension-config";
 import type { CustomImageExtensionOptions, CustomImageExtensionStorage } from "./types";
 import { imageInputError, validateImages } from "./input";
 import { imagePaste } from "./paste";
+import { ImageTransfers } from "./transfers";
 export function CustomImageExtension({ images, isEditable }: { images?: EditorImages; isEditable: boolean }) {
   return CustomImageExtensionConfig.extend<CustomImageExtensionOptions, CustomImageExtensionStorage>({
     selectable: isEditable,
@@ -21,7 +22,8 @@ export function CustomImageExtension({ images, isEditable }: { images?: EditorIm
       return { ...this.parent?.(), images };
     },
     addStorage() {
-      return { fileMap: new Map(), completed: new Map(), images, inputError: undefined };
+      const settled = { fileMap: new Map(), completed: new Map<string, string>() };
+      return { ...settled, transfers: new ImageTransfers(images, settled), images, inputError: undefined };
     },
     addCommands() {
       return {
