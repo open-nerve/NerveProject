@@ -63,9 +63,19 @@ export class FakeNerve {
     });
   };
 
-  /** A client of this fake, as the app makes one. */
+  /**
+   * A client of this fake, as the app makes one. Its fetch takes no receiver but the window, as a browser's does
+   * ("Illegal invocation"): openapi-fetch hands middleware the fetch as a property of its options.
+   */
   client() {
-    return createClient({ baseUrl: BASE_URL, fetch: this.fetch });
+    const fetch = this.fetch;
+    return createClient({
+      baseUrl: BASE_URL,
+      fetch: function browserFetch(this: unknown, request: Request) {
+        if (this !== undefined && this !== globalThis) return Promise.reject(new TypeError("Illegal invocation"));
+        return fetch(request);
+      },
+    });
   }
 
   /**

@@ -49,7 +49,10 @@ export function authMiddleware(
       const token = await tokens.renew(first.token);
       if (token === undefined) return undefined;
       first.copy.headers.set("Authorization", `Bearer ${token}`);
-      const again = await options.fetch(first.copy);
+      // The client's fetch is the browser's, which takes no receiver but the window: called as a method of options,
+      // it throws before the copy leaves.
+      const send = options.fetch;
+      const again = await send(first.copy);
       // Refused again: the request's session ends, unless the record is no longer that session's by then.
       if (again.status === 401 && !(await tokens.endSession(loginId))) throw new SessionChangedError();
       return again;
