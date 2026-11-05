@@ -10,7 +10,7 @@
 
 ## 2. 验收状态
 
-A1–A8全部开放，T1–T8已实现，尚待页面与阶段联合验收。P5/P7a的API、P6的上传及权限回归仅为前置；P7b真实页面、三浏览器、local/S3、有效变异和完整七门禁必须在本阶段新运行。
+A1–A8全部开放，T1–T11已实现，尚待页面与阶段联合验收。P5/P7a的API、P6的上传及权限回归仅为前置；P7b真实页面、三浏览器、local/S3、有效变异和完整七门禁必须在本阶段新运行。
 
 ## 3. 局部裁定
 
@@ -32,6 +32,8 @@ A1–A8全部开放，T1–T8已实现，尚待页面与阶段联合验收。P5/
 ## 5. 与原草案的差异
 
 正式以P7a最终main为基线；补准备件生成DTO/端点/cursor规则，T13使用实际stories/files与fixtures/file-story.ts；原恢复/副本接收义务保留。明确草稿owner寿命与权威刷新输入所有者，不放宽架构守卫或新增依赖。phase继续M5/P7，不改工具支持的数字格式。
+
+T11按负责人2026-11-05裁定A偏离计划原句“不新建后端字段”：服务端display_properties原为OpenAPI、project/issue词表与迁移00026 CHECK三层严格的固定11键，前端PATCH完整对象，只加前端键会被拒；改为端到端新增attachment_count显示键（OpenAPI与生成、两处词表、迁移00038替换CHECK并回填true）。这与M4设计表结构“attachment_count（M5）随各自迁移加回”一致；B（并入link/常显）与C（仅本地开关）未采用。
 
 ## 6. 移交事项
 
@@ -101,3 +103,9 @@ T10实现与验证：已有草稿（含无项目）在弹窗内由`issue-modal/d
 15项新页面测试（draft-files 7、content-copy 8，真实RootStore/Tiptap/服务）与扩展Step2范围40文件427项通过；草稿原保存/完整payload/项目清除/双发布/拒绝回归随draft.test保持通过。7项变异全部AssertionError并SHA恢复：切项目不退休旧view、发布后才复制（前端publish后搬asset）、去掉传输闸、重试另建目标、未知结果不拦截、源UUID写入目标；初版“从不复制”变异同样被杀，由发布后复制版本取代。类型、16文件零warning、18文件格式、web lint 69等于上限、1415翻译引用/中英键同步、关键词通过；完整make test-web18/18（15缓存，web实际重跑），web直接运行334文件3766测试通过，transform 27.3s。
 
 局部根因与回归修正：弹窗读取StoreContext后，既有模态测试的store-context mock须导出StoreContext并以真实store作Provider（fake-form、draft.test、base.clone、base.loading）；editor-capabilities三项过渡期“弹窗禁用图片”断言按本Task合同改为“不禁节点、不给images”。草稿种子副本最初漏判图片（只提交改动字段），改以合并后的草稿输入判断。T10原件t10-draft-files-red/-1/-2、t10-copy-red/-1/-2、t10-step2-1~4、t10-clone-fix、t10-green、t10-mutation-m1/m2/m2b/m3/m4/m5/m6、t10-lint~-4、t10-format/-2、t10-types-web~-3、t10-i18n(-sync)、t10-keywords、t10-web-lint-cap、t10-web-full、t10-test-web。真实浏览器、local/S3与另一标签页仍由T13验证。
+
+T11实现与验证：附件数直接取服务端`Issue.attachment_count`。列表/看板行在显示且计数大于0时给出带朗读名称的信息性计数（点击仍打开工作项），表格新增附件列（数量+单位，0也显示），表头双向排序发送±attachment_count；排序与跨页位置全部由服务器决定，前端只在偏好确认后重读第一页，从不按已取样本自排。按§5的负责人裁定，服务端新增attachment_count显示键：project domain默认true、HTTP双向映射、project/issue两处list_settings词表，迁移00038替换CHECK、为既有行回填true，Down恢复11键；项目范围由服务端偏好保存，成员/归档等本地范围的读回名单同步加入；列表页解码对attachment_count做安全整数检查，与sub_issues/link一致。
+
+测试：13项真实页面（`issue-layouts/attachment-count.test.tsx`：列表/看板/表格的0/1/51、偏好隐藏、表头双向排序与方向性ID tie、增删附件后的权威读使列表重读而行进出未加载页、另一列表带来新计数时重读、403/503不沿用旧值且只有确认重试显示新值、404经重读离开、成员跨项目视图），另有行属性7项、表头4项、显示菜单1项（保存整组并重载）、成员视图偏好1项、页解码1项；全部请求监测无逐行GET或附件列表读取。服务端：迁移00038的回填/默认/CHECK拒绝码/Down、HTTP 12键往返、bootstrap默认与自定义偏好、issue list_settings词表。Step2命令57文件860项、constants 10项通过。8项变异全部以断言失败并SHA恢复：零计数仍显示、忽略显示偏好、本地范围丢失选择、接受不安全计数、表格丢数字、行显示别的计数、排序方向对调；store fields去掉attachment_count的变异两次存活（权威读本身就会重读列表），补“另一列表带来新计数”测试后被杀。完整make test-web 18/18、web直接335文件3792测试、类型、17文件零warning、19文件格式、web lint 69等于上限、1416翻译引用与中英键同步、关键词、golangci-lint 0 issues通过，生成物重跑一致。
+
+局部裁定与原件：bootstrap首跑因命令遗漏项目的`-timeout=20m`，在Go默认10分钟处截断（当时运行中的测试才1s，非挂起），按Makefile的GO_TEST_TIMEOUT重跑623s通过，期间只有web文件变化。knip现报3个未用文件、2个导出、1个类型与3个枚举成员，均为旧文件链与T7/T8遗留、无T11新增，由T12（Step2含make knip）清除。T11原件t11-server-red、t11-server-green（bootstrap超时）、t11-server-bootstrap、t11-web-red、t11-web-green-1~8、t11-build-packages、t11-step2/-constants、t11-mut-1~8与5b/5c、t11-lint（无效路径）/-2/-3、t11-format（无效路径）/-2~4、t11-types/-2、t11-i18n-keys（无效路径）/-root、t11-i18n-sync、t11-keywords、t11-check-lint、t11-lint-go、t11-test-web、t11-web-all、t11-knip、t11-gen-repeat。真实浏览器、local/S3与三浏览器仍由T13验证。

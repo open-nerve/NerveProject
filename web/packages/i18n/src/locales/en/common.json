@@ -80,6 +80,7 @@
       "published": "The draft copy is no longer in your drafts. Check the project's work items before creating it again."
     },
     "title": "Attachments",
+    "count_unit": "{count, plural, one {attachment} other {attachments}}",
     "confirmed_upload": "File uploaded.",
     "confirmed_delete": "File deleted.",
     "input": {

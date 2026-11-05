@@ -72,6 +72,7 @@ const displayPropertyNames = [
   "state",
   "sub_issue_count",
   "link",
+  "attachment_count",
   "created_on",
   "updated_on",
 ] as const;

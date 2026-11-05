@@ -13,7 +13,7 @@ func TestProjectIssuePreferencesValues(t *testing.T) {
 		Navigation: domain.Navigation{DefaultTab: "work_items", HideInMoreMenu: []string{}}, SortOrder: 65535,
 		Filters:           domain.Filters{},
 		DisplayFilters:    domain.DisplayFilters{Layout: "list", OrderBy: "-created_at", SubIssue: true, ShowEmptyGroups: true, Calendar: domain.DisplayCalendar{Layout: "month"}},
-		DisplayProperties: domain.DisplayProperties{Assignee: true, StartDate: true, DueDate: true, Labels: true, Key: true, Priority: true, State: true, SubIssueCount: true, Link: true, CreatedOn: true, UpdatedOn: true},
+		DisplayProperties: domain.DisplayProperties{Assignee: true, StartDate: true, DueDate: true, Labels: true, Key: true, Priority: true, State: true, SubIssueCount: true, Link: true, AttachmentCount: true, CreatedOn: true, UpdatedOn: true},
 	}
 	p := domain.DefaultPreferences()
 	if !reflect.DeepEqual(p, want) {

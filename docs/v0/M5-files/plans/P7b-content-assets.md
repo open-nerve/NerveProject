@@ -148,11 +148,11 @@ T3与T5衔接：命令确认收据先发布给稳定host再触发权威重读；
 ## Task 11（T11）：真实附件计数、排序和显示偏好
 
 **Files:** web/packages/constants/src/issue/common.ts；issues/issue-layouts/properties/all-properties.tsx；filters/header/display-filters/{display-properties,order-by}.tsx；新spreadsheet/columns/attachment-column.tsx与列注册；现有偏好验证/测试、en/zh-CN。
-**Interfaces:** 直接用生成Issue.attachment_count及已实现±attachment_count排序；显示属性沿现有link_count范式，不新建后端字段。
+**Interfaces:** 直接用生成Issue.attachment_count及已实现±attachment_count排序；显示属性沿现有link_count范式。2026-11-05负责人裁定A：原“不新建后端字段”作废——服务端display_properties固定11键且三层严格（OpenAPI additionalProperties:false、project/issue两处词表、迁移00026 CHECK），故端到端新增attachment_count显示键：OpenAPI与生成、project domain/HTTP/两处list_settings词表、迁移00038替换CHECK并为既有行回填true（M4设计§表结构原已预留“attachment_count（M5）随各自迁移加回”）。
 
-- [ ] Step 1：0/1/51、tie及ID反序、项目列表/看板/表格/成员跨项目视图、显示隐藏后刷新偏好；增删附件刷新后计数/排序位置正确，即使当前列表未加载那一页；错误/权限收窄不得沿用旧值；请求监测无每行GET。
-- [ ] Step 2：`pnpm --filter web exec vitest run core/components/issues/issue-layouts core/store/issue` 并运行constants受影响测试，RED→GREEN；完整页/跨页排序由服务器，前端不只排当前已取样本。
-- [ ] Step 3：原列表布局/拖拽/虚拟化/筛选及保存偏好回归，类型/翻译/格式；提交 `feat(M5/P7b): 展示真实附件数量与排序`。
+- [x] Step 1：0/1/51、tie及ID反序、项目列表/看板/表格/成员跨项目视图、显示隐藏后刷新偏好；增删附件刷新后计数/排序位置正确，即使当前列表未加载那一页；错误/权限收窄不得沿用旧值；请求监测无每行GET。
+- [x] Step 2：`pnpm --filter web exec vitest run core/components/issues/issue-layouts core/store/issue` 并运行constants受影响测试，RED→GREEN；完整页/跨页排序由服务器，前端不只排当前已取样本。
+- [x] Step 3：原列表布局/拖拽/虚拟化/筛选及保存偏好回归，类型/翻译/格式；提交 `feat(M5/P7b): 展示真实附件数量与排序`。
 
 ## Task 12（T12）：删除最后旧文件链与 services 包
 

@@ -101,7 +101,7 @@ func TestIssueListSettings(t *testing.T) {
 	d.Calendar.Layout = "day"
 	check(t, nil, &d, nil, "display_filters.layout", "display_filters.order_by", "display_filters.calendar.layout")
 	properties := map[string]bool{}
-	for i, key := range strings.Fields("assignee start_date due_date labels key priority state sub_issue_count link created_on updated_on") {
+	for i, key := range strings.Fields("assignee start_date due_date labels key priority state sub_issue_count link attachment_count created_on updated_on") {
 		properties[key] = i%2 == 0
 	}
 	check(t, nil, nil, properties)

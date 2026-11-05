@@ -26,7 +26,7 @@ func TestProjectIssuePreferencesStore(t *testing.T) {
 	before := tableRows(t, pool, "project_user_properties", uuid.Nil())
 	want := domain.Preferences{Navigation: domain.Navigation{DefaultTab: "work_items", HideInMoreMenu: []string{}}, SortOrder: 65535,
 		DisplayFilters:    domain.DisplayFilters{Layout: "list", OrderBy: "-created_at", SubIssue: true, ShowEmptyGroups: true, Calendar: domain.DisplayCalendar{Layout: "month"}},
-		DisplayProperties: domain.DisplayProperties{Assignee: true, StartDate: true, DueDate: true, Labels: true, Key: true, Priority: true, State: true, SubIssueCount: true, Link: true, CreatedOn: true, UpdatedOn: true}}
+		DisplayProperties: domain.DisplayProperties{Assignee: true, StartDate: true, DueDate: true, Labels: true, Key: true, Priority: true, State: true, SubIssueCount: true, Link: true, AttachmentCount: true, CreatedOn: true, UpdatedOn: true}}
 	defaults := want
 	filters := domain.Filters{LabelID: []string{"none"}, Priority: []string{"high"}, AssigneeID: []string{"me"}, StartDate: []string{"2026-10-01.."}}
 	display := domain.DisplayFilters{Layout: "kanban", OrderBy: "sort_order", Calendar: domain.DisplayCalendar{Layout: "week", ShowWeekends: true}}

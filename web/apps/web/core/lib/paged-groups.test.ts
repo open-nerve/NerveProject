@@ -179,6 +179,7 @@ test("refusesUnsafeDecodedCounts", () => {
   for (const issue of [
     { ...row("a", 1), sub_issues_count: rounded },
     { ...row("a", 1), link_count: rounded },
+    { ...row("a", 1), attachment_count: rounded },
   ]) {
     expect(() => decodePage(issuePageOf([issue]), first(), context)).toThrow();
   }

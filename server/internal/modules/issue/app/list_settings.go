@@ -80,7 +80,7 @@ func (ListSettings) Validate(filters map[string][]string, display *ListDisplayFi
 	slices.Sort(keys)
 	for _, key := range keys {
 		switch key {
-		case "assignee", "start_date", "due_date", "labels", "key", "priority", "state", "sub_issue_count", "link", "created_on", "updated_on":
+		case "assignee", "start_date", "due_date", "labels", "key", "priority", "state", "sub_issue_count", "link", "attachment_count", "created_on", "updated_on":
 		default:
 			refuse("display_properties." + key)
 		}

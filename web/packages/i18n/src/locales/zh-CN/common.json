@@ -80,6 +80,7 @@
       "published": "草稿副本已不在草稿中。请先检查项目的工作项，再决定是否重新创建。"
     },
     "title": "附件",
+    "count_unit": "个附件",
     "confirmed_upload": "文件已上传。",
     "confirmed_delete": "文件已删除。",
     "input": {

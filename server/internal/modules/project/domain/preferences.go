@@ -63,7 +63,7 @@ type PreferencesPatch struct {
 func DefaultPreferences() Preferences {
 	return Preferences{Navigation: Navigation{DefaultTab: tabs[0], HideInMoreMenu: []string{}}, SortOrder: DefaultSortOrder,
 		DisplayFilters:    DisplayFilters{Layout: "list", OrderBy: "-created_at", SubIssue: true, ShowEmptyGroups: true, Calendar: DisplayCalendar{Layout: "month"}},
-		DisplayProperties: DisplayProperties{Assignee: true, StartDate: true, DueDate: true, Labels: true, Key: true, Priority: true, State: true, SubIssueCount: true, Link: true, CreatedOn: true, UpdatedOn: true}}
+		DisplayProperties: DisplayProperties{Assignee: true, StartDate: true, DueDate: true, Labels: true, Key: true, Priority: true, State: true, SubIssueCount: true, Link: true, AttachmentCount: true, CreatedOn: true, UpdatedOn: true}}
 }
 
 // Apply returns p with the fields patch gives changed.

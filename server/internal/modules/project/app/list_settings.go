@@ -59,7 +59,7 @@ func checkListSettings(p domain.PreferencesPatch, settings IssueListSettings) er
 	var properties map[string]bool
 	if d := p.DisplayProperties; d != nil {
 		properties = map[string]bool{"assignee": d.Assignee, "start_date": d.StartDate, "due_date": d.DueDate, "labels": d.Labels, "key": d.Key,
-			"priority": d.Priority, "state": d.State, "sub_issue_count": d.SubIssueCount, "link": d.Link, "created_on": d.CreatedOn, "updated_on": d.UpdatedOn}
+			"priority": d.Priority, "state": d.State, "sub_issue_count": d.SubIssueCount, "link": d.Link, "attachment_count": d.AttachmentCount, "created_on": d.CreatedOn, "updated_on": d.UpdatedOn}
 	}
 	fields = append(fields, settings.Validate(filters, display, properties)...)
 	if len(fields) > 0 {
