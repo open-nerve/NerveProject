@@ -159,7 +159,7 @@
 
 - [x] Step 1：核main与worktree干净、准确green候选及祖先，根main用`--no-ff`，核双父/树一致，system push。
 - [x] Step 2：准确main CI三项全绿后归档全部ignored原件，核hash/bytes/mode/membership/unknown0；origin/main..branch=0后正常清理远端/本地/worktree，归档再核。
-- [ ] Step 3：closeout worktree回填P8完成证据；写closeout spec/plan并一次builder预检：首次noff/main绿→§14逐条勾选与总体§9.4→第二次noff/main绿→最终归档清理；输入交接改closed。
+- [x] Step 3：closeout worktree回填P8完成证据；写closeout spec/plan并一次builder预检：首次noff/main绿→§14逐条勾选与总体§9.4→第二次noff/main绿→最终归档清理；输入交接改closed。
 
 ## 预检自查
 
