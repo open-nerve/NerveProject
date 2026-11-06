@@ -123,9 +123,9 @@
 
 **Files:** `e2e/playwright.m5-demo.config.ts`、`e2e/stories/files/f18-default-deployment.spec.ts`；`e2e/fixtures/server.ts`必须增加显式选项，使`startNerve`不注入test环境与放宽的限速；README部署节。
 
-- [ ] Step 1：按README“部署”节的prod步骤：独立空库上`NERVE_ENV=prod nerve migrate up`；Node `crypto`生成Ed25519 PKCS#8经`NERVE_AUTH__JWT__PRIVATE_KEY_FILE`给出；`nerve users create`建第一个账户；以基础配置默认`files`（local、默认限速）与实例独占`NERVE_FILES__LOCAL__ROOT`启动。三浏览器故事：登录→头像→工作区图标→项目封面（预设与上传）→附件上传/下载SHA→正文图片粘贴→评论文件→重启进程→全部重读一致；`watchPage`无旧路由、CSP违规、未处理异常；阶段记录列全部环境变量。
-- [ ] Step 2：扫描：无`/api/assets/v2`等旧路由、无`web/packages/services`、关键词守卫无到期例外、T7死成员表闭环。
-- [ ] Step 3：三浏览器GREEN并保存原件；提交`test(M5/P8): 默认部署演示`。
+- [x] Step 1：按README“部署”节的prod步骤：独立空库上`NERVE_ENV=prod nerve migrate up`；Node `crypto`生成Ed25519 PKCS#8经`NERVE_AUTH__JWT__PRIVATE_KEY_FILE`给出；`nerve users create`建第一个账户；以基础配置默认`files`（local、默认限速）与实例独占`NERVE_FILES__LOCAL__ROOT`启动。三浏览器故事：登录→头像→工作区图标→项目封面（预设与上传）→附件上传/下载SHA→正文图片粘贴→评论文件→重启进程→全部重读一致；`watchPage`无旧路由、CSP违规、未处理异常；阶段记录列全部环境变量。
+- [x] Step 2：扫描：无`/api/assets/v2`等旧路由、无`web/packages/services`、关键词守卫无到期例外、T7死成员表闭环。
+- [x] Step 3：三浏览器GREEN并保存原件；提交`test(M5/P8): 默认部署演示`。
 
 ## Task 12（T12）：最终F1–F18矩阵
 

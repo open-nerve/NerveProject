@@ -92,6 +92,16 @@ export async function copyFrom(target: Locator): Promise<Record<string, string>>
   });
 }
 
+/** The browser's own download of the control holds exactly the stored bytes. */
+export async function downloadedExactly(page: Page, control: Locator, file: ContentFile) {
+  const started = page.waitForEvent("download");
+  await control.click();
+  const download = await started;
+  expect(download.suggestedFilename()).toBe(file.name);
+  const saved = await download.path();
+  expect(sha256(await readDiskFile(saved))).toBe(sha256(file.bytes));
+}
+
 const pathOf = (request: Request) => new URL(request.url()).pathname;
 
 /**
@@ -188,15 +198,7 @@ export async function contentFilesPage(world: PageFileStoryWorld, info: TestInfo
       contentType: "application/json",
     });
   };
-  /** The browser's own download of the control holds exactly the stored bytes. */
-  const downloaded = async (control: Locator, file: ContentFile) => {
-    const started = page.waitForEvent("download");
-    await control.click();
-    const download = await started;
-    expect(download.suggestedFilename()).toBe(file.name);
-    const saved = await download.path();
-    expect(sha256(await readDiskFile(saved))).toBe(sha256(file.bytes));
-  };
+  const downloaded = (control: Locator, file: ContentFile) => downloadedExactly(page, control, file);
   /** expected names the failures a story caused on purpose; every other API failure fails the story. */
   const finish = async (expected: (failure: string) => boolean = () => false) => {
     expect(watch.oldApiRequests).toEqual([]);

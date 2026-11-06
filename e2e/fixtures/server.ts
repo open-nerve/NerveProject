@@ -24,6 +24,22 @@ const pollIntervalMs = 100;
  */
 export const nerveFixtureTimeoutMs = readyTimeoutMs + stopTimeoutMs + 10_000;
 
+/** How the fixture configures a nerve process. */
+export interface NerveOptions {
+  /**
+   * As a deployment runs it: the base configuration, with neither NERVE_ENV=test nor the test transfer capacity.
+   * env then carries every setting the deployment makes, NERVE_ENV among them.
+   */
+  deployment?: boolean;
+}
+
+// Catalog stories upload many real files from one loopback address.
+// Keep the limiter enabled with an explicit test-only capacity.
+const testTransferCapacity = {
+  NERVE_FILES__TRANSFER_RATE__PER_MINUTE: "10000",
+  NERVE_FILES__TRANSFER_RATE__BURST: "1000",
+};
+
 /** A nerve serve process of this run. */
 export interface Nerve {
   readonly baseURL: string;
@@ -37,22 +53,23 @@ export interface Nerve {
 
 /**
  * Runs a nerve command, such as migrate up or users create, with the test
- * configuration on the database at databaseUrl, plus the variables of env.
- * input, a password for instance, is its standard input, which is closed
- * after it, so a command that reads more gets end of file rather than
- * waiting. It rejects when the command exits non-zero, with the exit code as
- * the error's code and its stdout and stderr, and kills it after
- * commandTimeoutMs: global setup runs it before any Playwright timeout
- * applies.
+ * configuration (or, for a deployment, the base one) on the database at
+ * databaseUrl, plus the variables of env. input, a password for instance, is
+ * its standard input, which is closed after it, so a command that reads more
+ * gets end of file rather than waiting. It rejects when the command exits
+ * non-zero, with the exit code as the error's code and its stdout and
+ * stderr, and kills it after commandTimeoutMs: global setup runs it before
+ * any Playwright timeout applies.
  */
 export async function runNerve(
   args: string[],
   databaseUrl: string,
   input = "",
-  env: Record<string, string> = {}
+  env: Record<string, string> = {},
+  options: NerveOptions = {}
 ): Promise<{ stdout: string; stderr: string }> {
   const run = promisify(execFile)(binary, args, {
-    env: { ...nerveEnv(databaseUrl), ...env },
+    env: { ...nerveEnv(databaseUrl, options), ...env },
     timeout: commandTimeoutMs,
     killSignal: "SIGKILL",
   });
@@ -61,16 +78,17 @@ export async function runNerve(
 }
 
 /**
- * Starts nerve serve with the test configuration, plus the variables of env
- * (e.g. NERVE_AUTH__SIGNUP_ENABLED=false for a nerve with sign-up off), and
- * waits until /readyz answers 200. nerve listens on a port the system picks
- * and writes its address to server.addr_file, next to logFile, which gets
- * its output.
+ * Starts nerve serve with the test configuration (or, for a deployment, the
+ * base one), plus the variables of env (e.g. NERVE_AUTH__SIGNUP_ENABLED=false
+ * for a nerve with sign-up off), and waits until /readyz answers 200. nerve
+ * listens on a port the system picks and writes its address to
+ * server.addr_file, next to logFile, which gets its output.
  */
 export async function startNerve(
   databaseUrl: string,
   logFile: string,
-  env: Record<string, string> = {}
+  env: Record<string, string> = {},
+  options: NerveOptions = {}
 ): Promise<Nerve> {
   mkdirSync(path.dirname(logFile), { recursive: true });
   const addrFile = logFile.replace(/\.log$/, "") + ".addr";
@@ -79,14 +97,11 @@ export async function startNerve(
   const log = openSync(logFile, "w");
   const child = spawn(binary, ["serve"], {
     env: {
-      ...nerveEnv(databaseUrl),
+      ...nerveEnv(databaseUrl, options),
       NERVE_SERVER__ADDR: "127.0.0.1:0",
       NERVE_SERVER__ADDR_FILE: addrFile,
       NERVE_FILES__LOCAL__ROOT: storageRoot,
-      // Catalog stories upload many real files from one loopback address.
-      // Keep the limiter enabled with an explicit test-only capacity.
-      NERVE_FILES__TRANSFER_RATE__PER_MINUTE: "10000",
-      NERVE_FILES__TRANSFER_RATE__BURST: "1000",
+      ...(options.deployment ? {} : testTransferCapacity),
       ...env,
     },
     stdio: ["ignore", log, log],
@@ -114,12 +129,19 @@ export async function startNerve(
   }
 }
 
-/** The test configuration on the given database; the caller's own NERVE_* variables are left out. */
-function nerveEnv(databaseUrl: string): NodeJS.ProcessEnv {
+/**
+ * The test configuration on the given database, or for a deployment only the database; the caller's own NERVE_*
+ * variables are left out.
+ */
+function nerveEnv(databaseUrl: string, { deployment = false }: NerveOptions): NodeJS.ProcessEnv {
   const url = new URL(databaseUrl);
   url.searchParams.set("application_name", applicationName);
   const inherited = Object.entries(process.env).filter(([name]) => !name.startsWith("NERVE_"));
-  return { ...Object.fromEntries(inherited), NERVE_ENV: "test", NERVE_DATABASE__URL: url.toString() };
+  return {
+    ...Object.fromEntries(inherited),
+    ...(deployment ? {} : { NERVE_ENV: "test" }),
+    NERVE_DATABASE__URL: url.toString(),
+  };
 }
 
 /** The address nerve wrote to addrFile; undefined until it has. nerve renames the file into place, so it is never partial. */

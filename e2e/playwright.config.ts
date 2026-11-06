@@ -2,6 +2,9 @@ import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
   testDir: "stories",
+  // The default deployment demo migrates and runs a production nerve of its own in each browser; it runs through
+  // playwright.m5-demo.config.ts, outside the default stories.
+  testIgnore: /files\/f18-default-deployment\.spec\.ts$/,
   // Starts PostgreSQL and migrates the template database once per run.
   globalSetup: "./global-setup.ts",
   forbidOnly: !!process.env.CI,

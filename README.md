@@ -93,6 +93,7 @@ M4列表专用三浏览器矩阵在当前 `make build` 之后运行 `pnpm --filt
 - **页面的登录状态**：`signedInPage(tokens)` 给出一个已经登录、还没有加载任何东西的页面，`tokens` 来自 `login` 或 `register`（`nerveWith` 另起的 nerve 把它的地址作为第二个参数）。页面第一次加载时，在它的任何脚本运行之前，一条新的 `nerve.auth` 记录写进 localStorage；之后的加载、刷新和同一上下文里的其他标签页不再写，看到的是页面自己续期或删除之后的记录，和真实的浏览器一样。`e2e/fixtures/browser.ts` 的 `watchPage` 记录页面的接口请求、失败的接口请求、发往旧接口（`/api/v0` 之外）的请求、未处理的异常、控制台的错误和警告、CSP 违规，要在页面第一次打开之前调用；同一文件的 `expectQuietConsole` 先让页面写一条探针错误和一条探针警告、要求收到，再断言控制台没有别的错误和警告（参数点名允许的第三方警告，以及浏览器对 401 这类回答的报错）。
 - **版本号**：`make build` 把 `VERSION`（默认 `0.1.0-dev`）写进 `bin/nerve`，例如 `make build VERSION=0.1.0`。`make e2e` 把同一个值放进环境变量 `NERVE_VERSION` 交给测试，S3 核对 `/api/v0/instance` 返回的版本号。
 - **同源**：S2 断言页面的所有请求都发往 nerve 自身（见"前端"一节的"没有前端环境变量"一条）；有请求发往别处时 S2 失败，失败信息列出这些请求。S2 还断言：未登录的页面只请求 `GET /api/v0/instance`，没有失败的请求、未处理的异常和 CSP 违规，控制台没有错误和警告（深链接点名允许一条第三方的警告：编辑器加载时 `is-emoji-supported` 反复读画布，Chromium 提示 `willReadFrequently`）；首页带 `Content-Security-Policy`。S2 等 `GET /api/v0/instance` 的回答和登录页的"Go to workspace"按钮出现，不等 `networkidle`：页面不读回答的请求一直算在途中，`networkidle` 会等到测试超时。
+- **M5 的验收运行**（都不在默认 `make e2e` 中，先 `make build`）：`pnpm --filter @nerve/e2e run test:m5-demo` 是默认部署演示（F18）：在一个空库上以 `NERVE_ENV=prod` 执行 `nerve migrate up` 和 `nerve users create`，用 Node `crypto` 生成的 Ed25519 私钥（`NERVE_AUTH__JWT__PRIVATE_KEY_FILE`）和独占的 `NERVE_FILES__LOCAL__ROOT` 启动，不注入 test 配置和放宽的限速（`startNerve` 的 `deployment` 选项）；在 Chromium、Firefox、WebKit 中登录，上传头像、工作区图标、项目封面（预设与上传）、附件、粘贴的正文图片和评论文件，在同一地址重启后全部重读。`test:m5-slow` 在 Chromium 中把页面的上行限到 72 KiB/s，上传一个大于 1 MiB、超过 15 秒的附件（local 与 S3）。Go 的全链路清理演练在 `server/` 下运行：`NERVE_FILES_DRILL=1 go test -count=1 -run '^TestFilesCleanupDrill$' ./internal/bootstrap`（local 与 S3）。
 - **只运行部分故事、打开浏览器调试**：先 `make build`，再直接运行 Playwright，`NERVE_VERSION` 要与构建时的 `VERSION` 相同：
 
   ```bash
@@ -128,7 +129,7 @@ M4列表专用三浏览器矩阵在当前 `make build` 之后运行 `pnpm --filt
 
   六配置、runtime角色、失败/窗口及实测入口见 [P9 review](docs/v0/M4-issue-core/reviews/P9-purge-review.md)。六项目各660000行的规模原件和全部160个存活邻居读写样本见 [P9 spec附录B](docs/v0/M4-issue-core/specs/P9-purge.md)；数据只代表记录的机器/数据库/池/缓存与observer条件，M8继续承担部署与超目标规模评估。
 
-- **本地文件存储**：`files.driver=local`，`files.local.root` 默认为相对于 nerve **进程工作目录**的 `./data/files`；生产部署应通过 `NERVE_FILES__LOCAL__ROOT` 指定稳定的绝对路径，并让服务进程独占该目录。数据库备份不包含文件字节，备份时需一起保存文件根目录及签名密钥，恢复到彼此一致的时点。M5/P1 仅建立受签名保护的传输底座，用户申请上传与附件页面随后续阶段接入。
+- **本地文件存储**：`files.driver=local`，`files.local.root` 默认为相对于 nerve **进程工作目录**的 `./data/files`；生产部署应通过 `NERVE_FILES__LOCAL__ROOT` 指定稳定的绝对路径，并让服务进程独占该目录。数据库备份不包含文件字节，备份时需一起保存文件根目录及签名密钥，恢复到彼此一致的时点。按基础配置（`files.driver: local`，出厂的大小、期限与限速），头像、工作区图标、项目封面、附件、正文图片和评论文件的字节都在这个目录里；默认部署演示（"端到端测试"一节）照本节的步骤部署，在三个浏览器中逐一上传，重启后全部重读。
   - 文件签名从同一 Ed25519 密钥按用途派生；保持目录和密钥后，重启不使未过期文件链接失效。换密钥或 dev/test 使用临时密钥重启后，旧上传/读取链接失效；存储文件不会因此删除。
   - 文件传输独占 `/static/local/{key}`，`static` 从既有预留名字转为服务端路径；`/assets` 仍是构建资源。开发时由 Vite 的具名传输插件送到 Go；生产反向代理应将 `/static` 完整送到 nerve，保留方法/query/响应缓存头，不将它映射成磁盘静态目录或统一设为公共长期缓存。代理日志不得记录签名 query。
   - 普通 JSON 接口的请求体和期限保持原值；原始文件传输按文件大小、最低速率、空闲期限和最大时长单独约束，并有独立的并发与 IP 限流。配置项见 [M5/P1 spec](docs/v0/M5-files/specs/P1-local-storage.md#25-期限并发和配置)。
