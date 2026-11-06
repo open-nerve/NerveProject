@@ -153,6 +153,15 @@ var rules = map[shared.Action]Rule{
 	"issue_draft.write": {Level: LevelWorkspace, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember}},
 	"member_issue.list": {Level: LevelWorkspace, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember}},
 	"issue.search":      {Level: LevelWorkspace, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember, shared.RoleGuest}},
+	// Every active member of the project reads cycles; the guest's OwnOnly
+	// filtering is the planning module's (M6 design 3.7).
+	"cycle.read": {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember, shared.RoleGuest}},
+	// As issue.create: creating, changing, archiving and unarchiving a
+	// cycle; the planning module refuses an OwnOnly grant (M6 design 3.7).
+	"cycle.write": {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember}},
+	// As issue.delete: the project's admins, and the cycle's creator while a
+	// member or an admin of the project (M6 design 3.7).
+	"cycle.delete": {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin}, AllowCreator: true},
 }
 
 // RuleFor returns a copy of the row of action, every field of it and its

@@ -10,6 +10,7 @@ import (
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/access"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue"
+	"github.com/open-nerve/NerveProject/server/internal/modules/planning"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project"
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
@@ -23,6 +24,7 @@ func moduleActions() map[string][]shared.Action {
 		"workspace": workspace.Actions(),
 		"project":   project.Actions(),
 		"issue":     issue.Actions(),
+		"planning":  planning.Actions(),
 	}
 }
 

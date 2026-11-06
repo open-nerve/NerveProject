@@ -98,7 +98,8 @@ func TestConstraintAndIndexNames(t *testing.T) {
 	// DELETE CASCADE, n: ON DELETE SET NULL, a: NO ACTION), c check, x exclusion. An index is i, then
 	// u when it is unique and w when it is partial (has a WHERE). The project
 	// module's tables are in projectNames (project_schema_test.go), the issue
-	// module's in issueNames (issue_schema_test.go).
+	// module's in issueNames (issue_schema_test.go), the planning module's in
+	// planningNames (planning_schema_test.go).
 	want := slices.Concat([]string{
 		"api_tokens_deleted_at_idx iw",
 		"api_tokens_created_by_id_fkey f n",
@@ -178,7 +179,7 @@ func TestConstraintAndIndexNames(t *testing.T) {
 		"workspaces_slug_check c",
 		"workspaces_slug_key iuw",
 		"workspaces_updated_by_id_fkey f n",
-	}, projectNames, issueNames, assetNames, profileImageNames)
+	}, projectNames, issueNames, assetNames, profileImageNames, planningNames)
 	slices.Sort(want)
 	if !slices.Equal(got, want) {
 		t.Errorf("constraints and indexes =\n%q\nwant\n%q", got, want)

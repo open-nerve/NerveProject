@@ -54,7 +54,7 @@
 | 审计四列 | 照 M2 设计 3.13 | 同 |
 | 删除 | `view_props`、`logo_props`、`timezone`、`version`、`external_source`、`external_id`；`progress_snapshot` 在 P4 加回 | 没有读者，或用项目的时区 |
 
-索引：每条外键无条件索引；活行列表 `(project_id, sort_order, created_at, id) WHERE deleted_at IS NULL`；清理用 `cycles_deleted_at_idx (deleted_at) WHERE deleted_at IS NOT NULL`（照 `purge_indexes_test`）。约束与索引按既有命名，列入 `planning_schema_test.go`。
+索引：每条 `CASCADE` 外键（`workspace_id`、`project_id`）无条件索引，指向 `users` 的 `SET NULL` 外键照 `projects.project_lead_id` 不建（`TestConstraintAndIndexNames` 的约定）；活行列表 `(project_id, sort_order, created_at, id) WHERE deleted_at IS NULL`；清理用 `cycles_deleted_at_idx (deleted_at) WHERE deleted_at IS NOT NULL`（照 `purge_indexes_test`）。约束与索引按既有命名，列入 `planning_schema_test.go`。
 
 ### 2.3 接口与错误目录
 
