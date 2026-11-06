@@ -98,6 +98,7 @@ func (c Config) validate() error {
 	c.RateLimit.validate(fail)
 	c.Cleanup.validate(fail)
 	c.Issue.validate(c.Server.RequestTimeout, fail)
+	c.Planning.validate(fail)
 	if c.Jobs.ShutdownTimeout <= 0 {
 		fail("jobs.shutdown_timeout", "must be positive, got %s", c.Jobs.ShutdownTimeout)
 	}
@@ -166,6 +167,15 @@ func (c CleanupConfig) validate(fail func(key, format string, args ...any)) {
 	}
 	if c.PurgeBatch < 1 || c.PurgeBatch > math.MaxInt32 {
 		fail("cleanup.purge_batch", "must be from 1 to 2147483647, got %d", c.PurgeBatch)
+	}
+}
+
+func (p PlanningConfig) validate(fail func(key, format string, args ...any)) {
+	if p.DeleteBatch < 1 || p.DeleteBatch > math.MaxInt32 {
+		fail("planning.delete_batch", "must be from 1 to 2147483647, got %d", p.DeleteBatch)
+	}
+	if p.DeleteBudget <= 0 || p.DeleteBudget > math.MaxInt64-5*time.Second {
+		fail("planning.delete_budget", "must be positive and leave 5s before duration overflow, got %s", p.DeleteBudget)
 	}
 }
 

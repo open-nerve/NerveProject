@@ -92,6 +92,7 @@ func testConfig(t *testing.T, dbURL string, autoMigrate bool) config.Config {
 		Jobs:      config.JobsConfig{DefaultWorkers: 10, PeriodicWorkers: 2, ShutdownTimeout: 5 * time.Second},
 		Workspace: config.WorkspaceConfig{CreationEnabled: true},
 		Issue:     testIssueConfig,
+		Planning:  config.PlanningConfig{DeleteBatch: 1000, DeleteBudget: 45 * time.Second},
 		Files:     testFilesConfig(t),
 		Log:       config.LogConfig{Level: "error", Format: "text"},
 	}

@@ -1,0 +1,124 @@
+package riveradapter
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"errors"
+	"log/slog"
+	"reflect"
+	"testing"
+	"time"
+	"uuid"
+
+	"github.com/riverqueue/river"
+	"github.com/riverqueue/river/rivertype"
+
+	"github.com/open-nerve/NerveProject/server/internal/modules/planning/app"
+)
+
+type deleteRowsCall func(context.Context, uuid.UUID, time.Time, uuid.UUID) (app.DeleteRowsResult, error)
+
+func (f deleteRowsCall) Execute(ctx context.Context, project uuid.UUID, at time.Time, by uuid.UUID) (app.DeleteRowsResult, error) {
+	return f(ctx, project, at, by)
+}
+
+// A complete run ends the job, a run stopped at its budget snoozes it, a failure retries it and the last failed
+// attempt is logged; the job's timeout is its budget and five seconds.
+func TestDeleteRowsWorkerMapsBudgetAndTimeout(t *testing.T) {
+	args := DeleteRowsArgs{ProjectID: uuid.NewV7(), At: time.Now().Add(-61 * 24 * time.Hour), By: uuid.NewV7()}
+	failure := errors.New("database unavailable")
+	for _, tt := range []struct {
+		name     string
+		complete bool
+		err      error
+		attempt  int
+	}{{"complete", true, nil, 25}, {"snooze", false, nil, 25}, {"retry", false, failure, 24}, {"exhausted", false, failure, 25}} {
+		t.Run(tt.name, func(t *testing.T) {
+			var buf bytes.Buffer
+			logger := slog.New(slog.NewJSONHandler(&buf, nil))
+			ctx, cancel := context.WithCancel(t.Context())
+			cancel()
+			uc := deleteRowsCall(func(got context.Context, project uuid.UUID, at time.Time, by uuid.UUID) (app.DeleteRowsResult, error) {
+				if got != ctx || project != args.ProjectID || at != args.At || by != args.By {
+					t.Error("lost arguments/context")
+				}
+				return app.DeleteRowsResult{Complete: tt.complete}, tt.err
+			})
+			worker := NewDeleteRowsWorker(uc, 45*time.Second, logger)
+			job := &river.Job[DeleteRowsArgs]{JobRow: &rivertype.JobRow{ID: 73, Attempt: tt.attempt, MaxAttempts: 25}, Args: args}
+			if worker.Timeout(job) != 50*time.Second || NewDeleteRowsWorker(uc, time.Second, logger).Timeout(job) != 6*time.Second {
+				t.Fatal("timeout")
+			}
+			err := worker.Work(ctx, job)
+			var snooze *river.JobSnoozeError
+			switch {
+			case tt.err != nil:
+				if err != failure {
+					t.Fatal(err)
+				}
+			case !tt.complete:
+				if !errors.As(err, &snooze) || snooze.Duration != 0 {
+					t.Fatalf("want snooze(0), got %v", err)
+				}
+			case err != nil:
+				t.Fatal(err)
+			}
+			if tt.name == "exhausted" {
+				var got map[string]any
+				if err := json.Unmarshal(buf.Bytes(), &got); err != nil {
+					t.Fatal(err)
+				}
+				if got["msg"] != "planning row deletion exhausted" || got["level"] != "ERROR" || got["job_id"] != float64(73) || got["project_id"] != args.ProjectID.String() || got["error"] != failure.Error() {
+					t.Fatal(got)
+				}
+			} else if buf.Len() != 0 {
+				t.Fatalf("unexpected exhausted log %s", buf.String())
+			}
+			if declaration := DeleteRowsJob(uc, 45*time.Second, logger); declaration.Worker == nil || declaration.Periodic != nil {
+				t.Fatal(declaration)
+			}
+		})
+	}
+}
+
+type insertCall func(context.Context, river.JobArgs, *river.InsertOpts) error
+
+func (f insertCall) InsertTx(ctx context.Context, args river.JobArgs, opts *river.InsertOpts) error {
+	return f(ctx, args, opts)
+}
+
+// The job carries the project and the deletion's moment and actor, on the default queue with River's default
+// attempts, inserted in the caller's context (its transaction).
+func TestRowDeletionsEnqueue(t *testing.T) {
+	ctx := t.Context()
+	at := time.Date(2026, 10, 28, 1, 2, 3, 123456000, time.UTC)
+	project, by := uuid.NewV7(), uuid.NewV7()
+	failure := errors.New("insert failed")
+	calls := 0
+	q := NewRowDeletions(insertCall(func(got context.Context, args river.JobArgs, opts *river.InsertOpts) error {
+		calls++
+		if got != ctx || args.Kind() != "planning.delete_rows" {
+			t.Fatal("context/kind")
+		}
+		raw, err := json.Marshal(args)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var payload map[string]any
+		if err := json.Unmarshal(raw, &payload); err != nil {
+			t.Fatal(err)
+		}
+		want := map[string]any{"project_id": project.String(), "at": at.Format(time.RFC3339Nano), "by": by.String()}
+		if !reflect.DeepEqual(payload, want) {
+			t.Fatalf("payload=%v", payload)
+		}
+		if opts == nil || !reflect.DeepEqual(*opts, river.InsertOpts{Queue: "default"}) {
+			t.Fatalf("opts=%+v", opts)
+		}
+		return failure
+	}))
+	if err := q.Enqueue(ctx, project, at, by); err != failure || calls != 1 {
+		t.Fatalf("Enqueue = %v, calls=%d", err, calls)
+	}
+}

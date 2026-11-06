@@ -76,7 +76,7 @@
 - 软删：`deleted_at` 与 `updated_*` 同一时刻、同一写者；P1 不发事件。
 - 项目、工作区删除：订阅者 `planning_delete_rows_on_deletion` 在发布者事务内投递 `planning.delete_rows`（参数：项目 id、原 At/By）；worker 按 `planning.delete_batch` 有界软删该项目的迭代，沿用原 At/By，在 `planning.delete_budget` 内续跑，可重试。不取项目锁（项目已删除，同 `issue/app/delete_rows.go`）。父范围立即隐藏：项目已删除即 404。
 - 60 天物理清理：单语句分页（`WITH candidates AS MATERIALIZED … DELETE FROM cycles`）有界删除；运行角色执行（`TestPurgeDeletedRunsWithRuntimeRole`）。
-- 守卫与夹具同步扩展：`project_deletion_test`、`workspace_deletion_test`、`purge_late_deletion_test` 以 SQL 种入 `cycles` 行并核软删（夹具允许 SQL）；`parentAsyncTable` 与 `waitProjectDeletion`/`waitWorkspaceDeletion` 认得 `planning.delete_rows`；`purge_runtime_test` 的模块组加 `{"planning", {"cycles"}}` 与夹具中的一行迭代；`purge_catalog_test` 与 `purge_indexes_test` 的表数；`purgeScaleTables` 以接口建迭代并等待 `planning.delete_rows`。P1 以 `NERVE_PURGE_SCALE=1` 跑一次 `TestPurgeScale` 证明追踪器认得新语句，P8 在最终代码上重跑。
+- 守卫与夹具同步扩展：`project_deletion_test`、`workspace_deletion_test`、`purge_late_deletion_test` 以 SQL 种入 `cycles` 行并核软删（夹具允许 SQL）；`parentAsyncTable` 与 `waitProjectDeletion`/`waitWorkspaceDeletion` 认得 `planning.delete_rows`；`purge_runtime_test` 的模块组加 `{"planning", {"cycles"}}` 与夹具中的一行迭代；`purge_catalog_test` 与 `purge_indexes_test` 的表数；`purgeScaleTables` 加 `cycles`，规模夹具以 SQL 种迭代（建立接口在 T7 才有）并等待 `planning.delete_rows`。P1 以 `NERVE_PURGE_SCALE=1` 跑一次 `TestPurgeScale` 证明追踪器认得新语句，P8 在最终代码上重跑。
 
 ## 3. 局部裁定
 

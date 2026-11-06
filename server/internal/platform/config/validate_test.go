@@ -56,6 +56,7 @@ func validConfig() Config {
 		Cleanup: CleanupConfig{PurgeAfter: 1440 * time.Hour, PurgeInterval: 24 * time.Hour, PurgeBatch: 1000},
 		Issue: IssueConfig{TrimVersionsInterval: 24 * time.Hour, DeleteBatch: 1000, DeleteBudget: 45 * time.Second, AutoArchiveInterval: 24 * time.Hour, WriteGate: WriteGateConfig{PerProject: 9, MaxWait: 1500 * time.Millisecond, MaxQueue: 32},
 			WriteLockTimeout: 3 * time.Second},
+		Planning: PlanningConfig{DeleteBatch: 997, DeleteBudget: 43 * time.Second},
 		Files: FilesConfig{
 			UploadTTL: 15 * time.Minute, OperationTimeout: 10 * time.Second, CleanupInterval: time.Hour, CleanupBatch: 100, CleanupBudget: 10 * time.Second, SizeLimit: 7340032, Driver: "local", Local: LocalFilesConfig{Root: "/private/config-test-files"},
 			MinTransferBytesPerSecond: 262144, TransferGrace: 16 * time.Second, TransferIdleTimeout: 21 * time.Second,
@@ -129,6 +130,8 @@ func TestValidateReportsEveryInvalidKey(t *testing.T) {
 		"issue.write_gate.max_wait: must be positive, got 0s",
 		"issue.write_gate.max_queue: must not be negative, got -1",
 		"issue.write_lock_timeout: must be positive, got 0s",
+		"planning.delete_batch: must be from 1 to 2147483647, got 0",
+		"planning.delete_budget: must be positive and leave 5s before duration overflow, got 0s",
 		"jobs.shutdown_timeout: must be positive, got 0s",
 		"jobs.default_workers: must be at least 1, got 0",
 		"jobs.periodic_workers: must be at least 1, got 0",

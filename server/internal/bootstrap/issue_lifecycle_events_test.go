@@ -16,6 +16,7 @@ import (
 	"github.com/riverqueue/river"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue"
+	"github.com/open-nerve/NerveProject/server/internal/modules/planning"
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace"
 	"github.com/open-nerve/NerveProject/server/internal/platform/clock"
 	"github.com/open-nerve/NerveProject/server/internal/platform/config"
@@ -246,7 +247,7 @@ func TestIssueDeletionEventsCascade(t *testing.T) {
 				t.Fatal("event observer did not see the positive control")
 			}
 			runner, err := jobs.New(pool, jobs.Config{ShutdownTimeout: cfg.Jobs.ShutdownTimeout,
-				Logger: slog.New(slog.DiscardHandler), DefaultWorkers: cfg.Jobs.DefaultWorkers, PeriodicWorkers: cfg.Jobs.PeriodicWorkers}, append(module.Jobs(), assetDeletionJobForTest(pool, cfg)), append(issue.EnqueuedKinds(), "asset.delete_scope"))
+				Logger: slog.New(slog.DiscardHandler), DefaultWorkers: cfg.Jobs.DefaultWorkers, PeriodicWorkers: cfg.Jobs.PeriodicWorkers}, slices.Concat(module.Jobs(), []jobs.Job{assetDeletionJobForTest(pool, cfg)}, planningDeletionJobsForTest(pool, cfg)), slices.Concat(issue.EnqueuedKinds(), []string{"asset.delete_scope"}, planning.EnqueuedKinds()))
 			if err != nil {
 				t.Fatal(err)
 			}

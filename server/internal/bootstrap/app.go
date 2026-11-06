@@ -23,6 +23,7 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity"
 	"github.com/open-nerve/NerveProject/server/internal/modules/instance"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue"
+	"github.com/open-nerve/NerveProject/server/internal/modules/planning"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project"
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace"
 	"github.com/open-nerve/NerveProject/server/internal/platform/buildinfo"
@@ -139,6 +140,7 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 	workspacePorts := workspace.Provide(pool, protected)
 	projectPorts := project.Provide(pool, protected)
 	issuePorts := issue.Provide(pool, protected)
+	planningPorts := planning.Provide(pool)
 	imageBindings := asset.NewImageBindings(assetPorts, businessClock)
 	imageReader := asset.NewImageReader(assetPorts, assets.store, assets.runtimeNow)
 	assetPurger := asset.NewPurger(assetPorts, assetImageReferences{identityPorts.ImageReferences, workspacePorts.ImageReferences, projectPorts.ImageReferences}, tx)
@@ -151,7 +153,7 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 		a.close()
 		return nil, err
 	}
-	events, err := newDispatcher(eventTypes(), slices.Concat(issue.Subscribers(issuePorts, issueInserter{client: inserter}), asset.Subscribers(assetPorts, assetInserter{client: inserter})))
+	events, err := newDispatcher(eventTypes(), slices.Concat(issue.Subscribers(issuePorts, issueInserter{client: inserter}), planning.Subscribers(planningInserter{client: inserter}), asset.Subscribers(assetPorts, assetInserter{client: inserter})))
 	if err != nil {
 		a.close()
 		return nil, err
@@ -175,6 +177,10 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 		Workspaces: issueWorkspaces{directory: workspacePorts.WorkspaceDirectory},
 		Members:    issueMembers{members: workspacePorts.WorkspaceMemberDirectory},
 		Profiles:   issueProfiles{profiles: identityPorts.PublicProfiles},
+	})
+	plans := planning.New(planning.Deps{
+		Pool: pool, JobTx: issueTx, RuntimeNow: time.Now, Logger: logger,
+		DeleteBatch: cfg.Planning.DeleteBatch, DeleteBudget: cfg.Planning.DeleteBudget,
 	})
 	// project before workspace: workspace's writes take its cascade.
 	proj := project.New(project.Deps{
@@ -236,9 +242,9 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 		a.close()
 		return nil, err
 	}
-	purge := newPurgeDeleted([]purgeModule{{"asset", forAssetPurge(assetPurger)}, {"issue", forIssuePurge(issuePorts.Purger)}, {"project", forProjectPurge(projectPorts.Purger)}, {"workspace", forWorkspacePurge(workspacePorts.Purger)}, {"identity", forIdentityPurge(identityPorts.Purger)}}, businessClock, time.Now, cfg.Cleanup.PurgeAfter, cfg.Cleanup.PurgeBatch, cfg.Files.CleanupBudget)
-	definitions := append(slices.Concat(ident.Jobs(), issues.Jobs(), files.Jobs()), purgeJob(purge, cfg.Cleanup.PurgeInterval))
-	a.jobs, err = jobs.New(pool, jobs.Config{ShutdownTimeout: cfg.Jobs.ShutdownTimeout, Logger: logger, DefaultWorkers: cfg.Jobs.DefaultWorkers, PeriodicWorkers: cfg.Jobs.PeriodicWorkers}, definitions, slices.Concat(identity.EnqueuedKinds(), issue.EnqueuedKinds(), asset.EnqueuedKinds()))
+	purge := newPurgeDeleted([]purgeModule{{"asset", forAssetPurge(assetPurger)}, {"issue", forIssuePurge(issuePorts.Purger)}, {"planning", forPlanningPurge(planningPorts.Purger)}, {"project", forProjectPurge(projectPorts.Purger)}, {"workspace", forWorkspacePurge(workspacePorts.Purger)}, {"identity", forIdentityPurge(identityPorts.Purger)}}, businessClock, time.Now, cfg.Cleanup.PurgeAfter, cfg.Cleanup.PurgeBatch, cfg.Files.CleanupBudget)
+	definitions := append(slices.Concat(ident.Jobs(), issues.Jobs(), plans.Jobs(), files.Jobs()), purgeJob(purge, cfg.Cleanup.PurgeInterval))
+	a.jobs, err = jobs.New(pool, jobs.Config{ShutdownTimeout: cfg.Jobs.ShutdownTimeout, Logger: logger, DefaultWorkers: cfg.Jobs.DefaultWorkers, PeriodicWorkers: cfg.Jobs.PeriodicWorkers}, definitions, slices.Concat(identity.EnqueuedKinds(), issue.EnqueuedKinds(), planning.EnqueuedKinds(), asset.EnqueuedKinds()))
 	if err != nil {
 		a.close()
 		return nil, err
