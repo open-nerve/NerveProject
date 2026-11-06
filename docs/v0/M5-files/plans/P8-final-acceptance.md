@@ -147,7 +147,7 @@
 
 - [x] Step 1：串行`make gen-check`、`make lint-go`、`GOFLAGS=-p=1 make test`、`make lint-web`、`make knip`、`make test-web`、`make e2e`；真实exit、完整raw、cache/skip、前后输入hash、容器快照。
 - [x] Step 2：失败按根因修；环境失败同输入重跑并保留原件，不改预算。
-- [ ] Step 3：中文检查点提交、system push，精确HEAD的server/web/e2e全绿。
+- [x] Step 3：中文检查点提交、system push，精确HEAD的server/web/e2e全绿。
 
 ## Task 15（T15）：一次整分支deep-review与修复
 
