@@ -1,6 +1,6 @@
 # M5：文件
 
-> 状态：P1–P8已完成，收尾进行中，M5总体未完成。P8整审及修复闭环，最终分支CI 42188195625（attempt 3）和noff main`d8ec845750e61b4d1970aec58cb57cb72e3685ab`的CI 42212370678（attempt 2）三项全绿；27,066文件全量归档核验并正常清理。收尾spec/plan预检通过。见[P8完成证据](reviews/P8-final-acceptance-review.md#7-实施记录)与[收尾预检](../../reviews/re-53-M5收尾预检.md)。
+> 状态：已完成（2026-11-06）。P1–P8与收尾均以`--no-ff`合入main；收尾首次合入`1831dabc`的[main CI 42229175694](https://github.com/open-nerve/NerveProject/actions/runs/42229175694)（attempt 2）三项全绿后勾选§14并把总体§9.4标为已完成，第二次合入的main CI、收尾归档与清理见集成收据。见[收尾记录](reviews/closeout-integration.md)与[收尾预检](../../reviews/re-53-M5收尾预检.md)。
 > 起点：`main@3db22f06ad9e82a483c05c8078801af00a5cae02`（M4 最终 main CI 41397218533，三个作业成功）。
 PC2 已批准 A：[工作区更新的迟到回包](reviews/P6-workspace-write-lifetime-decision.md)。
 > 当前文档分支为`codex/m5-closeout`，根目录保持main。负责人2026-11-02已授权按既有节奏连续推进，常规设计、预检、实现、deep-review、`--no-ff`集成、CI和归档无需逐次询问；负责人2026-11-05进一步授权P7b实施、整审和既有节奏集成后连续推进P8及M5最终收尾。重大风险、架构回归或关键分歧，先提交已完成工作，再上报。
@@ -313,26 +313,26 @@ P8 T13 已写出三份：[M6](../M6-cycles-modules/handoffs/M5-closeout.md)（�
 
 ## 14. 完成标准
 
-仅在收尾 first main CI 成功后逐条勾选，并附最终证据；本节现在全未完成。
+收尾首次`--no-ff`（main `1831dabc`）的[main CI 42229175694](https://github.com/open-nerve/NerveProject/actions/runs/42229175694)（attempt 2）三项全绿后逐条勾选；每条的最终证据见[收尾记录§2](reviews/closeout-integration.md#2-设计-14-十八条的证据)对应行。第17、18条中收尾自身的第二次main CI、归档与清理发生在本提交之后，由仓库外的集成收据签结（[收尾记录§3.3](reviews/closeout-integration.md#33-第二次集成归档与清理)）。
 
-- [ ] F1–F18 每条有与失败路径相区分的 API/字节/页面证据，未把 mock 当真实存储。
-- [ ] local 默认可运行；HMAC/路径/期限/超限/并发/重启验证通过。
-- [ ] s3 真实兼容服务与 local 共用合同通过，配置/CORS/CSP和明确支持边界有证据。
-- [ ] 已确认对象不可被旧上传 URL 覆盖；并发、崩溃、未知外部结果和孤立对象清理有证明。
-- [ ] 全部资源用途、宿主/角色矩阵、复制源与目标、准备件绑定授权通过。
-- [ ] users/workspaces/projects 引用、成员头像、稳定封面一次写入、organization_size 契约完整。
-- [ ] 工作项/评论/草稿附件和真实 attachment_count、排序/显示全部可用。
-- [ ] 草稿发布的创建、资产迁移、软删与审计同事务；唯一发布与交错失败证明通过。
-- [ ] 图片清洗、有序 src 内容标识、skip_activity、历史/撤销与持久身份通过。
-- [ ] 所有删除入口、新表目录/外键图、有限批次、原 At/By、60 天 purge 和存储重试通过。
-- [ ] 文件传输/渲染/store/弹窗在换身份、路由、撤权和迟到回包时正确失效。
-- [ ] 中文/英文错误、键盘/读屏/焦点、请求中/拒绝/成功/取消的交互通过三浏览器核验。
-- [ ] 无旧文件 API、死 services 包、到期 keyword 例外；死成员逐条核实、改动文件 oxlint 为零及一个新规则全仓清零。
-- [ ] Plane 差异、前端改动、配置/部署说明、素材 SOURCES 和原始证据均已同步。
-- [ ] 所有输入 handoff closed 并有落点；M6/M7/M8 收到 M5-closeout，首个 CLI 与 copy 风险未丢失。
-- [ ] 最终本地七项、deep-review 和修复复审、精确分支/main CI 均通过；历史失败诚实保留。
-- [ ] 全阶段与收尾 noff 合入，完成标记第二次 noff 后 main 全绿，总体 §9.4 标完成。
-- [ ] 原始证据完整归档并验证 hash/bytes/mode/membership，分支和 worktree 正常清理、未知文件为零。
+- [x] F1–F18 每条有与失败路径相区分的 API/字节/页面证据，未把 mock 当真实存储。 最终证据：[收尾记录§2第1条](reviews/closeout-integration.md#2-设计-14-十八条的证据)。
+- [x] local 默认可运行；HMAC/路径/期限/超限/并发/重启验证通过。 最终证据：[收尾记录§2第2条](reviews/closeout-integration.md#2-设计-14-十八条的证据)。
+- [x] s3 真实兼容服务与 local 共用合同通过，配置/CORS/CSP和明确支持边界有证据。 最终证据：[收尾记录§2第3条](reviews/closeout-integration.md#2-设计-14-十八条的证据)。
+- [x] 已确认对象不可被旧上传 URL 覆盖；并发、崩溃、未知外部结果和孤立对象清理有证明。 最终证据：[收尾记录§2第4条](reviews/closeout-integration.md#2-设计-14-十八条的证据)。
+- [x] 全部资源用途、宿主/角色矩阵、复制源与目标、准备件绑定授权通过。 最终证据：[收尾记录§2第5条](reviews/closeout-integration.md#2-设计-14-十八条的证据)。
+- [x] users/workspaces/projects 引用、成员头像、稳定封面一次写入、organization_size 契约完整。 最终证据：[收尾记录§2第6条](reviews/closeout-integration.md#2-设计-14-十八条的证据)。
+- [x] 工作项/评论/草稿附件和真实 attachment_count、排序/显示全部可用。 最终证据：[收尾记录§2第7条](reviews/closeout-integration.md#2-设计-14-十八条的证据)。
+- [x] 草稿发布的创建、资产迁移、软删与审计同事务；唯一发布与交错失败证明通过。 最终证据：[收尾记录§2第8条](reviews/closeout-integration.md#2-设计-14-十八条的证据)。
+- [x] 图片清洗、有序 src 内容标识、skip_activity、历史/撤销与持久身份通过。 最终证据：[收尾记录§2第9条](reviews/closeout-integration.md#2-设计-14-十八条的证据)。
+- [x] 所有删除入口、新表目录/外键图、有限批次、原 At/By、60 天 purge 和存储重试通过。 最终证据：[收尾记录§2第10条](reviews/closeout-integration.md#2-设计-14-十八条的证据)。
+- [x] 文件传输/渲染/store/弹窗在换身份、路由、撤权和迟到回包时正确失效。 最终证据：[收尾记录§2第11条](reviews/closeout-integration.md#2-设计-14-十八条的证据)。
+- [x] 中文/英文错误、键盘/读屏/焦点、请求中/拒绝/成功/取消的交互通过三浏览器核验。 最终证据：[收尾记录§2第12条](reviews/closeout-integration.md#2-设计-14-十八条的证据)。
+- [x] 无旧文件 API、死 services 包、到期 keyword 例外；死成员逐条核实、改动文件 oxlint 为零及一个新规则全仓清零。 最终证据：[收尾记录§2第13条](reviews/closeout-integration.md#2-设计-14-十八条的证据)。
+- [x] Plane 差异、前端改动、配置/部署说明、素材 SOURCES 和原始证据均已同步。 最终证据：[收尾记录§2第14条](reviews/closeout-integration.md#2-设计-14-十八条的证据)。
+- [x] 所有输入 handoff closed 并有落点；M6/M7/M8 收到 M5-closeout，首个 CLI 与 copy 风险未丢失。 最终证据：[收尾记录§2第15条](reviews/closeout-integration.md#2-设计-14-十八条的证据)。
+- [x] 最终本地七项、deep-review 和修复复审、精确分支/main CI 均通过；历史失败诚实保留。 最终证据：[收尾记录§2第16条](reviews/closeout-integration.md#2-设计-14-十八条的证据)；收尾首次[main CI 42229175694](https://github.com/open-nerve/NerveProject/actions/runs/42229175694)（attempt 2）。
+- [x] 全阶段与收尾 noff 合入，完成标记第二次 noff 后 main 全绿，总体 §9.4 标完成。 最终证据：[收尾记录§2第17条](reviews/closeout-integration.md#2-设计-14-十八条的证据)；P1–P8各阶段已noff合入且main CI全绿，收尾首次noff main `1831dabc`与[main CI 42229175694](https://github.com/open-nerve/NerveProject/actions/runs/42229175694)（attempt 2）全绿，总体§9.4在本提交标为已完成，第二次noff与main CI由集成收据签结。
+- [x] 原始证据完整归档并验证 hash/bytes/mode/membership，分支和 worktree 正常清理、未知文件为零。 最终证据：[收尾记录§2第18条](reviews/closeout-integration.md#2-设计-14-十八条的证据)；P1–P8各阶段归档核验与正常清理已完成（收尾记录§1），收尾自身的归档与清理由集成收据签结。
 
 ## 15. 进度与裁定
 
@@ -348,7 +348,7 @@ P8 T13 已写出三份：[M6](../M6-cycles-modules/handoffs/M5-closeout.md)（�
 | P7a | 已完成：noff main cf07c9fb、CI41869045846三job全绿，2,885文件归档核验及正常清理，P7b正式预检完成 | [spec](specs/P7a-draft-preparations.md) / [plan](plans/P7a-draft-preparations.md) / [完成证据](reviews/P7a-draft-preparations-review.md#13-t7-集成归档与接续) / [整审](../../reviews/re-48-M5P7a整体审核.md) |
 | P7b | 已完成：noff main 2b2c6f33、CI42115811156三job全绿，7,397文件归档核验及正常清理，P8正式预检完成 | [spec](specs/P7b-content-assets.md) / [plan](plans/P7b-content-assets.md) / [预检](../../reviews/re-49-M5P7b预检.md) / [整审](../../reviews/re-50-M5P7b整体审核.md) / [完成证据](reviews/P7b-content-assets-review.md#11-t16-集成归档与接续) |
 | P8 | 已完成：noff main d8ec8457、CI42212370678三job全绿（分支CI42188195625；两次运行的e2e因浏览器安装停滞在期限处取消后重跑，一次M4 C12 Escape弹窗偶发经负责人决定重跑），27,066文件归档核验及正常清理，收尾预检完成 | [spec](specs/P8-final-acceptance.md) / [plan](plans/P8-final-acceptance.md) / [预检](../../reviews/re-51-M5P8预检.md) / [整审](../../reviews/re-52-M5P8整体审核.md) / [阶段记录](reviews/P8-final-acceptance-review.md) |
-| closeout | 进行中：spec/plan预检通过（12项局部问题已补实） | [spec](specs/closeout.md) / [plan](plans/closeout.md) / [预检](../../reviews/re-53-M5收尾预检.md) |
+| closeout | 已完成：P8完成证据回填，七份输入交接关闭，首次noff main 1831dabc、CI42229175694三job全绿后勾选§14与总体§9.4；第二次noff、main CI、归档与清理见集成收据 | [spec](specs/closeout.md) / [plan](plans/closeout.md) / [预检](../../reviews/re-53-M5收尾预检.md) / [收尾记录](reviews/closeout-integration.md) |
 
 当前可自行决定的局部取舍及代价：编辑器只处理图片，普通文件走附件区；预设封面使用稳定编号，不上传构建素材副本；描述图片保留到宿主删除，代价是占用空间；封存复制增加一次存储操作，换取确认后字节不被旧 PUT 改写。以上均在既定文件模块范围内，设计预检已核对一致性，具体实现按阶段合同验证。
 

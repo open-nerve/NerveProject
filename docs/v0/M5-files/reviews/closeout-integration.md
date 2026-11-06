@@ -50,7 +50,7 @@
 
 ### 3.2 首次集成
 
-本节在首次 `--no-ff` 与准确 main CI 全绿之后由 T5 补写；此前 §2 各条不勾选。
+准确候选 `9d19478e`（9d19478e927a9adbcba71c0c598922e81f075920，T1–T3 三个提交）在本地通过 `doc-links.py`、关键词守卫与 `make lint-web`，其[分支 CI 42224350248](https://github.com/open-nerve/NerveProject/actions/runs/42224350248)（attempt 1）三项全绿：web 127913955833、server 127913956427、e2e 127922168723（E2E 417/417，作业 16.6 分钟）。根 main 原为 `d8ec8457`，与 origin 一致且干净，worktree 干净，本地与远端分支都是该候选；`--no-ff` 合并生成 `1831dabc`（1831dabcd0687c60c2102572c2af85f205c3cb52），双父依次为 `d8ec8457` 与候选，完整 tree 与候选相同，首次推送因网络连接被关闭失败，同一推送重试成功。准确 main CI 的 attempt 1 中 web 与 server 成功，e2e 416/417：M4 的“I4 (page): table label…”故事在选“Z A”后 5 秒内找不到“Labels”表头——trace 显示换排序时整个表格（含表头）换成骨架屏，数据 20 毫秒返回后骨架仍显示约 5.3 秒才重新渲染（同一故事的“A Z”一步约 3.5 秒），与只改文档的本次合并无关；按负责人规则重跑一次失败作业，[main CI 42229175694](https://github.com/open-nerve/NerveProject/actions/runs/42229175694)（attempt 2）三项全绿：e2e 127952547976、web 127952627789、server 127952549059（E2E 417/417，测试 21.7 分钟、作业 23.9 分钟）。这一机理写入 [M8 交接 M5-M8-06](../../M8-open-release/handoffs/M5-closeout.md#M5-M8-06)。此后 §2 各条在设计 §14 中勾选、总体 §9.4 标为已完成；收尾分支先快进到 `1831dabc` 再写完成标记，第二次合入因此仍是以 main 为祖先的 `--no-ff`。
 
 ### 3.3 第二次集成、归档与清理
 
