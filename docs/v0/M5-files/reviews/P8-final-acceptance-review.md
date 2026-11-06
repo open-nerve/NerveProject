@@ -140,3 +140,22 @@ T6②（M4链接提示，本地修复）：链接创建/更新表单的成功提
 
 RED（`t6b-red`）：表单被写后重读撤下后确认、表单实例被关闭后确认，两例都没有提示。既有用例“已关闭实例的确认不清除也不关闭重开的表单”原断言没有提示，那是§3第5条要取代的表单scope规则，改为恰好一次提示、重开的表单仍不被清除或关闭；新增“宿主结束后确认不提示”守住另一侧。GREEN（`t6b-green`）7/7；变异“提示随表单寿命”杀死2、“总是提示”杀死1、“表单不在也关闭”杀死3。`vitest related`覆盖该表单的30文件372项（`t6b-web-related`）、应用类型、改动文件oxlint 0/0与格式、关键词检查通过。
 
+T7（删除而非转交）：`1718210a`删除三处无读者代码。`EditorRefApi.copyMarkdownToClipboard`（editor的`helpers/editor-ref.ts`与`types/editor.ts`，`dist`随构建）只有描述版本弹窗测试里一个断言它未被调用的绑定，一并删除；后续复制走`getMarkDown`与`useCopyText`。`web/apps/web/app/assets/attachment/`的17个PNG（含4个第三方标志）全仓无引用（`git grep`含字符串、动态路径与样式），整目录删除。`WorkspacePatch.Logo`无赋值者也无读者：删除后`go build ./...`、`go vet`与workspace包测试（`t7a-go-workspace`，含postgres适配器）通过；同文件`Workspace.Logo`仍在使用，未动。editor类型与14文件145项、重建editor后web类型、描述版本测试3文件15项、`make knip`通过。M4交接中复制方法的具名风险与M1交接的附件图标条件由T13按“已删除”关闭。
+
+死成员：按M1收尾计划附录A取出三个脚本（SHA-256：`deadsym.mjs` 3d85f090…、`lib/program.mjs` b2c52513…、`domains.mjs` 5f76ea3b…，TypeScript 5.8.3），`react-router typegen`后全量扫描，原始输出保存在P8工作区（`deadsym/dead-before.tsv`、`rows-M5-before.txt`及删除后的`-after-1`）。删除前合计prop 344、member 874、export 5，`--rows M5`为member 53、prop 3；第二个提交删除只为死成员存在的代码：`ContentReads.retry`与`invalidate`（无调用方；`readWith`的强制参数随之只剩false，并回`read`；`ContentReadEntry.invalidate`只被后者调用，一并删除），`PagedContent.retryRead`（两个子类各自定义，基类实现无人调用），editor的`TEditorAsset`（整个`types/asset.ts`与其再导出），`ProfileImageLease.key`（只被一处测试断言读取，断言随之删除），`ContentConfirmation.asset`（收据只读kind与id；输入状态的`Receipt`改为直接用`ContentConfirmation`，去掉重复类型），`CoverImage.fallbackUrl`（无人传入），以及T3自己引入、只在本文件使用的`ImageTransferState`导出。删除后合计prop 343、member 859、export 3，全量逐行对比没有新出现的行（无孤儿）；M5剩41行，均为误报：
+
+| 文件 | 成员 | 读者（或写者） |
+|---|---|---|
+| `components/assets/project-cover.tsx` | `kind` | `source`原样传给`ProfileImage`，由`useProfileImage`经`ProfileImageSource`读取 |
+| `issue-detail-widgets/attachments/host.test.tsx` | `children`、`removeRoutePeekId`、`data`、`next_cursor` | 模拟的`Link`与peek页头读前两者（由被测组件经模块模拟写入）；页对象经`json(200, page)`序列化后由附件列表客户端读取 |
+| `issue-layouts/attachment-count.test.tsx` | `children`、`as`、`observe`、`unobserve`、`disconnect`、`order`、`shown` | 模拟的`RenderIfVisible`读前两者；`QuietObserver`的方法由列表续页代码经全局观察器接口调用；后两者由同文件`mount()`读取 |
+| `lib/asset-download.test.ts`、`lib/asset-upload.test.ts` | `href`、`name`、`attached`、`url`、`init` | 记录的点击与请求由同文件断言（`toEqual`整体比较或逐项读取） |
+| `services/asset.service.test.ts` | `name`、`method`、`path`、`body`、`query`、`answer`、`run` | 表驱动用例由同文件读取，`name`由vitest的`$name`标题插值读取 |
+| `store/asset/content-read-entry.ts` | `stamp`（非ready分支）、`error`（ready分支） | 判别联合的同一字段：生产在收窄后读取另一分支的同名成员（`content-read-entry.ts`的loaded/failed、`hooks/editor/image-read.ts`的stamp与非ready分支的error），测试经联合整体读取 |
+| `store/asset/fake-assets.ts` | `file`、`signal`、`fail` | 假PUT记录，由各测试读取 |
+| `store/asset/upload-policy.ts` | `purpose`（三个分支） | `upload-session.ts`把冻结的`target`展开进创建资产的请求体，经生成的请求类型读取 |
+| propel `empty-state/assets/asset-registry.tsx`、`helper.tsx` | `className`（注册表五处类型字面量与插图props） | 插图组件经`TIllustrationAssetProps`读取（25处），`getCompactAsset`/`getDetailedAsset`经注册表类型传入 |
+| `spreadsheet/columns/attachment-column.tsx` | prop `issue` | `spreadsheet/issue-column.tsx`经`SPREADSHEET_COLUMNS`以`TSpreadsheetColumn`写入 |
+
+验证：editor类型与14文件145项、重建后web类型、`vitest related`覆盖八个改动源文件的254文件3024项（`t7b-web-related`）、`make knip`、改动文件oxlint 0/0与格式、关键词检查通过。
+

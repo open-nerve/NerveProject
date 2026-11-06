@@ -57,9 +57,6 @@ export class PagedContent<T extends { id: string }> {
     this.pendingMore = pending;
     return pending;
   }
-  retryRead(): Promise<void> {
-    return this.load();
-  }
   private async fetch(cursor?: string): Promise<void> {
     this.assertCurrent();
     const request = ++this.request;

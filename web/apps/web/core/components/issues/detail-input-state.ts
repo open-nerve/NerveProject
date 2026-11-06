@@ -4,6 +4,7 @@ import { ApiError } from "@/lib/api-error";
 import type { IssueRootStore } from "@/store/issue/root.store";
 import type { DetailRegistration } from "@/store/issue/issue-details/resource";
 import type { AutosaveSnapshot } from "@/components/editor/autosave-retention";
+import type { ContentConfirmation } from "@/store/asset/attachment-resource";
 export type RetainedText = AutosaveSnapshot<string>;
 export type RetainedForm = {
   html: string;
@@ -17,7 +18,7 @@ export type RetainedForm = {
   editing?: boolean;
   focusAfterRead?: boolean;
 };
-type Receipt = { kind: "uploaded" | "deleted"; id: string };
+type Receipt = ContentConfirmation;
 class LocalInput<T> {
   private value: T | undefined;
   constructor(

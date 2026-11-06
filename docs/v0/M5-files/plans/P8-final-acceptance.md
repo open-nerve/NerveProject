@@ -91,9 +91,9 @@
 
 **Files:** 删除`copyMarkdownToClipboard`（`types/editor.ts`、`helpers/editor-ref.ts`、`dist`随构建）与测试绑定；删除`web/apps/web/app/assets/attachment/`；删除`WorkspacePatch.Logo`；阶段记录死成员表。
 
-- [ ] Step 1：先证明无读者：`git grep`（含字符串/动态路径/样式）、knip、类型检查；按M1收尾计划附录A取出`deadsym.mjs`/`domains.mjs`/`lib/program.mjs`，`pnpm --filter web exec react-router typegen`后跑`--rows M5`，保存脚本hash与完整raw。
-- [ ] Step 2：删除上述三处；逐行处理`--rows M5`：删除只为死成员存在的代码，误报写明文件、名称与读者。`make knip`、web/editor类型、`go build ./...`与workspace包测试通过。
-- [ ] Step 3：受影响测试GREEN；提交`refactor(M5/P8): 删除无读者的复制方法、附件图标与工作区补丁字段`（死成员另一提交）。
+- [x] Step 1：先证明无读者：`git grep`（含字符串/动态路径/样式）、knip、类型检查；按M1收尾计划附录A取出`deadsym.mjs`/`domains.mjs`/`lib/program.mjs`，`pnpm --filter web exec react-router typegen`后跑`--rows M5`，保存脚本hash与完整raw。
+- [x] Step 2：删除上述三处；逐行处理`--rows M5`：删除只为死成员存在的代码，误报写明文件、名称与读者。`make knip`、web/editor类型、`go build ./...`与workspace包测试通过。
+- [x] Step 3：受影响测试GREEN；提交`refactor(M5/P8): 删除无读者的复制方法、附件图标与工作区补丁字段`（死成员另一提交）。
 
 ## Task 8（T8）：两条规则全仓清零与cap下调
 

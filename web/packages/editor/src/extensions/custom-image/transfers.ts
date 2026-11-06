@@ -5,7 +5,7 @@ import type { EditorImages, ImageOperation, ImageTransferPhase } from "@/types";
 import { isImageID } from "./input";
 import { ECustomImageStatus } from "./types";
 
-export type ImageTransferState = {
+type ImageTransferState = {
   phase?: ImageTransferPhase;
   error?: string;
   failed: boolean;

@@ -17,8 +17,6 @@ type TCoverImageProps = {
   className?: string;
   /** Whether to show default image when src is null/undefined. If false, shows loading skeleton */
   showDefaultWhenEmpty?: boolean;
-  /** Custom fallback URL to use instead of DEFAULT_COVER_IMAGE_URL */
-  fallbackUrl?: string;
 } & React.ComponentProps<"img">;
 
 /**
@@ -29,21 +27,14 @@ type TCoverImageProps = {
  * - Fallback to default cover image
  */
 export function CoverImage(props: TCoverImageProps) {
-  const {
-    src,
-    alt = "Cover image",
-    className,
-    showDefaultWhenEmpty = false,
-    fallbackUrl = DEFAULT_COVER_IMAGE_URL,
-    ...restProps
-  } = props;
+  const { src, alt = "Cover image", className, showDefaultWhenEmpty = false, ...restProps } = props;
 
   // Show loading skeleton when src is undefined/null and we don't want to show default
   if (!src && !showDefaultWhenEmpty) {
     return <div className={cn("animate-pulse bg-layer-2", className)} />;
   }
 
-  const displayUrl = getCoverImageDisplayURL(src, fallbackUrl);
+  const displayUrl = getCoverImageDisplayURL(src, DEFAULT_COVER_IMAGE_URL);
 
   return <img src={displayUrl} alt={alt} className={cn("object-cover", className)} {...restProps} />;
 }

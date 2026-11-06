@@ -136,16 +136,6 @@ export class ContentReadEntry {
     this.readers--;
     if (!this.readers && !this.leases && cancelled) this.dispose();
   }
-  invalidate(): void {
-    if (!this.current) return;
-    ++this.version;
-    this.controller?.abort();
-    this.controller = undefined;
-    this.pending = undefined;
-    this.unsent = false;
-    this.stopTimer();
-    this.publish({ status: "unavailable", stamp: this.version });
-  }
   dispose(): void {
     if (this.ended) return;
     this.ended = true;
