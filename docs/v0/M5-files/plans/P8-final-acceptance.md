@@ -1,6 +1,6 @@
 # M5/P8 最终验收矩阵、清理演练与交接收敛 Implementation Plan
 
-> 2026-11-06：正式预检通过，暂不实施；一次fresh builder的6项局部问题已补实到spec§3与下列步骤，见[re-51](../../../reviews/re-51-M5P8预检.md)。分支`codex/m5-p8`，基线main`2b2c6f33e3a93536742d5f28b74eb959ba73d6d1`；P7b准确分支/main CI、归档与清理已核。
+> 2026-11-06：已集成（noff main`d8ec845750e61b4d1970aec58cb57cb72e3685ab`，main CI 42212370678 attempt 2三项全绿，归档与正常清理完成）；T16 Step 3由M5收尾完成，见[阶段记录](../reviews/P8-final-acceptance-review.md)与[收尾合同](../specs/closeout.md)。预检时一次fresh builder的6项局部问题已补实到spec§3与下列步骤，见[re-51](../../../reviews/re-51-M5P8预检.md)；基线main`2b2c6f33e3a93536742d5f28b74eb959ba73d6d1`。
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans 逐Task内联实施；不逐Task新派实现者/审者，阶段末一次fresh whole-branch review。
 
@@ -153,12 +153,12 @@
 
 - [x] Step 1：冻结基线..候选，一次fresh reviewer（最强档）读全部手写变更、Review Focus与所有Ruling；报告存`docs/reviews/re-52-M5P8整体审核.md`。
 - [x] Step 2：主控按效果复核；Critical/Important一次修复、各有RED/GREEN；Minor入台账；DeclinedToJudge逐条裁定。受影响的矩阵行在最终候选上重跑。
-- [ ] Step 3：最终本地七门禁与修改范围对应，push准确HEAD CI全绿；阶段记录写事实、限制与closeout责任。
+- [x] Step 3：最终本地七门禁与修改范围对应，push准确HEAD CI全绿；阶段记录写事实、限制与closeout责任。
 
 ## Task 16（T16）：集成、归档与closeout预检
 
-- [ ] Step 1：核main与worktree干净、准确green候选及祖先，根main用`--no-ff`，核双父/树一致，system push。
-- [ ] Step 2：准确main CI三项全绿后归档全部ignored原件，核hash/bytes/mode/membership/unknown0；origin/main..branch=0后正常清理远端/本地/worktree，归档再核。
+- [x] Step 1：核main与worktree干净、准确green候选及祖先，根main用`--no-ff`，核双父/树一致，system push。
+- [x] Step 2：准确main CI三项全绿后归档全部ignored原件，核hash/bytes/mode/membership/unknown0；origin/main..branch=0后正常清理远端/本地/worktree，归档再核。
 - [ ] Step 3：closeout worktree回填P8完成证据；写closeout spec/plan并一次builder预检：首次noff/main绿→§14逐条勾选与总体§9.4→第二次noff/main绿→最终归档清理；输入交接改closed。
 
 ## 预检自查
