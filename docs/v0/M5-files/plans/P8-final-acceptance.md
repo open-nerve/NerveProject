@@ -151,8 +151,8 @@
 
 ## Task 15（T15）：一次整分支deep-review与修复
 
-- [ ] Step 1：冻结基线..候选，一次fresh reviewer（最强档）读全部手写变更、Review Focus与所有Ruling；报告存`docs/reviews/re-52-M5P8整体审核.md`。
-- [ ] Step 2：主控按效果复核；Critical/Important一次修复、各有RED/GREEN；Minor入台账；DeclinedToJudge逐条裁定。受影响的矩阵行在最终候选上重跑。
+- [x] Step 1：冻结基线..候选，一次fresh reviewer（最强档）读全部手写变更、Review Focus与所有Ruling；报告存`docs/reviews/re-52-M5P8整体审核.md`。
+- [x] Step 2：主控按效果复核；Critical/Important一次修复、各有RED/GREEN；Minor入台账；DeclinedToJudge逐条裁定。受影响的矩阵行在最终候选上重跑。
 - [ ] Step 3：最终本地七门禁与修改范围对应，push准确HEAD CI全绿；阶段记录写事实、限制与closeout责任。
 
 ## Task 16（T16）：集成、归档与closeout预检
