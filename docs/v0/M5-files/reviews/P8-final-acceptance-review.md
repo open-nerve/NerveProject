@@ -169,3 +169,23 @@ T5更正（T10期间发现）：T5把plan“`takeFocus()`归还焦点后的正�
 
 同时，T5对删除核验404的改变使P7b的F8页面故事过时：它在“核验最新状态”后断言“删除文件”重新可用、再发一次DELETE得幂等的204。按§3第4条改为断言说明获得焦点、对话框只剩“关闭”、关闭后“删除结果未知”的提示消失、DELETE仍只有一次、没有“已删除”收据、服务端附件数为49。此路径不触发Issue权威重读（T5 Ruling），页面上附件区标题的数字在下一次规范读取前仍是50，故事不断言它。重建后Chromium上F8两个变异（`t5b-f8`）、F9与F16页面故事（`t5b-page-stories`中除F8外17项）通过。
 
+T10（全链路清理与慢流演练）：新增显式开启的`TestFilesCleanupDrill`（`NERVE_FILES_DRILL=1`，沿`NERVE_PURGE_SCALE`先例；默认`make test`跳过，默认CI时长不变），文件`server/internal/bootstrap/files_cleanup_drill{,_fixture}_test.go`，子测试local与s3。演练用生产组合`newAppWithFactories`，只经测试自有的工厂观察与注入：连接池挂查询追踪记录分页、资产工厂取得存储句柄、重启后以运行时钟+2小时模拟租约已过（同`restartAssetS3Cleanup`）、需要时以既有`imageDeleteFault`让一个对象删除失败；业务时钟经既有test环境配置`clock.offset`随重启推进。没有产品开关，没有只供测试的API。配置在`testConfig`上只改三项合法取值：`files.cleanup_batch=2`、`cleanup.purge_batch=2`（让每次清扫与purge都要走多页）、`jobs.periodic_workers=1`（启动时RunOnStart任务按注册顺序先清扫后purge，每一步状态可精确断言）。为让S3复用，既有夹具抽出`newContentAssetTreeAt`（按驱动给出直传base与成功状态，原`newContentAssetTree`委托它）与`addContentMember`，既有调用方行为不变。
+
+演练对象：工作区A（acme）含六类内容用途（议题/评论/草稿的附件与描述图片，均经API绑定）、工作区图标与项目封面、一个未绑定准备件（草稿描述图片，草稿准备件列表中唯一一项）、一次失败复制（声明为PNG的非图片附件复制为议题描述图片：422 `asset.content_invalid`，目标行保留一个候选记录；源文件先过图片检查失败，候选对象从未写出——有对象的失败复制恢复由`TestDraftAssetPreparationsRecoverFailedCopy`证明，本次重跑）、一次未完成上传（申请后从未PUT）、一次慢流上传（3 MiB，按`pacedAssetBody`的160 KiB/s直传：local 19.116628625s、S3 19.125008375s，均>15秒；local在其传输预算内；完成后经API读回字节一致），项目封面最后创建。邻域：bob的工作区B（同样六类内容用途）与alice的头像。A共13行。每步精确断言：
+
+1. 第一次重启（业务时钟不动）：A中11个已上传文件的暂存对象全部回收、失败复制的候选记录移除；13行无墓碑、无候选，只有未完成上传保留其暂存记录；11个final对象的SHA-256与行内记录一致（慢流文件另与上传字节的摘要一致）。此后取邻域基线：B的文件行、宿主行（工作区/项目/议题/评论/草稿）、alice头像引用与7个对象的摘要。
+2. 删除A（204）后立即：读A的文件内容404、以A的文件为源复制404、在A内申请上传404、草稿准备件列表404 `asset.not_found`。项目、工作区草稿与`asset.delete_scope`任务各一次完成且沿用原At/By（`waitWorkspaceDeletion`）。13行等于上一步，只有删除时间/更新时间为工作区的`deleted_at`、删除人/更新人为alice；5个宿主行带同一`deleted_at`；字节全在；图标/封面引用不变；邻域不变。
+3. 第8天（重启，+8天）：墓碑不被7天规则重盖，未完成上传那条从未写出的暂存记录因删除而回收，其余逐字段不变；字节全在；宿主、引用、邻域不变。
+4. 第61天（重启，再+53天），封面final对象的删除在该组合中失败：清扫第1次尝试以“specific image key unavailable”失败，第2次完成，输出`failed=1`；purge一次完成：扫描41、删除39、受阻2（封面所在项目与工作区）。A只剩封面一行，删除审计不变、final处于reclaiming；其余10个final对象已删、封面字节仍在；议题、评论、草稿已purge，项目与工作区保留；工作区图标引用已解除（null），项目封面引用保留；邻域不变。
+5. 下一周期（同日再重启）：清扫与purge各一次无错误；A无任何文件行，封面对象已删，项目与工作区已purge；邻域不变。
+
+两种存储结果相同（local {'neighbour': 7, 'objects_reclaimed': 22, 'workspace_a': 13}；S3相同），清扫第61天输出与purge计数一致。分页与时间：每个`ListRecovery`/`ListScope`页LIMIT 2且不超过2行、每个`Purge…`页LIMIT 2且不超过2行；local上`ListRecovery`共49页（43页满）、`ListScope` 8页（6页满）、`PurgeAssetCandidates` 12页（6页满）；清扫、范围删除与purge任务共12次运行，最长262.133ms（S3 285.078ms），预算10s。原件：`t10-drill-local-2`、`t10-drill-s3-1`（各含证据JSON）。
+
+变异（local，均被杀死）：删除审计丢失删除人（`t10-mut-audit-by`，删除一步失败）、final对象不等60天就回收（`t10-mut-purge-early`，第8天失败）、对象删除失败被吞掉而记录照删（`t10-mut-failure-swallowed`，第61天无错误而失败）、7天规则也盖已绑定文件（`t10-mut-seven-days-bound`，邻域检查失败）。
+
+已有阶段测试证明的性质不在演练里重证，重跑原测试（`t10-phase-reruns`，31个顶层测试全部通过，另含资产模块8个包的全部测试）：`TestADeletionRefusedAtItsCommitChangesNoRow`、`TestAFailedProjectsStepRollsTheDeletionBack`、`TestAssetConfiguredRetentionWired`、`TestAssetDeletionFollowsCommentAndDraft`、`TestAssetDeletionFollowsIssueTree`、`TestAssetDraftPublicationDoesNotDeleteAssets`、`TestAssetParentDeletionReader`、`TestAssetParentEventRollsBackAfterSynchronousMark`、`TestAssetParentJobsUseOriginalTransaction`、`TestAssetParentLocksAndFacts`、`TestAssetProtectedParentDoesNotBlockWiredPurge`、`TestAssetProtectedParentsProgressAndConverge`、`TestAssetS3Lifecycle`、`TestAssetScopeDeletionRollback`、`TestAssetSweepRestarts`、`TestContentAssetDeletion`、`TestContentAssetRetention`、`TestContentAssetRetentionProcess`、`TestDeletingAWorkspaceLeavesNoUndeletedRowUnderIt`、`TestDeletionViolationsCatchesEachGap`、`TestDraftAssetPreparationsCancelReleasesSnapshot`、`TestDraftAssetPreparationsCompletedAndHistoricalImages`、`TestDraftAssetPreparationsOtherWorkspaceUnaffected`、`TestDraftAssetPreparationsRecoverFailedCopy`、`TestDraftAssetPreparationsRecoverLostAnswer`、`TestDraftAssetPreparationsSnapshot`、`TestImagePurgeProcess`、`TestImageReferenceRetention`、`TestPurgeCursorRiverSnoozeAndRestart`、`TestPurgeDeletedRunsWithRuntimeRole`、`TestRawStorageDefaultSlowUpload`。
+
+页面慢流（T1裁定补入）：`e2e/drills/f1-slow-page-upload.spec.ts`，独立配置`e2e/playwright.m5-slow.config.ts`（testDir为drills，只Chromium）与脚本`test:m5-slow`，不进默认套件。Chromium经DevTools把上行限到72 KiB/s，详情页附件区上传1,310,720字节：local与S3的PUT各约17.8秒、从选择文件到计数变为1约18.4秒，均>15秒；页面给出“File uploaded.”，服务端字节一致（`t10-slow-page-3`，含报告JSON）。演练等待附件计数变为1（90秒）后再读取请求，因为夹具对请求的5秒轮询短于这次传输。T5更正与F8页面故事更新即在写这条演练时发现，见上节。
+
+T10期间另发现：M4的显式规模测试`TestPurgeScale`的查询追踪只认以`-- name: Purge`开头、带3个参数的DELETE；M5/P2起purge协议改为`…Candidates`查询加`DeletePurge…`删除，它会把候选查询记为错误并漏掉父行删除，M5期间该测试从未开启（P5/P6评审记录）。T12显式运行确认，确认后只修测试追踪。
+

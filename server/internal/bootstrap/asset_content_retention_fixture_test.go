@@ -21,17 +21,30 @@ type contentAssetTree struct {
 func newContentRetentionWorld(t *testing.T) imageRetentionWorld {
 	t.Helper()
 	w := newImageRetentionWorld(t)
+	addContentMember(t, w.issueWorld)
+	return w
+}
+
+// addContentMember makes bob an ordinary member of acme and its Web project
+// through the invitation and membership APIs.
+func addContentMember(t *testing.T, w issueWorld) {
+	t.Helper()
 	w.tokens["bob"] = registerAccount(t, w.contract, w.base, "bob@example.com").AccessToken
 	w.ids["bob"] = accountID(t, w.contract, w.base, w.tokens["bob"])
 	link := inviteAs(t, w.contract, w.base, w.tokens["alice"], "acme", "bob@example.com", shared.RoleMember)
 	answerInvitation(t, w.contract, w.base, w.tokens["bob"], "accept", link, 200)
 	w.makeMember(t, "bob", w.web, shared.RoleMember)
-	return w
 }
 
 // Every positive host, upload and binding is an actual public API operation.
 // The separately named age helper only adjusts completed tombstone fixtures.
 func newContentAssetTree(t *testing.T, w issueWorld, project uuid.UUID, slug string) contentAssetTree {
+	t.Helper()
+	return newContentAssetTreeAt(t, w, w.base, 204, project, slug)
+}
+
+// Only the raw transfer's base and documented success status vary by driver.
+func newContentAssetTreeAt(t *testing.T, w issueWorld, base string, status int, project uuid.UUID, slug string) contentAssetTree {
 	t.Helper()
 	g := contentAssetTree{assetPurgeTree: assetPurgeTree{workspace: w.acme, project: project}}
 	g.issue = w.newWorkItemBy(t, "bob", project, `{"name":"Content retention"}`)
@@ -46,7 +59,7 @@ func newContentAssetTree(t *testing.T, w issueWorld, project uuid.UUID, slug str
 		{"issue", "ISSUE", g.issue}, {"comment", "COMMENT", g.comment}, {"draft", "DRAFT_ISSUE", g.draft},
 	} {
 		for _, suffix := range []string{"ATTACHMENT", "DESCRIPTION"} {
-			file := uploadedAssetHTTP(t, w, "bob", host.prefix+"_"+suffix, assetScopeBody(host.kind, host.id), "content.png", "image/png", assetTestPNG(t))
+			file := uploadedAssetHTTPAt(t, w, base, status, "bob", host.prefix+"_"+suffix, assetScopeBody(host.kind, host.id), "content.png", "image/png", assetTestPNG(t))
 			if suffix == "DESCRIPTION" {
 				html := issueImageHTML(file.Asset.ID)
 				switch host.kind {
