@@ -199,3 +199,37 @@ T11（默认部署演示，F18）：`e2e/fixtures/deployment.ts`的`deploymentTe
 
 Step 2扫描：产品源码中没有旧文件路由（`/api/assets`、`assets/v2`、`file-assets`）——两处命中都在测试替身`core/store/asset/fake-assets.ts`中，它定义这些旧路由以断言从未被调用；`web/packages/services`不存在；关键词守卫当前阶段M5/P8，14条例外全部在M6及以后到期，无命中；死成员按附录A重扫（脚本SHA与T7相同）：`domains.mjs --rows M5`仍是T7表中的41行（35个符号），无新增、无消失（`deadsym/dead-after-2.tsv`、`rows-M5-after-2.txt`）。`/api/v0`之外的路径字面量只剩M6/M7领域尚未迁移的服务（周期、模块、视图、通知、intake、收藏、webhook），演示中三浏览器均未请求。README“部署”节的本地文件存储一条删去“用户申请上传与附件页面随后续阶段接入”的过时说法，写明默认配置下六类文件的字节都在文件根中并指向演示；“端到端测试”一节写入`test:m5-demo`、`test:m5-slow`与Go清理演练的运行方法。
 
+T12（F1–F18最终矩阵）：最终产品候选的产品代码即T11的`24d2e507`，本Task只增两个测试提交：`54e07f76`（`TestPurgeScale`按M5清理协议观察，见下）与`da82f250`（F11页面故事更正与内容页夹具`quiet()`，见下）。按plan的顺序逐个运行、同一时刻只有一组容器套件（原件均在P8工作区，每次运行含收据、输入清单与日志，Playwright另有JSON报告与独立的`-results`目录）：`make build build-s3-fixture`（t12-build）；默认故事（e2e按`make e2e`的同一命令，只加JSON报告与独立输出目录）t12-e2e-3 417/417（211秒）；`m5-profile`三浏览器42/42（t12-m5-profile）；`m5-content`三浏览器local 63/63（t12-m5-content-4）；`m5-s3`（F4三浏览器）3/3（t12-m5-s3）；`m5-demo`三浏览器3/3（t12-m5-demo-2）；`m5-slow`（local/S3）2/2（t12-m5-slow-2）；`NERVE_FILES_DRILL=1`清理演练local与s3通过（t12-drill，79秒）；`NERVE_PURGE_SCALE=1`通过（t12-purge-scale-final）；`GOFLAGS='-p=1 -v' make test`（-v只为留下逐测试行）61个包全过、0失败、7项跳过均为显式开启的测量/演练或子进程辅助（t12-go，997秒）。另在M5代码上重跑M4的`TestTheDeletionsAtTheScaleTarget`（NERVE_MEASURE_SCALE=1，t12-deletion-scale）：原样通过，单项目删除任务7.6秒、五项目14.3秒，处理期间邻工作区PATCH最大68ms（M4记为6.4秒、14.6秒、576ms）。
+
+输入一致性：t12-e2e-3、t12-m5-content-4与两次F11隔离运行的输入清单与`da82f250`的工作树逐文件一致；t12-m5-profile、t12-m5-s3、t12-drill、t12-purge-scale-final、t12-go运行于`54e07f76`，与最终树只差F11故事与内容页夹具两个e2e文件——前两者的故事不导入该夹具，后三者不读e2e文件；t12-go的“输入有变”即运行期间改了这两个文件。电脑重启中止了t12-m5-content-2（exit 137，无收据，原件保留）；重启后Docker Desktop自动启动了其他项目的容器（未触碰），此后的运行与其共享主机资源，只影响绝对耗时。
+
+| F | Go（T1目录所列文件中的测试，t12-go） | 故事与演练（本次运行） |
+|---|---|---|
+| F1 | 4个文件7项全过 | F1 (API)（默认，Chromium）；F1 (page, slow network)（m5-slow，Chromium local/S3） |
+| F2 | 7个文件12项全过 | 无故事（Go慢流）；页面慢流见F1行；`TestFilesCleanupDrill`慢流上传local/S3（t12-drill） |
+| F3 | 5个文件7项全过 | F3 (API)（默认） |
+| F4 | 8个文件8项全过 | F4 (browser)（m5-s3三浏览器＋默认Chromium） |
+| F5 | 6个文件9项全过 | F5 (API)；F5 (page)两项（m5-profile三浏览器local＋默认Chromium local/S3） |
+| F6 | 4个文件5项全过 | F6 (API)；F6 (page)（m5-profile三浏览器＋默认local/S3） |
+| F7 | 2个文件2项全过 | F7 (API)；F7 (page)（m5-profile三浏览器＋默认local/S3） |
+| F8 | 9个文件12项全过 | F8 (API)（默认local/S3）；F8 (page)（m5-content三浏览器local＋默认local/S3） |
+| F9 | 4个文件4项全过 | F9 (API)；F9 (page)（同上） |
+| F10 | 7个文件26项全过 | F10 (API)三项（默认local/S3）；F10 (page)三项（m5-content三浏览器＋默认） |
+| F11 | 3个文件7项全过 | F11 (API)；F11 (page)（m5-content三浏览器＋默认local/S3；本节更正后另隔离3轮15/15） |
+| F12 | 5个文件15项全过 | F12 (API)；F12 (page)两项（m5-content三浏览器＋默认local/S3） |
+| F13 | 7个文件10项全过 | F13 (API)（默认） |
+| F14 | 6个文件9项全过 | F14 (API)（默认）；`TestFilesCleanupDrill`删除与立即404（t12-drill local/S3） |
+| F15 | 12个文件16项全过 | F15 (API)（默认）；`TestFilesCleanupDrill`第8/61天与故障重试（t12-drill）；`TestPurgeScale`（t12-purge-scale-final） |
+| F16 | web单元在T14门禁 | F16 (page)二十二项：资料页9项（m5-profile三浏览器＋默认）、内容页13项（m5-content三浏览器＋默认，两项另含S3） |
+| F17 | web单元在T14门禁 | F17 (page)（m5-profile三浏览器＋默认）；页面故事中的可访问性断言 |
+| F18 | 关键词守卫、knip在T14门禁 | F18 (page)（m5-demo三浏览器） |
+
+F11更正：T2把普通文件的粘贴交回ProseMirror的粘贴管线（§3第1条），但T2只以编辑器与应用单元测试验证，F11页面故事直到本Task才重跑，仍按P7b合同断言“粘贴事件未被拦下”；ProseMirror管线中Plane的代码块插件（`codeBlockVSCodeHandlerCustom`）对代码块外的每次粘贴先`preventDefault`，于是t12-e2e（Chromium local/S3）与t12-m5-content（三浏览器）一致失败于同一断言。这是故事过时，不是产品缺陷：故事改为断言合同本身——普通文件的拖放仍不拦下；带着文件名文字的普通文件粘贴由ProseMirror插入文字并保存，不上传、无提示。更正后的首次全量（t12-e2e-2）在Chromium local暴露故事自身的换页竞态：保存后的规范重读重挂载正文并再次读取图片，故事随即换页，`GET …/content`被中止（`net::ERR_ABORTED`）；Playwright的`networkidle`在早已加载的单页应用上立即返回，不能表达这一等待，内容页夹具因此新增`quiet()`（无`/api/v0`请求在途且500毫秒无活动），F11在换页前调用。隔离3轮：默认local/S3 6/6、m5-content三浏览器9/9（t12-f11-default、t12-f11-content）；变异“普通批返回true”（t12-mut-f11-ordinary-true，重建后运行）在等待含文件名的保存处超时被杀死，恢复后重建（t12-build-2，缓存命中原产物）。
+
+间歇项（re-50§6/P7b `t13-content-local-4`）：Firefox F16换工作区故事隔离重复5/5（t12-repeat-f16-firefox），三次三浏览器全量均通过。WebKit F8隔离重复5/5（t12-repeat-f8-webkit），但在t12-m5-content-3全量中复现一次，签名与P7b相同——点击“Choose or replace file”后180秒内没有`filechooser`事件；该控件是可见的原生`<input type="file">`加`<label htmlFor>`，点击与系统选择器之间没有应用代码，不存在应用异步丢失用户激活的路径。结论：自动化层（WebKit在满载下的选择器拦截）间歇，紧接的全量重跑63/63（t12-m5-content-4），记入T14/CI观察；默认CI不跑WebKit。
+
+评论卡成本（re-50§6交P8实测）：一次性测量故事（未提交，脚本存于P8工作区`t12-comment-cards.spec.ts`，`t12-comment-cards`）在同一工作项详情页各打开1条与40条带图评论，计时到全部评论图片解码：local 818ms/895ms、S3 726ms/858ms；接口请求26/105，每张图恰好一次元数据读取与一次内容授权读取（`GET /api/v0/assets/:id`与`…/content`各40），没有重复读取。成本随图片线性增长、每卡无额外请求，维持re-50的“每卡一条reaction与一次登记”。
+
+清理规模（`54e07f76`，Ruling见台账）：M4的`TestPurgeScale`假定一次运行、无snooze，追踪器只认M4的三参DELETE，在M5的有界清理上必然失败（t12-purge-scale：`State:available Snoozes:1`）。按M5协议更新：一次attempt可分多次预算内运行，job观察器在离开running的同一UPDATE中读出每次运行的自报输出；追踪器认三种语句形状，参数按类型读取；受保护表逐表核对DELETE命令标签；分页表以各次运行自报删除总数对旧范围行数，并先核实旧范围之外无可清理行，推出无一行被级联删除；预算取消的在途语句只在紧随其后的就是它的重做时接受。变异：先清`issue_comments`使`comment_reactions`被级联删除1行（t12-mut-cascade，只被总量核对杀死：660025≠660026）；每次运行从头开始并换截止时间（t12-mut-no-resume，被重做规则杀死）。诊断（t12-diag-plans）发现原夹具在播种后、软删与老化前ANALYZE，`deleted_at`统计为全NULL，规划器每页读遍全部墓碑，直到autovacuum下一轮分析；夹具改为老化后ANALYZE。最终一次运行5.0秒删除660,026行（M4同数据单次12.2秒）；统计陈旧时仍有界并续跑完成（t12-purge-scale-3：6次运行、5条被取消的语句均重做、合计52秒）。
+
+其余：`TestAllPeriodicJobsRun`的独立清单仍是M4的四种周期任务，未含`asset.cleanup`（十余个默认测试等待其启动运行），记为Minor。CI的e2e余量（约21.2/20.5分钟，预算25分钟）在T14的准确检查点CI复核；本地默认故事417项3.5分钟。

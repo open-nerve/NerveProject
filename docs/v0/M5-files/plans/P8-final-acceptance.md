@@ -131,9 +131,9 @@
 
 **Files:** 阶段记录矩阵节。
 
-- [ ] Step 1：在最终产品候选（T2–T11之后）上：`make build build-s3-fixture`；默认`make e2e`（含`[s3]`页面变体，Chromium）；`m5-profile`、`m5-content`（local，三浏览器）、`m5-s3`（F4，三浏览器）、`m5-demo`（三浏览器）；`GOFLAGS=-p=1 make test`。
-- [ ] Step 2：每条F指向本次运行的故事/测试名、浏览器、存储变体与原件；`t13-content-local-4`等间歇项隔离重复运行至少5次并给结论。
-- [ ] Step 3：提交`docs(M5/P8): 记录F1–F18最终矩阵`。
+- [x] Step 1：在最终产品候选（T2–T11之后）上：`make build build-s3-fixture`；默认`make e2e`（含`[s3]`页面变体，Chromium）；`m5-profile`、`m5-content`（local，三浏览器）、`m5-s3`（F4，三浏览器）、`m5-demo`（三浏览器）；`GOFLAGS=-p=1 make test`。
+- [x] Step 2：每条F指向本次运行的故事/测试名、浏览器、存储变体与原件；`t13-content-local-4`等间歇项隔离重复运行至少5次并给结论。
+- [x] Step 3：提交`docs(M5/P8): 记录F1–F18最终矩阵`。
 
 ## Task 13（T13）：文档同步与交接
 
