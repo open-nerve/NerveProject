@@ -126,6 +126,24 @@ export async function contentFilesPage(world: PageFileStoryWorld, info: TestInfo
   const watch = await watchPage(page);
   const requests: Request[] = [];
   page.on("request", (request) => requests.push(request));
+  let inFlight = 0;
+  let lastActivity = Date.now();
+  const touch = (request: Request, change: number) => {
+    if (!pathOf(request).startsWith("/api/v0/")) return;
+    inFlight += change;
+    lastActivity = Date.now();
+  };
+  page.on("request", (request) => touch(request, 1));
+  page.on("requestfinished", (request) => touch(request, -1));
+  page.on("requestfailed", (request) => touch(request, -1));
+  /**
+   * Waits until no API request has been in flight for quietMs. A write's canonical re-read re-mounts the body, which
+   * reads its images again; a story that leaves the page before then would abort those reads.
+   */
+  const quiet = (quietMs = 500) =>
+    expect
+      .poll(() => inFlight === 0 && Date.now() - lastActivity >= quietMs, { timeout: 15_000, intervals: [100] })
+      .toBe(true);
   const calls = (method: string, endpoint: string | RegExp) =>
     requests.filter(
       (request) =>
@@ -210,5 +228,5 @@ export async function contentFilesPage(world: PageFileStoryWorld, info: TestInfo
       contentType: "application/json",
     });
   };
-  return { ...files, watch, requests, calls, transfer, persisted, downloaded, finish };
+  return { ...files, watch, requests, calls, quiet, transfer, persisted, downloaded, finish };
 }

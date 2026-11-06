@@ -23,7 +23,7 @@ async function caretAtEnd(page: Page, editor: Locator) {
 const imageIDs = (html: string) => [...html.matchAll(/src="([0-9a-f-]{36})"/g)].map((match) => match[1]!);
 
 pageFileStory(
-  "F11 (page): a copied image becomes the target's own server copy that Undo and Redo reuse; forged and unreadable sources and a refused target insert nothing; plain files are not swallowed",
+  "F11 (page): a copied image becomes the target's own server copy that Undo and Redo reuse; forged and unreadable sources and a refused target insert nothing; plain files are left to the browser's drop and to ProseMirror's paste",
   async (world, info) => {
     info.setTimeout(180_000);
     const { api, page, baseURL, db, uploadStatus } = world;
@@ -145,11 +145,17 @@ pageFileStory(
     expect(saves(target.id).some((html) => html.includes(unreadable.id))).toBe(false);
     expect(await assetRows(db, [unreadable.id])).toMatchObject([{ issue_id: hiddenIssue.id, is_deleted: false }]);
 
-    // A plain file is left to its owner: the editor neither takes nor uploads it.
+    // A plain file is not the editor's to take. Its drop stays the browser's; its paste goes to ProseMirror, which
+    // pastes the text that came with it (a file manager puts the file's name there), uploads nothing and says nothing.
     const note = textFile("plain.txt", "not an image");
     expect(await dropFiles(editor, [note])).toBe(false);
-    expect(await pasteInto(editor, {}, [note])).toBe(false);
+    saved = savedWith(target.id, (html) => html.includes("plain.txt"));
+    await pasteInto(editor, { "text/plain": "plain.txt" }, [note]);
+    await saved;
+    await expect(editor).toContainText("plain.txt");
+    await expect(editor.getByRole("alert")).toHaveCount(0);
     expect(files.calls("POST", "/api/v0/assets")).toHaveLength(0);
+    await files.quiet();
 
     // The target is archived elsewhere: the server refuses the copy, and nothing of it is saved.
     const done = (await stateIds(api, owner.token, project.id)).Done;
