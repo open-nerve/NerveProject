@@ -2,9 +2,11 @@ package bootstrap
 
 import (
 	"log/slog"
+	"maps"
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -13,9 +15,10 @@ import (
 	"github.com/open-nerve/NerveProject/server/migrations"
 )
 
-// This is one production Runner execution after all preparation workers have
-// stopped. Calling Purger directly, deleting nothing or reusing a historical
-// completed job cannot satisfy these observations.
+// This is one production purge job, one attempt resumed across budget-bounded
+// runs, after all preparation workers have stopped. Calling Purger directly,
+// deleting nothing or reusing a historical completed job cannot satisfy these
+// observations.
 func TestPurgeScale(t *testing.T) {
 	if os.Getenv("NERVE_PURGE_SCALE") != "1" {
 		t.Skip("NERVE_PURGE_SCALE=1 required: default skip is not scale validation")
@@ -44,7 +47,18 @@ func TestPurgeScale(t *testing.T) {
 		before = append(before, counts)
 	}
 	retained := purgeRetentionSnapshot(t, roles.owner, f.Scopes[1:])
-	listEvidence(t, dir, "before", map[string]any{"counts": before, "retention": retained})
+	want := maps.Clone(before[0])
+	for _, table := range []string{"file_assets", "workspace_user_properties", "workspace_member_invites", "workspace_members", "workspaces"} {
+		want[table] = 0
+	}
+	// The runs' account proves no cascade did a table's work only if nothing
+	// outside the old scope is purgeable. Only aged rows are older than a day,
+	// and the cutoff falls minutes after anchor-60d.
+	purgeable := purgeableRows(t, roles.owner, f.Anchor.Add(-60*24*time.Hour), want)
+	listEvidence(t, dir, "before", map[string]any{"counts": before, "retention": retained, "purgeable": purgeable})
+	if !reflect.DeepEqual(purgeable, want) {
+		t.Fatalf("purgeable rows %v; want only the old scope %v", purgeable, want)
+	}
 	previousID, watermark := purgeScaleBoundary(t, roles.owner)
 	trace := &purgeScaleTrace{}
 	var logs lockedBuffer
@@ -64,6 +78,7 @@ func TestPurgeScale(t *testing.T) {
 	environment["seed_version"] = "purge-scale-v1: 20k roots/660k core rows plus sparse API rows; 59d/live controls"
 	environment["measurement"] = "production Runner and runtime app pool; owner only prepares and observes"
 	environment["cleanup"], environment["jobs"], environment["issue"] = cfg.Cleanup, cfg.Jobs, cfg.Issue
+	environment["run_budget"] = cfg.Files.CleanupBudget.String()
 	listEvidence(t, dir, "environment", environment)
 	started := time.Now()
 	listEvidence(t, dir, "boundary", map[string]any{"previous_purge_id": previousID, "database_watermark": watermark, "app_start": started, "app_construction_seconds": started.Sub(constructing).Seconds(), "runtime_role": role})
@@ -75,18 +90,10 @@ func TestPurgeScale(t *testing.T) {
 	if job.ID <= previousID || job.Kind != "cleanup.purge_deleted" || job.Queue != "periodic" || job.Attempt != 1 || job.Attempted == nil || job.Finalized == nil || job.Created.Before(watermark) || job.Attempted.Before(watermark) || job.Finalized.Before(*job.Attempted) {
 		t.Fatalf("purge completion is not bound to this run: %+v previous=%d watermark=%s", job, previousID, watermark)
 	}
-	assertJobRuns(t, roles.owner, deletionJob{ID: job.ID}, []int{1}, "completed")
-	transitions := jobTransitions(t, roles.owner, job.ID)
-	listEvidence(t, dir, "transitions", transitions)
-	var running, finished time.Time
-	for _, tr := range transitions {
-		if tr.To == "running" {
-			running = tr.At
-		}
-		if tr.To == "completed" {
-			finished = tr.At
-		}
-	}
+	assertJobRuns(t, roles.owner, deletionJob{ID: job.ID}, slices.Repeat([]int{1}, job.Snoozes+1), "completed")
+	listEvidence(t, dir, "transitions", jobTransitions(t, roles.owner, job.ID))
+	runs := purgeScaleRuns(t, roles.owner, job.ID)
+	listEvidence(t, dir, "runs", runs)
 	after := make([]map[string]int64, 0, len(f.Scopes))
 	for i, scope := range f.Scopes {
 		after = append(after, purgeScopeCounts(t, roles.owner, scope, i < 2))
@@ -101,21 +108,20 @@ func TestPurgeScale(t *testing.T) {
 	if !reflect.DeepEqual(retained, retainedAfter) || !reflect.DeepEqual(before[1:], after[1:]) {
 		t.Error("purge changed 59-day or live rows; complete before/after snapshots retained")
 	}
-	want := before[0]
-	for _, table := range []string{"workspace_user_properties", "workspace_member_invites", "workspace_members", "workspaces"} {
-		want[table] = 0
-	}
-	sql := purgeScaleSQLSummary(t, trace.snapshot(), role, started, ended, want)
+	cutoff, cut, sql := purgeScaleSQLSummary(t, trace.snapshot(), role, started, ended, want)
+	account := purgeScaleRunSummary(t, runs, cutoff, cut, want)
 	if strings.Contains(logs.String(), "permission denied") {
 		t.Error("purge runtime permission failure: " + logs.String())
 	}
 	listEvidence(t, dir, "summary", map[string]any{
 		"job_id": job.ID, "attempt": job.Attempt, "queue": job.Queue, "state": job.State,
-		"running_count": 1, "errors": job.Errors, "snoozes": job.Snoozes, "runtime_role": role,
-		"running_seconds": finished.Sub(running).Seconds(), "queue_seconds": running.Sub(job.Created).Seconds(),
-		"app_start_to_observed_completion_seconds": ended.Sub(started).Seconds(), "sql": sql,
-		"seed_seconds": f.Seed.Seconds(), "analyze_seconds": f.Analyze.Seconds(),
-		"measurement": "real Runner and runtime pool; includes pgx trace and River transition observer, no row DELETE trigger; no production time SLA",
+		"errors": job.Errors, "snoozes": job.Snoozes, "runtime_role": role, "runs": account,
+		"queue_seconds": runs[0].Started.Sub(job.Created).Seconds(), "sql": sql,
+		"first_run_to_completion_seconds": runs[len(runs)-1].Ended.Sub(runs[0].Started).Seconds(), "app_start_to_observed_completion_seconds": ended.Sub(started).Seconds(),
+		"seed_seconds": f.Seed.Seconds(), "analyze_seconds": f.Analyze.Seconds(), "analyze_after_aging_seconds": f.AgedAnalyze.Seconds(),
+		"measurement": "real Runner and runtime pool, budget-bounded runs resumed by snooze; includes pgx trace and River transition observer, no row DELETE trigger; no production time SLA",
 	})
-	t.Logf("purge scale: job=%d one running/attempt1, runtime=%s, running_seconds=%.6f; old scope removed; 59d/live rows unchanged", job.ID, role, finished.Sub(running).Seconds())
+	if !t.Failed() {
+		t.Logf("purge scale: job=%d attempt 1 in %d runs, runtime=%s, running_seconds=%.6f; old scope removed by its own statements; 59d/live rows unchanged", job.ID, len(runs), role, account["running_seconds"])
+	}
 }
