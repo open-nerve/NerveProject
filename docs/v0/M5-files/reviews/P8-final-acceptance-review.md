@@ -1,16 +1,16 @@
 # M5/P8 阶段评审记录
 
-> 2026-11-06：正式预检通过，暂不实施。分支`codex/m5-p8`，基线main`2b2c6f33e3a93536742d5f28b74eb959ba73d6d1`（P7b noff）。P7b准确分支CI 42109712732、main CI 42115811156及归档/正常清理已核，见[P7b阶段记录§11](P7b-content-assets-review.md#11-t16-集成归档与接续)。
+> 2026-11-06：已集成。准确候选`d0513ff9`经`--no-ff`合入main`d8ec845750e61b4d1970aec58cb57cb72e3685ab`；分支CI 42188195625 attempt 3与main CI 42212370678 attempt 2三项全绿，全量归档核验并正常清理，见§7的T16段。基线main`2b2c6f33e3a93536742d5f28b74eb959ba73d6d1`（P7b noff），P7b前置见[P7b阶段记录§11](P7b-content-assets-review.md#11-t16-集成归档与接续)。
 
 ## 1. 评审方式与范围
 
 [主spec](../specs/P8-final-acceptance.md)与[plan](../plans/P8-final-acceptance.md)界定16个Task。一次fresh builder对照main实际代码逐Task核查，主控按既有事实、局部裁定、需负责人决定分类闭环；正式报告见[re-51](../../../reviews/re-51-M5P8预检.md)。
 
-这是实施前预检；P8整分支deep-review、门禁与集成尚未开始，不冒充同一轮完成。
+以上为实施前预检；其后的门禁、整分支deep-review（[re-52](../../../reviews/re-52-M5P8整体审核.md)）与集成见§7。
 
 ## 2. 验收状态
 
-A1–A8全部开放。P1–P7b的阶段证据只作前置与目录来源；最终F1–F18矩阵、演练、演示和三浏览器结果必须在本阶段最终产品候选上新运行。
+A1–A8全部满足（[spec §4](../specs/P8-final-acceptance.md#4-验收标准)逐项勾选，证据见§7：A1→T2–T6，A2→T7，A3→T8，A4→T9，A5→T10，A6→T11，A7→T12与T14，A8→T13–T16与收尾预检[re-53](../../../reviews/re-53-M5收尾预检.md)）。P1–P7b的阶段证据只作前置与目录来源；最终F1–F18矩阵、演练、演示和三浏览器结果在本阶段最终产品候选上新运行。
 
 ## 3. 局部裁定
 
@@ -257,3 +257,11 @@ P8预检提交`1f4da708`的CI（42126297643）e2e有1项失败、414项通过：
 T15 Step 3（与修改范围对应的最终本地门禁）：T14七门禁之后的改动只有Go测试（bootstrap与`server/tools/s3fixture`）、e2e夹具与配置和文档，`web/`未变。在`486c22bd`上：`make gen-check`（t15-gen-check）、`make lint-go`（t14w-lint-go-2）、bootstrap包全量（t14w-bootstrap-2）与工具模块测试（t15-tools-test）、`make lint-web`（t15-lint-web，50项任务中33项由缓存回放、e2e包的检查实际执行）、`make knip`（t15-knip）全部exit 0；默认E2E 417/417在`2234d114`上运行（t14s-e2e），其后到`486c22bd`只改Go测试与文档，e2e的输入与被测二进制未变；`make test-web`的输入（`web/`）自T14门禁未变，不重跑。准确候选为加上本段记录的提交，它的分支CI与集成由T16记录。
 
 T15（整分支审查）：冻结候选`634bc8eb`，一次fresh只读审查（`fable`），报告见[re-52](../../../reviews/re-52-M5P8整体审核.md)。结论Ready to merge: Yes，没有Critical或Important；五项Review Focus全部PASS（第5项附Minor 1）。主控按效果复核后不需要修复轮：上面T10那句关于`Purge…`页的措辞按实际观测改写；其余Minor（演练追踪器对单语句分页只记结果行、`ImageTransfers`的中止监听不移除、`verify()`多ID部分失败时对话框混乱、未完成时恢复点击无反馈、404后的标题计数、启动时已非当前节点的`queued`）作为deferred记入台账与负责人报告；declined-to-judge十项逐条维持既有裁定。冻结候选的CI首次server失败两项测试，由T14 Step 2按根因修复（`dd0eb2ff`），不触及审查过的产品代码。
+
+T16（集成、归档与接续；M5收尾回填）：准确最终候选`d0513ff9`（d0513ff986a5b9b2797ab96657c274eb09aa5905，只在`486c22bd`之上加T14/T15的记录）的[分支CI 42188195625](https://github.com/open-nerve/NerveProject/actions/runs/42188195625)中server 127793476024（19.7分钟）与web 127793476579 success。e2e三次：attempt 1（127801255160）在25分钟期限处被取消——“安装Playwright浏览器”一步用了22.5分钟（运行器的Ubuntu镜像每个包停顿64–185秒），测试刚开始；同一输入重跑的attempt 2（127812269431）416/417，M4的“C12 (review): list group controls fold, reopen and create through native keyboard focus”在“Create new work item”弹窗打开约150–500毫秒后按Escape，5秒内弹窗未关闭——该故事在CI历史上首次失败，P8对这个弹窗只改了关闭副本时的提示文字，不涉及Escape与普通新建，本地两种布局各重复20次共40次通过（t16-c12-repeat），原因未查实；按负责人规则停下报告后，负责人2026-11-06决定再重跑一次失败作业，并把这一偶发记入M8交接与负责人报告（M8交接由收尾T2补写）：attempt 3（127864017383）success，E2E 417/417，测试20.9分钟、作业23.1分钟。
+
+根main原基线`2b2c6f33`与origin一致且干净，worktree干净，本地与远端分支都是该候选（27个提交，main为其祖先）。`--no-ff`合并生成`d8ec8457`（d8ec845750e61b4d1970aec58cb57cb72e3685ab），双父依次为原main与最终候选，完整tree与候选相同；系统Git推送成功，主目录未切开发分支。[准确main CI 42212370678](https://github.com/open-nerve/NerveProject/actions/runs/42212370678)中web 127873890885与server 127873891095（18.4分钟）success；e2e attempt 1（127881316912）同样因浏览器安装停滞（8次超过1分钟的停顿，共971秒）在25分钟期限处被取消，按负责人规则以基础设施证据重跑一次：attempt 2（127892590376）success，E2E 417/417，测试22.0分钟、作业24.1分钟，离25分钟期限不到1分钟。共用S3服务后的四次完整e2e运行都没有`ERR_NETWORK_CHANGED`。
+
+归档根：`/Users/xiaoruan/project/nerve-project/.superpowers/sdd/M5-P8-integration-20261106`。P7b的`archive.py`先按其manifest记录的成员SHA-256（`6e855b19…`）核对一致再复制进本阶段工作区；会话scratchpad（门禁、诊断与合并脚本、CI原件与下载的报告、探针记录）一并放入工作区后归档。共27,066个文件、733,888,345字节、38,970个成员，unknown=0，manifest SHA-256为`a795fcd880c83e89c02e1d265ddce3998aec1a478300f349fb01c583b657192a`。确认`origin/main..codex/m5-p8`为0后，正常删除远端分支、worktree及本地分支（was `d0513ff9`），未使用force/stash/clean/reset-hard，远端只剩main；清理后从归档副本再次核对全部成员，与清理前一致。清理收据与清单位于冻结payload之外。
+
+M5收尾的worktree从`d8ec8457`创建于`.codex/worktress/codex/m5-closeout`（分支`codex/m5-closeout`），本段由收尾T1按P8台账（归档`payload/worktree/.superpowers/sdd/P8-final-acceptance/progress.md`第119–123行）、CI原件与归档收据回填，见[收尾合同](../specs/closeout.md)。收尾预检见[re-53](../../../reviews/re-53-M5收尾预检.md)。

@@ -1,6 +1,6 @@
 # M5/P8：最终验收矩阵、清理演练与交接收敛
 
-> 2026-11-06：正式预检通过，暂不实施；一次fresh builder的6项局部问题已按§3补实，见[re-51](../../../reviews/re-51-M5P8预检.md)。分支`codex/m5-p8`，基线main`2b2c6f33e3a93536742d5f28b74eb959ba73d6d1`（P7b noff）；P7b准确分支CI 42109712732、main CI 42115811156、归档及清理前置已核。
+> 2026-11-06：已集成。noff main`d8ec845750e61b4d1970aec58cb57cb72e3685ab`，分支CI 42188195625 attempt 3与main CI 42212370678 attempt 2三项全绿，归档与正常清理完成；A1–A8全部满足，见[阶段记录](../reviews/P8-final-acceptance-review.md)。预检时一次fresh builder的6项局部问题已按§3补实，见[re-51](../../../reviews/re-51-M5P8预检.md)；基线main`2b2c6f33e3a93536742d5f28b74eb959ba73d6d1`（P7b noff）。
 
 ## 1. 目标与边界
 
@@ -49,14 +49,14 @@ P8 是 M5 最后一个编号阶段：在最终代码上为 F1–F18 各给一条
 
 ## 4. 验收标准
 
-- [ ] A1 re-50 的 F2–F6、F7a 与 M4 成功提示遗留各有有区分度的 RED/GREEN（必要时有效变异）和受影响页面回归；跨 M 修复单独提交。
-- [ ] A2 `copyMarkdownToClipboard`、`app/assets/attachment/`、`WorkspacePatch.Logo` 删除；M1 附录 A `--rows M5` 每行消失或在阶段记录写明文件、名称与读者；knip/类型/测试通过。
-- [ ] A3 两条规则全仓为零且为 error，各包 cap 等于实际；M5 全期改动文件 oxlint 零 warning；关键词守卫无 M5 到期例外。
-- [ ] A4 S3 夹具双失败与子进程原错误可见（P3-M1）。
-- [ ] A5 全链路清理与慢流演练在 local 与 S3 通过，精确行/对象/字节与邻域证据保存（F2、F14、F15 最终证据）。
-- [ ] A6 默认部署演示在三浏览器中通过（F18），重启后字节一致，无旧路由、CSP 违规或未处理异常。
-- [ ] A7 F1–F18 最终矩阵在最终产品候选上全部有本次运行证据；间歇项有重复运行结论。
-- [ ] A8 文档同步、七份输入交接最终处理结果与 M6/M7/M8 `M5-closeout` 交接完成；七门禁、一次整分支 deep-review 修复闭环、准确分支 CI、noff 后准确 main CI、全量归档与 closeout 预检完成。
+- [x] A1 re-50 的 F2–F6、F7a 与 M4 成功提示遗留各有有区分度的 RED/GREEN（必要时有效变异）和受影响页面回归；跨 M 修复单独提交。证据：[阶段记录§7](../reviews/P8-final-acceptance-review.md#7-实施记录) T2–T6。
+- [x] A2 `copyMarkdownToClipboard`、`app/assets/attachment/`、`WorkspacePatch.Logo` 删除；M1 附录 A `--rows M5` 每行消失或在阶段记录写明文件、名称与读者；knip/类型/测试通过。证据：[阶段记录§7](../reviews/P8-final-acceptance-review.md#7-实施记录) T7。
+- [x] A3 两条规则全仓为零且为 error，各包 cap 等于实际；M5 全期改动文件 oxlint 零 warning；关键词守卫无 M5 到期例外。证据：[阶段记录§7](../reviews/P8-final-acceptance-review.md#7-实施记录) T8。
+- [x] A4 S3 夹具双失败与子进程原错误可见（P3-M1）。证据：[阶段记录§7](../reviews/P8-final-acceptance-review.md#7-实施记录) T9。
+- [x] A5 全链路清理与慢流演练在 local 与 S3 通过，精确行/对象/字节与邻域证据保存（F2、F14、F15 最终证据）。证据：[阶段记录§7](../reviews/P8-final-acceptance-review.md#7-实施记录) T10。
+- [x] A6 默认部署演示在三浏览器中通过（F18），重启后字节一致，无旧路由、CSP 违规或未处理异常。证据：[阶段记录§7](../reviews/P8-final-acceptance-review.md#7-实施记录) T11。
+- [x] A7 F1–F18 最终矩阵在最终产品候选上全部有本次运行证据；间歇项有重复运行结论。证据：[阶段记录§7](../reviews/P8-final-acceptance-review.md#7-实施记录) T12与T14。
+- [x] A8 文档同步、七份输入交接最终处理结果与 M6/M7/M8 `M5-closeout` 交接完成；七门禁、一次整分支 deep-review 修复闭环、准确分支 CI、noff 后准确 main CI、全量归档与 closeout 预检完成。证据：[阶段记录§7](../reviews/P8-final-acceptance-review.md#7-实施记录) T13–T16，closeout预检见[re-53](../../../reviews/re-53-M5收尾预检.md)。
 
 每项证据入口为[阶段记录](../reviews/P8-final-acceptance-review.md)。
 

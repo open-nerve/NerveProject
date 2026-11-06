@@ -1,9 +1,9 @@
 # M5：文件
 
-> 状态：P1–P7b已完成。P7b整审及修复闭环，最终分支CI42109712732和noff main2b2c6f33e3a93536742d5f28b74eb959ba73d6d1的CI42115811156均全绿；7,397文件全量归档核验并正常清理。P8正式spec/plan预检通过，暂未实施；随后连续推进P8及closeout，M5总体未完成。见[P7b完成证据](reviews/P7b-content-assets-review.md#11-t16-集成归档与接续)与[P8预检](../../reviews/re-51-M5P8预检.md)。
+> 状态：P1–P8已完成，收尾进行中，M5总体未完成。P8整审及修复闭环，最终分支CI 42188195625（attempt 3）和noff main`d8ec845750e61b4d1970aec58cb57cb72e3685ab`的CI 42212370678（attempt 2）三项全绿；27,066文件全量归档核验并正常清理。收尾spec/plan预检通过。见[P8完成证据](reviews/P8-final-acceptance-review.md#7-实施记录)与[收尾预检](../../reviews/re-53-M5收尾预检.md)。
 > 起点：`main@3db22f06ad9e82a483c05c8078801af00a5cae02`（M4 最终 main CI 41397218533，三个作业成功）。
 PC2 已批准 A：[工作区更新的迟到回包](reviews/P6-workspace-write-lifetime-decision.md)。
-> 当前文档分支为`codex/m5-p8`，根目录保持main。负责人2026-11-02已授权按既有节奏连续推进，常规设计、预检、实现、deep-review、`--no-ff`集成、CI和归档无需逐次询问；负责人2026-11-05进一步授权P7b实施、整审和既有节奏集成后连续推进P8及M5最终收尾。重大风险、架构回归或关键分歧，先提交已完成工作，再上报。
+> 当前文档分支为`codex/m5-closeout`，根目录保持main。负责人2026-11-02已授权按既有节奏连续推进，常规设计、预检、实现、deep-review、`--no-ff`集成、CI和归档无需逐次询问；负责人2026-11-05进一步授权P7b实施、整审和既有节奏集成后连续推进P8及M5最终收尾。重大风险、架构回归或关键分歧，先提交已完成工作，再上报。
 
 ## 1. 目标、范围与输入
 
@@ -295,7 +295,7 @@ P1 起第一个实现提交更新关键词 phase 与到期例外；纯设计分�
 
 ## 13. 输入交接与后续交接
 
-当前所有输入仍为 open，只有实际验收或明确转交完成才关闭，原文与处理结果分开。
+七份输入已在 M5 收尾（2026-11-06）全部改为 closed：只有实际验收或明确转交完成才关闭，原文与处理结果分开，各份末尾的“关闭（M5/closeout）”一段写结论与链接；M5-04 原文转交三份输出交接。
 
 | 输入 | 条款落点 | 关闭阶段 |
 |---|---|---|
@@ -309,7 +309,7 @@ P1 起第一个实现提交更新关键词 phase 与到期例外；纯设计分�
 
 收尾分别给 M6/M7/M8 写 `handoffs/M5-closeout.md`：明确资产端口/生命周期与作用域要求、真实支持的存储协议、事件名字和载荷、清理/通知责任、尚未触发的 CLI 条款原文。未复用且未修复的 copy 方法风险继续具名转交，不能因没有消费者写成“已修复”。M5 自己承诺的可用功能不得靠转交逃避完成标准。
 
-P8 T13 已写出三份：[M6](../M6-cycles-modules/handoffs/M5-closeout.md)（资产宿主的接入步骤、列表中的附件计数、有界清理协议）、[M7](../M7-collaboration/handoffs/M5-closeout.md)（收集箱的图片与附件、附件事件与通知、只读显示与复制为 Markdown）、[M8](../M8-open-release/handoffs/M5-closeout.md)（存储协议与部署条件、配置、备份与实例独占、Webhook、发布前的演练、仍开放的观察）；M5-04 的原文三份各一。旧 copy 方法没有消费者，P8 T7 删除（不是“已修复”），复制为 Markdown 省略图片作为已知限制写入 M7/M8。七份输入交接各写“处理结果（M5/P8）”，保持 open 至收尾。
+P8 T13 已写出三份：[M6](../M6-cycles-modules/handoffs/M5-closeout.md)（资产宿主的接入步骤、列表中的附件计数、有界清理协议）、[M7](../M7-collaboration/handoffs/M5-closeout.md)（收集箱的图片与附件、附件事件与通知、只读显示与复制为 Markdown）、[M8](../M8-open-release/handoffs/M5-closeout.md)（存储协议与部署条件、配置、备份与实例独占、Webhook、发布前的演练、仍开放的观察）；M5-04 的原文三份各一。旧 copy 方法没有消费者，P8 T7 删除（不是“已修复”），复制为 Markdown 省略图片作为已知限制写入 M7/M8。七份输入交接各写“处理结果（M5/P8）”，保持 open 至收尾（收尾已关闭，见本节开头）。
 
 ## 14. 完成标准
 
@@ -347,8 +347,8 @@ P8 T13 已写出三份：[M6](../M6-cycles-modules/handoffs/M5-closeout.md)（�
 | P6 | 已完成：整审/局部修复、准确最终分支及main CI全绿，6,861文件归档验证并正常清理 | [spec](specs/P6-profile-upload.md) / [plan](plans/P6-profile-upload.md) / [完成证据](reviews/P6-profile-upload-review.md#22-t15准确main全绿与归档清理) |
 | P7a | 已完成：noff main cf07c9fb、CI41869045846三job全绿，2,885文件归档核验及正常清理，P7b正式预检完成 | [spec](specs/P7a-draft-preparations.md) / [plan](plans/P7a-draft-preparations.md) / [完成证据](reviews/P7a-draft-preparations-review.md#13-t7-集成归档与接续) / [整审](../../reviews/re-48-M5P7a整体审核.md) |
 | P7b | 已完成：noff main 2b2c6f33、CI42115811156三job全绿，7,397文件归档核验及正常清理，P8正式预检完成 | [spec](specs/P7b-content-assets.md) / [plan](plans/P7b-content-assets.md) / [预检](../../reviews/re-49-M5P7b预检.md) / [整审](../../reviews/re-50-M5P7b整体审核.md) / [完成证据](reviews/P7b-content-assets-review.md#11-t16-集成归档与接续) |
-| P8 | 进行中：T1–T15在分支完成（re-50交下的修复、死代码与告警清零、全链路清理/容量演练、默认部署演示、F1–F18最终矩阵、交接、整分支deep-review无Critical/Important；检查点CI暴露的[s3]故事浏览器网络变化按负责人决定改为共用S3服务，启动任务与锁测试的竞争在测试处修复，准确检查点CI 42182979090全绿）；集成进行中 | [spec](specs/P8-final-acceptance.md) / [plan](plans/P8-final-acceptance.md) / [预检](../../reviews/re-51-M5P8预检.md) / [整审](../../reviews/re-52-M5P8整体审核.md) / [阶段记录](reviews/P8-final-acceptance-review.md) |
-| closeout | 未开始 | 待P8完成后展开 |
+| P8 | 已完成：noff main d8ec8457、CI42212370678三job全绿（分支CI42188195625；两次运行的e2e因浏览器安装停滞在期限处取消后重跑，一次M4 C12 Escape弹窗偶发经负责人决定重跑），27,066文件归档核验及正常清理，收尾预检完成 | [spec](specs/P8-final-acceptance.md) / [plan](plans/P8-final-acceptance.md) / [预检](../../reviews/re-51-M5P8预检.md) / [整审](../../reviews/re-52-M5P8整体审核.md) / [阶段记录](reviews/P8-final-acceptance-review.md) |
+| closeout | 进行中：spec/plan预检通过（12项局部问题已补实） | [spec](specs/closeout.md) / [plan](plans/closeout.md) / [预检](../../reviews/re-53-M5收尾预检.md) |
 
 当前可自行决定的局部取舍及代价：编辑器只处理图片，普通文件走附件区；预设封面使用稳定编号，不上传构建素材副本；描述图片保留到宿主删除，代价是占用空间；封存复制增加一次存储操作，换取确认后字节不被旧 PUT 改写。以上均在既定文件模块范围内，设计预检已核对一致性，具体实现按阶段合同验证。
 

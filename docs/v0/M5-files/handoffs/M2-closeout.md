@@ -1,5 +1,5 @@
 ---
-status: open
+status: closed
 from: M2/closeout
 to: M5
 created: 2026-09-28
@@ -88,3 +88,7 @@ T13真实页面发现M2认证中间件的缺陷（不是本页的交接项，因
 ## 处理结果（M5/P8）
 
 §1头像与个人封面：两列与外键、签名地址、个人资料与引导两处上传控件均已接通（P4/P6），`plane-user-assets`仍挡住Plane的地址与弹窗名。§2上传与中间件：文件字节不经`/api/v0`的1 MiB/15秒中间件，走逐请求放宽期限的raw路由；大于1 MiB、超过15秒的上传在T10的local/S3演练与页面慢流中成功；超过`files.size_limit`的上传被拒（413）；整程序契约测试在T12重跑通过；CSP只为S3的实际签名来源放开`img-src`/`connect-src`（P3 T7）。`use-file-size.ts`已删，实际读取点为`core/hooks/editor/editor-assets.ts`读`root.instance.config.file_size_limit`。§3 `@nerve/services`整包删除（P7b）。§4 `FileService`单例清零，M5新加的SWR键带`loginId`（P6/P7b）。§5 `e2e/fixtures/storage.ts`照fixture写法加入并被上传故事使用（P2）。另记P7b T14修复的M2认证中间件401续期重发缺陷`86c9f9f6`。最终证据见[P8阶段记录§7](../reviews/P8-final-acceptance-review.md#7-实施记录)的T10与T12。条款全部完成，closeout改为closed。
+
+## 关闭（M5/closeout，2026-11-06）
+
+§1–§5全部完成，见上面的处理结果与[P8阶段记录§7](../reviews/P8-final-acceptance-review.md#7-实施记录)。§1要求的[差异清单二·按表](../../plane-diff.md#按表)已更新：`users`一行记有M5/P4的迁移00035（头像与个人封面两列及外键，归`identity`）。没有转交项，`status`改为`closed`。原文与各阶段处理结果保留不改。
