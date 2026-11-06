@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { setTimeout as sleep } from "node:timers/promises";
 
-import { s3Command, startS3Process } from "./s3-process";
+import { removeS3Container, s3Command, startS3Process } from "./s3-process";
 
 const id = () => randomBytes(16).toString("hex");
 interface Connection {
@@ -32,22 +32,31 @@ export interface S3Service {
   close(): Promise<void>;
 }
 
-export async function startS3(): Promise<S3Service> {
+export interface S3Options {
+  /** Removes the owned container once its child has exited. */
+  remove?: (name: string) => Promise<void>;
+  /** The SeaweedFS identity file; one the child refuses fails startup before any container exists. */
+  auth?: string;
+}
+
+export async function startS3({ remove = removeS3Container, auth }: S3Options = {}): Promise<S3Service> {
   const name = `nerve-s3-e2e-${id()}`;
   const access = id(),
     secret = id() + id();
   const deadline = Date.now() + 90_000;
   const process = startS3Process(
     name,
-    JSON.stringify({
-      identities: [
-        {
-          name: "nerve-test",
-          credentials: [{ accessKey: access, secretKey: secret }],
-          actions: ["Admin", "Read", "Write", "List", "Tagging"],
-        },
-      ],
-    })
+    auth ??
+      JSON.stringify({
+        identities: [
+          {
+            name: "nerve-test",
+            credentials: [{ accessKey: access, secretKey: secret }],
+            actions: ["Admin", "Read", "Write", "List", "Tagging"],
+          },
+        ],
+      }),
+    remove
   );
   const abort = new AbortController();
   const pending = new Set<Promise<unknown>>();
@@ -110,7 +119,15 @@ export async function startS3(): Promise<S3Service> {
     await createBucket(deadline);
     return { name, containerId: ready.id, endpoint: ready.endpoint, createBucket: () => createBucket(), close };
   } catch (error) {
-    await close();
+    // A cleanup that also fails must not hide why startup failed.
+    const cleanup = await close().then(
+      () => undefined,
+      (reason: unknown) => ({ reason })
+    );
+    if (cleanup) {
+      // oxlint-disable-next-line preserve-caught-error -- the caught error is the first of the aggregated errors.
+      throw new AggregateError([error, cleanup.reason], `S3 startup and cleanup failed (${name})`);
+    }
     throw new Error(`S3 startup failed (${name})`, { cause: error });
   } finally {
     clearTimeout(timer);

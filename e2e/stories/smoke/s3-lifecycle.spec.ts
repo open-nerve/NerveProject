@@ -7,6 +7,7 @@ import { expect, test } from "@playwright/test";
 
 import { createS3World } from "../../fixtures/s3-world";
 import { removeS3Container, startS3Process } from "../../fixtures/s3-process";
+import { startS3 } from "../../fixtures/s3";
 
 // oxlint-disable-next-line no-empty-pattern -- Playwright requires destructured fixture arguments.
 test("S3 fixture: concurrent close removes its container, process, secrets and database connection", async ({}, info) => {
@@ -71,6 +72,44 @@ test("S3 fixture: close during child startup joins it before final owned cleanup
   await absent(name);
   // The independent fallback is itself idempotent on exact daemon NotFound.
   await removeS3Container(name);
+});
+
+test("S3 fixture: a child that refuses its startup reports its own error", async () => {
+  const name = "nerve-s3-e2e-" + randomBytes(16).toString("hex");
+  const child = startS3Process(name, "");
+  const failure = await child.ready.then(
+    () => undefined,
+    (error: unknown) => error
+  );
+  await child.close();
+  expect(failure).toMatchObject({ cause: { message: "invalid startup" } });
+  await absent(name);
+});
+
+test("S3 fixture: a failed startup whose cleanup also fails keeps both errors", async () => {
+  const names: string[] = [];
+  const cleanup = new Error("cleanup refused");
+  const failure = await startS3({
+    auth: "",
+    remove: async (name) => {
+      names.push(name);
+      await removeS3Container(name);
+      throw cleanup;
+    },
+  }).then(
+    async (service) => {
+      await service.close();
+      return undefined;
+    },
+    (error: unknown) => error
+  );
+  expect(names).toHaveLength(1);
+  await absent(names[0]!);
+  expect(failure).toBeInstanceOf(AggregateError);
+  expect((failure as AggregateError).errors).toEqual([
+    expect.objectContaining({ cause: expect.objectContaining({ message: "invalid startup" }) }),
+    cleanup,
+  ]);
 });
 
 async function absent(name: string) {

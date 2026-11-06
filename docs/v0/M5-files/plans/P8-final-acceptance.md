@@ -107,9 +107,9 @@
 
 **Files:** `e2e/fixtures/{s3.ts,s3-process.ts,s3-container.ts}`；用例追加到`e2e/stories/smoke/s3-lifecycle.spec.ts`（不启动容器、毫秒级，记录默认套件时长不变）。
 
-- [ ] Step 1：注入①`startS3Process(name, "")`使子进程启动校验失败（`s3-container.ts`的catch现只回送固定字符串）②`s3.ts`层可注入的清理函数在启动失败后也失败：断言错误含子进程原错误，双失败为同时含启动原cause与清理错误的`AggregateError`。先看到只有通用信息或只有清理错误（RED）。
-- [ ] Step 2：子进程把原错误随消息回送并作为cause（`s3-container.ts`、`s3-process.ts`）；`s3.ts`与`closeProcess`的双失败用`AggregateError`保留两者（沿`e2e/fixtures/test.ts`先例）；清理函数参数默认现有`removeS3Container`；不改等待期限。
-- [ ] Step 3：GREEN；S3变体故事各浏览器至少一条回归；提交`test(M5/P8): S3夹具保留启动与清理两个错误`。
+- [x] Step 1：注入①`startS3Process(name, "")`使子进程启动校验失败（`s3-container.ts`的catch现只回送固定字符串）②`s3.ts`层可注入的清理函数在启动失败后也失败：断言错误含子进程原错误，双失败为同时含启动原cause与清理错误的`AggregateError`。先看到只有通用信息或只有清理错误（RED）。
+- [x] Step 2：子进程把原错误随消息回送并作为cause（`s3-container.ts`、`s3-process.ts`）；`s3.ts`与`closeProcess`的双失败用`AggregateError`保留两者（沿`e2e/fixtures/test.ts`先例）；清理函数参数默认现有`removeS3Container`；不改等待期限。
+- [x] Step 3：GREEN；S3变体故事各浏览器至少一条回归；提交`test(M5/P8): S3夹具保留启动与清理两个错误`。
 
 ## Task 10（T10）：全链路清理与慢流演练
 
