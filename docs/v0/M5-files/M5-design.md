@@ -309,6 +309,8 @@ P1 起第一个实现提交更新关键词 phase 与到期例外；纯设计分�
 
 收尾分别给 M6/M7/M8 写 `handoffs/M5-closeout.md`：明确资产端口/生命周期与作用域要求、真实支持的存储协议、事件名字和载荷、清理/通知责任、尚未触发的 CLI 条款原文。未复用且未修复的 copy 方法风险继续具名转交，不能因没有消费者写成“已修复”。M5 自己承诺的可用功能不得靠转交逃避完成标准。
 
+P8 T13 已写出三份：[M6](../M6-cycles-modules/handoffs/M5-closeout.md)（资产宿主的接入步骤、列表中的附件计数、有界清理协议）、[M7](../M7-collaboration/handoffs/M5-closeout.md)（收集箱的图片与附件、附件事件与通知、只读显示与复制为 Markdown）、[M8](../M8-open-release/handoffs/M5-closeout.md)（存储协议与部署条件、配置、备份与实例独占、Webhook、发布前的演练、仍开放的观察）；M5-04 的原文三份各一。旧 copy 方法没有消费者，P8 T7 删除（不是“已修复”），复制为 Markdown 省略图片作为已知限制写入 M7/M8。七份输入交接各写“处理结果（M5/P8）”，保持 open 至收尾。
+
 ## 14. 完成标准
 
 仅在收尾 first main CI 成功后逐条勾选，并附最终证据；本节现在全未完成。
@@ -345,7 +347,7 @@ P1 起第一个实现提交更新关键词 phase 与到期例外；纯设计分�
 | P6 | 已完成：整审/局部修复、准确最终分支及main CI全绿，6,861文件归档验证并正常清理 | [spec](specs/P6-profile-upload.md) / [plan](plans/P6-profile-upload.md) / [完成证据](reviews/P6-profile-upload-review.md#22-t15准确main全绿与归档清理) |
 | P7a | 已完成：noff main cf07c9fb、CI41869045846三job全绿，2,885文件归档核验及正常清理，P7b正式预检完成 | [spec](specs/P7a-draft-preparations.md) / [plan](plans/P7a-draft-preparations.md) / [完成证据](reviews/P7a-draft-preparations-review.md#13-t7-集成归档与接续) / [整审](../../reviews/re-48-M5P7a整体审核.md) |
 | P7b | 已完成：noff main 2b2c6f33、CI42115811156三job全绿，7,397文件归档核验及正常清理，P8正式预检完成 | [spec](specs/P7b-content-assets.md) / [plan](plans/P7b-content-assets.md) / [预检](../../reviews/re-49-M5P7b预检.md) / [整审](../../reviews/re-50-M5P7b整体审核.md) / [完成证据](reviews/P7b-content-assets-review.md#11-t16-集成归档与接续) |
-| P8 | 正式预检通过，基线2b2c6f33；暂未实施，16Task/8产品验收待证据 | [spec](specs/P8-final-acceptance.md) / [plan](plans/P8-final-acceptance.md) / [预检](../../reviews/re-51-M5P8预检.md) / [阶段记录](reviews/P8-final-acceptance-review.md) |
+| P8 | 进行中：T1–T13在分支完成（re-50交下的修复、死代码与告警清零、全链路清理/容量演练、默认部署演示、F1–F18最终矩阵、交接）；七门禁、整分支deep-review与集成进行中 | [spec](specs/P8-final-acceptance.md) / [plan](plans/P8-final-acceptance.md) / [预检](../../reviews/re-51-M5P8预检.md) / [阶段记录](reviews/P8-final-acceptance-review.md) |
 | closeout | 未开始 | 待P8完成后展开 |
 
 当前可自行决定的局部取舍及代价：编辑器只处理图片，普通文件走附件区；预设封面使用稳定编号，不上传构建素材副本；描述图片保留到宿主删除，代价是占用空间；封存复制增加一次存储操作，换取确认后字节不被旧 PUT 改写。以上均在既定文件模块范围内，设计预检已核对一致性，具体实现按阶段合同验证。

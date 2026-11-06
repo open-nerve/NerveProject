@@ -1,6 +1,6 @@
 # Deep Review：M5 文件路由方案 A — 根因、架构与风险收益
 
-审查日期：2026-11-02。模式：doc，目标为[命名空间决策文档 §3](../v0/M5-files/reviews/P1-storage-namespace-decision.md#3-方案-a推荐使用已保留的服务端命名空间)。分支 `codex/m5-p1`，审查 HEAD `d4a63d1fa0bd2b56df7aa196198e6c43dcf3184b`，main 基线 `fb3e788b7be33467018385c9a67d515e51b79dad`。
+审查日期：2026-11-02。模式：doc，目标为[命名空间决策文档 §3](../v0/M5-files/reviews/P1-storage-namespace-decision.md#3-原方案-a独立复核后不再首选使用已保留的服务端命名空间)。分支 `codex/m5-p1`，审查 HEAD `d4a63d1fa0bd2b56df7aa196198e6c43dcf3184b`，main 基线 `fb3e788b7be33467018385c9a67d515e51b79dad`。
 
 负责人先同意 A，随后明确暂停实施、要求独立复核。本轮只有审查文档和隔离探针，未迁移产品路由，未修改设计/spec/plan 的实施合同，未提交、推送或合并本轮报告。当前产品仍有原 `/storage` 遮蔽工作区问题，不能合并。
 
@@ -73,7 +73,7 @@ http proxy error: /assets/storage/local/key?payload=review-secret-token&tag=revi
 
 ### R3. 原比较遗漏现有预留段，A 的资源所有权说明也不完整
 
-位置：[原方案:36](../v0/M5-files/reviews/P1-storage-namespace-decision.md#3-方案-a推荐使用已保留的服务端命名空间)、[webui/handler.go:12](../../server/internal/platform/webui/handler.go#L12)、[emojibase.ts:37](../../web/apps/web/emojibase.ts#L37)。
+位置：[原方案:36](../v0/M5-files/reviews/P1-storage-namespace-decision.md#3-原方案-a独立复核后不再首选使用已保留的服务端命名空间)、[webui/handler.go:12](../../server/internal/platform/webui/handler.go#L12)、[emojibase.ts:37](../../web/apps/web/emojibase.ts#L37)。
 
 `assets` 当前是 Vite 构建资源目录；已有 emojibase 插件会输出具名子目录，不能假设未来构建永远只生成平铺的 hash 文件。现有 public/build 中未发现 `assets/storage` 或 `static` 碰撞，但这不是永久排他保证。
 

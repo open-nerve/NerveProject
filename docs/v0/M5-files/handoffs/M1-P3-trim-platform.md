@@ -35,3 +35,7 @@ P2新增原生生成协议、六个业务操作及真实API文件故事；没有
 ## 处理结果（M5/P7b T12核对）
 
 `EFileAssetType`与旧文件类型已删除，资源用途由P2起生成的AssetPurpose表达，团队空间、Initiative等企业类型不在新接口中。最终逐项结论由M5收尾写入review，本页保持open。
+
+## 处理结果（M5/P8）
+
+逐项结论：资源类型由生成的`AssetPurpose`表达（十种，含头像、个人封面与工作区图标），前端只用生成类型，旧枚举已删；评论附件只有项目级上传；封面只有内置预设（稳定编号`cover-01`…`cover-29`）与上传文件，没有Unsplash；编辑器只处理图片，`ACCEPTED_ATTACHMENT_MIME_TYPES`已删，P8 T2把被拒图片批改为整批不插入并拦下、普通文件交回ProseMirror（不再算“已处理”）；`file_size_limit`由服务端`files.size_limit`下发并执行（超限413），前端读取点为`core/hooks/editor/editor-assets.ts`的`root.instance.config.file_size_limit`（`use-file-size.ts`已删）。最终证据见[P8阶段记录§7](../reviews/P8-final-acceptance-review.md#7-实施记录)的T2与T12。closeout改为closed。

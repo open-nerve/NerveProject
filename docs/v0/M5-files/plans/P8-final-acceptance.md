@@ -139,9 +139,9 @@
 
 **Files:** README、`server/configs/`样例注释、`docs/v0/{plane-diff,frontend-changes}.md`、`app/assets/*/SOURCES.md`、七份输入交接、`docs/v0/M6-cycles-modules/handoffs/M5-closeout.md`、`docs/v0/M7-collaboration/handoffs/M5-closeout.md`、`docs/v0/M8-open-release/handoffs/M5-closeout.md`、M5设计§13/§15。
 
-- [ ] Step 1：七份输入交接逐条写“处理结果（M5/P8）”：实际完成+证据，或具名转交目标与验收（保持`status: open`，closeout改closed）。M4-closeout的M5-04原文整段转交（若仍无投递任务的CLI），复制方法写“已删除”，P7b T14段“子项/关联提示”更正为只涉链接；M2-closeout §2的`use-file-size.ts`已删，写实际读取点（`core/hooks/editor/editor-assets.ts`读`root.instance.config.file_size_limit`）。
-- [ ] Step 2：三份`M5-closeout`：资产端口与用途、宿主权限与生命周期/作用域、真实支持的存储协议与部署条件、事件名与载荷、清理/通知责任、未接入领域如何接入、仍开放的风险；M8另含部署/备份/CSP/配置。修复re-32→P1决策§3与re-41行号锚两处现存断链；`doc-links.py`零断。
-- [ ] Step 3：提交`docs(M5/P8): 同步部署与差异文档并写M5交接`。
+- [x] Step 1：七份输入交接逐条写“处理结果（M5/P8）”：实际完成+证据，或具名转交目标与验收（保持`status: open`，closeout改closed）。M4-closeout的M5-04原文整段转交（若仍无投递任务的CLI），复制方法写“已删除”，P7b T14段“子项/关联提示”更正为只涉链接；M2-closeout §2的`use-file-size.ts`已删，写实际读取点（`core/hooks/editor/editor-assets.ts`读`root.instance.config.file_size_limit`）。
+- [x] Step 2：三份`M5-closeout`：资产端口与用途、宿主权限与生命周期/作用域、真实支持的存储协议与部署条件、事件名与载荷、清理/通知责任、未接入领域如何接入、仍开放的风险；M8另含部署/备份/CSP/配置。修复re-32→P1决策§3与re-41行号锚两处现存断链；`doc-links.py`零断。
+- [x] Step 3：提交`docs(M5/P8): 同步部署与差异文档并写M5交接`。
 
 ## Task 14（T14）：七门禁与准确检查点CI
 
