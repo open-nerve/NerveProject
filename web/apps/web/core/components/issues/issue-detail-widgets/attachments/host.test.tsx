@@ -219,7 +219,7 @@ for (const kind of ["detail", "peek"] as const) {
     expect(document.body.textContent).not.toContain("file-a.txt");
     expect(tab.nerve.to("/api/v0/assets/file-a").map((call) => call.method)).toEqual(["DELETE", "GET"]);
   });
-  it(`${kind}: the confirmed notice is announced once and ends when the remounted widget takes the focus back`, async () => {
+  it(`${kind}: the confirmed notice is announced once, stays through the remount that returns the focus and ends at the next`, async () => {
     await render(kind);
     await openFiles();
     const shown: Node[] = [];
@@ -238,10 +238,17 @@ for (const kind of ["detail", "peek"] as const) {
     expect(document.body.textContent).toContain("content_files.confirmed_upload");
     await act(async () => pending!.answer(json(200, tab.issue)));
     await waitForPickerDOM(() => document.activeElement === document.querySelector('input[type="file"]'), "picker");
-    expect(document.body.textContent).not.toContain("content_files.confirmed_upload");
-    core = (call) => call.answer(json(200, tab.issue));
+    expect(document.body.textContent).toContain("content_files.confirmed_upload");
+    pending = undefined;
+    let reread!: Promise<unknown>;
     await act(async () => {
-      await tab.app.issue.issues.refreshAuthoritative(tab.issue.id, { afterWrite: true });
+      reread = tab.app.issue.issues.refreshAuthoritative(tab.issue.id, { afterWrite: true });
+    });
+    await waitForPickerDOM(() => !!pending, "later re-read");
+    expect(document.body.textContent).not.toContain("content_files.confirmed_upload");
+    await act(async () => {
+      pending!.answer(json(200, tab.issue));
+      await reread;
     });
     await waitForPickerDOM(() => !!document.querySelector('input[type="file"]'), "later remount");
     expect(document.body.textContent).not.toContain("content_files.confirmed_upload");
