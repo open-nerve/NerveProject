@@ -25,7 +25,7 @@
 | `server/internal/modules/planning/adapter/http/` | `gen/oapi-codegen.yaml`（照 `issue`）、处理器、`TestMain(m){apitest.Main(m, "planning")}` 与每个错误码的处理器测试 |
 | `server/internal/modules/planning/adapter/river/` | `planning.delete_rows` 的 worker 与投递器 |
 | `server/internal/modules/planning/{module.go,module_events.go,module_jobs.go,module_purge.go}` | 照 `issue` 的模板 |
-| `server/internal/modules/project/` | 新端口三法：`Find`（不加锁，工作区）、`PlanningFacts`（不加锁，`workspace_id, archived_at, timezone, cycle_view, module_view`）、`LockPlanning`（事务内 `FOR NO KEY UPDATE`，返回同样的事实；项目已删除时 found=false，同 `issue_ports.sql`） |
+| `server/internal/modules/project/` | 新端口两法：`PlanningFacts`（不加锁，`workspace_id, archived_at, timezone, cycle_view, module_view`；不加锁的查找即读它的工作区）、`LockPlanning`（事务内 `FOR NO KEY UPDATE`，返回同样的事实；项目已删除时 found=false，同 `issue_ports.sql`） |
 | `server/internal/modules/access/domain/rules.go` | `cycle.read/write/delete`（`LevelProject`；delete 带 `AllowCreator`） |
 | `server/internal/platform/config/` 与四份配置文件 | `planning.delete_batch`、`planning.delete_budget`（默认同 `issue` 的对应值）与校验 |
 | `server/internal/bootstrap/` | 接线；清理顺序 asset → issue → planning → project → workspace → identity；投递种类；`actions_test`；权限矩阵的迭代表（§3 R10）；删除守卫、清理守卫、运行角色与规模测试的夹具（§2.4） |

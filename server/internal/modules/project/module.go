@@ -146,6 +146,21 @@ type IssueProjects interface {
 	ProjectIdentifiers(ctx context.Context, workspaceID uuid.UUID) ([]IssueProjectIdentifier, error)
 }
 
+// PlanningProjects is what the planning module asks of a project (M6 P1
+// spec 2.1): its facts without a lock, for a read and a write's checks
+// before its lock, and the same facts under the project's FOR NO KEY UPDATE,
+// the first lock of a planning write (M6 design 6). found is false for a
+// project that is not there or is deleted, also one deleted while the lock
+// waited.
+type PlanningProjects interface {
+	PlanningFacts(ctx context.Context, id uuid.UUID) (f PlanningFacts, found bool, err error)
+	LockPlanning(ctx context.Context, id uuid.UUID) (f PlanningFacts, found bool, err error)
+}
+
+// PlanningFacts is the value PlanningProjects hands over: bootstrap converts
+// it into planning's.
+type PlanningFacts = app.PlanningFacts
+
 // IssueProject, IssueState, IssueLabel and IssueProjectIdentifier are the
 // values IssueProjects hands over: bootstrap converts them into issue's
 // (M4 design 6.5).
@@ -170,6 +185,7 @@ type Provided struct {
 	ProjectAccess           ProjectAccess
 	ProjectMembershipCounts ProjectMembershipCounts
 	IssueProjects           IssueProjects
+	PlanningProjects        PlanningProjects
 }
 
 // Provide builds project's adapters for the other modules.
@@ -185,7 +201,7 @@ func Provide(pool *pgxpool.Pool, protected []postgres.ProtectedReference) Provid
 			{Table: "projects", Protected: true, Delete: store.PurgeProjects},
 		}),
 		AssetParents: store, ArchivePolicies: store, ProjectAccess: store,
-		ProjectMembershipCounts: store, IssueProjects: store,
+		ProjectMembershipCounts: store, IssueProjects: store, PlanningProjects: store,
 	}
 }
 

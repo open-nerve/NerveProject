@@ -63,9 +63,9 @@
 
 ## Task 5（T5）：项目端口
 
-**Files：** `project/adapter/postgres/queries/planning_ports.sql`、`planning_ports.go` 与测试；`project/module.go` 导出；`bootstrap/ports.go` 适配器；`planning/app/ports.go`。
+**Files：** `project/adapter/postgres/queries/planning_ports.sql`、`planning_ports.go` 与测试；`project/app/planning_ports.go`；`project/module.go` 导出；`planning/app/ports.go`（`bootstrap` 的适配器随 T6/T7 第一次接线加入）。
 
-- [ ] Step 1：测试（RED）：`Find`、`PlanningFacts` 不加锁且已删除项目 found=false；`LockPlanning` 的锁模式为 `FOR NO KEY UPDATE`（照 `lock_issue_projects_test.go`）。
+- [ ] Step 1：测试（RED）：`PlanningFacts` 不加锁且已删除项目 found=false；`LockPlanning` 的锁模式为 `FOR NO KEY UPDATE`（照 `lock_issue_projects_test.go`）。
 - [ ] Step 2：实现三法与消费方端口；变异：锁模式改 `FOR KEY SHARE` 时失败。提交。
 
 ## Task 6（T6）：加锁之路与拒绝次序
