@@ -160,7 +160,7 @@ func (f attachmentCapacityFixture) cancelRead(t *testing.T, path string, n int) 
 	w := f.w
 	// The app pool also runs the start-time jobs that read file_assets. One
 	// still running would queue on this table lock and stay acquired.
-	waitForCompletedKinds(t, w.pool, map[string]int{"asset.cleanup": 1, "cleanup.purge_deleted": 1}, &lockedBuffer{})
+	waitForStartupRuns(t, w.pool)
 	held, err := w.pool.Begin(t.Context())
 	if err != nil {
 		t.Fatal(err)

@@ -165,9 +165,7 @@ func TestRequestLockProbeWaitsForItsFixtureAfterUpstreamProject(t *testing.T) {
 		t.Fatal("createIssueLink missing")
 	}
 	target := write.target(t, w)
-	// The start-time trim run locks every project; queued behind upstream, it
-	// would hold the tuple lock ahead of the request.
-	waitForCompletedKinds(t, w.pool, map[string]int{"issue.trim_description_versions": 1}, &lockedBuffer{})
+	waitForStartupRuns(t, w.pool)
 	upstream := holding(t, w.pool, "SELECT id FROM projects WHERE id=$1 FOR NO KEY UPDATE", w.web)
 	downstream := lockedTables(t, w.pool, write.waits, write.mode)
 	upstreamPID := upstream.Conn().PgConn().PID()
