@@ -1,5 +1,5 @@
 ---
-status: open
+status: closed
 from: M4/closeout
 to: M5
 created: 2026-11-02
@@ -91,3 +91,7 @@ T13真实页面在M4的browse详情路由发现并修复两处，均在路由页
 ## 处理结果（M5/P8）
 
 M5-01：真实`attachment_count`、排序与显示属性，详情附件区与评论附件经真实上传接通（P5/P7b），T12的F8/F9在三浏览器重跑。旧复制入口：`EditorRefApi.copyMarkdownToClipboard`没有任何产品消费者，T7连同类型声明删除（`1718210a`），具名风险随方法删除而结束，不是“已修复”；复制为Markdown走`getMarkDown`与`useCopyText`，图片省略（签名读取不外泄），这一已知限制写入M7/M8交接。M5-02：草稿发布的同事务迁移、有序`image-component[src]`内容标识与历史图片保留已验证（P5/P7a/P7b，T12的F10–F12）。M5-03：删除图、原At/By的范围投递与60天物理清理由T10全链路演练（local与S3）证明，M4的两项规模测试在M5代码上重跑：`TestTheDeletionsAtTheScaleTarget`原样通过，`TestPurgeScale`按M5的有界清理协议更新后通过（T12）。M5-04：M5仍没有投递任务的CLI，本节原文整段转交M6/M7/M8的`M5-closeout`。P7b T14段已更正为只涉链接表单的成功提示，P8 T6②修复（`8be9e329`）。证据见[P8阶段记录§7](../reviews/P8-final-acceptance-review.md#7-实施记录)。除M5-04转交外条款全部完成，closeout改为closed。
+
+## 关闭（M5/closeout，2026-11-06）
+
+M5-01至M5-03已完成，见上面的处理结果与[P8阶段记录§7](../reviews/P8-final-acceptance-review.md#7-实施记录)；旧复制方法的风险随方法删除而结束（不是“已修复”）。M5-04（首个投递任务的CLI，含M2原第1节）在M5仍未触发，原文整段转交[M6](../../M6-cycles-modules/handoffs/M5-closeout.md#M5-04)、[M7](../../M7-collaboration/handoffs/M5-closeout.md#M5-04)、[M8](../../M8-open-release/handoffs/M5-closeout.md#M5-04)三份`M5-closeout`交接；那三份交接保持open，转交不表示该项已实现。`status`改为`closed`。原文与各阶段处理结果保留不改。

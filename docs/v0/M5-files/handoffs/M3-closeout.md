@@ -1,5 +1,5 @@
 ---
-status: open
+status: closed
 from: M3/closeout
 to: M5
 created: 2026-10-13
@@ -73,3 +73,7 @@ P2建立仅申请者可见的准备件与完整宿主授权，项目/工作区�
 ## 处理结果（M5/P8）
 
 §1工作区图标、项目封面与成员头像有真值，预设与随机封面的取舍已写入M5设计（P4/P6）。§2 `Workspace.organization_size`回答引用`OrganizationSize`（P4收紧，生成无差异）。§3附件确认框与上传弹窗：删除确认被拒时保留、只在成功跟进中关闭，文字经`t()`；焦点轮廓、以id为key的布局之下的弹窗与后退、可访问的错误（`role="alert"`/拒绝提示）在P7b附件对话框与页面故事中核对，P8 T5/T6修正删除核验404与确认提示的寿命；T12在三浏览器的`m5-content`与`m5-profile`重跑这些页面故事。证据见[P8阶段记录§7](../reviews/P8-final-acceptance-review.md#7-实施记录)的T5、T6与T12。条款全部完成，closeout改为closed。
+
+## 关闭（M5/closeout，2026-11-06）
+
+§1–§3全部完成，见上面的处理结果与[P8阶段记录§7](../reviews/P8-final-acceptance-review.md#7-实施记录)。§1的关闭条件中“差异清单二·按表的两行”已在[差异清单二·按表](../../plane-diff.md#按表)写明：`workspaces`一行记M5/P4的迁移00036（`logo_asset_id`），`projects`一行记迁移00037（`cover_image_asset_id`）；预设封面与随机封面的取舍已写入M5设计。没有转交项，`status`改为`closed`。原文与各阶段处理结果保留不改。

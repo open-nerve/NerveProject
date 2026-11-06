@@ -1,5 +1,5 @@
 ---
-status: open
+status: closed
 from: M1/closeout
 to: M5
 created: 2026-09-25
@@ -74,3 +74,7 @@ P2复制接口先检查源准备件申请者及宿主可见性，再检查目标
 ## 处理结果（M5/P8）
 
 死成员：T7按附录A重扫，`domains.mjs --rows M5`删除前56行（member 53、prop 3）；`e879c84d`删除只为死成员存在的代码后剩41行，全部是误报，逐行写明读者或写者（T7表），T11后重扫不变。oxlint：M5全期改动文件零警告；T8把`valid-typeof`与`no-constant-binary-expression`全仓清零并设为error，上限随之调低（`28be6724`）。附件图标：`app/assets/attachment/`的17个PNG没有任何引用，T7整目录删除（`1718210a`），因此不再有第三方标志。新建项目封面值：P4/P6起只保存上传资产或稳定预设编号，一次POST完成绑定。复制资源权限：源不可读与不存在同为404，先证明源可读再核目标可写（P2/P5，F13与F11在T12重跑）。证据见[P8阶段记录§7](../reviews/P8-final-acceptance-review.md#7-实施记录)的T7、T8与T12。条款全部完成，closeout改为closed。
+
+## 关闭（M5/closeout，2026-11-06）
+
+五节全部完成，见上面的处理结果与[P8阶段记录§7](../reviews/P8-final-acceptance-review.md#7-实施记录)。附件图标一节的做法“新图标的来源登记在`SOURCES.md`”以换用新图标为前提；`app/assets/attachment/`的图标没有任何读者，P8 T7整目录删除，关闭条件“目录里没有第三方的标志”成立，登记来源一项随之不再适用。没有转交项，`status`改为`closed`。原文与各阶段处理结果保留不改。

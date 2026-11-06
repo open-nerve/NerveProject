@@ -1,5 +1,5 @@
 ---
-status: open
+status: closed
 from: M0 加固
 to: M5
 created: 2026-09-22
@@ -30,3 +30,7 @@ P1已通过raw路由逐请求期限与大小上限验证；P2六个业务JSON操
 ## 处理结果（M5/P8）
 
 P2留下的“S3和页面慢速上传仍在后续阶段”由T10补齐：显式开启的Go演练`TestFilesCleanupDrill`在local与S3上各以160 KiB/s直传3 MiB（约19秒，均超过15秒），完成后经API读回原字节，local另核在其传输预算内；页面慢流`e2e/drills/f1-slow-page-upload.spec.ts`（`test:m5-slow`，Chromium经DevTools把上行限到72 KiB/s）从详情页附件区上传1,310,720字节，PUT约17.8秒，页面给出“File uploaded.”，服务端字节一致。P1的raw路由逐请求期限、大小上限与413（`TestRawStorageDefaultSlowUpload`等）在T12的Go全量测试中重跑通过；全局`read_timeout`/`write_timeout`没有调大。证据见[P8阶段记录§7](../reviews/P8-final-acceptance-review.md#7-实施记录)的T10与T12。条款全部完成，closeout改为closed。
+
+## 关闭（M5/closeout，2026-11-06）
+
+逐条结论见上面的处理结果：全局读写上限不调大，文件字节走逐请求放宽期限的raw路由，大小上限与413、local与S3的慢速直传和页面慢流都有本次运行证据（[P8阶段记录§7](../reviews/P8-final-acceptance-review.md#7-实施记录)的T10与T12）。没有转交项，`status`改为`closed`。原文与各阶段处理结果保留不改。
