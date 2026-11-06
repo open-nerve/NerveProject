@@ -99,9 +99,9 @@
 
 **Files:** 告警命中文件（§3第7条）；oxlint配置；`web/apps/web/package.json` cap。
 
-- [ ] Step 1：保存全仓oxlint按包按规则的原始统计；删除恒假/恒真分支前后`use-local-storage`/`local-storage`/`settings/helper`的现有测试或新增小测试证明行为不变（含`window`存在时的读写）。
-- [ ] Step 2：先删死分支使两条规则命中为零，再在根`.oxlintrc.json`的`rules`块设两条为error（`lint-cap.mjs`遇error即失败，顺序不能反）；web cap 67→58，经各包`check:lint`核cap等于实际；M5全期改动文件（`3db22f06..HEAD`的web与tools文件）逐包oxlint零warning。
-- [ ] Step 3：`make lint-web`通过；提交`chore(M5/P8): valid-typeof与no-constant-binary-expression全仓清零`。
+- [x] Step 1：保存全仓oxlint按包按规则的原始统计；删除恒假/恒真分支前后`use-local-storage`/`local-storage`/`settings/helper`的现有测试或新增小测试证明行为不变（含`window`存在时的读写）。
+- [x] Step 2：先删死分支使两条规则命中为零，再在根`.oxlintrc.json`的`rules`块设两条为error（`lint-cap.mjs`遇error即失败，顺序不能反）；web cap 67→58，经各包`check:lint`核cap等于实际；M5全期改动文件（`3db22f06..HEAD`的web与tools文件）逐包oxlint零warning。
+- [x] Step 3：`make lint-web`通过；提交`chore(M5/P8): valid-typeof与no-constant-binary-expression全仓清零`。
 
 ## Task 9（T9）：S3夹具保留双错误与子进程原错误
 

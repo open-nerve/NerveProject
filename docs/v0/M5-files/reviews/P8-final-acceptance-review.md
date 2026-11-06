@@ -159,3 +159,5 @@ T7（删除而非转交）：`1718210a`删除三处无读者代码。`EditorRefA
 
 验证：editor类型与14文件145项、重建后web类型、`vitest related`覆盖八个改动源文件的254文件3024项（`t7b-web-related`）、`make knip`、改动文件oxlint 0/0与格式、关键词检查通过。
 
+T8（两条规则清零）：全仓按包按规则的原始统计保存在P8工作区`lint/before`与`lint/after`。命中全在web：`valid-typeof` 4处、`no-constant-binary-expression` 5处，即`lib/local-storage.ts`三处与`hooks/use-local-storage.tsx`一处的`typeof window === undefined ||`（`typeof`的结果是字符串，与`undefined`值比较恒假），以及`components/settings/helper.ts`的`` `/${accessKey}` || "" ``（模板字符串恒真）。删除死分支前先补三份小测试（存储的读写删与空值、无`window`时不抛错并返回空；钩子从已存JSON起步、写回、清除后由自身事件回到初始值、坏JSON被丢弃；设置路径的工作区与访问键），删除前后均9/9（`t8-before-2`、`t8-after-2`）；变异“去掉无window守卫”被杀死。随后在根`.oxlintrc.json`的`rules`把两条设为error，web的cap 67→58，其余包不变；重新加回一处命中时web的`check:lint`以“errors are never allowed”失败（`t8-mut-hit-returns`）。`make lint-web`首跑因新钩子测试的泛型推断成字面量`false`而类型失败，补类型参数后50/50通过（`t8-make-lint-web-2`）；M5全期（`3db22f06..HEAD`）改动的395个web与tools文件逐包oxlint零诊断（`t8-m5-changed-lint`）。
+
