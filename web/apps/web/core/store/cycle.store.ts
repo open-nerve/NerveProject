@@ -8,7 +8,7 @@ import { sortBy, set } from "lodash-es";
 import { action, computed, observable, makeObservable, runInAction } from "mobx";
 import { computedFn } from "mobx-utils";
 // types
-import type { ICycle, TProgressSnapshot, TCycleDistribution } from "@nerve/types";
+import type { ICycle, TProgressSnapshot } from "@nerve/types";
 import { orderCycles, shouldFilterCycle } from "@nerve/utils";
 // services
 import { CycleService } from "@/services/cycle.service";
@@ -46,11 +46,6 @@ export interface ICycleStore {
   fetchArchivedCycleDetails: (workspaceSlug: string, projectId: string, cycleId: string) => Promise<ICycle>;
   fetchCycleDetails: (workspaceSlug: string, projectId: string, cycleId: string) => Promise<ICycle>;
   fetchActiveCycleProgress: (workspaceSlug: string, projectId: string, cycleId: string) => Promise<TProgressSnapshot>;
-  fetchActiveCycleDistribution: (
-    workspaceSlug: string,
-    projectId: string,
-    cycleId: string
-  ) => Promise<TCycleDistribution>;
   // crud
   createCycle: (workspaceSlug: string, projectId: string, data: Partial<ICycle>) => Promise<ICycle>;
   updateCycleDetails: (
@@ -100,7 +95,6 @@ export class CycleStore implements ICycleStore {
       fetchArchivedCycles: action,
       fetchArchivedCycleDetails: action,
       fetchActiveCycleProgress: action,
-      fetchActiveCycleDistribution: action,
       fetchCycleDetails: action,
       updateCycleDetails: action,
       deleteCycle: action,
@@ -362,21 +356,6 @@ export class CycleStore implements ICycleStore {
       return progress;
     });
   };
-
-  /**
-   * @description fetches the cycle's work-item distribution
-   * @param workspaceSlug
-   * @param projectId
-   * @param cycleId
-   *  @returns
-   */
-  fetchActiveCycleDistribution = async (workspaceSlug: string, projectId: string, cycleId: string) =>
-    await this.cycleService.cycleDistribution(workspaceSlug, projectId, cycleId).then((cycle) => {
-      runInAction(() => {
-        set(this.cycleMap, [cycleId, "distribution"], cycle);
-      });
-      return cycle;
-    });
 
   /**
    * @description fetches cycle details
