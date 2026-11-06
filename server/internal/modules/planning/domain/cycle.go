@@ -3,10 +3,26 @@ package domain
 import (
 	"fmt"
 	"strings"
+	"time"
 	"unicode/utf8"
+	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
+
+// Cycle is a cycle of a project as the module stores it (M6 P1 spec 2.2): its
+// status is not stored but read from its dates on the project's day
+// (StatusOf).
+type Cycle struct {
+	ID, ProjectID, WorkspaceID uuid.UUID
+	Name, Description          string
+	Dates                      Dates
+	OwnedByID                  *uuid.UUID
+	SortOrder                  float64
+	ArchivedAt                 *time.Time
+	CreatedAt, UpdatedAt       time.Time
+	CreatedByID, UpdatedByID   *uuid.UUID
+}
 
 // maxName is the length of cycles.name, in characters.
 const maxName = 255
