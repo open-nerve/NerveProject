@@ -22,12 +22,14 @@ type jobTransition struct {
 
 // Install before starting the app: its cleanup stops and joins workers before
 // this cleanup drops the observer. No production schema migration is involved.
+// River writes a run's recorded output in the UPDATE that leaves running, so
+// each transition's metadata is what that run reported.
 func observeJobStates(t testing.TB, pool *pgxpool.Pool) {
 	t.Helper()
 	for _, sql := range []string{
 		`CREATE SCHEMA job_observer`,
-		`CREATE TABLE job_observer.transitions (ordinal bigint GENERATED ALWAYS AS IDENTITY, job_id bigint NOT NULL, old_state text NOT NULL, new_state text NOT NULL, attempt integer NOT NULL, at timestamptz NOT NULL)`,
-		`CREATE FUNCTION job_observer.record() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN INSERT INTO job_observer.transitions(job_id,old_state,new_state,attempt,at) VALUES(NEW.id,OLD.state::text,NEW.state::text,NEW.attempt,clock_timestamp()); RETURN NEW; END $$`,
+		`CREATE TABLE job_observer.transitions (ordinal bigint GENERATED ALWAYS AS IDENTITY, job_id bigint NOT NULL, old_state text NOT NULL, new_state text NOT NULL, attempt integer NOT NULL, metadata jsonb NOT NULL, at timestamptz NOT NULL)`,
+		`CREATE FUNCTION job_observer.record() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN INSERT INTO job_observer.transitions(job_id,old_state,new_state,attempt,metadata,at) VALUES(NEW.id,OLD.state::text,NEW.state::text,NEW.attempt,NEW.metadata,clock_timestamp()); RETURN NEW; END $$`,
 		`CREATE TRIGGER observe_job_state AFTER UPDATE OF state ON river_job FOR EACH ROW WHEN(OLD.state IS DISTINCT FROM NEW.state) EXECUTE FUNCTION job_observer.record()`,
 		`DO $$ BEGIN IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='nerve_runtime') THEN GRANT USAGE ON SCHEMA job_observer TO nerve_runtime; GRANT INSERT,SELECT ON job_observer.transitions TO nerve_runtime; GRANT USAGE ON SEQUENCE job_observer.transitions_ordinal_seq TO nerve_runtime; GRANT EXECUTE ON FUNCTION job_observer.record() TO nerve_runtime; END IF; END $$`,
 	} {

@@ -19,7 +19,12 @@ export async function removeS3Container(name: string, timeout = 10_000): Promise
   await promisify(execFile)("docker", ["rm", "--force", "--volumes", name], { timeout, maxBuffer: 4096 });
 }
 
-export function startS3Process(name: string, auth: string) {
+/** The cleanup runs after the child has exited; tests may inject one that fails. */
+export function startS3Process(
+  name: string,
+  auth: string,
+  remove: (name: string) => Promise<void> = removeS3Container
+) {
   const child = fork(fileURLToPath(new URL("./s3-container.ts", import.meta.url)), [], {
     execArgv: [],
     stdio: ["ignore", "ignore", "ignore", "ipc"],
@@ -33,8 +38,9 @@ export function startS3Process(name: string, auth: string) {
   const ready = new Promise<{ endpoint: string; id: string }>((resolve, reject) => {
     child.once("error", reject);
     child.once("exit", () => reject(new Error("S3 child exited before readiness")));
-    child.once("message", (message: { endpoint?: string; id?: string; error?: string }) => {
-      if (!message.endpoint || !message.id || message.error) reject(new Error("S3 child startup failed"));
+    child.once("message", (message: { endpoint?: string; id?: string; error?: ChildError }) => {
+      if (message.error) reject(new Error("S3 child startup failed", { cause: childError(message.error) }));
+      else if (!message.endpoint || !message.id) reject(new Error("S3 child startup failed"));
       else resolve({ endpoint: message.endpoint, id: message.id });
     });
     child.send({ action: "start", name, auth });
@@ -42,21 +48,38 @@ export function startS3Process(name: string, auth: string) {
   let closing: Promise<void> | undefined;
   return {
     ready,
-    close: () => (closing ??= closeProcess(child, exited, name)),
+    close: () => (closing ??= closeProcess(child, exited, name, remove)),
   };
 }
 
-async function closeProcess(child: ChildProcess, exited: Promise<void>, name: string): Promise<void> {
+type ChildError = { name: string; message: string; stack?: string };
+const childError = ({ name, message, stack }: ChildError) => Object.assign(new Error(message), { name, stack });
+
+async function closeProcess(
+  child: ChildProcess,
+  exited: Promise<void>,
+  name: string,
+  remove: (name: string) => Promise<void>
+): Promise<void> {
+  const errors: unknown[] = [];
   let timer: NodeJS.Timeout | undefined;
   try {
     if (child.connected) child.send({ action: "close" }, () => undefined);
     timer = setTimeout(() => child.kill("SIGKILL"), 5000);
     await exited;
+  } catch (error) {
+    errors.push(error);
   } finally {
     clearTimeout(timer);
-    // Joining the child first prevents a late container creation after cleanup.
-    await removeS3Container(name);
   }
+  // Joining the child first prevents a late container creation after cleanup.
+  try {
+    await remove(name);
+  } catch (error) {
+    errors.push(error);
+  }
+  if (errors.length === 1) throw errors[0];
+  if (errors.length > 1) throw new AggregateError(errors, `S3 child and its container cleanup failed (${name})`);
 }
 
 const binary = fileURLToPath(new URL("../../bin/nerve-s3-fixture", import.meta.url));

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 	"uuid"
@@ -31,9 +32,9 @@ type purgeScaleScope struct {
 }
 
 type purgeScaleFixture struct {
-	Scopes        []purgeScaleScope // 61d, 59d, live; in that order.
-	Anchor        time.Time
-	Seed, Analyze time.Duration
+	Scopes                     []purgeScaleScope // 61d, 59d, live; in that order.
+	Anchor                     time.Time
+	Seed, Analyze, AgedAnalyze time.Duration
 }
 
 func preparePurgeScale(t *testing.T, roles splitRoles, dir string) purgeScaleFixture {
@@ -101,9 +102,20 @@ func preparePurgeScale(t *testing.T, roles splitRoles, dir string) purgeScaleFix
 	if err := tx.Commit(pgtest.Soon(t)); err != nil {
 		t.Fatal(err)
 	}
+	// The seed's statistics predate the soft delete and the aging: they say no
+	// row is tombstoned, so the planner would read every tombstone for each
+	// page until autovacuum next analyzes. A deployment's autovacuum analyzed
+	// these tombstones long before they aged 60 days.
+	analyzing := time.Now()
+	ctx, cancel := context.WithTimeout(t.Context(), time.Minute)
+	defer cancel()
+	if _, err := roles.owner.Exec(ctx, "ANALYZE "+strings.Join(append(append([]string{}, purgeScaleTables...), "api_tokens"), ", ")); err != nil {
+		t.Fatal(err)
+	}
+	f.AgedAnalyze = time.Since(analyzing)
 	listEvidence(t, dir, "fixture", map[string]any{
 		"scopes": f.Scopes, "aging_anchor": f.Anchor, "ages_days": []int{61, 59, 0},
-		"seed_seconds": f.Seed.Seconds(), "analyze_seconds": f.Analyze.Seconds(),
+		"seed_seconds": f.Seed.Seconds(), "analyze_seconds": f.Analyze.Seconds(), "analyze_after_aging_seconds": f.AgedAnalyze.Seconds(),
 		"preparation_including_api_soft_delete_seconds": time.Since(started).Seconds(), "pending_jobs_after_stop": pending,
 	})
 	return f
@@ -191,6 +203,21 @@ func purgeScopeCounts(t *testing.T, pool *pgxpool.Pool, scope purgeScaleScope, d
 			t.Fatalf("purge scope %s tombstones=%d/%d want deleted=%t", table, dead, total, deleted)
 		}
 		out[table] = total
+	}
+	return out
+}
+
+// purgeableRows counts, across every scope, each table's rows tombstoned
+// before cutoff.
+func purgeableRows(t *testing.T, pool *pgxpool.Pool, cutoff time.Time, tables map[string]int64) map[string]int64 {
+	t.Helper()
+	out := map[string]int64{}
+	for table := range tables {
+		var n int64
+		if err := pool.QueryRow(pgtest.Soon(t), "SELECT count(*) FROM "+pgx.Identifier{table}.Sanitize()+" WHERE deleted_at < $1", cutoff).Scan(&n); err != nil {
+			t.Fatal(err)
+		}
+		out[table] = n
 	}
 	return out
 }

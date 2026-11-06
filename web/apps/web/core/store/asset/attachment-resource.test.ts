@@ -198,7 +198,7 @@ it.each(["comment", "draft"] as const)("%s confirmation only rereads its own att
     "bound attachment"
   );
   expect(result.error).toBeUndefined();
-  expect(tab.receipts).toEqual([{ kind: "uploaded", id: "a", asset }]);
+  expect(tab.receipts).toEqual([{ kind: "uploaded", id: "a" }]);
   expect(tab.nerve.calls).toHaveLength(1);
 });
 it("retiring a view cancels pagination and permanently withdraws its rows", async () => {

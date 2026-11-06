@@ -9,8 +9,10 @@ import { ACCEPTED_IMAGE_MIME_TYPES } from "@/constants/config";
 import { imageInputError, validateImages } from "@/extensions/custom-image/input";
 import type { EditorImages, TExtensions } from "@/types";
 type Props = { disabledExtensions?: TExtensions[]; editor: Editor; images?: EditorImages };
+/** Files the editor can take: all ordinary (not its own), a rejected image batch, or the images it accepts. */
+type Batch = "ordinary" | "rejected" | { files: File[] };
 export const DropHandlerPlugin = ({ disabledExtensions, editor, images }: Props): Plugin => {
-  const accept = (data: DataTransfer | null | undefined): File[] | undefined => {
+  const classify = (data: DataTransfer | null | undefined): Batch | undefined => {
     if (
       !editor.isEditable ||
       !images?.write ||
@@ -20,14 +22,17 @@ export const DropHandlerPlugin = ({ disabledExtensions, editor, images }: Props)
     )
       return;
     const files = Array.from(data.files);
-    const ordinary = files.every((file) => file.type && !file.type.startsWith("image/"));
-    if (ordinary) return;
+    if (files.every((file) => file.type && !file.type.startsWith("image/"))) return "ordinary";
     const directory = Array.from(data.items ?? []).some(
       (item) => item.kind === "file" && (!item.getAsFile() || item.webkitGetAsEntry?.()?.isDirectory)
     );
     const error = directory ? "invalid" : validateImages(files, images.write.maxBytes);
     imageInputError(editor, error);
-    return error ? undefined : files;
+    return error ? "rejected" : { files };
+  };
+  const accept = (data: DataTransfer | null | undefined): File[] | undefined => {
+    const batch = classify(data);
+    return typeof batch === "object" ? batch.files : undefined;
   };
   return new Plugin({
     key: new PluginKey("drop-handler-plugin"),
@@ -40,19 +45,22 @@ export const DropHandlerPlugin = ({ disabledExtensions, editor, images }: Props)
             ["text/nerve-editor-html", "text/html", "text/plain"].some((type) => event.clipboardData!.getData(type))
           )
             return false;
-          const files = accept(event.clipboardData);
-          // ProseMirror otherwise treats the file-only empty text slice as a paste and prevents the native event.
-          // Returning here leaves rejected files unprevented and bubbling to their owning consumer.
-          if (files) {
-            event.preventDefault();
+          const batch = classify(event.clipboardData);
+          // Ordinary files are not the editor's to take: ProseMirror pastes the text or HTML that came with them.
+          if (batch === "ordinary") return false;
+          // Without the image capability ProseMirror would treat the file-only empty slice as a paste and prevent
+          // the native event; returning leaves the files unprevented for their owning consumer.
+          if (!batch) return true;
+          // An image batch is taken whole, accepted or rejected, so neither ProseMirror nor the browser pastes it.
+          event.preventDefault();
+          if (batch !== "rejected")
             insertFilesSafely({
               disabledExtensions,
               editor,
-              files,
+              files: batch.files,
               initialPos: view.state.selection.from,
               event: "drop",
             });
-          }
           return true;
         },
       },

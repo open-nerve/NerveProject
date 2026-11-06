@@ -12,6 +12,7 @@ export const defaultEditorLabels: EditorLabels = {
     loading: "Loading image",
     copyUnknown:
       "Copying may have created an unfinished file. Check the draft files before publishing; retrying may create another copy.",
+    cancelled: "This image's transfer was cancelled. Choose the image again.",
     invalid: "Choose only JPEG, PNG, WebP or GIF images.",
     size: "The image is empty or exceeds the current file size limit.",
     name: "The image filename is invalid.",

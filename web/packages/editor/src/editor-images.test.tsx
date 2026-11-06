@@ -34,33 +34,65 @@ it.each([false, true])("only an editable consumer with images.write can insert: 
   expect(tab.editor.getHTML()).not.toContain("image-component");
   expect(tab.pending).toHaveLength(0);
 });
-it.each(["pdf", "mixed", "directory", "empty", "svg", "too-many"])(
-  "does not swallow rejected %s files or partially insert a batch",
+const ordinaryFile = () => new File(["pdf"], "doc.pdf", { type: "application/pdf" });
+it("leaves a clipboard of only ordinary files to ProseMirror, which pastes its text once", async () => {
+  const tab = await fixture();
+  await act(async () => {
+    pasteFiles(tab.editor, [ordinaryFile()], false, { "text/plain": "doc.pdf" });
+  });
+  expect(tab.editor.getText()).toBe("doc.pdf");
+  expect(tab.pending).toHaveLength(0);
+  expect(tab.editor.getHTML()).not.toContain("image-component");
+  expect(tab.host.querySelector('[role="alert"]')).toBeNull();
+});
+it.each(["mixed", "directory", "empty", "svg", "too-many"])(
+  "takes a rejected %s image batch whole: nothing is inserted, not even its text, and one alert explains it",
   async (kind) => {
     const tab = await fixture();
-    const pdf = new File(["pdf"], "doc.pdf", { type: "application/pdf" });
     const files =
-      kind === "pdf"
-        ? [pdf]
-        : kind === "mixed"
-          ? [nativeImage(), pdf]
-          : kind === "empty"
-            ? [new File(["png"], "image.png")]
-            : kind === "svg"
-              ? [new File(["svg"], "image.svg", { type: "image/svg+xml" })]
-              : kind === "too-many"
-                ? Array.from({ length: 11 }, nativeImage)
-                : [nativeImage()];
+      kind === "mixed"
+        ? [nativeImage(), ordinaryFile()]
+        : kind === "empty"
+          ? [new File(["png"], "image.png")]
+          : kind === "svg"
+            ? [new File(["svg"], "image.svg", { type: "image/svg+xml" })]
+            : kind === "too-many"
+              ? Array.from({ length: 11 }, nativeImage)
+              : [nativeImage()];
+    const names = files.map((file) => file.name).join("\n");
     let event!: Event;
     await act(async () => {
-      event = pasteFiles(tab.editor, files, kind === "directory");
+      event = pasteFiles(tab.editor, files, kind === "directory", {
+        "text/plain": names,
+        "text/html": `<p>${names}</p><img src="https://external.test/a.png">`,
+      });
     });
-    expect(event.defaultPrevented).toBe(false);
+    // Unprevented, the browser would paste that text and <img> natively, past ProseMirror's own paste handling.
+    expect(event.defaultPrevented).toBe(true);
     expect(tab.pending).toHaveLength(0);
+    expect(tab.editor.getText()).toBe("");
     expect(tab.editor.getHTML()).not.toContain("image-component");
-    if (kind !== "pdf") expect(tab.host.querySelector('[role="alert"]')).not.toBeNull();
+    expect(tab.host.querySelectorAll('[role="alert"]')).toHaveLength(1);
   }
 );
+it.each(["pdf", "mixed"])("a dropped %s batch stays unprevented for the page and is not inserted", async (kind) => {
+  const tab = await fixture();
+  const view = tab.editor.view;
+  vi.spyOn(view, "posAtCoords").mockReturnValue({ pos: 0, inside: -1 });
+  const files = kind === "pdf" ? [ordinaryFile()] : [nativeImage(), ordinaryFile()];
+  const event = new Event("drop", { bubbles: true, cancelable: true });
+  Object.defineProperties(event, {
+    dataTransfer: { value: { files, getData: () => "" } },
+    clientX: { value: 10 },
+    clientY: { value: 10 },
+    ctrlKey: { value: false },
+    altKey: { value: false },
+  });
+  await act(async () => view.dom.dispatchEvent(event));
+  expect(event.defaultPrevented).toBe(false);
+  expect(tab.pending).toHaveLength(0);
+  expect(tab.editor.getHTML()).not.toContain("image-component");
+});
 it("native image selection publishes only the confirmed ID, with busy feedback and no percentage", async () => {
   const tab = await fixture();
   await act(async () => {
@@ -128,6 +160,157 @@ it.each(["upload", "copy"])("removing a %s node aborts it and a late answer cann
   await act(async () => old.resolve(TARGET_IMAGE));
   expect(tab.editor.getHTML()).not.toContain(TARGET_IMAGE);
   expect(tab.read).not.toHaveBeenCalledWith(TARGET_IMAGE);
+});
+type TestEditor = Awaited<ReturnType<typeof createEditor>>;
+const onlyImage = (editor: TestEditor) => {
+  const found: { pos: number; id: string; src: string | null }[] = [];
+  editor.state.doc.descendants((node, pos) => {
+    if (node.type.name === "imageComponent") found.push({ pos, id: node.attrs.id, src: node.attrs.src });
+  });
+  expect(found).toHaveLength(1);
+  return found[0]!;
+};
+const uploaderOf = (host: HTMLElement) => host.querySelector(".image-upload-component");
+const startTransfer = async (editor: TestEditor, kind: "upload" | "copy") =>
+  act(async () => {
+    if (kind === "copy") imageClipboard(editor, `<image-component src="${SOURCE_IMAGE}"></image-component>`);
+    else pasteFiles(editor, [nativeImage()]);
+  });
+it.each(["upload", "copy"] as const)(
+  "dragging a %s image far down rebuilds its view, keeps the transfer and confirms the moved node",
+  async (kind) => {
+    const tab = await fixture(Array.from({ length: 8 }, (_, i) => `<p>Paragraph ${i}</p>`).join(""));
+    await startTransfer(tab.editor, kind);
+    expect(tab.pending).toHaveLength(1);
+    const transfer = tab.pending[0]!;
+    const before = uploaderOf(tab.host);
+    const view = tab.editor.view;
+    const start = onlyImage(tab.editor);
+    view.dispatch(view.state.tr.setSelection(NodeSelection.create(view.state.doc, start.pos)));
+    // A drag that starts inside this editor is a move: the block keeps its id (UniqueID treats others as pastes).
+    view.dom.dispatchEvent(new Event("dragstart", { bubbles: true }));
+    view.dragging = { slice: view.state.selection.content(), move: true };
+    vi.spyOn(view, "posAtCoords").mockReturnValue({ pos: view.state.doc.content.size, inside: -1 });
+    const event = new Event("drop", { bubbles: true, cancelable: true });
+    Object.defineProperties(event, {
+      dataTransfer: { value: { files: [], getData: () => "", effectAllowed: "copyMove" } },
+      clientX: { value: 10 },
+      clientY: { value: 10 },
+      ctrlKey: { value: false },
+      altKey: { value: false },
+    });
+    await act(async () => view.dom.dispatchEvent(event));
+    const moved = onlyImage(tab.editor);
+    expect(moved).toMatchObject({ id: start.id, src: null });
+    expect(moved.pos).toBeGreaterThan(start.pos);
+    // The move replaced the node view; the transfer belongs to the node, which never left the document.
+    expect(uploaderOf(tab.host)).not.toBe(before);
+    expect(transfer.operation.signal.aborted).toBe(false);
+    expect(tab.images.write!.cancel).not.toHaveBeenCalled();
+    expect(uploaderOf(tab.host)?.textContent).toContain("Preparing image");
+    await act(async () => transfer.resolve(TARGET_IMAGE));
+    expect(onlyImage(tab.editor)).toMatchObject({ id: start.id, src: TARGET_IMAGE });
+    expect(tab.editor.getText()).toContain("Paragraph 7");
+    expect(tab.pending).toHaveLength(1);
+  }
+);
+it("a confirmed transfer is written only to its own node, never to the image now at its old position", async () => {
+  const tab = await fixture(Array.from({ length: 8 }, (_, i) => `<p>Paragraph ${i}</p>`).join(""));
+  await act(async () => {
+    pasteFiles(tab.editor, [nativeImage(), nativeImage()]);
+  });
+  const ids = () => {
+    const found: { pos: number; id: string; src: string | null }[] = [];
+    tab.editor.state.doc.descendants((node, pos) => {
+      if (node.type.name === "imageComponent") found.push({ pos, id: node.attrs.id, src: node.attrs.src });
+    });
+    return found;
+  };
+  const [first, second] = ids();
+  expect(tab.pending.map((transfer) => transfer.nodeID).toSorted()).toEqual([first!.id, second!.id].toSorted());
+  const view = tab.editor.view;
+  view.dispatch(view.state.tr.setSelection(NodeSelection.create(view.state.doc, first!.pos)));
+  view.dom.dispatchEvent(new Event("dragstart", { bubbles: true }));
+  view.dragging = { slice: view.state.selection.content(), move: true };
+  vi.spyOn(view, "posAtCoords").mockReturnValue({ pos: view.state.doc.content.size, inside: -1 });
+  const event = new Event("drop", { bubbles: true, cancelable: true });
+  Object.defineProperties(event, {
+    dataTransfer: { value: { files: [], getData: () => "", effectAllowed: "copyMove" } },
+    clientX: { value: 10 },
+    clientY: { value: 10 },
+    ctrlKey: { value: false },
+    altKey: { value: false },
+  });
+  await act(async () => view.dom.dispatchEvent(event));
+  // The other image now sits where the first one started.
+  expect(ids().find((image) => image.id === second!.id)?.pos).toBe(first!.pos);
+  await act(async () => tab.pending.find((transfer) => transfer.nodeID === first!.id)!.resolve(TARGET_IMAGE));
+  expect(ids().find((image) => image.id === first!.id)?.src).toBe(TARGET_IMAGE);
+  expect(ids().find((image) => image.id === second!.id)?.src).toBeNull();
+});
+it("wrapping and unwrapping an uploading image in a quote keeps its transfer", async () => {
+  const tab = await fixture("<p>Before</p>");
+  expect(tab.editor.schema.nodes.blockquote).toBeDefined();
+  await startTransfer(tab.editor, "upload");
+  const transfer = tab.pending[0]!;
+  const before = uploaderOf(tab.host);
+  await act(async () => {
+    tab.editor.chain().setNodeSelection(onlyImage(tab.editor).pos).wrapIn("blockquote").run();
+  });
+  expect(tab.editor.getHTML()).toContain("<blockquote");
+  expect(uploaderOf(tab.host)).not.toBe(before);
+  await act(async () => {
+    tab.editor.chain().setNodeSelection(onlyImage(tab.editor).pos).lift("blockquote").run();
+  });
+  expect(tab.editor.getHTML()).not.toContain("<blockquote");
+  expect(transfer.operation.signal.aborted).toBe(false);
+  await act(async () => transfer.resolve(TARGET_IMAGE));
+  expect(onlyImage(tab.editor).src).toBe(TARGET_IMAGE);
+});
+it("undoing an uploading image's insertion ends its transfer; redo shows it was cancelled and sends nothing", async () => {
+  const tab = await fixture("<p>Before</p>");
+  await startTransfer(tab.editor, "upload");
+  const transfer = tab.pending[0]!;
+  const { id } = onlyImage(tab.editor);
+  await act(async () => {
+    tab.editor.commands.undo();
+  });
+  expect(tab.editor.getHTML()).not.toContain("image-component");
+  expect(transfer.operation.signal.aborted).toBe(true);
+  expect(tab.images.write!.cancel).toHaveBeenCalledWith(id);
+  await act(async () => {
+    tab.editor.commands.redo();
+  });
+  expect(onlyImage(tab.editor)).toMatchObject({ id, src: null });
+  expect(uploaderOf(tab.host)?.textContent).toContain("transfer was cancelled");
+  await act(async () => transfer.resolve(TARGET_IMAGE));
+  expect(onlyImage(tab.editor).src).toBeNull();
+  expect(tab.pending).toHaveLength(1);
+});
+it("an uploading node given another id ends its transfer and the late answer is written nowhere", async () => {
+  const tab = await fixture("<p>Before</p>");
+  await startTransfer(tab.editor, "upload");
+  const transfer = tab.pending[0]!;
+  const { pos, id } = onlyImage(tab.editor);
+  await act(async () => {
+    const node = tab.editor.state.doc.nodeAt(pos)!;
+    tab.editor.view.dispatch(
+      tab.editor.state.tr.setNodeMarkup(pos, undefined, { ...node.attrs, id: "33333333-3333-4333-8333-333333333333" })
+    );
+  });
+  expect(transfer.operation.signal.aborted).toBe(true);
+  expect(tab.images.write!.cancel).toHaveBeenCalledWith(id);
+  await act(async () => transfer.resolve(TARGET_IMAGE));
+  expect(onlyImage(tab.editor).src).toBeNull();
+});
+it("destroying the editor ends an uploading transfer", async () => {
+  const tab = await fixture("<p>Before</p>");
+  await startTransfer(tab.editor, "upload");
+  const transfer = tab.pending[0]!;
+  const { id } = onlyImage(tab.editor);
+  await act(async () => tab.editor.destroy());
+  expect(transfer.operation.signal.aborted).toBe(true);
+  expect(tab.images.write!.cancel).toHaveBeenCalledWith(id);
 });
 it("Undo and Redo reuse a completed UUID without a new copy or deletion command", async () => {
   const tab = await fixture();

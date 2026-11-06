@@ -196,13 +196,21 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
 
   const finishClose = () => {
     descriptionRequest.current++;
+    // Closing says where the copy stands: a publish whose answer was lost may already be a work item.
     if (copy?.target && workspaceSlug)
-      setToast({
-        type: TOAST_TYPE.INFO,
-        title: t("info"),
-        message: t("content_files.copy.kept_closed"),
-        actionItems: <a href={joinUrlPath(workspaceSlug, "drafts")}>{t("content_files.copy.open_drafts")}</a>,
-      });
+      setToast(
+        copy.published
+          ? { type: TOAST_TYPE.INFO, title: t("info"), message: t("content_files.copy.published") }
+          : {
+              type: TOAST_TYPE.INFO,
+              title: t("info"),
+              message:
+                copy.unknown === "publish" && !copy.checked
+                  ? t("content_files.copy.unknown_publish")
+                  : t("content_files.copy.kept_closed"),
+              actionItems: <a href={joinUrlPath(workspaceSlug, "drafts")}>{t("content_files.copy.open_drafts")}</a>,
+            }
+      );
 
     setActiveProjectId(null);
     setChangesMade(null);

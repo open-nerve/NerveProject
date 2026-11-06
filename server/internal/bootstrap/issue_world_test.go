@@ -12,6 +12,9 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	assetriver "github.com/open-nerve/NerveProject/server/internal/modules/asset/adapter/river"
+	identityriver "github.com/open-nerve/NerveProject/server/internal/modules/identity/adapter/river"
+	issueriver "github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/river"
 	"github.com/open-nerve/NerveProject/server/internal/platform/config"
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apitest"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
@@ -71,7 +74,25 @@ func newIssueWorldOnRequests(t *testing.T, dbURL string, pool *pgxpool.Pool, con
 	}
 	w := issueWorld{requests: requests, contract: contract, base: base, pool: pool, tokens: map[string]string{},
 		ids: map[string]uuid.UUID{}}
-	return prepareIssueWorld(t, w)
+	w = prepareIssueWorld(t, w)
+	if requests != nil {
+		// An observed world attributes every lock wait to its request, so no
+		// start-time run may still be pending to queue among them.
+		waitForStartupRuns(t, pool)
+	}
+	return w
+}
+
+// waitForStartupRuns returns once every job serve runs at start (RunOnStart)
+// has completed once. Those runs usually end one to three seconds after the
+// app starts, after a world is built; one still pending queues on the locks a
+// test holds and stands between its request and its fixture (P8 T14). Only
+// tests that hold such locks wait: every world waiting would double the
+// package's run time.
+func waitForStartupRuns(t *testing.T, pool *pgxpool.Pool) {
+	t.Helper()
+	waitForCompletedKinds(t, pool, map[string]int{identityriver.CleanupKind: 1, issueriver.AutoArchiveKind: 1,
+		issueriver.TrimVersionsKind: 1, (purgeArgs{}).Kind(): 1, assetriver.CleanupKind: 1}, &lockedBuffer{})
 }
 
 // prepareIssueWorld shares the original API and membership-store fixture with

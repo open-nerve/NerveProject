@@ -46,7 +46,9 @@ process.on("message", async (message: { action: string; name?: string; auth?: st
         "-s3.iam=false",
         "-s3.port.iceberg=0",
         "-s3.port.lance=0",
-        "-volume.max=32",
+        // The run's one service holds a bucket per live world. SeaweedFS gives every bucket that holds data about
+        // seven volumes and frees them when the bucket is removed: 256 is room for some thirty-six at once.
+        "-volume.max=256",
         "-master.volumeSizeLimitMB=512",
         "-master.telemetry=false",
       ])
@@ -54,8 +56,10 @@ process.on("message", async (message: { action: string; name?: string; auth?: st
       .withStartupTimeout(90_000)
       .start();
     process.send?.({ endpoint: `http://127.0.0.1:${container.getMappedPort(8333)}`, id: container.getId() });
-  } catch {
-    process.send?.({ error: "owned S3 container failed" });
+  } catch (error) {
+    // Error objects do not cross IPC: the parent rebuilds this child's own reason from its parts.
+    const { name, message: reason, stack } = error instanceof Error ? error : new Error(String(error));
+    process.send?.({ error: { name, message: reason, stack } });
     process.exitCode = 1;
     await close();
   }

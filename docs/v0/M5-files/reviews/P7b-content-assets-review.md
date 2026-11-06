@@ -1,6 +1,6 @@
 # M5/P7b 阶段评审记录
 
-> 2026-11-05：正式预检通过后已获准实施；预检历史结论保留，当前执行见§8，T14门禁与接收核对见§9。分支`codex/m5-p7b`，基线main`cf07c9fbe663b2e2c821c5988bb06933325b8ac1`。P7a main CI 41869045846及归档/正常清理已核；
+> 2026-11-06：P7b已完成；预检历史结论保留，实施见§8，T14门禁与接收核对见§9，T15整审修复见§10，集成、归档与接续见§11。原分支`codex/m5-p7b`（已正常清理），基线main`cf07c9fbe663b2e2c821c5988bb06933325b8ac1`，noff main`2b2c6f33e3a93536742d5f28b74eb959ba73d6d1`。P7a main CI 41869045846及归档/正常清理已核；
 
 ## 1. 评审方式与范围
 
@@ -10,7 +10,7 @@
 
 ## 2. 验收状态
 
-A1–A8全部开放；T1–T13已实现，A1–A6逐项核对见§9，A7待T14门禁与检查点CI及T15整审修复，A8待T16。P5/P7a的API、P6的上传及权限回归仅为前置；P7b真实页面、三浏览器、local/S3、有效变异和完整七门禁必须在本阶段新运行。
+A1–A8全部完成：A1–A6逐项核对见§9；A7（RED/GREEN与变异、local/S3、三浏览器、七门禁、一次整分支deep-review修复与准确最终分支CI）见§9–§10；A8（--no-ff后准确main CI、全量归档与正常清理、P8 spec/plan预检）见§11。P5/P7a的API、P6的上传及权限回归仅为前置；P7b真实页面、三浏览器、local/S3、有效变异和完整七门禁均在本阶段新运行。
 
 ## 3. 局部裁定
 
@@ -150,7 +150,7 @@ T13记录提交为`e6e2bc15`。验收与证据逐项对应如下（证据标签�
 
 Step 2七门禁（串行、`run-check`收据，不改预算/workers/期限，未操作既有容器）：首轮`t14-*`中gen-check、lint-go、lint-web、knip、test-web通过，test因archtest发现T11迁移00038未登记到sqlc的project条目失败，e2e 415中9失败；逐项根因修复并各自单独提交——`dd60ef8a`（sqlc登记，make gen无生成物变化）、`5ff2e4a2`（I8/I9/I10确认后弹窗以空表单重开，见上文跨M修复）、`8d85db5a`（C12表格页面错误）、`55f2b487`（I11评论POST体与editor-loading detail变体按P7b合同更新，creation变体不变）。第二轮`t14-*-2`：e2e 415/415，lint-web因本人新测试的局部变量遮蔽（no-shadow）失败，`ae4e7440`改名；test只在`asset/adapter/postgres`一个包失败——testcontainers启动postgres时Docker API查询容器状态连续超时（context deadline exceeded），包内其余用例因缓存的启动失败即刻失败，该包随后单独运行通过（`t14-asset-postgres-alone`）。第三轮`t14-*-3`七项输入清单同一（digest `986993e2…`，前后不变）：gen-check、lint-go、test、lint-web、knip、test-web全部通过；e2e 414/415，F10页面[s3]变体在S3夹具启动阶段失败（16.3秒，远未到90秒期限，尚未执行业务步骤），原因只见“S3 child startup failed”——夹具子进程吞掉原错误（与P3-M1同类的诊断缺口），Docker事件缓冲已被其他项目容器的健康检查挤出，无法事后取证；与第二轮及P5 T13记录的Docker查询超时同类，按P5先例不改设置，以同一输入完整重跑`make e2e`（`t14-e2e-4`）415/415。最终同一输入（HEAD `ae4e7440`）七门禁：gen-check 4秒；lint-go 2秒；`GOFLAGS=-p=1 make test` 988秒（61个测试包、21个无测试包，-count=1，bootstrap 644秒）；lint-web 50任务/33缓存（web实际执行）；knip通过；test-web 16任务/15缓存（web实际执行337文件3815项，缓存项为相同输入的回放，如编辑器包135项来自第二轮实际执行）；e2e 415/415（205秒）。其他项目的15个容器前后名称与镜像一致，只有testcontainers自身的ryuk收割器短暂存在并自行退出。
 
-P8未完成事项（规格§5、M5设计）：M6/M7/M8领域接线、最终F1–F18矩阵与默认部署/容量演示、P3-M1清理错误诊断、P4-M1死字段、全仓新warning规则清零与死成员、复制为Markdown省略图片的具名风险、全仓旧第三方图标消费者核对、七个输入交接的最终关闭；另有T13记入T14/CI观察的两项间歇（`t13-content-local-4`）；M4既有：写后规范重读期间弹窗表单卸载，链接/子项/关联的成功toast被跳过（M4详情页已如此，写入与列表正确，交M4交接）。S3夹具子进程启动失败时应回传原错误（T14第三轮只见通用信息，扩充P3-M1）。
+P8未完成事项（规格§5、M5设计）：M6/M7/M8领域接线、最终F1–F18矩阵与默认部署/容量演示、P3-M1清理错误诊断、P4-M1死字段、全仓新warning规则清零与死成员、复制为Markdown省略图片的具名风险、全仓旧第三方图标消费者核对、七个输入交接的最终关闭；另有T13记入T14/CI观察的两项间歇（`t13-content-local-4`）；M4既有：写后规范重读期间弹窗表单卸载，链接/子项/关联的成功toast被跳过（M4详情页已如此，写入与列表正确，交M4交接）。（P8更正：只有链接表单有成功提示，子项/关联经选择弹窗提交，M4起只有失败提示；链接提示由P8 T6②修复。）S3夹具子进程启动失败时应回传原错误（T14第三轮只见通用信息，扩充P3-M1）。
 
 ## 10. T15 整分支审查与修复
 
@@ -169,3 +169,15 @@ P8新增事项：上述Minor；测试设施在本阶段三次出现Docker侧停�
 T15候选`f26630b6`的分支CI [42097010743](https://github.com/open-nerve/NerveProject/actions/runs/42097010743)：attempt1中server、web通过，e2e在25分钟作业期限处被取消——`playwright install --with-deps`一步因GitHub托管runner的Ubuntu apt镜像极慢耗时23分钟，故事未及运行；不改预算，原始元数据与日志保存后以`gh run rerun --failed`重跑。attempt2跑完414通过1失败（22.5分钟）后仍超作业期限被取消。失败的是M4故事C12（review）history Markdown：CI trace中故事等到的PATCH回包是编辑器给无块标识修订补data-id的迁移保存（防抖1.5秒），慢runner上它恰与粘贴同刻发出，故事随即重载，粘贴的防抖保存尚未发出。根因是故事把粘贴后第一个PATCH当成粘贴的保存；`6b9d8051`按同族cleanup-interactions的做法先等迁移保存应答再粘贴，产品不变。临时探针扣住迁移保存，“原顺序”确定性复现失败、“先等应答”通过（`t15-race-probe-red-2`，探针用后删除、副本随证据归档），修正后的故事连续3次通过（`t15-history-story-green`）。
 
 最终候选的门禁：受影响的gen-check、lint-go、lint-web、knip与e2e（415/415，205秒）在最终输入上重跑通过（`t15-*-2`）；Go全量（`t15-test-2`）与test-web（`t15-test-web`）复用——输入清单逐文件比对，与最终输入只差T15三份文档与这一个故事文件；e2e包没有`test`脚本，`make test-web`不运行故事，Go不读e2e（P5“精确替换限定复用”先例）。
+
+## 11. T16 集成、归档与接续
+
+准确最终候选`a5cb9d65bb3715ddea713689953114232a466d3e`（只在T15候选之上加C12故事修正`6b9d8051`与本记录§10的补记）的[分支CI 42109712732](https://github.com/open-nerve/NerveProject/actions/runs/42109712732) attempt1三个作业均success：server127533730693、web127533731202、e2e127541590787。E2E 415/415，测试21.2分钟、作业23分钟（浏览器依赖安装22秒、构建41秒）；同一套件在T14检查点CI为16.9分钟，差异来自runner，作业离25分钟期限只余约2分钟，记入P8观察，未改预算。
+
+根main原基线`cf07c9fbe663b2e2c821c5988bb06933325b8ac1`与origin一致且干净，worktree干净，本地与远端分支都是该候选（30个提交，main为其祖先）。`--no-ff`合并生成`2b2c6f33e3a93536742d5f28b74eb959ba73d6d1`，双父依次为原main与最终候选，完整tree与候选相同；系统Git推送成功，主目录未切开发分支。[准确main CI 42115811156](https://github.com/open-nerve/NerveProject/actions/runs/42115811156) attempt1三个作业均success：web127555018192、server127555018588、e2e127563759440；E2E 415/415，测试20.5分钟、作业22.3分钟。无需重跑，没有用分支CI替代main结果，原始run/all-jobs与E2E日志单独保存。
+
+归档根：`/Users/xiaoruan/project/nerve-project/.superpowers/sdd/M5-P7b-integration-20261106`。P7a的`archive.py`先按其manifest记录的成员SHA-256（`6e855b19…`）核对一致，再复制进本阶段工作区；会话scratchpad（门禁与探针脚本、CI原件、浏览器运行、容器快照、合并与归档脚本，4,328个文件）一并放入工作区后归档。包含Codex实施T1–T8与接手后T9–T16的全部台账、run-check收据与原件、失败/变异、审者原文、浏览器报告和全部`.turbo`。共7,397个文件、676,283,877字节、9,850个成员；18个证据根与30个可重建路径（node_modules、dist、build、bin、`.react-router`、webui dist）逐项分类，unknown=0，源在归档期间未改变，manifest head为最终候选。manifest SHA-256为`6ff41dedb451349bef20bfb3d22e2af4092520ff1dfbf9ada71449b32c050818`。
+
+确认本地main=origin/main=`2b2c6f33`、`origin/main..codex/m5-p7b`与`origin/main..origin/codex/m5-p7b`均为0后，正常删除远端分支、worktree及本地分支（was `a5cb9d65`）；未使用force/stash/clean/reset-hard，远端只剩main。清理后从归档副本再次核对全部成员，与清理前一致。[清理收据](/Users/xiaoruan/project/nerve-project/.superpowers/sdd/M5-P7b-integration-20261106/cleanup-receipt.json)与[清单](/Users/xiaoruan/project/nerve-project/.superpowers/sdd/M5-P7b-integration-20261106/manifest.json)位于冻结payload之外，原件不再改写。
+
+P8 worktree从该main以Git创建于`.codex/worktress/codex/m5-p8`（分支`codex/m5-p8`）；本阶段只写P8 spec/plan并做一次fresh builder预检，不安装依赖、不实施，详见[re-51](../../../reviews/re-51-M5P8预检.md)。T16最后完成收据在P8 worktree的同名P7b接续台账登记，冻结归档保留清理前现场。M5最终矩阵、交接与完成勾选继续由P8/closeout承担。

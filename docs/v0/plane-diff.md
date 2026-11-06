@@ -80,7 +80,7 @@ Plane 共有 96 张业务表（`db` 应用 92 张，`license` 应用 4 张）。
 | `users` | 删除登录记录 `last_login_time`、`last_logout_time`、`last_login_ip`、`last_logout_ip`、`last_login_medium`、`last_login_uagent`、`last_active`、`token`、`token_updated_at` | 改由 `auth_sessions` 承担 |
 | `users` | 删除 `is_password_autoset`、`is_email_verified`、`is_email_valid`、`mobile_number`、`last_location`、`created_location`、`is_managed`、`is_password_expired`、`is_password_reset_required`、`masked_at` | 第三方登录、验证码登录、邮箱验证已砍掉；其余在 Plane 代码中已不使用 |
 | `users` | 删除 `is_bot`、`bot_type` | 核心原则：不区分人和机器人 |
-| `users` | 删除旧的头像和封面 URL 列（`avatar`、`cover_image`）；`avatar_asset_id`、`cover_image_asset_id` 暂不建，由 M5 随文件存储加入（迁移归 `identity`） | 遗留列；在那之前接口的 `avatar_url`、`cover_image_url` 是 `null` |
+| `users` | 删除旧的头像和封面 URL 列（`avatar`、`cover_image`）；M5/P4（迁移00035，归 `identity`）加入 `avatar_asset_id`、`cover_image_asset_id`，外键到 `file_assets` 为具名 NO ACTION，各有索引 | 遗留列；接口的 `avatar_url`、`cover_image_url` 返回所绑定资产的签名地址，未绑定时为 `null` |
 | `profiles` | 29 列保留 11 列（M2/P1，`00002_identity_profiles.sql`） | M2 设计 4.3 |
 | `profiles` | `user_id`：唯一约束照搬（`OneToOne`），加上 `ON DELETE CASCADE` | 二·全局 |
 | `profiles` | `theme`：`jsonb`（默认 `{}`，存自定义调色板）改为 `varchar(20) NOT NULL DEFAULT 'system'`，`CHECK (theme IN ('system','light','dark','light-contrast','dark-contrast'))` | 自定义主题已删除（M1），只剩一个值 |
@@ -109,7 +109,7 @@ Plane 共有 96 张业务表（`db` 应用 92 张，`license` 应用 4 张）。
 | `workspaces` | `timezone`：新加 `DEFAULT 'UTC'`；取值在领域层按 IANA 名称校验 | 模型的默认值（M3 设计 3.13） |
 | `workspaces` | `created_by_id`、`updated_by_id`：加上 `ON DELETE SET NULL`；`created_at`、`updated_at`：新加 `DEFAULT now()`（兜底，见二·全局） | 二·全局 |
 | `workspaces` | 删除旧的 `logo` URL 列 | 遗留列 |
-| `workspaces` | 删除 `owner_id`、`background_color`；`logo_asset_id` 暂不建，由 M5 随文件存储加入 | `owner_id` 与 `created_by_id` 重复、没有读取者，它的 `CASCADE` 会随账户删掉工作区（M3 设计 3.15）；`background_color` 前端不读；在 M5 之前接口的 `logo_url` 是 `null` |
+| `workspaces` | 删除 `owner_id`、`background_color`；M5/P4（迁移00036）加入 `logo_asset_id`，外键到 `file_assets` 为具名 NO ACTION | `owner_id` 与 `created_by_id` 重复、没有读取者，它的 `CASCADE` 会随账户删掉工作区（M3 设计 3.15）；`background_color` 前端不读；接口的 `logo_url` 返回所绑定资产的签名地址，未绑定时为 `null` |
 | `workspace_members` | 17 列保留 10 列（M3/P1，`00007_workspace_workspace_members.sql`） | M3 设计 4.3 |
 | `workspace_members` | `workspace_id`、`member_id`：加上 `ON DELETE CASCADE`；`created_by_id`、`updated_by_id`：加上 `ON DELETE SET NULL` | 二·全局（模型的 `on_delete`） |
 | `workspace_members` | `role`：`CHECK (role >= 0)` 收紧为 `CHECK (role IN (5, 15, 20))`，新加 `DEFAULT 5` | 只有三种角色（M3 设计 3.4） |
@@ -138,7 +138,7 @@ Plane 共有 96 张业务表（`db` 应用 92 张，`license` 应用 4 张）。
 | `projects` | **新增** `last_issue_sequence integer NOT NULL DEFAULT 0 CHECK (last_issue_sequence >= 0)`：工作项编号的计数列，M4 取号；M3 不读写它，它不进入接口 | 替代 `issue_sequences`（一 B；v0-design 5.3） |
 | `projects` | 两个部分唯一索引照搬，改名为 `projects_workspace_id_identifier_key`、`projects_workspace_id_name_key`（`ON (workspace_id, …) WHERE deleted_at IS NULL`；Plane 是 `project_unique_identifier_workspace_when_deleted_at_null`、`project_unique_name_workspace_when_deleted_at_null`，列的顺序相反）；新加不带条件的 `projects_workspace_id_idx ON (workspace_id)` | 按工作区列出项目用它们；物理级联要不带条件的索引（M3 设计 4） |
 | `projects` | 删除 `emoji`、`icon_prop`、旧的 `cover_image`、`description_text`、`description_html`（旧的 json 列）、`page_view`、`is_time_tracking_enabled`、`is_issue_type_enabled`、`estimate_id`、`close_in` | 遗留列或对应功能已砍掉（归档保留，`archive_in` 和 `archived_at` 保留） |
-| `projects` | 删除 `default_state_id`；`cover_image_asset_id` 暂不建，由 M5 随文件存储加入 | 新工作项的默认状态来自 `states."default"`（M1/P2 的交接）；在 M5 之前接口的 `cover_image_url` 是 `null` |
+| `projects` | 删除 `default_state_id`；M5/P4（迁移00037）加入 `cover_image_asset_id`（外键到 `file_assets` 为具名 NO ACTION）与内置封面编号 `cover_builtin_id`（只能是 `cover-01`…`cover-29`），二者至多其一 | 新工作项的默认状态来自 `states."default"`（M1/P2 的交接）；封面只保存上传资产或稳定的内置编号，不保存构建路径（M1 收尾交接） |
 | `project_members` | 16 列保留 11 列（M3/P4a，`00011_project_project_members.sql`） | M3 设计 4.7 |
 | `project_members` | `workspace_id`、`project_id`：加上 `ON DELETE CASCADE`；`member_id`：改为 `NOT NULL`（Plane 可为空），加上 `ON DELETE CASCADE`；`created_by_id`、`updated_by_id`：加上 `ON DELETE SET NULL` | 二·全局（模型的 `on_delete`）；没有成员的成员关系没有意义，Plane 也从不写入空值 |
 | `project_members` | `role`：`CHECK (role >= 0)` 收紧为 `CHECK (role IN (5, 15, 20))`，新加 `DEFAULT 5`；`is_active`：新加 `DEFAULT true`；`created_at`、`updated_at`：新加 `DEFAULT now()`（兜底，见二·全局） | 只有三种角色（M3 设计 3.4）；模型的默认值 |

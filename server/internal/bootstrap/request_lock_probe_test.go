@@ -165,6 +165,7 @@ func TestRequestLockProbeWaitsForItsFixtureAfterUpstreamProject(t *testing.T) {
 		t.Fatal("createIssueLink missing")
 	}
 	target := write.target(t, w)
+	waitForStartupRuns(t, w.pool)
 	upstream := holding(t, w.pool, "SELECT id FROM projects WHERE id=$1 FOR NO KEY UPDATE", w.web)
 	downstream := lockedTables(t, w.pool, write.waits, write.mode)
 	upstreamPID := upstream.Conn().PgConn().PID()

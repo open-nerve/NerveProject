@@ -67,24 +67,35 @@ export class ContentDeletion {
     this.confirmed(id);
     if (this.current) await this.page.refreshConfirmed(this.refresh);
   }
-  async verify(): Promise<void> {
+  /**
+   * Reads the list and every uncertain ID. Returns the IDs still visible, which may be deleted again explicitly; an ID
+   * no longer visible has nothing left to delete and leaves the uncertain set without a receipt or another request.
+   */
+  async verify(): Promise<ReadonlySet<string>> {
+    const visible = new Set<string>();
     await this.page.load();
-    if (!this.current) return;
+    if (!this.current) return visible;
     await Promise.all(
       [...this.uncertain].map(async (id) => {
         try {
           await this.service.read(id, this.controller.signal);
-          if (this.current) this.verified.add(id);
+          if (!this.current) return;
+          this.verified.add(id);
+          visible.add(id);
         } catch (error) {
           if (!this.current) return;
           if (error instanceof ApiError && error.status === 404) {
-            this.verified.add(id);
+            this.verified.delete(id);
+            runInAction(() => {
+              this.uncertain.delete(id);
+            });
             return;
           }
           throw error;
         }
       })
     );
+    return visible;
   }
   dispose(): void {
     if (this.ended) return;

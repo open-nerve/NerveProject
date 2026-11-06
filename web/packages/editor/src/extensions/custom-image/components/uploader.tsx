@@ -31,7 +31,10 @@ export function CustomImageUploader({ editor, extension, getPos, transfer, avail
       contentEditable={false}
     >
       <p role={transfer.error ? "alert" : "status"} aria-live="polite">
-        {transfer.phase ? labels[transfer.phase] : (transfer.error ?? (canWrite ? labels.select : labels.unavailable))}
+        {transfer.phase
+          ? labels[transfer.phase]
+          : (transfer.error ??
+            (canWrite ? (transfer.cancelled ? labels.cancelled : labels.select) : labels.unavailable))}
       </p>
       {transfer.failed && transfer.copied && <p>{labels.copyUnknown}</p>}
       {canWrite && (

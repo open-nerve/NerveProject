@@ -4,6 +4,7 @@ import { ApiError } from "@/lib/api-error";
 import type { IssueRootStore } from "@/store/issue/root.store";
 import type { DetailRegistration } from "@/store/issue/issue-details/resource";
 import type { AutosaveSnapshot } from "@/components/editor/autosave-retention";
+import type { ContentConfirmation } from "@/store/asset/attachment-resource";
 export type RetainedText = AutosaveSnapshot<string>;
 export type RetainedForm = {
   html: string;
@@ -17,7 +18,7 @@ export type RetainedForm = {
   editing?: boolean;
   focusAfterRead?: boolean;
 };
-type Receipt = { kind: "uploaded" | "deleted"; id: string };
+type Receipt = ContentConfirmation;
 class LocalInput<T> {
   private value: T | undefined;
   constructor(
@@ -56,6 +57,8 @@ export class IssueDetailInputState implements DetailRegistration {
   private readonly text = new Map<string, LocalInput<RetainedText>>();
   private readonly forms = new Map<string, LocalInput<RetainedForm>>();
   private confirmed: readonly Receipt[] = [];
+  /** The control has taken back the focus its remount lost: the next withdrawal of the body ends the notice. */
+  private delivered = false;
   /** The control whose confirmed command the canonical re-read unmounted; its next mount takes the focus back once. */
   private refocus: { owner: string; kind: Receipt["kind"] } | undefined;
   private unregister?: () => void;
@@ -123,6 +126,7 @@ export class IssueDetailInputState implements DetailRegistration {
       ({ present, invalid }) => {
         if (invalid) this.retire();
         else if (present) this.seen = true;
+        else if (this.delivered) this.endNotice();
       },
       { fireImmediately: true }
     );
@@ -137,6 +141,7 @@ export class IssueDetailInputState implements DetailRegistration {
     this.text.clear();
     this.forms.clear();
     this.refocus = undefined;
+    this.delivered = false;
     runInAction(() => {
       this.confirmed = [];
       ++this.epoch;
@@ -187,6 +192,7 @@ export class IssueDetailInputState implements DetailRegistration {
   confirm(receipt: Receipt, owner: string): void {
     if (!this.current) return;
     this.refocus = { owner, kind: receipt.kind };
+    this.delivered = false;
     runInAction(() => {
       this.confirmed = [
         ...this.confirmed.filter((value) => value.id !== receipt.id),
@@ -194,10 +200,27 @@ export class IssueDetailInputState implements DetailRegistration {
       ];
     });
   }
-  /** The kind of owner's last confirmed command, once: a later mount of the same control gets nothing. */
+  /** A content command began on this host: the notice describes only the most recent confirmed result. */
+  beginCommand(): void {
+    this.refocus = undefined;
+    this.endNotice();
+  }
+  /**
+   * The kind of owner's last confirmed command, once, for the control that lost its focus to the remount: a later
+   * mount of the same control gets nothing. The notice stays with the body shown now and ends when it is next withdrawn.
+   */
   takeFocus(owner: string): Receipt["kind"] | undefined {
     const request = this.current && this.refocus?.owner === owner ? this.refocus : undefined;
-    if (request) this.refocus = undefined;
+    if (request) {
+      this.refocus = undefined;
+      this.delivered = true;
+    }
     return request?.kind;
+  }
+  private endNotice(): void {
+    this.delivered = false;
+    runInAction(() => {
+      this.confirmed = [];
+    });
   }
 }

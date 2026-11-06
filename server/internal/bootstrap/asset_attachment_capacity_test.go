@@ -158,6 +158,9 @@ func (f attachmentCapacityFixture) checkGroups(t *testing.T, p issueListHTTP, wa
 func (f attachmentCapacityFixture) cancelRead(t *testing.T, path string, n int) {
 	t.Helper()
 	w := f.w
+	// The app pool also runs the start-time jobs that read file_assets. One
+	// still running would queue on this table lock and stay acquired.
+	waitForStartupRuns(t, w.pool)
 	held, err := w.pool.Begin(t.Context())
 	if err != nil {
 		t.Fatal(err)

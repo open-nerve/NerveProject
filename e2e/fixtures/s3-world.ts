@@ -8,25 +8,28 @@ import { test as base, type TestInfo } from "@playwright/test";
 import { createApi, type Api } from "./api";
 import { createDatabase, openDatabase, templateDatabase, type Database } from "./db";
 import { startNerve, type Nerve } from "./server";
-import { startS3, type S3Bucket, type S3Service } from "./s3";
+import { sharedS3, type S3Bucket, type S3Storage } from "./s3";
 
 export interface S3World {
   readonly api: Api;
   readonly db: Database;
   readonly nerve: Nerve;
-  readonly storage: S3Service;
+  readonly storage: S3Storage;
   readonly bucket: S3Bucket;
   readonly secretsDirectory: string;
   close(): Promise<void>;
 }
 
-/** Every world owns its database, private bucket/CORS, secrets and process. */
+/**
+ * Every world owns its database, private bucket/CORS, secrets and process. The S3 service is the run's
+ * (global-setup.ts): closing the world removes its buckets, never the service.
+ */
 export async function createS3World(info: TestInfo, env: Record<string, string> = {}): Promise<S3World> {
   const hash = createHash("sha256")
     .update(`${info.testId}:${info.workerIndex}:${info.repeatEachIndex}:${info.retry}`)
     .digest("hex")
     .slice(0, 16);
-  let storage: S3Service | undefined;
+  let storage: S3Storage | undefined;
   let db: Database | undefined;
   let nerve: Nerve | undefined;
   let directory: string | undefined;
@@ -34,7 +37,7 @@ export async function createS3World(info: TestInfo, env: Record<string, string> 
   const close = () =>
     (closing ??= (async () => {
       const errors: unknown[] = [];
-      // HTTP/jobs stop before storage, then assertion connections and secrets.
+      // HTTP/jobs stop before its buckets are removed, then assertion connections and secrets.
       for (const release of [
         () => nerve?.stop(),
         () => storage?.close(),
@@ -51,7 +54,7 @@ export async function createS3World(info: TestInfo, env: Record<string, string> 
       if (errors.length) throw new AggregateError(errors, "S3 world cleanup failed");
     })());
   try {
-    storage = await startS3();
+    storage = sharedS3();
     const bucket = await storage.createBucket();
     const name = `e2e_s3_${hash}`;
     await createDatabase(name, templateDatabase);
@@ -61,7 +64,8 @@ export async function createS3World(info: TestInfo, env: Record<string, string> 
     // checks can inspect this world's resources while other worlds run.
     await writeFile(
       info.outputPath("s3-resources.json"),
-      JSON.stringify({ containerName: storage.name, secretsDirectory: directory }) + "\n"
+      JSON.stringify({ containerName: storage.name, bucket: bucket.connection.bucket, secretsDirectory: directory }) +
+        "\n"
     );
     const accessFile = path.join(directory, "access"),
       secretFile = path.join(directory, "secret");

@@ -84,3 +84,7 @@ P2已有资产表、生成AssetPurpose和真实业务/字节两段协议；按§
 ## 处理结果（M5/P7b T14核对）
 
 T13真实页面发现M2认证中间件的缺陷（不是本页的交接项，因属M2的代码在此记录）：401后续期一次，再以`options.fetch(copy)`重发请求副本；openapi-fetch交出的是冻结options对象上的浏览器原生fetch，以options为接收者调用时浏览器在副本发出前抛Illegal invocation，M2设计7.1的“续期一次并重发一次”在真实浏览器从未生效（单元测试的FakeNerve fetch是箭头函数，未暴露）。`86c9f9f6`取出后单独调用，FakeNerve客户端的fetch改为与浏览器一样拒绝非window接收者，六个既有重发用例RED→GREEN；F16页面故事在三浏览器证明一次401经续期重发后读取成功、输入与收据保留。按本地缺陷处理（单文件、无接口变更），可单独回退。本页其余各节不变，保持open。
+
+## 处理结果（M5/P8）
+
+§1头像与个人封面：两列与外键、签名地址、个人资料与引导两处上传控件均已接通（P4/P6），`plane-user-assets`仍挡住Plane的地址与弹窗名。§2上传与中间件：文件字节不经`/api/v0`的1 MiB/15秒中间件，走逐请求放宽期限的raw路由；大于1 MiB、超过15秒的上传在T10的local/S3演练与页面慢流中成功；超过`files.size_limit`的上传被拒（413）；整程序契约测试在T12重跑通过；CSP只为S3的实际签名来源放开`img-src`/`connect-src`（P3 T7）。`use-file-size.ts`已删，实际读取点为`core/hooks/editor/editor-assets.ts`读`root.instance.config.file_size_limit`。§3 `@nerve/services`整包删除（P7b）。§4 `FileService`单例清零，M5新加的SWR键带`loginId`（P6/P7b）。§5 `e2e/fixtures/storage.ts`照fixture写法加入并被上传故事使用（P2）。另记P7b T14修复的M2认证中间件401续期重发缺陷`86c9f9f6`。最终证据见[P8阶段记录§7](../reviews/P8-final-acceptance-review.md#7-实施记录)的T10与T12。条款全部完成，closeout改为closed。

@@ -5,6 +5,7 @@
 
 import type { Editor } from "@tiptap/core";
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
+import { NodeSelection } from "@tiptap/pm/state";
 import { afterEach, describe, expect, it, vi } from "vitest";
 // local imports
 import { getSlashCommandFilteredSections } from "@/extensions/slash-commands/command-items-list";
@@ -272,6 +273,40 @@ describe("a rich-text editor built like the kept ones", () => {
     expect(parse(saved).querySelectorAll("[data-id]")).toHaveLength(after.length);
     const reopened = await createEditor({ content: saved });
     expect(blockIds(reopened)).toEqual(after);
+  });
+
+  it("keeps a block's id through an internal drag, even after another handler took a paste", async () => {
+    const port = fakeEditorImages();
+    const editor = await createEditor({ content: "<p>First</p><p>Second</p><p>Third</p>", images: port.images });
+    const view = editor.view;
+    // The image handler takes this paste whole, so ProseMirror never transforms a pasted slice for it.
+    const paste = new Event("paste", { bubbles: true, cancelable: true });
+    Object.defineProperty(paste, "clipboardData", {
+      value: { files: [new File(["png"], "a.png", { type: "image/png" })], items: [], getData: () => "" },
+    });
+    view.dom.dispatchEvent(paste);
+    expect(paste.defaultPrevented).toBe(true);
+    let first = -1;
+    view.state.doc.descendants((node, pos) => {
+      if (node.type.name === "paragraph" && node.textContent === "First") first = pos;
+    });
+    const id = view.state.doc.nodeAt(first)!.attrs.id as string;
+    view.dispatch(view.state.tr.setSelection(NodeSelection.create(view.state.doc, first)));
+    view.dom.dispatchEvent(new Event("dragstart", { bubbles: true }));
+    view.dragging = { slice: view.state.selection.content(), move: true };
+    vi.spyOn(view, "posAtCoords").mockReturnValue({ pos: view.state.doc.content.size, inside: -1 });
+    const drop = new Event("drop", { bubbles: true, cancelable: true });
+    Object.defineProperties(drop, {
+      dataTransfer: { value: { files: [], getData: () => "", effectAllowed: "copyMove" } },
+      clientX: { value: 10 },
+      clientY: { value: 10 },
+      ctrlKey: { value: false },
+      altKey: { value: false },
+    });
+    view.dom.dispatchEvent(drop);
+    const last = view.state.doc.lastChild!;
+    expect(last.textContent).toBe("First");
+    expect(last.attrs.id).toBe(id);
   });
 
   it("restores persisted emoji names and accepts their aliases without image or canvas support", async () => {

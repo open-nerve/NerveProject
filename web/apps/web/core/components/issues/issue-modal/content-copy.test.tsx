@@ -278,6 +278,34 @@ it.each(["still a draft", "already published"] as const)(
   }
 );
 
+it.each(["unchecked", "already published"] as const)(
+  "closing after an unconfirmed publish says where the copy may be instead of claiming the draft is kept (%s)",
+  async (state) => {
+    let lost = true;
+    const publish = tab.control.publish;
+    tab.control.publish = (call, draft) => {
+      if (!lost) return publish(call, draft);
+      lost = false;
+      publish({ ...call, answer: () => {} } as Call, draft);
+      call.fail();
+    };
+    await copyIssue();
+    await tab.submit();
+    await tab.waitFor(() => text().includes("content_files.copy.unknown_publish"), "unconfirmed publish");
+    if (state === "already published") {
+      await tab.click("content_files.copy.verify");
+      await tab.waitFor(() => text().includes("content_files.copy.published"), "published elsewhere");
+    }
+    await tab.click("discard");
+    expect(tab.close).toHaveBeenCalledTimes(1);
+    const messages = toasts.map((toast) => toast.message);
+    expect(messages).not.toContain("content_files.copy.kept_closed");
+    expect(messages).toContain(
+      state === "unchecked" ? "content_files.copy.unknown_publish" : "content_files.copy.published"
+    );
+  }
+);
+
 it("a copy without images keeps the direct work item creation and makes no draft", async () => {
   await copyIssue('<p data-id="a">Only text</p>');
   await tab.submit();

@@ -44,6 +44,7 @@ const CommentAttachmentContent = observer(function CommentAttachmentContent(prop
     return () => resource.dispose();
   }, [root, view, inputs, owner]);
   const takeFocus = useCallback(() => inputs?.takeFocus(owner), [inputs, owner]);
+  const beginCommand = useCallback(() => inputs?.beginCommand(), [inputs]);
   return view?.current && held?.view === view ? (
     <Attachments
       view={view}
@@ -51,6 +52,7 @@ const CommentAttachmentContent = observer(function CommentAttachmentContent(prop
       readOnly={props.disabled}
       onDialogOpened={modals?.retainContentDialog}
       takeFocus={takeFocus}
+      beginCommand={beginCommand}
     />
   ) : null;
 });

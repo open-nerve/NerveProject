@@ -24,6 +24,7 @@ import { setToast, TOAST_TYPE } from "@nerve/propel/toast";
 import { ModalCore, ModalTitle } from "@nerve/ui";
 // hooks
 import { useIssueDetail, useIssueDetailModals } from "@/hooks/store/use-issue-detail";
+import { useIssueDetailInput } from "@/hooks/use-issue-detail-input";
 // types
 import type { TLinkOperations } from "./types";
 
@@ -92,6 +93,7 @@ function LinkForm({
   // store hooks
   const { setIssueLinkData } = useIssueDetailModals();
   const capture = useDetailScope(workspaceSlug, projectId, issueId, true);
+  const host = useIssueDetailInput();
   const sending = useRef(false);
   const [isSubmitting, setSubmitting] = useState(false);
   const formRef = useRefusedFocus<HTMLFormElement>(submitCount);
@@ -108,20 +110,24 @@ function LinkForm({
   const handleFormSubmit = async (formData: TIssueLinkCreateFormFieldOptions) => {
     const current = capture();
     if (!current()) return;
+    // The canonical re-read after the write withdraws the body and this form with it; the detail host that sent the
+    // command outlives that, so it reports the result unless the host itself has ended.
+    const epoch = host?.epoch;
+    const reported = host ? () => host.current && host.epoch === epoch : current;
     // The API owns scheme normalization and validation; retain its exact uniqueness semantics.
     const body = { title: formData.title || null, url: formData.url.trim() };
     await followInSession(
       () => (formData.id ? linkOperations.update(formData.id, body) : linkOperations.create(body)),
       {
         done: () => {
-          if (!current()) return;
           const verb = formData.id ? "updated" : "created";
-          setToast({
-            type: TOAST_TYPE.SUCCESS,
-            title: t(`links.toasts.${verb}.title`),
-            message: t(`links.toasts.${verb}.message`),
-          });
-          finishClose();
+          if (reported())
+            setToast({
+              type: TOAST_TYPE.SUCCESS,
+              title: t(`links.toasts.${verb}.title`),
+              message: t(`links.toasts.${verb}.message`),
+            });
+          if (current()) finishClose();
         },
         failed: (error) => {
           if (current() && !(error instanceof SessionChangedError))

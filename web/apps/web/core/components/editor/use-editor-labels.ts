@@ -12,6 +12,7 @@ export function useEditorLabels(): EditorLabels {
       unavailable: t("content_files.image.unavailable"),
       loading: t("content_files.image.loading"),
       copyUnknown: t("content_files.image.copyUnknown"),
+      cancelled: t("content_files.image.cancelled"),
       invalid: t("content_files.image.invalid"),
       size: t("content_files.image.size"),
       name: t("content_files.image.name"),

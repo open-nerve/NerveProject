@@ -84,7 +84,6 @@ export type EditorRefApi = {
   getCoordsFromPos: (pos?: number) => ReturnType<EditorView["coordsAtPos"]> | undefined;
   getCurrentCursorPosition: () => number | undefined;
   getMarkDown: () => string;
-  copyMarkdownToClipboard: () => void;
   getSelectedText: () => string | null;
   insertText: (contentHTML: string, insertOnNextLine?: boolean) => void;
   isAnyDropbarOpen: () => boolean;

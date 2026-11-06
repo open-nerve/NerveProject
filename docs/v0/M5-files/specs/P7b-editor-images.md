@@ -51,7 +51,7 @@ HTML只含合法 image-component[src=UUID]，保持原尺寸/对齐和M4稳定ID
 
 ## 3. 文件、剪贴板、复制与撤销
 
-- 有write且editable时才接图；只接四种已批准MIME、大小/名字按内容合同。文件选择和drop/paste共用校验。一次最多10图；混合普通文件整批拒绝并保持事件未处理，纯非图片不吞事件。目录、无 File、空MIME、SVG拒绝，错误role=alert；没有alert()。
+- 有write且editable时才接图；只接四种已批准MIME、大小/名字按内容合同。文件选择和drop/paste共用校验。一次最多10图。粘贴时，被拒的图片批（超数、超限、空MIME、SVG、目录、混合普通文件）整批不插入（连同附带的文字/HTML）、提示一次并拦下事件；纯非图片文件交回ProseMirror的粘贴管线；拖放的被拒与普通文件不拦下。（M5/P8改写：原写“混合批保持事件未处理”时，插件返回已处理却不拦下，浏览器原生粘贴绕过ProseMirror，见[P8 spec§3第1条](P8-final-acceptance.md#3-局部裁定与合同补充)。）目录、无 File、空MIME、SVG拒绝，错误role=alert；没有alert()。
 - 拖入已允许的图片时才preventDefault；选择/drop/paste不可触发重复上传。输入法组合键和既有快捷键合同保留。
 - 剪贴板 image-component 的src必须是UUID，不接受http/data/blob/javascript作为内部资产身份。自称“同一文档”“已上传”的剪贴板标记不可信；每次跨剪贴板插入的UUID图片均走服务器 duplicate，不能直接把源UUID保存到目标文稿。普通浏览器<img src=外部地址>沿M4清洗保持不自动加载，不借图片接线开放外部网络。
 - 复制服务先验证源再验证目标；源不可见与不存在相同404。新副本描述用途未绑定，只有目标宿主保存引用时绑定。失败不改src为原图；未知复制结果保留失败节点并提示可能已生成准备件，不在mount/重开/online自动重发。显式重试可能新增私有副本；草稿宿主通过P7a恢复列表显示并允许明确丢弃，其他未绑定件按原GC。不能告知草稿用户仅取消节点就保证能发布。
@@ -74,4 +74,4 @@ HTML只含合法 image-component[src=UUID]，保持原尺寸/对齐和M4稳定ID
 
 ## 5. 必须可失败的反例
 
-真实 RootStore/DOM：prepare/PUT/complete/duplicate/resolve 各延迟成功及失败；两个节点同ID与换src；同节点重新选不同字节；撤权恢复、草稿A→B→A与发布移除；已读缓存到期后台恢复、旧onError晚到；挂起复制时Undo后Redo；伪造clipboard标记；普通PDF、混合PNG+PDF、只读drop均不吞；保存拒绝及未知评论POST；图片顺序/换图/只补ID。删掉对应关键屏障时应AssertionError，编译/环境失败不算RED。真实浏览器同时检查请求路径、原字节、persisted UUID与无旧文件API，不能只测编辑器JSON。
+真实 RootStore/DOM：prepare/PUT/complete/duplicate/resolve 各延迟成功及失败；两个节点同ID与换src；同节点重新选不同字节；撤权恢复、草稿A→B→A与发布移除；已读缓存到期后台恢复、旧onError晚到；挂起复制时Undo后Redo；伪造clipboard标记；粘贴普通PDF交回ProseMirror、粘贴混合PNG+PDF整批不插入且拦下、普通/混合与只读drop均不拦下；保存拒绝及未知评论POST；图片顺序/换图/只补ID。删掉对应关键屏障时应AssertionError，编译/环境失败不算RED。真实浏览器同时检查请求路径、原字节、persisted UUID与无旧文件API，不能只测编辑器JSON。

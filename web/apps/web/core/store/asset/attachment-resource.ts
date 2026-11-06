@@ -8,7 +8,8 @@ import type { ContentView } from "./content-view";
 import { PagedContent } from "./paged-content";
 import { ContentDeletion } from "./content-deletion";
 import { matchesContent } from "./content-target";
-export type ContentConfirmation = { kind: "deleted"; id: string } | { kind: "uploaded"; id: string; asset: Asset };
+/** A confirmed command on a host's content: its kind and the asset it concerned. */
+export type ContentConfirmation = { kind: "uploaded" | "deleted"; id: string };
 export class AttachmentResource extends PagedContent<Attachment> {
   private readonly deletion: ContentDeletion;
   constructor(
@@ -39,14 +40,19 @@ export class AttachmentResource extends PagedContent<Attachment> {
   remove(id: string): Promise<void> {
     return this.deletion.remove(id);
   }
-  override retryRead(): Promise<void> {
+  /** The read behind the refresh control also settles uncertain deletions. */
+  async retryRead(): Promise<void> {
+    await this.deletion.verify();
+  }
+  /** The uncertain IDs still visible after a fresh read; only those may be deleted again explicitly. */
+  verifyDeletion(): Promise<ReadonlySet<string>> {
     return this.deletion.verify();
   }
   async afterUpload(asset: Asset): Promise<void> {
     this.assertCurrent();
     if (asset.state !== "uploaded" || !asset.is_bound || !matchesContent(asset, this.view.host, "attachment"))
       throw new SessionChangedError();
-    this.confirmed({ kind: "uploaded", id: asset.id, asset });
+    this.confirmed({ kind: "uploaded", id: asset.id });
     if (this.current) await this.refreshConfirmed(() => this.refresh());
   }
   private async refresh(): Promise<void> {

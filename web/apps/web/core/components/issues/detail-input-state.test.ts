@@ -1,6 +1,6 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { problem } from "@/lib/auth/fake-nerve";
+import { json, problem } from "@/lib/auth/fake-nerve";
 import { track, until } from "@/lib/auth/fake-time";
 import { loadProjects } from "@/store/project/fake-projects";
 import { contentAssetTab } from "@/store/asset/fake-assets";
@@ -54,6 +54,24 @@ it("keeps only local input and confirmed receipts through pending and a temporar
   expect(tab.inputs.takeFocus("other files")).toBeUndefined();
   expect(tab.inputs.takeFocus("files")).toBe("uploaded");
   expect(tab.inputs.takeFocus("files")).toBeUndefined();
+  // The control has its focus back; the notice stays with the shown body and ends when the body is next withdrawn.
+  expect(tab.inputs.receipts).toEqual([{ kind: "uploaded", id: "uploaded-file" }]);
+  const later = track(tab.app.issue.issues.refreshAuthoritative(tab.issue.id, { afterWrite: true }));
+  expect(tab.app.issue.issues.getIssueDetailById(tab.issue.id)).toBeUndefined();
+  expect(tab.inputs.receipts).toEqual([]);
+  const reads = () => tab.nerve.to(`/api/v0/issues/${tab.issue.id}`);
+  await until(() => reads().length === 3, "later owner read");
+  reads()[2]!.answer(json(200, tab.issue));
+  await until(() => later.settled, "later owner read settled");
+});
+it("a new command ends the previous result's notice and its pending focus return", async () => {
+  const tab = await fixture();
+  tab.inputs.confirm({ kind: "uploaded", id: "uploaded-file" }, "files");
+  tab.inputs.beginCommand();
+  expect(tab.inputs.receipts).toEqual([]);
+  expect(tab.inputs.takeFocus("files")).toBeUndefined();
+  tab.inputs.confirm({ kind: "deleted", id: "deleted-file" }, "files");
+  expect(tab.inputs.receipts).toEqual([{ kind: "deleted", id: "deleted-file" }]);
 });
 it.each([401, 403, 404])(
   "a final owner %i retires local input permanently, even when the same ID returns",

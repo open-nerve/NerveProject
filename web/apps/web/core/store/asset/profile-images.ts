@@ -17,9 +17,6 @@ export class ProfileImageLease {
     makeObservable<ProfileImageLease, "disposed">(this, { disposed: observable });
     entry.add(source.projection);
   }
-  get key(): string {
-    return this.entry.key;
-  }
   get current(): boolean {
     return !this.disposed && this.entry.lifetime.current;
   }

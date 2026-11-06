@@ -92,13 +92,7 @@ export class ContentReads {
     }
     return entry;
   }
-  read(id: string, signal: AbortSignal): Promise<ContentRead> {
-    return this.readWith(id, signal, false);
-  }
-  retry(id: string, signal: AbortSignal): Promise<ContentRead> {
-    return this.readWith(id, signal, true);
-  }
-  private async readWith(id: string, signal: AbortSignal, force: boolean): Promise<ContentRead> {
+  async read(id: string, signal: AbortSignal): Promise<ContentRead> {
     if (signal.aborted) throw new SessionChangedError();
     const entry = this.entry(id);
     entry.readers++;
@@ -108,14 +102,11 @@ export class ContentReads {
       signal.addEventListener("abort", abort, { once: true });
     });
     try {
-      return await Promise.race([entry.resolve(force), aborted]);
+      return await Promise.race([entry.resolve(), aborted]);
     } finally {
       signal.removeEventListener("abort", abort);
       entry.releaseReader(signal.aborted);
     }
-  }
-  invalidate(id: string): void {
-    this.entries.get(id)?.invalidate();
   }
   acquire(id: string): ContentReadLease {
     const entry = this.entry(id);

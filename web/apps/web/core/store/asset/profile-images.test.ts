@@ -181,7 +181,6 @@ it("last release retires the old view while a fresh view may join the current in
   first.dispose();
   first.dispose();
   const fresh = images.acquire({ kind: "workspace", workspaceID: workspace.id });
-  expect(fresh.key).not.toBe(first.key);
   const next = track(fresh.read(readWorkspace));
   expect(nerve.calls).toHaveLength(1);
   nerve.calls[0]!.answer(json(200, { data: [{ ...workspace, logo_url: "/static/fresh" }] }));

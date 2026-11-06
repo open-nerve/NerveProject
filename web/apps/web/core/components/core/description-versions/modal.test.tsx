@@ -14,19 +14,18 @@ vi.mock("@nerve/propel/toast", () => import("@/lib/fake-toast"));
 vi.mock("@/lib/auth/api-client", () => ({ tokenManager: { state: { loginId: "one" } } }));
 vi.mock("@/hooks/store/use-member", () => ({ useMember: () => ({ getUserDetails: () => undefined }) }));
 vi.mock("@/hooks/store/use-workspace", () => ({ useWorkspace: () => ({ getWorkspaceBySlug: () => ({ id: "ws" }) }) }));
-const binding = vi.hoisted(() => ({ ready: true, legacyCopy: vi.fn() }));
+const binding = vi.hoisted(() => ({ ready: true }));
 vi.mock("@/components/editor/rich-text", () => ({
   RichTextEditor: ({
     initialValue,
     ref,
   }: {
     initialValue: string;
-    ref: React.Ref<Pick<EditorRefApi, "getMarkDown" | "isEditorReadyToDiscard" | "copyMarkdownToClipboard">>;
+    ref: React.Ref<Pick<EditorRefApi, "getMarkDown" | "isEditorReadyToDiscard">>;
   }) => {
     useImperativeHandle(ref, () => ({
       getMarkDown: () => "# Chosen\n\n**bold**\n",
       isEditorReadyToDiscard: () => binding.ready,
-      copyMarkdownToClipboard: binding.legacyCopy,
     }));
     return <div data-html>{initialValue}</div>;
   },
@@ -53,7 +52,6 @@ beforeEach(() => {
   );
   vi.spyOn(Element.prototype, "getAnimations").mockReturnValue([]);
   binding.ready = true;
-  binding.legacyCopy.mockClear();
   toasts.length = 0;
   clipboard = heldChange<void>();
   write = vi.fn(() => clipboard.sent);
@@ -168,7 +166,6 @@ it.each([true, false])("markdownCopyWaitsAndReportsRefusalOnce (accepted=%s)", a
   );
   expect(toasts).toHaveLength(1);
   expect(toasts[0]?.type).toBe(accepted ? "success" : "error");
-  expect(binding.legacyCopy).not.toHaveBeenCalled();
   expect(copy.disabled).toBe(false);
 });
 it("does not invent Markdown before the editor is ready", async () => {

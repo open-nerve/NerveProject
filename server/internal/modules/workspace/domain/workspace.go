@@ -53,7 +53,6 @@ type NewWorkspace struct {
 type WorkspacePatch struct {
 	SetLogo          bool
 	LogoAssetID      *uuid.UUID
-	Logo             *ImageURL
 	Name             *string
 	OrganizationSize *string
 	Timezone         *string

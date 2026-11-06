@@ -1,6 +1,6 @@
 # M5/P7b 工作项附件与编辑器图片 Implementation Plan
 
-> 2026-11-05：正式预检通过，已获准从T1实施；阶段结束经deep-review、noff/main CI及归档后继续P8和M5收尾。分支`codex/m5-p7b`，基线main`cf07c9fbe663b2e2c821c5988bb06933325b8ac1`；P7a准确main CI41869045846、全量归档及正常清理已核。一次独立builder发现的局部问题已修订合同并自检闭环，产品验收仍待实施。
+> 2026-11-06：P7b已完成。最终候选`a5cb9d65bb3715ddea713689953114232a466d3e`的分支CI 42109712732与noff main`2b2c6f33e3a93536742d5f28b74eb959ba73d6d1`的CI 42115811156均三job全绿；7,397文件全量归档核验并正常清理；P8正式预检见[re-51](../../../reviews/re-51-M5P8预检.md)。完成证据见[阶段记录§11](../reviews/P7b-content-assets-review.md#11-t16-集成归档与接续)。
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans 逐Task内联实施；不逐Task新派实现者/审者，阶段末一次fresh whole-branch review。正式分支`codex/m5-p7b`已从main`cf07c9fbe663b2e2c821c5988bb06933325b8ac1`创建；一次fresh builder的局部问题已按现有owner和输入寿命补实，main CI、归档清理和文档自检前置已闭环，实施已从T1开始。
 
@@ -185,13 +185,13 @@ T3与T5衔接：命令确认收据先发布给稳定host再触发权威重读；
 
 - [x] Step 1：冻结正式main基线..候选HEAD，一次fresh reviewer读完整手写文件与调用链、Review Focus/所有局部Ruling、全部消费者与证据；三视角报告保存docs/reviews下一编号，生成物核源。
 - [x] Step 2：主控逐条裁定、局部根因修复及有区分度RED/GREEN/受影响回归；真实架构问题先提交上报，不用第二同范围审者替代修复判断；DeclinedToJudge必须具名解决。
-- [ ] Step 3：最终本地七门禁证据与修改范围对应，中文提交/push准确HEAD CI全绿，A7闭环；阶段记录写明事实、限制和P8责任，不提前写main完成。
+- [x] Step 3：最终本地七门禁证据与修改范围对应，中文提交/push准确HEAD CI全绿，A7闭环；阶段记录写明事实、限制和P8责任，不提前写main完成。
 
 ## Task 16（T16）：集成、归档与 P8 预检
 
-- [ ] Step 1：连续授权下核main与worktree干净、最终准确green候选及祖先，根main用--no-ff，核双父/树一致，system push；不在主目录切开发分支。
-- [ ] Step 2：准确main CI三项全绿后归档全部ignored原件（含失败、突变、审者、浏览器、准备记录），核hash/bytes/mode/membership/unknown0；origin/main..branch=0后普通清理远端/本地/worktree，归档再核。
-- [ ] Step 3：下一P8 worktree回填P7完成证据；仅P8 spec/plan与一次builder预检，不实施。P8承接最终F1–F18、P3/P4维护项、warning新规则/死成员/默认部署和handoffs；M5完成勾选仍等closeout两轮main证据。
+- [x] Step 1：连续授权下核main与worktree干净、最终准确green候选及祖先，根main用--no-ff，核双父/树一致，system push；不在主目录切开发分支。
+- [x] Step 2：准确main CI三项全绿后归档全部ignored原件（含失败、突变、审者、浏览器、准备记录），核hash/bytes/mode/membership/unknown0；origin/main..branch=0后普通清理远端/本地/worktree，归档再核。
+- [x] Step 3：下一P8 worktree回填P7完成证据；仅P8 spec/plan与一次builder预检，不实施。P8承接最终F1–F18、P3/P4维护项、warning新规则/死成员/默认部署和handoffs；M5完成勾选仍等closeout两轮main证据。
 
 ## 预检自查
 

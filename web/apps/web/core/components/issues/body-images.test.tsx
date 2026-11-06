@@ -308,6 +308,66 @@ it("editing preserved text cannot bypass the explicit image verification before 
   expect(document.body.textContent).toContain("content_files.image.unavailable");
 });
 
+it("saving preserved input while an image uploads keeps the editor and the upload, and saves once it finishes", async () => {
+  await tab.render();
+  const first = await uploadImage();
+  const accept = tab.control.patch;
+  tab.control.patch = (call) => call.answer(problem(422, "validation_failed"));
+  await tab.debounce();
+  await act(async () => {
+    await tab.app.issue.issues.refreshAuthoritative(tab.issue.id);
+  });
+  await waitForPickerDOM(() => !!tab.editor(), "preserved description");
+  await tab.paste(undefined, [imageFile()]);
+  await waitForPickerDOM(() => tab.puts.length === 2, "second image PUT");
+  const field = tab.editor()!;
+  await tab.click("content_files.input.save");
+  expect(tab.editor()).toBe(field);
+  expect(tab.puts[1]!.signal?.aborted).toBe(false);
+  expect(document.body.textContent).toContain("content_files.image.unfinished");
+  expect(document.body.textContent).not.toContain("content_files.image.unavailable");
+  await act(async () => tab.puts[1]!.answer(new Response(null, { status: 200 })));
+  await waitForPickerDOM(() => document.querySelectorAll("img.image-component").length === 2, "second image");
+  const second = [...tab.assets.keys()].find((id) => id !== first)!;
+  await tab.click("content_files.input.save");
+  await waitForPickerDOM(() => tab.patches().length === 2, "refused save");
+  expect(tab.editor()).toBe(field);
+  expect(field.innerHTML).toContain(second);
+  tab.control.patch = accept;
+  await tab.click("common.retry");
+  await waitForPickerDOM(() => tab.patches().length === 3, "retried save");
+  expect(tab.patches()[2]!.body).toMatchObject({ description_html: expect.stringContaining(second) });
+  expect(tab.patches()[2]!.body).toMatchObject({ description_html: expect.stringContaining(first) });
+});
+
+it("verifying preserved input blocks the same editor while it waits, and a refused image keeps the input", async () => {
+  await tab.render();
+  const id = await uploadImage();
+  tab.control.patch = (call) => call.answer(problem(422, "validation_failed"));
+  await tab.debounce();
+  const reads: Call[] = [];
+  tab.control.asset = (call) => {
+    reads.push(call);
+  };
+  await act(async () => {
+    await tab.app.issue.issues.refreshAuthoritative(tab.issue.id);
+  });
+  await waitForPickerDOM(() => !!tab.editor(), "preserved description");
+  const field = tab.editor()!;
+  await tab.click("content_files.input.save");
+  expect(reads.map((call) => call.path)).toContain(`/api/v0/assets/${id}`);
+  expect(tab.editor()).toBe(field);
+  expect(field.closest("[inert]")?.getAttribute("aria-busy")).toBe("true");
+  await act(async () => {
+    for (const call of reads.splice(0)) call.answer(problem(404, "asset.not_found"));
+  });
+  await waitForPickerDOM(() => document.body.textContent!.includes("content_files.image.unavailable"), "refused image");
+  expect(tab.editor()).toBe(field);
+  expect(field.closest("[inert]")).toBeNull();
+  expect(field.querySelector(".node-imageComponent [role=alert]")?.textContent).toContain("errors.asset_not_found");
+  expect(tab.patches()).toHaveLength(1);
+});
+
 it.each(["detail", "peek"] as const)(
   "%s keeps a refused image body and an unsaved title through a failed read and a concurrent body, then permission ABA clears both",
   async (kind) => {

@@ -118,3 +118,87 @@ func TestHelperCORSAndRedirect(t *testing.T) {
 		}
 	})
 }
+
+// A bucket is removed only after every page of its keys is deleted; one
+// already gone counts as removed, and only an exact 404 reads as absent.
+func TestHelperBucketRemovalAndCheck(t *testing.T) {
+	bucket := "/nerve-e2e-" + strings.Repeat("a", 32)
+	t.Run("empties every page, then deletes the bucket", func(t *testing.T) {
+		var calls []string
+		s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			switch {
+			case r.Method == "GET" && r.URL.Path == bucket && r.URL.Query().Get("list-type") == "2":
+				calls = append(calls, "list "+r.URL.Query().Get("continuation-token"))
+				if r.URL.Query().Get("continuation-token") == "" {
+					_, _ = io.WriteString(w, `<ListBucketResult><IsTruncated>true</IsTruncated><NextContinuationToken>next</NextContinuationToken><Contents><Key>e2e/x/one</Key></Contents><Contents><Key>other/two</Key></Contents></ListBucketResult>`)
+					return
+				}
+				_, _ = io.WriteString(w, `<ListBucketResult><IsTruncated>false</IsTruncated><Contents><Key>e2e/x/three</Key></Contents></ListBucketResult>`)
+			case r.Method == "DELETE" && strings.HasPrefix(r.URL.Path, bucket+"/"):
+				calls = append(calls, "delete "+strings.TrimPrefix(r.URL.Path, bucket+"/"))
+				w.WriteHeader(http.StatusNoContent)
+			case r.Method == "DELETE" && r.URL.Path == bucket:
+				calls = append(calls, "remove bucket")
+				w.WriteHeader(http.StatusNoContent)
+			default:
+				t.Errorf("unexpected %s %s", r.Method, r.URL)
+				w.WriteHeader(http.StatusBadRequest)
+			}
+		}))
+		defer s.Close()
+		r := testRequest(s.URL)
+		r.Action = "delete-bucket"
+		r.Key = ""
+		data, _ := json.Marshal(r)
+		if err := run(context.Background(), bytes.NewReader(data), io.Discard); err != nil {
+			t.Fatal(err)
+		}
+		want := []string{"list ", "delete e2e/x/one", "delete other/two", "list next", "delete e2e/x/three", "remove bucket"}
+		if strings.Join(calls, "|") != strings.Join(want, "|") {
+			t.Fatalf("calls = %q, want %q", calls, want)
+		}
+	})
+	t.Run("a bucket already gone is removed", func(t *testing.T) {
+		s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.Method != "GET" {
+				t.Errorf("unexpected %s %s", r.Method, r.URL)
+			}
+			w.WriteHeader(http.StatusNotFound)
+			_, _ = io.WriteString(w, `<Error><Code>NoSuchBucket</Code></Error>`)
+		}))
+		defer s.Close()
+		r := testRequest(s.URL)
+		r.Action = "delete-bucket"
+		r.Key = ""
+		data, _ := json.Marshal(r)
+		if err := run(context.Background(), bytes.NewReader(data), io.Discard); err != nil {
+			t.Fatal(err)
+		}
+	})
+	for status, want := range map[int]string{http.StatusOK: `{"exists":true}`, http.StatusNotFound: `{"exists":false}`, http.StatusForbidden: ""} {
+		t.Run(fmt.Sprint("check ", status), func(t *testing.T) {
+			s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.Method != "HEAD" || r.URL.Path != bucket {
+					t.Errorf("unexpected %s %s", r.Method, r.URL)
+				}
+				w.WriteHeader(status)
+			}))
+			defer s.Close()
+			r := testRequest(s.URL)
+			r.Action = "head-bucket"
+			r.Key = ""
+			data, _ := json.Marshal(r)
+			var out bytes.Buffer
+			err := run(context.Background(), bytes.NewReader(data), &out)
+			if want == "" {
+				if err == nil {
+					t.Fatal("refused check read as an answer")
+				}
+				return
+			}
+			if err != nil || strings.TrimSpace(out.String()) != want {
+				t.Fatalf("out=%q err=%v", out.String(), err)
+			}
+		})
+	}
+}

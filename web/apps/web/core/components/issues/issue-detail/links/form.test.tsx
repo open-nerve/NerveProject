@@ -1,11 +1,13 @@
 // @vitest-environment jsdom
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 import { act } from "react";
+import { observer } from "mobx-react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { RootStore } from "@/store/root.store";
 import type { Problem } from "@nerve/api-client";
 import { ApiError } from "@/lib/api-error";
 import { heldChange } from "@/lib/auth/fake-tab";
+import { json } from "@/lib/auth/fake-nerve";
 import { issueDetailOf } from "@/store/issue/fake-issues";
 import { issueSelectionTab, selectionButton } from "@/components/core/modals/fake-issue-selection";
 import { toasts } from "@/lib/fake-toast";
@@ -145,5 +147,51 @@ it("a confirmed command from a closed instance cannot clear or close the reopene
   await act(async () => sent.answer());
   expect(input().value).toBe("https://new.test/");
   expect(close).not.toHaveBeenCalled();
+  // The link was created in this host, which still reports it once.
+  expect(toasts.map((toast) => toast.message)).toEqual(["links.toasts.created.message"]);
+});
+it("a link confirmed while the canonical re-read withdrew its form is reported once by the host", async () => {
+  const Body = observer(function Body() {
+    return tab.app.issue.issues.getIssueById("x") ? (
+      <IssueLinkCreateUpdateModal
+        workspaceSlug="ws"
+        projectId="A"
+        issueId="x"
+        isModalOpen
+        handleOnClose={close}
+        linkOperations={operations}
+      />
+    ) : null;
+  });
+  await tab.render(
+    <IssueDetailHost workspaceSlug="ws" projectId="A" issueId="x">
+      <Body />
+    </IssueDetailHost>
+  );
+  await fill("https://example.test/");
+  await submit();
+  let reread!: Promise<unknown>;
+  await act(async () => {
+    reread = tab.app.issue.issues.refreshAuthoritative("x", { afterWrite: true });
+    await vi.advanceTimersByTimeAsync(0);
+  });
+  expect(document.querySelector("form")).toBeNull();
+  await act(async () => sent.answer());
+  expect(toasts.map((toast) => toast.message)).toEqual(["links.toasts.created.message"]);
+  expect(close).not.toHaveBeenCalled();
+  await act(async () => {
+    tab.nerve.to("/api/v0/issues/x")[0]!.answer(json(200, issueDetailOf("x")));
+    await reread;
+  });
+  expect(document.querySelector("form")).not.toBeNull();
+  expect(toasts).toHaveLength(1);
+});
+it("a link confirmed after its host ended reports nothing", async () => {
+  await render();
+  await fill("https://example.test/");
+  await submit();
+  await tab.render(null);
+  await act(async () => sent.answer());
   expect(toasts).toHaveLength(0);
+  expect(close).not.toHaveBeenCalled();
 });

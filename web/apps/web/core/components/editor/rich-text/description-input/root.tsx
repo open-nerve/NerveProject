@@ -171,8 +171,10 @@ const DescriptionInputContent = observer(function DescriptionInputContent(props:
       mounted.active = false;
     };
   }, []);
+  const unfinished = contentImageIDs(localDescription.description_html).incomplete;
   const recover = async () => {
-    if (verifying) return;
+    // An image still transferring is reported as unfinished below and verified once it finishes.
+    if (verifying || unfinished) return;
     const html = localDescription.description_html;
     const live = () => current.current.active && current.current.images === images && current.current.html === html;
     setVerifying(true);
@@ -186,7 +188,6 @@ const DescriptionInputContent = observer(function DescriptionInputContent(props:
       if (current.current.active) setVerifying(false);
     }
   };
-  const unfinished = contentImageIDs(localDescription.description_html).incomplete;
 
   useImperativeHandle(
     autosaveRef,
@@ -207,26 +208,29 @@ const DescriptionInputContent = observer(function DescriptionInputContent(props:
 
   return (
     <>
-      <RichTextEditor
-        key={entityId}
-        editable={!disabled && !replacing && !verifying}
-        ref={editorRef}
-        images={images}
-        id={entityId}
-        issueSequenceId={issueSequenceId}
-        disabledExtensions={disabledExtensions}
-        initialValue={(disabled ? initialValue : localDescription.description_html) ?? "<p></p>"}
-        value={swrDescription ?? null}
-        workspaceSlug={workspaceSlug}
-        workspaceId={workspaceDetails.id}
-        projectId={projectId}
-        dragDropEnabled
-        onChange={(_document, description_html, options) => {
-          change({ id: entityId, description_html, isMigrationUpdate: !!options?.isMigrationUpdate });
-        }}
-        placeholder={placeholder ?? ((isFocused, value) => t(getDescriptionPlaceholderI18n(isFocused, value)))}
-        containerClassName={containerClassName}
-      />
+      {/* Verification blocks input without rebuilding the editor, which would end its image transfers. */}
+      <div className="contents" inert={verifying} aria-busy={verifying}>
+        <RichTextEditor
+          key={entityId}
+          editable={!disabled && !replacing}
+          ref={editorRef}
+          images={images}
+          id={entityId}
+          issueSequenceId={issueSequenceId}
+          disabledExtensions={disabledExtensions}
+          initialValue={(disabled ? initialValue : localDescription.description_html) ?? "<p></p>"}
+          value={swrDescription ?? null}
+          workspaceSlug={workspaceSlug}
+          workspaceId={workspaceDetails.id}
+          projectId={projectId}
+          dragDropEnabled
+          onChange={(_document, description_html, options) => {
+            change({ id: entityId, description_html, isMigrationUpdate: !!options?.isMigrationUpdate });
+          }}
+          placeholder={placeholder ?? ((isFocused, value) => t(getDescriptionPlaceholderI18n(isFocused, value)))}
+          containerClassName={containerClassName}
+        />
+      </div>
       {unfinished && !disabled && <p role="status">{t("content_files.image.unfinished")}</p>}
       {imageFailure && <p role="alert">{t("content_files.image.unavailable")}</p>}
       {needsResume && !disabled && (

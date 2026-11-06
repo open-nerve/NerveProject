@@ -175,16 +175,22 @@ pageFileStory(
     await expect(modalDialog(page).getByRole("button", { name: "Delete file", exact: true })).toBeDisabled();
     await modalDialog(page).getByRole("button", { name: "Check latest status", exact: true }).click();
     await expect(widget.getByRole("button", { name: `Delete file ${unknown.name}`, exact: true })).toHaveCount(0);
-    await expect(modalDialog(page).getByRole("button", { name: "Delete file", exact: true })).toBeEnabled();
+    // The read finds the file gone: nothing is left to delete, so the dialog only explains it and closes.
+    await expect(
+      modalDialog(page).getByText("This file is no longer visible, so there is nothing to delete.", { exact: true })
+    ).toBeFocused();
+    await expect(modalDialog(page).getByRole("button")).toHaveText(["Close"]);
     expect(files.calls("GET", `/api/v0/assets/${unknown.id}`)).toHaveLength(1);
-    expect(files.calls("DELETE", `/api/v0/assets/${unknown.id}`)).toHaveLength(1);
-    // Only the person's second confirmation sends it again; the server's answer is the same idempotent 204.
-    await modalDialog(page).getByRole("button", { name: "Delete file", exact: true }).click();
+    await modalDialog(page).getByRole("button", { name: "Close", exact: true }).click();
     await expect(modalDialog(page)).toHaveCount(0);
-    await expect(trigger(49)).toBeVisible();
-    const deletions = files.calls("DELETE", `/api/v0/assets/${unknown.id}`);
-    expect(deletions).toHaveLength(2);
-    expect((await deletions[1]!.response())?.status()).toBe(204);
+    await expect(
+      widget.getByText("The deletion result is unknown. Read the latest status before explicitly trying again.", {
+        exact: true,
+      })
+    ).toHaveCount(0);
+    // Nothing was sent again, and no receipt stands for a deletion this page never saw confirmed.
+    expect(files.calls("DELETE", `/api/v0/assets/${unknown.id}`)).toHaveLength(1);
+    await expect(page.getByRole("status").filter({ hasText: "File deleted." })).toHaveCount(0);
     expect(await issueRead(api, owner.token, issue.id)).toMatchObject({ issue: { attachment_count: 49 } });
 
     // The spreadsheet sorts by the server's count, both ways, and shows each total.

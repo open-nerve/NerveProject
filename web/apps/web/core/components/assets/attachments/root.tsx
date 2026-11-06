@@ -19,6 +19,7 @@ export const Attachments = observer(function Attachments({
   onDialogOpened,
   onBusyChange,
   takeFocus,
+  beginCommand,
 }: {
   view: ContentView;
   resource: AttachmentResource;
@@ -28,6 +29,8 @@ export const Attachments = observer(function Attachments({
   onBusyChange?(busy: boolean): void;
   /** The command a host re-read confirmed while it unmounted this widget, once, so that the focus it lost returns. */
   takeFocus?(): "uploaded" | "deleted" | undefined;
+  /** A transfer or deletion starts: the host's notice of an earlier result ends. */
+  beginCommand?(): void;
 }) {
   const { t } = useTranslation();
   const root = useContext(StoreContext);
@@ -40,10 +43,10 @@ export const Attachments = observer(function Attachments({
   }, [resource]);
   const [returning, setReturning] = useState<"uploaded" | "deleted">();
   useLayoutEffect(() => {
-    if (!view.current) return;
+    // Only the focus the remount lost returns: a control chosen meanwhile keeps it, and the notice stays.
+    if (!view.current || !focusLost()) return;
     const kind = takeFocus?.();
-    // Only the focus the remount lost returns: a control chosen meanwhile keeps it.
-    if (kind && focusLost()) setReturning(kind);
+    if (kind) setReturning(kind);
   }, [view, takeFocus]);
   const pickerExpected = !readOnly && view.canWrite("attachment");
   useLayoutEffect(() => {
@@ -63,7 +66,10 @@ export const Attachments = observer(function Attachments({
           input={picker}
           upload={upload}
           onUploaded={(asset) => resource.afterUpload(asset)}
-          onBusyChange={onBusyChange}
+          onBusyChange={(busy) => {
+            if (busy) beginCommand?.();
+            onBusyChange?.(busy);
+          }}
         />
       )}
       <div className="flex items-center justify-between">
@@ -121,8 +127,11 @@ export const Attachments = observer(function Attachments({
           view={view}
           file={selected}
           uncertain={resource.uncertainIDs.includes(selected.id)}
-          remove={(id) => resource.remove(id)}
-          verify={() => resource.retryRead()}
+          remove={(id) => {
+            beginCommand?.();
+            return resource.remove(id);
+          }}
+          verify={() => resource.verifyDeletion()}
           onClose={() => setSelection(undefined)}
         />
       )}

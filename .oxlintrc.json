@@ -37,6 +37,8 @@
     "react/jsx-curly-brace-presence": "error",
     "no-unreachable": "error",
     "no-shadow": "error",
+    "valid-typeof": "error",
+    "no-constant-binary-expression": "error",
     "unicorn/filename-case": "off",
     "unicorn/no-null": "off",
     "unicorn/prevent-abbreviations": "off",

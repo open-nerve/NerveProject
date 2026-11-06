@@ -69,6 +69,7 @@ export function imagePaste(editor: Editor, storage: CustomImageExtensionStorage)
     view() {
       return {
         destroy() {
+          storage.transfers.destroy();
           for (const id of storage.fileMap.keys()) storage.images?.write?.cancel(id);
           storage.fileMap.clear();
           storage.completed.clear();

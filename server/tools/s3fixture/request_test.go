@@ -36,19 +36,25 @@ func TestInputDeadlineClosesPipe(t *testing.T) {
 func TestInvalidRequests(t *testing.T) {
 	valid := testRequest("http://127.0.0.1:8333")
 	for name, mutate := range map[string]func(*request){
-		"unknown action":     func(r *request) { r.Action = "presign" },
-		"external endpoint":  func(r *request) { r.Endpoint = "https://bucket.example.com" },
-		"path":               func(r *request) { r.Endpoint += "/api" },
-		"credentials in URL": func(r *request) { r.Endpoint = "http://secret@127.0.0.1:8333" },
-		"invalid port":       func(r *request) { r.Endpoint = "http://127.0.0.1:65536" },
-		"existing bucket":    func(r *request) { r.Bucket = "production" },
-		"root prefix":        func(r *request) { r.Prefix = "" },
-		"outside key":        func(r *request) { r.Key = "../private" },
-		"missing secret":     func(r *request) { r.SecretAccessKey = "" },
-		"oversized secret":   func(r *request) { r.SecretAccessKey = strings.Repeat("s", 4097) },
-		"wildcard CORS":      func(r *request) { r.Action = "cors"; r.Key = ""; r.Origin = "*" },
-		"missing CORS":       func(r *request) { r.Action = "cors"; r.Key = "" },
-		"unneeded origin":    func(r *request) { r.Origin = "http://127.0.0.1:8334" },
+		"unknown action":        func(r *request) { r.Action = "presign" },
+		"external endpoint":     func(r *request) { r.Endpoint = "https://bucket.example.com" },
+		"path":                  func(r *request) { r.Endpoint += "/api" },
+		"credentials in URL":    func(r *request) { r.Endpoint = "http://secret@127.0.0.1:8333" },
+		"invalid port":          func(r *request) { r.Endpoint = "http://127.0.0.1:65536" },
+		"existing bucket":       func(r *request) { r.Bucket = "production" },
+		"root prefix":           func(r *request) { r.Prefix = "" },
+		"outside key":           func(r *request) { r.Key = "../private" },
+		"missing secret":        func(r *request) { r.SecretAccessKey = "" },
+		"oversized secret":      func(r *request) { r.SecretAccessKey = strings.Repeat("s", 4097) },
+		"wildcard CORS":         func(r *request) { r.Action = "cors"; r.Key = ""; r.Origin = "*" },
+		"missing CORS":          func(r *request) { r.Action = "cors"; r.Key = "" },
+		"unneeded origin":       func(r *request) { r.Origin = "http://127.0.0.1:8334" },
+		"key on bucket removal": func(r *request) { r.Action = "delete-bucket" },
+		"origin on bucket check": func(r *request) {
+			r.Action = "head-bucket"
+			r.Key = ""
+			r.Origin = "http://127.0.0.1:8334"
+		},
 	} {
 		t.Run(name, func(t *testing.T) {
 			r := valid
