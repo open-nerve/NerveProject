@@ -88,6 +88,7 @@ created: 2026-11-06
 - M4 的 C12 (review) 页面故事（`e2e/stories/issue/review-interactions.spec.ts` 中按布局生成的 “group controls fold, reopen and create through native keyboard focus”）2026-11-06 在 P8 最终候选的 CI 上首次失败一次：“Create new work item”弹窗打开约 150–500 毫秒后按 Escape，5 秒内弹窗没有关闭。P8 对这个弹窗只改了关闭副本时的提示文字，不涉及 Escape 与普通新建；本地两种布局各重复 20 次全部通过，原因未查实。负责人决定重跑后通过，并要求记入本交接。若再出现，先看失败时弹窗内的焦点位置与 Escape 的处理者。
 - CI 的 e2e 作业余量：2026-11-06 两次运行的“安装 Playwright 浏览器”一步因运行器 Ubuntu 镜像的软件包下载停滞（单包停顿约 1–3 分钟，一次这一步用了 22.5 分钟）而耗尽作业的 25 分钟期限被取消，同一输入重跑后通过；绿色 e2e 作业已用 23–24 分钟（最慢一次 24.1 分钟，测试本身 21–22 分钟）。浏览器的系统依赖每次运行都重新下载；缓存它或调整作业期限属 CI 配置，调整预算须负责人同意。
 - M4 的 I4 (page) 表格排序故事（`e2e/stories/issue/i4-list-order-calendar.spec.ts` 的 “table label, assignee, child-count and due-date orders …”）2026-11-06 在 M5 收尾首次合入的 main CI 42229175694 上失败一次：选“Z A”后整个表格（含表头）换成骨架屏，数据 20 毫秒返回后骨架仍显示约 5.3 秒才重新渲染，故事对表头 `aria-sort` 的 5 秒断言因此超时（同一故事的“A Z”一步约 3.5 秒，刚好过线）；相同 tree 的分支 CI 全过，重跑后通过。这是故事断言与运行器繁忙时的渲染时间之间的余量问题：可让故事先等表格回来再查表头，或让列表换排序时保留表头；一百行表格重新渲染要数秒，也值得在 M8 的性能工作中看一眼。
+- M5 的 F16 (page) 重连故事（`e2e/stories/files/f16-content-lifetime-page.spec.ts` 中 “a reconnect does not read the proven browse route again …” [local]）2026-11-06 在收尾分支 CI 42239529087 上失败一次：故事只等标题出现就点击“Attachments”折叠按钮，点击坐标是按钮当时的位置，随后描述编辑器晚挂载、页面下移约 29 像素，按下落在按钮上（按钮得到焦点）、抬起已不在按钮上，折叠区没有展开，故事等文件选择器直到 2 分钟超时。这是故事与详情页晚到的版面位移之间的竞争：`openFiles` 可在点击后确认 `aria-expanded` 变为 true（不成就重试），或先等描述编辑器出现；同类“点开折叠区”的辅助函数宜一并检查。详情页挂载描述编辑器时的版面位移本身也属可感知的跳动。
 
 **何时验收：** 发布说明列出前两项限制；其余在 M8 的性能与 CI 工作中复核或关闭。
 
