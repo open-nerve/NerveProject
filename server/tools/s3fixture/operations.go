@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"io"
 	"net"
 	"net/http"
@@ -21,6 +22,7 @@ type result struct {
 	SHA256      string `json:"sha256,omitempty"`
 	ContentType string `json:"content_type,omitempty"`
 	ETag        string `json:"etag,omitempty"`
+	Exists      *bool  `json:"exists,omitempty"`
 }
 
 func execute(ctx context.Context, r request) (result, error) {
@@ -43,6 +45,10 @@ func execute(ctx context.Context, r request) (result, error) {
 		return result{}, err
 	case "inspect":
 		return inspect(ctx, client, r)
+	case "delete-bucket":
+		return result{}, deleteBucket(ctx, client, r)
+	case "head-bucket":
+		return headBucket(ctx, client, r)
 	default:
 		return result{}, errRequest
 	}
@@ -85,4 +91,55 @@ func inspect(ctx context.Context, client *s3.Client, r request) (result, error) 
 		return result{}, errOperation
 	}
 	return result{Size: n, SHA256: hex.EncodeToString(hash.Sum(nil)), ContentType: aws.ToString(object.ContentType), ETag: aws.ToString(object.ETag)}, nil
+}
+
+// maxBucketKeys bounds one removal; an e2e world writes far fewer objects.
+const maxBucketKeys = 10_000
+
+// deleteBucket empties the owned bucket, every key whatever its prefix (the
+// random bucket is the world's alone), then removes it, which also frees the
+// service's volumes for it. A bucket already gone counts as removed.
+func deleteBucket(ctx context.Context, client *s3.Client, r request) error {
+	var token *string
+	deleted := 0
+	for {
+		page, err := client.ListObjectsV2(ctx, &s3.ListObjectsV2Input{Bucket: &r.Bucket, ContinuationToken: token})
+		var gone *types.NoSuchBucket
+		if errors.As(err, &gone) {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		for _, object := range page.Contents {
+			if deleted++; deleted > maxBucketKeys {
+				return errOperation
+			}
+			if _, err := client.DeleteObject(ctx, &s3.DeleteObjectInput{Bucket: &r.Bucket, Key: object.Key}); err != nil {
+				return err
+			}
+		}
+		if !aws.ToBool(page.IsTruncated) {
+			break
+		}
+		if token = page.NextContinuationToken; token == nil {
+			return errOperation
+		}
+	}
+	_, err := client.DeleteBucket(ctx, &s3.DeleteBucketInput{Bucket: &r.Bucket})
+	return err
+}
+
+// headBucket answers whether the owned bucket exists; only an exact 404 is absence.
+func headBucket(ctx context.Context, client *s3.Client, r request) (result, error) {
+	_, err := client.HeadBucket(ctx, &s3.HeadBucketInput{Bucket: &r.Bucket})
+	var absent *types.NotFound
+	switch {
+	case err == nil:
+		return result{Exists: aws.Bool(true)}, nil
+	case errors.As(err, &absent):
+		return result{Exists: aws.Bool(false)}, nil
+	default:
+		return result{}, err
+	}
 }

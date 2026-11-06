@@ -50,6 +50,10 @@ func decodeRequest(data []byte) (request, error) {
 		if !objectKey.MatchString(r.Key) || r.Origin != "" {
 			return r, errRequest
 		}
+	case "delete-bucket", "head-bucket":
+		if r.Key != "" || r.Origin != "" {
+			return r, errRequest
+		}
 	default:
 		return r, errRequest
 	}
