@@ -29,8 +29,8 @@ type ListCycles struct{ d ListCyclesDeps }
 func NewListCycles(d ListCyclesDeps) *ListCycles { return &ListCycles{d: d} }
 
 // Execute lists the project's cycles, archived or not as asked, in the
-// store's order, each with its status on the clock's one reading, after the
-// list; an empty list for none.
+// store's order, each with its status on the project's day at the clock's
+// one reading, after the list; an empty list for none.
 func (u *ListCycles) Execute(ctx context.Context, projectID uuid.UUID, archived bool) ([]domain.ReadCycle, error) {
 	actor, err := shared.RequireActor(ctx)
 	if err != nil {
@@ -42,13 +42,12 @@ func (u *ListCycles) Execute(ctx context.Context, projectID uuid.UUID, archived 
 		if err != nil {
 			return err
 		}
-		now := u.d.Clock.Now()
+		today, err := domain.Today(u.d.Clock.Now(), h.project.Timezone)
+		if err != nil {
+			return err
+		}
 		for _, c := range cycles {
-			r, err := readCycle(c, h.project.Timezone, now)
-			if err != nil {
-				return err
-			}
-			out = append(out, r)
+			out = append(out, domain.ReadCycle{Cycle: c, Status: domain.StatusOf(c.Dates, today)})
 		}
 		return nil
 	})

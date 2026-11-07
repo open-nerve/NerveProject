@@ -72,7 +72,7 @@ WHERE id = sqlc.arg(id) AND deleted_at IS NULL;
 -- A cycle soft-deleted by one account at one moment, its last change the same (M6 P1 spec 2.4); one deleted already
 -- keeps its deletion.
 UPDATE cycles
-SET deleted_at    = sqlc.arg(at),
+SET deleted_at    = sqlc.arg(at)::timestamptz,
     updated_at    = sqlc.arg(at),
-    updated_by_id = sqlc.arg(by)
+    updated_by_id = sqlc.arg(by)::uuid
 WHERE id = sqlc.arg(id) AND deleted_at IS NULL;

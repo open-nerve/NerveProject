@@ -144,12 +144,13 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 		WorkspaceRoles: workspacePorts.WorkspaceRoles,
 		ProjectAccess:  accessProjects{projects: projectPorts.ProjectAccess},
 	})
-	inserter, err := jobs.NewInserter(pool)
+	client, err := jobs.NewInserter(pool)
 	if err != nil {
 		a.close()
 		return nil, err
 	}
-	events, err := newDispatcher(eventTypes(), slices.Concat(issue.Subscribers(issuePorts, issueInserter{client: inserter}), planning.Subscribers(planningInserter{client: inserter}), asset.Subscribers(assetPorts, assetInserter{client: inserter})))
+	inserter := jobInserter{client: client}
+	events, err := newDispatcher(eventTypes(), slices.Concat(issue.Subscribers(issuePorts, inserter), planning.Subscribers(inserter), asset.Subscribers(assetPorts, inserter)))
 	if err != nil {
 		a.close()
 		return nil, err

@@ -25,7 +25,7 @@ func TestAssetParentEventRollsBackAfterSynchronousMark(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	subs := asset.Subscribers(asset.Provide(w.pool), assetInserter{client: client})
+	subs := asset.Subscribers(asset.Provide(w.pool), jobInserter{client: client})
 	fault := errors.New("later subscriber failed")
 	seen := false
 	subs = append(subs, shared.EventSubscriber{Name: "fail_after_asset", Types: []string{"issue.deleted"}, Handle: func(ctx context.Context, e shared.Event) error {
@@ -67,7 +67,7 @@ func TestAssetParentJobsUseOriginalTransaction(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	events, err := newDispatcher(eventTypes(), asset.Subscribers(asset.Provide(w.pool), assetInserter{client: client}))
+	events, err := newDispatcher(eventTypes(), asset.Subscribers(asset.Provide(w.pool), jobInserter{client: client}))
 	if err != nil {
 		t.Fatal(err)
 	}

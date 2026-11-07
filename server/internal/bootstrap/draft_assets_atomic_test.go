@@ -27,7 +27,7 @@ func draftAssetEventRoute(t *testing.T, w issueWorld, clock *eventCountingClock,
 	if err != nil {
 		t.Fatal(err)
 	}
-	inserter := issueInserter{client: client}
+	inserter := jobInserter{client: client}
 	subscribers := issue.Subscribers(issue.Provide(w.pool, nil), inserter)
 	subscribers = append(subscribers, shared.EventSubscriber{Name: "draft migration probe", Types: []string{"issue.created", "asset.attachment_added"}, Handle: func(ctx context.Context, e shared.Event) error {
 		if _, ok := postgres.Tx(ctx); !ok {

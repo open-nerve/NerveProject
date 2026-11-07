@@ -55,4 +55,4 @@ created: 2026-09-28
 
 ## 处理结果（M6/P1）：第 2 节
 
-M6 设计 §4.3 已在 M2 §4.7 的图上延伸到迭代、模块及其关联表。迭代负责人的结论是改为可空、`ON DELETE SET NULL`（Plane `CASCADE`，同 M3 对项目负责人的改法），差异登记在 [plane-diff](../../plane-diff.md) 按表的 `cycles` 行。P1 的 `cycles` 表（`00039_planning_cycles.sql`）照此落地，`server/migrations/schema_test.go` 的 `TestCyclesSchema` 核外键去向；把负责人改回 `CASCADE` 的变异让迭代随账户消失而失败。模块的负责人与成员在 P2、关联表在 P3 落地；第 1、3–6 节也未到，本交接保持 open。证据：[P1 spec](../specs/P1-cycles-backend.md) 2.2。
+M6 设计 §4.3 已在 M2 §4.7 的图上延伸到迭代、模块及其关联表。迭代负责人的结论是改为可空、`ON DELETE SET NULL`（Plane `CASCADE`，同 M3 对项目负责人的改法），差异登记在 [plane-diff](../../plane-diff.md) 按表的 `cycles` 行。P1 的 `cycles` 表（`00039_planning_cycles.sql`）照此落地，`server/migrations/planning_schema_test.go` 的 `TestCyclesSchema` 核外键去向；把负责人改回 `CASCADE` 的变异让迭代随账户消失而失败。模块的负责人与成员在 P2、关联表在 P3 落地；第 1、3–6 节也未到，本交接保持 open。证据：[P1 spec](../specs/P1-cycles-backend.md) 2.2。

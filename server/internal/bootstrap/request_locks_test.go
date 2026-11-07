@@ -259,7 +259,7 @@ func observedIssueRoute(t *testing.T, pool *pgxpool.Pool, tx shared.TxManager, c
 	if err != nil {
 		t.Fatal(err)
 	}
-	publisher, err := newDispatcher(eventTypes(), issue.Subscribers(issue.Provide(pool, nil), issueInserter{client: client}))
+	publisher, err := newDispatcher(eventTypes(), issue.Subscribers(issue.Provide(pool, nil), jobInserter{client: client}))
 	if err != nil {
 		t.Fatal(err)
 	}

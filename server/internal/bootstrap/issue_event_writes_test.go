@@ -56,7 +56,7 @@ func issueEventRouteFor(t *testing.T, w issueWorld, c interface{ Now() time.Time
 	if err != nil {
 		t.Fatal(err)
 	}
-	inserter := issueInserter{client: client}
+	inserter := jobInserter{client: client}
 	dispatcher, err := newDispatcher(issue.EventTypes(), []shared.EventSubscriber{{Name: "transaction probe", Types: types, Handle: func(ctx context.Context, e shared.Event) error {
 		if _, ok := postgres.Tx(ctx); !ok {
 			t.Error("event lost request transaction")

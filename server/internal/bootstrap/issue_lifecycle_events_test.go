@@ -236,7 +236,7 @@ func TestIssueDeletionEventsCascade(t *testing.T) {
 			events := projectDeletionPublisher(t, pool, shared.EventSubscriber{
 				Name: "observe all issue lifecycle events", Types: issue.EventTypes(),
 				Handle: func(ctx context.Context, e shared.Event) error {
-					return (issueInserter{client: client}).InsertTx(ctx, issueEventProbeArgs{Event: e}, &river.InsertOpts{Queue: "issue_events"})
+					return (jobInserter{client: client}).InsertTx(ctx, issueEventProbeArgs{Event: e}, &river.InsertOpts{Queue: "issue_events"})
 				},
 			})
 			tx := postgres.NewTxManager(pool, cfg.Database.CommitTimeout)

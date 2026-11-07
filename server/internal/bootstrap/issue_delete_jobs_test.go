@@ -26,7 +26,7 @@ func TestIssueDeleteSubscriberRegistration(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	subs := issue.Subscribers(issue.Provide(pool, nil), issueInserter{client: client})
+	subs := issue.Subscribers(issue.Provide(pool, nil), jobInserter{client: client})
 	index := slices.IndexFunc(subs, func(s shared.EventSubscriber) bool { return s.Name == "delete_rows_on_deletion" })
 	if index < 0 || !reflect.DeepEqual(subs[index].Types, []string{"project.deleted", "workspace.deleted"}) {
 		t.Fatalf("missing deletion subscriber: %+v", subs)
@@ -69,7 +69,7 @@ func TestIssueDeleteSubscriberRegistration(t *testing.T) {
 			var caller context.Context
 			var tx pgx.Tx
 			var visible int
-			subscribers := issue.Subscribers(issue.Provide(pool, nil), issueInserter{client: client})
+			subscribers := issue.Subscribers(issue.Provide(pool, nil), jobInserter{client: client})
 			subscribers = append(subscribers, shared.EventSubscriber{Name: "observe original transaction", Types: []string{"project.deleted", "workspace.deleted"}, Handle: func(ctx context.Context, _ shared.Event) error {
 				got, ok := postgres.Tx(ctx)
 				if !ok || got != tx || ctx != caller {
@@ -186,7 +186,7 @@ func TestNewAppDeleteRowsJobRuns(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	d, err := newDispatcher(eventTypes(), issue.Subscribers(issue.Provide(w.pool, nil), issueInserter{client: client}))
+	d, err := newDispatcher(eventTypes(), issue.Subscribers(issue.Provide(w.pool, nil), jobInserter{client: client}))
 	if err != nil {
 		t.Fatal(err)
 	}

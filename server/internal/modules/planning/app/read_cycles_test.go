@@ -68,23 +68,28 @@ func TestGetCycle(t *testing.T) {
 	}
 }
 
-// The project's cycles, archived or not as asked, in the store's order, each with its status on the clock's one
-// reading, after the list.
+// The project's cycles, archived or not as asked, in the store's order, each with its status on the project's day at
+// the clock's one reading, after the list.
 func TestListCycles(t *testing.T) {
 	w := newLockWorld()
+	w.facts[lockProject] = ProjectFacts{WorkspaceID: lockWorkspace, Timezone: "Asia/Shanghai", CycleView: true}
+	c := w.cycles[lockCycle]
+	c.Dates = domain.Dates{Start: date(t, "2026-11-07"), End: date(t, "2026-11-07")}
+	w.cycles[lockCycle] = c
 	archived := time.Date(2026, 11, 1, 0, 0, 0, 0, time.UTC)
 	other := uuid.NewV7()
 	w.cycles[other] = domain.Cycle{ID: other, ProjectID: lockProject, Dates: domain.Dates{Start: date(t, "2026-10-01"), End: date(t, "2026-10-14")},
 		ArchivedAt: &archived}
 	elsewhere := uuid.NewV7()
 	w.cycles[elsewhere] = domain.Cycle{ID: elsewhere, ProjectID: uuid.NewV7()}
-	w.now = time.Date(2026, 11, 7, 1, 0, 0, 0, time.UTC)
+	// 2026-11-06 17:00 UTC is the 7th in Shanghai: the cycle of the 7th is current there, upcoming in UTC.
+	w.now = time.Date(2026, 11, 6, 17, 0, 0, 0, time.UTC)
 	for _, tt := range []struct {
 		archived bool
 		list     string
 		want     []uuid.UUID
 		status   domain.Status
-	}{{false, "ListCycles", []uuid.UUID{lockCycle}, domain.StatusDraft}, {true, "ListCycles archived", []uuid.UUID{other}, domain.StatusCompleted}} {
+	}{{false, "ListCycles", []uuid.UUID{lockCycle}, domain.StatusCurrent}, {true, "ListCycles archived", []uuid.UUID{other}, domain.StatusCompleted}} {
 		w.calls = nil
 		got, err := w.list(lockProject, tt.archived)
 		if err != nil {

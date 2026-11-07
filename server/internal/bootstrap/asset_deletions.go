@@ -2,14 +2,10 @@ package bootstrap
 
 import (
 	"context"
-	"errors"
 	"time"
-
-	"github.com/riverqueue/river"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/asset"
 	issueapp "github.com/open-nerve/NerveProject/server/internal/modules/issue/app"
-	"github.com/open-nerve/NerveProject/server/internal/platform/jobs"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
 )
 
@@ -19,15 +15,6 @@ func (d issueDraftAssets) DeleteDraftAssets(ctx context.Context, row issueapp.Dr
 	return d.assets.DeleteDraftAssets(ctx, row.ID, row.At, row.By)
 }
 
-type assetInserter struct{ client *jobs.Inserter }
-
-func (i assetInserter) InsertTx(ctx context.Context, args river.JobArgs, opts *river.InsertOpts) error {
-	tx, ok := postgres.Tx(ctx)
-	if !ok {
-		return errors.New("asset job insert requires a transaction")
-	}
-	return i.client.InsertTx(ctx, tx, args, opts)
-}
 func protectedAssetReferences() []postgres.ProtectedReference {
 	var refs []postgres.ProtectedReference
 	for _, r := range asset.ProtectedParentReferences() {

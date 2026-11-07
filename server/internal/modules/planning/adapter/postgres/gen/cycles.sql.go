@@ -58,15 +58,15 @@ func (q *Queries) CreateCycle(ctx context.Context, arg CreateCycleParams) error 
 
 const deleteCycle = `-- name: DeleteCycle :exec
 UPDATE cycles
-SET deleted_at    = $1,
+SET deleted_at    = $1::timestamptz,
     updated_at    = $1,
-    updated_by_id = $2
+    updated_by_id = $2::uuid
 WHERE id = $3 AND deleted_at IS NULL
 `
 
 type DeleteCycleParams struct {
-	At *time.Time
-	By *uuid.UUID
+	At time.Time
+	By uuid.UUID
 	ID uuid.UUID
 }
 

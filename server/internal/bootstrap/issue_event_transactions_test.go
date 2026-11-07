@@ -72,7 +72,7 @@ func TestIssueEventThreeSubscribersAndBatchRollback(t *testing.T) {
 					if issueEventCount(t, w) != 0 {
 						t.Error("uncommitted jobs visible outside original transaction")
 					}
-					return (issueInserter{client: client}).InsertTx(ctx, issueEventProbeArgs{Event: e}, &river.InsertOpts{Queue: "issue_events"})
+					return (jobInserter{client: client}).InsertTx(ctx, issueEventProbeArgs{Event: e}, &river.InsertOpts{Queue: "issue_events"})
 				}},
 				{Name: "second may fail", Types: []string{"issue.archived"}, Handle: func(ctx context.Context, e shared.Event) error {
 					checkContext(ctx)

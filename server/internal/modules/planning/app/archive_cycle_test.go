@@ -7,6 +7,7 @@ import (
 	"slices"
 	"testing"
 	"time"
+	_ "time/tzdata" // the package's tests read Asia/Shanghai and America/Los_Angeles, whatever the host's zoneinfo
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/planning/domain"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
