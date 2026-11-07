@@ -32,6 +32,26 @@ func (h handler) GetModule(ctx context.Context, req gen.GetModuleRequestObject) 
 	return gen.GetModule200JSONResponse(module(m)), nil
 }
 
+// UpdateModule serves PATCH /api/v0/modules/{module_id}: the fields given go
+// to the use case as given, a status not of the six too (its 422); a date or
+// the lead given as null to clear it; member_ids, given, the whole set of
+// members, empty for none.
+func (h handler) UpdateModule(ctx context.Context, req gen.UpdateModuleRequestObject) (gen.UpdateModuleResponseObject, error) {
+	p := domain.ModulePatch{Name: req.Body.Name, Description: req.Body.Description, MemberIDs: req.Body.MemberIds, SortOrder: req.Body.SortOrder}
+	if req.Body.Status != nil {
+		status := domain.ModuleStatus(*req.Body.Status)
+		p.Status = &status
+	}
+	p.SetStartDate, p.StartDate = given(req.Body.StartDate)
+	p.SetTargetDate, p.TargetDate = given(req.Body.TargetDate)
+	p.SetLeadID, p.LeadID = given(req.Body.LeadID)
+	m, err := h.uc.UpdateModule.Execute(ctx, req.ModuleID, p)
+	if err != nil {
+		return nil, err
+	}
+	return gen.UpdateModule200JSONResponse(module(m)), nil
+}
+
 // CreateModule serves POST /api/v0/projects/{project_id}/modules: the values
 // go to the use case as given, a status not of the six too (its 422); the
 // description empty, the dates, the status and the lead none, and no member,

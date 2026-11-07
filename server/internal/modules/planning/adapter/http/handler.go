@@ -58,6 +58,11 @@ type GetModuleUseCase interface {
 	Execute(ctx context.Context, id uuid.UUID) (domain.Module, error)
 }
 
+// UpdateModuleUseCase is app.UpdateModule.
+type UpdateModuleUseCase interface {
+	Execute(ctx context.Context, id uuid.UUID, p domain.ModulePatch) (domain.Module, error)
+}
+
 // CreateModuleLinkUseCase is app.CreateModuleLink.
 type CreateModuleLinkUseCase interface {
 	Execute(ctx context.Context, moduleID uuid.UUID, in domain.NewModuleLink) (domain.ModuleLink, error)
@@ -90,6 +95,7 @@ type UseCases struct {
 	ListModules      ListModulesUseCase
 	CreateModule     CreateModuleUseCase
 	GetModule        GetModuleUseCase
+	UpdateModule     UpdateModuleUseCase
 	CreateModuleLink CreateModuleLinkUseCase
 	UpdateModuleLink UpdateModuleLinkUseCase
 	DeleteModuleLink DeleteModuleLinkUseCase

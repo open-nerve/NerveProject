@@ -272,3 +272,52 @@ func (q *Queries) LowestModuleSortOrder(ctx context.Context, projectID uuid.UUID
 	err := row.Scan(&sort_order)
 	return sort_order, err
 }
+
+const updateModule = `-- name: UpdateModule :exec
+UPDATE modules
+SET name          = $1,
+    description   = $2,
+    start_date    = $3,
+    target_date   = $4,
+    status        = $5,
+    lead_id       = $6,
+    sort_order    = $7,
+    updated_at    = $8,
+    updated_by_id = $9
+WHERE id = $10 AND deleted_at IS NULL
+`
+
+type UpdateModuleParams struct {
+	Name        string
+	Description string
+	StartDate   *time.Time
+	TargetDate  *time.Time
+	Status      string
+	LeadID      *uuid.UUID
+	SortOrder   float64
+	UpdatedAt   time.Time
+	UpdatedByID *uuid.UUID
+	ID          uuid.UUID
+}
+
+// A change of a module (M6 P2 spec 2.3): its name, description, dates, status, lead and sort order, last changed by one
+// account at one moment; its archive and creation are not a change's, nor its members' rows. Run under the project's
+// FOR NO KEY UPDATE, which every write on the project's modules takes first, so the row is as the change read it; it is
+// not locked by id first (M3 design 3.6, convention 5). A name another undeleted module of the project has, in any case,
+// breaks modules_project_id_name_key (M6 P2 spec R8); the module's own row, which the update replaces, is no other, so
+// its own name in another case is its to take.
+func (q *Queries) UpdateModule(ctx context.Context, arg UpdateModuleParams) error {
+	_, err := q.db.Exec(ctx, updateModule,
+		arg.Name,
+		arg.Description,
+		arg.StartDate,
+		arg.TargetDate,
+		arg.Status,
+		arg.LeadID,
+		arg.SortOrder,
+		arg.UpdatedAt,
+		arg.UpdatedByID,
+		arg.ID,
+	)
+	return err
+}

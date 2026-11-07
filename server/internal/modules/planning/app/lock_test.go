@@ -42,6 +42,10 @@ type lockWorld struct {
 	updatedLinks  []domain.ModuleLink
 	deletedLinks  []string
 	linkRefusal   error
+	// A module's change: what UpdateModule stored and its refusal (a name taken), and the members' rows it removed.
+	updatedModules []domain.Module
+	updateRefusal  error
+	removals       []removal
 }
 
 type inTx struct{}

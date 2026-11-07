@@ -43,3 +43,31 @@ func (q *Queries) InsertModuleMembers(ctx context.Context, arg InsertModuleMembe
 	)
 	return err
 }
+
+const removeModuleMembers = `-- name: RemoveModuleMembers :exec
+UPDATE module_members
+SET deleted_at = $1::timestamptz, updated_at = $1, updated_by_id = $2::uuid
+WHERE module_id = $3 AND member_id = ANY ($4::uuid[]) AND deleted_at IS NULL
+`
+
+type RemoveModuleMembersParams struct {
+	At        time.Time
+	By        uuid.UUID
+	ModuleID  uuid.UUID
+	MemberIds []uuid.UUID
+}
+
+// The members a change of a module removes (M6 P2 spec R5): the module's undeleted rows of the accounts, soft-deleted at
+// the moment and by the account given, in one statement; a member it keeps, its row as it is. Every write of these rows
+// through the API holds the project's FOR NO KEY UPDATE first, and the deletion job's reach a deleted project's alone,
+// which no change reaches: no other write reaches them meanwhile, so they are not locked by id first (M3 design 3.6,
+// convention 5; as the work items' RemoveAssignees). module_members_module_id_member_id_key serves it.
+func (q *Queries) RemoveModuleMembers(ctx context.Context, arg RemoveModuleMembersParams) error {
+	_, err := q.db.Exec(ctx, removeModuleMembers,
+		arg.At,
+		arg.By,
+		arg.ModuleID,
+		arg.MemberIds,
+	)
+	return err
+}

@@ -89,10 +89,35 @@ func (s *Store) CreateModule(ctx context.Context, m domain.Module) error {
 		LeadID: m.LeadID, SortOrder: m.SortOrder, CreatedAt: m.CreatedAt, UpdatedAt: m.UpdatedAt, CreatedByID: m.CreatedByID,
 		UpdatedByID: m.UpdatedByID})
 	switch {
-	case postgres.UniqueViolation(err, "modules_project_id_name_key"):
+	case nameTaken(err):
 		return domain.ErrModuleNameTaken
 	case err != nil:
 		return fmt.Errorf("create module %s: %w", m.ID, err)
 	}
 	return nil
+}
+
+// UpdateModule writes the change of the module m: its name, description,
+// dates, status, lead, sort order and last change; nothing else of it, nor
+// its members' rows. A name another undeleted module of the project has,
+// archived or not, in any case, is domain.ErrModuleNameTaken (M6 P2 spec R8);
+// the module's own row is no other, so its own name in another case is its
+// to take. As CreateModule, any other violation is a bug.
+func (s *Store) UpdateModule(ctx context.Context, m domain.Module) error {
+	err := s.queries(ctx).UpdateModule(ctx, gen.UpdateModuleParams{ID: m.ID, Name: m.Name, Description: m.Description,
+		StartDate: columnOf(m.StartDate), TargetDate: columnOf(m.TargetDate), Status: string(m.Status), LeadID: m.LeadID, SortOrder: m.SortOrder,
+		UpdatedAt: m.UpdatedAt, UpdatedByID: m.UpdatedByID})
+	switch {
+	case nameTaken(err):
+		return domain.ErrModuleNameTaken
+	case err != nil:
+		return fmt.Errorf("update module %s: %w", m.ID, err)
+	}
+	return nil
+}
+
+// nameTaken reports whether err is the violation of the unique index of the
+// project's undeleted modules' names, in any case (M6 P2 spec R8).
+func nameTaken(err error) bool {
+	return postgres.UniqueViolation(err, "modules_project_id_name_key")
 }

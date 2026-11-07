@@ -168,8 +168,8 @@ func (u *ListModuleLinks) Execute(ctx context.Context, moduleID uuid.UUID) ([]do
 	return out, err
 }
 
-// writable refuses a write on the links of an archived module (M6 P2 spec
-// R2): planning.archived, after the decision.
+// writable refuses a change of an archived module and a write on its links
+// (M6 P2 spec R2): planning.archived, after the decision.
 func writable(h held) error {
 	if h.module.ArchivedAt != nil {
 		return domain.ErrArchived

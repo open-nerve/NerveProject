@@ -54,3 +54,22 @@ SELECT m.id, m.workspace_id, m.project_id, m.name, m.description, m.start_date, 
 FROM modules m
 WHERE m.project_id = sqlc.arg(project_id) AND m.deleted_at IS NULL AND m.archived_at IS NOT NULL
 ORDER BY m.archived_at DESC, m.id;
+
+-- name: UpdateModule :exec
+-- A change of a module (M6 P2 spec 2.3): its name, description, dates, status, lead and sort order, last changed by one
+-- account at one moment; its archive and creation are not a change's, nor its members' rows. Run under the project's
+-- FOR NO KEY UPDATE, which every write on the project's modules takes first, so the row is as the change read it; it is
+-- not locked by id first (M3 design 3.6, convention 5). A name another undeleted module of the project has, in any case,
+-- breaks modules_project_id_name_key (M6 P2 spec R8); the module's own row, which the update replaces, is no other, so
+-- its own name in another case is its to take.
+UPDATE modules
+SET name          = sqlc.arg(name),
+    description   = sqlc.arg(description),
+    start_date    = sqlc.narg(start_date),
+    target_date   = sqlc.narg(target_date),
+    status        = sqlc.arg(status),
+    lead_id       = sqlc.narg(lead_id),
+    sort_order    = sqlc.arg(sort_order),
+    updated_at    = sqlc.arg(updated_at),
+    updated_by_id = sqlc.narg(updated_by_id)
+WHERE id = sqlc.arg(id) AND deleted_at IS NULL;

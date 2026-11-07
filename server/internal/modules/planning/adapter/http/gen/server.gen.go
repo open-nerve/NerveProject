@@ -254,6 +254,33 @@ type ModuleList struct {
 // ModuleStatus A module's status, set by its writers, never read from its dates.
 type ModuleStatus string
 
+// ModuleUpdate defines model for ModuleUpdate.
+type ModuleUpdate struct {
+	// Description Plain text without NUL; empty for none.
+	Description *string `json:"description,omitempty"`
+
+	// LeadID Another lead, an active member of the project who is not its guest; the lead it has is kept as it is; null clears it.
+	LeadID nullable.Nullable[uuid.UUID] `json:"lead_id,omitempty"`
+
+	// MemberIds Its members, all of them: at most 100 accounts, each named once; each it adds an active member of the project who is not its guest; empty for none.
+	MemberIds *[]uuid.UUID `json:"member_ids,omitempty"`
+
+	// Name 1–255 characters without the surrounding white space, which is dropped; no NUL.
+	Name *string `json:"name,omitempty"`
+
+	// SortOrder The module's place among the project's modules, the lowest first.
+	SortOrder *float64 `json:"sort_order,omitempty"`
+
+	// StartDate The day it starts, not after the target date; null clears it.
+	StartDate nullable.Nullable[shared.Date] `json:"start_date,omitempty"`
+
+	// Status A module's status, set by its writers, never read from its dates.
+	Status *ModuleStatus `json:"status,omitempty"`
+
+	// TargetDate The day it is due, not before the start date; null clears it.
+	TargetDate nullable.Nullable[shared.Date] `json:"target_date,omitempty"`
+}
+
 // CycleID defines model for CycleID.
 type CycleID = uuid.UUID
 
@@ -286,6 +313,9 @@ type UpdateCycleJSONRequestBody = CycleUpdate
 
 // UpdateModuleLinkJSONRequestBody defines body for UpdateModuleLink for application/json ContentType.
 type UpdateModuleLinkJSONRequestBody = ModuleLinkPatch
+
+// UpdateModuleJSONRequestBody defines body for UpdateModule for application/json ContentType.
+type UpdateModuleJSONRequestBody = ModuleUpdate
 
 // CreateModuleLinkJSONRequestBody defines body for CreateModuleLink for application/json ContentType.
 type CreateModuleLinkJSONRequestBody = ModuleLinkCreate
@@ -322,6 +352,9 @@ type ServerInterface interface {
 	// GetModule Read a module
 	// (GET /api/v0/modules/{module_id})
 	GetModule(w http.ResponseWriter, r *http.Request, moduleID ModuleID)
+	// UpdateModule Change a module
+	// (PATCH /api/v0/modules/{module_id})
+	UpdateModule(w http.ResponseWriter, r *http.Request, moduleID ModuleID)
 	// ListModuleLinks List a module's links
 	// (GET /api/v0/modules/{module_id}/links)
 	ListModuleLinks(w http.ResponseWriter, r *http.Request, moduleID ModuleID)
@@ -550,6 +583,32 @@ func (siw *ServerInterfaceWrapper) GetModule(w http.ResponseWriter, r *http.Requ
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetModule(w, r, moduleID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateModule operation middleware
+func (siw *ServerInterfaceWrapper) UpdateModule(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "module_id" -------------
+	var moduleID ModuleID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "module_id", r.PathValue("module_id"), &moduleID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "module_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateModule(w, r, moduleID)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -877,6 +936,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/projects/{project_id}/modules", wrapper.ListModules)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/projects/{project_id}/modules", wrapper.CreateModule)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/modules/{module_id}", wrapper.GetModule)
+	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/modules/{module_id}", wrapper.UpdateModule)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/modules/{module_id}/links", wrapper.ListModuleLinks)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/modules/{module_id}/links", wrapper.CreateModuleLink)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v0/module-links/{module_link_id}", wrapper.DeleteModuleLink)
@@ -1253,6 +1313,53 @@ func (response GetModuledefaultApplicationProblemPlusJSONResponse) VisitGetModul
 	return err
 }
 
+type UpdateModuleRequestObject struct {
+	ModuleID ModuleID `json:"module_id"`
+	Body     *UpdateModuleJSONRequestBody
+}
+
+type UpdateModuleResponseObject interface {
+	VisitUpdateModuleResponse(w http.ResponseWriter) error
+}
+
+type UpdateModule200JSONResponse Module
+
+func (response UpdateModule200JSONResponse) VisitUpdateModuleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateModuledefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response UpdateModuledefaultApplicationProblemPlusJSONResponse) VisitUpdateModuleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ListModuleLinksRequestObject struct {
 	ModuleID ModuleID `json:"module_id"`
 }
@@ -1560,6 +1667,9 @@ type StrictServerInterface interface {
 	// GetModule Read a module
 	// (GET /api/v0/modules/{module_id})
 	GetModule(ctx context.Context, request GetModuleRequestObject) (GetModuleResponseObject, error)
+	// UpdateModule Change a module
+	// (PATCH /api/v0/modules/{module_id})
+	UpdateModule(ctx context.Context, request UpdateModuleRequestObject) (UpdateModuleResponseObject, error)
 	// ListModuleLinks List a module's links
 	// (GET /api/v0/modules/{module_id}/links)
 	ListModuleLinks(ctx context.Context, request ListModuleLinksRequestObject) (ListModuleLinksResponseObject, error)
@@ -1834,6 +1944,39 @@ func (sh *strictHandler) GetModule(w http.ResponseWriter, r *http.Request, modul
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetModuleResponseObject); ok {
 		if err := validResponse.VisitGetModuleResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateModule operation middleware
+func (sh *strictHandler) UpdateModule(w http.ResponseWriter, r *http.Request, moduleID ModuleID) {
+	var request UpdateModuleRequestObject
+
+	request.ModuleID = moduleID
+
+	var body UpdateModuleJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateModule(ctx, request.(UpdateModuleRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateModule")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateModuleResponseObject); ok {
+		if err := validResponse.VisitUpdateModuleResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

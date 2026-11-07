@@ -183,3 +183,34 @@ func TestDiffMembers(t *testing.T) {
 		}
 	}
 }
+
+// Newcomers: the accounts a change makes anew, whose roles are read under the lock (M6 P2 spec R5) — the lead it sets
+// to another, then the members it adds, in id order; none for a lead it keeps or clears, nor a member it keeps or
+// removes, so no role is read for them.
+func TestModulePatchNewcomers(t *testing.T) {
+	people := ascending(5)
+	lead, kept, gone, added, other := people[0], people[1], people[2], people[3], people[4]
+	m := domain.Module{LeadID: &lead, MemberIDs: []uuid.UUID{kept, gone}}
+	for _, tt := range []struct {
+		name string
+		p    domain.ModulePatch
+		want []uuid.UUID
+	}{
+		{"nothing", domain.ModulePatch{Name: ptr("x")}, nil},
+		{"the lead as it is", domain.ModulePatch{SetLeadID: true, LeadID: &lead}, nil},
+		{"the lead cleared", domain.ModulePatch{SetLeadID: true}, nil},
+		{"another lead", domain.ModulePatch{SetLeadID: true, LeadID: &other}, []uuid.UUID{other}},
+		{"a kept member made the lead", domain.ModulePatch{SetLeadID: true, LeadID: &kept}, []uuid.UUID{kept}},
+		{"the members as they are", domain.ModulePatch{MemberIDs: &[]uuid.UUID{gone, kept}}, nil},
+		{"members added and removed", domain.ModulePatch{MemberIDs: &[]uuid.UUID{other, kept, added}}, []uuid.UUID{added, other}},
+		{"a lead and members", domain.ModulePatch{SetLeadID: true, LeadID: &other, MemberIDs: &[]uuid.UUID{kept, added}},
+			[]uuid.UUID{other, added}},
+	} {
+		if got := tt.p.Newcomers(m); !reflect.DeepEqual(got, tt.want) {
+			t.Errorf("%s: %v; want %v", tt.name, got, tt.want)
+		}
+	}
+	if got := (domain.ModulePatch{SetLeadID: true, LeadID: &lead}).Newcomers(domain.Module{}); !reflect.DeepEqual(got, []uuid.UUID{lead}) {
+		t.Errorf("a lead given to a module without one: %v", got)
+	}
+}

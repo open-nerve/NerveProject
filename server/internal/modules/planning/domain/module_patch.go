@@ -110,6 +110,22 @@ func (p ModulePatch) Apply(m Module, roles map[uuid.UUID]shared.Role) (Module, b
 	return next, changed, nil
 }
 
+// Newcomers are the accounts p makes anew on m, whose project roles Apply
+// holds them to (M6 P2 spec R5), so the only ones whose roles a change
+// reads: the lead it sets, when it is another than m's, then each member it
+// adds, in id order. A lead it keeps or clears, and a member it keeps or
+// removes, is none; nil when there is no newcomer.
+func (p ModulePatch) Newcomers(m Module) []uuid.UUID {
+	var ids []uuid.UUID
+	if p.SetLeadID && p.LeadID != nil && !sameAccount(p.LeadID, m.LeadID) {
+		ids = append(ids, *p.LeadID)
+	}
+	if p.MemberIDs != nil {
+		ids = append(ids, DiffMembers(m.MemberIDs, *p.MemberIDs).Added...)
+	}
+	return ids
+}
+
 // datesProblem is the problem of next's dates, those p gives merged with the
 // module's, when the start comes after the target: at start_date when p gives
 // the start date alone, since the target is the module's; else at

@@ -1889,7 +1889,11 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        /**
+         * Change a module
+         * @description For its project's admins and members, not its guests, and not a caller who sees only his own work items there. Each field given is changed, each left out kept; start_date, target_date and lead_id may each be given alone, and null clears it. member_ids, given, is the module's whole set of members: those it leaves out are removed, those it adds are added, those it keeps are left as they are. The name has 1–255 characters without its surrounding white space, which is dropped, and no NUL; the description no NUL; the status is one of ModuleStatus; member_ids names at most 100 accounts, each once; the sort order is a number (validation_failed); these are checked before the module is looked at. A module that does not exist or is deleted, one whose project is deleted, and one whose project the caller does not see answer planning.module_not_found; a caller who may not change it, forbidden; an archived project, project.archived; modules turned off, planning.modules_disabled; an archived module refuses any change, one of nothing too (planning.archived). After the project's row is locked: the dates given, each else the module's, may not put the start after the target (validation_failed, at start_date when it is given alone, else at target_date); a lead given anew and each member added must be an active member of the project who is not its guest (validation_failed, at lead_id or member_ids[i]), while a lead or a member kept is not looked at, even one who has left the project; and no other undeleted module of the project, archived ones too, may have the name, in any case (planning.module_name_taken), while its own name in another case is its to take. A change of nothing, member_ids naming its members in any order too, writes nothing and answers the module as it is. The module's change and its removed and added members' rows are written at one moment by the caller.
+         */
+        patch: operations["updateModule"];
         trace?: never;
     };
     "/api/v0/modules/{module_id}/links": {
@@ -3499,6 +3503,32 @@ export interface components {
             /** @description At most 100 accounts, each named once, each an active member of the project who is not its guest; left out, or empty, for none. */
             member_ids?: string[];
         };
+        ModuleUpdate: {
+            /** @description 1–255 characters without the surrounding white space, which is dropped; no NUL. */
+            name?: string;
+            /** @description Plain text without NUL; empty for none. */
+            description?: string;
+            /**
+             * Format: date
+             * @description The day it starts, not after the target date; null clears it.
+             */
+            start_date?: string | null;
+            /**
+             * Format: date
+             * @description The day it is due, not before the start date; null clears it.
+             */
+            target_date?: string | null;
+            status?: components["schemas"]["ModuleStatus"];
+            /**
+             * Format: uuid
+             * @description Another lead, an active member of the project who is not its guest; the lead it has is kept as it is; null clears it.
+             */
+            lead_id?: string | null;
+            /** @description Its members, all of them: at most 100 accounts, each named once; each it adds an active member of the project who is not its guest; empty for none. */
+            member_ids?: string[];
+            /** @description The module's place among the project's modules, the lowest first. */
+            sort_order?: number;
+        };
         /** @description A link of a module. */
         ModuleLink: {
             /** Format: uuid */
@@ -3728,6 +3758,7 @@ export type ModuleStatus = components['schemas']['ModuleStatus'];
 export type Module = components['schemas']['Module'];
 export type ModuleList = components['schemas']['ModuleList'];
 export type ModuleCreate = components['schemas']['ModuleCreate'];
+export type ModuleUpdate = components['schemas']['ModuleUpdate'];
 export type ModuleLink = components['schemas']['ModuleLink'];
 export type ModuleLinkCollection = components['schemas']['ModuleLinkCollection'];
 export type ModuleLinkCreate = components['schemas']['ModuleLinkCreate'];
@@ -6740,6 +6771,34 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description The module. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Module"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateModule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A module's id (Module.id). */
+                module_id: components["parameters"]["ModuleID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModuleUpdate"];
+            };
+        };
+        responses: {
+            /** @description The module as changed. */
             200: {
                 headers: {
                     [name: string]: unknown;

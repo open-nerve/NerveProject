@@ -13,7 +13,7 @@ import (
 
 // The rows of the permission matrix of a project's modules (M6 P2 spec
 // R10): listing and creating them under the project of each column, and
-// reading one, naming its column's own (moduleOf) by its id
+// reading and changing one, naming its column's own (moduleOf) by its id
 // (/modules/{module_id}); and the modules they rest on, matrixModules,
 // which prepareMatrix seeds in each project through the planning store
 // (modules) once the project store has turned the project's modules on
@@ -115,6 +115,35 @@ func moduleMatrixRows() []matrixRow {
 		// decision too.
 		{op: "createModule", variant: "archived", write: true, columns: archivedColumns, request: toProject(http.MethodPost, "/modules", newModule),
 			cells: ofArchived(cellProjectArchived, cellForbidden)},
+		// The project's admins and members, as createModule, whoever made
+		// the module.
+		{op: "updateModule", write: true, columns: cycleColumns, request: toModule(http.MethodPatch, "", `{"sort_order":12345}`),
+			cells: moduleRows.inCycleColumns(cellOK, cellOK, cellOK, cellForbidden, cellForbidden), check: reordersTheModule},
+		{op: "updateModule", variant: "archived", write: true, columns: archivedColumns, request: toModule(http.MethodPatch, "", `{"sort_order":12345}`),
+			cells: moduleRows.ofArchived(cellProjectArchived, cellForbidden)},
+		// The column's module archived first in each cell's copy
+		// (moduleArchived): it takes no change, one of nothing too, after the
+		// decision (M6 P2 spec R2).
+		{op: "updateModule", variant: "an archived module", write: true, columns: cycleColumns, prepare: moduleArchived,
+			request: toModule(http.MethodPatch, "", `{}`),
+			cells:   moduleRows.inCycleColumns(cellModuleArchived, cellModuleArchived, cellModuleArchived, cellForbidden, cellForbidden)},
+	}
+}
+
+// reordersTheModule: the column's own module at 12345, the rest as seeded,
+// last changed by the column's account.
+func reordersTheModule(t *testing.T, c caller, s seeded, answer string) {
+	var got moduleAnswer
+	decodeAnswer(t, answer, &got)
+	if got.SortOrder != 12345 || got.UpdatedByID == nil || *got.UpdatedByID != s.account(accountOf(c)) || !got.UpdatedAt.After(got.CreatedAt) {
+		t.Errorf("%s reorders %s; want %s's %s at 12345, changed by %s", c, answer, projectOf(c), moduleOf(c), accountOf(c))
+	}
+	for _, m := range matrixModules {
+		if m.name == moduleOf(c) {
+			seeded := got
+			seeded.SortOrder, seeded.UpdatedByID = m.sortOrder, got.CreatedByID
+			isTheSeededModule(t, c, s, m.name, seeded, answer)
+		}
 	}
 }
 
