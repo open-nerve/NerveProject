@@ -84,6 +84,8 @@ export const PROBLEM_MESSAGES: Readonly<Record<string, string>> = {
   "issue.archived": "errors.issue_archived",
   "issue.not_archivable": "errors.issue_not_archivable",
   "issue.relation_not_found": "errors.issue_relation_not_found",
+  "planning.cycles_disabled": "errors.planning_cycles_disabled",
+  "planning.cycle_dates_overlap": "errors.planning_cycle_dates_overlap",
 };
 
 /** The message of every FieldError.code, shown under the field it names. */

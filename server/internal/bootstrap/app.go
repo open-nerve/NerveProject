@@ -5,12 +5,8 @@ package bootstrap
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io/fs"
 	"log/slog"
-	"net"
-	"net/netip"
-	"os"
 	"slices"
 	"sync"
 	"time"
@@ -179,8 +175,10 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 		Profiles:   issueProfiles{profiles: identityPorts.PublicProfiles},
 	})
 	plans := planning.New(planning.Deps{
-		Pool: pool, JobTx: issueTx, RuntimeNow: time.Now, Logger: logger,
+		Pool: pool, Tx: busyTx{tx: issueTx}, JobTx: issueTx, RuntimeNow: time.Now, Logger: logger,
 		DeleteBatch: cfg.Planning.DeleteBatch, DeleteBudget: cfg.Planning.DeleteBudget,
+		WriteGate: projectWrites, Clock: businessClock, Authorizer: authorizer,
+		Projects: planningProjects{projects: projectPorts.PlanningProjects},
 	})
 	// project before workspace: workspace's writes take its cascade.
 	proj := project.New(project.Deps{
@@ -288,6 +286,7 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 	ws.Register(a.router, api)
 	proj.Register(a.router, api)
 	issues.Register(a.router, api)
+	plans.Register(a.router, api)
 	files.Register(a.router, api, bucket(limiter, "file_transfer", cfg.Files.TransferRate))
 	// The web UI takes every path no other pattern claims. It must be the
 	// method-less "/": "GET /" and the method-less "/api/" would conflict.
@@ -298,70 +297,6 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 	}
 	a.router.Handle("/", webHandler)
 	return a, nil
-}
-
-// readSigningKey returns the content of auth.jwt.private_key_file, or nil
-// when it is not set. Errors name the key, never the path (M0-P2 handoff 4).
-func readSigningKey(path string) ([]byte, error) {
-	if path == "" {
-		return nil, nil
-	}
-	data, err := os.ReadFile(path)
-	if err != nil {
-		var pathErr *fs.PathError
-		if errors.As(err, &pathErr) {
-			err = pathErr.Err
-		}
-		return nil, fmt.Errorf("auth.jwt.private_key_file: %w", err)
-	}
-	return data, nil
-}
-
-// invitationMAC is the invitation MAC the workspace module takes: keys'
-// MAC of workspace.InvitationMACPurpose (M3 design 3.8, 6.6), the one place
-// the composition names the purpose.
-func invitationMAC(keys *identity.Keys) (identity.MAC, error) {
-	return keys.MAC(workspace.InvitationMACPurpose)
-}
-
-// passwordHashing is auth.password as identity takes it.
-func passwordHashing(p config.PasswordConfig) identity.PasswordHashing {
-	return identity.PasswordHashing{
-		MemoryKiB:     p.Argon2MemoryKiB,
-		Iterations:    p.Argon2Iterations,
-		Parallelism:   p.Argon2Parallelism,
-		MaxConcurrent: p.MaxConcurrentHashes,
-		MaxWait:       p.MaxWait,
-	}
-}
-
-// bucket is the rate-limit bucket name on limiter, sized by c (M2 design
-// 3.10).
-func bucket(limiter *ratelimit.Limiter, name string, c config.BucketConfig) *ratelimit.Bucket {
-	return limiter.Bucket(name, ratelimit.Rate{PerMinute: c.PerMinute, Burst: c.Burst})
-}
-
-// warnIfExposed warns once when a non-prod nerve listens beyond loopback:
-// most likely a deployment without NERVE_ENV=prod (M2 design 6.1).
-func warnIfExposed(ctx context.Context, logger *slog.Logger, cfg config.Config) {
-	if cfg.Env == config.EnvProd || loopback(cfg.Server.Addr) {
-		return
-	}
-	logger.WarnContext(ctx, "not running as prod but listening beyond this machine: sign-up is open by default, "+
-		"and without auth.jwt.private_key_file the signing key is ephemeral; set NERVE_ENV=prod to deploy",
-		slog.String("env", cfg.Env), slog.String("addr", cfg.Server.Addr))
-}
-
-func loopback(addr string) bool {
-	host, _, err := net.SplitHostPort(addr)
-	if err != nil {
-		return false
-	}
-	if host == "localhost" {
-		return true
-	}
-	ip, err := netip.ParseAddr(host)
-	return err == nil && ip.IsLoopback()
 }
 
 // run applies pending migrations when database.auto_migrate is on, then

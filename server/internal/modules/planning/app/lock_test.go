@@ -24,6 +24,8 @@ type lockWorld struct {
 	onLock   func() // what commits while the lock waits
 	busy     error  // the transaction's failure
 	gateFail error
+	now      time.Time      // the clock's reading
+	created  []domain.Cycle // what CreateCycle stored
 }
 
 type inTx struct{}

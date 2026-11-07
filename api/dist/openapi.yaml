@@ -19,6 +19,8 @@ tags:
     description: Work items.
   - name: asset
     description: Private file preparations and content capabilities.
+  - name: planning
+    description: Cycles and modules of a project.
 paths:
   /api/v0/drafts/{draft_id}/asset-preparations:
     parameters:
@@ -3053,6 +3055,40 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ProjectPreferences'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/projects/{project_id}/cycles:
+    parameters:
+      - $ref: '#/components/parameters/ProjectID'
+    post:
+      operationId: createCycle
+      tags:
+        - planning
+      summary: Create a cycle in a project
+      description: 'For the project''s admins and members, not its guests, and not a caller who sees only his own work items there. The name has 1–255 characters without its surrounding white space, which is dropped, and no NUL; the description has no NUL and is empty when it is left out; the start and end dates are days of the project''s calendar, both or neither, the start not after the end (validation_failed). The values are checked before the project is looked at. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but whose cycles he may not change, forbidden; an archived project, project.archived; a project whose cycles are turned off (Project.cycle_view), planning.cycles_disabled. A dated cycle may not share a day with another undeleted cycle of the project, archived ones too (planning.cycle_dates_overlap). The new cycle comes first: its sort order is the lowest of the project''s undeleted cycles, archived ones too, less 10000, or 65535 when it has none. Its owner is the caller. Everything is decided after the project''s row is locked, and written at one moment by the caller.'
+      security:
+        - bearer: []
+      x-problem-codes:
+        - validation_failed
+        - project.not_found
+        - forbidden
+        - project.archived
+        - planning.cycles_disabled
+        - planning.cycle_dates_overlap
+        - server_busy
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CycleCreate'
+      responses:
+        '201':
+          description: The new cycle.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cycle'
         default:
           $ref: '#/components/responses/Problem'
 components:
@@ -6107,6 +6143,114 @@ components:
           $ref: '#/components/schemas/ProjectDisplayFilters'
         display_properties:
           $ref: '#/components/schemas/ProjectDisplayProperties'
+    CycleCreate:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+      properties:
+        name:
+          description: 1–255 characters without the surrounding white space, which is dropped; no NUL.
+          type: string
+        description:
+          description: Plain text without NUL; empty when left out.
+          type: string
+        start_date:
+          description: The day it starts, on the project's calendar; given with end_date, or neither for a draft.
+          type: string
+          format: date
+        end_date:
+          description: The day it ends, not before start_date; given with start_date, or neither for a draft.
+          type: string
+          format: date
+    CycleStatus:
+      description: 'Read from the cycle''s dates on the project''s calendar day, never stored: draft without dates, upcoming before the start, current from the start to the end, completed after the end.'
+      type: string
+      enum:
+        - draft
+        - upcoming
+        - current
+        - completed
+    Cycle:
+      description: A cycle of a project.
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - workspace_id
+        - project_id
+        - name
+        - description
+        - start_date
+        - end_date
+        - status
+        - owned_by_id
+        - sort_order
+        - archived_at
+        - created_at
+        - updated_at
+        - created_by_id
+        - updated_by_id
+      properties:
+        id:
+          type: string
+          format: uuid
+        workspace_id:
+          type: string
+          format: uuid
+        project_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          description: Plain text; empty for none.
+          type: string
+        start_date:
+          description: The day it starts, on the project's calendar; null for a draft.
+          type:
+            - string
+            - 'null'
+          format: date
+        end_date:
+          description: The day it ends, on the project's calendar; null for a draft.
+          type:
+            - string
+            - 'null'
+          format: date
+        status:
+          $ref: '#/components/schemas/CycleStatus'
+        owned_by_id:
+          description: The account that created it; null once that account is gone.
+          type:
+            - string
+            - 'null'
+          format: uuid
+        sort_order:
+          description: The cycle's place among the project's cycles, the lowest first.
+          type: number
+        archived_at:
+          description: When it was archived; null while it is not.
+          type:
+            - string
+            - 'null'
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        created_by_id:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        updated_by_id:
+          type:
+            - string
+            - 'null'
+          format: uuid
   responses:
     Problem:
       description: Error (RFC 9457 problem details).

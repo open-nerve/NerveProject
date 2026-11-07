@@ -1738,6 +1738,29 @@ export interface paths {
         patch: operations["updateProjectPreferences"];
         trace?: never;
     };
+    "/api/v0/projects/{project_id}/cycles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A project's id (Project.id). */
+                project_id: components["parameters"]["ProjectID"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create a cycle in a project
+         * @description For the project's admins and members, not its guests, and not a caller who sees only his own work items there. The name has 1–255 characters without its surrounding white space, which is dropped, and no NUL; the description has no NUL and is empty when it is left out; the start and end dates are days of the project's calendar, both or neither, the start not after the end (validation_failed). The values are checked before the project is looked at. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but whose cycles he may not change, forbidden; an archived project, project.archived; a project whose cycles are turned off (Project.cycle_view), planning.cycles_disabled. A dated cycle may not share a day with another undeleted cycle of the project, archived ones too (planning.cycle_dates_overlap). The new cycle comes first: its sort order is the lowest of the project's undeleted cycles, archived ones too, less 10000, or 65535 when it has none. Its owner is the caller. Everything is decided after the project's row is locked, and written at one moment by the caller.
+         */
+        post: operations["createCycle"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -3129,6 +3152,70 @@ export interface components {
             display_filters?: components["schemas"]["ProjectDisplayFilters"];
             display_properties?: components["schemas"]["ProjectDisplayProperties"];
         };
+        CycleCreate: {
+            /** @description 1–255 characters without the surrounding white space, which is dropped; no NUL. */
+            name: string;
+            /** @description Plain text without NUL; empty when left out. */
+            description?: string;
+            /**
+             * Format: date
+             * @description The day it starts, on the project's calendar; given with end_date, or neither for a draft.
+             */
+            start_date?: string;
+            /**
+             * Format: date
+             * @description The day it ends, not before start_date; given with start_date, or neither for a draft.
+             */
+            end_date?: string;
+        };
+        /**
+         * @description Read from the cycle's dates on the project's calendar day, never stored: draft without dates, upcoming before the start, current from the start to the end, completed after the end.
+         * @enum {string}
+         */
+        CycleStatus: "draft" | "upcoming" | "current" | "completed";
+        /** @description A cycle of a project. */
+        Cycle: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            workspace_id: string;
+            /** Format: uuid */
+            project_id: string;
+            name: string;
+            /** @description Plain text; empty for none. */
+            description: string;
+            /**
+             * Format: date
+             * @description The day it starts, on the project's calendar; null for a draft.
+             */
+            start_date: string | null;
+            /**
+             * Format: date
+             * @description The day it ends, on the project's calendar; null for a draft.
+             */
+            end_date: string | null;
+            status: components["schemas"]["CycleStatus"];
+            /**
+             * Format: uuid
+             * @description The account that created it; null once that account is gone.
+             */
+            owned_by_id: string | null;
+            /** @description The cycle's place among the project's cycles, the lowest first. */
+            sort_order: number;
+            /**
+             * Format: date-time
+             * @description When it was archived; null while it is not.
+             */
+            archived_at: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+            /** Format: uuid */
+            created_by_id: string | null;
+            /** Format: uuid */
+            updated_by_id: string | null;
+        };
     };
     responses: {
         /** @description Error (RFC 9457 problem details). */
@@ -3308,6 +3395,9 @@ export type ProjectDisplayFilters = components['schemas']['ProjectDisplayFilters
 export type ProjectDisplayProperties = components['schemas']['ProjectDisplayProperties'];
 export type ProjectPreferences = components['schemas']['ProjectPreferences'];
 export type ProjectPreferencesUpdate = components['schemas']['ProjectPreferencesUpdate'];
+export type CycleCreate = components['schemas']['CycleCreate'];
+export type CycleStatus = components['schemas']['CycleStatus'];
+export type Cycle = components['schemas']['Cycle'];
 export type ResponseProblem = components['responses']['Problem'];
 export type ParameterLimit = components['parameters']['Limit'];
 export type ParameterCursor = components['parameters']['Cursor'];
@@ -6063,6 +6153,34 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProjectPreferences"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    createCycle: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A project's id (Project.id). */
+                project_id: components["parameters"]["ProjectID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CycleCreate"];
+            };
+        };
+        responses: {
+            /** @description The new cycle. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Cycle"];
                 };
             };
             default: components["responses"]["Problem"];

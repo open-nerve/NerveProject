@@ -281,7 +281,10 @@ export async function expectWorkspaceDeleted(
   const deferred = names.filter(asynchronousDeletionTable);
   expect(await readRows(immediate), `the synchronous rows under ${slug}`).toEqual(expected(immediate));
   await expect
-    .poll(() => readRows(deferred), { message: `the asynchronous issue/asset rows under ${slug}`, timeout: 15_000 })
+    .poll(() => readRows(deferred), {
+      message: `the asynchronous issue/asset/planning rows under ${slug}`,
+      timeout: 15_000,
+    })
     .toEqual(expected(deferred));
 }
 

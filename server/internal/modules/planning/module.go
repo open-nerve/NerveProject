@@ -12,11 +12,17 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	httpadapter "github.com/open-nerve/NerveProject/server/internal/modules/planning/adapter/http"
 	postgresadapter "github.com/open-nerve/NerveProject/server/internal/modules/planning/adapter/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/modules/planning/app"
 	"github.com/open-nerve/NerveProject/server/internal/modules/planning/domain"
+	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
+
+// ProjectFacts are a project's facts as the module reads them: bootstrap
+// converts project's PlanningFacts into them.
+type ProjectFacts = app.ProjectFacts
 
 // Provided are the adapters bootstrap builds before wiring the modules.
 type Provided struct {
@@ -33,6 +39,17 @@ func Provide(pool *pgxpool.Pool) Provided {
 // Deps are what the module needs.
 type Deps struct {
 	Pool *pgxpool.Pool
+	// Tx are the transactions of the module's writes, each of which waits
+	// for a lock at most issue.write_lock_timeout and answers server_busy
+	// past it (bootstrap/gate.go).
+	Tx shared.TxManager
+	// WriteGate is the write gate of each project, shared with the
+	// work-item side (bootstrap/gate.go).
+	WriteGate  app.WriteGate
+	Clock      app.Clock
+	Authorizer shared.Authorizer
+	// Projects are project's PlanningProjects, converted (bootstrap/ports.go).
+	Projects app.Projects
 	// JobTx runs the deletion job's short transactions.
 	JobTx shared.TxManager
 	// RuntimeNow is the monotonic clock of the deletion job's budget.
@@ -44,6 +61,7 @@ type Deps struct {
 
 // Module is the planning module.
 type Module struct {
+	uc           httpadapter.UseCases
 	deleteRows   *app.DeleteRows
 	deleteBudget time.Duration
 	logger       *slog.Logger
@@ -52,10 +70,17 @@ type Module struct {
 // New builds the module from d.
 func New(d Deps) *Module {
 	store := postgresadapter.New(d.Pool)
+	locks := app.NewLocks(d.Projects, store, d.Authorizer, d.WriteGate, d.Tx)
 	return &Module{
+		uc:           httpadapter.UseCases{CreateCycle: app.NewCreateCycle(app.CreateCycleDeps{Locks: locks, Cycles: store, Clock: d.Clock})},
 		deleteRows:   app.NewDeleteRows(app.DeleteRowsDeps{Rows: store, Tx: d.JobTx, RuntimeNow: d.RuntimeNow, Batch: d.DeleteBatch, Budget: d.DeleteBudget}),
 		deleteBudget: d.DeleteBudget, logger: d.Logger,
 	}
+}
+
+// Register mounts the module's routes on router behind api's middlewares.
+func (m *Module) Register(router *httpserver.Router, api *httpserver.API) {
+	httpadapter.Register(router, api, m.uc)
 }
 
 // Actions lists the module's actions: bootstrap's test holds the union of

@@ -27,7 +27,7 @@ import {
   modalDialog,
   pageBehindHidden,
 } from "../../fixtures/dialogs";
-import { furnishIssueRows } from "../../fixtures/furnish";
+import { furnishIssueRows, furnishPlanningRows } from "../../fixtures/furnish";
 import { answerTo, registerOnboarded, sentHeld } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 import { anotherBrowser } from "../../fixtures/workspace-pages";
@@ -177,6 +177,7 @@ test("P4 (API): the admin archives a project, which leaves the list for the arch
   // admin's.
   expect(await act(api, admin, web.id, "unarchive")).toBeNull();
   await furnishIssueRows(api, member, slug, web.id, memberId, bug.id);
+  await furnishPlanningRows(api, admin, web.id);
   expect(await act(api, admin, web.id, "archive")).toEqual(expect.any(String));
   // An archived project is deleted as any other.
   const deleted = await api.DELETE("/api/v0/projects/{project_id}", {
@@ -247,6 +248,7 @@ test("P4 (page): the admin archives a project from its settings, the dialog held
   // assigned to wes and labelled Bug.
   const bug = await createLabel(api, admin.access_token, web.id, { name: "Bug" });
   await furnishIssueRows(api, admin.access_token, slug, web.id, wesId, bug.id);
+  await furnishPlanningRows(api, admin.access_token, web.id);
 
   const page = await signedInPage(admin);
   const watch = await watchPage(page);

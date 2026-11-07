@@ -185,7 +185,7 @@ export async function expectMember(
  * P4, W3: the project of projectId is deleted by the account of adminEmail, and with it, at the same moment and by the
  * same account, every row under it that was not deleted before, of each table under projects (projectTables), by its
  * project_id. Each table has such a row, and none is left undeleted; a row deleted before the project, as a label a
- * story deleted, is not counted. M3 rows are immediate; issue/asset-owned rows wait for the committed task.
+ * story deleted, is not counted. M3 rows are immediate; issue/asset/planning-owned rows wait for the committed task.
  */
 export async function expectProjectDeleted(db: Database, projectId: string, adminEmail: string): Promise<void> {
   const [project] = await db.query(
@@ -217,7 +217,7 @@ export async function expectProjectDeleted(db: Database, projectId: string, admi
   );
   await expect
     .poll(() => readRows(deferred), {
-      message: `the asynchronous issue/asset rows under ${projectId}`,
+      message: `the asynchronous issue/asset/planning rows under ${projectId}`,
       timeout: 15_000,
     })
     .toEqual(projectDeletionCounts(deferred));

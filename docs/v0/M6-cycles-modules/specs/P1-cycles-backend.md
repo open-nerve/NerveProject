@@ -34,7 +34,7 @@
 | `web/apps/web/core/services/cycle.service.ts`（及测试）、`store/cycle.store.ts`、`components/cycles/active-cycle/use-cycles-details.ts`、`[cycleId]/page.test.tsx` | 删除 `cycleDistribution`/`fetchActiveCycleDistribution`、它们的调用与因此不再使用的 `TCycleDistribution` 导入（`progress-stats.tsx` 仍用该类型） |
 | `tools/keywords.json` | `phase` 为 `M6/P1`；删除 `analytics` 对这两个文件的例外 |
 | `web/apps/web/core/lib/error-messages.ts`、`web/packages/i18n/src/locales/{en,zh-CN}/errors.json` | 新错误码的文案（M4 约束 4） |
-| `e2e/` | `furnishIssueRows`/`furnishWorkspace` 打开 `cycle_view` 并经接口建迭代；`catalog.ts` 的 `asynchronousDeletionTable` 加 `cycles`；`stories/planning/` 的 G1–G3、G8、G18 接口故事 |
+| `e2e/` | 新的 `furnishPlanningRows` 以项目管理员经接口打开 `cycle_view` 并建一个迭代，`furnishWorkspace` 与 P4、W3 的删除故事在 `furnishIssueRows` 旁调用它（`furnishIssueRows` 的调用者多是项目成员，不能改项目设置）；`catalog.ts` 的 `asynchronousDeletionTable` 加 `cycles`；`stories/planning/` 的 G1–G3、G8、G18 接口故事 |
 | `docs/v0/plane-diff.md`、各输入交接 | `cycles` 的差异；“处理结果（M6/P1）” |
 
 ### 2.2 表与 Plane 差异

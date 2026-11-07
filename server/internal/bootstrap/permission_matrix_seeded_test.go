@@ -145,6 +145,7 @@ type seeded struct {
 	projectMembers      map[string]uuid.UUID
 	states              map[string]uuid.UUID
 	labels              map[string]uuid.UUID
+	cycles              map[string]uuid.UUID
 	issues              map[string]uuid.UUID
 	comments            map[string]uuid.UUID
 	links               map[string]uuid.UUID
@@ -162,7 +163,7 @@ type seeded struct {
 // cells will.
 func newSeeded() seeded {
 	s := seeded{assets: map[string]uuid.UUID{}, drafts: map[string]uuid.UUID{}, workspaces: map[string]uuid.UUID{}, memberships: map[string]uuid.UUID{}, invitations: map[string]uuid.UUID{},
-		projects: map[string]uuid.UUID{}, projectMembers: map[string]uuid.UUID{}, states: map[string]uuid.UUID{}, labels: map[string]uuid.UUID{},
+		projects: map[string]uuid.UUID{}, projectMembers: map[string]uuid.UUID{}, states: map[string]uuid.UUID{}, labels: map[string]uuid.UUID{}, cycles: map[string]uuid.UUID{},
 		issues: map[string]uuid.UUID{}, comments: map[string]uuid.UUID{}, links: map[string]uuid.UUID{}, descriptionVersions: map[string]uuid.UUID{}, relations: map[string]uuid.UUID{}, accounts: map[caller]uuid.UUID{}}
 	for _, c := range workspaceColumns {
 		s.drafts[workspaceOf(c)+"/"+string(c)] = uuid.NewV7()
@@ -184,6 +185,9 @@ func newSeeded() seeded {
 		}
 		for _, l := range matrixLabels {
 			s.labels[p.key+"|"+l.name] = uuid.NewV7()
+		}
+		for _, c := range matrixCycles {
+			s.cycles[p.key+"|"+c.name] = uuid.NewV7()
 		}
 	}
 	for _, i := range seededItems() {
