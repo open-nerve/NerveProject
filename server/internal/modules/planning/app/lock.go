@@ -14,6 +14,28 @@ type CycleReader interface {
 	GetCycle(ctx context.Context, id uuid.UUID) (c domain.Cycle, found bool, err error)
 }
 
+// ModuleReader reads the undeleted module id, archived or not, with its
+// undeleted members' accounts in id order, in the transaction ctx carries;
+// found is false when there is none.
+type ModuleReader interface {
+	GetModule(ctx context.Context, id uuid.UUID) (m domain.Module, found bool, err error)
+}
+
+// ModuleLinkReader reads the undeleted module link id, in the transaction
+// ctx carries; found is false when there is none. Its module is read apart
+// (ModuleReader).
+type ModuleLinkReader interface {
+	GetModuleLink(ctx context.Context, id uuid.UUID) (l domain.ModuleLink, found bool, err error)
+}
+
+// NamedReader reads what a planning call names below its project (M6 P2
+// spec R1): a cycle, a module, a module link.
+type NamedReader interface {
+	CycleReader
+	ModuleReader
+	ModuleLinkReader
+}
+
 // WriteGate is the projects' write gate (platform/gate), the one the work
 // items' writes enter too: Enter returns once a write on the project may
 // begin its transaction, with the function that leaves the gate, which the
@@ -31,29 +53,37 @@ type WriteGate interface {
 // lock nor a place in the write gate. Then the gate. Then, in the write's
 // transaction, the project's row FOR NO KEY UPDATE, the first lock of every
 // write on the project's work items, cycles and modules, so they run one
-// after another; the cycle read again under it; and the decision again,
-// which is final: what committed while the write waited is seen.
+// after another; what the write names read again under it — a cycle, a
+// module, a module link and its module (M6 P2 spec R1); and the decision
+// again, which is final: what committed while the write waited is seen.
 type Locks struct {
 	projects Projects
-	cycles   CycleReader
+	objects  NamedReader
 	auth     shared.Authorizer
 	gate     WriteGate
 	tx       shared.TxManager
 }
 
-// NewLocks returns the locks over project's facts and lock, the cycles'
-// reads, the Authorizer, the write gate and write transactions.
-func NewLocks(projects Projects, cycles CycleReader, auth shared.Authorizer, gate WriteGate, tx shared.TxManager) Locks {
-	return Locks{projects: projects, cycles: cycles, auth: auth, gate: gate, tx: tx}
+// NewLocks returns the locks over project's facts and lock, the reads of
+// what a write names, the Authorizer, the write gate and write
+// transactions.
+func NewLocks(projects Projects, objects NamedReader, auth shared.Authorizer, gate WriteGate, tx shared.TxManager) Locks {
+	return Locks{projects: projects, objects: objects, auth: auth, gate: gate, tx: tx}
 }
 
 // write is a planning write as Locks takes its lock: on the project project,
-// or on the cycle cycle, whose project it is then on; and the action it
+// or, whichever is not nil, on the cycle cycle, the module module or the
+// module link link, whose project it is then on (named); and the action it
 // decides.
 type write struct {
-	project uuid.UUID
-	cycle   *uuid.UUID
-	action  shared.Action
+	project             uuid.UUID
+	cycle, module, link *uuid.UUID
+	action              shared.Action
+}
+
+// named is what w names.
+func (w write) named() named {
+	return named{project: w.project, cycle: w.cycle, module: w.module, link: w.link}
 }
 
 // run takes w's precheck, then its project's write gate, then in one
@@ -81,14 +111,14 @@ func (l Locks) run(ctx context.Context, actor shared.Actor, w write, fn func(ctx
 }
 
 // decideOn reads what w is on and decides w's action on it for actor (M6 P1
-// spec R2), through facts: the project's facts without a lock for the
-// precheck, or its lock, in the transaction ctx carries (see). Then what a
-// write is refused and a read is not: an OwnOnly grant, which no planning
-// write takes (R6), is 403; then an archived project, then a project whose
-// cycles are turned off (R7), 409.
+// spec R2, P2 spec R2), through facts: the project's facts without a lock for
+// the precheck, or its lock, in the transaction ctx carries (see). Then what
+// a write is refused and a read is not: an OwnOnly grant, which no planning
+// write takes (R6), is 403; then an archived project, 409; then the toggle of
+// what the action writes turned off (R7, turnedOff), 409.
 func (l Locks) decideOn(ctx context.Context, actor shared.Actor, w write, locked uuid.UUID,
 	facts func(context.Context, uuid.UUID) (ProjectFacts, bool, error)) (held, error) {
-	h, err := see(ctx, l.cycles, l.auth, actor, w.action, w.project, w.cycle, locked, facts)
+	h, err := see(ctx, l.objects, l.auth, actor, w.action, w.named(), locked, facts)
 	switch {
 	case err != nil:
 		return held{}, err
@@ -96,8 +126,25 @@ func (l Locks) decideOn(ctx context.Context, actor shared.Actor, w write, locked
 		return held{}, shared.Forbidden()
 	case h.project.Archived:
 		return held{}, domain.ErrProjectArchived
-	case !h.project.CycleView:
-		return held{}, domain.ErrCyclesDisabled
+	}
+	if err := turnedOff(w.action, h.project); err != nil {
+		return held{}, err
 	}
 	return h, nil
+}
+
+// turnedOff is the refusal of a write of action on a project of facts f
+// whose toggle of what action writes is off (M6 design 3.8, P2 spec R1): a
+// module action's, planning.modules_disabled when its modules are off; any
+// other's, planning.cycles_disabled when its cycles are. nil when it is on.
+func turnedOff(action shared.Action, f ProjectFacts) error {
+	switch {
+	case domain.ModuleAction(action):
+		if !f.ModuleView {
+			return domain.ErrModulesDisabled
+		}
+	case !f.CycleView:
+		return domain.ErrCyclesDisabled
+	}
+	return nil
 }

@@ -28,7 +28,7 @@ func (u *GetCycle) Execute(ctx context.Context, id uuid.UUID) (domain.ReadCycle,
 		return domain.ReadCycle{}, err
 	}
 	var out domain.ReadCycle
-	err = u.d.Reads.run(ctx, actor, uuid.UUID{}, &id, func(_ context.Context, h held) error {
+	err = u.d.Reads.run(ctx, actor, domain.ActionCycleRead, named{cycle: &id}, func(_ context.Context, h held) error {
 		out, err = readCycle(h.cycle, h.project.Timezone, u.d.Clock.Now())
 		return err
 	})

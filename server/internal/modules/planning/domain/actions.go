@@ -21,6 +21,13 @@ const (
 	ActionModuleDelete shared.Action = "module.delete"
 )
 
+// ModuleAction reports whether a is one of the modules' actions: a write of
+// it is held to the project's module toggle, any other planning write to its
+// cycle toggle (M6 design 3.8).
+func ModuleAction(a shared.Action) bool {
+	return a == ActionModuleRead || a == ActionModuleWrite || a == ActionModuleDelete
+}
+
 // Actions lists the module's actions. bootstrap's test holds the union of
 // every module's Actions equal to the rule table's keys (M3 design 3.4).
 func Actions() []shared.Action {

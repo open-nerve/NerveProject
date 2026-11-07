@@ -18,6 +18,8 @@ type lockWorld struct {
 	calls    []string
 	facts    map[uuid.UUID]ProjectFacts
 	cycles   map[uuid.UUID]domain.Cycle
+	modules  map[uuid.UUID]domain.Module
+	links    map[uuid.UUID]domain.ModuleLink
 	grant    shared.Grant
 	refusal  error // the Authorizer's answer, nil for an allowance
 	targets  []shared.Target

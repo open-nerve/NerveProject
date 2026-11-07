@@ -37,7 +37,7 @@ func (u *ListCycles) Execute(ctx context.Context, projectID uuid.UUID, archived 
 		return nil, err
 	}
 	out := []domain.ReadCycle{}
-	err = u.d.Reads.run(ctx, actor, projectID, nil, func(ctx context.Context, h held) error {
+	err = u.d.Reads.run(ctx, actor, domain.ActionCycleRead, named{project: projectID}, func(ctx context.Context, h held) error {
 		cycles, err := u.d.Cycles.ListCycles(ctx, projectID, archived)
 		if err != nil {
 			return err

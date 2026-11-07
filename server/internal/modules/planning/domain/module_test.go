@@ -157,3 +157,13 @@ func TestModuleErrors(t *testing.T) {
 		t.Errorf("planning.archived says %q", got)
 	}
 }
+
+// The modules' actions are the three module.*: a write of one is held to the project's module toggle, a cycle
+// action's to its cycle toggle (M6 design 3.8).
+func TestModuleAction(t *testing.T) {
+	for _, a := range domain.Actions() {
+		if got, want := domain.ModuleAction(a), strings.HasPrefix(string(a), "module."); got != want {
+			t.Errorf("ModuleAction(%s) = %t, want %t", a, got, want)
+		}
+	}
+}
