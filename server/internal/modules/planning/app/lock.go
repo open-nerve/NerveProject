@@ -2,7 +2,6 @@ package app
 
 import (
 	"context"
-	"errors"
 	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/planning/domain"
@@ -57,16 +56,6 @@ type write struct {
 	action  shared.Action
 }
 
-// held is what a write holds under its lock: its project's id and facts,
-// locked; the cycle it names, read under the lock, zero for a write on a
-// project; and the caller's grant, as decided under the lock.
-type held struct {
-	projectID uuid.UUID
-	project   ProjectFacts
-	cycle     domain.Cycle
-	grant     shared.Grant
-}
-
 // run takes w's precheck, then its project's write gate, then in one
 // transaction its lock and decision, and runs fn in it with what they hold:
 // w's whole write. It leaves the gate once the transaction has ended, on
@@ -93,72 +82,22 @@ func (l Locks) run(ctx context.Context, actor shared.Actor, w write, fn func(ctx
 
 // decideOn reads what w is on and decides w's action on it for actor (M6 P1
 // spec R2), through facts: the project's facts without a lock for the
-// precheck, or its lock, in the transaction ctx carries. Under the lock,
-// locked is the project the precheck found, locked before the cycle is
-// read again. A cycle that is not there, or no longer in that project, and
-// a project that is not there or that actor does not see, is the 404 of
-// what the caller named; then a role the rule does not allow, and an
-// OwnOnly grant, which no planning write takes (R6), is 403; then an
-// archived project, then a project whose cycles are turned off, 409.
+// precheck, or its lock, in the transaction ctx carries (see). Then what a
+// write is refused and a read is not: an OwnOnly grant, which no planning
+// write takes (R6), is 403; then an archived project, then a project whose
+// cycles are turned off (R7), 409.
 func (l Locks) decideOn(ctx context.Context, actor shared.Actor, w write, locked uuid.UUID,
 	facts func(context.Context, uuid.UUID) (ProjectFacts, bool, error)) (held, error) {
-	notFound := domain.ErrProjectNotFound
-	h := held{projectID: w.project}
+	h, err := see(ctx, l.cycles, l.auth, actor, w.action, w.project, w.cycle, locked, facts)
 	switch {
-	case w.cycle != nil && locked == (uuid.UUID{}):
-		// The precheck of a cycle write: its project is the cycle's.
-		notFound = domain.ErrCycleNotFound
-		c, err := l.readCycle(ctx, *w.cycle, uuid.UUID{})
-		if err != nil {
-			return held{}, err
-		}
-		h.cycle, h.projectID = c, c.ProjectID
-	case w.cycle != nil:
-		// Under the lock: the project first, then the cycle read again.
-		notFound, h.projectID = domain.ErrCycleNotFound, locked
-	}
-	f, found, err := facts(ctx, h.projectID)
-	switch {
-	case err != nil:
-		return held{}, err
-	case !found:
-		return held{}, notFound
-	}
-	h.project = f
-	if w.cycle != nil && locked != (uuid.UUID{}) {
-		if h.cycle, err = l.readCycle(ctx, *w.cycle, locked); err != nil {
-			return held{}, err
-		}
-	}
-	target := shared.Target{WorkspaceID: f.WorkspaceID, ProjectID: h.projectID}
-	if h.cycle.CreatedByID != nil {
-		target.CreatorID = *h.cycle.CreatedByID
-	}
-	h.grant, err = l.auth.Authorize(ctx, actor, w.action, target)
-	switch {
-	case errors.Is(err, shared.ErrNotVisible):
-		return held{}, notFound
 	case err != nil:
 		return held{}, err
 	case h.grant.OwnOnly:
 		return held{}, shared.Forbidden()
-	case f.Archived:
+	case h.project.Archived:
 		return held{}, domain.ErrProjectArchived
-	case !f.CycleView:
+	case !h.project.CycleView:
 		return held{}, domain.ErrCyclesDisabled
 	}
 	return h, nil
-}
-
-// readCycle reads the cycle id; one that is not there, or, when project is
-// not zero, not in project, is planning.cycle_not_found.
-func (l Locks) readCycle(ctx context.Context, id, project uuid.UUID) (domain.Cycle, error) {
-	c, found, err := l.cycles.GetCycle(ctx, id)
-	switch {
-	case err != nil:
-		return domain.Cycle{}, err
-	case !found || (project != (uuid.UUID{}) && c.ProjectID != project):
-		return domain.Cycle{}, domain.ErrCycleNotFound
-	}
-	return c, nil
 }

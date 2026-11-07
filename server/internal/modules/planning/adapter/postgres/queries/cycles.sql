@@ -29,3 +29,20 @@ INSERT INTO cycles (id, workspace_id, project_id, name, description, start_date,
 VALUES (sqlc.arg(id), sqlc.arg(workspace_id), sqlc.arg(project_id), sqlc.arg(name), sqlc.arg(description),
         sqlc.narg(start_date), sqlc.narg(end_date), sqlc.narg(owned_by_id), sqlc.arg(sort_order),
         sqlc.arg(created_at), sqlc.arg(updated_at), sqlc.narg(created_by_id), sqlc.narg(updated_by_id));
+
+-- name: ListCycles :many
+-- The project's undeleted, unarchived cycles in their default order (M6 P1 spec 2.3): by sort order, then creation,
+-- then id. The list index (project_id, sort_order, created_at, id) WHERE deleted_at IS NULL serves it.
+SELECT id, workspace_id, project_id, name, description, start_date, end_date, owned_by_id, sort_order, archived_at,
+       created_at, updated_at, created_by_id, updated_by_id
+FROM cycles
+WHERE project_id = sqlc.arg(project_id) AND deleted_at IS NULL AND archived_at IS NULL
+ORDER BY sort_order, created_at, id;
+
+-- name: ListArchivedCycles :many
+-- The project's undeleted, archived cycles alone, the latest archived first, then by id (M6 P1 spec 2.3, R9).
+SELECT id, workspace_id, project_id, name, description, start_date, end_date, owned_by_id, sort_order, archived_at,
+       created_at, updated_at, created_by_id, updated_by_id
+FROM cycles
+WHERE project_id = sqlc.arg(project_id) AND deleted_at IS NULL AND archived_at IS NOT NULL
+ORDER BY archived_at DESC, id;

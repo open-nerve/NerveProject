@@ -18,9 +18,21 @@ type CreateCycleUseCase interface {
 	Execute(ctx context.Context, projectID uuid.UUID, in domain.NewCycle) (domain.ReadCycle, error)
 }
 
+// ListCyclesUseCase is app.ListCycles.
+type ListCyclesUseCase interface {
+	Execute(ctx context.Context, projectID uuid.UUID, archived bool) ([]domain.ReadCycle, error)
+}
+
+// GetCycleUseCase is app.GetCycle.
+type GetCycleUseCase interface {
+	Execute(ctx context.Context, id uuid.UUID) (domain.ReadCycle, error)
+}
+
 // UseCases are the use cases behind the module's operations.
 type UseCases struct {
+	ListCycles  ListCyclesUseCase
 	CreateCycle CreateCycleUseCase
+	GetCycle    GetCycleUseCase
 }
 
 // Register mounts the module's routes on router behind api's per-route

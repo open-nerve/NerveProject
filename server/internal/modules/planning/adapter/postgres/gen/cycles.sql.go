@@ -104,6 +104,129 @@ func (q *Queries) GetCycle(ctx context.Context, id uuid.UUID) (GetCycleRow, erro
 	return i, err
 }
 
+const listArchivedCycles = `-- name: ListArchivedCycles :many
+SELECT id, workspace_id, project_id, name, description, start_date, end_date, owned_by_id, sort_order, archived_at,
+       created_at, updated_at, created_by_id, updated_by_id
+FROM cycles
+WHERE project_id = $1 AND deleted_at IS NULL AND archived_at IS NOT NULL
+ORDER BY archived_at DESC, id
+`
+
+type ListArchivedCyclesRow struct {
+	ID          uuid.UUID
+	WorkspaceID uuid.UUID
+	ProjectID   uuid.UUID
+	Name        string
+	Description string
+	StartDate   *time.Time
+	EndDate     *time.Time
+	OwnedByID   *uuid.UUID
+	SortOrder   float64
+	ArchivedAt  *time.Time
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	CreatedByID *uuid.UUID
+	UpdatedByID *uuid.UUID
+}
+
+// The project's undeleted, archived cycles alone, the latest archived first, then by id (M6 P1 spec 2.3, R9).
+func (q *Queries) ListArchivedCycles(ctx context.Context, projectID uuid.UUID) ([]ListArchivedCyclesRow, error) {
+	rows, err := q.db.Query(ctx, listArchivedCycles, projectID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListArchivedCyclesRow
+	for rows.Next() {
+		var i ListArchivedCyclesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkspaceID,
+			&i.ProjectID,
+			&i.Name,
+			&i.Description,
+			&i.StartDate,
+			&i.EndDate,
+			&i.OwnedByID,
+			&i.SortOrder,
+			&i.ArchivedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.CreatedByID,
+			&i.UpdatedByID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listCycles = `-- name: ListCycles :many
+SELECT id, workspace_id, project_id, name, description, start_date, end_date, owned_by_id, sort_order, archived_at,
+       created_at, updated_at, created_by_id, updated_by_id
+FROM cycles
+WHERE project_id = $1 AND deleted_at IS NULL AND archived_at IS NULL
+ORDER BY sort_order, created_at, id
+`
+
+type ListCyclesRow struct {
+	ID          uuid.UUID
+	WorkspaceID uuid.UUID
+	ProjectID   uuid.UUID
+	Name        string
+	Description string
+	StartDate   *time.Time
+	EndDate     *time.Time
+	OwnedByID   *uuid.UUID
+	SortOrder   float64
+	ArchivedAt  *time.Time
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	CreatedByID *uuid.UUID
+	UpdatedByID *uuid.UUID
+}
+
+// The project's undeleted, unarchived cycles in their default order (M6 P1 spec 2.3): by sort order, then creation,
+// then id. The list index (project_id, sort_order, created_at, id) WHERE deleted_at IS NULL serves it.
+func (q *Queries) ListCycles(ctx context.Context, projectID uuid.UUID) ([]ListCyclesRow, error) {
+	rows, err := q.db.Query(ctx, listCycles, projectID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListCyclesRow
+	for rows.Next() {
+		var i ListCyclesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkspaceID,
+			&i.ProjectID,
+			&i.Name,
+			&i.Description,
+			&i.StartDate,
+			&i.EndDate,
+			&i.OwnedByID,
+			&i.SortOrder,
+			&i.ArchivedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.CreatedByID,
+			&i.UpdatedByID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const lowestCycleSortOrder = `-- name: LowestCycleSortOrder :one
 SELECT sort_order
 FROM cycles

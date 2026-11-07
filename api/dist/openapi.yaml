@@ -3060,6 +3060,33 @@ paths:
   /api/v0/projects/{project_id}/cycles:
     parameters:
       - $ref: '#/components/parameters/ProjectID'
+    get:
+      operationId: listCycles
+      tags:
+        - planning
+      summary: List a project's cycles
+      description: 'For the project''s admins, members and guests, also a caller who sees only his own work items there, whether its cycles are turned on or off and whether it is archived. The undeleted cycles that are not archived, by sort_order, then creation, then id; or, when archived is true, the archived ones alone, the latest archived first, then by id. Each with its status on the project''s calendar day. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but whose cycles he may not read, forbidden. The whole collection at once: collections are not paginated.'
+      security:
+        - bearer: []
+      x-problem-codes:
+        - project.not_found
+        - forbidden
+      parameters:
+        - name: archived
+          in: query
+          required: false
+          description: true lists the archived cycles alone; false, or no value, the others.
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: The project's cycles.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CycleList'
+        default:
+          $ref: '#/components/responses/Problem'
     post:
       operationId: createCycle
       tags:
@@ -3085,6 +3112,29 @@ paths:
       responses:
         '201':
           description: The new cycle.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cycle'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/cycles/{cycle_id}:
+    parameters:
+      - $ref: '#/components/parameters/CycleID'
+    get:
+      operationId: getCycle
+      tags:
+        - planning
+      summary: Read a cycle
+      description: For its project's admins, members and guests, also a caller who sees only his own work items there, whether the project's cycles are turned on or off and whether the project or the cycle is archived; with its status on the project's calendar day. A cycle that does not exist or is deleted, one whose project is deleted, and one whose project the caller does not see answer planning.cycle_not_found; one whose project he sees but whose cycles he may not read, forbidden.
+      security:
+        - bearer: []
+      x-problem-codes:
+        - planning.cycle_not_found
+        - forbidden
+      responses:
+        '200':
+          description: The cycle.
           content:
             application/json:
               schema:
@@ -3197,6 +3247,14 @@ components:
       description: 'A work item''s identifier: its project''s identifier, in any case, a hyphen and its number (IssueDetail.sequence_id), as WEB-12.'
       schema:
         type: string
+    CycleID:
+      name: cycle_id
+      in: path
+      required: true
+      description: A cycle's id (Cycle.id).
+      schema:
+        type: string
+        format: uuid
   schemas:
     FieldError:
       description: One invalid field of a request. Clients show text looked up by `code`; `message` is an English explanation for developers. Must match httpserver.FieldError and the field codes of internal/shared.
@@ -6143,26 +6201,6 @@ components:
           $ref: '#/components/schemas/ProjectDisplayFilters'
         display_properties:
           $ref: '#/components/schemas/ProjectDisplayProperties'
-    CycleCreate:
-      type: object
-      additionalProperties: false
-      required:
-        - name
-      properties:
-        name:
-          description: 1–255 characters without the surrounding white space, which is dropped; no NUL.
-          type: string
-        description:
-          description: Plain text without NUL; empty when left out.
-          type: string
-        start_date:
-          description: The day it starts, on the project's calendar; given with end_date, or neither for a draft.
-          type: string
-          format: date
-        end_date:
-          description: The day it ends, not before start_date; given with start_date, or neither for a draft.
-          type: string
-          format: date
     CycleStatus:
       description: 'Read from the cycle''s dates on the project''s calendar day, never stored: draft without dates, upcoming before the start, current from the start to the end, completed after the end.'
       type: string
@@ -6251,6 +6289,36 @@ components:
             - string
             - 'null'
           format: uuid
+    CycleList:
+      type: object
+      additionalProperties: false
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Cycle'
+    CycleCreate:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+      properties:
+        name:
+          description: 1–255 characters without the surrounding white space, which is dropped; no NUL.
+          type: string
+        description:
+          description: Plain text without NUL; empty when left out.
+          type: string
+        start_date:
+          description: The day it starts, on the project's calendar; given with end_date, or neither for a draft.
+          type: string
+          format: date
+        end_date:
+          description: The day it ends, not before start_date; given with start_date, or neither for a draft.
+          type: string
+          format: date
   responses:
     Problem:
       description: Error (RFC 9457 problem details).

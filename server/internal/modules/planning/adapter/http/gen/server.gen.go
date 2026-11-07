@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -91,8 +92,16 @@ type CycleCreate struct {
 	StartDate *shared.Date `json:"start_date,omitempty"`
 }
 
+// CycleList defines model for CycleList.
+type CycleList struct {
+	Data []Cycle `json:"data"`
+}
+
 // CycleStatus Read from the cycle's dates on the project's calendar day, never stored: draft without dates, upcoming before the start, current from the start to the end, completed after the end.
 type CycleStatus string
+
+// CycleID defines model for CycleID.
+type CycleID = uuid.UUID
 
 // ProjectID defines model for ProjectID.
 type ProjectID = uuid.UUID
@@ -100,11 +109,23 @@ type ProjectID = uuid.UUID
 // Problem RFC 9457 problem details (v0 design 3.5). `title` is the HTTP status phrase, `detail` explains this occurrence, and clients branch on `code`. Must match httpserver.Problem; the platform's contract test checks it.
 type Problem = externalRef0.Problem
 
+// ListCyclesParams defines parameters for ListCycles.
+type ListCyclesParams struct {
+	// Archived true lists the archived cycles alone; false, or no value, the others.
+	Archived *bool `form:"archived,omitempty" json:"archived,omitempty"`
+}
+
 // CreateCycleJSONRequestBody defines body for CreateCycle for application/json ContentType.
 type CreateCycleJSONRequestBody = CycleCreate
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// GetCycle Read a cycle
+	// (GET /api/v0/cycles/{cycle_id})
+	GetCycle(w http.ResponseWriter, r *http.Request, cycleID CycleID)
+	// ListCycles List a project's cycles
+	// (GET /api/v0/projects/{project_id}/cycles)
+	ListCycles(w http.ResponseWriter, r *http.Request, projectID ProjectID, params ListCyclesParams)
 	// CreateCycle Create a cycle in a project
 	// (POST /api/v0/projects/{project_id}/cycles)
 	CreateCycle(w http.ResponseWriter, r *http.Request, projectID ProjectID)
@@ -118,6 +139,74 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// GetCycle operation middleware
+func (siw *ServerInterfaceWrapper) GetCycle(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "cycle_id" -------------
+	var cycleID CycleID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "cycle_id", r.PathValue("cycle_id"), &cycleID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cycle_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetCycle(w, r, cycleID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListCycles operation middleware
+func (siw *ServerInterfaceWrapper) ListCycles(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "project_id" -------------
+	var projectID ProjectID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "project_id", r.PathValue("project_id"), &projectID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "project_id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListCyclesParams
+
+	// ------------- Optional query parameter "archived" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "archived", r.URL.Query(), &params.Archived, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "archived"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "archived", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListCycles(w, r, projectID, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
 
 // CreateCycle operation middleware
 func (siw *ServerInterfaceWrapper) CreateCycle(w http.ResponseWriter, r *http.Request) {
@@ -265,7 +354,9 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 		ErrorHandlerFunc:   options.ErrorHandlerFunc,
 	}
 
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/projects/{project_id}/cycles", wrapper.ListCycles)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/projects/{project_id}/cycles", wrapper.CreateCycle)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/cycles/{cycle_id}", wrapper.GetCycle)
 
 	return m
 }
@@ -278,6 +369,99 @@ type ProblemApplicationProblemPlusJSONResponse struct {
 	Body externalRef0.Problem
 
 	Headers ProblemResponseHeaders
+}
+
+type GetCycleRequestObject struct {
+	CycleID CycleID `json:"cycle_id"`
+}
+
+type GetCycleResponseObject interface {
+	VisitGetCycleResponse(w http.ResponseWriter) error
+}
+
+type GetCycle200JSONResponse Cycle
+
+func (response GetCycle200JSONResponse) VisitGetCycleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCycledefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response GetCycledefaultApplicationProblemPlusJSONResponse) VisitGetCycleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListCyclesRequestObject struct {
+	ProjectID ProjectID `json:"project_id"`
+	Params    ListCyclesParams
+}
+
+type ListCyclesResponseObject interface {
+	VisitListCyclesResponse(w http.ResponseWriter) error
+}
+
+type ListCycles200JSONResponse CycleList
+
+func (response ListCycles200JSONResponse) VisitListCyclesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListCyclesdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response ListCyclesdefaultApplicationProblemPlusJSONResponse) VisitListCyclesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
 }
 
 type CreateCycleRequestObject struct {
@@ -329,6 +513,12 @@ func (response CreateCycledefaultApplicationProblemPlusJSONResponse) VisitCreate
 
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
+	// GetCycle Read a cycle
+	// (GET /api/v0/cycles/{cycle_id})
+	GetCycle(ctx context.Context, request GetCycleRequestObject) (GetCycleResponseObject, error)
+	// ListCycles List a project's cycles
+	// (GET /api/v0/projects/{project_id}/cycles)
+	ListCycles(ctx context.Context, request ListCyclesRequestObject) (ListCyclesResponseObject, error)
 	// CreateCycle Create a cycle in a project
 	// (POST /api/v0/projects/{project_id}/cycles)
 	CreateCycle(ctx context.Context, request CreateCycleRequestObject) (CreateCycleResponseObject, error)
@@ -371,6 +561,59 @@ type strictHandler struct {
 	ssi         StrictServerInterface
 	middlewares []StrictMiddlewareFunc
 	options     StrictHTTPServerOptions
+}
+
+// GetCycle operation middleware
+func (sh *strictHandler) GetCycle(w http.ResponseWriter, r *http.Request, cycleID CycleID) {
+	var request GetCycleRequestObject
+
+	request.CycleID = cycleID
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetCycle(ctx, request.(GetCycleRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetCycle")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetCycleResponseObject); ok {
+		if err := validResponse.VisitGetCycleResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListCycles operation middleware
+func (sh *strictHandler) ListCycles(w http.ResponseWriter, r *http.Request, projectID ProjectID, params ListCyclesParams) {
+	var request ListCyclesRequestObject
+
+	request.ProjectID = projectID
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListCycles(ctx, request.(ListCyclesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListCycles")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListCyclesResponseObject); ok {
+		if err := validResponse.VisitListCyclesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
 }
 
 // CreateCycle operation middleware

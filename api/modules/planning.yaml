@@ -8,6 +8,39 @@ paths:
   /api/v0/projects/{project_id}/cycles:
     parameters:
       - $ref: '#/components/parameters/ProjectID'
+    get:
+      operationId: listCycles
+      tags: [planning]
+      summary: List a project's cycles
+      description: >-
+        For the project's admins, members and guests, also a caller who sees
+        only his own work items there, whether its cycles are turned on or
+        off and whether it is archived. The undeleted cycles that are not
+        archived, by sort_order, then creation, then id; or, when archived is
+        true, the archived ones alone, the latest archived first, then by id.
+        Each with its status on the project's calendar day. A project that
+        does not exist, is deleted, or that the caller does not see answers
+        project.not_found; one he sees but whose cycles he may not read,
+        forbidden. The whole collection at once: collections are not
+        paginated.
+      security: [{bearer: []}]
+      x-problem-codes: [project.not_found, forbidden]
+      parameters:
+        - name: archived
+          in: query
+          required: false
+          description: true lists the archived cycles alone; false, or no value, the others.
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: The project's cycles.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CycleList'
+        default:
+          $ref: '#/components/responses/Problem'
     post:
       operationId: createCycle
       tags: [planning]
@@ -47,6 +80,32 @@ paths:
                 $ref: '#/components/schemas/Cycle'
         default:
           $ref: '#/components/responses/Problem'
+  /api/v0/cycles/{cycle_id}:
+    parameters:
+      - $ref: '#/components/parameters/CycleID'
+    get:
+      operationId: getCycle
+      tags: [planning]
+      summary: Read a cycle
+      description: >-
+        For its project's admins, members and guests, also a caller who sees
+        only his own work items there, whether the project's cycles are
+        turned on or off and whether the project or the cycle is archived;
+        with its status on the project's calendar day. A cycle that does not
+        exist or is deleted, one whose project is deleted, and one whose
+        project the caller does not see answer planning.cycle_not_found; one
+        whose project he sees but whose cycles he may not read, forbidden.
+      security: [{bearer: []}]
+      x-problem-codes: [planning.cycle_not_found, forbidden]
+      responses:
+        '200':
+          description: The cycle.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cycle'
+        default:
+          $ref: '#/components/responses/Problem'
 components:
   # 与 api/openapi.yaml 的相同：打包时丢掉模块文件的 securitySchemes，oapi-codegen 读这一份（M0-P3 交接 3）
   securitySchemes:
@@ -59,6 +118,14 @@ components:
       in: path
       required: true
       description: A project's id (Project.id).
+      schema:
+        type: string
+        format: uuid
+    CycleID:
+      name: cycle_id
+      in: path
+      required: true
+      description: A cycle's id (Cycle.id).
       schema:
         type: string
         format: uuid
@@ -148,6 +215,15 @@ components:
         updated_by_id:
           type: [string, 'null']
           format: uuid
+    CycleList:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Cycle'
     CycleCreate:
       type: object
       additionalProperties: false

@@ -156,6 +156,8 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 	}
 	projectWrites := newWriteGate(cfg.Issue.WriteGate)
 	issueTx := newIssueJobTx(pool, cfg)
+	// Each read-only snapshot transaction is its own (issue, planning and file reads).
+	readTx := postgres.NewTxManager(pool, cfg.Database.CommitTimeout, postgres.ReadOnlySnapshot())
 	attachmentReads := asset.NewAttachmentReads(assetPorts)
 	issueAttachmentReads := issueAttachments{reader: attachmentReads, counter: attachmentReads, catalog: attachmentReads}
 	issues := issue.New(issue.Deps{
@@ -167,7 +169,7 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 		Events: events,
 		Pool:   pool, Tx: busyTx{tx: issueTx}, JobTx: issueTx, ArchivePolicies: projectPorts.ArchivePolicies, AutoArchiveInterval: cfg.Issue.AutoArchiveInterval, TrimVersionsInterval: cfg.Issue.TrimVersionsInterval,
 		DeleteBatch: cfg.Issue.DeleteBatch, DeleteBudget: cfg.Issue.DeleteBudget, RuntimeNow: time.Now,
-		ReadTx:    postgres.NewTxManager(pool, cfg.Database.CommitTimeout, postgres.ReadOnlySnapshot()),
+		ReadTx:    readTx,
 		WriteGate: projectWrites, Clock: businessClock, Authorizer: authorizer,
 		Projects:   issueProjects{projects: projectPorts.IssueProjects},
 		Workspaces: issueWorkspaces{directory: workspacePorts.WorkspaceDirectory},
@@ -175,7 +177,7 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 		Profiles:   issueProfiles{profiles: identityPorts.PublicProfiles},
 	})
 	plans := planning.New(planning.Deps{
-		Pool: pool, Tx: busyTx{tx: issueTx}, JobTx: issueTx, RuntimeNow: time.Now, Logger: logger,
+		Pool: pool, Tx: busyTx{tx: issueTx}, ReadTx: readTx, JobTx: issueTx, RuntimeNow: time.Now, Logger: logger,
 		DeleteBatch: cfg.Planning.DeleteBatch, DeleteBudget: cfg.Planning.DeleteBudget,
 		WriteGate: projectWrites, Clock: businessClock, Authorizer: authorizer,
 		Projects: planningProjects{projects: projectPorts.PlanningProjects},
@@ -232,7 +234,7 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 	}
 	files, err := asset.New(asset.Deps{Events: events, Files: cfg.Files, RuntimeNow: assets.runtimeNow, Transfer: assets.transfer, Sealing: assets.sealing, Ports: assetPorts, Objects: assets.store, Inventory: assets.store, Temporary: assets.store, JobTx: tx,
 		PurgeAfter: cfg.Cleanup.PurgeAfter,
-		ReadTx:     postgres.NewTxManager(pool, cfg.Database.CommitTimeout, postgres.ReadOnlySnapshot()), UploadSigner: assets.store, ReadSigner: assets.store,
+		ReadTx:     readTx, UploadSigner: assets.store, ReadSigner: assets.store,
 		Parents: assetParentReader{workspaces: workspacePorts.AssetParents, projects: projectPorts.AssetParents, issues: issuePorts.AssetParents},
 		Access:  assetapp.AccessDeps{Hosts: assetHostAccess{workspaces: ws.AssetAccess(), projects: proj.AssetAccess(), issues: issues.AssetAccess()}, Workspaces: assetWorkspaceLocks{parents: workspacePorts.AssetParents}, Projects: assetProjectLocks{projects: projectPorts.IssueProjects}, Drafts: assetDraftLocks{parents: issuePorts.AssetParents}, Caller: identityPorts.CredentialLock, Gate: forAssetWrites(projectWrites), Tx: busyTx{tx: issueTx}, CredentialClock: businessClock, Clock: businessClock},
 	})

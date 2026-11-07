@@ -14,6 +14,7 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/project"
 	"github.com/open-nerve/NerveProject/server/internal/platform/clock"
 	"github.com/open-nerve/NerveProject/server/internal/platform/config"
+	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
@@ -176,7 +177,7 @@ func TestCreateCycleRefusals(t *testing.T) {
 // with tx its writes' transactions.
 func newPlanningRoute(t *testing.T, pool *pgxpool.Pool, tx shared.TxManager) moduleRoute {
 	t.Helper()
-	return newRoute(t, planning.New(planning.Deps{Pool: pool, Tx: tx, JobTx: tx, RuntimeNow: time.Now, Logger: slog.New(slog.DiscardHandler),
+	return newRoute(t, planning.New(planning.Deps{Pool: pool, Tx: tx, ReadTx: postgres.NewTxManager(pool, 2*time.Second, postgres.ReadOnlySnapshot()), JobTx: tx, RuntimeNow: time.Now, Logger: slog.New(slog.DiscardHandler),
 		DeleteBatch: 1000, DeleteBudget: 45 * time.Second, WriteGate: newWriteGate(testIssueConfig.WriteGate), Clock: clock.System{},
 		Authorizer: authorizerOn(pool), Projects: planningProjects{projects: project.Provide(pool, nil).PlanningProjects}}).Register)
 }

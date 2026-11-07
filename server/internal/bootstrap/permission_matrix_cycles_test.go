@@ -14,12 +14,20 @@ import (
 )
 
 // The rows of the permission matrix of a project's cycles (M6 P1 spec R10):
-// creating one under the project of each column; and the cycles they rest
-// on, matrixCycles, which prepareMatrix seeds in each project through the
+// listing and creating them under the project of each column, and reading
+// one, naming it by its id (/cycles/{cycle_id}) among its column's
+// project's seeded cycles; and the cycles they rest on, matrixCycles, which prepareMatrix seeds in each project through the
 // planning store (cycles) once the project store has turned the project's
 // cycles on (cyclesOn).
 
-var cellCycleDatesOverlap = cell{http.StatusConflict, "planning.cycle_dates_overlap"}
+var (
+	cellCycleDatesOverlap = cell{http.StatusConflict, "planning.cycle_dates_overlap"}
+	cellCycleNotFound     = cell{http.StatusNotFound, "planning.cycle_not_found"}
+)
+
+// cycleRows are the cycles the rows name by id: a column that does not see
+// its project answers planning.cycle_not_found.
+var cycleRows = rowsByID{path: "cycles", notFound: cellCycleNotFound, find: seeded.cycle}
 
 // cycleColumns are the columns of the cycle table (M6 P1 spec R10): PA, PM
 // and the member who made a cycle; the project's guest; the workspace admin
@@ -37,6 +45,17 @@ var cycleColumns = []caller{callerProjectAdmin, callerProjectMember, callerCreat
 func onTheCycles(admin, member, guest, adminGuest cell) map[caller]cell {
 	cells := ofProject(admin, member, guest, admin, cellForbidden, cellForbidden)
 	cells[callerCreator] = member
+	cells[callerAdminGuest] = adminGuest
+	return cells
+}
+
+// onACycle are the cells of a row of the cycle table on one cycle, named by
+// its id (cycleRows): a project-level row's on one (cycleRows.of), PM+WA as
+// an admin of its project; the member who made a cycle as creator, and the
+// workspace admin who is a guest as adminGuest.
+func onACycle(admin, member, creator, guest, adminGuest cell) map[caller]cell {
+	cells := cycleRows.of(admin, member, guest, admin, cellForbidden, cellForbidden)
+	cells[callerCreator] = creator
 	cells[callerAdminGuest] = adminGuest
 	return cells
 }
@@ -64,6 +83,18 @@ const overlappingCycle = `{"name":"Overlap","start_date":"2026-10-14","end_date"
 
 func cycleMatrixRows() []matrixRow {
 	return []matrixRow{
+		// Every active member of the project, its guests and a caller who sees
+		// only his own work items there too (M6 P1 spec R6); a workspace admin
+		// or member who is no member of it sees it and may not.
+		{op: "listCycles", columns: cycleColumns, request: toProject(http.MethodGet, "/cycles", ""),
+			cells: onTheCycles(cellOK, cellOK, cellOK, cellOK), check: listsTheCycles},
+		// An archived project's cycles are listed as any other's.
+		{op: "listCycles", variant: "archived", columns: archivedColumns, request: toProject(http.MethodGet, "/cycles", ""),
+			cells: ofArchived(cellOK, cellForbidden), check: listsTheCycles},
+		{op: "getCycle", columns: cycleColumns, request: cycleRows.to(http.MethodGet, "", "Sprint", ""),
+			cells: onACycle(cellOK, cellOK, cellOK, cellOK, cellOK), check: readsTheCycle},
+		{op: "getCycle", variant: "archived", columns: archivedColumns, request: cycleRows.to(http.MethodGet, "", "Sprint", ""),
+			cells: cycleRows.ofArchived(cellOK, cellForbidden), check: readsTheCycle},
 		// The project's admins and members, not its guests, nor a caller who
 		// sees only his own work items in it (M6 design 3.4); a workspace
 		// admin or member who is no member of the project sees it and may
@@ -80,6 +111,37 @@ func cycleMatrixRows() []matrixRow {
 		// decision too.
 		{op: "createCycle", variant: "archived", write: true, columns: archivedColumns, request: toProject(http.MethodPost, "/cycles", newCycle),
 			cells: ofArchived(cellProjectArchived, cellForbidden)},
+	}
+}
+
+// listsTheCycles: the column's project's Sprint alone, as seeded.
+func listsTheCycles(t *testing.T, c caller, s seeded, answer string) {
+	var list struct{ Data []cycleAnswer }
+	decodeAnswer(t, answer, &list)
+	if len(list.Data) != 1 {
+		t.Fatalf("%s lists %s; want %s's Sprint alone", c, answer, projectOf(c))
+	}
+	isTheSeededSprint(t, c, s, list.Data[0], answer)
+}
+
+// readsTheCycle: the column's project's Sprint, as seeded.
+func readsTheCycle(t *testing.T, c caller, s seeded, answer string) {
+	var got cycleAnswer
+	decodeAnswer(t, answer, &got)
+	isTheSeededSprint(t, c, s, got, answer)
+}
+
+// isTheSeededSprint checks that got, of answer, is the column's project's
+// Sprint as matrixCycles seeds it, completed (its days are past), owned and
+// written by the project's workspace's admin.
+func isTheSeededSprint(t *testing.T, c caller, s seeded, got cycleAnswer, answer string) {
+	t.Helper()
+	slug, _, _ := strings.Cut(projectOf(c), "/")
+	by := s.account(matrixAdmins[slug])
+	if got.ID != s.cycle(projectOf(c), "Sprint") || got.ProjectID != s.project(projectOf(c)) || got.WorkspaceID != s.workspace(slug) ||
+		got.Name != "Sprint" || got.StartDate == nil || *got.StartDate != "2026-10-01" || got.EndDate == nil || *got.EndDate != "2026-10-14" ||
+		got.Status != "completed" || got.SortOrder != 65535 || got.OwnedByID == nil || *got.OwnedByID != by {
+		t.Errorf("%s reads %s; want %s's Sprint as seeded", c, answer, projectOf(c))
 	}
 }
 

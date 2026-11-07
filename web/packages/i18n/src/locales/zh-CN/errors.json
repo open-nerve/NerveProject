@@ -70,6 +70,7 @@
     "issue_not_archivable": "只有已完成或已取消的工作项才能归档。请先把它移到已完成或已取消的状态。",
     "issue_relation_not_found": "关联不存在，或者它的两个工作项你都看不到。",
     "planning_cycles_disabled": "此项目未开启周期，开启之后才能修改。",
+    "planning_cycle_not_found": "周期不存在，或者你看不到它。",
     "planning_cycle_dates_overlap": "日期与此项目的另一个周期重叠。",
     "unreachable": "暂时连不上服务器，请稍后再试。",
     "unknown": "出错了，请重试。",

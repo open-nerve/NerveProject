@@ -43,6 +43,9 @@ type Deps struct {
 	// for a lock at most issue.write_lock_timeout and answers server_busy
 	// past it (bootstrap/gate.go).
 	Tx shared.TxManager
+	// ReadTx supplies the reads' read-only snapshot transactions, each its
+	// own: never one inside a write's.
+	ReadTx shared.TxManager
 	// WriteGate is the write gate of each project, shared with the
 	// work-item side (bootstrap/gate.go).
 	WriteGate  app.WriteGate
@@ -71,8 +74,13 @@ type Module struct {
 func New(d Deps) *Module {
 	store := postgresadapter.New(d.Pool)
 	locks := app.NewLocks(d.Projects, store, d.Authorizer, d.WriteGate, d.Tx)
+	reads := app.NewReads(d.Projects, store, d.Authorizer, d.ReadTx)
 	return &Module{
-		uc:           httpadapter.UseCases{CreateCycle: app.NewCreateCycle(app.CreateCycleDeps{Locks: locks, Cycles: store, Clock: d.Clock})},
+		uc: httpadapter.UseCases{
+			ListCycles:  app.NewListCycles(app.ListCyclesDeps{Reads: reads, Cycles: store, Clock: d.Clock}),
+			CreateCycle: app.NewCreateCycle(app.CreateCycleDeps{Locks: locks, Cycles: store, Clock: d.Clock}),
+			GetCycle:    app.NewGetCycle(app.GetCycleDeps{Reads: reads, Clock: d.Clock}),
+		},
 		deleteRows:   app.NewDeleteRows(app.DeleteRowsDeps{Rows: store, Tx: d.JobTx, RuntimeNow: d.RuntimeNow, Batch: d.DeleteBatch, Budget: d.DeleteBudget}),
 		deleteBudget: d.DeleteBudget, logger: d.Logger,
 	}

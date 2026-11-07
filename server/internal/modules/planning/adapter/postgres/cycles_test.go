@@ -104,3 +104,62 @@ func TestProjectCycleDatesAndLowestSortOrder(t *testing.T) {
 		t.Fatalf("dates %s\nwant %s", jsonOf(t, dates), jsonOf(t, want))
 	}
 }
+
+// The project's undeleted cycles: the unarchived ones by sort order, then creation, then id; the archived ones alone,
+// the latest archived first, then by id. Another project's and deleted ones are in neither.
+func TestListCycles(t *testing.T) {
+	s, pool := newStore(t)
+	ctx := context.Background()
+	w := newWorld(t, pool)
+	at := now.Truncate(time.Microsecond)
+	ids := sortedIDs(7)
+	add := func(id, project uuid.UUID, sortOrder float64, created time.Time) {
+		t.Helper()
+		if err := s.CreateCycle(ctx, domain.Cycle{ID: id, ProjectID: project, WorkspaceID: w.workspace, Name: id.String(), SortOrder: sortOrder,
+			CreatedAt: created, UpdatedAt: created}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// ids[2] and ids[1] tie on sort order and creation: by id. ids[0] ties on sort order, created later.
+	add(ids[2], w.web, 100, at)
+	add(ids[1], w.web, 100, at)
+	add(ids[0], w.web, 100, at.Add(time.Second))
+	add(ids[3], w.web, -5, at.Add(time.Hour))
+	add(ids[4], w.web, 1, at)
+	add(ids[5], w.web, 2, at)
+	add(ids[6], w.ops, 0, at)
+	deleted := uuid.NewV7()
+	add(deleted, w.web, 0, at)
+	exec(t, pool, "UPDATE cycles SET deleted_at = now() WHERE id = $1", deleted)
+	// ids[4] and ids[5] archived at one moment, ids[1] later.
+	exec(t, pool, "UPDATE cycles SET archived_at = $2 WHERE id = ANY($1)", []uuid.UUID{ids[4], ids[5]}, at)
+	exec(t, pool, "UPDATE cycles SET archived_at = $2 WHERE id = $1", ids[1], at.Add(time.Minute))
+	for _, tt := range []struct {
+		archived bool
+		want     []uuid.UUID
+	}{{false, []uuid.UUID{ids[3], ids[2], ids[0]}}, {true, []uuid.UUID{ids[1], ids[4], ids[5]}}} {
+		got, err := s.ListCycles(ctx, w.web, tt.archived)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var gotIDs []uuid.UUID
+		for _, c := range got {
+			gotIDs = append(gotIDs, c.ID)
+		}
+		if !slices.Equal(gotIDs, tt.want) {
+			t.Errorf("archived=%t: %v, want %v", tt.archived, gotIDs, tt.want)
+		}
+	}
+	// Each row as GetCycle reads it.
+	got, err := s.ListCycles(ctx, w.web, true)
+	if err != nil || len(got) == 0 {
+		t.Fatal(got, err)
+	}
+	one, _, err := s.GetCycle(ctx, got[0].ID)
+	if err != nil || jsonOf(t, one) != jsonOf(t, got[0]) {
+		t.Fatalf("listed %s, read %s, %v", jsonOf(t, got[0]), jsonOf(t, one), err)
+	}
+	if got, err := s.ListCycles(ctx, uuid.NewV7(), false); err != nil || len(got) != 0 {
+		t.Fatalf("a project without cycles: %v, %v", got, err)
+	}
+}

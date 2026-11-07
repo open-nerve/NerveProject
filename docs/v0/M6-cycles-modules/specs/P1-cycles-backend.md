@@ -62,9 +62,9 @@
 
 | 操作 | 成功 | 声明的错误 |
 |---|---|---|
-| `GET /projects/{project_id}/cycles?archived=` | 200 `{data}`；默认未归档按 `sort_order, created_at, id`；`archived=true` 只返回已归档，按 `archived_at DESC, id` | 400（参数不是布尔）、404 |
+| `GET /projects/{project_id}/cycles?archived=` | 200 `{data}`；默认未归档按 `sort_order, created_at, id`；`archived=true` 只返回已归档，按 `archived_at DESC, id` | 400（参数不是布尔）、404、403（看得到项目但不是它的成员） |
 | `POST /projects/{project_id}/cycles` `{name, description?, start_date?, end_date?}` | 201 | 400、422、404、403、409 `project.archived`/`planning.cycles_disabled`/`planning.cycle_dates_overlap`、503 |
-| `GET /cycles/{cycle_id}` | 200 | 404 `planning.cycle_not_found` |
+| `GET /cycles/{cycle_id}` | 200 | 404 `planning.cycle_not_found`、403（看得到项目但不是它的成员） |
 | `PATCH /cycles/{cycle_id}` `{name?, description?, start_date?, end_date?, sort_order?}` | 200 | 400、422、404、403、409 `project.archived`/`planning.cycles_disabled`/`planning.archived`/`planning.cycle_completed`/`planning.cycle_dates_overlap`、503 |
 | `DELETE /cycles/{cycle_id}` | 204 | 404、403、409 `project.archived`/`planning.cycles_disabled`、503 |
 | `POST /cycles/{cycle_id}/archive`、`/unarchive` | 200 `Cycle` | 404、403、409 `project.archived`/`planning.cycles_disabled`、`planning.cycle_not_completed`（归档）、503 |

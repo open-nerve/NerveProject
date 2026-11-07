@@ -24,9 +24,43 @@ func (s *Store) GetCycle(ctx context.Context, id uuid.UUID) (domain.Cycle, bool,
 	case err != nil:
 		return domain.Cycle{}, false, fmt.Errorf("read cycle %s: %w", id, err)
 	}
+	return cycleOf(r), true, nil
+}
+
+// ListCycles lists the project's undeleted cycles: the unarchived ones by
+// sort order, creation and id, or, when archived, the archived ones alone,
+// the latest archived first, then by id.
+func (s *Store) ListCycles(ctx context.Context, project uuid.UUID, archived bool) ([]domain.Cycle, error) {
+	var rows []gen.GetCycleRow
+	if archived {
+		listed, err := s.queries(ctx).ListArchivedCycles(ctx, project)
+		if err != nil {
+			return nil, fmt.Errorf("list the archived cycles of project %s: %w", project, err)
+		}
+		for _, r := range listed {
+			rows = append(rows, gen.GetCycleRow(r))
+		}
+	} else {
+		listed, err := s.queries(ctx).ListCycles(ctx, project)
+		if err != nil {
+			return nil, fmt.Errorf("list the cycles of project %s: %w", project, err)
+		}
+		for _, r := range listed {
+			rows = append(rows, gen.GetCycleRow(r))
+		}
+	}
+	out := make([]domain.Cycle, len(rows))
+	for i, r := range rows {
+		out[i] = cycleOf(r)
+	}
+	return out, nil
+}
+
+// cycleOf is the cycle a row of cycles.sql's reads holds.
+func cycleOf(r gen.GetCycleRow) domain.Cycle {
 	return domain.Cycle{ID: r.ID, ProjectID: r.ProjectID, WorkspaceID: r.WorkspaceID, Name: r.Name, Description: r.Description,
 		Dates: datesOf(r.StartDate, r.EndDate), OwnedByID: r.OwnedByID, SortOrder: r.SortOrder, ArchivedAt: r.ArchivedAt,
-		CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt, CreatedByID: r.CreatedByID, UpdatedByID: r.UpdatedByID}, true, nil
+		CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt, CreatedByID: r.CreatedByID, UpdatedByID: r.UpdatedByID}
 }
 
 // ProjectCycleDates reads the dates of the project's undeleted cycles,
