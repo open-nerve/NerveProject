@@ -33,3 +33,27 @@ func TestUniqueViolation(t *testing.T) {
 		})
 	}
 }
+
+func TestExclusionViolation(t *testing.T) {
+	const constraint = "things_owner_id_url_key"
+	taken := &pgconn.PgError{Code: "23P01", ConstraintName: constraint}
+	tests := []struct {
+		name string
+		err  error
+		want bool
+	}{
+		{"the named constraint", taken, true},
+		{"the named constraint, wrapped", fmt.Errorf("create thing: %w", taken), true},
+		{"another exclusion constraint", &pgconn.PgError{Code: "23P01", ConstraintName: "things_period_excl"}, false},
+		{"another SQLSTATE on the constraint", &pgconn.PgError{Code: "23505", ConstraintName: constraint}, false},
+		{"an error that is not PostgreSQL's", errors.New(constraint), false},
+		{"no error", nil, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := postgres.ExclusionViolation(tt.err, constraint); got != tt.want {
+				t.Errorf("ExclusionViolation(%v, %q) = %v, want %v", tt.err, constraint, got, tt.want)
+			}
+		})
+	}
+}

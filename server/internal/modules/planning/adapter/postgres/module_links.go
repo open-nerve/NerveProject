@@ -9,10 +9,10 @@ import (
 	"uuid"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/planning/adapter/postgres/gen"
 	"github.com/open-nerve/NerveProject/server/internal/modules/planning/domain"
+	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
@@ -95,8 +95,7 @@ func (s *Store) DeleteModuleLinkRows(ctx context.Context, module uuid.UUID, at t
 // module_links_module_id_url_key, the exclusion of a second live address
 // (SQLSTATE 23P01, as issue_links'); any other error is the write's.
 func moduleLinkTaken(write string, err error) error {
-	var pg *pgconn.PgError
-	if errors.As(err, &pg) && pg.Code == "23P01" && pg.ConstraintName == "module_links_module_id_url_key" {
+	if postgres.ExclusionViolation(err, "module_links_module_id_url_key") {
 		return domain.ErrModuleLinkExists
 	}
 	return fmt.Errorf("%s: %w", write, err)

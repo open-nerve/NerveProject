@@ -167,13 +167,10 @@ func TestUpdateModuleThroughTheApp(t *testing.T) {
 	// R8: another module's name, in any case, an archived one's too, is taken; a deleted one's is free, and its own in
 	// another case.
 	w.createModule(t, "alice", `{"name":"Billing"}`, http.StatusCreated)
-	old := w.createModule(t, "alice", `{"name":"Old"}`, http.StatusCreated)
+	old := w.createModule(t, "alice", `{"name":"Old","status":"completed"}`, http.StatusCreated)
 	gone := w.createModule(t, "alice", `{"name":"Gone"}`, http.StatusCreated)
-	for id, set := range map[uuid.UUID]string{old.ID: "archived_at", gone.ID: "deleted_at"} {
-		if _, err := w.pool.Exec(pgtest.Soon(t), "UPDATE modules SET "+set+" = now() WHERE id = $1", id); err != nil {
-			t.Fatal(err)
-		}
-	}
+	w.send(t, "alice", http.MethodPost, "/api/v0/modules/"+old.ID.String()+"/archive", "", http.StatusOK)
+	w.send(t, "alice", http.MethodDelete, "/api/v0/modules/"+gone.ID.String(), "", http.StatusNoContent)
 	for _, name := range []string{"billing", " BILLING ", "old"} {
 		w.refusedModuleChange(t, "bob", auth.ID, `{"name":"`+name+`"}`, http.StatusConflict, "planning.module_name_taken")
 	}
@@ -192,7 +189,7 @@ func TestUpdateModuleThroughTheApp(t *testing.T) {
 func TestUpdateModuleRefusals(t *testing.T) {
 	w := newIssueWorld(t)
 	w.turnModulesOn(t, w.web)
-	auth := w.createModule(t, "alice", `{"name":"Auth"}`, http.StatusCreated).ID
+	auth := w.createModule(t, "alice", `{"name":"Auth","status":"completed"}`, http.StatusCreated).ID
 	nowhere, olga := uuid.NewV7(), w.ids["olga"].String()
 	w.refusedModuleChange(t, "olga", auth, `{"name":" "}`, http.StatusUnprocessableEntity, "validation_failed name too_short")
 	w.refusedModuleChange(t, "alice", nowhere, `{"member_ids":["`+olga+`","`+olga+`"]}`, http.StatusUnprocessableEntity,
@@ -209,17 +206,13 @@ func TestUpdateModuleRefusals(t *testing.T) {
 	w.send(t, "alice", http.MethodPatch, "/api/v0/projects/"+w.web.String(), `{"module_view":false}`, http.StatusOK)
 	w.refusedModuleChange(t, "bob", auth, `{"name":"A"}`, http.StatusConflict, "planning.modules_disabled")
 	w.turnModulesOn(t, w.web)
-	if _, err := w.pool.Exec(pgtest.Soon(t), "UPDATE modules SET archived_at = now() WHERE id = $1", auth); err != nil {
-		t.Fatal(err)
-	}
+	w.send(t, "alice", http.MethodPost, "/api/v0/modules/"+auth.String()+"/archive", "", http.StatusOK)
 	for _, body := range []string{`{}`, `{"sort_order":1}`, `{"lead_id":"` + olga + `"}`} {
 		w.refusedModuleChange(t, "bob", auth, body, http.StatusConflict, "planning.archived")
 	}
-	if m := w.getModule(t, "bob", auth); m.Name != "Auth" || m.SortOrder != 65535 || m.LeadID != nil || !m.UpdatedAt.Equal(m.CreatedAt) {
+	if m := w.getModule(t, "bob", auth); m.Name != "Auth" || m.SortOrder != 65535 || m.LeadID != nil || m.ArchivedAt == nil || !m.UpdatedAt.Equal(*m.ArchivedAt) {
 		t.Fatalf("a refused change wrote: %+v", m)
 	}
-	if _, err := w.pool.Exec(pgtest.Soon(t), "UPDATE modules SET archived_at = NULL, deleted_at = now() WHERE id = $1", auth); err != nil {
-		t.Fatal(err)
-	}
+	w.send(t, "alice", http.MethodDelete, "/api/v0/modules/"+auth.String(), "", http.StatusNoContent)
 	w.refusedModuleChange(t, "alice", auth, `{"name":"A"}`, http.StatusNotFound, "planning.module_not_found")
 }

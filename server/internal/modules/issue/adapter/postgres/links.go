@@ -12,6 +12,7 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/postgres/gen"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/app"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/domain"
+	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
@@ -80,6 +81,14 @@ func (s *Store) DeleteLink(ctx context.Context, d app.LinkDeletion) error {
 		return fmt.Errorf("delete link %s: %w", d.ID, err)
 	}
 	return nil
+}
+
+// linkConflict maps only the exact live-URL exclusion constraint.
+func linkConflict(err error) error {
+	if postgres.ExclusionViolation(err, "issue_links_issue_id_url_key") {
+		return domain.ErrLinkExists
+	}
+	return err
 }
 
 func linkOf(r gen.LinksRow) (domain.Link, error) {

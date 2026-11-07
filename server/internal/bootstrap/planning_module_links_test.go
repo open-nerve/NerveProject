@@ -156,9 +156,8 @@ func TestModuleLinkRefusals(t *testing.T) {
 		w.refusedLink(t, "bob", write.method, write.path, write.body, http.StatusConflict, "planning.modules_disabled")
 	}
 	w.turnModulesOn(t, w.web)
-	if _, err := w.pool.Exec(pgtest.Soon(t), "UPDATE modules SET archived_at = now() WHERE id = $1", billing); err != nil {
-		t.Fatal(err)
-	}
+	w.changeModule(t, "alice", billing, `{"status":"completed"}`, http.StatusOK)
+	w.send(t, "alice", http.MethodPost, "/api/v0/modules/"+billing.String()+"/archive", "", http.StatusOK)
 	for _, write := range []struct{ method, path, body string }{{http.MethodPost, links, `{"url":"169.254.169.254"}`}, {http.MethodPatch, link, `{}`},
 		{http.MethodPatch, link, `{"title":"A"}`}, {http.MethodDelete, link, ""}} {
 		w.refusedLink(t, "bob", write.method, write.path, write.body, http.StatusConflict, "planning.archived")
@@ -166,9 +165,7 @@ func TestModuleLinkRefusals(t *testing.T) {
 	if list := w.moduleLinks(t, "walt", billing); len(list) != 1 || list[0].Title != nil {
 		t.Fatalf("walt lists %+v, want Spec as it was", list)
 	}
-	if _, err := w.pool.Exec(pgtest.Soon(t), "UPDATE modules SET archived_at = NULL, deleted_at = now() WHERE id = $1", billing); err != nil {
-		t.Fatal(err)
-	}
+	w.send(t, "alice", http.MethodDelete, "/api/v0/modules/"+billing.String(), "", http.StatusNoContent)
 	w.refusedLink(t, "alice", http.MethodPatch, link, `{"title":"A"}`, http.StatusNotFound, "planning.module_link_not_found")
 	w.refusedLink(t, "alice", http.MethodGet, links, "", http.StatusNotFound, "planning.module_not_found")
 }
