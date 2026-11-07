@@ -10,14 +10,21 @@ import "github.com/open-nerve/NerveProject/server/internal/platform/httpserver/b
 func BodyShapes() *bodyshape.Table {
 	return &bodyshape.Table{
 		Nodes: []bodyshape.Node{
-			/* 0 */ {Types: bodyshape.Object, Extra: bodyshape.Closed, Items: bodyshape.Open, Props: map[string]int{"description": 1, "end_date": 2, "name": 3, "start_date": 4}, Required: []string{"name"}},
+			/* 0 */ {Types: bodyshape.Object, Extra: bodyshape.Closed, Items: bodyshape.Open, Props: map[string]int{"description": 1, "end_date": 2, "name": 3, "sort_order": 4, "start_date": 5}},
 			/* 1 */ {Types: bodyshape.String, Extra: bodyshape.Open, Items: bodyshape.Open},
-			/* 2 */ {Types: bodyshape.String, Format: bodyshape.FormatDate, Extra: bodyshape.Open, Items: bodyshape.Open},
+			/* 2 */ {Types: bodyshape.Null | bodyshape.String, Format: bodyshape.FormatDate, Extra: bodyshape.Open, Items: bodyshape.Open},
 			/* 3 */ {Types: bodyshape.String, Extra: bodyshape.Open, Items: bodyshape.Open},
-			/* 4 */ {Types: bodyshape.String, Format: bodyshape.FormatDate, Extra: bodyshape.Open, Items: bodyshape.Open},
+			/* 4 */ {Types: bodyshape.Number, Extra: bodyshape.Open, Items: bodyshape.Open},
+			/* 5 */ {Types: bodyshape.Null | bodyshape.String, Format: bodyshape.FormatDate, Extra: bodyshape.Open, Items: bodyshape.Open},
+			/* 6 */ {Types: bodyshape.Object, Extra: bodyshape.Closed, Items: bodyshape.Open, Props: map[string]int{"description": 7, "end_date": 8, "name": 9, "start_date": 10}, Required: []string{"name"}},
+			/* 7 */ {Types: bodyshape.String, Extra: bodyshape.Open, Items: bodyshape.Open},
+			/* 8 */ {Types: bodyshape.String, Format: bodyshape.FormatDate, Extra: bodyshape.Open, Items: bodyshape.Open},
+			/* 9 */ {Types: bodyshape.String, Extra: bodyshape.Open, Items: bodyshape.Open},
+			/* 10 */ {Types: bodyshape.String, Format: bodyshape.FormatDate, Extra: bodyshape.Open, Items: bodyshape.Open},
 		},
 		Roots: map[string]int{
-			"POST /api/v0/projects/{project_id}/cycles": 0,
+			"PATCH /api/v0/cycles/{cycle_id}":           0,
+			"POST /api/v0/projects/{project_id}/cycles": 6,
 		},
 	}
 }

@@ -86,6 +86,8 @@ export const PROBLEM_MESSAGES: Readonly<Record<string, string>> = {
   "issue.relation_not_found": "errors.issue_relation_not_found",
   "planning.cycles_disabled": "errors.planning_cycles_disabled",
   "planning.cycle_not_found": "errors.planning_cycle_not_found",
+  "planning.archived": "errors.planning_archived",
+  "planning.cycle_completed": "errors.planning_cycle_completed",
   "planning.cycle_dates_overlap": "errors.planning_cycle_dates_overlap",
 };
 

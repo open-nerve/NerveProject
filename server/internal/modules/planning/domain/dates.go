@@ -17,6 +17,17 @@ type Dates struct {
 // Dated reports whether d has its days.
 func (d Dates) Dated() bool { return d.Start != nil && d.End != nil }
 
+// Equal reports whether d and o are the same days, or both none.
+func (d Dates) Equal(o Dates) bool { return sameDay(d.Start, o.Start) && sameDay(d.End, o.End) }
+
+// sameDay reports whether a and b are the same day, or both none.
+func sameDay(a, b *shared.Date) bool {
+	if a == nil || b == nil {
+		return a == b
+	}
+	return a.Compare(*b) == 0
+}
+
 // CheckDates is the problem of d: a date alone is refused at the missing one,
 // a start after the end at end_date; nil when d is in order.
 func CheckDates(d Dates) *shared.FieldError {

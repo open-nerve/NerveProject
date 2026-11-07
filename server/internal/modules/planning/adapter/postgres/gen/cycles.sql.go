@@ -277,3 +277,42 @@ func (q *Queries) ProjectCycleDates(ctx context.Context, projectID uuid.UUID) ([
 	}
 	return items, nil
 }
+
+const updateCycle = `-- name: UpdateCycle :exec
+UPDATE cycles
+SET name          = $1,
+    description   = $2,
+    start_date    = $3,
+    end_date      = $4,
+    sort_order    = $5,
+    updated_at    = $6,
+    updated_by_id = $7
+WHERE id = $8 AND deleted_at IS NULL
+`
+
+type UpdateCycleParams struct {
+	Name        string
+	Description string
+	StartDate   *time.Time
+	EndDate     *time.Time
+	SortOrder   float64
+	UpdatedAt   time.Time
+	UpdatedByID *uuid.UUID
+	ID          uuid.UUID
+}
+
+// A change of a cycle: its name, description, dates and sort order, last changed by one account at one moment. Its
+// owner, archive and creation are not a change's (M6 P1 spec 2.3).
+func (q *Queries) UpdateCycle(ctx context.Context, arg UpdateCycleParams) error {
+	_, err := q.db.Exec(ctx, updateCycle,
+		arg.Name,
+		arg.Description,
+		arg.StartDate,
+		arg.EndDate,
+		arg.SortOrder,
+		arg.UpdatedAt,
+		arg.UpdatedByID,
+		arg.ID,
+	)
+	return err
+}

@@ -46,3 +46,16 @@ SELECT id, workspace_id, project_id, name, description, start_date, end_date, ow
 FROM cycles
 WHERE project_id = sqlc.arg(project_id) AND deleted_at IS NULL AND archived_at IS NOT NULL
 ORDER BY archived_at DESC, id;
+
+-- name: UpdateCycle :exec
+-- A change of a cycle: its name, description, dates and sort order, last changed by one account at one moment. Its
+-- owner, archive and creation are not a change's (M6 P1 spec 2.3).
+UPDATE cycles
+SET name          = sqlc.arg(name),
+    description   = sqlc.arg(description),
+    start_date    = sqlc.narg(start_date),
+    end_date      = sqlc.narg(end_date),
+    sort_order    = sqlc.arg(sort_order),
+    updated_at    = sqlc.arg(updated_at),
+    updated_by_id = sqlc.narg(updated_by_id)
+WHERE id = sqlc.arg(id) AND deleted_at IS NULL;

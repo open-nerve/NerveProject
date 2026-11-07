@@ -163,3 +163,33 @@ func TestListCycles(t *testing.T) {
 		t.Fatalf("a project without cycles: %v, %v", got, err)
 	}
 }
+
+// UpdateCycle writes a cycle's name, description, dates, sort order and last change; what it does not change, its
+// owner, archive and creation, stays as it was.
+func TestUpdateCycle(t *testing.T) {
+	s, pool := newStore(t)
+	ctx := context.Background()
+	w := newWorld(t, pool)
+	at := now.Truncate(time.Microsecond)
+	c := domain.Cycle{ID: uuid.NewV7(), ProjectID: w.web, WorkspaceID: w.workspace, Name: "Sprint", Description: "Ship",
+		Dates: domain.Dates{Start: dayOf(t, "2026-11-07"), End: dayOf(t, "2026-11-20")}, OwnedByID: &w.by, SortOrder: 5,
+		CreatedAt: at, UpdatedAt: at, CreatedByID: &w.by, UpdatedByID: &w.by}
+	if err := s.CreateCycle(ctx, c); err != nil {
+		t.Fatal(err)
+	}
+	editor := uuid.NewV7()
+	exec(t, pool, "INSERT INTO users (id, email, password, display_name) VALUES ($1, 'eve@corp.com', 'x', 'eve')", editor)
+	changed := c
+	changed.Name, changed.Description, changed.Dates, changed.SortOrder = "Two", "", domain.Dates{}, -0.5
+	changed.UpdatedAt, changed.UpdatedByID = at.Add(time.Minute), &editor
+	// What UpdateCycle does not write, changed here, must not reach the row.
+	moved := changed
+	moved.OwnedByID, moved.CreatedAt, moved.CreatedByID, moved.WorkspaceID = &editor, at.Add(time.Hour), &editor, uuid.NewV7()
+	if err := s.UpdateCycle(ctx, moved); err != nil {
+		t.Fatal(err)
+	}
+	got, found, err := s.GetCycle(ctx, c.ID)
+	if err != nil || !found || jsonOf(t, got) != jsonOf(t, changed) {
+		t.Fatalf("after UpdateCycle: %s, %t, %v\nwant %s", jsonOf(t, got), found, err, jsonOf(t, changed))
+	}
+}

@@ -128,3 +128,15 @@ func columnOf(d *shared.Date) *time.Time {
 	t := d.Time()
 	return &t
 }
+
+// UpdateCycle writes the change of the cycle c: its name, description,
+// dates, sort order and last change; nothing else of it.
+func (s *Store) UpdateCycle(ctx context.Context, c domain.Cycle) error {
+	start, end := columns(c.Dates)
+	err := s.queries(ctx).UpdateCycle(ctx, gen.UpdateCycleParams{ID: c.ID, Name: c.Name, Description: c.Description, StartDate: start,
+		EndDate: end, SortOrder: c.SortOrder, UpdatedAt: c.UpdatedAt, UpdatedByID: c.UpdatedByID})
+	if err != nil {
+		return fmt.Errorf("update cycle %s: %w", c.ID, err)
+	}
+	return nil
+}

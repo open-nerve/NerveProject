@@ -1785,7 +1785,11 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        /**
+         * Change a cycle
+         * @description For its project's admins and members, not its guests, and not a caller who sees only his own work items there. Each field given is changed, each left out kept; start_date and end_date may each be given alone or null. The name has 1–255 characters without its surrounding white space, which is dropped, and no NUL; the description no NUL; the sort order is a number (validation_failed); these are checked before the cycle is looked at. A cycle that does not exist or is deleted, one whose project is deleted, and one whose project the caller does not see answer planning.cycle_not_found; a caller who may not change it, forbidden; an archived project, project.archived; cycles turned off, planning.cycles_disabled; an archived cycle refuses any change, one of nothing too (planning.archived); a completed cycle, any field but sort_order, even given as it is (planning.cycle_completed). The dates given, each else the cycle's, must be both or neither with the start not after the end (validation_failed, at the date given alone, or where they part when both are given), and may not share a day with another undeleted cycle of the project, archived ones too (planning.cycle_dates_overlap). A change of nothing writes nothing and answers the cycle as it is. Everything is decided after the project's row is locked, and written at one moment by the caller.
+         */
+        patch: operations["updateCycle"];
         trace?: never;
     };
 }
@@ -3246,6 +3250,24 @@ export interface components {
              */
             end_date?: string;
         };
+        CycleUpdate: {
+            /** @description 1–255 characters without the surrounding white space, which is dropped; no NUL. */
+            name?: string;
+            /** @description Plain text without NUL; empty for none. */
+            description?: string;
+            /**
+             * Format: date
+             * @description The day it starts, on the project's calendar; null clears it, with end_date.
+             */
+            start_date?: string | null;
+            /**
+             * Format: date
+             * @description The day it ends, not before start_date; null clears it, with start_date.
+             */
+            end_date?: string | null;
+            /** @description The cycle's place among the project's cycles, the lowest first. */
+            sort_order?: number;
+        };
     };
     responses: {
         /** @description Error (RFC 9457 problem details). */
@@ -3431,6 +3453,7 @@ export type CycleStatus = components['schemas']['CycleStatus'];
 export type Cycle = components['schemas']['Cycle'];
 export type CycleList = components['schemas']['CycleList'];
 export type CycleCreate = components['schemas']['CycleCreate'];
+export type CycleUpdate = components['schemas']['CycleUpdate'];
 export type ResponseProblem = components['responses']['Problem'];
 export type ParameterLimit = components['parameters']['Limit'];
 export type ParameterCursor = components['parameters']['Cursor'];
@@ -6260,6 +6283,34 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description The cycle. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Cycle"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateCycle: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A cycle's id (Cycle.id). */
+                cycle_id: components["parameters"]["CycleID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CycleUpdate"];
+            };
+        };
+        responses: {
+            /** @description The cycle as changed. */
             200: {
                 headers: {
                     [name: string]: unknown;

@@ -33,6 +33,31 @@ func (h handler) GetCycle(ctx context.Context, req gen.GetCycleRequestObject) (g
 	return gen.GetCycle200JSONResponse(cycle(c)), nil
 }
 
+// UpdateCycle serves PATCH /api/v0/cycles/{cycle_id}: the fields given go
+// to the use case, a date given as null as one given as none.
+func (h handler) UpdateCycle(ctx context.Context, req gen.UpdateCycleRequestObject) (gen.UpdateCycleResponseObject, error) {
+	p := domain.CyclePatch{Name: req.Body.Name, Description: req.Body.Description, SortOrder: req.Body.SortOrder}
+	p.SetStart, p.Start = given(req.Body.StartDate)
+	p.SetEnd, p.End = given(req.Body.EndDate)
+	c, err := h.uc.UpdateCycle.Execute(ctx, req.CycleID, p)
+	if err != nil {
+		return nil, err
+	}
+	return gen.UpdateCycle200JSONResponse(cycle(c)), nil
+}
+
+// given is whether v is given, and its value, nil for null.
+func given[T any](v nullable.Nullable[T]) (bool, *T) {
+	switch {
+	case !v.IsSpecified():
+		return false, nil
+	case v.IsNull():
+		return true, nil
+	}
+	value := v.MustGet()
+	return true, &value
+}
+
 // CreateCycle serves POST /api/v0/projects/{project_id}/cycles: the values
 // go to the use case as given, the description empty and the dates none
 // when left out.

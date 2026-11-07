@@ -80,6 +80,7 @@ func New(d Deps) *Module {
 			ListCycles:  app.NewListCycles(app.ListCyclesDeps{Reads: reads, Cycles: store, Clock: d.Clock}),
 			CreateCycle: app.NewCreateCycle(app.CreateCycleDeps{Locks: locks, Cycles: store, Clock: d.Clock}),
 			GetCycle:    app.NewGetCycle(app.GetCycleDeps{Reads: reads, Clock: d.Clock}),
+			UpdateCycle: app.NewUpdateCycle(app.UpdateCycleDeps{Locks: locks, Cycles: store, Clock: d.Clock}),
 		},
 		deleteRows:   app.NewDeleteRows(app.DeleteRowsDeps{Rows: store, Tx: d.JobTx, RuntimeNow: d.RuntimeNow, Batch: d.DeleteBatch, Budget: d.DeleteBudget}),
 		deleteBudget: d.DeleteBudget, logger: d.Logger,

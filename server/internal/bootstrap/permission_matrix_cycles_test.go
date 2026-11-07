@@ -15,7 +15,7 @@ import (
 
 // The rows of the permission matrix of a project's cycles (M6 P1 spec R10):
 // listing and creating them under the project of each column, and reading
-// one, naming it by its id (/cycles/{cycle_id}) among its column's
+// and changing one, naming it by its id (/cycles/{cycle_id}) among its column's
 // project's seeded cycles; and the cycles they rest on, matrixCycles, which prepareMatrix seeds in each project through the
 // planning store (cycles) once the project store has turned the project's
 // cycles on (cyclesOn).
@@ -23,6 +23,7 @@ import (
 var (
 	cellCycleDatesOverlap = cell{http.StatusConflict, "planning.cycle_dates_overlap"}
 	cellCycleNotFound     = cell{http.StatusNotFound, "planning.cycle_not_found"}
+	cellCycleCompleted    = cell{http.StatusConflict, "planning.cycle_completed"}
 )
 
 // cycleRows are the cycles the rows name by id: a column that does not see
@@ -101,6 +102,17 @@ func cycleMatrixRows() []matrixRow {
 		// not.
 		{op: "createCycle", write: true, columns: cycleColumns, request: toProject(http.MethodPost, "/cycles", newCycle),
 			cells: onTheCycles(cellCreated, cellCreated, cellForbidden, cellForbidden), check: createsTheCycle},
+		// The project's admins and members, as createCycle. Sprint is
+		// completed: its sort order is all it takes (M6 P1 spec R5).
+		{op: "updateCycle", write: true, columns: cycleColumns, request: cycleRows.to(http.MethodPatch, "", "Sprint", `{"sort_order":12345}`),
+			cells: onACycle(cellOK, cellOK, cellOK, cellForbidden, cellForbidden), check: reordersTheCycle},
+		// Its name: refused after the decision, so who may not change it
+		// learns nothing of its status.
+		{op: "updateCycle", variant: "a completed cycle's name", write: true, columns: cycleColumns,
+			request: cycleRows.to(http.MethodPatch, "", "Sprint", `{"name":"Renamed"}`),
+			cells:   onACycle(cellCycleCompleted, cellCycleCompleted, cellCycleCompleted, cellForbidden, cellForbidden)},
+		{op: "updateCycle", variant: "archived", write: true, columns: archivedColumns,
+			request: cycleRows.to(http.MethodPatch, "", "Sprint", `{"sort_order":12345}`), cells: cycleRows.ofArchived(cellProjectArchived, cellForbidden)},
 		// Dates sharing a day with Sprint: refused under the lock, after the
 		// decision, so who may not create cycles learns nothing of the
 		// project's (M6 P1 spec R2).
@@ -142,6 +154,20 @@ func isTheSeededSprint(t *testing.T, c caller, s seeded, got cycleAnswer, answer
 		got.Name != "Sprint" || got.StartDate == nil || *got.StartDate != "2026-10-01" || got.EndDate == nil || *got.EndDate != "2026-10-14" ||
 		got.Status != "completed" || got.SortOrder != 65535 || got.OwnedByID == nil || *got.OwnedByID != by {
 		t.Errorf("%s reads %s; want %s's Sprint as seeded", c, answer, projectOf(c))
+	}
+}
+
+// reordersTheCycle: the column's project's Sprint at 12345, the rest as
+// seeded, last changed by the column's account.
+func reordersTheCycle(t *testing.T, c caller, s seeded, answer string) {
+	var got cycleAnswer
+	decodeAnswer(t, answer, &got)
+	by := s.account(accountOf(c))
+	seededSprint := got
+	seededSprint.SortOrder = 65535
+	isTheSeededSprint(t, c, s, seededSprint, answer)
+	if got.SortOrder != 12345 || got.UpdatedByID == nil || *got.UpdatedByID != by || !got.UpdatedAt.After(got.CreatedAt) {
+		t.Errorf("%s reorders %s; want %s's Sprint at 12345, changed by %s", c, answer, projectOf(c), accountOf(c))
 	}
 }
 

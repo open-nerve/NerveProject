@@ -26,6 +26,7 @@ type lockWorld struct {
 	gateFail error
 	now      time.Time      // the clock's reading
 	created  []domain.Cycle // what CreateCycle stored
+	updated  []domain.Cycle // what UpdateCycle stored
 }
 
 type inTx struct{}
