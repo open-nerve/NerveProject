@@ -114,7 +114,7 @@ func startClusterWith(options ...testcontainers.ContainerCustomizer) (_ *cluster
 		tcpostgres.WithDatabase("postgres"),
 		tcpostgres.BasicWaitStrategies(),
 	}, options...)
-	container, err := tcpostgres.Run(ctx, image, options...)
+	container, err := startPublished(func() (*tcpostgres.PostgresContainer, error) { return tcpostgres.Run(ctx, image, options...) })
 	var admin *pgxpool.Pool
 	defer func() {
 		if startupErr == nil {
