@@ -1,6 +1,6 @@
 # M6/P2 阶段评审记录
 
-> 2026-11-07：最终候选（修复轮、编辑器计时器的修复与本记录，门禁于 `254d3255` 全过）待推送、核分支 CI 与合入；分支 CI、合入、main CI 与归档清理在合入后由 P3 的 T1 回填到 §7。基线 main `0a601f212e32057c4e48fe43e8c4f19691254573`（P1 noff）。
+> 2026-11-08：最终候选（修复轮、编辑器计时器与 I21 等待的两处修复与本记录，门禁于 `78c7f7d3` 全过）待推送、核分支 CI 与合入；分支 CI、合入、main CI 与归档清理在合入后由 P3 的 T1 回填到 §7。基线 main `0a601f212e32057c4e48fe43e8c4f19691254573`（P1 noff）。
 
 ## 1. 评审方式与范围
 
@@ -21,6 +21,7 @@ A1–A8 满足（[spec §4](../specs/P2-modules-backend.md#4-验收标准)已勾
 - **测试**：模块与链接的矩阵表复用迭代的列；`planningOn` 一次打开两个开关；e2e 的链接地址都是出站策略拦截的 `169.254.169.254`，抓取不出网。
 - **修复轮**：`planning_module_reads_test.go` 用 SQL 归档两个模块（已完成、已取消，不违 R3）以造出先后不同的归档时刻，固定业务时钟下经接口做不到，保留。
 - **CI 暴露的编辑器缺陷**：在 P2 内修复而不交 M8（§5）——根因明确、改动 8 行，不修则分支与 main 的 CI 间歇变红。
+- **I21 的测试竞争**：CI 重跑也未过时按负责人规则停下报告，负责人同意后只改 I21 的等待（§5）；本机的连接预算不在 P2 改，交 M8（M6-M8-03）。
 - 其余见台账。
 
 ## 4. 实施记录
@@ -43,6 +44,8 @@ A1–A8 满足（[spec §4](../specs/P2-modules-backend.md#4-验收标准)已勾
 - **修复轮之后**：在 `62bc0de4`（修复轮 `18c06607` 加审查报告与本记录）上串行重跑七项门禁，全部 exit 0、输入前后一致：`make gen-check`、`make lint-go`、`make test`（66 个包，849 秒）、`make lint-web`（50 项任务中 35 项由 turbo 缓存回放）、`make knip`、`make test-web`（16 项任务全部由缓存回放：`web/` 自 `64d43fee` 以来未变）、`make build && make e2e`（426 条全过）。
 - **候选 `e7adbbca` 的分支 CI 失败**（42376662419 attempt 1）：server 成功；web 的编辑器单元测试 145 条全过，却因一个未处理错误失败——`ReferenceError: window is not defined`，出自 `code-block-node-view.tsx` 的复制计时器（点“复制代码”后 1 秒恢复图标），由 `editor-block-menu.test.tsx` 的复制用例触发；e2e 因依赖 web 被跳过。这不是已登记的 C7/C12，P2 也没有改编辑器包；本地两轮 `make test-web` 都由 turbo 缓存回放，没有重跑编辑器包。根因是计时器从不清除，节点视图卸载后仍对它设状态，测试环境先拆除时便落在没有 `window` 的环境里（M4 起就有）。修复 `254d3255`：计时器存入 ref、卸载时清除；新测试“代码块移除时复制标记的计时器随之结束”修复前失败（卸载后仍有 1 个计时器）、修复后通过，去掉卸载清除的变异使之失败。旧 CI 不重跑，新候选另起 CI。
 - **修复编辑器之后**（`254d3255`）：第一次串行门禁 `make test` 有 2 个包因测试容器起不来而失败（S3 容器等 Docker 应答超时、Postgres 容器拿不到映射端口；62 个包通过；本机 Docker 当时运行二十余个其他项目的容器），属环境失败，重跑完整七项：`make gen-check`、`make lint-go`、`make test`（66 个包）、`make lint-web`、`make knip`、`make test-web`（编辑器包实跑通过）全部 exit 0；`make build && make e2e` 第一次 425 条通过、W6 的两次注册因 e2e 共用的 Postgres 连接数用尽（`too many clients already`）回答 500，同一输入只重跑这一项即 426 条全过。连接余量的观察交 [M8 交接 M6-M8-03](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-03)。
+- **候选 `784d8e0a` 的分支 CI 失败、重跑也未过**（42380907752）：attempt 1 的 server、web（编辑器包实跑）成功，e2e 426 条中 425 过，M5 已记的 F16 (page) 同类间歇失败（`f16-content-lifetime-page.spec.ts:672`，展开评论的“Attachments”后找不到下载按钮；补记入 [M6-M8-01](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-01)）；只重跑失败的作业，attempt 2 的 F16 通过，I21 (API) 失败——“module_links: retained IDs and every column”：furnish 建的模块链接在全行快照时 `metadata` 为 `{}`，比对时已被抓取写成 `{"error":"blocked",…}`。根因是 P2 自己的测试竞争：T12 起建模块链接即投递抓取，I21 的 `finishLinks` 只在快照前等 `issue_links` 的抓取，没有等 `module_links`；本地各轮与 attempt 1 抓取恰好先于快照。按负责人规则停下报告，负责人 2026-11-08 同意按方案修：`78c7f7d3` 让 `finishLinks` 对模块链接也等到恰好一次抓取完成；e2e 的类型、lint、格式检查与 I21 聚焦通过，把期望改为“没有抓取”的变异使 I21 失败（证明等待作用在模块链接上）。
+- **修复 I21 之后**（`78c7f7d3`）：七项串行，前六项全部 exit 0（`make test` 66 个包）；`make build && make e2e` 第一次 425 条通过、W12 的命令因共用 Postgres 连接数用尽连不上数据库（第二次本地出现，按配置核算的连接预算写入 M6-M8-03：本机 9 个工作进程远超 100 个连接，CI 2 个有余量），同一输入只重跑这一项即 426 条全过。
 
 ## 6. 整分支审查
 
