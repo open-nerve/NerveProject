@@ -59,3 +59,11 @@ SET name          = sqlc.arg(name),
     updated_at    = sqlc.arg(updated_at),
     updated_by_id = sqlc.narg(updated_by_id)
 WHERE id = sqlc.arg(id) AND deleted_at IS NULL;
+
+-- name: SetCycleArchived :exec
+-- A cycle archived at one moment, or no longer, last changed by one account at that moment (M6 P1 spec R3).
+UPDATE cycles
+SET archived_at   = sqlc.narg(archived_at),
+    updated_at    = sqlc.arg(updated_at),
+    updated_by_id = sqlc.narg(updated_by_id)
+WHERE id = sqlc.arg(id) AND deleted_at IS NULL;

@@ -147,6 +147,12 @@ type ServerInterface interface {
 	// UpdateCycle Change a cycle
 	// (PATCH /api/v0/cycles/{cycle_id})
 	UpdateCycle(w http.ResponseWriter, r *http.Request, cycleID CycleID)
+	// ArchiveCycle Archive a completed cycle
+	// (POST /api/v0/cycles/{cycle_id}/archive)
+	ArchiveCycle(w http.ResponseWriter, r *http.Request, cycleID CycleID)
+	// UnarchiveCycle Unarchive a cycle
+	// (POST /api/v0/cycles/{cycle_id}/unarchive)
+	UnarchiveCycle(w http.ResponseWriter, r *http.Request, cycleID CycleID)
 	// ListCycles List a project's cycles
 	// (GET /api/v0/projects/{project_id}/cycles)
 	ListCycles(w http.ResponseWriter, r *http.Request, projectID ProjectID, params ListCyclesParams)
@@ -207,6 +213,58 @@ func (siw *ServerInterfaceWrapper) UpdateCycle(w http.ResponseWriter, r *http.Re
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateCycle(w, r, cycleID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ArchiveCycle operation middleware
+func (siw *ServerInterfaceWrapper) ArchiveCycle(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "cycle_id" -------------
+	var cycleID CycleID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "cycle_id", r.PathValue("cycle_id"), &cycleID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cycle_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ArchiveCycle(w, r, cycleID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UnarchiveCycle operation middleware
+func (siw *ServerInterfaceWrapper) UnarchiveCycle(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "cycle_id" -------------
+	var cycleID CycleID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "cycle_id", r.PathValue("cycle_id"), &cycleID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cycle_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UnarchiveCycle(w, r, cycleID)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -408,6 +466,8 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/projects/{project_id}/cycles", wrapper.CreateCycle)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/cycles/{cycle_id}", wrapper.GetCycle)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/cycles/{cycle_id}", wrapper.UpdateCycle)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/cycles/{cycle_id}/archive", wrapper.ArchiveCycle)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/cycles/{cycle_id}/unarchive", wrapper.UnarchiveCycle)
 
 	return m
 }
@@ -498,6 +558,98 @@ type UpdateCycledefaultApplicationProblemPlusJSONResponse struct {
 }
 
 func (response UpdateCycledefaultApplicationProblemPlusJSONResponse) VisitUpdateCycleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ArchiveCycleRequestObject struct {
+	CycleID CycleID `json:"cycle_id"`
+}
+
+type ArchiveCycleResponseObject interface {
+	VisitArchiveCycleResponse(w http.ResponseWriter) error
+}
+
+type ArchiveCycle200JSONResponse Cycle
+
+func (response ArchiveCycle200JSONResponse) VisitArchiveCycleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ArchiveCycledefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response ArchiveCycledefaultApplicationProblemPlusJSONResponse) VisitArchiveCycleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UnarchiveCycleRequestObject struct {
+	CycleID CycleID `json:"cycle_id"`
+}
+
+type UnarchiveCycleResponseObject interface {
+	VisitUnarchiveCycleResponse(w http.ResponseWriter) error
+}
+
+type UnarchiveCycle200JSONResponse Cycle
+
+func (response UnarchiveCycle200JSONResponse) VisitUnarchiveCycleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UnarchiveCycledefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response UnarchiveCycledefaultApplicationProblemPlusJSONResponse) VisitUnarchiveCycleResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -617,6 +769,12 @@ type StrictServerInterface interface {
 	// UpdateCycle Change a cycle
 	// (PATCH /api/v0/cycles/{cycle_id})
 	UpdateCycle(ctx context.Context, request UpdateCycleRequestObject) (UpdateCycleResponseObject, error)
+	// ArchiveCycle Archive a completed cycle
+	// (POST /api/v0/cycles/{cycle_id}/archive)
+	ArchiveCycle(ctx context.Context, request ArchiveCycleRequestObject) (ArchiveCycleResponseObject, error)
+	// UnarchiveCycle Unarchive a cycle
+	// (POST /api/v0/cycles/{cycle_id}/unarchive)
+	UnarchiveCycle(ctx context.Context, request UnarchiveCycleRequestObject) (UnarchiveCycleResponseObject, error)
 	// ListCycles List a project's cycles
 	// (GET /api/v0/projects/{project_id}/cycles)
 	ListCycles(ctx context.Context, request ListCyclesRequestObject) (ListCyclesResponseObject, error)
@@ -716,6 +874,58 @@ func (sh *strictHandler) UpdateCycle(w http.ResponseWriter, r *http.Request, cyc
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(UpdateCycleResponseObject); ok {
 		if err := validResponse.VisitUpdateCycleResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ArchiveCycle operation middleware
+func (sh *strictHandler) ArchiveCycle(w http.ResponseWriter, r *http.Request, cycleID CycleID) {
+	var request ArchiveCycleRequestObject
+
+	request.CycleID = cycleID
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ArchiveCycle(ctx, request.(ArchiveCycleRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ArchiveCycle")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ArchiveCycleResponseObject); ok {
+		if err := validResponse.VisitArchiveCycleResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UnarchiveCycle operation middleware
+func (sh *strictHandler) UnarchiveCycle(w http.ResponseWriter, r *http.Request, cycleID CycleID) {
+	var request UnarchiveCycleRequestObject
+
+	request.CycleID = cycleID
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UnarchiveCycle(ctx, request.(UnarchiveCycleRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UnarchiveCycle")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UnarchiveCycleResponseObject); ok {
+		if err := validResponse.VisitUnarchiveCycleResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

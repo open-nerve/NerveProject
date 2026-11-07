@@ -33,12 +33,19 @@ type UpdateCycleUseCase interface {
 	Execute(ctx context.Context, id uuid.UUID, p domain.CyclePatch) (domain.ReadCycle, error)
 }
 
+// ArchiveCycleUseCase is app.ArchiveCycle, which archives or unarchives.
+type ArchiveCycleUseCase interface {
+	Execute(ctx context.Context, id uuid.UUID) (domain.ReadCycle, error)
+}
+
 // UseCases are the use cases behind the module's operations.
 type UseCases struct {
-	ListCycles  ListCyclesUseCase
-	CreateCycle CreateCycleUseCase
-	GetCycle    GetCycleUseCase
-	UpdateCycle UpdateCycleUseCase
+	ListCycles     ListCyclesUseCase
+	CreateCycle    CreateCycleUseCase
+	GetCycle       GetCycleUseCase
+	UpdateCycle    UpdateCycleUseCase
+	ArchiveCycle   ArchiveCycleUseCase
+	UnarchiveCycle ArchiveCycleUseCase
 }
 
 // Register mounts the module's routes on router behind api's per-route

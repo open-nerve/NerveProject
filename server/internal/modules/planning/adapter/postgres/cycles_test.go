@@ -193,3 +193,32 @@ func TestUpdateCycle(t *testing.T) {
 		t.Fatalf("after UpdateCycle: %s, %t, %v\nwant %s", jsonOf(t, got), found, err, jsonOf(t, changed))
 	}
 }
+
+// SetCycleArchived writes a cycle's archive and its last change, nothing else of it; cleared, it is none again.
+func TestSetCycleArchived(t *testing.T) {
+	s, pool := newStore(t)
+	ctx := context.Background()
+	w := newWorld(t, pool)
+	at := now.Truncate(time.Microsecond)
+	c := domain.Cycle{ID: uuid.NewV7(), ProjectID: w.web, WorkspaceID: w.workspace, Name: "Sprint", SortOrder: 5, CreatedAt: at, UpdatedAt: at,
+		CreatedByID: &w.by, UpdatedByID: &w.by}
+	if err := s.CreateCycle(ctx, c); err != nil {
+		t.Fatal(err)
+	}
+	archived := c
+	later := at.Add(time.Minute)
+	archived.ArchivedAt, archived.UpdatedAt = &later, later
+	// What SetCycleArchived does not write, changed here, must not reach the row.
+	moved := archived
+	moved.Name, moved.SortOrder = "Other", 1
+	for _, tt := range []struct{ write, want domain.Cycle }{{moved, archived}, {func() domain.Cycle { c := archived; c.ArchivedAt = nil; return c }(),
+		func() domain.Cycle { c := archived; c.ArchivedAt = nil; return c }()}} {
+		if err := s.SetCycleArchived(ctx, tt.write); err != nil {
+			t.Fatal(err)
+		}
+		got, _, err := s.GetCycle(ctx, c.ID)
+		if err != nil || jsonOf(t, got) != jsonOf(t, tt.want) {
+			t.Fatalf("after SetCycleArchived: %s, %v\nwant %s", jsonOf(t, got), err, jsonOf(t, tt.want))
+		}
+	}
+}

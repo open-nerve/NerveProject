@@ -73,6 +73,7 @@
     "planning_cycle_not_found": "The cycle does not exist, or you cannot see it.",
     "planning_archived": "The cycle is archived. Restore it to change it.",
     "planning_cycle_completed": "The cycle is completed. Only its order can change.",
+    "planning_cycle_not_completed": "Only a completed cycle can be archived.",
     "planning_cycle_dates_overlap": "These dates overlap another cycle of this project.",
     "unreachable": "Cannot reach the server for now. Please try again.",
     "unknown": "Something went wrong. Please try again.",

@@ -46,6 +46,24 @@ func (h handler) UpdateCycle(ctx context.Context, req gen.UpdateCycleRequestObje
 	return gen.UpdateCycle200JSONResponse(cycle(c)), nil
 }
 
+// ArchiveCycle serves POST /api/v0/cycles/{cycle_id}/archive.
+func (h handler) ArchiveCycle(ctx context.Context, req gen.ArchiveCycleRequestObject) (gen.ArchiveCycleResponseObject, error) {
+	c, err := h.uc.ArchiveCycle.Execute(ctx, req.CycleID)
+	if err != nil {
+		return nil, err
+	}
+	return gen.ArchiveCycle200JSONResponse(cycle(c)), nil
+}
+
+// UnarchiveCycle serves POST /api/v0/cycles/{cycle_id}/unarchive.
+func (h handler) UnarchiveCycle(ctx context.Context, req gen.UnarchiveCycleRequestObject) (gen.UnarchiveCycleResponseObject, error) {
+	c, err := h.uc.UnarchiveCycle.Execute(ctx, req.CycleID)
+	if err != nil {
+		return nil, err
+	}
+	return gen.UnarchiveCycle200JSONResponse(cycle(c)), nil
+}
+
 // given is whether v is given, and its value, nil for null.
 func given[T any](v nullable.Nullable[T]) (bool, *T) {
 	switch {

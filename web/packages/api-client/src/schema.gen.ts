@@ -1792,6 +1792,52 @@ export interface paths {
         patch: operations["updateCycle"];
         trace?: never;
     };
+    "/api/v0/cycles/{cycle_id}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A cycle's id (Cycle.id). */
+                cycle_id: components["parameters"]["CycleID"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Archive a completed cycle
+         * @description For its project's admins and members, not its guests, and not a caller who sees only his own work items there. Only a cycle completed on the project's calendar day is archived (planning.cycle_not_completed); one archived already is answered as it is, nothing written. A cycle that does not exist or is deleted, one whose project is deleted, and one whose project the caller does not see answer planning.cycle_not_found; a caller who may not change it, forbidden; an archived project, project.archived; cycles turned off, planning.cycles_disabled. Decided after the project's row is locked; archived_at and the cycle's last change are one moment, the caller's.
+         */
+        post: operations["archiveCycle"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v0/cycles/{cycle_id}/unarchive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A cycle's id (Cycle.id). */
+                cycle_id: components["parameters"]["CycleID"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Unarchive a cycle
+         * @description For its project's admins and members, not its guests, and not a caller who sees only his own work items there; whatever the cycle's status. One not archived is answered as it is, nothing written. A cycle that does not exist or is deleted, one whose project is deleted, and one whose project the caller does not see answer planning.cycle_not_found; a caller who may not change it, forbidden; an archived project, project.archived; cycles turned off, planning.cycles_disabled. Decided after the project's row is locked; the cycle's last change is the caller's at that moment.
+         */
+        post: operations["unarchiveCycle"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -6311,6 +6357,54 @@ export interface operations {
         };
         responses: {
             /** @description The cycle as changed. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Cycle"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    archiveCycle: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A cycle's id (Cycle.id). */
+                cycle_id: components["parameters"]["CycleID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The cycle, archived. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Cycle"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    unarchiveCycle: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A cycle's id (Cycle.id). */
+                cycle_id: components["parameters"]["CycleID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The cycle, not archived. */
             200: {
                 headers: {
                     [name: string]: unknown;

@@ -278,6 +278,32 @@ func (q *Queries) ProjectCycleDates(ctx context.Context, projectID uuid.UUID) ([
 	return items, nil
 }
 
+const setCycleArchived = `-- name: SetCycleArchived :exec
+UPDATE cycles
+SET archived_at   = $1,
+    updated_at    = $2,
+    updated_by_id = $3
+WHERE id = $4 AND deleted_at IS NULL
+`
+
+type SetCycleArchivedParams struct {
+	ArchivedAt  *time.Time
+	UpdatedAt   time.Time
+	UpdatedByID *uuid.UUID
+	ID          uuid.UUID
+}
+
+// A cycle archived at one moment, or no longer, last changed by one account at that moment (M6 P1 spec R3).
+func (q *Queries) SetCycleArchived(ctx context.Context, arg SetCycleArchivedParams) error {
+	_, err := q.db.Exec(ctx, setCycleArchived,
+		arg.ArchivedAt,
+		arg.UpdatedAt,
+		arg.UpdatedByID,
+		arg.ID,
+	)
+	return err
+}
+
 const updateCycle = `-- name: UpdateCycle :exec
 UPDATE cycles
 SET name          = $1,

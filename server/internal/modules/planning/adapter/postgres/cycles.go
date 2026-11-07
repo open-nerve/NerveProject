@@ -140,3 +140,14 @@ func (s *Store) UpdateCycle(ctx context.Context, c domain.Cycle) error {
 	}
 	return nil
 }
+
+// SetCycleArchived writes the archive of the cycle c, archived_at, and its
+// last change; nothing else of it.
+func (s *Store) SetCycleArchived(ctx context.Context, c domain.Cycle) error {
+	err := s.queries(ctx).SetCycleArchived(ctx, gen.SetCycleArchivedParams{ID: c.ID, ArchivedAt: c.ArchivedAt, UpdatedAt: c.UpdatedAt,
+		UpdatedByID: c.UpdatedByID})
+	if err != nil {
+		return fmt.Errorf("archive cycle %s: %w", c.ID, err)
+	}
+	return nil
+}

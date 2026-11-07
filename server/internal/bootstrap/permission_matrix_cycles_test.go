@@ -10,12 +10,13 @@ import (
 	planningpg "github.com/open-nerve/NerveProject/server/internal/modules/planning/adapter/postgres"
 	planningdomain "github.com/open-nerve/NerveProject/server/internal/modules/planning/domain"
 	projectdomain "github.com/open-nerve/NerveProject/server/internal/modules/project/domain"
+	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
 // The rows of the permission matrix of a project's cycles (M6 P1 spec R10):
-// listing and creating them under the project of each column, and reading
-// and changing one, naming it by its id (/cycles/{cycle_id}) among its column's
+// listing and creating them under the project of each column, and reading,
+// changing, archiving and unarchiving one, naming it by its id (/cycles/{cycle_id}) among its column's
 // project's seeded cycles; and the cycles they rest on, matrixCycles, which prepareMatrix seeds in each project through the
 // planning store (cycles) once the project store has turned the project's
 // cycles on (cyclesOn).
@@ -113,6 +114,17 @@ func cycleMatrixRows() []matrixRow {
 			cells:   onACycle(cellCycleCompleted, cellCycleCompleted, cellCycleCompleted, cellForbidden, cellForbidden)},
 		{op: "updateCycle", variant: "archived", write: true, columns: archivedColumns,
 			request: cycleRows.to(http.MethodPatch, "", "Sprint", `{"sort_order":12345}`), cells: cycleRows.ofArchived(cellProjectArchived, cellForbidden)},
+		// As updateCycle: Sprint is completed, so it may be archived.
+		{op: "archiveCycle", write: true, columns: cycleColumns, request: cycleRows.to(http.MethodPost, "/archive", "Sprint", ""),
+			cells: onACycle(cellOK, cellOK, cellOK, cellForbidden, cellForbidden), check: archivesTheCycle(true)},
+		{op: "archiveCycle", variant: "archived", write: true, columns: archivedColumns, request: cycleRows.to(http.MethodPost, "/archive", "Sprint", ""),
+			cells: cycleRows.ofArchived(cellProjectArchived, cellForbidden)},
+		// Sprint archived first in each cell's copy (sprintArchived).
+		{op: "unarchiveCycle", write: true, columns: cycleColumns, prepare: sprintArchived,
+			request: cycleRows.to(http.MethodPost, "/unarchive", "Sprint", ""),
+			cells:   onACycle(cellOK, cellOK, cellOK, cellForbidden, cellForbidden), check: archivesTheCycle(false)},
+		{op: "unarchiveCycle", variant: "archived", write: true, columns: archivedColumns, prepare: sprintArchived,
+			request: cycleRows.to(http.MethodPost, "/unarchive", "Sprint", ""), cells: cycleRows.ofArchived(cellProjectArchived, cellForbidden)},
 		// Dates sharing a day with Sprint: refused under the lock, after the
 		// decision, so who may not create cycles learns nothing of the
 		// project's (M6 P1 spec R2).
@@ -168,6 +180,38 @@ func reordersTheCycle(t *testing.T, c caller, s seeded, answer string) {
 	isTheSeededSprint(t, c, s, seededSprint, answer)
 	if got.SortOrder != 12345 || got.UpdatedByID == nil || *got.UpdatedByID != by || !got.UpdatedAt.After(got.CreatedAt) {
 		t.Errorf("%s reorders %s; want %s's Sprint at 12345, changed by %s", c, answer, projectOf(c), accountOf(c))
+	}
+}
+
+// sprintArchived archives the column's project's Sprint in the cell's copy,
+// at its last change.
+func sprintArchived(t *testing.T, c caller, s seeded, url string) {
+	t.Helper()
+	pool := openPool(t, url)
+	defer pool.Close()
+	tag, err := pool.Exec(pgtest.Soon(t), "UPDATE cycles SET archived_at = updated_at WHERE id = $1", s.cycle(projectOf(c), "Sprint"))
+	if err != nil || tag.RowsAffected() != 1 {
+		t.Fatalf("archiving %s's Sprint: %v, %d rows", c, err, tag.RowsAffected())
+	}
+}
+
+// archivesTheCycle: the column's project's Sprint, archived or not as
+// archived says, last changed by the column's account at the moment it is
+// archived; the rest as seeded.
+func archivesTheCycle(archived bool) func(t *testing.T, c caller, s seeded, answer string) {
+	return func(t *testing.T, c caller, s seeded, answer string) {
+		var got cycleAnswer
+		decodeAnswer(t, answer, &got)
+		isTheSeededSprint(t, c, s, got, answer)
+		ok := got.UpdatedByID != nil && *got.UpdatedByID == s.account(accountOf(c)) && got.UpdatedAt.After(got.CreatedAt)
+		if archived {
+			ok = ok && got.ArchivedAt != nil && got.ArchivedAt.Equal(got.UpdatedAt)
+		} else {
+			ok = ok && got.ArchivedAt == nil
+		}
+		if !ok {
+			t.Errorf("%s answers %s; want %s's Sprint archived=%t, changed by %s", c, answer, projectOf(c), archived, accountOf(c))
+		}
 	}
 }
 
