@@ -56,3 +56,7 @@ created: 2026-09-28
 ## 处理结果（M6/P1）：第 2 节
 
 M6 设计 §4.3 已在 M2 §4.7 的图上延伸到迭代、模块及其关联表。迭代负责人的结论是改为可空、`ON DELETE SET NULL`（Plane `CASCADE`，同 M3 对项目负责人的改法），差异登记在 [plane-diff](../../plane-diff.md) 按表的 `cycles` 行。P1 的 `cycles` 表（`00039_planning_cycles.sql`）照此落地，`server/migrations/planning_schema_test.go` 的 `TestCyclesSchema` 核外键去向；把负责人改回 `CASCADE` 的变异让迭代随账户消失而失败。模块的负责人与成员在 P2、关联表在 P3 落地；第 1、3–6 节也未到，本交接保持 open。证据：[P1 spec](../specs/P1-cycles-backend.md) 2.2。
+
+## 处理结果（M6/P2）：第 2 节
+
+P2 落地 §4.3 图中模块的三张表（`00040`–`00042`）：`modules.lead_id` 照 Plane 为 `ON DELETE SET NULL`，`module_members.member_id` 照 Plane 为 `ON DELETE CASCADE`（v0 只停用、不物理删除账户，这条不触发），两张子表的 `module_id` 与三张表的 `workspace_id`、`project_id` 都是 `CASCADE`，审计列 `SET NULL`；差异登记在 [plane-diff](../../plane-diff.md) 按表的 `modules`、`module_members`、`module_links` 行。`server/migrations/planning_modules_schema_test.go` 的 `TestModulesSchema`、`TestModuleMembersSchema`、`TestModuleLinksSchema` 核外键去向：物理删除负责人的账户，模块留下、负责人为空；删除成员的账户，带走他的成员行；删除模块，带走它的成员与链接。把 `member_id` 改为 `SET NULL` 的变异让 `TestModuleMembersSchema` 失败。关联表在 P3；第 1、3–6 节也未到，本交接保持 open。证据：[P2 spec](../specs/P2-modules-backend.md) 2.2。

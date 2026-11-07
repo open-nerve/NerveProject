@@ -27,3 +27,50 @@ type Cycle struct {
 	UpdatedAt   time.Time
 	DeletedAt   *time.Time
 }
+
+type Module struct {
+	ID          uuid.UUID
+	WorkspaceID uuid.UUID
+	ProjectID   uuid.UUID
+	Name        string
+	Description string
+	StartDate   *time.Time
+	TargetDate  *time.Time
+	Status      string
+	LeadID      *uuid.UUID
+	SortOrder   float64
+	ArchivedAt  *time.Time
+	CreatedByID *uuid.UUID
+	UpdatedByID *uuid.UUID
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	DeletedAt   *time.Time
+}
+
+type ModuleLink struct {
+	ID          uuid.UUID
+	WorkspaceID uuid.UUID
+	ProjectID   uuid.UUID
+	ModuleID    uuid.UUID
+	Title       *string
+	Url         string
+	Metadata    []byte
+	CreatedByID *uuid.UUID
+	UpdatedByID *uuid.UUID
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	DeletedAt   *time.Time
+}
+
+type ModuleMember struct {
+	ID          uuid.UUID
+	WorkspaceID uuid.UUID
+	ProjectID   uuid.UUID
+	ModuleID    uuid.UUID
+	MemberID    uuid.UUID
+	CreatedByID *uuid.UUID
+	UpdatedByID *uuid.UUID
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	DeletedAt   *time.Time
+}

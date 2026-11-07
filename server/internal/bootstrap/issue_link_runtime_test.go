@@ -11,9 +11,9 @@ import (
 
 	"github.com/jackc/pgx/v5/pgconn"
 
-	"github.com/open-nerve/NerveProject/server/internal/modules/issue/domain"
 	"github.com/open-nerve/NerveProject/server/internal/platform/config"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
+	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
 // The same restricted login serves CRUD, inserts request jobs and runs the
@@ -52,13 +52,13 @@ func TestIssueLinkRuntimeJob(t *testing.T) {
 	}
 	assertPreview := func(link answeredLink, previewTitle string) {
 		t.Helper()
-		want := domain.LinkMetadata{"title": eventValue(previewTitle), "url": &link.URL,
+		want := shared.LinkMetadata{"title": eventValue(previewTitle), "url": &link.URL,
 			"favicon": eventValue("data:image/png;base64,cnVudGltZSBpY29u"), "favicon_url": eventValue(fixture.URL + "/favicon.ico")}
 		var raw []byte
 		if err := roles.owner.QueryRow(pgtest.Soon(t), "SELECT metadata FROM issue_links WHERE id=$1", link.ID).Scan(&raw); err != nil {
 			t.Fatal(err)
 		}
-		var stored domain.LinkMetadata
+		var stored shared.LinkMetadata
 		if err := json.Unmarshal(raw, &stored); err != nil {
 			t.Fatal(err)
 		}
@@ -78,7 +78,7 @@ func TestIssueLinkRuntimeJob(t *testing.T) {
 		t.Fatalf("runtime title update=%+v", titled)
 	}
 	assertPreview(titled, "runtime /first")
-	if !reflect.DeepEqual(titled.Metadata, domain.LinkMetadata{"title": eventValue("runtime /first"), "url": &link.URL,
+	if !reflect.DeepEqual(titled.Metadata, shared.LinkMetadata{"title": eventValue("runtime /first"), "url": &link.URL,
 		"favicon": eventValue("data:image/png;base64,cnVudGltZSBpY29u"), "favicon_url": eventValue(fixture.URL + "/favicon.ico")}) {
 		t.Fatalf("runtime title response lost completed metadata: %+v", titled)
 	}

@@ -43,15 +43,76 @@ type DeleteCycleUseCase interface {
 	Execute(ctx context.Context, id uuid.UUID) error
 }
 
+// CreateModuleUseCase is app.CreateModule.
+type CreateModuleUseCase interface {
+	Execute(ctx context.Context, projectID uuid.UUID, in domain.NewModule) (domain.Module, error)
+}
+
+// ListModulesUseCase is app.ListModules.
+type ListModulesUseCase interface {
+	Execute(ctx context.Context, projectID uuid.UUID, archived bool) ([]domain.Module, error)
+}
+
+// GetModuleUseCase is app.GetModule.
+type GetModuleUseCase interface {
+	Execute(ctx context.Context, id uuid.UUID) (domain.Module, error)
+}
+
+// UpdateModuleUseCase is app.UpdateModule.
+type UpdateModuleUseCase interface {
+	Execute(ctx context.Context, id uuid.UUID, p domain.ModulePatch) (domain.Module, error)
+}
+
+// ArchiveModuleUseCase is app.ArchiveModule, which archives or unarchives.
+type ArchiveModuleUseCase interface {
+	Execute(ctx context.Context, id uuid.UUID) (domain.Module, error)
+}
+
+// DeleteModuleUseCase is app.DeleteModule.
+type DeleteModuleUseCase interface {
+	Execute(ctx context.Context, id uuid.UUID) error
+}
+
+// CreateModuleLinkUseCase is app.CreateModuleLink.
+type CreateModuleLinkUseCase interface {
+	Execute(ctx context.Context, moduleID uuid.UUID, in domain.NewModuleLink) (domain.ModuleLink, error)
+}
+
+// UpdateModuleLinkUseCase is app.UpdateModuleLink.
+type UpdateModuleLinkUseCase interface {
+	Execute(ctx context.Context, id uuid.UUID, p domain.ModuleLinkPatch) (domain.ModuleLink, error)
+}
+
+// DeleteModuleLinkUseCase is app.DeleteModuleLink.
+type DeleteModuleLinkUseCase interface {
+	Execute(ctx context.Context, id uuid.UUID) error
+}
+
+// ListModuleLinksUseCase is app.ListModuleLinks.
+type ListModuleLinksUseCase interface {
+	Execute(ctx context.Context, moduleID uuid.UUID) ([]domain.ModuleLink, error)
+}
+
 // UseCases are the use cases behind the module's operations.
 type UseCases struct {
-	ListCycles     ListCyclesUseCase
-	CreateCycle    CreateCycleUseCase
-	GetCycle       GetCycleUseCase
-	UpdateCycle    UpdateCycleUseCase
-	ArchiveCycle   ArchiveCycleUseCase
-	UnarchiveCycle ArchiveCycleUseCase
-	DeleteCycle    DeleteCycleUseCase
+	ListCycles       ListCyclesUseCase
+	CreateCycle      CreateCycleUseCase
+	GetCycle         GetCycleUseCase
+	UpdateCycle      UpdateCycleUseCase
+	ArchiveCycle     ArchiveCycleUseCase
+	UnarchiveCycle   ArchiveCycleUseCase
+	DeleteCycle      DeleteCycleUseCase
+	ListModules      ListModulesUseCase
+	CreateModule     CreateModuleUseCase
+	GetModule        GetModuleUseCase
+	UpdateModule     UpdateModuleUseCase
+	ArchiveModule    ArchiveModuleUseCase
+	UnarchiveModule  ArchiveModuleUseCase
+	DeleteModule     DeleteModuleUseCase
+	CreateModuleLink CreateModuleLinkUseCase
+	UpdateModuleLink UpdateModuleLinkUseCase
+	DeleteModuleLink DeleteModuleLinkUseCase
+	ListModuleLinks  ListModuleLinksUseCase
 }
 
 // Register mounts the module's routes on router behind api's per-route

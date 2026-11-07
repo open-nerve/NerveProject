@@ -25,8 +25,10 @@ func projectIssueTable(table string) bool {
 	return table == "draft_issues" || table == "issues" || table == "comment_reactions" || len(table) > 6 && table[:6] == "issue_"
 }
 
-// The planning module's tables are deleted by its own planning.delete_rows job (M6 P1 spec 2.4).
-func projectPlanningTable(table string) bool { return table == "cycles" }
+// The planning module's tables are deleted by its own planning.delete_rows job (M6 P1 spec 2.4, P2 spec 2.4).
+func projectPlanningTable(table string) bool {
+	return table == "cycles" || table == "modules" || table == "module_members" || table == "module_links"
+}
 
 func parentAsyncTable(table string) bool {
 	return table == "file_assets" || projectIssueTable(table) || projectPlanningTable(table)

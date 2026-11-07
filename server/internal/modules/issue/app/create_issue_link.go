@@ -45,7 +45,7 @@ func (u *CreateIssueLink) Execute(ctx context.Context, id uuid.UUID, input domai
 			return domain.ErrLinkExists
 		}
 		at := u.d.Clock.Now()
-		created = domain.Link{ID: uuid.NewV7(), WorkspaceID: h.issue.WorkspaceID, ProjectID: h.issue.ProjectID, IssueID: id, URL: input.URL, Title: input.Title, Metadata: domain.LinkMetadata{}, CreatedByID: &actor.UserID, CreatedAt: at, UpdatedAt: at}
+		created = domain.Link{ID: uuid.NewV7(), WorkspaceID: h.issue.WorkspaceID, ProjectID: h.issue.ProjectID, IssueID: id, URL: input.URL, Title: input.Title, Metadata: shared.LinkMetadata{}, CreatedByID: &actor.UserID, CreatedAt: at, UpdatedAt: at}
 		if err := u.d.Links.MarkChanged(ctx, ChangedRows{IDs: []uuid.UUID{id}, By: actor.UserID, At: at}); err != nil {
 			return err
 		}

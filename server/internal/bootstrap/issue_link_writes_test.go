@@ -10,7 +10,6 @@ import (
 	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue"
-	"github.com/open-nerve/NerveProject/server/internal/modules/issue/domain"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
@@ -35,7 +34,7 @@ func TestUpdateIssueLinkAPI(t *testing.T) {
 	}{{`{"title":"  Mine  "}`, eventValue("  Mine  ")}, {`{"url":"  169.254.169.254/a "}`, eventValue("  Mine  ")}, {`{"title":null}`, nil}, {`{"title":""}`, eventValue("")}} {
 		var got answeredLink
 		decodeAnswer(t, w.send(t, "alice", http.MethodPatch, linkPath(a.ID), tc.body, 200), &got)
-		if !reflect.DeepEqual(got.Title, tc.title) || !reflect.DeepEqual(got.Metadata, domain.LinkMetadata{"title": eventValue("fresh preview")}) {
+		if !reflect.DeepEqual(got.Title, tc.title) || !reflect.DeepEqual(got.Metadata, shared.LinkMetadata{"title": eventValue("fresh preview")}) {
 			t.Fatalf("title/metadata=%+v", got)
 		}
 	}

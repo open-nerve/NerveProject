@@ -14,6 +14,7 @@ import (
 	postgresadapter "github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/app"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/domain"
+	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
 var (
@@ -76,7 +77,7 @@ func testLinkReads(t *testing.T) {
 		if link.ID == ids[0] {
 			at = now.Add(time.Minute)
 		}
-		want := domain.Link{ID: link.ID, WorkspaceID: p.workspace, ProjectID: p.id, IssueID: one, URL: "HTTP://Example.com/" + link.ID.String(), Metadata: domain.LinkMetadata{}, CreatedByID: &by, CreatedAt: at, UpdatedAt: at}
+		want := domain.Link{ID: link.ID, WorkspaceID: p.workspace, ProjectID: p.id, IssueID: one, URL: "HTTP://Example.com/" + link.ID.String(), Metadata: shared.LinkMetadata{}, CreatedByID: &by, CreatedAt: at, UpdatedAt: at}
 		if !reflect.DeepEqual(link, want) {
 			t.Fatalf("read link = %#v; want %#v", link, want)
 		}
@@ -115,7 +116,7 @@ func testLinkUpdate(t *testing.T) {
 	issue, id := uuid.NewV7(), uuid.NewV7()
 	newIssue(t, pool, p, issue, 1, by)
 	ctx := context.Background()
-	link := domain.Link{ID: id, WorkspaceID: p.workspace, ProjectID: p.id, IssueID: issue, URL: "HTTP://Example.com/P?q=A", Metadata: domain.LinkMetadata{}}
+	link := domain.Link{ID: id, WorkspaceID: p.workspace, ProjectID: p.id, IssueID: issue, URL: "HTTP://Example.com/P?q=A", Metadata: shared.LinkMetadata{}}
 	if err := s.InsertLink(ctx, app.LinkWrite{Link: link, By: by, At: now}); err != nil {
 		t.Fatal(err)
 	}
@@ -131,10 +132,10 @@ func testLinkUpdate(t *testing.T) {
 		}
 		want := link
 		want.CreatedByID, want.CreatedAt, want.UpdatedAt = &by, now, at
-		want.Metadata = domain.LinkMetadata{}
+		want.Metadata = shared.LinkMetadata{}
 		if n == 0 {
 			fresh := "Fresh crawler"
-			want.Metadata = domain.LinkMetadata{"title": &fresh, "favicon": nil, "url": &url, "favicon_url": nil}
+			want.Metadata = shared.LinkMetadata{"title": &fresh, "favicon": nil, "url": &url, "favicon_url": nil}
 		}
 		var stored domain.Link
 		var raw []byte

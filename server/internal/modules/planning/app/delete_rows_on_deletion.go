@@ -11,14 +11,15 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
-// RowDeletions inserts a project's cycle deletion in the publishing transaction.
+// RowDeletions inserts a project's planning row deletion in the publishing
+// transaction.
 type RowDeletions interface {
 	Enqueue(ctx context.Context, project uuid.UUID, at time.Time, by uuid.UUID) error
 }
 
 // NewDeleteRowsOnDeletion enqueues, within the deletion's transaction, the
-// deletion of the cycles of each project the event deletes, at the event's
-// moment and by its actor (M6 P1 spec 2.4).
+// deletion of the planning rows of each project the event deletes, at the
+// event's moment and by its actor (M6 P1 spec 2.4, P2 spec 2.4).
 func NewDeleteRowsOnDeletion(rows RowDeletions) shared.EventSubscriber {
 	return shared.EventSubscriber{Name: "planning_delete_rows_on_deletion", Types: []string{"project.deleted", "workspace.deleted"}, Handle: func(ctx context.Context, e shared.Event) error {
 		projects, err := deletedProjects(e)

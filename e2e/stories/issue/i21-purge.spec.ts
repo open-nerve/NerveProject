@@ -14,6 +14,7 @@ import type { Database } from "../../fixtures/db";
 import { furnishIssueRows, furnishPlanningRows, furnishWorkspace } from "../../fixtures/furnish";
 import { createIssue, createIssueRelations, issueDeleted, issueRead } from "../../fixtures/issues";
 import { completedLinkCrawl, createIssueLink } from "../../fixtures/links";
+import { expectModuleLinkCrawled } from "../../fixtures/modules";
 import { filePixel, furnishIssueFiles, storedFile, waitForFileSafety } from "../../fixtures/storage";
 import { clockTest as test, expect } from "../../fixtures/test";
 
@@ -92,15 +93,23 @@ async function parentIDs(db: Database, table: "projects" | "workspaces", id: str
   return ids;
 }
 
-/** Furnish leaves link crawling asynchronous; stabilize it before any full-row comparison. */
+/**
+ * Furnish leaves link crawling asynchronous, of work-item links and of module links alike: a crawl writes the link's
+ * metadata. Stabilize both before any full-row comparison.
+ */
 async function finishLinks(db: Database, ids: Map<string, Set<string>>) {
-  await Promise.all(
-    [...(ids.get("issue_links") ?? [])].map(async (id) => {
+  await Promise.all([
+    ...[...(ids.get("issue_links") ?? [])].map(async (id) => {
       const [link] = await db.query<{ url: string }>("SELECT url FROM issue_links WHERE id=$1", [id]);
       if (!link) throw new Error(`missing furnished link ${id}`);
       await completedLinkCrawl(db, id, link.url);
-    })
-  );
+    }),
+    ...[...(ids.get("module_links") ?? [])].map(async (id) => {
+      const [link] = await db.query<{ url: string }>("SELECT url FROM module_links WHERE id=$1", [id]);
+      if (!link) throw new Error(`missing furnished module link ${id}`);
+      await expectModuleLinkCrawled(db, id, [link.url]);
+    }),
+  ]);
 }
 
 async function seed(api: Api, db: Database, info: TestInfo, admin: Account, member: Account, age: string) {

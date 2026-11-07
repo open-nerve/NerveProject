@@ -29,9 +29,9 @@ import (
 // twoProjects is the wired app on a database of its own, and acme with two
 // projects alice created, Web and Ops: each has her membership, her display
 // settings in it and its states, through createProject, a label of hers,
-// Bug, with its child, UI, two cycles of hers, and a work item of hers with
-// a row of each table under it, written directly (seedLabels, seedCycles,
-// seedIssues).
+// Bug, with its child, UI, two cycles of hers, a module of hers with its
+// member and link, and a work item of hers with a row of each table under
+// it, written directly (seedLabels, seedCycles, seedModules, seedIssues).
 func twoProjects(t *testing.T) (contract *apitest.Contract, base string, pool *pgxpool.Pool, alice string, aliceID, web, ops uuid.UUID) {
 	t.Helper()
 	contract = apitest.Load(t)
@@ -47,6 +47,7 @@ func twoProjects(t *testing.T) (contract *apitest.Contract, base string, pool *p
 	for _, project := range []uuid.UUID{web, ops} {
 		seedLabels(t, pool, project, aliceID)
 		seedCycles(t, pool, project, aliceID)
+		seedModules(t, pool, project, aliceID)
 		seedIssues(t, pool, project, aliceID)
 		for _, id := range queryIDs(t, pool, "SELECT id FROM issues WHERE project_id=$1", project) {
 			status, body := call(t, contract, http.MethodPatch, base+"/api/v0/issues/"+id.String(), alice, fmt.Sprintf(`{"description_html":%q}`, mentionHTML(aliceID)))

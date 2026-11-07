@@ -30,10 +30,11 @@ type DeleteProjectCyclesParams struct {
 	Batch     int32
 }
 
-// The deletion of a deleted project's cycles (M6 P1 spec 2.4): a batch of the project's undeleted cycles after the
-// id `after`, in id order, locked FOR NO KEY UPDATE as they come and soft-deleted at the moment and by the account
-// given. The caller runs it again from the batch's greatest id until a batch finds none (a row deleted while the batch
-// waits for it is passed over; each batch reads a new snapshot). The primary key's index serves the order and bound.
+// The deletion of a deleted project's planning rows, a step per table (M6 P1 spec 2.4, P2 spec 2.4 and R16), here its
+// cycles: a batch of the project's undeleted rows after the id `after`, in id order, locked FOR NO KEY UPDATE as they
+// come and soft-deleted at the moment and by the account given. The caller runs it again from the batch's greatest id
+// until a batch finds none (a row deleted while the batch waits for it is passed over; each batch reads a new
+// snapshot). The primary key's index serves the order and bound.
 func (q *Queries) DeleteProjectCycles(ctx context.Context, arg DeleteProjectCyclesParams) ([]uuid.UUID, error) {
 	rows, err := q.db.Query(ctx, deleteProjectCycles,
 		arg.At,
@@ -60,19 +61,163 @@ func (q *Queries) DeleteProjectCycles(ctx context.Context, arg DeleteProjectCycl
 	return items, nil
 }
 
-const projectCyclesRemaining = `-- name: ProjectCyclesRemaining :one
-SELECT EXISTS (SELECT 1 FROM cycles r WHERE r.project_id = $1::uuid
-    AND r.deleted_at IS NULL AND r.id > $2::uuid) AS remaining
+const deleteProjectModuleLinks = `-- name: DeleteProjectModuleLinks :many
+UPDATE module_links AS t
+SET deleted_at = $1::timestamptz, updated_at = $1, updated_by_id = $2::uuid
+WHERE t.id IN (
+    SELECT r.id FROM module_links r
+    WHERE r.project_id = $3 AND r.deleted_at IS NULL AND r.id > $4::uuid
+    ORDER BY r.id LIMIT $5 FOR NO KEY UPDATE)
+RETURNING t.id
 `
 
-type ProjectCyclesRemainingParams struct {
+type DeleteProjectModuleLinksParams struct {
+	At        time.Time
+	DeletedBy uuid.UUID
+	ProjectID uuid.UUID
+	After     uuid.UUID
+	Batch     int32
+}
+
+// DeleteProjectCycles' batch, of the project's modules' links.
+func (q *Queries) DeleteProjectModuleLinks(ctx context.Context, arg DeleteProjectModuleLinksParams) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, deleteProjectModuleLinks,
+		arg.At,
+		arg.DeletedBy,
+		arg.ProjectID,
+		arg.After,
+		arg.Batch,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const deleteProjectModuleMembers = `-- name: DeleteProjectModuleMembers :many
+UPDATE module_members AS t
+SET deleted_at = $1::timestamptz, updated_at = $1, updated_by_id = $2::uuid
+WHERE t.id IN (
+    SELECT r.id FROM module_members r
+    WHERE r.project_id = $3 AND r.deleted_at IS NULL AND r.id > $4::uuid
+    ORDER BY r.id LIMIT $5 FOR NO KEY UPDATE)
+RETURNING t.id
+`
+
+type DeleteProjectModuleMembersParams struct {
+	At        time.Time
+	DeletedBy uuid.UUID
+	ProjectID uuid.UUID
+	After     uuid.UUID
+	Batch     int32
+}
+
+// DeleteProjectCycles' batch, of the project's modules' members.
+func (q *Queries) DeleteProjectModuleMembers(ctx context.Context, arg DeleteProjectModuleMembersParams) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, deleteProjectModuleMembers,
+		arg.At,
+		arg.DeletedBy,
+		arg.ProjectID,
+		arg.After,
+		arg.Batch,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const deleteProjectModules = `-- name: DeleteProjectModules :many
+UPDATE modules AS t
+SET deleted_at = $1::timestamptz, updated_at = $1, updated_by_id = $2::uuid
+WHERE t.id IN (
+    SELECT r.id FROM modules r
+    WHERE r.project_id = $3 AND r.deleted_at IS NULL AND r.id > $4::uuid
+    ORDER BY r.id LIMIT $5 FOR NO KEY UPDATE)
+RETURNING t.id
+`
+
+type DeleteProjectModulesParams struct {
+	At        time.Time
+	DeletedBy uuid.UUID
+	ProjectID uuid.UUID
+	After     uuid.UUID
+	Batch     int32
+}
+
+// DeleteProjectCycles' batch, of the project's modules, archived ones too.
+func (q *Queries) DeleteProjectModules(ctx context.Context, arg DeleteProjectModulesParams) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, deleteProjectModules,
+		arg.At,
+		arg.DeletedBy,
+		arg.ProjectID,
+		arg.After,
+		arg.Batch,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const projectDeletionStepRemaining = `-- name: ProjectDeletionStepRemaining :one
+SELECT CASE $1::text
+WHEN 'cycles' THEN EXISTS (SELECT 1 FROM cycles r WHERE r.project_id = $2::uuid
+    AND r.deleted_at IS NULL AND r.id > $3::uuid)
+WHEN 'modules' THEN EXISTS (SELECT 1 FROM modules r WHERE r.project_id = $2::uuid
+    AND r.deleted_at IS NULL AND r.id > $3::uuid)
+WHEN 'module_members' THEN EXISTS (SELECT 1 FROM module_members r WHERE r.project_id = $2::uuid
+    AND r.deleted_at IS NULL AND r.id > $3::uuid)
+WHEN 'module_links' THEN EXISTS (SELECT 1 FROM module_links r WHERE r.project_id = $2::uuid
+    AND r.deleted_at IS NULL AND r.id > $3::uuid)
+ELSE false END AS remaining
+`
+
+type ProjectDeletionStepRemainingParams struct {
+	Step      string
 	ProjectID uuid.UUID
 	After     uuid.UUID
 }
 
-// Candidate-only read at a budget boundary: no lock, no write.
-func (q *Queries) ProjectCyclesRemaining(ctx context.Context, arg ProjectCyclesRemainingParams) (bool, error) {
-	row := q.db.QueryRow(ctx, projectCyclesRemaining, arg.ProjectID, arg.After)
+// Candidate-only read of one step at a budget boundary: no lock, no write.
+func (q *Queries) ProjectDeletionStepRemaining(ctx context.Context, arg ProjectDeletionStepRemainingParams) (bool, error) {
+	row := q.db.QueryRow(ctx, projectDeletionStepRemaining, arg.Step, arg.ProjectID, arg.After)
 	var remaining bool
 	err := row.Scan(&remaining)
 	return remaining, err

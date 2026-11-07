@@ -183,6 +183,18 @@ paths:
     $ref: 'modules/planning.yaml#/paths/~1api~1v0~1cycles~1{cycle_id}~1archive'
   /api/v0/cycles/{cycle_id}/unarchive:
     $ref: 'modules/planning.yaml#/paths/~1api~1v0~1cycles~1{cycle_id}~1unarchive'
+  /api/v0/projects/{project_id}/modules:
+    $ref: 'modules/planning.yaml#/paths/~1api~1v0~1projects~1{project_id}~1modules'
+  /api/v0/modules/{module_id}:
+    $ref: 'modules/planning.yaml#/paths/~1api~1v0~1modules~1{module_id}'
+  /api/v0/modules/{module_id}/archive:
+    $ref: 'modules/planning.yaml#/paths/~1api~1v0~1modules~1{module_id}~1archive'
+  /api/v0/modules/{module_id}/unarchive:
+    $ref: 'modules/planning.yaml#/paths/~1api~1v0~1modules~1{module_id}~1unarchive'
+  /api/v0/modules/{module_id}/links:
+    $ref: 'modules/planning.yaml#/paths/~1api~1v0~1modules~1{module_id}~1links'
+  /api/v0/module-links/{module_link_id}:
+    $ref: 'modules/planning.yaml#/paths/~1api~1v0~1module-links~1{module_link_id}'
 components:
   # 模块文件的 securitySchemes 在打包时被丢掉，操作引用的 scheme 写在这里（M0-P3 交接 3）
   securitySchemes:

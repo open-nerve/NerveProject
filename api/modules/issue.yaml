@@ -2085,25 +2085,6 @@ components:
         title:
           type: [string, 'null']
           maxLength: 255
-    IssueLinkMetadataError:
-      type: string
-      enum: [blocked, failed]
-    IssueLinkMetadata:
-      type: object
-      additionalProperties: false
-      properties:
-        title:
-          type: [string, 'null']
-        favicon:
-          type: [string, 'null']
-        url:
-          type: [string, 'null']
-        favicon_url:
-          type: [string, 'null']
-        error:
-          oneOf:
-            - $ref: '#/components/schemas/IssueLinkMetadataError'
-            - type: 'null'
     IssueLink:
       type: object
       additionalProperties: false
@@ -2120,7 +2101,7 @@ components:
         title:
           type: [string, 'null']
         metadata:
-          $ref: '#/components/schemas/IssueLinkMetadata'
+          $ref: '../common.yaml#/components/schemas/LinkMetadata'
         created_by_id:
           type: [string, 'null']
           format: uuid

@@ -151,10 +151,15 @@ type IssueProjects interface {
 // before its lock, and the same facts under the project's FOR NO KEY UPDATE,
 // the first lock of a planning write (M6 design 6). found is false for a
 // project that is not there or is deleted, also one deleted while the lock
-// waited.
+// waited. And the active project roles of accounts, which a module's lead
+// and members are held to (M6 P2 spec R5), the read IssueProjects answers
+// a work item's assignees with.
 type PlanningProjects interface {
 	PlanningFacts(ctx context.Context, id uuid.UUID) (f PlanningFacts, found bool, err error)
 	LockPlanning(ctx context.Context, id uuid.UUID) (f PlanningFacts, found bool, err error)
+	// ActiveRoles reads the project roles of those of the accounts ids
+	// that are its active members, by account.
+	ActiveRoles(ctx context.Context, projectID uuid.UUID, ids []uuid.UUID) (map[uuid.UUID]shared.Role, error)
 }
 
 // PlanningFacts is the value PlanningProjects hands over: bootstrap converts

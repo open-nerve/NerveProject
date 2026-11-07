@@ -1842,6 +1842,164 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v0/projects/{project_id}/modules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A project's id (Project.id). */
+                project_id: components["parameters"]["ProjectID"];
+            };
+            cookie?: never;
+        };
+        /**
+         * List a project's modules
+         * @description For the project's admins, members and guests, also a caller who sees only his own work items there, whether its modules are turned on or off and whether it is archived. The undeleted modules that are not archived, by sort_order, then creation, then id; or, when archived is true, the archived ones alone, the latest archived first, then by id. Each with its undeleted members, ascending. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but whose modules he may not read, forbidden. The whole collection at once: collections are not paginated.
+         */
+        get: operations["listModules"];
+        put?: never;
+        /**
+         * Create a module in a project
+         * @description For the project's admins and members, not its guests, and not a caller who sees only his own work items there. The name has 1–255 characters without its surrounding white space, which is dropped, and no NUL; the description has no NUL and is empty when it is left out; the status is one of ModuleStatus, planned when it is left out; the start and target dates are days, each given alone or neither, the start not after the target; member_ids names at most 100 accounts, each once (validation_failed). The values are checked before the project is looked at. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but whose modules he may not change, forbidden; an archived project, project.archived; a project whose modules are turned off (Project.module_view), planning.modules_disabled. After the project's row is locked, the lead and each member must be an active member of the project who is not its guest (validation_failed, at lead_id or member_ids[i]); and no other undeleted module of the project, archived ones too, may have the name, in any case (planning.module_name_taken). The new module comes first: its sort order is the lowest of the project's undeleted modules, archived ones too, less 10000, or 65535 when it has none. It and its members' rows are written at one moment by the caller.
+         */
+        post: operations["createModule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v0/modules/{module_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A module's id (Module.id). */
+                module_id: components["parameters"]["ModuleID"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Read a module
+         * @description For its project's admins, members and guests, also a caller who sees only his own work items there, whether the project's modules are turned on or off and whether the project or the module is archived; with its undeleted members, ascending. A module that does not exist or is deleted, one whose project is deleted, and one whose project the caller does not see answer planning.module_not_found; one whose project he sees but whose modules he may not read, forbidden.
+         */
+        get: operations["getModule"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete a module
+         * @description For its project's admins, and for the member who created it; not another member, not a guest, and not a caller who sees only his own work items there. Whatever its status and archive. A module that does not exist or is deleted, one whose project is deleted, and one whose project the caller does not see answer planning.module_not_found; a caller who may not delete it, forbidden; an archived project, project.archived; modules turned off, planning.modules_disabled. Decided after the project's row is locked; its deletion, the deletion of its members and of its links, and its last change are one moment, the caller's. It is read no more, nor are its links.
+         */
+        delete: operations["deleteModule"];
+        options?: never;
+        head?: never;
+        /**
+         * Change a module
+         * @description For its project's admins and members, not its guests, and not a caller who sees only his own work items there. Each field given is changed, each left out kept; start_date, target_date and lead_id may each be given alone, and null clears it. member_ids, given, is the module's whole set of members: those it leaves out are removed, those it adds are added, those it keeps are left as they are. The name has 1–255 characters without its surrounding white space, which is dropped, and no NUL; the description no NUL; the status is one of ModuleStatus; member_ids names at most 100 accounts, each once; the sort order is a number (validation_failed); these are checked before the module is looked at. A module that does not exist or is deleted, one whose project is deleted, and one whose project the caller does not see answer planning.module_not_found; a caller who may not change it, forbidden; an archived project, project.archived; modules turned off, planning.modules_disabled; an archived module refuses any change, one of nothing too (planning.archived). After the project's row is locked: the dates given, each else the module's, may not put the start after the target (validation_failed, at start_date when it is given alone, else at target_date); a lead given anew and each member added must be an active member of the project who is not its guest (validation_failed, at lead_id or member_ids[i]), while a lead or a member kept is not looked at, even one who has left the project; and no other undeleted module of the project, archived ones too, may have the name, in any case (planning.module_name_taken), while its own name in another case is its to take. A change of nothing, member_ids naming its members in any order too, writes nothing and answers the module as it is. The module's change and its removed and added members' rows are written at one moment by the caller.
+         */
+        patch: operations["updateModule"];
+        trace?: never;
+    };
+    "/api/v0/modules/{module_id}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A module's id (Module.id). */
+                module_id: components["parameters"]["ModuleID"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Archive a completed or cancelled module
+         * @description For its project's admins and members, not its guests, and not a caller who sees only his own work items there. Only a module whose status is completed or cancelled is archived (planning.module_not_closed); one archived already is answered as it is, nothing written. A module that does not exist or is deleted, one whose project is deleted, and one whose project the caller does not see answer planning.module_not_found; a caller who may not change it, forbidden; an archived project, project.archived; modules turned off, planning.modules_disabled. Decided after the project's row is locked; archived_at and the module's last change are one moment, the caller's.
+         */
+        post: operations["archiveModule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v0/modules/{module_id}/unarchive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A module's id (Module.id). */
+                module_id: components["parameters"]["ModuleID"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Unarchive a module
+         * @description For its project's admins and members, not its guests, and not a caller who sees only his own work items there; whatever the module's status. One not archived is answered as it is, nothing written. A module that does not exist or is deleted, one whose project is deleted, and one whose project the caller does not see answer planning.module_not_found; a caller who may not change it, forbidden; an archived project, project.archived; modules turned off, planning.modules_disabled. Decided after the project's row is locked; the module's last change is the caller's at that moment.
+         */
+        post: operations["unarchiveModule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v0/modules/{module_id}/links": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A module's id (Module.id). */
+                module_id: components["parameters"]["ModuleID"];
+            };
+            cookie?: never;
+        };
+        /**
+         * List a module's links
+         * @description For its project's admins, members and guests, also a caller who sees only his own work items there, whether the project's modules are turned on or off and whether the project or the module is archived. Its undeleted links, the latest created first, then by id descending. A module that does not exist or is deleted, one whose project is deleted, and one whose project the caller does not see answer planning.module_not_found; one whose project he sees but whose modules he may not read, forbidden. The whole collection at once: collections are not paginated.
+         */
+        get: operations["listModuleLinks"];
+        put?: never;
+        /**
+         * Add a link to a module
+         * @description For its project's admins and members, not its guests, and not a caller who sees only his own work items there. The URL has its surrounding white space dropped and http:// added when it names no scheme; it is an HTTP or HTTPS URL without credentials, zones or control characters, of at most 2048 characters; the title, null or empty too, has at most 255 characters and no NUL (validation_failed), checked before the module is looked at. A module that does not exist or is deleted, one whose project is deleted, and one whose project the caller does not see answer planning.module_not_found; a caller who may not change it, forbidden; an archived project, project.archived; modules turned off, planning.modules_disabled; an archived module, planning.archived. Another undeleted link of the module may not have the URL, as it is spelt (planning.module_link_exists). Decided after the project's row is locked, and written at one moment by the caller; its preview metadata is empty.
+         */
+        post: operations["createModuleLink"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v0/module-links/{module_link_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A module link's id (ModuleLink.id). */
+                module_link_id: components["parameters"]["ModuleLinkID"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove a module's link
+         * @description For its project's admins and members, not its guests, and not a caller who sees only his own work items there, whoever added it. A link that does not exist or is deleted, one whose module or project is deleted, and one whose project the caller does not see answer planning.module_link_not_found; a caller who may not change it, forbidden; an archived project, project.archived; modules turned off, planning.modules_disabled; an archived module, planning.archived. Decided after the project's row is locked; its deletion and its last change are one moment, the caller's. It is read no more.
+         */
+        delete: operations["deleteModuleLink"];
+        options?: never;
+        head?: never;
+        /**
+         * Change a module's link
+         * @description For its project's admins and members, not its guests, and not a caller who sees only his own work items there, whoever added it. The URL and the title are checked as createModuleLink's, each when given, before the link is looked at; the title may be given alone, null clears it. A link that does not exist or is deleted, one whose module or project is deleted, and one whose project the caller does not see answer planning.module_link_not_found; a caller who may not change it, forbidden; an archived project, project.archived; modules turned off, planning.modules_disabled; an archived module, planning.archived, for a change of nothing too. Another undeleted link of the module may not have the URL (planning.module_link_exists). A change of nothing writes nothing and answers the link as it is. A changed URL empties its preview metadata; a title alone keeps it. Decided after the project's row is locked, and written at one moment by the caller.
+         */
+        patch: operations["updateModuleLink"];
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -3101,13 +3259,13 @@ export interface components {
             title?: string | null;
         };
         /** @enum {string} */
-        IssueLinkMetadataError: "blocked" | "failed";
-        IssueLinkMetadata: {
+        LinkMetadataError: "blocked" | "failed";
+        LinkMetadata: {
             title?: string | null;
             favicon?: string | null;
             url?: string | null;
             favicon_url?: string | null;
-            error?: components["schemas"]["IssueLinkMetadataError"] | null;
+            error?: components["schemas"]["LinkMetadataError"] | null;
         };
         IssueLink: {
             /** Format: uuid */
@@ -3116,7 +3274,7 @@ export interface components {
             issue_id: string;
             url: string;
             title: string | null;
-            metadata: components["schemas"]["IssueLinkMetadata"];
+            metadata: components["schemas"]["LinkMetadata"];
             /** Format: uuid */
             created_by_id: string | null;
             /** Format: date-time */
@@ -3318,6 +3476,144 @@ export interface components {
             /** @description The cycle's place among the project's cycles, the lowest first. */
             sort_order?: number;
         };
+        /**
+         * @description A module's status, set by its writers, never read from its dates.
+         * @enum {string}
+         */
+        ModuleStatus: "backlog" | "planned" | "in-progress" | "paused" | "completed" | "cancelled";
+        /** @description A module of a project. */
+        Module: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            workspace_id: string;
+            /** Format: uuid */
+            project_id: string;
+            name: string;
+            /** @description Plain text; empty for none. */
+            description: string;
+            /**
+             * Format: date
+             * @description The day it starts; null for none.
+             */
+            start_date: string | null;
+            /**
+             * Format: date
+             * @description The day it is due, not before start_date; null for none.
+             */
+            target_date: string | null;
+            status: components["schemas"]["ModuleStatus"];
+            /**
+             * Format: uuid
+             * @description The account that leads it; null for none, or once that account is gone.
+             */
+            lead_id: string | null;
+            /** @description Its members' accounts, ascending; one who has left the project since is still one. */
+            member_ids: string[];
+            /** @description The module's place among the project's modules, the lowest first. */
+            sort_order: number;
+            /**
+             * Format: date-time
+             * @description When it was archived; null while it is not.
+             */
+            archived_at: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+            /** Format: uuid */
+            created_by_id: string | null;
+            /** Format: uuid */
+            updated_by_id: string | null;
+        };
+        ModuleList: {
+            data: components["schemas"]["Module"][];
+        };
+        ModuleCreate: {
+            /** @description 1–255 characters without the surrounding white space, which is dropped; no NUL. */
+            name: string;
+            /** @description Plain text without NUL; empty when left out. */
+            description?: string;
+            /**
+             * Format: date
+             * @description The day it starts; left out for none.
+             */
+            start_date?: string;
+            /**
+             * Format: date
+             * @description The day it is due, not before start_date; left out for none.
+             */
+            target_date?: string;
+            status?: components["schemas"]["ModuleStatus"];
+            /**
+             * Format: uuid
+             * @description An active member of the project who is not its guest; null, or left out, for none.
+             */
+            lead_id?: string | null;
+            /** @description At most 100 accounts, each named once, each an active member of the project who is not its guest; left out, or empty, for none. */
+            member_ids?: string[];
+        };
+        ModuleUpdate: {
+            /** @description 1–255 characters without the surrounding white space, which is dropped; no NUL. */
+            name?: string;
+            /** @description Plain text without NUL; empty for none. */
+            description?: string;
+            /**
+             * Format: date
+             * @description The day it starts, not after the target date; null clears it.
+             */
+            start_date?: string | null;
+            /**
+             * Format: date
+             * @description The day it is due, not before the start date; null clears it.
+             */
+            target_date?: string | null;
+            status?: components["schemas"]["ModuleStatus"];
+            /**
+             * Format: uuid
+             * @description Another lead, an active member of the project who is not its guest; the lead it has is kept as it is; null clears it.
+             */
+            lead_id?: string | null;
+            /** @description Its members, all of them: at most 100 accounts, each named once; each it adds an active member of the project who is not its guest; empty for none. */
+            member_ids?: string[];
+            /** @description The module's place among the project's modules, the lowest first. */
+            sort_order?: number;
+        };
+        /** @description A link of a module. */
+        ModuleLink: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            module_id: string;
+            url: string;
+            /** @description Null for none; empty text is kept. */
+            title: string | null;
+            metadata: components["schemas"]["LinkMetadata"];
+            /**
+             * Format: uuid
+             * @description The account that added it; null once that account is gone.
+             */
+            created_by_id: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        ModuleLinkCollection: {
+            data: components["schemas"]["ModuleLink"][];
+        };
+        ModuleLinkCreate: {
+            /** @description HTTP URL, at most 2048 Unicode characters after normalization. */
+            url: string;
+            /** @description Null, or left out, for none; empty text is kept. */
+            title?: string | null;
+        };
+        ModuleLinkPatch: {
+            /** @description HTTP URL, at most 2048 Unicode characters after normalization. */
+            url?: string;
+            /** @description Null clears it; empty text is kept; left out, it is kept. */
+            title?: string | null;
+        };
     };
     responses: {
         /** @description Error (RFC 9457 problem details). */
@@ -3361,6 +3657,10 @@ export interface components {
         IssueIdentifier: string;
         /** @description A cycle's id (Cycle.id). */
         CycleID: string;
+        /** @description A module's id (Module.id). */
+        ModuleID: string;
+        /** @description A module link's id (ModuleLink.id). */
+        ModuleLinkID: string;
     };
     requestBodies: never;
     headers: never;
@@ -3480,8 +3780,8 @@ export type DescriptionVersion = components['schemas']['DescriptionVersion'];
 export type DescriptionVersionPage = components['schemas']['DescriptionVersionPage'];
 export type DescriptionVersionDetail = components['schemas']['DescriptionVersionDetail'];
 export type IssueLinkPatch = components['schemas']['IssueLinkPatch'];
-export type IssueLinkMetadataError = components['schemas']['IssueLinkMetadataError'];
-export type IssueLinkMetadata = components['schemas']['IssueLinkMetadata'];
+export type LinkMetadataError = components['schemas']['LinkMetadataError'];
+export type LinkMetadata = components['schemas']['LinkMetadata'];
 export type IssueLink = components['schemas']['IssueLink'];
 export type IssueLinkCollection = components['schemas']['IssueLinkCollection'];
 export type IssueLinkCreate = components['schemas']['IssueLinkCreate'];
@@ -3504,6 +3804,15 @@ export type Cycle = components['schemas']['Cycle'];
 export type CycleList = components['schemas']['CycleList'];
 export type CycleCreate = components['schemas']['CycleCreate'];
 export type CycleUpdate = components['schemas']['CycleUpdate'];
+export type ModuleStatus = components['schemas']['ModuleStatus'];
+export type Module = components['schemas']['Module'];
+export type ModuleList = components['schemas']['ModuleList'];
+export type ModuleCreate = components['schemas']['ModuleCreate'];
+export type ModuleUpdate = components['schemas']['ModuleUpdate'];
+export type ModuleLink = components['schemas']['ModuleLink'];
+export type ModuleLinkCollection = components['schemas']['ModuleLinkCollection'];
+export type ModuleLinkCreate = components['schemas']['ModuleLinkCreate'];
+export type ModuleLinkPatch = components['schemas']['ModuleLinkPatch'];
 export type ResponseProblem = components['responses']['Problem'];
 export type ParameterLimit = components['parameters']['Limit'];
 export type ParameterCursor = components['parameters']['Cursor'];
@@ -3519,6 +3828,8 @@ export type ParameterIssueId = components['parameters']['IssueID'];
 export type ParameterRelationId = components['parameters']['RelationID'];
 export type ParameterIssueIdentifier = components['parameters']['IssueIdentifier'];
 export type ParameterCycleId = components['parameters']['CycleID'];
+export type ParameterModuleId = components['parameters']['ModuleID'];
+export type ParameterModuleLinkId = components['parameters']['ModuleLinkID'];
 export type $defs = Record<string, never>;
 export interface operations {
     listDraftAssetPreparations: {
@@ -6437,6 +6748,285 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Cycle"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listModules: {
+        parameters: {
+            query?: {
+                /** @description true lists the archived modules alone; false, or no value, the others. */
+                archived?: boolean;
+            };
+            header?: never;
+            path: {
+                /** @description A project's id (Project.id). */
+                project_id: components["parameters"]["ProjectID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The project's modules. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModuleList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    createModule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A project's id (Project.id). */
+                project_id: components["parameters"]["ProjectID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModuleCreate"];
+            };
+        };
+        responses: {
+            /** @description The new module. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Module"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getModule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A module's id (Module.id). */
+                module_id: components["parameters"]["ModuleID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The module. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Module"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    deleteModule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A module's id (Module.id). */
+                module_id: components["parameters"]["ModuleID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateModule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A module's id (Module.id). */
+                module_id: components["parameters"]["ModuleID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModuleUpdate"];
+            };
+        };
+        responses: {
+            /** @description The module as changed. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Module"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    archiveModule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A module's id (Module.id). */
+                module_id: components["parameters"]["ModuleID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The module, archived. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Module"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    unarchiveModule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A module's id (Module.id). */
+                module_id: components["parameters"]["ModuleID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The module, not archived. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Module"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listModuleLinks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A module's id (Module.id). */
+                module_id: components["parameters"]["ModuleID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The module's links, with an empty data array when it has none. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModuleLinkCollection"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    createModuleLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A module's id (Module.id). */
+                module_id: components["parameters"]["ModuleID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModuleLinkCreate"];
+            };
+        };
+        responses: {
+            /** @description The new link, with empty preview metadata. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModuleLink"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    deleteModuleLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A module link's id (ModuleLink.id). */
+                module_link_id: components["parameters"]["ModuleLinkID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateModuleLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A module link's id (ModuleLink.id). */
+                module_link_id: components["parameters"]["ModuleLinkID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModuleLinkPatch"];
+            };
+        };
+        responses: {
+            /** @description The link as changed, with its current preview metadata. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModuleLink"];
                 };
             };
             default: components["responses"]["Problem"];

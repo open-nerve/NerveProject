@@ -90,6 +90,12 @@ export const PROBLEM_MESSAGES: Readonly<Record<string, string>> = {
   "planning.cycle_completed": "errors.planning_cycle_completed",
   "planning.cycle_not_completed": "errors.planning_cycle_not_completed",
   "planning.cycle_dates_overlap": "errors.planning_cycle_dates_overlap",
+  "planning.modules_disabled": "errors.planning_modules_disabled",
+  "planning.module_name_taken": "errors.planning_module_name_taken",
+  "planning.module_not_closed": "errors.planning_module_not_closed",
+  "planning.module_not_found": "errors.planning_module_not_found",
+  "planning.module_link_not_found": "errors.planning_module_link_not_found",
+  "planning.module_link_exists": "errors.planning_module_link_exists",
 };
 
 /** The message of every FieldError.code, shown under the field it names. */

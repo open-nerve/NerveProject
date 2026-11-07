@@ -65,7 +65,7 @@ func TestCreateIssueLink(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			want := domain.Link{ID: got.ID, WorkspaceID: acme, ProjectID: web, IssueID: id, URL: "http://169.254.169.254/P?q=A", Title: title, Metadata: domain.LinkMetadata{}, CreatedByID: &alice, CreatedAt: clockNow, UpdatedAt: clockNow}
+			want := domain.Link{ID: got.ID, WorkspaceID: acme, ProjectID: web, IssueID: id, URL: "http://169.254.169.254/P?q=A", Title: title, Metadata: shared.LinkMetadata{}, CreatedByID: &alice, CreatedAt: clockNow, UpdatedAt: clockNow}
 			if got.ID == (uuid.UUID{}) || !reflect.DeepEqual(got, want) {
 				t.Fatalf("link=%#v want=%#v", got, want)
 			}

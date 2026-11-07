@@ -70,3 +70,184 @@ export async function cycleMoments(db: Database, projectId: string): Promise<Rec
   );
   return Object.fromEntries(rows.map((r) => [r.name, r.at]));
 }
+
+/** A module of a project as expectModules reads it. */
+export interface ModuleRow {
+  name: string;
+  description: string;
+  /** Its days, as YYYY-MM-DD, each null for none. */
+  start: string | null;
+  target: string | null;
+  status: string;
+  /** The address of the account that leads it, null for none. */
+  lead: string | null;
+  /** The addresses of the accounts of its undeleted members' rows, in order. */
+  members: string[];
+  sort_order: number;
+  archived: boolean;
+  deleted: boolean;
+  /** The address of the account that created it. */
+  creator: string;
+  /** The address of the account that wrote it last: created, changed, archived, unarchived or deleted it. */
+  by: string;
+}
+
+/**
+ * G9, G13: the modules of the project of projectId, deleted ones too, are exactly want, by name. Each is a row of the
+ * project's workspace; an archived one was archived, and a deleted one deleted, at a moment of its writes, a deleted
+ * one at its last (M6 P2 spec 2.4).
+ */
+export async function expectModules(db: Database, projectId: string, want: ModuleRow[]): Promise<void> {
+  expect(
+    await db.query(
+      `SELECT m.name, m.description, m.start_date::text AS start, m.target_date::text AS target, m.status,
+              l.email AS lead,
+              ARRAY(SELECT u.email::text FROM module_members mm JOIN users u ON u.id = mm.member_id
+                     WHERE mm.module_id = m.id AND mm.deleted_at IS NULL ORDER BY u.email COLLATE "C") AS members,
+              m.sort_order, m.archived_at IS NOT NULL AS archived, m.deleted_at IS NOT NULL AS deleted,
+              c.email AS creator, b.email AS by,
+              m.workspace_id = p.workspace_id AS in_its_project,
+              coalesce(m.archived_at BETWEEN m.created_at AND m.updated_at, true)
+                AND coalesce(m.deleted_at = m.updated_at, true) AS written_at_its_moments
+         FROM modules m
+         JOIN projects p ON p.id = m.project_id
+         LEFT JOIN users l ON l.id = m.lead_id
+         JOIN users c ON c.id = m.created_by_id
+         JOIN users b ON b.id = m.updated_by_id
+        WHERE m.project_id = $1 ORDER BY m.name COLLATE "C"`,
+      [projectId]
+    ),
+    `the modules of ${projectId}`
+  ).toEqual(
+    want
+      .toSorted((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0))
+      .map((m) => ({
+        name: m.name,
+        description: m.description,
+        start: m.start,
+        target: m.target,
+        status: m.status,
+        lead: m.lead,
+        members: m.members.toSorted(),
+        sort_order: m.sort_order,
+        archived: m.archived,
+        deleted: m.deleted,
+        creator: m.creator,
+        by: m.by,
+        in_its_project: true,
+        written_at_its_moments: true,
+      }))
+  );
+}
+
+/** The moment of the last write of each module of the project of projectId, by name, deleted ones too. */
+export async function moduleMoments(db: Database, projectId: string): Promise<Record<string, string>> {
+  const rows = await db.query<{ name: string; at: string }>(
+    `SELECT name, updated_at::text AS at FROM modules WHERE project_id = $1`,
+    [projectId]
+  );
+  return Object.fromEntries(rows.map((r) => [r.name, r.at]));
+}
+
+/** A row of a module's members as expectModuleMembers reads it. */
+export interface ModuleMemberRow {
+  /** The address of the member's account. */
+  member: string;
+  /** The moment the row was added: that of the module's write that added it (moduleMoments). */
+  added: string;
+  /** The moment it was removed: that of the change or the deletion of the module that removed it; null while it is not. */
+  removed: string | null;
+  /** The address of the account that added it. */
+  adder: string;
+  /** The address of the account that wrote it last: that added it, or removed it. */
+  by: string;
+}
+
+/**
+ * G9, G13: the rows of the members of the module of moduleId, removed ones too, are exactly want, in the order they
+ * were added, those added at one moment by address. Each is a row of the module's project and workspace, written
+ * only when it was added and, once, when it was removed: a member a change keeps is left as it is (M6 P2 spec R5).
+ */
+export async function expectModuleMembers(db: Database, moduleId: string, want: ModuleMemberRow[]): Promise<void> {
+  expect(
+    await db.query(
+      `SELECT u.email AS member, mm.created_at::text AS added, mm.deleted_at::text AS removed, a.email AS adder,
+              b.email AS by,
+              mm.workspace_id = m.workspace_id AND mm.project_id = m.project_id AS in_its_module,
+              mm.updated_at = coalesce(mm.deleted_at, mm.created_at) AS written_at_its_moments
+         FROM module_members mm
+         JOIN modules m ON m.id = mm.module_id
+         JOIN users u ON u.id = mm.member_id
+         JOIN users a ON a.id = mm.created_by_id
+         JOIN users b ON b.id = mm.updated_by_id
+        WHERE mm.module_id = $1 ORDER BY mm.created_at, u.email COLLATE "C"`,
+      [moduleId]
+    ),
+    `the members of the module ${moduleId}`
+  ).toEqual(
+    want.map(({ member, added, removed, adder, by }) => ({
+      member,
+      added,
+      removed,
+      adder,
+      by,
+      in_its_module: true,
+      written_at_its_moments: true,
+    }))
+  );
+}
+
+/** A link of a module as expectModuleLinks reads it; its metadata, which the crawl writes, aside. */
+export interface ModuleLinkRow {
+  url: string;
+  title: string | null;
+  /** The address of the account that added it. */
+  adder: string;
+  /** The address of the account that wrote it last: added, changed or deleted it. */
+  by: string;
+  /** The moment it was deleted, by itself or with its module; null while it is not. */
+  removed: string | null;
+}
+
+/**
+ * G10, G13: the links of the module of moduleId, deleted ones too, are exactly want, by address, those of one address
+ * in the order they were added. Each is a row of the module's project and workspace, a deleted one deleted at its
+ * last write.
+ */
+export async function expectModuleLinks(db: Database, moduleId: string, want: ModuleLinkRow[]): Promise<void> {
+  expect(
+    await db.query(
+      `SELECT l.url, l.title, a.email AS adder, b.email AS by, l.deleted_at::text AS removed,
+              l.workspace_id = m.workspace_id AND l.project_id = m.project_id AS in_its_module,
+              coalesce(l.deleted_at = l.updated_at, true) AS written_at_its_moments
+         FROM module_links l
+         JOIN modules m ON m.id = l.module_id
+         JOIN users a ON a.id = l.created_by_id
+         JOIN users b ON b.id = l.updated_by_id
+        WHERE l.module_id = $1 ORDER BY l.url COLLATE "C", l.created_at`,
+      [moduleId]
+    ),
+    `the links of the module ${moduleId}`
+  ).toEqual(
+    want
+      .toSorted((a, b) => (a.url < b.url ? -1 : a.url > b.url ? 1 : 0))
+      .map(({ url, title, adder, by, removed }) => ({
+        url,
+        title,
+        adder,
+        by,
+        removed,
+        in_its_module: true,
+        written_at_its_moments: true,
+      }))
+  );
+}
+
+/** The moment of the last write of each link of the module of moduleId, by address, deleted ones too. */
+export async function moduleLinkMoments(db: Database, moduleId: string): Promise<Record<string, string>> {
+  const rows = await db.query<{ url: string; at: string }>(
+    `SELECT url, updated_at::text AS at FROM module_links WHERE module_id = $1`,
+    [moduleId]
+  );
+  return Object.fromEntries(rows.map((r) => [r.url, r.at]));
+}

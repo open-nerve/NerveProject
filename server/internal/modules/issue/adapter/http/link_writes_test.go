@@ -23,7 +23,7 @@ type fakeLinkUpdate struct {
 func (f *fakeLinkUpdate) Execute(ctx context.Context, id uuid.UUID, p domain.LinkPatch) (domain.Link, error) {
 	a, _ := shared.RequireActor(ctx)
 	f.id, f.actor, f.patch, f.calls = id, a.UserID, p, f.calls+1
-	return domain.Link{ID: id, IssueID: webSixID, URL: "http://169.254.169.254/P", Title: p.Title, Metadata: domain.LinkMetadata{}, CreatedAt: created, UpdatedAt: created}, f.err
+	return domain.Link{ID: id, IssueID: webSixID, URL: "http://169.254.169.254/P", Title: p.Title, Metadata: shared.LinkMetadata{}, CreatedAt: created, UpdatedAt: created}, f.err
 }
 
 type fakeLinkDelete struct {

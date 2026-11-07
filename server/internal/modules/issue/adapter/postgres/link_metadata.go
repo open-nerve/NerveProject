@@ -7,11 +7,11 @@ import (
 	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/postgres/gen"
-	"github.com/open-nerve/NerveProject/server/internal/modules/issue/domain"
+	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
 // SetLinkMetadata writes only metadata; a stale or deleted link is a no-op.
-func (s *Store) SetLinkMetadata(ctx context.Context, id uuid.UUID, url string, metadata domain.LinkMetadata) (bool, error) {
+func (s *Store) SetLinkMetadata(ctx context.Context, id uuid.UUID, url string, metadata shared.LinkMetadata) (bool, error) {
 	data, err := json.Marshal(metadata)
 	if err != nil {
 		return false, fmt.Errorf("encode link metadata: %w", err)

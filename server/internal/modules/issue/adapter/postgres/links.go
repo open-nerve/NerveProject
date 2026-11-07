@@ -12,6 +12,8 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/postgres/gen"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/app"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/domain"
+	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
+	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
 // GetLink reads a live link without deciding visibility of its work item.
@@ -81,8 +83,16 @@ func (s *Store) DeleteLink(ctx context.Context, d app.LinkDeletion) error {
 	return nil
 }
 
+// linkConflict maps only the exact live-URL exclusion constraint.
+func linkConflict(err error) error {
+	if postgres.ExclusionViolation(err, "issue_links_issue_id_url_key") {
+		return domain.ErrLinkExists
+	}
+	return err
+}
+
 func linkOf(r gen.LinksRow) (domain.Link, error) {
-	var metadata domain.LinkMetadata
+	var metadata shared.LinkMetadata
 	if err := json.Unmarshal(r.Metadata, &metadata); err != nil {
 		return domain.Link{}, fmt.Errorf("decode metadata of link %s: %w", r.ID, err)
 	}

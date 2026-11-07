@@ -5,6 +5,7 @@ import (
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/http/gen"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/domain"
+	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apigen"
 )
 
 // CreateIssueLink serves POST /api/v0/issues/{issue_id}/links.
@@ -30,7 +31,7 @@ func (h handler) ListIssueLinks(ctx context.Context, req gen.ListIssueLinksReque
 	return gen.ListIssueLinks200JSONResponse{Data: data}, nil
 }
 func linkDetail(link domain.Link) gen.IssueLink {
-	m := gen.IssueLinkMetadata{}
+	m := apigen.LinkMetadata{}
 	if value, ok := link.Metadata["title"]; ok {
 		m.Title = orNull(value)
 	}
@@ -44,7 +45,7 @@ func linkDetail(link domain.Link) gen.IssueLink {
 		m.FaviconURL = orNull(value)
 	}
 	if value, ok := link.Metadata["error"]; ok {
-		m.Error = orNull((*gen.IssueLinkMetadataError)(value))
+		m.Error = orNull((*apigen.LinkMetadataError)(value))
 	}
 	return gen.IssueLink{ID: link.ID, IssueID: link.IssueID, URL: link.URL, Title: orNull(link.Title), Metadata: m, CreatedByID: orNull(link.CreatedByID), CreatedAt: link.CreatedAt, UpdatedAt: link.UpdatedAt}
 }

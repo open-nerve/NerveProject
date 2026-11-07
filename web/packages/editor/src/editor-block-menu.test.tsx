@@ -138,6 +138,25 @@ it("offers a named code-copy action that copies the actual code block text", asy
   }
 });
 
+it("ends the copied mark's timer when its code block goes away", async () => {
+  const current = await mount("<p></p>");
+  await act(async () => current.editor.commands.setContent("<pre><code>const answer = 42;</code></pre>"));
+  Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText: vi.fn(async () => {}) } });
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+  try {
+    const before = vi.getTimerCount();
+    await act(async () => document.querySelector<HTMLButtonElement>('button[aria-label="Copy code"]')!.click());
+    expect(vi.getTimerCount()).toBe(before + 1);
+    // The node view unmounts with its block; a timer left behind would set state on it after the test's
+    // environment is gone (window is not defined).
+    await act(async () => current.editor.commands.setContent("<p></p>"));
+    expect(vi.getTimerCount()).toBe(before);
+  } finally {
+    vi.useRealTimers();
+    Reflect.deleteProperty(navigator, "clipboard");
+  }
+});
+
 it("names the block handle and reveals it when reached by keyboard", async () => {
   const current = await mount("<p>Keyboard block</p>");
   // jsdom does not track the browser's input modality for :focus-visible.

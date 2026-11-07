@@ -1,9 +1,13 @@
 // Package planning is the cycles and modules module (M6 design 3, 4): it owns
-// the cycles' tables and brings creating, reading, listing, changing,
-// archiving, unarchiving and deleting a cycle of a project. Project and
-// workspace deletion events enqueue the asynchronous deletion of the deleted
-// projects' cycles in the publishing transaction; the 60-day purge removes
-// them.
+// the cycles' and the modules' tables and brings creating, reading, listing,
+// changing, archiving, unarchiving and deleting a cycle of a project;
+// creating, listing, reading, changing, archiving, unarchiving and deleting a
+// module of a project, and adding, listing, changing and removing a module's
+// links. A link's creation and a change of its address enqueue its crawl in
+// their transaction, whose job writes the link's metadata. Project
+// and workspace deletion events enqueue the asynchronous deletion of the
+// deleted projects' planning rows in the publishing transaction; the 60-day
+// purge removes them.
 package planning
 
 import (
@@ -14,6 +18,7 @@ import (
 
 	httpadapter "github.com/open-nerve/NerveProject/server/internal/modules/planning/adapter/http"
 	postgresadapter "github.com/open-nerve/NerveProject/server/internal/modules/planning/adapter/postgres"
+	riveradapter "github.com/open-nerve/NerveProject/server/internal/modules/planning/adapter/river"
 	"github.com/open-nerve/NerveProject/server/internal/modules/planning/app"
 	"github.com/open-nerve/NerveProject/server/internal/modules/planning/domain"
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver"
@@ -30,10 +35,15 @@ type Provided struct {
 }
 
 // Provide builds planning's purge over pool: its tables, children before
-// parents.
+// parents, so no parent's CASCADE takes a child's rows first (M6 P2 spec 2.4).
 func Provide(pool *pgxpool.Pool) Provided {
 	store := postgresadapter.New(pool)
-	return Provided{Purger: app.NewPurger([]app.PurgeStep{{Table: "cycles", Delete: store.PurgeCycles}})}
+	return Provided{Purger: app.NewPurger([]app.PurgeStep{
+		{Table: "module_links", Delete: store.PurgeModuleLinks},
+		{Table: "module_members", Delete: store.PurgeModuleMembers},
+		{Table: "modules", Delete: store.PurgeModules},
+		{Table: "cycles", Delete: store.PurgeCycles},
+	})}
 }
 
 // Deps are what the module needs.
@@ -53,6 +63,13 @@ type Deps struct {
 	Authorizer shared.Authorizer
 	// Projects are project's PlanningProjects, converted (bootstrap/ports.go).
 	Projects app.Projects
+	// LinkCrawls inserts the module links' crawls, planning.crawl_link, in
+	// the transaction of the write that asks for them, which it requires:
+	// bootstrap's jobInserter (M6 P2 spec R11).
+	LinkCrawls riveradapter.Inserter
+	// LinkCrawler is the link-preview crawler every module that has links
+	// shares, adapted by bootstrap (R12).
+	LinkCrawler app.LinkCrawler
 	// JobTx runs the deletion job's short transactions.
 	JobTx shared.TxManager
 	// RuntimeNow is the monotonic clock of the deletion job's budget.
@@ -65,6 +82,7 @@ type Deps struct {
 // Module is the planning module.
 type Module struct {
 	uc           httpadapter.UseCases
+	crawlLink    *app.CrawlLink
 	deleteRows   *app.DeleteRows
 	deleteBudget time.Duration
 	logger       *slog.Logger
@@ -75,16 +93,29 @@ func New(d Deps) *Module {
 	store := postgresadapter.New(d.Pool)
 	locks := app.NewLocks(d.Projects, store, d.Authorizer, d.WriteGate, d.Tx)
 	reads := app.NewReads(d.Projects, store, d.Authorizer, d.ReadTx)
+	links := app.ModuleLinkDeps{Locks: locks, Links: store, Crawls: riveradapter.NewLinkCrawls(d.LinkCrawls), Clock: d.Clock}
 	return &Module{
 		uc: httpadapter.UseCases{
-			ListCycles:     app.NewListCycles(app.ListCyclesDeps{Reads: reads, Cycles: store, Clock: d.Clock}),
-			CreateCycle:    app.NewCreateCycle(app.CreateCycleDeps{Locks: locks, Cycles: store, Clock: d.Clock}),
-			GetCycle:       app.NewGetCycle(app.GetCycleDeps{Reads: reads, Clock: d.Clock}),
-			UpdateCycle:    app.NewUpdateCycle(app.UpdateCycleDeps{Locks: locks, Cycles: store, Clock: d.Clock}),
-			ArchiveCycle:   app.NewArchiveCycle(app.ArchiveCycleDeps{Locks: locks, Cycles: store, Clock: d.Clock}),
-			UnarchiveCycle: app.NewUnarchiveCycle(app.ArchiveCycleDeps{Locks: locks, Cycles: store, Clock: d.Clock}),
-			DeleteCycle:    app.NewDeleteCycle(app.DeleteCycleDeps{Locks: locks, Cycles: store, Clock: d.Clock}),
+			ListCycles:       app.NewListCycles(app.ListCyclesDeps{Reads: reads, Cycles: store, Clock: d.Clock}),
+			CreateCycle:      app.NewCreateCycle(app.CreateCycleDeps{Locks: locks, Cycles: store, Clock: d.Clock}),
+			GetCycle:         app.NewGetCycle(app.GetCycleDeps{Reads: reads, Clock: d.Clock}),
+			UpdateCycle:      app.NewUpdateCycle(app.UpdateCycleDeps{Locks: locks, Cycles: store, Clock: d.Clock}),
+			ArchiveCycle:     app.NewArchiveCycle(app.ArchiveCycleDeps{Locks: locks, Cycles: store, Clock: d.Clock}),
+			UnarchiveCycle:   app.NewUnarchiveCycle(app.ArchiveCycleDeps{Locks: locks, Cycles: store, Clock: d.Clock}),
+			DeleteCycle:      app.NewDeleteCycle(app.DeleteCycleDeps{Locks: locks, Cycles: store, Clock: d.Clock}),
+			ListModules:      app.NewListModules(app.ListModulesDeps{Reads: reads, Modules: store}),
+			CreateModule:     app.NewCreateModule(app.CreateModuleDeps{Locks: locks, Roles: d.Projects, Modules: store, Clock: d.Clock}),
+			GetModule:        app.NewGetModule(app.GetModuleDeps{Reads: reads}),
+			UpdateModule:     app.NewUpdateModule(app.UpdateModuleDeps{Locks: locks, Roles: d.Projects, Modules: store, Clock: d.Clock}),
+			ArchiveModule:    app.NewArchiveModule(app.ArchiveModuleDeps{Locks: locks, Modules: store, Clock: d.Clock}),
+			UnarchiveModule:  app.NewUnarchiveModule(app.ArchiveModuleDeps{Locks: locks, Modules: store, Clock: d.Clock}),
+			DeleteModule:     app.NewDeleteModule(app.DeleteModuleDeps{Locks: locks, Modules: store, Clock: d.Clock}),
+			CreateModuleLink: app.NewCreateModuleLink(links),
+			UpdateModuleLink: app.NewUpdateModuleLink(links),
+			DeleteModuleLink: app.NewDeleteModuleLink(links),
+			ListModuleLinks:  app.NewListModuleLinks(app.ListModuleLinksDeps{Reads: reads, Links: store}),
 		},
+		crawlLink:    app.NewCrawlLink(app.CrawlLinkDeps{Crawler: d.LinkCrawler, Links: store}),
 		deleteRows:   app.NewDeleteRows(app.DeleteRowsDeps{Rows: store, Tx: d.JobTx, RuntimeNow: d.RuntimeNow, Batch: d.DeleteBatch, Budget: d.DeleteBudget}),
 		deleteBudget: d.DeleteBudget, logger: d.Logger,
 	}

@@ -229,6 +229,372 @@ paths:
                 $ref: '#/components/schemas/Cycle'
         default:
           $ref: '#/components/responses/Problem'
+  /api/v0/projects/{project_id}/modules:
+    parameters:
+      - $ref: '#/components/parameters/ProjectID'
+    get:
+      operationId: listModules
+      tags: [planning]
+      summary: List a project's modules
+      description: >-
+        For the project's admins, members and guests, also a caller who sees
+        only his own work items there, whether its modules are turned on or
+        off and whether it is archived. The undeleted modules that are not
+        archived, by sort_order, then creation, then id; or, when archived is
+        true, the archived ones alone, the latest archived first, then by id.
+        Each with its undeleted members, ascending. A project that does not
+        exist, is deleted, or that the caller does not see answers
+        project.not_found; one he sees but whose modules he may not read,
+        forbidden. The whole collection at once: collections are not
+        paginated.
+      security: [{bearer: []}]
+      x-problem-codes: [project.not_found, forbidden]
+      parameters:
+        - name: archived
+          in: query
+          required: false
+          description: true lists the archived modules alone; false, or no value, the others.
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: The project's modules.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModuleList'
+        default:
+          $ref: '#/components/responses/Problem'
+    post:
+      operationId: createModule
+      tags: [planning]
+      summary: Create a module in a project
+      description: >-
+        For the project's admins and members, not its guests, and not a
+        caller who sees only his own work items there. The name has 1–255
+        characters without its surrounding white space, which is dropped,
+        and no NUL; the description has no NUL and is empty when it is left
+        out; the status is one of ModuleStatus, planned when it is left out;
+        the start and target dates are days, each given alone or neither,
+        the start not after the target; member_ids names at most 100
+        accounts, each once (validation_failed). The values are checked
+        before the project is looked at. A project that does not exist, is
+        deleted, or that the caller does not see answers project.not_found;
+        one he sees but whose modules he may not change, forbidden; an
+        archived project, project.archived; a project whose modules are
+        turned off (Project.module_view), planning.modules_disabled. After
+        the project's row is locked, the lead and each member must be an
+        active member of the project who is not its guest
+        (validation_failed, at lead_id or member_ids[i]); and no other
+        undeleted module of the project, archived ones too, may have the
+        name, in any case (planning.module_name_taken). The new module comes
+        first: its sort order is the lowest of the project's undeleted
+        modules, archived ones too, less 10000, or 65535 when it has none.
+        It and its members' rows are written at one moment by the caller.
+      security: [{bearer: []}]
+      x-problem-codes: [validation_failed, project.not_found, forbidden, project.archived, planning.modules_disabled, planning.module_name_taken,
+        server_busy]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModuleCreate'
+      responses:
+        '201':
+          description: The new module.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Module'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/modules/{module_id}:
+    parameters:
+      - $ref: '#/components/parameters/ModuleID'
+    get:
+      operationId: getModule
+      tags: [planning]
+      summary: Read a module
+      description: >-
+        For its project's admins, members and guests, also a caller who sees
+        only his own work items there, whether the project's modules are
+        turned on or off and whether the project or the module is archived;
+        with its undeleted members, ascending. A module that does not exist
+        or is deleted, one whose project is deleted, and one whose project
+        the caller does not see answer planning.module_not_found; one whose
+        project he sees but whose modules he may not read, forbidden.
+      security: [{bearer: []}]
+      x-problem-codes: [planning.module_not_found, forbidden]
+      responses:
+        '200':
+          description: The module.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Module'
+        default:
+          $ref: '#/components/responses/Problem'
+    patch:
+      operationId: updateModule
+      tags: [planning]
+      summary: Change a module
+      description: >-
+        For its project's admins and members, not its guests, and not a
+        caller who sees only his own work items there. Each field given is
+        changed, each left out kept; start_date, target_date and lead_id may
+        each be given alone, and null clears it. member_ids, given, is the
+        module's whole set of members: those it leaves out are removed,
+        those it adds are added, those it keeps are left as they are. The
+        name has 1–255 characters without its surrounding white space, which
+        is dropped, and no NUL; the description no NUL; the status is one of
+        ModuleStatus; member_ids names at most 100 accounts, each once; the
+        sort order is a number (validation_failed); these are checked before
+        the module is looked at. A module that does not exist or is deleted,
+        one whose project is deleted, and one whose project the caller does
+        not see answer planning.module_not_found; a caller who may not
+        change it, forbidden; an archived project, project.archived; modules
+        turned off, planning.modules_disabled; an archived module refuses any
+        change, one of nothing too (planning.archived). After the project's
+        row is locked: the dates given, each else the module's, may not put
+        the start after the target (validation_failed, at start_date when it
+        is given alone, else at target_date); a lead given anew and each
+        member added must be an active member of the project who is not its
+        guest (validation_failed, at lead_id or member_ids[i]), while a lead
+        or a member kept is not looked at, even one who has left the
+        project; and no other undeleted module of the project, archived ones
+        too, may have the name, in any case (planning.module_name_taken),
+        while its own name in another case is its to take. A change of
+        nothing, member_ids naming its members in any order too, writes
+        nothing and answers the module as it is. The module's change and its
+        removed and added members' rows are written at one moment by the
+        caller.
+      security: [{bearer: []}]
+      x-problem-codes: [validation_failed, planning.module_not_found, forbidden, project.archived, planning.modules_disabled, planning.archived,
+        planning.module_name_taken, server_busy]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModuleUpdate'
+      responses:
+        '200':
+          description: The module as changed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Module'
+        default:
+          $ref: '#/components/responses/Problem'
+    delete:
+      operationId: deleteModule
+      tags: [planning]
+      summary: Delete a module
+      description: >-
+        For its project's admins, and for the member who created it; not
+        another member, not a guest, and not a caller who sees only his own
+        work items there. Whatever its status and archive. A module that does
+        not exist or is deleted, one whose project is deleted, and one whose
+        project the caller does not see answer planning.module_not_found; a
+        caller who may not delete it, forbidden; an archived project,
+        project.archived; modules turned off, planning.modules_disabled.
+        Decided after the project's row is locked; its deletion, the
+        deletion of its members and of its links, and its last change are
+        one moment, the caller's. It is read no more, nor are its links.
+      security: [{bearer: []}]
+      x-problem-codes: [planning.module_not_found, forbidden, project.archived, planning.modules_disabled, server_busy]
+      responses:
+        '204':
+          description: Deleted.
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/modules/{module_id}/archive:
+    parameters:
+      - $ref: '#/components/parameters/ModuleID'
+    post:
+      operationId: archiveModule
+      tags: [planning]
+      summary: Archive a completed or cancelled module
+      description: >-
+        For its project's admins and members, not its guests, and not a
+        caller who sees only his own work items there. Only a module whose
+        status is completed or cancelled is archived
+        (planning.module_not_closed); one archived already is answered as it
+        is, nothing written. A module that does not exist or is deleted, one
+        whose project is deleted, and one whose project the caller does not
+        see answer planning.module_not_found; a caller who may not change it,
+        forbidden; an archived project, project.archived; modules turned
+        off, planning.modules_disabled. Decided after the project's row is
+        locked; archived_at and the module's last change are one moment, the
+        caller's.
+      security: [{bearer: []}]
+      x-problem-codes: [planning.module_not_found, forbidden, project.archived, planning.modules_disabled, planning.module_not_closed, server_busy]
+      responses:
+        '200':
+          description: The module, archived.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Module'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/modules/{module_id}/unarchive:
+    parameters:
+      - $ref: '#/components/parameters/ModuleID'
+    post:
+      operationId: unarchiveModule
+      tags: [planning]
+      summary: Unarchive a module
+      description: >-
+        For its project's admins and members, not its guests, and not a
+        caller who sees only his own work items there; whatever the module's
+        status. One not archived is answered as it is, nothing written. A
+        module that does not exist or is deleted, one whose project is
+        deleted, and one whose project the caller does not see answer
+        planning.module_not_found; a caller who may not change it,
+        forbidden; an archived project, project.archived; modules turned
+        off, planning.modules_disabled. Decided after the project's row is
+        locked; the module's last change is the caller's at that moment.
+      security: [{bearer: []}]
+      x-problem-codes: [planning.module_not_found, forbidden, project.archived, planning.modules_disabled, server_busy]
+      responses:
+        '200':
+          description: The module, not archived.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Module'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/modules/{module_id}/links:
+    parameters:
+      - $ref: '#/components/parameters/ModuleID'
+    get:
+      operationId: listModuleLinks
+      tags: [planning]
+      summary: List a module's links
+      description: >-
+        For its project's admins, members and guests, also a caller who sees
+        only his own work items there, whether the project's modules are
+        turned on or off and whether the project or the module is archived.
+        Its undeleted links, the latest created first, then by id
+        descending. A module that does not exist or is deleted, one whose
+        project is deleted, and one whose project the caller does not see
+        answer planning.module_not_found; one whose project he sees but
+        whose modules he may not read, forbidden. The whole collection at
+        once: collections are not paginated.
+      security: [{bearer: []}]
+      x-problem-codes: [planning.module_not_found, forbidden]
+      responses:
+        '200':
+          description: The module's links, with an empty data array when it has none.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModuleLinkCollection'
+        default:
+          $ref: '#/components/responses/Problem'
+    post:
+      operationId: createModuleLink
+      tags: [planning]
+      summary: Add a link to a module
+      description: >-
+        For its project's admins and members, not its guests, and not a
+        caller who sees only his own work items there. The URL has its
+        surrounding white space dropped and http:// added when it names no
+        scheme; it is an HTTP or HTTPS URL without credentials, zones or
+        control characters, of at most 2048 characters; the title, null or
+        empty too, has at most 255 characters and no NUL (validation_failed),
+        checked before the module is looked at. A module that does not exist
+        or is deleted, one whose project is deleted, and one whose project
+        the caller does not see answer planning.module_not_found; a caller
+        who may not change it, forbidden; an archived project,
+        project.archived; modules turned off, planning.modules_disabled; an
+        archived module, planning.archived. Another undeleted link of the
+        module may not have the URL, as it is spelt
+        (planning.module_link_exists). Decided after the project's row is
+        locked, and written at one moment by the caller; its preview
+        metadata is empty.
+      security: [{bearer: []}]
+      x-problem-codes: [validation_failed, planning.module_not_found, forbidden, project.archived, planning.modules_disabled, planning.archived,
+        planning.module_link_exists, server_busy]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModuleLinkCreate'
+      responses:
+        '201':
+          description: The new link, with empty preview metadata.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModuleLink'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/module-links/{module_link_id}:
+    parameters:
+      - $ref: '#/components/parameters/ModuleLinkID'
+    patch:
+      operationId: updateModuleLink
+      tags: [planning]
+      summary: Change a module's link
+      description: >-
+        For its project's admins and members, not its guests, and not a
+        caller who sees only his own work items there, whoever added it. The
+        URL and the title are checked as createModuleLink's, each when given,
+        before the link is looked at; the title may be given alone, null
+        clears it. A link that does not exist or is deleted, one whose module
+        or project is deleted, and one whose project the caller does not see
+        answer planning.module_link_not_found; a caller who may not change
+        it, forbidden; an archived project, project.archived; modules turned
+        off, planning.modules_disabled; an archived module, planning.archived,
+        for a change of nothing too. Another undeleted link of the module may
+        not have the URL (planning.module_link_exists). A change of nothing
+        writes nothing and answers the link as it is. A changed URL empties
+        its preview metadata; a title alone keeps it. Decided after the
+        project's row is locked, and written at one moment by the caller.
+      security: [{bearer: []}]
+      x-problem-codes: [validation_failed, planning.module_link_not_found, forbidden, project.archived, planning.modules_disabled,
+        planning.archived, planning.module_link_exists, server_busy]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModuleLinkPatch'
+      responses:
+        '200':
+          description: The link as changed, with its current preview metadata.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModuleLink'
+        default:
+          $ref: '#/components/responses/Problem'
+    delete:
+      operationId: deleteModuleLink
+      tags: [planning]
+      summary: Remove a module's link
+      description: >-
+        For its project's admins and members, not its guests, and not a
+        caller who sees only his own work items there, whoever added it. A
+        link that does not exist or is deleted, one whose module or project
+        is deleted, and one whose project the caller does not see answer
+        planning.module_link_not_found; a caller who may not change it,
+        forbidden; an archived project, project.archived; modules turned off,
+        planning.modules_disabled; an archived module, planning.archived.
+        Decided after the project's row is locked; its deletion and its last
+        change are one moment, the caller's. It is read no more.
+      security: [{bearer: []}]
+      x-problem-codes: [planning.module_link_not_found, forbidden, project.archived, planning.modules_disabled, planning.archived, server_busy]
+      responses:
+        '204':
+          description: Removed.
+        default:
+          $ref: '#/components/responses/Problem'
 components:
   # 与 api/openapi.yaml 的相同：打包时丢掉模块文件的 securitySchemes，oapi-codegen 读这一份（M0-P3 交接 3）
   securitySchemes:
@@ -249,6 +615,22 @@ components:
       in: path
       required: true
       description: A cycle's id (Cycle.id).
+      schema:
+        type: string
+        format: uuid
+    ModuleID:
+      name: module_id
+      in: path
+      required: true
+      description: A module's id (Module.id).
+      schema:
+        type: string
+        format: uuid
+    ModuleLinkID:
+      name: module_link_id
+      in: path
+      required: true
+      description: A module link's id (ModuleLink.id).
       schema:
         type: string
         format: uuid
@@ -387,3 +769,212 @@ components:
           description: The day it ends, not before start_date; given with start_date, or neither for a draft.
           type: string
           format: date
+    ModuleStatus:
+      description: A module's status, set by its writers, never read from its dates.
+      type: string
+      enum: [backlog, planned, in-progress, paused, completed, cancelled]
+    Module:
+      description: A module of a project.
+      type: object
+      additionalProperties: false
+      required: [id, workspace_id, project_id, name, description, start_date, target_date, status, lead_id, member_ids, sort_order,
+        archived_at, created_at, updated_at, created_by_id, updated_by_id]
+      properties:
+        id:
+          type: string
+          format: uuid
+        workspace_id:
+          type: string
+          format: uuid
+        project_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          description: Plain text; empty for none.
+          type: string
+        start_date:
+          description: The day it starts; null for none.
+          type: [string, 'null']
+          format: date
+        target_date:
+          description: The day it is due, not before start_date; null for none.
+          type: [string, 'null']
+          format: date
+        status:
+          $ref: '#/components/schemas/ModuleStatus'
+        lead_id:
+          description: The account that leads it; null for none, or once that account is gone.
+          type: [string, 'null']
+          format: uuid
+        member_ids:
+          description: >-
+            Its members' accounts, ascending; one who has left the project
+            since is still one.
+          type: array
+          items:
+            type: string
+            format: uuid
+        sort_order:
+          description: The module's place among the project's modules, the lowest first.
+          type: number
+        archived_at:
+          description: When it was archived; null while it is not.
+          type: [string, 'null']
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        created_by_id:
+          type: [string, 'null']
+          format: uuid
+        updated_by_id:
+          type: [string, 'null']
+          format: uuid
+    ModuleList:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Module'
+    ModuleCreate:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name:
+          description: 1–255 characters without the surrounding white space, which is dropped; no NUL.
+          type: string
+        description:
+          description: Plain text without NUL; empty when left out.
+          type: string
+        start_date:
+          description: The day it starts; left out for none.
+          type: string
+          format: date
+        target_date:
+          description: The day it is due, not before start_date; left out for none.
+          type: string
+          format: date
+        status:
+          $ref: '#/components/schemas/ModuleStatus'
+        lead_id:
+          description: >-
+            An active member of the project who is not its guest; null, or
+            left out, for none.
+          type: [string, 'null']
+          format: uuid
+        member_ids:
+          description: >-
+            At most 100 accounts, each named once, each an active member of
+            the project who is not its guest; left out, or empty, for none.
+          type: array
+          items:
+            type: string
+            format: uuid
+    ModuleUpdate:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          description: 1–255 characters without the surrounding white space, which is dropped; no NUL.
+          type: string
+        description:
+          description: Plain text without NUL; empty for none.
+          type: string
+        start_date:
+          description: The day it starts, not after the target date; null clears it.
+          type: [string, 'null']
+          format: date
+        target_date:
+          description: The day it is due, not before the start date; null clears it.
+          type: [string, 'null']
+          format: date
+        status:
+          $ref: '#/components/schemas/ModuleStatus'
+        lead_id:
+          description: >-
+            Another lead, an active member of the project who is not its
+            guest; the lead it has is kept as it is; null clears it.
+          type: [string, 'null']
+          format: uuid
+        member_ids:
+          description: >-
+            Its members, all of them: at most 100 accounts, each named once;
+            each it adds an active member of the project who is not its
+            guest; empty for none.
+          type: array
+          items:
+            type: string
+            format: uuid
+        sort_order:
+          description: The module's place among the project's modules, the lowest first.
+          type: number
+    ModuleLink:
+      description: A link of a module.
+      type: object
+      additionalProperties: false
+      required: [id, module_id, url, title, metadata, created_by_id, created_at, updated_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        module_id:
+          type: string
+          format: uuid
+        url:
+          type: string
+        title:
+          description: Null for none; empty text is kept.
+          type: [string, 'null']
+        metadata:
+          $ref: '../common.yaml#/components/schemas/LinkMetadata'
+        created_by_id:
+          description: The account that added it; null once that account is gone.
+          type: [string, 'null']
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    ModuleLinkCollection:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ModuleLink'
+    ModuleLinkCreate:
+      type: object
+      additionalProperties: false
+      required: [url]
+      properties:
+        url:
+          description: HTTP URL, at most 2048 Unicode characters after normalization.
+          type: string
+        title:
+          description: Null, or left out, for none; empty text is kept.
+          type: [string, 'null']
+          maxLength: 255
+    ModuleLinkPatch:
+      type: object
+      additionalProperties: false
+      properties:
+        url:
+          description: HTTP URL, at most 2048 Unicode characters after normalization.
+          type: string
+        title:
+          description: Null clears it; empty text is kept; left out, it is kept.
+          type: [string, 'null']
+          maxLength: 255

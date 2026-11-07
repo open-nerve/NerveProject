@@ -12,6 +12,7 @@ import (
 	postgresadapter "github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/app"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/domain"
+	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
 var _ app.LinkMetadataWriter = (*postgresadapter.Store)(nil)
@@ -61,7 +62,7 @@ func TestLinkMetadataGuard(t *testing.T) {
 	}
 	before := snapshot()
 	crawledTitle, resultURL := "Fetched title", newURL
-	metadata := domain.LinkMetadata{"title": &crawledTitle, "url": &resultURL, "favicon": nil, "favicon_url": nil}
+	metadata := shared.LinkMetadata{"title": &crawledTitle, "url": &resultURL, "favicon": nil, "favicon_url": nil}
 	for _, tc := range []struct {
 		name string
 		id   uuid.UUID
@@ -87,11 +88,11 @@ func TestLinkMetadataGuard(t *testing.T) {
 				if err := pool.QueryRow(t.Context(), "SELECT metadata FROM issue_links WHERE id=$1", id).Scan(&data); err != nil {
 					t.Fatal(err)
 				}
-				var got domain.LinkMetadata
+				var got shared.LinkMetadata
 				if err := json.Unmarshal(data, &got); err != nil {
 					t.Fatal(err)
 				}
-				want := domain.LinkMetadata{}
+				want := shared.LinkMetadata{}
 				if id == live {
 					want = metadata
 				}

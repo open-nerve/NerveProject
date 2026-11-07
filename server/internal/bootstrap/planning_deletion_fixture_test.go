@@ -34,9 +34,36 @@ func seedCycles(t *testing.T, pool *pgxpool.Pool, project, by uuid.UUID) {
 	}
 }
 
+// seedModules writes a module of project by by, directly, with the rows
+// under it: by as its lead and its member, and a link of it, so a deletion of
+// the project reaches each of the module tables. The deletion and purge
+// guards write the planning module's rows as fixtures (M6 P2 spec 2.4).
+func seedModules(t *testing.T, pool *pgxpool.Pool, project, by uuid.UUID) {
+	t.Helper()
+	module := uuid.NewV7()
+	for _, stmt := range []struct {
+		sql  string
+		args []any
+	}{
+		{`INSERT INTO modules (id, workspace_id, project_id, name, start_date, target_date, status, lead_id, created_by_id, updated_by_id)
+			SELECT $1::uuid, workspace_id, id, 'Platform', DATE '2026-11-02', DATE '2026-11-30', 'in-progress', $2::uuid, $2::uuid, $2::uuid FROM projects WHERE id = $3`,
+			[]any{module, by, project}},
+		{`INSERT INTO module_members (id, workspace_id, project_id, module_id, member_id, created_by_id, updated_by_id)
+			SELECT $1::uuid, workspace_id, project_id, id, $2::uuid, $2::uuid, $2::uuid FROM modules WHERE id = $3`, []any{uuid.NewV7(), by, module}},
+		{`INSERT INTO module_links (id, workspace_id, project_id, module_id, title, url, created_by_id, updated_by_id)
+			SELECT $1::uuid, workspace_id, project_id, id, 'Spec', 'https://nerve.dev/spec', $2::uuid, $2::uuid FROM modules WHERE id = $3`,
+			[]any{uuid.NewV7(), by, module}},
+	} {
+		if tag, err := pool.Exec(pgtest.Soon(t), stmt.sql, stmt.args...); err != nil || tag.RowsAffected() != 1 {
+			t.Fatalf("seeding the modules of %s: %s: %d rows, %v; want 1", project, stmt.sql, tag.RowsAffected(), err)
+		}
+	}
+}
+
 // holdPlanningDeletion holds a row lock on one of the project's live cycles:
-// the planning deletion's first batch waits for it, so the cycles stay as
-// they were while the app and its River worker keep running.
+// the planning deletion's first batch, of its first step, waits for it, so
+// the planning rows stay as they were while the app and its River worker
+// keep running.
 func holdPlanningDeletion(t *testing.T, pool *pgxpool.Pool, project uuid.UUID) pgx.Tx {
 	t.Helper()
 	var id uuid.UUID
@@ -102,8 +129,9 @@ func waitPlanningDeletion(t *testing.T, pool *pgxpool.Pool, project uuid.UUID) {
 // The planning module declares its request kind and registers its worker,
 // with no periodic schedule; leaving the worker out fails the registration.
 func TestNewAppPlanningJobCatalog(t *testing.T) {
-	if got := planning.EnqueuedKinds(); !slices.Equal(got, []string{"planning.delete_rows"}) {
-		t.Fatalf("enqueued kinds=%v; want planning.delete_rows", got)
+	kinds := []string{"planning.crawl_link", "planning.delete_rows"}
+	if got := planning.EnqueuedKinds(); !slices.Equal(got, kinds) {
+		t.Fatalf("enqueued kinds=%v; want %v", got, kinds)
 	}
 	pool, err := postgres.NewPool(t.Context(), config.DatabaseConfig{URL: unreachableDB, MaxConns: 1})
 	if err != nil {
@@ -112,15 +140,17 @@ func TestNewAppPlanningJobCatalog(t *testing.T) {
 	defer pool.Close()
 	module := planning.New(planning.Deps{Pool: pool, DeleteBatch: 1000, DeleteBudget: 45 * time.Second, RuntimeNow: time.Now, Logger: slog.New(slog.DiscardHandler)})
 	definitions := module.Jobs()
-	if len(definitions) != 1 || definitions[0].Worker == nil || definitions[0].Periodic != nil {
-		t.Fatalf("planning jobs=%+v; want the deletion worker only", definitions)
+	if len(definitions) != 2 || slices.ContainsFunc(definitions, func(j jobs.Job) bool { return j.Worker == nil || j.Periodic != nil }) {
+		t.Fatalf("planning jobs=%+v; want the crawl and the deletion workers alone", definitions)
 	}
 	cfg := jobs.Config{DefaultWorkers: 1, PeriodicWorkers: 1, Logger: slog.New(slog.DiscardHandler)}
-	if _, err := jobs.New(pool, cfg, definitions, []string{"planning.delete_rows"}); err != nil {
+	if _, err := jobs.New(pool, cfg, definitions, kinds); err != nil {
 		t.Fatalf("module request worker registration: %v", err)
 	}
-	if _, err := jobs.New(pool, cfg, nil, []string{"planning.delete_rows"}); err == nil {
-		t.Fatal("a declared kind without its worker registered")
+	for _, kind := range kinds {
+		if _, err := jobs.New(pool, cfg, nil, []string{kind}); err == nil {
+			t.Fatalf("%s declared without its worker registered", kind)
+		}
 	}
 }
 

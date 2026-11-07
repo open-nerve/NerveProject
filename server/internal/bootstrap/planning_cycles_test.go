@@ -14,6 +14,7 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/project"
 	"github.com/open-nerve/NerveProject/server/internal/platform/clock"
 	"github.com/open-nerve/NerveProject/server/internal/platform/config"
+	"github.com/open-nerve/NerveProject/server/internal/platform/jobs"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
@@ -174,10 +175,15 @@ func TestCreateCycleRefusals(t *testing.T) {
 }
 
 // newPlanningRoute is the planning module as bootstrap wires it, on pool,
-// with tx its writes' transactions.
+// with tx its writes' transactions, its link crawls inserted in them.
 func newPlanningRoute(t *testing.T, pool *pgxpool.Pool, tx shared.TxManager) moduleRoute {
 	t.Helper()
+	client, err := jobs.NewInserter(pool)
+	if err != nil {
+		t.Fatal(err)
+	}
 	return newRoute(t, planning.New(planning.Deps{Pool: pool, Tx: tx, ReadTx: postgres.NewTxManager(pool, 2*time.Second, postgres.ReadOnlySnapshot()), JobTx: tx, RuntimeNow: time.Now, Logger: slog.New(slog.DiscardHandler),
+		LinkCrawls:  jobInserter{client: client},
 		DeleteBatch: 1000, DeleteBudget: 45 * time.Second, WriteGate: newWriteGate(testIssueConfig.WriteGate), Clock: clock.System{},
 		Authorizer: authorizerOn(pool), Projects: planningProjects{projects: project.Provide(pool, nil).PlanningProjects}}).Register)
 }

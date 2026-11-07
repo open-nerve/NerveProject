@@ -150,6 +150,9 @@ sql:
   - engine: postgresql
     schema:
       - migrations/sql/00039_planning_cycles.sql
+      - migrations/sql/00040_planning_modules.sql
+      - migrations/sql/00041_planning_module_members.sql
+      - migrations/sql/00042_planning_module_links.sql
     queries: internal/modules/planning/adapter/postgres/queries
     gen:
       go:

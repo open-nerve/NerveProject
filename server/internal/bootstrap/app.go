@@ -159,6 +159,8 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 	issueTx := newIssueJobTx(pool, cfg)
 	// Each read-only snapshot transaction is its own (issue, planning and file reads).
 	readTx := postgres.NewTxManager(pool, cfg.Database.CommitTimeout, postgres.ReadOnlySnapshot())
+	// One link-preview crawler for the links of the work items and of the modules (M6 P2 spec R12).
+	previews := newLinkPreviews(outboundClient, logger)
 	attachmentReads := asset.NewAttachmentReads(assetPorts)
 	issueAttachmentReads := issueAttachments{reader: attachmentReads, counter: attachmentReads, catalog: attachmentReads}
 	issues := issue.New(issue.Deps{
@@ -166,7 +168,7 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 		ContentBindings:    issueContentBindings{bindings: asset.NewContentBindings(assetPorts, businessClock)},
 		DraftAssetTransfer: issueDraftAssetTransfer{assets: asset.NewDraftAssetTransfer(assetPorts, businessClock, events)},
 		DraftAssets:        issueDraftAssets{assets: assetPorts.DraftAssets},
-		Outbound:           outboundClient, Logger: logger,
+		LinkCrawler:        previews, Logger: logger,
 		Events: events,
 		Pool:   pool, Tx: busyTx{tx: issueTx}, JobTx: issueTx, ArchivePolicies: projectPorts.ArchivePolicies, AutoArchiveInterval: cfg.Issue.AutoArchiveInterval, TrimVersionsInterval: cfg.Issue.TrimVersionsInterval,
 		DeleteBatch: cfg.Issue.DeleteBatch, DeleteBudget: cfg.Issue.DeleteBudget, RuntimeNow: time.Now,
@@ -181,7 +183,8 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 		Pool: pool, Tx: busyTx{tx: issueTx}, ReadTx: readTx, JobTx: issueTx, RuntimeNow: time.Now, Logger: logger,
 		DeleteBatch: cfg.Planning.DeleteBatch, DeleteBudget: cfg.Planning.DeleteBudget,
 		WriteGate: projectWrites, Clock: businessClock, Authorizer: authorizer,
-		Projects: planningProjects{projects: projectPorts.PlanningProjects},
+		Projects:   planningProjects{projects: projectPorts.PlanningProjects},
+		LinkCrawls: inserter, LinkCrawler: previews,
 	})
 	// project before workspace: workspace's writes take its cascade.
 	proj := project.New(project.Deps{

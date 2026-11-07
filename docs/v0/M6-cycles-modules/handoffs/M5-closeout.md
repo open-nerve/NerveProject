@@ -79,3 +79,11 @@ M5 给工作项加入真实的 `attachment_count`、排序码与显示属性“�
 ## 处理结果（M6/P1）：M5-M6-03
 
 `planning` 的清理步骤属于它自己的 `Purger`，排在 issue 之后、project 之前，在 `files.cleanup_budget` 的同一预算内运行，单条语句有 `LIMIT` 批量，被取消的语句回滚并在下一次运行重做；`cycles` 加入 `purgeScaleTables`，`TestPurgeScale`（`NERVE_PURGE_SCALE=1`）认得它的两条分页语句、一次运行完成。`planning` 放到 project 之后的变异让 `TestPurgeDeletedRunsWithRuntimeRole` 失败。删除迭代不影响资产。关系表在 P3 加入；收尾前在 M6 代码上重跑 `TestPurgeScale` 与 `TestTheDeletionsAtTheScaleTarget`，本交接保持 open。证据：[P1 spec](../specs/P1-cycles-backend.md) 2.4、A6。
+
+## 处理结果（M6/P2）：M5-M6-01
+
+P2 的模块不是资产的宿主：`modules.description` 是纯文本的 `text`（只拒 NUL，契约写明 plain text），Plane 的 `description_text`、`description_html` 已删除；模块链接只存地址、标题与抓取的元数据，抓到的图标以 `data:` 地址内嵌在元数据里，不存文件（同工作项链接）。`AssetPurpose`、`asset` 模块与 `file_assets` 都没有改动。本条的触发条件（迭代/模块第一次带文件）没有出现，本交接保持 open。证据：[P2 spec](../specs/P2-modules-backend.md) 2.2。
+
+## 处理结果（M6/P2）：M5-M6-03
+
+`planning` 的 `Purger` 在 `cycles` 之前加三步 `module_links → module_members → modules`（子先父），每张表单语句分页、有 `LIMIT`，在 `files.cleanup_budget` 的同一预算内运行；三张表加入 `purgeScaleTables`，P2 以 `NERVE_PURGE_SCALE=1` 跑 `TestPurgeScale`，追踪器认得三张表的分页语句，一次尝试、一次运行完成。删除模块不影响资产。关系表在 P3 加入；收尾前在 M6 代码上重跑 `TestPurgeScale` 与 `TestTheDeletionsAtTheScaleTarget`，本交接保持 open。证据：[P2 spec](../specs/P2-modules-backend.md) 2.4、A6。

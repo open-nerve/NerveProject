@@ -5,9 +5,10 @@
 // Authorizer decides what a caller may do in a workspace or a project (M3
 // design 3.4). It also holds the pure value rules that modules must apply
 // alike: e-mail addresses, web addresses in names, and time zones (M3 design
-// 3.13). It imports only the standard library, and the platform does not
-// import it: the platform declares the small interfaces these types satisfy
-// by structure.
+// 3.13), and a link's URL, title and preview metadata (M6 design 3.2). It
+// imports only the standard library, and the platform does not import it:
+// the platform declares the small interfaces these types satisfy by
+// structure.
 package shared
 
 import "time"

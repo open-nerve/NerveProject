@@ -13,3 +13,11 @@ func UniqueViolation(err error, constraint string) bool {
 	var pgErr *pgconn.PgError
 	return errors.As(err, &pgErr) && pgErr.Code == "23505" && pgErr.ConstraintName == constraint
 }
+
+// ExclusionViolation reports whether err, or an error it wraps, broke the
+// exclusion constraint named constraint (SQLSTATE 23P01). Repositories map a
+// conflicting row to their domain's error by the constraint's name.
+func ExclusionViolation(err error, constraint string) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && pgErr.Code == "23P01" && pgErr.ConstraintName == constraint
+}

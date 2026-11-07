@@ -18,6 +18,8 @@ type lockWorld struct {
 	calls    []string
 	facts    map[uuid.UUID]ProjectFacts
 	cycles   map[uuid.UUID]domain.Cycle
+	modules  map[uuid.UUID]domain.Module
+	links    map[uuid.UUID]domain.ModuleLink
 	grant    shared.Grant
 	refusal  error // the Authorizer's answer, nil for an allowance
 	targets  []shared.Target
@@ -27,6 +29,23 @@ type lockWorld struct {
 	now      time.Time      // the clock's reading
 	created  []domain.Cycle // what CreateCycle stored
 	updated  []domain.Cycle // what UpdateCycle stored
+	// The modules' writes: the roles Roles answers and the accounts each call of it asked about; what CreateModule and
+	// InsertModuleMembers stored, and CreateModule's refusal.
+	roles          map[uuid.UUID]shared.Role
+	asked          [][]uuid.UUID
+	createdModules []domain.Module
+	memberRows     []MemberRows
+	createRefusal  error
+	// The module links' writes: what each stored, as "id at by" for a deletion, and the refusal of an insert or an
+	// update (an address the module has).
+	insertedLinks []domain.ModuleLink
+	updatedLinks  []domain.ModuleLink
+	deletedLinks  []string
+	linkRefusal   error
+	// A module's change: what UpdateModule stored and its refusal (a name taken), and the members' rows it removed.
+	updatedModules []domain.Module
+	updateRefusal  error
+	removals       []removal
 }
 
 type inTx struct{}

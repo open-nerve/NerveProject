@@ -98,3 +98,23 @@ components:
             - contains_url
         message:
           type: string
+    # 链接预览的元数据（M4 设计 3.11）：工作项链接与模块链接共用（M6 设计 3.2）
+    LinkMetadataError:
+      type: string
+      enum: [blocked, failed]
+    LinkMetadata:
+      type: object
+      additionalProperties: false
+      properties:
+        title:
+          type: [string, 'null']
+        favicon:
+          type: [string, 'null']
+        url:
+          type: [string, 'null']
+        favicon_url:
+          type: [string, 'null']
+        error:
+          oneOf:
+            - $ref: '#/components/schemas/LinkMetadataError'
+            - type: 'null'

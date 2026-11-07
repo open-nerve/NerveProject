@@ -12,7 +12,6 @@ import (
 	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue"
-	"github.com/open-nerve/NerveProject/server/internal/modules/issue/domain"
 	"github.com/open-nerve/NerveProject/server/internal/platform/config"
 	"github.com/open-nerve/NerveProject/server/internal/platform/jobs"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
@@ -137,13 +136,13 @@ func waitLinkRaceJob(t *testing.T, w issueWorld, job int64, link uuid.UUID, url 
 	}
 }
 
-func wantLinkRaceMetadata(t *testing.T, w issueWorld, id uuid.UUID, want domain.LinkMetadata) {
+func wantLinkRaceMetadata(t *testing.T, w issueWorld, id uuid.UUID, want shared.LinkMetadata) {
 	t.Helper()
 	var raw []byte
 	if err := w.pool.QueryRow(pgtest.Soon(t), "SELECT metadata FROM issue_links WHERE id=$1", id).Scan(&raw); err != nil {
 		t.Fatal(err)
 	}
-	var got domain.LinkMetadata
+	var got shared.LinkMetadata
 	if err := json.Unmarshal(raw, &got); err != nil {
 		t.Fatal(err)
 	}
@@ -152,8 +151,8 @@ func wantLinkRaceMetadata(t *testing.T, w issueWorld, id uuid.UUID, want domain.
 	}
 }
 
-func linkPageMetadata(url, title string) domain.LinkMetadata {
-	return domain.LinkMetadata{"title": &title, "url": &url, "favicon": nil, "favicon_url": nil}
+func linkPageMetadata(url, title string) shared.LinkMetadata {
+	return shared.LinkMetadata{"title": &title, "url": &url, "favicon": nil, "favicon_url": nil}
 }
 
 func changeLinkRaceURL(t *testing.T, w issueWorld, link answeredLink, url string) answeredLink {
@@ -163,7 +162,7 @@ func changeLinkRaceURL(t *testing.T, w issueWorld, link answeredLink, url string
 	if got.ID != link.ID || got.URL != url || got.Metadata == nil || len(got.Metadata) != 0 {
 		t.Fatalf("URL update did not return pending metadata: %+v", got)
 	}
-	wantLinkRaceMetadata(t, w, link.ID, domain.LinkMetadata{})
+	wantLinkRaceMetadata(t, w, link.ID, shared.LinkMetadata{})
 	return got
 }
 
@@ -237,7 +236,7 @@ func startLinkRaceTitle(t *testing.T, w issueWorld, link answeredLink) (*linkRea
 	if pgtest.RowWaits(t, w.pool, "issue_links", link.ID, "FOR UPDATE") {
 		t.Fatal("title already locked link before the intended write point")
 	}
-	wantLinkRaceMetadata(t, w, link.ID, domain.LinkMetadata{})
+	wantLinkRaceMetadata(t, w, link.ID, shared.LinkMetadata{})
 	return clock, func() answeredLink {
 		release()
 		if err := result(t, ctx, done, "title update"); err != nil {

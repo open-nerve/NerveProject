@@ -56,3 +56,7 @@ M4 的最终 C12、准确分支 CI 和未来 main 集成分别由[验收台账](
 ## 处理结果（M6/P1）：M6-03
 
 P1 还没有关系表（`cycle_issues`、`module_issues` 在 P3），`cycles` 本身照本条的协议：订阅 `project.deleted`、`workspace.deleted`，在原事务投递 `planning.delete_rows`，父范围立即隐藏，任务沿用请求的 At/By、有界续跑；`furnishPlanningRows` 进了 `furnishWorkspace` 和 P4、W3、I21 的删除故事，目录 `asynchronousDeletionTable` 加 `cycles`，删除与清理的守卫（`TestDeletingAProject…`、`TestPurgeCatalog…`、`TestPurgeParentCascades…`）都覆盖它；60 天清理的 `planning` 清理者有过期、未过期、邻域、运行角色与回滚重试的证明。工作项删除入口对关系表的覆盖与全图在 P3 及收尾，本交接保持 open。证据：[P1 spec](../specs/P1-cycles-backend.md) 2.4、A6。
+
+## 处理结果（M6/P2）：M6-03
+
+P2 也还没有关系表（在 P3）。模块的三张表照本条的协议加入：`planning.delete_rows` 由单表改为命名步骤 `cycles → modules → module_members → module_links`（照 `issue` 的 `DeletionRowSteps`），沿用请求的 At/By、有界续跑，预算边界按当前步骤判断剩余；`furnishPlanningRows` 再打开 `module_view`，以管理员为负责人和成员建一个带一条链接的模块，P4、W3、I21 的删除故事随之覆盖三张表，目录 `asynchronousDeletionTable` 加 `modules`、`module_members`、`module_links`；删除与清理的守卫（`TestDeletingAProjectLeavesNoUndeletedRowUnderIt`、`TestDeletingAWorkspaceLeavesNoUndeletedRowUnderIt`、`TestPurgeCatalogCoversTablesAndIncomingKeys`、`TestPurgeParentCascadesUnprocessedIssueRows`、`TestLateDeleteRowsAfterPurge`）以 SQL 种三张表的行并核软删。60 天清理的新步骤有 `TestPurgeModuleTables`（过期的按页删除，截止时刻的、近期的、未删除的留下）与 `TestModulePurgeChildrenFirst`（子先父），运行角色可执行（`TestPurgeDeletedRunsWithRuntimeRole` 的 planning 组含三张表）。删一个模块时，它未删除的成员与链接在同一事务、同一时刻、同一写者软删（G13 的数据库断言）。工作项删除入口对关系表的覆盖与全图在 P3 及收尾，本交接保持 open。证据：[P2 spec](../specs/P2-modules-backend.md) 2.4、A6。

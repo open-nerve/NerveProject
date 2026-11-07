@@ -15,6 +15,7 @@ import { createCommentReaction, createIssueComment, createIssueReaction } from "
 import { createCycle } from "./cycles";
 import { createDraft, createIssue, createIssueRelations } from "./issues";
 import { createIssueLink } from "./links";
+import { createModule, createModuleLink } from "./modules";
 import { furnishIssueFiles, storedFile } from "./storage";
 
 // The rows a deletion story furnishes a workspace or a project with first, so that its deletion has a row of each
@@ -57,21 +58,29 @@ export async function furnishIssueRows(
 }
 
 /**
- * Gives the project of projectId a row of each of the planning tables: its cycles turned on by the caller of adminToken,
- * an admin of it (they are off by default), and a cycle he creates, the draft Sprint 1.
+ * Gives the project of projectId a row of each of the planning tables: its cycles and modules turned on by the caller of
+ * adminToken, an admin of it (they are off by default); a cycle he creates, the draft Sprint 1; and a module he creates,
+ * Release 1, which he leads and is the member of, with a link.
  */
 export async function furnishPlanningRows(api: Api, adminToken: string, projectId: string): Promise<void> {
-  const changed = await changeProject(api, adminToken, projectId, { cycle_view: true });
-  expect(changed.status, `turn on the cycles of ${projectId}: ${JSON.stringify(changed)}`).toBe(200);
+  const changed = await changeProject(api, adminToken, projectId, { cycle_view: true, module_view: true });
+  expect(changed.status, `turn on the cycles and modules of ${projectId}: ${JSON.stringify(changed)}`).toBe(200);
   await createCycle(api, adminToken, projectId, { name: "Sprint 1" });
+  const admin = await accountId(api, adminToken);
+  const release = await createModule(api, adminToken, projectId, {
+    name: "Release 1",
+    lead_id: admin,
+    member_ids: [admin],
+  });
+  await createModuleLink(api, adminToken, release.id, { url: `http://169.254.169.254/furnish/${release.id}` });
 }
 
 /**
  * Gives the workspace of slug, as its admin of adminToken, a row of each table its deletion writes
  * (expectWorkspaceDeleted): the membership of member, by an invitation he accepts (deleted as he accepts it); a pending
  * invitation of inviteeEmail; the admin's display settings; and the project Web, with its own rows: its label Bug
- * among them, a work item assigned to the admin and labelled Bug, with its own (furnishIssueRows), and a cycle
- * (furnishPlanningRows).
+ * among them, a work item assigned to the admin and labelled Bug, with its own (furnishIssueRows), and a cycle and a
+ * module with its member and link (furnishPlanningRows).
  */
 export async function furnishWorkspace(
   api: Api,

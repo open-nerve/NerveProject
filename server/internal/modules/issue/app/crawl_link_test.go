@@ -9,16 +9,16 @@ import (
 	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/app"
-	"github.com/open-nerve/NerveProject/server/internal/modules/issue/domain"
+	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
 type crawlResult struct {
 	ctx      context.Context
 	url      string
-	metadata domain.LinkMetadata
+	metadata shared.LinkMetadata
 }
 
-func (c *crawlResult) Crawl(ctx context.Context, url string) domain.LinkMetadata {
+func (c *crawlResult) Crawl(ctx context.Context, url string) shared.LinkMetadata {
 	c.ctx, c.url = ctx, url
 	return c.metadata
 }
@@ -27,12 +27,12 @@ type metadataWrite struct {
 	ctx      context.Context
 	id       uuid.UUID
 	url      string
-	metadata domain.LinkMetadata
+	metadata shared.LinkMetadata
 	changed  bool
 	err      error
 }
 
-func (w *metadataWrite) SetLinkMetadata(ctx context.Context, id uuid.UUID, url string, m domain.LinkMetadata) (bool, error) {
+func (w *metadataWrite) SetLinkMetadata(ctx context.Context, id uuid.UUID, url string, m shared.LinkMetadata) (bool, error) {
 	w.ctx, w.id, w.url, w.metadata = ctx, id, url, m
 	return w.changed, w.err
 }
@@ -44,17 +44,17 @@ func TestCrawlLink(t *testing.T) {
 	boom := errors.New("database unavailable")
 	for _, tc := range []struct {
 		name     string
-		metadata domain.LinkMetadata
+		metadata shared.LinkMetadata
 		changed  bool
 		err      error
 		canceled bool
 	}{
-		{"page success", domain.LinkMetadata{"title": &title, "url": &rawURL, "favicon": nil, "favicon_url": nil}, true, nil, false},
-		{"blocked result completes", domain.LinkMetadata{"error": &blocked, "url": &rawURL}, true, nil, false},
-		{"failed result completes", domain.LinkMetadata{"error": &failed, "url": &rawURL}, true, nil, false},
-		{"stale task completes", domain.LinkMetadata{"error": &blocked, "url": &rawURL}, false, nil, false},
-		{"DB failure retries", domain.LinkMetadata{"title": &title}, false, fmt.Errorf("write metadata: %w", boom), false},
-		{"canceled context stays canceled", domain.LinkMetadata{"error": &failed, "url": &rawURL}, false, context.Canceled, true},
+		{"page success", shared.LinkMetadata{"title": &title, "url": &rawURL, "favicon": nil, "favicon_url": nil}, true, nil, false},
+		{"blocked result completes", shared.LinkMetadata{"error": &blocked, "url": &rawURL}, true, nil, false},
+		{"failed result completes", shared.LinkMetadata{"error": &failed, "url": &rawURL}, true, nil, false},
+		{"stale task completes", shared.LinkMetadata{"error": &blocked, "url": &rawURL}, false, nil, false},
+		{"DB failure retries", shared.LinkMetadata{"title": &title}, false, fmt.Errorf("write metadata: %w", boom), false},
+		{"canceled context stays canceled", shared.LinkMetadata{"error": &failed, "url": &rawURL}, false, context.Canceled, true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx, cancel := context.WithCancel(t.Context())

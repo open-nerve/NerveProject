@@ -15,8 +15,9 @@ import (
 // Worker progress and periodic scheduling must not look like request writes.
 func TestRegistrationRowsSeeRequestJobs(t *testing.T) {
 	t.Run("declared request kinds", func(t *testing.T) {
-		if kinds := slices.Concat(identity.EnqueuedKinds(), issue.EnqueuedKinds(), planning.EnqueuedKinds()); !slices.Contains(kinds, "issue.crawl_link") || !slices.Contains(kinds, "issue.delete_rows") || !slices.Contains(kinds, "planning.delete_rows") {
-			t.Fatalf("request kinds=%v; want independently expected issue.crawl_link, issue.delete_rows and planning.delete_rows", kinds)
+		if kinds := slices.Concat(identity.EnqueuedKinds(), issue.EnqueuedKinds(), planning.EnqueuedKinds()); !slices.Contains(kinds, "issue.crawl_link") || !slices.Contains(kinds, "issue.delete_rows") || !slices.Contains(kinds, "planning.delete_rows") ||
+			!slices.Contains(kinds, "planning.crawl_link") {
+			t.Fatalf("request kinds=%v; want independently expected issue.crawl_link, issue.delete_rows, planning.delete_rows and planning.crawl_link", kinds)
 		}
 	})
 	pool := openPool(t, pgtest.NewDatabase(t))

@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/open-nerve/NerveProject/server/internal/modules/issue/domain"
 	"github.com/open-nerve/NerveProject/server/internal/platform/buildinfo"
 	"github.com/open-nerve/NerveProject/server/internal/platform/config"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
+	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
 // The API event must enqueue exactly one job through the production subscriber
@@ -42,12 +42,12 @@ func TestNewAppCrawlJobRuns(t *testing.T) {
 	if err := w.pool.QueryRow(pgtest.Soon(t), "SELECT metadata,(to_jsonb(l)-'metadata')::text FROM issue_links l WHERE id=$1", link.ID).Scan(&metadata, &afterLink); err != nil {
 		t.Fatal(err)
 	}
-	var got domain.LinkMetadata
+	var got shared.LinkMetadata
 	if err := json.Unmarshal(metadata, &got); err != nil {
 		t.Fatal(err)
 	}
 	title, icon, iconURL := "Nerve/"+buildinfo.Get().Version+" (+link preview)", "data:image/png;base64,aWNvbg==", fixture.URL+"/favicon.ico"
-	want := domain.LinkMetadata{"title": &title, "url": &link.URL, "favicon": &icon, "favicon_url": &iconURL}
+	want := shared.LinkMetadata{"title": &title, "url": &link.URL, "favicon": &icon, "favicon_url": &iconURL}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("composed crawl metadata=%s; want %+v", metadata, want)
 	}

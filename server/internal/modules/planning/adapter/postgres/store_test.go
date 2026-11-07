@@ -94,10 +94,10 @@ func TestDeleteProjectCycles(t *testing.T) {
 	deleter := uuid.NewV7()
 	exec(t, pool, "INSERT INTO users (id, email, password, display_name) VALUES ($1, 'dave@corp.com', 'x', 'dave')", deleter)
 
-	if pending, err := s.ProjectCyclesRemaining(ctx, w.web, uuid.UUID{}); err != nil || !pending {
+	if pending, err := s.ProjectDeletionRemaining(ctx, app.ProjectRemainder{ProjectID: w.web, Step: "cycles"}); err != nil || !pending {
 		t.Fatalf("remaining before = %t, %v", pending, err)
 	}
-	batch := app.CycleBatch{ProjectID: w.web, Limit: 2, At: now, By: deleter}
+	batch := app.RowBatch{ProjectID: w.web, Limit: 2, At: now, By: deleter}
 	var got [][]uuid.UUID
 	for {
 		ids, err := s.DeleteProjectCycles(ctx, batch)
@@ -114,7 +114,7 @@ func TestDeleteProjectCycles(t *testing.T) {
 	if want := [][]uuid.UUID{live[:2], live[2:], nil}; fmt.Sprint(got) != fmt.Sprint(want) {
 		t.Fatalf("batches = %v, want %v", got, want)
 	}
-	if pending, err := s.ProjectCyclesRemaining(ctx, w.web, uuid.UUID{}); err != nil || pending {
+	if pending, err := s.ProjectDeletionRemaining(ctx, app.ProjectRemainder{ProjectID: w.web, Step: "cycles"}); err != nil || pending {
 		t.Fatalf("remaining after = %t, %v", pending, err)
 	}
 	var stamped, kept int
@@ -127,7 +127,7 @@ func TestDeleteProjectCycles(t *testing.T) {
 	}
 	// The remainder reads after its cursor only.
 	cycle(t, pool, w, w.web, uuid.NewV7(), nil)
-	if pending, err := s.ProjectCyclesRemaining(ctx, w.web, uuid.Max()); err != nil || pending {
+	if pending, err := s.ProjectDeletionRemaining(ctx, app.ProjectRemainder{ProjectID: w.web, Step: "cycles", After: uuid.Max()}); err != nil || pending {
 		t.Fatalf("remaining after the greatest id = %t, %v", pending, err)
 	}
 }
@@ -157,7 +157,7 @@ func TestPurgeCycles(t *testing.T) {
 		t.Fatalf("after the greatest=%+v,%v; want empty", skipped, err)
 	}
 	purger := planning.Provide(pool).Purger
-	if !slices.Equal(purger.Tables(), []string{"cycles"}) {
+	if !slices.Equal(purger.Tables(), []string{"module_links", "module_members", "modules", "cycles"}) {
 		t.Fatalf("directory=%v", purger.Tables())
 	}
 	deleted := 0

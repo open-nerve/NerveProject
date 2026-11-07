@@ -4,12 +4,12 @@ import (
 	"context"
 	"uuid"
 
-	"github.com/open-nerve/NerveProject/server/internal/modules/issue/domain"
+	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
 // LinkMetadataWriter updates metadata only while the link still matches the task.
 type LinkMetadataWriter interface {
-	SetLinkMetadata(context.Context, uuid.UUID, string, domain.LinkMetadata) (bool, error)
+	SetLinkMetadata(context.Context, uuid.UUID, string, shared.LinkMetadata) (bool, error)
 }
 
 // CrawlLinkDeps are the crawl and guarded persistence ports.

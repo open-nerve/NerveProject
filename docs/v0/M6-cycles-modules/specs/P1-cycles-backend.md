@@ -1,6 +1,6 @@
 # M6 / P1：planning 模块与迭代的后端
 
-> 状态：已实施（2026-11-07），整分支审查见 [re-55](../../../reviews/re-55-M6P1整体审核.md)，阶段记录见 [P1 阶段记录](../reviews/P1-cycles-backend-review.md)；预检见 [re-54](../../../reviews/re-54-M6设计与P1预检.md)。基线为设计合入后的 main。设计见 [M6 设计](../M6-design.md)，负责人 2026-11-07 的决定 A/B/C 见设计 §15。
+> 状态：已完成（2026-11-07，noff `0a601f21`，main CI 42343073949 通过），整分支审查见 [re-55](../../../reviews/re-55-M6P1整体审核.md)，阶段记录见 [P1 阶段记录](../reviews/P1-cycles-backend-review.md)；预检见 [re-54](../../../reviews/re-54-M6设计与P1预检.md)。基线为设计合入后的 main。设计见 [M6 设计](../M6-design.md)，负责人 2026-11-07 的决定 A/B/C 见设计 §15。
 
 ## 1. 目标与边界
 
@@ -102,7 +102,7 @@
 - [x] A5 G18 与权限：开关关闭时写 409、读 200；矩阵（管理员、成员、建立者、访客、OwnOnly、非成员、私有项目）与 `permission_matrix_coverage_test` 一致；看不到的一律 404；每个声明的错误码在 planning 的 apitest 二进制里有回答。
 - [x] A6 删除：项目、工作区删除后迭代立即不可读，任务以原 At/By 软删并续跑；60 天清理有界、运行角色可执行、`TestPurgeScale` 认得新语句；删除与清理的全部守卫覆盖 `cycles`。
 - [x] A7 phase 为 `M6/P1`，`analytics` 例外与旧调用路径删除；新错误码有中英文案；输入交接写“处理结果（M6/P1）”。
-- [ ] A8 七项本地门禁、deep-review 修复闭环、准确分支 CI 与 noff 后 main CI 全绿、归档清理。（本地门禁与修复闭环已完成；CI 与归档清理见阶段记录 §7，合入后勾选）
+- [x] A8 七项本地门禁、deep-review 修复闭环、准确分支 CI 与 noff 后 main CI 全绿、归档清理（见阶段记录 §5–§7）。
 
 ## 5. 后续责任
 
