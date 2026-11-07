@@ -268,7 +268,7 @@ P1 起第一个实现提交把关键词 phase 改为 `M6/P1`；纯设计分支�
 | 阶段 | 状态 | spec / plan / review |
 |---|---|---|
 | 设计与 P1 预检 | 已合入 main（d1ec8c69）；e2e 作业期限改为 35 分钟（910a55cd，负责人同意），main CI 42332404481 第二次运行通过 | [预检](../../reviews/re-54-M6设计与P1预检.md) / [P1 spec](specs/P1-cycles-backend.md) / [P1 plan](plans/P1-cycles-backend.md) |
-| P1 迭代后端 | T1–T12 完成，待门禁、整审与合入 | [P1 spec](specs/P1-cycles-backend.md) / [P1 plan](plans/P1-cycles-backend.md) |
+| P1 迭代后端 | T1–T13 完成；T14 整审 Ready to merge、修复轮已提交，待最终门禁与合入 | [P1 spec](specs/P1-cycles-backend.md) / [P1 plan](plans/P1-cycles-backend.md) / [P1 阶段记录](reviews/P1-cycles-backend-review.md) / [re-55](../../reviews/re-55-M6P1整体审核.md) |
 | P2–P8、closeout | 未开始 | — |
 
 ## 15. 决定记录
