@@ -1,6 +1,6 @@
 # M6 / P2：模块的后端
 
-> 状态：待预检（2026-11-07）。基线 main `0a601f212e32057c4e48fe43e8c4f19691254573`（P1 noff，main CI 42343073949 通过）。设计见 [M6 设计](../M6-design.md)，负责人 2026-11-07 的决定 A/B/C 见设计 §15；P1 的加锁之路与拒绝次序见 [P1 spec](P1-cycles-backend.md) §3。
+> 状态：预检通过（2026-11-07，[re-56](../../../reviews/re-56-M6P2预检.md)），尚未实施。基线 main `0a601f212e32057c4e48fe43e8c4f19691254573`（P1 noff，main CI 42343073949 通过）。设计见 [M6 设计](../M6-design.md)，负责人 2026-11-07 的决定 A/B/C 见设计 §15；P1 的加锁之路与拒绝次序见 [P1 spec](P1-cycles-backend.md) §3。
 
 ## 1. 目标与边界
 
@@ -17,9 +17,9 @@
 | 路径 | 职责 |
 |---|---|
 | `server/internal/shared/link.go` 与测试 | 由 `issue/domain/link.go`、`link_metadata.go` 移来：`CheckLinkURL`、`CheckLinkTitle`、`LinkMetadata`（R12），测试随之移动，用例不变 |
-| `server/internal/platform/outbound/linkpreview/` | 由 `issue/adapter/crawler/` 原样移来（`charset`、`metadata`、`crawler` 及六个测试文件），只把返回类型改为不依赖任何模块的 `Metadata`（R12） |
+| `server/internal/platform/outbound/linkpreview/` | 由 `issue/adapter/crawler/` 原样移来（`charset`、`metadata`、`crawler` 及六个测试文件），只把返回类型改为不依赖任何模块的 `Metadata`（R12）；`fixture_test.go` 里“满足 `issue/app.LinkCrawler`”的编译期断言移到 `bootstrap`，改为断言适配器满足两个模块的端口 |
 | `server/internal/modules/issue/` | `domain.Link` 等改用 `shared` 的检查与元数据类型；`app.LinkCrawler` 返回 `shared.LinkMetadata`；`Deps.Outbound` 换为 `Deps.LinkCrawler`；删除 `adapter/crawler/` 与原 `link_metadata.go` |
-| `api/common.yaml`、`api/modules/issue.yaml` | `IssueLinkMetadata`、`IssueLinkMetadataError` 移入 common 为 `LinkMetadata`、`LinkMetadataError`，`IssueLink` 引用它；`apitest` 的形状测试随之改名 |
+| `api/common.yaml`、`api/modules/issue.yaml` | `IssueLinkMetadata`、`IssueLinkMetadataError` 移入 common 为 `LinkMetadata`、`LinkMetadataError`，`IssueLink` 引用它；Go 类型由 `platform/httpserver/apigen` 生成，`issue/adapter/http/links.go` 改用 `apigen.LinkMetadata{,Error}`；TS 只有 `api-client/src/schema.gen.ts` 的组件名变（没有代码按名字引用）；`apitest/issue_link_shapes_test.go` 按字符串引用的名字随之改 |
 | `server/migrations/sql/00040_planning_modules.sql`、`00041_planning_module_members.sql`、`00042_planning_module_links.sql` | 三张表、约束、索引，各含 Down 段（§2.2） |
 | `server/sqlc.yaml`、`deploy/runtime-grants.sql` | planning 条目的 schema 加三个迁移；运行角色对三张表的四种 DML |
 | `server/internal/modules/planning/domain/` | `module.go`（名字、状态、日期、`member_ids`）、`module_patch.go`、`module_link.go`、`actions.go`、`errors.go` 的新增 |
@@ -27,14 +27,14 @@
 | `server/internal/modules/planning/adapter/postgres/` | `modules.sql`、`module_members.sql`、`module_links.sql`、`link_metadata.sql` 及 `delete_rows.sql`、`purge.sql` 的新语句与 `Store` |
 | `server/internal/modules/planning/adapter/http/` | 处理器与每个错误码的处理器测试 |
 | `server/internal/modules/planning/adapter/river/` | `planning.crawl_link` 的 worker 与投递器（R11） |
-| `server/internal/modules/planning/{module.go,module_jobs.go,module_purge.go}` | 接线；`EnqueuedKinds` 加 `planning.crawl_link` |
+| `server/internal/modules/planning/{module.go,module_jobs.go,module_purge.go}` | 接线；`Deps` 新增 `LinkCrawls`（事务内投递的端口，由 `bootstrap` 的 `jobInserter` 适配，ctx 须带事务）与 `LinkCrawler`；`EnqueuedKinds` 加 `planning.crawl_link` |
 | `server/internal/modules/project/` | `PlanningProjects` 加 `ActiveRoles`（复用现有 `Store.ActiveRoles`，工作项的负责人检查读同一个） |
 | `server/internal/modules/access/domain/rules.go` | `module.read/write/delete`（`LevelProject`；delete 带 `AllowCreator`） |
-| `server/internal/bootstrap/` | 接线；一个 `linkPreviews` 适配器给两个模块（R12）；权限矩阵的模块表与链接表（R10）；删除、清理、运行角色与规模的守卫和夹具（§2.4） |
-| `server/migrations/` 测试 | `planning_schema_test.go` 的约束与索引名；`purge_indexes_test.go` 与 `purge_catalog_test.go` 的表数 |
+| `server/internal/bootstrap/` | 接线（`app.go` 把投递器与 `linkPreviews` 交给 `planning.Deps`）；一个 `linkPreviews` 适配器给两个模块（R12）；权限矩阵的模块表与链接表（R10）；删除、清理、运行角色与规模的守卫和夹具（§2.4） |
+| `server/migrations/` 测试 | `planning_schema_test.go` 的约束与索引名；`purge_indexes_test.go` 的表数；`trigram_schema_test.go` 的迁移总数（两处）、Down 循环起点与表清单；`schema_test.go` |
 | `api/modules/planning.yaml`、`api/openapi.yaml` | 新路径（§2.3） |
 | `web/apps/web/core/lib/error-messages.ts`、`web/packages/i18n/src/locales/{en,zh-CN}/errors.json` | 新错误码的文案；`planning_archived` 改为通用 |
-| `e2e/` | `furnishPlanningRows` 再打开 `module_view`，建一个以管理员为负责人和成员、带一条链接的模块；`catalog.ts` 的 `asynchronousDeletionTable` 加三张表；`stories/planning/` 的 G9、G10、G13 接口故事 |
+| `e2e/` | `furnishPlanningRows` 再打开 `module_view`，建一个以管理员为负责人和成员、带一条链接的模块；`assert/catalog.ts` 的 `asynchronousDeletionTable` 加三张表；`stories/planning/` 的 G9、G10、G13 接口故事 |
 | `tools/keywords.json` | `phase` 为 `M6/P2`（没有到期的例外） |
 | `docs/` | P1 阶段记录 §7 与 spec A8、设计 §14 的回填（T1）；设计 §3.2 的落点措辞（R12）；`plane-diff.md`；输入交接的“处理结果（M6/P2）” |
 
@@ -57,7 +57,7 @@
 
 `module_members`：`id`、`workspace_id`、`project_id`（`CASCADE`）、`module_id`（`REFERENCES modules ON DELETE CASCADE`）、`member_id`（`REFERENCES users ON DELETE CASCADE`）、审计四列、`deleted_at`；部分唯一 `(module_id, member_id) WHERE deleted_at IS NULL`。删除 Plane 多余的 `UNIQUE (module_id, member_id, deleted_at)`。
 
-`module_links`：`id`、`workspace_id`、`project_id`、`module_id`（均 `CASCADE`）、`title varchar(255) NULL`、`url text NOT NULL CHECK (url <> '' AND length(url) <= 2048)`（Plane `varchar(200)`）、`metadata jsonb NOT NULL DEFAULT '{}'` 带与 `issue_links` 相同的键与类型 CHECK（Plane 不约束）、审计四列、`deleted_at`；`module_links_module_id_url_key EXCLUDE USING hash ((module_id::text || ':' || url) WITH =) WHERE (deleted_at IS NULL)`（照 `issue_links`；Plane 只在代码里查，且建立时因 `module_id` 只读而查不到）。
+`module_links`：`id`、`workspace_id`、`project_id`、`module_id`（均 `CASCADE`）、`title varchar(255) NULL`、`url text NOT NULL CHECK (url <> '' AND length(url) <= 2048)`（Plane `varchar(200)`）、`metadata jsonb NOT NULL DEFAULT '{}'` 带与 `issue_links` 相同的键与类型 CHECK（Plane 不约束）、审计四列、`deleted_at`；`module_links_module_id_url_key EXCLUDE USING hash ((module_id::text || ':' || url) WITH =) WHERE (deleted_at IS NULL)`（照 `issue_links`；Plane 只在代码里按原样比较、不加锁）。
 
 索引：每条 `CASCADE` 外键（含 `module_members.member_id`）无条件索引，指向 `users` 的 `SET NULL` 外键不建（P1 的约定）；活行列表 `modules (project_id, sort_order, created_at, id) WHERE deleted_at IS NULL`；名字唯一 `modules_project_id_name_key (project_id, lower(name)) WHERE deleted_at IS NULL`；三张表各一个清理用的 `<表>_deleted_at_idx (deleted_at) WHERE deleted_at IS NOT NULL`。命名列入 `planning_schema_test.go`。
 
@@ -66,6 +66,8 @@
 `Module`：`id, project_id, workspace_id, name, description, start_date, target_date, status, lead_id, member_ids, sort_order, archived_at, created_at, updated_at, created_by_id, updated_by_id`；`status` ∈ `backlog|planned|in-progress|paused|completed|cancelled`；`member_ids` 按 id 升序。
 
 `ModuleLink`：`id, module_id, url, title, metadata, created_by_id, created_at, updated_at`；`metadata` 引用 common 的 `LinkMetadata`（同 `IssueLink`）。
+
+`lead_id` 在 POST 与 PATCH 可为 `null`（PATCH 给 `null` 即清空负责人）；`GET /modules/{module_id}` 对已归档的模块照常 200（同 P1 的迭代；Plane 的 `retrieve` 过滤掉已归档的，不照搬：归档目录要能打开详情）。链接的路径参数名为 `{module_link_id}`（一参数一资源，`{link_id}` 已是工作项链接）。
 
 | 操作 | 成功 | 声明的错误 |
 |---|---|---|
@@ -77,14 +79,14 @@
 | `POST /modules/{module_id}/archive`、`/unarchive` | 200 `Module` | 404、403、409 `project.archived`/`planning.modules_disabled`、`planning.module_not_closed`（归档）、503 |
 | `GET /modules/{module_id}/links` | 200 `{data}`，按 `created_at DESC, id DESC`（同工作项链接与 Plane） | 404、403 |
 | `POST /modules/{module_id}/links` `{url, title?}` | 201，`metadata` 为 `{}` | 400、422、404、403、409 `project.archived`/`planning.modules_disabled`/`planning.archived`/`planning.module_link_exists`、503 |
-| `PATCH /module-links/{link_id}` `{url?, title?}` | 200 | 400、422、404 `planning.module_link_not_found`、403、409 同上、503 |
-| `DELETE /module-links/{link_id}` | 204 | 404、403、409 `project.archived`/`planning.modules_disabled`/`planning.archived`、503 |
+| `PATCH /module-links/{module_link_id}` `{url?, title?}` | 200 | 400、422、404 `planning.module_link_not_found`、403、409 同上、503 |
+| `DELETE /module-links/{module_link_id}` | 204 | 404、403、409 `project.archived`/`planning.modules_disabled`/`planning.archived`、503 |
 
 看不到的项目沿用项目的 404；看不到或不存在的模块 404 `planning.module_not_found`，链接 404 `planning.module_link_not_found`（链接所在的模块已删除也是）。
 
 ### 2.4 删除与清理
 
-- 删模块：软删本行及其未删除的成员与链接，同一时刻、同一写者（同 M4 删工作项连带子行）；P2 不发事件。已归档的模块可以删（同迭代）。
+- 删模块：软删本行及其未删除的成员与链接，同一时刻、同一写者（同 M4 删工作项连带子行），成员与链接各一条语句、按 id 升序锁定后写（硬规则约定五）；P2 不发事件。已归档的模块可以删（同迭代）。
 - 项目、工作区删除：`planning.delete_rows` 由单表改为命名步骤 `cycles → modules → module_members → module_links`（父先子后，同 `issue` 的 `DeletionRowSteps`），每步按项目、id 升序、`FOR NO KEY UPDATE`、有界、沿用原 At/By，预算边界按当前步骤判断剩余（R16）。任务参数不变。
 - 60 天物理清理：步骤 `module_links → module_members → modules → cycles`（子先父），每张表单语句分页；运行角色可执行。
 - 守卫与夹具同步扩展：`project_deletion_test`、`workspace_deletion_test`、`purge_late_deletion_test` 以 SQL 种三张表的行并核软删；`purge_runtime_test` 的 planning 组加三张表；`purge_catalog_test` 与 `purge_indexes_test` 的表数；`purgeScaleTables` 加三张表，规模夹具以 SQL 种入。P2 以 `NERVE_PURGE_SCALE=1` 跑一次 `TestPurgeScale` 证明追踪器认得新语句，P8 在最终代码上重跑。
@@ -97,12 +99,12 @@
 - **R4 PATCH 的日期**：`start_date`、`target_date` 各自可给、可为 `null`，各自可空；合并后两者都有时开始 ≤ 目标（422 指向给出的字段）。空 PATCH 或没有实际改动 200、不写；`member_ids` 与现有集合相同算没有改动。
 - **R5 负责人与成员**：资格是项目中角色为管理员或成员的有效成员（同工作项负责人的 `CanAssign`），不合格 422 `lead_id`/`member_ids[i]` `not_allowed`。建立时检查负责人与全部成员；PATCH 只检查改成的新负责人和新加入的成员，留下的成员和未改的负责人即使已离开项目也保持（设计 §3.2“成员离开项目不回写模块”，同 M4 只检查新增的负责人）。`member_ids` 至多 100 个、不重复（同工作项的 `MaxAssignees`），整体替换：移出的软删，新加入的插入，留下的不动。
 - **R6 OwnOnly**：一切写 403（P1 R6）。
-- **R7 开关**：`module_view=false` 时模块与链接的一切写 409；读照常。`module_view` 默认 `false`，Go 夹具、清理运行角色夹具、e2e 先经接口打开它。
+- **R7 开关**：`module_view=false` 时模块与链接的一切写 409；读照常。`module_view` 默认 `false`：Go 组合测试与 e2e 先经接口打开它；删除、清理、运行角色与规模的夹具以 SQL 种行，不需要开关。
 - **R8 名字唯一**：比较本项目未删除（含已归档）的模块，不分大小写；由唯一索引保证，适配器把这条约束的冲突映射为 409 `planning.module_name_taken`（项目标签的先例）。写入在项目行锁下，并发两次同名建立只有一次成功，有交错测试。
 - **R9 归档参数**：照 P1 R9。
-- **R10 权限矩阵**：在 `projectTables` 下加模块表（`{module_id}`、成员建立的 `Mine` 与他人的模块，`prepareMatrix` 打开 `module_view`）与链接表（`{link_id}`），列同迭代表。
+- **R10 权限矩阵**：在 `projectTables` 下加模块表（成员建立的 `Mine` 与他人的模块，`prepareMatrix` 打开 `module_view`）与模块链接表，列同迭代表；`permission_matrix_targets_test.go` 的 `underProject` 加 `{module_id}`（`moduleOf(c)`）与 `{module_link_id}` 两项，`seeded` 加两个 map；每个模块接口的 Task 加它的矩阵行（同 P1 每个接口 Task 改迭代表）。
 - **R11 抓取**：建链接与改地址在写入事务里经端口直接投递 `planning.crawl_link {link_id, url}`（planning 不为链接发事件，不经订阅者）；改地址把 `metadata` 重置为 `{}`，只改标题保留。worker 只在 `(id, url)` 仍对应未删除的链接时写入（同工作项链接）；最多 3 次尝试；没有新配置，两个模块共用同一个出站客户端。
-- **R12 共用代码的落点**：设计 §3.2 写的是“移到 `platform`”，但架构测试规定 `domain`/`app` 只能导入标准库、本模块内层与 `internal/shared`，`platform` 不能导入 `shared` 与业务模块，`platform` 的包之间互不导入（`archtest/rules_test.go`）。因此地址与标题检查和元数据类型放 `internal/shared/link.go`（先例 `shared.ContainsURL`、`NormalizeEmail`），抓取放 `platform/outbound/linkpreview`（`outbound` 自己的子包），返回自有的 `Metadata`，由 `bootstrap` 的一个适配器转成 `shared.LinkMetadata` 交给两个模块。仍是一份代码，工作项链接的行为与测试不变；设计 §3.2 的措辞随之改。
+- **R12 共用代码的落点**：设计 §3.2 写的是“移到 `platform`”，但架构测试规定 `domain`/`app` 只能导入标准库、本模块内层与 `internal/shared`，`platform` 不能导入 `shared` 与业务模块，`platform` 的包之间互不导入（`archtest/rules_test.go`）。因此地址与标题检查和元数据类型放 `internal/shared/link.go`（先例 `shared.ContainsURL`、`NormalizeEmail`），抓取放 `platform/outbound/linkpreview`（`outbound` 自己的子包），返回自有的 `Metadata`，由 `bootstrap` 的一个适配器转成 `shared.LinkMetadata` 交给两个模块。仍是一份代码，工作项链接的行为与测试不变；设计 §3.2 与 §15 第 17 条的措辞随之注明落点（预检确认属局部裁定，不需新的负责人决定）。
 - **R13 `planning.archived`**：码不变，说明与文案改为迭代与模块通用。
 - **R14 动作与路由的次序**：照 P1 R12：动作与规则在建表的同一 Task 加入，`Register` 在第一个模块接口的 Task 加入。
 - **R15 删模块的连带**：成员与链接在同一事务软删（§2.4），列表与清理不必再连父表判断。
@@ -128,4 +130,4 @@ P3：`module_issues`、`planning.module_deleted`、`module_user_properties`、�
 
 - 共用链接代码动到 `issue`：纯移动，以 `bootstrap` 的 11 个工作项链接测试文件与 `crawler` 测试为回归，单独一个 Task、先于模块的任何代码。
 - `see` 改为三种对象动到 P1 的迭代：迭代的 app、http、组合与矩阵测试作为回归。
-- 一次建三张表触发多道按目录驱动的守卫：建表与删除任务放相邻的两个 Task，第一个模块接口 Task 之前不做整段七项检查点。
+- 一次建三张表触发多道按目录驱动的守卫：表级守卫在建表的 Task 内转绿，删除守卫在紧接的删除任务 Task 结束时转绿；e2e 的项目/工作区删除故事要求三张表各有一行随项目软删，而故事只能经接口种数据，所以要等链接接口落地、`furnishPlanningRows` 能建链接之后才做第一个整段七项检查点（plan 的 T8）。
