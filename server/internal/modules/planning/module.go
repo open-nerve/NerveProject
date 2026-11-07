@@ -1,7 +1,8 @@
 // Package planning is the cycles and modules module (M6 design 3, 4): it owns
 // the cycles' and the modules' tables and brings creating, reading, listing,
-// changing, archiving, unarchiving and deleting a cycle of a project, and
-// creating a module of a project. Project
+// changing, archiving, unarchiving and deleting a cycle of a project;
+// creating a module of a project, and adding, listing, changing and
+// removing a module's links. Project
 // and workspace deletion events enqueue the asynchronous deletion of the
 // deleted projects' planning rows in the publishing transaction; the 60-day
 // purge removes them.
@@ -81,16 +82,21 @@ func New(d Deps) *Module {
 	store := postgresadapter.New(d.Pool)
 	locks := app.NewLocks(d.Projects, store, d.Authorizer, d.WriteGate, d.Tx)
 	reads := app.NewReads(d.Projects, store, d.Authorizer, d.ReadTx)
+	links := app.ModuleLinkDeps{Locks: locks, Links: store, Clock: d.Clock}
 	return &Module{
 		uc: httpadapter.UseCases{
-			ListCycles:     app.NewListCycles(app.ListCyclesDeps{Reads: reads, Cycles: store, Clock: d.Clock}),
-			CreateCycle:    app.NewCreateCycle(app.CreateCycleDeps{Locks: locks, Cycles: store, Clock: d.Clock}),
-			GetCycle:       app.NewGetCycle(app.GetCycleDeps{Reads: reads, Clock: d.Clock}),
-			UpdateCycle:    app.NewUpdateCycle(app.UpdateCycleDeps{Locks: locks, Cycles: store, Clock: d.Clock}),
-			ArchiveCycle:   app.NewArchiveCycle(app.ArchiveCycleDeps{Locks: locks, Cycles: store, Clock: d.Clock}),
-			UnarchiveCycle: app.NewUnarchiveCycle(app.ArchiveCycleDeps{Locks: locks, Cycles: store, Clock: d.Clock}),
-			DeleteCycle:    app.NewDeleteCycle(app.DeleteCycleDeps{Locks: locks, Cycles: store, Clock: d.Clock}),
-			CreateModule:   app.NewCreateModule(app.CreateModuleDeps{Locks: locks, Roles: d.Projects, Modules: store, Clock: d.Clock}),
+			ListCycles:       app.NewListCycles(app.ListCyclesDeps{Reads: reads, Cycles: store, Clock: d.Clock}),
+			CreateCycle:      app.NewCreateCycle(app.CreateCycleDeps{Locks: locks, Cycles: store, Clock: d.Clock}),
+			GetCycle:         app.NewGetCycle(app.GetCycleDeps{Reads: reads, Clock: d.Clock}),
+			UpdateCycle:      app.NewUpdateCycle(app.UpdateCycleDeps{Locks: locks, Cycles: store, Clock: d.Clock}),
+			ArchiveCycle:     app.NewArchiveCycle(app.ArchiveCycleDeps{Locks: locks, Cycles: store, Clock: d.Clock}),
+			UnarchiveCycle:   app.NewUnarchiveCycle(app.ArchiveCycleDeps{Locks: locks, Cycles: store, Clock: d.Clock}),
+			DeleteCycle:      app.NewDeleteCycle(app.DeleteCycleDeps{Locks: locks, Cycles: store, Clock: d.Clock}),
+			CreateModule:     app.NewCreateModule(app.CreateModuleDeps{Locks: locks, Roles: d.Projects, Modules: store, Clock: d.Clock}),
+			CreateModuleLink: app.NewCreateModuleLink(links),
+			UpdateModuleLink: app.NewUpdateModuleLink(links),
+			DeleteModuleLink: app.NewDeleteModuleLink(links),
+			ListModuleLinks:  app.NewListModuleLinks(app.ListModuleLinksDeps{Reads: reads, Links: store}),
 		},
 		deleteRows:   app.NewDeleteRows(app.DeleteRowsDeps{Rows: store, Tx: d.JobTx, RuntimeNow: d.RuntimeNow, Batch: d.DeleteBatch, Budget: d.DeleteBudget}),
 		deleteBudget: d.DeleteBudget, logger: d.Logger,

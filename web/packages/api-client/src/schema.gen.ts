@@ -1865,6 +1865,60 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v0/modules/{module_id}/links": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A module's id (Module.id). */
+                module_id: components["parameters"]["ModuleID"];
+            };
+            cookie?: never;
+        };
+        /**
+         * List a module's links
+         * @description For its project's admins, members and guests, also a caller who sees only his own work items there, whether the project's modules are turned on or off and whether the project or the module is archived. Its undeleted links, the latest created first, then by id descending. A module that does not exist or is deleted, one whose project is deleted, and one whose project the caller does not see answer planning.module_not_found; one whose project he sees but whose modules he may not read, forbidden. The whole collection at once: collections are not paginated.
+         */
+        get: operations["listModuleLinks"];
+        put?: never;
+        /**
+         * Add a link to a module
+         * @description For its project's admins and members, not its guests, and not a caller who sees only his own work items there. The URL has its surrounding white space dropped and http:// added when it names no scheme; it is an HTTP or HTTPS URL without credentials, zones or control characters, of at most 2048 characters; the title, null or empty too, has at most 255 characters and no NUL (validation_failed), checked before the module is looked at. A module that does not exist or is deleted, one whose project is deleted, and one whose project the caller does not see answer planning.module_not_found; a caller who may not change it, forbidden; an archived project, project.archived; modules turned off, planning.modules_disabled; an archived module, planning.archived. Another undeleted link of the module may not have the URL, as it is spelt (planning.module_link_exists). Decided after the project's row is locked, and written at one moment by the caller; its preview metadata is empty.
+         */
+        post: operations["createModuleLink"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v0/module-links/{module_link_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A module link's id (ModuleLink.id). */
+                module_link_id: components["parameters"]["ModuleLinkID"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove a module's link
+         * @description For its project's admins and members, not its guests, and not a caller who sees only his own work items there, whoever added it. A link that does not exist or is deleted, one whose module or project is deleted, and one whose project the caller does not see answer planning.module_link_not_found; a caller who may not change it, forbidden; an archived project, project.archived; modules turned off, planning.modules_disabled; an archived module, planning.archived. Decided after the project's row is locked; its deletion and its last change are one moment, the caller's. It is read no more.
+         */
+        delete: operations["deleteModuleLink"];
+        options?: never;
+        head?: never;
+        /**
+         * Change a module's link
+         * @description For its project's admins and members, not its guests, and not a caller who sees only his own work items there, whoever added it. The URL and the title are checked as createModuleLink's, each when given, before the link is looked at; the title may be given alone, null clears it. A link that does not exist or is deleted, one whose module or project is deleted, and one whose project the caller does not see answer planning.module_link_not_found; a caller who may not change it, forbidden; an archived project, project.archived; modules turned off, planning.modules_disabled; an archived module, planning.archived, for a change of nothing too. Another undeleted link of the module may not have the URL (planning.module_link_exists). A change of nothing writes nothing and answers the link as it is. A changed URL empties its preview metadata; a title alone keeps it. Decided after the project's row is locked, and written at one moment by the caller.
+         */
+        patch: operations["updateModuleLink"];
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -3415,6 +3469,41 @@ export interface components {
             /** Format: uuid */
             updated_by_id: string | null;
         };
+        /** @description A link of a module. */
+        ModuleLink: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            module_id: string;
+            url: string;
+            /** @description Null for none; empty text is kept. */
+            title: string | null;
+            metadata: components["schemas"]["LinkMetadata"];
+            /**
+             * Format: uuid
+             * @description The account that added it; null once that account is gone.
+             */
+            created_by_id: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        ModuleLinkCollection: {
+            data: components["schemas"]["ModuleLink"][];
+        };
+        ModuleLinkCreate: {
+            /** @description HTTP URL, at most 2048 Unicode characters after normalization. */
+            url: string;
+            /** @description Null, or left out, for none; empty text is kept. */
+            title?: string | null;
+        };
+        ModuleLinkPatch: {
+            /** @description HTTP URL, at most 2048 Unicode characters after normalization. */
+            url?: string;
+            /** @description Null clears it; empty text is kept; left out, it is kept. */
+            title?: string | null;
+        };
     };
     responses: {
         /** @description Error (RFC 9457 problem details). */
@@ -3458,6 +3547,10 @@ export interface components {
         IssueIdentifier: string;
         /** @description A cycle's id (Cycle.id). */
         CycleID: string;
+        /** @description A module's id (Module.id). */
+        ModuleID: string;
+        /** @description A module link's id (ModuleLink.id). */
+        ModuleLinkID: string;
     };
     requestBodies: never;
     headers: never;
@@ -3604,6 +3697,10 @@ export type CycleUpdate = components['schemas']['CycleUpdate'];
 export type ModuleStatus = components['schemas']['ModuleStatus'];
 export type ModuleCreate = components['schemas']['ModuleCreate'];
 export type Module = components['schemas']['Module'];
+export type ModuleLink = components['schemas']['ModuleLink'];
+export type ModuleLinkCollection = components['schemas']['ModuleLinkCollection'];
+export type ModuleLinkCreate = components['schemas']['ModuleLinkCreate'];
+export type ModuleLinkPatch = components['schemas']['ModuleLinkPatch'];
 export type ResponseProblem = components['responses']['Problem'];
 export type ParameterLimit = components['parameters']['Limit'];
 export type ParameterCursor = components['parameters']['Cursor'];
@@ -3619,6 +3716,8 @@ export type ParameterIssueId = components['parameters']['IssueID'];
 export type ParameterRelationId = components['parameters']['RelationID'];
 export type ParameterIssueIdentifier = components['parameters']['IssueIdentifier'];
 export type ParameterCycleId = components['parameters']['CycleID'];
+export type ParameterModuleId = components['parameters']['ModuleID'];
+export type ParameterModuleLinkId = components['parameters']['ModuleLinkID'];
 export type $defs = Record<string, never>;
 export interface operations {
     listDraftAssetPreparations: {
@@ -6565,6 +6664,108 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Module"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listModuleLinks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A module's id (Module.id). */
+                module_id: components["parameters"]["ModuleID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The module's links, with an empty data array when it has none. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModuleLinkCollection"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    createModuleLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A module's id (Module.id). */
+                module_id: components["parameters"]["ModuleID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModuleLinkCreate"];
+            };
+        };
+        responses: {
+            /** @description The new link, with empty preview metadata. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModuleLink"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    deleteModuleLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A module link's id (ModuleLink.id). */
+                module_link_id: components["parameters"]["ModuleLinkID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateModuleLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A module link's id (ModuleLink.id). */
+                module_link_id: components["parameters"]["ModuleLinkID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModuleLinkPatch"];
+            };
+        };
+        responses: {
+            /** @description The link as changed, with its current preview metadata. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModuleLink"];
                 };
             };
             default: components["responses"]["Problem"];

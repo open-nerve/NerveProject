@@ -276,6 +276,134 @@ paths:
                 $ref: '#/components/schemas/Module'
         default:
           $ref: '#/components/responses/Problem'
+  /api/v0/modules/{module_id}/links:
+    parameters:
+      - $ref: '#/components/parameters/ModuleID'
+    get:
+      operationId: listModuleLinks
+      tags: [planning]
+      summary: List a module's links
+      description: >-
+        For its project's admins, members and guests, also a caller who sees
+        only his own work items there, whether the project's modules are
+        turned on or off and whether the project or the module is archived.
+        Its undeleted links, the latest created first, then by id
+        descending. A module that does not exist or is deleted, one whose
+        project is deleted, and one whose project the caller does not see
+        answer planning.module_not_found; one whose project he sees but
+        whose modules he may not read, forbidden. The whole collection at
+        once: collections are not paginated.
+      security: [{bearer: []}]
+      x-problem-codes: [planning.module_not_found, forbidden]
+      responses:
+        '200':
+          description: The module's links, with an empty data array when it has none.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModuleLinkCollection'
+        default:
+          $ref: '#/components/responses/Problem'
+    post:
+      operationId: createModuleLink
+      tags: [planning]
+      summary: Add a link to a module
+      description: >-
+        For its project's admins and members, not its guests, and not a
+        caller who sees only his own work items there. The URL has its
+        surrounding white space dropped and http:// added when it names no
+        scheme; it is an HTTP or HTTPS URL without credentials, zones or
+        control characters, of at most 2048 characters; the title, null or
+        empty too, has at most 255 characters and no NUL (validation_failed),
+        checked before the module is looked at. A module that does not exist
+        or is deleted, one whose project is deleted, and one whose project
+        the caller does not see answer planning.module_not_found; a caller
+        who may not change it, forbidden; an archived project,
+        project.archived; modules turned off, planning.modules_disabled; an
+        archived module, planning.archived. Another undeleted link of the
+        module may not have the URL, as it is spelt
+        (planning.module_link_exists). Decided after the project's row is
+        locked, and written at one moment by the caller; its preview
+        metadata is empty.
+      security: [{bearer: []}]
+      x-problem-codes: [validation_failed, planning.module_not_found, forbidden, project.archived, planning.modules_disabled, planning.archived,
+        planning.module_link_exists, server_busy]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModuleLinkCreate'
+      responses:
+        '201':
+          description: The new link, with empty preview metadata.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModuleLink'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/module-links/{module_link_id}:
+    parameters:
+      - $ref: '#/components/parameters/ModuleLinkID'
+    patch:
+      operationId: updateModuleLink
+      tags: [planning]
+      summary: Change a module's link
+      description: >-
+        For its project's admins and members, not its guests, and not a
+        caller who sees only his own work items there, whoever added it. The
+        URL and the title are checked as createModuleLink's, each when given,
+        before the link is looked at; the title may be given alone, null
+        clears it. A link that does not exist or is deleted, one whose module
+        or project is deleted, and one whose project the caller does not see
+        answer planning.module_link_not_found; a caller who may not change
+        it, forbidden; an archived project, project.archived; modules turned
+        off, planning.modules_disabled; an archived module, planning.archived,
+        for a change of nothing too. Another undeleted link of the module may
+        not have the URL (planning.module_link_exists). A change of nothing
+        writes nothing and answers the link as it is. A changed URL empties
+        its preview metadata; a title alone keeps it. Decided after the
+        project's row is locked, and written at one moment by the caller.
+      security: [{bearer: []}]
+      x-problem-codes: [validation_failed, planning.module_link_not_found, forbidden, project.archived, planning.modules_disabled,
+        planning.archived, planning.module_link_exists, server_busy]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModuleLinkPatch'
+      responses:
+        '200':
+          description: The link as changed, with its current preview metadata.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModuleLink'
+        default:
+          $ref: '#/components/responses/Problem'
+    delete:
+      operationId: deleteModuleLink
+      tags: [planning]
+      summary: Remove a module's link
+      description: >-
+        For its project's admins and members, not its guests, and not a
+        caller who sees only his own work items there, whoever added it. A
+        link that does not exist or is deleted, one whose module or project
+        is deleted, and one whose project the caller does not see answer
+        planning.module_link_not_found; a caller who may not change it,
+        forbidden; an archived project, project.archived; modules turned off,
+        planning.modules_disabled; an archived module, planning.archived.
+        Decided after the project's row is locked; its deletion and its last
+        change are one moment, the caller's. It is read no more.
+      security: [{bearer: []}]
+      x-problem-codes: [planning.module_link_not_found, forbidden, project.archived, planning.modules_disabled, planning.archived, server_busy]
+      responses:
+        '204':
+          description: Removed.
+        default:
+          $ref: '#/components/responses/Problem'
 components:
   # 与 api/openapi.yaml 的相同：打包时丢掉模块文件的 securitySchemes，oapi-codegen 读这一份（M0-P3 交接 3）
   securitySchemes:
@@ -296,6 +424,22 @@ components:
       in: path
       required: true
       description: A cycle's id (Cycle.id).
+      schema:
+        type: string
+        format: uuid
+    ModuleID:
+      name: module_id
+      in: path
+      required: true
+      description: A module's id (Module.id).
+      schema:
+        type: string
+        format: uuid
+    ModuleLinkID:
+      name: module_link_id
+      in: path
+      required: true
+      description: A module link's id (ModuleLink.id).
       schema:
         type: string
         format: uuid
@@ -535,3 +679,64 @@ components:
           items:
             type: string
             format: uuid
+    ModuleLink:
+      description: A link of a module.
+      type: object
+      additionalProperties: false
+      required: [id, module_id, url, title, metadata, created_by_id, created_at, updated_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        module_id:
+          type: string
+          format: uuid
+        url:
+          type: string
+        title:
+          description: Null for none; empty text is kept.
+          type: [string, 'null']
+        metadata:
+          $ref: '../common.yaml#/components/schemas/LinkMetadata'
+        created_by_id:
+          description: The account that added it; null once that account is gone.
+          type: [string, 'null']
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    ModuleLinkCollection:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ModuleLink'
+    ModuleLinkCreate:
+      type: object
+      additionalProperties: false
+      required: [url]
+      properties:
+        url:
+          description: HTTP URL, at most 2048 Unicode characters after normalization.
+          type: string
+        title:
+          description: Null, or left out, for none; empty text is kept.
+          type: [string, 'null']
+          maxLength: 255
+    ModuleLinkPatch:
+      type: object
+      additionalProperties: false
+      properties:
+        url:
+          description: HTTP URL, at most 2048 Unicode characters after normalization.
+          type: string
+        title:
+          description: Null clears it; empty text is kept; left out, it is kept.
+          type: [string, 'null']
+          maxLength: 255

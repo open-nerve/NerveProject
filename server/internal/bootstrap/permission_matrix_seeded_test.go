@@ -147,6 +147,7 @@ type seeded struct {
 	labels              map[string]uuid.UUID
 	cycles              map[string]uuid.UUID
 	modules             map[string]uuid.UUID
+	moduleLinks         map[string]uuid.UUID
 	issues              map[string]uuid.UUID
 	comments            map[string]uuid.UUID
 	links               map[string]uuid.UUID
@@ -165,7 +166,7 @@ type seeded struct {
 func newSeeded() seeded {
 	s := seeded{assets: map[string]uuid.UUID{}, drafts: map[string]uuid.UUID{}, workspaces: map[string]uuid.UUID{}, memberships: map[string]uuid.UUID{}, invitations: map[string]uuid.UUID{},
 		projects: map[string]uuid.UUID{}, projectMembers: map[string]uuid.UUID{}, states: map[string]uuid.UUID{}, labels: map[string]uuid.UUID{}, cycles: map[string]uuid.UUID{},
-		modules: map[string]uuid.UUID{}, issues: map[string]uuid.UUID{}, comments: map[string]uuid.UUID{}, links: map[string]uuid.UUID{}, descriptionVersions: map[string]uuid.UUID{}, relations: map[string]uuid.UUID{}, accounts: map[caller]uuid.UUID{}}
+		modules: map[string]uuid.UUID{}, moduleLinks: map[string]uuid.UUID{}, issues: map[string]uuid.UUID{}, comments: map[string]uuid.UUID{}, links: map[string]uuid.UUID{}, descriptionVersions: map[string]uuid.UUID{}, relations: map[string]uuid.UUID{}, accounts: map[caller]uuid.UUID{}}
 	for _, c := range workspaceColumns {
 		s.drafts[workspaceOf(c)+"/"+string(c)] = uuid.NewV7()
 		s.assets[workspaceOf(c)+"/"+string(c)] = uuid.NewV7()
@@ -195,6 +196,7 @@ func newSeeded() seeded {
 		for _, m := range matrixModules {
 			if m.project == "" || m.project == p.key {
 				s.modules[p.key+"|"+m.name] = uuid.NewV7()
+				s.moduleLinks[p.key+"|"+m.name] = uuid.NewV7()
 			}
 		}
 	}

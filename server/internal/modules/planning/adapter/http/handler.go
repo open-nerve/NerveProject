@@ -48,16 +48,40 @@ type CreateModuleUseCase interface {
 	Execute(ctx context.Context, projectID uuid.UUID, in domain.NewModule) (domain.Module, error)
 }
 
+// CreateModuleLinkUseCase is app.CreateModuleLink.
+type CreateModuleLinkUseCase interface {
+	Execute(ctx context.Context, moduleID uuid.UUID, in domain.NewModuleLink) (domain.ModuleLink, error)
+}
+
+// UpdateModuleLinkUseCase is app.UpdateModuleLink.
+type UpdateModuleLinkUseCase interface {
+	Execute(ctx context.Context, id uuid.UUID, p domain.ModuleLinkPatch) (domain.ModuleLink, error)
+}
+
+// DeleteModuleLinkUseCase is app.DeleteModuleLink.
+type DeleteModuleLinkUseCase interface {
+	Execute(ctx context.Context, id uuid.UUID) error
+}
+
+// ListModuleLinksUseCase is app.ListModuleLinks.
+type ListModuleLinksUseCase interface {
+	Execute(ctx context.Context, moduleID uuid.UUID) ([]domain.ModuleLink, error)
+}
+
 // UseCases are the use cases behind the module's operations.
 type UseCases struct {
-	ListCycles     ListCyclesUseCase
-	CreateCycle    CreateCycleUseCase
-	GetCycle       GetCycleUseCase
-	UpdateCycle    UpdateCycleUseCase
-	ArchiveCycle   ArchiveCycleUseCase
-	UnarchiveCycle ArchiveCycleUseCase
-	DeleteCycle    DeleteCycleUseCase
-	CreateModule   CreateModuleUseCase
+	ListCycles       ListCyclesUseCase
+	CreateCycle      CreateCycleUseCase
+	GetCycle         GetCycleUseCase
+	UpdateCycle      UpdateCycleUseCase
+	ArchiveCycle     ArchiveCycleUseCase
+	UnarchiveCycle   ArchiveCycleUseCase
+	DeleteCycle      DeleteCycleUseCase
+	CreateModule     CreateModuleUseCase
+	CreateModuleLink CreateModuleLinkUseCase
+	UpdateModuleLink UpdateModuleLinkUseCase
+	DeleteModuleLink DeleteModuleLinkUseCase
+	ListModuleLinks  ListModuleLinksUseCase
 }
 
 // Register mounts the module's routes on router behind api's per-route

@@ -95,6 +95,9 @@ export function asynchronousDeletionTable(name: string): boolean {
   return (
     name === "file_assets" ||
     name === "cycles" ||
+    name === "modules" ||
+    name === "module_members" ||
+    name === "module_links" ||
     name === "issues" ||
     name === "draft_issues" ||
     name === "comment_reactions" ||

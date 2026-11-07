@@ -19,7 +19,25 @@ import (
 // cells are the cycle table's (cycleColumns, onTheCycles): the member who
 // made a module (callerCreator) is PM's account, as for the cycles.
 
-var cellModuleNameTaken = cell{http.StatusConflict, "planning.module_name_taken"}
+var (
+	cellModuleNameTaken = cell{http.StatusConflict, "planning.module_name_taken"}
+	cellModuleNotFound  = cell{http.StatusNotFound, "planning.module_not_found"}
+)
+
+// moduleRows are the modules the rows name by id: a column that does not
+// see its project answers planning.module_not_found.
+var moduleRows = rowsByID{path: "modules", notFound: cellModuleNotFound, find: seeded.module}
+
+// inCycleColumns are the cells of a row of the cycle table's columns
+// (cycleColumns) on one row of k, named by its id (k.of), PM+WA as an admin
+// of its project; the member who made the module as creator, and the
+// workspace admin who is a guest as adminGuest.
+func (k rowsByID) inCycleColumns(admin, member, creator, guest, adminGuest cell) map[caller]cell {
+	cells := k.of(admin, member, guest, admin, cellForbidden, cellForbidden)
+	cells[callerCreator] = creator
+	cells[callerAdminGuest] = adminGuest
+	return cells
+}
 
 // matrixModules are the modules prepareMatrix seeds, both planned: Release,
 // at the sort order of a project's first module, in each project of
@@ -45,6 +63,14 @@ func moduleOf(c caller) string {
 		return "Mine"
 	}
 	return "Release"
+}
+
+// toModule is the request of a row whose callers each send method, with
+// body, to their column's own module (moduleOf), after its id.
+func toModule(method, after, body string) func(caller, seeded) (string, string, string) {
+	return func(c caller, s seeded) (string, string, string) {
+		return moduleRows.to(method, after, moduleOf(c), body)(c, s)
+	}
 }
 
 // newModule is the body of the module the rows create: Release 2, its name

@@ -36,6 +36,12 @@ type lockWorld struct {
 	createdModules []domain.Module
 	memberRows     []MemberRows
 	createRefusal  error
+	// The module links' writes: what each stored, as "id at by" for a deletion, and the refusal of an insert or an
+	// update (an address the module has).
+	insertedLinks []domain.ModuleLink
+	updatedLinks  []domain.ModuleLink
+	deletedLinks  []string
+	linkRefusal   error
 }
 
 type inTx struct{}

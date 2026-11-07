@@ -12,6 +12,26 @@ import (
 	"uuid"
 )
 
+const deleteModuleLink = `-- name: DeleteModuleLink :exec
+UPDATE module_links
+SET deleted_at    = $1::timestamptz,
+    updated_at    = $1,
+    updated_by_id = $2::uuid
+WHERE id = $3 AND deleted_at IS NULL
+`
+
+type DeleteModuleLinkParams struct {
+	At time.Time
+	By uuid.UUID
+	ID uuid.UUID
+}
+
+// A link soft-deleted by one account at one moment, its last change the same; one deleted already keeps its deletion.
+func (q *Queries) DeleteModuleLink(ctx context.Context, arg DeleteModuleLinkParams) error {
+	_, err := q.db.Exec(ctx, deleteModuleLink, arg.At, arg.By, arg.ID)
+	return err
+}
+
 const getModuleLink = `-- name: GetModuleLink :one
 SELECT id, workspace_id, project_id, module_id, url, title, metadata, created_by_id, created_at, updated_at
 FROM module_links
@@ -37,6 +57,152 @@ type GetModuleLinkRow struct {
 func (q *Queries) GetModuleLink(ctx context.Context, id uuid.UUID) (GetModuleLinkRow, error) {
 	row := q.db.QueryRow(ctx, getModuleLink, id)
 	var i GetModuleLinkRow
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.ProjectID,
+		&i.ModuleID,
+		&i.Url,
+		&i.Title,
+		&i.Metadata,
+		&i.CreatedByID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const insertModuleLink = `-- name: InsertModuleLink :exec
+INSERT INTO module_links (id, workspace_id, project_id, module_id, url, title, created_by_id, updated_by_id, created_at,
+                          updated_at)
+VALUES ($1, $2, $3, $4, $5, $6,
+        $7::uuid, $7, $8::timestamptz, $8)
+`
+
+type InsertModuleLinkParams struct {
+	ID          uuid.UUID
+	WorkspaceID uuid.UUID
+	ProjectID   uuid.UUID
+	ModuleID    uuid.UUID
+	Url         string
+	Title       *string
+	By          *uuid.UUID
+	At          time.Time
+}
+
+// A new link of a module, its metadata empty, written at one moment by one account. A URL another undeleted link of the
+// module has, as it is spelt, breaks module_links_module_id_url_key.
+func (q *Queries) InsertModuleLink(ctx context.Context, arg InsertModuleLinkParams) error {
+	_, err := q.db.Exec(ctx, insertModuleLink,
+		arg.ID,
+		arg.WorkspaceID,
+		arg.ProjectID,
+		arg.ModuleID,
+		arg.Url,
+		arg.Title,
+		arg.By,
+		arg.At,
+	)
+	return err
+}
+
+const listModuleLinks = `-- name: ListModuleLinks :many
+SELECT id, workspace_id, project_id, module_id, url, title, metadata, created_by_id, created_at, updated_at
+FROM module_links
+WHERE module_id = $1 AND deleted_at IS NULL
+ORDER BY created_at DESC, id DESC
+`
+
+type ListModuleLinksRow struct {
+	ID          uuid.UUID
+	WorkspaceID uuid.UUID
+	ProjectID   uuid.UUID
+	ModuleID    uuid.UUID
+	Url         string
+	Title       *string
+	Metadata    []byte
+	CreatedByID *uuid.UUID
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+}
+
+// The module's undeleted links, the latest created first, then by id descending (M6 P2 spec 2.3, as a work item's).
+// module_links_module_id_idx (module_id) serves it.
+func (q *Queries) ListModuleLinks(ctx context.Context, moduleID uuid.UUID) ([]ListModuleLinksRow, error) {
+	rows, err := q.db.Query(ctx, listModuleLinks, moduleID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListModuleLinksRow
+	for rows.Next() {
+		var i ListModuleLinksRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkspaceID,
+			&i.ProjectID,
+			&i.ModuleID,
+			&i.Url,
+			&i.Title,
+			&i.Metadata,
+			&i.CreatedByID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const updateModuleLink = `-- name: UpdateModuleLink :one
+UPDATE module_links
+SET url           = $1,
+    title         = $2,
+    metadata      = CASE WHEN url <> $1 THEN '{}'::jsonb ELSE metadata END,
+    updated_by_id = $3::uuid,
+    updated_at    = $4::timestamptz
+WHERE id = $5 AND deleted_at IS NULL
+RETURNING id, workspace_id, project_id, module_id, url, title, metadata, created_by_id, created_at, updated_at
+`
+
+type UpdateModuleLinkParams struct {
+	Url   string
+	Title *string
+	By    *uuid.UUID
+	At    time.Time
+	ID    uuid.UUID
+}
+
+type UpdateModuleLinkRow struct {
+	ID          uuid.UUID
+	WorkspaceID uuid.UUID
+	ProjectID   uuid.UUID
+	ModuleID    uuid.UUID
+	Url         string
+	Title       *string
+	Metadata    []byte
+	CreatedByID *uuid.UUID
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+}
+
+// A change of a link: its URL and title, last changed by one account at one moment. A URL it did not have empties its
+// metadata; one it had keeps the metadata as it is now, which a crawl may have written since the link was read (M6 P2
+// spec R11). The link as written.
+func (q *Queries) UpdateModuleLink(ctx context.Context, arg UpdateModuleLinkParams) (UpdateModuleLinkRow, error) {
+	row := q.db.QueryRow(ctx, updateModuleLink,
+		arg.Url,
+		arg.Title,
+		arg.By,
+		arg.At,
+		arg.ID,
+	)
+	var i UpdateModuleLinkRow
 	err := row.Scan(
 		&i.ID,
 		&i.WorkspaceID,
