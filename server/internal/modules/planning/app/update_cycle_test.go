@@ -62,7 +62,7 @@ func TestUpdateCycle(t *testing.T) {
 		*stored.CreatedByID != lockCreator || !stored.CreatedAt.Equal(old.CreatedAt) || stored.SortOrder != 5 {
 		t.Fatalf("stored %+v", stored)
 	}
-	if got.Cycle.Name != "Sprint 2" || got.Status != domain.StatusCurrent {
+	if got.Name != "Sprint 2" || got.Status != domain.StatusCurrent {
 		t.Fatalf("answer %+v", got)
 	}
 	// Without new dates — none given, or its own given again — no other cycle is read.
@@ -85,7 +85,7 @@ func TestUpdateCycleChangesNothing(t *testing.T) {
 			p.Start = date(t, "2026-11-02")
 		}
 		got, err := w.update(t, p)
-		if err != nil || len(w.updated) != 0 || got.Cycle.UpdatedAt != w.cycles[lockCycle].UpdatedAt || got.Status != domain.StatusCurrent {
+		if err != nil || len(w.updated) != 0 || !got.UpdatedAt.Equal(w.cycles[lockCycle].UpdatedAt) || got.Status != domain.StatusCurrent {
 			t.Fatalf("%+v: %+v, %v, stored %v", p, got, err, w.updated)
 		}
 	}
