@@ -52,3 +52,7 @@ M4 的最终 C12、准确分支 CI 和未来 main 集成分别由[验收台账](
 - `AreaChart` / `ProgressChart` 的单点除零风险只剩 M6 统计消费者；在开放统计前覆盖 0/1/多点，绘图坐标必须有限，空态/单点仍可读。
 
 **何时验收：** 对应 M6 页面启用前；跨 M6/M7 的最后读者在最后一个消费者的阶段删除，并同步另一份交接。原始数量和读者见 [P16 inventory](../../M4-issue-core/reviews/P16-web-cleanup-inventory.md)。
+
+## 处理结果（M6/P1）：M6-03
+
+P1 还没有关系表（`cycle_issues`、`module_issues` 在 P3），`cycles` 本身照本条的协议：订阅 `project.deleted`、`workspace.deleted`，在原事务投递 `planning.delete_rows`，父范围立即隐藏，任务沿用请求的 At/By、有界续跑；`furnishPlanningRows` 进了 `furnishWorkspace` 和 P4、W3、I21 的删除故事，目录 `asynchronousDeletionTable` 加 `cycles`，删除与清理的守卫（`TestDeletingAProject…`、`TestPurgeCatalog…`、`TestPurgeParentCascades…`）都覆盖它；60 天清理的 `planning` 清理者有过期、未过期、邻域、运行角色与回滚重试的证明。工作项删除入口对关系表的覆盖与全图在 P3 及收尾，本交接保持 open。证据：[P1 spec](../specs/P1-cycles-backend.md) 2.4、A6。
