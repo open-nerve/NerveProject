@@ -2,6 +2,7 @@ package postgresadapter_test
 
 import (
 	"context"
+	"slices"
 	"testing"
 	"time"
 	"uuid"
@@ -108,5 +109,76 @@ func TestGetModuleLink(t *testing.T) {
 	}
 	if _, found, err := s.GetModuleLink(ctx, uuid.NewV7()); err != nil || found {
 		t.Fatalf("a missing link read: %t, %v", found, err)
+	}
+}
+
+// The project's undeleted modules: the unarchived ones by sort order, then creation, then id; the archived ones alone,
+// the latest archived first, then by id. Another project's and deleted ones are in neither. Each reads as GetModule
+// reads it, its undeleted members in id order.
+func TestListModules(t *testing.T) {
+	s, pool := newStore(t)
+	ctx := context.Background()
+	w := newWorld(t, pool)
+	at := now.Truncate(time.Microsecond)
+	ids := sortedIDs(7)
+	add := func(id, project uuid.UUID, sortOrder float64, created time.Time) {
+		t.Helper()
+		if err := s.CreateModule(ctx, domain.Module{ID: id, ProjectID: project, WorkspaceID: w.workspace, Name: id.String(),
+			Status: domain.ModulePlanned, SortOrder: sortOrder, CreatedAt: created, UpdatedAt: created}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// ids[2] and ids[1] tie on sort order and creation: by id. ids[0] ties on sort order, created later.
+	add(ids[2], w.web, 100, at)
+	add(ids[1], w.web, 100, at)
+	add(ids[0], w.web, 100, at.Add(time.Second))
+	add(ids[3], w.web, -5, at.Add(time.Hour))
+	add(ids[4], w.web, 1, at)
+	add(ids[5], w.web, 2, at)
+	add(ids[6], w.ops, 0, at)
+	deleted := uuid.NewV7()
+	add(deleted, w.web, 0, at)
+	exec(t, pool, "UPDATE modules SET deleted_at = now() WHERE id = $1", deleted)
+	// ids[4] and ids[5] archived at one moment, ids[1] later.
+	exec(t, pool, "UPDATE modules SET archived_at = $2 WHERE id = ANY($1)", []uuid.UUID{ids[4], ids[5]}, at)
+	exec(t, pool, "UPDATE modules SET archived_at = $2 WHERE id = $1", ids[1], at.Add(time.Minute))
+	// ids[3]'s members, written out of id order, one removed; ids[1]'s one.
+	members := sortedIDs(3)
+	for _, id := range members {
+		exec(t, pool, "INSERT INTO users (id, email, password, display_name) VALUES ($1, $2, 'x', 'm')", id, id.String()+"@corp.com")
+	}
+	member := func(module, account uuid.UUID, deleted *time.Time) {
+		exec(t, pool, `INSERT INTO module_members (id, workspace_id, project_id, module_id, member_id, deleted_at) VALUES ($1, $2, $3, $4, $5, $6)`,
+			uuid.NewV7(), w.workspace, w.web, module, account, deleted)
+	}
+	member(ids[3], members[2], nil)
+	member(ids[3], members[1], &at)
+	member(ids[3], members[0], nil)
+	member(ids[1], members[1], nil)
+	for _, tt := range []struct {
+		archived bool
+		want     []uuid.UUID
+	}{{false, []uuid.UUID{ids[3], ids[2], ids[0]}}, {true, []uuid.UUID{ids[1], ids[4], ids[5]}}} {
+		got, err := s.ListModules(ctx, w.web, tt.archived)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var gotIDs []uuid.UUID
+		for _, m := range got {
+			gotIDs = append(gotIDs, m.ID)
+			one, found, err := s.GetModule(ctx, m.ID)
+			if err != nil || !found || jsonOf(t, one) != jsonOf(t, m) {
+				t.Errorf("listed %s, read %s, %t, %v", jsonOf(t, m), jsonOf(t, one), found, err)
+			}
+		}
+		if !slices.Equal(gotIDs, tt.want) {
+			t.Errorf("archived=%t: %v, want %v", tt.archived, gotIDs, tt.want)
+		}
+		if want := []uuid.UUID{members[0], members[2]}; !tt.archived && (len(got) == 0 || !slices.Equal(got[0].MemberIDs, want)) {
+			t.Errorf("the first listed = %s, want %s with the members %v", jsonOf(t, got), ids[3], want)
+		}
+	}
+	if got, err := s.ListModules(ctx, uuid.NewV7(), false); err != nil || len(got) != 0 {
+		t.Fatalf("a project without modules: %v, %v", got, err)
 	}
 }

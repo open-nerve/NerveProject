@@ -12,10 +12,12 @@ import (
 )
 
 // The rows of the permission matrix of a project's modules (M6 P2 spec
-// R10): creating them under the project of each column; and the modules
-// they rest on, matrixModules, which prepareMatrix seeds in each project
-// through the planning store (modules) once the project store has turned
-// the project's modules on (planningOn). The module table's columns and
+// R10): listing and creating them under the project of each column, and
+// reading one, naming its column's own (moduleOf) by its id
+// (/modules/{module_id}); and the modules they rest on, matrixModules,
+// which prepareMatrix seeds in each project through the planning store
+// (modules) once the project store has turned the project's modules on
+// (planningOn). The module table's columns and
 // cells are the cycle table's (cycleColumns, onTheCycles): the member who
 // made a module (callerCreator) is PM's account, as for the cycles.
 
@@ -79,6 +81,21 @@ const newModule = `{"name":"Release 2"}`
 
 func moduleMatrixRows() []matrixRow {
 	return []matrixRow{
+		// Every active member of the project, its guests and a caller who sees
+		// only his own work items there too (M6 P2 spec R6); a workspace admin
+		// or member who is no member of it sees it and may not. An archived
+		// project's modules, and an archived module, are read as any other's.
+		{op: "listModules", columns: cycleColumns, request: toProject(http.MethodGet, "/modules", ""),
+			cells: onTheCycles(cellOK, cellOK, cellOK, cellOK), check: listsTheModules},
+		{op: "listModules", variant: "archived", columns: archivedColumns, request: toProject(http.MethodGet, "/modules", ""),
+			cells: ofArchived(cellOK, cellForbidden), check: listsTheModules},
+		// The archive alone (M6 P2 spec R9): no seeded module is archived.
+		{op: "listModules", variant: "the archive", columns: cycleColumns, request: toProject(http.MethodGet, "/modules?archived=true", ""),
+			cells: onTheCycles(cellOK, cellOK, cellOK, cellOK), check: listsNoModule},
+		{op: "getModule", columns: cycleColumns, request: toModule(http.MethodGet, "", ""),
+			cells: moduleRows.inCycleColumns(cellOK, cellOK, cellOK, cellOK, cellOK), check: readsTheModule},
+		{op: "getModule", variant: "archived", columns: archivedColumns, request: toModule(http.MethodGet, "", ""),
+			cells: moduleRows.ofArchived(cellOK, cellForbidden), check: readsTheModule},
 		// The project's admins and members, not its guests, nor a caller who
 		// sees only his own work items in it (M6 P2 spec R6); a workspace
 		// admin or member who is no member of the project sees it and may
@@ -99,6 +116,63 @@ func moduleMatrixRows() []matrixRow {
 		{op: "createModule", variant: "archived", write: true, columns: archivedColumns, request: toProject(http.MethodPost, "/modules", newModule),
 			cells: ofArchived(cellProjectArchived, cellForbidden)},
 	}
+}
+
+// listsTheModules: the column's project's seeded modules, by sort order,
+// each as seeded.
+func listsTheModules(t *testing.T, c caller, s seeded, answer string) {
+	got := listIn[moduleAnswer](t, answer)
+	var want []string
+	for _, m := range matrixModules {
+		if m.project == "" || m.project == projectOf(c) {
+			want = append(want, m.name)
+		}
+	}
+	if len(got) != len(want) {
+		t.Fatalf("%s lists %s; want %s's %v", c, answer, projectOf(c), want)
+	}
+	for i, name := range want {
+		isTheSeededModule(t, c, s, name, got[i], answer)
+	}
+}
+
+// listsNoModule: an empty archive.
+func listsNoModule(t *testing.T, c caller, _ seeded, answer string) {
+	if got := listIn[moduleAnswer](t, answer); len(got) != 0 {
+		t.Errorf("%s lists %s; want no archived module", c, answer)
+	}
+}
+
+// readsTheModule: the column's own module (moduleOf), as seeded.
+func readsTheModule(t *testing.T, c caller, s seeded, answer string) {
+	var got moduleAnswer
+	decodeAnswer(t, answer, &got)
+	isTheSeededModule(t, c, s, moduleOf(c), got, answer)
+}
+
+// isTheSeededModule checks that got, of answer, is the module name of the
+// column's project as matrixModules seeds it: planned, without dates, lead
+// or members, at its sort order, created and last changed by its writer.
+func isTheSeededModule(t *testing.T, c caller, s seeded, name string, got moduleAnswer, answer string) {
+	t.Helper()
+	slug, _, _ := strings.Cut(projectOf(c), "/")
+	for _, m := range matrixModules {
+		if m.name != name {
+			continue
+		}
+		by := s.account(matrixAdmins[slug])
+		if m.author != "" {
+			by = s.account(m.author)
+		}
+		if got.ID != s.module(projectOf(c), name) || got.ProjectID != s.project(projectOf(c)) || got.WorkspaceID != s.workspace(slug) ||
+			got.Name != name || got.Status != "planned" || got.StartDate != nil || got.TargetDate != nil || got.LeadID != nil ||
+			got.MemberIDs == nil || len(got.MemberIDs) != 0 || got.SortOrder != m.sortOrder || got.ArchivedAt != nil ||
+			got.CreatedByID == nil || *got.CreatedByID != by || got.UpdatedByID == nil || *got.UpdatedByID != by {
+			t.Errorf("%s answers %s; want %s's %s as seeded", c, answer, projectOf(c), name)
+		}
+		return
+	}
+	t.Fatalf("no module %s in matrixModules", name)
 }
 
 // createsTheModule: Release 2 in the column's project and workspace,

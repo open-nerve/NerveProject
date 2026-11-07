@@ -48,6 +48,16 @@ type CreateModuleUseCase interface {
 	Execute(ctx context.Context, projectID uuid.UUID, in domain.NewModule) (domain.Module, error)
 }
 
+// ListModulesUseCase is app.ListModules.
+type ListModulesUseCase interface {
+	Execute(ctx context.Context, projectID uuid.UUID, archived bool) ([]domain.Module, error)
+}
+
+// GetModuleUseCase is app.GetModule.
+type GetModuleUseCase interface {
+	Execute(ctx context.Context, id uuid.UUID) (domain.Module, error)
+}
+
 // CreateModuleLinkUseCase is app.CreateModuleLink.
 type CreateModuleLinkUseCase interface {
 	Execute(ctx context.Context, moduleID uuid.UUID, in domain.NewModuleLink) (domain.ModuleLink, error)
@@ -77,7 +87,9 @@ type UseCases struct {
 	ArchiveCycle     ArchiveCycleUseCase
 	UnarchiveCycle   ArchiveCycleUseCase
 	DeleteCycle      DeleteCycleUseCase
+	ListModules      ListModulesUseCase
 	CreateModule     CreateModuleUseCase
+	GetModule        GetModuleUseCase
 	CreateModuleLink CreateModuleLinkUseCase
 	UpdateModuleLink UpdateModuleLinkUseCase
 	DeleteModuleLink DeleteModuleLinkUseCase

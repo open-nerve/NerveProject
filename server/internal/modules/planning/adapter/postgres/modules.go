@@ -24,10 +24,45 @@ func (s *Store) GetModule(ctx context.Context, id uuid.UUID) (domain.Module, boo
 	case err != nil:
 		return domain.Module{}, false, fmt.Errorf("read module %s: %w", id, err)
 	}
+	return moduleOf(r), true, nil
+}
+
+// ListModules lists the project's undeleted modules, each with the accounts
+// of its undeleted members in id order: the unarchived ones by sort order,
+// creation and id, or, when archived, the archived ones alone, the latest
+// archived first, then by id (modules.sql).
+func (s *Store) ListModules(ctx context.Context, project uuid.UUID, archived bool) ([]domain.Module, error) {
+	var rows []gen.GetModuleRow
+	if archived {
+		listed, err := s.queries(ctx).ListArchivedModules(ctx, project)
+		if err != nil {
+			return nil, fmt.Errorf("list the archived modules of project %s: %w", project, err)
+		}
+		for _, r := range listed {
+			rows = append(rows, gen.GetModuleRow(r))
+		}
+	} else {
+		listed, err := s.queries(ctx).ListModules(ctx, project)
+		if err != nil {
+			return nil, fmt.Errorf("list the modules of project %s: %w", project, err)
+		}
+		for _, r := range listed {
+			rows = append(rows, gen.GetModuleRow(r))
+		}
+	}
+	out := make([]domain.Module, len(rows))
+	for i, r := range rows {
+		out[i] = moduleOf(r)
+	}
+	return out, nil
+}
+
+// moduleOf is the module a row of modules.sql's reads holds.
+func moduleOf(r gen.GetModuleRow) domain.Module {
 	return domain.Module{ID: r.ID, ProjectID: r.ProjectID, WorkspaceID: r.WorkspaceID, Name: r.Name, Description: r.Description,
 		StartDate: dayOf(r.StartDate), TargetDate: dayOf(r.TargetDate), Status: domain.ModuleStatus(r.Status), LeadID: r.LeadID,
 		MemberIDs: r.MemberIds, SortOrder: r.SortOrder, ArchivedAt: r.ArchivedAt, CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt,
-		CreatedByID: r.CreatedByID, UpdatedByID: r.UpdatedByID}, true, nil
+		CreatedByID: r.CreatedByID, UpdatedByID: r.UpdatedByID}
 }
 
 // LowestModuleSortOrder reads the lowest sort order of the project's

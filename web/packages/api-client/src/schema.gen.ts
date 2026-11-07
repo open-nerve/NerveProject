@@ -1852,13 +1852,40 @@ export interface paths {
             };
             cookie?: never;
         };
-        get?: never;
+        /**
+         * List a project's modules
+         * @description For the project's admins, members and guests, also a caller who sees only his own work items there, whether its modules are turned on or off and whether it is archived. The undeleted modules that are not archived, by sort_order, then creation, then id; or, when archived is true, the archived ones alone, the latest archived first, then by id. Each with its undeleted members, ascending. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but whose modules he may not read, forbidden. The whole collection at once: collections are not paginated.
+         */
+        get: operations["listModules"];
         put?: never;
         /**
          * Create a module in a project
          * @description For the project's admins and members, not its guests, and not a caller who sees only his own work items there. The name has 1–255 characters without its surrounding white space, which is dropped, and no NUL; the description has no NUL and is empty when it is left out; the status is one of ModuleStatus, planned when it is left out; the start and target dates are days, each given alone or neither, the start not after the target; member_ids names at most 100 accounts, each once (validation_failed). The values are checked before the project is looked at. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but whose modules he may not change, forbidden; an archived project, project.archived; a project whose modules are turned off (Project.module_view), planning.modules_disabled. After the project's row is locked, the lead and each member must be an active member of the project who is not its guest (validation_failed, at lead_id or member_ids[i]); and no other undeleted module of the project, archived ones too, may have the name, in any case (planning.module_name_taken). The new module comes first: its sort order is the lowest of the project's undeleted modules, archived ones too, less 10000, or 65535 when it has none. It and its members' rows are written at one moment by the caller.
          */
         post: operations["createModule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v0/modules/{module_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A module's id (Module.id). */
+                module_id: components["parameters"]["ModuleID"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Read a module
+         * @description For its project's admins, members and guests, also a caller who sees only his own work items there, whether the project's modules are turned on or off and whether the project or the module is archived; with its undeleted members, ascending. A module that does not exist or is deleted, one whose project is deleted, and one whose project the caller does not see answer planning.module_not_found; one whose project he sees but whose modules he may not read, forbidden.
+         */
+        get: operations["getModule"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -3400,30 +3427,6 @@ export interface components {
          * @enum {string}
          */
         ModuleStatus: "backlog" | "planned" | "in-progress" | "paused" | "completed" | "cancelled";
-        ModuleCreate: {
-            /** @description 1–255 characters without the surrounding white space, which is dropped; no NUL. */
-            name: string;
-            /** @description Plain text without NUL; empty when left out. */
-            description?: string;
-            /**
-             * Format: date
-             * @description The day it starts; left out for none.
-             */
-            start_date?: string;
-            /**
-             * Format: date
-             * @description The day it is due, not before start_date; left out for none.
-             */
-            target_date?: string;
-            status?: components["schemas"]["ModuleStatus"];
-            /**
-             * Format: uuid
-             * @description An active member of the project who is not its guest; null, or left out, for none.
-             */
-            lead_id?: string | null;
-            /** @description At most 100 accounts, each named once, each an active member of the project who is not its guest; left out, or empty, for none. */
-            member_ids?: string[];
-        };
         /** @description A module of a project. */
         Module: {
             /** Format: uuid */
@@ -3468,6 +3471,33 @@ export interface components {
             created_by_id: string | null;
             /** Format: uuid */
             updated_by_id: string | null;
+        };
+        ModuleList: {
+            data: components["schemas"]["Module"][];
+        };
+        ModuleCreate: {
+            /** @description 1–255 characters without the surrounding white space, which is dropped; no NUL. */
+            name: string;
+            /** @description Plain text without NUL; empty when left out. */
+            description?: string;
+            /**
+             * Format: date
+             * @description The day it starts; left out for none.
+             */
+            start_date?: string;
+            /**
+             * Format: date
+             * @description The day it is due, not before start_date; left out for none.
+             */
+            target_date?: string;
+            status?: components["schemas"]["ModuleStatus"];
+            /**
+             * Format: uuid
+             * @description An active member of the project who is not its guest; null, or left out, for none.
+             */
+            lead_id?: string | null;
+            /** @description At most 100 accounts, each named once, each an active member of the project who is not its guest; left out, or empty, for none. */
+            member_ids?: string[];
         };
         /** @description A link of a module. */
         ModuleLink: {
@@ -3695,8 +3725,9 @@ export type CycleList = components['schemas']['CycleList'];
 export type CycleCreate = components['schemas']['CycleCreate'];
 export type CycleUpdate = components['schemas']['CycleUpdate'];
 export type ModuleStatus = components['schemas']['ModuleStatus'];
-export type ModuleCreate = components['schemas']['ModuleCreate'];
 export type Module = components['schemas']['Module'];
+export type ModuleList = components['schemas']['ModuleList'];
+export type ModuleCreate = components['schemas']['ModuleCreate'];
 export type ModuleLink = components['schemas']['ModuleLink'];
 export type ModuleLinkCollection = components['schemas']['ModuleLinkCollection'];
 export type ModuleLinkCreate = components['schemas']['ModuleLinkCreate'];
@@ -6641,6 +6672,33 @@ export interface operations {
             default: components["responses"]["Problem"];
         };
     };
+    listModules: {
+        parameters: {
+            query?: {
+                /** @description true lists the archived modules alone; false, or no value, the others. */
+                archived?: boolean;
+            };
+            header?: never;
+            path: {
+                /** @description A project's id (Project.id). */
+                project_id: components["parameters"]["ProjectID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The project's modules. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModuleList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
     createModule: {
         parameters: {
             query?: never;
@@ -6659,6 +6717,30 @@ export interface operations {
         responses: {
             /** @description The new module. */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Module"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getModule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A module's id (Module.id). */
+                module_id: components["parameters"]["ModuleID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The module. */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

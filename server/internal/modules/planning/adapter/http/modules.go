@@ -8,6 +8,30 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/planning/domain"
 )
 
+// ListModules serves GET /api/v0/projects/{project_id}/modules: archived
+// false when left out; data an array, never null.
+func (h handler) ListModules(ctx context.Context, req gen.ListModulesRequestObject) (gen.ListModulesResponseObject, error) {
+	archived := req.Params.Archived != nil && *req.Params.Archived
+	list, err := h.uc.ListModules.Execute(ctx, req.ProjectID, archived)
+	if err != nil {
+		return nil, err
+	}
+	out := gen.ModuleList{Data: make([]gen.Module, len(list))}
+	for i, m := range list {
+		out.Data[i] = module(m)
+	}
+	return gen.ListModules200JSONResponse(out), nil
+}
+
+// GetModule serves GET /api/v0/modules/{module_id}.
+func (h handler) GetModule(ctx context.Context, req gen.GetModuleRequestObject) (gen.GetModuleResponseObject, error) {
+	m, err := h.uc.GetModule.Execute(ctx, req.ModuleID)
+	if err != nil {
+		return nil, err
+	}
+	return gen.GetModule200JSONResponse(module(m)), nil
+}
+
 // CreateModule serves POST /api/v0/projects/{project_id}/modules: the values
 // go to the use case as given, a status not of the six too (its 422); the
 // description empty, the dates, the status and the lead none, and no member,

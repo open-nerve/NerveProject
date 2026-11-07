@@ -246,6 +246,11 @@ type ModuleLinkPatch struct {
 	URL *string `json:"url,omitempty"`
 }
 
+// ModuleList defines model for ModuleList.
+type ModuleList struct {
+	Data []Module `json:"data"`
+}
+
 // ModuleStatus A module's status, set by its writers, never read from its dates.
 type ModuleStatus string
 
@@ -267,6 +272,12 @@ type Problem = externalRef0.Problem
 // ListCyclesParams defines parameters for ListCycles.
 type ListCyclesParams struct {
 	// Archived true lists the archived cycles alone; false, or no value, the others.
+	Archived *bool `form:"archived,omitempty" json:"archived,omitempty"`
+}
+
+// ListModulesParams defines parameters for ListModules.
+type ListModulesParams struct {
+	// Archived true lists the archived modules alone; false, or no value, the others.
 	Archived *bool `form:"archived,omitempty" json:"archived,omitempty"`
 }
 
@@ -308,6 +319,9 @@ type ServerInterface interface {
 	// UpdateModuleLink Change a module's link
 	// (PATCH /api/v0/module-links/{module_link_id})
 	UpdateModuleLink(w http.ResponseWriter, r *http.Request, moduleLinkID ModuleLinkID)
+	// GetModule Read a module
+	// (GET /api/v0/modules/{module_id})
+	GetModule(w http.ResponseWriter, r *http.Request, moduleID ModuleID)
 	// ListModuleLinks List a module's links
 	// (GET /api/v0/modules/{module_id}/links)
 	ListModuleLinks(w http.ResponseWriter, r *http.Request, moduleID ModuleID)
@@ -320,6 +334,9 @@ type ServerInterface interface {
 	// CreateCycle Create a cycle in a project
 	// (POST /api/v0/projects/{project_id}/cycles)
 	CreateCycle(w http.ResponseWriter, r *http.Request, projectID ProjectID)
+	// ListModules List a project's modules
+	// (GET /api/v0/projects/{project_id}/modules)
+	ListModules(w http.ResponseWriter, r *http.Request, projectID ProjectID, params ListModulesParams)
 	// CreateModule Create a module in a project
 	// (POST /api/v0/projects/{project_id}/modules)
 	CreateModule(w http.ResponseWriter, r *http.Request, projectID ProjectID)
@@ -516,6 +533,32 @@ func (siw *ServerInterfaceWrapper) UpdateModuleLink(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r)
 }
 
+// GetModule operation middleware
+func (siw *ServerInterfaceWrapper) GetModule(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "module_id" -------------
+	var moduleID ModuleID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "module_id", r.PathValue("module_id"), &moduleID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "module_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetModule(w, r, moduleID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListModuleLinks operation middleware
 func (siw *ServerInterfaceWrapper) ListModuleLinks(w http.ResponseWriter, r *http.Request) {
 
@@ -627,6 +670,48 @@ func (siw *ServerInterfaceWrapper) CreateCycle(w http.ResponseWriter, r *http.Re
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.CreateCycle(w, r, projectID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListModules operation middleware
+func (siw *ServerInterfaceWrapper) ListModules(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "project_id" -------------
+	var projectID ProjectID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "project_id", r.PathValue("project_id"), &projectID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "project_id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListModulesParams
+
+	// ------------- Optional query parameter "archived" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "archived", r.URL.Query(), &params.Archived, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "archived"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "archived", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListModules(w, r, projectID, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -789,7 +874,9 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/cycles/{cycle_id}", wrapper.UpdateCycle)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/cycles/{cycle_id}/archive", wrapper.ArchiveCycle)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/cycles/{cycle_id}/unarchive", wrapper.UnarchiveCycle)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/projects/{project_id}/modules", wrapper.ListModules)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/projects/{project_id}/modules", wrapper.CreateModule)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/modules/{module_id}", wrapper.GetModule)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/modules/{module_id}/links", wrapper.ListModuleLinks)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/modules/{module_id}/links", wrapper.CreateModuleLink)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v0/module-links/{module_link_id}", wrapper.DeleteModuleLink)
@@ -1120,6 +1207,52 @@ func (response UpdateModuleLinkdefaultApplicationProblemPlusJSONResponse) VisitU
 	return err
 }
 
+type GetModuleRequestObject struct {
+	ModuleID ModuleID `json:"module_id"`
+}
+
+type GetModuleResponseObject interface {
+	VisitGetModuleResponse(w http.ResponseWriter) error
+}
+
+type GetModule200JSONResponse Module
+
+func (response GetModule200JSONResponse) VisitGetModuleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetModuledefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response GetModuledefaultApplicationProblemPlusJSONResponse) VisitGetModuleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ListModuleLinksRequestObject struct {
 	ModuleID ModuleID `json:"module_id"`
 }
@@ -1307,6 +1440,53 @@ func (response CreateCycledefaultApplicationProblemPlusJSONResponse) VisitCreate
 	return err
 }
 
+type ListModulesRequestObject struct {
+	ProjectID ProjectID `json:"project_id"`
+	Params    ListModulesParams
+}
+
+type ListModulesResponseObject interface {
+	VisitListModulesResponse(w http.ResponseWriter) error
+}
+
+type ListModules200JSONResponse ModuleList
+
+func (response ListModules200JSONResponse) VisitListModulesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListModulesdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response ListModulesdefaultApplicationProblemPlusJSONResponse) VisitListModulesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type CreateModuleRequestObject struct {
 	ProjectID ProjectID `json:"project_id"`
 	Body      *CreateModuleJSONRequestBody
@@ -1377,6 +1557,9 @@ type StrictServerInterface interface {
 	// UpdateModuleLink Change a module's link
 	// (PATCH /api/v0/module-links/{module_link_id})
 	UpdateModuleLink(ctx context.Context, request UpdateModuleLinkRequestObject) (UpdateModuleLinkResponseObject, error)
+	// GetModule Read a module
+	// (GET /api/v0/modules/{module_id})
+	GetModule(ctx context.Context, request GetModuleRequestObject) (GetModuleResponseObject, error)
 	// ListModuleLinks List a module's links
 	// (GET /api/v0/modules/{module_id}/links)
 	ListModuleLinks(ctx context.Context, request ListModuleLinksRequestObject) (ListModuleLinksResponseObject, error)
@@ -1389,6 +1572,9 @@ type StrictServerInterface interface {
 	// CreateCycle Create a cycle in a project
 	// (POST /api/v0/projects/{project_id}/cycles)
 	CreateCycle(ctx context.Context, request CreateCycleRequestObject) (CreateCycleResponseObject, error)
+	// ListModules List a project's modules
+	// (GET /api/v0/projects/{project_id}/modules)
+	ListModules(ctx context.Context, request ListModulesRequestObject) (ListModulesResponseObject, error)
 	// CreateModule Create a module in a project
 	// (POST /api/v0/projects/{project_id}/modules)
 	CreateModule(ctx context.Context, request CreateModuleRequestObject) (CreateModuleResponseObject, error)
@@ -1629,6 +1815,32 @@ func (sh *strictHandler) UpdateModuleLink(w http.ResponseWriter, r *http.Request
 	}
 }
 
+// GetModule operation middleware
+func (sh *strictHandler) GetModule(w http.ResponseWriter, r *http.Request, moduleID ModuleID) {
+	var request GetModuleRequestObject
+
+	request.ModuleID = moduleID
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetModule(ctx, request.(GetModuleRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetModule")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetModuleResponseObject); ok {
+		if err := validResponse.VisitGetModuleResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // ListModuleLinks operation middleware
 func (sh *strictHandler) ListModuleLinks(w http.ResponseWriter, r *http.Request, moduleID ModuleID) {
 	var request ListModuleLinksRequestObject
@@ -1741,6 +1953,33 @@ func (sh *strictHandler) CreateCycle(w http.ResponseWriter, r *http.Request, pro
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(CreateCycleResponseObject); ok {
 		if err := validResponse.VisitCreateCycleResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListModules operation middleware
+func (sh *strictHandler) ListModules(w http.ResponseWriter, r *http.Request, projectID ProjectID, params ListModulesParams) {
+	var request ListModulesRequestObject
+
+	request.ProjectID = projectID
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListModules(ctx, request.(ListModulesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListModules")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListModulesResponseObject); ok {
+		if err := validResponse.VisitListModulesResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

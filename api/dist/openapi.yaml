@@ -3249,6 +3249,33 @@ paths:
   /api/v0/projects/{project_id}/modules:
     parameters:
       - $ref: '#/components/parameters/ProjectID'
+    get:
+      operationId: listModules
+      tags:
+        - planning
+      summary: List a project's modules
+      description: 'For the project''s admins, members and guests, also a caller who sees only his own work items there, whether its modules are turned on or off and whether it is archived. The undeleted modules that are not archived, by sort_order, then creation, then id; or, when archived is true, the archived ones alone, the latest archived first, then by id. Each with its undeleted members, ascending. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but whose modules he may not read, forbidden. The whole collection at once: collections are not paginated.'
+      security:
+        - bearer: []
+      x-problem-codes:
+        - project.not_found
+        - forbidden
+      parameters:
+        - name: archived
+          in: query
+          required: false
+          description: true lists the archived modules alone; false, or no value, the others.
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: The project's modules.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModuleList'
+        default:
+          $ref: '#/components/responses/Problem'
     post:
       operationId: createModule
       tags:
@@ -3274,6 +3301,29 @@ paths:
       responses:
         '201':
           description: The new module.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Module'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/modules/{module_id}:
+    parameters:
+      - $ref: '#/components/parameters/ModuleID'
+    get:
+      operationId: getModule
+      tags:
+        - planning
+      summary: Read a module
+      description: For its project's admins, members and guests, also a caller who sees only his own work items there, whether the project's modules are turned on or off and whether the project or the module is archived; with its undeleted members, ascending. A module that does not exist or is deleted, one whose project is deleted, and one whose project the caller does not see answer planning.module_not_found; one whose project he sees but whose modules he may not read, forbidden.
+      security:
+        - bearer: []
+      x-problem-codes:
+        - planning.module_not_found
+        - forbidden
+      responses:
+        '200':
+          description: The module.
           content:
             application/json:
               schema:
@@ -6619,40 +6669,6 @@ components:
         - paused
         - completed
         - cancelled
-    ModuleCreate:
-      type: object
-      additionalProperties: false
-      required:
-        - name
-      properties:
-        name:
-          description: 1–255 characters without the surrounding white space, which is dropped; no NUL.
-          type: string
-        description:
-          description: Plain text without NUL; empty when left out.
-          type: string
-        start_date:
-          description: The day it starts; left out for none.
-          type: string
-          format: date
-        target_date:
-          description: The day it is due, not before start_date; left out for none.
-          type: string
-          format: date
-        status:
-          $ref: '#/components/schemas/ModuleStatus'
-        lead_id:
-          description: An active member of the project who is not its guest; null, or left out, for none.
-          type:
-            - string
-            - 'null'
-          format: uuid
-        member_ids:
-          description: At most 100 accounts, each named once, each an active member of the project who is not its guest; left out, or empty, for none.
-          type: array
-          items:
-            type: string
-            format: uuid
     Module:
       description: A module of a project.
       type: object
@@ -6740,6 +6756,50 @@ components:
             - string
             - 'null'
           format: uuid
+    ModuleList:
+      type: object
+      additionalProperties: false
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Module'
+    ModuleCreate:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+      properties:
+        name:
+          description: 1–255 characters without the surrounding white space, which is dropped; no NUL.
+          type: string
+        description:
+          description: Plain text without NUL; empty when left out.
+          type: string
+        start_date:
+          description: The day it starts; left out for none.
+          type: string
+          format: date
+        target_date:
+          description: The day it is due, not before start_date; left out for none.
+          type: string
+          format: date
+        status:
+          $ref: '#/components/schemas/ModuleStatus'
+        lead_id:
+          description: An active member of the project who is not its guest; null, or left out, for none.
+          type:
+            - string
+            - 'null'
+          format: uuid
+        member_ids:
+          description: At most 100 accounts, each named once, each an active member of the project who is not its guest; left out, or empty, for none.
+          type: array
+          items:
+            type: string
+            format: uuid
     ModuleLink:
       description: A link of a module.
       type: object

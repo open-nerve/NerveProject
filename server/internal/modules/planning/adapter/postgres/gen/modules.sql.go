@@ -116,6 +116,145 @@ func (q *Queries) GetModule(ctx context.Context, id uuid.UUID) (GetModuleRow, er
 	return i, err
 }
 
+const listArchivedModules = `-- name: ListArchivedModules :many
+SELECT m.id, m.workspace_id, m.project_id, m.name, m.description, m.start_date, m.target_date, m.status, m.lead_id,
+       m.sort_order, m.archived_at, m.created_at, m.updated_at, m.created_by_id, m.updated_by_id,
+       ARRAY(SELECT mm.member_id FROM module_members mm
+             WHERE mm.module_id = m.id AND mm.deleted_at IS NULL
+             ORDER BY mm.member_id)::uuid[] AS member_ids
+FROM modules m
+WHERE m.project_id = $1 AND m.deleted_at IS NULL AND m.archived_at IS NOT NULL
+ORDER BY m.archived_at DESC, m.id
+`
+
+type ListArchivedModulesRow struct {
+	ID          uuid.UUID
+	WorkspaceID uuid.UUID
+	ProjectID   uuid.UUID
+	Name        string
+	Description string
+	StartDate   *time.Time
+	TargetDate  *time.Time
+	Status      string
+	LeadID      *uuid.UUID
+	SortOrder   float64
+	ArchivedAt  *time.Time
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	CreatedByID *uuid.UUID
+	UpdatedByID *uuid.UUID
+	MemberIds   []uuid.UUID
+}
+
+// The project's undeleted, archived modules alone, the latest archived first, then by id (M6 P2 spec 2.3, R9); each
+// with its members as GetModule reads them.
+func (q *Queries) ListArchivedModules(ctx context.Context, projectID uuid.UUID) ([]ListArchivedModulesRow, error) {
+	rows, err := q.db.Query(ctx, listArchivedModules, projectID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListArchivedModulesRow
+	for rows.Next() {
+		var i ListArchivedModulesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkspaceID,
+			&i.ProjectID,
+			&i.Name,
+			&i.Description,
+			&i.StartDate,
+			&i.TargetDate,
+			&i.Status,
+			&i.LeadID,
+			&i.SortOrder,
+			&i.ArchivedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.CreatedByID,
+			&i.UpdatedByID,
+			&i.MemberIds,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listModules = `-- name: ListModules :many
+SELECT m.id, m.workspace_id, m.project_id, m.name, m.description, m.start_date, m.target_date, m.status, m.lead_id,
+       m.sort_order, m.archived_at, m.created_at, m.updated_at, m.created_by_id, m.updated_by_id,
+       ARRAY(SELECT mm.member_id FROM module_members mm
+             WHERE mm.module_id = m.id AND mm.deleted_at IS NULL
+             ORDER BY mm.member_id)::uuid[] AS member_ids
+FROM modules m
+WHERE m.project_id = $1 AND m.deleted_at IS NULL AND m.archived_at IS NULL
+ORDER BY m.sort_order, m.created_at, m.id
+`
+
+type ListModulesRow struct {
+	ID          uuid.UUID
+	WorkspaceID uuid.UUID
+	ProjectID   uuid.UUID
+	Name        string
+	Description string
+	StartDate   *time.Time
+	TargetDate  *time.Time
+	Status      string
+	LeadID      *uuid.UUID
+	SortOrder   float64
+	ArchivedAt  *time.Time
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	CreatedByID *uuid.UUID
+	UpdatedByID *uuid.UUID
+	MemberIds   []uuid.UUID
+}
+
+// The project's undeleted, unarchived modules in their default order (M6 P2 spec 2.3): by sort order, then creation,
+// then id; each with its members as GetModule reads them. The list index (project_id, sort_order, created_at, id) WHERE
+// deleted_at IS NULL serves the order, module_members_module_id_member_id_key each one's members.
+func (q *Queries) ListModules(ctx context.Context, projectID uuid.UUID) ([]ListModulesRow, error) {
+	rows, err := q.db.Query(ctx, listModules, projectID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListModulesRow
+	for rows.Next() {
+		var i ListModulesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkspaceID,
+			&i.ProjectID,
+			&i.Name,
+			&i.Description,
+			&i.StartDate,
+			&i.TargetDate,
+			&i.Status,
+			&i.LeadID,
+			&i.SortOrder,
+			&i.ArchivedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.CreatedByID,
+			&i.UpdatedByID,
+			&i.MemberIds,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const lowestModuleSortOrder = `-- name: LowestModuleSortOrder :one
 SELECT sort_order
 FROM modules

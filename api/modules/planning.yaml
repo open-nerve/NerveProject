@@ -232,6 +232,39 @@ paths:
   /api/v0/projects/{project_id}/modules:
     parameters:
       - $ref: '#/components/parameters/ProjectID'
+    get:
+      operationId: listModules
+      tags: [planning]
+      summary: List a project's modules
+      description: >-
+        For the project's admins, members and guests, also a caller who sees
+        only his own work items there, whether its modules are turned on or
+        off and whether it is archived. The undeleted modules that are not
+        archived, by sort_order, then creation, then id; or, when archived is
+        true, the archived ones alone, the latest archived first, then by id.
+        Each with its undeleted members, ascending. A project that does not
+        exist, is deleted, or that the caller does not see answers
+        project.not_found; one he sees but whose modules he may not read,
+        forbidden. The whole collection at once: collections are not
+        paginated.
+      security: [{bearer: []}]
+      x-problem-codes: [project.not_found, forbidden]
+      parameters:
+        - name: archived
+          in: query
+          required: false
+          description: true lists the archived modules alone; false, or no value, the others.
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: The project's modules.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModuleList'
+        default:
+          $ref: '#/components/responses/Problem'
     post:
       operationId: createModule
       tags: [planning]
@@ -270,6 +303,32 @@ paths:
       responses:
         '201':
           description: The new module.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Module'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/modules/{module_id}:
+    parameters:
+      - $ref: '#/components/parameters/ModuleID'
+    get:
+      operationId: getModule
+      tags: [planning]
+      summary: Read a module
+      description: >-
+        For its project's admins, members and guests, also a caller who sees
+        only his own work items there, whether the project's modules are
+        turned on or off and whether the project or the module is archived;
+        with its undeleted members, ascending. A module that does not exist
+        or is deleted, one whose project is deleted, and one whose project
+        the caller does not see answer planning.module_not_found; one whose
+        project he sees but whose modules he may not read, forbidden.
+      security: [{bearer: []}]
+      x-problem-codes: [planning.module_not_found, forbidden]
+      responses:
+        '200':
+          description: The module.
           content:
             application/json:
               schema:
@@ -644,6 +703,15 @@ components:
         updated_by_id:
           type: [string, 'null']
           format: uuid
+    ModuleList:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Module'
     ModuleCreate:
       type: object
       additionalProperties: false
