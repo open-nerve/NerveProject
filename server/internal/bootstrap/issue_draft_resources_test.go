@@ -73,6 +73,9 @@ func (g draftObservedGate) Enter(ctx context.Context, ids ...uuid.UUID) (func(),
 }
 func testDraftGateConnection(t *testing.T) {
 	w := newIssueWorld(t)
+	// A start-time run locks each project in turn, which the probe that Web
+	// is free would see.
+	waitForStartupRuns(t, w.pool)
 	d := createDraftHTTP(t, w, "alice", `{"project_id":"`+w.web.String()+`","payload":{"name":"Admitted"}}`)
 	one := poolOfOne(t, w.pool.Config().ConnString())
 	realGate := newWriteGate(config.WriteGateConfig{PerProject: 1, MaxQueue: 1, MaxWait: 2 * time.Second})

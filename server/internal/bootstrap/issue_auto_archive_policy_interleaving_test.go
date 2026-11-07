@@ -35,6 +35,9 @@ func TestAutoArchiveUsesLockedPolicy(t *testing.T) {
 		for _, order := range []string{"after_scan", "request_first", "job_first"} {
 			t.Run(change.name+"/"+order, func(t *testing.T) {
 				w := newIssueWorld(t)
+				// The app's own start-time auto-archive would archive this real-clock
+				// candidate, and a start-time run's wait for Web pass for this one's.
+				waitForStartupRuns(t, w.pool)
 				// Project/workspace routes use the real clock, after this system time.
 				at := time.Now().UTC().Truncate(time.Microsecond).Add(-time.Hour)
 				id := archiveRaceSeed(t, w, at, 40*24*time.Hour)
@@ -139,6 +142,10 @@ func TestAutoArchiveUsesLockedPolicy(t *testing.T) {
 // Several candidates must not become one transaction holding all projects.
 func TestAutoArchiveUsesLockedPolicyOneProjectAtATime(t *testing.T) {
 	w := newIssueWorld(t)
+	// A start-time run queued on Web takes it as the job lets go, before the
+	// probe that Web is free; the app's own auto-archive would also archive
+	// this real-clock candidate.
+	waitForStartupRuns(t, w.pool)
 	at := time.Now().UTC().Truncate(time.Microsecond)
 	archiveRaceSeed(t, w, at, 40*24*time.Hour)
 	other := createdProject(t, w.contract, w.base, w.tokens["alice"], "acme", "Other", "OTH")

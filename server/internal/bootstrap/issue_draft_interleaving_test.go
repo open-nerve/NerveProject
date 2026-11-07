@@ -106,6 +106,9 @@ func TestDraftProjectMoveAndPublishSerialize(t *testing.T) {
 	for _, originHigh := range []bool{false, true} {
 		t.Run(map[bool]string{false: "P1 low", true: "P1 high"}[originHigh], func(t *testing.T) {
 			w := newIssueWorld(t)
+			// A start-time run locks each project in turn, which the probe that
+			// P1 is free would see.
+			waitForStartupRuns(t, w.pool)
 			other := createdProject(t, w.contract, w.base, w.tokens["alice"], "acme", "Ops", "OPS")
 			low, high := w.web, other
 			if low.Compare(high) > 0 {

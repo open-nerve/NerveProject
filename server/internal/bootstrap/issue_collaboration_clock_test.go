@@ -118,6 +118,9 @@ func TestCollaborationReadsClockUnderLock(t *testing.T) {
 			for _, operation := range []string{"description", "comment create", "comment edit", "comment delete", "issue reaction add", "issue reaction remove", "comment reaction add", "comment reaction remove"} {
 				t.Run(operation, func(t *testing.T) {
 					w := newIssueWorld(t)
+					// A start-time run locks each project in turn, which the probe
+					// that the neighbor is free would see.
+					waitForStartupRuns(t, w.pool)
 					neighbor := createdProject(t, w.contract, w.base, w.tokens["alice"], "acme", "Later", "LATER")
 					if higherProject {
 						w.web, neighbor = neighbor, w.web

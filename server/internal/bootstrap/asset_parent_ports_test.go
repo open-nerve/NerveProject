@@ -22,6 +22,10 @@ func (f *fakeIssueProjects) AssetProjectArchived(_ context.Context, id uuid.UUID
 
 func TestAssetParentLocksAndFacts(t *testing.T) {
 	w := newIssueWorld(t)
+	// A start-time run queued on a held project takes it as the holder lets
+	// go, and locks each project in turn, which the probes that Web is free
+	// would see.
+	waitForStartupRuns(t, w.pool)
 	var ws struct {
 		ID uuid.UUID `json:"id"`
 	}

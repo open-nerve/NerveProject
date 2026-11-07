@@ -86,9 +86,12 @@ func newIssueWorldOnRequests(t *testing.T, dbURL string, pool *pgxpool.Pool, con
 // waitForStartupRuns returns once every job serve runs at start (RunOnStart)
 // has completed once. Those runs usually end one to three seconds after the
 // app starts, after a world is built; one still pending queues on the locks a
-// test holds and stands between its request and its fixture (P8 T14). Only
-// tests that hold such locks wait: every world waiting would double the
-// package's run time.
+// test holds and stands between its request and its fixture (P8 T14), or
+// takes them as the test lets go; the issue runs lock each project in turn,
+// and the auto-archive archives a real-clock candidate. Only the tests these
+// break wait, before their first lock or seed: those that observe their
+// requests' lock waits, probe that a project is free, or seed such a
+// candidate. Every world waiting would double the package's run time.
 func waitForStartupRuns(t *testing.T, pool *pgxpool.Pool) {
 	t.Helper()
 	waitForCompletedKinds(t, pool, map[string]int{identityriver.CleanupKind: 1, issueriver.AutoArchiveKind: 1,

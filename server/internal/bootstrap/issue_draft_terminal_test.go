@@ -32,6 +32,9 @@ func testDraftWorkspaceTerminal(t *testing.T) {
 		for _, terminal := range []string{"guest", "draft deleted and guest", "project deleted and guest", "workspace deleted and guest", "moved and guest"} {
 			t.Run(method+"/"+terminal, func(t *testing.T) {
 				w := newIssueWorld(t)
+				// A start-time run locks each project in turn, which the probe
+				// that Ops is free would see.
+				waitForStartupRuns(t, w.pool)
 				next := createdProject(t, w.contract, w.base, w.tokens["alice"], "acme", "Ops", "OPS")
 				d := createDraftHTTP(t, w, "alice", `{"project_id":"`+w.web.String()+`","payload":{"name":"Unchanged"}}`)
 				trace := &listTrace{}
@@ -115,6 +118,9 @@ func testDraftWorkspaceTerminal(t *testing.T) {
 	for _, deleted := range []bool{false, true} {
 		t.Run(map[bool]string{false: "nil guest", true: "nil deleted guest"}[deleted], func(t *testing.T) {
 			w := newIssueWorld(t)
+			// A start-time run locks each project in turn, which the probe that
+			// Web is free would see.
+			waitForStartupRuns(t, w.pool)
 			d := createDraftHTTP(t, w, "alice", `{"payload":{"name":"Nil"}}`)
 			holder := holding(t, w.pool, "SELECT 1 FROM workspaces WHERE id=$1 FOR NO KEY UPDATE", w.acme)
 			draftExec(t, holder, "UPDATE workspace_members SET role=5 WHERE workspace_id=$1 AND member_id=$2", w.acme, w.ids["alice"])

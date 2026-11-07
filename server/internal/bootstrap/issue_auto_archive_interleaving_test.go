@@ -19,6 +19,9 @@ func TestAutoArchiveAndStateChangeSerialize(t *testing.T) {
 	for _, jobFirst := range []bool{false, true} {
 		t.Run(fmt.Sprintf("job_first=%t", jobFirst), func(t *testing.T) {
 			w := newIssueWorld(t)
+			// The app's own start-time auto-archive would archive this real-clock
+			// candidate, and its wait for Web pass for this job's (archiveWaitOrDone).
+			waitForStartupRuns(t, w.pool)
 			at := time.Now().UTC().Truncate(time.Microsecond)
 			id := archiveRaceSeed(t, w, at, 40*24*time.Hour)
 			before := archiveStableRow(t, w, id)

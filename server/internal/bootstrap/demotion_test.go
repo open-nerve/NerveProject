@@ -103,6 +103,9 @@ func refusingCommits(t *testing.T, pool *pgxpool.Pool, table string) (restore fu
 // req's transaction would no longer be held.
 func sendHoldingTheMemberships(t *testing.T, contract *apitest.Contract, pool *pgxpool.Pool, req *http.Request, member uuid.UUID) (int, string) {
 	t.Helper()
+	// A start-time run locks each project in turn, which the FOR SHARE NOWAIT
+	// that finds his projects free would see.
+	waitForStartupRuns(t, pool)
 	ctx := context.Background()
 	hold := func(sql string) pgx.Tx {
 		t.Helper()
