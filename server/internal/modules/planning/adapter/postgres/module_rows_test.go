@@ -55,8 +55,8 @@ func tableRows(t *testing.T, pool *pgxpool.Pool, table string, project uuid.UUID
 }
 
 // Each module table's step soft-deletes, a batch at a time after its cursor and in id order, at most its limit of the
-// project's undeleted rows at the batch's moment and by its actor; a row deleted before keeps its own deletion, the
-// other project's rows are untouched.
+// project's undeleted rows, archived modules too, at the batch's moment and by its actor; a row deleted before keeps
+// its own deletion, the other project's rows are untouched.
 func TestDeleteProjectModuleRows(t *testing.T) {
 	for _, table := range moduleTables {
 		t.Run(table, func(t *testing.T) {
@@ -71,6 +71,9 @@ func TestDeleteProjectModuleRows(t *testing.T) {
 			gone := uuid.NewV7()
 			moduleRow(t, pool, w, table, w.web, gone, &earlier)
 			moduleRow(t, pool, w, table, w.ops, uuid.NewV7(), nil)
+			if table == "modules" {
+				exec(t, pool, "UPDATE modules SET archived_at=$2 WHERE id=$1", live[1], now.Add(-time.Hour))
+			}
 			ops := tableRows(t, pool, table, w.ops)
 			deleter := uuid.NewV7()
 			exec(t, pool, "INSERT INTO users (id, email, password, display_name) VALUES ($1, 'dave@corp.com', 'x', 'dave')", deleter)
