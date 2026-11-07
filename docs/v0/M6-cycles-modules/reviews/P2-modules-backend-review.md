@@ -1,6 +1,6 @@
 # M6/P2 阶段评审记录
 
-> 2026-11-07：最终候选（修复轮与本记录）待推送、核分支 CI 与合入；分支 CI、合入、main CI 与归档清理在合入后由 P3 的 T1 回填到 §7。基线 main `0a601f212e32057c4e48fe43e8c4f19691254573`（P1 noff）。
+> 2026-11-07：最终候选（修复轮与本记录，门禁于 `62bc0de4` 全过）待推送、核分支 CI 与合入；分支 CI、合入、main CI 与归档清理在合入后由 P3 的 T1 回填到 §7。基线 main `0a601f212e32057c4e48fe43e8c4f19691254573`（P1 noff）。
 
 ## 1. 评审方式与范围
 
@@ -39,7 +39,7 @@ A1–A8 满足（[spec §4](../specs/P2-modules-backend.md#4-验收标准)已勾
 
 - **第一个检查点**（`d784d160`，T8 之后）：七项门禁串行全过，输入前后一致：`make gen-check`、`make lint-go`、`make test`（66 个包，829 秒）、`make lint-web`、`make knip`、`make test-web`、`make build && make e2e`（422 条全过）。分支 CI 42367215686 attempt 1 三个作业成功（e2e 16.5 分钟）。
 - **整审前**（`64d43fee`，T14 之后）：七项门禁串行全过，输入前后一致：`make test`（66 个包，848 秒）、`make build && make e2e`（426 条全过，即 422 条加 G9 两条、G10、G13）。
-- **修复轮之后**：在修复轮与本记录之后的候选上串行重跑七项门禁，结果在合入前写入本节。
+- **修复轮之后**：在 `62bc0de4`（修复轮 `18c06607` 加审查报告与本记录）上串行重跑七项门禁，全部 exit 0、输入前后一致：`make gen-check`、`make lint-go`、`make test`（66 个包，849 秒）、`make lint-web`（50 项任务中 35 项由 turbo 缓存回放）、`make knip`、`make test-web`（16 项任务全部由缓存回放：`web/` 自 `64d43fee` 以来未变）、`make build && make e2e`（426 条全过）。
 
 ## 6. 整分支审查
 
