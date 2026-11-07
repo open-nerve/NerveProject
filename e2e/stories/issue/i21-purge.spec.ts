@@ -11,7 +11,7 @@ import { expectWorkspaceDeleted } from "../../fixtures/assert/workspace";
 import { archiveWatermark, completedPeriodicJobs } from "../../fixtures/auto-archive";
 import { createCommentReaction, createIssueComment, createIssueReaction } from "../../fixtures/comments";
 import type { Database } from "../../fixtures/db";
-import { furnishIssueRows, furnishWorkspace } from "../../fixtures/furnish";
+import { furnishIssueRows, furnishPlanningRows, furnishWorkspace } from "../../fixtures/furnish";
 import { createIssue, createIssueRelations, issueDeleted, issueRead } from "../../fixtures/issues";
 import { completedLinkCrawl, createIssueLink } from "../../fixtures/links";
 import { filePixel, furnishIssueFiles, storedFile, waitForFileSafety } from "../../fixtures/storage";
@@ -134,12 +134,14 @@ async function seed(api: Api, db: Database, info: TestInfo, admin: Account, memb
   const doomed = await createProject(api, token, keeper.slug, { name: "Project target", identifier: "DEL" });
   const projectLabel = await createLabel(api, token, doomed.id, { name: "Bug" });
   await furnishIssueRows(api, token, keeper.slug, doomed.id, admin.id, projectLabel.id);
+  await furnishPlanningRows(api, token, doomed.id);
   const workspace = await createWorkspace(api, token, { name: "Workspace target", slug: slugFor(info, `${age}-del`) });
   await furnishWorkspace(api, token, workspace.slug, member, emailFor(info, `${age}-pending`));
   // A neighboring project remains live even when already 61 days old.
   const neighbor = await createProject(api, token, keeper.slug, { name: "Neighbor", identifier: "LIVE" });
   const neighborLabel = await createLabel(api, token, neighbor.id, { name: "Keep" });
   await furnishIssueRows(api, token, keeper.slug, neighbor.id, admin.id, neighborLabel.id);
+  await furnishPlanningRows(api, token, neighbor.id);
   const preparationHost = await createIssue(api, token, neighbor.id, { name: "Unreferenced image preparation" });
   await storedFile(
     api,
