@@ -9,7 +9,7 @@ import { NodeViewWrapper, NodeViewContent } from "@tiptap/react";
 import ts from "highlight.js/lib/languages/typescript";
 import { common, createLowlight } from "lowlight";
 import { CopyOutline, TickOutline } from "@makeplane/propel/icons";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 // ui
 import { Tooltip } from "@nerve/propel/tooltip";
 // nerve utils
@@ -28,6 +28,9 @@ type Props = {
 
 export function CodeBlockComponent({ node }: Props) {
   const [copied, setCopied] = useState(false);
+  // The copied mark's reset, ended with the code block so it never sets state on an unmounted view.
+  const copiedReset = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => () => clearTimeout(copiedReset.current), []);
   // derived values
   const attrs = node.attrs as TCodeBlockAttributes;
 
@@ -35,7 +38,8 @@ export function CodeBlockComponent({ node }: Props) {
     try {
       await navigator.clipboard.writeText(node.textContent);
       setCopied(true);
-      setTimeout(() => setCopied(false), 1000);
+      clearTimeout(copiedReset.current);
+      copiedReset.current = setTimeout(() => setCopied(false), 1000);
     } catch {
       setCopied(false);
     }
