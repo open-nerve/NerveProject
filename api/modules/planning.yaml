@@ -387,6 +387,86 @@ paths:
                 $ref: '#/components/schemas/Module'
         default:
           $ref: '#/components/responses/Problem'
+    delete:
+      operationId: deleteModule
+      tags: [planning]
+      summary: Delete a module
+      description: >-
+        For its project's admins, and for the member who created it; not
+        another member, not a guest, and not a caller who sees only his own
+        work items there. Whatever its status and archive. A module that does
+        not exist or is deleted, one whose project is deleted, and one whose
+        project the caller does not see answer planning.module_not_found; a
+        caller who may not delete it, forbidden; an archived project,
+        project.archived; modules turned off, planning.modules_disabled.
+        Decided after the project's row is locked; its deletion, the
+        deletion of its members and of its links, and its last change are
+        one moment, the caller's. It is read no more, nor are its links.
+      security: [{bearer: []}]
+      x-problem-codes: [planning.module_not_found, forbidden, project.archived, planning.modules_disabled, server_busy]
+      responses:
+        '204':
+          description: Deleted.
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/modules/{module_id}/archive:
+    parameters:
+      - $ref: '#/components/parameters/ModuleID'
+    post:
+      operationId: archiveModule
+      tags: [planning]
+      summary: Archive a completed or cancelled module
+      description: >-
+        For its project's admins and members, not its guests, and not a
+        caller who sees only his own work items there. Only a module whose
+        status is completed or cancelled is archived
+        (planning.module_not_closed); one archived already is answered as it
+        is, nothing written. A module that does not exist or is deleted, one
+        whose project is deleted, and one whose project the caller does not
+        see answer planning.module_not_found; a caller who may not change it,
+        forbidden; an archived project, project.archived; modules turned
+        off, planning.modules_disabled. Decided after the project's row is
+        locked; archived_at and the module's last change are one moment, the
+        caller's.
+      security: [{bearer: []}]
+      x-problem-codes: [planning.module_not_found, forbidden, project.archived, planning.modules_disabled, planning.module_not_closed, server_busy]
+      responses:
+        '200':
+          description: The module, archived.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Module'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/modules/{module_id}/unarchive:
+    parameters:
+      - $ref: '#/components/parameters/ModuleID'
+    post:
+      operationId: unarchiveModule
+      tags: [planning]
+      summary: Unarchive a module
+      description: >-
+        For its project's admins and members, not its guests, and not a
+        caller who sees only his own work items there; whatever the module's
+        status. One not archived is answered as it is, nothing written. A
+        module that does not exist or is deleted, one whose project is
+        deleted, and one whose project the caller does not see answer
+        planning.module_not_found; a caller who may not change it,
+        forbidden; an archived project, project.archived; modules turned
+        off, planning.modules_disabled. Decided after the project's row is
+        locked; the module's last change is the caller's at that moment.
+      security: [{bearer: []}]
+      x-problem-codes: [planning.module_not_found, forbidden, project.archived, planning.modules_disabled, server_busy]
+      responses:
+        '200':
+          description: The module, not archived.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Module'
+        default:
+          $ref: '#/components/responses/Problem'
   /api/v0/modules/{module_id}/links:
     parameters:
       - $ref: '#/components/parameters/ModuleID'

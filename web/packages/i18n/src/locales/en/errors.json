@@ -77,6 +77,7 @@
     "planning_cycle_dates_overlap": "These dates overlap another cycle of this project.",
     "planning_modules_disabled": "Modules are turned off in this project. Turn them on to change them.",
     "planning_module_name_taken": "A module of this project already has this name.",
+    "planning_module_not_closed": "Only a completed or cancelled module can be archived.",
     "planning_module_not_found": "The module does not exist, or you cannot see it.",
     "planning_module_link_not_found": "The link does not exist, or you cannot see it.",
     "planning_module_link_exists": "This module already has this link.",

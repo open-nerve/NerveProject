@@ -59,6 +59,28 @@ func (q *Queries) CreateModule(ctx context.Context, arg CreateModuleParams) erro
 	return err
 }
 
+const deleteModule = `-- name: DeleteModule :exec
+UPDATE modules
+SET deleted_at    = $1::timestamptz,
+    updated_at    = $1,
+    updated_by_id = $2::uuid
+WHERE id = $3 AND deleted_at IS NULL
+`
+
+type DeleteModuleParams struct {
+	At time.Time
+	By uuid.UUID
+	ID uuid.UUID
+}
+
+// A module soft-deleted by one account at one moment, archived or not, its last change the same (M6 P2 spec 2.4); one
+// deleted already keeps its deletion. Run under the project's FOR NO KEY UPDATE, as UpdateModule; its members' and links'
+// rows go in the same transaction (DeleteModuleMemberRows, DeleteModuleLinkRows; R15).
+func (q *Queries) DeleteModule(ctx context.Context, arg DeleteModuleParams) error {
+	_, err := q.db.Exec(ctx, deleteModule, arg.At, arg.By, arg.ID)
+	return err
+}
+
 const getModule = `-- name: GetModule :one
 SELECT m.id, m.workspace_id, m.project_id, m.name, m.description, m.start_date, m.target_date, m.status, m.lead_id,
        m.sort_order, m.archived_at, m.created_at, m.updated_at, m.created_by_id, m.updated_by_id,
@@ -271,6 +293,33 @@ func (q *Queries) LowestModuleSortOrder(ctx context.Context, projectID uuid.UUID
 	var sort_order float64
 	err := row.Scan(&sort_order)
 	return sort_order, err
+}
+
+const setModuleArchived = `-- name: SetModuleArchived :exec
+UPDATE modules
+SET archived_at   = $1,
+    updated_at    = $2,
+    updated_by_id = $3
+WHERE id = $4 AND deleted_at IS NULL
+`
+
+type SetModuleArchivedParams struct {
+	ArchivedAt  *time.Time
+	UpdatedAt   time.Time
+	UpdatedByID *uuid.UUID
+	ID          uuid.UUID
+}
+
+// A module archived at one moment, or no longer, last changed by one account at that moment (M6 P2 spec R3); nothing
+// else of it. Run under the project's FOR NO KEY UPDATE, as UpdateModule.
+func (q *Queries) SetModuleArchived(ctx context.Context, arg SetModuleArchivedParams) error {
+	_, err := q.db.Exec(ctx, setModuleArchived,
+		arg.ArchivedAt,
+		arg.UpdatedAt,
+		arg.UpdatedByID,
+		arg.ID,
+	)
+	return err
 }
 
 const updateModule = `-- name: UpdateModule :exec

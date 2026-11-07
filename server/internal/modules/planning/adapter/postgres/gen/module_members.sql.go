@@ -12,6 +12,29 @@ import (
 	"uuid"
 )
 
+const deleteModuleMemberRows = `-- name: DeleteModuleMemberRows :exec
+UPDATE module_members AS t
+SET deleted_at = $1::timestamptz, updated_at = $1, updated_by_id = $2::uuid
+WHERE t.id IN (
+    SELECT r.id FROM module_members r
+    WHERE r.module_id = $3 AND r.deleted_at IS NULL
+    ORDER BY r.id FOR NO KEY UPDATE)
+`
+
+type DeleteModuleMemberRowsParams struct {
+	At       time.Time
+	By       uuid.UUID
+	ModuleID uuid.UUID
+}
+
+// A deleted module's members (M6 P2 spec 2.4, R15): its undeleted rows, locked FOR NO KEY UPDATE in id order, then
+// soft-deleted at the moment and by the account given, in one statement (M3 design 3.6, convention 5); a row deleted
+// before keeps its deletion. module_members_module_id_idx serves it.
+func (q *Queries) DeleteModuleMemberRows(ctx context.Context, arg DeleteModuleMemberRowsParams) error {
+	_, err := q.db.Exec(ctx, deleteModuleMemberRows, arg.At, arg.By, arg.ModuleID)
+	return err
+}
+
 const insertModuleMembers = `-- name: InsertModuleMembers :exec
 INSERT INTO module_members (id, workspace_id, project_id, module_id, member_id, created_by_id, updated_by_id, created_at,
                             updated_at)

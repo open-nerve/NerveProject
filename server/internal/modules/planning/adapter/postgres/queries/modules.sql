@@ -73,3 +73,22 @@ SET name          = sqlc.arg(name),
     updated_at    = sqlc.arg(updated_at),
     updated_by_id = sqlc.narg(updated_by_id)
 WHERE id = sqlc.arg(id) AND deleted_at IS NULL;
+
+-- name: SetModuleArchived :exec
+-- A module archived at one moment, or no longer, last changed by one account at that moment (M6 P2 spec R3); nothing
+-- else of it. Run under the project's FOR NO KEY UPDATE, as UpdateModule.
+UPDATE modules
+SET archived_at   = sqlc.narg(archived_at),
+    updated_at    = sqlc.arg(updated_at),
+    updated_by_id = sqlc.narg(updated_by_id)
+WHERE id = sqlc.arg(id) AND deleted_at IS NULL;
+
+-- name: DeleteModule :exec
+-- A module soft-deleted by one account at one moment, archived or not, its last change the same (M6 P2 spec 2.4); one
+-- deleted already keeps its deletion. Run under the project's FOR NO KEY UPDATE, as UpdateModule; its members' and links'
+-- rows go in the same transaction (DeleteModuleMemberRows, DeleteModuleLinkRows; R15).
+UPDATE modules
+SET deleted_at    = sqlc.arg(at)::timestamptz,
+    updated_at    = sqlc.arg(at),
+    updated_by_id = sqlc.arg(by)::uuid
+WHERE id = sqlc.arg(id) AND deleted_at IS NULL;

@@ -79,6 +79,17 @@ func (s *Store) DeleteModuleLink(ctx context.Context, id uuid.UUID, at time.Time
 	return nil
 }
 
+// DeleteModuleLinkRows soft-deletes the deleted module's undeleted links,
+// locked in id order, deleted and last changed by by at at, in one
+// statement (module_links.sql).
+func (s *Store) DeleteModuleLinkRows(ctx context.Context, module uuid.UUID, at time.Time, by uuid.UUID) error {
+	err := s.queries(ctx).DeleteModuleLinkRows(ctx, gen.DeleteModuleLinkRowsParams{ModuleID: module, At: at, By: by})
+	if err != nil {
+		return fmt.Errorf("delete the links of module %s: %w", module, err)
+	}
+	return nil
+}
+
 // moduleLinkTaken is err, a write's of a module link, as an address another
 // undeleted link of the module has: domain.ErrModuleLinkExists when it broke
 // module_links_module_id_url_key, the exclusion of a second live address

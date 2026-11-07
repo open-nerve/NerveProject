@@ -77,6 +77,7 @@
     "planning_cycle_dates_overlap": "日期与此项目的另一个周期重叠。",
     "planning_modules_disabled": "此项目未开启模块，开启之后才能修改。",
     "planning_module_name_taken": "此项目已有同名的模块。",
+    "planning_module_not_closed": "只有已完成或已取消的模块才能归档。",
     "planning_module_not_found": "模块不存在，或者你看不到它。",
     "planning_module_link_not_found": "链接不存在，或者你看不到它。",
     "planning_module_link_exists": "此模块已存在相同链接。",

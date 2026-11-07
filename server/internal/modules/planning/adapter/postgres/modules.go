@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 	"uuid"
 
 	"github.com/jackc/pgx/v5"
@@ -112,6 +113,27 @@ func (s *Store) UpdateModule(ctx context.Context, m domain.Module) error {
 		return domain.ErrModuleNameTaken
 	case err != nil:
 		return fmt.Errorf("update module %s: %w", m.ID, err)
+	}
+	return nil
+}
+
+// SetModuleArchived writes the archive of the module m, archived_at, and its
+// last change; nothing else of it.
+func (s *Store) SetModuleArchived(ctx context.Context, m domain.Module) error {
+	err := s.queries(ctx).SetModuleArchived(ctx, gen.SetModuleArchivedParams{ID: m.ID, ArchivedAt: m.ArchivedAt, UpdatedAt: m.UpdatedAt,
+		UpdatedByID: m.UpdatedByID})
+	if err != nil {
+		return fmt.Errorf("archive module %s: %w", m.ID, err)
+	}
+	return nil
+}
+
+// DeleteModule soft-deletes the module id, deleted and last changed by by at
+// at; one deleted already keeps its deletion. Its members' and links' rows
+// are DeleteModuleMemberRows' and DeleteModuleLinkRows'.
+func (s *Store) DeleteModule(ctx context.Context, id uuid.UUID, at time.Time, by uuid.UUID) error {
+	if err := s.queries(ctx).DeleteModule(ctx, gen.DeleteModuleParams{ID: id, At: at, By: by}); err != nil {
+		return fmt.Errorf("delete module %s: %w", id, err)
 	}
 	return nil
 }

@@ -15,3 +15,14 @@ SELECT unnest(sqlc.arg(ids)::uuid[]), sqlc.arg(workspace_id), sqlc.arg(project_i
 UPDATE module_members
 SET deleted_at = sqlc.arg(at)::timestamptz, updated_at = sqlc.arg(at), updated_by_id = sqlc.arg(by)::uuid
 WHERE module_id = sqlc.arg(module_id) AND member_id = ANY (sqlc.arg(member_ids)::uuid[]) AND deleted_at IS NULL;
+
+-- name: DeleteModuleMemberRows :exec
+-- A deleted module's members (M6 P2 spec 2.4, R15): its undeleted rows, locked FOR NO KEY UPDATE in id order, then
+-- soft-deleted at the moment and by the account given, in one statement (M3 design 3.6, convention 5); a row deleted
+-- before keeps its deletion. module_members_module_id_idx serves it.
+UPDATE module_members AS t
+SET deleted_at = sqlc.arg(at)::timestamptz, updated_at = sqlc.arg(at), updated_by_id = sqlc.arg(by)::uuid
+WHERE t.id IN (
+    SELECT r.id FROM module_members r
+    WHERE r.module_id = sqlc.arg(module_id) AND r.deleted_at IS NULL
+    ORDER BY r.id FOR NO KEY UPDATE);

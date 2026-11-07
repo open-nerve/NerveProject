@@ -1,8 +1,9 @@
 // Package planning is the cycles and modules module (M6 design 3, 4): it owns
 // the cycles' and the modules' tables and brings creating, reading, listing,
 // changing, archiving, unarchiving and deleting a cycle of a project;
-// creating, listing, reading and changing a module of a project, and adding,
-// listing, changing and removing a module's links. Project
+// creating, listing, reading, changing, archiving, unarchiving and deleting a
+// module of a project, and adding, listing, changing and removing a module's
+// links. Project
 // and workspace deletion events enqueue the asynchronous deletion of the
 // deleted projects' planning rows in the publishing transaction; the 60-day
 // purge removes them.
@@ -96,6 +97,9 @@ func New(d Deps) *Module {
 			CreateModule:     app.NewCreateModule(app.CreateModuleDeps{Locks: locks, Roles: d.Projects, Modules: store, Clock: d.Clock}),
 			GetModule:        app.NewGetModule(app.GetModuleDeps{Reads: reads}),
 			UpdateModule:     app.NewUpdateModule(app.UpdateModuleDeps{Locks: locks, Roles: d.Projects, Modules: store, Clock: d.Clock}),
+			ArchiveModule:    app.NewArchiveModule(app.ArchiveModuleDeps{Locks: locks, Modules: store, Clock: d.Clock}),
+			UnarchiveModule:  app.NewUnarchiveModule(app.ArchiveModuleDeps{Locks: locks, Modules: store, Clock: d.Clock}),
+			DeleteModule:     app.NewDeleteModule(app.DeleteModuleDeps{Locks: locks, Modules: store, Clock: d.Clock}),
 			CreateModuleLink: app.NewCreateModuleLink(links),
 			UpdateModuleLink: app.NewUpdateModuleLink(links),
 			DeleteModuleLink: app.NewDeleteModuleLink(links),

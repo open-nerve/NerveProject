@@ -9,21 +9,23 @@ import (
 
 	planningpg "github.com/open-nerve/NerveProject/server/internal/modules/planning/adapter/postgres"
 	planningdomain "github.com/open-nerve/NerveProject/server/internal/modules/planning/domain"
+	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 )
 
 // The rows of the permission matrix of a project's modules (M6 P2 spec
 // R10): listing and creating them under the project of each column, and
-// reading and changing one, naming its column's own (moduleOf) by its id
-// (/modules/{module_id}); and the modules they rest on, matrixModules,
-// which prepareMatrix seeds in each project through the planning store
-// (modules) once the project store has turned the project's modules on
-// (planningOn). The module table's columns and
+// reading, changing, archiving, unarchiving and deleting one, naming its
+// column's own (moduleOf) by its id (/modules/{module_id}); and the modules
+// they rest on, matrixModules, which prepareMatrix seeds in each project
+// through the planning store (modules) once the project store has turned
+// the project's modules on (planningOn). The module table's columns and
 // cells are the cycle table's (cycleColumns, onTheCycles): the member who
 // made a module (callerCreator) is PM's account, as for the cycles.
 
 var (
 	cellModuleNameTaken = cell{http.StatusConflict, "planning.module_name_taken"}
 	cellModuleNotFound  = cell{http.StatusNotFound, "planning.module_not_found"}
+	cellModuleNotClosed = cell{http.StatusConflict, "planning.module_not_closed"}
 )
 
 // moduleRows are the modules the rows name by id: a column that does not
@@ -127,6 +129,63 @@ func moduleMatrixRows() []matrixRow {
 		{op: "updateModule", variant: "an archived module", write: true, columns: cycleColumns, prepare: moduleArchived,
 			request: toModule(http.MethodPatch, "", `{}`),
 			cells:   moduleRows.inCycleColumns(cellModuleArchived, cellModuleArchived, cellModuleArchived, cellForbidden, cellForbidden)},
+		// The project's admins and members, as updateModule, whoever made
+		// the module, once it is completed (moduleCompleted); a module not
+		// closed, as seeded, is refused after the decision (M6 P2 spec R3).
+		{op: "archiveModule", write: true, columns: cycleColumns, prepare: moduleCompleted, request: toModule(http.MethodPost, "/archive", ""),
+			cells: moduleRows.inCycleColumns(cellOK, cellOK, cellOK, cellForbidden, cellForbidden), check: archivesTheModule(true)},
+		{op: "archiveModule", variant: "a module not closed", write: true, columns: cycleColumns, request: toModule(http.MethodPost, "/archive", ""),
+			cells: moduleRows.inCycleColumns(cellModuleNotClosed, cellModuleNotClosed, cellModuleNotClosed, cellForbidden, cellForbidden)},
+		{op: "archiveModule", variant: "archived", write: true, columns: archivedColumns, request: toModule(http.MethodPost, "/archive", ""),
+			cells: moduleRows.ofArchived(cellProjectArchived, cellForbidden)},
+		// The column's module archived first in each cell's copy
+		// (moduleArchived), whatever its status.
+		{op: "unarchiveModule", write: true, columns: cycleColumns, prepare: moduleArchived, request: toModule(http.MethodPost, "/unarchive", ""),
+			cells: moduleRows.inCycleColumns(cellOK, cellOK, cellOK, cellForbidden, cellForbidden), check: archivesTheModule(false)},
+		{op: "unarchiveModule", variant: "archived", write: true, columns: archivedColumns, prepare: moduleArchived,
+			request: toModule(http.MethodPost, "/unarchive", ""), cells: moduleRows.ofArchived(cellProjectArchived, cellForbidden)},
+		// The project's admins, and the member who made the module
+		// (AllowCreator): PM may not delete Release, the workspace admin's,
+		// and deletes Mine, his own; an archived module too (M6 P2 spec 2.4).
+		{op: "deleteModule", write: true, columns: cycleColumns, request: toModule(http.MethodDelete, "", ""),
+			cells: moduleRows.inCycleColumns(cellNoContent, cellForbidden, cellNoContent, cellForbidden, cellForbidden)},
+		{op: "deleteModule", variant: "archived", write: true, columns: archivedColumns, request: toModule(http.MethodDelete, "", ""),
+			cells: moduleRows.ofArchived(cellProjectArchived, cellForbidden)},
+		{op: "deleteModule", variant: "an archived module", write: true, columns: cycleColumns, prepare: moduleArchived,
+			request: toModule(http.MethodDelete, "", ""), cells: moduleRows.inCycleColumns(cellNoContent, cellForbidden, cellNoContent, cellForbidden, cellForbidden)},
+	}
+}
+
+// moduleCompleted completes the column's own module in the cell's copy.
+func moduleCompleted(t *testing.T, c caller, s seeded, url string) {
+	t.Helper()
+	pool := openPool(t, url)
+	defer pool.Close()
+	tag, err := pool.Exec(pgtest.Soon(t), "UPDATE modules SET status = 'completed' WHERE id = $1", s.module(projectOf(c), moduleOf(c)))
+	if err != nil || tag.RowsAffected() != 1 {
+		t.Fatalf("completing %s's %s: %v, %d rows", c, moduleOf(c), err, tag.RowsAffected())
+	}
+}
+
+// archivesTheModule: the column's own module, completed and archived, or
+// planned and not archived, as archived says, last changed by the column's
+// account at the moment it is archived; the rest as seeded.
+func archivesTheModule(archived bool) func(t *testing.T, c caller, s seeded, answer string) {
+	return func(t *testing.T, c caller, s seeded, answer string) {
+		var got moduleAnswer
+		decodeAnswer(t, answer, &got)
+		seeded := got
+		seeded.Status, seeded.ArchivedAt, seeded.UpdatedByID = "planned", nil, got.CreatedByID
+		isTheSeededModule(t, c, s, moduleOf(c), seeded, answer)
+		ok := got.UpdatedByID != nil && *got.UpdatedByID == s.account(accountOf(c)) && got.UpdatedAt.After(got.CreatedAt)
+		if archived {
+			ok = ok && got.Status == "completed" && got.ArchivedAt != nil && got.ArchivedAt.Equal(got.UpdatedAt)
+		} else {
+			ok = ok && got.Status == "planned" && got.ArchivedAt == nil
+		}
+		if !ok {
+			t.Errorf("%s answers %s; want %s's %s archived=%t, changed by %s", c, answer, projectOf(c), moduleOf(c), archived, accountOf(c))
+		}
 	}
 }
 

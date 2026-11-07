@@ -167,3 +167,13 @@ func TestModuleAction(t *testing.T) {
 		}
 	}
 }
+
+// Only a completed or a cancelled module is closed, which archiving asks (M6 P2 spec R3); the four others are not.
+func TestModuleStatusClosed(t *testing.T) {
+	for _, s := range []domain.ModuleStatus{domain.ModuleBacklog, domain.ModulePlanned, domain.ModuleInProgress, domain.ModulePaused,
+		domain.ModuleCompleted, domain.ModuleCancelled} {
+		if got, want := s.Closed(), s == domain.ModuleCompleted || s == domain.ModuleCancelled; got != want {
+			t.Errorf("%s closed = %t, want %t", s, got, want)
+		}
+	}
+}

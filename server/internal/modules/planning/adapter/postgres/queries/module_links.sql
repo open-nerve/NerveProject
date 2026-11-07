@@ -42,3 +42,13 @@ SET deleted_at    = sqlc.arg(at)::timestamptz,
     updated_at    = sqlc.arg(at),
     updated_by_id = sqlc.arg(by)::uuid
 WHERE id = sqlc.arg(id) AND deleted_at IS NULL;
+
+-- name: DeleteModuleLinkRows :exec
+-- A deleted module's links (M6 P2 spec 2.4, R15): DeleteModuleMemberRows' statement, of its links.
+-- module_links_module_id_idx serves it.
+UPDATE module_links AS t
+SET deleted_at = sqlc.arg(at)::timestamptz, updated_at = sqlc.arg(at), updated_by_id = sqlc.arg(by)::uuid
+WHERE t.id IN (
+    SELECT r.id FROM module_links r
+    WHERE r.module_id = sqlc.arg(module_id) AND r.deleted_at IS NULL
+    ORDER BY r.id FOR NO KEY UPDATE);

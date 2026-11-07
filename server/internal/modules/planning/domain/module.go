@@ -26,6 +26,12 @@ const (
 // moduleStatuses are the statuses, as a request spells them.
 var moduleStatuses = []ModuleStatus{ModuleBacklog, ModulePlanned, ModuleInProgress, ModulePaused, ModuleCompleted, ModuleCancelled}
 
+// Closed reports whether s is completed or cancelled: only a module that is
+// may be archived (M6 P2 spec R3).
+func (s ModuleStatus) Closed() bool {
+	return s == ModuleCompleted || s == ModuleCancelled
+}
+
 // Module is a module of a project as the module stores it (M6 P2 spec 2.2):
 // each of its dates a day or none, the start not after the target when it
 // has both, which modules_dates_check holds too; the accounts of its

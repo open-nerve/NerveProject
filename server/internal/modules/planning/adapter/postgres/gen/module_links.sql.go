@@ -32,6 +32,28 @@ func (q *Queries) DeleteModuleLink(ctx context.Context, arg DeleteModuleLinkPara
 	return err
 }
 
+const deleteModuleLinkRows = `-- name: DeleteModuleLinkRows :exec
+UPDATE module_links AS t
+SET deleted_at = $1::timestamptz, updated_at = $1, updated_by_id = $2::uuid
+WHERE t.id IN (
+    SELECT r.id FROM module_links r
+    WHERE r.module_id = $3 AND r.deleted_at IS NULL
+    ORDER BY r.id FOR NO KEY UPDATE)
+`
+
+type DeleteModuleLinkRowsParams struct {
+	At       time.Time
+	By       uuid.UUID
+	ModuleID uuid.UUID
+}
+
+// A deleted module's links (M6 P2 spec 2.4, R15): DeleteModuleMemberRows' statement, of its links.
+// module_links_module_id_idx serves it.
+func (q *Queries) DeleteModuleLinkRows(ctx context.Context, arg DeleteModuleLinkRowsParams) error {
+	_, err := q.db.Exec(ctx, deleteModuleLinkRows, arg.At, arg.By, arg.ModuleID)
+	return err
+}
+
 const getModuleLink = `-- name: GetModuleLink :one
 SELECT id, workspace_id, project_id, module_id, url, title, metadata, created_by_id, created_at, updated_at
 FROM module_links

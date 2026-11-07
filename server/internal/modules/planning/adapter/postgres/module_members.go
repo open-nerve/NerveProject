@@ -31,3 +31,14 @@ func (s *Store) RemoveModuleMembers(ctx context.Context, module uuid.UUID, accou
 	}
 	return nil
 }
+
+// DeleteModuleMemberRows soft-deletes the deleted module's undeleted
+// members' rows, locked in id order, deleted and last changed by by at at,
+// in one statement (module_members.sql).
+func (s *Store) DeleteModuleMemberRows(ctx context.Context, module uuid.UUID, at time.Time, by uuid.UUID) error {
+	err := s.queries(ctx).DeleteModuleMemberRows(ctx, gen.DeleteModuleMemberRowsParams{ModuleID: module, At: at, By: by})
+	if err != nil {
+		return fmt.Errorf("delete the members of module %s: %w", module, err)
+	}
+	return nil
+}

@@ -52,6 +52,32 @@ func (h handler) UpdateModule(ctx context.Context, req gen.UpdateModuleRequestOb
 	return gen.UpdateModule200JSONResponse(module(m)), nil
 }
 
+// ArchiveModule serves POST /api/v0/modules/{module_id}/archive.
+func (h handler) ArchiveModule(ctx context.Context, req gen.ArchiveModuleRequestObject) (gen.ArchiveModuleResponseObject, error) {
+	m, err := h.uc.ArchiveModule.Execute(ctx, req.ModuleID)
+	if err != nil {
+		return nil, err
+	}
+	return gen.ArchiveModule200JSONResponse(module(m)), nil
+}
+
+// UnarchiveModule serves POST /api/v0/modules/{module_id}/unarchive.
+func (h handler) UnarchiveModule(ctx context.Context, req gen.UnarchiveModuleRequestObject) (gen.UnarchiveModuleResponseObject, error) {
+	m, err := h.uc.UnarchiveModule.Execute(ctx, req.ModuleID)
+	if err != nil {
+		return nil, err
+	}
+	return gen.UnarchiveModule200JSONResponse(module(m)), nil
+}
+
+// DeleteModule serves DELETE /api/v0/modules/{module_id}.
+func (h handler) DeleteModule(ctx context.Context, req gen.DeleteModuleRequestObject) (gen.DeleteModuleResponseObject, error) {
+	if err := h.uc.DeleteModule.Execute(ctx, req.ModuleID); err != nil {
+		return nil, err
+	}
+	return gen.DeleteModule204Response{}, nil
+}
+
 // CreateModule serves POST /api/v0/projects/{project_id}/modules: the values
 // go to the use case as given, a status not of the six too (its 422); the
 // description empty, the dates, the status and the lead none, and no member,

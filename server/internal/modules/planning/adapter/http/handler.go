@@ -63,6 +63,16 @@ type UpdateModuleUseCase interface {
 	Execute(ctx context.Context, id uuid.UUID, p domain.ModulePatch) (domain.Module, error)
 }
 
+// ArchiveModuleUseCase is app.ArchiveModule, which archives or unarchives.
+type ArchiveModuleUseCase interface {
+	Execute(ctx context.Context, id uuid.UUID) (domain.Module, error)
+}
+
+// DeleteModuleUseCase is app.DeleteModule.
+type DeleteModuleUseCase interface {
+	Execute(ctx context.Context, id uuid.UUID) error
+}
+
 // CreateModuleLinkUseCase is app.CreateModuleLink.
 type CreateModuleLinkUseCase interface {
 	Execute(ctx context.Context, moduleID uuid.UUID, in domain.NewModuleLink) (domain.ModuleLink, error)
@@ -96,6 +106,9 @@ type UseCases struct {
 	CreateModule     CreateModuleUseCase
 	GetModule        GetModuleUseCase
 	UpdateModule     UpdateModuleUseCase
+	ArchiveModule    ArchiveModuleUseCase
+	UnarchiveModule  ArchiveModuleUseCase
+	DeleteModule     DeleteModuleUseCase
 	CreateModuleLink CreateModuleLinkUseCase
 	UpdateModuleLink UpdateModuleLinkUseCase
 	DeleteModuleLink DeleteModuleLinkUseCase
