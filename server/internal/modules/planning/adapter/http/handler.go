@@ -43,6 +43,11 @@ type DeleteCycleUseCase interface {
 	Execute(ctx context.Context, id uuid.UUID) error
 }
 
+// CreateModuleUseCase is app.CreateModule.
+type CreateModuleUseCase interface {
+	Execute(ctx context.Context, projectID uuid.UUID, in domain.NewModule) (domain.Module, error)
+}
+
 // UseCases are the use cases behind the module's operations.
 type UseCases struct {
 	ListCycles     ListCyclesUseCase
@@ -52,6 +57,7 @@ type UseCases struct {
 	ArchiveCycle   ArchiveCycleUseCase
 	UnarchiveCycle ArchiveCycleUseCase
 	DeleteCycle    DeleteCycleUseCase
+	CreateModule   CreateModuleUseCase
 }
 
 // Register mounts the module's routes on router behind api's per-route

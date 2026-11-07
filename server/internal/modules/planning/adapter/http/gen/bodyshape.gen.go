@@ -21,10 +21,20 @@ func BodyShapes() *bodyshape.Table {
 			/* 8 */ {Types: bodyshape.String, Format: bodyshape.FormatDate, Extra: bodyshape.Open, Items: bodyshape.Open},
 			/* 9 */ {Types: bodyshape.String, Extra: bodyshape.Open, Items: bodyshape.Open},
 			/* 10 */ {Types: bodyshape.String, Format: bodyshape.FormatDate, Extra: bodyshape.Open, Items: bodyshape.Open},
+			/* 11 */ {Types: bodyshape.Object, Extra: bodyshape.Closed, Items: bodyshape.Open, Props: map[string]int{"description": 12, "lead_id": 13, "member_ids": 14, "name": 16, "start_date": 17, "status": 18, "target_date": 19}, Required: []string{"name"}},
+			/* 12 */ {Types: bodyshape.String, Extra: bodyshape.Open, Items: bodyshape.Open},
+			/* 13 */ {Types: bodyshape.Null | bodyshape.String, Format: bodyshape.FormatUUID, Extra: bodyshape.Open, Items: bodyshape.Open},
+			/* 14 */ {Types: bodyshape.Array, Extra: bodyshape.Open, Items: 15},
+			/* 15 */ {Types: bodyshape.String, Format: bodyshape.FormatUUID, Extra: bodyshape.Open, Items: bodyshape.Open},
+			/* 16 */ {Types: bodyshape.String, Extra: bodyshape.Open, Items: bodyshape.Open},
+			/* 17 */ {Types: bodyshape.String, Format: bodyshape.FormatDate, Extra: bodyshape.Open, Items: bodyshape.Open},
+			/* 18 */ {Types: bodyshape.String, Extra: bodyshape.Open, Items: bodyshape.Open},
+			/* 19 */ {Types: bodyshape.String, Format: bodyshape.FormatDate, Extra: bodyshape.Open, Items: bodyshape.Open},
 		},
 		Roots: map[string]int{
-			"PATCH /api/v0/cycles/{cycle_id}":           0,
-			"POST /api/v0/projects/{project_id}/cycles": 6,
+			"PATCH /api/v0/cycles/{cycle_id}":            0,
+			"POST /api/v0/projects/{project_id}/cycles":  6,
+			"POST /api/v0/projects/{project_id}/modules": 11,
 		},
 	}
 }

@@ -12,6 +12,53 @@ import (
 	"uuid"
 )
 
+const createModule = `-- name: CreateModule :exec
+INSERT INTO modules (id, workspace_id, project_id, name, description, start_date, target_date, status, lead_id,
+                     sort_order, created_at, updated_at, created_by_id, updated_by_id)
+VALUES ($1, $2, $3, $4, $5,
+        $6, $7, $8, $9, $10,
+        $11, $12, $13, $14)
+`
+
+type CreateModuleParams struct {
+	ID          uuid.UUID
+	WorkspaceID uuid.UUID
+	ProjectID   uuid.UUID
+	Name        string
+	Description string
+	StartDate   *time.Time
+	TargetDate  *time.Time
+	Status      string
+	LeadID      *uuid.UUID
+	SortOrder   float64
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	CreatedByID *uuid.UUID
+	UpdatedByID *uuid.UUID
+}
+
+// A new module, written at one moment by one account. A name another undeleted module of the project has, in any case,
+// breaks modules_project_id_name_key (M6 P2 spec R8).
+func (q *Queries) CreateModule(ctx context.Context, arg CreateModuleParams) error {
+	_, err := q.db.Exec(ctx, createModule,
+		arg.ID,
+		arg.WorkspaceID,
+		arg.ProjectID,
+		arg.Name,
+		arg.Description,
+		arg.StartDate,
+		arg.TargetDate,
+		arg.Status,
+		arg.LeadID,
+		arg.SortOrder,
+		arg.CreatedAt,
+		arg.UpdatedAt,
+		arg.CreatedByID,
+		arg.UpdatedByID,
+	)
+	return err
+}
+
 const getModule = `-- name: GetModule :one
 SELECT m.id, m.workspace_id, m.project_id, m.name, m.description, m.start_date, m.target_date, m.status, m.lead_id,
        m.sort_order, m.archived_at, m.created_at, m.updated_at, m.created_by_id, m.updated_by_id,
@@ -67,4 +114,22 @@ func (q *Queries) GetModule(ctx context.Context, id uuid.UUID) (GetModuleRow, er
 		&i.MemberIds,
 	)
 	return i, err
+}
+
+const lowestModuleSortOrder = `-- name: LowestModuleSortOrder :one
+SELECT sort_order
+FROM modules
+WHERE project_id = $1 AND deleted_at IS NULL
+ORDER BY sort_order
+LIMIT 1
+`
+
+// The lowest sort order of the project's undeleted modules, archived ones too, no row when it has none: a new module
+// goes before it (M6 P2 spec 2.2). The list index (project_id, sort_order, created_at, id) WHERE deleted_at IS NULL
+// serves it.
+func (q *Queries) LowestModuleSortOrder(ctx context.Context, projectID uuid.UUID) (float64, error) {
+	row := q.db.QueryRow(ctx, lowestModuleSortOrder, projectID)
+	var sort_order float64
+	err := row.Scan(&sort_order)
+	return sort_order, err
 }

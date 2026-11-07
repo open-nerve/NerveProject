@@ -14,8 +14,8 @@ import (
 
 // projectTables are the tables of the project level (M3 design 9.2, M4
 // design 9.2's of the work items, issueColumns, and M6 P1 spec R10's of the
-// cycles, cycleColumns), each whole: a row that names a project names one of
-// them.
+// cycles, cycleColumns, which P2 spec R10's of the modules shares), each
+// whole: a row that names a project names one of them.
 var projectTables = [][]caller{projectColumns, archivedColumns, issueColumns, cycleColumns}
 
 // workspaceLevelTables are the tables of the workspace level besides its

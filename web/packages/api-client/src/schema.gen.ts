@@ -1842,6 +1842,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v0/projects/{project_id}/modules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A project's id (Project.id). */
+                project_id: components["parameters"]["ProjectID"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create a module in a project
+         * @description For the project's admins and members, not its guests, and not a caller who sees only his own work items there. The name has 1–255 characters without its surrounding white space, which is dropped, and no NUL; the description has no NUL and is empty when it is left out; the status is one of ModuleStatus, planned when it is left out; the start and target dates are days, each given alone or neither, the start not after the target; member_ids names at most 100 accounts, each once (validation_failed). The values are checked before the project is looked at. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but whose modules he may not change, forbidden; an archived project, project.archived; a project whose modules are turned off (Project.module_view), planning.modules_disabled. After the project's row is locked, the lead and each member must be an active member of the project who is not its guest (validation_failed, at lead_id or member_ids[i]); and no other undeleted module of the project, archived ones too, may have the name, in any case (planning.module_name_taken). The new module comes first: its sort order is the lowest of the project's undeleted modules, archived ones too, less 10000, or 65535 when it has none. It and its members' rows are written at one moment by the caller.
+         */
+        post: operations["createModule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -3318,6 +3341,80 @@ export interface components {
             /** @description The cycle's place among the project's cycles, the lowest first. */
             sort_order?: number;
         };
+        /**
+         * @description A module's status, set by its writers, never read from its dates.
+         * @enum {string}
+         */
+        ModuleStatus: "backlog" | "planned" | "in-progress" | "paused" | "completed" | "cancelled";
+        ModuleCreate: {
+            /** @description 1–255 characters without the surrounding white space, which is dropped; no NUL. */
+            name: string;
+            /** @description Plain text without NUL; empty when left out. */
+            description?: string;
+            /**
+             * Format: date
+             * @description The day it starts; left out for none.
+             */
+            start_date?: string;
+            /**
+             * Format: date
+             * @description The day it is due, not before start_date; left out for none.
+             */
+            target_date?: string;
+            status?: components["schemas"]["ModuleStatus"];
+            /**
+             * Format: uuid
+             * @description An active member of the project who is not its guest; null, or left out, for none.
+             */
+            lead_id?: string | null;
+            /** @description At most 100 accounts, each named once, each an active member of the project who is not its guest; left out, or empty, for none. */
+            member_ids?: string[];
+        };
+        /** @description A module of a project. */
+        Module: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            workspace_id: string;
+            /** Format: uuid */
+            project_id: string;
+            name: string;
+            /** @description Plain text; empty for none. */
+            description: string;
+            /**
+             * Format: date
+             * @description The day it starts; null for none.
+             */
+            start_date: string | null;
+            /**
+             * Format: date
+             * @description The day it is due, not before start_date; null for none.
+             */
+            target_date: string | null;
+            status: components["schemas"]["ModuleStatus"];
+            /**
+             * Format: uuid
+             * @description The account that leads it; null for none, or once that account is gone.
+             */
+            lead_id: string | null;
+            /** @description Its members' accounts, ascending; one who has left the project since is still one. */
+            member_ids: string[];
+            /** @description The module's place among the project's modules, the lowest first. */
+            sort_order: number;
+            /**
+             * Format: date-time
+             * @description When it was archived; null while it is not.
+             */
+            archived_at: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+            /** Format: uuid */
+            created_by_id: string | null;
+            /** Format: uuid */
+            updated_by_id: string | null;
+        };
     };
     responses: {
         /** @description Error (RFC 9457 problem details). */
@@ -3504,6 +3601,9 @@ export type Cycle = components['schemas']['Cycle'];
 export type CycleList = components['schemas']['CycleList'];
 export type CycleCreate = components['schemas']['CycleCreate'];
 export type CycleUpdate = components['schemas']['CycleUpdate'];
+export type ModuleStatus = components['schemas']['ModuleStatus'];
+export type ModuleCreate = components['schemas']['ModuleCreate'];
+export type Module = components['schemas']['Module'];
 export type ResponseProblem = components['responses']['Problem'];
 export type ParameterLimit = components['parameters']['Limit'];
 export type ParameterCursor = components['parameters']['Cursor'];
@@ -6437,6 +6537,34 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Cycle"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    createModule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A project's id (Project.id). */
+                project_id: components["parameters"]["ProjectID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModuleCreate"];
+            };
+        };
+        responses: {
+            /** @description The new module. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Module"];
                 };
             };
             default: components["responses"]["Problem"];

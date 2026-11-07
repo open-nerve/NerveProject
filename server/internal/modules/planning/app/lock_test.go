@@ -29,6 +29,13 @@ type lockWorld struct {
 	now      time.Time      // the clock's reading
 	created  []domain.Cycle // what CreateCycle stored
 	updated  []domain.Cycle // what UpdateCycle stored
+	// The modules' writes: the roles Roles answers and the accounts each call of it asked about; what CreateModule and
+	// InsertModuleMembers stored, and CreateModule's refusal.
+	roles          map[uuid.UUID]shared.Role
+	asked          [][]uuid.UUID
+	createdModules []domain.Module
+	memberRows     []MemberRows
+	createRefusal  error
 }
 
 type inTx struct{}

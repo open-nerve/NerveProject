@@ -45,6 +45,36 @@ func (e CycleStatus) Valid() bool {
 	}
 }
 
+// Defines values for ModuleStatus.
+const (
+	ModuleStatusBacklog    ModuleStatus = "backlog"
+	ModuleStatusCancelled  ModuleStatus = "cancelled"
+	ModuleStatusCompleted  ModuleStatus = "completed"
+	ModuleStatusInProgress ModuleStatus = "in-progress"
+	ModuleStatusPaused     ModuleStatus = "paused"
+	ModuleStatusPlanned    ModuleStatus = "planned"
+)
+
+// Valid indicates whether the value is a known member of the ModuleStatus enum.
+func (e ModuleStatus) Valid() bool {
+	switch e {
+	case ModuleStatusBacklog:
+		return true
+	case ModuleStatusCancelled:
+		return true
+	case ModuleStatusCompleted:
+		return true
+	case ModuleStatusInProgress:
+		return true
+	case ModuleStatusPaused:
+		return true
+	case ModuleStatusPlanned:
+		return true
+	default:
+		return false
+	}
+}
+
 // Cycle A cycle of a project.
 type Cycle struct {
 	// ArchivedAt When it was archived; null while it is not.
@@ -118,6 +148,68 @@ type CycleUpdate struct {
 	StartDate nullable.Nullable[shared.Date] `json:"start_date,omitempty"`
 }
 
+// Module A module of a project.
+type Module struct {
+	// ArchivedAt When it was archived; null while it is not.
+	ArchivedAt  nullable.Nullable[time.Time] `json:"archived_at"`
+	CreatedAt   time.Time                    `json:"created_at"`
+	CreatedByID nullable.Nullable[uuid.UUID] `json:"created_by_id"`
+
+	// Description Plain text; empty for none.
+	Description string    `json:"description"`
+	ID          uuid.UUID `json:"id"`
+
+	// LeadID The account that leads it; null for none, or once that account is gone.
+	LeadID nullable.Nullable[uuid.UUID] `json:"lead_id"`
+
+	// MemberIds Its members' accounts, ascending; one who has left the project since is still one.
+	MemberIds []uuid.UUID `json:"member_ids"`
+	Name      string      `json:"name"`
+	ProjectID uuid.UUID   `json:"project_id"`
+
+	// SortOrder The module's place among the project's modules, the lowest first.
+	SortOrder float64 `json:"sort_order"`
+
+	// StartDate The day it starts; null for none.
+	StartDate nullable.Nullable[shared.Date] `json:"start_date"`
+
+	// Status A module's status, set by its writers, never read from its dates.
+	Status ModuleStatus `json:"status"`
+
+	// TargetDate The day it is due, not before start_date; null for none.
+	TargetDate  nullable.Nullable[shared.Date] `json:"target_date"`
+	UpdatedAt   time.Time                      `json:"updated_at"`
+	UpdatedByID nullable.Nullable[uuid.UUID]   `json:"updated_by_id"`
+	WorkspaceID uuid.UUID                      `json:"workspace_id"`
+}
+
+// ModuleCreate defines model for ModuleCreate.
+type ModuleCreate struct {
+	// Description Plain text without NUL; empty when left out.
+	Description *string `json:"description,omitempty"`
+
+	// LeadID An active member of the project who is not its guest; null, or left out, for none.
+	LeadID nullable.Nullable[uuid.UUID] `json:"lead_id,omitempty"`
+
+	// MemberIds At most 100 accounts, each named once, each an active member of the project who is not its guest; left out, or empty, for none.
+	MemberIds *[]uuid.UUID `json:"member_ids,omitempty"`
+
+	// Name 1–255 characters without the surrounding white space, which is dropped; no NUL.
+	Name string `json:"name"`
+
+	// StartDate The day it starts; left out for none.
+	StartDate *shared.Date `json:"start_date,omitempty"`
+
+	// Status A module's status, set by its writers, never read from its dates.
+	Status *ModuleStatus `json:"status,omitempty"`
+
+	// TargetDate The day it is due, not before start_date; left out for none.
+	TargetDate *shared.Date `json:"target_date,omitempty"`
+}
+
+// ModuleStatus A module's status, set by its writers, never read from its dates.
+type ModuleStatus string
+
 // CycleID defines model for CycleID.
 type CycleID = uuid.UUID
 
@@ -138,6 +230,9 @@ type UpdateCycleJSONRequestBody = CycleUpdate
 
 // CreateCycleJSONRequestBody defines body for CreateCycle for application/json ContentType.
 type CreateCycleJSONRequestBody = CycleCreate
+
+// CreateModuleJSONRequestBody defines body for CreateModule for application/json ContentType.
+type CreateModuleJSONRequestBody = ModuleCreate
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
@@ -162,6 +257,9 @@ type ServerInterface interface {
 	// CreateCycle Create a cycle in a project
 	// (POST /api/v0/projects/{project_id}/cycles)
 	CreateCycle(w http.ResponseWriter, r *http.Request, projectID ProjectID)
+	// CreateModule Create a module in a project
+	// (POST /api/v0/projects/{project_id}/modules)
+	CreateModule(w http.ResponseWriter, r *http.Request, projectID ProjectID)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -371,6 +469,32 @@ func (siw *ServerInterfaceWrapper) CreateCycle(w http.ResponseWriter, r *http.Re
 	handler.ServeHTTP(w, r)
 }
 
+// CreateModule operation middleware
+func (siw *ServerInterfaceWrapper) CreateModule(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "project_id" -------------
+	var projectID ProjectID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "project_id", r.PathValue("project_id"), &projectID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "project_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateModule(w, r, projectID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 type UnescapedCookieParamError struct {
 	ParamName string
 	Err       error
@@ -498,6 +622,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/cycles/{cycle_id}", wrapper.UpdateCycle)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/cycles/{cycle_id}/archive", wrapper.ArchiveCycle)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/cycles/{cycle_id}/unarchive", wrapper.UnarchiveCycle)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/projects/{project_id}/modules", wrapper.CreateModule)
 
 	return m
 }
@@ -831,6 +956,53 @@ func (response CreateCycledefaultApplicationProblemPlusJSONResponse) VisitCreate
 	return err
 }
 
+type CreateModuleRequestObject struct {
+	ProjectID ProjectID `json:"project_id"`
+	Body      *CreateModuleJSONRequestBody
+}
+
+type CreateModuleResponseObject interface {
+	VisitCreateModuleResponse(w http.ResponseWriter) error
+}
+
+type CreateModule201JSONResponse Module
+
+func (response CreateModule201JSONResponse) VisitCreateModuleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateModuledefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response CreateModuledefaultApplicationProblemPlusJSONResponse) VisitCreateModuleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
 	// DeleteCycle Delete a cycle
@@ -854,6 +1026,9 @@ type StrictServerInterface interface {
 	// CreateCycle Create a cycle in a project
 	// (POST /api/v0/projects/{project_id}/cycles)
 	CreateCycle(ctx context.Context, request CreateCycleRequestObject) (CreateCycleResponseObject, error)
+	// CreateModule Create a module in a project
+	// (POST /api/v0/projects/{project_id}/modules)
+	CreateModule(ctx context.Context, request CreateModuleRequestObject) (CreateModuleResponseObject, error)
 }
 
 type StrictHandlerFunc func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error)
@@ -1085,6 +1260,39 @@ func (sh *strictHandler) CreateCycle(w http.ResponseWriter, r *http.Request, pro
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(CreateCycleResponseObject); ok {
 		if err := validResponse.VisitCreateCycleResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateModule operation middleware
+func (sh *strictHandler) CreateModule(w http.ResponseWriter, r *http.Request, projectID ProjectID) {
+	var request CreateModuleRequestObject
+
+	request.ProjectID = projectID
+
+	var body CreateModuleJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateModule(ctx, request.(CreateModuleRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateModule")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateModuleResponseObject); ok {
+		if err := validResponse.VisitCreateModuleResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

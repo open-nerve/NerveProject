@@ -20,7 +20,7 @@ import (
 // own (cycleOf) by its id (/cycles/{cycle_id}) among its column's
 // project's seeded cycles; and the cycles they rest on, matrixCycles, which prepareMatrix seeds in each project through the
 // planning store (cycles) once the project store has turned the project's
-// cycles on (cyclesOn).
+// cycles on (planningOn).
 
 var (
 	cellCycleDatesOverlap = cell{http.StatusConflict, "planning.cycle_dates_overlap"}
@@ -294,14 +294,15 @@ func createsTheCycle(t *testing.T, c caller, s seeded, answer string) {
 	}
 }
 
-// cyclesOn turns each project's cycles on through the project store, by
-// its workspace's admin (M6 P1 spec R7: they are off by default).
-func (s projectSeed) cyclesOn() {
+// planningOn turns each project's cycles and modules on through the project
+// store, by its workspace's admin (M6 P1 spec R7, P2 spec R7: they are off
+// by default).
+func (s projectSeed) planningOn() {
 	s.t.Helper()
 	on := true
 	for _, p := range matrixProjects {
 		slug, _, _ := strings.Cut(p.key, "/")
-		if err := s.store.UpdateProject(context.Background(), s.projects[p.key], projectdomain.ProjectPatch{CycleView: &on},
+		if err := s.store.UpdateProject(context.Background(), s.projects[p.key], projectdomain.ProjectPatch{CycleView: &on, ModuleView: &on},
 			s.ids[matrixAdmins[slug]], s.now); err != nil {
 			s.t.Fatal(err)
 		}

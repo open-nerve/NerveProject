@@ -22,9 +22,10 @@ func (w *lockWorld) GetModuleLink(ctx context.Context, id uuid.UUID) (domain.Mod
 	return l, ok, nil
 }
 
-func (w *lockWorld) Roles(ctx context.Context, _ uuid.UUID, _ []uuid.UUID) (map[uuid.UUID]shared.Role, error) {
+func (w *lockWorld) Roles(ctx context.Context, _ uuid.UUID, ids []uuid.UUID) (map[uuid.UUID]shared.Role, error) {
 	w.log(ctx, "Roles")
-	return nil, nil
+	w.asked = append(w.asked, ids)
+	return w.roles, nil
 }
 
 var (
