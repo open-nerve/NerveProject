@@ -1,9 +1,9 @@
 // Package planning is the cycles and modules module (M6 design 3, 4): it owns
-// the cycles' tables and brings creating, reading, listing, changing,
-// archiving, unarchiving and deleting a cycle of a project. Project and
-// workspace deletion events enqueue the asynchronous deletion of the deleted
-// projects' cycles in the publishing transaction; the 60-day purge removes
-// them.
+// the cycles' and the modules' tables and brings creating, reading, listing,
+// changing, archiving, unarchiving and deleting a cycle of a project. Project
+// and workspace deletion events enqueue the asynchronous deletion of the
+// deleted projects' planning rows in the publishing transaction; the 60-day
+// purge removes them.
 package planning
 
 import (
@@ -30,10 +30,15 @@ type Provided struct {
 }
 
 // Provide builds planning's purge over pool: its tables, children before
-// parents.
+// parents, so no parent's CASCADE takes a child's rows first (M6 P2 spec 2.4).
 func Provide(pool *pgxpool.Pool) Provided {
 	store := postgresadapter.New(pool)
-	return Provided{Purger: app.NewPurger([]app.PurgeStep{{Table: "cycles", Delete: store.PurgeCycles}})}
+	return Provided{Purger: app.NewPurger([]app.PurgeStep{
+		{Table: "module_links", Delete: store.PurgeModuleLinks},
+		{Table: "module_members", Delete: store.PurgeModuleMembers},
+		{Table: "modules", Delete: store.PurgeModules},
+		{Table: "cycles", Delete: store.PurgeCycles},
+	})}
 }
 
 // Deps are what the module needs.

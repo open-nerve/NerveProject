@@ -18,8 +18,8 @@ import (
 )
 
 // Hosts are created and soft deleted through the runtime app. Asset rows and
-// cycles are explicit storage fixtures written with the same restricted
-// runtime role.
+// the planning module's rows are explicit storage fixtures written with the
+// same restricted runtime role.
 // Only the isolated owner connection ages tombstones and observes results.
 func TestPurgeDeletedRunsWithRuntimeRole(t *testing.T) {
 	roles := newSplitRoles(t)
@@ -46,7 +46,7 @@ func TestPurgeDeletedRunsWithRuntimeRole(t *testing.T) {
 	}{
 		{"asset", []string{"file_assets"}},
 		{"issue", []string{"issue_labels", "issue_subscribers", "issue_comments", "issue_activities", "issues"}},
-		{"planning", []string{"cycles"}},
+		{"planning", []string{"cycles", "modules", "module_members", "module_links"}},
 		{"project", []string{"project_members", "labels", "states", "projects"}},
 		{"workspace", []string{"workspace_members", "workspaces"}},
 		{"identity", []string{"api_tokens"}},
@@ -81,6 +81,7 @@ func TestPurgeDeletedRunsWithRuntimeRole(t *testing.T) {
 			item := w.newWorkItemIn(t, project, `{"name":"Purge","label_ids":["`+created.ID.String()+`"]}`)
 			seedIssueAsset(t, roles.server, item, accountID(t, contract, base, token))
 			seedCycles(t, roles.server, project, accountID(t, contract, base, token))
+			seedModules(t, roles.server, project, accountID(t, contract, base, token))
 			w.send(t, "alice", http.MethodPost, commentsOf(item), `{"comment_html":"<p>Keep the child visible to cleanup</p>"}`, 201)
 			credential := createPAT(t, contract, base, token)
 			w.send(t, "alice", http.MethodDelete, "/api/v0/api-tokens/"+credential.ID, "", 204)
@@ -98,7 +99,7 @@ func TestPurgeDeletedRunsWithRuntimeRole(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = tx.Rollback(context.Background()) }()
-	tables := []string{"file_assets", "issue_labels", "issue_subscribers", "issue_comments", "issue_activities", "issues", "cycles", "labels", "states", "project_members", "projects", "workspace_members", "workspaces"}
+	tables := []string{"file_assets", "issue_labels", "issue_subscribers", "issue_comments", "issue_activities", "issues", "module_links", "module_members", "modules", "cycles", "labels", "states", "project_members", "projects", "workspace_members", "workspaces"}
 	for i, f := range fixtures {
 		age := 61
 		if i == 1 {

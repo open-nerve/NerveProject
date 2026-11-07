@@ -13,7 +13,7 @@ import (
 )
 
 // DeleteRowsKind identifies the request-driven deletion of a deleted
-// project's cycles.
+// project's planning rows.
 const DeleteRowsKind = "planning.delete_rows"
 
 // DeleteRowsArgs keeps the project and the deletion's moment and actor across

@@ -37,11 +37,111 @@ type PurgeCyclesRow struct {
 	AfterID uuid.UUID
 }
 
-// One bounded page of the 60-day purge (M6 P1 spec 2.4): the cycles deleted before the cutoff after the cursor, in id
-// order, deleted in one statement; it returns how many it read and deleted and the page's greatest id.
+// One bounded page of the 60-day purge (M6 P1 spec 2.4, P2 spec 2.4): the cycles deleted before the cutoff after the
+// cursor, in id order, deleted in one statement; it returns how many it read and deleted and the page's greatest id.
 func (q *Queries) PurgeCycles(ctx context.Context, arg PurgeCyclesParams) (PurgeCyclesRow, error) {
 	row := q.db.QueryRow(ctx, purgeCycles, arg.AfterID, arg.Cutoff, arg.BatchLimit)
 	var i PurgeCyclesRow
+	err := row.Scan(&i.Scanned, &i.Deleted, &i.AfterID)
+	return i, err
+}
+
+const purgeModuleLinks = `-- name: PurgeModuleLinks :one
+WITH candidates AS MATERIALIZED (
+    SELECT candidate.id FROM module_links AS candidate
+    WHERE candidate.deleted_at < $2 AND candidate.id > $1
+    ORDER BY candidate.id LIMIT $3
+), deleted AS (
+    DELETE FROM module_links AS target WHERE target.deleted_at < $2 AND target.id IN (SELECT candidates.id FROM candidates) RETURNING target.id
+)
+SELECT (SELECT count(*)::integer FROM candidates) AS scanned,
+       (SELECT count(*)::integer FROM deleted) AS deleted,
+       coalesce((SELECT id FROM candidates ORDER BY id DESC LIMIT 1), $1::uuid)::uuid AS after_id
+`
+
+type PurgeModuleLinksParams struct {
+	AfterID    uuid.UUID
+	Cutoff     *time.Time
+	BatchLimit int32
+}
+
+type PurgeModuleLinksRow struct {
+	Scanned int32
+	Deleted int32
+	AfterID uuid.UUID
+}
+
+// PurgeCycles' page, of the modules' links.
+func (q *Queries) PurgeModuleLinks(ctx context.Context, arg PurgeModuleLinksParams) (PurgeModuleLinksRow, error) {
+	row := q.db.QueryRow(ctx, purgeModuleLinks, arg.AfterID, arg.Cutoff, arg.BatchLimit)
+	var i PurgeModuleLinksRow
+	err := row.Scan(&i.Scanned, &i.Deleted, &i.AfterID)
+	return i, err
+}
+
+const purgeModuleMembers = `-- name: PurgeModuleMembers :one
+WITH candidates AS MATERIALIZED (
+    SELECT candidate.id FROM module_members AS candidate
+    WHERE candidate.deleted_at < $2 AND candidate.id > $1
+    ORDER BY candidate.id LIMIT $3
+), deleted AS (
+    DELETE FROM module_members AS target WHERE target.deleted_at < $2 AND target.id IN (SELECT candidates.id FROM candidates) RETURNING target.id
+)
+SELECT (SELECT count(*)::integer FROM candidates) AS scanned,
+       (SELECT count(*)::integer FROM deleted) AS deleted,
+       coalesce((SELECT id FROM candidates ORDER BY id DESC LIMIT 1), $1::uuid)::uuid AS after_id
+`
+
+type PurgeModuleMembersParams struct {
+	AfterID    uuid.UUID
+	Cutoff     *time.Time
+	BatchLimit int32
+}
+
+type PurgeModuleMembersRow struct {
+	Scanned int32
+	Deleted int32
+	AfterID uuid.UUID
+}
+
+// PurgeCycles' page, of the modules' members.
+func (q *Queries) PurgeModuleMembers(ctx context.Context, arg PurgeModuleMembersParams) (PurgeModuleMembersRow, error) {
+	row := q.db.QueryRow(ctx, purgeModuleMembers, arg.AfterID, arg.Cutoff, arg.BatchLimit)
+	var i PurgeModuleMembersRow
+	err := row.Scan(&i.Scanned, &i.Deleted, &i.AfterID)
+	return i, err
+}
+
+const purgeModules = `-- name: PurgeModules :one
+WITH candidates AS MATERIALIZED (
+    SELECT candidate.id FROM modules AS candidate
+    WHERE candidate.deleted_at < $2 AND candidate.id > $1
+    ORDER BY candidate.id LIMIT $3
+), deleted AS (
+    DELETE FROM modules AS target WHERE target.deleted_at < $2 AND target.id IN (SELECT candidates.id FROM candidates) RETURNING target.id
+)
+SELECT (SELECT count(*)::integer FROM candidates) AS scanned,
+       (SELECT count(*)::integer FROM deleted) AS deleted,
+       coalesce((SELECT id FROM candidates ORDER BY id DESC LIMIT 1), $1::uuid)::uuid AS after_id
+`
+
+type PurgeModulesParams struct {
+	AfterID    uuid.UUID
+	Cutoff     *time.Time
+	BatchLimit int32
+}
+
+type PurgeModulesRow struct {
+	Scanned int32
+	Deleted int32
+	AfterID uuid.UUID
+}
+
+// PurgeCycles' page, of the modules. Their members and links are purged before them (module.go), so the CASCADE of a
+// module's deletion finds none of its own rows to take.
+func (q *Queries) PurgeModules(ctx context.Context, arg PurgeModulesParams) (PurgeModulesRow, error) {
+	row := q.db.QueryRow(ctx, purgeModules, arg.AfterID, arg.Cutoff, arg.BatchLimit)
+	var i PurgeModulesRow
 	err := row.Scan(&i.Scanned, &i.Deleted, &i.AfterID)
 	return i, err
 }

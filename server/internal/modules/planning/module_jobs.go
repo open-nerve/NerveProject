@@ -5,7 +5,8 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/platform/jobs"
 )
 
-// Jobs declares the request-driven deletion of a deleted project's cycles.
+// Jobs declares the request-driven deletion of a deleted project's planning
+// rows.
 func (m *Module) Jobs() []jobs.Job {
 	return []jobs.Job{riveradapter.DeleteRowsJob(m.deleteRows, m.deleteBudget, m.logger)}
 }

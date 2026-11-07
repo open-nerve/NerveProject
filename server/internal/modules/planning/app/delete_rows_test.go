@@ -11,16 +11,17 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/planning/app"
 )
 
-// fakeCycles holds one project's undeleted cycle ids; a batch soft-deletes the first Limit after After.
+// fakeCycles holds one project's undeleted cycle ids, and no module rows; a batch soft-deletes the first Limit after
+// After.
 type fakeCycles struct {
 	live      []uuid.UUID
-	batches   []app.CycleBatch
+	batches   []app.RowBatch
 	remaining []uuid.UUID
 	inTx      bool
 	fail      error
 }
 
-func (f *fakeCycles) DeleteProjectCycles(_ context.Context, b app.CycleBatch) ([]uuid.UUID, error) {
+func (f *fakeCycles) DeleteProjectCycles(_ context.Context, b app.RowBatch) ([]uuid.UUID, error) {
 	if !f.inTx {
 		return nil, errors.New("batch outside a transaction")
 	}
@@ -38,9 +39,28 @@ func (f *fakeCycles) DeleteProjectCycles(_ context.Context, b app.CycleBatch) ([
 	return out, nil
 }
 
-func (f *fakeCycles) ProjectCyclesRemaining(_ context.Context, project, after uuid.UUID) (bool, error) {
-	f.remaining = append(f.remaining, after)
-	return slices.ContainsFunc(f.live, func(id uuid.UUID) bool { return id.Compare(after) > 0 }), nil
+// The module tables' steps find no rows.
+func (f *fakeCycles) DeleteProjectModules(context.Context, app.RowBatch) ([]uuid.UUID, error) {
+	return f.none()
+}
+func (f *fakeCycles) DeleteProjectModuleMembers(context.Context, app.RowBatch) ([]uuid.UUID, error) {
+	return f.none()
+}
+func (f *fakeCycles) DeleteProjectModuleLinks(context.Context, app.RowBatch) ([]uuid.UUID, error) {
+	return f.none()
+}
+
+func (f *fakeCycles) none() ([]uuid.UUID, error) {
+	if !f.inTx {
+		return nil, errors.New("batch outside a transaction")
+	}
+	return nil, nil
+}
+
+// ProjectDeletionRemaining records the probe's cursor; only the cycles' step has rows.
+func (f *fakeCycles) ProjectDeletionRemaining(_ context.Context, r app.ProjectRemainder) (bool, error) {
+	f.remaining = append(f.remaining, r.After)
+	return r.Step == "cycles" && slices.ContainsFunc(f.live, func(id uuid.UUID) bool { return id.Compare(r.After) > 0 }), nil
 }
 
 type fakeTx struct{ rows *fakeCycles }

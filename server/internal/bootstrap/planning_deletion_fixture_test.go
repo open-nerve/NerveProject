@@ -34,9 +34,36 @@ func seedCycles(t *testing.T, pool *pgxpool.Pool, project, by uuid.UUID) {
 	}
 }
 
+// seedModules writes a module of project by by, directly, with the rows
+// under it: by as its lead and its member, and a link of it, so a deletion of
+// the project reaches each of the module tables. The deletion and purge
+// guards write the planning module's rows as fixtures (M6 P2 spec 2.4).
+func seedModules(t *testing.T, pool *pgxpool.Pool, project, by uuid.UUID) {
+	t.Helper()
+	module := uuid.NewV7()
+	for _, stmt := range []struct {
+		sql  string
+		args []any
+	}{
+		{`INSERT INTO modules (id, workspace_id, project_id, name, start_date, target_date, status, lead_id, created_by_id, updated_by_id)
+			SELECT $1::uuid, workspace_id, id, 'Platform', DATE '2026-11-02', DATE '2026-11-30', 'in-progress', $2::uuid, $2::uuid, $2::uuid FROM projects WHERE id = $3`,
+			[]any{module, by, project}},
+		{`INSERT INTO module_members (id, workspace_id, project_id, module_id, member_id, created_by_id, updated_by_id)
+			SELECT $1::uuid, workspace_id, project_id, id, $2::uuid, $2::uuid, $2::uuid FROM modules WHERE id = $3`, []any{uuid.NewV7(), by, module}},
+		{`INSERT INTO module_links (id, workspace_id, project_id, module_id, title, url, created_by_id, updated_by_id)
+			SELECT $1::uuid, workspace_id, project_id, id, 'Spec', 'https://nerve.dev/spec', $2::uuid, $2::uuid FROM modules WHERE id = $3`,
+			[]any{uuid.NewV7(), by, module}},
+	} {
+		if tag, err := pool.Exec(pgtest.Soon(t), stmt.sql, stmt.args...); err != nil || tag.RowsAffected() != 1 {
+			t.Fatalf("seeding the modules of %s: %s: %d rows, %v; want 1", project, stmt.sql, tag.RowsAffected(), err)
+		}
+	}
+}
+
 // holdPlanningDeletion holds a row lock on one of the project's live cycles:
-// the planning deletion's first batch waits for it, so the cycles stay as
-// they were while the app and its River worker keep running.
+// the planning deletion's first batch, of its first step, waits for it, so
+// the planning rows stay as they were while the app and its River worker
+// keep running.
 func holdPlanningDeletion(t *testing.T, pool *pgxpool.Pool, project uuid.UUID) pgx.Tx {
 	t.Helper()
 	var id uuid.UUID
