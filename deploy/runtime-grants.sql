@@ -23,7 +23,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON draft_issues, issues, issue_assignees, i
     TO nerve_runtime;
 
 GRANT SELECT, INSERT, UPDATE, DELETE ON file_assets TO nerve_runtime;
-GRANT SELECT, INSERT, UPDATE, DELETE ON cycles TO nerve_runtime;
+GRANT SELECT, INSERT, UPDATE, DELETE ON cycles, modules, module_members, module_links TO nerve_runtime;
 
 -- River's tables and the sequences of their ids. River rebuilds the indexes of river_job every day with
 -- REINDEX INDEX CONCURRENTLY, which takes MAINTAIN on the table (PostgreSQL 17 and later).

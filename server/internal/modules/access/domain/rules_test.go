@@ -128,6 +128,18 @@ var tableCells = map[shared.Action][]outcome{
 	// (M6 design 3.7).
 	"cycle.delete": {allowed, forbidden, forbidden, forbidden, allowed, forbidden, forbidden, invisible, invisible, invisible, invisible,
 		forbidden, invisible, invisible, invisible, forbidden, forbidden},
+	// As cycle.read: every active member of the project reads modules, the
+	// guest's OwnOnly filtering the planning module's (M6 design 3.7).
+	"module.read": {allowed, allowed, allowed, allowed, allowed, forbidden, forbidden, invisible, invisible, invisible, invisible,
+		forbidden, invisible, invisible, invisible, forbidden, forbidden},
+	// As cycle.write: the project's admins and members, not its guests; an
+	// OwnOnly grant's refusal is the planning module's (M6 design 3.7).
+	"module.write": {allowed, allowed, forbidden, forbidden, allowed, forbidden, forbidden, invisible, invisible, invisible, invisible,
+		forbidden, invisible, invisible, invisible, forbidden, forbidden},
+	// As cycle.delete: the project's admins; creatorCells has its creators'
+	// (M6 design 3.7).
+	"module.delete": {allowed, forbidden, forbidden, forbidden, allowed, forbidden, forbidden, invisible, invisible, invisible, invisible,
+		forbidden, invisible, invisible, invisible, forbidden, forbidden},
 }
 
 // creatorCells is every row with AllowCreator decided for every identity of
@@ -140,6 +152,8 @@ var creatorCells = map[shared.Action][]outcome{
 	"issue.delete": {allowed, allowed, forbidden, forbidden, allowed, forbidden, forbidden, invisible, invisible, invisible, invisible,
 		forbidden, invisible, invisible, invisible, forbidden, forbidden},
 	"cycle.delete": {allowed, allowed, forbidden, forbidden, allowed, forbidden, forbidden, invisible, invisible, invisible, invisible,
+		forbidden, invisible, invisible, invisible, forbidden, forbidden},
+	"module.delete": {allowed, allowed, forbidden, forbidden, allowed, forbidden, forbidden, invisible, invisible, invisible, invisible,
 		forbidden, invisible, invisible, invisible, forbidden, forbidden},
 }
 
