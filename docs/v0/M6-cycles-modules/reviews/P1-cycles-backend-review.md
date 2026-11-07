@@ -1,6 +1,6 @@
 # M6/P1 阶段评审记录
 
-> 2026-11-07：修复轮之后的最终候选待推送、核分支 CI 与合入；分支 CI、合入、main CI 与归档清理在合入后由 P2 的 T1 回填到 §7。基线 main `d1ec8c696d017f19aac66471f6737b8ea1678d0b`（M6 设计 noff），实施中合入 main `910a55cd`（e2e 作业期限 35 分钟与 M8 交接 M6-M8-01）。
+> 2026-11-07：最终候选（修复轮与本记录，门禁于 `a95a3b8e` 全过）待推送、核分支 CI 与合入；分支 CI、合入、main CI 与归档清理在合入后由 P2 的 T1 回填到 §7。基线 main `d1ec8c696d017f19aac66471f6737b8ea1678d0b`（M6 设计 noff），实施中合入 main `910a55cd`（e2e 作业期限 35 分钟与 M8 交接 M6-M8-01）。
 
 ## 1. 评审方式与范围
 
@@ -41,7 +41,7 @@ A1–A7 满足（[spec §4](../specs/P1-cycles-backend.md#4-验收标准)已勾�
 
 - **整审前**（`eb1b2208`，T13 之后）：七项门禁串行全过，输入前后一致：`make gen-check`、`make lint-go`、`make test`（66 个包，827 秒）、`make lint-web`、`make knip`、`make test-web`、`make build && make e2e`（422 条全过，即原 417 条加 planning 五条，192 秒）。
 - **检查点的分支 CI**（42334013393，`c528d682`）：attempt 1 的 e2e 417 条中 416 过，C12（`review-interactions.spec.ts:83` 的 list 布局）失败，即 [M6-M8-01](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-01) 所记的间歇失败；只重跑失败的作业，attempt 2 通过。
-- **修复轮之后**：在最终候选上串行重跑七项门禁（待运行，结果随下一提交写入）。
+- **修复轮之后**：在 `a95a3b8e`（修复轮 `6af33742` 加记录）上串行重跑七项门禁，全部 exit 0、输入前后一致：`make gen-check`、`make lint-go`、`make test`（66 个包，840 秒，`-count=1`）、`make lint-web`（50 项任务中 35 项由 turbo 缓存回放）、`make knip`、`make test-web`（16 项任务全部由缓存回放：`web/` 自 `eb1b2208` 的实跑以来未变）、`make build && make e2e`（422 条全过）。
 
 ## 6. 整分支审查
 
