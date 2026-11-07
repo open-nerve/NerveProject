@@ -1,4 +1,4 @@
-package crawler_test
+package linkpreview_test
 
 import (
 	"bytes"
@@ -13,9 +13,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/crawler"
-	"github.com/open-nerve/NerveProject/server/internal/modules/issue/domain"
 	"github.com/open-nerve/NerveProject/server/internal/platform/outbound"
+	"github.com/open-nerve/NerveProject/server/internal/platform/outbound/linkpreview"
 )
 
 func TestCrawlerLogsRedacted(t *testing.T) {
@@ -109,13 +108,13 @@ func TestCrawlerLogsRedacted(t *testing.T) {
 				ctx, cancel = context.WithTimeout(ctx, 200*time.Millisecond)
 				defer cancel()
 			}
-			got := crawler.New(client, logger).Crawl(ctx, target)
+			got := linkpreview.New(client, logger).Crawl(ctx, target)
 			if tc.stage == "page" {
 				public := "failed"
 				if tc.category == "blocked" {
 					public = "blocked"
 				}
-				wantMetadata(t, got, domain.LinkMetadata{"error": value(public), "url": value(target)})
+				wantMetadata(t, got, linkpreview.Metadata{"error": value(public), "url": value(target)})
 			} else {
 				wantMetadata(t, got, success(target, value("kept")))
 			}

@@ -1,4 +1,4 @@
-package crawler_test
+package linkpreview_test
 
 import (
 	"net/http"

@@ -2,7 +2,7 @@ package apitest
 
 import "testing"
 
-func TestIssueLinkMetadataError(t *testing.T) {
+func TestLinkMetadataError(t *testing.T) {
 	c := Load(t)
 	for _, tc := range []struct {
 		body  string
@@ -17,7 +17,7 @@ func TestIssueLinkMetadataError(t *testing.T) {
 		{`{"error":""}`, false},
 	} {
 		t.Run(tc.body, func(t *testing.T) {
-			err := c.validateSchema("IssueLinkMetadata", []byte(tc.body))
+			err := c.validateSchema("LinkMetadata", []byte(tc.body))
 			if (err == nil) != tc.valid {
 				t.Errorf("schema accepted=%v want %v: %v", err == nil, tc.valid, err)
 			}

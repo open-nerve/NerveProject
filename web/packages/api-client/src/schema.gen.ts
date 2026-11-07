@@ -3101,13 +3101,13 @@ export interface components {
             title?: string | null;
         };
         /** @enum {string} */
-        IssueLinkMetadataError: "blocked" | "failed";
-        IssueLinkMetadata: {
+        LinkMetadataError: "blocked" | "failed";
+        LinkMetadata: {
             title?: string | null;
             favicon?: string | null;
             url?: string | null;
             favicon_url?: string | null;
-            error?: components["schemas"]["IssueLinkMetadataError"] | null;
+            error?: components["schemas"]["LinkMetadataError"] | null;
         };
         IssueLink: {
             /** Format: uuid */
@@ -3116,7 +3116,7 @@ export interface components {
             issue_id: string;
             url: string;
             title: string | null;
-            metadata: components["schemas"]["IssueLinkMetadata"];
+            metadata: components["schemas"]["LinkMetadata"];
             /** Format: uuid */
             created_by_id: string | null;
             /** Format: date-time */
@@ -3480,8 +3480,8 @@ export type DescriptionVersion = components['schemas']['DescriptionVersion'];
 export type DescriptionVersionPage = components['schemas']['DescriptionVersionPage'];
 export type DescriptionVersionDetail = components['schemas']['DescriptionVersionDetail'];
 export type IssueLinkPatch = components['schemas']['IssueLinkPatch'];
-export type IssueLinkMetadataError = components['schemas']['IssueLinkMetadataError'];
-export type IssueLinkMetadata = components['schemas']['IssueLinkMetadata'];
+export type LinkMetadataError = components['schemas']['LinkMetadataError'];
+export type LinkMetadata = components['schemas']['LinkMetadata'];
 export type IssueLink = components['schemas']['IssueLink'];
 export type IssueLinkCollection = components['schemas']['IssueLinkCollection'];
 export type IssueLinkCreate = components['schemas']['IssueLinkCreate'];

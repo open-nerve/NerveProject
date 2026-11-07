@@ -19,13 +19,11 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/content"
-	"github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/crawler"
 	httpadapter "github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/http"
 	postgresadapter "github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/app"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/domain"
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver"
-	"github.com/open-nerve/NerveProject/server/internal/platform/outbound"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
@@ -122,10 +120,12 @@ type Deps struct {
 	AttachmentReader   app.AttachmentReader
 	DraftAssetTransfer app.DraftAssetTransfer
 	DraftAssets        app.DraftAssets
-	Outbound           *outbound.Client
-	Logger             *slog.Logger
-	Events             shared.EventPublisher
-	Pool               *pgxpool.Pool
+	// LinkCrawler is the platform's link-preview crawler, adapted
+	// (bootstrap/link_previews.go).
+	LinkCrawler app.LinkCrawler
+	Logger      *slog.Logger
+	Events      shared.EventPublisher
+	Pool        *pgxpool.Pool
 	// Tx are the transactions of the module's writes, each of which waits
 	// for a lock at most issue.write_lock_timeout (bootstrap/gate.go).
 	Tx shared.TxManager
@@ -191,7 +191,7 @@ func New(d Deps) *Module {
 	return &Module{
 		assets: assetAccess, deleteRows: app.NewDeleteRows(app.DeleteRowsDeps{Rows: store, Relations: app.NewRelationDeletions(store, d.Projects), Remaining: store, Tx: d.JobTx, RuntimeNow: d.RuntimeNow, Batch: d.DeleteBatch, Budget: d.DeleteBudget}), deleteBudget: d.DeleteBudget, logger: d.Logger,
 		trimVersions: app.NewTrimVersions(app.TrimVersionsDeps{Projects: d.Projects, Gate: d.Projects, Rows: store, Tx: d.JobTx}), trimVersionsInterval: d.TrimVersionsInterval,
-		crawlLink: app.NewCrawlLink(app.CrawlLinkDeps{Crawler: crawler.New(d.Outbound, d.Logger), Links: store}), autoArchive: app.NewAutoArchive(app.AutoArchiveDeps{Policies: d.ArchivePolicies, Projects: d.Projects, States: d.Projects, Issues: store, Tx: d.JobTx, Clock: d.Clock, Events: d.Events}), autoArchiveInterval: d.AutoArchiveInterval,
+		crawlLink: app.NewCrawlLink(app.CrawlLinkDeps{Crawler: d.LinkCrawler, Links: store}), autoArchive: app.NewAutoArchive(app.AutoArchiveDeps{Policies: d.ArchivePolicies, Projects: d.Projects, States: d.Projects, Issues: store, Tx: d.JobTx, Clock: d.Clock, Events: d.Events}), autoArchiveInterval: d.AutoArchiveInterval,
 		uc: httpadapter.UseCases{
 			GetIssueAttachments:     app.NewGetAttachments("issue", attachments),
 			GetCommentAttachments:   app.NewGetAttachments("comment", attachments),

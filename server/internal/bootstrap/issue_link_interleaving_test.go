@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/open-nerve/NerveProject/server/internal/modules/issue/domain"
+	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
 func TestLinkCrawlURLInterleaving(t *testing.T) {
@@ -40,7 +40,7 @@ func TestLinkCrawlURLInterleaving(t *testing.T) {
 			if !crawlFirst {
 				first.reply <- "Stale preview A"
 				waitLinkRaceJob(t, w, jobA, a.ID, a.URL)
-				wantLinkRaceMetadata(t, w, a.ID, domain.LinkMetadata{})
+				wantLinkRaceMetadata(t, w, a.ID, shared.LinkMetadata{})
 			}
 			second.reply <- "Preview B"
 			waitLinkRaceJob(t, w, jobs[1], a.ID, b.URL)
@@ -127,7 +127,7 @@ func TestLinkTitlePreservesConcurrentMetadata(t *testing.T) {
 				}
 			}
 			got := finish()
-			wantAnswer := domain.LinkMetadata{}
+			wantAnswer := shared.LinkMetadata{}
 			if crawlFirst {
 				wantAnswer = want
 			}
@@ -189,13 +189,13 @@ func TestLinkCrawlAfterDeletion(t *testing.T) {
 			if before != descriptionRows(t, w, "issue_links", item) {
 				t.Fatal("old crawl changed deleted link or same-URL replacement")
 			}
-			wantLinkRaceMetadata(t, w, old.ID, domain.LinkMetadata{})
+			wantLinkRaceMetadata(t, w, old.ID, shared.LinkMetadata{})
 			if rebuild {
-				wantLinkRaceMetadata(t, w, fresh.ID, domain.LinkMetadata{})
+				wantLinkRaceMetadata(t, w, fresh.ID, shared.LinkMetadata{})
 				freshPage.reply <- "New link preview"
 				waitLinkRaceJob(t, w, freshJob, fresh.ID, fresh.URL)
 				wantLinkRaceMetadata(t, w, fresh.ID, linkPageMetadata(fresh.URL, "New link preview"))
-				wantLinkRaceMetadata(t, w, old.ID, domain.LinkMetadata{})
+				wantLinkRaceMetadata(t, w, old.ID, shared.LinkMetadata{})
 				if ids := linkRaceJobs(t, w, fresh.ID, fresh.URL); ids[0] != freshJob {
 					t.Fatal("replacement job identity changed", ids)
 				}

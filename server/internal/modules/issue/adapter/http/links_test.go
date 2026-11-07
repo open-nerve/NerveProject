@@ -28,7 +28,7 @@ func (f *fakeLinkCreate) Execute(ctx context.Context, id uuid.UUID, input domain
 		return domain.Link{}, err
 	}
 	f.id, f.actor, f.input, f.calls = id, a.UserID, input, f.calls+1
-	return domain.Link{ID: bobComment, IssueID: id, URL: input.URL, Title: input.Title, Metadata: domain.LinkMetadata{}, CreatedByID: &a.UserID, CreatedAt: created, UpdatedAt: created}, f.err
+	return domain.Link{ID: bobComment, IssueID: id, URL: input.URL, Title: input.Title, Metadata: shared.LinkMetadata{}, CreatedByID: &a.UserID, CreatedAt: created, UpdatedAt: created}, f.err
 }
 
 type fakeLinkList struct {
@@ -66,7 +66,7 @@ func TestCreateIssueLinkHTTP(t *testing.T) {
 	}
 }
 func TestListIssueLinksHTTP(t *testing.T) {
-	for _, rows := range [][]domain.Link{nil, {{ID: bobComment, IssueID: webSixID, URL: "http://169.254.169.254/P", Metadata: domain.LinkMetadata{"title": nil, "favicon": linkString("data:image/png;base64,aA=="), "url": linkString("http://169.254.169.254/P"), "favicon_url": nil, "error": nil}, CreatedAt: created, UpdatedAt: created}}} {
+	for _, rows := range [][]domain.Link{nil, {{ID: bobComment, IssueID: webSixID, URL: "http://169.254.169.254/P", Metadata: shared.LinkMetadata{"title": nil, "favicon": linkString("data:image/png;base64,aA=="), "url": linkString("http://169.254.169.254/P"), "favicon_url": nil, "error": nil}, CreatedAt: created, UpdatedAt: created}}} {
 		f := &fakeLinkList{rows: rows}
 		res, body := do(t, newServer(t, httpadapter.UseCases{ListIssueLinks: f}), request(http.MethodGet, linksPath, "alice", ""))
 		if res.StatusCode != 200 || f.id != webSixID {

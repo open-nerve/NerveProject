@@ -166,7 +166,7 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 		ContentBindings:    issueContentBindings{bindings: asset.NewContentBindings(assetPorts, businessClock)},
 		DraftAssetTransfer: issueDraftAssetTransfer{assets: asset.NewDraftAssetTransfer(assetPorts, businessClock, events)},
 		DraftAssets:        issueDraftAssets{assets: assetPorts.DraftAssets},
-		Outbound:           outboundClient, Logger: logger,
+		LinkCrawler:        newLinkPreviews(outboundClient, logger), Logger: logger,
 		Events: events,
 		Pool:   pool, Tx: busyTx{tx: issueTx}, JobTx: issueTx, ArchivePolicies: projectPorts.ArchivePolicies, AutoArchiveInterval: cfg.Issue.AutoArchiveInterval, TrimVersionsInterval: cfg.Issue.TrimVersionsInterval,
 		DeleteBatch: cfg.Issue.DeleteBatch, DeleteBudget: cfg.Issue.DeleteBudget, RuntimeNow: time.Now,

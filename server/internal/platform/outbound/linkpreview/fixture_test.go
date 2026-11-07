@@ -1,4 +1,4 @@
-package crawler_test
+package linkpreview_test
 
 import (
 	"context"
@@ -15,13 +15,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/crawler"
-	"github.com/open-nerve/NerveProject/server/internal/modules/issue/app"
-	"github.com/open-nerve/NerveProject/server/internal/modules/issue/domain"
 	"github.com/open-nerve/NerveProject/server/internal/platform/outbound"
+	"github.com/open-nerve/NerveProject/server/internal/platform/outbound/linkpreview"
 )
-
-var _ app.LinkCrawler = (*crawler.Crawler)(nil)
 
 func localClient(t *testing.T) *outbound.Client {
 	t.Helper()
@@ -32,9 +28,9 @@ func localClient(t *testing.T) *outbound.Client {
 	return c
 }
 
-func newCrawler(t *testing.T) *crawler.Crawler {
+func newCrawler(t *testing.T) *linkpreview.Crawler {
 	t.Helper()
-	return crawler.New(localClient(t), slog.New(slog.NewJSONHandler(io.Discard, &slog.HandlerOptions{Level: slog.Level(math.MinInt)})))
+	return linkpreview.New(localClient(t), slog.New(slog.NewJSONHandler(io.Discard, &slog.HandlerOptions{Level: slog.Level(math.MinInt)})))
 }
 
 func response(w http.ResponseWriter, status int, mime, body string) {
@@ -45,11 +41,11 @@ func response(w http.ResponseWriter, status int, mime, body string) {
 
 func value(s string) *string { return &s }
 
-func success(target string, title *string) domain.LinkMetadata {
-	return domain.LinkMetadata{"title": title, "favicon": nil, "url": value(target), "favicon_url": nil}
+func success(target string, title *string) linkpreview.Metadata {
+	return linkpreview.Metadata{"title": title, "favicon": nil, "url": value(target), "favicon_url": nil}
 }
 
-func wantMetadata(t *testing.T, got, want domain.LinkMetadata) {
+func wantMetadata(t *testing.T, got, want linkpreview.Metadata) {
 	t.Helper()
 	if !reflect.DeepEqual(got, want) {
 		// Keep oversized data URLs out of assertion output.

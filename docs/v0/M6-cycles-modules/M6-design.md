@@ -62,7 +62,7 @@ M6 让迭代（Sprint）和模块经真实接口工作：迭代的建立、日�
 
 - **字段**：名字（必填，≤255，项目内未删除者不分大小写唯一，409 `planning.module_name_taken`）、说明（纯文本；删除 Plane 的 `description_text`、`description_html` 遗留列，差异清单已登记）、开始与目标日期（`date`，开始 ≤ 目标）、状态（`backlog`、`planned`、`in-progress`、`paused`、`completed`、`cancelled`，默认 `planned`，数据库 CHECK）、负责人、成员、排序、归档时刻。
 - **负责人与成员只有信息作用**，不影响权限。写入时须是项目中不是访客的有效成员（422 `lead_id`/`member_ids[i]` `not_allowed`）；Plane 的应用接口接受任何账户、公共接口过滤为项目成员，Nerve 统一校验（同 M3 的项目负责人规则，我的决定）。成员离开项目不回写模块。`member_ids` 整体替换。
-- **链接**：标题（可空，≤255）、地址（http/https，补协议、校验同 M4 工作项链接）、元数据（后台抓取，沿用 M4 的协议：P2 把地址规整校验（`issue/domain/link.go`）与抓取适配器（`issue/adapter/crawler/`）移到 `platform` 共用，工作项链接的行为与测试不变，不复制一份，我的决定）；同一模块内未删除链接的地址唯一（409）。
+- **链接**：标题（可空，≤255）、地址（http/https，补协议、校验同 M4 工作项链接）、元数据（后台抓取，沿用 M4 的协议：P2 把地址规整校验（原 `issue/domain/link.go`）与抓取适配器（原 `issue/adapter/crawler/`）移出 `issue`、两个模块共用，不复制一份，我的决定；落点受架构测试的导入规则约束（`domain`/`app` 只能导入标准库、本模块内层与 `internal/shared`，`platform` 不导入 `shared` 与业务模块），所以地址与标题检查和元数据类型在 `internal/shared/link.go`，抓取在 `platform/outbound/linkpreview`（返回自有的 `Metadata`），由 `bootstrap` 一个适配器转成 `shared.LinkMetadata` 交给两个模块；仍是一份代码，工作项链接的行为与测试不变，见 [P2 spec](specs/P2-modules-backend.md) R12）；同一模块内未删除链接的地址唯一（409）。
 
 ### 3.3 工作项的归属
 
@@ -297,4 +297,4 @@ P1 起第一个实现提交把关键词 phase 改为 `M6/P1`；纯设计分支�
 14. 冻结后照样返回实时计数，转移看实时未完成数、可多次转移（§3.4、§3.5）。
 15. OwnOnly 的调用者不能做 `planning` 的写（§3.7）。
 16. 排序加 `cycle_name`（§7）。
-17. 链接的规整与抓取移到 `platform` 共用（§3.2）。
+17. 链接的规整与抓取移出 `issue`、两个模块共用一份（§3.2）。落点见 §3.2 / P2 spec R12：检查与元数据类型在 `internal/shared`，抓取在 `platform/outbound/linkpreview`，`bootstrap` 一次适配（原写“移到 `platform`”，因架构测试的导入规则而改）。

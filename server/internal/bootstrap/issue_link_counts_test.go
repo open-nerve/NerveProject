@@ -81,7 +81,7 @@ func TestIssueLinkCountsAcrossRepresentations(t *testing.T) {
 	waitUniqueLinkCrawl(t, w, answeredLink{ID: live.ID, URL: "http://169.254.169.254/count-replaced"})
 	detail(http.MethodGet, "", "")
 	title := "Worker title"
-	changed, err := postgresadapter.New(w.pool).SetLinkMetadata(pgtest.Soon(t), live.ID, "http://169.254.169.254/count-replaced", domain.LinkMetadata{"title": &title})
+	changed, err := postgresadapter.New(w.pool).SetLinkMetadata(pgtest.Soon(t), live.ID, "http://169.254.169.254/count-replaced", shared.LinkMetadata{"title": &title})
 	if err != nil || !changed {
 		t.Fatal("worker metadata update", changed, err)
 	}

@@ -1,4 +1,4 @@
-package crawler_test
+package linkpreview_test
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/open-nerve/NerveProject/server/internal/modules/issue/domain"
+	"github.com/open-nerve/NerveProject/server/internal/platform/outbound/linkpreview"
 )
 
 func TestCrawlerLimitsAndFailures(t *testing.T) {
@@ -38,7 +38,7 @@ func TestCrawlerLimitsAndFailures(t *testing.T) {
 				target := s.URL + "/page"
 				got := newCrawler(t).Crawl(t.Context(), target)
 				if !tc.pageOK {
-					wantMetadata(t, got, domain.LinkMetadata{"error": value("failed"), "url": value(target)})
+					wantMetadata(t, got, linkpreview.Metadata{"error": value("failed"), "url": value(target)})
 					if icons.Load() != 0 {
 						t.Error("icon requested after page failure")
 					}
@@ -95,7 +95,7 @@ func TestCrawlerLimitsAndFailures(t *testing.T) {
 				}))
 				defer s.Close()
 				got := newCrawler(t).Crawl(t.Context(), s.URL)
-				wantMetadata(t, got, domain.LinkMetadata{"error": value("failed"), "url": value(s.URL)})
+				wantMetadata(t, got, linkpreview.Metadata{"error": value("failed"), "url": value(s.URL)})
 				if requests.Load() != 1 {
 					t.Errorf("page failure retried: %d", requests.Load())
 				}
@@ -127,7 +127,7 @@ func TestCrawlerLimitsAndFailures(t *testing.T) {
 				got := newCrawler(t).Crawl(t.Context(), target)
 				want := success(target, value("kept"))
 				if stage == "page" {
-					want = domain.LinkMetadata{"error": value("blocked"), "url": value(target)}
+					want = linkpreview.Metadata{"error": value("blocked"), "url": value(target)}
 				}
 				wantMetadata(t, got, want)
 				if listener.accepted.Load() != 1 || hits.Load() != 1 {
@@ -158,7 +158,7 @@ func TestCrawlerLimitsAndFailures(t *testing.T) {
 	t.Run("cancelled_parent", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(t.Context())
 		cancel()
-		wantMetadata(t, newCrawler(t).Crawl(ctx, "http://127.0.0.1/"), domain.LinkMetadata{"error": value("failed"), "url": value("http://127.0.0.1/")})
+		wantMetadata(t, newCrawler(t).Crawl(ctx, "http://127.0.0.1/"), linkpreview.Metadata{"error": value("failed"), "url": value("http://127.0.0.1/")})
 	})
 	t.Run("shared_five_seconds", testSharedBudget)
 	t.Run("short_parent_deadline", testParentDeadline)

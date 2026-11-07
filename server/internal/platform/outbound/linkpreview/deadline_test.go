@@ -1,4 +1,4 @@
-package crawler_test
+package linkpreview_test
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/open-nerve/NerveProject/server/internal/modules/issue/domain"
+	"github.com/open-nerve/NerveProject/server/internal/platform/outbound/linkpreview"
 )
 
 func testSharedBudget(t *testing.T) {
@@ -29,7 +29,7 @@ func testSharedBudget(t *testing.T) {
 	defer s.Close()
 	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
 	defer cancel()
-	result := make(chan domain.LinkMetadata, 1)
+	result := make(chan linkpreview.Metadata, 1)
 	c := newCrawler(t)
 	start := time.Now()
 	go func() { result <- c.Crawl(ctx, s.URL+"/") }()
@@ -54,7 +54,7 @@ func testParentDeadline(t *testing.T) {
 	defer s.Close()
 	ctx, cancel := context.WithTimeout(t.Context(), 200*time.Millisecond)
 	defer cancel()
-	result := make(chan domain.LinkMetadata, 1)
+	result := make(chan linkpreview.Metadata, 1)
 	c := newCrawler(t)
 	go func() { result <- c.Crawl(ctx, s.URL) }()
 	await(t, entered)
@@ -63,7 +63,7 @@ func testParentDeadline(t *testing.T) {
 		if ctx.Err() != context.DeadlineExceeded {
 			t.Error("crawl returned before parent deadline")
 		}
-		wantMetadata(t, got, domain.LinkMetadata{"error": value("failed"), "url": value(s.URL)})
+		wantMetadata(t, got, linkpreview.Metadata{"error": value("failed"), "url": value(s.URL)})
 	case <-time.After(2 * time.Second):
 		t.Fatal("shorter parent deadline ignored")
 	}

@@ -1,4 +1,9 @@
-package crawler
+// Package linkpreview fetches a link's preview, the page title and one icon,
+// through the outbound client's address policy (M4 design 3.11). Work-item
+// and module links share it (M6 design 3.2). Like all of the platform it
+// imports no module and not internal/shared, so it returns its own Metadata,
+// which bootstrap hands to the modules as shared.LinkMetadata.
+package linkpreview
 
 import (
 	"context"
@@ -9,9 +14,13 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/open-nerve/NerveProject/server/internal/modules/issue/domain"
 	"github.com/open-nerve/NerveProject/server/internal/platform/outbound"
 )
+
+// Metadata is a crawl's result: title, favicon, url and favicon_url when the
+// page was fetched (a missing title or icon is nil), or error ("blocked" or
+// "failed") and url when it was not.
+type Metadata map[string]*string
 
 // Crawler fetches a page and at most one icon through the same outbound policy.
 type Crawler struct {
@@ -27,7 +36,7 @@ func New(client *outbound.Client, logger *slog.Logger) *Crawler {
 }
 
 // Crawl retains the task URL and shares one deadline across both resources.
-func (c *Crawler) Crawl(parent context.Context, rawURL string) domain.LinkMetadata {
+func (c *Crawler) Crawl(parent context.Context, rawURL string) Metadata {
 	ctx, cancel := context.WithTimeout(parent, 5*time.Second)
 	defer cancel()
 	page, err := c.client.Get(ctx, rawURL, limits(1<<20))
@@ -38,7 +47,7 @@ func (c *Crawler) Crawl(parent context.Context, rawURL string) domain.LinkMetada
 		if category == "blocked" {
 			public = "blocked"
 		}
-		return domain.LinkMetadata{"error": &public, "url": &rawURL}
+		return Metadata{"error": &public, "url": &rawURL}
 	}
 	category := ""
 	if page.StatusCode < 200 || page.StatusCode >= 300 {
@@ -49,15 +58,15 @@ func (c *Crawler) Crawl(parent context.Context, rawURL string) domain.LinkMetada
 	if category != "" {
 		c.diagnose(ctx, "page", category, nil)
 		failed := "failed"
-		return domain.LinkMetadata{"error": &failed, "url": &rawURL}
+		return Metadata{"error": &failed, "url": &rawURL}
 	}
 	title, href, err := pageMetadata(page.Body, page.ContentType)
 	if err != nil {
 		c.diagnose(ctx, "page", "non_html", nil)
 		failed := "failed"
-		return domain.LinkMetadata{"error": &failed, "url": &rawURL}
+		return Metadata{"error": &failed, "url": &rawURL}
 	}
-	result := domain.LinkMetadata{"title": title, "favicon": nil, "url": &rawURL, "favicon_url": nil}
+	result := Metadata{"title": title, "favicon": nil, "url": &rawURL, "favicon_url": nil}
 	base, err := url.Parse(page.FinalURL)
 	if err != nil {
 		c.diagnose(ctx, "icon", "blocked", nil)

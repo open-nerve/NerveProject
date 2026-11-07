@@ -21,7 +21,7 @@ type writableLinks struct {
 	reads            int
 	updated          *app.LinkWrite
 	deleted          *app.LinkDeletion
-	returnedMetadata domain.LinkMetadata
+	returnedMetadata shared.LinkMetadata
 }
 
 func (f *writableLinks) GetLink(ctx context.Context, id uuid.UUID) (domain.Link, bool, error) {
@@ -49,7 +49,7 @@ func newLinkWrites(t *testing.T) (*app.UpdateIssueLink, *app.DeleteIssueLink, *w
 	t.Helper()
 	_, w, f, p, id := newLinkCreate(t)
 	gated(w, nil)
-	c := &writableLinks{fakeLinks: f, found: true, current: domain.Link{ID: uuid.NewV7(), WorkspaceID: acme, ProjectID: web, IssueID: id, URL: "http://169.254.169.254/before", Title: evptr("Before"), Metadata: domain.LinkMetadata{"title": evptr("old snapshot")}, CreatedByID: &bob, CreatedAt: earlier, UpdatedAt: earlier}, returnedMetadata: domain.LinkMetadata{"title": evptr("concurrent preview")}}
+	c := &writableLinks{fakeLinks: f, found: true, current: domain.Link{ID: uuid.NewV7(), WorkspaceID: acme, ProjectID: web, IssueID: id, URL: "http://169.254.169.254/before", Title: evptr("Before"), Metadata: shared.LinkMetadata{"title": evptr("old snapshot")}, CreatedByID: &bob, CreatedAt: earlier, UpdatedAt: earlier}, returnedMetadata: shared.LinkMetadata{"title": evptr("concurrent preview")}}
 	return app.NewUpdateIssueLink(app.UpdateIssueLinkDeps{Locks: w.locks, Links: c, Clock: clockAt{at: clockNow, log: w.log}, Events: p}), app.NewDeleteIssueLink(app.DeleteIssueLinkDeps{Locks: w.locks, Links: c, Clock: clockAt{at: clockNow, log: w.log}, Events: p}), w, c, p
 }
 func TestUpdateIssueLink(t *testing.T) {

@@ -13,7 +13,6 @@ import (
 	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue"
-	"github.com/open-nerve/NerveProject/server/internal/modules/issue/domain"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
@@ -24,7 +23,7 @@ type answeredLink struct {
 	IssueID     uuid.UUID           `json:"issue_id"`
 	URL         string              `json:"url"`
 	Title       *string             `json:"title"`
-	Metadata    domain.LinkMetadata `json:"metadata"`
+	Metadata    shared.LinkMetadata `json:"metadata"`
 	CreatedByID *uuid.UUID          `json:"created_by_id"`
 	CreatedAt   time.Time           `json:"created_at"`
 	UpdatedAt   time.Time           `json:"updated_at"`

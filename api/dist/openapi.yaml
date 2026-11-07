@@ -5942,12 +5942,12 @@ components:
             - string
             - 'null'
           maxLength: 255
-    IssueLinkMetadataError:
+    LinkMetadataError:
       type: string
       enum:
         - blocked
         - failed
-    IssueLinkMetadata:
+    LinkMetadata:
       type: object
       additionalProperties: false
       properties:
@@ -5969,7 +5969,7 @@ components:
             - 'null'
         error:
           oneOf:
-            - $ref: '#/components/schemas/IssueLinkMetadataError'
+            - $ref: '#/components/schemas/LinkMetadataError'
             - type: 'null'
     IssueLink:
       type: object
@@ -5997,7 +5997,7 @@ components:
             - string
             - 'null'
         metadata:
-          $ref: '#/components/schemas/IssueLinkMetadata'
+          $ref: '#/components/schemas/LinkMetadata'
         created_by_id:
           type:
             - string
