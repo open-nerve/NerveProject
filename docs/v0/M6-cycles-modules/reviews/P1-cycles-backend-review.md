@@ -1,6 +1,6 @@
 # M6/P1 阶段评审记录
 
-> 2026-11-07：最终候选（修复轮与本记录，门禁于 `a95a3b8e` 全过）待推送、核分支 CI 与合入；分支 CI、合入、main CI 与归档清理在合入后由 P2 的 T1 回填到 §7。基线 main `d1ec8c696d017f19aac66471f6737b8ea1678d0b`（M6 设计 noff），实施中合入 main `910a55cd`（e2e 作业期限 35 分钟与 M8 交接 M6-M8-01）。
+> 2026-11-07：已合入 main（noff `0a601f21`，main CI 42343073949 首次通过），归档与清理完成，见 §7。基线 main `d1ec8c696d017f19aac66471f6737b8ea1678d0b`（M6 设计 noff），实施中合入 main `910a55cd`（e2e 作业期限 35 分钟与 M8 交接 M6-M8-01）。
 
 ## 1. 评审方式与范围
 
@@ -49,4 +49,11 @@ A1–A7 满足（[spec §4](../specs/P1-cycles-backend.md#4-验收标准)已勾�
 
 ## 7. 集成、归档与接续
 
-最终候选推送后核准确分支 CI，`--no-ff` 合入 main 并核 main CI，再归档本阶段 ignored 证据（台账、收据、审者原文、CI 原件）并正常清理 worktree 与分支。结果由 P2 的 T1 按台账回填到这里。
+最终候选推送后核准确分支 CI，`--no-ff` 合入 main 并核 main CI，再归档本阶段 ignored 证据（台账、收据、审者原文、CI 原件）并正常清理 worktree 与分支。以下由 P2 的 T1 按归档的台账回填。
+
+- **分支 CI**：最终候选 `72b83bebb7bd0eef89a41a209925b717bee50a37` 的 42340200507 attempt 1 成功（web 128305957226、server 128305957374、e2e 128309777084，e2e 22 分钟）。
+- **合入**：main `910a55cd` 干净且与 origin 一致；`--no-ff` 生成 `0a601f212e32057c4e48fe43e8c4f19691254573`，双父依次为 `910a55cd`、`72b83beb`，树与候选相同；系统 Git 推送。
+- **main CI**：42343073949 attempt 1 成功（web 128314830261、server 128314830458、e2e 128318456919，e2e 22 分 44 秒）。
+- **归档**：`.superpowers/sdd/M6-P1-integration-20261107`（主目录，ignored）：1982 个文件、245,220,964 字节、未知 0，清单 sha256 `4a07a8abe1fc7bb6f5dd8939c639172a942804af0e81f89602807d9a2f73e541`，`archive.py verify` 通过（P2 开工时复核一次）；`cleanup.log` 记有清理前候选已含于 origin/main。
+- **清理**：worktree `m6-p1`、本地与远端分支 `codex/m6-p1` 已删除，主目录停在 main `0a601f21`。
+- **接续**：P2（模块的后端），预检见 [re-56](../../../reviews/re-56-M6P2预检.md)。

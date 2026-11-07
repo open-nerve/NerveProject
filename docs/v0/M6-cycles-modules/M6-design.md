@@ -1,6 +1,6 @@
 # M6：迭代与模块
 
-> 状态：设计与 P1 预检通过（2026-11-07，[re-54](../../reviews/re-54-M6设计与P1预检.md)），尚未实施。
+> 状态：设计与 P1 预检通过（2026-11-07，[re-54](../../reviews/re-54-M6设计与P1预检.md)）；P1 已完成，P2 实施中（进度见 §14）。
 > 起点：`main@ba3fd6e0b65e91e8bcf5ba32ad02ebff0b7bd939`（M5 最终 main CI 42251522430，三个作业成功）。
 > 当前文档分支为`codex/m6-design`，根目录保持main。负责人2026-11-07指示“启动 M6，按照之前的推进节奏，一步步推进”，并在设计预检后决定三项（见 §15）：归属表放 `issue` 模块、草稿照 Plane 带迭代与模块、其余取舍按 §15 推进。常规设计、预检、实现、deep-review、`--no-ff`集成、CI和归档照 M5 的节奏连续推进；架构回归、跨模块协同调整或意外高风险发现，先提交已完成工作，再用大白话上报。
 
@@ -268,8 +268,9 @@ P1 起第一个实现提交把关键词 phase 改为 `M6/P1`；纯设计分支�
 | 阶段 | 状态 | spec / plan / review |
 |---|---|---|
 | 设计与 P1 预检 | 已合入 main（d1ec8c69）；e2e 作业期限改为 35 分钟（910a55cd，负责人同意），main CI 42332404481 第二次运行通过 | [预检](../../reviews/re-54-M6设计与P1预检.md) / [P1 spec](specs/P1-cycles-backend.md) / [P1 plan](plans/P1-cycles-backend.md) |
-| P1 迭代后端 | T1–T14 完成：整审 Ready to merge，修复轮之后七项门禁全过；待合入 | [P1 spec](specs/P1-cycles-backend.md) / [P1 plan](plans/P1-cycles-backend.md) / [P1 阶段记录](reviews/P1-cycles-backend-review.md) / [re-55](../../reviews/re-55-M6P1整体审核.md) |
-| P2–P8、closeout | 未开始 | — |
+| P1 迭代后端 | 已完成：noff `0a601f21`，分支 CI 42340200507 与 main CI 42343073949 首次通过，证据归档于 `.superpowers/sdd/M6-P1-integration-20261107` | [P1 spec](specs/P1-cycles-backend.md) / [P1 plan](plans/P1-cycles-backend.md) / [P1 阶段记录](reviews/P1-cycles-backend-review.md) / [re-55](../../reviews/re-55-M6P1整体审核.md) |
+| P2 模块后端 | 进行中：预检通过（re-56），15 个 Task | [预检](../../reviews/re-56-M6P2预检.md) / [P2 spec](specs/P2-modules-backend.md) / [P2 plan](plans/P2-modules-backend.md) |
+| P3–P8、closeout | 未开始 | — |
 
 ## 15. 决定记录
 
