@@ -67,3 +67,7 @@ M4 原创建表单的 `ISSUE_FORM` 已无读者，本期删除其枚举、独占
 ## 处理结果（M6/P1）：第 2 节
 
 4.12 的图已在 M6 设计 §4.3 延伸。P1 落地其中的 `cycles`：`workspace_id`、`project_id` 两条 `CASCADE` 父外键各有不带条件的索引；删项目、删工作区时 `planning` 订阅 `project.deleted`、`workspace.deleted`，在原事务投递 `planning.delete_rows`（沿用请求的 At/By），父范围立即隐藏；60 天物理清理加入 `planning` 的步骤（asset → issue → planning → project → workspace → identity）。模块的表在 P2、关联表在 P3；`core/sidebar/progress-stats/` 的 8 行死成员属前端，结论在 M6/P5 的评审。本交接保持 open。证据：[P1 spec](../specs/P1-cycles-backend.md) 2.4。
+
+## 处理结果（M6/P2）：第 2 节
+
+P2 落地 M6 设计 §4.3 中模块的三张表：`modules`、`module_members`、`module_links` 的 `workspace_id`、`project_id`，子表的 `module_id` 和 `module_members.member_id` 都是 `CASCADE`，各有不带条件的索引。删项目、删工作区沿用 P1 的 `planning.delete_rows`（任务参数不变），由单表改为命名步骤 `cycles → modules → module_members → module_links`，每步按项目、id 升序有界，沿用请求的 At/By，可续跑；60 天物理清理的 `planning` 步骤为 `module_links → module_members → modules → cycles`（子先父）。删除与清理的守卫随之覆盖三张表；漏掉链接步骤的变异让 `TestDeletionRowStepsParentsFirst` 等删除任务的测试失败，清理把 `modules` 放到 `module_links` 之前的变异让 `TestModulePurgeChildrenFirst` 失败。关联表在 P3；`core/sidebar/progress-stats/` 的 8 行死成员属前端，结论在 M6/P5 的评审。本交接保持 open。证据：[P2 spec](../specs/P2-modules-backend.md) 2.4。
