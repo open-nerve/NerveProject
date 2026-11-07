@@ -24,12 +24,12 @@ type Cycle struct {
 	CreatedByID, UpdatedByID   *uuid.UUID
 }
 
-// maxName is the length of cycles.name, in characters.
+// maxName is the length of cycles.name and modules.name, in characters.
 const maxName = 255
 
 // CleanName is name without its surrounding white space, or the problem of
-// that: empty, longer than cycles.name, or with NUL, which Postgres cannot
-// store (M6 design 3.1).
+// that: empty, longer than a cycle's or a module's name may be, or with NUL,
+// which Postgres cannot store (M6 design 3.1, 3.2).
 func CleanName(name string) (string, *shared.FieldError) {
 	name = strings.TrimSpace(name)
 	switch {

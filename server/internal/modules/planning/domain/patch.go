@@ -33,13 +33,22 @@ func CheckCyclePatch(p CyclePatch) (CyclePatch, error) {
 			fields = append(fields, *problem)
 		}
 	}
-	if p.SortOrder != nil && (math.IsNaN(*p.SortOrder) || math.IsInf(*p.SortOrder, 0)) {
-		fields = append(fields, shared.FieldError{Field: "sort_order", Code: shared.FieldInvalidFormat, Message: "must be a finite number"})
+	if problem := checkSortOrder(p.SortOrder); problem != nil {
+		fields = append(fields, *problem)
 	}
 	if len(fields) > 0 {
 		return CyclePatch{}, shared.Invalid(fields...)
 	}
 	return p, nil
+}
+
+// checkSortOrder refuses a sort order given that is no finite number; nil
+// for one not given.
+func checkSortOrder(s *float64) *shared.FieldError {
+	if s != nil && (math.IsNaN(*s) || math.IsInf(*s, 0)) {
+		return &shared.FieldError{Field: "sort_order", Code: shared.FieldInvalidFormat, Message: "must be a finite number"}
+	}
+	return nil
 }
 
 // OnlySortOrder reports whether p gives no field but the sort order: all a

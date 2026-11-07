@@ -98,7 +98,7 @@ func TestUpdateCycleRefusals(t *testing.T) {
 		{"cycles turned off", domain.ErrCyclesDisabled, http.StatusConflict,
 			`{"status":409,"code":"planning.cycles_disabled","title":"Conflict","detail":"Cycles are turned off in this project; turn them on to change them."}`},
 		{"an archived cycle", domain.ErrArchived, http.StatusConflict,
-			`{"status":409,"code":"planning.archived","title":"Conflict","detail":"The cycle is archived; unarchive it to change it."}`},
+			`{"status":409,"code":"planning.archived","title":"Conflict","detail":"The cycle or module is archived; unarchive it to change it."}`},
 		{"a completed cycle", domain.ErrCycleCompleted, http.StatusConflict,
 			`{"status":409,"code":"planning.cycle_completed","title":"Conflict","detail":"The cycle is completed; only its order can change."}`},
 		{"overlapping dates", domain.ErrDatesOverlap, http.StatusConflict,
