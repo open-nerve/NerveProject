@@ -1782,7 +1782,11 @@ export interface paths {
         get: operations["getCycle"];
         put?: never;
         post?: never;
-        delete?: never;
+        /**
+         * Delete a cycle
+         * @description For its project's admins, and for the member who created it; not another member, not a guest, and not a caller who sees only his own work items there. Whatever its status and archive. A cycle that does not exist or is deleted, one whose project is deleted, and one whose project the caller does not see answer planning.cycle_not_found; a caller who may not delete it, forbidden; an archived project, project.archived; cycles turned off, planning.cycles_disabled. Decided after the project's row is locked; its deletion and its last change are one moment, the caller's. It is read no more.
+         */
+        delete: operations["deleteCycle"];
         options?: never;
         head?: never;
         /**
@@ -6336,6 +6340,28 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["Cycle"];
                 };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    deleteCycle: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A cycle's id (Cycle.id). */
+                cycle_id: components["parameters"]["CycleID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             default: components["responses"]["Problem"];
         };

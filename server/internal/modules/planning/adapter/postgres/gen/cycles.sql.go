@@ -56,6 +56,27 @@ func (q *Queries) CreateCycle(ctx context.Context, arg CreateCycleParams) error 
 	return err
 }
 
+const deleteCycle = `-- name: DeleteCycle :exec
+UPDATE cycles
+SET deleted_at    = $1,
+    updated_at    = $1,
+    updated_by_id = $2
+WHERE id = $3 AND deleted_at IS NULL
+`
+
+type DeleteCycleParams struct {
+	At *time.Time
+	By *uuid.UUID
+	ID uuid.UUID
+}
+
+// A cycle soft-deleted by one account at one moment, its last change the same (M6 P1 spec 2.4); one deleted already
+// keeps its deletion.
+func (q *Queries) DeleteCycle(ctx context.Context, arg DeleteCycleParams) error {
+	_, err := q.db.Exec(ctx, deleteCycle, arg.At, arg.By, arg.ID)
+	return err
+}
+
 const getCycle = `-- name: GetCycle :one
 SELECT id, workspace_id, project_id, name, description, start_date, end_date, owned_by_id, sort_order, archived_at,
        created_at, updated_at, created_by_id, updated_by_id

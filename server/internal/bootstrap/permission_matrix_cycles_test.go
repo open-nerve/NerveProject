@@ -16,7 +16,8 @@ import (
 
 // The rows of the permission matrix of a project's cycles (M6 P1 spec R10):
 // listing and creating them under the project of each column, and reading,
-// changing, archiving and unarchiving one, naming it by its id (/cycles/{cycle_id}) among its column's
+// changing, archiving, unarchiving and deleting one, naming its column's
+// own (cycleOf) by its id (/cycles/{cycle_id}) among its column's
 // project's seeded cycles; and the cycles they rest on, matrixCycles, which prepareMatrix seeds in each project through the
 // planning store (cycles) once the project store has turned the project's
 // cycles on (cyclesOn).
@@ -62,18 +63,53 @@ func onACycle(admin, member, creator, guest, adminGuest cell) map[caller]cell {
 	return cells
 }
 
-// matrixCycles are the cycles prepareMatrix seeds in each project of
-// matrixProjects, by its workspace's admin: Sprint, from the 1st to the 14th
-// of October 2026, at the sort order of a project's first cycle. Their
-// writer in acme, as for the labels, is its admin, WA-'s account, a member
-// of none of its projects, so no column that may write a cycle calls as
-// him: a check that a write made its caller a cycle's owner cannot pass on
-// the seed's.
+// matrixCycles are the cycles prepareMatrix seeds: Sprint, from the 1st to
+// the 14th of October 2026, at the sort order of a project's first cycle, in
+// each project of matrixProjects, by its workspace's admin; and Mine, from
+// the 1st to the 14th of September, after Sprint, in acme's public project
+// alone, by PM's account, the member who made it (callerCreator). Both are
+// completed. Sprint's writer in acme, as for the labels, is its admin, WA-'s
+// account, a member of none of its projects, so no column that may write a
+// cycle calls as him: a check that a write made its caller a cycle's owner
+// cannot pass on the seed's.
 var matrixCycles = []struct {
 	name, start, end string
 	sortOrder        float64
+	project          string // its project's key, "" for each project
+	author           caller // its writer, "" for its workspace's admin
 }{
-	{"Sprint", "2026-10-01", "2026-10-14", 65535},
+	{"Sprint", "2026-10-01", "2026-10-14", 65535, "", ""},
+	{"Mine", "2026-09-01", "2026-09-14", 75535, "acme/public", callerProjectMember},
+}
+
+// seededCycles are the cycles of matrixCycles seeded in the project key, in
+// the order its list answers them (by sort order).
+func seededCycles(key string) []string {
+	var names []string
+	for _, c := range matrixCycles {
+		if c.project == "" || c.project == key {
+			names = append(names, c.name)
+		}
+	}
+	return names
+}
+
+// cycleOf is the name of the cycle of its project (projectOf) that a
+// column's cells name: Mine, his own, for the member who made it; Sprint,
+// made by the workspace's admin, for every other.
+func cycleOf(c caller) string {
+	if c == callerCreator {
+		return "Mine"
+	}
+	return "Sprint"
+}
+
+// toCycle is the request of a row whose callers each send method, with
+// body, to their column's own cycle (cycleOf), after its id.
+func toCycle(method, after, body string) func(caller, seeded) (string, string, string) {
+	return func(c caller, s seeded) (string, string, string) {
+		return cycleRows.to(method, after, cycleOf(c), body)(c, s)
+	}
 }
 
 // newCycle is the body of the cycle the rows create: Sprint 2, from the day
@@ -93,9 +129,9 @@ func cycleMatrixRows() []matrixRow {
 		// An archived project's cycles are listed as any other's.
 		{op: "listCycles", variant: "archived", columns: archivedColumns, request: toProject(http.MethodGet, "/cycles", ""),
 			cells: ofArchived(cellOK, cellForbidden), check: listsTheCycles},
-		{op: "getCycle", columns: cycleColumns, request: cycleRows.to(http.MethodGet, "", "Sprint", ""),
+		{op: "getCycle", columns: cycleColumns, request: toCycle(http.MethodGet, "", ""),
 			cells: onACycle(cellOK, cellOK, cellOK, cellOK, cellOK), check: readsTheCycle},
-		{op: "getCycle", variant: "archived", columns: archivedColumns, request: cycleRows.to(http.MethodGet, "", "Sprint", ""),
+		{op: "getCycle", variant: "archived", columns: archivedColumns, request: toCycle(http.MethodGet, "", ""),
 			cells: cycleRows.ofArchived(cellOK, cellForbidden), check: readsTheCycle},
 		// The project's admins and members, not its guests, nor a caller who
 		// sees only his own work items in it (M6 design 3.4); a workspace
@@ -103,28 +139,35 @@ func cycleMatrixRows() []matrixRow {
 		// not.
 		{op: "createCycle", write: true, columns: cycleColumns, request: toProject(http.MethodPost, "/cycles", newCycle),
 			cells: onTheCycles(cellCreated, cellCreated, cellForbidden, cellForbidden), check: createsTheCycle},
-		// The project's admins and members, as createCycle. Sprint is
+		// The project's admins and members, as createCycle. Each cycle is
 		// completed: its sort order is all it takes (M6 P1 spec R5).
-		{op: "updateCycle", write: true, columns: cycleColumns, request: cycleRows.to(http.MethodPatch, "", "Sprint", `{"sort_order":12345}`),
+		{op: "updateCycle", write: true, columns: cycleColumns, request: toCycle(http.MethodPatch, "", `{"sort_order":12345}`),
 			cells: onACycle(cellOK, cellOK, cellOK, cellForbidden, cellForbidden), check: reordersTheCycle},
 		// Its name: refused after the decision, so who may not change it
 		// learns nothing of its status.
 		{op: "updateCycle", variant: "a completed cycle's name", write: true, columns: cycleColumns,
-			request: cycleRows.to(http.MethodPatch, "", "Sprint", `{"name":"Renamed"}`),
+			request: toCycle(http.MethodPatch, "", `{"name":"Renamed"}`),
 			cells:   onACycle(cellCycleCompleted, cellCycleCompleted, cellCycleCompleted, cellForbidden, cellForbidden)},
 		{op: "updateCycle", variant: "archived", write: true, columns: archivedColumns,
-			request: cycleRows.to(http.MethodPatch, "", "Sprint", `{"sort_order":12345}`), cells: cycleRows.ofArchived(cellProjectArchived, cellForbidden)},
-		// As updateCycle: Sprint is completed, so it may be archived.
-		{op: "archiveCycle", write: true, columns: cycleColumns, request: cycleRows.to(http.MethodPost, "/archive", "Sprint", ""),
+			request: toCycle(http.MethodPatch, "", `{"sort_order":12345}`), cells: cycleRows.ofArchived(cellProjectArchived, cellForbidden)},
+		// As updateCycle: each cycle is completed, so it may be archived.
+		{op: "archiveCycle", write: true, columns: cycleColumns, request: toCycle(http.MethodPost, "/archive", ""),
 			cells: onACycle(cellOK, cellOK, cellOK, cellForbidden, cellForbidden), check: archivesTheCycle(true)},
-		{op: "archiveCycle", variant: "archived", write: true, columns: archivedColumns, request: cycleRows.to(http.MethodPost, "/archive", "Sprint", ""),
+		{op: "archiveCycle", variant: "archived", write: true, columns: archivedColumns, request: toCycle(http.MethodPost, "/archive", ""),
 			cells: cycleRows.ofArchived(cellProjectArchived, cellForbidden)},
-		// Sprint archived first in each cell's copy (sprintArchived).
-		{op: "unarchiveCycle", write: true, columns: cycleColumns, prepare: sprintArchived,
-			request: cycleRows.to(http.MethodPost, "/unarchive", "Sprint", ""),
+		// The column's cycle archived first in each cell's copy (cycleArchived).
+		{op: "unarchiveCycle", write: true, columns: cycleColumns, prepare: cycleArchived,
+			request: toCycle(http.MethodPost, "/unarchive", ""),
 			cells:   onACycle(cellOK, cellOK, cellOK, cellForbidden, cellForbidden), check: archivesTheCycle(false)},
-		{op: "unarchiveCycle", variant: "archived", write: true, columns: archivedColumns, prepare: sprintArchived,
-			request: cycleRows.to(http.MethodPost, "/unarchive", "Sprint", ""), cells: cycleRows.ofArchived(cellProjectArchived, cellForbidden)},
+		{op: "unarchiveCycle", variant: "archived", write: true, columns: archivedColumns, prepare: cycleArchived,
+			request: toCycle(http.MethodPost, "/unarchive", ""), cells: cycleRows.ofArchived(cellProjectArchived, cellForbidden)},
+		// The project's admins, and the member who made the cycle
+		// (AllowCreator): PM may not delete Sprint, the workspace admin's, and
+		// deletes Mine, his own; whatever their status.
+		{op: "deleteCycle", write: true, columns: cycleColumns, request: toCycle(http.MethodDelete, "", ""),
+			cells: onACycle(cellNoContent, cellForbidden, cellNoContent, cellForbidden, cellForbidden)},
+		{op: "deleteCycle", variant: "archived", write: true, columns: archivedColumns, request: toCycle(http.MethodDelete, "", ""),
+			cells: cycleRows.ofArchived(cellProjectArchived, cellForbidden)},
 		// Dates sharing a day with Sprint: refused under the lock, after the
 		// decision, so who may not create cycles learns nothing of the
 		// project's (M6 P1 spec R2).
@@ -138,71 +181,88 @@ func cycleMatrixRows() []matrixRow {
 	}
 }
 
-// listsTheCycles: the column's project's Sprint alone, as seeded.
+// listsTheCycles: the column's project's seeded cycles, by sort order, each
+// as seeded.
 func listsTheCycles(t *testing.T, c caller, s seeded, answer string) {
 	var list struct{ Data []cycleAnswer }
 	decodeAnswer(t, answer, &list)
-	if len(list.Data) != 1 {
-		t.Fatalf("%s lists %s; want %s's Sprint alone", c, answer, projectOf(c))
+	want := seededCycles(projectOf(c))
+	if len(list.Data) != len(want) {
+		t.Fatalf("%s lists %s; want %s's %v", c, answer, projectOf(c), want)
 	}
-	isTheSeededSprint(t, c, s, list.Data[0], answer)
+	for i, name := range want {
+		isTheSeededCycle(t, c, s, name, list.Data[i], answer)
+	}
 }
 
-// readsTheCycle: the column's project's Sprint, as seeded.
+// readsTheCycle: the column's own cycle (cycleOf), as seeded.
 func readsTheCycle(t *testing.T, c caller, s seeded, answer string) {
 	var got cycleAnswer
 	decodeAnswer(t, answer, &got)
-	isTheSeededSprint(t, c, s, got, answer)
+	isTheSeededCycle(t, c, s, cycleOf(c), got, answer)
 }
 
-// isTheSeededSprint checks that got, of answer, is the column's project's
-// Sprint as matrixCycles seeds it, completed (its days are past), owned and
-// written by the project's workspace's admin.
-func isTheSeededSprint(t *testing.T, c caller, s seeded, got cycleAnswer, answer string) {
+// isTheSeededCycle checks that got, of answer, is the cycle name of the
+// column's project as matrixCycles seeds it, completed (its days are past),
+// owned by its writer.
+func isTheSeededCycle(t *testing.T, c caller, s seeded, name string, got cycleAnswer, answer string) {
 	t.Helper()
 	slug, _, _ := strings.Cut(projectOf(c), "/")
-	by := s.account(matrixAdmins[slug])
-	if got.ID != s.cycle(projectOf(c), "Sprint") || got.ProjectID != s.project(projectOf(c)) || got.WorkspaceID != s.workspace(slug) ||
-		got.Name != "Sprint" || got.StartDate == nil || *got.StartDate != "2026-10-01" || got.EndDate == nil || *got.EndDate != "2026-10-14" ||
-		got.Status != "completed" || got.SortOrder != 65535 || got.OwnedByID == nil || *got.OwnedByID != by {
-		t.Errorf("%s reads %s; want %s's Sprint as seeded", c, answer, projectOf(c))
+	for _, m := range matrixCycles {
+		if m.name != name {
+			continue
+		}
+		by := s.account(matrixAdmins[slug])
+		if m.author != "" {
+			by = s.account(m.author)
+		}
+		if got.ID != s.cycle(projectOf(c), name) || got.ProjectID != s.project(projectOf(c)) || got.WorkspaceID != s.workspace(slug) ||
+			got.Name != name || got.StartDate == nil || *got.StartDate != m.start || got.EndDate == nil || *got.EndDate != m.end ||
+			got.Status != "completed" || got.SortOrder != m.sortOrder || got.OwnedByID == nil || *got.OwnedByID != by {
+			t.Errorf("%s answers %s; want %s's %s as seeded", c, answer, projectOf(c), name)
+		}
+		return
 	}
+	t.Fatalf("no cycle %s in matrixCycles", name)
 }
 
-// reordersTheCycle: the column's project's Sprint at 12345, the rest as
-// seeded, last changed by the column's account.
+// reordersTheCycle: the column's own cycle at 12345, the rest as seeded,
+// last changed by the column's account.
 func reordersTheCycle(t *testing.T, c caller, s seeded, answer string) {
 	var got cycleAnswer
 	decodeAnswer(t, answer, &got)
-	by := s.account(accountOf(c))
-	seededSprint := got
-	seededSprint.SortOrder = 65535
-	isTheSeededSprint(t, c, s, seededSprint, answer)
-	if got.SortOrder != 12345 || got.UpdatedByID == nil || *got.UpdatedByID != by || !got.UpdatedAt.After(got.CreatedAt) {
-		t.Errorf("%s reorders %s; want %s's Sprint at 12345, changed by %s", c, answer, projectOf(c), accountOf(c))
+	for _, m := range matrixCycles {
+		if m.name == cycleOf(c) {
+			seeded := got
+			seeded.SortOrder = m.sortOrder
+			isTheSeededCycle(t, c, s, m.name, seeded, answer)
+		}
+	}
+	if got.SortOrder != 12345 || got.UpdatedByID == nil || *got.UpdatedByID != s.account(accountOf(c)) || !got.UpdatedAt.After(got.CreatedAt) {
+		t.Errorf("%s reorders %s; want %s's %s at 12345, changed by %s", c, answer, projectOf(c), cycleOf(c), accountOf(c))
 	}
 }
 
-// sprintArchived archives the column's project's Sprint in the cell's copy,
-// at its last change.
-func sprintArchived(t *testing.T, c caller, s seeded, url string) {
+// cycleArchived archives the column's own cycle in the cell's copy, at its
+// last change.
+func cycleArchived(t *testing.T, c caller, s seeded, url string) {
 	t.Helper()
 	pool := openPool(t, url)
 	defer pool.Close()
-	tag, err := pool.Exec(pgtest.Soon(t), "UPDATE cycles SET archived_at = updated_at WHERE id = $1", s.cycle(projectOf(c), "Sprint"))
+	tag, err := pool.Exec(pgtest.Soon(t), "UPDATE cycles SET archived_at = updated_at WHERE id = $1", s.cycle(projectOf(c), cycleOf(c)))
 	if err != nil || tag.RowsAffected() != 1 {
-		t.Fatalf("archiving %s's Sprint: %v, %d rows", c, err, tag.RowsAffected())
+		t.Fatalf("archiving %s's %s: %v, %d rows", c, cycleOf(c), err, tag.RowsAffected())
 	}
 }
 
-// archivesTheCycle: the column's project's Sprint, archived or not as
-// archived says, last changed by the column's account at the moment it is
-// archived; the rest as seeded.
+// archivesTheCycle: the column's own cycle, archived or not as archived
+// says, last changed by the column's account at the moment it is archived;
+// the rest as seeded.
 func archivesTheCycle(archived bool) func(t *testing.T, c caller, s seeded, answer string) {
 	return func(t *testing.T, c caller, s seeded, answer string) {
 		var got cycleAnswer
 		decodeAnswer(t, answer, &got)
-		isTheSeededSprint(t, c, s, got, answer)
+		isTheSeededCycle(t, c, s, cycleOf(c), got, answer)
 		ok := got.UpdatedByID != nil && *got.UpdatedByID == s.account(accountOf(c)) && got.UpdatedAt.After(got.CreatedAt)
 		if archived {
 			ok = ok && got.ArchivedAt != nil && got.ArchivedAt.Equal(got.UpdatedAt)
@@ -210,7 +270,7 @@ func archivesTheCycle(archived bool) func(t *testing.T, c caller, s seeded, answ
 			ok = ok && got.ArchivedAt == nil
 		}
 		if !ok {
-			t.Errorf("%s answers %s; want %s's Sprint archived=%t, changed by %s", c, answer, projectOf(c), archived, accountOf(c))
+			t.Errorf("%s answers %s; want %s's %s archived=%t, changed by %s", c, answer, projectOf(c), cycleOf(c), archived, accountOf(c))
 		}
 	}
 }
@@ -249,13 +309,19 @@ func (s projectSeed) cyclesOn() {
 }
 
 // cycles stores each project's matrixCycles through the planning store, with
-// the ids sd names, by its workspace's admin.
+// the ids sd names, each by its writer.
 func (s projectSeed) cycles(sd seeded, store *planningpg.Store) {
 	s.t.Helper()
 	for _, p := range matrixProjects {
 		slug, _, _ := strings.Cut(p.key, "/")
-		by := s.ids[matrixAdmins[slug]]
 		for _, c := range matrixCycles {
+			if c.project != "" && c.project != p.key {
+				continue
+			}
+			by := s.ids[matrixAdmins[slug]]
+			if c.author != "" {
+				by = s.ids[c.author]
+			}
 			start, end := seedDay(s.t, c.start), seedDay(s.t, c.end)
 			if err := store.CreateCycle(context.Background(), planningdomain.Cycle{ID: sd.cycle(p.key, c.name), ProjectID: s.projects[p.key],
 				WorkspaceID: s.workspaces[slug], Name: c.name, Dates: planningdomain.Dates{Start: &start, End: &end}, OwnedByID: &by,

@@ -141,6 +141,9 @@ type CreateCycleJSONRequestBody = CycleCreate
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// DeleteCycle Delete a cycle
+	// (DELETE /api/v0/cycles/{cycle_id})
+	DeleteCycle(w http.ResponseWriter, r *http.Request, cycleID CycleID)
 	// GetCycle Read a cycle
 	// (GET /api/v0/cycles/{cycle_id})
 	GetCycle(w http.ResponseWriter, r *http.Request, cycleID CycleID)
@@ -169,6 +172,32 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// DeleteCycle operation middleware
+func (siw *ServerInterfaceWrapper) DeleteCycle(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "cycle_id" -------------
+	var cycleID CycleID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "cycle_id", r.PathValue("cycle_id"), &cycleID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cycle_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteCycle(w, r, cycleID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
 
 // GetCycle operation middleware
 func (siw *ServerInterfaceWrapper) GetCycle(w http.ResponseWriter, r *http.Request) {
@@ -464,6 +493,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/projects/{project_id}/cycles", wrapper.ListCycles)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/projects/{project_id}/cycles", wrapper.CreateCycle)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v0/cycles/{cycle_id}", wrapper.DeleteCycle)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/cycles/{cycle_id}", wrapper.GetCycle)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/cycles/{cycle_id}", wrapper.UpdateCycle)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/cycles/{cycle_id}/archive", wrapper.ArchiveCycle)
@@ -480,6 +510,46 @@ type ProblemApplicationProblemPlusJSONResponse struct {
 	Body externalRef0.Problem
 
 	Headers ProblemResponseHeaders
+}
+
+type DeleteCycleRequestObject struct {
+	CycleID CycleID `json:"cycle_id"`
+}
+
+type DeleteCycleResponseObject interface {
+	VisitDeleteCycleResponse(w http.ResponseWriter) error
+}
+
+type DeleteCycle204Response struct {
+}
+
+func (response DeleteCycle204Response) VisitDeleteCycleResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteCycledefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response DeleteCycledefaultApplicationProblemPlusJSONResponse) VisitDeleteCycleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
 }
 
 type GetCycleRequestObject struct {
@@ -763,6 +833,9 @@ func (response CreateCycledefaultApplicationProblemPlusJSONResponse) VisitCreate
 
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
+	// DeleteCycle Delete a cycle
+	// (DELETE /api/v0/cycles/{cycle_id})
+	DeleteCycle(ctx context.Context, request DeleteCycleRequestObject) (DeleteCycleResponseObject, error)
 	// GetCycle Read a cycle
 	// (GET /api/v0/cycles/{cycle_id})
 	GetCycle(ctx context.Context, request GetCycleRequestObject) (GetCycleResponseObject, error)
@@ -820,6 +893,32 @@ type strictHandler struct {
 	ssi         StrictServerInterface
 	middlewares []StrictMiddlewareFunc
 	options     StrictHTTPServerOptions
+}
+
+// DeleteCycle operation middleware
+func (sh *strictHandler) DeleteCycle(w http.ResponseWriter, r *http.Request, cycleID CycleID) {
+	var request DeleteCycleRequestObject
+
+	request.CycleID = cycleID
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteCycle(ctx, request.(DeleteCycleRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteCycle")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteCycleResponseObject); ok {
+		if err := validResponse.VisitDeleteCycleResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
 }
 
 // GetCycle operation middleware

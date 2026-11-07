@@ -222,3 +222,33 @@ func TestSetCycleArchived(t *testing.T) {
 		}
 	}
 }
+
+// DeleteCycle soft-deletes a cycle, its deletion and last change one moment and one account; it is read no more, and
+// a cycle already deleted keeps its deletion.
+func TestDeleteCycle(t *testing.T) {
+	s, pool := newStore(t)
+	ctx := context.Background()
+	w := newWorld(t, pool)
+	at := now.Truncate(time.Microsecond)
+	c := domain.Cycle{ID: uuid.NewV7(), ProjectID: w.web, WorkspaceID: w.workspace, Name: "Sprint", SortOrder: 5, CreatedAt: at, UpdatedAt: at}
+	if err := s.CreateCycle(ctx, c); err != nil {
+		t.Fatal(err)
+	}
+	later := at.Add(time.Minute)
+	for _, when := range []time.Time{later, later.Add(time.Hour)} {
+		if err := s.DeleteCycle(ctx, c.ID, when, w.by); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var deleted, updated time.Time
+	var by uuid.UUID
+	if err := pool.QueryRow(ctx, "SELECT deleted_at, updated_at, updated_by_id FROM cycles WHERE id = $1", c.ID).Scan(&deleted, &updated, &by); err != nil {
+		t.Fatal(err)
+	}
+	if !deleted.Equal(later) || !updated.Equal(later) || by != w.by {
+		t.Fatalf("deleted at %s, changed at %s by %s; want both %s by %s", deleted, updated, by, later, w.by)
+	}
+	if _, found, err := s.GetCycle(ctx, c.ID); err != nil || found {
+		t.Fatalf("a deleted cycle read: %t, %v", found, err)
+	}
+}

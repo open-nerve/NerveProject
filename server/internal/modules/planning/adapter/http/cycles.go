@@ -46,6 +46,14 @@ func (h handler) UpdateCycle(ctx context.Context, req gen.UpdateCycleRequestObje
 	return gen.UpdateCycle200JSONResponse(cycle(c)), nil
 }
 
+// DeleteCycle serves DELETE /api/v0/cycles/{cycle_id}.
+func (h handler) DeleteCycle(ctx context.Context, req gen.DeleteCycleRequestObject) (gen.DeleteCycleResponseObject, error) {
+	if err := h.uc.DeleteCycle.Execute(ctx, req.CycleID); err != nil {
+		return nil, err
+	}
+	return gen.DeleteCycle204Response{}, nil
+}
+
 // ArchiveCycle serves POST /api/v0/cycles/{cycle_id}/archive.
 func (h handler) ArchiveCycle(ctx context.Context, req gen.ArchiveCycleRequestObject) (gen.ArchiveCycleResponseObject, error) {
 	c, err := h.uc.ArchiveCycle.Execute(ctx, req.CycleID)

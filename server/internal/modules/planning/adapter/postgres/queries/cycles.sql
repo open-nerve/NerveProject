@@ -67,3 +67,12 @@ SET archived_at   = sqlc.narg(archived_at),
     updated_at    = sqlc.arg(updated_at),
     updated_by_id = sqlc.narg(updated_by_id)
 WHERE id = sqlc.arg(id) AND deleted_at IS NULL;
+
+-- name: DeleteCycle :exec
+-- A cycle soft-deleted by one account at one moment, its last change the same (M6 P1 spec 2.4); one deleted already
+-- keeps its deletion.
+UPDATE cycles
+SET deleted_at    = sqlc.arg(at),
+    updated_at    = sqlc.arg(at),
+    updated_by_id = sqlc.arg(by)
+WHERE id = sqlc.arg(id) AND deleted_at IS NULL;

@@ -187,7 +187,9 @@ func newSeeded() seeded {
 			s.labels[p.key+"|"+l.name] = uuid.NewV7()
 		}
 		for _, c := range matrixCycles {
-			s.cycles[p.key+"|"+c.name] = uuid.NewV7()
+			if c.project == "" || c.project == p.key {
+				s.cycles[p.key+"|"+c.name] = uuid.NewV7()
+			}
 		}
 	}
 	for _, i := range seededItems() {

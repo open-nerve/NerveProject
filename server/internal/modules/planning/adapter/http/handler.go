@@ -38,6 +38,11 @@ type ArchiveCycleUseCase interface {
 	Execute(ctx context.Context, id uuid.UUID) (domain.ReadCycle, error)
 }
 
+// DeleteCycleUseCase is app.DeleteCycle.
+type DeleteCycleUseCase interface {
+	Execute(ctx context.Context, id uuid.UUID) error
+}
+
 // UseCases are the use cases behind the module's operations.
 type UseCases struct {
 	ListCycles     ListCyclesUseCase
@@ -46,6 +51,7 @@ type UseCases struct {
 	UpdateCycle    UpdateCycleUseCase
 	ArchiveCycle   ArchiveCycleUseCase
 	UnarchiveCycle ArchiveCycleUseCase
+	DeleteCycle    DeleteCycleUseCase
 }
 
 // Register mounts the module's routes on router behind api's per-route
