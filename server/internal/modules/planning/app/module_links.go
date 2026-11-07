@@ -22,6 +22,15 @@ type ModuleLinkWriter interface {
 	DeleteModuleLink(ctx context.Context, id uuid.UUID, at time.Time, by uuid.UUID) error
 }
 
+// LinkCrawls enqueues a module link's crawl of the address url,
+// planning.crawl_link, in the transaction ctx carries, which it requires
+// (M6 P2 spec R11): it commits with the write that asks for it, or neither
+// does. The planning module has no events of its links; their writes
+// enqueue it directly.
+type LinkCrawls interface {
+	Enqueue(ctx context.Context, id uuid.UUID, url string) error
+}
+
 // ModuleLinkLister reads the module's undeleted links, the latest created
 // first, then by id descending, in the transaction ctx carries.
 type ModuleLinkLister interface {
@@ -30,9 +39,10 @@ type ModuleLinkLister interface {
 
 // ModuleLinkDeps are what the writes of a module's links need.
 type ModuleLinkDeps struct {
-	Locks Locks
-	Links ModuleLinkWriter
-	Clock Clock
+	Locks  Locks
+	Links  ModuleLinkWriter
+	Crawls LinkCrawls
+	Clock  Clock
 }
 
 // CreateModuleLink adds a link to a module (createModuleLink).
@@ -44,8 +54,9 @@ func NewCreateModuleLink(d ModuleLinkDeps) *CreateModuleLink { return &CreateMod
 // Execute checks in's values, takes the lock and decision of a write on the
 // module (Locks, module.write), refuses an archived module, and writes the
 // link, its metadata empty, created and last changed by the caller at the
-// moment read after the lock. The address is the store's to refuse
-// (ModuleLinkWriter).
+// moment read after the lock; then enqueues its crawl of that address in
+// the same transaction (R11). The address is the store's to refuse
+// (ModuleLinkWriter), and a link refused is not crawled.
 func (u *CreateModuleLink) Execute(ctx context.Context, moduleID uuid.UUID, in domain.NewModuleLink) (domain.ModuleLink, error) {
 	actor, err := shared.RequireActor(ctx)
 	if err != nil {
@@ -67,7 +78,7 @@ func (u *CreateModuleLink) Execute(ctx context.Context, moduleID uuid.UUID, in d
 			return err
 		}
 		out = l
-		return nil
+		return u.d.Crawls.Enqueue(ctx, l.ID, l.URL)
 	})
 	return out, err
 }
@@ -81,8 +92,10 @@ func NewUpdateModuleLink(d ModuleLinkDeps) *UpdateModuleLink { return &UpdateMod
 // Execute checks what p gives, takes the lock and decision of a write on the
 // link (Locks, module.write), refuses an archived module, a change of
 // nothing too, and writes what changes, last changed by the caller at the
-// moment read after the lock. A change of nothing writes nothing and
-// answers the link as the lock read it.
+// moment read after the lock; a new address empties the link's metadata
+// (ModuleLinkWriter) and enqueues its crawl in the same transaction, a title
+// alone does neither (R11). A change of nothing writes nothing and answers
+// the link as the lock read it.
 func (u *UpdateModuleLink) Execute(ctx context.Context, id uuid.UUID, p domain.ModuleLinkPatch) (domain.ModuleLink, error) {
 	actor, err := shared.RequireActor(ctx)
 	if err != nil {
@@ -113,7 +126,10 @@ func (u *UpdateModuleLink) Execute(ctx context.Context, id uuid.UUID, p domain.M
 			return err
 		}
 		out = written
-		return nil
+		if written.URL == h.link.URL {
+			return nil
+		}
+		return u.d.Crawls.Enqueue(ctx, written.ID, written.URL)
 	})
 	return out, err
 }

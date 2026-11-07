@@ -68,23 +68,24 @@ func TestModuleLinksThroughTheApp(t *testing.T) {
 	billing := w.linkedModule(t, "Billing")
 	docs := w.createModule(t, "alice", `{"name":"Docs"}`, http.StatusCreated).ID
 	bob := w.ids["bob"]
-	spec := w.addLink(t, "bob", billing, `{"url":" nerve.dev/spec ","title":""}`, http.StatusCreated)
-	if spec.ModuleID != billing || spec.URL != "http://nerve.dev/spec" || spec.Title == nil || *spec.Title != "" || spec.Metadata == nil ||
+	spec := w.addLink(t, "bob", billing, `{"url":" 169.254.169.254/spec ","title":""}`, http.StatusCreated)
+	if spec.ModuleID != billing || spec.URL != "http://169.254.169.254/spec" || spec.Title == nil || *spec.Title != "" || spec.Metadata == nil ||
 		len(spec.Metadata) != 0 || spec.CreatedByID == nil || *spec.CreatedByID != bob || !spec.CreatedAt.Equal(spec.UpdatedAt) {
 		t.Fatalf("Spec = %+v", spec)
 	}
-	plan := w.addLink(t, "alice", billing, `{"url":"https://nerve.dev/plan","title":null}`, http.StatusCreated)
+	plan := w.addLink(t, "alice", billing, `{"url":"https://169.254.169.254/plan","title":null}`, http.StatusCreated)
 	if plan.Title != nil {
 		t.Fatalf("Plan's title = %q, want none", *plan.Title)
 	}
 	if list := w.moduleLinks(t, "bob", billing); len(list) != 2 || list[0].ID != plan.ID || list[1].ID != spec.ID {
 		t.Fatalf("Billing's links = %+v, want Plan, then Spec", list)
 	}
-	w.refusedLink(t, "alice", http.MethodPost, "/api/v0/modules/"+billing.String()+"/links", `{"url":"http://nerve.dev/spec"}`, http.StatusConflict,
+	w.refusedLink(t, "alice", http.MethodPost, "/api/v0/modules/"+billing.String()+"/links", `{"url":"http://169.254.169.254/spec"}`, http.StatusConflict,
 		"planning.module_link_exists")
-	w.addLink(t, "alice", docs, `{"url":"http://nerve.dev/spec"}`, http.StatusCreated)
+	w.addLink(t, "alice", docs, `{"url":"http://169.254.169.254/spec"}`, http.StatusCreated)
 
-	// A crawl wrote Spec's metadata; alice, who did not add Spec, changes its title alone.
+	// Spec's crawl completed, a crawl wrote Spec's metadata; alice, who did not add Spec, changes its title alone.
+	w.waitModuleLinkCrawl(t, spec)
 	if _, err := w.pool.Exec(pgtest.Soon(t), `UPDATE module_links SET metadata = '{"title":"Spec page"}' WHERE id = $1`, spec.ID); err != nil {
 		t.Fatal(err)
 	}
@@ -96,14 +97,14 @@ func TestModuleLinksThroughTheApp(t *testing.T) {
 		t.Fatalf("a title alone = %+v; want the metadata kept", titled)
 	}
 	var same moduleLinkAnswer
-	decodeAnswer(t, w.send(t, "bob", http.MethodPatch, path, `{"url":"http://nerve.dev/spec","title":"Spec"}`, http.StatusOK), &same)
+	decodeAnswer(t, w.send(t, "bob", http.MethodPatch, path, `{"url":"http://169.254.169.254/spec","title":"Spec"}`, http.StatusOK), &same)
 	if !same.UpdatedAt.Equal(titled.UpdatedAt) {
 		t.Fatalf("a change of nothing wrote: %s, was %s", same.UpdatedAt, titled.UpdatedAt)
 	}
-	w.refusedLink(t, "bob", http.MethodPatch, path, `{"url":"https://nerve.dev/plan"}`, http.StatusConflict, "planning.module_link_exists")
+	w.refusedLink(t, "bob", http.MethodPatch, path, `{"url":"https://169.254.169.254/plan"}`, http.StatusConflict, "planning.module_link_exists")
 	var moved moduleLinkAnswer
-	decodeAnswer(t, w.send(t, "bob", http.MethodPatch, path, `{"url":"nerve.dev/spec/v2","title":null}`, http.StatusOK), &moved)
-	if moved.URL != "http://nerve.dev/spec/v2" || moved.Title != nil || len(moved.Metadata) != 0 {
+	decodeAnswer(t, w.send(t, "bob", http.MethodPatch, path, `{"url":"169.254.169.254/spec/v2","title":null}`, http.StatusOK), &moved)
+	if moved.URL != "http://169.254.169.254/spec/v2" || moved.Title != nil || len(moved.Metadata) != 0 {
 		t.Fatalf("a new address = %+v; want the metadata emptied, the title cleared", moved)
 	}
 
@@ -119,7 +120,7 @@ func TestModuleLinksThroughTheApp(t *testing.T) {
 	if list := w.moduleLinks(t, "alice", billing); len(list) != 1 || list[0].ID != spec.ID {
 		t.Fatalf("Billing's links = %+v, want Spec alone", list)
 	}
-	w.addLink(t, "alice", billing, `{"url":"https://nerve.dev/plan"}`, http.StatusCreated)
+	w.addLink(t, "alice", billing, `{"url":"https://169.254.169.254/plan"}`, http.StatusCreated)
 }
 
 // The refusals of the links' writes in their order (M6 P2 spec R2): values
@@ -133,24 +134,24 @@ func TestModuleLinksThroughTheApp(t *testing.T) {
 func TestModuleLinkRefusals(t *testing.T) {
 	w := newIssueWorld(t)
 	billing := w.linkedModule(t, "Billing")
-	spec := w.addLink(t, "alice", billing, `{"url":"https://nerve.dev/spec"}`, http.StatusCreated)
+	spec := w.addLink(t, "alice", billing, `{"url":"https://169.254.169.254/spec"}`, http.StatusCreated)
 	links, link := "/api/v0/modules/"+billing.String()+"/links", "/api/v0/module-links/"+spec.ID.String()
 	nowhere := "/api/v0/modules/" + uuid.NewV7().String() + "/links"
-	w.refusedLink(t, "alice", http.MethodPost, nowhere, `{"url":"http://u:p@nerve.dev"}`, http.StatusUnprocessableEntity, "validation_failed url not_allowed")
-	w.refusedLink(t, "olga", http.MethodPatch, link, `{"url":"ftp://nerve.dev"}`, http.StatusUnprocessableEntity, "validation_failed url not_allowed")
-	w.refusedLink(t, "alice", http.MethodPost, nowhere, `{"url":"nerve.dev"}`, http.StatusNotFound, "planning.module_not_found")
+	w.refusedLink(t, "alice", http.MethodPost, nowhere, `{"url":"http://u:p@169.254.169.254"}`, http.StatusUnprocessableEntity, "validation_failed url not_allowed")
+	w.refusedLink(t, "olga", http.MethodPatch, link, `{"url":"ftp://169.254.169.254"}`, http.StatusUnprocessableEntity, "validation_failed url not_allowed")
+	w.refusedLink(t, "alice", http.MethodPost, nowhere, `{"url":"169.254.169.254"}`, http.StatusNotFound, "planning.module_not_found")
 	w.refusedLink(t, "olga", http.MethodGet, links, "", http.StatusNotFound, "planning.module_not_found")
 	w.refusedLink(t, "olga", http.MethodDelete, link, "", http.StatusNotFound, "planning.module_link_not_found")
 	w.refusedLink(t, "walt", http.MethodGet, links, "", http.StatusForbidden, "forbidden")
 	w.adminGuest(t)
-	w.refusedLink(t, "walt", http.MethodPost, links, `{"url":"nerve.dev"}`, http.StatusForbidden, "forbidden")
+	w.refusedLink(t, "walt", http.MethodPost, links, `{"url":"169.254.169.254"}`, http.StatusForbidden, "forbidden")
 	w.refusedLink(t, "walt", http.MethodPatch, link, `{"title":"A"}`, http.StatusForbidden, "forbidden")
 	w.refusedLink(t, "walt", http.MethodDelete, link, "", http.StatusForbidden, "forbidden")
 	if list := w.moduleLinks(t, "walt", billing); len(list) != 1 {
 		t.Fatalf("walt lists %+v, want Spec", list)
 	}
 	w.send(t, "alice", http.MethodPatch, "/api/v0/projects/"+w.web.String(), `{"module_view":false}`, http.StatusOK)
-	for _, write := range []struct{ method, path, body string }{{http.MethodPost, links, `{"url":"nerve.dev"}`}, {http.MethodPatch, link, `{}`},
+	for _, write := range []struct{ method, path, body string }{{http.MethodPost, links, `{"url":"169.254.169.254"}`}, {http.MethodPatch, link, `{}`},
 		{http.MethodDelete, link, ""}} {
 		w.refusedLink(t, "bob", write.method, write.path, write.body, http.StatusConflict, "planning.modules_disabled")
 	}
@@ -158,7 +159,7 @@ func TestModuleLinkRefusals(t *testing.T) {
 	if _, err := w.pool.Exec(pgtest.Soon(t), "UPDATE modules SET archived_at = now() WHERE id = $1", billing); err != nil {
 		t.Fatal(err)
 	}
-	for _, write := range []struct{ method, path, body string }{{http.MethodPost, links, `{"url":"nerve.dev"}`}, {http.MethodPatch, link, `{}`},
+	for _, write := range []struct{ method, path, body string }{{http.MethodPost, links, `{"url":"169.254.169.254"}`}, {http.MethodPatch, link, `{}`},
 		{http.MethodPatch, link, `{"title":"A"}`}, {http.MethodDelete, link, ""}} {
 		w.refusedLink(t, "bob", write.method, write.path, write.body, http.StatusConflict, "planning.archived")
 	}
@@ -190,7 +191,7 @@ func addsLink(name, body string) racingWrite {
 // answer 500).
 func TestCreateModuleLinkInterleaving(t *testing.T) {
 	inBothOrdersAt(t, "projects", func(t *testing.T, w issueWorld) { w.linkedModule(t, "Billing") }, "alice",
-		addsLink("alice", `{"url":"https://nerve.dev/spec"}`), "bob", addsLink("bob", `{"url":"https://nerve.dev/spec"}`),
+		addsLink("alice", `{"url":"https://169.254.169.254/spec"}`), "bob", addsLink("bob", `{"url":"https://169.254.169.254/spec"}`),
 		func(t *testing.T, w issueWorld, aliceFirst bool, alice, bob exchange) {
 			first, second := alice, bob
 			if !aliceFirst {

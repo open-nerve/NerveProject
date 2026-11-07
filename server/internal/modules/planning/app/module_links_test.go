@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 	"uuid"
@@ -14,7 +15,7 @@ import (
 )
 
 // The lock world's module link store: an update keeps the stored metadata unless the address changes, as the
-// statement does.
+// statement does. And its link crawls: each enqueue logged with its link and address.
 
 func (w *lockWorld) InsertModuleLink(ctx context.Context, l domain.ModuleLink) error {
 	w.log(ctx, "InsertModuleLink")
@@ -56,9 +57,24 @@ func (w *lockWorld) ListModuleLinks(ctx context.Context, module uuid.UUID) ([]do
 	return out, nil
 }
 
-func (w *lockWorld) moduleLinks() ModuleLinkDeps {
-	return ModuleLinkDeps{Locks: w.locks(), Links: w, Clock: w}
+func (w *lockWorld) Enqueue(ctx context.Context, id uuid.UUID, url string) error {
+	w.log(ctx, fmt.Sprint("Enqueue ", id, " ", url))
+	return nil
 }
+
+func (w *lockWorld) moduleLinks() ModuleLinkDeps {
+	return ModuleLinkDeps{Locks: w.locks(), Links: w, Crawls: w, Clock: w}
+}
+
+// enqueued reports whether calls enqueued a crawl.
+func enqueued(calls []string) bool {
+	return slices.ContainsFunc(calls, func(c string) bool { return strings.HasPrefix(c, "Enqueue") })
+}
+
+// failedCrawls are link crawls whose every enqueue fails.
+type failedCrawls struct{ err error }
+
+func (f failedCrawls) Enqueue(context.Context, uuid.UUID, string) error { return f.err }
 
 func asCreator() context.Context {
 	return shared.WithActor(context.Background(), shared.Actor{UserID: lockCreator})
@@ -73,7 +89,7 @@ func (w *lockWorld) archiveModule() {
 
 // A link is added to the module under the project's lock, after the decision: its address normalized, its title as
 // given, its metadata empty, in the module's project and workspace, created and last changed by the caller at the
-// moment read after the lock.
+// moment read after the lock; then its crawl enqueued with that address, in the write's transaction (M6 P2 spec R11).
 func TestCreateModuleLink(t *testing.T) {
 	w := newModuleWorld()
 	w.now = time.Date(2026, 11, 7, 1, 0, 0, 0, time.UTC)
@@ -88,7 +104,7 @@ func TestCreateModuleLink(t *testing.T) {
 		t.Fatalf("created %+v, stored %+v", l, w.insertedLinks)
 	}
 	want := []string{"GetModule outside tx", "Facts outside tx", "Authorize module.write outside tx", "Enter 1 outside tx", "Begin", "Lock",
-		"GetModule", "Authorize module.write", "Now", "InsertModuleLink", "End", "Leave"}
+		"GetModule", "Authorize module.write", "Now", "InsertModuleLink", fmt.Sprint("Enqueue ", l.ID, " http://nerve.dev/spec"), "End", "Leave"}
 	if !slices.Equal(w.calls, want) {
 		t.Fatalf("calls\n%q\nwant\n%q", w.calls, want)
 	}
@@ -96,6 +112,7 @@ func TestCreateModuleLink(t *testing.T) {
 
 // A link's values are checked before anything is read; an archived module, which the lock reads again, takes none
 // (planning.archived), after the decision; an address the module has is the store's refusal (domain.ErrModuleLinkExists).
+// A link refused is not crawled; an enqueue that fails fails the write, whose transaction then takes neither.
 func TestCreateModuleLinkRefusals(t *testing.T) {
 	w := newModuleWorld()
 	_, err := NewCreateModuleLink(w.moduleLinks()).Execute(asCreator(), lockModule, domain.NewModuleLink{URL: "ftp://nerve.dev"})
@@ -106,20 +123,28 @@ func TestCreateModuleLinkRefusals(t *testing.T) {
 	w = newModuleWorld()
 	w.onLock = w.archiveModule
 	if _, err := NewCreateModuleLink(w.moduleLinks()).Execute(asCreator(), lockModule, domain.NewModuleLink{URL: "nerve.dev"}); !errors.Is(err, domain.ErrArchived) ||
-		len(w.insertedLinks) != 0 || !slices.Contains(w.calls, "Authorize module.write") {
+		len(w.insertedLinks) != 0 || !slices.Contains(w.calls, "Authorize module.write") || enqueued(w.calls) {
 		t.Fatalf("an archived module = %v, stored %+v, calls %q; want planning.archived under the lock", err, w.insertedLinks, w.calls)
 	}
 	w = newModuleWorld()
 	w.linkRefusal = domain.ErrModuleLinkExists
-	if _, err := NewCreateModuleLink(w.moduleLinks()).Execute(asCreator(), lockModule, domain.NewModuleLink{URL: "nerve.dev"}); !errors.Is(err, domain.ErrModuleLinkExists) {
-		t.Fatalf("a taken address = %v; want planning.module_link_exists", err)
+	if _, err := NewCreateModuleLink(w.moduleLinks()).Execute(asCreator(), lockModule, domain.NewModuleLink{URL: "nerve.dev"}); !errors.Is(err, domain.ErrModuleLinkExists) ||
+		enqueued(w.calls) {
+		t.Fatalf("a taken address = %v, calls %q; want planning.module_link_exists, no crawl", err, w.calls)
+	}
+	w = newModuleWorld()
+	d := w.moduleLinks()
+	d.Crawls = failedCrawls{errors.New("insert failed")}
+	if _, err := NewCreateModuleLink(d).Execute(asCreator(), lockModule, domain.NewModuleLink{URL: "nerve.dev"}); err == nil || err.Error() != "insert failed" {
+		t.Fatalf("a failed enqueue = %v; want its failure", err)
 	}
 }
 
 // A change of a link under the project's lock writes what changes, at the moment read after the lock, by the caller: the
-// title alone, the address kept and its metadata too; a new address, its metadata emptied by the store; the title
-// cleared. A change of nothing, the patch empty or giving the link's values, writes nothing and answers the link as it
-// is. An archived module refuses any, one of nothing too.
+// title alone, the address kept and its metadata too; a new address, its metadata emptied by the store and its crawl
+// enqueued with it in the write's transaction (M6 P2 spec R11), which a title alone does not; the title cleared. A
+// change of nothing, the patch empty or giving the link's values, writes nothing, enqueues nothing and answers the link
+// as it is. An archived module refuses any, one of nothing too.
 func TestUpdateModuleLink(t *testing.T) {
 	title, edited, favicon := "Spec", "Edited", "https://nerve.dev/favicon.ico"
 	url, other := "http://nerve.dev/spec", "https://nerve.dev/other"
@@ -153,8 +178,8 @@ func TestUpdateModuleLink(t *testing.T) {
 			}
 			got, err := NewUpdateModuleLink(w.moduleLinks()).Execute(asCreator(), lockLink, tt.patch)
 			if tt.refusedAs != nil {
-				if !errors.Is(err, tt.refusedAs) || len(w.updatedLinks) != 0 {
-					t.Fatalf("got %v, stored %+v; want %v", err, w.updatedLinks, tt.refusedAs)
+				if !errors.Is(err, tt.refusedAs) || len(w.updatedLinks) != 0 || enqueued(w.calls) {
+					t.Fatalf("got %v, stored %+v, calls %q; want %v", err, w.updatedLinks, w.calls, tt.refusedAs)
 				}
 				return
 			}
@@ -166,7 +191,7 @@ func TestUpdateModuleLink(t *testing.T) {
 				t.Fatalf("answered %+v; want %s %v, metadata kept %t", got, tt.url, tt.title, tt.metadata)
 			}
 			if !tt.writes {
-				if len(w.updatedLinks) != 0 || slices.Contains(w.calls, "Now") {
+				if len(w.updatedLinks) != 0 || slices.Contains(w.calls, "Now") || enqueued(w.calls) {
 					t.Fatalf("stored %+v, calls %q; want no write", w.updatedLinks, w.calls)
 				}
 				return
@@ -174,6 +199,9 @@ func TestUpdateModuleLink(t *testing.T) {
 			want := []string{"GetModuleLink outside tx", "GetModule outside tx", "Facts outside tx", "Authorize module.write outside tx",
 				"Enter 1 outside tx", "Begin", "Lock", "GetModuleLink", "GetModule", "Authorize module.write", "Now",
 				"UpdateModuleLink by " + lockCreator.String(), "End", "Leave"}
+			if tt.url != url {
+				want = slices.Insert(want, len(want)-2, fmt.Sprint("Enqueue ", lockLink, " ", tt.url))
+			}
 			if !slices.Equal(w.calls, want) || len(w.updatedLinks) != 1 || !w.updatedLinks[0].UpdatedAt.Equal(w.now) {
 				t.Fatalf("calls\n%q\nwant\n%q\nstored %+v", w.calls, want, w.updatedLinks)
 			}
@@ -187,8 +215,15 @@ func TestUpdateModuleLink(t *testing.T) {
 	}
 	w = newModuleWorld()
 	w.linkRefusal = domain.ErrModuleLinkExists
-	if _, err := NewUpdateModuleLink(w.moduleLinks()).Execute(asCreator(), lockLink, domain.ModuleLinkPatch{URL: &other}); !errors.Is(err, domain.ErrModuleLinkExists) {
-		t.Fatalf("a taken address = %v; want planning.module_link_exists", err)
+	if _, err := NewUpdateModuleLink(w.moduleLinks()).Execute(asCreator(), lockLink, domain.ModuleLinkPatch{URL: &other}); !errors.Is(err, domain.ErrModuleLinkExists) ||
+		enqueued(w.calls) {
+		t.Fatalf("a taken address = %v, calls %q; want planning.module_link_exists, no crawl", err, w.calls)
+	}
+	w = newModuleWorld()
+	d := w.moduleLinks()
+	d.Crawls = failedCrawls{errors.New("insert failed")}
+	if _, err := NewUpdateModuleLink(d).Execute(asCreator(), lockLink, domain.ModuleLinkPatch{URL: &other}); err == nil || err.Error() != "insert failed" {
+		t.Fatalf("a failed enqueue = %v; want its failure", err)
 	}
 }
 
