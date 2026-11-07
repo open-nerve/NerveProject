@@ -23,8 +23,9 @@ func requestFixtureRowLock(t *testing.T, observer, probes *pgxpool.Pool, request
 	return requestOwnedRowLock(t, observer, probes, request, fixture, false, from, args...)
 }
 
-// requestGateRowLock is only for callers that already observed their explicit
-// gate held. That request is idle in its transaction, not waiting on a DB lock.
+// requestGateRowLock is only for callers whose request is idle in its
+// transaction, not waiting on a DB lock: held at an explicit gate, or between
+// two statements of the caller's own goroutine.
 func requestGateRowLock(t *testing.T, observer, probes *pgxpool.Pool, request *requestProbe, from string, args ...any) string {
 	t.Helper()
 	return requestOwnedRowLock(t, observer, probes, request, nil, true, from, args...)

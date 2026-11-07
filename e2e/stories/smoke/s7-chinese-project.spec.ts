@@ -86,10 +86,14 @@ test("S7 (page): an admin whose language is Chinese sees a project's header, gen
   await expect(page.getByRole("menuitem", { name: "显示视图", exact: true })).toHaveCount(1);
   await expect(page.getByRole("menuitem", { name: "取消视图的默认", exact: true })).toHaveCount(1);
   const modules = page.getByRole("menuitem", { name: "模块", exact: true });
+  // One item a step: each press waits for the focus to leave the item it was on before looking, so a focus that lands
+  // after the press is never read one item late (and the modules' item never skipped by the next press).
   await expect
     .poll(
       async () => {
+        const before = await page.evaluateHandle(() => document.activeElement);
         await page.keyboard.press("ArrowDown");
+        await page.waitForFunction((was) => document.activeElement !== was, before);
         return modules.evaluate((item) => item === document.activeElement);
       },
       { timeout: 5_000 }

@@ -32,9 +32,11 @@ func queuedRun(t *testing.T, pool *pgxpool.Pool, holder uint32, sql string, args
 		_, err := tx.Exec(context.Background(), sql, args...)
 		locked <- err
 	}()
-	taken := false
+	// answered is whether the statement's answer was received: until then the
+	// cleanup cancels the statement and receives it itself.
+	answered := false
 	t.Cleanup(func() {
-		if !taken {
+		if !answered {
 			// Cancel the statement still waiting, not its connection, so that
 			// its transaction rolls back.
 			if err := tx.Conn().PgConn().CancelRequest(context.Background()); err != nil {
@@ -53,8 +55,9 @@ func queuedRun(t *testing.T, pool *pgxpool.Pool, holder uint32, sql string, args
 	})
 	return func() pgx.Tx {
 		t.Helper()
-		taken = true
-		if err := receiveWithin(t, locked, 5*time.Second, "the stand-in run's row lock"); err != nil {
+		err := receiveWithin(t, locked, 5*time.Second, "the stand-in run's row lock")
+		answered = true
+		if err != nil {
 			t.Fatal(err)
 		}
 		return tx
