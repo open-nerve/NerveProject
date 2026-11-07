@@ -78,8 +78,9 @@ jobs:
     needs: [server, web]
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-24.04
-    # 完整故事约17–18分钟，另留安装、浏览器、构建与收尾时间。
-    timeout-minutes: 25
+    # 完整故事约21–22分钟（M5 收尾），绿色作业23–24分钟；安装浏览器一步在运行器上偶尔停滞数分钟到二十多分钟。
+    # 负责人2026-11-07批准由25改为35分钟（M6 迭代与模块还会加故事）；再改须负责人同意。
+    timeout-minutes: 35
     env:
       # 写进 bin/nerve 的版本号，与默认值不同，S3 由此确认 make build 的注入生效
       VERSION: 0.0.0-ci.${{ github.run_number }}
