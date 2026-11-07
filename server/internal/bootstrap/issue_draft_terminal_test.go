@@ -32,9 +32,6 @@ func testDraftWorkspaceTerminal(t *testing.T) {
 		for _, terminal := range []string{"guest", "draft deleted and guest", "project deleted and guest", "workspace deleted and guest", "moved and guest"} {
 			t.Run(method+"/"+terminal, func(t *testing.T) {
 				w := newIssueWorld(t)
-				// A start-time run locks each project in turn, which the probe
-				// that Ops is free would see.
-				waitForStartupRuns(t, w.pool)
 				next := createdProject(t, w.contract, w.base, w.tokens["alice"], "acme", "Ops", "OPS")
 				d := createDraftHTTP(t, w, "alice", `{"project_id":"`+w.web.String()+`","payload":{"name":"Unchanged"}}`)
 				trace := &listTrace{}
@@ -74,8 +71,11 @@ func testDraftWorkspaceTerminal(t *testing.T) {
 				}
 				collect := requestBackground(t, send, func() { requestRelease(t, holder) })
 				requestBlocked(t, w.pool, tx, holder.Conn().PgConn().PID(), "workspaces")
-				if pgtest.RowWaits(t, w.pool, "projects", next, "FOR NO KEY UPDATE") {
-					t.Fatal("request took a new project lock while waiting W")
+				// The request's and the holder's own locks, of which the holder's
+				// move takes Ops FOR KEY SHARE: a start-time run locks each project
+				// in turn (waitForStartupRuns).
+				if lock := requestFixtureRowLock(t, w.pool, w.pool, tx, holder, "projects WHERE id = $1", next); lock != "no lock" && lock != "FOR KEY SHARE" {
+					t.Fatal("request took a new project lock while waiting W", lock)
 				}
 				draftCommit(t, holder)
 				collect()
@@ -118,9 +118,6 @@ func testDraftWorkspaceTerminal(t *testing.T) {
 	for _, deleted := range []bool{false, true} {
 		t.Run(map[bool]string{false: "nil guest", true: "nil deleted guest"}[deleted], func(t *testing.T) {
 			w := newIssueWorld(t)
-			// A start-time run locks each project in turn, which the probe that
-			// Web is free would see.
-			waitForStartupRuns(t, w.pool)
 			d := createDraftHTTP(t, w, "alice", `{"payload":{"name":"Nil"}}`)
 			holder := holding(t, w.pool, "SELECT 1 FROM workspaces WHERE id=$1 FOR NO KEY UPDATE", w.acme)
 			draftExec(t, holder, "UPDATE workspace_members SET role=5 WHERE workspace_id=$1 AND member_id=$2", w.acme, w.ids["alice"])
@@ -132,7 +129,11 @@ func testDraftWorkspaceTerminal(t *testing.T) {
 			var e exchange
 			collect := requestBackground(t, draftWrite(t, w, tx, &e, "PATCH", draftPath(d.ID), `{"payload":{}}`), func() { requestRelease(t, holder) })
 			requestBlocked(t, w.pool, tx, holder.Conn().PgConn().PID(), "workspaces")
-			draftNoLock(t, w, "projects", w.web)
+			// The request's own lock: a start-time run locks each project in turn
+			// (waitForStartupRuns).
+			if requestRowLock(t, w.pool, w.pool, tx, "projects WHERE id = $1", w.web) != "no lock" {
+				t.Fatal("unexpected projects row lock")
+			}
 			draftCommit(t, holder)
 			collect()
 			want, code := 403, "forbidden"

@@ -3,6 +3,7 @@ package bootstrap
 import (
 	"context"
 	"net/http"
+	"slices"
 	"testing"
 	"time"
 	"uuid"
@@ -11,7 +12,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apitest"
-	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 	"github.com/open-nerve/NerveProject/server/migrations"
@@ -93,19 +93,14 @@ func refusingCommits(t *testing.T, pool *pgxpool.Pool, table string) (restore fu
 // FOR SHARE, as P4b's add and join will, and then his membership of acme's
 // project FOR UPDATE, and answers what req got once both have rolled back.
 // req takes M3 design 3.6's global order, workspace_members before
-// projects: while it waits for his membership of acme, it has locked none
-// of his projects in acme yet, so a FOR SHARE NOWAIT of each succeeds,
-// where a demotion run before the membership's write would hold them FOR
-// NO KEY UPDATE; nor has it written his project membership, which is held
-// NOWAIT. Then, as req's write of his project membership waits for
-// that row, the project must be held FOR NO KEY UPDATE, so that a FOR SHARE
-// of it NOWAIT fails with lock_not_available (55P03): a lock taken outside
-// req's transaction would no longer be held.
+// projects: while it waits for his membership of acme, it holds none of his
+// projects in acme yet, where a demotion run before the membership's write
+// would hold them FOR NO KEY UPDATE; nor has it written his project
+// membership, which is held NOWAIT. Then, as req's write of his project
+// membership waits for that row, req holds each of them FOR NO KEY UPDATE:
+// a lock taken outside req's transaction would no longer be held.
 func sendHoldingTheMemberships(t *testing.T, contract *apitest.Contract, pool *pgxpool.Pool, req *http.Request, member uuid.UUID) (int, string) {
 	t.Helper()
-	// A start-time run locks each project in turn, which the FOR SHARE NOWAIT
-	// that finds his projects free would see.
-	waitForStartupRuns(t, pool)
 	ctx := context.Background()
 	hold := func(sql string) pgx.Tx {
 		t.Helper()
@@ -129,24 +124,47 @@ func sendHoldingTheMemberships(t *testing.T, contract *apitest.Contract, pool *p
 		WHERE w.slug = 'acme' AND m.member_id = $1 FOR SHARE OF m`)
 	contract.CheckRequest(t, req)
 	answered := sendInBackground(req)
-	pgtest.WaitForLockWaitOn(t, pool, "workspace_members", 10*time.Second)
-	var free int
-	err := pool.QueryRow(ctx, `SELECT count(*) FROM (SELECT p.id FROM projects p JOIN workspaces w ON w.id = p.workspace_id
-		WHERE w.slug = 'acme' AND EXISTS (SELECT 1 FROM project_members m WHERE m.project_id = p.id AND m.member_id = $1)
-		FOR SHARE OF p NOWAIT) s`, member).Scan(&free)
-	if err != nil || free == 0 {
-		t.Errorf("a FOR SHARE NOWAIT of his projects in acme while %s %s waits for his membership of acme = %d, %v; "+
-			"want each locked at once, and one at least", req.Method, req.URL.Path, free, err)
+	// req is the one backend waiting behind each held membership. Each probe
+	// reads req's own lock of his projects in acme (deactivationRowLock): a
+	// start-time run locks each project in turn (waitForStartupRuns).
+	waiter := func(holder pgx.Tx) uint32 {
+		t.Helper()
+		pgtest.WaitForLockWaitBehind(t, pool, holder.Conn().PgConn(), 10*time.Second)
+		waiters := deactivationWaiters(t, pool, holder.Conn().PgConn().PID())
+		if len(waiters) != 1 {
+			t.Fatalf("waiters %v for a held membership of his; want %s %s alone", waiters, req.Method, req.URL.Path)
+		}
+		return waiters[0]
+	}
+	projects := queryIDs(t, pool, `SELECT p.id FROM projects p JOIN workspaces w ON w.id = p.workspace_id
+		WHERE w.slug = 'acme' AND EXISTS (SELECT 1 FROM project_members m WHERE m.project_id = p.id AND m.member_id = $1)`, member)
+	if len(projects) == 0 {
+		t.Fatal("he has no project in acme")
+	}
+	locks := func(pid uint32) []string {
+		t.Helper()
+		owners := map[string]string{}
+		if xid := deactivationIdentityOf(t, pool, pid).xid; xid != "" {
+			owners[xid] = "request"
+		}
+		var modes []string
+		for _, project := range projects {
+			modes = append(modes, deactivationRowLock(t, pool, pool, owners, "projects WHERE id = $1", project))
+		}
+		return modes
+	}
+	pid := waiter(membership)
+	if got := locks(pid); slices.ContainsFunc(got, func(lock string) bool { return lock != "no lock" }) {
+		t.Errorf("%s %s holds his projects in acme %v while it waits for his membership of acme; want none", req.Method, req.URL.Path, got)
 	}
 	projectMembership := hold(`SELECT 1 FROM project_members m JOIN workspaces w ON w.id = m.workspace_id
 		WHERE w.slug = 'acme' AND m.member_id = $1 FOR UPDATE OF m NOWAIT`)
 	release(membership)
-	pgtest.WaitForLockWaitOn(t, pool, "project_members", 10*time.Second)
-	_, err = pool.Exec(ctx, `SELECT 1 FROM projects p JOIN workspaces w ON w.id = p.workspace_id
-		WHERE w.slug = 'acme' FOR SHARE OF p NOWAIT`)
-
-	if !postgres.LockNotAvailable(err) {
-		t.Errorf("a FOR SHARE of acme's project while %s %s waits = %v; want lock_not_available (55P03)", req.Method, req.URL.Path, err)
+	if waiter(projectMembership) != pid {
+		t.Fatalf("another backend than %s %s waits for his project membership", req.Method, req.URL.Path)
+	}
+	if got := locks(pid); slices.ContainsFunc(got, func(lock string) bool { return lock != "FOR NO KEY UPDATE" }) {
+		t.Errorf("%s %s holds his projects in acme %v while it waits; want each FOR NO KEY UPDATE", req.Method, req.URL.Path, got)
 	}
 	release(projectMembership)
 	a := receiveWithin(t, answered, 10*time.Second, "answer to "+req.Method+" "+req.URL.Path)

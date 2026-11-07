@@ -87,11 +87,14 @@ func newIssueWorldOnRequests(t *testing.T, dbURL string, pool *pgxpool.Pool, con
 // has completed once. Those runs usually end one to three seconds after the
 // app starts, after a world is built; one still pending queues on the locks a
 // test holds and stands between its request and its fixture (P8 T14), or
-// takes them as the test lets go; the issue runs lock each project in turn,
-// and the auto-archive archives a real-clock candidate. Only the tests these
-// break wait, before their first lock or seed: those that observe their
-// requests' lock waits, probe that a project is free, or seed such a
-// candidate. Every world waiting would double the package's run time.
+// takes them as the test lets go, and the issue runs lock each project in
+// turn. A probe of locks or waits therefore reads its actor's own
+// (requestRowLock, requestBlocked), never any backend's; queuedRun stands in
+// for such a run where a test shows its probe tells them apart. Only the
+// tests whose fixture such a run would change wait: those that observe every
+// request's lock waits, and those whose auto-archive candidate is due on the
+// real clock too (archiveAhead). Every world waiting would double the
+// package's run time.
 func waitForStartupRuns(t *testing.T, pool *pgxpool.Pool) {
 	t.Helper()
 	waitForCompletedKinds(t, pool, map[string]int{identityriver.CleanupKind: 1, issueriver.AutoArchiveKind: 1,

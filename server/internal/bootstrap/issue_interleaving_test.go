@@ -196,13 +196,16 @@ func (w issueWorld) serializeAt(t *testing.T, table string, first, second racing
 // before releasing the first. It lets a test advance a synchronized clock.
 func (w issueWorld) serializeAtAfter(t *testing.T, table string, first, second racingWrite, a, b *exchange, afterWait func()) {
 	t.Helper()
-	w.serializeAtObserved(t, table, first, second, a, b, func(*requestProbe) {
+	w.serializeAtObserved(t, table, first, second, a, b, func(*requestProbe, *requestProbe) {
 		if afterWait != nil {
 			afterWait()
 		}
 	})
 }
-func (w issueWorld) serializeAtObserved(t *testing.T, table string, first, second racingWrite, a, b *exchange, afterWait func(*requestProbe)) {
+
+// serializeAtObserved is serializeAtAfter whose afterWait gets the probes of
+// the first's transaction, held, and of the second's, waiting.
+func (w issueWorld) serializeAtObserved(t *testing.T, table string, first, second racingWrite, a, b *exchange, afterWait func(holder, waiter *requestProbe)) {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -212,7 +215,7 @@ func (w issueWorld) serializeAtObserved(t *testing.T, table string, first, secon
 		secondProbe, b)
 	opened, firstErr, secondErr := serializeWaiting(t, ctx, g, firstWrite, secondWrite, func() {
 		requestBlocked(t, w.pool, secondProbe, requestPID(t, probe), table)
-	}, func() { afterWait(probe) })
+	}, func() { afterWait(probe, secondProbe) })
 	if err := errors.Join(firstErr, secondErr); err != nil {
 		t.Fatal(err)
 	}

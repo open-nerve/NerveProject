@@ -56,7 +56,7 @@ func TestIssueLinkWritesLockAndRecheck(t *testing.T) {
 						change, status = removesBob, 204
 					}
 					var changed, written exchange
-					w.serializeAtObserved(t, "projects", change, collaborationAt("bob", op.method, op.path, op.body, clock.System{}), &changed, &written, func(probe *requestProbe) {
+					w.serializeAtObserved(t, "projects", change, collaborationAt("bob", op.method, op.path, op.body, clock.System{}), &changed, &written, func(probe, _ *requestProbe) {
 						if lock := requestGateRowLock(t, w.pool, w.pool, probe, "projects WHERE id = $1", w.web); lock != "FOR NO KEY UPDATE" {
 							t.Fatal("membership holder lost project N lock", lock)
 						}
@@ -106,8 +106,8 @@ func TestIssueLinkWritesLockAndRecheck(t *testing.T) {
 				}
 				body := `{"url":"http://169.254.169.254/contended"}`
 				var first, second exchange
-				w.serializeAtAfter(t, "projects", collaborationAt(firstActor, method, firstPath, body, clock.System{}), collaborationAt(secondActor, method, secondPath, body, clock.System{}), &first, &second, func() {
-					assertLinkProjectLock(t, w)
+				w.serializeAtObserved(t, "projects", collaborationAt(firstActor, method, firstPath, body, clock.System{}), collaborationAt(secondActor, method, secondPath, body, clock.System{}), &first, &second, func(holder, _ *requestProbe) {
+					assertLinkProjectLock(t, w, holder)
 				})
 				want := 201
 				if update {
@@ -133,8 +133,8 @@ func TestIssueLinkWritesLockAndRecheck(t *testing.T) {
 					continue
 				}
 				var holder, writer exchange
-				w.serializeAtAfter(t, "projects", collaborationAt("alice", http.MethodPatch, "/api/v0/issues/"+id.String(), `{"name":"Clock holder"}`, clock.System{}), collaborationAt("bob", op.method, op.path, op.body, tracked), &holder, &writer, func() {
-					assertLinkProjectLock(t, w)
+				w.serializeAtObserved(t, "projects", collaborationAt("alice", http.MethodPatch, "/api/v0/issues/"+id.String(), `{"name":"Clock holder"}`, clock.System{}), collaborationAt("bob", op.method, op.path, op.body, tracked), &holder, &writer, func(held, _ *requestProbe) {
+					assertLinkProjectLock(t, w, held)
 					if tracked.calls.Load() != 0 {
 						t.Error("clock read before project lock")
 					}
@@ -160,13 +160,15 @@ func TestIssueLinkWritesLockAndRecheck(t *testing.T) {
 	}
 }
 
-func assertLinkProjectLock(t *testing.T, w issueWorld) {
+// assertLinkProjectLock reads the held request's own locks: a start-time run
+// locks project rows too (waitForStartupRuns).
+func assertLinkProjectLock(t *testing.T, w issueWorld, holder *requestProbe) {
 	t.Helper()
-	if !pgtest.RowWaits(t, w.pool, "projects", w.web, "FOR SHARE") || pgtest.RowWaits(t, w.pool, "projects", w.web, "FOR KEY SHARE") {
-		t.Fatal("holder must own project FOR NO KEY UPDATE")
+	if lock := requestGateRowLock(t, w.pool, w.pool, holder, "projects WHERE id = $1", w.web); lock != "FOR NO KEY UPDATE" {
+		t.Fatal("holder must own project FOR NO KEY UPDATE", lock)
 	}
-	if pgtest.RowWaits(t, w.pool, "workspaces", w.acme, "FOR NO KEY UPDATE") {
-		t.Fatal("link write holds conflicting workspace lock")
+	if lock := requestGateRowLock(t, w.pool, w.pool, holder, "workspaces WHERE id = $1", w.acme); lock != "no lock" && lock != "FOR KEY SHARE" {
+		t.Fatal("link write holds conflicting workspace lock", lock)
 	}
 }
 

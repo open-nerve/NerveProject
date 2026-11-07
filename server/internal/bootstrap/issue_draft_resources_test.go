@@ -73,9 +73,6 @@ func (g draftObservedGate) Enter(ctx context.Context, ids ...uuid.UUID) (func(),
 }
 func testDraftGateConnection(t *testing.T) {
 	w := newIssueWorld(t)
-	// A start-time run locks each project in turn, which the probe that Web
-	// is free would see.
-	waitForStartupRuns(t, w.pool)
 	d := createDraftHTTP(t, w, "alice", `{"project_id":"`+w.web.String()+`","payload":{"name":"Admitted"}}`)
 	one := poolOfOne(t, w.pool.Config().ConnString())
 	realGate := newWriteGate(config.WriteGateConfig{PerProject: 1, MaxQueue: 1, MaxWait: 2 * time.Second})
@@ -103,8 +100,9 @@ func testDraftGateConnection(t *testing.T) {
 	if tx.pid.Load() != 0 {
 		t.Errorf("gate waiter opened request transaction PID %d", tx.pid.Load())
 	}
+	// Without a transaction (above) the waiter holds no row; Web's would not
+	// tell, as a start-time run locks each project in turn (waitForStartupRuns).
 	draftNoLock(t, w, "workspaces", w.acme)
-	draftNoLock(t, w, "projects", w.web)
 	draftNoLock(t, w, "draft_issues", d.ID)
 	leave()
 	collect()

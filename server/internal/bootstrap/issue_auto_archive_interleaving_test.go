@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
@@ -19,33 +18,31 @@ func TestAutoArchiveAndStateChangeSerialize(t *testing.T) {
 	for _, jobFirst := range []bool{false, true} {
 		t.Run(fmt.Sprintf("job_first=%t", jobFirst), func(t *testing.T) {
 			w := newIssueWorld(t)
-			// The app's own start-time auto-archive would archive this real-clock
-			// candidate, and its wait for Web pass for this job's (archiveWaitOrDone).
-			waitForStartupRuns(t, w.pool)
-			at := time.Now().UTC().Truncate(time.Microsecond)
+			at := time.Now().UTC().Truncate(time.Microsecond).Add(archiveAhead)
 			id := archiveRaceSeed(t, w, at, 40*24*time.Hour)
 			before := archiveStableRow(t, w, id)
 			events := newArchiveRaceEvents(t, w)
 			requestEvents := newArchiveStateEvents(t)
 			g := newGate()
 			c := clockAt(at)
-			tx := shared.TxManager(postgres.NewTxManager(w.pool, 2*time.Second))
+			reqTx, jobTx := requestTx(w.pool), &requestProbe{TxManager: archiveJobTx(w)}
+			tx := shared.TxManager(reqTx)
 			var locked *gate
 			if jobFirst {
 				locked = g
 			} else {
 				tx = heldTx{tx, g}
 			}
-			job := archiveRaceJob(w, c, events, nil, locked)
+			job := archiveRaceJobOn(w, jobTx, c, events, nil, locked)
 			var reply exchange
 			n := 0
 			request := w.sending(&reply, newIssueRouteWithPublisher(t, w.pool, tx, c, requestEvents), "bob", http.MethodPatch, "/api/v0/issues/"+id.String(), `{"state_id":"`+w.todo.String()+`"}`)
 			archive := func() error { var err error; n, err = job.Execute(pgtest.Soon(t)); return err }
-			first, second := request, archive
+			first, second, waiter := request, archive, jobTx
 			if jobFirst {
-				first, second = archive, request
+				first, second, waiter = archive, request, reqTx
 			}
-			archiveInterleave(t, w, g, first, second, nil, nil)
+			archiveInterleave(t, w, g, first, second, waiter, nil, nil)
 			want := 0
 			if jobFirst {
 				want = 1
@@ -97,10 +94,15 @@ func TestAutoArchiveReadsClockAfterLock(t *testing.T) {
 	events := newArchiveRaceEvents(t, w)
 	holder := holding(t, w.pool, "SELECT 1 FROM projects WHERE id=$1 FOR NO KEY UPDATE", w.web)
 	defer func() { _ = holder.Rollback(context.Background()) }()
-	job := autoArchiveOn(w, c, events)
+	jobTx := &requestProbe{TxManager: archiveJobTx(w)}
+	job := archiveRaceJobOn(w, jobTx, c, events, nil, nil)
+	// Another backend already waits for a row when the job starts, as a
+	// start-time run or a worker of the app may: the wait observed is the job's.
+	walts := holding(t, w.pool, "SELECT 1 FROM users WHERE id = $1 FOR UPDATE", w.ids["walt"])
+	queuedRun(t, w.pool, walts.Conn().PgConn().PID(), "SELECT 1 FROM users WHERE id = $1 FOR UPDATE", w.ids["walt"])
 	n := 0
 	done := run(func() error { var err error; n, err = job.Execute(pgtest.Soon(t)); return err })
-	table, ended, err := archiveWaitOrDone(t, w, done)
+	table, ended, err := archiveWaitOrDone(t, w, jobTx, done)
 	c.advance(48 * time.Hour)
 	if err := holder.Commit(context.Background()); err != nil {
 		t.Fatal(err)
