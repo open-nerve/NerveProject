@@ -28,6 +28,8 @@ tags:
     description: Work items.
   - name: asset
     description: Private file preparations and content capabilities.
+  - name: planning
+    description: Cycles and modules of a project.
 paths:
   /api/v0/drafts/{draft_id}/asset-preparations:
     $ref: 'modules/asset.yaml#/paths/~1api~1v0~1drafts~1{draft_id}~1asset-preparations'
@@ -173,6 +175,14 @@ paths:
     $ref: 'modules/issue.yaml#/paths/~1api~1v0~1workspaces~1{slug}~1issues~1{identifier}'
   /api/v0/me/projects/{project_id}/preferences:
     $ref: 'modules/project.yaml#/paths/~1api~1v0~1me~1projects~1{project_id}~1preferences'
+  /api/v0/projects/{project_id}/cycles:
+    $ref: 'modules/planning.yaml#/paths/~1api~1v0~1projects~1{project_id}~1cycles'
+  /api/v0/cycles/{cycle_id}:
+    $ref: 'modules/planning.yaml#/paths/~1api~1v0~1cycles~1{cycle_id}'
+  /api/v0/cycles/{cycle_id}/archive:
+    $ref: 'modules/planning.yaml#/paths/~1api~1v0~1cycles~1{cycle_id}~1archive'
+  /api/v0/cycles/{cycle_id}/unarchive:
+    $ref: 'modules/planning.yaml#/paths/~1api~1v0~1cycles~1{cycle_id}~1unarchive'
 components:
   # 模块文件的 securitySchemes 在打包时被丢掉，操作引用的 scheme 写在这里（M0-P3 交接 3）
   securitySchemes:

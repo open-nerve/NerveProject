@@ -1,7 +1,18 @@
-import { changeWorkspacePreferences, createLabel, createProject, invite, inviteAndAccept, type Api } from "./api";
+import { expect } from "@playwright/test";
+
+import {
+  changeProject,
+  changeWorkspacePreferences,
+  createLabel,
+  createProject,
+  invite,
+  inviteAndAccept,
+  type Api,
+} from "./api";
 
 import { accountId } from "./auth";
 import { createCommentReaction, createIssueComment, createIssueReaction } from "./comments";
+import { createCycle } from "./cycles";
 import { createDraft, createIssue, createIssueRelations } from "./issues";
 import { createIssueLink } from "./links";
 import { furnishIssueFiles, storedFile } from "./storage";
@@ -46,10 +57,21 @@ export async function furnishIssueRows(
 }
 
 /**
+ * Gives the project of projectId a row of each of the planning tables: its cycles turned on by the caller of adminToken,
+ * an admin of it (they are off by default), and a cycle he creates, the draft Sprint 1.
+ */
+export async function furnishPlanningRows(api: Api, adminToken: string, projectId: string): Promise<void> {
+  const changed = await changeProject(api, adminToken, projectId, { cycle_view: true });
+  expect(changed.status, `turn on the cycles of ${projectId}: ${JSON.stringify(changed)}`).toBe(200);
+  await createCycle(api, adminToken, projectId, { name: "Sprint 1" });
+}
+
+/**
  * Gives the workspace of slug, as its admin of adminToken, a row of each table its deletion writes
  * (expectWorkspaceDeleted): the membership of member, by an invitation he accepts (deleted as he accepts it); a pending
  * invitation of inviteeEmail; the admin's display settings; and the project Web, with its own rows: its label Bug
- * among them, and a work item assigned to the admin and labelled Bug, with its own (furnishIssueRows).
+ * among them, a work item assigned to the admin and labelled Bug, with its own (furnishIssueRows), and a cycle
+ * (furnishPlanningRows).
  */
 export async function furnishWorkspace(
   api: Api,
@@ -66,4 +88,5 @@ export async function furnishWorkspace(
   const draft = await createDraft(api, adminToken, slug, { payload: { name: "Unassigned" } });
   await storedFile(api, adminToken, "DRAFT_ISSUE_ATTACHMENT", { kind: "draft", id: draft.id });
   await furnishIssueRows(api, adminToken, slug, web.id, await accountId(api, adminToken), bug.id);
+  await furnishPlanningRows(api, adminToken, web.id);
 }

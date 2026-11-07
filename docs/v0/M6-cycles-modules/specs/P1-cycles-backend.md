@@ -1,6 +1,6 @@
 # M6 / P1：planning 模块与迭代的后端
 
-> 状态：预检通过（2026-11-07，[re-54](../../../reviews/re-54-M6设计与P1预检.md)），尚未实施。基线为设计合入后的 main。设计见 [M6 设计](../M6-design.md)，负责人 2026-11-07 的决定 A/B/C 见设计 §15。
+> 状态：已实施（2026-11-07），整分支审查见 [re-55](../../../reviews/re-55-M6P1整体审核.md)，阶段记录见 [P1 阶段记录](../reviews/P1-cycles-backend-review.md)；预检见 [re-54](../../../reviews/re-54-M6设计与P1预检.md)。基线为设计合入后的 main。设计见 [M6 设计](../M6-design.md)，负责人 2026-11-07 的决定 A/B/C 见设计 §15。
 
 ## 1. 目标与边界
 
@@ -25,7 +25,7 @@
 | `server/internal/modules/planning/adapter/http/` | `gen/oapi-codegen.yaml`（照 `issue`）、处理器、`TestMain(m){apitest.Main(m, "planning")}` 与每个错误码的处理器测试 |
 | `server/internal/modules/planning/adapter/river/` | `planning.delete_rows` 的 worker 与投递器 |
 | `server/internal/modules/planning/{module.go,module_events.go,module_jobs.go,module_purge.go}` | 照 `issue` 的模板 |
-| `server/internal/modules/project/` | 新端口三法：`Find`（不加锁，工作区）、`PlanningFacts`（不加锁，`workspace_id, archived_at, timezone, cycle_view, module_view`）、`LockPlanning`（事务内 `FOR NO KEY UPDATE`，返回同样的事实；项目已删除时 found=false，同 `issue_ports.sql`） |
+| `server/internal/modules/project/` | 新端口两法：`PlanningFacts`（不加锁，`workspace_id, archived_at, timezone, cycle_view, module_view`；不加锁的查找即读它的工作区）、`LockPlanning`（事务内 `FOR NO KEY UPDATE`，返回同样的事实；项目已删除时 found=false，同 `issue_ports.sql`） |
 | `server/internal/modules/access/domain/rules.go` | `cycle.read/write/delete`（`LevelProject`；delete 带 `AllowCreator`） |
 | `server/internal/platform/config/` 与四份配置文件 | `planning.delete_batch`、`planning.delete_budget`（默认同 `issue` 的对应值）与校验 |
 | `server/internal/bootstrap/` | 接线；清理顺序 asset → issue → planning → project → workspace → identity；投递种类；`actions_test`；权限矩阵的迭代表（§3 R10）；删除守卫、清理守卫、运行角色与规模测试的夹具（§2.4） |
@@ -34,7 +34,7 @@
 | `web/apps/web/core/services/cycle.service.ts`（及测试）、`store/cycle.store.ts`、`components/cycles/active-cycle/use-cycles-details.ts`、`[cycleId]/page.test.tsx` | 删除 `cycleDistribution`/`fetchActiveCycleDistribution`、它们的调用与因此不再使用的 `TCycleDistribution` 导入（`progress-stats.tsx` 仍用该类型） |
 | `tools/keywords.json` | `phase` 为 `M6/P1`；删除 `analytics` 对这两个文件的例外 |
 | `web/apps/web/core/lib/error-messages.ts`、`web/packages/i18n/src/locales/{en,zh-CN}/errors.json` | 新错误码的文案（M4 约束 4） |
-| `e2e/` | `furnishIssueRows`/`furnishWorkspace` 打开 `cycle_view` 并经接口建迭代；`catalog.ts` 的 `asynchronousDeletionTable` 加 `cycles`；`stories/planning/` 的 G1–G3、G8、G18 接口故事 |
+| `e2e/` | 新的 `furnishPlanningRows` 以项目管理员经接口打开 `cycle_view` 并建一个迭代，`furnishWorkspace` 与 P4、W3 的删除故事在 `furnishIssueRows` 旁调用它（`furnishIssueRows` 的调用者多是项目成员，不能改项目设置）；`catalog.ts` 的 `asynchronousDeletionTable` 加 `cycles`；`stories/planning/` 的 G1–G3、G8、G18 接口故事 |
 | `docs/v0/plane-diff.md`、各输入交接 | `cycles` 的差异；“处理结果（M6/P1）” |
 
 ### 2.2 表与 Plane 差异
@@ -54,7 +54,7 @@
 | 审计四列 | 照 M2 设计 3.13 | 同 |
 | 删除 | `view_props`、`logo_props`、`timezone`、`version`、`external_source`、`external_id`；`progress_snapshot` 在 P4 加回 | 没有读者，或用项目的时区 |
 
-索引：每条外键无条件索引；活行列表 `(project_id, sort_order, created_at, id) WHERE deleted_at IS NULL`；清理用 `cycles_deleted_at_idx (deleted_at) WHERE deleted_at IS NOT NULL`（照 `purge_indexes_test`）。约束与索引按既有命名，列入 `planning_schema_test.go`。
+索引：每条 `CASCADE` 外键（`workspace_id`、`project_id`）无条件索引，指向 `users` 的 `SET NULL` 外键照 `projects.project_lead_id` 不建（`TestConstraintAndIndexNames` 的约定）；活行列表 `(project_id, sort_order, created_at, id) WHERE deleted_at IS NULL`；清理用 `cycles_deleted_at_idx (deleted_at) WHERE deleted_at IS NOT NULL`（照 `purge_indexes_test`）。约束与索引按既有命名，列入 `planning_schema_test.go`。
 
 ### 2.3 接口与错误目录
 
@@ -62,9 +62,9 @@
 
 | 操作 | 成功 | 声明的错误 |
 |---|---|---|
-| `GET /projects/{project_id}/cycles?archived=` | 200 `{data}`；默认未归档按 `sort_order, created_at, id`；`archived=true` 只返回已归档，按 `archived_at DESC, id` | 400（参数不是布尔）、404 |
+| `GET /projects/{project_id}/cycles?archived=` | 200 `{data}`；默认未归档按 `sort_order, created_at, id`；`archived=true` 只返回已归档，按 `archived_at DESC, id` | 400（参数不是布尔）、404、403（看得到项目但不是它的成员） |
 | `POST /projects/{project_id}/cycles` `{name, description?, start_date?, end_date?}` | 201 | 400、422、404、403、409 `project.archived`/`planning.cycles_disabled`/`planning.cycle_dates_overlap`、503 |
-| `GET /cycles/{cycle_id}` | 200 | 404 `planning.cycle_not_found` |
+| `GET /cycles/{cycle_id}` | 200 | 404 `planning.cycle_not_found`、403（看得到项目但不是它的成员） |
 | `PATCH /cycles/{cycle_id}` `{name?, description?, start_date?, end_date?, sort_order?}` | 200 | 400、422、404、403、409 `project.archived`/`planning.cycles_disabled`/`planning.archived`/`planning.cycle_completed`/`planning.cycle_dates_overlap`、503 |
 | `DELETE /cycles/{cycle_id}` | 204 | 404、403、409 `project.archived`/`planning.cycles_disabled`、503 |
 | `POST /cycles/{cycle_id}/archive`、`/unarchive` | 200 `Cycle` | 404、403、409 `project.archived`/`planning.cycles_disabled`、`planning.cycle_not_completed`（归档）、503 |
@@ -76,7 +76,7 @@
 - 软删：`deleted_at` 与 `updated_*` 同一时刻、同一写者；P1 不发事件。
 - 项目、工作区删除：订阅者 `planning_delete_rows_on_deletion` 在发布者事务内投递 `planning.delete_rows`（参数：项目 id、原 At/By）；worker 按 `planning.delete_batch` 有界软删该项目的迭代，沿用原 At/By，在 `planning.delete_budget` 内续跑，可重试。不取项目锁（项目已删除，同 `issue/app/delete_rows.go`）。父范围立即隐藏：项目已删除即 404。
 - 60 天物理清理：单语句分页（`WITH candidates AS MATERIALIZED … DELETE FROM cycles`）有界删除；运行角色执行（`TestPurgeDeletedRunsWithRuntimeRole`）。
-- 守卫与夹具同步扩展：`project_deletion_test`、`workspace_deletion_test`、`purge_late_deletion_test` 以 SQL 种入 `cycles` 行并核软删（夹具允许 SQL）；`parentAsyncTable` 与 `waitProjectDeletion`/`waitWorkspaceDeletion` 认得 `planning.delete_rows`；`purge_runtime_test` 的模块组加 `{"planning", {"cycles"}}` 与夹具中的一行迭代；`purge_catalog_test` 与 `purge_indexes_test` 的表数；`purgeScaleTables` 以接口建迭代并等待 `planning.delete_rows`。P1 以 `NERVE_PURGE_SCALE=1` 跑一次 `TestPurgeScale` 证明追踪器认得新语句，P8 在最终代码上重跑。
+- 守卫与夹具同步扩展：`project_deletion_test`、`workspace_deletion_test`、`purge_late_deletion_test` 以 SQL 种入 `cycles` 行并核软删（夹具允许 SQL）；`parentAsyncTable` 与 `waitProjectDeletion`/`waitWorkspaceDeletion` 认得 `planning.delete_rows`；`purge_runtime_test` 的模块组加 `{"planning", {"cycles"}}` 与夹具中的一行迭代；`purge_catalog_test` 与 `purge_indexes_test` 的表数；`purgeScaleTables` 加 `cycles`，规模夹具以 SQL 种迭代（建立接口在 T7 才有）并等待 `planning.delete_rows`。P1 以 `NERVE_PURGE_SCALE=1` 跑一次 `TestPurgeScale` 证明追踪器认得新语句，P8 在最终代码上重跑。
 
 ## 3. 局部裁定
 
@@ -95,14 +95,14 @@
 
 ## 4. 验收标准
 
-- [ ] A1 G1：只有名字成草稿；日期同空同有、顺序；重叠（含已归档、边界同日即相交）409；两次并发建立重叠的迭代只有一次成功（交错测试，无 `40P01`）。
-- [ ] A2 G2：四种状态在非 UTC 项目时区的日界前后推算正确（固定业务时钟，含跨日）。
-- [ ] A3 G3：改名、改说明、改日期（含重叠、排除自身）、改排序；空改动不写入；已结束只能改排序；已归档 409；删除只限管理员或建立者。
-- [ ] A4 G8：只有已结束的能归档；重复归档与恢复 200 不写入；归档目录与默认列表互斥且顺序正确。
-- [ ] A5 G18 与权限：开关关闭时写 409、读 200；矩阵（管理员、成员、建立者、访客、OwnOnly、非成员、私有项目）与 `permission_matrix_coverage_test` 一致；看不到的一律 404；每个声明的错误码在 planning 的 apitest 二进制里有回答。
-- [ ] A6 删除：项目、工作区删除后迭代立即不可读，任务以原 At/By 软删并续跑；60 天清理有界、运行角色可执行、`TestPurgeScale` 认得新语句；删除与清理的全部守卫覆盖 `cycles`。
-- [ ] A7 phase 为 `M6/P1`，`analytics` 例外与旧调用路径删除；新错误码有中英文案；输入交接写“处理结果（M6/P1）”。
-- [ ] A8 七项本地门禁、deep-review 修复闭环、准确分支 CI 与 noff 后 main CI 全绿、归档清理。
+- [x] A1 G1：只有名字成草稿；日期同空同有、顺序；重叠（含已归档、边界同日即相交）409；两次并发建立重叠的迭代只有一次成功（交错测试，无 `40P01`）。
+- [x] A2 G2：四种状态在非 UTC 项目时区的日界前后推算正确（固定业务时钟，含跨日）。
+- [x] A3 G3：改名、改说明、改日期（含重叠、排除自身）、改排序；空改动不写入；已结束只能改排序；已归档 409；删除只限管理员或建立者。
+- [x] A4 G8：只有已结束的能归档；重复归档与恢复 200 不写入；归档目录与默认列表互斥且顺序正确。
+- [x] A5 G18 与权限：开关关闭时写 409、读 200；矩阵（管理员、成员、建立者、访客、OwnOnly、非成员、私有项目）与 `permission_matrix_coverage_test` 一致；看不到的一律 404；每个声明的错误码在 planning 的 apitest 二进制里有回答。
+- [x] A6 删除：项目、工作区删除后迭代立即不可读，任务以原 At/By 软删并续跑；60 天清理有界、运行角色可执行、`TestPurgeScale` 认得新语句；删除与清理的全部守卫覆盖 `cycles`。
+- [x] A7 phase 为 `M6/P1`，`analytics` 例外与旧调用路径删除；新错误码有中英文案；输入交接写“处理结果（M6/P1）”。
+- [ ] A8 七项本地门禁、deep-review 修复闭环、准确分支 CI 与 noff 后 main CI 全绿、归档清理。（本地门禁与修复闭环已完成；CI 与归档清理见阶段记录 §7，合入后勾选）
 
 ## 5. 后续责任
 

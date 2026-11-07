@@ -21,3 +21,7 @@ M6 合并时：进度接口只提供按状态组的计数，没有点数字段�
 逐项的结论写进该 M 的 review，然后 `status` 改为 `closed`。
 
 来源：[M1/P2 评审记录](../../M1-frontend-trim/reviews/P2-trim-content-review.md)第 7 节。
+
+## 处理结果（M6/P1）
+
+进入 M6/P1 时关键词守卫的 `phase` 改为 `M6/P1`，`analytics` 规则对 `core/services/cycle.service.ts` 及其测试的两条例外（`until: "M6"`）随之到期，已删除；同一提交删去指向 Nerve 没有的旧地址 `…/cycles/{id}/analytics?type=issues` 的 `CycleService.cycleDistribution`、`CycleStore.fetchActiveCycleDistribution` 和进行中迭代卡片对它的调用。`calculateCycleProgress` 与它的测试保留。只按状态组计数、没有点数字段的进度接口在 M6/P4，进行中迭代卡片的分布与燃尽由 M6/P5 依新接口重建，本交接保持 open。证据：[P1 spec](../specs/P1-cycles-backend.md) A7。

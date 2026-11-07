@@ -13,6 +13,7 @@ import (
 	issuepg "github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/postgres"
 	issueriver "github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/river"
 	issueapp "github.com/open-nerve/NerveProject/server/internal/modules/issue/app"
+	"github.com/open-nerve/NerveProject/server/internal/modules/planning"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project"
 	"github.com/open-nerve/NerveProject/server/internal/platform/config"
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apitest"
@@ -110,11 +111,11 @@ func newDeletionLifecycle(t *testing.T, configure func(*config.Config), runtimeN
 	store := issuepg.New(a.pool)
 	uc := issueapp.NewDeleteRows(issueapp.DeleteRowsDeps{Rows: store, Relations: issueapp.NewRelationDeletions(store, issueProjects{projects: project.Provide(a.pool, nil).IssueProjects}), Remaining: store, Tx: tx, RuntimeNow: runtimeNow, Batch: cfg.Issue.DeleteBatch, Budget: cfg.Issue.DeleteBudget})
 	execution := &deletionExecution{DeleteRowsUseCase: uc}
-	definitions := []jobs.Job{issueriver.DeleteRowsJob(execution, cfg.Issue.DeleteBudget, logger), assetDeletionJobForTest(a.pool, cfg)}
+	definitions := append([]jobs.Job{issueriver.DeleteRowsJob(execution, cfg.Issue.DeleteBudget, logger), assetDeletionJobForTest(a.pool, cfg)}, planningDeletionJobsForTest(a.pool, cfg)...)
 	if extra != nil {
 		definitions = append(definitions, extra(a.pool)...)
 	}
-	runner, err := jobs.New(a.pool, jobs.Config{ShutdownTimeout: cfg.Jobs.ShutdownTimeout, Logger: logger, DefaultWorkers: cfg.Jobs.DefaultWorkers, PeriodicWorkers: cfg.Jobs.PeriodicWorkers}, definitions, []string{issueriver.DeleteRowsKind, "asset.delete_scope"})
+	runner, err := jobs.New(a.pool, jobs.Config{ShutdownTimeout: cfg.Jobs.ShutdownTimeout, Logger: logger, DefaultWorkers: cfg.Jobs.DefaultWorkers, PeriodicWorkers: cfg.Jobs.PeriodicWorkers}, definitions, append([]string{issueriver.DeleteRowsKind, "asset.delete_scope"}, planning.EnqueuedKinds()...))
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -40,7 +40,7 @@
 
 ## Task 2（T2）：首张表、模块骨架、动作与表级守卫
 
-**Files：** `server/migrations/sql/00039_planning_cycles.sql`；`server/sqlc.yaml`；`deploy/runtime-grants.sql`；`server/migrations/planning_schema_test.go`、`purge_indexes_test.go`；`server/internal/modules/planning/{module.go,domain/actions.go}`；`access/domain/rules.go` 与 `rules_test.go`；`bootstrap/{app.go,actions_test.go}`；`purge_catalog_test.go`。
+**Files：** `server/migrations/sql/00039_planning_cycles.sql`；`deploy/runtime-grants.sql`；`server/migrations/planning_schema_test.go`、`purge_indexes_test.go`、`schema_test.go`、`trigram_schema_test.go`（迁移总数与表清单）；`server/internal/modules/planning/{module.go,domain/actions.go}`；`access/domain/rules.go` 与 `rules_test.go`；`bootstrap/{app.go,actions_test.go}`；`purge_catalog_test.go`。
 
 - [ ] Step 1：先改守卫（RED）：`planning_schema_test` 的约束/索引名、两处硬编码表数、`rules_test` 的三个动作、运行角色授权覆盖。
 - [ ] Step 2：迁移（含 Down 与 spec §2.2 的全部约束、索引）、sqlc 条目（`date` 覆盖）、运行角色授权、模块骨架与 `Actions()`、`cycle.read/write/delete` 规则；`TestMigrationsGoUpDownAndUpAgain`、`TestConstraintAndIndexNames`、`TestTheGrantsFileCoversEveryRelationAndFunction`、`TestEveryActionHasARuleAndEveryRuleAnAction` 通过。
@@ -48,7 +48,7 @@
 
 ## Task 3（T3）：删除任务、物理清理与删除守卫
 
-**Files：** `planning/app/{delete_rows.go,delete_rows_on_deletion.go,purge.go}`、`planning/adapter/river/`、`planning/{module_events.go,module_jobs.go,module_purge.go}`；`platform/config/`（`planning.delete_batch`/`delete_budget` 与校验）与四份配置文件；`bootstrap/{app.go,purge_ports.go}`；`project_deletion_test.go`、`workspace_deletion_test.go`、`purge_late_deletion_test.go`、`issue_project_deletion_jobs_test.go`（`parentAsyncTable`、两个 wait 助手）、`purge_runtime_test.go`、`purge_scale_fixture_test.go`。
+**Files：** `server/sqlc.yaml`（随第一条查询加入 planning 条目：sqlc 不接受没有查询目录的条目）；`planning/app/{delete_rows.go,delete_rows_on_deletion.go,purge.go}`、`planning/adapter/postgres/`、`planning/adapter/river/`、`planning/{module_events.go,module_jobs.go,module_purge.go}`；`platform/config/`（`planning.delete_batch`/`delete_budget` 与校验）与四份配置文件；`bootstrap/{app.go,purge_ports.go}`；`project_deletion_test.go`、`workspace_deletion_test.go`、`purge_late_deletion_test.go`、`issue_project_deletion_jobs_test.go`（`parentAsyncTable`、两个 wait 助手）、`purge_runtime_test.go`、`purge_scale_fixture_test.go`。
 
 - [ ] Step 1：守卫与夹具（RED）：父/邻项目各种一行迭代并核删除后软删、wait 助手认得 `planning.delete_rows`、运行角色清理组 `{"planning", {"cycles"}}`、规模夹具的迭代。
 - [ ] Step 2：订阅者 `planning_delete_rows_on_deletion`（发布者事务内投递，原 At/By）、worker（有界续跑、不取项目锁、可重试）、清理步骤（单语句分页）、清理顺序、`EnqueuedKinds`；单元测试：回滚不投递、原 At/By、续跑、邻项目不受影响、重试幂等。
@@ -63,9 +63,9 @@
 
 ## Task 5（T5）：项目端口
 
-**Files：** `project/adapter/postgres/queries/planning_ports.sql`、`planning_ports.go` 与测试；`project/module.go` 导出；`bootstrap/ports.go` 适配器；`planning/app/ports.go`。
+**Files：** `project/adapter/postgres/queries/planning_ports.sql`、`planning_ports.go` 与测试；`project/app/planning_ports.go`；`project/module.go` 导出；`planning/app/ports.go`（`bootstrap` 的适配器随 T6/T7 第一次接线加入）。
 
-- [ ] Step 1：测试（RED）：`Find`、`PlanningFacts` 不加锁且已删除项目 found=false；`LockPlanning` 的锁模式为 `FOR NO KEY UPDATE`（照 `lock_issue_projects_test.go`）。
+- [ ] Step 1：测试（RED）：`PlanningFacts` 不加锁且已删除项目 found=false；`LockPlanning` 的锁模式为 `FOR NO KEY UPDATE`（照 `lock_issue_projects_test.go`）。
 - [ ] Step 2：实现三法与消费方端口；变异：锁模式改 `FOR KEY SHARE` 时失败。提交。
 
 ## Task 6（T6）：加锁之路与拒绝次序

@@ -5,18 +5,10 @@
  */
 
 // services
-import type { CycleDateCheckData, ICycle, TCycleDistribution, TProgressSnapshot } from "@nerve/types";
+import type { CycleDateCheckData, ICycle, TProgressSnapshot } from "@nerve/types";
 import { APIService } from "@/services/api.service";
 
 export class CycleService extends APIService {
-  async cycleDistribution(workspaceSlug: string, projectId: string, cycleId: string): Promise<TCycleDistribution> {
-    return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/cycles/${cycleId}/analytics?type=issues`)
-      .then((res) => res?.data)
-      .catch((err) => {
-        throw err?.response?.data;
-      });
-  }
-
   async cycleProgress(workspaceSlug: string, projectId: string, cycleId: string): Promise<TProgressSnapshot> {
     return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/cycles/${cycleId}/progress/`)
       .then((res) => res?.data)

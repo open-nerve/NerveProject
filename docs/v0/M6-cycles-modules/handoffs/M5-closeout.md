@@ -75,3 +75,7 @@ M5 给工作项加入真实的 `attachment_count`、排序码与显示属性“�
 **M5 结束时的事实：** M5 仍没有投递任务的命令。CLI 的组合（`bootstrap/users.go`、`workspaces.go`、`commands.go`）只构造连接池与管理用例，不接事件发布者；`jobs.NewInserter` 唯一的非测试调用在 `bootstrap/app.go`（serve），由 `issueInserter` 与 `assetInserter` 包装。M5 新增的投递均在服务中：`asset.delete_scope` 由 `project.deleted`/`workspace.deleted` 的订阅者在发布者事务内投递。
 
 **何时验收：** 首个投递任务的 CLI 提交中完成，验收同上文原文；M6、M7、M8 谁先加入这样的命令，谁完成并在另两份交接中写明。
+
+## 处理结果（M6/P1）：M5-M6-03
+
+`planning` 的清理步骤属于它自己的 `Purger`，排在 issue 之后、project 之前，在 `files.cleanup_budget` 的同一预算内运行，单条语句有 `LIMIT` 批量，被取消的语句回滚并在下一次运行重做；`cycles` 加入 `purgeScaleTables`，`TestPurgeScale`（`NERVE_PURGE_SCALE=1`）认得它的两条分页语句、一次运行完成。`planning` 放到 project 之后的变异让 `TestPurgeDeletedRunsWithRuntimeRole` 失败。删除迭代不影响资产。关系表在 P3 加入；收尾前在 M6 代码上重跑 `TestPurgeScale` 与 `TestTheDeletionsAtTheScaleTarget`，本交接保持 open。证据：[P1 spec](../specs/P1-cycles-backend.md) 2.4、A6。

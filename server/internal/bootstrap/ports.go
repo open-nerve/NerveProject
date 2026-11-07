@@ -8,6 +8,7 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/access"
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue"
+	"github.com/open-nerve/NerveProject/server/internal/modules/planning"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project"
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
@@ -81,6 +82,22 @@ type accessProjects struct {
 func (a accessProjects) ProjectFacts(ctx context.Context, projectID, userID uuid.UUID) (access.ProjectFacts, bool, error) {
 	f, found, err := a.projects.ProjectFacts(ctx, projectID, userID)
 	return access.ProjectFacts(f), found, err
+}
+
+// planningProjects is project's PlanningProjects as planning's Projects:
+// the same read and lock, each value converted.
+type planningProjects struct {
+	projects project.PlanningProjects
+}
+
+func (p planningProjects) Facts(ctx context.Context, id uuid.UUID) (planning.ProjectFacts, bool, error) {
+	f, found, err := p.projects.PlanningFacts(ctx, id)
+	return planning.ProjectFacts(f), found, err
+}
+
+func (p planningProjects) Lock(ctx context.Context, id uuid.UUID) (planning.ProjectFacts, bool, error) {
+	f, found, err := p.projects.LockPlanning(ctx, id)
+	return planning.ProjectFacts(f), found, err
 }
 
 // issueProjects is project's IssueProjects as issue's ProjectPorts: the

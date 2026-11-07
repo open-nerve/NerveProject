@@ -109,7 +109,7 @@ M4列表专用三浏览器矩阵在当前 `make build` 之后运行 `pnpm --filt
 
 - **后台任务与自动归档（M4/P6–P9）**：`jobs.default_workers` 默认10、`jobs.periodic_workers` 默认2，均须为正整数。`issue.auto_archive_interval` 默认24小时、测试环境2秒，最小1秒；River的 `periodic` 队列运行会话清理、工作项自动归档、物理清理与描述版本保留，`default` 运行链接抓取与删除行任务。项目 `archive_in=0` 关闭自动归档，1–12按每月30天计；只归档完成/取消且 `updated_at` 到阈值的未归档工作项。系统活动和事件均无操作者。`clock.offset` 默认0，仅 `NERVE_ENV=test` 可设非零（可用 `NERVE_CLOCK__OFFSET` 覆盖），只影响业务时钟，不改变River调度、限速和等待期限；生产环境非零启动失败。配置及实测见 [P6 review](docs/v0/M4-issue-core/reviews/P6-issue-events-review.md)。
 
-- **后台删除与保留（M4/P9）**：以下六项支持同名环境覆盖；test的两个新周期间隔为2s，其他默认值与基础配置相同。启动会记录有效配置，非法值启动失败。
+- **后台删除与保留（M4/P9、M6/P1）**：以下八项支持同名环境覆盖；test的两个新周期间隔为2s，其他默认值与基础配置相同。启动会记录有效配置，非法值启动失败。
 
   | 配置 | 默认 | 环境变量 | 合法值 |
   |---|---|---|---|
@@ -119,12 +119,14 @@ M4列表专用三浏览器矩阵在当前 `make build` 之后运行 `pnpm --filt
   | `issue.trim_versions_interval` | `24h` | `NERVE_ISSUE__TRIM_VERSIONS_INTERVAL` | `≥1s` |
   | `issue.delete_batch` | `1000` | `NERVE_ISSUE__DELETE_BATCH` | `1..2147483647` |
   | `issue.delete_budget` | `45s` | `NERVE_ISSUE__DELETE_BUDGET` | `>0`且加5s不溢出 |
+  | `planning.delete_batch` | `1000` | `NERVE_PLANNING__DELETE_BATCH` | `1..2147483647` |
+  | `planning.delete_budget` | `45s` | `NERVE_PLANNING__DELETE_BUDGET` | `>0`且加5s不溢出 |
 
-  `cleanup.purge_deleted` 是一个无参周期任务，一次读取业务时钟固定截止点，依次调用issue→project→workspace→identity。每表按id键集分批、每批独立提交，只选择 `deleted_at < cutoff`；精确截止点和较新的直接候选保留。父行的CASCADE可带走仍活或较新的子行。不物理删除账户；会话仍由原会话清理任务负责。
+  `cleanup.purge_deleted` 是一个无参周期任务，一次读取业务时钟固定截止点，依次调用asset→issue→planning→project→workspace→identity。每表按id键集分批、每批独立提交，只选择 `deleted_at < cutoff`；精确截止点和较新的直接候选保留。父行的CASCADE可带走仍活或较新的子行。不物理删除账户；会话仍由原会话清理任务负责。
 
   `issue.trim_description_versions` 对每个未删除项目分别加N锁、开事务；已归档项目和工作项仍参与。只保留活工作项的活版本按 `last_saved_at DESC,id DESC` 排序的最新20条，不产生审计改写、动态或事件。软删版本由purge回收。
 
-  项目/工作区DELETE在原事务同步完成M3行，并投递 `issue.delete_rows`；每个本次删除项目一条project任务，工作区另投一条workspace_drafts任务（零项目也投，更早删除的项目不重归属）。提交后即使issue行尚未分批软删，相关API已不可见；204不表示后台任务全部完成。任务始终沿用原请求At/By。
+  项目/工作区DELETE在原事务同步完成M3行，并投递 `issue.delete_rows`；每个本次删除项目一条project任务，工作区另投一条workspace_drafts任务（零项目也投，更早删除的项目不重归属）。提交后即使issue行尚未分批软删，相关API已不可见；204不表示后台任务全部完成。任务始终沿用原请求At/By。同一事务里还为每个本次删除项目投递一条 `planning.delete_rows`（参数为项目id与原At/By），按 `planning.delete_batch` 分批软删该项目的迭代，不取项目锁，超出 `planning.delete_budget` 时由River续跑。
 
   删除预算采用monotonic运行时钟；还有候选时以 `JobSnooze(0)` 继续，不消耗真实失败attempt。worker超时为预算+5s，真实错误按River默认最多25次尝试；末次失败记录 `issue row deletion exhausted`。数据库阻塞不承诺必在额外5s内结束。任务失败/耗尽后窗口仍隐藏；超过保留期的父project/workspace物理清理可通过CASCADE回收子链，迟到任务无害。迟到软删与父purge恰好交叠允许原40P01交River重试收敛，不承诺全系统无死锁。
 

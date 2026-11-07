@@ -3,6 +3,7 @@ package bootstrap
 import (
 	"context"
 	"encoding/json"
+	"slices"
 	"testing"
 	"time"
 	"uuid"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/asset"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue"
+	"github.com/open-nerve/NerveProject/server/internal/modules/planning"
 	"github.com/open-nerve/NerveProject/server/internal/platform/jobs"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
@@ -23,7 +25,12 @@ func projectIssueTable(table string) bool {
 	return table == "draft_issues" || table == "issues" || table == "comment_reactions" || len(table) > 6 && table[:6] == "issue_"
 }
 
-func parentAsyncTable(table string) bool { return table == "file_assets" || projectIssueTable(table) }
+// The planning module's tables are deleted by its own planning.delete_rows job (M6 P1 spec 2.4).
+func projectPlanningTable(table string) bool { return table == "cycles" }
+
+func parentAsyncTable(table string) bool {
+	return table == "file_assets" || projectIssueTable(table) || projectPlanningTable(table)
+}
 
 type deletionJob struct {
 	ID     int64     `json:"-"`
@@ -91,6 +98,7 @@ func waitProjectDeletion(t *testing.T, pool *pgxpool.Pool, project uuid.UUID) {
 	t.Helper()
 	job := projectDeletionJob(t, pool, project)
 	waitDeletionJob(t, pool, job, "completed")
+	waitPlanningDeletion(t, pool, project)
 	waitAssetScopeDeletion(t, pool, "project", project)
 }
 
@@ -187,7 +195,7 @@ func projectDeletionPublisher(t *testing.T, pool *pgxpool.Pool, observers ...sha
 	if err != nil {
 		t.Fatal(err)
 	}
-	subscribers := append(issue.Subscribers(issue.Provide(pool, nil), issueInserter{client: client}), asset.Subscribers(asset.Provide(pool), assetInserter{client: client})...)
+	subscribers := slices.Concat(issue.Subscribers(issue.Provide(pool, nil), jobInserter{client: client}), planning.Subscribers(jobInserter{client: client}), asset.Subscribers(asset.Provide(pool), jobInserter{client: client}))
 	subscribers = append(subscribers, observers...)
 	d, err := newDispatcher(eventTypes(), subscribers)
 	if err != nil {
@@ -216,6 +224,7 @@ func waitWorkspaceDeletion(t *testing.T, pool *pgxpool.Pool, workspace uuid.UUID
 	projects := queryIDs(t, pool, "SELECT p.id FROM projects p JOIN workspaces w ON w.id=p.workspace_id WHERE w.id=$1 AND p.deleted_at=w.deleted_at ORDER BY p.id", workspace)
 	for _, project := range projects {
 		waitDeletionJob(t, pool, projectDeletionJob(t, pool, project), "completed")
+		waitPlanningDeletion(t, pool, project)
 	}
 	waitDeletionJob(t, pool, parentDeletionJob(t, pool, "workspace_drafts", workspace), "completed")
 	waitAssetScopeDeletion(t, pool, "workspace", workspace)

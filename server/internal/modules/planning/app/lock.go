@@ -1,0 +1,103 @@
+package app
+
+import (
+	"context"
+	"uuid"
+
+	"github.com/open-nerve/NerveProject/server/internal/modules/planning/domain"
+	"github.com/open-nerve/NerveProject/server/internal/shared"
+)
+
+// CycleReader reads the undeleted cycle id, archived or not, in the
+// transaction ctx carries; found is false when there is none.
+type CycleReader interface {
+	GetCycle(ctx context.Context, id uuid.UUID) (c domain.Cycle, found bool, err error)
+}
+
+// WriteGate is the projects' write gate (platform/gate), the one the work
+// items' writes enter too: Enter returns once a write on the project may
+// begin its transaction, with the function that leaves the gate, which the
+// write calls once its transaction has ended. It waits holding no
+// connection and no lock.
+type WriteGate interface {
+	Enter(ctx context.Context, projects ...uuid.UUID) (leave func(), err error)
+}
+
+// Locks is the one way a planning write takes its lock and its decision
+// (M6 design 6, as M4's for the work items). Before any lock and outside the
+// write's transaction, the precheck: the cycle the write names and its
+// project, or the project, read without a lock, and the decision on them,
+// which answers every refusal the lock would, so a refused caller takes no
+// lock nor a place in the write gate. Then the gate. Then, in the write's
+// transaction, the project's row FOR NO KEY UPDATE, the first lock of every
+// write on the project's work items, cycles and modules, so they run one
+// after another; the cycle read again under it; and the decision again,
+// which is final: what committed while the write waited is seen.
+type Locks struct {
+	projects Projects
+	cycles   CycleReader
+	auth     shared.Authorizer
+	gate     WriteGate
+	tx       shared.TxManager
+}
+
+// NewLocks returns the locks over project's facts and lock, the cycles'
+// reads, the Authorizer, the write gate and write transactions.
+func NewLocks(projects Projects, cycles CycleReader, auth shared.Authorizer, gate WriteGate, tx shared.TxManager) Locks {
+	return Locks{projects: projects, cycles: cycles, auth: auth, gate: gate, tx: tx}
+}
+
+// write is a planning write as Locks takes its lock: on the project project,
+// or on the cycle cycle, whose project it is then on; and the action it
+// decides.
+type write struct {
+	project uuid.UUID
+	cycle   *uuid.UUID
+	action  shared.Action
+}
+
+// run takes w's precheck, then its project's write gate, then in one
+// transaction its lock and decision, and runs fn in it with what they hold:
+// w's whole write. It leaves the gate once the transaction has ended, on
+// every path. A refusal of the precheck, the gate or the decision is its
+// answer, and fn does not run.
+func (l Locks) run(ctx context.Context, actor shared.Actor, w write, fn func(ctx context.Context, h held) error) error {
+	pre, err := l.decideOn(ctx, actor, w, uuid.UUID{}, l.projects.Facts)
+	if err != nil {
+		return err
+	}
+	leave, err := l.gate.Enter(ctx, pre.projectID)
+	if err != nil {
+		return err
+	}
+	defer leave()
+	return l.tx.WithinTx(ctx, func(ctx context.Context) error {
+		h, err := l.decideOn(ctx, actor, w, pre.projectID, l.projects.Lock)
+		if err != nil {
+			return err
+		}
+		return fn(ctx, h)
+	})
+}
+
+// decideOn reads what w is on and decides w's action on it for actor (M6 P1
+// spec R2), through facts: the project's facts without a lock for the
+// precheck, or its lock, in the transaction ctx carries (see). Then what a
+// write is refused and a read is not: an OwnOnly grant, which no planning
+// write takes (R6), is 403; then an archived project, then a project whose
+// cycles are turned off (R7), 409.
+func (l Locks) decideOn(ctx context.Context, actor shared.Actor, w write, locked uuid.UUID,
+	facts func(context.Context, uuid.UUID) (ProjectFacts, bool, error)) (held, error) {
+	h, err := see(ctx, l.cycles, l.auth, actor, w.action, w.project, w.cycle, locked, facts)
+	switch {
+	case err != nil:
+		return held{}, err
+	case h.grant.OwnOnly:
+		return held{}, shared.Forbidden()
+	case h.project.Archived:
+		return held{}, domain.ErrProjectArchived
+	case !h.project.CycleView:
+		return held{}, domain.ErrCyclesDisabled
+	}
+	return h, nil
+}

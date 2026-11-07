@@ -25,6 +25,7 @@ func TestProjectDeletionPublishesAndEnqueuesAtomically(t *testing.T) {
 	}
 	holder := holdProjectDeletion(t, pool, web)
 	assetHolder := holdAssetScopeDeletion(t, pool, web)
+	planningHolder := holdPlanningDeletion(t, pool, web)
 	var received []shared.Event
 	events := projectDeletionPublisher(t, pool, shared.EventSubscriber{Name: "observe project transaction", Types: []string{"project.deleted"}, Handle: func(ctx context.Context, e shared.Event) error {
 		received = append(received, e)
@@ -90,6 +91,7 @@ func TestProjectDeletionPublishesAndEnqueuesAtomically(t *testing.T) {
 	deletionWorkerBlocked(t, pool, holder, job, "draft_issues")
 	requestRelease(t, holder)
 	requestRelease(t, assetHolder)
+	requestRelease(t, planningHolder)
 	waitProjectDeletion(t, pool, web)
 	for _, k := range keys {
 		assertProjectDeletionStamp(t, pool, k, recorded[k.String()], web, aliceID)

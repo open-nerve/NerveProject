@@ -17,6 +17,7 @@ import (
 	assetdomain "github.com/open-nerve/NerveProject/server/internal/modules/asset/domain"
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue"
+	"github.com/open-nerve/NerveProject/server/internal/modules/planning"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project"
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace"
 	"github.com/open-nerve/NerveProject/server/internal/platform/config"
@@ -126,6 +127,7 @@ func imagePurgeModules(pool *pgxpool.Pool) []purgeModule {
 	return []purgeModule{
 		{"asset", forAssetPurge(asset.NewPurger(asset.Provide(pool), providedImageReferences(pool), postgres.NewTxManager(pool, time.Second)))},
 		{"issue", forIssuePurge(issue.Provide(pool, protectedAssetReferences()).Purger)},
+		{"planning", forPlanningPurge(planning.Provide(pool).Purger)},
 		{"project", forProjectPurge(project.Provide(pool, protectedAssetReferences()).Purger)},
 		{"workspace", forWorkspacePurge(workspace.Provide(pool, protectedAssetReferences()).Purger)},
 		{"identity", forIdentityPurge(identity.Provide(pool).Purger)},

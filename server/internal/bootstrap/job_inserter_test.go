@@ -46,7 +46,7 @@ func TestInserterCommitRollback(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			inserter := issueInserter{client: client}
+			inserter := jobInserter{client: client}
 			sentinel := errors.New("rollback probe")
 			var wantErr error
 			if scenario != "commit" {
@@ -111,7 +111,7 @@ func assertInserterRows(t *testing.T, ctx context.Context, observer *pgx.Conn, w
 // A lost transaction must fail before touching even the jobs client, and
 // callers must recognize this programming error through wrapping.
 func TestInserterRequiresTransaction(t *testing.T) {
-	err := (issueInserter{}).InsertTx(context.Background(), inserterProbeArgs{}, nil)
+	err := (jobInserter{}).InsertTx(context.Background(), inserterProbeArgs{}, nil)
 	if !errors.Is(fmt.Errorf("publish: %w", err), errInserterRequiresTransaction) {
 		t.Fatalf("InsertTx without transaction = %v, want recognizable transaction-required error", err)
 	}

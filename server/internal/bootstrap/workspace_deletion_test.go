@@ -209,8 +209,8 @@ func seedWorkspace(t *testing.T, contract *apitest.Contract, base string, pool *
 // seedProject writes a project of the workspace id named name, its
 // identifier the name in upper case, created by admin, with member as its
 // admin, his display settings in it, one state, a label with its child and
-// a work item with a row of each table under it, by member (seedLabels,
-// seedIssues), directly: the seed does not depend on which of the project
+// two cycles and a work item with a row of each table under it, by member
+// (seedLabels, seedCycles, seedIssues), directly: the seed does not depend on which of the project
 // module's writes exist, nor on what they write besides. member, a project
 // admin who is a member of the workspace (PA in M3 design 9.2), may write
 // the project's labels. No row under the project is the last writing of
@@ -237,6 +237,7 @@ func seedProject(t *testing.T, pool *pgxpool.Pool, id, admin, member uuid.UUID, 
 		}
 	}
 	seedLabels(t, pool, project, member)
+	seedCycles(t, pool, project, member)
 	seedIssues(t, pool, project, member)
 }
 

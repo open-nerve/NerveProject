@@ -63,3 +63,7 @@ M4 原创建表单的 `ISSUE_FORM` 已无读者，本期删除其枚举、独占
 最后删除条件：M6/M7 迁移上述表单与两处归档弹窗 `tabIndex={1}` 到自然 Tab 顺序，并完成各自弹窗/portal/回焦回归；全仓确认 `getTabIndex`、枚举/映射及各共享控件的属性读者都迁完后，最后迁移者删除两份 `tab-indices.ts` 和 barrel。共享菜单的非正索引用途须独立核实保留，不以 M4 零正索引等同全部焦点属性可删。未改未来领域键盘顺序、接口或顶部 open 状态。
 
 证据：[P16 review §9](../../M4-issue-core/reviews/P16-web-cleanup-review.md#9-t1-焦点索引与实施入口)、本期 `t1-focus-inventory.json`（逐调用、直接属性、M01 静态输入反例）。
+
+## 处理结果（M6/P1）：第 2 节
+
+4.12 的图已在 M6 设计 §4.3 延伸。P1 落地其中的 `cycles`：`workspace_id`、`project_id` 两条 `CASCADE` 父外键各有不带条件的索引；删项目、删工作区时 `planning` 订阅 `project.deleted`、`workspace.deleted`，在原事务投递 `planning.delete_rows`（沿用请求的 At/By），父范围立即隐藏；60 天物理清理加入 `planning` 的步骤（asset → issue → planning → project → workspace → identity）。模块的表在 P2、关联表在 P3；`core/sidebar/progress-stats/` 的 8 行死成员属前端，结论在 M6/P5 的评审。本交接保持 open。证据：[P1 spec](../specs/P1-cycles-backend.md) 2.4。

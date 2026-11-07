@@ -18,7 +18,7 @@ const useCyclesDetails = (props: IActiveCycleDetails) => {
   // props
   const { workspaceSlug, projectId, cycleId } = props;
   // store hooks
-  const { fetchActiveCycleProgress, getCycleById, fetchActiveCycleDistribution } = useCycle();
+  const { fetchActiveCycleProgress, getCycleById } = useCycle();
   // derived values
   const cycle = cycleId ? getCycleById(cycleId) : null;
 
@@ -26,14 +26,6 @@ const useCyclesDetails = (props: IActiveCycleDetails) => {
     workspaceSlug && projectId && cycle?.id ? `PROJECT_ACTIVE_CYCLE_${projectId}_PROGRESS_${cycle.id}` : null,
     workspaceSlug && projectId && cycle?.id ? () => fetchActiveCycleProgress(workspaceSlug, projectId, cycle.id) : null,
     { revalidateIfStale: false, revalidateOnFocus: false }
-  );
-  useSWR(
-    workspaceSlug && projectId && cycle?.id && !cycle?.distribution
-      ? `PROJECT_ACTIVE_CYCLE_${projectId}_DURATION_${cycle.id}`
-      : null,
-    workspaceSlug && projectId && cycle?.id && !cycle?.distribution
-      ? () => fetchActiveCycleDistribution(workspaceSlug, projectId, cycle.id)
-      : null
   );
   return {
     cycle,

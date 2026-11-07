@@ -117,6 +117,11 @@ issue:
   # 这些写的事务等每一把锁的上限（lock_timeout）；到期 503 server_busy。加上 write_gate.max_wait 必须短于 server.request_timeout
   write_lock_timeout: 5s
 
+# 迭代与模块的维护（M6 P1 spec 2.4）：已删除项目的迭代按批软删，每批一个事务，每次运行至多 delete_budget 后由 River 稍后续跑
+planning:
+  delete_batch: 1000
+  delete_budget: 45s
+
 files:
   # 运行时期限，不使用业务时间偏移。测试覆盖可显式缩短，默认不变
   upload_ttl: 15m           # 10s–15m，新上传授权；实际 expires_at 持久化，API 提交成功后返回

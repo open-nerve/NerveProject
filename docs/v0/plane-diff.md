@@ -221,6 +221,9 @@ Plane 共有 96 张业务表（`db` 应用 92 张，`license` 应用 4 张）。
 | `issue_links.updated_at` | 保留非空timestamptz，新增now()默认 | 抓取不推进审计 |
 | `issue_links.deleted_at` | 保留nullable timestamptz | 活行排重/任务写回均检查NULL |
 | `issue_links`约束/授权 | 新增内置hash exclusion `((issue_id::text \|\| ':' \|\| url) WITH =) WHERE deleted_at IS NULL`，约束名`issue_links_issue_id_url_key`；只有该名+23P01映射409 | 原文相等recheck允许真实hash碰撞共存；不加extension/散列列；sqlc与runtime-grants纳入此表的四DML |
+| `cycles` | 22 列保留 15 列（M6/P1，`00039_planning_cycles.sql`）：删除 `view_props`、`logo_props`、`timezone`、`version`、`external_source`、`external_id`、`progress_snapshot`（`progress_snapshot` 在 M6/P4 随冻结加回） | 没有读者，时区用项目的（M6 P1 spec 2.2） |
+| `cycles` | `start_date`、`end_date`：由 `timestamptz` 改为 `date`，新加 `cycles_dates_check`（两者同空同有、开始不晚于结束）；`description`：改为 `NOT NULL DEFAULT ''`（Plane 可空）；`name`：新加 `CHECK (name <> '')`；`owned_by_id`：改为可空、`ON DELETE SET NULL`（Plane 非空、`CASCADE`）；`workspace_id`、`project_id`：加上 `ON DELETE CASCADE`；`created_by_id`、`updated_by_id`：加上 `ON DELETE SET NULL`；`sort_order`：新加 `DEFAULT 65535`；`created_at`、`updated_at`：新加 `DEFAULT now()`（兜底，见二·全局） | 日期是项目时区的日历日：Plane 存时刻，把开始规整为当地 00:00:01（当天创建时为"现在"）、结束为 23:59，状态判断又不用项目时区（M6 设计 3.1）；负责人同 M3 对项目负责人的改法；二·全局（模型的 `on_delete`） |
+| `cycles` | 索引：不带条件的 `cycles_workspace_id_idx`、`cycles_project_id_idx`；活行列表 `cycles_project_list_idx ON (project_id, sort_order, created_at, id) WHERE deleted_at IS NULL`；清理用 `cycles_deleted_at_idx ON (deleted_at) WHERE deleted_at IS NOT NULL`；指向 `users` 的 `SET NULL` 外键照 `projects.project_lead_id` 不建索引 | 物理级联；列表的顺序；60 天清理（M6 P1 spec 2.2） |
 | `cycle_issues` | **新增**部分唯一约束 `(issue_id)`：一个工作项最多属于一个迭代 | Plane 只在代码里检查 |
 | `modules` | 删除旧的 `description_text`、`description_html` | 遗留列 |
 | `*_user_properties`、`issue_views` | 删除旧的 `filters` 列；筛选条件按 Nerve 自己的格式存储（列名与格式在 M3/M4 确定）；`issue_views` 删除 `query` 列 | 筛选格式改变（见接口差异） |
@@ -250,6 +253,7 @@ Nerve 不兼容 Plane 的 `/api/`、`/auth/`、`/api/v1/`、`/api/public/`、`/a
 | 关联字段 | 名字不带 `_id`（`workspace`、`member`、`project_lead`），有的内嵌对象 | 只给 id，名字带 `_id`（`WorkspaceMember.workspace_id`）；例外有两个：工作区成员内嵌成员的公开资料 `member`（`MemberUser`，v0-design 3.6；M3 设计 5.2），关联内嵌对方工作项的列表行 `issue`（`IssueRelation.issue`，M4/P3；M4 设计 3.10） |
 | 工作区的显示设置的路径 | `/api/workspaces/{slug}/user-properties/`（与工作项的筛选合在一起） | `GET`、`PATCH /api/v0/me/workspaces/{slug}/preferences`，只有项目导航的两项（M3 设计 3.18）；没有 `/sidebar-preferences/` |
 | 迭代和模块归属 | 通过单独的接口设置 | 作为工作项字段，用 PATCH 修改 |
+| 迭代的接口（M6/P1） | `.../projects/{pid}/cycles/` 增删改查；归档目录另是 `archived-cycles/`；归档 `POST cycles/{id}/archive` 答 `{archived_at}`，恢复是同一路径的 `DELETE`、答 204；前端先调 `POST cycles/date-check/` 查日期重叠；列表带进度、负责人、收藏等派生字段 | `GET`、`POST /api/v0/projects/{project_id}/cycles`，`?archived=true` 是归档目录；`GET`、`PATCH`、`DELETE /api/v0/cycles/{cycle_id}`；`POST /api/v0/cycles/{cycle_id}/archive`、`/unarchive` 都答 `Cycle`；没有 `date-check`；`Cycle` 带服务端推算的 `status`，进度在 M6/P4 |
 | 错误 | `{"error": "..."}`、DRF 字段错误、认证错误码三种格式混用 | 统一使用 RFC 9457 |
 | 无权限 | 403 | 看不到的资源返回 404，看得到但没权限返回 403 |
 | 错误码 | 接口描述中没有 | 每个操作在接口描述中用 `x-problem-codes` 声明它可能返回的错误码；字段错误带 `code`（M2 设计 3.11） |
@@ -322,6 +326,12 @@ M4/P6 已实现的差异以 [P6 review](M4-issue-core/reviews/P6-issue-events-re
 | 访客删除自己建的工作项 | 服务端允许，页面不显示 | 403 `forbidden`（工作区管理员是项目的有效成员时不论项目角色都通过项目的每条规则，总体设计 6.5 的约定；所以只是项目访客的工作区管理员删得了自己建的，204，不是凭 `AllowCreator`）（M4 设计 3.4） |
 | 已归档的工作项 | 只挡修改；评论、链接、表情、关联不挡；能成为父工作项 | 修改 409 `issue.archived`，什么都没改的修改也是；恢复、删除照常；在已归档的项目里先答 409 `project.archived`；往它下面加子工作项、从它加关联、删除它的关联（任一端已归档）409 `issue.archived`；不能被改成别的工作项的父工作项、被加到别的工作项下面、成为关联的对方（422 `not_allowed`）；已归档的子工作项、对方不在子工作项和关联的列表、`sub_issues_count` 里，恢复之后重新出现（M4/P3）（M4 设计 3.8、3.9、3.10；评论/表情P4及链接P7的写已接归档只读，页面仍按各自Phase） |
 | 工作项的归档、恢复 | 归档答 `{archived_at}`，恢复 204；再归档、恢复没归档的 404；状态不在"已完成""已取消"组时 400 | 都答 `IssueDetail`；已归档的再归档、未归档的再恢复不写、200；状态不在"已完成""已取消"组时 409 `issue.not_archivable`；各写一条动态（`archived_at` 的 `manual_archive`、`restore`），动态的 `comment` 不同（M4 设计 3.8、3.13） |
+| 迭代的日期与状态（M6/P1） | 存时刻；状态按"现在"与开始、结束时刻比较，项目时区的换算不起作用；两个日期同空同有只在创建时检查 | 存项目时区的日历日，两者同空同有、开始不晚于结束，创建与修改都检查（修改时与原值合并后检查，问题报在给出的那个日期上）；状态（`draft`、`upcoming`、`current`、`completed`）不入库，每次读时按项目时区的今天推算，改项目时区即改状态（M6 设计 3.1） |
+| 迭代的日期重叠（M6/P1） | 只有前端先调的 `date-check`（含已归档的），创建与修改都不检查 | 删除 `date-check`；创建与改日期时，与本项目其他未删除的迭代（含已归档的）的闭区间相交即 409 `planning.cycle_dates_overlap`，同一天也算相交，修改时排除自己；判断在项目行的锁下，两次并发写入只有一次成功（M6 设计 3.1、6） |
+| 修改迭代（M6/P1） | 已结束的本意只能改排序，但代码把整个请求体写入；已归档的不能改 | 已结束的（按项目时区）只能改 `sort_order`，给了其他字段即使值相同也 409 `planning.cycle_completed`；已归档的任何修改，空修改也算，409 `planning.archived`；值都没变时不写、答所读（M6 P1 spec R4、R5） |
+| 迭代的归档、恢复（M6/P1） | 结束时刻已过才能归档，否则 400；再归档会重写 `archived_at`；恢复不看状态、答 204 | 按项目时区已结束才能归档，否则 409 `planning.cycle_not_completed`；已归档的再归档、未归档的再恢复不写、200；都答 `Cycle`；归档时移除收藏随 M7（M6 P1 spec R3） |
+| 删除迭代（M6/P1） | 项目管理员或创建者；连带软删迭代的工作项归属与个人设置，写一条动态 | 项目管理员或创建者，不看状态与归档；软删，删除时刻即最后修改时刻；工作项归属、`planning.cycle_deleted` 事件在 M6/P3 |
+| 迭代的开关（M6/P1） | 应用接口不看 `cycle_view`，只有公共接口在建、改时看 | 关闭时写 409 `planning.cycles_disabled`、读照常，再打开数据都在；已归档的项目写 409 `project.archived`、读照常（M6 设计 3.6） |
 | 按编号取工作项 | 格式不对 400，不是成员 403 | `GET /api/v0/workspaces/{slug}/issues/{identifier}`：不是工作区的有效成员 404 `workspace.not_found`；之后格式不对、项目或编号不存在、看不到、访客规则都是同一个 404 `issue.not_found`；看得到项目而不是它的有效成员的（工作区管理员；项目公开时，工作区成员）403 `forbidden`，与取工作项相同；标识经同一个折叠比较（`identifier-fold.json`，`i`、`ı`、`I`、`İ` 一样）（M4 设计 3.7） |
 | 删除工作项 | 动态保留，另写一条"已删除"的动态；确认框不提子工作项 | 工作项及各层子工作项连同负责人、标签、双方向关联、链接、关注、提及、动态、评论/两层表情和描述版本按原事务审计软删；已软删行不覆戳，关系先锁后判另一端项目删除归属。不写"已删除"动态；物理清理时活动/评论子链采用CASCADE，不沿用DO_NOTHING阻挡说法。完整issue侧13表目录见P9 spec；子树确认框已由P14接通并集成 |
 | 父工作项 | 不检查自己、不检查成环 | 父工作项要是同一个项目里调用者看得到、未归档的工作项，不是它自己、不是它下面的：创建、修改的 `parent_id` 不是这样的工作项（不存在、已删除的也是）422 `parent_id` `not_allowed`；加子工作项的父工作项是路径里的工作项，调用者看不到它（不存在、已删除的也是）404 `issue.not_found`，它的项目已归档 409 `project.archived`，它已归档 409 `issue.archived`，放进去的每一个不是同一个项目里调用者看得到、未归档的工作项（不存在、已删除的也是），或是父工作项自己、它上面的，各在它的位置 422 `sub_issue_ids[i]` `not_allowed`，一次答全部；同一个项目里改父工作项的写在项目的 N 之下一个接一个，两个并发的移动不会合起来成环（M4 设计 3.9） |

@@ -35,6 +35,10 @@ issue:
   delete_budget: 45s
   auto_archive_interval: 2s
 
+planning:
+  delete_batch: 1000
+  delete_budget: 45s
+
 # 只放行本地抓取 fixture 的单一 IPv4 地址，不放行整个 127/8。
 outbound:
   allow_cidrs: [127.0.0.1/32]

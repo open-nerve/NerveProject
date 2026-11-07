@@ -88,7 +88,6 @@ it("preserves_domain_loading_without_issue_lists: the real cycle sidebar dedupli
   const pending = new Promise<never>(() => {});
   const fetch = vi.spyOn(service, "getCycleDetails").mockReturnValue(pending);
   const progress = vi.spyOn(service, "cycleProgress").mockReturnValue(pending);
-  const distribution = vi.spyOn(service, "cycleDistribution").mockReturnValue(pending);
   const issues = vi.spyOn(IssueListService.prototype, "listProject");
   const params = { workspaceSlug: "ws", projectId: "project", cycleId: "present" };
   await act(async () =>
@@ -103,7 +102,6 @@ it("preserves_domain_loading_without_issue_lists: the real cycle sidebar dedupli
   );
   expect(fetch).toHaveBeenCalledOnce();
   expect(progress).toHaveBeenCalledExactlyOnceWith("ws", "project", "present");
-  expect(distribution).toHaveBeenCalledExactlyOnceWith("ws", "project", "present");
   expect(issues).not.toHaveBeenCalled();
   expect(container.textContent).toContain("Spring cycle");
   expect(container.textContent).toContain("project_cycles.active_cycle.progress");

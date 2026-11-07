@@ -5,12 +5,8 @@ package bootstrap
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io/fs"
 	"log/slog"
-	"net"
-	"net/netip"
-	"os"
 	"slices"
 	"sync"
 	"time"
@@ -23,6 +19,7 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity"
 	"github.com/open-nerve/NerveProject/server/internal/modules/instance"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue"
+	"github.com/open-nerve/NerveProject/server/internal/modules/planning"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project"
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace"
 	"github.com/open-nerve/NerveProject/server/internal/platform/buildinfo"
@@ -139,6 +136,7 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 	workspacePorts := workspace.Provide(pool, protected)
 	projectPorts := project.Provide(pool, protected)
 	issuePorts := issue.Provide(pool, protected)
+	planningPorts := planning.Provide(pool)
 	imageBindings := asset.NewImageBindings(assetPorts, businessClock)
 	imageReader := asset.NewImageReader(assetPorts, assets.store, assets.runtimeNow)
 	assetPurger := asset.NewPurger(assetPorts, assetImageReferences{identityPorts.ImageReferences, workspacePorts.ImageReferences, projectPorts.ImageReferences}, tx)
@@ -146,18 +144,21 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 		WorkspaceRoles: workspacePorts.WorkspaceRoles,
 		ProjectAccess:  accessProjects{projects: projectPorts.ProjectAccess},
 	})
-	inserter, err := jobs.NewInserter(pool)
+	client, err := jobs.NewInserter(pool)
 	if err != nil {
 		a.close()
 		return nil, err
 	}
-	events, err := newDispatcher(eventTypes(), slices.Concat(issue.Subscribers(issuePorts, issueInserter{client: inserter}), asset.Subscribers(assetPorts, assetInserter{client: inserter})))
+	inserter := jobInserter{client: client}
+	events, err := newDispatcher(eventTypes(), slices.Concat(issue.Subscribers(issuePorts, inserter), planning.Subscribers(inserter), asset.Subscribers(assetPorts, inserter)))
 	if err != nil {
 		a.close()
 		return nil, err
 	}
 	projectWrites := newWriteGate(cfg.Issue.WriteGate)
 	issueTx := newIssueJobTx(pool, cfg)
+	// Each read-only snapshot transaction is its own (issue, planning and file reads).
+	readTx := postgres.NewTxManager(pool, cfg.Database.CommitTimeout, postgres.ReadOnlySnapshot())
 	attachmentReads := asset.NewAttachmentReads(assetPorts)
 	issueAttachmentReads := issueAttachments{reader: attachmentReads, counter: attachmentReads, catalog: attachmentReads}
 	issues := issue.New(issue.Deps{
@@ -169,12 +170,18 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 		Events: events,
 		Pool:   pool, Tx: busyTx{tx: issueTx}, JobTx: issueTx, ArchivePolicies: projectPorts.ArchivePolicies, AutoArchiveInterval: cfg.Issue.AutoArchiveInterval, TrimVersionsInterval: cfg.Issue.TrimVersionsInterval,
 		DeleteBatch: cfg.Issue.DeleteBatch, DeleteBudget: cfg.Issue.DeleteBudget, RuntimeNow: time.Now,
-		ReadTx:    postgres.NewTxManager(pool, cfg.Database.CommitTimeout, postgres.ReadOnlySnapshot()),
+		ReadTx:    readTx,
 		WriteGate: projectWrites, Clock: businessClock, Authorizer: authorizer,
 		Projects:   issueProjects{projects: projectPorts.IssueProjects},
 		Workspaces: issueWorkspaces{directory: workspacePorts.WorkspaceDirectory},
 		Members:    issueMembers{members: workspacePorts.WorkspaceMemberDirectory},
 		Profiles:   issueProfiles{profiles: identityPorts.PublicProfiles},
+	})
+	plans := planning.New(planning.Deps{
+		Pool: pool, Tx: busyTx{tx: issueTx}, ReadTx: readTx, JobTx: issueTx, RuntimeNow: time.Now, Logger: logger,
+		DeleteBatch: cfg.Planning.DeleteBatch, DeleteBudget: cfg.Planning.DeleteBudget,
+		WriteGate: projectWrites, Clock: businessClock, Authorizer: authorizer,
+		Projects: planningProjects{projects: projectPorts.PlanningProjects},
 	})
 	// project before workspace: workspace's writes take its cascade.
 	proj := project.New(project.Deps{
@@ -228,7 +235,7 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 	}
 	files, err := asset.New(asset.Deps{Events: events, Files: cfg.Files, RuntimeNow: assets.runtimeNow, Transfer: assets.transfer, Sealing: assets.sealing, Ports: assetPorts, Objects: assets.store, Inventory: assets.store, Temporary: assets.store, JobTx: tx,
 		PurgeAfter: cfg.Cleanup.PurgeAfter,
-		ReadTx:     postgres.NewTxManager(pool, cfg.Database.CommitTimeout, postgres.ReadOnlySnapshot()), UploadSigner: assets.store, ReadSigner: assets.store,
+		ReadTx:     readTx, UploadSigner: assets.store, ReadSigner: assets.store,
 		Parents: assetParentReader{workspaces: workspacePorts.AssetParents, projects: projectPorts.AssetParents, issues: issuePorts.AssetParents},
 		Access:  assetapp.AccessDeps{Hosts: assetHostAccess{workspaces: ws.AssetAccess(), projects: proj.AssetAccess(), issues: issues.AssetAccess()}, Workspaces: assetWorkspaceLocks{parents: workspacePorts.AssetParents}, Projects: assetProjectLocks{projects: projectPorts.IssueProjects}, Drafts: assetDraftLocks{parents: issuePorts.AssetParents}, Caller: identityPorts.CredentialLock, Gate: forAssetWrites(projectWrites), Tx: busyTx{tx: issueTx}, CredentialClock: businessClock, Clock: businessClock},
 	})
@@ -236,9 +243,9 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 		a.close()
 		return nil, err
 	}
-	purge := newPurgeDeleted([]purgeModule{{"asset", forAssetPurge(assetPurger)}, {"issue", forIssuePurge(issuePorts.Purger)}, {"project", forProjectPurge(projectPorts.Purger)}, {"workspace", forWorkspacePurge(workspacePorts.Purger)}, {"identity", forIdentityPurge(identityPorts.Purger)}}, businessClock, time.Now, cfg.Cleanup.PurgeAfter, cfg.Cleanup.PurgeBatch, cfg.Files.CleanupBudget)
-	definitions := append(slices.Concat(ident.Jobs(), issues.Jobs(), files.Jobs()), purgeJob(purge, cfg.Cleanup.PurgeInterval))
-	a.jobs, err = jobs.New(pool, jobs.Config{ShutdownTimeout: cfg.Jobs.ShutdownTimeout, Logger: logger, DefaultWorkers: cfg.Jobs.DefaultWorkers, PeriodicWorkers: cfg.Jobs.PeriodicWorkers}, definitions, slices.Concat(identity.EnqueuedKinds(), issue.EnqueuedKinds(), asset.EnqueuedKinds()))
+	purge := newPurgeDeleted([]purgeModule{{"asset", forAssetPurge(assetPurger)}, {"issue", forIssuePurge(issuePorts.Purger)}, {"planning", forPlanningPurge(planningPorts.Purger)}, {"project", forProjectPurge(projectPorts.Purger)}, {"workspace", forWorkspacePurge(workspacePorts.Purger)}, {"identity", forIdentityPurge(identityPorts.Purger)}}, businessClock, time.Now, cfg.Cleanup.PurgeAfter, cfg.Cleanup.PurgeBatch, cfg.Files.CleanupBudget)
+	definitions := append(slices.Concat(ident.Jobs(), issues.Jobs(), plans.Jobs(), files.Jobs()), purgeJob(purge, cfg.Cleanup.PurgeInterval))
+	a.jobs, err = jobs.New(pool, jobs.Config{ShutdownTimeout: cfg.Jobs.ShutdownTimeout, Logger: logger, DefaultWorkers: cfg.Jobs.DefaultWorkers, PeriodicWorkers: cfg.Jobs.PeriodicWorkers}, definitions, slices.Concat(identity.EnqueuedKinds(), issue.EnqueuedKinds(), planning.EnqueuedKinds(), asset.EnqueuedKinds()))
 	if err != nil {
 		a.close()
 		return nil, err
@@ -282,6 +289,7 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 	ws.Register(a.router, api)
 	proj.Register(a.router, api)
 	issues.Register(a.router, api)
+	plans.Register(a.router, api)
 	files.Register(a.router, api, bucket(limiter, "file_transfer", cfg.Files.TransferRate))
 	// The web UI takes every path no other pattern claims. It must be the
 	// method-less "/": "GET /" and the method-less "/api/" would conflict.
@@ -292,70 +300,6 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 	}
 	a.router.Handle("/", webHandler)
 	return a, nil
-}
-
-// readSigningKey returns the content of auth.jwt.private_key_file, or nil
-// when it is not set. Errors name the key, never the path (M0-P2 handoff 4).
-func readSigningKey(path string) ([]byte, error) {
-	if path == "" {
-		return nil, nil
-	}
-	data, err := os.ReadFile(path)
-	if err != nil {
-		var pathErr *fs.PathError
-		if errors.As(err, &pathErr) {
-			err = pathErr.Err
-		}
-		return nil, fmt.Errorf("auth.jwt.private_key_file: %w", err)
-	}
-	return data, nil
-}
-
-// invitationMAC is the invitation MAC the workspace module takes: keys'
-// MAC of workspace.InvitationMACPurpose (M3 design 3.8, 6.6), the one place
-// the composition names the purpose.
-func invitationMAC(keys *identity.Keys) (identity.MAC, error) {
-	return keys.MAC(workspace.InvitationMACPurpose)
-}
-
-// passwordHashing is auth.password as identity takes it.
-func passwordHashing(p config.PasswordConfig) identity.PasswordHashing {
-	return identity.PasswordHashing{
-		MemoryKiB:     p.Argon2MemoryKiB,
-		Iterations:    p.Argon2Iterations,
-		Parallelism:   p.Argon2Parallelism,
-		MaxConcurrent: p.MaxConcurrentHashes,
-		MaxWait:       p.MaxWait,
-	}
-}
-
-// bucket is the rate-limit bucket name on limiter, sized by c (M2 design
-// 3.10).
-func bucket(limiter *ratelimit.Limiter, name string, c config.BucketConfig) *ratelimit.Bucket {
-	return limiter.Bucket(name, ratelimit.Rate{PerMinute: c.PerMinute, Burst: c.Burst})
-}
-
-// warnIfExposed warns once when a non-prod nerve listens beyond loopback:
-// most likely a deployment without NERVE_ENV=prod (M2 design 6.1).
-func warnIfExposed(ctx context.Context, logger *slog.Logger, cfg config.Config) {
-	if cfg.Env == config.EnvProd || loopback(cfg.Server.Addr) {
-		return
-	}
-	logger.WarnContext(ctx, "not running as prod but listening beyond this machine: sign-up is open by default, "+
-		"and without auth.jwt.private_key_file the signing key is ephemeral; set NERVE_ENV=prod to deploy",
-		slog.String("env", cfg.Env), slog.String("addr", cfg.Server.Addr))
-}
-
-func loopback(addr string) bool {
-	host, _, err := net.SplitHostPort(addr)
-	if err != nil {
-		return false
-	}
-	if host == "localhost" {
-		return true
-	}
-	ip, err := netip.ParseAddr(host)
-	return err == nil && ip.IsLoopback()
 }
 
 // run applies pending migrations when database.auto_migrate is on, then

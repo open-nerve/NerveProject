@@ -149,7 +149,7 @@ func archiveDispatcher(t *testing.T, w issueWorld, received *[]shared.Event, fai
 			return fmt.Errorf("event before all activities: %d", pending)
 		}
 		*received = append(*received, e)
-		if err := (issueInserter{client: client}).InsertTx(ctx, issueEventProbeArgs{Event: e}, &river.InsertOpts{Queue: "issue_events"}); err != nil {
+		if err := (jobInserter{client: client}).InsertTx(ctx, issueEventProbeArgs{Event: e}, &river.InsertOpts{Queue: "issue_events"}); err != nil {
 			return err
 		}
 		return fail

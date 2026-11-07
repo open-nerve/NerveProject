@@ -15,6 +15,7 @@ import (
 
 	issuepg "github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/postgres"
 	issueapp "github.com/open-nerve/NerveProject/server/internal/modules/issue/app"
+	planningpg "github.com/open-nerve/NerveProject/server/internal/modules/planning/adapter/postgres"
 	projectpg "github.com/open-nerve/NerveProject/server/internal/modules/project/adapter/postgres"
 	workspacepg "github.com/open-nerve/NerveProject/server/internal/modules/workspace/adapter/postgres"
 	workspacedomain "github.com/open-nerve/NerveProject/server/internal/modules/workspace/domain"
@@ -217,7 +218,7 @@ func decodeAnswer(t *testing.T, answer string, v any) {
 // matrixRows are the rows, each module's from its file.
 func matrixRows() []matrixRow {
 	return slices.Concat(workspaceMatrixRows(), projectMatrixRows(), memberMatrixRows(), membershipMatrixRows(), stateMatrixRows(),
-		labelMatrixRows(), draftMatrixRows(), searchMatrixRows(), issueMatrixRows(), issueUpdateMatrixRows(), issueArchiveMatrixRows(), issueListMatrixRows(), memberIssueMatrixRows(), subIssueMatrixRows(), relationMatrixRows(), collaborationMatrixRows(), linkMatrixRows(), assetMatrixRows())
+		labelMatrixRows(), draftMatrixRows(), searchMatrixRows(), issueMatrixRows(), issueUpdateMatrixRows(), issueArchiveMatrixRows(), issueListMatrixRows(), memberIssueMatrixRows(), subIssueMatrixRows(), relationMatrixRows(), collaborationMatrixRows(), linkMatrixRows(), assetMatrixRows(), cycleMatrixRows())
 }
 
 // matrixApps is how many cells may run an app of their own at once: each
@@ -255,7 +256,9 @@ func (d matrixData) config(t *testing.T, url string, change func(*config.Config)
 // other's admin and removed member are there so that a role read in the
 // wrong workspace lets either into acme. Through the project store, the
 // projects, project memberships, states and labels of matrixProjects,
-// matrixProjectMembers, matrixStates and matrixLabels; through the issue
+// matrixProjectMembers, matrixStates and matrixLabels; through the project
+// store, each project's cycles turned on, and through the planning store,
+// the cycles of matrixCycles; through the issue
 // store, the work items of seededItems, once guestViewAll shows its guests
 // every one (issueSeed), and the relations of seededRelations; through the
 // project store, acme's archived project archived. Through both stores,
@@ -308,6 +311,8 @@ func prepareMatrix(t *testing.T) matrixData {
 		}
 		projects.states(s)
 		projects.labels(s)
+		projects.cyclesOn()
+		projects.cycles(s, planningpg.New(pool))
 		issues := issueSeed{projectSeed: projects, store: issuepg.New(pool)}
 		issues.issues(s)
 		issues.relations(s)

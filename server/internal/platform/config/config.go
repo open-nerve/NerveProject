@@ -29,6 +29,7 @@ type Config struct {
 	Jobs      JobsConfig      `koanf:"jobs"`
 	Workspace WorkspaceConfig `koanf:"workspace"`
 	Issue     IssueConfig     `koanf:"issue"`
+	Planning  PlanningConfig  `koanf:"planning"`
 	Cleanup   CleanupConfig   `koanf:"cleanup"`
 	Files     FilesConfig     `koanf:"files"`
 	Log       LogConfig       `koanf:"log"`
@@ -185,6 +186,15 @@ type IssueConfig struct {
 	WriteLockTimeout time.Duration `koanf:"write_lock_timeout"`
 }
 
+// PlanningConfig configures the cycles' and modules' maintenance: the
+// asynchronous deletion of a deleted project's cycles soft-deletes at most
+// DeleteBatch of them per transaction and runs for at most DeleteBudget
+// before River snoozes it (M6 P1 spec 2.4).
+type PlanningConfig struct {
+	DeleteBatch  int           `koanf:"delete_batch"`
+	DeleteBudget time.Duration `koanf:"delete_budget"`
+}
+
 // WriteGateConfig is the work items' write gate (platform/gate): at most
 // PerProject writes on a project's work items hold a connection at once in
 // this process, at most MaxQueue others wait for it, holding none, each at
@@ -277,6 +287,10 @@ func (c Config) LogValue() slog.Value {
 			),
 			slog.Duration("write_lock_timeout", c.Issue.WriteLockTimeout),
 			slog.Duration("auto_archive_interval", c.Issue.AutoArchiveInterval),
+		),
+		slog.Group("planning",
+			slog.Int("delete_batch", c.Planning.DeleteBatch),
+			slog.Duration("delete_budget", c.Planning.DeleteBudget),
 		),
 		slog.Any("files", c.Files),
 		slog.Group("log",

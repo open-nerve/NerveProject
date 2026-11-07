@@ -51,6 +51,9 @@ var underProject = map[string]struct {
 	"{project_member_id}": {"membership", func(s seeded) map[string]uuid.UUID { return s.projectMembers }, nil},
 	"{state_id}":          {"state", func(s seeded) map[string]uuid.UUID { return s.states }, nil},
 	"{label_id}":          {"label", func(s seeded) map[string]uuid.UUID { return s.labels }, nil},
+	"{cycle_id}": {"cycle", func(s seeded) map[string]uuid.UUID { return s.cycles }, func(c caller, s seeded) (string, uuid.UUID) {
+		return cycleOf(c), s.cycle(projectOf(c), cycleOf(c))
+	}},
 	"{issue_id}": {"work item", func(s seeded) map[string]uuid.UUID { return s.issues }, func(c caller, s seeded) (string, uuid.UUID) {
 		return issueOf(c), s.issue(projectOf(c), issueOf(c))
 	}},

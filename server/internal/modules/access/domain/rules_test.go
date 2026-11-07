@@ -116,6 +116,18 @@ var tableCells = map[shared.Action][]outcome{
 	// As issue.create (M4 design 3.4).
 	"issue.archive": {allowed, allowed, forbidden, forbidden, allowed, forbidden, forbidden, invisible, invisible, invisible, invisible,
 		forbidden, invisible, invisible, invisible, forbidden, forbidden},
+	// As issue.read: every active member of the project, the guest's
+	// OwnOnly filtering the planning module's (M6 design 3.7).
+	"cycle.read": {allowed, allowed, allowed, allowed, allowed, forbidden, forbidden, invisible, invisible, invisible, invisible,
+		forbidden, invisible, invisible, invisible, forbidden, forbidden},
+	// As issue.create: the project's admins and members, not its guests;
+	// an OwnOnly grant's refusal is the planning module's (M6 design 3.7).
+	"cycle.write": {allowed, allowed, forbidden, forbidden, allowed, forbidden, forbidden, invisible, invisible, invisible, invisible,
+		forbidden, invisible, invisible, invisible, forbidden, forbidden},
+	// As issue.delete: the project's admins; creatorCells has its creators'
+	// (M6 design 3.7).
+	"cycle.delete": {allowed, forbidden, forbidden, forbidden, allowed, forbidden, forbidden, invisible, invisible, invisible, invisible,
+		forbidden, invisible, invisible, invisible, forbidden, forbidden},
 }
 
 // creatorCells is every row with AllowCreator decided for every identity of
@@ -126,6 +138,8 @@ var tableCells = map[shared.Action][]outcome{
 // and not a project role outside the three.
 var creatorCells = map[shared.Action][]outcome{
 	"issue.delete": {allowed, allowed, forbidden, forbidden, allowed, forbidden, forbidden, invisible, invisible, invisible, invisible,
+		forbidden, invisible, invisible, invisible, forbidden, forbidden},
+	"cycle.delete": {allowed, allowed, forbidden, forbidden, allowed, forbidden, forbidden, invisible, invisible, invisible, invisible,
 		forbidden, invisible, invisible, invisible, forbidden, forbidden},
 }
 
