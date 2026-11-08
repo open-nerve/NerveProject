@@ -49,9 +49,11 @@ SELECT i.id, i.workspace_id, i.project_id, i.sequence_id, i.name, i.description_
        i.created_by_id, i.updated_by_id, i.created_at, i.updated_at,
        (SELECT array_agg(a.assignee_id ORDER BY a.assignee_id) FROM issue_assignees a WHERE a.issue_id=i.id AND a.deleted_at IS NULL)::uuid[] AS assignee_ids,
        (SELECT array_agg(l.label_id ORDER BY l.label_id) FROM issue_labels l WHERE l.issue_id=i.id AND l.deleted_at IS NULL)::uuid[] AS label_ids,
+       ci.cycle_id,
+       (SELECT array_agg(m.module_id ORDER BY m.module_id) FROM module_issues m WHERE m.issue_id=i.id AND m.deleted_at IS NULL)::uuid[] AS module_ids,
        (SELECT count(*) FROM issue_links l WHERE l.issue_id=i.id AND l.deleted_at IS NULL)::bigint AS link_count,
        similarity(i.name, @query) AS similarity
-FROM paged c JOIN issues i ON i.id=c.id
+FROM paged c JOIN issues i ON i.id=c.id LEFT JOIN cycle_issues ci ON ci.issue_id=i.id AND ci.deleted_at IS NULL
 ORDER BY CASE WHEN sqlc.arg(query)::text='' THEN c.updated_at END DESC,
          CASE WHEN sqlc.arg(query)::text<>'' THEN c.rank END,
          CASE WHEN sqlc.arg(query)::text<>'' THEN c.score END DESC,

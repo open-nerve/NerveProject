@@ -146,7 +146,7 @@ func issueOf(r gen.GetIssueRow) domain.Issue {
 		DescriptionHTML: r.DescriptionHtml, DescriptionStripped: r.DescriptionStripped,
 		Priority: domain.Priority(r.Priority), StartDate: dayOf(r.StartDate), TargetDate: dayOf(r.TargetDate), ParentID: r.ParentID,
 		SortOrder: r.SortOrder, CompletedAt: r.CompletedAt, ArchivedAt: r.ArchivedAt, AssigneeIDs: r.AssigneeIds, LabelIDs: r.LabelIds, LinkCount: r.LinkCount,
-		CreatedByID: r.CreatedByID, UpdatedByID: r.UpdatedByID, CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt,
+		CycleID: r.CycleID, ModuleIDs: r.ModuleIds, CreatedByID: r.CreatedByID, UpdatedByID: r.UpdatedByID, CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt,
 	}
 }
 

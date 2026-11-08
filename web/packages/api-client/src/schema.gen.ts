@@ -2879,6 +2879,13 @@ export interface components {
             /** @description Its labels, by id. */
             label_ids: string[];
             /**
+             * Format: uuid
+             * @description The cycle it is in, an archived one too; null for none. A work item is in one cycle at most.
+             */
+            cycle_id: string | null;
+            /** @description The modules it is in, archived ones too, by id, in id order. */
+            module_ids: string[];
+            /**
              * Format: int64
              * @description Uploaded, bound, undeleted ordinary issue attachments, read in the same snapshot.
              */
@@ -3018,6 +3025,13 @@ export interface components {
             assignee_ids: string[];
             /** @description Its labels, by id. */
             label_ids: string[];
+            /**
+             * Format: uuid
+             * @description The cycle it is in, an archived one too; null for none. A work item is in one cycle at most.
+             */
+            cycle_id: string | null;
+            /** @description The modules it is in, archived ones too, by id, in id order. */
+            module_ids: string[];
             /**
              * Format: int64
              * @description Uploaded, bound, undeleted ordinary issue attachments, read in the same snapshot.

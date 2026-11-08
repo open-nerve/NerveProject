@@ -171,6 +171,7 @@ func (l *Listing) issues(ctx context.Context, input ListingInput, rows []ListRec
 		items[n] = r.Issue
 		items[n].AssigneeIDs = append([]uuid.UUID{}, r.Issue.AssigneeIDs...)
 		items[n].LabelIDs = append([]uuid.UUID{}, r.Issue.LabelIDs...)
+		items[n].ModuleIDs = append([]uuid.UUID{}, r.Issue.ModuleIDs...)
 		if only && r.Issue.ParentID != nil {
 			guarded = append(guarded, n)
 		}

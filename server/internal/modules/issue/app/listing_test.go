@@ -123,6 +123,27 @@ func TestListingDirectoriesAndPage(t *testing.T) {
 	}
 }
 
+// A page answers its rows' cycles and modules (M6 P3a spec 2.3), the
+// modules a copy, as its other arrays: editing the page's leaves the rows'.
+func TestListingAnswersTheRowsMemberships(t *testing.T) {
+	l, f, in := listingFixture(t)
+	id, cycle, module := uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
+	r := listRecord(id, nil)
+	r.Issue.CycleID, r.Issue.ModuleIDs = &cycle, []uuid.UUID{module}
+	f.pages = [][]app.ListRecord{{r}}
+	page, err := l.Read(f.ctx, in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(page.Data) != 1 || page.Data[0].CycleID == nil || *page.Data[0].CycleID != cycle || !slices.Equal(page.Data[0].ModuleIDs, []uuid.UUID{module}) {
+		t.Fatalf("page %+v; want the row's cycle %s and module %s", page.Data, cycle, module)
+	}
+	page.Data[0].ModuleIDs[0] = carol
+	if f.pages[0][0].Issue.ModuleIDs[0] != module {
+		t.Fatal("mutated Rows storage")
+	}
+}
+
 func TestListingParents(t *testing.T) {
 	for _, tc := range []struct {
 		name                   string

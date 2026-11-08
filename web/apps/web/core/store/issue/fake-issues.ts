@@ -27,6 +27,8 @@ export const issueOf = (id: string, projectId = "A", workspaceId = "id-ws"): Iss
   priority: "none",
   label_ids: [],
   assignee_ids: [],
+  cycle_id: null,
+  module_ids: [],
   sub_issues_count: 0,
   link_count: 0,
   attachment_count: 0,

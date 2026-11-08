@@ -314,14 +314,20 @@ type Issue struct {
 
 	// CreatedByID The account that created it; null for none.
 	CreatedByID nullable.Nullable[uuid.UUID] `json:"created_by_id"`
-	ID          uuid.UUID                    `json:"id"`
+
+	// CycleID The cycle it is in, an archived one too; null for none. A work item is in one cycle at most.
+	CycleID nullable.Nullable[uuid.UUID] `json:"cycle_id"`
+	ID      uuid.UUID                    `json:"id"`
 
 	// LabelIds Its labels, by id.
 	LabelIds []uuid.UUID `json:"label_ids"`
 
 	// LinkCount The number of undeleted links, regardless of creator or metadata state.
-	LinkCount int64  `json:"link_count"`
-	Name      string `json:"name"`
+	LinkCount int64 `json:"link_count"`
+
+	// ModuleIds The modules it is in, archived ones too, by id, in id order.
+	ModuleIds []uuid.UUID `json:"module_ids"`
+	Name      string      `json:"name"`
 
 	// ParentID The work item it is under, in the same project; null for none, or for one the caller does not see (a guest who sees only his own work items).
 	ParentID nullable.Nullable[uuid.UUID] `json:"parent_id"`
@@ -460,6 +466,9 @@ type IssueDetail struct {
 	// CreatedByID The account that created it; null for none.
 	CreatedByID nullable.Nullable[uuid.UUID] `json:"created_by_id"`
 
+	// CycleID The cycle it is in, an archived one too; null for none. A work item is in one cycle at most.
+	CycleID nullable.Nullable[uuid.UUID] `json:"cycle_id"`
+
 	// DescriptionHTML Sanitized rich text HTML; at most 500000 characters on input.
 	DescriptionHTML string    `json:"description_html"`
 	ID              uuid.UUID `json:"id"`
@@ -468,8 +477,11 @@ type IssueDetail struct {
 	LabelIds []uuid.UUID `json:"label_ids"`
 
 	// LinkCount The number of undeleted links, regardless of creator or metadata state.
-	LinkCount int64  `json:"link_count"`
-	Name      string `json:"name"`
+	LinkCount int64 `json:"link_count"`
+
+	// ModuleIds The modules it is in, archived ones too, by id, in id order.
+	ModuleIds []uuid.UUID `json:"module_ids"`
+	Name      string      `json:"name"`
 
 	// ParentID The work item it is under, in the same project; null for none, or for one the caller does not see (a guest who sees only his own work items).
 	ParentID nullable.Nullable[uuid.UUID] `json:"parent_id"`

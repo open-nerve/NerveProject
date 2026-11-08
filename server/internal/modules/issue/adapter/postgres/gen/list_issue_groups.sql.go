@@ -133,8 +133,10 @@ SELECT i.id, i.workspace_id, i.project_id, i.sequence_id, i.name, i.state_id, i.
        coalesce(k.link_count,(SELECT count(*) FROM issue_links l WHERE l.issue_id=i.id AND l.deleted_at IS NULL))::bigint AS link_count,
        k.attachment_count::bigint AS attachment_count,
        coalesce((SELECT array_agg(a.assignee_id ORDER BY a.assignee_id) FROM issue_assignees a WHERE a.issue_id=i.id AND a.deleted_at IS NULL),'{}'::uuid[])::uuid[] AS assignee_ids,
-       coalesce((SELECT array_agg(l.label_id ORDER BY l.label_id) FROM issue_labels l WHERE l.issue_id=i.id AND l.deleted_at IS NULL),'{}'::uuid[])::uuid[] AS label_ids
-FROM ranked k JOIN issues i ON i.id=k.id
+       coalesce((SELECT array_agg(l.label_id ORDER BY l.label_id) FROM issue_labels l WHERE l.issue_id=i.id AND l.deleted_at IS NULL),'{}'::uuid[])::uuid[] AS label_ids,
+       ci.cycle_id,
+       coalesce((SELECT array_agg(m.module_id ORDER BY m.module_id) FROM module_issues m WHERE m.issue_id=i.id AND m.deleted_at IS NULL),'{}'::uuid[])::uuid[] AS module_ids
+FROM ranked k JOIN issues i ON i.id=k.id LEFT JOIN cycle_issues ci ON ci.issue_id=i.id AND ci.deleted_at IS NULL
 WHERE k.row_number <= $2::integer
 ORDER BY (k.group_key='none'),
          CASE $3::text
@@ -221,6 +223,8 @@ type GroupIssuesRow struct {
 	AttachmentCount int64
 	AssigneeIds     []uuid.UUID
 	LabelIds        []uuid.UUID
+	CycleID         *uuid.UUID
+	ModuleIds       []uuid.UUID
 }
 
 // Directories are paired arrays, already scoped in the same read snapshot.
@@ -309,6 +313,8 @@ func (q *Queries) GroupIssues(ctx context.Context, arg GroupIssuesParams) ([]Gro
 			&i.AttachmentCount,
 			&i.AssigneeIds,
 			&i.LabelIds,
+			&i.CycleID,
+			&i.ModuleIds,
 		); err != nil {
 			return nil, err
 		}

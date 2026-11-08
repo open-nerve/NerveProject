@@ -52,9 +52,11 @@ func Archivable(group StateGroup) bool {
 
 // Issue is a work item as stored and as the API shows it (M4 design 5.2),
 // with the accounts of its undeleted assignees' rows and the labels of its
-// undeleted labels' rows, in the accounts' and the labels' id order, and
-// the caller's view of it. The fields of later phases come with them (M4
-// design 12, constraint 5).
+// undeleted labels' rows, in the accounts' and the labels' id order, the
+// cycle of its undeleted cycle's row and the modules of its undeleted
+// modules' rows, in the modules' id order, archived cycles and modules too
+// (M6 P3a spec 2.3), and the caller's view of it. The fields of later
+// phases come with them (M4 design 12, constraint 5).
 type Issue struct {
 	ID                  uuid.UUID
 	WorkspaceID         uuid.UUID
@@ -73,6 +75,8 @@ type Issue struct {
 	ArchivedAt          *time.Time
 	AssigneeIDs         []uuid.UUID
 	LabelIDs            []uuid.UUID
+	CycleID             *uuid.UUID
+	ModuleIDs           []uuid.UUID
 	CreatedByID         *uuid.UUID
 	UpdatedByID         *uuid.UUID
 	CreatedAt           time.Time

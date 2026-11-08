@@ -91,6 +91,7 @@ func issueDetail(i domain.Issue) gen.IssueDetail {
 		StateID: i.StateID, Priority: gen.IssuePriority(i.Priority), StartDate: orNull(i.StartDate), TargetDate: orNull(i.TargetDate),
 		ParentID: orNull(i.ParentID), SortOrder: i.SortOrder,
 		CompletedAt: orNull(i.CompletedAt), ArchivedAt: orNull(i.ArchivedAt), AssigneeIds: orEmpty(i.AssigneeIDs), LabelIds: orEmpty(i.LabelIDs),
+		CycleID: orNull(i.CycleID), ModuleIds: orEmpty(i.ModuleIDs),
 		SubIssuesCount: i.SubIssuesCount, LinkCount: i.LinkCount, AttachmentCount: i.AttachmentCount, CreatedByID: orNull(i.CreatedByID), UpdatedByID: orNull(i.UpdatedByID), CreatedAt: i.CreatedAt,
 		UpdatedAt: i.UpdatedAt}
 }
@@ -100,6 +101,7 @@ func issueRow(i domain.Issue) gen.Issue {
 		StateID: i.StateID, Priority: gen.IssuePriority(i.Priority), StartDate: orNull(i.StartDate), TargetDate: orNull(i.TargetDate),
 		ParentID: orNull(i.ParentID), SortOrder: i.SortOrder,
 		CompletedAt: orNull(i.CompletedAt), ArchivedAt: orNull(i.ArchivedAt), AssigneeIds: orEmpty(i.AssigneeIDs), LabelIds: orEmpty(i.LabelIDs),
+		CycleID: orNull(i.CycleID), ModuleIds: orEmpty(i.ModuleIDs),
 		SubIssuesCount: i.SubIssuesCount, LinkCount: i.LinkCount, AttachmentCount: i.AttachmentCount, CreatedByID: orNull(i.CreatedByID), UpdatedByID: orNull(i.UpdatedByID), CreatedAt: i.CreatedAt,
 		UpdatedAt: i.UpdatedAt}
 }

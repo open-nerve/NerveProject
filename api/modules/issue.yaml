@@ -1586,7 +1586,8 @@ components:
       type: object
       additionalProperties: false
       required: [description_html, id, workspace_id, project_id, sequence_id, name, state_id, priority, start_date, target_date, parent_id, sort_order,
-        completed_at, archived_at, assignee_ids, label_ids, sub_issues_count, link_count, attachment_count, created_by_id, updated_by_id, created_at, updated_at]
+        completed_at, archived_at, assignee_ids, label_ids, cycle_id, module_ids, sub_issues_count, link_count, attachment_count, created_by_id, updated_by_id,
+        created_at, updated_at]
       properties:
         description_html:
           description: Sanitized rich text HTML; at most 500000 characters on input.
@@ -1650,6 +1651,18 @@ components:
           items:
             type: string
             format: uuid
+        cycle_id:
+          description: >-
+            The cycle it is in, an archived one too; null for none. A work item
+            is in one cycle at most.
+          type: [string, 'null']
+          format: uuid
+        module_ids:
+          description: The modules it is in, archived ones too, by id, in id order.
+          type: array
+          items:
+            type: string
+            format: uuid
         attachment_count:
           description: Uploaded, bound, undeleted ordinary issue attachments, read in the same snapshot.
           type: integer
@@ -1685,7 +1698,8 @@ components:
       type: object
       additionalProperties: false
       required: [id, workspace_id, project_id, sequence_id, name, state_id, priority, start_date, target_date, parent_id, sort_order,
-        completed_at, archived_at, assignee_ids, label_ids, sub_issues_count, link_count, attachment_count, created_by_id, updated_by_id, created_at, updated_at]
+        completed_at, archived_at, assignee_ids, label_ids, cycle_id, module_ids, sub_issues_count, link_count, attachment_count, created_by_id, updated_by_id,
+        created_at, updated_at]
       properties:
         id:
           type: string
@@ -1742,6 +1756,18 @@ components:
             format: uuid
         label_ids:
           description: Its labels, by id.
+          type: array
+          items:
+            type: string
+            format: uuid
+        cycle_id:
+          description: >-
+            The cycle it is in, an archived one too; null for none. A work item
+            is in one cycle at most.
+          type: [string, 'null']
+          format: uuid
+        module_ids:
+          description: The modules it is in, archived ones too, by id, in id order.
           type: array
           items:
             type: string

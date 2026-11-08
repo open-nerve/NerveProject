@@ -5377,6 +5377,8 @@ components:
         - archived_at
         - assignee_ids
         - label_ids
+        - cycle_id
+        - module_ids
         - sub_issues_count
         - link_count
         - attachment_count
@@ -5445,6 +5447,18 @@ components:
             format: uuid
         label_ids:
           description: Its labels, by id.
+          type: array
+          items:
+            type: string
+            format: uuid
+        cycle_id:
+          description: The cycle it is in, an archived one too; null for none. A work item is in one cycle at most.
+          type:
+            - string
+            - 'null'
+          format: uuid
+        module_ids:
+          description: The modules it is in, archived ones too, by id, in id order.
           type: array
           items:
             type: string
@@ -5662,6 +5676,8 @@ components:
         - archived_at
         - assignee_ids
         - label_ids
+        - cycle_id
+        - module_ids
         - sub_issues_count
         - link_count
         - attachment_count
@@ -5733,6 +5749,18 @@ components:
             format: uuid
         label_ids:
           description: Its labels, by id.
+          type: array
+          items:
+            type: string
+            format: uuid
+        cycle_id:
+          description: The cycle it is in, an archived one too; null for none. A work item is in one cycle at most.
+          type:
+            - string
+            - 'null'
+          format: uuid
+        module_ids:
+          description: The modules it is in, archived ones too, by id, in id order.
           type: array
           items:
             type: string
