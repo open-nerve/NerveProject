@@ -1,6 +1,6 @@
 # M6 / P3a：工作项的迭代与模块归属
 
-> 状态：预检通过（2026-11-08，[re-58](../../../reviews/re-58-M6P3a预检.md)），尚未实施。基线 main `ddd79a9f5362aedfc33c940acecc2a5bf0e3d9b8`（P2 的根因修复 noff，main CI 42458454710 通过）。设计见 [M6 设计](../M6-design.md)，负责人 2026-11-07 的决定 A/B/C 见设计 §15；加锁之路与拒绝次序沿用 M4（[硬规则 §4](../../claude_to_gpt/03-rules-and-pitfalls.md)）与 [P1 spec](P1-cycles-backend.md) §3。现状调研见本阶段台账 `research/write-path.md`、`research/list-engine.md`（ignored，随阶段归档）。
+> 状态：已实施（2026-11-08），整分支审查见 [re-59](../../../reviews/re-59-M6P3a整体审核.md)，阶段记录见 [P3a 阶段记录](../reviews/P3a-issue-membership-review.md)；预检见 [re-58](../../../reviews/re-58-M6P3a预检.md)。基线 main `ddd79a9f5362aedfc33c940acecc2a5bf0e3d9b8`（P2 的根因修复 noff，main CI 42458454710 通过）。设计见 [M6 设计](../M6-design.md)，负责人 2026-11-07 的决定 A/B/C 见设计 §15；加锁之路与拒绝次序沿用 M4（[硬规则 §4](../../claude_to_gpt/03-rules-and-pitfalls.md)）与 [P1 spec](P1-cycles-backend.md) §3。现状调研见本阶段台账 `research/write-path.md`、`research/list-engine.md`（ignored，随阶段归档）。
 
 ## 1. 目标与边界
 
@@ -28,7 +28,7 @@ P3a 不做：列表的筛选、分组、排序与显示（P3b，列表行只是�
 | `server/internal/bootstrap/` | 接线（`planning.Provide` 拿到项目端口；`eventTypes()` 加 planning；`ports.go` 的转换）；组合测试、交错、守卫与夹具（§2.5） |
 | `server/migrations/` 测试 | `issue_schema_test` 的约束与索引名；`purge_indexes_test` 的表数；`trigram_schema_test` 的迁移总数、Down 循环起点与表清单 |
 | `api/modules/issue.yaml` | `Issue`、`IssueDetail` 加必填 `cycle_id`（uuid 或 null）、`module_ids`（uuid 数组，按 id 升序）；`IssueCreate`、`IssueDraftPayload` 加可省略的 `cycle_id`（uuid，不可为 null）、`module_ids`；`IssueUpdate` 加 `cycle_id`（uuid 或 null）、`module_ids`；建立、修改、发布草稿声明新错误码（§2.3） |
-| `web/` | `api-client` 重新生成；手写的 `Issue`/`IssueDetail` 字面量（13 个文件：测试与 `core/store/issue/fake-issues.ts`）补 `cycle_id: null, module_ids: []`；`issue-activity/activity/actions/cycle.tsx` 的移出分支读 `old_value` |
+| `web/` | `api-client` 重新生成；手写的 `Issue`/`IssueDetail` 字面量补 `cycle_id: null, module_ids: []`（实际只有 `core/store/issue/fake-issues.ts`，其余手写回答展开 `issueOf`/`issueDetailOf`；预检估为 13 个文件）；`issue-activity/activity/actions/cycle.tsx` 的移出分支读 `old_value` |
 | `e2e/` | `furnishPlanningRows` 回答它建的迭代与模块的 id，`furnishIssueRows` 接收它们并经接口把工作项加入（调用者的令牌须是项目成员）；各调用处（`furnishWorkspace` 与 P4、W3、I21 等删除故事）改为先 `furnishPlanningRows` 后 `furnishIssueRows`；`assert/catalog.ts` 的 `asynchronousDeletionTable` 加两张表；`stories/planning/` 的 G4、G11、G14 接口与数据库故事 |
 | `tools/keywords.json` | `phase` 为 `M6/P3`（P3a 与 P3b 共用，先例 M5 的 P7a/P7b 用 `M5/P7`：关键词工具只认 `M<n>/P<k>`） |
 | `docs/` | P2 阶段记录 §7、P2 spec A9、设计 §12 与 §14（拆分与 P2 完成）的回填（T1）；`plane-diff.md`；输入交接的“处理结果（M6/P3a）” |
@@ -89,14 +89,14 @@ PATCH 的行接在既有行（名字…负责人移出）之后：迭代一行�
 
 ## 4. 验收标准
 
-- [ ] A1 G4：建立、PATCH、草稿发布加入迭代；移到别的迭代、移出；已结束、已归档、已删除、别的项目的迭代被拒（码与字段如 §2.3）；开关关闭时有变化即 409；重复加入 200 不写；每次变化一条动态，`issue.updated`/`issue.created` 的 `Changes` 带上。
-- [ ] A2 G11：模块的加入、移出、整体替换；已归档、已删除、别的项目的模块被拒；留下的不检查；上限与重复；开关；动态。
-- [ ] A3 G14：删迭代/模块后工作项不受影响、归属移除，每个受影响的工作项一条 `deleted` 动态并记为被删除者此刻修改；删工作项、项目、工作区后归属以原 At/By 软删并可续跑；60 天清理有界、运行角色可执行、`TestPurgeScale` 认得新语句；全部守卫覆盖两张表。
-- [ ] A4 G16：自动归档跳过仍在未结束迭代（含草稿迭代）或未到目标日模块（含目标日为空）里的工作项；“今天”按项目时区与任务的固定时钟；调用次序与锁不变。
-- [ ] A5 加锁与交错：归属的检查与写在项目行锁下；“写归属”与“删迭代/删模块”两种次序的交错各有测试（先删则 422，先写则被订阅者移除并记动态）；“已结束”用这次写的时钟。
-- [ ] A6 回答：`Issue`/`IssueDetail` 的两个字段在详情、列表行、关系、子工作项、搜索里一致；访客与 OwnOnly 读到的同样；前端类型与字面量更新后 `make lint-web`、`make test-web` 通过。
-- [ ] A7 phase 为 `M6/P3`；每个新声明的码在 issue 的 apitest 二进制里有回答；输入交接写“处理结果（M6/P3a）”；P2 阶段记录 §7、spec A9 与设计 §12、§14 已回填。
-- [ ] A8 七项本地门禁、deep-review 修复闭环、准确分支 CI 与 noff 后 main CI 全绿、归档清理。
+- [x] A1 G4：建立、PATCH、草稿发布加入迭代；移到别的迭代、移出；已结束、已归档、已删除、别的项目的迭代被拒（码与字段如 §2.3）；开关关闭时有变化即 409；重复加入 200 不写；每次变化一条动态，`issue.updated`/`issue.created` 的 `Changes` 带上。
+- [x] A2 G11：模块的加入、移出、整体替换；已归档、已删除、别的项目的模块被拒；留下的不检查；上限与重复；开关；动态。
+- [x] A3 G14：删迭代/模块后工作项不受影响、归属移除，每个受影响的工作项一条 `deleted` 动态并记为被删除者此刻修改；删工作项、项目、工作区后归属以原 At/By 软删并可续跑；60 天清理有界、运行角色可执行、`TestPurgeScale` 认得新语句；全部守卫覆盖两张表。
+- [x] A4 G16：自动归档跳过仍在未结束迭代（含草稿迭代）或未到目标日模块（含目标日为空）里的工作项；“今天”按项目时区与任务的固定时钟；调用次序与锁不变。
+- [x] A5 加锁与交错：归属的检查与写在项目行锁下；“写归属”与“删迭代/删模块”两种次序的交错各有测试（先删则 422，先写则被订阅者移除并记动态）；“已结束”用这次写的时钟。
+- [x] A6 回答：`Issue`/`IssueDetail` 的两个字段在详情、列表行、关系、子工作项、搜索里一致；访客与 OwnOnly 读到的同样；前端类型与字面量更新后 `make lint-web`、`make test-web` 通过。
+- [x] A7 phase 为 `M6/P3`；每个新声明的码在 issue 的 apitest 二进制里有回答；输入交接写“处理结果（M6/P3a）”；P2 阶段记录 §7、spec A9 与设计 §12、§14 已回填。
+- [ ] A8 七项本地门禁、deep-review 修复闭环、准确分支 CI 与 noff 后 main CI 全绿、归档清理。（本地门禁与修复闭环见阶段记录 §5、§6；CI 与归档清理见 §7，合入后由 P3b 的 T1 勾选）
 
 ## 5. 后续责任
 

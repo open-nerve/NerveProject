@@ -21,7 +21,7 @@ type membership struct {
 }
 
 // readMembership reads what planning holds about a write's change of the
-// work item's cycle, cycle, nil when it is left as it is, and of its
+// work item's cycle, the cycle given, nil when it is left as it is, and of its
 // modules, the Diff modules, in the project projectID (M6 P3a spec R1–R3):
 // once, under the project's lock the write holds, before its clock, about
 // the cycles and the modules together, nothing when neither changes. The

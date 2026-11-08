@@ -1,7 +1,7 @@
 # M6 / P3a 工作项的迭代与模块归属实施计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-> 状态：预检通过（2026-11-08，[re-58](../../../reviews/re-58-M6P3a预检.md)），尚未实施。
+> 状态：T1–T13 已实施（2026-11-08），整分支审查 [re-59](../../../reviews/re-59-M6P3a整体审核.md)，阶段记录 [P3a 阶段记录](../reviews/P3a-issue-membership-review.md)；预检 [re-58](../../../reviews/re-58-M6P3a预检.md)。
 
 **Goal：** 工作项经自己的字段加入、移动、移出迭代与模块（建立、PATCH、草稿发布），每次变化一条动态；删除迭代/模块、工作项、项目、工作区时归属随之移除与清理；自动归档跳过仍在未结束迭代或未到目标日模块里的工作项。
 

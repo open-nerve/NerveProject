@@ -37,6 +37,8 @@ M6/P2 的本地 e2e（`make build && make e2e`）两次各有一条因 Postgres 
 
 连接预算（按配置核算，未逐个计数）：全部 Playwright 工作进程共用一个 `postgres:18.6` 测试容器（`e2e/fixtures/db.ts`），用默认的 `max_connections`（100）；工作进程数取 Playwright 的默认值（CPU 数的一半），本机 18 核为 9 个，CI 运行器 4 核为 2 个；每个工作进程的 Nerve 服务器连接池上限 10（`server/configs/config.yaml` 的 `database.max_conns`），测试一侧的 pg 连接池默认上限 10，另有 River 的连接。本机 9 ×（10 + 10 + River）远超 100，平时用不满，机器繁忙、各池同时涨到上限时就会用尽；CI 约 2 ×（10 + 10 + River），有余量，分支与 main CI 都没有出现过。M6 加入的模块数据、链接抓取任务与故事里的数据库轮询让本机更容易撞线。证据在 M6/P2 归档的台账（`t15-gate4-build-e2e`、`t15-gate5-build-e2e`）。
 
+M6/P3a 的最终候选 `070762f5` 的本地门禁（`t13-gate1-build-e2e`）又一次撞上：W6（API）“a deleted invitation”一步回答 500，该测试 nerve 日志为 `FATAL: sorry, too many clients already`（53300）；只重跑这一项即 429 条全过（`t13-gate1-build-e2e-2`）。同一候选的分支 CI 不受影响。
+
 **何时验收：** M8 的 CI 工作核算 e2e 的连接预算（工作进程数 × 每进程的连接上限 + 余量），按结果给测试容器设 `max_connections` 或收紧 e2e 服务器的 `database.max_conns`，并在 CI 与本地都留有余量；或负责人决定维持现状，并在此写明理由。
 
 <a id="M6-M8-04"></a>
