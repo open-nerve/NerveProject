@@ -1,6 +1,6 @@
 # M6 / P3a：工作项的迭代与模块归属
 
-> 状态：待预检。基线 main `ddd79a9f5362aedfc33c940acecc2a5bf0e3d9b8`（P2 的根因修复 noff，main CI 42458454710 通过）。设计见 [M6 设计](../M6-design.md)，负责人 2026-11-07 的决定 A/B/C 见设计 §15；加锁之路与拒绝次序沿用 M4（[硬规则 §4](../../claude_to_gpt/03-rules-and-pitfalls.md)）与 [P1 spec](P1-cycles-backend.md) §3。现状调研见本阶段台账 `research/write-path.md`、`research/list-engine.md`（ignored，随阶段归档）。
+> 状态：预检通过（2026-11-08，[re-58](../../../reviews/re-58-M6P3a预检.md)），尚未实施。基线 main `ddd79a9f5362aedfc33c940acecc2a5bf0e3d9b8`（P2 的根因修复 noff，main CI 42458454710 通过）。设计见 [M6 设计](../M6-design.md)，负责人 2026-11-07 的决定 A/B/C 见设计 §15；加锁之路与拒绝次序沿用 M4（[硬规则 §4](../../claude_to_gpt/03-rules-and-pitfalls.md)）与 [P1 spec](P1-cycles-backend.md) §3。现状调研见本阶段台账 `research/write-path.md`、`research/list-engine.md`（ignored，随阶段归档）。
 
 ## 1. 目标与边界
 
@@ -9,7 +9,7 @@
 - **P3a（本 spec）**：`issue` 模块的两张归属表 `cycle_issues`、`module_issues`；工作项与草稿的 `cycle_id`、`module_ids`（建立、PATCH、草稿发布）及回答里的这两个字段；归属的动态；删除迭代/模块时移除归属（`planning.cycle_deleted`、`planning.module_deleted` 两个事件）；删除工作项、项目、工作区时归属的软删与 60 天清理；自动归档跳过仍在未结束迭代或未到目标日模块里的工作项。覆盖设计 §2 的 G4、G11、G14、G16 的接口与数据库证据。
 - **P3b（P3a 合入后再写 spec 与 plan）**：列表引擎的筛选 `cycle_id`/`module_id`、分组、排序 `cycle_name`/`module_name`、显示属性 `cycle`/`modules`（含 `api/testdata/issue-order.json` 的前后端同一夹具）、项目偏好的 CHECK；`cycle_user_properties`、`module_user_properties` 与 `/me/cycles|modules/{id}/preferences`、`cycle.preferences`/`module.preferences`。覆盖 G15。
 
-P3a 不做：列表的筛选、分组、排序与显示（P3b，列表行只是多回答两个字段）；进度、冻结、转移（P4）；前端的属性与下拉框（P7）。前端只做三件事：重新生成的类型、手写的 `Issue`/`IssueDetail` 字面量补上两个字段、新错误码在工作项写入上的文案复用（码已有文案，不新增）。
+P3a 不做：列表的筛选、分组、排序与显示（P3b，列表行只是多回答两个字段）；进度、冻结、转移（P4）；前端的属性与下拉框（P7）。前端只做四件事：重新生成的类型、手写的 `Issue`/`IssueDetail` 字面量补上两个字段、新错误码在工作项写入上的文案复用（码已有文案，不新增）、迭代动态渲染器的移出分支改读 `old_value`（设计 §8；否则移出迭代的动态显示空名）。
 
 ## 2. 交付合同
 
@@ -23,13 +23,13 @@ P3a 不做：列表的筛选、分组、排序与显示（P3b，列表行只是�
 | `server/internal/modules/issue/app/` | `PlanningTargets`、`OpenPlanning` 两个端口（消费方声明，R1、R9）；`IssueCreation.check/write` 与 `UpdateIssue.check/write` 的归属（建立与草稿发布共用 `IssueCreation`）；删除迭代/模块的订阅者（R6）；`issueRowSteps`、`DeletionRowSteps` 与清理步骤加两张表；`AutoArchiveRows` 加未结束的 id |
 | `server/internal/modules/issue/adapter/postgres/` | 归属的读写语句；`GetIssue`、`GetIssues`、`SubIssues`、`SearchIssues` 与三条列表语句（平铺、分组、子分组）回答 `cycle_id`、`module_ids`（各条的列须逐一相同，`gen.GetIssueRow`、`gen.FlatIssuesRow` 互转）；软删、删除任务、剩余探查的 CASE 与清理语句；自动归档的排除 |
 | `server/internal/modules/issue/adapter/http/` | 建立、PATCH、草稿载荷的解码；`issueDetail`、`issueRow` 的两个字段；每个新声明的错误码一个处理器测试 |
-| `server/internal/modules/issue/{module.go,module_events.go,module_purge.go}` | `Deps` 加 `Planning`（两个端口）；订阅 `planning.cycle_deleted`、`planning.module_deleted`；清理步骤 |
-| `server/internal/modules/planning/` | `app` 里两个端口的实现（`issue_targets.go`：目标事实、迭代是否已结束、未结束的 id，R1、R9）与批量读取的语句；`Provide(pool, projects)` 回答 `Provided{Purger, IssueTargets}`；`Deps.Events`，删迭代/模块在原事务发布事件（R6）；`EventTypes()` |
+| `server/internal/modules/issue/{module.go,module_events.go}` | `Deps` 加 `Planning`（两个端口）；订阅 `planning.cycle_deleted`、`planning.module_deleted`；清理步骤在 `module.go` 的 `Provide`（`module_purge.go` 只有类型别名） |
+| `server/internal/modules/planning/` | `app` 里两个端口的实现（`issue_targets.go`：目标事实、迭代是否已结束、未结束的 id，R1、R9）与批量读取的语句；`Provide(pool, projects)` 回答 `Provided{Purger, IssueTargets}`（`projects` 只需项目事实的读取；五处测试调用随之改：`bootstrap` 的 `purge_catalog_test`、`issue_retention_sets_test`、`asset_image_retention_fixture_test`，`planning/adapter/postgres` 的 `module_rows_test`、`store_test`，清理不用它，可传 nil）；`Deps.Events`，删迭代/模块在原事务发布事件（R6）；`EventTypes()` |
 | `server/internal/bootstrap/` | 接线（`planning.Provide` 拿到项目端口；`eventTypes()` 加 planning；`ports.go` 的转换）；组合测试、交错、守卫与夹具（§2.5） |
 | `server/migrations/` 测试 | `issue_schema_test` 的约束与索引名；`purge_indexes_test` 的表数；`trigram_schema_test` 的迁移总数、Down 循环起点与表清单 |
 | `api/modules/issue.yaml` | `Issue`、`IssueDetail` 加必填 `cycle_id`（uuid 或 null）、`module_ids`（uuid 数组，按 id 升序）；`IssueCreate`、`IssueDraftPayload` 加可省略的 `cycle_id`（uuid，不可为 null）、`module_ids`；`IssueUpdate` 加 `cycle_id`（uuid 或 null）、`module_ids`；建立、修改、发布草稿声明新错误码（§2.3） |
-| `web/` | `api-client` 重新生成；手写的 `Issue`/`IssueDetail` 字面量（约 15 个测试与假数据文件，如 `core/store/issue/fake-issues.ts`）补 `cycle_id: null, module_ids: []` |
-| `e2e/` | `furnishIssueRows` 给工作项一个迭代与一个模块的归属（先打开两个开关、先建迭代与模块，调整与 `furnishPlanningRows` 的次序）；`assert/catalog.ts` 的 `asynchronousDeletionTable` 加两张表；`stories/planning/` 的 G4、G11、G14 接口与数据库故事 |
+| `web/` | `api-client` 重新生成；手写的 `Issue`/`IssueDetail` 字面量（13 个文件：测试与 `core/store/issue/fake-issues.ts`）补 `cycle_id: null, module_ids: []`；`issue-activity/activity/actions/cycle.tsx` 的移出分支读 `old_value` |
+| `e2e/` | `furnishPlanningRows` 回答它建的迭代与模块的 id，`furnishIssueRows` 接收它们并经接口把工作项加入（调用者的令牌须是项目成员）；各调用处（`furnishWorkspace` 与 P4、W3、I21 等删除故事）改为先 `furnishPlanningRows` 后 `furnishIssueRows`；`assert/catalog.ts` 的 `asynchronousDeletionTable` 加两张表；`stories/planning/` 的 G4、G11、G14 接口与数据库故事 |
 | `tools/keywords.json` | `phase` 为 `M6/P3a` |
 | `docs/` | P2 阶段记录 §7、P2 spec A9、设计 §12 与 §14（拆分与 P2 完成）的回填（T1）；`plane-diff.md`；输入交接的“处理结果（M6/P3a）” |
 
@@ -50,11 +50,11 @@ P3a 不做：列表的筛选、分组、排序与显示（P3b，列表行只是�
 - **建立与草稿发布**：`cycle_id` 省略即不加入；`module_ids` 省略或 `[]` 即不加入；`module_ids` 至多 100 个、不重复（同 `label_ids`，`checkIDs`）。
 - **PATCH**：`cycle_id` 给 uuid 即加入或移到该迭代，给 `null` 即移出；`module_ids` 整体替换（移出的软删，新加入的插入，留下的不动）。与现值相同算没有改动。
 - **草稿保存**：`IssueDraftPayload` 加同样的两个字段，只做结构检查（同其他九个字段）；类型与 `IssueCreate` 一致，使发布与建立的 400/422 逐值相同（`TestDraftPublishMatchesCreateBodyErrors`）。
-- **新声明的错误**（建立、PATCH、发布草稿三处）：409 `planning.cycles_disabled`、`planning.modules_disabled`、`planning.archived`、`planning.cycle_completed`；422 字段 `cycle_id`、`module_ids[i]` 的 `not_allowed`（同 `label_ids[i]`）。`issue/domain/errors.go` 自己声明这四个码（跨模块重复声明的先例：`project.archived`）。
+- **新声明的错误**（建立、PATCH、发布草稿三处）：409 `planning.cycles_disabled`、`planning.modules_disabled`、`planning.archived`、`planning.cycle_completed`；422 字段 `cycle_id`、`module_ids[i]` 的 `not_allowed`（同 `label_ids[i]`）。`issue/domain/errors.go` 自己声明这四个码（跨模块重复声明的先例：`project.archived`）。`apitest.Main` 按（操作，码）核对，每个声明了某码的操作各要一个回答它的处理器测试：建立与 PATCH 各 4 个、发布草稿 4 个（`project.archived` 今天也是每个操作一个）。
 
 ### 2.4 动态
 
-照 Plane 的字段名写进 `issue_activities`（设计 §3.3），前端现有的渲染器直接读：
+照 Plane 的字段名写进 `issue_activities`（设计 §3.3），前端现有的渲染器读它们（迭代渲染器的移出分支随本阶段改读 `old_value`，见 §1）：
 
 | 变化 | 行 |
 |---|---|
@@ -72,16 +72,16 @@ PATCH 的行接在既有行（名字…负责人移出）之后：迭代一行�
 - **删工作项**：`issueRowSteps` 在 `issue_labels` 之后加 `cycle_issues`、`module_issues`，随子树同一时刻软删，不写归属动态。
 - **删项目、工作区**：`issue.delete_rows` 的 `DeletionRowSteps` 在 `issue_labels` 之后加两步，剩余探查加两个 CASE 分支。
 - **60 天清理**：`issue` 的清理步骤在 `issues` 之前加 `module_issues`、`cycle_issues`（子先父；模块次序 asset → issue → planning 已使它们先于 `cycles`、`modules`）。
-- **守卫与夹具**：`purge_catalog_test` 与 `purge_indexes_test` 30 张表；`trigram_schema_test` 44 个迁移；`issueNames`；运行角色；`projectIssueTable`（bootstrap）与 `asynchronousDeletionTable`（e2e）认得两张表（它们不以 `issue_` 开头，不改就会被当作同步删除）；`seedIssues` 以 SQL 种归属（覆盖项目、工作区、迟到删除与清理的守卫）；`deletedWorkItem`、`fullIssue`、`furnishDeletionIssue` 经接口加归属（先经接口打开两个开关）；`seedPurgeSparseRows` 与 `purgeScaleTables` 加两张表。P3a 以 `NERVE_PURGE_SCALE=1` 跑一次 `TestPurgeScale`。
+- **守卫与夹具**：`purge_catalog_test` 与 `purge_indexes_test` 30 张表；`trigram_schema_test` 44 个迁移；`issueNames`；运行角色；`projectIssueTable`（bootstrap）与 `asynchronousDeletionTable`（e2e）认得两张表（它们不以 `issue_` 开头，不改就会被当作同步删除）。`keysTo` 由目录推导，建表后这些守卫即要求两张表有行，而归属的接口要到 T6/T7 才有，所以 Go 的夹具一律以 SQL 种归属（夹具允许），在迭代与模块的种子之后：`seedIssues`（`twoProjects`、`seedProject` 已先跑 `seedCycles`/`seedModules`，它们不回答 id，`seedIssues` 按项目查出迭代与模块）覆盖项目、工作区、迟到删除与清理的守卫；`deletedWorkItem` 与 `issue_deletion_test` 里保留的工作项、`furnishDeletionIssue`（三个项目，其中两个在测试里建立）在工作项所在项目以 SQL 种一个迭代、一个模块与归属；`seedPurgeSparseRows` 与 `purgeScaleTables` 加两张表；`purge_runtime_test` 的 issue 组若加两张表，老化与核对的表清单同步加。P3a 以 `NERVE_PURGE_SCALE=1` 跑一次 `TestPurgeScale`。
 
 ## 3. 局部裁定
 
 - **R1 目标的事实经 planning 的端口**：`issue/app` 声明 `PlanningTargets`：`Targets(ctx, projectID, cycles, modules []uuid.UUID)` 在工作项写已取得的项目行锁下回答项目的两个开关，以及所给 id 中属于本项目、未删除的迭代与模块（含已归档）的名字与是否归档；`CycleCompleted(ctx, projectID, cycleID, now)` 回答该迭代按项目时区在 `now` 是否已结束。实现在 `planning/app`（项目时区与开关经 planning 已有的项目端口，状态用 `domain.Today`/`StatusOf`，口径只此一处），由 `planning.Provide(pool, projects)` 交出，`bootstrap/ports.go` 转换。不扩展 `issue` 的 `LockedProject`：开关与“已结束”是 planning 的规则。
-- **R2 拒绝的次序**：结构 400 → 不读数据的 422（`module_ids` 上限与重复）→ 404 → 403 → 409 `project.archived` →（PATCH）409 `issue.archived` → 无改动 200 → 409 `planning.cycles_disabled`（`cycle_id` 有变化）、`planning.modules_disabled`（`module_ids` 有变化）→ 409 `planning.archived`（新加入的目标已归档）→ 锁下的 422（既有各项与 `cycle_id`/`module_ids[i]` `not_allowed`：不存在、已删除或不在本项目）→ 资产的 404（`LockContent`）→ 读时钟 → 409 `planning.cycle_completed`（新加入的迭代已结束）→ 写。“已结束”要用这次写的时钟，所以在最后一把锁与读时钟之后判定（P1 改迭代时同样在锁下读时钟后判定状态）；其余目标事实在时钟之前一次读出，未知目标与其他字段的问题合在一个 422 里。
-- **R3 只检查新加入的**：留下的与移出的目标不检查（含已归档、已结束的迭代，已归档的模块）；移到别的迭代只检查新迭代；开关看的是“有变化”，移出也受开关约束（设计 §3.8）。
+- **R2 拒绝的次序**（建立、PATCH、草稿发布三条路相同）：结构 400 → 不读数据的 422（`module_ids` 上限与重复）→ 404 → 403 → 409 `project.archived` →（PATCH）409 `issue.archived` → 无改动 200 → 409 `planning.cycles_disabled`（`cycle_id` 有变化）、`planning.modules_disabled`（`module_ids` 有变化）→ 409 `planning.archived`（新加入的目标已归档）→ 锁下的 422（既有各项与 `cycle_id`/`module_ids[i]` `not_allowed`：不存在、已删除或不在本项目）→ 资产的 404（`LockContent`）→ 读时钟 → 409 `planning.cycle_completed`（新加入的迭代已结束）→ 写。“已结束”要用这次写的时钟，所以在最后一把锁与读时钟之后判定（P1 改迭代时同样在锁下读时钟后判定状态，`update_cycle.go:54-59`）；建立只读一次时钟由 `issue_event_writes_test.go:120` 固定，不能为此再读一次。三条路的时钟都来自资产锁之后（`LockContent`、`LockDraftAssets`），判定点只有两处：`IssueCreation.writePreparedAt` 的开头（建立与草稿发布共用）与 `UpdateIssue.write` 的开头；PATCH 在检查与时钟之间的 `prepareDescription` 不产生回答给用户的错误。其余目标事实在时钟之前一次读出，未知目标与其他字段的问题合在一个 422 里。
+- **R3 只检查新加入的**：留下的与移出的目标不检查（含已归档、已结束的迭代，已归档的模块），但仍经 `Targets` 读出名字，供“移到”“移出”的动态（同标签读加入与移出的两组，`update_issue.go:203`）；移到别的迭代只检查新迭代；开关看的是“有变化”，移出也受开关约束（设计 §3.8）。
 - **R4 写法**：迭代变化时软删旧行、插入新行（同一时刻、同一写者，不就地改 `cycle_id`）；模块照标签的 `relink`。按 `(issue_id)` 与 `(issue_id, module_id)` 的部分唯一，同一工作项的并发写已由项目行锁串行，唯一冲突只可能是缺陷，不映射为业务错误。
 - **R5 建立时的动态**：建立与草稿发布写迭代与模块的“加入”行。Plane 的建立弹窗先建工作项、再分别调加入迭代与模块的接口，历史里因此有这两类行；Nerve 一次写入，保留同样的历史（M4 对建立时的标签不写行，依据也是 Plane，两者不矛盾）。
-- **R6 删除的事件**：`planning` 自己发布、`issue` 订阅（设计 §4.3、§6），名字随事件给出（`issue` 不能读 `cycles`/`modules`）。`planning.Deps` 加 `Events`；P1/P2 的删除用例测试固定了调用次序，加上“发布”一步，断言随之改这一处。订阅者要求已有事务，按 `planning.cycle_deleted` 的先例严格解析载荷。
+- **R6 删除的事件**：`planning` 自己发布、`issue` 订阅（设计 §4.3、§6），名字随事件给出（`issue` 不能读 `cycles`/`modules`）。`planning.Deps` 加 `Events`；P1/P2 的删除用例测试固定了调用次序，加上“发布”一步，断言随之改这一处。订阅者要求已有事务（先例 `issue/adapter/postgres/attachment_events.go:12-27`），严格解析载荷（先例 `issue/app/delete_rows_on_deletion.go` 的 `deletedProjects`、`attachment_events.go` 的 `attachmentIssue`）。
 - **R7 OwnOnly**：归属是工作项的写，照 `issue.update` 的规则（只看自己的调用者只能改自己建立的工作项，`HiddenFrom` 的 404）；不套用 `planning` 对一切写 403 的规则（那是迭代/模块本身的写）。
 - **R8 开关默认关**：Go 组合测试与 e2e 先经接口打开 `cycle_view`、`module_view`；删除、清理、运行角色与规模的夹具以 SQL 种行。
 - **R9 自动归档**：`issue/app` 声明 `OpenPlanning.OpenTargets(ctx, projectID, now)`，回答本项目未删除、结束日为空或不早于今天（项目时区）的迭代，与未删除、目标日为空或不早于今天的模块（不论归档与状态，Plane 同，设计 §7）。在 `Now` 之后、`AutoArchive` 之前调用（同一事务、同一业务时钟），id 数组进 `AutoArchiveRows`，语句以 `NOT EXISTS` 排除仍有这些归属的工作项。`auto_archive_test` 固定的调用次序加这一步。
@@ -106,5 +106,5 @@ P3b：列表引擎与两种偏好（G15），`PlanningDirectory` 端口只服务
 
 - **三条列表语句与四个读取投影**：`cycle_id`、`module_ids` 两列要在七处语句里逐一相同，一处不一致即编译失败（行类型互转），以 sqlc 生成与 `issue` 的适配器测试为守卫，单独一个 Task、先于任何写入。
 - **前端类型**：`Issue` 加必填字段使手写字面量编译失败，在同一 Task 内修完并跑 `make lint-web`、`make test-web`。
-- **事件把 planning 的删除与 issue 的写连在一个事务**：订阅者失败使删迭代回滚；订阅者只做软删、插动态与 `MarkChanged` 三条语句，按 id 升序，锁序为项目行 → 迭代行 → 归属行 → 工作项行，与工作项写的“项目行 → 工作项行 → 归属行”在同一把项目行锁下串行，不会交叉等待。
+- **事件把 planning 的删除与 issue 的写连在一个事务**：订阅者失败使删迭代回滚；订阅者只做软删、插动态与 `MarkChanged` 三条语句，按 id 升序，次序为项目行（planning 已持有）→ 迭代/模块行（它的 UPDATE）→ 归属行 → 动态 → 工作项行（`MarkChanged`）。工作项的写不显式锁工作项行（行锁来自 `write` 里的 UPDATE），但每个写一个项目的工作项或归属的写者都先取项目行 `FOR NO KEY UPDATE`（issue 与 planning 的 `Locks`、附件写的 `LockIssueProject`、自动归档的 `Projects.Lock`），所以它们在这把锁下串行，不会交叉等待。
 - **按目录驱动的守卫**：两张表在建表的 Task 触发多道守卫；Go 的删除守卫在紧接的删除 Task 结束时转绿；e2e 的项目/工作区删除故事要等工作项能经接口加入迭代与模块（`furnishIssueRows`）之后才转绿，所以第一个整段七项检查点在归属的接口落地之后（plan 写明时点）。

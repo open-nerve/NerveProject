@@ -1,7 +1,7 @@
 # M6 / P3a 工作项的迭代与模块归属实施计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-> 状态：待预检，尚未实施。
+> 状态：预检通过（2026-11-08，[re-58](../../../reviews/re-58-M6P3a预检.md)），尚未实施。
 
 **Goal：** 工作项经自己的字段加入、移动、移出迭代与模块（建立、PATCH、草稿发布），每次变化一条动态；删除迭代/模块、工作项、项目、工作区时归属随之移除与清理；自动归档跳过仍在未结束迭代或未到目标日模块里的工作项。
 
@@ -17,8 +17,8 @@
 - `plane/`、`refer/` 只读且不在其内跑 git；不动既有容器，不 stash/clean/reset --hard/force；容器套件一次一个。
 - T1 改 phase 为 `M6/P3a`；不延长任何 `until`。
 - 手写文件约 400 行内；SQL 只经本模块 sqlc（`issue` 的语句不连 `cycles`、`modules`）；端口由消费方声明；模块不互相 import；不放宽 `TestSQLCSchemaScope`、`rawsql_test`、`archtest`、删除/清理/运行角色守卫。
-- 每个新声明的错误码在同一 Task 有 issue 的 apitest 处理器测试回答（`apitest.Main`）；码已有中英文案，不新增；`make test-web` 照跑。
-- 测试夹具：`cycle_view`、`module_view` 默认关，Go 组合测试与 e2e 先经接口打开；删除、清理、运行角色与规模的夹具以 SQL 种行（夹具允许）；故事的前置数据只经接口。
+- 每个（操作，新声明的码）在同一 Task 有 issue 的 apitest 处理器测试回答（`apitest.Main` 按操作核对）；码已有中英文案，不新增；`make test-web` 照跑。
+- 测试夹具：`cycle_view`、`module_view` 默认关，Go 组合测试与 e2e 先经接口打开；删除、清理、运行角色与规模的夹具以 SQL 种行（夹具允许，含 T3 起各删除守卫要求的归属行，归属的接口要到 T6/T7 才有）；故事的前置数据只经接口。
 - 守卫转绿的时点：表级守卫在 T2 内转绿；Go 的删除与清理守卫在 T3 结束时转绿；e2e 的项目/工作区删除故事要求两张表各有一行随项目软删，等 T9 的 `furnishIssueRows` 能经接口加入迭代与模块才转绿。因此 T9 之前不做整段七项检查点（只跑聚焦回归，`make test` 的 bootstrap 包用 `make test-shard` 两路或聚焦正则），T9 起有产品变化的检查点推送前串行完整七项。
 - 每个 Task：先写会失败的测试并看到它因所测性质失败，再实现到通过；安全、加锁、访客性质至少一个能让测试失败的变异（只计能编译的变异）。每 Task 跑聚焦回归。
 - M4 的工作项测试与 P1/P2 的迭代、模块测试是回归：只改它们的夹具、假实现与固定的调用次序（spec R6、R9 点名的两处），不改其他断言。
@@ -50,7 +50,7 @@
 
 ## Task 3（T3）：删工作项、删除任务与清理的两步，删除守卫
 
-**Files：** `issue/app/{delete_issue.go,delete_rows.go,delete_project_rows.go}` 与测试；`issue/adapter/postgres/queries/{delete_issue.sql,delete_rows.sql,deletion_remaining.sql,purge.sql}`、`Store` 与测试（`deletion_remaining_test`、`purge_test` 的固定清单）；`issue/module.go` 的清理步骤；`bootstrap` 的 `issue_project_deletion_jobs_test.go`（`projectIssueTable` 认两张表）、种子 `seedIssues`（以 SQL 给 Web/Ops 的工作项各一个迭代与模块归属，迭代与模块先由 `seedCycles`/`seedModules` 种下）、`issue_deletion_test.go`（`deletedWorkItem` 与保留的工作项以 SQL 加归属）、`issue_deletion_interleaving_test.go`（`furnishDeletionIssue`）、`purge_scale_fixture_test.go`（`purgeScaleTables`、`seedPurgeSparseRows`）、`purge_runtime_test.go`（issue 组加两张表）。
+**Files：** `issue/app/{delete_issue.go,delete_rows.go,delete_project_rows.go}` 与测试；`issue/adapter/postgres/queries/{delete_issue.sql,delete_rows.sql,deletion_remaining.sql,purge.sql}`、`Store` 与测试（`deletion_remaining_test`、`delete_rows_test`、`delete_issue_test`、`purge_test` 的固定清单）；`issue/module.go` 的 `Provide` 里的清理步骤；`bootstrap` 的 `issue_project_deletion_jobs_test.go`（`projectIssueTable` 认两张表）、种子 `seedIssues`（以 SQL 给 Web/Ops 的工作项各一个迭代与模块归属：`twoProjects`、`seedProject` 已先跑 `seedCycles`/`seedModules`，它们不回答 id，按项目查出）、`project_deletion_test.go` 与 `issue_deletion_test.go`（`deletedWorkItem` 与保留的工作项在其项目以 SQL 种迭代、模块与归属）、`issue_deletion_interleaving_test.go`（`furnishDeletionIssue`，三个项目各种一份）、`purge_scale_fixture_test.go`（`purgeScaleTables`、`seedPurgeSparseRows`）、`purge_runtime_test.go`（issue 组与老化、核对的表清单同步加两张表）。
 
 - [ ] Step 1：守卫与单元测试（RED）：删工作项连带两张表同一时刻；`DeletionRowSteps` 的步骤清单与剩余探查；清理步骤的次序；项目/工作区删除、迟到删除与清理的守卫随种子扩展而要求两张表。
 - [ ] Step 2：实现（`issueRowSteps` 与 `DeletionRowSteps` 在 `issue_labels` 之后加 `cycle_issues`、`module_issues`；清理在 `issues` 之前加 `module_issues`、`cycle_issues`）；bootstrap 的删除、清理、运行角色守卫转绿（聚焦正则，收据）。
@@ -66,7 +66,7 @@
 
 ## Task 5（T5）：planning 的目标端口与未结束的 id
 
-**Files：** `issue/app/planning_ports.go`（`PlanningTargets`、`OpenPlanning` 与值类型，spec R1、R9）；`planning/app/issue_targets.go` 与测试；`planning/adapter/postgres/queries/issue_targets.sql`（按 id 批量读本项目未删除的迭代与模块、未结束的 id）与 `Store`；`planning/module.go`（`Provide(pool, projects)` 回答 `IssueTargets`）；`bootstrap/{app.go,ports.go}` 的转换与接线（`issue.Deps.Planning`）；`planning.Provide` 的三处测试调用（`purge_catalog_test.go`、`issue_retention_sets_test.go`、`asset_image_retention_fixture_test.go`）。
+**Files：** `issue/app/planning_ports.go`（`PlanningTargets`、`OpenPlanning` 与值类型，spec R1、R9）；`planning/app/issue_targets.go` 与测试；`planning/adapter/postgres/queries/issue_targets.sql`（按 id 批量读本项目未删除的迭代与模块、未结束的 id）与 `Store`；`planning/module.go`（`Provide(pool, projects)` 回答 `IssueTargets`，`projects` 只需项目事实的读取）；`bootstrap/{app.go,ports.go}` 的转换与接线（`issue.Deps.Planning`）；`planning.Provide` 的五处测试调用（`bootstrap` 的 `purge_catalog_test.go`、`issue_retention_sets_test.go`、`asset_image_retention_fixture_test.go`，`planning/adapter/postgres` 的 `module_rows_test.go`、`store_test.go`；清理不用项目端口，可传 nil）。
 
 - [ ] Step 1：测试（RED）：`Targets` 只回答本项目、未删除的（含已归档）并带名字与归档；别的项目、已删除的不回答；两个开关；`CycleCompleted` 按项目时区（以上海时区跨日的用例区分 UTC）、草稿与未开始与进行中为否；`OpenTargets` 的迭代（结束日为空或不早于今天）与模块（目标日为空或不早于今天，不论归档与状态），已删除的不在内。
 - [ ] Step 2：实现；`bootstrap` 接线（此 Task 端口尚无调用者，下一 Task 使用）。
@@ -74,15 +74,15 @@
 
 ## Task 6（T6）：工作项加入、移动、移出迭代
 
-**Files：** `api/modules/issue.yaml`（`IssueCreate`、`IssueUpdate` 的 `cycle_id`；建立与 PATCH 声明 `planning.cycles_disabled`、`planning.archived`、`planning.cycle_completed`）、生成物；`issue/domain/{issue.go,patch.go,activity.go,errors.go}` 与测试；`issue/app/{create_core.go,update_issue.go,writes.go,issue_events.go}` 与测试（假实现加端口）；`issue/adapter/postgres/queries/memberships.sql`（迭代的软删与插入）与 `Store`；`issue/adapter/http/{create_payload.go,issues.go}` 与每个新码的处理器测试；bootstrap 的组合测试（新文件 `issue_cycle_membership_test.go`）。
+**Files：** `api/modules/issue.yaml`（`IssueCreate`、`IssueUpdate` 的 `cycle_id`；建立与 PATCH 声明 `planning.cycles_disabled`、`planning.archived`、`planning.cycle_completed`）、生成物；`issue/domain/{issue.go,patch.go,activity.go,errors.go}` 与测试；`issue/app/{create_core.go,update_issue.go,writes.go,issue_events.go}` 与测试（假实现加端口）；`issue/adapter/postgres/queries/memberships.sql`（迭代的软删与插入）与 `Store`；`issue/adapter/http/{create_payload.go,issues.go}` 与处理器测试（三个码 × 建立、PATCH 各一个）；bootstrap 的组合测试（新文件 `issue_cycle_membership_test.go`）；`web/apps/web/core/components/issues/issue-detail/issue-activity/activity/actions/cycle.tsx` 的移出分支读 `old_value`（设计 §8）与它的单元测试。
 
-- [ ] Step 1：测试（RED）：建立时加入；PATCH 加入、移到别的迭代、移出（含移出已归档、已结束的迭代）；相同值不写；已结束（用这次写的时钟，以项目时区跨日区分）、已归档 409；不存在、已删除、别的项目 422 `cycle_id not_allowed` 并与其他字段问题合在一个 422；`cycle_view` 关闭时有变化 409、无变化 200；拒绝次序（spec R2）的相邻对各一个用例；动态的三种行与 `issue.created`/`issue.updated` 的 `Changes`；OwnOnly 只能改自己建立的（R7）；归属行与工作项的审计同一时刻。
+- [ ] Step 1：测试（RED）：建立时加入；PATCH 加入、移到别的迭代、移出（含移出已归档、已结束的迭代）；相同值不写；已结束（用这次写的时钟，以项目时区跨日区分）、已归档 409；不存在、已删除、别的项目 422 `cycle_id not_allowed` 并与其他字段问题合在一个 422；`cycle_view` 关闭时有变化 409、无变化 200；拒绝次序（spec R2）的相邻对各一个用例；动态的三种行与 `issue.created`/`issue.updated` 的 `Changes`；OwnOnly 只能改自己建立的（R7）；归属行与工作项的审计同一时刻；竞态：同一工作项两个并发 PATCH 指向不同迭代，最后只有一行未删除的 `cycle_issues`、两条动态（`racingWrite`/`w.sending`，`planning_cycles_test.go:192-196` 的写法）。
 - [ ] Step 2：实现（R1–R5）；`make gen`；聚焦回归（issue 全部包、bootstrap 的工作项写与事件测试、`make lint-go gen-check test-web`）。
 - [ ] Step 3：变异：“已结束”在读时钟之前判定（以跨日交错证明）、开关只在加入时看、移到别的迭代也检查旧迭代、重复加入仍写动态时测试失败。提交。
 
 ## Task 7（T7）：工作项加入、移出模块
 
-**Files：** `api/modules/issue.yaml`（`module_ids`；声明 `planning.modules_disabled`）、生成物；`issue/domain` 的 `module_ids` 上限、重复与 `Changes`；`issue/app` 的检查与 `relink`；`memberships.sql` 的模块语句；处理器测试；bootstrap 组合测试（`issue_module_membership_test.go`）。
+**Files：** `api/modules/issue.yaml`（`module_ids`；建立与 PATCH 声明 `planning.modules_disabled`）、生成物；`issue/domain` 的 `module_ids` 上限、重复与 `Changes`；`issue/app` 的检查与 `relink`；`memberships.sql` 的模块语句；处理器测试（新码 × 建立、PATCH 各一个）；bootstrap 组合测试（`issue_module_membership_test.go`）。
 
 - [ ] Step 1：测试（RED）：建立时加入多个；PATCH 整体替换（新加入的检查、留下的已归档模块不检查、移出的软删且同一时刻）；集合相同不写；上限与重复（下标）；已归档 409；不存在、已删除、别的项目 422 `module_ids[i] not_allowed`（下标指向请求里的位置）；开关；动态的两种行（按 id 升序）。
 - [ ] Step 2：实现；聚焦回归。
@@ -90,14 +90,14 @@
 
 ## Task 8（T8）：草稿的迭代与模块
 
-**Files：** `api/modules/issue.yaml`（`IssueDraftPayload` 两个字段；`publishDraft` 声明四个新码）、生成物；处理器测试；bootstrap 的草稿测试（`issue_draft_publish_test.go` 等）。
+**Files：** `api/modules/issue.yaml`（`IssueDraftPayload` 两个字段；`publishDraft` 声明四个新码）、生成物；处理器测试（四个码 × 发布草稿各一个）；bootstrap 的草稿测试（`issue_draft_publish_test.go` 等）。
 
 - [ ] Step 1：测试（RED）：保存只做结构检查（指向已结束、已删除的迭代也能保存）；发布按建立的规则（已结束、已归档、已删除、开关关闭被拒、草稿留着可改）；发布成功写归属与“加入”动态；`TestDraftPublishMatchesCreateBodyErrors` 覆盖两个字段的 400/422 用例。
 - [ ] Step 2：实现（解码随 `newIssueInput` 共用，检查与写入随 `IssueCreation` 共用，不另写）；提交。
 
 ## Task 9（T9）：删迭代/模块的事件与订阅者；第一个检查点
 
-**Files：** `planning/{module.go,module_events.go}`（`Deps.Events`、`EventTypes()`）；`planning/app/{delete_cycle.go,delete_module.go}` 与测试（固定次序加“发布”）；`issue/{module_events.go}`、`issue/app/membership_events.go`（订阅者）与测试；`issue/adapter/postgres` 的移除语句；`bootstrap/{app.go,events.go,events_test.go}`（事件目录）；bootstrap 组合测试（`planning_deletion_memberships_test.go`）与交错测试；`e2e/fixtures/furnish.ts`（`furnishIssueRows` 经接口给工作项一个迭代与一个模块的归属，先打开两个开关、先建迭代与模块）、`e2e/fixtures/assert/catalog.ts`（`asynchronousDeletionTable` 加两张表）。
+**Files：** `planning/{module.go,module_events.go}`（`Deps.Events`、`EventTypes()`）；`planning/app/{delete_cycle.go,delete_module.go}` 与测试（固定次序加“发布”）；`issue/{module_events.go}`、`issue/app/membership_events.go`（订阅者）与测试；`issue/adapter/postgres` 的移除语句；`bootstrap/{app.go,events.go,events_test.go}`（事件目录）；bootstrap 组合测试（`planning_deletion_memberships_test.go`）与交错测试；`e2e/fixtures/furnish.ts`（`furnishPlanningRows` 回答所建迭代与模块的 id，`furnishIssueRows` 接收它们、以项目成员的令牌经接口把工作项加入；`furnishWorkspace` 改为先 planning 后 issue）、调用两者的删除故事（`p4-archive.spec.ts`、`w3-workspace-settings.spec.ts`、`i21-purge.spec.ts` 等，以 grep 找全，调用次序对调）、`e2e/fixtures/assert/catalog.ts`（`asynchronousDeletionTable` 加两张表）。
 
 - [ ] Step 1：测试（RED）：删迭代后归属同一时刻软删、每个工作项一条 `deleted` 动态（名字来自事件）、工作项记为被删除者此刻修改、不发 `issue.updated`；删模块同理；删一个没有归属的迭代不写；载荷严格解析（类型、实体、缺名字被拒）；交错：写归属与删迭代两种次序（先删则 PATCH 422，先写则被移除并记动态），删模块同理；事件目录。
 - [ ] Step 2：实现（R6）；e2e furnish 与目录。
