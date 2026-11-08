@@ -21,6 +21,10 @@ WHEN 'issue_assignees' THEN EXISTS (SELECT 1 FROM issue_assignees r WHERE r.proj
     AND r.deleted_at IS NULL AND r.id > $3::uuid)
 WHEN 'issue_labels' THEN EXISTS (SELECT 1 FROM issue_labels r WHERE r.project_id = $2::uuid
     AND r.deleted_at IS NULL AND r.id > $3::uuid)
+WHEN 'cycle_issues' THEN EXISTS (SELECT 1 FROM cycle_issues r WHERE r.project_id = $2::uuid
+    AND r.deleted_at IS NULL AND r.id > $3::uuid)
+WHEN 'module_issues' THEN EXISTS (SELECT 1 FROM module_issues r WHERE r.project_id = $2::uuid
+    AND r.deleted_at IS NULL AND r.id > $3::uuid)
 WHEN 'issue_relations' THEN EXISTS (SELECT 1 FROM issue_relations r WHERE (r.project_id = $2::uuid OR r.related_issue_id IN (SELECT i.id FROM issues i WHERE i.project_id = $2))
     AND r.deleted_at IS NULL AND r.id > $3::uuid)
 WHEN 'issue_links' THEN EXISTS (SELECT 1 FROM issue_links r WHERE r.project_id = $2::uuid

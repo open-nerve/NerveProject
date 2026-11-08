@@ -12,7 +12,7 @@ import (
 )
 
 func TestDeletionRemainingUsesCurrentCursor(t *testing.T) {
-	order := []app.RowStep{"draft_issues", "issues", "issue_assignees", "issue_labels", "issue_relations", "issue_links", "issue_subscribers", "issue_mentions", "issue_comments", "issue_reactions", "comment_reactions", "issue_activities", "issue_description_versions"}
+	order := []app.RowStep{"draft_issues", "issues", "issue_assignees", "issue_labels", "cycle_issues", "module_issues", "issue_relations", "issue_links", "issue_subscribers", "issue_mentions", "issue_comments", "issue_reactions", "comment_reactions", "issue_activities", "issue_description_versions"}
 	if !slices.Equal(app.DeletionRowSteps(), order) {
 		t.Fatalf("steps=%v", app.DeletionRowSteps())
 	}

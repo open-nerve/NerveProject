@@ -56,6 +56,16 @@ func (s *Store) DeleteIssueLabelRows(ctx context.Context, d app.IssueDeletion) e
 	return deletedRows(s.queries(ctx).DeleteIssueLabelRows(ctx, gen.DeleteIssueLabelRowsParams(deletion(d))), "the labels", d)
 }
 
+// DeleteIssueCycleRows soft-deletes the work items' cycle memberships.
+func (s *Store) DeleteIssueCycleRows(ctx context.Context, d app.IssueDeletion) error {
+	return deletedRows(s.queries(ctx).DeleteIssueCycleRows(ctx, gen.DeleteIssueCycleRowsParams(deletion(d))), "the cycle memberships", d)
+}
+
+// DeleteIssueModuleRows soft-deletes the work items' module memberships.
+func (s *Store) DeleteIssueModuleRows(ctx context.Context, d app.IssueDeletion) error {
+	return deletedRows(s.queries(ctx).DeleteIssueModuleRows(ctx, gen.DeleteIssueModuleRowsParams(deletion(d))), "the module memberships", d)
+}
+
 // DeleteIssueLinkRows soft-deletes the subtree's links, locked in id order.
 func (s *Store) DeleteIssueLinkRows(ctx context.Context, d app.IssueDeletion) error {
 	return deletedRows(s.queries(ctx).DeleteIssueLinkRows(ctx, gen.DeleteIssueLinkRowsParams(deletion(d))), "the links", d)

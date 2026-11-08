@@ -202,7 +202,9 @@ func TestDeleteRowsSkippedRelationsAdvance(t *testing.T) {
 			w.other = map[uuid.UUID]uuid.UUID{r[0]: q, r[1]: q}
 			w.deletedProjects = map[uuid.UUID]time.Time{q: at.Add(-time.Hour)}
 			if budget {
-				w.advance = 9 * time.Second
+				// Six empty tables before the relations and their first batch:
+				// the seventh commit reaches the 45s budget at the second batch.
+				w.advance = 7 * time.Second
 				w.pending = true
 			}
 			got, err := w.useCase().Execute(t.Context(), "project", p, at, by)
@@ -228,7 +230,7 @@ func TestDeleteRowsSkippedRelationsAdvance(t *testing.T) {
 func TestDeleteRowsStopsAtEveryFailedTable(t *testing.T) {
 	p, by := uuid.NewV7(), uuid.NewV7()
 	at := time.Now()
-	for _, statement := range []string{"workspace_drafts", "drafts", "issues", "assignees", "labels", "relations", "links", "subscribers", "mentions", "comments", "reactions", "comment_reactions", "activities", "description_versions"} {
+	for _, statement := range []string{"workspace_drafts", "drafts", "issues", "assignees", "labels", "cycle_issues", "module_issues", "relations", "links", "subscribers", "mentions", "comments", "reactions", "comment_reactions", "activities", "description_versions"} {
 		t.Run(statement, func(t *testing.T) {
 			w := newDeletionWorld(p)
 			w.rows["workspace_drafts"] = map[uuid.UUID][]uuid.UUID{p: ids(3)}

@@ -137,6 +137,38 @@ func (q *Queries) PurgeCommentReactions(ctx context.Context, arg PurgeCommentRea
 	return i, err
 }
 
+const purgeCycleIssues = `-- name: PurgeCycleIssues :one
+WITH candidates AS MATERIALIZED (
+    SELECT candidate.id FROM cycle_issues AS candidate
+    WHERE candidate.deleted_at < $2 AND candidate.id > $1
+    ORDER BY candidate.id LIMIT $3
+), deleted AS (
+    DELETE FROM cycle_issues AS target WHERE target.deleted_at < $2 AND target.id IN (SELECT candidates.id FROM candidates) RETURNING target.id
+)
+SELECT (SELECT count(*)::integer FROM candidates) AS scanned,
+       (SELECT count(*)::integer FROM deleted) AS deleted,
+       coalesce((SELECT id FROM candidates ORDER BY id DESC LIMIT 1), $1::uuid)::uuid AS after_id
+`
+
+type PurgeCycleIssuesParams struct {
+	AfterID    uuid.UUID
+	Cutoff     *time.Time
+	BatchLimit int32
+}
+
+type PurgeCycleIssuesRow struct {
+	Scanned int32
+	Deleted int32
+	AfterID uuid.UUID
+}
+
+func (q *Queries) PurgeCycleIssues(ctx context.Context, arg PurgeCycleIssuesParams) (PurgeCycleIssuesRow, error) {
+	row := q.db.QueryRow(ctx, purgeCycleIssues, arg.AfterID, arg.Cutoff, arg.BatchLimit)
+	var i PurgeCycleIssuesRow
+	err := row.Scan(&i.Scanned, &i.Deleted, &i.AfterID)
+	return i, err
+}
+
 const purgeDraftIssuesCandidates = `-- name: PurgeDraftIssuesCandidates :many
 SELECT id FROM draft_issues
 WHERE deleted_at < $1 AND id > $2
@@ -519,4 +551,36 @@ func (q *Queries) PurgeIssuesCandidates(ctx context.Context, arg PurgeIssuesCand
 		return nil, err
 	}
 	return items, nil
+}
+
+const purgeModuleIssues = `-- name: PurgeModuleIssues :one
+WITH candidates AS MATERIALIZED (
+    SELECT candidate.id FROM module_issues AS candidate
+    WHERE candidate.deleted_at < $2 AND candidate.id > $1
+    ORDER BY candidate.id LIMIT $3
+), deleted AS (
+    DELETE FROM module_issues AS target WHERE target.deleted_at < $2 AND target.id IN (SELECT candidates.id FROM candidates) RETURNING target.id
+)
+SELECT (SELECT count(*)::integer FROM candidates) AS scanned,
+       (SELECT count(*)::integer FROM deleted) AS deleted,
+       coalesce((SELECT id FROM candidates ORDER BY id DESC LIMIT 1), $1::uuid)::uuid AS after_id
+`
+
+type PurgeModuleIssuesParams struct {
+	AfterID    uuid.UUID
+	Cutoff     *time.Time
+	BatchLimit int32
+}
+
+type PurgeModuleIssuesRow struct {
+	Scanned int32
+	Deleted int32
+	AfterID uuid.UUID
+}
+
+func (q *Queries) PurgeModuleIssues(ctx context.Context, arg PurgeModuleIssuesParams) (PurgeModuleIssuesRow, error) {
+	row := q.db.QueryRow(ctx, purgeModuleIssues, arg.AfterID, arg.Cutoff, arg.BatchLimit)
+	var i PurgeModuleIssuesRow
+	err := row.Scan(&i.Scanned, &i.Deleted, &i.AfterID)
+	return i, err
 }

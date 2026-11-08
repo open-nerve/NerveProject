@@ -50,6 +50,29 @@ func aLabel(t *testing.T, pool *pgxpool.Pool, p project, n int) uuid.UUID {
 	return newLabel(t, pool, p, fmt.Sprint("L", n))
 }
 
+// aCycle is a cycle of p of its own for the n-th row.
+func aCycle(t *testing.T, pool *pgxpool.Pool, p project, n int) uuid.UUID {
+	return newCycle(t, pool, p, fmt.Sprint("C", n))
+}
+
+// aModule is a module of p of its own for the n-th row.
+func aModule(t *testing.T, pool *pgxpool.Pool, p project, n int) uuid.UUID {
+	return newModule(t, pool, p, fmt.Sprint("M", n))
+}
+
+// aCycleRow inserts the cycle row id under the work item issue of p, in a
+// cycle of its own. A work item is in one cycle at most
+// (cycle_issues_issue_id_key), and the tests put several undeleted rows
+// under one work item: so the row is of a work item of its own for the
+// n-th row, numbered 300 + n, under issue, in issue's subtree.
+func aCycleRow(t *testing.T, pool *pgxpool.Pool, p project, issue, id, by uuid.UUID, n int) {
+	t.Helper()
+	own := uuid.NewV7()
+	newIssue(t, pool, p, own, 300+n, by)
+	exec(t, pool, "UPDATE issues SET parent_id = $2 WHERE id = $1", own, issue)
+	child("cycle_issues", "cycle_id", aCycle)(t, pool, p, own, id, by, n)
+}
+
 // aRelation inserts the relation id of the work item issue of p to a work
 // item of p of its own for the n-th row, numbered 200 + n.
 func aRelation(t *testing.T, pool *pgxpool.Pool, p project, issue, id, by uuid.UUID, n int) {
@@ -72,6 +95,8 @@ var batchStatements = []batchStatement{
 	}},
 	{"issue_assignees", (*postgresadapter.Store).DeleteProjectAssigneeRows, child("issue_assignees", "assignee_id", anAccount)},
 	{"issue_labels", (*postgresadapter.Store).DeleteProjectLabelRows, child("issue_labels", "label_id", aLabel)},
+	{"cycle_issues", (*postgresadapter.Store).DeleteProjectCycleRows, aCycleRow},
+	{"module_issues", (*postgresadapter.Store).DeleteProjectModuleRows, child("module_issues", "module_id", aModule)},
 	{"issue_relations", relationBatch, aRelation},
 	{"issue_links", (*postgresadapter.Store).DeleteProjectLinkRows, func(t *testing.T, pool *pgxpool.Pool, p project, issue, id, by uuid.UUID, n int) {
 		insertLink(t, pool, p, issue, id, by, fmt.Sprintf("http://169.254.169.254/%d", n))

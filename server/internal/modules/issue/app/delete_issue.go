@@ -31,6 +31,8 @@ type IssueRowsDeleter interface {
 	DeleteIssueRows(ctx context.Context, d IssueDeletion) error
 	DeleteIssueAssigneeRows(ctx context.Context, d IssueDeletion) error
 	DeleteIssueLabelRows(ctx context.Context, d IssueDeletion) error
+	DeleteIssueCycleRows(ctx context.Context, d IssueDeletion) error
+	DeleteIssueModuleRows(ctx context.Context, d IssueDeletion) error
 	DeleteIssueLinkRows(ctx context.Context, d IssueDeletion) error
 	DeleteIssueSubscriberRows(ctx context.Context, d IssueDeletion) error
 	DeleteIssueMentionRows(ctx context.Context, d IssueDeletion) error
@@ -43,10 +45,12 @@ type IssueRowsDeleter interface {
 
 // issueRowSteps are d's statements of a work item's deletion in the global
 // order of M4 design 3.5, as a project's (rowSteps): the work items, then
-// the rows under them.
+// the rows under them, the cycle and module memberships after the labels,
+// at the deletion's moment and without a membership activity (M6 P3a spec
+// 2.5).
 func issueRowSteps(d IssueRowsDeleter, relations func(context.Context, IssueDeletion) error) []func(context.Context, IssueDeletion) error {
 	return []func(context.Context, IssueDeletion) error{
-		d.DeleteIssueRows, d.DeleteIssueAssigneeRows, d.DeleteIssueLabelRows, relations, d.DeleteIssueLinkRows, d.DeleteIssueSubscriberRows, d.DeleteIssueMentionRows,
+		d.DeleteIssueRows, d.DeleteIssueAssigneeRows, d.DeleteIssueLabelRows, d.DeleteIssueCycleRows, d.DeleteIssueModuleRows, relations, d.DeleteIssueLinkRows, d.DeleteIssueSubscriberRows, d.DeleteIssueMentionRows,
 		d.DeleteIssueCommentRows, d.DeleteIssueReactionRows, d.DeleteIssueCommentReactionRows, d.DeleteIssueActivityRows, d.DeleteIssueDescriptionVersionRows,
 	}
 }

@@ -37,6 +37,8 @@ type ProjectRowsDeleter interface {
 	DeleteProjectIssueRows(ctx context.Context, b RowBatch) ([]uuid.UUID, error)
 	DeleteProjectAssigneeRows(ctx context.Context, b RowBatch) ([]uuid.UUID, error)
 	DeleteProjectLabelRows(ctx context.Context, b RowBatch) ([]uuid.UUID, error)
+	DeleteProjectCycleRows(ctx context.Context, b RowBatch) ([]uuid.UUID, error)
+	DeleteProjectModuleRows(ctx context.Context, b RowBatch) ([]uuid.UUID, error)
 	DeleteProjectLinkRows(ctx context.Context, b RowBatch) ([]uuid.UUID, error)
 	DeleteProjectSubscriberRows(ctx context.Context, b RowBatch) ([]uuid.UUID, error)
 	DeleteProjectMentionRows(ctx context.Context, b RowBatch) ([]uuid.UUID, error)
@@ -48,11 +50,13 @@ type ProjectRowsDeleter interface {
 }
 
 // rowSteps are d's statements in the global order of M4 design 3.5: the
-// drafts, work items, then the rows under them.
+// drafts, work items, then the rows under them, the cycle and module
+// memberships after the labels (M6 P3a spec 2.5).
 func rowSteps(d ProjectRowsDeleter, relations func(context.Context, RowBatch) (BatchProgress, error)) []func(context.Context, RowBatch) (BatchProgress, error) {
 	methods := map[RowStep]func(context.Context, RowBatch) (BatchProgress, error){
 		"draft_issues": rowProgress(d.DeleteProjectDraftRows), "issues": rowProgress(d.DeleteProjectIssueRows),
 		"issue_assignees": rowProgress(d.DeleteProjectAssigneeRows), "issue_labels": rowProgress(d.DeleteProjectLabelRows),
+		"cycle_issues": rowProgress(d.DeleteProjectCycleRows), "module_issues": rowProgress(d.DeleteProjectModuleRows),
 		"issue_relations": relations, "issue_links": rowProgress(d.DeleteProjectLinkRows),
 		"issue_subscribers": rowProgress(d.DeleteProjectSubscriberRows), "issue_mentions": rowProgress(d.DeleteProjectMentionRows),
 		"issue_comments": rowProgress(d.DeleteProjectCommentRows), "issue_reactions": rowProgress(d.DeleteProjectReactionRows),

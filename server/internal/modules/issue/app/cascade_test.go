@@ -58,6 +58,14 @@ func (f *fakeRows) DeleteProjectLabelRows(ctx context.Context, b app.RowBatch) (
 	return f.batch(ctx, "labels", b)
 }
 
+func (f *fakeRows) DeleteProjectCycleRows(ctx context.Context, b app.RowBatch) ([]uuid.UUID, error) {
+	return f.batch(ctx, "cycle_issues", b)
+}
+
+func (f *fakeRows) DeleteProjectModuleRows(ctx context.Context, b app.RowBatch) ([]uuid.UUID, error) {
+	return f.batch(ctx, "module_issues", b)
+}
+
 func (f *fakeRows) DeleteProjectSubscriberRows(ctx context.Context, b app.RowBatch) ([]uuid.UUID, error) {
 	return f.batch(ctx, "subscribers", b)
 }
@@ -77,19 +85,22 @@ func ids(n int) []uuid.UUID {
 
 // twoProjects are the rows of web and ops, each with three drafts. Web has
 // three work items, an assignee, a relation and two activity rows; ops a work
-// item, a label on it, a relation and a subscriber. Several tables fill a
-// batch of two, which fakeRows alternates greatest first and least first.
+// item, a label on it, its cycle and its module, a relation and a subscriber.
+// Several tables fill a batch of two, which fakeRows alternates greatest
+// first and least first.
 func twoProjects(web, ops uuid.UUID) *fakeRows {
-	w, o := ids(13), ids(8)
+	w, o := ids(13), ids(10)
 	return &fakeRows{deleted: map[uuid.UUID]string{}, rows: map[string]map[uuid.UUID][]uuid.UUID{
-		"drafts":      {web: w[10:13], ops: o[5:8]},
-		"issues":      {web: w[0:3], ops: o[0:1]},
-		"assignees":   {web: w[3:4]},
-		"labels":      {ops: o[1:2]},
-		"relations":   {web: w[6:7], ops: o[3:4]},
-		"subscribers": {ops: o[2:3]},
-		"links":       {web: w[7:10], ops: o[4:5]},
-		"activities":  {web: w[4:6]},
+		"drafts":        {web: w[10:13], ops: o[5:8]},
+		"issues":        {web: w[0:3], ops: o[0:1]},
+		"assignees":     {web: w[3:4]},
+		"labels":        {ops: o[1:2]},
+		"cycle_issues":  {ops: o[8:9]},
+		"module_issues": {ops: o[9:10]},
+		"relations":     {web: w[6:7], ops: o[3:4]},
+		"subscribers":   {ops: o[2:3]},
+		"links":         {web: w[7:10], ops: o[4:5]},
+		"activities":    {web: w[4:6]},
 	}}
 }
 
@@ -98,7 +109,7 @@ func twoProjects(web, ops uuid.UUID) *fakeRows {
 // zero id, then after the greatest id of each batch, until one finds none.
 func batches(f *fakeRows, project uuid.UUID) []string {
 	var calls []string
-	for _, statement := range []string{"drafts", "issues", "assignees", "labels", "relations", "links", "subscribers", "mentions", "comments", "reactions", "comment_reactions", "activities", "description_versions"} {
+	for _, statement := range []string{"drafts", "issues", "assignees", "labels", "cycle_issues", "module_issues", "relations", "links", "subscribers", "mentions", "comments", "reactions", "comment_reactions", "activities", "description_versions"} {
 		rows := f.rows[statement][project]
 		after := uuid.UUID{}
 		for i := 0; ; i += 2 {

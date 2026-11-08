@@ -74,6 +74,8 @@ func Provide(pool *pgxpool.Pool, protected []postgres.ProtectedReference) Provid
 		{Table: "issue_labels", Delete: store.PurgeIssueLabels},
 		{Table: "issue_subscribers", Delete: store.PurgeIssueSubscribers},
 		{Table: "draft_issues", Protected: true, Delete: store.PurgeDraftIssues},
+		{Table: "module_issues", Delete: store.PurgeModuleIssues},
+		{Table: "cycle_issues", Delete: store.PurgeCycleIssues},
 		{Table: "issues", Protected: true, Delete: store.PurgeIssues},
 	}), IssueCascade: app.NewCascade(store), ListSettings: app.ListSettings{}}
 }

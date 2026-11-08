@@ -33,6 +33,8 @@ func purgeMethods(s *postgresadapter.Store) map[string]func(context.Context, app
 		"issue_labels":               s.PurgeIssueLabels,
 		"issue_subscribers":          s.PurgeIssueSubscribers,
 		"draft_issues":               s.PurgeDraftIssues,
+		"module_issues":              s.PurgeModuleIssues,
+		"cycle_issues":               s.PurgeCycleIssues,
 		"issues":                     s.PurgeIssues,
 	}
 }
@@ -166,9 +168,11 @@ func testIssuePurgeGraph(t *testing.T) {
 	}
 	// Workspace-only draft is not reachable through an issue or project purge.
 	exec(t, pool, "INSERT INTO draft_issues(id,workspace_id,created_by_id,deleted_at) VALUES($1,$2,$3,$4)", purgeID(160), p.workspace, by, old)
-	// 12 owned child rows + the reaction fixture's extra comment + 3 reverse
-	// relations + 1 workspace-only draft + 1 root; recent descendants cascade.
-	const wantDirect = 18
+	// 14 owned child rows + the reaction fixture's extra comment + 3 reverse
+	// relations + 1 workspace-only draft + 1 root; recent descendants cascade,
+	// and so does the cycle fixture's work item under root (aCycleRow), whose
+	// old cycle row counts directly only when cycle_issues goes before issues.
+	const wantDirect = 20
 	if count, err := purgeAll(issue.Provide(pool, nil).Purger, ctx, cutoff, 1); err != nil || count != wantDirect {
 		t.Fatalf("graph direct count=%d,%v; want %d", count, err, wantDirect)
 	}

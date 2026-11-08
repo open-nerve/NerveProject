@@ -307,6 +307,11 @@ func TestDeletionInterleaving25(t *testing.T) {
 				requestRelease(t, oldHolder)
 				waitDeletionJob(t, w.pool, oldJob, "completed")
 			}
+			// The catalog holds furnishDeletionIssue's cycles and modules, which the
+			// planning module's own job deletes: wait for it too.
+			for _, p := range []uuid.UUID{old, w.web, q} {
+				waitPlanningDeletion(t, w.pool, p)
+			}
 			assertDeletionAudit(t, w.pool, "issue_relations", skipped, oldJob)
 			assertDeletionAudit(t, w.pool, "issue_relations", sharedIDs, pj)
 			assertDeletionAudit(t, w.pool, "draft_issues", []uuid.UUID{loose}, wj)
@@ -342,10 +347,15 @@ func TestDeletionInterleaving25(t *testing.T) {
 }
 
 // Fill every issue-owned table without adding relations that would change the
-// ordered candidate fixture. Links use the existing catalog seed; the remaining
-// rows are created through the real authenticated HTTP handlers.
+// ordered candidate fixture. Links and the cycle and module memberships use the
+// existing catalog seeds (seedIssueLinks, seedCycles, seedModules,
+// seedMemberships); the remaining rows are created through the real
+// authenticated HTTP handlers.
 func furnishDeletionIssue(t *testing.T, w issueWorld, projectID, issueID uuid.UUID) {
 	t.Helper()
+	seedCycles(t, w.pool, projectID, w.ids["alice"])
+	seedModules(t, w.pool, projectID, w.ids["alice"])
+	seedMemberships(t, w.pool, issueID, w.ids["alice"])
 	var label struct {
 		ID uuid.UUID `json:"id"`
 	}
