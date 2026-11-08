@@ -11,8 +11,8 @@ shard=$1 shards=$2 timeout=$3
 
 cd "$(dirname "$0")/../server"
 pkg=./internal/bootstrap
-# go test -list 先列名字，最后一行是包的结果；测试名是标识符，不含正则的元字符
-list() { go test -list "$1" "$pkg" | grep -E '^[A-Za-z_][A-Za-z0-9_]*$'; }
+# go test -list 先列名字，最后一行是包的结果（含空白）；测试名是 Go 标识符（可含非 ASCII 字母），不含空白和正则的元字符
+list() { go test -list "$1" "$pkg" | grep -E '^[^[:space:]]+$'; }
 all=$(list .)
 mine=$(LC_ALL=C sort <<<"$all" | awk -v n="$shards" -v k="$shard" '(NR - 1) % n == k')
 [ -n "$mine" ] || { echo "第 $shard 路没有分到 bootstrap 包的测试" >&2; exit 1; }

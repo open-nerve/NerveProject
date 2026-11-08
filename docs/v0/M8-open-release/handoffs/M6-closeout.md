@@ -45,5 +45,6 @@ M6/P2 的本地 e2e（`make build && make e2e`）两次各有一条因 Postgres 
 - `internal/bootstrap` 包把数百个组合测试串行跑在一个测试二进制里，受 `go test -timeout=20m` 的整包期限约束（`Makefile` 的 `GO_TEST_TIMEOUT`）。[M5-closeout](M5-closeout.md) 记它在 CI 上为 756–978 秒；到 M6/P2，最近 12 次 CI 为 919–1185 秒（M6/P1、P2 各加了测试；本地约 840–860 秒，CI 运行器慢约 15–40%）。修复分支 `codex/m6-p2-ci` 的分支 CI 42413098044 中它超过 1200 秒被终止（`panic: test timed out after 20m0s`），修复分支本身没有让它在本地变慢（修复前 840–855 秒，修复后 833–848 秒）。
 - 负责人 2026-11-08 批准把 CI 的 `server` 任务按矩阵分两路（`.github/workflows/ci.yml`，`make test-shard`，`tools/go-test-shard.sh`）：bootstrap 包的测试按名字排序后轮流分到两路，其他包和 `server/tools` 只在第 0 路；生成物检查与 lint 只在第 0 路。两路合起来与 `make test` 相同，脚本核对每路的 `-run` 模式恰好选中分到的测试。整包期限 20 分钟和 `server` 任务期限 25 分钟都没有改。按本地逐个测试的计时（644 个测试共 831 秒），两半分别约 450 与 382 秒。
 - 本地 `make test` 照旧整包串行运行。
+- 分路后 CI 报告的检查名是 `server (0)`、`server (1)`，不再有 `server`；按 [M0-P6 交接](M0-P6-release-notes.md) 设分支保护的必须检查时以此为准（那里建议的汇总任务也要依赖两路）。
 
 **何时验收：** M8 的 CI 工作复核每路的余量（bootstrap 每半与 20 分钟整包期限、各路与 25 分钟任务期限）；需要时增加路数，或把 bootstrap 的测试改为可并行运行。改路数、期限或作业结构须负责人同意。
