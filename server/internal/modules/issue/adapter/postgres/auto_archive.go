@@ -13,7 +13,7 @@ import (
 // transaction and returns only the IDs actually changed, in no defined order.
 func (s *Store) AutoArchive(ctx context.Context, rows app.AutoArchiveRows) ([]uuid.UUID, error) {
 	ids, err := s.queries(ctx).AutoArchive(ctx, gen.AutoArchiveParams{
-		ProjectID: rows.ProjectID, StateIds: rows.StateIDs, Cutoff: rows.Cutoff, At: rows.At,
+		ProjectID: rows.ProjectID, StateIds: rows.StateIDs, OpenCycles: rows.OpenCycles, OpenModules: rows.OpenModules, Cutoff: rows.Cutoff, At: rows.At,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("auto-archive work items of project %s: %w", rows.ProjectID, err)

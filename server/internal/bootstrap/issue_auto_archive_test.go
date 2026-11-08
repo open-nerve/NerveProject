@@ -17,6 +17,7 @@ import (
 	issuepostgres "github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/postgres"
 	riveradapter "github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/river"
 	issueapp "github.com/open-nerve/NerveProject/server/internal/modules/issue/app"
+	"github.com/open-nerve/NerveProject/server/internal/modules/planning"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project"
 	"github.com/open-nerve/NerveProject/server/internal/platform/clock/clocktest"
 	"github.com/open-nerve/NerveProject/server/internal/platform/config"
@@ -28,7 +29,13 @@ import (
 
 func autoArchiveOn(w issueWorld, c issueapp.Clock, events shared.EventPublisher) *issueapp.AutoArchive {
 	p := project.Provide(w.pool, nil)
-	return issueapp.NewAutoArchive(issueapp.AutoArchiveDeps{Policies: p.ArchivePolicies, Projects: issueProjects{projects: p.IssueProjects}, States: issueProjects{projects: p.IssueProjects}, Issues: issuepostgres.New(w.pool), Tx: newIssueJobTx(w.pool, config.Config{Database: config.DatabaseConfig{CommitTimeout: 2 * time.Second}, Issue: testIssueConfig}), Clock: c, Events: events})
+	return issueapp.NewAutoArchive(issueapp.AutoArchiveDeps{Policies: p.ArchivePolicies, Projects: issueProjects{projects: p.IssueProjects}, States: issueProjects{projects: p.IssueProjects}, Planning: archivePlanning(w), Issues: issuepostgres.New(w.pool), Tx: newIssueJobTx(w.pool, config.Config{Database: config.DatabaseConfig{CommitTimeout: 2 * time.Second}, Issue: testIssueConfig}), Clock: c, Events: events})
+}
+
+// archivePlanning is planning's IssueTargets as the job's OpenPlanning, as
+// the app wires it (issue.Deps.Planning).
+func archivePlanning(w issueWorld) issueapp.OpenPlanning {
+	return issuePlanning{targets: planning.Provide(w.pool, planningProjects{projects: project.Provide(w.pool, nil).PlanningProjects}).IssueTargets}
 }
 
 // The literal dates distinguish 30-day months from calendar months and 31 days.
@@ -206,7 +213,7 @@ func TestAutoArchiveJobLockTimeoutPreservesPostgresError(t *testing.T) {
 	cfg := config.Config{Database: config.DatabaseConfig{CommitTimeout: 2 * time.Second}, Issue: config.IssueConfig{WriteLockTimeout: 300 * time.Millisecond}}
 	c := &eventCountingClock{base: clocktest.At(time.Now())}
 	probe := &requestProbe{TxManager: newIssueJobTx(w.pool, cfg)}
-	uc := issueapp.NewAutoArchive(issueapp.AutoArchiveDeps{Policies: p.ArchivePolicies, Projects: issueProjects{projects: p.IssueProjects}, States: issueProjects{projects: p.IssueProjects}, Issues: issuepostgres.New(w.pool), Tx: probe, Clock: c, Events: discardIssueEvents{}})
+	uc := issueapp.NewAutoArchive(issueapp.AutoArchiveDeps{Policies: p.ArchivePolicies, Projects: issueProjects{projects: p.IssueProjects}, States: issueProjects{projects: p.IssueProjects}, Planning: archivePlanning(w), Issues: issuepostgres.New(w.pool), Tx: probe, Clock: c, Events: discardIssueEvents{}})
 	result := make(chan error, 1)
 	go func() {
 		result <- riveradapter.NewAutoArchiveWorker(uc).Work(context.Background(), &river.Job[riveradapter.AutoArchiveArgs]{})

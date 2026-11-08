@@ -27,12 +27,29 @@ type archiveWorld struct {
 	committed      []uuid.UUID
 	failProject    uuid.UUID
 	cancel         context.CancelFunc
+	// openCycles and openModules are each project's cycles and modules
+	// that keep its work items (OpenPlanning), on any day asked about.
+	openCycles, openModules map[uuid.UUID][]uuid.UUID
 }
 
 func archiveSetup() (*archiveWorld, app.AutoArchiveDeps) {
 	l := &callLog{}
-	f := &archiveWorld{fakeProject: &fakeProject{log: l, states: []app.StateRef{{ID: bob, Group: domain.GroupCompleted}, {ID: alice, Group: domain.GroupCancelled}, {ID: dave, Group: "started"}}}, candidates: []uuid.UUID{web, acme}, lockedProjects: map[uuid.UUID]app.LockedProject{web: {WorkspaceID: acme, ArchiveIn: 2}, acme: {WorkspaceID: acme, ArchiveIn: 1}}, results: map[uuid.UUID][]uuid.UUID{web: {dave, bob}, acme: {alice}}}
-	return f, app.AutoArchiveDeps{Policies: f, Projects: f, States: f, Issues: f, Tx: f, Clock: clockAt{at: time.Date(2026, 3, 31, 10, 0, 0, 123456000, time.UTC), log: l}, Events: f}
+	f := &archiveWorld{fakeProject: &fakeProject{log: l, states: []app.StateRef{{ID: bob, Group: domain.GroupCompleted}, {ID: alice, Group: domain.GroupCancelled}, {ID: dave, Group: "started"}}}, candidates: []uuid.UUID{web, acme}, lockedProjects: map[uuid.UUID]app.LockedProject{web: {WorkspaceID: acme, ArchiveIn: 2}, acme: {WorkspaceID: acme, ArchiveIn: 1}}, results: map[uuid.UUID][]uuid.UUID{web: {dave, bob}, acme: {alice}},
+		openCycles: map[uuid.UUID][]uuid.UUID{web: {cycleNow.ID, cycleNext.ID}}, openModules: map[uuid.UUID][]uuid.UUID{web: {moduleAuth.ID}, acme: {moduleBilling.ID}}}
+	return f, app.AutoArchiveDeps{Policies: f, Projects: f, States: f, Planning: f, Issues: f, Tx: f, Clock: clockAt{at: time.Date(2026, 3, 31, 10, 0, 0, 123456000, time.UTC), log: l}, Events: f}
+}
+
+// archiveNow is the instant archiveSetup's clock stands at, as the calls
+// log it.
+const archiveNow = "2026-03-31T10:00:00.123456Z"
+
+// OpenTargets answers the project's open cycles and modules, logging the
+// day's instant it is asked on.
+func (f *archiveWorld) OpenTargets(ctx context.Context, id uuid.UUID, now time.Time) ([]uuid.UUID, []uuid.UUID, error) {
+	if err := f.log.add(ctx, "OpenTargets", id, now.Format(time.RFC3339Nano)); err != nil {
+		return nil, nil, err
+	}
+	return f.openCycles[id], f.openModules[id], nil
 }
 func (f *archiveWorld) ArchiveProjects(ctx context.Context) ([]uuid.UUID, error) {
 	return f.candidates, f.log.add(ctx, "Scan")
@@ -98,7 +115,7 @@ func TestAutoArchiveProjectTransactionsAndSystemIdentity(t *testing.T) {
 	if n != 3 || err != nil {
 		t.Fatalf("Execute = %d,%v", n, err)
 	}
-	want := []string{"Scan outside tx", "Begin", "Tx", line("Lock", web), line("States", web), "Now", line("Update", web), "Activities", line("Event", bob), line("Event", dave), "Commit", "Begin", "Tx", line("Lock", acme), line("States", acme), "Now", line("Update", acme), "Activities", line("Event", alice), "Commit"}
+	want := []string{"Scan outside tx", "Begin", "Tx", line("Lock", web), line("States", web), "Now", line("OpenTargets", web, archiveNow), line("Update", web), "Activities", line("Event", bob), line("Event", dave), "Commit", "Begin", "Tx", line("Lock", acme), line("States", acme), "Now", line("OpenTargets", acme, archiveNow), line("Update", acme), "Activities", line("Event", alice), "Commit"}
 	if !slices.Equal(f.log.calls, want) {
 		t.Fatalf("calls = %v; want %v", f.log.calls, want)
 	}
@@ -109,6 +126,10 @@ func TestAutoArchiveProjectTransactionsAndSystemIdentity(t *testing.T) {
 	for i, r := range f.rows {
 		if !r.Cutoff.Equal(cutoffs[i]) || !r.At.Equal(d.Clock.(clockAt).at) || !slices.Equal(r.StateIDs, []uuid.UUID{bob, alice}) {
 			t.Errorf("row %d = %+v", i, r)
+		}
+		// Each project's own open cycles and modules, as OpenTargets answered them (M6 P3a spec R9).
+		if !slices.Equal(r.OpenCycles, f.openCycles[r.ProjectID]) || !slices.Equal(r.OpenModules, f.openModules[r.ProjectID]) {
+			t.Errorf("row %d keeps cycles %v and modules %v; want %v and %v", i, r.OpenCycles, r.OpenModules, f.openCycles[r.ProjectID], f.openModules[r.ProjectID])
 		}
 	}
 	if len(f.activities) != 3 || len(f.events) != 3 {
@@ -172,7 +193,7 @@ func TestAutoArchiveRechecksPolicyUnderLock(t *testing.T) {
 	}
 }
 func TestAutoArchivePropagatesEveryPortFailure(t *testing.T) {
-	for _, port := range []string{"Scan", "Tx", "Lock", "States", "Update", "Activities", line("Event", bob), line("Event", dave)} {
+	for _, port := range []string{"Scan", "Tx", "Lock", "States", "OpenTargets", "Update", "Activities", line("Event", bob), line("Event", dave)} {
 		t.Run(port, func(t *testing.T) {
 			f, d := archiveSetup()
 			f.log.fail = port
