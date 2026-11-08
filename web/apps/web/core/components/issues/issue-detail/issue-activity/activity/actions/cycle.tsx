@@ -82,7 +82,7 @@ export const IssueCycleActivity = observer(function IssueCycleActivity(props: TI
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1 truncate font-medium text-primary hover:underline"
             >
-              <span className="truncate"> {activity.new_value}</span>
+              <span className="truncate"> {activity.old_value}</span>
             </a>
           </>
         )}

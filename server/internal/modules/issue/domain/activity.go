@@ -60,8 +60,37 @@ func CreationActivity(assignees []Assignee) []Activity {
 	return rows
 }
 
-// Named is a row an activity names by its name, a state or a label: its
-// id, and its name when the activity is written.
+// CreationJoins are the rows a work item's creation writes after
+// CreationActivity's (M6 P3a spec 2.4, R5): the cycle it joins, nil for
+// none.
+func CreationJoins(cycle *Named) []Activity {
+	if cycle == nil {
+		return nil
+	}
+	return []Activity{cycleActivity(Changed[*Named]{New: cycle})}
+}
+
+// cycleActivity is the row of a work item's cycle changing from c.Old to
+// c.New, either nil for none (M6 P3a spec 2.4, Plane's field and verbs):
+// joining one, created, from "" to its name, its id the new identifier;
+// moving to another, updated, from the old name to the new, both ids;
+// leaving one, deleted, from its name to "", its id the old identifier.
+// Plane's sentences go with them, cut before the names.
+func cycleActivity(c Changed[*Named]) Activity {
+	switch {
+	case c.Old == nil:
+		return Activity{Field: ptr("cycles"), Verb: VerbCreated, OldValue: ptr(""), NewValue: ptr(c.New.Name), NewIdentifier: ptr(c.New.ID),
+			Comment: "added cycle "}
+	case c.New == nil:
+		return Activity{Field: ptr("cycles"), Verb: VerbDeleted, OldValue: ptr(c.Old.Name), NewValue: ptr(""), OldIdentifier: ptr(c.Old.ID),
+			Comment: "removed this work item from cycle "}
+	}
+	return Activity{Field: ptr("cycles"), Verb: VerbUpdated, OldValue: ptr(c.Old.Name), NewValue: ptr(c.New.Name), OldIdentifier: ptr(c.Old.ID),
+		NewIdentifier: ptr(c.New.ID), Comment: "updated cycle from "}
+}
+
+// Named is a row an activity names by its name, a state, a label or a
+// cycle: its id, and its name when the activity is written.
 type Named struct {
 	ID   uuid.UUID
 	Name string
@@ -75,7 +104,8 @@ type Changed[T any] struct {
 // Update is what an update of a work item changes, as its activity names
 // it (M4 design 3.13): its name, its cleaned HTML description, its parent, its priority, its state and
 // its dates, each nil when it is left as it is; the labels and the
-// accounts it adds and removes, each in id order.
+// accounts it adds and removes, each in id order; its cycle before and
+// after, each nil for none, nil when it is left as it is (M6 P3a spec 2.4).
 type Update struct {
 	Name             *Changed[string]
 	Description      *Changed[string]
@@ -88,6 +118,7 @@ type Update struct {
 	LabelsRemoved    []Named
 	AssigneesAdded   []Assignee
 	AssigneesRemoved []Assignee
+	Cycle            *Changed[*Named]
 }
 
 // UpdateActivity is the rows an update writes, in the order of M4 design
@@ -96,8 +127,9 @@ type Update struct {
 // the start and the target dates, as YYYY-MM-DD or "" for none; then each
 // label added (row 10) and removed (row 11), by its name and its id; then
 // each account assigned (row 12) and unassigned (row 13), by his display
-// name and his id; each list in the order given. A field left as it is
-// writes no row (Plane the same).
+// name and his id; each list in the order given; then the cycle's row
+// (cycleActivity, M6 P3a spec 2.4). A field left as it is writes no row
+// (Plane the same).
 func UpdateActivity(u Update) []Activity {
 	var rows []Activity
 	if u.Name != nil {
@@ -141,6 +173,9 @@ func UpdateActivity(u Update) []Activity {
 	for _, a := range u.AssigneesRemoved {
 		rows = append(rows, Activity{Field: ptr("assignees"), Verb: VerbUpdated, OldValue: ptr(a.DisplayName), NewValue: ptr(""),
 			OldIdentifier: ptr(a.ID), Comment: "removed assignee "})
+	}
+	if u.Cycle != nil {
+		rows = append(rows, cycleActivity(*u.Cycle))
 	}
 	return rows
 }

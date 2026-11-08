@@ -232,7 +232,8 @@ func (f fakeProfiles) DisplayNames(ctx context.Context, ids []uuid.UUID) (map[uu
 // are the store's other work items, answered as they are, ancestry their
 // ancestries, counts the work items' numbers of sub-items, subItems the
 // sub-items it answers, and parented the last addition of sub-items' rows
-// (fakes_parents_test.go).
+// (fakes_parents_test.go). cycle is the cycle the work item is in, nil for
+// none (fakes_planning_test.go).
 type fakeIssues struct {
 	relationWrites    int
 	log               *callLog
@@ -246,6 +247,7 @@ type fakeIssues struct {
 	archivedAt        *time.Time
 	assignees         []uuid.UUID
 	labels            []uuid.UUID
+	cycle             *uuid.UUID
 	activities        []app.ActivityRow
 	subtree           []uuid.UUID
 	deletions         []app.IssueDeletion
@@ -399,7 +401,7 @@ func (f *fakeIssues) read(id uuid.UUID) (domain.Issue, bool) {
 		StateID: r.StateID, Priority: r.Priority, StartDate: r.StartDate, TargetDate: r.TargetDate, ParentID: r.ParentID, SortOrder: r.SortOrder,
 		CompletedAt: r.CompletedAt, ArchivedAt: f.archivedAt,
 		AssigneeIDs: slices.SortedFunc(slices.Values(f.assignees), uuid.UUID.Compare), LabelIDs: slices.SortedFunc(slices.Values(f.labels),
-			uuid.UUID.Compare), CreatedByID: creatorOf(r.By), UpdatedByID: &by, CreatedAt: r.At, UpdatedAt: at}, true
+			uuid.UUID.Compare), CycleID: f.cycle, CreatedByID: creatorOf(r.By), UpdatedByID: &by, CreatedAt: r.At, UpdatedAt: at}, true
 }
 
 // creatorOf is a stored work item's creator as a read answers it: none for

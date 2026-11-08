@@ -105,8 +105,9 @@ func (i Issue) HiddenFrom(actor uuid.UUID, ownOnly bool) bool {
 // NewIssue is what the caller asks for when creating a work item (M4
 // design 5.2, IssueCreate without the fields of later phases): StateID nil
 // for the project's default state, Priority nil for none, a date nil for
-// none, ParentID nil for no parent. A field given is checked as given, a
-// priority given empty too.
+// none, ParentID nil for no parent, CycleID nil for no cycle to join (M6
+// P3a spec 2.3). A field given is checked as given, a priority given empty
+// too.
 type NewIssue struct {
 	DescriptionHTML *string
 	Name            string
@@ -117,6 +118,7 @@ type NewIssue struct {
 	StartDate       *shared.Date
 	TargetDate      *shared.Date
 	ParentID        *uuid.UUID
+	CycleID         *uuid.UUID
 }
 
 // maxName is the length of issues.name, varchar(255), in characters.
@@ -212,6 +214,13 @@ func unassignable(i int) shared.FieldError {
 // undeleted label of the project (M4 design 3.7).
 func UnknownLabel(i int) shared.FieldError {
 	return shared.FieldError{Field: fmt.Sprintf("label_ids[%d]", i), Code: shared.FieldNotAllowed, Message: "must be a label of the project"}
+}
+
+// CycleNotAllowed is the problem of a cycle a write joins that is not an
+// undeleted cycle of the work item's project, archived or not (M6 P3a spec
+// 2.3, R2).
+func CycleNotAllowed() shared.FieldError {
+	return shared.FieldError{Field: "cycle_id", Code: shared.FieldNotAllowed, Message: "must be a cycle of the project"}
 }
 
 // StateNotAllowed is the problem of a state asked for that is not an

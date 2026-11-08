@@ -55,3 +55,10 @@ func unlinked(err error, table string, issue uuid.UUID) error {
 	}
 	return nil
 }
+
+// RemoveCycle soft-deletes the work item's undeleted row of the cycle r
+// names, the one it leaves (M6 P3a spec R4).
+func (s *Store) RemoveCycle(ctx context.Context, r app.UnlinkRows) error {
+	err := s.queries(ctx).RemoveCycleIssues(ctx, gen.RemoveCycleIssuesParams{IssueID: r.IssueID, CycleIds: r.Targets, By: r.By, At: r.At})
+	return unlinked(err, "cycle", r.IssueID)
+}

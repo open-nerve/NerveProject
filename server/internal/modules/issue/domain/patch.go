@@ -13,9 +13,10 @@ import (
 // 5.2, IssueUpdate without the fields of later phases): each field nil
 // when it is not given, and keeps its value. AssigneeIDs and LabelIDs,
 // given, are the work item's new sets of accounts and labels; given empty,
-// none. A date and the parent may be cleared: SetStartDate, SetTargetDate
-// and SetParentID tell whether the field is given, StartDate, TargetDate
-// and ParentID its value, nil for none.
+// none. A date, the parent and the cycle may be cleared: SetStartDate,
+// SetTargetDate, SetParentID and SetCycleID tell whether the field is
+// given, StartDate, TargetDate, ParentID and CycleID its value, nil for
+// none (M6 P3a spec 2.3: the cycle cleared, the work item leaves it).
 type IssuePatch struct {
 	DescriptionHTML *string
 	SkipActivity    *bool
@@ -31,6 +32,8 @@ type IssuePatch struct {
 	TargetDate      *shared.Date
 	SetParentID     bool
 	ParentID        *uuid.UUID
+	SetCycleID      bool
+	CycleID         *uuid.UUID
 }
 
 // CheckIssuePatch checks the fields p gives by createIssue's rules (M4
@@ -94,8 +97,9 @@ func diffOf(from, to []uuid.UUID) Diff {
 }
 
 // Changes is what a checked patch changes in a work item (M4 design 3.7,
-// 3.9): the new name, priority, state, sort order, dates and parent where each differs
-// from the work item's, nil where it is not given or is the same; and the
+// 3.9): the new name, priority, state, sort order, dates, parent and cycle
+// (M6 P3a spec 2.3) where each differs from the work item's, nil where it
+// is not given or is the same; and the
 // accounts and the labels it adds and removes (Diff), where the patch
 // gives the new set. An account or a label the work item has and the new
 // set keeps is left as it is: its row is not written again.
@@ -108,8 +112,17 @@ type Changes struct {
 	StartDate   *DateChange
 	TargetDate  *DateChange
 	Parent      *ParentChange
+	Cycle       *CycleChange
 	Assignees   Diff
 	Labels      Diff
+}
+
+// CycleChange is a change of the cycle a work item is in (M6 P3a spec
+// 2.3): From, the cycle it is in, nil for none; To, the cycle it joins,
+// nil when it leaves From. Moved to another cycle, it leaves From and
+// joins To.
+type CycleChange struct {
+	From, To *uuid.UUID
 }
 
 // ChangesOf is what p, checked (CheckIssuePatch), changes in i.
@@ -135,6 +148,9 @@ func ChangesOf(i Issue, p IssuePatch) Changes {
 	}
 	if p.SetParentID && !same(p.ParentID, i.ParentID) {
 		c.Parent = &ParentChange{To: p.ParentID}
+	}
+	if p.SetCycleID && !same(p.CycleID, i.CycleID) {
+		c.Cycle = &CycleChange{From: i.CycleID, To: p.CycleID}
 	}
 	if p.AssigneeIDs != nil {
 		c.Assignees = diffOf(i.AssigneeIDs, *p.AssigneeIDs)
@@ -163,7 +179,7 @@ func Unassignable(asked, added []uuid.UUID, roles map[uuid.UUID]shared.Role) []s
 
 // None reports whether c changes nothing: then the update writes no row.
 func (c Changes) None() bool {
-	return (c.Description == nil || !c.Description.Write) && c.Name == nil && c.Priority == nil && c.StateID == nil && c.SortOrder == nil && c.StartDate == nil && c.TargetDate == nil && c.Parent == nil &&
+	return (c.Description == nil || !c.Description.Write) && c.Name == nil && c.Priority == nil && c.StateID == nil && c.SortOrder == nil && c.StartDate == nil && c.TargetDate == nil && c.Parent == nil && c.Cycle == nil &&
 		len(c.Assignees.Added) == 0 && len(c.Assignees.Removed) == 0 && len(c.Labels.Added) == 0 && len(c.Labels.Removed) == 0
 }
 

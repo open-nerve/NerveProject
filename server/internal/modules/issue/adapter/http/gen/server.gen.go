@@ -423,6 +423,9 @@ type IssueCreate struct {
 	// AssigneeIds At most 100 accounts, each named once, each an active member of the project who is not its guest; left out, or empty, for the project's default assignee while he is one, else no one.
 	AssigneeIds *[]uuid.UUID `json:"assignee_ids,omitempty"`
 
+	// CycleID The cycle it is created in: one of the project's, not archived, not ended on the day of the write in the project's time zone, while the project's cycles are turned on; left out for none.
+	CycleID *uuid.UUID `json:"cycle_id,omitempty"`
+
 	// DescriptionHTML Sanitized rich text HTML; at most 500000 characters on input.
 	DescriptionHTML *string `json:"description_html,omitempty"`
 
@@ -652,6 +655,9 @@ type IssueRelationsCreate struct {
 type IssueUpdate struct {
 	// AssigneeIds The work item's new assignees, empty for none: at most 100 accounts, each named once; each it is not assigned to yet an active member of the project who is not its guest.
 	AssigneeIds *[]uuid.UUID `json:"assignee_ids,omitempty"`
+
+	// CycleID The cycle it is in, null for none: another moves it there, out of the one it is in, and null takes it out, while the project's cycles are turned on. The cycle it moves to is one of the project's, not archived, not ended on the day of the write in the project's time zone; the one it leaves is not checked.
+	CycleID nullable.Nullable[uuid.UUID] `json:"cycle_id,omitempty"`
 
 	// DescriptionHTML Sanitized rich text HTML; at most 500000 characters on input.
 	DescriptionHTML *string `json:"description_html,omitempty"`

@@ -18,6 +18,7 @@ func (s stamp) event(kind string, changes []shared.Change) shared.Event {
 
 // createdChanges is the complete initial state, including fields that have no
 // activity rows. Names are snapshots already read under the project lock.
+// The cycle it joins comes after the labels, as they do (M6 P3a spec 2.4).
 func createdChanges(row IssueRow, c checked, accounts []domain.Assignee) []shared.Change {
 	changes := []shared.Change{
 		{Field: "name", New: eventPtr(row.Name)},
@@ -42,6 +43,9 @@ func createdChanges(row IssueRow, c checked, accounts []domain.Assignee) []share
 	}
 	for _, l := range c.labelNames {
 		changes = append(changes, shared.Change{Field: "labels", New: eventPtr(l.Name), NewID: eventPtr(l.ID)})
+	}
+	if c.cycle != nil {
+		changes = append(changes, shared.Change{Field: "cycles", New: eventPtr(c.cycle.Name), NewID: eventPtr(c.cycle.ID)})
 	}
 	return changes
 }
