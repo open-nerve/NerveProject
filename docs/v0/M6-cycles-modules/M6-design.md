@@ -271,7 +271,7 @@ P1 起第一个实现提交把关键词 phase 改为 `M6/P1`；纯设计分支�
 | 设计与 P1 预检 | 已合入 main（d1ec8c69）；e2e 作业期限改为 35 分钟（910a55cd，负责人同意），main CI 42332404481 第二次运行通过 | [预检](../../reviews/re-54-M6设计与P1预检.md) / [P1 spec](specs/P1-cycles-backend.md) / [P1 plan](plans/P1-cycles-backend.md) |
 | P1 迭代后端 | 已完成：noff `0a601f21`，分支 CI 42340200507 与 main CI 42343073949 首次通过，证据归档于 `.superpowers/sdd/M6-P1-integration-20261107` | [P1 spec](specs/P1-cycles-backend.md) / [P1 plan](plans/P1-cycles-backend.md) / [P1 阶段记录](reviews/P1-cycles-backend-review.md) / [re-55](../../reviews/re-55-M6P1整体审核.md) |
 | P2 模块后端 | 已完成：noff `861ea1b5` 的 main CI 两次未过（与 P2 无关），根因修复（含负责人 2026-11-08 批准的 server 任务分两路）第二次 noff `ddd79a9f`，main CI 42458454710 首次通过；证据归档于 `.superpowers/sdd/M6-P2-integration-20261108` | [预检](../../reviews/re-56-M6P2预检.md) / [P2 spec](specs/P2-modules-backend.md) / [P2 plan](plans/P2-modules-backend.md) / [P2 阶段记录](reviews/P2-modules-backend-review.md) |
-| P3a 工作项的归属 | 进行中：P3 因超出一段的上限拆为 P3a/P3b（§12）；预检通过 | [预检](../../reviews/re-58-M6P3a预检.md) / [P3a spec](specs/P3a-issue-membership.md) / [P3a plan](plans/P3a-issue-membership.md) |
+| P3a 工作项的归属 | 进行中：T1–T12 完成，待门禁、整审与合入；P3 因超出一段的上限拆为 P3a/P3b（§12），预检通过 | [预检](../../reviews/re-58-M6P3a预检.md) / [P3a spec](specs/P3a-issue-membership.md) / [P3a plan](plans/P3a-issue-membership.md) |
 | P3b–P8、closeout | 未开始（P3b 的 spec 与 plan 在 P3a 合入后写） | — |
 
 ## 15. 决定记录

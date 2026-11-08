@@ -5,7 +5,7 @@ to: M8
 created: 2026-11-07
 ---
 
-# M6 交给 M8：CI 的 e2e 作业期限与间歇失败的故事、清理分页器的副本、e2e 数据库的连接余量、server 作业的分路
+# M6 交给 M8：CI 的 e2e 作业期限与间歇失败的故事、清理分页器的副本、e2e 数据库的连接余量、server 作业的分路与 lint 工具的在线下载
 
 这是接收方尚待完成的工作。转交只表示责任和验收条件已落实到此处，不表示本页问题已经解决。M6 进行中发现的条目随发现写入；M6 收尾时补齐其余交接。延续 [M5 → M8 交接 M5-M8-06](M5-closeout.md#M5-M8-06) 中仍开放的观察。
 
@@ -40,11 +40,12 @@ M6/P2 的本地 e2e（`make build && make e2e`）两次各有一条因 Postgres 
 **何时验收：** M8 的 CI 工作核算 e2e 的连接预算（工作进程数 × 每进程的连接上限 + 余量），按结果给测试容器设 `max_connections` 或收紧 e2e 服务器的 `database.max_conns`，并在 CI 与本地都留有余量；或负责人决定维持现状，并在此写明理由。
 
 <a id="M6-M8-04"></a>
-## M6-M8-04 server 作业的 Go 测试分两路并行
+## M6-M8-04 server 作业：Go 测试分两路并行，lint 工具每次在线下载
 
 - `internal/bootstrap` 包把数百个组合测试串行跑在一个测试二进制里，受 `go test -timeout=20m` 的整包期限约束（`Makefile` 的 `GO_TEST_TIMEOUT`）。[M5-closeout](M5-closeout.md) 记它在 CI 上为 756–978 秒；到 M6/P2，最近 12 次 CI 为 919–1185 秒（M6/P1、P2 各加了测试；本地约 840–860 秒，CI 运行器慢约 15–40%）。修复分支 `codex/m6-p2-ci` 的分支 CI 42413098044 中它超过 1200 秒被终止（`panic: test timed out after 20m0s`），修复分支本身没有让它在本地变慢（修复前 840–855 秒，修复后 833–848 秒）。
 - 负责人 2026-11-08 批准把 CI 的 `server` 任务按矩阵分两路（`.github/workflows/ci.yml`，`make test-shard`，`tools/go-test-shard.sh`）：bootstrap 包的测试按名字排序后轮流分到两路，其他包和 `server/tools` 只在第 0 路；生成物检查与 lint 只在第 0 路。两路合起来与 `make test` 相同，脚本核对每路的 `-run` 模式恰好选中分到的测试。整包期限 20 分钟和 `server` 任务期限 25 分钟都没有改。按本地逐个测试的计时（644 个测试共 831 秒），两半分别约 450 与 382 秒。
 - 本地 `make test` 照旧整包串行运行。
 - 分路后 CI 报告的检查名是 `server (0)`、`server (1)`，不再有 `server`；按 [M0-P6 交接](M0-P6-release-notes.md) 设分支保护的必须检查时以此为准（那里建议的汇总任务也要依赖两路）。
+- **lint 工具每次从 GitHub 下载**（M6/P3a 的观察）：`server (0)` 的 Lint 一步是 `make lint-go`，它先跑 `make tools`；CI 的运行器上没有 `./bin`，`tools` 目标每次都经 `raw.githubusercontent.com` 上的 `install.sh` 从 GitHub 下载锁定版本的 golangci-lint（`Makefile` 的 `GOLANGCI_LINT_VERSION`，现为 2.13.2；工作流只缓存 pnpm 的存储）。M6/P3a 检查点 `a37bc6370ae651118bd9cb6204279679fdd5031c` 的分支 CI 42478883539 attempt 1 中，`server (0)`（作业 128726250098）在这次下载时收到 GitHub 的 HTTP 504 而失败，lint 没有开始，与代码无关；`server (1)` 与 `web` 通过，`e2e` 随之跳过。根因是外部下载故障，只重跑失败的作业一次，attempt 2 的 `server (0)` 通过（Lint 一步 84 秒）。即 server 作业的每次运行都依赖一次在线的 GitHub 下载；按版本缓存锁定的二进制（例如以 `GOLANGCI_LINT_VERSION` 为键的 Actions 缓存）可去掉这一外部依赖。
 
-**何时验收：** M8 的 CI 工作复核每路的余量（bootstrap 每半与 20 分钟整包期限、各路与 25 分钟任务期限）；需要时增加路数，或把 bootstrap 的测试改为可并行运行。改路数、期限或作业结构须负责人同意。
+**何时验收：** M8 的 CI 工作复核每路的余量（bootstrap 每半与 20 分钟整包期限、各路与 25 分钟任务期限）；需要时增加路数，或把 bootstrap 的测试改为可并行运行。lint 工具不再每次在线下载（例如缓存锁定版本的二进制），或负责人决定维持现状并在此写明理由。改路数、期限、作业结构或缓存，任何 CI 的改动都须负责人同意。
