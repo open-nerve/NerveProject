@@ -18,8 +18,10 @@ import (
 
 // queuedRun begins a transaction on pool that takes the row lock sql states,
 // with args, and returns once that statement waits behind holder, the
-// backend holding the row, as a start-time run queued there does. take
-// answers the transaction once it holds the row; the test's end lets it go.
+// backend holding the row, as a start-time run queued there does. Nothing
+// else may queue for the row first: the statement would wait behind that
+// backend instead. take answers the transaction once it holds the row; the
+// test's end lets it go.
 func queuedRun(t *testing.T, pool *pgxpool.Pool, holder uint32, sql string, args ...any) (take func() pgx.Tx) {
 	t.Helper()
 	tx, err := pool.Begin(pgtest.Soon(t))
@@ -46,13 +48,22 @@ func queuedRun(t *testing.T, pool *pgxpool.Pool, holder uint32, sql string, args
 		}
 		requestRelease(t, tx)
 	})
-	requestEventually(t, "stand-in run queued behind its holder", func(ctx context.Context) bool {
+	// The backends it waits behind, named, so that a failure shows who queued first.
+	ctx := pgtest.Soon(t)
+	for deadline := time.Now().Add(2 * time.Second); ; time.Sleep(time.Millisecond) {
 		var queued bool
-		if err := pool.QueryRow(ctx, "SELECT $2::int = ANY (pg_blocking_pids($1::int))", int64(pid), int64(holder)).Scan(&queued); err != nil {
+		var blockers string
+		if err := pool.QueryRow(ctx, `SELECT $2::int = ANY (pg_blocking_pids($1::int)), coalesce((SELECT string_agg(pid || ': ' || query, '; ')
+			FROM pg_stat_activity WHERE pid = ANY (pg_blocking_pids($1::int))), '')`, int64(pid), int64(holder)).Scan(&queued, &blockers); err != nil {
 			t.Fatal(err)
 		}
-		return queued
-	})
+		if queued {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("stand-in run not queued behind its holder %d; it waits behind [%s]", holder, blockers)
+		}
+	}
 	return func() pgx.Tx {
 		t.Helper()
 		err := receiveWithin(t, locked, 5*time.Second, "the stand-in run's row lock")

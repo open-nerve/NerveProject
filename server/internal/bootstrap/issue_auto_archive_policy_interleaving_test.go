@@ -150,6 +150,10 @@ func TestAutoArchiveUsesLockedPolicy(t *testing.T) {
 // Several candidates must not become one transaction holding all projects.
 func TestAutoArchiveUsesLockedPolicyOneProjectAtATime(t *testing.T) {
 	w := newIssueWorld(t)
+	// The stand-in below must be the first to queue on Web behind the job: a
+	// real start-time run, which locks every project in turn, may otherwise be
+	// there first (branch CI 42453471322).
+	waitForStartupRuns(t, w.pool)
 	at := time.Now().UTC().Truncate(time.Microsecond).Add(archiveAhead)
 	archiveRaceSeed(t, w, at, 40*24*time.Hour)
 	other := createdProject(t, w.contract, w.base, w.tokens["alice"], "acme", "Other", "OTH")
@@ -175,14 +179,14 @@ func TestAutoArchiveUsesLockedPolicyOneProjectAtATime(t *testing.T) {
 		}
 	}()
 	held(t, pgtest.Soon(t), g, done, "first project")
-	// Each probe reads the job's own locks: a start-time run locks project rows
-	// too (waitForStartupRuns).
+	// Each probe reads the job's own locks: the stand-in below locks Web too, as
+	// a start-time run does.
 	if requestGateRowLock(t, w.pool, w.pool, jobTx, "projects WHERE id = $1", w.web) != "FOR NO KEY UPDATE" ||
 		requestGateRowLock(t, w.pool, w.pool, jobTx, "projects WHERE id = $1", other) != "no lock" {
 		t.Error("job holds more than its current project")
 	}
-	// As in main CI 42399566014, such a run queues on Web behind the job, takes
-	// it as the job lets go, and holds it while the job holds Other.
+	// As in main CI 42399566014, a start-time run queues on Web behind the job,
+	// takes it as the job lets go, and holds it while the job holds Other.
 	standIn := queuedRun(t, w.pool, requestPID(t, jobTx), "SELECT 1 FROM projects WHERE id = $1 FOR NO KEY UPDATE", w.web)
 	var reply exchange
 	request := aliceOnWeb(http.MethodPatch, func(*testing.T, issueWorld) string { return "/api/v0/projects/" + other.String() }, `{"name":"Unblocked"}`)(t, w, postgres.NewTxManager(w.pool, 2*time.Second), &reply)
