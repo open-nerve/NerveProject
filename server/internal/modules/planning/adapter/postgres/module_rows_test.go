@@ -179,7 +179,7 @@ func TestPurgeModuleTables(t *testing.T) {
 			if err != nil || skipped.Scanned != 0 || skipped.Deleted != 0 || skipped.After != purgeID(30) {
 				t.Fatalf("after the greatest=%+v,%v; want empty", skipped, err)
 			}
-			if deleted := purgeAll(t, planning.Provide(pool).Purger, cutoff); deleted != 1 {
+			if deleted := purgeAll(t, planning.Provide(pool, nil).Purger, cutoff); deleted != 1 {
 				t.Fatalf("module purge deleted %d; want the remaining one", deleted)
 			}
 			var left []uuid.UUID
@@ -208,7 +208,7 @@ func TestPurgeModuleTables(t *testing.T) {
 func TestModulePurgeChildrenFirst(t *testing.T) {
 	_, pool := newStore(t)
 	w := newWorld(t, pool)
-	purger := planning.Provide(pool).Purger
+	purger := planning.Provide(pool, nil).Purger
 	cutoff, old := now.Add(-60*24*time.Hour), now.Add(-61*24*time.Hour)
 	module := uuid.NewV7()
 	exec(t, pool, `INSERT INTO modules (id, workspace_id, project_id, name, deleted_at) VALUES ($1, $2, $3, 'Gone', $4)`, module, w.workspace, w.web, old)

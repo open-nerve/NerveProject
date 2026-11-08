@@ -101,6 +101,23 @@ type ProjectPorts interface {
 	app.ListLabelCatalog
 }
 
+// PlanningPorts are what the module asks of planning (M6 P3a spec R1,
+// R9): the facts of the cycle and modules a work item's write names, under
+// the project's lock it holds, and the cycles and modules that keep the
+// project's work items from automatic archival. planning.Provide's
+// IssueTargets is them, converted (bootstrap/ports.go).
+type PlanningPorts interface {
+	app.PlanningTargets
+	app.OpenPlanning
+}
+
+// PlanningFacts and PlanningTarget are the values PlanningPorts hand over:
+// bootstrap converts planning's into them.
+type (
+	PlanningFacts  = app.PlanningFacts
+	PlanningTarget = app.PlanningTarget
+)
+
 // LockedProject, StateRef and its StateGroup, LabelRef and
 // ProjectIdentifier are the values ProjectPorts hand over: bootstrap
 // converts project's into them (M4 design 6.5).
@@ -150,6 +167,8 @@ type Deps struct {
 	Authorizer shared.Authorizer
 	// Projects are project's IssueProjects, converted (bootstrap/ports.go).
 	Projects ProjectPorts
+	// Planning is planning's IssueTargets, converted (bootstrap/ports.go).
+	Planning PlanningPorts
 	// Workspaces is workspace's WorkspaceDirectory, converted
 	// (bootstrap/ports.go).
 	Workspaces interface {

@@ -18,7 +18,7 @@ import (
 )
 
 func retentionPurge(w issueWorld, at time.Time) *purgeDeleted {
-	return newPurgeDeleted([]purgeModule{{"asset", forAssetPurge(imageReferencePurger(w.pool))}, {"issue", forIssuePurge(issue.Provide(w.pool, protectedAssetReferences()).Purger)}, {"planning", forPlanningPurge(planning.Provide(w.pool).Purger)}, {"project", forProjectPurge(project.Provide(w.pool, protectedAssetReferences()).Purger)}, {"workspace", forWorkspacePurge(workspace.Provide(w.pool, protectedAssetReferences()).Purger)}, {"identity", forIdentityPurge(identity.Provide(w.pool).Purger)}}, clockAt(at), time.Now, 60*24*time.Hour, 2, 10*time.Second)
+	return newPurgeDeleted([]purgeModule{{"asset", forAssetPurge(imageReferencePurger(w.pool))}, {"issue", forIssuePurge(issue.Provide(w.pool, protectedAssetReferences()).Purger)}, {"planning", forPlanningPurge(planning.Provide(w.pool, nil).Purger)}, {"project", forProjectPurge(project.Provide(w.pool, protectedAssetReferences()).Purger)}, {"workspace", forWorkspacePurge(workspace.Provide(w.pool, protectedAssetReferences()).Purger)}, {"identity", forIdentityPurge(identity.Provide(w.pool).Purger)}}, clockAt(at), time.Now, 60*24*time.Hour, 2, 10*time.Second)
 }
 
 // Each scenario publishes its complete fixture atomically. The live parent

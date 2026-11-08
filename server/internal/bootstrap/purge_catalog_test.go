@@ -77,7 +77,7 @@ func purgeTables(t *testing.T, pool *pgxpool.Pool) []string {
 func providedPurgeTables(pool *pgxpool.Pool) []string {
 	tables := imageReferencePurger(pool).Tables()
 	tables = append(tables, issue.Provide(pool, protectedAssetReferences()).Purger.Tables()...)
-	tables = append(tables, planning.Provide(pool).Purger.Tables()...)
+	tables = append(tables, planning.Provide(pool, nil).Purger.Tables()...)
 	tables = append(tables, project.Provide(pool, protectedAssetReferences()).Purger.Tables()...)
 	tables = append(tables, workspace.Provide(pool, protectedAssetReferences()).Purger.Tables()...)
 	return append(tables, identity.Provide(pool).Purger.Tables()...)

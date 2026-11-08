@@ -104,6 +104,38 @@ func (p planningProjects) Roles(ctx context.Context, id uuid.UUID, ids []uuid.UU
 	return p.projects.ActiveRoles(ctx, id, ids)
 }
 
+// issuePlanning is planning's IssueTargets as issue's PlanningPorts: the
+// same reads, the facts converted.
+type issuePlanning struct {
+	targets planning.IssueTargets
+}
+
+func (p issuePlanning) Targets(ctx context.Context, project uuid.UUID, cycles, modules []uuid.UUID) (issue.PlanningFacts, error) {
+	f, err := p.targets.Targets(ctx, project, cycles, modules)
+	if err != nil {
+		return issue.PlanningFacts{}, err
+	}
+	return issue.PlanningFacts{CyclesEnabled: f.CyclesEnabled, ModulesEnabled: f.ModulesEnabled,
+		Cycles: issuePlanningTargets(f.Cycles), Modules: issuePlanningTargets(f.Modules)}, nil
+}
+
+// issuePlanningTargets is planning's targets as issue's, in their order.
+func issuePlanningTargets(targets []planning.IssueTarget) []issue.PlanningTarget {
+	out := make([]issue.PlanningTarget, len(targets))
+	for i, t := range targets {
+		out[i] = issue.PlanningTarget(t)
+	}
+	return out
+}
+
+func (p issuePlanning) CycleCompleted(ctx context.Context, project, cycle uuid.UUID, now time.Time) (bool, error) {
+	return p.targets.CycleCompleted(ctx, project, cycle, now)
+}
+
+func (p issuePlanning) OpenTargets(ctx context.Context, project uuid.UUID, now time.Time) ([]uuid.UUID, []uuid.UUID, error) {
+	return p.targets.OpenTargets(ctx, project, now)
+}
+
 // issueProjects is project's IssueProjects as issue's ProjectPorts: the
 // same reads and lock, each value converted.
 type issueProjects struct {

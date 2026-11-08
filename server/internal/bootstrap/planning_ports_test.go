@@ -7,8 +7,10 @@ import (
 	"maps"
 	"slices"
 	"testing"
+	"time"
 	"uuid"
 
+	"github.com/open-nerve/NerveProject/server/internal/modules/issue"
 	"github.com/open-nerve/NerveProject/server/internal/modules/planning"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
@@ -71,5 +73,81 @@ func TestPlanningProjectsConvertsProjectsAnswers(t *testing.T) {
 	}
 	if _, err := p.Roles(ctx, web, []uuid.UUID{ann}); !errors.Is(err, boom) {
 		t.Errorf("Roles() = %v; want the error", err)
+	}
+}
+
+// fakeIssueTargets is planning's IssueTargets answering what it holds,
+// recording what it was asked.
+type fakeIssueTargets struct {
+	facts         planning.IssueTargetFacts
+	completed     bool
+	open, openMod []uuid.UUID
+	err           error
+	asked         []string
+}
+
+func (f *fakeIssueTargets) Targets(_ context.Context, project uuid.UUID, cycles, modules []uuid.UUID) (planning.IssueTargetFacts, error) {
+	f.asked = append(f.asked, fmt.Sprint("targets ", project, " ", cycles, " ", modules))
+	return f.facts, f.err
+}
+
+func (f *fakeIssueTargets) CycleCompleted(_ context.Context, project, cycle uuid.UUID, now time.Time) (bool, error) {
+	f.asked = append(f.asked, fmt.Sprint("completed ", project, " ", cycle, " ", now.Format(time.RFC3339Nano)))
+	return f.completed, f.err
+}
+
+func (f *fakeIssueTargets) OpenTargets(_ context.Context, project uuid.UUID, now time.Time) ([]uuid.UUID, []uuid.UUID, error) {
+	f.asked = append(f.asked, fmt.Sprint("open ", project, " ", now.Format(time.RFC3339Nano)))
+	return f.open, f.openMod, f.err
+}
+
+// issuePlanning hands issue planning's answers to the same questions, asked
+// of the project, cycles, modules and moment asked about: the facts
+// converted, each toggle its own and every target's every field in their
+// order; whether a cycle has ended and the open ids as they came; the
+// error as it came.
+func TestIssuePlanningConvertsPlanningsAnswers(t *testing.T) {
+	web, c1, c2, m1, m2 := uuid.NewV7(), uuid.NewV7(), uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
+	now := time.Date(2026, 11, 7, 17, 0, 0, 1, time.UTC)
+	fake := &fakeIssueTargets{
+		facts: planning.IssueTargetFacts{CyclesEnabled: true, Cycles: []planning.IssueTarget{{ID: c1, Name: "Sprint 1"}, {ID: c2, Name: "Sprint 2", Archived: true}},
+			Modules: []planning.IssueTarget{{ID: m1, Name: "Core", Archived: true}}},
+		completed: true, open: []uuid.UUID{c1, c2}, openMod: []uuid.UUID{m2},
+	}
+	var p issue.PlanningPorts = issuePlanning{targets: fake}
+	ctx := context.Background()
+
+	got, err := p.Targets(ctx, web, []uuid.UUID{c1, c2}, []uuid.UUID{m1})
+	if err != nil || !got.CyclesEnabled || got.ModulesEnabled ||
+		!slices.Equal(got.Cycles, []issue.PlanningTarget{{ID: c1, Name: "Sprint 1"}, {ID: c2, Name: "Sprint 2", Archived: true}}) ||
+		!slices.Equal(got.Modules, []issue.PlanningTarget{{ID: m1, Name: "Core", Archived: true}}) {
+		t.Errorf("Targets() = %+v, %v; want planning's facts converted", got, err)
+	}
+	fake.facts = planning.IssueTargetFacts{ModulesEnabled: true}
+	if got, err := p.Targets(ctx, web, nil, nil); err != nil || got.CyclesEnabled || !got.ModulesEnabled || len(got.Cycles) != 0 || len(got.Modules) != 0 {
+		t.Errorf("Targets() = %+v, %v; want the modules' toggle alone", got, err)
+	}
+	if completed, err := p.CycleCompleted(ctx, web, c2, now); err != nil || !completed {
+		t.Errorf("CycleCompleted() = %v, %v; want completed", completed, err)
+	}
+	if cycles, modules, err := p.OpenTargets(ctx, web, now); err != nil || !slices.Equal(cycles, fake.open) || !slices.Equal(modules, fake.openMod) {
+		t.Errorf("OpenTargets() = %v, %v, %v; want %v, %v", cycles, modules, err, fake.open, fake.openMod)
+	}
+	at := now.Format(time.RFC3339Nano)
+	if want := []string{fmt.Sprint("targets ", web, " ", []uuid.UUID{c1, c2}, " ", []uuid.UUID{m1}), fmt.Sprint("targets ", web, " [] []"),
+		fmt.Sprint("completed ", web, " ", c2, " ", at), fmt.Sprint("open ", web, " ", at)}; !slices.Equal(fake.asked, want) {
+		t.Errorf("asked %q, want %q", fake.asked, want)
+	}
+
+	boom := errors.New("boom")
+	fake.err = boom
+	if _, err := p.Targets(ctx, web, []uuid.UUID{c1}, nil); !errors.Is(err, boom) {
+		t.Errorf("Targets() = %v; want the error", err)
+	}
+	if _, err := p.CycleCompleted(ctx, web, c1, now); !errors.Is(err, boom) {
+		t.Errorf("CycleCompleted() = %v; want the error", err)
+	}
+	if _, _, err := p.OpenTargets(ctx, web, now); !errors.Is(err, boom) {
+		t.Errorf("OpenTargets() = %v; want the error", err)
 	}
 }
