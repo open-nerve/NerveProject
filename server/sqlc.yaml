@@ -103,6 +103,8 @@ sql:
       - migrations/sql/00028_issue_draft_issues.sql
       - migrations/sql/00029_issue_issues_name_trgm.sql
       - migrations/sql/00033_issue_purge_indexes.sql
+      - migrations/sql/00043_issue_cycle_issues.sql
+      - migrations/sql/00044_issue_module_issues.sql
     queries: internal/modules/issue/adapter/postgres/queries
     gen:
       go:
