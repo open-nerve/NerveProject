@@ -85,7 +85,7 @@ PATCH 的行接在既有行（名字…负责人移出）之后：迭代一行�
 - **R7 OwnOnly**：归属是工作项的写，照 `issue.update` 的规则（只看自己的调用者只能改自己建立的工作项，`HiddenFrom` 的 404）；不套用 `planning` 对一切写 403 的规则（那是迭代/模块本身的写）。
 - **R8 开关默认关**：Go 组合测试与 e2e 先经接口打开 `cycle_view`、`module_view`；删除、清理、运行角色与规模的夹具以 SQL 种行。
 - **R9 自动归档**：`issue/app` 声明 `OpenPlanning.OpenTargets(ctx, projectID, now)`，回答本项目未删除、结束日为空或不早于今天（项目时区）的迭代，与未删除、目标日为空或不早于今天的模块（不论归档与状态，Plane 同，设计 §7）。在 `Now` 之后、`AutoArchive` 之前调用（同一事务、同一业务时钟），id 数组进 `AutoArchiveRows`，语句以 `NOT EXISTS` 排除仍有这些归属的工作项。`auto_archive_test` 固定的调用次序加这一步。
-- **R10 Plane 差异**：不照搬重复加入时重复写动态；加入已结束迭代 Plane 回答 400，Nerve 409 `planning.cycle_completed`；Plane 的 `module_ids` 不含已归档的模块，Nerve 含（设计 §3.6）；删迭代时 Plane 只写一条迭代动态，Nerve 每个工作项一条（设计 §3.3）。登记进 `plane-diff.md`。
+- **R10 Plane 差异**：不照搬重复加入时重复写动态；加入已结束迭代 Plane 回答 400，Nerve 409 `planning.cycle_completed`；Plane 的 `module_ids` 不含已归档的模块，Nerve 含（设计 §3.6）。删迭代/模块时每个工作项一条“移出”动态并更新它的修改时间，与 Plane 相同（`bgtasks/issue_activities_task.py:822-858`；原写“Plane 只写一条迭代动态”有误，T12 核对 Plane 源码后更正，`plane-diff.md` 的 P1“删除迭代”一行同步更正）。登记进 `plane-diff.md`。
 
 ## 4. 验收标准
 

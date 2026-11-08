@@ -173,7 +173,7 @@ M2 交接第 1 节要求列出每个跨模块的写入与查询；全部走端�
 |---|---|---|
 | `issue` → `planning` | 写 `cycle_id`/`module_ids` 时读取目标的事实（项目、是否删除/归档、迭代是否已结束、开关） | `PlanningTargets`：在工作项写已取得的项目行锁下读取 |
 | `issue` → `planning` | 列表分组头、按模块名排序、筛选值校验需要的目录 | `PlanningDirectory`：按项目返回 id、名字、排序、归档，数组传入静态查询（M4 §11.5） |
-| `issue` → `planning` | 自动归档要排除的未结束迭代、未到目标日期模块 | `OpenPlanningIDs`：在项目锁下按项目时区返回 id 数组 |
+| `issue` → `planning` | 自动归档要排除的未结束迭代、未到目标日期模块 | `OpenPlanning.OpenTargets`：在项目锁下按项目时区返回 id 数组（P3a） |
 | `planning` → `issue` | 计数、分布、燃尽（按调用者的可见范围）；列表行的批量计数 | `PlanningIssueStats` |
 | `planning` → `issue` | 转移：在同一事务移动归属并写动态 | `TransferCycleIssues` |
 | `planning` → `project` | 项目事实（时区、开关、成员角色）、项目锁 | 复用/扩展现有项目端口 |
@@ -186,7 +186,7 @@ M2 交接第 1 节要求列出每个跨模块的写入与查询；全部走端�
 
 - **列表引擎**（M4 交接 M6-02）：`listvocab.go` 加筛选 `cycle_id`、`module_id`（值为 id 或 `none`，同 `label_id` 的语法）、分组 `cycle_id`、`module_id`（沿用分组码等于筛选名的约定；模块是多值分组，同标签）、排序 `cycle_name`、`module_name` 两向（Plane 的表头提供迭代排序而后端允许表只有模块名，Nerve 两者都支持，登记差异）、显示属性 `cycle`、`modules`；`api/testdata/issue-order.json`、游标键、`list_settings.go`、项目偏好的 CHECK（新迁移，先例 `00038`）同步。迭代/模块页的列表就是项目列表加 `cycle_id`/`module_id` 筛选，读本迭代/模块的偏好（偏好里的筛选不含本域的 `cycle_id`/`module_id` 键），不另开列表接口。附件列随共享设置出现（M5-M6-02）。
 - **动态**：§3.3。
-- **自动归档**（M4 §3 `:431`）：照 Plane，工作项不在未结束的迭代（结束日为空或 ≥ 今天）且不在未到目标日的模块（目标日为空或 ≥ 今天）时才可自动归档；id 数组经 `OpenPlanningIDs` 在项目锁下取得，保持每项目事务、固定业务时钟。
+- **自动归档**（M4 §3 `:431`）：照 Plane，工作项不在未结束的迭代（结束日为空或 ≥ 今天）且不在未到目标日的模块（目标日为空或 ≥ 今天）时才可自动归档；id 数组经 `OpenPlanning.OpenTargets` 在项目锁下取得，保持每项目事务、固定业务时钟。
 - **搜索**：M4 的 `issue-search` 不加 Plane 的迭代/模块变体（“添加已有”用普通搜索并排除已在其中的工作项，见 §8）。
 
 ## 8. 前端
