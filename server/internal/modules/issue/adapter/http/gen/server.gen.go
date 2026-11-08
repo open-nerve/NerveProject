@@ -521,8 +521,10 @@ type IssueDetail struct {
 // IssueDraftPayload Unfinished issue input. Saving checks structure, not create semantics.
 type IssueDraftPayload struct {
 	AssigneeIds     *[]uuid.UUID `json:"assignee_ids,omitempty"`
+	CycleID         *uuid.UUID   `json:"cycle_id,omitempty"`
 	DescriptionHTML *string      `json:"description_html,omitempty"`
 	LabelIds        *[]uuid.UUID `json:"label_ids,omitempty"`
+	ModuleIds       *[]uuid.UUID `json:"module_ids,omitempty"`
 	Name            *string      `json:"name,omitempty"`
 	ParentID        *uuid.UUID   `json:"parent_id,omitempty"`
 	Priority        *string      `json:"priority,omitempty"`

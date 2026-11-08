@@ -1933,7 +1933,7 @@ paths:
       tags:
         - issue
       summary: Publish your stored issue draft
-      description: Accepts no request body. Creates from the locked stored payload and soft-deletes the draft atomically.
+      description: Accepts no request body. Creates from the locked stored payload and soft-deletes the draft atomically. The payload is checked as createIssue checks its body, its cycle and modules too, as they are when it is published (planning.cycles_disabled, planning.modules_disabled, planning.archived, planning.cycle_completed); a refused publication leaves the draft as it was, to be changed and published again.
       security:
         - bearer: []
       x-problem-codes:
@@ -1943,6 +1943,10 @@ paths:
         - validation_failed
         - issue.draft_changed
         - project.archived
+        - planning.cycles_disabled
+        - planning.modules_disabled
+        - planning.archived
+        - planning.cycle_completed
         - server_busy
         - asset.not_found
         - asset.not_uploaded
@@ -5591,6 +5595,14 @@ components:
         parent_id:
           type: string
           format: uuid
+        cycle_id:
+          type: string
+          format: uuid
+        module_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
     Draft:
       type: object
       additionalProperties: false

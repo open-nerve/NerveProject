@@ -1201,7 +1201,7 @@ export interface paths {
         put?: never;
         /**
          * Publish your stored issue draft
-         * @description Accepts no request body. Creates from the locked stored payload and soft-deletes the draft atomically.
+         * @description Accepts no request body. Creates from the locked stored payload and soft-deletes the draft atomically. The payload is checked as createIssue checks its body, its cycle and modules too, as they are when it is published (planning.cycles_disabled, planning.modules_disabled, planning.archived, planning.cycle_completed); a refused publication leaves the draft as it was, to be changed and published again.
          */
         post: operations["publishDraft"];
         delete?: never;
@@ -2947,6 +2947,9 @@ export interface components {
             target_date?: string;
             /** Format: uuid */
             parent_id?: string;
+            /** Format: uuid */
+            cycle_id?: string;
+            module_ids?: string[];
         };
         Draft: {
             /** Format: uuid */
