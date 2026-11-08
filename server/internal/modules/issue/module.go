@@ -4,7 +4,8 @@
 // work items under one and putting work items under it, and listing a
 // work item's relations, relating it to others and deleting a relation.
 // Project and workspace deletion events enqueue asynchronous work-item row
-// deletion in the publishing transaction. Its IssueCascade port tells whether
+// deletion in the publishing transaction; a cycle's and a module's deletion
+// events take the work items out of it there. Its IssueCascade port tells whether
 // work items are in a state and takes deleted labels off them.
 package issue
 
@@ -51,17 +52,18 @@ type ListSettings interface {
 
 // Provided are the adapters bootstrap builds before wiring consuming modules.
 type Provided struct {
-	attachmentChanges app.AttachmentEventStore
-	AssetParents      AssetParents
-	IssueCascade      Cascade
-	ListSettings      ListSettings
-	Purger            *app.Purger
+	attachmentChanges  app.AttachmentEventStore
+	membershipRemovals app.MembershipRemovals
+	AssetParents       AssetParents
+	IssueCascade       Cascade
+	ListSettings       ListSettings
+	Purger             *app.Purger
 }
 
 // Provide builds issue's adapters for the other modules.
 func Provide(pool *pgxpool.Pool, protected []postgres.ProtectedReference) Provided {
 	store := postgresadapter.NewPurgeStore(pool, protected)
-	return Provided{attachmentChanges: store, AssetParents: store, Purger: app.NewPurger([]app.PurgeStep{
+	return Provided{attachmentChanges: store, membershipRemovals: store, AssetParents: store, Purger: app.NewPurger([]app.PurgeStep{
 		{Table: "comment_reactions", Delete: store.PurgeCommentReactions},
 		{Table: "issue_reactions", Delete: store.PurgeIssueReactions},
 		{Table: "issue_mentions", Delete: store.PurgeIssueMentions},

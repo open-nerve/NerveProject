@@ -74,17 +74,19 @@ func CreationJoins(cycle *Named, modules ...Named) []Activity {
 	return rows
 }
 
-// moduleJoined and moduleLeft are the rows of a work item's joining and
-// leaving the module m (M6 P3a spec 2.4, Plane's field and verbs): joining,
-// created, from "" to its name, its id the new identifier; leaving,
-// deleted, from its name to "", its id the old identifier. Plane's
-// sentences go with them, cut before the name.
+// moduleJoined is the row of a work item's joining the module m (M6 P3a
+// spec 2.4, Plane's field and verb): created, from "" to its name, its id
+// the new identifier, Plane's sentence cut before the name.
 func moduleJoined(m Named) Activity {
 	return Activity{Field: ptr("modules"), Verb: VerbCreated, OldValue: ptr(""), NewValue: ptr(m.Name), NewIdentifier: ptr(m.ID),
 		Comment: "added module "}
 }
 
-func moduleLeft(m Named) Activity {
+// ModuleLeft is the row of a work item's leaving the module m, whether a
+// write of the work item takes it out or m is deleted (M6 P3a spec 2.4,
+// 2.5): deleted, from its name to "", its id the old identifier, Plane's
+// sentence cut before the name.
+func ModuleLeft(m Named) Activity {
 	return Activity{Field: ptr("modules"), Verb: VerbDeleted, OldValue: ptr(m.Name), NewValue: ptr(""), OldIdentifier: ptr(m.ID),
 		Comment: "removed this work item from module "}
 }
@@ -106,6 +108,13 @@ func cycleActivity(c Changed[*Named]) Activity {
 	}
 	return Activity{Field: ptr("cycles"), Verb: VerbUpdated, OldValue: ptr(c.Old.Name), NewValue: ptr(c.New.Name), OldIdentifier: ptr(c.Old.ID),
 		NewIdentifier: ptr(c.New.ID), Comment: "updated cycle from "}
+}
+
+// CycleLeft is the row of a work item's leaving the cycle c because c is
+// deleted (M6 P3a spec 2.5): the row of a write that takes it out of c
+// (cycleActivity).
+func CycleLeft(c Named) Activity {
+	return cycleActivity(Changed[*Named]{Old: &c})
 }
 
 // Named is a row an activity names by its name, a state, a label, a cycle
@@ -151,7 +160,7 @@ type Update struct {
 // each account assigned (row 12) and unassigned (row 13), by his display
 // name and his id; each list in the order given; then the cycle's row
 // (cycleActivity, M6 P3a spec 2.4); then each module added and removed
-// (moduleJoined, moduleLeft), in the order given. A field left as it is
+// (moduleJoined, ModuleLeft), in the order given. A field left as it is
 // writes no row (Plane the same).
 func UpdateActivity(u Update) []Activity {
 	var rows []Activity
@@ -204,7 +213,7 @@ func UpdateActivity(u Update) []Activity {
 		rows = append(rows, moduleJoined(m))
 	}
 	for _, m := range u.ModulesRemoved {
-		rows = append(rows, moduleLeft(m))
+		rows = append(rows, ModuleLeft(m))
 	}
 	return rows
 }

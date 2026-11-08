@@ -25,3 +25,32 @@ SELECT unnest(sqlc.arg(ids)::uuid[]), sqlc.arg(workspace_id), sqlc.arg(project_i
 UPDATE module_issues
 SET deleted_at = sqlc.arg(at)::timestamptz, updated_at = sqlc.arg(at), updated_by_id = sqlc.arg(by)::uuid
 WHERE issue_id = sqlc.arg(issue_id) AND module_id = ANY (sqlc.arg(module_ids)::uuid[]) AND deleted_at IS NULL;
+
+-- name: RemoveCycleMemberships :many
+-- A deleted cycle's memberships (M6 P3a spec 2.5, R6), in the deletion's transaction: its undeleted rows, locked FOR
+-- NO KEY UPDATE in id order, then soft-deleted at the deletion's moment by its account, in one statement (convention
+-- 5); a row deleted before, with its work item or by a leave, keeps its deletion. It answers the work items the rows
+-- were of, in id order. cycle_issues_cycle_id_idx serves it.
+WITH removed AS (
+    UPDATE cycle_issues AS t
+    SET deleted_at = sqlc.arg(at)::timestamptz, updated_at = sqlc.arg(at), updated_by_id = sqlc.arg(by)::uuid
+    WHERE t.id IN (
+        SELECT r.id FROM cycle_issues r
+        WHERE r.cycle_id = sqlc.arg(cycle_id) AND r.deleted_at IS NULL
+        ORDER BY r.id FOR NO KEY UPDATE)
+    RETURNING t.issue_id
+)
+SELECT issue_id FROM removed ORDER BY issue_id;
+
+-- name: RemoveModuleMemberships :many
+-- RemoveCycleMemberships' statement, of a deleted module's memberships. module_issues_module_id_idx serves it.
+WITH removed AS (
+    UPDATE module_issues AS t
+    SET deleted_at = sqlc.arg(at)::timestamptz, updated_at = sqlc.arg(at), updated_by_id = sqlc.arg(by)::uuid
+    WHERE t.id IN (
+        SELECT r.id FROM module_issues r
+        WHERE r.module_id = sqlc.arg(module_id) AND r.deleted_at IS NULL
+        ORDER BY r.id FOR NO KEY UPDATE)
+    RETURNING t.issue_id
+)
+SELECT issue_id FROM removed ORDER BY issue_id;

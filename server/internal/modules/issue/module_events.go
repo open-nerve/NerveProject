@@ -19,7 +19,10 @@ func EventTypes() []string {
 	}
 }
 
-// Subscribers composes transactional consumers independently of New.
+// Subscribers composes transactional consumers independently of New: an
+// attachment's change, a link's crawl, a project's or a workspace's
+// deletion, and a cycle's or a module's deletion (M6 P3a spec R6).
 func Subscribers(ports Provided, inserter riveradapter.Inserter) []shared.EventSubscriber {
-	return []shared.EventSubscriber{app.NewAttachmentChanges(ports.attachmentChanges), app.NewCrawlOnLinkChange(riveradapter.NewLinkCrawls(inserter)), app.NewDeleteRowsOnDeletion(riveradapter.NewRowDeletions(inserter))}
+	return []shared.EventSubscriber{app.NewAttachmentChanges(ports.attachmentChanges), app.NewCrawlOnLinkChange(riveradapter.NewLinkCrawls(inserter)),
+		app.NewDeleteRowsOnDeletion(riveradapter.NewRowDeletions(inserter)), app.NewMembershipRemovals(ports.membershipRemovals)}
 }

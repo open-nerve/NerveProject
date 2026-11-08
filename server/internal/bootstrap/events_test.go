@@ -10,6 +10,7 @@ import (
 	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue"
+	"github.com/open-nerve/NerveProject/server/internal/modules/planning"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project"
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
@@ -234,5 +235,29 @@ func TestIssueEventDirectory(t *testing.T) {
 	}
 	if err := all.Publish(t.Context(), shared.Event{Type: "unknown.deleted"}); err == nil {
 		t.Fatal("accepted unknown event")
+	}
+}
+
+// planning declares its cycle's and module's deletions (M6 P3a spec R6), and the app's directory declares them, so
+// that their publication reaches the issue module's subscriber, which the app's dispatcher takes with the rest of
+// issue's: a subscription to an undeclared type is refused at its construction.
+func TestPlanningEventDirectory(t *testing.T) {
+	want := []string{"planning.cycle_deleted", "planning.module_deleted"}
+	types := planning.EventTypes()
+	if !reflect.DeepEqual(types, want) {
+		t.Fatalf("planning event directory = %v", types)
+	}
+	types[0] = "external mutation"
+	if !reflect.DeepEqual(planning.EventTypes(), want) {
+		t.Error("caller mutation changed module directory")
+	}
+	all, err := newDispatcher(eventTypes(), issue.Subscribers(issue.Provide(nil, nil), nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, kind := range want {
+		if err := all.Publish(t.Context(), shared.Event{Type: kind}); err == nil {
+			t.Errorf("%s: a malformed deletion was taken; want the issue subscriber's refusal", kind)
+		}
 	}
 }

@@ -92,8 +92,8 @@ test("W3 (API): the admin changes the workspace and deletes it with its members,
   const { project: acmeWeb, bug: acmeBug } = await furnish(acme, 15);
   // Acme's Web has a work item too, the member's, assigned to him and labelled Bug, whose rows Acme's deletion must
   // write again as the admin's; Other's Web has none, as made (expectProjectCreated).
-  await furnishIssueRows(api, member, slug, acmeWeb.id, memberId, acmeBug.id);
-  await furnishPlanningRows(api, member, acmeWeb.id);
+  const acmePlanning = await furnishPlanningRows(api, member, acmeWeb.id);
+  await furnishIssueRows(api, member, slug, acmeWeb.id, memberId, acmeBug.id, acmePlanning);
   const projectless = await createDraft(api, member, slug, { project_id: null, payload: { name: "Unassigned" } });
   /** Web's labels, as the member made them; deleted by the admin, as Acme's deletion writes them. */
   const webLabels = (deleted: boolean): LabelRow[] => [
@@ -170,8 +170,8 @@ test("W3 (API): the admin changes the workspace and deletes it with its members,
   // display settings in it, its label and the work item's rows are his own writing, which Old's deletion must write
   // again as the admin's.
   const oldBug = await createLabel(api, member, old.id, { name: "Bug" });
-  await furnishIssueRows(api, member, slug, old.id, memberId, oldBug.id);
-  await furnishPlanningRows(api, member, old.id);
+  const oldPlanning = await furnishPlanningRows(api, member, old.id);
+  await furnishIssueRows(api, member, slug, old.id, memberId, oldBug.id, oldPlanning);
   const moved = await api.PATCH("/api/v0/me/projects/{project_id}/preferences", {
     params: { path: { project_id: old.id } },
     body: { sort_order: 75535 },

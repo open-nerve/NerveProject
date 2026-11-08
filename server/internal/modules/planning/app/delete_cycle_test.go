@@ -2,7 +2,9 @@ package app
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"reflect"
 	"slices"
 	"testing"
 	"time"
@@ -33,12 +35,12 @@ func TestDeleteCycle(t *testing.T) {
 		if change != nil {
 			change(w)
 		}
-		uc := NewDeleteCycle(DeleteCycleDeps{Locks: w.locks(), Cycles: w, Clock: w})
+		uc := NewDeleteCycle(DeleteCycleDeps{Locks: w.locks(), Cycles: w, Clock: w, Events: &deletionEvents{lockWorld: w}})
 		if err := uc.Execute(shared.WithActor(context.Background(), shared.Actor{UserID: lockEditor}), lockCycle); err != nil {
 			t.Fatalf("%s: %v", name, err)
 		}
 		want := []string{"GetCycle outside tx", "Facts outside tx", "Authorize cycle.delete outside tx", "Enter 1 outside tx", "Begin", "Lock",
-			"GetCycle", "Authorize cycle.delete", "Now", "DeleteCycle true true true", "End", "Leave"}
+			"GetCycle", "Authorize cycle.delete", "Now", "DeleteCycle true true true", "Publish planning.cycle_deleted", "End", "Leave"}
 		if !slices.Equal(w.calls, want) {
 			t.Fatalf("%s: calls\n%q\nwant\n%q", name, w.calls, want)
 		}
@@ -47,5 +49,58 @@ func TestDeleteCycle(t *testing.T) {
 				t.Fatalf("%s: target %+v, want its creator", name, target)
 			}
 		}
+	}
+}
+
+// deletionEvents is the lock world's publisher: each event it is given, logged as "Publish <type>" inside or outside
+// the write's transaction, and its answer, refusal.
+type deletionEvents struct {
+	*lockWorld
+	published []shared.Event
+	refusal   error
+}
+
+func (p *deletionEvents) Publish(ctx context.Context, e shared.Event) error {
+	p.log(ctx, "Publish "+e.Type)
+	p.published = append(p.published, e)
+	return p.refusal
+}
+
+// wantDeletion checks that events published one event, the deletion of kind, of the entity named name of the lock
+// world's project, by the editor at the world's moment, the moment of the row's deletion (M6 P3a spec 2.5, R6).
+func wantDeletion(t *testing.T, events *deletionEvents, kind string, entity shared.EntityRef, name string) {
+	t.Helper()
+	if len(events.published) != 1 {
+		t.Fatalf("published %+v, want the one deletion", events.published)
+	}
+	got := events.published[0]
+	editor := lockEditor
+	want := shared.Event{ID: got.ID, Type: kind, OccurredAt: events.now, WorkspaceID: lockWorkspace, ProjectID: lockProject, ActorID: &editor,
+		Entity: entity, Changes: []shared.Change{{Field: "name", Old: &name}}}
+	if got.ID == uuid.Nil() || !reflect.DeepEqual(got, want) {
+		t.Errorf("published %+v, want %+v", got, want)
+	}
+}
+
+// Deleting a cycle publishes its deletion in the write's transaction, after the row's (M6 P3a spec 2.5, R6): the
+// cycle, its workspace and project, the caller at the moment of the deletion, and its name before it as the one
+// change. A publication that fails fails the deletion: the transaction ends with its error, which rolls it back.
+func TestDeleteCyclePublishesItsDeletion(t *testing.T) {
+	w := sprintWorld(t)
+	events := &deletionEvents{lockWorld: w}
+	uc := NewDeleteCycle(DeleteCycleDeps{Locks: w.locks(), Cycles: w, Clock: w, Events: events})
+	if err := uc.Execute(shared.WithActor(context.Background(), shared.Actor{UserID: lockEditor}), lockCycle); err != nil {
+		t.Fatal(err)
+	}
+	wantDeletion(t, events, "planning.cycle_deleted", shared.EntityRef{Kind: "cycle", ID: lockCycle}, "Sprint")
+
+	w = sprintWorld(t)
+	events = &deletionEvents{lockWorld: w, refusal: errors.New("a subscriber failed")}
+	uc = NewDeleteCycle(DeleteCycleDeps{Locks: w.locks(), Cycles: w, Clock: w, Events: events})
+	if err := uc.Execute(shared.WithActor(context.Background(), shared.Actor{UserID: lockEditor}), lockCycle); !errors.Is(err, events.refusal) {
+		t.Fatalf("Execute() = %v, want the publication's error", err)
+	}
+	if want := []string{"DeleteCycle true true true", "Publish planning.cycle_deleted", "End", "Leave"}; !slices.Equal(w.calls[len(w.calls)-4:], want) {
+		t.Errorf("calls %q, want them to end %q", w.calls, want)
 	}
 }

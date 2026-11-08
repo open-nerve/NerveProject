@@ -99,6 +99,49 @@ func (q *Queries) RemoveCycleIssues(ctx context.Context, arg RemoveCycleIssuesPa
 	return err
 }
 
+const removeCycleMemberships = `-- name: RemoveCycleMemberships :many
+WITH removed AS (
+    UPDATE cycle_issues AS t
+    SET deleted_at = $1::timestamptz, updated_at = $1, updated_by_id = $2::uuid
+    WHERE t.id IN (
+        SELECT r.id FROM cycle_issues r
+        WHERE r.cycle_id = $3 AND r.deleted_at IS NULL
+        ORDER BY r.id FOR NO KEY UPDATE)
+    RETURNING t.issue_id
+)
+SELECT issue_id FROM removed ORDER BY issue_id
+`
+
+type RemoveCycleMembershipsParams struct {
+	At      time.Time
+	By      uuid.UUID
+	CycleID uuid.UUID
+}
+
+// A deleted cycle's memberships (M6 P3a spec 2.5, R6), in the deletion's transaction: its undeleted rows, locked FOR
+// NO KEY UPDATE in id order, then soft-deleted at the deletion's moment by its account, in one statement (convention
+// 5); a row deleted before, with its work item or by a leave, keeps its deletion. It answers the work items the rows
+// were of, in id order. cycle_issues_cycle_id_idx serves it.
+func (q *Queries) RemoveCycleMemberships(ctx context.Context, arg RemoveCycleMembershipsParams) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, removeCycleMemberships, arg.At, arg.By, arg.CycleID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []uuid.UUID
+	for rows.Next() {
+		var issue_id uuid.UUID
+		if err := rows.Scan(&issue_id); err != nil {
+			return nil, err
+		}
+		items = append(items, issue_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const removeModuleIssues = `-- name: RemoveModuleIssues :exec
 UPDATE module_issues
 SET deleted_at = $1::timestamptz, updated_at = $1, updated_by_id = $2::uuid
@@ -122,4 +165,44 @@ func (q *Queries) RemoveModuleIssues(ctx context.Context, arg RemoveModuleIssues
 		arg.ModuleIds,
 	)
 	return err
+}
+
+const removeModuleMemberships = `-- name: RemoveModuleMemberships :many
+WITH removed AS (
+    UPDATE module_issues AS t
+    SET deleted_at = $1::timestamptz, updated_at = $1, updated_by_id = $2::uuid
+    WHERE t.id IN (
+        SELECT r.id FROM module_issues r
+        WHERE r.module_id = $3 AND r.deleted_at IS NULL
+        ORDER BY r.id FOR NO KEY UPDATE)
+    RETURNING t.issue_id
+)
+SELECT issue_id FROM removed ORDER BY issue_id
+`
+
+type RemoveModuleMembershipsParams struct {
+	At       time.Time
+	By       uuid.UUID
+	ModuleID uuid.UUID
+}
+
+// RemoveCycleMemberships' statement, of a deleted module's memberships. module_issues_module_id_idx serves it.
+func (q *Queries) RemoveModuleMemberships(ctx context.Context, arg RemoveModuleMembershipsParams) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, removeModuleMemberships, arg.At, arg.By, arg.ModuleID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []uuid.UUID
+	for rows.Next() {
+		var issue_id uuid.UUID
+		if err := rows.Scan(&issue_id); err != nil {
+			return nil, err
+		}
+		items = append(items, issue_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

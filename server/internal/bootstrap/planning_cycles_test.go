@@ -1,6 +1,7 @@
 package bootstrap
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/open-nerve/NerveProject/server/internal/modules/issue"
 	"github.com/open-nerve/NerveProject/server/internal/modules/planning"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project"
 	"github.com/open-nerve/NerveProject/server/internal/platform/clock"
@@ -175,15 +177,37 @@ func TestCreateCycleRefusals(t *testing.T) {
 }
 
 // newPlanningRoute is the planning module as bootstrap wires it, on pool,
-// with tx its writes' transactions, its link crawls inserted in them.
+// with tx its writes' transactions, its link crawls inserted in them, its
+// deletions published in them through the app's event directory to the
+// issue module's subscribers (M6 P3a spec R6).
 func newPlanningRoute(t *testing.T, pool *pgxpool.Pool, tx shared.TxManager) moduleRoute {
+	t.Helper()
+	return newPlanningRouteObserved(t, pool, tx, nil)
+}
+
+// newPlanningRouteObserved is newPlanningRoute whose dispatcher, when observe
+// is given, hands it every event of the app's directory too, after the issue
+// module's subscribers.
+func newPlanningRouteObserved(t *testing.T, pool *pgxpool.Pool, tx shared.TxManager, observe func(shared.Event)) moduleRoute {
 	t.Helper()
 	client, err := jobs.NewInserter(pool)
 	if err != nil {
 		t.Fatal(err)
 	}
+	inserter := jobInserter{client: client}
+	subscribers := issue.Subscribers(issue.Provide(pool, nil), inserter)
+	if observe != nil {
+		subscribers = append(subscribers, shared.EventSubscriber{Name: "observer", Types: eventTypes(), Handle: func(_ context.Context, e shared.Event) error {
+			observe(e)
+			return nil
+		}})
+	}
+	events, err := newDispatcher(eventTypes(), subscribers)
+	if err != nil {
+		t.Fatal(err)
+	}
 	return newRoute(t, planning.New(planning.Deps{Pool: pool, Tx: tx, ReadTx: postgres.NewTxManager(pool, 2*time.Second, postgres.ReadOnlySnapshot()), JobTx: tx, RuntimeNow: time.Now, Logger: slog.New(slog.DiscardHandler),
-		LinkCrawls:  jobInserter{client: client},
+		LinkCrawls: inserter, Events: events,
 		DeleteBatch: 1000, DeleteBudget: 45 * time.Second, WriteGate: newWriteGate(testIssueConfig.WriteGate), Clock: clock.System{},
 		Authorizer: authorizerOn(pool), Projects: planningProjects{projects: project.Provide(pool, nil).PlanningProjects}}).Register)
 }

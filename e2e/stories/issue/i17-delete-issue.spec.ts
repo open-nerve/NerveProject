@@ -1,4 +1,5 @@
 import { furnishIssueFiles } from "../../fixtures/storage";
+import { furnishPlanningRows } from "../../fixtures/furnish";
 import { c12Evidence } from "../../fixtures/c12-evidence";
 import {
   addProjectMembers,
@@ -53,11 +54,15 @@ test("I17 (page): the confirmation names the whole subtree including archived de
   await addProjectMembers(api, seed.member.token, seed.project.id, [{ member_id: writer.id, role: 15 }]);
   const bug = await createLabel(api, seed.member.token, seed.project.id, { name: "Bug" });
   const description = `<mention-component entity_name="user_mention" entity_identifier="${seed.member.id}"></mention-component>`;
+  // The root is in a cycle and a module of the project: a row of each key of the catalog under it.
+  const planning = await furnishPlanningRows(api, seed.member.token, seed.project.id);
   const root = await createIssue(api, writer.token, seed.project.id, {
     name: "Delete release tree",
     description_html: description,
     assignee_ids: [seed.member.id],
     label_ids: [bug.id],
+    cycle_id: planning.cycleId,
+    module_ids: [planning.moduleId],
   });
   const child = await createIssue(api, writer.token, seed.project.id, {
     name: "Release notes",
@@ -191,15 +196,19 @@ test("I17 (API): a member does not delete another's work item (403), a guest his
     throw new Error("Web's states hold no Done");
   }
 
-  // ann's Plan the release, assigned to bob and labelled Bug; Write the notes under it, and Check the mirrors, in Done,
-  // under that, archived. Plan the release relates to Deploy the site, of Ops, stored from it, and blocks Ship it, of
-  // Ops, stored from Ship it as its blocked_by: under Plan the release, a row of each key of the catalog.
+  // ann's Plan the release, assigned to bob, labelled Bug and in a cycle and a module of Web (furnishPlanningRows, the
+  // admin's); Write the notes under it, and Check the mirrors, in Done, under that, archived. Plan the release relates
+  // to Deploy the site, of Ops, stored from it, and blocks Ship it, of Ops, stored from Ship it as its blocked_by: under
+  // Plan the release, a row of each key of the catalog.
   const description = `<mention-component entity_name="user_mention" entity_identifier="${bob.id}"></mention-component>`;
+  const planning = await furnishPlanningRows(api, admin.token, web.id);
   const plan = await createIssue(api, ann.token, web.id, {
     name: "Plan the release",
     description_html: description,
     assignee_ids: [bob.id],
     label_ids: [bug.id],
+    cycle_id: planning.cycleId,
+    module_ids: [planning.moduleId],
   });
   const notes = await createIssue(api, ann.token, web.id, {
     name: "Write the notes",
