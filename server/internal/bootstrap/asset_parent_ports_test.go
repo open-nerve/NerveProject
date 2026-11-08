@@ -87,7 +87,8 @@ func TestAssetParentLocksAndFacts(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	err := postgres.NewTxManager(w.pool, 2*time.Second).WithinTx(t.Context(), func(ctx context.Context) error {
+	facts := requestTx(w.pool)
+	err := facts.WithinTx(t.Context(), func(ctx context.Context) error {
 		wf, err := workspaces.AssetWorkspaceFacts(ctx, []uuid.UUID{ws.ID, w.acme, uuid.New()})
 		if err != nil {
 			return err
@@ -134,8 +135,10 @@ func TestAssetParentLocksAndFacts(t *testing.T) {
 				check(r.ID, r.DeletedAt, r.DeletedByID)
 			}
 		}
+		// The fact read's own locks: a start-time run locks each project in
+		// turn (waitForStartupRuns).
 		for table, id := range map[string]uuid.UUID{"workspaces": ws.ID, "projects": w.web, "issues": i, "issue_comments": c.ID, "draft_issues": d1.ID} {
-			if pgtest.RowWaits(t, w.pool, table, id, "FOR UPDATE") {
+			if requestGateRowLock(t, w.pool, w.pool, facts, table+" WHERE id = $1", id) != "no lock" {
 				t.Errorf("fact read locked %s", table)
 			}
 		}

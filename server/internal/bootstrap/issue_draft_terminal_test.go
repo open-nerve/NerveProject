@@ -71,8 +71,11 @@ func testDraftWorkspaceTerminal(t *testing.T) {
 				}
 				collect := requestBackground(t, send, func() { requestRelease(t, holder) })
 				requestBlocked(t, w.pool, tx, holder.Conn().PgConn().PID(), "workspaces")
-				if pgtest.RowWaits(t, w.pool, "projects", next, "FOR NO KEY UPDATE") {
-					t.Fatal("request took a new project lock while waiting W")
+				// The request's and the holder's own locks, of which the holder's
+				// move takes Ops FOR KEY SHARE: a start-time run locks each project
+				// in turn (waitForStartupRuns).
+				if lock := requestFixtureRowLock(t, w.pool, w.pool, tx, holder, "projects WHERE id = $1", next); lock != "no lock" && lock != "FOR KEY SHARE" {
+					t.Fatal("request took a new project lock while waiting W", lock)
 				}
 				draftCommit(t, holder)
 				collect()
@@ -126,7 +129,11 @@ func testDraftWorkspaceTerminal(t *testing.T) {
 			var e exchange
 			collect := requestBackground(t, draftWrite(t, w, tx, &e, "PATCH", draftPath(d.ID), `{"payload":{}}`), func() { requestRelease(t, holder) })
 			requestBlocked(t, w.pool, tx, holder.Conn().PgConn().PID(), "workspaces")
-			draftNoLock(t, w, "projects", w.web)
+			// The request's own lock: a start-time run locks each project in turn
+			// (waitForStartupRuns).
+			if requestRowLock(t, w.pool, w.pool, tx, "projects WHERE id = $1", w.web) != "no lock" {
+				t.Fatal("unexpected projects row lock")
+			}
 			draftCommit(t, holder)
 			collect()
 			want, code := 403, "forbidden"

@@ -8,7 +8,7 @@ SHELL := /bin/bash
 
 DEV_COMPOSE := docker compose -f deploy/compose.dev.yaml
 GOLANGCI_LINT_VERSION := 2.13.2
-# go test 的期限覆盖整个包；605 个组合测试的累计运行需独立于单个请求/锁等待期限。
+# go test 的期限覆盖整个包；bootstrap 包数百个组合测试的累计运行需独立于单个请求/锁等待期限，持续集成把它分路运行（test-shard）。
 GO_TEST_TIMEOUT ?= 20m
 BIN_DIR := $(CURDIR)/bin
 GOLANGCI_LINT := $(BIN_DIR)/golangci-lint
@@ -133,6 +133,11 @@ knip: ## 检查未使用的文件、导出和依赖（需要 Node；门禁）
 test: ## 运行 Go 测试（server 和它的工具模块，不用测试缓存）
 	cd server && go test -count=1 -timeout=$(GO_TEST_TIMEOUT) ./...
 	go -C server/tools test -count=1 -timeout=$(GO_TEST_TIMEOUT) ./...
+
+# 持续集成的 server 任务按矩阵分路，每路运行其中一份；各路合起来与 make test 相同（分法见脚本开头）
+.PHONY: test-shard
+test-shard: ## 运行第 SHARD 路（共 SHARDS 路，从 0 起）的 Go 测试（持续集成 server 任务）
+	bash tools/go-test-shard.sh "$(SHARD)" "$(SHARDS)" "$(GO_TEST_TIMEOUT)"
 
 .PHONY: test-web
 test-web: ## 运行前端单元测试（各包 test 脚本，经 turbo；需要 Node；持续集成 web 任务）

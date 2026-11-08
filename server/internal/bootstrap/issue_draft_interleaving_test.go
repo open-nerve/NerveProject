@@ -133,8 +133,13 @@ func TestDraftProjectMoveAndPublishSerialize(t *testing.T) {
 				case <-ctx.Done():
 					t.Fatal("publish did not finish its precheck")
 				}
-				draftNoLock(t, w, "projects", p1)
-				draftNoLock(t, w, "draft_issues", d.ID)
+				// The request's own locks: a start-time run locks each project in
+				// turn (waitForStartupRuns).
+				for table, id := range map[string]uuid.UUID{"projects": p1, "draft_issues": d.ID} {
+					if requestGateRowLock(t, w.pool, w.pool, tx, table+" WHERE id = $1", id) != "no lock" {
+						t.Fatalf("unexpected %s row lock", table)
+					}
+				}
 				draftRequest(t, w, "alice", "PATCH", draftPath(d.ID), `{"project_id":"`+p2.String()+`"}`, 200)
 				before := publishSnapshot(t, w)
 				requestOpen(g)

@@ -60,8 +60,9 @@ func startService(ctx context.Context, check func(context.Context, *Service) err
 	if err != nil {
 		return nil, err
 	}
-	s.container, err = testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
-		ContainerRequest: testcontainers.ContainerRequest{
+	// Each start builds its request anew: a start reads the file's reader.
+	s.container, err = startPublished(func() (testcontainers.Container, error) {
+		return testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{ContainerRequest: testcontainers.ContainerRequest{
 			// Docker copies this synthetic secret as root. The image drops to
 			// seaweed, so transfer ownership before invoking its normal entrypoint.
 			Entrypoint: []string{"/bin/sh", "-c", `chown seaweed:seaweed /etc/nerve-s3.json && exec /entrypoint.sh "$@"`, "nerve-s3-test"},
@@ -73,7 +74,7 @@ func startService(ctx context.Context, check func(context.Context, *Service) err
 				h.PortBindings = network.PortMap{network.MustParsePort("8333/tcp"): {{HostIP: netip.MustParseAddr("127.0.0.1")}}}
 			},
 			WaitingFor: wait.ForHTTP("/").WithPort("8333/tcp").WithStatusCodeMatcher(func(code int) bool { return code == 400 || code == 403 }).WithStartupTimeout(90 * time.Second),
-		}, Started: true,
+		}, Started: true})
 	})
 	if err != nil {
 		return nil, errors.Join(err, s.Close())

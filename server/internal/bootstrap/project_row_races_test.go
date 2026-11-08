@@ -124,7 +124,18 @@ func (m rowWrite) param() string {
 // member of acme who is no member of Web does not see it.
 func newPrivateWorld(t *testing.T) memberWorld {
 	t.Helper()
-	w := newMemberWorld(t)
+	return private(t, newMemberWorld(t))
+}
+
+// newObservedPrivateWorld is newPrivateWorld on newObservedMemberWorld.
+func newObservedPrivateWorld(t *testing.T) memberWorld {
+	t.Helper()
+	return private(t, newObservedMemberWorld(t))
+}
+
+// private makes w's Web private, by alice.
+func private(t *testing.T, w memberWorld) memberWorld {
+	t.Helper()
 	if status, body := call(t, w.contract, http.MethodPatch, w.base+"/api/v0/projects/"+w.web.String(), w.tokens["alice"], `{"network":0}`); status !=
 		http.StatusOK {
 		t.Fatalf("alice's making Web private = %d %s", status, body)
@@ -189,7 +200,7 @@ func TestAWriteOnARowUnderAProjectFindsWhatChangedMeanwhile(t *testing.T) {
 				continue // a state or a label does not end
 			}
 			t.Run(m.op+", "+c.name, func(t *testing.T) {
-				w := newPrivateWorld(t)
+				w := newObservedPrivateWorld(t)
 				m.labelsFor(t, w)
 				table := c.table
 				if table == "" {
@@ -209,7 +220,9 @@ func TestAWriteOnARowUnderAProjectFindsWhatChangedMeanwhile(t *testing.T) {
 				}
 				changed := rowJSON(t, other, table, id)
 				req, answered := m.sent(t, w)
-				pgtest.WaitForLockWaitOn(t, w.pool, c.holds, 5*time.Second)
+				// The write's own wait, behind other: a start-time run queues on
+				// project rows too (waitForStartupRuns).
+				requestBlocked(t, w.pool, w.requests.forRequest(req), other.Conn().PgConn().PID(), c.holds)
 				if err := other.Commit(pgtest.Soon(t)); err != nil {
 					t.Fatal(err)
 				}

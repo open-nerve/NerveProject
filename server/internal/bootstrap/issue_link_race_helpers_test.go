@@ -179,7 +179,7 @@ func (c *linkReadClock) Now() time.Time {
 	return time.Date(2044, 10, 11, 12, 13, 14, 0, time.UTC)
 }
 
-func linkRaceTitleRoute(t *testing.T, w issueWorld, clock *linkReadClock) moduleRoute {
+func linkRaceTitleRoute(t *testing.T, w issueWorld, clock *linkReadClock, tx shared.TxManager) moduleRoute {
 	t.Helper()
 	client, err := jobs.NewInserter(w.pool)
 	if err != nil {
@@ -199,15 +199,16 @@ func linkRaceTitleRoute(t *testing.T, w issueWorld, clock *linkReadClock) module
 	if err != nil {
 		t.Fatal(err)
 	}
-	return newIssueRouteWithPublisher(t, w.pool, postgres.NewTxManager(w.pool, 2*time.Second), clock, publisher)
+	return newIssueRouteWithPublisher(t, w.pool, tx, clock, publisher)
 }
 
 // Every failed assertion releases and joins the request before pool cleanup.
-func startLinkRaceTitle(t *testing.T, w issueWorld, link answeredLink) (*linkReadClock, func() answeredLink) {
+func startLinkRaceTitle(t *testing.T, w issueWorld, link answeredLink) (*linkReadClock, *requestProbe, func() answeredLink) {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
 	clock := &linkReadClock{gate: newGate(), ctx: ctx}
-	route := linkRaceTitleRoute(t, w, clock)
+	title := requestTx(w.pool)
+	route := linkRaceTitleRoute(t, w, clock, title)
 	var answer exchange
 	done := run(func() error {
 		answer.req, answer.rec = route.sendContext(ctx, http.MethodPatch, linkPath(link.ID), w.ids["alice"], `{"title":"User title"}`)
@@ -232,12 +233,12 @@ func startLinkRaceTitle(t *testing.T, w issueWorld, link answeredLink) (*linkRea
 		}
 	})
 	held(t, ctx, clock.gate, done, "title locked reread")
-	assertLinkProjectLock(t, w)
+	assertLinkProjectLock(t, w, title)
 	if pgtest.RowWaits(t, w.pool, "issue_links", link.ID, "FOR UPDATE") {
 		t.Fatal("title already locked link before the intended write point")
 	}
 	wantLinkRaceMetadata(t, w, link.ID, shared.LinkMetadata{})
-	return clock, func() answeredLink {
+	return clock, title, func() answeredLink {
 		release()
 		if err := result(t, ctx, done, "title update"); err != nil {
 			t.Fatal(err)

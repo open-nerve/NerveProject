@@ -54,8 +54,9 @@ func TestDescriptionSavesSerialize(t *testing.T) {
 			first := collaborationAt("bob", http.MethodPatch, path, fmt.Sprintf(`{"description_html":%q}`, firstHTML), c)
 			second := collaborationAt(secondActor, http.MethodPatch, path, fmt.Sprintf(`{"description_html":%q}`, secondHTML), c)
 			var a, b exchange
-			w.serializeAtAfter(t, "projects", first, second, &a, &b, func() {
-				if !pgtest.RowWaits(t, w.pool, "projects", w.web, "FOR NO KEY UPDATE") {
+			w.serializeAtObserved(t, "projects", first, second, &a, &b, func(holder, _ *requestProbe) {
+				// The holder's own lock: a start-time run locks project rows too.
+				if requestGateRowLock(t, w.pool, w.pool, holder, "projects WHERE id = $1", w.web) != "FOR NO KEY UPDATE" {
 					t.Fatal("description holder lost project N lock")
 				}
 				c.advance(500 * time.Second)
@@ -156,11 +157,14 @@ func TestCollaborationReadsClockUnderLock(t *testing.T) {
 						expected = map[string]int{"comment_reactions": 1}
 					}
 					var holder, writer exchange
-					w.serializeAtAfter(t, "projects", changesIssue("alice", named("Holder committed first")), collaborationAt("bob", method, path, body, c), &holder, &writer, func() {
-						if !pgtest.RowWaits(t, w.pool, "projects", w.web, "FOR NO KEY UPDATE") {
+					w.serializeAtObserved(t, "projects", changesIssue("alice", named("Holder committed first")), collaborationAt("bob", method, path, body, c), &holder, &writer, func(held, waiting *requestProbe) {
+						// Each probe reads its request's own locks: a start-time run
+						// locks each project in turn (waitForStartupRuns).
+						if requestGateRowLock(t, w.pool, w.pool, held, "projects WHERE id = $1", w.web) != "FOR NO KEY UPDATE" {
 							t.Fatal("holder does not hold project N lock")
 						}
-						if pgtest.RowWaits(t, w.pool, "projects", neighbor, "FOR NO KEY UPDATE") {
+						if requestGateRowLock(t, w.pool, w.pool, held, "projects WHERE id = $1", neighbor) != "no lock" ||
+							requestRowLock(t, w.pool, w.pool, waiting, "projects WHERE id = $1", neighbor) != "no lock" {
 							t.Fatal("unrelated project locked")
 						}
 						c.advance(time.Hour)

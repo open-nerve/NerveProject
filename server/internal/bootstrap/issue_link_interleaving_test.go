@@ -107,7 +107,7 @@ func TestLinkTitlePreservesConcurrentMetadata(t *testing.T) {
 			page := pages.wait(t, "/title")
 			jobs := linkRaceJobs(t, w, link.ID, link.URL)
 			activity := descriptionRows(t, w, "issue_activities", item)
-			clock, finish := startLinkRaceTitle(t, w, link)
+			clock, title, finish := startLinkRaceTitle(t, w, link)
 			want := linkPageMetadata(link.URL, "Crawled preview")
 			if crawlFirst {
 				pendingAudit := linkRaceAudit(t, w, item)
@@ -115,7 +115,7 @@ func TestLinkTitlePreservesConcurrentMetadata(t *testing.T) {
 				waitLinkRaceJob(t, w, jobs[0], link.ID, link.URL)
 				// The worker committed on a second connection while the title transaction
 				// still holds the project lock and has not reached its link UPDATE.
-				assertLinkProjectLock(t, w)
+				assertLinkProjectLock(t, w, title)
 				select {
 				case <-clock.gate.open:
 					t.Fatal("title gate opened before crawl committed")

@@ -91,7 +91,12 @@ func (w memberWorld) tx() shared.TxManager {
 // leaveProject is name's leaving of project, through project's use case
 // over leavers, with projectLocks and tx.
 func (w memberWorld) leaveProject(ctx context.Context, name string, project uuid.UUID, leavers projectapp.MemberLeaver) error {
-	return projectapp.NewLeaveProject(w.projectLocks(), leavers, w.tx(), clock.System{}).
+	return w.leaveProjectOn(ctx, name, project, leavers, w.tx())
+}
+
+// leaveProjectOn is leaveProject in transactions of tx.
+func (w memberWorld) leaveProjectOn(ctx context.Context, name string, project uuid.UUID, leavers projectapp.MemberLeaver, tx shared.TxManager) error {
+	return projectapp.NewLeaveProject(w.projectLocks(), leavers, tx, clock.System{}).
 		Execute(shared.WithActor(ctx, shared.Actor{UserID: w.ids[name]}), project)
 }
 
@@ -154,10 +159,13 @@ func TestTwoProjectAdminsLeavingLeaveAnAdmin(t *testing.T) {
 					first, second, want = second, first, carolOutOfOps
 				}
 				g := newGate()
-				left := run(func() error { return w.leaveProject(ctx, first, w.ops, l.holding(projectpg.New(w.pool), g)) })
+				firstTx, secondTx := requestTx(w.pool), requestTx(w.pool)
+				left := run(func() error { return w.leaveProjectOn(ctx, first, w.ops, l.holding(projectpg.New(w.pool), g), firstTx) })
 				held(t, ctx, g, left, "the first leaving")
-				refused := run(func() error { return w.leaveProject(ctx, second, w.ops, projectpg.New(w.pool)) })
-				pgtest.WaitForLockWaitOn(t, w.pool, "projects", 5*time.Second)
+				refused := run(func() error { return w.leaveProjectOn(ctx, second, w.ops, projectpg.New(w.pool), secondTx) })
+				// The second leaving's own wait, behind the first's transaction: a
+				// start-time run queues on Ops too (waitForStartupRuns).
+				requestBlocked(t, w.pool, secondTx, requestPID(t, firstTx), "projects")
 				if got := w.standing(t); got != worldStanding {
 					t.Errorf("while the first holds Ops: %s; want %s", got, worldStanding)
 				}

@@ -45,7 +45,7 @@ func TestAWriteOnAProjectMembershipDecidesOnWhatItReadUnderItsLocks(t *testing.T
 			"project.member_not_found"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			w := newMemberWorld(t)
+			w := newObservedMemberWorld(t)
 			id := w.membership(t, w.web, tt.member)
 			others := rowsBut(t, w.pool, []uuid.UUID{id})
 			other := holding(t, w.pool, "SELECT 1 FROM projects WHERE id = $1 FOR NO KEY UPDATE", w.web)
@@ -59,8 +59,11 @@ func TestAWriteOnAProjectMembershipDecidesOnWhatItReadUnderItsLocks(t *testing.T
 			}
 			req := newRequest(t, tt.method, w.base+"/api/v0/project-members/"+id.String(), w.tokens[tt.by], body)
 			w.contract.CheckRequest(t, req)
+			probe := w.requests.observe(req)
 			answered := sendInBackground(req)
-			pgtest.WaitForLockWaitOn(t, w.pool, "projects", 5*time.Second)
+			// The write's own wait, behind other: a start-time run queues on Web
+			// too (waitForStartupRuns).
+			requestBlocked(t, w.pool, probe, other.Conn().PgConn().PID(), "projects")
 			if err := other.Commit(pgtest.Soon(t)); err != nil {
 				t.Fatal(err)
 			}

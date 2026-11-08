@@ -49,6 +49,17 @@ func (p archiveHeldPolicies) ArchiveProjects(ctx context.Context) ([]uuid.UUID, 
 }
 
 func archiveRaceJob(w issueWorld, c issueapp.Clock, e shared.EventPublisher, scanned, locked *gate) *issueapp.AutoArchive {
+	return archiveRaceJobOn(w, archiveJobTx(w), c, e, scanned, locked)
+}
+
+// archiveJobTx is the auto-archive worker's transaction manager, as the app
+// wires it; a requestProbe around it names the job's backend.
+func archiveJobTx(w issueWorld) shared.TxManager {
+	return newIssueJobTx(w.pool, config.Config{Database: config.DatabaseConfig{CommitTimeout: 2 * time.Second}, Issue: testIssueConfig})
+}
+
+// archiveRaceJobOn is archiveRaceJob in transactions of tx.
+func archiveRaceJobOn(w issueWorld, tx shared.TxManager, c issueapp.Clock, e shared.EventPublisher, scanned, locked *gate) *issueapp.AutoArchive {
 	p := project.Provide(w.pool, nil)
 	var policies issueapp.ArchivePolicies = p.ArchivePolicies
 	var states issueapp.StateCatalog = issueProjects{projects: p.IssueProjects}
@@ -58,7 +69,7 @@ func archiveRaceJob(w issueWorld, c issueapp.Clock, e shared.EventPublisher, sca
 	if locked != nil {
 		states = archiveHeldStates{states, locked}
 	}
-	return issueapp.NewAutoArchive(issueapp.AutoArchiveDeps{Policies: policies, Projects: issueProjects{projects: p.IssueProjects}, States: states, Issues: issuepostgres.New(w.pool), Tx: newIssueJobTx(w.pool, config.Config{Database: config.DatabaseConfig{CommitTimeout: 2 * time.Second}, Issue: testIssueConfig}), Clock: c, Events: e})
+	return issueapp.NewAutoArchive(issueapp.AutoArchiveDeps{Policies: policies, Projects: issueProjects{projects: p.IssueProjects}, States: states, Issues: issuepostgres.New(w.pool), Tx: tx, Clock: c, Events: e})
 }
 
 // Even broken lock mutants may publish from overlapping goroutines. Serialize
@@ -99,6 +110,12 @@ func (e *archiveRaceEvents) snapshot() []shared.Event {
 	return append([]shared.Event(nil), e.events...)
 }
 
+// archiveAhead puts a job's clock so far ahead of the real one that a
+// candidate archiveRaceSeed ages 40 days for it is due on that clock alone:
+// the app's own start-time auto-archive (waitForStartupRuns), on the real
+// clock, must not find it due and archive it first.
+const archiveAhead = 30 * 24 * time.Hour
+
 func archiveRaceSeed(t *testing.T, w issueWorld, at time.Time, age time.Duration) uuid.UUID {
 	t.Helper()
 	id := w.newWorkItemIn(t, w.web, `{"name":"Archive interleaving"}`)
@@ -109,10 +126,12 @@ func archiveRaceSeed(t *testing.T, w issueWorld, at time.Time, age time.Duration
 	return id
 }
 
-// Observe the actual waiter, but also allow a broken implementation to finish
-// early. Callers still run their final business assertions in either case;
-// removal of a lock must not merely turn into a synchronization timeout.
-func archiveWaitOrDone(t *testing.T, w issueWorld, done <-chan error) (string, bool, error) {
+// Observe the actual waiter, waiter's own backend, but also allow a broken
+// implementation to finish early. Callers still run their final business
+// assertions in either case; removal of a lock must not merely turn into a
+// synchronization timeout. Another backend's row wait never counts: a
+// start-time run queues on project rows too (waitForStartupRuns).
+func archiveWaitOrDone(t *testing.T, w issueWorld, waiter *requestProbe, done <-chan error) (string, bool, error) {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
@@ -124,8 +143,9 @@ func archiveWaitOrDone(t *testing.T, w issueWorld, done <-chan error) (string, b
 			return "", true, err
 		default:
 		}
+		pid, _ := waiter.snapshot()
 		var table string
-		err := w.pool.QueryRow(ctx, `SELECT coalesce((SELECT c.relname FROM pg_stat_activity a JOIN pg_locks l ON l.pid=a.pid JOIN pg_class c ON c.oid=l.relation WHERE a.datname=current_database() AND a.wait_event_type='Lock' AND l.locktype='tuple' LIMIT 1),'')`).Scan(&table)
+		err := w.pool.QueryRow(ctx, `SELECT coalesce((SELECT c.relname FROM pg_stat_activity a JOIN pg_locks l ON l.pid=a.pid JOIN pg_class c ON c.oid=l.relation WHERE a.pid=$1 AND a.wait_event_type='Lock' AND l.locktype='tuple' LIMIT 1),'')`, int64(pid)).Scan(&table)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -142,8 +162,9 @@ func archiveWaitOrDone(t *testing.T, w issueWorld, done <-chan error) (string, b
 	}
 }
 
-// All gates are opened and goroutines joined on failed assertions too.
-func archiveInterleave(t *testing.T, w issueWorld, g *gate, first, second func() error, whileHeld, afterWait func()) {
+// All gates are opened and goroutines joined on failed assertions too. waiter
+// is the second side's transaction manager, whose wait is observed.
+func archiveInterleave(t *testing.T, w issueWorld, g *gate, first, second func() error, waiter *requestProbe, whileHeld, afterWait func()) {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -168,7 +189,7 @@ func archiveInterleave(t *testing.T, w issueWorld, g *gate, first, second func()
 		whileHeld()
 	}
 	b = run(second)
-	table, ended, err := archiveWaitOrDone(t, w, b)
+	table, ended, err := archiveWaitOrDone(t, w, waiter, b)
 	if ended {
 		b = nil
 	}

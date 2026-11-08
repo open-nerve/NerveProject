@@ -57,7 +57,7 @@ func TestTwoChangesOfAWorkItemSerialize(t *testing.T) {
 // a change of it waits is TestDeletingAWorkItemAndChangingItSerialize's,
 // through the route.
 func TestAWorkItemGoneWhileItsChangeWaitsIsNotFound(t *testing.T) {
-	w := newIssueWorld(t)
+	w := newObservedIssueWorld(t)
 	aWorkItem(t, w)
 	item := w.workItem(t)
 	ops := createdProject(t, w.contract, w.base, w.tokens["alice"], "acme", "Ops", "OPS")
@@ -67,8 +67,11 @@ func TestAWorkItemGoneWhileItsChangeWaitsIsNotFound(t *testing.T) {
 	}
 	change := newRequest(t, http.MethodPatch, w.base+"/api/v0/issues/"+item.String(), w.tokens["bob"], []byte(`{"name":"Mend"}`))
 	w.contract.CheckRequest(t, change)
+	probe := w.observe(change)
 	changed := sendInBackground(change)
-	pgtest.WaitForLockWaitOn(t, w.pool, "projects", 5*time.Second)
+	// The change's own wait, behind held: a start-time run queues on Web too
+	// (waitForStartupRuns).
+	requestBlocked(t, w.pool, probe, held.Conn().PgConn().PID(), "projects")
 	if err := held.Commit(pgtest.Soon(t)); err != nil {
 		t.Fatal(err)
 	}

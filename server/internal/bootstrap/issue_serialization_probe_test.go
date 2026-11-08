@@ -104,7 +104,7 @@ func TestIssueSerializationIgnoresTrimWaiter(t *testing.T) {
 	}
 
 	var removed, changed exchange
-	w.serializeAtObserved(t, "projects", first, second, &removed, &changed, func(holder *requestProbe) {
+	w.serializeAtObserved(t, "projects", first, second, &removed, &changed, func(holder, _ *requestProbe) {
 		defer releaseUsers()
 		receiveWithin(t, trimReady, 2*time.Second, "trim waiting while the second request is paused")
 		trim := receiveWithin(t, trimStarted, time.Second, "identified trim")

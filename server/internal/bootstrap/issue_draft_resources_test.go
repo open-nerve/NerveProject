@@ -100,8 +100,9 @@ func testDraftGateConnection(t *testing.T) {
 	if tx.pid.Load() != 0 {
 		t.Errorf("gate waiter opened request transaction PID %d", tx.pid.Load())
 	}
+	// Without a transaction (above) the waiter holds no row; Web's would not
+	// tell, as a start-time run locks each project in turn (waitForStartupRuns).
 	draftNoLock(t, w, "workspaces", w.acme)
-	draftNoLock(t, w, "projects", w.web)
 	draftNoLock(t, w, "draft_issues", d.ID)
 	leave()
 	collect()

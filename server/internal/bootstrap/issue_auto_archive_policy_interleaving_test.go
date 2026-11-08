@@ -10,7 +10,6 @@ import (
 	issuepostgres "github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/postgres"
 	issueapp "github.com/open-nerve/NerveProject/server/internal/modules/issue/app"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project"
-	"github.com/open-nerve/NerveProject/server/internal/platform/config"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
@@ -35,8 +34,16 @@ func TestAutoArchiveUsesLockedPolicy(t *testing.T) {
 		for _, order := range []string{"after_scan", "request_first", "job_first"} {
 			t.Run(change.name+"/"+order, func(t *testing.T) {
 				w := newIssueWorld(t)
-				// Project/workspace routes use the real clock, after this system time.
-				at := time.Now().UTC().Truncate(time.Microsecond).Add(-time.Hour)
+				since := time.Now().UTC().Truncate(time.Microsecond)
+				at := since.Add(archiveAhead)
+				if change.deleted != "" && order == "job_first" {
+					// Its archive precedes a deletion on the real clock of the
+					// project and workspace routes, so it dates before that clock,
+					// where the app's own start-time auto-archive finds it due too:
+					// that run ends first.
+					waitForStartupRuns(t, w.pool)
+					at = time.Now().UTC().Truncate(time.Microsecond).Add(-time.Hour)
+				}
 				id := archiveRaceSeed(t, w, at, 40*24*time.Hour)
 				before := issueSnapshot(t, w, id)
 				stable := archiveStableRow(t, w, id)
@@ -44,7 +51,8 @@ func TestAutoArchiveUsesLockedPolicy(t *testing.T) {
 				events := newArchiveRaceEvents(t, w)
 				g := newGate()
 				var scanned, locked *gate
-				tx := shared.TxManager(postgres.NewTxManager(w.pool, 2*time.Second))
+				reqTx, jobTx := requestTx(w.pool), &requestProbe{TxManager: archiveJobTx(w)}
+				tx := shared.TxManager(reqTx)
 				switch order {
 				case "after_scan":
 					scanned = g
@@ -53,7 +61,7 @@ func TestAutoArchiveUsesLockedPolicy(t *testing.T) {
 				case "request_first":
 					tx = heldTx{tx, g}
 				}
-				job := archiveRaceJob(w, clockAt(at), events, scanned, locked)
+				job := archiveRaceJobOn(w, jobTx, clockAt(at), events, scanned, locked)
 				n := 0
 				var reply exchange
 				request := change.write(t, w, tx, &reply)
@@ -79,29 +87,32 @@ func TestAutoArchiveUsesLockedPolicy(t *testing.T) {
 						t.Fatal(err)
 					}
 				} else {
-					first, second := request, archive
+					first, second, waiter := request, archive, jobTx
 					var lockedCheck, waitingCheck func()
 					if order == "job_first" {
-						first, second = archive, request
+						first, second, waiter = archive, request, reqTx
+						// Each probe reads its actor's own locks: a start-time run
+						// locks project rows too (waitForStartupRuns).
 						lockedCheck = func() {
 							// N conflicts with SHARE, not KEY SHARE. No workspace or issue
 							// prelock exists before the automatic UPDATE and activity INSERT.
-							if !pgtest.RowWaits(t, w.pool, "projects", w.web, "FOR SHARE") || pgtest.RowWaits(t, w.pool, "projects", w.web, "FOR KEY SHARE") {
+							if requestGateRowLock(t, w.pool, w.pool, jobTx, "projects WHERE id = $1", w.web) != "FOR NO KEY UPDATE" {
 								t.Error("job does not hold project N")
 							}
-							if pgtest.RowWaits(t, w.pool, "workspaces", w.acme, "FOR UPDATE") || pgtest.RowWaits(t, w.pool, "issues", id, "FOR UPDATE") {
+							if requestGateRowLock(t, w.pool, w.pool, jobTx, "workspaces WHERE id = $1", w.acme) != "no lock" ||
+								requestGateRowLock(t, w.pool, w.pool, jobTx, "issues WHERE id = $1", id) != "no lock" {
 								t.Error("job prelocked workspace or issue")
 							}
 						}
 						if change.deleted == "workspaces" {
 							waitingCheck = func() {
-								if !pgtest.RowWaits(t, w.pool, "workspaces", w.acme, "FOR SHARE") || pgtest.RowWaits(t, w.pool, "workspaces", w.acme, "FOR KEY SHARE") {
+								if requestRowLock(t, w.pool, w.pool, reqTx, "workspaces WHERE id = $1", w.acme) != "FOR NO KEY UPDATE" {
 									t.Error("workspace deletion must hold N, compatible with the upcoming activity FK")
 								}
 							}
 						}
 					}
-					archiveInterleave(t, w, g, first, second, lockedCheck, waitingCheck)
+					archiveInterleave(t, w, g, first, second, waiter, lockedCheck, waitingCheck)
 				}
 				w.answered(t, reply, change.status)
 				want := 0
@@ -123,7 +134,7 @@ func TestAutoArchiveUsesLockedPolicy(t *testing.T) {
 					if change.deleted == "workspaces" {
 						parent = w.acme
 					}
-					w.deletedWith(t, change.deleted, parent, at, rows+want)
+					w.deletedWith(t, change.deleted, parent, since, rows+want)
 				} else if want == 0 {
 					if after := issueSnapshot(t, w, id); after != before {
 						t.Error("policy rejection left issue/activity writes")
@@ -139,7 +150,11 @@ func TestAutoArchiveUsesLockedPolicy(t *testing.T) {
 // Several candidates must not become one transaction holding all projects.
 func TestAutoArchiveUsesLockedPolicyOneProjectAtATime(t *testing.T) {
 	w := newIssueWorld(t)
-	at := time.Now().UTC().Truncate(time.Microsecond)
+	// The stand-in below must be the first to queue on Web behind the job: a
+	// real start-time run, which locks every project in turn, may otherwise be
+	// there first (branch CI 42453471322).
+	waitForStartupRuns(t, w.pool)
+	at := time.Now().UTC().Truncate(time.Microsecond).Add(archiveAhead)
 	archiveRaceSeed(t, w, at, 40*24*time.Hour)
 	other := createdProject(t, w.contract, w.base, w.tokens["alice"], "acme", "Other", "OTH")
 	w.send(t, "alice", http.MethodPatch, "/api/v0/projects/"+other.String(), `{"archive_in":1}`, 200)
@@ -147,7 +162,8 @@ func TestAutoArchiveUsesLockedPolicyOneProjectAtATime(t *testing.T) {
 	events := newArchiveRaceEvents(t, w)
 	p := project.Provide(w.pool, nil)
 	states := &archiveFirstStates{StateCatalog: issueProjects{projects: p.IssueProjects}, gates: []*gate{g, second}}
-	job := issueapp.NewAutoArchive(issueapp.AutoArchiveDeps{Policies: p.ArchivePolicies, Projects: issueProjects{projects: p.IssueProjects}, States: states, Issues: issuepostgres.New(w.pool), Tx: newIssueJobTx(w.pool, config.Config{Database: config.DatabaseConfig{CommitTimeout: 2 * time.Second}, Issue: testIssueConfig}), Clock: clockAt(at), Events: events})
+	jobTx := &requestProbe{TxManager: archiveJobTx(w)}
+	job := issueapp.NewAutoArchive(issueapp.AutoArchiveDeps{Policies: p.ArchivePolicies, Projects: issueProjects{projects: p.IssueProjects}, States: states, Issues: issuepostgres.New(w.pool), Tx: jobTx, Clock: clockAt(at), Events: events})
 	count := 0
 	done := run(func() error { var err error; count, err = job.Execute(pgtest.Soon(t)); return err })
 	defer func() {
@@ -163,9 +179,15 @@ func TestAutoArchiveUsesLockedPolicyOneProjectAtATime(t *testing.T) {
 		}
 	}()
 	held(t, pgtest.Soon(t), g, done, "first project")
-	if !pgtest.RowWaits(t, w.pool, "projects", w.web, "FOR SHARE") || pgtest.RowWaits(t, w.pool, "projects", other, "FOR UPDATE") {
+	// Each probe reads the job's own locks: the stand-in below locks Web too, as
+	// a start-time run does.
+	if requestGateRowLock(t, w.pool, w.pool, jobTx, "projects WHERE id = $1", w.web) != "FOR NO KEY UPDATE" ||
+		requestGateRowLock(t, w.pool, w.pool, jobTx, "projects WHERE id = $1", other) != "no lock" {
 		t.Error("job holds more than its current project")
 	}
+	// As in main CI 42399566014, a start-time run queues on Web behind the job,
+	// takes it as the job lets go, and holds it while the job holds Other.
+	standIn := queuedRun(t, w.pool, requestPID(t, jobTx), "SELECT 1 FROM projects WHERE id = $1 FOR NO KEY UPDATE", w.web)
 	var reply exchange
 	request := aliceOnWeb(http.MethodPatch, func(*testing.T, issueWorld) string { return "/api/v0/projects/" + other.String() }, `{"name":"Unblocked"}`)(t, w, postgres.NewTxManager(w.pool, 2*time.Second), &reply)
 	if err := request(); err != nil {
@@ -174,7 +196,9 @@ func TestAutoArchiveUsesLockedPolicyOneProjectAtATime(t *testing.T) {
 	w.answered(t, reply, 200)
 	close(g.open)
 	held(t, pgtest.Soon(t), second, done, "second project")
-	if pgtest.RowWaits(t, w.pool, "projects", w.web, "FOR SHARE") || !pgtest.RowWaits(t, w.pool, "projects", other, "FOR SHARE") {
+	letGoOnceWaitedOn(t, w.pool, standIn())
+	if requestGateRowLock(t, w.pool, w.pool, jobTx, "projects WHERE id = $1", w.web) != "no lock" ||
+		requestGateRowLock(t, w.pool, w.pool, jobTx, "projects WHERE id = $1", other) != "FOR NO KEY UPDATE" {
 		t.Error("first project lock was not released while second project is held")
 	}
 	close(second.open)
