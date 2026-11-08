@@ -15,12 +15,19 @@ permissions:
 
 jobs:
   server:
-    name: server
+    name: server (${{ matrix.shard }})
     # 同仓库分支的 PR 已由 push 事件在同一个提交上跑过；pull_request 事件只为 fork 的 PR 运行
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-24.04
     # Go 整包预算 20m，另留生成、编译、lint 与工具模块的时间。
     timeout-minutes: 25
+    # Go 测试分路并行（make test-shard）：bootstrap 包在运行器上已用 919–1185 秒，逼近 20m 的整包期限，
+    # 它的测试轮流分到各路，其他包只在第 0 路。负责人 2026-11-08 批准分两路；再改路数须负责人同意。
+    strategy:
+      # 一路失败不取消另一路，两路的结果都看得到
+      fail-fast: false
+      matrix:
+        shard: [0, 1]
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-go@v7
@@ -30,12 +37,15 @@ jobs:
       - name: Go version
         working-directory: server
         run: go version
+      # 生成物与 lint 和测试的分路无关，只在第 0 路检查
       - name: Generated code
+        if: matrix.shard == 0
         run: make gen-check-go
       - name: Lint
+        if: matrix.shard == 0
         run: make lint-go
       - name: Test
-        run: make test
+        run: make test-shard SHARD=${{ matrix.shard }} SHARDS=${{ strategy.job-total }}
 
   web:
     name: web
