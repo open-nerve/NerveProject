@@ -1,6 +1,6 @@
 # M6：迭代与模块
 
-> 状态：设计与 P1 预检通过（2026-11-07，[re-54](../../reviews/re-54-M6设计与P1预检.md)）；P1 已完成，P2 实施中（进度见 §14）。
+> 状态：设计与 P1 预检通过（2026-11-07，[re-54](../../reviews/re-54-M6设计与P1预检.md)）；P1、P2 已完成，P3 拆为 P3a/P3b，P3a 实施中（进度见 §14）。
 > 起点：`main@ba3fd6e0b65e91e8bcf5ba32ad02ebff0b7bd939`（M5 最终 main CI 42251522430，三个作业成功）。
 > 当前文档分支为`codex/m6-design`，根目录保持main。负责人2026-11-07指示“启动 M6，按照之前的推进节奏，一步步推进”，并在设计预检后决定三项（见 §15）：归属表放 `issue` 模块、草稿照 Plane 带迭代与模块、其余取舍按 §15 推进。常规设计、预检、实现、deep-review、`--no-ff`集成、CI和归档照 M5 的节奏连续推进；架构回归、跨模块协同调整或意外高风险发现，先提交已完成工作，再用大白话上报。
 
@@ -234,7 +234,8 @@ M2 交接第 1 节要求列出每个跨模块的写入与查询；全部走端�
 |---|---|---|
 | P1 | `planning` 模块、`cycles` 表与迭代的建/读/改/删/归档/恢复/归档目录、日期与状态、重叠、开关、权限矩阵、删除图（项目/工作区删除、清理任务、60 天清理）；删除前端旧 `analytics` 调用路径（例外到期） | G1–G3、G8、G18 的接口与数据库；锁与交错、删除目录守卫与清理规模 |
 | P2 | `modules`、`module_members`、`module_links` 与模块的建/读/改/删/归档/恢复、成员与负责人校验、链接与元数据抓取 | G9、G10、G13 的接口与数据库 |
-| P3 | `cycle_issues`、`module_issues`（`issue` 模块）、工作项与草稿的 `cycle_id`/`module_ids`、动态、删除迭代/模块与工作项的归属清理、列表引擎的筛选/分组/排序/显示、迭代与模块的偏好、自动归档 | G4、G11、G14–G16 的接口与数据库；同 fixture 的 Go 与前端顺序测试、交错 |
+| P3a | `cycle_issues`、`module_issues`（`issue` 模块）、工作项与草稿的 `cycle_id`/`module_ids`（含回答）、动态、删除迭代/模块与工作项的归属清理、自动归档 | G4、G11、G14、G16 的接口与数据库；交错 |
+| P3b | 列表引擎的筛选/分组/排序/显示、迭代与模块的偏好 | G15 的接口与数据库；同 fixture 的 Go 与前端顺序测试 |
 | P4 | 进度/分布/燃尽接口、冻结任务、转移、列表行的计数 | G5–G7、G12、G17 的接口与数据库；冻结与转移交错 |
 | P5 | 前端迭代：service/store 按会话分代、列表/详情/归档、表单与弹窗、进度侧栏与进行中卡片、图表、转移弹窗、迭代页工作项列表 | G1–G8、G19 的页面 |
 | P6 | 前端模块：列表/卡片、详情、链接、成员、归档、模块页工作项列表 | G9–G13、G19 的页面 |
@@ -269,8 +270,9 @@ P1 起第一个实现提交把关键词 phase 改为 `M6/P1`；纯设计分支�
 |---|---|---|
 | 设计与 P1 预检 | 已合入 main（d1ec8c69）；e2e 作业期限改为 35 分钟（910a55cd，负责人同意），main CI 42332404481 第二次运行通过 | [预检](../../reviews/re-54-M6设计与P1预检.md) / [P1 spec](specs/P1-cycles-backend.md) / [P1 plan](plans/P1-cycles-backend.md) |
 | P1 迭代后端 | 已完成：noff `0a601f21`，分支 CI 42340200507 与 main CI 42343073949 首次通过，证据归档于 `.superpowers/sdd/M6-P1-integration-20261107` | [P1 spec](specs/P1-cycles-backend.md) / [P1 plan](plans/P1-cycles-backend.md) / [P1 阶段记录](reviews/P1-cycles-backend-review.md) / [re-55](../../reviews/re-55-M6P1整体审核.md) |
-| P2 模块后端 | T1–T15 完成：整审 Ready to merge（[re-57](../../reviews/re-57-M6P2整体审核.md)），修复轮之后七项门禁重跑；待合入 | [预检](../../reviews/re-56-M6P2预检.md) / [P2 spec](specs/P2-modules-backend.md) / [P2 plan](plans/P2-modules-backend.md) / [P2 阶段记录](reviews/P2-modules-backend-review.md) |
-| P3–P8、closeout | 未开始 | — |
+| P2 模块后端 | 已完成：noff `861ea1b5` 的 main CI 两次未过（与 P2 无关），根因修复（含负责人 2026-11-08 批准的 server 任务分两路）第二次 noff `ddd79a9f`，main CI 42458454710 首次通过；证据归档于 `.superpowers/sdd/M6-P2-integration-20261108` | [预检](../../reviews/re-56-M6P2预检.md) / [P2 spec](specs/P2-modules-backend.md) / [P2 plan](plans/P2-modules-backend.md) / [P2 阶段记录](reviews/P2-modules-backend-review.md) |
+| P3a 工作项的归属 | 进行中：P3 因超出一段的上限拆为 P3a/P3b（§12）；预检通过 | [预检](../../reviews/re-58-M6P3a预检.md) / [P3a spec](specs/P3a-issue-membership.md) / [P3a plan](plans/P3a-issue-membership.md) |
+| P3b–P8、closeout | 未开始（P3b 的 spec 与 plan 在 P3a 合入后写） | — |
 
 ## 15. 决定记录
 

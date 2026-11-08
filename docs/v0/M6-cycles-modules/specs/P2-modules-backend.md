@@ -1,6 +1,6 @@
 # M6 / P2：模块的后端
 
-> 状态：已实施（2026-11-07），整分支审查见 [re-57](../../../reviews/re-57-M6P2整体审核.md)，阶段记录见 [P2 阶段记录](../reviews/P2-modules-backend-review.md)；预检见 [re-56](../../../reviews/re-56-M6P2预检.md)。基线 main `0a601f212e32057c4e48fe43e8c4f19691254573`（P1 noff，main CI 42343073949 通过）。设计见 [M6 设计](../M6-design.md)，负责人 2026-11-07 的决定 A/B/C 见设计 §15；P1 的加锁之路与拒绝次序见 [P1 spec](P1-cycles-backend.md) §3。
+> 状态：已完成（2026-11-08，合入、main CI 与归档见[阶段记录](../reviews/P2-modules-backend-review.md) §7），整分支审查见 [re-57](../../../reviews/re-57-M6P2整体审核.md)，阶段记录见 [P2 阶段记录](../reviews/P2-modules-backend-review.md)；预检见 [re-56](../../../reviews/re-56-M6P2预检.md)。基线 main `0a601f212e32057c4e48fe43e8c4f19691254573`（P1 noff，main CI 42343073949 通过）。设计见 [M6 设计](../M6-design.md)，负责人 2026-11-07 的决定 A/B/C 见设计 §15；P1 的加锁之路与拒绝次序见 [P1 spec](P1-cycles-backend.md) §3。
 
 ## 1. 目标与边界
 
@@ -120,7 +120,7 @@
 - [x] A6 删除与清理：项目、工作区删除后三张表以原 At/By 软删并可续跑；60 天清理有界、运行角色可执行、`TestPurgeScale` 认得新语句；全部守卫覆盖三张表；迭代的删除与清理测试不变且通过。
 - [x] A7 共用链接：`shared` 与 `linkpreview` 各一份；工作项链接的全部测试只改导入路径与类型名并通过；架构测试通过。
 - [x] A8 phase 为 `M6/P2`；新错误码有中英文案；输入交接写“处理结果（M6/P2）”；P1 的阶段记录 §7、spec A8 与设计 §14 已回填。
-- [ ] A9 七项本地门禁、deep-review 修复闭环、准确分支 CI 与 noff 后 main CI 全绿、归档清理。（本地门禁与修复闭环见阶段记录 §5、§6；CI 与归档清理见 §7，合入后由 P3 的 T1 勾选）
+- [x] A9 七项本地门禁、deep-review 修复闭环、准确分支 CI 与 noff 后 main CI 全绿、归档清理。（本地门禁与修复闭环见阶段记录 §5、§6；CI、两次合入与归档清理见 §7，由 P3a 的 T1 勾选）
 
 ## 5. 后续责任
 

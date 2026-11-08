@@ -15,7 +15,7 @@
 
 - worktree `/Users/xiaoruan/project/nerve-project/.codex/worktress/codex/m6-p3a`，分支 `codex/m6-p3a`，基线 main `ddd79a9f`；主目录永远 main。提交详细中文，前缀 `feat/fix/docs/test/refactor(M6/P3a)`，结尾 `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`，推送用 `/usr/bin/git`；noff 已获连续授权。
 - `plane/`、`refer/` 只读且不在其内跑 git；不动既有容器，不 stash/clean/reset --hard/force；容器套件一次一个。
-- T1 改 phase 为 `M6/P3a`；不延长任何 `until`。
+- T1 改 phase 为 `M6/P3`（P3a 与 P3b 共用，先例 `M5/P7`；关键词工具只认 `M<n>/P<k>`）；不延长任何 `until`。
 - 手写文件约 400 行内；SQL 只经本模块 sqlc（`issue` 的语句不连 `cycles`、`modules`）；端口由消费方声明；模块不互相 import；不放宽 `TestSQLCSchemaScope`、`rawsql_test`、`archtest`、删除/清理/运行角色守卫。
 - 每个（操作，新声明的码）在同一 Task 有 issue 的 apitest 处理器测试回答（`apitest.Main` 按操作核对）；码已有中英文案，不新增；`make test-web` 照跑。
 - 测试夹具：`cycle_view`、`module_view` 默认关，Go 组合测试与 e2e 先经接口打开；删除、清理、运行角色与规模的夹具以 SQL 种行（夹具允许，含 T3 起各删除守卫要求的归属行，归属的接口要到 T6/T7 才有）；故事的前置数据只经接口。
@@ -38,7 +38,7 @@
 **Files：** `docs/v0/M6-cycles-modules/reviews/P2-modules-backend-review.md`（抬头与 §7）；`specs/P2-modules-backend.md`（A9）；`M6-design.md`（抬头、§12 的 P3 拆为 P3a/P3b 两行、§14 的 P2 行“已完成”与 P3a 行“进行中”）；`tools/keywords.json`。
 
 - [ ] Step 1：按 P2 归档（`.superpowers/sdd/M6-P2-integration-20261108`）的台账与 CI 收据回填 §7：分支 CI（含失败与修复的去向）、noff `861ea1b5`、main CI 42399566014 两次失败与负责人的指示、修复分支 `codex/m6-p2-ci` 的提交与分支 CI、第二次 noff `ddd79a9f`、main CI 42458454710、归档（2707 个文件、未知 0、清单 sha256 `a7ba04f0…`，复核 `archive.py verify`）、清理；勾选 A9；抬头改为已完成。
-- [ ] Step 2：设计 §12 把 P3 拆为 P3a（本 plan）与 P3b（列表引擎与偏好，P3a 合入后写 spec 与 plan），§14 加两行；phase 改 `M6/P3a`，`node tools/keywords.mjs` 通过；文档链接检查；提交 `docs(M6/P3a): 回填P2的集成结果，P3拆为P3a与P3b并进入P3a阶段`。
+- [ ] Step 2：设计 §12 把 P3 拆为 P3a（本 plan）与 P3b（列表引擎与偏好，P3a 合入后写 spec 与 plan），§14 加两行；phase 改 `M6/P3`，`node tools/keywords.mjs` 通过；文档链接检查；提交 `docs(M6/P3a): 回填P2的集成结果，P3拆为P3a与P3b并进入P3a阶段`。
 
 ## Task 2（T2）：两张归属表与表级守卫
 
