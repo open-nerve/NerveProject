@@ -62,12 +62,31 @@ func CreationActivity(assignees []Assignee) []Activity {
 
 // CreationJoins are the rows a work item's creation writes after
 // CreationActivity's (M6 P3a spec 2.4, R5): the cycle it joins, nil for
-// none.
-func CreationJoins(cycle *Named) []Activity {
-	if cycle == nil {
-		return nil
+// none, then each of the modules it joins, in the order given.
+func CreationJoins(cycle *Named, modules ...Named) []Activity {
+	var rows []Activity
+	if cycle != nil {
+		rows = append(rows, cycleActivity(Changed[*Named]{New: cycle}))
 	}
-	return []Activity{cycleActivity(Changed[*Named]{New: cycle})}
+	for _, m := range modules {
+		rows = append(rows, moduleJoined(m))
+	}
+	return rows
+}
+
+// moduleJoined and moduleLeft are the rows of a work item's joining and
+// leaving the module m (M6 P3a spec 2.4, Plane's field and verbs): joining,
+// created, from "" to its name, its id the new identifier; leaving,
+// deleted, from its name to "", its id the old identifier. Plane's
+// sentences go with them, cut before the name.
+func moduleJoined(m Named) Activity {
+	return Activity{Field: ptr("modules"), Verb: VerbCreated, OldValue: ptr(""), NewValue: ptr(m.Name), NewIdentifier: ptr(m.ID),
+		Comment: "added module "}
+}
+
+func moduleLeft(m Named) Activity {
+	return Activity{Field: ptr("modules"), Verb: VerbDeleted, OldValue: ptr(m.Name), NewValue: ptr(""), OldIdentifier: ptr(m.ID),
+		Comment: "removed this work item from module "}
 }
 
 // cycleActivity is the row of a work item's cycle changing from c.Old to
@@ -89,8 +108,8 @@ func cycleActivity(c Changed[*Named]) Activity {
 		NewIdentifier: ptr(c.New.ID), Comment: "updated cycle from "}
 }
 
-// Named is a row an activity names by its name, a state, a label or a
-// cycle: its id, and its name when the activity is written.
+// Named is a row an activity names by its name, a state, a label, a cycle
+// or a module: its id, and its name when the activity is written.
 type Named struct {
 	ID   uuid.UUID
 	Name string
@@ -105,7 +124,8 @@ type Changed[T any] struct {
 // it (M4 design 3.13): its name, its cleaned HTML description, its parent, its priority, its state and
 // its dates, each nil when it is left as it is; the labels and the
 // accounts it adds and removes, each in id order; its cycle before and
-// after, each nil for none, nil when it is left as it is (M6 P3a spec 2.4).
+// after, each nil for none, nil when it is left as it is; the modules it
+// adds and removes, each in id order (M6 P3a spec 2.4).
 type Update struct {
 	Name             *Changed[string]
 	Description      *Changed[string]
@@ -119,6 +139,8 @@ type Update struct {
 	AssigneesAdded   []Assignee
 	AssigneesRemoved []Assignee
 	Cycle            *Changed[*Named]
+	ModulesAdded     []Named
+	ModulesRemoved   []Named
 }
 
 // UpdateActivity is the rows an update writes, in the order of M4 design
@@ -128,8 +150,9 @@ type Update struct {
 // label added (row 10) and removed (row 11), by its name and its id; then
 // each account assigned (row 12) and unassigned (row 13), by his display
 // name and his id; each list in the order given; then the cycle's row
-// (cycleActivity, M6 P3a spec 2.4). A field left as it is writes no row
-// (Plane the same).
+// (cycleActivity, M6 P3a spec 2.4); then each module added and removed
+// (moduleJoined, moduleLeft), in the order given. A field left as it is
+// writes no row (Plane the same).
 func UpdateActivity(u Update) []Activity {
 	var rows []Activity
 	if u.Name != nil {
@@ -176,6 +199,12 @@ func UpdateActivity(u Update) []Activity {
 	}
 	if u.Cycle != nil {
 		rows = append(rows, cycleActivity(*u.Cycle))
+	}
+	for _, m := range u.ModulesAdded {
+		rows = append(rows, moduleJoined(m))
+	}
+	for _, m := range u.ModulesRemoved {
+		rows = append(rows, moduleLeft(m))
 	}
 	return rows
 }

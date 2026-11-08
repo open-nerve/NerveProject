@@ -11,13 +11,14 @@ import (
 )
 
 // cycleWritten is what a refused write must leave as it was: the number of
-// work items, of their cycle rows and of their activity rows, and the last
-// change of each work item.
+// work items, of their cycle and module rows and of their activity rows,
+// and the last change of each work item.
 func (w issueWorld) cycleWritten(t *testing.T) string {
 	t.Helper()
 	var written string
 	if err := w.pool.QueryRow(pgtest.Soon(t), `SELECT concat_ws(' ', (SELECT count(*) FROM issues), (SELECT count(*) FROM cycle_issues),
-		(SELECT count(*) FROM issue_activities), (SELECT string_agg(updated_at::text, ',' ORDER BY id) FROM issues))`).Scan(&written); err != nil {
+		(SELECT count(*) FROM module_issues), (SELECT count(*) FROM issue_activities),
+		(SELECT string_agg(updated_at::text, ',' ORDER BY id) FROM issues))`).Scan(&written); err != nil {
 		t.Fatal(err)
 	}
 	return written

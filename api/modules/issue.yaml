@@ -540,21 +540,28 @@ paths:
         the project is refused with the other problems (validation_failed,
         cycle_id); one that has ended on the day of the write in the
         project's time zone is refused last, after the description's images
-        (planning.cycle_completed). Left out, the state is the project's
-        default, the priority none, and the assignee the project's default
-        assignee while he is still an active member of it who is not its
-        guest, else no one, and the work item is in no cycle. The work item
+        (planning.cycle_completed). A work item created in modules, at most
+        100, each named once (validation_failed, before the project is looked
+        at), needs the project's modules turned on
+        (planning.modules_disabled), after its cycles; then modules that are
+        not archived (planning.archived); one that is not an undeleted module
+        of the project is refused at its place in module_ids with the other
+        problems (validation_failed, module_ids[i]). Left out, the state is
+        the project's default, the priority none, and the assignee the
+        project's default assignee while he is still an active member of it
+        who is not its guest, else no one, and the work item is in no cycle
+        and no module. The work item
         takes the project's next number, never used again, also after a
         deletion; it comes after its state's work items,
         archived ones too: its sort order is their greatest plus 10000, or
         65535 for the state's first; in a state of the completed group it is
         completed at its creation. The caller and the assignees subscribe to
-        it; its activity says it was created, assigned to each assignee, and
-        added to its cycle. Every row it writes is the caller's, at one
-        moment. A project with too many writes on its work items at once
+        it; its activity says it was created, assigned to each assignee,
+        added to its cycle, and added to each module. Every row it writes is
+        the caller's, at one moment. A project with too many writes on its work items at once
         answers server_busy, with Retry-After: try again then.
       security: [{bearer: []}]
-      x-problem-codes: [validation_failed, project.not_found, forbidden, project.archived, planning.cycles_disabled, planning.archived, planning.cycle_completed, server_busy, asset.not_found]
+      x-problem-codes: [validation_failed, project.not_found, forbidden, project.archived, planning.cycles_disabled, planning.modules_disabled, planning.archived, planning.cycle_completed, server_busy, asset.not_found]
       requestBody:
         required: true
         content:
@@ -640,17 +647,25 @@ paths:
         (validation_failed, cycle_id, with the other problems), and has not
         ended on the day of the write in the project's time zone, refused
         last, after the description's images (planning.cycle_completed); the
-        cycle it leaves is not checked, archived or ended too. Otherwise the work item is changed last by the
+        cycle it leaves is not checked, archived or ended too. A change of
+        its modules, a new set replacing the whole, at most 100, each named
+        once, its leaving one too, needs the project's modules turned on
+        (planning.modules_disabled), after its cycles; each module it joins
+        is not archived (planning.archived) and is an undeleted module of
+        the project (validation_failed, module_ids[i], at its place in
+        module_ids, with the other problems); the modules it keeps and
+        leaves are not checked, archived too, and giving the modules it is
+        in, in any order, changes nothing. Otherwise the work item is changed last by the
         caller; moved into a state of the completed group, it is completed
         at the change, and moved into another, not completed; the accounts
         newly assigned subscribe to it; its activity says what changed: the
         name, the parent, the priority, the state, the start and the target
-        dates, each label and each assignee added and removed, and the cycle
-        it joins, moves to or leaves. Every row it writes is the caller's, at
-        one moment. A project with too many writes on its work items at once
+        dates, each label and each assignee added and removed, the cycle it
+        joins, moves to or leaves, and each module it joins and leaves. Every
+        row it writes is the caller's, at one moment. A project with too many writes on its work items at once
         answers server_busy, with Retry-After: try again then.
       security: [{bearer: []}]
-      x-problem-codes: [validation_failed, issue.not_found, forbidden, project.archived, issue.archived, planning.cycles_disabled, planning.archived, planning.cycle_completed, server_busy, asset.not_found, asset.not_uploaded]
+      x-problem-codes: [validation_failed, issue.not_found, forbidden, project.archived, issue.archived, planning.cycles_disabled, planning.modules_disabled, planning.archived, planning.cycle_completed, server_busy, asset.not_found, asset.not_uploaded]
       requestBody:
         required: true
         content:
@@ -2012,6 +2027,15 @@ components:
             while the project's cycles are turned on; left out for none.
           type: string
           format: uuid
+        module_ids:
+          description: >-
+            The modules it is created in: at most 100 of the project's, each
+            named once, none archived, while the project's modules are turned
+            on; left out, or empty, for none.
+          type: array
+          items:
+            type: string
+            format: uuid
     IssueUpdate:
       description: Changes the fields it names; a field left out keeps its value.
       type: object
@@ -2083,6 +2107,16 @@ components:
             the project's time zone; the one it leaves is not checked.
           type: [string, 'null']
           format: uuid
+        module_ids:
+          description: >-
+            The work item's new modules, empty for none, while the project's
+            modules are turned on: at most 100, each named once; each it is
+            not in yet one of the project's, not archived. Those it keeps and
+            leaves are not checked.
+          type: array
+          items:
+            type: string
+            format: uuid
 
     ReactionCreate:
       type: object

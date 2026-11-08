@@ -41,14 +41,15 @@ func NewUpdateIssue(d UpdateIssueDeps) *UpdateIssue {
 // project's lock: the work item's state before and after, when the update
 // changes it, and the new one's group; its parent before and after, when
 // the update changes it; the labels it adds and removes, each in id order;
-// its cycle before and after, when the update changes it (M6 P3a spec R1).
+// its cycle before and after, when the update changes it, and the modules
+// it joins and leaves (membership, M6 P3a spec R1).
 type named struct {
 	state         *domain.Changed[domain.Named]
 	group         domain.StateGroup
 	parent        *domain.Changed[*domain.Ref]
 	labelsAdded   []domain.Named
 	labelsRemoved []domain.Named
-	cycle         *cycleChange
+	membership
 }
 
 // Execute checks p (domain.CheckIssuePatch), before any read; then Locks
@@ -63,12 +64,13 @@ type named struct {
 // as the caller is answered it, a parent he does not see counted as none
 // (asAnswered, domain.ChangesOf), and when it changes nothing, nothing is
 // written and the answer is the work item as read; the dependent rows it
-// adds, the order of the dates it leaves, the parent it sets and the cycle
-// it joins (check), every problem in one 422; the clock; whether the cycle
-// it joins has ended then (M6 P3a spec R2); the work item's fields, its
-// completion by its new state's group when its state changes
-// (domain.CompletedAt); the accounts and the labels it removes and adds, in
-// id order; its cycle's rows (cycleRows); the accounts it adds subscribed;
+// adds, the order of the dates it leaves, the parent it sets, the cycle and
+// the modules it joins (check), every problem in one 422; the clock;
+// whether the cycle it joins has ended then (M6 P3a spec R2); the work
+// item's fields, its completion by its new state's group when its state
+// changes (domain.CompletedAt); the accounts and the labels it removes and
+// adds, in id order; its cycle's rows (cycleRows); the modules it leaves
+// and joins, the same; the accounts it adds subscribed;
 // its activity (domain.UpdateActivity), each account
 // by his display name, each parent by its identifier. All of it is the
 // caller's at that moment. The answer is the work item as stored, read
@@ -164,8 +166,9 @@ func (u *UpdateIssue) Execute(ctx context.Context, id uuid.UUID, p domain.IssueP
 // check checks the dependent rows that c adds to the work item that h, the
 // caller actor's write, holds under the project's lock (M4 design 3.6,
 // 3.7, 3.9), and reads the names its activity writes: first the cycle it
-// leaves and the one it joins, when c changes it, whose refusals come
-// before any other's (readCycleChange, M6 P3a spec R2); the new state,
+// leaves and the one it joins and the modules it joins and leaves, when c
+// changes them, whose refusals come before any other's (readMembership, M6
+// P3a spec R2); the new state,
 // when c changes it, is the project's and not its triage state, by a creation's
 // rule (pickState); each account added may be assigned
 // (domain.Unassignable), while one the work item keeps stays whatever his
@@ -175,20 +178,21 @@ func (u *UpdateIssue) Execute(ctx context.Context, id uuid.UUID, p domain.IssueP
 // work item with are in order, merged with those it keeps
 // (domain.DatesOutOfOrder); then the parent c sets may be the work item's
 // (parentChange), from its parent before, old when the comparison read it
-// (asAnswered); the cycle joined is the project's. Every problem is
-// reported at once, in one 422, each at its place in p.
+// (asAnswered); the cycle and each module joined are the project's. Every
+// problem is reported at once, in one 422, each at its place in p.
 func (u *UpdateIssue) check(ctx context.Context, h held, actor uuid.UUID, p domain.IssuePatch, c domain.Changes, old *domain.Ref) (named, error) {
 	i := h.issue
 	var n named
 	var problems []shared.FieldError
-	var unknownCycle bool
-	if c.Cycle != nil {
-		change, unknown, err := readCycleChange(ctx, u.d.Planning, i.ProjectID, c.Cycle.From, c.Cycle.To)
-		if err != nil {
-			return named{}, err
-		}
-		n.cycle, unknownCycle = &change, unknown
+	var listed []uuid.UUID
+	if p.ModuleIDs != nil {
+		listed = *p.ModuleIDs
 	}
+	m, late, err := readMembership(ctx, u.d.Planning, i.ProjectID, c.Cycle, c.Modules, listed)
+	if err != nil {
+		return named{}, err
+	}
+	n.membership = m
 	if c.StateID != nil {
 		states, err := u.d.States.States(ctx, i.ProjectID)
 		if err != nil {
@@ -239,13 +243,10 @@ func (u *UpdateIssue) check(ctx context.Context, h held, actor uuid.UUID, p doma
 			problems = append(problems, domain.ParentNotAllowed())
 		}
 	}
-	if unknownCycle {
-		problems = append(problems, domain.CycleNotAllowed())
-	}
+	problems = append(problems, late...)
 	if len(problems) > 0 {
 		return named{}, shared.Invalid(problems...)
 	}
-	var err error
 	if n.labelsAdded, err = labelNames(labels, c.Labels.Added); err != nil {
 		return named{}, err
 	}
@@ -274,8 +275,8 @@ func labelNames(labels []LabelRef, ids []uuid.UUID) ([]domain.Named, error) {
 // order of M4 design 3.5: first, the cycle it joins may not have ended on
 // the day of s's moment, the write's clock (refuseEnded, M6 P3a spec R2);
 // its fields; its assignees' rows, those removed then those added; its
-// labels' rows, the same; its cycle's (cycleRows); its subscribers', the
-// accounts added; its activity's.
+// labels' rows, the same; its cycle's (cycleRows); its modules', the same
+// as its labels'; its subscribers', the accounts added; its activity's.
 func (u *UpdateIssue) write(ctx context.Context, s stamp, i domain.Issue, c domain.Changes, n named, relations descriptionRelations) (*shared.Event, error) {
 	if n.cycle != nil {
 		if err := refuseEnded(ctx, u.d.Planning, i.ProjectID, n.cycle.New, s.at); err != nil {
@@ -298,7 +299,8 @@ func (u *UpdateIssue) write(ctx context.Context, s stamp, i domain.Issue, c doma
 	f := IssueFields{SortOrder: i.SortOrder, ID: i.ID, Name: i.Name, StateID: i.StateID, Priority: i.Priority, StartDate: i.StartDate, TargetDate: i.TargetDate,
 		DescriptionHTML: i.DescriptionHTML, DescriptionStripped: i.DescriptionStripped,
 		ParentID: i.ParentID, CompletedAt: i.CompletedAt, By: s.by, At: s.at}
-	activity := domain.Update{Parent: n.parent, State: n.state, LabelsAdded: n.labelsAdded, LabelsRemoved: n.labelsRemoved, Cycle: n.cycle}
+	activity := domain.Update{Parent: n.parent, State: n.state, LabelsAdded: n.labelsAdded, LabelsRemoved: n.labelsRemoved, Cycle: n.cycle,
+		ModulesAdded: n.modulesJoined, ModulesRemoved: n.modulesLeft}
 	if c.Description != nil && c.Description.Write {
 		clean := c.Description.Content
 		f.DescriptionHTML, f.DescriptionStripped = clean.HTML, &clean.Text
@@ -338,6 +340,9 @@ func (u *UpdateIssue) write(ctx context.Context, s stamp, i domain.Issue, c doma
 		if err := u.relink(ctx, s, cycleRows(*n.cycle), u.d.Issues.RemoveCycle, u.d.Issues.InsertCycle); err != nil {
 			return nil, err
 		}
+	}
+	if err := u.relink(ctx, s, c.Modules, u.d.Issues.RemoveModules, u.d.Issues.InsertModules); err != nil {
+		return nil, err
 	}
 	if targets := ascending(slices.Concat(c.Assignees.Added, relations.subscribers)); len(targets) > 0 {
 		if err := u.d.Issues.InsertSubscribers(ctx, s.links(targets)); err != nil {

@@ -43,6 +43,37 @@ func (q *Queries) InsertCycleIssues(ctx context.Context, arg InsertCycleIssuesPa
 	return err
 }
 
+const insertModuleIssues = `-- name: InsertModuleIssues :exec
+INSERT INTO module_issues (id, workspace_id, project_id, issue_id, module_id, created_by_id, updated_by_id, created_at, updated_at)
+SELECT unnest($1::uuid[]), $2, $3, $4,
+       unnest($5::uuid[]), $6::uuid, $6, $7::timestamptz, $7
+`
+
+type InsertModuleIssuesParams struct {
+	Ids         []uuid.UUID
+	WorkspaceID uuid.UUID
+	ProjectID   uuid.UUID
+	IssueID     uuid.UUID
+	ModuleIds   []uuid.UUID
+	By          *uuid.UUID
+	At          time.Time
+}
+
+// A work item's new modules' rows (M6 P3a spec R4), one statement, as InsertLabels: the modules it joins. The partial
+// unique key module_issues_issue_id_module_id_key refuses a second undeleted row of a module it is in.
+func (q *Queries) InsertModuleIssues(ctx context.Context, arg InsertModuleIssuesParams) error {
+	_, err := q.db.Exec(ctx, insertModuleIssues,
+		arg.Ids,
+		arg.WorkspaceID,
+		arg.ProjectID,
+		arg.IssueID,
+		arg.ModuleIds,
+		arg.By,
+		arg.At,
+	)
+	return err
+}
+
 const removeCycleIssues = `-- name: RemoveCycleIssues :exec
 UPDATE cycle_issues
 SET deleted_at = $1::timestamptz, updated_at = $1, updated_by_id = $2::uuid
@@ -64,6 +95,31 @@ func (q *Queries) RemoveCycleIssues(ctx context.Context, arg RemoveCycleIssuesPa
 		arg.By,
 		arg.IssueID,
 		arg.CycleIds,
+	)
+	return err
+}
+
+const removeModuleIssues = `-- name: RemoveModuleIssues :exec
+UPDATE module_issues
+SET deleted_at = $1::timestamptz, updated_at = $1, updated_by_id = $2::uuid
+WHERE issue_id = $3 AND module_id = ANY ($4::uuid[]) AND deleted_at IS NULL
+`
+
+type RemoveModuleIssuesParams struct {
+	At        time.Time
+	By        uuid.UUID
+	IssueID   uuid.UUID
+	ModuleIds []uuid.UUID
+}
+
+// The modules a work item leaves (M6 P3a spec R4), as RemoveLabels: their undeleted rows soft-deleted; the partial
+// unique key on (issue_id, module_id) serves it.
+func (q *Queries) RemoveModuleIssues(ctx context.Context, arg RemoveModuleIssuesParams) error {
+	_, err := q.db.Exec(ctx, removeModuleIssues,
+		arg.At,
+		arg.By,
+		arg.IssueID,
+		arg.ModuleIds,
 	)
 	return err
 }

@@ -33,5 +33,8 @@ func newIssueInput(body gen.IssueCreate) domain.NewIssue {
 	if body.LabelIds != nil {
 		in.LabelIDs = *body.LabelIds
 	}
+	if body.ModuleIds != nil {
+		in.ModuleIDs = *body.ModuleIds
+	}
 	return in
 }

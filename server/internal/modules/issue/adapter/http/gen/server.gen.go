@@ -432,6 +432,9 @@ type IssueCreate struct {
 	// LabelIds At most 100 of the project's labels, each named once.
 	LabelIds *[]uuid.UUID `json:"label_ids,omitempty"`
 
+	// ModuleIds The modules it is created in: at most 100 of the project's, each named once, none archived, while the project's modules are turned on; left out, or empty, for none.
+	ModuleIds *[]uuid.UUID `json:"module_ids,omitempty"`
+
 	// Name 1–255 characters without the white space around it, which is not stored.
 	Name string `json:"name"`
 
@@ -664,6 +667,9 @@ type IssueUpdate struct {
 
 	// LabelIds The work item's new labels, empty for none: at most 100 of the project's labels, each named once.
 	LabelIds *[]uuid.UUID `json:"label_ids,omitempty"`
+
+	// ModuleIds The work item's new modules, empty for none, while the project's modules are turned on: at most 100, each named once; each it is not in yet one of the project's, not archived. Those it keeps and leaves are not checked.
+	ModuleIds *[]uuid.UUID `json:"module_ids,omitempty"`
 
 	// Name 1–255 characters without the white space around it, which is not stored.
 	Name *string `json:"name,omitempty"`

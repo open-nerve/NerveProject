@@ -62,3 +62,10 @@ func (s *Store) RemoveCycle(ctx context.Context, r app.UnlinkRows) error {
 	err := s.queries(ctx).RemoveCycleIssues(ctx, gen.RemoveCycleIssuesParams{IssueID: r.IssueID, CycleIds: r.Targets, By: r.By, At: r.At})
 	return unlinked(err, "cycle", r.IssueID)
 }
+
+// RemoveModules soft-deletes the work item's undeleted rows of the modules
+// r names, those it leaves (M6 P3a spec R4).
+func (s *Store) RemoveModules(ctx context.Context, r app.UnlinkRows) error {
+	err := s.queries(ctx).RemoveModuleIssues(ctx, gen.RemoveModuleIssuesParams{IssueID: r.IssueID, ModuleIds: r.Targets, By: r.By, At: r.At})
+	return unlinked(err, "modules", r.IssueID)
+}

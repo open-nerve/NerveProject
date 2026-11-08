@@ -3,7 +3,6 @@ package app
 import (
 	"context"
 	"fmt"
-	"slices"
 	"time"
 	"uuid"
 
@@ -15,59 +14,33 @@ import (
 // joins, each nil for none.
 type cycleChange = domain.Changed[*domain.Named]
 
-// readCycleChange reads what planning holds about a write's change of the
-// work item's cycle, from the cycle from to the cycle to, each nil for
-// none, in the project projectID (M6 P3a spec R1–R3): once, under the
-// project's lock the write holds, before its clock. The project's cycles
-// turned off refuse any change, leaving one too (409
-// planning.cycles_disabled, design 3.8); then the cycle joined, archived,
-// refuses it (409 planning.archived). The cycle joined that is not the
-// project's undeleted cycle is unknown: the write's one 422 names it at
-// cycle_id (domain.CycleNotAllowed), with its other problems. The cycle
-// left is not checked (R3), only named; it is the project's undeleted
-// cycle, else an error: a cycle's deletion takes its work items out of it.
-func readCycleChange(ctx context.Context, planning PlanningTargets, projectID uuid.UUID, from, to *uuid.UUID) (change cycleChange, unknown bool,
-	err error) {
-	var asked []uuid.UUID
-	for _, id := range []*uuid.UUID{from, to} {
-		if id != nil {
-			asked = append(asked, *id)
-		}
-	}
-	facts, err := planning.Targets(ctx, projectID, ascending(asked), nil)
-	if err != nil {
-		return cycleChange{}, false, err
-	}
-	if !facts.CyclesEnabled {
-		return cycleChange{}, false, domain.ErrCyclesDisabled
-	}
-	if to != nil {
-		joined, found := cycleOf(facts.Cycles, *to)
+// namedCycleChange is c, a write's change of the work item's cycle in the
+// project projectID, named by cycles, planning's answer about the cycles it
+// leaves and joins (readMembership, M6 P3a spec R1–R3). The cycle joined,
+// archived, refuses it (409 planning.archived); one that is not among
+// cycles, the project's undeleted cycles, is unknown, for the write's 422
+// at cycle_id. The cycle left is not checked (R3), only named; it is the
+// project's undeleted cycle, else an error: a cycle's deletion takes its
+// work items out of it.
+func namedCycleChange(cycles []PlanningTarget, projectID uuid.UUID, c domain.CycleChange) (change cycleChange, unknown bool, err error) {
+	if c.To != nil {
+		joined, found := targetOf(cycles, *c.To)
 		switch {
 		case !found:
 			unknown = true
 		case joined.Archived:
 			return cycleChange{}, false, domain.ErrPlanningArchived
 		}
-		change.New = &domain.Named{ID: *to, Name: joined.Name}
+		change.New = &domain.Named{ID: *c.To, Name: joined.Name}
 	}
-	if from != nil {
-		left, found := cycleOf(facts.Cycles, *from)
+	if c.From != nil {
+		left, found := targetOf(cycles, *c.From)
 		if !found {
-			return cycleChange{}, false, fmt.Errorf("work item's cycle %s is not an undeleted cycle of project %s", *from, projectID)
+			return cycleChange{}, false, fmt.Errorf("work item's cycle %s is not an undeleted cycle of project %s", *c.From, projectID)
 		}
-		change.Old = &domain.Named{ID: *from, Name: left.Name}
+		change.Old = &domain.Named{ID: *c.From, Name: left.Name}
 	}
 	return change, unknown, nil
-}
-
-// cycleOf is the cycle id among cycles; found is false when it is not there.
-func cycleOf(cycles []PlanningTarget, id uuid.UUID) (PlanningTarget, bool) {
-	at := slices.IndexFunc(cycles, func(c PlanningTarget) bool { return c.ID == id })
-	if at < 0 {
-		return PlanningTarget{}, false
-	}
-	return cycles[at], true
 }
 
 // refuseEnded refuses a write's joining the cycle joined, nil for none,

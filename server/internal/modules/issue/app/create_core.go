@@ -36,8 +36,9 @@ func NewIssueCreation(d IssueCreationDeps) *IssueCreation { return &IssueCreatio
 
 // checked is what createIssue's checks of the dependent rows found, under
 // the project's lock: the state, the accounts the work item is assigned
-// to and its labels, each in id order, its parent, nil for none, and the
-// cycle it joins, by its name, nil for none (M6 P3a spec R1).
+// to and its labels, each in id order, its parent, nil for none, the cycle
+// it joins, by its name, nil for none, and the modules it joins, by their
+// names, in id order (M6 P3a spec R1).
 type checked struct {
 	state                 StateRef
 	mentions, subscribers []uuid.UUID
@@ -47,6 +48,7 @@ type checked struct {
 	parentName            *domain.Ref
 	labelNames            []domain.Named
 	cycle                 *domain.Named
+	modules               []domain.Named
 }
 
 // preparedIssue has its final identity and checked graph, but no write time.
@@ -136,27 +138,32 @@ func (u *IssueCreation) writePreparedAt(ctx context.Context, p preparedIssue, at
 }
 
 // check checks the dependent rows of in, by the caller actor, under h, his
-// write's lock on the project (M4 design 3.7, 3.9): first the cycle it
-// joins, when it joins one, whose refusals come before any other's
-// (readCycleChange, M6 P3a spec R2); the state asked for is the project's
+// write's lock on the project (M4 design 3.7, 3.9): first the cycle and the
+// modules it joins, when it joins any, whose refusals come before any
+// other's (readMembership, M6 P3a spec R2); the state asked for is the project's
 // and not its triage state, or the project's default state when none is;
 // the assignees by domain.Assignees, from the roles of the
 // accounts asked for, or of the project's default assignee when none is;
 // each label asked for is the project's; the parent asked for may be one
-// (parentOf); the cycle is the project's. Every problem is reported at
-// once, in one 422.
+// (parentOf); the cycle and each module are the project's, each module's
+// problem at its place in module_ids. Every problem is reported at once,
+// in one 422.
 func (u *IssueCreation) check(ctx context.Context, h held, actor, projectID uuid.UUID, in domain.NewIssue) (checked, error) {
 	p := h.project
 	var c checked
 	var problems []shared.FieldError
-	var unknownCycle bool
+	var joining *domain.CycleChange
 	if in.CycleID != nil {
-		change, unknown, err := readCycleChange(ctx, u.d.Planning, projectID, nil, in.CycleID)
-		if err != nil {
-			return checked{}, err
-		}
-		c.cycle, unknownCycle = change.New, unknown
+		joining = &domain.CycleChange{To: in.CycleID}
 	}
+	joins, late, err := readMembership(ctx, u.d.Planning, projectID, joining, domain.Diff{Added: ascending(in.ModuleIDs)}, in.ModuleIDs)
+	if err != nil {
+		return checked{}, err
+	}
+	if joins.cycle != nil {
+		c.cycle = joins.cycle.New
+	}
+	c.modules = joins.modulesJoined
 	states, err := u.d.States.States(ctx, projectID)
 	if err != nil {
 		return checked{}, err
@@ -211,9 +218,7 @@ func (u *IssueCreation) check(ctx context.Context, h held, actor, projectID uuid
 			c.parentName = refOf(h.project, parent)
 		}
 	}
-	if unknownCycle {
-		problems = append(problems, domain.CycleNotAllowed())
-	}
+	problems = append(problems, late...)
 	if len(problems) > 0 {
 		return checked{}, shared.Invalid(problems...)
 	}
@@ -221,9 +226,9 @@ func (u *IssueCreation) check(ctx context.Context, h held, actor, projectID uuid
 }
 
 // write writes the work item row and the rows under it, in the order of M4
-// design 3.5: the work item, its assignees, its labels, its cycle's (M6
-// P3a spec R4), its subscribers, its activity: the creation's rows, then
-// the cycle it joins (domain.CreationJoins, R5).
+// design 3.5: the work item, its assignees, its labels, its cycle's and its
+// modules' (M6 P3a spec R4), its subscribers, its activity: the creation's
+// rows, then the cycle and the modules it joins (domain.CreationJoins, R5).
 func (u *IssueCreation) write(ctx context.Context, row IssueRow, c checked, clean domain.RichText) error {
 	if err := u.d.Issues.InsertIssue(ctx, row); err != nil {
 		return err
@@ -244,6 +249,11 @@ func (u *IssueCreation) write(ctx context.Context, row IssueRow, c checked, clea
 			return err
 		}
 	}
+	if len(c.modules) > 0 {
+		if err := u.d.Issues.InsertModules(ctx, s.links(idsOf(c.modules))); err != nil {
+			return err
+		}
+	}
 	subscribers := ascending(slices.Concat([]uuid.UUID{row.By}, c.assignees, c.subscribers))
 	if err := u.d.Issues.InsertSubscribers(ctx, s.links(subscribers)); err != nil {
 		return err
@@ -257,7 +267,7 @@ func (u *IssueCreation) write(ctx context.Context, row IssueRow, c checked, clea
 	if err != nil {
 		return err
 	}
-	if err := u.d.Issues.InsertActivities(ctx, s.activity(slices.Concat(domain.CreationActivity(accounts), domain.CreationJoins(c.cycle)))); err != nil {
+	if err := u.d.Issues.InsertActivities(ctx, s.activity(slices.Concat(domain.CreationActivity(accounts), domain.CreationJoins(c.cycle, c.modules...)))); err != nil {
 		return err
 	}
 	if err := u.d.Issues.InsertDescriptionVersion(ctx, descriptionVersion(s, clean)); err != nil {

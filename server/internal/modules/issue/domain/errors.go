@@ -55,6 +55,11 @@ var (
 	// which the work item's writes declare too.
 	ErrCyclesDisabled = shared.NewError(shared.KindConflict, "planning.cycles_disabled",
 		"Cycles are turned off in this project; turn them on to change a work item's cycle.")
+	// ErrModulesDisabled answers a change of a work item's modules, its
+	// leaving one too, and a creation in modules, while the project's
+	// modules are turned off (M6 design 3.8, P3a spec R2): planning's code.
+	ErrModulesDisabled = shared.NewError(shared.KindConflict, "planning.modules_disabled",
+		"Modules are turned off in this project; turn them on to change a work item's modules.")
 	// ErrPlanningArchived answers a work item's joining an archived cycle
 	// (M6 design 3.3, P3a spec R3): planning's code.
 	ErrPlanningArchived = shared.NewError(shared.KindConflict, "planning.archived", "The cycle or module is archived; a work item cannot join it.")

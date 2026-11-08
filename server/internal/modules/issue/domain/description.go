@@ -34,7 +34,7 @@ func checkDescription(html *string) *shared.FieldError {
 
 func checkSkipActivity(p IssuePatch) *shared.FieldError {
 	if p.SkipActivity != nil && (p.DescriptionHTML == nil || p.Name != nil || p.StateID != nil || p.Priority != nil || p.SortOrder != nil ||
-		p.AssigneeIDs != nil || p.LabelIDs != nil || p.SetStartDate || p.SetTargetDate || p.SetParentID || p.SetCycleID) {
+		p.AssigneeIDs != nil || p.LabelIDs != nil || p.SetStartDate || p.SetTargetDate || p.SetParentID || p.SetCycleID || p.ModuleIDs != nil) {
 		return &shared.FieldError{Field: "skip_activity", Code: shared.FieldNotAllowed, Message: "requires description_html without other patch fields"}
 	}
 	return nil

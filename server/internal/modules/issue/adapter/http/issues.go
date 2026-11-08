@@ -10,9 +10,9 @@ import (
 )
 
 // CreateIssue serves POST /api/v0/projects/{project_id}/issues: the state,
-// the priority, the dates, the parent and the cycle nil and the lists empty
-// when not given; a value given goes to the use case as it came, which
-// checks it.
+// the priority, the dates, the parent and the cycle nil and the lists, the
+// modules too, empty when not given; a value given goes to the use case as
+// it came, which checks it.
 func (h handler) CreateIssue(ctx context.Context, req gen.CreateIssueRequestObject) (gen.CreateIssueResponseObject, error) {
 	in := newIssueInput(*req.Body)
 	i, err := h.uc.CreateIssue.Execute(ctx, req.ProjectID, in)
@@ -48,7 +48,7 @@ func (h handler) GetIssueByIdentifier(ctx context.Context, req gen.GetIssueByIde
 // value given goes to the use case as it came, which checks it.
 func (h handler) UpdateIssue(ctx context.Context, req gen.UpdateIssueRequestObject) (gen.UpdateIssueResponseObject, error) {
 	p := domain.IssuePatch{SortOrder: req.Body.SortOrder, DescriptionHTML: req.Body.DescriptionHTML, SkipActivity: req.Body.SkipActivity, Name: req.Body.Name, StateID: req.Body.StateID, Priority: (*domain.Priority)(req.Body.Priority),
-		AssigneeIDs: req.Body.AssigneeIds, LabelIDs: req.Body.LabelIds}
+		AssigneeIDs: req.Body.AssigneeIds, LabelIDs: req.Body.LabelIds, ModuleIDs: req.Body.ModuleIds}
 	p.SetStartDate, p.StartDate = given(req.Body.StartDate)
 	p.SetTargetDate, p.TargetDate = given(req.Body.TargetDate)
 	p.SetParentID, p.ParentID = given(req.Body.ParentID)

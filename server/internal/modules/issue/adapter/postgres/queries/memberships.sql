@@ -11,3 +11,17 @@ SELECT unnest(sqlc.arg(ids)::uuid[]), sqlc.arg(workspace_id), sqlc.arg(project_i
 UPDATE cycle_issues
 SET deleted_at = sqlc.arg(at)::timestamptz, updated_at = sqlc.arg(at), updated_by_id = sqlc.arg(by)::uuid
 WHERE issue_id = sqlc.arg(issue_id) AND cycle_id = ANY (sqlc.arg(cycle_ids)::uuid[]) AND deleted_at IS NULL;
+
+-- name: InsertModuleIssues :exec
+-- A work item's new modules' rows (M6 P3a spec R4), one statement, as InsertLabels: the modules it joins. The partial
+-- unique key module_issues_issue_id_module_id_key refuses a second undeleted row of a module it is in.
+INSERT INTO module_issues (id, workspace_id, project_id, issue_id, module_id, created_by_id, updated_by_id, created_at, updated_at)
+SELECT unnest(sqlc.arg(ids)::uuid[]), sqlc.arg(workspace_id), sqlc.arg(project_id), sqlc.arg(issue_id),
+       unnest(sqlc.arg(module_ids)::uuid[]), sqlc.arg(by)::uuid, sqlc.arg(by), sqlc.arg(at)::timestamptz, sqlc.arg(at);
+
+-- name: RemoveModuleIssues :exec
+-- The modules a work item leaves (M6 P3a spec R4), as RemoveLabels: their undeleted rows soft-deleted; the partial
+-- unique key on (issue_id, module_id) serves it.
+UPDATE module_issues
+SET deleted_at = sqlc.arg(at)::timestamptz, updated_at = sqlc.arg(at), updated_by_id = sqlc.arg(by)::uuid
+WHERE issue_id = sqlc.arg(issue_id) AND module_id = ANY (sqlc.arg(module_ids)::uuid[]) AND deleted_at IS NULL;

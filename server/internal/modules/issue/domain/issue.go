@@ -105,9 +105,9 @@ func (i Issue) HiddenFrom(actor uuid.UUID, ownOnly bool) bool {
 // NewIssue is what the caller asks for when creating a work item (M4
 // design 5.2, IssueCreate without the fields of later phases): StateID nil
 // for the project's default state, Priority nil for none, a date nil for
-// none, ParentID nil for no parent, CycleID nil for no cycle to join (M6
-// P3a spec 2.3). A field given is checked as given, a priority given empty
-// too.
+// none, ParentID nil for no parent, CycleID nil for no cycle to join,
+// ModuleIDs the modules it joins, empty for none (M6 P3a spec 2.3). A field
+// given is checked as given, a priority given empty too.
 type NewIssue struct {
 	DescriptionHTML *string
 	Name            string
@@ -119,16 +119,18 @@ type NewIssue struct {
 	TargetDate      *shared.Date
 	ParentID        *uuid.UUID
 	CycleID         *uuid.UUID
+	ModuleIDs       []uuid.UUID
 }
 
 // maxName is the length of issues.name, varchar(255), in characters.
 const maxName = 255
 
-// MaxAssignees and MaxLabels are the most accounts and labels a request
-// sets on a work item (M4 design 3.7).
+// MaxAssignees, MaxLabels and MaxModules are the most accounts, labels and
+// modules a request sets on a work item (M4 design 3.7, M6 P3a spec 2.3).
 const (
 	MaxAssignees = 100
 	MaxLabels    = 100
+	MaxModules   = 100
 )
 
 // sortOrderStep is the gap between the greatest sort order of a state's
@@ -144,10 +146,11 @@ const (
 // without NUL; the priority one of the five, none when it is not given
 // (nil), so never nil once checked; at most MaxAssignees accounts and
 // MaxLabels labels, each named once; the start date not after the target
-// date, as the request gives both (at target_date). Every problem is
+// date, as the request gives both (at target_date); at most MaxModules
+// modules, each named once (M6 P3a spec 2.3). Every problem is
 // reported at once, in one 422 validation_failed; whether the state, each
-// assignee, each label and the parent may be is the use case's, under the
-// project's lock.
+// assignee, each label, the parent, the cycle and each module may be is
+// the use case's, under the project's lock.
 func CheckNewIssue(n NewIssue) (NewIssue, error) {
 	n.Name = strings.TrimSpace(n.Name)
 	if n.DescriptionHTML == nil {
@@ -160,6 +163,7 @@ func CheckNewIssue(n NewIssue) (NewIssue, error) {
 	found = append(found, checkIDs("assignee_ids", n.AssigneeIDs, MaxAssignees)...)
 	found = append(found, checkIDs("label_ids", n.LabelIDs, MaxLabels)...)
 	found = append(found, checkNewDates(n.StartDate, n.TargetDate))
+	found = append(found, checkIDs("module_ids", n.ModuleIDs, MaxModules)...)
 	if err := invalid(found...); err != nil {
 		return NewIssue{}, err
 	}
@@ -221,6 +225,13 @@ func UnknownLabel(i int) shared.FieldError {
 // 2.3, R2).
 func CycleNotAllowed() shared.FieldError {
 	return shared.FieldError{Field: "cycle_id", Code: shared.FieldNotAllowed, Message: "must be a cycle of the project"}
+}
+
+// ModuleNotAllowed is the problem of the i-th module asked for, which a
+// write adds and which is not an undeleted module of the work item's
+// project, archived or not (M6 P3a spec 2.3, R2).
+func ModuleNotAllowed(i int) shared.FieldError {
+	return shared.FieldError{Field: fmt.Sprintf("module_ids[%d]", i), Code: shared.FieldNotAllowed, Message: "must be a module of the project"}
 }
 
 // StateNotAllowed is the problem of a state asked for that is not an

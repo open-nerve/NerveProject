@@ -72,6 +72,15 @@ func (s *Store) InsertCycle(ctx context.Context, r app.LinkRows) error {
 	return linked(err, "cycle", r.IssueID)
 }
 
+// InsertModules inserts the work item's rows of the modules r names, those
+// it joins (M6 P3a spec R4).
+func (s *Store) InsertModules(ctx context.Context, r app.LinkRows) error {
+	err := s.queries(ctx).InsertModuleIssues(ctx, gen.InsertModuleIssuesParams{
+		Ids: r.IDs, WorkspaceID: r.WorkspaceID, ProjectID: r.ProjectID, IssueID: r.IssueID, ModuleIds: r.Targets, By: &r.By, At: r.At,
+	})
+	return linked(err, "modules", r.IssueID)
+}
+
 // InsertSubscribers inserts the work item's subscribers' rows r, but of an
 // account that subscribes to it already or that r names before (M4 design
 // 3.12).

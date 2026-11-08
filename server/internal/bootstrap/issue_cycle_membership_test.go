@@ -15,16 +15,18 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
-// joinedItem is a work item as a write answers it, with its cycle.
+// joinedItem is a work item as a write answers it, with its cycle and its
+// modules.
 type joinedItem struct {
-	ID        uuid.UUID  `json:"id"`
-	CycleID   *uuid.UUID `json:"cycle_id"`
-	CreatedAt time.Time  `json:"created_at"`
-	UpdatedAt time.Time  `json:"updated_at"`
+	ID        uuid.UUID   `json:"id"`
+	CycleID   *uuid.UUID  `json:"cycle_id"`
+	ModuleIDs []uuid.UUID `json:"module_ids"`
+	CreatedAt time.Time   `json:"created_at"`
+	UpdatedAt time.Time   `json:"updated_at"`
 }
 
-// cycleNames names the world's accounts and the cycles given, and the
-// moments given, for the tests' readable rows.
+// cycleNames names the world's accounts and the cycles and modules given
+// (cycles, by id), and the moments given, for the tests' readable rows.
 type cycleNames struct {
 	w       issueWorld
 	cycles  map[uuid.UUID]string
