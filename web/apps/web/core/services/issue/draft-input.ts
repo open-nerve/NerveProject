@@ -14,18 +14,25 @@ const keys = [
   "parent_id",
   "start_date",
   "target_date",
+  "cycle_id",
+  "module_ids",
 ] as const;
 export function draftPayload(before: IssueDraftPayload, edits: DraftEdits = {}): IssueDraftPayload {
   const payload: IssueDraftPayload = {};
   for (const key of keys) {
-    if (key === "assignee_ids" || key === "label_ids") {
+    if (key === "assignee_ids" || key === "label_ids" || key === "module_ids") {
       const value = Object.hasOwn(edits, key) ? edits[key] : before[key];
       if (value !== null && value !== undefined) payload[key] = value;
     } else {
       const value = Object.hasOwn(edits, key) ? edits[key] : before[key];
       // Empty reference/date controls mean clear, not a UUID/date wire value.
       const cleared =
-        value === "" && (key === "state_id" || key === "parent_id" || key === "start_date" || key === "target_date");
+        value === "" &&
+        (key === "state_id" ||
+          key === "parent_id" ||
+          key === "cycle_id" ||
+          key === "start_date" ||
+          key === "target_date");
       if (value !== null && value !== undefined && !cleared) payload[key] = value;
     }
   }

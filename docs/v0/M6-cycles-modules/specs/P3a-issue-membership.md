@@ -9,7 +9,7 @@
 - **P3a（本 spec）**：`issue` 模块的两张归属表 `cycle_issues`、`module_issues`；工作项与草稿的 `cycle_id`、`module_ids`（建立、PATCH、草稿发布）及回答里的这两个字段；归属的动态；删除迭代/模块时移除归属（`planning.cycle_deleted`、`planning.module_deleted` 两个事件）；删除工作项、项目、工作区时归属的软删与 60 天清理；自动归档跳过仍在未结束迭代或未到目标日模块里的工作项。覆盖设计 §2 的 G4、G11、G14、G16 的接口与数据库证据。
 - **P3b（P3a 合入后再写 spec 与 plan）**：列表引擎的筛选 `cycle_id`/`module_id`、分组、排序 `cycle_name`/`module_name`、显示属性 `cycle`/`modules`（含 `api/testdata/issue-order.json` 的前后端同一夹具）、项目偏好的 CHECK；`cycle_user_properties`、`module_user_properties` 与 `/me/cycles|modules/{id}/preferences`、`cycle.preferences`/`module.preferences`。覆盖 G15。
 
-P3a 不做：列表的筛选、分组、排序与显示（P3b，列表行只是多回答两个字段）；进度、冻结、转移（P4）；前端的属性与下拉框（P7）。前端只做四件事：重新生成的类型、手写的 `Issue`/`IssueDetail` 字面量补上两个字段、新错误码在工作项写入上的文案复用（码已有文案，不新增）、迭代动态渲染器的移出分支改读 `old_value`（设计 §8；否则移出迭代的动态显示空名）。
+P3a 不做：列表的筛选、分组、排序与显示（P3b，列表行只是多回答两个字段）；进度、冻结、转移（P4）；前端的属性与下拉框（P7）。前端只做五件事：重新生成的类型、手写的 `Issue`/`IssueDetail` 字面量补上两个字段、新错误码在工作项写入上的文案复用（码已有文案，不新增）、迭代动态渲染器的移出分支改读 `old_value`（设计 §8；否则移出迭代的动态显示空名）、草稿编辑保留两个字段（`core/services/issue/draft-input.ts` 的白名单原只有九个键，草稿契约加了两个字段后，网页一编辑就会丢掉经接口存入的迭代与模块；T8 实施时发现，随 T8 修）。
 
 ## 2. 交付合同
 

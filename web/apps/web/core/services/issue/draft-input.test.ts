@@ -46,7 +46,7 @@ it("project omission and clearing remain distinct, and native incomplete drafts 
   expect(draftInput({ project_id: null })).toStrictEqual({ project_id: null, payload: {} });
   expect(draftInput({ project_id: "A", name: "" })).toStrictEqual({ project_id: "A", payload: { name: "" } });
 });
-it("only generated payload keys survive, even if a caller supplies an issue or an obsolete draft field", () => {
+it("only generated payload keys survive, even if a caller supplies an issue or a key outside the draft contract", () => {
   const input = {
     name: "kept",
     id: "draft",
@@ -55,7 +55,26 @@ it("only generated payload keys survive, even if a caller supplies an issue or a
     module_ids: ["module"],
     sequence_id: 123,
   };
-  expect(draftInput(input, input)).toStrictEqual({ payload: { name: "kept" } });
+  expect(draftInput(input, input)).toStrictEqual({
+    payload: { name: "kept", cycle_id: "cycle", module_ids: ["module"] },
+  });
+});
+const planned: IssueDraftPayload = { ...original, cycle_id: "cycle", module_ids: ["module-b", "module-a"] };
+it("an edit of other fields keeps the stored cycle and modules, and an edit of them sets or replaces them", () => {
+  expect(draftInput({ name: "after" }, planned)).toStrictEqual({ payload: { ...planned, name: "after" } });
+  expect(draftInput({ cycle_id: "next", module_ids: ["module-c"] }, planned)).toStrictEqual({
+    payload: { ...planned, cycle_id: "next", module_ids: ["module-c"] },
+  });
+  expect(draftInput({ cycle_id: "cycle", module_ids: ["module"] })).toStrictEqual({
+    payload: { cycle_id: "cycle", module_ids: ["module"] },
+  });
+});
+it("clearing the cycle omits it like the other references, and the modules clear like the labels", () => {
+  expect(draftInput({ cycle_id: "", module_ids: null }, planned)).toStrictEqual({ payload: original });
+  expect(draftInput({ cycle_id: null, module_ids: undefined }, planned)).toStrictEqual({ payload: original });
+  expect(draftInput({ cycle_id: undefined, module_ids: [] }, planned)).toStrictEqual({
+    payload: { ...original, module_ids: [] },
+  });
 });
 
 it("form empty references and dates clear their wire keys, while empty text and arrays stay valid draft input", () => {
