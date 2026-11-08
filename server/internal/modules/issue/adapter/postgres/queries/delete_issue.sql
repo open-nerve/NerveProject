@@ -34,6 +34,19 @@ UPDATE issue_labels
 SET deleted_at = sqlc.arg(at)::timestamptz, updated_at = sqlc.arg(at), updated_by_id = sqlc.arg(deleted_by)::uuid
 WHERE issue_id = ANY (sqlc.arg(issue_ids)::uuid[]) AND deleted_at IS NULL;
 
+-- name: DeleteIssueCycleRows :exec
+-- DeleteIssueAssigneeRows' statement, of the deleted work items' cycle memberships (M6 P3a spec 2.5): they go with
+-- their work item, at its moment, and no membership activity is written. The index on issue_id serves it.
+UPDATE cycle_issues
+SET deleted_at = sqlc.arg(at)::timestamptz, updated_at = sqlc.arg(at), updated_by_id = sqlc.arg(deleted_by)::uuid
+WHERE issue_id = ANY (sqlc.arg(issue_ids)::uuid[]) AND deleted_at IS NULL;
+
+-- name: DeleteIssueModuleRows :exec
+-- DeleteIssueCycleRows' statement, of the deleted work items' module memberships.
+UPDATE module_issues
+SET deleted_at = sqlc.arg(at)::timestamptz, updated_at = sqlc.arg(at), updated_by_id = sqlc.arg(deleted_by)::uuid
+WHERE issue_id = ANY (sqlc.arg(issue_ids)::uuid[]) AND deleted_at IS NULL;
+
 -- name: DeleteIssueLinkRows :exec
 -- Lock the subtree's live links in id order before stamping them; earlier deletions keep their audit.
 UPDATE issue_links AS t

@@ -24,6 +24,19 @@ type CommentReaction struct {
 	DeletedAt   *time.Time
 }
 
+type CycleIssue struct {
+	ID          uuid.UUID
+	WorkspaceID uuid.UUID
+	ProjectID   uuid.UUID
+	CycleID     uuid.UUID
+	IssueID     uuid.UUID
+	CreatedByID *uuid.UUID
+	UpdatedByID *uuid.UUID
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	DeletedAt   *time.Time
+}
+
 type DraftIssue struct {
 	ID          uuid.UUID
 	WorkspaceID uuid.UUID
@@ -204,4 +217,17 @@ type IssueSubscriber struct {
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
 	DeletedAt    *time.Time
+}
+
+type ModuleIssue struct {
+	ID          uuid.UUID
+	WorkspaceID uuid.UUID
+	ProjectID   uuid.UUID
+	ModuleID    uuid.UUID
+	IssueID     uuid.UUID
+	CreatedByID *uuid.UUID
+	UpdatedByID *uuid.UUID
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	DeletedAt   *time.Time
 }

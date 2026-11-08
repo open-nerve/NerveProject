@@ -10,8 +10,9 @@ import (
 )
 
 // CreateIssue serves POST /api/v0/projects/{project_id}/issues: the state,
-// the priority, the dates and the parent nil and the lists empty when not
-// given; a value given goes to the use case as it came, which checks it.
+// the priority, the dates, the parent and the cycle nil and the lists, the
+// modules too, empty when not given; a value given goes to the use case as
+// it came, which checks it.
 func (h handler) CreateIssue(ctx context.Context, req gen.CreateIssueRequestObject) (gen.CreateIssueResponseObject, error) {
 	in := newIssueInput(*req.Body)
 	i, err := h.uc.CreateIssue.Execute(ctx, req.ProjectID, in)
@@ -43,14 +44,15 @@ func (h handler) GetIssueByIdentifier(ctx context.Context, req gen.GetIssueByIde
 }
 
 // UpdateIssue serves PATCH /api/v0/issues/{issue_id}: each field nil when
-// not given, a date or the parent given null given as none; a value given
-// goes to the use case as it came, which checks it.
+// not given, a date, the parent or the cycle given null given as none; a
+// value given goes to the use case as it came, which checks it.
 func (h handler) UpdateIssue(ctx context.Context, req gen.UpdateIssueRequestObject) (gen.UpdateIssueResponseObject, error) {
 	p := domain.IssuePatch{SortOrder: req.Body.SortOrder, DescriptionHTML: req.Body.DescriptionHTML, SkipActivity: req.Body.SkipActivity, Name: req.Body.Name, StateID: req.Body.StateID, Priority: (*domain.Priority)(req.Body.Priority),
-		AssigneeIDs: req.Body.AssigneeIds, LabelIDs: req.Body.LabelIds}
+		AssigneeIDs: req.Body.AssigneeIds, LabelIDs: req.Body.LabelIds, ModuleIDs: req.Body.ModuleIds}
 	p.SetStartDate, p.StartDate = given(req.Body.StartDate)
 	p.SetTargetDate, p.TargetDate = given(req.Body.TargetDate)
 	p.SetParentID, p.ParentID = given(req.Body.ParentID)
+	p.SetCycleID, p.CycleID = given(req.Body.CycleID)
 	i, err := h.uc.UpdateIssue.Execute(ctx, req.IssueID, p)
 	if err != nil {
 		return nil, err
@@ -91,6 +93,7 @@ func issueDetail(i domain.Issue) gen.IssueDetail {
 		StateID: i.StateID, Priority: gen.IssuePriority(i.Priority), StartDate: orNull(i.StartDate), TargetDate: orNull(i.TargetDate),
 		ParentID: orNull(i.ParentID), SortOrder: i.SortOrder,
 		CompletedAt: orNull(i.CompletedAt), ArchivedAt: orNull(i.ArchivedAt), AssigneeIds: orEmpty(i.AssigneeIDs), LabelIds: orEmpty(i.LabelIDs),
+		CycleID: orNull(i.CycleID), ModuleIds: orEmpty(i.ModuleIDs),
 		SubIssuesCount: i.SubIssuesCount, LinkCount: i.LinkCount, AttachmentCount: i.AttachmentCount, CreatedByID: orNull(i.CreatedByID), UpdatedByID: orNull(i.UpdatedByID), CreatedAt: i.CreatedAt,
 		UpdatedAt: i.UpdatedAt}
 }
@@ -100,6 +103,7 @@ func issueRow(i domain.Issue) gen.Issue {
 		StateID: i.StateID, Priority: gen.IssuePriority(i.Priority), StartDate: orNull(i.StartDate), TargetDate: orNull(i.TargetDate),
 		ParentID: orNull(i.ParentID), SortOrder: i.SortOrder,
 		CompletedAt: orNull(i.CompletedAt), ArchivedAt: orNull(i.ArchivedAt), AssigneeIds: orEmpty(i.AssigneeIDs), LabelIds: orEmpty(i.LabelIDs),
+		CycleID: orNull(i.CycleID), ModuleIds: orEmpty(i.ModuleIDs),
 		SubIssuesCount: i.SubIssuesCount, LinkCount: i.LinkCount, AttachmentCount: i.AttachmentCount, CreatedByID: orNull(i.CreatedByID), UpdatedByID: orNull(i.UpdatedByID), CreatedAt: i.CreatedAt,
 		UpdatedAt: i.UpdatedAt}
 }

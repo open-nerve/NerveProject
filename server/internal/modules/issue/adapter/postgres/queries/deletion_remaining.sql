@@ -9,6 +9,10 @@ WHEN 'issue_assignees' THEN EXISTS (SELECT 1 FROM issue_assignees r WHERE r.proj
     AND r.deleted_at IS NULL AND r.id > sqlc.arg(after)::uuid)
 WHEN 'issue_labels' THEN EXISTS (SELECT 1 FROM issue_labels r WHERE r.project_id = sqlc.arg(project_id)::uuid
     AND r.deleted_at IS NULL AND r.id > sqlc.arg(after)::uuid)
+WHEN 'cycle_issues' THEN EXISTS (SELECT 1 FROM cycle_issues r WHERE r.project_id = sqlc.arg(project_id)::uuid
+    AND r.deleted_at IS NULL AND r.id > sqlc.arg(after)::uuid)
+WHEN 'module_issues' THEN EXISTS (SELECT 1 FROM module_issues r WHERE r.project_id = sqlc.arg(project_id)::uuid
+    AND r.deleted_at IS NULL AND r.id > sqlc.arg(after)::uuid)
 WHEN 'issue_relations' THEN EXISTS (SELECT 1 FROM issue_relations r WHERE (r.project_id = sqlc.arg(project_id)::uuid OR r.related_issue_id IN (SELECT i.id FROM issues i WHERE i.project_id = sqlc.arg(project_id)))
     AND r.deleted_at IS NULL AND r.id > sqlc.arg(after)::uuid)
 WHEN 'issue_links' THEN EXISTS (SELECT 1 FROM issue_links r WHERE r.project_id = sqlc.arg(project_id)::uuid

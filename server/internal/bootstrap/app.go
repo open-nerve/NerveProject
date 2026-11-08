@@ -136,7 +136,7 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 	workspacePorts := workspace.Provide(pool, protected)
 	projectPorts := project.Provide(pool, protected)
 	issuePorts := issue.Provide(pool, protected)
-	planningPorts := planning.Provide(pool)
+	planningPorts := planning.Provide(pool, planningProjects{projects: projectPorts.PlanningProjects})
 	imageBindings := asset.NewImageBindings(assetPorts, businessClock)
 	imageReader := asset.NewImageReader(assetPorts, assets.store, assets.runtimeNow)
 	assetPurger := asset.NewPurger(assetPorts, assetImageReferences{identityPorts.ImageReferences, workspacePorts.ImageReferences, projectPorts.ImageReferences}, tx)
@@ -175,6 +175,7 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 		ReadTx:    readTx,
 		WriteGate: projectWrites, Clock: businessClock, Authorizer: authorizer,
 		Projects:   issueProjects{projects: projectPorts.IssueProjects},
+		Planning:   issuePlanning{targets: planningPorts.IssueTargets},
 		Workspaces: issueWorkspaces{directory: workspacePorts.WorkspaceDirectory},
 		Members:    issueMembers{members: workspacePorts.WorkspaceMemberDirectory},
 		Profiles:   issueProfiles{profiles: identityPorts.PublicProfiles},
@@ -182,7 +183,7 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 	plans := planning.New(planning.Deps{
 		Pool: pool, Tx: busyTx{tx: issueTx}, ReadTx: readTx, JobTx: issueTx, RuntimeNow: time.Now, Logger: logger,
 		DeleteBatch: cfg.Planning.DeleteBatch, DeleteBudget: cfg.Planning.DeleteBudget,
-		WriteGate: projectWrites, Clock: businessClock, Authorizer: authorizer,
+		WriteGate: projectWrites, Clock: businessClock, Authorizer: authorizer, Events: events,
 		Projects:   planningProjects{projects: projectPorts.PlanningProjects},
 		LinkCrawls: inserter, LinkCrawler: previews,
 	})

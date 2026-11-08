@@ -156,7 +156,7 @@ func TestPurgeCycles(t *testing.T) {
 	if err != nil || skipped.Scanned != 0 || skipped.Deleted != 0 || skipped.After != purgeID(30) {
 		t.Fatalf("after the greatest=%+v,%v; want empty", skipped, err)
 	}
-	purger := planning.Provide(pool).Purger
+	purger := planning.Provide(pool, nil).Purger
 	if !slices.Equal(purger.Tables(), []string{"module_links", "module_members", "modules", "cycles"}) {
 		t.Fatalf("directory=%v", purger.Tables())
 	}

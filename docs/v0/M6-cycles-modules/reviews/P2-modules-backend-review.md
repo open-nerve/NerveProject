@@ -1,6 +1,6 @@
 # M6/P2 阶段评审记录
 
-> 2026-11-08：最终候选（修复轮、编辑器计时器与 I21 等待的两处修复与本记录，门禁于 `78c7f7d3` 全过）待推送、核分支 CI 与合入；分支 CI、合入、main CI 与归档清理在合入后由 P3 的 T1 回填到 §7。基线 main `0a601f212e32057c4e48fe43e8c4f19691254573`（P1 noff）。
+> 2026-11-08：已完成。最终候选 `cf892deb` 经分支 CI 后 noff 为 `861ea1b5`；其 main CI 两次未过（与 P2 无关），按负责人指示由修复分支 `codex/m6-p2-ci` 修根因（含负责人批准的 server 任务分两路），第二次 noff `ddd79a9f` 的 main CI 42458454710 通过；归档与清理完成（§7，由 P3a 的 T1 回填）。基线 main `0a601f212e32057c4e48fe43e8c4f19691254573`（P1 noff）。
 
 ## 1. 评审方式与范围
 
@@ -56,4 +56,14 @@ A1–A8 满足（[spec §4](../specs/P2-modules-backend.md#4-验收标准)已勾
 
 ## 7. 集成、归档与接续
 
-最终候选推送后核准确分支 CI，`--no-ff` 合入 main 并核 main CI，再归档本阶段 ignored 证据（台账、收据、审者原文、CI 原件）并正常清理 worktree 与分支。结果由 P3 的 T1 按台账回填到这里。
+最终候选推送后核准确分支 CI，`--no-ff` 合入 main 并核 main CI，再归档本阶段 ignored 证据（台账、收据、审者原文、CI 原件）并正常清理 worktree 与分支。以下由 P3a 的 T1 按归档的台账与 CI 收据回填。
+
+- **分支 CI**：检查点 `d784d160` 的 42367215686 成功；`e7adbbca` 的 42376662419 web 失败（编辑器复制计时器，修于 `254d3255`）；`784d8e0a` 的 42380907752 attempt 1 e2e 失败（F16 偶发，交 M6-M8-01）、attempt 2 e2e 失败（I21 未等模块链接的抓取，P2 的测试竞争，负责人同意后修于 `78c7f7d3`）；最终候选 `cf892deb469c6b822d5f05de46a57016202697ea` 的 42395954380 attempt 1 成功（web 128473238455、server 128473238741、e2e 128478221771）。
+- **合入**：main `0a601f21` 干净且与 origin 一致；`--no-ff` 生成 `861ea1b5fd5356d1d0129ca28468f67dc681c6c6`，双父依次为 `0a601f21`、`cf892deb`，树与候选相同；系统 Git 推送。
+- **main CI（第一次合入）**：42399566014 两次未过，均与 P2 无关、同一树的分支 CI 通过：attempt 1 server 128484192479 挂在 `TestAutoArchiveUsesLockedPolicyOneProjectAtATime`（全局锁探测被启动时的修剪任务骗过），attempt 2（只重跑失败的作业）server 128489449119 挂在 `s3test` 的 `TestS3ServiceLifecycle`（发布端口撞上本机连接占用的临时端口）。负责人 2026-11-08 指示“定位根因，修复之后再重跑”。
+- **修复分支** `codex/m6-p2-ci`（经过见 §5）：`55162379`、`8e907399`、`ebc949ed`、`7366976f`、`077a1b06`；其分支 CI 42413098044 server 128525236938 的 bootstrap 包超 20 分钟整包期限（最近 12 次 CI 919–1185 秒），负责人 2026-11-08 批准 server 任务分两路（`2e395074`，M6-M8-04）；42453471322 server (0) 128647415777 挂在替身被真实启动任务插队（修于 `951144ea`）；复审两条 Minor 修于 `6eea8e09`。最终候选 `6eea8e095706e2f3fa7458d38a466b196f9c50da` 的 42456226091 attempt 1 成功（server (0) 128655710789、server (1) 128655710570、web 128655710790、e2e 128658048684；两路 bootstrap 526、492 秒）。
+- **第二次合入**：`--no-ff` 生成 `ddd79a9f5362aedfc33c940acecc2a5bf0e3d9b8`，双父依次为 `861ea1b5`、`6eea8e09`，树与修复分支头相同；系统 Git 推送。
+- **main CI**：42458454710 attempt 1 成功（server (0) 128662377790、server (1) 128662377961、web 128662377970、e2e 128665596004；两路 bootstrap 656、466 秒）。
+- **归档**：`.superpowers/sdd/M6-P2-integration-20261108`（主目录，ignored）：2707 个文件、488,258,835 字节、未知 0，清单 sha256 `a7ba04f09c48e237b31e5c7d6b3d7c0fa3cc7a59f428e6b2709690f8bc45cd20`，`archive.py verify` 通过（P3 开工时复核一次）；`cleanup.log` 记有清理前两个分支均已含于 origin/main。
+- **清理**：worktree `m6-p2`、本地与远端分支 `codex/m6-p2`、`codex/m6-p2-ci` 已删除，主目录停在 main `ddd79a9f`。
+- **接续**：P3 拆为 P3a（工作项的迭代与模块归属）与 P3b（列表引擎与偏好）；P3a 预检见 [re-58](../../../reviews/re-58-M6P3a预检.md)。

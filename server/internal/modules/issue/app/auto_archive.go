@@ -12,10 +12,13 @@ import (
 
 // AutoArchiveDeps supplies the system job's raw transaction manager, without
 // request admission or conversion of PostgreSQL lock failures to HTTP errors.
+// Planning answers the cycles and modules that keep a project's work items
+// (M6 P3a spec R9).
 type AutoArchiveDeps struct {
 	Policies ArchivePolicies
 	Projects ProjectGate
 	States   StateCatalog
+	Planning OpenPlanning
 	Issues   AutoArchiveStore
 	Tx       shared.TxManager
 	Clock    Clock
@@ -65,7 +68,14 @@ func (u *AutoArchive) Execute(ctx context.Context) (int, error) {
 				return nil
 			}
 			at := u.d.Clock.Now()
-			ids, err := u.d.Issues.AutoArchive(ctx, AutoArchiveRows{ProjectID: id, StateIDs: terminal, Cutoff: at.Add(-time.Duration(p.ArchiveIn) * 30 * 24 * time.Hour), At: at})
+			// The work items of the cycles and modules open on at's day stay
+			// (M6 P3a spec R9): read under the lock, on the same clock.
+			cycles, modules, err := u.d.Planning.OpenTargets(ctx, id, at)
+			if err != nil {
+				return err
+			}
+			ids, err := u.d.Issues.AutoArchive(ctx, AutoArchiveRows{ProjectID: id, StateIDs: terminal, OpenCycles: cycles, OpenModules: modules,
+				Cutoff: at.Add(-time.Duration(p.ArchiveIn) * 30 * 24 * time.Hour), At: at})
 			if err != nil {
 				return err
 			}

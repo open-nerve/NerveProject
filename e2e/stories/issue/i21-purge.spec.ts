@@ -120,11 +120,15 @@ async function seed(api: Api, db: Database, info: TestInfo, admin: Account, memb
   const label = await createLabel(api, token, project.id, { name: "Independent label" });
   const pat = await createPAT(api, token, { label: `${age} independent PAT` });
   const description = `<mention-component entity_name="user_mention" entity_identifier="${admin.id}"></mention-component>`;
+  // The root is in a cycle and a module of its project too: a row of each key below issues (issueIDs).
+  const planning = await furnishPlanningRows(api, token, project.id);
   const root = await createIssue(api, token, project.id, {
     name: `${age} root`,
     description_html: description,
     assignee_ids: [admin.id],
     label_ids: [usedLabel.id],
+    cycle_id: planning.cycleId,
+    module_ids: [planning.moduleId],
   });
   const child = await createIssue(api, token, project.id, { name: "Child", parent_id: root.id });
   await createIssue(api, token, project.id, { name: "Grandchild", parent_id: child.id });
@@ -142,15 +146,15 @@ async function seed(api: Api, db: Database, info: TestInfo, admin: Account, memb
   await relate("blocking");
   const doomed = await createProject(api, token, keeper.slug, { name: "Project target", identifier: "DEL" });
   const projectLabel = await createLabel(api, token, doomed.id, { name: "Bug" });
-  await furnishIssueRows(api, token, keeper.slug, doomed.id, admin.id, projectLabel.id);
-  await furnishPlanningRows(api, token, doomed.id);
+  const doomedPlanning = await furnishPlanningRows(api, token, doomed.id);
+  await furnishIssueRows(api, token, keeper.slug, doomed.id, admin.id, projectLabel.id, doomedPlanning);
   const workspace = await createWorkspace(api, token, { name: "Workspace target", slug: slugFor(info, `${age}-del`) });
   await furnishWorkspace(api, token, workspace.slug, member, emailFor(info, `${age}-pending`));
   // A neighboring project remains live even when already 61 days old.
   const neighbor = await createProject(api, token, keeper.slug, { name: "Neighbor", identifier: "LIVE" });
   const neighborLabel = await createLabel(api, token, neighbor.id, { name: "Keep" });
-  await furnishIssueRows(api, token, keeper.slug, neighbor.id, admin.id, neighborLabel.id);
-  await furnishPlanningRows(api, token, neighbor.id);
+  const neighborPlanning = await furnishPlanningRows(api, token, neighbor.id);
+  await furnishIssueRows(api, token, keeper.slug, neighbor.id, admin.id, neighborLabel.id, neighborPlanning);
   const preparationHost = await createIssue(api, token, neighbor.id, { name: "Unreferenced image preparation" });
   await storedFile(
     api,

@@ -1,4 +1,5 @@
 import { furnishIssueFiles } from "../../fixtures/storage";
+import { furnishPlanningRows } from "../../fixtures/furnish";
 import { c12Evidence } from "../../fixtures/c12-evidence";
 import {
   addProjectMembers,
@@ -152,10 +153,15 @@ test("I15 (API): a member's work item in a started state is not archived (409); 
   expect(await issueArchived(api, gus.token, id)).toEqual({ status: 403, code: "forbidden" });
   await expectIssueArchival(db, id, restored);
 
-  // Restored, it takes ann's Write the test under it, and she relates it to her Write the spec, stored from it, and
-  // blocking her Ship the fix, stored from Ship the fix as its blocked_by: a row more of its activity for each
-  // relation.
-  const part = await createIssue(api, ann.token, web.id, { name: "Write the test" });
+  // Restored, it takes ann's Write the test, in a cycle and a module of Web (furnishPlanningRows, the admin's), under
+  // it, and she relates it to her Write the spec, stored from it, and blocking her Ship the fix, stored from Ship the
+  // fix as its blocked_by: a row more of its activity for each relation.
+  const planning = await furnishPlanningRows(api, admin.token, web.id);
+  const part = await createIssue(api, ann.token, web.id, {
+    name: "Write the test",
+    cycle_id: planning.cycleId,
+    module_ids: [planning.moduleId],
+  });
   const spec = await createIssue(api, ann.token, web.id, { name: "Write the spec" });
   const ship = await createIssue(api, ann.token, web.id, { name: "Ship the fix" });
   expect(await subIssuesAdded(api, ann.token, id, [part.id])).toMatchObject({ status: 200, issues: [{ id: part.id }] });
@@ -408,7 +414,13 @@ test("I15 (page): an admin deletes an archived item through its read-only detail
     label_ids: [label.id],
     description_html: `<mention-component entity_name="user_mention" entity_identifier="${member.id}"></mention-component>`,
   });
-  const child = await createIssue(api, member.token, project.id, { name: "Dependent child" });
+  // The child is in a cycle and a module of the project: under the item, a row of each of their keys too.
+  const planning = await furnishPlanningRows(api, member.token, project.id);
+  const child = await createIssue(api, member.token, project.id, {
+    name: "Dependent child",
+    cycle_id: planning.cycleId,
+    module_ids: [planning.moduleId],
+  });
   const one = await createIssue(api, member.token, project.id, { name: "Related forward" });
   const two = await createIssue(api, member.token, project.id, { name: "Related backward" });
   expect((await subIssuesAdded(api, member.token, item.id, [child.id])).status).toBe(200);

@@ -21,11 +21,14 @@ type ModuleDeleter interface {
 	DeleteModuleLinkRows(ctx context.Context, module uuid.UUID, at time.Time, by uuid.UUID) error
 }
 
-// DeleteModuleDeps are DeleteModule's ports.
+// DeleteModuleDeps are DeleteModule's ports: Events publishes the deletion
+// in its transaction, which the issue module's subscriber writes in too (M6
+// P3a spec R6).
 type DeleteModuleDeps struct {
 	Locks   Locks
 	Modules ModuleDeleter
 	Clock   Clock
+	Events  shared.EventPublisher
 }
 
 // DeleteModule answers deleteModule (M6 P2 spec 2.3, 2.4).
@@ -38,14 +41,15 @@ func NewDeleteModule(d DeleteModuleDeps) *DeleteModule { return &DeleteModule{d:
 // which its project's admins pass and its creator too (AllowCreator); then
 // under the lock, the clock, and the module, its members' rows and its
 // links deleted and last changed by the caller at that moment, in the
-// write's transaction (R15), whatever its status and archive. P2 publishes
-// no event.
+// write's transaction (R15), whatever its status and archive; then its
+// deletion published in that transaction (deletionEvent, M6 P3a spec R6),
+// whose failure fails the deletion.
 func (u *DeleteModule) Execute(ctx context.Context, id uuid.UUID) error {
 	actor, err := shared.RequireActor(ctx)
 	if err != nil {
 		return err
 	}
-	return u.d.Locks.run(ctx, actor, write{module: &id, action: domain.ActionModuleDelete}, func(ctx context.Context, _ held) error {
+	return u.d.Locks.run(ctx, actor, write{module: &id, action: domain.ActionModuleDelete}, func(ctx context.Context, h held) error {
 		at, by := u.d.Clock.Now(), actor.UserID
 		if err := u.d.Modules.DeleteModule(ctx, id, at, by); err != nil {
 			return err
@@ -53,6 +57,11 @@ func (u *DeleteModule) Execute(ctx context.Context, id uuid.UUID) error {
 		if err := u.d.Modules.DeleteModuleMemberRows(ctx, id, at, by); err != nil {
 			return err
 		}
-		return u.d.Modules.DeleteModuleLinkRows(ctx, id, at, by)
+		if err := u.d.Modules.DeleteModuleLinkRows(ctx, id, at, by); err != nil {
+			return err
+		}
+		m := h.module
+		return u.d.Events.Publish(ctx, deletionEvent(domain.EventModuleDeleted, shared.EntityRef{Kind: "module", ID: m.ID}, m.WorkspaceID, m.ProjectID,
+			m.Name, at, by))
 	})
 }

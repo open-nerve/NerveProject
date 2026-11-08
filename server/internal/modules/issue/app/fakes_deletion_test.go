@@ -46,6 +46,14 @@ func (f *fakeIssues) DeleteIssueLabelRows(ctx context.Context, d app.IssueDeleti
 	return f.deleteRows(ctx, "DeleteIssueLabelRows", d)
 }
 
+func (f *fakeIssues) DeleteIssueCycleRows(ctx context.Context, d app.IssueDeletion) error {
+	return f.deleteRows(ctx, "DeleteIssueCycleRows", d)
+}
+
+func (f *fakeIssues) DeleteIssueModuleRows(ctx context.Context, d app.IssueDeletion) error {
+	return f.deleteRows(ctx, "DeleteIssueModuleRows", d)
+}
+
 func (f *fakeIssues) LockIssueRelationRows(ctx context.Context, d app.IssueDeletion) ([]app.RelationDeletionRow, error) {
 	if err := f.log.add(ctx, "LockIssueRelationRows", d.IssueIDs); err != nil {
 		return nil, err

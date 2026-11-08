@@ -45,7 +45,7 @@ func TestPurgeDeletedRunsWithRuntimeRole(t *testing.T) {
 		tables []string
 	}{
 		{"asset", []string{"file_assets"}},
-		{"issue", []string{"issue_labels", "issue_subscribers", "issue_comments", "issue_activities", "issues"}},
+		{"issue", []string{"issue_labels", "issue_subscribers", "module_issues", "cycle_issues", "issue_comments", "issue_activities", "issues"}},
 		{"planning", []string{"cycles", "modules", "module_members", "module_links"}},
 		{"project", []string{"project_members", "labels", "states", "projects"}},
 		{"workspace", []string{"workspace_members", "workspaces"}},
@@ -82,6 +82,7 @@ func TestPurgeDeletedRunsWithRuntimeRole(t *testing.T) {
 			seedIssueAsset(t, roles.server, item, accountID(t, contract, base, token))
 			seedCycles(t, roles.server, project, accountID(t, contract, base, token))
 			seedModules(t, roles.server, project, accountID(t, contract, base, token))
+			seedMemberships(t, roles.server, item, accountID(t, contract, base, token))
 			w.send(t, "alice", http.MethodPost, commentsOf(item), `{"comment_html":"<p>Keep the child visible to cleanup</p>"}`, 201)
 			credential := createPAT(t, contract, base, token)
 			w.send(t, "alice", http.MethodDelete, "/api/v0/api-tokens/"+credential.ID, "", 204)
@@ -99,7 +100,7 @@ func TestPurgeDeletedRunsWithRuntimeRole(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = tx.Rollback(context.Background()) }()
-	tables := []string{"file_assets", "issue_labels", "issue_subscribers", "issue_comments", "issue_activities", "issues", "module_links", "module_members", "modules", "cycles", "labels", "states", "project_members", "projects", "workspace_members", "workspaces"}
+	tables := []string{"file_assets", "issue_labels", "issue_subscribers", "module_issues", "cycle_issues", "issue_comments", "issue_activities", "issues", "module_links", "module_members", "modules", "cycles", "labels", "states", "project_members", "projects", "workspace_members", "workspaces"}
 	for i, f := range fixtures {
 		age := 61
 		if i == 1 {

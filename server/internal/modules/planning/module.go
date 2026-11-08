@@ -3,16 +3,22 @@
 // changing, archiving, unarchiving and deleting a cycle of a project;
 // creating, listing, reading, changing, archiving, unarchiving and deleting a
 // module of a project, and adding, listing, changing and removing a module's
-// links. A link's creation and a change of its address enqueue its crawl in
+// links. A cycle's and a module's deletion publish it in their transaction
+// (EventTypes), which the issue module's subscriber takes the work items out
+// of it in. A link's creation and a change of its address enqueue its crawl in
 // their transaction, whose job writes the link's metadata. Project
 // and workspace deletion events enqueue the asynchronous deletion of the
 // deleted projects' planning rows in the publishing transaction; the 60-day
-// purge removes them.
+// purge removes them. It tells the issue module about the cycles and modules
+// a work item's write names and those that keep work items from automatic
+// archival (IssueTargets).
 package planning
 
 import (
+	"context"
 	"log/slog"
 	"time"
+	"uuid"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -29,21 +35,49 @@ import (
 // converts project's PlanningFacts into them.
 type ProjectFacts = app.ProjectFacts
 
-// Provided are the adapters bootstrap builds before wiring the modules.
-type Provided struct {
-	Purger *app.Purger
+// IssueTargets is what the module tells the issue module about the cycles
+// and modules of a project whose row lock the asking transaction holds (M6
+// P3a spec R1, R9): the project's toggles and, of the cycles and modules a
+// work item's write names, the project's undeleted ones with their names
+// and archives; whether a cycle has ended on the day now falls on in the
+// project's time zone; and, on that day, the ids of the cycles that have
+// not ended and of the modules whose target day has not passed. bootstrap
+// converts it into issue's PlanningPorts.
+type IssueTargets interface {
+	Targets(ctx context.Context, project uuid.UUID, cycles, modules []uuid.UUID) (IssueTargetFacts, error)
+	CycleCompleted(ctx context.Context, project, cycle uuid.UUID, now time.Time) (bool, error)
+	OpenTargets(ctx context.Context, project uuid.UUID, now time.Time) (cycles, modules []uuid.UUID, err error)
 }
 
-// Provide builds planning's purge over pool: its tables, children before
-// parents, so no parent's CASCADE takes a child's rows first (M6 P2 spec 2.4).
-func Provide(pool *pgxpool.Pool) Provided {
+// IssueTargetFacts and IssueTarget are the values IssueTargets hands over:
+// bootstrap converts them into issue's.
+type (
+	IssueTargetFacts = app.IssueTargetFacts
+	IssueTarget      = app.IssueTarget
+)
+
+// Provided are the adapters bootstrap builds before wiring the modules.
+type Provided struct {
+	Purger       *app.Purger
+	IssueTargets IssueTargets
+}
+
+// Provide builds, over pool, planning's purge: its tables, children before
+// parents, so no parent's CASCADE takes a child's rows first (M6 P2 spec
+// 2.4); and its issue targets, which read a project's facts through
+// projects, project's PlanningProjects converted. The purge does not use
+// projects.
+func Provide(pool *pgxpool.Pool, projects app.FactsReader) Provided {
 	store := postgresadapter.New(pool)
-	return Provided{Purger: app.NewPurger([]app.PurgeStep{
-		{Table: "module_links", Delete: store.PurgeModuleLinks},
-		{Table: "module_members", Delete: store.PurgeModuleMembers},
-		{Table: "modules", Delete: store.PurgeModules},
-		{Table: "cycles", Delete: store.PurgeCycles},
-	})}
+	return Provided{
+		Purger: app.NewPurger([]app.PurgeStep{
+			{Table: "module_links", Delete: store.PurgeModuleLinks},
+			{Table: "module_members", Delete: store.PurgeModuleMembers},
+			{Table: "modules", Delete: store.PurgeModules},
+			{Table: "cycles", Delete: store.PurgeCycles},
+		}),
+		IssueTargets: app.NewIssueTargets(projects, store),
+	}
 }
 
 // Deps are what the module needs.
@@ -61,6 +95,10 @@ type Deps struct {
 	WriteGate  app.WriteGate
 	Clock      app.Clock
 	Authorizer shared.Authorizer
+	// Events publishes a cycle's and a module's deletion in the deleting
+	// transaction: bootstrap's dispatcher, whose issue subscriber takes the
+	// work items out of the deleted cycle or module (M6 P3a spec R6).
+	Events shared.EventPublisher
 	// Projects are project's PlanningProjects, converted (bootstrap/ports.go).
 	Projects app.Projects
 	// LinkCrawls inserts the module links' crawls, planning.crawl_link, in
@@ -102,14 +140,14 @@ func New(d Deps) *Module {
 			UpdateCycle:      app.NewUpdateCycle(app.UpdateCycleDeps{Locks: locks, Cycles: store, Clock: d.Clock}),
 			ArchiveCycle:     app.NewArchiveCycle(app.ArchiveCycleDeps{Locks: locks, Cycles: store, Clock: d.Clock}),
 			UnarchiveCycle:   app.NewUnarchiveCycle(app.ArchiveCycleDeps{Locks: locks, Cycles: store, Clock: d.Clock}),
-			DeleteCycle:      app.NewDeleteCycle(app.DeleteCycleDeps{Locks: locks, Cycles: store, Clock: d.Clock}),
+			DeleteCycle:      app.NewDeleteCycle(app.DeleteCycleDeps{Locks: locks, Cycles: store, Clock: d.Clock, Events: d.Events}),
 			ListModules:      app.NewListModules(app.ListModulesDeps{Reads: reads, Modules: store}),
 			CreateModule:     app.NewCreateModule(app.CreateModuleDeps{Locks: locks, Roles: d.Projects, Modules: store, Clock: d.Clock}),
 			GetModule:        app.NewGetModule(app.GetModuleDeps{Reads: reads}),
 			UpdateModule:     app.NewUpdateModule(app.UpdateModuleDeps{Locks: locks, Roles: d.Projects, Modules: store, Clock: d.Clock}),
 			ArchiveModule:    app.NewArchiveModule(app.ArchiveModuleDeps{Locks: locks, Modules: store, Clock: d.Clock}),
 			UnarchiveModule:  app.NewUnarchiveModule(app.ArchiveModuleDeps{Locks: locks, Modules: store, Clock: d.Clock}),
-			DeleteModule:     app.NewDeleteModule(app.DeleteModuleDeps{Locks: locks, Modules: store, Clock: d.Clock}),
+			DeleteModule:     app.NewDeleteModule(app.DeleteModuleDeps{Locks: locks, Modules: store, Clock: d.Clock, Events: d.Events}),
 			CreateModuleLink: app.NewCreateModuleLink(links),
 			UpdateModuleLink: app.NewUpdateModuleLink(links),
 			DeleteModuleLink: app.NewDeleteModuleLink(links),

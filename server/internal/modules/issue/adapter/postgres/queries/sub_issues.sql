@@ -18,8 +18,11 @@ SELECT i.id, i.workspace_id, i.project_id, i.sequence_id, i.name, i.description_
         WHERE a.issue_id = i.id AND a.deleted_at IS NULL)::uuid[] AS assignee_ids,
        (SELECT array_agg(l.label_id ORDER BY l.label_id) FROM issue_labels l
         WHERE l.issue_id = i.id AND l.deleted_at IS NULL)::uuid[] AS label_ids,
+       ci.cycle_id,
+       (SELECT array_agg(m.module_id ORDER BY m.module_id) FROM module_issues m
+        WHERE m.issue_id = i.id AND m.deleted_at IS NULL)::uuid[] AS module_ids,
        (SELECT count(*) FROM issue_links l WHERE l.issue_id=i.id AND l.deleted_at IS NULL)::bigint AS link_count
-FROM issues i
+FROM issues i LEFT JOIN cycle_issues ci ON ci.issue_id = i.id AND ci.deleted_at IS NULL
 WHERE i.parent_id = sqlc.arg(parent_id)::uuid AND i.deleted_at IS NULL AND i.archived_at IS NULL
   AND (sqlc.narg(created_by)::uuid IS NULL OR i.created_by_id = sqlc.narg(created_by)::uuid)
 ORDER BY i.created_at, i.id;

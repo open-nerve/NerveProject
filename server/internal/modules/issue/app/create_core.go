@@ -21,6 +21,7 @@ type IssueCreationDeps struct {
 	States          StateCatalog
 	Labels          LabelCatalog
 	Members         ProjectMembers
+	Planning        PlanningTargets
 	Profiles        PublicProfiles
 	Clock           Clock
 	Sanitizer       HTMLSanitizer
@@ -35,7 +36,9 @@ func NewIssueCreation(d IssueCreationDeps) *IssueCreation { return &IssueCreatio
 
 // checked is what createIssue's checks of the dependent rows found, under
 // the project's lock: the state, the accounts the work item is assigned
-// to and its labels, each in id order, and its parent, nil for none.
+// to and its labels, each in id order, its parent, nil for none, the cycle
+// it joins, by its name, nil for none, and the modules it joins, by their
+// names, in id order (M6 P3a spec R1).
 type checked struct {
 	state                 StateRef
 	mentions, subscribers []uuid.UUID
@@ -44,6 +47,8 @@ type checked struct {
 	parent                *uuid.UUID
 	parentName            *domain.Ref
 	labelNames            []domain.Named
+	cycle                 *domain.Named
+	modules               []domain.Named
 }
 
 // preparedIssue has its final identity and checked graph, but no write time.
@@ -117,7 +122,14 @@ func (u *IssueCreation) prepareLocked(ctx context.Context, actorID, projectID uu
 	return preparedIssue{row: row, checked: c, content: clean}, nil
 }
 
+// writePreparedAt writes p at the moment at, the write's clock read after
+// its last lock: first, the cycle it joins may not have ended on the day
+// at falls on (refuseEnded, M6 P3a spec R2), the one judgement of it for a
+// creation and a draft's publication alike.
 func (u *IssueCreation) writePreparedAt(ctx context.Context, p preparedIssue, at time.Time) (domain.Issue, error) {
+	if err := refuseEnded(ctx, u.d.Planning, p.row.ProjectID, p.checked.cycle, at); err != nil {
+		return domain.Issue{}, err
+	}
 	p.row.At, p.row.CompletedAt = at, domain.CompletedAt(p.checked.state.Group, at)
 	if err := u.write(ctx, p.row, p.checked, p.content); err != nil {
 		return domain.Issue{}, err
@@ -126,16 +138,32 @@ func (u *IssueCreation) writePreparedAt(ctx context.Context, p preparedIssue, at
 }
 
 // check checks the dependent rows of in, by the caller actor, under h, his
-// write's lock on the project (M4 design 3.7, 3.9): the state asked for is
-// the project's and not its triage state, or the project's default state
-// when none is; the assignees by domain.Assignees, from the roles of the
+// write's lock on the project (M4 design 3.7, 3.9): first the cycle and the
+// modules it joins, when it joins any, whose refusals come before any
+// other's (readMembership, M6 P3a spec R2); the state asked for is the project's
+// and not its triage state, or the project's default state when none is;
+// the assignees by domain.Assignees, from the roles of the
 // accounts asked for, or of the project's default assignee when none is;
 // each label asked for is the project's; the parent asked for may be one
-// (parentOf). Every problem is reported at once, in one 422.
+// (parentOf); the cycle and each module are the project's, each module's
+// problem at its place in module_ids. Every problem is reported at once,
+// in one 422.
 func (u *IssueCreation) check(ctx context.Context, h held, actor, projectID uuid.UUID, in domain.NewIssue) (checked, error) {
 	p := h.project
 	var c checked
 	var problems []shared.FieldError
+	var joining *domain.CycleChange
+	if in.CycleID != nil {
+		joining = &domain.CycleChange{To: in.CycleID}
+	}
+	joins, late, err := readMembership(ctx, u.d.Planning, projectID, joining, domain.Diff{Added: ascending(in.ModuleIDs)}, in.ModuleIDs)
+	if err != nil {
+		return checked{}, err
+	}
+	if joins.cycle != nil {
+		c.cycle = joins.cycle.New
+	}
+	c.modules = joins.modulesJoined
 	states, err := u.d.States.States(ctx, projectID)
 	if err != nil {
 		return checked{}, err
@@ -190,6 +218,7 @@ func (u *IssueCreation) check(ctx context.Context, h held, actor, projectID uuid
 			c.parentName = refOf(h.project, parent)
 		}
 	}
+	problems = append(problems, late...)
 	if len(problems) > 0 {
 		return checked{}, shared.Invalid(problems...)
 	}
@@ -197,8 +226,9 @@ func (u *IssueCreation) check(ctx context.Context, h held, actor, projectID uuid
 }
 
 // write writes the work item row and the rows under it, in the order of M4
-// design 3.5: the work item, its assignees, its labels, its subscribers,
-// its activity.
+// design 3.5: the work item, its assignees, its labels, its cycle's and its
+// modules' (M6 P3a spec R4), its subscribers, its activity: the creation's
+// rows, then the cycle and the modules it joins (domain.CreationJoins, R5).
 func (u *IssueCreation) write(ctx context.Context, row IssueRow, c checked, clean domain.RichText) error {
 	if err := u.d.Issues.InsertIssue(ctx, row); err != nil {
 		return err
@@ -211,6 +241,16 @@ func (u *IssueCreation) write(ctx context.Context, row IssueRow, c checked, clea
 	}
 	if len(c.labels) > 0 {
 		if err := u.d.Issues.InsertLabels(ctx, s.links(c.labels)); err != nil {
+			return err
+		}
+	}
+	if c.cycle != nil {
+		if err := u.d.Issues.InsertCycle(ctx, s.links([]uuid.UUID{c.cycle.ID})); err != nil {
+			return err
+		}
+	}
+	if len(c.modules) > 0 {
+		if err := u.d.Issues.InsertModules(ctx, s.links(idsOf(c.modules))); err != nil {
 			return err
 		}
 	}
@@ -227,7 +267,7 @@ func (u *IssueCreation) write(ctx context.Context, row IssueRow, c checked, clea
 	if err != nil {
 		return err
 	}
-	if err := u.d.Issues.InsertActivities(ctx, s.activity(domain.CreationActivity(accounts))); err != nil {
+	if err := u.d.Issues.InsertActivities(ctx, s.activity(slices.Concat(domain.CreationActivity(accounts), domain.CreationJoins(c.cycle, c.modules...)))); err != nil {
 		return err
 	}
 	if err := u.d.Issues.InsertDescriptionVersion(ctx, descriptionVersion(s, clean)); err != nil {

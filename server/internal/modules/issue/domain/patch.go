@@ -11,11 +11,12 @@ import (
 
 // IssuePatch is what the caller asks to change in a work item (M4 design
 // 5.2, IssueUpdate without the fields of later phases): each field nil
-// when it is not given, and keeps its value. AssigneeIDs and LabelIDs,
-// given, are the work item's new sets of accounts and labels; given empty,
-// none. A date and the parent may be cleared: SetStartDate, SetTargetDate
-// and SetParentID tell whether the field is given, StartDate, TargetDate
-// and ParentID its value, nil for none.
+// when it is not given, and keeps its value. AssigneeIDs, LabelIDs and
+// ModuleIDs, given, are the work item's new sets of accounts, labels and
+// modules (M6 P3a spec 2.3); given empty, none. A date, the parent and the cycle may be cleared: SetStartDate,
+// SetTargetDate, SetParentID and SetCycleID tell whether the field is
+// given, StartDate, TargetDate, ParentID and CycleID its value, nil for
+// none (M6 P3a spec 2.3: the cycle cleared, the work item leaves it).
 type IssuePatch struct {
 	DescriptionHTML *string
 	SkipActivity    *bool
@@ -31,14 +32,17 @@ type IssuePatch struct {
 	TargetDate      *shared.Date
 	SetParentID     bool
 	ParentID        *uuid.UUID
+	SetCycleID      bool
+	CycleID         *uuid.UUID
+	ModuleIDs       *[]uuid.UUID
 }
 
 // CheckIssuePatch checks the fields p gives by createIssue's rules (M4
 // design 3.7, CheckNewIssue) and returns p as it is stored: the name
 // without its surrounding white space, of 1–255 characters and without
 // NUL; the priority one of the five (given empty, it is refused, not left
-// as it is); at most MaxAssignees accounts and MaxLabels labels, each
-// named once; sort_order finite. Every problem is reported at once, in one 422
+// as it is); at most MaxAssignees accounts, MaxLabels labels and
+// MaxModules modules, each named once; sort_order finite. Every problem is reported at once, in one 422
 // validation_failed; whether the state, each account and each label the
 // change adds, and the parent it sets, may be is the use case's, under the
 // project's lock, and so is the order of the dates the change leaves
@@ -61,6 +65,9 @@ func CheckIssuePatch(p IssuePatch) (IssuePatch, error) {
 	}
 	if p.LabelIDs != nil {
 		found = append(found, checkIDs("label_ids", *p.LabelIDs, MaxLabels)...)
+	}
+	if p.ModuleIDs != nil {
+		found = append(found, checkIDs("module_ids", *p.ModuleIDs, MaxModules)...)
 	}
 	if err := invalid(found...); err != nil {
 		return IssuePatch{}, err
@@ -94,11 +101,12 @@ func diffOf(from, to []uuid.UUID) Diff {
 }
 
 // Changes is what a checked patch changes in a work item (M4 design 3.7,
-// 3.9): the new name, priority, state, sort order, dates and parent where each differs
-// from the work item's, nil where it is not given or is the same; and the
-// accounts and the labels it adds and removes (Diff), where the patch
-// gives the new set. An account or a label the work item has and the new
-// set keeps is left as it is: its row is not written again.
+// 3.9): the new name, priority, state, sort order, dates, parent and cycle
+// (M6 P3a spec 2.3) where each differs from the work item's, nil where it
+// is not given or is the same; and the accounts, the labels and the
+// modules it adds and removes (Diff), where the patch gives the new set.
+// An account, a label or a module the work item has and the new set keeps
+// is left as it is: its row is not written again.
 type Changes struct {
 	Description *DescriptionChange
 	Name        *string
@@ -108,8 +116,18 @@ type Changes struct {
 	StartDate   *DateChange
 	TargetDate  *DateChange
 	Parent      *ParentChange
+	Cycle       *CycleChange
 	Assignees   Diff
 	Labels      Diff
+	Modules     Diff
+}
+
+// CycleChange is a change of the cycle a work item is in (M6 P3a spec
+// 2.3): From, the cycle it is in, nil for none; To, the cycle it joins,
+// nil when it leaves From. Moved to another cycle, it leaves From and
+// joins To.
+type CycleChange struct {
+	From, To *uuid.UUID
 }
 
 // ChangesOf is what p, checked (CheckIssuePatch), changes in i.
@@ -136,11 +154,17 @@ func ChangesOf(i Issue, p IssuePatch) Changes {
 	if p.SetParentID && !same(p.ParentID, i.ParentID) {
 		c.Parent = &ParentChange{To: p.ParentID}
 	}
+	if p.SetCycleID && !same(p.CycleID, i.CycleID) {
+		c.Cycle = &CycleChange{From: i.CycleID, To: p.CycleID}
+	}
 	if p.AssigneeIDs != nil {
 		c.Assignees = diffOf(i.AssigneeIDs, *p.AssigneeIDs)
 	}
 	if p.LabelIDs != nil {
 		c.Labels = diffOf(i.LabelIDs, *p.LabelIDs)
+	}
+	if p.ModuleIDs != nil {
+		c.Modules = diffOf(i.ModuleIDs, *p.ModuleIDs)
 	}
 	return c
 }
@@ -163,8 +187,9 @@ func Unassignable(asked, added []uuid.UUID, roles map[uuid.UUID]shared.Role) []s
 
 // None reports whether c changes nothing: then the update writes no row.
 func (c Changes) None() bool {
-	return (c.Description == nil || !c.Description.Write) && c.Name == nil && c.Priority == nil && c.StateID == nil && c.SortOrder == nil && c.StartDate == nil && c.TargetDate == nil && c.Parent == nil &&
-		len(c.Assignees.Added) == 0 && len(c.Assignees.Removed) == 0 && len(c.Labels.Added) == 0 && len(c.Labels.Removed) == 0
+	return (c.Description == nil || !c.Description.Write) && c.Name == nil && c.Priority == nil && c.StateID == nil && c.SortOrder == nil && c.StartDate == nil && c.TargetDate == nil && c.Parent == nil && c.Cycle == nil &&
+		len(c.Assignees.Added) == 0 && len(c.Assignees.Removed) == 0 && len(c.Labels.Added) == 0 && len(c.Labels.Removed) == 0 &&
+		len(c.Modules.Added) == 0 && len(c.Modules.Removed) == 0
 }
 
 // same reports whether a and b, either nil for none, are both none or the

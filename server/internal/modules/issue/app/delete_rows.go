@@ -117,5 +117,5 @@ func workspaceBatch(b RowBatch) WorkspaceDraftBatch {
 
 // DeletionRowSteps is the shared scan and remainder order; callers own the slice.
 func DeletionRowSteps() []RowStep {
-	return []RowStep{"draft_issues", "issues", "issue_assignees", "issue_labels", "issue_relations", "issue_links", "issue_subscribers", "issue_mentions", "issue_comments", "issue_reactions", "comment_reactions", "issue_activities", "issue_description_versions"}
+	return []RowStep{"draft_issues", "issues", "issue_assignees", "issue_labels", "cycle_issues", "module_issues", "issue_relations", "issue_links", "issue_subscribers", "issue_mentions", "issue_comments", "issue_reactions", "comment_reactions", "issue_activities", "issue_description_versions"}
 }

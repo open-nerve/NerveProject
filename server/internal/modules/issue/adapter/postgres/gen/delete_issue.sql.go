@@ -88,6 +88,25 @@ func (q *Queries) DeleteIssueCommentRows(ctx context.Context, arg DeleteIssueCom
 	return err
 }
 
+const deleteIssueCycleRows = `-- name: DeleteIssueCycleRows :exec
+UPDATE cycle_issues
+SET deleted_at = $1::timestamptz, updated_at = $1, updated_by_id = $2::uuid
+WHERE issue_id = ANY ($3::uuid[]) AND deleted_at IS NULL
+`
+
+type DeleteIssueCycleRowsParams struct {
+	At        time.Time
+	DeletedBy uuid.UUID
+	IssueIds  []uuid.UUID
+}
+
+// DeleteIssueAssigneeRows' statement, of the deleted work items' cycle memberships (M6 P3a spec 2.5): they go with
+// their work item, at its moment, and no membership activity is written. The index on issue_id serves it.
+func (q *Queries) DeleteIssueCycleRows(ctx context.Context, arg DeleteIssueCycleRowsParams) error {
+	_, err := q.db.Exec(ctx, deleteIssueCycleRows, arg.At, arg.DeletedBy, arg.IssueIds)
+	return err
+}
+
 const deleteIssueDescriptionVersionRows = `-- name: DeleteIssueDescriptionVersionRows :exec
 UPDATE issue_description_versions
 SET deleted_at = $1::timestamptz, updated_at = $1, updated_by_id = $2::uuid
@@ -160,6 +179,24 @@ type DeleteIssueMentionRowsParams struct {
 // DeleteIssueAssigneeRows' statement, of the deleted work items' subscribers.
 func (q *Queries) DeleteIssueMentionRows(ctx context.Context, arg DeleteIssueMentionRowsParams) error {
 	_, err := q.db.Exec(ctx, deleteIssueMentionRows, arg.At, arg.DeletedBy, arg.IssueIds)
+	return err
+}
+
+const deleteIssueModuleRows = `-- name: DeleteIssueModuleRows :exec
+UPDATE module_issues
+SET deleted_at = $1::timestamptz, updated_at = $1, updated_by_id = $2::uuid
+WHERE issue_id = ANY ($3::uuid[]) AND deleted_at IS NULL
+`
+
+type DeleteIssueModuleRowsParams struct {
+	At        time.Time
+	DeletedBy uuid.UUID
+	IssueIds  []uuid.UUID
+}
+
+// DeleteIssueCycleRows' statement, of the deleted work items' module memberships.
+func (q *Queries) DeleteIssueModuleRows(ctx context.Context, arg DeleteIssueModuleRowsParams) error {
+	_, err := q.db.Exec(ctx, deleteIssueModuleRows, arg.At, arg.DeletedBy, arg.IssueIds)
 	return err
 }
 

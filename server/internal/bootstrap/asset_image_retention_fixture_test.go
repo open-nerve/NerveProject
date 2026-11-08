@@ -127,7 +127,7 @@ func imagePurgeModules(pool *pgxpool.Pool) []purgeModule {
 	return []purgeModule{
 		{"asset", forAssetPurge(asset.NewPurger(asset.Provide(pool), providedImageReferences(pool), postgres.NewTxManager(pool, time.Second)))},
 		{"issue", forIssuePurge(issue.Provide(pool, protectedAssetReferences()).Purger)},
-		{"planning", forPlanningPurge(planning.Provide(pool).Purger)},
+		{"planning", forPlanningPurge(planning.Provide(pool, nil).Purger)},
 		{"project", forProjectPurge(project.Provide(pool, protectedAssetReferences()).Purger)},
 		{"workspace", forWorkspacePurge(workspace.Provide(pool, protectedAssetReferences()).Purger)},
 		{"identity", forIdentityPurge(identity.Provide(pool).Purger)},

@@ -37,7 +37,7 @@ func TestPurgeIndexes(t *testing.T) {
 	if err := rows.Err(); err != nil {
 		t.Fatal(err)
 	}
-	if n != 28 {
-		t.Fatalf("indexed soft-deleted tables=%d; want 28", n)
+	if n != 30 {
+		t.Fatalf("indexed soft-deleted tables=%d; want 30", n)
 	}
 }

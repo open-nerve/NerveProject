@@ -314,14 +314,20 @@ type Issue struct {
 
 	// CreatedByID The account that created it; null for none.
 	CreatedByID nullable.Nullable[uuid.UUID] `json:"created_by_id"`
-	ID          uuid.UUID                    `json:"id"`
+
+	// CycleID The cycle it is in, an archived one too; null for none. A work item is in one cycle at most.
+	CycleID nullable.Nullable[uuid.UUID] `json:"cycle_id"`
+	ID      uuid.UUID                    `json:"id"`
 
 	// LabelIds Its labels, by id.
 	LabelIds []uuid.UUID `json:"label_ids"`
 
 	// LinkCount The number of undeleted links, regardless of creator or metadata state.
-	LinkCount int64  `json:"link_count"`
-	Name      string `json:"name"`
+	LinkCount int64 `json:"link_count"`
+
+	// ModuleIds The modules it is in, archived ones too, by id, in id order.
+	ModuleIds []uuid.UUID `json:"module_ids"`
+	Name      string      `json:"name"`
 
 	// ParentID The work item it is under, in the same project; null for none, or for one the caller does not see (a guest who sees only his own work items).
 	ParentID nullable.Nullable[uuid.UUID] `json:"parent_id"`
@@ -417,11 +423,17 @@ type IssueCreate struct {
 	// AssigneeIds At most 100 accounts, each named once, each an active member of the project who is not its guest; left out, or empty, for the project's default assignee while he is one, else no one.
 	AssigneeIds *[]uuid.UUID `json:"assignee_ids,omitempty"`
 
+	// CycleID The cycle it is created in: one of the project's, not archived, not ended on the day of the write in the project's time zone, while the project's cycles are turned on; left out for none.
+	CycleID *uuid.UUID `json:"cycle_id,omitempty"`
+
 	// DescriptionHTML Sanitized rich text HTML; at most 500000 characters on input.
 	DescriptionHTML *string `json:"description_html,omitempty"`
 
 	// LabelIds At most 100 of the project's labels, each named once.
 	LabelIds *[]uuid.UUID `json:"label_ids,omitempty"`
+
+	// ModuleIds The modules it is created in: at most 100 of the project's, each named once, none archived, while the project's modules are turned on; left out, or empty, for none.
+	ModuleIds *[]uuid.UUID `json:"module_ids,omitempty"`
 
 	// Name 1–255 characters without the white space around it, which is not stored.
 	Name string `json:"name"`
@@ -460,6 +472,9 @@ type IssueDetail struct {
 	// CreatedByID The account that created it; null for none.
 	CreatedByID nullable.Nullable[uuid.UUID] `json:"created_by_id"`
 
+	// CycleID The cycle it is in, an archived one too; null for none. A work item is in one cycle at most.
+	CycleID nullable.Nullable[uuid.UUID] `json:"cycle_id"`
+
 	// DescriptionHTML Sanitized rich text HTML; at most 500000 characters on input.
 	DescriptionHTML string    `json:"description_html"`
 	ID              uuid.UUID `json:"id"`
@@ -468,8 +483,11 @@ type IssueDetail struct {
 	LabelIds []uuid.UUID `json:"label_ids"`
 
 	// LinkCount The number of undeleted links, regardless of creator or metadata state.
-	LinkCount int64  `json:"link_count"`
-	Name      string `json:"name"`
+	LinkCount int64 `json:"link_count"`
+
+	// ModuleIds The modules it is in, archived ones too, by id, in id order.
+	ModuleIds []uuid.UUID `json:"module_ids"`
+	Name      string      `json:"name"`
 
 	// ParentID The work item it is under, in the same project; null for none, or for one the caller does not see (a guest who sees only his own work items).
 	ParentID nullable.Nullable[uuid.UUID] `json:"parent_id"`
@@ -503,8 +521,10 @@ type IssueDetail struct {
 // IssueDraftPayload Unfinished issue input. Saving checks structure, not create semantics.
 type IssueDraftPayload struct {
 	AssigneeIds     *[]uuid.UUID `json:"assignee_ids,omitempty"`
+	CycleID         *uuid.UUID   `json:"cycle_id,omitempty"`
 	DescriptionHTML *string      `json:"description_html,omitempty"`
 	LabelIds        *[]uuid.UUID `json:"label_ids,omitempty"`
+	ModuleIds       *[]uuid.UUID `json:"module_ids,omitempty"`
 	Name            *string      `json:"name,omitempty"`
 	ParentID        *uuid.UUID   `json:"parent_id,omitempty"`
 	Priority        *string      `json:"priority,omitempty"`
@@ -641,11 +661,17 @@ type IssueUpdate struct {
 	// AssigneeIds The work item's new assignees, empty for none: at most 100 accounts, each named once; each it is not assigned to yet an active member of the project who is not its guest.
 	AssigneeIds *[]uuid.UUID `json:"assignee_ids,omitempty"`
 
+	// CycleID The cycle it is in, null for none: another moves it there, out of the one it is in, and null takes it out, while the project's cycles are turned on. The cycle it moves to is one of the project's, not archived, not ended on the day of the write in the project's time zone; the one it leaves is not checked.
+	CycleID nullable.Nullable[uuid.UUID] `json:"cycle_id,omitempty"`
+
 	// DescriptionHTML Sanitized rich text HTML; at most 500000 characters on input.
 	DescriptionHTML *string `json:"description_html,omitempty"`
 
 	// LabelIds The work item's new labels, empty for none: at most 100 of the project's labels, each named once.
 	LabelIds *[]uuid.UUID `json:"label_ids,omitempty"`
+
+	// ModuleIds The work item's new modules, empty for none, while the project's modules are turned on: at most 100, each named once; each it is not in yet one of the project's, not archived. Those it keeps and leaves are not checked.
+	ModuleIds *[]uuid.UUID `json:"module_ids,omitempty"`
 
 	// Name 1–255 characters without the white space around it, which is not stored.
 	Name *string `json:"name,omitempty"`

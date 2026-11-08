@@ -69,7 +69,7 @@ func archiveRaceJobOn(w issueWorld, tx shared.TxManager, c issueapp.Clock, e sha
 	if locked != nil {
 		states = archiveHeldStates{states, locked}
 	}
-	return issueapp.NewAutoArchive(issueapp.AutoArchiveDeps{Policies: policies, Projects: issueProjects{projects: p.IssueProjects}, States: states, Issues: issuepostgres.New(w.pool), Tx: tx, Clock: c, Events: e})
+	return issueapp.NewAutoArchive(issueapp.AutoArchiveDeps{Policies: policies, Projects: issueProjects{projects: p.IssueProjects}, States: states, Planning: archivePlanning(w), Issues: issuepostgres.New(w.pool), Tx: tx, Clock: c, Events: e})
 }
 
 // Even broken lock mutants may publish from overlapping goroutines. Serialize

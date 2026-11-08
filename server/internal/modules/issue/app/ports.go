@@ -261,6 +261,12 @@ type IssueCreator interface {
 	InsertIssue(ctx context.Context, r IssueRow) error
 	InsertAssignees(ctx context.Context, r LinkRows) error
 	InsertLabels(ctx context.Context, r LinkRows) error
+	// InsertCycle inserts the work item's row of the cycle r names, the one
+	// it joins (M6 P3a spec R4).
+	InsertCycle(ctx context.Context, r LinkRows) error
+	// InsertModules inserts the work item's rows of the modules r names,
+	// those it joins (M6 P3a spec R4).
+	InsertModules(ctx context.Context, r LinkRows) error
 	// InsertSubscribers inserts the rows, but of an account that
 	// subscribes to the work item already.
 	InsertSubscribers(ctx context.Context, r LinkRows) error
@@ -290,6 +296,14 @@ type IssueUpdater interface {
 	// RemoveLabels soft-deletes the work item's undeleted labels' rows of
 	// the labels r names.
 	RemoveLabels(ctx context.Context, r UnlinkRows) error
+	InsertCycle(ctx context.Context, r LinkRows) error
+	// RemoveCycle soft-deletes the work item's undeleted row of the cycle
+	// r names, the one it leaves (M6 P3a spec R4).
+	RemoveCycle(ctx context.Context, r UnlinkRows) error
+	InsertModules(ctx context.Context, r LinkRows) error
+	// RemoveModules soft-deletes the work item's undeleted rows of the
+	// modules r names, those it leaves (M6 P3a spec R4).
+	RemoveModules(ctx context.Context, r UnlinkRows) error
 	// InsertSubscribers inserts the rows, but of an account that
 	// subscribes to the work item already.
 	InsertSubscribers(ctx context.Context, r LinkRows) error

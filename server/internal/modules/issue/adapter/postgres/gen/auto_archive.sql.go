@@ -16,28 +16,45 @@ const autoArchive = `-- name: AutoArchive :many
 UPDATE issues
 SET archived_at = $1::timestamptz,
     updated_at = $1::timestamptz, updated_by_id = NULL
-WHERE project_id = $2
-  AND deleted_at IS NULL AND archived_at IS NULL
-  AND state_id = ANY ($3::uuid[])
-  AND updated_at <= $4::timestamptz
+WHERE issues.project_id = $2
+  AND issues.deleted_at IS NULL AND issues.archived_at IS NULL
+  AND issues.state_id = ANY ($3::uuid[])
+  AND issues.updated_at <= $4::timestamptz
+  AND NOT EXISTS (
+    SELECT 1 FROM cycle_issues ci
+    WHERE ci.issue_id = issues.id AND ci.deleted_at IS NULL
+      AND ci.cycle_id = ANY ($5::uuid[]))
+  AND NOT EXISTS (
+    SELECT 1 FROM module_issues mi
+    WHERE mi.issue_id = issues.id AND mi.deleted_at IS NULL
+      AND mi.module_id = ANY ($6::uuid[]))
 RETURNING id
 `
 
 type AutoArchiveParams struct {
-	At        time.Time
-	ProjectID uuid.UUID
-	StateIds  []uuid.UUID
-	Cutoff    time.Time
+	At          time.Time
+	ProjectID   uuid.UUID
+	StateIds    []uuid.UUID
+	Cutoff      time.Time
+	OpenCycles  []uuid.UUID
+	OpenModules []uuid.UUID
 }
 
 // The caller holds the project's lock and supplies its terminal state IDs.
 // An empty state array matches nothing; no other module's table is read.
+// A work item in one of the open cycles or modules the caller supplies
+// (planning's, read under that lock), by an undeleted row of its own, is
+// kept (M6 P3a spec R9); an empty or null array keeps none. The partial
+// unique keys on cycle_issues (issue_id) and module_issues (issue_id,
+// module_id), both WHERE deleted_at IS NULL, serve the two probes.
 func (q *Queries) AutoArchive(ctx context.Context, arg AutoArchiveParams) ([]uuid.UUID, error) {
 	rows, err := q.db.Query(ctx, autoArchive,
 		arg.At,
 		arg.ProjectID,
 		arg.StateIds,
 		arg.Cutoff,
+		arg.OpenCycles,
+		arg.OpenModules,
 	)
 	if err != nil {
 		return nil, err

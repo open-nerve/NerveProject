@@ -60,8 +60,65 @@ func CreationActivity(assignees []Assignee) []Activity {
 	return rows
 }
 
-// Named is a row an activity names by its name, a state or a label: its
-// id, and its name when the activity is written.
+// CreationJoins are the rows a work item's creation writes after
+// CreationActivity's (M6 P3a spec 2.4, R5): the cycle it joins, nil for
+// none, then each of the modules it joins, in the order given.
+func CreationJoins(cycle *Named, modules ...Named) []Activity {
+	var rows []Activity
+	if cycle != nil {
+		rows = append(rows, cycleActivity(Changed[*Named]{New: cycle}))
+	}
+	for _, m := range modules {
+		rows = append(rows, moduleJoined(m))
+	}
+	return rows
+}
+
+// moduleJoined is the row of a work item's joining the module m (M6 P3a
+// spec 2.4, Plane's field and verb): created, from "" to its name, its id
+// the new identifier, Plane's sentence cut before the name.
+func moduleJoined(m Named) Activity {
+	return Activity{Field: ptr("modules"), Verb: VerbCreated, OldValue: ptr(""), NewValue: ptr(m.Name), NewIdentifier: ptr(m.ID),
+		Comment: "added module "}
+}
+
+// ModuleLeft is the row of a work item's leaving the module m, whether a
+// write of the work item takes it out or m is deleted (M6 P3a spec 2.4,
+// 2.5): deleted, from its name to "", its id the old identifier, Plane's
+// sentence cut before the name.
+func ModuleLeft(m Named) Activity {
+	return Activity{Field: ptr("modules"), Verb: VerbDeleted, OldValue: ptr(m.Name), NewValue: ptr(""), OldIdentifier: ptr(m.ID),
+		Comment: "removed this work item from module "}
+}
+
+// cycleActivity is the row of a work item's cycle changing from c.Old to
+// c.New, either nil for none (M6 P3a spec 2.4, Plane's field and verbs):
+// joining one, created, from "" to its name, its id the new identifier;
+// moving to another, updated, from the old name to the new, both ids;
+// leaving one, deleted, from its name to "", its id the old identifier.
+// Plane's sentences go with them, cut before the names.
+func cycleActivity(c Changed[*Named]) Activity {
+	switch {
+	case c.Old == nil:
+		return Activity{Field: ptr("cycles"), Verb: VerbCreated, OldValue: ptr(""), NewValue: ptr(c.New.Name), NewIdentifier: ptr(c.New.ID),
+			Comment: "added cycle "}
+	case c.New == nil:
+		return Activity{Field: ptr("cycles"), Verb: VerbDeleted, OldValue: ptr(c.Old.Name), NewValue: ptr(""), OldIdentifier: ptr(c.Old.ID),
+			Comment: "removed this work item from cycle "}
+	}
+	return Activity{Field: ptr("cycles"), Verb: VerbUpdated, OldValue: ptr(c.Old.Name), NewValue: ptr(c.New.Name), OldIdentifier: ptr(c.Old.ID),
+		NewIdentifier: ptr(c.New.ID), Comment: "updated cycle from "}
+}
+
+// CycleLeft is the row of a work item's leaving the cycle c because c is
+// deleted (M6 P3a spec 2.5): the row of a write that takes it out of c
+// (cycleActivity).
+func CycleLeft(c Named) Activity {
+	return cycleActivity(Changed[*Named]{Old: &c})
+}
+
+// Named is a row an activity names by its name, a state, a label, a cycle
+// or a module: its id, and its name when the activity is written.
 type Named struct {
 	ID   uuid.UUID
 	Name string
@@ -75,7 +132,9 @@ type Changed[T any] struct {
 // Update is what an update of a work item changes, as its activity names
 // it (M4 design 3.13): its name, its cleaned HTML description, its parent, its priority, its state and
 // its dates, each nil when it is left as it is; the labels and the
-// accounts it adds and removes, each in id order.
+// accounts it adds and removes, each in id order; its cycle before and
+// after, each nil for none, nil when it is left as it is; the modules it
+// adds and removes, each in id order (M6 P3a spec 2.4).
 type Update struct {
 	Name             *Changed[string]
 	Description      *Changed[string]
@@ -88,6 +147,9 @@ type Update struct {
 	LabelsRemoved    []Named
 	AssigneesAdded   []Assignee
 	AssigneesRemoved []Assignee
+	Cycle            *Changed[*Named]
+	ModulesAdded     []Named
+	ModulesRemoved   []Named
 }
 
 // UpdateActivity is the rows an update writes, in the order of M4 design
@@ -96,7 +158,9 @@ type Update struct {
 // the start and the target dates, as YYYY-MM-DD or "" for none; then each
 // label added (row 10) and removed (row 11), by its name and its id; then
 // each account assigned (row 12) and unassigned (row 13), by his display
-// name and his id; each list in the order given. A field left as it is
+// name and his id; each list in the order given; then the cycle's row
+// (cycleActivity, M6 P3a spec 2.4); then each module added and removed
+// (moduleJoined, ModuleLeft), in the order given. A field left as it is
 // writes no row (Plane the same).
 func UpdateActivity(u Update) []Activity {
 	var rows []Activity
@@ -141,6 +205,15 @@ func UpdateActivity(u Update) []Activity {
 	for _, a := range u.AssigneesRemoved {
 		rows = append(rows, Activity{Field: ptr("assignees"), Verb: VerbUpdated, OldValue: ptr(a.DisplayName), NewValue: ptr(""),
 			OldIdentifier: ptr(a.ID), Comment: "removed assignee "})
+	}
+	if u.Cycle != nil {
+		rows = append(rows, cycleActivity(*u.Cycle))
+	}
+	for _, m := range u.ModulesAdded {
+		rows = append(rows, moduleJoined(m))
+	}
+	for _, m := range u.ModulesRemoved {
+		rows = append(rows, ModuleLeft(m))
 	}
 	return rows
 }

@@ -4,7 +4,8 @@
 // work items under one and putting work items under it, and listing a
 // work item's relations, relating it to others and deleting a relation.
 // Project and workspace deletion events enqueue asynchronous work-item row
-// deletion in the publishing transaction. Its IssueCascade port tells whether
+// deletion in the publishing transaction; a cycle's and a module's deletion
+// events take the work items out of it there. Its IssueCascade port tells whether
 // work items are in a state and takes deleted labels off them.
 package issue
 
@@ -51,17 +52,18 @@ type ListSettings interface {
 
 // Provided are the adapters bootstrap builds before wiring consuming modules.
 type Provided struct {
-	attachmentChanges app.AttachmentEventStore
-	AssetParents      AssetParents
-	IssueCascade      Cascade
-	ListSettings      ListSettings
-	Purger            *app.Purger
+	attachmentChanges  app.AttachmentEventStore
+	membershipRemovals app.MembershipRemovals
+	AssetParents       AssetParents
+	IssueCascade       Cascade
+	ListSettings       ListSettings
+	Purger             *app.Purger
 }
 
 // Provide builds issue's adapters for the other modules.
 func Provide(pool *pgxpool.Pool, protected []postgres.ProtectedReference) Provided {
 	store := postgresadapter.NewPurgeStore(pool, protected)
-	return Provided{attachmentChanges: store, AssetParents: store, Purger: app.NewPurger([]app.PurgeStep{
+	return Provided{attachmentChanges: store, membershipRemovals: store, AssetParents: store, Purger: app.NewPurger([]app.PurgeStep{
 		{Table: "comment_reactions", Delete: store.PurgeCommentReactions},
 		{Table: "issue_reactions", Delete: store.PurgeIssueReactions},
 		{Table: "issue_mentions", Delete: store.PurgeIssueMentions},
@@ -74,6 +76,8 @@ func Provide(pool *pgxpool.Pool, protected []postgres.ProtectedReference) Provid
 		{Table: "issue_labels", Delete: store.PurgeIssueLabels},
 		{Table: "issue_subscribers", Delete: store.PurgeIssueSubscribers},
 		{Table: "draft_issues", Protected: true, Delete: store.PurgeDraftIssues},
+		{Table: "module_issues", Delete: store.PurgeModuleIssues},
+		{Table: "cycle_issues", Delete: store.PurgeCycleIssues},
 		{Table: "issues", Protected: true, Delete: store.PurgeIssues},
 	}), IssueCascade: app.NewCascade(store), ListSettings: app.ListSettings{}}
 }
@@ -98,6 +102,23 @@ type ProjectPorts interface {
 	app.ListStateCatalog
 	app.ListLabelCatalog
 }
+
+// PlanningPorts are what the module asks of planning (M6 P3a spec R1,
+// R9): the facts of the cycle and modules a work item's write names, under
+// the project's lock it holds, and the cycles and modules that keep the
+// project's work items from automatic archival. planning.Provide's
+// IssueTargets is them, converted (bootstrap/ports.go).
+type PlanningPorts interface {
+	app.PlanningTargets
+	app.OpenPlanning
+}
+
+// PlanningFacts and PlanningTarget are the values PlanningPorts hand over:
+// bootstrap converts planning's into them.
+type (
+	PlanningFacts  = app.PlanningFacts
+	PlanningTarget = app.PlanningTarget
+)
 
 // LockedProject, StateRef and its StateGroup, LabelRef and
 // ProjectIdentifier are the values ProjectPorts hand over: bootstrap
@@ -148,6 +169,8 @@ type Deps struct {
 	Authorizer shared.Authorizer
 	// Projects are project's IssueProjects, converted (bootstrap/ports.go).
 	Projects ProjectPorts
+	// Planning is planning's IssueTargets, converted (bootstrap/ports.go).
+	Planning PlanningPorts
 	// Workspaces is workspace's WorkspaceDirectory, converted
 	// (bootstrap/ports.go).
 	Workspaces interface {
@@ -185,13 +208,13 @@ func New(d Deps) *Module {
 	listing := app.NewListing(app.ListingDeps{Attachments: d.AttachmentCounter, AttachmentCatalog: d.AttachmentCatalog, Rows: store, States: d.Projects, Labels: d.Projects, Assignees: store, Profiles: d.Profiles, Issues: store})
 	archive := app.ArchiveIssueDeps{Events: d.Events, Locks: locks, Issues: store, States: d.Projects, Clock: d.Clock}
 	creation := app.NewIssueCreation(app.IssueCreationDeps{Events: d.Events,
-		Issues: store, Sequences: d.Projects, States: d.Projects, Labels: d.Projects, Members: d.Projects,
+		Issues: store, Sequences: d.Projects, States: d.Projects, Labels: d.Projects, Members: d.Projects, Planning: d.Planning,
 		Profiles: d.Profiles, Clock: d.Clock, Sanitizer: sanitizer, Attachments: d.AttachmentCounter, ContentBindings: d.ContentBindings,
 	})
 	return &Module{
 		assets: assetAccess, deleteRows: app.NewDeleteRows(app.DeleteRowsDeps{Rows: store, Relations: app.NewRelationDeletions(store, d.Projects), Remaining: store, Tx: d.JobTx, RuntimeNow: d.RuntimeNow, Batch: d.DeleteBatch, Budget: d.DeleteBudget}), deleteBudget: d.DeleteBudget, logger: d.Logger,
 		trimVersions: app.NewTrimVersions(app.TrimVersionsDeps{Projects: d.Projects, Gate: d.Projects, Rows: store, Tx: d.JobTx}), trimVersionsInterval: d.TrimVersionsInterval,
-		crawlLink: app.NewCrawlLink(app.CrawlLinkDeps{Crawler: d.LinkCrawler, Links: store}), autoArchive: app.NewAutoArchive(app.AutoArchiveDeps{Policies: d.ArchivePolicies, Projects: d.Projects, States: d.Projects, Issues: store, Tx: d.JobTx, Clock: d.Clock, Events: d.Events}), autoArchiveInterval: d.AutoArchiveInterval,
+		crawlLink: app.NewCrawlLink(app.CrawlLinkDeps{Crawler: d.LinkCrawler, Links: store}), autoArchive: app.NewAutoArchive(app.AutoArchiveDeps{Policies: d.ArchivePolicies, Projects: d.Projects, States: d.Projects, Planning: d.Planning, Issues: store, Tx: d.JobTx, Clock: d.Clock, Events: d.Events}), autoArchiveInterval: d.AutoArchiveInterval,
 		uc: httpadapter.UseCases{
 			GetIssueAttachments:     app.NewGetAttachments("issue", attachments),
 			GetCommentAttachments:   app.NewGetAttachments("comment", attachments),
@@ -227,7 +250,7 @@ func New(d Deps) *Module {
 				Locks: locks, Workspaces: d.Workspaces, Projects: d.Projects, Issues: store, ReadTx: d.ReadTx,
 			}),
 			UpdateIssue: app.NewUpdateIssue(app.UpdateIssueDeps{Events: d.Events,
-				Locks: locks, Issues: store, States: d.Projects, Labels: d.Projects, Members: d.Projects, Profiles: d.Profiles, Clock: d.Clock, Sanitizer: sanitizer, ContentBindings: d.ContentBindings,
+				Locks: locks, Issues: store, States: d.Projects, Labels: d.Projects, Members: d.Projects, Planning: d.Planning, Profiles: d.Profiles, Clock: d.Clock, Sanitizer: sanitizer, ContentBindings: d.ContentBindings,
 			}),
 			DeleteIssue:        app.NewDeleteIssue(app.DeleteIssueDeps{Events: d.Events, Locks: locks, Rows: store, Relations: app.NewRelationDeletions(store, d.Projects), Clock: d.Clock}),
 			ArchiveIssue:       app.NewArchiveIssue(archive),

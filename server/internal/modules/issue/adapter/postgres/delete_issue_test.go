@@ -100,6 +100,8 @@ func TestTheStatementsOfADeletedSubtreeDeleteItsRows(t *testing.T) {
 		{"issues", (*postgresadapter.Store).DeleteIssueRows},
 		{"issue_assignees", (*postgresadapter.Store).DeleteIssueAssigneeRows},
 		{"issue_labels", (*postgresadapter.Store).DeleteIssueLabelRows},
+		// cycle_issues, one undeleted row a work item: TestTheCycleStatementOfADeletedSubtreeDeletesItsRows.
+		{"module_issues", (*postgresadapter.Store).DeleteIssueModuleRows},
 		{"issue_links", (*postgresadapter.Store).DeleteIssueLinkRows},
 		{"issue_subscribers", (*postgresadapter.Store).DeleteIssueSubscriberRows},
 		{"issue_mentions", (*postgresadapter.Store).DeleteIssueMentionRows},
@@ -153,5 +155,59 @@ func TestTheStatementsOfADeletedSubtreeDeleteItsRows(t *testing.T) {
 				t.Errorf("the statement on a cancelled context = %v; want context.Canceled", err)
 			}
 		})
+	}
+}
+
+// The cycle statement of a deleted subtree is
+// TestTheStatementsOfADeletedSubtreeDeleteItsRows' over cycle_issues, whose
+// rows fit its one undeleted row a work item (cycle_issues_issue_id_key):
+// the work item item was in a cycle, c, which alice moved it out of an hour
+// before, and is in another, a; the work item sub is in one, d; the work
+// item gone was in one, g, deleted then too; the work item other is in one,
+// o, other's id after gone's and before item's and sub's. One statement
+// names sub, item and gone, in descending id order, by bob at later: a and
+// d are deleted at later by bob; c and g keep alice's deletion, and o its
+// row as it was; every other column of every row is kept. It answers a
+// failed write as its failure.
+func TestTheCycleStatementOfADeletedSubtreeDeletesItsRows(t *testing.T) {
+	s, pool := newStore(t)
+	alice, bob := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com")
+	web := newProject(t, pool, newWorkspace(t, pool, "acme"), "WEB")
+	gone, other, item, sub := uuid.NewV7(), uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
+	for n, id := range []uuid.UUID{item, gone, other, sub} {
+		newIssue(t, pool, web, id, n+1, alice)
+	}
+	before, later := now.Add(-time.Hour), now.Add(time.Hour)
+	c, a, d, g, o := uuid.NewV7(), uuid.NewV7(), uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
+	insert := child("cycle_issues", "cycle_id", aCycle)
+	for n, row := range []struct {
+		issue, id uuid.UUID
+		earlier   bool
+	}{{item, c, true}, {item, a, false}, {sub, d, false}, {gone, g, true}, {other, o, false}} {
+		insert(t, pool, web, row.issue, row.id, alice, n)
+		if row.earlier {
+			exec(t, pool, "UPDATE cycle_issues SET deleted_at = $2, updated_at = $2, updated_by_id = $3 WHERE id = $1", row.id, before, alice)
+		}
+	}
+	rows, stamps := rowsAsText(t, pool, "cycle_issues"), audits(t, pool, "cycle_issues")
+
+	if err := s.DeleteIssueCycleRows(context.Background(), app.IssueDeletion{IssueIDs: []uuid.UUID{sub, item, gone}, By: bob, At: later}); err != nil {
+		t.Fatal(err)
+	}
+
+	if after := rowsAsText(t, pool, "cycle_issues"); !maps.Equal(after, rows) {
+		t.Errorf("the rows but their audit columns:\n%v\nwant them as they were:\n%v", after, rows)
+	}
+	want := maps.Clone(stamps)
+	for _, id := range []uuid.UUID{a, d} {
+		want[id] = deletion(later, bob)
+	}
+	if after := audits(t, pool, "cycle_issues"); !maps.Equal(after, want) {
+		t.Errorf("the audit columns:\n%v\nwant\n%v", after, want)
+	}
+	cancelled, cancel := context.WithCancel(context.Background())
+	cancel()
+	if err := s.DeleteIssueCycleRows(cancelled, app.IssueDeletion{IssueIDs: []uuid.UUID{other}, By: bob, At: later}); !errors.Is(err, context.Canceled) {
+		t.Errorf("the statement on a cancelled context = %v; want context.Canceled", err)
 	}
 }

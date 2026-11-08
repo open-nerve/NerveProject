@@ -1933,7 +1933,7 @@ paths:
       tags:
         - issue
       summary: Publish your stored issue draft
-      description: Accepts no request body. Creates from the locked stored payload and soft-deletes the draft atomically.
+      description: Accepts no request body. Creates from the locked stored payload and soft-deletes the draft atomically. The payload is checked as createIssue checks its body, its cycle and modules too, as they are when it is published (planning.cycles_disabled, planning.modules_disabled, planning.archived, planning.cycle_completed); a refused publication leaves the draft as it was, to be changed and published again.
       security:
         - bearer: []
       x-problem-codes:
@@ -1943,6 +1943,10 @@ paths:
         - validation_failed
         - issue.draft_changed
         - project.archived
+        - planning.cycles_disabled
+        - planning.modules_disabled
+        - planning.archived
+        - planning.cycle_completed
         - server_busy
         - asset.not_found
         - asset.not_uploaded
@@ -2229,7 +2233,7 @@ paths:
       tags:
         - issue
       summary: Create a work item in a project
-      description: 'Canonical asset IDs in description images must belong to this final work item. A new item has no existing asset scope, so references to another item or draft answer asset.not_found and roll back its sequence. For the project''s admins and members; not in an archived project (project.archived). The name, without the white space around it, has 1–255 characters, without NUL, and is stored so; at most 100 assignees and 100 labels, each named once; the start date not after the target date (validation_failed), checked before the project is looked at. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but may not create work items in, forbidden; both are answered before the project is locked, and with the project locked the role is decided again. Then the state, when it is given, is one of the project''s, not its triage state; each assignee is an active member of the project who is not its guest; each label is one of the project''s; the parent, when it is given, is a work item of the project that is not archived and that the caller sees (validation_failed, every problem at once). Left out, the state is the project''s default, the priority none, and the assignee the project''s default assignee while he is still an active member of it who is not its guest, else no one. The work item takes the project''s next number, never used again, also after a deletion; it comes after its state''s work items, archived ones too: its sort order is their greatest plus 10000, or 65535 for the state''s first; in a state of the completed group it is completed at its creation. The caller and the assignees subscribe to it; its activity says it was created, and assigned to each assignee. Every row it writes is the caller''s, at one moment. A project with too many writes on its work items at once answers server_busy, with Retry-After: try again then.'
+      description: 'Canonical asset IDs in description images must belong to this final work item. A new item has no existing asset scope, so references to another item or draft answer asset.not_found and roll back its sequence. For the project''s admins and members; not in an archived project (project.archived). The name, without the white space around it, has 1–255 characters, without NUL, and is stored so; at most 100 assignees and 100 labels, each named once; the start date not after the target date (validation_failed), checked before the project is looked at. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but may not create work items in, forbidden; both are answered before the project is locked, and with the project locked the role is decided again. Then the state, when it is given, is one of the project''s, not its triage state; each assignee is an active member of the project who is not its guest; each label is one of the project''s; the parent, when it is given, is a work item of the project that is not archived and that the caller sees (validation_failed, every problem at once). A work item created in a cycle needs the project''s cycles turned on (planning.cycles_disabled), then a cycle that is not archived (planning.archived); one that is not an undeleted cycle of the project is refused with the other problems (validation_failed, cycle_id); one that has ended on the day of the write in the project''s time zone is refused last, after the description''s images (planning.cycle_completed). A work item created in modules, at most 100, each named once (validation_failed, before the project is looked at), needs the project''s modules turned on (planning.modules_disabled), after its cycles; then modules that are not archived (planning.archived); one that is not an undeleted module of the project is refused at its place in module_ids with the other problems (validation_failed, module_ids[i]). Left out, the state is the project''s default, the priority none, and the assignee the project''s default assignee while he is still an active member of it who is not its guest, else no one, and the work item is in no cycle and no module. The work item takes the project''s next number, never used again, also after a deletion; it comes after its state''s work items, archived ones too: its sort order is their greatest plus 10000, or 65535 for the state''s first; in a state of the completed group it is completed at its creation. The caller and the assignees subscribe to it; its activity says it was created, assigned to each assignee, added to its cycle, and added to each module. Every row it writes is the caller''s, at one moment. A project with too many writes on its work items at once answers server_busy, with Retry-After: try again then.'
       security:
         - bearer: []
       x-problem-codes:
@@ -2237,6 +2241,10 @@ paths:
         - project.not_found
         - forbidden
         - project.archived
+        - planning.cycles_disabled
+        - planning.modules_disabled
+        - planning.archived
+        - planning.cycle_completed
         - server_busy
         - asset.not_found
       requestBody:
@@ -2282,7 +2290,7 @@ paths:
       tags:
         - issue
       summary: Change a work item
-      description: 'Description image references are checked after host authorization and archival rules. New references must be uploaded preparations of this author, purpose and full host; other members may retain bound images of this host. Invalid references answer asset.not_found, unfinished ones asset.not_uploaded. Even an unchanged body validates its references; binding a legitimate legacy preparation preserves the issue audit and versions. Removing an image never unbinds its historical asset. For the admins and members of its project. The fields given change and the others stay; a list given is the work item''s new list, empty for none. The values follow createIssue''s rules, but for the order of the dates (validation_failed), checked before the work item is looked at. A work item that does not exist, is deleted, whose project the caller does not see, or that he did not create as a guest who sees only his own (getIssue) answers issue.not_found, whatever his role may do; one whose project he sees but whose work items he may not change, forbidden; both are answered before the project is locked, and with the project locked the role is decided again. A work item of an archived project cannot be changed (project.archived), nor then an archived work item (issue.archived), even by a change that changes nothing. Then the state, when it changes, is one of the project''s, not its triage state; each account the work item is newly assigned to is an active member of the project who is not its guest, while one it keeps stays assigned whatever has become of him; each label added is one of the project''s; the start date the work item then has is not after its target date, each as given or, not given, as it is: at start_date when the start date alone is given, else at target_date; the parent, when it changes to a work item, is one of the project''s that is not archived and that the caller sees, and neither the work item nor one under it (validation_failed, every problem at once). A change that changes nothing writes nothing, and the work item is answered as it is. Otherwise the work item is changed last by the caller; moved into a state of the completed group, it is completed at the change, and moved into another, not completed; the accounts newly assigned subscribe to it; its activity says what changed: the name, the parent, the priority, the state, the start and the target dates, and each label and each assignee added and removed. Every row it writes is the caller''s, at one moment. A project with too many writes on its work items at once answers server_busy, with Retry-After: try again then.'
+      description: 'Description image references are checked after host authorization and archival rules. New references must be uploaded preparations of this author, purpose and full host; other members may retain bound images of this host. Invalid references answer asset.not_found, unfinished ones asset.not_uploaded. Even an unchanged body validates its references; binding a legitimate legacy preparation preserves the issue audit and versions. Removing an image never unbinds its historical asset. For the admins and members of its project. The fields given change and the others stay; a list given is the work item''s new list, empty for none. The values follow createIssue''s rules, but for the order of the dates (validation_failed), checked before the work item is looked at. A work item that does not exist, is deleted, whose project the caller does not see, or that he did not create as a guest who sees only his own (getIssue) answers issue.not_found, whatever his role may do; one whose project he sees but whose work items he may not change, forbidden; both are answered before the project is locked, and with the project locked the role is decided again. A work item of an archived project cannot be changed (project.archived), nor then an archived work item (issue.archived), even by a change that changes nothing. Then the state, when it changes, is one of the project''s, not its triage state; each account the work item is newly assigned to is an active member of the project who is not its guest, while one it keeps stays assigned whatever has become of him; each label added is one of the project''s; the start date the work item then has is not after its target date, each as given or, not given, as it is: at start_date when the start date alone is given, else at target_date; the parent, when it changes to a work item, is one of the project''s that is not archived and that the caller sees, and neither the work item nor one under it (validation_failed, every problem at once). A change that changes nothing writes nothing, and the work item is answered as it is; giving the cycle it is in changes nothing. A change of its cycle, its leaving one too, needs the project''s cycles turned on (planning.cycles_disabled), checked before the values; a cycle it joins, the one it moves to, is not archived (planning.archived), is an undeleted cycle of the project (validation_failed, cycle_id, with the other problems), and has not ended on the day of the write in the project''s time zone, refused last, after the description''s images (planning.cycle_completed); the cycle it leaves is not checked, archived or ended too. A change of its modules, a new set replacing the whole, at most 100, each named once, its leaving one too, needs the project''s modules turned on (planning.modules_disabled), after its cycles; each module it joins is not archived (planning.archived) and is an undeleted module of the project (validation_failed, module_ids[i], at its place in module_ids, with the other problems); the modules it keeps and leaves are not checked, archived too, and giving the modules it is in, in any order, changes nothing. Otherwise the work item is changed last by the caller; moved into a state of the completed group, it is completed at the change, and moved into another, not completed; the accounts newly assigned subscribe to it; its activity says what changed: the name, the parent, the priority, the state, the start and the target dates, each label and each assignee added and removed, the cycle it joins, moves to or leaves, and each module it joins and leaves. Every row it writes is the caller''s, at one moment. A project with too many writes on its work items at once answers server_busy, with Retry-After: try again then.'
       security:
         - bearer: []
       x-problem-codes:
@@ -2291,6 +2299,10 @@ paths:
         - forbidden
         - project.archived
         - issue.archived
+        - planning.cycles_disabled
+        - planning.modules_disabled
+        - planning.archived
+        - planning.cycle_completed
         - server_busy
         - asset.not_found
         - asset.not_uploaded
@@ -5377,6 +5389,8 @@ components:
         - archived_at
         - assignee_ids
         - label_ids
+        - cycle_id
+        - module_ids
         - sub_issues_count
         - link_count
         - attachment_count
@@ -5445,6 +5459,18 @@ components:
             format: uuid
         label_ids:
           description: Its labels, by id.
+          type: array
+          items:
+            type: string
+            format: uuid
+        cycle_id:
+          description: The cycle it is in, an archived one too; null for none. A work item is in one cycle at most.
+          type:
+            - string
+            - 'null'
+          format: uuid
+        module_ids:
+          description: The modules it is in, archived ones too, by id, in id order.
           type: array
           items:
             type: string
@@ -5569,6 +5595,14 @@ components:
         parent_id:
           type: string
           format: uuid
+        cycle_id:
+          type: string
+          format: uuid
+        module_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
     Draft:
       type: object
       additionalProperties: false
@@ -5662,6 +5696,8 @@ components:
         - archived_at
         - assignee_ids
         - label_ids
+        - cycle_id
+        - module_ids
         - sub_issues_count
         - link_count
         - attachment_count
@@ -5733,6 +5769,18 @@ components:
             format: uuid
         label_ids:
           description: Its labels, by id.
+          type: array
+          items:
+            type: string
+            format: uuid
+        cycle_id:
+          description: The cycle it is in, an archived one too; null for none. A work item is in one cycle at most.
+          type:
+            - string
+            - 'null'
+          format: uuid
+        module_ids:
+          description: The modules it is in, archived ones too, by id, in id order.
           type: array
           items:
             type: string
@@ -5927,6 +5975,16 @@ components:
           description: 'The work item it is under: one of the project''s that is not archived; left out for none.'
           type: string
           format: uuid
+        cycle_id:
+          description: 'The cycle it is created in: one of the project''s, not archived, not ended on the day of the write in the project''s time zone, while the project''s cycles are turned on; left out for none.'
+          type: string
+          format: uuid
+        module_ids:
+          description: 'The modules it is created in: at most 100 of the project''s, each named once, none archived, while the project''s modules are turned on; left out, or empty, for none.'
+          type: array
+          items:
+            type: string
+            format: uuid
     IssueUpdate:
       description: Changes the fields it names; a field left out keeps its value.
       type: object
@@ -5980,6 +6038,18 @@ components:
             - string
             - 'null'
           format: uuid
+        cycle_id:
+          description: 'The cycle it is in, null for none: another moves it there, out of the one it is in, and null takes it out, while the project''s cycles are turned on. The cycle it moves to is one of the project''s, not archived, not ended on the day of the write in the project''s time zone; the one it leaves is not checked.'
+          type:
+            - string
+            - 'null'
+          format: uuid
+        module_ids:
+          description: 'The work item''s new modules, empty for none, while the project''s modules are turned on: at most 100, each named once; each it is not in yet one of the project''s, not archived. Those it keeps and leaves are not checked.'
+          type: array
+          items:
+            type: string
+            format: uuid
     SubIssuesAdd:
       type: object
       additionalProperties: false

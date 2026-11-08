@@ -19,6 +19,17 @@ func TestIssueDetailShape(t *testing.T) {
 		if !slices.Contains(schema.Required, "link_count") || link == nil || link.Value == nil || !link.Value.Type.Is("integer") || link.Value.Format != "int64" || link.Value.Min == nil || *link.Value.Min != 0 {
 			t.Fatal("Issue link_count must be required nonnegative int64")
 		}
+		// M6 P3a spec 2.3: the cycle it is in, or null, and its modules' ids.
+		cycle, modules := schema.Properties["cycle_id"], schema.Properties["module_ids"]
+		if !slices.Contains(schema.Required, "cycle_id") || cycle == nil || cycle.Value == nil ||
+			!slices.Equal(cycle.Value.Type.Slice(), []string{"string", "null"}) || cycle.Value.Format != "uuid" {
+			t.Fatal("Issue cycle_id must be a required uuid or null")
+		}
+		if !slices.Contains(schema.Required, "module_ids") || modules == nil || modules.Value == nil || !modules.Value.Type.Is("array") ||
+			modules.Value.Items == nil || modules.Value.Items.Value == nil || !modules.Value.Items.Value.Type.Is("string") ||
+			modules.Value.Items.Value.Format != "uuid" {
+			t.Fatal("Issue module_ids must be a required array of uuids")
+		}
 	}
 	properties := maps.Clone(detail.Properties)
 	if _, ok := properties["description_html"]; !ok {

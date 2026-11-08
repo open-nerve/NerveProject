@@ -44,13 +44,19 @@ func TestDraftPublishUsesStoredPayload(t *testing.T) {
 }
 
 // Saving remains permissive; publishing has exactly the same problem object
-// as create for both shape failures and aggregate business/reference failures.
+// as create for both shape failures and aggregate business/reference failures,
+// a cycle's and modules' too, with Web's cycles and modules turned on (M6 P3a
+// spec 2.3). A cycle or modules whose shape create refuses cannot be saved:
+// saving refuses them as create does, each problem under payload.
 func TestDraftPublishMatchesCreateBodyErrors(t *testing.T) {
 	w := newIssueWorld(t)
+	w.turnCyclesOn(t, w.web)
+	w.turnModulesOn(t, w.web)
 	ids := make([]uuid.UUID, 101)
 	for i := range ids {
 		ids[i] = uuid.NewV7()
 	}
+	cycle, module := uuid.NewV7(), uuid.NewV7()
 	for _, tc := range []struct {
 		body   string
 		status int
@@ -58,6 +64,10 @@ func TestDraftPublishMatchesCreateBodyErrors(t *testing.T) {
 		{`{}`, 400},
 		{fmt.Sprintf(`{"name":"Refs","state_id":%q,"label_ids":[%q],"parent_id":%q,"assignee_ids":[%q]}`, uuid.NewV7(), uuid.NewV7(), uuid.NewV7(), w.ids["olga"]), 422},
 		{`{"name":"` + strings.Repeat("x", 256) + `","priority":"bad","label_ids":` + idArray(ids...) + `}`, 422},
+		{fmt.Sprintf(`{"cycle_id":%q,"module_ids":[%q]}`, cycle, module), 400},
+		{fmt.Sprintf(`{"name":"Refs","label_ids":[%q],"cycle_id":%q,"module_ids":[%q,%q]}`, uuid.NewV7(), cycle, module, w.bug), 422},
+		{`{"name":"Many","module_ids":` + idArray(ids...) + `}`, 422},
+		{fmt.Sprintf(`{"name":"Twice","module_ids":[%q,%q,%q]}`, module, cycle, module), 422},
 	} {
 		d := createDraftHTTP(t, w, "alice", `{"project_id":"`+w.web.String()+`","payload":`+tc.body+`}`)
 		before := draftState(t, w)
@@ -68,6 +78,21 @@ func TestDraftPublishMatchesCreateBodyErrors(t *testing.T) {
 		}
 		if !reflect.DeepEqual(before, draftState(t, w)) {
 			t.Fatal("validation wrote rows")
+		}
+	}
+	for _, body := range []string{`{"name":"Fix","cycle_id":null}`, `{"name":"Fix","cycle_id":"Sprint"}`, `{"name":"Fix","module_ids":null}`,
+		`{"name":"Fix","module_ids":[null]}`, `{"name":"Fix","module_ids":["Auth"]}`, `{"name":"Fix","module_ids":{}}`} {
+		before := draftState(t, w)
+		saved := problemObject(t, draftRequest(t, w, "alice", http.MethodPost, draftsPath, `{"project_id":"`+w.web.String()+`","payload":`+body+`}`, 400))
+		want := problemObject(t, draftRequest(t, w, "alice", http.MethodPost, "/api/v0/projects/"+w.web.String()+"/issues", body, 400))
+		for _, e := range want["errors"].([]any) {
+			e.(map[string]any)["field"] = "payload." + e.(map[string]any)["field"].(string)
+		}
+		if !reflect.DeepEqual(saved, want) {
+			t.Errorf("saving %s = %v, want create's refusal under payload: %v", body, saved, want)
+		}
+		if !reflect.DeepEqual(before, draftState(t, w)) {
+			t.Fatalf("the refusal of %s wrote rows", body)
 		}
 	}
 }

@@ -61,6 +61,26 @@ func (s *Store) InsertLabels(ctx context.Context, r app.LinkRows) error {
 	return linked(err, "labels", r.IssueID)
 }
 
+// InsertCycle inserts the work item's row of the cycle r names, the one it
+// joins (M6 P3a spec R4). A work item is in one cycle at most: a second
+// undeleted row breaks the partial unique key on issue_id, a bug the
+// write's lock and checks rule out, so an error.
+func (s *Store) InsertCycle(ctx context.Context, r app.LinkRows) error {
+	err := s.queries(ctx).InsertCycleIssues(ctx, gen.InsertCycleIssuesParams{
+		Ids: r.IDs, WorkspaceID: r.WorkspaceID, ProjectID: r.ProjectID, IssueID: r.IssueID, CycleIds: r.Targets, By: &r.By, At: r.At,
+	})
+	return linked(err, "cycle", r.IssueID)
+}
+
+// InsertModules inserts the work item's rows of the modules r names, those
+// it joins (M6 P3a spec R4).
+func (s *Store) InsertModules(ctx context.Context, r app.LinkRows) error {
+	err := s.queries(ctx).InsertModuleIssues(ctx, gen.InsertModuleIssuesParams{
+		Ids: r.IDs, WorkspaceID: r.WorkspaceID, ProjectID: r.ProjectID, IssueID: r.IssueID, ModuleIds: r.Targets, By: &r.By, At: r.At,
+	})
+	return linked(err, "modules", r.IssueID)
+}
+
 // InsertSubscribers inserts the work item's subscribers' rows r, but of an
 // account that subscribes to it already or that r names before (M4 design
 // 3.12).
@@ -146,7 +166,7 @@ func issueOf(r gen.GetIssueRow) domain.Issue {
 		DescriptionHTML: r.DescriptionHtml, DescriptionStripped: r.DescriptionStripped,
 		Priority: domain.Priority(r.Priority), StartDate: dayOf(r.StartDate), TargetDate: dayOf(r.TargetDate), ParentID: r.ParentID,
 		SortOrder: r.SortOrder, CompletedAt: r.CompletedAt, ArchivedAt: r.ArchivedAt, AssigneeIDs: r.AssigneeIds, LabelIDs: r.LabelIds, LinkCount: r.LinkCount,
-		CreatedByID: r.CreatedByID, UpdatedByID: r.UpdatedByID, CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt,
+		CycleID: r.CycleID, ModuleIDs: r.ModuleIds, CreatedByID: r.CreatedByID, UpdatedByID: r.UpdatedByID, CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt,
 	}
 }
 

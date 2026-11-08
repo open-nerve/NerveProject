@@ -176,8 +176,8 @@ test("P4 (API): the admin archives a project, which leaves the list for the arch
   // project takes none (M4 design 3.8). Its rows are his own writing, which the deletion must write again as the
   // admin's.
   expect(await act(api, admin, web.id, "unarchive")).toBeNull();
-  await furnishIssueRows(api, member, slug, web.id, memberId, bug.id);
-  await furnishPlanningRows(api, admin, web.id);
+  const planning = await furnishPlanningRows(api, admin, web.id);
+  await furnishIssueRows(api, member, slug, web.id, memberId, bug.id, planning);
   expect(await act(api, admin, web.id, "archive")).toEqual(expect.any(String));
   // An archived project is deleted as any other.
   const deleted = await api.DELETE("/api/v0/projects/{project_id}", {
@@ -247,8 +247,8 @@ test("P4 (page): the admin archives a project from its settings, the dialog held
   // Web has a row in each table its deletion writes (expectProjectDeleted): its label Bug too, and a work item
   // assigned to wes and labelled Bug.
   const bug = await createLabel(api, admin.access_token, web.id, { name: "Bug" });
-  await furnishIssueRows(api, admin.access_token, slug, web.id, wesId, bug.id);
-  await furnishPlanningRows(api, admin.access_token, web.id);
+  const planning = await furnishPlanningRows(api, admin.access_token, web.id);
+  await furnishIssueRows(api, admin.access_token, slug, web.id, wesId, bug.id, planning);
 
   const page = await signedInPage(admin);
   const watch = await watchPage(page);

@@ -60,3 +60,24 @@ P1 还没有关系表（`cycle_issues`、`module_issues` 在 P3），`cycles` �
 ## 处理结果（M6/P2）：M6-03
 
 P2 也还没有关系表（在 P3）。模块的三张表照本条的协议加入：`planning.delete_rows` 由单表改为命名步骤 `cycles → modules → module_members → module_links`（照 `issue` 的 `DeletionRowSteps`），沿用请求的 At/By、有界续跑，预算边界按当前步骤判断剩余；`furnishPlanningRows` 再打开 `module_view`，以管理员为负责人和成员建一个带一条链接的模块，P4、W3、I21 的删除故事随之覆盖三张表，目录 `asynchronousDeletionTable` 加 `modules`、`module_members`、`module_links`；删除与清理的守卫（`TestDeletingAProjectLeavesNoUndeletedRowUnderIt`、`TestDeletingAWorkspaceLeavesNoUndeletedRowUnderIt`、`TestPurgeCatalogCoversTablesAndIncomingKeys`、`TestPurgeParentCascadesUnprocessedIssueRows`、`TestLateDeleteRowsAfterPurge`）以 SQL 种三张表的行并核软删。60 天清理的新步骤有 `TestPurgeModuleTables`（过期的按页删除，截止时刻的、近期的、未删除的留下）与 `TestModulePurgeChildrenFirst`（子先父），运行角色可执行（`TestPurgeDeletedRunsWithRuntimeRole` 的 planning 组含三张表）。删一个模块时，它未删除的成员与链接在同一事务、同一时刻、同一写者软删（G13 的数据库断言）。工作项删除入口对关系表的覆盖与全图在 P3 及收尾，本交接保持 open。证据：[P2 spec](../specs/P2-modules-backend.md) 2.4、A6。
+
+## 处理结果（M6/P3a）：M6-02
+
+P3a 做了本条中不依赖列表引擎的两项；列表引擎的筛选、分组、排序、显示属性与 `issue-order.json`、偏好在 P3b，页面在 P5–P7，本条其余各项未到。
+
+- **`Issue.cycle_id` / `module_ids` 及写入**：`Issue`、`IssueDetail` 必带两个字段，详情、列表的三种形态、关系、子工作项、搜索的七处投影逐列相同，访客与只看自己的调用者读到的一样（`TestEveryReadAnswersTheMemberships`、`TestIssueMembershipsAcrossRepresentations`；`module_ids` 不排序、读到已离开的迭代、访客读不到迭代的变异都让它们失败）。建立、PATCH、发布草稿经这两个字段加入、移动、移出迭代与模块，每次变化一条动态；接口与数据库故事 `e2e/stories/planning/g4-issue-cycle.spec.ts`、`g11-issue-modules.spec.ts`。前端只重新生成类型、补 `fake-issues.ts` 的字面量、迭代动态的移出分支改读 `old_value`、草稿编辑保留两个字段，列表没有动。
+- **自动归档的迭代与模块条件**：经 `planning` 的端口在项目锁与固定业务时钟下读出未结束的迭代（结束日为空或不早于今天，含草稿、未开始的）与目标日未过的模块的 id，语句以 `NOT EXISTS` 排除仍有未删除归属的工作项；仍是每项目一个事务，固定的调用次序为 `Lock → States → Now → OpenTargets → Update`（`TestAutoArchiveProjectTransactionsAndSystemIdentity`），锁与时钟的既有测试照常通过（`TestAutoArchiveReadsClockAfterLock`）；组合测试 `TestAutoArchiveKeepsTheWorkOfOpenCyclesAndModules` 按项目时区跨日，适配器测试 `TestAutoArchiveKeepsTheOpenTargetsWorkItems`。以 UTC 的今天、把今天结束的迭代算作已结束、排除条件漏掉模块的变异（`t10-mut-utc-today`、`t10-mut-cycle-ending-today-ended`、`t10-mut-exclusion-forgets-modules`）都让测试失败。
+
+本交接保持 open。证据：提交 `12bac611efd49c7aa0477194b61aef64d13de169`（回答）、`54d9284892b166bfee5ac91ba6c5b8bd81f0fede`、`650662bd02e9b66e4829bbc156095f3eab8c848f`（迭代与模块的写入）、`d7d1cdb54371960dd2f2d9c98234cf6685961167`、`333e9ba87574eb80c7b682fe73d29453ebaec487`（草稿）、`9e3220594912c9a9d419e8d13154b67473ae8a71`（自动归档）、`dfa04ae47bae651d767f1e33f86aa5c8a890ff60`（故事）；[P3a spec](../specs/P3a-issue-membership.md) 2.3、R9。
+
+## 处理结果（M6/P3a）：M6-03
+
+P3a 加入本条的两张关系表 `cycle_issues`、`module_issues`（归 `issue` 模块；外键与不带条件的父索引延伸 M4 §4.16，见 M6 设计 §4.3），各删除入口与清理都覆盖：
+
+- **普通工作项删除**：`issueRowSteps` 在 `issue_labels` 之后加两步，随子树以原 At/By 软删，不写归属的动态（`TestDeleteIssueDeletesTheWorkItemsSubtreeAndItsRows`、`TestTheCycleStatementOfADeletedSubtreeDeletesItsRows`、`TestDeletingAWorkItemLeavesNoUndeletedRowUnderIt`）。
+- **项目、工作区删除**：两张表是 `issue` 的，走 `issue` 已有的 `issue.delete_rows`（订阅 `project.deleted`/`workspace.deleted`，原事务投递，父范围立即隐藏，沿用请求的 At/By）；`DeletionRowSteps` 加两步、剩余探查加两个分支，按批有界、可续跑（`TestDeleteRowsCommitsEachBatch`、`TestDeletionRemainingUsesCurrentCursor`、`TestABatchPassesOverARowDeletedWhileItWaits`）；守卫 `TestDeletingAProjectLeavesNoUndeletedRowUnderIt`、`TestDeletingAWorkspaceLeavesNoUndeletedRowUnderIt`、`TestAProjectDeletionRefusedAtItsCommitChangesNoRow`、`TestProjectDeletionPublishesAndEnqueuesAtomically`、`TestLateDeleteRowsAfterPurge`、`TestDeletionInterleaving25` 都要求两张表有行并核软删。
+- **删迭代、删模块**：`planning` 在原事务发布 `planning.cycle_deleted`/`planning.module_deleted`，`issue` 的订阅者在同一事务移除归属、写动态（`TestDeletingACycleTakesItsWorkItemsOut`、`TestDeletingAModuleTakesItsWorkItemsOut`，交错 `TestJoiningAndDeletingATargetInterleave`）。
+- **夹具与目录**：Go 的守卫以 SQL 种归属（`seedIssues`、`deletedWorkItem`、`furnishDeletionIssue`、`seedPurgeSparseRows`），`projectIssueTable` 认得两张表；e2e 的 `furnishPlanningRows` 回答所建迭代与模块的 id，`furnishIssueRows` 以项目成员的令牌经 PATCH 把工作项加入，`furnishWorkspace` 与 P4、W3、I21 的删除故事改为先 planning 后 issue，`asynchronousDeletionTable` 加两张表；I15、I17、I21 的工作项删除故事同样要求两张表有行。第一个检查点（收据 `t9-gate1`，七项串行全过，e2e 426 条通过）时这些故事转绿；`furnishIssueRows` 不经 PATCH 加入的变异（`t9-mut-e2e-no-join`）让 P4、W2 的删除断言失败。
+- **60 天清理**：`issue` 的清理步骤在 `issues` 之前加 `module_issues`、`cycle_issues`；`TestIssuePurgeAllTables` 的 `cycle_issues`、`module_issues` 两个子测试覆盖过期的删除，截止时刻的、近期的、未删除的留下，游标邻域，调用者回滚，失败时已提交的批次保留，`child_order_and_cascades` 核子先父；运行角色可执行（`TestPurgeDeletedRunsWithRuntimeRole` 的 issue 组含两张表）。
+
+删工作项漏掉 `cycle_issues`、删除任务漏掉 `module_issues`、清理把 `issues` 放到两张表之前的变异（`t3-mut-issue-deletion-no-cycle`、`t3-mut-delete-rows-no-module`、`t3-mut-purge-issues-first`）都让测试失败。全图与有限批次清理的规模重跑在 M6 收尾，本交接保持 open。证据：提交 `2ce5591cab00f32200502c05e54b7c1248d02d03`（表）、`f9e62906607ba16f2b0a7ee21ced6db539ce03c8`（删除与清理）、`a37bc6370ae651118bd9cb6204279679fdd5031c`（删迭代/模块的事件与 e2e 夹具）、`dfa04ae47bae651d767f1e33f86aa5c8a890ff60`（G14 故事）；[P3a spec](../specs/P3a-issue-membership.md) 2.5、A3。

@@ -163,7 +163,7 @@ func TestAutoArchiveUsesLockedPolicyOneProjectAtATime(t *testing.T) {
 	p := project.Provide(w.pool, nil)
 	states := &archiveFirstStates{StateCatalog: issueProjects{projects: p.IssueProjects}, gates: []*gate{g, second}}
 	jobTx := &requestProbe{TxManager: archiveJobTx(w)}
-	job := issueapp.NewAutoArchive(issueapp.AutoArchiveDeps{Policies: p.ArchivePolicies, Projects: issueProjects{projects: p.IssueProjects}, States: states, Issues: issuepostgres.New(w.pool), Tx: jobTx, Clock: clockAt(at), Events: events})
+	job := issueapp.NewAutoArchive(issueapp.AutoArchiveDeps{Policies: p.ArchivePolicies, Projects: issueProjects{projects: p.IssueProjects}, States: states, Planning: archivePlanning(w), Issues: issuepostgres.New(w.pool), Tx: jobTx, Clock: clockAt(at), Events: events})
 	count := 0
 	done := run(func() error { var err error; count, err = job.Execute(pgtest.Soon(t)); return err })
 	defer func() {

@@ -49,6 +49,24 @@ var (
 	// neither the completed nor the cancelled group (M4 design 3.8).
 	ErrNotArchivable = shared.NewError(shared.KindConflict, "issue.not_archivable",
 		"Only a completed or cancelled work item can be archived; move it to such a state first.")
+	// ErrCyclesDisabled answers a change of a work item's cycle, its
+	// leaving one too, and a creation in a cycle, while the project's
+	// cycles are turned off (M6 design 3.8, P3a spec R2): planning's code,
+	// which the work item's writes declare too.
+	ErrCyclesDisabled = shared.NewError(shared.KindConflict, "planning.cycles_disabled",
+		"Cycles are turned off in this project; turn them on to change a work item's cycle.")
+	// ErrModulesDisabled answers a change of a work item's modules, its
+	// leaving one too, and a creation in modules, while the project's
+	// modules are turned off (M6 design 3.8, P3a spec R2): planning's code.
+	ErrModulesDisabled = shared.NewError(shared.KindConflict, "planning.modules_disabled",
+		"Modules are turned off in this project; turn them on to change a work item's modules.")
+	// ErrPlanningArchived answers a work item's joining an archived cycle
+	// (M6 design 3.3, P3a spec R3): planning's code.
+	ErrPlanningArchived = shared.NewError(shared.KindConflict, "planning.archived", "The cycle or module is archived; a work item cannot join it.")
+	// ErrCycleCompleted answers a work item's joining a cycle that has
+	// ended on the write's day in the project's time zone (M6 design 3.3,
+	// P3a spec R2): planning's code.
+	ErrCycleCompleted = shared.NewError(shared.KindConflict, "planning.cycle_completed", "The cycle is completed; a work item cannot join it.")
 	// ErrRelationNotFound answers a relation that does not exist or is
 	// deleted, and one neither of whose work items the caller sees, all
 	// with this one value (M4 design 3.10, 5.3).

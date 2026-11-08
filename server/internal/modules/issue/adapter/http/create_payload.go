@@ -25,12 +25,16 @@ func (IssueCreatePayloadDecoder) DecodeCreatePayload(raw []byte) (domain.NewIssu
 
 // newIssueInput preserves omitted fields and explicitly empty lists alike.
 func newIssueInput(body gen.IssueCreate) domain.NewIssue {
-	in := domain.NewIssue{DescriptionHTML: body.DescriptionHTML, Name: body.Name, StateID: body.StateID, Priority: (*domain.Priority)(body.Priority), StartDate: body.StartDate, TargetDate: body.TargetDate, ParentID: body.ParentID}
+	in := domain.NewIssue{DescriptionHTML: body.DescriptionHTML, Name: body.Name, StateID: body.StateID, Priority: (*domain.Priority)(body.Priority), StartDate: body.StartDate, TargetDate: body.TargetDate, ParentID: body.ParentID,
+		CycleID: body.CycleID}
 	if body.AssigneeIds != nil {
 		in.AssigneeIDs = *body.AssigneeIds
 	}
 	if body.LabelIds != nil {
 		in.LabelIDs = *body.LabelIds
+	}
+	if body.ModuleIds != nil {
+		in.ModuleIDs = *body.ModuleIds
 	}
 	return in
 }

@@ -47,6 +47,20 @@ func (s *Store) DeleteProjectLabelRows(ctx context.Context, b app.RowBatch) ([]u
 	return deleted(ids, err, "work items' labels")
 }
 
+// DeleteProjectCycleRows soft-deletes a batch of the project's work items'
+// cycle memberships.
+func (s *Store) DeleteProjectCycleRows(ctx context.Context, b app.RowBatch) ([]uuid.UUID, error) {
+	ids, err := s.queries(ctx).DeleteProjectCycleRows(ctx, gen.DeleteProjectCycleRowsParams(batch(b)))
+	return deleted(ids, err, "cycle memberships")
+}
+
+// DeleteProjectModuleRows soft-deletes a batch of the project's work items'
+// module memberships.
+func (s *Store) DeleteProjectModuleRows(ctx context.Context, b app.RowBatch) ([]uuid.UUID, error) {
+	ids, err := s.queries(ctx).DeleteProjectModuleRows(ctx, gen.DeleteProjectModuleRowsParams(batch(b)))
+	return deleted(ids, err, "module memberships")
+}
+
 // DeleteProjectLinkRows soft-deletes a batch of the project's links.
 func (s *Store) DeleteProjectLinkRows(ctx context.Context, b app.RowBatch) ([]uuid.UUID, error) {
 	ids, err := s.queries(ctx).DeleteProjectLinkRows(ctx, gen.DeleteProjectLinkRowsParams(batch(b)))

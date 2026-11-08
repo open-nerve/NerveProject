@@ -89,10 +89,11 @@ func seedLabels(t *testing.T, pool *pgxpool.Pool, project, by uuid.UUID) {
 // seedIssues writes a work item of project in its default state, by by,
 // and a row of each of the issue module's tables under it: by its assignee
 // and its subscriber, the project's label Bug (seedLabels) on it, its
-// relation to another work item of the project, its blocker (relate), and
-// its activity's first row, directly: the seed does not depend on which of
-// the issue module's writes exist. Each number is the project's counter,
-// moved on, as a creation moves it.
+// relation to another work item of the project, its blocker (relate), its
+// activity's first row, and its memberships of the project's cycle Sprint
+// and module Platform (seedMemberships), directly: the seed does not depend
+// on which of the issue module's writes exist. Each number is the project's
+// counter, moved on, as a creation moves it.
 func seedIssues(t *testing.T, pool *pgxpool.Pool, project, by uuid.UUID) {
 	t.Helper()
 	issue, blocker := uuid.NewV7(), uuid.NewV7()
@@ -124,10 +125,32 @@ func seedIssues(t *testing.T, pool *pgxpool.Pool, project, by uuid.UUID) {
 		}
 	}
 	relate(t, pool, issue, blocker, "blocked_by", by)
+	seedMemberships(t, pool, issue, by)
 	seedIssueLinks(t, pool, issue, by)
 	seedIssueDrafts(t, pool, project, by)
 	seedIssueAsset(t, pool, issue, by)
 	seedIssueAsset(t, pool, blocker, by)
+}
+
+// seedMemberships puts the work item issue in its project's cycle Sprint
+// (seedCycles) and module Platform (seedModules), by by, directly: the
+// membership writes arrive with the work item's fields (M6 P3a spec 2.5), and
+// the deletion and purge guards need a row of each membership table under
+// the work item, its project and its workspace.
+func seedMemberships(t testing.TB, pool *pgxpool.Pool, issue, by uuid.UUID) {
+	t.Helper()
+	for _, sql := range []string{
+		`INSERT INTO cycle_issues (id, workspace_id, project_id, cycle_id, issue_id, created_by_id, updated_by_id)
+			SELECT $1, i.workspace_id, i.project_id, c.id, i.id, $3, $3 FROM issues i
+			JOIN cycles c ON c.project_id = i.project_id AND c.name = 'Sprint' AND c.deleted_at IS NULL WHERE i.id = $2`,
+		`INSERT INTO module_issues (id, workspace_id, project_id, module_id, issue_id, created_by_id, updated_by_id)
+			SELECT $1, i.workspace_id, i.project_id, m.id, i.id, $3, $3 FROM issues i
+			JOIN modules m ON m.project_id = i.project_id AND m.name = 'Platform' AND m.deleted_at IS NULL WHERE i.id = $2`,
+	} {
+		if tag, err := pool.Exec(pgtest.Soon(t), sql, uuid.NewV7(), issue, by); err != nil || tag.RowsAffected() != 1 {
+			t.Fatalf("seeding the memberships of %s: %s: %d rows, %v; want 1", issue, sql, tag.RowsAffected(), err)
+		}
+	}
 }
 
 // noRowLastWrittenBy fails the test when a row under the parent row id, by

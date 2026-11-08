@@ -17,6 +17,7 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue"
 	issueapp "github.com/open-nerve/NerveProject/server/internal/modules/issue/app"
+	"github.com/open-nerve/NerveProject/server/internal/modules/planning"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project"
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace"
 	"github.com/open-nerve/NerveProject/server/internal/platform/clock"
@@ -116,6 +117,7 @@ func newIssueModuleWithConfig(t *testing.T, pool *pgxpool.Pool, tx shared.TxMana
 		ReadTx:    postgres.NewTxManager(pool, cfg.Database.CommitTimeout, postgres.ReadOnlySnapshot()),
 		WriteGate: gate, Clock: clock,
 		Authorizer: authorizerOn(pool), Projects: issueProjects{projects: project.Provide(pool, nil).IssueProjects},
+		Planning:   issuePlanning{targets: planning.Provide(pool, planningProjects{projects: project.Provide(pool, nil).PlanningProjects}).IssueTargets},
 		Workspaces: issueWorkspaces{directory: workspace.Provide(pool, nil).WorkspaceDirectory},
 		Members:    issueMembers{members: workspace.Provide(pool, nil).WorkspaceMemberDirectory},
 		Profiles:   issueProfiles{profiles: identity.Provide(pool).PublicProfiles}})

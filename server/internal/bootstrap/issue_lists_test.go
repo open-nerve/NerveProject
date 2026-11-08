@@ -67,9 +67,10 @@ func checkListRows(t *testing.T, obj map[string]json.RawMessage) {
 		}
 	}
 	for _, raw := range listArray(t, obj["data"]) {
-		row := listKeys(t, raw, "id", "workspace_id", "project_id", "sequence_id", "name", "state_id", "priority", "start_date", "target_date", "parent_id", "sort_order", "completed_at", "archived_at", "assignee_ids", "label_ids", "sub_issues_count", "link_count", "attachment_count", "created_by_id", "updated_by_id", "created_at", "updated_at")
+		row := listKeys(t, raw, "id", "workspace_id", "project_id", "sequence_id", "name", "state_id", "priority", "start_date", "target_date", "parent_id", "sort_order", "completed_at", "archived_at", "assignee_ids", "label_ids", "cycle_id", "module_ids", "sub_issues_count", "link_count", "attachment_count", "created_by_id", "updated_by_id", "created_at", "updated_at")
 		listArray(t, row["assignee_ids"])
 		listArray(t, row["label_ids"])
+		listArray(t, row["module_ids"])
 	}
 }
 func checkListEnvelope(t *testing.T, answer string, grouped, lanes bool) issueListHTTP {

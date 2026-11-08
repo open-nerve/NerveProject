@@ -1,0 +1,56 @@
+-- name: InsertCycleIssues :exec
+-- A work item's new cycle's row (M6 P3a spec R4), one statement, as InsertLabels: the cycle it joins. A work item is
+-- in one cycle at most: the partial unique key cycle_issues_issue_id_key refuses a second undeleted row.
+INSERT INTO cycle_issues (id, workspace_id, project_id, issue_id, cycle_id, created_by_id, updated_by_id, created_at, updated_at)
+SELECT unnest(sqlc.arg(ids)::uuid[]), sqlc.arg(workspace_id), sqlc.arg(project_id), sqlc.arg(issue_id),
+       unnest(sqlc.arg(cycle_ids)::uuid[]), sqlc.arg(by)::uuid, sqlc.arg(by), sqlc.arg(at)::timestamptz, sqlc.arg(at);
+
+-- name: RemoveCycleIssues :exec
+-- The cycle a work item leaves (M6 P3a spec R4), as RemoveLabels: its undeleted row soft-deleted, never changed in
+-- place; the partial unique key on issue_id serves it.
+UPDATE cycle_issues
+SET deleted_at = sqlc.arg(at)::timestamptz, updated_at = sqlc.arg(at), updated_by_id = sqlc.arg(by)::uuid
+WHERE issue_id = sqlc.arg(issue_id) AND cycle_id = ANY (sqlc.arg(cycle_ids)::uuid[]) AND deleted_at IS NULL;
+
+-- name: InsertModuleIssues :exec
+-- A work item's new modules' rows (M6 P3a spec R4), one statement, as InsertLabels: the modules it joins. The partial
+-- unique key module_issues_issue_id_module_id_key refuses a second undeleted row of a module it is in.
+INSERT INTO module_issues (id, workspace_id, project_id, issue_id, module_id, created_by_id, updated_by_id, created_at, updated_at)
+SELECT unnest(sqlc.arg(ids)::uuid[]), sqlc.arg(workspace_id), sqlc.arg(project_id), sqlc.arg(issue_id),
+       unnest(sqlc.arg(module_ids)::uuid[]), sqlc.arg(by)::uuid, sqlc.arg(by), sqlc.arg(at)::timestamptz, sqlc.arg(at);
+
+-- name: RemoveModuleIssues :exec
+-- The modules a work item leaves (M6 P3a spec R4), as RemoveLabels: their undeleted rows soft-deleted; the partial
+-- unique key on (issue_id, module_id) serves it.
+UPDATE module_issues
+SET deleted_at = sqlc.arg(at)::timestamptz, updated_at = sqlc.arg(at), updated_by_id = sqlc.arg(by)::uuid
+WHERE issue_id = sqlc.arg(issue_id) AND module_id = ANY (sqlc.arg(module_ids)::uuid[]) AND deleted_at IS NULL;
+
+-- name: RemoveCycleMemberships :many
+-- A deleted cycle's memberships (M6 P3a spec 2.5, R6), in the deletion's transaction: its undeleted rows, locked FOR
+-- NO KEY UPDATE in id order, then soft-deleted at the deletion's moment by its account, in one statement (convention
+-- 5); a row deleted before, with its work item or by a leave, keeps its deletion. It answers the work items the rows
+-- were of, in id order. cycle_issues_cycle_id_idx serves it.
+WITH removed AS (
+    UPDATE cycle_issues AS t
+    SET deleted_at = sqlc.arg(at)::timestamptz, updated_at = sqlc.arg(at), updated_by_id = sqlc.arg(by)::uuid
+    WHERE t.id IN (
+        SELECT r.id FROM cycle_issues r
+        WHERE r.cycle_id = sqlc.arg(cycle_id) AND r.deleted_at IS NULL
+        ORDER BY r.id FOR NO KEY UPDATE)
+    RETURNING t.issue_id
+)
+SELECT issue_id FROM removed ORDER BY issue_id;
+
+-- name: RemoveModuleMemberships :many
+-- RemoveCycleMemberships' statement, of a deleted module's memberships. module_issues_module_id_idx serves it.
+WITH removed AS (
+    UPDATE module_issues AS t
+    SET deleted_at = sqlc.arg(at)::timestamptz, updated_at = sqlc.arg(at), updated_by_id = sqlc.arg(by)::uuid
+    WHERE t.id IN (
+        SELECT r.id FROM module_issues r
+        WHERE r.module_id = sqlc.arg(module_id) AND r.deleted_at IS NULL
+        ORDER BY r.id FOR NO KEY UPDATE)
+    RETURNING t.issue_id
+)
+SELECT issue_id FROM removed ORDER BY issue_id;

@@ -21,8 +21,10 @@ import (
 
 // Only the explicitly owned portions are asynchronous; unknown catalog tables still
 // participate in the immediate assertions rather than receiving an exemption.
+// The issue module's memberships (M6 P3a spec 2.5) are named for their targets.
 func projectIssueTable(table string) bool {
-	return table == "draft_issues" || table == "issues" || table == "comment_reactions" || len(table) > 6 && table[:6] == "issue_"
+	return table == "draft_issues" || table == "issues" || table == "comment_reactions" || table == "cycle_issues" || table == "module_issues" ||
+		len(table) > 6 && table[:6] == "issue_"
 }
 
 // The planning module's tables are deleted by its own planning.delete_rows job (M6 P1 spec 2.4, P2 spec 2.4).
