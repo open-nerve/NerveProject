@@ -3063,10 +3063,10 @@ export interface components {
             updated_at: string;
         };
         /**
-         * @description Project lists exclude project_id; member lists use their narrower page vocabulary.
+         * @description Project lists exclude project_id; member lists use their narrower page vocabulary. cycle_id and module_id group project lists only: a work item is in the group of its undeleted cycle membership, and in the group of each of its undeleted module memberships, an archived cycle's or module's too; one without is in the none group.
          * @enum {string}
          */
-        IssueListGroupField: "state_id" | "state_group" | "priority" | "label_id" | "assignee_id" | "created_by_id" | "target_date" | "project_id";
+        IssueListGroupField: "state_id" | "state_group" | "priority" | "label_id" | "assignee_id" | "created_by_id" | "cycle_id" | "module_id" | "target_date" | "project_id";
         /** @enum {string} */
         IssueListOrder: "created_at" | "-created_at" | "updated_at" | "-updated_at" | "start_date" | "-start_date" | "target_date" | "-target_date" | "priority" | "-priority" | "state_name" | "-state_name" | "label_name" | "-label_name" | "assignee_name" | "-assignee_name" | "sub_issues_count" | "-sub_issues_count" | "link_count" | "-link_count" | "attachment_count" | "-attachment_count" | "sort_order";
         IssueListSubgroup: {

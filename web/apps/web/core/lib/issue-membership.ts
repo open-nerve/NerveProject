@@ -25,6 +25,8 @@ function groupKeys(issue: Issue, field: IssueListGroupField | undefined, context
       return issue.label_ids.length ? [...new Set(issue.label_ids)] : ["none"];
     case "assignee_id":
       return issue.assignee_ids.length ? [...new Set(issue.assignee_ids)] : ["none"];
+    case "module_id":
+      return issue.module_ids.length ? [...new Set(issue.module_ids)] : ["none"];
     case "state_group": {
       const group = context.catalog.states.get(issue.state_id)?.group;
       return group ? [group] : undefined;

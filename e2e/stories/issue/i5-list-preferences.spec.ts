@@ -197,7 +197,9 @@ test("I5 (API): two members retain different complete list settings; me follows 
   });
   expect(await readProjectPreferences(api, b.token, project.id)).toEqual(savedB);
   expect(
-    await changeProjectPreferences(api, a.token, project.id, { display_filters: { ...display, group_by: "cycle_id" } })
+    await changeProjectPreferences(api, a.token, project.id, {
+      display_filters: { ...display, group_by: "project_id" },
+    })
   ).toEqual({
     status: 422,
     code: "validation_failed",

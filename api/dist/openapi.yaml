@@ -5835,7 +5835,7 @@ components:
           type: string
           format: date-time
     IssueListGroupField:
-      description: Project lists exclude project_id; member lists use their narrower page vocabulary.
+      description: 'Project lists exclude project_id; member lists use their narrower page vocabulary. cycle_id and module_id group project lists only: a work item is in the group of its undeleted cycle membership, and in the group of each of its undeleted module memberships, an archived cycle''s or module''s too; one without is in the none group.'
       type: string
       enum:
         - state_id
@@ -5844,6 +5844,8 @@ components:
         - label_id
         - assignee_id
         - created_by_id
+        - cycle_id
+        - module_id
         - target_date
         - project_id
     IssueListOrder:

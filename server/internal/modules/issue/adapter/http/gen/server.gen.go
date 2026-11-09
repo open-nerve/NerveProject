@@ -25,7 +25,9 @@ import (
 const (
 	IssueListGroupFieldAssigneeID  IssueListGroupField = "assignee_id"
 	IssueListGroupFieldCreatedByID IssueListGroupField = "created_by_id"
+	IssueListGroupFieldCycleID     IssueListGroupField = "cycle_id"
 	IssueListGroupFieldLabelID     IssueListGroupField = "label_id"
+	IssueListGroupFieldModuleID    IssueListGroupField = "module_id"
 	IssueListGroupFieldPriority    IssueListGroupField = "priority"
 	IssueListGroupFieldProjectID   IssueListGroupField = "project_id"
 	IssueListGroupFieldStateGroup  IssueListGroupField = "state_group"
@@ -40,7 +42,11 @@ func (e IssueListGroupField) Valid() bool {
 		return true
 	case IssueListGroupFieldCreatedByID:
 		return true
+	case IssueListGroupFieldCycleID:
+		return true
 	case IssueListGroupFieldLabelID:
+		return true
+	case IssueListGroupFieldModuleID:
 		return true
 	case IssueListGroupFieldPriority:
 		return true
@@ -577,7 +583,7 @@ type IssueListGroup struct {
 	Total      int64                                      `json:"total"`
 }
 
-// IssueListGroupField Project lists exclude project_id; member lists use their narrower page vocabulary.
+// IssueListGroupField Project lists exclude project_id; member lists use their narrower page vocabulary. cycle_id and module_id group project lists only: a work item is in the group of its undeleted cycle membership, and in the group of each of its undeleted module memberships, an archived cycle's or module's too; one without is in the none group.
 type IssueListGroupField string
 
 // IssueListOrder defines model for IssueListOrder.

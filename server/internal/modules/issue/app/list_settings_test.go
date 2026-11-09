@@ -69,7 +69,7 @@ func TestIssueListSettings(t *testing.T) {
 			check(t, nil, &d, nil)
 		}
 	}
-	groups := strings.Fields("state_id state_group priority label_id assignee_id created_by_id target_date")
+	groups := strings.Fields("state_id state_group priority label_id assignee_id created_by_id cycle_id module_id target_date")
 	for _, group := range groups {
 		d := display()
 		d.GroupBy = &group
@@ -83,7 +83,7 @@ func TestIssueListSettings(t *testing.T) {
 			}
 		}
 	}
-	for _, future := range []string{"cycle_id", "module_id", "project_id", "future"} {
+	for _, future := range []string{"project_id", "future"} {
 		d := display()
 		d.GroupBy = &future
 		check(t, nil, &d, nil, "display_filters.group_by")

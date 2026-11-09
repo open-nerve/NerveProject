@@ -99,6 +99,8 @@ WITH projects AS (
     LEFT JOIN LATERAL unnest(CASE $3::text
         WHEN 'label_id' THEN ARRAY(SELECT r.label_id::text FROM issue_labels r WHERE r.issue_id=i.id AND r.deleted_at IS NULL)
         WHEN 'assignee_id' THEN ARRAY(SELECT r.assignee_id::text FROM issue_assignees r WHERE r.issue_id=i.id AND r.deleted_at IS NULL)
+        WHEN 'cycle_id' THEN ARRAY(SELECT r.cycle_id::text FROM cycle_issues r WHERE r.issue_id=i.id AND r.deleted_at IS NULL)
+        WHEN 'module_id' THEN ARRAY(SELECT r.module_id::text FROM module_issues r WHERE r.issue_id=i.id AND r.deleted_at IS NULL)
         WHEN 'state_id' THEN ARRAY[i.state_id::text]
         WHEN 'state_group' THEN ARRAY[s.state_group]
         WHEN 'priority' THEN ARRAY[i.priority::text]
@@ -114,6 +116,8 @@ WITH projects AS (
     LEFT JOIN LATERAL unnest(CASE $4::text
         WHEN 'label_id' THEN ARRAY(SELECT r.label_id::text FROM issue_labels r WHERE r.issue_id=i.id AND r.deleted_at IS NULL)
         WHEN 'assignee_id' THEN ARRAY(SELECT r.assignee_id::text FROM issue_assignees r WHERE r.issue_id=i.id AND r.deleted_at IS NULL)
+        WHEN 'cycle_id' THEN ARRAY(SELECT r.cycle_id::text FROM cycle_issues r WHERE r.issue_id=i.id AND r.deleted_at IS NULL)
+        WHEN 'module_id' THEN ARRAY(SELECT r.module_id::text FROM module_issues r WHERE r.issue_id=i.id AND r.deleted_at IS NULL)
         WHEN 'state_id' THEN ARRAY[i.state_id::text]
         WHEN 'state_group' THEN ARRAY[s.state_group]
         WHEN 'priority' THEN ARRAY[i.priority::text]

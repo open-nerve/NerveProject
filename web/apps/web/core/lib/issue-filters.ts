@@ -272,16 +272,22 @@ export function memberListQuery(
 
 /** Existing display controls name groups differently from the generated wire vocabulary. */
 export function issueFieldForGroup(field: string): keyof Issue {
-  const grouped = group(field);
-  switch (grouped) {
+  return groupedIssueField(group(field) ?? "state_id");
+}
+
+/** The work item field holding a wire grouping's keys; a state's group is read through its state. */
+export function groupedIssueField(field: IssueListGroupField): keyof Issue {
+  switch (field) {
     case "label_id":
       return "label_ids";
     case "assignee_id":
       return "assignee_ids";
+    case "module_id":
+      return "module_ids";
     case "state_group":
       return "state_id";
     default:
-      return grouped ?? "state_id";
+      return field;
   }
 }
 

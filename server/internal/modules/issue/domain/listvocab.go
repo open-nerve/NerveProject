@@ -46,7 +46,7 @@ func ListGroupAllowed(group ListGroup, scope ListScope) bool {
 	switch scope {
 	case ProjectList:
 		switch group {
-		case "state_id", "state_group", "priority", "label_id", "assignee_id", "created_by_id", "target_date":
+		case "state_id", "state_group", "priority", "label_id", "assignee_id", "created_by_id", "cycle_id", "module_id", "target_date":
 			return true
 		}
 	case MemberList:
@@ -109,7 +109,7 @@ func ListGroupKeyAllowed(group ListGroup, key string) bool {
 	switch group {
 	case "state_id", "project_id":
 		return listUUIDAllowed(key)
-	case "label_id", "assignee_id", "created_by_id":
+	case "label_id", "assignee_id", "created_by_id", "cycle_id", "module_id":
 		return key == "none" || listUUIDAllowed(key)
 	case "priority":
 		return slices.Contains(priorities, Priority(key))

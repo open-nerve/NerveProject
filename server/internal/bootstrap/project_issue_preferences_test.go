@@ -111,7 +111,7 @@ func checkPreferenceWords(t *testing.T, w issueWorld, path string) {
 	// Valid structure alone must not permit an invalid filter atom.
 	w.send(t, "bob", http.MethodPatch, path, `{"filters":{"label_id":["bad-uuid"]}}`, 422)
 	// One request exercises deterministic aggregation across navigation and both new word-bearing fields.
-	body := `{"navigation":{"default_tab":"views","hide_in_more_menu":["views","views"]},"filters":{"target_date":["none","none"],"label_id":["bad-uuid","none,me"],"start_date":["2026-02-30"]},"display_filters":{"layout":"future","group_by":"cycle_id","sub_group_by":"module_id","order_by":"-sort_order","sub_issue":false,"show_empty_groups":false,"calendar":{"layout":"year","show_weekends":false}}}`
+	body := `{"navigation":{"default_tab":"views","hide_in_more_menu":["views","views"]},"filters":{"target_date":["none","none"],"label_id":["bad-uuid","none,me"],"start_date":["2026-02-30"]},"display_filters":{"layout":"future","group_by":"project_id","sub_group_by":"project_id","order_by":"-sort_order","sub_issue":false,"show_empty_groups":false,"calendar":{"layout":"year","show_weekends":false}}}`
 	answer := w.send(t, "bob", http.MethodPatch, path, body, 422)
 	var problem struct {
 		Code   string
