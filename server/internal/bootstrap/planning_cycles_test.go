@@ -209,7 +209,8 @@ func newPlanningRouteObserved(t *testing.T, pool *pgxpool.Pool, tx shared.TxMana
 	return newRoute(t, planning.New(planning.Deps{Pool: pool, Tx: tx, ReadTx: postgres.NewTxManager(pool, 2*time.Second, postgres.ReadOnlySnapshot()), JobTx: tx, RuntimeNow: time.Now, Logger: slog.New(slog.DiscardHandler),
 		LinkCrawls: inserter, Events: events,
 		DeleteBatch: 1000, DeleteBudget: 45 * time.Second, WriteGate: newWriteGate(testIssueConfig.WriteGate), Clock: clock.System{},
-		Authorizer: authorizerOn(pool), Projects: planningProjects{projects: project.Provide(pool, nil).PlanningProjects}}).Register)
+		Authorizer: authorizerOn(pool), Projects: planningProjects{projects: project.Provide(pool, nil).PlanningProjects},
+		ListSettings: issue.Provide(pool, nil).ListSettings}).Register)
 }
 
 // createsCycle is name's creation of a cycle in Web with the body body

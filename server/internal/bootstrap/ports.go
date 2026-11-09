@@ -85,7 +85,7 @@ func (a accessProjects) ProjectFacts(ctx context.Context, projectID, userID uuid
 }
 
 // planningProjects is project's PlanningProjects as planning's Projects:
-// the same reads and lock, the facts converted, the roles as they come.
+// the same reads and locks, the facts converted, the roles as they come.
 type planningProjects struct {
 	projects project.PlanningProjects
 }
@@ -97,6 +97,11 @@ func (p planningProjects) Facts(ctx context.Context, id uuid.UUID) (planning.Pro
 
 func (p planningProjects) Lock(ctx context.Context, id uuid.UUID) (planning.ProjectFacts, bool, error) {
 	f, found, err := p.projects.LockPlanning(ctx, id)
+	return planning.ProjectFacts(f), found, err
+}
+
+func (p planningProjects) Share(ctx context.Context, id uuid.UUID) (planning.ProjectFacts, bool, error) {
+	f, found, err := p.projects.SharePlanning(ctx, id)
 	return planning.ProjectFacts(f), found, err
 }
 

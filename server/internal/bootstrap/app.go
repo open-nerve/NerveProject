@@ -184,8 +184,9 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 		Pool: pool, Tx: busyTx{tx: issueTx}, ReadTx: readTx, JobTx: issueTx, RuntimeNow: time.Now, Logger: logger,
 		DeleteBatch: cfg.Planning.DeleteBatch, DeleteBudget: cfg.Planning.DeleteBudget,
 		WriteGate: projectWrites, Clock: businessClock, Authorizer: authorizer, Events: events,
-		Projects:   planningProjects{projects: projectPorts.PlanningProjects},
-		LinkCrawls: inserter, LinkCrawler: previews,
+		Projects:     planningProjects{projects: projectPorts.PlanningProjects},
+		ListSettings: issuePorts.ListSettings,
+		LinkCrawls:   inserter, LinkCrawler: previews,
 	})
 	// project before workspace: workspace's writes take its cascade.
 	proj := project.New(project.Deps{

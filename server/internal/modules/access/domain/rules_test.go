@@ -128,6 +128,11 @@ var tableCells = map[shared.Action][]outcome{
 	// (M6 design 3.7).
 	"cycle.delete": {allowed, forbidden, forbidden, forbidden, allowed, forbidden, forbidden, invisible, invisible, invisible, invisible,
 		forbidden, invisible, invisible, invisible, forbidden, forbidden},
+	// As cycle.read: every active member of the project reads and changes
+	// his own display settings on a cycle's page, the guest and an OwnOnly
+	// grant too (M6 P3b spec 2.3, R6).
+	"cycle.preferences": {allowed, allowed, allowed, allowed, allowed, forbidden, forbidden, invisible, invisible, invisible, invisible,
+		forbidden, invisible, invisible, invisible, forbidden, forbidden},
 	// As cycle.read: every active member of the project reads modules, the
 	// guest's OwnOnly filtering the planning module's (M6 design 3.7).
 	"module.read": {allowed, allowed, allowed, allowed, allowed, forbidden, forbidden, invisible, invisible, invisible, invisible,
@@ -139,6 +144,9 @@ var tableCells = map[shared.Action][]outcome{
 	// As cycle.delete: the project's admins; creatorCells has its creators'
 	// (M6 design 3.7).
 	"module.delete": {allowed, forbidden, forbidden, forbidden, allowed, forbidden, forbidden, invisible, invisible, invisible, invisible,
+		forbidden, invisible, invisible, invisible, forbidden, forbidden},
+	// As cycle.preferences, on a module's page.
+	"module.preferences": {allowed, allowed, allowed, allowed, allowed, forbidden, forbidden, invisible, invisible, invisible, invisible,
 		forbidden, invisible, invisible, invisible, forbidden, forbidden},
 }
 

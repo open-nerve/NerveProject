@@ -55,7 +55,9 @@ type WriteGate interface {
 // write on the project's work items, cycles and modules, so they run one
 // after another; what the write names read again under it — a cycle, a
 // module, a module link and its module (M6 P2 spec R1); and the decision
-// again, which is final: what committed while the write waited is seen.
+// again, which is final: what committed while the write waited is seen. A
+// change of one's own display settings on a page takes its own, lighter way
+// (share).
 type Locks struct {
 	projects Projects
 	objects  NamedReader
@@ -96,6 +98,31 @@ func (l Locks) run(ctx context.Context, actor shared.Actor, w write, fn func(ctx
 	defer leave()
 	return l.tx.WithinTx(ctx, func(ctx context.Context) error {
 		h, err := l.decideOn(ctx, actor, w, pre.projectID, l.projects.Lock)
+		if err != nil {
+			return err
+		}
+		return fn(ctx, h)
+	})
+}
+
+// share takes, in one transaction, the lock of a change of the caller's own
+// display settings on a page (M6 P3b spec R6), which is no planning write,
+// and runs fn in it with what it holds. What n names and its project's
+// facts, read without a lock, and the decision on action (see), which
+// answers a refusal before any lock; then the project's row FOR SHARE
+// (Projects.Share), what n names read again under it, and the decision
+// again, which is final. No write gate, and none of a write's refusals
+// (decideOn): not an OwnOnly grant, an archived project nor a toggle turned
+// off. The share waits for the FOR NO KEY UPDATE of a cycle's, a module's or
+// the project's deletion, and they for it, so no row is written under a page
+// being deleted.
+func (l Locks) share(ctx context.Context, actor shared.Actor, action shared.Action, n named, fn func(ctx context.Context, h held) error) error {
+	return l.tx.WithinTx(ctx, func(ctx context.Context) error {
+		pre, err := see(ctx, l.objects, l.auth, actor, action, n, uuid.UUID{}, l.projects.Facts)
+		if err != nil {
+			return err
+		}
+		h, err := see(ctx, l.objects, l.auth, actor, action, n, pre.projectID, l.projects.Share)
 		if err != nil {
 			return err
 		}

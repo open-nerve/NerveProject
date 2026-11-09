@@ -12,6 +12,32 @@ import (
 	"uuid"
 )
 
+const cyclePreferences = `-- name: CyclePreferences :one
+SELECT filters, display_filters, display_properties
+FROM cycle_user_properties
+WHERE cycle_id = $1 AND user_id = $2 AND deleted_at IS NULL
+`
+
+type CyclePreferencesParams struct {
+	CycleID uuid.UUID
+	UserID  uuid.UUID
+}
+
+type CyclePreferencesRow struct {
+	Filters           []byte
+	DisplayFilters    []byte
+	DisplayProperties []byte
+}
+
+// getCyclePreferences (M6 P3b spec 2.3): the account's undeleted display settings on the cycle's page, if any.
+// cycle_user_properties_cycle_id_user_id_key serves it.
+func (q *Queries) CyclePreferences(ctx context.Context, arg CyclePreferencesParams) (CyclePreferencesRow, error) {
+	row := q.db.QueryRow(ctx, cyclePreferences, arg.CycleID, arg.UserID)
+	var i CyclePreferencesRow
+	err := row.Scan(&i.Filters, &i.DisplayFilters, &i.DisplayProperties)
+	return i, err
+}
+
 const deleteCyclePreferenceRows = `-- name: DeleteCyclePreferenceRows :exec
 UPDATE cycle_user_properties AS t
 SET deleted_at = $1::timestamptz, updated_at = $1, updated_by_id = $2::uuid
@@ -55,4 +81,144 @@ type DeleteModulePreferenceRowsParams struct {
 func (q *Queries) DeleteModulePreferenceRows(ctx context.Context, arg DeleteModulePreferenceRowsParams) error {
 	_, err := q.db.Exec(ctx, deleteModulePreferenceRows, arg.At, arg.By, arg.ModuleID)
 	return err
+}
+
+const modulePreferences = `-- name: ModulePreferences :one
+SELECT filters, display_filters, display_properties
+FROM module_user_properties
+WHERE module_id = $1 AND user_id = $2 AND deleted_at IS NULL
+`
+
+type ModulePreferencesParams struct {
+	ModuleID uuid.UUID
+	UserID   uuid.UUID
+}
+
+type ModulePreferencesRow struct {
+	Filters           []byte
+	DisplayFilters    []byte
+	DisplayProperties []byte
+}
+
+// CyclePreferences' statement, of a module's page. module_user_properties_module_id_user_id_key serves it.
+func (q *Queries) ModulePreferences(ctx context.Context, arg ModulePreferencesParams) (ModulePreferencesRow, error) {
+	row := q.db.QueryRow(ctx, modulePreferences, arg.ModuleID, arg.UserID)
+	var i ModulePreferencesRow
+	err := row.Scan(&i.Filters, &i.DisplayFilters, &i.DisplayProperties)
+	return i, err
+}
+
+const upsertCyclePreferences = `-- name: UpsertCyclePreferences :one
+INSERT INTO cycle_user_properties AS p (id, workspace_id, project_id, cycle_id, user_id, filters, display_filters, display_properties,
+                                         created_by_id, updated_by_id, created_at, updated_at)
+VALUES ($1, $2, $3, $4, $5, $6,
+        $7, $8, $5, $5, $9, $9)
+ON CONFLICT (cycle_id, user_id) WHERE deleted_at IS NULL DO UPDATE
+SET filters            = CASE WHEN $10::boolean THEN EXCLUDED.filters ELSE p.filters END,
+    display_filters    = CASE WHEN $11::boolean THEN EXCLUDED.display_filters ELSE p.display_filters END,
+    display_properties = CASE WHEN $12::boolean THEN EXCLUDED.display_properties ELSE p.display_properties END,
+    updated_by_id      = EXCLUDED.updated_by_id,
+    updated_at         = EXCLUDED.updated_at
+RETURNING filters, display_filters, display_properties
+`
+
+type UpsertCyclePreferencesParams struct {
+	ID                   uuid.UUID
+	WorkspaceID          uuid.UUID
+	ProjectID            uuid.UUID
+	CycleID              uuid.UUID
+	UserID               uuid.UUID
+	Filters              []byte
+	DisplayFilters       []byte
+	DisplayProperties    []byte
+	Now                  time.Time
+	SetFilters           bool
+	SetDisplayFilters    bool
+	SetDisplayProperties bool
+}
+
+type UpsertCyclePreferencesRow struct {
+	Filters           []byte
+	DisplayFilters    []byte
+	DisplayProperties []byte
+}
+
+// updateCyclePreferences, under the project's FOR SHARE (M6 P3b spec 2.3, R6): an account without an undeleted row gets
+// one, with the values given, the defaults with the change applied; one with a row has the fields that are set changed,
+// each whole. The account makes and last changes his own row. The conflict target is the partial unique index, so a
+// deleted row does not count (as updateProjectPreferences).
+func (q *Queries) UpsertCyclePreferences(ctx context.Context, arg UpsertCyclePreferencesParams) (UpsertCyclePreferencesRow, error) {
+	row := q.db.QueryRow(ctx, upsertCyclePreferences,
+		arg.ID,
+		arg.WorkspaceID,
+		arg.ProjectID,
+		arg.CycleID,
+		arg.UserID,
+		arg.Filters,
+		arg.DisplayFilters,
+		arg.DisplayProperties,
+		arg.Now,
+		arg.SetFilters,
+		arg.SetDisplayFilters,
+		arg.SetDisplayProperties,
+	)
+	var i UpsertCyclePreferencesRow
+	err := row.Scan(&i.Filters, &i.DisplayFilters, &i.DisplayProperties)
+	return i, err
+}
+
+const upsertModulePreferences = `-- name: UpsertModulePreferences :one
+INSERT INTO module_user_properties AS p (id, workspace_id, project_id, module_id, user_id, filters, display_filters, display_properties,
+                                          created_by_id, updated_by_id, created_at, updated_at)
+VALUES ($1, $2, $3, $4, $5, $6,
+        $7, $8, $5, $5, $9, $9)
+ON CONFLICT (module_id, user_id) WHERE deleted_at IS NULL DO UPDATE
+SET filters            = CASE WHEN $10::boolean THEN EXCLUDED.filters ELSE p.filters END,
+    display_filters    = CASE WHEN $11::boolean THEN EXCLUDED.display_filters ELSE p.display_filters END,
+    display_properties = CASE WHEN $12::boolean THEN EXCLUDED.display_properties ELSE p.display_properties END,
+    updated_by_id      = EXCLUDED.updated_by_id,
+    updated_at         = EXCLUDED.updated_at
+RETURNING filters, display_filters, display_properties
+`
+
+type UpsertModulePreferencesParams struct {
+	ID                   uuid.UUID
+	WorkspaceID          uuid.UUID
+	ProjectID            uuid.UUID
+	ModuleID             uuid.UUID
+	UserID               uuid.UUID
+	Filters              []byte
+	DisplayFilters       []byte
+	DisplayProperties    []byte
+	Now                  time.Time
+	SetFilters           bool
+	SetDisplayFilters    bool
+	SetDisplayProperties bool
+}
+
+type UpsertModulePreferencesRow struct {
+	Filters           []byte
+	DisplayFilters    []byte
+	DisplayProperties []byte
+}
+
+// UpsertCyclePreferences' statement, of a module's page.
+func (q *Queries) UpsertModulePreferences(ctx context.Context, arg UpsertModulePreferencesParams) (UpsertModulePreferencesRow, error) {
+	row := q.db.QueryRow(ctx, upsertModulePreferences,
+		arg.ID,
+		arg.WorkspaceID,
+		arg.ProjectID,
+		arg.ModuleID,
+		arg.UserID,
+		arg.Filters,
+		arg.DisplayFilters,
+		arg.DisplayProperties,
+		arg.Now,
+		arg.SetFilters,
+		arg.SetDisplayFilters,
+		arg.SetDisplayProperties,
+	)
+	var i UpsertModulePreferencesRow
+	err := row.Scan(&i.Filters, &i.DisplayFilters, &i.DisplayProperties)
+	return i, err
 }

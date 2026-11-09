@@ -162,6 +162,11 @@ var rules = map[shared.Action]Rule{
 	// As issue.delete: the project's admins, and the cycle's creator while a
 	// member or an admin of the project (M6 design 3.7).
 	"cycle.delete": {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin}, AllowCreator: true},
+	// As cycle.read: every active member of the project reads and changes
+	// his own display settings on a cycle's page; the planning module
+	// refuses no OwnOnly grant there, nor an archived project or a toggle
+	// turned off (M6 P3b spec 2.3, R6).
+	"cycle.preferences": {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember, shared.RoleGuest}},
 	// As cycle.read: every active member of the project reads modules and
 	// their links; the guest's OwnOnly filtering is the planning module's
 	// (M6 design 3.7).
@@ -173,6 +178,8 @@ var rules = map[shared.Action]Rule{
 	// As cycle.delete: the project's admins, and the module's creator while
 	// a member or an admin of the project (M6 design 3.7).
 	"module.delete": {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin}, AllowCreator: true},
+	// As cycle.preferences, on a module's page.
+	"module.preferences": {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember, shared.RoleGuest}},
 }
 
 // RuleFor returns a copy of the row of action, every field of it and its

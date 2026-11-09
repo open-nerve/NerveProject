@@ -70,3 +70,36 @@ func (q *Queries) PlanningProjectFacts(ctx context.Context, id uuid.UUID) (Plann
 	)
 	return i, err
 }
+
+const sharePlanningProject = `-- name: SharePlanningProject :one
+SELECT workspace_id, (archived_at IS NOT NULL)::boolean AS archived, timezone, cycle_view, module_view
+FROM projects
+WHERE id = $1 AND deleted_at IS NULL
+FOR SHARE
+`
+
+type SharePlanningProjectRow struct {
+	WorkspaceID uuid.UUID
+	Archived    bool
+	Timezone    string
+	CycleView   bool
+	ModuleView  bool
+}
+
+// PlanningProjectFacts under the lock of a change of one's own display settings on a cycle's or a module's page (M6
+// P3b spec R6), which is no planning write: the project's row FOR SHARE, as updateProjectPreferences takes it, its
+// workspace's row not locked. It waits for a planning write's and a deletion's FOR NO KEY UPDATE, and they for it.
+// After a wait Postgres evaluates deleted_at IS NULL again on the row's newest version, so a project deleted meanwhile
+// reads no row.
+func (q *Queries) SharePlanningProject(ctx context.Context, id uuid.UUID) (SharePlanningProjectRow, error) {
+	row := q.db.QueryRow(ctx, sharePlanningProject, id)
+	var i SharePlanningProjectRow
+	err := row.Scan(
+		&i.WorkspaceID,
+		&i.Archived,
+		&i.Timezone,
+		&i.CycleView,
+		&i.ModuleView,
+	)
+	return i, err
+}

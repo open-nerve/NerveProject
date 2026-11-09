@@ -36,13 +36,19 @@ func (f *fakePlanningProjects) LockPlanning(_ context.Context, id uuid.UUID) (pr
 	return f.facts, f.found, f.err
 }
 
+func (f *fakePlanningProjects) SharePlanning(_ context.Context, id uuid.UUID) (project.PlanningFacts, bool, error) {
+	f.asked = append(f.asked, "share "+id.String())
+	return f.facts, f.found, f.err
+}
+
 func (f *fakePlanningProjects) ActiveRoles(_ context.Context, id uuid.UUID, ids []uuid.UUID) (map[uuid.UUID]shared.Role, error) {
 	f.asked = append(f.asked, fmt.Sprint("roles ", id, " ", ids))
 	return f.roles, f.err
 }
 
 // planningProjects hands planning project's answers to the same questions:
-// the facts, read or locked, converted, every field; the active roles of the
+// the facts, read, locked or shared (M6 P3b spec R6), converted, every
+// field; the active roles of the
 // accounts asked for in the project asked for (M6 P2 spec R5), as they came;
 // found and the error as they came.
 func TestPlanningProjectsConvertsProjectsAnswers(t *testing.T) {
@@ -59,10 +65,13 @@ func TestPlanningProjectsConvertsProjectsAnswers(t *testing.T) {
 	if f, found, err := p.Lock(ctx, web); err != nil || !found || f != want {
 		t.Errorf("Lock() = %+v, %v, %v; want %+v, found", f, found, err, want)
 	}
+	if f, found, err := p.Share(ctx, web); err != nil || !found || f != want {
+		t.Errorf("Share() = %+v, %v, %v; want %+v, found", f, found, err, want)
+	}
 	if roles, err := p.Roles(ctx, web, []uuid.UUID{ann, bob}); err != nil || !maps.Equal(roles, fake.roles) {
 		t.Errorf("Roles() = %v, %v; want %v", roles, err, fake.roles)
 	}
-	if want := []string{"facts " + web.String(), "lock " + web.String(), fmt.Sprint("roles ", web, " ", []uuid.UUID{ann, bob})}; !slices.Equal(fake.asked, want) {
+	if want := []string{"facts " + web.String(), "lock " + web.String(), "share " + web.String(), fmt.Sprint("roles ", web, " ", []uuid.UUID{ann, bob})}; !slices.Equal(fake.asked, want) {
 		t.Errorf("asked %q, want %q", fake.asked, want)
 	}
 
@@ -70,6 +79,9 @@ func TestPlanningProjectsConvertsProjectsAnswers(t *testing.T) {
 	fake.found, fake.err = false, boom
 	if _, found, err := p.Lock(ctx, web); !errors.Is(err, boom) || found {
 		t.Errorf("Lock() = %v, %v; want the error, not found", found, err)
+	}
+	if _, found, err := p.Share(ctx, web); !errors.Is(err, boom) || found {
+		t.Errorf("Share() = %v, %v; want the error, not found", found, err)
 	}
 	if _, err := p.Roles(ctx, web, []uuid.UUID{ann}); !errors.Is(err, boom) {
 		t.Errorf("Roles() = %v; want the error", err)
