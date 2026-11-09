@@ -11,7 +11,8 @@
 // deleted projects' planning rows in the publishing transaction; the 60-day
 // purge removes them. It tells the issue module about the cycles and modules
 // a work item's write names and those that keep work items from automatic
-// archival (IssueTargets).
+// archival (IssueTargets), and the names of the cycles and modules of the
+// projects a list of work items ordered by them reads (IssueDirectory).
 package planning
 
 import (
@@ -56,17 +57,33 @@ type (
 	IssueTarget      = app.IssueTarget
 )
 
+// IssueDirectory is what the module tells the issue module about the
+// cycles and modules of the projects a list of work items ordered by their
+// names reads (M6 P3b spec R2): of the projects, the names of the undeleted
+// cycles and of the undeleted modules, archived or not, in id order, read in
+// the list's read-only snapshot whatever the projects' toggles. bootstrap
+// converts it into issue's PlanningPorts.
+type IssueDirectory interface {
+	CycleNames(ctx context.Context, projects []uuid.UUID) ([]IssueDirectoryName, error)
+	ModuleNames(ctx context.Context, projects []uuid.UUID) ([]IssueDirectoryName, error)
+}
+
+// IssueDirectoryName is the value IssueDirectory hands over: bootstrap
+// converts it into issue's.
+type IssueDirectoryName = app.IssueDirectoryName
+
 // Provided are the adapters bootstrap builds before wiring the modules.
 type Provided struct {
-	Purger       *app.Purger
-	IssueTargets IssueTargets
+	Purger         *app.Purger
+	IssueTargets   IssueTargets
+	IssueDirectory IssueDirectory
 }
 
 // Provide builds, over pool, planning's purge: its tables, children before
 // parents, so no parent's CASCADE takes a child's rows first (M6 P2 spec
-// 2.4); and its issue targets, which read a project's facts through
-// projects, project's PlanningProjects converted. The purge does not use
-// projects.
+// 2.4); its issue targets, which read a project's facts through projects,
+// project's PlanningProjects converted; and its issue directory. Neither
+// the purge nor the directory uses projects.
 func Provide(pool *pgxpool.Pool, projects app.FactsReader) Provided {
 	store := postgresadapter.New(pool)
 	return Provided{
@@ -76,7 +93,8 @@ func Provide(pool *pgxpool.Pool, projects app.FactsReader) Provided {
 			{Table: "modules", Delete: store.PurgeModules},
 			{Table: "cycles", Delete: store.PurgeCycles},
 		}),
-		IssueTargets: app.NewIssueTargets(projects, store),
+		IssueTargets:   app.NewIssueTargets(projects, store),
+		IssueDirectory: app.NewIssueDirectory(store),
 	}
 }
 

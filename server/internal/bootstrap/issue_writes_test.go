@@ -112,12 +112,13 @@ func newIssueRouteWithConfig(t *testing.T, pool *pgxpool.Pool, tx shared.TxManag
 // request and background use cases receive the same observable publisher.
 func newIssueModuleWithConfig(t *testing.T, pool *pgxpool.Pool, tx shared.TxManager, clock interface{ Now() time.Time }, events shared.EventPublisher, gate issueapp.WriteGate, cfg config.Config) *issue.Module {
 	t.Helper()
+	planningPorts := planning.Provide(pool, planningProjects{projects: project.Provide(pool, nil).PlanningProjects})
 	return issue.New(issue.Deps{DraftAssetTransfer: issueDraftAssetTransfer{assets: asset.NewDraftAssetTransfer(asset.Provide(pool), clock, events)}, AttachmentReader: attachmentCounterOn(pool), AttachmentCounter: attachmentCounterOn(pool), AttachmentCatalog: attachmentCounterOn(pool), ContentBindings: issueContentBindings{bindings: asset.NewContentBindings(asset.Provide(pool), clock)}, DraftAssets: issueDraftAssets{assets: asset.Provide(pool).DraftAssets}, Events: events, Pool: pool, Tx: tx, Logger: slog.New(slog.DiscardHandler), JobTx: newIssueJobTx(pool, cfg), ArchivePolicies: project.Provide(pool, nil).ArchivePolicies, AutoArchiveInterval: cfg.Issue.AutoArchiveInterval, TrimVersionsInterval: cfg.Issue.TrimVersionsInterval,
 		DeleteBatch: cfg.Issue.DeleteBatch, DeleteBudget: cfg.Issue.DeleteBudget, RuntimeNow: time.Now,
 		ReadTx:    postgres.NewTxManager(pool, cfg.Database.CommitTimeout, postgres.ReadOnlySnapshot()),
 		WriteGate: gate, Clock: clock,
 		Authorizer: authorizerOn(pool), Projects: issueProjects{projects: project.Provide(pool, nil).IssueProjects},
-		Planning:   issuePlanning{targets: planning.Provide(pool, planningProjects{projects: project.Provide(pool, nil).PlanningProjects}).IssueTargets},
+		Planning:   issuePlanning{targets: planningPorts.IssueTargets, directory: planningPorts.IssueDirectory},
 		Workspaces: issueWorkspaces{directory: workspace.Provide(pool, nil).WorkspaceDirectory},
 		Members:    issueMembers{members: workspace.Provide(pool, nil).WorkspaceMemberDirectory},
 		Profiles:   issueProfiles{profiles: identity.Provide(pool).PublicProfiles}})

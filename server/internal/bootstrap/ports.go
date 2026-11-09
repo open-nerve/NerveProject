@@ -104,10 +104,11 @@ func (p planningProjects) Roles(ctx context.Context, id uuid.UUID, ids []uuid.UU
 	return p.projects.ActiveRoles(ctx, id, ids)
 }
 
-// issuePlanning is planning's IssueTargets as issue's PlanningPorts: the
-// same reads, the facts converted.
+// issuePlanning is planning's IssueTargets and IssueDirectory as issue's
+// PlanningPorts: the same reads, the facts and the names converted.
 type issuePlanning struct {
-	targets planning.IssueTargets
+	targets   planning.IssueTargets
+	directory planning.IssueDirectory
 }
 
 func (p issuePlanning) Targets(ctx context.Context, project uuid.UUID, cycles, modules []uuid.UUID) (issue.PlanningFacts, error) {
@@ -134,6 +135,31 @@ func (p issuePlanning) CycleCompleted(ctx context.Context, project, cycle uuid.U
 
 func (p issuePlanning) OpenTargets(ctx context.Context, project uuid.UUID, now time.Time) ([]uuid.UUID, []uuid.UUID, error) {
 	return p.targets.OpenTargets(ctx, project, now)
+}
+
+func (p issuePlanning) CycleNames(ctx context.Context, projects []uuid.UUID) ([]issue.PlanningName, error) {
+	names, err := p.directory.CycleNames(ctx, projects)
+	if err != nil {
+		return nil, err
+	}
+	return issuePlanningNames(names), nil
+}
+
+func (p issuePlanning) ModuleNames(ctx context.Context, projects []uuid.UUID) ([]issue.PlanningName, error) {
+	names, err := p.directory.ModuleNames(ctx, projects)
+	if err != nil {
+		return nil, err
+	}
+	return issuePlanningNames(names), nil
+}
+
+// issuePlanningNames is planning's names as issue's, in their order.
+func issuePlanningNames(names []planning.IssueDirectoryName) []issue.PlanningName {
+	out := make([]issue.PlanningName, len(names))
+	for i, n := range names {
+		out[i] = issue.PlanningName(n)
+	}
+	return out
 }
 
 // issueProjects is project's IssueProjects as issue's ProjectPorts: the

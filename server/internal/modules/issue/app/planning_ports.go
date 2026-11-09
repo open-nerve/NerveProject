@@ -56,3 +56,25 @@ type PlanningTargets interface {
 type OpenPlanning interface {
 	OpenTargets(ctx context.Context, projectID uuid.UUID, now time.Time) (cycles, modules []uuid.UUID, err error)
 }
+
+// PlanningName is a cycle or a module as PlanningDirectory answers it: its
+// id and its name, which a list ordered by the cycles' or the modules'
+// names keys its work items by (NameOrderKey, M6 P3b spec R2).
+type PlanningName struct {
+	ID   uuid.UUID
+	Name string
+}
+
+// PlanningDirectory reads the names a list ordered by the cycles' or the
+// modules' names needs (M6 P3b spec R2), in the read-only snapshot ctx
+// carries, the one the list reads its rows in: of the projects projectIDs,
+// every undeleted cycle, or module, archived or not, in id order. Another
+// project's and a deleted one are not among them, nor is anything when no
+// project is asked about. The projects' toggles do not matter, reading is
+// not held to them (M6 design 3.8); the projects are those the list may
+// read, whose cycles and modules any member, a guest too, may read.
+// planning.Provide's IssueDirectory, converted (bootstrap/ports.go).
+type PlanningDirectory interface {
+	CycleNames(ctx context.Context, projectIDs []uuid.UUID) ([]PlanningName, error)
+	ModuleNames(ctx context.Context, projectIDs []uuid.UUID) ([]PlanningName, error)
+}

@@ -104,20 +104,24 @@ type ProjectPorts interface {
 }
 
 // PlanningPorts are what the module asks of planning (M6 P3a spec R1,
-// R9): the facts of the cycle and modules a work item's write names, under
-// the project's lock it holds, and the cycles and modules that keep the
-// project's work items from automatic archival. planning.Provide's
-// IssueTargets is them, converted (bootstrap/ports.go).
+// R9, P3b spec R2): the facts of the cycle and modules a work item's write
+// names, under the project's lock it holds; the cycles and modules that
+// keep the project's work items from automatic archival; and the names of
+// the listed projects' cycles and modules, in the list's snapshot, which a
+// list ordered by them keys its work items by. planning.Provide's
+// IssueTargets and IssueDirectory are them, converted (bootstrap/ports.go).
 type PlanningPorts interface {
 	app.PlanningTargets
 	app.OpenPlanning
+	app.PlanningDirectory
 }
 
-// PlanningFacts and PlanningTarget are the values PlanningPorts hand over:
-// bootstrap converts planning's into them.
+// PlanningFacts, PlanningTarget and PlanningName are the values
+// PlanningPorts hand over: bootstrap converts planning's into them.
 type (
 	PlanningFacts  = app.PlanningFacts
 	PlanningTarget = app.PlanningTarget
+	PlanningName   = app.PlanningName
 )
 
 // LockedProject, StateRef and its StateGroup, LabelRef and
@@ -169,7 +173,8 @@ type Deps struct {
 	Authorizer shared.Authorizer
 	// Projects are project's IssueProjects, converted (bootstrap/ports.go).
 	Projects ProjectPorts
-	// Planning is planning's IssueTargets, converted (bootstrap/ports.go).
+	// Planning is planning's IssueTargets and IssueDirectory, converted
+	// (bootstrap/ports.go).
 	Planning PlanningPorts
 	// Workspaces is workspace's WorkspaceDirectory, converted
 	// (bootstrap/ports.go).

@@ -175,7 +175,7 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 		ReadTx:    readTx,
 		WriteGate: projectWrites, Clock: businessClock, Authorizer: authorizer,
 		Projects:   issueProjects{projects: projectPorts.IssueProjects},
-		Planning:   issuePlanning{targets: planningPorts.IssueTargets},
+		Planning:   issuePlanning{targets: planningPorts.IssueTargets, directory: planningPorts.IssueDirectory},
 		Workspaces: issueWorkspaces{directory: workspacePorts.WorkspaceDirectory},
 		Members:    issueMembers{members: workspacePorts.WorkspaceMemberDirectory},
 		Profiles:   issueProfiles{profiles: identityPorts.PublicProfiles},
