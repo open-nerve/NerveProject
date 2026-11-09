@@ -1,7 +1,7 @@
 # M6 / P3b 列表引擎的迭代与模块、迭代与模块页的显示设置实施计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-> 状态：预检通过（修正后，[re-60](../../../reviews/re-60-M6P3b预检.md)），实施中。
+> 状态：T1–T14 已实施（2026-11-09），整分支审查 [re-61](../../../reviews/re-61-M6P3b整体审核.md)，阶段记录 [P3b 阶段记录](../reviews/P3b-list-engine-review.md)；预检 [re-60](../../../reviews/re-60-M6P3b预检.md)。
 
 **Goal：**
 - 工作项列表能按迭代、模块筛选（含“无”）与分组；

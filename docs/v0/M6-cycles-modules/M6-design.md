@@ -273,7 +273,7 @@ P1 起第一个实现提交把关键词 phase 改为 `M6/P1`；纯设计分支�
 | P1 迭代后端 | 已完成：noff `0a601f21`，分支 CI 42340200507 与 main CI 42343073949 首次通过，证据归档于 `.superpowers/sdd/M6-P1-integration-20261107` | [P1 spec](specs/P1-cycles-backend.md) / [P1 plan](plans/P1-cycles-backend.md) / [P1 阶段记录](reviews/P1-cycles-backend-review.md) / [re-55](../../reviews/re-55-M6P1整体审核.md) |
 | P2 模块后端 | 已完成：noff `861ea1b5` 的 main CI 两次未过（与 P2 无关），根因修复（含负责人 2026-11-08 批准的 server 任务分两路）第二次 noff `ddd79a9f`，main CI 42458454710 首次通过；证据归档于 `.superpowers/sdd/M6-P2-integration-20261108` | [预检](../../reviews/re-56-M6P2预检.md) / [P2 spec](specs/P2-modules-backend.md) / [P2 plan](plans/P2-modules-backend.md) / [P2 阶段记录](reviews/P2-modules-backend-review.md) |
 | P3a 工作项的归属 | 已完成：noff `2648a739`，分支 CI 42484965936 与 main CI 42487991301 首次通过（检查点 CI 42478883539 第一次因 GitHub 504 未过，只重跑失败的作业后通过），证据归档于 `.superpowers/sdd/M6-P3a-integration-20261108`；P3 因超出一段的上限拆为 P3a/P3b（§12） | [预检](../../reviews/re-58-M6P3a预检.md) / [P3a spec](specs/P3a-issue-membership.md) / [P3a plan](plans/P3a-issue-membership.md) / [P3a 阶段记录](reviews/P3a-issue-membership-review.md) |
-| P3b 列表引擎与偏好 | 进行中：预检通过（修正后）；T1–T13 完成（列表引擎、项目偏好、两张偏好表与接口、G15 的接口故事、文档与交接回执；T7 检查点七项串行一次通过，检查点 CI 42594813667 首次通过），T14 的七项门禁、整审与集成待做 | [预检](../../reviews/re-60-M6P3b预检.md) / [P3b spec](specs/P3b-list-engine.md) / [P3b plan](plans/P3b-list-engine.md) |
+| P3b 列表引擎与偏好 | T1–T14 完成：整审 Ready to merge（[re-61](../../reviews/re-61-M6P3b整体审核.md)），最终候选的门禁见阶段记录 §5；待合入（T7 检查点七项串行一次通过，检查点 CI 42594813667 首次通过） | [预检](../../reviews/re-60-M6P3b预检.md) / [P3b spec](specs/P3b-list-engine.md) / [P3b plan](plans/P3b-list-engine.md) / [P3b 阶段记录](reviews/P3b-list-engine-review.md) |
 | P4–P8、closeout | 未开始 | — |
 
 ## 15. 决定记录
