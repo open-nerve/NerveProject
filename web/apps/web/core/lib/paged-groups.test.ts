@@ -9,7 +9,7 @@ const context: ListContext = {
   projectID: "A",
   query: { order_by: "sort_order" },
   currentUserID: "actor",
-  catalog: { states: new Map(), labels: new Map(), members: new Map() },
+  catalog: { states: new Map(), labels: new Map(), members: new Map(), cycles: new Map(), modules: new Map() },
   pendingIDs: new Set(),
 };
 const first = (): PageReadMeta => ({

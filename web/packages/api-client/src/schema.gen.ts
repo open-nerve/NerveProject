@@ -3067,8 +3067,11 @@ export interface components {
          * @enum {string}
          */
         IssueListGroupField: "state_id" | "state_group" | "priority" | "label_id" | "assignee_id" | "created_by_id" | "cycle_id" | "module_id" | "target_date" | "project_id";
-        /** @enum {string} */
-        IssueListOrder: "created_at" | "-created_at" | "updated_at" | "-updated_at" | "start_date" | "-start_date" | "target_date" | "-target_date" | "priority" | "-priority" | "state_name" | "-state_name" | "label_name" | "-label_name" | "assignee_name" | "-assignee_name" | "sub_issues_count" | "-sub_issues_count" | "link_count" | "-link_count" | "attachment_count" | "-attachment_count" | "sort_order";
+        /**
+         * @description Both lists take every order. cycle_name orders by the name of a work item's cycle, module_name by the least of its modules' names, an archived cycle's or module's too; one in none is last either way.
+         * @enum {string}
+         */
+        IssueListOrder: "created_at" | "-created_at" | "updated_at" | "-updated_at" | "start_date" | "-start_date" | "target_date" | "-target_date" | "priority" | "-priority" | "state_name" | "-state_name" | "label_name" | "-label_name" | "assignee_name" | "-assignee_name" | "cycle_name" | "-cycle_name" | "module_name" | "-module_name" | "sub_issues_count" | "-sub_issues_count" | "link_count" | "-link_count" | "attachment_count" | "-attachment_count" | "sort_order";
         IssueListSubgroup: {
             key: string;
             /** Format: int64 */

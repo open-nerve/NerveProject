@@ -45,6 +45,8 @@ func listParameters(in app.ListRead) (gen.FlatIssuesParams, error) {
 		StateIds: make([]uuid.UUID, 0, len(d.States)), StateGroups: make([]string, 0, len(d.States)), StateKeys: make([]string, 0, len(d.States)),
 		LabelIds: make([]uuid.UUID, 0, len(d.Labels)), LabelKeys: make([]string, 0, len(d.Labels)),
 		AssigneeIds: make([]uuid.UUID, 0, len(d.Assignees)), AssigneeKeys: make([]string, 0, len(d.Assignees)),
+		CycleIds: make([]uuid.UUID, 0, len(d.Cycles)), CycleKeys: make([]string, 0, len(d.Cycles)),
+		ModuleIds: make([]uuid.UUID, 0, len(d.Modules)), ModuleKeys: make([]string, 0, len(d.Modules)),
 	}
 	seenCounts := make(map[uuid.UUID]bool, len(d.AttachmentCounts))
 	for _, v := range d.AttachmentCounts {
@@ -71,6 +73,14 @@ func listParameters(in app.ListRead) (gen.FlatIssuesParams, error) {
 	for _, v := range d.Assignees {
 		p.AssigneeIds = append(p.AssigneeIds, v.ID)
 		p.AssigneeKeys = append(p.AssigneeKeys, v.Key)
+	}
+	for _, v := range d.Cycles {
+		p.CycleIds = append(p.CycleIds, v.ID)
+		p.CycleKeys = append(p.CycleKeys, v.Key)
+	}
+	for _, v := range d.Modules {
+		p.ModuleIds = append(p.ModuleIds, v.ID)
+		p.ModuleKeys = append(p.ModuleKeys, v.Key)
 	}
 	for _, v := range f.StateGroups {
 		p.FilterGroups = append(p.FilterGroups, string(v))

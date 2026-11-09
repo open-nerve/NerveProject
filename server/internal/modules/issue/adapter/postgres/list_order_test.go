@@ -47,6 +47,19 @@ func TestFlatIssueListOrders(t *testing.T) {
 			p := newProject(t, pool, wid, "ORDER")
 			dirs := app.ListDirectories{Projects: []app.VisibleProject{{ID: p.id}}, States: []app.ListState{{ID: p.state, Group: "backlog", Key: "backlog"}}}
 			var absent uuid.UUID
+			// Each work item also left a cycle and a module named "0 left",
+			// keyed before every name: a membership left never counts (M6 P3b
+			// spec 2.1). Modules are one per name, Alpha shared by 07 and 08.
+			var left uuid.UUID
+			modules := map[string]uuid.UUID{}
+			switch sc.Order {
+			case "cycle_name":
+				left = newCycle(t, pool, p, "0 left")
+				dirs.Cycles = append(dirs.Cycles, app.ListName{ID: left, Key: domain.NameOrderKey("0 left")})
+			case "module_name":
+				left = newModule(t, pool, p, "0 left")
+				dirs.Modules = append(dirs.Modules, app.ListName{ID: left, Key: domain.NameOrderKey("0 left")})
+			}
 			for n, r := range sc.Rows {
 				if sc.Order == "state_name" && string(r.Key) == "null" {
 					absent = r.ID
@@ -78,6 +91,25 @@ func TestFlatIssueListOrders(t *testing.T) {
 						}
 						exec(t, pool, "INSERT INTO "+table+"(id,workspace_id,project_id,issue_id,"+column+") VALUES($1,$2,$3,$4,$5)", uuid.NewV7(), wid, p.id, r.ID, target)
 					}
+				case "cycle_name":
+					// The row without a name is a work item in no cycle, listed last.
+					for _, name := range r.Names {
+						cycle := newCycle(t, pool, p, name)
+						dirs.Cycles = append(dirs.Cycles, app.ListName{ID: cycle, Key: domain.NameOrderKey(name)})
+						joinTarget(t, pool, p, "cycle_issues", "cycle_id", r.ID, cycle, false)
+					}
+					joinTarget(t, pool, p, "cycle_issues", "cycle_id", r.ID, left, true)
+				case "module_name":
+					for _, name := range r.Names {
+						module, ok := modules[name]
+						if !ok {
+							module = newModule(t, pool, p, name)
+							modules[name] = module
+							dirs.Modules = append(dirs.Modules, app.ListName{ID: module, Key: domain.NameOrderKey(name)})
+						}
+						joinTarget(t, pool, p, "module_issues", "module_id", r.ID, module, false)
+					}
+					joinTarget(t, pool, p, "module_issues", "module_id", r.ID, left, true)
 				case "link_count":
 					var count int
 					if err := json.Unmarshal(r.Key, &count); err != nil {

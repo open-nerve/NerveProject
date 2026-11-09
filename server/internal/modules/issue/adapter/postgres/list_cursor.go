@@ -44,7 +44,7 @@ func cursorParameters(p *gen.FlatIssuesParams, c domain.ListCursor, order domain
 	}
 	var numeric int64
 	switch p.OrderKey {
-	case "state_name", "label_name", "assignee_name":
+	case "state_name", "label_name", "assignee_name", "cycle_name", "module_name":
 		var value string
 		if err := json.Unmarshal(c.Key, &value); err != nil {
 			return err

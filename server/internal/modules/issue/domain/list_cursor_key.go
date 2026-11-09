@@ -17,7 +17,7 @@ func canonicalListKey(order ListOrder, raw json.RawMessage) (json.RawMessage, er
 		return nil, shared.InvalidCursor()
 	}
 	field := strings.TrimPrefix(string(order), "-")
-	nullable := field == "start_date" || field == "target_date" || field == "state_name" || field == "label_name" || field == "assignee_name"
+	nullable := field == "start_date" || field == "target_date" || field == "state_name" || field == "label_name" || field == "assignee_name" || field == "cycle_name" || field == "module_name"
 	if bytes.Equal(bytes.TrimSpace(raw), []byte("null")) {
 		if nullable {
 			return json.RawMessage("null"), nil
@@ -45,7 +45,7 @@ func canonicalListKey(order ListOrder, raw json.RawMessage) (json.RawMessage, er
 			return nil, shared.InvalidCursor()
 		}
 		return json.Marshal(day.String())
-	case "state_name", "label_name", "assignee_name":
+	case "state_name", "label_name", "assignee_name", "cycle_name", "module_name":
 		var value string
 		if err := json.Unmarshal(raw, &value); err != nil || strings.ContainsRune(value, '\x00') {
 			return nil, shared.InvalidCursor()

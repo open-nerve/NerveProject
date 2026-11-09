@@ -9,6 +9,10 @@ WITH projects AS (
     SELECT * FROM ROWS FROM(unnest(sqlc.arg(label_ids)::uuid[]), unnest(sqlc.arg(label_keys)::text[])) AS l(id, name_key)
 ), assignees AS (
     SELECT * FROM ROWS FROM(unnest(sqlc.arg(assignee_ids)::uuid[]), unnest(sqlc.arg(assignee_keys)::text[])) AS a(id, name_key)
+), cycle_names AS (
+    SELECT * FROM ROWS FROM(unnest(sqlc.arg(cycle_ids)::uuid[]), unnest(sqlc.arg(cycle_keys)::text[])) AS c(id, name_key)
+), module_names AS (
+    SELECT * FROM ROWS FROM(unnest(sqlc.arg(module_ids)::uuid[]), unnest(sqlc.arg(module_keys)::text[])) AS m(id, name_key)
 ), attachments AS (
     SELECT * FROM ROWS FROM(unnest(sqlc.arg(attachment_ids)::uuid[]), unnest(sqlc.arg(attachment_counts)::bigint[])) AS a(id, attachment_count)
 ), filtered AS MATERIALIZED (
@@ -59,6 +63,8 @@ WITH projects AS (
              WHEN 'state_name' THEN f.state_key
              WHEN 'label_name' THEN (SELECT min(l.name_key COLLATE "C") FROM issue_labels r JOIN labels l ON l.id=r.label_id WHERE r.issue_id=i.id AND r.deleted_at IS NULL)
              WHEN 'assignee_name' THEN (SELECT min(a.name_key COLLATE "C") FROM issue_assignees r JOIN assignees a ON a.id=r.assignee_id WHERE r.issue_id=i.id AND r.deleted_at IS NULL)
+             WHEN 'cycle_name' THEN (SELECT c.name_key FROM cycle_issues r JOIN cycle_names c ON c.id=r.cycle_id WHERE r.issue_id=i.id AND r.deleted_at IS NULL)
+             WHEN 'module_name' THEN (SELECT min(m.name_key COLLATE "C") FROM module_issues r JOIN module_names m ON m.id=r.module_id WHERE r.issue_id=i.id AND r.deleted_at IS NULL)
            END AS k_text
     FROM counted f JOIN issues i ON i.id=f.id
 ), numeric_keys AS (

@@ -1,11 +1,14 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
-import type { Issue, IssueListOrder, Label, MemberUser, State } from "@nerve/api-client";
+import type { Cycle, Issue, IssueListOrder, Label, MemberUser, Module, State } from "@nerve/api-client";
 import type { Boundary, SortKey } from "./paged-groups";
 
 export type IssueCatalog = {
   states: ReadonlyMap<string, State>;
   labels: ReadonlyMap<string, Label>;
   members: ReadonlyMap<string, MemberUser>;
+  /** Archived cycles and modules included: they key their work items as any other. */
+  cycles: ReadonlyMap<string, Cycle>;
+  modules: ReadonlyMap<string, Module>;
 };
 
 /** Match the server's ASCII fold and PostgreSQL C collation, without locale rules. */
@@ -79,6 +82,10 @@ export function issueSortKey(issue: Issue, order: IssueListOrder, catalog: Issue
       return minimumName(issue.label_ids.map((id) => catalog.labels.get(id)?.name));
     case "assignee_name":
       return minimumName(issue.assignee_ids.map((id) => catalog.members.get(id)?.display_name));
+    case "cycle_name":
+      return minimumName([issue.cycle_id === null ? undefined : catalog.cycles.get(issue.cycle_id)?.name]);
+    case "module_name":
+      return minimumName(issue.module_ids.map((id) => catalog.modules.get(id)?.name));
     case "sub_issues_count":
       return exactCount(issue.sub_issues_count);
     case "link_count":

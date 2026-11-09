@@ -50,7 +50,7 @@ func TestIssueListSettings(t *testing.T) {
 	check(t, map[string][]string{"target_date": {"none", "none"}}, nil, nil, "filters.target_date[0]", "filters.target_date[1]")
 	check(t, map[string][]string{"start_date": {"2026-10-01..2026-10-02", "2026-10-04..2026-10-05"}}, nil, nil)
 	check(t, map[string][]string{"sub_issue": {}, "project_id": {}, "archived": {}}, nil, nil, "filters.archived", "filters.project_id", "filters.sub_issue")
-	for _, word := range strings.Fields("created_at updated_at start_date target_date priority state_name label_name assignee_name sub_issues_count link_count sort_order") {
+	for _, word := range strings.Fields("created_at updated_at start_date target_date priority state_name label_name assignee_name cycle_name module_name sub_issues_count link_count sort_order") {
 		for _, prefix := range []string{"", "-"} {
 			d := display()
 			d.OrderBy = prefix + word

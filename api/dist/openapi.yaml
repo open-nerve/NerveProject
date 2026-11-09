@@ -5849,6 +5849,7 @@ components:
         - target_date
         - project_id
     IssueListOrder:
+      description: Both lists take every order. cycle_name orders by the name of a work item's cycle, module_name by the least of its modules' names, an archived cycle's or module's too; one in none is last either way.
       type: string
       enum:
         - created_at
@@ -5867,6 +5868,10 @@ components:
         - -label_name
         - assignee_name
         - -assignee_name
+        - cycle_name
+        - -cycle_name
+        - module_name
+        - -module_name
         - sub_issues_count
         - -sub_issues_count
         - link_count

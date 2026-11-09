@@ -65,13 +65,15 @@ func ListSubGroupAllowed(group ListGroup, scope ListScope) bool {
 }
 
 // ListOrderAllowed accepts the implemented ordering words. Ascending
-// words have no prefix; sort_order has no descending form.
+// words have no prefix; sort_order has no descending form. Orders are the
+// same on every page: the cycles' and the modules' names order the
+// member's list too (M6 P3b spec R3).
 func ListOrderAllowed(value ListOrder) bool {
 	if value == "sort_order" {
 		return true
 	}
 	switch strings.TrimPrefix(string(value), "-") {
-	case "created_at", "updated_at", "start_date", "target_date", "priority", "state_name", "label_name", "assignee_name", "sub_issues_count", "link_count", "attachment_count":
+	case "created_at", "updated_at", "start_date", "target_date", "priority", "state_name", "label_name", "assignee_name", "cycle_name", "module_name", "sub_issues_count", "link_count", "attachment_count":
 		return true
 	}
 	return false

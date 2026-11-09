@@ -53,6 +53,8 @@ type ListingDeps struct {
 	Assignees         AssigneeDirectory
 	Profiles          PublicProfiles
 	Issues            IssueReader
+	// Planning names the cycles and modules of a list ordered by them.
+	Planning PlanningDirectory
 }
 
 // Listing assembles a list inside the read snapshot provided by its caller.
@@ -87,11 +89,17 @@ func (l *Listing) Read(ctx context.Context, input ListingInput) (IssueListPage, 
 	if err != nil {
 		return IssueListPage{}, err
 	}
-	if q.Order == "attachment_count" || q.Order == "-attachment_count" {
+	// The directories only an order needs are read for it alone, in the same snapshot.
+	switch q.Order {
+	case "attachment_count", "-attachment_count":
 		directories.AttachmentCounts, err = l.attachmentCounts(ctx, input.Projects)
-		if err != nil {
-			return IssueListPage{}, err
-		}
+	case "cycle_name", "-cycle_name":
+		directories.Cycles, err = planningNames(ctx, l.deps.Planning.CycleNames, input.Projects)
+	case "module_name", "-module_name":
+		directories.Modules, err = planningNames(ctx, l.deps.Planning.ModuleNames, input.Projects)
+	}
+	if err != nil {
+		return IssueListPage{}, err
 	}
 	read := ListRead{ActorID: input.ActorID, TargetMemberID: input.TargetMemberID, Query: q, Directories: directories}
 	fetch := l.deps.Rows.Flat
@@ -217,10 +225,7 @@ func (l *Listing) groups(ctx context.Context, input ListingInput, rows []ListRec
 }
 
 func (l *Listing) directories(ctx context.Context, projects []VisibleProject) (ListDirectories, error) {
-	ids := make([]uuid.UUID, len(projects))
-	for n, p := range projects {
-		ids[n] = p.ID
-	}
+	ids := projectIDs(projects)
 	states, err := l.deps.States.ListStates(ctx, ids)
 	if err != nil {
 		return ListDirectories{}, err
@@ -250,4 +255,28 @@ func (l *Listing) directories(ctx context.Context, projects []VisibleProject) (L
 		}
 	}
 	return dirs, nil
+}
+
+// planningNames reads with read the cycles' or the modules' names of the
+// listed projects, those the other directories are of, and keys them as
+// those are, in Go (NameOrderKey, M6 P3b spec R2).
+func planningNames(ctx context.Context, read func(context.Context, []uuid.UUID) ([]PlanningName, error), projects []VisibleProject) ([]ListName, error) {
+	names, err := read(ctx, projectIDs(projects))
+	if err != nil {
+		return nil, err
+	}
+	keyed := make([]ListName, len(names))
+	for n, v := range names {
+		keyed[n] = ListName{ID: v.ID, Key: domain.NameOrderKey(v.Name)}
+	}
+	return keyed, nil
+}
+
+// projectIDs are the ids of the listed projects, in their order.
+func projectIDs(projects []VisibleProject) []uuid.UUID {
+	ids := make([]uuid.UUID, len(projects))
+	for n, p := range projects {
+		ids[n] = p.ID
+	}
+	return ids
 }

@@ -81,6 +81,9 @@ export class IssueListBinding {
         states: new Map(Object.entries(this.root.stateMap ?? {})),
         labels: new Map(Object.entries(this.root.labelMap ?? {})),
         members: new Map(Object.entries(this.root.memberMap ?? {})),
+        // No cycle or module directory before P7 (M6 P3b spec R9): prepareCatalog refuses an order that needs one.
+        cycles: new Map(),
+        modules: new Map(),
       },
     };
   }
@@ -232,7 +235,9 @@ export class IssueListBinding {
       !!this.scope.query.state_group?.length;
     const labels = order === "label_name";
     const members = order === "assignee_name";
-    if (!states && !labels && !members) return;
+    const cycles = order === "cycle_name";
+    const modules = order === "module_name";
+    if (!states && !labels && !members && !cycles && !modules) return;
     if (states || labels)
       await Promise.all(
         [...new Set(issues.map((issue) => issue.project_id))].map(async (project) => {
@@ -275,7 +280,9 @@ export class IssueListBinding {
         (issue) =>
           (states && !catalog.states.has(issue.state_id)) ||
           (labels && issue.label_ids.some((id) => !catalog.labels.has(id))) ||
-          (members && issue.assignee_ids.some((id) => !catalog.members.has(id)))
+          (members && issue.assignee_ids.some((id) => !catalog.members.has(id))) ||
+          (cycles && issue.cycle_id !== null && !catalog.cycles.has(issue.cycle_id)) ||
+          (modules && issue.module_ids.some((id) => !catalog.modules.has(id)))
       )
     )
       throw new Error("Required issue directory is unavailable");

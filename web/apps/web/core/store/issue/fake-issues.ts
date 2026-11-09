@@ -107,7 +107,7 @@ export const listContext = (
   projectID: "A",
   query: { order_by: "sort_order", ...query },
   currentUserID: "actor",
-  catalog: { states: new Map(), labels: new Map(), members: new Map() },
+  catalog: { states: new Map(), labels: new Map(), members: new Map(), cycles: new Map(), modules: new Map() },
   pendingIDs: new Set(),
 });
 let pageSource = 0;

@@ -68,19 +68,23 @@ const (
 	IssueListOrderAssigneeName         IssueListOrder = "assignee_name"
 	IssueListOrderAttachmentCount      IssueListOrder = "attachment_count"
 	IssueListOrderCreatedAt            IssueListOrder = "created_at"
+	IssueListOrderCycleName            IssueListOrder = "cycle_name"
 	IssueListOrderLabelName            IssueListOrder = "label_name"
 	IssueListOrderLinkCount            IssueListOrder = "link_count"
 	IssueListOrderMinusAssigneeName    IssueListOrder = "-assignee_name"
 	IssueListOrderMinusAttachmentCount IssueListOrder = "-attachment_count"
 	IssueListOrderMinusCreatedAt       IssueListOrder = "-created_at"
+	IssueListOrderMinusCycleName       IssueListOrder = "-cycle_name"
 	IssueListOrderMinusLabelName       IssueListOrder = "-label_name"
 	IssueListOrderMinusLinkCount       IssueListOrder = "-link_count"
+	IssueListOrderMinusModuleName      IssueListOrder = "-module_name"
 	IssueListOrderMinusPriority        IssueListOrder = "-priority"
 	IssueListOrderMinusStartDate       IssueListOrder = "-start_date"
 	IssueListOrderMinusStateName       IssueListOrder = "-state_name"
 	IssueListOrderMinusSubIssuesCount  IssueListOrder = "-sub_issues_count"
 	IssueListOrderMinusTargetDate      IssueListOrder = "-target_date"
 	IssueListOrderMinusUpdatedAt       IssueListOrder = "-updated_at"
+	IssueListOrderModuleName           IssueListOrder = "module_name"
 	IssueListOrderPriority             IssueListOrder = "priority"
 	IssueListOrderSortOrder            IssueListOrder = "sort_order"
 	IssueListOrderStartDate            IssueListOrder = "start_date"
@@ -99,6 +103,8 @@ func (e IssueListOrder) Valid() bool {
 		return true
 	case IssueListOrderCreatedAt:
 		return true
+	case IssueListOrderCycleName:
+		return true
 	case IssueListOrderLabelName:
 		return true
 	case IssueListOrderLinkCount:
@@ -109,9 +115,13 @@ func (e IssueListOrder) Valid() bool {
 		return true
 	case IssueListOrderMinusCreatedAt:
 		return true
+	case IssueListOrderMinusCycleName:
+		return true
 	case IssueListOrderMinusLabelName:
 		return true
 	case IssueListOrderMinusLinkCount:
+		return true
+	case IssueListOrderMinusModuleName:
 		return true
 	case IssueListOrderMinusPriority:
 		return true
@@ -124,6 +134,8 @@ func (e IssueListOrder) Valid() bool {
 	case IssueListOrderMinusTargetDate:
 		return true
 	case IssueListOrderMinusUpdatedAt:
+		return true
+	case IssueListOrderModuleName:
 		return true
 	case IssueListOrderPriority:
 		return true
@@ -586,7 +598,7 @@ type IssueListGroup struct {
 // IssueListGroupField Project lists exclude project_id; member lists use their narrower page vocabulary. cycle_id and module_id group project lists only: a work item is in the group of its undeleted cycle membership, and in the group of each of its undeleted module memberships, an archived cycle's or module's too; one without is in the none group.
 type IssueListGroupField string
 
-// IssueListOrder defines model for IssueListOrder.
+// IssueListOrder Both lists take every order. cycle_name orders by the name of a work item's cycle, module_name by the least of its modules' names, an archived cycle's or module's too; one in none is last either way.
 type IssueListOrder string
 
 // IssueListPage Flat pages and selected group/cell pages have total, data and next_cursor. Grouped pages have total and groups. Lanes have total, groups and subgroup_totals. Other branch fields are omitted. Arrays are never null.

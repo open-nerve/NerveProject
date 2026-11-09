@@ -33,6 +33,31 @@ func among(known []app.PlanningTarget, ids []uuid.UUID) []app.PlanningTarget {
 	return slices.DeleteFunc(slices.Clone(known), func(t app.PlanningTarget) bool { return !slices.Contains(ids, t.ID) })
 }
 
+// fakeDirectory is planning's directory of a list's cycles and modules
+// (PlanningDirectory, M6 P3b spec R2): the names it holds of the projects
+// the list's other directories are of, each read logged among the list's
+// reads by ports, which fails the one it is told to.
+type fakeDirectory struct {
+	ports           *listingPorts
+	cycles, modules []app.PlanningName
+}
+
+func (f fakeDirectory) CycleNames(ctx context.Context, projectIDs []uuid.UUID) ([]app.PlanningName, error) {
+	return f.names(ctx, "cycles", projectIDs, f.cycles)
+}
+
+func (f fakeDirectory) ModuleNames(ctx context.Context, projectIDs []uuid.UUID) ([]app.PlanningName, error) {
+	return f.names(ctx, "modules", projectIDs, f.modules)
+}
+
+func (f fakeDirectory) names(ctx context.Context, read string, projectIDs []uuid.UUID, names []app.PlanningName) ([]app.PlanningName, error) {
+	f.ports.t.Helper()
+	if !slices.Equal(projectIDs, f.ports.pids) {
+		f.ports.t.Fatalf("%s scope %v; want %v", read, projectIDs, f.ports.pids)
+	}
+	return names, f.ports.called(ctx, read)
+}
+
 func (f *fakePlanning) CycleCompleted(ctx context.Context, projectID, cycleID uuid.UUID, now time.Time) (bool, error) {
 	if err := f.log.add(ctx, "CycleCompleted", projectID, cycleID, now.Format(time.RFC3339Nano)); err != nil {
 		return false, err
