@@ -129,8 +129,9 @@ func (s *Store) SetModuleArchived(ctx context.Context, m domain.Module) error {
 }
 
 // DeleteModule soft-deletes the module id, deleted and last changed by by at
-// at; one deleted already keeps its deletion. Its members' and links' rows
-// are DeleteModuleMemberRows' and DeleteModuleLinkRows'.
+// at; one deleted already keeps its deletion. Its members', links' and page's
+// display settings' rows are DeleteModuleMemberRows', DeleteModuleLinkRows'
+// and DeleteModulePreferenceRows'.
 func (s *Store) DeleteModule(ctx context.Context, id uuid.UUID, at time.Time, by uuid.UUID) error {
 	if err := s.queries(ctx).DeleteModule(ctx, gen.DeleteModuleParams{ID: id, At: at, By: by}); err != nil {
 		return fmt.Errorf("delete module %s: %w", id, err)

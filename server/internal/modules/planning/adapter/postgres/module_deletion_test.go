@@ -73,11 +73,12 @@ func audited(t *testing.T, pool *pgxpool.Pool, table string, project uuid.UUID) 
 	return stamps, rest
 }
 
-// A module's deletion (M6 P2 spec 2.4, R15): DeleteModule soft-deletes the module, DeleteModuleMemberRows its
-// undeleted members' rows, DeleteModuleLinkRows its undeleted links, each at the moment and by the account given; a
-// member removed and a link deleted before keep their own deletion, the other module's rows theirs, and every other
-// column of every row is kept. Again later, nothing changes. The module and its links are read no more. Each
-// statement answers a failed write as its failure.
+// A module's deletion (M6 P2 spec 2.4, R15; P3b spec 2.5): DeleteModule soft-deletes the module,
+// DeleteModuleMemberRows its undeleted members' rows, DeleteModuleLinkRows its undeleted links,
+// DeleteModulePreferenceRows its page's undeleted display settings' rows, each at the moment and by the account given;
+// a member removed, a link deleted and display settings deleted before keep their own deletion, the other module's
+// rows theirs, and every other column of every row is kept. Again later, nothing changes. The module and its links are
+// read no more. Each statement answers a failed write as its failure.
 func TestDeleteModuleWithItsRows(t *testing.T) {
 	w := newLinksWorld(t)
 	ctx := context.Background()
@@ -99,12 +100,19 @@ func TestDeleteModuleWithItsRows(t *testing.T) {
 				}
 			}
 		}
+		for _, user := range []uuid.UUID{w.by, kept, gone} {
+			exec(t, w.pool, `INSERT INTO module_user_properties (id, workspace_id, project_id, module_id, user_id, filters, created_by_id, updated_by_id,
+				created_at, updated_at) VALUES ($1, $2, $3, $4, $5, '{"cycle_id":["none"]}', $5, $5, $6, $6)`, uuid.NewV7(), w.workspace, w.web, module,
+				user, at.Add(-time.Hour))
+		}
 	}
+	exec(t, w.pool, `UPDATE module_user_properties SET deleted_at = $1, updated_at = $1, updated_by_id = $2 WHERE module_id = $3 AND user_id = $4`,
+		at.Add(-time.Minute), kept, w.auth, gone)
 	if err := w.s.RemoveModuleMembers(ctx, w.auth, []uuid.UUID{gone}, at.Add(-time.Minute), kept); err != nil {
 		t.Fatal(err)
 	}
 	deleter := account(t, w.pool, "del")
-	tables := []string{"modules", "module_members", "module_links"}
+	tables := []string{"modules", "module_members", "module_links", "module_user_properties"}
 	before, rests, live := map[string]map[uuid.UUID]string{}, map[string]string{}, map[string][]uuid.UUID{"modules": {w.auth}}
 	for _, table := range tables {
 		before[table], rests[table] = audited(t, w.pool, table, w.web)
@@ -115,7 +123,8 @@ func TestDeleteModuleWithItsRows(t *testing.T) {
 			}
 		}
 	}
-	steps := []func(context.Context, uuid.UUID, time.Time, uuid.UUID) error{w.s.DeleteModule, w.s.DeleteModuleMemberRows, w.s.DeleteModuleLinkRows}
+	steps := []func(context.Context, uuid.UUID, time.Time, uuid.UUID) error{w.s.DeleteModule, w.s.DeleteModuleMemberRows, w.s.DeleteModuleLinkRows,
+		w.s.DeleteModulePreferenceRows}
 	for _, when := range []time.Time{at, at.Add(time.Hour)} {
 		for _, step := range steps {
 			if err := step(ctx, w.auth, when, deleter); err != nil {

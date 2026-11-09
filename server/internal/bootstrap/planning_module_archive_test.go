@@ -113,12 +113,13 @@ func (w issueWorld) moduleRowStamps(t *testing.T, table string, id uuid.UUID) []
 }
 
 // The app deletes Web's modules as the contract says (M6 P2 spec 2.4, R15): bob, its member, may not delete alice's
-// Auth and deletes his own Mine, archived, with its members and links: the module, each of its members' rows and
-// each of its links soft-deleted at one moment by him, a link removed before keeping its removal; it is read and
-// listed no more, nor are its links, which are not found to change or remove, and a second deletion answers not
-// found. alice, its admin, deletes any. A guest, an admin of the workspace who sees only his own work items there and
-// a non-member who sees Web are forbidden; one who does not see it, not found; modules turned off and an archived
-// project refuse it.
+// Auth and deletes his own Mine, archived, with its members, links and the display settings of its page: the module,
+// each of its members' rows, each of its links and alice's and his display settings soft-deleted at one moment by
+// him, a link removed and display settings deleted before keeping their deletion, Auth's display settings as they were
+// (M6 P3b spec 2.5); it is read and listed no more, nor are its links, which are not found to change or remove, and a
+// second deletion answers not found. alice, its admin, deletes any. A guest, an admin of the workspace who sees only
+// his own work items there and a non-member who sees Web are forbidden; one who does not see it, not found; modules
+// turned off and an archived project refuse it.
 func TestDeleteModuleThroughTheApp(t *testing.T) {
 	w := newIssueWorld(t)
 	w.turnModulesOn(t, w.web)
@@ -130,6 +131,13 @@ func TestDeleteModuleThroughTheApp(t *testing.T) {
 	gone := w.addLink(t, "alice", mine, `{"url":"http://169.254.169.254/gone"}`, http.StatusCreated)
 	w.send(t, "alice", http.MethodDelete, "/api/v0/module-links/"+gone.ID.String(), "", http.StatusNoContent)
 	removed := w.moduleRowStamps(t, "module_links", mine)
+	mineSettings, authSettings := modulePreferences(mine), modulePreferences(auth)
+	mineSettings.seed(t, w, []string{"alice", "bob"}, []string{"walt"})
+	authSettings.seed(t, w, []string{"alice", "bob"}, nil)
+	settings, authRows := mineSettings.stamps(t, w), authSettings.rows(t, w)
+	if len(settings) != 3 || len(slices.DeleteFunc(slices.Clone(settings), func(s string) bool { return s != "live" })) != 2 {
+		t.Fatalf("Mine's display settings before its deletion: %q; want alice's and bob's live, walt's deleted", settings)
+	}
 	w.send(t, "bob", http.MethodPost, "/api/v0/modules/"+mine.String()+"/archive", "", http.StatusOK)
 	path := func(id uuid.UUID) string { return "/api/v0/modules/" + id.String() }
 
@@ -153,6 +161,10 @@ func TestDeleteModuleThroughTheApp(t *testing.T) {
 		if got := w.moduleRowStamps(t, table, mine); !slices.Equal(got, want) {
 			t.Errorf("Mine's %s after bob's deletion: %q; want %q", table, got, want)
 		}
+	}
+	mineSettings.wantDeletedWith(t, w, settings, at, bob)
+	if got := authSettings.rows(t, w); got != authRows {
+		t.Errorf("Auth's display settings after Mine's deletion: %s; want %s", got, authRows)
 	}
 	if live := slices.DeleteFunc(slices.Clone(removed), func(s string) bool { return s != "live" }); len(live) != 2 || len(removed) != 3 {
 		t.Fatalf("Mine's links before its deletion: %q; want Spec and Plan live, Gone removed", removed)
