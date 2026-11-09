@@ -5802,6 +5802,10 @@ export interface operations {
                 mention_id?: string[];
                 /** @description UUID or me alternatives. CSV; repeated parameters are not allowed. */
                 subscriber_id?: string[];
+                /** @description UUID or none alternatives. CSV; repeated parameters are not allowed. A work item's undeleted cycle membership counts, an archived cycle's too; none selects work items in no cycle. */
+                cycle_id?: string[];
+                /** @description UUID or none alternatives. CSV; repeated parameters are not allowed. A work item's undeleted module memberships count, an archived module's too; none selects work items in no module. */
+                module_id?: string[];
                 /** @description A day, a..b, ..b, a.. or none; repeated conditions use AND. */
                 start_date?: string[];
                 /** @description A day, a..b, ..b, a.. or none; repeated conditions use AND. */

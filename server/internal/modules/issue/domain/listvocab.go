@@ -29,7 +29,7 @@ func ListFilterAllowed(field string, scope ListScope) bool {
 	switch scope {
 	case ProjectList:
 		switch field {
-		case "state_id", "state_group", "priority", "label_id", "assignee_id", "created_by_id", "mention_id", "subscriber_id", "start_date", "target_date", "sub_issue", "archived":
+		case "state_id", "state_group", "priority", "label_id", "assignee_id", "created_by_id", "mention_id", "subscriber_id", "cycle_id", "module_id", "start_date", "target_date", "sub_issue", "archived":
 			return true
 		}
 	case MemberList:
@@ -84,7 +84,7 @@ func ListFilterValueAllowed(field, value string) bool {
 	switch field {
 	case "state_id", "project_id":
 		return listUUIDAllowed(value)
-	case "label_id":
+	case "label_id", "cycle_id", "module_id":
 		return value == "none" || listUUIDAllowed(value)
 	case "assignee_id":
 		return value == "none" || value == "me" || listUUIDAllowed(value)

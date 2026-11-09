@@ -44,25 +44,31 @@ WITH projects AS (
       AND ((coalesce(cardinality($24::uuid[]),0)=0 AND NOT $25::boolean)
            OR EXISTS(SELECT 1 FROM issue_assignees a WHERE a.issue_id=i.id AND a.deleted_at IS NULL AND a.assignee_id=ANY($24::uuid[]))
            OR ($25::boolean AND NOT EXISTS(SELECT 1 FROM issue_assignees a WHERE a.issue_id=i.id AND a.deleted_at IS NULL)))
-      AND NOT EXISTS(SELECT 1 FROM ROWS FROM(unnest($26::boolean[]), unnest($27::text[]), unnest($28::text[])) AS d(none, lo, hi)
+      AND ((coalesce(cardinality($26::uuid[]),0)=0 AND NOT $27::boolean)
+           OR EXISTS(SELECT 1 FROM cycle_issues c WHERE c.issue_id=i.id AND c.deleted_at IS NULL AND c.cycle_id=ANY($26::uuid[]))
+           OR ($27::boolean AND NOT EXISTS(SELECT 1 FROM cycle_issues c WHERE c.issue_id=i.id AND c.deleted_at IS NULL)))
+      AND ((coalesce(cardinality($28::uuid[]),0)=0 AND NOT $29::boolean)
+           OR EXISTS(SELECT 1 FROM module_issues m WHERE m.issue_id=i.id AND m.deleted_at IS NULL AND m.module_id=ANY($28::uuid[]))
+           OR ($29::boolean AND NOT EXISTS(SELECT 1 FROM module_issues m WHERE m.issue_id=i.id AND m.deleted_at IS NULL)))
+      AND NOT EXISTS(SELECT 1 FROM ROWS FROM(unnest($30::boolean[]), unnest($31::text[]), unnest($32::text[])) AS d(none, lo, hi)
                      WHERE NOT (CASE WHEN d.none THEN i.start_date IS NULL ELSE i.start_date IS NOT NULL AND (d.lo='' OR i.start_date>=NULLIF(d.lo,'')::date) AND (d.hi='' OR i.start_date<=NULLIF(d.hi,'')::date) END))
-      AND NOT EXISTS(SELECT 1 FROM ROWS FROM(unnest($29::boolean[]), unnest($30::text[]), unnest($31::text[])) AS d(none, lo, hi)
+      AND NOT EXISTS(SELECT 1 FROM ROWS FROM(unnest($33::boolean[]), unnest($34::text[]), unnest($35::text[])) AS d(none, lo, hi)
                      WHERE NOT (CASE WHEN d.none THEN i.target_date IS NULL ELSE i.target_date IS NOT NULL AND (d.lo='' OR i.target_date>=NULLIF(d.lo,'')::date) AND (d.hi='' OR i.target_date<=NULLIF(d.hi,'')::date) END))
-      AND ($32::text = ''
-           OR ($32::text='created' AND i.created_by_id=$33::uuid)
-           OR ($32::text='assigned' AND EXISTS(SELECT 1 FROM issue_assignees a WHERE a.issue_id=i.id AND a.deleted_at IS NULL AND a.assignee_id=$33::uuid))
-           OR ($32::text='subscribed' AND EXISTS(SELECT 1 FROM issue_subscribers s WHERE s.issue_id=i.id AND s.deleted_at IS NULL AND s.subscriber_id=$33::uuid)))
+      AND ($36::text = ''
+           OR ($36::text='created' AND i.created_by_id=$37::uuid)
+           OR ($36::text='assigned' AND EXISTS(SELECT 1 FROM issue_assignees a WHERE a.issue_id=i.id AND a.deleted_at IS NULL AND a.assignee_id=$37::uuid))
+           OR ($36::text='subscribed' AND EXISTS(SELECT 1 FROM issue_subscribers s WHERE s.issue_id=i.id AND s.deleted_at IS NULL AND s.subscriber_id=$37::uuid)))
 ), counted AS (
     SELECT f.id, f.own_only, f.attachment_count, f.state_key, f.created_at, f.updated_at, f.start_date, f.target_date, f.priority, f.sort_order, count(*) OVER () AS total FROM filtered f
 ), source_keys AS (
     SELECT f.id, f.own_only, f.total, f.attachment_count, f.created_at, f.updated_at, f.start_date, f.target_date, f.priority,
-           CASE WHEN $34::text='sort_order' THEN pg_catalog.float8send(f.sort_order) END AS bits,
-           CASE WHEN $34::text='sub_issues_count' THEN
+           CASE WHEN $38::text='sort_order' THEN pg_catalog.float8send(f.sort_order) END AS bits,
+           CASE WHEN $38::text='sub_issues_count' THEN
                (SELECT count(*) FROM issues c WHERE c.parent_id=f.id AND c.deleted_at IS NULL AND c.archived_at IS NULL
                 AND (NOT f.own_only OR c.created_by_id=$1::uuid)) END AS child_count,
-           CASE WHEN $34::text='link_count' THEN
+           CASE WHEN $38::text='link_count' THEN
                (SELECT count(*) FROM issue_links l WHERE l.issue_id=f.id AND l.deleted_at IS NULL) END AS link_count,
-           CASE $34::text
+           CASE $38::text
              WHEN 'state_name' THEN f.state_key
              WHEN 'label_name' THEN (SELECT min(l.name_key COLLATE "C") FROM issue_labels r JOIN labels l ON l.id=r.label_id WHERE r.issue_id=f.id AND r.deleted_at IS NULL)
              WHEN 'assignee_name' THEN (SELECT min(a.name_key COLLATE "C") FROM issue_assignees r JOIN assignees a ON a.id=r.assignee_id WHERE r.issue_id=f.id AND r.deleted_at IS NULL)
@@ -70,7 +76,7 @@ WITH projects AS (
     FROM counted f
 ), numeric_keys AS (
     SELECT s.id, s.own_only, s.total, s.child_count, s.link_count, s.attachment_count, s.k_text,
-           CASE $34::text
+           CASE $38::text
              WHEN 'sort_order' THEN ((CASE WHEN get_byte(s.bits,0)>=128 THEN -1 ELSE 1 END)::bigint *
                  ((get_byte(s.bits,0)&127)::bigint*72057594037927936::bigint + get_byte(s.bits,1)::bigint*281474976710656::bigint
                  + get_byte(s.bits,2)::bigint*1099511627776::bigint + get_byte(s.bits,3)::bigint*4294967296::bigint
@@ -91,25 +97,25 @@ WITH projects AS (
 ), ranked AS (
     SELECT k.id, k.own_only, k.total, k.child_count, k.link_count, k.attachment_count, k.k_text, k.k_num, k.k_null, row_number() OVER (
         ORDER BY k.k_null,
-                 CASE WHEN NOT $35::boolean THEN k.k_num END ASC,
-                 CASE WHEN $35::boolean THEN k.k_num END DESC,
-                 CASE WHEN NOT $35::boolean THEN k.k_text END COLLATE "C" ASC,
-                 CASE WHEN $35::boolean THEN k.k_text END COLLATE "C" DESC,
-                 CASE WHEN NOT $35::boolean THEN k.id END ASC,
-                 CASE WHEN $35::boolean THEN k.id END DESC) AS page_position
+                 CASE WHEN NOT $39::boolean THEN k.k_num END ASC,
+                 CASE WHEN $39::boolean THEN k.k_num END DESC,
+                 CASE WHEN NOT $39::boolean THEN k.k_text END COLLATE "C" ASC,
+                 CASE WHEN $39::boolean THEN k.k_text END COLLATE "C" DESC,
+                 CASE WHEN NOT $39::boolean THEN k.id END ASC,
+                 CASE WHEN $39::boolean THEN k.id END DESC) AS page_position
     FROM keyed k
-    WHERE NOT $36::boolean OR
-          (k.k_null AND NOT $37::boolean) OR
-          (k.k_null=$37::boolean AND
-           (CASE WHEN $35::boolean THEN
-               (k.k_num<$38::bigint::numeric OR k.k_text COLLATE "C"<$39::text COLLATE "C")
-             ELSE (k.k_num>$38::bigint::numeric OR k.k_text COLLATE "C">$39::text COLLATE "C") END
-            OR ((k.k_null OR k.k_num=$38::bigint::numeric OR k.k_text COLLATE "C"=$39::text COLLATE "C")
-                AND CASE WHEN $35::boolean THEN k.id<$40::uuid ELSE k.id>$40::uuid END)))
+    WHERE NOT $40::boolean OR
+          (k.k_null AND NOT $41::boolean) OR
+          (k.k_null=$41::boolean AND
+           (CASE WHEN $39::boolean THEN
+               (k.k_num<$42::bigint::numeric OR k.k_text COLLATE "C"<$43::text COLLATE "C")
+             ELSE (k.k_num>$42::bigint::numeric OR k.k_text COLLATE "C">$43::text COLLATE "C") END
+            OR ((k.k_null OR k.k_num=$42::bigint::numeric OR k.k_text COLLATE "C"=$43::text COLLATE "C")
+                AND CASE WHEN $39::boolean THEN k.id<$44::uuid ELSE k.id>$44::uuid END)))
 ), paged AS MATERIALIZED (
     -- Carry the one authoritative order through the page's full projection.
-    SELECT id, own_only, total, child_count, link_count, attachment_count, k_text, k_num, k_null, page_position FROM ranked WHERE page_position <= $41::integer
-    LIMIT $41::integer
+    SELECT id, own_only, total, child_count, link_count, attachment_count, k_text, k_num, k_null, page_position FROM ranked WHERE page_position <= $45::integer
+    LIMIT $45::integer
 )
 SELECT i.id, i.workspace_id, i.project_id, i.sequence_id, i.name, i.state_id, i.priority,
        i.start_date, i.target_date, i.parent_id, i.sort_order, i.completed_at, i.archived_at,
@@ -155,6 +161,10 @@ type FlatIssuesParams struct {
 	LabelsNone        bool
 	FilterAssignees   []uuid.UUID
 	AssigneesNone     bool
+	FilterCycles      []uuid.UUID
+	CyclesNone        bool
+	FilterModules     []uuid.UUID
+	ModulesNone       bool
 	StartNone         []bool
 	StartFrom         []string
 	StartTo           []string
@@ -237,6 +247,10 @@ func (q *Queries) FlatIssues(ctx context.Context, arg FlatIssuesParams) ([]FlatI
 		arg.LabelsNone,
 		arg.FilterAssignees,
 		arg.AssigneesNone,
+		arg.FilterCycles,
+		arg.CyclesNone,
+		arg.FilterModules,
+		arg.ModulesNone,
 		arg.StartNone,
 		arg.StartFrom,
 		arg.StartTo,

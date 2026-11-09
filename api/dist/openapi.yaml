@@ -2165,6 +2165,24 @@ paths:
             type: array
             items:
               type: string
+        - name: cycle_id
+          in: query
+          description: UUID or none alternatives. CSV; repeated parameters are not allowed. A work item's undeleted cycle membership counts, an archived cycle's too; none selects work items in no cycle.
+          style: form
+          explode: false
+          schema:
+            type: array
+            items:
+              type: string
+        - name: module_id
+          in: query
+          description: UUID or none alternatives. CSV; repeated parameters are not allowed. A work item's undeleted module memberships count, an archived module's too; none selects work items in no module.
+          style: form
+          explode: false
+          schema:
+            type: array
+            items:
+              type: string
         - name: start_date
           in: query
           description: A day, a..b, ..b, a.. or none; repeated conditions use AND.

@@ -33,6 +33,36 @@ func TestParseListQuery(t *testing.T) {
 			t.Fatalf("query = %+v; filters want %+v", q, want)
 		}
 	})
+	// Each none is recorded on its own field: a cycle's or a module's none
+	// recorded as the assignees' would list unassigned work items instead.
+	t.Run("each none stays in its own field", func(t *testing.T) {
+		for field, want := range map[string]ListFilters{
+			"label_id": {Labels: IDFilter{None: true}}, "assignee_id": {Assignees: IDFilter{None: true}},
+			"cycle_id": {Cycles: IDFilter{None: true}}, "module_id": {Modules: IDFilter{None: true}},
+		} {
+			q, err := ParseListQuery(map[string][]string{field: {"none"}}, ProjectList, actor)
+			if err != nil {
+				t.Fatalf("%s=none: %v", field, err)
+			}
+			if field == "cycle_id" && q.Filters.Assignees.None {
+				t.Error("cycle_id=none set the assignees' none")
+			}
+			want.SubIssues = true
+			if !reflect.DeepEqual(q.Filters, want) {
+				t.Errorf("%s=none filters = %+v; want %+v", field, q.Filters, want)
+			}
+		}
+	})
+	t.Run("cycle and module alternatives", func(t *testing.T) {
+		q, err := ParseListQuery(map[string][]string{"cycle_id": {other.String() + ",none"}, "module_id": {"none," + other.String() + "," + actor.String()}, "label_id": {other.String()}}, ProjectList, actor)
+		if err != nil {
+			t.Fatal(err)
+		}
+		want := ListFilters{Labels: IDFilter{IDs: []uuid.UUID{other}}, Cycles: IDFilter{IDs: []uuid.UUID{other}, None: true}, Modules: IDFilter{IDs: []uuid.UUID{other, actor}, None: true}, SubIssues: true}
+		if !reflect.DeepEqual(q.Filters, want) {
+			t.Fatalf("filters = %+v; want %+v", q.Filters, want)
+		}
+	})
 	t.Run("member relation and project filter", func(t *testing.T) {
 		for _, relation := range []string{"assigned", "created", "subscribed"} {
 			q, err := ParseListQuery(map[string][]string{"relation": {relation}, "project_id": {other.String()}, "group_by": {"project_id"}}, MemberList, actor)
@@ -60,7 +90,7 @@ func TestParseListQuery(t *testing.T) {
 		}
 	})
 	t.Run("all nondate parameters reject repetition and empty value lists", func(t *testing.T) {
-		for _, field := range []string{"state_id", "state_group", "priority", "label_id", "assignee_id", "created_by_id", "mention_id", "subscriber_id", "project_id", "sub_issue", "archived", "group_by", "sub_group_by", "group_key", "sub_group_key", "order_by", "relation", "limit", "cursor"} {
+		for _, field := range []string{"state_id", "state_group", "priority", "label_id", "assignee_id", "created_by_id", "mention_id", "subscriber_id", "project_id", "cycle_id", "module_id", "sub_issue", "archived", "group_by", "sub_group_by", "group_key", "sub_group_key", "order_by", "relation", "limit", "cursor"} {
 			for _, values := range [][]string{{"x", "x"}, {}} {
 				scope := ProjectList
 				raw := map[string][]string{field: values}
@@ -78,7 +108,7 @@ func TestParseListQuery(t *testing.T) {
 	t.Run("invalid filters and controls", func(t *testing.T) {
 		cases := []struct{ field, value string }{
 			{"state_id", "bad"}, {"state_id", "none"}, {"state_id", other.String() + ","}, {"priority", ",high"}, {"priority", "high,,low"}, {"priority", "HIGH"}, {"state_group", "triage"},
-			{"label_id", "me"}, {"created_by_id", "none"}, {"mention_id", "none"}, {"subscriber_id", "none"}, {"assignee_id", " me"},
+			{"label_id", "me"}, {"cycle_id", "me"}, {"module_id", "me"}, {"cycle_id", other.String() + ",bad"}, {"created_by_id", "none"}, {"mention_id", "none"}, {"subscriber_id", "none"}, {"assignee_id", " me"},
 			{"start_date", "2026-02-30"}, {"start_date", "2026-03-01..2026-02-01"}, {"target_date", ".."}, {"target_date", "2026-01-01,2026-01-02"},
 			{"sub_issue", "1"}, {"archived", ""}, {"cycle_id", "x"}, {"module_id", "x"}, {"link_count", "1"}, {"group_by", "state_name"}, {"order_by", "-sort_order"}, {"order_by", "unknown_count"}, {"order_by", "+created_at"}, {"order_by", ""}, {"relation", "assigned"},
 		}
@@ -96,8 +126,12 @@ func TestParseListQuery(t *testing.T) {
 		}
 	})
 	t.Run("member excludes project capabilities", func(t *testing.T) {
-		for _, field := range []string{"state_id", "assignee_id", "created_by_id", "mention_id", "subscriber_id", "archived", "sub_group_by"} {
+		for _, field := range []string{"state_id", "assignee_id", "created_by_id", "mention_id", "subscriber_id", "cycle_id", "module_id", "archived", "sub_group_by"} {
 			_, err := ParseListQuery(map[string][]string{"relation": {"assigned"}, field: {other.String()}}, MemberList, actor)
+			assertListProblem(t, err, shared.KindInvalid, field, shared.FieldNotAllowed)
+		}
+		for _, field := range []string{"cycle_id", "module_id"} {
+			_, err := ParseListQuery(map[string][]string{"relation": {"assigned"}, field: {"none"}}, MemberList, actor)
 			assertListProblem(t, err, shared.KindInvalid, field, shared.FieldNotAllowed)
 		}
 		_, err := ParseListQuery(map[string][]string{"relation": {"unknown"}}, MemberList, actor)

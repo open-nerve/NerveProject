@@ -20,7 +20,7 @@ type ListFilters struct {
 	StateIDs, CreatorIDs, MentionIDs, SubscriberIDs, ProjectIDs []uuid.UUID
 	StateGroups                                                 []StateGroup
 	Priorities                                                  []Priority
-	Labels, Assignees                                           IDFilter
+	Labels, Assignees, Cycles, Modules                          IDFilter
 	Start, Target                                               []DateFilter
 	SubIssues                                                   bool
 	Archived                                                    bool

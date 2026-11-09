@@ -103,6 +103,7 @@ func TestIssueSubgroupsParameters(t *testing.T) {
 		"labels": p.LabelIds == nil, "label keys": p.LabelKeys == nil, "assignees": p.AssigneeIds == nil, "assignee keys": p.AssigneeKeys == nil,
 		"filter projects": p.FilterProjects == nil, "filter states": p.FilterStates == nil, "filter groups": p.FilterGroups == nil, "priorities": p.FilterPriorities == nil,
 		"creators": p.FilterCreators == nil, "mentions": p.FilterMentions == nil, "subscribers": p.FilterSubscribers == nil, "filter labels": p.FilterLabels == nil, "filter assignees": p.FilterAssignees == nil,
+		"filter cycles": p.FilterCycles == nil, "filter modules": p.FilterModules == nil,
 		"start none": p.StartNone == nil, "start from": p.StartFrom == nil, "start to": p.StartTo == nil, "target none": p.TargetNone == nil, "target from": p.TargetFrom == nil, "target to": p.TargetTo == nil,
 	} {
 		if isNil {

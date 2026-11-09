@@ -31,6 +31,8 @@ func TestIssueSubgroupsArrayParameters(t *testing.T) {
 		{"subscribers", func(p *gen.SubgroupIssuesParams) { p.FilterSubscribers = []uuid.UUID{} }},
 		{"labels", func(p *gen.SubgroupIssuesParams) { p.FilterLabels = []uuid.UUID{} }},
 		{"assignees", func(p *gen.SubgroupIssuesParams) { p.FilterAssignees = []uuid.UUID{} }},
+		{"cycles", func(p *gen.SubgroupIssuesParams) { p.FilterCycles = []uuid.UUID{} }},
+		{"modules", func(p *gen.SubgroupIssuesParams) { p.FilterModules = []uuid.UUID{} }},
 		{"start", func(p *gen.SubgroupIssuesParams) {
 			p.StartNone, p.StartFrom, p.StartTo = []bool{}, []string{}, []string{}
 		}},

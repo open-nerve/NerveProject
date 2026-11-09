@@ -38,6 +38,8 @@ func listParameters(in app.ListRead) (gen.FlatIssuesParams, error) {
 		FilterCreators: listArray(f.CreatorIDs), FilterMentions: listArray(f.MentionIDs), FilterSubscribers: listArray(f.SubscriberIDs),
 		FilterLabels: listArray(f.Labels.IDs), LabelsNone: f.Labels.None,
 		FilterAssignees: listArray(f.Assignees.IDs), AssigneesNone: f.Assignees.None,
+		FilterCycles: listArray(f.Cycles.IDs), CyclesNone: f.Cycles.None,
+		FilterModules: listArray(f.Modules.IDs), ModulesNone: f.Modules.None,
 		FilterGroups: make([]string, 0, len(f.StateGroups)), FilterPriorities: make([]string, 0, len(f.Priorities)),
 		ProjectIds: make([]uuid.UUID, 0, len(d.Projects)), ProjectOwn: make([]bool, 0, len(d.Projects)),
 		StateIds: make([]uuid.UUID, 0, len(d.States)), StateGroups: make([]string, 0, len(d.States)), StateKeys: make([]string, 0, len(d.States)),

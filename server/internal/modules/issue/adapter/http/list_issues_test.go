@@ -63,7 +63,7 @@ func TestIssueListEnvelope(t *testing.T) {
 	}
 }
 func TestIssueListQueryBoundary(t *testing.T) {
-	values := map[string]string{"state_id": stateID.String(), "state_group": "started", "priority": "high", "label_id": bugID.String(), "assignee_id": "me", "created_by_id": "me", "mention_id": "me", "subscriber_id": "me", "sub_issue": "true", "archived": "false", "group_by": "priority", "sub_group_by": "label_id", "order_by": "created_at", "group_key": "high", "sub_group_key": "none", "limit": "1", "cursor": "bad"}
+	values := map[string]string{"state_id": stateID.String(), "state_group": "started", "priority": "high", "label_id": bugID.String(), "cycle_id": "none", "module_id": webID.String(), "assignee_id": "me", "created_by_id": "me", "mention_id": "me", "subscriber_id": "me", "sub_issue": "true", "archived": "false", "group_by": "priority", "sub_group_by": "label_id", "order_by": "created_at", "group_key": "high", "sub_group_key": "none", "limit": "1", "cursor": "bad"}
 	check := func(t *testing.T, path, token string, status int, field, code string) {
 		t.Helper()
 		f := &fakeProjectList{}

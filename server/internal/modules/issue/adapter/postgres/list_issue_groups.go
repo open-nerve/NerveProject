@@ -50,6 +50,7 @@ func groupParameters(in app.ListRead) (gen.GroupIssuesParams, error) {
 		FilterProjects: p.FilterProjects, FilterStates: p.FilterStates, FilterGroups: p.FilterGroups, FilterPriorities: p.FilterPriorities,
 		FilterCreators: p.FilterCreators, FilterMentions: p.FilterMentions, FilterSubscribers: p.FilterSubscribers,
 		FilterLabels: p.FilterLabels, LabelsNone: p.LabelsNone, FilterAssignees: p.FilterAssignees, AssigneesNone: p.AssigneesNone,
+		FilterCycles: p.FilterCycles, CyclesNone: p.CyclesNone, FilterModules: p.FilterModules, ModulesNone: p.ModulesNone,
 		StartNone: p.StartNone, StartFrom: p.StartFrom, StartTo: p.StartTo, TargetNone: p.TargetNone, TargetFrom: p.TargetFrom, TargetTo: p.TargetTo,
 	}, nil
 }

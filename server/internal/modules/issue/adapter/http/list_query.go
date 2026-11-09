@@ -51,7 +51,7 @@ func listSingleQuery(pattern, name string) bool {
 	switch name {
 	case "state_group", "priority", "label_id", "sub_issue", "group_by", "order_by", "group_key", "limit", "cursor":
 		return true
-	case "state_id", "assignee_id", "created_by_id", "mention_id", "subscriber_id", "archived", "sub_group_by", "sub_group_key":
+	case "state_id", "assignee_id", "created_by_id", "mention_id", "subscriber_id", "cycle_id", "module_id", "archived", "sub_group_by", "sub_group_key":
 		return project
 	case "project_id", "relation":
 		return member

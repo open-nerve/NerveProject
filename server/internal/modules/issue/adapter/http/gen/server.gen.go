@@ -810,6 +810,12 @@ type ListIssuesParams struct {
 	// SubscriberID UUID or me alternatives. CSV; repeated parameters are not allowed.
 	SubscriberID *[]string `form:"subscriber_id,omitempty" json:"subscriber_id,omitempty"`
 
+	// CycleID UUID or none alternatives. CSV; repeated parameters are not allowed. A work item's undeleted cycle membership counts, an archived cycle's too; none selects work items in no cycle.
+	CycleID *[]string `form:"cycle_id,omitempty" json:"cycle_id,omitempty"`
+
+	// ModuleID UUID or none alternatives. CSV; repeated parameters are not allowed. A work item's undeleted module memberships count, an archived module's too; none selects work items in no module.
+	ModuleID *[]string `form:"module_id,omitempty" json:"module_id,omitempty"`
+
 	// StartDate A day, a..b, ..b, a.. or none; repeated conditions use AND.
 	StartDate *[]string `form:"start_date,omitempty" json:"start_date,omitempty"`
 
@@ -2248,6 +2254,32 @@ func (siw *ServerInterfaceWrapper) ListIssues(w http.ResponseWriter, r *http.Req
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "subscriber_id"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "subscriber_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cycle_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", false, false, "cycle_id", r.URL.Query(), &params.CycleID, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cycle_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cycle_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "module_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", false, false, "module_id", r.URL.Query(), &params.ModuleID, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "module_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "module_id", Err: err})
 		}
 		return
 	}

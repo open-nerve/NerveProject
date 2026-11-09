@@ -36,10 +36,11 @@ func TestListVocabulary(t *testing.T) {
 			{"label_id", true, true}, {"assignee_id", true, false}, {"created_by_id", true, false},
 			{"mention_id", true, false}, {"subscriber_id", true, false}, {"project_id", false, true},
 			{"start_date", true, true}, {"target_date", true, true}, {"sub_issue", true, true}, {"archived", true, false},
+			{"cycle_id", true, false}, {"module_id", true, false},
 			{"creator", false, false}, {"subgroup", false, false}, {"relation", false, false},
 			{"group_by", false, false}, {"sub_group_by", false, false}, {"order_by", false, false},
-			{"cursor", false, false}, {"limit", false, false}, {"cycle_id", false, false},
-			{"module_id", false, false}, {"link_count", false, false}, {"", false, false},
+			{"cursor", false, false}, {"limit", false, false}, {"cycle_ids", false, false},
+			{"module_ids", false, false}, {"link_count", false, false}, {"", false, false},
 		} {
 			t.Run(tc.field, func(t *testing.T) {
 				if got := ListFilterAllowed(tc.field, ProjectList); got != tc.project {
@@ -92,6 +93,7 @@ func TestListVocabulary(t *testing.T) {
 			me, none bool
 		}{
 			{"state_id", false, false}, {"project_id", false, false}, {"label_id", false, true},
+			{"cycle_id", false, true}, {"module_id", false, true},
 			{"assignee_id", true, true}, {"created_by_id", true, false},
 			{"mention_id", true, false}, {"subscriber_id", true, false},
 		} {
