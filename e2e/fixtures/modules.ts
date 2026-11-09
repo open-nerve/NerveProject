@@ -28,6 +28,31 @@ export async function createModule(api: Api, token: string, projectId: string, b
   return data;
 }
 
+/**
+ * The answer of GET /api/v0/me/modules/{module_id}/preferences by the caller of token: its status and his display
+ * settings on the page of the module of id, or the problem's code.
+ */
+export async function modulePreferencesRead(api: Api, token: string, id: string) {
+  const { data, error, response } = await api.GET("/api/v0/me/modules/{module_id}/preferences", {
+    params: { path: { module_id: id } },
+    headers: bearer(token),
+  });
+  return data ? { status: response.status, preferences: data } : answer(response, error);
+}
+
+/**
+ * The answer of PATCH /api/v0/me/modules/{module_id}/preferences by the caller of token: its status and his display
+ * settings on the page of the module of id as changed, or the problem's code and fields.
+ */
+export async function modulePreferencesChanged(api: Api, token: string, id: string, body: ModulePreferencesUpdate) {
+  const { data, error, response } = await api.PATCH("/api/v0/me/modules/{module_id}/preferences", {
+    params: { path: { module_id: id } },
+    body,
+    headers: bearer(token),
+  });
+  return data ? { status: response.status, preferences: data } : answer(response, error);
+}
+
 /** Changes the display settings of the caller of token on the page of the module of id, and returns them as changed. */
 export async function changeModulePreferences(
   api: Api,
@@ -35,16 +60,12 @@ export async function changeModulePreferences(
   id: string,
   body: ModulePreferencesUpdate
 ): Promise<ModulePreferences> {
-  const { data, error, response } = await api.PATCH("/api/v0/me/modules/{module_id}/preferences", {
-    params: { path: { module_id: id } },
-    body,
-    headers: bearer(token),
-  });
-  expect(response.status, `change the display settings on the module ${id}: ${JSON.stringify(error)}`).toBe(200);
-  if (!data) {
+  const changed = await modulePreferencesChanged(api, token, id, body);
+  expect(changed.status, `change the display settings on the module ${id}: ${JSON.stringify(changed)}`).toBe(200);
+  if (!("preferences" in changed)) {
     throw new Error(`changeModulePreferences ${id} answered 200 without the settings`);
   }
-  return data;
+  return changed.preferences;
 }
 
 /**

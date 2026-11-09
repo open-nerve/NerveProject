@@ -24,6 +24,31 @@ export async function createCycle(api: Api, token: string, projectId: string, bo
   return data;
 }
 
+/**
+ * The answer of GET /api/v0/me/cycles/{cycle_id}/preferences by the caller of token: its status and his display
+ * settings on the page of the cycle of id, or the problem's code.
+ */
+export async function cyclePreferencesRead(api: Api, token: string, id: string) {
+  const { data, error, response } = await api.GET("/api/v0/me/cycles/{cycle_id}/preferences", {
+    params: { path: { cycle_id: id } },
+    headers: bearer(token),
+  });
+  return data ? { status: response.status, preferences: data } : answer(response, error);
+}
+
+/**
+ * The answer of PATCH /api/v0/me/cycles/{cycle_id}/preferences by the caller of token: its status and his display
+ * settings on the page of the cycle of id as changed, or the problem's code and fields.
+ */
+export async function cyclePreferencesChanged(api: Api, token: string, id: string, body: CyclePreferencesUpdate) {
+  const { data, error, response } = await api.PATCH("/api/v0/me/cycles/{cycle_id}/preferences", {
+    params: { path: { cycle_id: id } },
+    body,
+    headers: bearer(token),
+  });
+  return data ? { status: response.status, preferences: data } : answer(response, error);
+}
+
 /** Changes the display settings of the caller of token on the page of the cycle of id, and returns them as changed. */
 export async function changeCyclePreferences(
   api: Api,
@@ -31,16 +56,12 @@ export async function changeCyclePreferences(
   id: string,
   body: CyclePreferencesUpdate
 ): Promise<CyclePreferences> {
-  const { data, error, response } = await api.PATCH("/api/v0/me/cycles/{cycle_id}/preferences", {
-    params: { path: { cycle_id: id } },
-    body,
-    headers: bearer(token),
-  });
-  expect(response.status, `change the display settings on the cycle ${id}: ${JSON.stringify(error)}`).toBe(200);
-  if (!data) {
+  const changed = await cyclePreferencesChanged(api, token, id, body);
+  expect(changed.status, `change the display settings on the cycle ${id}: ${JSON.stringify(changed)}`).toBe(200);
+  if (!("preferences" in changed)) {
     throw new Error(`changeCyclePreferences ${id} answered 200 without the settings`);
   }
-  return data;
+  return changed.preferences;
 }
 
 /**
