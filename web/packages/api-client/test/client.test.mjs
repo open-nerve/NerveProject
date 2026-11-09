@@ -1,5 +1,11 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { test } from "node:test";
+import { fileURLToPath } from "node:url";
+
+// The reader that openapi-typescript (the gen script) reads the contract with, through the package's "./*" export.
+// The version is pinned: a release that moves the file fails this import, it cannot pass silently.
+import { parseSchema } from "openapi-typescript/dist/lib/redoc.mjs";
 
 import { createClient } from "../src/index.ts";
 
@@ -180,3 +186,50 @@ test("explicit client and request serializer overrides remain authoritative", as
   assert.deepEqual(objects.requests[1].searchParams.getAll("priority"), ["high", "low"]);
   assert.deepEqual(defaults.requests[0].searchParams.getAll("priority"), ["high", "low"]);
 });
+
+// The client against the contract: csvKeys above is a hand copy of the contract's explode: false arrays, and T2 of
+// M6/P3b once made cycle_id and module_id CSV in the contract only. Every query array of every GET operation in
+// api/dist/openapi.yaml, given two values, goes out as its explode says: once, comma-separated, for false; repeated
+// for true, form's default.
+const contractURL = new URL("../../../../api/dist/openapi.yaml", import.meta.url);
+const { parsed: contract } = await parseSchema(readFileSync(contractURL, "utf8"), {
+  absoluteRef: fileURLToPath(contractURL),
+});
+
+// The bundled contract's references are local ones, "#/components/…".
+function resolved(node) {
+  if (node?.$ref === undefined) return node;
+  const [root, ...names] = node.$ref.split("/");
+  assert.equal(root, "#", node.$ref);
+  return resolved(names.reduce((at, name) => at[name], contract));
+}
+
+const queryArrays = Object.entries(contract.paths).flatMap(([path, item]) => {
+  if (item.get === undefined) return [];
+  const parameters = [...(item.parameters ?? []), ...(item.get.parameters ?? [])].map(resolved);
+  const arrays = parameters.filter((p) => p.in === "query" && resolved(p.schema).type === "array");
+  if (arrays.length === 0) return [];
+  const pathParams = Object.fromEntries(parameters.filter((p) => p.in === "path").map((p) => [p.name, "x"]));
+  return [{ path, pathParams, arrays }];
+});
+
+test("the contract is read: both lists declare CSV and repeated query arrays", () => {
+  for (const path of ["/api/v0/projects/{project_id}/issues", "/api/v0/workspaces/{slug}/members/{user_id}/issues"]) {
+    const explodes = new Set(queryArrays.find((operation) => operation.path === path)?.arrays.map((p) => p.explode));
+    assert.ok(explodes.has(false) && explodes.has(true), path);
+  }
+});
+
+const values = (name) => [`${name}-a`, `${name}-b`];
+
+for (const { path, pathParams, arrays } of queryArrays)
+  test(`GET ${path} sends each query array as the contract's explode says`, async () => {
+    const { client, requests } = capture();
+    const query = Object.fromEntries(arrays.map(({ name }) => [name, values(name)]));
+    await client.GET(path, { params: { path: pathParams, query } });
+    for (const { name, style = "form", explode = style === "form" } of arrays) {
+      assert.equal(style, "form", `${path} ${name}: the client sends form arrays only`);
+      const sent = requests[0].searchParams.getAll(name);
+      assert.deepEqual(sent, explode ? values(name) : [values(name).join(",")], `${path} ${name}: explode ${explode}`);
+    }
+  });
