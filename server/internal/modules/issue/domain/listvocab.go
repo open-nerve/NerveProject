@@ -29,7 +29,7 @@ func ListFilterAllowed(field string, scope ListScope) bool {
 	switch scope {
 	case ProjectList:
 		switch field {
-		case "state_id", "state_group", "priority", "label_id", "assignee_id", "created_by_id", "mention_id", "subscriber_id", "start_date", "target_date", "sub_issue", "archived":
+		case "state_id", "state_group", "priority", "label_id", "assignee_id", "created_by_id", "mention_id", "subscriber_id", "cycle_id", "module_id", "start_date", "target_date", "sub_issue", "archived":
 			return true
 		}
 	case MemberList:
@@ -46,7 +46,7 @@ func ListGroupAllowed(group ListGroup, scope ListScope) bool {
 	switch scope {
 	case ProjectList:
 		switch group {
-		case "state_id", "state_group", "priority", "label_id", "assignee_id", "created_by_id", "target_date":
+		case "state_id", "state_group", "priority", "label_id", "assignee_id", "created_by_id", "cycle_id", "module_id", "target_date":
 			return true
 		}
 	case MemberList:
@@ -65,13 +65,15 @@ func ListSubGroupAllowed(group ListGroup, scope ListScope) bool {
 }
 
 // ListOrderAllowed accepts the implemented ordering words. Ascending
-// words have no prefix; sort_order has no descending form.
+// words have no prefix; sort_order has no descending form. Orders are the
+// same on every page: the cycles' and the modules' names order the
+// member's list too (M6 P3b spec R3).
 func ListOrderAllowed(value ListOrder) bool {
 	if value == "sort_order" {
 		return true
 	}
 	switch strings.TrimPrefix(string(value), "-") {
-	case "created_at", "updated_at", "start_date", "target_date", "priority", "state_name", "label_name", "assignee_name", "sub_issues_count", "link_count", "attachment_count":
+	case "created_at", "updated_at", "start_date", "target_date", "priority", "state_name", "label_name", "assignee_name", "cycle_name", "module_name", "sub_issues_count", "link_count", "attachment_count":
 		return true
 	}
 	return false
@@ -84,7 +86,7 @@ func ListFilterValueAllowed(field, value string) bool {
 	switch field {
 	case "state_id", "project_id":
 		return listUUIDAllowed(value)
-	case "label_id":
+	case "label_id", "cycle_id", "module_id":
 		return value == "none" || listUUIDAllowed(value)
 	case "assignee_id":
 		return value == "none" || value == "me" || listUUIDAllowed(value)
@@ -109,7 +111,7 @@ func ListGroupKeyAllowed(group ListGroup, key string) bool {
 	switch group {
 	case "state_id", "project_id":
 		return listUUIDAllowed(key)
-	case "label_id", "assignee_id", "created_by_id":
+	case "label_id", "assignee_id", "created_by_id", "cycle_id", "module_id":
 		return key == "none" || listUUIDAllowed(key)
 	case "priority":
 		return slices.Contains(priorities, Priority(key))

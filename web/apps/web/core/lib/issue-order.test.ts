@@ -4,7 +4,7 @@ import type { Issue, IssueListOrder, IssuePriority } from "@nerve/api-client";
 import { expect, test } from "vitest";
 import { issueOf } from "@/store/issue/fake-issues";
 import { userOf } from "@/store/member/fake-users";
-import { labelOf, projectOf, stateOf } from "@/store/project/fake-projects";
+import { cycleOf, labelOf, moduleOf, projectOf, stateOf } from "@/store/project/fake-projects";
 import {
   compareCodePoints,
   compareIssueTime,
@@ -31,11 +31,17 @@ const fixture: { name_keys: { name: string; key: string }[]; scenarios: Scenario
       : value
 );
 const project = projectOf("A", "ws");
-const emptyCatalog: IssueCatalog = { states: new Map(), labels: new Map(), members: new Map() };
+const emptyCatalog: IssueCatalog = {
+  states: new Map(),
+  labels: new Map(),
+  members: new Map(),
+  cycles: new Map(),
+  modules: new Map(),
+};
 
 function fixtureRow(row: Scenario["rows"][number], order: IssueListOrder): Row {
   const issue = issueOf(row.id);
-  const catalog: IssueCatalog = { states: new Map(), labels: new Map(), members: new Map() };
+  const catalog: IssueCatalog = { ...emptyCatalog };
   const names = row.names ?? [];
   if (order === "sub_issues_count" || order === "link_count") {
     if (typeof row.key !== "number" && typeof row.key !== "bigint") throw new Error("count fixture");
@@ -53,6 +59,15 @@ function fixtureRow(row: Scenario["rows"][number], order: IssueListOrder): Row {
     const members = names.map(userOf);
     issue.assignee_ids = members.map((member) => member.id);
     catalog.members = new Map(members.map((member) => [member.id, member]));
+  } else if (order === "cycle_name") {
+    // The row without a name is a work item in no cycle.
+    const cycles = names.map((name) => cycleOf(project, name));
+    issue.cycle_id = cycles[0]?.id ?? null;
+    catalog.cycles = new Map(cycles.map((cycle) => [cycle.id, cycle]));
+  } else if (order === "module_name") {
+    const modules = names.map((name) => moduleOf(project, name));
+    issue.module_ids = modules.map((module) => module.id);
+    catalog.modules = new Map(modules.map((module) => [module.id, module]));
   } else if (order === "priority") {
     const priorities: IssuePriority[] = ["none", "low", "medium", "high", "urgent"];
     if (typeof row.key !== "number" || !priorities[row.key]) throw new Error("priority fixture");
@@ -74,7 +89,7 @@ function fixtureRow(row: Scenario["rows"][number], order: IssueListOrder): Row {
 
 test("ordersAllSharedFixtureScenarios", () => {
   for (const { name, key } of fixture.name_keys) expect(issueNameKey(name)).toBe(key);
-  expect(fixture.scenarios).toHaveLength(11);
+  expect(fixture.scenarios).toHaveLength(13);
   for (const scenario of fixture.scenarios) {
     const rows = scenario.rows.map((row) => fixtureRow(row, scenario.order));
     expect(

@@ -464,6 +464,28 @@ paths:
           schema:
             type: array
             items: {type: string}
+        - name: cycle_id
+          in: query
+          description: >-
+            UUID or none alternatives. CSV; repeated parameters are not allowed.
+            A work item's undeleted cycle membership counts, an archived cycle's
+            too; none selects work items in no cycle.
+          style: form
+          explode: false
+          schema:
+            type: array
+            items: {type: string}
+        - name: module_id
+          in: query
+          description: >-
+            UUID or none alternatives. CSV; repeated parameters are not allowed.
+            A work item's undeleted module memberships count, an archived
+            module's too; none selects work items in no module.
+          style: form
+          explode: false
+          schema:
+            type: array
+            items: {type: string}
         - name: start_date
           in: query
           description: A day, a..b, ..b, a.. or none; repeated conditions use AND.
@@ -1844,12 +1866,21 @@ components:
           type: string
           format: date-time
     IssueListOrder:
+      description: >-
+        Both lists take every order. cycle_name orders by the name of a work
+        item's cycle, module_name by the least of its modules' names, an
+        archived cycle's or module's too; one in none is last either way.
       type: string
-      enum: [created_at, '-created_at', updated_at, '-updated_at', start_date, '-start_date', target_date, '-target_date', priority, '-priority', state_name, '-state_name', label_name, '-label_name', assignee_name, '-assignee_name', sub_issues_count, '-sub_issues_count', link_count, '-link_count', attachment_count, '-attachment_count', sort_order]
+      enum: [created_at, '-created_at', updated_at, '-updated_at', start_date, '-start_date', target_date, '-target_date', priority, '-priority', state_name, '-state_name', label_name, '-label_name', assignee_name, '-assignee_name', cycle_name, '-cycle_name', module_name, '-module_name', sub_issues_count, '-sub_issues_count', link_count, '-link_count', attachment_count, '-attachment_count', sort_order]
     IssueListGroupField:
-      description: Project lists exclude project_id; member lists use their narrower page vocabulary.
+      description: >-
+        Project lists exclude project_id; member lists use their narrower page
+        vocabulary. cycle_id and module_id group project lists only: a work
+        item is in the group of its undeleted cycle membership, and in the
+        group of each of its undeleted module memberships, an archived cycle's
+        or module's too; one without is in the none group.
       type: string
-      enum: [state_id, state_group, priority, label_id, assignee_id, created_by_id, target_date, project_id]
+      enum: [state_id, state_group, priority, label_id, assignee_id, created_by_id, cycle_id, module_id, target_date, project_id]
     IssueListPage:
       description: >-
         Flat pages and selected group/cell pages have total, data and next_cursor.

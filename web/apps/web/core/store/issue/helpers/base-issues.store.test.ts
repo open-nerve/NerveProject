@@ -448,6 +448,46 @@ it("authoritativeDirectoryStillMissingAReferenceRejectsWithoutRetryLoop", async 
   expect(app.issue.issues.getIssueById("x")).toBeUndefined();
 });
 
+// Until P7 the web has no cycle or module directory (M6 P3b spec R9): a list ordered by their names, which no web
+// control asks for yet, refuses loudly when a work item is in one, and orders one in none last, as nerve does.
+it.each<[import("@nerve/api-client").IssueListOrder, Partial<import("@nerve/api-client").Issue>]>([
+  ["cycle_name", { cycle_id: "c-A-Sprint" }],
+  ["-cycle_name", { cycle_id: "c-A-Sprint" }],
+  ["module_name", { module_ids: ["m-A-Core"] }],
+  ["-module_name", { module_ids: ["m-A-Core"] }],
+])("planningDirectoryIsUnavailableUntilP7 %s", async (order_by, fields) => {
+  const request = await requestedIssue(
+    nerve,
+    () =>
+      app.issue.projectIssues.fetchIssues("ws", "A", "init-loader", {
+        limit: 10,
+        query: { group_by: undefined, order_by },
+      }),
+    ["GET", "/api/v0/projects/A/issues"]
+  );
+  const refused = expect(request.promise).rejects.toThrow("Required issue directory is unavailable");
+  request.call.answer(json(200, issuePageOf([listIssue("x", 1, fields)])));
+  await refused;
+  expect(nerve.calls).toHaveLength(1);
+  expect(app.issue.projectIssues.groups).toBeUndefined();
+  expect(app.issue.issues.getIssueById("x")).toBeUndefined();
+});
+
+it.each(["cycle_name", "-module_name"] as const)("workItemInNoCycleOrModuleNeedsNoDirectory %s", async (order_by) => {
+  await answered(
+    nerve,
+    () =>
+      app.issue.projectIssues.fetchIssues("ws", "A", "init-loader", {
+        limit: 10,
+        query: { group_by: undefined, order_by },
+      }),
+    ["GET", "/api/v0/projects/A/issues"],
+    issuePageOf([listIssue("x", 1)]),
+    "the list"
+  );
+  expect(app.issue.projectIssues.groups?.get("")?.rows.map((row) => [row.id, row.key])).toEqual([["x", null]]);
+});
+
 it("writeFreezesBodyBeforeAndHeldSourcesAfterRequiredDirectoryWait", async () => {
   const stateA = stateOf(project, "Alpha", "unstarted", 1),
     stateB = stateOf(project, "Beta", "started", 2);

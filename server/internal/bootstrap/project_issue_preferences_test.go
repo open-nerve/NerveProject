@@ -14,11 +14,11 @@ import (
 )
 
 const defaultDisplay = `{"calendar":{"layout":"month","show_weekends":false},"group_by":null,"layout":"list","order_by":"-created_at","show_empty_groups":true,"sub_group_by":null,"sub_issue":true}`
-const defaultProperties = `{"assignee":true,"attachment_count":true,"created_on":true,"due_date":true,"key":true,"labels":true,"link":true,"priority":true,"start_date":true,"state":true,"sub_issue_count":true,"updated_on":true}`
+const defaultProperties = `{"assignee":true,"attachment_count":true,"created_on":true,"cycle":true,"due_date":true,"key":true,"labels":true,"link":true,"modules":true,"priority":true,"start_date":true,"state":true,"sub_issue_count":true,"updated_on":true}`
 const defaultIssueSettings = `"display_filters":` + defaultDisplay + `,"display_properties":` + defaultProperties + `,"filters":{},`
 const customDisplay = `{"layout":"calendar","group_by":"state_id","sub_group_by":"priority","order_by":"priority","sub_issue":false,"show_empty_groups":false,"calendar":{"layout":"week","show_weekends":true}}`
-const customProperties = `{"assignee":false,"start_date":true,"due_date":false,"labels":true,"key":false,"priority":true,"state":false,"sub_issue_count":true,"link":false,"attachment_count":false,"created_on":true,"updated_on":false}`
-const customFilters = `{"priority":["high"],"label_id":[],"assignee_id":["me"],"start_date":["2026-10-01..2026-10-02","2026-10-04..2026-10-05"]}`
+const customProperties = `{"assignee":false,"start_date":true,"due_date":false,"labels":true,"key":false,"priority":true,"state":false,"sub_issue_count":true,"link":false,"attachment_count":false,"created_on":true,"updated_on":false,"cycle":false,"modules":true}`
+const customFilters = `{"priority":["high"],"label_id":[],"assignee_id":["me"],"start_date":["2026-10-01..2026-10-02","2026-10-04..2026-10-05"],"cycle_id":["none"],"module_id":["0199a2b4-0000-7000-8000-0000000000ff","none"]}`
 
 func preferencesJSON(tab, hidden string, sort int, filters, display, properties string) string {
 	return fmt.Sprintf(`{"navigation":{"default_tab":%q,"hide_in_more_menu":%s},"sort_order":%d,"filters":%s,"display_filters":%s,"display_properties":%s}`, tab, hidden, sort, filters, display, properties)
@@ -110,9 +110,22 @@ func checkPreferenceWords(t *testing.T, w issueWorld, path string) {
 	before := preferenceRow(t, w, w.ids["bob"])
 	// Valid structure alone must not permit an invalid filter atom.
 	w.send(t, "bob", http.MethodPatch, path, `{"filters":{"label_id":["bad-uuid"]}}`, 422)
+	// The project's cycles and modules are uuid or none alternatives too.
+	refusedWords(t, w.send(t, "bob", http.MethodPatch, path, `{"filters":{"cycle_id":["bad-uuid","none"],"module_id":["none","me"]}}`, 422),
+		"filters.cycle_id[0] not_allowed", "filters.module_id[1] not_allowed")
 	// One request exercises deterministic aggregation across navigation and both new word-bearing fields.
-	body := `{"navigation":{"default_tab":"views","hide_in_more_menu":["views","views"]},"filters":{"target_date":["none","none"],"label_id":["bad-uuid","none,me"],"start_date":["2026-02-30"]},"display_filters":{"layout":"future","group_by":"cycle_id","sub_group_by":"module_id","order_by":"-sort_order","sub_issue":false,"show_empty_groups":false,"calendar":{"layout":"year","show_weekends":false}}}`
-	answer := w.send(t, "bob", http.MethodPatch, path, body, 422)
+	body := `{"navigation":{"default_tab":"views","hide_in_more_menu":["views","views"]},"filters":{"target_date":["none","none"],"label_id":["bad-uuid","none,me"],"start_date":["2026-02-30"]},"display_filters":{"layout":"future","group_by":"project_id","sub_group_by":"project_id","order_by":"-sort_order","sub_issue":false,"show_empty_groups":false,"calendar":{"layout":"year","show_weekends":false}}}`
+	refusedWords(t, w.send(t, "bob", http.MethodPatch, path, body, 422),
+		"navigation.hide_in_more_menu[1] duplicate", "filters.label_id[0] not_allowed", "filters.label_id[1] not_allowed", "filters.start_date[0] not_allowed", "filters.target_date[0] not_allowed", "filters.target_date[1] not_allowed", "display_filters.layout not_allowed", "display_filters.group_by not_allowed", "display_filters.sub_group_by not_allowed", "display_filters.order_by not_allowed", "display_filters.calendar.layout not_allowed")
+	if after := preferenceRow(t, w, w.ids["bob"]); after != before {
+		t.Fatal("invalid words changed stored preferences")
+	}
+}
+
+// refusedWords: answer is a validation failure with exactly the field
+// errors want, in order.
+func refusedWords(t *testing.T, answer string, want ...string) {
+	t.Helper()
 	var problem struct {
 		Code   string
 		Errors []struct{ Field, Code string }
@@ -122,11 +135,7 @@ func checkPreferenceWords(t *testing.T, w issueWorld, path string) {
 	for _, e := range problem.Errors {
 		got = append(got, e.Field+" "+e.Code)
 	}
-	want := []string{"navigation.hide_in_more_menu[1] duplicate", "filters.label_id[0] not_allowed", "filters.label_id[1] not_allowed", "filters.start_date[0] not_allowed", "filters.target_date[0] not_allowed", "filters.target_date[1] not_allowed", "display_filters.layout not_allowed", "display_filters.group_by not_allowed", "display_filters.sub_group_by not_allowed", "display_filters.order_by not_allowed", "display_filters.calendar.layout not_allowed"}
 	if problem.Code != "validation_failed" || !reflect.DeepEqual(got, want) {
 		t.Fatalf("errors %s; want %v", answer, want)
-	}
-	if after := preferenceRow(t, w, w.ids["bob"]); after != before {
-		t.Fatal("invalid words changed stored preferences")
 	}
 }

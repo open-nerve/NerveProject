@@ -13,3 +13,14 @@ SELECT workspace_id, (archived_at IS NOT NULL)::boolean AS archived, timezone, c
 FROM projects
 WHERE id = sqlc.arg(id) AND deleted_at IS NULL
 FOR NO KEY UPDATE;
+
+-- name: SharePlanningProject :one
+-- PlanningProjectFacts under the lock of a change of one's own display settings on a cycle's or a module's page (M6
+-- P3b spec R6), which is no planning write: the project's row FOR SHARE, as updateProjectPreferences takes it, its
+-- workspace's row not locked. It waits for a planning write's and a deletion's FOR NO KEY UPDATE, and they for it.
+-- After a wait Postgres evaluates deleted_at IS NULL again on the row's newest version, so a project deleted meanwhile
+-- reads no row.
+SELECT workspace_id, (archived_at IS NOT NULL)::boolean AS archived, timezone, cycle_view, module_view
+FROM projects
+WHERE id = sqlc.arg(id) AND deleted_at IS NULL
+FOR SHARE;

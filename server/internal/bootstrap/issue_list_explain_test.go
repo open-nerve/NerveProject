@@ -38,7 +38,7 @@ func listStatementClass(name string) string {
 	switch name {
 	case "FlatIssues", "GroupIssues", "SubgroupIssues":
 		return "list"
-	case "IssueListStates", "IssueListLabels", "ListAssigneeIDs", "PublicProfiles":
+	case "IssueListStates", "IssueListLabels", "ListAssigneeIDs", "PublicProfiles", "CycleNames", "ModuleNames":
 		return "directories"
 	default:
 		return "other"

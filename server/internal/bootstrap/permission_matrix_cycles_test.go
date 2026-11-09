@@ -112,6 +112,23 @@ func toCycle(method, after, body string) func(caller, seeded) (string, string, s
 	}
 }
 
+// cycleSettingsRows are the cycles' pages the rows name by their cycle's id
+// (/me/cycles/{cycle_id}/preferences), as cycleRows.
+var cycleSettingsRows = rowsByID{path: "me/cycles", notFound: cellCycleNotFound, find: seeded.cycle}
+
+// toCyclePreferences is the request of a row whose callers each send
+// method, with body, to their own display settings on their column's own
+// cycle's page (cycleOf).
+func toCyclePreferences(method, body string) func(caller, seeded) (string, string, string) {
+	return func(c caller, s seeded) (string, string, string) {
+		return cycleSettingsRows.to(method, "/preferences", cycleOf(c), body)(c, s)
+	}
+}
+
+// cycleSettings are the settings on a cycle's page the rows store: a
+// filter of the modules', and display settings apart from the defaults.
+var cycleSettings = pageSettingsJSON(`{"priority":["high"],"label_id":[],"module_id":["none"]}`, customDisplay, customProperties)
+
 // newCycle is the body of the cycle the rows create: Sprint 2, from the day
 // after Sprint's last, which it does not share.
 const newCycle = `{"name":"Sprint 2","start_date":"2026-10-15","end_date":"2026-10-28"}`
@@ -178,6 +195,23 @@ func cycleMatrixRows() []matrixRow {
 		// decision too.
 		{op: "createCycle", variant: "archived", write: true, columns: archivedColumns, request: toProject(http.MethodPost, "/cycles", newCycle),
 			cells: ofArchived(cellProjectArchived, cellForbidden)},
+		// Every active member of the project, its guests and a caller who
+		// sees only his own work items there, each his own display settings
+		// on the cycle's page, the project or the cycle archived too (M6 P3b
+		// spec 2.3, R6); a workspace admin or member who is no member of it
+		// sees it and may not.
+		{op: "getCyclePreferences", columns: cycleColumns, request: toCyclePreferences(http.MethodGet, ""),
+			cells: onACycle(cellOK, cellOK, cellOK, cellOK, cellOK), check: answersPageSettings(pageDefaults)},
+		{op: "getCyclePreferences", variant: "archived", columns: archivedColumns, request: toCyclePreferences(http.MethodGet, ""),
+			cells: cycleRows.ofArchived(cellOK, cellForbidden), check: answersPageSettings(pageDefaults)},
+		{op: "updateCyclePreferences", write: true, columns: cycleColumns, request: toCyclePreferences(http.MethodPatch, cycleSettings),
+			cells: onACycle(cellOK, cellOK, cellOK, cellOK, cellOK), check: answersPageSettings(cycleSettings)},
+		{op: "updateCyclePreferences", variant: "archived", write: true, columns: archivedColumns,
+			request: toCyclePreferences(http.MethodPatch, cycleSettings), cells: cycleRows.ofArchived(cellOK, cellForbidden),
+			check: answersPageSettings(cycleSettings)},
+		{op: "updateCyclePreferences", variant: "an archived cycle", write: true, columns: cycleColumns, prepare: cycleArchived,
+			request: toCyclePreferences(http.MethodPatch, cycleSettings), cells: onACycle(cellOK, cellOK, cellOK, cellOK, cellOK),
+			check: answersPageSettings(cycleSettings)},
 	}
 }
 

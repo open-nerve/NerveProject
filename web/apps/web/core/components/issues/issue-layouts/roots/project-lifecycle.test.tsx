@@ -102,6 +102,8 @@ async function mount(
     attachment_count: false,
     created_on: false,
     updated_on: false,
+    cycle: false,
+    modules: false,
   };
   await tab.render(
     <StrictMode>

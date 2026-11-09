@@ -175,7 +175,7 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 		ReadTx:    readTx,
 		WriteGate: projectWrites, Clock: businessClock, Authorizer: authorizer,
 		Projects:   issueProjects{projects: projectPorts.IssueProjects},
-		Planning:   issuePlanning{targets: planningPorts.IssueTargets},
+		Planning:   issuePlanning{targets: planningPorts.IssueTargets, directory: planningPorts.IssueDirectory},
 		Workspaces: issueWorkspaces{directory: workspacePorts.WorkspaceDirectory},
 		Members:    issueMembers{members: workspacePorts.WorkspaceMemberDirectory},
 		Profiles:   issueProfiles{profiles: identityPorts.PublicProfiles},
@@ -184,8 +184,9 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 		Pool: pool, Tx: busyTx{tx: issueTx}, ReadTx: readTx, JobTx: issueTx, RuntimeNow: time.Now, Logger: logger,
 		DeleteBatch: cfg.Planning.DeleteBatch, DeleteBudget: cfg.Planning.DeleteBudget,
 		WriteGate: projectWrites, Clock: businessClock, Authorizer: authorizer, Events: events,
-		Projects:   planningProjects{projects: projectPorts.PlanningProjects},
-		LinkCrawls: inserter, LinkCrawler: previews,
+		Projects:     planningProjects{projects: projectPorts.PlanningProjects},
+		ListSettings: issuePorts.ListSettings,
+		LinkCrawls:   inserter, LinkCrawler: previews,
 	})
 	// project before workspace: workspace's writes take its cascade.
 	proj := project.New(project.Deps{
@@ -196,7 +197,7 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 		Workspaces:   projectWorkspaces{directory: workspacePorts.WorkspaceDirectory},
 		Members:      workspacePorts.WorkspaceMembers,
 		Issues:       issuePorts.IssueCascade,
-		ListSettings: projectListSettings{settings: issuePorts.ListSettings},
+		ListSettings: issuePorts.ListSettings,
 	})
 	ws := workspace.New(workspace.Deps{
 		ImageBindings: workspaceImageBindings{bindings: imageBindings}, Images: workspaceImageReader{images: imageReader}, MemberAvatars: memberAvatarReader{images: imageReader},

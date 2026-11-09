@@ -23,9 +23,10 @@ type RowBatch struct {
 type RowStep string
 
 // DeletionRowSteps is the deletion's scan and remainder order, each parent
-// before its children (M6 P2 spec R16); callers own the slice.
+// before its children (M6 P2 spec R16), the pages' preferences after the
+// module links (P3b spec 2.5); callers own the slice.
 func DeletionRowSteps() []RowStep {
-	return []RowStep{"cycles", "modules", "module_members", "module_links"}
+	return []RowStep{"cycles", "modules", "module_members", "module_links", "cycle_user_properties", "module_user_properties"}
 }
 
 // ProjectRemainder is where a deletion stopped: the step it was in and the
@@ -45,6 +46,8 @@ type ProjectRows interface {
 	DeleteProjectModules(ctx context.Context, b RowBatch) ([]uuid.UUID, error)
 	DeleteProjectModuleMembers(ctx context.Context, b RowBatch) ([]uuid.UUID, error)
 	DeleteProjectModuleLinks(ctx context.Context, b RowBatch) ([]uuid.UUID, error)
+	DeleteProjectCycleUserProperties(ctx context.Context, b RowBatch) ([]uuid.UUID, error)
+	DeleteProjectModuleUserProperties(ctx context.Context, b RowBatch) ([]uuid.UUID, error)
 	ProjectDeletionRemaining(ctx context.Context, r ProjectRemainder) (bool, error)
 }
 
@@ -87,6 +90,7 @@ func (u *DeleteRows) Execute(ctx context.Context, project uuid.UUID, at time.Tim
 	deletes := map[RowStep]func(context.Context, RowBatch) ([]uuid.UUID, error){
 		"cycles": u.d.Rows.DeleteProjectCycles, "modules": u.d.Rows.DeleteProjectModules,
 		"module_members": u.d.Rows.DeleteProjectModuleMembers, "module_links": u.d.Rows.DeleteProjectModuleLinks,
+		"cycle_user_properties": u.d.Rows.DeleteProjectCycleUserProperties, "module_user_properties": u.d.Rows.DeleteProjectModuleUserProperties,
 	}
 	for _, step := range DeletionRowSteps() {
 		b := RowBatch{ProjectID: project, Limit: u.d.Batch, At: at, By: by}

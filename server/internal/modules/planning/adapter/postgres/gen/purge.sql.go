@@ -12,6 +12,40 @@ import (
 	"uuid"
 )
 
+const purgeCycleUserProperties = `-- name: PurgeCycleUserProperties :one
+WITH candidates AS MATERIALIZED (
+    SELECT candidate.id FROM cycle_user_properties AS candidate
+    WHERE candidate.deleted_at < $2 AND candidate.id > $1
+    ORDER BY candidate.id LIMIT $3
+), deleted AS (
+    DELETE FROM cycle_user_properties AS target WHERE target.deleted_at < $2 AND target.id IN (SELECT candidates.id FROM candidates) RETURNING target.id
+)
+SELECT (SELECT count(*)::integer FROM candidates) AS scanned,
+       (SELECT count(*)::integer FROM deleted) AS deleted,
+       coalesce((SELECT id FROM candidates ORDER BY id DESC LIMIT 1), $1::uuid)::uuid AS after_id
+`
+
+type PurgeCycleUserPropertiesParams struct {
+	AfterID    uuid.UUID
+	Cutoff     *time.Time
+	BatchLimit int32
+}
+
+type PurgeCycleUserPropertiesRow struct {
+	Scanned int32
+	Deleted int32
+	AfterID uuid.UUID
+}
+
+// PurgeCycles' page, of the accounts' display settings of the cycles' pages (M6/P3b spec 2.5). They are purged before
+// the cycles (module.go), so the CASCADE of a cycle's deletion finds none of them to take.
+func (q *Queries) PurgeCycleUserProperties(ctx context.Context, arg PurgeCycleUserPropertiesParams) (PurgeCycleUserPropertiesRow, error) {
+	row := q.db.QueryRow(ctx, purgeCycleUserProperties, arg.AfterID, arg.Cutoff, arg.BatchLimit)
+	var i PurgeCycleUserPropertiesRow
+	err := row.Scan(&i.Scanned, &i.Deleted, &i.AfterID)
+	return i, err
+}
+
 const purgeCycles = `-- name: PurgeCycles :one
 WITH candidates AS MATERIALIZED (
     SELECT candidate.id FROM cycles AS candidate
@@ -108,6 +142,39 @@ type PurgeModuleMembersRow struct {
 func (q *Queries) PurgeModuleMembers(ctx context.Context, arg PurgeModuleMembersParams) (PurgeModuleMembersRow, error) {
 	row := q.db.QueryRow(ctx, purgeModuleMembers, arg.AfterID, arg.Cutoff, arg.BatchLimit)
 	var i PurgeModuleMembersRow
+	err := row.Scan(&i.Scanned, &i.Deleted, &i.AfterID)
+	return i, err
+}
+
+const purgeModuleUserProperties = `-- name: PurgeModuleUserProperties :one
+WITH candidates AS MATERIALIZED (
+    SELECT candidate.id FROM module_user_properties AS candidate
+    WHERE candidate.deleted_at < $2 AND candidate.id > $1
+    ORDER BY candidate.id LIMIT $3
+), deleted AS (
+    DELETE FROM module_user_properties AS target WHERE target.deleted_at < $2 AND target.id IN (SELECT candidates.id FROM candidates) RETURNING target.id
+)
+SELECT (SELECT count(*)::integer FROM candidates) AS scanned,
+       (SELECT count(*)::integer FROM deleted) AS deleted,
+       coalesce((SELECT id FROM candidates ORDER BY id DESC LIMIT 1), $1::uuid)::uuid AS after_id
+`
+
+type PurgeModuleUserPropertiesParams struct {
+	AfterID    uuid.UUID
+	Cutoff     *time.Time
+	BatchLimit int32
+}
+
+type PurgeModuleUserPropertiesRow struct {
+	Scanned int32
+	Deleted int32
+	AfterID uuid.UUID
+}
+
+// PurgeCycles' page, of the accounts' display settings of the modules' pages, purged before the modules.
+func (q *Queries) PurgeModuleUserProperties(ctx context.Context, arg PurgeModuleUserPropertiesParams) (PurgeModuleUserPropertiesRow, error) {
+	row := q.db.QueryRow(ctx, purgeModuleUserProperties, arg.AfterID, arg.Cutoff, arg.BatchLimit)
+	var i PurgeModuleUserPropertiesRow
 	err := row.Scan(&i.Scanned, &i.Deleted, &i.AfterID)
 	return i, err
 }

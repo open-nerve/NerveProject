@@ -85,7 +85,7 @@ func (a accessProjects) ProjectFacts(ctx context.Context, projectID, userID uuid
 }
 
 // planningProjects is project's PlanningProjects as planning's Projects:
-// the same reads and lock, the facts converted, the roles as they come.
+// the same reads and locks, the facts converted, the roles as they come.
 type planningProjects struct {
 	projects project.PlanningProjects
 }
@@ -100,14 +100,20 @@ func (p planningProjects) Lock(ctx context.Context, id uuid.UUID) (planning.Proj
 	return planning.ProjectFacts(f), found, err
 }
 
+func (p planningProjects) Share(ctx context.Context, id uuid.UUID) (planning.ProjectFacts, bool, error) {
+	f, found, err := p.projects.SharePlanning(ctx, id)
+	return planning.ProjectFacts(f), found, err
+}
+
 func (p planningProjects) Roles(ctx context.Context, id uuid.UUID, ids []uuid.UUID) (map[uuid.UUID]shared.Role, error) {
 	return p.projects.ActiveRoles(ctx, id, ids)
 }
 
-// issuePlanning is planning's IssueTargets as issue's PlanningPorts: the
-// same reads, the facts converted.
+// issuePlanning is planning's IssueTargets and IssueDirectory as issue's
+// PlanningPorts: the same reads, the facts and the names converted.
 type issuePlanning struct {
-	targets planning.IssueTargets
+	targets   planning.IssueTargets
+	directory planning.IssueDirectory
 }
 
 func (p issuePlanning) Targets(ctx context.Context, project uuid.UUID, cycles, modules []uuid.UUID) (issue.PlanningFacts, error) {
@@ -134,6 +140,31 @@ func (p issuePlanning) CycleCompleted(ctx context.Context, project, cycle uuid.U
 
 func (p issuePlanning) OpenTargets(ctx context.Context, project uuid.UUID, now time.Time) ([]uuid.UUID, []uuid.UUID, error) {
 	return p.targets.OpenTargets(ctx, project, now)
+}
+
+func (p issuePlanning) CycleNames(ctx context.Context, projects []uuid.UUID) ([]issue.PlanningName, error) {
+	names, err := p.directory.CycleNames(ctx, projects)
+	if err != nil {
+		return nil, err
+	}
+	return issuePlanningNames(names), nil
+}
+
+func (p issuePlanning) ModuleNames(ctx context.Context, projects []uuid.UUID) ([]issue.PlanningName, error) {
+	names, err := p.directory.ModuleNames(ctx, projects)
+	if err != nil {
+		return nil, err
+	}
+	return issuePlanningNames(names), nil
+}
+
+// issuePlanningNames is planning's names as issue's, in their order.
+func issuePlanningNames(names []planning.IssueDirectoryName) []issue.PlanningName {
+	out := make([]issue.PlanningName, len(names))
+	for i, n := range names {
+		out[i] = issue.PlanningName(n)
+	}
+	return out
 }
 
 // issueProjects is project's IssueProjects as issue's ProjectPorts: the
@@ -303,18 +334,6 @@ func (p issueProjects) ListLabels(ctx context.Context, projectIDs []uuid.UUID) (
 		out[i] = issue.LabelRef(label)
 	}
 	return out, nil
-}
-
-// projectListSettings converts the two modules' app values for the pure validator.
-type projectListSettings struct{ settings issue.ListSettings }
-
-func (p projectListSettings) Validate(filters map[string][]string, display *project.ListDisplayFilters, properties map[string]bool) []shared.FieldError {
-	var d *issue.ListDisplayFilters
-	if display != nil {
-		d = &issue.ListDisplayFilters{Layout: display.Layout, GroupBy: display.GroupBy, SubGroupBy: display.SubGroupBy, OrderBy: display.OrderBy,
-			SubIssue: display.SubIssue, ShowEmptyGroups: display.ShowEmptyGroups, Calendar: issue.ListCalendar{Layout: display.Calendar.Layout, ShowWeekends: display.Calendar.ShowWeekends}}
-	}
-	return p.settings.Validate(filters, d, properties)
 }
 
 // UndeletedIDs uses the full project directory for personal drafts, including

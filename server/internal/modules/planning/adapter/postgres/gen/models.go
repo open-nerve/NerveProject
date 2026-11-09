@@ -28,6 +28,22 @@ type Cycle struct {
 	DeletedAt   *time.Time
 }
 
+type CycleUserProperty struct {
+	ID                uuid.UUID
+	WorkspaceID       uuid.UUID
+	ProjectID         uuid.UUID
+	CycleID           uuid.UUID
+	UserID            uuid.UUID
+	Filters           []byte
+	DisplayFilters    []byte
+	DisplayProperties []byte
+	CreatedByID       *uuid.UUID
+	UpdatedByID       *uuid.UUID
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+	DeletedAt         *time.Time
+}
+
 type Module struct {
 	ID          uuid.UUID
 	WorkspaceID uuid.UUID
@@ -73,4 +89,20 @@ type ModuleMember struct {
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 	DeletedAt   *time.Time
+}
+
+type ModuleUserProperty struct {
+	ID                uuid.UUID
+	WorkspaceID       uuid.UUID
+	ProjectID         uuid.UUID
+	ModuleID          uuid.UUID
+	UserID            uuid.UUID
+	Filters           []byte
+	DisplayFilters    []byte
+	DisplayProperties []byte
+	CreatedByID       *uuid.UUID
+	UpdatedByID       *uuid.UUID
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+	DeletedAt         *time.Time
 }

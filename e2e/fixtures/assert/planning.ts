@@ -251,3 +251,59 @@ export async function moduleLinkMoments(db: Database, moduleId: string): Promise
   );
   return Object.fromEntries(rows.map((r) => [r.url, r.at]));
 }
+
+/** A row of an account's display settings on the page of a cycle or a module, as pageSettingsRows reads it. */
+export interface PageSettingsRow {
+  /** The address of the account whose settings it holds. */
+  user: string;
+  filters: unknown;
+  display_filters: unknown;
+  display_properties: unknown;
+  /** The address of the account that wrote it last: its own, or the one that deleted its cycle or module. */
+  by: string;
+  /** The moment it was made, its account's first change on the page. */
+  created: string;
+  /** The moment it was written last. */
+  updated: string;
+  /** The moment it was deleted, null while it is not. */
+  deleted: string | null;
+}
+
+/**
+ * G15: the rows of the display settings on the page of the cycle or the module of id, kept in table, deleted ones too,
+ * by account address, those of one account in the order they were made. Each must be a row of its page's project and
+ * workspace, made by its own account (M6 P3b spec 2.3, 2.4).
+ */
+export async function pageSettingsRows(
+  db: Database,
+  table: "cycle_user_properties" | "module_user_properties",
+  id: string
+): Promise<PageSettingsRow[]> {
+  const [column, targets] = table === "cycle_user_properties" ? ["cycle_id", "cycles"] : ["module_id", "modules"];
+  const rows = await db.query<PageSettingsRow & { of_its_page: boolean }>(
+    `SELECT u.email AS user, r.filters, r.display_filters, r.display_properties, b.email AS by,
+            r.created_at::text AS created, r.updated_at::text AS updated, r.deleted_at::text AS deleted,
+            r.workspace_id = t.workspace_id AND r.project_id = t.project_id AND r.created_by_id = r.user_id
+              AS of_its_page
+       FROM ${table} r
+       JOIN ${targets} t ON t.id = r.${column}
+       JOIN users u ON u.id = r.user_id
+       JOIN users b ON b.id = r.updated_by_id
+      WHERE r.${column} = $1 ORDER BY u.email COLLATE "C", r.created_at`,
+    [id]
+  );
+  expect(
+    rows.filter((r) => !r.of_its_page).map((r) => r.user),
+    `the accounts of the rows of ${table} of ${id} that are not of its page or not made by their account`
+  ).toEqual([]);
+  return rows.map(({ user, filters, display_filters, display_properties, by, created, updated, deleted }) => ({
+    user,
+    filters,
+    display_filters,
+    display_properties,
+    by,
+    created,
+    updated,
+    deleted,
+  }));
+}

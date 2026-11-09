@@ -25,12 +25,12 @@ func TestListParameterMapping(t *testing.T) {
 		}
 	}
 	a, b := uuid.NewV7(), uuid.NewV7()
-	in.Directories = app.ListDirectories{Projects: []app.VisibleProject{{ID: b, OwnOnly: true}, {ID: a}}, States: []app.ListState{{ID: b, Group: "started", Key: "z"}, {ID: a, Group: "backlog", Key: "a"}}, Labels: []app.ListName{{ID: b, Key: "z"}, {ID: a, Key: "a"}}, Assignees: []app.ListName{{ID: b, Key: "b"}, {ID: a, Key: "a"}}}
+	in.Directories = app.ListDirectories{Projects: []app.VisibleProject{{ID: b, OwnOnly: true}, {ID: a}}, States: []app.ListState{{ID: b, Group: "started", Key: "z"}, {ID: a, Group: "backlog", Key: "a"}}, Labels: []app.ListName{{ID: b, Key: "z"}, {ID: a, Key: "a"}}, Assignees: []app.ListName{{ID: b, Key: "b"}, {ID: a, Key: "a"}}, Cycles: []app.ListName{{ID: b, Key: "y"}, {ID: a, Key: "c"}}, Modules: []app.ListName{{ID: a, Key: "m"}, {ID: b, Key: "x"}}}
 	p, err = flatParameters(in)
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, pair := range []struct{ got, want any }{{p.ProjectIds, []uuid.UUID{b, a}}, {p.ProjectOwn, []bool{true, false}}, {p.StateIds, []uuid.UUID{b, a}}, {p.StateGroups, []string{"started", "backlog"}}, {p.StateKeys, []string{"z", "a"}}, {p.LabelIds, []uuid.UUID{b, a}}, {p.LabelKeys, []string{"z", "a"}}, {p.AssigneeIds, []uuid.UUID{b, a}}, {p.AssigneeKeys, []string{"b", "a"}}} {
+	for _, pair := range []struct{ got, want any }{{p.ProjectIds, []uuid.UUID{b, a}}, {p.ProjectOwn, []bool{true, false}}, {p.StateIds, []uuid.UUID{b, a}}, {p.StateGroups, []string{"started", "backlog"}}, {p.StateKeys, []string{"z", "a"}}, {p.LabelIds, []uuid.UUID{b, a}}, {p.LabelKeys, []string{"z", "a"}}, {p.AssigneeIds, []uuid.UUID{b, a}}, {p.AssigneeKeys, []string{"b", "a"}}, {p.CycleIds, []uuid.UUID{b, a}}, {p.CycleKeys, []string{"y", "c"}}, {p.ModuleIds, []uuid.UUID{a, b}}, {p.ModuleKeys, []string{"m", "x"}}} {
 		if !reflect.DeepEqual(pair.got, pair.want) {
 			t.Errorf("paired array %v; want %v", pair.got, pair.want)
 		}
@@ -103,6 +103,7 @@ func TestIssueSubgroupsParameters(t *testing.T) {
 		"labels": p.LabelIds == nil, "label keys": p.LabelKeys == nil, "assignees": p.AssigneeIds == nil, "assignee keys": p.AssigneeKeys == nil,
 		"filter projects": p.FilterProjects == nil, "filter states": p.FilterStates == nil, "filter groups": p.FilterGroups == nil, "priorities": p.FilterPriorities == nil,
 		"creators": p.FilterCreators == nil, "mentions": p.FilterMentions == nil, "subscribers": p.FilterSubscribers == nil, "filter labels": p.FilterLabels == nil, "filter assignees": p.FilterAssignees == nil,
+		"filter cycles": p.FilterCycles == nil, "filter modules": p.FilterModules == nil,
 		"start none": p.StartNone == nil, "start from": p.StartFrom == nil, "start to": p.StartTo == nil, "target none": p.TargetNone == nil, "target from": p.TargetFrom == nil, "target to": p.TargetTo == nil,
 	} {
 		if isNil {

@@ -99,7 +99,8 @@ func TestCyclesSchema(t *testing.T) {
 }
 
 // planningNames are the planning module's constraint and index names with what each is (TestConstraintAndIndexNames):
-// the cycles', then the modules', their members' and their links' (planning_modules_schema_test.go).
+// the cycles', then the modules', their members' and their links' (planning_modules_schema_test.go), then the two
+// preference tables' (planning_preferences_schema_test.go).
 var planningNames = []string{
 	"cycles_created_by_id_fkey f n",
 	"cycles_dates_check c",
@@ -158,4 +159,38 @@ var planningNames = []string{
 	"module_links_url_check c",
 	"module_links_workspace_id_fkey f c",
 	"module_links_workspace_id_idx i",
+	"cycle_user_properties_created_by_id_fkey f n",
+	"cycle_user_properties_cycle_id_fkey f c",
+	"cycle_user_properties_cycle_id_idx i",
+	"cycle_user_properties_cycle_id_user_id_key iuw",
+	"cycle_user_properties_deleted_at_idx iw",
+	"cycle_user_properties_display_filters_check c",
+	"cycle_user_properties_display_properties_check c",
+	"cycle_user_properties_filters_check c",
+	"cycle_user_properties_pkey iu",
+	"cycle_user_properties_pkey p",
+	"cycle_user_properties_project_id_fkey f c",
+	"cycle_user_properties_project_id_idx i",
+	"cycle_user_properties_updated_by_id_fkey f n",
+	"cycle_user_properties_user_id_fkey f c",
+	"cycle_user_properties_user_id_idx i",
+	"cycle_user_properties_workspace_id_fkey f c",
+	"cycle_user_properties_workspace_id_idx i",
+	"module_user_properties_created_by_id_fkey f n",
+	"module_user_properties_module_id_fkey f c",
+	"module_user_properties_module_id_idx i",
+	"module_user_properties_module_id_user_id_key iuw",
+	"module_user_properties_deleted_at_idx iw",
+	"module_user_properties_display_filters_check c",
+	"module_user_properties_display_properties_check c",
+	"module_user_properties_filters_check c",
+	"module_user_properties_pkey iu",
+	"module_user_properties_pkey p",
+	"module_user_properties_project_id_fkey f c",
+	"module_user_properties_project_id_idx i",
+	"module_user_properties_updated_by_id_fkey f n",
+	"module_user_properties_user_id_fkey f c",
+	"module_user_properties_user_id_idx i",
+	"module_user_properties_workspace_id_fkey f c",
+	"module_user_properties_workspace_id_idx i",
 }

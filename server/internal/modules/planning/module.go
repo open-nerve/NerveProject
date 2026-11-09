@@ -3,15 +3,18 @@
 // changing, archiving, unarchiving and deleting a cycle of a project;
 // creating, listing, reading, changing, archiving, unarchiving and deleting a
 // module of a project, and adding, listing, changing and removing a module's
-// links. A cycle's and a module's deletion publish it in their transaction
-// (EventTypes), which the issue module's subscriber takes the work items out
-// of it in. A link's creation and a change of its address enqueue its crawl in
-// their transaction, whose job writes the link's metadata. Project
-// and workspace deletion events enqueue the asynchronous deletion of the
-// deleted projects' planning rows in the publishing transaction; the 60-day
-// purge removes them. It tells the issue module about the cycles and modules
-// a work item's write names and those that keep work items from automatic
-// archival (IssueTargets).
+// links; and reading and changing each caller's own display settings on a
+// cycle's and a module's page. A cycle's and a module's deletion publish it
+// in their transaction (EventTypes), which the issue module's subscriber
+// takes the work items out of it in. A link's creation and a change of its
+// address enqueue its crawl in their transaction, whose job writes the
+// link's metadata. Project and workspace deletion events enqueue the
+// asynchronous deletion of the deleted projects' planning rows in the
+// publishing transaction; the 60-day purge removes them. It tells the issue
+// module about the cycles and modules a work item's write names and those
+// that keep work items from automatic archival (IssueTargets), and the names
+// of the cycles and modules of the projects a list of work items ordered by
+// them reads (IssueDirectory).
 package planning
 
 import (
@@ -56,27 +59,46 @@ type (
 	IssueTarget      = app.IssueTarget
 )
 
+// IssueDirectory is what the module tells the issue module about the
+// cycles and modules of the projects a list of work items ordered by their
+// names reads (M6 P3b spec R2): of the projects, the names of the undeleted
+// cycles and of the undeleted modules, archived or not, in id order, read in
+// the list's read-only snapshot whatever the projects' toggles. bootstrap
+// converts it into issue's PlanningPorts.
+type IssueDirectory interface {
+	CycleNames(ctx context.Context, projects []uuid.UUID) ([]IssueDirectoryName, error)
+	ModuleNames(ctx context.Context, projects []uuid.UUID) ([]IssueDirectoryName, error)
+}
+
+// IssueDirectoryName is the value IssueDirectory hands over: bootstrap
+// converts it into issue's.
+type IssueDirectoryName = app.IssueDirectoryName
+
 // Provided are the adapters bootstrap builds before wiring the modules.
 type Provided struct {
-	Purger       *app.Purger
-	IssueTargets IssueTargets
+	Purger         *app.Purger
+	IssueTargets   IssueTargets
+	IssueDirectory IssueDirectory
 }
 
 // Provide builds, over pool, planning's purge: its tables, children before
 // parents, so no parent's CASCADE takes a child's rows first (M6 P2 spec
-// 2.4); and its issue targets, which read a project's facts through
-// projects, project's PlanningProjects converted. The purge does not use
-// projects.
+// 2.4, P3b spec 2.5); its issue targets, which read a project's facts through projects,
+// project's PlanningProjects converted; and its issue directory. Neither
+// the purge nor the directory uses projects.
 func Provide(pool *pgxpool.Pool, projects app.FactsReader) Provided {
 	store := postgresadapter.New(pool)
 	return Provided{
 		Purger: app.NewPurger([]app.PurgeStep{
+			{Table: "module_user_properties", Delete: store.PurgeModuleUserProperties},
 			{Table: "module_links", Delete: store.PurgeModuleLinks},
 			{Table: "module_members", Delete: store.PurgeModuleMembers},
 			{Table: "modules", Delete: store.PurgeModules},
+			{Table: "cycle_user_properties", Delete: store.PurgeCycleUserProperties},
 			{Table: "cycles", Delete: store.PurgeCycles},
 		}),
-		IssueTargets: app.NewIssueTargets(projects, store),
+		IssueTargets:   app.NewIssueTargets(projects, store),
+		IssueDirectory: app.NewIssueDirectory(store),
 	}
 }
 
@@ -101,6 +123,10 @@ type Deps struct {
 	Events shared.EventPublisher
 	// Projects are project's PlanningProjects, converted (bootstrap/ports.go).
 	Projects app.Projects
+	// ListSettings checks the words of the pages' display settings: the
+	// issue module's ListSettings, as issue.Provide offers it (M6 P3b spec
+	// R5).
+	ListSettings app.IssueListSettings
 	// LinkCrawls inserts the module links' crawls, planning.crawl_link, in
 	// the transaction of the write that asks for them, which it requires:
 	// bootstrap's jobInserter (M6 P2 spec R11).
@@ -132,6 +158,8 @@ func New(d Deps) *Module {
 	locks := app.NewLocks(d.Projects, store, d.Authorizer, d.WriteGate, d.Tx)
 	reads := app.NewReads(d.Projects, store, d.Authorizer, d.ReadTx)
 	links := app.ModuleLinkDeps{Locks: locks, Links: store, Crawls: riveradapter.NewLinkCrawls(d.LinkCrawls), Clock: d.Clock}
+	pageReads := app.GetPreferencesDeps{Reads: reads, Preferences: store}
+	pageWrites := app.UpdatePreferencesDeps{Locks: locks, Settings: d.ListSettings, Clock: d.Clock, Preferences: store}
 	return &Module{
 		uc: httpadapter.UseCases{
 			ListCycles:       app.NewListCycles(app.ListCyclesDeps{Reads: reads, Cycles: store, Clock: d.Clock}),
@@ -152,6 +180,11 @@ func New(d Deps) *Module {
 			UpdateModuleLink: app.NewUpdateModuleLink(links),
 			DeleteModuleLink: app.NewDeleteModuleLink(links),
 			ListModuleLinks:  app.NewListModuleLinks(app.ListModuleLinksDeps{Reads: reads, Links: store}),
+
+			GetCyclePreferences:     app.NewGetCyclePreferences(pageReads),
+			UpdateCyclePreferences:  app.NewUpdateCyclePreferences(pageWrites),
+			GetModulePreferences:    app.NewGetModulePreferences(pageReads),
+			UpdateModulePreferences: app.NewUpdateModulePreferences(pageWrites),
 		},
 		crawlLink:    app.NewCrawlLink(app.CrawlLinkDeps{Crawler: d.LinkCrawler, Links: store}),
 		deleteRows:   app.NewDeleteRows(app.DeleteRowsDeps{Rows: store, Tx: d.JobTx, RuntimeNow: d.RuntimeNow, Batch: d.DeleteBatch, Budget: d.DeleteBudget}),

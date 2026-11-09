@@ -11,8 +11,8 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/planning/app"
 )
 
-// fakeCycles holds one project's undeleted cycle ids, and no module rows; a batch soft-deletes the first Limit after
-// After.
+// fakeCycles holds one project's undeleted cycle ids, and no other planning rows; a batch soft-deletes the first Limit
+// after After.
 type fakeCycles struct {
 	live      []uuid.UUID
 	batches   []app.RowBatch
@@ -39,7 +39,7 @@ func (f *fakeCycles) DeleteProjectCycles(_ context.Context, b app.RowBatch) ([]u
 	return out, nil
 }
 
-// The module tables' steps find no rows.
+// The other tables' steps find no rows.
 func (f *fakeCycles) DeleteProjectModules(context.Context, app.RowBatch) ([]uuid.UUID, error) {
 	return f.none()
 }
@@ -47,6 +47,12 @@ func (f *fakeCycles) DeleteProjectModuleMembers(context.Context, app.RowBatch) (
 	return f.none()
 }
 func (f *fakeCycles) DeleteProjectModuleLinks(context.Context, app.RowBatch) ([]uuid.UUID, error) {
+	return f.none()
+}
+func (f *fakeCycles) DeleteProjectCycleUserProperties(context.Context, app.RowBatch) ([]uuid.UUID, error) {
+	return f.none()
+}
+func (f *fakeCycles) DeleteProjectModuleUserProperties(context.Context, app.RowBatch) ([]uuid.UUID, error) {
 	return f.none()
 }
 

@@ -5,7 +5,7 @@
  */
 
 import { isEmpty, set } from "lodash-es";
-import type { ApiClient, ProjectPreferences, ProjectDisplayFilters } from "@nerve/api-client";
+import type { ApiClient, ProjectPreferences, IssueListDisplayFilters } from "@nerve/api-client";
 import { oneAtATime } from "@/lib/one-at-a-time";
 import { projectListQuery, toFilterExpression, toProjectFilters } from "@/lib/issue-filters";
 import { ProjectPreferencesService } from "@/services/project/project-preferences.service";
@@ -230,7 +230,7 @@ export class ProjectIssuesFilter extends IssueFilterHelperStore implements IProj
       case EIssueFilterType.DISPLAY_FILTERS:
         return this.change(projectId, "display_filters", (held) => {
           const update = filters as IIssueDisplayFilterOptions;
-          const result: ProjectDisplayFilters = {
+          const result: IssueListDisplayFilters = {
             ...held,
             ...update,
             calendar: { ...held.calendar, ...update.calendar },

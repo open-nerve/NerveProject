@@ -3,6 +3,7 @@ import type { IssueListOrder } from "@nerve/api-client";
 
 import {
   addProjectMembers,
+  changeProject,
   createLabel,
   createProject,
   createWorkspace,
@@ -17,6 +18,8 @@ import { createIssue, issueRead, listIssues, searchIssues, updateIssue } from ".
 import { startLinkPage } from "../../fixtures/link-page";
 import { createIssueLink, issueLinkDeleted } from "../../fixtures/links";
 import { createState } from "../../fixtures/states";
+import { createCycle } from "../../fixtures/cycles";
+import { createModule } from "../../fixtures/modules";
 import {
   issueListProject,
   saveListPreferences,
@@ -82,6 +85,20 @@ test("I4 (API): all ordering words traverse real second and terminal pages with 
   });
   expect(instantKey(p.created_at) < instantKey(q.created_at)).toBe(true);
   expect(instantKey(q.created_at) < instantKey(r.created_at)).toBe(true);
+  // Cycles and modules order by their names (M6 P3b): P in Beta and in Zebra and Alpha, Q in Alpha and in Beta, R in
+  // none, last either way. Placed before the later writes that fix the updated_at order.
+  expect((await changeProject(api, admin.token, project.id, { cycle_view: true, module_view: true })).status).toBe(200);
+  const cycleAlpha = await createCycle(api, admin.token, project.id, { name: "Alpha" });
+  const cycleBeta = await createCycle(api, admin.token, project.id, { name: "Beta" });
+  const modules: Awaited<ReturnType<typeof createModule>>[] = [];
+  await ["Alpha", "Beta", "Zebra"].reduce(async (before, name) => {
+    await before;
+    modules.push(await createModule(api, admin.token, project.id, { name }));
+  }, Promise.resolve());
+  const [ma, mb, mz] = modules;
+  if (!ma || !mb || !mz) throw new Error("missing sort modules");
+  await updateIssue(api, admin.token, p.id, { cycle_id: cycleBeta.id, module_ids: [mz.id, ma.id] });
+  await updateIssue(api, admin.token, q.id, { cycle_id: cycleAlpha.id, module_ids: [mb.id] });
   await updateIssue(api, admin.token, p.id, { sort_order: 30 });
   await updateIssue(api, admin.token, q.id, { sort_order: 10 });
   await updateIssue(api, admin.token, r.id, { sort_order: 20 });
@@ -116,6 +133,10 @@ test("I4 (API): all ordering words traverse real second and terminal pages with 
     "-label_name": [q.id, p.id, r.id],
     assignee_name: [p.id, q.id, r.id],
     "-assignee_name": [q.id, p.id, r.id],
+    cycle_name: [q.id, p.id, r.id],
+    "-cycle_name": [p.id, q.id, r.id],
+    module_name: [p.id, q.id, r.id],
+    "-module_name": [q.id, p.id, r.id],
     sub_issues_count: [q.id, r.id, p.id],
     "-sub_issues_count": [p.id, r.id, q.id],
     link_count: idOrder,
@@ -123,7 +144,7 @@ test("I4 (API): all ordering words traverse real second and terminal pages with 
     attachment_count: idOrder,
     "-attachment_count": idOrder.toReversed(),
   } satisfies Record<IssueListOrder, string[]>;
-  expect(Object.keys(orders)).toHaveLength(23);
+  expect(Object.keys(orders)).toHaveLength(27);
   await (Object.keys(orders) as IssueListOrder[]).reduce(async (before, order_by) => {
     await before;
     await test.step(`${order_by}: second page, terminal page, exact identities`, async () => {

@@ -52,6 +52,8 @@ function listQueryString(query: Record<string, unknown>): string {
     "created_by_id",
     "mention_id",
     "subscriber_id",
+    "cycle_id",
+    "module_id",
     "project_id",
   ]);
   const normal = createQuerySerializer();

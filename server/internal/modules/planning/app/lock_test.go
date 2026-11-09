@@ -46,6 +46,13 @@ type lockWorld struct {
 	updatedModules []domain.Module
 	updateRefusal  error
 	removals       []removal
+	// The pages' display settings (M6 P3b): each account's stored on a page, by the page and the account; the changes
+	// the writer was given; the words the list settings refuse, and what they were given last.
+	pagePreferences map[[2]uuid.UUID]any
+	pageChanges     []any
+	refusedWords    []shared.FieldError
+	checkedFilters  map[string][]string
+	checkedDisplay  *shared.ListDisplayFilters
 }
 
 type inTx struct{}
@@ -68,6 +75,15 @@ func (w *lockWorld) Lock(ctx context.Context, id uuid.UUID) (ProjectFacts, bool,
 		w.onLock()
 	}
 	w.log(ctx, "Lock")
+	f, ok := w.facts[id]
+	return f, ok, nil
+}
+
+func (w *lockWorld) Share(ctx context.Context, id uuid.UUID) (ProjectFacts, bool, error) {
+	if w.onLock != nil {
+		w.onLock()
+	}
+	w.log(ctx, "Share")
 	f, ok := w.facts[id]
 	return f, ok, nil
 }
@@ -119,8 +135,13 @@ func newLockWorld() *lockWorld {
 
 func (w *lockWorld) locks() Locks { return NewLocks(w, w, w, w, w) }
 
-func onProject(action shared.Action) write { return write{project: lockProject, action: action} }
-func onCycle(action shared.Action) write   { c := lockCycle; return write{cycle: &c, action: action} }
+func onProject(action shared.Action) write {
+	return write{named: named{project: lockProject}, action: action}
+}
+func onCycle(action shared.Action) write {
+	c := lockCycle
+	return write{named: named{cycle: &c}, action: action}
+}
 
 // run runs w's write, its body recording what it holds.
 func (w *lockWorld) run(wr write) (held, error) {

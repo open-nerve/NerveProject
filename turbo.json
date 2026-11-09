@@ -46,6 +46,11 @@
       "dependsOn": ["^build"],
       "outputs": []
     },
+    "@nerve/api-client#test": {
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/api/dist/openapi.yaml"],
+      "outputs": []
+    },
     "web#test": {
       "dependsOn": ["^build"],
       "inputs": [

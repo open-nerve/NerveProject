@@ -9,6 +9,10 @@ WITH projects AS (
     SELECT * FROM ROWS FROM(unnest(sqlc.arg(label_ids)::uuid[]), unnest(sqlc.arg(label_keys)::text[])) AS l(id, name_key)
 ), assignees AS (
     SELECT * FROM ROWS FROM(unnest(sqlc.arg(assignee_ids)::uuid[]), unnest(sqlc.arg(assignee_keys)::text[])) AS a(id, name_key)
+), cycle_names AS (
+    SELECT * FROM ROWS FROM(unnest(sqlc.arg(cycle_ids)::uuid[]), unnest(sqlc.arg(cycle_keys)::text[])) AS c(id, name_key)
+), module_names AS (
+    SELECT * FROM ROWS FROM(unnest(sqlc.arg(module_ids)::uuid[]), unnest(sqlc.arg(module_keys)::text[])) AS m(id, name_key)
 ), attachments AS (
     SELECT * FROM ROWS FROM(unnest(sqlc.arg(attachment_ids)::uuid[]), unnest(sqlc.arg(attachment_counts)::bigint[])) AS a(id, attachment_count)
 ), filtered AS MATERIALIZED (
@@ -31,6 +35,12 @@ WITH projects AS (
       AND ((coalesce(cardinality(sqlc.arg(filter_assignees)::uuid[]),0)=0 AND NOT sqlc.arg(assignees_none)::boolean)
            OR EXISTS(SELECT 1 FROM issue_assignees a WHERE a.issue_id=i.id AND a.deleted_at IS NULL AND a.assignee_id=ANY(sqlc.arg(filter_assignees)::uuid[]))
            OR (sqlc.arg(assignees_none)::boolean AND NOT EXISTS(SELECT 1 FROM issue_assignees a WHERE a.issue_id=i.id AND a.deleted_at IS NULL)))
+      AND ((coalesce(cardinality(sqlc.arg(filter_cycles)::uuid[]),0)=0 AND NOT sqlc.arg(cycles_none)::boolean)
+           OR EXISTS(SELECT 1 FROM cycle_issues c WHERE c.issue_id=i.id AND c.deleted_at IS NULL AND c.cycle_id=ANY(sqlc.arg(filter_cycles)::uuid[]))
+           OR (sqlc.arg(cycles_none)::boolean AND NOT EXISTS(SELECT 1 FROM cycle_issues c WHERE c.issue_id=i.id AND c.deleted_at IS NULL)))
+      AND ((coalesce(cardinality(sqlc.arg(filter_modules)::uuid[]),0)=0 AND NOT sqlc.arg(modules_none)::boolean)
+           OR EXISTS(SELECT 1 FROM module_issues m WHERE m.issue_id=i.id AND m.deleted_at IS NULL AND m.module_id=ANY(sqlc.arg(filter_modules)::uuid[]))
+           OR (sqlc.arg(modules_none)::boolean AND NOT EXISTS(SELECT 1 FROM module_issues m WHERE m.issue_id=i.id AND m.deleted_at IS NULL)))
       AND NOT EXISTS(SELECT 1 FROM ROWS FROM(unnest(sqlc.arg(start_none)::boolean[]), unnest(sqlc.arg(start_from)::text[]), unnest(sqlc.arg(start_to)::text[])) AS d(none, lo, hi)
                      WHERE NOT (CASE WHEN d.none THEN i.start_date IS NULL ELSE i.start_date IS NOT NULL AND (d.lo='' OR i.start_date>=NULLIF(d.lo,'')::date) AND (d.hi='' OR i.start_date<=NULLIF(d.hi,'')::date) END))
       AND NOT EXISTS(SELECT 1 FROM ROWS FROM(unnest(sqlc.arg(target_none)::boolean[]), unnest(sqlc.arg(target_from)::text[]), unnest(sqlc.arg(target_to)::text[])) AS d(none, lo, hi)
@@ -53,6 +63,8 @@ WITH projects AS (
              WHEN 'state_name' THEN f.state_key
              WHEN 'label_name' THEN (SELECT min(l.name_key COLLATE "C") FROM issue_labels r JOIN labels l ON l.id=r.label_id WHERE r.issue_id=i.id AND r.deleted_at IS NULL)
              WHEN 'assignee_name' THEN (SELECT min(a.name_key COLLATE "C") FROM issue_assignees r JOIN assignees a ON a.id=r.assignee_id WHERE r.issue_id=i.id AND r.deleted_at IS NULL)
+             WHEN 'cycle_name' THEN (SELECT c.name_key FROM cycle_issues r JOIN cycle_names c ON c.id=r.cycle_id WHERE r.issue_id=i.id AND r.deleted_at IS NULL)
+             WHEN 'module_name' THEN (SELECT min(m.name_key COLLATE "C") FROM module_issues r JOIN module_names m ON m.id=r.module_id WHERE r.issue_id=i.id AND r.deleted_at IS NULL)
            END AS k_text
     FROM counted f JOIN issues i ON i.id=f.id
 ), numeric_keys AS (
@@ -81,6 +93,8 @@ WITH projects AS (
     LEFT JOIN LATERAL unnest(CASE sqlc.arg(group_by)::text
         WHEN 'label_id' THEN ARRAY(SELECT r.label_id::text FROM issue_labels r WHERE r.issue_id=i.id AND r.deleted_at IS NULL)
         WHEN 'assignee_id' THEN ARRAY(SELECT r.assignee_id::text FROM issue_assignees r WHERE r.issue_id=i.id AND r.deleted_at IS NULL)
+        WHEN 'cycle_id' THEN ARRAY(SELECT r.cycle_id::text FROM cycle_issues r WHERE r.issue_id=i.id AND r.deleted_at IS NULL)
+        WHEN 'module_id' THEN ARRAY(SELECT r.module_id::text FROM module_issues r WHERE r.issue_id=i.id AND r.deleted_at IS NULL)
         WHEN 'state_id' THEN ARRAY[i.state_id::text]
         WHEN 'state_group' THEN ARRAY[s.state_group]
         WHEN 'priority' THEN ARRAY[i.priority::text]

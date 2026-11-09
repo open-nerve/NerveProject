@@ -41,13 +41,10 @@ type Cascade interface {
 	DetachLabel(ctx context.Context, labelIDs []uuid.UUID, by uuid.UUID, now time.Time) error
 }
 
-// ListCalendar and ListDisplayFilters are the pure saved-settings boundary values.
-type ListCalendar = app.ListCalendar
-type ListDisplayFilters = app.ListDisplayFilters
-
-// ListSettings validates saved list words without a directory or actor.
+// ListSettings validates saved list words without a directory or actor:
+// the filters by key, and the display filters every page shares.
 type ListSettings interface {
-	Validate(map[string][]string, *ListDisplayFilters, map[string]bool) []shared.FieldError
+	Validate(map[string][]string, *shared.ListDisplayFilters) []shared.FieldError
 }
 
 // Provided are the adapters bootstrap builds before wiring consuming modules.
@@ -104,20 +101,24 @@ type ProjectPorts interface {
 }
 
 // PlanningPorts are what the module asks of planning (M6 P3a spec R1,
-// R9): the facts of the cycle and modules a work item's write names, under
-// the project's lock it holds, and the cycles and modules that keep the
-// project's work items from automatic archival. planning.Provide's
-// IssueTargets is them, converted (bootstrap/ports.go).
+// R9, P3b spec R2): the facts of the cycle and modules a work item's write
+// names, under the project's lock it holds; the cycles and modules that
+// keep the project's work items from automatic archival; and the names of
+// the listed projects' cycles and modules, in the list's snapshot, which a
+// list ordered by them keys its work items by. planning.Provide's
+// IssueTargets and IssueDirectory are them, converted (bootstrap/ports.go).
 type PlanningPorts interface {
 	app.PlanningTargets
 	app.OpenPlanning
+	app.PlanningDirectory
 }
 
-// PlanningFacts and PlanningTarget are the values PlanningPorts hand over:
-// bootstrap converts planning's into them.
+// PlanningFacts, PlanningTarget and PlanningName are the values
+// PlanningPorts hand over: bootstrap converts planning's into them.
 type (
 	PlanningFacts  = app.PlanningFacts
 	PlanningTarget = app.PlanningTarget
+	PlanningName   = app.PlanningName
 )
 
 // LockedProject, StateRef and its StateGroup, LabelRef and
@@ -169,7 +170,8 @@ type Deps struct {
 	Authorizer shared.Authorizer
 	// Projects are project's IssueProjects, converted (bootstrap/ports.go).
 	Projects ProjectPorts
-	// Planning is planning's IssueTargets, converted (bootstrap/ports.go).
+	// Planning is planning's IssueTargets and IssueDirectory, converted
+	// (bootstrap/ports.go).
 	Planning PlanningPorts
 	// Workspaces is workspace's WorkspaceDirectory, converted
 	// (bootstrap/ports.go).
@@ -205,7 +207,7 @@ func New(d Deps) *Module {
 	assetAccess := app.NewAssetAccess(app.AssetAccessDeps{Locks: locks, Drafts: draftLocks, Comments: store, Projects: d.Projects})
 	attachments := app.GetAttachmentsDeps{Access: assetAccess, Rows: d.AttachmentReader, ReadTx: d.ReadTx}
 	sanitizer := content.NewSanitizer()
-	listing := app.NewListing(app.ListingDeps{Attachments: d.AttachmentCounter, AttachmentCatalog: d.AttachmentCatalog, Rows: store, States: d.Projects, Labels: d.Projects, Assignees: store, Profiles: d.Profiles, Issues: store})
+	listing := app.NewListing(app.ListingDeps{Attachments: d.AttachmentCounter, AttachmentCatalog: d.AttachmentCatalog, Rows: store, States: d.Projects, Labels: d.Projects, Assignees: store, Profiles: d.Profiles, Issues: store, Planning: d.Planning})
 	archive := app.ArchiveIssueDeps{Events: d.Events, Locks: locks, Issues: store, States: d.Projects, Clock: d.Clock}
 	creation := app.NewIssueCreation(app.IssueCreationDeps{Events: d.Events,
 		Issues: store, Sequences: d.Projects, States: d.Projects, Labels: d.Projects, Members: d.Projects, Planning: d.Planning,

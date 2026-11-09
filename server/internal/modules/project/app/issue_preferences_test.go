@@ -12,16 +12,15 @@ import (
 )
 
 type capturedSettings struct {
-	calls      int
-	filters    map[string][]string
-	display    *app.ListDisplayFilters
-	properties map[string]bool
-	errors     []shared.FieldError
+	calls   int
+	filters map[string][]string
+	display *shared.ListDisplayFilters
+	errors  []shared.FieldError
 }
 
-func (s *capturedSettings) Validate(f map[string][]string, d *app.ListDisplayFilters, p map[string]bool) []shared.FieldError {
+func (s *capturedSettings) Validate(f map[string][]string, d *shared.ListDisplayFilters) []shared.FieldError {
 	s.calls++
-	s.filters, s.display, s.properties = f, d, p
+	s.filters, s.display = f, d
 	return s.errors
 }
 
@@ -32,7 +31,7 @@ func TestIssuePreferencesValidation(t *testing.T) {
 		{Field: "display_filters.layout", Code: shared.FieldNotAllowed},
 	}}
 	uc := app.NewUpdateProjectPreferences(f.store, f.locks(), f.tx, clockAt{clockNow, f.log}, settings)
-	patch := domain.PreferencesPatch{Navigation: &domain.Navigation{DefaultTab: "bad", HideInMoreMenu: []string{"views", "views"}}, Filters: &domain.Filters{LabelID: []string{"bad"}}}
+	patch := domain.PreferencesPatch{Navigation: &domain.Navigation{DefaultTab: "bad", HideInMoreMenu: []string{"views", "views"}}, Filters: &domain.Filters{ListFilters: shared.ListFilters{LabelID: []string{"bad"}}}}
 	if _, err := uc.Execute(context.Background(), webID, patch); !errors.Is(err, shared.Unauthenticated()) {
 		var e *shared.Error
 		if !errors.As(err, &e) || e.Code != shared.CodeUnauthorized {
@@ -61,22 +60,23 @@ func TestIssuePreferencesValuesReachThePort(t *testing.T) {
 	f := newPreferences()
 	settings := &capturedSettings{}
 	uc := app.NewUpdateProjectPreferences(f.store, f.locks(), f.tx, clockAt{clockNow, f.log}, settings)
-	display := domain.DisplayFilters{Layout: "calendar", GroupBy: ptr("state_id"), SubGroupBy: ptr("priority"), OrderBy: "name", Calendar: domain.DisplayCalendar{Layout: "week", ShowWeekends: true}}
-	filters := domain.Filters{StateID: []string{"state"}, StateGroup: []string{"started"}, Priority: []string{"low"}, LabelID: []string{}, AssigneeID: []string{"me"}, CreatedByID: []string{"me"}, MentionID: []string{"me"}, SubscriberID: []string{"me"}, StartDate: []string{"none"}, TargetDate: []string{"2026-10-26"}}
-	properties := domain.DisplayProperties{Assignee: true, DueDate: true, Key: true, State: true, Link: true, AttachmentCount: true, UpdatedOn: true}
+	display := shared.ListDisplayFilters{Layout: "calendar", GroupBy: ptr("state_id"), SubGroupBy: ptr("priority"), OrderBy: "name", Calendar: shared.ListCalendar{Layout: "week", ShowWeekends: true}}
+	filters := domain.Filters{ListFilters: shared.ListFilters{StateID: []string{"state"}, StateGroup: []string{"started"}, Priority: []string{"low"}, LabelID: []string{}, AssigneeID: []string{"me"}, CreatedByID: []string{"me"}, MentionID: []string{"me"}, SubscriberID: []string{"me"}, StartDate: []string{"none"}, TargetDate: []string{"2026-10-26"}},
+		CycleID: []string{"none"}, ModuleID: []string{"module", "none"}}
+	properties := shared.ListDisplayProperties{Assignee: true, DueDate: true, Key: true, State: true, Link: true, AttachmentCount: true, UpdatedOn: true, Modules: true}
 	patch := domain.PreferencesPatch{Filters: &filters, DisplayFilters: &display, DisplayProperties: &properties}
 	got, err := uc.Execute(as(bob), webID, patch)
-	wantF := map[string][]string{"state_id": {"state"}, "state_group": {"started"}, "priority": {"low"}, "label_id": {}, "assignee_id": {"me"}, "created_by_id": {"me"}, "mention_id": {"me"}, "subscriber_id": {"me"}, "start_date": {"none"}, "target_date": {"2026-10-26"}}
-	wantD := &app.ListDisplayFilters{Layout: "calendar", GroupBy: ptr("state_id"), SubGroupBy: ptr("priority"), OrderBy: "name", Calendar: app.ListCalendar{Layout: "week", ShowWeekends: true}}
-	wantP := map[string]bool{"assignee": true, "start_date": false, "due_date": true, "labels": false, "key": true, "priority": false, "state": true, "sub_issue_count": false, "link": true, "attachment_count": true, "created_on": false, "updated_on": true}
-	if err != nil || !reflect.DeepEqual(settings.filters, wantF) || !reflect.DeepEqual(settings.display, wantD) || !reflect.DeepEqual(settings.properties, wantP) || !reflect.DeepEqual(got.Filters, filters) || got.DisplayProperties != properties {
+	wantF := map[string][]string{"state_id": {"state"}, "state_group": {"started"}, "priority": {"low"}, "label_id": {}, "assignee_id": {"me"}, "created_by_id": {"me"}, "mention_id": {"me"}, "subscriber_id": {"me"}, "start_date": {"none"}, "target_date": {"2026-10-26"},
+		"cycle_id": {"none"}, "module_id": {"module", "none"}}
+	wantD := &shared.ListDisplayFilters{Layout: "calendar", GroupBy: ptr("state_id"), SubGroupBy: ptr("priority"), OrderBy: "name", Calendar: shared.ListCalendar{Layout: "week", ShowWeekends: true}}
+	if err != nil || !reflect.DeepEqual(settings.filters, wantF) || !reflect.DeepEqual(settings.display, wantD) || !reflect.DeepEqual(got.Filters, filters) || got.DisplayProperties != properties {
 		t.Fatalf("port=%+v answer=%+v err=%v", settings, got, err)
 	}
 	for _, p := range []domain.PreferencesPatch{{}, {Filters: &domain.Filters{}}} {
 		if _, err := uc.Execute(as(bob), webID, p); err != nil {
 			t.Fatal(err)
 		}
-		if (settings.filters == nil) != (p.Filters == nil) || len(settings.filters) != 0 || settings.display != nil || settings.properties != nil {
+		if (settings.filters == nil) != (p.Filters == nil) || len(settings.filters) != 0 || settings.display != nil {
 			t.Fatalf("omission/clear: %+v", settings)
 		}
 	}

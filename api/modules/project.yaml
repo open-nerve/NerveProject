@@ -1187,64 +1187,20 @@ components:
           type: array
           items:
             type: string
-    ProjectListCalendar:
-      type: object
-      additionalProperties: false
-      required: [layout, show_weekends]
-      properties:
-        layout:
-          type: string
-        show_weekends:
-          type: boolean
-    ProjectDisplayFilters:
-      type: object
-      additionalProperties: false
-      required: [layout, group_by, sub_group_by, order_by, sub_issue, show_empty_groups, calendar]
-      properties:
-        layout:
-          type: string
-        group_by:
-          type: [string, 'null']
-        sub_group_by:
-          type: [string, 'null']
-        order_by:
-          type: string
-        sub_issue:
-          type: boolean
-        show_empty_groups:
-          type: boolean
-        calendar:
-          $ref: '#/components/schemas/ProjectListCalendar'
-    ProjectDisplayProperties:
-      type: object
-      additionalProperties: false
-      required: [assignee, start_date, due_date, labels, key, priority, state, sub_issue_count, link, attachment_count, created_on, updated_on]
-      properties:
-        assignee:
-          type: boolean
-        start_date:
-          type: boolean
-        due_date:
-          type: boolean
-        labels:
-          type: boolean
-        key:
-          type: boolean
-        priority:
-          type: boolean
-        state:
-          type: boolean
-        sub_issue_count:
-          type: boolean
-        link:
-          type: boolean
-        attachment_count:
-          description: Whether lists show a work item's number of live ordinary attachments.
-          type: boolean
-        created_on:
-          type: boolean
-        updated_on:
-          type: boolean
+        cycle_id:
+          description: >-
+            The project's cycles, as the list's cycle_id: UUID or none
+            alternatives.
+          type: array
+          items:
+            type: string
+        module_id:
+          description: >-
+            The project's modules, as the list's module_id: UUID or none
+            alternatives.
+          type: array
+          items:
+            type: string
     ProjectPreferences:
       description: The caller's display settings in a project.
       type: object
@@ -1259,9 +1215,9 @@ components:
         filters:
           $ref: '#/components/schemas/ProjectIssueFilters'
         display_filters:
-          $ref: '#/components/schemas/ProjectDisplayFilters'
+          $ref: '../common.yaml#/components/schemas/IssueListDisplayFilters'
         display_properties:
-          $ref: '#/components/schemas/ProjectDisplayProperties'
+          $ref: '../common.yaml#/components/schemas/IssueListDisplayProperties'
     ProjectPreferencesUpdate:
       description: Each named top-level field replaces that field whole; omitted fields stay unchanged.
       type: object
@@ -1275,9 +1231,9 @@ components:
         filters:
           $ref: '#/components/schemas/ProjectIssueFilters'
         display_filters:
-          $ref: '#/components/schemas/ProjectDisplayFilters'
+          $ref: '../common.yaml#/components/schemas/IssueListDisplayFilters'
         display_properties:
-          $ref: '#/components/schemas/ProjectDisplayProperties'
+          $ref: '../common.yaml#/components/schemas/IssueListDisplayProperties'
     ProjectMember:
       description: An active membership of a project.
       type: object

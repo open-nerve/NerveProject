@@ -60,7 +60,7 @@ func (u *CreateModule) Execute(ctx context.Context, projectID uuid.UUID, in doma
 		return domain.Module{}, err
 	}
 	var out domain.Module
-	err = u.d.Locks.run(ctx, actor, write{project: projectID, action: domain.ActionModuleWrite}, func(ctx context.Context, h held) error {
+	err = u.d.Locks.run(ctx, actor, write{named: named{project: projectID}, action: domain.ActionModuleWrite}, func(ctx context.Context, h held) error {
 		if accounts := accountsOf(in.LeadID, in.MemberIDs); len(accounts) > 0 {
 			roles, err := u.d.Roles.Roles(ctx, projectID, accounts)
 			if err != nil {

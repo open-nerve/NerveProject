@@ -93,8 +93,8 @@ func TestIssueListAllOrders(t *testing.T) {
 			}
 		})
 	}
-	if orders != 21 {
-		t.Fatalf("executed %d orders, want 21 in each of four shapes", orders)
+	if orders != 25 {
+		t.Fatalf("executed %d orders, want 25 in each of four shapes", orders)
 	}
 }
 
@@ -107,6 +107,16 @@ func seedListOrder(t *testing.T, sc *listOrderSample) (issueWorld, map[uuid.UUID
 	backlog := stateID(t, w.pool, w.web, "Backlog")
 	keys, wants := map[uuid.UUID]json.RawMessage{}, map[uuid.UUID]listRowWant{}
 	labels := map[string]uuid.UUID{}
+	// Cycles and modules are planning's, written here as a fixture (M6 P3b
+	// spec 2.1): one per name, so 07 and 08 share the module Alpha. Each
+	// work item also left one named "0 left", keyed before every name, which
+	// never counts; 😀 is archived, which keys its work item as any other.
+	// Web's cycles and modules stay turned off: reading is not held to them.
+	targets := map[string]uuid.UUID{}
+	var left uuid.UUID
+	if sc.Order == "cycle_name" || sc.Order == "module_name" {
+		left = w.seedPlanningTarget(t, planningTable(sc.Order), "0 left")
+	}
 	for n, r := range sc.Rows {
 		if sc.Order == "state_name" && string(r.Key) == "null" {
 			continue // Every admitted state has a name.
@@ -147,6 +157,20 @@ func seedListOrder(t *testing.T, sc *listOrderSample) (issueWorld, map[uuid.UUID
 					want.assignees = append(want.assignees, target)
 				}
 			}
+		case "cycle_name", "module_name":
+			table, column := "cycle_issues", "cycle_id"
+			if sc.Order == "module_name" {
+				table, column = "module_issues", "module_id"
+			}
+			for _, name := range r.Names {
+				target, exists := targets[name]
+				if !exists {
+					target = w.seedPlanningTarget(t, planningTable(sc.Order), name)
+					targets[name] = target
+				}
+				w.seedMembership(t, table, column, r.ID, target, false)
+			}
+			w.seedMembership(t, table, column, r.ID, left, true)
 		case "created_at", "updated_at", "start_date", "target_date":
 			var value *string
 			if err := json.Unmarshal(r.Key, &value); err != nil {
@@ -200,6 +224,17 @@ func seedListOrder(t *testing.T, sc *listOrderSample) (issueWorld, map[uuid.UUID
 		listSeedSQL(t, w, "INSERT INTO issue_labels(id,workspace_id,project_id,issue_id,label_id,deleted_at) VALUES($1,$2,$3,$4,$5,now())", uuid.NewV7(), w.acme, w.web, r.ID, w.bug)
 		wants[r.ID] = want
 	}
+	if id, exists := targets["😀"]; exists {
+		listSeedSQL(t, w, "UPDATE "+planningTable(sc.Order)+" SET archived_at = now() WHERE id = $1", id)
+	}
 	t.Logf("fixed %s oracle: %d admitted rows; 4 real entry/query shapes", sc.Order, len(keys))
 	return w, keys, wants
+}
+
+// planningTable is planning's table whose names the order orders by: cycles or modules.
+func planningTable(order string) string {
+	if order == "cycle_name" {
+		return "cycles"
+	}
+	return "modules"
 }

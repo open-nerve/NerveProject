@@ -20,7 +20,7 @@ type ListFilters struct {
 	StateIDs, CreatorIDs, MentionIDs, SubscriberIDs, ProjectIDs []uuid.UUID
 	StateGroups                                                 []StateGroup
 	Priorities                                                  []Priority
-	Labels, Assignees                                           IDFilter
+	Labels, Assignees, Cycles, Modules                          IDFilter
 	Start, Target                                               []DateFilter
 	SubIssues                                                   bool
 	Archived                                                    bool
@@ -151,7 +151,7 @@ func canonicalizeListGroupKey(group ListGroup, key *string) {
 		return
 	}
 	switch group {
-	case "state_id", "project_id", "label_id", "assignee_id", "created_by_id":
+	case "state_id", "project_id", "label_id", "assignee_id", "created_by_id", "cycle_id", "module_id":
 		if id, err := uuid.Parse(*key); err == nil {
 			*key = id.String()
 		}

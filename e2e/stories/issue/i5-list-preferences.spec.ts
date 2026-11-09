@@ -1,5 +1,5 @@
 import { c12Evidence } from "../../fixtures/c12-evidence";
-import type { ProjectDisplayFilters, ProjectDisplayProperties, ProjectIssueFilters } from "@nerve/api-client";
+import type { IssueListDisplayFilters, IssueListDisplayProperties, ProjectIssueFilters } from "@nerve/api-client";
 import type { Page } from "@playwright/test";
 
 import {
@@ -88,7 +88,7 @@ test("I5 (API): two members retain different complete list settings; me follows 
     label_id: ["none"],
     target_date: ["2026-10-01..2026-10-31", "2026-10-15..2026-10-20"],
   };
-  const display: ProjectDisplayFilters = {
+  const display: IssueListDisplayFilters = {
     layout: "kanban",
     group_by: "state_id",
     sub_group_by: null,
@@ -97,7 +97,7 @@ test("I5 (API): two members retain different complete list settings; me follows 
     show_empty_groups: false,
     calendar: { layout: "week", show_weekends: true },
   };
-  const properties: ProjectDisplayProperties = {
+  const properties: IssueListDisplayProperties = {
     assignee: true,
     start_date: true,
     due_date: true,
@@ -110,6 +110,8 @@ test("I5 (API): two members retain different complete list settings; me follows 
     attachment_count: true,
     created_on: true,
     updated_on: true,
+    cycle: false,
+    modules: true,
   };
   const savedA = {
     ...(await readProjectPreferences(api, a.token, project.id)),
@@ -197,7 +199,9 @@ test("I5 (API): two members retain different complete list settings; me follows 
   });
   expect(await readProjectPreferences(api, b.token, project.id)).toEqual(savedB);
   expect(
-    await changeProjectPreferences(api, a.token, project.id, { display_filters: { ...display, group_by: "cycle_id" } })
+    await changeProjectPreferences(api, a.token, project.id, {
+      display_filters: { ...display, group_by: "project_id" },
+    })
   ).toEqual({
     status: 422,
     code: "validation_failed",
@@ -371,7 +375,7 @@ test("I5 (page): all twelve display properties and layout, grouping, ordering an
   const path = `/api/v0/me/projects/${project.id}/preferences`;
   const { watch, queries } = await openIssueList(page, seed);
   let panel = await displayPanel(page);
-  const properties: [keyof ProjectDisplayProperties, string][] = [
+  const properties: [keyof IssueListDisplayProperties, string][] = [
     ["assignee", "Assignee"],
     ["start_date", "Start date"],
     ["due_date", "Due date"],

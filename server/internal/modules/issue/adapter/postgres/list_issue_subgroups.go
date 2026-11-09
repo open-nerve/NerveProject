@@ -49,9 +49,11 @@ func subgroupParameters(in app.ListRead) (gen.SubgroupIssuesParams, error) {
 		Archived: p.Archived, SubIssues: p.SubIssues,
 		ProjectIds: p.ProjectIds, ProjectOwn: p.ProjectOwn, StateIds: p.StateIds, StateGroups: p.StateGroups, StateKeys: p.StateKeys,
 		LabelIds: p.LabelIds, LabelKeys: p.LabelKeys, AssigneeIds: p.AssigneeIds, AssigneeKeys: p.AssigneeKeys,
+		CycleIds: p.CycleIds, CycleKeys: p.CycleKeys, ModuleIds: p.ModuleIds, ModuleKeys: p.ModuleKeys,
 		FilterProjects: p.FilterProjects, FilterStates: p.FilterStates, FilterGroups: p.FilterGroups, FilterPriorities: p.FilterPriorities,
 		FilterCreators: p.FilterCreators, FilterMentions: p.FilterMentions, FilterSubscribers: p.FilterSubscribers,
 		FilterLabels: p.FilterLabels, LabelsNone: p.LabelsNone, FilterAssignees: p.FilterAssignees, AssigneesNone: p.AssigneesNone,
+		FilterCycles: p.FilterCycles, CyclesNone: p.CyclesNone, FilterModules: p.FilterModules, ModulesNone: p.ModulesNone,
 		StartNone: p.StartNone, StartFrom: p.StartFrom, StartTo: p.StartTo, TargetNone: p.TargetNone, TargetFrom: p.TargetFrom, TargetTo: p.TargetTo,
 	}, nil
 }

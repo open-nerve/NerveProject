@@ -1,6 +1,6 @@
 # M6 / P3a：工作项的迭代与模块归属
 
-> 状态：已实施（2026-11-08），整分支审查见 [re-59](../../../reviews/re-59-M6P3a整体审核.md)，阶段记录见 [P3a 阶段记录](../reviews/P3a-issue-membership-review.md)；预检见 [re-58](../../../reviews/re-58-M6P3a预检.md)。基线 main `ddd79a9f5362aedfc33c940acecc2a5bf0e3d9b8`（P2 的根因修复 noff，main CI 42458454710 通过）。设计见 [M6 设计](../M6-design.md)，负责人 2026-11-07 的决定 A/B/C 见设计 §15；加锁之路与拒绝次序沿用 M4（[硬规则 §4](../../claude_to_gpt/03-rules-and-pitfalls.md)）与 [P1 spec](P1-cycles-backend.md) §3。现状调研见本阶段台账 `research/write-path.md`、`research/list-engine.md`（ignored，随阶段归档）。
+> 状态：已完成（2026-11-08，noff `2648a739`，main CI 42487991301 首次通过），整分支审查见 [re-59](../../../reviews/re-59-M6P3a整体审核.md)，阶段记录见 [P3a 阶段记录](../reviews/P3a-issue-membership-review.md)；预检见 [re-58](../../../reviews/re-58-M6P3a预检.md)。基线 main `ddd79a9f5362aedfc33c940acecc2a5bf0e3d9b8`（P2 的根因修复 noff，main CI 42458454710 通过）。设计见 [M6 设计](../M6-design.md)，负责人 2026-11-07 的决定 A/B/C 见设计 §15；加锁之路与拒绝次序沿用 M4（[硬规则 §4](../../claude_to_gpt/03-rules-and-pitfalls.md)）与 [P1 spec](P1-cycles-backend.md) §3。现状调研见本阶段台账 `research/write-path.md`、`research/list-engine.md`（ignored，随阶段归档）。
 
 ## 1. 目标与边界
 
@@ -96,7 +96,7 @@ PATCH 的行接在既有行（名字…负责人移出）之后：迭代一行�
 - [x] A5 加锁与交错：归属的检查与写在项目行锁下；“写归属”与“删迭代/删模块”两种次序的交错各有测试（先删则 422，先写则被订阅者移除并记动态）；“已结束”用这次写的时钟。
 - [x] A6 回答：`Issue`/`IssueDetail` 的两个字段在详情、列表行、关系、子工作项、搜索里一致；访客与 OwnOnly 读到的同样；前端类型与字面量更新后 `make lint-web`、`make test-web` 通过。
 - [x] A7 phase 为 `M6/P3`；每个新声明的码在 issue 的 apitest 二进制里有回答；输入交接写“处理结果（M6/P3a）”；P2 阶段记录 §7、spec A9 与设计 §12、§14 已回填。
-- [ ] A8 七项本地门禁、deep-review 修复闭环、准确分支 CI 与 noff 后 main CI 全绿、归档清理。（本地门禁与修复闭环见阶段记录 §5、§6；CI 与归档清理见 §7，合入后由 P3b 的 T1 勾选）
+- [x] A8 七项本地门禁、deep-review 修复闭环、准确分支 CI 与 noff 后 main CI 全绿、归档清理。（本地门禁与修复闭环见阶段记录 §5、§6；分支 CI 42484965936、noff `2648a739`、main CI 42487991301 与归档清理见 §7，由 P3b 的 T1 勾选）
 
 ## 5. 后续责任
 

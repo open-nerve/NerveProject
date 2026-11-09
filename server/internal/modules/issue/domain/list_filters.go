@@ -51,12 +51,19 @@ func (f *ListFilters) parse(field string, values []string, actorID uuid.UUID) er
 	return nil
 }
 
+// appendID records one checked atom on its own field: none only on the four
+// fields whose atoms admit it, each its own, never another field's.
 func (f *ListFilters) appendID(field, value string, actorID uuid.UUID) error {
 	if value == "none" {
-		if field == "label_id" {
+		switch field {
+		case "label_id":
 			f.Labels.None = true
-		} else {
+		case "assignee_id":
 			f.Assignees.None = true
+		case "cycle_id":
+			f.Cycles.None = true
+		case "module_id":
+			f.Modules.None = true
 		}
 		return nil
 	}
@@ -83,6 +90,10 @@ func (f *ListFilters) appendID(field, value string, actorID uuid.UUID) error {
 		f.Labels.IDs = append(f.Labels.IDs, id)
 	case "assignee_id":
 		f.Assignees.IDs = append(f.Assignees.IDs, id)
+	case "cycle_id":
+		f.Cycles.IDs = append(f.Cycles.IDs, id)
+	case "module_id":
+		f.Modules.IDs = append(f.Modules.IDs, id)
 	}
 	return nil
 }

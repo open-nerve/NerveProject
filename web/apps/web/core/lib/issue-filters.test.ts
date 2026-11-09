@@ -13,7 +13,14 @@ const A = "019a0000-0000-7000-8000-000000000001";
 const B = "019a0000-0000-7000-8000-000000000002";
 import { listContext, listIssue } from "@/store/issue/fake-issues";
 import { issueMembership } from "./issue-membership";
-import { memberListQuery, projectListQuery, toFilterExpression, toProjectFilters } from "./issue-filters";
+import {
+  groupedIssueField,
+  issueFieldForGroup,
+  memberListQuery,
+  projectListQuery,
+  toFilterExpression,
+  toProjectFilters,
+} from "./issue-filters";
 it("translatesOneLevelAndWithoutCollapsingRepeatedDateConditions", () => {
   expect(
     toProjectFilters({
@@ -44,6 +51,16 @@ it("narrowsDisplayVocabularyAndMemberScope", () => {
     order_by: "-created_at",
     sub_issue: "true",
   });
+});
+
+// A wire grouping's keys are read from the work item field that holds them;
+// modules, like labels, from the array (M6 P3b spec 2.6).
+it("reads each wire grouping's keys from the work item field holding them", () => {
+  expect(groupedIssueField("module_id")).toBe("module_ids");
+  expect(groupedIssueField("label_id")).toBe("label_ids");
+  expect(groupedIssueField("cycle_id")).toBe("cycle_id");
+  expect(groupedIssueField("state_group")).toBe("state_id");
+  expect(issueFieldForGroup("labels")).toBe("label_ids");
 });
 
 it.each(["attachment_count", "-attachment_count"])("preserves attachment order %s in both list scopes", (order_by) => {

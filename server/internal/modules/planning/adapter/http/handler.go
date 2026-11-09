@@ -93,6 +93,26 @@ type ListModuleLinksUseCase interface {
 	Execute(ctx context.Context, moduleID uuid.UUID) ([]domain.ModuleLink, error)
 }
 
+// GetCyclePreferencesUseCase is app.GetCyclePreferences.
+type GetCyclePreferencesUseCase interface {
+	Execute(ctx context.Context, cycleID uuid.UUID) (domain.CyclePreferences, error)
+}
+
+// UpdateCyclePreferencesUseCase is app.UpdateCyclePreferences.
+type UpdateCyclePreferencesUseCase interface {
+	Execute(ctx context.Context, cycleID uuid.UUID, p domain.CyclePreferencesPatch) (domain.CyclePreferences, error)
+}
+
+// GetModulePreferencesUseCase is app.GetModulePreferences.
+type GetModulePreferencesUseCase interface {
+	Execute(ctx context.Context, moduleID uuid.UUID) (domain.ModulePreferences, error)
+}
+
+// UpdateModulePreferencesUseCase is app.UpdateModulePreferences.
+type UpdateModulePreferencesUseCase interface {
+	Execute(ctx context.Context, moduleID uuid.UUID, p domain.ModulePreferencesPatch) (domain.ModulePreferences, error)
+}
+
 // UseCases are the use cases behind the module's operations.
 type UseCases struct {
 	ListCycles       ListCyclesUseCase
@@ -113,6 +133,11 @@ type UseCases struct {
 	UpdateModuleLink UpdateModuleLinkUseCase
 	DeleteModuleLink DeleteModuleLinkUseCase
 	ListModuleLinks  ListModuleLinksUseCase
+	// The caller's own display settings on a cycle's and a module's page.
+	GetCyclePreferences     GetCyclePreferencesUseCase
+	UpdateCyclePreferences  UpdateCyclePreferencesUseCase
+	GetModulePreferences    GetModulePreferencesUseCase
+	UpdateModulePreferences UpdateModulePreferencesUseCase
 }
 
 // Register mounts the module's routes on router behind api's per-route

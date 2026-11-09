@@ -45,7 +45,7 @@ func (u *ArchiveCycle) Execute(ctx context.Context, id uuid.UUID) (domain.ReadCy
 		return domain.ReadCycle{}, err
 	}
 	var out domain.ReadCycle
-	err = u.d.Locks.run(ctx, actor, write{cycle: &id, action: domain.ActionCycleWrite}, func(ctx context.Context, h held) error {
+	err = u.d.Locks.run(ctx, actor, write{named: named{cycle: &id}, action: domain.ActionCycleWrite}, func(ctx context.Context, h held) error {
 		now := u.d.Clock.Now()
 		today, err := domain.Today(now, h.project.Timezone)
 		if err != nil {

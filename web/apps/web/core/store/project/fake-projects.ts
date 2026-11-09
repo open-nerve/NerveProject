@@ -7,7 +7,9 @@
 // fetches that load them into a store, and a tab whose stores have the caller's workspaces and projects.
 
 import type {
+  Cycle,
   Label,
+  Module,
   Project,
   ProjectMember,
   ProjectPreferences,
@@ -91,6 +93,8 @@ export function preferencesOf(fields: Partial<ProjectPreferences> = {}): Project
       attachment_count: true,
       created_on: true,
       updated_on: true,
+      cycle: true,
+      modules: true,
     },
     navigation: { default_tab: "work_items", hide_in_more_menu: [] },
     sort_order: 65535,
@@ -134,6 +138,51 @@ export function labelOf(project: Project, name: string, sortOrder: number, field
     sort_order: sortOrder,
     created_at: "2026-10-01T09:00:00Z",
     updated_at: "2026-10-01T09:00:00Z",
+    ...fields,
+  };
+}
+
+/** A cycle of the project as nerve gives it: the name names it in its project; a draft unless fields say otherwise. */
+export function cycleOf(project: Project, name: string, fields: Partial<Cycle> = {}): Cycle {
+  return {
+    id: `c-${project.identifier}-${name}`,
+    workspace_id: project.workspace_id,
+    project_id: project.id,
+    name,
+    description: "",
+    start_date: null,
+    end_date: null,
+    status: "draft",
+    owned_by_id: null,
+    sort_order: 65535,
+    archived_at: null,
+    created_at: "2026-10-01T09:00:00Z",
+    updated_at: "2026-10-01T09:00:00Z",
+    created_by_id: null,
+    updated_by_id: null,
+    ...fields,
+  };
+}
+
+/** A module of the project as nerve gives it: the name names it in its project; in its backlog unless fields say so. */
+export function moduleOf(project: Project, name: string, fields: Partial<Module> = {}): Module {
+  return {
+    id: `m-${project.identifier}-${name}`,
+    workspace_id: project.workspace_id,
+    project_id: project.id,
+    name,
+    description: "",
+    start_date: null,
+    target_date: null,
+    status: "backlog",
+    lead_id: null,
+    member_ids: [],
+    sort_order: 65535,
+    archived_at: null,
+    created_at: "2026-10-01T09:00:00Z",
+    updated_at: "2026-10-01T09:00:00Z",
+    created_by_id: null,
+    updated_by_id: null,
     ...fields,
   };
 }

@@ -25,7 +25,9 @@ import (
 const (
 	IssueListGroupFieldAssigneeID  IssueListGroupField = "assignee_id"
 	IssueListGroupFieldCreatedByID IssueListGroupField = "created_by_id"
+	IssueListGroupFieldCycleID     IssueListGroupField = "cycle_id"
 	IssueListGroupFieldLabelID     IssueListGroupField = "label_id"
+	IssueListGroupFieldModuleID    IssueListGroupField = "module_id"
 	IssueListGroupFieldPriority    IssueListGroupField = "priority"
 	IssueListGroupFieldProjectID   IssueListGroupField = "project_id"
 	IssueListGroupFieldStateGroup  IssueListGroupField = "state_group"
@@ -40,7 +42,11 @@ func (e IssueListGroupField) Valid() bool {
 		return true
 	case IssueListGroupFieldCreatedByID:
 		return true
+	case IssueListGroupFieldCycleID:
+		return true
 	case IssueListGroupFieldLabelID:
+		return true
+	case IssueListGroupFieldModuleID:
 		return true
 	case IssueListGroupFieldPriority:
 		return true
@@ -62,19 +68,23 @@ const (
 	IssueListOrderAssigneeName         IssueListOrder = "assignee_name"
 	IssueListOrderAttachmentCount      IssueListOrder = "attachment_count"
 	IssueListOrderCreatedAt            IssueListOrder = "created_at"
+	IssueListOrderCycleName            IssueListOrder = "cycle_name"
 	IssueListOrderLabelName            IssueListOrder = "label_name"
 	IssueListOrderLinkCount            IssueListOrder = "link_count"
 	IssueListOrderMinusAssigneeName    IssueListOrder = "-assignee_name"
 	IssueListOrderMinusAttachmentCount IssueListOrder = "-attachment_count"
 	IssueListOrderMinusCreatedAt       IssueListOrder = "-created_at"
+	IssueListOrderMinusCycleName       IssueListOrder = "-cycle_name"
 	IssueListOrderMinusLabelName       IssueListOrder = "-label_name"
 	IssueListOrderMinusLinkCount       IssueListOrder = "-link_count"
+	IssueListOrderMinusModuleName      IssueListOrder = "-module_name"
 	IssueListOrderMinusPriority        IssueListOrder = "-priority"
 	IssueListOrderMinusStartDate       IssueListOrder = "-start_date"
 	IssueListOrderMinusStateName       IssueListOrder = "-state_name"
 	IssueListOrderMinusSubIssuesCount  IssueListOrder = "-sub_issues_count"
 	IssueListOrderMinusTargetDate      IssueListOrder = "-target_date"
 	IssueListOrderMinusUpdatedAt       IssueListOrder = "-updated_at"
+	IssueListOrderModuleName           IssueListOrder = "module_name"
 	IssueListOrderPriority             IssueListOrder = "priority"
 	IssueListOrderSortOrder            IssueListOrder = "sort_order"
 	IssueListOrderStartDate            IssueListOrder = "start_date"
@@ -93,6 +103,8 @@ func (e IssueListOrder) Valid() bool {
 		return true
 	case IssueListOrderCreatedAt:
 		return true
+	case IssueListOrderCycleName:
+		return true
 	case IssueListOrderLabelName:
 		return true
 	case IssueListOrderLinkCount:
@@ -103,9 +115,13 @@ func (e IssueListOrder) Valid() bool {
 		return true
 	case IssueListOrderMinusCreatedAt:
 		return true
+	case IssueListOrderMinusCycleName:
+		return true
 	case IssueListOrderMinusLabelName:
 		return true
 	case IssueListOrderMinusLinkCount:
+		return true
+	case IssueListOrderMinusModuleName:
 		return true
 	case IssueListOrderMinusPriority:
 		return true
@@ -118,6 +134,8 @@ func (e IssueListOrder) Valid() bool {
 	case IssueListOrderMinusTargetDate:
 		return true
 	case IssueListOrderMinusUpdatedAt:
+		return true
+	case IssueListOrderModuleName:
 		return true
 	case IssueListOrderPriority:
 		return true
@@ -577,10 +595,10 @@ type IssueListGroup struct {
 	Total      int64                                      `json:"total"`
 }
 
-// IssueListGroupField Project lists exclude project_id; member lists use their narrower page vocabulary.
+// IssueListGroupField Project lists exclude project_id; member lists use their narrower page vocabulary. cycle_id and module_id group project lists only: a work item is in the group of its undeleted cycle membership, and in the group of each of its undeleted module memberships, an archived cycle's or module's too; one without is in the none group.
 type IssueListGroupField string
 
-// IssueListOrder defines model for IssueListOrder.
+// IssueListOrder Both lists take every order. cycle_name orders by the name of a work item's cycle, module_name by the least of its modules' names, an archived cycle's or module's too; one in none is last either way.
 type IssueListOrder string
 
 // IssueListPage Flat pages and selected group/cell pages have total, data and next_cursor. Grouped pages have total and groups. Lanes have total, groups and subgroup_totals. Other branch fields are omitted. Arrays are never null.
@@ -809,6 +827,12 @@ type ListIssuesParams struct {
 
 	// SubscriberID UUID or me alternatives. CSV; repeated parameters are not allowed.
 	SubscriberID *[]string `form:"subscriber_id,omitempty" json:"subscriber_id,omitempty"`
+
+	// CycleID UUID or none alternatives. CSV; repeated parameters are not allowed. A work item's undeleted cycle membership counts, an archived cycle's too; none selects work items in no cycle.
+	CycleID *[]string `form:"cycle_id,omitempty" json:"cycle_id,omitempty"`
+
+	// ModuleID UUID or none alternatives. CSV; repeated parameters are not allowed. A work item's undeleted module memberships count, an archived module's too; none selects work items in no module.
+	ModuleID *[]string `form:"module_id,omitempty" json:"module_id,omitempty"`
 
 	// StartDate A day, a..b, ..b, a.. or none; repeated conditions use AND.
 	StartDate *[]string `form:"start_date,omitempty" json:"start_date,omitempty"`
@@ -2248,6 +2272,32 @@ func (siw *ServerInterfaceWrapper) ListIssues(w http.ResponseWriter, r *http.Req
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "subscriber_id"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "subscriber_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cycle_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", false, false, "cycle_id", r.URL.Query(), &params.CycleID, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cycle_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cycle_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "module_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", false, false, "module_id", r.URL.Query(), &params.ModuleID, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "module_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "module_id", Err: err})
 		}
 		return
 	}

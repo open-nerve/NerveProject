@@ -38,11 +38,15 @@ func listParameters(in app.ListRead) (gen.FlatIssuesParams, error) {
 		FilterCreators: listArray(f.CreatorIDs), FilterMentions: listArray(f.MentionIDs), FilterSubscribers: listArray(f.SubscriberIDs),
 		FilterLabels: listArray(f.Labels.IDs), LabelsNone: f.Labels.None,
 		FilterAssignees: listArray(f.Assignees.IDs), AssigneesNone: f.Assignees.None,
+		FilterCycles: listArray(f.Cycles.IDs), CyclesNone: f.Cycles.None,
+		FilterModules: listArray(f.Modules.IDs), ModulesNone: f.Modules.None,
 		FilterGroups: make([]string, 0, len(f.StateGroups)), FilterPriorities: make([]string, 0, len(f.Priorities)),
 		ProjectIds: make([]uuid.UUID, 0, len(d.Projects)), ProjectOwn: make([]bool, 0, len(d.Projects)),
 		StateIds: make([]uuid.UUID, 0, len(d.States)), StateGroups: make([]string, 0, len(d.States)), StateKeys: make([]string, 0, len(d.States)),
 		LabelIds: make([]uuid.UUID, 0, len(d.Labels)), LabelKeys: make([]string, 0, len(d.Labels)),
 		AssigneeIds: make([]uuid.UUID, 0, len(d.Assignees)), AssigneeKeys: make([]string, 0, len(d.Assignees)),
+		CycleIds: make([]uuid.UUID, 0, len(d.Cycles)), CycleKeys: make([]string, 0, len(d.Cycles)),
+		ModuleIds: make([]uuid.UUID, 0, len(d.Modules)), ModuleKeys: make([]string, 0, len(d.Modules)),
 	}
 	seenCounts := make(map[uuid.UUID]bool, len(d.AttachmentCounts))
 	for _, v := range d.AttachmentCounts {
@@ -69,6 +73,14 @@ func listParameters(in app.ListRead) (gen.FlatIssuesParams, error) {
 	for _, v := range d.Assignees {
 		p.AssigneeIds = append(p.AssigneeIds, v.ID)
 		p.AssigneeKeys = append(p.AssigneeKeys, v.Key)
+	}
+	for _, v := range d.Cycles {
+		p.CycleIds = append(p.CycleIds, v.ID)
+		p.CycleKeys = append(p.CycleKeys, v.Key)
+	}
+	for _, v := range d.Modules {
+		p.ModuleIds = append(p.ModuleIds, v.ID)
+		p.ModuleKeys = append(p.ModuleKeys, v.Key)
 	}
 	for _, v := range f.StateGroups {
 		p.FilterGroups = append(p.FilterGroups, string(v))

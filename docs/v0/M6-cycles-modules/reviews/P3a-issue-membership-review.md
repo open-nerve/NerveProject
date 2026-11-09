@@ -1,6 +1,6 @@
 # M6/P3a 阶段评审记录
 
-> 2026-11-08：T1–T13 完成，整分支审查 Ready to merge（[re-59](../../../reviews/re-59-M6P3a整体审核.md)），最终候选待推送、核分支 CI 与合入；分支 CI、合入、main CI 与归档清理在合入后由 P3b 的 T1 回填到 §7。基线 main `ddd79a9f5362aedfc33c940acecc2a5bf0e3d9b8`（P2 的根因修复 noff）。
+> 2026-11-08：已完成。最终候选 `384a365f` 的分支 CI 42484965936 首次通过，noff 为 `2648a739`，main CI 42487991301 首次通过；归档与清理完成（§7，由 P3b 的 T1 回填）。基线 main `ddd79a9f5362aedfc33c940acecc2a5bf0e3d9b8`（P2 的根因修复 noff）。
 
 ## 1. 评审方式与范围
 
@@ -50,4 +50,13 @@ fresh 只读审查（[re-59](../../../reviews/re-59-M6P3a整体审核.md)）逐�
 
 ## 7. 集成、归档与接续
 
-最终候选推送后核准确分支 CI，`--no-ff` 合入 main 并核 main CI，再归档本阶段 ignored 证据（台账、调研笔记、收据、审者原文、CI 原件）并正常清理 worktree 与分支。结果由 P3b 的 T1 按台账回填到这里。
+最终候选推送后核准确分支 CI，`--no-ff` 合入 main 并核 main CI，再归档本阶段 ignored 证据（台账、调研笔记、收据、审者原文、CI 原件）并正常清理 worktree 与分支。以下由 P3b 的 T1 按归档的台账与 CI 收据回填。
+
+- **分支 CI**：
+  - 检查点 `a37bc6370ae651118bd9cb6204279679fdd5031c` 的 42478883539：attempt 1 的 server (0) 128726250098 在 `make lint-go` 下载 golangci-lint 时遇 GitHub HTTP 504，lint 尚未开始，与代码无关；server (1)、web 成功，e2e 因此跳过。attempt 2 只重跑失败的作业，四个作业成功（server (0) 128729006747、server (1) 128729008282、web 128729008489、e2e 128732775768）。“CI 每次从 GitHub 下载 lint 工具”记入 M8 交接 M6-M8-04。
+  - 最终候选 `384a365f5ea8d6b78617ed394d1269a1692cc28f` 的 42484965936：attempt 1 成功（web 128744737934、server (1) 128744738111、server (0) 128744738216、e2e 128748217400）。
+- **合入**：main `ddd79a9f` 干净且与 origin 一致；`--no-ff` 生成 `2648a73940f053940b3f321f241b1a25eaac8209`，双父依次为 `ddd79a9f`、`384a365f`，树与候选相同（`602ba978`）；系统 Git 推送。
+- **main CI**：42487991301 attempt 1 成功（web 128753969664、server (0) 128753969803、server (1) 128753969861、e2e 128757024821）。
+- **归档**：`.superpowers/sdd/M6-P3a-integration-20261108`（主目录，ignored）：2378 个文件、387,069,731 字节、未知 0，清单 sha256 `cb75d968fd03db3eed3f03a71efce10b938cc04ccb62947126a5a5289dc9bf44`。`archive.py verify` 通过，P3b 开工时复核一次（收据 `t1-p3a-archive-verify`）。`cleanup.log` 记有：清理前分支已含于 origin/main。
+- **清理**：worktree `m6-p3a`、本地与远端分支 `codex/m6-p3a` 已删除，主目录停在 main `2648a739`。
+- **接续**：P3b（列表引擎的迭代与模块、迭代与模块页的显示设置），预检见 [re-60](../../../reviews/re-60-M6P3b预检.md)。

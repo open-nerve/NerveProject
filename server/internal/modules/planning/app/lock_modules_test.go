@@ -46,8 +46,14 @@ func newModuleWorld() *lockWorld {
 	return w
 }
 
-func onModule(action shared.Action) write     { m := lockModule; return write{module: &m, action: action} }
-func onModuleLink(action shared.Action) write { l := lockLink; return write{link: &l, action: action} }
+func onModule(action shared.Action) write {
+	m := lockModule
+	return write{named: named{module: &m}, action: action}
+}
+func onModuleLink(action shared.Action) write {
+	l := lockLink
+	return write{named: named{link: &l}, action: action}
+}
 
 // moveModule puts the module in another project of the workspace.
 func (w *lockWorld) moveModule() {

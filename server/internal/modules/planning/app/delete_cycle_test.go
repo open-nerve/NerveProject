@@ -19,9 +19,15 @@ func (w *lockWorld) DeleteCycle(ctx context.Context, id uuid.UUID, at time.Time,
 	return nil
 }
 
+func (w *lockWorld) DeleteCyclePreferenceRows(ctx context.Context, cycle uuid.UUID, at time.Time, by uuid.UUID) error {
+	w.log(ctx, fmt.Sprintf("DeleteCyclePreferenceRows %t %t %t", cycle == lockCycle, at.Equal(w.now), by == lockEditor))
+	return nil
+}
+
 // Deleting takes the lock path on the cycle, deciding cycle.delete, the cycle's creator in the target (AllowCreator);
-// under the lock, the clock, then the deletion: deleted and last changed by the caller at that moment. Neither its
-// status nor its archive holds it back (M6 P1 spec R5).
+// under the lock, the clock, then the deletion: the cycle, then its page's display settings' rows, each deleted and
+// last changed by the caller at that moment, in the write's transaction (M6 P3b spec 2.5). Neither its status nor its
+// archive holds it back (M6 P1 spec R5).
 func TestDeleteCycle(t *testing.T) {
 	archived := func(w *lockWorld) {
 		c := w.cycles[lockCycle]
@@ -40,7 +46,8 @@ func TestDeleteCycle(t *testing.T) {
 			t.Fatalf("%s: %v", name, err)
 		}
 		want := []string{"GetCycle outside tx", "Facts outside tx", "Authorize cycle.delete outside tx", "Enter 1 outside tx", "Begin", "Lock",
-			"GetCycle", "Authorize cycle.delete", "Now", "DeleteCycle true true true", "Publish planning.cycle_deleted", "End", "Leave"}
+			"GetCycle", "Authorize cycle.delete", "Now", "DeleteCycle true true true", "DeleteCyclePreferenceRows true true true", "Publish planning.cycle_deleted",
+			"End", "Leave"}
 		if !slices.Equal(w.calls, want) {
 			t.Fatalf("%s: calls\n%q\nwant\n%q", name, w.calls, want)
 		}
@@ -82,7 +89,7 @@ func wantDeletion(t *testing.T, events *deletionEvents, kind string, entity shar
 	}
 }
 
-// Deleting a cycle publishes its deletion in the write's transaction, after the row's (M6 P3a spec 2.5, R6): the
+// Deleting a cycle publishes its deletion in the write's transaction, after its rows' (M6 P3a spec 2.5, R6): the
 // cycle, its workspace and project, the caller at the moment of the deletion, and its name before it as the one
 // change. A publication that fails fails the deletion: the transaction ends with its error, which rolls it back.
 func TestDeleteCyclePublishesItsDeletion(t *testing.T) {
@@ -100,7 +107,7 @@ func TestDeleteCyclePublishesItsDeletion(t *testing.T) {
 	if err := uc.Execute(shared.WithActor(context.Background(), shared.Actor{UserID: lockEditor}), lockCycle); !errors.Is(err, events.refusal) {
 		t.Fatalf("Execute() = %v, want the publication's error", err)
 	}
-	if want := []string{"DeleteCycle true true true", "Publish planning.cycle_deleted", "End", "Leave"}; !slices.Equal(w.calls[len(w.calls)-4:], want) {
+	if want := []string{"DeleteCyclePreferenceRows true true true", "Publish planning.cycle_deleted", "End", "Leave"}; !slices.Equal(w.calls[len(w.calls)-4:], want) {
 		t.Errorf("calls %q, want them to end %q", w.calls, want)
 	}
 }

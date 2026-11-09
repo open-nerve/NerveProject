@@ -12,10 +12,10 @@ import {
 
 import { accountId } from "./auth";
 import { createCommentReaction, createIssueComment, createIssueReaction } from "./comments";
-import { createCycle } from "./cycles";
+import { changeCyclePreferences, createCycle } from "./cycles";
 import { createDraft, createIssue, createIssueRelations, updateIssue } from "./issues";
 import { createIssueLink } from "./links";
-import { createModule, createModuleLink } from "./modules";
+import { changeModulePreferences, createModule, createModuleLink } from "./modules";
 import { furnishIssueFiles, storedFile } from "./storage";
 
 // The rows a deletion story furnishes a workspace or a project with first, so that its deletion has a row of each
@@ -70,8 +70,9 @@ export async function furnishIssueRows(
 /**
  * Gives the project of projectId a row of each of the planning tables: its cycles and modules turned on by the caller of
  * adminToken, an admin of it (they are off by default); a cycle he creates, the draft Sprint 1; and a module he creates,
- * Release 1, which he leads and is the member of, with a link. It answers the two, for work items to join
- * (furnishIssueRows): a deletion story furnishes its planning rows before its work items' rows.
+ * Release 1, which he leads and is the member of, with a link; and his display settings on each one's page, which his
+ * first change stores (M6 P3b spec 2.5). It answers the two, for work items to join (furnishIssueRows): a deletion
+ * story furnishes its planning rows before its work items' rows.
  */
 export async function furnishPlanningRows(api: Api, adminToken: string, projectId: string): Promise<PlanningRows> {
   const changed = await changeProject(api, adminToken, projectId, { cycle_view: true, module_view: true });
@@ -84,6 +85,8 @@ export async function furnishPlanningRows(api: Api, adminToken: string, projectI
     member_ids: [admin],
   });
   await createModuleLink(api, adminToken, release.id, { url: `http://169.254.169.254/furnish/${release.id}` });
+  await changeCyclePreferences(api, adminToken, sprint.id, { filters: { priority: ["high"] } });
+  await changeModulePreferences(api, adminToken, release.id, { filters: { priority: ["high"] } });
   return { cycleId: sprint.id, moduleId: release.id };
 }
 

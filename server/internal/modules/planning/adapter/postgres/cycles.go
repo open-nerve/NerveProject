@@ -153,7 +153,8 @@ func (s *Store) SetCycleArchived(ctx context.Context, c domain.Cycle) error {
 }
 
 // DeleteCycle soft-deletes the cycle id, deleted and last changed by by at
-// at; one deleted already keeps its deletion.
+// at; one deleted already keeps its deletion. Its page's display settings'
+// rows are DeleteCyclePreferenceRows'.
 func (s *Store) DeleteCycle(ctx context.Context, id uuid.UUID, at time.Time, by uuid.UUID) error {
 	if err := s.queries(ctx).DeleteCycle(ctx, gen.DeleteCycleParams{ID: id, At: at, By: by}); err != nil {
 		return fmt.Errorf("delete cycle %s: %w", id, err)

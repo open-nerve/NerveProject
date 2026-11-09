@@ -93,7 +93,7 @@ func TestParseListQueryGroups(t *testing.T) {
 func TestParseListQueryCanonicalGroupKeys(t *testing.T) {
 	const canonical = "0199a2b4-0000-7000-8000-000000000001"
 	actor := uuid.MustParse(canonical)
-	for _, field := range []ListGroup{"state_id", "label_id", "assignee_id", "created_by_id", "project_id"} {
+	for _, field := range []ListGroup{"state_id", "label_id", "assignee_id", "created_by_id", "cycle_id", "module_id", "project_id"} {
 		for _, spelling := range []string{"0199A2B4-0000-7000-8000-000000000001", "0199a2b4000070008000000000000001", "{0199a2b4-0000-7000-8000-000000000001}", "urn:uuid:0199a2b4-0000-7000-8000-000000000001"} {
 			t.Run(string(field)+"/"+spelling, func(t *testing.T) {
 				scope := ProjectList
@@ -118,7 +118,7 @@ func TestParseListQueryCanonicalGroupKeys(t *testing.T) {
 		}
 	}
 	for _, tc := range []struct{ field, key string }{
-		{"label_id", "none"}, {"assignee_id", "none"}, {"created_by_id", "none"}, {"priority", "none"}, {"priority", "urgent"}, {"state_group", "started"}, {"target_date", "none"}, {"target_date", "2030-03-01"},
+		{"label_id", "none"}, {"assignee_id", "none"}, {"created_by_id", "none"}, {"cycle_id", "none"}, {"module_id", "none"}, {"priority", "none"}, {"priority", "urgent"}, {"state_group", "started"}, {"target_date", "none"}, {"target_date", "2030-03-01"},
 	} {
 		q, err := ParseListQuery(map[string][]string{"group_by": {tc.field}, "group_key": {tc.key}}, ProjectList, actor)
 		if err != nil || q.GroupKey == nil || *q.GroupKey != tc.key {
@@ -132,5 +132,24 @@ func TestParseListQueryCanonicalGroupKeys(t *testing.T) {
 		if err != nil || q.SubGroupKey == nil || *q.SubGroupKey != tc.key {
 			t.Fatalf("non-UUID cell %v: %+v / %v", tc, q, err)
 		}
+	}
+}
+
+// Cycles and modules group a project's list only (M6 P3b spec 2.1, R1):
+// the member's list spans projects and refuses both, as it refuses
+// assignee_id; a cycle's or a module's key is a UUID or none.
+func TestParseListQueryPlanningGroups(t *testing.T) {
+	actor := uuid.MustParse("0199a2b4-0000-7000-8000-000000000001")
+	for _, tc := range []struct{ group, lane string }{{"cycle_id", "module_id"}, {"module_id", "cycle_id"}} {
+		q, err := ParseListQuery(map[string][]string{"group_by": {tc.group}, "group_key": {"none"}, "sub_group_by": {tc.lane}, "sub_group_key": {actor.String()}}, ProjectList, actor)
+		if err != nil || q.GroupBy != ListGroup(tc.group) || q.SubGroupBy != ListGroup(tc.lane) || *q.GroupKey != "none" || *q.SubGroupKey != actor.String() {
+			t.Fatalf("%s/%s: %+v / %v", tc.group, tc.lane, q, err)
+		}
+		for _, key := range []string{"me", "bad"} {
+			_, err := ParseListQuery(map[string][]string{"group_by": {tc.group}, "group_key": {key}}, ProjectList, actor)
+			assertListProblem(t, err, shared.KindInvalid, "group_key", shared.FieldNotAllowed)
+		}
+		_, err = ParseListQuery(map[string][]string{"relation": {"assigned"}, "group_by": {tc.group}}, MemberList, actor)
+		assertListProblem(t, err, shared.KindInvalid, "group_by", shared.FieldNotAllowed)
 	}
 }

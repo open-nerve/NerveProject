@@ -118,3 +118,68 @@ components:
           oneOf:
             - $ref: '#/components/schemas/LinkMetadataError'
             - type: 'null'
+    # 工作项列表的显示设置（M6/P3b spec R5）：项目、迭代、模块三页共用；筛选按页各自，不在这里
+    IssueListCalendar:
+      type: object
+      additionalProperties: false
+      required: [layout, show_weekends]
+      properties:
+        layout:
+          type: string
+        show_weekends:
+          type: boolean
+    IssueListDisplayFilters:
+      type: object
+      additionalProperties: false
+      required: [layout, group_by, sub_group_by, order_by, sub_issue, show_empty_groups, calendar]
+      properties:
+        layout:
+          type: string
+        group_by:
+          type: [string, 'null']
+        sub_group_by:
+          type: [string, 'null']
+        order_by:
+          type: string
+        sub_issue:
+          type: boolean
+        show_empty_groups:
+          type: boolean
+        calendar:
+          $ref: '#/components/schemas/IssueListCalendar'
+    IssueListDisplayProperties:
+      type: object
+      additionalProperties: false
+      required: [assignee, start_date, due_date, labels, key, priority, state, sub_issue_count, link, attachment_count, created_on, updated_on, cycle, modules]
+      properties:
+        assignee:
+          type: boolean
+        start_date:
+          type: boolean
+        due_date:
+          type: boolean
+        labels:
+          type: boolean
+        key:
+          type: boolean
+        priority:
+          type: boolean
+        state:
+          type: boolean
+        sub_issue_count:
+          type: boolean
+        link:
+          type: boolean
+        attachment_count:
+          description: Whether lists show a work item's number of live ordinary attachments.
+          type: boolean
+        created_on:
+          type: boolean
+        updated_on:
+          type: boolean
+        cycle:
+          description: Whether lists show a work item's cycle.
+          type: boolean
+        modules:
+          description: Whether lists show a work item's modules.
+          type: boolean

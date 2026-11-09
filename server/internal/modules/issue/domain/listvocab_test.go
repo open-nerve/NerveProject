@@ -12,6 +12,7 @@ func TestListVocabulary(t *testing.T) {
 			"state_name", "-state_name", "label_name", "-label_name", "assignee_name", "-assignee_name",
 			"sub_issues_count", "-sub_issues_count", "link_count", "-link_count",
 			"attachment_count", "-attachment_count",
+			"cycle_name", "-cycle_name", "module_name", "-module_name",
 		} {
 			t.Run(string(order), func(t *testing.T) {
 				if !ListOrderAllowed(order) {
@@ -36,10 +37,11 @@ func TestListVocabulary(t *testing.T) {
 			{"label_id", true, true}, {"assignee_id", true, false}, {"created_by_id", true, false},
 			{"mention_id", true, false}, {"subscriber_id", true, false}, {"project_id", false, true},
 			{"start_date", true, true}, {"target_date", true, true}, {"sub_issue", true, true}, {"archived", true, false},
+			{"cycle_id", true, false}, {"module_id", true, false},
 			{"creator", false, false}, {"subgroup", false, false}, {"relation", false, false},
 			{"group_by", false, false}, {"sub_group_by", false, false}, {"order_by", false, false},
-			{"cursor", false, false}, {"limit", false, false}, {"cycle_id", false, false},
-			{"module_id", false, false}, {"link_count", false, false}, {"", false, false},
+			{"cursor", false, false}, {"limit", false, false}, {"cycle_ids", false, false},
+			{"module_ids", false, false}, {"link_count", false, false}, {"", false, false},
 		} {
 			t.Run(tc.field, func(t *testing.T) {
 				if got := ListFilterAllowed(tc.field, ProjectList); got != tc.project {
@@ -62,6 +64,8 @@ func TestListVocabulary(t *testing.T) {
 			{"state_id", true, false}, {"state_group", true, true}, {"priority", true, true},
 			{"label_id", true, true}, {"assignee_id", true, false}, {"created_by_id", true, false},
 			{"target_date", true, true}, {"project_id", false, true},
+			{"cycle_id", true, false}, {"module_id", true, false},
+			{"cycle_ids", false, false}, {"module_ids", false, false},
 			{"start_date", false, false}, {"mention_id", false, false}, {"subscriber_id", false, false},
 			{"state_name", false, false}, {"label_name", false, false}, {"assignee_name", false, false},
 			{"creator", false, false}, {"archived", false, false}, {"subgroup", false, false}, {"", false, false},
@@ -92,6 +96,7 @@ func TestListVocabulary(t *testing.T) {
 			me, none bool
 		}{
 			{"state_id", false, false}, {"project_id", false, false}, {"label_id", false, true},
+			{"cycle_id", false, true}, {"module_id", false, true},
 			{"assignee_id", true, true}, {"created_by_id", true, false},
 			{"mention_id", true, false}, {"subscriber_id", true, false},
 		} {
@@ -162,6 +167,8 @@ func TestListVocabulary(t *testing.T) {
 			{"label_id", []string{id, "none"}, []string{"me", "bad", id + "," + id}},
 			{"assignee_id", []string{id, "none"}, []string{"me", "bad"}},
 			{"created_by_id", []string{id, "none"}, []string{"me", "bad"}},
+			{"cycle_id", []string{id, "none"}, []string{"me", "bad", id + "," + id}},
+			{"module_id", []string{id, "none"}, []string{"me", "bad", id + "," + id}},
 			{"priority", []string{"urgent", "high", "medium", "low", "none"}, []string{"me", "triage", id}},
 			{"state_group", []string{"backlog", "unstarted", "started", "completed", "cancelled"}, []string{"none", "triage", id}},
 			{"target_date", []string{"2026-10-25", "none", "9999-12-31"}, []string{"..2026-10-25", "2026-10-25..", "2026-10-25..2026-10-26", "2026-02-30"}},

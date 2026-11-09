@@ -18,14 +18,17 @@ type ProjectFacts struct {
 }
 
 // Projects is what the module asks of a project: its facts without a lock
-// (FactsReader), and the same facts under the project's FOR NO KEY UPDATE,
-// the first lock of a write (M6 design 6); found is false for a project
-// that is not there or is deleted, also one deleted while the lock waited.
-// And its members' roles (RoleReader). project.Provide's PlanningProjects
-// is it, converted (bootstrap).
+// (FactsReader); the same facts under the project's FOR NO KEY UPDATE, the
+// first lock of a write (M6 design 6); and under its FOR SHARE, the lock of
+// a change of one's own display settings on a page (M6 P3b spec R6), which
+// waits for a write's and a deletion's lock and they for it. found is false
+// for a project that is not there or is deleted, also one deleted while the
+// lock waited. And its members' roles (RoleReader). project.Provide's
+// PlanningProjects is it, converted (bootstrap).
 type Projects interface {
 	FactsReader
 	Lock(ctx context.Context, id uuid.UUID) (f ProjectFacts, found bool, err error)
+	Share(ctx context.Context, id uuid.UUID) (f ProjectFacts, found bool, err error)
 	RoleReader
 }
 

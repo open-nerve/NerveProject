@@ -46,7 +46,7 @@ func TestPurgeDeletedRunsWithRuntimeRole(t *testing.T) {
 	}{
 		{"asset", []string{"file_assets"}},
 		{"issue", []string{"issue_labels", "issue_subscribers", "module_issues", "cycle_issues", "issue_comments", "issue_activities", "issues"}},
-		{"planning", []string{"cycles", "modules", "module_members", "module_links"}},
+		{"planning", []string{"cycles", "modules", "module_members", "module_links", "cycle_user_properties", "module_user_properties"}},
 		{"project", []string{"project_members", "labels", "states", "projects"}},
 		{"workspace", []string{"workspace_members", "workspaces"}},
 		{"identity", []string{"api_tokens"}},
@@ -100,7 +100,7 @@ func TestPurgeDeletedRunsWithRuntimeRole(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = tx.Rollback(context.Background()) }()
-	tables := []string{"file_assets", "issue_labels", "issue_subscribers", "module_issues", "cycle_issues", "issue_comments", "issue_activities", "issues", "module_links", "module_members", "modules", "cycles", "labels", "states", "project_members", "projects", "workspace_members", "workspaces"}
+	tables := []string{"file_assets", "issue_labels", "issue_subscribers", "module_issues", "cycle_issues", "issue_comments", "issue_activities", "issues", "module_user_properties", "module_links", "module_members", "modules", "cycle_user_properties", "cycles", "labels", "states", "project_members", "projects", "workspace_members", "workspaces"}
 	for i, f := range fixtures {
 		age := 61
 		if i == 1 {

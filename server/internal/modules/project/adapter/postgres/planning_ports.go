@@ -28,6 +28,14 @@ func (s *Store) LockPlanning(ctx context.Context, id uuid.UUID) (app.PlanningFac
 	return planningFacts(r, err, "lock project for its cycles and modules", id)
 }
 
+// SharePlanning locks the undeleted project id FOR SHARE, its workspace not
+// locked, and reads its facts; found is false when there is none, also when
+// it was deleted while the lock waited.
+func (s *Store) SharePlanning(ctx context.Context, id uuid.UUID) (app.PlanningFacts, bool, error) {
+	r, err := s.queries(ctx).SharePlanningProject(ctx, id)
+	return planningFacts(gen.LockPlanningProjectRow(r), err, "share project for a page's display settings", id)
+}
+
 func planningFacts(r gen.LockPlanningProjectRow, err error, what string, id uuid.UUID) (app.PlanningFacts, bool, error) {
 	switch {
 	case errors.Is(err, pgx.ErrNoRows):

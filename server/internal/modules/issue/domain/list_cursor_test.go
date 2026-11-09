@@ -23,6 +23,7 @@ func TestListCursor(t *testing.T) {
 		{"start_date", `"0001-01-01"`}, {"-start_date", `"9999-12-31"`}, {"target_date", `"2026-01-01"`}, {"-target_date", `null`},
 		{"priority", "0"}, {"-priority", "4"}, {"sub_issues_count", "9007199254740993"}, {"-sub_issues_count", "9223372036854775807"}, {"link_count", "9007199254740993"}, {"-link_count", "9223372036854775807"},
 		{"state_name", `"Äbc"`}, {"-state_name", `null`}, {"label_name", `"～"`}, {"-label_name", `"😀"`}, {"assignee_name", `"İ"`}, {"-assignee_name", `""`},
+		{"cycle_name", `"Äbc"`}, {"-cycle_name", `null`}, {"module_name", `"～"`}, {"-module_name", `"😀"`},
 	}
 	for _, tc := range cases {
 		t.Run(string(tc.order), func(t *testing.T) {
@@ -53,6 +54,7 @@ func TestListCursor(t *testing.T) {
 			{"created_at", `"2026-01-01T08:00:00.123456+08:00"`, `"2026-01-01T00:00:00.123456Z"`},
 			{"updated_at", `"2026-01-01T00:00:00Z"`, `"2026-01-01T00:00:00.000000Z"`},
 			{"state_name", `"ABCÄİ"`, `"abcÄİ"`},
+			{"cycle_name", `"ABCÄİ"`, `"abcÄİ"`}, {"-module_name", `"Alpha"`, `"alpha"`},
 		} {
 			encoded, err := EncodeListCursor(ListCursor{Order: tc.order, Key: json.RawMessage(tc.key), ID: id})
 			if err != nil {
@@ -76,7 +78,7 @@ func TestListCursor(t *testing.T) {
 			{"priority", "5"}, {"priority", "-1"}, {"priority", "1.0"}, {"priority", "1e0"}, {"priority", `"1"`},
 			{"sub_issues_count", "-1"}, {"sub_issues_count", "9223372036854775808"}, {"sub_issues_count", "1.5"}, {"sub_issues_count", `"1"`},
 			{"sort_order", "1e309"}, {"sort_order", "NaN"}, {"sort_order", "Infinity"}, {"sort_order", `"1"`}, {"sort_order", "true"},
-			{"state_name", "42"}, {"label_name", "[]"}, {"assignee_name", "{}"}, {"bad", "1"}, {"-sort_order", "1"},
+			{"state_name", "42"}, {"label_name", "[]"}, {"assignee_name", "{}"}, {"cycle_name", "true"}, {"-module_name", "[]"}, {"bad", "1"}, {"-sort_order", "1"},
 		} {
 			t.Run(string(tc.order)+"/"+tc.key, func(t *testing.T) {
 				_, err := EncodeListCursor(ListCursor{Order: tc.order, Key: json.RawMessage(tc.key), ID: id})
@@ -86,7 +88,7 @@ func TestListCursor(t *testing.T) {
 				assertListProblem(t, err, shared.KindBadRequest, "cursor", shared.FieldInvalidFormat)
 			})
 		}
-		for _, order := range []ListOrder{"start_date", "-start_date", "target_date", "-target_date", "state_name", "-state_name", "label_name", "-label_name", "assignee_name", "-assignee_name"} {
+		for _, order := range []ListOrder{"start_date", "-start_date", "target_date", "-target_date", "state_name", "-state_name", "label_name", "-label_name", "assignee_name", "-assignee_name", "cycle_name", "-cycle_name", "module_name", "-module_name"} {
 			_, err := EncodeListCursor(ListCursor{Order: order, Key: json.RawMessage("null"), ID: id})
 			if err != nil {
 				t.Fatalf("nullable %s: %v", order, err)
@@ -133,7 +135,7 @@ func TestListCursorCanonicalTypedKeys(t *testing.T) {
 		{"created_at", `"2026-01-01T00:00:00Z"`},
 		{"updated_at", `"2026-01-01T00:00:00.123Z"`},
 		{"updated_at", `"2026-01-01T00:00:00.123456000Z"`},
-		{"state_name", `"ABC"`}, {"label_name", `"\u0061"`},
+		{"state_name", `"ABC"`}, {"label_name", `"\u0061"`}, {"cycle_name", `"ABC"`}, {"-module_name", `"\u0061"`},
 		{"priority", "-0"}, {"sub_issues_count", "-0"}, {"sort_order", "1e0"}, {"sort_order", "1.0"}, {"sort_order", "-0.0"},
 	} {
 		raw := fmt.Sprintf(`{"v":1,"p":[%q,%s,"00000000-0000-0000-0000-000000000001"]}`, tc.order, tc.key)
@@ -169,7 +171,7 @@ func TestListCursorCanonicalTypedKeys(t *testing.T) {
 // enough to make a name position a valid public cursor.
 func TestListCursorRejectsNULNames(t *testing.T) {
 	id := uuid.MustParse("00000000-0000-0000-0000-000000000001")
-	for _, order := range []ListOrder{"state_name", "-state_name", "label_name", "-label_name", "assignee_name", "-assignee_name"} {
+	for _, order := range []ListOrder{"state_name", "-state_name", "label_name", "-label_name", "assignee_name", "-assignee_name", "cycle_name", "-cycle_name", "module_name", "-module_name"} {
 		t.Run(string(order), func(t *testing.T) {
 			for _, key := range []string{`"\u0000"`, `"a\u0000名"`} {
 				_, err := EncodeListCursor(ListCursor{Order: order, Key: json.RawMessage(key), ID: id})

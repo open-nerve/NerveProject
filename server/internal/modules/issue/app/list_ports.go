@@ -32,18 +32,22 @@ type ListState struct {
 	Key   string
 }
 
-// ListName pairs a label or account with its normalized name ordering key.
+// ListName pairs a label, account, cycle or module with its normalized name
+// ordering key.
 type ListName struct {
 	ID  uuid.UUID
 	Key string
 }
 
 // ListDirectories contains the complete project scope and name catalogs of
-// a list read, independently of the page's filters and returned rows.
+// a list read, independently of the page's filters and returned rows. The
+// cycles' and the modules' names are read only for a list ordered by them
+// (M6 P3b spec R2), as the attachment counts only for one ordered by those.
 type ListDirectories struct {
 	Projects          []VisibleProject
 	States            []ListState
 	Labels, Assignees []ListName
+	Cycles, Modules   []ListName
 	AttachmentCounts  []AttachmentCount
 }
 

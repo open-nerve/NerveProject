@@ -43,8 +43,8 @@ type Preferences struct {
 	Navigation        Navigation
 	SortOrder         float64
 	Filters           Filters
-	DisplayFilters    DisplayFilters
-	DisplayProperties DisplayProperties
+	DisplayFilters    shared.ListDisplayFilters
+	DisplayProperties shared.ListDisplayProperties
 }
 
 // PreferencesPatch is a change of Preferences: a nil field stays as it
@@ -53,8 +53,8 @@ type PreferencesPatch struct {
 	Navigation        *Navigation
 	SortOrder         *float64
 	Filters           *Filters
-	DisplayFilters    *DisplayFilters
-	DisplayProperties *DisplayProperties
+	DisplayFilters    *shared.ListDisplayFilters
+	DisplayProperties *shared.ListDisplayProperties
 }
 
 // DefaultPreferences are an account's settings in a project while he has
@@ -62,8 +62,7 @@ type PreferencesPatch struct {
 // test holds equal.
 func DefaultPreferences() Preferences {
 	return Preferences{Navigation: Navigation{DefaultTab: tabs[0], HideInMoreMenu: []string{}}, SortOrder: DefaultSortOrder,
-		DisplayFilters:    DisplayFilters{Layout: "list", OrderBy: "-created_at", SubIssue: true, ShowEmptyGroups: true, Calendar: DisplayCalendar{Layout: "month"}},
-		DisplayProperties: DisplayProperties{Assignee: true, StartDate: true, DueDate: true, Labels: true, Key: true, Priority: true, State: true, SubIssueCount: true, Link: true, AttachmentCount: true, CreatedOn: true, UpdatedOn: true}}
+		DisplayFilters: shared.DefaultListDisplayFilters(), DisplayProperties: shared.DefaultListDisplayProperties()}
 }
 
 // Apply returns p with the fields patch gives changed.

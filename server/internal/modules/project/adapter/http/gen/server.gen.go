@@ -305,41 +305,18 @@ type ProjectCreate struct {
 	Timezone *string `json:"timezone,omitempty"`
 }
 
-// ProjectDisplayFilters defines model for ProjectDisplayFilters.
-type ProjectDisplayFilters struct {
-	Calendar        ProjectListCalendar       `json:"calendar"`
-	GroupBy         nullable.Nullable[string] `json:"group_by"`
-	Layout          string                    `json:"layout"`
-	OrderBy         string                    `json:"order_by"`
-	ShowEmptyGroups bool                      `json:"show_empty_groups"`
-	SubGroupBy      nullable.Nullable[string] `json:"sub_group_by"`
-	SubIssue        bool                      `json:"sub_issue"`
-}
-
-// ProjectDisplayProperties defines model for ProjectDisplayProperties.
-type ProjectDisplayProperties struct {
-	Assignee bool `json:"assignee"`
-
-	// AttachmentCount Whether lists show a work item's number of live ordinary attachments.
-	AttachmentCount bool `json:"attachment_count"`
-	CreatedOn       bool `json:"created_on"`
-	DueDate         bool `json:"due_date"`
-	Key             bool `json:"key"`
-	Labels          bool `json:"labels"`
-	Link            bool `json:"link"`
-	Priority        bool `json:"priority"`
-	StartDate       bool `json:"start_date"`
-	State           bool `json:"state"`
-	SubIssueCount   bool `json:"sub_issue_count"`
-	UpdatedOn       bool `json:"updated_on"`
-}
-
 // ProjectIssueFilters Saved filter atoms; an empty array means no filtering for its key.
 type ProjectIssueFilters struct {
-	AssigneeID   *[]string `json:"assignee_id,omitempty"`
-	CreatedByID  *[]string `json:"created_by_id,omitempty"`
-	LabelID      *[]string `json:"label_id,omitempty"`
-	MentionID    *[]string `json:"mention_id,omitempty"`
+	AssigneeID  *[]string `json:"assignee_id,omitempty"`
+	CreatedByID *[]string `json:"created_by_id,omitempty"`
+
+	// CycleID The project's cycles, as the list's cycle_id: UUID or none alternatives.
+	CycleID   *[]string `json:"cycle_id,omitempty"`
+	LabelID   *[]string `json:"label_id,omitempty"`
+	MentionID *[]string `json:"mention_id,omitempty"`
+
+	// ModuleID The project's modules, as the list's module_id: UUID or none alternatives.
+	ModuleID     *[]string `json:"module_id,omitempty"`
 	Priority     *[]string `json:"priority,omitempty"`
 	StartDate    *[]string `json:"start_date,omitempty"`
 	StateGroup   *[]string `json:"state_group,omitempty"`
@@ -351,12 +328,6 @@ type ProjectIssueFilters struct {
 // ProjectList defines model for ProjectList.
 type ProjectList struct {
 	Data []Project `json:"data"`
-}
-
-// ProjectListCalendar defines model for ProjectListCalendar.
-type ProjectListCalendar struct {
-	Layout       string `json:"layout"`
-	ShowWeekends bool   `json:"show_weekends"`
 }
 
 // ProjectMember An active membership of a project.
@@ -413,8 +384,8 @@ type ProjectNetwork int
 
 // ProjectPreferences The caller's display settings in a project.
 type ProjectPreferences struct {
-	DisplayFilters    ProjectDisplayFilters    `json:"display_filters"`
-	DisplayProperties ProjectDisplayProperties `json:"display_properties"`
+	DisplayFilters    externalRef0.IssueListDisplayFilters    `json:"display_filters"`
+	DisplayProperties externalRef0.IssueListDisplayProperties `json:"display_properties"`
 
 	// Filters Saved filter atoms; an empty array means no filtering for its key.
 	Filters ProjectIssueFilters `json:"filters"`
@@ -428,8 +399,8 @@ type ProjectPreferences struct {
 
 // ProjectPreferencesUpdate Each named top-level field replaces that field whole; omitted fields stay unchanged.
 type ProjectPreferencesUpdate struct {
-	DisplayFilters    *ProjectDisplayFilters    `json:"display_filters,omitempty"`
-	DisplayProperties *ProjectDisplayProperties `json:"display_properties,omitempty"`
+	DisplayFilters    *externalRef0.IssueListDisplayFilters    `json:"display_filters,omitempty"`
+	DisplayProperties *externalRef0.IssueListDisplayProperties `json:"display_properties,omitempty"`
 
 	// Filters Saved filter atoms; an empty array means no filtering for its key.
 	Filters *ProjectIssueFilters `json:"filters,omitempty"`
