@@ -41,13 +41,10 @@ type Cascade interface {
 	DetachLabel(ctx context.Context, labelIDs []uuid.UUID, by uuid.UUID, now time.Time) error
 }
 
-// ListCalendar and ListDisplayFilters are the pure saved-settings boundary values.
-type ListCalendar = app.ListCalendar
-type ListDisplayFilters = app.ListDisplayFilters
-
-// ListSettings validates saved list words without a directory or actor.
+// ListSettings validates saved list words without a directory or actor:
+// the filters by key, and the display filters every page shares.
 type ListSettings interface {
-	Validate(map[string][]string, *ListDisplayFilters, map[string]bool) []shared.FieldError
+	Validate(map[string][]string, *shared.ListDisplayFilters) []shared.FieldError
 }
 
 // Provided are the adapters bootstrap builds before wiring consuming modules.

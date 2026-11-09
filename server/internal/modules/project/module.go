@@ -214,10 +214,6 @@ func Provide(pool *pgxpool.Pool, protected []postgres.ProtectedReference) Provid
 // bootstrap converts workspace's DirectoryEntry into it (M3 design 6.5).
 type Workspace = app.Workspace
 
-// ListCalendar and ListDisplayFilters are the settings consumer boundary values.
-type ListCalendar = app.ListCalendar
-type ListDisplayFilters = app.ListDisplayFilters
-
 // Deps are what bootstrap gives the module (M3 design 6.6, step 4).
 type Deps struct {
 	Caller        app.CallerLock
@@ -236,7 +232,7 @@ type Deps struct {
 	Members app.WorkspaceMembers
 	// Issues is issue's IssueCascade (issue.Provide).
 	Issues app.IssueCascade
-	// ListSettings is the pure issue-list vocabulary validator, converted by bootstrap.
+	// ListSettings is issue's pure issue-list vocabulary validator (issue.Provide).
 	ListSettings app.IssueListSettings
 }
 

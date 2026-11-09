@@ -6594,7 +6594,7 @@ components:
           type: array
           items:
             type: string
-    ProjectListCalendar:
+    IssueListCalendar:
       type: object
       additionalProperties: false
       required:
@@ -6605,7 +6605,7 @@ components:
           type: string
         show_weekends:
           type: boolean
-    ProjectDisplayFilters:
+    IssueListDisplayFilters:
       type: object
       additionalProperties: false
       required:
@@ -6634,8 +6634,8 @@ components:
         show_empty_groups:
           type: boolean
         calendar:
-          $ref: '#/components/schemas/ProjectListCalendar'
-    ProjectDisplayProperties:
+          $ref: '#/components/schemas/IssueListCalendar'
+    IssueListDisplayProperties:
       type: object
       additionalProperties: false
       required:
@@ -6696,9 +6696,9 @@ components:
         filters:
           $ref: '#/components/schemas/ProjectIssueFilters'
         display_filters:
-          $ref: '#/components/schemas/ProjectDisplayFilters'
+          $ref: '#/components/schemas/IssueListDisplayFilters'
         display_properties:
-          $ref: '#/components/schemas/ProjectDisplayProperties'
+          $ref: '#/components/schemas/IssueListDisplayProperties'
     ProjectPreferencesUpdate:
       description: Each named top-level field replaces that field whole; omitted fields stay unchanged.
       type: object
@@ -6712,9 +6712,9 @@ components:
         filters:
           $ref: '#/components/schemas/ProjectIssueFilters'
         display_filters:
-          $ref: '#/components/schemas/ProjectDisplayFilters'
+          $ref: '#/components/schemas/IssueListDisplayFilters'
         display_properties:
-          $ref: '#/components/schemas/ProjectDisplayProperties'
+          $ref: '#/components/schemas/IssueListDisplayProperties'
     CycleStatus:
       description: 'Read from the cycle''s dates on the project''s calendar day, never stored: draft without dates, upcoming before the start, current from the start to the end, completed after the end.'
       type: string

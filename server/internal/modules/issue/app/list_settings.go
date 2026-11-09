@@ -8,29 +8,15 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
-// ListCalendar and ListDisplayFilters are issue app boundary values. The
-// composition root converts the consuming module's own values into these.
-type ListCalendar struct {
-	Layout       string
-	ShowWeekends bool
-}
-
-type ListDisplayFilters struct {
-	Layout                    string
-	GroupBy, SubGroupBy       *string
-	OrderBy                   string
-	SubIssue, ShowEmptyGroups bool
-	Calendar                  ListCalendar
-}
-
 // ListSettings validates saved words without a query, actor or directory.
 // Its zero value is ready to use and never changes its inputs.
 type ListSettings struct{}
 
 // Validate accepts nil top-level fields as omitted and empty filter arrays
 // as no filtering. Errors are deterministic: sorted filter keys and original
-// element order, display fields, then sorted property keys.
-func (ListSettings) Validate(filters map[string][]string, display *ListDisplayFilters, properties map[string]bool) []shared.FieldError {
+// element order, then display fields. Display properties are not checked
+// here: they are booleans whose keys shared.ListDisplayProperties fixes.
+func (ListSettings) Validate(filters map[string][]string, display *shared.ListDisplayFilters) []shared.FieldError {
 	var found []shared.FieldError
 	refuse := func(field string) {
 		found = append(found, shared.FieldError{Field: field, Code: shared.FieldNotAllowed, Message: "is not allowed"})
@@ -71,18 +57,6 @@ func (ListSettings) Validate(filters map[string][]string, display *ListDisplayFi
 		}
 		if d.Calendar.Layout != "month" && d.Calendar.Layout != "week" {
 			refuse("display_filters.calendar.layout")
-		}
-	}
-	keys = keys[:0]
-	for key := range properties {
-		keys = append(keys, key)
-	}
-	slices.Sort(keys)
-	for _, key := range keys {
-		switch key {
-		case "assignee", "start_date", "due_date", "labels", "key", "priority", "state", "sub_issue_count", "link", "attachment_count", "created_on", "updated_on":
-		default:
-			refuse("display_properties." + key)
 		}
 	}
 	return found

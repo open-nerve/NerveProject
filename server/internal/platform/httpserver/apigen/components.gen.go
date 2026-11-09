@@ -83,6 +83,41 @@ type FieldError struct {
 // FieldErrorCode What is wrong with the field.
 type FieldErrorCode string
 
+// IssueListCalendar defines model for IssueListCalendar.
+type IssueListCalendar struct {
+	Layout       string `json:"layout"`
+	ShowWeekends bool   `json:"show_weekends"`
+}
+
+// IssueListDisplayFilters defines model for IssueListDisplayFilters.
+type IssueListDisplayFilters struct {
+	Calendar        IssueListCalendar         `json:"calendar"`
+	GroupBy         nullable.Nullable[string] `json:"group_by"`
+	Layout          string                    `json:"layout"`
+	OrderBy         string                    `json:"order_by"`
+	ShowEmptyGroups bool                      `json:"show_empty_groups"`
+	SubGroupBy      nullable.Nullable[string] `json:"sub_group_by"`
+	SubIssue        bool                      `json:"sub_issue"`
+}
+
+// IssueListDisplayProperties defines model for IssueListDisplayProperties.
+type IssueListDisplayProperties struct {
+	Assignee bool `json:"assignee"`
+
+	// AttachmentCount Whether lists show a work item's number of live ordinary attachments.
+	AttachmentCount bool `json:"attachment_count"`
+	CreatedOn       bool `json:"created_on"`
+	DueDate         bool `json:"due_date"`
+	Key             bool `json:"key"`
+	Labels          bool `json:"labels"`
+	Link            bool `json:"link"`
+	Priority        bool `json:"priority"`
+	StartDate       bool `json:"start_date"`
+	State           bool `json:"state"`
+	SubIssueCount   bool `json:"sub_issue_count"`
+	UpdatedOn       bool `json:"updated_on"`
+}
+
 // LinkMetadata defines model for LinkMetadata.
 type LinkMetadata struct {
 	Error      nullable.Nullable[LinkMetadataError] `json:"error,omitempty"`

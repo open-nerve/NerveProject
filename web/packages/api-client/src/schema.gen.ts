@@ -3379,20 +3379,20 @@ export interface components {
             start_date?: string[];
             target_date?: string[];
         };
-        ProjectListCalendar: {
+        IssueListCalendar: {
             layout: string;
             show_weekends: boolean;
         };
-        ProjectDisplayFilters: {
+        IssueListDisplayFilters: {
             layout: string;
             group_by: string | null;
             sub_group_by: string | null;
             order_by: string;
             sub_issue: boolean;
             show_empty_groups: boolean;
-            calendar: components["schemas"]["ProjectListCalendar"];
+            calendar: components["schemas"]["IssueListCalendar"];
         };
-        ProjectDisplayProperties: {
+        IssueListDisplayProperties: {
             assignee: boolean;
             start_date: boolean;
             due_date: boolean;
@@ -3413,8 +3413,8 @@ export interface components {
             /** @description The project's place in the caller's sidebar, lowest first. */
             sort_order: number;
             filters: components["schemas"]["ProjectIssueFilters"];
-            display_filters: components["schemas"]["ProjectDisplayFilters"];
-            display_properties: components["schemas"]["ProjectDisplayProperties"];
+            display_filters: components["schemas"]["IssueListDisplayFilters"];
+            display_properties: components["schemas"]["IssueListDisplayProperties"];
         };
         /** @description Each named top-level field replaces that field whole; omitted fields stay unchanged. */
         ProjectPreferencesUpdate: {
@@ -3422,8 +3422,8 @@ export interface components {
             /** @description The project's place in the caller's sidebar, lowest first. */
             sort_order?: number;
             filters?: components["schemas"]["ProjectIssueFilters"];
-            display_filters?: components["schemas"]["ProjectDisplayFilters"];
-            display_properties?: components["schemas"]["ProjectDisplayProperties"];
+            display_filters?: components["schemas"]["IssueListDisplayFilters"];
+            display_properties?: components["schemas"]["IssueListDisplayProperties"];
         };
         /**
          * @description Read from the cycle's dates on the project's calendar day, never stored: draft without dates, upcoming before the start, current from the start to the end, completed after the end.
@@ -3828,9 +3828,9 @@ export type IssueRelationsCreate = components['schemas']['IssueRelationsCreate']
 export type ProjectTab = components['schemas']['ProjectTab'];
 export type ProjectNavigation = components['schemas']['ProjectNavigation'];
 export type ProjectIssueFilters = components['schemas']['ProjectIssueFilters'];
-export type ProjectListCalendar = components['schemas']['ProjectListCalendar'];
-export type ProjectDisplayFilters = components['schemas']['ProjectDisplayFilters'];
-export type ProjectDisplayProperties = components['schemas']['ProjectDisplayProperties'];
+export type IssueListCalendar = components['schemas']['IssueListCalendar'];
+export type IssueListDisplayFilters = components['schemas']['IssueListDisplayFilters'];
+export type IssueListDisplayProperties = components['schemas']['IssueListDisplayProperties'];
 export type ProjectPreferences = components['schemas']['ProjectPreferences'];
 export type ProjectPreferencesUpdate = components['schemas']['ProjectPreferencesUpdate'];
 export type CycleStatus = components['schemas']['CycleStatus'];

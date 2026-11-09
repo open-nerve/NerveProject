@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/project/domain"
+	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
 const displayDefaultJSON = `{"calendar":{"layout":"month","show_weekends":false},"group_by":null,"layout":"list","order_by":"-created_at","show_empty_groups":true,"sub_group_by":null,"sub_issue":true}`
@@ -15,7 +16,7 @@ const issueDefaultsJSON = `"display_filters":` + displayDefaultJSON + `,"display
 
 func TestIssuePreferencesHTTPValues(t *testing.T) {
 	p := domain.DefaultPreferences()
-	p.Filters = domain.Filters{LabelID: []string{}, Priority: []string{"low"}}
+	p.Filters = domain.Filters{ListFilters: shared.ListFilters{LabelID: []string{}, Priority: []string{"low"}}}
 	p.DisplayFilters.GroupBy = ptr("priority")
 	p.DisplayFilters.SubIssue = false
 	p.DisplayProperties.Link = false
@@ -50,9 +51,9 @@ func TestIssuePreferencesHTTPValues(t *testing.T) {
 			t.Fatal(answer)
 		}
 	}
-	wantFilters := domain.Filters{StateID: []string{"bad-uuid"}, StateGroup: []string{"future"}, Priority: []string{"future"}, LabelID: []string{}, AssigneeID: []string{"me"}, CreatedByID: []string{"me"}, MentionID: []string{"me"}, SubscriberID: []string{"me"}, StartDate: []string{"bad-date"}, TargetDate: []string{"none"}}
-	wantDisplay := domain.DisplayFilters{Layout: "calendar", OrderBy: "name", Calendar: domain.DisplayCalendar{Layout: "week", ShowWeekends: true}}
-	wantProps := domain.DisplayProperties{StartDate: true, Labels: true, Priority: true, SubIssueCount: true, AttachmentCount: true, CreatedOn: true}
+	wantFilters := domain.Filters{ListFilters: shared.ListFilters{StateID: []string{"bad-uuid"}, StateGroup: []string{"future"}, Priority: []string{"future"}, LabelID: []string{}, AssigneeID: []string{"me"}, CreatedByID: []string{"me"}, MentionID: []string{"me"}, SubscriberID: []string{"me"}, StartDate: []string{"bad-date"}, TargetDate: []string{"none"}}}
+	wantDisplay := shared.ListDisplayFilters{Layout: "calendar", OrderBy: "name", Calendar: shared.ListCalendar{Layout: "week", ShowWeekends: true}}
+	wantProps := shared.ListDisplayProperties{StartDate: true, Labels: true, Priority: true, SubIssueCount: true, AttachmentCount: true, CreatedOn: true}
 	want := []domain.PreferencesPatch{{Filters: &wantFilters, DisplayFilters: &wantDisplay, DisplayProperties: &wantProps}, {Filters: &domain.Filters{}}, {}}
 	if !reflect.DeepEqual(prefs.got, want) {
 		t.Fatalf("patches %+v; want %+v", prefs.got, want)

@@ -9,6 +9,7 @@ import (
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/project/app"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project/domain"
+	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
 // Every flag keeps its neighbors, including when the first PATCH inserts.
@@ -25,18 +26,18 @@ func TestProjectIssuePreferencesStore(t *testing.T) {
 	exec(t, pool, "UPDATE project_user_properties SET deleted_at=$2 WHERE id=$1", deleted, now)
 	before := tableRows(t, pool, "project_user_properties", uuid.Nil())
 	want := domain.Preferences{Navigation: domain.Navigation{DefaultTab: "work_items", HideInMoreMenu: []string{}}, SortOrder: 65535,
-		DisplayFilters:    domain.DisplayFilters{Layout: "list", OrderBy: "-created_at", SubIssue: true, ShowEmptyGroups: true, Calendar: domain.DisplayCalendar{Layout: "month"}},
-		DisplayProperties: domain.DisplayProperties{Assignee: true, StartDate: true, DueDate: true, Labels: true, Key: true, Priority: true, State: true, SubIssueCount: true, Link: true, AttachmentCount: true, CreatedOn: true, UpdatedOn: true}}
+		DisplayFilters:    shared.ListDisplayFilters{Layout: "list", OrderBy: "-created_at", SubIssue: true, ShowEmptyGroups: true, Calendar: shared.ListCalendar{Layout: "month"}},
+		DisplayProperties: shared.ListDisplayProperties{Assignee: true, StartDate: true, DueDate: true, Labels: true, Key: true, Priority: true, State: true, SubIssueCount: true, Link: true, AttachmentCount: true, CreatedOn: true, UpdatedOn: true}}
 	defaults := want
-	filters := domain.Filters{LabelID: []string{"none"}, Priority: []string{"high"}, AssigneeID: []string{"me"}, StartDate: []string{"2026-10-01.."}}
-	display := domain.DisplayFilters{Layout: "kanban", OrderBy: "sort_order", Calendar: domain.DisplayCalendar{Layout: "week", ShowWeekends: true}}
-	properties := domain.DisplayProperties{Key: true}
+	filters := domain.Filters{ListFilters: shared.ListFilters{LabelID: []string{"none"}, Priority: []string{"high"}, AssigneeID: []string{"me"}, StartDate: []string{"2026-10-01.."}}}
+	display := shared.ListDisplayFilters{Layout: "kanban", OrderBy: "sort_order", Calendar: shared.ListCalendar{Layout: "week", ShowWeekends: true}}
+	properties := shared.ListDisplayProperties{Key: true}
 	navigation := domain.Navigation{DefaultTab: "views", HideInMoreMenu: []string{"cycles"}}
 	order := 4.5
 	id := uuid.NewV7()
 	for i, patch := range []domain.PreferencesPatch{
 		{Filters: &filters}, {DisplayFilters: &display}, {DisplayProperties: &properties}, {Navigation: &navigation}, {SortOrder: &order},
-		{Filters: &domain.Filters{LabelID: []string{}}}, {Filters: &domain.Filters{}}, {},
+		{Filters: &domain.Filters{ListFilters: shared.ListFilters{LabelID: []string{}}}}, {Filters: &domain.Filters{}}, {},
 	} {
 		switch i {
 		case 0:
@@ -50,7 +51,7 @@ func TestProjectIssuePreferencesStore(t *testing.T) {
 		case 4:
 			want.SortOrder = order
 		case 5:
-			want.Filters = domain.Filters{LabelID: []string{}}
+			want.Filters = domain.Filters{ListFilters: shared.ListFilters{LabelID: []string{}}}
 		case 6:
 			want.Filters = domain.Filters{}
 		}

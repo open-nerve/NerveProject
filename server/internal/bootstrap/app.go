@@ -196,7 +196,7 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 		Workspaces:   projectWorkspaces{directory: workspacePorts.WorkspaceDirectory},
 		Members:      workspacePorts.WorkspaceMembers,
 		Issues:       issuePorts.IssueCascade,
-		ListSettings: projectListSettings{settings: issuePorts.ListSettings},
+		ListSettings: issuePorts.ListSettings,
 	})
 	ws := workspace.New(workspace.Deps{
 		ImageBindings: workspaceImageBindings{bindings: imageBindings}, Images: workspaceImageReader{images: imageReader}, MemberAvatars: memberAvatarReader{images: imageReader},
