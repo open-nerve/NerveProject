@@ -77,6 +77,22 @@ func toModule(method, after, body string) func(caller, seeded) (string, string, 
 	}
 }
 
+// moduleSettingsRows are the modules' pages the rows name by their module's
+// id (/me/modules/{module_id}/preferences), as moduleRows.
+var moduleSettingsRows = rowsByID{path: "me/modules", notFound: cellModuleNotFound, find: seeded.module}
+
+// toModulePreferences is toCyclePreferences of their column's own module's
+// page (moduleOf).
+func toModulePreferences(method, body string) func(caller, seeded) (string, string, string) {
+	return func(c caller, s seeded) (string, string, string) {
+		return moduleSettingsRows.to(method, "/preferences", moduleOf(c), body)(c, s)
+	}
+}
+
+// moduleSettings are cycleSettings of a module's page: a filter of the
+// cycles'.
+var moduleSettings = pageSettingsJSON(`{"priority":["high"],"label_id":[],"cycle_id":["none"]}`, customDisplay, customProperties)
+
 // newModule is the body of the module the rows create: Release 2, its name
 // alone.
 const newModule = `{"name":"Release 2"}`
@@ -153,6 +169,20 @@ func moduleMatrixRows() []matrixRow {
 			cells: moduleRows.ofArchived(cellProjectArchived, cellForbidden)},
 		{op: "deleteModule", variant: "an archived module", write: true, columns: cycleColumns, prepare: moduleArchived,
 			request: toModule(http.MethodDelete, "", ""), cells: moduleRows.inCycleColumns(cellNoContent, cellForbidden, cellNoContent, cellForbidden, cellForbidden)},
+		// As getCyclePreferences and updateCyclePreferences, on the module's
+		// page (M6 P3b spec 2.3, R6).
+		{op: "getModulePreferences", columns: cycleColumns, request: toModulePreferences(http.MethodGet, ""),
+			cells: moduleRows.inCycleColumns(cellOK, cellOK, cellOK, cellOK, cellOK), check: answersPageSettings(pageDefaults)},
+		{op: "getModulePreferences", variant: "archived", columns: archivedColumns, request: toModulePreferences(http.MethodGet, ""),
+			cells: moduleRows.ofArchived(cellOK, cellForbidden), check: answersPageSettings(pageDefaults)},
+		{op: "updateModulePreferences", write: true, columns: cycleColumns, request: toModulePreferences(http.MethodPatch, moduleSettings),
+			cells: moduleRows.inCycleColumns(cellOK, cellOK, cellOK, cellOK, cellOK), check: answersPageSettings(moduleSettings)},
+		{op: "updateModulePreferences", variant: "archived", write: true, columns: archivedColumns,
+			request: toModulePreferences(http.MethodPatch, moduleSettings), cells: moduleRows.ofArchived(cellOK, cellForbidden),
+			check: answersPageSettings(moduleSettings)},
+		{op: "updateModulePreferences", variant: "an archived module", write: true, columns: cycleColumns, prepare: moduleArchived,
+			request: toModulePreferences(http.MethodPatch, moduleSettings), cells: moduleRows.inCycleColumns(cellOK, cellOK, cellOK, cellOK, cellOK),
+			check: answersPageSettings(moduleSettings)},
 	}
 }
 

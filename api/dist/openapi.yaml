@@ -3574,6 +3574,108 @@ paths:
           description: Removed.
         default:
           $ref: '#/components/responses/Problem'
+  /api/v0/me/cycles/{cycle_id}/preferences:
+    parameters:
+      - $ref: '#/components/parameters/CycleID'
+    get:
+      operationId: getCyclePreferences
+      tags:
+        - planning
+      summary: Read the caller's display settings on a cycle's page
+      description: The caller's own list settings on the cycle's page, for its project's admins, members and guests, also a caller who sees only his own work items there, whether the project's cycles are turned on or off and whether the project or the cycle is archived. While he has none stored they are the defaults; reading them writes nothing. A cycle that does not exist or is deleted, one whose project is deleted, and one whose project the caller does not see answer planning.cycle_not_found; one whose project he sees but is not a member of, forbidden.
+      security:
+        - bearer: []
+      x-problem-codes:
+        - planning.cycle_not_found
+        - forbidden
+      responses:
+        '200':
+          description: The caller's settings on the cycle's page.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CyclePreferences'
+        default:
+          $ref: '#/components/responses/Problem'
+    patch:
+      operationId: updateCyclePreferences
+      tags:
+        - planning
+      summary: Change the caller's display settings on a cycle's page
+      description: 'For its project''s admins, members and guests, their own settings, also a caller who sees only his own work items there, whether the project''s cycles are turned on or off and whether the project or the cycle is archived. The fields given change and the others stay; each top-level field is replaced whole, and the first change stores the caller''s settings, the defaults with the change applied. The filters have no cycle_id, the page''s list being its cycle''s (bad_request). Invalid saved filter or display words are refused with indexed field paths (validation_failed), before the cycle is looked at. An empty filters object clears filtering, and empty arrays are retained. A cycle that does not exist or is deleted, one whose project is deleted, and one whose project the caller does not see answer planning.cycle_not_found; one whose project he sees but is not a member of, forbidden. Decided after the project''s row is locked for share, which the cycle''s deletion waits for or is waited for by: the settings of a deleted cycle are deleted with it. Written at one moment by the caller.'
+      security:
+        - bearer: []
+      x-problem-codes:
+        - validation_failed
+        - planning.cycle_not_found
+        - forbidden
+        - server_busy
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CyclePreferencesUpdate'
+      responses:
+        '200':
+          description: The caller's settings on the cycle's page as changed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CyclePreferences'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/me/modules/{module_id}/preferences:
+    parameters:
+      - $ref: '#/components/parameters/ModuleID'
+    get:
+      operationId: getModulePreferences
+      tags:
+        - planning
+      summary: Read the caller's display settings on a module's page
+      description: The caller's own list settings on the module's page, for its project's admins, members and guests, also a caller who sees only his own work items there, whether the project's modules are turned on or off and whether the project or the module is archived. While he has none stored they are the defaults; reading them writes nothing. A module that does not exist or is deleted, one whose project is deleted, and one whose project the caller does not see answer planning.module_not_found; one whose project he sees but is not a member of, forbidden.
+      security:
+        - bearer: []
+      x-problem-codes:
+        - planning.module_not_found
+        - forbidden
+      responses:
+        '200':
+          description: The caller's settings on the module's page.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModulePreferences'
+        default:
+          $ref: '#/components/responses/Problem'
+    patch:
+      operationId: updateModulePreferences
+      tags:
+        - planning
+      summary: Change the caller's display settings on a module's page
+      description: 'For its project''s admins, members and guests, their own settings, also a caller who sees only his own work items there, whether the project''s modules are turned on or off and whether the project or the module is archived. The fields given change and the others stay; each top-level field is replaced whole, and the first change stores the caller''s settings, the defaults with the change applied. The filters have no module_id, the page''s list being its module''s (bad_request). Invalid saved filter or display words are refused with indexed field paths (validation_failed), before the module is looked at. An empty filters object clears filtering, and empty arrays are retained. A module that does not exist or is deleted, one whose project is deleted, and one whose project the caller does not see answer planning.module_not_found; one whose project he sees but is not a member of, forbidden. Decided after the project''s row is locked for share, which the module''s deletion waits for or is waited for by: the settings of a deleted module are deleted with it. Written at one moment by the caller.'
+      security:
+        - bearer: []
+      x-problem-codes:
+        - validation_failed
+        - planning.module_not_found
+        - forbidden
+        - server_busy
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModulePreferencesUpdate'
+      responses:
+        '200':
+          description: The caller's settings on the module's page as changed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModulePreferences'
+        default:
+          $ref: '#/components/responses/Problem'
 components:
   securitySchemes:
     bearer:
@@ -7135,6 +7237,158 @@ components:
             - string
             - 'null'
           maxLength: 255
+    CycleIssueFilters:
+      description: 'Saved filter atoms of a cycle''s page: the project''s keys but cycle_id, the page''s list being its cycle''s; an empty array means no filtering for its key.'
+      type: object
+      additionalProperties: false
+      properties:
+        state_id:
+          type: array
+          items:
+            type: string
+        state_group:
+          type: array
+          items:
+            type: string
+        priority:
+          type: array
+          items:
+            type: string
+        label_id:
+          type: array
+          items:
+            type: string
+        assignee_id:
+          type: array
+          items:
+            type: string
+        created_by_id:
+          type: array
+          items:
+            type: string
+        mention_id:
+          type: array
+          items:
+            type: string
+        subscriber_id:
+          type: array
+          items:
+            type: string
+        start_date:
+          type: array
+          items:
+            type: string
+        target_date:
+          type: array
+          items:
+            type: string
+        module_id:
+          description: 'The project''s modules, as the list''s module_id: UUID or none alternatives.'
+          type: array
+          items:
+            type: string
+    CyclePreferences:
+      description: The caller's display settings on a cycle's page.
+      type: object
+      additionalProperties: false
+      required:
+        - filters
+        - display_filters
+        - display_properties
+      properties:
+        filters:
+          $ref: '#/components/schemas/CycleIssueFilters'
+        display_filters:
+          $ref: '#/components/schemas/IssueListDisplayFilters'
+        display_properties:
+          $ref: '#/components/schemas/IssueListDisplayProperties'
+    CyclePreferencesUpdate:
+      description: Each named top-level field replaces that field whole; omitted fields stay unchanged.
+      type: object
+      additionalProperties: false
+      properties:
+        filters:
+          $ref: '#/components/schemas/CycleIssueFilters'
+        display_filters:
+          $ref: '#/components/schemas/IssueListDisplayFilters'
+        display_properties:
+          $ref: '#/components/schemas/IssueListDisplayProperties'
+    ModuleIssueFilters:
+      description: 'Saved filter atoms of a module''s page: the project''s keys but module_id, the page''s list being its module''s; an empty array means no filtering for its key.'
+      type: object
+      additionalProperties: false
+      properties:
+        state_id:
+          type: array
+          items:
+            type: string
+        state_group:
+          type: array
+          items:
+            type: string
+        priority:
+          type: array
+          items:
+            type: string
+        label_id:
+          type: array
+          items:
+            type: string
+        assignee_id:
+          type: array
+          items:
+            type: string
+        created_by_id:
+          type: array
+          items:
+            type: string
+        mention_id:
+          type: array
+          items:
+            type: string
+        subscriber_id:
+          type: array
+          items:
+            type: string
+        start_date:
+          type: array
+          items:
+            type: string
+        target_date:
+          type: array
+          items:
+            type: string
+        cycle_id:
+          description: 'The project''s cycles, as the list''s cycle_id: UUID or none alternatives.'
+          type: array
+          items:
+            type: string
+    ModulePreferences:
+      description: The caller's display settings on a module's page.
+      type: object
+      additionalProperties: false
+      required:
+        - filters
+        - display_filters
+        - display_properties
+      properties:
+        filters:
+          $ref: '#/components/schemas/ModuleIssueFilters'
+        display_filters:
+          $ref: '#/components/schemas/IssueListDisplayFilters'
+        display_properties:
+          $ref: '#/components/schemas/IssueListDisplayProperties'
+    ModulePreferencesUpdate:
+      description: Each named top-level field replaces that field whole; omitted fields stay unchanged.
+      type: object
+      additionalProperties: false
+      properties:
+        filters:
+          $ref: '#/components/schemas/ModuleIssueFilters'
+        display_filters:
+          $ref: '#/components/schemas/IssueListDisplayFilters'
+        display_properties:
+          $ref: '#/components/schemas/IssueListDisplayProperties'
   responses:
     Problem:
       description: Error (RFC 9457 problem details).

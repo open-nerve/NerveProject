@@ -7,6 +7,8 @@ import { bearer } from "./auth";
 export type Cycle = components["schemas"]["Cycle"];
 export type CycleCreate = components["schemas"]["CycleCreate"];
 export type CycleUpdate = components["schemas"]["CycleUpdate"];
+type CyclePreferences = components["schemas"]["CyclePreferences"];
+type CyclePreferencesUpdate = components["schemas"]["CyclePreferencesUpdate"];
 
 /** Creates a cycle in the project of projectId through the planning API, as the caller of token. */
 export async function createCycle(api: Api, token: string, projectId: string, body: CycleCreate): Promise<Cycle> {
@@ -18,6 +20,25 @@ export async function createCycle(api: Api, token: string, projectId: string, bo
   expect(response.status, `create the cycle ${body.name} in ${projectId}: ${JSON.stringify(error)}`).toBe(201);
   if (!data) {
     throw new Error(`createCycle ${body.name} answered 201 without the cycle`);
+  }
+  return data;
+}
+
+/** Changes the display settings of the caller of token on the page of the cycle of id, and returns them as changed. */
+export async function changeCyclePreferences(
+  api: Api,
+  token: string,
+  id: string,
+  body: CyclePreferencesUpdate
+): Promise<CyclePreferences> {
+  const { data, error, response } = await api.PATCH("/api/v0/me/cycles/{cycle_id}/preferences", {
+    params: { path: { cycle_id: id } },
+    body,
+    headers: bearer(token),
+  });
+  expect(response.status, `change the display settings on the cycle ${id}: ${JSON.stringify(error)}`).toBe(200);
+  if (!data) {
+    throw new Error(`changeCyclePreferences ${id} answered 200 without the settings`);
   }
   return data;
 }

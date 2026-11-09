@@ -2000,6 +2000,60 @@ export interface paths {
         patch: operations["updateModuleLink"];
         trace?: never;
     };
+    "/api/v0/me/cycles/{cycle_id}/preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A cycle's id (Cycle.id). */
+                cycle_id: components["parameters"]["CycleID"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Read the caller's display settings on a cycle's page
+         * @description The caller's own list settings on the cycle's page, for its project's admins, members and guests, also a caller who sees only his own work items there, whether the project's cycles are turned on or off and whether the project or the cycle is archived. While he has none stored they are the defaults; reading them writes nothing. A cycle that does not exist or is deleted, one whose project is deleted, and one whose project the caller does not see answer planning.cycle_not_found; one whose project he sees but is not a member of, forbidden.
+         */
+        get: operations["getCyclePreferences"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Change the caller's display settings on a cycle's page
+         * @description For its project's admins, members and guests, their own settings, also a caller who sees only his own work items there, whether the project's cycles are turned on or off and whether the project or the cycle is archived. The fields given change and the others stay; each top-level field is replaced whole, and the first change stores the caller's settings, the defaults with the change applied. The filters have no cycle_id, the page's list being its cycle's (bad_request). Invalid saved filter or display words are refused with indexed field paths (validation_failed), before the cycle is looked at. An empty filters object clears filtering, and empty arrays are retained. A cycle that does not exist or is deleted, one whose project is deleted, and one whose project the caller does not see answer planning.cycle_not_found; one whose project he sees but is not a member of, forbidden. Decided after the project's row is locked for share, which the cycle's deletion waits for or is waited for by: the settings of a deleted cycle are deleted with it. Written at one moment by the caller.
+         */
+        patch: operations["updateCyclePreferences"];
+        trace?: never;
+    };
+    "/api/v0/me/modules/{module_id}/preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A module's id (Module.id). */
+                module_id: components["parameters"]["ModuleID"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Read the caller's display settings on a module's page
+         * @description The caller's own list settings on the module's page, for its project's admins, members and guests, also a caller who sees only his own work items there, whether the project's modules are turned on or off and whether the project or the module is archived. While he has none stored they are the defaults; reading them writes nothing. A module that does not exist or is deleted, one whose project is deleted, and one whose project the caller does not see answer planning.module_not_found; one whose project he sees but is not a member of, forbidden.
+         */
+        get: operations["getModulePreferences"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Change the caller's display settings on a module's page
+         * @description For its project's admins, members and guests, their own settings, also a caller who sees only his own work items there, whether the project's modules are turned on or off and whether the project or the module is archived. The fields given change and the others stay; each top-level field is replaced whole, and the first change stores the caller's settings, the defaults with the change applied. The filters have no module_id, the page's list being its module's (bad_request). Invalid saved filter or display words are refused with indexed field paths (validation_failed), before the module is looked at. An empty filters object clears filtering, and empty arrays are retained. A module that does not exist or is deleted, one whose project is deleted, and one whose project the caller does not see answer planning.module_not_found; one whose project he sees but is not a member of, forbidden. Decided after the project's row is locked for share, which the module's deletion waits for or is waited for by: the settings of a deleted module are deleted with it. Written at one moment by the caller.
+         */
+        patch: operations["updateModulePreferences"];
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -3656,6 +3710,60 @@ export interface components {
             /** @description Null clears it; empty text is kept; left out, it is kept. */
             title?: string | null;
         };
+        /** @description Saved filter atoms of a cycle's page: the project's keys but cycle_id, the page's list being its cycle's; an empty array means no filtering for its key. */
+        CycleIssueFilters: {
+            state_id?: string[];
+            state_group?: string[];
+            priority?: string[];
+            label_id?: string[];
+            assignee_id?: string[];
+            created_by_id?: string[];
+            mention_id?: string[];
+            subscriber_id?: string[];
+            start_date?: string[];
+            target_date?: string[];
+            /** @description The project's modules, as the list's module_id: UUID or none alternatives. */
+            module_id?: string[];
+        };
+        /** @description The caller's display settings on a cycle's page. */
+        CyclePreferences: {
+            filters: components["schemas"]["CycleIssueFilters"];
+            display_filters: components["schemas"]["IssueListDisplayFilters"];
+            display_properties: components["schemas"]["IssueListDisplayProperties"];
+        };
+        /** @description Each named top-level field replaces that field whole; omitted fields stay unchanged. */
+        CyclePreferencesUpdate: {
+            filters?: components["schemas"]["CycleIssueFilters"];
+            display_filters?: components["schemas"]["IssueListDisplayFilters"];
+            display_properties?: components["schemas"]["IssueListDisplayProperties"];
+        };
+        /** @description Saved filter atoms of a module's page: the project's keys but module_id, the page's list being its module's; an empty array means no filtering for its key. */
+        ModuleIssueFilters: {
+            state_id?: string[];
+            state_group?: string[];
+            priority?: string[];
+            label_id?: string[];
+            assignee_id?: string[];
+            created_by_id?: string[];
+            mention_id?: string[];
+            subscriber_id?: string[];
+            start_date?: string[];
+            target_date?: string[];
+            /** @description The project's cycles, as the list's cycle_id: UUID or none alternatives. */
+            cycle_id?: string[];
+        };
+        /** @description The caller's display settings on a module's page. */
+        ModulePreferences: {
+            filters: components["schemas"]["ModuleIssueFilters"];
+            display_filters: components["schemas"]["IssueListDisplayFilters"];
+            display_properties: components["schemas"]["IssueListDisplayProperties"];
+        };
+        /** @description Each named top-level field replaces that field whole; omitted fields stay unchanged. */
+        ModulePreferencesUpdate: {
+            filters?: components["schemas"]["ModuleIssueFilters"];
+            display_filters?: components["schemas"]["IssueListDisplayFilters"];
+            display_properties?: components["schemas"]["IssueListDisplayProperties"];
+        };
     };
     responses: {
         /** @description Error (RFC 9457 problem details). */
@@ -3855,6 +3963,12 @@ export type ModuleLink = components['schemas']['ModuleLink'];
 export type ModuleLinkCollection = components['schemas']['ModuleLinkCollection'];
 export type ModuleLinkCreate = components['schemas']['ModuleLinkCreate'];
 export type ModuleLinkPatch = components['schemas']['ModuleLinkPatch'];
+export type CycleIssueFilters = components['schemas']['CycleIssueFilters'];
+export type CyclePreferences = components['schemas']['CyclePreferences'];
+export type CyclePreferencesUpdate = components['schemas']['CyclePreferencesUpdate'];
+export type ModuleIssueFilters = components['schemas']['ModuleIssueFilters'];
+export type ModulePreferences = components['schemas']['ModulePreferences'];
+export type ModulePreferencesUpdate = components['schemas']['ModulePreferencesUpdate'];
 export type ResponseProblem = components['responses']['Problem'];
 export type ParameterLimit = components['parameters']['Limit'];
 export type ParameterCursor = components['parameters']['Cursor'];
@@ -7073,6 +7187,110 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ModuleLink"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getCyclePreferences: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A cycle's id (Cycle.id). */
+                cycle_id: components["parameters"]["CycleID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller's settings on the cycle's page. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CyclePreferences"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateCyclePreferences: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A cycle's id (Cycle.id). */
+                cycle_id: components["parameters"]["CycleID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CyclePreferencesUpdate"];
+            };
+        };
+        responses: {
+            /** @description The caller's settings on the cycle's page as changed. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CyclePreferences"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getModulePreferences: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A module's id (Module.id). */
+                module_id: components["parameters"]["ModuleID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller's settings on the module's page. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModulePreferences"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateModulePreferences: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A module's id (Module.id). */
+                module_id: components["parameters"]["ModuleID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModulePreferencesUpdate"];
+            };
+        };
+        responses: {
+            /** @description The caller's settings on the module's page as changed. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModulePreferences"];
                 };
             };
             default: components["responses"]["Problem"];

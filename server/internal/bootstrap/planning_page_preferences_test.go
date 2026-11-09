@@ -27,8 +27,9 @@ func modulePreferences(id uuid.UUID) pagePreferences {
 
 // seed writes, directly, a row of the display settings of the page for each
 // account named in live, and for each named in gone one deleted and last
-// changed by alice an hour ago. Until /me/cycles|modules/{id}/preferences
-// writes them (M6 P3b spec 2.3), the rows are fixtures.
+// changed by alice an hour ago: fixtures, a row no change through
+// /me/cycles|modules/{id}/preferences writes (M6 P3b spec 2.3), a deleted
+// one or one last changed by another, among them.
 func (p pagePreferences) seed(t *testing.T, w issueWorld, live, gone []string) {
 	t.Helper()
 	deleted := time.Now().Add(-time.Hour)

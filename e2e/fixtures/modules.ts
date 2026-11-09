@@ -11,6 +11,8 @@ type ModuleUpdate = components["schemas"]["ModuleUpdate"];
 type ModuleLink = components["schemas"]["ModuleLink"];
 type ModuleLinkCreate = components["schemas"]["ModuleLinkCreate"];
 type ModuleLinkPatch = components["schemas"]["ModuleLinkPatch"];
+type ModulePreferences = components["schemas"]["ModulePreferences"];
+type ModulePreferencesUpdate = components["schemas"]["ModulePreferencesUpdate"];
 
 /** Creates a module in the project of projectId through the planning API, as the caller of token. */
 export async function createModule(api: Api, token: string, projectId: string, body: ModuleCreate): Promise<Module> {
@@ -22,6 +24,25 @@ export async function createModule(api: Api, token: string, projectId: string, b
   expect(response.status, `create the module ${body.name} in ${projectId}: ${JSON.stringify(error)}`).toBe(201);
   if (!data) {
     throw new Error(`createModule ${body.name} answered 201 without the module`);
+  }
+  return data;
+}
+
+/** Changes the display settings of the caller of token on the page of the module of id, and returns them as changed. */
+export async function changeModulePreferences(
+  api: Api,
+  token: string,
+  id: string,
+  body: ModulePreferencesUpdate
+): Promise<ModulePreferences> {
+  const { data, error, response } = await api.PATCH("/api/v0/me/modules/{module_id}/preferences", {
+    params: { path: { module_id: id } },
+    body,
+    headers: bearer(token),
+  });
+  expect(response.status, `change the display settings on the module ${id}: ${JSON.stringify(error)}`).toBe(200);
+  if (!data) {
+    throw new Error(`changeModulePreferences ${id} answered 200 without the settings`);
   }
   return data;
 }

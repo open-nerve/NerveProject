@@ -122,9 +122,44 @@ type CycleCreate struct {
 	StartDate *shared.Date `json:"start_date,omitempty"`
 }
 
+// CycleIssueFilters Saved filter atoms of a cycle's page: the project's keys but cycle_id, the page's list being its cycle's; an empty array means no filtering for its key.
+type CycleIssueFilters struct {
+	AssigneeID  *[]string `json:"assignee_id,omitempty"`
+	CreatedByID *[]string `json:"created_by_id,omitempty"`
+	LabelID     *[]string `json:"label_id,omitempty"`
+	MentionID   *[]string `json:"mention_id,omitempty"`
+
+	// ModuleID The project's modules, as the list's module_id: UUID or none alternatives.
+	ModuleID     *[]string `json:"module_id,omitempty"`
+	Priority     *[]string `json:"priority,omitempty"`
+	StartDate    *[]string `json:"start_date,omitempty"`
+	StateGroup   *[]string `json:"state_group,omitempty"`
+	StateID      *[]string `json:"state_id,omitempty"`
+	SubscriberID *[]string `json:"subscriber_id,omitempty"`
+	TargetDate   *[]string `json:"target_date,omitempty"`
+}
+
 // CycleList defines model for CycleList.
 type CycleList struct {
 	Data []Cycle `json:"data"`
+}
+
+// CyclePreferences The caller's display settings on a cycle's page.
+type CyclePreferences struct {
+	DisplayFilters    externalRef0.IssueListDisplayFilters    `json:"display_filters"`
+	DisplayProperties externalRef0.IssueListDisplayProperties `json:"display_properties"`
+
+	// Filters Saved filter atoms of a cycle's page: the project's keys but cycle_id, the page's list being its cycle's; an empty array means no filtering for its key.
+	Filters CycleIssueFilters `json:"filters"`
+}
+
+// CyclePreferencesUpdate Each named top-level field replaces that field whole; omitted fields stay unchanged.
+type CyclePreferencesUpdate struct {
+	DisplayFilters    *externalRef0.IssueListDisplayFilters    `json:"display_filters,omitempty"`
+	DisplayProperties *externalRef0.IssueListDisplayProperties `json:"display_properties,omitempty"`
+
+	// Filters Saved filter atoms of a cycle's page: the project's keys but cycle_id, the page's list being its cycle's; an empty array means no filtering for its key.
+	Filters *CycleIssueFilters `json:"filters,omitempty"`
 }
 
 // CycleStatus Read from the cycle's dates on the project's calendar day, never stored: draft without dates, upcoming before the start, current from the start to the end, completed after the end.
@@ -207,6 +242,23 @@ type ModuleCreate struct {
 	TargetDate *shared.Date `json:"target_date,omitempty"`
 }
 
+// ModuleIssueFilters Saved filter atoms of a module's page: the project's keys but module_id, the page's list being its module's; an empty array means no filtering for its key.
+type ModuleIssueFilters struct {
+	AssigneeID  *[]string `json:"assignee_id,omitempty"`
+	CreatedByID *[]string `json:"created_by_id,omitempty"`
+
+	// CycleID The project's cycles, as the list's cycle_id: UUID or none alternatives.
+	CycleID      *[]string `json:"cycle_id,omitempty"`
+	LabelID      *[]string `json:"label_id,omitempty"`
+	MentionID    *[]string `json:"mention_id,omitempty"`
+	Priority     *[]string `json:"priority,omitempty"`
+	StartDate    *[]string `json:"start_date,omitempty"`
+	StateGroup   *[]string `json:"state_group,omitempty"`
+	StateID      *[]string `json:"state_id,omitempty"`
+	SubscriberID *[]string `json:"subscriber_id,omitempty"`
+	TargetDate   *[]string `json:"target_date,omitempty"`
+}
+
 // ModuleLink A link of a module.
 type ModuleLink struct {
 	CreatedAt time.Time `json:"created_at"`
@@ -249,6 +301,24 @@ type ModuleLinkPatch struct {
 // ModuleList defines model for ModuleList.
 type ModuleList struct {
 	Data []Module `json:"data"`
+}
+
+// ModulePreferences The caller's display settings on a module's page.
+type ModulePreferences struct {
+	DisplayFilters    externalRef0.IssueListDisplayFilters    `json:"display_filters"`
+	DisplayProperties externalRef0.IssueListDisplayProperties `json:"display_properties"`
+
+	// Filters Saved filter atoms of a module's page: the project's keys but module_id, the page's list being its module's; an empty array means no filtering for its key.
+	Filters ModuleIssueFilters `json:"filters"`
+}
+
+// ModulePreferencesUpdate Each named top-level field replaces that field whole; omitted fields stay unchanged.
+type ModulePreferencesUpdate struct {
+	DisplayFilters    *externalRef0.IssueListDisplayFilters    `json:"display_filters,omitempty"`
+	DisplayProperties *externalRef0.IssueListDisplayProperties `json:"display_properties,omitempty"`
+
+	// Filters Saved filter atoms of a module's page: the project's keys but module_id, the page's list being its module's; an empty array means no filtering for its key.
+	Filters *ModuleIssueFilters `json:"filters,omitempty"`
 }
 
 // ModuleStatus A module's status, set by its writers, never read from its dates.
@@ -311,6 +381,12 @@ type ListModulesParams struct {
 // UpdateCycleJSONRequestBody defines body for UpdateCycle for application/json ContentType.
 type UpdateCycleJSONRequestBody = CycleUpdate
 
+// UpdateCyclePreferencesJSONRequestBody defines body for UpdateCyclePreferences for application/json ContentType.
+type UpdateCyclePreferencesJSONRequestBody = CyclePreferencesUpdate
+
+// UpdateModulePreferencesJSONRequestBody defines body for UpdateModulePreferences for application/json ContentType.
+type UpdateModulePreferencesJSONRequestBody = ModulePreferencesUpdate
+
 // UpdateModuleLinkJSONRequestBody defines body for UpdateModuleLink for application/json ContentType.
 type UpdateModuleLinkJSONRequestBody = ModuleLinkPatch
 
@@ -343,6 +419,18 @@ type ServerInterface interface {
 	// UnarchiveCycle Unarchive a cycle
 	// (POST /api/v0/cycles/{cycle_id}/unarchive)
 	UnarchiveCycle(w http.ResponseWriter, r *http.Request, cycleID CycleID)
+	// GetCyclePreferences Read the caller's display settings on a cycle's page
+	// (GET /api/v0/me/cycles/{cycle_id}/preferences)
+	GetCyclePreferences(w http.ResponseWriter, r *http.Request, cycleID CycleID)
+	// UpdateCyclePreferences Change the caller's display settings on a cycle's page
+	// (PATCH /api/v0/me/cycles/{cycle_id}/preferences)
+	UpdateCyclePreferences(w http.ResponseWriter, r *http.Request, cycleID CycleID)
+	// GetModulePreferences Read the caller's display settings on a module's page
+	// (GET /api/v0/me/modules/{module_id}/preferences)
+	GetModulePreferences(w http.ResponseWriter, r *http.Request, moduleID ModuleID)
+	// UpdateModulePreferences Change the caller's display settings on a module's page
+	// (PATCH /api/v0/me/modules/{module_id}/preferences)
+	UpdateModulePreferences(w http.ResponseWriter, r *http.Request, moduleID ModuleID)
 	// DeleteModuleLink Remove a module's link
 	// (DELETE /api/v0/module-links/{module_link_id})
 	DeleteModuleLink(w http.ResponseWriter, r *http.Request, moduleLinkID ModuleLinkID)
@@ -514,6 +602,110 @@ func (siw *ServerInterfaceWrapper) UnarchiveCycle(w http.ResponseWriter, r *http
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UnarchiveCycle(w, r, cycleID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetCyclePreferences operation middleware
+func (siw *ServerInterfaceWrapper) GetCyclePreferences(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "cycle_id" -------------
+	var cycleID CycleID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "cycle_id", r.PathValue("cycle_id"), &cycleID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cycle_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetCyclePreferences(w, r, cycleID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateCyclePreferences operation middleware
+func (siw *ServerInterfaceWrapper) UpdateCyclePreferences(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "cycle_id" -------------
+	var cycleID CycleID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "cycle_id", r.PathValue("cycle_id"), &cycleID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cycle_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateCyclePreferences(w, r, cycleID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetModulePreferences operation middleware
+func (siw *ServerInterfaceWrapper) GetModulePreferences(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "module_id" -------------
+	var moduleID ModuleID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "module_id", r.PathValue("module_id"), &moduleID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "module_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetModulePreferences(w, r, moduleID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateModulePreferences operation middleware
+func (siw *ServerInterfaceWrapper) UpdateModulePreferences(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "module_id" -------------
+	var moduleID ModuleID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "module_id", r.PathValue("module_id"), &moduleID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "module_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateModulePreferences(w, r, moduleID)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1031,6 +1223,10 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/modules/{module_id}/links", wrapper.CreateModuleLink)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v0/module-links/{module_link_id}", wrapper.DeleteModuleLink)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/module-links/{module_link_id}", wrapper.UpdateModuleLink)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/me/cycles/{cycle_id}/preferences", wrapper.GetCyclePreferences)
+	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/me/cycles/{cycle_id}/preferences", wrapper.UpdateCyclePreferences)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/me/modules/{module_id}/preferences", wrapper.GetModulePreferences)
+	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/me/modules/{module_id}/preferences", wrapper.UpdateModulePreferences)
 
 	return m
 }
@@ -1253,6 +1449,192 @@ type UnarchiveCycledefaultApplicationProblemPlusJSONResponse struct {
 }
 
 func (response UnarchiveCycledefaultApplicationProblemPlusJSONResponse) VisitUnarchiveCycleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCyclePreferencesRequestObject struct {
+	CycleID CycleID `json:"cycle_id"`
+}
+
+type GetCyclePreferencesResponseObject interface {
+	VisitGetCyclePreferencesResponse(w http.ResponseWriter) error
+}
+
+type GetCyclePreferences200JSONResponse CyclePreferences
+
+func (response GetCyclePreferences200JSONResponse) VisitGetCyclePreferencesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCyclePreferencesdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response GetCyclePreferencesdefaultApplicationProblemPlusJSONResponse) VisitGetCyclePreferencesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateCyclePreferencesRequestObject struct {
+	CycleID CycleID `json:"cycle_id"`
+	Body    *UpdateCyclePreferencesJSONRequestBody
+}
+
+type UpdateCyclePreferencesResponseObject interface {
+	VisitUpdateCyclePreferencesResponse(w http.ResponseWriter) error
+}
+
+type UpdateCyclePreferences200JSONResponse CyclePreferences
+
+func (response UpdateCyclePreferences200JSONResponse) VisitUpdateCyclePreferencesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateCyclePreferencesdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response UpdateCyclePreferencesdefaultApplicationProblemPlusJSONResponse) VisitUpdateCyclePreferencesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetModulePreferencesRequestObject struct {
+	ModuleID ModuleID `json:"module_id"`
+}
+
+type GetModulePreferencesResponseObject interface {
+	VisitGetModulePreferencesResponse(w http.ResponseWriter) error
+}
+
+type GetModulePreferences200JSONResponse ModulePreferences
+
+func (response GetModulePreferences200JSONResponse) VisitGetModulePreferencesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetModulePreferencesdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response GetModulePreferencesdefaultApplicationProblemPlusJSONResponse) VisitGetModulePreferencesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateModulePreferencesRequestObject struct {
+	ModuleID ModuleID `json:"module_id"`
+	Body     *UpdateModulePreferencesJSONRequestBody
+}
+
+type UpdateModulePreferencesResponseObject interface {
+	VisitUpdateModulePreferencesResponse(w http.ResponseWriter) error
+}
+
+type UpdateModulePreferences200JSONResponse ModulePreferences
+
+func (response UpdateModulePreferences200JSONResponse) VisitUpdateModulePreferencesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateModulePreferencesdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response UpdateModulePreferencesdefaultApplicationProblemPlusJSONResponse) VisitUpdateModulePreferencesResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -1880,6 +2262,18 @@ type StrictServerInterface interface {
 	// UnarchiveCycle Unarchive a cycle
 	// (POST /api/v0/cycles/{cycle_id}/unarchive)
 	UnarchiveCycle(ctx context.Context, request UnarchiveCycleRequestObject) (UnarchiveCycleResponseObject, error)
+	// GetCyclePreferences Read the caller's display settings on a cycle's page
+	// (GET /api/v0/me/cycles/{cycle_id}/preferences)
+	GetCyclePreferences(ctx context.Context, request GetCyclePreferencesRequestObject) (GetCyclePreferencesResponseObject, error)
+	// UpdateCyclePreferences Change the caller's display settings on a cycle's page
+	// (PATCH /api/v0/me/cycles/{cycle_id}/preferences)
+	UpdateCyclePreferences(ctx context.Context, request UpdateCyclePreferencesRequestObject) (UpdateCyclePreferencesResponseObject, error)
+	// GetModulePreferences Read the caller's display settings on a module's page
+	// (GET /api/v0/me/modules/{module_id}/preferences)
+	GetModulePreferences(ctx context.Context, request GetModulePreferencesRequestObject) (GetModulePreferencesResponseObject, error)
+	// UpdateModulePreferences Change the caller's display settings on a module's page
+	// (PATCH /api/v0/me/modules/{module_id}/preferences)
+	UpdateModulePreferences(ctx context.Context, request UpdateModulePreferencesRequestObject) (UpdateModulePreferencesResponseObject, error)
 	// DeleteModuleLink Remove a module's link
 	// (DELETE /api/v0/module-links/{module_link_id})
 	DeleteModuleLink(ctx context.Context, request DeleteModuleLinkRequestObject) (DeleteModuleLinkResponseObject, error)
@@ -2090,6 +2484,124 @@ func (sh *strictHandler) UnarchiveCycle(w http.ResponseWriter, r *http.Request, 
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(UnarchiveCycleResponseObject); ok {
 		if err := validResponse.VisitUnarchiveCycleResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetCyclePreferences operation middleware
+func (sh *strictHandler) GetCyclePreferences(w http.ResponseWriter, r *http.Request, cycleID CycleID) {
+	var request GetCyclePreferencesRequestObject
+
+	request.CycleID = cycleID
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetCyclePreferences(ctx, request.(GetCyclePreferencesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetCyclePreferences")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetCyclePreferencesResponseObject); ok {
+		if err := validResponse.VisitGetCyclePreferencesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateCyclePreferences operation middleware
+func (sh *strictHandler) UpdateCyclePreferences(w http.ResponseWriter, r *http.Request, cycleID CycleID) {
+	var request UpdateCyclePreferencesRequestObject
+
+	request.CycleID = cycleID
+
+	var body UpdateCyclePreferencesJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateCyclePreferences(ctx, request.(UpdateCyclePreferencesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateCyclePreferences")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateCyclePreferencesResponseObject); ok {
+		if err := validResponse.VisitUpdateCyclePreferencesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetModulePreferences operation middleware
+func (sh *strictHandler) GetModulePreferences(w http.ResponseWriter, r *http.Request, moduleID ModuleID) {
+	var request GetModulePreferencesRequestObject
+
+	request.ModuleID = moduleID
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetModulePreferences(ctx, request.(GetModulePreferencesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetModulePreferences")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetModulePreferencesResponseObject); ok {
+		if err := validResponse.VisitGetModulePreferencesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateModulePreferences operation middleware
+func (sh *strictHandler) UpdateModulePreferences(w http.ResponseWriter, r *http.Request, moduleID ModuleID) {
+	var request UpdateModulePreferencesRequestObject
+
+	request.ModuleID = moduleID
+
+	var body UpdateModulePreferencesJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateModulePreferences(ctx, request.(UpdateModulePreferencesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateModulePreferences")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateModulePreferencesResponseObject); ok {
+		if err := validResponse.VisitUpdateModulePreferencesResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
