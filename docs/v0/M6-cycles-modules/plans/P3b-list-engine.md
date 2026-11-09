@@ -1,7 +1,7 @@
 # M6 / P3b 列表引擎的迭代与模块、迭代与模块页的显示设置实施计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-> 状态：待预检。
+> 状态：预检通过（修正后，[re-60](../../../reviews/re-60-M6P3b预检.md)），实施中。
 
 **Goal：**
 - 工作项列表能按迭代、模块筛选（含“无”）与分组；
@@ -109,10 +109,10 @@
 **Files：**
 - `issue/domain/{listvocab.go,list_query.go}` 与测试：分组、子分组、分组键语法、`canonicalizeListGroupKey`；`listvocab_test` 与 `issue/app/list_settings_test.go:86` 的翻转。
 - 两条分组语句的 `CASE`：分组一处，子分组两处。
-- `api/modules/issue.yaml` 的 `IssueListGroupField`，以及生成物。
+- `api/modules/issue.yaml` 的 `IssueListGroupField`（含它的说明文字 `issue.yaml:1850`，写明两个新词只限项目列表），以及生成物。
 - 网页（编译修正）：`lib/issue-membership.ts` 的 `groupKeys` 加 `module_id`，`lib/issue-filters.ts` 的 `issueFieldForGroup` 加 `module_id → module_ids`，各配一个单元测试。
 - bootstrap 的分组测试：`issue_list_planning_groups_test.go`。
-- `bootstrap/project_issue_preferences_test.go:114`：拒绝词换成仍被拒的，例如 `project_id`。
+- 仍被拒的替代词：`bootstrap/project_issue_preferences_test.go:114` 与 e2e `stories/issue/i5-list-preferences.spec.ts:199-205` 把 `group_by:"cycle_id"`、`sub_group_by:"module_id"` 换成仍被拒的词，例如 `project_id`（服务端从本 Task 起接受原来的词）。
 
 - [ ] Step 1：先写测试（RED）：
   - 迭代单值分组；模块多值分组，一个工作项进它的每个模块组；`none` 组；
@@ -162,7 +162,7 @@
 - `list_parameters.go` 的成对数组与参数复制三处，以及三条语句的目录 CTE 与名字键。
 - `api/modules/issue.yaml` 的 `IssueListOrder`，以及生成物。
 - `api/testdata/issue-order.json`：两个场景（R7）。
-- Go 的三个消费者：`issue/domain/list_order_test.go`（11→13）、`issue/adapter/postgres/list_order_test.go`（播种分支）、`bootstrap/issue_list_orders_test.go`（21→25；`seedListOrder` 的两个分支要打开项目的两个开关，没有迭代的那一行照种）。
+- Go 的三个消费者：`issue/domain/list_order_test.go`（11→13）、`issue/adapter/postgres/list_order_test.go`（播种分支）、`bootstrap/issue_list_orders_test.go`（21→25；`seedListOrder` 的两个分支以 SQL 种迭代、模块与归属，读取不看开关，没有迭代的那一行照种）。
 - 快照与证据：`bootstrap/issue_list_explain_test.go:41` 的目录分组；仿 `issue_list_attachment_snapshot_test.go` 的目录快照测试。
 - 网页：
   - `lib/issue-order.ts` 与 `issue-order.test.ts`（13）；
@@ -194,10 +194,12 @@
 - 生成物：`apigen/components.gen.go`、项目的 `server.gen.go` 与 bodyshape、`api/dist`、`schema.gen.ts`。
 - `server/internal/shared/` 新文件：`ListFilters`（十个共同的筛选键与转为 map 的方法）、`ListDisplayFilters`、`ListCalendar`、`ListDisplayProperties` 与默认值，并配测试。
 - `project/domain/{issue_preferences.go,preferences.go}`、`project/app/list_settings.go`、`project/adapter/{http,postgres}` 与测试：改用共用类型，删除被替代的类型。
-- `issue/app/list_settings.go` 与测试：`Validate` 的新签名，删除手写的属性清单（R5）。
+- `issue/app/list_settings.go` 与测试：`Validate(filters, display)` 的新签名，去掉显示属性参数，删除手写的属性清单（R5）；`issue/module.go:44-50` 的别名 `ListCalendar`/`ListDisplayFilters` 与导出的 `ListSettings` 接口随之改。
+- `project/app/issue_preferences_test.go:14-26` 的假实现 `capturedSettings`。
 - `bootstrap/{ports.go,app.go}`：删除 `projectListSettings`，直接交 `issue.ListSettings`。
-- 网页：`store/issue/project/filter.store.ts:8` 的类型名。
-- e2e：引用 `ProjectDisplayProperties` 的地方（`i5-list-preferences.spec.ts:100-113`）改名。
+- 网页：`store/issue/project/filter.store.ts:8` 与 `:233` 的类型名。
+- e2e：`stories/issue/i5-list-preferences.spec.ts` 的 `:2`、`:91`（`ProjectDisplayFilters`）、`:100-113`、`:374`（`keyof ProjectDisplayProperties`）改名。
+- 提交前 grep：web 与 e2e（除 `schema.gen.ts`）不再有 `ProjectDisplayFilters`、`ProjectDisplayProperties`、`ProjectListCalendar`；server 不再有被删的 `ListDisplayFilters`、`ListCalendar` 旧类型。
 
 - [ ] Step 1：先核实 bodyshape。在 `common.yaml` 加一个 schema，并让 `ProjectPreferencesUpdate` 引用它，`make gen` 后跑 project 的 bodyshape 与 apitest：多余的键与错误的类型仍回答 400，收据记为 RED/GREEN。如果生成器解析不了外部引用，就停下上报，不绕开。
 - [ ] Step 2：完成搬移与 Go 的共用类型，跑全部的项目偏好测试（project 模块、`bootstrap/project_issue_preferences_test.go`、`project_preferences_*`、`p5_preferences_scope_test.go`）。它们只因类型名改动，断言不动。新增 `shared` 的单元测试：默认值，以及 `ListFilters` 转 map 时 nil 与空数组的区别。
@@ -216,11 +218,11 @@
 - `project/domain.Filters` 加 `CycleID`、`ModuleID`，与它的转换、HTTP 映射。
 - `api/common.yaml` 的显示属性加两个必填键；`api/modules/project.yaml` 的 `ProjectIssueFilters` 加两个可省略的键；生成物。
 - 网页：`store/project/fake-projects.ts:81-94`、`components/issues/issue-layouts/roots/project-lifecycle.test.tsx:92-105`。
-- e2e：`stories/issue/i5-list-preferences.spec.ts`（补两个键；`:199-205` 的拒绝词换成 `project_id`）、`stories/project/p8-project-preferences.spec.ts:40-54`。
-- bootstrap 的项目偏好测试（默认值的 JSON 常量）。
+- e2e：`stories/issue/i5-list-preferences.spec.ts:100-113`（补两个键）、`stories/project/p8-project-preferences.spec.ts:40-54`。
+- bootstrap 的项目偏好测试：`project_issue_preferences_test.go` 的默认与自定义 JSON 常量（`customProperties` 等）、`permission_matrix_project_test.go:154-160` 的偏好行。
 
 - [ ] Step 1：先写测试（RED）：
-  - 迁移：旧行补上两个属性；默认值；12 个筛选键与 14 个显示属性；下行时剥掉新键，旧 CHECK 能重建。
+  - 迁移：旧行补上两个属性；默认值；12 个筛选键与 14 个显示属性；下行的次序为删新 CHECK → 剥键 → 旧默认值 → 重建旧 CHECK（spec R4），存过新键的行下行后合法。
   - 项目偏好：存 `filters.cycle_id`/`module_id` 与两个属性；`DefaultPreferences` 等于列的默认值。
   - 未知的属性键与筛选键回答 400。
 - [ ] Step 2：实现，然后 `make gen`，跑聚焦回归。
@@ -231,48 +233,49 @@
   
   提交后串行完整七项（`gates.sh t7-gate1`，第一个检查点），推送，核分支 CI。
 
-## Task 8（T8）：两张偏好表与表级守卫
+## Task 8（T8）：两张偏好表、删除任务与清理的两步，守卫
+
+建表即触发的 Go 守卫（每张表恰好一个清理者、删除目录、两个父范围下都要有种下的行、清理规模必须有过期行）在本 Task 内一并转绿（预检 M1）。
 
 **Files：**
 - `server/migrations/sql/00046_planning_cycle_user_properties.sql`、`00047_planning_module_user_properties.sql`（spec §2.4）。
 - `server/sqlc.yaml` 的 planning 条目；`deploy/runtime-grants.sql`。
 - `server/migrations/{planning_schema_test.go,purge_indexes_test.go,trigram_schema_test.go}`：迁移总数 45→47，清理表数 30→32，`planningNames` 加两张表的约束与索引名。
-- `bootstrap/purge_catalog_test.go`：表数。
+- 删除任务：`planning/app/delete_rows.go` 的 `DeletionRowSteps`、`deletes` 与 `ProjectRows` 加两步；`queries/delete_rows.sql` 的两条语句与剩余探查 `CASE`（`:45-56`）；适配器 `delete_rows.go`；`delete_rows_steps_test.go:17` 的 `planningSteps` 与 `delete_rows_test.go`。
+- 清理：`planning/module.go:73-78` 的步骤子先父（`module_user_properties`、`module_links`、`module_members`、`modules`、`cycle_user_properties`、`cycles`）；`purge.go`、`queries/purge.sql`；`store_test.go:160`、`module_rows_test.go:223` 固定的 `Tables()`。
+- bootstrap：
+  - `purge_catalog_test.go` 的表数；
+  - `issue_project_deletion_jobs_test.go:31-33` 的 `projectPlanningTable` 认两张表；
+  - `planning_deletion_fixture_test.go` 的 `seedCycles`、`seedModules` 各以 SQL 种一行偏好（`seedProject`、清理夹具已调用它们）；
+  - `purge_scale_fixture_test.go` 的 `purgeScaleTables`、`seedPurgeSparseRows`；
+  - `purge_runtime_test.go:49,103` 的 planning 组与老化、核对的表清单。
 
-- [ ] Step 1：先改守卫（RED），并写约束测试：
-  - 同一迭代、同一用户只有一行未删除的，已删除的不占位；
-  - 筛选不认本页的键；显示属性恰好 14 个键；默认值；
-  - 外键的去向：删迭代、模块、用户、项目、工作区时 CASCADE，审计列 SET NULL。
-- [ ] Step 2：写两个迁移（含 Down）、sqlc 的 schema、运行角色的授权。表级守卫转绿。清理目录的“没有清理步骤”与删除守卫要到 T9 才转绿，在台账里记下基线。
-- [ ] Step 3：变异，以下每一项都应让测试失败：
+- [ ] Step 1：先改守卫并写测试（RED）：
+  - 约束：同一迭代、同一用户只有一行未删除的，已删除的不占位；筛选不认本页的键；显示属性恰好 14 个键；默认值；外键的去向（删迭代、模块、用户、项目、工作区时 CASCADE，审计列 SET NULL）。
+  - 删除任务的步骤清单与剩余探查；清理的次序子先父。
+  - 项目/工作区删除、迟到删除与清理的守卫要求两张表有行并核对软删。
+- [ ] Step 2：写两个迁移（含 Down）、sqlc 的 schema、运行角色的授权、删除任务与清理的语句和步骤、夹具。表级守卫与 bootstrap 的删除、清理、运行角色守卫都转绿，用聚焦正则跑，留收据。
+- [ ] Step 3：本地跑一次 `NERVE_PURGE_SCALE=1` 的 `TestPurgeScale`，留收据。再做变异，以下每一项都应让测试失败：
   - 唯一约束去掉部分条件；
   - 筛选的 CHECK 认本页的键；
-  - `cycle_id` 改为 `SET NULL`。
+  - `cycle_id` 改为 `SET NULL`；
+  - 删除任务漏掉 `module_user_properties` 一步；
+  - 清理把 `cycles` 放在 `cycle_user_properties` 之前。
   
   然后提交。
 
-## Task 9（T9）：删迭代/模块、删除任务与清理的两步，删除守卫
+## Task 9（T9）：删迭代/模块时软删偏好行
 
 **Files：**
-- `planning/app/{delete_cycle.go,delete_module.go,delete_rows.go}` 与测试：固定的调用次序加一步；`DeletionRowSteps` 加两步。
-- `planning/adapter/postgres/queries/{delete_cycle.sql 或同名文件,delete_rows.sql,purge.sql}` 与 `Store`、适配器测试：`store_test.go:160`、`module_rows_test.go:223` 固定的 `Tables()`。
-- `planning/module.go` 的清理步骤。
-- bootstrap：
-  - `issue_project_deletion_jobs_test.go` 的 `projectPlanningTable` 认两张表；
-  - `planning_deletion_fixture_test.go` 的 `seedCycles`、`seedModules` 各以 SQL 种一行偏好；
-  - `purge_scale_fixture_test.go` 的 `purgeScaleTables`、`seedPurgeSparseRows`；
-  - `purge_runtime_test.go` 的 planning 组。
+- `planning/app/{delete_cycle.go,delete_module.go}` 与测试：`CycleDeleter` 加一个方法、`ModuleDeleter` 再加一个，固定的调用次序加一步。
+- `planning/adapter/postgres` 的两条软删语句（照 `DeleteModuleMemberRows`：一条语句，按 id 次序锁行后写）与 `Store`、适配器测试。
+- bootstrap 的删迭代/删模块组合测试（`planning_deletion_*` 或 P1/P2 的删除测试，加偏好行的断言）。
 
-- [ ] Step 1：先写测试与守卫（RED）：
-  - 删迭代/模块时，偏好行在同一时刻、同一写者软删，已删除的保持原样；
-  - 删除任务的步骤清单与剩余探查；
-  - 清理的次序子先父；
-  - 项目/工作区删除、迟到删除与清理的守卫要求两张表有行并核对软删。
-- [ ] Step 2：实现。bootstrap 的删除、清理、运行角色守卫转绿，用聚焦正则跑，留收据。
-- [ ] Step 3：本地跑一次 `NERVE_PURGE_SCALE=1` 的 `TestPurgeScale`，留收据。再做变异，以下每一项都应让测试失败：
+- [ ] Step 1：先写测试（RED）：删迭代/模块时，未删除的偏好行在同一事务、同一时刻、同一写者软删；已删除的保持原来的删除；别的迭代/模块的行不动。
+- [ ] Step 2：实现，跑聚焦回归。
+- [ ] Step 3：变异，以下每一项都应让测试失败：
   - 删迭代漏掉偏好行；
-  - 删除任务漏掉 `module_user_properties` 一步；
-  - 清理把 `cycles` 放在 `cycle_user_properties` 之前。
+  - 软删不排除已删除的行，改写它们的删除时刻。
   
   然后提交。
 
@@ -284,6 +287,7 @@
 - `planning/adapter/postgres`：读与 upsert（`ON CONFLICT (cycle_id,user_id) WHERE deleted_at IS NULL`），与适配器测试，其中默认值等于列的默认值。
 - `project/adapter/postgres/queries/planning_ports.sql` 与 `PlanningProjects.Share`（`FOR SHARE`），与测试。
 - `bootstrap/{ports.go,app.go}`：`planningProjects.Share`；planning 的列表设置端口直接交 `issue.ListSettings`。
+- 随端口长大的假实现：`planning/app/lock_test.go:60-66` 的 `lockWorld`、`bootstrap/planning_ports_test.go:20-43` 的 `fakePlanningProjects` 与它的转换测试。
 - `access/domain/{rules.go,rules_test.go}`；`bootstrap/actions_test.go`。
 
 - [ ] Step 1：先写测试（RED）：
@@ -306,7 +310,7 @@
 ## Task 11（T11）：偏好的接口、矩阵与交错
 
 **Files：**
-- `api/modules/planning.yaml`：四个操作与六个 schema（spec §2.3），以及生成物。
+- `api/modules/planning.yaml`：四个操作与六个 schema（spec §2.3）；`api/openapi.yaml` 的根 `$ref` 两条新路径（`TestRootListsEveryModulePath`）；以及生成物。
 - `planning/adapter/http`：四个处理器、`UseCases` 字段、处理器测试；每个（操作，码）一个。
 - bootstrap：
   - 组合测试：新文件 `planning_preferences_test.go`；
@@ -349,7 +353,7 @@
 **Files：**
 - `docs/v0/plane-diff.md`（spec R10）。
 - 输入交接：M4 M6-02 的列表引擎部分、M5-M6-02 的附件列随共用设置出现，各写“处理结果（M6/P3b）”，status 保持 open。逐条核对与 P3b 相关的条款，没有相关的不写。
-- 设计 §6 的 `PlanningDirectory` 一行收窄（R2）；§7 的列表引擎一句补“筛选与分组只限项目列表”（R1）；§14 的 P3b 行。
+- 设计 §6 的 `PlanningDirectory` 一行收窄（R2）；§7 的列表引擎一句补“筛选与分组只限项目列表”（R1）；§3.7 写明个人显示设置不属于“OwnOnly 时所有 planning 的写 403”（R6 的澄清）；§14 的 P3b 行。
 
 - [ ] Step 1：写差异与回执。
 - [ ] Step 2：检查文档链接，然后提交。

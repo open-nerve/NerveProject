@@ -1,6 +1,6 @@
 # M6 / P3b：列表引擎的迭代与模块、迭代与模块页的显示设置
 
-> 状态：待预检。基线 main `2648a73940f053940b3f321f241b1a25eaac8209`（P3a 的 noff，main CI 42487991301 首次通过）。设计见 [M6 设计](../M6-design.md) §2 的 G15、§3.7、§4、§5、§6、§7；负责人 2026-11-07 的决定 A/B/C 见设计 §15；P3a 见 [P3a spec](P3a-issue-membership.md)。加锁之路沿用 M4（[硬规则 §4](../../claude_to_gpt/03-rules-and-pitfalls.md)）与 [P1 spec](P1-cycles-backend.md) §3。现状调研见本阶段台账 `research/backend.md`、`research/web.md`（核对过 P3a 前的 `research/list-engine-P3a.md`，ignored，随阶段归档）。
+> 状态：预检通过（修正后，[re-60](../../../reviews/re-60-M6P3b预检.md)），实施中。基线 main `2648a73940f053940b3f321f241b1a25eaac8209`（P3a 的 noff，main CI 42487991301 首次通过）。设计见 [M6 设计](../M6-design.md) §2 的 G15、§3.7、§4、§5、§6、§7；负责人 2026-11-07 的决定 A/B/C 见设计 §15；P3a 见 [P3a spec](P3a-issue-membership.md)。加锁之路沿用 M4（[硬规则 §4](../../claude_to_gpt/03-rules-and-pitfalls.md)）与 [P1 spec](P1-cycles-backend.md) §3。现状调研见本阶段台账 `research/backend.md`、`research/web.md`（核对过 P3a 前的 `research/list-engine-P3a.md`，ignored，随阶段归档）。
 
 ## 1. 目标与边界
 
@@ -44,7 +44,7 @@ P3 按设计 §12 拆为两段，P3a 已合入。P3b 交付设计 §12 P3b 一�
 | 路径 | 职责 |
 |---|---|
 | `server/internal/modules/issue/domain/` | `listvocab.go`：§2.1 的筛选、值语法、分组、分组键、排序。`list_query.go`：`ListFilters` 加 `Cycles`、`Modules IDFilter`，`canonicalizeListGroupKey` 认两个分组字段。`list_filters.go`：`appendID` 由两路 `else` 改为按字段的 `switch`（P3a 调研发现的陷阱：`none` 会被记到负责人）。`list_cursor_key.go`：可空与文本键两处列表 |
-| `server/internal/modules/issue/app/` | `planning_ports.go`：`PlanningDirectory`（R2），并入 `PlanningPorts`。`list_ports.go`：`ListDirectories` 加 `Cycles`、`Modules []ListName`。`listing.go`：只在 `±cycle_name`/`±module_name` 时、在读行的同一个快照里取目录（先例：附件计数，`listing.go:90-95`）。`list_settings.go`：`Validate` 改收共用的显示设置值，显示属性由类型保证恰好 14 个键，删除手写的属性清单（R5） |
+| `server/internal/modules/issue/app/` | `planning_ports.go`：`PlanningDirectory`（R2），并入 `PlanningPorts`。`list_ports.go`：`ListDirectories` 加 `Cycles`、`Modules []ListName`。`listing.go`：只在 `±cycle_name`/`±module_name` 时、在读行的同一个快照里取目录（先例：附件计数，`listing.go:90-95`）。`list_settings.go`：`Validate(filters, display)` 改收共用的显示筛选，不再收显示属性（键由共用类型保证恰好 14 个），删除手写的属性清单（R5） |
 | `server/internal/modules/issue/adapter/` | `postgres/list_parameters.go`：成对的数组与 `Filter{Cycles,Modules}`、`{Cycles,Modules}None`。`groupParameters` 与子分组的同名函数逐字段复制，每个新参数改三处。三条列表语句（平铺、分组、子分组），各加：目录 CTE `cycle_names`/`module_names`，不叫 `cycles`/`modules` 以免遮住表名；两个筛选；两个名字键；分组与子分组的 `CASE`。三条语句的列保持逐一相同。`postgres/list_cursor.go:47` 的文本键。`http/list_query.go` 的 `listSingleQuery`：项目列表重复给出两个新参数时回答 422 |
 | `server/internal/modules/planning/` | `app`：`PlanningDirectory` 的实现（按项目 id 数组读未删除的迭代、模块的 id 与名字，含已归档，`ORDER BY id`）；偏好的读与改、`Locks` 的共享锁之路（R6）；列表设置端口（消费方声明，R5）。`domain`：两种偏好、默认值、动作 `cycle.preferences`、`module.preferences`（并入 `Actions()`；`module.preferences` 并入 `ModuleAction`，`TestModuleAction` 要求所有 `module.` 动作都在其中，偏好之路不看开关）。`adapter/postgres`：两张表的读、upsert、删迭代/模块时的软删、删除任务两步、清理两步。`adapter/http`：四个处理器。`module.go`：接线、清理步骤 |
 | `server/internal/modules/project/` | `domain`：`Filters` 加 `CycleID`、`ModuleID`；显示设置改用共用的类型（R5）。`app/list_settings.go`：转换随之。`adapter/http`、`adapter/postgres` 的映射随之。`PlanningProjects` 加 `Share`（项目行 `FOR SHARE`，R6）与其语句 |
@@ -112,7 +112,7 @@ P3 按设计 §12 拆为两段，P3a 已合入。P3b 交付设计 §12 P3b 一�
 - **守卫与夹具**：
   - bootstrap 的 `projectPlanningTable` 与 e2e 的 `asynchronousDeletionTable` 认得两张表；
   - `seedCycles`、`seedModules`（`planning_deletion_fixture_test.go`）以 SQL 各种一行偏好，覆盖项目、工作区、迟到删除与清理的守卫；
-  - `purgeScaleTables`、`seedPurgeSparseRows` 加两张表：这里列出的表必须有过期行（`purge_scale_fixture_test.go:106-109`）；
+  - `purgeScaleTables`、`seedPurgeSparseRows` 加两张表：这里列出的表必须有过期行（`purge_scale_fixture_test.go:96-99`）；
   - `purge_runtime_test` 的 planning 组加两张表；
   - e2e 的 `furnishPlanningRows` 以管理员的令牌 PATCH 两种偏好，让删除故事有行可断言。
 - **用户删除**：外键 `CASCADE`；v0 不物理删除账户。
@@ -147,13 +147,13 @@ P3 按设计 §12 拆为两段，P3a 已合入。P3b 交付设计 §12 P3b 一�
 - **R4 项目偏好的 CHECK**：`00045` 照 `00038`：
   - 删去并重建同名的 `project_user_properties_filters_check`，改为 12 个键。旧行仍然合法，不用 UPDATE。
   - 显示属性：删去 CHECK；UPDATE 现有行 `|| '{"cycle":true,"modules":true}'`；改默认值；重建同名的 CHECK，改为 14 个键。
-  - Down：先从行里去掉 `cycle`、`modules` 与筛选的 `cycle_id`、`module_id` 两个键，再恢复旧的 CHECK 与默认值。否则旧 CHECK 会因存过的新键而建不起来。
+  - Down 的次序：先删去两个新 CHECK；再 UPDATE 行，`display_properties - array['cycle','modules']`、`filters - array['cycle_id','module_id']`；然后恢复旧默认值；最后重建旧的两个 CHECK。不先删 CHECK，剥键的 UPDATE 本身就违反 14 键的 CHECK；不先剥键，旧 CHECK 会因存过的新键而建不起来（`00038` 的 Down 同样是删 → 改 → 默认值与重建）。
   - `display_filters` 的 CHECK 只管形状，分组与排序的词本来就是自由字符串，不改。
 - **R5 显示设置的形状三页共用**：
   - **为什么共用**：显示筛选、日历、显示属性在项目、迭代、模块三页完全相同。各存一份，14 个键的列表就要写三遍，容易不一致。照 P2 把链接检查放进 `internal/shared` 的先例（设计 §15 第 17 条），一份共用。
   - **契约**：放在 `common.yaml`，名字中性：`IssueListCalendar`、`IssueListDisplayFilters`、`IssueListDisplayProperties`。先例 `LinkMetadata`，issue 与 planning 共用。Go 生成为 `apigen.X`，TS 保留 schema 名。
   - **值类型**：放在 `internal/shared`，带 JSON 标签与默认值。项目的 `domain.DisplayFilters`、`DisplayCalendar`、`DisplayProperties` 与 `app.ListDisplayFilters`、`ListCalendar` 删除，改用共用类型。
-  - **校验端口**：issue 的 `ListSettings.Validate(filters map[string][]string, display *shared.ListDisplayFilters, properties *shared.ListDisplayProperties)` 改收共用类型；显示属性的键由类型保证，issue 里手写的 12 个属性清单删除（它与项目里的转换清单是同一事实的两份）。项目与 planning 各自声明的 `IssueListSettings` 端口签名相同，`bootstrap` 直接交给 `issue.ListSettings`，删除 `projectListSettings` 的逐字段转换。
+  - **校验端口**：issue 的 `ListSettings.Validate(filters map[string][]string, display *shared.ListDisplayFilters)` 改收共用类型，去掉显示属性参数：显示属性只有布尔、键由共用类型保证，issue 里手写的 12 个属性清单删除（它与项目里的转换清单是同一事实的两份）。项目与 planning 各自声明的 `IssueListSettings` 端口签名相同，`bootstrap` 直接交给 `issue.ListSettings`，删除 `projectListSettings` 的逐字段转换。
   - **筛选按页各自**：十个共同的键在 `shared.ListFilters`（嵌入），连同转为 `map[string][]string` 的方法。项目再加两个键，迭代页、模块页各再加对方的一个键。
   - **契约层面**：每页一个封闭的 OpenAPI schema，因为 `additionalProperties:false` 不能与组合同用。
   - **验证**：`bodyshape` 对请求体里引用 `common.yaml` 的 schema 是第一次（`LinkMetadata` 只在回答里）。`util.LoadSwagger` 会解析外部引用，在该 Task 内以 `make gen` 与 bodyshape 的测试核实。
@@ -161,6 +161,7 @@ P3 按设计 §12 拆为两段，P3a 已合入。P3b 交付设计 §12 P3b 一�
   - **GET**：用 planning 现有的读之路（`Reads.run`，一个只读快照），决定 `cycle.preferences`/`module.preferences`；没有写时的那些拒绝。
   - **PATCH**：`Locks` 新开一条共享锁之路：在一个事务里，先不加锁找到项目（`see` 经 `Facts`），再以 `Projects.Share` 把项目行加 `FOR SHARE` 并在锁下重读迭代/模块，决定动作后读时钟、upsert。
   - **不进项目写闸门，不拒绝写时的那三种情形**：OwnOnly 403、已归档项目 409、开关 409。这些是迭代/模块本身的写的规则（设计 §3.7、§3.8），个人显示设置不是这类写；项目偏好与草稿保存也是这样做的。
+  - **OwnOnly 的澄清**：设计 §3.7 写“Grant 为 OwnOnly 时所有 `planning` 的写 403”，理由是那些写会动到他看不见的工作项，或把他看不见的数量写进回答；个人显示设置两者都不涉及，项目偏好对工作区管理员兼访客也放行（`permission_matrix_project_test.go:154-160`）。所以偏好不在那句话的范围内，T13 在设计 §3.7 写明这一澄清。
   - **为什么要锁**：`FOR SHARE` 与删迭代/模块、删项目的 `FOR NO KEY UPDATE`/`FOR UPDATE` 冲突，所以不会在一个正被删除的迭代下写入新行：先删则 PATCH 404，先写则行随删除软删。
   - **开关**：偏好之路不经 `turnedOff`。`module.preferences` 虽在 `ModuleAction` 里，也不受开关约束。
   - **重构**：`write` 与 `named` 的字段重复（`lock.go:78`、`decide.go:15`），改为 `write` 嵌入 `named`。改到 `lock.go` 时顺手完成，行为不变。
@@ -236,4 +237,4 @@ P3 按设计 §12 拆为两段，P3a 已合入。P3b 交付设计 §12 P3b 一�
   - 影响面：项目偏好的 Go 类型与 TS 类型名都变。
   - 守卫：先做“不改任何回答与存储”的重构，M4 的项目偏好测试只改类型名，断言不动；再加新词。
   - 不确定的一点：bodyshape 对外部引用的请求体能否正确解析，在重构的 Task 内先核实。若不行，停下上报，不绕开。
-- **按目录驱动的守卫**：两张新表在建表的 Task 就触发多道守卫（清理表数、删除目录、清理规模必须有过期行）。Go 的夹具以 SQL 种行。e2e 的删除故事要等偏好接口落地、`furnishPlanningRows` 能经接口写行后才转绿，所以整段的七项检查点安排在列表引擎与项目偏好完成之后、建新表之前一次，收尾再一次。
+- **按目录驱动的守卫**：两张新表一建就触发多道 Go 守卫：每张表恰好一个清理者、删除目录、两个父范围下都要有种下的行、清理规模必须有过期行。所以建表的 Task 同时加删除任务与清理的步骤和 Go 夹具（以 SQL 种行），在同一个 Task 内转绿。e2e 的删除故事要等偏好接口落地、`furnishPlanningRows` 能经接口写行后才转绿，所以整段的七项检查点安排在列表引擎与项目偏好完成之后、建新表之前一次，收尾再一次。
