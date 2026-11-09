@@ -81,16 +81,18 @@ type Provided struct {
 
 // Provide builds, over pool, planning's purge: its tables, children before
 // parents, so no parent's CASCADE takes a child's rows first (M6 P2 spec
-// 2.4); its issue targets, which read a project's facts through projects,
+// 2.4, P3b spec 2.5); its issue targets, which read a project's facts through projects,
 // project's PlanningProjects converted; and its issue directory. Neither
 // the purge nor the directory uses projects.
 func Provide(pool *pgxpool.Pool, projects app.FactsReader) Provided {
 	store := postgresadapter.New(pool)
 	return Provided{
 		Purger: app.NewPurger([]app.PurgeStep{
+			{Table: "module_user_properties", Delete: store.PurgeModuleUserProperties},
 			{Table: "module_links", Delete: store.PurgeModuleLinks},
 			{Table: "module_members", Delete: store.PurgeModuleMembers},
 			{Table: "modules", Delete: store.PurgeModules},
+			{Table: "cycle_user_properties", Delete: store.PurgeCycleUserProperties},
 			{Table: "cycles", Delete: store.PurgeCycles},
 		}),
 		IssueTargets:   app.NewIssueTargets(projects, store),

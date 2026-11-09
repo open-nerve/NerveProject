@@ -56,3 +56,21 @@ func (s *Store) PurgeModuleLinks(ctx context.Context, b app.PurgeBatch) (app.Pur
 		return row.Scanned, row.Deleted, row.AfterID, err
 	})
 }
+
+// PurgeCycleUserProperties commits one bounded page of the cycles' pages'
+// preferences' purge.
+func (s *Store) PurgeCycleUserProperties(ctx context.Context, b app.PurgeBatch) (app.PurgePage, error) {
+	return s.purgePage(b, "cycle_user_properties", func(q *gen.Queries, cutoff *time.Time, after uuid.UUID, limit int32) (int32, int32, uuid.UUID, error) {
+		row, err := q.PurgeCycleUserProperties(ctx, gen.PurgeCycleUserPropertiesParams{Cutoff: cutoff, AfterID: after, BatchLimit: limit})
+		return row.Scanned, row.Deleted, row.AfterID, err
+	})
+}
+
+// PurgeModuleUserProperties commits one bounded page of the modules' pages'
+// preferences' purge.
+func (s *Store) PurgeModuleUserProperties(ctx context.Context, b app.PurgeBatch) (app.PurgePage, error) {
+	return s.purgePage(b, "module_user_properties", func(q *gen.Queries, cutoff *time.Time, after uuid.UUID, limit int32) (int32, int32, uuid.UUID, error) {
+		row, err := q.PurgeModuleUserProperties(ctx, gen.PurgeModuleUserPropertiesParams{Cutoff: cutoff, AfterID: after, BatchLimit: limit})
+		return row.Scanned, row.Deleted, row.AfterID, err
+	})
+}

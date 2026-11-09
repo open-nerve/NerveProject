@@ -41,15 +41,15 @@ func testMigrationsRoundTrip(t *testing.T, preexisting bool) {
 	t.Cleanup(func() { _ = m.Close() })
 
 	up, err := m.Up(ctx)
-	if err != nil || len(up) != 45 {
-		t.Fatalf("Up() = %d migrations, %v; want 45", len(up), err)
+	if err != nil || len(up) != 47 {
+		t.Fatalf("Up() = %d migrations, %v; want 47", len(up), err)
 	}
 	wantSchema := []struct {
 		query string
 		names []string
 	}{
-		{tablesQuery, []string{"api_tokens", "auth_sessions", "comment_reactions", "cycle_issues", "cycles", "draft_issues", "file_assets", "issue_activities", "issue_assignees", "issue_comments", "issue_description_versions", "issue_labels", "issue_links", "issue_mentions", "issue_reactions", "issue_relations",
-			"issue_subscribers", "issues", "labels", "module_issues", "module_links", "module_members", "modules", "profiles", "project_members",
+		{tablesQuery, []string{"api_tokens", "auth_sessions", "comment_reactions", "cycle_issues", "cycle_user_properties", "cycles", "draft_issues", "file_assets", "issue_activities", "issue_assignees", "issue_comments", "issue_description_versions", "issue_labels", "issue_links", "issue_mentions", "issue_reactions", "issue_relations",
+			"issue_subscribers", "issues", "labels", "module_issues", "module_links", "module_members", "module_user_properties", "modules", "profiles", "project_members",
 			"project_user_properties", "projects", "river_job", "river_leader", "river_notification", "river_queue", "states", "users",
 			"workspace_member_invites", "workspace_members", "workspace_user_properties", "workspaces"}},
 		{enumsQuery, []string{"river_job_state"}},
@@ -81,7 +81,7 @@ func testMigrationsRoundTrip(t *testing.T, preexisting bool) {
 		t.Fatal(err)
 	}
 	// Roll back the later migrations before checking migration 29.
-	for version := int64(45); version >= 29; version-- {
+	for version := int64(47); version >= 29; version-- {
 		down, err := m.Down(ctx)
 		if err != nil || down == nil || down.Version != version {
 			t.Fatalf("Down version %d = %+v, %v", version, down, err)
@@ -103,8 +103,8 @@ func testMigrationsRoundTrip(t *testing.T, preexisting bool) {
 			t.Errorf("after every Down, %s = %q, want none", query, got)
 		}
 	}
-	if again, err := m.Up(ctx); err != nil || len(again) != 45 {
-		t.Errorf("Up() again = %d migrations, %v; want 45", len(again), err)
+	if again, err := m.Up(ctx); err != nil || len(again) != 47 {
+		t.Errorf("Up() again = %d migrations, %v; want 47", len(again), err)
 	}
 	checkSchema("Up again")
 	assertTrigramIndex(t, pool)

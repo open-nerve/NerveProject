@@ -42,6 +42,26 @@ WHERE t.id IN (
     ORDER BY r.id LIMIT sqlc.arg(batch) FOR NO KEY UPDATE)
 RETURNING t.id;
 
+-- name: DeleteProjectCycleUserProperties :many
+-- DeleteProjectCycles' batch, of the account's display settings of the project's cycles' pages (M6/P3b spec 2.5).
+UPDATE cycle_user_properties AS t
+SET deleted_at = sqlc.arg(at)::timestamptz, updated_at = sqlc.arg(at), updated_by_id = sqlc.arg(deleted_by)::uuid
+WHERE t.id IN (
+    SELECT r.id FROM cycle_user_properties r
+    WHERE r.project_id = sqlc.arg(project_id) AND r.deleted_at IS NULL AND r.id > sqlc.arg(after)::uuid
+    ORDER BY r.id LIMIT sqlc.arg(batch) FOR NO KEY UPDATE)
+RETURNING t.id;
+
+-- name: DeleteProjectModuleUserProperties :many
+-- DeleteProjectCycles' batch, of the account's display settings of the project's modules' pages.
+UPDATE module_user_properties AS t
+SET deleted_at = sqlc.arg(at)::timestamptz, updated_at = sqlc.arg(at), updated_by_id = sqlc.arg(deleted_by)::uuid
+WHERE t.id IN (
+    SELECT r.id FROM module_user_properties r
+    WHERE r.project_id = sqlc.arg(project_id) AND r.deleted_at IS NULL AND r.id > sqlc.arg(after)::uuid
+    ORDER BY r.id LIMIT sqlc.arg(batch) FOR NO KEY UPDATE)
+RETURNING t.id;
+
 -- name: ProjectDeletionStepRemaining :one
 -- Candidate-only read of one step at a budget boundary: no lock, no write.
 SELECT CASE sqlc.arg(step)::text
@@ -52,5 +72,9 @@ WHEN 'modules' THEN EXISTS (SELECT 1 FROM modules r WHERE r.project_id = sqlc.ar
 WHEN 'module_members' THEN EXISTS (SELECT 1 FROM module_members r WHERE r.project_id = sqlc.arg(project_id)::uuid
     AND r.deleted_at IS NULL AND r.id > sqlc.arg(after)::uuid)
 WHEN 'module_links' THEN EXISTS (SELECT 1 FROM module_links r WHERE r.project_id = sqlc.arg(project_id)::uuid
+    AND r.deleted_at IS NULL AND r.id > sqlc.arg(after)::uuid)
+WHEN 'cycle_user_properties' THEN EXISTS (SELECT 1 FROM cycle_user_properties r WHERE r.project_id = sqlc.arg(project_id)::uuid
+    AND r.deleted_at IS NULL AND r.id > sqlc.arg(after)::uuid)
+WHEN 'module_user_properties' THEN EXISTS (SELECT 1 FROM module_user_properties r WHERE r.project_id = sqlc.arg(project_id)::uuid
     AND r.deleted_at IS NULL AND r.id > sqlc.arg(after)::uuid)
 ELSE false END AS remaining;

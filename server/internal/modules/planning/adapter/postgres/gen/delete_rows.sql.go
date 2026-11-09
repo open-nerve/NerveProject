@@ -12,6 +12,51 @@ import (
 	"uuid"
 )
 
+const deleteProjectCycleUserProperties = `-- name: DeleteProjectCycleUserProperties :many
+UPDATE cycle_user_properties AS t
+SET deleted_at = $1::timestamptz, updated_at = $1, updated_by_id = $2::uuid
+WHERE t.id IN (
+    SELECT r.id FROM cycle_user_properties r
+    WHERE r.project_id = $3 AND r.deleted_at IS NULL AND r.id > $4::uuid
+    ORDER BY r.id LIMIT $5 FOR NO KEY UPDATE)
+RETURNING t.id
+`
+
+type DeleteProjectCycleUserPropertiesParams struct {
+	At        time.Time
+	DeletedBy uuid.UUID
+	ProjectID uuid.UUID
+	After     uuid.UUID
+	Batch     int32
+}
+
+// DeleteProjectCycles' batch, of the account's display settings of the project's cycles' pages (M6/P3b spec 2.5).
+func (q *Queries) DeleteProjectCycleUserProperties(ctx context.Context, arg DeleteProjectCycleUserPropertiesParams) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, deleteProjectCycleUserProperties,
+		arg.At,
+		arg.DeletedBy,
+		arg.ProjectID,
+		arg.After,
+		arg.Batch,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const deleteProjectCycles = `-- name: DeleteProjectCycles :many
 UPDATE cycles AS t
 SET deleted_at = $1::timestamptz, updated_at = $1, updated_by_id = $2::uuid
@@ -151,6 +196,51 @@ func (q *Queries) DeleteProjectModuleMembers(ctx context.Context, arg DeleteProj
 	return items, nil
 }
 
+const deleteProjectModuleUserProperties = `-- name: DeleteProjectModuleUserProperties :many
+UPDATE module_user_properties AS t
+SET deleted_at = $1::timestamptz, updated_at = $1, updated_by_id = $2::uuid
+WHERE t.id IN (
+    SELECT r.id FROM module_user_properties r
+    WHERE r.project_id = $3 AND r.deleted_at IS NULL AND r.id > $4::uuid
+    ORDER BY r.id LIMIT $5 FOR NO KEY UPDATE)
+RETURNING t.id
+`
+
+type DeleteProjectModuleUserPropertiesParams struct {
+	At        time.Time
+	DeletedBy uuid.UUID
+	ProjectID uuid.UUID
+	After     uuid.UUID
+	Batch     int32
+}
+
+// DeleteProjectCycles' batch, of the account's display settings of the project's modules' pages.
+func (q *Queries) DeleteProjectModuleUserProperties(ctx context.Context, arg DeleteProjectModuleUserPropertiesParams) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, deleteProjectModuleUserProperties,
+		arg.At,
+		arg.DeletedBy,
+		arg.ProjectID,
+		arg.After,
+		arg.Batch,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const deleteProjectModules = `-- name: DeleteProjectModules :many
 UPDATE modules AS t
 SET deleted_at = $1::timestamptz, updated_at = $1, updated_by_id = $2::uuid
@@ -205,6 +295,10 @@ WHEN 'modules' THEN EXISTS (SELECT 1 FROM modules r WHERE r.project_id = $2::uui
 WHEN 'module_members' THEN EXISTS (SELECT 1 FROM module_members r WHERE r.project_id = $2::uuid
     AND r.deleted_at IS NULL AND r.id > $3::uuid)
 WHEN 'module_links' THEN EXISTS (SELECT 1 FROM module_links r WHERE r.project_id = $2::uuid
+    AND r.deleted_at IS NULL AND r.id > $3::uuid)
+WHEN 'cycle_user_properties' THEN EXISTS (SELECT 1 FROM cycle_user_properties r WHERE r.project_id = $2::uuid
+    AND r.deleted_at IS NULL AND r.id > $3::uuid)
+WHEN 'module_user_properties' THEN EXISTS (SELECT 1 FROM module_user_properties r WHERE r.project_id = $2::uuid
     AND r.deleted_at IS NULL AND r.id > $3::uuid)
 ELSE false END AS remaining
 `

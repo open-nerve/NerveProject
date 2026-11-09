@@ -22,22 +22,30 @@ import (
 
 // seedCycles writes two cycles of project by by, directly: a dated one with
 // its owner, and an archived one without dates, so a deletion of the project
-// reaches archived cycles too. The deletion and purge guards write the
-// planning module's rows as fixtures (M6 P1 spec 2.4).
+// reaches archived cycles too; and by's display settings of the dated one's
+// page. The deletion and purge guards write the planning module's rows as
+// fixtures (M6 P1 spec 2.4, P3b spec 2.5).
 func seedCycles(t *testing.T, pool *pgxpool.Pool, project, by uuid.UUID) {
 	t.Helper()
+	sprint := uuid.NewV7()
 	if tag, err := pool.Exec(pgtest.Soon(t), `INSERT INTO cycles (id, workspace_id, project_id, name, start_date, end_date, owned_by_id, archived_at, created_by_id, updated_by_id)
 		SELECT $1::uuid, workspace_id, id, 'Sprint', DATE '2026-11-02', DATE '2026-11-15', $2::uuid, NULL::timestamptz, $2::uuid, $2::uuid FROM projects WHERE id = $3
 		UNION ALL SELECT $4::uuid, workspace_id, id, 'Done', NULL::date, NULL::date, NULL::uuid, now(), $2::uuid, $2::uuid FROM projects WHERE id = $3`,
-		uuid.NewV7(), by, project, uuid.NewV7()); err != nil || tag.RowsAffected() != 2 {
+		sprint, by, project, uuid.NewV7()); err != nil || tag.RowsAffected() != 2 {
 		t.Fatalf("seeding the cycles of %s: %d rows, %v; want 2", project, tag.RowsAffected(), err)
+	}
+	if tag, err := pool.Exec(pgtest.Soon(t), `INSERT INTO cycle_user_properties (id, workspace_id, project_id, cycle_id, user_id, filters, created_by_id, updated_by_id)
+		SELECT $1::uuid, workspace_id, project_id, id, $2::uuid, '{"priority":["urgent"]}', $2::uuid, $2::uuid FROM cycles WHERE id = $3`,
+		uuid.NewV7(), by, sprint); err != nil || tag.RowsAffected() != 1 {
+		t.Fatalf("seeding the cycle preferences of %s: %d rows, %v; want 1", project, tag.RowsAffected(), err)
 	}
 }
 
 // seedModules writes a module of project by by, directly, with the rows
-// under it: by as its lead and its member, and a link of it, so a deletion of
-// the project reaches each of the module tables. The deletion and purge
-// guards write the planning module's rows as fixtures (M6 P2 spec 2.4).
+// under it: by as its lead and its member, a link of it and by's display
+// settings of its page, so a deletion of the project reaches each of the
+// module tables. The deletion and purge guards write the planning module's
+// rows as fixtures (M6 P2 spec 2.4, P3b spec 2.5).
 func seedModules(t *testing.T, pool *pgxpool.Pool, project, by uuid.UUID) {
 	t.Helper()
 	module := uuid.NewV7()
@@ -52,6 +60,9 @@ func seedModules(t *testing.T, pool *pgxpool.Pool, project, by uuid.UUID) {
 			SELECT $1::uuid, workspace_id, project_id, id, $2::uuid, $2::uuid, $2::uuid FROM modules WHERE id = $3`, []any{uuid.NewV7(), by, module}},
 		{`INSERT INTO module_links (id, workspace_id, project_id, module_id, title, url, created_by_id, updated_by_id)
 			SELECT $1::uuid, workspace_id, project_id, id, 'Spec', 'https://nerve.dev/spec', $2::uuid, $2::uuid FROM modules WHERE id = $3`,
+			[]any{uuid.NewV7(), by, module}},
+		{`INSERT INTO module_user_properties (id, workspace_id, project_id, module_id, user_id, filters, created_by_id, updated_by_id)
+			SELECT $1::uuid, workspace_id, project_id, id, $2::uuid, '{"cycle_id":["none"]}', $2::uuid, $2::uuid FROM modules WHERE id = $3`,
 			[]any{uuid.NewV7(), by, module}},
 	} {
 		if tag, err := pool.Exec(pgtest.Soon(t), stmt.sql, stmt.args...); err != nil || tag.RowsAffected() != 1 {

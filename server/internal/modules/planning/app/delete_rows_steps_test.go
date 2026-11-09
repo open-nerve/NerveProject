@@ -13,8 +13,9 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/planning/app"
 )
 
-// planningSteps is the deletion's step order the tests hold DeletionRowSteps to: each parent before its children.
-var planningSteps = []app.RowStep{"cycles", "modules", "module_members", "module_links"}
+// planningSteps is the deletion's step order the tests hold DeletionRowSteps to: each parent before its children, the
+// pages' preferences after the module links (M6/P3b spec 2.5).
+var planningSteps = []app.RowStep{"cycles", "modules", "module_members", "module_links", "cycle_user_properties", "module_user_properties"}
 
 // stepRows holds two projects' undeleted rows of each planning table, by step; a batch soft-deletes the first Limit of
 // its project's rows after After, stamping each with the batch's moment and actor. Each committed transaction moves
@@ -33,7 +34,7 @@ type stepRows struct {
 
 var errStep = errors.New("step failed")
 
-// newStepRows seeds project p with 2 cycles and 3 rows of each module table, and its neighbour q with one of each.
+// newStepRows seeds project p with 2 cycles and 3 rows of each other table, and its neighbour q with one of each.
 func newStepRows(p, q uuid.UUID) *stepRows {
 	f := &stepRows{live: map[app.RowStep]map[uuid.UUID][]uuid.UUID{}, stamps: map[uuid.UUID]string{}, start: time.Now()}
 	for _, step := range planningSteps {
@@ -83,6 +84,12 @@ func (f *stepRows) DeleteProjectModuleMembers(_ context.Context, b app.RowBatch)
 }
 func (f *stepRows) DeleteProjectModuleLinks(_ context.Context, b app.RowBatch) ([]uuid.UUID, error) {
 	return f.batch("module_links", b)
+}
+func (f *stepRows) DeleteProjectCycleUserProperties(_ context.Context, b app.RowBatch) ([]uuid.UUID, error) {
+	return f.batch("cycle_user_properties", b)
+}
+func (f *stepRows) DeleteProjectModuleUserProperties(_ context.Context, b app.RowBatch) ([]uuid.UUID, error) {
+	return f.batch("module_user_properties", b)
 }
 
 // ProjectDeletionRemaining answers from the rows: the remainder's step after its cursor, every later step whole.
@@ -139,7 +146,7 @@ func cloneRows(f *stepRows) *stepRows {
 	return c
 }
 
-// The steps are the four planning tables, each parent before its children, in a slice the caller owns.
+// The steps are the six planning tables, each parent before its children, in a slice the caller owns.
 func TestDeletionRowStepsParentsFirst(t *testing.T) {
 	steps := app.DeletionRowSteps()
 	if !slices.Equal(steps, planningSteps) {
@@ -160,11 +167,12 @@ func TestDeleteRowsRunsEveryStepWithTheOriginalMomentAndActor(t *testing.T) {
 	f := newStepRows(p, q)
 	seeded := cloneRows(f)
 	got, err := f.useCase(100).Execute(t.Context(), p, at, by)
-	if err != nil || got != (app.DeleteRowsResult{Deleted: 11, Complete: true}) {
+	if err != nil || got != (app.DeleteRowsResult{Deleted: 17, Complete: true}) {
 		t.Fatalf("Execute = %+v, %v", got, err)
 	}
 	want := []app.RowStep{"cycles", "cycles", "modules", "modules", "modules", "module_members", "module_members", "module_members",
-		"module_links", "module_links", "module_links"}
+		"module_links", "module_links", "module_links", "cycle_user_properties", "cycle_user_properties", "cycle_user_properties",
+		"module_user_properties", "module_user_properties", "module_user_properties"}
 	if !slices.Equal(f.steps, want) || len(f.probes) != 0 {
 		t.Fatalf("steps=%v probes=%v; want %v and none", f.steps, f.probes, want)
 	}
@@ -199,8 +207,8 @@ func TestDeleteRowsRunsEveryStepWithTheOriginalMomentAndActor(t *testing.T) {
 // (a step's first batch from the start); a later run with the job's same arguments finishes, stamping every row with
 // the deletion's original moment and actor.
 func TestDeleteRowsProbesTheStepItStoppedIn(t *testing.T) {
-	// Batches of two over 2 cycles and 3 rows of each module table: cycles 2+0, modules 2+1+0, members 2+1+0,
-	// links 2+1+0.
+	// Batches of two over 2 cycles and 3 rows of each other table: cycles 2+0, modules 2+1+0, members 2+1+0,
+	// links 2+1+0, the cycles' preferences 2+1+0, the modules' 2+1+0.
 	for _, tt := range []struct {
 		batches, deleted, after int
 		step                    app.RowStep
@@ -211,7 +219,11 @@ func TestDeleteRowsProbesTheStepItStoppedIn(t *testing.T) {
 		{4, 5, 3, "modules", false},
 		{5, 5, 0, "module_members", false},
 		{9, 10, 2, "module_links", false},
-		{10, 11, 3, "module_links", true},
+		{10, 11, 3, "module_links", false},
+		{11, 11, 0, "cycle_user_properties", false},
+		{13, 14, 3, "cycle_user_properties", false},
+		{14, 14, 0, "module_user_properties", false},
+		{16, 17, 3, "module_user_properties", true},
 	} {
 		t.Run(fmt.Sprintf("%d batches", tt.batches), func(t *testing.T) {
 			p, q, by := uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
@@ -230,7 +242,7 @@ func TestDeleteRowsProbesTheStepItStoppedIn(t *testing.T) {
 				t.Fatalf("probes=%+v; want %+v", f.probes, want)
 			}
 			rest, err := f.useCase(100).Execute(t.Context(), p, at, by)
-			if err != nil || rest != (app.DeleteRowsResult{Deleted: 11 - tt.deleted, Complete: true}) {
+			if err != nil || rest != (app.DeleteRowsResult{Deleted: 17 - tt.deleted, Complete: true}) {
 				t.Fatalf("resumed = %+v, %v", rest, err)
 			}
 			for _, id := range seeded.all(p) {

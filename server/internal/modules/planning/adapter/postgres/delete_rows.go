@@ -51,6 +51,26 @@ func (s *Store) DeleteProjectModuleLinks(ctx context.Context, b app.RowBatch) ([
 	return ids, nil
 }
 
+// DeleteProjectCycleUserProperties soft-deletes a batch of the accounts'
+// display settings of a deleted project's cycles' pages.
+func (s *Store) DeleteProjectCycleUserProperties(ctx context.Context, b app.RowBatch) ([]uuid.UUID, error) {
+	ids, err := s.queries(ctx).DeleteProjectCycleUserProperties(ctx, gen.DeleteProjectCycleUserPropertiesParams{At: b.At, DeletedBy: b.By, ProjectID: b.ProjectID, After: b.After, Batch: int32(b.Limit)})
+	if err != nil {
+		return nil, fmt.Errorf("delete a batch of the project's cycle preferences: %w", err)
+	}
+	return ids, nil
+}
+
+// DeleteProjectModuleUserProperties soft-deletes a batch of the accounts'
+// display settings of a deleted project's modules' pages.
+func (s *Store) DeleteProjectModuleUserProperties(ctx context.Context, b app.RowBatch) ([]uuid.UUID, error) {
+	ids, err := s.queries(ctx).DeleteProjectModuleUserProperties(ctx, gen.DeleteProjectModuleUserPropertiesParams{At: b.At, DeletedBy: b.By, ProjectID: b.ProjectID, After: b.After, Batch: int32(b.Limit)})
+	if err != nil {
+		return nil, fmt.Errorf("delete a batch of the project's module preferences: %w", err)
+	}
+	return ids, nil
+}
+
 // ProjectDeletionRemaining tells, without locking or writing, whether the
 // project has undeleted rows in the remainder's step after its cursor, or in
 // any later step; the steps before it are done. It is called only at a budget

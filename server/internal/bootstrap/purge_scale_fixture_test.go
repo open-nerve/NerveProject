@@ -17,14 +17,14 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
-// Independent observation directory: all fifteen issue tables, the four
+// Independent observation directory: all fifteen issue tables, the six
 // planning tables, then the project tables with rows in this fixture. It does
 // not read Module.Tables.
 var purgeScaleTables = []string{
 	"comment_reactions", "issue_reactions", "issue_mentions", "issue_description_versions",
 	"issue_activities", "issue_comments", "issue_links", "issue_relations", "issue_assignees",
 	"issue_labels", "issue_subscribers", "draft_issues", "module_issues", "cycle_issues", "issues",
-	"module_links", "module_members", "modules", "cycles",
+	"module_user_properties", "module_links", "module_members", "modules", "cycle_user_properties", "cycles",
 	"project_user_properties", "project_members", "labels", "states", "projects",
 }
 
