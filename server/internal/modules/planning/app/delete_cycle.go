@@ -47,7 +47,7 @@ func (u *DeleteCycle) Execute(ctx context.Context, id uuid.UUID) error {
 	if err != nil {
 		return err
 	}
-	return u.d.Locks.run(ctx, actor, write{cycle: &id, action: domain.ActionCycleDelete}, func(ctx context.Context, h held) error {
+	return u.d.Locks.run(ctx, actor, write{named: named{cycle: &id}, action: domain.ActionCycleDelete}, func(ctx context.Context, h held) error {
 		at, by := u.d.Clock.Now(), actor.UserID
 		if err := u.d.Cycles.DeleteCycle(ctx, id, at, by); err != nil {
 			return err

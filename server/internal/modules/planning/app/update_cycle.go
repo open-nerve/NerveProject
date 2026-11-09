@@ -47,7 +47,7 @@ func (u *UpdateCycle) Execute(ctx context.Context, id uuid.UUID, p domain.CycleP
 		return domain.ReadCycle{}, err
 	}
 	var out domain.ReadCycle
-	err = u.d.Locks.run(ctx, actor, write{cycle: &id, action: domain.ActionCycleWrite}, func(ctx context.Context, h held) error {
+	err = u.d.Locks.run(ctx, actor, write{named: named{cycle: &id}, action: domain.ActionCycleWrite}, func(ctx context.Context, h held) error {
 		if h.cycle.ArchivedAt != nil {
 			return domain.ErrArchived
 		}

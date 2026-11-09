@@ -119,8 +119,13 @@ func newLockWorld() *lockWorld {
 
 func (w *lockWorld) locks() Locks { return NewLocks(w, w, w, w, w) }
 
-func onProject(action shared.Action) write { return write{project: lockProject, action: action} }
-func onCycle(action shared.Action) write   { c := lockCycle; return write{cycle: &c, action: action} }
+func onProject(action shared.Action) write {
+	return write{named: named{project: lockProject}, action: action}
+}
+func onCycle(action shared.Action) write {
+	c := lockCycle
+	return write{named: named{cycle: &c}, action: action}
+}
 
 // run runs w's write, its body recording what it holds.
 func (w *lockWorld) run(wr write) (held, error) {

@@ -66,7 +66,7 @@ func (u *CreateModuleLink) Execute(ctx context.Context, moduleID uuid.UUID, in d
 		return domain.ModuleLink{}, err
 	}
 	var out domain.ModuleLink
-	err = u.d.Locks.run(ctx, actor, write{module: &moduleID, action: domain.ActionModuleWrite}, func(ctx context.Context, h held) error {
+	err = u.d.Locks.run(ctx, actor, write{named: named{module: &moduleID}, action: domain.ActionModuleWrite}, func(ctx context.Context, h held) error {
 		if err := writable(h); err != nil {
 			return err
 		}
@@ -105,7 +105,7 @@ func (u *UpdateModuleLink) Execute(ctx context.Context, id uuid.UUID, p domain.M
 		return domain.ModuleLink{}, err
 	}
 	var out domain.ModuleLink
-	err = u.d.Locks.run(ctx, actor, write{link: &id, action: domain.ActionModuleWrite}, func(ctx context.Context, h held) error {
+	err = u.d.Locks.run(ctx, actor, write{named: named{link: &id}, action: domain.ActionModuleWrite}, func(ctx context.Context, h held) error {
 		if err := writable(h); err != nil {
 			return err
 		}
@@ -148,7 +148,7 @@ func (u *DeleteModuleLink) Execute(ctx context.Context, id uuid.UUID) error {
 	if err != nil {
 		return err
 	}
-	return u.d.Locks.run(ctx, actor, write{link: &id, action: domain.ActionModuleWrite}, func(ctx context.Context, h held) error {
+	return u.d.Locks.run(ctx, actor, write{named: named{link: &id}, action: domain.ActionModuleWrite}, func(ctx context.Context, h held) error {
 		if err := writable(h); err != nil {
 			return err
 		}

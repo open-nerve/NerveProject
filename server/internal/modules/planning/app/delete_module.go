@@ -51,7 +51,7 @@ func (u *DeleteModule) Execute(ctx context.Context, id uuid.UUID) error {
 	if err != nil {
 		return err
 	}
-	return u.d.Locks.run(ctx, actor, write{module: &id, action: domain.ActionModuleDelete}, func(ctx context.Context, h held) error {
+	return u.d.Locks.run(ctx, actor, write{named: named{module: &id}, action: domain.ActionModuleDelete}, func(ctx context.Context, h held) error {
 		at, by := u.d.Clock.Now(), actor.UserID
 		if err := u.d.Modules.DeleteModule(ctx, id, at, by); err != nil {
 			return err

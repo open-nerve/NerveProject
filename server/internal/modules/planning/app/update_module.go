@@ -60,7 +60,7 @@ func (u *UpdateModule) Execute(ctx context.Context, id uuid.UUID, p domain.Modul
 		return domain.Module{}, err
 	}
 	var out domain.Module
-	err = u.d.Locks.run(ctx, actor, write{module: &id, action: domain.ActionModuleWrite}, func(ctx context.Context, h held) error {
+	err = u.d.Locks.run(ctx, actor, write{named: named{module: &id}, action: domain.ActionModuleWrite}, func(ctx context.Context, h held) error {
 		if err := writable(h); err != nil {
 			return err
 		}

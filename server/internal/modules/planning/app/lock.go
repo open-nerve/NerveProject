@@ -71,19 +71,12 @@ func NewLocks(projects Projects, objects NamedReader, auth shared.Authorizer, ga
 	return Locks{projects: projects, objects: objects, auth: auth, gate: gate, tx: tx}
 }
 
-// write is a planning write as Locks takes its lock: on the project project,
-// or, whichever is not nil, on the cycle cycle, the module module or the
-// module link link, whose project it is then on (named); and the action it
-// decides.
+// write is a planning write as Locks takes its lock: what it names, the
+// project, or a cycle, a module or a module link, whose project it is then on
+// (named); and the action it decides.
 type write struct {
-	project             uuid.UUID
-	cycle, module, link *uuid.UUID
-	action              shared.Action
-}
-
-// named is what w names.
-func (w write) named() named {
-	return named{project: w.project, cycle: w.cycle, module: w.module, link: w.link}
+	named
+	action shared.Action
 }
 
 // run takes w's precheck, then its project's write gate, then in one
@@ -118,7 +111,7 @@ func (l Locks) run(ctx context.Context, actor shared.Actor, w write, fn func(ctx
 // what the action writes turned off (R7, turnedOff), 409.
 func (l Locks) decideOn(ctx context.Context, actor shared.Actor, w write, locked uuid.UUID,
 	facts func(context.Context, uuid.UUID) (ProjectFacts, bool, error)) (held, error) {
-	h, err := see(ctx, l.objects, l.auth, actor, w.action, w.named(), locked, facts)
+	h, err := see(ctx, l.objects, l.auth, actor, w.action, w.named, locked, facts)
 	switch {
 	case err != nil:
 		return held{}, err

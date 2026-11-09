@@ -51,7 +51,7 @@ func (u *CreateCycle) Execute(ctx context.Context, projectID uuid.UUID, in domai
 		return domain.ReadCycle{}, err
 	}
 	var out domain.ReadCycle
-	err = u.d.Locks.run(ctx, actor, write{project: projectID, action: domain.ActionCycleWrite}, func(ctx context.Context, h held) error {
+	err = u.d.Locks.run(ctx, actor, write{named: named{project: projectID}, action: domain.ActionCycleWrite}, func(ctx context.Context, h held) error {
 		if in.Dates.Dated() {
 			others, err := u.d.Cycles.ProjectCycleDates(ctx, projectID)
 			if err != nil {
