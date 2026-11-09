@@ -41,6 +41,8 @@ test("both list routes serialize each CSV field without changing atoms or contro
     created_by_id: Object.freeze(["me", "user-a"]),
     mention_id: Object.freeze(["me", "user-b"]),
     subscriber_id: Object.freeze(["user-a", "user-b"]),
+    cycle_id: Object.freeze(["none", "cycle-a"]),
+    module_id: Object.freeze(["module-a", "module-b"]),
     target_date: Object.freeze(["2026-10-01..", "..2026-10-31"]),
     sub_issue: "false",
     archived: "true",
@@ -64,6 +66,8 @@ test("both list routes serialize each CSV field without changing atoms or contro
     created_by_id: "me,user-a",
     mention_id: "me,user-b",
     subscriber_id: "user-a,user-b",
+    cycle_id: "none,cycle-a",
+    module_id: "module-a,module-b",
     target_date: "..2026-10-31",
     sub_issue: "false",
     archived: "true",
@@ -85,6 +89,8 @@ test("both list routes serialize each CSV field without changing atoms or contro
     "created_by_id",
     "mention_id",
     "subscriber_id",
+    "cycle_id",
+    "module_id",
   ])
     assert.equal(requests[0].searchParams.getAll(key).length, 1, key);
 
