@@ -192,7 +192,7 @@ GET   /api/v0/issues/{issue_id}/comments
   - `group_by=state_id&sub_group_by=priority` 返回组内 `subgroups`。组续页保留原筛选、`group_by`、`order_by`，另加 `group_key` 和该组游标；泳道还保留 `sub_group_by` 并加 `sub_group_key`。返回平面封套，`total` 为该组/格总数；`label_id=A&group_by=label_id&group_key=C` 仍是 A AND C。
   - 未知 `order_by`、`group_by`、`sub_group_by`、不合格组键及缺少续页所需组/格键均 422；有子分组时只支持格续页。键组合和错误优先级见 [P5 spec §2.4](M4-issue-core/specs/P5-issue-list.md#24-分组与响应)。
   - 列表鉴权、目录、三条静态 SQL、隐藏父项及空游标页补 `total` 都在同一独立 READ ONLY / REPEATABLE READ 快照内。每次请求重新鉴权，不承诺两次请求共用快照。
-  - 工作项默认 `order_by=-created_at`，当前支持21码（P5原19码，P8新增正反向 `link_count`）；载荷为 `[order,key,id]`，键按排序定型、同键以同方向 `id` 稳序。时间保留微秒、名字按仅折 ASCII 大写后的 Unicode 码点序、两方向 null 均末尾。canonical 封套仍复用 shared；姓名或子项数跨请求变化可使行移动。精确键/游标和后续前端共用样例见 [P5 spec §2.5](M4-issue-core/specs/P5-issue-list.md#25-排序与游标)。
+  - 工作项默认 `order_by=-created_at`，当前支持27码（P5原19码，P8新增正反向 `link_count`，M5 新增正反向 `attachment_count`，M6/P3b 新增正反向 `cycle_name`、`module_name`）；载荷为 `[order,key,id]`，键按排序定型、同键以同方向 `id` 稳序。时间保留微秒、名字按仅折 ASCII 大写后的 Unicode 码点序、两方向 null 均末尾。canonical 封套仍复用 shared；姓名或子项数跨请求变化可使行移动。精确键/游标和后续前端共用样例见 [P5 spec §2.5](M4-issue-core/specs/P5-issue-list.md#25-排序与游标)。
 
 ### 3.5 错误
 - 统一使用 RFC 9457（`application/problem+json`），`code` 是给程序判断用的固定字符串：

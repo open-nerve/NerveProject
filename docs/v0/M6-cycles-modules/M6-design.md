@@ -99,7 +99,7 @@ M6 让迭代（Sprint）和模块经真实接口工作：迭代的建立、日�
 | `cycle.delete`、`module.delete` | 项目 | 管理员；成员只限建立者（`AllowCreator`） |
 | `cycle.preferences`、`module.preferences`（自己的列表显示设置） | 项目 | 管理员、成员、访客 |
 
-看不到的项目、迭代、模块一律 404，看得到但没权限 403。规则级别都是 `LevelProject`（`LevelVisible` 只给 `project.read`/`project.join`，不能放进公开项目的非成员）。工作区管理员兼项目访客按 M4 的规则（OwnOnly 只看自己）；迭代/模块的写会动到他看不见的工作项（转移、删除）或把他看不见的数量写进回答，所以 Grant 为 OwnOnly 时所有 `planning` 的写 403（我的决定）。Plane 中访客能列迭代、看进度却不能看详情，Nerve 让访客读迭代/模块本身，工作项与数字按 OwnOnly 过滤（我的决定）。
+看不到的项目、迭代、模块一律 404，看得到但没权限 403。规则级别都是 `LevelProject`（`LevelVisible` 只给 `project.read`/`project.join`，不能放进公开项目的非成员）。工作区管理员兼项目访客按 M4 的规则（OwnOnly 只看自己）；迭代/模块的写会动到他看不见的工作项（转移、删除）或把他看不见的数量写进回答，所以 Grant 为 OwnOnly 时所有 `planning` 的写 403（我的决定）。自己的列表显示设置（`cycle.preferences`、`module.preferences`）不在“所有 `planning` 的写”之内：它不动任何工作项、不把数量写进回答，项目偏好也照常让 OwnOnly 的人改，所以 OwnOnly 照常读写；已归档的项目与迭代/模块、开关关闭也不拒绝它（[P3b spec](specs/P3b-list-engine.md) R6）。Plane 中访客能列迭代、看进度却不能看详情，Nerve 让访客读迭代/模块本身，工作项与数字按 OwnOnly 过滤（我的决定）。
 
 ### 3.8 项目的开关
 
@@ -172,11 +172,12 @@ M2 交接第 1 节要求列出每个跨模块的写入与查询；全部走端�
 | 方向 | 用途 | 端口（由使用方声明，在 `bootstrap` 接线） |
 |---|---|---|
 | `issue` → `planning` | 写 `cycle_id`/`module_ids` 时读取目标的事实（项目、是否删除/归档、迭代是否已结束、开关） | `PlanningTargets`：在工作项写已取得的项目行锁下读取 |
-| `issue` → `planning` | 列表分组头、按模块名排序、筛选值校验需要的目录 | `PlanningDirectory`：按项目返回 id、名字、排序、归档，数组传入静态查询（M4 §11.5） |
+| `issue` → `planning` | 按名字排序时的迭代/模块名字（含已归档、不含已删除），只在 `±cycle_name`/`±module_name` 时于读行的同一快照按项目 id 数组取得；分组头由前端给、筛选值只做语法检查，都不用目录（[P3b](specs/P3b-list-engine.md) R2） | `PlanningDirectory`：`CycleNames`、`ModuleNames` 按项目 id 数组返回 id 与名字，数组传入静态查询（M4 §11.5） |
 | `issue` → `planning` | 自动归档要排除的未结束迭代、未到目标日期模块 | `OpenPlanning.OpenTargets`：在项目锁下按项目时区返回 id 数组（P3a） |
 | `planning` → `issue` | 计数、分布、燃尽（按调用者的可见范围）；列表行的批量计数 | `PlanningIssueStats` |
 | `planning` → `issue` | 转移：在同一事务移动归属并写动态 | `TransferCycleIssues` |
-| `planning` → `project` | 项目事实（时区、开关、成员角色）、项目锁 | 复用/扩展现有项目端口 |
+| `planning` → `project` | 项目事实（时区、开关、成员角色）、项目锁；改迭代/模块页的偏好时项目行 `FOR SHARE`（[P3b](specs/P3b-list-engine.md) R6） | 复用/扩展现有项目端口 |
+| `planning` → `issue` | 迭代/模块页偏好里的筛选与显示筛选的词（纯校验，不读库） | `IssueListSettings`：与项目偏好同一个 `issue.ListSettings`（[P3b](specs/P3b-list-engine.md) R5） |
 | `planning` → 成员 | 负责人、成员是否为项目中不是访客的有效成员 | 项目成员端口 |
 | 事件 | `planning.cycle_deleted`/`module_deleted` → `issue` 软删归属；`project.deleted`/`workspace.deleted` → `planning` 投递清理任务 | 同步分发器，发布者事务内（`bootstrap/events.go`） |
 
@@ -184,7 +185,7 @@ M2 交接第 1 节要求列出每个跨模块的写入与查询；全部走端�
 
 ## 7. 工作项列表、动态与自动归档
 
-- **列表引擎**（M4 交接 M6-02）：`listvocab.go` 加筛选 `cycle_id`、`module_id`（值为 id 或 `none`，同 `label_id` 的语法）、分组 `cycle_id`、`module_id`（沿用分组码等于筛选名的约定；模块是多值分组，同标签）、排序 `cycle_name`、`module_name` 两向（Plane 的表头提供迭代排序而后端允许表只有模块名，Nerve 两者都支持，登记差异）、显示属性 `cycle`、`modules`；`api/testdata/issue-order.json`、游标键、`list_settings.go`、项目偏好的 CHECK（新迁移，先例 `00038`）同步。迭代/模块页的列表就是项目列表加 `cycle_id`/`module_id` 筛选，读本迭代/模块的偏好（偏好里的筛选不含本域的 `cycle_id`/`module_id` 键），不另开列表接口。附件列随共享设置出现（M5-M6-02）。
+- **列表引擎**（M4 交接 M6-02）：`listvocab.go` 加筛选 `cycle_id`、`module_id`（值为 id 或 `none`，同 `label_id` 的语法）、分组 `cycle_id`、`module_id`（沿用分组码等于筛选名的约定；模块是多值分组，同标签）、排序 `cycle_name`、`module_name` 两向（Plane 的表头提供迭代排序而后端允许表只有模块名，Nerve 两者都支持，登记差异）、显示属性 `cycle`、`modules`；`api/testdata/issue-order.json`、游标键、`list_settings.go`、项目偏好的 CHECK（新迁移，先例 `00038`）同步。筛选与分组的 `cycle_id`、`module_id` 只限项目列表，“我的工作项”回答 422；四个排序词两种列表都可用（[P3b spec](specs/P3b-list-engine.md) R1、R3）。迭代/模块页的列表就是项目列表加 `cycle_id`/`module_id` 筛选，读本迭代/模块的偏好（偏好里的筛选不含本域的 `cycle_id`/`module_id` 键），不另开列表接口。附件列随共享设置出现（M5-M6-02）。
 - **动态**：§3.3。
 - **自动归档**（M4 §3 `:431`）：照 Plane，工作项不在未结束的迭代（结束日为空或 ≥ 今天）且不在未到目标日的模块（目标日为空或 ≥ 今天）时才可自动归档；id 数组经 `OpenPlanning.OpenTargets` 在项目锁下取得，保持每项目事务、固定业务时钟。“未结束”的 SQL（结束日为空或 ≥ 今天）是 `StatusOf` 的“已结束”取反，两者都在 planning，由适配器测试 `TestOpenCycleIDs` 对照钉住（P3a）。
 - **搜索**：M4 的 `issue-search` 不加 Plane 的迭代/模块变体（“添加已有”用普通搜索并排除已在其中的工作项，见 §8）。
@@ -272,7 +273,7 @@ P1 起第一个实现提交把关键词 phase 改为 `M6/P1`；纯设计分支�
 | P1 迭代后端 | 已完成：noff `0a601f21`，分支 CI 42340200507 与 main CI 42343073949 首次通过，证据归档于 `.superpowers/sdd/M6-P1-integration-20261107` | [P1 spec](specs/P1-cycles-backend.md) / [P1 plan](plans/P1-cycles-backend.md) / [P1 阶段记录](reviews/P1-cycles-backend-review.md) / [re-55](../../reviews/re-55-M6P1整体审核.md) |
 | P2 模块后端 | 已完成：noff `861ea1b5` 的 main CI 两次未过（与 P2 无关），根因修复（含负责人 2026-11-08 批准的 server 任务分两路）第二次 noff `ddd79a9f`，main CI 42458454710 首次通过；证据归档于 `.superpowers/sdd/M6-P2-integration-20261108` | [预检](../../reviews/re-56-M6P2预检.md) / [P2 spec](specs/P2-modules-backend.md) / [P2 plan](plans/P2-modules-backend.md) / [P2 阶段记录](reviews/P2-modules-backend-review.md) |
 | P3a 工作项的归属 | 已完成：noff `2648a739`，分支 CI 42484965936 与 main CI 42487991301 首次通过（检查点 CI 42478883539 第一次因 GitHub 504 未过，只重跑失败的作业后通过），证据归档于 `.superpowers/sdd/M6-P3a-integration-20261108`；P3 因超出一段的上限拆为 P3a/P3b（§12） | [预检](../../reviews/re-58-M6P3a预检.md) / [P3a spec](specs/P3a-issue-membership.md) / [P3a plan](plans/P3a-issue-membership.md) / [P3a 阶段记录](reviews/P3a-issue-membership-review.md) |
-| P3b 列表引擎与偏好 | 进行中：预检通过（修正后） | [预检](../../reviews/re-60-M6P3b预检.md) / [P3b spec](specs/P3b-list-engine.md) / [P3b plan](plans/P3b-list-engine.md) |
+| P3b 列表引擎与偏好 | 进行中：预检通过（修正后）；T1–T13 完成（列表引擎、项目偏好、两张偏好表与接口、G15 的接口故事、文档与交接回执；T7 检查点七项串行一次通过，检查点 CI 42594813667 首次通过），T14 的七项门禁、整审与集成待做 | [预检](../../reviews/re-60-M6P3b预检.md) / [P3b spec](specs/P3b-list-engine.md) / [P3b plan](plans/P3b-list-engine.md) |
 | P4–P8、closeout | 未开始 | — |
 
 ## 15. 决定记录
