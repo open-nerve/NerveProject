@@ -107,15 +107,21 @@ type IssueListDisplayProperties struct {
 	// AttachmentCount Whether lists show a work item's number of live ordinary attachments.
 	AttachmentCount bool `json:"attachment_count"`
 	CreatedOn       bool `json:"created_on"`
-	DueDate         bool `json:"due_date"`
-	Key             bool `json:"key"`
-	Labels          bool `json:"labels"`
-	Link            bool `json:"link"`
-	Priority        bool `json:"priority"`
-	StartDate       bool `json:"start_date"`
-	State           bool `json:"state"`
-	SubIssueCount   bool `json:"sub_issue_count"`
-	UpdatedOn       bool `json:"updated_on"`
+
+	// Cycle Whether lists show a work item's cycle.
+	Cycle   bool `json:"cycle"`
+	DueDate bool `json:"due_date"`
+	Key     bool `json:"key"`
+	Labels  bool `json:"labels"`
+	Link    bool `json:"link"`
+
+	// Modules Whether lists show a work item's modules.
+	Modules       bool `json:"modules"`
+	Priority      bool `json:"priority"`
+	StartDate     bool `json:"start_date"`
+	State         bool `json:"state"`
+	SubIssueCount bool `json:"sub_issue_count"`
+	UpdatedOn     bool `json:"updated_on"`
 }
 
 // LinkMetadata defines model for LinkMetadata.

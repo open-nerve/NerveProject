@@ -307,10 +307,16 @@ type ProjectCreate struct {
 
 // ProjectIssueFilters Saved filter atoms; an empty array means no filtering for its key.
 type ProjectIssueFilters struct {
-	AssigneeID   *[]string `json:"assignee_id,omitempty"`
-	CreatedByID  *[]string `json:"created_by_id,omitempty"`
-	LabelID      *[]string `json:"label_id,omitempty"`
-	MentionID    *[]string `json:"mention_id,omitempty"`
+	AssigneeID  *[]string `json:"assignee_id,omitempty"`
+	CreatedByID *[]string `json:"created_by_id,omitempty"`
+
+	// CycleID The project's cycles, as the list's cycle_id: UUID or none alternatives.
+	CycleID   *[]string `json:"cycle_id,omitempty"`
+	LabelID   *[]string `json:"label_id,omitempty"`
+	MentionID *[]string `json:"mention_id,omitempty"`
+
+	// ModuleID The project's modules, as the list's module_id: UUID or none alternatives.
+	ModuleID     *[]string `json:"module_id,omitempty"`
 	Priority     *[]string `json:"priority,omitempty"`
 	StartDate    *[]string `json:"start_date,omitempty"`
 	StateGroup   *[]string `json:"state_group,omitempty"`

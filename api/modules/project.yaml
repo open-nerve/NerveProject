@@ -1187,6 +1187,20 @@ components:
           type: array
           items:
             type: string
+        cycle_id:
+          description: >-
+            The project's cycles, as the list's cycle_id: UUID or none
+            alternatives.
+          type: array
+          items:
+            type: string
+        module_id:
+          description: >-
+            The project's modules, as the list's module_id: UUID or none
+            alternatives.
+          type: array
+          items:
+            type: string
     ProjectPreferences:
       description: The caller's display settings in a project.
       type: object

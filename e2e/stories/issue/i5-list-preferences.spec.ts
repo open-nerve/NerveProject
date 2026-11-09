@@ -110,6 +110,8 @@ test("I5 (API): two members retain different complete list settings; me follows 
     attachment_count: true,
     created_on: true,
     updated_on: true,
+    cycle: false,
+    modules: true,
   };
   const savedA = {
     ...(await readProjectPreferences(api, a.token, project.id)),

@@ -11,22 +11,23 @@ import (
 )
 
 const displayDefaultJSON = `{"calendar":{"layout":"month","show_weekends":false},"group_by":null,"layout":"list","order_by":"-created_at","show_empty_groups":true,"sub_group_by":null,"sub_issue":true}`
-const propertiesDefaultJSON = `{"assignee":true,"attachment_count":true,"created_on":true,"due_date":true,"key":true,"labels":true,"link":true,"priority":true,"start_date":true,"state":true,"sub_issue_count":true,"updated_on":true}`
+const propertiesDefaultJSON = `{"assignee":true,"attachment_count":true,"created_on":true,"cycle":true,"due_date":true,"key":true,"labels":true,"link":true,"modules":true,"priority":true,"start_date":true,"state":true,"sub_issue_count":true,"updated_on":true}`
 const issueDefaultsJSON = `"display_filters":` + displayDefaultJSON + `,"display_properties":` + propertiesDefaultJSON + `,"filters":{},`
 
 func TestIssuePreferencesHTTPValues(t *testing.T) {
 	p := domain.DefaultPreferences()
-	p.Filters = domain.Filters{ListFilters: shared.ListFilters{LabelID: []string{}, Priority: []string{"low"}}}
+	p.Filters = domain.Filters{ListFilters: shared.ListFilters{LabelID: []string{}, Priority: []string{"low"}}, CycleID: []string{"none"}, ModuleID: []string{}}
 	p.DisplayFilters.GroupBy = ptr("priority")
 	p.DisplayFilters.SubIssue = false
 	p.DisplayProperties.Link = false
 	p.DisplayProperties.AttachmentCount = false
+	p.DisplayProperties.Modules = false
 	prefs := &fakePreferences{answer: p}
 	h := newServer(t, fakes{prefs: prefs})
 	path := "/api/v0/me/projects/" + webID.String() + "/preferences"
 	display := `{"layout":"calendar","group_by":null,"sub_group_by":null,"order_by":"name","sub_issue":false,"show_empty_groups":false,"calendar":{"layout":"week","show_weekends":true}}`
-	properties := `{"assignee":false,"start_date":true,"due_date":false,"labels":true,"key":false,"priority":true,"state":false,"sub_issue_count":true,"link":false,"attachment_count":true,"created_on":true,"updated_on":false}`
-	body := `{"filters":{"state_id":["bad-uuid"],"state_group":["future"],"priority":["future"],"label_id":[],"assignee_id":["me"],"created_by_id":["me"],"mention_id":["me"],"subscriber_id":["me"],"start_date":["bad-date"],"target_date":["none"]},"display_filters":` + display + `,"display_properties":` + properties + `}`
+	properties := `{"assignee":false,"start_date":true,"due_date":false,"labels":true,"key":false,"priority":true,"state":false,"sub_issue_count":true,"link":false,"attachment_count":true,"created_on":true,"updated_on":false,"cycle":false,"modules":true}`
+	body := `{"filters":{"state_id":["bad-uuid"],"state_group":["future"],"priority":["future"],"label_id":[],"assignee_id":["me"],"created_by_id":["me"],"mention_id":["me"],"subscriber_id":["me"],"start_date":["bad-date"],"target_date":["none"],"cycle_id":["none"],"module_id":["bad-uuid","none"]},"display_filters":` + display + `,"display_properties":` + properties + `}`
 	for _, b := range []string{body, `{"filters":{}}`, `{}`} {
 		res, answer := do(t, h, request(http.MethodPatch, path, "bob", b))
 		if res.StatusCode != 200 {
@@ -36,7 +37,7 @@ func TestIssuePreferencesHTTPValues(t *testing.T) {
 		if err := json.Unmarshal([]byte(answer), &got); err != nil {
 			t.Fatal(err)
 		}
-		if string(got["filters"]) != `{"label_id":[],"priority":["low"]}` {
+		if string(got["filters"]) != `{"cycle_id":["none"],"label_id":[],"module_id":[],"priority":["low"]}` {
 			t.Fatalf("filters: %s", answer)
 		}
 		var d map[string]any
@@ -47,13 +48,14 @@ func TestIssuePreferencesHTTPValues(t *testing.T) {
 		if err := json.Unmarshal(got["display_properties"], &props); err != nil {
 			t.Fatal(err)
 		}
-		if d["group_by"] != "priority" || d["sub_group_by"] != nil || d["sub_issue"] != false || props["link"] != false || props["attachment_count"] != false || len(props) != 12 {
+		if d["group_by"] != "priority" || d["sub_group_by"] != nil || d["sub_issue"] != false || props["link"] != false || props["attachment_count"] != false || props["cycle"] != true || props["modules"] != false || len(props) != 14 {
 			t.Fatal(answer)
 		}
 	}
-	wantFilters := domain.Filters{ListFilters: shared.ListFilters{StateID: []string{"bad-uuid"}, StateGroup: []string{"future"}, Priority: []string{"future"}, LabelID: []string{}, AssigneeID: []string{"me"}, CreatedByID: []string{"me"}, MentionID: []string{"me"}, SubscriberID: []string{"me"}, StartDate: []string{"bad-date"}, TargetDate: []string{"none"}}}
+	wantFilters := domain.Filters{ListFilters: shared.ListFilters{StateID: []string{"bad-uuid"}, StateGroup: []string{"future"}, Priority: []string{"future"}, LabelID: []string{}, AssigneeID: []string{"me"}, CreatedByID: []string{"me"}, MentionID: []string{"me"}, SubscriberID: []string{"me"}, StartDate: []string{"bad-date"}, TargetDate: []string{"none"}},
+		CycleID: []string{"none"}, ModuleID: []string{"bad-uuid", "none"}}
 	wantDisplay := shared.ListDisplayFilters{Layout: "calendar", OrderBy: "name", Calendar: shared.ListCalendar{Layout: "week", ShowWeekends: true}}
-	wantProps := shared.ListDisplayProperties{StartDate: true, Labels: true, Priority: true, SubIssueCount: true, AttachmentCount: true, CreatedOn: true}
+	wantProps := shared.ListDisplayProperties{StartDate: true, Labels: true, Priority: true, SubIssueCount: true, AttachmentCount: true, CreatedOn: true, Modules: true}
 	want := []domain.PreferencesPatch{{Filters: &wantFilters, DisplayFilters: &wantDisplay, DisplayProperties: &wantProps}, {Filters: &domain.Filters{}}, {}}
 	if !reflect.DeepEqual(prefs.got, want) {
 		t.Fatalf("patches %+v; want %+v", prefs.got, want)
@@ -70,10 +72,12 @@ func TestIssuePreferencesHTTPStructure(t *testing.T) {
 			bad = append(bad, `{"`+key+`":`+v+`}`)
 		}
 	}
-	for _, v := range []string{`null`, `"x"`, `1`, `true`, `{}`, `[1]`, `[null]`, `[true]`, `[{}]`, `[["x"]]`} {
-		bad = append(bad, `{"filters":{"label_id":`+v+`}}`)
+	for _, key := range []string{"label_id", "cycle_id", "module_id"} {
+		for _, v := range []string{`null`, `"x"`, `1`, `true`, `{}`, `[1]`, `[null]`, `[true]`, `[{}]`, `[["x"]]`} {
+			bad = append(bad, `{"filters":{"`+key+`":`+v+`}}`)
+		}
 	}
-	bad = append(bad, `{"filters":{"archived":[]}}`, `{"filters":{"project_id":[]}}`, `{"filters":{"sub_issue":[]}}`)
+	bad = append(bad, `{"filters":{"archived":[]}}`, `{"filters":{"project_id":[]}}`, `{"filters":{"sub_issue":[]}}`, `{"filters":{"cycle_ids":[]}}`, `{"filters":{"module_ids":[]}}`)
 	for key, raw := range map[string]string{"display_filters": displayDefaultJSON, "display_properties": propertiesDefaultJSON} {
 		var obj map[string]json.RawMessage
 		if err := json.Unmarshal([]byte(raw), &obj); err != nil {

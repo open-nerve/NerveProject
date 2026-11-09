@@ -6594,6 +6594,16 @@ components:
           type: array
           items:
             type: string
+        cycle_id:
+          description: 'The project''s cycles, as the list''s cycle_id: UUID or none alternatives.'
+          type: array
+          items:
+            type: string
+        module_id:
+          description: 'The project''s modules, as the list''s module_id: UUID or none alternatives.'
+          type: array
+          items:
+            type: string
     IssueListCalendar:
       type: object
       additionalProperties: false
@@ -6651,6 +6661,8 @@ components:
         - attachment_count
         - created_on
         - updated_on
+        - cycle
+        - modules
       properties:
         assignee:
           type: boolean
@@ -6676,6 +6688,12 @@ components:
         created_on:
           type: boolean
         updated_on:
+          type: boolean
+        cycle:
+          description: Whether lists show a work item's cycle.
+          type: boolean
+        modules:
+          description: Whether lists show a work item's modules.
           type: boolean
     ProjectPreferences:
       description: The caller's display settings in a project.

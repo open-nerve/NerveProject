@@ -93,6 +93,8 @@ export function preferencesOf(fields: Partial<ProjectPreferences> = {}): Project
       attachment_count: true,
       created_on: true,
       updated_on: true,
+      cycle: true,
+      modules: true,
     },
     navigation: { default_tab: "work_items", hide_in_more_menu: [] },
     sort_order: 65535,

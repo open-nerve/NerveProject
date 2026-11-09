@@ -50,6 +50,8 @@ const issueDefaults = {
     attachment_count: true,
     created_on: true,
     updated_on: true,
+    cycle: true,
+    modules: true,
   },
 } satisfies Pick<ProjectPreferences, "filters" | "display_filters" | "display_properties">;
 

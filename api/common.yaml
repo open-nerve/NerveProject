@@ -150,7 +150,7 @@ components:
     IssueListDisplayProperties:
       type: object
       additionalProperties: false
-      required: [assignee, start_date, due_date, labels, key, priority, state, sub_issue_count, link, attachment_count, created_on, updated_on]
+      required: [assignee, start_date, due_date, labels, key, priority, state, sub_issue_count, link, attachment_count, created_on, updated_on, cycle, modules]
       properties:
         assignee:
           type: boolean
@@ -176,4 +176,10 @@ components:
         created_on:
           type: boolean
         updated_on:
+          type: boolean
+        cycle:
+          description: Whether lists show a work item's cycle.
+          type: boolean
+        modules:
+          description: Whether lists show a work item's modules.
           type: boolean

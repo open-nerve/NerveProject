@@ -9,8 +9,8 @@ import (
 )
 
 // The defaults, as JSON, are project_user_properties' column defaults
-// (00026, 00038) character for character: a page answers them before its
-// caller has a row, and stores them under his first change.
+// (00026, 00038, 00045) character for character: a page answers them
+// before its caller has a row, and stores them under his first change.
 func TestDefaultListDisplaySettings(t *testing.T) {
 	for _, tc := range []struct {
 		name  string
@@ -20,7 +20,7 @@ func TestDefaultListDisplaySettings(t *testing.T) {
 		{"display filters", shared.DefaultListDisplayFilters(),
 			`{"layout":"list","group_by":null,"sub_group_by":null,"order_by":"-created_at","sub_issue":true,"show_empty_groups":true,"calendar":{"layout":"month","show_weekends":false}}`},
 		{"display properties", shared.DefaultListDisplayProperties(),
-			`{"assignee":true,"start_date":true,"due_date":true,"labels":true,"key":true,"priority":true,"state":true,"sub_issue_count":true,"link":true,"attachment_count":true,"created_on":true,"updated_on":true}`},
+			`{"assignee":true,"start_date":true,"due_date":true,"labels":true,"key":true,"priority":true,"state":true,"sub_issue_count":true,"link":true,"attachment_count":true,"created_on":true,"updated_on":true,"cycle":true,"modules":true}`},
 	} {
 		got, err := json.Marshal(tc.value)
 		if err != nil || string(got) != tc.want {

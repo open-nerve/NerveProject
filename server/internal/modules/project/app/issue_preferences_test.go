@@ -61,11 +61,13 @@ func TestIssuePreferencesValuesReachThePort(t *testing.T) {
 	settings := &capturedSettings{}
 	uc := app.NewUpdateProjectPreferences(f.store, f.locks(), f.tx, clockAt{clockNow, f.log}, settings)
 	display := shared.ListDisplayFilters{Layout: "calendar", GroupBy: ptr("state_id"), SubGroupBy: ptr("priority"), OrderBy: "name", Calendar: shared.ListCalendar{Layout: "week", ShowWeekends: true}}
-	filters := domain.Filters{ListFilters: shared.ListFilters{StateID: []string{"state"}, StateGroup: []string{"started"}, Priority: []string{"low"}, LabelID: []string{}, AssigneeID: []string{"me"}, CreatedByID: []string{"me"}, MentionID: []string{"me"}, SubscriberID: []string{"me"}, StartDate: []string{"none"}, TargetDate: []string{"2026-10-26"}}}
-	properties := shared.ListDisplayProperties{Assignee: true, DueDate: true, Key: true, State: true, Link: true, AttachmentCount: true, UpdatedOn: true}
+	filters := domain.Filters{ListFilters: shared.ListFilters{StateID: []string{"state"}, StateGroup: []string{"started"}, Priority: []string{"low"}, LabelID: []string{}, AssigneeID: []string{"me"}, CreatedByID: []string{"me"}, MentionID: []string{"me"}, SubscriberID: []string{"me"}, StartDate: []string{"none"}, TargetDate: []string{"2026-10-26"}},
+		CycleID: []string{"none"}, ModuleID: []string{"module", "none"}}
+	properties := shared.ListDisplayProperties{Assignee: true, DueDate: true, Key: true, State: true, Link: true, AttachmentCount: true, UpdatedOn: true, Modules: true}
 	patch := domain.PreferencesPatch{Filters: &filters, DisplayFilters: &display, DisplayProperties: &properties}
 	got, err := uc.Execute(as(bob), webID, patch)
-	wantF := map[string][]string{"state_id": {"state"}, "state_group": {"started"}, "priority": {"low"}, "label_id": {}, "assignee_id": {"me"}, "created_by_id": {"me"}, "mention_id": {"me"}, "subscriber_id": {"me"}, "start_date": {"none"}, "target_date": {"2026-10-26"}}
+	wantF := map[string][]string{"state_id": {"state"}, "state_group": {"started"}, "priority": {"low"}, "label_id": {}, "assignee_id": {"me"}, "created_by_id": {"me"}, "mention_id": {"me"}, "subscriber_id": {"me"}, "start_date": {"none"}, "target_date": {"2026-10-26"},
+		"cycle_id": {"none"}, "module_id": {"module", "none"}}
 	wantD := &shared.ListDisplayFilters{Layout: "calendar", GroupBy: ptr("state_id"), SubGroupBy: ptr("priority"), OrderBy: "name", Calendar: shared.ListCalendar{Layout: "week", ShowWeekends: true}}
 	if err != nil || !reflect.DeepEqual(settings.filters, wantF) || !reflect.DeepEqual(settings.display, wantD) || !reflect.DeepEqual(got.Filters, filters) || got.DisplayProperties != properties {
 		t.Fatalf("port=%+v answer=%+v err=%v", settings, got, err)

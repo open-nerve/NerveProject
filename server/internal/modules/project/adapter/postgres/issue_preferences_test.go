@@ -27,11 +27,12 @@ func TestProjectIssuePreferencesStore(t *testing.T) {
 	before := tableRows(t, pool, "project_user_properties", uuid.Nil())
 	want := domain.Preferences{Navigation: domain.Navigation{DefaultTab: "work_items", HideInMoreMenu: []string{}}, SortOrder: 65535,
 		DisplayFilters:    shared.ListDisplayFilters{Layout: "list", OrderBy: "-created_at", SubIssue: true, ShowEmptyGroups: true, Calendar: shared.ListCalendar{Layout: "month"}},
-		DisplayProperties: shared.ListDisplayProperties{Assignee: true, StartDate: true, DueDate: true, Labels: true, Key: true, Priority: true, State: true, SubIssueCount: true, Link: true, AttachmentCount: true, CreatedOn: true, UpdatedOn: true}}
+		DisplayProperties: shared.ListDisplayProperties{Assignee: true, StartDate: true, DueDate: true, Labels: true, Key: true, Priority: true, State: true, SubIssueCount: true, Link: true, AttachmentCount: true, CreatedOn: true, UpdatedOn: true, Cycle: true, Modules: true}}
 	defaults := want
-	filters := domain.Filters{ListFilters: shared.ListFilters{LabelID: []string{"none"}, Priority: []string{"high"}, AssigneeID: []string{"me"}, StartDate: []string{"2026-10-01.."}}}
+	filters := domain.Filters{ListFilters: shared.ListFilters{LabelID: []string{"none"}, Priority: []string{"high"}, AssigneeID: []string{"me"}, StartDate: []string{"2026-10-01.."}},
+		CycleID: []string{"none"}, ModuleID: []string{}}
 	display := shared.ListDisplayFilters{Layout: "kanban", OrderBy: "sort_order", Calendar: shared.ListCalendar{Layout: "week", ShowWeekends: true}}
-	properties := shared.ListDisplayProperties{Key: true}
+	properties := shared.ListDisplayProperties{Key: true, Modules: true}
 	navigation := domain.Navigation{DefaultTab: "views", HideInMoreMenu: []string{"cycles"}}
 	order := 4.5
 	id := uuid.NewV7()

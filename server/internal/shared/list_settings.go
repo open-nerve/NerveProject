@@ -76,6 +76,9 @@ type ListDisplayProperties struct {
 	AttachmentCount bool `json:"attachment_count"`
 	CreatedOn       bool `json:"created_on"`
 	UpdatedOn       bool `json:"updated_on"`
+	// Cycle and Modules show a work item's cycle and modules (M6/P3b).
+	Cycle   bool `json:"cycle"`
+	Modules bool `json:"modules"`
 }
 
 // DefaultListDisplayFilters are the display filters of a list nobody has
@@ -88,5 +91,5 @@ func DefaultListDisplayFilters() ListDisplayFilters {
 // DefaultListDisplayProperties show every property.
 func DefaultListDisplayProperties() ListDisplayProperties {
 	return ListDisplayProperties{Assignee: true, StartDate: true, DueDate: true, Labels: true, Key: true, Priority: true, State: true,
-		SubIssueCount: true, Link: true, AttachmentCount: true, CreatedOn: true, UpdatedOn: true}
+		SubIssueCount: true, Link: true, AttachmentCount: true, CreatedOn: true, UpdatedOn: true, Cycle: true, Modules: true}
 }

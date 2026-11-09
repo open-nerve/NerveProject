@@ -3378,6 +3378,10 @@ export interface components {
             subscriber_id?: string[];
             start_date?: string[];
             target_date?: string[];
+            /** @description The project's cycles, as the list's cycle_id: UUID or none alternatives. */
+            cycle_id?: string[];
+            /** @description The project's modules, as the list's module_id: UUID or none alternatives. */
+            module_id?: string[];
         };
         IssueListCalendar: {
             layout: string;
@@ -3406,6 +3410,10 @@ export interface components {
             attachment_count: boolean;
             created_on: boolean;
             updated_on: boolean;
+            /** @description Whether lists show a work item's cycle. */
+            cycle: boolean;
+            /** @description Whether lists show a work item's modules. */
+            modules: boolean;
         };
         /** @description The caller's display settings in a project. */
         ProjectPreferences: {
