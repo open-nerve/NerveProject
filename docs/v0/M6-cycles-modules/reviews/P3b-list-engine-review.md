@@ -81,7 +81,7 @@ A8（CI、合入与归档清理）合入后由 P4 的 T1 勾选。
   - `gen-check`、`lint-go` 通过。
   - `make test` 在 `server` 模块里只有 `platform/postgres` 一个包失败，其余 63 个包（含 bootstrap）通过；`server/tools` 模块因前一步失败而没有运行。原因是该包启动容器时，testcontainers 调本机 Docker API（`GET /containers/<id>/json`）超时（`context deadline exceeded`），而容器里的 Postgres 已经就绪。P3b 没有改该包，也没有改容器助手，判为本机环境失败。
   - 修完整审的 Minor 后，在最终候选上从头串行重跑一次七项：`t14-gate2`，结果见下。
-- **最终候选**（`t14-gate2`）：待填。
+- **最终候选**（`295a6f07`，`t14-gate2`）：七项门禁从头串行一次全过，输入前后一致：`make gen-check`、`make lint-go`、`make test`（66 个包，906 秒）、`make lint-web`、`make knip`、`make test-web`、`make build && make e2e`（432 条全过）。之后只有本节的文档修改，以文档链接检查覆盖。
 
 ## 6. 整分支审查
 
