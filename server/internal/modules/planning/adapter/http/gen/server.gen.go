@@ -75,6 +75,42 @@ func (e ModuleStatus) Valid() bool {
 	}
 }
 
+// AssigneeDistribution An assignee's work items not cancelled, or those without an assignee.
+type AssigneeDistribution struct {
+	// AssigneeID The assignee's account; null for the work items without one.
+	AssigneeID nullable.Nullable[uuid.UUID] `json:"assignee_id"`
+
+	// CompletedIssues Those in a state of the completed group.
+	CompletedIssues int64 `json:"completed_issues"`
+
+	// PendingIssues Those in a state of the backlog, unstarted or started group.
+	PendingIssues int64 `json:"pending_issues"`
+
+	// TotalIssues completed_issues plus pending_issues.
+	TotalIssues int64 `json:"total_issues"`
+}
+
+// Burndown The work left on each day of a cycle, from its start to its end, or of a module, from its start to its target day, on the project's calendar.
+type Burndown struct {
+	// EndDate The cycle's end or the module's target day.
+	EndDate shared.Date `json:"end_date"`
+
+	// Points One for every day from start_date to end_date, in order.
+	Points []BurndownPoint `json:"points"`
+
+	// Scope The work items not cancelled, where an ideal line starts.
+	Scope     int64       `json:"scope"`
+	StartDate shared.Date `json:"start_date"`
+}
+
+// BurndownPoint A day of a burndown.
+type BurndownPoint struct {
+	Date shared.Date `json:"date"`
+
+	// Remaining The work items of the scope not completed by the day's end: one in a state of the completed group is completed from the day its completion falls on in the project's time zone, or from the first day when that is not known. null for a day after today.
+	Remaining nullable.Nullable[int64] `json:"remaining"`
+}
+
 // Cycle A cycle of a project.
 type Cycle struct {
 	// ArchivedAt When it was archived; null while it is not.
@@ -162,6 +198,18 @@ type CyclePreferencesUpdate struct {
 	Filters *CycleIssueFilters `json:"filters,omitempty"`
 }
 
+// CycleProgress A cycle's status and progress, live and as frozen.
+type CycleProgress struct {
+	// Live The numbers of a cycle's or a module's work items: those in it by an undeleted membership, undeleted and not archived, sub-items too, that the caller sees; his own alone for a caller who sees only his own work items.
+	Live Progress `json:"live"`
+
+	// ProgressSnapshot The cycle's progress as it was frozen once after it ended, by the periodic freeze or a transfer of its work items, whichever came first, then never rewritten; of every work item, whoever reads it. null while it is not frozen, and always for a caller who sees only his own work items, whom it would show others'. A reader shows it only while status is completed.
+	ProgressSnapshot nullable.Nullable[FrozenProgress] `json:"progress_snapshot"`
+
+	// Status Read from the cycle's dates on the project's calendar day, never stored: draft without dates, upcoming before the start, current from the start to the end, completed after the end.
+	Status CycleStatus `json:"status"`
+}
+
 // CycleStatus Read from the cycle's dates on the project's calendar day, never stored: draft without dates, upcoming before the start, current from the start to the end, completed after the end.
 type CycleStatus string
 
@@ -181,6 +229,54 @@ type CycleUpdate struct {
 
 	// StartDate The day it starts, on the project's calendar; null clears it, with end_date.
 	StartDate nullable.Nullable[shared.Date] `json:"start_date,omitempty"`
+}
+
+// FrozenProgress A cycle's progress as it was frozen, of every work item (Progress's fields), and when.
+type FrozenProgress struct {
+	// Assignees As Progress.assignees.
+	Assignees []AssigneeDistribution `json:"assignees"`
+
+	// BacklogIssues Those in a state of the backlog group.
+	BacklogIssues int64 `json:"backlog_issues"`
+
+	// Burndown As Progress.burndown, on the day it was frozen.
+	Burndown nullable.Nullable[Burndown] `json:"burndown"`
+
+	// CancelledIssues Those in a state of the cancelled group.
+	CancelledIssues int64 `json:"cancelled_issues"`
+
+	// CompletedIssues Those in a state of the completed group.
+	CompletedIssues int64 `json:"completed_issues"`
+
+	// FrozenAt When it was frozen.
+	FrozenAt time.Time `json:"frozen_at"`
+
+	// Labels As Progress.labels.
+	Labels []LabelDistribution `json:"labels"`
+
+	// StartedIssues Those in a state of the started group.
+	StartedIssues int64 `json:"started_issues"`
+
+	// TotalIssues The work items; the sum of the five groups' counts.
+	TotalIssues int64 `json:"total_issues"`
+
+	// UnstartedIssues Those in a state of the unstarted group.
+	UnstartedIssues int64 `json:"unstarted_issues"`
+}
+
+// LabelDistribution A label's work items not cancelled, or those without a label.
+type LabelDistribution struct {
+	// CompletedIssues Those in a state of the completed group.
+	CompletedIssues int64 `json:"completed_issues"`
+
+	// LabelID The label; null for the work items without one.
+	LabelID nullable.Nullable[uuid.UUID] `json:"label_id"`
+
+	// PendingIssues Those in a state of the backlog, unstarted or started group.
+	PendingIssues int64 `json:"pending_issues"`
+
+	// TotalIssues completed_issues plus pending_issues.
+	TotalIssues int64 `json:"total_issues"`
 }
 
 // Module A module of a project.
@@ -351,6 +447,36 @@ type ModuleUpdate struct {
 	TargetDate nullable.Nullable[shared.Date] `json:"target_date,omitempty"`
 }
 
+// Progress The numbers of a cycle's or a module's work items: those in it by an undeleted membership, undeleted and not archived, sub-items too, that the caller sees; his own alone for a caller who sees only his own work items.
+type Progress struct {
+	// Assignees The work items not cancelled by assignee: one counts under each of its assignees, or under null without any. Only the rows of a work item at least, by assignee_id ascending, the null row last.
+	Assignees []AssigneeDistribution `json:"assignees"`
+
+	// BacklogIssues Those in a state of the backlog group.
+	BacklogIssues int64 `json:"backlog_issues"`
+
+	// Burndown null for a cycle without dates, a module without its start or its target day, or a span of more than 3660 days.
+	Burndown nullable.Nullable[Burndown] `json:"burndown"`
+
+	// CancelledIssues Those in a state of the cancelled group.
+	CancelledIssues int64 `json:"cancelled_issues"`
+
+	// CompletedIssues Those in a state of the completed group.
+	CompletedIssues int64 `json:"completed_issues"`
+
+	// Labels The work items not cancelled by label: one counts under each of its labels, or under null without any. Only the rows of a work item at least, by label_id ascending, the null row last.
+	Labels []LabelDistribution `json:"labels"`
+
+	// StartedIssues Those in a state of the started group.
+	StartedIssues int64 `json:"started_issues"`
+
+	// TotalIssues The work items; the sum of the five groups' counts.
+	TotalIssues int64 `json:"total_issues"`
+
+	// UnstartedIssues Those in a state of the unstarted group.
+	UnstartedIssues int64 `json:"unstarted_issues"`
+}
+
 // CycleID defines model for CycleID.
 type CycleID = uuid.UUID
 
@@ -416,6 +542,9 @@ type ServerInterface interface {
 	// ArchiveCycle Archive a completed cycle
 	// (POST /api/v0/cycles/{cycle_id}/archive)
 	ArchiveCycle(w http.ResponseWriter, r *http.Request, cycleID CycleID)
+	// GetCycleProgress Read a cycle's progress
+	// (GET /api/v0/cycles/{cycle_id}/progress)
+	GetCycleProgress(w http.ResponseWriter, r *http.Request, cycleID CycleID)
 	// UnarchiveCycle Unarchive a cycle
 	// (POST /api/v0/cycles/{cycle_id}/unarchive)
 	UnarchiveCycle(w http.ResponseWriter, r *http.Request, cycleID CycleID)
@@ -455,6 +584,9 @@ type ServerInterface interface {
 	// CreateModuleLink Add a link to a module
 	// (POST /api/v0/modules/{module_id}/links)
 	CreateModuleLink(w http.ResponseWriter, r *http.Request, moduleID ModuleID)
+	// GetModuleProgress Read a module's progress
+	// (GET /api/v0/modules/{module_id}/progress)
+	GetModuleProgress(w http.ResponseWriter, r *http.Request, moduleID ModuleID)
 	// UnarchiveModule Unarchive a module
 	// (POST /api/v0/modules/{module_id}/unarchive)
 	UnarchiveModule(w http.ResponseWriter, r *http.Request, moduleID ModuleID)
@@ -576,6 +708,32 @@ func (siw *ServerInterfaceWrapper) ArchiveCycle(w http.ResponseWriter, r *http.R
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ArchiveCycle(w, r, cycleID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetCycleProgress operation middleware
+func (siw *ServerInterfaceWrapper) GetCycleProgress(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "cycle_id" -------------
+	var cycleID CycleID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "cycle_id", r.PathValue("cycle_id"), &cycleID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cycle_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetCycleProgress(w, r, cycleID)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -923,6 +1081,32 @@ func (siw *ServerInterfaceWrapper) CreateModuleLink(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r)
 }
 
+// GetModuleProgress operation middleware
+func (siw *ServerInterfaceWrapper) GetModuleProgress(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "module_id" -------------
+	var moduleID ModuleID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "module_id", r.PathValue("module_id"), &moduleID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "module_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetModuleProgress(w, r, moduleID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // UnarchiveModule operation middleware
 func (siw *ServerInterfaceWrapper) UnarchiveModule(w http.ResponseWriter, r *http.Request) {
 
@@ -1212,6 +1396,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/cycles/{cycle_id}", wrapper.UpdateCycle)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/cycles/{cycle_id}/archive", wrapper.ArchiveCycle)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/cycles/{cycle_id}/unarchive", wrapper.UnarchiveCycle)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/cycles/{cycle_id}/progress", wrapper.GetCycleProgress)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/projects/{project_id}/modules", wrapper.ListModules)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/projects/{project_id}/modules", wrapper.CreateModule)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v0/modules/{module_id}", wrapper.DeleteModule)
@@ -1219,6 +1404,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/modules/{module_id}", wrapper.UpdateModule)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/modules/{module_id}/archive", wrapper.ArchiveModule)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/modules/{module_id}/unarchive", wrapper.UnarchiveModule)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/modules/{module_id}/progress", wrapper.GetModuleProgress)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/modules/{module_id}/links", wrapper.ListModuleLinks)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/modules/{module_id}/links", wrapper.CreateModuleLink)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v0/module-links/{module_link_id}", wrapper.DeleteModuleLink)
@@ -1403,6 +1589,52 @@ type ArchiveCycledefaultApplicationProblemPlusJSONResponse struct {
 }
 
 func (response ArchiveCycledefaultApplicationProblemPlusJSONResponse) VisitArchiveCycleResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCycleProgressRequestObject struct {
+	CycleID CycleID `json:"cycle_id"`
+}
+
+type GetCycleProgressResponseObject interface {
+	VisitGetCycleProgressResponse(w http.ResponseWriter) error
+}
+
+type GetCycleProgress200JSONResponse CycleProgress
+
+func (response GetCycleProgress200JSONResponse) VisitGetCycleProgressResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCycleProgressdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response GetCycleProgressdefaultApplicationProblemPlusJSONResponse) VisitGetCycleProgressResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -2011,6 +2243,52 @@ func (response CreateModuleLinkdefaultApplicationProblemPlusJSONResponse) VisitC
 	return err
 }
 
+type GetModuleProgressRequestObject struct {
+	ModuleID ModuleID `json:"module_id"`
+}
+
+type GetModuleProgressResponseObject interface {
+	VisitGetModuleProgressResponse(w http.ResponseWriter) error
+}
+
+type GetModuleProgress200JSONResponse Progress
+
+func (response GetModuleProgress200JSONResponse) VisitGetModuleProgressResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetModuleProgressdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response GetModuleProgressdefaultApplicationProblemPlusJSONResponse) VisitGetModuleProgressResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type UnarchiveModuleRequestObject struct {
 	ModuleID ModuleID `json:"module_id"`
 }
@@ -2259,6 +2537,9 @@ type StrictServerInterface interface {
 	// ArchiveCycle Archive a completed cycle
 	// (POST /api/v0/cycles/{cycle_id}/archive)
 	ArchiveCycle(ctx context.Context, request ArchiveCycleRequestObject) (ArchiveCycleResponseObject, error)
+	// GetCycleProgress Read a cycle's progress
+	// (GET /api/v0/cycles/{cycle_id}/progress)
+	GetCycleProgress(ctx context.Context, request GetCycleProgressRequestObject) (GetCycleProgressResponseObject, error)
 	// UnarchiveCycle Unarchive a cycle
 	// (POST /api/v0/cycles/{cycle_id}/unarchive)
 	UnarchiveCycle(ctx context.Context, request UnarchiveCycleRequestObject) (UnarchiveCycleResponseObject, error)
@@ -2298,6 +2579,9 @@ type StrictServerInterface interface {
 	// CreateModuleLink Add a link to a module
 	// (POST /api/v0/modules/{module_id}/links)
 	CreateModuleLink(ctx context.Context, request CreateModuleLinkRequestObject) (CreateModuleLinkResponseObject, error)
+	// GetModuleProgress Read a module's progress
+	// (GET /api/v0/modules/{module_id}/progress)
+	GetModuleProgress(ctx context.Context, request GetModuleProgressRequestObject) (GetModuleProgressResponseObject, error)
 	// UnarchiveModule Unarchive a module
 	// (POST /api/v0/modules/{module_id}/unarchive)
 	UnarchiveModule(ctx context.Context, request UnarchiveModuleRequestObject) (UnarchiveModuleResponseObject, error)
@@ -2458,6 +2742,32 @@ func (sh *strictHandler) ArchiveCycle(w http.ResponseWriter, r *http.Request, cy
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(ArchiveCycleResponseObject); ok {
 		if err := validResponse.VisitArchiveCycleResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetCycleProgress operation middleware
+func (sh *strictHandler) GetCycleProgress(w http.ResponseWriter, r *http.Request, cycleID CycleID) {
+	var request GetCycleProgressRequestObject
+
+	request.CycleID = cycleID
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetCycleProgress(ctx, request.(GetCycleProgressRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetCycleProgress")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetCycleProgressResponseObject); ok {
+		if err := validResponse.VisitGetCycleProgressResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -2831,6 +3141,32 @@ func (sh *strictHandler) CreateModuleLink(w http.ResponseWriter, r *http.Request
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(CreateModuleLinkResponseObject); ok {
 		if err := validResponse.VisitCreateModuleLinkResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetModuleProgress operation middleware
+func (sh *strictHandler) GetModuleProgress(w http.ResponseWriter, r *http.Request, moduleID ModuleID) {
+	var request GetModuleProgressRequestObject
+
+	request.ModuleID = moduleID
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetModuleProgress(ctx, request.(GetModuleProgressRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetModuleProgress")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetModuleProgressResponseObject); ok {
+		if err := validResponse.VisitGetModuleProgressResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

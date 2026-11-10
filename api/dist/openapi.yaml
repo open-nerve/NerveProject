@@ -3276,6 +3276,29 @@ paths:
                 $ref: '#/components/schemas/Cycle'
         default:
           $ref: '#/components/responses/Problem'
+  /api/v0/cycles/{cycle_id}/progress:
+    parameters:
+      - $ref: '#/components/parameters/CycleID'
+    get:
+      operationId: getCycleProgress
+      tags:
+        - planning
+      summary: Read a cycle's progress
+      description: For its project's admins, members and guests, also a caller who sees only his own work items there, whether the project's cycles are turned on or off and whether the project or the cycle is archived. The cycle's status on the project's calendar day; its live progress, of the work items the caller sees in it; and its progress as frozen once it ended, of every work item, which a caller who sees only his own work items is not shown. All of it is read in one snapshot. A cycle that does not exist or is deleted, one whose project is deleted, and one whose project the caller does not see answer planning.cycle_not_found; one whose project he sees but whose cycles he may not read, forbidden.
+      security:
+        - bearer: []
+      x-problem-codes:
+        - planning.cycle_not_found
+        - forbidden
+      responses:
+        '200':
+          description: The cycle's progress.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CycleProgress'
+        default:
+          $ref: '#/components/responses/Problem'
   /api/v0/projects/{project_id}/modules:
     parameters:
       - $ref: '#/components/parameters/ProjectID'
@@ -3462,6 +3485,29 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Module'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/modules/{module_id}/progress:
+    parameters:
+      - $ref: '#/components/parameters/ModuleID'
+    get:
+      operationId: getModuleProgress
+      tags:
+        - planning
+      summary: Read a module's progress
+      description: 'For its project''s admins, members and guests, also a caller who sees only his own work items there, whether the project''s modules are turned on or off and whether the project or the module is archived: the live progress of the work items the caller sees in the module, its burndown from its start to its target day, read in one snapshot. A module is never frozen. A module that does not exist or is deleted, one whose project is deleted, and one whose project the caller does not see answer planning.module_not_found; one whose project he sees but whose modules he may not read, forbidden.'
+      security:
+        - bearer: []
+      x-problem-codes:
+        - planning.module_not_found
+        - forbidden
+      responses:
+        '200':
+          description: The module's progress.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Progress'
         default:
           $ref: '#/components/responses/Problem'
   /api/v0/modules/{module_id}/links:
@@ -6978,6 +7024,256 @@ components:
         sort_order:
           description: The cycle's place among the project's cycles, the lowest first.
           type: number
+    AssigneeDistribution:
+      description: An assignee's work items not cancelled, or those without an assignee.
+      type: object
+      additionalProperties: false
+      required:
+        - assignee_id
+        - total_issues
+        - completed_issues
+        - pending_issues
+      properties:
+        assignee_id:
+          description: The assignee's account; null for the work items without one.
+          type:
+            - string
+            - 'null'
+          format: uuid
+        total_issues:
+          description: completed_issues plus pending_issues.
+          type: integer
+          format: int64
+          minimum: 1
+        completed_issues:
+          description: Those in a state of the completed group.
+          type: integer
+          format: int64
+          minimum: 0
+        pending_issues:
+          description: Those in a state of the backlog, unstarted or started group.
+          type: integer
+          format: int64
+          minimum: 0
+    LabelDistribution:
+      description: A label's work items not cancelled, or those without a label.
+      type: object
+      additionalProperties: false
+      required:
+        - label_id
+        - total_issues
+        - completed_issues
+        - pending_issues
+      properties:
+        label_id:
+          description: The label; null for the work items without one.
+          type:
+            - string
+            - 'null'
+          format: uuid
+        total_issues:
+          description: completed_issues plus pending_issues.
+          type: integer
+          format: int64
+          minimum: 1
+        completed_issues:
+          description: Those in a state of the completed group.
+          type: integer
+          format: int64
+          minimum: 0
+        pending_issues:
+          description: Those in a state of the backlog, unstarted or started group.
+          type: integer
+          format: int64
+          minimum: 0
+    BurndownPoint:
+      description: A day of a burndown.
+      type: object
+      additionalProperties: false
+      required:
+        - date
+        - remaining
+      properties:
+        date:
+          type: string
+          format: date
+        remaining:
+          description: 'The work items of the scope not completed by the day''s end: one in a state of the completed group is completed from the day its completion falls on in the project''s time zone, or from the first day when that is not known. null for a day after today.'
+          type:
+            - integer
+            - 'null'
+          format: int64
+          minimum: 0
+    Burndown:
+      description: The work left on each day of a cycle, from its start to its end, or of a module, from its start to its target day, on the project's calendar.
+      type: object
+      additionalProperties: false
+      required:
+        - start_date
+        - end_date
+        - scope
+        - points
+      properties:
+        start_date:
+          type: string
+          format: date
+        end_date:
+          description: The cycle's end or the module's target day.
+          type: string
+          format: date
+        scope:
+          description: The work items not cancelled, where an ideal line starts.
+          type: integer
+          format: int64
+          minimum: 0
+        points:
+          description: One for every day from start_date to end_date, in order.
+          type: array
+          items:
+            $ref: '#/components/schemas/BurndownPoint'
+    Progress:
+      description: 'The numbers of a cycle''s or a module''s work items: those in it by an undeleted membership, undeleted and not archived, sub-items too, that the caller sees; his own alone for a caller who sees only his own work items.'
+      type: object
+      additionalProperties: false
+      required:
+        - total_issues
+        - backlog_issues
+        - unstarted_issues
+        - started_issues
+        - completed_issues
+        - cancelled_issues
+        - assignees
+        - labels
+        - burndown
+      properties:
+        total_issues:
+          description: The work items; the sum of the five groups' counts.
+          type: integer
+          format: int64
+          minimum: 0
+        backlog_issues:
+          description: Those in a state of the backlog group.
+          type: integer
+          format: int64
+          minimum: 0
+        unstarted_issues:
+          description: Those in a state of the unstarted group.
+          type: integer
+          format: int64
+          minimum: 0
+        started_issues:
+          description: Those in a state of the started group.
+          type: integer
+          format: int64
+          minimum: 0
+        completed_issues:
+          description: Those in a state of the completed group.
+          type: integer
+          format: int64
+          minimum: 0
+        cancelled_issues:
+          description: Those in a state of the cancelled group.
+          type: integer
+          format: int64
+          minimum: 0
+        assignees:
+          description: 'The work items not cancelled by assignee: one counts under each of its assignees, or under null without any. Only the rows of a work item at least, by assignee_id ascending, the null row last.'
+          type: array
+          items:
+            $ref: '#/components/schemas/AssigneeDistribution'
+        labels:
+          description: 'The work items not cancelled by label: one counts under each of its labels, or under null without any. Only the rows of a work item at least, by label_id ascending, the null row last.'
+          type: array
+          items:
+            $ref: '#/components/schemas/LabelDistribution'
+        burndown:
+          description: null for a cycle without dates, a module without its start or its target day, or a span of more than 3660 days.
+          oneOf:
+            - $ref: '#/components/schemas/Burndown'
+            - type: 'null'
+    FrozenProgress:
+      description: A cycle's progress as it was frozen, of every work item (Progress's fields), and when.
+      type: object
+      additionalProperties: false
+      required:
+        - total_issues
+        - backlog_issues
+        - unstarted_issues
+        - started_issues
+        - completed_issues
+        - cancelled_issues
+        - assignees
+        - labels
+        - burndown
+        - frozen_at
+      properties:
+        total_issues:
+          description: The work items; the sum of the five groups' counts.
+          type: integer
+          format: int64
+          minimum: 0
+        backlog_issues:
+          description: Those in a state of the backlog group.
+          type: integer
+          format: int64
+          minimum: 0
+        unstarted_issues:
+          description: Those in a state of the unstarted group.
+          type: integer
+          format: int64
+          minimum: 0
+        started_issues:
+          description: Those in a state of the started group.
+          type: integer
+          format: int64
+          minimum: 0
+        completed_issues:
+          description: Those in a state of the completed group.
+          type: integer
+          format: int64
+          minimum: 0
+        cancelled_issues:
+          description: Those in a state of the cancelled group.
+          type: integer
+          format: int64
+          minimum: 0
+        assignees:
+          description: As Progress.assignees.
+          type: array
+          items:
+            $ref: '#/components/schemas/AssigneeDistribution'
+        labels:
+          description: As Progress.labels.
+          type: array
+          items:
+            $ref: '#/components/schemas/LabelDistribution'
+        burndown:
+          description: As Progress.burndown, on the day it was frozen.
+          oneOf:
+            - $ref: '#/components/schemas/Burndown'
+            - type: 'null'
+        frozen_at:
+          description: When it was frozen.
+          type: string
+          format: date-time
+    CycleProgress:
+      description: A cycle's status and progress, live and as frozen.
+      type: object
+      additionalProperties: false
+      required:
+        - status
+        - live
+        - progress_snapshot
+      properties:
+        status:
+          $ref: '#/components/schemas/CycleStatus'
+        live:
+          $ref: '#/components/schemas/Progress'
+        progress_snapshot:
+          description: The cycle's progress as it was frozen once after it ended, by the periodic freeze or a transfer of its work items, whichever came first, then never rewritten; of every work item, whoever reads it. null while it is not frozen, and always for a caller who sees only his own work items, whom it would show others'. A reader shows it only while status is completed.
+          oneOf:
+            - $ref: '#/components/schemas/FrozenProgress'
+            - type: 'null'
     ModuleStatus:
       description: A module's status, set by its writers, never read from its dates.
       type: string

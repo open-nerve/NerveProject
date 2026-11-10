@@ -124,6 +124,16 @@ type Frozen struct {
 	FrozenAt time.Time `json:"frozen_at"`
 }
 
+// CycleProgress is a cycle's status and its progress as its reader is
+// answered it (M6 P4 spec 2.3): live, of the work items he sees, and as
+// frozen, nil while it is not, and for a reader who sees only his own work
+// items, whom it would show others' (R5).
+type CycleProgress struct {
+	Status   Status
+	Live     Progress
+	Snapshot *Frozen
+}
+
 // FrozenCounts are the counts of a frozen progress and its moment, as a
 // cycle's list row answers them (M6 P4 spec R5).
 type FrozenCounts struct {

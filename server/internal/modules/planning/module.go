@@ -3,18 +3,19 @@
 // changing, archiving, unarchiving and deleting a cycle of a project;
 // creating, listing, reading, changing, archiving, unarchiving and deleting a
 // module of a project, and adding, listing, changing and removing a module's
-// links; and reading and changing each caller's own display settings on a
-// cycle's and a module's page. A cycle's and a module's deletion publish it
-// in their transaction (EventTypes), which the issue module's subscriber
-// takes the work items out of it in. A link's creation and a change of its
-// address enqueue its crawl in their transaction, whose job writes the
-// link's metadata. Project and workspace deletion events enqueue the
-// asynchronous deletion of the deleted projects' planning rows in the
-// publishing transaction; the 60-day purge removes them. It tells the issue
-// module about the cycles and modules a work item's write names and those
-// that keep work items from automatic archival (IssueTargets), and the names
-// of the cycles and modules of the projects a list of work items ordered by
-// them reads (IssueDirectory).
+// links; reading a cycle's and a module's progress, computed from the issue
+// module's facts of their work items (IssueStats); and reading and changing
+// each caller's own display settings on a cycle's and a module's page. A
+// cycle's and a module's deletion publish it in their transaction
+// (EventTypes), which the issue module's subscriber takes the work items out
+// of it in. A link's creation and a change of its address enqueue its crawl
+// in their transaction, whose job writes the link's metadata. Project and
+// workspace deletion events enqueue the asynchronous deletion of the deleted
+// projects' planning rows in the publishing transaction; the 60-day purge
+// removes them. It tells the issue module about the cycles and modules a
+// work item's write names and those that keep work items from automatic
+// archival (IssueTargets), and the names of the cycles and modules of the
+// projects a list of work items ordered by them reads (IssueDirectory).
 package planning
 
 import (
@@ -200,6 +201,11 @@ func New(d Deps) *Module {
 			UpdateModuleLink: app.NewUpdateModuleLink(links),
 			DeleteModuleLink: app.NewDeleteModuleLink(links),
 			ListModuleLinks:  app.NewListModuleLinks(app.ListModuleLinksDeps{Reads: reads, Links: store}),
+
+			GetCycleProgress: app.NewGetCycleProgress(app.GetCycleProgressDeps{Reads: reads, Groups: d.Projects, Stats: d.IssueStats,
+				Snapshots: store, Clock: d.Clock}),
+			GetModuleProgress: app.NewGetModuleProgress(app.GetModuleProgressDeps{Reads: reads, Groups: d.Projects, Stats: d.IssueStats,
+				Clock: d.Clock}),
 
 			GetCyclePreferences:     app.NewGetCyclePreferences(pageReads),
 			UpdateCyclePreferences:  app.NewUpdateCyclePreferences(pageWrites),

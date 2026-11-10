@@ -53,8 +53,12 @@ type lockWorld struct {
 	refusedWords    []shared.FieldError
 	checkedFilters  map[string][]string
 	checkedDisplay  *shared.ListDisplayFilters
-	// The groups StateGroups answers, by state (M6 P4).
-	groups map[uuid.UUID]domain.StateGroup
+	// The groups StateGroups answers, by state (M6 P4); the work items of each cycle and module, by its id, and the
+	// viewer each read of them was asked for; the cycles' frozen progress, by cycle.
+	groups    map[uuid.UUID]domain.StateGroup
+	items     map[uuid.UUID][]domain.WorkItem
+	viewers   []*uuid.UUID
+	snapshots map[uuid.UUID]*domain.Frozen
 }
 
 type inTx struct{}

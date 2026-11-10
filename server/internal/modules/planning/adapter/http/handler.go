@@ -93,6 +93,16 @@ type ListModuleLinksUseCase interface {
 	Execute(ctx context.Context, moduleID uuid.UUID) ([]domain.ModuleLink, error)
 }
 
+// GetCycleProgressUseCase is app.GetCycleProgress.
+type GetCycleProgressUseCase interface {
+	Execute(ctx context.Context, id uuid.UUID) (domain.CycleProgress, error)
+}
+
+// GetModuleProgressUseCase is app.GetModuleProgress.
+type GetModuleProgressUseCase interface {
+	Execute(ctx context.Context, id uuid.UUID) (domain.Progress, error)
+}
+
 // GetCyclePreferencesUseCase is app.GetCyclePreferences.
 type GetCyclePreferencesUseCase interface {
 	Execute(ctx context.Context, cycleID uuid.UUID) (domain.CyclePreferences, error)
@@ -133,6 +143,9 @@ type UseCases struct {
 	UpdateModuleLink UpdateModuleLinkUseCase
 	DeleteModuleLink DeleteModuleLinkUseCase
 	ListModuleLinks  ListModuleLinksUseCase
+	// A cycle's and a module's progress.
+	GetCycleProgress  GetCycleProgressUseCase
+	GetModuleProgress GetModuleProgressUseCase
 	// The caller's own display settings on a cycle's and a module's page.
 	GetCyclePreferences     GetCyclePreferencesUseCase
 	UpdateCyclePreferences  UpdateCyclePreferencesUseCase

@@ -114,6 +114,11 @@ func moduleMatrixRows() []matrixRow {
 			cells: moduleRows.inCycleColumns(cellOK, cellOK, cellOK, cellOK, cellOK), check: readsTheModule},
 		{op: "getModule", variant: "archived", columns: archivedColumns, request: toModule(http.MethodGet, "", ""),
 			cells: moduleRows.ofArchived(cellOK, cellForbidden), check: readsTheModule},
+		// As getModule (M6 P4 spec R10): no seeded module has work items.
+		{op: "getModuleProgress", columns: cycleColumns, request: toModule(http.MethodGet, "/progress", ""),
+			cells: moduleRows.inCycleColumns(cellOK, cellOK, cellOK, cellOK, cellOK), check: answersAnEmptyModuleProgress},
+		{op: "getModuleProgress", variant: "archived", columns: archivedColumns, request: toModule(http.MethodGet, "/progress", ""),
+			cells: moduleRows.ofArchived(cellOK, cellForbidden), check: answersAnEmptyModuleProgress},
 		// The project's admins and members, not its guests, nor a caller who
 		// sees only his own work items in it (M6 P2 spec R6); a workspace
 		// admin or member who is no member of the project sees it and may
