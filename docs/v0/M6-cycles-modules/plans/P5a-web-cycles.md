@@ -44,7 +44,7 @@
 
 **回归测试的边界**
 - 回归测试指 M2–M5 与 P1–P4 的网页单测与 e2e。
-- 只在 spec 说契约变化的地方改：`root.store.test.ts` 的 store 数与 `dispose()` 的断言、`removal.test.tsx` 与 `cycle-peek-overview.test.tsx`、`[cycleId]/page.test.tsx`、`form-focus.test.tsx` 中读旧迭代 store 或旧类型的部分、`progress.test.ts` 的旧用例。其他断言不改。
+- 只在 spec 说契约变化的地方改：`root.store.test.ts` 的 store 数与 `dispose()` 的断言、`removal.test.tsx` 与 `cycle-peek-overview.test.tsx`、`[cycleId]/page.test.tsx`、`form-focus.test.tsx` 中读旧迭代 store 或旧类型的部分、`progress.test.ts` 的旧用例；M4 的冒烟故事 `e2e/stories/smoke/s2-issue-list-removal.spec.ts` 中迭代与已归档迭代两条（它们钉的是“迭代页面还请求旧地址、得 404”的状态，T9 的检查点发现；两条移出，覆盖由 T13 的 G3、G8 页面故事接上）。其他断言不改。
 
 **检查点与证据**
 - 检查点：T9 结束时（数据层、弹窗、快捷操作、详情、列表与归档目录完成）串行完整七项，推送并核分支 CI（同时核 e2e 作业的实际时长）。T16 收尾再串行一次。
@@ -222,7 +222,7 @@
 
 **Files：** `e2e/stories/planning/{g1-create-cycle-page, g2-cycle-status-page, g3-change-cycle-page, g8-archive-cycle-page}.spec.ts`；新 `e2e/playwright.m6-pages.config.ts`（chromium、firefox、webkit，`grep` `G\d+ \(page\)`，先例 `playwright.m4-list.config.ts`）；需要的夹具（`fixtures/` 的页面定位与等待）。
 
-- [ ] Step 1：写故事（spec §2.9 的表），数据库断言与同号接口故事共用；先跑一个期望错误的版本，看到断言失败，再改正。
+- [ ] Step 1：写故事（spec §2.9 的表），数据库断言与同号接口故事共用；先跑一个期望错误的版本，看到断言失败，再改正。另接上 S2 移出的两条：G3 中打开不存在的迭代地址显示“迭代不存在”，接口请求只有 `/api/v0` 的读（迭代与进度 404），没有旧地址；G8 中没有已归档迭代时归档目录显示空态，不是加载占位，没有旧地址。
 - [ ] Step 2：`make build build-s3-fixture` 后聚焦跑（`cd e2e && NERVE_VERSION=0.1.0-dev pnpm exec playwright test --project=chromium stories/planning/g1-create-cycle-page.spec.ts …`），通过后再以 `--config playwright.m6-pages.config.ts` 在三种引擎上跑一次（M4 交接 M6-04(a)，收据），然后提交。
 
 ## Task 14（T14）：页面故事二（G5、G6、G7、G19）
