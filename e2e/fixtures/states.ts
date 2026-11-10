@@ -38,3 +38,17 @@ export async function listStates(api: Api, token: string, projectId: string): Pr
 export async function stateIds(api: Api, token: string, projectId: string): Promise<Record<string, string>> {
   return Object.fromEntries((await listStates(api, token, projectId)).map((s) => [s.name, s.id]));
 }
+
+/** Changes the state of stateId with the bearer token given, an admin's of its project, and returns it as changed. */
+export async function updateState(api: Api, token: string, stateId: string, body: StateUpdate): Promise<State> {
+  const { data, error, response } = await api.PATCH("/api/v0/states/{state_id}", {
+    params: { path: { state_id: stateId } },
+    body,
+    headers: bearer(token),
+  });
+  expect(response.status, `change the state ${stateId}: ${JSON.stringify(error)}`).toBe(200);
+  if (!data) {
+    throw new Error(`updateState ${stateId} answered 200 without the state`);
+  }
+  return data;
+}

@@ -218,7 +218,7 @@ func decodeAnswer(t *testing.T, answer string, v any) {
 // matrixRows are the rows, each module's from its file.
 func matrixRows() []matrixRow {
 	return slices.Concat(workspaceMatrixRows(), projectMatrixRows(), memberMatrixRows(), membershipMatrixRows(), stateMatrixRows(),
-		labelMatrixRows(), draftMatrixRows(), searchMatrixRows(), issueMatrixRows(), issueUpdateMatrixRows(), issueArchiveMatrixRows(), issueListMatrixRows(), memberIssueMatrixRows(), subIssueMatrixRows(), relationMatrixRows(), collaborationMatrixRows(), linkMatrixRows(), assetMatrixRows(), cycleMatrixRows(), moduleMatrixRows(), moduleLinkMatrixRows())
+		labelMatrixRows(), draftMatrixRows(), searchMatrixRows(), issueMatrixRows(), issueUpdateMatrixRows(), issueArchiveMatrixRows(), issueListMatrixRows(), memberIssueMatrixRows(), subIssueMatrixRows(), relationMatrixRows(), collaborationMatrixRows(), linkMatrixRows(), assetMatrixRows(), cycleMatrixRows(), transferMatrixRows(), moduleMatrixRows(), moduleLinkMatrixRows(), countMatrixRows())
 }
 
 // matrixApps is how many cells may run an app of their own at once: each
@@ -258,7 +258,8 @@ func (d matrixData) config(t *testing.T, url string, change func(*config.Config)
 // projects, project memberships, states and labels of matrixProjects,
 // matrixProjectMembers, matrixStates and matrixLabels; through the project
 // store, each project's cycles and modules turned on, and through the
-// planning store, the cycles of matrixCycles and the modules of
+// planning store, the cycles of matrixCycles, which have ended, frozen as
+// the freeze job freezes them (freezeSeededCycles), and the modules of
 // matrixModules, each with its link; through the issue
 // store, the work items of seededItems, once guestViewAll shows its guests
 // every one (issueSeed), and the relations of seededRelations; through the
@@ -315,6 +316,7 @@ func prepareMatrix(t *testing.T) matrixData {
 		projects.planningOn()
 		plans := planningpg.New(pool)
 		projects.cycles(s, plans)
+		freezeSeededCycles(t, pool)
 		projects.modules(s, plans)
 		projects.moduleLinks(s, plans)
 		issues := issueSeed{projectSeed: projects, store: issuepg.New(pool)}

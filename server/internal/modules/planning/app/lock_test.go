@@ -53,6 +53,16 @@ type lockWorld struct {
 	refusedWords    []shared.FieldError
 	checkedFilters  map[string][]string
 	checkedDisplay  *shared.ListDisplayFilters
+	// The groups StateGroups answers, by state (M6 P4); the work items of each cycle and module, by its id, and the
+	// viewer each read of them was asked for; the cycles' frozen progress, by cycle. A list's: the counts by cycle or
+	// module and state, and the cycles' assignees, the issue module answers; the ids each read of a page was asked for.
+	groups    map[uuid.UUID]domain.StateGroup
+	items     map[uuid.UUID][]domain.WorkItem
+	viewers   []*uuid.UUID
+	snapshots map[uuid.UUID]*domain.Frozen
+	counts    []domain.StateCount
+	assignees []domain.CycleAssignee
+	pages     [][]uuid.UUID
 }
 
 type inTx struct{}
@@ -86,6 +96,11 @@ func (w *lockWorld) Share(ctx context.Context, id uuid.UUID) (ProjectFacts, bool
 	w.log(ctx, "Share")
 	f, ok := w.facts[id]
 	return f, ok, nil
+}
+
+func (w *lockWorld) StateGroups(ctx context.Context, _ uuid.UUID) (map[uuid.UUID]domain.StateGroup, error) {
+	w.log(ctx, "StateGroups")
+	return w.groups, nil
 }
 
 func (w *lockWorld) GetCycle(ctx context.Context, id uuid.UUID) (domain.Cycle, bool, error) {

@@ -27,6 +27,15 @@ var (
 	// ErrCycleNotCompleted answers the archiving of a cycle that is not
 	// completed (M6 design 3.6).
 	ErrCycleNotCompleted = shared.NewError(shared.KindConflict, "planning.cycle_not_completed", "Only a completed cycle can be archived.")
+	// ErrTransferFromOpenCycle answers a transfer of the work items of a
+	// cycle not completed on the write's day in its project's time zone (M6
+	// P4 spec 2.3, R7): ErrCycleNotCompleted's code, a transfer's message.
+	ErrTransferFromOpenCycle = shared.NewError(shared.KindConflict, "planning.cycle_not_completed",
+		"Only a completed cycle can transfer its work items.")
+	// ErrTransferToCompletedCycle answers a transfer to a cycle completed on
+	// the write's day in its project's time zone (M6 P4 spec 2.3, R7):
+	// ErrCycleCompleted's code, a transfer's message.
+	ErrTransferToCompletedCycle = shared.NewError(shared.KindConflict, "planning.cycle_completed", "A completed cycle cannot take work items.")
 	// ErrDatesOverlap answers dates that share a day with another cycle of
 	// the project (M6 design 3.1).
 	ErrDatesOverlap = shared.NewError(shared.KindConflict, "planning.cycle_dates_overlap", "The dates overlap another cycle of this project.")

@@ -3,18 +3,24 @@
 // changing, archiving, unarchiving and deleting a cycle of a project;
 // creating, listing, reading, changing, archiving, unarchiving and deleting a
 // module of a project, and adding, listing, changing and removing a module's
-// links; and reading and changing each caller's own display settings on a
-// cycle's and a module's page. A cycle's and a module's deletion publish it
-// in their transaction (EventTypes), which the issue module's subscriber
-// takes the work items out of it in. A link's creation and a change of its
-// address enqueue its crawl in their transaction, whose job writes the
-// link's metadata. Project and workspace deletion events enqueue the
+// links; reading a cycle's and a module's progress, and the numbers of their
+// list rows, computed from the issue module's facts of their work items
+// (IssueStats); and reading and changing each caller's own display settings on
+// a cycle's and a module's page. A cycle's and a module's deletion publish it
+// in their transaction (EventTypes), which the issue module's subscriber takes
+// the work items out of it in. A link's creation and a change of its address
+// enqueue its crawl in their transaction, whose job writes the link's
+// metadata. A periodic job freezes, once, the progress of each cycle that
+// has ended, which a cycle's progress and list row answer beside the live
+// one (FreezeCycles). Project and workspace deletion events enqueue the
 // asynchronous deletion of the deleted projects' planning rows in the
 // publishing transaction; the 60-day purge removes them. It tells the issue
 // module about the cycles and modules a work item's write names and those
 // that keep work items from automatic archival (IssueTargets), and the names
 // of the cycles and modules of the projects a list of work items ordered by
-// them reads (IssueDirectory).
+// them reads (IssueDirectory); it asks the issue module to move the
+// unfinished work items of a cycle that has ended to another
+// (IssueTransfer).
 package planning
 
 import (
@@ -74,6 +80,33 @@ type IssueDirectory interface {
 // converts it into issue's.
 type IssueDirectoryName = app.IssueDirectoryName
 
+// IssueStats is what the module asks the issue module about the work items
+// of a project's cycles and modules, which their progress and their list
+// rows are computed from (M6 P4 spec R2): bootstrap converts issue's
+// PlanningStats into it.
+type IssueStats = app.IssueStats
+
+// WorkItem, StateCount and CycleAssignee are the values IssueStats hands
+// over, and StateGroup a state's group, which Projects' StateGroups hands
+// over: bootstrap converts issue's and project's into them.
+type (
+	WorkItem      = domain.WorkItem
+	StateCount    = domain.StateCount
+	CycleAssignee = domain.CycleAssignee
+	StateGroup    = domain.StateGroup
+)
+
+// IssueTransfer is what the module asks the issue module to do when a
+// transfer moves the unfinished work items of a cycle that has ended to
+// another (M6 P4 spec 2.6, R2, R8): bootstrap converts issue's
+// PlanningTransfer into it. Transfer and NamedCycle are the values it
+// takes, which bootstrap converts into issue's.
+type (
+	IssueTransfer = app.IssueTransfer
+	Transfer      = app.Transfer
+	NamedCycle    = app.NamedCycle
+)
+
 // Provided are the adapters bootstrap builds before wiring the modules.
 type Provided struct {
 	Purger         *app.Purger
@@ -123,6 +156,14 @@ type Deps struct {
 	Events shared.EventPublisher
 	// Projects are project's PlanningProjects, converted (bootstrap/ports.go).
 	Projects app.Projects
+	// IssueStats are the issue module's PlanningStats, converted
+	// (bootstrap/planning_issues.go): the facts of the work items of the
+	// project's cycles and modules (M6 P4 spec R2).
+	IssueStats app.IssueStats
+	// IssueTransfer is the issue module's PlanningTransfer, converted
+	// (bootstrap/planning_issues.go): a transfer's move of the work items,
+	// in its write (M6 P4 spec 2.6, R8).
+	IssueTransfer app.IssueTransfer
 	// ListSettings checks the words of the pages' display settings: the
 	// issue module's ListSettings, as issue.Provide offers it (M6 P3b spec
 	// R5).
@@ -134,22 +175,30 @@ type Deps struct {
 	// LinkCrawler is the link-preview crawler every module that has links
 	// shares, adapted by bootstrap (R12).
 	LinkCrawler app.LinkCrawler
-	// JobTx runs the deletion job's short transactions.
+	// JobTx runs the deletion job's and the freeze job's short
+	// transactions: each lock wait at most issue.write_lock_timeout, no
+	// write gate, and a lock failure kept as PostgreSQL's for River's
+	// retry (bootstrap/gate.go).
 	JobTx shared.TxManager
 	// RuntimeNow is the monotonic clock of the deletion job's budget.
 	RuntimeNow   func() time.Time
 	DeleteBatch  int
 	DeleteBudget time.Duration
-	Logger       *slog.Logger
+	// FreezeInterval is the freeze job's: it runs when the server starts,
+	// then every FreezeInterval (planning.freeze_interval).
+	FreezeInterval time.Duration
+	Logger         *slog.Logger
 }
 
 // Module is the planning module.
 type Module struct {
-	uc           httpadapter.UseCases
-	crawlLink    *app.CrawlLink
-	deleteRows   *app.DeleteRows
-	deleteBudget time.Duration
-	logger       *slog.Logger
+	uc             httpadapter.UseCases
+	crawlLink      *app.CrawlLink
+	deleteRows     *app.DeleteRows
+	deleteBudget   time.Duration
+	freezeCycles   *app.FreezeCycles
+	freezeInterval time.Duration
+	logger         *slog.Logger
 }
 
 // New builds the module from d.
@@ -162,14 +211,15 @@ func New(d Deps) *Module {
 	pageWrites := app.UpdatePreferencesDeps{Locks: locks, Settings: d.ListSettings, Clock: d.Clock, Preferences: store}
 	return &Module{
 		uc: httpadapter.UseCases{
-			ListCycles:       app.NewListCycles(app.ListCyclesDeps{Reads: reads, Cycles: store, Clock: d.Clock}),
+			ListCycles: app.NewListCycles(app.ListCyclesDeps{Reads: reads, Cycles: store, Groups: d.Projects, Stats: d.IssueStats, Snapshots: store,
+				Clock: d.Clock}),
 			CreateCycle:      app.NewCreateCycle(app.CreateCycleDeps{Locks: locks, Cycles: store, Clock: d.Clock}),
 			GetCycle:         app.NewGetCycle(app.GetCycleDeps{Reads: reads, Clock: d.Clock}),
 			UpdateCycle:      app.NewUpdateCycle(app.UpdateCycleDeps{Locks: locks, Cycles: store, Clock: d.Clock}),
 			ArchiveCycle:     app.NewArchiveCycle(app.ArchiveCycleDeps{Locks: locks, Cycles: store, Clock: d.Clock}),
 			UnarchiveCycle:   app.NewUnarchiveCycle(app.ArchiveCycleDeps{Locks: locks, Cycles: store, Clock: d.Clock}),
 			DeleteCycle:      app.NewDeleteCycle(app.DeleteCycleDeps{Locks: locks, Cycles: store, Clock: d.Clock, Events: d.Events}),
-			ListModules:      app.NewListModules(app.ListModulesDeps{Reads: reads, Modules: store}),
+			ListModules:      app.NewListModules(app.ListModulesDeps{Reads: reads, Modules: store, Groups: d.Projects, Stats: d.IssueStats}),
 			CreateModule:     app.NewCreateModule(app.CreateModuleDeps{Locks: locks, Roles: d.Projects, Modules: store, Clock: d.Clock}),
 			GetModule:        app.NewGetModule(app.GetModuleDeps{Reads: reads}),
 			UpdateModule:     app.NewUpdateModule(app.UpdateModuleDeps{Locks: locks, Roles: d.Projects, Modules: store, Clock: d.Clock}),
@@ -181,6 +231,14 @@ func New(d Deps) *Module {
 			DeleteModuleLink: app.NewDeleteModuleLink(links),
 			ListModuleLinks:  app.NewListModuleLinks(app.ListModuleLinksDeps{Reads: reads, Links: store}),
 
+			TransferCycleIssues: app.NewTransferCycleIssues(app.TransferCycleIssuesDeps{Locks: locks, Cycles: store, Groups: d.Projects,
+				Stats: d.IssueStats, Issues: d.IssueTransfer, Clock: d.Clock}),
+
+			GetCycleProgress: app.NewGetCycleProgress(app.GetCycleProgressDeps{Reads: reads, Groups: d.Projects, Stats: d.IssueStats,
+				Snapshots: store, Clock: d.Clock}),
+			GetModuleProgress: app.NewGetModuleProgress(app.GetModuleProgressDeps{Reads: reads, Groups: d.Projects, Stats: d.IssueStats,
+				Clock: d.Clock}),
+
 			GetCyclePreferences:     app.NewGetCyclePreferences(pageReads),
 			UpdateCyclePreferences:  app.NewUpdateCyclePreferences(pageWrites),
 			GetModulePreferences:    app.NewGetModulePreferences(pageReads),
@@ -189,6 +247,9 @@ func New(d Deps) *Module {
 		crawlLink:    app.NewCrawlLink(app.CrawlLinkDeps{Crawler: d.LinkCrawler, Links: store}),
 		deleteRows:   app.NewDeleteRows(app.DeleteRowsDeps{Rows: store, Tx: d.JobTx, RuntimeNow: d.RuntimeNow, Batch: d.DeleteBatch, Budget: d.DeleteBudget}),
 		deleteBudget: d.DeleteBudget, logger: d.Logger,
+		freezeCycles: app.NewFreezeCycles(app.FreezeCyclesDeps{Projects: d.Projects, Groups: d.Projects, Cycles: store, Stats: d.IssueStats,
+			Tx: d.JobTx, Clock: d.Clock}),
+		freezeInterval: d.FreezeInterval,
 	}
 }
 

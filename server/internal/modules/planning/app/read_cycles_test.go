@@ -37,9 +37,13 @@ func (w *lockWorld) get(id uuid.UUID) (domain.ReadCycle, error) {
 	return uc.Execute(shared.WithActor(context.Background(), shared.Actor{UserID: uuid.NewV7()}), id)
 }
 
-func (w *lockWorld) list(project uuid.UUID, archived bool) ([]domain.ReadCycle, error) {
-	uc := NewListCycles(ListCyclesDeps{Reads: w.reads(), Cycles: w, Clock: w})
-	return uc.Execute(shared.WithActor(context.Background(), shared.Actor{UserID: uuid.NewV7()}), project, archived)
+func (w *lockWorld) list(project uuid.UUID, archived bool) ([]domain.CycleListItem, error) {
+	return w.listAs(shared.Actor{UserID: uuid.NewV7()}, project, archived)
+}
+
+func (w *lockWorld) listAs(actor shared.Actor, project uuid.UUID, archived bool) ([]domain.CycleListItem, error) {
+	uc := NewListCycles(ListCyclesDeps{Reads: w.reads(), Cycles: w, Groups: w, Stats: w, Snapshots: w, Clock: w})
+	return uc.Execute(shared.WithActor(context.Background(), actor), project, archived)
 }
 
 // A read decides in one transaction of its own, the read-only snapshot, where it reads the cycle, then its project's
@@ -95,7 +99,8 @@ func TestListCycles(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if want := []string{"Begin", "Facts", "Authorize cycle.read", tt.list, "Now", "End"}; !slices.Equal(w.calls, want) {
+		if want := []string{"Begin", "Facts", "Authorize cycle.read", tt.list, "StateGroups", "CycleCounts", "CycleAssignees", "CycleSnapshotCounts",
+			"Now", "End"}; !slices.Equal(w.calls, want) {
 			t.Fatalf("archived=%t: calls\n%q\nwant\n%q", tt.archived, w.calls, want)
 		}
 		var ids []uuid.UUID

@@ -1,6 +1,6 @@
 # M6/P3b 阶段评审记录
 
-> 2026-11-09：T1–T14 完成，整分支审查 Ready to merge（[re-61](../../../reviews/re-61-M6P3b整体审核.md)）。最终候选待七项门禁、推送、核分支 CI 与合入；分支 CI、合入、main CI 与归档清理在合入后由 P4 的 T1 回填到 §7。基线 main `2648a73940f053940b3f321f241b1a25eaac8209`（P3a 的 noff）。
+> 2026-11-09：已完成。整分支审查 Ready to merge（[re-61](../../../reviews/re-61-M6P3b整体审核.md)）；最终候选 `79a540f9` 的分支 CI 42616111421 首次通过，noff `ed8f0df4` 的 main CI 42621199100 首次通过，证据已归档（§7，由 P4 的 T1 回填）。基线 main `2648a73940f053940b3f321f241b1a25eaac8209`（P3a 的 noff）。
 
 ## 1. 评审方式与范围
 
@@ -103,6 +103,14 @@ fresh 只读审查（[re-61](../../../reviews/re-61-M6P3b整体审核.md)）逐�
 
 ## 7. 集成、归档与接续
 
-最终候选推送后核准确分支 CI，`--no-ff` 合入 main 并核 main CI；再归档本阶段 ignored 证据（台账、调研笔记、收据、CI 原件），并正常清理 worktree 与分支。结果由 P4 的 T1 按台账回填到这里。
+最终候选推送后核准确分支 CI，`--no-ff` 合入 main 并核 main CI；再归档本阶段 ignored 证据（台账、调研笔记、收据、CI 原件），并正常清理 worktree 与分支。以下由 P4 的 T1 按归档的台账、CI 收据与 `cleanup.log` 回填。
 
-**接续**：P4（进度、冻结、转移）。
+- **分支 CI**：
+  - 检查点 `28f7bbb92b3d3f6837580732289fe0f5635df5bf` 的 42594813667：attempt 1 成功（server (1) 129084768215、web 129084768598、server (0) 129084768608、e2e 129090608431）。
+  - 最终候选 `79a540f99e1518ca1746b202aac850ebae1f7fcf` 的 42616111421：attempt 1 成功（web 129156280178、server (0) 129156280351、server (1) 129156280411、e2e 129162795112）。
+- **最终门禁的一次环境失败**：t14-gate1 在 `4738850c` 上只有 `platform/postgres` 一包失败：testcontainers 调本机 Docker API 查询容器时超时（context deadline exceeded），容器内 Postgres 已就绪，P3b 未改该包。判为本机环境失败，不改代码；修复整审 Minor 后的 `295a6f07` 上整段重跑一次（t14-gate2），七项通过（§5）。
+- **合入**：main `2648a739` 干净且与 origin 一致；`--no-ff` 生成 `ed8f0df4e8982dc50a4560a31fdf9b2964d84ac7`，双父依次为 `2648a739`、`79a540f9`，树与候选相同（`a18207d1`）；系统 Git 推送。
+- **main CI**：42621199100 attempt 1 成功（web 129173481052、server (1) 129173481263、server (0) 129173481411、e2e 129181980131）。
+- **归档**：`.superpowers/sdd/M6-P3b-integration-20261109`（主目录，ignored）：2403 个文件、402,178,603 字节、未知 0，清单 sha256 `5fc24b37fd80dcc9db74d34f3d6f4ae432e94ebb8e710b767016353346699166`。`archive.py verify` 通过，P4 开工时复核一次（收据 `t1-p3b-archive-verify`）。`cleanup.log` 记有：清理前分支已含于 origin/main。
+- **清理**：worktree `m6-p3b`、本地与远端分支 `codex/m6-p3b` 已删除，主目录停在 main `ed8f0df4`。
+- **接续**：P4（进度、冻结与转移），预检见 [re-62](../../../reviews/re-62-M6P4预检.md)。

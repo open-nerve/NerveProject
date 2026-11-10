@@ -9,9 +9,9 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
-// The planning module's cycles table (M6 P1 spec 2.2): its columns, its indexes, the date CHECK (both dates or
-// neither, the start not after the end), the non-empty name, and where each foreign key goes, the owner's SET NULL
-// keeping the cycle when its owner's account is purged.
+// The planning module's cycles table (M6 P1 spec 2.2, P4 spec 2.4): its columns, its indexes, the date CHECK (both
+// dates or neither, the start not after the end), the non-empty name, the frozen progress an object or none, and
+// where each foreign key goes, the owner's SET NULL keeping the cycle when its owner's account is purged.
 func TestCyclesSchema(t *testing.T) {
 	pool := newIssueDatabase(t)
 	ctx := context.Background()
@@ -23,6 +23,7 @@ func TestCyclesSchema(t *testing.T) {
 		"sort_order double precision NO 65535", "archived_at timestamp with time zone YES -",
 		"created_by_id uuid YES -", "updated_by_id uuid YES -", "created_at timestamp with time zone NO now()",
 		"updated_at timestamp with time zone NO now()", "deleted_at timestamp with time zone YES -",
+		"progress_snapshot jsonb YES -",
 	}
 	if !slices.Equal(got, want) {
 		t.Fatalf("cycles columns\n%q\nwant\n%q", got, want)
@@ -30,6 +31,7 @@ func TestCyclesSchema(t *testing.T) {
 	indexes := names(t, pool, `SELECT indexdef FROM pg_indexes WHERE schemaname='public' AND tablename='cycles' ORDER BY indexname`)
 	wantIndexes := []string{
 		"CREATE INDEX cycles_deleted_at_idx ON public.cycles USING btree (deleted_at) WHERE (deleted_at IS NOT NULL)",
+		"CREATE INDEX cycles_freeze_due_idx ON public.cycles USING btree (end_date) WHERE ((deleted_at IS NULL) AND (progress_snapshot IS NULL) AND (end_date IS NOT NULL))",
 		"CREATE UNIQUE INDEX cycles_pkey ON public.cycles USING btree (id)",
 		"CREATE INDEX cycles_project_id_idx ON public.cycles USING btree (project_id)",
 		"CREATE INDEX cycles_project_list_idx ON public.cycles USING btree (project_id, sort_order, created_at, id) WHERE (deleted_at IS NULL)",
@@ -50,11 +52,11 @@ func TestCyclesSchema(t *testing.T) {
 			t.Fatalf("%s: %v", stmt, err)
 		}
 	}
-	// Accepted: no dates, one day, a range.
-	for _, dates := range []string{"start_date=NULL,end_date=NULL", "start_date='2026-11-07',end_date='2026-11-07'",
-		"start_date='2026-11-07',end_date='2026-11-20'"} {
-		if _, err := pool.Exec(ctx, "UPDATE cycles SET "+dates+" WHERE id="+cycle); err != nil {
-			t.Errorf("dates %s refused: %v", dates, err)
+	// Accepted: no dates, one day, a range; a frozen progress, an object, and none.
+	for _, set := range []string{"start_date=NULL,end_date=NULL", "start_date='2026-11-07',end_date='2026-11-07'",
+		"start_date='2026-11-07',end_date='2026-11-20'", `progress_snapshot='{"total_issues":0}'`, "progress_snapshot=NULL"} {
+		if _, err := pool.Exec(ctx, "UPDATE cycles SET "+set+" WHERE id="+cycle); err != nil {
+			t.Errorf("%s refused: %v", set, err)
 		}
 	}
 	for _, tt := range []struct{ update, constraint string }{
@@ -62,6 +64,10 @@ func TestCyclesSchema(t *testing.T) {
 		{"start_date=NULL,end_date='2026-11-07'", "cycles_dates_check"},
 		{"start_date='2026-11-08',end_date='2026-11-07'", "cycles_dates_check"},
 		{"name=''", "cycles_name_check"},
+		{"progress_snapshot='[]'", "cycles_progress_snapshot_check"},
+		{"progress_snapshot='1'", "cycles_progress_snapshot_check"},
+		{`progress_snapshot='"frozen"'`, "cycles_progress_snapshot_check"},
+		{"progress_snapshot='null'", "cycles_progress_snapshot_check"},
 	} {
 		_, err := pool.Exec(ctx, "UPDATE cycles SET "+tt.update+" WHERE id="+cycle)
 		var pe *pgconn.PgError
@@ -105,12 +111,14 @@ var planningNames = []string{
 	"cycles_created_by_id_fkey f n",
 	"cycles_dates_check c",
 	"cycles_deleted_at_idx iw",
+	"cycles_freeze_due_idx iw",
 	"cycles_name_check c",
 	"cycles_owned_by_id_fkey f n",
 	"cycles_pkey iu",
 	"cycles_pkey p",
 	"cycles_project_id_fkey f c",
 	"cycles_project_id_idx i",
+	"cycles_progress_snapshot_check c",
 	"cycles_project_list_idx iw",
 	"cycles_updated_by_id_fkey f n",
 	"cycles_workspace_id_fkey f c",

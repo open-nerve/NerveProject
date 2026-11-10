@@ -19,11 +19,12 @@ import (
 // fakePlanningProjects is project's PlanningProjects answering what it holds,
 // recording what it was asked.
 type fakePlanningProjects struct {
-	facts project.PlanningFacts
-	found bool
-	roles map[uuid.UUID]shared.Role
-	err   error
-	asked []string
+	facts  project.PlanningFacts
+	found  bool
+	roles  map[uuid.UUID]shared.Role
+	states []project.IssueState
+	err    error
+	asked  []string
 }
 
 func (f *fakePlanningProjects) PlanningFacts(_ context.Context, id uuid.UUID) (project.PlanningFacts, bool, error) {
@@ -44,6 +45,11 @@ func (f *fakePlanningProjects) SharePlanning(_ context.Context, id uuid.UUID) (p
 func (f *fakePlanningProjects) ActiveRoles(_ context.Context, id uuid.UUID, ids []uuid.UUID) (map[uuid.UUID]shared.Role, error) {
 	f.asked = append(f.asked, fmt.Sprint("roles ", id, " ", ids))
 	return f.roles, f.err
+}
+
+func (f *fakePlanningProjects) IssueStates(_ context.Context, id uuid.UUID) ([]project.IssueState, error) {
+	f.asked = append(f.asked, "states "+id.String())
+	return f.states, f.err
 }
 
 // planningProjects hands planning project's answers to the same questions:
@@ -85,6 +91,35 @@ func TestPlanningProjectsConvertsProjectsAnswers(t *testing.T) {
 	}
 	if _, err := p.Roles(ctx, web, []uuid.UUID{ann}); !errors.Is(err, boom) {
 		t.Errorf("Roles() = %v; want the error", err)
+	}
+}
+
+// planningProjects hands planning the group of each of the states project reads of the project asked about, by state
+// (M6 P4 spec R2): every state, the triage state too, whatever its name and whether it is the default; none as none;
+// the error as it came.
+func TestPlanningProjectsConvertsStateGroups(t *testing.T) {
+	web, backlog, done, triage := uuid.NewV7(), uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
+	fake := &fakePlanningProjects{states: []project.IssueState{{ID: backlog, Name: "Backlog", Group: "backlog", Default: true},
+		{ID: done, Name: "Done", Group: "completed"}, {ID: triage, Name: "Triage", Group: "triage"}}}
+	p := planningProjects{projects: fake}
+	ctx := context.Background()
+
+	want := map[uuid.UUID]planning.StateGroup{backlog: "backlog", done: "completed", triage: "triage"}
+	if got, err := p.StateGroups(ctx, web); err != nil || !maps.Equal(got, want) {
+		t.Errorf("StateGroups() = %v, %v; want %v", got, err, want)
+	}
+	fake.states = nil
+	if got, err := p.StateGroups(ctx, web); err != nil || len(got) != 0 {
+		t.Errorf("StateGroups() = %v, %v; want none", got, err)
+	}
+	if want := []string{"states " + web.String(), "states " + web.String()}; !slices.Equal(fake.asked, want) {
+		t.Errorf("asked %q, want %q", fake.asked, want)
+	}
+
+	boom := errors.New("boom")
+	fake.states, fake.err = []project.IssueState{{ID: backlog, Group: "backlog"}}, boom
+	if got, err := p.StateGroups(ctx, web); !errors.Is(err, boom) || got != nil {
+		t.Errorf("StateGroups() = %v, %v; want the error alone", got, err)
 	}
 }
 
@@ -214,4 +249,133 @@ func TestIssuePlanningConvertsPlanningsNames(t *testing.T) {
 	if _, err := p.ModuleNames(ctx, []uuid.UUID{web}); !errors.Is(err, boom) {
 		t.Errorf("ModuleNames() = %v; want the error", err)
 	}
+}
+
+// fakePlanningStats is issue's PlanningStats answering what it holds,
+// recording what it was asked.
+type fakePlanningStats struct {
+	items     []issue.PlanningItem
+	counts    []issue.PlanningStateCount
+	assignees []issue.PlanningAssignee
+	err       error
+	asked     []string
+}
+
+func (f *fakePlanningStats) ask(what string, project uuid.UUID, targets any, viewer *uuid.UUID) {
+	by := "everyone"
+	if viewer != nil {
+		by = viewer.String()
+	}
+	f.asked = append(f.asked, fmt.Sprint(what, " ", project, " ", targets, " ", by))
+}
+
+func (f *fakePlanningStats) CycleItems(_ context.Context, project, cycle uuid.UUID, viewer *uuid.UUID) ([]issue.PlanningItem, error) {
+	f.ask("cycle items", project, cycle, viewer)
+	return f.items, f.err
+}
+
+func (f *fakePlanningStats) ModuleItems(_ context.Context, project, module uuid.UUID, viewer *uuid.UUID) ([]issue.PlanningItem, error) {
+	f.ask("module items", project, module, viewer)
+	return f.items, f.err
+}
+
+func (f *fakePlanningStats) CycleStateCounts(_ context.Context, project uuid.UUID, cycles []uuid.UUID, viewer *uuid.UUID) ([]issue.PlanningStateCount, error) {
+	f.ask("cycle counts", project, cycles, viewer)
+	return f.counts, f.err
+}
+
+func (f *fakePlanningStats) ModuleStateCounts(_ context.Context, project uuid.UUID, modules []uuid.UUID, viewer *uuid.UUID) ([]issue.PlanningStateCount, error) {
+	f.ask("module counts", project, modules, viewer)
+	return f.counts, f.err
+}
+
+func (f *fakePlanningStats) CycleAssignees(_ context.Context, project uuid.UUID, cycles []uuid.UUID, viewer *uuid.UUID) ([]issue.PlanningAssignee, error) {
+	f.ask("cycle assignees", project, cycles, viewer)
+	return f.assignees, f.err
+}
+
+// planningIssues hands planning issue's answers to the same questions (M6 P4 spec R2), asked of the project, the cycle
+// or module, or the page of them, and the viewer asked about, an OwnOnly one or none: every work item's every field,
+// every count's and every assignee's, in their order; none as none; the error as it came, and nothing with it.
+func TestPlanningIssuesConvertsIssuesStats(t *testing.T) {
+	web, c1, c2, m1, i1, i2 := uuid.NewV7(), uuid.NewV7(), uuid.NewV7(), uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
+	todo, done, ann, bob, bug := uuid.NewV7(), uuid.NewV7(), uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
+	at := time.Date(2026, 11, 9, 16, 30, 0, 123456000, time.UTC)
+	fake := &fakePlanningStats{
+		items: []issue.PlanningItem{{ID: i2, StateID: done, CompletedAt: &at, AssigneeIDs: []uuid.UUID{ann, bob}, LabelIDs: []uuid.UUID{bug}},
+			{ID: i1, StateID: todo}},
+		counts:    []issue.PlanningStateCount{{TargetID: c2, StateID: done, Issues: 3}, {TargetID: c1, StateID: todo, Issues: 1}},
+		assignees: []issue.PlanningAssignee{{CycleID: c2, AssigneeID: bob}, {CycleID: c1, AssigneeID: ann}},
+	}
+	var p planning.IssueStats = planningIssues{stats: fake}
+	ctx := context.Background()
+
+	items := []planning.WorkItem{{ID: i2, StateID: done, CompletedAt: &at, AssigneeIDs: []uuid.UUID{ann, bob}, LabelIDs: []uuid.UUID{bug}},
+		{ID: i1, StateID: todo}}
+	if got, err := p.CycleItems(ctx, web, c1, &ann); err != nil || !slices.EqualFunc(got, items, sameWorkItem) {
+		t.Errorf("CycleItems() = %+v, %v; want %+v", got, err, items)
+	}
+	if got, err := p.ModuleItems(ctx, web, m1, nil); err != nil || !slices.EqualFunc(got, items, sameWorkItem) {
+		t.Errorf("ModuleItems() = %+v, %v; want %+v", got, err, items)
+	}
+	counts := []planning.StateCount{{TargetID: c2, StateID: done, Issues: 3}, {TargetID: c1, StateID: todo, Issues: 1}}
+	if got, err := p.CycleCounts(ctx, web, []uuid.UUID{c1, c2}, nil); err != nil || !slices.Equal(got, counts) {
+		t.Errorf("CycleCounts() = %+v, %v; want %+v", got, err, counts)
+	}
+	if got, err := p.ModuleCounts(ctx, web, []uuid.UUID{m1}, &bob); err != nil || !slices.Equal(got, counts) {
+		t.Errorf("ModuleCounts() = %+v, %v; want %+v", got, err, counts)
+	}
+	assignees := []planning.CycleAssignee{{CycleID: c2, AssigneeID: bob}, {CycleID: c1, AssigneeID: ann}}
+	if got, err := p.CycleAssignees(ctx, web, []uuid.UUID{c1, c2}, &ann); err != nil || !slices.Equal(got, assignees) {
+		t.Errorf("CycleAssignees() = %+v, %v; want %+v", got, err, assignees)
+	}
+	if want := []string{fmt.Sprint("cycle items ", web, " ", c1, " ", ann), fmt.Sprint("module items ", web, " ", m1, " everyone"),
+		fmt.Sprint("cycle counts ", web, " ", []uuid.UUID{c1, c2}, " everyone"), fmt.Sprint("module counts ", web, " ", []uuid.UUID{m1}, " ", bob),
+		fmt.Sprint("cycle assignees ", web, " ", []uuid.UUID{c1, c2}, " ", ann)}; !slices.Equal(fake.asked, want) {
+		t.Errorf("asked %q, want %q", fake.asked, want)
+	}
+
+	none := &fakePlanningStats{}
+	p = planningIssues{stats: none}
+	if got, err := p.CycleItems(ctx, web, c1, nil); err != nil || len(got) != 0 {
+		t.Errorf("CycleItems() = %+v, %v; want none", got, err)
+	}
+	if got, err := p.ModuleItems(ctx, web, m1, nil); err != nil || len(got) != 0 {
+		t.Errorf("ModuleItems() = %+v, %v; want none", got, err)
+	}
+	if got, err := p.CycleCounts(ctx, web, nil, nil); err != nil || len(got) != 0 {
+		t.Errorf("CycleCounts() = %+v, %v; want none", got, err)
+	}
+	if got, err := p.ModuleCounts(ctx, web, nil, nil); err != nil || len(got) != 0 {
+		t.Errorf("ModuleCounts() = %+v, %v; want none", got, err)
+	}
+	if got, err := p.CycleAssignees(ctx, web, nil, nil); err != nil || len(got) != 0 {
+		t.Errorf("CycleAssignees() = %+v, %v; want none", got, err)
+	}
+
+	boom := errors.New("boom")
+	fake.err = boom
+	p = planningIssues{stats: fake}
+	if got, err := p.CycleItems(ctx, web, c1, nil); !errors.Is(err, boom) || got != nil {
+		t.Errorf("CycleItems() = %+v, %v; want the error alone", got, err)
+	}
+	if got, err := p.ModuleItems(ctx, web, m1, nil); !errors.Is(err, boom) || got != nil {
+		t.Errorf("ModuleItems() = %+v, %v; want the error alone", got, err)
+	}
+	if got, err := p.CycleCounts(ctx, web, []uuid.UUID{c1}, nil); !errors.Is(err, boom) || got != nil {
+		t.Errorf("CycleCounts() = %+v, %v; want the error alone", got, err)
+	}
+	if got, err := p.ModuleCounts(ctx, web, []uuid.UUID{m1}, nil); !errors.Is(err, boom) || got != nil {
+		t.Errorf("ModuleCounts() = %+v, %v; want the error alone", got, err)
+	}
+	if got, err := p.CycleAssignees(ctx, web, []uuid.UUID{c1}, nil); !errors.Is(err, boom) || got != nil {
+		t.Errorf("CycleAssignees() = %+v, %v; want the error alone", got, err)
+	}
+}
+
+// sameWorkItem reports whether two work items are the same, every field.
+func sameWorkItem(x, y planning.WorkItem) bool {
+	return x.ID == y.ID && x.StateID == y.StateID && (x.CompletedAt == nil) == (y.CompletedAt == nil) &&
+		(x.CompletedAt == nil || x.CompletedAt.Equal(*y.CompletedAt)) &&
+		slices.Equal(x.AssigneeIDs, y.AssigneeIDs) && slices.Equal(x.LabelIDs, y.LabelIDs)
 }

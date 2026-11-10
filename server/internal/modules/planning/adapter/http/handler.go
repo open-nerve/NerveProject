@@ -20,7 +20,7 @@ type CreateCycleUseCase interface {
 
 // ListCyclesUseCase is app.ListCycles.
 type ListCyclesUseCase interface {
-	Execute(ctx context.Context, projectID uuid.UUID, archived bool) ([]domain.ReadCycle, error)
+	Execute(ctx context.Context, projectID uuid.UUID, archived bool) ([]domain.CycleListItem, error)
 }
 
 // GetCycleUseCase is app.GetCycle.
@@ -50,7 +50,7 @@ type CreateModuleUseCase interface {
 
 // ListModulesUseCase is app.ListModules.
 type ListModulesUseCase interface {
-	Execute(ctx context.Context, projectID uuid.UUID, archived bool) ([]domain.Module, error)
+	Execute(ctx context.Context, projectID uuid.UUID, archived bool) ([]domain.ModuleListItem, error)
 }
 
 // GetModuleUseCase is app.GetModule.
@@ -93,6 +93,21 @@ type ListModuleLinksUseCase interface {
 	Execute(ctx context.Context, moduleID uuid.UUID) ([]domain.ModuleLink, error)
 }
 
+// TransferCycleIssuesUseCase is app.TransferCycleIssues.
+type TransferCycleIssuesUseCase interface {
+	Execute(ctx context.Context, id, target uuid.UUID) (int, error)
+}
+
+// GetCycleProgressUseCase is app.GetCycleProgress.
+type GetCycleProgressUseCase interface {
+	Execute(ctx context.Context, id uuid.UUID) (domain.CycleProgress, error)
+}
+
+// GetModuleProgressUseCase is app.GetModuleProgress.
+type GetModuleProgressUseCase interface {
+	Execute(ctx context.Context, id uuid.UUID) (domain.Progress, error)
+}
+
 // GetCyclePreferencesUseCase is app.GetCyclePreferences.
 type GetCyclePreferencesUseCase interface {
 	Execute(ctx context.Context, cycleID uuid.UUID) (domain.CyclePreferences, error)
@@ -133,6 +148,11 @@ type UseCases struct {
 	UpdateModuleLink UpdateModuleLinkUseCase
 	DeleteModuleLink DeleteModuleLinkUseCase
 	ListModuleLinks  ListModuleLinksUseCase
+	// The move of a completed cycle's unfinished work items to another.
+	TransferCycleIssues TransferCycleIssuesUseCase
+	// A cycle's and a module's progress.
+	GetCycleProgress  GetCycleProgressUseCase
+	GetModuleProgress GetModuleProgressUseCase
 	// The caller's own display settings on a cycle's and a module's page.
 	GetCyclePreferences     GetCyclePreferencesUseCase
 	UpdateCyclePreferences  UpdateCyclePreferencesUseCase

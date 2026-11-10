@@ -6,7 +6,10 @@
 // Project and workspace deletion events enqueue asynchronous work-item row
 // deletion in the publishing transaction; a cycle's and a module's deletion
 // events take the work items out of it there. Its IssueCascade port tells whether
-// work items are in a state and takes deleted labels off them.
+// work items are in a state and takes deleted labels off them; its
+// PlanningStats tells the planning module the facts of the work items of a
+// project's cycles and modules, and its PlanningTransfer moves the
+// unfinished work items of a cycle that has ended to another for it.
 package issue
 
 import (
@@ -54,6 +57,8 @@ type Provided struct {
 	AssetParents       AssetParents
 	IssueCascade       Cascade
 	ListSettings       ListSettings
+	PlanningStats      PlanningStats
+	PlanningTransfer   PlanningTransfer
 	Purger             *app.Purger
 }
 
@@ -76,7 +81,8 @@ func Provide(pool *pgxpool.Pool, protected []postgres.ProtectedReference) Provid
 		{Table: "module_issues", Delete: store.PurgeModuleIssues},
 		{Table: "cycle_issues", Delete: store.PurgeCycleIssues},
 		{Table: "issues", Protected: true, Delete: store.PurgeIssues},
-	}), IssueCascade: app.NewCascade(store), ListSettings: app.ListSettings{}}
+	}), IssueCascade: app.NewCascade(store), ListSettings: app.ListSettings{}, PlanningStats: store,
+		PlanningTransfer: app.NewCycleTransfers(store)}
 }
 
 // ProjectPorts are what the module asks of a project (M4 design 6.5): its

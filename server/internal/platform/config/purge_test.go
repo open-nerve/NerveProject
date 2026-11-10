@@ -24,19 +24,19 @@ func TestPurgeConfiguration(t *testing.T) {
 	}
 	t.Run("defaults", func(t *testing.T) {
 		cfg := load(t)
-		if cfg.Cleanup != (CleanupConfig{PurgeAfter: 1440 * time.Hour, PurgeInterval: 24 * time.Hour, PurgeBatch: 1000}) || cfg.Issue.TrimVersionsInterval != 24*time.Hour || cfg.Issue.DeleteBatch != 1000 || cfg.Issue.DeleteBudget != 45*time.Second || cfg.Planning != (PlanningConfig{DeleteBatch: 1000, DeleteBudget: 45 * time.Second}) {
+		if cfg.Cleanup != (CleanupConfig{PurgeAfter: 1440 * time.Hour, PurgeInterval: 24 * time.Hour, PurgeBatch: 1000}) || cfg.Issue.TrimVersionsInterval != 24*time.Hour || cfg.Issue.DeleteBatch != 1000 || cfg.Issue.DeleteBudget != 45*time.Second || cfg.Planning != (PlanningConfig{DeleteBatch: 1000, DeleteBudget: 45 * time.Second, FreezeInterval: time.Hour}) {
 			t.Fatalf("defaults: cleanup=%+v issue=%+v planning=%+v", cfg.Cleanup, cfg.Issue, cfg.Planning)
 		}
 	})
 	t.Run("test profile", func(t *testing.T) {
 		cfg := load(t, "NERVE_ENV=test")
-		if cfg.Cleanup != (CleanupConfig{PurgeAfter: 1440 * time.Hour, PurgeInterval: 2 * time.Second, PurgeBatch: 1000}) || cfg.Issue.TrimVersionsInterval != 2*time.Second || cfg.Issue.DeleteBatch != 1000 || cfg.Issue.DeleteBudget != 45*time.Second || cfg.Planning != (PlanningConfig{DeleteBatch: 1000, DeleteBudget: 45 * time.Second}) {
+		if cfg.Cleanup != (CleanupConfig{PurgeAfter: 1440 * time.Hour, PurgeInterval: 2 * time.Second, PurgeBatch: 1000}) || cfg.Issue.TrimVersionsInterval != 2*time.Second || cfg.Issue.DeleteBatch != 1000 || cfg.Issue.DeleteBudget != 45*time.Second || cfg.Planning != (PlanningConfig{DeleteBatch: 1000, DeleteBudget: 45 * time.Second, FreezeInterval: 2 * time.Second}) {
 			t.Fatalf("test profile: cleanup=%+v issue=%+v planning=%+v", cfg.Cleanup, cfg.Issue, cfg.Planning)
 		}
 	})
 	t.Run("environment and logs", func(t *testing.T) {
 		cfg := load(t, "NERVE_CLEANUP__PURGE_AFTER=1450h", "NERVE_CLEANUP__PURGE_INTERVAL=25h", "NERVE_CLEANUP__PURGE_BATCH=71", "NERVE_ISSUE__TRIM_VERSIONS_INTERVAL=26h", "NERVE_ISSUE__DELETE_BATCH=73", "NERVE_ISSUE__DELETE_BUDGET=47s", "NERVE_PLANNING__DELETE_BATCH=79", "NERVE_PLANNING__DELETE_BUDGET=49s")
-		if cfg.Cleanup != (CleanupConfig{PurgeAfter: 1450 * time.Hour, PurgeInterval: 25 * time.Hour, PurgeBatch: 71}) || cfg.Issue.TrimVersionsInterval != 26*time.Hour || cfg.Issue.DeleteBatch != 73 || cfg.Issue.DeleteBudget != 47*time.Second || cfg.Planning != (PlanningConfig{DeleteBatch: 79, DeleteBudget: 49 * time.Second}) {
+		if cfg.Cleanup != (CleanupConfig{PurgeAfter: 1450 * time.Hour, PurgeInterval: 25 * time.Hour, PurgeBatch: 71}) || cfg.Issue.TrimVersionsInterval != 26*time.Hour || cfg.Issue.DeleteBatch != 73 || cfg.Issue.DeleteBudget != 47*time.Second || cfg.Planning != (PlanningConfig{DeleteBatch: 79, DeleteBudget: 49 * time.Second, FreezeInterval: time.Hour}) {
 			t.Fatalf("environment: cleanup=%+v issue=%+v planning=%+v", cfg.Cleanup, cfg.Issue, cfg.Planning)
 		}
 		var buf bytes.Buffer

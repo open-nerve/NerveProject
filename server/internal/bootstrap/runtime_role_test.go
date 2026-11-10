@@ -100,8 +100,9 @@ func grantsFile() string {
 }
 
 // nerve serves on the role: ready, River's jobs run (the session cleanup
-// completes as the app starts), and River's daily reindex goes through, as
-// River runs it, index by index.
+// completes as the app starts; the automatic archival and the freeze of a
+// cycle's progress write as it serves), and River's daily reindex goes
+// through, as River runs it, index by index.
 func TestTheRuntimeRoleServesWithTheGrantsFile(t *testing.T) {
 	roles := newSplitRoles(t)
 	ctx := context.Background()
@@ -122,6 +123,7 @@ func TestTheRuntimeRoleServesWithTheGrantsFile(t *testing.T) {
 	cfg := testConfig(t, roles.serverURL, false)
 	cfg.Issue.AutoArchiveInterval = time.Second
 	cfg.Issue.TrimVersionsInterval = time.Second
+	cfg.Planning.FreezeInterval = time.Second
 	base := startAppLogging(t, cfg, migrations.FS(), slog.New(slog.NewTextHandler(&logs, nil)))
 
 	if status, p := getReadyz(t, base); status != 200 {
@@ -137,6 +139,7 @@ func TestTheRuntimeRoleServesWithTheGrantsFile(t *testing.T) {
 			sessionExists(t, roles.owner, expired), sessionExists(t, roles.owner, live))
 	}
 	assertRuntimeAutoArchive(t, roles, base, &logs)
+	assertRuntimeFreeze(t, roles, base, &logs)
 	if all := logs.String(); !strings.Contains(all, `msg="jobs started"`) || strings.Contains(all, "permission denied") {
 		t.Errorf("logs want jobs started and no permission denied:\n%s", all)
 	}
@@ -270,7 +273,7 @@ func assertRuntimeAutoArchive(t *testing.T, roles splitRoles, base string, logs 
 	}
 	versions := seedTrimVersions(t, roles.owner, id, "")
 	awaitTrimVersions(t, roles.owner, map[uuid.UUID][]uuid.UUID{id: versions[3:]})
-	waitForCompletedKinds(t, roles.owner, map[string]int{"identity.cleanup_expired_sessions": 1, "issue.auto_archive": 1, "cleanup.purge_deleted": 1, "issue.trim_description_versions": 1}, logs)
+	waitForCompletedKinds(t, roles.owner, map[string]int{"identity.cleanup_expired_sessions": 1, "issue.auto_archive": 1, "cleanup.purge_deleted": 1, "issue.trim_description_versions": 1, "planning.freeze_cycles": 1}, logs)
 }
 
 // A zero-project workspace still enqueues its draft task. The deployed role

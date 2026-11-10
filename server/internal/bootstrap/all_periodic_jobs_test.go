@@ -15,14 +15,15 @@ import (
 // and schedules agree. The expected kinds are independent of Module.Jobs.
 func TestAllPeriodicJobsRun(t *testing.T) {
 	for _, tt := range []struct {
-		name                          string
-		cleanup, archive, purge, trim time.Duration
-		fast                          string
+		name                                  string
+		cleanup, archive, purge, trim, freeze time.Duration
+		fast                                  string
 	}{
-		{"cleanup repeats", time.Second, time.Hour, time.Hour, time.Hour, "identity.cleanup_expired_sessions"},
-		{"archive repeats", time.Hour, time.Second, time.Hour, time.Hour, "issue.auto_archive"},
-		{"purge repeats", time.Hour, time.Hour, time.Second, time.Hour, "cleanup.purge_deleted"},
-		{"trim repeats", time.Hour, time.Hour, time.Hour, time.Second, "issue.trim_description_versions"},
+		{"cleanup repeats", time.Second, time.Hour, time.Hour, time.Hour, time.Hour, "identity.cleanup_expired_sessions"},
+		{"archive repeats", time.Hour, time.Second, time.Hour, time.Hour, time.Hour, "issue.auto_archive"},
+		{"purge repeats", time.Hour, time.Hour, time.Second, time.Hour, time.Hour, "cleanup.purge_deleted"},
+		{"trim repeats", time.Hour, time.Hour, time.Hour, time.Second, time.Hour, "issue.trim_description_versions"},
+		{"freeze repeats", time.Hour, time.Hour, time.Hour, time.Hour, time.Second, "planning.freeze_cycles"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			dbURL := pgtest.NewDatabase(t)
@@ -32,14 +33,15 @@ func TestAllPeriodicJobsRun(t *testing.T) {
 			cfg.Issue.AutoArchiveInterval = tt.archive
 			cfg.Cleanup.PurgeInterval = tt.purge
 			cfg.Issue.TrimVersionsInterval = tt.trim
+			cfg.Planning.FreezeInterval = tt.freeze
 			var logs lockedBuffer
 			base := startAppLogging(t, cfg, migrations.FS(), slog.New(slog.NewTextHandler(&logs, nil)))
 			if status, p := getReadyz(t, base); status != 200 {
 				t.Fatalf("/readyz = %d %+v", status, p)
 			}
-			waitForCompletedKinds(t, pool, map[string]int{"identity.cleanup_expired_sessions": 1, "issue.auto_archive": 1, "cleanup.purge_deleted": 1, "issue.trim_description_versions": 1}, &logs)
+			waitForCompletedKinds(t, pool, map[string]int{"identity.cleanup_expired_sessions": 1, "issue.auto_archive": 1, "cleanup.purge_deleted": 1, "issue.trim_description_versions": 1, "planning.freeze_cycles": 1}, &logs)
 			waitForCompletedKinds(t, pool, map[string]int{tt.fast: 2}, &logs)
-			for _, slow := range []string{"identity.cleanup_expired_sessions", "issue.auto_archive", "cleanup.purge_deleted", "issue.trim_description_versions"} {
+			for _, slow := range []string{"identity.cleanup_expired_sessions", "issue.auto_archive", "cleanup.purge_deleted", "issue.trim_description_versions", "planning.freeze_cycles"} {
 				if slow != tt.fast {
 					if n := completedKind(t, pool, slow); n != 1 {
 						t.Errorf("hourly %s completed %d times, want only its startup run", slow, n)
@@ -48,7 +50,7 @@ func TestAllPeriodicJobsRun(t *testing.T) {
 			}
 			var wrong int
 			if err := pool.QueryRow(pgtest.Soon(t), `SELECT count(*) FROM river_job
-				WHERE kind IN ('identity.cleanup_expired_sessions', 'issue.auto_archive', 'cleanup.purge_deleted','issue.trim_description_versions') AND queue <> 'periodic'`).Scan(&wrong); err != nil {
+				WHERE kind IN ('identity.cleanup_expired_sessions', 'issue.auto_archive', 'cleanup.purge_deleted','issue.trim_description_versions', 'planning.freeze_cycles') AND queue <> 'periodic'`).Scan(&wrong); err != nil {
 				t.Fatal(err)
 			}
 			if wrong != 0 {

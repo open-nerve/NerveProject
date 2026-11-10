@@ -155,7 +155,9 @@ type IssueProjects interface {
 // not there or is deleted, also one deleted while the lock waited. And the
 // active project roles of accounts, which a module's lead and members are
 // held to (M6 P2 spec R5), the read IssueProjects answers a work item's
-// assignees with.
+// assignees with; and the project's states, whose groups a cycle's or a
+// module's progress counts its work items by (M6 P4 spec R2), the read
+// IssueProjects answers a work item's states with.
 type PlanningProjects interface {
 	PlanningFacts(ctx context.Context, id uuid.UUID) (f PlanningFacts, found bool, err error)
 	LockPlanning(ctx context.Context, id uuid.UUID) (f PlanningFacts, found bool, err error)
@@ -163,6 +165,9 @@ type PlanningProjects interface {
 	// ActiveRoles reads the project roles of those of the accounts ids
 	// that are its active members, by account.
 	ActiveRoles(ctx context.Context, projectID uuid.UUID, ids []uuid.UUID) (map[uuid.UUID]shared.Role, error)
+	// IssueStates reads the project's undeleted states, its triage state
+	// too, in id order.
+	IssueStates(ctx context.Context, projectID uuid.UUID) ([]IssueState, error)
 }
 
 // PlanningFacts is the value PlanningProjects hands over: bootstrap converts

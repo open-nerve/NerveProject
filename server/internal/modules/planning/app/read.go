@@ -26,6 +26,17 @@ func NewReads(projects Projects, objects NamedReader, auth shared.Authorizer, tx
 	return Reads{projects: projects, objects: objects, auth: auth, tx: tx}
 }
 
+// viewer is whose work items a read of what h holds counts (M6 P4 spec R1,
+// R10): actor's own, for an OwnOnly grant, who sees only those; nil, every
+// one, else.
+func (h held) viewer(actor shared.Actor) *uuid.UUID {
+	if !h.grant.OwnOnly {
+		return nil
+	}
+	id := actor.UserID
+	return &id
+}
+
 // run decides action, cycle.read or module.read, on what n names for actor,
 // and runs fn with what it holds, all in one snapshot.
 func (r Reads) run(ctx context.Context, actor shared.Actor, action shared.Action, n named, fn func(ctx context.Context, h held) error) error {

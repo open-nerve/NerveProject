@@ -21,7 +21,9 @@ import (
 )
 
 // seedCycles writes two cycles of project by by, directly: a dated one with
-// its owner, and an archived one without dates, so a deletion of the project
+// its owner, current around the database's day, so that no start-time run
+// of the freeze job ends it under a test that compares its row (M6 P4 spec
+// 2.5), and an archived one without dates, so a deletion of the project
 // reaches archived cycles too; and by's display settings of the dated one's
 // page. The deletion and purge guards write the planning module's rows as
 // fixtures (M6 P1 spec 2.4, P3b spec 2.5).
@@ -29,7 +31,7 @@ func seedCycles(t *testing.T, pool *pgxpool.Pool, project, by uuid.UUID) {
 	t.Helper()
 	sprint := uuid.NewV7()
 	if tag, err := pool.Exec(pgtest.Soon(t), `INSERT INTO cycles (id, workspace_id, project_id, name, start_date, end_date, owned_by_id, archived_at, created_by_id, updated_by_id)
-		SELECT $1::uuid, workspace_id, id, 'Sprint', DATE '2026-11-02', DATE '2026-11-15', $2::uuid, NULL::timestamptz, $2::uuid, $2::uuid FROM projects WHERE id = $3
+		SELECT $1::uuid, workspace_id, id, 'Sprint', current_date - 7, current_date + 6, $2::uuid, NULL::timestamptz, $2::uuid, $2::uuid FROM projects WHERE id = $3
 		UNION ALL SELECT $4::uuid, workspace_id, id, 'Done', NULL::date, NULL::date, NULL::uuid, now(), $2::uuid, $2::uuid FROM projects WHERE id = $3`,
 		sprint, by, project, uuid.NewV7()); err != nil || tag.RowsAffected() != 2 {
 		t.Fatalf("seeding the cycles of %s: %d rows, %v; want 2", project, tag.RowsAffected(), err)
@@ -137,8 +139,10 @@ func waitPlanningDeletion(t *testing.T, pool *pgxpool.Pool, project uuid.UUID) {
 	})
 }
 
-// The planning module declares its request kind and registers its worker,
-// with no periodic schedule; leaving the worker out fails the registration.
+// The planning module declares its request kinds and registers their
+// workers, with no periodic schedule, and the freeze's worker with its
+// schedule, which is no request kind (M6 P4 spec 2.5); leaving a request
+// worker out fails the registration.
 func TestNewAppPlanningJobCatalog(t *testing.T) {
 	kinds := []string{"planning.crawl_link", "planning.delete_rows"}
 	if got := planning.EnqueuedKinds(); !slices.Equal(got, kinds) {
@@ -149,10 +153,17 @@ func TestNewAppPlanningJobCatalog(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer pool.Close()
-	module := planning.New(planning.Deps{Pool: pool, DeleteBatch: 1000, DeleteBudget: 45 * time.Second, RuntimeNow: time.Now, Logger: slog.New(slog.DiscardHandler)})
+	module := planning.New(planning.Deps{Pool: pool, DeleteBatch: 1000, DeleteBudget: 45 * time.Second, FreezeInterval: 7 * time.Second, RuntimeNow: time.Now,
+		Logger: slog.New(slog.DiscardHandler)})
 	definitions := module.Jobs()
-	if len(definitions) != 2 || slices.ContainsFunc(definitions, func(j jobs.Job) bool { return j.Worker == nil || j.Periodic != nil }) {
-		t.Fatalf("planning jobs=%+v; want the crawl and the deletion workers alone", definitions)
+	requests := slices.DeleteFunc(slices.Clone(definitions), func(j jobs.Job) bool { return j.Periodic != nil })
+	if len(definitions) != 3 || len(requests) != 2 || slices.ContainsFunc(definitions, func(j jobs.Job) bool { return j.Worker == nil }) {
+		t.Fatalf("planning jobs=%+v; want the crawl and the deletion workers alone and the freeze's worker on its schedule", definitions)
+	}
+	i := slices.IndexFunc(definitions, func(j jobs.Job) bool { return j.Periodic != nil })
+	if p := definitions[i].Periodic; p.Args.Kind() != "planning.freeze_cycles" || p.ID != "planning.freeze_cycles" || p.Interval != 7*time.Second ||
+		!p.RunOnStart || p.InsertOpts == nil || p.InsertOpts.Queue != "periodic" {
+		t.Fatalf("the freeze's schedule = %+v; want planning.freeze_cycles every planning.freeze_interval on the periodic queue, at start too", p)
 	}
 	cfg := jobs.Config{DefaultWorkers: 1, PeriodicWorkers: 1, Logger: slog.New(slog.DiscardHandler)}
 	if _, err := jobs.New(pool, cfg, definitions, kinds); err != nil {
@@ -168,7 +179,8 @@ func TestNewAppPlanningJobCatalog(t *testing.T) {
 // planningDeletionJobsForTest are the planning module's request workers as
 // newApp registers them, for a test that runs its own Runner in place of the
 // app's: the deletion events it publishes enqueue planning.delete_rows too.
+// Its periodic freeze is not among them.
 func planningDeletionJobsForTest(pool *pgxpool.Pool, cfg config.Config) []jobs.Job {
-	return planning.New(planning.Deps{Pool: pool, JobTx: newIssueJobTx(pool, cfg), RuntimeNow: time.Now, Logger: slog.New(slog.DiscardHandler),
-		DeleteBatch: cfg.Planning.DeleteBatch, DeleteBudget: cfg.Planning.DeleteBudget}).Jobs()
+	return slices.DeleteFunc(planning.New(planning.Deps{Pool: pool, JobTx: newIssueJobTx(pool, cfg), RuntimeNow: time.Now, Logger: slog.New(slog.DiscardHandler),
+		DeleteBatch: cfg.Planning.DeleteBatch, DeleteBudget: cfg.Planning.DeleteBudget}).Jobs(), func(j jobs.Job) bool { return j.Periodic != nil })
 }

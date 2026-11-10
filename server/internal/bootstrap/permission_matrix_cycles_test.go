@@ -150,6 +150,11 @@ func cycleMatrixRows() []matrixRow {
 			cells: onACycle(cellOK, cellOK, cellOK, cellOK, cellOK), check: readsTheCycle},
 		{op: "getCycle", variant: "archived", columns: archivedColumns, request: toCycle(http.MethodGet, "", ""),
 			cells: cycleRows.ofArchived(cellOK, cellForbidden), check: readsTheCycle},
+		// As getCycle (M6 P4 spec R10): no seeded cycle has work items.
+		{op: "getCycleProgress", columns: cycleColumns, request: toCycle(http.MethodGet, "/progress", ""),
+			cells: onACycle(cellOK, cellOK, cellOK, cellOK, cellOK), check: answersAnEmptyCycleProgress},
+		{op: "getCycleProgress", variant: "archived", columns: archivedColumns, request: toCycle(http.MethodGet, "/progress", ""),
+			cells: cycleRows.ofArchived(cellOK, cellForbidden), check: answersAnEmptyCycleProgress},
 		// The project's admins and members, not its guests, nor a caller who
 		// sees only his own work items in it (M6 design 3.4); a workspace
 		// admin or member who is no member of the project sees it and may

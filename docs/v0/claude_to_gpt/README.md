@@ -16,7 +16,7 @@
 3. [02-method.md](02-method.md)：一个 Phase 怎么推进，每一步的产物和检查。
 4. [04-next-steps.md](04-next-steps.md)：马上要处理的、P4 的起步清单、P5 以后的顺序、M4 收尾清单、阶段终审和集成门。
 5. [05-local-materials.md](05-local-materials.md)：本机保留的简报模板、过程记录和工具在哪，怎么用。
-6. [06-ci-w11-flake.md](06-ci-w11-flake.md)：问题记录：持续集成上 W11 页面故事偶发失败，根因未明；阻塞主线时再由负责人协调解决。
+6. [06-ci-w11-flake.md](06-ci-w11-flake.md)：问题记录：持续集成上 W11 页面故事偶发失败；2026-11-10 据 trace 找到根因（测试的等待条件分不清两个工作区）并修正，见其 §8。
 
 ## 最要紧的五条
 1. **事实以仓库为准**：[M4 设计](../M4-issue-core/M4-design.md)（第 10、11 节和 17.4 是负责人的裁定，不重开）、各 Phase 的 spec 第 3、5 节和评审第 6 节（交给后面 Phase 的事项）、[handoffs](../M4-issue-core/handoffs/)。

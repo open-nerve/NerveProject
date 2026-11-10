@@ -1750,7 +1750,7 @@ export interface paths {
         };
         /**
          * List a project's cycles
-         * @description For the project's admins, members and guests, also a caller who sees only his own work items there, whether its cycles are turned on or off and whether it is archived. The undeleted cycles that are not archived, by sort_order, then creation, then id; or, when archived is true, the archived ones alone, the latest archived first, then by id. Each with its status on the project's calendar day. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but whose cycles he may not read, forbidden. The whole collection at once: collections are not paginated.
+         * @description For the project's admins, members and guests, also a caller who sees only his own work items there, whether its cycles are turned on or off and whether it is archived. The undeleted cycles that are not archived, by sort_order, then creation, then id; or, when archived is true, the archived ones alone, the latest archived first, then by id. Each with its status on the project's calendar day, the counts and the assignees of its work items that the caller sees, and the counts it was frozen with (CycleListItem). A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but whose cycles he may not read, forbidden. The whole collection at once: collections are not paginated.
          */
         get: operations["listCycles"];
         put?: never;
@@ -1842,6 +1842,52 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v0/cycles/{cycle_id}/progress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A cycle's id (Cycle.id). */
+                cycle_id: components["parameters"]["CycleID"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Read a cycle's progress
+         * @description For its project's admins, members and guests, also a caller who sees only his own work items there, whether the project's cycles are turned on or off and whether the project or the cycle is archived. The cycle's status on the project's calendar day; its live progress, of the work items the caller sees in it; and its progress as frozen once it ended, of every work item, which a caller who sees only his own work items is not shown. All of it is read in one snapshot. A cycle that does not exist or is deleted, one whose project is deleted, and one whose project the caller does not see answer planning.cycle_not_found; one whose project he sees but whose cycles he may not read, forbidden.
+         */
+        get: operations["getCycleProgress"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v0/cycles/{cycle_id}/transfer-issues": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A cycle's id (Cycle.id). */
+                cycle_id: components["parameters"]["CycleID"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Move a completed cycle's unfinished work items to another cycle
+         * @description For its project's admins and members, not its guests, and not a caller who sees only his own work items there. The work items in the cycle by an undeleted membership, undeleted and not archived, whose state is of the backlog, unstarted or started group, whoever made them, leave it and join the target cycle; completed, cancelled and archived ones stay. Each moved work item gets one row of activity naming both cycles and is last changed by the caller. First, unless it is frozen already, the cycle's progress is frozen with the numbers it has before the move (CycleProgress.progress_snapshot). With none left to move, the answer is 0, the freeze written all the same; a transfer may be repeated. A cycle that does not exist or is deleted, one whose project is deleted, and one whose project the caller does not see answer planning.cycle_not_found; a caller who may not change it, forbidden; an archived project, project.archived; cycles turned off, planning.cycles_disabled; an archived cycle, planning.archived. The target must be another undeleted cycle of the same project (validation_failed at target_cycle_id), not archived (planning.archived). Then, on the project's calendar day, the cycle must be completed (planning.cycle_not_completed) and the target not (planning.cycle_completed). Everything is decided after the project's row is locked, and written at one moment by the caller.
+         */
+        post: operations["transferCycleIssues"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v0/projects/{project_id}/modules": {
         parameters: {
             query?: never;
@@ -1854,7 +1900,7 @@ export interface paths {
         };
         /**
          * List a project's modules
-         * @description For the project's admins, members and guests, also a caller who sees only his own work items there, whether its modules are turned on or off and whether it is archived. The undeleted modules that are not archived, by sort_order, then creation, then id; or, when archived is true, the archived ones alone, the latest archived first, then by id. Each with its undeleted members, ascending. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but whose modules he may not read, forbidden. The whole collection at once: collections are not paginated.
+         * @description For the project's admins, members and guests, also a caller who sees only his own work items there, whether its modules are turned on or off and whether it is archived. The undeleted modules that are not archived, by sort_order, then creation, then id; or, when archived is true, the archived ones alone, the latest archived first, then by id. Each with its undeleted members, ascending, and the counts of its work items that the caller sees (ModuleListItem). A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but whose modules he may not read, forbidden. The whole collection at once: collections are not paginated.
          */
         get: operations["listModules"];
         put?: never;
@@ -1940,6 +1986,29 @@ export interface paths {
          * @description For its project's admins and members, not its guests, and not a caller who sees only his own work items there; whatever the module's status. One not archived is answered as it is, nothing written. A module that does not exist or is deleted, one whose project is deleted, and one whose project the caller does not see answer planning.module_not_found; a caller who may not change it, forbidden; an archived project, project.archived; modules turned off, planning.modules_disabled. Decided after the project's row is locked; the module's last change is the caller's at that moment.
          */
         post: operations["unarchiveModule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v0/modules/{module_id}/progress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A module's id (Module.id). */
+                module_id: components["parameters"]["ModuleID"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Read a module's progress
+         * @description For its project's admins, members and guests, also a caller who sees only his own work items there, whether the project's modules are turned on or off and whether the project or the module is archived: the live progress of the work items the caller sees in the module, its burndown from its start to its target day, read in one snapshot. A module is never frozen. A module that does not exist or is deleted, one whose project is deleted, and one whose project the caller does not see answer planning.module_not_found; one whose project he sees but whose modules he may not read, forbidden.
+         */
+        get: operations["getModuleProgress"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -3492,6 +3561,140 @@ export interface components {
          * @enum {string}
          */
         CycleStatus: "draft" | "upcoming" | "current" | "completed";
+        /** @description The counts of a cycle's progress as it was frozen, of every work item (FrozenProgress's), and when. */
+        FrozenCounts: {
+            /**
+             * Format: int64
+             * @description The work items; the sum of the five groups' counts.
+             */
+            total_issues: number;
+            /**
+             * Format: int64
+             * @description Those in a state of the backlog group.
+             */
+            backlog_issues: number;
+            /**
+             * Format: int64
+             * @description Those in a state of the unstarted group.
+             */
+            unstarted_issues: number;
+            /**
+             * Format: int64
+             * @description Those in a state of the started group.
+             */
+            started_issues: number;
+            /**
+             * Format: int64
+             * @description Those in a state of the completed group.
+             */
+            completed_issues: number;
+            /**
+             * Format: int64
+             * @description Those in a state of the cancelled group.
+             */
+            cancelled_issues: number;
+            /**
+             * Format: date-time
+             * @description When it was frozen.
+             */
+            frozen_at: string;
+        };
+        /** @description A cycle of a project as its list shows it: every field of Cycle, and the numbers of its work items that the caller sees, those in it by an undeleted membership, undeleted and not archived, sub-items too; his own alone for a caller who sees only his own work items. A cycle without any has every count 0 and no assignee. */
+        CycleListItem: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            workspace_id: string;
+            /** Format: uuid */
+            project_id: string;
+            name: string;
+            /** @description Plain text; empty for none. */
+            description: string;
+            /**
+             * Format: date
+             * @description The day it starts, on the project's calendar; null for a draft.
+             */
+            start_date: string | null;
+            /**
+             * Format: date
+             * @description The day it ends, on the project's calendar; null for a draft.
+             */
+            end_date: string | null;
+            status: components["schemas"]["CycleStatus"];
+            /**
+             * Format: uuid
+             * @description The account that created it; null once that account is gone.
+             */
+            owned_by_id: string | null;
+            /** @description The cycle's place among the project's cycles, the lowest first. */
+            sort_order: number;
+            /**
+             * Format: date-time
+             * @description When it was archived; null while it is not.
+             */
+            archived_at: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+            /** Format: uuid */
+            created_by_id: string | null;
+            /** Format: uuid */
+            updated_by_id: string | null;
+            /**
+             * Format: int64
+             * @description The work items; the sum of the five groups' counts.
+             */
+            total_issues: number;
+            /**
+             * Format: int64
+             * @description Those in a state of the backlog group.
+             */
+            backlog_issues: number;
+            /**
+             * Format: int64
+             * @description Those in a state of the unstarted group.
+             */
+            unstarted_issues: number;
+            /**
+             * Format: int64
+             * @description Those in a state of the started group.
+             */
+            started_issues: number;
+            /**
+             * Format: int64
+             * @description Those in a state of the completed group.
+             */
+            completed_issues: number;
+            /**
+             * Format: int64
+             * @description Those in a state of the cancelled group.
+             */
+            cancelled_issues: number;
+            /** @description The undeleted assignees of those work items, each once, ascending. */
+            assignee_ids: string[];
+            /** @description The counts of the cycle's progress as it was frozen once after it ended, of every work item, and when (CycleProgress's progress_snapshot). null while it is not frozen, and always for a caller who sees only his own work items. */
+            progress_snapshot: components["schemas"]["FrozenCounts"] | null;
+        };
+        CycleList: {
+            data: components["schemas"]["CycleListItem"][];
+        };
+        CycleCreate: {
+            /** @description 1–255 characters without the surrounding white space, which is dropped; no NUL. */
+            name: string;
+            /** @description Plain text without NUL; empty when left out. */
+            description?: string;
+            /**
+             * Format: date
+             * @description The day it starts, on the project's calendar; given with end_date, or neither for a draft.
+             */
+            start_date?: string;
+            /**
+             * Format: date
+             * @description The day it ends, not before start_date; given with start_date, or neither for a draft.
+             */
+            end_date?: string;
+        };
         /** @description A cycle of a project. */
         Cycle: {
             /** Format: uuid */
@@ -3535,25 +3738,6 @@ export interface components {
             /** Format: uuid */
             updated_by_id: string | null;
         };
-        CycleList: {
-            data: components["schemas"]["Cycle"][];
-        };
-        CycleCreate: {
-            /** @description 1–255 characters without the surrounding white space, which is dropped; no NUL. */
-            name: string;
-            /** @description Plain text without NUL; empty when left out. */
-            description?: string;
-            /**
-             * Format: date
-             * @description The day it starts, on the project's calendar; given with end_date, or neither for a draft.
-             */
-            start_date?: string;
-            /**
-             * Format: date
-             * @description The day it ends, not before start_date; given with start_date, or neither for a draft.
-             */
-            end_date?: string;
-        };
         CycleUpdate: {
             /** @description 1–255 characters without the surrounding white space, which is dropped; no NUL. */
             name?: string;
@@ -3572,11 +3756,292 @@ export interface components {
             /** @description The cycle's place among the project's cycles, the lowest first. */
             sort_order?: number;
         };
+        /** @description An assignee's work items not cancelled, or those without an assignee. */
+        AssigneeDistribution: {
+            /**
+             * Format: uuid
+             * @description The assignee's account; null for the work items without one.
+             */
+            assignee_id: string | null;
+            /**
+             * Format: int64
+             * @description completed_issues plus pending_issues.
+             */
+            total_issues: number;
+            /**
+             * Format: int64
+             * @description Those in a state of the completed group.
+             */
+            completed_issues: number;
+            /**
+             * Format: int64
+             * @description Those in a state of the backlog, unstarted or started group.
+             */
+            pending_issues: number;
+        };
+        /** @description A label's work items not cancelled, or those without a label. */
+        LabelDistribution: {
+            /**
+             * Format: uuid
+             * @description The label; null for the work items without one.
+             */
+            label_id: string | null;
+            /**
+             * Format: int64
+             * @description completed_issues plus pending_issues.
+             */
+            total_issues: number;
+            /**
+             * Format: int64
+             * @description Those in a state of the completed group.
+             */
+            completed_issues: number;
+            /**
+             * Format: int64
+             * @description Those in a state of the backlog, unstarted or started group.
+             */
+            pending_issues: number;
+        };
+        /** @description A day of a burndown. */
+        BurndownPoint: {
+            /** Format: date */
+            date: string;
+            /**
+             * Format: int64
+             * @description The work items of the scope not completed by the day's end: one in a state of the completed group is completed from the day its completion falls on in the project's time zone, or from the first day when that is not known. null for a day after today.
+             */
+            remaining: number | null;
+        };
+        /** @description The work left on each day of a cycle, from its start to its end, or of a module, from its start to its target day, on the project's calendar. */
+        Burndown: {
+            /** Format: date */
+            start_date: string;
+            /**
+             * Format: date
+             * @description The cycle's end or the module's target day.
+             */
+            end_date: string;
+            /**
+             * Format: int64
+             * @description The work items not cancelled, where an ideal line starts.
+             */
+            scope: number;
+            /** @description One for every day from start_date to end_date, in order. */
+            points: components["schemas"]["BurndownPoint"][];
+        };
+        /** @description The numbers of a cycle's or a module's work items: those in it by an undeleted membership, undeleted and not archived, sub-items too, that the caller sees; his own alone for a caller who sees only his own work items. */
+        Progress: {
+            /**
+             * Format: int64
+             * @description The work items; the sum of the five groups' counts.
+             */
+            total_issues: number;
+            /**
+             * Format: int64
+             * @description Those in a state of the backlog group.
+             */
+            backlog_issues: number;
+            /**
+             * Format: int64
+             * @description Those in a state of the unstarted group.
+             */
+            unstarted_issues: number;
+            /**
+             * Format: int64
+             * @description Those in a state of the started group.
+             */
+            started_issues: number;
+            /**
+             * Format: int64
+             * @description Those in a state of the completed group.
+             */
+            completed_issues: number;
+            /**
+             * Format: int64
+             * @description Those in a state of the cancelled group.
+             */
+            cancelled_issues: number;
+            /** @description The work items not cancelled by assignee: one counts under each of its assignees, or under null without any. Only the rows of a work item at least, by assignee_id ascending, the null row last. */
+            assignees: components["schemas"]["AssigneeDistribution"][];
+            /** @description The work items not cancelled by label: one counts under each of its labels, or under null without any. Only the rows of a work item at least, by label_id ascending, the null row last. */
+            labels: components["schemas"]["LabelDistribution"][];
+            /** @description null for a cycle without dates, a module without its start or its target day, or a span of more than 3660 days. */
+            burndown: components["schemas"]["Burndown"] | null;
+        };
+        /** @description A cycle's progress as it was frozen, of every work item (Progress's fields), and when. */
+        FrozenProgress: {
+            /**
+             * Format: int64
+             * @description The work items; the sum of the five groups' counts.
+             */
+            total_issues: number;
+            /**
+             * Format: int64
+             * @description Those in a state of the backlog group.
+             */
+            backlog_issues: number;
+            /**
+             * Format: int64
+             * @description Those in a state of the unstarted group.
+             */
+            unstarted_issues: number;
+            /**
+             * Format: int64
+             * @description Those in a state of the started group.
+             */
+            started_issues: number;
+            /**
+             * Format: int64
+             * @description Those in a state of the completed group.
+             */
+            completed_issues: number;
+            /**
+             * Format: int64
+             * @description Those in a state of the cancelled group.
+             */
+            cancelled_issues: number;
+            /** @description As Progress.assignees. */
+            assignees: components["schemas"]["AssigneeDistribution"][];
+            /** @description As Progress.labels. */
+            labels: components["schemas"]["LabelDistribution"][];
+            /** @description As Progress.burndown, on the day it was frozen. */
+            burndown: components["schemas"]["Burndown"] | null;
+            /**
+             * Format: date-time
+             * @description When it was frozen.
+             */
+            frozen_at: string;
+        };
+        /** @description A cycle's status and progress, live and as frozen. */
+        CycleProgress: {
+            status: components["schemas"]["CycleStatus"];
+            live: components["schemas"]["Progress"];
+            /** @description The cycle's progress as it was frozen once after it ended, by the periodic freeze or a transfer of its work items, whichever came first, then never rewritten; of every work item, whoever reads it. null while it is not frozen, and always for a caller who sees only his own work items, whom it would show others'. A reader shows it only while status is completed. */
+            progress_snapshot: components["schemas"]["FrozenProgress"] | null;
+        };
+        /** @description Where a transfer moves a completed cycle's unfinished work items. */
+        CycleTransfer: {
+            /**
+             * Format: uuid
+             * @description Another undeleted cycle of the same project, not archived and not completed.
+             */
+            target_cycle_id: string;
+        };
+        /** @description What a transfer moved. */
+        CycleTransferResult: {
+            /**
+             * Format: int64
+             * @description The work items moved to the target cycle; 0 when none was left to move.
+             */
+            transferred_issues: number;
+        };
         /**
          * @description A module's status, set by its writers, never read from its dates.
          * @enum {string}
          */
         ModuleStatus: "backlog" | "planned" | "in-progress" | "paused" | "completed" | "cancelled";
+        /** @description A module of a project as its list shows it: every field of Module, and the counts of its work items that the caller sees, those in it by an undeleted membership, undeleted and not archived, sub-items too; his own alone for a caller who sees only his own work items. A work item in several modules counts in each; a module without any has every count 0. */
+        ModuleListItem: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            workspace_id: string;
+            /** Format: uuid */
+            project_id: string;
+            name: string;
+            /** @description Plain text; empty for none. */
+            description: string;
+            /**
+             * Format: date
+             * @description The day it starts; null for none.
+             */
+            start_date: string | null;
+            /**
+             * Format: date
+             * @description The day it is due, not before start_date; null for none.
+             */
+            target_date: string | null;
+            status: components["schemas"]["ModuleStatus"];
+            /**
+             * Format: uuid
+             * @description The account that leads it; null for none, or once that account is gone.
+             */
+            lead_id: string | null;
+            /** @description Its members' accounts, ascending; one who has left the project since is still one. */
+            member_ids: string[];
+            /** @description The module's place among the project's modules, the lowest first. */
+            sort_order: number;
+            /**
+             * Format: date-time
+             * @description When it was archived; null while it is not.
+             */
+            archived_at: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+            /** Format: uuid */
+            created_by_id: string | null;
+            /** Format: uuid */
+            updated_by_id: string | null;
+            /**
+             * Format: int64
+             * @description The work items; the sum of the five groups' counts.
+             */
+            total_issues: number;
+            /**
+             * Format: int64
+             * @description Those in a state of the backlog group.
+             */
+            backlog_issues: number;
+            /**
+             * Format: int64
+             * @description Those in a state of the unstarted group.
+             */
+            unstarted_issues: number;
+            /**
+             * Format: int64
+             * @description Those in a state of the started group.
+             */
+            started_issues: number;
+            /**
+             * Format: int64
+             * @description Those in a state of the completed group.
+             */
+            completed_issues: number;
+            /**
+             * Format: int64
+             * @description Those in a state of the cancelled group.
+             */
+            cancelled_issues: number;
+        };
+        ModuleList: {
+            data: components["schemas"]["ModuleListItem"][];
+        };
+        ModuleCreate: {
+            /** @description 1–255 characters without the surrounding white space, which is dropped; no NUL. */
+            name: string;
+            /** @description Plain text without NUL; empty when left out. */
+            description?: string;
+            /**
+             * Format: date
+             * @description The day it starts; left out for none.
+             */
+            start_date?: string;
+            /**
+             * Format: date
+             * @description The day it is due, not before start_date; left out for none.
+             */
+            target_date?: string;
+            status?: components["schemas"]["ModuleStatus"];
+            /**
+             * Format: uuid
+             * @description An active member of the project who is not its guest; null, or left out, for none.
+             */
+            lead_id?: string | null;
+            /** @description At most 100 accounts, each named once, each an active member of the project who is not its guest; left out, or empty, for none. */
+            member_ids?: string[];
+        };
         /** @description A module of a project. */
         Module: {
             /** Format: uuid */
@@ -3621,33 +4086,6 @@ export interface components {
             created_by_id: string | null;
             /** Format: uuid */
             updated_by_id: string | null;
-        };
-        ModuleList: {
-            data: components["schemas"]["Module"][];
-        };
-        ModuleCreate: {
-            /** @description 1–255 characters without the surrounding white space, which is dropped; no NUL. */
-            name: string;
-            /** @description Plain text without NUL; empty when left out. */
-            description?: string;
-            /**
-             * Format: date
-             * @description The day it starts; left out for none.
-             */
-            start_date?: string;
-            /**
-             * Format: date
-             * @description The day it is due, not before start_date; left out for none.
-             */
-            target_date?: string;
-            status?: components["schemas"]["ModuleStatus"];
-            /**
-             * Format: uuid
-             * @description An active member of the project who is not its guest; null, or left out, for none.
-             */
-            lead_id?: string | null;
-            /** @description At most 100 accounts, each named once, each an active member of the project who is not its guest; left out, or empty, for none. */
-            member_ids?: string[];
         };
         ModuleUpdate: {
             /** @description 1–255 characters without the surrounding white space, which is dropped; no NUL. */
@@ -3950,14 +4388,26 @@ export type IssueListDisplayProperties = components['schemas']['IssueListDisplay
 export type ProjectPreferences = components['schemas']['ProjectPreferences'];
 export type ProjectPreferencesUpdate = components['schemas']['ProjectPreferencesUpdate'];
 export type CycleStatus = components['schemas']['CycleStatus'];
-export type Cycle = components['schemas']['Cycle'];
+export type FrozenCounts = components['schemas']['FrozenCounts'];
+export type CycleListItem = components['schemas']['CycleListItem'];
 export type CycleList = components['schemas']['CycleList'];
 export type CycleCreate = components['schemas']['CycleCreate'];
+export type Cycle = components['schemas']['Cycle'];
 export type CycleUpdate = components['schemas']['CycleUpdate'];
+export type AssigneeDistribution = components['schemas']['AssigneeDistribution'];
+export type LabelDistribution = components['schemas']['LabelDistribution'];
+export type BurndownPoint = components['schemas']['BurndownPoint'];
+export type Burndown = components['schemas']['Burndown'];
+export type Progress = components['schemas']['Progress'];
+export type FrozenProgress = components['schemas']['FrozenProgress'];
+export type CycleProgress = components['schemas']['CycleProgress'];
+export type CycleTransfer = components['schemas']['CycleTransfer'];
+export type CycleTransferResult = components['schemas']['CycleTransferResult'];
 export type ModuleStatus = components['schemas']['ModuleStatus'];
-export type Module = components['schemas']['Module'];
+export type ModuleListItem = components['schemas']['ModuleListItem'];
 export type ModuleList = components['schemas']['ModuleList'];
 export type ModuleCreate = components['schemas']['ModuleCreate'];
+export type Module = components['schemas']['Module'];
 export type ModuleUpdate = components['schemas']['ModuleUpdate'];
 export type ModuleLink = components['schemas']['ModuleLink'];
 export type ModuleLinkCollection = components['schemas']['ModuleLinkCollection'];
@@ -6913,6 +7363,58 @@ export interface operations {
             default: components["responses"]["Problem"];
         };
     };
+    getCycleProgress: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A cycle's id (Cycle.id). */
+                cycle_id: components["parameters"]["CycleID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The cycle's progress. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CycleProgress"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    transferCycleIssues: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A cycle's id (Cycle.id). */
+                cycle_id: components["parameters"]["CycleID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CycleTransfer"];
+            };
+        };
+        responses: {
+            /** @description How many work items moved. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CycleTransferResult"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
     listModules: {
         parameters: {
             query?: {
@@ -7085,6 +7587,30 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Module"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getModuleProgress: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A module's id (Module.id). */
+                module_id: components["parameters"]["ModuleID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The module's progress. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Progress"];
                 };
             };
             default: components["responses"]["Problem"];
