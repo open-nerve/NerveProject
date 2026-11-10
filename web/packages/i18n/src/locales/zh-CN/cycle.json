@@ -21,5 +21,14 @@
   "cycle": {
     "label": "{count, plural, one {周期} other {周期}}",
     "no_cycle": "无周期"
+  },
+  "burndown": {
+    "remaining": "剩余工作项",
+    "ideal": "理想"
+  },
+  "distribution": {
+    "former_member": "已离开的成员",
+    "deleted_label": "已删除的标签",
+    "no_labels": "无标签"
   }
 }

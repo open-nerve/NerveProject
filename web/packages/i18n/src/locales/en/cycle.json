@@ -21,5 +21,14 @@
   "cycle": {
     "label": "{count, plural, one {Cycle} other {Cycles}}",
     "no_cycle": "No cycle"
+  },
+  "burndown": {
+    "remaining": "Remaining work items",
+    "ideal": "Ideal"
+  },
+  "distribution": {
+    "former_member": "Former member",
+    "deleted_label": "Deleted label",
+    "no_labels": "No labels"
   }
 }
