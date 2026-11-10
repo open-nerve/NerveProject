@@ -18,7 +18,9 @@
 // module about the cycles and modules a work item's write names and those
 // that keep work items from automatic archival (IssueTargets), and the names
 // of the cycles and modules of the projects a list of work items ordered by
-// them reads (IssueDirectory).
+// them reads (IssueDirectory); it asks the issue module to move the
+// unfinished work items of a cycle that has ended to another
+// (IssueTransfer).
 package planning
 
 import (
@@ -94,6 +96,17 @@ type (
 	StateGroup    = domain.StateGroup
 )
 
+// IssueTransfer is what the module asks the issue module to do when a
+// transfer moves the unfinished work items of a cycle that has ended to
+// another (M6 P4 spec 2.6, R2, R8): bootstrap converts issue's
+// PlanningTransfer into it. Transfer and NamedCycle are the values it
+// takes, which bootstrap converts into issue's.
+type (
+	IssueTransfer = app.IssueTransfer
+	Transfer      = app.Transfer
+	NamedCycle    = app.NamedCycle
+)
+
 // Provided are the adapters bootstrap builds before wiring the modules.
 type Provided struct {
 	Purger         *app.Purger
@@ -147,6 +160,10 @@ type Deps struct {
 	// (bootstrap/planning_issues.go): the facts of the work items of the
 	// project's cycles and modules (M6 P4 spec R2).
 	IssueStats app.IssueStats
+	// IssueTransfer is the issue module's PlanningTransfer, converted
+	// (bootstrap/planning_issues.go): a transfer's move of the work items,
+	// in its write (M6 P4 spec 2.6, R8).
+	IssueTransfer app.IssueTransfer
 	// ListSettings checks the words of the pages' display settings: the
 	// issue module's ListSettings, as issue.Provide offers it (M6 P3b spec
 	// R5).

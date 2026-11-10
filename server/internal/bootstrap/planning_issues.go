@@ -77,3 +77,16 @@ func (p planningIssues) CycleAssignees(ctx context.Context, projectID uuid.UUID,
 	}
 	return out, nil
 }
+
+// planningTransfer is issue's PlanningTransfer as planning's IssueTransfer
+// (M6 P4 spec R2): the same move, in the context it comes in, which carries
+// planning's transaction, every field converted; issue's count and error as
+// they come.
+type planningTransfer struct {
+	transfer issue.PlanningTransfer
+}
+
+func (p planningTransfer) TransferCycleIssues(ctx context.Context, t planning.Transfer) (int, error) {
+	return p.transfer.TransferCycleIssues(ctx, issue.CycleTransfer{ProjectID: t.ProjectID, WorkspaceID: t.WorkspaceID, From: issue.Named(t.From),
+		To: issue.Named(t.To), StateIDs: t.StateIDs, By: t.By, At: t.At})
+}

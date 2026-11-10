@@ -276,9 +276,10 @@ func TestPlanningListsReadEachPageOnceInOneSnapshot(t *testing.T) {
 		ReadTx: postgres.NewTxManager(w.pool, 2*time.Second, postgres.ReadOnlySnapshot()), JobTx: postgres.NewTxManager(w.pool, 2*time.Second),
 		RuntimeNow: time.Now, Logger: slog.New(slog.DiscardHandler), DeleteBatch: 1000, DeleteBudget: 45 * time.Second,
 		WriteGate: newWriteGate(testIssueConfig.WriteGate), Clock: clock.System{}, Authorizer: authorizerOn(w.pool),
-		Projects:     probedProjects{planningProjects: planningProjects{projects: project.Provide(w.pool, nil).PlanningProjects}, p: probe},
-		IssueStats:   probedStats{planningIssues: planningIssues{stats: issue.Provide(w.pool, nil).PlanningStats}, p: probe},
-		ListSettings: issue.Provide(w.pool, nil).ListSettings}).Register)
+		Projects:      probedProjects{planningProjects: planningProjects{projects: project.Provide(w.pool, nil).PlanningProjects}, p: probe},
+		IssueStats:    probedStats{planningIssues: planningIssues{stats: issue.Provide(w.pool, nil).PlanningStats}, p: probe},
+		IssueTransfer: planningTransfer{transfer: issue.Provide(w.pool, nil).PlanningTransfer},
+		ListSettings:  issue.Provide(w.pool, nil).ListSettings}).Register)
 	for path, want := range map[string][]string{
 		"/api/v0/projects/" + w.web.String() + "/cycles":  {"facts", "groups", "counts", "assignees"},
 		"/api/v0/projects/" + w.web.String() + "/modules": {"facts", "groups", "counts"},

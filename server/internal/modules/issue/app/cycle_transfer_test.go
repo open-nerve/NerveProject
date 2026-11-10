@@ -78,8 +78,8 @@ func TestTransferringACyclesWorkItems(t *testing.T) {
 		t.Fatalf("TransferCycleIssues() = %d, %v; want 2", n, err)
 	}
 	at, by := tr.At.Format(time.RFC3339Nano), tr.By
-	want := []string{fmt.Sprint("RemoveTransferredCycleIssues ", tr.From.ID, " ", at, " ", by), fmt.Sprint("InsertTransferredCycleIssues ", tr.To.ID, " ", at, " ", by),
-		"InsertActivities 2", fmt.Sprint("MarkChanged ", []uuid.UUID{a, b}, " ", at, " ", by)}
+	want := []string{fmt.Sprint("RemoveTransferredCycleIssues ", tr.From.ID, " ", at, " ", by),
+		fmt.Sprint("InsertTransferredCycleIssues ", tr.To.ID, " ", at, " ", by), "InsertActivities 2", fmt.Sprint("MarkChanged ", []uuid.UUID{a, b}, " ", at, " ", by)}
 	if !slices.Equal(rows.calls, want) {
 		t.Fatalf("calls\n%q\nwant\n%q", rows.calls, want)
 	}
