@@ -20,10 +20,6 @@ import { CommandPaletteStore } from "@/store/command-palette.store";
 import { WorkspaceRootStore } from "@/store/workspace";
 import { RootAssetStore } from "@/store/asset/root.store";
 // stores
-import type { ICycleStore } from "./cycle.store";
-import { CycleStore } from "./cycle.store";
-import type { ICycleFilterStore } from "./cycle_filter.store";
-import { CycleFilterStore } from "./cycle_filter.store";
 import type { IFavoriteStore } from "./favorite.store";
 import { FavoriteStore } from "./favorite.store";
 import type { IGlobalViewStore } from "./global-view.store";
@@ -64,8 +60,6 @@ export class RootStore {
   workspaceRoot: IWorkspaceRootStore;
   projectRoot: IProjectRootStore;
   memberRoot: IMemberRootStore;
-  cycle: ICycleStore;
-  cycleFilter: ICycleFilterStore;
   planning: IPlanningStore;
   module: IModuleStore;
   moduleFilter: IModuleFilterStore;
@@ -107,8 +101,6 @@ export class RootStore {
     );
     this.projectRoot = new ProjectRootStore(this, api);
     this.memberRoot = new MemberRootStore(this, api);
-    this.cycle = new CycleStore(this);
-    this.cycleFilter = new CycleFilterStore(this);
     this.planning = new PlanningStore(this, api);
     this.module = new ModulesStore(this);
     this.moduleFilter = new ModuleFilterStore(this);
@@ -131,8 +123,7 @@ export class RootStore {
    * session's RootStore takes over, so that a retired session's project filters no longer follow the address. It also
    * retires the issue root and its permission observation. The cycle filters of planning keep each project's by its
    * id and follow no address: there is nothing of theirs to release (P5a spec R4). The module filters' reaction still
-   * follows the RouterStore until P6 (M3 design 7.1, 13.2), and so does the old cycleFilter's until planning's have
-   * its readers (P5a spec R3).
+   * follows the RouterStore until P6 (M3 design 7.1, 13.2).
    */
   dispose(): void {
     this.issue.retire();

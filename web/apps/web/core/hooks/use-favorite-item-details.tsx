@@ -12,7 +12,6 @@ import {
   generateFavoriteItemLink,
 } from "@/components/workspace/sidebar/favorites/favorite-items/common";
 // hooks
-import { useCycle } from "@/hooks/store/use-cycle";
 import { useModule } from "@/hooks/store/use-module";
 import { useProject } from "@/hooks/store/use-project";
 import { useProjectView } from "@/hooks/store/use-project-view";
@@ -27,11 +26,9 @@ export const useFavoriteItemDetails = (workspaceSlug: string, favorite: IFavorit
   // store hooks
   const { getViewById } = useProjectView();
   const { getProjectById } = useProject();
-  const { getCycleById } = useCycle();
   const { getModuleById } = useModule();
   // derived values
   const viewDetails = getViewById(favoriteItemId ?? "");
-  const cycleDetail = getCycleById(favoriteItemId ?? "");
   const moduleDetail = getModuleById(favoriteItemId ?? "");
   const currentProjectDetails = getProjectById(favorite.project_id ?? "");
 
@@ -49,7 +46,8 @@ export const useFavoriteItemDetails = (workspaceSlug: string, favorite: IFavorit
       itemIcon = <FavoriteItemIcon type="view" logo={viewDetails?.logo_props || favoriteItemLogoProps} />;
       break;
     case "cycle":
-      itemTitle = cycleDetail?.name ?? favoriteItemName;
+      // the cycles' favorites are gone until M7 (M6 design 15 #13): the favorite's own name, no cycle store read
+      itemTitle = favoriteItemName;
       itemIcon = <FavoriteItemIcon type="cycle" />;
       break;
     case "module":

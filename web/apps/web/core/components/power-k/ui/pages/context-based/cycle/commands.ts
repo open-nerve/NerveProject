@@ -4,87 +4,28 @@
  * See the LICENSE file for details.
  */
 
-import { useCallback } from "react";
 import { useParams } from "react-router";
-import { StarOff } from "lucide-react";
-import { LinkOutline, StarOutline } from "@makeplane/propel/icons";
+import { LinkOutline } from "@makeplane/propel/icons";
 // nerve imports
-import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
-import { setToast, TOAST_TYPE } from "@nerve/propel/toast";
-import { copyTextToClipboard } from "@nerve/utils";
 // components
 import type { TPowerKCommandConfig } from "@/components/power-k/core/types";
 // hooks
-import { useCycle } from "@/hooks/store/use-cycle";
-import { useUser } from "@/hooks/store/user";
+import { useCopyLink } from "@/hooks/use-copy-link";
 
+/**
+ * The commands on a cycle's page (P5a spec 2.7, R2): the copy of its link, the route's cycle's, through the web app's
+ * one copy, which says whether it could. The cycles' favorites are gone until M7 brings them back (M6 design 15 #13).
+ */
 export const usePowerKCycleContextBasedActions = (): TPowerKCommandConfig[] => {
   // navigation
-  const { workspaceSlug, cycleId } = useParams();
-  // store
-  const {
-    permission: { allowPermissions },
-  } = useUser();
-  const { getCycleById, addCycleToFavorites, removeCycleFromFavorites } = useCycle();
-  // derived values
-  const cycleDetails = cycleId ? getCycleById(cycleId) : null;
-  const isFavorite = !!cycleDetails?.is_favorite;
-  // permission
-  const isEditingAllowed =
-    allowPermissions([EUserPermissions.ADMIN, EUserPermissions.MEMBER], EUserPermissionsLevel.PROJECT) &&
-    !cycleDetails?.archived_at;
+  const { workspaceSlug, projectId, cycleId } = useParams();
+  // hooks
+  const copyLink = useCopyLink();
   // translation
   const { t } = useTranslation();
 
-  const toggleFavorite = useCallback(() => {
-    if (!workspaceSlug || !cycleDetails || !cycleDetails.project_id) return;
-    try {
-      if (isFavorite) removeCycleFromFavorites(workspaceSlug, cycleDetails.project_id, cycleDetails.id);
-      else addCycleToFavorites(workspaceSlug, cycleDetails.project_id, cycleDetails.id);
-    } catch {
-      setToast({
-        type: TOAST_TYPE.ERROR,
-        title: "Some error occurred",
-      });
-    }
-  }, [addCycleToFavorites, removeCycleFromFavorites, workspaceSlug, cycleDetails, isFavorite]);
-
-  const copyCycleUrlToClipboard = useCallback(() => {
-    const url = new URL(window.location.href);
-    copyTextToClipboard(url.href)
-      .then(() => {
-        setToast({
-          type: TOAST_TYPE.SUCCESS,
-          title: t("power_k.contextual_actions.cycle.copy_url_toast_success"),
-        });
-        return;
-      })
-      .catch(() => {
-        setToast({
-          type: TOAST_TYPE.ERROR,
-          title: t("power_k.contextual_actions.cycle.copy_url_toast_error"),
-        });
-      });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   return [
-    {
-      id: "toggle_cycle_favorite",
-      i18n_title: isFavorite
-        ? "power_k.contextual_actions.cycle.remove_from_favorites"
-        : "power_k.contextual_actions.cycle.add_to_favorites",
-      icon: isFavorite ? StarOff : StarOutline,
-      group: "contextual",
-      contextType: "cycle",
-      type: "action",
-      action: toggleFavorite,
-      modifierShortcut: "shift+f",
-      isEnabled: () => isEditingAllowed,
-      isVisible: () => isEditingAllowed,
-      closeOnSelect: true,
-    },
     {
       id: "copy_cycle_url",
       i18n_title: "power_k.contextual_actions.cycle.copy_url",
@@ -92,7 +33,11 @@ export const usePowerKCycleContextBasedActions = (): TPowerKCommandConfig[] => {
       group: "contextual",
       contextType: "cycle",
       type: "action",
-      action: copyCycleUrlToClipboard,
+      action: () =>
+        copyLink(
+          `/${workspaceSlug}/projects/${projectId}/cycles/${cycleId}`,
+          t("power_k.contextual_actions.cycle.copy_url_toast_success")
+        ),
       modifierShortcut: "cmd+shift+,",
       isEnabled: () => true,
       isVisible: () => true,

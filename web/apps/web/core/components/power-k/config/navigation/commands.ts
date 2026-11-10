@@ -19,8 +19,8 @@ import {
 } from "@makeplane/propel/icons";
 // nerve imports
 import { EUserPermissionsLevel } from "@nerve/constants";
-import type { Workspace, Project } from "@nerve/api-client";
-import type { ICycle, IModule, IProjectView } from "@nerve/types";
+import type { Cycle, Workspace, Project } from "@nerve/api-client";
+import type { IModule, IProjectView } from "@nerve/types";
 import { EUserProjectRoles, EUserWorkspaceRoles } from "@nerve/types";
 // components
 import type { TPowerKCommandConfig, TPowerKContext } from "@/components/power-k/core/types";
@@ -298,7 +298,7 @@ export const usePowerKNavigationCommandsRecord = (): Record<TPowerKNavigationCom
       keySequence: "oc",
       page: "open-project-cycle",
       onSelect: (data, ctx) => {
-        const cycleDetails = data as ICycle;
+        const cycleDetails = data as Cycle;
         handlePowerKNavigate(ctx, [
           ctx.params.workspaceSlug,
           "projects",
