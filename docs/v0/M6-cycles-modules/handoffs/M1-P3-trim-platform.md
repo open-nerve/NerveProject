@@ -17,3 +17,7 @@ M6 合并时：迭代进度改用新接口，`analytics` 的守卫例外已删�
 逐项的结论写进该 M 的 review，然后 `status` 改为 `closed`。
 
 来源：[M1/P3 评审记录](../../M1-frontend-trim/reviews/P3-trim-platform-review.md)第 7 节。
+
+## 处理结果（M6/P4）
+
+新的进度接口是 `GET /api/v0/cycles/{cycle_id}/progress`（生成的类型在 `api-client` 的 `schema.gen.ts`，`CycleProgress`），没有结尾斜杠的问题；模块另有 `GET /api/v0/modules/{module_id}/progress`。没有工作区级的进度，新接口没有 `TCycleProgress`、`IWorkspaceProgressResponse` 的对应结构（[P4 spec](../specs/P4-progress-transfer.md) §2.3）。网页改用新接口在 M6/P5，本交接保持 open。证据：提交 `a92a292387db1105e97a7a52b8e4b9ac6d7d70bb`。

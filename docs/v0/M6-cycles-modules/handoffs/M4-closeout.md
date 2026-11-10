@@ -105,3 +105,7 @@ P3b 加两张表 `cycle_user_properties`（`00046`）、`module_user_properties`
 - **60 天清理**：`planning` 的清理步骤子先父，`module_user_properties → module_links → module_members → modules → cycle_user_properties → cycles`（`TestPurgePlanningTables`、`TestModulePurgeChildrenFirst`；把 `cycles` 放到 `cycle_user_properties` 之前的变异 `t8-mut-purge-cycles-first` 让它们失败）；运行角色可执行（`TestPurgeDeletedRunsWithRuntimeRole`，授权文件 `TestTheGrantsFileCoversEveryRelationAndFunction`，变异 `t8-mut-grants-missing`）；清理目录 `TestPurgeCatalogCoversTablesAndIncomingKeys` 认得两张表。
 
 全图与有限批次清理的规模重跑在 M6 收尾，本交接保持 open。证据：提交 `e239a557471a048f56453f94676f2ecec22bf238`（表、删除任务、清理与守卫）、`8fd6f9972b887824d4524f2a7dbf63444e3ec48e`（删迭代/模块时软删）、`79a33c7c83c078ac4664eb0379c0decca4795226`（接口、e2e 夹具与交错）；[P3b spec](../specs/P3b-list-engine.md) 2.4、2.5、A6。
+
+## 处理结果（M6/P4）：M6-04
+
+统计的消费者要用的燃尽序列在 P4 定形：`Burndown {start_date, end_date, scope, points: [{date, remaining}]}`，点覆盖开始到结束（模块到目标日）的每一天，今天之后 `remaining` 为 `null`；一天的迭代只有 1 个点，草稿、缺日期或跨度超过 3660 天时整个燃尽为 `null`，所以 0、1、多个点与 `null` 都是合法的回答（[P4 spec](../specs/P4-progress-transfer.md) §2.1、R4，`planning/domain/burndown_test.go` 的 `TestProgressBurndown`、`TestProgressBurndownNeedsBothDays`、`TestProgressBurndownSpan` 覆盖这些形状）。`ProgressChart`/`AreaChart` 按它画、`null` 不画成 0、坐标有限，在 P5 的迭代页面与 P6 的模块页面启用前完成；本条保持 open。证据：提交 `735cac67f04519adee7d6a046051cc9dcefabe05`、`a92a292387db1105e97a7a52b8e4b9ac6d7d70bb`。

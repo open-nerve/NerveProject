@@ -79,9 +79,9 @@ M6 让迭代（Sprint）和模块经真实接口工作：迭代的建立、日�
 ### 3.5 进度、冻结、燃尽与分布
 
 - **口径**（M1 收尾交接要求本 M 定）：服务端按状态组计数（积压、未开始、进行中、已完成、已取消）与总数；进度 = 已完成 ÷（总数 − 已取消），分母为 0 时为 0。迭代、模块各一个前端函数（`@nerve/utils`），卡片、列表、排序、侧栏都调用它（我的决定，取活动迭代卡片与迭代列表已有的口径）。
-- **冻结**：迭代第一次被看到已结束时写一次 `progress_snapshot`（计数、分布、燃尽序列与冻结时刻），之后不覆盖：周期任务 `planning.freeze_cycles`（启动即运行，之后按配置间隔，默认 1 小时）与转移都会写，先写者为准。已结束的迭代只能改排序，所以冻结不会被日期修改作废。读取：列表行与 `/progress` 总是返回实时计数，另带冻结（有时）；已结束迭代的统计展示（进度、分布、燃尽）读冻结，没有冻结（任务尚未运行）时读实时；“转移”按钮与转移本身看实时的未完成数（积压、未开始、进行中 > 0），不看冻结是否为空。Plane 以“快照为空”判断能否转移、只在转移时写快照并每次覆盖，Nerve 改为上述规则（我的决定）。模块不冻结（Plane 同）。
-- **燃尽**：从开始日到 min(结束日, 今天)（项目时区）逐日，值 = 范围 − 当日结束前已完成的数量；范围 = 当前归属里除已取消外的工作项，已完成按 `completed_at` 换算到项目时区的日期；今天之后为 `null`。在开始前已完成的从第一天就计入（与 Plane 同）。模块用开始日到目标日。理想线由前端画。Plane 按 UTC 切天、取消的永远不烧，不照搬。
-- **分布**：负责人与标签两种，各含“无”一行，每行总数、已完成、未完成（积压/未开始/进行中）；已取消不计入。Plane 的“无负责人”恒为 0，不照搬。
+- **冻结**：迭代第一次被看到已结束时写一次 `progress_snapshot`（计数、分布、燃尽序列与冻结时刻），之后不覆盖：周期任务 `planning.freeze_cycles`（启动即运行，之后按配置间隔，默认 1 小时）与转移都会写，先写者为准。已结束的迭代只能改排序，所以冻结不会被日期修改作废。读取：列表行与 `/progress` 总是返回实时计数，另带冻结（有时）；已结束迭代的统计展示（进度、分布、燃尽）读冻结，没有冻结（任务尚未运行）时读实时；“转移”按钮与转移本身看实时的未完成数（积压、未开始、进行中 > 0），不看冻结是否为空：这指转哪些，没有可转的时转移回答 0、照常 200（[P4 spec](specs/P4-progress-transfer.md) R7）。冻结写下后不清除；改项目时区让已冻结的迭代暂时回到进行中、其间又有变化的边角接受，读者只在已结束时用冻结（R5）。Plane 以“快照为空”判断能否转移、只在转移时写快照并每次覆盖，Nerve 改为上述规则（我的决定）。模块不冻结（Plane 同）。
+- **燃尽**：从开始日到结束日（项目时区）逐日一点，今天之后为 `null`（有值的是开始日到 min(结束日, 今天)），值 = 范围 − 当日结束前已完成的数量；范围 = 当前归属里除已取消外的工作项，已完成按 `completed_at` 换算到项目时区的日期；今天之后为 `null`。在开始前已完成的从第一天就计入（与 Plane 同）。模块用开始日到目标日。理想线由前端画。已完成按状态组：状态改组后缺完成时刻的从第一天起算，过时的完成时刻不算；缺日期或跨度超过 3660 天时没有燃尽（[P4 spec](specs/P4-progress-transfer.md) §2.1、R4）。Plane 按 UTC 切天、取消的永远不烧，不照搬。
+- **分布**：负责人与标签两种，没有负责人、标签的计入“无”一行（只回答总数大于 0 的行，按 id、“无”最后，只给 id，[P4 spec](specs/P4-progress-transfer.md) R3），每行总数、已完成、未完成（积压/未开始/进行中）；已取消不计入。Plane 的“无负责人”恒为 0，不照搬。
 - **谁能看到什么**：所有数字只算调用者能看见、未归档、未删除的工作项（已归档的工作项不计，同 Plane）；只看自己的访客（OwnOnly）总是实时计算他自己的范围，不读冻结。
 
 ### 3.6 归档
@@ -153,13 +153,13 @@ users ─────── cycles.owned_by_id、modules.lead_id                
 
 | 方法与路径 | 说明 |
 |---|---|
-| `GET/POST /projects/{project_id}/cycles` | 默认未归档迭代，按 `sort_order, created_at, id`；`?archived=true` 只返回已归档的，按 `archived_at DESC, id`（总体设计 §3.3）；行内带状态、实时计数与冻结 |
+| `GET/POST /projects/{project_id}/cycles` | 默认未归档迭代，按 `sort_order, created_at, id`；`?archived=true` 只返回已归档的，按 `archived_at DESC, id`（总体设计 §3.3）；行内带状态、实时计数与冻结：列表行为 `CycleListItem`（六个实时数、`assignee_ids` 与冻结的计数），`Cycle` 与各写入的回答不带计数（[P4 spec](specs/P4-progress-transfer.md) R9） |
 | `GET/PATCH/DELETE /cycles/{cycle_id}` | 详情、修改、软删 |
 | `POST /cycles/{cycle_id}/archive`、`/unarchive` | §3.6 |
-| `POST /cycles/{cycle_id}/transfer-issues` | §3.4 |
-| `GET /cycles/{cycle_id}/progress` | 计数、分布、燃尽、是否冻结（替换旧 `analytics?type=issues` 与 `progress` 两个地址） |
+| `POST /cycles/{cycle_id}/transfer-issues` | §3.4；体 `{target_cycle_id}`，答 `{transferred_issues}` |
+| `GET /cycles/{cycle_id}/progress` | `{status, live, progress_snapshot}`：实时的计数、分布、燃尽与冻结（有时）（替换旧 `analytics?type=issues` 与 `progress` 两个地址，[P4 spec](specs/P4-progress-transfer.md) §2.3） |
 | `GET/PATCH /me/cycles/{cycle_id}/preferences` | 迭代页的工作项列表显示设置（同项目的偏好结构） |
-| 模块：`GET/POST /projects/{project_id}/modules`（`?archived=true` 同上）、`GET/PATCH/DELETE /modules/{module_id}`、`archive`/`unarchive`、`GET /modules/{module_id}/progress`、`GET/PATCH /me/modules/{module_id}/preferences` | 同上；`PATCH` 的 `member_ids` 整体替换 |
+| 模块：`GET/POST /projects/{project_id}/modules`（`?archived=true` 同上）、`GET/PATCH/DELETE /modules/{module_id}`、`archive`/`unarchive`、`GET /modules/{module_id}/progress`、`GET/PATCH /me/modules/{module_id}/preferences` | 同上（列表行为 `ModuleListItem`，模块的 `/progress` 答 `Progress`，不冻结）；`PATCH` 的 `member_ids` 整体替换 |
 | `GET/POST /modules/{module_id}/links`、`PATCH/DELETE /module-links/{link_id}` | §3.2 |
 | `issue.yaml`：`Issue`/`IssueDetail` 加 `cycle_id`、`module_ids`；创建与 PATCH 接受它们；列表加筛选 `cycle_id`、`module_id`（含 `none`）、分组 `cycle_id`、`module_id`、排序 `cycle_name`、`module_name` 两向、显示属性 `cycle`、`modules` | §7 |
 
@@ -174,9 +174,9 @@ M2 交接第 1 节要求列出每个跨模块的写入与查询；全部走端�
 | `issue` → `planning` | 写 `cycle_id`/`module_ids` 时读取目标的事实（项目、是否删除/归档、迭代是否已结束、开关） | `PlanningTargets`：在工作项写已取得的项目行锁下读取 |
 | `issue` → `planning` | 按名字排序时的迭代/模块名字（含已归档、不含已删除），只在 `±cycle_name`/`±module_name` 时于读行的同一快照按项目 id 数组取得；分组头由前端给、筛选值只做语法检查，都不用目录（[P3b](specs/P3b-list-engine.md) R2） | `PlanningDirectory`：`CycleNames`、`ModuleNames` 按项目 id 数组返回 id 与名字，数组传入静态查询（M4 §11.5） |
 | `issue` → `planning` | 自动归档要排除的未结束迭代、未到目标日期模块 | `OpenPlanning.OpenTargets`：在项目锁下按项目时区返回 id 数组（P3a） |
-| `planning` → `issue` | 计数、分布、燃尽（按调用者的可见范围）；列表行的批量计数 | `PlanningIssueStats` |
-| `planning` → `issue` | 转移：在同一事务移动归属并写动态 | `TransferCycleIssues` |
-| `planning` → `project` | 项目事实（时区、开关、成员角色）、项目锁；改迭代/模块页的偏好时项目行 `FOR SHARE`（[P3b](specs/P3b-list-engine.md) R6） | 复用/扩展现有项目端口 |
+| `planning` → `issue` | 计数、分布、燃尽（按调用者的可见范围）；列表行的批量计数 | `IssueStats`（planning/app 声明，即原写的 `PlanningIssueStats`）：按状态 id 回答工作项事实与批量计数，状态组经项目的读取，计算在 planning 的纯函数（[P4 spec](specs/P4-progress-transfer.md) R2） |
+| `planning` → `issue` | 转移：在同一事务移动归属并写动态 | `IssueTransfer.TransferCycleIssues`：经 ctx 在 planning 的写事务里，软删加插入、每个一条动态、`MarkChanged`（[P4 spec](specs/P4-progress-transfer.md) §2.6） |
+| `planning` → `project` | 项目事实（时区、开关、成员角色）、项目锁；改迭代/模块页的偏好时项目行 `FOR SHARE`（[P3b](specs/P3b-list-engine.md) R6）；状态组（P4） | 复用/扩展现有项目端口（状态组复用 `IssueStates`） |
 | `planning` → `issue` | 迭代/模块页偏好里的筛选与显示筛选的词（纯校验，不读库） | `IssueListSettings`：与项目偏好同一个 `issue.ListSettings`（[P3b](specs/P3b-list-engine.md) R5） |
 | `planning` → 成员 | 负责人、成员是否为项目中不是访客的有效成员 | 项目成员端口 |
 | 事件 | `planning.cycle_deleted`/`module_deleted` → `issue` 软删归属；`project.deleted`/`workspace.deleted` → `planning` 投递清理任务 | 同步分发器，发布者事务内（`bootstrap/events.go`） |
@@ -205,7 +205,7 @@ M2 交接第 1 节要求列出每个跨模块的写入与查询；全部走端�
 
 ## 9. 运行与观察
 
-- 周期任务 `planning.freeze_cycles`（§3.5）：配置 `planning.freeze_interval`，默认 1h，`RunOnStart`；进入 `all_periodic_jobs_test`。
+- 周期任务 `planning.freeze_cycles`（§3.5）：配置 `planning.freeze_interval`，默认 1h（测试环境 2s，bootstrap 测试 1h、只有启动时的一次），`RunOnStart`；进入 `all_periodic_jobs_test` 与其余五处周期种类清单；不进写闸门，每项目一个事务、先锁后读时钟（[P4 spec](specs/P4-progress-transfer.md) §2.5）。
 - 请求触发的任务：`planning.delete_rows`（项目/工作区删除）、`planning.crawl_link`（模块链接元数据），登记 `EnqueuedKinds` 并各有 worker。
 - 启动时运行的任务可能插到持锁的测试后面（M5 P8 的教训）：新的周期任务进入 `waitForStartupRuns`。
 
