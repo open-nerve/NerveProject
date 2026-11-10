@@ -1,7 +1,7 @@
 # M6 / P4 进度、冻结与转移实施计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-> 状态：待预检（2026-11-10）。
+> 状态：预检通过（修正后，2026-11-10，[re-62](../../../reviews/re-62-M6P4预检.md)）：H1 矩阵行随操作进入 T5/T9、H2 转移格子按格子建目标、M1 根契约、M2 `embed_test`、M3 删去“改日期清掉冻结”、M4 对照测试带 `archived=false`、L1–L6 已改入。
 
 **Goal：**
 - 迭代与模块各有 `/progress`：按状态组的计数、负责人与标签的分布、按项目时区的燃尽；迭代另带冻结；
@@ -52,7 +52,7 @@
 
 1. **口径（R1、R3、R4）**：范围（未删除归属、未删除、未归档、可见）；五组之和即总数；分布不计已取消、`null` 行、多值；燃尽的时区、今天、`scope`、完成日、过时的 `completed_at`、上限与 `null`。
 2. **可见范围（R1、R10）**：OwnOnly 只算自己建立的，冻结为 `null`；访客的计数；与列表引擎的总数相同。
-3. **冻结（R5、R6）**：只写一次、先写者为准；任务与转移都在项目行锁下；锁后读时钟；不改 `updated_at`；改日期清掉。
+3. **冻结（R5、R6）**：只写一次、先写者为准；任务与转移都在项目行锁下；锁后读时钟；不改 `updated_at`；写下后不清（时区回退的边角接受，spec R5）。
 4. **转移（R7、R8）**：转谁、留谁；拒绝次序；先冻结再移动；不就地改；每个一条动态与 `MarkChanged`；0 也是 200；锁序。
 5. **端口（R2）**：消费方声明；issue 的语句不连 `states`/`cycles`；同一事务经 ctx；列表一次取整页。
 6. **回答的形状（R9）**：列表行另立 schema，`Cycle`/`Module` 与写入的回答不变；字段名沿用 Plane。
@@ -90,15 +90,13 @@
   - `FreezeDueProjects(utc_today)`：候选项目 id；
   - `CyclesToFreeze(project_id, today)`：本项目未删除、未冻结、`end_date < today` 的迭代（含已归档），按 id。
 - `planning/adapter/postgres/`：上述语句的存储方法与适配器测试。
-- 改日期清掉冻结：`UpdateCycle` 的语句在开始或结束日变化时把 `progress_snapshot` 置空（spec R5）；适配器测试。
 
-- [ ] Step 1：写迁移与存储的测试（列、CHECK 拒绝非对象、部分索引、只在为空时写入、列表计数的形状、候选与待冻结的边界：已删除、已冻结、结束日等于今天、已归档的迭代、别的项目；改日期清空、只改排序或名字不清空），看到失败。
+- [ ] Step 1：写迁移与存储的测试（列、CHECK 拒绝非对象、部分索引进 `TestCyclesSchema` 的 `wantIndexes`、只在为空时写入、列表计数的形状、候选与待冻结的边界：已删除、已冻结、结束日等于今天、已归档的迭代、别的项目），看到失败。
 - [ ] Step 2：实现，`make gen`，聚焦通过。
 - [ ] Step 3：变异，以下每一项都应让测试失败：
   - `FreezeCycle` 去掉 `progress_snapshot IS NULL`；
   - `CyclesToFreeze` 的 `<` 改为 `<=`；
-  - `CyclesToFreeze` 漏掉 `deleted_at IS NULL`；
-  - 改日期的清空条件恒为假。
+  - `CyclesToFreeze` 漏掉 `deleted_at IS NULL`。
   
   然后提交。
 
@@ -111,7 +109,7 @@
 - [ ] Step 1：写表驱动测试，至少覆盖：
   - 五组计数与总数；范围外的状态组回答错误；
   - 分布：多负责人、多标签、没有的进 `null` 行且排最后、已取消不计、只回答总数大于 0 的行、按 id 升序；
-  - 燃尽：东八区的完成时刻落在 UTC 的前一天；今天之后为 `null`；开始前完成的从第一天起算；状态为已完成而 `completed_at` 为空的从第一天起算；状态不是已完成而带 `completed_at` 的不算；已取消不在 `scope`；草稿、缺日期、跨度恰为 3660 天（有）与 3661 天（`null`）；一天的迭代；
+  - 燃尽：东八区的完成时刻落在 UTC 的前一天；今天之后为 `null`；开始前完成的从第一天起算；状态为已完成而 `completed_at` 为空的从第一天起算；状态不是已完成而带 `completed_at` 的不算；已取消不在 `scope`；草稿、缺日期、跨度（结束日减开始日）恰为 3660 天（有，3661 个点）与 3661 天（`null`）；一天的迭代；
   - 冻结的编解码往返。
   
   看到失败。
@@ -133,7 +131,9 @@
 - `issue/adapter/postgres/queries/`：新文件 `planning_stats.sql`：`CycleItems`、`ModuleItems`（每个工作项的状态 id、`completed_at`、未删除负责人与标签的 id 数组，按工作项 id）、`CycleStateCounts`、`ModuleStateCounts`（按目标与状态 id）、`CycleAssignees`（按迭代去重的负责人 id）；OwnOnly 以可空的 `viewer` 参数（`viewer IS NULL OR i.created_by_id = viewer`）。
 - `issue/` 的实现与 `issue.Provide` 交出（只用连接池）。
 - `project/`：`PlanningProjects` 加状态的读取（复用 `IssueStates`）。
-- `bootstrap/ports.go`：`planningProjects.StateGroups`、`planningIssues` 的转换；`app.go` 接线；手搭 `planning.New` 的测试补字段（`planning_cycles_test.go` 的 `newPlanningRoute`、`planning_preferences_lock_test.go` 等）。
+- `bootstrap/ports.go`：`planningProjects.StateGroups`、`planningIssues` 的转换；`app.go` 接线；手搭 `planning.New` 的测试补字段（`planning_cycles_test.go` 的 `newPlanningRoute`、`planning_preferences_lock_test.go` 的 `cyclePreferencesChange` 等）。
+- 假实现随端口扩展：`planning/app/lock_test.go` 的 `lockWorld`、`bootstrap/planning_ports_test.go` 的 `fakePlanningProjects`；`project/adapter/postgres/planning_ports_test.go` 加状态读取的用例（re-60 L6 的先例）。
+- 本 Task 较大：可以分两个提交（先 issue 的语句与适配器测试，再端口、项目读取与转换），收据与台账照常。
 
 - [ ] Step 1：写适配器测试（每条语句）：已删除的工作项、已归档的工作项、已删除的归属、别的迭代/模块、别的项目、OwnOnly（自己的、别人的、建立者为空的）、已删除的负责人与标签行、多负责人与多标签、空输入；再写 bootstrap 的转换测试（不经 planning、不转换、不传错误三种失败）。看到失败。
 - [ ] Step 2：实现，`make gen`，聚焦通过。
@@ -150,14 +150,14 @@
 ## Task 5（T5）：迭代与模块的 `/progress`
 
 **Files：**
-- `api/modules/planning.yaml`：`getCycleProgress`、`getModuleProgress` 与 spec §2.3 的 schema（`Progress`、`FrozenProgress`、`CycleProgress`、两种分布、燃尽）。
+- `api/modules/planning.yaml`、`api/openapi.yaml`（根契约列出两条新路径）：`getCycleProgress`、`getModuleProgress` 与 spec §2.3 的 schema（`Progress`、`FrozenProgress`、`CycleProgress`、两种分布、燃尽）。
 - `planning/app/`：`GetCycleProgress`、`GetModuleProgress`（读之路：一个快照里读迭代/模块、状态组、工作项事实、冻结；OwnOnly 用自己的范围、冻结为 `null`；今天按项目时区）。
 - `planning/adapter/http/`：两个处理器与映射；apitest 每个（操作，码）。
-- `bootstrap/`：HTTP 组合测试。
+- `bootstrap/`：HTTP 组合测试；权限矩阵的两行（`permission_matrix_cycles_test.go`、`permission_matrix_modules_test.go`，`onACycle` 与模块的同类，读的格子），覆盖守卫不留红。
 
 - [ ] Step 1：写测试：
   - 用例单测：读之路的拒绝（404、403），OwnOnly 的范围与冻结为 `null`，非 OwnOnly 回答冻结；
-  - bootstrap：成员、访客、OwnOnly 的计数；已归档的项目与迭代、开关关闭照常读；与列表引擎 `cycle_id=<id>&sub_issues=true` 的总数相同（同一调用者，spec R1）；已删除的迭代/模块 404；模块缺日期时燃尽为 `null`。
+  - bootstrap：成员、访客、OwnOnly 的计数；已归档的项目与迭代、开关关闭照常读；与列表引擎 `cycle_id=<id>&sub_issues=true&archived=false` 的总数相同（同一调用者，spec R1）；已删除的迭代/模块 404；模块缺日期时燃尽为 `null`。
   
   看到失败。
 - [ ] Step 2：实现，`make gen`，网页 `check:types` 通过，聚焦通过。
@@ -192,8 +192,8 @@
 **Files：**
 - `planning/app/freeze_cycles.go`：`FreezeCycles`（spec §2.5、R6）。
 - `planning/adapter/river/freeze_cycles.go`：`planning.freeze_cycles` 周期任务（照 `issue/adapter/river/auto_archive.go`）；`planning/module_jobs.go` 的 `Jobs()`。
-- `platform/config/`：`PlanningConfig.FreezeInterval`（`koanf:"freeze_interval"`），校验 ≥1s、日志键、测试；`server/configs/config.yaml` 1h，`config.test.yaml` 2s。
-- `bootstrap/`：接线；`app_test.go` 的配置（1h）；六处周期种类清单（`all_periodic_jobs_test`、`issue_world_test` 的 `waitForStartupRuns`、`issue_draft_publish_test`、`request_jobs_test`、`purge_scale_fixture_test`、`runtime_role_test`）。
+- `platform/config/`：`PlanningConfig.FreezeInterval`（`koanf:"freeze_interval"`），校验 ≥1s、日志键、测试；`server/configs/config.yaml` 1h，`config.test.yaml` 2s（dev/prod 的 YAML 没有 `planning:` 一节，继承 `config.yaml`）；`server/configs/embed_test.go:113` 三种环境的期望（test 2s，dev/prod 1h）。
+- `bootstrap/`：接线；`app_test.go:95` 的配置（1h）；六处周期种类清单（`all_periodic_jobs_test`、`issue_world_test` 的 `waitForStartupRuns`、`issue_draft_publish_test`、`request_jobs_test`、`purge_scale_fixture_test`、`runtime_role_test`）。
 
 - [ ] Step 1：写测试：
   - 用例单测：候选不加锁；每项目先锁、锁后读时钟；已删除的项目跳过；归档的项目、开关关闭、归档的迭代照样冻结；已冻结的不再写；某项目失败时回答已冻结的个数、之前的已提交；
@@ -233,12 +233,12 @@
 ## Task 9（T9）：转移的接口
 
 **Files：**
-- `api/modules/planning.yaml`：`transferCycleIssues`、`CycleTransfer`、`CycleTransferResult`（spec §2.3）。
+- `api/modules/planning.yaml`、`api/openapi.yaml`（根契约列出新路径）：`transferCycleIssues`、`CycleTransfer`、`CycleTransferResult`（spec §2.3）。
 - `planning/app/transfer_cycle_issues.go`：写之路，拒绝次序（spec §2.3、R7），锁下读状态组与目标，读时钟，先冻结（同 T7 的计算）再经端口移动。
 - `planning/domain/errors.go`：转移用的两条服务端消息（同码）。
 - `planning/adapter/http/`：处理器；apitest 每个（操作，码）。
 - `web/packages/i18n` 的 en 与 zh-CN 两条文案（spec R11）。
-- `bootstrap/`：HTTP 组合测试。
+- `bootstrap/`：HTTP 组合测试；权限矩阵的转移行：目标迭代与源里的归属由该行的 `prepare` 按格子建立（先例 `unarchiveCycle` 的 `cycleArchived`），不改共用种子（spec §6）。
 
 - [ ] Step 1：写测试：
   - 用例单测：拒绝次序逐项（`lock_test.go` 的 `lockWorld` 记录调用次序）；锁后读时钟；先冻结后移动；已冻结的不再写；0 个时 200；
@@ -278,10 +278,9 @@
 ## Task 11（T11）：权限矩阵（G17）
 
 **Files：**
-- `bootstrap/permission_matrix_cycles_test.go`、`permission_matrix_modules_test.go`：三个新操作的行（列与既有相同）；矩阵世界加一个未结束的目标迭代与种下的归属（spec §6），不改已有格子的断言。
-- 访客与 OwnOnly 的计数格子：列表行、进度的数字只算可见的。
+- `bootstrap/permission_matrix_cycles_test.go`、`permission_matrix_modules_test.go`：三个新操作的行已在 T5、T9 加入；本 Task 加计数的可见性格子：列表行与进度的数字对访客、OwnOnly（工作区管理员兼访客）只算可见的，冻结对 OwnOnly 为 `null`。归属与冻结由格子的 `prepare` 建立（spec §6），共用种子与已有格子不变。
 
-- [ ] Step 1：写行，看到覆盖守卫与新格子失败（未实现时）或通过（已实现的读写），记录。
+- [ ] Step 1：写格子，先以一个期望错误的版本看到失败，再改正。
 - [ ] Step 2：聚焦通过（`TestPermissionMatrix` 与覆盖守卫）。
 - [ ] Step 3：变异，以下每一项都应让测试失败：
   - `transferCycleIssues` 的动作改为 `cycle.read`；
@@ -303,9 +302,9 @@
 **Files：**
 - `docs/v0/plane-diff.md`（spec R12）：改写 `cycles` 表与迭代接口两行（`progress_snapshot` 回来、进度在 P4），新增行为各行。
 - 输入交接的“处理结果（M6/P4）”，status 保持 open：M1-P2（无点数）、M1-P3（无工作区进度）、M1-closeout（口径定义）、M2-closeout 第 1 节（三个端口）、M4-closeout M6-04（燃尽序列的形状）。逐条核对，没有相关的不写。
-- 设计：§3.5（燃尽的跨度、完成日、上限、改日期清掉冻结、“转移看实时未完成数”的意思）、§5（列表行的 schema 与 `assignee_ids`）、§6（端口的名字与状态组的读取）、§9（配置与测试间隔）、§14 的 P4 行。
+- 设计：§3.5（燃尽的跨度、完成日、上限；分布只回答总数大于 0 的行，“无”行在有这样的工作项时出现；冻结写下后不清与时区回退的边角；“转移看实时未完成数”的意思）、§5（列表行的 schema 与 `assignee_ids`）、§6（端口的名字与状态组的读取）、§9（配置与测试间隔）、§14 的 P4 行。
 
-- [ ] Step 1：写差异与回执；Plane 的行号对照只读 `plane/` 逐一核过。
+- [ ] Step 1：写差异与回执；Plane 的行号对照主目录的只读 `/Users/xiaoruan/project/nerve-project/plane/` 逐一核过（worktree 里没有 `plane/`）。
 - [ ] Step 2：检查文档链接与关键词，然后提交。
 
 ## Task 14（T14）：门禁、整审与集成

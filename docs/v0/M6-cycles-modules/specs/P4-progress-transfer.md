@@ -1,6 +1,6 @@
 # M6 / P4：进度、冻结与转移
 
-> 状态：待预检（2026-11-10）。基线 main `ed8f0df4e8982dc50a4560a31fdf9b2964d84ac7`（P3b 的 noff，main CI 42621199100 首次通过）。设计见 [M6 设计](../M6-design.md) §2 的 G5–G7、G12、G17，§3.4、§3.5、§3.7、§3.8、§5、§6、§9；负责人 2026-11-07 的决定 A/B/C 见设计 §15（第 5、6、7、8、11、14、15 条与本段直接相关）。加锁之路沿用 M4（[硬规则 §4](../../claude_to_gpt/03-rules-and-pitfalls.md)）与 [P1 spec](P1-cycles-backend.md) §3；归属的写法与动态沿用 [P3a spec](P3a-issue-membership.md)。现状调研见本阶段台账 `research/backend.md`、`research/plane-web.md`（ignored，随阶段归档）。
+> 状态：预检通过（修正后，2026-11-10，[re-62](../../../reviews/re-62-M6P4预检.md)），按 plan 的 T1 开始实施。基线 main `ed8f0df4e8982dc50a4560a31fdf9b2964d84ac7`（P3b 的 noff，main CI 42621199100 首次通过）。设计见 [M6 设计](../M6-design.md) §2 的 G5–G7、G12、G17，§3.4、§3.5、§3.7、§3.8、§5、§6、§9；负责人 2026-11-07 的决定 A/B/C 见设计 §15（第 5、6、7、8、11、14、15 条与本段直接相关）。加锁之路沿用 M4（[硬规则 §4](../../claude_to_gpt/03-rules-and-pitfalls.md)）与 [P1 spec](P1-cycles-backend.md) §3；归属的写法与动态沿用 [P3a spec](P3a-issue-membership.md)。现状调研见本阶段台账 `research/backend.md`、`research/plane-web.md`（ignored，随阶段归档）。
 
 ## 1. 目标与边界
 
@@ -31,21 +31,21 @@ P4 交付设计 §12 P4 一行：
 |---|---|
 | 计数 | `total_issues` 与五个状态组 `backlog_issues`、`unstarted_issues`、`started_issues`、`completed_issues`、`cancelled_issues`；`total` 恒等于五者之和 |
 | 分布 | 负责人、标签各一张表；已取消的不计入。每行 `total_issues = completed_issues + pending_issues`（pending = 积压、未开始、进行中）。一个工作项有几个负责人/标签就计入几行；没有的计入 id 为 `null` 的一行。只回答总数大于 0 的行，按 id 升序，`null` 行最后 |
-| 燃尽 | 迭代从开始日到结束日、模块从开始日到目标日，按项目时区逐日一点 `{date, remaining}`。`scope` = 范围内除已取消外的工作项数；某日的 `remaining` = `scope` − 该日结束前已完成的数量；今天（项目时区）之后为 `null`。已完成指状态组为已完成，完成日为 `completed_at` 换到项目时区的日期；状态组为已完成而 `completed_at` 为空的（状态改组后才会出现）从第一天起算已完成，状态组不是已完成的即使带着旧的 `completed_at` 也不算。缺日期（草稿迭代、缺任一日期的模块）或跨度超过 3660 天时整个燃尽为 `null` |
+| 燃尽 | 迭代从开始日到结束日、模块从开始日到目标日，按项目时区逐日一点 `{date, remaining}`。`scope` = 范围内除已取消外的工作项数；某日的 `remaining` = `scope` − 该日结束前已完成的数量；今天（项目时区）之后为 `null`。已完成指状态组为已完成，完成日为 `completed_at` 换到项目时区的日期；状态组为已完成而 `completed_at` 为空的（状态改组后才会出现）从第一天起算已完成，状态组不是已完成的即使带着旧的 `completed_at` 也不算。缺日期（草稿迭代、缺任一日期的模块）或跨度（结束日减开始日的天数）超过 3660（即多于 3661 个点）时整个燃尽为 `null` |
 
 ### 2.2 文件与职责
 
 | 路径 | 职责 |
 |---|---|
 | `server/internal/modules/planning/domain/` | `progress.go`：状态组、`WorkItem`（状态 id、`completed_at`、负责人 id、标签 id）、`Counts`、分布行、`Burndown`、`Progress`、`Frozen`；纯函数由工作项事实、状态组、日期跨度、时区与今天算出 `Progress`（§2.1）；冻结的 JSON 编解码（类型化，字段名同接口）。`BurndownDays = 3660` |
-| `server/internal/modules/planning/app/` | 端口（消费方声明，R2）：`IssueStats`（设计 §6 的 `PlanningIssueStats`）、`IssueTransfer`（设计 §6 的 `TransferCycleIssues`），`Projects` 加 `StateGroups`。用例：`GetCycleProgress`、`GetModuleProgress`（读之路）、列表两个用例带计数（R9）、`FreezeCycles`（周期任务，R6）、`TransferCycleIssues`（写之路，R7、R8）；`UpdateCycle` 改日期时清掉冻结（R5） |
-| `server/internal/modules/planning/adapter/` | `postgres`：冻结的读（列表行只取计数与时刻，进度取整份）、只在为空时写入、待冻结的项目与迭代、改日期时清空。`http`：三个新处理器，列表处理器回答新行。`river`：`planning.freeze_cycles` 周期任务。`module.go`、`module_jobs.go`：接线与 `Jobs()` |
+| `server/internal/modules/planning/app/` | 端口（消费方声明，R2）：`IssueStats`（设计 §6 的 `PlanningIssueStats`）、`IssueTransfer`（设计 §6 的 `TransferCycleIssues`），`Projects` 加 `StateGroups`。用例：`GetCycleProgress`、`GetModuleProgress`（读之路）、列表两个用例带计数（R9）、`FreezeCycles`（周期任务，R6）、`TransferCycleIssues`（写之路，R7、R8） |
+| `server/internal/modules/planning/adapter/` | `postgres`：冻结的读（列表行只取计数与时刻，进度取整份）、只在为空时写入、待冻结的项目与迭代。`http`：三个新处理器，列表处理器回答新行。`river`：`planning.freeze_cycles` 周期任务。`module.go`、`module_jobs.go`：接线与 `Jobs()` |
 | `server/internal/modules/issue/` | 实现 planning 的两个端口：`adapter/postgres` 的统计语句（单个迭代/模块的工作项事实；一批迭代/模块按状态的计数；一批迭代的负责人 id）与转移语句（锁源迭代的归属行、软删、插入目标行、回答工作项 id）；`domain` 导出 `CycleMoved(from, to Named)`（`cycleActivity` 的 `updated`）；转移写动态并 `MarkChanged`。经 `issue.Provide` 交出（只用连接池，先例 `MembershipRemovals`） |
 | `server/internal/modules/project/` | `PlanningProjects` 加状态的读取（id 与状态组），复用 `IssueStates` 的语句，不新增 SQL |
-| `server/internal/bootstrap/` | 接线与转换（`planningProjects.StateGroups`、`planningIssues`）；`planning.Deps` 新字段；周期任务进入六处周期种类清单与 `waitForStartupRuns`；组合测试、矩阵、交错 |
-| `server/internal/platform/config/`、`server/configs/` | `planning.freeze_interval`（默认 1h，最少 1s，日志键）；`config.test.yaml` 为 2s |
+| `server/internal/bootstrap/` | 接线与转换（`planningProjects.StateGroups`、`planningIssues`）；`planning.Deps` 新字段；周期任务进入六处周期种类清单与 `waitForStartupRuns`；组合测试、矩阵（每个新操作在加它的 Task 里同时加矩阵行，覆盖守卫不留红）、交错 |
+| `server/internal/platform/config/`、`server/configs/` | `planning.freeze_interval`（默认 1h，最少 1s，日志键）；`config.test.yaml` 为 2s；`configs/embed_test.go` 三种环境的期望 |
 | `server/migrations/sql/00048_planning_cycles_progress_snapshot.sql` 与测试 | §2.4；迁移总数 47→48（`trigram_schema_test`）、`TestCyclesSchema` 的列；sqlc 的 planning 条目加 `00048` |
-| `api/modules/planning.yaml` | §2.3 的三个操作与 schema；`CycleList`、`ModuleList` 的行改为 `CycleListItem`、`ModuleListItem` |
+| `api/modules/planning.yaml`、`api/openapi.yaml` | §2.3 的三个操作与 schema（根契约列出三条新路径，`TestRootListsEveryModulePath`）；`CycleList`、`ModuleList` 的行改为 `CycleListItem`、`ModuleListItem` |
 | `web/` | 重新生成；两条文案（R11） |
 | `e2e/` | §2.7 |
 | `docs/` | P3b 回填（T1）；`plane-diff.md`；输入交接的“处理结果（M6/P4）”；设计 §3.5、§5、§6、§9、§14 |
@@ -133,7 +133,7 @@ P4 交付设计 §12 P4 一行：
 - **R1 口径**：
   - 范围同设计 §3.5：只算调用者看得见、未归档、未删除的工作项与未删除的归属。子工作项计入（Plane 同：它的统计不排除子工作项）。
   - 五个状态组之和就是总数。分诊组不收工作项（`issue/domain/issue.go:36-45`），遇到范围外的组是缺陷，回答 500，不静默丢弃。
-  - OwnOnly 只看到自己建立的工作项（`HiddenFrom`、`list_issues.sql:24` 同一谓词）。同一调用者的进度总数等于列表引擎 `cycle_id=<id>&sub_issues=true` 的总数，T5 以一个对照测试钉住。
+  - OwnOnly 只看到自己建立的工作项（`HiddenFrom`、`list_issues.sql:24` 同一谓词）。同一调用者的进度总数等于列表引擎 `cycle_id=<id>&sub_issues=true&archived=false` 的总数，T5 以一个对照测试钉住。
 - **R2 计算在 planning，事实来自 issue**：
   - issue 的语句不能连 `states`，planning 的语句不能连 `issues`（`TestSQLCSchemaScope`）。所以 issue 只回答按状态 id 的事实，planning 经项目的状态读取把状态 id 对到状态组，在 `planning/domain` 用纯函数算出全部数字（时区逻辑与 `domain.Today` 在一处，可单测）。
   - **`IssueStats`**（planning/app 声明）：
@@ -148,13 +148,13 @@ P4 交付设计 §12 P4 一行：
   - **跨度**：点覆盖整个迭代（开始到结束），今天之后为 `null`。设计 §3.5 的“从开始日到 min(结束日, 今天)”指有值的范围，坐标轴仍是整个迭代（Plane 同），T13 改写设计的这句话。
   - **范围不含已取消**（设计 §3.5）；用当前归属，后加入的从第一天起计入（Plane 同）。
   - **完成日**：见 §2.1。状态改组后 `completed_at` 可能过时（`project/app/update_state.go:48-55` 只改状态，不回写工作项）。按状态组判断是否已完成，与计数一致；完成日缺失时从第一天起算，使最后一个点与计数一致、过去的点不随日子变。
-  - **上限**：日期没有跨度上限（年份 0001–9999），不设上限时一个迭代的燃尽可达数百万个点，写进回答与冻结。跨度超过 3660 天（约十年）时燃尽为 `null`，计数与分布照常（Plane 没有上限，登记差异）。
+  - **上限**：日期没有跨度上限（年份 0001–9999），不设上限时一个迭代的燃尽可达数百万个点，写进回答与冻结。跨度（结束日减开始日）超过 3660 天（约十年，即多于 3661 个点）时燃尽为 `null`，计数与分布照常（Plane 没有上限，登记差异）。
   - **今天**：项目时区，用读之路的时钟（冻结用锁后的时钟）。
 - **R5 冻结**：
   - 写一次：`UPDATE cycles SET progress_snapshot = … WHERE id = … AND progress_snapshot IS NULL`；周期任务与转移都在项目行锁下写，先写者为准。
   - 读：列表行只回答冻结的六个数与时刻（不读分布与燃尽，列表轻）；进度回答整份。OwnOnly 回答 `null`。
   - 不改 `updated_at`/`updated_by_id`（R6）。
-  - **改日期即清掉冻结**：已结束的迭代只能改排序（P1），所以冻结一般不会过时；唯一的例外是改项目时区让“今天”往回退，已冻结的迭代暂时回到进行中、又能改日期。这时 `UpdateCycle` 改了开始或结束日就在同一写里把 `progress_snapshot` 置空，迭代再次结束时重新冻结。不改日期则冻结保留（读者按 `status` 决定用哪份，设计 §3.5）。
+  - **写下后不清**：已结束的迭代只能改排序（P1），工作项也不能加入已结束的迭代（P3a），所以冻结不会因写入而过时。唯一的边角是改项目时区让“今天”往回退：已冻结的迭代暂时回到进行中，其间日期、归属与状态都可能变，再次结束时冻结仍是第一次的。接受这个边角，不加清除规则（只改日期时清除也堵不住归属与状态的变化，预检 re-62 M3）：读者只在 `status` 为已结束时用冻结（设计 §3.5），回答照常带着它与 `status`。
 - **R6 冻结任务**：先例自动归档（`issue/app/auto_archive.go:35-108`）：候选不加锁、权威判定在项目锁下、锁后读时钟、每项目提交。冻结不看项目归档、开关与迭代归档：它记录迭代结束时的事实，用户随后照样能读（设计 §3.8 读取照常）。
 - **R7 转移的规则与次序**：
   - 源：须已结束（Plane 的公共接口规则；应用接口不查，不照搬）且未归档。目标：同项目、未删除、未归档、不是源本身、不是已结束。
@@ -172,7 +172,7 @@ P4 交付设计 §12 P4 一行：
 - **R12 Plane 差异**（登记进 `plane-diff.md`）：
   - 燃尽按项目时区切天、判断今天（Plane 按 UTC，跨度因存的时刻偏一天）；范围不含已取消（Plane 含，取消的永不燃尽）；完成按状态组；跨度上限；形状为数组。
   - 分布的“无负责人”“无标签”是真实数字（Plane 实时分布恒为 0）；已取消不计入；已完成按状态组；只给 id。
-  - 冻结：任务或转移先写者为准、只写一次（Plane 只在转移时写、每次覆盖、移动 0 个也写、没有任务）；改日期清掉；`NULL` 而非 `{}`。
+  - 冻结：任务或转移先写者为准、只写一次（Plane 只在转移时写、每次覆盖、移动 0 个也写、没有任务）；`NULL` 而非 `{}`。
   - `/progress` 同时回答实时与冻结（Plane 有快照后只回答快照）；一个接口代替 `progress` 与 `analytics?type=`；模块也有 `/progress`（Plane 只在详情里）。
   - 列表行六个数（Plane 应用接口的迭代列表三个）；数字按访客的可见范围（Plane 不过滤）。
   - 转移：源须已结束且未归档；目标的五条规则（Plane 缺失或跨项目为 500，归档或同一迭代照收）；每个工作项一条动态（Plane 因崩溃一条不写）；回答转走的个数（Plane `{"message": "Success"}`）；字段名 `target_cycle_id`（Plane `new_cycle_id`）；可以多次转移（Plane 网页有快照后禁用按钮）。
@@ -180,7 +180,7 @@ P4 交付设计 §12 P4 一行：
 ## 4. 验收标准
 
 - [ ] A1 G5：迭代的计数、分布、燃尽按 §2.1：五组与总数；进度的分母由网页算（不在服务端）；分布的“无”行、多负责人/多标签、取消不计；燃尽按项目时区（东八区与 UTC 不同日的时刻）、今天之后为 `null`、开始前完成的从第一天起算、状态改组后的两种过时、草稿与超长跨度为 `null`。
-- [ ] A2 G6：周期任务冻结已结束的迭代，之后改状态、移出，冻结不变而实时变化；冻结只写一次；任务与转移两种次序交错，冻结的数字相同；改日期清掉冻结；任务不改 `updated_at`。
+- [ ] A2 G6：周期任务冻结已结束的迭代，之后改状态、移出，冻结不变而实时变化；冻结只写一次；任务与转移两种次序交错，冻结的数字相同；任务不改 `updated_at`。
 - [ ] A3 G7：转移只转积压、未开始、进行中的，已完成、已取消、已归档的留下；每个转走的一条动态、修改时间与修改者更新；回答个数，0 也是 200；可以多次转移；拒绝次序与码（§2.3）；转移前冻结用移动之前的数字。
 - [ ] A4 G12：模块的计数、分布、燃尽（开始到目标日），缺日期为 `null`；模块不冻结。
 - [ ] A5 列表行：迭代与模块列表（含归档目录）每行六个实时数；迭代行 `assignee_ids` 与冻结的计数；没有 N+1（每页固定条数的语句）；OwnOnly 只算自己的、冻结为 `null`。
@@ -194,11 +194,14 @@ P4 交付设计 §12 P4 一行：
 
 **P6**（模块页面）：同上的模块部分。
 
-**P8**：冻结任务的规模（候选的部分索引、每项目的迭代数）随清理规模一起重跑。
+**P8**（写给 M7 的交接）：转移不发布 `issue.updated`（R8）；M7 的通知若要知道转移，由 M7 决定是否加事件。
+
+**P8**（规模）：冻结任务的规模（候选的部分索引、每项目的迭代数）随清理规模一起重跑。
 
 ## 6. 风险
 
 - **跨模块的同一事务**：转移在 planning 的写事务里调 issue 的语句（经 ctx）。锁序见 §2.6；以交错测试与“锁后读时钟”的测试钉住，变异证明它们能失败。
 - **周期任务插到持锁的测试后面**（M5 P8 的教训）：新种类进入 `waitForStartupRuns` 与其余五处周期种类清单；bootstrap 测试的间隔取 1h，只有启动时的一次运行。
-- **矩阵的种子**：现有矩阵的两个迭代都已结束、没有归属。转移与计数的格子需要一个未结束的目标迭代与种下的归属，加在矩阵的世界里，不改已有格子的断言。
+- **矩阵的种子**：现有矩阵的两个迭代都已结束、没有归属，`listsTheCycles` 要求列表恰为种下的迭代且都已结束（`permission_matrix_cycles_test.go:220-262`）。所以转移格子的目标迭代与源里的归属由该行的 `prepare` 按格子建立（先例：`unarchiveCycle` 的 `cycleArchived`，写的行各在自己的副本上跑），不加进共用的种子，已有格子不变。计数格子的归属同样按格子建立。
+- **覆盖守卫**：`permission_matrix_coverage_test.go` 要求每个操作有矩阵行，所以每个新操作在加它的 Task 里同时加行（进度在 T5、转移在 T9），T11 只加计数的可见性格子与变异。
 - **`Cycle` 的回答不变**：列表行换成新 schema，e2e 与 Go 测试里把列表行当 `Cycle` 用的地方随之改类型，断言不改。
