@@ -173,8 +173,17 @@ test("W11 (page): a guest signs in: his sidebar lists Web, the project he is a g
   // So does the projects page's creation, whose open flag the command palette's store holds, above the key: its host
   // closes it as acme's content goes. From Beta's projects page to acme's (the router's own move), Add Project, and a
   // Back to Beta's: the dialog does not open there, to create the project in Beta.
+  /**
+   * The router's move to acme's projects page, done once acme's own content is up: Beta's projects page has the same
+   * "Add Project", and the move can return while Beta's content is still on screen (seen on CI: a key pressed then
+   * opened the palette in Beta's content, which closed it as it went). Secret, a project of acme's, is not on Beta's.
+   */
+  const toAcmesProjects = async () => {
+    await moveWithinApp(theAdmin.page, `/${slug}/projects`);
+    await expect(theAdmin.page.getByText("Secret", { exact: true }).first()).toBeVisible();
+  };
   await moveWithinApp(theAdmin.page, `/${betaSlug}/projects`);
-  await moveWithinApp(theAdmin.page, `/${slug}/projects`);
+  await toAcmesProjects();
   await theAdmin.page.getByRole("button", { name: "Add Project", exact: true }).click();
   await expect(modalDialog(theAdmin.page)).toHaveCount(1);
   await theAdmin.page.goBack();
@@ -184,7 +193,7 @@ test("W11 (page): a guest signs in: his sidebar lists Web, the project he is a g
   // host: opened by its keys on acme's projects page, each ends with the Back to Beta's.
   /** From Beta's projects page to acme's, opens a dialog by keys, Backs to Beta's: whether the dialog ended. */
   const endsOnBack = async (keys: string) => {
-    await moveWithinApp(theAdmin.page, `/${slug}/projects`);
+    await toAcmesProjects();
     await expect(theAdmin.page.getByRole("button", { name: "Add Project", exact: true })).toBeVisible();
     await theAdmin.page.keyboard.press(keys);
     await expect(modalDialog(theAdmin.page)).toHaveCount(1);
