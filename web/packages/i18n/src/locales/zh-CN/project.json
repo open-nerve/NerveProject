@@ -47,10 +47,6 @@
         "success": {
           "title": "周期已恢复",
           "description": "周期已被恢复。"
-        },
-        "failed": {
-          "title": "周期恢复失败",
-          "description": "无法恢复周期。请重试。"
         }
       },
       "favorite": {
@@ -92,6 +88,18 @@
         "error": {
           "already_exists": "在给定日期范围内已存在周期，如果您想创建草稿周期，可以通过移除两个日期来实现。"
         }
+      },
+      "delete": {
+        "success": {
+          "title": "成功！",
+          "description": "周期删除成功。"
+        }
+      },
+      "archive": {
+        "success": {
+          "title": "归档成功",
+          "description": "您可以在项目归档中找到归档的内容。"
+        }
       }
     },
     "empty_state": {
@@ -103,6 +111,15 @@
         "title": "没有活动周期",
         "description": "活动周期包括其范围内包含今天日期的任何时期。在这里查找活动周期的进度和详细信息。"
       }
+    },
+    "delete": {
+      "title": "删除周期",
+      "body": "确定要删除周期 {name} 吗？与这个周期相关的全部数据将被永久删除。此操作无法撤销。"
+    },
+    "archive": {
+      "title": "归档周期 {name}",
+      "body": "确定要归档这个周期吗？归档的内容以后都可以恢复。",
+      "only_completed": "只有已完成的周期才能归档"
     }
   },
   "project_views": {

@@ -8,12 +8,14 @@ import { Outlet } from "react-router";
 // components
 import { AppHeader } from "@/components/core/app-header";
 import { ContentWrapper } from "@/components/core/content-wrapper";
+import { CycleActionsHost } from "@/components/cycles/actions-host";
 import { CycleIssuesHeader } from "./header";
 import type { Route } from "./+types/layout";
 
 export default function ProjectCycleIssuesLayout({ params }: Route.ComponentProps) {
+  // the cycle's dialogs and restore outlive its header's quick actions, which go once it is deleted (CycleActionsHost)
   return (
-    <>
+    <CycleActionsHost workspaceSlug={params.workspaceSlug} projectId={params.projectId}>
       <AppHeader
         header={
           <CycleIssuesHeader
@@ -26,6 +28,6 @@ export default function ProjectCycleIssuesLayout({ params }: Route.ComponentProp
       <ContentWrapper>
         <Outlet />
       </ContentWrapper>
-    </>
+    </CycleActionsHost>
   );
 }
