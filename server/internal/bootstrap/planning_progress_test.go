@@ -30,7 +30,10 @@ func newNoonWorld(t *testing.T) (issueWorld, time.Time) {
 	y, m, d := started.In(loc).Date()
 	offset := time.Date(y, m, d, 12, 0, 0, 0, loc).Sub(started)
 	w := newIssueWorldWith(t, func(c *config.Config) { c.Clock.Offset = offset })
-	return w, time.Now().Add(offset)
+	// As the business clock reads it, to the microsecond in UTC: a moment
+	// nerve stores (a clocktest.At reading too) never carries the
+	// nanoseconds Linux's clock has, so one compared to this must not.
+	return w, time.Now().Add(offset).UTC().Truncate(time.Microsecond)
 }
 
 // cycleProgressAnswer is a cycle's progress as the API answers it, its

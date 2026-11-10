@@ -66,7 +66,8 @@ A8（CI、合入与归档清理）合入后由 P5 的 T1 勾选。
 | T11 矩阵的计数 | `e706371c` | 154 格计数可见性；转移的“访客看全部”变体；8 个变异失败 |
 | T13 文档 | `6b5a322b` | 差异清单、设计 §3.5/§5/§6/§9、五份交接回执、spec §5 的 P8 跟进 |
 | T12 接口故事 | `9cf2348d` | G5、G6、G7、G12，各先 RED 后 GREEN |
-| T14 整审修复 | 本记录所在提交 | |
+| T14 整审修复 | `18aeb25a` | re-63 的 m1–m3、本记录 |
+| 分支 CI 的根因修正 | 本记录所在提交 | `newNoonWorld` 交出截到微秒的时刻（见 §5） |
 
 ## 5. 门禁与 CI
 
@@ -75,6 +76,10 @@ A8（CI、合入与归档清理）合入后由 P5 的 T1 勾选。
   - 分支 CI 42775845319 attempt 1：server (0) 129694033698、server (1) 129694033912、web 129694033946 成功；e2e 129699354565 失败 431/1，W11 第 190 行（Ctrl+K 后命令面板 0 个），签名与[记录 06](../../claude_to_gpt/06-ci-w11-flake.md) 相同。按已知偶发只重跑失败作业一次：attempt 2 的 e2e 129706674516 成功。
   - **W11 的根因**：从产物 `playwright-report` 的 trace 还原帧快照：`moveWithinApp` 返回后地址已是 acme 的，内容仍是 Beta 的；等待条件 “Add Project” 两边都有，立即通过；面板在 Beta 的内容里打开，随 Beta 的宿主卸载而关闭。修正测试的等待条件（`38c74554`），应用不改；记录 06 §8 写证据。
 - **最终候选**（`9cf2348d`，`t14-gate1`）：七项门禁从头串行一次全过，输入前后一致：`make gen-check`、`make lint-go`、`make test`（66 个包，955 秒）、`make lint-web`、`make knip`、`make test-web`（turbo 缓存重放，输入与上次相同）、`make build && make e2e`（436 条全过，含四个新故事）。之后只有本节与整审 Minor 的文档修改和 `e2e/fixtures/assert/progress.ts` 的一段注释（re-63 m3），以 `make lint-web` 与文档链接检查覆盖。
+- **分支 CI 第一次**（`18aeb25a`，42800976748）：web 129778085248、server (1) 129778085665 成功；server (0) 129778085598 失败，e2e 因此跳过。失败的只有 `TestTransferKeepsTheJobsFreeze`（T9）：冻结的时刻与测试取的“此刻”不相等。
+  - **根因**：`newNoonWorld` 交出的“此刻”是 `time.Now()` 加偏移，Linux 上带纳秒；业务时钟与 `clocktest.At` 都截到微秒，存下的冻结时刻因而差几百纳秒。macOS 的时钟只到微秒，所以本机门禁通过。测试的缺陷，产品不改。
+  - **证据**：本机给 `newNoonWorld` 的返回值加 123 纳秒，复现与 CI 一字不差的失败（收据 `ci-red-ns-now`）；修正为 `.UTC().Truncate(time.Microsecond)`（同业务时钟的读法）后，同样加 123 纳秒也通过（`ci-green-ns-now`），用到它的组合测试全部通过（`ci-green-noon-tests`），`make lint-go` 通过。本阶段新测试里其余直接取墙上时钟的地方都已截到微秒或不与存下的时刻比较。
+  - 按负责人 2026-11-08 的规则不重跑，修正后以新提交重跑分支 CI，结果见 §7。
 - **本机环境**：T8 的一次 bootstrap 回归在 testcontainers 等容器就绪时 Docker API 超时，未到数据库，重跑通过（P3b 的 t14-gate1 有一次同类），记入 M8 的观察。
 
 ## 6. 整分支审查
