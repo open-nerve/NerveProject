@@ -54,3 +54,36 @@ WITH removed AS (
     RETURNING t.issue_id
 )
 SELECT issue_id FROM removed ORDER BY issue_id;
+
+-- name: RemoveTransferredCycleIssues :many
+-- A transfer's leaving of the cycle cycle_id (M6 P4 spec 2.6, R8), in the transfer's transaction under the project's
+-- row lock planning holds: of the cycle's undeleted memberships, those whose work items are the project's, undeleted,
+-- not archived and in one of state_ids (planning reads the states' groups), locked FOR NO KEY UPDATE in id order, the
+-- memberships alone (the work items' rows are written last, MarkChanged: the spec's lock order), then soft-deleted at
+-- the transfer's moment by its account, never changed in place (P3a spec R4): InsertTransferredCycleIssues then
+-- inserts the rows of the cycle they join, in the same transaction. Two statements, not one: a row's id is the
+-- application's (v0 design, IDs), and how many move is known after this one. It answers the work items, in id order.
+-- cycle_issues_cycle_id_idx serves it.
+WITH removed AS (
+    UPDATE cycle_issues AS t
+    SET deleted_at = sqlc.arg(at)::timestamptz, updated_at = sqlc.arg(at), updated_by_id = sqlc.arg(by)::uuid
+    WHERE t.id IN (
+        SELECT r.id FROM cycle_issues r
+        JOIN issues i ON i.id = r.issue_id
+        WHERE r.cycle_id = sqlc.arg(cycle_id) AND r.deleted_at IS NULL
+          AND i.project_id = sqlc.arg(project_id) AND i.deleted_at IS NULL AND i.archived_at IS NULL
+          AND i.state_id = ANY (sqlc.arg(state_ids)::uuid[])
+        ORDER BY r.id FOR NO KEY UPDATE OF r)
+    RETURNING t.issue_id
+)
+SELECT issue_id FROM removed ORDER BY issue_id;
+
+-- name: InsertTransferredCycleIssues :exec
+-- A transfer's joining of the cycle cycle_id (M6 P4 spec 2.6, R8), in the transfer's transaction, after
+-- RemoveTransferredCycleIssues: one new undeleted row of each of issue_ids, the work items that statement answered,
+-- whose id is the one of ids at its place, in the project and its workspace, created and last changed at the
+-- transfer's moment by its account, as InsertCycleIssues writes a work item's. Each one's row of the cycle it left is
+-- deleted, so the partial unique key cycle_issues_issue_id_key holds.
+INSERT INTO cycle_issues (id, workspace_id, project_id, issue_id, cycle_id, created_by_id, updated_by_id, created_at, updated_at)
+SELECT unnest(sqlc.arg(ids)::uuid[]), sqlc.arg(workspace_id), sqlc.arg(project_id), unnest(sqlc.arg(issue_ids)::uuid[]),
+       sqlc.arg(cycle_id), sqlc.arg(by)::uuid, sqlc.arg(by), sqlc.arg(at)::timestamptz, sqlc.arg(at);

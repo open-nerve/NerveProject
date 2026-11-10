@@ -117,6 +117,14 @@ func CycleLeft(c Named) Activity {
 	return cycleActivity(Changed[*Named]{Old: &c})
 }
 
+// CycleMoved is the row of a work item's moving from the cycle from to the
+// cycle to because a transfer moves the unfinished work items of from,
+// which has ended, to to (M6 P4 spec 2.6, R8): the row of a write that
+// moves it from one cycle to the other (cycleActivity).
+func CycleMoved(from, to Named) Activity {
+	return cycleActivity(Changed[*Named]{Old: &from, New: &to})
+}
+
 // Named is a row an activity names by its name, a state, a label, a cycle
 // or a module: its id, and its name when the activity is written.
 type Named struct {

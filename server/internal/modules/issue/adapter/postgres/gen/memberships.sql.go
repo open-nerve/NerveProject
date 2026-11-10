@@ -74,6 +74,40 @@ func (q *Queries) InsertModuleIssues(ctx context.Context, arg InsertModuleIssues
 	return err
 }
 
+const insertTransferredCycleIssues = `-- name: InsertTransferredCycleIssues :exec
+INSERT INTO cycle_issues (id, workspace_id, project_id, issue_id, cycle_id, created_by_id, updated_by_id, created_at, updated_at)
+SELECT unnest($1::uuid[]), $2, $3, unnest($4::uuid[]),
+       $5, $6::uuid, $6, $7::timestamptz, $7
+`
+
+type InsertTransferredCycleIssuesParams struct {
+	Ids         []uuid.UUID
+	WorkspaceID uuid.UUID
+	ProjectID   uuid.UUID
+	IssueIds    []uuid.UUID
+	CycleID     uuid.UUID
+	By          *uuid.UUID
+	At          time.Time
+}
+
+// A transfer's joining of the cycle cycle_id (M6 P4 spec 2.6, R8), in the transfer's transaction, after
+// RemoveTransferredCycleIssues: one new undeleted row of each of issue_ids, the work items that statement answered,
+// whose id is the one of ids at its place, in the project and its workspace, created and last changed at the
+// transfer's moment by its account, as InsertCycleIssues writes a work item's. Each one's row of the cycle it left is
+// deleted, so the partial unique key cycle_issues_issue_id_key holds.
+func (q *Queries) InsertTransferredCycleIssues(ctx context.Context, arg InsertTransferredCycleIssuesParams) error {
+	_, err := q.db.Exec(ctx, insertTransferredCycleIssues,
+		arg.Ids,
+		arg.WorkspaceID,
+		arg.ProjectID,
+		arg.IssueIds,
+		arg.CycleID,
+		arg.By,
+		arg.At,
+	)
+	return err
+}
+
 const removeCycleIssues = `-- name: RemoveCycleIssues :exec
 UPDATE cycle_issues
 SET deleted_at = $1::timestamptz, updated_at = $1, updated_by_id = $2::uuid
@@ -189,6 +223,64 @@ type RemoveModuleMembershipsParams struct {
 // RemoveCycleMemberships' statement, of a deleted module's memberships. module_issues_module_id_idx serves it.
 func (q *Queries) RemoveModuleMemberships(ctx context.Context, arg RemoveModuleMembershipsParams) ([]uuid.UUID, error) {
 	rows, err := q.db.Query(ctx, removeModuleMemberships, arg.At, arg.By, arg.ModuleID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []uuid.UUID
+	for rows.Next() {
+		var issue_id uuid.UUID
+		if err := rows.Scan(&issue_id); err != nil {
+			return nil, err
+		}
+		items = append(items, issue_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const removeTransferredCycleIssues = `-- name: RemoveTransferredCycleIssues :many
+WITH removed AS (
+    UPDATE cycle_issues AS t
+    SET deleted_at = $1::timestamptz, updated_at = $1, updated_by_id = $2::uuid
+    WHERE t.id IN (
+        SELECT r.id FROM cycle_issues r
+        JOIN issues i ON i.id = r.issue_id
+        WHERE r.cycle_id = $3 AND r.deleted_at IS NULL
+          AND i.project_id = $4 AND i.deleted_at IS NULL AND i.archived_at IS NULL
+          AND i.state_id = ANY ($5::uuid[])
+        ORDER BY r.id FOR NO KEY UPDATE OF r)
+    RETURNING t.issue_id
+)
+SELECT issue_id FROM removed ORDER BY issue_id
+`
+
+type RemoveTransferredCycleIssuesParams struct {
+	At        time.Time
+	By        uuid.UUID
+	CycleID   uuid.UUID
+	ProjectID uuid.UUID
+	StateIds  []uuid.UUID
+}
+
+// A transfer's leaving of the cycle cycle_id (M6 P4 spec 2.6, R8), in the transfer's transaction under the project's
+// row lock planning holds: of the cycle's undeleted memberships, those whose work items are the project's, undeleted,
+// not archived and in one of state_ids (planning reads the states' groups), locked FOR NO KEY UPDATE in id order, the
+// memberships alone (the work items' rows are written last, MarkChanged: the spec's lock order), then soft-deleted at
+// the transfer's moment by its account, never changed in place (P3a spec R4): InsertTransferredCycleIssues then
+// inserts the rows of the cycle they join, in the same transaction. Two statements, not one: a row's id is the
+// application's (v0 design, IDs), and how many move is known after this one. It answers the work items, in id order.
+// cycle_issues_cycle_id_idx serves it.
+func (q *Queries) RemoveTransferredCycleIssues(ctx context.Context, arg RemoveTransferredCycleIssuesParams) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, removeTransferredCycleIssues,
+		arg.At,
+		arg.By,
+		arg.CycleID,
+		arg.ProjectID,
+		arg.StateIds,
+	)
 	if err != nil {
 		return nil, err
 	}
