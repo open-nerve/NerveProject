@@ -11,7 +11,6 @@ import { renderFormattedDateWithoutYear } from "@nerve/utils";
 
 type Props = {
   burndown: Burndown;
-  className?: string;
 };
 
 /** A day of the chart: its calendar day, the work left at its end (null after today: no point), the ideal line's. */
@@ -30,7 +29,7 @@ const idealOn = (scope: number, index: number, days: number): number =>
  * day after today has none to draw (null, never 0); and the ideal line from the scope to 0. Every number it draws is
  * finite. nerve gives no burndown without a day (a draft's is null), so the page shows the chart only with one.
  */
-export function BurndownChart({ burndown, className = "" }: Props) {
+export function BurndownChart({ burndown }: Props) {
   const { t } = useTranslation();
   const days = burndown.points.length;
   const data: TChartData<"date", "remaining" | "ideal">[] = burndown.points.map(
@@ -42,7 +41,7 @@ export function BurndownChart({ burndown, className = "" }: Props) {
   );
 
   return (
-    <div className={`flex w-full items-center justify-center ${className}`}>
+    <div className="flex w-full items-center justify-center">
       <AreaChart
         data={data}
         areas={[

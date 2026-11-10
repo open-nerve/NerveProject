@@ -20,7 +20,7 @@ export function sidebarCycles(cycle: Cycle, held: { row?: CycleListItem; progres
   const shown = observable.box<Cycle | undefined>(cycle, { deep: false });
   const row = observable.box(held.row, { deep: false });
   const progress = observable.box(held.progress, { deep: false });
-  const sent: { cycleId: string; body: CycleUpdate; change: HeldChange<Cycle> }[] = [];
+  const sent: { change: HeldChange<Cycle> }[] = [];
   const of =
     <T,>(box: { get: () => T }) =>
     (cycleId: string | null | undefined) =>
@@ -29,9 +29,9 @@ export function sidebarCycles(cycle: Cycle, held: { row?: CycleListItem; progres
     getCycleById: of(shown),
     getCycleRow: of(row),
     getCycleProgress: of(progress),
-    update: vi.fn(async (cycleId: string, body: CycleUpdate): Promise<Cycle> => {
+    update: vi.fn<(cycleId: string, body: CycleUpdate) => Promise<Cycle>>(async () => {
       const change = heldChange<Cycle>();
-      sent.push({ cycleId, body, change });
+      sent.push({ change });
       const answer = await change.sent;
       runInAction(() => shown.set(answer));
       return answer;
