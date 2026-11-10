@@ -274,7 +274,7 @@ P1 起第一个实现提交把关键词 phase 改为 `M6/P1`；纯设计分支�
 | P2 模块后端 | 已完成：noff `861ea1b5` 的 main CI 两次未过（与 P2 无关），根因修复（含负责人 2026-11-08 批准的 server 任务分两路）第二次 noff `ddd79a9f`，main CI 42458454710 首次通过；证据归档于 `.superpowers/sdd/M6-P2-integration-20261108` | [预检](../../reviews/re-56-M6P2预检.md) / [P2 spec](specs/P2-modules-backend.md) / [P2 plan](plans/P2-modules-backend.md) / [P2 阶段记录](reviews/P2-modules-backend-review.md) |
 | P3a 工作项的归属 | 已完成：noff `2648a739`，分支 CI 42484965936 与 main CI 42487991301 首次通过（检查点 CI 42478883539 第一次因 GitHub 504 未过，只重跑失败的作业后通过），证据归档于 `.superpowers/sdd/M6-P3a-integration-20261108`；P3 因超出一段的上限拆为 P3a/P3b（§12） | [预检](../../reviews/re-58-M6P3a预检.md) / [P3a spec](specs/P3a-issue-membership.md) / [P3a plan](plans/P3a-issue-membership.md) / [P3a 阶段记录](reviews/P3a-issue-membership-review.md) |
 | P3b 列表引擎与偏好 | 已完成：noff `ed8f0df4`，检查点 CI 42594813667、分支 CI 42616111421 与 main CI 42621199100 首次通过（最终门禁第一次因本机 Docker API 超时未过，整段重跑一次通过），证据归档于 `.superpowers/sdd/M6-P3b-integration-20261109` | [预检](../../reviews/re-60-M6P3b预检.md) / [P3b spec](specs/P3b-list-engine.md) / [P3b plan](plans/P3b-list-engine.md) / [P3b 阶段记录](reviews/P3b-list-engine-review.md) |
-| P4 进度、冻结与转移 | 进行中：预检通过（修正后） | [预检](../../reviews/re-62-M6P4预检.md) / [P4 spec](specs/P4-progress-transfer.md) / [P4 plan](plans/P4-progress-transfer.md) |
+| P4 进度、冻结与转移 | T1–T14 完成：整审 Ready to merge（[re-63](../../reviews/re-63-M6P4整体审核.md)），最终候选七项门禁串行通过（阶段记录 §5）；检查点 CI 42775845319 的 e2e 第一次因 W11 的老问题未过，只重跑失败作业后通过，W11 据 trace 找到根因并修正；待合入 | [预检](../../reviews/re-62-M6P4预检.md) / [P4 spec](specs/P4-progress-transfer.md) / [P4 plan](plans/P4-progress-transfer.md) / [P4 阶段记录](reviews/P4-progress-transfer-review.md) |
 | P5–P8、closeout | 未开始 | — |
 
 ## 15. 决定记录

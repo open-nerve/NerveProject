@@ -95,7 +95,8 @@ export async function frozenSnapshot(db: Database, id: string): Promise<unknown>
 /**
  * How the cycle of id was last written and frozen: whether its last write is still the one at written, by the
  * account of the address by (a freeze does not write it, M6 P4 spec R6), and whether it was frozen within [from, to],
- * microseconds and all.
+ * microseconds and all. frozen_at is nerve's business clock: a bound taken from the runner's own clock holds only
+ * while the test profile's clock offset is 0 and nerve runs on the runner's host, as it does locally and on CI.
  */
 export async function frozenWrite(db: Database, id: string, written: string, from: string, to: string) {
   const [row] = await db.query(

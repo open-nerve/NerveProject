@@ -1,7 +1,7 @@
 # M6 / P4 进度、冻结与转移实施计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-> 状态：预检通过（修正后，2026-11-10，[re-62](../../../reviews/re-62-M6P4预检.md)）：H1 矩阵行随操作进入 T5/T9、H2 转移格子按格子建目标、M1 根契约、M2 `embed_test`、M3 删去“改日期清掉冻结”、M4 对照测试带 `archived=false`、L1–L6 已改入。
+> 状态：T1–T14 已实施（2026-11-10），整分支审查 [re-63](../../../reviews/re-63-M6P4整体审核.md)，阶段记录 [P4 阶段记录](../reviews/P4-progress-transfer-review.md)。预检通过（修正后，[re-62](../../../reviews/re-62-M6P4预检.md)）：H1 矩阵行随操作进入 T5/T9、H2 转移格子按格子建目标、M1 根契约、M2 `embed_test`、M3 删去“改日期清掉冻结”、M4 对照测试带 `archived=false`、L1–L6 已改入。
 
 **Goal：**
 - 迭代与模块各有 `/progress`：按状态组的计数、负责人与标签的分布、按项目时区的燃尽；迭代另带冻结；
