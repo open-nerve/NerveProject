@@ -133,7 +133,7 @@ P4 交付设计 §12 P4 一行：
 - **R1 口径**：
   - 范围同设计 §3.5：只算调用者看得见、未归档、未删除的工作项与未删除的归属。子工作项计入（Plane 同：它的统计不排除子工作项）。
   - 五个状态组之和就是总数。分诊组不收工作项（`issue/domain/issue.go:36-45`），遇到范围外的组是缺陷，回答 500，不静默丢弃。
-  - OwnOnly 只看到自己建立的工作项（`HiddenFrom`、`list_issues.sql:24` 同一谓词）。同一调用者的进度总数等于列表引擎 `cycle_id=<id>&sub_issues=true&archived=false` 的总数，T5 以一个对照测试钉住。
+  - OwnOnly 只看到自己建立的工作项（`HiddenFrom`、`list_issues.sql:24` 同一谓词）。同一调用者的进度总数等于列表引擎 `cycle_id=<id>&sub_issue=true&archived=false` 的总数，T5 以一个对照测试钉住。
 - **R2 计算在 planning，事实来自 issue**：
   - issue 的语句不能连 `states`，planning 的语句不能连 `issues`（`TestSQLCSchemaScope`）。所以 issue 只回答按状态 id 的事实，planning 经项目的状态读取把状态 id 对到状态组，在 `planning/domain` 用纯函数算出全部数字（时区逻辑与 `domain.Today` 在一处，可单测）。
   - **`IssueStats`**（planning/app 声明）：

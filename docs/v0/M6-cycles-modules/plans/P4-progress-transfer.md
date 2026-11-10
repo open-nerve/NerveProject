@@ -157,7 +157,7 @@
 
 - [ ] Step 1：写测试：
   - 用例单测：读之路的拒绝（404、403），OwnOnly 的范围与冻结为 `null`，非 OwnOnly 回答冻结；
-  - bootstrap：成员、访客、OwnOnly 的计数；已归档的项目与迭代、开关关闭照常读；与列表引擎 `cycle_id=<id>&sub_issues=true&archived=false` 的总数相同（同一调用者，spec R1）；已删除的迭代/模块 404；模块缺日期时燃尽为 `null`。
+  - bootstrap：成员、访客、OwnOnly 的计数；已归档的项目与迭代、开关关闭照常读；与列表引擎 `cycle_id=<id>&sub_issue=true&archived=false` 的总数相同（同一调用者，spec R1）；已删除的迭代/模块 404；模块缺日期时燃尽为 `null`。
   
   看到失败。
 - [ ] Step 2：实现，`make gen`，网页 `check:types` 通过，聚焦通过。
