@@ -1,6 +1,7 @@
 package bootstrap
 
 import (
+	"net/http"
 	"slices"
 	"sync"
 	"testing"
@@ -9,29 +10,50 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 )
 
-// The cells of transferCycleIssues' rows (M6 P4 spec 6): the seeded
-// cycles have ended and hold no work item, and listsTheCycles holds each
+// The rows of transferCycleIssues (M6 P4 spec 6, R10): the seeded cycles
+// have ended and hold no work item, and listsTheCycles holds each
 // project's list to them, so each cell's prepare makes, in its own copy,
 // the cycle it transfers to and the work items it moves.
 
 // matrixNext is the id of Next, the cycle every cell transfers to, which
-// toTransfer makes in the cell's copy.
+// transferCells.prepare makes in the cell's copy.
 var matrixNext = uuid.NewV7()
 
 // transferToNext is the body of a transfer to Next.
 var transferToNext = transferBody(matrixNext)
 
-// transferCopies are the copies of the cells, by column: each cell's
-// prepare keeps its copy's url here, for its check to read the moved
-// memberships from; a row's check is given its answer alone.
-var transferCopies sync.Map
+func transferMatrixRows() []matrixRow {
+	plain, archived, guests := newTransferCells(), newTransferCells(), newTransferCells()
+	return []matrixRow{
+		// As archiveCycle (M6 P4 spec R10).
+		{op: "transferCycleIssues", write: true, columns: cycleColumns, prepare: plain.prepare, request: toCycle(http.MethodPost, "/transfer-issues",
+			transferToNext), cells: onACycle(cellOK, cellOK, cellOK, cellForbidden, cellForbidden), check: plain.check},
+		{op: "transferCycleIssues", variant: "archived", write: true, columns: archivedColumns, prepare: archived.prepare,
+			request: toCycle(http.MethodPost, "/transfer-issues", transferToNext), cells: cycleRows.ofArchived(cellProjectArchived, cellForbidden)},
+		// A project that shows its guests every work item (guestsSeeAll):
+		// its guest is refused by his role, as cycle.write has it, not as
+		// one who sees only his own; the workspace admin who is a guest no
+		// longer is, and transfers as an admin of the project.
+		{op: "transferCycleIssues", variant: "guests see all", write: true, columns: cycleColumns, prepare: preparing(guestsSeeAll, guests.prepare),
+			request: toCycle(http.MethodPost, "/transfer-issues", transferToNext),
+			cells:   onACycle(cellOK, cellOK, cellOK, cellForbidden, cellOK), check: guests.check},
+	}
+}
 
-// toTransfer is a cell's prepare: in its copy at url, through SQL, Next, a
+// transferCells are the copies of a transfer row's cells, by column: each
+// cell's prepare keeps its copy's url there, for its check to read the
+// moved memberships from, as a row's check is given its answer alone. Each
+// row has its own, so that no cell reads another row's copy.
+type transferCells struct{ copies *sync.Map }
+
+func newTransferCells() transferCells { return transferCells{copies: &sync.Map{}} }
+
+// prepare is a cell's prepare: in its copy at url, through SQL, Next, a
 // draft of the column's project with the id matrixNext; every undeleted
 // work item of the project in the column's own cycle (cycleOf), its
 // matrixIssue in Todo as seeded, the others moved into Done. The copy is
-// kept for the check (transferCopies).
-func toTransfer(t *testing.T, c caller, s seeded, url string) {
+// kept for the check.
+func (k transferCells) prepare(t *testing.T, c caller, s seeded, url string) {
 	t.Helper()
 	pool := openPool(t, url)
 	defer pool.Close()
@@ -52,18 +74,18 @@ func toTransfer(t *testing.T, c caller, s seeded, url string) {
 			t.Fatalf("preparing %s's transfer: %v", c, err)
 		}
 	}
-	transferCopies.Store(c, url)
+	k.copies.Store(c, url)
 }
 
-// transfersTheWorkItems: one work item moved, the column's project's
-// matrixIssue, now Next's alone; the project's others, in Done, left in
-// the column's own cycle (toTransfer).
-func transfersTheWorkItems(t *testing.T, c caller, s seeded, answer string) {
+// check: one work item moved, the column's project's matrixIssue, now
+// Next's alone; the project's others, in Done, left in the column's own
+// cycle (prepare).
+func (k transferCells) check(t *testing.T, c caller, s seeded, answer string) {
 	var got struct {
 		Transferred int64 `json:"transferred_issues"`
 	}
 	decodeAnswer(t, answer, &got)
-	url, ok := transferCopies.Load(c)
+	url, ok := k.copies.Load(c)
 	if !ok {
 		t.Fatalf("no copy of %s's cell was prepared", c)
 	}
