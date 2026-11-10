@@ -32,9 +32,9 @@
     "active_cycle": {
       "label": "活动周期",
       "progress": "进度",
-      "priority_issue": "优先工作项",
       "assignees": "受理人",
       "issue_burndown": "工作项燃尽",
+      "pending_work_items": "待处理的工作项 - {count}",
       "labels": "标签",
       "work_items_completed": "{completed}/{total} 个工作项已完成",
       "cancelled_excluded": "报告中已排除 {count} 个已取消的工作项。"

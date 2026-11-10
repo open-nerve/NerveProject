@@ -2,7 +2,7 @@
 import { act } from "react";
 import { observable, runInAction } from "mobx";
 import { vi } from "vitest";
-import type { CycleListItem } from "@nerve/api-client";
+import type { CycleListItem, CycleProgress } from "@nerve/api-client";
 import { heldChange, type HeldChange } from "@/lib/auth/fake-tab";
 
 // The cycles of a project's pages of cycles (its list, its archive, a cycle's preview; P5a spec 2.2, 2.5) as they read
@@ -15,21 +15,24 @@ type List = "cycles" | "archive";
 /**
  * A stand-in for the cycle store as the pages of a project's cycles read it: each of a project's two lists as nerve
  * last answered its read (show sets one as if it had); a cycle's row, of either list, by its id; the project's cycle in
- * progress, the first of its list whose status is current. Each read (a project's two lists, a cycle, its progress)
- * goes to nerve, which settles the last one of its kind when the test says (answer, refuse); a list nerve answers is
- * in the store before the read resolves, as the store does.
+ * progress, the first of its list whose status is current; a cycle's progress as nerve last answered its read. Each
+ * read (a project's two lists, a cycle, its progress) goes to nerve, which settles the last one of its kind when the
+ * test says (answer, refuse); a list or a progress nerve answers is in the store before the read resolves, as the store
+ * does.
  */
 export function listedCycles() {
   const lists = observable.map<string, CycleListItem[]>({}, { deep: false });
+  const progress = observable.map<string, CycleProgress>({}, { deep: false });
   const reads: { what: string; of: string; nerve: HeldChange<unknown> }[] = [];
-  const read = (what: string, keep?: List) =>
+  const read = (what: string, keep?: (of: string, answer: unknown) => void) =>
     vi.fn(async (of: string) => {
       const nerve = heldChange<unknown>();
       reads.push({ what, of, nerve });
       const answer = await nerve.sent;
-      if (keep) runInAction(() => lists.set(`${keep} ${of}`, answer as CycleListItem[]));
+      if (keep) runInAction(() => keep(of, answer));
       return answer;
     });
+  const listed = (list: List) => (of: string, answer: unknown) => lists.set(`${list} ${of}`, answer as CycleListItem[]);
   const listOf = (list: List, projectId: string | null | undefined) => lists.get(`${list} ${projectId}`);
   const rowOf = (cycleId: string | null | undefined) => [...lists.values()].flat().find((row) => row.id === cycleId);
   return {
@@ -41,10 +44,11 @@ export function listedCycles() {
     },
     getCycleRow: rowOf,
     getCycleById: rowOf,
-    fetchCycles: read("cycles", "cycles"),
-    fetchArchivedCycles: read("archive", "archive"),
+    getCycleProgress: (cycleId: string | null | undefined) => (cycleId ? progress.get(cycleId) : undefined),
+    fetchCycles: read("cycles", listed("cycles")),
+    fetchArchivedCycles: read("archive", listed("archive")),
     fetchCycle: read("cycle"),
-    fetchProgress: read("progress"),
+    fetchProgress: read("progress", (of, answer) => progress.set(of, answer as CycleProgress)),
     /** The project's list is rows, as if nerve had answered its read. */
     show: (list: List, projectId: string, rows: CycleListItem[]) =>
       runInAction(() => lists.set(`${list} ${projectId}`, rows)),

@@ -32,9 +32,9 @@
     "active_cycle": {
       "label": "Active cycle",
       "progress": "Progress",
-      "priority_issue": "Priority work items",
       "assignees": "Assignees",
       "issue_burndown": "Work item burndown",
+      "pending_work_items": "Pending work items - {count}",
       "labels": "Labels",
       "work_items_completed": "{completed}/{total} {total, plural, one {work item} other {work items}} completed",
       "cancelled_excluded": "{count, plural, one {# cancelled work item is} other {# cancelled work items are}} excluded from this report."

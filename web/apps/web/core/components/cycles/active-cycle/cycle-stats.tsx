@@ -4,214 +4,120 @@
  * See the LICENSE file for details.
  */
 
-import { Fragment } from "react";
-import { isEmpty } from "lodash-es";
+import type { ReactNode } from "react";
 import { observer } from "mobx-react";
 import { useTheme } from "next-themes";
-// headless ui
 import { Tab } from "@headlessui/react";
 // nerve imports
-import { useWorkspace } from "@/hooks/store/use-workspace";
-import { ProfileAvatar } from "@/components/assets/profile-image";
+import type { Progress } from "@nerve/api-client";
 import { useTranslation } from "@nerve/i18n";
-import type { ICycle } from "@nerve/types";
-// ui
-import { Loader } from "@nerve/ui";
 import { cn } from "@nerve/utils";
 // assets
 import darkAssigneeAsset from "@/app/assets/empty-state/active-cycle/assignee-dark.webp?url";
 import lightAssigneeAsset from "@/app/assets/empty-state/active-cycle/assignee-light.webp?url";
 import darkLabelAsset from "@/app/assets/empty-state/active-cycle/label-dark.webp?url";
 import lightLabelAsset from "@/app/assets/empty-state/active-cycle/label-light.webp?url";
-import userImage from "@/app/assets/user.png?url";
 // components
-import { SingleProgressStats } from "@/components/core/sidebar/single-progress-stats";
 import { SimpleEmptyState } from "@/components/empty-state/simple-empty-state-root";
 // hooks
 import useLocalStorage from "@/hooks/use-local-storage";
-// store
+// local imports
+import { AssigneeStats, LabelStats, useDistributionRows } from "../distribution-stats";
 
-export type ActiveCycleStatsProps = {
-  workspaceSlug: string;
+/** The card's tabs, in their order, each as the browser keeps it (localStorage activeCycleTab). */
+const TABS = ["Assignees", "Labels"] as const;
+
+type Props = {
   projectId: string;
-  cycle: ICycle | null;
-  cycleId?: string | null;
+  /** The progress the card shows (cycleCounts' choice): its assignees and its labels. */
+  progress: Progress;
 };
 
-export const ActiveCycleStats = observer(function ActiveCycleStats(props: ActiveCycleStatsProps) {
-  const { cycle, cycleId } = props;
-  const imageWorkspace = useWorkspace().getWorkspaceBySlug(props.workspaceSlug);
-  // local storage
-  const { storedValue: tab, setValue: setTab } = useLocalStorage("activeCycleTab", "Assignees");
+/**
+ * The breakdowns of the cycle in progress (P5a spec 2.4, 2.5, R10), each a tab: by assignee (the first) and by label,
+ * as nerve counts them, named by the project's members and labels (distribution-stats.tsx); without a row, how to see
+ * one. The tab chosen is kept (localStorage). The tab of its priority work items comes with P5b; a row does not set the
+ * page's filters (P5b).
+ */
+export const ActiveCycleStats = observer(function ActiveCycleStats({ projectId, progress }: Props) {
   // theme hook
   const { resolvedTheme } = useTheme();
   // nerve hooks
   const { t } = useTranslation();
+  const { assignees, labels } = useDistributionRows(progress, projectId);
+  // local storage
+  const { storedValue: tab, setValue: setTab } = useLocalStorage<(typeof TABS)[number]>("activeCycleTab", "Assignees");
   // derived values
-  const assigneesResolvedPath = resolvedTheme === "light" ? lightAssigneeAsset : darkAssigneeAsset;
-  const labelsResolvedPath = resolvedTheme === "light" ? lightLabelAsset : darkLabelAsset;
+  const light = resolvedTheme === "light";
 
-  const loaders = (
-    <Loader className="space-y-3">
-      <Loader.Item height="30px" />
-      <Loader.Item height="30px" />
-      <Loader.Item height="30px" />
-    </Loader>
-  );
-
-  return cycleId ? (
+  return (
     <div className="col-span-1 flex min-h-[17rem] flex-col gap-4 overflow-hidden rounded-lg border border-subtle bg-surface-1 p-4 lg:col-span-2 xl:col-span-1">
       <Tab.Group
-        as={Fragment}
-        defaultIndex={tab === "Labels" ? 1 : 0}
-        onChange={(i) => {
-          switch (i) {
-            case 0:
-              return setTab("Assignees");
-            case 1:
-              return setTab("Labels");
-
-            default:
-              return setTab("Assignees");
-          }
-        }}
+        selectedIndex={Math.max(0, TABS.indexOf(tab ?? "Assignees"))}
+        onChange={(index: number) => setTab(TABS[index] ?? "Assignees")}
       >
         <Tab.List
           as="div"
-          className="relative grid rounded-sm border-[0.5px] border-subtle bg-layer-1 p-[1px]"
-          style={{
-            gridTemplateColumns: `repeat(2, 1fr)`,
-          }}
+          className="relative grid grid-cols-2 rounded-sm border-[0.5px] border-subtle bg-layer-1 p-[1px]"
         >
-          <Tab
-            className={({ selected }) =>
-              cn(
-                "relative z-[1] rounded-[3px] py-1.5 text-11 font-semibold text-placeholder transition duration-500 focus:outline-none",
-                {
-                  "bg-surface-1 text-tertiary": selected,
-                  "hover:text-tertiary": !selected,
-                }
-              )
-            }
-          >
-            {t("project_cycles.active_cycle.assignees")}
-          </Tab>
-          <Tab
-            className={({ selected }) =>
-              cn(
-                "relative z-[1] rounded-[3px] py-1.5 text-11 font-semibold text-placeholder transition duration-500 focus:outline-none",
-                {
-                  "bg-surface-1 text-tertiary": selected,
-                  "hover:text-tertiary": !selected,
-                }
-              )
-            }
-          >
-            {t("project_cycles.active_cycle.labels")}
-          </Tab>
+          {[t("project_cycles.active_cycle.assignees"), t("project_cycles.active_cycle.labels")].map((name) => (
+            <Tab
+              key={name}
+              className={({ selected }) =>
+                cn(
+                  "relative z-[1] rounded-[3px] py-1.5 text-11 font-semibold text-placeholder transition duration-500 focus:outline-none",
+                  { "bg-surface-1 text-tertiary": selected, "hover:text-tertiary": !selected }
+                )
+              }
+            >
+              {name}
+            </Tab>
+          ))}
         </Tab.List>
-
-        <Tab.Panels as={Fragment}>
-          <Tab.Panel
-            as="div"
-            className="vertical-scrollbar scrollbar-sm flex h-52 w-full flex-col gap-1 overflow-y-auto text-secondary"
-          >
-            {cycle && !isEmpty(cycle.distribution) ? (
-              cycle?.distribution?.assignees && cycle.distribution.assignees.length > 0 ? (
-                cycle.distribution?.assignees?.map((assignee) => {
-                  if (assignee.assignee_id)
-                    return (
-                      <SingleProgressStats
-                        key={assignee.assignee_id}
-                        title={
-                          <div className="flex items-center gap-2">
-                            <ProfileAvatar
-                              alt={assignee?.display_name ?? undefined}
-                              fallback={assignee?.display_name?.[0]?.toUpperCase()}
-                              source={{
-                                kind: "member",
-                                workspaceID: imageWorkspace?.id ?? "",
-                                memberID: assignee.assignee_id,
-                              }}
-                              size="xs"
-                            />
-
-                            <span>{assignee.display_name}</span>
-                          </div>
-                        }
-                        completed={assignee.completed_issues}
-                        total={assignee.total_issues}
-                      />
-                    );
-                  else
-                    return (
-                      <SingleProgressStats
-                        key="unassigned"
-                        title={
-                          <div className="flex items-center gap-2">
-                            <div className="h-5 w-5 rounded-full border-2 border-subtle bg-layer-1">
-                              <img src={userImage} height="100%" width="100%" className="rounded-full" alt="User" />
-                            </div>
-                            <span>{t("no_assignee")}</span>
-                          </div>
-                        }
-                        completed={assignee.completed_issues}
-                        total={assignee.total_issues}
-                      />
-                    );
-                })
-              ) : (
-                <div className="flex h-full w-full items-center justify-center">
-                  <SimpleEmptyState
-                    title={t("active_cycle.empty_state.assignee.title")}
-                    assetPath={assigneesResolvedPath}
-                  />
-                </div>
-              )
+        <Tab.Panels>
+          <StatsPanel>
+            {assignees.length > 0 ? (
+              <AssigneeStats rows={assignees} />
             ) : (
-              loaders
+              <NoRows
+                title={t("active_cycle.empty_state.assignee.title")}
+                asset={light ? lightAssigneeAsset : darkAssigneeAsset}
+              />
             )}
-          </Tab.Panel>
-
-          <Tab.Panel
-            as="div"
-            className="vertical-scrollbar scrollbar-sm flex h-52 w-full flex-col gap-1 overflow-y-auto text-secondary"
-          >
-            {cycle && !isEmpty(cycle.distribution) ? (
-              cycle?.distribution?.labels && cycle.distribution.labels.length > 0 ? (
-                cycle.distribution.labels?.map((label) => (
-                  <SingleProgressStats
-                    key={label.label_id ?? "no-label"}
-                    title={
-                      <div className="flex items-center gap-2 truncate">
-                        <span
-                          className="block h-3 w-3 flex-shrink-0 rounded-full"
-                          style={{
-                            backgroundColor: label.color ?? "#000000",
-                          }}
-                        />
-                        <span className="truncate text-11 text-ellipsis">{label.label_name ?? "No labels"}</span>
-                      </div>
-                    }
-                    completed={label.completed_issues}
-                    total={label.total_issues}
-                  />
-                ))
-              ) : (
-                <div className="flex h-full w-full items-center justify-center">
-                  <SimpleEmptyState title={t("active_cycle.empty_state.label.title")} assetPath={labelsResolvedPath} />
-                </div>
-              )
+          </StatsPanel>
+          <StatsPanel>
+            {labels.length > 0 ? (
+              <LabelStats rows={labels} />
             ) : (
-              loaders
+              <NoRows
+                title={t("active_cycle.empty_state.label.title")}
+                asset={light ? lightLabelAsset : darkLabelAsset}
+              />
             )}
-          </Tab.Panel>
+          </StatsPanel>
         </Tab.Panels>
       </Tab.Group>
     </div>
-  ) : (
-    <Loader className="col-span-1 flex min-h-[17rem] flex-col gap-4 overflow-hidden bg-surface-1 lg:col-span-2 xl:col-span-1">
-      <Loader.Item width="100%" height="17rem" />
-    </Loader>
   );
 });
+
+/** A tab's rows, scrolled within the card. */
+function StatsPanel({ children }: { children: ReactNode }) {
+  return (
+    <Tab.Panel
+      as="div"
+      className="vertical-scrollbar scrollbar-sm flex h-52 w-full flex-col gap-1 overflow-y-auto text-secondary"
+    >
+      {children}
+    </Tab.Panel>
+  );
+}
+
+/** A breakdown without a row: how to see one. */
+function NoRows({ title, asset }: { title: string; asset: string }) {
+  return (
+    <div className="flex h-full w-full items-center justify-center">
+      <SimpleEmptyState title={title} assetPath={asset} />
+    </div>
+  );
+}

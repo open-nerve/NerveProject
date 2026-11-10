@@ -15,18 +15,13 @@ import { cn } from "@nerve/utils";
 // assets
 import emptyLabel from "@/app/assets/empty-state/empty_label.svg?url";
 import emptyMembers from "@/app/assets/empty-state/empty_members.svg?url";
-import userImage from "@/app/assets/user.png?url";
 // components
-import { ProfileAvatar } from "@/components/assets/profile-image";
 import { PROGRESS_STATS } from "@/components/core/sidebar/progress-stats/shared";
 import { SingleProgressStats } from "@/components/core/sidebar/single-progress-stats";
 // hooks
-import { useLabel } from "@/hooks/store/use-label";
-import { useMember } from "@/hooks/store/use-member";
 import useLocalStorage from "@/hooks/use-local-storage";
-import { useRouteWorkspace } from "@/hooks/use-route-workspace";
 // local imports
-import { assigneeRows, labelRows } from "../distribution-rows";
+import { AssigneeStats, LabelStats, useDistributionRows } from "../distribution-stats";
 
 /** The state groups whose work items a cycle's progress counts, in their order; the cancelled ones it does not. */
 const COUNTED = ["backlog", "unstarted", "started", "completed"] as const;
@@ -48,11 +43,7 @@ export const CycleProgressStats = observer(function CycleProgressStats(props: Pr
   const { cycleId, projectId, progress } = props;
   // hooks
   const { t } = useTranslation();
-  const imageWorkspace = useRouteWorkspace();
-  const {
-    project: { getProjectMemberDetails },
-  } = useMember();
-  const { getProjectLabels } = useLabel();
+  const { assignees, labels } = useDistributionRows(progress, projectId);
   const { storedValue: currentTab, setValue: setCycleTab } = useLocalStorage(
     `cycle-progress-tab-${cycleId}`,
     "stat-assignees"
@@ -63,8 +54,6 @@ export const CycleProgressStats = observer(function CycleProgressStats(props: Pr
     PROGRESS_STATS.findIndex((stat) => stat.key === currentTab)
   );
   const counted = progress.total_issues - progress.cancelled_issues;
-  const assignees = assigneeRows(progress.assignees, (id) => getProjectMemberDetails(id, projectId)?.member, t);
-  const labels = labelRows(progress.labels, getProjectLabels(projectId) ?? [], t);
 
   return (
     <Tab.Group
@@ -108,60 +97,13 @@ export const CycleProgressStats = observer(function CycleProgressStats(props: Pr
         </Tab.Panel>
         <Tab.Panel>
           {assignees.length > 0 ? (
-            <ul>
-              {assignees.map((row) => (
-                <li key={row.assignee_id ?? "none"}>
-                  <SingleProgressStats
-                    title={
-                      <div className="flex items-center gap-2">
-                        {row.avatarOf === null ? (
-                          <img src={userImage} className="size-4 rounded-full object-cover" alt="" aria-hidden="true" />
-                        ) : (
-                          <ProfileAvatar
-                            alt={row.name}
-                            fallback={row.name[0]?.toUpperCase()}
-                            source={{ kind: "member", workspaceID: imageWorkspace?.id ?? "", memberID: row.avatarOf }}
-                            size="xs"
-                          />
-                        )}
-                        <span>{row.name}</span>
-                      </div>
-                    }
-                    completed={row.completed_issues}
-                    total={row.total_issues}
-                  />
-                </li>
-              ))}
-            </ul>
+            <AssigneeStats rows={assignees} />
           ) : (
             <NoRows image={emptyMembers}>{t("no_assignee")}</NoRows>
           )}
         </Tab.Panel>
         <Tab.Panel>
-          {labels.length > 0 ? (
-            <ul>
-              {labels.map((row) => (
-                <li key={row.label_id ?? "none"}>
-                  <SingleProgressStats
-                    title={
-                      <div className="flex items-center gap-2 truncate">
-                        <span
-                          className="block h-3 w-3 flex-shrink-0 rounded-full"
-                          style={{ backgroundColor: row.color ?? undefined }}
-                          aria-hidden="true"
-                        />
-                        <span className="truncate text-11 text-ellipsis">{row.name}</span>
-                      </div>
-                    }
-                    completed={row.completed_issues}
-                    total={row.total_issues}
-                  />
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <NoRows image={emptyLabel}>{t("no_labels_yet")}</NoRows>
-          )}
+          {labels.length > 0 ? <LabelStats rows={labels} /> : <NoRows image={emptyLabel}>{t("no_labels_yet")}</NoRows>}
         </Tab.Panel>
       </Tab.Panels>
     </Tab.Group>
