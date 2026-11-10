@@ -5,6 +5,7 @@ import { answer, type Api } from "./api";
 import { bearer } from "./auth";
 
 export type Cycle = components["schemas"]["Cycle"];
+export type CycleListItem = components["schemas"]["CycleListItem"];
 export type CycleCreate = components["schemas"]["CycleCreate"];
 export type CycleUpdate = components["schemas"]["CycleUpdate"];
 type CyclePreferences = components["schemas"]["CyclePreferences"];
@@ -68,7 +69,12 @@ export async function changeCyclePreferences(
  * The cycles of the project of projectId that the caller of token lists: the project's list, by sort order, or its
  * archived catalog, the last archived first.
  */
-export async function listCycles(api: Api, token: string, projectId: string, archived = false): Promise<Cycle[]> {
+export async function listCycles(
+  api: Api,
+  token: string,
+  projectId: string,
+  archived = false
+): Promise<CycleListItem[]> {
   const { data, error, response } = await api.GET("/api/v0/projects/{project_id}/cycles", {
     params: { path: { project_id: projectId }, query: { archived } },
     headers: bearer(token),

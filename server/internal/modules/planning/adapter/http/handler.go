@@ -20,7 +20,7 @@ type CreateCycleUseCase interface {
 
 // ListCyclesUseCase is app.ListCycles.
 type ListCyclesUseCase interface {
-	Execute(ctx context.Context, projectID uuid.UUID, archived bool) ([]domain.ReadCycle, error)
+	Execute(ctx context.Context, projectID uuid.UUID, archived bool) ([]domain.CycleListItem, error)
 }
 
 // GetCycleUseCase is app.GetCycle.
@@ -50,7 +50,7 @@ type CreateModuleUseCase interface {
 
 // ListModulesUseCase is app.ListModules.
 type ListModulesUseCase interface {
-	Execute(ctx context.Context, projectID uuid.UUID, archived bool) ([]domain.Module, error)
+	Execute(ctx context.Context, projectID uuid.UUID, archived bool) ([]domain.ModuleListItem, error)
 }
 
 // GetModuleUseCase is app.GetModule.

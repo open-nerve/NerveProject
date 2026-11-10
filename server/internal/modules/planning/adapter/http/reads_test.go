@@ -17,11 +17,11 @@ import (
 // fakeList is listCycles: each call is recorded as "caller project archived"; it answers list, or err.
 type fakeList struct {
 	calls []string
-	list  []domain.ReadCycle
+	list  []domain.CycleListItem
 	err   error
 }
 
-func (f *fakeList) Execute(ctx context.Context, projectID uuid.UUID, archived bool) ([]domain.ReadCycle, error) {
+func (f *fakeList) Execute(ctx context.Context, projectID uuid.UUID, archived bool) ([]domain.CycleListItem, error) {
 	actor, err := shared.RequireActor(ctx)
 	if err != nil {
 		return nil, err
@@ -54,19 +54,21 @@ const (
 )
 
 // GET goes to the use case for the caller, the path's project and archived as given, false when left out; the
-// answer is 200 with its cycles in its order, each as POST answers one, and [] for none.
+// answer is 200 with its cycles in its order, each as POST answers one with the numbers of a cycle without work items
+// (TestListCyclesAnswersTheNumbers has others), and [] for none.
 func TestListCycles(t *testing.T) {
 	sprint, backlog := cycles(t)
 	path := "/api/v0/projects/" + webID.String() + "/cycles"
 	for _, tt := range []struct {
 		query    string
 		archived bool
-		list     []domain.ReadCycle
+		list     []domain.CycleListItem
 		want     string
 	}{
-		{"", false, []domain.ReadCycle{backlog, sprint}, `{"data":[` + backlogJSON + `,` + sprintJSON + `]}`},
+		{"", false, []domain.CycleListItem{{ReadCycle: backlog}, {ReadCycle: sprint}},
+			`{"data":[` + uncountedCycle(t, backlogJSON) + `,` + uncountedCycle(t, sprintJSON) + `]}`},
 		{"?archived=false", false, nil, `{"data":[]}`},
-		{"?archived=true", true, []domain.ReadCycle{sprint}, `{"data":[` + sprintJSON + `]}`},
+		{"?archived=true", true, []domain.CycleListItem{{ReadCycle: sprint}}, `{"data":[` + uncountedCycle(t, sprintJSON) + `]}`},
 	} {
 		list := &fakeList{list: tt.list}
 		res, body := do(t, newServer(t, httpadapter.UseCases{ListCycles: list}), request(http.MethodGet, path+tt.query, "alice", ""))

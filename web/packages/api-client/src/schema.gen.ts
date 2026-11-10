@@ -1750,7 +1750,7 @@ export interface paths {
         };
         /**
          * List a project's cycles
-         * @description For the project's admins, members and guests, also a caller who sees only his own work items there, whether its cycles are turned on or off and whether it is archived. The undeleted cycles that are not archived, by sort_order, then creation, then id; or, when archived is true, the archived ones alone, the latest archived first, then by id. Each with its status on the project's calendar day. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but whose cycles he may not read, forbidden. The whole collection at once: collections are not paginated.
+         * @description For the project's admins, members and guests, also a caller who sees only his own work items there, whether its cycles are turned on or off and whether it is archived. The undeleted cycles that are not archived, by sort_order, then creation, then id; or, when archived is true, the archived ones alone, the latest archived first, then by id. Each with its status on the project's calendar day, the counts and the assignees of its work items that the caller sees, and the counts it was frozen with (CycleListItem). A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but whose cycles he may not read, forbidden. The whole collection at once: collections are not paginated.
          */
         get: operations["listCycles"];
         put?: never;
@@ -1877,7 +1877,7 @@ export interface paths {
         };
         /**
          * List a project's modules
-         * @description For the project's admins, members and guests, also a caller who sees only his own work items there, whether its modules are turned on or off and whether it is archived. The undeleted modules that are not archived, by sort_order, then creation, then id; or, when archived is true, the archived ones alone, the latest archived first, then by id. Each with its undeleted members, ascending. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but whose modules he may not read, forbidden. The whole collection at once: collections are not paginated.
+         * @description For the project's admins, members and guests, also a caller who sees only his own work items there, whether its modules are turned on or off and whether it is archived. The undeleted modules that are not archived, by sort_order, then creation, then id; or, when archived is true, the archived ones alone, the latest archived first, then by id. Each with its undeleted members, ascending, and the counts of its work items that the caller sees (ModuleListItem). A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but whose modules he may not read, forbidden. The whole collection at once: collections are not paginated.
          */
         get: operations["listModules"];
         put?: never;
@@ -3538,6 +3538,140 @@ export interface components {
          * @enum {string}
          */
         CycleStatus: "draft" | "upcoming" | "current" | "completed";
+        /** @description The counts of a cycle's progress as it was frozen, of every work item (FrozenProgress's), and when. */
+        FrozenCounts: {
+            /**
+             * Format: int64
+             * @description The work items; the sum of the five groups' counts.
+             */
+            total_issues: number;
+            /**
+             * Format: int64
+             * @description Those in a state of the backlog group.
+             */
+            backlog_issues: number;
+            /**
+             * Format: int64
+             * @description Those in a state of the unstarted group.
+             */
+            unstarted_issues: number;
+            /**
+             * Format: int64
+             * @description Those in a state of the started group.
+             */
+            started_issues: number;
+            /**
+             * Format: int64
+             * @description Those in a state of the completed group.
+             */
+            completed_issues: number;
+            /**
+             * Format: int64
+             * @description Those in a state of the cancelled group.
+             */
+            cancelled_issues: number;
+            /**
+             * Format: date-time
+             * @description When it was frozen.
+             */
+            frozen_at: string;
+        };
+        /** @description A cycle of a project as its list shows it: every field of Cycle, and the numbers of its work items that the caller sees, those in it by an undeleted membership, undeleted and not archived, sub-items too; his own alone for a caller who sees only his own work items. A cycle without any has every count 0 and no assignee. */
+        CycleListItem: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            workspace_id: string;
+            /** Format: uuid */
+            project_id: string;
+            name: string;
+            /** @description Plain text; empty for none. */
+            description: string;
+            /**
+             * Format: date
+             * @description The day it starts, on the project's calendar; null for a draft.
+             */
+            start_date: string | null;
+            /**
+             * Format: date
+             * @description The day it ends, on the project's calendar; null for a draft.
+             */
+            end_date: string | null;
+            status: components["schemas"]["CycleStatus"];
+            /**
+             * Format: uuid
+             * @description The account that created it; null once that account is gone.
+             */
+            owned_by_id: string | null;
+            /** @description The cycle's place among the project's cycles, the lowest first. */
+            sort_order: number;
+            /**
+             * Format: date-time
+             * @description When it was archived; null while it is not.
+             */
+            archived_at: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+            /** Format: uuid */
+            created_by_id: string | null;
+            /** Format: uuid */
+            updated_by_id: string | null;
+            /**
+             * Format: int64
+             * @description The work items; the sum of the five groups' counts.
+             */
+            total_issues: number;
+            /**
+             * Format: int64
+             * @description Those in a state of the backlog group.
+             */
+            backlog_issues: number;
+            /**
+             * Format: int64
+             * @description Those in a state of the unstarted group.
+             */
+            unstarted_issues: number;
+            /**
+             * Format: int64
+             * @description Those in a state of the started group.
+             */
+            started_issues: number;
+            /**
+             * Format: int64
+             * @description Those in a state of the completed group.
+             */
+            completed_issues: number;
+            /**
+             * Format: int64
+             * @description Those in a state of the cancelled group.
+             */
+            cancelled_issues: number;
+            /** @description The undeleted assignees of those work items, each once, ascending. */
+            assignee_ids: string[];
+            /** @description The counts of the cycle's progress as it was frozen once after it ended, of every work item, and when (CycleProgress's progress_snapshot). null while it is not frozen, and always for a caller who sees only his own work items. */
+            progress_snapshot: components["schemas"]["FrozenCounts"] | null;
+        };
+        CycleList: {
+            data: components["schemas"]["CycleListItem"][];
+        };
+        CycleCreate: {
+            /** @description 1–255 characters without the surrounding white space, which is dropped; no NUL. */
+            name: string;
+            /** @description Plain text without NUL; empty when left out. */
+            description?: string;
+            /**
+             * Format: date
+             * @description The day it starts, on the project's calendar; given with end_date, or neither for a draft.
+             */
+            start_date?: string;
+            /**
+             * Format: date
+             * @description The day it ends, not before start_date; given with start_date, or neither for a draft.
+             */
+            end_date?: string;
+        };
         /** @description A cycle of a project. */
         Cycle: {
             /** Format: uuid */
@@ -3580,25 +3714,6 @@ export interface components {
             created_by_id: string | null;
             /** Format: uuid */
             updated_by_id: string | null;
-        };
-        CycleList: {
-            data: components["schemas"]["Cycle"][];
-        };
-        CycleCreate: {
-            /** @description 1–255 characters without the surrounding white space, which is dropped; no NUL. */
-            name: string;
-            /** @description Plain text without NUL; empty when left out. */
-            description?: string;
-            /**
-             * Format: date
-             * @description The day it starts, on the project's calendar; given with end_date, or neither for a draft.
-             */
-            start_date?: string;
-            /**
-             * Format: date
-             * @description The day it ends, not before start_date; given with start_date, or neither for a draft.
-             */
-            end_date?: string;
         };
         CycleUpdate: {
             /** @description 1–255 characters without the surrounding white space, which is dropped; no NUL. */
@@ -3786,6 +3901,108 @@ export interface components {
          * @enum {string}
          */
         ModuleStatus: "backlog" | "planned" | "in-progress" | "paused" | "completed" | "cancelled";
+        /** @description A module of a project as its list shows it: every field of Module, and the counts of its work items that the caller sees, those in it by an undeleted membership, undeleted and not archived, sub-items too; his own alone for a caller who sees only his own work items. A work item in several modules counts in each; a module without any has every count 0. */
+        ModuleListItem: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            workspace_id: string;
+            /** Format: uuid */
+            project_id: string;
+            name: string;
+            /** @description Plain text; empty for none. */
+            description: string;
+            /**
+             * Format: date
+             * @description The day it starts; null for none.
+             */
+            start_date: string | null;
+            /**
+             * Format: date
+             * @description The day it is due, not before start_date; null for none.
+             */
+            target_date: string | null;
+            status: components["schemas"]["ModuleStatus"];
+            /**
+             * Format: uuid
+             * @description The account that leads it; null for none, or once that account is gone.
+             */
+            lead_id: string | null;
+            /** @description Its members' accounts, ascending; one who has left the project since is still one. */
+            member_ids: string[];
+            /** @description The module's place among the project's modules, the lowest first. */
+            sort_order: number;
+            /**
+             * Format: date-time
+             * @description When it was archived; null while it is not.
+             */
+            archived_at: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+            /** Format: uuid */
+            created_by_id: string | null;
+            /** Format: uuid */
+            updated_by_id: string | null;
+            /**
+             * Format: int64
+             * @description The work items; the sum of the five groups' counts.
+             */
+            total_issues: number;
+            /**
+             * Format: int64
+             * @description Those in a state of the backlog group.
+             */
+            backlog_issues: number;
+            /**
+             * Format: int64
+             * @description Those in a state of the unstarted group.
+             */
+            unstarted_issues: number;
+            /**
+             * Format: int64
+             * @description Those in a state of the started group.
+             */
+            started_issues: number;
+            /**
+             * Format: int64
+             * @description Those in a state of the completed group.
+             */
+            completed_issues: number;
+            /**
+             * Format: int64
+             * @description Those in a state of the cancelled group.
+             */
+            cancelled_issues: number;
+        };
+        ModuleList: {
+            data: components["schemas"]["ModuleListItem"][];
+        };
+        ModuleCreate: {
+            /** @description 1–255 characters without the surrounding white space, which is dropped; no NUL. */
+            name: string;
+            /** @description Plain text without NUL; empty when left out. */
+            description?: string;
+            /**
+             * Format: date
+             * @description The day it starts; left out for none.
+             */
+            start_date?: string;
+            /**
+             * Format: date
+             * @description The day it is due, not before start_date; left out for none.
+             */
+            target_date?: string;
+            status?: components["schemas"]["ModuleStatus"];
+            /**
+             * Format: uuid
+             * @description An active member of the project who is not its guest; null, or left out, for none.
+             */
+            lead_id?: string | null;
+            /** @description At most 100 accounts, each named once, each an active member of the project who is not its guest; left out, or empty, for none. */
+            member_ids?: string[];
+        };
         /** @description A module of a project. */
         Module: {
             /** Format: uuid */
@@ -3830,33 +4047,6 @@ export interface components {
             created_by_id: string | null;
             /** Format: uuid */
             updated_by_id: string | null;
-        };
-        ModuleList: {
-            data: components["schemas"]["Module"][];
-        };
-        ModuleCreate: {
-            /** @description 1–255 characters without the surrounding white space, which is dropped; no NUL. */
-            name: string;
-            /** @description Plain text without NUL; empty when left out. */
-            description?: string;
-            /**
-             * Format: date
-             * @description The day it starts; left out for none.
-             */
-            start_date?: string;
-            /**
-             * Format: date
-             * @description The day it is due, not before start_date; left out for none.
-             */
-            target_date?: string;
-            status?: components["schemas"]["ModuleStatus"];
-            /**
-             * Format: uuid
-             * @description An active member of the project who is not its guest; null, or left out, for none.
-             */
-            lead_id?: string | null;
-            /** @description At most 100 accounts, each named once, each an active member of the project who is not its guest; left out, or empty, for none. */
-            member_ids?: string[];
         };
         ModuleUpdate: {
             /** @description 1–255 characters without the surrounding white space, which is dropped; no NUL. */
@@ -4159,9 +4349,11 @@ export type IssueListDisplayProperties = components['schemas']['IssueListDisplay
 export type ProjectPreferences = components['schemas']['ProjectPreferences'];
 export type ProjectPreferencesUpdate = components['schemas']['ProjectPreferencesUpdate'];
 export type CycleStatus = components['schemas']['CycleStatus'];
-export type Cycle = components['schemas']['Cycle'];
+export type FrozenCounts = components['schemas']['FrozenCounts'];
+export type CycleListItem = components['schemas']['CycleListItem'];
 export type CycleList = components['schemas']['CycleList'];
 export type CycleCreate = components['schemas']['CycleCreate'];
+export type Cycle = components['schemas']['Cycle'];
 export type CycleUpdate = components['schemas']['CycleUpdate'];
 export type AssigneeDistribution = components['schemas']['AssigneeDistribution'];
 export type LabelDistribution = components['schemas']['LabelDistribution'];
@@ -4171,9 +4363,10 @@ export type Progress = components['schemas']['Progress'];
 export type FrozenProgress = components['schemas']['FrozenProgress'];
 export type CycleProgress = components['schemas']['CycleProgress'];
 export type ModuleStatus = components['schemas']['ModuleStatus'];
-export type Module = components['schemas']['Module'];
+export type ModuleListItem = components['schemas']['ModuleListItem'];
 export type ModuleList = components['schemas']['ModuleList'];
 export type ModuleCreate = components['schemas']['ModuleCreate'];
+export type Module = components['schemas']['Module'];
 export type ModuleUpdate = components['schemas']['ModuleUpdate'];
 export type ModuleLink = components['schemas']['ModuleLink'];
 export type ModuleLinkCollection = components['schemas']['ModuleLinkCollection'];

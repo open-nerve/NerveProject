@@ -54,11 +54,15 @@ type lockWorld struct {
 	checkedFilters  map[string][]string
 	checkedDisplay  *shared.ListDisplayFilters
 	// The groups StateGroups answers, by state (M6 P4); the work items of each cycle and module, by its id, and the
-	// viewer each read of them was asked for; the cycles' frozen progress, by cycle.
+	// viewer each read of them was asked for; the cycles' frozen progress, by cycle. A list's: the counts by cycle or
+	// module and state, and the cycles' assignees, the issue module answers; the ids each read of a page was asked for.
 	groups    map[uuid.UUID]domain.StateGroup
 	items     map[uuid.UUID][]domain.WorkItem
 	viewers   []*uuid.UUID
 	snapshots map[uuid.UUID]*domain.Frozen
+	counts    []domain.StateCount
+	assignees []domain.CycleAssignee
+	pages     [][]uuid.UUID
 }
 
 type inTx struct{}

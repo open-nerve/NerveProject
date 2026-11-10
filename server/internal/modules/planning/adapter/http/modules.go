@@ -16,9 +16,9 @@ func (h handler) ListModules(ctx context.Context, req gen.ListModulesRequestObje
 	if err != nil {
 		return nil, err
 	}
-	out := gen.ModuleList{Data: make([]gen.Module, len(list))}
+	out := gen.ModuleList{Data: make([]gen.ModuleListItem, len(list))}
 	for i, m := range list {
-		out.Data[i] = module(m)
+		out.Data[i] = moduleListItem(m)
 	}
 	return gen.ListModules200JSONResponse(out), nil
 }
@@ -113,4 +113,15 @@ func module(m domain.Module) gen.Module {
 		StartDate: orNull(m.StartDate), TargetDate: orNull(m.TargetDate), Status: gen.ModuleStatus(m.Status), LeadID: orNull(m.LeadID),
 		MemberIds: members, SortOrder: m.SortOrder, ArchivedAt: orNull(m.ArchivedAt), CreatedAt: m.CreatedAt, UpdatedAt: m.UpdatedAt,
 		CreatedByID: orNull(m.CreatedByID), UpdatedByID: orNull(m.UpdatedByID)}
+}
+
+// moduleListItem is m as the list shows it: the module as module shows it,
+// and the counts of its work items.
+func moduleListItem(m domain.ModuleListItem) gen.ModuleListItem {
+	b := module(m.Module)
+	return gen.ModuleListItem{ID: b.ID, WorkspaceID: b.WorkspaceID, ProjectID: b.ProjectID, Name: b.Name, Description: b.Description,
+		StartDate: b.StartDate, TargetDate: b.TargetDate, Status: b.Status, LeadID: b.LeadID, MemberIds: b.MemberIds, SortOrder: b.SortOrder,
+		ArchivedAt: b.ArchivedAt, CreatedAt: b.CreatedAt, UpdatedAt: b.UpdatedAt, CreatedByID: b.CreatedByID, UpdatedByID: b.UpdatedByID,
+		TotalIssues: m.Live.Total, BacklogIssues: m.Live.Backlog, UnstartedIssues: m.Live.Unstarted, StartedIssues: m.Live.Started,
+		CompletedIssues: m.Live.Completed, CancelledIssues: m.Live.Cancelled}
 }

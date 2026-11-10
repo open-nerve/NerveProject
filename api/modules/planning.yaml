@@ -18,8 +18,10 @@ paths:
         off and whether it is archived. The undeleted cycles that are not
         archived, by sort_order, then creation, then id; or, when archived is
         true, the archived ones alone, the latest archived first, then by id.
-        Each with its status on the project's calendar day. A project that
-        does not exist, is deleted, or that the caller does not see answers
+        Each with its status on the project's calendar day, the counts and
+        the assignees of its work items that the caller sees, and the counts
+        it was frozen with (CycleListItem). A project that does not exist,
+        is deleted, or that the caller does not see answers
         project.not_found; one he sees but whose cycles he may not read,
         forbidden. The whole collection at once: collections are not
         paginated.
@@ -272,8 +274,9 @@ paths:
         off and whether it is archived. The undeleted modules that are not
         archived, by sort_order, then creation, then id; or, when archived is
         true, the archived ones alone, the latest archived first, then by id.
-        Each with its undeleted members, ascending. A project that does not
-        exist, is deleted, or that the caller does not see answers
+        Each with its undeleted members, ascending, and the counts of its
+        work items that the caller sees (ModuleListItem). A project that
+        does not exist, is deleted, or that the caller does not see answers
         project.not_found; one he sees but whose modules he may not read,
         forbidden. The whole collection at once: collections are not
         paginated.
@@ -920,7 +923,112 @@ components:
         data:
           type: array
           items:
-            $ref: '#/components/schemas/Cycle'
+            $ref: '#/components/schemas/CycleListItem'
+    CycleListItem:
+      description: >-
+        A cycle of a project as its list shows it: every field of Cycle, and
+        the numbers of its work items that the caller sees, those in it by an
+        undeleted membership, undeleted and not archived, sub-items too; his
+        own alone for a caller who sees only his own work items. A cycle
+        without any has every count 0 and no assignee.
+      type: object
+      additionalProperties: false
+      required: [id, workspace_id, project_id, name, description, start_date, end_date, status, owned_by_id, sort_order, archived_at,
+        created_at, updated_at, created_by_id, updated_by_id, total_issues, backlog_issues, unstarted_issues, started_issues,
+        completed_issues, cancelled_issues, assignee_ids, progress_snapshot]
+      properties:
+        id:
+          type: string
+          format: uuid
+        workspace_id:
+          type: string
+          format: uuid
+        project_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          description: Plain text; empty for none.
+          type: string
+        start_date:
+          description: The day it starts, on the project's calendar; null for a draft.
+          type: [string, 'null']
+          format: date
+        end_date:
+          description: The day it ends, on the project's calendar; null for a draft.
+          type: [string, 'null']
+          format: date
+        status:
+          $ref: '#/components/schemas/CycleStatus'
+        owned_by_id:
+          description: The account that created it; null once that account is gone.
+          type: [string, 'null']
+          format: uuid
+        sort_order:
+          description: The cycle's place among the project's cycles, the lowest first.
+          type: number
+        archived_at:
+          description: When it was archived; null while it is not.
+          type: [string, 'null']
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        created_by_id:
+          type: [string, 'null']
+          format: uuid
+        updated_by_id:
+          type: [string, 'null']
+          format: uuid
+        total_issues:
+          description: The work items; the sum of the five groups' counts.
+          type: integer
+          format: int64
+          minimum: 0
+        backlog_issues:
+          description: Those in a state of the backlog group.
+          type: integer
+          format: int64
+          minimum: 0
+        unstarted_issues:
+          description: Those in a state of the unstarted group.
+          type: integer
+          format: int64
+          minimum: 0
+        started_issues:
+          description: Those in a state of the started group.
+          type: integer
+          format: int64
+          minimum: 0
+        completed_issues:
+          description: Those in a state of the completed group.
+          type: integer
+          format: int64
+          minimum: 0
+        cancelled_issues:
+          description: Those in a state of the cancelled group.
+          type: integer
+          format: int64
+          minimum: 0
+        assignee_ids:
+          description: The undeleted assignees of those work items, each once, ascending.
+          type: array
+          items:
+            type: string
+            format: uuid
+        progress_snapshot:
+          description: >-
+            The counts of the cycle's progress as it was frozen once after it
+            ended, of every work item, and when (CycleProgress's
+            progress_snapshot). null while it is not frozen, and always for a
+            caller who sees only his own work items.
+          oneOf:
+            - $ref: '#/components/schemas/FrozenCounts'
+            - type: 'null'
     CycleUpdate:
       type: object
       additionalProperties: false
@@ -1035,7 +1143,106 @@ components:
         data:
           type: array
           items:
-            $ref: '#/components/schemas/Module'
+            $ref: '#/components/schemas/ModuleListItem'
+    ModuleListItem:
+      description: >-
+        A module of a project as its list shows it: every field of Module,
+        and the counts of its work items that the caller sees, those in it by
+        an undeleted membership, undeleted and not archived, sub-items too;
+        his own alone for a caller who sees only his own work items. A work
+        item in several modules counts in each; a module without any has
+        every count 0.
+      type: object
+      additionalProperties: false
+      required: [id, workspace_id, project_id, name, description, start_date, target_date, status, lead_id, member_ids, sort_order,
+        archived_at, created_at, updated_at, created_by_id, updated_by_id, total_issues, backlog_issues, unstarted_issues,
+        started_issues, completed_issues, cancelled_issues]
+      properties:
+        id:
+          type: string
+          format: uuid
+        workspace_id:
+          type: string
+          format: uuid
+        project_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          description: Plain text; empty for none.
+          type: string
+        start_date:
+          description: The day it starts; null for none.
+          type: [string, 'null']
+          format: date
+        target_date:
+          description: The day it is due, not before start_date; null for none.
+          type: [string, 'null']
+          format: date
+        status:
+          $ref: '#/components/schemas/ModuleStatus'
+        lead_id:
+          description: The account that leads it; null for none, or once that account is gone.
+          type: [string, 'null']
+          format: uuid
+        member_ids:
+          description: >-
+            Its members' accounts, ascending; one who has left the project
+            since is still one.
+          type: array
+          items:
+            type: string
+            format: uuid
+        sort_order:
+          description: The module's place among the project's modules, the lowest first.
+          type: number
+        archived_at:
+          description: When it was archived; null while it is not.
+          type: [string, 'null']
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        created_by_id:
+          type: [string, 'null']
+          format: uuid
+        updated_by_id:
+          type: [string, 'null']
+          format: uuid
+        total_issues:
+          description: The work items; the sum of the five groups' counts.
+          type: integer
+          format: int64
+          minimum: 0
+        backlog_issues:
+          description: Those in a state of the backlog group.
+          type: integer
+          format: int64
+          minimum: 0
+        unstarted_issues:
+          description: Those in a state of the unstarted group.
+          type: integer
+          format: int64
+          minimum: 0
+        started_issues:
+          description: Those in a state of the started group.
+          type: integer
+          format: int64
+          minimum: 0
+        completed_issues:
+          description: Those in a state of the completed group.
+          type: integer
+          format: int64
+          minimum: 0
+        cancelled_issues:
+          description: Those in a state of the cancelled group.
+          type: integer
+          format: int64
+          minimum: 0
     ModuleCreate:
       type: object
       additionalProperties: false
@@ -1464,6 +1671,46 @@ components:
           oneOf:
             - $ref: '#/components/schemas/Burndown'
             - type: 'null'
+        frozen_at:
+          description: When it was frozen.
+          type: string
+          format: date-time
+    FrozenCounts:
+      description: The counts of a cycle's progress as it was frozen, of every work item (FrozenProgress's), and when.
+      type: object
+      additionalProperties: false
+      required: [total_issues, backlog_issues, unstarted_issues, started_issues, completed_issues, cancelled_issues, frozen_at]
+      properties:
+        total_issues:
+          description: The work items; the sum of the five groups' counts.
+          type: integer
+          format: int64
+          minimum: 0
+        backlog_issues:
+          description: Those in a state of the backlog group.
+          type: integer
+          format: int64
+          minimum: 0
+        unstarted_issues:
+          description: Those in a state of the unstarted group.
+          type: integer
+          format: int64
+          minimum: 0
+        started_issues:
+          description: Those in a state of the started group.
+          type: integer
+          format: int64
+          minimum: 0
+        completed_issues:
+          description: Those in a state of the completed group.
+          type: integer
+          format: int64
+          minimum: 0
+        cancelled_issues:
+          description: Those in a state of the cancelled group.
+          type: integer
+          format: int64
+          minimum: 0
         frozen_at:
           description: When it was frozen.
           type: string

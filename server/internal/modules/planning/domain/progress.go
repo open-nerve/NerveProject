@@ -175,7 +175,7 @@ func ProgressOf(f ProgressFacts) (Progress, error) {
 		if !ok {
 			return Progress{}, fmt.Errorf("work item %s is in state %s, not one of the project's", item.ID, item.StateID)
 		}
-		if err := counts.add(group); err != nil {
+		if err := counts.add(group, 1); err != nil {
 			return Progress{}, fmt.Errorf("work item %s: %w", item.ID, err)
 		}
 		items[i] = grouped{item, group}
@@ -190,23 +190,23 @@ func ProgressOf(f ProgressFacts) (Progress, error) {
 	}, nil
 }
 
-// add counts a work item in a state of group, one of the five.
-func (c *Counts) add(group StateGroup) error {
+// add counts n work items in a state of group, one of the five.
+func (c *Counts) add(group StateGroup, n int64) error {
 	switch group {
 	case GroupBacklog:
-		c.Backlog++
+		c.Backlog += n
 	case GroupUnstarted:
-		c.Unstarted++
+		c.Unstarted += n
 	case GroupStarted:
-		c.Started++
+		c.Started += n
 	case GroupCompleted:
-		c.Completed++
+		c.Completed += n
 	case GroupCancelled:
-		c.Cancelled++
+		c.Cancelled += n
 	default:
 		return fmt.Errorf("its state's group %q takes no work item", group)
 	}
-	c.Total++
+	c.Total += n
 	return nil
 }
 

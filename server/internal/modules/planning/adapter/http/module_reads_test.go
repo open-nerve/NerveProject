@@ -17,11 +17,11 @@ import (
 // fakeListModules is listModules: each call is recorded as "caller project archived"; it answers list, or err.
 type fakeListModules struct {
 	calls []string
-	list  []domain.Module
+	list  []domain.ModuleListItem
 	err   error
 }
 
-func (f *fakeListModules) Execute(ctx context.Context, projectID uuid.UUID, archived bool) ([]domain.Module, error) {
+func (f *fakeListModules) Execute(ctx context.Context, projectID uuid.UUID, archived bool) ([]domain.ModuleListItem, error) {
 	actor, err := shared.RequireActor(ctx)
 	if err != nil {
 		return nil, err
@@ -49,19 +49,21 @@ func (f *fakeGetModule) Execute(ctx context.Context, id uuid.UUID) (domain.Modul
 const moduleNotFoundJSON = `{"status":404,"code":"planning.module_not_found","title":"Not Found","detail":"The module does not exist, or you cannot see it."}`
 
 // GET goes to the use case for the caller, the path's project and archived as given, false when left out; the
-// answer is 200 with its modules in its order, each as POST answers one, and [] for none.
+// answer is 200 with its modules in its order, each as POST answers one with the counts of a module without work
+// items (TestListModulesAnswersTheNumbers has others), and [] for none.
 func TestListModules(t *testing.T) {
 	billing, auth := modules(t)
 	path := "/api/v0/projects/" + webID.String() + "/modules"
 	for _, tt := range []struct {
 		query    string
 		archived bool
-		list     []domain.Module
+		list     []domain.ModuleListItem
 		want     string
 	}{
-		{"", false, []domain.Module{auth, billing}, `{"data":[` + authJSON + `,` + billingJSON + `]}`},
+		{"", false, []domain.ModuleListItem{{Module: auth}, {Module: billing}},
+			`{"data":[` + uncountedModule(t, authJSON) + `,` + uncountedModule(t, billingJSON) + `]}`},
 		{"?archived=false", false, nil, `{"data":[]}`},
-		{"?archived=true", true, []domain.Module{billing}, `{"data":[` + billingJSON + `]}`},
+		{"?archived=true", true, []domain.ModuleListItem{{Module: billing}}, `{"data":[` + uncountedModule(t, billingJSON) + `]}`},
 	} {
 		list := &fakeListModules{list: tt.list}
 		res, body := do(t, newServer(t, httpadapter.UseCases{ListModules: list}), request(http.MethodGet, path+tt.query, "alice", ""))

@@ -2,6 +2,7 @@ package httpadapter
 
 import (
 	"context"
+	"uuid"
 
 	"github.com/oapi-codegen/nullable"
 
@@ -17,9 +18,9 @@ func (h handler) ListCycles(ctx context.Context, req gen.ListCyclesRequestObject
 	if err != nil {
 		return nil, err
 	}
-	out := gen.CycleList{Data: make([]gen.Cycle, len(list))}
+	out := gen.CycleList{Data: make([]gen.CycleListItem, len(list))}
 	for i, c := range list {
-		out.Data[i] = cycle(c)
+		out.Data[i] = cycleListItem(c)
 	}
 	return gen.ListCycles200JSONResponse(out), nil
 }
@@ -105,6 +106,29 @@ func cycle(c domain.ReadCycle) gen.Cycle {
 		StartDate: orNull(c.Dates.Start), EndDate: orNull(c.Dates.End), Status: gen.CycleStatus(c.Status), OwnedByID: orNull(c.OwnedByID),
 		SortOrder: c.SortOrder, ArchivedAt: orNull(c.ArchivedAt), CreatedAt: c.CreatedAt, UpdatedAt: c.UpdatedAt,
 		CreatedByID: orNull(c.CreatedByID), UpdatedByID: orNull(c.UpdatedByID)}
+}
+
+// cycleListItem is c as the list shows it: the cycle as cycle shows it,
+// the counts of its work items, their assignees an array, never null, and
+// its frozen counts, null for none.
+func cycleListItem(c domain.CycleListItem) gen.CycleListItem {
+	b := cycle(c.ReadCycle)
+	assignees := c.AssigneeIDs
+	if assignees == nil {
+		assignees = []uuid.UUID{}
+	}
+	out := gen.CycleListItem{ID: b.ID, WorkspaceID: b.WorkspaceID, ProjectID: b.ProjectID, Name: b.Name, Description: b.Description,
+		StartDate: b.StartDate, EndDate: b.EndDate, Status: b.Status, OwnedByID: b.OwnedByID, SortOrder: b.SortOrder, ArchivedAt: b.ArchivedAt,
+		CreatedAt: b.CreatedAt, UpdatedAt: b.UpdatedAt, CreatedByID: b.CreatedByID, UpdatedByID: b.UpdatedByID,
+		TotalIssues: c.Live.Total, BacklogIssues: c.Live.Backlog, UnstartedIssues: c.Live.Unstarted, StartedIssues: c.Live.Started,
+		CompletedIssues: c.Live.Completed, CancelledIssues: c.Live.Cancelled, AssigneeIds: assignees,
+		ProgressSnapshot: nullable.NewNullNullable[gen.FrozenCounts]()}
+	if f := c.Snapshot; f != nil {
+		out.ProgressSnapshot = nullable.NewNullableWithValue(gen.FrozenCounts{TotalIssues: f.Total, BacklogIssues: f.Backlog,
+			UnstartedIssues: f.Unstarted, StartedIssues: f.Started, CompletedIssues: f.Completed, CancelledIssues: f.Cancelled,
+			FrozenAt: f.FrozenAt})
+	}
+	return out
 }
 
 // orNull is v as a nullable field: null when v is nil.

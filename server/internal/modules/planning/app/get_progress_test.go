@@ -34,25 +34,56 @@ func (w *lockWorld) ModuleItems(ctx context.Context, project, module uuid.UUID, 
 	return w.items[module], nil
 }
 
-func (w *lockWorld) CycleCounts(ctx context.Context, _ uuid.UUID, _ []uuid.UUID, _ *uuid.UUID) ([]domain.StateCount, error) {
+// CycleCounts is the lock world's counts of a page of cycles: its counts of the cycles asked for, whoever views them
+// (the issue module filters them by viewer, whom the world records, with the page).
+func (w *lockWorld) CycleCounts(ctx context.Context, _ uuid.UUID, ids []uuid.UUID, viewer *uuid.UUID) ([]domain.StateCount, error) {
 	w.log(ctx, "CycleCounts")
-	return nil, nil
+	return paged(w, ids, viewer, w.counts, func(c domain.StateCount) uuid.UUID { return c.TargetID }), nil
 }
 
-func (w *lockWorld) ModuleCounts(ctx context.Context, _ uuid.UUID, _ []uuid.UUID, _ *uuid.UUID) ([]domain.StateCount, error) {
+// ModuleCounts is CycleCounts of a page of modules.
+func (w *lockWorld) ModuleCounts(ctx context.Context, _ uuid.UUID, ids []uuid.UUID, viewer *uuid.UUID) ([]domain.StateCount, error) {
 	w.log(ctx, "ModuleCounts")
-	return nil, nil
+	return paged(w, ids, viewer, w.counts, func(c domain.StateCount) uuid.UUID { return c.TargetID }), nil
 }
 
-func (w *lockWorld) CycleAssignees(ctx context.Context, _ uuid.UUID, _ []uuid.UUID, _ *uuid.UUID) ([]domain.CycleAssignee, error) {
+// CycleAssignees is the lock world's assignees of a page of cycles, as CycleCounts reads its counts.
+func (w *lockWorld) CycleAssignees(ctx context.Context, _ uuid.UUID, ids []uuid.UUID, viewer *uuid.UUID) ([]domain.CycleAssignee, error) {
 	w.log(ctx, "CycleAssignees")
-	return nil, nil
+	return paged(w, ids, viewer, w.assignees, func(a domain.CycleAssignee) uuid.UUID { return a.CycleID }), nil
+}
+
+// paged records a read of the page ids for viewer, and answers those of rows that are of a target of ids'.
+func paged[R any](w *lockWorld, ids []uuid.UUID, viewer *uuid.UUID, rows []R, target func(R) uuid.UUID) []R {
+	w.pages = append(w.pages, ids)
+	w.viewers = append(w.viewers, viewer)
+	var out []R
+	for _, r := range rows {
+		if slices.Contains(ids, target(r)) {
+			out = append(out, r)
+		}
+	}
+	return out
 }
 
 // CycleSnapshot is the lock world's frozen progress of the cycle id, nil for none.
 func (w *lockWorld) CycleSnapshot(ctx context.Context, id uuid.UUID) (*domain.Frozen, error) {
 	w.log(ctx, "CycleSnapshot")
 	return w.snapshots[id], nil
+}
+
+// CycleSnapshotCounts is the lock world's counts and moments of the frozen progress of the cycles ids, by cycle, the
+// page recorded.
+func (w *lockWorld) CycleSnapshotCounts(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]domain.FrozenCounts, error) {
+	w.log(ctx, "CycleSnapshotCounts")
+	w.pages = append(w.pages, ids)
+	out := map[uuid.UUID]domain.FrozenCounts{}
+	for _, id := range ids {
+		if f := w.snapshots[id]; f != nil {
+			out[id] = domain.FrozenCounts{Counts: f.Counts, FrozenAt: f.FrozenAt}
+		}
+	}
+	return out, nil
 }
 
 func (w *lockWorld) cycleProgress(actor shared.Actor) (domain.CycleProgress, error) {

@@ -36,9 +36,13 @@ func (w *lockWorld) getModule(id uuid.UUID) (domain.Module, error) {
 	return uc.Execute(shared.WithActor(context.Background(), shared.Actor{UserID: uuid.NewV7()}), id)
 }
 
-func (w *lockWorld) listModules(project uuid.UUID, archived bool) ([]domain.Module, error) {
-	uc := NewListModules(ListModulesDeps{Reads: w.reads(), Modules: w})
-	return uc.Execute(shared.WithActor(context.Background(), shared.Actor{UserID: uuid.NewV7()}), project, archived)
+func (w *lockWorld) listModules(project uuid.UUID, archived bool) ([]domain.ModuleListItem, error) {
+	return w.listModulesAs(shared.Actor{UserID: uuid.NewV7()}, project, archived)
+}
+
+func (w *lockWorld) listModulesAs(actor shared.Actor, project uuid.UUID, archived bool) ([]domain.ModuleListItem, error) {
+	uc := NewListModules(ListModulesDeps{Reads: w.reads(), Modules: w, Groups: w, Stats: w})
+	return uc.Execute(shared.WithActor(context.Background(), actor), project, archived)
 }
 
 // A module's read decides module.read in one transaction of its own, the read-only snapshot (Reads): the module read,
@@ -84,7 +88,7 @@ func TestListModules(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if want := []string{"Begin", "Facts", "Authorize module.read", tt.list, "End"}; !slices.Equal(w.calls, want) {
+		if want := []string{"Begin", "Facts", "Authorize module.read", tt.list, "StateGroups", "ModuleCounts", "End"}; !slices.Equal(w.calls, want) {
 			t.Fatalf("archived=%t: calls\n%q\nwant\n%q", tt.archived, w.calls, want)
 		}
 		var ids []uuid.UUID

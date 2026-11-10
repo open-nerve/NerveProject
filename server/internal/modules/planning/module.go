@@ -3,19 +3,20 @@
 // changing, archiving, unarchiving and deleting a cycle of a project;
 // creating, listing, reading, changing, archiving, unarchiving and deleting a
 // module of a project, and adding, listing, changing and removing a module's
-// links; reading a cycle's and a module's progress, computed from the issue
-// module's facts of their work items (IssueStats); and reading and changing
-// each caller's own display settings on a cycle's and a module's page. A
-// cycle's and a module's deletion publish it in their transaction
-// (EventTypes), which the issue module's subscriber takes the work items out
-// of it in. A link's creation and a change of its address enqueue its crawl
-// in their transaction, whose job writes the link's metadata. Project and
-// workspace deletion events enqueue the asynchronous deletion of the deleted
-// projects' planning rows in the publishing transaction; the 60-day purge
-// removes them. It tells the issue module about the cycles and modules a
-// work item's write names and those that keep work items from automatic
-// archival (IssueTargets), and the names of the cycles and modules of the
-// projects a list of work items ordered by them reads (IssueDirectory).
+// links; reading a cycle's and a module's progress, and the numbers of their
+// list rows, computed from the issue module's facts of their work items
+// (IssueStats); and reading and changing each caller's own display settings on
+// a cycle's and a module's page. A cycle's and a module's deletion publish it
+// in their transaction (EventTypes), which the issue module's subscriber takes
+// the work items out of it in. A link's creation and a change of its address
+// enqueue its crawl in their transaction, whose job writes the link's
+// metadata. Project and workspace deletion events enqueue the asynchronous
+// deletion of the deleted projects' planning rows in the publishing
+// transaction; the 60-day purge removes them. It tells the issue module about
+// the cycles and modules a work item's write names and those that keep work
+// items from automatic archival (IssueTargets), and the names of the cycles
+// and modules of the projects a list of work items ordered by them reads
+// (IssueDirectory).
 package planning
 
 import (
@@ -183,14 +184,15 @@ func New(d Deps) *Module {
 	pageWrites := app.UpdatePreferencesDeps{Locks: locks, Settings: d.ListSettings, Clock: d.Clock, Preferences: store}
 	return &Module{
 		uc: httpadapter.UseCases{
-			ListCycles:       app.NewListCycles(app.ListCyclesDeps{Reads: reads, Cycles: store, Clock: d.Clock}),
+			ListCycles: app.NewListCycles(app.ListCyclesDeps{Reads: reads, Cycles: store, Groups: d.Projects, Stats: d.IssueStats, Snapshots: store,
+				Clock: d.Clock}),
 			CreateCycle:      app.NewCreateCycle(app.CreateCycleDeps{Locks: locks, Cycles: store, Clock: d.Clock}),
 			GetCycle:         app.NewGetCycle(app.GetCycleDeps{Reads: reads, Clock: d.Clock}),
 			UpdateCycle:      app.NewUpdateCycle(app.UpdateCycleDeps{Locks: locks, Cycles: store, Clock: d.Clock}),
 			ArchiveCycle:     app.NewArchiveCycle(app.ArchiveCycleDeps{Locks: locks, Cycles: store, Clock: d.Clock}),
 			UnarchiveCycle:   app.NewUnarchiveCycle(app.ArchiveCycleDeps{Locks: locks, Cycles: store, Clock: d.Clock}),
 			DeleteCycle:      app.NewDeleteCycle(app.DeleteCycleDeps{Locks: locks, Cycles: store, Clock: d.Clock, Events: d.Events}),
-			ListModules:      app.NewListModules(app.ListModulesDeps{Reads: reads, Modules: store}),
+			ListModules:      app.NewListModules(app.ListModulesDeps{Reads: reads, Modules: store, Groups: d.Projects, Stats: d.IssueStats}),
 			CreateModule:     app.NewCreateModule(app.CreateModuleDeps{Locks: locks, Roles: d.Projects, Modules: store, Clock: d.Clock}),
 			GetModule:        app.NewGetModule(app.GetModuleDeps{Reads: reads}),
 			UpdateModule:     app.NewUpdateModule(app.UpdateModuleDeps{Locks: locks, Roles: d.Projects, Modules: store, Clock: d.Clock}),

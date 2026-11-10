@@ -6,6 +6,7 @@ import { bearer } from "./auth";
 import type { Database } from "./db";
 
 type Module = components["schemas"]["Module"];
+type ModuleListItem = components["schemas"]["ModuleListItem"];
 type ModuleCreate = components["schemas"]["ModuleCreate"];
 type ModuleUpdate = components["schemas"]["ModuleUpdate"];
 type ModuleLink = components["schemas"]["ModuleLink"];
@@ -72,7 +73,12 @@ export async function changeModulePreferences(
  * The modules of the project of projectId that the caller of token lists: the project's list, by sort order, or its
  * archived catalog, the last archived first.
  */
-export async function listModules(api: Api, token: string, projectId: string, archived = false): Promise<Module[]> {
+export async function listModules(
+  api: Api,
+  token: string,
+  projectId: string,
+  archived = false
+): Promise<ModuleListItem[]> {
   const { data, error, response } = await api.GET("/api/v0/projects/{project_id}/modules", {
     params: { path: { project_id: projectId }, query: { archived } },
     headers: bearer(token),

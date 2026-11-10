@@ -177,7 +177,63 @@ type CycleIssueFilters struct {
 
 // CycleList defines model for CycleList.
 type CycleList struct {
-	Data []Cycle `json:"data"`
+	Data []CycleListItem `json:"data"`
+}
+
+// CycleListItem A cycle of a project as its list shows it: every field of Cycle, and the numbers of its work items that the caller sees, those in it by an undeleted membership, undeleted and not archived, sub-items too; his own alone for a caller who sees only his own work items. A cycle without any has every count 0 and no assignee.
+type CycleListItem struct {
+	// ArchivedAt When it was archived; null while it is not.
+	ArchivedAt nullable.Nullable[time.Time] `json:"archived_at"`
+
+	// AssigneeIds The undeleted assignees of those work items, each once, ascending.
+	AssigneeIds []uuid.UUID `json:"assignee_ids"`
+
+	// BacklogIssues Those in a state of the backlog group.
+	BacklogIssues int64 `json:"backlog_issues"`
+
+	// CancelledIssues Those in a state of the cancelled group.
+	CancelledIssues int64 `json:"cancelled_issues"`
+
+	// CompletedIssues Those in a state of the completed group.
+	CompletedIssues int64                        `json:"completed_issues"`
+	CreatedAt       time.Time                    `json:"created_at"`
+	CreatedByID     nullable.Nullable[uuid.UUID] `json:"created_by_id"`
+
+	// Description Plain text; empty for none.
+	Description string `json:"description"`
+
+	// EndDate The day it ends, on the project's calendar; null for a draft.
+	EndDate nullable.Nullable[shared.Date] `json:"end_date"`
+	ID      uuid.UUID                      `json:"id"`
+	Name    string                         `json:"name"`
+
+	// OwnedByID The account that created it; null once that account is gone.
+	OwnedByID nullable.Nullable[uuid.UUID] `json:"owned_by_id"`
+
+	// ProgressSnapshot The counts of the cycle's progress as it was frozen once after it ended, of every work item, and when (CycleProgress's progress_snapshot). null while it is not frozen, and always for a caller who sees only his own work items.
+	ProgressSnapshot nullable.Nullable[FrozenCounts] `json:"progress_snapshot"`
+	ProjectID        uuid.UUID                       `json:"project_id"`
+
+	// SortOrder The cycle's place among the project's cycles, the lowest first.
+	SortOrder float64 `json:"sort_order"`
+
+	// StartDate The day it starts, on the project's calendar; null for a draft.
+	StartDate nullable.Nullable[shared.Date] `json:"start_date"`
+
+	// StartedIssues Those in a state of the started group.
+	StartedIssues int64 `json:"started_issues"`
+
+	// Status Read from the cycle's dates on the project's calendar day, never stored: draft without dates, upcoming before the start, current from the start to the end, completed after the end.
+	Status CycleStatus `json:"status"`
+
+	// TotalIssues The work items; the sum of the five groups' counts.
+	TotalIssues int64 `json:"total_issues"`
+
+	// UnstartedIssues Those in a state of the unstarted group.
+	UnstartedIssues int64                        `json:"unstarted_issues"`
+	UpdatedAt       time.Time                    `json:"updated_at"`
+	UpdatedByID     nullable.Nullable[uuid.UUID] `json:"updated_by_id"`
+	WorkspaceID     uuid.UUID                    `json:"workspace_id"`
 }
 
 // CyclePreferences The caller's display settings on a cycle's page.
@@ -229,6 +285,30 @@ type CycleUpdate struct {
 
 	// StartDate The day it starts, on the project's calendar; null clears it, with end_date.
 	StartDate nullable.Nullable[shared.Date] `json:"start_date,omitempty"`
+}
+
+// FrozenCounts The counts of a cycle's progress as it was frozen, of every work item (FrozenProgress's), and when.
+type FrozenCounts struct {
+	// BacklogIssues Those in a state of the backlog group.
+	BacklogIssues int64 `json:"backlog_issues"`
+
+	// CancelledIssues Those in a state of the cancelled group.
+	CancelledIssues int64 `json:"cancelled_issues"`
+
+	// CompletedIssues Those in a state of the completed group.
+	CompletedIssues int64 `json:"completed_issues"`
+
+	// FrozenAt When it was frozen.
+	FrozenAt time.Time `json:"frozen_at"`
+
+	// StartedIssues Those in a state of the started group.
+	StartedIssues int64 `json:"started_issues"`
+
+	// TotalIssues The work items; the sum of the five groups' counts.
+	TotalIssues int64 `json:"total_issues"`
+
+	// UnstartedIssues Those in a state of the unstarted group.
+	UnstartedIssues int64 `json:"unstarted_issues"`
 }
 
 // FrozenProgress A cycle's progress as it was frozen, of every work item (Progress's fields), and when.
@@ -396,7 +476,60 @@ type ModuleLinkPatch struct {
 
 // ModuleList defines model for ModuleList.
 type ModuleList struct {
-	Data []Module `json:"data"`
+	Data []ModuleListItem `json:"data"`
+}
+
+// ModuleListItem A module of a project as its list shows it: every field of Module, and the counts of its work items that the caller sees, those in it by an undeleted membership, undeleted and not archived, sub-items too; his own alone for a caller who sees only his own work items. A work item in several modules counts in each; a module without any has every count 0.
+type ModuleListItem struct {
+	// ArchivedAt When it was archived; null while it is not.
+	ArchivedAt nullable.Nullable[time.Time] `json:"archived_at"`
+
+	// BacklogIssues Those in a state of the backlog group.
+	BacklogIssues int64 `json:"backlog_issues"`
+
+	// CancelledIssues Those in a state of the cancelled group.
+	CancelledIssues int64 `json:"cancelled_issues"`
+
+	// CompletedIssues Those in a state of the completed group.
+	CompletedIssues int64                        `json:"completed_issues"`
+	CreatedAt       time.Time                    `json:"created_at"`
+	CreatedByID     nullable.Nullable[uuid.UUID] `json:"created_by_id"`
+
+	// Description Plain text; empty for none.
+	Description string    `json:"description"`
+	ID          uuid.UUID `json:"id"`
+
+	// LeadID The account that leads it; null for none, or once that account is gone.
+	LeadID nullable.Nullable[uuid.UUID] `json:"lead_id"`
+
+	// MemberIds Its members' accounts, ascending; one who has left the project since is still one.
+	MemberIds []uuid.UUID `json:"member_ids"`
+	Name      string      `json:"name"`
+	ProjectID uuid.UUID   `json:"project_id"`
+
+	// SortOrder The module's place among the project's modules, the lowest first.
+	SortOrder float64 `json:"sort_order"`
+
+	// StartDate The day it starts; null for none.
+	StartDate nullable.Nullable[shared.Date] `json:"start_date"`
+
+	// StartedIssues Those in a state of the started group.
+	StartedIssues int64 `json:"started_issues"`
+
+	// Status A module's status, set by its writers, never read from its dates.
+	Status ModuleStatus `json:"status"`
+
+	// TargetDate The day it is due, not before start_date; null for none.
+	TargetDate nullable.Nullable[shared.Date] `json:"target_date"`
+
+	// TotalIssues The work items; the sum of the five groups' counts.
+	TotalIssues int64 `json:"total_issues"`
+
+	// UnstartedIssues Those in a state of the unstarted group.
+	UnstartedIssues int64                        `json:"unstarted_issues"`
+	UpdatedAt       time.Time                    `json:"updated_at"`
+	UpdatedByID     nullable.Nullable[uuid.UUID] `json:"updated_by_id"`
+	WorkspaceID     uuid.UUID                    `json:"workspace_id"`
 }
 
 // ModulePreferences The caller's display settings on a module's page.
