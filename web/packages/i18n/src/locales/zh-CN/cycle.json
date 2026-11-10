@@ -29,6 +29,7 @@
   "distribution": {
     "former_member": "已离开的成员",
     "deleted_label": "已删除的标签",
-    "no_labels": "无标签"
+    "no_labels": "无标签",
+    "of_total": "共 {total}"
   }
 }

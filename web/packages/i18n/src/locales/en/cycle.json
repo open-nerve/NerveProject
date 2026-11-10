@@ -29,6 +29,7 @@
   "distribution": {
     "former_member": "Former member",
     "deleted_label": "Deleted label",
-    "no_labels": "No labels"
+    "no_labels": "No labels",
+    "of_total": "of {total}"
   }
 }

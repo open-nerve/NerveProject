@@ -19,6 +19,11 @@
     "in_your_timezone": "In your timezone",
     "date_range": "Date range",
     "add_date": "Add date",
+    "not_found": {
+      "title": "Cycle does not exist",
+      "description": "The cycle you are looking for does not exist or has been deleted.",
+      "action": "View other cycles"
+    },
     "active_cycle": {
       "label": "Active cycle",
       "progress": "Progress",
@@ -81,12 +86,6 @@
         "success": {
           "description": "Cycle updated successfully.",
           "title": "Success!"
-        },
-        "failed": {
-          "title": "Error!"
-        },
-        "error": {
-          "already_exists": "You already have a cycle on the given dates, if you want to create a draft cycle, you can do that by removing both the dates."
         }
       },
       "delete": {

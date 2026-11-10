@@ -4,6 +4,7 @@
  * See the LICENSE file for details.
  */
 
+import { Fragment } from "react";
 import { Outlet } from "react-router";
 // components
 import { AppHeader } from "@/components/core/app-header";
@@ -13,21 +14,21 @@ import { CycleIssuesHeader } from "./header";
 import type { Route } from "./+types/layout";
 
 export default function ProjectCycleIssuesLayout({ params }: Route.ComponentProps) {
-  // the cycle's dialogs and restore outlive its header's quick actions, which go once it is deleted (CycleActionsHost)
+  const { workspaceSlug, projectId, cycleId } = params;
+  // Keyed by the route's cycle (M3 handoff 1, v0 design 7.7): another cycle, by the header's switcher, a link, a Back or
+  // a Forward, mounts its page afresh, so nothing of the cycle before (its reads, a dialog, days picked, a follow-up of
+  // nerve's late answer) carries into it. The host of the cycle's dialogs is within the key: they and their follow-ups
+  // are the page's, and outlive the header's quick actions, which are under it (CycleActionsHost).
   return (
-    <CycleActionsHost workspaceSlug={params.workspaceSlug} projectId={params.projectId}>
-      <AppHeader
-        header={
-          <CycleIssuesHeader
-            workspaceSlug={params.workspaceSlug}
-            projectId={params.projectId}
-            cycleId={params.cycleId}
-          />
-        }
-      />
-      <ContentWrapper>
-        <Outlet />
-      </ContentWrapper>
-    </CycleActionsHost>
+    <Fragment key={cycleId}>
+      <CycleActionsHost workspaceSlug={workspaceSlug} projectId={projectId}>
+        <AppHeader
+          header={<CycleIssuesHeader workspaceSlug={workspaceSlug} projectId={projectId} cycleId={cycleId} />}
+        />
+        <ContentWrapper>
+          <Outlet />
+        </ContentWrapper>
+      </CycleActionsHost>
+    </Fragment>
   );
 }

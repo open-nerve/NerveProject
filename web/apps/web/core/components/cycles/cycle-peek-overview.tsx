@@ -58,7 +58,6 @@ export const CyclePeekOverview = observer(function CyclePeekOverview(props: Prop
         >
           <CycleDetailsSidebar
             handleClose={handleClose}
-            isArchived={isArchived}
             projectId={projectId}
             workspaceSlug={workspaceSlug}
             cycleId={peekCycle}

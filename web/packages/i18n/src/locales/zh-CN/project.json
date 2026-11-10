@@ -19,6 +19,11 @@
     "in_your_timezone": "在您的时区",
     "date_range": "日期范围",
     "add_date": "添加日期",
+    "not_found": {
+      "title": "周期不存在",
+      "description": "你要找的周期不存在或已被删除。",
+      "action": "查看其他周期"
+    },
     "active_cycle": {
       "label": "活动周期",
       "progress": "进度",
@@ -81,12 +86,6 @@
         "success": {
           "description": "周期更新成功。",
           "title": "成功！"
-        },
-        "failed": {
-          "title": "错误！"
-        },
-        "error": {
-          "already_exists": "在给定日期范围内已存在周期，如果您想创建草稿周期，可以通过移除两个日期来实现。"
         }
       },
       "delete": {
