@@ -85,7 +85,8 @@ func (a accessProjects) ProjectFacts(ctx context.Context, projectID, userID uuid
 }
 
 // planningProjects is project's PlanningProjects as planning's Projects:
-// the same reads and locks, the facts converted, the roles as they come.
+// the same reads and locks, the facts converted, the roles as they come,
+// the states' groups by state.
 type planningProjects struct {
 	projects project.PlanningProjects
 }
@@ -107,6 +108,18 @@ func (p planningProjects) Share(ctx context.Context, id uuid.UUID) (planning.Pro
 
 func (p planningProjects) Roles(ctx context.Context, id uuid.UUID, ids []uuid.UUID) (map[uuid.UUID]shared.Role, error) {
 	return p.projects.ActiveRoles(ctx, id, ids)
+}
+
+func (p planningProjects) StateGroups(ctx context.Context, id uuid.UUID) (map[uuid.UUID]planning.StateGroup, error) {
+	states, err := p.projects.IssueStates(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	groups := make(map[uuid.UUID]planning.StateGroup, len(states))
+	for _, s := range states {
+		groups[s.ID] = planning.StateGroup(s.Group)
+	}
+	return groups, nil
 }
 
 // issuePlanning is planning's IssueTargets and IssueDirectory as issue's

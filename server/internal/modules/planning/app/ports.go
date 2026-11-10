@@ -4,6 +4,7 @@ import (
 	"context"
 	"uuid"
 
+	"github.com/open-nerve/NerveProject/server/internal/modules/planning/domain"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
@@ -23,13 +24,15 @@ type ProjectFacts struct {
 // a change of one's own display settings on a page (M6 P3b spec R6), which
 // waits for a write's and a deletion's lock and they for it. found is false
 // for a project that is not there or is deleted, also one deleted while the
-// lock waited. And its members' roles (RoleReader). project.Provide's
-// PlanningProjects is it, converted (bootstrap).
+// lock waited. And its members' roles (RoleReader), and its states' groups
+// (StateGroupReader). project.Provide's PlanningProjects is it, converted
+// (bootstrap).
 type Projects interface {
 	FactsReader
 	Lock(ctx context.Context, id uuid.UUID) (f ProjectFacts, found bool, err error)
 	Share(ctx context.Context, id uuid.UUID) (f ProjectFacts, found bool, err error)
 	RoleReader
+	StateGroupReader
 }
 
 // FactsReader reads a project's facts without a lock, in the transaction
@@ -47,4 +50,13 @@ type FactsReader interface {
 // project's lock (M6 P2 spec R5), which keeps them as read.
 type RoleReader interface {
 	Roles(ctx context.Context, project uuid.UUID, ids []uuid.UUID) (map[uuid.UUID]shared.Role, error)
+}
+
+// StateGroupReader reads the group of each of a project's undeleted states,
+// its triage state too, by state, in the transaction ctx carries (M6 P4
+// spec R2): the issue module answers a work item's state by its id, and a
+// progress counts the work item by its state's group. Under the project's
+// lock, which every write of a state takes too, they stay as read.
+type StateGroupReader interface {
+	StateGroups(ctx context.Context, projectID uuid.UUID) (map[uuid.UUID]domain.StateGroup, error)
 }

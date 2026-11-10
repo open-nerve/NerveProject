@@ -74,6 +74,22 @@ type IssueDirectory interface {
 // converts it into issue's.
 type IssueDirectoryName = app.IssueDirectoryName
 
+// IssueStats is what the module asks the issue module about the work items
+// of a project's cycles and modules, which their progress and their list
+// rows are computed from (M6 P4 spec R2): bootstrap converts issue's
+// PlanningStats into it.
+type IssueStats = app.IssueStats
+
+// WorkItem, StateCount and CycleAssignee are the values IssueStats hands
+// over, and StateGroup a state's group, which Projects' StateGroups hands
+// over: bootstrap converts issue's and project's into them.
+type (
+	WorkItem      = domain.WorkItem
+	StateCount    = domain.StateCount
+	CycleAssignee = domain.CycleAssignee
+	StateGroup    = domain.StateGroup
+)
+
 // Provided are the adapters bootstrap builds before wiring the modules.
 type Provided struct {
 	Purger         *app.Purger
@@ -123,6 +139,10 @@ type Deps struct {
 	Events shared.EventPublisher
 	// Projects are project's PlanningProjects, converted (bootstrap/ports.go).
 	Projects app.Projects
+	// IssueStats are the issue module's PlanningStats, converted
+	// (bootstrap/planning_issues.go): the facts of the work items of the
+	// project's cycles and modules (M6 P4 spec R2).
+	IssueStats app.IssueStats
 	// ListSettings checks the words of the pages' display settings: the
 	// issue module's ListSettings, as issue.Provide offers it (M6 P3b spec
 	// R5).

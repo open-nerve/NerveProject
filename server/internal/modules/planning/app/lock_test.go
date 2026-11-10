@@ -53,6 +53,8 @@ type lockWorld struct {
 	refusedWords    []shared.FieldError
 	checkedFilters  map[string][]string
 	checkedDisplay  *shared.ListDisplayFilters
+	// The groups StateGroups answers, by state (M6 P4).
+	groups map[uuid.UUID]domain.StateGroup
 }
 
 type inTx struct{}
@@ -86,6 +88,11 @@ func (w *lockWorld) Share(ctx context.Context, id uuid.UUID) (ProjectFacts, bool
 	w.log(ctx, "Share")
 	f, ok := w.facts[id]
 	return f, ok, nil
+}
+
+func (w *lockWorld) StateGroups(ctx context.Context, _ uuid.UUID) (map[uuid.UUID]domain.StateGroup, error) {
+	w.log(ctx, "StateGroups")
+	return w.groups, nil
 }
 
 func (w *lockWorld) GetCycle(ctx context.Context, id uuid.UUID) (domain.Cycle, bool, error) {

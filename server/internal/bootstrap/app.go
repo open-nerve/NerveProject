@@ -185,6 +185,7 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 		DeleteBatch: cfg.Planning.DeleteBatch, DeleteBudget: cfg.Planning.DeleteBudget,
 		WriteGate: projectWrites, Clock: businessClock, Authorizer: authorizer, Events: events,
 		Projects:     planningProjects{projects: projectPorts.PlanningProjects},
+		IssueStats:   planningIssues{stats: issuePorts.PlanningStats},
 		ListSettings: issuePorts.ListSettings,
 		LinkCrawls:   inserter, LinkCrawler: previews,
 	})

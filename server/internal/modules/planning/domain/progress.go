@@ -42,6 +42,21 @@ type WorkItem struct {
 	AssigneeIDs, LabelIDs []uuid.UUID
 }
 
+// StateCount is how many of the work items of a cycle or a module,
+// TargetID's, are in the state StateID, as a list row counts them, from
+// the issue module (M6 P4 spec R2, R9); the state's group is the project's.
+type StateCount struct {
+	TargetID, StateID uuid.UUID
+	Issues            int64
+}
+
+// CycleAssignee is an account assigned to a work item of a cycle, as a
+// cycle's list row reads its assignees, from the issue module (M6 P4 spec
+// R9).
+type CycleAssignee struct {
+	CycleID, AssigneeID uuid.UUID
+}
+
 // Counts are the work items by the group of their state; the total is the
 // sum of the five.
 type Counts struct {
