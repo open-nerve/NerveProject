@@ -110,7 +110,8 @@ func TestBuiltInProfiles(t *testing.T) {
 					WriteLockTimeout:     5 * time.Second,
 					AutoArchiveInterval:  map[string]time.Duration{"test": 2 * time.Second, "dev": 24 * time.Hour, "prod": 24 * time.Hour}[tt.env],
 				},
-				Planning: config.PlanningConfig{DeleteBatch: 1000, DeleteBudget: 45 * time.Second},
+				Planning: config.PlanningConfig{DeleteBatch: 1000, DeleteBudget: 45 * time.Second,
+					FreezeInterval: map[string]time.Duration{"test": 2 * time.Second, "dev": time.Hour, "prod": time.Hour}[tt.env]},
 				Files: config.FilesConfig{
 					UploadTTL: 15 * time.Minute, OperationTimeout: 10 * time.Second, CleanupInterval: time.Hour, CleanupBatch: 100, CleanupBudget: 10 * time.Second,
 					SizeLimit: 5 << 20, Driver: "local", Local: config.LocalFilesConfig{Root: "./data/files"}, S3: config.S3FilesConfig{PathStyle: true},

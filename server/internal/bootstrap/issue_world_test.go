@@ -15,6 +15,7 @@ import (
 	assetriver "github.com/open-nerve/NerveProject/server/internal/modules/asset/adapter/river"
 	identityriver "github.com/open-nerve/NerveProject/server/internal/modules/identity/adapter/river"
 	issueriver "github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/river"
+	planningriver "github.com/open-nerve/NerveProject/server/internal/modules/planning/adapter/river"
 	"github.com/open-nerve/NerveProject/server/internal/platform/config"
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apitest"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
@@ -92,13 +93,15 @@ func newIssueWorldOnRequests(t *testing.T, dbURL string, pool *pgxpool.Pool, con
 // (requestRowLock, requestBlocked), never any backend's; queuedRun stands in
 // for such a run where a test shows its probe tells them apart. Only the
 // tests whose fixture such a run would change wait: those that observe every
-// request's lock waits, and those whose auto-archive candidate is due on the
-// real clock too (archiveAhead). Every world waiting would double the
-// package's run time.
+// request's lock waits, those whose auto-archive candidate is due on the
+// real clock too (archiveAhead), and those with a cycle that has ended on
+// the app's clock, which the freeze's run locks the project of and freezes
+// (planning.freeze_cycles). Every world waiting would double the package's
+// run time.
 func waitForStartupRuns(t *testing.T, pool *pgxpool.Pool) {
 	t.Helper()
 	waitForCompletedKinds(t, pool, map[string]int{identityriver.CleanupKind: 1, issueriver.AutoArchiveKind: 1,
-		issueriver.TrimVersionsKind: 1, (purgeArgs{}).Kind(): 1, assetriver.CleanupKind: 1}, &lockedBuffer{})
+		issueriver.TrimVersionsKind: 1, (purgeArgs{}).Kind(): 1, assetriver.CleanupKind: 1, planningriver.FreezeCyclesKind: 1}, &lockedBuffer{})
 }
 
 // prepareIssueWorld shares the original API and membership-store fixture with

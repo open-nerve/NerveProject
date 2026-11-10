@@ -189,10 +189,13 @@ type IssueConfig struct {
 // PlanningConfig configures the cycles' and modules' maintenance: the
 // asynchronous deletion of a deleted project's cycles soft-deletes at most
 // DeleteBatch of them per transaction and runs for at most DeleteBudget
-// before River snoozes it (M6 P1 spec 2.4).
+// before River snoozes it (M6 P1 spec 2.4); the periodic job that freezes
+// the progress of the cycles that have ended runs when the server starts,
+// then every FreezeInterval (M6 P4 spec 2.5).
 type PlanningConfig struct {
-	DeleteBatch  int           `koanf:"delete_batch"`
-	DeleteBudget time.Duration `koanf:"delete_budget"`
+	DeleteBatch    int           `koanf:"delete_batch"`
+	DeleteBudget   time.Duration `koanf:"delete_budget"`
+	FreezeInterval time.Duration `koanf:"freeze_interval"`
 }
 
 // WriteGateConfig is the work items' write gate (platform/gate): at most
@@ -291,6 +294,7 @@ func (c Config) LogValue() slog.Value {
 		slog.Group("planning",
 			slog.Int("delete_batch", c.Planning.DeleteBatch),
 			slog.Duration("delete_budget", c.Planning.DeleteBudget),
+			slog.Duration("freeze_interval", c.Planning.FreezeInterval),
 		),
 		slog.Any("files", c.Files),
 		slog.Group("log",

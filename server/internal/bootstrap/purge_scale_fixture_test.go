@@ -47,7 +47,7 @@ func preparePurgeScale(t *testing.T, roles splitRoles, dir string) purgeScaleFix
 		w := newIssueWorldOn(t, roles.serverURL, roles.owner, func(c *config.Config) { c.Auth.AccessTokenTTL = time.Hour })
 		waitForCompletedKinds(t, roles.owner, map[string]int{
 			"identity.cleanup_expired_sessions": 1, "issue.auto_archive": 1,
-			"cleanup.purge_deleted": 1, "issue.trim_description_versions": 1,
+			"cleanup.purge_deleted": 1, "issue.trim_description_versions": 1, "planning.freeze_cycles": 1,
 		}, &lockedBuffer{})
 		w.makeMember(t, "walt", w.web, shared.RoleMember)
 		w.send(t, "alice", http.MethodPost, "/api/v0/projects/"+w.web.String()+"/labels", `{"name":"Feature"}`, 201)

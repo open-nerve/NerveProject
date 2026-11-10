@@ -177,6 +177,9 @@ func (p PlanningConfig) validate(fail func(key, format string, args ...any)) {
 	if p.DeleteBudget <= 0 || p.DeleteBudget > math.MaxInt64-5*time.Second {
 		fail("planning.delete_budget", "must be positive and leave 5s before duration overflow, got %s", p.DeleteBudget)
 	}
+	if p.FreezeInterval < time.Second {
+		fail("planning.freeze_interval", "must be at least 1s, got %s", p.FreezeInterval)
+	}
 }
 
 func (i IssueConfig) validate(requestTimeout time.Duration, fail func(key, format string, args ...any)) {

@@ -11,12 +11,15 @@ import (
 type LinkCrawler = app.LinkCrawler
 
 // Jobs declares the request-driven crawl of a module link and deletion of a
-// deleted project's planning rows.
+// deleted project's planning rows, and the scheduled freeze of the cycles
+// that have ended.
 func (m *Module) Jobs() []jobs.Job {
-	return []jobs.Job{riveradapter.CrawlLinkJob(m.crawlLink), riveradapter.DeleteRowsJob(m.deleteRows, m.deleteBudget, m.logger)}
+	return []jobs.Job{riveradapter.CrawlLinkJob(m.crawlLink), riveradapter.DeleteRowsJob(m.deleteRows, m.deleteBudget, m.logger),
+		riveradapter.FreezeCyclesJob(m.freezeCycles, m.freezeInterval)}
 }
 
-// EnqueuedKinds declares kinds that require a registered request-driven worker.
+// EnqueuedKinds declares kinds that require a registered request-driven
+// worker; the scheduled freeze is none.
 func EnqueuedKinds() []string {
 	return []string{riveradapter.CrawlLinkKind, riveradapter.DeleteRowsKind}
 }

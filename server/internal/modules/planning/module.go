@@ -10,13 +10,15 @@
 // in their transaction (EventTypes), which the issue module's subscriber takes
 // the work items out of it in. A link's creation and a change of its address
 // enqueue its crawl in their transaction, whose job writes the link's
-// metadata. Project and workspace deletion events enqueue the asynchronous
-// deletion of the deleted projects' planning rows in the publishing
-// transaction; the 60-day purge removes them. It tells the issue module about
-// the cycles and modules a work item's write names and those that keep work
-// items from automatic archival (IssueTargets), and the names of the cycles
-// and modules of the projects a list of work items ordered by them reads
-// (IssueDirectory).
+// metadata. A periodic job freezes, once, the progress of each cycle that
+// has ended, which a cycle's progress and list row answer beside the live
+// one (FreezeCycles). Project and workspace deletion events enqueue the
+// asynchronous deletion of the deleted projects' planning rows in the
+// publishing transaction; the 60-day purge removes them. It tells the issue
+// module about the cycles and modules a work item's write names and those
+// that keep work items from automatic archival (IssueTargets), and the names
+// of the cycles and modules of the projects a list of work items ordered by
+// them reads (IssueDirectory).
 package planning
 
 import (
@@ -156,22 +158,30 @@ type Deps struct {
 	// LinkCrawler is the link-preview crawler every module that has links
 	// shares, adapted by bootstrap (R12).
 	LinkCrawler app.LinkCrawler
-	// JobTx runs the deletion job's short transactions.
+	// JobTx runs the deletion job's and the freeze job's short
+	// transactions: each lock wait at most issue.write_lock_timeout, no
+	// write gate, and a lock failure kept as PostgreSQL's for River's
+	// retry (bootstrap/gate.go).
 	JobTx shared.TxManager
 	// RuntimeNow is the monotonic clock of the deletion job's budget.
 	RuntimeNow   func() time.Time
 	DeleteBatch  int
 	DeleteBudget time.Duration
-	Logger       *slog.Logger
+	// FreezeInterval is the freeze job's: it runs when the server starts,
+	// then every FreezeInterval (planning.freeze_interval).
+	FreezeInterval time.Duration
+	Logger         *slog.Logger
 }
 
 // Module is the planning module.
 type Module struct {
-	uc           httpadapter.UseCases
-	crawlLink    *app.CrawlLink
-	deleteRows   *app.DeleteRows
-	deleteBudget time.Duration
-	logger       *slog.Logger
+	uc             httpadapter.UseCases
+	crawlLink      *app.CrawlLink
+	deleteRows     *app.DeleteRows
+	deleteBudget   time.Duration
+	freezeCycles   *app.FreezeCycles
+	freezeInterval time.Duration
+	logger         *slog.Logger
 }
 
 // New builds the module from d.
@@ -217,6 +227,9 @@ func New(d Deps) *Module {
 		crawlLink:    app.NewCrawlLink(app.CrawlLinkDeps{Crawler: d.LinkCrawler, Links: store}),
 		deleteRows:   app.NewDeleteRows(app.DeleteRowsDeps{Rows: store, Tx: d.JobTx, RuntimeNow: d.RuntimeNow, Batch: d.DeleteBatch, Budget: d.DeleteBudget}),
 		deleteBudget: d.DeleteBudget, logger: d.Logger,
+		freezeCycles: app.NewFreezeCycles(app.FreezeCyclesDeps{Projects: d.Projects, Groups: d.Projects, Cycles: store, Stats: d.IssueStats,
+			Tx: d.JobTx, Clock: d.Clock}),
+		freezeInterval: d.FreezeInterval,
 	}
 }
 

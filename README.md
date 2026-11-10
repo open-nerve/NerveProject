@@ -110,7 +110,7 @@ M4列表专用三浏览器矩阵在当前 `make build` 之后运行 `pnpm --filt
 
 - **后台任务与自动归档（M4/P6–P9）**：`jobs.default_workers` 默认10、`jobs.periodic_workers` 默认2，均须为正整数。`issue.auto_archive_interval` 默认24小时、测试环境2秒，最小1秒；River的 `periodic` 队列运行会话清理、工作项自动归档、物理清理与描述版本保留，`default` 运行链接抓取与删除行任务。项目 `archive_in=0` 关闭自动归档，1–12按每月30天计；只归档完成/取消且 `updated_at` 到阈值的未归档工作项。系统活动和事件均无操作者。`clock.offset` 默认0，仅 `NERVE_ENV=test` 可设非零（可用 `NERVE_CLOCK__OFFSET` 覆盖），只影响业务时钟，不改变River调度、限速和等待期限；生产环境非零启动失败。配置及实测见 [P6 review](docs/v0/M4-issue-core/reviews/P6-issue-events-review.md)。
 
-- **后台删除与保留（M4/P9、M6/P1）**：以下八项支持同名环境覆盖；test的两个新周期间隔为2s，其他默认值与基础配置相同。启动会记录有效配置，非法值启动失败。
+- **后台删除、保留与冻结（M4/P9、M6/P1、M6/P4）**：以下九项支持同名环境覆盖；test的三个周期间隔（`cleanup.purge_interval`、`issue.trim_versions_interval`、`planning.freeze_interval`）为2s，其他默认值与基础配置相同。启动会记录有效配置，非法值启动失败。
 
   | 配置 | 默认 | 环境变量 | 合法值 |
   |---|---|---|---|
@@ -122,8 +122,11 @@ M4列表专用三浏览器矩阵在当前 `make build` 之后运行 `pnpm --filt
   | `issue.delete_budget` | `45s` | `NERVE_ISSUE__DELETE_BUDGET` | `>0`且加5s不溢出 |
   | `planning.delete_batch` | `1000` | `NERVE_PLANNING__DELETE_BATCH` | `1..2147483647` |
   | `planning.delete_budget` | `45s` | `NERVE_PLANNING__DELETE_BUDGET` | `>0`且加5s不溢出 |
+  | `planning.freeze_interval` | `1h` | `NERVE_PLANNING__FREEZE_INTERVAL` | `≥1s` |
 
   `cleanup.purge_deleted` 是一个无参周期任务，一次读取业务时钟固定截止点，依次调用asset→issue→planning→project→workspace→identity。每表按id键集分批、每批独立提交，只选择 `deleted_at < cutoff`；精确截止点和较新的直接候选保留。父行的CASCADE可带走仍活或较新的子行。不物理删除账户；会话仍由原会话清理任务负责。
+
+  `planning.freeze_cycles`（M6/P4）在 `periodic` 队列，启动时与此后每 `planning.freeze_interval` 一次：不加锁取有未冻结、`end_date` 不晚于UTC今天的迭代的项目，再每个项目一个事务，先取项目行锁、锁后读业务时钟，把按项目时区已结束的迭代的进度（全部工作项，不按调用者过滤）写入 `cycles.progress_snapshot`，只写一次，不改 `updated_at`/`updated_by_id`；已归档的项目、关闭迭代的项目与已归档的迭代照样冻结。某个项目失败时之前的项目已提交，River重试续上。
 
   `issue.trim_description_versions` 对每个未删除项目分别加N锁、开事务；已归档项目和工作项仍参与。只保留活工作项的活版本按 `last_saved_at DESC,id DESC` 排序的最新20条，不产生审计改写、动态或事件。软删版本由purge回收。
 

@@ -77,7 +77,8 @@ func TestRegistrationRowsSeeRequestJobs(t *testing.T) {
 		}
 	})
 	exec(`INSERT INTO river_job (kind,args,max_attempts,queue) VALUES
-		('identity.cleanup_expired_sessions','{}',3,'periodic'),('issue.auto_archive','{}',3,'periodic'),('issue.trim_description_versions','{}',25,'periodic'),('cleanup.purge_deleted','{}',25,'periodic')`)
+		('identity.cleanup_expired_sessions','{}',3,'periodic'),('issue.auto_archive','{}',3,'periodic'),('issue.trim_description_versions','{}',25,'periodic'),('cleanup.purge_deleted','{}',25,'periodic'),
+		('planning.freeze_cycles','{}',25,'periodic')`)
 	exec(`INSERT INTO river_leader (leader_id,elected_at,expires_at) VALUES ('new-leader',now(),now()+interval '1 minute')`)
 	t.Run("periodic and leader noise", func(t *testing.T) {
 		if after := registrationRows(t, pool); after != replaced {
