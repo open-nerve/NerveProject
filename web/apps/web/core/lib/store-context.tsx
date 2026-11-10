@@ -42,8 +42,9 @@ export const snapshot = (): RootStore => rootStore;
  * It gets a new RootStore, and the app renders again with it: nothing of the account shown before stays on
  * screen. The stores left behind keep their own RootStore, whose account's stores and client are the
  * old session's: nothing they still do reaches the new one. Of what they registered on the page's stores, the
- * project filters' reaction is released (RootStore.dispose); the cycle and module filters' reactions and the issue
- * root's autorun still follow the address in a retired session until M6 and M4 release them (M3 design 7.1, 13.2).
+ * project filters' reaction is released (RootStore.dispose); the cycle filters of planning register nothing (P5a
+ * spec R4); the module filters' reaction, and the old cycle filters' until planning's have their readers, still
+ * follow the address in a retired session (M3 design 7.1, 13.2).
  * The language was the account's: the new session shows the default until its profile sets it. The theme follows
  * the session in StoreWrapper.
  */
