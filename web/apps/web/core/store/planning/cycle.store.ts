@@ -13,11 +13,13 @@ import { ReconciledByKey } from "@/lib/reconciled";
 import { CyclesService } from "@/services/planning/cycles.service";
 // store
 import type { RootStore } from "@/store/root.store";
+import type { ICycleChanges } from "./cycle-changes";
+import { CycleChanges } from "./cycle-changes";
 
 /** A copy of a cycle the store holds, and when nerve answered it (Reconciled.answeredAt). */
 type Copy<T extends Cycle> = { cycle: T; answeredAt: number };
 
-export interface ICycleStore {
+export interface ICycleStore extends ICycleChanges {
   // computed actions
   getCycleById: (cycleId: string | null | undefined) => Cycle | undefined;
   getCycleRow: (cycleId: string | null | undefined) => CycleListItem | undefined;
@@ -28,7 +30,7 @@ export interface ICycleStore {
   // fetch actions
   fetchCycles: (projectId: string) => Promise<CycleListItem[] | undefined>;
   fetchArchivedCycles: (projectId: string) => Promise<CycleListItem[] | undefined>;
-  fetchCycle: (cycleId: string) => Promise<Cycle | undefined>;
+  fetchCycle: (cycleId: string) => Promise<Cycle | null | undefined>;
   fetchProgress: (cycleId: string) => Promise<CycleProgress | undefined>;
 }
 
@@ -39,19 +41,22 @@ export interface ICycleStore {
  * frozen with come from its list's row alone, which only a list gives. Every reader takes its project or cycle from
  * its caller (the route's), never from the address in the router store; the cycles of a project the project store no
  * longer gives (deleted, left, or of a workspace no longer the caller's) do not show. Its service sends with the
- * session's client; fetches do not queue.
+ * session's client; fetches do not queue. Its changes go one at a time and write nerve's answers into every copy that
+ * holds the cycle (cycle-changes.ts, v0 design 7.7).
  */
 export class CycleStore implements ICycleStore {
   /** Each project's cycles that are not archived, in nerve's order, reconciled between fetches and changes. */
   readonly unarchived = new ReconciledByKey<CycleListItem[]>();
   /** Each project's archived cycles, the latest archived first. */
   readonly archived = new ReconciledByKey<CycleListItem[]>();
-  /** Each cycle as nerve last answered it alone. */
-  readonly details = new ReconciledByKey<Cycle>();
+  /** Each cycle as nerve last answered it alone; null once deleted here (a fetch out meanwhile answers null too). */
+  readonly details = new ReconciledByKey<Cycle | null>();
   /** Each cycle's progress: its status, its live progress, and what it was frozen with. */
   readonly progress = new ReconciledByKey<CycleProgress>();
   // services
   private readonly service: CyclesService;
+  /** The changes of the cycles, which write nerve's answers into the values above. */
+  private readonly changes: CycleChanges;
   // stores
   /** The project as the caller sees it, by the project store (ProjectStore.getProjectById). */
   private readonly projectOf: (projectId: string | undefined | null) => Project | undefined;
@@ -59,6 +64,7 @@ export class CycleStore implements ICycleStore {
   constructor(rootStore: RootStore, api: ApiClient) {
     this.service = new CyclesService(api);
     this.projectOf = rootStore.projectRoot.project.getProjectById;
+    this.changes = new CycleChanges(this, this.service);
   }
 
   /**
@@ -123,13 +129,21 @@ export class CycleStore implements ICycleStore {
   fetchArchivedCycles = (projectId: string): Promise<CycleListItem[] | undefined> =>
     this.archived.fetch(projectId, () => this.service.listArchived(projectId));
 
-  /** @description reads the cycle alone, an archived one too, as fetchCycles */
-  fetchCycle = (cycleId: string): Promise<Cycle | undefined> =>
+  /** @description reads the cycle alone, an archived one too, as fetchCycles; null for one deleted meanwhile */
+  fetchCycle = (cycleId: string): Promise<Cycle | null | undefined> =>
     this.details.fetch(cycleId, () => this.service.get(cycleId));
 
   /** @description reads the cycle's progress, as fetchCycles */
   fetchProgress = (cycleId: string): Promise<CycleProgress | undefined> =>
     this.progress.fetch(cycleId, () => this.service.progress(cycleId));
+
+  // changes (cycle-changes.ts)
+  create: ICycleStore["create"] = (projectId, body) => this.changes.create(projectId, body);
+  update: ICycleStore["update"] = (cycleId, body) => this.changes.update(cycleId, body);
+  remove: ICycleStore["remove"] = (cycleId) => this.changes.remove(cycleId);
+  archive: ICycleStore["archive"] = (cycleId) => this.changes.archive(cycleId);
+  unarchive: ICycleStore["unarchive"] = (cycleId) => this.changes.unarchive(cycleId);
+  transfer: ICycleStore["transfer"] = (cycleId, targetCycleId) => this.changes.transfer(cycleId, targetCycleId);
 
   /** The project's list in lists (the unarchived or the archived), once fetched, of a project the project store gives. */
   private listed(lists: ReconciledByKey<CycleListItem[]>, projectId: string | null | undefined) {

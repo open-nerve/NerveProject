@@ -49,11 +49,17 @@ export function progressOf(cycle: Cycle, live: Partial<Progress> = {}): CyclePro
   };
 }
 
-/** The requests of the cycles: a project's lists (the archived one with archived=true), a cycle, its progress. */
+/**
+ * The requests of the cycles: a project's lists (the archived one with archived=true), where it creates its cycles; a
+ * cycle, which is read, changed and deleted there; its progress, its archiving, unarchiving and transfer.
+ */
 export const cycleRequests = {
   list: (project: Pick<Project, "id">) => `/api/v0/projects/${project.id}/cycles`,
   at: (cycle: Pick<Cycle, "id">) => `/api/v0/cycles/${cycle.id}`,
   progress: (cycle: Pick<Cycle, "id">) => `/api/v0/cycles/${cycle.id}/progress`,
+  archive: (cycle: Pick<Cycle, "id">) => `/api/v0/cycles/${cycle.id}/archive`,
+  unarchive: (cycle: Pick<Cycle, "id">) => `/api/v0/cycles/${cycle.id}/unarchive`,
+  transfer: (cycle: Pick<Cycle, "id">) => `/api/v0/cycles/${cycle.id}/transfer-issues`,
 };
 
 /** The store fetches the project's cycles that are not archived, web's unless it says, and nerve lists these. */
