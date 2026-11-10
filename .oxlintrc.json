@@ -160,7 +160,9 @@
         "web/apps/web/app/(all)/\\[workspaceSlug\\]/(projects)/browse/\\[workItem\\]/page.tsx",
         "web/apps/web/app/(all)/\\[workspaceSlug\\]/(projects)/projects/(detail)/\\[projectId\\]/issues/(detail)/\\[issueId\\]/page.tsx",
         "web/apps/web/app/(all)/\\[workspaceSlug\\]/(projects)/projects/(detail)/\\[projectId\\]/archives/issues/(detail)/\\[archivedIssueId\\]/page.tsx",
-        "web/apps/web/app/(all)/\\[workspaceSlug\\]/(projects)/projects/(detail)/\\[projectId\\]/archives/issues/(detail)/header.tsx"
+        "web/apps/web/app/(all)/\\[workspaceSlug\\]/(projects)/projects/(detail)/\\[projectId\\]/archives/issues/(detail)/header.tsx",
+        "web/apps/web/core/store/planning/**",
+        "web/apps/web/core/hooks/store/use-cycles.ts"
       ],
       "rules": {
         "no-restricted-imports": [

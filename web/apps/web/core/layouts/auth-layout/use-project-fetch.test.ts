@@ -22,6 +22,7 @@ vi.mock("@/hooks/store/use-project-preferences", () => import("@/hooks/store/fak
 vi.mock("@/hooks/store/use-label", () => import("@/hooks/store/fake-store-hooks"));
 vi.mock("@/hooks/store/use-member", () => import("@/hooks/store/fake-store-hooks"));
 vi.mock("@/hooks/store/use-project-state", () => import("@/hooks/store/fake-store-hooks"));
+vi.mock("@/hooks/store/use-cycles", () => import("@/hooks/store/fake-store-hooks"));
 vi.mock("@/hooks/store/use-workspace", () => import("@/hooks/store/fake-store-hooks"));
 
 const { useProjectFetch } = await import("./use-project-fetch");
@@ -35,6 +36,8 @@ const archived = projectOf("WEB", acme.id, { archived_at: "2026-10-02T09:00:00Z"
 const archivedSeen = { ...archived, member_role: null };
 /** The project the address names, a project of beta's, of which he is a member: the address is acme's. */
 const elsewhere = projectOf("WEB", beta.id);
+/** The project the address names, of which he is a member, whose cycles are turned off (Project.cycle_view). */
+const noCycles = projectOf("WEB", acme.id, { cycle_view: false });
 const notFound = refusal(404, "project.not_found");
 const unreachable = refusal(503, "server_busy");
 
@@ -47,7 +50,7 @@ beforeEach(() => {
 });
 
 describe("useProjectFetch", () => {
-  it("fetches the project and, for a member, his tab bar in it, its labels, its members and its states", async () => {
+  it("fetches the project and, for a member, his tab bar in it, its labels, its members, its states and its cycles", async () => {
     stores.projects = [member];
     response.current = { data: member };
     expect(useProjectFetch("acme", member.id)).toEqual({ kind: "member", project: member });
@@ -57,6 +60,7 @@ describe("useProjectFetch", () => {
       ["PROJECT_LABELS", "p-web"],
       ["PROJECT_MEMBERS", "p-web"],
       ["PROJECT_STATES", "p-web"],
+      ["PROJECT_CYCLES", "p-web"],
     ]);
     await fetchHanded();
     expect(stores.fetched).toEqual([
@@ -65,6 +69,7 @@ describe("useProjectFetch", () => {
       "the labels of p-web",
       "the members of p-web",
       "the states of p-web",
+      "the cycles of p-web",
     ]);
   });
 
@@ -79,7 +84,31 @@ describe("useProjectFetch", () => {
     stores.projects = projects;
     response.current = { data, error };
     useProjectFetch("acme", member.id);
-    expect(handed.map(([fetch]) => fetch)).toEqual([["PROJECT", "p-web"], null, null, null, null]);
+    expect(handed.map(([fetch]) => fetch)).toEqual([["PROJECT", "p-web"], null, null, null, null, null]);
+  });
+
+  /** The fetch of the project's cycles the hook handed, the sixth: null fetches nothing. */
+  const cyclesFetch = () => handed[5]?.[0];
+
+  it.each<{ when: string; project: Project }>([
+    { when: "he is its member", project: member },
+    { when: "he is its guest, who reads its cycles too", project: guest },
+  ])("fetches the project's cycles when $when, the project not archived and its cycles turned on", ({ project }) => {
+    stores.projects = [project];
+    response.current = { data: project };
+    useProjectFetch("acme", project.id);
+    expect(cyclesFetch()).toEqual(["PROJECT_CYCLES", "p-web"]);
+  });
+
+  it.each<{ when: string; project: Project }>([
+    { when: "he sees it and is no member", project: seen },
+    { when: "it is archived, though he is its member", project: archived },
+    { when: "its cycles are turned off, though he is its member", project: noCycles },
+  ])("does not fetch the project's cycles when $when", ({ project }) => {
+    stores.projects = [project];
+    response.current = { data: project };
+    useProjectFetch("acme", project.id);
+    expect(cyclesFetch()).toBeNull();
   });
 
   it.each<{ when: string; projects: Project[]; data?: Project; error?: ApiError; shows: object }>([
@@ -183,7 +212,7 @@ describe("useProjectFetch", () => {
     stores.projects = [elsewhere];
     response.current = { data: elsewhere };
     expect(useProjectFetch("acme", elsewhere.id)).toEqual({ kind: "not-found" });
-    expect(handed.map(([fetch]) => fetch)).toEqual([["PROJECT", "p-web"], null, null, null, null]);
+    expect(handed.map(([fetch]) => fetch)).toEqual([["PROJECT", "p-web"], null, null, null, null, null]);
   });
 
   it("reads the project again when the page's retry asks", () => {

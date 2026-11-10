@@ -5,6 +5,7 @@
 
 import type { Project } from "@nerve/api-client";
 // hooks
+import { useCycles } from "@/hooks/store/use-cycles";
 import { useLabel } from "@/hooks/store/use-label";
 import { useMember } from "@/hooks/store/use-member";
 import { useProject } from "@/hooks/store/use-project";
@@ -34,7 +35,8 @@ export type ProjectAccess =
  * The project side of what a page of a project fetches as it mounts (M3 design 3.1, 7.1), and the one decision what
  * the project is to the caller: nerve's read of the project, which decides it; once it says he is a member of a
  * project that is not archived, his tab bar in the project, its labels, its members and its states, which nerve gives
- * its members alone (an archived project's pages do not show, so they need none). A project counts
+ * its members alone (an archived project's pages do not show, so they need none), and its cycles that are not
+ * archived while they are turned on (cycle_view: its pages show none otherwise; M6 P5a spec 2.2). A project counts
  * in the address's workspace alone, workspaceSlug's (the route's, as useWorkspaceFetch reads it; the stores' current
  * workspace follows the address a render later): one of another of his workspaces is not found here. Gives what the
  * wrapper shows.
@@ -48,6 +50,7 @@ export function useProjectFetch(workspaceSlug: string | undefined, projectId: st
     project: { fetchProjectMembers },
   } = useMember();
   const { fetchProjectStates } = useProjectState();
+  const { fetchCycles } = useCycles();
   const read = useProjectRead(projectId);
   const workspace = workspaceSlug === undefined ? null : getWorkspaceBySlug(workspaceSlug);
   const held = getProjectById(projectId);
@@ -59,6 +62,8 @@ export function useProjectFetch(workspaceSlug: string | undefined, projectId: st
   useSessionSWR(member ? ["PROJECT_LABELS", member] : null, (id) => fetchProjectLabels(id));
   useSessionSWR(member ? ["PROJECT_MEMBERS", member] : null, (id) => fetchProjectMembers(id));
   useSessionSWR(member ? ["PROJECT_STATES", member] : null, (id) => fetchProjectStates(id));
+  const cycles = access.kind === "member" && access.project.cycle_view ? access.project.id : undefined;
+  useSessionSWR(cycles ? ["PROJECT_CYCLES", cycles] : null, (id) => fetchCycles(id));
   return access;
 }
 

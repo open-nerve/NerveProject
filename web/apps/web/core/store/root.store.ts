@@ -44,6 +44,8 @@ import type { IModuleFilterStore } from "./module_filter.store";
 import { ModuleFilterStore } from "./module_filter.store";
 import type { IWorkspaceNotificationStore } from "./notifications/workspace-notifications.store";
 import { WorkspaceNotificationStore } from "./notifications/workspace-notifications.store";
+import type { IPlanningStore } from "./planning";
+import { PlanningStore } from "./planning";
 import type { IProjectRootStore } from "./project";
 import { ProjectRootStore } from "./project";
 import type { IProjectViewStore } from "./project-view.store";
@@ -64,6 +66,7 @@ export class RootStore {
   memberRoot: IMemberRootStore;
   cycle: ICycleStore;
   cycleFilter: ICycleFilterStore;
+  planning: IPlanningStore;
   module: IModuleStore;
   moduleFilter: IModuleFilterStore;
   projectView: IProjectViewStore;
@@ -106,6 +109,7 @@ export class RootStore {
     this.memberRoot = new MemberRootStore(this, api);
     this.cycle = new CycleStore(this);
     this.cycleFilter = new CycleFilterStore(this);
+    this.planning = new PlanningStore(this, api);
     this.module = new ModulesStore(this);
     this.moduleFilter = new ModuleFilterStore(this);
     this.projectView = new ProjectViewStore(this);
