@@ -95,12 +95,7 @@ function ProjectCyclesPage({ params }: Route.ComponentProps) {
     <>
       <PageHead title={pageTitle} />
       <div className="h-full w-full">
-        <CycleCreateUpdateModal
-          workspaceSlug={workspaceSlug}
-          projectId={projectId}
-          isOpen={createModal}
-          handleClose={() => setCreateModal(false)}
-        />
+        <CycleCreateUpdateModal projectId={projectId} isOpen={createModal} handleClose={() => setCreateModal(false)} />
         {totalCycles === 0 ? (
           <div className="h-full place-items-center">
             <EmptyStateDetailed

@@ -84,7 +84,10 @@ export const ProjectsAppPowerKProvider = observer(function ProjectsAppPowerKProv
     <>
       <GlobalShortcutsProvider context={context} commands={commands} />
       {workspaceSlug && <WorkspaceLevelModals workspaceSlug={workspaceSlug} />}
-      {workspaceSlug && projectId && <ProjectLevelModals workspaceSlug={workspaceSlug} projectId={projectId} />}
+      {/* keyed by its project: the host closes its dialogs as it goes (ProjectLevelModals) */}
+      {workspaceSlug && projectId && (
+        <ProjectLevelModals key={projectId} workspaceSlug={workspaceSlug} projectId={projectId} />
+      )}
       {workspaceSlug && <WorkItemLevelModals workItemIdentifier={workItemIdentifier} />}
       <ProjectsAppPowerKModalWrapper
         commandsListComponent={ProjectsAppPowerKCommandsList}

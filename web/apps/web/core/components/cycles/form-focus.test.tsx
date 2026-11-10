@@ -59,7 +59,11 @@ for (const kind of ["cycle", "module"] as const) {
       root.render(
         <ModalCore isOpen handleClose={closed}>
           <ModalTitle>{kind}</ModalTitle>
-          {kind === "cycle" ? <CycleForm {...props} /> : <ModuleForm {...props} />}
+          {kind === "cycle" ? (
+            <CycleForm projectId="project" editing={false} busy={false} onSubmit={submitted} onCancel={closed} />
+          ) : (
+            <ModuleForm {...props} />
+          )}
         </ModalCore>
       )
     );

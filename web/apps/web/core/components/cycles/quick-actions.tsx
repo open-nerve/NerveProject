@@ -113,10 +113,9 @@ export const CycleQuickActions = observer(function CycleQuickActions(props: Prop
       {cycleDetails && (
         <div className="fixed">
           <CycleCreateUpdateModal
-            data={cycleDetails}
+            cycleId={cycleId}
             isOpen={updateModal}
             handleClose={() => setUpdateModal(false)}
-            workspaceSlug={workspaceSlug}
             projectId={projectId}
           />
           <ArchiveCycleModal

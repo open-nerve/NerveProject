@@ -75,6 +75,12 @@
           "title": "错误！"
         }
       },
+      "create": {
+        "success": {
+          "title": "成功！",
+          "description": "周期创建成功。"
+        }
+      },
       "update": {
         "success": {
           "description": "周期更新成功。",
