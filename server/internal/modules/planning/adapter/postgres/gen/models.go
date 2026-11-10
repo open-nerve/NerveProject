@@ -11,21 +11,22 @@ import (
 )
 
 type Cycle struct {
-	ID          uuid.UUID
-	WorkspaceID uuid.UUID
-	ProjectID   uuid.UUID
-	Name        string
-	Description string
-	StartDate   *time.Time
-	EndDate     *time.Time
-	OwnedByID   *uuid.UUID
-	SortOrder   float64
-	ArchivedAt  *time.Time
-	CreatedByID *uuid.UUID
-	UpdatedByID *uuid.UUID
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
-	DeletedAt   *time.Time
+	ID               uuid.UUID
+	WorkspaceID      uuid.UUID
+	ProjectID        uuid.UUID
+	Name             string
+	Description      string
+	StartDate        *time.Time
+	EndDate          *time.Time
+	OwnedByID        *uuid.UUID
+	SortOrder        float64
+	ArchivedAt       *time.Time
+	CreatedByID      *uuid.UUID
+	UpdatedByID      *uuid.UUID
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+	DeletedAt        *time.Time
+	ProgressSnapshot []byte
 }
 
 type CycleUserProperty struct {

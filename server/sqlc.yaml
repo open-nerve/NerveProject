@@ -158,6 +158,7 @@ sql:
       - migrations/sql/00042_planning_module_links.sql
       - migrations/sql/00046_planning_cycle_user_properties.sql
       - migrations/sql/00047_planning_module_user_properties.sql
+      - migrations/sql/00048_planning_cycles_progress_snapshot.sql
     queries: internal/modules/planning/adapter/postgres/queries
     gen:
       go:
