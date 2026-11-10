@@ -38,7 +38,7 @@
 **测试纪律**
 - 每个 Task 先写会失败的测试，看到它因所测性质失败，再实现到通过。
 - 安全、加锁、访客、口径的每个性质至少一个能让测试失败的变异，只计能编译的变异。
-- 每个 Task 跑聚焦回归：planning 全部包、P1–P3b 的迭代与模块 bootstrap 测试（`TestCycle|TestModule|TestPlanning|TestIssueCycle|TestIssueModule`）、受影响的 issue 包。
+- 每个 Task 跑聚焦回归：planning 全部包、P1–P3b 的迭代与模块 bootstrap 测试（按子串匹配 `-run 'Cycle|Module|Planning|PermissionMatrix|Purge|RuntimeRole|Grants|ProjectDeletion'`，`-timeout=40m`；bootstrap 的测试名多为动词在前，如 `TestReadCyclesThroughTheApp`，以 `TestCycle` 开头的正则只匹配到 9 个，T2 发现）、受影响的 issue 包。
 
 **回归测试的边界**
 - 回归测试指 M4 的工作项与列表、P1–P3b 的迭代、模块、归属、偏好的测试。
