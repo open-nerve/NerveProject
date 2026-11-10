@@ -1,6 +1,6 @@
 # M6/P4 阶段评审记录
 
-> 2026-11-10：T1–T14 完成，整分支审查 Ready to merge（[re-63](../../../reviews/re-63-M6P4整体审核.md)）。最终候选待推送、核分支 CI 与合入；分支 CI、合入、main CI 与归档清理在合入后由 P5 的 T1 回填到 §7。基线 main `ed8f0df4e8982dc50a4560a31fdf9b2964d84ac7`（P3b 的 noff）。
+> 已完成（2026-11-10，noff `c3ba5a40`；合入后 main CI 的 e2e 失败经根因修复第二次 noff `a2b50624`，main CI 42824266166 首次通过），整分支审查 Ready to merge（[re-63](../../../reviews/re-63-M6P4整体审核.md)）；分支 CI、合入、main CI 与归档清理见 §7（由 P5a 的 T1 回填）。基线 main `ed8f0df4e8982dc50a4560a31fdf9b2964d84ac7`（P3b 的 noff）。
 
 ## 1. 评审方式与范围
 
@@ -30,7 +30,7 @@ A1–A7 满足（[spec §4](../specs/P4-progress-transfer.md#4-验收标准)已�
 | A6 | G17 与加锁 | T5、T9、T10、T11 |
 | A7 | 契约与文档 | T1、T5、T6、T9、T13 |
 
-A8（CI、合入与归档清理）合入后由 P5 的 T1 勾选。
+A8（CI、合入与归档清理）由 P5a 的 T1 勾选，证据见 §7。
 
 ## 3. 局部裁定
 
@@ -107,6 +107,16 @@ fresh 只读审查（[re-63](../../../reviews/re-63-M6P4整体审核.md)）逐�
 
 ## 7. 集成、归档与接续
 
-最终候选推送后核准确分支 CI，`--no-ff` 合入 main 并核 main CI；再归档本阶段 ignored 证据（台账、调研笔记、收据、CI 原件与 W11 的产物），并正常清理 worktree 与分支。结果由 P5 的 T1 按台账回填到这里。
+由 P5a 的 T1 按两个归档里的台账、CI 收据与 `cleanup.log` 回填。
 
-**接续**：P5（网页的迭代）。
+- **最终候选的分支 CI**：
+  - 第一次，`18aeb25ae9e43e9c4d724be98a19bc64ab63a2a0` 的 42800976748 attempt 1：web 129778085248、server (1) 129778085665 成功；server (0) 129778085598 失败（`TestTransferKeepsTheJobsFreeze`，根因与修正见 §5），e2e 129784645493 因此跳过。
+  - 修正后，`292f40fe3a9b1d4899fbd27b4f0fbf8ed2073399` 的 42803535189 attempt 1 成功（server (0) 129786842989、web 129786843414、server (1) 129786843437、e2e 129794166643）。
+- **合入与 main CI**：noff `c3ba5a40b38380e03a03334e1c680763e991b587`，双父 `ed8f0df4`、`292f40fe`，树与候选相同（`5489b877`）。main CI 42809569341 attempt 1：web 129807294464、server (0) 129807294819、server (1) 129807295028 成功，e2e 129815035293 失败 435/1（C12，根因与修正见 §5）；按负责人的规则不重跑。
+- **修复分支与第二次 main CI**：`codex/m6-p4-ci`（自 `c3ba5a40`：`675de55e` 修正与单测，`d7824b26` 复审结论与 M7 的交接）的分支 CI 42818532689 attempt 1 成功（web 129837762256、server (1) 129837762619、server (0) 129837762738、e2e 129846836535）。noff `a2b50624fd872c183628a55d04b7961f9a1dbc60`，双父 `c3ba5a40`、`d7824b26`，树与修复分支相同（`16eae5f1`）；main CI 42824266166 attempt 1 成功（web 129857313676、server (0) 129857314105、server (1) 129857314265、e2e 129866383345）。
+- **归档**（主目录，P5a 开工时以 `archive.py verify` 复核，收据 `t1-p4-archive-verify`、`t1-p4ci-archive-verify`）：
+  - `.superpowers/sdd/M6-P4-integration-20261110`：3823 个文件、532,660,546 字节、未知 0、清单 sha256 `e786eaba5e9d4b9a06d551babd3194799c4d8ea21b65bfdf7c3a3b0e9573e430`（台账、调研笔记、收据、CI 原件、W11 的产物与解析工具）；
+  - `.superpowers/sdd/M6-P4-ci-20261110`：2521 个文件、64,500,851 字节、未知 0、清单 sha256 `dd85429f4bdda14cd53a8eac74a7994f2dde95ea5b8aeaf9c5ceef8d6cd7d50b`（修复的台账、复审原文、C12 的 trace 解析工具与 CI 原件）。
+- **清理**：两份 `cleanup.log` 记录分支已含于 origin/main，worktree `m6-p4`、`m6-p4-ci`，本地与远端分支 `codex/m6-p4`、`codex/m6-p4-ci` 已删除，主目录停在 `a2b50624`。
+
+**接续**：P5 拆为 P5a（网页迭代的数据层与页面，[P5a spec](../specs/P5a-web-cycles.md)）与 P5b（迭代页的工作项列表）。
