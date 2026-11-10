@@ -1,6 +1,6 @@
 # M6 / P3b：列表引擎的迭代与模块、迭代与模块页的显示设置
 
-> 状态：已实施（2026-11-09），整分支审查见 [re-61](../../../reviews/re-61-M6P3b整体审核.md)，阶段记录见 [P3b 阶段记录](../reviews/P3b-list-engine-review.md)；预检见 [re-60](../../../reviews/re-60-M6P3b预检.md)。基线 main `2648a73940f053940b3f321f241b1a25eaac8209`（P3a 的 noff，main CI 42487991301 首次通过）。设计见 [M6 设计](../M6-design.md) §2 的 G15、§3.7、§4、§5、§6、§7；负责人 2026-11-07 的决定 A/B/C 见设计 §15；P3a 见 [P3a spec](P3a-issue-membership.md)。加锁之路沿用 M4（[硬规则 §4](../../claude_to_gpt/03-rules-and-pitfalls.md)）与 [P1 spec](P1-cycles-backend.md) §3。现状调研见本阶段台账 `research/backend.md`、`research/web.md`（核对过 P3a 前的 `research/list-engine-P3a.md`，ignored，随阶段归档）。
+> 状态：已完成（2026-11-09，noff `ed8f0df4`，main CI 42621199100 首次通过），整分支审查见 [re-61](../../../reviews/re-61-M6P3b整体审核.md)，阶段记录见 [P3b 阶段记录](../reviews/P3b-list-engine-review.md)；预检见 [re-60](../../../reviews/re-60-M6P3b预检.md)。基线 main `2648a73940f053940b3f321f241b1a25eaac8209`（P3a 的 noff，main CI 42487991301 首次通过）。设计见 [M6 设计](../M6-design.md) §2 的 G15、§3.7、§4、§5、§6、§7；负责人 2026-11-07 的决定 A/B/C 见设计 §15；P3a 见 [P3a spec](P3a-issue-membership.md)。加锁之路沿用 M4（[硬规则 §4](../../claude_to_gpt/03-rules-and-pitfalls.md)）与 [P1 spec](P1-cycles-backend.md) §3。现状调研见本阶段台账 `research/backend.md`、`research/web.md`（核对过 P3a 前的 `research/list-engine-P3a.md`，ignored，随阶段归档）。
 
 ## 1. 目标与边界
 
@@ -214,7 +214,7 @@ P3 按设计 §12 拆为两段，P3a 已合入。P3b 交付设计 §12 P3b 一�
   - 共用的显示设置 schema 在 `common.yaml`，bodyshape 照常；每个新声明的码在 planning 的 apitest 有回答；
   - P3a 的阶段记录 §7、spec A8 与设计 §14 已回填；
   - 差异清单与输入交接的“处理结果（M6/P3b）”已写；设计 §6 的目录一行已收窄。
-- [ ] A8 七项本地门禁、deep-review 修复闭环、准确的分支 CI 与 noff 后的 main CI 全绿、归档清理。（本地门禁与修复闭环见阶段记录 §5、§6；CI 与归档清理见 §7，合入后由 P4 的 T1 勾选）
+- [x] A8 七项本地门禁、deep-review 修复闭环、准确的分支 CI 与 noff 后的 main CI 全绿、归档清理。（本地门禁与修复闭环见阶段记录 §5、§6；CI 与归档清理见 §7，由 P4 的 T1 回填）
 
 ## 5. 后续责任
 
