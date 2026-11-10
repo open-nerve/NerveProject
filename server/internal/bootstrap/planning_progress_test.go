@@ -12,8 +12,26 @@ import (
 
 	planningpg "github.com/open-nerve/NerveProject/server/internal/modules/planning/adapter/postgres"
 	planningdomain "github.com/open-nerve/NerveProject/server/internal/modules/planning/domain"
+	"github.com/open-nerve/NerveProject/server/internal/platform/config"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
+
+// newNoonWorld is the issue world whose business clock reads 12:00 in
+// Shanghai, on the day it is there as the test starts, and that clock's
+// reading now: a test that counts on a day in Shanghai, today's completions
+// on it, runs far from its midnight, whenever it runs.
+func newNoonWorld(t *testing.T) (issueWorld, time.Time) {
+	t.Helper()
+	loc, err := time.LoadLocation("Asia/Shanghai")
+	if err != nil {
+		t.Fatal(err)
+	}
+	started := time.Now()
+	y, m, d := started.In(loc).Date()
+	offset := time.Date(y, m, d, 12, 0, 0, 0, loc).Sub(started)
+	w := newIssueWorldWith(t, func(c *config.Config) { c.Clock.Offset = offset })
+	return w, time.Now().Add(offset)
+}
 
 // cycleProgressAnswer is a cycle's progress as the API answers it, its
 // progress read into the domain's values, whose JSON names are the API's
@@ -112,10 +130,9 @@ func byLabel(rows map[uuid.UUID]planningdomain.Tally, none *planningdomain.Tally
 // the project archived and cycles off; a deleted cycle is not found, a
 // non-member who sees Web is refused, one who does not see it is not found.
 func TestReadCycleProgressThroughTheApp(t *testing.T) {
-	w := newIssueWorld(t)
+	w, now := newNoonWorld(t)
 	w.turnCyclesOn(t, w.web)
 	w.adminGuest(t)
-	now := time.Now()
 	start, end := shanghaiDay(t, now, -2), shanghaiDay(t, now, 2)
 	sprint := w.newCycle(t, "alice", datesBody("Sprint", start, end))
 	other := w.newCycle(t, "alice", datesBody("Other", shanghaiDay(t, now, 10), shanghaiDay(t, now, 12)))
@@ -212,10 +229,9 @@ func TestReadCycleProgressThroughTheApp(t *testing.T) {
 // a non-member who sees Web is refused, one who does not see it is not
 // found.
 func TestReadModuleProgressThroughTheApp(t *testing.T) {
-	w := newIssueWorld(t)
+	w, now := newNoonWorld(t)
 	w.send(t, "alice", http.MethodPatch, "/api/v0/projects/"+w.web.String(), `{"module_view":true,"timezone":"Asia/Shanghai"}`, http.StatusOK)
 	w.adminGuest(t)
-	now := time.Now()
 	start, target := shanghaiDay(t, now, -1), shanghaiDay(t, now, 1)
 	core := w.createModule(t, "alice", `{"name":"Core","start_date":"`+start+`","target_date":"`+target+`"}`, http.StatusCreated).ID
 	loose := w.createModule(t, "alice", `{"name":"Loose","start_date":"`+start+`"}`, http.StatusCreated).ID
