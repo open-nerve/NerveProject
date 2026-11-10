@@ -54,13 +54,20 @@ func (n cycleNames) trail(t *testing.T, item uuid.UUID) itemTrail {
 }
 
 // moved is trail after a transfer from Sprint to Next by by at the moment
-// named at: Sprint's row left, Next's made, an updated row of activity
-// naming both, the work item last changed then.
+// named at (movedBetween).
 func (trail itemTrail) moved(by, at string) itemTrail {
+	return trail.movedBetween("Sprint", "Next", by, at)
+}
+
+// movedBetween is trail after a move from the cycle named from, its last
+// row's, to the one named to, by by at the moment named at, a transfer's or
+// a change's alike: from's row left, to's made, an updated row of activity
+// naming both, the work item last changed then.
+func (trail itemTrail) movedBetween(from, to, by, at string) itemTrail {
 	rows := append([]string{}, trail.rows...)
 	rows[len(rows)-1] += ", left by " + by + " at " + at + ", written at " + at
-	return itemTrail{rows: append(rows, "Next made by "+by+" at "+at),
-		activity: append(append([]string{}, trail.activity...), `cycles updated "Sprint"→"Next" Sprint→Next "updated cycle from " by `+by+` at `+at),
+	return itemTrail{rows: append(rows, to+" made by "+by+" at "+at),
+		activity: append(append([]string{}, trail.activity...), `cycles updated "`+from+`"→"`+to+`" `+from+`→`+to+` "updated cycle from " by `+by+` at `+at),
 		audit:    "by " + by + " at " + at}
 }
 
