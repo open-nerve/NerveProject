@@ -15,7 +15,7 @@ import { getEditorRefHelpers } from "@/helpers/editor-ref";
 import { CoreEditorProps } from "@/props";
 import { CORE_EXTENSIONS } from "@/constants/extension";
 // types
-import type { TEditorHookProps } from "@/types";
+import type { EditorRefApi, TEditorHookProps } from "@/types";
 const defaultEditorProps: NonNullable<TEditorHookProps["editorProps"]> = {};
 
 export const useEditor = (props: TEditorHookProps) => {
@@ -119,13 +119,11 @@ export const useEditor = (props: TEditorHookProps) => {
     }
   }, [editor, value, id]);
 
-  useImperativeHandle(
+  // The ref is the editor's: null until TipTap has built it (immediatelyRender: false builds it in an effect after the
+  // first commit), so a host can tell an editor still being created from one that is busy (isEditorReadyToDiscard).
+  useImperativeHandle<EditorRefApi | null, EditorRefApi | null>(
     forwardedRef,
-    () =>
-      getEditorRefHelpers({
-        editor,
-        getEditorMetaData,
-      }),
+    () => (editor ? getEditorRefHelpers({ editor, getEditorMetaData }) : null),
     [editor, getEditorMetaData]
   );
 
