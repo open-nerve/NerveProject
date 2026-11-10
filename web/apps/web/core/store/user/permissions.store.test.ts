@@ -11,7 +11,7 @@ import { inTurn } from "@/store/fake-queue";
 import { fakeRoot, withoutImageObservation } from "@/store/fake-root";
 import { projectOf } from "@/store/project/fake-projects";
 import { RouterStore } from "@/store/router.store";
-import { permissionsOver } from "@/store/user/fake-permissions";
+import { callerInWeb, its, permissionsOver, type Caller } from "@/store/user/fake-permissions";
 import { UserPermissionStore } from "@/store/user/permissions.store";
 import { WorkspaceRootStore } from "@/store/workspace";
 import { loadWorkspaces, workspaceOf } from "@/store/workspace/fake-workspaces";
@@ -209,5 +209,50 @@ describe("UserPermissionStore, in a project", () => {
     const again = workspaceOf("ws-1", { id: "id-ws-1-again", role: 20 });
     await loadWorkspaces(nerve, workspaceRoot, [again]);
     expect(permissions.getProjectRoleByWorkspaceSlugAndProjectId("ws-1", "p-p1")).toBeUndefined();
+  });
+});
+
+/**
+ * nerve's cycle.write and cycle.delete (access/domain/rules.go, decide.go; M6 design 3.7) for the callers of acme and
+ * its project web: its admins and members write its cycles, and the workspace's admin; its admins delete them, the
+ * workspace's admin too, and so does a cycle's creator while the project's admin or member (by his role in web alone,
+ * not the workspace's). Neither for one nerve shows only his own work items (OwnOnly: a guest of web, by his role in
+ * web alone, though the workspace's admin, web not showing its guests every work item), whose every planning write
+ * nerve refuses (planning/app/lock.go).
+ */
+const CYCLE_CALLERS: { caller: Caller; write: boolean; deleteAny: boolean; deleteOwn: boolean }[] = [
+  { caller: its.admin, write: true, deleteAny: true, deleteOwn: true },
+  { caller: its.member, write: true, deleteAny: false, deleteOwn: true },
+  { caller: its.memberAdmin, write: true, deleteAny: true, deleteOwn: true },
+  { caller: its.guest, write: false, deleteAny: false, deleteOwn: false },
+  { caller: its.guestSeesAll, write: false, deleteAny: false, deleteOwn: false },
+  { caller: its.guestAdmin, write: false, deleteAny: false, deleteOwn: false },
+  { caller: its.guestAdminSeesAll, write: true, deleteAny: true, deleteOwn: true },
+  { caller: its.outsider, write: false, deleteAny: false, deleteOwn: false },
+];
+
+describe("UserPermissionStore, of a project's cycles", () => {
+  it.each(CYCLE_CALLERS)(
+    "lets $caller.who write them: $write; delete another's: $deleteAny; delete his own: $deleteOwn",
+    async ({ caller, write, deleteAny, deleteOwn }) => {
+      const { permissions, acme, web } = await callerInWeb(
+        caller.workspaceRole,
+        caller.projectRole,
+        caller.guestViewAll
+      );
+      expect([
+        permissions.canWriteCycles(acme.slug, web.id),
+        permissions.canDeleteCycle(acme.slug, web.id, false),
+        permissions.canDeleteCycle(acme.slug, web.id, true),
+      ]).toEqual([write, deleteAny, deleteOwn]);
+    }
+  );
+
+  it("lets no one write nor delete the cycles of a project through another workspace, or of none", async () => {
+    const { permissions, web } = await callerInWeb(its.admin.workspaceRole, its.admin.projectRole);
+    expect(permissions.canWriteCycles("elsewhere", web.id)).toBe(false);
+    expect(permissions.canDeleteCycle("elsewhere", web.id, true)).toBe(false);
+    expect(permissions.canWriteCycles("acme", undefined)).toBe(false);
+    expect(permissions.canDeleteCycle("acme", undefined, true)).toBe(false);
   });
 });

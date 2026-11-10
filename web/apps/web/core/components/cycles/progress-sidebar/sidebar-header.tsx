@@ -9,7 +9,7 @@ import { observer } from "mobx-react";
 // nerve imports
 import { ChevronRightOutline } from "@makeplane/propel/icons";
 import type { Cycle } from "@nerve/api-client";
-import { CYCLE_STATUS, EUserPermissions } from "@nerve/constants";
+import { CYCLE_STATUS } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import type { DateRange } from "@nerve/propel/calendar";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
@@ -32,18 +32,17 @@ type Props = {
 
 /**
  * The head of a cycle's progress sidebar (P5a spec 2.5): its close button, the cycle's name, its status as nerve gives
- * it, and its days, which the caller changes here while he writes the project (its admin or member, R8) and the cycle
- * has neither ended nor been archived; nerve refuses a change of the others.
+ * it, and its days, which the caller changes here while he writes the project's cycles (canWriteCycles, R8) and the
+ * cycle has neither ended nor been archived; nerve refuses a change of the others.
  */
 export const CycleSidebarHeader = observer(function CycleSidebarHeader(props: Props) {
   const { cycle, workspaceSlug, projectId, handleClose } = props;
   // hooks
   const { t } = useTranslation();
-  const { getProjectRoleByWorkspaceSlugAndProjectId } = useUserPermissions();
+  const { canWriteCycles } = useUserPermissions();
   // auth
-  const role = getProjectRoleByWorkspaceSlugAndProjectId(workspaceSlug, projectId);
-  const canWrite = role === EUserPermissions.ADMIN || role === EUserPermissions.MEMBER;
-  const editable = canWrite && cycle.status !== "completed" && cycle.archived_at === null;
+  const editable =
+    canWriteCycles(workspaceSlug, projectId) && cycle.status !== "completed" && cycle.archived_at === null;
   const status = CYCLE_STATUS.find((one) => one.value === cycle.status);
 
   return (

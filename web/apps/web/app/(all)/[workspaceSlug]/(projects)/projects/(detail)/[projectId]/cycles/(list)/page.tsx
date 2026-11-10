@@ -38,7 +38,7 @@ import type { Route } from "./+types/page";
  * admins may go to its features to turn them on. Else it shows nerve's list of the project's cycles not archived (the
  * read the project's wrapper makes, which the page shares, use-project-fetch.ts): it waits for nerve's first answer,
  * says why nerve could not give it, with a retry, or how to set the project's first cycle (those who write its cycles
- * may, by the project's dialogs' host); else the filters applied and the cycles (CyclesView).
+ * may, canWriteCycles, by the project's dialogs' host); else the filters applied and the cycles (CyclesView).
  */
 function ProjectCyclesPage({ params }: Route.ComponentProps) {
   const { workspaceSlug, projectId } = params;
@@ -52,7 +52,7 @@ function ProjectCyclesPage({ params }: Route.ComponentProps) {
   const { getProjectCycleIds, fetchCycles } = useCycles();
   const { getFilters } = useCycleFilters();
   const { getProjectById } = useProject();
-  const { getProjectRoleByWorkspaceSlugAndProjectId } = useUserPermissions();
+  const { getProjectRoleByWorkspaceSlugAndProjectId, canWriteCycles } = useUserPermissions();
   const { toggleCreateCycleModal } = useCommandPalette();
   // a member's read, of a project not archived whose cycles are on: as the project's wrapper reads them
   const project = getProjectById(projectId);
@@ -89,7 +89,7 @@ function ProjectCyclesPage({ params }: Route.ComponentProps) {
 
   if (cycleIds === undefined) return <CycleModuleListLayoutLoader />;
 
-  const canWrite = role === EUserPermissions.ADMIN || role === EUserPermissions.MEMBER;
+  const canWrite = canWriteCycles(workspaceSlug, projectId);
   return (
     <>
       {pageHead}

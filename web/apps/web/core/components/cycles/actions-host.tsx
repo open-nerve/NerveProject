@@ -80,6 +80,7 @@ export function CycleActionsHost(props: Props) {
       <CycleCreateUpdateModal
         isOpen={isOpen("edit")}
         handleClose={close}
+        workspaceSlug={workspaceSlug}
         projectId={projectId}
         cycleId={shown?.cycle.id}
       />

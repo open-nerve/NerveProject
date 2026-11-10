@@ -64,7 +64,7 @@ afterEach(async () => {
  * web's (cyclesOf), or those of names alone. Gives them by name.
  */
 async function at(page: string, caller: Caller = its.admin, names?: string[]) {
-  const { permissions, acme, web } = await callerInWeb(caller.workspaceRole, caller.projectRole);
+  const { permissions, acme, web } = await callerInWeb(caller.workspaceRole, caller.projectRole, caller.guestViewAll);
   held.permissions = permissions;
   const rows = cyclesOf(web).filter((row) => names?.includes(row.name) ?? true);
   held.cycles = transferCycles(rows);
@@ -121,7 +121,8 @@ it.each([
   { caller: its.member, offered: true },
   { caller: its.memberAdmin, offered: true },
   { caller: its.guest, offered: false },
-  { caller: its.guestAdmin, offered: true },
+  { caller: its.guestAdmin, offered: false },
+  { caller: its.guestAdminSeesAll, offered: true },
   { caller: its.outsider, offered: false },
 ])(
   "offers $caller.who a row's transfer of an ended cycle's unfinished work items, by its live counts: $offered",
@@ -137,6 +138,8 @@ it.each([
   { cycle: "Sprint", caller: its.admin, offered: true },
   { cycle: "Frozen", caller: its.member, offered: true },
   { cycle: "Sprint", caller: its.guest, offered: false },
+  { cycle: "Sprint", caller: its.guestAdmin, offered: false },
+  { cycle: "Sprint", caller: its.guestAdminSeesAll, offered: true },
   { cycle: "Sprint", caller: its.outsider, offered: false },
   { cycle: "Done", caller: its.admin, offered: false },
   { cycle: "Shelved", caller: its.admin, offered: false },

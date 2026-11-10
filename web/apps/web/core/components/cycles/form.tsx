@@ -19,7 +19,7 @@ import { getDate, renderFormattedPayloadDate } from "@nerve/utils";
 import { DateRangeDropdown } from "@/components/dropdowns/date-range";
 import { ProjectDropdown } from "@/components/dropdowns/project/dropdown";
 // hooks
-import { useUser } from "@/hooks/store/user/user-user";
+import { useUserPermissions } from "@/hooks/store/user/user-permissions";
 // lib
 import { useRefusedFocus } from "@/lib/refused-focus";
 
@@ -31,6 +31,8 @@ export type CycleFormField = "name" | "start_date" | "end_date";
 export type CycleUnderField = (field: CycleFormField, message: string) => void;
 
 type Props = {
+  /** The workspace of the projects a new cycle may go to, the route's. */
+  workspaceSlug: string;
   /** The project a new cycle goes to until the caller picks another he may write; a change keeps its cycle's. */
   projectId: string;
   /** The cycle a change starts from, as the store holds it as the form opens. */
@@ -45,17 +47,18 @@ type Props = {
 };
 
 /**
- * A cycle's form (P5a spec 2.6): for a new one, the project among those the caller may write (a member's or an admin's
- * role), then its name (required, 255 characters at most; it has the focus as the dialog opens), its description and
- * its two days, which the calendar offers from the browser's today on. Every control is in the natural Tab order. A
- * name the rules refuse, or a field nerve refuses, shows its message under it and takes the focus (useRefusedFocus).
+ * A cycle's form (P5a spec 2.6): for a new one, the project among those whose cycles the caller may write
+ * (canWriteCycles, as nerve decides: an admin's or a member's role, not one nerve shows only his own work items), then
+ * its name (required, 255 characters at most; it has the focus as the dialog opens), its description and its two
+ * days, which the calendar offers from the browser's today on. Every control is in the natural Tab order. A name the
+ * rules refuse, or a field nerve refuses, shows its message under it and takes the focus (useRefusedFocus).
  */
 export function CycleForm(props: Props) {
-  const { projectId, cycle, editing, busy, onSubmit, onCancel } = props;
+  const { workspaceSlug, projectId, cycle, editing, busy, onSubmit, onCancel } = props;
   // nerve hooks
   const { t } = useTranslation();
   // store hooks
-  const { projectsWithCreatePermissions } = useUser();
+  const { canWriteCycles } = useUserPermissions();
   // what the form opens with, which a change compares what it sends with
   const [initial] = useState<CycleFormValues>(() => ({
     project_id: cycle?.project_id ?? projectId,
@@ -95,7 +98,7 @@ export function CycleForm(props: Props) {
                     onChange={onChange}
                     multiple={false}
                     buttonVariant="border-with-text"
-                    renderCondition={(id) => projectsWithCreatePermissions[id] !== undefined}
+                    renderCondition={(id) => canWriteCycles(workspaceSlug, id)}
                   />
                 </div>
               )}

@@ -84,7 +84,7 @@ const states = {
  * by him or by another: an archived cycle in the archive, another in the list. Gives Sprint.
  */
 async function shown(caller: Caller, state: keyof typeof states, created = false) {
-  const { permissions, acme, web } = await callerInWeb(caller.workspaceRole, caller.projectRole);
+  const { permissions, acme, web } = await callerInWeb(caller.workspaceRole, caller.projectRole, caller.guestViewAll);
   held.permissions = permissions;
   const sprint = cycleOf(web, "Sprint", { ...states[state], created_by_id: created ? "me" : "another" });
   held.cycles = standInCycles([sprint]);
@@ -112,6 +112,15 @@ it.each([
   { ...other(its.guest), state: "ended", items: [NEW_TAB, COPY] },
   { ...creator(its.member), state: "archived", items: [NEW_TAB, COPY, "restore"] },
   { ...other(its.guest), state: "archived", items: [NEW_TAB, COPY] },
+  // nerve refuses every planning write of one it shows only his own work items, the workspace's admin too (OwnOnly)
+  { ...creator(its.guestAdmin), state: "upcoming", items: [NEW_TAB, COPY] },
+  { ...other(its.guestAdmin), state: "ended", items: [NEW_TAB, COPY] },
+  { ...other(its.guestAdmin), state: "archived", items: [NEW_TAB, COPY] },
+  { ...other(its.guestAdminSeesAll), state: "upcoming", items: ["edit", NEW_TAB, COPY, NOT_YET, "delete"] },
+  { ...other(its.guestAdminSeesAll), state: "ended", items: [NEW_TAB, COPY, "archive"] },
+  { ...other(its.guestAdminSeesAll), state: "archived", items: [NEW_TAB, COPY, "restore"] },
+  // a creator deletes his cycle by his role in the project, not the workspace's
+  { ...creator(its.guestSeesAll), state: "upcoming", items: [NEW_TAB, COPY] },
 ] as const)("offers $who, of a cycle $state, what nerve lets him do with it: $items", async (caller) => {
   const { sprint } = await shown(caller, caller.state, caller.created);
   expect(offered(await openMenu(sprint.id))).toEqual(caller.items);

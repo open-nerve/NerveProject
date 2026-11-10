@@ -3,16 +3,21 @@
 import { act, useState, type ComponentProps } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import type { Cycle } from "@nerve/api-client";
+import type { Cycle, ProjectRole } from "@nerve/api-client";
 import type { DateRangeDropdown } from "@/components/dropdowns/date-range";
 import { heldChange, signedIn, switchAccount, type HeldChange } from "@/lib/auth/fake-tab";
 import { refusal } from "@/lib/fake-refusal";
 import { toasts } from "@/lib/fake-toast";
+import { projectOf } from "@/store/project/fake-projects";
+import { permissionsOver } from "@/store/user/fake-permissions";
+import type { IUserPermissionStore } from "@/store/user/permissions.store";
+import { workspaceOf } from "@/store/workspace/fake-workspaces";
 import { CycleCreateUpdateModal } from "./modal";
 
 // The cycle's dialog as a person uses it (P5a spec 2.6): its real dialog and form, the cycles of a stand-in store whose
-// changes nerve settles when the test says (fake-tab.ts), and two stand-in pickers: the project's, which keeps what it
-// may list, and the dates', which keeps its props so that the test picks a range as its calendar would.
+// changes nerve settles when the test says (fake-tab.ts), the caller's permissions the store's own
+// (fake-permissions.ts), and two stand-in pickers: the project's, which keeps what it may list, and the dates', which
+// keeps its props so that the test picks a range as its calendar would.
 type Picker = {
   value: string | null;
   onChange: (projectId: string) => void;
@@ -24,6 +29,7 @@ const ui = vi.hoisted(() => ({
   update: vi.fn(),
   project: undefined as Picker | undefined,
   dates: undefined as ComponentProps<typeof DateRangeDropdown> | undefined,
+  permissions: undefined as IUserPermissionStore | undefined,
 }));
 vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
 vi.mock("@nerve/propel/toast", () => import("@/lib/fake-toast"));
@@ -31,10 +37,7 @@ vi.mock("@/lib/auth/api-client", () => import("@/lib/auth/fake-tab"));
 vi.mock("@/hooks/store/use-cycles", () => ({
   useCycles: () => ({ getCycleById: (id: string) => ui.cycles.get(id), create: ui.create, update: ui.update }),
 }));
-// the caller writes A (a member) and B (an admin); G, where he is a guest, is not among them
-vi.mock("@/hooks/store/user/user-user", () => ({
-  useUser: () => ({ projectsWithCreatePermissions: { A: 15, B: 20 } }),
-}));
+vi.mock("@/hooks/store/user/user-permissions", () => ({ useUserPermissions: () => ui.permissions }));
 vi.mock("@/components/dropdowns/project/dropdown", () => ({
   ProjectDropdown: (props: Picker) => {
     ui.project = props;
@@ -75,8 +78,15 @@ const close = vi.fn();
 let sent: HeldChange<Cycle>;
 let host: HTMLDivElement, root: ReturnType<typeof createRoot>;
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
-beforeEach(() => {
+beforeEach(async () => {
   vi.useFakeTimers({ now: new Date(2026, 10, 11, 12) });
+  // the caller, the admin of acme, writes the cycles of A (its member), B (its admin) and S (its guest, S showing its
+  // guests every work item); not of G, where he is a guest whom nerve shows only his own work items
+  const acme = workspaceOf("acme", { role: 20 });
+  const project = (id: string, member_role: ProjectRole, guest_view_all_features = false) =>
+    projectOf(id, acme.id, { id, member_role, guest_view_all_features });
+  const projects = [project("A", 15), project("B", 20), project("G", 5), project("S", 5, true)];
+  ui.permissions = (await permissionsOver([acme], projects)).permissions;
   vi.stubGlobal(
     "ResizeObserver",
     class {
@@ -121,6 +131,7 @@ function Page({ cycleId }: { cycleId?: string }) {
           close();
           setShown(false);
         }}
+        workspaceSlug="acme"
         projectId="A"
         cycleId={cycleId}
       />
@@ -201,7 +212,7 @@ it("creates a draft with its name alone, no date keys nor its project's id, clos
 it("creates a dated cycle in a project the caller writes: its two calendar days and its description", async () => {
   await open();
   expect(ui.project?.value).toBe("A");
-  expect(["A", "B", "G"].map((id) => ui.project?.renderCondition?.(id))).toEqual([true, true, false]);
+  expect(["A", "B", "G", "S"].map((id) => ui.project?.renderCondition?.(id))).toEqual([true, true, false, true]);
   // the calendar starts at the browser's today
   expect(ui.dates?.minDate?.toDateString()).toBe(new Date(2026, 10, 11).toDateString());
   await act(async () => ui.project!.onChange("B"));

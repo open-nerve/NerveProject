@@ -69,7 +69,7 @@ const states = {
 
 /** The caller of a role in acme and in web, at the sidebar of web's cycle Sprint, of state: Sprint. */
 async function shown(caller: Caller, state: keyof typeof states) {
-  const { permissions, web } = await callerInWeb(caller.workspaceRole, caller.projectRole);
+  const { permissions, web } = await callerInWeb(caller.workspaceRole, caller.projectRole, caller.guestViewAll);
   held.permissions = permissions;
   const sprint = cycleOf(web, "Sprint", states[state]);
   held.cycles = sidebarCycles(sprint);
@@ -109,7 +109,9 @@ it.each([
   { ...its.member, state: "in progress", editable: true },
   { ...its.memberAdmin, state: "draft", editable: true },
   { ...its.guest, state: "upcoming", editable: false },
-  { ...its.guestAdmin, state: "upcoming", editable: true },
+  { ...its.guestAdmin, state: "upcoming", editable: false },
+  { ...its.guestAdminSeesAll, state: "upcoming", editable: true },
+  { ...its.guestSeesAll, state: "upcoming", editable: false },
   { ...its.outsider, state: "upcoming", editable: false },
   { ...its.admin, state: "ended", editable: false },
   { ...its.admin, state: "archived, ended", editable: false },

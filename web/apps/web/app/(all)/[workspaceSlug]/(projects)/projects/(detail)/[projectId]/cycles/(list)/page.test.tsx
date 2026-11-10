@@ -113,7 +113,11 @@ const button = (name: string) =>
 
 /** The caller of a role in acme and in web, at web's cycles list, web being as project says. */
 async function opened(caller: Caller, project: Partial<Project> = {}) {
-  const { permissions, projects, acme, web } = await callerInWeb(caller.workspaceRole, caller.projectRole);
+  const { permissions, projects, acme, web } = await callerInWeb(
+    caller.workspaceRole,
+    caller.projectRole,
+    caller.guestViewAll
+  );
   Object.assign(held, { permissions, projects, project });
   await act(async () =>
     root.render(
@@ -174,6 +178,8 @@ it("says why nerve could not list them, waiting no more, and lists them again on
 it.each([
   { caller: its.member, may: true },
   { caller: its.guest, may: false },
+  { caller: its.guestAdmin, may: false },
+  { caller: its.guestAdminSeesAll, may: true },
 ])(
   "shows $caller.who, the project having no cycles, how to set its first, which he may if he writes them",
   async ({ caller, may }) => {
@@ -207,7 +213,8 @@ it.each([
   { caller: its.admin, may: true },
   { caller: its.member, may: true },
   { caller: its.guest, may: false },
-  { caller: its.guestAdmin, may: true },
+  { caller: its.guestAdmin, may: false },
+  { caller: its.guestAdminSeesAll, may: true },
 ])(
   "gives $caller.who the search, the filters and a new cycle if he writes the project's cycles",
   async ({ caller, may }) => {

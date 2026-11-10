@@ -8,7 +8,6 @@ import { observer } from "mobx-react";
 import { useNavigate } from "react-router";
 import { CyclesOutline } from "@makeplane/propel/icons";
 // nerve imports
-import { EUserPermissions } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 import { Breadcrumbs, Header } from "@nerve/ui";
@@ -28,8 +27,8 @@ type TProps = {
 
 /**
  * The header of a project's cycles list (P5a spec 2.5, R8), of the route's project: its crumbs; for those who write
- * the project's cycles (its admins and members), the list's search and filters, and a new cycle, by the project's
- * dialogs' host (ProjectLevelModals).
+ * the project's cycles (canWriteCycles: its admins and members, not one nerve shows only his own work items), the
+ * list's search and filters, and a new cycle, by the project's dialogs' host (ProjectLevelModals).
  */
 export const CyclesListHeader = observer(function CyclesListHeader(props: TProps) {
   const { workspaceSlug, projectId } = props;
@@ -37,12 +36,11 @@ export const CyclesListHeader = observer(function CyclesListHeader(props: TProps
   const navigate = useNavigate();
   // store hooks
   const { toggleCreateCycleModal } = useCommandPalette();
-  const { getProjectRoleByWorkspaceSlugAndProjectId } = useUserPermissions();
+  const { canWriteCycles } = useUserPermissions();
   const { loader } = useProject();
   const { t } = useTranslation();
 
-  const role = getProjectRoleByWorkspaceSlugAndProjectId(workspaceSlug, projectId);
-  const canWrite = role === EUserPermissions.ADMIN || role === EUserPermissions.MEMBER;
+  const canWrite = canWriteCycles(workspaceSlug, projectId);
 
   return (
     <Header>

@@ -9,7 +9,6 @@ import { useNavigate } from "react-router";
 import { MoreHorizontalOutline } from "@makeplane/propel/icons";
 // nerve imports
 import type { Cycle } from "@nerve/api-client";
-import { EUserPermissions } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { getIconButtonStyling } from "@nerve/propel/icon-button";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
@@ -46,9 +45,9 @@ export const CycleQuickActions = observer(function CycleQuickActions(props: Prop
 });
 
 /**
- * The menu of the cycle of the project of projectId (useCycleMenuItems): what the caller may do with it, by his role in
- * the project, as nerve decides it (R8): its admins and members write it; its admins delete it, and so does its creator
- * while the project's admin or member.
+ * The menu of the cycle of the project of projectId (useCycleMenuItems): what the caller may do with it, as nerve
+ * decides it (R8; canWriteCycles, canDeleteCycle): its admins and members write it; its admins delete it, and so does
+ * its creator while the project's admin or member; neither one whom nerve shows only his own work items.
  */
 const CycleMenu = observer(function CycleMenu(props: Props & { cycle: Cycle }) {
   const { parentRef, cycle, projectId, workspaceSlug, customClassName } = props;
@@ -58,15 +57,14 @@ const CycleMenu = observer(function CycleMenu(props: Props & { cycle: Cycle }) {
   const { t } = useTranslation();
   // store hooks
   const { unarchive } = useCycles();
-  const { getProjectRoleByWorkspaceSlugAndProjectId } = useUserPermissions();
+  const { canWriteCycles, canDeleteCycle } = useUserPermissions();
   const { data: currentUser } = useUser();
   const { openDialog, pageMounted } = useCyclePage();
   const copyLink = useCopyLink();
   const toastRefusal = useRefusalToast();
   // auth
-  const role = getProjectRoleByWorkspaceSlugAndProjectId(workspaceSlug, projectId);
-  const canWrite = role === EUserPermissions.ADMIN || role === EUserPermissions.MEMBER;
-  const canDelete = role === EUserPermissions.ADMIN || (canWrite && cycle.created_by_id === currentUser?.id);
+  const canWrite = canWriteCycles(workspaceSlug, projectId);
+  const canDelete = canDeleteCycle(workspaceSlug, projectId, cycle.created_by_id === currentUser?.id);
 
   const link = `/${workspaceSlug}/projects/${projectId}/cycles/${cycle.id}`;
   // Restored, the cycle goes back to its project's list, and its row from the archive; the page says so and goes to the

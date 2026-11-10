@@ -53,6 +53,8 @@ function changes(initial: CycleFormValues, values: CycleFormValues): CycleUpdate
 type CycleModalProps = {
   isOpen: boolean;
   handleClose: () => void;
+  /** The workspace of the projects a new cycle may go to, the route's. */
+  workspaceSlug: string;
   /** The project a new cycle goes to, until the caller picks another. */
   projectId: string;
   /** The cycle to change; none, to make a new one. */
@@ -68,7 +70,7 @@ type CycleModalProps = {
  * a Back), nerve's late answer reaches the store alone. Closed, the dialog gives the focus back to what opened it.
  */
 export const CycleCreateUpdateModal = observer(function CycleCreateUpdateModal(props: CycleModalProps) {
-  const { isOpen, handleClose, projectId, cycleId } = props;
+  const { isOpen, handleClose, workspaceSlug, projectId, cycleId } = props;
   // nerve hooks
   const { t } = useTranslation();
   // store hooks
@@ -126,6 +128,7 @@ export const CycleCreateUpdateModal = observer(function CycleCreateUpdateModal(p
       width={EModalWidth.XXL}
     >
       <CycleForm
+        workspaceSlug={workspaceSlug}
         projectId={projectId}
         cycle={cycle}
         editing={editing}

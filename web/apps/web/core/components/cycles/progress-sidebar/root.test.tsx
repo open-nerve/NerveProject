@@ -21,9 +21,8 @@ const held = vi.hoisted(() => ({
 }));
 vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n-values"));
 vi.mock("@/hooks/store/use-cycles", () => ({ useCycles: () => held.cycles }));
-vi.mock("@/hooks/store/user", () => ({
-  useUserPermissions: () => ({ getProjectRoleByWorkspaceSlugAndProjectId: () => 15 }),
-}));
+// the caller writes the project's cycles (its member)
+vi.mock("@/hooks/store/user", () => ({ useUserPermissions: () => ({ canWriteCycles: () => true }) }));
 vi.mock("@/hooks/use-route-workspace", () => ({ useRouteWorkspace: () => ({ id: "id-acme" }) }));
 vi.mock("@/hooks/store/use-member", () => ({
   useMember: () => ({

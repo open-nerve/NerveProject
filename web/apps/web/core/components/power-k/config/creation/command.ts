@@ -33,7 +33,7 @@ export const usePowerKCreationCommandsRecord = (): Record<TPowerKCreationCommand
   // store
   const { config } = useInstance();
   const {
-    permission: { allowPermissions, canCreateProject },
+    permission: { allowPermissions, canCreateProject, canWriteCycles },
   } = useUser();
   const { knownProjectIds, getProjectById } = useProject();
   const { getWorkspaceBySlug } = useWorkspace();
@@ -70,6 +70,9 @@ export const usePowerKCreationCommandsRecord = (): Record<TPowerKCreationCommand
       ctx.params.workspaceSlug,
       ctx.params.projectId
     );
+  // nerve's rule for the route's project's cycles, not the member check: nerve refuses every planning write of one it
+  // shows only his own work items
+  const canCreateCycle = (ctx: TPowerKContext) => canWriteCycles(ctx.params.workspaceSlug ?? "", ctx.params.projectId);
   const isWorkspaceCreationDisabled = config?.workspace_creation_enabled === false;
 
   const getProjectDetails = (ctx: TPowerKContext) =>
@@ -115,9 +118,8 @@ export const usePowerKCreationCommandsRecord = (): Record<TPowerKCreationCommand
       icon: CyclesOutline,
       keySequence: "nc",
       action: () => toggleCreateCycleModal(true),
-      isEnabled: (ctx) => Boolean(getProjectDetails(ctx)?.cycle_view && hasProjectMemberLevelPermissions(ctx)),
-      isVisible: (ctx) =>
-        Boolean(ctx.params.projectId && getProjectDetails(ctx)?.cycle_view && hasProjectMemberLevelPermissions(ctx)),
+      isEnabled: (ctx) => Boolean(getProjectDetails(ctx)?.cycle_view && canCreateCycle(ctx)),
+      isVisible: (ctx) => Boolean(ctx.params.projectId && getProjectDetails(ctx)?.cycle_view && canCreateCycle(ctx)),
       closeOnSelect: true,
     },
     create_module: {

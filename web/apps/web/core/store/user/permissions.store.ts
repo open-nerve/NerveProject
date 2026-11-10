@@ -30,6 +30,8 @@ export interface IUserPermissionStore {
     onPermissionAllowed?: () => boolean
   ) => boolean;
   canCreateProject: (workspaceSlug: string | undefined) => boolean;
+  canWriteCycles: (workspaceSlug: string, projectId: string | undefined) => boolean;
+  canDeleteCycle: (workspaceSlug: string, projectId: string | undefined, createdByCaller: boolean) => boolean;
 }
 
 /**
@@ -127,4 +129,46 @@ export class UserPermissionStore implements IUserPermissionStore {
     const role = workspaceSlug === undefined ? undefined : this.getWorkspaceRoleByWorkspaceSlug(workspaceSlug);
     return role === EUserWorkspaceRoles.ADMIN || role === EUserWorkspaceRoles.MEMBER;
   };
+
+  /**
+   * @description Whether the caller may write the cycles of the project of the workspace named (make one, change,
+   * archive or restore one, transfer its work items), as nerve's cycle.write decides (access/domain/decide.go, M6
+   * design 3.7): his role in the project is an admin's or a member's (an admin's for the workspace's admin), and nerve
+   * does not show him only his own work items there (ownOnly), whose every planning write it refuses
+   * (planning/app/lock.go)
+   * @param { string } workspaceSlug
+   * @param { string } projectId
+   * @returns { boolean }
+   */
+  canWriteCycles = (workspaceSlug: string, projectId: string | undefined): boolean => {
+    const role = this.getProjectRoleByWorkspaceSlugAndProjectId(workspaceSlug, projectId);
+    return (role === EUserPermissions.ADMIN || role === EUserPermissions.MEMBER) && !this.ownOnly(projectId);
+  };
+
+  /**
+   * @description Whether the caller may delete a cycle of the project of the workspace named, created by him or not,
+   * as nerve's cycle.delete decides (decide.go): the project's admins may, and the workspace's admin, and the cycle's
+   * creator while his role in the project, not the workspace's, is an admin's or a member's (AllowCreator); not one
+   * nerve shows only his own work items there (ownOnly)
+   * @param { string } workspaceSlug
+   * @param { string } projectId
+   * @param { boolean } createdByCaller
+   * @returns { boolean }
+   */
+  canDeleteCycle = (workspaceSlug: string, projectId: string | undefined, createdByCaller: boolean): boolean => {
+    const role = this.getProjectRoleByWorkspaceSlugAndProjectId(workspaceSlug, projectId);
+    if (role === undefined || this.ownOnly(projectId)) return false;
+    const projectRole = this.store.projectRoot.project.getProjectById(projectId)?.member_role;
+    const creatorRole = projectRole === EUserPermissions.ADMIN || projectRole === EUserPermissions.MEMBER;
+    return role === EUserPermissions.ADMIN || (createdByCaller && creatorRole);
+  };
+
+  /**
+   * Whether nerve shows the caller only his own work items in the project (its grant's OwnOnly, decide.go): by his role
+   * in the project alone, a guest's, though the workspace's admin, of a project not showing its guests every work item
+   */
+  private ownOnly(projectId: string | undefined): boolean {
+    const project = this.store.projectRoot.project.getProjectById(projectId);
+    return project?.member_role === EUserPermissions.GUEST && !project.guest_view_all_features;
+  }
 }

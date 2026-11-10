@@ -11,6 +11,7 @@ vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
 vi.mock("@/hooks/store/user/user-user", () => ({
   useUser: () => ({ projectsWithCreatePermissions: { project: true } }),
 }));
+vi.mock("@/hooks/store/user/user-permissions", () => ({ useUserPermissions: () => ({ canWriteCycles: () => true }) }));
 // Unrelated asynchronous fields are not involved in the dialog's initial focus contract.
 vi.mock("@/components/dropdowns/project/dropdown", () => ({
   ProjectDropdown: () => <button type="button">Project</button>,
@@ -60,7 +61,14 @@ for (const kind of ["cycle", "module"] as const) {
         <ModalCore isOpen handleClose={closed}>
           <ModalTitle>{kind}</ModalTitle>
           {kind === "cycle" ? (
-            <CycleForm projectId="project" editing={false} busy={false} onSubmit={submitted} onCancel={closed} />
+            <CycleForm
+              workspaceSlug="ws"
+              projectId="project"
+              editing={false}
+              busy={false}
+              onSubmit={submitted}
+              onCancel={closed}
+            />
           ) : (
             <ModuleForm {...props} />
           )}

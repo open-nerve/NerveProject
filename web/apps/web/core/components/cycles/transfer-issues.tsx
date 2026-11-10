@@ -8,7 +8,6 @@ import { observer } from "mobx-react";
 import { TransferWorkItemOutline, WarningCircleOutline } from "@makeplane/propel/icons";
 // nerve imports
 import type { CycleListItem } from "@nerve/api-client";
-import { EUserPermissions } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 // hooks
@@ -26,13 +25,12 @@ type EntryProps = {
  * The work items a transfer of the cycle of row would move, for the caller (P5a spec 2.5, M6 design 3.5, R8): those
  * unfinished by its live counts (in the backlog, not started, started), never the counts it was frozen with, which a
  * transfer does not change; of an ended cycle not archived alone, frozen or not, as often as some are left; none for a
- * caller who may not write the project's cycles (its admins and members may; nerve refuses its guests).
+ * caller who may not write the project's cycles (canWriteCycles, as nerve decides: not its guests, nor one it shows
+ * only his own work items).
  */
 function useTransferable(row: CycleListItem | undefined, workspaceSlug: string, projectId: string): number {
-  const { getProjectRoleByWorkspaceSlugAndProjectId } = useUserPermissions();
-  const role = getProjectRoleByWorkspaceSlugAndProjectId(workspaceSlug, projectId);
-  const canWrite = role === EUserPermissions.ADMIN || role === EUserPermissions.MEMBER;
-  if (!canWrite || row?.status !== "completed" || row.archived_at !== null) return 0;
+  const { canWriteCycles } = useUserPermissions();
+  if (!canWriteCycles(workspaceSlug, projectId) || row?.status !== "completed" || row.archived_at !== null) return 0;
   return row.backlog_issues + row.unstarted_issues + row.started_issues;
 }
 
