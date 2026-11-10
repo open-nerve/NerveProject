@@ -93,6 +93,11 @@ type ListModuleLinksUseCase interface {
 	Execute(ctx context.Context, moduleID uuid.UUID) ([]domain.ModuleLink, error)
 }
 
+// TransferCycleIssuesUseCase is app.TransferCycleIssues.
+type TransferCycleIssuesUseCase interface {
+	Execute(ctx context.Context, id, target uuid.UUID) (int, error)
+}
+
 // GetCycleProgressUseCase is app.GetCycleProgress.
 type GetCycleProgressUseCase interface {
 	Execute(ctx context.Context, id uuid.UUID) (domain.CycleProgress, error)
@@ -143,6 +148,8 @@ type UseCases struct {
 	UpdateModuleLink UpdateModuleLinkUseCase
 	DeleteModuleLink DeleteModuleLinkUseCase
 	ListModuleLinks  ListModuleLinksUseCase
+	// The move of a completed cycle's unfinished work items to another.
+	TransferCycleIssues TransferCycleIssuesUseCase
 	// A cycle's and a module's progress.
 	GetCycleProgress  GetCycleProgressUseCase
 	GetModuleProgress GetModuleProgressUseCase

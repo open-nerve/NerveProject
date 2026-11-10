@@ -1865,6 +1865,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v0/cycles/{cycle_id}/transfer-issues": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A cycle's id (Cycle.id). */
+                cycle_id: components["parameters"]["CycleID"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Move a completed cycle's unfinished work items to another cycle
+         * @description For its project's admins and members, not its guests, and not a caller who sees only his own work items there. The work items in the cycle by an undeleted membership, undeleted and not archived, whose state is of the backlog, unstarted or started group, whoever made them, leave it and join the target cycle; completed, cancelled and archived ones stay. Each moved work item gets one row of activity naming both cycles and is last changed by the caller. First, unless it is frozen already, the cycle's progress is frozen with the numbers it has before the move (CycleProgress.progress_snapshot). With none left to move, the answer is 0, the freeze written all the same; a transfer may be repeated. A cycle that does not exist or is deleted, one whose project is deleted, and one whose project the caller does not see answer planning.cycle_not_found; a caller who may not change it, forbidden; an archived project, project.archived; cycles turned off, planning.cycles_disabled; an archived cycle, planning.archived. The target must be another undeleted cycle of the same project (validation_failed at target_cycle_id), not archived (planning.archived). Then, on the project's calendar day, the cycle must be completed (planning.cycle_not_completed) and the target not (planning.cycle_completed). Everything is decided after the project's row is locked, and written at one moment by the caller.
+         */
+        post: operations["transferCycleIssues"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v0/projects/{project_id}/modules": {
         parameters: {
             query?: never;
@@ -3896,6 +3919,22 @@ export interface components {
             /** @description The cycle's progress as it was frozen once after it ended, by the periodic freeze or a transfer of its work items, whichever came first, then never rewritten; of every work item, whoever reads it. null while it is not frozen, and always for a caller who sees only his own work items, whom it would show others'. A reader shows it only while status is completed. */
             progress_snapshot: components["schemas"]["FrozenProgress"] | null;
         };
+        /** @description Where a transfer moves a completed cycle's unfinished work items. */
+        CycleTransfer: {
+            /**
+             * Format: uuid
+             * @description Another undeleted cycle of the same project, not archived and not completed.
+             */
+            target_cycle_id: string;
+        };
+        /** @description What a transfer moved. */
+        CycleTransferResult: {
+            /**
+             * Format: int64
+             * @description The work items moved to the target cycle; 0 when none was left to move.
+             */
+            transferred_issues: number;
+        };
         /**
          * @description A module's status, set by its writers, never read from its dates.
          * @enum {string}
@@ -4362,6 +4401,8 @@ export type Burndown = components['schemas']['Burndown'];
 export type Progress = components['schemas']['Progress'];
 export type FrozenProgress = components['schemas']['FrozenProgress'];
 export type CycleProgress = components['schemas']['CycleProgress'];
+export type CycleTransfer = components['schemas']['CycleTransfer'];
+export type CycleTransferResult = components['schemas']['CycleTransferResult'];
 export type ModuleStatus = components['schemas']['ModuleStatus'];
 export type ModuleListItem = components['schemas']['ModuleListItem'];
 export type ModuleList = components['schemas']['ModuleList'];
@@ -7341,6 +7382,34 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CycleProgress"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    transferCycleIssues: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A cycle's id (Cycle.id). */
+                cycle_id: components["parameters"]["CycleID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CycleTransfer"];
+            };
+        };
+        responses: {
+            /** @description How many work items moved. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CycleTransferResult"];
                 };
             };
             default: components["responses"]["Problem"];

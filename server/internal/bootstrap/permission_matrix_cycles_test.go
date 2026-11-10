@@ -183,6 +183,11 @@ func cycleMatrixRows() []matrixRow {
 			cells:   onACycle(cellOK, cellOK, cellOK, cellForbidden, cellForbidden), check: archivesTheCycle(false)},
 		{op: "unarchiveCycle", variant: "archived", write: true, columns: archivedColumns, prepare: cycleArchived,
 			request: toCycle(http.MethodPost, "/unarchive", ""), cells: cycleRows.ofArchived(cellProjectArchived, cellForbidden)},
+		// As archiveCycle (M6 P4 spec R10), each cell's copy with its target and work items (toTransfer).
+		{op: "transferCycleIssues", write: true, columns: cycleColumns, prepare: toTransfer, request: toCycle(http.MethodPost, "/transfer-issues",
+			transferToNext), cells: onACycle(cellOK, cellOK, cellOK, cellForbidden, cellForbidden), check: transfersTheWorkItems},
+		{op: "transferCycleIssues", variant: "archived", write: true, columns: archivedColumns, prepare: toTransfer,
+			request: toCycle(http.MethodPost, "/transfer-issues", transferToNext), cells: cycleRows.ofArchived(cellProjectArchived, cellForbidden)},
 		// The project's admins, and the member who made the cycle
 		// (AllowCreator): PM may not delete Sprint, the workspace admin's, and
 		// deletes Mine, his own; whatever their status.

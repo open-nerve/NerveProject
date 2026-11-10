@@ -73,6 +73,16 @@ func (h handler) UnarchiveCycle(ctx context.Context, req gen.UnarchiveCycleReque
 	return gen.UnarchiveCycle200JSONResponse(cycle(c)), nil
 }
 
+// TransferCycleIssues serves POST /api/v0/cycles/{cycle_id}/transfer-issues:
+// the answer is how many work items moved, none too.
+func (h handler) TransferCycleIssues(ctx context.Context, req gen.TransferCycleIssuesRequestObject) (gen.TransferCycleIssuesResponseObject, error) {
+	n, err := h.uc.TransferCycleIssues.Execute(ctx, req.CycleID, req.Body.TargetCycleID)
+	if err != nil {
+		return nil, err
+	}
+	return gen.TransferCycleIssues200JSONResponse(gen.CycleTransferResult{TransferredIssues: int64(n)}), nil
+}
+
 // given is whether v is given, and its value, nil for null.
 func given[T any](v nullable.Nullable[T]) (bool, *T) {
 	switch {

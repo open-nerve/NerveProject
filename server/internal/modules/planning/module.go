@@ -231,6 +231,9 @@ func New(d Deps) *Module {
 			DeleteModuleLink: app.NewDeleteModuleLink(links),
 			ListModuleLinks:  app.NewListModuleLinks(app.ListModuleLinksDeps{Reads: reads, Links: store}),
 
+			TransferCycleIssues: app.NewTransferCycleIssues(app.TransferCycleIssuesDeps{Locks: locks, Cycles: store, Groups: d.Projects,
+				Stats: d.IssueStats, Issues: d.IssueTransfer, Clock: d.Clock}),
+
 			GetCycleProgress: app.NewGetCycleProgress(app.GetCycleProgressDeps{Reads: reads, Groups: d.Projects, Stats: d.IssueStats,
 				Snapshots: store, Clock: d.Clock}),
 			GetModuleProgress: app.NewGetModuleProgress(app.GetModuleProgressDeps{Reads: reads, Groups: d.Projects, Stats: d.IssueStats,

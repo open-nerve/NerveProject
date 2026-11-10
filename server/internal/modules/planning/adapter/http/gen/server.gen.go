@@ -269,6 +269,18 @@ type CycleProgress struct {
 // CycleStatus Read from the cycle's dates on the project's calendar day, never stored: draft without dates, upcoming before the start, current from the start to the end, completed after the end.
 type CycleStatus string
 
+// CycleTransfer Where a transfer moves a completed cycle's unfinished work items.
+type CycleTransfer struct {
+	// TargetCycleID Another undeleted cycle of the same project, not archived and not completed.
+	TargetCycleID uuid.UUID `json:"target_cycle_id"`
+}
+
+// CycleTransferResult What a transfer moved.
+type CycleTransferResult struct {
+	// TransferredIssues The work items moved to the target cycle; 0 when none was left to move.
+	TransferredIssues int64 `json:"transferred_issues"`
+}
+
 // CycleUpdate defines model for CycleUpdate.
 type CycleUpdate struct {
 	// Description Plain text without NUL; empty for none.
@@ -640,6 +652,9 @@ type ListModulesParams struct {
 // UpdateCycleJSONRequestBody defines body for UpdateCycle for application/json ContentType.
 type UpdateCycleJSONRequestBody = CycleUpdate
 
+// TransferCycleIssuesJSONRequestBody defines body for TransferCycleIssues for application/json ContentType.
+type TransferCycleIssuesJSONRequestBody = CycleTransfer
+
 // UpdateCyclePreferencesJSONRequestBody defines body for UpdateCyclePreferences for application/json ContentType.
 type UpdateCyclePreferencesJSONRequestBody = CyclePreferencesUpdate
 
@@ -678,6 +693,9 @@ type ServerInterface interface {
 	// GetCycleProgress Read a cycle's progress
 	// (GET /api/v0/cycles/{cycle_id}/progress)
 	GetCycleProgress(w http.ResponseWriter, r *http.Request, cycleID CycleID)
+	// TransferCycleIssues Move a completed cycle's unfinished work items to another cycle
+	// (POST /api/v0/cycles/{cycle_id}/transfer-issues)
+	TransferCycleIssues(w http.ResponseWriter, r *http.Request, cycleID CycleID)
 	// UnarchiveCycle Unarchive a cycle
 	// (POST /api/v0/cycles/{cycle_id}/unarchive)
 	UnarchiveCycle(w http.ResponseWriter, r *http.Request, cycleID CycleID)
@@ -867,6 +885,32 @@ func (siw *ServerInterfaceWrapper) GetCycleProgress(w http.ResponseWriter, r *ht
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetCycleProgress(w, r, cycleID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// TransferCycleIssues operation middleware
+func (siw *ServerInterfaceWrapper) TransferCycleIssues(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "cycle_id" -------------
+	var cycleID CycleID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "cycle_id", r.PathValue("cycle_id"), &cycleID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cycle_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.TransferCycleIssues(w, r, cycleID)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1530,6 +1574,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/cycles/{cycle_id}/archive", wrapper.ArchiveCycle)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/cycles/{cycle_id}/unarchive", wrapper.UnarchiveCycle)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/cycles/{cycle_id}/progress", wrapper.GetCycleProgress)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/cycles/{cycle_id}/transfer-issues", wrapper.TransferCycleIssues)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/projects/{project_id}/modules", wrapper.ListModules)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/projects/{project_id}/modules", wrapper.CreateModule)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v0/modules/{module_id}", wrapper.DeleteModule)
@@ -1768,6 +1813,53 @@ type GetCycleProgressdefaultApplicationProblemPlusJSONResponse struct {
 }
 
 func (response GetCycleProgressdefaultApplicationProblemPlusJSONResponse) VisitGetCycleProgressResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type TransferCycleIssuesRequestObject struct {
+	CycleID CycleID `json:"cycle_id"`
+	Body    *TransferCycleIssuesJSONRequestBody
+}
+
+type TransferCycleIssuesResponseObject interface {
+	VisitTransferCycleIssuesResponse(w http.ResponseWriter) error
+}
+
+type TransferCycleIssues200JSONResponse CycleTransferResult
+
+func (response TransferCycleIssues200JSONResponse) VisitTransferCycleIssuesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type TransferCycleIssuesdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response TransferCycleIssuesdefaultApplicationProblemPlusJSONResponse) VisitTransferCycleIssuesResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -2673,6 +2765,9 @@ type StrictServerInterface interface {
 	// GetCycleProgress Read a cycle's progress
 	// (GET /api/v0/cycles/{cycle_id}/progress)
 	GetCycleProgress(ctx context.Context, request GetCycleProgressRequestObject) (GetCycleProgressResponseObject, error)
+	// TransferCycleIssues Move a completed cycle's unfinished work items to another cycle
+	// (POST /api/v0/cycles/{cycle_id}/transfer-issues)
+	TransferCycleIssues(ctx context.Context, request TransferCycleIssuesRequestObject) (TransferCycleIssuesResponseObject, error)
 	// UnarchiveCycle Unarchive a cycle
 	// (POST /api/v0/cycles/{cycle_id}/unarchive)
 	UnarchiveCycle(ctx context.Context, request UnarchiveCycleRequestObject) (UnarchiveCycleResponseObject, error)
@@ -2901,6 +2996,39 @@ func (sh *strictHandler) GetCycleProgress(w http.ResponseWriter, r *http.Request
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetCycleProgressResponseObject); ok {
 		if err := validResponse.VisitGetCycleProgressResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// TransferCycleIssues operation middleware
+func (sh *strictHandler) TransferCycleIssues(w http.ResponseWriter, r *http.Request, cycleID CycleID) {
+	var request TransferCycleIssuesRequestObject
+
+	request.CycleID = cycleID
+
+	var body TransferCycleIssuesJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.TransferCycleIssues(ctx, request.(TransferCycleIssuesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "TransferCycleIssues")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(TransferCycleIssuesResponseObject); ok {
+		if err := validResponse.VisitTransferCycleIssuesResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

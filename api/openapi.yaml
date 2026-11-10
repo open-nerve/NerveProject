@@ -185,6 +185,8 @@ paths:
     $ref: 'modules/planning.yaml#/paths/~1api~1v0~1cycles~1{cycle_id}~1unarchive'
   /api/v0/cycles/{cycle_id}/progress:
     $ref: 'modules/planning.yaml#/paths/~1api~1v0~1cycles~1{cycle_id}~1progress'
+  /api/v0/cycles/{cycle_id}/transfer-issues:
+    $ref: 'modules/planning.yaml#/paths/~1api~1v0~1cycles~1{cycle_id}~1transfer-issues'
   /api/v0/projects/{project_id}/modules:
     $ref: 'modules/planning.yaml#/paths/~1api~1v0~1projects~1{project_id}~1modules'
   /api/v0/modules/{module_id}:
