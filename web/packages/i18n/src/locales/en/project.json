@@ -82,6 +82,12 @@
           "title": "Archive success",
           "description": "Your archives can be found in project archives."
         }
+      },
+      "transfer": {
+        "success": {
+          "title": "Work items transferred",
+          "description": "{count, plural, one {# work item was} other {# work items were}} transferred to {name}."
+        }
       }
     },
     "empty_state": {
@@ -102,6 +108,13 @@
       "title": "Archive cycle {name}",
       "body": "Are you sure you want to archive the cycle? All your archives can be restored later.",
       "only_completed": "Only completed cycles can be archived"
+    },
+    "transfer": {
+      "title": "Transfer work items",
+      "entry": "Transfer {count, plural, one {# work item} other {# work items}}",
+      "completed": "Completed cycles can no longer take work items.",
+      "search": "Search for a cycle",
+      "no_target": "No cycle can take these work items. Create one first."
     }
   },
   "project_views": {

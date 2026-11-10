@@ -22,6 +22,7 @@ import { usePlatformOS } from "@/hooks/use-platform-os";
 import { useRouteWorkspace } from "@/hooks/use-route-workspace";
 // local imports
 import { CycleQuickActions } from "../quick-actions";
+import { TransferIssuesButton } from "../transfer-issues";
 
 type Props = {
   workspaceSlug: string;
@@ -36,10 +37,10 @@ type Props = {
 
 /**
  * The actions and the facts of a cycle's row (P5a spec 2.5): "more details", which previews it; its work items, while
- * a draft or upcoming; its days, days of its project's calendar ("YYYY-MM-DD", M6 design 3.1, R6), never shifted by the
- * browser's time zone; its creator; its members, the assignees of its work items (but in the card of the cycle in
- * progress, whose members it shows itself); and its quick actions. People show as the project's members, one who has
- * left it as such.
+ * a draft or upcoming; the transfer of its unfinished work items, once it has ended (TransferIssuesButton says when);
+ * its days, days of its project's calendar ("YYYY-MM-DD", M6 design 3.1, R6), never shifted by the browser's time
+ * zone; its creator; its members, the assignees of its work items (but in the card of the cycle in progress, whose
+ * members it shows itself); and its quick actions. People show as the project's members, one who has left it as such.
  */
 export const CycleListItemAction = observer(function CycleListItemAction(props: Props) {
   const { workspaceSlug, projectId, row, parentRef, isPeekOpen, onPeek } = props;
@@ -89,6 +90,7 @@ export const CycleListItemAction = observer(function CycleListItemAction(props: 
           <span>{row.total_issues}</span>
         </div>
       )}
+      <TransferIssuesButton row={row} workspaceSlug={workspaceSlug} projectId={projectId} />
       {row.start_date !== null && (
         <div className="flex items-center gap-1 text-11 font-medium text-tertiary">
           <CalendarOutline className="my-auto h-3 w-3 flex-shrink-0" aria-hidden="true" />

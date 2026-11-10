@@ -79,6 +79,9 @@ vi.mock("@/components/cycles/progress-sidebar", () => ({
     );
   },
 }));
+vi.mock("@/components/cycles/transfer-issues", () => ({
+  TransferIssues: (props: { cycleId: string }) => <p data-banner={props.cycleId} />,
+}));
 vi.mock("@/components/cycles/modal", () => ({
   CycleCreateUpdateModal: (props: NonNullable<typeof held.edit>) => {
     held.edit = props;
@@ -312,6 +315,14 @@ it("switches to the project's cycles that are not archived, in nerve's order, by
     [alpha.id, "Alpha"],
     [beta.id, "Beta"],
   ]);
+});
+
+it("shows in its body, before its sidebar, the banner of the cycle's transfer, which says itself whether it shows", async () => {
+  const { alpha } = await opened(its.member, "Alpha");
+  const banner = host.querySelector("[data-banner]");
+  expect(banner?.getAttribute("data-banner")).toBe(alpha.id);
+  const aside = host.querySelector("aside");
+  expect(aside && banner?.compareDocumentPosition(aside)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
 });
 
 it("hides and shows its sidebar by the header's toggle, and hides it by the sidebar's close", async () => {

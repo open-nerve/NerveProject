@@ -54,6 +54,9 @@ vi.mock("@/components/cycles/quick-actions", () => ({
 vi.mock("@/components/cycles/progress-sidebar", () => ({
   CycleDetailsSidebar: (props: { cycleId: string }) => <aside aria-label={`sidebar of ${props.cycleId}`} />,
 }));
+vi.mock("@/components/cycles/transfer-issues", () => ({
+  TransferIssuesButton: (props: { row: CycleListItem }) => <i data-transfer={props.row.id} />,
+}));
 
 const web = projectOf("WEB", "id-acme");
 const ops = projectOf("OPS", "id-acme");
@@ -224,6 +227,12 @@ it("shows a cycle's creator and its members by their avatars, with no star to fa
     (one) => one.getAttribute("aria-label") ?? one.textContent
   );
   expect(buttons).toEqual(["project_cycles.more_details", "options of c-WEB-Alpha"]);
+});
+
+it("gives each row's transfer its row, which says itself whether it is offered (TransferIssuesButton)", async () => {
+  await act(async () => header(COMPLETED)?.click());
+  const transfer = (name: string) => rowNamed(name)?.querySelector("[data-transfer]")?.getAttribute("data-transfer");
+  expect([transfer("S1"), transfer("S3")]).toEqual(["c-WEB-S1", "c-WEB-S3"]);
 });
 
 it("previews a cycle by its 'more details', and closes the preview by it again", async () => {

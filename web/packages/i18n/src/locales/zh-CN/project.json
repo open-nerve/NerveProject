@@ -82,6 +82,12 @@
           "title": "归档成功",
           "description": "您可以在项目归档中找到归档的内容。"
         }
+      },
+      "transfer": {
+        "success": {
+          "title": "工作项已转移",
+          "description": "已将 {count} 个工作项转移到 {name}。"
+        }
       }
     },
     "empty_state": {
@@ -102,6 +108,13 @@
       "title": "归档周期 {name}",
       "body": "确定要归档这个周期吗？归档的内容以后都可以恢复。",
       "only_completed": "只有已完成的周期才能归档"
+    },
+    "transfer": {
+      "title": "转移工作项",
+      "entry": "转移 {count} 个工作项",
+      "completed": "已完成的周期不能再加入工作项。",
+      "search": "搜索周期",
+      "no_target": "没有可以接收这些工作项的周期，请先创建一个。"
     }
   },
   "project_views": {
