@@ -4,85 +4,57 @@
  * See the LICENSE file for details.
  */
 
-import type { MouseEvent } from "react";
 import { useRef } from "react";
 import { observer } from "mobx-react";
-import { useNavigate, useSearchParams, useLocation } from "react-router";
 import { CircularProgress } from "@makeplane/propel/components/circular-progress";
 import { TickOutline } from "@makeplane/propel/icons";
 // nerve imports
-import type { TCycleGroups } from "@nerve/types";
+import { useTranslation } from "@nerve/i18n";
+import { cycleCounts, progressPercent } from "@nerve/utils";
 // components
-import { generateQueryParams, calculateCycleProgress } from "@nerve/utils";
 import { ListItem } from "@/components/core/list";
 // hooks
-import { useCycle } from "@/hooks/store/use-cycle";
+import { useCycles } from "@/hooks/store/use-cycles";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 // local imports
-import { CycleQuickActions } from "../quick-actions";
+import { usePeekCycle } from "../cycle-peek-overview";
 import { CycleListItemAction } from "./cycle-list-item-action";
 
 type TCyclesListItem = {
   cycleId: string;
-  handleEditCycle?: () => void;
-  handleDeleteCycle?: () => void;
-  handleAddToFavorites?: () => void;
-  handleRemoveFromFavorites?: () => void;
   workspaceSlug: string;
   projectId: string;
   className?: string;
 };
 
+/**
+ * A cycle's row in its project's list or archive (P5a spec 2.5), its list's row as the store gives it: its name, a link
+ * to its page (an archived cycle's opens its preview instead), and its progress, the completed of its work items not
+ * cancelled (progressPercent), of the counts cycleCounts chooses (those it was frozen with once it has ended, R7), with a
+ * tick once all are done; then its actions (CycleListItemAction).
+ */
 export const CyclesListItem = observer(function CyclesListItem(props: TCyclesListItem) {
   const { cycleId, workspaceSlug, projectId, className = "" } = props;
   // refs
-  const parentRef = useRef(null);
-  // router
-  const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const { pathname } = useLocation();
+  const parentRef = useRef<HTMLDivElement>(null);
   // hooks
+  const { t } = useTranslation();
   const { isMobile } = usePlatformOS();
+  const [peekCycle, peek] = usePeekCycle();
   // store hooks
-  const { getCycleById } = useCycle();
+  const { getCycleRow } = useCycles();
+  const row = getCycleRow(cycleId);
 
-  // derived values
-  const cycleDetails = getCycleById(cycleId);
+  if (!row) return null;
 
-  if (!cycleDetails) return null;
-
-  // computed
-  // TODO: change this logic once backend fix the response
-  const cycleStatus = cycleDetails.status ? (cycleDetails.status.toLocaleLowerCase() as TCycleGroups) : "draft";
-  const isActive = cycleStatus === "current";
-
-  // handlers
-  const openCycleOverview = (e: MouseEvent<HTMLButtonElement | HTMLAnchorElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    const query = generateQueryParams(searchParams, ["peekCycle"]);
-    if (searchParams.has("peekCycle") && searchParams.get("peekCycle") === cycleId) {
-      navigate(`${pathname}?${query}`);
-    } else {
-      navigate(`${pathname}?${query && `${query}&`}peekCycle=${cycleId}`);
-    }
-  };
-
-  // handlers
-  const handleArchivedCycleClick = (e: MouseEvent<HTMLAnchorElement>) => {
-    openCycleOverview(e);
-  };
-
-  const handleItemClick = cycleDetails.archived_at ? handleArchivedCycleClick : undefined;
-
-  const progress = calculateCycleProgress(cycleDetails);
+  const progress = progressPercent(cycleCounts(row.status, row, row.progress_snapshot));
+  const togglePeek = () => peek(peekCycle === row.id ? null : row.id);
 
   return (
     <ListItem
-      title={cycleDetails?.name ?? ""}
-      itemLink={`/${workspaceSlug}/projects/${projectId}/cycles/${cycleDetails.id}`}
-      onItemClick={handleItemClick}
+      title={row.name}
+      itemLink={`/${workspaceSlug}/projects/${projectId}/cycles/${row.id}`}
+      onItemClick={row.archived_at === null ? undefined : togglePeek}
       className={className}
       prependTitleElement={
         <div className="relative size-[30px]">
@@ -91,10 +63,10 @@ export const CyclesListItem = observer(function CyclesListItem(props: TCyclesLis
               value={progress}
               size="md"
               variant={progress === 100 ? "success" : "brand"}
-              aria-label="Cycle progress"
+              aria-label={t("common.progress")}
             />
           </div>
-          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center" aria-hidden="true">
             {progress === 100 ? (
               <TickOutline className="h-3 w-3" />
             ) : (
@@ -107,25 +79,15 @@ export const CyclesListItem = observer(function CyclesListItem(props: TCyclesLis
         <CycleListItemAction
           workspaceSlug={workspaceSlug}
           projectId={projectId}
-          cycleId={cycleId}
-          cycleDetails={cycleDetails}
+          row={row}
           parentRef={parentRef}
-          isActive={isActive}
+          isPeekOpen={peekCycle !== null}
+          onPeek={togglePeek}
         />
-      }
-      quickActionElement={
-        <div className="block md:hidden">
-          <CycleQuickActions
-            parentRef={parentRef}
-            cycleId={cycleId}
-            projectId={projectId}
-            workspaceSlug={workspaceSlug}
-          />
-        </div>
       }
       isMobile={isMobile}
       parentRef={parentRef}
-      isSidebarOpen={searchParams.has("peekCycle")}
+      isSidebarOpen={peekCycle !== null}
     />
   );
 });

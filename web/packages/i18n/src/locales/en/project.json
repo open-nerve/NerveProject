@@ -16,9 +16,14 @@
     "remove_search_criteria_to_see_all_cycles": "Remove the search criteria to see all cycles",
     "start_date": "Start date",
     "end_date": "End date",
-    "in_your_timezone": "In your timezone",
     "date_range": "Date range",
     "add_date": "Add date",
+    "archived_cycles": "Archived cycles",
+    "member_count": "{count, plural, one {# member} other {# members}}",
+    "filters": {
+      "status": "Status",
+      "custom": "Custom"
+    },
     "not_found": {
       "title": "Cycle does not exist",
       "description": "The cycle you are looking for does not exist or has been deleted.",
@@ -52,28 +57,6 @@
         "success": {
           "title": "Cycle restored",
           "description": "The cycle has been restored."
-        }
-      },
-      "favorite": {
-        "loading": "Adding cycle to favorites",
-        "success": {
-          "description": "Cycle added to favorites.",
-          "title": "Success!"
-        },
-        "failed": {
-          "description": "Couldn't add the cycle to favorites. Please try again.",
-          "title": "Error!"
-        }
-      },
-      "unfavorite": {
-        "loading": "Removing cycle from favorites",
-        "success": {
-          "description": "Cycle removed from favorites.",
-          "title": "Success!"
-        },
-        "failed": {
-          "description": "Couldn't remove the cycle from favorites. Please try again.",
-          "title": "Error!"
         }
       },
       "create": {

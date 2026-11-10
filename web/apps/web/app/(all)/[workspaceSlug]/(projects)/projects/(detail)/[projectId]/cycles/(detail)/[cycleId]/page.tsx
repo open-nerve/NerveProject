@@ -8,7 +8,6 @@ import { observer } from "mobx-react";
 import { useNavigate } from "react-router";
 // nerve imports
 import { useTranslation } from "@nerve/i18n";
-import { Button } from "@nerve/propel/button";
 import { Loader } from "@nerve/ui";
 import { cn } from "@nerve/utils";
 // assets
@@ -17,12 +16,12 @@ import emptyCycle from "@/app/assets/empty-state/cycle.svg?url";
 import { EmptyState } from "@/components/common/empty-state";
 import { PageHead } from "@/components/core/page-title";
 import { CycleDetailsSidebar } from "@/components/cycles/progress-sidebar";
+import { CyclesReadFailure } from "@/components/cycles/read-failure";
 // hooks
 import { useCycles } from "@/hooks/store/use-cycles";
 import { useProject } from "@/hooks/store/use-project";
 import { useUserPermissions } from "@/hooks/store/user";
 import useLocalStorage from "@/hooks/use-local-storage";
-import { useRefusalMessage } from "@/hooks/use-refusal-toast";
 // lib
 import { problemCode } from "@/lib/api-error";
 import { useSessionSWR } from "@/lib/use-session-swr";
@@ -30,8 +29,10 @@ import type { Route } from "./+types/page";
 
 /**
  * A cycle's page (P5a spec 2.2, 2.5, R11), of the route's project and cycle: until P5b brings its work items, its
- * progress sidebar. It reads the cycle and its progress, and for an archived cycle its project's archive, whose row
- * holds its members; a member's reads of a project not archived alone, as the project's own (use-project-fetch.ts).
+ * progress sidebar. It reads the cycle and its progress, and the list of its project that holds its row, whose
+ * assignees are its members: the project's archive for an archived cycle, else the project's cycles not archived (the
+ * read the project's wrapper makes too while they are on, which the two share, use-project-fetch.ts); a member's reads
+ * of a project not archived alone, as the project's own.
  * It says that nerve finds no such cycle in the project (deleted, or never there), with the way back to its list; why
  * nerve could not read it, with a retry; and waits for nerve's first answer. An archived cycle shows as any other,
  * read-only: its quick actions and its dates offer no change of it.
@@ -42,9 +43,8 @@ function CycleDetailPage({ params }: Route.ComponentProps) {
   const { workspaceSlug, projectId, cycleId } = params;
   // nerve hooks
   const { t } = useTranslation();
-  const refusalMessage = useRefusalMessage();
   // store hooks
-  const { getCycleById, fetchCycle, fetchProgress, fetchArchivedCycles } = useCycles();
+  const { getCycleById, fetchCycle, fetchProgress, fetchCycles, fetchArchivedCycles } = useCycles();
   const { getProjectById } = useProject();
   const { getProjectRoleByWorkspaceSlugAndProjectId } = useUserPermissions();
   // hooks
@@ -59,8 +59,15 @@ function CycleDetailPage({ params }: Route.ComponentProps) {
   // the route's project's cycle alone: one of another project is not found here
   const held = getCycleById(cycleId);
   const cycle = held?.project_id === projectId ? held : undefined;
-  const archive = readable && cycle !== undefined && cycle.archived_at !== null ? projectId : undefined;
-  const archived = useSessionSWR(archive ? ["PROJECT_ARCHIVED_CYCLES", archive] : null, (id) =>
+  // the list of the project that holds the cycle's row, its archive for an archived cycle, once the page has the cycle
+  const rowIn =
+    !readable || cycle === undefined
+      ? undefined
+      : cycle.archived_at === null
+        ? "PROJECT_CYCLES"
+        : "PROJECT_ARCHIVED_CYCLES";
+  const list = useSessionSWR(rowIn === "PROJECT_CYCLES" ? [rowIn, projectId] : null, (id) => fetchCycles(id));
+  const archive = useSessionSWR(rowIn === "PROJECT_ARCHIVED_CYCLES" ? [rowIn, projectId] : null, (id) =>
     fetchArchivedCycles(id)
   );
 
@@ -69,7 +76,7 @@ function CycleDetailPage({ params }: Route.ComponentProps) {
 
   if (!readable) return null;
 
-  const failed = [read, progress, archived].filter((fetch) => fetch.error !== undefined);
+  const failed = [read, progress, list, archive].filter((fetch) => fetch.error !== undefined);
   // nerve has no such cycle: it said so, it deleted it since, or it gave one of another project
   if (
     failed.some((fetch) => problemCode(fetch.error) === "planning.cycle_not_found") ||
@@ -89,12 +96,7 @@ function CycleDetailPage({ params }: Route.ComponentProps) {
 
   if (failed.length > 0)
     return (
-      <div role="alert" className="flex size-full flex-col items-center justify-center gap-3 text-13 text-secondary">
-        <span>{refusalMessage(failed[0]?.error)}</span>
-        <Button variant="secondary" size="sm" onClick={() => failed.forEach((fetch) => void fetch.mutate())}>
-          {t("common.retry")}
-        </Button>
-      </div>
+      <CyclesReadFailure error={failed[0]?.error} onRetry={() => failed.forEach((fetch) => void fetch.mutate())} />
     );
 
   if (cycle === undefined)

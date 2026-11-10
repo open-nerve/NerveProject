@@ -8,7 +8,7 @@ import { observable, runInAction } from "mobx";
 import type { CycleFilters } from "@nerve/utils";
 
 /** A project's cycles list ("default") or its archive ("archived"). */
-type CycleList = "default" | "archived";
+export type CycleList = "default" | "archived";
 /** What one of a project's lists is filtered and searched by. */
 type ListFilters = { readonly filters: CycleFilters; readonly searchQuery: string };
 type ProjectFilters = Readonly<Record<CycleList, ListFilters>>;

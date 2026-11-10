@@ -114,6 +114,7 @@ function pageCycles(listed: Cycle[]) {
       return answer;
     }),
     fetchProgress: read("progress"),
+    fetchCycles: read("list"),
     fetchArchivedCycles: read("archive"),
     reads,
     /** What the page has read so far, each as "what of id". */
@@ -202,14 +203,21 @@ async function opened(caller: Caller, name: string, fields: Partial<Cycle> = {},
 }
 
 it("reads a member's cycle and its progress, and shows the cycle once nerve has given it", async () => {
-  const { cycle } = await opened(its.member, "Gamma", { status: "upcoming" }, true);
+  const { cycle, web } = await opened(its.member, "Gamma", { status: "upcoming" }, true);
   expect(held.cycles.asked()).toEqual([`cycle of ${cycle.id}`, `progress of ${cycle.id}`]);
   expect(sidebar()).toBeUndefined();
   expect(text()).not.toContain("project_cycles.not_found.title");
   await held.cycles.answer("cycle", cycle);
   await settle();
   expect(sidebar()).toBe(cycle.id);
-  expect(held.cycles.asked()).toEqual([`cycle of ${cycle.id}`, `progress of ${cycle.id}`]);
+  expect(held.cycles.asked()).toEqual([`cycle of ${cycle.id}`, `progress of ${cycle.id}`, `list of ${web.id}`]);
+});
+
+it("reads its project's cycles too for a cycle not archived, whose row has its members, its wrapper's read or not", async () => {
+  // the project's wrapper reads them while the project's cycles are on, by the same key: the two share one read
+  const { alpha, web } = await opened(its.member, "Alpha");
+  expect(held.cycles.asked()).toEqual([`cycle of ${alpha.id}`, `progress of ${alpha.id}`, `list of ${web.id}`]);
+  expect(sidebar()).toBe(alpha.id);
 });
 
 it.each([
@@ -244,9 +252,10 @@ it("says a cycle nerve does not find does not exist, with the way back to the li
 it.each([
   { what: "cycle", error: refusal(503, "server_busy"), says: "errors.server_busy" },
   { what: "progress", error: new TypeError("Failed to fetch"), says: "errors.unknown" },
+  { what: "list", error: refusal(503, "server_busy"), says: "errors.server_busy" },
 ])("says why its $what could not be read, and reads it again on retry", async ({ what, error, says }) => {
   const { cycle } = await opened(its.member, "Gamma", { status: "upcoming" }, true);
-  if (what === "progress") await held.cycles.answer("cycle", cycle);
+  if (what !== "cycle") await held.cycles.answer("cycle", cycle);
   await held.cycles.refuse(what, error);
   await settle();
   expect(host.querySelector('[role="alert"]')?.textContent).toContain(says);
@@ -254,7 +263,7 @@ it.each([
   const before = held.cycles.asked().length;
   await act(async () => button("common.retry")?.click());
   await settle();
-  expect(held.cycles.asked().slice(before)).toEqual([`${what} of ${cycle.id}`]);
+  expect(held.cycles.asked().slice(before)).toEqual([`${what} of ${what === "list" ? cycle.project_id : cycle.id}`]);
   await held.cycles.answer(what, what === "cycle" ? cycle : {});
   await settle();
   expect(host.querySelector('[role="alert"]')).toBeNull();
@@ -276,16 +285,18 @@ async function chooseInHeader(title: string) {
 }
 
 it("mounts the page of another cycle afresh, its host with it: the dialog of the cycle before ends", async () => {
-  const { alpha, beta } = await opened(its.admin, "Alpha");
+  const { alpha, beta, web } = await opened(its.admin, "Alpha");
   await chooseInHeader("edit");
   expect(held.edit).toMatchObject({ isOpen: true, cycleId: alpha.id });
   await act(async () => held.switcher?.onChange?.(beta.id));
   await settle();
   expect(held.edit).toMatchObject({ isOpen: false });
   expect(held.sidebars).toEqual([alpha.id, beta.id]);
+  // the project's list is the project's, the one read of it shared by both
   expect(held.cycles.asked()).toEqual([
     `cycle of ${alpha.id}`,
     `progress of ${alpha.id}`,
+    `list of ${web.id}`,
     `cycle of ${beta.id}`,
     `progress of ${beta.id}`,
   ]);

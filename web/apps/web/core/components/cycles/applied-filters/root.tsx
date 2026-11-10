@@ -6,93 +6,92 @@
 
 import { observer } from "mobx-react";
 // nerve imports
-import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { PillButton } from "@makeplane/propel/components/pill";
 import { CloseOutline } from "@makeplane/propel/icons";
-import type { TCycleFilters } from "@nerve/types";
-import { replaceUnderscoreIfSnakeCase } from "@nerve/utils";
+import type { CycleFilters } from "@nerve/utils";
 // hooks
-import { useUserPermissions } from "@/hooks/store/user";
+import { useCycleFilters } from "@/hooks/store/use-cycle-filters";
+// store
+import type { CycleList } from "@/store/planning/cycle_filter.store";
 // local imports
 import { AppliedDateFilters } from "./date";
 import { AppliedStatusFilters } from "./status";
 
 type Props = {
-  appliedFilters: TCycleFilters;
-  handleClearAllFilters: () => void;
-  handleRemoveFilter: (key: keyof TCycleFilters, value: string | null) => void;
-  alwaysAllowEditing?: boolean;
+  projectId: string;
+  /** The project's list the filters are of: its cycles list, or its archive. */
+  list: CycleList;
 };
 
-const DATE_FILTERS = ["start_date", "end_date"];
+/** The filters of a project's cycles list, each by its name in the page: nerve's status, and the two days. */
+const FILTERS = [
+  { key: "status", i18n_title: "project_cycles.filters.status" },
+  { key: "start_date", i18n_title: "start_date" },
+  { key: "end_date", i18n_title: "end_date" },
+] as const satisfies { key: keyof CycleFilters; i18n_title: string }[];
 
+/**
+ * The filters applied to a project's cycles list or archive (P5a spec 2.3), the session's of the project and the list:
+ * each filter by its name, each of its options removable, each filter as a whole too, and all of them at once; nothing
+ * while none is applied. They are the viewer's own, whatever his role.
+ */
 export const CycleAppliedFiltersList = observer(function CycleAppliedFiltersList(props: Props) {
-  const { appliedFilters, handleClearAllFilters, handleRemoveFilter, alwaysAllowEditing } = props;
-  // store hooks
-  const { allowPermissions } = useUserPermissions();
+  const { projectId, list } = props;
+  // hooks
   const { t } = useTranslation();
+  const { getFilters, updateFilters, clearAllFilters } = useCycleFilters();
+  const filters = getFilters(projectId, list);
+  const applied = FILTERS.filter(({ key }) => (filters[key]?.length ?? 0) > 0);
 
-  if (!appliedFilters) return null;
-
-  if (Object.keys(appliedFilters).length === 0) return null;
-
-  const isEditingAllowed =
-    alwaysAllowEditing ||
-    allowPermissions([EUserPermissions.ADMIN, EUserPermissions.MEMBER], EUserPermissionsLevel.PROJECT);
+  if (applied.length === 0) return null;
 
   return (
     <div className="flex flex-wrap items-stretch gap-2 bg-surface-1">
-      {Object.entries(appliedFilters).map(([key, value]) => {
-        const filterKey = key as keyof TCycleFilters;
-
-        if (!value) return;
-        if (Array.isArray(value) && value.length === 0) return;
-
+      {applied.map(({ key, i18n_title }) => {
+        const title = t(i18n_title);
         return (
           <div
-            key={filterKey}
-            className="my-auto flex min-h-9 cursor-pointer flex-wrap items-center gap-1.5 rounded-md border border-subtle p-1.5 text-11 text-tertiary capitalize hover:text-secondary"
+            key={key}
+            className="my-auto flex min-h-9 flex-wrap items-center gap-1.5 rounded-md border border-subtle p-1.5 text-11 text-tertiary"
           >
-            <span className="text-11 text-tertiary">{replaceUnderscoreIfSnakeCase(filterKey)}</span>
+            <span className="text-11 text-tertiary">{title}</span>
             <div className="flex flex-wrap items-center gap-1">
-              {filterKey === "status" && (
+              {key === "status" ? (
                 <AppliedStatusFilters
-                  editable={isEditingAllowed}
-                  handleRemove={(val) => handleRemoveFilter("status", val)}
-                  values={value}
+                  values={filters.status ?? []}
+                  handleRemove={(status) =>
+                    updateFilters(projectId, list, { status: filters.status?.filter((one) => one !== status) })
+                  }
                 />
-              )}
-              {DATE_FILTERS.includes(filterKey) && (
+              ) : (
                 <AppliedDateFilters
-                  editable={isEditingAllowed}
-                  handleRemove={(val) => handleRemoveFilter(filterKey, val)}
-                  values={value}
+                  values={filters[key] ?? []}
+                  handleRemove={(day) =>
+                    updateFilters(projectId, list, { [key]: filters[key]?.filter((one) => one !== day) })
+                  }
                 />
               )}
-              {isEditingAllowed && (
-                <button
-                  type="button"
-                  className="grid place-items-center text-tertiary hover:text-secondary"
-                  onClick={() => handleRemoveFilter(filterKey, null)}
-                >
-                  <CloseOutline height={12} width={12} />
-                </button>
-              )}
+              <button
+                type="button"
+                className="grid place-items-center text-tertiary hover:text-secondary"
+                aria-label={t("common.remove_item", { name: title })}
+                onClick={() => updateFilters(projectId, list, { [key]: [] })}
+              >
+                <CloseOutline height={12} width={12} aria-hidden="true" />
+              </button>
             </div>
           </div>
         );
       })}
-      {isEditingAllowed && (
-        <PillButton
-          type="button"
-          size="md"
-          variant="outline"
-          label={t("common.clear_all")}
-          endIcon={<CloseOutline height={12} width={12} />}
-          onClick={handleClearAllFilters}
-        />
-      )}
+      <PillButton
+        type="button"
+        size="md"
+        variant="outline"
+        label={t("common.clear_all")}
+        endIcon={<CloseOutline height={12} width={12} />}
+        onClick={() => clearAllFilters(projectId, list)}
+      />
     </div>
   );
 });

@@ -5,43 +5,44 @@
  */
 
 import { observer } from "mobx-react";
-// ui
-import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
+import { useNavigate } from "react-router";
+import { CyclesOutline } from "@makeplane/propel/icons";
+// nerve imports
+import { EUserPermissions } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
-import { CyclesOutline } from "@makeplane/propel/icons";
 import { Breadcrumbs, Header } from "@nerve/ui";
 // components
+import { CommonProjectBreadcrumbs } from "@/components/breadcrumbs/common";
 import { BreadcrumbLink } from "@/components/common/breadcrumb-link";
 import { CyclesViewHeader } from "@/components/cycles/cycles-view-header";
 // hooks
 import { useCommandPalette } from "@/hooks/store/use-command-palette";
 import { useProject } from "@/hooks/store/use-project";
 import { useUserPermissions } from "@/hooks/store/user";
-import { useNavigate } from "react-router";
-// components
-import { CommonProjectBreadcrumbs } from "@/components/breadcrumbs/common";
 
 type TProps = {
   workspaceSlug: string;
   projectId: string;
 };
 
+/**
+ * The header of a project's cycles list (P5a spec 2.5, R8), of the route's project: its crumbs; for those who write
+ * the project's cycles (its admins and members), the list's search and filters, and a new cycle, by the project's
+ * dialogs' host (ProjectLevelModals).
+ */
 export const CyclesListHeader = observer(function CyclesListHeader(props: TProps) {
+  const { workspaceSlug, projectId } = props;
   // router
   const navigate = useNavigate();
-  const { workspaceSlug, projectId } = props;
-
   // store hooks
   const { toggleCreateCycleModal } = useCommandPalette();
-  const { allowPermissions } = useUserPermissions();
-  const { currentProjectDetails, loader } = useProject();
+  const { getProjectRoleByWorkspaceSlugAndProjectId } = useUserPermissions();
+  const { loader } = useProject();
   const { t } = useTranslation();
 
-  const canUserCreateCycle = allowPermissions(
-    [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
-    EUserPermissionsLevel.PROJECT
-  );
+  const role = getProjectRoleByWorkspaceSlugAndProjectId(workspaceSlug, projectId);
+  const canWrite = role === EUserPermissions.ADMIN || role === EUserPermissions.MEMBER;
 
   return (
     <Header>
@@ -51,8 +52,8 @@ export const CyclesListHeader = observer(function CyclesListHeader(props: TProps
           <Breadcrumbs.Item
             component={
               <BreadcrumbLink
-                label="Cycles"
-                href={`/${workspaceSlug}/projects/${currentProjectDetails?.id}/cycles`}
+                label={t("cycles")}
+                href={`/${workspaceSlug}/projects/${projectId}/cycles`}
                 icon={<CyclesOutline className="h-4 w-4 text-tertiary" />}
                 isLast
               />
@@ -61,22 +62,14 @@ export const CyclesListHeader = observer(function CyclesListHeader(props: TProps
           />
         </Breadcrumbs>
       </Header.LeftItem>
-      {canUserCreateCycle && currentProjectDetails ? (
+      {canWrite && (
         <Header.RightItem>
-          <CyclesViewHeader projectId={currentProjectDetails.id} />
-          <Button
-            variant="primary"
-            size="lg"
-            onClick={() => {
-              toggleCreateCycleModal(true);
-            }}
-          >
+          <CyclesViewHeader projectId={projectId} list="default" />
+          <Button variant="primary" size="lg" onClick={() => toggleCreateCycleModal(true)}>
             <div className="block sm:hidden">{t("add")}</div>
             <div className="hidden sm:block">{t("project_cycles.add_cycle")}</div>
           </Button>
         </Header.RightItem>
-      ) : (
-        <></>
       )}
     </Header>
   );

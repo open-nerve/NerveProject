@@ -4,119 +4,98 @@
  * See the LICENSE file for details.
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { observer } from "mobx-react";
 import { CloseOutline, FilterOutline, SearchOutline } from "@makeplane/propel/icons";
 // nerve imports
 import { useOutsideClickDetector } from "@nerve/hooks";
-import { IconButton } from "@nerve/propel/icon-button";
 import { useTranslation } from "@nerve/i18n";
-import type { TCycleFilters } from "@nerve/types";
-import { cn, calculateTotalFilters } from "@nerve/utils";
+import { IconButton } from "@nerve/propel/icon-button";
+import { calculateTotalFilters } from "@nerve/utils";
 // components
 import { FiltersDropdown } from "@/components/issues/issue-layouts/filters";
 // hooks
-import { useCycleFilter } from "@/hooks/store/use-cycle-filter";
+import { useCycleFilters } from "@/hooks/store/use-cycle-filters";
+// store
+import type { CycleList } from "@/store/planning/cycle_filter.store";
 // local imports
 import { CycleFiltersSelection } from "./dropdowns";
 
 type Props = {
   projectId: string;
+  /** The project's list the search and the filters are of: its cycles list, or its archive. */
+  list: CycleList;
 };
 
+/**
+ * The search and the filters' menu of a project's cycles list or archive (P5a spec 2.3, 2.5), kept by the project and
+ * the list in the session's filters. The search opens on its button, and stays open on a search kept from before;
+ * Escape clears it, then closes it, and so does a click elsewhere on an empty one.
+ */
 export const CyclesViewHeader = observer(function CyclesViewHeader(props: Props) {
-  const { projectId } = props;
+  const { projectId, list } = props;
   // refs
   const inputRef = useRef<HTMLInputElement>(null);
   // hooks
-  const { currentProjectFilters, searchQuery, updateFilters, updateSearchQuery } = useCycleFilter();
   const { t } = useTranslation();
+  const { getFilters, getSearchQuery, updateSearchQuery } = useCycleFilters();
+  const searchQuery = getSearchQuery(projectId, list);
   // states
-  const [isSearchOpen, setIsSearchOpen] = useState(searchQuery !== "");
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const searchShown = isSearchOpen || searchQuery.trim() !== "";
   // outside click detector hook
   useOutsideClickDetector(inputRef, () => {
     if (isSearchOpen && searchQuery.trim() === "") setIsSearchOpen(false);
   });
+  // the search opened on its button: the caret goes into it
+  useEffect(() => {
+    if (isSearchOpen) inputRef.current?.focus();
+  }, [isSearchOpen]);
 
-  const handleFilters = useCallback(
-    (key: keyof TCycleFilters, value: string | string[]) => {
-      if (!projectId) return;
-      const newValues = currentProjectFilters?.[key] ?? [];
-
-      if (Array.isArray(value))
-        value.forEach((val) => {
-          if (!newValues.includes(val)) newValues.push(val);
-          else newValues.splice(newValues.indexOf(val), 1);
-        });
-      else {
-        if (currentProjectFilters?.[key]?.includes(value)) newValues.splice(newValues.indexOf(value), 1);
-        else newValues.push(value);
-      }
-
-      updateFilters(projectId, { [key]: newValues });
-    },
-    [currentProjectFilters, projectId, updateFilters]
-  );
-
+  const search = (query: string) => updateSearchQuery(projectId, list, query);
+  const closeSearch = () => {
+    search("");
+    setIsSearchOpen(false);
+  };
   const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Escape") {
-      if (searchQuery && searchQuery.trim() !== "") updateSearchQuery("");
-      else {
-        setIsSearchOpen(false);
-        inputRef.current?.blur();
-      }
+    if (e.key !== "Escape") return;
+    if (searchQuery.trim() !== "") search("");
+    else {
+      setIsSearchOpen(false);
+      inputRef.current?.blur();
     }
   };
 
-  const isFiltersApplied = calculateTotalFilters(currentProjectFilters ?? {}) !== 0;
-
-  useEffect(() => {
-    if (searchQuery.trim() !== "") setIsSearchOpen(true);
-  }, [searchQuery]);
-
   return (
     <div className="flex items-center gap-2">
-      {!isSearchOpen ? (
+      {!searchShown ? (
         <IconButton
           variant="ghost"
           size="lg"
-          onClick={() => {
-            setIsSearchOpen(true);
-            inputRef.current?.focus();
-          }}
+          onClick={() => setIsSearchOpen(true)}
           icon={SearchOutline}
           aria-label={t("common.search.label")}
         />
       ) : (
-        <div
-          className={cn(
-            "ml-auto flex w-0 items-center justify-start gap-1 overflow-hidden rounded-md border border-transparent bg-surface-1 text-placeholder opacity-0 transition-[width] ease-linear",
-            {
-              "w-64 border-subtle px-2.5 py-1.5 opacity-100": isSearchOpen,
-            }
-          )}
-        >
-          <SearchOutline className="h-3.5 w-3.5" />
+        <div className="ml-auto flex w-64 items-center justify-start gap-1 overflow-hidden rounded-md border border-subtle bg-surface-1 px-2.5 py-1.5 text-placeholder opacity-100 transition-[width] ease-linear">
+          <SearchOutline className="h-3.5 w-3.5" aria-hidden="true" />
           <input
             ref={inputRef}
             className="w-full max-w-[234px] border-none bg-transparent text-13 text-primary placeholder:text-placeholder focus:outline-none"
-            placeholder="Search"
+            placeholder={t("common.search.label")}
+            aria-label={t("common.search.label")}
             value={searchQuery}
-            onChange={(e) => updateSearchQuery(e.target.value)}
+            onChange={(e) => search(e.target.value)}
             onKeyDown={handleInputKeyDown}
           />
-          {isSearchOpen && (
-            <button
-              type="button"
-              className="grid place-items-center"
-              onClick={() => {
-                updateSearchQuery("");
-                setIsSearchOpen(false);
-              }}
-            >
-              <CloseOutline className="h-3 w-3" />
-            </button>
-          )}
+          <button
+            type="button"
+            className="grid place-items-center"
+            aria-label={t("common.search.clear")}
+            onClick={closeSearch}
+          >
+            <CloseOutline className="h-3 w-3" aria-hidden="true" />
+          </button>
         </div>
       )}
 
@@ -124,9 +103,9 @@ export const CyclesViewHeader = observer(function CyclesViewHeader(props: Props)
         icon={<FilterOutline className="h-3 w-3" />}
         title={t("common.filters")}
         placement="bottom-end"
-        isFiltersApplied={isFiltersApplied}
+        isFiltersApplied={calculateTotalFilters(getFilters(projectId, list)) !== 0}
       >
-        <CycleFiltersSelection filters={currentProjectFilters ?? {}} handleFiltersUpdate={handleFilters} />
+        <CycleFiltersSelection projectId={projectId} list={list} />
       </FiltersDropdown>
     </div>
   );

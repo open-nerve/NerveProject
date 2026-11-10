@@ -16,9 +16,14 @@
     "remove_search_criteria_to_see_all_cycles": "移除搜索条件以查看所有周期",
     "start_date": "开始日期",
     "end_date": "结束日期",
-    "in_your_timezone": "在您的时区",
     "date_range": "日期范围",
     "add_date": "添加日期",
+    "archived_cycles": "已归档的周期",
+    "member_count": "{count} 名成员",
+    "filters": {
+      "status": "状态",
+      "custom": "自定义"
+    },
     "not_found": {
       "title": "周期不存在",
       "description": "你要找的周期不存在或已被删除。",
@@ -52,28 +57,6 @@
         "success": {
           "title": "周期已恢复",
           "description": "周期已被恢复。"
-        }
-      },
-      "favorite": {
-        "loading": "正在将周期添加到收藏",
-        "success": {
-          "description": "周期已添加到收藏。",
-          "title": "成功！"
-        },
-        "failed": {
-          "description": "无法将周期添加到收藏。请重试。",
-          "title": "错误！"
-        }
-      },
-      "unfavorite": {
-        "loading": "正在从收藏中移除周期",
-        "success": {
-          "description": "周期已从收藏中移除。",
-          "title": "成功！"
-        },
-        "failed": {
-          "description": "无法从收藏中移除周期。请重试。",
-          "title": "错误！"
         }
       },
       "create": {

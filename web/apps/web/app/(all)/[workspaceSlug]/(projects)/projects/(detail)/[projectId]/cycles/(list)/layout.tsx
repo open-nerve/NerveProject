@@ -10,17 +10,13 @@ import { AppHeader } from "@/components/core/app-header";
 import { ContentWrapper } from "@/components/core/content-wrapper";
 import { CycleActionsHost } from "@/components/cycles/actions-host";
 import { CyclesListHeader } from "./header";
-import { CyclesListMobileHeader } from "./mobile-header";
 import type { Route } from "./+types/layout";
 
 export default function ProjectCyclesListLayout({ params }: Route.ComponentProps) {
   // the page's cycles' dialogs and restore outlive the row that asked for them (CycleActionsHost)
   return (
     <CycleActionsHost workspaceSlug={params.workspaceSlug} projectId={params.projectId}>
-      <AppHeader
-        header={<CyclesListHeader workspaceSlug={params.workspaceSlug} projectId={params.projectId} />}
-        mobileHeader={<CyclesListMobileHeader />}
-      />
+      <AppHeader header={<CyclesListHeader workspaceSlug={params.workspaceSlug} projectId={params.projectId} />} />
       <ContentWrapper>
         <Outlet />
       </ContentWrapper>

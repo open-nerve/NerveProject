@@ -5,58 +5,43 @@
  */
 
 import { observer } from "mobx-react";
-// assets
-import AllFiltersImage from "@/app/assets/empty-state/cycle/all-filters.svg?url";
-import NameFilterImage from "@/app/assets/empty-state/cycle/name-filter.svg?url";
 // components
 import { CyclesList } from "@/components/cycles/list";
-// ui
-import { CycleModuleListLayoutLoader } from "@/components/ui/loader/cycle-module-list-loader";
+import { CyclesListMap } from "@/components/cycles/list/cycles-list-map";
 // hooks
-import { useCycle } from "@/hooks/store/use-cycle";
-import { useCycleFilter } from "@/hooks/store/use-cycle-filter";
+import { useCycleFilters } from "@/hooks/store/use-cycle-filters";
+import { useCycles } from "@/hooks/store/use-cycles";
+// local imports
+import { filterCycleRows, NoMatchingCycles } from "../cycles-view";
 
 export interface IArchivedCyclesView {
   workspaceSlug: string;
   projectId: string;
 }
 
+/**
+ * A project's archived cycles in nerve's order, the latest archived first (R5), filtered and searched by the project's
+ * own filters and search of its archive; each row opens the cycle's preview. Nothing matching, it says which to clear.
+ */
 export const ArchivedCyclesView = observer(function ArchivedCyclesView(props: IArchivedCyclesView) {
   const { workspaceSlug, projectId } = props;
   // store hooks
-  const { getFilteredArchivedCycleIds, loader } = useCycle();
-  const { archivedCyclesSearchQuery } = useCycleFilter();
+  const { getArchivedCycleIds, getCycleRow } = useCycles();
+  const { getFilters, getSearchQuery } = useCycleFilters();
   // derived values
-  const filteredArchivedCycleIds = getFilteredArchivedCycleIds(projectId);
+  const query = getSearchQuery(projectId, "archived");
+  const rows = filterCycleRows(
+    getArchivedCycleIds(projectId) ?? [],
+    getCycleRow,
+    getFilters(projectId, "archived"),
+    query
+  );
 
-  if (loader || !filteredArchivedCycleIds) return <CycleModuleListLayoutLoader />;
-
-  if (filteredArchivedCycleIds.length === 0)
-    return (
-      <div className="grid h-full w-full place-items-center">
-        <div className="text-center">
-          <img
-            src={archivedCyclesSearchQuery.trim() === "" ? AllFiltersImage : NameFilterImage}
-            className="mx-auto h-36 w-36 sm:h-48 sm:w-48"
-            alt="No matching cycles"
-          />
-          <h5 className="mt-7 mb-1 text-18 font-medium">No matching cycles</h5>
-          <p className="text-14 text-placeholder">
-            {archivedCyclesSearchQuery.trim() === ""
-              ? "Remove the filters to see all cycles"
-              : "Remove the search criteria to see all cycles"}
-          </p>
-        </div>
-      </div>
-    );
+  if (rows.length === 0) return <NoMatchingCycles searched={query.trim() !== ""} />;
 
   return (
-    <CyclesList
-      completedCycleIds={[]}
-      cycleIds={filteredArchivedCycleIds}
-      workspaceSlug={workspaceSlug}
-      projectId={projectId}
-      isArchived
-    />
+    <CyclesList workspaceSlug={workspaceSlug} projectId={projectId}>
+      <CyclesListMap cycleIds={rows.map((row) => row.id)} projectId={projectId} workspaceSlug={workspaceSlug} />
+    </CyclesList>
   );
 });
