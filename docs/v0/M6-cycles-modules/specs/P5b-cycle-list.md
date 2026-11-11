@@ -1,6 +1,6 @@
 # M6 / P5b：迭代页的工作项列表
 
-> 状态：待预检。基线 main `0b8efcd701edf7e73a37d5bb82ad176a7795b910`（P5a 的 noff，main CI 42995581409 首次通过）。设计见 [M6 设计](../M6-design.md) §2 的 G15、G19，§3.3、§7、§8、§12；P5 的拆分与 P5b 的边界见 [P5a spec](P5a-web-cycles.md) §1、R1、R10、§5。网页的长期规则见[总体设计 §7.2、§7.7](../../v0-design.md#77-stores-按会话分代长期有效m2-起)。接口合同见 [P3a spec](P3a-issue-membership.md)（工作项的 `cycle_id`）、[P3b spec](P3b-list-engine.md) §2.1、§2.3、R6、R8、R9（列表的词表与迭代页偏好）。现状调研见本阶段台账 `research/web.md`（网页的列表引擎）、`research/plane-contract.md`（Plane 的迭代页列表、nerve 的接口与交接）（ignored，随阶段归档）。负责人 2026-11-11 授权连续推进至 M6 收官，重要高风险决策仍停下确认；本段不改 `server/`、`api/`，本机 `make test` 若因 M6-M8-05 的签名失败，以分支 CI 的服务端两路为准（负责人 2026-11-11）。
+> 状态：预检通过（修正后，[re-66](../../../reviews/re-66-M6P5b预检.md)）。基线 main `0b8efcd701edf7e73a37d5bb82ad176a7795b910`（P5a 的 noff，main CI 42995581409 首次通过）。设计见 [M6 设计](../M6-design.md) §2 的 G15、G19，§3.3、§7、§8、§12；P5 的拆分与 P5b 的边界见 [P5a spec](P5a-web-cycles.md) §1、R1、R10、§5。网页的长期规则见[总体设计 §7.2、§7.7](../../v0-design.md#77-stores-按会话分代长期有效m2-起)。接口合同见 [P3a spec](P3a-issue-membership.md)（工作项的 `cycle_id`）、[P3b spec](P3b-list-engine.md) §2.1、§2.3、R6、R8、R9（列表的词表与迭代页偏好）。现状调研见本阶段台账 `research/web.md`（网页的列表引擎）、`research/plane-contract.md`（Plane 的迭代页列表、nerve 的接口与交接）（ignored，随阶段归档）。负责人 2026-11-11 授权连续推进至 M6 收官，重要高风险决策仍停下确认；本段不改 `server/`、`api/`，本机 `make test` 若因 M6-M8-05 的签名失败，以分支 CI 的服务端两路为准（负责人 2026-11-11）。
 
 ## 1. 目标与边界
 
@@ -23,7 +23,8 @@ P5a 交付了迭代的页面，详情页的正文只有转移横幅与进度侧�
 
 - 迭代页的列表是项目列表加上 `cycle_id=<本迭代>`（设计 §7）：`IssueListScope` 仍是 `scope: "project"`，查询多一项 `cycle_id: [cycleId]`；不加新的 scope 变体（R1）。绑定的键是整份 scope，所以每个迭代各有一个绑定。
 - 请求：`GET /api/v0/projects/{project_id}/issues`，查询是迭代页偏好得出的筛选、分组、排序、子工作项，加 `cycle_id`、`limit`、游标；已归档的迭代照样可列（接口说明）。
-- 取数：只在调用者是项目的有效成员、项目未归档时取（同项目列表，`useIssueListMount` 的 `role !== undefined`）；访客与只看自己的访客照常读，nerve 只给他看得到的（列表与总数都按 OwnOnly）。迭代关闭（`cycle_view` 为假）时页面已显示停用的空态（P5a），不取列表。挂载键带迭代 id。
+- 取数：只在调用者是项目的有效成员、项目未归档、项目的迭代打开（`cycle_view`）时取（前两条同项目列表，`useIssueListMount` 的 `role !== undefined`）；访客与只看自己的访客照常读，nerve 只给他看得到的（列表与总数都按 OwnOnly）。挂载键带迭代 id。
+- **迭代关闭时**：P5a 的详情页在迭代关闭时照常显示页头与进度侧栏（只读，写入口已由 `canWriteCycles` 收起），正文的列表区改为与列表页相同的停用空态（`cycles/(list)/page.tsx` 的那一个），不取本页偏好与列表，页头不显示布局、筛选、显示与新建（re-66 H1）。nerve 在迭代关闭时拒绝工作项加入与离开迭代（`planning.cycles_disabled`），列表区也就没有可做的事。
 
 ### 2.2 成员判断
 
@@ -42,11 +43,13 @@ P5a 交付了迭代的页面，详情页的正文只有转移横幅与进度侧�
 - `CyclePreferences` 只有 `filters`、`display_filters`、`display_properties`（没有项目的 `navigation`、`sort_order`）；`filters` 没有 `cycle_id`（接口以 400 拒绝），网页的筛选词表本来没有它（P3b R9）。
 - 不读 router store：迭代页按路由参数的 `cycleId` 读本页的筛选；store 不加 `rootIssueStore.cycleId`，没有反应（P5a R4 的先例）。
 - 偏好修改确认后，本页列表若查询变了就按现有分页重取（项目页 `useProjectPreferencesFollow` 的规则，改为按 store 类型与本页的 id）。
+- 整字段替换不依赖已读的值：卡片的行点击（§2.8）在迭代页的偏好从未读过时也只发一个 `PATCH`（`filters` 整字段），以回答（完整的 `CyclePreferences`）种下本地的值并升该字段的版本；之后迭代页的读按“本地已确认的字段比读到的新时保留”不覆盖它（re-66 M1）。现在的 `change()` 在没有已读的值时抛错，基类要放开这一点。
 
 ### 2.5 列表引擎的 CYCLE
 
 - `EIssuesStoreType.CYCLE`；`IssueRootStore` 增加迭代页的列表 store（`CycleIssues`，继承 `BaseIssuesStore`）与 `CycleIssuesFilter`；`useIssues`、`useIssuesActions`、`ISSUE_STORE_TO_FILTERS_MAP`、`TCreateModalStoreTypes`、拖拽的 store 类型、空态的分支都加 CYCLE；迭代页的路由映射到 CYCLE（现在映射到 DEFAULT，测试钉住，按契约变化改）。
-- `CycleIssues.fetchIssues` 的查询是本页偏好得出的查询加 `cycle_id`；`createIssue`（快速新建、弹窗、分组头）带上本迭代的 `cycle_id`，调用方不必知道迭代。
+- `CycleIssues.fetchIssues` 的查询是本页偏好得出的查询加 `cycle_id`；`createIssue`（快速新建、弹窗、分组头）在目标项目就是迭代的项目时带上本迭代的 `cycle_id`，调用方不必知道迭代；目标是别的项目时不带（否则 nerve 以 422 `cycle_id` 拒绝，而表单在 P7 之前没有迭代字段可落这个错，re-66 M3）。迭代页页头打开的新建弹窗锁定项目（`isProjectSelectionDisabled`）。
+- 读本页筛选的地方（四个 base root、日历的子树）改经一个按 store 类型给出本页筛选的 hook：PROJECT、PROFILE、ARCHIVED 照旧，CYCLE 按路由参数的 `cycleId`。日历子树现在拿整个筛选 store 读 router 驱动的 getter（`week-days`、`header`、`day-tile`、`months-dropdown`、`options-dropdown`），改为拿已解析的日历显示设置与更新回调（re-66 H2）。
 - 日历的快速新建读当前 store 类型的 `viewFlags`（现在固定读项目的）。
 
 ### 2.6 页面
@@ -54,17 +57,17 @@ P5a 交付了迭代的页面，详情页的正文只有转移横幅与进度侧�
 - **布局根**：`CycleLayoutRoot` 提供 `IssuesStoreContext` CYCLE、筛选的实例（`ProjectLevelWorkItemFiltersHOC`，`entityType` CYCLE、`entityId` 迭代 id；保存视图照项目页）、已选筛选条、四种布局的迭代根、工作项预览；取本页偏好经 `useSessionSWR`（键带迭代 id），失败可重试。放在详情页正文里转移横幅之下，进度侧栏照旧在右边。
 - **页头**（`CycleIssuesHeader` 在 P5a 的面包屑、切换、侧栏开关与快捷操作之外加）：本页的工作项数（`getGroupIssueCount`）、四种布局、筛选开关、显示（显示筛选与显示属性，词表同项目页，见 R9）、“新建工作项”。布局、筛选、显示对看得到页面的人都可用（照 Plane）。
 - **新建工作项**（页头、快速新建、分组头的“+”）：只给能建工作项的人（项目页的 `allowPermissions([ADMIN, MEMBER])`），且迭代能被加入：迭代打开（`cycle_view`）、迭代未结束（`status` 不是 `completed`）、未归档（R5）。新建弹窗的请求体带本迭代；表单不显示迭代字段（P7 恢复下拉框）。确认后照项目页提示，本页列表经成员判断出现这一行。
-- **只读**（迭代已结束或已归档，R5）：没有行内修改、快速新建、分组头的新建与拖拽；行的快捷操作只有复制、新标签页打开、复制链接；页头没有“新建工作项”；空态没有操作。
-- **行的快捷操作**：在项目页的快捷操作之外加“移出迭代”（R6）：能改工作项的人、列表不只读时显示，经 `updateIssue` 发 `cycle_id: null`，确认后行离开本页列表并提示，被拒时说明。
+- **只读**（迭代已结束或已归档，R5）：没有行内修改、快速新建、分组头的新建与拖拽；行的快捷操作只有复制、新标签页打开、复制链接；页头没有“新建工作项”；空态没有操作。机制：四个 base root 加一个只读的 prop，迭代根以 `status === "completed" || archived_at !== null` 传入，并进 `disableIssueCreation`、日历的 `readOnly` 与 `canEditProperties`（现在这三者只看路由权限，`viewFlags` 是每个 store 实例一份，re-66 M2）。
+- **行的快捷操作**：在项目页的快捷操作之外加“移出迭代”（R6）：能改工作项的人、列表不只读、迭代打开时显示，经 `updateIssue` 发 `cycle_id: null`，确认后行离开本页列表并提示，被拒时说明。快捷操作里的修改与“复制一份”以 CYCLE 打开弹窗（复制的一份同样加入本迭代）；工作项预览的宿主是迭代页自己的（`hostScope` 带迭代 id），不与项目页共用（re-66 L4）。
 - **空态**：没有工作项时，未结束且能新建的人看到“新建工作项”；有筛选时显示“清除筛选”；已结束或已归档时只有说明。
-- **写后重读进度**（R10）：本页列表确认了一个写之后，重取本迭代的 `/progress`（进度侧栏、页头的数目来自绑定），不在网页上推算。
+- **写后重读进度**（R10）：迭代页列表的动作（新建、修改、移出、删除、归档、拖拽）经 nerve 确认后，经 `followInSession` 与页面范围的捕获重取本迭代的 `/progress`（`ReconciledByKey` 取最新的回答）；预览里经工作项详情的写不是列表的写，进度到下次读取更新（re-66 L5）。页头的数目来自绑定，不在网页上推算。
 
 ### 2.7 进行中卡片的优先级页签
 
 - 统计卡的页签为“优先级工作项”“负责人”“标签”（照 Plane 的次序，默认仍是负责人，记在 `localStorage` 的 `activeCycleTab`）。
-- 取数：另一个列表 store 实例，查询是显式的完整查询 `{cycle_id: [id], priority: ["urgent", "high"], order_by: "-created_at", sub_issue: "true", limit: 30}`，不并入任何偏好，不改本页列表的当前绑定（R7）；滚到底按游标续页。
+- 取数：另一个列表 store 实例，在 `IssueRootStore` 构造时建一个（同 `projectIssues`），随根退役；每个迭代一个绑定（绑定在构造时登记进根，根的列表只增不删，所以不能按组件建实例，re-66 M4）。查询是显式的完整查询 `{cycle_id: [id], priority: ["urgent", "high"], order_by: "-created_at", sub_issue: "true", limit: 30}`，不并入任何偏好，不改本页列表的当前绑定（R7）；滚到底按游标续页。
 - 行：编号、名字、优先级图标、状态（只读）、目标日期；没有时显示空态；加载时显示占位。
-- 点击一行：把迭代页的筛选换成“优先级为紧急或高”并进入迭代页，打开这个工作项的预览（照 Plane，R8）。
+- 点击一行：把迭代页的筛选换成“优先级为紧急或高”，nerve 确认后进入迭代页，再在迭代页的预览宿主下打开这个工作项的预览（照 Plane 的结果；nerve 的预览是工作项详情 store 的状态加宿主归属，别的宿主挂载时会清掉不属于它的选择，所以先进入、后打开，re-66 M1）。
 
 ### 2.8 行点击
 
@@ -74,7 +77,8 @@ P5a 交付了迭代的页面，详情页的正文只有转移横幅与进度侧�
 
 ### 2.9 守卫与告警
 
-- `project-address-route` 收入新建与改写的文件；新文件只经路由参数或 props 取工作区、项目、迭代。
+- `project-address-route` 收入新建与改写的文件（规则已列 Plane 旧的迭代根、空态与快捷操作的路径；`roots/cycle-layout-root.tsx`、`calendar/roots/cycle-root.tsx`、改写的 `issues/filters.tsx`、`issue-modal/base.tsx`、`calendar/calendar.tsx`、`core/sidebar/single-progress-stats.tsx` 与新 hook、store 不在，随各 Task 加入并带样例，re-66 M6）；新文件只经路由参数或 props 取工作区、项目、迭代。
+- 新文案（移出迭代、优先级页签与其空态等）en 与 zh-CN 在同一提交加入（`check:sync`、`i18n-keys.mjs`）。
 - 告警上限只降不升：清掉告警的提交同时下调上限。
 - 按本页分组（R9）：迭代页的显示选项常量不含迭代，测试钉住。
 - 关键词 phase 仍是 `M6/P5`。
@@ -83,8 +87,8 @@ P5a 交付了迭代的页面，详情页的正文只有转移横幅与进度侧�
 
 页面故事（`e2e/stories/planning/g15-*-page.spec.ts`、`g19-*` 的迭代页列表部分），纳入三种引擎的页面配置：
 
-- **G15**：迭代页的列表在四种布局中只列本迭代的工作项（含已归档迭代的页面），分组与续页双向（向下、向上续页不重复、空页），本页偏好的读写与被拒；本页新建（页头、快速新建）带上迭代、移出迭代、已结束的只读；附件列（真实附件的数目、按附件数排序、续页、换会话，增删附件后数目随读取更新，M5-M6-02）。
-- **G19**：换迭代（面包屑）、后退前进、换项目、换会话时，旧迭代的列表与迟到的回答不进新页面；只看自己的访客与工作区管理员兼访客只看到自己的；行点击与优先级页签。
+- **G15**：迭代页的列表在四种布局中只列本迭代的工作项（含已归档迭代的页面），续页按 M4 的双向分页（`expectPages`、`scrollToLastListRow` 的既有写法：续页不重复、不丢、空页），本页偏好的读写与被拒；本页新建（页头、快速新建）带上迭代、移出迭代、已结束的只读、迭代关闭时的停用空态；在迭代页归档一行后行离开、数目随 nerve 变化（归档范围）；附件列（真实附件的数目、按附件数排序、续页、换会话，增删附件后数目随读取更新，M5-M6-02）。每种布局以整页安静的断言收尾（`expectListPageQuiet`，M4 M6-01 的“整页零非预期失败”）。
+- **G19**：换迭代（面包屑）、后退前进、换项目、换会话时，旧迭代的列表与迟到的回答不进新页面；失权的迟到回答（列表回答被扣住时调用者被移出项目，放行后页面不显示那一页、不报非预期失败）；只看自己的访客与工作区管理员兼访客只看到自己的；行点击与优先级页签。
 - 跨分组的写之后计数（M4 M6-02）：在迭代页按状态分组时改一行的状态，两组的数随 nerve 的回答变化。
 
 ## 3. 局部裁定
@@ -99,7 +103,7 @@ P5a 交付了迭代的页面，详情页的正文只有转移横幅与进度侧�
 - **R8 行点击照 Plane**：卡片的行**替换**迭代页的筛选（整字段 `filters`）并进入；侧栏的行**切换**一个值。nerve 的偏好是整字段替换，卡片的写不必先读。保存经 nerve 确认后才跳转。优先级行另打开预览。
 - **R9 不出现“按迭代分组”**：nerve 的词表在 P7 才有迭代与模块（P3b R9），现在没有可藏的选项。本段给迭代页一份显示选项常量（同项目页、不含迭代），以测试钉住，P7 加词时迭代页仍不出现。服务端接受 `group_by: "cycle_id"`（只有一组），经接口写入的照 P3b R9 显示为不分组、修改时保留。
 - **R10 写后重读进度**：M4 删除了 Plane 的分布乐观更新（M4 交接 M6-02 不许恢复）。本页列表确认一个写之后重取本迭代的 `/progress`；列表页的行计数在下次取数时更新（同转移，P5a）。
-- **R11 “添加已有”在 P7**：设计 §12 把它与迭代下拉框放在 P7；nerve 没有批量接口，要逐个 `PATCH`，搜索也不排除已在迭代里的（设计 §3.3 第 12 条）。M4 交接 M6-02 列出的“分组头添加已有、日历 `addIssuesToView`、`existing-issues-list-modal.tsx` 的领域调用方”在 P7 回执。
+- **R11 “添加已有”在 P7**：设计 §12 把它与迭代下拉框放在 P7；nerve 没有批量接口，要逐个 `PATCH`，搜索也不排除已在迭代里的（设计 §3.3 第 12 条）。M4 交接 M6-02 写“对应列表第一次开放前完成”，字面上包含“添加已有”；本段先开放列表，“分组头添加已有、日历 `addIssuesToView`、`existing-issues-list-modal.tsx` 的领域调用方”依设计 §12 的 P7 一行与 §15 第 12 条在 P7 完成，回执照此直说（re-66 L8）。
 
 ## 4. 验收标准
 
@@ -107,7 +111,7 @@ P5a 交付了迭代的页面，详情页的正文只有转移横幅与进度侧�
 - [ ] A2 偏好：基类重构后项目页的既有测试不改断言全过；迭代页偏好的读、修改、被拒、较旧的读不覆盖较新的；不读 router store。
 - [ ] A3 页面：四种布局、页头、空态、只读（已结束、已归档）、新建（页头、快速新建、分组头）只发一个带 `cycle_id` 的请求、移出迭代、拖拽；被拒时说明；写后重读进度。
 - [ ] A4 优先级页签与行点击：显式的完整查询、续页、点击设筛选并进入；侧栏切换；预览里不可点。
-- [ ] A5 G15、G19 的迭代页列表部分（三种引擎）：四种布局、双向续页、本页偏好、换迭代与后退前进与换会话时迟到的回答不进新页面、OwnOnly 与工作区管理员兼访客、跨分组的写后计数、附件列（M5-M6-02）。
+- [ ] A5 G15、G19 的迭代页列表部分（三种引擎）：四种布局、双向续页、本页偏好、迭代关闭时的停用空态、换迭代与后退前进与换会话时迟到的回答不进新页面、失权的迟到回答、OwnOnly 与工作区管理员兼访客、跨分组的写后计数、归档范围、附件列（M5-M6-02）、整页零非预期失败。
 - [ ] A6 守卫：`project-address-route`、告警上限、knip、关键词；“按本页分组”的守卫。
 - [ ] A7 文档：P5a 的回填（阶段记录 §7、spec A8、设计 §14、M6-M8-05 的补充）；交接回执（M4 交接 M6-01、M6-02 的迭代部分，M5 交接 M5-M6-02 的迭代部分，M3 交接 §1 的迭代 user-properties）；差异清单、前端改动清单、设计 §8/§12/§14。
 - [ ] A8 七项本地门禁（`make test` 照负责人 2026-11-11 的规则）、deep-review 修复闭环、准确的分支 CI 与 noff 后的 main CI 全绿、归档清理。（合入后由 P6 的 T1 勾选）
