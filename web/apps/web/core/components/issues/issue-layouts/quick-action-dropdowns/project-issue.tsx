@@ -28,7 +28,18 @@ import type { IQuickActionProps } from "../list/list-view-types";
 import type { MenuItemFactoryProps } from "./helper";
 import { useProjectIssueMenuItems } from "./helper";
 
-export const ProjectIssueQuickActions = observer(function ProjectIssueQuickActions(props: IQuickActionProps) {
+/**
+ * A row's quick actions on a page of its project's work items, as the project's page has them; the page names its
+ * store type, which the edit and copy dialogs open with (a cycle's page's copy then joins the cycle, re-66 L4), and may
+ * add the removal of the work item from its cycle (cycle-issue.tsx).
+ */
+export const WorkItemQuickActions = observer(function WorkItemQuickActions(
+  props: IQuickActionProps & {
+    storeType: EIssuesStoreType.PROJECT | EIssuesStoreType.CYCLE;
+    /** Removes the work item from the page's cycle; the menu offers it while given. */
+    handleRemoveFromCycle?: () => void;
+  }
+) {
   const { t } = useTranslation();
   const {
     issue,
@@ -40,6 +51,8 @@ export const ProjectIssueQuickActions = observer(function ProjectIssueQuickActio
     readOnly = false,
     placements = "bottom-end",
     parentRef,
+    storeType,
+    handleRemoveFromCycle,
   } = props;
   // router
   const { workspaceSlug } = useParams();
@@ -97,6 +110,7 @@ export const ProjectIssueQuickActions = observer(function ProjectIssueQuickActio
     isInArchivableGroup,
     setIssueToEdit,
     setCreateUpdateIssueModal,
+    handleRemoveFromCycle,
     setDeleteIssueModal: () => {
       if (!requestDelete) throw new Error("Project issue actions require an IssueListCommandHost");
       requestDelete(issue, handleDelete);
@@ -135,7 +149,7 @@ export const ProjectIssueQuickActions = observer(function ProjectIssueQuickActio
         onSubmit={async (data) => {
           if (issueToEdit && handleUpdate) await handleUpdate(data);
         }}
-        storeType={EIssuesStoreType.PROJECT}
+        storeType={storeType}
       />
 
       <ContextMenu parentRef={parentRef} items={CONTEXT_MENU_ITEMS} />
@@ -187,4 +201,9 @@ export const ProjectIssueQuickActions = observer(function ProjectIssueQuickActio
       </CustomMenu>
     </>
   );
+});
+
+/** A row's quick actions on the project's page. */
+export const ProjectIssueQuickActions = observer(function ProjectIssueQuickActions(props: IQuickActionProps) {
+  return <WorkItemQuickActions {...props} storeType={EIssuesStoreType.PROJECT} />;
 });

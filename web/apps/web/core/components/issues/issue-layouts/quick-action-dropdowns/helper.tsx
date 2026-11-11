@@ -9,6 +9,7 @@ import type { Issue } from "@nerve/api-client";
 import { useMemo } from "react";
 import {
   ArchiveOutline,
+  CloseCircleOutline,
   CopyOutline,
   DeleteOutline,
   EditOutline,
@@ -69,6 +70,8 @@ export interface MenuItemFactoryProps {
   setCreateUpdateIssueModal: (open: boolean) => void;
   setDeleteIssueModal: (open: boolean) => void;
   setArchiveIssueModal?: (open: boolean) => void;
+  /** Removes the work item from the page's cycle (P5b spec 2.6, R6); the menu offers it while given. */
+  handleRemoveFromCycle?: () => void;
   /** The caller owns native refusal/success and its UI lifetime; the menu only consumes the promise. */
   handleRestore?: () => Promise<void>;
 }
@@ -126,6 +129,7 @@ const useMenuItemFactory = (props: MenuItemFactoryProps) => {
     setCreateUpdateIssueModal,
     setDeleteIssueModal,
     setArchiveIssueModal,
+    handleRemoveFromCycle,
   } = props;
 
   const createEditMenuItem = (): TContextMenuItem => ({
@@ -161,6 +165,14 @@ const useMenuItemFactory = (props: MenuItemFactoryProps) => {
     action: actionHandlers.handleCopyIssueLink,
   });
 
+  const createRemoveFromCycleMenuItem = (): TContextMenuItem => ({
+    key: "remove-from-cycle",
+    title: t("issue.remove.cycle.label"),
+    icon: CloseCircleOutline,
+    action: () => handleRemoveFromCycle?.(),
+    shouldRender: handleRemoveFromCycle !== undefined,
+  });
+
   const createArchiveMenuItem = (): TContextMenuItem => ({
     key: "archive",
     title: t("common.actions.archive"),
@@ -194,6 +206,7 @@ const useMenuItemFactory = (props: MenuItemFactoryProps) => {
     createCopyMenuItem,
     createOpenInNewTabMenuItem,
     createCopyLinkMenuItem,
+    createRemoveFromCycleMenuItem,
     createArchiveMenuItem,
     createRestoreMenuItem,
     createDeleteMenuItem,
@@ -210,6 +223,7 @@ export const useProjectIssueMenuItems = (props: MenuItemFactoryProps): TContextM
       factory.createCopyMenuItem(),
       factory.createOpenInNewTabMenuItem(),
       factory.createCopyLinkMenuItem(),
+      factory.createRemoveFromCycleMenuItem(),
       factory.createArchiveMenuItem(),
       factory.createDeleteMenuItem(),
     ],

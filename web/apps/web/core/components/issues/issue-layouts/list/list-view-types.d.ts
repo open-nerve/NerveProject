@@ -1,4 +1,4 @@
-import type { Issue } from "@nerve/api-client";
+import type { Issue, IssueUpdate } from "@nerve/api-client";
 
 import type { CustomMenu } from "@nerve/ui";
 
@@ -8,7 +8,8 @@ export interface IQuickActionProps {
   parentRef: React.RefObject<HTMLElement | null>;
   issue: Issue;
   handleDelete: () => Promise<void>;
-  handleUpdate?: (data: Issue) => Promise<void>;
+  /** Sends a change of the row's work item through the page's list. */
+  handleUpdate?: (data: IssueUpdate) => Promise<void>;
   handleArchive?: () => Promise<void>;
   handleRestore?: () => Promise<void>;
   handleMoveToIssues?: () => Promise<void>;

@@ -12,6 +12,8 @@ import { issueDetailOf, issueOf, issuePageOf, issueStoreTab, requestedIssue } fr
 import { cycleOf, loadProjects, projectOf } from "@/store/project/fake-projects";
 import { loadWorkspaces, workspaceOf } from "@/store/workspace/fake-workspaces";
 import { answered, json, noContent } from "@/lib/auth/fake-nerve";
+import { until } from "@/lib/auth/fake-time";
+import { cycleRequests, progressOf } from "@/store/planning/fake-cycles";
 import { IssuesStoreContext, useIssueStoreType } from "./use-issue-layout-store";
 import { useIssuesActions, type IssueActions } from "./use-issues-actions";
 
@@ -163,6 +165,10 @@ it("cycle actions list, create and keep preferences for the route's cycle, never
       expect(created.call.body).toEqual({ name: "New", cycle_id: C2 });
       created.call.answer(json(201, { ...issueDetailOf("new"), cycle_id: C2 }));
       await created.promise;
+      // A creation that joins the cycle is its list's write: once nerve confirms it, the cycle's progress is read (T10).
+      const progress = () => tab.nerve.to(cycleRequests.progress(next));
+      await until(() => progress().length === 1, "C2's progress");
+      progress()[0]!.answer(json(200, progressOf(next)));
       // The change is followed as the project page's (T8): the store's list being the cycle left's, not the page's,
       // the route cycle's list is read again with the pages it has.
       const kept = actions.updateFilters("A", EIssueFilterType.KANBAN_FILTERS, {

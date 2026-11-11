@@ -12,30 +12,30 @@ import { DeleteIssueModal } from "../delete-issue-modal";
 import { useDetailCommand } from "../issue-detail/use-issue-operations";
 
 type RequestConfirmation = (issue: Issue, submit: () => Promise<void>) => void;
-type RequestRestore = (issue: Issue, submit: () => Promise<void>) => Promise<void>;
+type RequestCommand = (issue: Issue, submit: () => Promise<void>) => Promise<void>;
 const CommandsContext = createContext<
   | {
       archive: RequestConfirmation;
       remove: RequestConfirmation;
-      restore: RequestRestore;
+      restore: RequestCommand;
+      removeFromCycle: RequestCommand;
     }
   | undefined
 >(undefined);
 export const useArchiveRequest = () => useContext(CommandsContext)?.archive;
 export const useDeleteRequest = () => useContext(CommandsContext)?.remove;
 export const useRestoreRequest = () => useContext(CommandsContext)?.restore;
+/** The removal of a row's work item from the page's cycle (P5b spec 2.6, R6), whose confirmation takes the row off. */
+export const useCycleRemovalRequest = () => useContext(CommandsContext)?.removeFromCycle;
 
 /** The layout owns row command feedback even when a confirmation removes the initiating row. */
 export const IssueListCommandHost = observer(function IssueListCommandHost({ children }: { children: ReactNode }) {
   const { rootIssueStore: root } = useIssueDetail();
   const { workspaceSlug, projectId } = useParams();
   const location = useLocation();
-  const runRestore = useDetailCommand(workspaceSlug ?? "", projectId, location.key);
+  const runCommand = useDetailCommand(workspaceSlug ?? "", projectId, location.key);
   const { t } = useTranslation();
-  const owner = useMemo(
-    () => ({ root, location: location.key, pendingRestores: new Set<string>() }),
-    [root, location.key]
-  );
+  const owner = useMemo(() => ({ root, location: location.key, pending: new Set<string>() }), [root, location.key]);
   const [request, setRequest] = useState<{
     owner: typeof owner;
     issue: Issue;
@@ -58,25 +58,43 @@ export const IssueListCommandHost = observer(function IssueListCommandHost({ chi
     },
     [root, workspace, owner]
   );
-  const requestRestore = useCallback<RequestRestore>(
-    async (issue, submit) => {
+  /**
+   * Runs a row's command whose confirmation may take the row off the list, one at a time for each command and work
+   * item, saying why nerve refused it; true once nerve confirmed it while the page is still the one that sent it.
+   */
+  const runRowCommand = useCallback(
+    async (kind: "restore" | "remove-from-cycle", issue: Issue, submit: () => Promise<void>) => {
       if (!workspace || issue.workspace_id !== workspace.id || issue.project_id !== projectId)
         throw new SessionChangedError();
-      const restoreKey = JSON.stringify([permission, issue.id]);
-      if (owner.pendingRestores.has(restoreKey)) return;
-      owner.pendingRestores.add(restoreKey);
+      const key = JSON.stringify([kind, permission, issue.id]);
+      if (owner.pending.has(key)) return false;
+      owner.pending.add(key);
       try {
-        await runRestore(submit);
+        await runCommand(submit);
+        return true;
+      } finally {
+        owner.pending.delete(key);
+      }
+    },
+    [workspace, projectId, runCommand, owner, permission]
+  );
+  const requestRestore = useCallback<RequestCommand>(
+    async (issue, submit) => {
+      if (await runRowCommand("restore", issue, submit))
         setToast({
           type: TOAST_TYPE.SUCCESS,
           title: t("issue.restore.success.title"),
           message: t("issue.restore.success.message"),
         });
-      } finally {
-        owner.pendingRestores.delete(restoreKey);
-      }
     },
-    [workspace, projectId, runRestore, owner, permission, t]
+    [runRowCommand, t]
+  );
+  const requestCycleRemoval = useCallback<RequestCommand>(
+    async (issue, submit) => {
+      if (await runRowCommand("remove-from-cycle", issue, submit))
+        setToast({ type: TOAST_TYPE.SUCCESS, title: t("common.success"), message: t("issue.remove.cycle.success") });
+    },
+    [runRowCommand, t]
   );
   const current =
     request &&
@@ -89,8 +107,9 @@ export const IssueListCommandHost = observer(function IssueListCommandHost({ chi
       archive: (issue: Issue, submit: () => Promise<void>) => requestConfirmation("archive", issue, submit),
       remove: (issue: Issue, submit: () => Promise<void>) => requestConfirmation("delete", issue, submit),
       restore: requestRestore,
+      removeFromCycle: requestCycleRemoval,
     }),
-    [requestConfirmation, requestRestore]
+    [requestConfirmation, requestRestore, requestCycleRemoval]
   );
   return (
     <CommandsContext.Provider value={commands}>

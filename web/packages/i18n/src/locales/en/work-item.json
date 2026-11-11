@@ -34,6 +34,7 @@
     },
     "remove": {
       "cycle": {
+        "label": "Remove from cycle",
         "loading": "Removing work item from the cycle",
         "success": "Work item removed from the cycle successfully.",
         "failed": "Work item could not be removed from the cycle. Please try again."

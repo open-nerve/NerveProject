@@ -7,7 +7,7 @@ import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { useUserPermissions } from "@/hooks/store/user";
 import { useCycleListState } from "@/hooks/use-cycle-list-state";
 // local imports
-import { ProjectIssueQuickActions } from "../../quick-action-dropdowns";
+import { CycleIssueQuickActions } from "../../quick-action-dropdowns";
 import { BaseSpreadsheetRoot } from "../base-spreadsheet-root";
 
 /** The table of a cycle's page: the project page's, read-only once the cycle has ended or is archived (R5). */
@@ -30,7 +30,7 @@ export const CycleSpreadsheetLayout = observer(function CycleSpreadsheetLayout()
 
   return (
     <BaseSpreadsheetRoot
-      QuickActions={ProjectIssueQuickActions}
+      QuickActions={CycleIssueQuickActions}
       canEditPropertiesBasedOnProject={canEditPropertiesBasedOnProject}
       readOnly={readOnly}
     />

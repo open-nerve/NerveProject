@@ -12,15 +12,18 @@ import { useIssues } from "./store/use-issues";
 import { useUserPermissions } from "./store/user";
 import { cycleListState } from "./use-cycle-list-state";
 import { useCyclePreferencesFollow } from "./use-cycle-preferences-follow";
+import { useCycleProgressFollow } from "./use-cycle-progress-follow";
 
 /**
  * The cycle page's list commands (P5b spec 2.5): the workspace, project and cycle come from the page's route params,
- * never the router store. The list is read for any member of the project, as the project page's is (spec 2.1).
+ * never the router store. The list is read for any member of the project, as the project page's is (spec 2.1). Each
+ * write it sends reads the cycle's progress again once nerve confirms it (useCycleProgressFollow, spec 2.6, R10).
  */
 export function useCycleIssueActions() {
   const { workspaceSlug, projectId: routeProjectId, cycleId } = useParams();
   const { issues, issuesFilter } = useIssues(EIssuesStoreType.CYCLE);
   const follow = useCyclePreferencesFollow();
+  const followProgress = useCycleProgressFollow();
   const permission = useUserPermissions();
   const role =
     workspaceSlug && routeProjectId
@@ -49,7 +52,8 @@ export function useCycleIssueActions() {
    * A creation joins the page's cycle while the page shows the cycle taking work items as it is sent (spec 2.5): the
    * page's own entries offer it only then, and the app's own new work item, which resolves to these commands on a
    * cycle's page, otherwise creates as the project's page does, with no cycle the form could not drop when nerve
-   * refused it.
+   * refused it. A creation of the cycle's project that joins it is the page's list's, whose confirmation reads the
+   * cycle's progress again (spec 2.6, R10); one in another project, or while the cycle takes none, is not the cycle's.
    */
   const createIssue = useCallback(
     async (projectId: string | undefined | null, data: IssueCreate) => {
@@ -59,37 +63,38 @@ export function useCycleIssueActions() {
         planning.cycles.getCycleById(page.cycleID),
         projectRoot.project.getProjectById(page.projectID)
       );
-      return await issues.createIssue(workspaceSlug, projectId, data, joinable ? page : undefined);
+      if (!joinable || projectId !== page.projectID) return await issues.createIssue(workspaceSlug, projectId, data);
+      return await followProgress(() => issues.createIssue(workspaceSlug, projectId, data, page));
     },
-    [issues, workspaceSlug, page]
+    [issues, workspaceSlug, page, followProgress]
   );
   const updateIssue = useCallback(
     async (projectId: string | undefined | null, issueId: string, data: IssueUpdate) => {
       if (!workspaceSlug || !projectId) return;
-      return await issues.updateIssue(workspaceSlug, projectId, issueId, data);
+      return await followProgress(() => issues.updateIssue(workspaceSlug, projectId, issueId, data));
     },
-    [issues, workspaceSlug]
+    [issues, workspaceSlug, followProgress]
   );
   const dropIssue = useCallback(
     async (targetProject: string, issueId: string, makeBody: (held: Issue) => IssueUpdate, drop: IssueDrop) => {
       if (!workspaceSlug) return;
-      await issues.dropIssue(workspaceSlug, targetProject, issueId, makeBody, drop);
+      await followProgress(() => issues.dropIssue(workspaceSlug, targetProject, issueId, makeBody, drop));
     },
-    [issues, workspaceSlug]
+    [issues, workspaceSlug, followProgress]
   );
   const removeIssue = useCallback(
     async (projectId: string | undefined | null, issueId: string) => {
       if (!workspaceSlug || !projectId) return;
-      return await issues.removeIssue(workspaceSlug, projectId, issueId);
+      return await followProgress(() => issues.removeIssue(workspaceSlug, projectId, issueId));
     },
-    [issues, workspaceSlug]
+    [issues, workspaceSlug, followProgress]
   );
   const archiveIssue = useCallback(
     async (projectId: string | undefined | null, issueId: string) => {
       if (!workspaceSlug || !projectId) return;
-      return await issues.archiveIssue(workspaceSlug, projectId, issueId);
+      return await followProgress(() => issues.archiveIssue(workspaceSlug, projectId, issueId));
     },
-    [issues, workspaceSlug]
+    [issues, workspaceSlug, followProgress]
   );
   /**
    * The page's preferences are the cycle's, whatever project the caller names; their change is followed as the project
