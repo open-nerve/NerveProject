@@ -12,6 +12,7 @@ import {
   layoutButton,
   listQueries,
   listRow,
+  loadedAnew,
   openCyclePage,
   quickAddButton,
   quietEachTime,
@@ -39,8 +40,10 @@ import { expect, test } from "../../fixtures/test";
 // ends without an unexpected failure (expectListPageQuiet). The world is made through the API, nerve's answers are
 // read back through it and the database.
 
-test("G15 (page): Now's page lists only Now's work items in the list, the board, the calendar and the table, each layout saved as the page's own; its grouping and a property, changed, stay after a reload and Web's own preferences do not change; Old's page, archived, lists its own read-only; with Web's cycles off Now's page reads neither its preferences nor its work items", async ({
+test("G15 (page): Now's page lists only Now's work items in the list, the board, the calendar and the table, each layout saved as the page's own; its grouping and a property, changed, stay when the page is loaded again and Web's own preferences do not change; Old's page, archived, lists its own read-only; with Web's cycles off Now's page, loaded again, reads neither its preferences nor its work items", async ({
   api,
+  baseURL,
+  browser,
   signedInPage,
 }, testInfo) => {
   const w = await cycleListWorld(api, testInfo);
@@ -84,7 +87,8 @@ test("G15 (page): Now's page lists only Now's work items in the list, the board,
     });
   }, Promise.resolve());
 
-  // The list grouped by priority, without the work items' IDs: as the page's own preferences, kept across a reload.
+  // The list grouped by priority, without the work items' IDs: as the page's own preferences, which it shows when
+  // loaded again, in another browser of mem's.
   await layoutButton(page, "List").click();
   const panel = await displayPanel(page);
   const groupBy = panel.getByRole("button", { name: "Group by", exact: true });
@@ -94,15 +98,16 @@ test("G15 (page): Now's page lists only Now's work items in the list, the board,
   await expect(panel.getByRole("button", { name: "ID", exact: true })).toHaveAttribute("aria-pressed", "false");
   await page.keyboard.press("Escape");
   await expect.poll(saved).toEqual({ layout: "list", group_by: "priority", id: false });
-  await page.reload();
-  await expect(layoutButton(page, "List")).toHaveAttribute("aria-pressed", "true");
-  await expectListOrder(listGroup(page, "High"), [build.id]);
-  await expect.poll(() => shownItems(page)).toEqual(["Build", "Plan"]);
-  await expect((await displayPanel(page)).getByRole("button", { name: "ID", exact: true })).toHaveAttribute(
-    "aria-pressed",
-    "false"
-  );
-  await page.keyboard.press("Escape");
+  await loadedAnew(browser, baseURL ?? "", api, w.mem, w.path(now.id), async (again) => {
+    await expect(layoutButton(again, "List")).toHaveAttribute("aria-pressed", "true");
+    await expectListOrder(listGroup(again, "High"), [build.id]);
+    await expect.poll(() => shownItems(again)).toEqual(["Build", "Plan"]);
+    await expect((await displayPanel(again)).getByRole("button", { name: "ID", exact: true })).toHaveAttribute(
+      "aria-pressed",
+      "false"
+    );
+    await again.keyboard.press("Escape");
+  });
   expect(await readProjectPreferences(api, token, w.web.id), "Web's own preferences").toEqual(projectPreferences);
   await quiet();
 
@@ -113,21 +118,21 @@ test("G15 (page): Now's page lists only Now's work items in the list, the board,
   await expect(page.getByRole("button", { name: "Add work item", exact: true })).toHaveCount(0);
   await quiet();
 
-  // Web's cycles off: Now's page shows that, and reads neither its preferences nor its work items.
+  // Web's cycles off: Now's page, loaded again, shows that, and reads neither its preferences nor its work items.
   await turnCycles(api, w.token, w.web, false);
   await moveWithinApp(page, w.path(now.id));
-  // the page has not read Web again yet: it shows Now's work items, read before the reload
+  // the page has not read Web again: it shows Now's work items, read before Web's cycles were turned off
   await expect.poll(() => shownItems(page)).toEqual(["Build", "Plan"]);
-  const sent = watch.apiRequests.length;
-  await page.reload();
-  await expect(page.getByText("Cycles is not enabled for this project.", { exact: true })).toBeVisible();
-  await expect(layoutButton(page, "List")).toHaveCount(0);
-  expect(
-    watch.apiRequests
-      .slice(sent)
-      .filter((request) => request.endsWith(`/projects/${w.web.id}/issues`) || request.includes("/me/cycles/"))
-  ).toEqual([]);
   await quiet();
+  await loadedAnew(browser, baseURL ?? "", api, w.mem, w.path(now.id), async (again, seen) => {
+    await expect(again.getByText("Cycles is not enabled for this project.", { exact: true })).toBeVisible();
+    await expect(layoutButton(again, "List")).toHaveCount(0);
+    expect(
+      seen.apiRequests.filter(
+        (request) => request.endsWith(`/projects/${w.web.id}/issues`) || request.includes("/me/cycles/")
+      )
+    ).toEqual([]);
+  });
 });
 
 test("G15 (page): Now's 51 work items, two with real attachments (1 and 3), page by attachments both ways in the list, each once, as nerve pages them; the table shows each count and sorts by it, and after a sign-in anew shows the counts an added and a deleted attachment leave; a state changed across the list's groups and an archiving change the counts as nerve answers", async ({
@@ -175,16 +180,23 @@ test("G15 (page): Now's 51 work items, two with real attachments (1 and 3), page
     up,
     50
   );
-  const preferences = async (order_by: "attachment_count" | "-attachment_count") => {
+  // Now's page as nerve keeps it for mem
+  const preferences = async () => {
     const read = await cyclePreferencesRead(api, token, now.id);
     if (!("preferences" in read)) throw new Error(`Now's preferences: ${JSON.stringify(read)}`);
-    const { display_filters, display_properties } = read.preferences;
-    await changeCyclePreferences(api, token, now.id, {
-      display_filters: { ...display_filters, layout: "list", group_by: "state_id", order_by, show_empty_groups: false },
-      display_properties: { ...display_properties, attachment_count: true },
-    });
+    return read.preferences;
   };
-  await preferences("-attachment_count");
+  const { display_filters, display_properties } = await preferences();
+  await changeCyclePreferences(api, token, now.id, {
+    display_filters: {
+      ...display_filters,
+      layout: "list",
+      group_by: "state_id",
+      order_by: "-attachment_count",
+      show_empty_groups: false,
+    },
+    display_properties: { ...display_properties, attachment_count: true },
+  });
 
   const { page, watch } = await openCyclePage(signedInPage, w.mem, w.path(now.id));
   const queries = listQueries(page, w.web.id);
@@ -211,27 +223,25 @@ test("G15 (page): Now's 51 work items, two with real attachments (1 and 3), page
     limit: "50",
   });
   await quiet();
-  await preferences("attachment_count");
-  await page.reload();
-  await pages(up);
-  await quiet();
 
-  // The table: each count, sorted by the header both ways.
+  // The table sorted by its header, the fewest attachments first: the page's own order, which nerve keeps, and by
+  // which the list then pages the other way. Sorted back, the most first, the table shows each count.
   await layoutButton(page, "Table").click();
   const table = page.getByRole("table");
   const heading = table.getByRole("columnheader", { name: "Attachments", exact: true });
-  await (
-    [
-      ["Least Most", "ascending", up.slice(0, 2)],
-      ["Most Least", "descending", down.slice(0, 2)],
-    ] as const
-  ).reduce(async (before, [label, direction, first]) => {
-    await before;
+  const sortBy = async (label: string, direction: string, first: string[]) => {
     await heading.getByRole("button").click();
     await page.getByRole("menuitem", { name: label, exact: true }).click();
     await expect(heading).toHaveAttribute("aria-sort", direction);
     await expect.poll(async () => (await tableOrder(page)).slice(0, 2)).toEqual(first);
-  }, Promise.resolve());
+  };
+  await sortBy("Least Most", "ascending", up.slice(0, 2));
+  await expect.poll(async () => (await preferences()).display_filters.order_by).toBe("attachment_count");
+  await layoutButton(page, "List").click();
+  await pages(up);
+  await quiet();
+  await layoutButton(page, "Table").click();
+  await sortBy("Most Least", "descending", down.slice(0, 2));
   const cell = (issue: Issue) => table.locator("tr").filter({ has: page.locator(`td[id="issue-${issue.id}"]`) });
   await expect(cell(three)).toContainText("3 attachments");
   await expect(cell(one)).toContainText("1 attachment");

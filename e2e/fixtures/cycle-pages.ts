@@ -94,8 +94,9 @@ export function archivedCyclesPath(slug: string, projectId: string): string {
 
 /**
  * Goes to the cycles list of the project of projectId, which page shows, by its link in the sidebar's project: within
- * the app, as a person does, not by a load of another document a moment after this one's (Firefox then serves the
- * fonts the document before loaded, and reports the font its root preloads as unused).
+ * the app, as a person does, not by a load of another document after this one's (Firefox then serves the fonts the
+ * document before loaded, and about ten seconds later reports the font its root preloads as unused, however long
+ * after the first the second load comes; M6 P5b T16).
  */
 export async function openCyclesList(page: Page, slug: string, projectId: string): Promise<void> {
   const list = cyclesPath(slug, projectId);

@@ -1,4 +1,4 @@
-import { expect, type Locator, type Page, type TestInfo } from "@playwright/test";
+import { expect, type Browser, type Locator, type Page, type TestInfo } from "@playwright/test";
 
 import {
   addProjectMembers,
@@ -11,7 +11,7 @@ import {
   slugFor,
   type Api,
 } from "./api";
-import { accountId, bearer, emailFor, type AuthTokens } from "./auth";
+import { accountId, bearer, emailFor, login, type AuthTokens } from "./auth";
 import { consoleProbe, watchPage, type PageWatch } from "./browser";
 import { cyclePath, entriesOf, turnCycles } from "./cycle-pages";
 import { createCycle, cycleCalls, type CycleCreate } from "./cycles";
@@ -19,6 +19,7 @@ import { createIssue, type Issue, type IssueCreate } from "./issues";
 import { expectListPageQuiet } from "./issue-list-page";
 import { registerOnboarded } from "./settings-pages";
 import { stateIds } from "./states";
+import { anotherBrowser } from "./workspace-pages";
 
 // A cycle's page's work items (M6 P5b spec 2.1, 2.6, 2.10), as a person uses them: the world of their stories, the
 // work items a layout shows, a row's menu, the counts the page gives, and the reads a row's dialog makes. The stories
@@ -125,6 +126,33 @@ export async function openCyclePage(
   await page.goto(path);
   await closeSidebar(page);
   return { page, watch };
+}
+
+/**
+ * Loads path again for who: opens it as openCyclePage does, in a browser of his own signed in anew, runs check on that
+ * page, which then ends quiet (expectListPageQuiet), and closes the browser. The page reads what nerve keeps now by a
+ * first load of its document. Not by page.reload(): Firefox gives a document loaded after another in the same browser
+ * the fonts that one loaded, and about ten seconds later reports the font the root preloads as unused, whatever the
+ * time between the two loads (M6 P5b T16).
+ */
+export async function loadedAnew(
+  browser: Browser,
+  baseURL: string,
+  api: Api,
+  who: Person,
+  path: string,
+  check: (page: Page, watch: PageWatch) => Promise<void>
+): Promise<void> {
+  const other = await anotherBrowser(browser, baseURL, await login(api, who.email));
+  try {
+    const watch = await watchPage(other.page);
+    await other.page.goto(path);
+    await closeSidebar(other.page);
+    await check(other.page, watch);
+    await expectListPageQuiet(other.page, watch);
+  } finally {
+    await other.close();
+  }
 }
 
 /**
