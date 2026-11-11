@@ -5,7 +5,7 @@ to: M8
 created: 2026-11-07
 ---
 
-# M6 交给 M8：CI 的 e2e 作业期限与间歇失败的故事、清理分页器的副本、e2e 数据库的连接余量、server 作业的分路与 lint 工具的在线下载、本机测试容器的端口冲突、e2e 作业在线安装浏览器的系统依赖、编辑器重建图片节点时中止的读取、工作项根 store 的行数
+# M6 交给 M8：CI 的 e2e 作业期限与间歇失败的故事、清理分页器的副本、e2e 数据库的连接余量、server 作业的分路与 lint 工具的在线下载、本机测试容器的端口冲突、e2e 作业在线安装浏览器的系统依赖、编辑器重建图片节点时中止的读取、工作项根 store 的行数、Firefox 再次载入后的字体预加载警告
 
 这是接收方尚待完成的工作。转交只表示责任和验收条件已落实到此处，不表示本页问题已经解决。M6 进行中发现的条目随发现写入；M6 收尾时补齐其余交接。延续 [M5 → M8 交接 M5-M8-06](M5-closeout.md#M5-M8-06) 中仍开放的观察。
 
@@ -90,7 +90,7 @@ M6/P5b 的 T13、T14（2026-11-12）在本机跑 e2e 的变异时，e2e 的全�
 
 M6/P5b 的 T16（2026-11-12）在 `8b11bc6381623717663ba986da74710668719494` 上串行跑本地门禁（`gates.sh t16-gate`）：build+e2e 一步 452 条通过、1 条失败——M5 的 F11 (page) [s3]（`e2e/stories/files/f11-editor-images-page.spec.ts`，失败于 `e2e/fixtures/content-files-page.ts:225` 的 finish）：页面的 `apiFailures` 多出一条 `net::ERR_ABORTED GET /api/v0/assets/{复制品}/content`。
 
-- 经过（本阶段台账记的 trace 分析，证据在台账的 `research/t16-f11-s3-failure/trace-summary.txt`，同目录有 `trace.zip`）：第二次“被拒的粘贴”（源不可读）时，编辑器把正文里已有的复制品图片的节点重建了两次，相隔约 10 ms，先读资产的元数据、再读内容；第一次的内容读取未答即被 Chromium 中止。`e2e/fixtures/browser.ts` 的 watch 把未答而中止的 API 请求记为失败。
+- 经过（本阶段台账记的 trace 分析，证据在台账的 `research/t16-f11-s3-failure/trace-summary.txt`，同目录有 `trace.zip`）：第一次“被拒的粘贴”之后的撤销、第二次“被拒的粘贴”（源不可读），各让编辑器把正文里已有的复制品图片重读一遍：先读资产的元数据、再读内容（trace 的单调时间约 137.295 s / 137.309 s，与 137.390 s / 137.409 s，元数据都 200）；第二遍的内容读取发出 9.8 ms 后未答即被 Chromium 中止——发起它的图片元素随即被替换或移除，trace 没有记下是哪一个事务。`e2e/fixtures/browser.ts` 的 watch 把未答而中止的 API 请求记为失败。
 - 范围：P5b 没有改编辑器、资产与详情页的代码，也没有改 F11 用到的夹具（`browser.ts` 只多导出 `consoleProbe`，watch 不变）；同一故事此前在本机与 CI 多次通过。只重跑该故事文件一次即通过（`t16-gate-e2e-f11-rerun`，exit 0：F11 的 [local] 与 [s3] 都过，连同 s3 夹具的自检共 7 例）。
 - 待查：
   - 为什么相邻的事务会让已有图片的节点重建、重读——用户看到的是图片重新载入；
@@ -104,3 +104,10 @@ M6/P5b 的 T16（2026-11-12）在 `8b11bc6381623717663ba986da74710668719494` 上
 观察（re-67 M10，M6/P5b 的整分支审查）：`web/apps/web/core/store/issue/root.store.ts` 有 615 行，超过手写文件约 400 行的上限。它是 M4 的文件，P5b 的基线 `0b8efcd701edf7e73a37d5bb82ad176a7795b910` 上已有 593 行；P5b 加了 22 行（迭代页的偏好筛选、列表与优先级页签三个 store 的声明与构造，`fields()` 的 `cycle_id`、`module_ids`，创建与更新放行 `cycle_id`）。P7 还要为迭代下拉框与“添加已有”往里加写入。
 
 **何时验收：** P7 往里加写入之前先把它按职责拆开，否则由 M8 拆，拆后不超过约 400 行；或负责人决定维持现状，并在此写明理由。
+
+<a id="M6-M8-09"></a>
+## M6-M8-09 Firefox 在同一浏览器的再次载入后报根预加载的字体未用
+
+观察（M6/P5b T16 的三引擎页面配置与修复轮 F2）：Firefox 在同一浏览器里任何一次再次载入文档之后（`page.reload()` 或再一次 `page.goto`，不论与前一次相隔 1.4 s 还是 13.5 s），约 10 s 报一条 JavaScript Warning：根预加载的 inter 字体 “preloaded with link preload was not used within a few seconds”。看控制台的故事若在这之后还检查，就会失败。G15 (page) 的故事一、二因此改为以页面自己的排序代替重载、以同一人另开的浏览器核对“再次载入后仍在”（修复轮 F2）；G19 的两次重载在装着扣住回答的路由时，探针 12 s 内没有这条警告；G1 的两次重载、G6 的重载、G8 的再次 `goto` 在三引擎配置里目前都通过，原因未逐一探查，同属潜在的间歇（证据在 P5b 台账的 `f-probe-g15s1-reload-a`、`f-probe-g15s1-late-reload`、`f-probe-g19-reloads`、`f2-probe-loaded-anew-12s-b` 收据）。
+
+**何时验收：** M8 查明 Firefox 为什么认定再次载入的文档没用到预加载（例如预加载与 `@font-face` 的属性不一致，或再次载入时字体来自前一个文档的缓存），改正预加载（或写明这是 Firefox 的预期行为并让相关故事避开再次载入）；或负责人决定维持现状，并在此写明理由。
