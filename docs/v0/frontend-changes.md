@@ -233,7 +233,7 @@ M4/P10a删除迭代、模块、项目视图与工作区视图的工作项列表�
 | 挂载时的取数 | 工作区包装层取收藏、顶部导航取未读通知数、首页的"最近"小部件、项目包装层取迭代、模块、视图、分诊状态，全部删除，各自的 M 随新接口加回 | M3 设计 3.1 | 已完成（M6、M7 加回；项目包装层的迭代由 M6/P5a 加回：调用者是有效成员、项目未归档且 `cycle_view` 打开时取） | M3/P8a |
 | 迭代的数据层（M6/P5a） | `core/services/planning/cycles.service.ts` 只调 `/api/v0`；`RootStore.planning` 的 `cycles`、`cycleFilters` 照总体设计 7.7（值在 `ReconciledByKey`、修改经 `oneAtATime`、取数经 `useSessionSWR`、写入的回答不把列表行的计数写坏）；旧的 `CycleService`、`CycleArchiveService`、`CycleStore`、`CycleFilterStore`、`@nerve/types` 的 `cycle/`、`@nerve/utils` 的 `cycle.ts` 删除；关键词规则 `old-cycle-urls` 拦住 Plane 的迭代接口地址 | M6 设计 §8 | 已完成 | M6/P5a |
 | 迭代的筛选 store（M6/P5a） | 按项目 id 存筛选与搜索词，不跟随 `router`，没有要随退役的一代释放的反应；搜索词按项目保留到会话结束（Plane 换项目时清空） | P5a spec R4 | 已完成 | M6/P5a |
-| 迭代页面的写入口（M6/P5a） | 新建、修改、归档、恢复、删除、侧栏改日期、转移只给能写迭代的人（项目管理员、成员；只看自己的访客，含工作区管理员兼访客，没有，`canWriteCycles`）；删除只给管理员或建立者（`canDeleteCycle`）；都只在 nerve 确认后关闭、提示、跳转，被拒时留着并说明；弹窗归页面级宿主 `CycleActionsHost`，行在确认后消失时跟进照常 | P5a spec R8、R12 | 已完成 | M6/P5a |
+| 迭代页面的写入口（M6/P5a） | 新建、修改、归档、恢复、删除、侧栏改日期、转移只给能写迭代的人（项目管理员、成员；只看自己的访客，含工作区管理员兼访客，没有，`canWriteCycles`；项目的迭代关闭时谁都没有）；删除只给管理员或建立者（`canDeleteCycle`）；都只在 nerve 确认后关闭、提示、跳转，被拒时留着并说明；弹窗归页面级宿主 `CycleActionsHost`，行在确认后消失时跟进照常 | P5a spec R8、R12 | 已完成 | M6/P5a |
 | 迭代页面的界面细节（M6/P5a） | 列表行的日期用 `MergedDateDisplay`、快捷操作只渲染一次、筛选标题用词（“状态”“结束日期”）、归档页复用列表的搜索与筛选（搜索框不再常驻）、已选筛选条对看得到它的人都可改、筛选面板去掉 `autoFocus`；进度侧栏的状态页签为四个计数的组加“已取消不计入”的说明（同进行中卡片）；进度卡的点色取 `STATE_GROUPS`；转移横幅整体随入口条件显示、靠左；“按你的时区”提示与时区换算删除（日期是项目时区的日历日） | P5a 各 Task 的裁定 | 已完成 | M6/P5a |
 | 迭代的收藏（M6/P5a） | 列表行的星、快捷操作与命令面板的收藏命令、收藏 store 的迭代分支删除；M7 随收藏的接口加回 | M6 设计 §15 第 13 条 | 已完成（M7 加回） | M6/P5a |
 | 进行中卡片的优先级页签（M6/P5a） | 暂时删除（工作项只能存在工作项的根里，项目列表又会并入项目偏好），P5b 随迭代页的列表以显式的完整查询加回 | P5a spec R10 | P5b 加回 | M6/P5a |

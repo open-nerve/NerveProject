@@ -1,6 +1,6 @@
 # M6 / P5a：网页的迭代（数据层与页面）
 
-> 状态：预检通过（修正后，[re-64](../../../reviews/re-64-M6P5a预检.md)），实施中。基线 main `a2b50624fd872c183628a55d04b7961f9a1dbc60`（P4 的 noff `c3ba5a40` 与其 main CI 失败的根因修复 noff `a2b50624`，main CI 42824266166 首次通过）。设计见 [M6 设计](../M6-design.md) §2 的 G1–G3、G5–G8、G19，§3.1–§3.8、§5、§8；负责人 2026-11-07 的决定 A/B/C 见设计 §15（第 2、3、4、5、6、11、13、14 条与本段直接相关）。网页的长期规则见[总体设计 §7.2、§7.7](../../v0-design.md#77-stores-按会话分代长期有效m2-起)。接口合同见 [P1 spec](P1-cycles-backend.md)、[P3b spec](P3b-list-engine.md) R8/R9、[P4 spec](P4-progress-transfer.md) §2.3、R3、R9。现状调研见本阶段台账 `research/web.md`（网页现状与约定）、`research/plane-contract.md`（Plane 的页面行为、接口契约与交接）（ignored，随阶段归档）。负责人 2026-11-11 授权连续推进至 M6 收官，重要高风险决策仍停下确认。
+> 状态：已实施（T1–T16），整分支审查修复后可合入（[re-65](../../../reviews/re-65-M6P5a整体审核.md)，[阶段记录](../reviews/P5a-web-cycles-review.md)），合入与 main CI 由 P5b 的 T1 回填；预检通过（修正后，[re-64](../../../reviews/re-64-M6P5a预检.md)）。基线 main `a2b50624fd872c183628a55d04b7961f9a1dbc60`（P4 的 noff `c3ba5a40` 与其 main CI 失败的根因修复 noff `a2b50624`，main CI 42824266166 首次通过）。设计见 [M6 设计](../M6-design.md) §2 的 G1–G3、G5–G8、G19，§3.1–§3.8、§5、§8；负责人 2026-11-07 的决定 A/B/C 见设计 §15（第 2、3、4、5、6、11、13、14 条与本段直接相关）。网页的长期规则见[总体设计 §7.2、§7.7](../../v0-design.md#77-stores-按会话分代长期有效m2-起)。接口合同见 [P1 spec](P1-cycles-backend.md)、[P3b spec](P3b-list-engine.md) R8/R9、[P4 spec](P4-progress-transfer.md) §2.3、R3、R9。现状调研见本阶段台账 `research/web.md`（网页现状与约定）、`research/plane-contract.md`（Plane 的页面行为、接口契约与交接）（ignored，随阶段归档）。负责人 2026-11-11 授权连续推进至 M6 收官，重要高风险决策仍停下确认。
 
 ## 1. 目标与边界
 
@@ -48,7 +48,7 @@
 |---|---|---|
 | `unarchived: ReconciledByKey<CycleListItem[]>` | 项目 id | `list` |
 | `archived: ReconciledByKey<CycleListItem[]>` | 项目 id | `listArchived` |
-| `details: ReconciledByKey<Cycle>` | 迭代 id | `get` |
+| `details: ReconciledByKey<Cycle \| null>` | 迭代 id | `get`（删除后写成 `null`，先例 `project.store.ts`） |
 | `progress: ReconciledByKey<CycleProgress>` | 迭代 id | `progress` |
 
 - **读**：迭代自身的字段取各副本中 nerve 最后回答的那一份（`answeredAt`，v0 §7.7“一个实体有几份副本”；先例 `project.store.ts` 的 `getProjectById`）；计数、`assignee_ids`、冻结的计数只有列表行有，从它所在的列表行读。按项目的选择器收项目 id（来自路由参数），不读 router store：本项目未归档的迭代 id（服务端次序）、进行中的迭代 id（第一个 `status === "current"` 的）、已归档的迭代 id。项目不在调用者此刻的项目列表里（删除、离开）时回答 `undefined`（先例 `label.store.ts:126-130`）。
@@ -57,7 +57,7 @@
   - 建：`Cycle` 补成计数全为 0、`assignee_ids: []`、`progress_snapshot: null` 的列表行，放在本项目未归档列表的最前（新迭代的 `sort_order` 最小，服务端次序同此；新迭代不会有工作项，所以这些值是准确的，不是猜测）。
   - 改：迭代的字段（含服务端回答的 `status`）写进每一份，列表行保留自己的计数。
   - 归档、恢复：在两个列表之间移动该行（保留计数），归档目录按 `archived_at DESC` 放在最前；重复归档/恢复（200、无写入）照常写入回答。
-  - 删：从每一份删去，进度一并删去。
+  - 删：从两个列表删去，读到的迭代写成 `null`；进度的值留在键下，但 `getCycleProgress` 只给 `getCycleById` 能给的迭代，所以读不到（T3 的裁定，re-65 M1）。
   - 转移：回答转走的个数；之后重取源与目标的进度和本项目的未归档列表（计数变了），不在网页上推算新的计数。
 - **拒绝**：每个写的拒绝都交给调用者（`ApiError`），store 不吞错误、不打日志了事（Plane 的归档、恢复吞掉错误，失败也提示成功，不照搬）。
 - **文件大小**：值、读与选择器一个文件，写另一个文件（约 400 行的限制；旧 store 538 行），先例 `label.store.ts` 与其改动的拆分；具体切法由 T2/T3 定并记入台账。
@@ -181,7 +181,7 @@ M4 交接 M6-04(a) 要求真实的迭代表单在三种引擎上核对，所以�
 - **R5 列表的三段照 Plane**：进行中卡片、“即将开始”（含草稿）、“已结束”。设计 §8 写的“进行中卡片、未开始、已结束、草稿”是状态的列举，不是另立“草稿”一段（Plane 没有），T15 改写设计 §8。次序：即将开始照 Plane 的 `orderCycles`（只用服务端的 `status`）；已结束按服务端次序；归档目录按服务端次序（`archived_at DESC`）。界面上没有写 `sort_order` 的入口（Plane 同）。
 - **R6 日期是日历日**：设计 §3.1 把迭代的日期改成项目时区的日历日，Plane 的“按你的时区”提示与时区换算对日历日没有意义，删除。日期选择器的 `minDate` 照 Plane 为浏览器的今天（选择器的提示，不是状态的推算）；状态只读服务端的 `status`（G2）。
 - **R7 冻结只在已结束时读**：`cycleCounts` 一处决定（§2.3）。列表行的冻结是六个数（`FrozenCounts`），`/progress` 的冻结是整份（`FrozenProgress`），两者都经同一条件。Plane 的 `validateCycleSnapshot` 不看状态，删除。
-- **R8 权限按 nerve 的规则**：写入口（新建、修改、归档、恢复、转移、侧栏改日期）只给能写的人；删除只给管理员或建立者（Plane 给任何成员，nerve 会 403）；转移入口 Plane 没有权限门，nerve 加上（访客会 403）。菜单的状态条件照 Plane（已结束不能修改、不能删除）。
+- **R8 权限按 nerve 的规则**：写入口（新建、修改、归档、恢复、转移、侧栏改日期）只给能写的人；删除只给管理员或建立者（Plane 给任何成员，nerve 会 403）；转移入口 Plane 没有权限门，nerve 加上（访客会 403）。项目的迭代关闭（`cycle_view` 为假）时 nerve 对迭代的每个写 409 `planning.cycles_disabled`，写入口与删除也都不给（`canWriteCycles`、`canDeleteCycle` 共用一处条件，re-65 M3）。菜单的状态条件照 Plane（已结束不能修改、不能删除）。
 - **R9 写入的回答不写进列表行的计数**：`Cycle` 不带计数（P4 R9）。建立时补 0（准确）；修改、归档、恢复只改迭代的字段、保留行的计数；转移之后重取。
 - **R10 优先级页签移到 P5b**：nerve 没有 Plane 的 `cycle-issues` 接口，优先级页签要按 `listIssues`（`cycle_id`、`priority=urgent,high`、按游标分页）取工作项。工作项只能存在 M4 的工作项根里（v0 §7.7“它不是第二份实体缓存”），而 `ProjectIssues.fetchIssues` 会并入项目偏好的筛选、分组与排序（`store/issue/project/issue.store.ts:22-34`），两者都不合适；P5b 给列表引擎加迭代页的 binding 时，以显式的完整查询（不并入偏好）为这个页签另取一个 binding。P5a 的统计卡只有负责人、标签两个页签（Plane 的默认页签就是负责人）。不新增接口。
 - **R11 已归档迭代的详情可读**：nerve 允许读已归档的迭代与进度（Plane 回答 404）。归档目录的行照 Plane 打开预览；直接打开已归档迭代的地址时详情照常显示、只读。登记差异。
@@ -189,22 +189,22 @@ M4 交接 M6-04(a) 要求真实的迭代表单在三种引擎上核对，所以�
 
 ## 4. 验收标准
 
-- [ ] A1 数据层：service 只调 `/api/v0`；store 按会话分代（构造时拿这一代的客户端、取数经 `useSessionSWR` 且键带 `loginId`、修改经 `oneAtATime`、副本取最后回答的一份、拒绝交给调用者）；包装层按权限与开关取数；筛选 store 没有跟随 router 的反应；每个性质有单测，权限门与迟到应答各有能让测试失败的变异。
-- [ ] A2 进度口径：`cycleCounts`、`progressPercent` 是唯一口径，列表行、进行中卡片、侧栏的数字一致；冻结只在已结束时读；燃尽图 0/1/多个点、`null` 不画成 0、坐标有限；分布按名字、兜底名字、`null` 行最后。
-- [ ] A3 G1–G3、G8 的页面：建、改、删、归档、恢复按 §2.5、§2.6，被拒时留着并说明；权限与状态条件按 R8；草稿的请求体没有日期键；没有 `date-check`。
-- [ ] A4 G5–G7 的页面：进行中卡片、侧栏、冻结、转移按 §2.5；转移看实时的未完成数、可以多次转移。
-- [ ] A5 G19（迭代页面）：换账号、换工作区/项目/迭代、后退前进时迟到的回答不写进新页面；详情子树以 `cycleId` 为 key；项目级宿主以 `projectId` 为 key 并在卸载时关上开关；弹窗、菜单、下拉框的键盘、名字与焦点逐项（M3 交接 §3 的迭代各项）；复制链接失败有提示。
-- [ ] A6 删除与守卫：§2.7 的旧代码全部删除；`old-cycle-urls` 规则；`project-address-route` 收入改写的文件；`copy-hook` 迭代的例外删除；改到的文件 oxlint 告警为零、上限下调；迭代的死成员与 progress-stats 8 行有结论。
-- [ ] A7 文档：差异清单、前端改动清单、输入交接的“处理结果（M6/P5a）”（M1-P2、M1-P3 在网页改用新接口后关闭）、设计 §8/§12/§14；P4 的阶段记录 §7、spec A8 与设计 §14 已回填。
-- [ ] A8 七项本地门禁、deep-review 修复闭环、准确的分支 CI 与 noff 后的 main CI 全绿、归档清理。（合入后由 P5b 的 T1 勾选）
+- [x] A1 数据层：service 只调 `/api/v0`；store 按会话分代（构造时拿这一代的客户端、取数经 `useSessionSWR` 且键带 `loginId`、修改经 `oneAtATime`、副本取最后回答的一份、拒绝交给调用者）；包装层按权限与开关取数；筛选 store 没有跟随 router 的反应；每个性质有单测，权限门与迟到应答各有能让测试失败的变异。
+- [x] A2 进度口径：`cycleCounts`、`progressPercent` 是唯一口径，列表行、进行中卡片、侧栏的数字一致；冻结只在已结束时读；燃尽图 0/1/多个点、`null` 不画成 0、坐标有限；分布按名字、兜底名字、`null` 行最后。
+- [x] A3 G1–G3、G8 的页面：建、改、删、归档、恢复按 §2.5、§2.6，被拒时留着并说明；权限与状态条件按 R8；草稿的请求体没有日期键；没有 `date-check`。
+- [x] A4 G5–G7 的页面：进行中卡片、侧栏、冻结、转移按 §2.5；转移看实时的未完成数、可以多次转移。
+- [x] A5 G19（迭代页面）：换账号、换工作区/项目/迭代、后退前进时迟到的回答不写进新页面；详情子树以 `cycleId` 为 key；项目级宿主以 `projectId` 为 key 并在卸载时关上开关；弹窗、菜单、下拉框的键盘、名字与焦点逐项（M3 交接 §3 的迭代各项）；复制链接失败有提示。
+- [x] A6 删除与守卫：§2.7 的旧代码全部删除；`old-cycle-urls` 规则；`project-address-route` 收入改写的文件；`copy-hook` 迭代的例外删除；改到的文件 oxlint 告警为零、上限下调；迭代的死成员与 progress-stats 8 行有结论。
+- [x] A7 文档：差异清单、前端改动清单、输入交接的“处理结果（M6/P5a）”（M1-P2、M1-P3 在网页改用新接口后关闭）、设计 §8/§12/§14；P4 的阶段记录 §7、spec A8 与设计 §14 已回填。（M1-P2、M1-P3 照设计 §11 保持 open、收尾关闭：M1-P2 还有模块的进度，M1-P3 的关闭条件已满足，回执已写明；re-65 M2）
+- [ ] A8 七项本地门禁、deep-review 修复闭环、准确的分支 CI 与 noff 后的 main CI 全绿、归档清理。（合入后由 P5b 的 T1 勾选）（本段的 `make test` 经负责人 2026-11-11 决定以分支 CI 为准：本机两次因 Docker Desktop 与 macOS 的端口范围重叠而失败，见[阶段记录](../reviews/P5a-web-cycles-review.md) §5）
 
 ## 5. 后续责任
 
 **P5b**（迭代页的工作项列表）：§1 所列；进行中卡片的优先级页签（R10）；进行中卡片与侧栏的行点击（Plane 的 `handleFiltersUpdate`：设迭代页的筛选并进入迭代页）；G15、G19 的列表部分；M4 交接 M6-02 的迭代部分、M5-M6-02。
 
-**P6**（模块页面）：模块改用 `BurndownChart` 与 `progressPercent` 后删除 `ProgressChart`、`TModuleCompletionChartDistribution` 与 `progress-stats/*`（P5a 之后只剩模块的读者；M3 交接 §2 的 8 行随之了结）；`@nerve/propel` 的 `AreaChart` 的 `comparisonLine` 单点除零（`BurndownChart` 不传它，P5a 未改）；`distribution-rows.ts`、`distribution-stats.tsx` 供模块复用时移到共用的位置；模块筛选 store 的 `reaction`（照 R4 去掉）；`canWriteCycles`/`canDeleteCycle` 的模块对应（同一条 OwnOnly 规则，F1）。
+**P6**（模块页面）：模块改用 `BurndownChart` 与 `progressPercent` 后删除 `ProgressChart`、`TModuleCompletionChartDistribution` 与 `progress-stats/*`（P5a 之后只剩模块的读者；M3 交接 §2 的 8 行随之了结）；`@nerve/propel` 的 `AreaChart` 的 `comparisonLine` 单点除零（`BurndownChart` 不传它，P5a 未改）；`distribution-rows.ts`、`distribution-stats.tsx` 供模块复用时移到共用的位置；模块筛选 store 的 `reaction`（照 R4 去掉）；`canWriteCycles`/`canDeleteCycle` 的模块对应（同一条 OwnOnly 规则，F1）；列表页、详情页、归档目录与命令面板的迭代菜单各写一遍的“有效成员且项目未归档（且开关打开）”取数门，在模块再加之前抽成一个 hook（re-65 M6）。
 
-**P7**：工作项一侧（属性与下拉框、新建弹窗的迭代、列表词表、添加已有、日历）用本段的 `useCycles()`；列表引擎的目录（P3b R9 的空 `Map`）改由本段的 store 提供；命令面板的本地过滤与切换；已归档的项目里命令面板仍显示“打开迭代”且菜单一直加载（取数按项目未归档才发，T12 发现）；该菜单的 `emptyText` 仍是英文字面量。
+**P7**：工作项一侧（属性与下拉框、新建弹窗的迭代、列表词表、添加已有、日历）用本段的 `useCycles()`；列表引擎的目录（P3b R9 的空 `Map`）改由本段的 store 提供；命令面板的本地过滤与切换；已归档的项目里命令面板仍显示“打开迭代”且菜单一直加载（取数按项目未归档才发，T12 发现；调用者不是项目成员时同样一直加载，re-65 M7）；快捷操作的“恢复”在途时菜单项仍可点（只发一次，点了没有反应），与弹窗一致地禁用随菜单的键盘逐项一并看（re-65 F3 复审 n1）；该菜单的 `emptyText` 仍是英文字面量。
 
 **P8**：迭代表单里项目选择（`dropdowns/project/base.tsx`）的浏览器核对（M2 交接 §5(d)，P5a 只有组件测试）；“按规则清一类”的 oxlint（M1 收尾交接）。
 

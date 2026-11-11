@@ -5,7 +5,7 @@ to: M8
 created: 2026-11-07
 ---
 
-# M6 交给 M8：CI 的 e2e 作业期限与间歇失败的故事、清理分页器的副本、e2e 数据库的连接余量、server 作业的分路与 lint 工具的在线下载
+# M6 交给 M8：CI 的 e2e 作业期限与间歇失败的故事、清理分页器的副本、e2e 数据库的连接余量、server 作业的分路与 lint 工具的在线下载、本机测试容器的端口冲突
 
 这是接收方尚待完成的工作。转交只表示责任和验收条件已落实到此处，不表示本页问题已经解决。M6 进行中发现的条目随发现写入；M6 收尾时补齐其余交接。延续 [M5 → M8 交接 M5-M8-06](M5-closeout.md#M5-M8-06) 中仍开放的观察。
 
@@ -40,6 +40,8 @@ M6/P2 的本地 e2e（`make build && make e2e`）两次各有一条因 Postgres 
 
 M6/P3a 的最终候选 `070762f5` 的本地门禁（`t13-gate1-build-e2e`）又一次撞上：W6（API）“a deleted invitation”一步回答 500，该测试 nerve 日志为 `FATAL: sorry, too many clients already`（53300）；只重跑这一项即 429 条全过（`t13-gate1-build-e2e-2`）。同一候选的分支 CI 不受影响。
 
+M6/P5a 的最终候选 `5b5da6ea` 的本地门禁（`t16-gate3-build-e2e`）再一次：C12 的 LAN HTTP 一例（`e2e/stories/issue/collaboration-interactions.spec.ts:556`）页面上 `GET /api/v0/workspaces/<slug>/states` 回答 500，该测试 nerve 日志为 `FATAL: sorry, too many clients already`（53300）；只重跑这一项即 29 条全过（`t16-gate3-e2e-c12-rerun`）。按 M6-M8-01 对 C12 的要求按新问题定位，查实是本条，不是 M6-M8-01 的间歇失败。
+
 **何时验收：** M8 的 CI 工作核算 e2e 的连接预算（工作进程数 × 每进程的连接上限 + 余量），按结果给测试容器设 `max_connections` 或收紧 e2e 服务器的 `database.max_conns`，并在 CI 与本地都留有余量；或负责人决定维持现状，并在此写明理由。
 
 <a id="M6-M8-04"></a>
@@ -52,3 +54,14 @@ M6/P3a 的最终候选 `070762f5` 的本地门禁（`t13-gate1-build-e2e`）又�
 - **lint 工具每次从 GitHub 下载**（M6/P3a 的观察）：`server (0)` 的 Lint 一步是 `make lint-go`，它先跑 `make tools`；CI 的运行器上没有 `./bin`，`tools` 目标每次都经 `raw.githubusercontent.com` 上的 `install.sh` 从 GitHub 下载锁定版本的 golangci-lint（`Makefile` 的 `GOLANGCI_LINT_VERSION`，现为 2.13.2；工作流只缓存 pnpm 的存储）。M6/P3a 检查点 `a37bc6370ae651118bd9cb6204279679fdd5031c` 的分支 CI 42478883539 attempt 1 中，`server (0)`（作业 128726250098）在这次下载时收到 GitHub 的 HTTP 504 而失败，lint 没有开始，与代码无关；`server (1)` 与 `web` 通过，`e2e` 随之跳过。根因是外部下载故障，只重跑失败的作业一次，attempt 2 的 `server (0)` 通过（Lint 一步 84 秒）。即 server 作业的每次运行都依赖一次在线的 GitHub 下载；按版本缓存锁定的二进制（例如以 `GOLANGCI_LINT_VERSION` 为键的 Actions 缓存）可去掉这一外部依赖。
 
 **何时验收：** M8 的 CI 工作复核每路的余量（bootstrap 每半与 20 分钟整包期限、各路与 25 分钟任务期限）；需要时增加路数，或把 bootstrap 的测试改为可并行运行。lint 工具不再每次在线下载（例如缓存锁定版本的二进制），或负责人决定维持现状并在此写明理由。改路数、期限、作业结构或缓存，任何 CI 的改动都须负责人同意。
+
+<a id="M6-M8-05"></a>
+## M6-M8-05 本机测试容器的主机端口与 macOS 的临时端口冲突
+
+M6/P5a 的最终候选 `5b5da6ea` 上，本机 `make test` 连续两次失败，各有包在 testcontainers 启动容器时等映射端口约 60 秒到期限（`wait until ready: mapped port … get state: GET /containers/<id>/json: context deadline exceeded`），容器内的服务已就绪：`t16-gate2` 是 `asset/adapter/s3`，`t16-gate3` 是 `platform/postgres`（16 例）与 `migrations`。Docker Desktop 的 `~/Library/Containers/com.docker.docker/Data/log/host/com.docker.backend.log` 在这些时刻记有该容器开端口转发失败：“listen tcp 0.0.0.0:56932（56934）: bind: address already in use”。
+
+根因：Docker Desktop 的 VM 从自己的 `ip_local_port_range`（55000–65535）给容器分配随机主机端口，再在 macOS 上监听同一个端口；macOS 自己的临时端口（`net.inet.ip.portrange.first`/`last`）是 49152–65535，两者重叠，分到的端口可能已被本机的出站连接或监听占用。`make test` 并行启动大量容器、开大量连接，撞上的机会随之增加。同一警告此前只在 2026-11-10 的两个时刻出现；M6/P2（`254d3255`）与 M6/P3b（t14-gate1）的“Docker API 超时、容器拿不到映射端口”是同一签名。Linux 的 CI 没有这一层端口转发，不受影响。
+
+负责人 2026-11-11 决定：P5a（没有 Go 改动）的服务端测试以分支 CI 为准，不改本机设置，不改测试代码，交 M8。
+
+**何时验收：** M8 在本机门禁的说明里给出不重叠的做法并验证（例如测试容器助手自己在本机选空闲端口并显式绑定、在端口转发失败时换端口重启容器，或在 README 写明把 macOS 的临时端口范围收到 55000 以下），使本机 `make test` 不再因此失败；或负责人决定维持现状，并在此写明理由。
