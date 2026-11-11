@@ -4,10 +4,6 @@
  * See the LICENSE file for details.
  */
 
-import { useCallback, useRef } from "react";
-import { cloneDeep } from "lodash-es";
-import { runInAction } from "mobx";
-import { deepCompareFilterExpressions } from "@nerve/utils";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
 import { useSessionSWR } from "@/lib/use-session-swr";
@@ -23,9 +19,8 @@ import { ProjectLevelWorkItemFiltersHOC } from "@/components/work-item-filters/f
 import { WorkItemFiltersRow } from "@/components/work-item-filters/filters-row";
 // hooks
 import { useIssues } from "@/hooks/store/use-issues";
-import { useWorkItemFilters } from "@/hooks/store/work-item-filters/use-work-item-filters";
+import { usePageFilterExpression } from "@/hooks/use-page-filter-expression";
 import { useProjectPreferencesFollow } from "@/hooks/use-project-preferences-follow";
-import type { TWorkItemFilterExpression } from "@nerve/types";
 import { IssuesStoreContext } from "@/hooks/use-issue-layout-store";
 // local imports
 import { IssuePeekOverview } from "../../peek-overview";
@@ -55,43 +50,12 @@ export const ProjectLayoutRoot = observer(function ProjectLayoutRoot() {
   // hooks
   const { issues, issuesFilter } = useIssues(EIssuesStoreType.PROJECT);
   const follow = useProjectPreferencesFollow();
-  const { getFilter } = useWorkItemFilters();
-  const applyingConfirmation = useRef(false);
-  const editSequence = useRef(0);
-  const updateExpression = useCallback(
-    (expression: TWorkItemFilterExpression) => {
-      if (applyingConfirmation.current || !workspaceSlug || !projectId) return;
-      const sequence = ++editSequence.current;
-      const filter = getFilter(EIssuesStoreType.PROJECT, projectId);
-      const submitted = JSON.stringify(filter?.expression);
-      void follow(workspaceSlug, projectId, async () => {
-        await issuesFilter.updateFilterExpression(workspaceSlug, projectId, expression);
-        // Capture the entire draft, including unfinished inputs that have not notified a save yet.
-        if (
-          sequence === editSequence.current &&
-          filter &&
-          getFilter(EIssuesStoreType.PROJECT, projectId) === filter &&
-          JSON.stringify(filter.expression) === submitted
-        ) {
-          applyingConfirmation.current = true;
-          try {
-            const confirmed = issuesFilter.getIssueFilters(projectId)?.richFilters ?? {};
-            if (deepCompareFilterExpressions(filter.expression, filter.adapter.toInternal(confirmed))) {
-              // The server accepted these conditions unchanged. Keep their DOM identity/focus while advancing
-              // the saved baseline; rebuilding equivalent conditions would discard the active keyboard control.
-              runInAction(() => {
-                filter.initialFilterExpression = cloneDeep(filter.expression);
-              });
-            } else {
-              filter.resetExpression(confirmed);
-            }
-          } finally {
-            applyingConfirmation.current = false;
-          }
-        }
-      });
-    },
-    [workspaceSlug, projectId, follow, issuesFilter, getFilter]
+  const updateExpression = usePageFilterExpression(
+    EIssuesStoreType.PROJECT,
+    workspaceSlug,
+    projectId,
+    issuesFilter,
+    follow
   );
   // derived values
   const workItemFilters = projectId ? issuesFilter?.getIssueFilters(projectId) : undefined;

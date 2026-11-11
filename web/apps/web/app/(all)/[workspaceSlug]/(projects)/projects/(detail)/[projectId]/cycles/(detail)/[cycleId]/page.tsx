@@ -18,6 +18,7 @@ import { PageHead } from "@/components/core/page-title";
 import { CycleDetailsSidebar } from "@/components/cycles/progress-sidebar";
 import { CyclesReadFailure } from "@/components/cycles/read-failure";
 import { TransferIssues } from "@/components/cycles/transfer-issues";
+import { CycleLayoutRoot } from "@/components/issues/issue-layouts/roots/cycle-layout-root";
 // hooks
 import { useCycles } from "@/hooks/store/use-cycles";
 import { useProject } from "@/hooks/store/use-project";
@@ -29,15 +30,16 @@ import { useSessionSWR } from "@/lib/use-session-swr";
 import type { Route } from "./+types/page";
 
 /**
- * A cycle's page (P5a spec 2.2, 2.5, R11), of the route's project and cycle: until P5b brings its work items, the
- * banner of an ended cycle's transfer (TransferIssues says when it shows) and its progress sidebar. It reads the cycle
+ * A cycle's page (P5a spec 2.2, 2.5, R11; P5b spec 2.6), of the route's project and cycle: the banner of an ended
+ * cycle's transfer (TransferIssues says when it shows), its work items under it (CycleLayoutRoot, which is the cycles'
+ * turned-off state while the project's cycles are off), and its progress sidebar on their right. It reads the cycle
  * and its progress, and the list of its project that holds its row, whose assignees are its members: the project's
  * archive for an archived cycle, else the project's cycles not archived (the read the project's wrapper makes too while
  * they are on, which the two share, use-project-fetch.ts); a member's reads of a project not archived alone, as the
  * project's own.
  * It says that nerve finds no such cycle in the project (deleted, or never there), with the way back to its list; why
  * nerve could not read it, with a retry; and waits for nerve's first answer. An archived cycle shows as any other,
- * read-only: its quick actions and its dates offer no change of it.
+ * read-only: its quick actions and its dates offer no change of it, and its work items none, as an ended cycle's (R5).
 
  */
 function CycleDetailPage({ params }: Route.ComponentProps) {
@@ -114,8 +116,11 @@ function CycleDetailPage({ params }: Route.ComponentProps) {
     <>
       <PageHead title={project ? `${project.name} - ${cycle.name}` : undefined} />
       <div className="flex h-full w-full">
-        <div className="h-full w-full overflow-hidden">
+        <div className="flex h-full w-full flex-col overflow-hidden">
           <TransferIssues cycleId={cycleId} workspaceSlug={workspaceSlug} projectId={projectId} />
+          <div className="relative min-h-0 w-full flex-1">
+            <CycleLayoutRoot />
+          </div>
         </div>
         {!isSidebarCollapsed && (
           <div

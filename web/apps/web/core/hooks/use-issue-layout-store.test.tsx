@@ -154,10 +154,19 @@ it("cycle actions list, create and keep preferences for the route's cycle, never
       expect(created.call.body).toEqual({ name: "New", cycle_id: C2 });
       created.call.answer(json(201, { ...issueDetailOf("new"), cycle_id: C2 }));
       await created.promise;
-      await actions.updateFilters("A", EIssueFilterType.KANBAN_FILTERS, { group_by: ["done"], sub_group_by: [] });
+      // The change is followed as the project page's (T8): the store's list being the cycle left's, not the page's,
+      // the route cycle's list is read again with the pages it has.
+      const kept = actions.updateFilters("A", EIssueFilterType.KANBAN_FILTERS, {
+        group_by: ["done"],
+        sub_group_by: [],
+      });
       expect(tab.app.issue.cycleIssuesFilter.filters[C2]?.kanbanFilters?.group_by).toEqual(["done"]);
       expect(tab.app.issue.cycleIssuesFilter.filters["router-cycle"]).toBeUndefined();
       expect(tab.app.issue.projectIssuesFilter.filters.A).toBeUndefined();
+      const followed = await requestedIssue(tab.nerve, () => kept, ["GET", "/api/v0/projects/A/issues"]);
+      expect(followed.call.query.cycle_id).toBe(C2);
+      followed.call.answer(json(200, issuePageOf([])));
+      await followed.promise;
       await answered(
         tab.nerve,
         () => actions.fetchIssues("init-loader", { limit: 1 }),

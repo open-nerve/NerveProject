@@ -5,23 +5,17 @@
  */
 
 import { observer } from "mobx-react";
-import { useNavigate } from "react-router";
-import { useTheme } from "next-themes";
 // nerve imports
-import { EUserPermissions } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { EmptyStateDetailed } from "@nerve/propel/empty-state";
 import { Header, EHeaderVariant } from "@nerve/ui";
 import { calculateTotalFilters } from "@nerve/utils";
-// assets
-import darkEmptyState from "@/app/assets/empty-state/disabled-feature/cycles-dark.webp?url";
-import lightEmptyState from "@/app/assets/empty-state/disabled-feature/cycles-light.webp?url";
 // components
 import { PageHead } from "@/components/core/page-title";
 import { CycleAppliedFiltersList } from "@/components/cycles/applied-filters";
 import { CyclesView } from "@/components/cycles/cycles-view";
+import { CyclesDisabled } from "@/components/cycles/disabled";
 import { CyclesReadFailure } from "@/components/cycles/read-failure";
-import { DetailedEmptyState } from "@/components/empty-state/detailed-empty-state-root";
 import { CycleModuleListLayoutLoader } from "@/components/ui/loader/cycle-module-list-loader";
 // hooks
 import { useCommandPalette } from "@/hooks/store/use-command-palette";
@@ -42,10 +36,6 @@ import type { Route } from "./+types/page";
  */
 function ProjectCyclesPage({ params }: Route.ComponentProps) {
   const { workspaceSlug, projectId } = params;
-  // router
-  const navigate = useNavigate();
-  // theme hook
-  const { resolvedTheme } = useTheme();
   // nerve hooks
   const { t } = useTranslation();
   // store hooks
@@ -67,19 +57,10 @@ function ProjectCyclesPage({ params }: Route.ComponentProps) {
 
   if (!project.cycle_view)
     return (
-      <div className="flex h-full w-full items-center justify-center">
+      <>
         {pageHead}
-        <DetailedEmptyState
-          title={t("disabled_project.empty_state.cycle.title")}
-          description={t("disabled_project.empty_state.cycle.description")}
-          assetPath={resolvedTheme === "light" ? lightEmptyState : darkEmptyState}
-          primaryButton={{
-            text: t("disabled_project.empty_state.cycle.primary_button.text"),
-            onClick: () => navigate(`/${workspaceSlug}/settings/projects/${projectId}/features/cycles`),
-            disabled: role !== EUserPermissions.ADMIN,
-          }}
-        />
-      </div>
+        <CyclesDisabled workspaceSlug={workspaceSlug} projectId={projectId} />
+      </>
     );
 
   if (!listed) return null;

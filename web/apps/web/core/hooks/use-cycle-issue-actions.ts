@@ -10,6 +10,7 @@ import type { CyclePage } from "@/store/issue/cycle/issue.store";
 import type { IssueDrop } from "@/store/issue/root.store";
 import { useIssues } from "./store/use-issues";
 import { useUserPermissions } from "./store/user";
+import { useCyclePreferencesFollow } from "./use-cycle-preferences-follow";
 
 /**
  * The cycle page's list commands (P5b spec 2.5): the workspace, project and cycle come from the page's route params,
@@ -18,6 +19,7 @@ import { useUserPermissions } from "./store/user";
 export function useCycleIssueActions() {
   const { workspaceSlug, projectId: routeProjectId, cycleId } = useParams();
   const { issues, issuesFilter } = useIssues(EIssuesStoreType.CYCLE);
+  const follow = useCyclePreferencesFollow();
   const permission = useUserPermissions();
   const role =
     workspaceSlug && routeProjectId
@@ -77,13 +79,18 @@ export function useCycleIssueActions() {
     },
     [issues, workspaceSlug]
   );
-  /** The page's preferences are the cycle's, whatever project the caller names. */
+  /**
+   * The page's preferences are the cycle's, whatever project the caller names; their change is followed as the project
+   * page's (P5b spec 2.4): its list read again when its query changed, a refusal said.
+   */
   const updateFilters = useCallback(
     async (_projectId: string, filterType: TSupportedFilterTypeForUpdate, filters: TSupportedFilterForUpdate) => {
       if (!workspaceSlug || !cycleId) return;
-      return await issuesFilter.updateFilters(workspaceSlug, cycleId, filterType, filters);
+      return await follow(workspaceSlug, cycleId, () =>
+        issuesFilter.updateFilters(workspaceSlug, cycleId, filterType, filters)
+      );
     },
-    [issuesFilter, workspaceSlug, cycleId]
+    [issuesFilter, workspaceSlug, cycleId, follow]
   );
 
   return useMemo(

@@ -21,7 +21,8 @@ import Page from "./page";
 // member of the project, and says that nerve finds no such cycle, or why it could not read it, with a retry. Its
 // subtree is the route cycle's: another cycle mounts it afresh, its host with it. The caller's role is the permission
 // store's own (fake-permissions.ts); the cycles a stand-in store's, whose reads nerve settles when the test says; the
-// sidebar, the switcher of the header's crumb and the dialog that changes a cycle stand-ins that say what they got.
+// sidebar, the switcher of the header's crumb, the dialog that changes a cycle and the cycle's work items (P5b,
+// cycle-layout-root.test.tsx) stand-ins that say what they got.
 
 type Switcher = {
   title?: string;
@@ -81,6 +82,9 @@ vi.mock("@/components/cycles/progress-sidebar", () => ({
 }));
 vi.mock("@/components/cycles/transfer-issues", () => ({
   TransferIssues: (props: { cycleId: string }) => <p data-banner={props.cycleId} />,
+}));
+vi.mock("@/components/issues/issue-layouts/roots/cycle-layout-root", () => ({
+  CycleLayoutRoot: () => <section data-work-items />,
 }));
 vi.mock("@/components/cycles/modal", () => ({
   CycleCreateUpdateModal: (props: NonNullable<typeof held.edit>) => {
@@ -317,12 +321,14 @@ it("switches to the project's cycles that are not archived, in nerve's order, by
   ]);
 });
 
-it("shows in its body, before its sidebar, the banner of the cycle's transfer, which says itself whether it shows", async () => {
+it("shows in its body the banner of the cycle's transfer, which says itself whether it shows, its work items under it, then its sidebar", async () => {
   const { alpha } = await opened(its.member, "Alpha");
   const banner = host.querySelector("[data-banner]");
   expect(banner?.getAttribute("data-banner")).toBe(alpha.id);
+  const workItems = host.querySelector("[data-work-items]");
+  expect(workItems && banner?.compareDocumentPosition(workItems)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
   const aside = host.querySelector("aside");
-  expect(aside && banner?.compareDocumentPosition(aside)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  expect(aside && workItems?.compareDocumentPosition(aside)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
 });
 
 it("hides and shows its sidebar by the header's toggle, and hides it by the sidebar's close", async () => {
