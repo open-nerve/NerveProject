@@ -88,7 +88,9 @@ vi.mock("@/components/issues/issue-layouts/roots/cycle-layout-root", () => ({
   CycleLayoutRoot: () => <section data-work-items />,
 }));
 vi.mock("@/components/issues/filters", () => ({ HeaderFilters: () => null }));
-vi.mock("@/hooks/store/use-issues", () => ({ useIssues: () => ({ issues: { pageTotal: () => undefined } }) }));
+vi.mock("@/hooks/store/use-issues", () => ({
+  useIssues: () => ({ issues: { pageTotal: () => undefined }, issuesFilter: { getIssueFilters: () => undefined } }),
+}));
 vi.mock("@/hooks/store/use-command-palette", () => ({
   useCommandPalette: () => ({ toggleCreateIssueModal: () => {} }),
 }));
