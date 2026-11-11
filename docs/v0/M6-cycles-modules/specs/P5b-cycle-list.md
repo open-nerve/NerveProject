@@ -48,7 +48,7 @@ P5a 交付了迭代的页面，详情页的正文只有转移横幅与进度侧�
 ### 2.5 列表引擎的 CYCLE
 
 - `EIssuesStoreType.CYCLE`；`IssueRootStore` 增加迭代页的列表 store（`CycleIssues`，继承 `BaseIssuesStore`）与 `CycleIssuesFilter`；`useIssues`、`useIssuesActions`、`ISSUE_STORE_TO_FILTERS_MAP`、`TCreateModalStoreTypes`、拖拽的 store 类型、空态的分支都加 CYCLE；迭代页的路由映射到 CYCLE（现在映射到 DEFAULT，测试钉住，按契约变化改）。
-- `CycleIssues.fetchIssues` 的查询是本页偏好得出的查询加 `cycle_id`；`createIssue`（快速新建、弹窗、分组头）在目标项目就是迭代的项目时带上本迭代的 `cycle_id`，调用方不必知道迭代；目标是别的项目时不带（否则 nerve 以 422 `cycle_id` 拒绝，而表单在 P7 之前没有迭代字段可落这个错，re-66 M3）。迭代页页头打开的新建弹窗锁定项目（`isProjectSelectionDisabled`）。
+- `CycleIssues.fetchIssues` 的查询是本页偏好得出的查询加 `cycle_id`；`createIssue`（快速新建、弹窗、分组头）在目标项目就是迭代的项目时带上本迭代的 `cycle_id`，调用方不必知道迭代；目标是别的项目时不带（否则 nerve 以 422 `cycle_id` 拒绝，而表单在 P7 之前没有迭代字段可落这个错，re-66 M3）。迭代页页头打开的新建弹窗锁定项目（`isProjectSelectionDisabled`）。迭代页的路由映射到 CYCLE 之后，全局的“新建工作项”（侧栏、命令面板，不指定 store 类型）在迭代页上也经 CYCLE 的动作；它只在迭代按页面所见可以加入时（迭代打开、未结束、未归档，与本页新建入口的条件相同）带上本迭代，否则照项目页新建，免得在已结束、已归档迭代的页面上整个新建被 nerve 拒绝而表单没有迭代字段可去掉（T5 的发现，主控裁定）。
 - 读本页筛选的地方（四个 base root、日历的子树）改经一个按 store 类型给出本页筛选的 hook：PROJECT、PROFILE、ARCHIVED 照旧，CYCLE 按路由参数的 `cycleId`。日历子树现在拿整个筛选 store 读 router 驱动的 getter（`week-days`、`header`、`day-tile`、`months-dropdown`、`options-dropdown`），改为拿已解析的日历显示设置与更新回调（re-66 H2）。
 - 日历的快速新建读当前 store 类型的 `viewFlags`（现在固定读项目的）。
 

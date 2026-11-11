@@ -143,8 +143,8 @@
 
 **Files：** `R/cycles/(detail)/header.tsx`、`core/components/issues/filters.tsx`（按 store 类型与 id）、`core/components/issues/issue-modal/base.tsx`（CYCLE 的动作带 `cycle_id`；迭代页页头打开时锁定项目）、`core/components/issues/issue-layouts/quick-add/root.tsx`（如需）、`modals/work-item-level.tsx`、`tools/keywords.json`（收入 `filters.tsx`、`issue-modal/base.tsx`）。
 
-- [ ] Step 1（RED）：页头的数目、四种布局、筛选开关、显示（显示选项用迭代页的常量，不含迭代，R9 的守卫测试）；迭代关闭时这些都不显示；“新建工作项”只给能建的人且迭代打开、未结束、未归档；新建弹窗（项目锁定）、快速新建、分组头的“+”各只发一个带 `cycle_id` 的创建请求，确认后提示、行出现在本页；被拒（`planning.cycle_completed`、`planning.cycles_disabled` 等）时说明、不提示成功（测试不断言拒绝码之间的次序，re-66 L7）。
-- [ ] Step 2（GREEN）：实现；变异：新建的权限门去掉、迭代状态条件去掉、请求体不带 `cycle_id`、弹窗不锁项目，各失败。
+- [ ] Step 1（RED）：页头的数目、四种布局、筛选开关、显示（显示选项用迭代页的常量，不含迭代，R9 的守卫测试）；迭代关闭时这些都不显示；“新建工作项”只给能建的人且迭代打开、未结束、未归档；新建弹窗（项目锁定）、快速新建、分组头的“+”各只发一个带 `cycle_id` 的创建请求，确认后提示、行出现在本页；全局的“新建工作项”（不指定 store 类型）在迭代页上只在迭代可加入时带上本迭代，已结束、已归档、迭代关闭时照项目页新建（不带 `cycle_id`）；被拒（`planning.cycle_completed`、`planning.cycles_disabled` 等）时说明、不提示成功（测试不断言拒绝码之间的次序，re-66 L7）。
+- [ ] Step 2（GREEN）：实现；变异：新建的权限门去掉、迭代状态条件去掉、请求体不带 `cycle_id`、弹窗不锁项目、全局新建在已结束迭代上仍带 `cycle_id`，各失败。
 - [ ] Step 3：`make lint-web`、`make knip`、`make test-web`、`node tools/keywords.mjs`；提交 `feat(M6/P5b): 迭代页的页头与本页新建`。
 
 ## Task 10（T10）：迭代页的快捷操作与写后重读进度（检查点）
