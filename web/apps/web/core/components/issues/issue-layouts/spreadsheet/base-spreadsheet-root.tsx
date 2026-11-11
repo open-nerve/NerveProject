@@ -31,10 +31,15 @@ type SpreadsheetStoreType = EIssuesStoreType.PROJECT | EIssuesStoreType.CYCLE;
 interface IBaseSpreadsheetRoot {
   QuickActions: FC<IQuickActionProps>;
   canEditPropertiesBasedOnProject?: (projectId: string) => boolean;
+  /**
+   * The whole list is read-only, whatever the caller may do in the project (an ended or archived cycle's page): no
+   * creation, inline edit or drag, and the rows' quick actions are read-only.
+   */
+  readOnly?: boolean;
 }
 
 export const BaseSpreadsheetRoot = observer(function BaseSpreadsheetRoot(props: IBaseSpreadsheetRoot) {
-  const { QuickActions, canEditPropertiesBasedOnProject } = props;
+  const { QuickActions, canEditPropertiesBasedOnProject, readOnly = false } = props;
   // router
   const { workspaceSlug, projectId } = useParams();
   // store hooks
@@ -69,6 +74,7 @@ export const BaseSpreadsheetRoot = observer(function BaseSpreadsheetRoot(props: 
 
   const canEditProperties = useCallback(
     (targetProjectId: string | undefined) => {
+      if (readOnly) return false;
       const isEditingAllowedBasedOnProject =
         canEditPropertiesBasedOnProject && targetProjectId
           ? canEditPropertiesBasedOnProject(targetProjectId)
@@ -76,7 +82,7 @@ export const BaseSpreadsheetRoot = observer(function BaseSpreadsheetRoot(props: 
 
       return enableInlineEditing && isEditingAllowedBasedOnProject;
     },
-    [canEditPropertiesBasedOnProject, enableInlineEditing, isEditingAllowed]
+    [canEditPropertiesBasedOnProject, enableInlineEditing, isEditingAllowed, readOnly]
   );
 
   const staleRefresh = useIssueListRefresh(issues.currentList, [{ group: "" }]);
@@ -126,7 +132,7 @@ export const BaseSpreadsheetRoot = observer(function BaseSpreadsheetRoot(props: 
           canEditProperties={canEditProperties}
           quickAddCallback={createIssue}
           enableQuickCreateIssue={enableQuickAdd}
-          disableIssueCreation={!enableIssueCreation || !isEditingAllowed}
+          disableIssueCreation={readOnly || !enableIssueCreation || !isEditingAllowed}
           canLoadMoreIssues={!!nextCursor}
           loadMoreIssues={() => {
             void fetchNextIssues().catch(() => {});

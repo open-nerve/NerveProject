@@ -40,13 +40,18 @@ export interface IBaseKanBanLayout {
   QuickActions: FC<IQuickActionProps>;
   canEditPropertiesBasedOnProject?: (projectId: string) => boolean;
   viewId?: TProfileViews;
+  /**
+   * The whole list is read-only, whatever the caller may do in the project (an ended or archived cycle's page): no
+   * creation, inline edit or drag, and the rows' quick actions are read-only.
+   */
+  readOnly?: boolean;
 }
 
 // Stable identity so an empty kanban-filter value doesn't churn the per-column cache's sharedDeps.
 const EMPTY_KANBAN_FILTERS = { group_by: [], sub_group_by: [] };
 
 export const BaseKanBanRoot = observer(function BaseKanBanRoot(props: IBaseKanBanLayout) {
-  const { QuickActions, canEditPropertiesBasedOnProject, viewId } = props;
+  const { QuickActions, canEditPropertiesBasedOnProject, viewId, readOnly = false } = props;
   // router
   const { workspaceSlug, projectId } = useParams();
   // store hooks
@@ -146,6 +151,7 @@ export const BaseKanBanRoot = observer(function BaseKanBanRoot(props: IBaseKanBa
 
   const canEditProperties = useCallback(
     (issueProjectId: string | undefined) => {
+      if (readOnly) return false;
       const isEditingAllowedBasedOnProject =
         canEditPropertiesBasedOnProject && issueProjectId
           ? canEditPropertiesBasedOnProject(issueProjectId)
@@ -153,7 +159,7 @@ export const BaseKanBanRoot = observer(function BaseKanBanRoot(props: IBaseKanBa
 
       return enableInlineEditing && isEditingAllowedBasedOnProject;
     },
-    [canEditPropertiesBasedOnProject, enableInlineEditing, isEditingAllowed]
+    [canEditPropertiesBasedOnProject, enableInlineEditing, isEditingAllowed, readOnly]
   );
 
   // The loading/verification gate can mount or replace the actual container later.
@@ -236,7 +242,7 @@ export const BaseKanBanRoot = observer(function BaseKanBanRoot(props: IBaseKanBa
                 enableQuickIssueCreate={enableQuickAdd}
                 showEmptyGroup={userDisplayFilters?.show_empty_groups ?? true}
                 quickAddCallback={createIssue}
-                disableIssueCreation={!enableIssueCreation || !isEditingAllowed}
+                disableIssueCreation={readOnly || !enableIssueCreation || !isEditingAllowed}
                 canEditProperties={canEditProperties}
                 scrollableContainerRef={scrollableContainerRef}
                 handleOnDrop={handleOnDrop}

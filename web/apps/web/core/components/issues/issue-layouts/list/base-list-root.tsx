@@ -41,9 +41,14 @@ interface IBaseListRoot {
   QuickActions: FC<IQuickActionProps>;
   canEditPropertiesBasedOnProject?: (projectId: string) => boolean;
   viewId?: TProfileViews;
+  /**
+   * The whole list is read-only, whatever the caller may do in the project (an ended or archived cycle's page): no
+   * creation, inline edit or drag, and the rows' quick actions are read-only.
+   */
+  readOnly?: boolean;
 }
 export const BaseListRoot = observer(function BaseListRoot(props: IBaseListRoot) {
-  const { QuickActions, viewId, canEditPropertiesBasedOnProject } = props;
+  const { QuickActions, viewId, canEditPropertiesBasedOnProject, readOnly = false } = props;
   // router
   const { workspaceSlug, projectId } = useParams();
   const storeType = useIssueStoreType() as ListStoreType;
@@ -97,6 +102,7 @@ export const BaseListRoot = observer(function BaseListRoot(props: IBaseListRoot)
 
   const canEditProperties = useCallback(
     (targetProjectId: string | undefined) => {
+      if (readOnly) return false;
       const isEditingAllowedBasedOnProject =
         canEditPropertiesBasedOnProject && targetProjectId
           ? canEditPropertiesBasedOnProject(targetProjectId)
@@ -104,7 +110,7 @@ export const BaseListRoot = observer(function BaseListRoot(props: IBaseListRoot)
 
       return !!enableInlineEditing && isEditingAllowedBasedOnProject;
     },
-    [canEditPropertiesBasedOnProject, enableInlineEditing, isEditingAllowed]
+    [canEditPropertiesBasedOnProject, enableInlineEditing, isEditingAllowed, readOnly]
   );
 
   const handleOnDrop = useGroupIssuesDragNDrop(storeType, orderBy, group_by);
@@ -168,7 +174,7 @@ export const BaseListRoot = observer(function BaseListRoot(props: IBaseListRoot)
             quickAddCallback={createIssue}
             enableIssueQuickAdd={!!enableQuickAdd}
             canEditProperties={canEditProperties}
-            disableIssueCreation={!enableIssueCreation || !isEditingAllowed}
+            disableIssueCreation={readOnly || !enableIssueCreation || !isEditingAllowed}
             handleOnDrop={handleOnDrop}
             handleCollapsedGroups={handleCollapsedGroups}
             collapsedGroups={collapsedGroups}

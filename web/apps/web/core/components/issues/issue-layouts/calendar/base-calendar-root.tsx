@@ -37,10 +37,15 @@ export type CalendarStoreType = EIssuesStoreType.PROJECT | EIssuesStoreType.CYCL
 interface IBaseCalendarRoot {
   QuickActions: FC<IQuickActionProps>;
   canEditPropertiesBasedOnProject?: (projectId: string) => boolean;
+  /**
+   * The whole list is read-only, whatever the caller may do in the project (an ended or archived cycle's page): no
+   * creation, inline edit or drag, and the rows' quick actions are read-only.
+   */
+  readOnly?: boolean;
 }
 
 export const BaseCalendarRoot = observer(function BaseCalendarRoot(props: IBaseCalendarRoot) {
-  const { QuickActions, canEditPropertiesBasedOnProject } = props;
+  const { QuickActions, canEditPropertiesBasedOnProject, readOnly = false } = props;
 
   // router
   const { workspaceSlug, projectId } = useParams();
@@ -72,6 +77,8 @@ export const BaseCalendarRoot = observer(function BaseCalendarRoot(props: IBaseC
       workspaceSlug,
       projectId
     );
+  // A read-only list or a caller who may not write here: no quick add, and no drag or drop of a day's row.
+  const isCalendarReadOnly = readOnly || !isEditingAllowed;
 
   const { enableInlineEditing } = issues?.viewFlags || {};
 
@@ -120,7 +127,7 @@ export const BaseCalendarRoot = observer(function BaseCalendarRoot(props: IBaseC
     sourceDate: string | undefined,
     destinationDate: string | undefined
   ) => {
-    if (!issueId || !destinationDate || !sourceDate || !issueProjectId || !dropIssue || !isEditingAllowed) return;
+    if (!issueId || !destinationDate || !sourceDate || !issueProjectId || !dropIssue || isCalendarReadOnly) return;
     if (sourceDate === destinationDate || issueProjectId !== projectId || issueMap[issueId]?.target_date !== sourceDate)
       return;
     const binding = issues.currentList;
@@ -167,6 +174,7 @@ export const BaseCalendarRoot = observer(function BaseCalendarRoot(props: IBaseC
 
   const canEditProperties = useCallback(
     (targetProjectId: string | undefined) => {
+      if (readOnly) return false;
       const isEditingAllowedBasedOnProject =
         canEditPropertiesBasedOnProject && targetProjectId
           ? canEditPropertiesBasedOnProject(targetProjectId)
@@ -174,7 +182,7 @@ export const BaseCalendarRoot = observer(function BaseCalendarRoot(props: IBaseC
 
       return enableInlineEditing && isEditingAllowedBasedOnProject;
     },
-    [canEditPropertiesBasedOnProject, enableInlineEditing, isEditingAllowed]
+    [canEditPropertiesBasedOnProject, enableInlineEditing, isEditingAllowed, readOnly]
   );
 
   return (
@@ -182,7 +190,7 @@ export const BaseCalendarRoot = observer(function BaseCalendarRoot(props: IBaseC
       <IssueListRetry {...staleRefresh} />
       <div className="h-full w-full overflow-hidden bg-surface-1 pt-4">
         <CalendarChart
-          readOnly={!isEditingAllowed}
+          readOnly={isCalendarReadOnly}
           issues={issueMap}
           groups={groups}
           layout={layout}
