@@ -350,6 +350,8 @@ export class IssueRootStore {
       issue.priority,
       issue.label_ids,
       issue.assignee_ids,
+      issue.cycle_id,
+      issue.module_ids,
       issue.parent_id,
       issue.created_by_id,
       issue.start_date,
@@ -498,6 +500,7 @@ export class IssueRootStore {
       start_date: input.start_date,
       target_date: input.target_date,
       parent_id: input.parent_id,
+      cycle_id: input.cycle_id,
     };
     return this.confirmCreation(scope, () => this.api.create(scope.projectID, body));
   }
@@ -546,6 +549,7 @@ export class IssueRootStore {
               start_date: input.start_date,
               target_date: input.target_date,
               parent_id: input.parent_id,
+              cycle_id: input.cycle_id,
               skip_activity: input.skip_activity,
             };
             if (
