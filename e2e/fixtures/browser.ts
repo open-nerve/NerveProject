@@ -175,6 +175,9 @@ export async function refuseClipboardWrites(page: Page): Promise<void> {
   await page.evaluate(refuseWrites);
 }
 
+/** What expectQuietConsole logs as an error and as a warning first, to find each heard. */
+export const consoleProbe = "nerve-e2e: console probe";
+
 /**
  * Checks that page logged no error and no warning since watch began (M2 design 9.6), such as React Router's
  * "navigate() should be called in useEffect". It logs a probe of each kind first and expects to find it,
@@ -188,7 +191,7 @@ export async function expectQuietConsole(
   watch: PageWatch,
   expected: { warnings?: readonly string[]; errors?: readonly string[] } = {}
 ): Promise<void> {
-  const probe = "nerve-e2e: console probe";
+  const probe = consoleProbe;
   await page.evaluate((text) => {
     console.error(text);
     console.warn(text);
