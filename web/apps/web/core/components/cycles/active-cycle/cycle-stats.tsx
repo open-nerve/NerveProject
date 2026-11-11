@@ -24,9 +24,12 @@ import useLocalStorage from "@/hooks/use-local-storage";
 // local imports
 import { AssigneeStats, LabelStats, useDistributionRows } from "../distribution-stats";
 import { ActiveCyclePriorityIssues } from "./priority-issues";
+import type { EnterFiltered } from "./use-enter-filtered";
 
 /** The card's tabs, in their order (P5b spec 2.7), each as the browser keeps it (localStorage activeCycleTab). */
 const TABS = ["Priority-Issues", "Assignees", "Labels"] as const;
+/** The priorities of the tab of priority work items, which its row sets the cycle's page to (P5b spec 2.7). */
+const URGENT_AND_HIGH = ["urgent", "high"];
 
 type Props = {
   workspaceSlug: string;
@@ -35,16 +38,20 @@ type Props = {
   cycleId: string;
   /** The progress the card shows (cycleCounts' choice): its assignees and its labels. */
   progress: Progress;
+  /** Takes the cycle's page to the work items of a condition (useEnterFiltered). */
+  enterFiltered: EnterFiltered;
 };
 
 /**
  * The work items of the cycle in progress (P5a spec 2.4, 2.5, R10; P5b spec 2.7), each a tab, in the spec's order: its
  * urgent and high ones (ActiveCyclePriorityIssues), then its breakdowns by assignee (the one first shown) and by label,
  * as nerve counts them, named by the project's members and labels (distribution-stats.tsx); without a row, how to see
- * one. The tab chosen is kept (localStorage). A row is a plain item.
+ * one. The tab chosen is kept (localStorage). A row of a work item, an assignee or a label (not the rows of none) takes
+ * the cycle's page to its work items: the urgent and high ones, previewing the row's there, or the assignee's, or the
+ * label's (P5b spec 2.7, 2.8).
  */
 export const ActiveCycleStats = observer(function ActiveCycleStats(props: Props) {
-  const { workspaceSlug, projectId, cycleId, progress } = props;
+  const { workspaceSlug, projectId, cycleId, progress, enterFiltered } = props;
   // theme hook
   const { resolvedTheme } = useTheme();
   // nerve hooks
@@ -85,11 +92,21 @@ export const ActiveCycleStats = observer(function ActiveCycleStats(props: Props)
         </Tab.List>
         <Tab.Panels>
           <StatsPanel>
-            <ActiveCyclePriorityIssues workspaceSlug={workspaceSlug} projectId={projectId} cycleId={cycleId} />
+            <ActiveCyclePriorityIssues
+              workspaceSlug={workspaceSlug}
+              projectId={projectId}
+              cycleId={cycleId}
+              openIssue={(issueId) =>
+                enterFiltered({ property: "priority", operator: "in", value: URGENT_AND_HIGH }, issueId)
+              }
+            />
           </StatsPanel>
           <StatsPanel>
             {assignees.length > 0 ? (
-              <AssigneeStats rows={assignees} />
+              <AssigneeStats
+                rows={assignees}
+                choose={(id) => enterFiltered({ property: "assignee_id", operator: "in", value: [id] })}
+              />
             ) : (
               <NoRows
                 title={t("active_cycle.empty_state.assignee.title")}
@@ -99,7 +116,10 @@ export const ActiveCycleStats = observer(function ActiveCycleStats(props: Props)
           </StatsPanel>
           <StatsPanel>
             {labels.length > 0 ? (
-              <LabelStats rows={labels} />
+              <LabelStats
+                rows={labels}
+                choose={(id) => enterFiltered({ property: "label_id", operator: "in", value: [id] })}
+              />
             ) : (
               <NoRows
                 title={t("active_cycle.empty_state.label.title")}

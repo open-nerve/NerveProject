@@ -7,6 +7,7 @@ import { EIssueLayoutTypes, EIssuesStoreType } from "@nerve/types";
 import { Spinner } from "@nerve/ui";
 // components
 import { CyclesDisabled } from "@/components/cycles/disabled";
+import { PeekOnEntry } from "@/components/cycles/peek-on-entry";
 import { CyclesReadFailure } from "@/components/cycles/read-failure";
 import { ProjectLevelWorkItemFiltersHOC } from "@/components/work-item-filters/filters-hoc/project-level";
 import { WorkItemFiltersRow } from "@/components/work-item-filters/filters-row";
@@ -47,7 +48,8 @@ function CycleIssueLayout(props: { activeLayout: EIssueLayoutTypes | undefined }
  * its cycles are on; with them off it is the cycles' turned-off state and reads nothing, nor does its list (re-66 H1).
  * It says why nerve could not read the preferences, with a retry; then the page's filters (their conditions saved as
  * its preferences, followed as the project page's), the row of their conditions, the layout they choose, and the
- * page's own preview, whose host is the cycle's (re-66 L4).
+ * page's own preview, whose host is the cycle's (re-66 L4), with the work item the way in asked it to preview
+ * (PeekOnEntry: the card of the cycle in progress, P5b spec 2.7).
  */
 export const CycleLayoutRoot = observer(function CycleLayoutRoot() {
   // router
@@ -107,6 +109,7 @@ export const CycleLayoutRoot = observer(function CycleLayoutRoot() {
               <CycleIssueLayout activeLayout={workItemFilters.displayFilters?.layout} />
             </div>
             <IssuePeekOverview hostScope={JSON.stringify(["cycle", workspaceSlug, projectId, cycleId])} />
+            <PeekOnEntry workspaceSlug={workspaceSlug} projectId={projectId} />
           </div>
         )}
       </ProjectLevelWorkItemFiltersHOC>

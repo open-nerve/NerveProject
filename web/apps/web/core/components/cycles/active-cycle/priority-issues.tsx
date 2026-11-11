@@ -31,6 +31,8 @@ type Props = {
   projectId: string;
   /** The cycle in progress the card shows. */
   cycleId: string;
+  /** Takes the cycle's page to its urgent and high work items, and previews the work item issueId there. */
+  openIssue: (issueId: string) => void;
 };
 
 /**
@@ -38,10 +40,11 @@ type Props = {
  * newest first, as nerve gives them: by their own list (useCyclePriorityIssues), never the cycle page's, read by the
  * card's own gates (a member's read, of a project not archived whose cycles are on) once the tab is open. It waits for
  * nerve's answer, or says why nerve could not give it, with a retry; says how to see one when there is none; scrolled
- * to its end, it reads the next page by its cursor, and says why one failed, with a retry. A row is a plain item.
+ * to its end, it reads the next page by its cursor, and says why one failed, with a retry. A row is a button that
+ * opens its work item (openIssue).
  */
 export const ActiveCyclePriorityIssues = observer(function ActiveCyclePriorityIssues(props: Props) {
-  const { workspaceSlug, projectId, cycleId } = props;
+  const { workspaceSlug, projectId, cycleId, openIssue } = props;
   // refs
   const containerRef = useRef<HTMLDivElement | null>(null);
   // states
@@ -102,7 +105,7 @@ export const ActiveCyclePriorityIssues = observer(function ActiveCyclePriorityIs
     >
       <ul className="flex flex-col gap-1">
         {shown.issueIds.map((issueId) => (
-          <PriorityIssueRow key={issueId} issueId={issueId} projectId={projectId} />
+          <PriorityIssueRow key={issueId} issueId={issueId} projectId={projectId} openIssue={openIssue} />
         ))}
       </ul>
       {shown.error !== undefined ? (
@@ -124,9 +127,11 @@ export const ActiveCyclePriorityIssues = observer(function ActiveCyclePriorityIs
   );
 });
 
-/** A work item of the tab: its identifier, name, priority, state (read-only) and target date. */
-const PriorityIssueRow = observer(function PriorityIssueRow(props: { issueId: string; projectId: string }) {
-  const { issueId, projectId } = props;
+/** A work item of the tab, a button that opens it: its identifier, name, priority, state (read-only) and target date. */
+const PriorityIssueRow = observer(function PriorityIssueRow(
+  props: Pick<Props, "projectId" | "openIssue"> & { issueId: string }
+) {
+  const { issueId, projectId, openIssue } = props;
   // nerve hooks
   const { t } = useTranslation();
   // store hooks
@@ -141,33 +146,39 @@ const PriorityIssueRow = observer(function PriorityIssueRow(props: { issueId: st
   if (!issue) return null;
 
   return (
-    <li className="group flex items-center justify-between gap-2 rounded-md p-1 hover:bg-surface-2">
-      <div className="flex w-full min-w-24 flex-grow items-center gap-1.5 truncate">
-        <IssueIdentifier issueId={issue.id} projectId={projectId} size="xs" variant="secondary" />
-        <Tooltip label={issue.name} layout="stacked" align="start">
-          <span className="truncate text-13 text-primary">{issue.name}</span>
-        </Tooltip>
-      </div>
-      <PriorityIcon priority={issue.priority} withContainer size={12} />
-      <span className="sr-only">{`${t("priority")}: ${t(issue.priority)}`}</span>
-      <div className="flex flex-shrink-0 items-center gap-1.5">
-        <span className="flex max-w-24 items-center gap-1 truncate rounded-sm bg-layer-1 px-2 py-0.5 text-11">
-          <StateGroupIcon
-            stateGroup={state?.group ?? "backlog"}
-            color={state?.color ?? "var(--text-color-tertiary)"}
-            className="size-3 flex-shrink-0"
-          />
-          <span className="truncate">{state?.name}</span>
-        </span>
-        {issue.target_date && (
-          <Tooltip label={`${t("target_date")}: ${renderFormattedDate(issue.target_date) ?? ""}`}>
-            <span className="flex h-full items-center gap-1.5 truncate rounded-sm bg-layer-1 px-2 py-0.5 text-11 group-hover:bg-surface-1">
-              <CompletedAtOutline className="h-3 w-3 flex-shrink-0" />
-              <span className="truncate text-11">{renderFormattedDateWithoutYear(issue.target_date)}</span>
-            </span>
+    <li>
+      <button
+        type="button"
+        className="group flex w-full cursor-pointer items-center justify-between gap-2 rounded-md p-1 text-left hover:bg-surface-2"
+        onClick={() => openIssue(issue.id)}
+      >
+        <div className="flex w-full min-w-24 flex-grow items-center gap-1.5 truncate">
+          <IssueIdentifier issueId={issue.id} projectId={projectId} size="xs" variant="secondary" />
+          <Tooltip label={issue.name} layout="stacked" align="start">
+            <span className="truncate text-13 text-primary">{issue.name}</span>
           </Tooltip>
-        )}
-      </div>
+        </div>
+        <PriorityIcon priority={issue.priority} withContainer size={12} />
+        <span className="sr-only">{`${t("priority")}: ${t(issue.priority)}`}</span>
+        <div className="flex flex-shrink-0 items-center gap-1.5">
+          <span className="flex max-w-24 items-center gap-1 truncate rounded-sm bg-layer-1 px-2 py-0.5 text-11">
+            <StateGroupIcon
+              stateGroup={state?.group ?? "backlog"}
+              color={state?.color ?? "var(--text-color-tertiary)"}
+              className="size-3 flex-shrink-0"
+            />
+            <span className="truncate">{state?.name}</span>
+          </span>
+          {issue.target_date && (
+            <Tooltip label={`${t("target_date")}: ${renderFormattedDate(issue.target_date) ?? ""}`}>
+              <span className="flex h-full items-center gap-1.5 truncate rounded-sm bg-layer-1 px-2 py-0.5 text-11 group-hover:bg-surface-1">
+                <CompletedAtOutline className="h-3 w-3 flex-shrink-0" />
+                <span className="truncate text-11">{renderFormattedDateWithoutYear(issue.target_date)}</span>
+              </span>
+            </Tooltip>
+          )}
+        </div>
+      </button>
     </li>
   );
 });

@@ -99,7 +99,14 @@ async function render(app = tab.app, copies = 1) {
       <StoreContext.Provider value={app as never}>
         <SWRConfig value={{ provider: () => cache as never }}>
           {Array.from({ length: copies }, (_, at) => (
-            <ActiveCycleStats key={at} workspaceSlug="ws" projectId="A" cycleId={C1} progress={progress()} />
+            <ActiveCycleStats
+              key={at}
+              workspaceSlug="ws"
+              projectId="A"
+              cycleId={C1}
+              progress={progress()}
+              enterFiltered={() => undefined}
+            />
           ))}
         </SWRConfig>
       </StoreContext.Provider>

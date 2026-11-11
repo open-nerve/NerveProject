@@ -11,14 +11,18 @@ import { Tab } from "@headlessui/react";
 import type { Progress } from "@nerve/api-client";
 import { STATE_GROUPS } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
-import { cn } from "@nerve/utils";
+import type { IWorkItemFilterInstance, TWorkItemFilterCondition } from "@nerve/shared-state";
+import type { TWorkItemFilterProperty } from "@nerve/types";
+import { EIssuesStoreType } from "@nerve/types";
+import { cn, toFilterArray } from "@nerve/utils";
 // assets
 import emptyLabel from "@/app/assets/empty-state/empty_label.svg?url";
 import emptyMembers from "@/app/assets/empty-state/empty_members.svg?url";
 // components
-import { PROGRESS_STATS } from "@/components/core/sidebar/progress-stats/shared";
+import { createFilterUpdateHandler, PROGRESS_STATS } from "@/components/core/sidebar/progress-stats/shared";
 import { SingleProgressStats } from "@/components/core/sidebar/single-progress-stats";
 // hooks
+import { useWorkItemFilters } from "@/hooks/store/work-item-filters/use-work-item-filters";
 import useLocalStorage from "@/hooks/use-local-storage";
 // local imports
 import { AssigneeStats, LabelStats, useDistributionRows } from "../distribution-stats";
@@ -33,17 +37,36 @@ type Props = {
   progress: Progress;
 };
 
+/** The values of property the filters' condition `in` holds (findFirstConditionByPropertyAndOperator's, observed). */
+const selectedOf = (filter: IWorkItemFilterInstance, property: TWorkItemFilterProperty) =>
+  toFilterArray(
+    filter.allConditions.find((condition) => condition.property === property && condition.operator === "in")?.value
+  ).map(String);
+
 /**
  * The breakdowns of a cycle's progress (P5a spec 2.4, 2.5), each a tab: by state, each group's share of the work items
  * not cancelled (progressPercent's, the cancelled said apart); by assignee and by label, as nerve counts them, named by
- * the project's members and labels (distribution-rows.ts). The tab chosen is kept for the cycle (localStorage); a row
- * does not set the page's filters (P5b).
+ * the project's members and labels (distribution-rows.ts). The tab chosen is kept for the cycle (localStorage).
+ * While the cycle's page shows its work items by its filters (CycleLayoutRoot's instance of them), a row of a state
+ * group, an assignee or a label toggles its value in them, saved as the page's own change of them, and says whether it
+ * is chosen (P5b spec 2.8, R8); the rows are plain before the page has its filters, and in the list page's preview
+ * (?peekCycle), which never has them: only the cycle's page makes them.
  */
 export const CycleProgressStats = observer(function CycleProgressStats(props: Props) {
   const { cycleId, projectId, progress } = props;
   // hooks
   const { t } = useTranslation();
   const { assignees, labels } = useDistributionRows(progress, projectId);
+  const { getFilter, updateFilterValueFromSidebar } = useWorkItemFilters();
+  const filter = getFilter(EIssuesStoreType.CYCLE, cycleId);
+  const toggle = (property: TWorkItemFilterProperty): { choose?: (value: string) => void; selected?: string[] } => {
+    if (!filter) return {};
+    const values = selectedOf(filter, property);
+    const update = (condition: TWorkItemFilterCondition) =>
+      updateFilterValueFromSidebar(EIssuesStoreType.CYCLE, cycleId, condition);
+    return { selected: values, choose: createFilterUpdateHandler(property, values, update) };
+  };
+  const { choose: chooseState, selected: statesChosen } = toggle("state_group");
   const { storedValue: currentTab, setValue: setCycleTab } = useLocalStorage(
     `cycle-progress-tab-${cycleId}`,
     "stat-assignees"
@@ -85,6 +108,7 @@ export const CycleProgressStats = observer(function CycleProgressStats(props: Pr
                   title={<span className="text-11">{t(STATE_GROUPS[group].i18n_label)}</span>}
                   completed={progress[`${group}_issues` as const]}
                   total={counted}
+                  {...(chooseState && { onClick: () => chooseState(group), selected: statesChosen?.includes(group) })}
                 />
               </li>
             ))}
@@ -97,13 +121,17 @@ export const CycleProgressStats = observer(function CycleProgressStats(props: Pr
         </Tab.Panel>
         <Tab.Panel>
           {assignees.length > 0 ? (
-            <AssigneeStats rows={assignees} />
+            <AssigneeStats rows={assignees} {...toggle("assignee_id")} />
           ) : (
             <NoRows image={emptyMembers}>{t("no_assignee")}</NoRows>
           )}
         </Tab.Panel>
         <Tab.Panel>
-          {labels.length > 0 ? <LabelStats rows={labels} /> : <NoRows image={emptyLabel}>{t("no_labels_yet")}</NoRows>}
+          {labels.length > 0 ? (
+            <LabelStats rows={labels} {...toggle("label_id")} />
+          ) : (
+            <NoRows image={emptyLabel}>{t("no_labels_yet")}</NoRows>
+          )}
         </Tab.Panel>
       </Tab.Panels>
     </Tab.Group>

@@ -16,6 +16,8 @@ import darkProgressAsset from "@/app/assets/empty-state/active-cycle/progress-da
 import lightProgressAsset from "@/app/assets/empty-state/active-cycle/progress-light.webp?url";
 // components
 import { SimpleEmptyState } from "@/components/empty-state/simple-empty-state-root";
+// local imports
+import type { EnterFiltered } from "./use-enter-filtered";
 
 /** The state groups whose work items a cycle's progress counts, completed first; the cancelled ones it does not. */
 const COUNTED = ["completed", "started", "unstarted", "backlog"] as const;
@@ -23,14 +25,16 @@ const COUNTED = ["completed", "started", "unstarted", "backlog"] as const;
 type Props = {
   /** The progress the card shows (cycleCounts' choice). */
   progress: Progress;
+  /** Takes the cycle's page to the work items of a condition (useEnterFiltered). */
+  enterFiltered: EnterFiltered;
 };
 
 /**
  * The progress of the cycle in progress (P5a spec 2.5): the completed of its work items not cancelled (progressPercent),
  * the work items of each state group it counts that has any, and the cancelled ones said apart; without work items,
- * how to see it. A row does not set the page's filters (P5b).
+ * how to see it. A state group's row is a button that takes the cycle's page to the group's work items (P5b spec 2.8).
  */
-export function ActiveCycleProgress({ progress }: Props) {
+export function ActiveCycleProgress({ progress, enterFiltered }: Props) {
   // theme hook
   const { resolvedTheme } = useTheme();
   // nerve hooks
@@ -72,16 +76,22 @@ export function ActiveCycleProgress({ progress }: Props) {
             {COUNTED.filter((group) => progress[`${group}_issues`] > 0).map((group) => {
               const count = progress[`${group}_issues`];
               return (
-                <li key={group} className="flex items-center justify-between gap-2 text-13">
-                  <div className="flex items-center gap-1.5">
-                    <span
-                      className="block h-3 w-3 rounded-full"
-                      style={{ backgroundColor: STATE_GROUPS[group].color }}
-                      aria-hidden="true"
-                    />
-                    <span className="font-medium text-tertiary">{t(STATE_GROUPS[group].i18n_label)}</span>
-                  </div>
-                  <span className="text-tertiary">{`${count} ${t("issue.label", { count })}`}</span>
+                <li key={group}>
+                  <button
+                    type="button"
+                    className="flex w-full cursor-pointer items-center justify-between gap-2 text-13"
+                    onClick={() => enterFiltered({ property: "state_group", operator: "in", value: [group] })}
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <span
+                        className="block h-3 w-3 rounded-full"
+                        style={{ backgroundColor: STATE_GROUPS[group].color }}
+                        aria-hidden="true"
+                      />
+                      <span className="font-medium text-tertiary">{t(STATE_GROUPS[group].i18n_label)}</span>
+                    </span>
+                    <span className="text-tertiary">{`${count} ${t("issue.label", { count })}`}</span>
+                  </button>
                 </li>
               );
             })}

@@ -21,8 +21,16 @@ import type { AssigneeRow, LabelRow } from "./distribution-rows";
 import { assigneeRows, labelRows } from "./distribution-rows";
 
 // The breakdowns of a cycle's progress by assignee and by label as a page shows them (P5a spec 2.4): its sidebar's and
-// the card of the cycle in progress. The rows are distribution-rows.ts's, named by the project's members and labels;
-// a row does not set the page's filters (P5b).
+// the card of the cycle in progress. The rows are distribution-rows.ts's, named by the project's members and labels.
+// Where the page lets one be chosen, a row of an assignee or a label (not the row of none) is a button that sets the
+// cycle page's filters by it, or toggles it in them (P5b spec 2.8).
+
+/** What choosing a row of a value does: given its value; and the values chosen, for a choice that toggles them. */
+type RowChoice = { choose?: (value: string) => void; selected?: string[] };
+
+/** The props of a row of value that the choice gives it: none without a choice, or for the row of none. */
+const choiceOf = ({ choose, selected }: RowChoice, value: string | null) =>
+  choose && value !== null ? { onClick: () => choose(value), selected: selected?.includes(value) } : {};
 
 /**
  * The rows of a progress's breakdowns by assignee and by label, of the project's members and labels (each by the
@@ -41,7 +49,7 @@ export function useDistributionRows(progress: Pick<Progress, "assignees" | "labe
 }
 
 /** The work items by assignee: each row's member by avatar and name (a placeholder for none), and its share. */
-export const AssigneeStats = observer(function AssigneeStats({ rows }: { rows: AssigneeRow[] }) {
+export const AssigneeStats = observer(function AssigneeStats({ rows, ...choice }: { rows: AssigneeRow[] } & RowChoice) {
   const imageWorkspace = useRouteWorkspace();
   return (
     <ul>
@@ -65,6 +73,7 @@ export const AssigneeStats = observer(function AssigneeStats({ rows }: { rows: A
             }
             completed={row.completed_issues}
             total={row.total_issues}
+            {...choiceOf(choice, row.assignee_id)}
           />
         </li>
       ))}
@@ -73,7 +82,7 @@ export const AssigneeStats = observer(function AssigneeStats({ rows }: { rows: A
 });
 
 /** The work items by label: each row's label by its color and name, and its share. */
-export function LabelStats({ rows }: { rows: LabelRow[] }) {
+export function LabelStats({ rows, ...choice }: { rows: LabelRow[] } & RowChoice) {
   return (
     <ul>
       {rows.map((row) => (
@@ -91,6 +100,7 @@ export function LabelStats({ rows }: { rows: LabelRow[] }) {
             }
             completed={row.completed_issues}
             total={row.total_issues}
+            {...choiceOf(choice, row.label_id)}
           />
         </li>
       ))}
