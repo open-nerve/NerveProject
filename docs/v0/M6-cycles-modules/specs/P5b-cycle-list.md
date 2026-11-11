@@ -57,7 +57,7 @@ P5a 交付了迭代的页面，详情页的正文只有转移横幅与进度侧�
 - **布局根**：`CycleLayoutRoot` 提供 `IssuesStoreContext` CYCLE、筛选的实例（`ProjectLevelWorkItemFiltersHOC`，`entityType` CYCLE、`entityId` 迭代 id；保存视图照项目页）、已选筛选条、四种布局的迭代根、工作项预览；取本页偏好经 `useSessionSWR`（键带迭代 id），失败可重试。放在详情页正文里转移横幅之下，进度侧栏照旧在右边。
 - **页头**（`CycleIssuesHeader` 在 P5a 的面包屑、切换、侧栏开关与快捷操作之外加）：本页的工作项数（`getGroupIssueCount`）、四种布局、筛选开关、显示（显示筛选与显示属性，词表同项目页，见 R9）、“新建工作项”。布局、筛选、显示对看得到页面的人都可用（照 Plane）。
 - **新建工作项**（页头、快速新建、分组头的“+”）：只给能建工作项的人（项目页的 `allowPermissions([ADMIN, MEMBER])`），且迭代能被加入：迭代打开（`cycle_view`）、迭代未结束（`status` 不是 `completed`）、未归档（R5）。新建弹窗的请求体带本迭代；表单不显示迭代字段（P7 恢复下拉框）。确认后照项目页提示，本页列表经成员判断出现这一行。
-- **只读**（迭代已结束或已归档，R5）：没有行内修改、快速新建、分组头的新建与拖拽；行的快捷操作只有复制、新标签页打开、复制链接；页头没有“新建工作项”；空态没有操作。机制：四个 base root 加一个只读的 prop，迭代根以 `status === "completed" || archived_at !== null` 传入，并进 `disableIssueCreation`、日历的 `readOnly` 与 `canEditProperties`（现在这三者只看路由权限，`viewFlags` 是每个 store 实例一份，re-66 M2）。
+- **只读**（迭代已结束或已归档，R5）：没有行内修改、快速新建、分组头的新建与拖拽；行的快捷操作只有新标签页打开、复制链接（照 Plane，没有“复制一份”，T10）；页头没有“新建工作项”；空态没有操作。机制：四个 base root 加一个只读的 prop，迭代根以 `status === "completed" || archived_at !== null` 传入，并进 `disableIssueCreation`、日历的 `readOnly` 与 `canEditProperties`（现在这三者只看路由权限，`viewFlags` 是每个 store 实例一份，re-66 M2）。
 - **行的快捷操作**：在项目页的快捷操作之外加“移出迭代”（R6）：能改工作项的人、列表不只读、迭代打开时显示，经 `updateIssue` 发 `cycle_id: null`，确认后行离开本页列表并提示，被拒时说明。快捷操作里的修改与“复制一份”以 CYCLE 打开弹窗（复制的一份同样加入本迭代）；工作项预览的宿主是迭代页自己的（`hostScope` 带迭代 id），不与项目页共用（re-66 L4）。
 - **空态**：没有工作项时，未结束且能新建的人看到“新建工作项”；有筛选时显示“清除筛选”；已结束或已归档时只有说明。
 - **写后重读进度**（R10）：迭代页列表的动作（新建、修改、移出、删除、归档、拖拽）经 nerve 确认后，经 `followInSession` 与页面范围的捕获重取本迭代的 `/progress`（`ReconciledByKey` 取最新的回答）；预览里经工作项详情的写不是列表的写，进度到下次读取更新（re-66 L5）。页头的数目来自绑定，不在网页上推算。
@@ -120,7 +120,7 @@ P5a 交付了迭代的页面，详情页的正文只有转移横幅与进度侧�
 
 **P6**：模块页的列表照本段（`EIssuesStoreType.MODULE`、偏好的筛选 store 用同一基类、成员判断的 `module_id` 已在本段）。
 
-**P7**：“添加已有工作项”（空态、分组头、日历）、迭代下拉框与列表词表（R9、R11）；迭代页的移动端页头。项目页与归档页的页头数目（`getGroupIssueCount(undefined, undefined, false)`）在列表分组时读不到 `""` 组而不显示（M4 起如此，T9 发现；迭代页改用绑定的总数 `pageTotal`）。
+**P7**：“添加已有工作项”（空态、分组头、日历）、迭代下拉框与列表词表（R9、R11）；迭代页的移动端页头。迭代页“复制一份”时描述带图片的工作项经内容复制（草稿再发布）建立，不带 `cycle_id`、不加入本迭代（项目页同一条路；P7 随新建弹窗与草稿的迭代字段处理，T10 发现）。项目页与归档页的页头数目（`getGroupIssueCount(undefined, undefined, false)`）在列表分组时读不到 `""` 组而不显示（M4 起如此，T9 发现；迭代页改用绑定的总数 `pageTotal`）。
 
 ## 6. 风险
 
