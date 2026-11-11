@@ -21,13 +21,14 @@ import { peekOnEntry } from "../peek-on-entry";
 export type EnterFiltered = (condition: TWorkItemFilterCondition, issueId?: string) => void;
 
 /**
- * How a row of the card of the cycle in progress takes its cycle's page to the row's work items (P5b spec 2.8, R8):
- * the page's filters are replaced by the one condition, its conditions alone, never merged with those it had. Off the cycle's page there is no instance of its filters, so the change replaces the
- * preferences' whole field, which needs nothing read (one PATCH, P5b spec 2.4, re-66 M1). Once nerve confirms it the
- * page is entered, with the work item to preview there (peekOnEntry); a refusal is said, and the list page stays. One
- * change at a time: a click while one is out does nothing. The follow-ups are those of the session the change was sent
- * in (followInSession) and of the card's page while it shows the cycle (useDetailScope: the card, the caller's
- * permission): late, nerve's answer reaches the store alone.
+ * How a row of the card of the cycle in progress takes its cycle's page to the row's work items (P5b spec 2.8, R8): the
+ * page's filters are replaced by the one condition, its conditions alone, never merged with those it had. Off the
+ * cycle's page there is no instance of its filters, so the change replaces the preferences' whole field, which needs
+ * nothing read (one PATCH, P5b spec 2.4, re-66 M1). Once nerve confirms it the page is entered, with the work item to
+ * preview there (peekOnEntry); a refusal is said, and the list page stays. One change at a time: a click while one is
+ * out does nothing. The follow-ups are those of the session the change was sent in (followInSession) and of the card's
+ * page while it shows the cycle (useDetailScope: the card, the caller's permission): late, nerve's answer reaches the
+ * store alone.
  */
 export function useEnterFiltered(workspaceSlug: string, projectId: string, cycleId: string): EnterFiltered {
   const navigate = useNavigate();

@@ -4,9 +4,6 @@
  * See the LICENSE file for details.
  */
 
-import type { Issue } from "@nerve/api-client";
-
-import { useRef } from "react";
 import { useTranslation } from "@nerve/i18n";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
@@ -54,8 +51,6 @@ export const WorkItemQuickActions = observer(function WorkItemQuickActions(
   } = props;
   // router
   const { workspaceSlug } = useParams();
-  // the menu names the work item to edit before it opens the dialog (helper.tsx), else the dialog makes a copy
-  const editing = useRef<Issue | undefined>(undefined);
   const requestDelete = useDeleteRequest();
   const requestArchive = useArchiveRequest();
   const requestDialog = useWorkItemDialogRequest();
@@ -87,14 +82,9 @@ export const WorkItemQuickActions = observer(function WorkItemQuickActions(
     isArchivingAllowed,
     isDeletingAllowed,
     isInArchivableGroup,
-    setIssueToEdit: (target) => {
-      editing.current = target;
-    },
-    setCreateUpdateIssueModal: (open) => {
-      if (!open) return;
+    openDialog: (kind) => {
       if (!requestDialog) throw new Error("Project issue actions require an IssueListCommandHost");
-      requestDialog(editing.current ? "edit" : "copy", editing.current ?? issue, storeType);
-      editing.current = undefined;
+      requestDialog(kind, issue, storeType);
     },
     handleRemoveFromCycle,
     setDeleteIssueModal: () => {

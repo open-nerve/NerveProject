@@ -56,7 +56,24 @@ function handleOptionalAction<T>(
   }
 }
 
-export interface MenuItemFactoryProps {
+/**
+ * How the menu's edit and copy open the work item's dialog. A list's rows name the dialog's kind (openDialog) to the
+ * list's command host, which holds the dialog while the row may leave the page (P5b T13). A page holding a dialog of
+ * its own, the work item's detail or the archive, sets the work item to edit, if any, and then opens the dialog.
+ */
+type DialogOpening =
+  | {
+      openDialog: (kind: "edit" | "copy") => void;
+      setIssueToEdit?: never;
+      setCreateUpdateIssueModal?: never;
+    }
+  | {
+      openDialog?: never;
+      setIssueToEdit: (issue: Issue | undefined) => void;
+      setCreateUpdateIssueModal: (open: boolean) => void;
+    };
+
+export type MenuItemFactoryProps = DialogOpening & {
   issue: Issue;
   workspaceSlug?: string;
   projectIdentifier?: string;
@@ -66,14 +83,22 @@ export interface MenuItemFactoryProps {
   isRestoringAllowed?: boolean;
   isInArchivableGroup?: boolean;
   // Action handlers
-  setIssueToEdit: (issue: Issue | undefined) => void;
-  setCreateUpdateIssueModal: (open: boolean) => void;
   setDeleteIssueModal: (open: boolean) => void;
   setArchiveIssueModal?: (open: boolean) => void;
   /** Removes the work item from the page's cycle (P5b spec 2.6, R6); the menu offers it while given. */
   handleRemoveFromCycle?: () => void;
   /** The caller owns native refusal/success and its UI lifetime; the menu only consumes the promise. */
   handleRestore?: () => Promise<void>;
+};
+
+/** Opens the work item's dialog of kind as the menu's caller holds it (DialogOpening). */
+function openDialogOf(props: MenuItemFactoryProps, kind: "edit" | "copy") {
+  if (props.openDialog) {
+    props.openDialog(kind);
+    return;
+  }
+  if (kind === "edit") props.setIssueToEdit(props.issue);
+  props.setCreateUpdateIssueModal(true);
 }
 
 // Common action handlers hook
@@ -119,14 +144,11 @@ const useMenuItemFactory = (props: MenuItemFactoryProps) => {
   const actionHandlers = useIssueActionHandlers(props);
 
   const {
-    issue,
     isEditingAllowed,
     isArchivingAllowed = false,
     isDeletingAllowed,
     isRestoringAllowed = false,
     isInArchivableGroup = false,
-    setIssueToEdit,
-    setCreateUpdateIssueModal,
     setDeleteIssueModal,
     setArchiveIssueModal,
     handleRemoveFromCycle,
@@ -136,10 +158,7 @@ const useMenuItemFactory = (props: MenuItemFactoryProps) => {
     key: "edit",
     title: t("common.actions.edit"),
     icon: EditOutline,
-    action: () => {
-      setIssueToEdit(issue);
-      setCreateUpdateIssueModal(true);
-    },
+    action: () => openDialogOf(props, "edit"),
     shouldRender: isEditingAllowed,
   });
 
@@ -147,7 +166,7 @@ const useMenuItemFactory = (props: MenuItemFactoryProps) => {
     key: "make-a-copy",
     title: t("common.actions.make_a_copy"),
     icon: CopyOutline,
-    action: () => setCreateUpdateIssueModal(true),
+    action: () => openDialogOf(props, "copy"),
     shouldRender: isEditingAllowed,
   });
 
