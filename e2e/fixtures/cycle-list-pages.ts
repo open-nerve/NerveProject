@@ -1,6 +1,16 @@
 import { expect, type Locator, type Page, type TestInfo } from "@playwright/test";
 
-import { addProjectMembers, createProject, createWorkspace, inviteAndAccept, slugFor, type Api } from "./api";
+import {
+  addProjectMembers,
+  changeRole,
+  createProject,
+  createWorkspace,
+  inviteAndAccept,
+  projectMembershipOf,
+  projectMemberWrites,
+  slugFor,
+  type Api,
+} from "./api";
 import { accountId, bearer, emailFor, type AuthTokens } from "./auth";
 import { consoleProbe, watchPage, type PageWatch } from "./browser";
 import { cyclePath, entriesOf, turnCycles } from "./cycle-pages";
@@ -31,6 +41,10 @@ async function person(api: Api, testInfo: TestInfo, label: string): Promise<Pers
  * Acme's world of a cycle page's stories: the admin's workspace Acme and its project Web, whose cycles are on, and
  * mem, a member of both, whose browser the stories drive. cycle makes a draft cycle of Web, item a work item of Web,
  * both as the admin; end ends a cycle in January 2025 (its work items joined it before), and archives it when asked.
+ * guest signs a person of label up who joins Acme and Web as a member, makes his own work item of name in the cycle of
+ * cycleId, and is then Web's guest, whom nerve shows his own work items alone there (Web's guests do not see every work
+ * item, M4 design 3.4); Acme's admin as well when workspaceAdmin is true, made so after his guest role, which the
+ * promotion keeps (a workspace's admin joins a project as its admin alone).
  */
 export async function cycleListWorld(api: Api, testInfo: TestInfo) {
   const [admin, mem] = [await person(api, testInfo, "admin"), await person(api, testInfo, "mem")];
@@ -53,6 +67,18 @@ export async function cycleListWorld(api: Api, testInfo: TestInfo) {
   };
   const item = (name: string, body: Partial<IssueCreate> = {}): Promise<Issue> =>
     createIssue(api, token, web.id, { name, ...body });
+  const guest = async (label: string, name: string, cycleId: string, workspaceAdmin = false) => {
+    const one = await person(api, testInfo, label);
+    await inviteAndAccept(api, token, slug, { email: one.email, token: one.tokens.access_token }, 15);
+    await addProjectMembers(api, token, web.id, [{ member_id: one.id, role: 15 }]);
+    await createIssue(api, one.tokens.access_token, web.id, { name, cycle_id: cycleId });
+    const membership = await projectMembershipOf(api, token, web.id, one.id);
+    expect(await projectMemberWrites(api, web.id).change(token, membership, 5), `${label}, Web's guest`).toEqual({
+      status: 200,
+    });
+    if (workspaceAdmin) await changeRole(api, token, slug, one.id, 20);
+    return one;
+  };
   return {
     admin,
     mem,
@@ -63,6 +89,7 @@ export async function cycleListWorld(api: Api, testInfo: TestInfo) {
     cycle,
     end,
     item,
+    guest,
     path: (cycleId: string) => cyclePath(slug, web.id, cycleId),
     projectPath: `/${slug}/projects/${web.id}/issues`,
   };
