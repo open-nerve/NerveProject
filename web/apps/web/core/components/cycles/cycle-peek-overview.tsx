@@ -82,7 +82,11 @@ export const CyclePeekOverview = observer(function CyclePeekOverview(props: Prop
           <CyclesReadFailure error={failed[0]?.error} onRetry={() => failed.forEach((fetch) => void fetch.mutate())} />
         </>
       ) : (
+        // Keyed by the cycle previewed (v0 design 7.7), as a cycle's own page is: the preview of another mounts its
+        // sidebar afresh, so nothing of the cycle before (days picked, a change of days still out, its progress' tab)
+        // carries into it.
         <CycleDetailsSidebar
+          key={peekCycle}
           handleClose={handleClose}
           projectId={projectId}
           workspaceSlug={workspaceSlug}

@@ -51,17 +51,26 @@ export async function permissionsOver(workspaces: Workspace[], projects: Project
 
 /**
  * A caller of acme, of role workspaceRole in it, and of role projectRole in its project web (null: he sees web, no
- * member of it), web showing its guests every work item when guestViewAll says so (guest_view_all_features): his
- * permissions, at web's address; the address (the router store) and the projects' store, for a test that moves the
- * address elsewhere; and the two. Nerve answers the lists in fake time, and a test that runs in real time is back in
- * it once they are loaded.
+ * member of it), web showing its guests every work item when guestViewAll says so (guest_view_all_features), and as
+ * fields say otherwise (its cycles turned off, say): his permissions, at web's address; the address (the router store)
+ * and the projects' store, for a test that moves the address elsewhere; and the two. Nerve answers the lists in fake
+ * time, and a test that runs in real time is back in it once they are loaded.
  */
-export async function callerInWeb(workspaceRole: WorkspaceRole, projectRole: ProjectRole | null, guestViewAll = false) {
+export async function callerInWeb(
+  workspaceRole: WorkspaceRole,
+  projectRole: ProjectRole | null,
+  guestViewAll = false,
+  fields: Partial<Project> = {}
+) {
   const inRealTime = !vi.isFakeTimers();
   if (inRealTime) vi.useFakeTimers();
   try {
     const acme = workspaceOf("acme", { role: workspaceRole });
-    const web = projectOf("WEB", acme.id, { member_role: projectRole, guest_view_all_features: guestViewAll });
+    const web = projectOf("WEB", acme.id, {
+      member_role: projectRole,
+      guest_view_all_features: guestViewAll,
+      ...fields,
+    });
     const { router, projects, permissions } = await permissionsOver([acme], [web]);
     router.setQuery({ workspaceSlug: acme.slug, projectId: web.id });
     return { permissions, router, projects, acme, web };

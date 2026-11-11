@@ -70,8 +70,8 @@ export const usePowerKCreationCommandsRecord = (): Record<TPowerKCreationCommand
       ctx.params.workspaceSlug,
       ctx.params.projectId
     );
-  // nerve's rule for the route's project's cycles, not the member check: nerve refuses every planning write of one it
-  // shows only his own work items
+  // nerve's rule for the route's project's cycles (canWriteCycles), not the member check: nerve refuses every planning
+  // write of one it shows only his own work items, and every write of a project's cycles while they are turned off
   const canCreateCycle = (ctx: TPowerKContext) => canWriteCycles(ctx.params.workspaceSlug ?? "", ctx.params.projectId);
   const isWorkspaceCreationDisabled = config?.workspace_creation_enabled === false;
 
@@ -118,8 +118,8 @@ export const usePowerKCreationCommandsRecord = (): Record<TPowerKCreationCommand
       icon: CyclesOutline,
       keySequence: "nc",
       action: () => toggleCreateCycleModal(true),
-      isEnabled: (ctx) => Boolean(getProjectDetails(ctx)?.cycle_view && canCreateCycle(ctx)),
-      isVisible: (ctx) => Boolean(ctx.params.projectId && getProjectDetails(ctx)?.cycle_view && canCreateCycle(ctx)),
+      isEnabled: canCreateCycle,
+      isVisible: canCreateCycle,
       closeOnSelect: true,
     },
     create_module: {

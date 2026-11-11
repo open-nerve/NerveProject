@@ -2622,13 +2622,13 @@
     {
       "id": "old-cycle-urls",
       "phase": "M6/P5",
-      "why": "M6 的网页迭代改调 /api/v0（P5a spec 2.1、2.8；设计 §13“没有旧的迭代、模块 service 与地址”）：Plane 的迭代地址（列表、详情、归档目录与归档、进度、date-check、迭代的工作项、转移、工作区级的列表）nerve 都不提供，旧 service 与 store 已删除，web 的源文件（测试也算）不得再出现。照 old-issue-urls 以 /api/workspaces/ 前缀锚定：组件目录的导入（./archived-cycles/modal）、路由与网页内的链接（/${workspaceSlug}/projects/${projectId}/cycles/${cycleId}）、/api/v0 的地址都不碰；模块的地址到 P6 删除旧模块 service 时另加规则",
+      "why": "M6 的网页迭代改调 /api/v0（P5a spec 2.1、2.8；设计 §13“没有旧的迭代、模块 service 与地址”）：Plane 的迭代地址（列表、详情、归档目录与归档、进度、date-check、迭代的工作项、转移、工作区级的列表）nerve 都不提供，旧 service 与 store 已删除，web 的源文件（测试也算）不得再出现。无尾段的（…/cycles 后接引号、查询或结尾）也算，cycles 之后不接字母、数字、下划线或连字符；照 old-issue-urls 以 /api/workspaces/ 前缀锚定：组件目录的导入（./archived-cycles/modal）、路由与网页内的链接（/${workspaceSlug}/projects/${projectId}/cycles/${cycleId}）、/api/v0 的地址都不碰；模块的地址到 P6 删除旧模块 service 时另加规则",
       "files": {
         "source": "^web/.*\\.(?:[cm]?[jt]sx?|json)$",
         "flags": ""
       },
       "content": {
-        "source": "/api/workspaces/(?:[^/\"'`\\s]+/)+(?:cycles|archived-cycles)/[^\"'`\\s]*",
+        "source": "/api/workspaces/(?:[^/\"'`\\s]+/)+(?:cycles|archived-cycles)(?![\\w-])[^\"'`\\s]*",
         "flags": ""
       },
       "samples": {
@@ -2643,7 +2643,12 @@
           "/api/workspaces/${workspaceSlug}/projects/${projectId}/cycles/${cycleId}/archive/",
           "/api/workspaces/${workspaceSlug}/projects/${projectId}/cycles/${cycleId}/progress/",
           "/api/workspaces/${workspaceSlug}/cycles/",
-          "\"/api/workspaces/ws/projects/project/cycles/cycle/progress/\""
+          "\"/api/workspaces/ws/projects/project/cycles/cycle/progress/\"",
+          "/api/workspaces/${workspaceSlug}/projects/${projectId}/cycles",
+          "\"/api/workspaces/ws/projects/project/cycles\"",
+          "`/api/workspaces/${workspaceSlug}/projects/${projectId}/cycles?cycle_view=current`",
+          "/api/workspaces/${workspaceSlug}/projects/${projectId}/archived-cycles?per_page=10",
+          "/api/workspaces/${workspaceSlug}/cycles"
         ],
         "miss": [
           "/api/v0/projects/{project_id}/cycles",
@@ -2652,6 +2657,10 @@
           "import { ArchiveCycleModal } from \"./archived-cycles/modal\";",
           "/${workspaceSlug}/projects/${projectId}/cycles/${cycleId}",
           "/${workspaceSlug}/projects/${projectId}/archives/cycles",
+          "/${workspaceSlug}/projects/${projectId}/cycles",
+          "`/${workspaceSlug}/projects/${projectId}/cycles?peekCycle=${cycleId}`",
+          "/api/v0/projects/{project_id}/cycles?archived=true",
+          "/api/workspaces/${workspaceSlug}/projects/${projectId}/cycles-overview/",
           "/api/workspaces/${workspaceSlug}/projects/${projectId}/modules/",
           "/api/workspaces/${workspaceSlug}/projects/${projectId}/modules/${moduleId}/",
           "/api/workspaces/${workspaceSlug}/projects/${projectId}/archived-modules/",

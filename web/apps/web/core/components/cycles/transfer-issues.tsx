@@ -26,7 +26,7 @@ type EntryProps = {
  * unfinished by its live counts (in the backlog, not started, started), never the counts it was frozen with, which a
  * transfer does not change; of an ended cycle not archived alone, frozen or not, as often as some are left; none for a
  * caller who may not write the project's cycles (canWriteCycles, as nerve decides: not its guests, nor one it shows
- * only his own work items).
+ * only his own work items, nor anyone while they are turned off).
  */
 function useTransferable(row: CycleListItem | undefined, workspaceSlug: string, projectId: string): number {
   const { canWriteCycles } = useUserPermissions();

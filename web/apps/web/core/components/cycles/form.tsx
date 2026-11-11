@@ -48,10 +48,11 @@ type Props = {
 
 /**
  * A cycle's form (P5a spec 2.6): for a new one, the project among those whose cycles the caller may write
- * (canWriteCycles, as nerve decides: an admin's or a member's role, not one nerve shows only his own work items), then
- * its name (required, 255 characters at most; it has the focus as the dialog opens), its description and its two
- * days, which the calendar offers from the browser's today on. Every control is in the natural Tab order. A name the
- * rules refuse, or a field nerve refuses, shows its message under it and takes the focus (useRefusedFocus).
+ * (canWriteCycles, as nerve decides: an admin's or a member's role, not one nerve shows only his own work items, and
+ * its cycles turned on), then its name (required, 255 characters at most; it has the focus as the dialog opens), its
+ * description and its two days, which the calendar offers from the browser's today on. Every control is in the natural
+ * Tab order. A name the rules refuse, or a field nerve refuses, shows its message under it and takes the focus
+ * (useRefusedFocus).
  */
 export function CycleForm(props: Props) {
   const { workspaceSlug, projectId, cycle, editing, busy, onSubmit, onCancel } = props;

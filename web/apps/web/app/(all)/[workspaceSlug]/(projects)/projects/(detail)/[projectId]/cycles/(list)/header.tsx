@@ -27,8 +27,9 @@ type TProps = {
 
 /**
  * The header of a project's cycles list (P5a spec 2.5, R8), of the route's project: its crumbs; for those who write
- * the project's cycles (canWriteCycles: its admins and members, not one nerve shows only his own work items), the
- * list's search and filters, and a new cycle, by the project's dialogs' host (ProjectLevelModals).
+ * the project's cycles (canWriteCycles: its admins and members, not one nerve shows only his own work items, and no one
+ * while they are turned off), the list's search and filters, and a new cycle, by the project's dialogs' host
+ * (ProjectLevelModals).
  */
 export const CyclesListHeader = observer(function CyclesListHeader(props: TProps) {
   const { workspaceSlug, projectId } = props;

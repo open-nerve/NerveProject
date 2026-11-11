@@ -221,6 +221,32 @@ it.each(["archives/cycles?peekCycle=<id>", "cycles/<id>"])(
   }
 );
 
+it("restores the cycle once while its restore is out, though asked again by its button's menu and its right-click menu", async () => {
+  const { sprint, project } = await at("archives/cycles", { ...ended, archived_at: ARCHIVED });
+  await choose(sprint.id, "restore");
+  // asked again while nerve has not answered: by the button's menu, then by the row's right-click menu
+  await choose(sprint.id, "restore");
+  await act(async () => row(sprint.id)?.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true })));
+  await settle();
+  const again = [
+    ...(row(sprint.id)?.querySelectorAll<HTMLButtonElement>('[data-context-menu="true"] [role="menuitem"]') ?? []),
+  ].find((item) => item.querySelector("h5")?.textContent === "restore");
+  await act(async () => again?.click());
+  await settle();
+  expect(held.cycles.unarchive.mock.calls).toEqual([[sprint.id]]);
+  await held.cycles.answer();
+  expect(toasts).toEqual([restored]);
+  expect(address()).toBe(`${project}/archives/cycles`);
+});
+
+it("restores the cycle again once nerve has refused its restore", async () => {
+  const { sprint } = await at("archives/cycles", { ...ended, archived_at: ARCHIVED });
+  await choose(sprint.id, "restore");
+  await held.cycles.refuse(refusal(409, "planning.cycles_disabled"));
+  await choose(sprint.id, "restore");
+  expect(held.cycles.unarchive.mock.calls).toEqual([[sprint.id], [sprint.id]]);
+});
+
 it("says nerve's refusal of a restore, never success, and stays", async () => {
   const { sprint, project } = await at("cycles/<id>", { ...ended, archived_at: ARCHIVED });
   await choose(sprint.id, "restore");

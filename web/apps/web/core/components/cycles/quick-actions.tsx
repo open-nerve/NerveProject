@@ -4,6 +4,7 @@
  * See the LICENSE file for details.
  */
 
+import { useRef } from "react";
 import { observer } from "mobx-react";
 import { useNavigate } from "react-router";
 import { MoreHorizontalOutline } from "@makeplane/propel/icons";
@@ -47,7 +48,8 @@ export const CycleQuickActions = observer(function CycleQuickActions(props: Prop
 /**
  * The menu of the cycle of the project of projectId (useCycleMenuItems): what the caller may do with it, as nerve
  * decides it (R8; canWriteCycles, canDeleteCycle): its admins and members write it; its admins delete it, and so does
- * its creator while the project's admin or member; neither one whom nerve shows only his own work items.
+ * its creator while the project's admin or member; neither one whom nerve shows only his own work items, nor anyone
+ * while the project's cycles are turned off.
  */
 const CycleMenu = observer(function CycleMenu(props: Props & { cycle: Cycle }) {
   const { parentRef, cycle, projectId, workspaceSlug, customClassName } = props;
@@ -62,15 +64,20 @@ const CycleMenu = observer(function CycleMenu(props: Props & { cycle: Cycle }) {
   const { openDialog, pageMounted } = useCyclePage();
   const copyLink = useCopyLink();
   const toastRefusal = useRefusalToast();
+  // states
+  const restoring = useRef(false);
   // auth
   const canWrite = canWriteCycles(workspaceSlug, projectId);
   const canDelete = canDeleteCycle(workspaceSlug, projectId, cycle.created_by_id === currentUser?.id);
 
   const link = `/${workspaceSlug}/projects/${projectId}/cycles/${cycle.id}`;
   // Restored, the cycle goes back to its project's list, and its row from the archive; the page says so and goes to the
-  // archive, which closes a preview. Refused, it says nerve's reason, never success.
-  const handleRestore = () =>
-    void followInSession(() => unarchive(cycle.id), {
+  // archive, which closes a preview. Refused, it says nerve's reason, never success. While its restore is out, the
+  // cycle's restore asked again (by its button's menu or its right-click menu, which share the items) sends nothing.
+  const handleRestore = async () => {
+    if (restoring.current) return;
+    restoring.current = true;
+    await followInSession(() => unarchive(cycle.id), {
       done: () => {
         if (!pageMounted.current) return;
         setToast({
@@ -84,13 +91,15 @@ const CycleMenu = observer(function CycleMenu(props: Props & { cycle: Cycle }) {
         if (pageMounted.current) toastRefusal(error);
       },
     });
+    restoring.current = false;
+  };
   const MENU_ITEMS = useCycleMenuItems({
     cycle,
     canWrite,
     canDelete,
     handleEdit: () => openDialog("edit", cycle),
     handleArchive: () => openDialog("archive", cycle),
-    handleRestore,
+    handleRestore: () => void handleRestore(),
     handleDelete: () => openDialog("delete", cycle),
     handleCopyLink: () => void copyLink(link, t("common.link_copied_to_clipboard")),
     handleOpenInNewTab: () => window.open(link, "_blank", "noopener,noreferrer"),

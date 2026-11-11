@@ -91,6 +91,23 @@ it.each([
     expect(commands.create_cycle.isEnabled(context)).toBe(allowed);
   }
 );
+// nerve refuses every write of a project's cycles while they are turned off (planning.cycles_disabled), its admin's too
+it.each([
+  [20, 20],
+  [15, 15],
+] as const)(
+  "offers no new cycle while the project's cycles are turned off: workspace %s/project %s",
+  async (wr: WorkspaceRole, pr: ProjectRole) => {
+    const other = workspaceOf("other", { role: wr });
+    const project = projectOf("OTHER", other.id, { member_role: pr, cycle_view: false });
+    await loadWorkspaces(tab.nerve, tab.app.workspaceRoot, [tab.workspace, other]);
+    await loadProjects(tab.nerve, tab.app.projectRoot.project, other, [project]);
+    renderToStaticMarkup(<Consumer />);
+    const context: TPowerKContext = { ...ctx("other"), params: { workspaceSlug: "other", projectId: project.id } };
+    expect(commands.create_cycle.isVisible(context)).toBe(false);
+    expect(commands.create_cycle.isEnabled(context)).toBe(false);
+  }
+);
 it("an unknown route never opens a form using the router store's previous projects", () => {
   renderToStaticMarkup(<Consumer />);
   const item = commands.create_work_item;

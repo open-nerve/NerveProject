@@ -30,7 +30,6 @@ const held = vi.hoisted(() => ({
   filters: undefined as unknown as CycleFilterStore,
   permissions: undefined as IUserPermissionStore | undefined,
   projects: undefined as ProjectStore | undefined,
-  project: {} as Partial<Project>,
   toggle: vi.fn(),
   mobileHeader: undefined as unknown,
 }));
@@ -48,10 +47,7 @@ vi.mock("@/hooks/store/user", () => ({
 vi.mock("@/hooks/store/use-project", () => ({
   useProject: () => ({
     loader: "loaded",
-    getProjectById: (id: string): Project | undefined => {
-      const project = held.projects?.getProjectById(id);
-      return project && { ...project, ...held.project };
-    },
+    getProjectById: (id: string): Project | undefined => held.projects?.getProjectById(id),
   }),
 }));
 vi.mock("@/components/breadcrumbs/common", () => ({ CommonProjectBreadcrumbs: () => null }));
@@ -92,7 +88,7 @@ beforeEach(() => {
   vi.spyOn(Element.prototype, "getAnimations").mockReturnValue([]);
   signedIn();
   held.toggle.mockReset();
-  Object.assign(held, { project: {}, mobileHeader: undefined, filters: new CycleFilterStore() });
+  Object.assign(held, { mobileHeader: undefined, filters: new CycleFilterStore() });
   held.cycles = listedCycles();
   host = document.createElement("div");
   document.body.append(host);
@@ -116,9 +112,10 @@ async function opened(caller: Caller, project: Partial<Project> = {}) {
   const { permissions, projects, acme, web } = await callerInWeb(
     caller.workspaceRole,
     caller.projectRole,
-    caller.guestViewAll
+    caller.guestViewAll,
+    project
   );
-  Object.assign(held, { permissions, projects, project });
+  Object.assign(held, { permissions, projects });
   await act(async () =>
     root.render(
       <SWRConfig value={{ provider: () => new Map() }}>
@@ -231,6 +228,15 @@ it.each([
     expect(held.toggle.mock.calls).toEqual(may ? [[true]] : []);
   }
 );
+
+// nerve refuses every write of the project's cycles while they are turned off (planning.cycles_disabled), its admin's too
+it("gives no one the search, the filters nor a new cycle while the project's cycles are turned off", async () => {
+  await opened(its.admin, { cycle_view: false });
+  expect(text()).toContain("disabled_project.empty_state.cycle.title");
+  expect(button("common.search.label")).toBeUndefined();
+  expect(button("common.filters")).toBeUndefined();
+  expect(text()).not.toContain("project_cycles.add_cycle");
+});
 
 it("has no layout menu for a small screen: the list has one layout", async () => {
   await opened(its.member);

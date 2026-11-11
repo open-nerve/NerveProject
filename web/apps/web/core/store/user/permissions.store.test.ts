@@ -248,6 +248,25 @@ describe("UserPermissionStore, of a project's cycles", () => {
     }
   );
 
+  // nerve refuses every write of a project's cycles while they are turned off (planning.cycles_disabled, lock.go's
+  // turnedOff), whoever writes: its admin, its member, a cycle's creator
+  it.each(CYCLE_CALLERS)(
+    "lets $caller.who neither write nor delete them while web's cycles are turned off",
+    async ({ caller }) => {
+      const { permissions, acme, web } = await callerInWeb(
+        caller.workspaceRole,
+        caller.projectRole,
+        caller.guestViewAll,
+        { cycle_view: false }
+      );
+      expect([
+        permissions.canWriteCycles(acme.slug, web.id),
+        permissions.canDeleteCycle(acme.slug, web.id, false),
+        permissions.canDeleteCycle(acme.slug, web.id, true),
+      ]).toEqual([false, false, false]);
+    }
+  );
+
   it("lets no one write nor delete the cycles of a project through another workspace, or of none", async () => {
     const { permissions, web } = await callerInWeb(its.admin.workspaceRole, its.admin.projectRole);
     expect(permissions.canWriteCycles("elsewhere", web.id)).toBe(false);
