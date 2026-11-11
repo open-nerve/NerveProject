@@ -2,7 +2,7 @@
 // A cycle's page's work items against a fake nerve (P5b spec 2.6), for the tests of its layout root: the route's
 // project A with the caller of a role, its cycle C1 as nerve last gave it, and the page's preferences and its list as
 // nerve answers them. The stores, rows, layouts and HTTP are real; the test file binds the stores and the route.
-import { act } from "react";
+import { act, type ReactNode } from "react";
 import { MemoryRouter } from "react-router";
 import { SWRConfig } from "swr";
 import { vi } from "vitest";
@@ -86,11 +86,12 @@ export async function cyclePageTab(
   tab.nerve.calls.length = 0;
   const preferences = () => tab.nerve.to(`/api/v0/me/cycles/${C1}/preferences`);
   const lists = () => tab.nerve.to("/api/v0/projects/A/issues");
-  /** Renders the page's work items. */
-  const mount = () =>
+  /** Renders the page's work items, after what else of the page the test puts before them (its header, its modals). */
+  const mount = (before?: ReactNode) =>
     tab.render(
       <SWRConfig value={{ provider: () => new Map() }}>
         <MemoryRouter>
+          {before}
           <CycleLayoutRoot />
         </MemoryRouter>
       </SWRConfig>
@@ -100,9 +101,9 @@ export async function cyclePageTab(
     preferences,
     lists,
     mount,
-    /** Renders the page's work items; nerve answers its preferences and, when given, its list. */
-    show: async (page: CyclePreferences, list?: unknown) => {
-      await mount();
+    /** Renders the page's work items, as mount; nerve answers its preferences and, when given, its list. */
+    show: async (page: CyclePreferences, list?: unknown, before?: ReactNode) => {
+      await mount(before);
       await until(() => preferences().length === 1, "the page's preferences");
       await act(async () => preferences()[0]!.answer(json(200, page)));
       await until(() => lists().length === 1, "the page's list");

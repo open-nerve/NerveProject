@@ -10,6 +10,7 @@ import type { CyclePage } from "@/store/issue/cycle/issue.store";
 import type { IssueDrop } from "@/store/issue/root.store";
 import { useIssues } from "./store/use-issues";
 import { useUserPermissions } from "./store/user";
+import { cycleListState } from "./use-cycle-list-state";
 import { useCyclePreferencesFollow } from "./use-cycle-preferences-follow";
 
 /**
@@ -44,10 +45,21 @@ export function useCycleIssueActions() {
     },
     [issues, workspaceSlug, page, role]
   );
+  /**
+   * A creation joins the page's cycle while the page shows the cycle taking work items as it is sent (spec 2.5): the
+   * page's own entries offer it only then, and the app's own new work item, which resolves to these commands on a
+   * cycle's page, otherwise creates as the project's page does, with no cycle the form could not drop when nerve
+   * refused it.
+   */
   const createIssue = useCallback(
     async (projectId: string | undefined | null, data: IssueCreate) => {
       if (!workspaceSlug || !projectId || !page) return;
-      return await issues.createIssue(workspaceSlug, projectId, data, page);
+      const { planning, projectRoot } = issues.rootIssueStore.rootStore;
+      const { joinable } = cycleListState(
+        planning.cycles.getCycleById(page.cycleID),
+        projectRoot.project.getProjectById(page.projectID)
+      );
+      return await issues.createIssue(workspaceSlug, projectId, data, joinable ? page : undefined);
     },
     [issues, workspaceSlug, page]
   );

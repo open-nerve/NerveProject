@@ -17,7 +17,8 @@
   },
   "cycle": {
     "label": "{count, plural, one {Cycle} other {Cycles}}",
-    "no_cycle": "No cycle"
+    "no_cycle": "No cycle",
+    "work_items_count": "{count, plural, one {There is # work item in this cycle} other {There are # work items in this cycle}}"
   },
   "burndown": {
     "remaining": "Remaining work items",

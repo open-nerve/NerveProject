@@ -9,7 +9,7 @@ import { EIssueFilterType } from "@nerve/constants";
 import type { RootStore } from "@/store/root.store";
 import { StoreContext } from "@/lib/store-context";
 import { issueDetailOf, issueOf, issuePageOf, issueStoreTab, requestedIssue } from "@/store/issue/fake-issues";
-import { loadProjects, projectOf } from "@/store/project/fake-projects";
+import { cycleOf, loadProjects, projectOf } from "@/store/project/fake-projects";
 import { loadWorkspaces, workspaceOf } from "@/store/workspace/fake-workspaces";
 import { answered, json, noContent } from "@/lib/auth/fake-nerve";
 import { IssuesStoreContext, useIssueStoreType } from "./use-issue-layout-store";
@@ -147,6 +147,15 @@ it("cycle actions list, create and keep preferences for the route's cycle, never
       // The first cycle's list is still the store's current one; the next page belongs to the cycle left.
       await expect(actions.fetchNextIssues()).resolves.toBeUndefined();
       expect(tab.nerve.calls).toHaveLength(1);
+      // A creation joins the route's cycle while the page shows it taking work items (T9): nerve has given it.
+      const next = cycleOf(tab.project, "Next", { id: C2, status: "current" });
+      await answered(
+        tab.nerve,
+        () => tab.app.planning.cycles.fetchCycle(C2),
+        ["GET", `/api/v0/cycles/${C2}`],
+        next,
+        "C2"
+      );
       const created = await requestedIssue(tab.nerve, () => actions.createIssue!("A", { name: "New" }), [
         "POST",
         "/api/v0/projects/A/issues",

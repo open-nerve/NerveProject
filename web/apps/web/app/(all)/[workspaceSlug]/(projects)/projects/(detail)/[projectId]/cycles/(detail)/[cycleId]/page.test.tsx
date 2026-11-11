@@ -22,7 +22,8 @@ import Page from "./page";
 // subtree is the route cycle's: another cycle mounts it afresh, its host with it. The caller's role is the permission
 // store's own (fake-permissions.ts); the cycles a stand-in store's, whose reads nerve settles when the test says; the
 // sidebar, the switcher of the header's crumb, the dialog that changes a cycle and the cycle's work items (P5b,
-// cycle-layout-root.test.tsx) stand-ins that say what they got.
+// cycle-layout-root.test.tsx) stand-ins that say what they got; the header's controls of those work items (P5b,
+// header.test.tsx) stand-ins that offer nothing.
 
 type Switcher = {
   title?: string;
@@ -85,6 +86,11 @@ vi.mock("@/components/cycles/transfer-issues", () => ({
 }));
 vi.mock("@/components/issues/issue-layouts/roots/cycle-layout-root", () => ({
   CycleLayoutRoot: () => <section data-work-items />,
+}));
+vi.mock("@/components/issues/filters", () => ({ HeaderFilters: () => null }));
+vi.mock("@/hooks/store/use-issues", () => ({ useIssues: () => ({ issues: { pageTotal: () => undefined } }) }));
+vi.mock("@/hooks/store/use-command-palette", () => ({
+  useCommandPalette: () => ({ toggleCreateIssueModal: () => {} }),
 }));
 vi.mock("@/components/cycles/modal", () => ({
   CycleCreateUpdateModal: (props: NonNullable<typeof held.edit>) => {

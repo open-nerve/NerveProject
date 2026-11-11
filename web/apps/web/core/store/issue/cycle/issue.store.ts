@@ -31,6 +31,13 @@ export class CycleIssues extends PagePreferencesIssues<IPagePreferencesFilter> {
   isPreferenceQueryCurrent(page: CyclePage): boolean {
     return !!this.pageList(page) && this.isPreferenceSelected(page.cycleID);
   }
+  /**
+   * The page's work items as nerve counts them (P5b spec 2.6), while the current list is the page's: until the page's
+   * list is selected the current one may be another cycle's, whose count is not this page's (G19).
+   */
+  pageTotal(page: CyclePage): number | undefined {
+    return this.pageList(page)?.value?.total;
+  }
   fetchIssues = (slug: string, page: CyclePage, _loader: TLoader, options: IssueListOptions) =>
     this.fetchPage(slug, page.projectID, page.cycleID, options, { cycle_id: [page.cycleID] });
   fetchNextIssues = (slug: string, page: CyclePage, group?: string, subgroup?: string) =>
