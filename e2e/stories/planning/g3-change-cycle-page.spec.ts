@@ -12,12 +12,14 @@ import {
   cycleSection,
   cyclesPath,
   dismissToasts,
+  entriesOf,
   failedLoads,
   linkedCycles,
   menuEntries,
   openCyclesList,
   pickDays,
   recordApi,
+  rowMenusKept,
   sectionToggle,
   seenBy,
   shownDay,
@@ -39,7 +41,8 @@ import { registerOnboarded, sentHeld, sentTo } from "../../fixtures/settings-pag
 import { expect, test } from "../../fixtures/test";
 
 // G3's page version (M6 P5a spec 2.5, 2.6, 2.9, R8, R12): a project's cycles changed by their dialog and by a cycle's
-// sidebar, and deleted, by its member in his browser; and the page of a cycle nerve does not have, which S2 covered
+// sidebar, and deleted, by its member in his browser, a row's menu opened by its button and by a right-click (M3
+// handoff 3); and the page of a cycle nerve does not have, which S2 covered
 // until the cycle pages read nerve's API (P5a T9). The API version is g3-update-delete-cycle.spec.ts; both assert the
 // same rows.
 
@@ -53,7 +56,7 @@ function made(name: string, start: string, end: string, sort_order: number, owne
   return { name, description: "", start, end, sort_order, archived: false, deleted: false, owner, by: owner };
 }
 
-test("G3 (page): mem renames Alpha Sprint A and moves its end by its dialog, which sends what changed and waits for nerve; on Sprint A's page its days moved onto Beta's first are refused and shown as nerve has them, and moved again shown once nerve has; Done, completed, offers no change and its days are disabled; its creator mem and the admin may delete Sprint A, nia, another member, may not, nor Web's guest or a workspace admin who is its guest change it; a deletion refused leaves its dialog open, one under way cannot be dismissed, and Sprint A is deleted", async ({
+test("G3 (page): a right-click on Beta's row opens its menu, inert while closed, whose Edit opens Beta's dialog; mem renames Alpha Sprint A and moves its end by its dialog, which sends what changed and waits for nerve; on Sprint A's page its days moved onto Beta's first are refused and shown as nerve has them, and moved again shown once nerve has; Done, completed, offers no change and its days are disabled; its creator mem and the admin may delete Sprint A, nia, another member, may not, nor Web's guest or a workspace admin who is its guest change it; a deletion refused leaves its dialog open, one under way cannot be dismissed, and Sprint A is deleted", async ({
   api,
   baseURL,
   browser,
@@ -102,12 +105,34 @@ test("G3 (page): mem renames Alpha Sprint A and moves its end by its dialog, whi
     ["Open in new tab", "Copy link", "Archive"],
   ]);
 
-  // Alpha's dialog, named for a change, holds Alpha; renamed Sprint A and its end moved to the 20th, it sends those
-  // alone, the days as a pair, and waits for nerve; it closes once nerve has changed it, and says so.
-  await chooseFromMenu(page, "Alpha", "Edit");
+  // Each row's right-click menu stays in the page while closed, inert: none is shown to assistive technology, and none
+  // of its entries takes the focus (M3 handoff 3, ruling F-14). A right-click on Beta's row opens its menu, the same
+  // entries as its button's, the first focused; Escape closes it, the focus back on the row's link, and it is inert
+  // again. Its Edit opens Beta's dialog, named for a change and holding Beta, which Escape closes.
+  await expect(page.getByRole("menu")).toHaveCount(0);
+  expect(await rowMenusKept(page)).toEqual({ entries: 12, focusable: 0 });
+  const betaLink = page.locator(`a[href="${cyclePath(slug, web.id, beta.id)}"]`);
+  await betaLink.click({ button: "right" });
+  const rowMenu = page.getByRole("menu");
+  expect(await entriesOf(rowMenu)).toEqual(upcomingEntries);
+  await expect(rowMenu.getByRole("menuitem", { name: "Edit", exact: true })).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(rowMenu).toHaveCount(0);
+  await expect(betaLink).toBeFocused();
+  expect(await rowMenusKept(page)).toEqual({ entries: 12, focusable: 0 });
+  await betaLink.click({ button: "right" });
+  await rowMenu.getByRole("menuitem", { name: "Edit", exact: true }).click();
+  await expect(rowMenu).toHaveCount(0);
   const dialog = modalDialog(page);
   await expect(dialog).toHaveAccessibleName("Update cycle");
   const name = dialog.getByRole("textbox", { name: "Title", exact: true });
+  await expect(name).toHaveValue("Beta");
+  expect(await closedByEscape(page)).toBe(true);
+
+  // Alpha's dialog, named for a change, holds Alpha; renamed Sprint A and its end moved to the 20th, it sends those
+  // alone, the days as a pair, and waits for nerve; it closes once nerve has changed it, and says so.
+  await chooseFromMenu(page, "Alpha", "Edit");
+  await expect(dialog).toHaveAccessibleName("Update cycle");
   await expect(name).toHaveValue("Alpha");
   const formDays = dialog.getByRole("button", { name: "Date range", exact: true });
   await expect(formDays).toContainText(shownDay("2031-01-14"));

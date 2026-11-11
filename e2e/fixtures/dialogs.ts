@@ -199,6 +199,34 @@ export async function composingKey(field: Locator, key: string): Promise<void> {
   }, key);
 }
 
+/**
+ * Composes text in the field that has page's focus through Chromium's own input method, the DevTools protocol's
+ * (Input.imeSetComposition), and ends the composition by an Enter as an input method gives it: the Enter's keydown
+ * while composing, of keyCode 229 and no character (the input method keeps the key), the text committed, then the
+ * Enter's keyup. Playwright drives no input method in Firefox or WebKit.
+ */
+export async function composeWithEnter(page: Page, text: string): Promise<void> {
+  const devtools = await page.context().newCDPSession(page);
+  try {
+    await devtools.send("Input.imeSetComposition", { text, selectionStart: text.length, selectionEnd: text.length });
+    await devtools.send("Input.dispatchKeyEvent", {
+      type: "rawKeyDown",
+      key: "Enter",
+      code: "Enter",
+      windowsVirtualKeyCode: 229,
+    });
+    await devtools.send("Input.insertText", { text });
+    await devtools.send("Input.dispatchKeyEvent", {
+      type: "keyUp",
+      key: "Enter",
+      code: "Enter",
+      windowsVirtualKeyCode: 13,
+    });
+  } finally {
+    await devtools.detach();
+  }
+}
+
 /** An Escape that ends a composition on field (composingKey). */
 export async function composingEscape(field: Locator): Promise<void> {
   await composingKey(field, "Escape");

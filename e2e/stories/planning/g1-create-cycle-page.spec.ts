@@ -1,4 +1,6 @@
+import { createProject, createWorkspace, slugFor } from "../../fixtures/api";
 import { expectCycles, type CycleRow } from "../../fixtures/assert/planning";
+import { emailFor } from "../../fixtures/auth";
 import { expectQuietConsole, watchPage } from "../../fixtures/browser";
 import {
   calendarOf,
@@ -21,15 +23,18 @@ import {
   announced,
   closedByEscape,
   closedWithin,
+  composeWithEnter,
+  composingKey,
   enabledWithin,
   modalDialog,
   sentWithin,
 } from "../../fixtures/dialogs";
-import { sentHeld, sentTo } from "../../fixtures/settings-pages";
+import { registerOnboarded, sentHeld, sentTo } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 
 // G1's page version (M6 P5a spec 2.5, 2.6, 2.9): a project's cycles created from its cycles list, by its member in his
-// browser, through the new cycle dialog. The API version is g1-create-cycle.spec.ts; both assert the same rows.
+// browser, through the new cycle dialog, its name composed by an input method too (M4 handoff M6-04). The API version
+// is g1-create-cycle.spec.ts; both assert the same rows.
 
 test("G1 (page): Web's cycles are off, so its member's list says so and reads none, Web's features its admin's alone to open; turned on, the empty list offers the first cycle; mem's new cycle dialog, named by its title, has its name focused, Tab goes round it and Escape closes it, the focus back on Add cycle; a name left empty is said under it and sent nowhere, one of spaces nerve refuses there; Backlog, a draft, is sent without days and the dialog waits for nerve; Sprint 1's days ending on Sprint 2's first are refused, the dialog keeping what it holds and saying why, and are taken ending the day before; Web's guest and a workspace admin who is its guest have no Add cycle", async ({
   api,
@@ -224,4 +229,64 @@ test("G1 (page): Web's cycles are off, so its member's list says so and reads no
   };
   await seenBy(browser, baseURL ?? "", api, gus.email, path, noAddCycle);
   await seenBy(browser, baseURL ?? "", api, wanda.email, path, noAddCycle);
+});
+
+test("G1 (page): an Enter that ends an input method's composition in the name of the admin's new cycle is the input method's: nothing is sent and the dialog stays, holding the name composed; the Enter after the composition sends it, and the dialog closes once nerve has made the cycle", async ({
+  api,
+  browserName,
+  db,
+  signedInPage,
+}, testInfo) => {
+  const email = emailFor(testInfo, "admin");
+  const tokens = await registerOnboarded(api, email);
+  const token = tokens.access_token;
+  const slug = slugFor(testInfo);
+  await createWorkspace(api, token, { name: "Acme", slug });
+  const web = await createProject(api, token, slug, { name: "Web", identifier: "WEB" });
+  await turnCycles(api, token, web, true);
+  const listed = `/api/v0/projects/${web.id}/cycles`;
+
+  const page = await signedInPage(tokens);
+  const watch = await watchPage(page);
+  await page.goto(cyclesPath(slug, web.id));
+  await page.getByRole("button", { name: "Set your first cycle", exact: true }).click();
+  const dialog = modalDialog(page);
+  await expect(dialog).toHaveAccessibleName("Create cycle");
+  const name = dialog.getByRole("textbox", { name: "Title", exact: true });
+  await expect(name).toBeFocused();
+
+  // Chromium composes 迭代 in the name through its own input method, an Enter ending the composition as an input method
+  // gives it, and nothing is sent; Playwright drives no input method in Firefox or WebKit, where 迭代 is filled in.
+  if (browserName === "chromium") {
+    expect(await sentWithin(page, "POST", listed, () => composeWithEnter(page, "迭代"))).toBe(false);
+  } else {
+    await name.fill("迭代");
+  }
+  // In each engine, what an Enter that ends a composition gives the page, in Chromium's and Firefox's order and in
+  // Safari's (composingKey): nothing is sent, and the dialog stays, holding 迭代.
+  expect(await sentWithin(page, "POST", listed, () => composingKey(name, "Enter"))).toBe(false);
+  expect(await closedWithin(page)).toBe(false);
+  await expect(name).toHaveValue("迭代");
+  await expectCycles(db, web.id, []);
+
+  // The Enter after the composition sends the name; once nerve has made the cycle, the dialog closes and says so.
+  const made = await sentTo(page, "POST", listed, () => page.keyboard.press("Enter"));
+  expect([made.answer.status(), made.body]).toEqual([201, { name: "迭代" }]);
+  expect(await closedWithin(page)).toBe(true);
+  await expect(toast(page, "Cycle created successfully.")).toBeVisible();
+  await expectCycles(db, web.id, [
+    {
+      name: "迭代",
+      description: "",
+      start: null,
+      end: null,
+      sort_order: 65535,
+      archived: false,
+      deleted: false,
+      owner: email,
+      by: email,
+    },
+  ]);
+  expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
+  await expectQuietConsole(page, watch);
 });

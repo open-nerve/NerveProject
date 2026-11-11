@@ -143,14 +143,12 @@ export function cycleMenu(page: Page, name: string): Locator {
 }
 
 /**
- * The entries of the menu of the cycle of name, which page shows, as the menu offers them: each by its title, marked
- * "(disabled)" when it may not be chosen. The menu is closed again by Escape.
+ * The entries of menu, a cycle's menu that is open, as it offers them: each by its title, marked "(disabled)" when it
+ * may not be chosen.
  */
-export async function menuEntries(page: Page, name: string): Promise<string[]> {
-  await cycleMenu(page, name).click();
-  const menu = page.getByRole("menu");
+export async function entriesOf(menu: Locator): Promise<string[]> {
   await expect(menu.getByRole("menuitem").first()).toBeVisible();
-  const entries = await menu
+  return menu
     .getByRole("menuitem")
     .evaluateAll((items) =>
       items.map(
@@ -158,9 +156,34 @@ export async function menuEntries(page: Page, name: string): Promise<string[]> {
           `${item.querySelector("h5")?.textContent ?? ""}${item.matches(":disabled,[aria-disabled=true]") ? " (disabled)" : ""}`
       )
     );
+}
+
+/**
+ * The entries of the menu of the cycle of name, which page shows, opened by its button (entriesOf). The menu is closed
+ * again by Escape.
+ */
+export async function menuEntries(page: Page, name: string): Promise<string[]> {
+  await cycleMenu(page, name).click();
+  const menu = page.getByRole("menu");
+  const entries = await entriesOf(menu);
   await page.keyboard.press("Escape");
   await expect(menu).toHaveCount(0);
   return entries;
+}
+
+/**
+ * How many entries the right-click menus of page's rows hold, and how many of them take the focus given to each. A
+ * row's right-click menu stays in the page while closed, to be measured, and is inert then (M3 ruling F-14): none of
+ * its entries takes the focus. Asked while every one is closed.
+ */
+export async function rowMenusKept(page: Page): Promise<{ entries: number; focusable: number }> {
+  return page.locator('[data-context-menu="true"] [role="menuitem"]').evaluateAll((items) => ({
+    entries: items.length,
+    focusable: items.filter((item) => {
+      if (item instanceof HTMLElement) item.focus();
+      return item.ownerDocument.activeElement === item;
+    }).length,
+  }));
 }
 
 /** Chooses entry from the menu of the cycle of name, which page shows. */
