@@ -99,3 +99,14 @@ P3b 让附件列随共用的列表设置出现在迭代页、模块页：两页�
 ## 处理结果（M6/P3b）：M5-M6-03
 
 两张新表 `cycle_user_properties`、`module_user_properties` 归 `planning`，清理步骤属于 `planning` 的 `Purger`：`module_user_properties` 在 `module_links` 之前、`cycle_user_properties` 在 `cycles` 之前（子先父，次序为 `module_user_properties → module_links → module_members → modules → cycle_user_properties → cycles`），在 `files.cleanup_budget` 的同一预算内运行。两条新语句 `PurgeCycleUserProperties`、`PurgeModuleUserProperties`（`planning/adapter/postgres/queries/purge.sql`）都是单语句分页（`WITH candidates AS MATERIALIZED … LIMIT … DELETE FROM <表>`），被预算取消的语句回滚，下一次运行从游标重做。两张表加入 `purgeScaleTables` 与 `seedPurgeSparseRows`；P3b 以 `NERVE_PURGE_SCALE=1` 跑 `TestPurgeScale`（收据 `t8-purge-scale`，exit 0，33 秒）：一次尝试、一次运行完成（运行 4.9 秒），旧范围的各表由自己的语句清掉，59 天前删除的与未删除的行不变。把 `cycles` 放到 `cycle_user_properties` 之前的变异（`t8-mut-purge-cycles-first`）让 `TestModulePurgeChildrenFirst` 与 `TestPurgeCycles` 的表序核对失败。删除迭代、模块及其偏好行不影响资产。收尾前在 M6 代码上重跑 `TestPurgeScale` 与 `TestTheDeletionsAtTheScaleTarget`，本交接保持 open。证据：提交 `e239a557471a048f56453f94676f2ecec22bf238`；[P3b spec](../specs/P3b-list-engine.md) 2.5、A6。
+
+## 处理结果（M6/P5b）：M5-M6-02（迭代）
+
+迭代页的工作项列表在 P5b 开放，附件列随共用的列表设置出现，网页不另算计数：迭代页偏好的 `display_properties` 就是三页共用的 14 个键（`attachment_count` 在其中、默认 `true`），行的 `attachment_count` 与 `±attachment_count` 的排序、续页都由 nerve 给出，网页只按回答显示（迭代页的列表是项目列表加 `cycle_id`，[P5b spec](../specs/P5b-cycle-list.md) R1）。“何时验收”由 G15 页面故事二（`e2e/stories/planning/g15-cycle-list-page.spec.ts`，提交 `f4a3700732eeda348ebf160b6aa8062fb168b1f1`）以真实附件核对：
+
+- **计数**：迭代里 51 个工作项，其中两个各有真实上传的附件（1 个、3 个），列表行显示“Attachments1”“Attachments3”，表格的附件列显示“1 attachment”“3 attachments”，没有附件的显示“0 attachments”。
+- **排序与分页**：接口按 `-attachment_count`、`attachment_count` 两个方向续页，每项一次、最后一页没有游标（`expectPages`）；页面以列表布局按状态分组（每组 50），两个方向各先列出 50 项、滚到底以组的游标续页，每项一次、之后没有“Load more”，续页的查询带 `cycle_id`、`group_key`、`order_by`；表格的表头两个方向排序（`aria-sort`）。
+- **换会话与增删**：经接口给一个工作项加一个附件、给另一个删一个，另一个标签页重新登录同一个人，页面跟随新会话（换用了新令牌）读到 nerve 现在的数（2、2）。
+- 每一段以整页安静的断言收尾。e2e 变异“附件列恒为 0”让故事失败。表格自身的续页（每页 100，要 101 项）不在故事里，续页由列表布局核对；附件部件本身的增删由 M5 F8 覆盖。
+
+模块页的附件列在 P6。本交接保持 open。证据：提交 `f4a3700732eeda348ebf160b6aa8062fb168b1f1`；[P5b spec](../specs/P5b-cycle-list.md) §2.10。

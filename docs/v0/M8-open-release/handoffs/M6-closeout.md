@@ -5,7 +5,7 @@ to: M8
 created: 2026-11-07
 ---
 
-# M6 交给 M8：CI 的 e2e 作业期限与间歇失败的故事、清理分页器的副本、e2e 数据库的连接余量、server 作业的分路与 lint 工具的在线下载、本机测试容器的端口冲突
+# M6 交给 M8：CI 的 e2e 作业期限与间歇失败的故事、清理分页器的副本、e2e 数据库的连接余量、server 作业的分路与 lint 工具的在线下载、本机测试容器的端口冲突、e2e 作业在线安装浏览器的系统依赖
 
 这是接收方尚待完成的工作。转交只表示责任和验收条件已落实到此处，不表示本页问题已经解决。M6 进行中发现的条目随发现写入；M6 收尾时补齐其余交接。延续 [M5 → M8 交接 M5-M8-06](M5-closeout.md#M5-M8-06) 中仍开放的观察。
 
@@ -42,6 +42,8 @@ M6/P3a 的最终候选 `070762f5` 的本地门禁（`t13-gate1-build-e2e`）又�
 
 M6/P5a 的最终候选 `5b5da6ea` 的本地门禁（`t16-gate3-build-e2e`）再一次：C12 的 LAN HTTP 一例（`e2e/stories/issue/collaboration-interactions.spec.ts:556`）页面上 `GET /api/v0/workspaces/<slug>/states` 回答 500，该测试 nerve 日志为 `FATAL: sorry, too many clients already`（53300）；只重跑这一项即 29 条全过（`t16-gate3-e2e-c12-rerun`）。按 M6-M8-01 对 C12 的要求按新问题定位，查实是本条，不是 M6-M8-01 的间歇失败。
 
+M6/P5b 的检查点（T10，2026-11-11，`00cf6c38672c0a21a63c0dab7026f339d8185f92`）的本地门禁（`t10-gate` 的 build+e2e）又一次：445 条通过、1 条失败，W7 (API)（`e2e/stories/workspace/w7-member-management.spec.ts:44`）在测试一侧的 pg 连接池上报 `error: sorry, too many clients already`（`e2e/fixtures/db.ts:88`，故事第 107 行 `expectWrittenLastBy` 的数据库断言）。P5b 没有改这个故事；同一输入只重跑这一项即通过（`t10-gate-e2e-w7-rerun`，exit 0）。同一检查点的分支 CI 没有跑到故事（见 M6-M8-06），之后 `f4a37007` 的分支 CI 全绿。
+
 **何时验收：** M8 的 CI 工作核算 e2e 的连接预算（工作进程数 × 每进程的连接上限 + 余量），按结果给测试容器设 `max_connections` 或收紧 e2e 服务器的 `database.max_conns`，并在 CI 与本地都留有余量；或负责人决定维持现状，并在此写明理由。
 
 <a id="M6-M8-04"></a>
@@ -66,4 +68,19 @@ M6/P5a 的最终候选 `5b5da6ea` 上，本机 `make test` 连续两次失败，
 
 M6/P2 的根因修复（`server/internal/platform/postgres/pgtest/hostport.go`、`server/internal/platform/s3test/hostport.go` 的 `startPublished`/`hostPortTaken`）只认 Docker 拒绝启动容器的那一种（“programming external connectivity … address already in use”，Linux 的 Docker 与 Docker Desktop 的 VM 内分配冲突时）；Docker Desktop 在 macOS 一侧转发失败时容器照常启动，错误只表现为等映射端口超时，这层重试认不出。
 
+M6/P5b 的 T13、T14（2026-11-12）在本机跑 e2e 的变异时，e2e 的全局准备（`e2e/global-setup.ts:13`）有三次因 testcontainers 等容器的端口映射到主机超时而失败（“Timed out after 10000ms while waiting for container ports to be bound to the host”，其中 T13 的一次在启动 reaper 时）：`t13-e2e-mut-archived-writable`、`t14-e2e-mut-create-for-guest-2`、`t14-e2e-mut-one-generation-2`。一条故事都没有跑，与所测的变异无关；各自重跑（`t13-e2e-mut-archived-writable-2`、`t14-e2e-mut-create-for-guest-3`、`t14-e2e-mut-one-generation-3`）都跑到了故事。签名与上文相同（同一台 Docker Desktop，映射端口迟迟不到主机一侧；台账没有记这几次的 Docker Desktop 后端日志），所以本条不只影响 Go 的 `make test`，也影响 e2e 的全局准备。
+
 **何时验收：** M8 在本机门禁的说明里给出不重叠的做法并验证（例如测试容器助手自己在本机选空闲端口并显式绑定、在端口转发失败时换端口重启容器，或在 README 写明把 macOS 的临时端口范围收到 55000 以下），使本机 `make test` 不再因此失败；或负责人决定维持现状，并在此写明理由。
+
+<a id="M6-M8-06"></a>
+## M6-M8-06 e2e 作业每次在线安装浏览器的系统依赖
+
+- e2e 作业的 “Install the Playwright browsers” 一步是 `pnpm exec playwright install --with-deps --only-shell chromium firefox`（`.github/workflows/ci.yml:120-122`）：`--with-deps` 每次经 apt 从 Ubuntu 的镜像在线安装浏览器的系统依赖，工作流只缓存 pnpm 的存储。镜像出故障时，这一步可以吃掉作业的 35 分钟期限（M6-M8-01）。
+- 2026-11-11，M6/P5b 检查点 `00cf6c38672c0a21a63c0dab7026f339d8185f92` 的分支 CI 43047769115：web、server (0)、server (1) 成功；e2e 两次都被取消，原因都是 runner 解析不了 `azure.archive.ubuntu.com`，与代码无关：
+  - attempt 1（作业 130626787723，15:40:38Z 开始）：apt 自 15:43:38Z 起 “Temporary failure resolving 'azure.archive.ubuntu.com'”，每个包等 20 秒超时；16:12:29Z 起 apt 反复打印 “W: Tried to start delayed item … ocl-icd-libopencl1 … but failed”，一直到作业期限到时被取消（开始后约 40 分钟），一条测试都没有跑。完整日志 2.47 GB，第 640 行之后的 1344 万行都是这一条警告。
+  - attempt 2（只重跑失败的作业，作业 130653659545，16:26:19Z–17:01:39Z）：这一步 16:27:05→16:57:02 用了 30 分钟后“成功”（InRelease 在 16:31:54–16:34:01 仍解析失败，包以 35.9 kB/s 取完，“Fetched 48.8 MB in 22min 40s”），Build 53 秒，E2E 一步只剩约 3 分半即到作业期限而被取消（“Running 446 tests using 2 workers”，已跑的都通过、没有失败）。
+  - 依规则只重跑一次、不改 CI 的时长或结构；该检查点的代码由下一次推送的分支 CI 覆盖。
+- 下一次推送（`f4a3700732eeda348ebf160b6aa8062fb168b1f1`）的分支 CI 43070304124 全绿：这一步 28 秒（镜像已恢复），e2e 作业 130704599852 共 20 分 41 秒（E2E 一步 18 分 49 秒），距 35 分钟期限约 14 分钟。
+- 可选的加固：缓存 Playwright 的系统依赖（例如以 Playwright 的版本为键缓存 apt 的包），或改用官方的 Playwright 容器镜像运行 e2e 作业。两者都改作业的结构，须负责人同意。
+
+**何时验收：** M8 的 CI 工作让 e2e 作业不再每次在线安装浏览器的系统依赖（上面任一做法，或负责人同意的其他做法），与 M6-M8-01 的余量复核一起做；或负责人决定维持现状，并在此写明理由。在此之前，这一步再因镜像故障超时，按“环境原因、只重跑一次、记下”处理，重跑仍不过就停下报告。
