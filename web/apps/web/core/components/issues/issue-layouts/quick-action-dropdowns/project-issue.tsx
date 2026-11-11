@@ -6,9 +6,8 @@
 
 import type { Issue } from "@nerve/api-client";
 
-import { useState } from "react";
+import { useRef } from "react";
 import { useTranslation } from "@nerve/i18n";
-import { pick } from "lodash-es";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
 // nerve imports
@@ -22,8 +21,7 @@ import { useProject } from "@/hooks/store/use-project";
 import { useProjectState } from "@/hooks/store/use-project-state";
 import { useUserPermissions } from "@/hooks/store/user";
 // helper
-import { useArchiveRequest, useDeleteRequest } from "../command-host";
-import { CreateUpdateIssueModal } from "../../issue-modal/modal";
+import { useArchiveRequest, useDeleteRequest, useWorkItemDialogRequest } from "../command-host";
 import type { IQuickActionProps } from "../list/list-view-types";
 import type { MenuItemFactoryProps } from "./helper";
 import { useProjectIssueMenuItems } from "./helper";
@@ -31,7 +29,8 @@ import { useProjectIssueMenuItems } from "./helper";
 /**
  * A row's quick actions on a page of its project's work items, as the project's page has them; the page names its
  * store type, which the edit and copy dialogs open with (a cycle's page's copy then joins the cycle, re-66 L4), and may
- * add the removal of the work item from its cycle (cycle-issue.tsx).
+ * add the removal of the work item from its cycle (cycle-issue.tsx). The layout's command host holds the dialogs, as
+ * it does the confirmations: the check of the work item a dialog's read starts takes the row off the page meanwhile.
  */
 export const WorkItemQuickActions = observer(function WorkItemQuickActions(
   props: IQuickActionProps & {
@@ -44,7 +43,6 @@ export const WorkItemQuickActions = observer(function WorkItemQuickActions(
   const {
     issue,
     handleDelete,
-    handleUpdate,
     handleArchive,
     customActionButton,
     portalElement,
@@ -56,11 +54,11 @@ export const WorkItemQuickActions = observer(function WorkItemQuickActions(
   } = props;
   // router
   const { workspaceSlug } = useParams();
-  // states
-  const [createUpdateIssueModal, setCreateUpdateIssueModal] = useState(false);
-  const [issueToEdit, setIssueToEdit] = useState<Issue | undefined>(undefined);
+  // the menu names the work item to edit before it opens the dialog (helper.tsx), else the dialog makes a copy
+  const editing = useRef<Issue | undefined>(undefined);
   const requestDelete = useDeleteRequest();
   const requestArchive = useArchiveRequest();
+  const requestDialog = useWorkItemDialogRequest();
   // store hooks
   const { allowPermissions } = useUserPermissions();
   const { getStateById } = useProjectState();
@@ -80,25 +78,6 @@ export const WorkItemQuickActions = observer(function WorkItemQuickActions(
   const isInArchivableGroup = !!stateDetails && ARCHIVABLE_STATE_GROUPS.includes(stateDetails?.group);
   const isDeletingAllowed = isEditingAllowed;
 
-  const duplicateIssuePayload = pick(
-    {
-      ...issue,
-      name: `${issue.name} (copy)`,
-    },
-    [
-      "name",
-      "project_id",
-      "state_id",
-      "description_html",
-      "parent_id",
-      "priority",
-      "assignee_ids",
-      "label_ids",
-      "start_date",
-      "target_date",
-    ]
-  );
-
   // Menu items and modals using helper
   const menuItemProps: MenuItemFactoryProps = {
     issue,
@@ -108,8 +87,15 @@ export const WorkItemQuickActions = observer(function WorkItemQuickActions(
     isArchivingAllowed,
     isDeletingAllowed,
     isInArchivableGroup,
-    setIssueToEdit,
-    setCreateUpdateIssueModal,
+    setIssueToEdit: (target) => {
+      editing.current = target;
+    },
+    setCreateUpdateIssueModal: (open) => {
+      if (!open) return;
+      if (!requestDialog) throw new Error("Project issue actions require an IssueListCommandHost");
+      requestDialog(editing.current ? "edit" : "copy", editing.current ?? issue, storeType);
+      editing.current = undefined;
+    },
     handleRemoveFromCycle,
     setDeleteIssueModal: () => {
       if (!requestDelete) throw new Error("Project issue actions require an IssueListCommandHost");
@@ -137,21 +123,6 @@ export const WorkItemQuickActions = observer(function WorkItemQuickActions(
 
   return (
     <>
-      {/* Modals */}
-      <CreateUpdateIssueModal
-        isOpen={createUpdateIssueModal}
-        onClose={() => {
-          setCreateUpdateIssueModal(false);
-          setIssueToEdit(undefined);
-        }}
-        data={issueToEdit ?? duplicateIssuePayload}
-        sourceIssueId={issueToEdit ? undefined : issue.id}
-        onSubmit={async (data) => {
-          if (issueToEdit && handleUpdate) await handleUpdate(data);
-        }}
-        storeType={storeType}
-      />
-
       <ContextMenu parentRef={parentRef} items={CONTEXT_MENU_ITEMS} />
       <CustomMenu
         ellipsis
