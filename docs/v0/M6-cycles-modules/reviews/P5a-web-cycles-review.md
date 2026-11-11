@@ -1,6 +1,6 @@
 # M6/P5a 阶段评审记录
 
-> 整分支审查修复后 Ready to merge（[re-65](../../../reviews/re-65-M6P5a整体审核.md)），待合入；分支 CI、合入、main CI 与归档清理见 §7（由 P5b 的 T1 回填）。基线 main `a2b50624fd872c183628a55d04b7961f9a1dbc60`（P4 的 noff `c3ba5a40` 与其 main CI 失败的根因修复 noff）。
+> 已完成（2026-11-11，noff `0b8efcd7`，main CI 42995581409 首次通过），整分支审查修复后 Ready to merge（[re-65](../../../reviews/re-65-M6P5a整体审核.md)）；分支 CI、合入、main CI 与归档清理见 §7（由 P5b 的 T1 回填）。基线 main `a2b50624fd872c183628a55d04b7961f9a1dbc60`（P4 的 noff `c3ba5a40` 与其 main CI 失败的根因修复 noff）。
 
 ## 1. 评审方式与范围
 
@@ -104,4 +104,13 @@ fresh 只读审查（[re-65](../../../reviews/re-65-M6P5a整体审核.md)）逐�
 
 ## 7. 集成、归档与接续
 
-由 P5b 的 T1 按归档里的台账与 CI 收据回填。
+由 P5b 的 T1 按归档里的台账、CI 收据与 `cleanup.log` 回填。
+
+- **最终候选的分支 CI**：
+  - 第一次，`cbfb0d50322f80aab3f6a262376fb2ac000cf918` 的 42984392888 attempt 1：server (1) 130402002284、server (0) 130402002429、web 130402002583 成功（本段的服务端测试以此为准，§5）；e2e 130408585582 失败 445/1（G18，根因与修正见 §5）。
+  - 修正后，`8175e76e258d50f3235a7e77b7c260eb5f9ec8fa` 的 42990196723 attempt 1 成功（web 130420905071、server (1) 130420905427、server (0) 130420905573、e2e 130427802649，约 21 分钟）。
+- **合入与 main CI**：noff `0b8efcd701edf7e73a37d5bb82ad176a7795b910`，双父 `a2b50624`、`8175e76e`，树与候选相同（`59fdf4e3`）。第一次推送 SSH 报 “Could not read from remote repository”（网络），再推一次成功。main CI 42995581409 attempt 1 成功（server (1) 130438746995、web 130438746998、server (0) 130438747043、e2e 130445895361）。
+- **归档**（主目录，P5b 开工时以 `archive.py verify` 复核，收据 `t1-p5a-archive-verify`）：`.superpowers/sdd/M6-P5a-integration-20261111`：1836 个文件、609,100,902 字节、未知 0、清单 sha256 `b9704d297a1c36b80137885bceb6bc40c2416d66501fcf707b82fc740fc5d9ea`（台账、调研笔记、收据、变异、CI 原件、scratchpad 的脚本与草稿）。
+- **清理**：`cleanup.log` 记录分支已含于 origin/main，worktree `m6-p5a`、本地与远端分支 `codex/m6-p5a` 已删除，主目录停在 `0b8efcd7`。
+
+**接续**：P5b（迭代页的工作项列表，[P5b spec](../specs/P5b-cycle-list.md)）。

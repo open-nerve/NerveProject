@@ -62,6 +62,8 @@ M6/P5a 的最终候选 `5b5da6ea` 上，本机 `make test` 连续两次失败，
 
 根因：Docker Desktop 的 VM 从自己的 `ip_local_port_range`（55000–65535）给容器分配随机主机端口，再在 macOS 上监听同一个端口；macOS 自己的临时端口（`net.inet.ip.portrange.first`/`last`）是 49152–65535，两者重叠，分到的端口可能已被本机的出站连接或监听占用。`make test` 并行启动大量容器、开大量连接，撞上的机会随之增加。同一警告此前只在 2026-11-10 的两个时刻出现；M6/P2（`254d3255`）与 M6/P3b（t14-gate1）的“Docker API 超时、容器拿不到映射端口”是同一签名。Linux 的 CI 没有这一层端口转发，不受影响。
 
-负责人 2026-11-11 决定：P5a（没有 Go 改动）的服务端测试以分支 CI 为准，不改本机设置，不改测试代码，交 M8。
+负责人 2026-11-11 决定：P5a（没有 Go 改动）的服务端测试以分支 CI 为准，不改本机设置，不改测试代码，交 M8；同日延续到 P5b–P7 中不改 `server/`、`api/` 的阶段（本机 `make test` 因这一签名失败时记录，以分支 CI 的服务端两路为准）。
+
+M6/P2 的根因修复（`server/internal/platform/postgres/pgtest/hostport.go`、`server/internal/platform/s3test/hostport.go` 的 `startPublished`/`hostPortTaken`）只认 Docker 拒绝启动容器的那一种（“programming external connectivity … address already in use”，Linux 的 Docker 与 Docker Desktop 的 VM 内分配冲突时）；Docker Desktop 在 macOS 一侧转发失败时容器照常启动，错误只表现为等映射端口超时，这层重试认不出。
 
 **何时验收：** M8 在本机门禁的说明里给出不重叠的做法并验证（例如测试容器助手自己在本机选空闲端口并显式绑定、在端口转发失败时换端口重启容器，或在 README 写明把 macOS 的临时端口范围收到 55000 以下），使本机 `make test` 不再因此失败；或负责人决定维持现状，并在此写明理由。

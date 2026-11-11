@@ -1,7 +1,7 @@
 # M6 / P5a 网页的迭代实施计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-> 状态：T1–T16 已实施，整分支审查修复后可合入（[re-65](../../../reviews/re-65-M6P5a整体审核.md)，[阶段记录](../reviews/P5a-web-cycles-review.md)），合入与 main CI 由 P5b 的 T1 回填。预检通过（修正后，[re-64](../../../reviews/re-64-M6P5a预检.md)）：H1 告警上限随清掉告警的提交下调、H2 新工具函数另起模块与名字、H3 优先级页签移到 P5b、M1 旧地址规则以接口前缀锚定、M2 hook 随第一个读者建立、M3 三种引擎的页面配置、M4–M7 与 L1–L7 已改入。
+> 状态：已完成（2026-11-11，noff `0b8efcd7`，main CI 42995581409 首次通过），T1–T16 已实施，整分支审查 [re-65](../../../reviews/re-65-M6P5a整体审核.md)，阶段记录 [P5a 阶段记录](../reviews/P5a-web-cycles-review.md)。预检通过（修正后，[re-64](../../../reviews/re-64-M6P5a预检.md)）：H1 告警上限随清掉告警的提交下调、H2 新工具函数另起模块与名字、H3 优先级页签移到 P5b、M1 旧地址规则以接口前缀锚定、M2 hook 随第一个读者建立、M3 三种引擎的页面配置、M4–M7 与 L1–L7 已改入。
 
 **Goal：**
 - 迭代的 service 与 store 按会话分代、只调 `/api/v0`、类型来自 OpenAPI；包装层按权限取迭代；

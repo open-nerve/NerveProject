@@ -1,6 +1,6 @@
 # M6 / P5a：网页的迭代（数据层与页面）
 
-> 状态：已实施（T1–T16），整分支审查修复后可合入（[re-65](../../../reviews/re-65-M6P5a整体审核.md)，[阶段记录](../reviews/P5a-web-cycles-review.md)），合入与 main CI 由 P5b 的 T1 回填；预检通过（修正后，[re-64](../../../reviews/re-64-M6P5a预检.md)）。基线 main `a2b50624fd872c183628a55d04b7961f9a1dbc60`（P4 的 noff `c3ba5a40` 与其 main CI 失败的根因修复 noff `a2b50624`，main CI 42824266166 首次通过）。设计见 [M6 设计](../M6-design.md) §2 的 G1–G3、G5–G8、G19，§3.1–§3.8、§5、§8；负责人 2026-11-07 的决定 A/B/C 见设计 §15（第 2、3、4、5、6、11、13、14 条与本段直接相关）。网页的长期规则见[总体设计 §7.2、§7.7](../../v0-design.md#77-stores-按会话分代长期有效m2-起)。接口合同见 [P1 spec](P1-cycles-backend.md)、[P3b spec](P3b-list-engine.md) R8/R9、[P4 spec](P4-progress-transfer.md) §2.3、R3、R9。现状调研见本阶段台账 `research/web.md`（网页现状与约定）、`research/plane-contract.md`（Plane 的页面行为、接口契约与交接）（ignored，随阶段归档）。负责人 2026-11-11 授权连续推进至 M6 收官，重要高风险决策仍停下确认。
+> 状态：已完成（2026-11-11，noff `0b8efcd7`，main CI 42995581409 首次通过），T1–T16 已实施，整分支审查 [re-65](../../../reviews/re-65-M6P5a整体审核.md)，[阶段记录](../reviews/P5a-web-cycles-review.md)；预检通过（修正后，[re-64](../../../reviews/re-64-M6P5a预检.md)）。基线 main `a2b50624fd872c183628a55d04b7961f9a1dbc60`（P4 的 noff `c3ba5a40` 与其 main CI 失败的根因修复 noff `a2b50624`，main CI 42824266166 首次通过）。设计见 [M6 设计](../M6-design.md) §2 的 G1–G3、G5–G8、G19，§3.1–§3.8、§5、§8；负责人 2026-11-07 的决定 A/B/C 见设计 §15（第 2、3、4、5、6、11、13、14 条与本段直接相关）。网页的长期规则见[总体设计 §7.2、§7.7](../../v0-design.md#77-stores-按会话分代长期有效m2-起)。接口合同见 [P1 spec](P1-cycles-backend.md)、[P3b spec](P3b-list-engine.md) R8/R9、[P4 spec](P4-progress-transfer.md) §2.3、R3、R9。现状调研见本阶段台账 `research/web.md`（网页现状与约定）、`research/plane-contract.md`（Plane 的页面行为、接口契约与交接）（ignored，随阶段归档）。负责人 2026-11-11 授权连续推进至 M6 收官，重要高风险决策仍停下确认。
 
 ## 1. 目标与边界
 
@@ -196,7 +196,7 @@ M4 交接 M6-04(a) 要求真实的迭代表单在三种引擎上核对，所以�
 - [x] A5 G19（迭代页面）：换账号、换工作区/项目/迭代、后退前进时迟到的回答不写进新页面；详情子树以 `cycleId` 为 key；项目级宿主以 `projectId` 为 key 并在卸载时关上开关；弹窗、菜单、下拉框的键盘、名字与焦点逐项（M3 交接 §3 的迭代各项）；复制链接失败有提示。
 - [x] A6 删除与守卫：§2.7 的旧代码全部删除；`old-cycle-urls` 规则；`project-address-route` 收入改写的文件；`copy-hook` 迭代的例外删除；改到的文件 oxlint 告警为零、上限下调；迭代的死成员与 progress-stats 8 行有结论。
 - [x] A7 文档：差异清单、前端改动清单、输入交接的“处理结果（M6/P5a）”（M1-P2、M1-P3 在网页改用新接口后关闭）、设计 §8/§12/§14；P4 的阶段记录 §7、spec A8 与设计 §14 已回填。（M1-P2、M1-P3 照设计 §11 保持 open、收尾关闭：M1-P2 还有模块的进度，M1-P3 的关闭条件已满足，回执已写明；re-65 M2）
-- [ ] A8 七项本地门禁、deep-review 修复闭环、准确的分支 CI 与 noff 后的 main CI 全绿、归档清理。（合入后由 P5b 的 T1 勾选）（本段的 `make test` 经负责人 2026-11-11 决定以分支 CI 为准：本机两次因 Docker Desktop 与 macOS 的端口范围重叠而失败，见[阶段记录](../reviews/P5a-web-cycles-review.md) §5）
+- [x] A8 七项本地门禁、deep-review 修复闭环、准确的分支 CI 与 noff 后的 main CI 全绿、归档清理。（合入后由 P5b 的 T1 勾选：分支 CI 42990196723、noff `0b8efcd7`、main CI 42995581409 首次通过、归档 `M6-P5a-integration-20261111`，阶段记录 §7）（本段的 `make test` 经负责人 2026-11-11 决定以分支 CI 为准：本机两次因 Docker Desktop 与 macOS 的端口范围重叠而失败，见[阶段记录](../reviews/P5a-web-cycles-review.md) §5）
 
 ## 5. 后续责任
 
