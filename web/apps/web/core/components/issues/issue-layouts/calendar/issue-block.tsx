@@ -17,7 +17,7 @@ import { ControlLink } from "@nerve/ui";
 import { cn, generateWorkItemLink } from "@nerve/utils";
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
-import { useIssues } from "@/hooks/store/use-issues";
+import { usePageIssueFilters } from "@/hooks/store/use-page-issue-filters";
 import { useProject } from "@/hooks/store/use-project";
 import { useProjectState } from "@/hooks/store/use-project-state";
 import { useIssueStoreType } from "@/hooks/use-issue-layout-store";
@@ -53,7 +53,7 @@ export const CalendarIssueBlock = observer(
     const { handleRedirection } = useIssuePeekOverviewRedirection();
     const { isMobile } = usePlatformOS();
     const storeType = useIssueStoreType() as CalendarStoreType;
-    const { issuesFilter } = useIssues(storeType);
+    const filters = usePageIssueFilters(storeType);
     const { getProjectIdentifierById } = useProject();
 
     const stateColor = getProjectStates(issue?.project_id)?.find((state) => state?.id == issue?.state_id)?.color || "";
@@ -129,7 +129,7 @@ export const CalendarIssueBlock = observer(
                         projectId={issue.project_id}
                         size="xs"
                         variant="tertiary"
-                        displayProperties={issuesFilter?.issueFilters?.displayProperties}
+                        displayProperties={filters?.displayProperties}
                       />
                     )}
                     <div className="truncate text-13 font-medium md:text-11 md:font-regular">{issue.name}</div>

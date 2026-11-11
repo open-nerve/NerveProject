@@ -20,12 +20,12 @@ import { cn, renderFormattedPayloadDate } from "@nerve/utils";
 // helpers
 import { MONTHS_LIST } from "@nerve/constants";
 // types
-import type { IProjectIssuesFilter } from "@/store/issue/project";
+import type { TCalendarLayouts } from "@nerve/types";
 import type { TRenderQuickActions } from "../list/list-view-types";
 import { CalendarIssueBlocks } from "./issue-blocks";
 
 type Props = {
-  issuesFilterStore: IProjectIssuesFilter;
+  calendarLayout: TCalendarLayouts;
   date: ICalendarDate;
   issues: Record<string, Issue | IssueDetail> | undefined;
   groups: Map<string, Group>;
@@ -50,7 +50,7 @@ type Props = {
 
 export const CalendarDayTile = observer(function CalendarDayTile(props: Props) {
   const {
-    issuesFilterStore,
+    calendarLayout,
     date,
     issues,
     groups,
@@ -69,8 +69,6 @@ export const CalendarDayTile = observer(function CalendarDayTile(props: Props) {
   } = props;
 
   const [isDraggingOver, setIsDraggingOver] = useState(false);
-
-  const calendarLayout = issuesFilterStore?.issueFilters?.displayFilters?.calendar?.layout ?? "month";
 
   const formattedDatePayload = renderFormattedPayloadDate(date.date);
 

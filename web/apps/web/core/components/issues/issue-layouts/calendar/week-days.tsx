@@ -10,17 +10,17 @@ import type { Issue, IssueDetail } from "@nerve/api-client";
 
 import { observer } from "mobx-react";
 // nerve imports
-import type { ICalendarDate, ICalendarWeek } from "@nerve/types";
+import type { ICalendarDate, ICalendarWeek, TCalendarLayouts } from "@nerve/types";
 import { cn, getOrderedDays, renderFormattedPayloadDate } from "@nerve/utils";
 // hooks
 import { useUserProfile } from "@/hooks/store/user";
 // types
-import type { IProjectIssuesFilter } from "@/store/issue/project";
 import type { TRenderQuickActions } from "../list/list-view-types";
 import { CalendarDayTile } from "./day-tile";
 
 type Props = {
-  issuesFilterStore: IProjectIssuesFilter;
+  calendarLayout: TCalendarLayouts;
+  showWeekends: boolean;
   issues: Record<string, Issue | IssueDetail> | undefined;
   groups: Map<string, Group>;
   week: ICalendarWeek | undefined;
@@ -45,7 +45,8 @@ type Props = {
 
 export const CalendarWeekDays = observer(function CalendarWeekDays(props: Props) {
   const {
-    issuesFilterStore,
+    calendarLayout,
+    showWeekends,
     issues,
     groups,
     handleDragAndDrop,
@@ -65,9 +66,6 @@ export const CalendarWeekDays = observer(function CalendarWeekDays(props: Props)
   // hooks
   const { data } = useUserProfile();
   const startOfWeek = data?.start_of_the_week;
-
-  const calendarLayout = issuesFilterStore?.issueFilters?.displayFilters?.calendar?.layout ?? "month";
-  const showWeekends = issuesFilterStore?.issueFilters?.displayFilters?.calendar?.show_weekends ?? false;
 
   if (!week) return null;
 
@@ -94,7 +92,7 @@ export const CalendarWeekDays = observer(function CalendarWeekDays(props: Props)
           <CalendarDayTile
             selectedDate={selectedDate}
             setSelectedDate={setSelectedDate}
-            issuesFilterStore={issuesFilterStore}
+            calendarLayout={calendarLayout}
             key={renderFormattedPayloadDate(date.date)}
             date={date}
             issues={issues}

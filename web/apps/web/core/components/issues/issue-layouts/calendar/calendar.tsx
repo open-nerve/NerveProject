@@ -12,11 +12,9 @@ import { useEffect, useState } from "react";
 import { combine } from "@atlaskit/pragmatic-drag-and-drop/combine";
 import { autoScrollForElements } from "@atlaskit/pragmatic-drag-and-drop-auto-scroll/element";
 import { observer } from "mobx-react";
-// nerve constants
-import type { TSupportedFilterTypeForUpdate } from "@nerve/constants";
 // types
-import type { ICalendarWeek, TSupportedFilterForUpdate } from "@nerve/types";
-import { EIssuesStoreType, EIssueLayoutTypes } from "@nerve/types";
+import type { ICalendarWeek, TCalendarLayouts } from "@nerve/types";
+import { EIssueLayoutTypes } from "@nerve/types";
 // ui
 import { Spinner } from "@nerve/ui";
 import { renderFormattedPayloadDate, cn } from "@nerve/utils";
@@ -24,24 +22,27 @@ import { renderFormattedPayloadDate, cn } from "@nerve/utils";
 import { MONTHS_LIST } from "@nerve/constants";
 // hooks
 import { useIssues } from "@/hooks/store/use-issues";
+import { useIssueStoreType } from "@/hooks/use-issue-layout-store";
 import useSize from "@/hooks/use-window-size";
 // store
 import type { ICalendarStore } from "@/store/issue/issue_calendar_view.store";
-import type { IProjectIssuesFilter } from "@/store/issue/project";
 // local imports
 import { IssueLayoutHOC } from "../issue-layout-HOC";
 import type { TRenderQuickActions } from "../list/list-view-types";
+import type { CalendarStoreType } from "./base-calendar-root";
+import type { TUpdateCalendarDisplay } from "./dropdowns";
 import { CalendarHeader } from "./header";
 import { CalendarIssueBlocks } from "./issue-blocks";
 import { CalendarWeekDays } from "./week-days";
 import { CalendarWeekHeader } from "./week-header";
 
 type Props = {
-  issuesFilterStore: IProjectIssuesFilter;
   issues: Record<string, Issue | IssueDetail> | undefined;
   groups: Map<string, Group>;
-  layout: "month" | "week" | undefined;
+  /** The page's calendar display, resolved from its display filters, and how to change it (P5b spec 2.5). */
+  layout: TCalendarLayouts;
   showWeekends: boolean;
+  updateCalendar?: TUpdateCalendarDisplay;
   issueCalendarView: ICalendarStore;
   loadMoreIssues: (dateString: string) => void;
   getPaginationData: (groupId: string | undefined) => Group | undefined;
@@ -55,21 +56,16 @@ type Props = {
     destinationDate: string | undefined
   ) => Promise<void>;
   readOnly?: boolean;
-  updateFilters?: (
-    projectId: string,
-    filterType: TSupportedFilterTypeForUpdate,
-    filters: TSupportedFilterForUpdate
-  ) => Promise<void>;
   canEditProperties: (projectId: string | undefined) => boolean;
 };
 
 export const CalendarChart = observer(function CalendarChart(props: Props) {
   const {
-    issuesFilterStore,
     issues,
     groups,
     layout,
     showWeekends,
+    updateCalendar,
     issueCalendarView,
     loadMoreIssues,
     handleDragAndDrop,
@@ -77,7 +73,6 @@ export const CalendarChart = observer(function CalendarChart(props: Props) {
     quickAddCallback,
     getPaginationData,
     getGroupIssueCount,
-    updateFilters,
     canEditProperties,
     readOnly = false,
   } = props;
@@ -85,10 +80,11 @@ export const CalendarChart = observer(function CalendarChart(props: Props) {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   //refs
   const [scrollableContainer, setScrollableContainer] = useState<HTMLDivElement | null>(null);
-  // store hooks
+  // store hooks: the quick add of the page's own list
+  const storeType = useIssueStoreType() as CalendarStoreType;
   const {
     issues: { viewFlags },
-  } = useIssues(EIssuesStoreType.PROJECT);
+  } = useIssues(storeType);
 
   const [windowWidth] = useSize();
 
@@ -127,8 +123,9 @@ export const CalendarChart = observer(function CalendarChart(props: Props) {
       <div className="flex h-full w-full flex-col overflow-hidden">
         <CalendarHeader
           setSelectedDate={setSelectedDate}
-          issuesFilterStore={issuesFilterStore}
-          updateFilters={updateFilters}
+          calendarLayout={layout}
+          showWeekends={showWeekends}
+          updateCalendar={updateCalendar}
         />
 
         <IssueLayoutHOC layout={EIssueLayoutTypes.CALENDAR}>
@@ -148,7 +145,8 @@ export const CalendarChart = observer(function CalendarChart(props: Props) {
                         selectedDate={selectedDate}
                         setSelectedDate={setSelectedDate}
                         handleDragAndDrop={handleDragAndDrop}
-                        issuesFilterStore={issuesFilterStore}
+                        calendarLayout={layout}
+                        showWeekends={showWeekends}
                         key={weekKey}
                         week={week}
                         issues={issues}
@@ -171,7 +169,8 @@ export const CalendarChart = observer(function CalendarChart(props: Props) {
                   selectedDate={selectedDate}
                   setSelectedDate={setSelectedDate}
                   handleDragAndDrop={handleDragAndDrop}
-                  issuesFilterStore={issuesFilterStore}
+                  calendarLayout={layout}
+                  showWeekends={showWeekends}
                   week={issueCalendarView.allDaysOfActiveWeek}
                   issues={issues}
                   groups={groups}

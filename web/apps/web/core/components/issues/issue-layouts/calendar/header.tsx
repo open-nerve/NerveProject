@@ -7,34 +7,28 @@
 import { observer } from "mobx-react";
 
 // components
-import type { TSupportedFilterTypeForUpdate } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { ChevronLeftOutline, ChevronRightOutline } from "@makeplane/propel/icons";
-import type { TSupportedFilterForUpdate } from "@nerve/types";
+import type { TCalendarLayouts } from "@nerve/types";
 import { Row } from "@nerve/ui";
 // icons
 import { useCalendarView } from "@/hooks/store/use-calendar-view";
-import type { IProjectIssuesFilter } from "@/store/issue/project";
+import type { TUpdateCalendarDisplay } from "./dropdowns";
 import { CalendarMonthsDropdown, CalendarOptionsDropdown } from "./dropdowns";
 
 interface ICalendarHeader {
-  issuesFilterStore: IProjectIssuesFilter;
-  updateFilters?: (
-    projectId: string,
-    filterType: TSupportedFilterTypeForUpdate,
-    filters: TSupportedFilterForUpdate
-  ) => Promise<void>;
+  calendarLayout: TCalendarLayouts;
+  showWeekends: boolean;
+  updateCalendar?: TUpdateCalendarDisplay;
   setSelectedDate: (date: Date) => void;
 }
 
 export const CalendarHeader = observer(function CalendarHeader(props: ICalendarHeader) {
-  const { issuesFilterStore, updateFilters, setSelectedDate } = props;
+  const { calendarLayout, showWeekends, updateCalendar, setSelectedDate } = props;
 
   const { t } = useTranslation();
 
   const issueCalendarView = useCalendarView();
-
-  const calendarLayout = issuesFilterStore.issueFilters?.displayFilters?.calendar?.layout ?? "month";
 
   const { activeMonthDate, activeWeekDate } = issueCalendarView.calendarFilters;
 
@@ -116,7 +110,7 @@ export const CalendarHeader = observer(function CalendarHeader(props: ICalendarH
         >
           <ChevronRightOutline height={16} width={16} />
         </button>
-        <CalendarMonthsDropdown issuesFilterStore={issuesFilterStore} />
+        <CalendarMonthsDropdown calendarLayout={calendarLayout} />
       </div>
       <div className="flex items-center gap-1.5">
         <button
@@ -126,7 +120,11 @@ export const CalendarHeader = observer(function CalendarHeader(props: ICalendarH
         >
           {t("common.today")}
         </button>
-        <CalendarOptionsDropdown issuesFilterStore={issuesFilterStore} updateFilters={updateFilters} />
+        <CalendarOptionsDropdown
+          calendarLayout={calendarLayout}
+          showWeekends={showWeekends}
+          updateCalendar={updateCalendar}
+        />
       </div>
     </Row>
   );

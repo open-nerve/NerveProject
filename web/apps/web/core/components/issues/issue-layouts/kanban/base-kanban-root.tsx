@@ -12,10 +12,12 @@ import { autoScrollForElements } from "@atlaskit/pragmatic-drag-and-drop-auto-sc
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
 import { EIssueFilterType, EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
-import { EIssueLayoutTypes, EIssuesStoreType } from "@nerve/types";
+import type { EIssuesStoreType } from "@nerve/types";
+import { EIssueLayoutTypes } from "@nerve/types";
 //hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { useIssues } from "@/hooks/store/use-issues";
+import { usePageIssueFilters } from "@/hooks/store/use-page-issue-filters";
 import { useUserPermissions } from "@/hooks/store/user";
 import { useGroupIssuesDragNDrop } from "@/hooks/use-group-dragndrop";
 import { useIssueStoreType } from "@/hooks/use-issue-layout-store";
@@ -32,7 +34,7 @@ import { KanBan } from "./default";
 import { KanbanDeleteDropZone } from "./kanban-delete-drop-zone";
 import { KanBanSwimLanes } from "./swimlanes";
 
-type KanbanStoreType = EIssuesStoreType.PROJECT | EIssuesStoreType.PROFILE;
+type KanbanStoreType = EIssuesStoreType.PROJECT | EIssuesStoreType.PROFILE | EIssuesStoreType.CYCLE;
 
 export interface IBaseKanBanLayout {
   QuickActions: FC<IQuickActionProps>;
@@ -46,11 +48,11 @@ const EMPTY_KANBAN_FILTERS = { group_by: [], sub_group_by: [] };
 export const BaseKanBanRoot = observer(function BaseKanBanRoot(props: IBaseKanBanLayout) {
   const { QuickActions, canEditPropertiesBasedOnProject, viewId } = props;
   // router
-  const { workspaceSlug, projectId, userId } = useParams();
+  const { workspaceSlug, projectId } = useParams();
   // store hooks
   const storeType = useIssueStoreType() as KanbanStoreType;
   const { allowPermissions } = useUserPermissions();
-  const { issueMap, issuesFilter, issues } = useIssues(storeType);
+  const { issueMap, issues } = useIssues(storeType);
   const {
     issue: { getIssueById },
   } = useIssueDetail();
@@ -65,10 +67,7 @@ export const BaseKanBanRoot = observer(function BaseKanBanRoot(props: IBaseKanBa
     updateFilters,
   } = useIssuesActions(storeType);
 
-  const localFilters =
-    storeType === EIssuesStoreType.PROFILE
-      ? issues.rootIssueStore.profileIssuesFilter.getIssueFilters(userId ?? "", workspaceSlug)
-      : issuesFilter.issueFilters;
+  const localFilters = usePageIssueFilters(storeType);
   const displayFilters = localFilters?.displayFilters;
   const displayProperties = localFilters?.displayProperties;
 
