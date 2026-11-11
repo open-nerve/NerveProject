@@ -10,11 +10,17 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { Cycle } from "@nerve/api-client";
 import { ISSUE_GROUP_BY_OPTIONS, ISSUE_STORE_TO_FILTERS_MAP } from "@nerve/constants";
 import { EIssuesStoreType } from "@nerve/types";
-import { answered, json } from "@/lib/auth/fake-nerve";
+import { answered, json, problem } from "@/lib/auth/fake-nerve";
 import { until } from "@/lib/auth/fake-time";
 import { cycleOf } from "@/store/project/fake-projects";
 import type { RootStore } from "@/store/root.store";
-import { C1, cyclePageTab, cyclePreferencesOf, layouts } from "@/components/issues/issue-layouts/roots/fake-cycle-page";
+import {
+  buttonOf,
+  C1,
+  cyclePageTab,
+  cyclePreferencesOf,
+  layouts,
+} from "@/components/issues/issue-layouts/roots/fake-cycle-page";
 import { CycleIssuesHeader } from "./header";
 
 const bound = vi.hoisted(() => ({ app: undefined as RootStore | undefined, params: {} as Record<string, string> }));
@@ -136,6 +142,40 @@ it("offers none of the list's controls to one who is not the project's member, w
   await act(async () => vi.advanceTimersByTimeAsync(1000));
   expect(offered()).toEqual({ count: undefined, layouts: [], filters: false, display: false, create: false });
   expect(page.nerve.calls).toEqual([]);
+});
+
+it("offers no layout, filter or display before nerve gives the page's preferences, and offers them once it has", async () => {
+  await opened({ role: 15 });
+  await page.mount(header());
+  await until(() => page.preferences().length === 1, "the page's preferences");
+  expect(offered()).toEqual({ count: undefined, layouts: [], filters: false, display: false, create: true });
+  await act(async () => inHeader("issue.layouts.title.kanban")?.click());
+  await act(async () => vi.advanceTimersByTimeAsync(1000));
+  expect(page.preferences().map(({ method }) => method)).toEqual(["GET"]);
+  await act(async () => page.preferences()[0]!.answer(json(200, cyclePreferencesOf(layouts.list.display))));
+  expect(offered()).toMatchObject({ layouts: all, filters: true, display: true, create: true });
+  await act(async () => inHeader("issue.layouts.title.kanban")?.click());
+  await until(() => page.preferences().length === 2, "the change of the page's layout");
+  expect(page.preferences()[1]).toMatchObject({ method: "PATCH", body: { display_filters: { layout: "kanban" } } });
+});
+
+it("offers no layout, filter or display while nerve could not give the page's preferences, and offers them once it has", async () => {
+  await opened({ role: 15 });
+  await page.mount(header());
+  await until(() => page.preferences().length === 1, "the page's preferences");
+  await act(async () => page.preferences()[0]!.answer(problem(503, "server_busy")));
+  expect(document.querySelector('[role="alert"]')?.textContent).toContain("errors.server_busy");
+  expect(offered()).toEqual({ count: undefined, layouts: [], filters: false, display: false, create: true });
+  await act(async () => inHeader("issue.layouts.title.kanban")?.click());
+  await act(async () => vi.advanceTimersByTimeAsync(1000));
+  expect(page.preferences().map(({ method }) => method)).toEqual(["GET"]);
+  await act(async () => buttonOf("common.retry")?.click());
+  await until(() => page.preferences().length === 2, "the preferences again");
+  await act(async () => page.preferences()[1]!.answer(json(200, cyclePreferencesOf(layouts.list.display))));
+  expect(offered()).toMatchObject({ layouts: all, filters: true, display: true, create: true });
+  await act(async () => inHeader("issue.layouts.title.kanban")?.click());
+  await until(() => page.preferences().length === 3, "the change of the page's layout");
+  expect(page.preferences()[2]).toMatchObject({ method: "PATCH", body: { display_filters: { layout: "kanban" } } });
 });
 
 it("hides the list's controls and its count once the project's cycles are turned off, its list still the store's", async () => {

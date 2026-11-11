@@ -47,8 +47,10 @@ type TProps = {
  * and the cycle, whose crumb switches to another of the project's cycles that are not archived, in nerve's order; an
  * archived cycle is not among them, its project's archive lists it), the toggle of the progress sidebar, and the
  * cycle's quick actions, under the host of its page (the layout's CycleActionsHost). For those who see the page's
- * work items while the project's cycles are on (P5b spec 2.6), their count as nerve gives it, the page's layouts,
- * filters and display, and, for those who may create a work item, a new one of the cycle while it takes them.
+ * work items while the project's cycles are on (P5b spec 2.6), their count as nerve gives it; the page's layouts,
+ * filters and display once nerve has given the page's preferences, which they change, as the page's work items show
+ * then (the layout root's condition; not while it has not answered or could not, re-67 M8); and, for those who may
+ * create a work item, a new one of the cycle while it takes them.
  */
 export const CycleIssuesHeader = observer(function CycleIssuesHeader(props: TProps) {
   const { workspaceSlug, projectId, cycleId } = props;
@@ -61,7 +63,7 @@ export const CycleIssuesHeader = observer(function CycleIssuesHeader(props: TPro
   // store hooks
   const { getCycleById, getProjectCycleIds } = useCycles();
   const { getProjectById, loader } = useProject();
-  const { issues } = useIssues(EIssuesStoreType.CYCLE);
+  const { issues, issuesFilter } = useIssues(EIssuesStoreType.CYCLE);
   const { allowPermissions, getProjectRoleByWorkspaceSlugAndProjectId } = useUserPermissions();
   const { toggleCreateIssueModal } = useCommandPalette();
   const { joinable } = useCycleListState();
@@ -81,6 +83,7 @@ export const CycleIssuesHeader = observer(function CycleIssuesHeader(props: TPro
     getProjectById(projectId)?.cycle_view === true &&
     getProjectRoleByWorkspaceSlugAndProjectId(workspaceSlug, projectId) !== undefined;
   const workItemsCount = listShown ? issues.pageTotal({ projectID: projectId, cycleID: cycleId }) : undefined;
+  const preferencesShown = listShown && issuesFilter.getIssueFilters(cycleId) !== undefined;
   const canCreateWorkItem =
     joinable &&
     allowPermissions(
@@ -150,7 +153,7 @@ export const CycleIssuesHeader = observer(function CycleIssuesHeader(props: TPro
       </Header.LeftItem>
       <Header.RightItem className="items-center">
         <div className="hidden items-center gap-2 md:flex">
-          {listShown && <HeaderFilters storeType={EIssuesStoreType.CYCLE} entityId={cycleId} />}
+          {preferencesShown && <HeaderFilters storeType={EIssuesStoreType.CYCLE} entityId={cycleId} />}
           {canCreateWorkItem && (
             <Button variant="primary" size="lg" onClick={() => toggleCreateIssueModal(true, EIssuesStoreType.CYCLE)}>
               {t("issue.add.label")}
