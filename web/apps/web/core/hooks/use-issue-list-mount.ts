@@ -9,7 +9,7 @@ import type { IssueActions } from "@/hooks/use-issues-actions";
 import { useUserPermissions } from "@/hooks/store/user";
 import { useSessionSWR } from "@/lib/use-session-swr";
 
-/** A mounted layout's first page belongs to its session, scope, view and query. */
+/** A mounted layout's first page belongs to its session, scope, page, view and query. */
 export function useIssueListMount(
   type: EIssuesStoreType,
   root: IssueRootStore,
@@ -18,10 +18,12 @@ export function useIssueListMount(
   viewId?: TProfileViews,
   variant = ""
 ) {
-  const { workspaceSlug, projectId, userId } = useParams();
+  const { workspaceSlug, projectId, userId, cycleId } = useParams();
   const permission = useUserPermissions();
   const profile = type === EIssuesStoreType.PROFILE;
   const target = profile ? userId : projectId;
+  // A cycle's page lists its project with the cycle (P5b spec 2.1): each cycle is its own list.
+  const page = type === EIssuesStoreType.CYCLE ? cycleId : "";
   const role = workspaceSlug
     ? profile
       ? permission.getWorkspaceRoleByWorkspaceSlug(workspaceSlug)
@@ -42,7 +44,17 @@ export function useIssueListMount(
   const identity = root.permissionReads.identity(workspaceID, projectIDs, profile);
   const key =
     options && allowed && (!profile || viewId)
-      ? (["ISSUE_LIST", type, workspaceSlug, target, viewId ?? "", variant, identity, JSON.stringify(options)] as const)
+      ? ([
+          "ISSUE_LIST",
+          type,
+          workspaceSlug,
+          target,
+          page,
+          viewId ?? "",
+          variant,
+          identity,
+          JSON.stringify(options),
+        ] as const)
       : null;
   return useSessionSWR(key, () => fetchIssues("init-loader", options!, viewId), { dedupingInterval: 0 });
 }

@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
+import { runInAction } from "mobx";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
@@ -7,10 +8,10 @@ import { EIssuesStoreType } from "@nerve/types";
 import { EIssueFilterType } from "@nerve/constants";
 import type { RootStore } from "@/store/root.store";
 import { StoreContext } from "@/lib/store-context";
-import { issueDetailOf, issuePageOf, issueStoreTab, requestedIssue } from "@/store/issue/fake-issues";
+import { issueDetailOf, issueOf, issuePageOf, issueStoreTab, requestedIssue } from "@/store/issue/fake-issues";
 import { loadProjects, projectOf } from "@/store/project/fake-projects";
 import { loadWorkspaces, workspaceOf } from "@/store/workspace/fake-workspaces";
-import { json, noContent } from "@/lib/auth/fake-nerve";
+import { answered, json, noContent } from "@/lib/auth/fake-nerve";
 import { IssuesStoreContext, useIssueStoreType } from "./use-issue-layout-store";
 import { useIssuesActions, type IssueActions } from "./use-issues-actions";
 
@@ -70,7 +71,7 @@ async function mount(
 }
 
 it.each(["globalViewId", "viewId", "cycleId", "moduleId"])(
-  "uses generic commands on %s routes and creates in the selected project without fetching a list",
+  "selects the %s route's commands and creates in the selected project without fetching a list",
   async (route) => {
     const selected = projectOf("SELECTED", tab.workspace.id, { id: "selected-project" });
     await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, [tab.project, selected]);
@@ -84,7 +85,7 @@ it.each(["globalViewId", "viewId", "cycleId", "moduleId"])(
     await mount(
       () => {
         const selectedType = useIssueStoreType();
-        expect(selectedType).toBe(EIssuesStoreType.DEFAULT);
+        expect(selectedType).toBe(route === "cycleId" ? EIssuesStoreType.CYCLE : EIssuesStoreType.DEFAULT);
         actions = useIssuesActions(selectedType);
       },
       undefined,
@@ -113,7 +114,7 @@ it("keeps project/profile route selection, explicit context and a generic route 
   fixture.params = { globalViewId: "view" };
   await mount(() => expect(useIssueStoreType()).toBe(EIssuesStoreType.ARCHIVED), EIssuesStoreType.ARCHIVED);
 });
-it.each(["GLOBAL", "CYCLE", "MODULE", "PROJECT_VIEW", "unknown"])(
+it.each(["GLOBAL", "MODULE", "PROJECT_VIEW", "unknown"])(
   "rejects %s actions instead of silently dispatching project commands",
   async (kind) => {
     // Deliberately invalid runtime input verifies the dispatch guard.
@@ -121,6 +122,83 @@ it.each(["GLOBAL", "CYCLE", "MODULE", "PROJECT_VIEW", "unknown"])(
     expect(tab.nerve.calls).toEqual([]);
   }
 );
+const C1 = "019a0000-0000-7000-8000-0000000000c1";
+const C2 = "019a0000-0000-7000-8000-0000000000c2";
+// P5b spec 2.5: the cycle page's commands act for the cycle in its route params; the router store is never read.
+it("cycle actions list, create and keep preferences for the route's cycle, never the router store's", async () => {
+  runInAction(() => tab.app.router.setQuery({ workspaceSlug: "ws", projectId: "A", cycleId: "router-cycle" }));
+  fixture.params = { workspaceSlug: "ws", projectId: "A", cycleId: C1 };
+  let actions!: IssueActions;
+  await mount(
+    () => {
+      actions = useIssuesActions(EIssuesStoreType.CYCLE);
+    },
+    EIssuesStoreType.CYCLE,
+    async (render) => {
+      const list = await requestedIssue(tab.nerve, () => actions.fetchIssues("init-loader", { limit: 1 }), [
+        "GET",
+        "/api/v0/projects/A/issues",
+      ]);
+      expect(list.call.query.cycle_id).toBe(C1);
+      list.call.answer(json(200, { ...issuePageOf([{ ...issueOf("a"), cycle_id: C1 }], "next"), total: 2 }));
+      await list.promise;
+      fixture.params = { workspaceSlug: "ws", projectId: "A", cycleId: C2 };
+      await render();
+      // The first cycle's list is still the store's current one; the next page belongs to the cycle left.
+      await expect(actions.fetchNextIssues()).resolves.toBeUndefined();
+      expect(tab.nerve.calls).toHaveLength(1);
+      const created = await requestedIssue(tab.nerve, () => actions.createIssue!("A", { name: "New" }), [
+        "POST",
+        "/api/v0/projects/A/issues",
+      ]);
+      expect(created.call.body).toEqual({ name: "New", cycle_id: C2 });
+      created.call.answer(json(201, { ...issueDetailOf("new"), cycle_id: C2 }));
+      await created.promise;
+      await actions.updateFilters("A", EIssueFilterType.KANBAN_FILTERS, { group_by: ["done"], sub_group_by: [] });
+      expect(tab.app.issue.cycleIssuesFilter.filters[C2]?.kanbanFilters?.group_by).toEqual(["done"]);
+      expect(tab.app.issue.cycleIssuesFilter.filters["router-cycle"]).toBeUndefined();
+      expect(tab.app.issue.projectIssuesFilter.filters.A).toBeUndefined();
+      await answered(
+        tab.nerve,
+        () => actions.fetchIssues("init-loader", { limit: 1 }),
+        ["GET", "/api/v0/projects/A/issues"],
+        issuePageOf([]),
+        "second cycle"
+      );
+      expect(tab.nerve.calls.at(-1)?.query.cycle_id).toBe(C2);
+    }
+  );
+});
+it("reads a cycle's list for any member of its project, guests included, and never for a nonmember", async () => {
+  fixture.params = { workspaceSlug: "ws", projectId: "A", cycleId: C1 };
+  await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, [{ ...tab.project, member_role: null }]);
+  tab.nerve.calls.length = 0;
+  await mount(() => {
+    void useIssuesActions(EIssuesStoreType.CYCLE).fetchIssues("init-loader", { limit: 20 });
+    void useIssuesActions(EIssuesStoreType.CYCLE).fetchNextIssues();
+  });
+  expect(tab.nerve.calls).toEqual([]);
+  // Nothing is even selected: the binding would refuse the read, but the page never asks it.
+  expect(tab.app.issue.cycleIssues.currentList).toBeUndefined();
+  await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, [{ ...tab.project, member_role: 5 }]);
+  tab.nerve.calls.length = 0;
+  let actions!: IssueActions;
+  await mount(
+    () => {
+      actions = useIssuesActions(EIssuesStoreType.CYCLE);
+    },
+    EIssuesStoreType.CYCLE,
+    () =>
+      answered(
+        tab.nerve,
+        () => actions.fetchIssues("init-loader", { limit: 20 }),
+        ["GET", "/api/v0/projects/A/issues"],
+        issuePageOf([]),
+        "guest's cycle list"
+      ).then(() => undefined)
+  );
+  expect(tab.nerve.calls.map(({ query }) => query.cycle_id)).toEqual([C1]);
+});
 it("does not fetch lists for unknown scopes or nonmembers", async () => {
   await loadWorkspaces(tab.nerve, tab.app.workspaceRoot, []);
   tab.nerve.calls.length = 0;
