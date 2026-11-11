@@ -90,7 +90,8 @@ M6/P5b 的 T13、T14（2026-11-12）在本机跑 e2e 的变异时，e2e 的全�
 
 M6/P5b 的 T16（2026-11-12）在 `8b11bc6381623717663ba986da74710668719494` 上串行跑本地门禁（`gates.sh t16-gate`）：build+e2e 一步 452 条通过、1 条失败——M5 的 F11 (page) [s3]（`e2e/stories/files/f11-editor-images-page.spec.ts`，失败于 `e2e/fixtures/content-files-page.ts:225` 的 finish）：页面的 `apiFailures` 多出一条 `net::ERR_ABORTED GET /api/v0/assets/{复制品}/content`。
 
-- 经过（本阶段台账记的 trace 分析，证据在台账的 `research/t16-f11-s3-failure/trace-summary.txt`，同目录有 `trace.zip`）：第一次“被拒的粘贴”之后的撤销、第二次“被拒的粘贴”（源不可读），各让编辑器把正文里已有的复制品图片重读一遍：先读资产的元数据、再读内容（trace 的单调时间约 137.295 s / 137.309 s，与 137.390 s / 137.409 s，元数据都 200）；第二遍的内容读取发出 9.8 ms 后未答即被 Chromium 中止——发起它的图片元素随即被替换或移除，trace 没有记下是哪一个事务。`e2e/fixtures/browser.ts` 的 watch 把未答而中止的 API 请求记为失败。
+- 经过（本阶段台账记的 trace 分析，证据在台账的 `research/t16-f11-s3-failure/trace-summary.txt`，同目录有 `trace.zip`）：两次“被拒的粘贴”（伪造的标识、源不可读）之后的撤销，各在撤销后 6–9 ms 让编辑器把正文里已有的复制品图片重读一遍：先读资产的元数据、再读内容（trace 的单调时间：撤销 137.287 s → 137.295 s / 137.309 s；撤销 137.385 s → 137.390 s / 137.409 s，元数据都 200）；第二遍的内容读取发出 9.8 ms 后未答即被 Chromium 中止——此时故事已开始下一步（普通文件的拖放与粘贴），发起它的图片元素随即被替换或移除，trace 没有记下是哪一个事务。
+- 再现：同一阶段最终候选 `ebeb2cab699e15fb7cae13b9a611189c0c0c2cc8` 的门禁（`t16-final-gate`）里 F11 (page) [local] 以同一签名失败一次，过程相同（第二次撤销 26.539 s → 元数据 26.544 s、内容 26.561 s，内容读取在故事粘贴普通文本 0.5 ms 后发出、11.3 ms 后中止；证据在台账的 `research/t16-final-f11-local-failure/`）；只重跑该文件一次即通过（`t16-final-gate-e2e-f11-rerun`）。T16 的两次完整门禁都出现、分支 CI 与单独重跑从未出现。把内容读取经路由延迟 150 ms 并不能复现（`t16-red-f11-undo-race` 通过），所以不能简单归为“图片未载入完、下一次粘贴把它中止”，故事未改。`e2e/fixtures/browser.ts` 的 watch 把未答而中止的 API 请求记为失败。
 - 范围：P5b 没有改编辑器、资产与详情页的代码，也没有改 F11 用到的夹具（`browser.ts` 只多导出 `consoleProbe`，watch 不变）；同一故事此前在本机与 CI 多次通过。只重跑该故事文件一次即通过（`t16-gate-e2e-f11-rerun`，exit 0：F11 的 [local] 与 [s3] 都过，连同 s3 夹具的自检共 7 例）。
 - 待查：
   - 为什么相邻的事务会让已有图片的节点重建、重读——用户看到的是图片重新载入；

@@ -48,9 +48,9 @@ type TProps = {
  * archived cycle is not among them, its project's archive lists it), the toggle of the progress sidebar, and the
  * cycle's quick actions, under the host of its page (the layout's CycleActionsHost). For those who see the page's
  * work items while the project's cycles are on (P5b spec 2.6), their count as nerve gives it; the page's layouts,
- * filters and display once nerve has given the page's preferences, which they change, as the page's work items show
- * then (the layout root's condition; not while it has not answered or could not, re-67 M8); and, for those who may
- * create a work item, a new one of the cycle while it takes them.
+ * filters and display once nerve has given the page's preferences, which they change: not before its first answer, nor
+ * when that first read failed (re-67 M8); a later read that fails leaves them, while the layout root says it failed;
+ * and, for those who may create a work item, a new one of the cycle while it takes them.
  */
 export const CycleIssuesHeader = observer(function CycleIssuesHeader(props: TProps) {
   const { workspaceSlug, projectId, cycleId } = props;
