@@ -202,7 +202,7 @@
 | 工作区、成员、邀请、项目、项目成员、项目归档、状态、标签、显示设置 | M3 | 已完成：数据层已对接（工作区一侧 M3/P8a，项目一侧 M3/P8b）；页面已对接（工作区的 M3/P9，项目的 M3/P10，状态和标签的设置页、访客看到的个人主页 M3/P11）；M3 的收尾重写了弹窗、加了离开工作区的入口、改了 M3 页面上英文和键盘的遗留（3.2 中"完成于 M3/收尾"的各行） |
 | 工作项、列表（分页和分组的新结构）、子任务、关联、链接、评论、表情回应、操作动态、搜索、历史版本、草稿、工作项归档 | M4 | 已完成（2026-11-02，[收官证据](M4-issue-core/reviews/closeout-integration.md)）：P10a–P16 已集成且 main CI 通过，证据见 3.4、3.5 |
 | 文件、附件、编辑器图片（上传改为 `{method, url, headers}` 形式的 PUT） | M5 | 已完成（M5/closeout，2026-11-06，[收尾记录](M5-files/reviews/closeout-integration.md)）：P1–P8 已集成（P8 noff main d8ec8457：粘贴三态、传输随节点、核验不重建编辑器、删除核验404与收据寿命、链接表单提示、死代码与两条告警规则清零、全链路清理演练、默认部署演示与 F1–F18 最终矩阵） |
-| 迭代、模块（归属改为工作项字段）、迭代和模块归档 | M6 | 计划中 |
+| 迭代、模块（归属改为工作项字段）、迭代和模块归档 | M6 | 进行中：P1–P4 的后端已合入；P5a 接上迭代的数据层与页面（列表、进行中卡片、预览、归档目录、详情页与进度侧栏、新建/修改、快捷操作、删除、归档与恢复、转移；不含迭代页的工作项列表，[P5a spec](M6-cycles-modules/specs/P5a-web-cycles.md)）；P5b（迭代页的工作项列表）、P6（模块）、P7（工作项一侧）计划中 |
 | 通知、收集箱、视图、收藏、最近访问 | M7 | 计划中 |
 | Webhook 设置、接口调用日志 | M8 | 计划中 |
 | 删除对 `@nerve/services` 的依赖 | M5 | 已完成（M5/P7b T12）：整包删除，地址规范化移入 web |
@@ -230,7 +230,13 @@ M4/P10a删除迭代、模块、项目视图与工作区视图的工作项列表�
 | 系统内接受邀请 | `/invitations` 页、它的入口和路由、新手引导的"加入工作区"一步、旧 `WorkspaceService` 按邮箱列出和批量接受邀请的两个方法删除；邀请只凭链接接受（`/workspace-invitations`） | [M3 设计](M3-workspace-project/M3-design.md) 决策点 2 | 已完成 | M3/P8a |
 | 创建工作区的 slug 检查 | `RESTRICTED_URLS` 删除，创建表单改问 nerve（`GET /api/v0/workspace-slugs/{slug}`）；保留名单"应用"一段由 vitest 核对与路由和 `public/` 的顶层目录一致 | M3 设计 3.10 | 已完成 | M3/P8a |
 | 用户设置和落点 | `settings.store.ts`、`IUserSettings`、`currentUserSettings` 删除；登录后的落点由 `useLanding`（`core/lib/use-landing.ts`）决定，落到哪个工作区由纯函数按工作区列表和资料的 `last_workspace_id` 算出（`core/lib/landing.ts`） | M3 设计 3.14 | 已完成 | M3/P8a |
-| 挂载时的取数 | 工作区包装层取收藏、顶部导航取未读通知数、首页的"最近"小部件、项目包装层取迭代、模块、视图、分诊状态，全部删除，各自的 M 随新接口加回 | M3 设计 3.1 | 已完成（M6、M7 加回） | M3/P8a |
+| 挂载时的取数 | 工作区包装层取收藏、顶部导航取未读通知数、首页的"最近"小部件、项目包装层取迭代、模块、视图、分诊状态，全部删除，各自的 M 随新接口加回 | M3 设计 3.1 | 已完成（M6、M7 加回；项目包装层的迭代由 M6/P5a 加回：调用者是有效成员、项目未归档且 `cycle_view` 打开时取） | M3/P8a |
+| 迭代的数据层（M6/P5a） | `core/services/planning/cycles.service.ts` 只调 `/api/v0`；`RootStore.planning` 的 `cycles`、`cycleFilters` 照总体设计 7.7（值在 `ReconciledByKey`、修改经 `oneAtATime`、取数经 `useSessionSWR`、写入的回答不把列表行的计数写坏）；旧的 `CycleService`、`CycleArchiveService`、`CycleStore`、`CycleFilterStore`、`@nerve/types` 的 `cycle/`、`@nerve/utils` 的 `cycle.ts` 删除；关键词规则 `old-cycle-urls` 拦住 Plane 的迭代接口地址 | M6 设计 §8 | 已完成 | M6/P5a |
+| 迭代的筛选 store（M6/P5a） | 按项目 id 存筛选与搜索词，不跟随 `router`，没有要随退役的一代释放的反应；搜索词按项目保留到会话结束（Plane 换项目时清空） | P5a spec R4 | 已完成 | M6/P5a |
+| 迭代页面的写入口（M6/P5a） | 新建、修改、归档、恢复、删除、侧栏改日期、转移只给能写迭代的人（项目管理员、成员；只看自己的访客，含工作区管理员兼访客，没有，`canWriteCycles`）；删除只给管理员或建立者（`canDeleteCycle`）；都只在 nerve 确认后关闭、提示、跳转，被拒时留着并说明；弹窗归页面级宿主 `CycleActionsHost`，行在确认后消失时跟进照常 | P5a spec R8、R12 | 已完成 | M6/P5a |
+| 迭代页面的界面细节（M6/P5a） | 列表行的日期用 `MergedDateDisplay`、快捷操作只渲染一次、筛选标题用词（“状态”“结束日期”）、归档页复用列表的搜索与筛选（搜索框不再常驻）、已选筛选条对看得到它的人都可改、筛选面板去掉 `autoFocus`；进度侧栏的状态页签为四个计数的组加“已取消不计入”的说明（同进行中卡片）；进度卡的点色取 `STATE_GROUPS`；转移横幅整体随入口条件显示、靠左；“按你的时区”提示与时区换算删除（日期是项目时区的日历日） | P5a 各 Task 的裁定 | 已完成 | M6/P5a |
+| 迭代的收藏（M6/P5a） | 列表行的星、快捷操作与命令面板的收藏命令、收藏 store 的迭代分支删除；M7 随收藏的接口加回 | M6 设计 §15 第 13 条 | 已完成（M7 加回） | M6/P5a |
+| 进行中卡片的优先级页签（M6/P5a） | 暂时删除（工作项只能存在工作项的根里，项目列表又会并入项目偏好），P5b 随迭代页的列表以显式的完整查询加回 | P5a spec R10 | P5b 加回 | M6/P5a |
 | 工作区图标的上传 | 工作区设置 general 页的图标上传弹窗删除：接口不能设置 `logo_url`，它恒为 `null`，显示图标的地方照旧显示首字母；M5 随文件的接口加回 | M3 设计 3.2 | 已完成（M5 加回） | M3/P8a |
 | 项目封面的上传 | 新建项目时的封面一步、默认的随机封面和项目设置的封面选择器删除，预设的 29 张封面图只留显示用的一张（`image_1`）：接口不能设置 `cover_image_url`，它恒为 `null`，显示封面的地方用这张默认图（`helpers/cover-image.helper.ts`）；M5 随文件的接口加回 | M3 设计 3.2 | 已完成（M5 加回） | M3/P8b |
 | 项目的收藏 | 项目卡片的收藏按钮、建项目之后加入收藏的一步、项目 store 的两个收藏方法和 `favoriteProjectIds`、收藏 store 移除收藏时改项目的一支删除；`Project` 没有 `is_favorite`；M7 随收藏的接口加回 | M3 设计 3.2 | 已完成（M7 加回） | M3/P8b |

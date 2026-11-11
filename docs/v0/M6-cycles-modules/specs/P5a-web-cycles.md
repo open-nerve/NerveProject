@@ -202,9 +202,13 @@ M4 交接 M6-04(a) 要求真实的迭代表单在三种引擎上核对，所以�
 
 **P5b**（迭代页的工作项列表）：§1 所列；进行中卡片的优先级页签（R10）；进行中卡片与侧栏的行点击（Plane 的 `handleFiltersUpdate`：设迭代页的筛选并进入迭代页）；G15、G19 的列表部分；M4 交接 M6-02 的迭代部分、M5-M6-02。
 
-**P6**（模块页面）：模块改用 `BurndownChart` 与 `progressPercent` 后删除 `ProgressChart`、`TModuleCompletionChartDistribution` 与 `progress-stats/*` 中只有模块用的部分；模块筛选 store 的 `reaction`（照 R4 去掉）。
+**P6**（模块页面）：模块改用 `BurndownChart` 与 `progressPercent` 后删除 `ProgressChart`、`TModuleCompletionChartDistribution` 与 `progress-stats/*`（P5a 之后只剩模块的读者；M3 交接 §2 的 8 行随之了结）；`@nerve/propel` 的 `AreaChart` 的 `comparisonLine` 单点除零（`BurndownChart` 不传它，P5a 未改）；`distribution-rows.ts`、`distribution-stats.tsx` 供模块复用时移到共用的位置；模块筛选 store 的 `reaction`（照 R4 去掉）；`canWriteCycles`/`canDeleteCycle` 的模块对应（同一条 OwnOnly 规则，F1）。
 
-**P7**：工作项一侧（属性与下拉框、新建弹窗的迭代、列表词表、添加已有、日历）用本段的 `useCycles()`；列表引擎的目录（P3b R9 的空 `Map`）改由本段的 store 提供；命令面板的本地过滤与切换。
+**P7**：工作项一侧（属性与下拉框、新建弹窗的迭代、列表词表、添加已有、日历）用本段的 `useCycles()`；列表引擎的目录（P3b R9 的空 `Map`）改由本段的 store 提供；命令面板的本地过滤与切换；已归档的项目里命令面板仍显示“打开迭代”且菜单一直加载（取数按项目未归档才发，T12 发现）；该菜单的 `emptyText` 仍是英文字面量。
+
+**P8**：迭代表单里项目选择（`dropdowns/project/base.tsx`）的浏览器核对（M2 交接 §5(d)，P5a 只有组件测试）；“按规则清一类”的 oxlint（M1 收尾交接）。
+
+**M8**（观察）：G2 页面故事按上海此刻的小时选浏览器时区，只在上海午夜前后几秒内会以明确的消息失败；根布局预载的字体在 firefox 里，新页面在上一页之后约半秒内加载时报“预载未用”的告警（P5a 的故事改为应用内跳转）。
 
 **M7**：迭代的收藏随收藏一起恢复（本段删除了入口）。
 

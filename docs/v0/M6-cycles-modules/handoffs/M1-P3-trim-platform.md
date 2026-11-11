@@ -21,3 +21,7 @@ M6 合并时：迭代进度改用新接口，`analytics` 的守卫例外已删�
 ## 处理结果（M6/P4）
 
 新的进度接口是 `GET /api/v0/cycles/{cycle_id}/progress`（生成的类型在 `api-client` 的 `schema.gen.ts`，`CycleProgress`），没有结尾斜杠的问题；模块另有 `GET /api/v0/modules/{module_id}/progress`。没有工作区级的进度，新接口没有 `TCycleProgress`、`IWorkspaceProgressResponse` 的对应结构（[P4 spec](../specs/P4-progress-transfer.md) §2.3）。网页改用新接口在 M6/P5，本交接保持 open。证据：提交 `a92a292387db1105e97a7a52b8e4b9ac6d7d70bb`。
+
+## 处理结果（M6/P5a）
+
+迭代的进度改用 `GET /api/v0/cycles/{cycle_id}/progress`（没有结尾斜杠的问题）；读 Plane 地址的旧 `core/services/cycle.service.ts` 与它的测试删除，新规则 `old-cycle-urls`（以 `/api/workspaces/` 前缀锚定，同 `old-issue-urls`）拦住旧的迭代接口地址；新接口没有 `TCycleProgress`、`IWorkspaceProgressResponse` 的对应结构，`@nerve/types` 的 `cycle/` 整目录删除。关闭条件的迭代部分已满足，与 M1/P2 的交接一起在收尾关闭。证据：提交 `b4911394dc2a92d4bd0224e572902e6d45275941`、`f497055055f00e0cdbfa74e08f5186d40a1297d3`；[P5a spec](../specs/P5a-web-cycles.md) §2.7、§2.8。
