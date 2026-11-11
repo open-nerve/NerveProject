@@ -34,6 +34,8 @@ import type { IProfileIssuesFilter, IProfileIssues } from "./profile";
 import { ProfileIssuesFilter, ProfileIssues } from "./profile";
 import type { IProjectIssuesFilter, IProjectIssues } from "./project";
 import { ProjectIssuesFilter, ProjectIssues } from "./project";
+import { CycleIssuesFilter } from "./cycle/filter.store";
+import type { IPagePreferencesFilter } from "./helpers/page-preferences-filter.store";
 import type { IWorkspaceDraftIssues } from "./workspace-draft";
 import { WorkspaceDraftIssues } from "./workspace-draft";
 
@@ -101,6 +103,9 @@ export class IssueRootStore {
 
   projectIssuesFilter: IProjectIssuesFilter;
   projectIssues: IProjectIssues;
+
+  /** The cycle page's preferences, by cycle id; it ends with this generation (assertActive) as the project's. */
+  cycleIssuesFilter: IPagePreferencesFilter;
 
   archivedIssuesFilter: IArchivedIssuesFilter;
   archivedIssues: IArchivedIssues;
@@ -180,6 +185,8 @@ export class IssueRootStore {
 
     this.projectIssuesFilter = new ProjectIssuesFilter(this, api);
     this.projectIssues = new ProjectIssues(this, this.projectIssuesFilter);
+
+    this.cycleIssuesFilter = new CycleIssuesFilter(this, api);
 
     this.archivedIssuesFilter = new ArchivedIssuesFilter(this);
     this.archivedIssues = new ArchivedIssues(this, this.archivedIssuesFilter);

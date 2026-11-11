@@ -36,6 +36,8 @@ export type TStoreIssues = {
     issues: IArchivedIssues;
     issuesFilter: IArchivedIssuesFilter;
   };
+  /** The cycle page has its preferences but no list store to select yet: asking for it throws (below). */
+  [EIssuesStoreType.CYCLE]: never;
   [EIssuesStoreType.DEFAULT]: defaultIssueStore & {
     issues: IProjectIssues;
     issuesFilter: IProjectIssuesFilter;
