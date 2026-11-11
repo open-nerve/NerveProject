@@ -4,74 +4,69 @@
  * See the LICENSE file for details.
  */
 
-import React from "react";
 import { observer } from "mobx-react";
-import { useParams } from "react-router";
-import useSWR from "swr";
 // nerve imports
 import { useTranslation } from "@nerve/i18n";
 import { EmptyStateDetailed } from "@nerve/propel/empty-state";
-import type { TCycleFilters } from "@nerve/types";
 import { calculateTotalFilters } from "@nerve/utils";
 // components
 import { CycleModuleListLayoutLoader } from "@/components/ui/loader/cycle-module-list-loader";
 // hooks
-import { useCycle } from "@/hooks/store/use-cycle";
-import { useCycleFilter } from "@/hooks/store/use-cycle-filter";
+import { useCycleFilters } from "@/hooks/store/use-cycle-filters";
+import { useCycles } from "@/hooks/store/use-cycles";
+import { useProject } from "@/hooks/store/use-project";
+import { useUserPermissions } from "@/hooks/store/user";
+// lib
+import { useSessionSWR } from "@/lib/use-session-swr";
 // local imports
 import { CycleAppliedFiltersList } from "../applied-filters";
+import { CyclesReadFailure } from "../read-failure";
 import { ArchivedCyclesView } from "./view";
 
-export const ArchivedCycleLayoutRoot = observer(function ArchivedCycleLayoutRoot() {
-  // router
-  const { workspaceSlug, projectId } = useParams();
+type Props = {
+  workspaceSlug: string;
+  projectId: string;
+};
+
+/**
+ * A project's archive of cycles (P5a spec 2.2, 2.5, R11): it reads the project's archived cycles, a member's read of a
+ * project not archived alone (as the project's own, use-project-fetch.ts), and the read a cycle's page makes of an
+ * archived cycle's archive too, which the two share. It waits for nerve's first answer, says why nerve could not give
+ * it, with a retry, or that the project has none yet; else the filters applied and the cycles.
+ */
+export const ArchivedCycleLayoutRoot = observer(function ArchivedCycleLayoutRoot(props: Props) {
+  const { workspaceSlug, projectId } = props;
   // nerve hooks
   const { t } = useTranslation();
-  // hooks
-  const { fetchArchivedCycles, currentProjectArchivedCycleIds, loader } = useCycle();
-  // cycle filters hook
-  const { clearAllFilters, currentProjectArchivedFilters, updateFilters } = useCycleFilter();
-  // derived values
-  const totalArchivedCycles = currentProjectArchivedCycleIds?.length ?? 0;
-
-  useSWR(
-    workspaceSlug && projectId ? `ARCHIVED_CYCLES_${workspaceSlug}_${projectId}` : null,
-    async () => {
-      if (workspaceSlug && projectId) {
-        await fetchArchivedCycles(workspaceSlug, projectId);
-      }
-    },
-    { revalidateIfStale: false, revalidateOnFocus: false }
+  // store hooks
+  const { getArchivedCycleIds, fetchArchivedCycles } = useCycles();
+  const { getFilters } = useCycleFilters();
+  const { getProjectById } = useProject();
+  const { getProjectRoleByWorkspaceSlugAndProjectId } = useUserPermissions();
+  // a member's read, of a project not archived: nerve's read of the project decided both (ProjectAuthWrapper)
+  const readable =
+    getProjectRoleByWorkspaceSlugAndProjectId(workspaceSlug, projectId) !== undefined &&
+    getProjectById(projectId)?.archived_at === null;
+  const archive = useSessionSWR(readable ? ["PROJECT_ARCHIVED_CYCLES", projectId] : null, (id) =>
+    fetchArchivedCycles(id)
   );
+  const archivedCycleIds = getArchivedCycleIds(projectId);
 
-  const handleRemoveFilter = (key: keyof TCycleFilters, value: string | null) => {
-    if (!projectId) return;
-    let newValues = currentProjectArchivedFilters?.[key] ?? [];
+  if (!readable) return null;
 
-    if (!value) newValues = [];
-    else newValues = newValues.filter((val) => val !== value);
+  if (archive.error !== undefined)
+    return <CyclesReadFailure error={archive.error} onRetry={() => void archive.mutate()} />;
 
-    updateFilters(projectId, { [key]: newValues }, "archived");
-  };
-
-  if (!workspaceSlug || !projectId) return <></>;
-
-  if (loader || !currentProjectArchivedCycleIds) {
-    return <CycleModuleListLayoutLoader />;
-  }
+  if (archivedCycleIds === undefined) return <CycleModuleListLayoutLoader />;
 
   return (
     <>
-      {calculateTotalFilters(currentProjectArchivedFilters ?? {}) !== 0 && (
+      {calculateTotalFilters(getFilters(projectId, "archived")) !== 0 && (
         <div className="border-b border-subtle px-5 py-3">
-          <CycleAppliedFiltersList
-            appliedFilters={currentProjectArchivedFilters ?? {}}
-            handleClearAllFilters={() => clearAllFilters(projectId, "archived")}
-            handleRemoveFilter={handleRemoveFilter}
-          />
+          <CycleAppliedFiltersList projectId={projectId} list="archived" />
         </div>
       )}
-      {totalArchivedCycles === 0 ? (
+      {archivedCycleIds.length === 0 ? (
         <div className="h-full place-items-center">
           <EmptyStateDetailed
             assetKey="archived-cycle"

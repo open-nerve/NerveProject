@@ -19,20 +19,14 @@ const iconComponents = {
   draft: Circle,
 };
 
-export function CycleGroupIcon({
-  className = "",
-  color,
-  cycleGroup,
-  height = "12px",
-  width = "12px",
-}: ICycleGroupIcon) {
+export function CycleGroupIcon({ className = "", cycleGroup }: ICycleGroupIcon) {
   const CycleIconComponent = iconComponents[cycleGroup] || CycleIcon;
 
   return (
     <CycleIconComponent
-      height={height}
-      width={width}
-      color={color ?? CYCLE_GROUP_COLORS[cycleGroup]}
+      height="12px"
+      width="12px"
+      color={CYCLE_GROUP_COLORS[cycleGroup]}
       className={`flex-shrink-0 ${className}`}
     />
   );

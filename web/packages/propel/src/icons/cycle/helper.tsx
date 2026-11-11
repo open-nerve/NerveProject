@@ -6,10 +6,7 @@
 
 export interface ICycleGroupIcon {
   className?: string;
-  color?: string;
   cycleGroup: TCycleGroups;
-  height?: string;
-  width?: string;
 }
 
 type TCycleGroups = "current" | "upcoming" | "completed" | "draft";

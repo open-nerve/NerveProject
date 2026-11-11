@@ -11,14 +11,16 @@ import { answerTo, expectListBesideButton, sentTo } from "./settings-pages";
 
 /**
  * A page of a browser of its own, signed in with tokens at the nerve of baseURL: another person's, beside the test's
- * page. Its context closes when the test's function returned by it is called.
+ * page, on the clock of timezoneId when given (the machine's otherwise). Its context closes when the test's function
+ * returned by it is called.
  */
 export async function anotherBrowser(
   browser: Browser,
   baseURL: string,
-  tokens: AuthTokens
+  tokens: AuthTokens,
+  timezoneId?: string
 ): Promise<{ page: Page; close: () => Promise<void> }> {
-  const context = await browser.newContext({ baseURL });
+  const context = await browser.newContext({ baseURL, timezoneId });
   await signInContext(context, baseURL, tokens);
   return { page: await context.newPage(), close: () => context.close() };
 }

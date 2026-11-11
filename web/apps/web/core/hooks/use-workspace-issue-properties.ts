@@ -6,27 +6,17 @@
 
 import useSWR from "swr";
 // nerve imports
-import { WORKSPACE_CYCLES, WORKSPACE_MODULES } from "@nerve/constants";
+import { WORKSPACE_MODULES } from "@nerve/constants";
 // local imports
-import { useCycle } from "./store/use-cycle";
 import { useModule } from "./store/use-module";
 
 export const useWorkspaceIssueProperties = (workspaceSlug: string | undefined) => {
   const { fetchWorkspaceModules } = useModule();
 
-  const { fetchWorkspaceCycles } = useCycle();
-
   // fetch workspace Modules
   useSWR(
     workspaceSlug ? WORKSPACE_MODULES(workspaceSlug) : null,
     workspaceSlug ? () => fetchWorkspaceModules(workspaceSlug) : null,
-    { revalidateIfStale: false, revalidateOnFocus: false }
-  );
-
-  // fetch workspace Cycles
-  useSWR(
-    workspaceSlug ? WORKSPACE_CYCLES(workspaceSlug) : null,
-    workspaceSlug ? () => fetchWorkspaceCycles(workspaceSlug) : null,
     { revalidateIfStale: false, revalidateOnFocus: false }
   );
 };

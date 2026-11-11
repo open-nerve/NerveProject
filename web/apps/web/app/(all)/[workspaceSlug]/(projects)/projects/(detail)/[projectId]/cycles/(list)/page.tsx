@@ -4,16 +4,13 @@
  * See the LICENSE file for details.
  */
 
-import { useState } from "react";
 import { observer } from "mobx-react";
-// nerve imports
+import { useNavigate } from "react-router";
 import { useTheme } from "next-themes";
-import { EUserPermissionsLevel } from "@nerve/constants";
+// nerve imports
+import { EUserPermissions } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { EmptyStateDetailed } from "@nerve/propel/empty-state";
-import type { TCycleFilters } from "@nerve/types";
-import { EUserProjectRoles } from "@nerve/types";
-// components
 import { Header, EHeaderVariant } from "@nerve/ui";
 import { calculateTotalFilters } from "@nerve/utils";
 // assets
@@ -23,85 +20,81 @@ import lightEmptyState from "@/app/assets/empty-state/disabled-feature/cycles-li
 import { PageHead } from "@/components/core/page-title";
 import { CycleAppliedFiltersList } from "@/components/cycles/applied-filters";
 import { CyclesView } from "@/components/cycles/cycles-view";
-import { CycleCreateUpdateModal } from "@/components/cycles/modal";
+import { CyclesReadFailure } from "@/components/cycles/read-failure";
 import { DetailedEmptyState } from "@/components/empty-state/detailed-empty-state-root";
 import { CycleModuleListLayoutLoader } from "@/components/ui/loader/cycle-module-list-loader";
 // hooks
-import { useCycle } from "@/hooks/store/use-cycle";
-import { useCycleFilter } from "@/hooks/store/use-cycle-filter";
+import { useCommandPalette } from "@/hooks/store/use-command-palette";
+import { useCycleFilters } from "@/hooks/store/use-cycle-filters";
+import { useCycles } from "@/hooks/store/use-cycles";
 import { useProject } from "@/hooks/store/use-project";
 import { useUserPermissions } from "@/hooks/store/user";
-import { useNavigate } from "react-router";
+// lib
+import { useSessionSWR } from "@/lib/use-session-swr";
 import type { Route } from "./+types/page";
 
+/**
+ * A project's cycles list (P5a spec 2.5, R8), of the route's project. Its cycles turned off, it says so, and only its
+ * admins may go to its features to turn them on. Else it shows nerve's list of the project's cycles not archived (the
+ * read the project's wrapper makes, which the page shares, use-project-fetch.ts): it waits for nerve's first answer,
+ * says why nerve could not give it, with a retry, or how to set the project's first cycle (those who write its cycles
+ * may, canWriteCycles, by the project's dialogs' host); else the filters applied and the cycles (CyclesView).
+ */
 function ProjectCyclesPage({ params }: Route.ComponentProps) {
-  // states
-  const [createModal, setCreateModal] = useState(false);
-  // store hooks
-  const { currentProjectCycleIds, loader } = useCycle();
-  const { getProjectById, currentProjectDetails } = useProject();
+  const { workspaceSlug, projectId } = params;
   // router
   const navigate = useNavigate();
-  const { workspaceSlug, projectId } = params;
   // theme hook
   const { resolvedTheme } = useTheme();
   // nerve hooks
   const { t } = useTranslation();
-  // cycle filters hook
-  const { clearAllFilters, currentProjectFilters, updateFilters } = useCycleFilter();
-  const { allowPermissions } = useUserPermissions();
-  // derived values
-  const resolvedEmptyState = resolvedTheme === "light" ? lightEmptyState : darkEmptyState;
-  const totalCycles = currentProjectCycleIds?.length ?? 0;
+  // store hooks
+  const { getProjectCycleIds, fetchCycles } = useCycles();
+  const { getFilters } = useCycleFilters();
+  const { getProjectById } = useProject();
+  const { getProjectRoleByWorkspaceSlugAndProjectId, canWriteCycles } = useUserPermissions();
+  const { toggleCreateCycleModal } = useCommandPalette();
+  // a member's read, of a project not archived whose cycles are on: as the project's wrapper reads them
   const project = getProjectById(projectId);
-  const pageTitle = project?.name ? `${project?.name} - ${t("common.cycles", { count: 2 })}` : undefined;
-  const hasAdminLevelPermission = allowPermissions([EUserProjectRoles.ADMIN], EUserPermissionsLevel.PROJECT);
-  const hasMemberLevelPermission = allowPermissions(
-    [EUserProjectRoles.ADMIN, EUserProjectRoles.MEMBER],
-    EUserPermissionsLevel.PROJECT
-  );
+  const role = getProjectRoleByWorkspaceSlugAndProjectId(workspaceSlug, projectId);
+  const listed = role !== undefined && project?.archived_at === null && project.cycle_view;
+  const cycles = useSessionSWR(listed ? ["PROJECT_CYCLES", projectId] : null, (id) => fetchCycles(id));
+  const cycleIds = getProjectCycleIds(projectId);
 
-  const handleRemoveFilter = (key: keyof TCycleFilters, value: string | null) => {
-    let newValues = currentProjectFilters?.[key] ?? [];
+  if (!project) return null;
 
-    if (!value) newValues = [];
-    else newValues = newValues.filter((val) => val !== value);
+  const pageHead = <PageHead title={`${project.name} - ${t("common.cycles", { count: 2 })}`} />;
 
-    updateFilters(projectId, { [key]: newValues });
-  };
-
-  // No access to cycle
-  if (currentProjectDetails?.cycle_view === false)
+  if (!project.cycle_view)
     return (
       <div className="flex h-full w-full items-center justify-center">
+        {pageHead}
         <DetailedEmptyState
           title={t("disabled_project.empty_state.cycle.title")}
           description={t("disabled_project.empty_state.cycle.description")}
-          assetPath={resolvedEmptyState}
+          assetPath={resolvedTheme === "light" ? lightEmptyState : darkEmptyState}
           primaryButton={{
             text: t("disabled_project.empty_state.cycle.primary_button.text"),
-            onClick: () => {
-              navigate(`/${workspaceSlug}/settings/projects/${projectId}/features/cycles`);
-            },
-            disabled: !hasAdminLevelPermission,
+            onClick: () => navigate(`/${workspaceSlug}/settings/projects/${projectId}/features/cycles`),
+            disabled: role !== EUserPermissions.ADMIN,
           }}
         />
       </div>
     );
 
-  if (loader) return <CycleModuleListLayoutLoader />;
+  if (!listed) return null;
 
+  if (cycles.error !== undefined)
+    return <CyclesReadFailure error={cycles.error} onRetry={() => void cycles.mutate()} />;
+
+  if (cycleIds === undefined) return <CycleModuleListLayoutLoader />;
+
+  const canWrite = canWriteCycles(workspaceSlug, projectId);
   return (
     <>
-      <PageHead title={pageTitle} />
+      {pageHead}
       <div className="h-full w-full">
-        <CycleCreateUpdateModal
-          workspaceSlug={workspaceSlug}
-          projectId={projectId}
-          isOpen={createModal}
-          handleClose={() => setCreateModal(false)}
-        />
-        {totalCycles === 0 ? (
+        {cycleIds.length === 0 ? (
           <div className="h-full place-items-center">
             <EmptyStateDetailed
               assetKey="cycle"
@@ -110,25 +103,20 @@ function ProjectCyclesPage({ params }: Route.ComponentProps) {
               actions={[
                 {
                   label: t("project_empty_state.cycles.cta_primary"),
-                  onClick: () => setCreateModal(true),
+                  onClick: () => toggleCreateCycleModal(true),
                   variant: "primary",
-                  disabled: !hasMemberLevelPermission,
+                  disabled: !canWrite,
                 },
               ]}
             />
           </div>
         ) : (
           <>
-            {calculateTotalFilters(currentProjectFilters ?? {}) !== 0 && (
+            {calculateTotalFilters(getFilters(projectId, "default")) !== 0 && (
               <Header variant={EHeaderVariant.TERNARY}>
-                <CycleAppliedFiltersList
-                  appliedFilters={currentProjectFilters ?? {}}
-                  handleClearAllFilters={() => clearAllFilters(projectId)}
-                  handleRemoveFilter={handleRemoveFilter}
-                />
+                <CycleAppliedFiltersList projectId={projectId} list="default" />
               </Header>
             )}
-
             <CyclesView workspaceSlug={workspaceSlug} projectId={projectId} />
           </>
         )}

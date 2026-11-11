@@ -8,17 +8,16 @@ import React from "react";
 import { observer } from "mobx-react";
 // nerve imports
 import { CyclesOutline } from "@makeplane/propel/icons";
-import type { ICycle } from "@nerve/types";
+import type { Cycle } from "@nerve/api-client";
 // local imports
 import { PowerKMenuBuilder } from "./builder";
 
 type Props = {
-  cycles: ICycle[];
-  onSelect: (cycle: ICycle) => void;
-  value?: string | null;
+  cycles: Cycle[];
+  onSelect: (cycle: Cycle) => void;
 };
 
-export const PowerKCyclesMenu = observer(function PowerKCyclesMenu({ cycles, onSelect, value }: Props) {
+export const PowerKCyclesMenu = observer(function PowerKCyclesMenu({ cycles, onSelect }: Props) {
   return (
     <PowerKMenuBuilder
       items={cycles}
@@ -26,7 +25,6 @@ export const PowerKCyclesMenu = observer(function PowerKCyclesMenu({ cycles, onS
       getKey={(cycle) => cycle.id}
       getValue={(cycle) => cycle.name}
       getLabel={(cycle) => cycle.name}
-      isSelected={(cycle) => value === cycle.id}
       onSelect={onSelect}
       emptyText="No cycles found"
     />

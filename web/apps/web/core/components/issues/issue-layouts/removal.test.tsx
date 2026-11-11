@@ -7,21 +7,23 @@ import { MemoryRouter } from "react-router";
 import { runInAction } from "mobx";
 import { SWRConfig } from "swr";
 import { afterEach, expect, it, vi } from "vitest";
-import type { ICycle, IModule } from "@nerve/types";
-import { FakeNerve } from "@/lib/auth/fake-nerve";
+import type { IModule } from "@nerve/types";
+import { FakeNerve, json } from "@/lib/auth/fake-nerve";
 import { StoreContext } from "@/lib/store-context";
 import { RootStore } from "@/store/root.store";
-import { CycleStore } from "@/store/cycle.store";
+import { rowOf } from "@/store/planning/fake-cycles";
 import { ModulesStore } from "@/store/module.store";
 import { RouterStore } from "@/store/router.store";
 import { InstanceStore } from "@/store/instance.store";
 import { ThemeStore } from "@/store/theme.store";
 import { loadWorkspaces, workspaceOf } from "@/store/workspace/fake-workspaces";
-import { loadProjects, projectOf } from "@/store/project/fake-projects";
+import { cycleOf, loadProjects, projectOf } from "@/store/project/fake-projects";
+import { CycleActionsHost } from "@/components/cycles/actions-host";
 import { ArchivedCycleLayoutRoot } from "@/components/cycles/archived-cycles/root";
 import { ArchivedModuleLayoutRoot } from "@/components/modules/archived-modules/root";
 
 vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
+vi.mock("@/lib/auth/use-session", () => ({ useSession: () => ({ status: "signed-in", loginId: "x" }) }));
 vi.mock("react-router", async (original) => ({
   ...(await original<typeof import("react-router")>()),
   useParams: () => ({ workspaceSlug: "ws", projectId: "p-proj" }),
@@ -42,8 +44,7 @@ afterEach(async () => {
   vi.restoreAllMocks();
 });
 
-async function fixture() {
-  const nerve = new FakeNerve();
+async function fixture(nerve = new FakeNerve()) {
   const router = new RouterStore();
   store = new RootStore(nerve.client(), { router, instance: new InstanceStore(), theme: new ThemeStore() });
   // The real app changes the route after constructing the stores; the domain-filter reactions initialize it.
@@ -56,27 +57,17 @@ async function fixture() {
   return store;
 }
 
-const cycle: ICycle = {
-  id: "archived-cycle",
-  name: "Archived spring",
-  description: "Retained cycle",
-  project_id: "p-proj",
-  workspace_id: "id-ws",
-  owned_by_id: "u",
-  sort_order: 1,
-  start_date: null,
-  end_date: null,
-  archived_at: "2026-10-01T09:00:00Z",
-  project_detail: { id: "p-proj" },
-  view_props: { filters: {} },
-  progress_snapshot: undefined,
-  total_issues: 2,
-  completed_issues: 1,
-  backlog_issues: 1,
-  started_issues: 0,
-  unstarted_issues: 0,
-  cancelled_issues: 0,
-};
+const cycle = rowOf(
+  cycleOf(projectOf("PROJ", "id-ws"), "Archived spring", {
+    id: "archived-cycle",
+    description: "Retained cycle",
+    owned_by_id: "u",
+    sort_order: 1,
+    status: "completed",
+    archived_at: "2026-10-01T09:00:00Z",
+  }),
+  { total_issues: 2, completed_issues: 1, backlog_issues: 1 }
+);
 const module: IModule = {
   id: "archived-module",
   name: "Archived milestone",
@@ -103,51 +94,74 @@ const module: IModule = {
   cancelled_issues: 0,
 };
 
-it.each(["cycle", "module"] as const)(
-  "preserves_domain_loading_without_issue_lists: archived %s retains real directory items and search",
-  async (domain) => {
-    const current = await fixture();
-    runInAction(() => {
-      current.cycle.cycleMap[cycle.id] = cycle;
-      (current.cycle as CycleStore).fetchedMap["p-proj"] = true;
-      current.module.moduleMap[module.id] = module;
-      (current.module as ModulesStore).fetchedMap["p-proj"] = true;
-    });
-    const fetch =
-      domain === "cycle"
-        ? vi.spyOn((current.cycle as CycleStore).cycleArchiveService, "getArchivedCycles")
-        : vi.spyOn((current.module as ModulesStore).moduleArchiveService, "getArchivedModules");
-    // Valid entities are store fixtures, not fabricated HTTP success. Keep the real store's failure path too.
-    fetch.mockRejectedValue(new Error("M6 archive API unavailable"));
-    const issues = vi.spyOn(IssueListService.prototype, "listProject");
-    await act(async () => {
-      root.render(
-        <MemoryRouter>
-          <StoreContext.Provider value={current}>
-            <SWRConfig value={{ provider: () => new Map() }}>
-              {domain === "cycle" ? <ArchivedCycleLayoutRoot /> : <ArchivedModuleLayoutRoot />}
-            </SWRConfig>
-          </StoreContext.Provider>
-        </MemoryRouter>
-      );
-    });
-    const name = domain === "cycle" ? cycle.name : module.name;
-    expect(fetch).toHaveBeenCalledExactlyOnceWith("ws", "p-proj");
-    expect(container.textContent).toContain(name);
-    expect(
-      container.querySelector(
-        `a[href="/ws/projects/p-proj/${domain === "cycle" ? "cycles" : "modules"}/${domain === "cycle" ? cycle.id : module.id}"]`
-      )
-    ).not.toBeNull();
-    expect(container.textContent).not.toContain("Add work item");
-    expect(issues).not.toHaveBeenCalled();
-    await act(async () => {
-      if (domain === "cycle") current.cycleFilter.updateArchivedCyclesSearchQuery("unmatched");
-      else current.moduleFilter.updateArchivedModulesSearchQuery("unmatched");
-    });
-    expect(container.textContent).not.toContain(name);
-    expect(container.textContent).toContain(domain === "cycle" ? "No matching cycles" : "No matching modules");
-    expect(fetch).toHaveBeenCalledOnce();
-    expect(issues).not.toHaveBeenCalled();
-  }
-);
+it("preserves_domain_loading_without_issue_lists: archived cycle retains real directory items and search", async () => {
+  const nerve = new FakeNerve();
+  // nerve lists the project's archived cycles (P5a spec 2.5): the archive reads them itself
+  nerve.respond = (call) => {
+    if (call.path === "/api/v0/projects/p-proj/cycles" && call.query.archived === "true")
+      call.answer(json(200, { data: [cycle] }));
+  };
+  const current = await fixture(nerve);
+  const issues = vi.spyOn(IssueListService.prototype, "listProject");
+  await act(async () => {
+    root.render(
+      <MemoryRouter>
+        <StoreContext.Provider value={current}>
+          <SWRConfig value={{ provider: () => new Map() }}>
+            <CycleActionsHost workspaceSlug="ws" projectId="p-proj">
+              <ArchivedCycleLayoutRoot workspaceSlug="ws" projectId="p-proj" />
+            </CycleActionsHost>
+          </SWRConfig>
+        </StoreContext.Provider>
+      </MemoryRouter>
+    );
+  });
+  await act(async () => new Promise((resolve) => setTimeout(resolve, 0)));
+  const archive = () => nerve.calls.filter((call) => call.path === "/api/v0/projects/p-proj/cycles");
+  expect(archive().map((call) => call.query)).toEqual([{ archived: "true" }]);
+  expect(container.textContent).toContain(cycle.name);
+  expect(container.querySelector(`a[href="/ws/projects/p-proj/cycles/${cycle.id}"]`)).not.toBeNull();
+  expect(container.textContent).not.toContain("Add work item");
+  expect(issues).not.toHaveBeenCalled();
+  await act(async () => current.planning.cycleFilters.updateSearchQuery("p-proj", "archived", "unmatched"));
+  expect(container.textContent).not.toContain(cycle.name);
+  expect(container.textContent).toContain("project_cycles.no_matching_cycles");
+  expect(archive()).toHaveLength(1);
+  expect(issues).not.toHaveBeenCalled();
+});
+
+it("preserves_domain_loading_without_issue_lists: archived module retains real directory items and search", async () => {
+  const current = await fixture();
+  runInAction(() => {
+    current.module.moduleMap[module.id] = module;
+    (current.module as ModulesStore).fetchedMap["p-proj"] = true;
+  });
+  const fetch = vi.spyOn((current.module as ModulesStore).moduleArchiveService, "getArchivedModules");
+  // Valid entities are store fixtures, not fabricated HTTP success. Keep the real store's failure path too.
+  fetch.mockRejectedValue(new Error("M6 archive API unavailable"));
+  const issues = vi.spyOn(IssueListService.prototype, "listProject");
+  await act(async () => {
+    root.render(
+      <MemoryRouter>
+        <StoreContext.Provider value={current}>
+          <SWRConfig value={{ provider: () => new Map() }}>
+            <ArchivedModuleLayoutRoot />
+          </SWRConfig>
+        </StoreContext.Provider>
+      </MemoryRouter>
+    );
+  });
+  const name = module.name;
+  expect(fetch).toHaveBeenCalledExactlyOnceWith("ws", "p-proj");
+  expect(container.textContent).toContain(name);
+  expect(container.querySelector(`a[href="/ws/projects/p-proj/modules/${module.id}"]`)).not.toBeNull();
+  expect(container.textContent).not.toContain("Add work item");
+  expect(issues).not.toHaveBeenCalled();
+  await act(async () => {
+    current.moduleFilter.updateArchivedModulesSearchQuery("unmatched");
+  });
+  expect(container.textContent).not.toContain(name);
+  expect(container.textContent).toContain("No matching modules");
+  expect(fetch).toHaveBeenCalledOnce();
+  expect(issues).not.toHaveBeenCalled();
+});

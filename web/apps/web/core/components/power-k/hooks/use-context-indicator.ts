@@ -6,7 +6,7 @@
 
 import { useParams } from "react-router";
 // hooks
-import { useCycle } from "@/hooks/store/use-cycle";
+import { useCycles } from "@/hooks/store/use-cycles";
 import { useModule } from "@/hooks/store/use-module";
 // local imports
 import type { TPowerKContextType } from "../core/types";
@@ -20,7 +20,7 @@ export const useContextIndicator = (args: TArgs): string | null => {
   // navigation
   const { workItem: workItemIdentifier, cycleId, moduleId } = useParams();
   // store hooks
-  const { getCycleById } = useCycle();
+  const { getCycleById } = useCycles();
   const { getModuleById } = useModule();
   let indicator: string | undefined | null = null;
 
@@ -30,8 +30,7 @@ export const useContextIndicator = (args: TArgs): string | null => {
       break;
     }
     case "cycle": {
-      const cycleDetails = cycleId ? getCycleById(cycleId) : null;
-      indicator = cycleDetails?.name;
+      indicator = getCycleById(cycleId)?.name;
       break;
     }
     case "module": {

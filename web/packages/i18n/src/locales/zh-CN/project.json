@@ -16,15 +16,25 @@
     "remove_search_criteria_to_see_all_cycles": "移除搜索条件以查看所有周期",
     "start_date": "开始日期",
     "end_date": "结束日期",
-    "in_your_timezone": "在您的时区",
     "date_range": "日期范围",
     "add_date": "添加日期",
+    "archived_cycles": "已归档的周期",
+    "member_count": "{count} 名成员",
+    "filters": {
+      "status": "状态",
+      "custom": "自定义"
+    },
+    "not_found": {
+      "title": "周期不存在",
+      "description": "你要找的周期不存在或已被删除。",
+      "action": "查看其他周期"
+    },
     "active_cycle": {
       "label": "活动周期",
       "progress": "进度",
-      "priority_issue": "优先工作项",
       "assignees": "受理人",
       "issue_burndown": "工作项燃尽",
+      "pending_work_items": "待处理的工作项 - {count}",
       "labels": "标签",
       "work_items_completed": "{completed}/{total} 个工作项已完成",
       "cancelled_excluded": "报告中已排除 {count} 个已取消的工作项。"
@@ -47,44 +57,36 @@
         "success": {
           "title": "周期已恢复",
           "description": "周期已被恢复。"
-        },
-        "failed": {
-          "title": "周期恢复失败",
-          "description": "无法恢复周期。请重试。"
         }
       },
-      "favorite": {
-        "loading": "正在将周期添加到收藏",
+      "create": {
         "success": {
-          "description": "周期已添加到收藏。",
-          "title": "成功！"
-        },
-        "failed": {
-          "description": "无法将周期添加到收藏。请重试。",
-          "title": "错误！"
-        }
-      },
-      "unfavorite": {
-        "loading": "正在从收藏中移除周期",
-        "success": {
-          "description": "周期已从收藏中移除。",
-          "title": "成功！"
-        },
-        "failed": {
-          "description": "无法从收藏中移除周期。请重试。",
-          "title": "错误！"
+          "title": "成功！",
+          "description": "周期创建成功。"
         }
       },
       "update": {
         "success": {
           "description": "周期更新成功。",
           "title": "成功！"
-        },
-        "failed": {
-          "title": "错误！"
-        },
-        "error": {
-          "already_exists": "在给定日期范围内已存在周期，如果您想创建草稿周期，可以通过移除两个日期来实现。"
+        }
+      },
+      "delete": {
+        "success": {
+          "title": "成功！",
+          "description": "周期删除成功。"
+        }
+      },
+      "archive": {
+        "success": {
+          "title": "归档成功",
+          "description": "您可以在项目归档中找到归档的内容。"
+        }
+      },
+      "transfer": {
+        "success": {
+          "title": "工作项已转移",
+          "description": "已将 {count} 个工作项转移到 {name}。"
         }
       }
     },
@@ -97,6 +99,22 @@
         "title": "没有活动周期",
         "description": "活动周期包括其范围内包含今天日期的任何时期。在这里查找活动周期的进度和详细信息。"
       }
+    },
+    "delete": {
+      "title": "删除周期",
+      "body": "确定要删除周期 {name} 吗？与这个周期相关的全部数据将被永久删除。此操作无法撤销。"
+    },
+    "archive": {
+      "title": "归档周期 {name}",
+      "body": "确定要归档这个周期吗？归档的内容以后都可以恢复。",
+      "only_completed": "只有已完成的周期才能归档"
+    },
+    "transfer": {
+      "title": "转移工作项",
+      "entry": "转移 {count} 个工作项",
+      "completed": "已完成的周期不能再加入工作项。",
+      "search": "搜索周期",
+      "no_target": "没有可以接收这些工作项的周期，请先创建一个。"
     }
   },
   "project_views": {

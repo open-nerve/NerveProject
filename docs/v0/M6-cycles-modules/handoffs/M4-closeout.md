@@ -109,3 +109,10 @@ P3b 加两张表 `cycle_user_properties`（`00046`）、`module_user_properties`
 ## 处理结果（M6/P4）：M6-04
 
 统计的消费者要用的燃尽序列在 P4 定形：`Burndown {start_date, end_date, scope, points: [{date, remaining}]}`，点覆盖开始到结束（模块到目标日）的每一天，今天之后 `remaining` 为 `null`；一天的迭代只有 1 个点，草稿、缺日期或跨度超过 3660 天时整个燃尽为 `null`，所以 0、1、多个点与 `null` 都是合法的回答（[P4 spec](../specs/P4-progress-transfer.md) §2.1、R4，`planning/domain/burndown_test.go` 的 `TestProgressBurndown`、`TestProgressBurndownNeedsBothDays`、`TestProgressBurndownSpan` 覆盖这些形状）。`ProgressChart`/`AreaChart` 按它画、`null` 不画成 0、坐标有限，在 P5 的迭代页面与 P6 的模块页面启用前完成；本条保持 open。证据：提交 `735cac67f04519adee7d6a046051cc9dcefabe05`、`a92a292387db1105e97a7a52b8e4b9ac6d7d70bb`。
+
+## 处理结果（M6/P5a）：M6-01、M6-04、M6-02
+
+- **M6-01**：迭代自身的页面接上 nerve：列表（进行中卡片、即将开始、已结束）、预览、归档目录、详情页与进度侧栏都只调 `/api/v0`；真实迭代覆盖详情、统计、归档目录、空态、拒绝与重试（G1、G2、G3、G5–G8 页面故事），归档目录取数失败可重试、不再永远加载（`t9-mut-archive-forever-loader`）。M4 冒烟故事 S2 中迭代的两条移出（`b36fe3b1ce130ecba8d97d46a804b4ded9bb2b91`），原覆盖由 G3（不存在的迭代只有 `/api/v0` 的读、404、没有旧地址）与 G8（空归档目录是空态）接上。模块的页面在 P6。
+- **M6-04**：迭代表单在三种引擎（`e2e/playwright.m6-pages.config.ts`）核对 Tab、日期的选择与确认、Escape、焦点返回、被拒保留输入（G1、G3）；输入法：组字中确认组字的 Enter 不提交、组字之后的 Enter 照常提交（G1 的输入法故事；chromium 经 DevTools 协议真组字，三种引擎都派发 M4 的 `composingKey` 两种次序，firefox、webkit 无法驱动真实组字，提交 `9831341cd2de3952f78db0778724840dde207a6c` 的裁定）。`cycles/form.tsx` 迁到自然次序、`PROJECT_CYCLE` 删除，迭代归档按钮的正 `tabIndex` 删除；侧栏的日期提交等 nerve 确认、被拒回到 nerve 的值（G3）；修改弹窗只在确认后关闭、Escape 经 `ModalCore` 的 `handleClose`；`BurndownChart` 覆盖 0、1、多个点，`null` 不画、坐标有限（单测与 G5 的一天的迭代）。`getTabIndex` 的最后读者是模块（P6）与 M7。模块的各项在 P6。
+- **M6-02**：迭代的部分在 P5b（迭代页的工作项列表）。
+- 证据：提交 `523c3d92e5d2d7fa3c57855e099dfbd87234ef1e`、`5cdd61c28bba772e2b69332c1b96fb26cb900e0a`、`a415c86eb74295cd132d449c0ad49b512f93e91f`、`b6a0b7dfe45aeb2fce97abda9b3e6ed14f1e4a10`、`1523da8682d55866e8c08f6da5eac0db34d784ba`、`5524a44dd6576da362a2588ec4079d307d565747`。本交接保持 open。

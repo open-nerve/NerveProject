@@ -93,7 +93,6 @@
     },
     "error": {
       "permission": "You don't have permission to perform this action.",
-      "cycle_delete": "Failed to delete cycle",
       "module_delete": "Failed to delete module",
       "issue_delete": "Failed to delete work item"
     },

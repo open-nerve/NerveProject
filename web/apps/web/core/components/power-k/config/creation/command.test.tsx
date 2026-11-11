@@ -70,6 +70,44 @@ it.each([
     expect(commands.create_project.isEnabled(context)).toBe(wr === 20 || wr === 15);
   }
 );
+// nerve's cycle.write (M6 design 3.7): the project's admins and members, and the workspace's admin, but not one nerve
+// shows only his own work items (a guest of a project not showing its guests every work item), whatever his workspace
+// role
+it.each([
+  [15, 15, false, true],
+  [5, 5, false, false],
+  [20, 5, false, false],
+  [20, 5, true, true],
+] as const)(
+  "offers a new cycle as nerve lets one write the project's cycles: workspace %s/project %s/guests see all %s",
+  async (wr: WorkspaceRole, pr: ProjectRole, guestViewAll, allowed) => {
+    const other = workspaceOf("other", { role: wr });
+    const project = projectOf("OTHER", other.id, { member_role: pr, guest_view_all_features: guestViewAll });
+    await loadWorkspaces(tab.nerve, tab.app.workspaceRoot, [tab.workspace, other]);
+    await loadProjects(tab.nerve, tab.app.projectRoot.project, other, [project]);
+    renderToStaticMarkup(<Consumer />);
+    const context: TPowerKContext = { ...ctx("other"), params: { workspaceSlug: "other", projectId: project.id } };
+    expect(commands.create_cycle.isVisible(context)).toBe(allowed);
+    expect(commands.create_cycle.isEnabled(context)).toBe(allowed);
+  }
+);
+// nerve refuses every write of a project's cycles while they are turned off (planning.cycles_disabled), its admin's too
+it.each([
+  [20, 20],
+  [15, 15],
+] as const)(
+  "offers no new cycle while the project's cycles are turned off: workspace %s/project %s",
+  async (wr: WorkspaceRole, pr: ProjectRole) => {
+    const other = workspaceOf("other", { role: wr });
+    const project = projectOf("OTHER", other.id, { member_role: pr, cycle_view: false });
+    await loadWorkspaces(tab.nerve, tab.app.workspaceRoot, [tab.workspace, other]);
+    await loadProjects(tab.nerve, tab.app.projectRoot.project, other, [project]);
+    renderToStaticMarkup(<Consumer />);
+    const context: TPowerKContext = { ...ctx("other"), params: { workspaceSlug: "other", projectId: project.id } };
+    expect(commands.create_cycle.isVisible(context)).toBe(false);
+    expect(commands.create_cycle.isEnabled(context)).toBe(false);
+  }
+);
 it("an unknown route never opens a form using the router store's previous projects", () => {
   renderToStaticMarkup(<Consumer />);
   const item = commands.create_work_item;

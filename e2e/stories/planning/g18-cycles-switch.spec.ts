@@ -8,6 +8,7 @@ import {
   slugFor,
 } from "../../fixtures/api";
 import { expectCycles, type CycleRow } from "../../fixtures/assert/planning";
+import { frozenSnapshot } from "../../fixtures/assert/progress";
 import { login, newAccount } from "../../fixtures/auth";
 import { createCycle, cycleCalls, listCycles, readCycle } from "../../fixtures/cycles";
 import { expect, test } from "../../fixtures/test";
@@ -90,6 +91,10 @@ test("G18 (API): with Web's cycles off, every write of its member and its admin 
     await listCycles(api, token, web.id, true),
     ...(await Promise.all([old, sprint, draft].map((c) => readCycle(api, token, c.id)))),
   ];
+  // Old and Sprint have ended: the periodic freeze (every 2s here) writes their progress once, whenever it next runs,
+  // and never again (M6 P4 spec R5, R6), so the reads are compared from once both are frozen.
+  await frozenSnapshot(db, old.id);
+  await frozenSnapshot(db, sprint.id);
   const before = await reads(browser);
 
   /** Each write on Web's cycles, by mem's sign-in or the admin, each one a write that would pass were it allowed. */

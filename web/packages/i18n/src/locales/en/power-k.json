@@ -26,11 +26,8 @@
       "cycle": {
         "title": "Cycle actions",
         "indicator": "Cycle",
-        "add_to_favorites": "Add to favorites",
-        "remove_from_favorites": "Remove from favorites",
         "copy_url": "Copy URL",
-        "copy_url_toast_success": "Cycle URL copied to clipboard.",
-        "copy_url_toast_error": "Some error occurred while copying the cycle URL to clipboard."
+        "copy_url_toast_success": "Cycle URL copied to clipboard."
       },
       "module": {
         "title": "Module actions",

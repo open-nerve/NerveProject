@@ -16,15 +16,25 @@
     "remove_search_criteria_to_see_all_cycles": "Remove the search criteria to see all cycles",
     "start_date": "Start date",
     "end_date": "End date",
-    "in_your_timezone": "In your timezone",
     "date_range": "Date range",
     "add_date": "Add date",
+    "archived_cycles": "Archived cycles",
+    "member_count": "{count, plural, one {# member} other {# members}}",
+    "filters": {
+      "status": "Status",
+      "custom": "Custom"
+    },
+    "not_found": {
+      "title": "Cycle does not exist",
+      "description": "The cycle you are looking for does not exist or has been deleted.",
+      "action": "View other cycles"
+    },
     "active_cycle": {
       "label": "Active cycle",
       "progress": "Progress",
-      "priority_issue": "Priority work items",
       "assignees": "Assignees",
       "issue_burndown": "Work item burndown",
+      "pending_work_items": "Pending work items - {count}",
       "labels": "Labels",
       "work_items_completed": "{completed}/{total} {total, plural, one {work item} other {work items}} completed",
       "cancelled_excluded": "{count, plural, one {# cancelled work item is} other {# cancelled work items are}} excluded from this report."
@@ -47,44 +57,36 @@
         "success": {
           "title": "Cycle restored",
           "description": "The cycle has been restored."
-        },
-        "failed": {
-          "title": "Cycle restore failed",
-          "description": "The cycle could not be restored. Please try again."
         }
       },
-      "favorite": {
-        "loading": "Adding cycle to favorites",
+      "create": {
         "success": {
-          "description": "Cycle added to favorites.",
-          "title": "Success!"
-        },
-        "failed": {
-          "description": "Couldn't add the cycle to favorites. Please try again.",
-          "title": "Error!"
-        }
-      },
-      "unfavorite": {
-        "loading": "Removing cycle from favorites",
-        "success": {
-          "description": "Cycle removed from favorites.",
-          "title": "Success!"
-        },
-        "failed": {
-          "description": "Couldn't remove the cycle from favorites. Please try again.",
-          "title": "Error!"
+          "title": "Success!",
+          "description": "Cycle created successfully."
         }
       },
       "update": {
         "success": {
           "description": "Cycle updated successfully.",
           "title": "Success!"
-        },
-        "failed": {
-          "title": "Error!"
-        },
-        "error": {
-          "already_exists": "You already have a cycle on the given dates, if you want to create a draft cycle, you can do that by removing both the dates."
+        }
+      },
+      "delete": {
+        "success": {
+          "title": "Success!",
+          "description": "Cycle deleted successfully."
+        }
+      },
+      "archive": {
+        "success": {
+          "title": "Archive success",
+          "description": "Your archives can be found in project archives."
+        }
+      },
+      "transfer": {
+        "success": {
+          "title": "Work items transferred",
+          "description": "{count, plural, one {# work item was} other {# work items were}} transferred to {name}."
         }
       }
     },
@@ -97,6 +99,22 @@
         "title": "No active cycle",
         "description": "An active cycle includes any period that encompasses today's date within its range. Find the progress and details of the active cycle here."
       }
+    },
+    "delete": {
+      "title": "Delete cycle",
+      "body": "Are you sure you want to delete the cycle {name}? All of the data related to the cycle will be permanently removed. This action cannot be undone."
+    },
+    "archive": {
+      "title": "Archive cycle {name}",
+      "body": "Are you sure you want to archive the cycle? All your archives can be restored later.",
+      "only_completed": "Only completed cycles can be archived"
+    },
+    "transfer": {
+      "title": "Transfer work items",
+      "entry": "Transfer {count, plural, one {# work item} other {# work items}}",
+      "completed": "Completed cycles can no longer take work items.",
+      "search": "Search for a cycle",
+      "no_target": "No cycle can take these work items. Create one first."
     }
   },
   "project_views": {

@@ -6,16 +6,16 @@
 
 import React from "react";
 // types
+import type { CycleStatus } from "@nerve/api-client";
 import { CycleGroupIcon } from "@nerve/propel/icons";
 import { ChevronDownOutline } from "@makeplane/propel/icons";
-import type { TCycleGroups } from "@nerve/types";
 // icons
 import { Row } from "@nerve/ui";
 // helpers
 import { cn } from "@nerve/utils";
 
 type Props = {
-  type: TCycleGroups;
+  type: CycleStatus;
   title: string;
   count?: number;
   showCount?: boolean;

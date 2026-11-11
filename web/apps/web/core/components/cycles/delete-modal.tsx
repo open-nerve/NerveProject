@@ -4,92 +4,98 @@
  * See the LICENSE file for details.
  */
 
-import { useState } from "react";
-import { observer } from "mobx-react";
-// types
-import { PROJECT_ERROR_MESSAGES } from "@nerve/constants";
+import { useLayoutEffect, useRef, useState } from "react";
+import { useNavigate, useParams, useSearchParams } from "react-router";
+// nerve imports
+import type { Cycle } from "@nerve/api-client";
 import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { ICycle } from "@nerve/types";
-// ui
 import { AlertModalCore } from "@nerve/ui";
+// components
+import { Translated } from "@/components/common/translated";
 // hooks
-import { useCycle } from "@/hooks/store/use-cycle";
-import { useParams, useNavigate, useSearchParams } from "react-router";
+import { useCycles } from "@/hooks/store/use-cycles";
+import { useRefusalToast } from "@/hooks/use-refusal-toast";
+// lib
+import { followInSession } from "@/lib/in-session";
 
-interface ICycleDelete {
-  cycle: ICycle;
+type Props = {
   isOpen: boolean;
   handleClose: () => void;
+  /** The cycle to delete, as it was when the dialog was asked for. */
+  cycle: Cycle | undefined;
   workspaceSlug: string;
   projectId: string;
-}
+};
 
-export const CycleDeleteModal = observer(function CycleDeleteModal(props: ICycleDelete) {
+/**
+ * The dialog that deletes a cycle (P5a spec 2.5). It closes only once nerve has deleted the cycle, says so and, when
+ * the page shows the cycle (its own page, its preview), goes back to the cycles' list; refused, it stays and says
+ * nerve's reason. While the deletion is out nothing closes it (Escape, the backdrop, Cancel). Its follow-ups are those
+ * of the session it was sent in (followInSession) and of its page: once the page has gone (a Back, another project),
+ * nerve's late answer reaches the store alone.
+ */
+export function CycleDeleteModal(props: Props) {
   const { isOpen, handleClose, cycle, workspaceSlug, projectId } = props;
-  // states
-  const [loader, setLoader] = useState(false);
-  // store hooks
-  const { deleteCycle } = useCycle();
-  const { t } = useTranslation();
   // router
   const navigate = useNavigate();
-  const { cycleId } = useParams();
+  const { cycleId: pageCycleId } = useParams();
   const [searchParams] = useSearchParams();
-  const peekCycle = searchParams.get("peekCycle");
+  // nerve hooks
+  const { t } = useTranslation();
+  // store hooks
+  const { remove } = useCycles();
+  const toastRefusal = useRefusalToast();
+  // states
+  const [busy, setBusy] = useState(false);
+  const out = useRef(false);
+  const mounted = useRef(false);
+  useLayoutEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
 
-  const formSubmit = async () => {
-    if (!cycle) return;
-
-    setLoader(true);
-    try {
-      await deleteCycle(workspaceSlug, projectId, cycle.id)
-        .then(() => {
-          if (cycleId || peekCycle) navigate(`/${workspaceSlug}/projects/${projectId}/cycles`);
-          setToast({
-            type: TOAST_TYPE.SUCCESS,
-            title: "Success!",
-            message: "Cycle deleted successfully.",
-          });
-          return;
-        })
-        .catch((errors) => {
-          const isPermissionError = errors?.error === "You don't have the required permissions.";
-          const currentError = isPermissionError
-            ? PROJECT_ERROR_MESSAGES.permissionError
-            : PROJECT_ERROR_MESSAGES.cycleDeleteError;
-          setToast({
-            title: t(currentError.i18n_title),
-            type: TOAST_TYPE.ERROR,
-            message: currentError.i18n_message && t(currentError.i18n_message),
-          });
-        })
-        .finally(() => handleClose());
-    } catch {
-      setToast({
-        type: TOAST_TYPE.ERROR,
-        title: "Warning!",
-        message: "Something went wrong please try again later.",
-      });
-    }
-
-    setLoader(false);
+  const submit = async () => {
+    if (!cycle || out.current) return;
+    out.current = true;
+    setBusy(true);
+    const shownByPage = pageCycleId === cycle.id || searchParams.get("peekCycle") === cycle.id;
+    await followInSession(() => remove(cycle.id), {
+      done: () => {
+        if (!mounted.current) return;
+        setToast({
+          type: TOAST_TYPE.SUCCESS,
+          title: t("project_cycles.action.delete.success.title"),
+          message: t("project_cycles.action.delete.success.description"),
+        });
+        handleClose();
+        if (shownByPage) return navigate(`/${workspaceSlug}/projects/${projectId}/cycles`);
+      },
+      failed: (error) => {
+        if (mounted.current) toastRefusal(error);
+      },
+    });
+    out.current = false;
+    if (mounted.current) setBusy(false);
   };
 
   return (
     <AlertModalCore
       handleClose={handleClose}
-      handleSubmit={formSubmit}
-      isSubmitting={loader}
+      handleSubmit={() => void submit()}
+      isSubmitting={busy}
       isOpen={isOpen}
-      title="Delete cycle"
+      title={t("project_cycles.delete.title")}
+      primaryButtonText={{ default: t("delete"), loading: t("deleting") }}
+      secondaryButtonText={t("cancel")}
       content={
-        <>
-          Are you sure you want to delete cycle{' "'}
-          <span className="font-medium break-words text-primary">{cycle?.name}</span>
-          "? All of the data related to the cycle will be permanently removed. This action cannot be undone.
-        </>
+        <Translated
+          i18nKey="project_cycles.delete.body"
+          values={{ name: <span className="font-medium break-words text-primary">{cycle?.name}</span> }}
+        />
       }
     />
   );
-});
+}

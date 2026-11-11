@@ -105,6 +105,12 @@ export function useLabel() {
   };
 }
 
+export function useCycles() {
+  return {
+    fetchCycles: (projectId: string) => fetching(`the cycles of ${projectId}`),
+  };
+}
+
 export function useProjectState() {
   return {
     fetchWorkspaceStates: (workspace: Pick<Workspace, "id" | "slug">) => fetching(`the states of ${named(workspace)}`),

@@ -29,3 +29,7 @@ M6 合并时：进度接口只提供按状态组的计数，没有点数字段�
 ## 处理结果（M6/P4）
 
 进度的接口只按状态组计数，没有点数：迭代的 `GET /api/v0/cycles/{cycle_id}/progress`（`CycleProgress`：`live` 与 `progress_snapshot`）、模块的 `GET /api/v0/modules/{module_id}/progress`（`Progress`），以及迭代、模块列表行的 `CycleListItem`、`ModuleListItem`，都只有六个计数（总数与五个状态组）、负责人与标签的分布（每行总数、已完成、未完成）和燃尽，没有 `points`、`estimate_distribution`、`*_estimate_points`；存下的冻结 `cycles.progress_snapshot` 就是 `FrozenProgress`，同样没有点数（`api/modules/planning.yaml`，[P4 spec](../specs/P4-progress-transfer.md) §2.3、§2.4）。网页改读新接口、重建进行中迭代卡片的分布与燃尽在 M6/P5，本交接保持 open。证据：提交 `735cac67f04519adee7d6a046051cc9dcefabe05`（计算与冻结的格式）、`a92a292387db1105e97a7a52b8e4b9ac6d7d70bb`（进度接口）、`e61752481bdec426020f989d743119d72230b903`（列表行）。
+
+## 处理结果（M6/P5a）
+
+网页的迭代改读新接口：迭代的 service 只调 `/api/v0`（`web/apps/web/core/services/planning/cycles.service.ts`），进度读 `GET /api/v0/cycles/{cycle_id}/progress`，列表行读 `CycleListItem` 的六个计数，没有点数字段；进行中迭代卡片的分布（负责人、标签，只带 id，网页按项目成员与标签配上名字）与燃尽（`BurndownChart` 按 `Burndown.points` 画）依新接口重建。`calculateCycleProgress` 与 `progress.test.ts` 随旧的 `@nerve/utils` `cycle.ts` 删除，口径由同包 `planning.ts` 的 `cycleCounts`、`progressPercent` 承担；关键词规则 `old-cycle-urls` 拦住 Plane 的迭代接口地址。迭代的部分已完成；模块的进度在 P6 改读新接口，本交接照设计 §11 保持 open 至收尾。证据：提交 `b4911394dc2a92d4bd0224e572902e6d45275941`（service 与读）、`a21686c4a9827c1fb98d28eafa67c35a5b1150f7`（口径函数）、`523c3d92e5d2d7fa3c57855e099dfbd87234ef1e`（燃尽与分布）、`51271de5b98e3d42013086558c310f9b4fbe2881`（进行中卡片）、`f497055055f00e0cdbfa74e08f5186d40a1297d3`（旧 service 与类型删除、`old-cycle-urls`）；[P5a spec](../specs/P5a-web-cycles.md) §2.1–§2.4。

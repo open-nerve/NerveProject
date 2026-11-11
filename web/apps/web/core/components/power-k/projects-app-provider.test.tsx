@@ -32,7 +32,21 @@ vi.mock("./config/commands", () => ({ useProjectsAppPowerKCommands: () => [] }))
 vi.mock("./global-shortcuts", () => ({ GlobalShortcutsProvider: () => <span data-shortcuts /> }));
 vi.mock("./ui/modal/commands-list", () => ({ ProjectsAppPowerKCommandsList: () => null }));
 vi.mock("./ui/modal/wrapper", () => ({ ProjectsAppPowerKModalWrapper: () => <span data-palette /> }));
-vi.mock("@/components/modals/project-level", () => ({ ProjectLevelModals: () => <span data-project /> }));
+// The project's dialogs' host says when it mounts, and for which project, and when it unmounts.
+const hosts = vi.hoisted((): string[] => []);
+vi.mock("@/components/modals/project-level", async () => {
+  const { useLayoutEffect, useState } = await import("react");
+  return {
+    ProjectLevelModals: ({ projectId }: { projectId: string }) => {
+      const [mountedFor] = useState(projectId);
+      useLayoutEffect(() => {
+        hosts.push(`mounted for ${mountedFor}`);
+        return () => void hosts.push(`unmounted from ${mountedFor}`);
+      }, [mountedFor]);
+      return <span data-project />;
+    },
+  };
+});
 vi.mock("@/components/modals/workspace-level", () => ({ WorkspaceLevelModals: () => <span data-workspace /> }));
 vi.mock("@/components/modals/work-item-level", () => ({ WorkItemLevelModals: () => <span data-work-item /> }));
 
@@ -108,4 +122,11 @@ it("workspace and project routes retain their command hosts and retire them on r
   await act(async () => root.render(null));
   expect(ui.toggle).toHaveBeenLastCalledWith(false);
   expect(ui.setPage).toHaveBeenLastCalledWith(null);
+});
+it("mounts the project's dialogs' host anew for each project, the host before closing what it renders as it goes", async () => {
+  await render({ workspaceSlug: "ws", projectId: "A" });
+  hosts.length = 0;
+  await render({ workspaceSlug: "ws", projectId: "A" });
+  await render({ workspaceSlug: "ws", projectId: "B" });
+  expect(hosts).toEqual(["unmounted from A", "mounted for B"]);
 });

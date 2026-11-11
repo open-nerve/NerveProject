@@ -1,6 +1,6 @@
 # M6：迭代与模块
 
-> 状态：设计与 P1 预检通过（2026-11-07，[re-54](../../reviews/re-54-M6设计与P1预检.md)）；P1、P2、P3a、P3b 已完成，P4 实施中（进度见 §14）。
+> 状态：设计与 P1 预检通过（2026-11-07，[re-54](../../reviews/re-54-M6设计与P1预检.md)）；P1–P4 已完成，P5 实施中（拆为 P5a/P5b，进度见 §14）。
 > 起点：`main@ba3fd6e0b65e91e8bcf5ba32ad02ebff0b7bd939`（M5 最终 main CI 42251522430，三个作业成功）。
 > 当前文档分支为`codex/m6-design`，根目录保持main。负责人2026-11-07指示“启动 M6，按照之前的推进节奏，一步步推进”，并在设计预检后决定三项（见 §15）：归属表放 `issue` 模块、草稿照 Plane 带迭代与模块、其余取舍按 §15 推进。常规设计、预检、实现、deep-review、`--no-ff`集成、CI和归档照 M5 的节奏连续推进；架构回归、跨模块协同调整或意外高风险发现，先提交已完成工作，再用大白话上报。
 
@@ -192,12 +192,12 @@ M2 交接第 1 节要求列出每个跨模块的写入与查询；全部走端�
 
 ## 8. 前端
 
-- **按总体设计 §7.2 重写本领域**：类型来自 OpenAPI 生成的类型，删除 `@nerve/types` 的手写 `ICycle`、`IModule` 等；service 只调 `/api/v0`；store 照 §7.7 按会话分代（SWR 键带 `loginId`，`cycle_filter`/`module_filter` 跟随 `router` 的反应由 `RootStore.dispose()` 释放并有单元测试，删除 2 个模块级 `CycleService` 实例）。旧 service、store 方法、手写类型、`date-check`、工作区级取数（`use-workspace-issue-properties.ts` 的两处）一并删除。
-- **页面**：迭代列表（进行中卡片、未开始、已结束、草稿）、详情（工作项列表 + 进度侧栏）、归档目录；模块列表（列表/卡片）、详情（列表 + 侧栏、链接、成员）、归档目录。列表页真正取数，详情页以 `cycleId`/`moduleId` 给子树 key（M3 交接 §1）；项目级弹窗宿主移到项目的 key 之下并在卸载时关上开关（M3 交接 §1）。
+- **按总体设计 §7.2 重写本领域**：类型来自 OpenAPI 生成的类型，删除 `@nerve/types` 的手写 `ICycle`、`IModule` 等；service 只调 `/api/v0`；store 照 §7.7 按会话分代（SWR 键带 `loginId`；迭代的筛选 store 按项目 id 存取、不跟随 `router`，没有要释放的反应（[P5a spec](specs/P5a-web-cycles.md) R4），模块的照做（P6）；删除 2 个模块级 `CycleService` 实例）。旧 service、store 方法、手写类型、`date-check`、工作区级取数（`use-workspace-issue-properties.ts` 的两处）一并删除。
+- **页面**：迭代列表（进行中卡片、“即将开始”（含草稿）、“已结束”，照 Plane 的三段，[P5a spec](specs/P5a-web-cycles.md) R5）、详情（工作项列表 + 进度侧栏）、归档目录；模块列表（列表/卡片）、详情（列表 + 侧栏、链接、成员）、归档目录。列表页真正取数，详情页以 `cycleId`/`moduleId` 给子树 key（M3 交接 §1）；项目级弹窗宿主移到项目的 key 之下并在卸载时关上开关（M3 交接 §1）。
 - **图表**：`ProgressChart`/`AreaChart` 覆盖 0、1、多个点，坐标有限（M4 交接 M6-04）。
 - **工作项一侧**：恢复 `dropdowns/cycle`、`dropdowns/module`（popper 的 ref 在列表元素上、`Combobox`/`Listbox` 二选一、弹窗里 `modal={false}`，M2/M3 交接）；工作项详情、预览、列表行的迭代/模块属性；列表的筛选、分组、显示属性；`existing-issues-list-modal.tsx` 的迭代/模块调用方；日历的 `addIssuesToView`；转移弹窗。
 - **键盘与可访问性**：M3 交接 §3 逐项（`ModalTitle`、正 `tabIndex` 删除、嵌套按钮、每行控件以行命名、字段提示与 `useRefusedFocus`、模块状态选择的提示、筛选按钮）；迭代/模块的表单与归档按钮迁到自然 Tab 顺序（`getTabIndex` 的最后读者在 M7 的视图与收集箱表单，M6 不删它）。
-- **地址与复制**：本领域 22 个读 router store 地址的文件改读路由参数并纳入 `project-address-route`；5 处复制改经 `useCopyLink`/`useCopyText`，删除 `copy-hook` 的例外。
+- **地址与复制**：本领域 22 个读 router store 地址的文件改读路由参数并纳入 `project-address-route`；5 处复制改经 `useCopyLink`/`useCopyText`，删除 `copy-hook` 的例外。迭代的文件与两处复制、迭代的收藏入口、项目级弹窗宿主的 key 在 P5a 随页面的重写完成（P5a spec R2），模块的在 P6。
 - **收藏**：迭代/模块的收藏按钮属于 M7 的收藏功能；M6 删除本领域里调用旧收藏接口的入口与 store 逻辑，交 M7 随收藏一起恢复（§11）。
 - **命令面板**：迭代、模块的打开与切换在已取得的项目列表里本地过滤（同项目的做法，M4 设计 `:40`、`:671` 交下）；工作区范围的搜索属 M7。
 - **交给 M6 的视图文件**：M3 交接把 4 个视图文件的地址读取（`views/(detail)/[viewId]/header.tsx`、`views/(list)/page.tsx`、`views/view-list-item-action.tsx`、`views/views-list.tsx`）、视图的跟进经 `followInSession`、`isCreateViewModalOpen` 随项目弹窗宿主一起分派给 M6，M6 照做；保存的视图自己的页面仍属 M7。
@@ -238,9 +238,10 @@ M2 交接第 1 节要求列出每个跨模块的写入与查询；全部走端�
 | P3a | `cycle_issues`、`module_issues`（`issue` 模块）、工作项与草稿的 `cycle_id`/`module_ids`（含回答）、动态、删除迭代/模块与工作项的归属清理、自动归档 | G4、G11、G14、G16 的接口与数据库；交错 |
 | P3b | 列表引擎的筛选/分组/排序/显示、迭代与模块的偏好 | G15 的接口与数据库；同 fixture 的 Go 与前端顺序测试 |
 | P4 | 进度/分布/燃尽接口、冻结任务、转移、列表行的计数 | G5–G7、G12、G17 的接口与数据库；冻结与转移交错 |
-| P5 | 前端迭代：service/store 按会话分代、列表/详情/归档、表单与弹窗、进度侧栏与进行中卡片、图表、转移弹窗、迭代页工作项列表 | G1–G8、G19 的页面 |
+| P5a | 前端迭代：service/store 按会话分代、列表/详情/归档、表单与弹窗、进度侧栏与进行中卡片、图表、转移弹窗；迭代文件的地址/复制/收藏入口与项目级弹窗宿主（P5 因超出一段的上限拆为 P5a/P5b，[P5a spec](specs/P5a-web-cycles.md) §1、R1、R2） | G1–G3、G5–G8、G19 的页面 |
+| P5b | 迭代页工作项列表（`EIssuesStoreType.CYCLE`、本页偏好、四种布局、本页新建、已结束只读、附件列）、进行中卡片的优先级页签、卡片与侧栏的行点击 | G15、G19 的列表部分 |
 | P6 | 前端模块：列表/卡片、详情、链接、成员、归档、模块页工作项列表 | G9–G13、G19 的页面 |
-| P7 | 前端工作项一侧：属性与下拉框（含新建弹窗与草稿）、列表筛选/分组/显示、添加已有、日历、命令面板、弹窗宿主与 key、地址与复制、收藏入口删除 | G4、G11、G15、G19 的页面；交接中的键盘逐项 |
+| P7 | 前端工作项一侧：属性与下拉框（含新建弹窗与草稿）、列表筛选/分组/显示、添加已有、日历、命令面板（迭代、模块菜单的本地过滤与切换）；迭代文件的地址与复制、收藏入口与项目级弹窗宿主已在 P5a 完成，模块的在 P6 | G4、G11、G15、G19 的页面；交接中的键盘逐项 |
 | P8 | 最终矩阵、清理规模重跑、死成员与告警收敛、文档同步、M7/M8 交接 | G1–G20 最终证据、deep-review |
 | closeout | 首次 noff/main 绿 → §13 勾选与总体 §9.4 → 第二次 noff/main 绿 → 归档清理 | §13 每条证据、全部输入关闭 |
 
@@ -274,8 +275,9 @@ P1 起第一个实现提交把关键词 phase 改为 `M6/P1`；纯设计分支�
 | P2 模块后端 | 已完成：noff `861ea1b5` 的 main CI 两次未过（与 P2 无关），根因修复（含负责人 2026-11-08 批准的 server 任务分两路）第二次 noff `ddd79a9f`，main CI 42458454710 首次通过；证据归档于 `.superpowers/sdd/M6-P2-integration-20261108` | [预检](../../reviews/re-56-M6P2预检.md) / [P2 spec](specs/P2-modules-backend.md) / [P2 plan](plans/P2-modules-backend.md) / [P2 阶段记录](reviews/P2-modules-backend-review.md) |
 | P3a 工作项的归属 | 已完成：noff `2648a739`，分支 CI 42484965936 与 main CI 42487991301 首次通过（检查点 CI 42478883539 第一次因 GitHub 504 未过，只重跑失败的作业后通过），证据归档于 `.superpowers/sdd/M6-P3a-integration-20261108`；P3 因超出一段的上限拆为 P3a/P3b（§12） | [预检](../../reviews/re-58-M6P3a预检.md) / [P3a spec](specs/P3a-issue-membership.md) / [P3a plan](plans/P3a-issue-membership.md) / [P3a 阶段记录](reviews/P3a-issue-membership-review.md) |
 | P3b 列表引擎与偏好 | 已完成：noff `ed8f0df4`，检查点 CI 42594813667、分支 CI 42616111421 与 main CI 42621199100 首次通过（最终门禁第一次因本机 Docker API 超时未过，整段重跑一次通过），证据归档于 `.superpowers/sdd/M6-P3b-integration-20261109` | [预检](../../reviews/re-60-M6P3b预检.md) / [P3b spec](specs/P3b-list-engine.md) / [P3b plan](plans/P3b-list-engine.md) / [P3b 阶段记录](reviews/P3b-list-engine-review.md) |
-| P4 进度、冻结与转移 | T1–T14 完成：整审 Ready to merge（[re-63](../../reviews/re-63-M6P4整体审核.md)），最终候选七项门禁串行通过（阶段记录 §5）；检查点 CI 42775845319 的 e2e 第一次因 W11 的老问题未过，只重跑失败作业后通过，W11 据 trace 找到根因并修正；待合入 | [预检](../../reviews/re-62-M6P4预检.md) / [P4 spec](specs/P4-progress-transfer.md) / [P4 plan](plans/P4-progress-transfer.md) / [P4 阶段记录](reviews/P4-progress-transfer-review.md) |
-| P5–P8、closeout | 未开始 | — |
+| P4 进度、冻结与转移 | 已完成：noff `c3ba5a40`。检查点 CI 42775845319 的 e2e 第一次因 W11 的老问题未过，只重跑失败作业后通过，W11 据 trace 找到根因并修正；最终候选的分支 CI 第一次因测试取的时刻带纳秒未过，修正后 42803535189 通过；合入后 main CI 42809569341 的 e2e 因 C12 未过，据 trace 查实为产品缺陷（编辑器建成之前就挂引用），修复分支第二次 noff `a2b50624`，main CI 42824266166 首次通过；证据归档于 `.superpowers/sdd/M6-P4-integration-20261110`、`M6-P4-ci-20261110` | [预检](../../reviews/re-62-M6P4预检.md) / [P4 spec](specs/P4-progress-transfer.md) / [P4 plan](plans/P4-progress-transfer.md) / [P4 阶段记录](reviews/P4-progress-transfer-review.md) |
+| P5a 网页的迭代（数据层与页面） | 整分支审查修复后可合入（re-65：一处 Important 与三处 Minor 在修复轮 F3 修复并经限定复审）；本机 `make test` 两次因 Docker Desktop 与 macOS 的端口范围重叠失败，负责人 2026-11-11 决定本段以分支 CI 为准（交 M8）；合入、CI 与归档由 P5b 的 T1 回填。P5 因超出一段的上限拆为 P5a/P5b（§12） | [预检](../../reviews/re-64-M6P5a预检.md) / [P5a spec](specs/P5a-web-cycles.md) / [P5a plan](plans/P5a-web-cycles.md) / [P5a 阶段记录](reviews/P5a-web-cycles-review.md) / [re-65](../../reviews/re-65-M6P5a整体审核.md) |
+| P5b、P6–P8、closeout | 未开始 | — |
 
 ## 15. 决定记录
 

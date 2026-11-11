@@ -4,35 +4,37 @@
  * See the LICENSE file for details.
  */
 
-import React from "react";
 import { observer } from "mobx-react";
 // nerve imports
 import { Loader } from "@nerve/ui";
+import { cycleCounts } from "@nerve/utils";
+// hooks
+import { useCycles } from "@/hooks/store/use-cycles";
 // local imports
-import useCyclesDetails from "../active-cycle/use-cycles-details";
 import { CycleProgress } from "./issue-progress";
 import { CycleSidebarDetails } from "./sidebar-details";
 import { CycleSidebarHeader } from "./sidebar-header";
 
 type Props = {
   handleClose: () => void;
-  isArchived?: boolean;
   cycleId: string;
   projectId: string;
   workspaceSlug: string;
 };
 
+/**
+ * A cycle's progress sidebar (P5a spec 2.5), of the cycle as the store shows it (its page or its preview reads it):
+ * its head, its details and its progress. Its numbers are nerve's progress of the cycle, of one choice (cycleCounts,
+ * R7): what nerve froze once the cycle has ended, else live; its members are its list's row's (R11).
+ */
 export const CycleDetailsSidebar = observer(function CycleDetailsSidebar(props: Props) {
-  const { handleClose, isArchived, projectId, workspaceSlug, cycleId } = props;
-
+  const { handleClose, projectId, workspaceSlug, cycleId } = props;
   // store hooks
-  const { cycle: cycleDetails } = useCyclesDetails({
-    workspaceSlug,
-    projectId,
-    cycleId,
-  });
+  const { getCycleById, getCycleRow, getCycleProgress } = useCycles();
+  const cycle = getCycleById(cycleId);
+  const progress = getCycleProgress(cycleId);
 
-  if (!cycleDetails)
+  if (!cycle)
     return (
       <Loader className="px-5">
         <div className="space-y-2">
@@ -47,20 +49,24 @@ export const CycleDetailsSidebar = observer(function CycleDetailsSidebar(props: 
       </Loader>
     );
 
+  const shown = progress && cycleCounts(progress.status, progress.live, progress.progress_snapshot);
   return (
     <div className="relative pb-2">
       <div className="flex w-full flex-col gap-5">
         <CycleSidebarHeader
+          cycle={cycle}
           workspaceSlug={workspaceSlug}
           projectId={projectId}
-          cycleDetails={cycleDetails}
-          isArchived={isArchived}
           handleClose={handleClose}
         />
-        <CycleSidebarDetails cycleDetails={cycleDetails} />
+        <CycleSidebarDetails
+          cycle={cycle}
+          projectId={projectId}
+          members={getCycleRow(cycleId)?.assignee_ids}
+          counts={shown}
+        />
       </div>
-
-      {workspaceSlug && projectId && cycleDetails?.id && <CycleProgress cycleId={cycleDetails?.id} />}
+      <CycleProgress cycle={cycle} projectId={projectId} progress={shown} />
     </div>
   );
 });

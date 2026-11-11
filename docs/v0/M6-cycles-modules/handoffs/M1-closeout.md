@@ -45,3 +45,10 @@ M1 收尾 T19 让活动迭代卡片的进度经 `@nerve/utils` 的 `calculateCyc
 ## 处理结果（M6/P4）：进度的口径
 
 口径定下，写进 M6 设计 §3.5 与 [P4 spec](../specs/P4-progress-transfer.md) §2.1：服务端只给计数，进度 = 已完成 ÷（总数 − 已取消），分母为 0 时为 0，由网页每域一个函数计算（取消的不算在分母里，与活动迭代卡片和迭代列表相同；侧边栏与模块的三种写法在 P5/P6 改为调用它）。快照何时写入也定下：迭代结束后第一次被看到时由周期任务 `planning.freeze_cycles` 或转移写一次（先写者为准），之后不覆盖；未冻结时 `progress_snapshot` 为 `null`（不是 `{}`），只看自己的访客恒为 `null`；读取的条件是迭代的 `status` 为已结束时用冻结，否则用实时（设计 §3.5），由 P5 的那个函数一次定下。第 1–3 条的网页改动在 P5（迭代）、P6（模块），本交接保持 open。证据：提交 `534d9cf092803a870b7d1ce9d64b23a04bc3d51a`（冻结列）、`a92a292387db1105e97a7a52b8e4b9ac6d7d70bb`（进度接口）、`e664868e4d4abea0c3d3e433dc864d533d9043e9`（冻结任务）。
+
+## 处理结果（M6/P5a）：死成员、oxlint 与进度的口径（迭代）
+
+- **死成员和死 prop**：按[M1 收尾计划](../../M1-frontend-trim/plans/closeout.md)附录 A 的三个脚本原样运行（先 `react-router typegen`）。M6 的行：开工时成员 143、prop 39，P5a 删除旧的迭代代码之后 51、38，删去迭代组件里没有调用方传的 prop（`CycleGroupIcon` 的 `color`、`height`、`width`，`BurndownChart` 的 `className`）与侧栏替身中无人读的字段之后 49、35。余下 84 行逐条有结论（P5a 台账“Task 12: 死成员”，随阶段归档）：63 行是测试与夹具的类型（误报）；`applied-filters` 的 `key`、`i18n_title` 与 `cycle.store` 的 `answeredAt` 是误报；18 行属模块，交 P6。
+- **oxlint**：P5a 改到的 117 个源文件告警为零；清掉告警的提交同时下调上限：web 58 → 53（迭代归档弹窗的正 `tabIndex`、`single-progress-stats.tsx` 两条、筛选面板的 `autoFocus`、`applied-filters` 的 `prefer-set-has`），utils 4 → 3（随旧 `cycle.ts` 删除）。“按规则清一类”留给 P8。
+- **进度的口径**：第 1 条（侧栏把取消的算在总数里）已改：侧栏的“工作项”与状态页签经 `cycleCounts` 与 `progressPercent`，完成 ÷（总数 − 取消）；第 3 条已改：冻结只在 `status` 为已结束且有冻结时读，条件只写在 `cycleCounts` 一处，`validateCycleSnapshot` 删除；列表行的圆环、进行中卡片、侧栏都调同一组函数。第 2 条（模块）在 P6。本交接保持 open。
+- 证据：提交 `a21686c4a9827c1fb98d28eafa67c35a5b1150f7`、`a415c86eb74295cd132d449c0ad49b512f93e91f`、`b6a0b7dfe45aeb2fce97abda9b3e6ed14f1e4a10`、`51271de5b98e3d42013086558c310f9b4fbe2881`、`f497055055f00e0cdbfa74e08f5186d40a1297d3`、`aabd9685fdcbcb099e15967069d61ffe6fff7f5d`；[P5a spec](../specs/P5a-web-cycles.md) §2.3、§2.8。

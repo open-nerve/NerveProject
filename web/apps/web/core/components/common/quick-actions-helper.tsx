@@ -5,18 +5,20 @@
  */
 
 // types
-import type { ICycle, IModule, IProjectView, IWorkspaceView } from "@nerve/types";
+import type { Cycle } from "@nerve/api-client";
+import { useTranslation } from "@nerve/i18n";
+import type { IModule, IProjectView, IWorkspaceView } from "@nerve/types";
 import type { TContextMenuItem } from "@nerve/ui";
 // hooks
 import { useQuickActionsFactory } from "@/components/common/quick-actions-factory";
 
 // Types
 interface UseCycleMenuItemsProps {
-  cycleDetails: ICycle | undefined;
-  isEditingAllowed: boolean;
-  workspaceSlug: string;
-  projectId: string;
-  cycleId: string;
+  cycle: Cycle;
+  /** The caller writes the cycle's project: he is its admin or its member (P5a spec 2.5). */
+  canWrite: boolean;
+  /** The caller may delete the cycle: the project's admin, or its creator while the project's admin or member (R8). */
+  canDelete: boolean;
   handleEdit: () => void;
   handleArchive: () => void;
   handleRestore: () => void;
@@ -51,25 +53,33 @@ interface UseViewMenuItemsProps {
   handleOpenInNewTab: () => void;
 }
 
+/**
+ * A cycle's menu (P5a spec 2.5, R8): changing it, to the caller who writes its project while it has not ended and is
+ * not archived; opening it in a new tab and copying its link, to anyone; archiving it, to the caller who writes, while
+ * it is not archived, the item disabled with the reason until it has ended; restoring it, to the caller who writes,
+ * once archived; deleting it, to the caller who may (canDelete), while it has not ended and is not archived. Its state
+ * is the status nerve gives it.
+ */
 export const useCycleMenuItems = (props: UseCycleMenuItemsProps): TContextMenuItem[] => {
   const factory = useQuickActionsFactory();
-  const { cycleDetails, isEditingAllowed, ...handlers } = props;
+  const { t } = useTranslation();
+  const { cycle, canWrite, canDelete, ...handlers } = props;
 
-  const isArchived = !!cycleDetails?.archived_at;
-  const isCompleted = cycleDetails?.status?.toLowerCase() === "completed";
+  const isArchived = cycle.archived_at !== null;
+  const isCompleted = cycle.status === "completed";
 
   // Assemble final menu items - order defined here
   const items = [
-    factory.createEditMenuItem(handlers.handleEdit, isEditingAllowed && !isCompleted && !isArchived),
+    factory.createEditMenuItem(handlers.handleEdit, canWrite && !isCompleted && !isArchived),
     factory.createOpenInNewTabMenuItem(handlers.handleOpenInNewTab),
     factory.createCopyLinkMenuItem(handlers.handleCopyLink),
     factory.createArchiveMenuItem(handlers.handleArchive, {
-      shouldRender: isEditingAllowed && !isArchived,
+      shouldRender: canWrite && !isArchived,
       disabled: !isCompleted,
-      description: isCompleted ? undefined : "Only completed cycles can be archived",
+      description: isCompleted ? undefined : t("project_cycles.archive.only_completed"),
     }),
-    factory.createRestoreMenuItem(handlers.handleRestore, isEditingAllowed && isArchived),
-    factory.createDeleteMenuItem(handlers.handleDelete, isEditingAllowed && !isCompleted && !isArchived),
+    factory.createRestoreMenuItem(handlers.handleRestore, canWrite && isArchived),
+    factory.createDeleteMenuItem(handlers.handleDelete, canDelete && !isCompleted && !isArchived),
   ].filter((item) => item.shouldRender !== false);
 
   return items;

@@ -8,12 +8,12 @@ import { registerOnboarded } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 
 const missing = "0199f1c2-7a1b-7c3d-8e4f-5a6b7c8d9e0f";
+// The cycle pages left this list in M6/P5a: they read nerve's /api/v0 cycles, and their missing-cycle and empty-archive
+// pages are covered by the G3 and G8 page stories (stories/planning/). The rest still mount without nerve's domain API.
 const entries = [
-  { name: "cycle", path: `cycles/${missing}`, domain: `cycles/${missing}/`, empty: "Cycle does not exist" },
   { name: "module", path: `modules/${missing}`, domain: `modules/${missing}/`, empty: "Module does not exist" },
   { name: "project view", path: `views/${missing}`, domain: `views/${missing}/`, empty: "View does not exist" },
   { name: "workspace view", path: "workspace-views/all-issues", domain: "views/" },
-  { name: "archived cycles", path: "archives/cycles", domain: "archived-cycles/", tab: "Cycles" },
   { name: "archived modules", path: "archives/modules", domain: "archived-modules/", tab: "Modules" },
 ] as const;
 

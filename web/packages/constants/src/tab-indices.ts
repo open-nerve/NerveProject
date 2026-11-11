@@ -20,8 +20,6 @@ const INTAKE_ISSUE_CREATE_FORM_TAB_INDICES = [
   "submit_button",
 ];
 
-const PROJECT_CYCLE_TAB_INDICES = ["name", "description", "date_range", "cancel", "submit", "project_id"];
-
 const PROJECT_MODULE_TAB_INDICES = [
   "name",
   "description",
@@ -37,14 +35,12 @@ const PROJECT_VIEW_TAB_INDICES = ["name", "description", "filters", "cancel", "s
 
 export enum ETabIndices {
   INTAKE_ISSUE_FORM = "intake-issue-form",
-  PROJECT_CYCLE = "project-cycle",
   PROJECT_MODULE = "project-module",
   PROJECT_VIEW = "project-view",
 }
 
 export const TAB_INDEX_MAP: Record<ETabIndices, string[]> = {
   [ETabIndices.INTAKE_ISSUE_FORM]: INTAKE_ISSUE_CREATE_FORM_TAB_INDICES,
-  [ETabIndices.PROJECT_CYCLE]: PROJECT_CYCLE_TAB_INDICES,
   [ETabIndices.PROJECT_MODULE]: PROJECT_MODULE_TAB_INDICES,
   [ETabIndices.PROJECT_VIEW]: PROJECT_VIEW_TAB_INDICES,
 };

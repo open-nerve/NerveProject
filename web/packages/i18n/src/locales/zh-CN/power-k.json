@@ -26,11 +26,8 @@
       "cycle": {
         "title": "周期操作",
         "indicator": "周期",
-        "add_to_favorites": "添加到收藏",
-        "remove_from_favorites": "从收藏中移除",
         "copy_url": "复制 URL",
-        "copy_url_toast_success": "周期 URL 已复制到剪贴板。",
-        "copy_url_toast_error": "复制周期 URL 到剪贴板时出错。"
+        "copy_url_toast_success": "周期 URL 已复制到剪贴板。"
       },
       "module": {
         "title": "模块操作",

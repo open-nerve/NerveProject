@@ -4,120 +4,69 @@
  * See the LICENSE file for details.
  */
 
-import { useMemo } from "react";
-import { isEmpty } from "lodash-es";
 import { observer } from "mobx-react";
-import { Disclosure, Transition } from "@headlessui/react";
+import { Disclosure } from "@headlessui/react";
 // nerve imports
-import { useTranslation } from "@nerve/i18n";
 import { ChevronDownOutline, ChevronUpOutline } from "@makeplane/propel/icons";
-import type { ICycle, TProgressSnapshot } from "@nerve/types";
-import { getDate } from "@nerve/utils";
-// hooks
-import { useCycle } from "@/hooks/store/use-cycle";
+import type { Cycle, Progress } from "@nerve/api-client";
+import { useTranslation } from "@nerve/i18n";
+import { Loader } from "@nerve/ui";
+// components
+import { BurndownChart } from "@/components/core/sidebar/burndown-chart";
 // local imports
 import { CycleProgressStats } from "./progress-stats";
-import { SidebarChart } from "./sidebar-chart";
 
-type TCycleProgressProps = {
-  cycleId: string;
+type Props = {
+  cycle: Cycle;
+  projectId: string;
+  /** The progress the sidebar shows (cycleCounts' choice); undefined until nerve has read it. */
+  progress: Progress | undefined;
 };
 
-export const validateCycleSnapshot = (cycleDetails: ICycle | null): ICycle | null => {
-  if (!cycleDetails || cycleDetails === null) return cycleDetails;
-
-  const updatedCycleDetails: any = { ...cycleDetails };
-  if (!isEmpty(cycleDetails.progress_snapshot)) {
-    Object.keys(cycleDetails.progress_snapshot || {}).forEach((key) => {
-      const currentKey = key as keyof TProgressSnapshot;
-      if (!isEmpty(cycleDetails.progress_snapshot) && !isEmpty(updatedCycleDetails)) {
-        updatedCycleDetails[currentKey as keyof ICycle] = cycleDetails?.progress_snapshot?.[currentKey];
-      }
-    });
-  }
-  return updatedCycleDetails;
-};
-
-export const CycleProgress = observer(function CycleProgress(props: TCycleProgressProps) {
-  // props
-  const { cycleId } = props;
-  // router
+/**
+ * The progress of a cycle's sidebar (P5a spec 2.5): none yet for a draft, which has no days; else its burndown, when
+ * nerve gives one, and its breakdowns by state, assignee and label.
+ */
+export const CycleProgress = observer(function CycleProgress(props: Props) {
+  const { cycle, projectId, progress } = props;
   // nerve hooks
   const { t } = useTranslation();
-  // store hooks
-  const { getCycleById } = useCycle();
-  // derived values
-  const cycleDetails = validateCycleSnapshot(getCycleById(cycleId));
-  const totalIssues = cycleDetails?.total_issues || 0;
-  const chartDistributionData = cycleDetails?.distribution || undefined;
-  const groupedIssues = useMemo(
-    () => ({
-      backlog: cycleDetails?.backlog_issues || 0,
-      unstarted: cycleDetails?.unstarted_issues || 0,
-      started: cycleDetails?.started_issues || 0,
-      completed: cycleDetails?.completed_issues || 0,
-      cancelled: cycleDetails?.cancelled_issues || 0,
-    }),
-    [cycleDetails]
-  );
-  const cycleStartDate = getDate(cycleDetails?.start_date);
-  const cycleEndDate = getDate(cycleDetails?.end_date);
-  const isCycleStartDateValid = cycleStartDate && cycleStartDate <= new Date();
-  const isCycleEndDateValid = cycleStartDate && cycleEndDate && cycleEndDate >= cycleStartDate;
-  const isCycleDateValid = isCycleStartDateValid && isCycleEndDateValid;
 
-  if (!cycleDetails) return <></>;
   return (
     <div className="space-y-4 border-t border-subtle py-5">
       <Disclosure defaultOpen>
         {({ open }) => (
           <div className="flex flex-col">
-            {/* progress bar header */}
-            {isCycleDateValid ? (
-              <div className="relative flex w-full items-center justify-between gap-2">
-                <Disclosure.Button className="relative flex w-full items-center gap-2">
-                  <div className="text-13 font-medium text-secondary">{t("project_cycles.active_cycle.progress")}</div>
-                </Disclosure.Button>
-                <Disclosure.Button className="ml-auto">
-                  {open ? (
-                    <ChevronUpOutline className="h-3.5 w-3.5" aria-hidden="true" />
-                  ) : (
-                    <ChevronDownOutline className="h-3.5 w-3.5" aria-hidden="true" />
+            <Disclosure.Button className="relative flex w-full items-center justify-between gap-2">
+              <span className="text-13 font-medium text-secondary">{t("project_cycles.active_cycle.progress")}</span>
+              {open ? (
+                <ChevronUpOutline className="h-3.5 w-3.5" aria-hidden="true" />
+              ) : (
+                <ChevronDownOutline className="h-3.5 w-3.5" aria-hidden="true" />
+              )}
+            </Disclosure.Button>
+            <Disclosure.Panel className="flex flex-col divide-y divide-subtle-1">
+              {cycle.status === "draft" ? (
+                <div className="my-2 w-full rounded-md bg-surface-2 px-2 py-2 text-13 text-tertiary">
+                  {t("no_data_yet")}
+                </div>
+              ) : progress === undefined ? (
+                <Loader className="mt-4 h-[160px] w-full">
+                  <Loader.Item width="100%" height="100%" />
+                </Loader>
+              ) : (
+                <>
+                  {progress.burndown && (
+                    <div className="py-4">
+                      <BurndownChart burndown={progress.burndown} />
+                    </div>
                   )}
-                </Disclosure.Button>
-              </div>
-            ) : (
-              <div className="relative flex w-full items-center justify-between gap-2">
-                <div className="text-13 font-medium text-secondary">{t("project_cycles.active_cycle.progress")}</div>
-              </div>
-            )}
-            <Transition as="div" show={open}>
-              <Disclosure.Panel className="flex flex-col divide-y divide-subtle-1">
-                {cycleStartDate && cycleEndDate ? (
-                  <>
-                    {isCycleDateValid && <SidebarChart cycleId={cycleId} />}
-                    {/* progress detailed view */}
-                    {chartDistributionData && (
-                      <div className="w-full py-4">
-                        <CycleProgressStats
-                          cycleId={cycleId}
-                          distribution={chartDistributionData}
-                          groupedIssues={groupedIssues}
-                          noBackground={false}
-                          roundedTab={false}
-                          size="xs"
-                          totalIssuesCount={totalIssues}
-                        />
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <div className="my-2 w-full rounded-md bg-surface-2 px-2 py-2 text-13 text-tertiary">
-                    {t("no_data_yet")}
+                  <div className="w-full py-4">
+                    <CycleProgressStats cycleId={cycle.id} projectId={projectId} progress={progress} />
                   </div>
-                )}
-              </Disclosure.Panel>
-            </Transition>
+                </>
+              )}
+            </Disclosure.Panel>
           </div>
         )}
       </Disclosure>

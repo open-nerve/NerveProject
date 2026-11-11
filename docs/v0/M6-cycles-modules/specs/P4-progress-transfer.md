@@ -1,6 +1,6 @@
 # M6 / P4：进度、冻结与转移
 
-> 状态：已实施（2026-11-10），整分支审查见 [re-63](../../../reviews/re-63-M6P4整体审核.md)，阶段记录见 [P4 阶段记录](../reviews/P4-progress-transfer-review.md)；预检见 [re-62](../../../reviews/re-62-M6P4预检.md)。基线 main `ed8f0df4e8982dc50a4560a31fdf9b2964d84ac7`（P3b 的 noff，main CI 42621199100 首次通过）。设计见 [M6 设计](../M6-design.md) §2 的 G5–G7、G12、G17，§3.4、§3.5、§3.7、§3.8、§5、§6、§9；负责人 2026-11-07 的决定 A/B/C 见设计 §15（第 5、6、7、8、11、14、15 条与本段直接相关）。加锁之路沿用 M4（[硬规则 §4](../../claude_to_gpt/03-rules-and-pitfalls.md)）与 [P1 spec](P1-cycles-backend.md) §3；归属的写法与动态沿用 [P3a spec](P3a-issue-membership.md)。现状调研见本阶段台账 `research/backend.md`、`research/plane-web.md`（ignored，随阶段归档）。
+> 状态：已完成（2026-11-10，noff `c3ba5a40`；合入后 main CI 的 e2e 失败经根因修复第二次 noff `a2b50624`，main CI 42824266166 首次通过），整分支审查见 [re-63](../../../reviews/re-63-M6P4整体审核.md)，阶段记录见 [P4 阶段记录](../reviews/P4-progress-transfer-review.md)；预检见 [re-62](../../../reviews/re-62-M6P4预检.md)。基线 main `ed8f0df4e8982dc50a4560a31fdf9b2964d84ac7`（P3b 的 noff，main CI 42621199100 首次通过）。设计见 [M6 设计](../M6-design.md) §2 的 G5–G7、G12、G17，§3.4、§3.5、§3.7、§3.8、§5、§6、§9；负责人 2026-11-07 的决定 A/B/C 见设计 §15（第 5、6、7、8、11、14、15 条与本段直接相关）。加锁之路沿用 M4（[硬规则 §4](../../claude_to_gpt/03-rules-and-pitfalls.md)）与 [P1 spec](P1-cycles-backend.md) §3；归属的写法与动态沿用 [P3a spec](P3a-issue-membership.md)。现状调研见本阶段台账 `research/backend.md`、`research/plane-web.md`（ignored，随阶段归档）。
 
 ## 1. 目标与边界
 
@@ -186,7 +186,7 @@ P4 交付设计 §12 P4 一行：
 - [x] A5 列表行：迭代与模块列表（含归档目录）每行六个实时数；迭代行 `assignee_ids` 与冻结的计数；没有 N+1（每页固定条数的语句）；OwnOnly 只算自己的、冻结为 `null`。
 - [x] A6 G17 与加锁：三个新操作进入权限矩阵（管理员、成员、建立者、访客、工作区管理员兼访客、非成员、私有项目、撤权）；访客与 OwnOnly 的数字只算可见的；交错：冻结任务与转移、转移与工作项改迭代/改状态、转移与删目标迭代、冻结任务与工作项改状态，各两种次序；转移与冻结都在最后一把锁之后读时钟；转移的锁超时回答 503，任务的锁超时保留错误、已提交的项目不回滚。
 - [x] A7 契约与文档：每个新声明的码在 planning 的 apitest 有回答；`00048` 上行、下行、再上行；差异清单、输入交接的“处理结果（M6/P4）”、设计 §3.5/§5/§6/§9/§14 已写；P3b 的阶段记录 §7、spec A8 与设计 §14 已回填。
-- [ ] A8 七项本地门禁、deep-review 修复闭环、准确的分支 CI 与 noff 后的 main CI 全绿、归档清理。（合入后由 P5 的 T1 勾选）
+- [x] A8 七项本地门禁、deep-review 修复闭环、准确的分支 CI 与 noff 后的 main CI 全绿、归档清理。（本地门禁与修复闭环见阶段记录 §5、§6；CI、合入后 main CI 的根因修复与归档清理见 §7，由 P5a 的 T1 回填）
 
 ## 5. 后续责任
 

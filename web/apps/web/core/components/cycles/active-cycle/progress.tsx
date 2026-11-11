@@ -4,108 +4,102 @@
  * See the LICENSE file for details.
  */
 
-import { observer } from "mobx-react";
 import { useTheme } from "next-themes";
 // nerve imports
-import { PROGRESS_STATE_GROUPS_DETAILS } from "@nerve/constants";
-import { useTranslation } from "@nerve/i18n";
 import { LinearProgress } from "@makeplane/propel/components/linear-progress";
-import type { ICycle } from "@nerve/types";
-import { Loader } from "@nerve/ui";
-import { calculateCycleProgress } from "@nerve/utils";
+import type { Progress } from "@nerve/api-client";
+import { STATE_GROUPS } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
+import { progressPercent } from "@nerve/utils";
 // assets
 import darkProgressAsset from "@/app/assets/empty-state/active-cycle/progress-dark.webp?url";
 import lightProgressAsset from "@/app/assets/empty-state/active-cycle/progress-light.webp?url";
 // components
 import { SimpleEmptyState } from "@/components/empty-state/simple-empty-state-root";
 
-export type ActiveCycleProgressProps = {
-  cycle: ICycle | null;
-  workspaceSlug: string;
-  projectId: string;
+/** The state groups whose work items a cycle's progress counts, completed first; the cancelled ones it does not. */
+const COUNTED = ["completed", "started", "unstarted", "backlog"] as const;
+
+type Props = {
+  /** The progress the card shows (cycleCounts' choice). */
+  progress: Progress;
 };
 
-export const ActiveCycleProgress = observer(function ActiveCycleProgress(props: ActiveCycleProgressProps) {
-  const { cycle } = props;
+/**
+ * The progress of the cycle in progress (P5a spec 2.5): the completed of its work items not cancelled (progressPercent),
+ * the work items of each state group it counts that has any, and the cancelled ones said apart; without work items,
+ * how to see it. A row does not set the page's filters (P5b).
+ */
+export function ActiveCycleProgress({ progress }: Props) {
   // theme hook
   const { resolvedTheme } = useTheme();
   // nerve hooks
   const { t } = useTranslation();
   // derived values
-  const completedIssues = cycle?.completed_issues ?? 0;
-  const closableIssues = cycle ? cycle.total_issues - cycle.cancelled_issues : 0;
-  const progressValue = calculateCycleProgress(cycle ?? undefined);
-  const groupedIssues: any = cycle
-    ? {
-        completed: cycle?.completed_issues,
-        started: cycle?.started_issues,
-        unstarted: cycle?.unstarted_issues,
-        backlog: cycle?.backlog_issues,
-      }
-    : {};
-  const resolvedPath = resolvedTheme === "light" ? lightProgressAsset : darkProgressAsset;
+  const title = t("project_cycles.active_cycle.progress");
 
-  return cycle && cycle.hasOwnProperty("started_issues") ? (
-    <div className="flex min-h-[17rem] flex-col gap-5 rounded-lg border border-subtle bg-surface-1 px-3.5 py-4">
+  return (
+    <section
+      aria-label={title}
+      className="flex min-h-[17rem] flex-col gap-5 rounded-lg border border-subtle bg-surface-1 px-3.5 py-4"
+    >
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between gap-4">
-          <h3 className="text-14 font-semibold text-tertiary">{t("project_cycles.active_cycle.progress")}</h3>
-          {cycle.total_issues > 0 && (
+          <h3 className="text-14 font-semibold text-tertiary">{title}</h3>
+          {progress.total_issues > 0 && (
             <span className="flex gap-1 rounded-xs px-3 py-1 text-13 font-medium whitespace-nowrap text-placeholder">
               {t("project_cycles.active_cycle.work_items_completed", {
-                completed: completedIssues,
-                total: closableIssues,
+                completed: progress.completed_issues,
+                total: progress.total_issues - progress.cancelled_issues,
               })}
             </span>
           )}
         </div>
-        {cycle.total_issues > 0 && (
+        {progress.total_issues > 0 && (
           <LinearProgress
-            value={progressValue}
+            value={progressPercent(progress)}
             size="md"
             variant="brand"
             showValue={false}
-            aria-label="Cycle progress"
+            aria-label={title}
           />
         )}
       </div>
 
-      {cycle.total_issues > 0 ? (
+      {progress.total_issues > 0 ? (
         <div className="flex flex-col gap-5">
-          {Object.keys(groupedIssues).map(
-            (group, index) =>
-              groupedIssues[group] > 0 && (
-                <div key={group} className="flex items-center justify-between gap-2 text-13">
+          <ul className="flex flex-col gap-5">
+            {COUNTED.filter((group) => progress[`${group}_issues`] > 0).map((group) => {
+              const count = progress[`${group}_issues`];
+              return (
+                <li key={group} className="flex items-center justify-between gap-2 text-13">
                   <div className="flex items-center gap-1.5">
                     <span
                       className="block h-3 w-3 rounded-full"
-                      style={{
-                        backgroundColor: PROGRESS_STATE_GROUPS_DETAILS[index].color,
-                      }}
+                      style={{ backgroundColor: STATE_GROUPS[group].color }}
+                      aria-hidden="true"
                     />
-                    <span className="w-16 font-medium text-tertiary capitalize">{group}</span>
+                    <span className="font-medium text-tertiary">{t(STATE_GROUPS[group].i18n_label)}</span>
                   </div>
-                  <span className="text-tertiary">{`${groupedIssues[group]} ${
-                    groupedIssues[group] > 1 ? "Work items" : "Work item"
-                  }`}</span>
-                </div>
-              )
-          )}
-          {cycle.cancelled_issues > 0 && (
+                  <span className="text-tertiary">{`${count} ${t("issue.label", { count })}`}</span>
+                </li>
+              );
+            })}
+          </ul>
+          {progress.cancelled_issues > 0 && (
             <span className="flex items-center gap-2 text-13 text-tertiary">
-              {t("project_cycles.active_cycle.cancelled_excluded", { count: cycle.cancelled_issues })}
+              {t("project_cycles.active_cycle.cancelled_excluded", { count: progress.cancelled_issues })}
             </span>
           )}
         </div>
       ) : (
         <div className="flex h-full w-full items-center justify-center">
-          <SimpleEmptyState title={t("active_cycle.empty_state.progress.title")} assetPath={resolvedPath} />
+          <SimpleEmptyState
+            title={t("active_cycle.empty_state.progress.title")}
+            assetPath={resolvedTheme === "light" ? lightProgressAsset : darkProgressAsset}
+          />
         </div>
       )}
-    </div>
-  ) : (
-    <Loader className="flex min-h-[17rem] flex-col gap-5 rounded-lg border border-subtle bg-surface-1">
-      <Loader.Item width="100%" height="100%" />
-    </Loader>
+    </section>
   );
-});
+}

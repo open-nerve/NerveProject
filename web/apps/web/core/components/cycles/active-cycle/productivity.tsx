@@ -4,78 +4,73 @@
  * See the LICENSE file for details.
  */
 
-import { Fragment } from "react";
-import { observer } from "mobx-react";
 import { Link } from "react-router";
 import { useTheme } from "next-themes";
 // nerve imports
+import type { Progress } from "@nerve/api-client";
 import { useTranslation } from "@nerve/i18n";
-import type { ICycle } from "@nerve/types";
-import { Loader } from "@nerve/ui";
 // assets
 import darkChartAsset from "@/app/assets/empty-state/active-cycle/chart-dark.webp?url";
 import lightChartAsset from "@/app/assets/empty-state/active-cycle/chart-light.webp?url";
 // components
-import ProgressChart from "@/components/core/sidebar/progress-chart";
+import { BurndownChart } from "@/components/core/sidebar/burndown-chart";
 import { SimpleEmptyState } from "@/components/empty-state/simple-empty-state-root";
 
-export type ActiveCycleProductivityProps = {
+type Props = {
   workspaceSlug: string;
   projectId: string;
-  cycle: ICycle | null;
+  cycleId: string;
+  /** The progress the card shows (cycleCounts' choice). */
+  progress: Progress;
 };
 
-export const ActiveCycleProductivity = observer(function ActiveCycleProductivity(props: ActiveCycleProductivityProps) {
-  const { workspaceSlug, projectId, cycle } = props;
+/**
+ * The burndown of the cycle in progress (P5a spec 2.4, 2.5), linked to the cycle's page: its work items pending (of
+ * the backlog, unstarted and started groups) and nerve's burndown (BurndownChart); without work items, how to see it.
+ * nerve gives no burndown of a span of more than 3660 days: none yet to show.
+ */
+export function ActiveCycleProductivity({ workspaceSlug, projectId, cycleId, progress }: Props) {
   // theme hook
   const { resolvedTheme } = useTheme();
   // nerve hooks
   const { t } = useTranslation();
   // derived values
-  const resolvedPath = resolvedTheme === "light" ? lightChartAsset : darkChartAsset;
-  const completionChartDistributionData = cycle?.distribution?.completion_chart || undefined;
+  const title = t("project_cycles.active_cycle.issue_burndown");
+  const cyclePage = `/${workspaceSlug}/projects/${projectId}/cycles/${cycleId}`;
+  const pending = progress.backlog_issues + progress.unstarted_issues + progress.started_issues;
 
-  return cycle && completionChartDistributionData ? (
-    <div className="flex min-h-[17rem] flex-col gap-5 rounded-lg border border-subtle bg-surface-1 px-3.5 py-4">
+  return (
+    <section
+      aria-label={title}
+      className="flex min-h-[17rem] flex-col gap-5 rounded-lg border border-subtle bg-surface-1 px-3.5 py-4"
+    >
       <div className="relative flex items-center justify-between gap-4">
-        <Link to={`/${workspaceSlug}/projects/${projectId}/cycles/${cycle?.id}`}>
-          <h3 className="text-14 font-semibold text-tertiary">{t("project_cycles.active_cycle.issue_burndown")}</h3>
+        <Link to={cyclePage}>
+          <h3 className="text-14 font-semibold text-tertiary">{title}</h3>
         </Link>
       </div>
 
-      <Link to={`/${workspaceSlug}/projects/${projectId}/cycles/${cycle?.id}`}>
-        {cycle.total_issues > 0 ? (
-          <>
-            <div className="h-full w-full px-2">
-              <div className="flex items-center justify-end gap-4 py-1 text-11 text-tertiary">
-                <span>{`Pending work items - ${cycle.backlog_issues + cycle.unstarted_issues + cycle.started_issues}`}</span>
-              </div>
-
-              <div className="relative h-full">
-                {completionChartDistributionData && (
-                  <Fragment>
-                    <ProgressChart
-                      distribution={completionChartDistributionData}
-                      totalIssues={cycle.total_issues || 0}
-                      plotTitle="work items"
-                    />
-                  </Fragment>
-                )}
-              </div>
-            </div>
-          </>
-        ) : (
-          <>
-            <div className="flex h-full w-full items-center justify-center">
-              <SimpleEmptyState title={t("active_cycle.empty_state.chart.title")} assetPath={resolvedPath} />
-            </div>
-          </>
-        )}
-      </Link>
-    </div>
-  ) : (
-    <Loader className="flex min-h-[17rem] flex-col gap-5 rounded-lg border border-subtle bg-surface-1">
-      <Loader.Item width="100%" height="100%" />
-    </Loader>
+      {progress.total_issues === 0 ? (
+        <div className="flex h-full w-full items-center justify-center">
+          <SimpleEmptyState
+            title={t("active_cycle.empty_state.chart.title")}
+            assetPath={resolvedTheme === "light" ? lightChartAsset : darkChartAsset}
+          />
+        </div>
+      ) : (
+        <Link to={cyclePage} className="h-full w-full px-2">
+          <div className="flex items-center justify-end gap-4 py-1 text-11 text-tertiary">
+            <span>{t("project_cycles.active_cycle.pending_work_items", { count: pending })}</span>
+          </div>
+          <div className="relative h-full">
+            {progress.burndown ? (
+              <BurndownChart burndown={progress.burndown} />
+            ) : (
+              <p className="text-13 text-tertiary">{t("no_data_yet")}</p>
+            )}
+          </div>
+        </Link>
+      )}
+    </section>
   );
-});
+}

@@ -468,7 +468,8 @@ describe("store-context", () => {
     await until(() => listed.settled, "Y's list");
     // The address's parameters are the page's: Y's stores go on with X's RouterStore, which X's project filters
     // followed (project_filter.store.ts). The project filters' reaction is the one RootStore.dispose releases; the
-    // cycle and module filters' and the issue root's are M6's and M4's (M3 design 7.1, 13.2).
+    // cycle filters of planning have none (the next test, P5a spec R4); the module filters' is P6's (M3 design 7.1,
+    // 13.2).
     expect(y.router).toBe(x.router);
     x.projectRoot.projectFilter.updateSearchQuery("x");
     y.projectRoot.projectFilter.updateSearchQuery("y");
@@ -478,6 +479,29 @@ describe("store-context", () => {
     expect(y.projectRoot.projectFilter.currentWorkspaceDisplayFilters).toBeDefined();
     expect(x.projectRoot.projectFilter.searchQuery).toBe("x");
     expect(x.projectRoot.projectFilter.currentWorkspaceDisplayFilters).toBeUndefined();
+  });
+
+  it("leaves a retired session's cycle filters as it left them: they follow no address, so there is no reaction to release", async () => {
+    const { context, signedIn, follow } = await load();
+    await signedIn();
+    const x = context.rootStore;
+    // X's filters and search of web's cycles list, kept by web's id as the list page gives it (P5a spec 2.3, R4).
+    const web = "p-web";
+    x.planning.cycleFilters.updateFilters(web, "default", { status: ["current"] });
+    x.planning.cycleFilters.updateSearchQuery(web, "default", "x");
+    await follow(Y);
+    const y = context.rootStore;
+    y.planning.cycleFilters.updateSearchQuery(web, "default", "y");
+    // Y's stores go on with X's RouterStore: the address moves into web, then on to another project.
+    expect(y.router).toBe(x.router);
+    y.router.setQuery({ workspaceSlug: "acme", projectId: web });
+    y.router.setQuery({ workspaceSlug: "acme", projectId: "p-ops" });
+    // Neither session's filters followed it (the old ones started a project's filters and cleared the search): X's
+    // are as X left them, Y's as Y left them, each its own.
+    expect(x.planning.cycleFilters.getFilters(web, "default")).toEqual({ status: ["current"] });
+    expect(x.planning.cycleFilters.getSearchQuery(web, "default")).toBe("x");
+    expect(y.planning.cycleFilters.getFilters(web, "default")).toEqual({});
+    expect(y.planning.cycleFilters.getSearchQuery(web, "default")).toBe("y");
   });
 
   it("gives the code that reads the stores outside the components the RootStore of the session now", async () => {
