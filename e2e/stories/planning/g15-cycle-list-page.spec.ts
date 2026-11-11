@@ -67,7 +67,14 @@ test("G15 (page): Now's page lists only Now's work items in the list, the board,
 
   const { page, watch } = await openCyclePage(signedInPage, w.mem, w.path(now.id));
   const quiet = quietEachTime(page, watch);
-  // Each layout lists Now's two work items, and nerve keeps the layout as the page's own.
+  // Each layout lists Now's two work items, each in that layout's own place for it (a list's group, a board's column of
+  // its state, the calendar's day of its date, the table), and nerve keeps the layout as the page's own.
+  const places = {
+    List: page.locator('[class~="group/list-header"]').locator("../.."),
+    Board: page.locator(`[id^="${build.state_id}__"]`),
+    Calendar: page.locator(`button[aria-label="${due}"]`).locator("xpath=preceding-sibling::div[1]"),
+    Table: page.getByRole("table"),
+  };
   await (
     [
       ["List", "list"],
@@ -81,6 +88,8 @@ test("G15 (page): Now's page lists only Now's work items in the list, the board,
       if ((await layoutButton(page, layout).getAttribute("aria-pressed")) !== "true")
         await layoutButton(page, layout).click();
       await expect(layoutButton(page, layout)).toHaveAttribute("aria-pressed", "true");
+      await expect(places[layout].filter({ has: rowOptions(page, "Build") })).toHaveCount(1);
+      await expect(places[layout].filter({ has: rowOptions(page, "Plan") })).toHaveCount(1);
       await expect.poll(() => shownItems(page)).toEqual(["Build", "Plan"]);
       await expect.poll(async () => (await saved()).layout).toBe(key);
       await quiet();

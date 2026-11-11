@@ -218,7 +218,10 @@ it.each([true, false])(
         self: { data: { date: "2026-12-30" } },
       } as never)
     );
-    if (readOnly) return expect(writes()).toEqual([]);
+    if (readOnly) {
+      await act(async () => vi.advanceTimersByTimeAsync(1000));
+      return expect(writes()).toEqual([]);
+    }
     await until(() => writes().length === 1, "the drop");
     expect(writes()[0]).toMatchObject({
       method: "PATCH",

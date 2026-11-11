@@ -3,6 +3,7 @@
 // ../project/filter.store.test.ts.
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { EIssueFilterType } from "@nerve/constants";
+import { ApiError } from "@/lib/api-error";
 import { json, problem } from "@/lib/auth/fake-nerve";
 import { preferencesOf } from "@/store/project/fake-projects";
 import { accountOf } from "@/store/member/fake-users";
@@ -86,7 +87,8 @@ it("seeds nothing when a whole-field change with nothing read is refused", async
     "/api/v0/me/projects/A/preferences",
   ]);
   patch.call.answer(problem(403, "forbidden"));
-  await expect(patch.promise).rejects.toBeDefined();
+  await expect(patch.promise).rejects.toBeInstanceOf(ApiError);
+  await expect(patch.promise).rejects.toMatchObject({ status: 403 });
   expect(store.getIssueFilters("A")).toBeUndefined();
 });
 
@@ -129,9 +131,9 @@ it("keeps group collapse locally under the page's store type", async () => {
 it("refuses a partial change of a field with nothing read, without a request", async () => {
   const { app, nerve } = tab;
   const store = app.issue.projectIssuesFilter;
-  await expect(
-    store.updateFilters("ws", "A", EIssueFilterType.DISPLAY_PROPERTIES, { state: false })
-  ).rejects.toBeDefined();
+  await expect(store.updateFilters("ws", "A", EIssueFilterType.DISPLAY_PROPERTIES, { state: false })).rejects.toThrow(
+    "Page preferences not loaded"
+  );
   expect(nerve.calls).toHaveLength(0);
   expect(store.getIssueFilters("A")).toBeUndefined();
 });

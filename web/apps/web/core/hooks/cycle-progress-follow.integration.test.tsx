@@ -191,31 +191,42 @@ it("reads nothing for a write nerve refuses, whose refusal reaches its caller", 
   expect(tab.app.issue.cycleIssues.getIssueIds()).toEqual(["old"]);
 });
 
-it.each(["in another project", "while the cycle has ended"])(
-  "reads nothing for a creation that does not join the cycle: %s",
-  async (creation) => {
-    const other = projectOf("B", tab.workspace.id, { id: "B" });
-    await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, [tab.project, other]);
-    if (creation === "while the cycle has ended")
-      await loadCycle(tab.nerve, tab.app.planning.cycles, cycleOf(tab.project, "Now", { id: C1, status: "completed" }));
-    tab.nerve.calls.length = 0;
-    const project = creation === "in another project" ? "B" : "A";
-    let promise!: Promise<unknown>;
-    const call = await act(async () => {
-      promise = fixture.actions!.createIssue!(project, { name: "Elsewhere" });
-      await until(() => tab.nerve.calls.length === 1, "the creation");
-      return tab.nerve.calls[0]!;
-    });
-    expect([call.method, call.path, call.body]).toEqual([
-      "POST",
-      `/api/v0/projects/${project}/issues`,
-      { name: "Elsewhere" },
-    ]);
-    await answer(call, json(201, { ...issueDetailOf("elsewhere", project), name: "Elsewhere" }));
-    await promise;
-    expect(progressReads()).toEqual([]);
-  }
-);
+it.each([
+  "in another project",
+  "while the cycle has ended",
+  "while the cycle is archived",
+  "while the project's cycles are off",
+])("reads nothing for a creation that does not join the cycle: %s", async (creation) => {
+  const other = projectOf("B", tab.workspace.id, { id: "B" });
+  await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, [tab.project, other]);
+  if (creation === "while the cycle has ended")
+    await loadCycle(tab.nerve, tab.app.planning.cycles, cycleOf(tab.project, "Now", { id: C1, status: "completed" }));
+  // nerve archives only ended cycles: a status other than completed shows that being archived alone is enough
+  if (creation === "while the cycle is archived")
+    await loadCycle(
+      tab.nerve,
+      tab.app.planning.cycles,
+      cycleOf(tab.project, "Now", { id: C1, status: "current", archived_at: LATER })
+    );
+  if (creation === "while the project's cycles are off")
+    tab.app.projectRoot.project.confirmProject(tab.project, (project) => ({ ...project, cycle_view: false }));
+  tab.nerve.calls.length = 0;
+  const project = creation === "in another project" ? "B" : "A";
+  let promise!: Promise<unknown>;
+  const call = await act(async () => {
+    promise = fixture.actions!.createIssue!(project, { name: "Elsewhere" });
+    await until(() => tab.nerve.calls.length === 1, "the creation");
+    return tab.nerve.calls[0]!;
+  });
+  expect([call.method, call.path, call.body]).toEqual([
+    "POST",
+    `/api/v0/projects/${project}/issues`,
+    { name: "Elsewhere" },
+  ]);
+  await answer(call, json(201, { ...issueDetailOf("elsewhere", project), name: "Elsewhere" }));
+  await promise;
+  expect(progressReads()).toEqual([]);
+});
 
 for (const ending of ["another cycle and back", "another session", "a permission lost and regained", "unmount"]) {
   it(`reads nothing when nerve confirms a write after ${ending}`, async () => {

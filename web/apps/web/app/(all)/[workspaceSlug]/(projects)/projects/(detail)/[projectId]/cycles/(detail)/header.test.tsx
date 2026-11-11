@@ -141,6 +141,7 @@ it("offers none of the list's controls to one who is not the project's member, w
   await page.mount(header());
   await act(async () => vi.advanceTimersByTimeAsync(1000));
   expect(offered()).toEqual({ count: undefined, layouts: [], filters: false, display: false, create: false });
+  expect(inHeader("aria_labels.toggle_details"), "the page's own header").toBeDefined();
   expect(page.nerve.calls).toEqual([]);
 });
 

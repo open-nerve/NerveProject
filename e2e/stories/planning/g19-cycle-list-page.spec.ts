@@ -103,6 +103,8 @@ test("G19 (page): on Next's page the header's layouts, filters, display and new 
   await expect(page).toHaveURL(w.path(next.id));
   await expect.poll(() => shownItems(page)).toEqual(["Ship"]);
   await lateAnswerAway(page, back, "Build");
+  expect(await shownItems(page), "Next's work items, after Now's late answer").toEqual(["Ship"]);
+  await expect(headerCount(page, "Next")).toHaveText("1");
 
   // Back to Now again, its read held; Ops's Launch, of another project: Deploy alone.
   const away = await sentHeld(page, "GET", listed(w.web.id), async () => {

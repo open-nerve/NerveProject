@@ -84,7 +84,8 @@ it("lists the cycle as its project's list under the cycle page's preferences, ne
   expect(ids()).toEqual(["a", "b"]);
   expect(store.total).toBe(2);
   expect(app.issue.projectIssues.currentList).toBeUndefined();
-  expect(store.viewFlags).toEqual(app.issue.projectIssues.viewFlags);
+  // the page offers new and changed work items as its store; an ended or archived cycle's roots narrow it (re-66 M2)
+  expect(store.viewFlags).toEqual({ enableQuickAdd: true, enableIssueCreation: true, enableInlineEditing: true });
 });
 
 it("keeps one binding per cycle, so a late answer for the cycle left does not enter the cycle shown", async () => {
@@ -117,6 +118,31 @@ it("keeps one binding per cycle, so a late answer for the cycle left does not en
   );
   expect(store.currentList).toBe(listOne);
   expect(ids()).toEqual(["a"]);
+});
+
+it("counts a cycle page's work items as nerve does, only while the current list is that page's", async () => {
+  const { nerve } = tab;
+  const store = tab.app.issue.cycleIssues;
+  expect(store.pageTotal(pageOf(C1)), "nothing read").toBeUndefined();
+  await answered(
+    nerve,
+    () => store.fetchIssues("ws", pageOf(C1), "init-loader", { limit: 20 }),
+    ["GET", "/api/v0/projects/A/issues"],
+    { ...issuePageOf([inCycle("a")]), total: 7 },
+    "the first cycle's list"
+  );
+  expect(store.pageTotal(pageOf(C1)), "nerve's count, though it sent one row").toBe(7);
+  expect(store.pageTotal(pageOf(C2)), "another cycle's page").toBeUndefined();
+  expect(store.pageTotal({ projectID: "B", cycleID: C1 }), "the cycle under another project").toBeUndefined();
+  const two = await requestedIssue(nerve, () => store.fetchIssues("ws", pageOf(C2), "init-loader", { limit: 20 }), [
+    "GET",
+    "/api/v0/projects/A/issues",
+  ]);
+  expect(store.pageTotal(pageOf(C1)), "the first cycle's, its list no longer current").toBeUndefined();
+  expect(store.pageTotal(pageOf(C2)), "the second cycle's, not answered yet").toBeUndefined();
+  two.call.answer(json(200, { ...issuePageOf([inCycle("b", C2)]), total: 1 }));
+  await two.promise;
+  expect(store.pageTotal(pageOf(C2))).toBe(1);
 });
 
 it("reads the next page only for the cycle page whose list is current", async () => {

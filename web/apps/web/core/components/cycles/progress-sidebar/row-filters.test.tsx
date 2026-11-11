@@ -144,7 +144,11 @@ it("leaves the rows plain until the page shows its filters", async () => {
   await tab.open(PAGE);
   await until(() => tab.reads().length === 1, "the page's preferences");
   await openTab("common.labels", sidebar());
-  expect(rowsIn(sidebar()).some(([button]) => button)).toBe(false);
+  expect(rowsIn(sidebar())).toEqual([
+    [false, "Bug"],
+    [false, "UI"],
+    [false, "distribution.no_labels"],
+  ]);
   await answerPreferences(tab.reads()[0]!);
   expect(rowsIn(sidebar()).filter(([button]) => button)).toHaveLength(2);
 });

@@ -115,9 +115,10 @@ it.each(rows)(
     await tab.open(LIST);
     const from = await atCard(chosen);
     const sent = await click(name, from);
-    expect(sent).toHaveLength(1);
     expect(sent[0]).toMatchObject({ method: "PATCH", path: `/api/v0/me/cycles/${C1}/preferences`, body: { filters } });
     await act(async () => vi.advanceTimersByTimeAsync(100));
+    expect(tab.nerve.calls.slice(from), "the one change, nothing more").toHaveLength(1);
+    expect(tab.reads(), "no read of the page's preferences").toEqual([]);
     expect(where.location?.pathname, "not before nerve confirms").toBe(LIST);
     await answerPreferences(sent[0]!, filters);
     await arrived(PAGE);
@@ -137,8 +138,12 @@ it("replaces, never merges: a page whose filters hold other conditions gets the 
   await act(async () => tab.lists()[0]!.answer(json(200, { total: 0, groups: [] })));
   await tab.go(LIST);
   const from = await atCard();
-  const sent = await click(STARTED, from);
-  expect(sent.map((call) => [call.method, call.body])).toEqual([["PATCH", { filters: { state_group: ["started"] } }]]);
+  await click(STARTED, from);
+  await act(async () => vi.advanceTimersByTimeAsync(100));
+  expect(tab.nerve.calls.slice(from).map((call) => [call.method, call.body])).toEqual([
+    ["PATCH", { filters: { state_group: ["started"] } }],
+  ]);
+  expect(tab.reads(), "the page's one read, before the change").toHaveLength(1);
 });
 
 it("keeps the row's filters when the page's read, sent before the change, answers older once the page is entered", async () => {

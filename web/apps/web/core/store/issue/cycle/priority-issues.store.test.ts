@@ -164,6 +164,25 @@ it("keeps a row while nerve confirms it urgent or high in the cycle, and lets it
   expect(shown()?.total).toBe(1);
 });
 
+it.each([
+  ["out of every cycle", null],
+  ["into another cycle", C2],
+])("lets an urgent row go once nerve confirms it moved %s", async (_, cycle_id) => {
+  const { app, nerve } = tab;
+  await firstPage([b, a]);
+  const change = await requestedIssue(
+    nerve,
+    () => app.issue.updateIssue("b", () => ({ cycle_id }), undefined, app.issue.scope("ws", "A")),
+    ["PATCH", "/api/v0/issues/b"]
+  );
+  expect(change.call.body).toEqual({ cycle_id });
+  expect(shown()?.issueIds, "until nerve confirms").toEqual(["b", "a"]);
+  change.call.answer(json(200, { ...b, cycle_id, updated_at: "2026-11-05T00:00:00Z" }));
+  await change.promise;
+  expect(shown()?.issueIds).toEqual(["a"]);
+  expect(shown()?.total).toBe(1);
+});
+
 it("writes nothing of an answer that comes once the root has retired", async () => {
   const { app, nerve } = tab;
   const read = await requestedIssue(nerve, () => app.issue.cyclePriorityIssues.fetchIssues("ws", pageOf(C1)), [

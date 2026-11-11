@@ -240,6 +240,8 @@ it.each([
   const registered = vi.spyOn(tab.app.issue, "registerList");
   await renderOpen();
   await act(async () => vi.advanceTimersByTimeAsync(100));
+  expect(tabNamed(PRIORITY)?.getAttribute("aria-selected"), "the tab, open").toBe("true");
+  expect(panel(), "its panel").not.toBeNull();
   expect(lists()).toEqual([]);
   expect(registered).not.toHaveBeenCalled();
 });

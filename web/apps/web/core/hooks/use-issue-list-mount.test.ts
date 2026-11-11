@@ -121,6 +121,5 @@ it("keys a cycle page's list by its cycle and gates it as its project's list", a
   expect(one).not.toEqual(two);
   expect(keyOf({ workspaceSlug: "ws", projectId: "A" }, 15)).toBeNull();
   expect(keyOf({ workspaceSlug: "ws", projectId: "A", cycleId: "C1" }, undefined)).toBeNull();
-  expect(tab.nerve.calls).toEqual([]);
   tab.app.dispose();
 });

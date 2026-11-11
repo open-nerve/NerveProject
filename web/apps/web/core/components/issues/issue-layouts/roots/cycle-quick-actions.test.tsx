@@ -129,6 +129,8 @@ it.each([
 it("removes a work item from the cycle in one change; once nerve confirms, the row leaves, the page says so and reads the progress again", async () => {
   await shown();
   const change = await removal();
+  await act(async () => vi.advanceTimersByTimeAsync(100));
+  expect(toasts, "nothing said before nerve confirms").toEqual([]);
   expect(progressReads()).toEqual([]);
   await act(async () => change.answer(json(200, first({ cycle_id: null }))));
   await until(() => row() === null, "the row off the list");
