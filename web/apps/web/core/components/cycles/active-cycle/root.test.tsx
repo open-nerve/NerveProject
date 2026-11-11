@@ -232,8 +232,12 @@ it("has neither progress nor burndown to show of a cycle without work items", as
 
 it("breaks its work items down by assignee and by label alone, named by the project's, by name, none last", async () => {
   await inProgress();
-  // no tab of priority work items (P5b)
-  expect(tabs().map((one) => one.textContent)).toEqual([ASSIGNEES, LABELS]);
+  // the tab of priority work items first (P5b spec 2.7), the assignees' shown
+  expect(tabs().map((one) => one.textContent)).toEqual([
+    "project_cycles.active_cycle.priority_issue",
+    ASSIGNEES,
+    LABELS,
+  ]);
   expect(tab(ASSIGNEES)?.getAttribute("aria-selected")).toBe("true");
   expect(rows()).toEqual([
     "Ann50%distribution.of_total 2",

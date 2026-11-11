@@ -36,6 +36,7 @@ import type { IProjectIssuesFilter, IProjectIssues } from "./project";
 import { ProjectIssuesFilter, ProjectIssues } from "./project";
 import { CycleIssuesFilter } from "./cycle/filter.store";
 import { CycleIssues, type ICycleIssues } from "./cycle/issue.store";
+import { CyclePriorityIssues } from "./cycle/priority-issues.store";
 import type { IPagePreferencesFilter } from "./helpers/page-preferences-filter.store";
 import type { IWorkspaceDraftIssues } from "./workspace-draft";
 import { WorkspaceDraftIssues } from "./workspace-draft";
@@ -109,6 +110,11 @@ export class IssueRootStore {
   cycleIssuesFilter: IPagePreferencesFilter;
   /** The cycle page's list, one binding per cycle, registered in this generation as every list is. */
   cycleIssues: ICycleIssues;
+  /**
+   * The cycles' priority work items of the card of the cycle in progress: their own list store, never the cycle
+   * page's (P5b R7), the one of this generation (re-66 M4).
+   */
+  cyclePriorityIssues: CyclePriorityIssues;
 
   archivedIssuesFilter: IArchivedIssuesFilter;
   archivedIssues: IArchivedIssues;
@@ -191,6 +197,7 @@ export class IssueRootStore {
 
     this.cycleIssuesFilter = new CycleIssuesFilter(this, api);
     this.cycleIssues = new CycleIssues(this, this.cycleIssuesFilter);
+    this.cyclePriorityIssues = new CyclePriorityIssues(this);
 
     this.archivedIssuesFilter = new ArchivedIssuesFilter(this);
     this.archivedIssues = new ArchivedIssues(this, this.archivedIssuesFilter);

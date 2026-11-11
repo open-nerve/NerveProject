@@ -76,11 +76,11 @@ export const ActiveCycleRoot = observer(function ActiveCycleRoot(props: Props) {
 type ActiveCycleProps = Props & { cycleId: string };
 
 /**
- * The cycle in progress: its row, then its progress, its burndown and its breakdowns. It reads the cycle's progress by
- * the key the cycle's page and its preview read it by (SWR shares the one read); the list page shows the card to the
- * project's members alone, of a project not archived, as it reads the project's cycles. The cards show nerve's
- * progress of one choice (cycleCounts, R7): a cycle in progress has its live one. It waits for nerve's answer, or says
- * why nerve could not give it, with a retry.
+ * The cycle in progress: its row, then its progress, its burndown and its work items (its priority ones and its
+ * breakdowns, ActiveCycleStats). It reads the cycle's progress by the key the cycle's page and its preview read it by
+ * (SWR shares the one read); the list page shows the card to the project's members alone, of a project not archived,
+ * as it reads the project's cycles. The cards show nerve's progress of one choice (cycleCounts, R7): a cycle in
+ * progress has its live one. It waits for nerve's answer, or says why nerve could not give it, with a retry.
  */
 const ActiveCycle = observer(function ActiveCycle(props: ActiveCycleProps) {
   const { workspaceSlug, projectId, cycleId } = props;
@@ -119,7 +119,12 @@ const ActiveCycle = observer(function ActiveCycle(props: ActiveCycleProps) {
                   cycleId={cycleId}
                   progress={shown}
                 />
-                <ActiveCycleStats projectId={projectId} progress={shown} />
+                <ActiveCycleStats
+                  workspaceSlug={workspaceSlug}
+                  projectId={projectId}
+                  cycleId={cycleId}
+                  progress={shown}
+                />
               </>
             )}
           </div>

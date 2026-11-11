@@ -32,6 +32,7 @@
     "active_cycle": {
       "label": "Active cycle",
       "progress": "Progress",
+      "priority_issue": "Priority work items",
       "assignees": "Assignees",
       "issue_burndown": "Work item burndown",
       "pending_work_items": "Pending work items - {count}",
