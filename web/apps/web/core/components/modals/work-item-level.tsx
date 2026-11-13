@@ -19,6 +19,7 @@ import { CreateUpdateIssueModal } from "@/components/issues/issue-modal/modal";
 // hooks
 import { useCommandPalette } from "@/hooks/store/use-command-palette";
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
+import { isPlanningPageStoreType } from "@/hooks/planning-page-domains";
 import { useParams, useNavigate } from "react-router";
 import { useIssuesActions } from "@/hooks/use-issues-actions";
 
@@ -109,9 +110,9 @@ export const WorkItemLevelModals = observer(function WorkItemLevelModals(props: 
         }}
         onSubmit={handleCreateIssueSubmit}
         allowedProjectIds={createWorkItemAllowedProjectIds}
-        // the cycle page's own entries open it for a work item of the cycle, of its project (P5b spec 2.5); any other
-        // opening, the app's own included, lets the project be chosen
-        isProjectSelectionDisabled={createIssueStoreType === EIssuesStoreType.CYCLE}
+        // a cycle's or a module's page's own entries open it for a work item of the page's cycle or module, of its
+        // project (P5b spec 2.5, P6b spec 2.6); any other opening, the app's own included, lets the project be chosen
+        isProjectSelectionDisabled={isPlanningPageStoreType(createIssueStoreType)}
       />
       {workspaceSlug && workItemId && workItemDetails && workItemDetails.project_id && (
         <DeleteIssueModal

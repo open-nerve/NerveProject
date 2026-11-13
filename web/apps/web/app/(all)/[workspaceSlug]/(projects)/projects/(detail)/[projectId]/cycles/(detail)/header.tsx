@@ -11,7 +11,6 @@ import { useNavigate } from "react-router";
 import { CyclesOutline, RightSidePaneOutline } from "@makeplane/propel/icons";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
 // nerve imports
-import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 import { IconButton } from "@nerve/propel/icon-button";
@@ -26,15 +25,12 @@ import { CountChip } from "@/components/common/count-chip";
 import { SwitcherLabel } from "@/components/common/switcher-label";
 import { CycleQuickActions } from "@/components/cycles/quick-actions";
 import { HeaderFilters } from "@/components/issues/filters";
+import { usePlanningPageHeader } from "@/components/issues/issue-layouts/use-planning-page-header";
 // hooks
 import { useCommandPalette } from "@/hooks/store/use-command-palette";
 import { useCycles } from "@/hooks/store/use-cycles";
-import { useIssues } from "@/hooks/store/use-issues";
 import { useProject } from "@/hooks/store/use-project";
-import { useUserPermissions } from "@/hooks/store/user";
-import { useCycleListState } from "@/hooks/use-cycle-list-state";
 import useLocalStorage from "@/hooks/use-local-storage";
-import { usePlanningReads } from "@/hooks/use-planning-reads";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 
 type TProps = {
@@ -64,10 +60,7 @@ export const CycleIssuesHeader = observer(function CycleIssuesHeader(props: TPro
   // store hooks
   const { getCycleById, getProjectCycleIds } = useCycles();
   const { loader } = useProject();
-  const { issues, issuesFilter } = useIssues(EIssuesStoreType.CYCLE);
-  const { allowPermissions } = useUserPermissions();
   const { toggleCreateIssueModal } = useCommandPalette();
-  const { joinable } = useCycleListState();
   const { isMobile } = usePlatformOS();
 
   const { setValue, storedValue } = useLocalStorage("cycle_sidebar_collapsed", false);
@@ -79,18 +72,11 @@ export const CycleIssuesHeader = observer(function CycleIssuesHeader(props: TPro
 
   // derived values
   const cycleDetails = getCycleById(cycleId);
-  // the page's work items show for the project's members while its cycles are on (the layout root's own condition)
-  const { listed: listShown } = usePlanningReads(workspaceSlug, projectId, "cycles");
-  const workItemsCount = listShown ? issues.pageTotal({ projectID: projectId, entityID: cycleId }) : undefined;
-  const preferencesShown = listShown && issuesFilter.getIssueFilters(cycleId) !== undefined;
-  const canCreateWorkItem =
-    joinable &&
-    allowPermissions(
-      [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
-      EUserPermissionsLevel.PROJECT,
-      workspaceSlug,
-      projectId
-    );
+  const {
+    count: workItemsCount,
+    preferencesShown,
+    canCreate: canCreateWorkItem,
+  } = usePlanningPageHeader(EIssuesStoreType.CYCLE, { workspaceSlug, projectId, entityId: cycleId });
   const switcherOptions = (getProjectCycleIds(projectId) ?? []).flatMap((id): ICustomSearchSelectOption[] => {
     const listed = getCycleById(id);
     if (!listed) return [];

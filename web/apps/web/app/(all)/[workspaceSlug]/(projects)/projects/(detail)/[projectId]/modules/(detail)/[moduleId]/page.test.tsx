@@ -23,7 +23,8 @@ import Page from "./page";
 // mounts it afresh, its host with it. The caller's role is the permission store's own (fake-permissions.ts); the
 // modules a stand-in store's, whose reads nerve settles when the test says; the sidebar, the switcher of the header's
 // crumb, the dialog that changes a module and the module's work items (P6b, module-layout-root.test.tsx) stand-ins
-// that say what they got; the header's quick actions the real ones.
+// that say what they got; the header's controls of those work items (P6b, header.test.tsx) stand-ins that offer
+// nothing; the header's quick actions the real ones.
 
 type Switcher = {
   title?: string;
@@ -83,6 +84,13 @@ vi.mock("@/components/modules/progress-sidebar", () => ({
 }));
 vi.mock("@/components/issues/issue-layouts/roots/planning-page-layout-root", () => ({
   PlanningPageLayoutRoot: (props: { storeType: string }) => <section data-work-items={props.storeType} />,
+}));
+vi.mock("@/components/issues/filters", () => ({ HeaderFilters: () => null }));
+vi.mock("@/components/issues/issue-layouts/use-planning-page-header", () => ({
+  usePlanningPageHeader: () => ({ count: undefined, preferencesShown: false, canCreate: false }),
+}));
+vi.mock("@/hooks/store/use-command-palette", () => ({
+  useCommandPalette: () => ({ toggleCreateIssueModal: () => {} }),
 }));
 vi.mock("@/components/modules/modal", () => ({
   CreateUpdateModuleModal: (props: NonNullable<typeof held.edit>) => {

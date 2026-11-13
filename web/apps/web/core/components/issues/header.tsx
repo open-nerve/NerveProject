@@ -35,6 +35,7 @@ export const IssuesHeader = observer(function IssuesHeader() {
   // store hooks
   const {
     issues: { getGroupIssueCount },
+    issuesFilter,
   } = useIssues(EIssuesStoreType.PROJECT);
   // i18n
   const { t } = useTranslation();
@@ -46,6 +47,9 @@ export const IssuesHeader = observer(function IssuesHeader() {
   const { isMobile } = usePlatformOS();
 
   const issuesCount = getGroupIssueCount(undefined, undefined, false);
+  // the page's layouts, filters and display once nerve has given its preferences, as its work items show them: not
+  // before its first answer, nor while that first read failed (P6b spec 2.8, R3)
+  const preferencesShown = !!projectId && issuesFilter.getIssueFilters(projectId) !== undefined;
   const canUserCreateIssue =
     !!workspaceSlug &&
     !!projectId &&
@@ -90,7 +94,7 @@ export const IssuesHeader = observer(function IssuesHeader() {
       </Header.LeftItem>
       <Header.RightItem>
         <div className="hidden gap-2 md:flex">
-          <HeaderFilters storeType={EIssuesStoreType.PROJECT} entityId={projectId} />
+          {preferencesShown && <HeaderFilters storeType={EIssuesStoreType.PROJECT} entityId={projectId} />}
         </div>
         {canUserCreateIssue && (
           <Button

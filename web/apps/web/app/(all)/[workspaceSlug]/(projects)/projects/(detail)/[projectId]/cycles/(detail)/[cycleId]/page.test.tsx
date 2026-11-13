@@ -89,8 +89,8 @@ vi.mock("@/components/issues/issue-layouts/roots/planning-page-layout-root", () 
 }));
 vi.mock("@/components/cycles/peek-on-entry", () => ({ PeekOnEntry: () => null }));
 vi.mock("@/components/issues/filters", () => ({ HeaderFilters: () => null }));
-vi.mock("@/hooks/store/use-issues", () => ({
-  useIssues: () => ({ issues: { pageTotal: () => undefined }, issuesFilter: { getIssueFilters: () => undefined } }),
+vi.mock("@/components/issues/issue-layouts/use-planning-page-header", () => ({
+  usePlanningPageHeader: () => ({ count: undefined, preferencesShown: false, canCreate: false }),
 }));
 vi.mock("@/hooks/store/use-command-palette", () => ({
   useCommandPalette: () => ({ toggleCreateIssueModal: () => {} }),

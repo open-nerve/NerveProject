@@ -65,7 +65,7 @@ async function fixture() {
   return store;
 }
 
-it("module details and its own loader, then the module's work items under the page's own preferences (P6b)", async () => {
+it("module details and its own loader, then the module's work items under the page's own preferences, with its header's display and new work item (P6b)", async () => {
   const params = { workspaceSlug: "ws", projectId: "p-proj", moduleId: "m" };
   route.params = params;
   const store = await fixture();
@@ -104,8 +104,9 @@ it("module details and its own loader, then the module's work items under the pa
   );
   expect(document.title).toBe("PROJ - Milestone");
   expect(container.textContent).toContain("Milestone");
-  expect(container.textContent).not.toContain("Add work item");
-  expect(container.textContent).not.toContain("Display");
+  // the header's display once the page's preferences are read, and a member's new work item of the module (P6b T9)
+  expect(container.textContent).toContain("common.display");
+  expect(container.textContent).toContain("issue.add.label");
   expect(container.textContent).toContain("Module details retained");
   store.dispose();
 });
