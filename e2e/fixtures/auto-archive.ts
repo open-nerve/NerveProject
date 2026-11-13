@@ -10,10 +10,13 @@ export async function archiveWatermark(db: Database): Promise<string> {
   return row.watermark;
 }
 
-/** A completed attempt must have STARTED after every recent-control write. */
+/**
+ * A completed attempt must have STARTED after every recent-control write. Each carries what the job recorded of its
+ * run (its metadata's output, such as a purge's counts of what it deleted and what it left blocked), if any.
+ */
 export function completedPeriodicJobs(db: Database, kind: string, watermark: string, startedAt: Date, id?: string) {
-  return db.query<{ id: string; attempted_at: string; finalized_at: string }>(
-    `SELECT id::text, attempted_at::text, finalized_at::text FROM river_job
+  return db.query<{ id: string; attempted_at: string; finalized_at: string; output: Record<string, unknown> | null }>(
+    `SELECT id::text, attempted_at::text, finalized_at::text, metadata->'output' AS output FROM river_job
      WHERE kind = $4 AND state = 'completed'
        AND attempted_at > $1::timestamptz
        AND finalized_at > $2::timestamptz
