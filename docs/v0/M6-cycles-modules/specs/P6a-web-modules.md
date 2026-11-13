@@ -1,6 +1,6 @@
 # M6 / P6a：网页的模块（数据层与页面）
 
-> 状态：待预检。基线 main `aadaf61a5929b57d8aa53b93e5ae04b03cc046c6`（P5b 的 noff `9675bb31` 与其 main CI 失败的根因修正 noff `aadaf61a`，main CI 43373039561 首次通过）。设计见 [M6 设计](../M6-design.md) §2 的 G9–G13、G19，§3.2、§3.5–§3.8、§5、§8、§11、§12；负责人 2026-11-07 的决定 A/B/C 见设计 §15（第 5、9、10、11、13、15、17 条与本段直接相关）。网页的长期规则见[总体设计 §7.2、§7.7](../../v0-design.md#77-stores-按会话分代长期有效m2-起)。接口合同见 [P2 spec](P2-modules-backend.md)、[P4 spec](P4-progress-transfer.md) §2.3；迭代一侧的先例与交给本段的事见 [P5a spec](P5a-web-cycles.md) §5、[P5b spec](P5b-cycle-list.md) §5 的 P6 一行。现状调研见本阶段台账 `research/web.md`（网页的模块现状、P5a/P5b 的约定、生成的客户端、守卫与交接）、`research/plane-contract.md`（Plane 的模块页面、nerve 的模块契约、两者的差异）（ignored，随阶段归档）。负责人 2026-11-11 授权连续推进至 M6 收官，重要高风险决策仍停下确认；本段不改 `server/`、`api/`，本机 `make test` 若因 M6-M8-05 的签名失败，以分支 CI 的服务端两路为准（负责人 2026-11-11）。
+> 状态：预检通过（修正后，[re-68](../../../reviews/re-68-M6P6a预检.md)）。基线 main `aadaf61a5929b57d8aa53b93e5ae04b03cc046c6`（P5b 的 noff `9675bb31` 与其 main CI 失败的根因修正 noff `aadaf61a`，main CI 43373039561 首次通过）。设计见 [M6 设计](../M6-design.md) §2 的 G9–G13、G19，§3.2、§3.5–§3.8、§5、§8、§11、§12；负责人 2026-11-07 的决定 A/B/C 见设计 §15（第 5、9、10、11、13、15、17 条与本段直接相关）。网页的长期规则见[总体设计 §7.2、§7.7](../../v0-design.md#77-stores-按会话分代长期有效m2-起)。接口合同见 [P2 spec](P2-modules-backend.md)、[P4 spec](P4-progress-transfer.md) §2.3；迭代一侧的先例与交给本段的事见 [P5a spec](P5a-web-cycles.md) §5、[P5b spec](P5b-cycle-list.md) §5 的 P6 一行。现状调研见本阶段台账 `research/web.md`（网页的模块现状、P5a/P5b 的约定、生成的客户端、守卫与交接）、`research/plane-contract.md`（Plane 的模块页面、nerve 的模块契约、两者的差异）（ignored，随阶段归档）。负责人 2026-11-11 授权连续推进至 M6 收官，重要高风险决策仍停下确认；本段不改 `server/`、`api/`，本机 `make test` 若因 M6-M8-05 的签名失败，以分支 CI 的服务端两路为准（负责人 2026-11-11）。
 
 ## 1. 目标与边界
 
@@ -68,12 +68,31 @@
 
 ### 2.3 取数门与写的门
 
-- **取数门**（re-65 M6，R3）：一个 hook（`core/hooks/use-planning-reads.ts`，名字由实现定）对路由的工作区与项目回答两件事：**可读**：调用者在项目里有角色（`getProjectRoleByWorkspaceSlugAndProjectId` 不为 `undefined`，访客也算）且项目未归档；**列表可取**：可读，且该域的开关（`cycle_view`、`module_view`）打开。开关的条件只写一处，包装层的 `access.kind === "member"` 之后读的也是它。迭代现有的四处（列表页、详情页、归档目录、命令面板的迭代菜单）改用它，行为不变（既有测试断言不改）；模块的读者从它出发：列表页、命令面板的模块菜单用“列表可取”，详情页、预览、归档目录用“可读”。
+- **取数门**（re-65 M6，R3）：一个 hook（`core/hooks/use-planning-reads.ts`，名字由实现定）对路由的工作区与项目回答两件事：**可读**：调用者在项目里有角色（`getProjectRoleByWorkspaceSlugAndProjectId` 不为 `undefined`，访客也算）且项目未归档；**列表可取**：可读，且该域的开关（`cycle_view`、`module_view`）打开。开关这一条是一个导出的谓词（如 `planningOn(project, "cycles" | "modules")`），hook 与包装层都用它；包装层自己的“有效成员”判断（`access.kind === "member"`，还要等 nerve 对项目的读）不变，它之下的页面用 hook。取数门在 T5 抽出（T2 先把模块的条件写在包装层迭代的条件旁）。每一处取数的取舍（迭代的各处行为不变，既有测试断言不改）：
+
+| 取数处 | 现在的条件 | 用什么 |
+|---|---|---|
+| 包装层 `use-project-fetch.ts` | 有效成员 + `cycle_view`（T2 加 `module_view` 一条） | 开关的谓词，成员判断照旧 |
+| 迭代列表页 `R/cycles/(list)/page.tsx`、命令面板的迭代菜单 `project-cycles-menu.tsx` | 角色 + 未归档 + `cycle_view` | 列表可取 |
+| 迭代详情页 `R/cycles/(detail)/[cycleId]/page.tsx`、迭代归档目录 `archived-cycles/root.tsx` | 角色 + 未归档 | 可读 |
+| 进行中卡片的优先级页签 `cycles/active-cycle/priority-issues.tsx` | 角色 + 未归档 + `cycle_view` | 列表可取 |
+| 迭代页的列表根 `issues/issue-layouts/roots/cycle-layout-root.tsx` | 角色 + `cycle_view`（P5b 的 re-66 H1），不看已归档 | 可读（否则不渲染）与列表可取（否则停用空态）：它只在包装层之下渲染，已归档的项目到不了它，多出的“未归档”一条不改行为 |
+| 迭代详情页头 `R/cycles/(detail)/header.tsx` | 角色 + `cycle_view`（是否显示列表的数目与偏好的控件） | 列表可取（同列表根，理由同上） |
+| 模块的列表页、命令面板的模块菜单 | — | 列表可取 |
+| 模块的详情页、预览、归档目录 | — | 可读 |
+
+  开关的其余读者不是取数门，各自留着条件：导航与项目侧栏的标签（`use-navigation-items.ts`、`project-navigation.tsx`）、归档目录的标签（`archive-tabs-list.tsx`）、命令面板命令的可见性（`config/navigation/commands.ts`、`config/creation/command.ts`：`create_module` 改用下面的写的门，其余在 P7）、`useCycleListState` 的“可加入”（写入的条件，模块的在 P6b）与下面的写的门。它们回答“显示哪个入口、能不能写”，不是“取不取”，并进取数门会把两种问题混在一个函数里。
 - **写的门**（R5）：`UserPermissionStore` 加 `canWriteModules(workspaceSlug, projectId)` 与 `canDeleteModule(workspaceSlug, projectId, createdByCaller)`，照 `access/domain/decide.go` 与 `planning/app/lock.go`：能写是项目的管理员或成员（工作区管理员算管理员），且 nerve 对这个项目的模块不是一律拒绝（只看自己的访客、项目的模块关闭 `module_view`、项目不在）；能删是管理员，或建立者且按项目角色是管理员或成员，同样在“一律拒绝”时没有。“一律拒绝”的条件与迭代共用一处（现在的 `cycleWritesRefused` 按域取开关），`canWriteCycles`、`canDeleteCycle` 的行为不变。所有写入口（新建、修改、归档、恢复、删除、侧栏与行内的修改、链接的加改删、命令面板的模块命令）只经这两个门。
 
 ### 2.4 筛选 store 与工具函数
 
-**`ModuleFilterStore`**（`core/store/planning/module_filter.store.ts`）：按项目 id 保存 `{default, archived}` 两组筛选（状态、负责人、成员、开始日、目标日）、两个搜索词（列表、归档目录）与列表的显示设置 `{layout: "list" | "board", order_by}`（默认 `list` 与 `name`，同 Plane；归档目录用同一个排序，同 Plane），读写都收项目 id。**不跟随 router**：没有 `reaction`，不写 `localStorage`（R4）。Plane 的 `displayFilters.favorites` 删除（收藏属 M7）。
+**`ModuleFilterStore`**（`core/store/planning/module_filter.store.ts`）：按项目 id 保存 `{default, archived}` 两组筛选（状态、负责人、成员、开始日、目标日）与两个搜索词（列表、归档目录），读写都收项目 id。**不跟随 router**：没有 `reaction`；不写 `localStorage`：筛选里有成员的 id，不能在同一浏览器里带到另一个账户（R4）。Plane 的 `displayFilters.favorites` 删除（收藏属 M7）。
+
+**列表的显示设置**：版式（`list`、`board`）与排序（`order_by`）是纯展示的设置，在组件里经 `useLocalStorage` 按项目、按浏览器存（同 Plane，同 `module_sidebar_collapsed`），默认 `list` 与 `name`（同 Plane）。一个 hook（`core/components/modules/` 下，名字由实现定）读写它们，键带项目 id（不沿用 Plane 的整张表 `module_display_filters`），存的值不在选项里时回到默认；页头的版式与排序、移动端的版式菜单、列表、归档目录都经它，归档目录用同一个排序（同 Plane）（R4）。
+
+**负责人与成员的筛选**列工作区的成员（同 Plane），读 `getWorkspaceMemberIds(workspaceSlug)`（`workspace-member.store.ts`，按地址的 slug），slug 来自路由参数；不读 `workspaceMemberIds`（它读 router store 的 `workspaceSlug`，同文件的 getter；`module-view-header.tsx`、`archived-modules/header.tsx` 现在以嵌套的解构读它，`project-address-route` 的内容模式认不出这种写法，§2.10）（R14）。
+
+**只给界面用的类型**：`ModuleLayout`、`ModuleOrderBy` 在 `@nerve/constants` 的 `src/module.ts` 由选项数组（`MODULE_VIEW_LAYOUTS`、`MODULE_ORDER_BY_OPTIONS`）推出（先例 `constants/src/cycle.ts` 的内联联合）；状态用 `@nerve/api-client` 的 `ModuleStatus`；筛选的形状 `ModuleFilters` 放在 `@nerve/utils` 的 `planning.ts`、`matchesModuleFilters` 旁（先例 `CycleFilters`）。`@nerve/utils` 已依赖 `@nerve/constants`（`utils/package.json`，`src/tab-indices.ts` 已从它导入），`orderModuleRows` 从它取 `ModuleOrderBy`。T4 建立它们，T12 删除 `@nerve/types` 的 `module/`（§2.9）。
 
 **`@nerve/utils` 的 `planning.ts`** 加下面两个函数（旧的 `module.ts` 有 `orderModules`、`shouldFilterModule`，由旧 store 读到 T12，所以新函数另起名字，`module.ts` 在 T12 删除，先例 re-64 H2）：
 - `orderModuleRows(rows, orderBy)`：名字（Plane 的自然排序，`Intl.Collator` 带 `numeric`）、进度（`progressPercent`）、工作项数（`total_issues`）、目标日、建立时刻，各有升降两向；“手动”是 `sort_order`、没有方向。相等的保持传入的次序（服务端次序）；没有目标日的在两个方向都排在最后（R14）。
@@ -93,7 +112,7 @@
 
 | 页面/组件 | 合同 |
 |---|---|
-| **列表页** `(list)/page.tsx`、`header.tsx`、`mobile-header.tsx`、`layout.tsx` | `module_view` 关闭：停用的空态（§2.5，同 Plane）。取数中：加载占位。取数失败：可重试的错误态（不是永远加载）。没有未归档的模块：空态，“新建模块”对不能写的人停用。否则：已选筛选条与列表。页头：面包屑；搜索、排序、筛选、版式对看得到页面的人都有（同 Plane）；能写的人有“新建模块”（经项目级弹窗宿主）。移动端页头：版式菜单（读写筛选 store 的版式）。布局挂 `ModuleActionsHost`。 |
+| **列表页** `(list)/page.tsx`、`header.tsx`、`mobile-header.tsx`、`layout.tsx` | `module_view` 关闭：停用的空态（§2.5，同 Plane）。取数中：加载占位。取数失败：可重试的错误态（不是永远加载）。没有未归档的模块：空态，“新建模块”对不能写的人停用。否则：已选筛选条与列表。页头：面包屑；搜索、排序、筛选、版式对看得到页面的人都有（同 Plane）；能写的人有“新建模块”（经项目级弹窗宿主）。移动端页头：版式菜单（读写本项目的显示设置，§2.4）。布局挂 `ModuleActionsHost`。 |
 | **列表与卡片** `modules-list-view.tsx`、`module-list-item.tsx`、`module-list-item-action.tsx`、`module-card-item.tsx` | 次序与筛选见 §2.4；搜索与筛选都为空时的空态区分“清除筛选”“清除搜索”。行：名字链接到详情页；“信息”按钮切换 `?peekModule=`；前缀是 `progressPercent` 的圆环，已完成而不到 100% 时显示“!”（同 Plane）；日期范围、状态（行内可改）；负责人的头像或“没有负责人”；快捷操作。卡片：名字链接到详情页，“信息”按钮，状态（行内可改），“已完成/（总数 − 已取消）个工作项”与同一份 `progressPercent` 的进度条，负责人，日期（行内可改），快捷操作。行内的修改只给能写的人、未归档的模块，等 nerve 确认后显示，在途时停用，被拒时提示、值回到 nerve 的（R11、R13）。没有收藏星。行与卡片的点击区域是链接或按钮，不是带点击的 `div`（`module-card-item.tsx` 的 5 条告警随之清掉）。 |
 | **预览** `module-peek-overview.tsx` | `?peekModule=<id>` 打开右侧面板，内容是侧栏，以所预览的模块为 key（re-65 I1 的先例）；取 `MODULE`、`MODULE_PROGRESS`、`MODULE_LINKS`（“可读”时），失败可重试；已归档的模块同样能看（R12）；关闭时去掉查询参数。 |
 | **归档目录** `archives/modules/*`、`archived-modules/{root,header,view}.tsx` | 取已归档的模块（“可读”时；失败可重试，不永远加载）；搜索、排序、筛选（同 Plane，无“收藏”）；空态；行打开预览；恢复经快捷操作。标签页在 `module_view` 关闭时隐藏（现状）。布局挂 `ModuleActionsHost`。 |
@@ -107,7 +126,7 @@
 ### 2.7 新建/修改弹窗与页面级宿主
 
 - **项目级宿主**：`ProjectLevelModals`（P5a 已以 `projectId` 为 key、卸载时关上新建迭代、模块、视图三个开关）照旧渲染新建模块的弹窗，改读新 store。
-- **页面级宿主**：`ModuleActionsHost`（`core/components/modules/actions-host.tsx`，先例 `CycleActionsHost`）持有模块的修改、归档、删除三个弹窗与“页面是否还在”（`pageMounted`），挂在模块列表、归档目录与详情页三个布局上；快捷操作经 `useModulePage()` 打开弹窗。行在自己的修改确认后可能消失（归档、删除、改名后的筛选），以页面为准，确认后的提示与跳转照常、换页面后迟到的回答只进 store（P5a T7 的裁定）。链接的弹窗属于侧栏的链接一节（侧栏以模块为 key，链接的确认不卸下侧栏）。
+- **页面级宿主**：`ModuleActionsHost`（`core/components/modules/actions-host.tsx`，先例 `CycleActionsHost`）持有模块的修改、归档、删除三个弹窗与“页面是否还在”（`pageMounted`），挂在模块列表、归档目录与详情页三个布局上；快捷操作经 `useModulePage()` 打开弹窗。T6 建立宿主时只接修改弹窗与 `pageMounted`；归档与删除确认框在 T7 改写时接入（旧的两个收 `IModule` 与旧 store 的参数，`delete-module-modal.tsx`、`archived-modules/modal.tsx`，改写之前接不进收 `Module` 的宿主）。行在自己的修改确认后可能消失（归档、删除、改名后的筛选），以页面为准，确认后的提示与跳转照常、换页面后迟到的回答只进 store（P5a T7 的裁定）。链接的弹窗属于侧栏的链接一节（侧栏以模块为 key，链接的确认不卸下侧栏）。
 - **弹窗**：`ModalCore` 带 `handleClose`（Escape、点外面都经它；提交中不能关）；标题经 `ModalTitle`（“新建模块”“修改模块”）；关闭后焦点回到打开它的控件。
 - **表单**：项目选择（新建时，只列能写模块的项目，`canWriteModules`，R7；M2 交接 §5(d) 在浏览器核对）；名字（必填、≤255、自动聚焦）；说明（纯文本）；日期范围（`DateRangeDropdown`，已固定 `modal={false}`；两天都可空、可只有一天，R13；M2 交接 §5(d) 在浏览器核对浮层在弹窗之内可用）；状态（`ModuleStatusSelect`，默认“积压”，同 Plane 的网页；没过规则时有经 `t()` 的提示、`aria-invalid`、被拒时取得焦点，不再收 `tabIndex`，M3 交接 §3）；负责人与成员（只列所选项目里不是访客的成员；换项目时清空已选的，R6）。删除 `getTabIndex(ETabIndices.PROJECT_MODULE)` 的正 `tabIndex` 与 `PROJECT_MODULE` 的表，用自然次序（`getTabIndex` 本身留给 M7，M3 交接 §5）。
 - **提交**：
@@ -130,14 +149,14 @@
 - `core/hooks/use-workspace-issue-properties.ts`：它只剩取工作区级模块的一半（P5a 删了迭代的一半），nerve 没有这个接口：整个 hook 与 `workspace-notifications/root.tsx` 对它的调用删除（通知页每次打开不再请求 Plane 的 `GET /api/workspaces/{slug}/modules/`）。
 - `common/quick-actions-helper.tsx` 的模块菜单（T7）、`modals/project-level.tsx`（T6）、`issues/issue-layouts/removal.test.tsx` 与 `R/domain-pages.test.tsx` 中读模块 store 的部分。
 
-删除：`core/services/module.service.ts`、`module_archive.service.ts`、旧的两个 store 与两个 hook、`@nerve/types` 的 `module/`（`IModule`、`TModuleStatus`、`TModuleDistribution`、`TModuleCompletionChartDistribution` 等）与只剩模块读者的 `ILinkDetails`（只给网页筛选、版式与排序用的形状移到它们的读者旁）、`@nerve/utils` 的 `module.ts`、`WORKSPACE_MODULES` 取数键、`ETabIndices.PROJECT_MODULE`、`ProgressChart` 与 `progress-stats/{assignee,label,state_group}.tsx`、模块的收藏入口、没有读者的 `router.store.ts` 的 `moduleId`、不再有读者的文案键。`@nerve/propel` 自己的 `TModuleStatus`（`icons/module/module-status-icon.tsx`）是包内的界面类型，保留。
+删除：`core/services/module.service.ts`、`module_archive.service.ts`、旧的两个 store 与两个 hook、`@nerve/types` 的 `module/`（`IModule`、`TModuleStatus`、`TModuleDistribution`、`TModuleCompletionChartDistribution`、`TModuleLayoutOptions`、`TModuleOrderByOptions`、`TModuleFilters`、`TModuleDisplayFilters` 等）与只剩模块读者的 `ILinkDetails`（只给界面用的版式、排序与筛选的形状在 T4 已立在 `@nerve/constants` 与 `@nerve/utils`，状态用生成的 `ModuleStatus`，§2.4；`@nerve/constants` 的 `MODULE_STATUS` 随之改用 `ModuleStatus`）、`@nerve/utils` 的 `module.ts`、`WORKSPACE_MODULES` 取数键、`ETabIndices.PROJECT_MODULE`、`ProgressChart` 与 `progress-stats/{assignee,label,state_group}.tsx`、模块的收藏入口、没有读者的 `router.store.ts` 的 `moduleId`、不再有读者的文案键。`@nerve/propel` 自己的 `TModuleStatus`（`icons/module/module-status-icon.tsx`）是包内的界面类型，保留。
 
 ### 2.10 守卫与告警
 
 - `tools/keywords.json`：
   - `phase` 改为 `M6/P6`（T1）。
   - 新规则 `old-module-urls`：`web/**` 的源文件（测试也算）不得出现 Plane 的模块接口地址，照 `old-cycle-urls` 以 `/api/workspaces/` 前缀锚定、以负向前瞻定边界：`/api/workspaces/(?:[^/"'`\s]+/)+(?:modules|archived-modules|module-links|user-favorite-modules)(?![\w-])…`；命中的样例含工作区级列表、项目列表、详情、`archive/`、`module-links/`、`archived-modules/`、无尾段的；不命中的含 `/api/v0/projects/{project_id}/modules`、`/api/v0/module-links/{module_link_id}`、`/api/v0/me/modules/{module_id}/preferences`、组件目录的导入（`./archived-modules/modal`）、网页内的链接（`/${workspaceSlug}/projects/${projectId}/modules/${moduleId}`、`…/archives/modules`、`?peekModule=`）、`…/modules-overview/` 与迭代的地址。`old-cycle-urls` 的说明里“模块的地址到 P6 另加规则”一句随之改为指向它。
-  - `project-address-route` 的文件表随各 Task 加入本段改写的模块文件（路由页面、组件、hook），带样例。
+  - `project-address-route` 的文件表随各 Task 加入本段改写的模块文件（路由页面、组件、hook），带样例。它的内容模式认得 `{ workspaceMemberIds } =` 这样的一层解构，认不出 `const { workspace: { workspaceMemberIds } } = useMember()` 这样的嵌套解构（模块的两个页头今天就这样读 router 驱动的 getter，I1）：第一个把模块页头加进文件表的 Task（T8 的详情页头）同时给内容模式加一个嵌套一层的分支（四个 getter 同 `projectStates|projectLabels|joinedProjectIds|workspaceMemberIds`），`samples.hit` 加嵌套解构的两例，`samples.miss` 加 `workspace: { getWorkspaceMemberIds }`。写 spec 时对 `aadaf61a` 试跑过这个分支：规则文件表现有的 121 个文件里命中 0 个，所以加上它不会让现有文件变红；表外命中的 9 个文件（模块的两个页头、成员下拉框、项目与工作区成员页等）不在规则的范围内，模块的两个页头随 T10、T11 改读 `getWorkspaceMemberIds` 后加入。
   - `copy-hook` 中模块的三条例外（`modules/quick-actions.tsx`、`modules/links/list-item.tsx`、`power-k/ui/pages/context-based/module/commands.tsx`）随复制改经 hook 的同一提交删除。
 - oxlint：本段改到的文件告警为零；模块的 9 条（`module-card-item.tsx` 5 条、`applied-filters/root.tsx` 2 条 `prefer-set-has`、`dropdowns/filters/root.tsx` 的 `autoFocus`、`archived-modules/modal.tsx` 的正 `tabIndex`）随之清掉。`lint-cap` 要求告警数恰好等于上限，所以**清掉告警的那个提交同时下调** `web/apps/web/package.json` 的上限（53 → 44，分在 T7、T10、T11），T12 只核对。
 - 死成员：M1 收尾交接的 `--rows M6` 中模块的 18 行（P5a 台账 Task 12 列出）与本段改到的文件里的新行，各删去或在阶段记录写明。三个脚本照 P5a 写进台账目录，先跑 `react-router typegen` 再跑。
@@ -146,7 +165,7 @@
 
 ### 2.11 e2e
 
-页面故事放在 `e2e/stories/planning/`，标题 `G<n> (page): …`，与同号的接口故事共用 `fixtures/assert/planning.ts`、`progress.ts` 的数据库断言；世界经接口建立（`createModule`、`moduleCalls`、`progressWorld`、`createModuleLink`；新项目的 `module_view` 默认关闭，故事先打开），新夹具放 `fixtures/module-pages.ts`，与迭代共用的帮手（`toast`、`dismissToasts`、`tabStops`、`recordApi`、`menuEntries`、`pickDays`）从 `cycle-pages.ts` 导入，不复制。浏览器证据用 `watchPage`/`expectQuietConsole`、`dialogs.ts` 的 `modalDialog`、`settings-pages.ts` 的 `sentTo`/`sentHeld`/`moveWithinApp`、`fixtures/auth.ts` 的 `anotherTabSignsIn`。全部纳入三种引擎的页面配置 `e2e/playwright.m6-pages.config.ts`（T13、T14、T16 在本机以它跑并留收据）；CI 照常只跑默认配置。P5b 阶段记录 §5 的教训照做：应用内跳转之后以目标页独有的内容为锚；不在重新载入之后核对控制台（Firefox 的字体预载告警，M6-M8-09），需要“载入后仍在”时由同一人另开的浏览器核对；`dismissToasts` 已容忍自动关闭。
+页面故事放在 `e2e/stories/planning/`，标题 `G<n> (page): …`，与同号的接口故事共用 `fixtures/assert/planning.ts`、`progress.ts` 的数据库断言；世界经接口建立（`createModule`、`moduleCalls`、`progressWorld`、`createModuleLink`；新项目的 `module_view` 默认关闭，故事先打开），新夹具放 `fixtures/module-pages.ts`，与迭代共用的帮手（`toast`、`dismissToasts`、`tabStops`、`recordApi`、`menuEntries`、`pickDays`）从 `cycle-pages.ts` 导入，不复制。浏览器证据用 `watchPage`/`expectQuietConsole`、`dialogs.ts` 的 `modalDialog`、`settings-pages.ts` 的 `sentTo`/`sentHeld`/`moveWithinApp`、`fixtures/auth.ts` 的 `anotherTabSignsIn`。全部纳入三种引擎的页面配置 `e2e/playwright.m6-pages.config.ts`（T13、T14、T16 在本机以它跑并留收据）；CI 照常只跑默认配置（每个故事在 chromium 跑一次）。**时长**：T13、T14 从本机三种引擎的运行记下每个新文件在各引擎的时长；T16 推送之前据此估出 CI 的 e2e 作业时长：上一次绿的 main CI（43373039561）的 e2e 作业 19 分 14 秒，加上新文件 chromium 一栏的时长乘以迭代页面故事在 CI 与本机的时长之比（同一批故事，CI 的数取那次作业的报告），期限 35 分钟，估出超过 30 分钟时先报告负责人。T10 检查点的分支 CI 核的是守卫与到那时的代码，那时还没有新故事，量不到它们的时长。P5b 阶段记录 §5 的教训照做：应用内跳转之后以目标页独有的内容为锚；不在重新载入之后核对控制台（Firefox 的字体预载告警，M6-M8-09），需要“载入后仍在”时由同一人另开的浏览器核对；`dismissToasts` 已容忍自动关闭。
 
 | 文件 | 覆盖 |
 |---|---|
@@ -165,9 +184,9 @@
 | `web/apps/web/core/store/root.store.ts`、`core/lib/store-context.tsx` | 旧 store 的接线删除；`dispose()` 的说明随 R4 更新；`root.store.test.ts` 的 store 数随之改 |
 | `web/apps/web/core/layouts/auth-layout/use-project-fetch.ts`、`core/hooks/use-planning-reads.ts`（名字由实现定） | §2.2 的包装层取数、§2.3 的取数门 |
 | `web/apps/web/core/store/user/permissions.store.ts` | §2.3 的写的门 |
-| `web/packages/utils/src/planning.ts`、`module.ts`（T12 删除） | §2.4 的函数与测试 |
+| `web/packages/utils/src/planning.ts`、`module.ts`（T12 删除）；`web/packages/constants/src/module.ts` | §2.4 的函数、类型与测试 |
 | `web/apps/web/core/components/planning/`、`core/components/core/sidebar/`、`web/packages/propel/src/charts/area-chart/` | §2.5 |
-| `web/apps/web/core/components/modules/**` | §2.6–§2.8 |
+| `web/apps/web/core/components/modules/**` | §2.6–§2.8，列表的显示设置的 hook（§2.4） |
 | `web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/modules/**`、`archives/modules/**` | 路由页面（§2.6） |
 | §2.9 所列 | 跨领域读者与删除 |
 | `web/packages/i18n/src/locales/{en,zh-CN}/` | 新文案与删除的键 |
@@ -179,8 +198,11 @@
 
 - **R1 拆段**：§1。P6b 的边界写在本 spec，它的 spec 与 plan 在 P6a 合入后写（设计 §12“后续阶段只在前置事实落实后写可执行 plan”）。研究笔记 §5 的 26 条交接中，第 7、8、9、21、23、26 条归 P6b（§5），其余归本段。
 - **R2 新 store 并行到 T12**：`PlanningStore.modules` 先与旧的 `RootStore.module`/`moduleFilter` 并存，逐个页面改用新 store，最后一个读者改完的 Task（T12）删除旧的。每个 Task 的提交都能通过类型检查与测试；并存只在本分支上，合入的是只有新 store 的状态。这不是兼容层：旧 store 调的都是 nerve 不提供的地址，本来就不工作（先例 P5a R3）。代价：中间提交里未改的页面仍是坏的（与 main 现状相同）。
-- **R3 取数门一个 hook（D6）**：re-65 M6 要求在模块再加之前把“有效成员且项目未归档（且开关打开）”抽成一个。模块的接口在开关关闭时照常可读（`getModule` 等的说明，设计 §3.8），页面照 P5a 的先例分两种：列表页、包装层与命令面板的菜单看开关（关闭时列表页是停用空态，没有要列的；Plane 的列表页同样只显示停用空态），详情页、预览与归档目录不看开关（直接打开地址时照常显示、只读，写入口由 `canWriteModules` 收起，它含开关）。理由：与迭代一致，用户在两域看到同一种行为；nerve 允许的读不在网页上藏起来。代价：开关关闭时直接打开模块的地址仍能看到它（登记差异：Plane 的详情页不看开关，照样可写）。
-- **R4 筛选、搜索与列表的显示设置按项目存在会话里（D1）**：Plane 的模块筛选 store 以 `reaction` 跟随 `router.projectId` 初始化，并把显示设置（版式、排序、收藏）与筛选写进 `localStorage`（`module_display_filters`、`module_filters`，按浏览器、不按账户）。nerve 照 P5a R4 按项目 id 存在 `PlanningStore` 里：不跟随 router，没有要随退役的一代释放的反应；不写 `localStorage`，所以换账户（同一浏览器）不带上一个账户的筛选，退役的一代也不再写它（M3 交接 §1 记下的“退役的模块筛选的反应在每次换路由时仍写 localStorage”随之消失）。版式与排序默认 `list`、`name`（同 Plane）。代价：重新载入页面后版式、排序、筛选回到默认（Plane 在同一浏览器里保留），登记差异。不选“组件里经 `useLocalStorage` 按项目存版式与排序”：它保留 Plane 的跨重新载入，但仍不按账户，且让同一页的显示设置分在两处（store 与 `localStorage`）；`localStorage` 在本领域只用于纯展示的开合与页签（`module_sidebar_collapsed`、`module-progress-tab-{id}`，同 P5a）。v0 §7.7 与设计 §8 写的“模块的筛选的反应……由 M6/P6 照迭代的做法去掉”，T15 改写为已完成，`store-context.test.ts` 加一条断言。
+- **R3 取数门一个 hook（D6）**：re-65 M6 要求在模块再加之前把“有效成员且项目未归档（且开关打开）”抽成一个。抽取放在共用件的 T5（以迭代的既有测试为基线、在第一个模块页面 T8 之前），T2 只在包装层迭代的条件旁加模块的一条；§2.3 的表逐处写明用 hook 的哪一项，开关的其余读者不是取数门、留着自己的条件。模块的接口在开关关闭时照常可读（`getModule` 等的说明，设计 §3.8），页面照 P5a 的先例分两种：列表页、包装层与命令面板的菜单看开关（关闭时列表页是停用空态，没有要列的；Plane 的列表页同样只显示停用空态），详情页、预览与归档目录不看开关（直接打开地址时照常显示、只读，写入口由 `canWriteModules` 收起，它含开关）。理由：与迭代一致，用户在两域看到同一种行为；nerve 允许的读不在网页上藏起来。代价：开关关闭时直接打开模块的地址仍能看到它（登记差异：Plane 的详情页不看开关，照样可写）。
+- **R4 版式与排序存在浏览器，筛选与搜索存在会话（D1，预检 re-68 I2 的主控裁定）**：Plane 的模块筛选 store 以 `reaction` 跟随 `router.projectId` 初始化，并把显示设置（版式、排序、收藏）与筛选写进 `localStorage`（`plane/apps/web/core/store/module_filter.store.ts:18-19,90-131` 的 `module_display_filters`、`module_filters`，按浏览器、不按账户）；Plane 的迭代筛选 store 从不写 `localStorage`，所以 P5a R4 的先例只管“去掉反应”，不管“去掉持久化”。分开处理：
+  - **版式与排序**是纯展示的设置，同 `module_sidebar_collapsed`、`module-progress-tab-{id}` 一类：在组件里经 `useLocalStorage` 按项目、按浏览器存，默认 `list`、`name`，跨重新载入保留（同 Plane，§2.4）。它们不含账户的数据，同一浏览器里换账户带过去无妨。
+  - **筛选与搜索**按项目 id 存在 `PlanningStore` 的 `ModuleFilterStore` 里：不跟随 router，没有要随退役的一代释放的反应（已批准的设计 §8 与 v0 §7.7 写“模块的……照迭代的做法去掉”）；不写 `localStorage`：筛选里有成员的 id，不能在同一浏览器里带到另一个账户，退役的一代也不再写它（M3 交接 §1 记下的“退役的模块筛选的反应在每次换路由时仍写 localStorage”随之消失）。
+  - 代价：重新载入页面后筛选与搜索回到空（Plane 在同一浏览器里保留筛选），版式与排序照 Plane 保留；登记差异。本地决定，不须负责人。v0 §7.7 与设计 §8 的那句由 T15 改写为已完成，`store-context.test.ts` 加一条断言。
 - **R5 写与删的门按 nerve 的规则；已归档的菜单里没有删除（D7）**：写入口只给 `canWriteModules`（Plane 给项目的管理员与成员，不看只看自己的访客与开关，nerve 会 403、409）；删除只给 `canDeleteModule`（Plane 给任何管理员与成员，nerve 只许管理员与建立者）。菜单的状态条件照 Plane：已归档的模块菜单里没有修改与删除（nerve 允许删除已归档的模块，“whatever its status and archive”），先例 P5a 对已结束、已归档迭代的同一取舍。理由：照 Plane 一比一的界面，只在权限上按 nerve 收窄。代价：要删除已归档的模块须先恢复；登记差异。
 - **R6 负责人与成员（D2）**：nerve 对访客、已离开的成员作负责人或新成员回答 422（设计 §3.2）。核对现状：`MemberDropdown` 带 `projectId` 时只列不是访客的项目成员（`dropdowns/member/dropdown.tsx:34` 的 `getProjectMemberIds(projectId, false)`），表单与侧栏都传了项目，所以已经不给访客（调研笔记推测“没有排除”，不确）；本段以组件测试与变异钉住。新建弹窗换项目时清空已选的负责人与成员（他们是上一个项目的成员，Plane 留着，提交时 nerve 422）。成员的增减：侧栏的多选与命令面板的“加/去成员”都是一次增减，以“加入谁、去掉谁”交给 store，轮到它发出时以 nerve 最近一次回答的集合算出整集合（v0 §7.7“修改的请求体取决于 store 所持的值时，轮到它发出时才算”），连续两次增减都不丢，已离开项目的成员留在集合里（nerve 不回写，设计 §3.2）；修改弹窗是一次快照式的编辑，发表单上的整集合。代价：无。
 - **R7 新建表单的项目下拉（D3）**：只列 `canWriteModules` 的项目（Plane 用工作项的 `projectsWithCreatePermissions`，包括只看自己的访客与模块关闭的项目，nerve 会拒绝），同 P5a 对迭代表单的做法。默认状态照 Plane 的网页为“积压”（两边的服务端默认都是“已计划”），请求体总带 `status`，不是差异。
@@ -190,20 +212,20 @@
 - **R11 不吞拒绝**：Plane 的归档、恢复吞掉错误、失败也提示成功；删除确认框失败也关闭；新建/修改失败把表单重置为默认值；侧栏改日期不等回答就提示成功；侧栏的状态、负责人、成员失败没人接（未处理的拒绝）；行内的修改是乐观的；删除后回到列表的判断读不到预览的参数。全部改为等 nerve 确认、被拒时留着并说明（M3 交接 §3、M4 交接 M6-04“表单失败即关闭”“日期提交未等待”）。登记差异。
 - **R12 已归档模块的详情可读**：nerve 允许读已归档的模块、进度与链接（Plane 的 `retrieve` 排除已归档的，回答“模块不存在”）。归档目录的行照 Plane 打开预览；直接打开已归档模块的地址时详情照常显示、只读，不在面包屑的切换列表里（先例 P5a R11）。模块的计数来自 `/progress`，详情页不需要列表行（与迭代不同，迭代的成员只在行里）。登记差异。
 - **R13 日期是日历日，侧栏与行内选完一段才发**：模块的开始日、目标日是项目时区的日历日（`date`），显示、选择与比较都按日历日，不经 `new Date("YYYY-MM-DD")`；`minDate` 照 Plane。nerve 允许只有一天（设计 §3.2），弹窗里可以只选一天或清空。侧栏、列表行与卡片的日期选择在两天都选了、或清除时发出一次 `PATCH`（一对），与 nerve 的值相同不发，在途时停用（先例 P5a T8 的裁定）；Plane 每次选择都发（`analytics-sidebar/root.tsx` 与 `module-list-item-action.tsx` 的 `onSelect`：选到一半时 `to` 为空，目标日就发成 `null`，选完再发一次）。代价：在侧栏与行内不能只设一天，要只设一天经修改弹窗；登记差异。
-- **R14 列表的排序与筛选照 Plane，修正它的错**：排序的选项、默认与“手动”照 Plane；Plane 的“工作项数”“目标日”“建立时刻”的降序按布尔值排序（`orderModules` 的 `!m.total_issues` 等），实际不是降序，nerve 按值降序；没有目标日的两向都在最后。负责人、成员的筛选列工作区的成员（同 Plane 的 `workspaceMemberIds`）。登记差异。
+- **R14 列表的排序与筛选照 Plane，修正它的错**：排序的选项、默认与“手动”照 Plane；Plane 的“工作项数”“目标日”“建立时刻”的降序按布尔值排序（`orderModules` 的 `!m.total_issues` 等），实际不是降序，nerve 按值降序；没有目标日的两向都在最后。负责人、成员的筛选列工作区的成员（同 Plane），但读按 slug 的 `getWorkspaceMemberIds(workspaceSlug)`、slug 取自路由参数，不读 Plane 用的 `workspaceMemberIds`（它读 router store，预检 re-68 I1；守卫见 §2.10）。登记差异。
 - **R15 G15 的模块部分在 P6b（D4）**：设计 §12 的 P6 一行列 G9–G13、G19，没有 G15；G15 的迭代页部分由 P5b 交付，模块页的列表与它同属一种（列表引擎、本页偏好、双向分页、附件列），随模块页的列表在 P6b 交付；P7 一行的 G15 是工作项一侧的筛选、分组与显示。T15 把设计 §12 的 P6 一行拆成 P6a/P6b 时写明。
 - **R16 工作项根 store 的拆分在 P6b（D5）**：M6-M8-08 记下 `core/store/issue/root.store.ts`（M4 的文件）615 行，P6b 要往里加模块页的列表与筛选 store、`module_ids` 的写入。P6a 不碰这个文件（本段改的是应用的 `core/store/root.store.ts`，只删两个字段，行数减少）；P6b 在加入之前先按职责把它拆开（拆法写在 P6b 的 spec，经它的预检），不留给 P7、M8。
 
-本段的裁定都是局部决定：都在已批准的设计与 P5a/P5b 的先例之内，不改接口、不改服务端、不跨后端模块；D1–D8 对应 R4、R6、R7、R15、R16、R3、R5、R10，另加 R6 的成员增减、R13 的日期、R14 的排序。**没有须负责人决定的事。**
+本段的裁定都是局部决定：都在已批准的设计与 P5a/P5b 的先例之内，不改接口、不改服务端、不跨后端模块；D1–D8 对应 R4、R6、R7、R15、R16、R3、R5、R10，另加 R6 的成员增减、R13 的日期、R14 的排序。R4 经预检 re-68 I2 由主控按局部决定改定（版式与排序同 Plane 存在浏览器，筛选与搜索存在会话）。**没有须负责人决定的事。**
 
 ## 4. 验收标准
 
-- [ ] A1 数据层：service 只调 `/api/v0`；store 按会话分代（构造时拿这一代的客户端、取数经 `useSessionSWR` 且键带 `loginId`、修改经 `oneAtATime`、副本取最后回答的一份、拒绝交给调用者、成员的增减在轮到时算）；包装层按权限与开关取数；取数门一个 hook、迭代的行为不变；筛选 store 没有跟随 router 的反应；每个性质有单测，权限门与迟到应答各有能让测试失败的变异。
+- [ ] A1 数据层：service 只调 `/api/v0`；store 按会话分代（构造时拿这一代的客户端、取数经 `useSessionSWR` 且键带 `loginId`、修改经 `oneAtATime`、副本取最后回答的一份、拒绝交给调用者、成员的增减在轮到时算）；包装层按权限与开关取数；取数门一个 hook、§2.3 表中的各处都用它、迭代的行为不变；筛选 store 没有跟随 router 的反应、不写 `localStorage`，版式与排序按项目存在浏览器；筛选的成员列表不读 router；每个性质有单测，权限门与迟到应答各有能让测试失败的变异。
 - [ ] A2 进度：`progressPercent` 是唯一口径，列表行、卡片、侧栏、按进度排序一致；燃尽图与分布用 P5a 的件，页签与面板一致；`ProgressChart`、`TModuleCompletionChartDistribution`、`progress-stats/*` 的三个文件与 `comparisonLine` 删除。
 - [ ] A3 G9、G10、G13 的页面：建、改、删、归档、恢复、链接的加改删按 §2.6–§2.8，被拒时留着并说明；权限与状态条件按 R5；负责人与成员的下拉没有访客；元数据按 R10 出现。
 - [ ] A4 G12 的页面：列表行、卡片、侧栏的计数、百分比、燃尽、分布与只看自己的访客的数。
 - [ ] A5 G19（模块页面）：换账号、换工作区/项目/模块、后退前进时迟到的回答不写进新页面；详情子树以 `moduleId` 为 key、预览侧栏以所预览的模块为 key；弹窗、菜单、下拉框的键盘、名字与焦点逐项（M3 交接 §3 的模块各项）；两处复制失败有提示。
-- [ ] A6 删除与守卫：§2.9 的旧代码全部删除；`old-module-urls` 规则；`project-address-route` 收入改写的文件；`copy-hook` 模块的三条例外删除；改到的文件 oxlint 告警为零、上限下调到 44；模块的死成员与 progress-stats 8 行有结论；`root.store.test.ts` 21 个 store。
+- [ ] A6 删除与守卫：§2.9 的旧代码全部删除；`old-module-urls` 规则；`project-address-route` 收入改写的文件、加上嵌套解构的一支；`copy-hook` 模块的三条例外删除；改到的文件 oxlint 告警为零、上限下调到 44；模块的死成员与 progress-stats 8 行有结论；`root.store.test.ts` 21 个 store。
 - [ ] A7 文档：差异清单、前端改动清单、输入交接的“处理结果（M6/P6a）”、设计 §8/§12/§14、总体设计 §7.7 一句；P5b 的阶段记录 §7、spec A8 与设计 §14 已回填。
 - [ ] A8 七项本地门禁（`make test` 照负责人 2026-11-11 的规则）、deep-review 修复闭环、准确的分支 CI 与 noff 后的 main CI 全绿、归档清理。（合入后由 P6b 的 T1 勾选）
 
@@ -219,9 +241,9 @@
 
 ## 6. 风险
 
-- **大范围的类型替换**：写 spec 时读旧的模块类型、store 或 hook（`IModule`、`TModule*`、`ILinkDetails`、`useModule`、`useModuleFilter`、旧 service）的 web 文件有 58 个（含它们自己的定义）。R2 的并行让每个 Task 只改它负责的页面；T12 以类型检查、knip 与 `old-module-urls` 确认没有残留。
+- **大范围的类型替换**：读旧的模块类型、store 或 hook（`IModule`、`TModule*`、`ILinkDetails`、`useModule`、`useModuleFilter`、旧 service）的 web 文件有五十余个（含几个测试与它们自己的定义）。R2 的并行让每个 Task 只改它负责的页面；T12 以类型检查、knip 与 `old-module-urls` 确认没有残留。
 - **共用件的重构碰坏迭代**：§2.5 的移动与抽取改的是迭代的现有组件，迭代的既有测试断言不改，作回归保护；取数门同理。
 - **成员的整体替换**：连续的增减若在调用时算请求体会丢掉前一次（R6）；store 的单测以两次在途的增减钉住，变异“调用时算”使它失败。
 - **列表行与详情的副本**：写入的回答（`Module`）不带计数，合并时不能把行的计数写成 0 或 `undefined`（R9）；store 的单测钉住。
 - **元数据的轮询**：有界（30 次、30 秒），卸载与换会话停止；单测以假时钟钉住次数、间隔与停止，变异“不设上限”使它失败。
-- **e2e 时长**：新增 5 个页面故事；CI 的 e2e 作业期限 35 分钟（负责人 2026-11-07 同意的值），上一次绿的 main CI 的 e2e 作业约 19–21 分钟。检查点与 T16 的分支 CI 核对实际时长，超过 30 分钟先报告负责人，不自行改期限或作业结构（M6-M8-06 的教训）。
+- **e2e 时长**：新增 5 个页面故事；CI 的 e2e 作业期限 35 分钟（负责人 2026-11-07 同意的值），上一次绿的 main CI 的 e2e 作业 19 分 14 秒。T10 检查点时还没有新故事，量不到它们；T13、T14 记下每个新文件在本机各引擎的时长，T16 推送之前照 §2.11 估出 CI 的时长，估出或实测超过 30 分钟先报告负责人，不自行改期限或作业结构（M6-M8-06 的教训）。
