@@ -30,6 +30,8 @@ export interface IssueActions {
   ) => Promise<PagedGroups | undefined>;
   fetchNextIssues: (groupId?: string, subGroupId?: string) => Promise<PagedGroups | undefined>;
   removeIssue: (projectId: string | undefined | null, issueId: string) => Promise<void>;
+  /** A cycle's or a module's page's removal of a work item from its cycle or module (P6b spec 2.2, 2.5). */
+  removeIssueFromView?: (projectId: string | undefined | null, issueId: string) => Promise<void>;
   createIssue?: (projectId: string | undefined | null, data: IssueCreate) => Promise<Issue | undefined>;
   updateIssue?: (projectId: string | undefined | null, issueId: string, data: IssueUpdate) => Promise<void>;
   dropIssue?: (
@@ -54,6 +56,7 @@ export function useIssuesActions(storeType: EIssuesStoreType | undefined): Issue
   const profileIssueActions = useProfileIssueActions();
   const archivedIssueActions = useArchivedIssueActions();
   const cycleIssueActions = usePlanningPageIssueActions(EIssuesStoreType.CYCLE);
+  const moduleIssueActions = usePlanningPageIssueActions(EIssuesStoreType.MODULE);
 
   switch (storeType) {
     case undefined:
@@ -64,6 +67,8 @@ export function useIssuesActions(storeType: EIssuesStoreType | undefined): Issue
       return archivedIssueActions;
     case EIssuesStoreType.CYCLE:
       return cycleIssueActions;
+    case EIssuesStoreType.MODULE:
+      return moduleIssueActions;
     case EIssuesStoreType.PROJECT:
     case EIssuesStoreType.DEFAULT:
       return projectIssueActions;

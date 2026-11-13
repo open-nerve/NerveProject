@@ -8,6 +8,7 @@ import type { IssueRootStore } from "@/store/issue/root.store";
 import type { IssueActions } from "@/hooks/use-issues-actions";
 import { useUserPermissions } from "@/hooks/store/user";
 import { useSessionSWR } from "@/lib/use-session-swr";
+import { isPlanningPageStoreType, PLANNING_PAGE_DOMAINS } from "./planning-page-domains";
 
 /** A mounted layout's first page belongs to its session, scope, page, view and query. */
 export function useIssueListMount(
@@ -18,12 +19,14 @@ export function useIssueListMount(
   viewId?: TProfileViews,
   variant = ""
 ) {
-  const { workspaceSlug, projectId, userId, cycleId } = useParams();
+  const params = useParams();
+  const { workspaceSlug, projectId, userId } = params;
   const permission = useUserPermissions();
   const profile = type === EIssuesStoreType.PROFILE;
   const target = profile ? userId : projectId;
-  // A cycle's page lists its project with the cycle (P5b spec 2.1): each cycle is its own list.
-  const page = type === EIssuesStoreType.CYCLE ? cycleId : "";
+  // A cycle's or a module's page lists its project with the cycle or module (P5b spec 2.1; P6b spec 2.3): each cycle
+  // and each module is its own list, none until the route names it.
+  const page = isPlanningPageStoreType(type) ? params[PLANNING_PAGE_DOMAINS[type].param] : "";
   const role = workspaceSlug
     ? profile
       ? permission.getWorkspaceRoleByWorkspaceSlug(workspaceSlug)

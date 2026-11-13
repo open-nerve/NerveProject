@@ -123,3 +123,27 @@ it("keys a cycle page's list by its cycle and gates it as its project's list", a
   expect(keyOf({ workspaceSlug: "ws", projectId: "A", cycleId: "C1" }, undefined)).toBeNull();
   tab.app.dispose();
 });
+
+// P6b spec 2.3: a module page's list is its project's with the module, gated as the project's: each module has its own
+// key, apart from a cycle's of the same id, and none until the route names a module.
+it("keys a module page's list by its module and gates it as its project's list", async () => {
+  const tab = await issueStoreTab();
+  const fetch = (() => Promise.resolve(undefined)) as never;
+  const keyOf = (type: EIssuesStoreType, params: Record<string, string>, role: number | undefined) => {
+    f.params = params;
+    f.role = role;
+    f.calls = [];
+    useIssueListMount(type, tab.app.issue, fetch, { limit: 20 });
+    const [key] = f.calls[0]!;
+    return key ? sessionKey({ status: "signed-in", loginId: "x" }, ...(key as [string, ...string[]])) : null;
+  };
+  const one = keyOf(EIssuesStoreType.MODULE, { workspaceSlug: "ws", projectId: "A", moduleId: "M1" }, 5);
+  const two = keyOf(EIssuesStoreType.MODULE, { workspaceSlug: "ws", projectId: "A", moduleId: "M2" }, 5);
+  expect(one).toContain("M1");
+  expect(two).toContain("M2");
+  expect(one).not.toEqual(two);
+  expect(one).not.toEqual(keyOf(EIssuesStoreType.CYCLE, { workspaceSlug: "ws", projectId: "A", cycleId: "M1" }, 5));
+  expect(keyOf(EIssuesStoreType.MODULE, { workspaceSlug: "ws", projectId: "A" }, 15)).toBeNull();
+  expect(keyOf(EIssuesStoreType.MODULE, { workspaceSlug: "ws", projectId: "A", moduleId: "M1" }, undefined)).toBeNull();
+  tab.app.dispose();
+});

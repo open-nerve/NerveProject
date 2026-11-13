@@ -96,6 +96,18 @@ export function usePlanningPageIssueActions(storeType: PlanningPageStoreType) {
     [issues, workspaceSlug, followProgress]
   );
   /**
+   * Takes a work item of the page's project out of the page's cycle or module, as the domain sends it (P6b spec 2.2,
+   * 2.5): a write of the page's list, whose confirmation reads the progress again. A work item of another project is
+   * in none of its cycles or modules.
+   */
+  const removeIssueFromView = useCallback(
+    async (projectId: string | undefined | null, issueId: string) => {
+      if (!workspaceSlug || !page || projectId !== page.projectID) return;
+      await followProgress(() => domain.remove(issues.rootIssueStore.rootStore, workspaceSlug, page, issueId));
+    },
+    [issues, domain, workspaceSlug, page, followProgress]
+  );
+  /**
    * The page's preferences are its cycle's or module's, whatever project the caller names; their change is followed
    * as the project page's (P5b spec 2.4): its list read again when its query changed, a refusal said.
    */
@@ -116,10 +128,21 @@ export function usePlanningPageIssueActions(storeType: PlanningPageStoreType) {
       createIssue,
       updateIssue,
       removeIssue,
+      removeIssueFromView,
       archiveIssue,
       dropIssue,
       updateFilters,
     }),
-    [fetchIssues, fetchNextIssues, createIssue, updateIssue, removeIssue, archiveIssue, dropIssue, updateFilters]
+    [
+      fetchIssues,
+      fetchNextIssues,
+      createIssue,
+      updateIssue,
+      removeIssue,
+      removeIssueFromView,
+      archiveIssue,
+      dropIssue,
+      updateFilters,
+    ]
   );
 }

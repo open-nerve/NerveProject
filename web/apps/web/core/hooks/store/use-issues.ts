@@ -88,6 +88,11 @@ export const useIssues = <T extends EIssuesStoreType>(storeType?: T): TStoreIssu
         issues: context.issue.cycleIssues,
         issuesFilter: context.issue.cycleIssuesFilter,
       }) as TStoreIssues[T];
+    case EIssuesStoreType.MODULE:
+      return merge(defaultStore, {
+        issues: context.issue.moduleIssues,
+        issuesFilter: context.issue.moduleIssuesFilter,
+      }) as TStoreIssues[T];
     case undefined:
     case EIssuesStoreType.DEFAULT:
       return merge(defaultStore, {

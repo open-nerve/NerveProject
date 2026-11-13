@@ -238,6 +238,67 @@ export const ISSUE_DISPLAY_FILTERS_BY_PAGE: TIssueFiltersToDisplayByPageType = {
       },
     },
   },
+  /**
+   * The module page's own options: the project page's, with no grouping by module when P7 adds it (P6b R12); P7 then
+   * derives this and cycle_issues from issues without the page's own key.
+   */
+  module_issues: {
+    filters: [
+      "priority",
+      "state_group",
+      "state_id",
+      "assignee_id",
+      "mention_id",
+      "subscriber_id",
+      "created_by_id",
+      "label_id",
+      "start_date",
+      "target_date",
+    ],
+    layoutOptions: {
+      list: {
+        display_properties: ISSUE_DISPLAY_PROPERTIES_KEYS,
+        display_filters: {
+          group_by: ["state", "priority", "labels", "assignees", "created_by", null],
+          order_by: ["sort_order", "-created_at", "-updated_at", "start_date", "-priority", "target_date"],
+        },
+        extra_options: {
+          access: true,
+          values: ["show_empty_groups", "sub_issue"],
+        },
+      },
+      kanban: {
+        display_properties: ISSUE_DISPLAY_PROPERTIES_KEYS,
+        display_filters: {
+          group_by: ["state", "priority", "labels", "assignees", "created_by"],
+          sub_group_by: ["state", "priority", "labels", "assignees", "created_by", null],
+          order_by: ["sort_order", "-created_at", "-updated_at", "start_date", "-priority", "target_date"],
+        },
+        extra_options: {
+          access: true,
+          values: ["show_empty_groups", "sub_issue"],
+        },
+      },
+      calendar: {
+        display_properties: ["key"],
+        display_filters: {},
+        extra_options: {
+          access: true,
+          values: ["sub_issue"],
+        },
+      },
+      spreadsheet: {
+        display_properties: ISSUE_DISPLAY_PROPERTIES_KEYS,
+        display_filters: {
+          order_by: ["sort_order", "-created_at", "-updated_at", "start_date", "-priority"],
+        },
+        extra_options: {
+          access: true,
+          values: ["sub_issue"],
+        },
+      },
+    },
+  },
   sub_work_items: {
     filters: ["priority", "state_id", "assignee_id", "start_date", "target_date"],
     layoutOptions: {
@@ -259,6 +320,7 @@ export const ISSUE_DISPLAY_FILTERS_BY_PAGE: TIssueFiltersToDisplayByPageType = {
 export const ISSUE_STORE_TO_FILTERS_MAP: Partial<Record<EIssuesStoreType, TFilterPropertiesByPageType>> = {
   [EIssuesStoreType.PROJECT]: ISSUE_DISPLAY_FILTERS_BY_PAGE.issues,
   [EIssuesStoreType.CYCLE]: ISSUE_DISPLAY_FILTERS_BY_PAGE.cycle_issues,
+  [EIssuesStoreType.MODULE]: ISSUE_DISPLAY_FILTERS_BY_PAGE.module_issues,
 };
 
 export const SUB_WORK_ITEM_AVAILABLE_FILTERS_FOR_WORK_ITEM_PAGE: (keyof IIssueFilterOptions)[] = [
