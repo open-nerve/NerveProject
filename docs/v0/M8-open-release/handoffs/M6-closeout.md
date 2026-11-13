@@ -47,6 +47,8 @@ M6/P5b 的检查点（T10，2026-11-11，`00cf6c38672c0a21a63c0dab7026f339d8185f
 
 M6/P6a 的检查点（T10，2026-11-13，`82dac1efd9dac3fe7b7d99bdcac18410cd12bb0a`）的本地门禁（`t10-gate-build-e2e`）又一次：451 条通过、1 条失败，W6 (API)（`e2e/stories/workspace/w6-sign-up-by-invitation.spec.ts:13`）在测试一侧的 pg 连接池上报 `error: sorry, too many clients already`（`e2e/fixtures/db.ts:88`，经 `e2e/fixtures/assert/identity.ts:307` 的 `countIdentity`，故事第 57 行的数据库断言）。P6a 没有改这个故事；同一输入只重跑这一个文件即 8 条全过（`t10-gate-rerun-w6`，exit 0）。同一检查点的分支 CI 43418051413 全绿。
 
+M6/P6a 的最终候选（T16，2026-11-14，`1f41c8ca78a3607174ba6bb3095a58a5dce87b2a`）的本地门禁（`f-final-gate-build-e2e`）又一次：461 条通过、1 条失败，W9（`e2e/stories/workspace/w9-deactivation.spec.ts:30`）第一次 `refusedBoth`（故事第 96 行，经第 91 行与 `e2e/fixtures/users.ts:44` 的 `nerveUsersFails`）的 `nerve users deactivate` 命令连不上数据库，报 `FATAL: sorry, too many clients already`（SQLSTATE 53300），与 P2 那次 W12 的命令一侧同类。P6a 没有改这个故事、`server/` 与命令；同一输入只重跑这一个文件即 7 条全过（`f-final-gate-rerun-w9`，exit 0）。最终 HEAD 的分支 CI 由 P6b 的 T1 回填到 P6a 阶段记录 §7。
+
 **何时验收：** M8 的 CI 工作核算 e2e 的连接预算（工作进程数 × 每进程的连接上限 + 余量），按结果给测试容器设 `max_connections` 或收紧 e2e 服务器的 `database.max_conns`，并在 CI 与本地都留有余量；或负责人决定维持现状，并在此写明理由。
 
 <a id="M6-M8-04"></a>
@@ -129,6 +131,6 @@ M6/P5b 的 T16（2026-11-12）在 `8b11bc6381623717663ba986da74710668719494` 上
 <a id="M6-M8-11"></a>
 ## M6-M8-11 两份相同的 useLocalStorage
 
-观察（[re-69](../../../reviews/re-69-M6P6a整体审核.md) 的观察，M6/P6a 的整分支审查）：web 里有两份逐字相同的 `useLocalStorage`：`@nerve/hooks` 的 `web/packages/hooks/src/use-local-storage.tsx`，与应用里 Plane 留下的副本 `web/apps/web/core/hooks/use-local-storage.tsx`（它的注释写着 “TODO: Remove this once its callers use useLocalStorage from @nerve/hooks”）。模块一侧两份都用：版式与排序（`core/components/modules/use-module-display.ts`）读 `@nerve/hooks`，详情页与页头的 `module_sidebar_collapsed`、两域共用的进度页签 `core/components/core/sidebar/progress-tabs.tsx` 读应用的副本。副本在 P6a 之前就有，现有读者 8 个文件（迭代的进行中卡片 `cycles/active-cycle/cycle-stats.tsx`，迭代与模块的详情页与页头，`progress-tabs.tsx`，工作区侧栏的 `sidebar-menu-items.tsx` 与 `favorites/favorites-menu.tsx`），`@nerve/hooks` 的读者 6 个。两份读写同一个键时行为相同（都以 `local-storage:<key>` 事件互相通知），所以不是缺陷，只是重复。
+观察（[re-69](../../../reviews/re-69-M6P6a整体审核.md) 的观察，M6/P6a 的整分支审查）：web 里有两份行为相同（只差一行多余的重复判断、导出方式与 TODO 注释）的 `useLocalStorage`：`@nerve/hooks` 的 `web/packages/hooks/src/use-local-storage.tsx`（具名导出；第 10 行把 `typeof window === "undefined"` 判断了两次），与应用里 Plane 留下的副本 `web/apps/web/core/hooks/use-local-storage.tsx`（默认导出；它的注释写着 “TODO: Remove this once its callers use useLocalStorage from @nerve/hooks”）。模块一侧两份都用：版式与排序（`core/components/modules/use-module-display.ts`）读 `@nerve/hooks`，详情页与页头的 `module_sidebar_collapsed`、两域共用的进度页签 `core/components/core/sidebar/progress-tabs.tsx` 读应用的副本。副本在 P6a 之前就有，现有读者 8 个文件（迭代的进行中卡片 `cycles/active-cycle/cycle-stats.tsx`，迭代与模块的详情页与页头，`progress-tabs.tsx`，工作区侧栏的 `sidebar-menu-items.tsx` 与 `favorites/favorites-menu.tsx`），`@nerve/hooks` 的读者 6 个。两份读写同一个键时行为相同（都以 `local-storage:<key>` 事件互相通知），所以不是缺陷，只是重复。
 
-**何时验收：** M8 的清理把应用副本的读者改为 `@nerve/hooks` 的 `useLocalStorage` 并删去副本（M7 若先改侧栏的收藏，可顺手改它那一处）；或负责人决定维持现状，并在此写明理由。
+**何时验收：** M8 的清理把应用副本的读者改为 `@nerve/hooks` 的 `useLocalStorage` 并删去副本，同时删去留下的 `@nerve/hooks` 一份第 10 行重复的 `|| typeof window === "undefined"`（M7 若先改侧栏的收藏，可顺手改它那一处）；或负责人决定维持现状，并在此写明理由。

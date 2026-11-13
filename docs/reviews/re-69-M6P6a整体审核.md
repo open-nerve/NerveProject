@@ -1,9 +1,9 @@
 # M6 / P6a 整体审核
 
-> 2026-11-13：Ready after fixes。
+> 2026-11-13：Ready after fixes；修复轮 F 经限定复审 Ready to merge（§4）。
 > - **目标**：分支 `codex/m6-p6a` 相对 main `aadaf61a5929b57d8aa53b93e5ae04b03cc046c6` 的全部修改（`aadaf61a..7d355551`，`45cb4482` 至 `7d355551` 的 18 个提交）；修复轮 F（`7b347f58` 起的六个提交，F1–F6）另经一次限定复审（§4）。
 > - **依据**：[P6a spec](../v0/M6-cycles-modules/specs/P6a-web-modules.md)、[P6a plan](../v0/M6-cycles-modules/plans/P6a-web-modules.md)、[预检 re-68](re-68-M6P6a预检.md)、[M6 设计](../v0/M6-cycles-modules/M6-design.md)、[总体设计 §7.2、§7.7](../v0/v0-design.md#77-stores-按会话分代长期有效m2-起)、[硬规则](../v0/claude_to_gpt/03-rules-and-pitfalls.md)。
-> - **阶段记录**：由 T16 在合入时写（P6a 的阶段记录），届时在此补链接。
+> - **阶段记录**：[P6a 阶段记录](../v0/M6-cycles-modules/reviews/P6a-web-modules-review.md)。
 
 ## 1. 方法
 
@@ -39,4 +39,17 @@ F2 逐个 Tab 量下来，这四种共用控件之外还有焦点轮廓被裁掉
 
 ## 4. 修复轮 F 的复审
 
-（待写：修复轮 F 之后接着做一次限定复审，结论与处理由主控填写。）
+修复轮 F（`7b347f58..1f41c8ca`，6 个提交，F1–F6）经一次 fresh 限定复审（`fable`，范围 `7d355551..1f41c8ca`，与最终候选 `1f41c8ca` 的七项门禁并行）。原始报告没有另存，结论与核对过的性质由主控转述。逐项核对：
+
+- **范围**：F1–F6 各做了 §3 表中所说的，没有多做。
+- **删除与共用**：F3 的删除完整，`modules/index.ts` 与只被它转发的 `select/index.ts` 没有留下读者；F4 抽出的两个共用件各有两个读者：`toggledOptions`（`@nerve/utils` 的 `planning.ts`）由迭代与模块的筛选菜单（`cycles/dropdowns/filters/root.tsx`、`modules/dropdowns/filters/root.tsx`）读，`PlanningListSearch`（`core/components/planning/list-search.tsx`）由两个页头（`cycles-view-header.tsx`、`module-view-header.tsx`）读。
+- **F2 的核对是真的**：模块名字的输入法故事照 P5a 的 G1（`g1-create-cycle-page.spec.ts`）写；`focusOutline` 自 M4 C12 的 `visibleFocus` 原样移到 `e2e/fixtures/browser.ts`，M4 的故事只换成调用；台账的两个产品变异（菜单放进 `overflow-hidden` 的容器、菜单按钮加 `focus-visible:outline-none`）在轮廓的断言处失败。
+- **回归边界**：修复轮改到的既有测试只改导入路径、调用名或改调抽出的帮手，断言不改，在 plan 的“回归测试的边界”之内。
+
+结论 **Ready to merge**：没有 Critical、Important，一处 Minor 与两条观察，T16 的记录提交处理：
+
+| 编号 | 问题 | 处理 |
+|---|---|---|
+| M1 | M8 交接 M6-M8-11（`docs/v0/M8-open-release/handoffs/M6-closeout.md:132`）与 P6a spec §5（`docs/v0/M6-cycles-modules/specs/P6a-web-modules.md:240`）说两份 `useLocalStorage` “逐字相同”。两份行为相同，但有三处不同：`@nerve/hooks` 的一份多一个重复的判断 `typeof window === "undefined" \|\| typeof window === "undefined"`（`web/packages/hooks/src/use-local-storage.tsx:10`）；应用的副本带 TODO 注释；应用的副本是默认导出，不是具名导出 | 两处改为“行为相同（只差一行多余的重复判断、导出方式与 TODO 注释）”；M6-M8-11 的验收加一句：M8 删去应用的副本时，同时删去留下的 `@nerve/hooks` 一份里重复的 `\|\|` 一支 |
+| 观察 | 量焦点轮廓的 `expectOutlinesWhole` 在 `e2e/fixtures/module-pages.ts`；P8 为迭代页核对焦点轮廓时，它属于 `browser.ts` 的 `focusOutline` 旁 | 写进 [P6a spec](../v0/M6-cycles-modules/specs/P6a-web-modules.md) §5 的 P8 |
+| 观察 | `browser.ts` 的 `FocusOutline` 导出而没有外部读者，与既有的 `FocusTaken` 相同 | 不需动作 |

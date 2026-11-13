@@ -1,6 +1,6 @@
 # M6 / P6a：网页的模块（数据层与页面）
 
-> 状态：预检通过（修正后，[re-68](../../../reviews/re-68-M6P6a预检.md)）；整分支审查 Ready after fixes（[re-69](../../../reviews/re-69-M6P6a整体审核.md)），修复轮 F 已提交，待限定复审。基线 main `aadaf61a5929b57d8aa53b93e5ae04b03cc046c6`（P5b 的 noff `9675bb31` 与其 main CI 失败的根因修正 noff `aadaf61a`，main CI 43373039561 首次通过）。设计见 [M6 设计](../M6-design.md) §2 的 G9–G13、G19，§3.2、§3.5–§3.8、§5、§8、§11、§12；负责人 2026-11-07 的决定 A/B/C 见设计 §15（第 5、9、10、11、13、15、17 条与本段直接相关）。网页的长期规则见[总体设计 §7.2、§7.7](../../v0-design.md#77-stores-按会话分代长期有效m2-起)。接口合同见 [P2 spec](P2-modules-backend.md)、[P4 spec](P4-progress-transfer.md) §2.3；迭代一侧的先例与交给本段的事见 [P5a spec](P5a-web-cycles.md) §5、[P5b spec](P5b-cycle-list.md) §5 的 P6 一行。现状调研见本阶段台账 `research/web.md`（网页的模块现状、P5a/P5b 的约定、生成的客户端、守卫与交接）、`research/plane-contract.md`（Plane 的模块页面、nerve 的模块契约、两者的差异）（ignored，随阶段归档）。负责人 2026-11-11 授权连续推进至 M6 收官，重要高风险决策仍停下确认；本段不改 `server/`、`api/`，本机 `make test` 若因 M6-M8-05 的签名失败，以分支 CI 的服务端两路为准（负责人 2026-11-11）。
+> 状态：实现与审查已完成，待分支 CI 与合入：整分支审查 Ready after fixes（[re-69](../../../reviews/re-69-M6P6a整体审核.md)），修复轮 F 经限定复审 Ready to merge，最终候选 `1f41c8ca`；A1–A7 已勾选，A8 由 P6b 的 T1 勾选（[阶段记录](../reviews/P6a-web-modules-review.md)）。预检通过（修正后，[re-68](../../../reviews/re-68-M6P6a预检.md)）。基线 main `aadaf61a5929b57d8aa53b93e5ae04b03cc046c6`（P5b 的 noff `9675bb31` 与其 main CI 失败的根因修正 noff `aadaf61a`，main CI 43373039561 首次通过）。设计见 [M6 设计](../M6-design.md) §2 的 G9–G13、G19，§3.2、§3.5–§3.8、§5、§8、§11、§12；负责人 2026-11-07 的决定 A/B/C 见设计 §15（第 5、9、10、11、13、15、17 条与本段直接相关）。网页的长期规则见[总体设计 §7.2、§7.7](../../v0-design.md#77-stores-按会话分代长期有效m2-起)。接口合同见 [P2 spec](P2-modules-backend.md)、[P4 spec](P4-progress-transfer.md) §2.3；迭代一侧的先例与交给本段的事见 [P5a spec](P5a-web-cycles.md) §5、[P5b spec](P5b-cycle-list.md) §5 的 P6 一行。现状调研见本阶段台账 `research/web.md`（网页的模块现状、P5a/P5b 的约定、生成的客户端、守卫与交接）、`research/plane-contract.md`（Plane 的模块页面、nerve 的模块契约、两者的差异）（ignored，随阶段归档）。负责人 2026-11-11 授权连续推进至 M6 收官，重要高风险决策仍停下确认；本段不改 `server/`、`api/`，本机 `make test` 若因 M6-M8-05 的签名失败，以分支 CI 的服务端两路为准（负责人 2026-11-11）。
 
 ## 1. 目标与边界
 
@@ -220,13 +220,13 @@
 
 ## 4. 验收标准
 
-- [ ] A1 数据层：service 只调 `/api/v0`；store 按会话分代（构造时拿这一代的客户端、取数经 `useSessionSWR` 且键带 `loginId`、修改经 `oneAtATime`、副本取最后回答的一份、拒绝交给调用者、成员的增减在轮到时算）；包装层按权限与开关取数；取数门一个 hook、§2.3 表中的各处都用它、迭代的行为不变；筛选 store 没有跟随 router 的反应、不写 `localStorage`，版式与排序按项目存在浏览器；筛选的成员列表不读 router；每个性质有单测，权限门与迟到应答各有能让测试失败的变异。
-- [ ] A2 进度：`progressPercent` 是唯一口径，列表行、卡片、侧栏、按进度排序一致；燃尽图与分布用 P5a 的件，页签与面板一致；`ProgressChart`、`TModuleCompletionChartDistribution`、`progress-stats/*` 的三个文件与 `comparisonLine` 删除。
-- [ ] A3 G9、G10、G13 的页面：建、改、删、归档、恢复、链接的加改删按 §2.6–§2.8，被拒时留着并说明；权限与状态条件按 R5；负责人与成员的下拉没有访客；元数据按 R10 出现。
-- [ ] A4 G12 的页面：列表行、卡片、侧栏的计数、百分比、燃尽、分布与只看自己的访客的数。
-- [ ] A5 G19（模块页面）：换账号、换工作区/项目/模块、后退前进时迟到的回答不写进新页面；详情子树以 `moduleId` 为 key、预览侧栏以所预览的模块为 key；弹窗、菜单、下拉框的键盘、名字与焦点逐项（M3 交接 §3 的模块各项）；两处复制失败有提示。
-- [ ] A6 删除与守卫：§2.9 的旧代码全部删除；`old-module-urls` 规则；`project-address-route` 收入改写的文件、加上嵌套解构的一支；`copy-hook` 模块的三条例外删除；改到的文件 oxlint 告警为零、上限下调到 44；模块的死成员与 progress-stats 8 行有结论；`root.store.test.ts` 21 个 store。
-- [ ] A7 文档：差异清单、前端改动清单、输入交接的“处理结果（M6/P6a）”、设计 §8/§12/§14、总体设计 §7.7 一句；P5b 的阶段记录 §7、spec A8 与设计 §14 已回填。
+- [x] A1 数据层：service 只调 `/api/v0`；store 按会话分代（构造时拿这一代的客户端、取数经 `useSessionSWR` 且键带 `loginId`、修改经 `oneAtATime`、副本取最后回答的一份、拒绝交给调用者、成员的增减在轮到时算）；包装层按权限与开关取数；取数门一个 hook、§2.3 表中的各处都用它、迭代的行为不变；筛选 store 没有跟随 router 的反应、不写 `localStorage`，版式与排序按项目存在浏览器；筛选的成员列表不读 router；每个性质有单测，权限门与迟到应答各有能让测试失败的变异。
+- [x] A2 进度：`progressPercent` 是唯一口径，列表行、卡片、侧栏、按进度排序一致；燃尽图与分布用 P5a 的件，页签与面板一致；`ProgressChart`、`TModuleCompletionChartDistribution`、`progress-stats/*` 的三个文件与 `comparisonLine` 删除。
+- [x] A3 G9、G10、G13 的页面：建、改、删、归档、恢复、链接的加改删按 §2.6–§2.8，被拒时留着并说明；权限与状态条件按 R5；负责人与成员的下拉没有访客；元数据按 R10 出现。
+- [x] A4 G12 的页面：列表行、卡片、侧栏的计数、百分比、燃尽、分布与只看自己的访客的数。
+- [x] A5 G19（模块页面）：换账号、换工作区/项目/模块、后退前进时迟到的回答不写进新页面；详情子树以 `moduleId` 为 key、预览侧栏以所预览的模块为 key；弹窗、菜单、下拉框的键盘、名字与焦点逐项（M3 交接 §3 的模块各项）；两处复制失败有提示。
+- [x] A6 删除与守卫：§2.9 的旧代码全部删除；`old-module-urls` 规则；`project-address-route` 收入改写的文件、加上嵌套解构的一支；`copy-hook` 模块的三条例外删除；改到的文件 oxlint 告警为零、上限下调到 44；模块的死成员与 progress-stats 8 行有结论；`root.store.test.ts` 21 个 store。
+- [x] A7 文档：差异清单、前端改动清单、输入交接的“处理结果（M6/P6a）”、设计 §8/§12/§14、总体设计 §7.7 一句；P5b 的阶段记录 §7、spec A8 与设计 §14 已回填。
 - [ ] A8 七项本地门禁（`make test` 照负责人 2026-11-11 的规则）、deep-review 修复闭环、准确的分支 CI 与 noff 后的 main CI 全绿、归档清理。（合入后由 P6b 的 T1 勾选）
 
 ## 5. 后续责任
@@ -235,9 +235,9 @@
 
 **P7**：工作项一侧（模块的属性与下拉框、新建弹窗的模块、列表词表、添加已有、`existing-issues-list-modal.tsx` 的模块调用方）用本段的 `useModules()`；列表引擎的目录（P3b R9 的空 `Map`）改由本段的 store 提供；命令面板模块菜单的本地过滤与切换；命令面板“打开模块”在取数门为假（已归档的项目、不是成员）时菜单一直加载（与迭代的同一条，re-65 M7，并入 P5a §5 的 P7 一条）；工作项一侧的模块文案 `common.modules`、`issue.remove.module.{loading,success,failed}`、`module.no_module` 在基线 `aadaf61a` 上就没有读者（T12 核对，本段未动），随模块的属性与下拉框用上或删除。
 
-**P8**：模块表单里项目选择（`dropdowns/project/base.tsx`）的浏览器核对随最终矩阵（M2 交接 §5(d)，本段有组件测试）。模块表单名字的输入法（M4 交接 M6-04）与模块页上共用组件的焦点轮廓（M3 交接 §3）T15 曾交给本条，已在整审 re-69 之后的修复轮 F2 核对（G9 的输入法页面故事 `g9-module-name-page.spec.ts`；G19 故事三以 `focusOutline` 量页头、行、卡片与详情页页头的 `Button`、`IconButton`、`getButtonStyling`、`CustomMenu`），不再在此。F2 在三种引擎里逐个 Tab 量下来，这四种以外的控件有焦点轮廓被裁掉或没有轮廓，迭代页同样（F2 的探针，未入收据），随最终矩阵处理：行的链接被行的 `truncate` 容器裁掉（`core/list` 的 `ListItem`，迭代与模块的行共用）；侧栏链接一行的链接被它的 `truncate` 裁掉，“Add link”在 Firefox、WebKit 被链接区的 `overflow-y-auto` 裁掉；面包屑的链接被面包屑的 `overflow-hidden` 裁掉（M3 的共用件，各页都有）；日期范围按钮（`DateRangeDropdown`）与进度页签（`ProgressTabs`）是 `outline-none`，Tab 到达时没有焦点轮廓；迭代列表的分节按钮在 WebKit 被列表的滚动容器裁掉。“按规则清一类”的 oxlint（M1 收尾交接）。
+**P8**：模块表单里项目选择（`dropdowns/project/base.tsx`）的浏览器核对随最终矩阵（M2 交接 §5(d)，本段有组件测试）。模块表单名字的输入法（M4 交接 M6-04）与模块页上共用组件的焦点轮廓（M3 交接 §3）T15 曾交给本条，已在整审 re-69 之后的修复轮 F2 核对（G9 的输入法页面故事 `g9-module-name-page.spec.ts`；G19 故事三以 `focusOutline` 量页头、行、卡片与详情页页头的 `Button`、`IconButton`、`getButtonStyling`、`CustomMenu`），不再在此。F2 在三种引擎里逐个 Tab 量下来，这四种以外的控件有焦点轮廓被裁掉或没有轮廓，迭代页同样（F2 的探针，未入收据），随最终矩阵处理：行的链接被行的 `truncate` 容器裁掉（`core/list` 的 `ListItem`，迭代与模块的行共用）；侧栏链接一行的链接被它的 `truncate` 裁掉，“Add link”在 Firefox、WebKit 被链接区的 `overflow-y-auto` 裁掉；面包屑的链接被面包屑的 `overflow-hidden` 裁掉（M3 的共用件，各页都有）；日期范围按钮（`DateRangeDropdown`）与进度页签（`ProgressTabs`）是 `outline-none`，Tab 到达时没有焦点轮廓；迭代列表的分节按钮在 WebKit 被列表的滚动容器裁掉。P5a 没有为迭代页核对 M3 交接 §3 的焦点轮廓（F2 的探针显示迭代页的四种共用控件同样不被裁，未入收据），随最终矩阵核对；那时把模块页的 `expectOutlinesWhole`（`e2e/fixtures/module-pages.ts`）移到 `e2e/fixtures/browser.ts` 的 `focusOutline` 旁，两域共用（修复轮的限定复审的观察，[re-69](../../../reviews/re-69-M6P6a整体审核.md) §4）。“按规则清一类”的 oxlint（M1 收尾交接）。
 
-**M8**：新增 [M6-M8-10](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-10)（Base UI 1.0.0-beta.3 的通知在出现后约一帧内按下关闭会被复位、不再消失，T13 发现；真人几乎碰不到，e2e 的 `dismissToasts` 已容忍）；新增 [M6-M8-11](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-11)（两份逐字相同的 `useLocalStorage`，模块一侧两份都用，整审 [re-69](../../../reviews/re-69-M6P6a整体审核.md) 的观察）；[M6-M8-03](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-03) 再现一次（T10 检查点本机 e2e 的 W6 (API)，只重跑这一项通过）；[M6-M8-01](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-01) 的余量复核多一个数据（T10 检查点的分支 CI 43418051413 的 e2e 作业 25 分 18 秒，比基线 main CI 43373039561 的 19 分 14 秒多约 6 分钟，逐条比对是 runner 的速度差异）。
+**M8**：新增 [M6-M8-10](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-10)（Base UI 1.0.0-beta.3 的通知在出现后约一帧内按下关闭会被复位、不再消失，T13 发现；真人几乎碰不到，e2e 的 `dismissToasts` 已容忍）；新增 [M6-M8-11](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-11)（两份 `useLocalStorage` 行为相同（只差一行多余的重复判断、导出方式与 TODO 注释），模块一侧两份都用，整审 [re-69](../../../reviews/re-69-M6P6a整体审核.md) 的观察）；[M6-M8-03](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-03) 再现两次（T10 检查点本机 e2e 的 W6 (API)、最终候选本机 e2e 的 W9 的 `nerve users deactivate` 命令，各只重跑这一项通过）；[M6-M8-01](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-01) 的余量复核多一个数据（T10 检查点的分支 CI 43418051413 的 e2e 作业 25 分 18 秒，比基线 main CI 43373039561 的 19 分 14 秒多约 6 分钟，逐条比对是 runner 的速度差异）。
 
 **M7**：模块的收藏随收藏一起恢复（本段删除了入口）；工作区级的模块列表（通知页、工作区视图）。
 
