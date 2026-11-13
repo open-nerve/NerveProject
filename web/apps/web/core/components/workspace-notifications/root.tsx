@@ -17,7 +17,6 @@ import { LogoSpinner } from "@/components/common/logo-spinner";
 import { useWorkspaceNotifications } from "@/hooks/store/notifications";
 import { useProject } from "@/hooks/store/use-project";
 import { useWorkspace } from "@/hooks/store/use-workspace";
-import { useWorkspaceIssueProperties } from "@/hooks/use-workspace-issue-properties";
 import { useNotificationPreview } from "@/hooks/use-notification-preview";
 // local imports
 import { InboxContentRoot } from "../inbox/content";
@@ -41,9 +40,6 @@ export const NotificationsRoot = observer(function NotificationsRoot({ workspace
   // derived values
   const { workspace_slug, project_id, issue_id, is_inbox_issue } =
     notificationLiteByNotificationId(currentSelectedNotificationId);
-
-  // fetching workspace work item properties
-  useWorkspaceIssueProperties(workspaceSlug);
 
   // fetch workspace notifications
   const notificationMutation =

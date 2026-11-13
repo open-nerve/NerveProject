@@ -108,6 +108,43 @@ it.each([
     expect(commands.create_cycle.isEnabled(context)).toBe(false);
   }
 );
+// nerve's module.write (P6a spec 2.3, R5), as its cycle.write: the project's admins and members, and the workspace's
+// admin, but not one nerve shows only his own work items there, whatever his workspace role
+it.each([
+  [15, 15, false, true],
+  [5, 5, false, false],
+  [20, 5, false, false],
+  [20, 5, true, true],
+] as const)(
+  "offers a new module as nerve lets one write the project's modules: workspace %s/project %s/guests see all %s",
+  async (wr: WorkspaceRole, pr: ProjectRole, guestViewAll, allowed) => {
+    const other = workspaceOf("other", { role: wr });
+    const project = projectOf("OTHER", other.id, { member_role: pr, guest_view_all_features: guestViewAll });
+    await loadWorkspaces(tab.nerve, tab.app.workspaceRoot, [tab.workspace, other]);
+    await loadProjects(tab.nerve, tab.app.projectRoot.project, other, [project]);
+    renderToStaticMarkup(<Consumer />);
+    const context: TPowerKContext = { ...ctx("other"), params: { workspaceSlug: "other", projectId: project.id } };
+    expect(commands.create_module.isVisible(context)).toBe(allowed);
+    expect(commands.create_module.isEnabled(context)).toBe(allowed);
+  }
+);
+// nerve refuses every write of a project's modules while they are turned off (planning.modules_disabled), its admin's too
+it.each([
+  [20, 20],
+  [15, 15],
+] as const)(
+  "offers no new module while the project's modules are turned off: workspace %s/project %s",
+  async (wr: WorkspaceRole, pr: ProjectRole) => {
+    const other = workspaceOf("other", { role: wr });
+    const project = projectOf("OTHER", other.id, { member_role: pr, module_view: false });
+    await loadWorkspaces(tab.nerve, tab.app.workspaceRoot, [tab.workspace, other]);
+    await loadProjects(tab.nerve, tab.app.projectRoot.project, other, [project]);
+    renderToStaticMarkup(<Consumer />);
+    const context: TPowerKContext = { ...ctx("other"), params: { workspaceSlug: "other", projectId: project.id } };
+    expect(commands.create_module.isVisible(context)).toBe(false);
+    expect(commands.create_module.isEnabled(context)).toBe(false);
+  }
+);
 it("an unknown route never opens a form using the router store's previous projects", () => {
   renderToStaticMarkup(<Consumer />);
   const item = commands.create_work_item;

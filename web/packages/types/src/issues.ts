@@ -15,15 +15,6 @@ import type {
   TIssueOrderByOptions,
 } from "./view-props";
 
-export interface ILinkDetails {
-  created_at: Date;
-  created_by: string;
-  id: string;
-  metadata: any;
-  title: string;
-  url: string;
-}
-
 export type TIssuePriorities = "urgent" | "high" | "medium" | "low" | "none";
 
 export type GroupByColumnTypes =

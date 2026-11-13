@@ -468,8 +468,7 @@ describe("store-context", () => {
     await until(() => listed.settled, "Y's list");
     // The address's parameters are the page's: Y's stores go on with X's RouterStore, which X's project filters
     // followed (project_filter.store.ts). The project filters' reaction is the one RootStore.dispose releases; the
-    // cycle and module filters of planning have none (the next two tests, P5a spec R4, P6a spec R4); the old module
-    // filters' (RootStore.moduleFilter) goes with that store once its last reader reads planning's (P6a spec R2).
+    // cycle and module filters of planning have none (the next two tests, P5a spec R4, P6a spec R4).
     expect(y.router).toBe(x.router);
     x.projectRoot.projectFilter.updateSearchQuery("x");
     y.projectRoot.projectFilter.updateSearchQuery("y");

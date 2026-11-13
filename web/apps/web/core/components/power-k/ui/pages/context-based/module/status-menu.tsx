@@ -8,15 +8,15 @@ import { Command } from "cmdk";
 import { observer } from "mobx-react";
 // nerve imports
 import { MODULE_STATUS } from "@nerve/constants";
+import type { ModuleStatus } from "@nerve/api-client";
 import { useTranslation } from "@nerve/i18n";
 import { ModuleStatusIcon } from "@nerve/propel/icons";
-import type { TModuleStatus } from "@nerve/types";
 // local imports
 import { PowerKModalCommandItem } from "../../../modal/command-item";
 
 type Props = {
-  handleSelect: (data: TModuleStatus) => void;
-  value: TModuleStatus;
+  handleSelect: (data: ModuleStatus) => void;
+  value: ModuleStatus;
 };
 
 export const PowerKModuleStatusMenu = observer(function PowerKModuleStatusMenu(props: Props) {

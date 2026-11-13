@@ -5,14 +5,12 @@ import { createRoot } from "react-dom/client";
 import { vi } from "vitest";
 import type { Module, ModuleLink, ModuleLinkCreate, ModuleLinkPatch, ModuleUpdate, Progress } from "@nerve/api-client";
 import { heldChange, type HeldChange } from "@/lib/auth/fake-tab";
+import type { IModuleStore } from "@/store/planning/module.store";
 import { ModuleDetailsSidebar } from "./root";
 
 // A module's progress sidebar as a person reads and changes it (P6a spec 2.6), for its tests: the module store is a
 // stand-in a test file gives the sidebar by mocking @/hooks/store/use-modules with it (sidebarModules); and where the
 // sidebar renders.
-
-/** Whom a change of the module's members adds and removes, as the sidebar gives it to the store. */
-type MembersChange = { add: string[]; remove: string[] };
 
 /**
  * A stand-in for the module store, as the sidebar reads the module: the module, its progress and its links, which a
@@ -51,7 +49,7 @@ export function sidebarModules(module: Module, held: { progress?: Progress; link
     getModuleProgress: of(progress),
     getModuleLinks: of(links),
     update: vi.fn<(moduleId: string, body: ModuleUpdate) => Promise<Module>>(changed),
-    changeMembers: vi.fn<(moduleId: string, change: MembersChange) => Promise<Module>>(changed),
+    changeMembers: vi.fn<IModuleStore["changeMembers"]>(changed),
     addLink: vi.fn((_moduleId: string, _body: ModuleLinkCreate) =>
       linkChanged((listed, answer) => (answer ? [answer, ...listed] : listed))
     ),

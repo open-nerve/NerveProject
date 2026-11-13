@@ -43,8 +43,7 @@ export const snapshot = (): RootStore => rootStore;
  * screen. The stores left behind keep their own RootStore, whose account's stores and client are the
  * old session's: nothing they still do reaches the new one. Of what they registered on the page's stores, the
  * project filters' reaction is released (RootStore.dispose); the cycle and module filters of planning register
- * nothing (P5a spec R4, P6a spec R4); the old module filters' reaction (RootStore.moduleFilter) still follows the
- * address in a retired session until that store goes (P6a spec R2).
+ * nothing (P5a spec R4, P6a spec R4).
  * The language was the account's: the new session shows the default until its profile sets it. The theme follows
  * the session in StoreWrapper.
  */

@@ -34,10 +34,6 @@ import type { ILabelStore } from "./label.store";
 import { LabelStore } from "./label.store";
 import type { IMemberRootStore } from "./member";
 import { MemberRootStore } from "./member";
-import type { IModuleStore } from "./module.store";
-import { ModulesStore } from "./module.store";
-import type { IModuleFilterStore } from "./module_filter.store";
-import { ModuleFilterStore } from "./module_filter.store";
 import type { IWorkspaceNotificationStore } from "./notifications/workspace-notifications.store";
 import { WorkspaceNotificationStore } from "./notifications/workspace-notifications.store";
 import type { IPlanningStore } from "./planning";
@@ -61,8 +57,6 @@ export class RootStore {
   projectRoot: IProjectRootStore;
   memberRoot: IMemberRootStore;
   planning: IPlanningStore;
-  module: IModuleStore;
-  moduleFilter: IModuleFilterStore;
   projectView: IProjectViewStore;
   globalView: IGlobalViewStore;
   issue: IIssueRootStore;
@@ -102,8 +96,6 @@ export class RootStore {
     this.projectRoot = new ProjectRootStore(this, api);
     this.memberRoot = new MemberRootStore(this, api);
     this.planning = new PlanningStore(this, api);
-    this.module = new ModulesStore(this);
-    this.moduleFilter = new ModuleFilterStore(this);
     this.projectView = new ProjectViewStore(this);
     this.globalView = new GlobalViewStore(this);
     this.issue = new IssueRootStore(this, api);
@@ -122,9 +114,7 @@ export class RootStore {
    * which goes on with the next session (v0 design 7.7, M3 design 7.1). store-context.tsx calls it as the next
    * session's RootStore takes over, so that a retired session's project filters no longer follow the address. It also
    * retires the issue root and its permission observation. The cycle and module filters of planning keep each
-   * project's by its id and follow no address: there is nothing of theirs to release (P5a spec R4, P6a spec R4). The
-   * old module filters' reaction (moduleFilter) still follows the RouterStore until that store goes, once its last
-   * reader reads planning's (P6a spec R2).
+   * project's by its id and follow no address: there is nothing of theirs to release (P5a spec R4, P6a spec R4).
    */
   dispose(): void {
     this.issue.retire();

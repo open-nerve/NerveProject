@@ -4,100 +4,60 @@
  * See the LICENSE file for details.
  */
 
-import { useCallback } from "react";
 import { useParams } from "react-router";
-import { StarOff } from "lucide-react";
-import { LinkOutline, MembersOutline, StarOutline } from "@makeplane/propel/icons";
+import { LinkOutline, MembersOutline } from "@makeplane/propel/icons";
 // nerve imports
-import { EUserPermissionsLevel } from "@nerve/constants";
+import { MODULE_STATUS } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { ModuleStatusIcon } from "@nerve/propel/icons";
-import { setToast, TOAST_TYPE } from "@nerve/propel/toast";
-import type { IModule, TModuleStatus } from "@nerve/types";
-import { EUserPermissions } from "@nerve/types";
-import { copyTextToClipboard } from "@nerve/utils";
 // components
 import type { TPowerKCommandConfig } from "@/components/power-k/core/types";
 // hooks
-import { useModule } from "@/hooks/store/use-module";
-import { useUser } from "@/hooks/store/user";
+import { useModules } from "@/hooks/store/use-modules";
+import { useUserPermissions } from "@/hooks/store/user";
+import { useCopyLink } from "@/hooks/use-copy-link";
+import { useRefusalToast } from "@/hooks/use-refusal-toast";
+// lib
+import { followInSession } from "@/lib/in-session";
 
+/**
+ * The commands on a module's page (P6a spec 2.9, R5, R6): its members and its status, changed while nerve takes the
+ * caller's writes of the route's project's modules (canWriteModules) and the module is not archived (nerve refuses
+ * any change of an archived one). A choice of a member adds him or removes him: the store is given whom, and makes
+ * nerve's whole set of members in its turn, so that a change sent before it is not lost. nerve's answer the store
+ * shows; its refusal is said, while the tab is in the session the change was sent in (followInSession). The copy of
+ * the link of the route's module, through the web app's one copy, is anyone's who sees the page. The modules'
+ * favorites are gone until M7 brings them back (M6 design 15 #13).
+ */
 export const usePowerKModuleContextBasedActions = (): TPowerKCommandConfig[] => {
   // navigation
   const { workspaceSlug, projectId, moduleId } = useParams();
-  // store
-  const {
-    permission: { allowPermissions },
-  } = useUser();
-  const { getModuleById, addModuleToFavorites, removeModuleFromFavorites, updateModuleDetails } = useModule();
-  // derived values
-  const moduleDetails = moduleId ? getModuleById(moduleId) : null;
-  const isFavorite = !!moduleDetails?.is_favorite;
-  // permission
-  const isEditingAllowed =
-    allowPermissions([EUserPermissions.ADMIN, EUserPermissions.MEMBER], EUserPermissionsLevel.PROJECT) &&
-    !moduleDetails?.archived_at;
-  // translation
+  // store hooks
+  const { getModuleById, update, changeMembers } = useModules();
+  const { canWriteModules } = useUserPermissions();
+  // hooks
+  const copyLink = useCopyLink();
+  const toastRefusal = useRefusalToast();
   const { t } = useTranslation();
+  // derived values
+  const module = getModuleById(moduleId);
+  const editable = () => !!module && !module.archived_at && canWriteModules(workspaceSlug ?? "", projectId);
 
-  const handleUpdateModule = useCallback(
-    async (formData: Partial<IModule>) => {
-      if (!workspaceSlug || !projectId || !moduleDetails) return;
-      await updateModuleDetails(workspaceSlug, projectId, moduleDetails.id, formData).catch(() => {
-        setToast({
-          type: TOAST_TYPE.ERROR,
-          title: "Error!",
-          message: "Module could not be updated. Please try again.",
-        });
-      });
-    },
-    [moduleDetails, projectId, updateModuleDetails, workspaceSlug]
-  );
+  /** Sends change of the module the page shows, while the caller may change it. */
+  const send = (change: (id: string) => Promise<unknown>) => {
+    if (!module || !editable()) return;
+    const id = module.id;
+    void followInSession(() => change(id), { failed: toastRefusal });
+  };
 
-  const handleUpdateMember = useCallback(
-    (memberId: string) => {
-      if (!moduleDetails) return;
-
-      const updatedMembers = moduleDetails.member_ids ?? [];
-      if (updatedMembers.includes(memberId)) updatedMembers.splice(updatedMembers.indexOf(memberId), 1);
-      else updatedMembers.push(memberId);
-
-      handleUpdateModule({ member_ids: updatedMembers });
-    },
-    [handleUpdateModule, moduleDetails]
-  );
-
-  const toggleFavorite = useCallback(() => {
-    if (!workspaceSlug || !moduleDetails || !moduleDetails.project_id) return;
-    try {
-      if (isFavorite) removeModuleFromFavorites(workspaceSlug, moduleDetails.project_id, moduleDetails.id);
-      else addModuleToFavorites(workspaceSlug, moduleDetails.project_id, moduleDetails.id);
-    } catch {
-      setToast({
-        type: TOAST_TYPE.ERROR,
-        title: "Some error occurred",
-      });
-    }
-  }, [addModuleToFavorites, removeModuleFromFavorites, workspaceSlug, moduleDetails, isFavorite]);
-
-  const copyModuleUrlToClipboard = useCallback(() => {
-    const url = new URL(window.location.href);
-    copyTextToClipboard(url.href)
-      .then(() => {
-        setToast({
-          type: TOAST_TYPE.SUCCESS,
-          title: t("power_k.contextual_actions.module.copy_url_toast_success"),
-        });
-        return;
-      })
-      .catch(() => {
-        setToast({
-          type: TOAST_TYPE.ERROR,
-          title: t("power_k.contextual_actions.module.copy_url_toast_error"),
-        });
-      });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  /** Adds the member, or removes him if he is one, as the menu shows him chosen. */
+  const toggleMember = (memberId: unknown) => {
+    if (!module || typeof memberId !== "string" || !memberId) return;
+    const change = module.member_ids.includes(memberId)
+      ? { add: [], remove: [memberId] }
+      : { add: [memberId], remove: [] };
+    send((id) => changeMembers(id, change));
+  };
 
   return [
     {
@@ -108,13 +68,10 @@ export const usePowerKModuleContextBasedActions = (): TPowerKCommandConfig[] => 
       contextType: "module",
       type: "change-page",
       page: "update-module-member",
-      onSelect: (data) => {
-        const memberId = data as string;
-        handleUpdateMember(memberId);
-      },
+      onSelect: toggleMember,
       shortcut: "m",
-      isEnabled: () => isEditingAllowed,
-      isVisible: () => isEditingAllowed,
+      isEnabled: editable,
+      isVisible: editable,
       closeOnSelect: false,
     },
     {
@@ -126,27 +83,12 @@ export const usePowerKModuleContextBasedActions = (): TPowerKCommandConfig[] => 
       type: "change-page",
       page: "update-module-status",
       onSelect: (data) => {
-        const status = data as TModuleStatus;
-        handleUpdateModule({ status });
+        const status = MODULE_STATUS.find((option) => option.value === data)?.value;
+        if (status) send((id) => update(id, { status }));
       },
       shortcut: "s",
-      isEnabled: () => isEditingAllowed,
-      isVisible: () => isEditingAllowed,
-      closeOnSelect: true,
-    },
-    {
-      id: "toggle_module_favorite",
-      i18n_title: isFavorite
-        ? "power_k.contextual_actions.module.remove_from_favorites"
-        : "power_k.contextual_actions.module.add_to_favorites",
-      icon: isFavorite ? StarOff : StarOutline,
-      group: "contextual",
-      contextType: "module",
-      type: "action",
-      action: toggleFavorite,
-      modifierShortcut: "shift+f",
-      isEnabled: () => isEditingAllowed,
-      isVisible: () => isEditingAllowed,
+      isEnabled: editable,
+      isVisible: editable,
       closeOnSelect: true,
     },
     {
@@ -156,7 +98,11 @@ export const usePowerKModuleContextBasedActions = (): TPowerKCommandConfig[] => 
       group: "contextual",
       contextType: "module",
       type: "action",
-      action: copyModuleUrlToClipboard,
+      action: () =>
+        copyLink(
+          `/${workspaceSlug}/projects/${projectId}/modules/${moduleId}`,
+          t("power_k.contextual_actions.module.copy_url_toast_success")
+        ),
       modifierShortcut: "cmd+shift+,",
       isEnabled: () => true,
       isVisible: () => true,

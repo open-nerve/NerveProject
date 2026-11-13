@@ -11,7 +11,7 @@ import type { TPowerKPageType } from "@/components/power-k/core/types";
 import { PowerKMembersMenu } from "@/components/power-k/menus/members";
 // hooks
 import { useMember } from "@/hooks/store/use-member";
-import { useModule } from "@/hooks/store/use-module";
+import { useModules } from "@/hooks/store/use-modules";
 // local imports
 import { PowerKModuleStatusMenu } from "./status-menu";
 
@@ -20,34 +20,37 @@ type Props = {
   handleSelection: (data: unknown) => void;
 };
 
+/**
+ * The pages of the module's page's commands (commands.tsx): its members, of its project's who are not its guests (as
+ * nerve takes a member), each shown chosen while he is one; and its status, the module's shown chosen.
+ */
 export const PowerKModuleContextBasedPages = observer(function PowerKModuleContextBasedPages(props: Props) {
   const { activePage, handleSelection } = props;
   // navigation
   const { moduleId } = useParams();
   // store hooks
-  const { getModuleById } = useModule();
+  const { getModuleById } = useModules();
   const {
     project: { getProjectMemberIds },
   } = useMember();
   // derived values
-  const moduleDetails = moduleId ? getModuleById(moduleId) : null;
-  const projectMemberIds = moduleDetails?.project_id ? getProjectMemberIds(moduleDetails.project_id, false) : [];
+  const module = getModuleById(moduleId);
 
-  if (!moduleDetails) return null;
+  if (!module) return null;
 
   return (
     <>
       {/* members menu */}
-      {activePage === "update-module-member" && moduleDetails && (
+      {activePage === "update-module-member" && (
         <PowerKMembersMenu
           handleSelect={handleSelection}
-          userIds={projectMemberIds ?? undefined}
-          value={moduleDetails.member_ids}
+          userIds={getProjectMemberIds(module.project_id, false) ?? undefined}
+          value={module.member_ids}
         />
       )}
       {/* status menu */}
-      {activePage === "update-module-status" && moduleDetails?.status && (
-        <PowerKModuleStatusMenu handleSelect={handleSelection} value={moduleDetails.status} />
+      {activePage === "update-module-status" && (
+        <PowerKModuleStatusMenu handleSelect={handleSelection} value={module.status} />
       )}
     </>
   );

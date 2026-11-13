@@ -4,6 +4,7 @@ import { observable, runInAction } from "mobx";
 import { vi } from "vitest";
 import type { Module, ModuleLink, ModuleListItem, ModuleUpdate, Progress } from "@nerve/api-client";
 import { heldChange, type HeldChange } from "@/lib/auth/fake-tab";
+import type { IModuleStore } from "@/store/planning/module.store";
 
 // The modules of a project's pages of modules (its list, its archive, a module's preview; P6a spec 2.2, 2.6) as they
 // read and change them, for their tests: the module store is a stand-in a test file gives the pages by mocking
@@ -12,8 +13,6 @@ import { heldChange, type HeldChange } from "@/lib/auth/fake-tab";
 
 /** A list of a project's the store holds: its modules that are not archived, or its archive. */
 type List = "modules" | "archive";
-/** Whom a change of a module's members adds and removes, as a page gives it to the store. */
-type MembersChange = { add: string[]; remove: string[] };
 
 /**
  * A stand-in for the module store as the pages of a project's modules read it: each of a project's two lists as nerve
@@ -92,7 +91,7 @@ export function listedModules() {
     fetchProgress: read("progress", (of, answer) => progress.set(of, answer as Progress)),
     fetchLinks: read("links", (of, answer) => links.set(of, answer as ModuleLink[])),
     update: vi.fn<(moduleId: string, body: ModuleUpdate) => Promise<Module>>(changed),
-    changeMembers: vi.fn<(moduleId: string, change: MembersChange) => Promise<Module>>(changed),
+    changeMembers: vi.fn<IModuleStore["changeMembers"]>(changed),
     unarchive: vi.fn<(moduleId: string) => Promise<Module>>(restored),
     sent,
     /** The project's list is rows, as if nerve had answered its read. */
