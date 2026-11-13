@@ -2,6 +2,7 @@ import { expect, type Locator, type Page, type TestInfo } from "@playwright/test
 
 import { changeProject, type Api, type Project } from "./api";
 import type { ModuleRow } from "./assert/planning";
+import { focusOutline } from "./browser";
 import { cycleMenu, cyclePagesWorld } from "./cycle-pages";
 
 // A project's module pages (M6 P6a spec 2.6, 2.7, 2.8, 2.11), as a person uses them: their addresses, what a story
@@ -94,6 +95,25 @@ export function moduleRow(page: Page, id: string, name: string): Locator {
  */
 export function layoutButton(page: Page, name: "List layout" | "Gallery layout"): Locator {
   return page.getByRole("button", { name, exact: true });
+}
+
+/**
+ * Checks that each of controls on page, reached by the keyboard, shows its focus outline whole: each in turn focused,
+ * then left for the stop before it by Shift with key (tabKey) and come back to by key, as a person tabs to it; its
+ * outline is drawn and neither the viewport nor a box that hides what overflows it cuts it (focusOutline; M3 handoff
+ * 3, the shared Button, IconButton, getButtonStyling and CustomMenu on the module pages).
+ */
+export async function expectOutlinesWhole(page: Page, key: string, ...controls: Locator[]): Promise<void> {
+  await controls.reduce(async (previous, control) => {
+    await previous;
+    await control.focus();
+    await page.keyboard.press(`Shift+${key}`);
+    await page.keyboard.press(key);
+    await expect(control).toBeFocused();
+    const outline = await focusOutline(control);
+    expect(outline.style, `the focus outline of ${control}`).not.toBe("none");
+    expect(outline.clippedBy, `what cuts the focus outline of ${control}`).toEqual([]);
+  }, Promise.resolve());
 }
 
 /**

@@ -161,6 +161,50 @@ export async function recordFocuses(page: Page): Promise<() => Promise<FocusTake
   return () => taken.jsonValue();
 }
 
+/** The outline a control draws as it has the focus, and what cuts it (focusOutline). */
+export interface FocusOutline {
+  readonly style: string;
+  /** Its width in pixels, as the browser computes it: Chromium's outline of style auto is 1px, Firefox's and WebKit's 3px. */
+  readonly width: number;
+  /** "viewport", and each ancestor, by its id or else its tag, that hides what overflows it where the outline crosses it. */
+  readonly clippedBy: readonly string[];
+}
+
+/**
+ * The focus outline of control, as the browser draws it: its style and width, and what cuts it, the outline reaching
+ * its width and offset beyond the control (M3 P11 review 6, M4 C12): the viewport, and each ancestor whose overflow is
+ * hidden, clipped or scrolled, on the axis the outline crosses its box by more than a pixel.
+ */
+export async function focusOutline(control: Locator): Promise<FocusOutline> {
+  return control.evaluate((element) => {
+    const style = getComputedStyle(element);
+    const width = Number.parseFloat(style.outlineWidth);
+    const rect = element.getBoundingClientRect();
+    const inset = Number.parseFloat(style.outlineOffset) + width;
+    const bounds = {
+      left: rect.left - inset,
+      top: rect.top - inset,
+      right: rect.right + inset,
+      bottom: rect.bottom + inset,
+    };
+    const clippedBy: string[] = [];
+    if (bounds.left < 0 || bounds.top < 0 || bounds.right > window.innerWidth || bounds.bottom > window.innerHeight)
+      clippedBy.push("viewport");
+    for (let ancestor = element.parentElement; ancestor; ancestor = ancestor.parentElement) {
+      const css = getComputedStyle(ancestor);
+      const box = ancestor.getBoundingClientRect();
+      if (
+        (/(auto|scroll|hidden|clip)/.test(css.overflowX) &&
+          (bounds.left < box.left - 1 || bounds.right > box.right + 1)) ||
+        (/(auto|scroll|hidden|clip)/.test(css.overflowY) &&
+          (bounds.top < box.top - 1 || bounds.bottom > box.bottom + 1))
+      )
+        clippedBy.push(ancestor.id || ancestor.tagName);
+    }
+    return { style: style.outlineStyle, width, clippedBy };
+  });
+}
+
 /** Run in a page: its navigator.clipboard.writeText rejects with a NotAllowedError, as a browser's refusal does. */
 function refuseWrites(): void {
   navigator.clipboard.writeText = () => Promise.reject(new DOMException("Write permission denied.", "NotAllowedError"));

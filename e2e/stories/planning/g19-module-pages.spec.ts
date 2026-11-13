@@ -4,12 +4,21 @@ import { addProjectMembers, createProject, createWorkspace, slugFor } from "../.
 import { expectModules } from "../../fixtures/assert/planning";
 import { anotherTabSignsIn } from "../../fixtures/auth";
 import { expectQuietConsole, refuseClipboardWrites, watchPage } from "../../fixtures/browser";
-import { chooseFromMenu, cycleMenu, dismissToasts, entriesOf, rowMenusKept, toast } from "../../fixtures/cycle-pages";
+import {
+  chooseFromMenu,
+  cycleMenu,
+  dismissToasts,
+  entriesOf,
+  rowMenusKept,
+  tabKey,
+  toast,
+} from "../../fixtures/cycle-pages";
 import { sidebarDetail } from "../../fixtures/cycle-progress-pages";
 import type { Database } from "../../fixtures/db";
 import { closedByEscape, closedWithin, modalDialog, shownWithin } from "../../fixtures/dialogs";
 import { createIssue } from "../../fixtures/issues";
 import {
+  expectOutlinesWhole,
   layoutButton,
   listedOn,
   madeModule,
@@ -173,8 +182,9 @@ test("G19 (page): with mem's new module dialog open on Web's list and its module
   await expectQuietConsole(page, watch);
 });
 
-test("G19 (page): Web's list names each module's menu, its order, its filters and their sections, each saying whether it is open, and its layouts, each saying whether it is chosen, a small screen's layout menu too; each row's right-click menu stays inert while closed; Alpha's link copied with the clipboard refused says the copy failed; on Alpha's page, its progress unanswered yet, the header's switcher opens Beta, whose page and progress show, and Alpha's late progress does not take Beta's place; Beta's link copied says the copy failed too", async ({
+test("G19 (page): Web's list names each module's menu, its order, its filters and their sections, each saying whether it is open, and its layouts, each saying whether it is chosen, a small screen's layout menu too; the shared controls of its header, a row and a card, and of Beta's page, reached by the keyboard, show their focus outlines whole; each row's right-click menu stays inert while closed; Alpha's link copied with the clipboard refused says the copy failed; on Alpha's page, its progress unanswered yet, the header's switcher opens Beta, whose page and progress show, and Alpha's late progress does not take Beta's place; Beta's link copied says the copy failed too", async ({
   api,
+  browserName,
   db,
   signedInPage,
 }, testInfo) => {
@@ -207,6 +217,18 @@ test("G19 (page): Web's list names each module's menu, its order, its filters an
   const watch = await watchPage(page);
   await page.goto(modulesPath(slug, web.id));
   await expect.poll(listedOn(page)).toEqual([alpha.id, beta.id]);
+
+  // Reached by the keyboard, the list's shared controls show their focus outlines whole, none cut by a box that hides
+  // what overflows it (M3 handoff 3): the header's search (IconButton), its order (CustomMenu, getButtonStyling), its
+  // filters and Add Module (Button), and Alpha's row's menu (CustomMenu).
+  const key = tabKey(browserName);
+  const named = (name: string) => page.getByRole("button", { name, exact: true });
+  await expectOutlinesWhole(
+    page,
+    key,
+    ...["Search", "Order by: Name", "Filters", "Add Module"].map(named),
+    cycleMenu(page, "Alpha")
+  );
 
   // Alpha's menu, named by it, says whether it is open; so do the order, named by the order chosen, and the filters,
   // and each of their sections.
@@ -256,6 +278,7 @@ test("G19 (page): Web's list names each module's menu, its order, its filters an
   if (wide) await page.setViewportSize(wide);
   await expect(cards).toHaveAttribute("aria-pressed", "true");
   await expect(rows).toHaveAttribute("aria-pressed", "false");
+  await expectOutlinesWhole(page, key, cycleMenu(page, "Alpha"));
   await rows.click();
   await expect(rows).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByText("1/3 work items", { exact: true })).toHaveCount(0);
@@ -308,6 +331,10 @@ test("G19 (page): Web's list names each module's menu, its order, its filters an
   expect(await shownWithin(workItems.getByText("1/2", { exact: true }))).toBe(false);
   await expect(workItems).toHaveText("1/3");
   await expect(page.getByRole("heading", { name: "Beta", exact: true })).toBeVisible();
+
+  // Reached by the keyboard, the header's details toggle (IconButton) and Beta's menu (CustomMenu) show their focus
+  // outlines whole.
+  await expectOutlinesWhole(page, key, named("Toggle details"), cycleMenu(page, "Beta"));
 
   // Beta's Notes link copied, the clipboard still refused: the sidebar says the copy failed, never that it copied.
   await page.getByRole("button", { name: "Copy link: Notes", exact: true }).click();

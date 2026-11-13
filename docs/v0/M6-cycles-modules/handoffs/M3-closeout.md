@@ -110,7 +110,7 @@ P3b 落地 M6 设计 §4.3 中的 `cycle_user_properties`、`module_user_propert
   - 正的 `tabIndex`：模块表单的 `PROJECT_MODULE` 删除，归档按钮的 `tabIndex={1}` 删除（变异 `t7-mut-archive-positive-tabindex`）；`ModuleStatusSelect` 不再收 `tabIndex`；`CustomSelect` 的 `tabIndex` 在 `@nerve/ui` 共用的 `IDropdownProps` 上，随第 5 节的最后迁移者收口。
   - 嵌套的按钮：`modules/quick-actions.tsx` 的菜单按钮不再嵌一个按钮，以模块命名（`common.item_options`），G19 核对它的名字与 `aria-expanded`。
   - 右键菜单：关着时 `inert`，右键一行打开、首项取得焦点，Escape 关上、焦点回到行的链接（G19 故事三）。
-  - 下拉框：负责人与成员的下拉（`CustomSearchSelect`）在 G9 中选人，只列项目里不是访客的成员；页头切换模块的下拉在 G19 打开另一个模块。共用组件的焦点轮廓是否被 `overflow-hidden` 裁掉没有在模块页上单独核对，随 P8 的最终矩阵。
+  - 下拉框：负责人与成员的下拉（`CustomSearchSelect`）在 G9 中选人，只列项目里不是访客的成员；页头切换模块的下拉在 G19 打开另一个模块。共用组件的焦点轮廓在整审 re-69 之后的修复轮 F2 核对（G19 故事三，三种引擎；量法是与 M4 C12 共用的 `focusOutline`：轮廓画出，视口与隐藏溢出的祖先都不裁它）：页头的搜索（`IconButton`）、排序（`CustomMenu` 与 `getButtonStyling`）、筛选与“Add Module”（`Button`），行与卡片的菜单（`CustomMenu`），详情页页头的详情开关（`IconButton`）与菜单，Tab 到达时都完整；菜单按钮放进隐藏溢出的盒子、去掉轮廓两个产品变异（`f2-mut-menu-in-hidden-box`、`f2-mut-menu-no-outline`）各让它失败。逐个 Tab 量下来，这四种以外的控件（行的链接、侧栏链接一行的链接与“Add link”、面包屑的链接被裁，日期范围按钮与进度页签没有轮廓）迭代页同样，交 P8（[P6a spec](../specs/P6a-web-modules.md) §5）。
   - 筛选的按钮：页头的筛选按钮以 “Filters” 为名、有 `aria-expanded`，各节也有，Escape 关上（G19）；筛选面板的搜索不再 `autoFocus`（变异 `t11-mut-filter-search-autofocus`）；排序的按钮以所选的排序为名。
   - 每一行的控件以行为名：模块一行的菜单按钮（`common.item_options`），链接一行的改、删、复制按钮以链接为名。
   - 字段的提示：名字的提示是 `FieldError`、`aria-invalid`、被拒时取得焦点（G9：空的名字与只有空格的名字）；链接弹窗的地址为空时提示显示在字段下、不发出（G10）；模块的状态选择没过规则时有经 `t()` 的提示、`aria-invalid`、被拒时取得焦点（组件测试 `select/status.test.tsx`；界面上走不到：新建默认“积压”，修改带着模块的状态）。
