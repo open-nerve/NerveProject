@@ -27,9 +27,9 @@ import { useModuleDisplay } from "./use-module-display";
 
 /**
  * The rows of moduleIds the store gives that pass filters and whose names hold query, whatever its case, in the order
- * of moduleIds.
+ * of moduleIds: a project's list's, or its archive's.
  */
-function filterModuleRows(
+export function filterModuleRows(
   moduleIds: string[],
   rowOf: (moduleId: string) => ModuleRow | undefined,
   filters: ModuleFilters,
@@ -42,8 +42,11 @@ function filterModuleRows(
   });
 }
 
-/** That none of a project's modules match its filters and its search, and which to clear to see them all. */
-function NoMatchingModules({ searched }: { searched: boolean }) {
+/**
+ * That none of a project's modules (of its list, or of its archive) match its filters and its search, and which to
+ * clear to see them all.
+ */
+export function NoMatchingModules({ searched }: { searched: boolean }) {
   const { t } = useTranslation();
   return (
     <div className="grid h-full w-full place-items-center">

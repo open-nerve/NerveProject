@@ -4,42 +4,45 @@
  * See the LICENSE file for details.
  */
 
-import React, { useState } from "react";
+import { useState } from "react";
 import { observer } from "mobx-react";
-// nerve constants
+// nerve imports
 import { DATE_AFTER_FILTER_OPTIONS } from "@nerve/constants";
-// components
+import { useTranslation } from "@nerve/i18n";
 import { isInDateFormat } from "@nerve/utils";
+// components
 import { DateFilterModal } from "@/components/core/filters/date-filter-modal";
 import { FilterHeader, FilterOption } from "@/components/issues/issue-layouts/filters";
 
 type Props = {
-  appliedFilters: string[] | null;
-  handleUpdate: (val: string | string[]) => void;
+  /** What the days filtered are, in the page's language: the day a cycle or a module starts, or ends. */
+  title: string;
+  appliedFilters: readonly string[] | undefined;
+  /** Turns each of the options on, or off if on. */
+  handleUpdate: (options: readonly string[]) => void;
   searchQuery: string;
 };
 
-export const FilterTargetDate = observer(function FilterTargetDate(props: Props) {
-  const { appliedFilters, handleUpdate, searchQuery } = props;
-
+/**
+ * The options of the filters' menu for a day of a cycle (P5a spec 2.3) or of a module (P6a spec 2.4): some weeks or
+ * months from today at the earliest, and a custom day, which a dialog picks (and the option, on, turns off).
+ */
+export const FilterDate = observer(function FilterDate(props: Props) {
+  const { title, appliedFilters, handleUpdate, searchQuery } = props;
+  // hooks
+  const { t } = useTranslation();
+  // states
   const [previewEnabled, setPreviewEnabled] = useState(true);
   const [isDateFilterModalOpen, setIsDateFilterModalOpen] = useState(false);
 
   const appliedFiltersCount = appliedFilters?.length ?? 0;
-
   const filteredOptions = DATE_AFTER_FILTER_OPTIONS.filter((d) =>
     d.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
-
-  const isCustomDateSelected = () => {
-    const isValidDateSelected = appliedFilters?.filter((f) => isInDateFormat(f.split(";")[0])) || [];
-    return isValidDateSelected.length > 0;
-  };
+  const customDays = appliedFilters?.filter((f) => isInDateFormat(f.split(";")[0] ?? "")) ?? [];
   const handleCustomDate = () => {
-    if (isCustomDateSelected()) {
-      const updateAppliedFilters = appliedFilters?.filter((f) => f.includes("-")) || [];
-      handleUpdate(updateAppliedFilters);
-    } else setIsDateFilterModalOpen(true);
+    if (customDays.length > 0) handleUpdate(customDays);
+    else setIsDateFilterModalOpen(true);
   };
 
   return (
@@ -49,11 +52,11 @@ export const FilterTargetDate = observer(function FilterTargetDate(props: Props)
           handleClose={() => setIsDateFilterModalOpen(false)}
           isOpen={isDateFilterModalOpen}
           onSelect={(val) => handleUpdate(val)}
-          title="Due date"
+          title={title}
         />
       )}
       <FilterHeader
-        title={`Due date${appliedFiltersCount > 0 ? ` (${appliedFiltersCount})` : ""}`}
+        title={`${title}${appliedFiltersCount > 0 ? ` (${appliedFiltersCount})` : ""}`}
         isPreviewEnabled={previewEnabled}
         handleIsPreviewEnabled={() => setPreviewEnabled(!previewEnabled)}
       />
@@ -65,15 +68,20 @@ export const FilterTargetDate = observer(function FilterTargetDate(props: Props)
                 <FilterOption
                   key={option.value}
                   isChecked={!!appliedFilters?.includes(option.value)}
-                  onClick={() => handleUpdate(option.value)}
+                  onClick={() => handleUpdate([option.value])}
                   title={option.name}
                   multiple
                 />
               ))}
-              <FilterOption isChecked={isCustomDateSelected()} onClick={handleCustomDate} title="Custom" multiple />
+              <FilterOption
+                isChecked={customDays.length > 0}
+                onClick={handleCustomDate}
+                title={t("common.filter_options.custom")}
+                multiple
+              />
             </>
           ) : (
-            <p className="text-11 text-placeholder italic">No matches found</p>
+            <p className="text-11 text-placeholder italic">{t("common.search.no_matches_found")}</p>
           )}
         </div>
       )}

@@ -56,14 +56,15 @@ export function invitationOf(
 }
 
 /**
- * The store, the users the stores share and the store's client, of a tab whose address names acme, and whose
- * caller's list nerve gave as acme and globex (workspaceOf), the requests of which are then forgotten.
+ * The store, the users the stores share and the store's client, of a tab whose address names acme (or the workspace
+ * slug names), and whose caller's list nerve gave as acme and globex (workspaceOf), the requests of which are then
+ * forgotten.
  */
-export async function memberStore() {
+export async function memberStore(slug = "acme") {
   const nerve = new FakeNerve();
   const api = nerve.client();
   const router = new RouterStore();
-  router.setQuery({ workspaceSlug: "acme" });
+  router.setQuery({ workspaceSlug: slug });
   const user = new UserStore(fakeRoot({ observeProfileRead: withoutImageObservation, router }), api);
   const workspaceRoot = new WorkspaceRootStore(
     fakeRoot({ observeProfileRead: withoutImageObservation, router }),

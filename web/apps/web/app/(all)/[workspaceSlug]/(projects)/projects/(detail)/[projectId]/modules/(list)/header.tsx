@@ -65,7 +65,7 @@ export const ModulesListHeader = observer(function ModulesListHeader(props: TPro
         </Breadcrumbs>
       </Header.LeftItem>
       <Header.RightItem>
-        {listed && <ModuleViewHeader workspaceSlug={workspaceSlug} projectId={projectId} />}
+        {listed && <ModuleViewHeader workspaceSlug={workspaceSlug} projectId={projectId} list="default" />}
         {canWrite && (
           <Button variant="primary" size="lg" onClick={() => toggleCreateModuleModal(true)}>
             <div className="block sm:hidden">{t("add")}</div>

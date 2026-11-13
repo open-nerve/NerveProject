@@ -21,9 +21,10 @@ type MembersChange = { add: string[]; remove: string[] };
  * own read once nerve has answered one, else its row; a module's progress and its links as nerve last answered their
  * reads. Each read (a project's two lists, a module, its progress, its links) goes to nerve, which settles the last one
  * of its kind when the test says (answer, refuse); what nerve answers is in the store before the read resolves, as the
- * store does. A change of a module (its fields, its members) goes to nerve too, which settles the last one sent when
- * the test says (sent): answered, the store writes the module nerve gives into its rows, which keep their counts, and
- * into its own read, then the change resolves.
+ * store does. A change of a module (its fields, its members, its restore) goes to nerve too, which settles the last one
+ * sent when the test says (sent): answered, the store writes the module nerve gives into its rows, which keep their
+ * counts, and into its own read (a restored module's row goes from its project's archive to the front of its list),
+ * then the change resolves.
  */
 export function listedModules() {
   const lists = observable.map<string, ModuleListItem[]>({}, { deep: false });
@@ -58,6 +59,25 @@ export function listedModules() {
     });
     return answer;
   };
+  const restored = async () => {
+    const change = heldChange<Module>();
+    sent.push(change);
+    const answer = await change.sent;
+    runInAction(() => {
+      const archive = listOf("archive", answer.project_id) ?? [];
+      const row = archive.find((one) => one.id === answer.id);
+      if (!row) return;
+      lists.set(
+        `archive ${answer.project_id}`,
+        archive.filter((one) => one !== row)
+      );
+      lists.set(`modules ${answer.project_id}`, [
+        { ...row, ...answer },
+        ...(listOf("modules", answer.project_id) ?? []),
+      ]);
+    });
+    return answer;
+  };
   return {
     getProjectModuleIds: (projectId: string | null | undefined) => listOf("modules", projectId)?.map((row) => row.id),
     getArchivedModuleIds: (projectId: string | null | undefined) => listOf("archive", projectId)?.map((row) => row.id),
@@ -73,6 +93,7 @@ export function listedModules() {
     fetchLinks: read("links", (of, answer) => links.set(of, answer as ModuleLink[])),
     update: vi.fn<(moduleId: string, body: ModuleUpdate) => Promise<Module>>(changed),
     changeMembers: vi.fn<(moduleId: string, change: MembersChange) => Promise<Module>>(changed),
+    unarchive: vi.fn<(moduleId: string) => Promise<Module>>(restored),
     sent,
     /** The project's list is rows, as if nerve had answered its read. */
     show: (list: List, projectId: string, rows: ModuleListItem[]) =>

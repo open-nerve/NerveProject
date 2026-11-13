@@ -4,34 +4,43 @@
  * See the LICENSE file for details.
  */
 
-import React, { useState } from "react";
+import { useState } from "react";
 import { observer } from "mobx-react";
+// nerve imports
+import type { ModuleStatus } from "@nerve/api-client";
 import { MODULE_STATUS } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { ModuleStatusIcon } from "@nerve/propel/icons";
-import type { TModuleStatus } from "@nerve/types";
 // components
 import { FilterHeader, FilterOption } from "@/components/issues/issue-layouts/filters";
 
 type Props = {
-  appliedFilters: TModuleStatus[] | null;
-  handleUpdate: (val: string) => void;
+  appliedFilters: readonly ModuleStatus[] | undefined;
+  /** Turns the status on, or off if on. */
+  handleUpdate: (status: ModuleStatus) => void;
   searchQuery: string;
 };
 
+/**
+ * The options of the filters' menu for nerve's status of a module (P6a spec 2.4), each by its name in the page, which
+ * the menu's search finds.
+ */
 export const FilterStatus = observer(function FilterStatus(props: Props) {
   const { appliedFilters, handleUpdate, searchQuery } = props;
   // states
   const [previewEnabled, setPreviewEnabled] = useState(true);
+  // hooks
   const { t } = useTranslation();
-
-  const filteredOptions = MODULE_STATUS.filter((p) => p.value.includes(searchQuery.toLowerCase()));
   const appliedFiltersCount = appliedFilters?.length ?? 0;
+  const title = t("project_module.status");
+  const filteredOptions = MODULE_STATUS.filter((status) =>
+    t(status.i18n_label).toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <>
       <FilterHeader
-        title={`Status${appliedFiltersCount > 0 ? ` (${appliedFiltersCount})` : ""}`}
+        title={`${title}${appliedFiltersCount > 0 ? ` (${appliedFiltersCount})` : ""}`}
         isPreviewEnabled={previewEnabled}
         handleIsPreviewEnabled={() => setPreviewEnabled(!previewEnabled)}
       />
@@ -48,7 +57,7 @@ export const FilterStatus = observer(function FilterStatus(props: Props) {
               />
             ))
           ) : (
-            <p className="text-11 text-placeholder italic">No matches found</p>
+            <p className="text-11 text-placeholder italic">{t("common.search.no_matches_found")}</p>
           )}
         </div>
       )}

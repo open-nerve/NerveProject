@@ -572,6 +572,7 @@
     "administration": "Administration",
     "filter_options": {
       "add": "Add filter",
+      "custom": "Custom",
       "me": "Me",
       "subscribers": "Subscribers",
       "search": "Search",

@@ -24,7 +24,7 @@ const dateLabel = (value: string): string => {
   return day && operator ? `${capitalizeFirstLetter(operator)} ${renderFormattedDate(day)}` : "";
 };
 
-/** The options a day of a cycles list is filtered by, each removable. */
+/** The options a day of a cycles or a modules list is filtered by, each removable. */
 export const AppliedDateFilters = observer(function AppliedDateFilters(props: Props) {
   const { handleRemove, values } = props;
   const { t } = useTranslation();

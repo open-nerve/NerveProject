@@ -18,7 +18,7 @@ import { ModulesListView } from "./modules-list-view";
 // keyboard too: an option, the lowest first or, by its direction, the highest first; the manual order has no
 // direction. The list follows what they choose, which the browser keeps for the project (useModuleDisplay). The
 // modules are a stand-in store's; each row and card a stand-in that says which it is; the header's search and filters
-// as they were (the session's filters come with T11).
+// the session's (module-filters.test.tsx).
 
 const held = vi.hoisted(() => ({
   modules: undefined as unknown as ReturnType<typeof import("./fake-module-lists").listedModules>,
@@ -27,16 +27,6 @@ const held = vi.hoisted(() => ({
 vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
 vi.mock("@/hooks/store/use-modules", () => ({ useModules: () => held.modules }));
 vi.mock("@/hooks/store/use-module-filters", () => ({ useModuleFilters: () => held.filters }));
-vi.mock("@/hooks/store/use-module-filter", () => ({
-  useModuleFilter: () => ({
-    currentProjectDisplayFilters: undefined,
-    currentProjectFilters: {},
-    searchQuery: "",
-    updateDisplayFilters: () => undefined,
-    updateFilters: () => undefined,
-    updateSearchQuery: () => undefined,
-  }),
-}));
 vi.mock("@/hooks/use-planning-reads", () => ({ usePlanningReads: () => ({ readable: true, listed: true }) }));
 vi.mock("@/hooks/store/use-member", () => ({ useMember: () => ({ workspace: { getWorkspaceMemberIds: () => [] } }) }));
 vi.mock("./module-list-item", () => ({
@@ -78,7 +68,7 @@ beforeEach(async () => {
       <SWRConfig value={{ provider: () => new Map() }}>
         <MemoryRouter initialEntries={[`/acme/projects/${web.id}/modules`]}>
           <header>
-            <ModuleViewHeader workspaceSlug="acme" projectId={web.id} />
+            <ModuleViewHeader workspaceSlug="acme" projectId={web.id} list="default" />
           </header>
           <nav>
             <ModulesListMobileHeader workspaceSlug="acme" projectId={web.id} />

@@ -11,6 +11,7 @@ import { useModuleDisplay } from "@/components/modules/use-module-display";
 import { signedIn } from "@/lib/auth/fake-tab";
 import { refusal } from "@/lib/fake-refusal";
 import { moduleRowOf } from "@/store/planning/fake-modules";
+import { ModuleFilterStore } from "@/store/planning/module_filter.store";
 import { moduleOf } from "@/store/project/fake-projects";
 import type { ProjectStore } from "@/store/project/project.store";
 import { callerInWeb, its, type Caller } from "@/store/user/fake-permissions";
@@ -23,11 +24,13 @@ import Page from "./page";
 // the project's modules not archived (the read the project's wrapper makes, which the page shares), and waits for it as
 // the list is laid out, says why nerve could not give it with a retry, or how to set the first module, which those who
 // write the project's modules may (canWriteModules) by the project's dialogs' host. Everyone who sees the list orders,
-// filters and lays it out. The caller's role is the permission store's own (fake-permissions.ts); the modules a
-// stand-in store's; the list itself and the header's view a stand-in that says whose it is.
+// filters and lays it out, and sees the filters applied to it above it. The caller's role is the permission store's own
+// (fake-permissions.ts); the modules a stand-in store's, the filters a session's; the list itself and the header's view
+// a stand-in that says whose it is.
 
 const held = vi.hoisted(() => ({
   modules: undefined as unknown as ReturnType<typeof import("@/components/modules/fake-module-lists").listedModules>,
+  filters: undefined as unknown as import("@/store/planning/module_filter.store").ModuleFilterStore,
   permissions: undefined as IUserPermissionStore | undefined,
   projects: undefined as ProjectStore | undefined,
   toggle: vi.fn(),
@@ -36,6 +39,7 @@ const held = vi.hoisted(() => ({
 vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n-values"));
 vi.mock("@/lib/auth/use-session", () => ({ useSession: () => ({ status: "signed-in", loginId: "x" }) }));
 vi.mock("@/hooks/store/use-modules", () => ({ useModules: () => held.modules }));
+vi.mock("@/hooks/store/use-module-filters", () => ({ useModuleFilters: () => held.filters }));
 vi.mock("@/hooks/store/use-command-palette", () => ({
   useCommandPalette: () => ({ toggleCreateModuleModal: held.toggle }),
 }));
@@ -103,6 +107,7 @@ beforeEach(() => {
   localStorage.clear();
   held.toggle.mockReset();
   held.modules = listedModules();
+  held.filters = new ModuleFilterStore();
   host = document.createElement("div");
   document.body.append(host);
   root = createRoot(host);
@@ -254,4 +259,21 @@ it("gives no one the list's view nor a new module while the project's modules ar
   expect(host.querySelector(`[aria-label="view of ${web.id}"]`)).toBeNull();
   expect(host.querySelectorAll("nav button")).toHaveLength(0);
   expect(text()).not.toContain("project_module.add_module");
+});
+
+it("shows the filters applied to the list above it, the list's own, which clear there", async () => {
+  const { web } = await opened(its.guest);
+  await held.modules.answer("modules", [moduleRowOf(moduleOf(web, "Auth"))]);
+  await settle();
+  expect(button("common.clear_all")).toBeUndefined();
+  await act(async () => held.filters.updateFilters(web.id, "default", { status: ["planned"] }));
+  expect(text()).toContain("project_modules.status.planned");
+  expect(text()).toContain(`the modules of ${web.id}`);
+  // the archive's filters are its own: not the list's
+  await act(async () => held.filters.updateFilters(web.id, "archived", { start_date: ["1_weeks;after;fromnow"] }));
+  expect(text()).not.toContain("1 week from now");
+  await act(async () => button("common.clear_all")?.click());
+  expect(held.filters.getFilters(web.id, "default")).toEqual({});
+  expect(held.filters.getFilters(web.id, "archived")).toEqual({ start_date: ["1_weeks;after;fromnow"] });
+  expect(button("common.clear_all")).toBeUndefined();
 });

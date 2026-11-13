@@ -5,58 +5,49 @@
  */
 
 import { observer } from "mobx-react";
-// assets
-import AllFiltersImage from "@/app/assets/empty-state/module/all-filters.svg?url";
-import NameFilterImage from "@/app/assets/empty-state/module/name-filter.svg?url";
-// components
-import { ModuleListItem } from "@/components/modules/module-list-item";
-import { ModulePeekOverview } from "@/components/modules/module-peek-overview";
-// ui
-import { CycleModuleListLayoutLoader } from "@/components/ui/loader/cycle-module-list-loader";
+// nerve imports
+import { orderModuleRows } from "@nerve/utils";
 // hooks
-import { useModule } from "@/hooks/store/use-module";
-import { useModuleFilter } from "@/hooks/store/use-module-filter";
+import { useModuleFilters } from "@/hooks/store/use-module-filters";
+import { useModules } from "@/hooks/store/use-modules";
+// local imports
+import { ModuleListItem } from "../module-list-item";
+import { ModulePeekOverview } from "../module-peek-overview";
+import { NoMatchingModules, filterModuleRows } from "../modules-list-view";
+import { useModuleDisplay } from "../use-module-display";
 
-export interface IArchivedModulesView {
+type Props = {
   workspaceSlug: string;
   projectId: string;
-}
+};
 
-export const ArchivedModulesView = observer(function ArchivedModulesView(props: IArchivedModulesView) {
+/**
+ * A project's archived modules (P6a spec 2.4, 2.6, R4, R12), filtered and searched by the project's own filters and
+ * search of its archive (the session's), ordered as the project's list is (the browser's one order of the project,
+ * useModuleDisplay); each row opens the module's preview, its quick actions restore it. Nothing matching, it says
+ * which to clear.
+ */
+export const ArchivedModulesView = observer(function ArchivedModulesView(props: Props) {
   const { workspaceSlug, projectId } = props;
   // store hooks
-  const { getFilteredArchivedModuleIds, loader } = useModule();
-  const { archivedModulesSearchQuery } = useModuleFilter();
+  const { getArchivedModuleIds, getModuleRow } = useModules();
+  const { getFilters, getSearchQuery } = useModuleFilters();
+  const { orderBy } = useModuleDisplay(projectId);
   // derived values
-  const filteredArchivedModuleIds = getFilteredArchivedModuleIds(projectId);
+  const query = getSearchQuery(projectId, "archived");
+  const rows = orderModuleRows(
+    filterModuleRows(getArchivedModuleIds(projectId) ?? [], getModuleRow, getFilters(projectId, "archived"), query),
+    orderBy
+  );
 
-  if (loader || !filteredArchivedModuleIds) return <CycleModuleListLayoutLoader />;
-
-  if (filteredArchivedModuleIds.length === 0)
-    return (
-      <div className="grid h-full w-full place-items-center">
-        <div className="text-center">
-          <img
-            src={archivedModulesSearchQuery.trim() === "" ? AllFiltersImage : NameFilterImage}
-            className="mx-auto h-36 w-36 sm:h-48 sm:w-48"
-            alt="No matching modules"
-          />
-          <h5 className="mt-7 mb-1 text-18 font-medium">No matching modules</h5>
-          <p className="text-14 text-placeholder">
-            {archivedModulesSearchQuery.trim() === ""
-              ? "Remove the filters to see all modules"
-              : "Remove the search criteria to see all modules"}
-          </p>
-        </div>
-      </div>
-    );
+  if (rows.length === 0) return <NoMatchingModules searched={query.trim() !== ""} />;
 
   return (
     <div className="h-full overflow-y-auto">
       <div className="flex h-full w-full justify-between">
         <div className="vertical-scrollbar scrollbar-lg flex h-full w-full flex-col overflow-y-auto">
-          {filteredArchivedModuleIds.map((moduleId) => (
-            <ModuleListItem key={moduleId} moduleId={moduleId} workspaceSlug={workspaceSlug} projectId={projectId} />
+          {rows.map((row) => (
+            <ModuleListItem key={row.id} moduleId={row.id} workspaceSlug={workspaceSlug} projectId={projectId} />
           ))}
         </div>
         <ModulePeekOverview projectId={projectId} workspaceSlug={workspaceSlug} />

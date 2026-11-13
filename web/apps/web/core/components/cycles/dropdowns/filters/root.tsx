@@ -9,12 +9,13 @@ import { observer } from "mobx-react";
 import { CloseOutline, SearchOutline } from "@makeplane/propel/icons";
 // nerve imports
 import { useTranslation } from "@nerve/i18n";
+// components
+import { FilterDate } from "@/components/planning/filter-date";
 // hooks
 import { useCycleFilters } from "@/hooks/store/use-cycle-filters";
 // store
 import type { CycleList } from "@/store/planning/cycle_filter.store";
 // local imports
-import { FilterDate } from "./date";
 import { FilterStatus } from "./status";
 
 /** The options held, with each of options turned on, or off if it was on. */

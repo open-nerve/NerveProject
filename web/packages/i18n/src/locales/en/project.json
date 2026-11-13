@@ -21,8 +21,7 @@
     "archived_cycles": "Archived cycles",
     "member_count": "{count, plural, one {# member} other {# members}}",
     "filters": {
-      "status": "Status",
-      "custom": "Custom"
+      "status": "Status"
     },
     "not_found": {
       "title": "Cycle does not exist",
@@ -141,6 +140,7 @@
     "more_details": "More details",
     "no_lead": "No lead",
     "work_items_done": "{completed}/{total} {total, plural, one {work item} other {work items}}",
+    "archived_modules": "Archived modules",
     "no_matching_modules": "No matching modules",
     "remove_filters_to_see_all_modules": "Remove the filters to see all modules",
     "remove_search_criteria_to_see_all_modules": "Remove the search criteria to see all modules",

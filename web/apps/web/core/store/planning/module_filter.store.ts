@@ -8,7 +8,7 @@ import { observable, runInAction } from "mobx";
 import type { ModuleFilters } from "@nerve/utils";
 
 /** A project's modules list ("default") or its archive ("archived"). */
-type ModuleListKind = "default" | "archived";
+export type ModuleListKind = "default" | "archived";
 /** What one of a project's lists is filtered and searched by. */
 type ListFilters = { readonly filters: ModuleFilters; readonly searchQuery: string };
 type ProjectFilters = Readonly<Record<ModuleListKind, ListFilters>>;

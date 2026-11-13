@@ -21,8 +21,7 @@
     "archived_cycles": "已归档的周期",
     "member_count": "{count} 名成员",
     "filters": {
-      "status": "状态",
-      "custom": "自定义"
+      "status": "状态"
     },
     "not_found": {
       "title": "周期不存在",
@@ -141,6 +140,7 @@
     "more_details": "更多详情",
     "no_lead": "没有负责人",
     "work_items_done": "{completed}/{total} 个工作项",
+    "archived_modules": "已归档的模块",
     "no_matching_modules": "没有匹配的模块",
     "remove_filters_to_see_all_modules": "移除筛选器以查看所有模块",
     "remove_search_criteria_to_see_all_modules": "移除搜索条件以查看所有模块",

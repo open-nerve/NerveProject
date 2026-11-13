@@ -8,8 +8,11 @@ import { observer } from "mobx-react";
 // nerve imports
 import { useTranslation } from "@nerve/i18n";
 import { EmptyStateDetailed } from "@nerve/propel/empty-state";
+import { EHeaderVariant, Header } from "@nerve/ui";
+import { calculateTotalFilters } from "@nerve/utils";
 // components
 import { PageHead } from "@/components/core/page-title";
+import { ModuleAppliedFiltersList } from "@/components/modules/applied-filters/root";
 import { ModulesListView } from "@/components/modules/modules-list-view";
 import { useModuleDisplay } from "@/components/modules/use-module-display";
 import { PlanningDisabled } from "@/components/planning/disabled";
@@ -18,6 +21,7 @@ import { CycleModuleBoardLayoutLoader } from "@/components/ui/loader/cycle-modul
 import { CycleModuleListLayoutLoader } from "@/components/ui/loader/cycle-module-list-loader";
 // hooks
 import { useCommandPalette } from "@/hooks/store/use-command-palette";
+import { useModuleFilters } from "@/hooks/store/use-module-filters";
 import { useModules } from "@/hooks/store/use-modules";
 import { useProject } from "@/hooks/store/use-project";
 import { useUserPermissions } from "@/hooks/store/user";
@@ -33,7 +37,7 @@ import type { Route } from "./+types/page";
  * (the read the project's wrapper makes, which the page shares, use-project-fetch.ts): it waits for nerve's first
  * answer as the list is laid out (rows or cards, useModuleDisplay), says why nerve could not give it, with a retry, or
  * how to set the project's first module (those who write its modules may, canWriteModules, by the project's dialogs'
- * host); else the modules (ModulesListView).
+ * host); else the filters applied to the list (the session's, ModuleFilterStore) and the modules (ModulesListView).
  */
 function ProjectModulesPage({ params }: Route.ComponentProps) {
   const { workspaceSlug, projectId } = params;
@@ -41,6 +45,7 @@ function ProjectModulesPage({ params }: Route.ComponentProps) {
   const { t } = useTranslation();
   // store hooks
   const { getProjectModuleIds, fetchModules } = useModules();
+  const { getFilters } = useModuleFilters();
   const { getProjectById } = useProject();
   const { canWriteModules } = useUserPermissions();
   const { toggleCreateModuleModal } = useCommandPalette();
@@ -89,7 +94,14 @@ function ProjectModulesPage({ params }: Route.ComponentProps) {
             ]}
           />
         ) : (
-          <ModulesListView workspaceSlug={workspaceSlug} projectId={projectId} />
+          <>
+            {calculateTotalFilters(getFilters(projectId, "default")) !== 0 && (
+              <Header variant={EHeaderVariant.TERNARY}>
+                <ModuleAppliedFiltersList projectId={projectId} list="default" />
+              </Header>
+            )}
+            <ModulesListView workspaceSlug={workspaceSlug} projectId={projectId} />
+          </>
         )}
       </div>
     </>
