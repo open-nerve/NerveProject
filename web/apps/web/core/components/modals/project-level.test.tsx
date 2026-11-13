@@ -15,7 +15,7 @@ vi.mock("@/lib/store-context", () => ({ rootStore: { powerK: {} } }));
 vi.mock("@/lib/auth/api-client", () => ({ tokenManager: { state: { loginId: "host" } }, publicClient: {} }));
 vi.mock("@/hooks/store/use-command-palette", () => ({ useCommandPalette: () => palette.store }));
 vi.mock("@/components/cycles/modal", () => ({ CycleCreateUpdateModal: (props: Dialog) => shown(props, "cycle") }));
-vi.mock("@/components/modules", () => ({ CreateUpdateModuleModal: (props: Dialog) => shown(props, "module") }));
+vi.mock("@/components/modules/modal", () => ({ CreateUpdateModuleModal: (props: Dialog) => shown(props, "module") }));
 vi.mock("@/components/views/modal", () => ({ CreateUpdateProjectViewModal: (props: Dialog) => shown(props, "view") }));
 
 let host: HTMLDivElement, root: ReturnType<typeof createRoot>;

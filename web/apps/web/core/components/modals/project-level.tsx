@@ -8,7 +8,7 @@ import { useLayoutEffect } from "react";
 import { observer } from "mobx-react";
 // components
 import { CycleCreateUpdateModal } from "@/components/cycles/modal";
-import { CreateUpdateModuleModal } from "@/components/modules";
+import { CreateUpdateModuleModal } from "@/components/modules/modal";
 import { CreateUpdateProjectViewModal } from "@/components/views/modal";
 // hooks
 import { useCommandPalette } from "@/hooks/store/use-command-palette";
