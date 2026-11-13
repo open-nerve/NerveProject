@@ -75,6 +75,7 @@ A1–A7 满足（[spec §4](../specs/P5b-cycle-list.md#4-验收标准)已勾选�
   - 修复轮之后 `f-final-three-engines`（`35215d46`）57 条全过。
 - **最终候选**：`t16-final-gate`（`ebeb2cab699e15fb7cae13b9a611189c0c0c2cc8`）：`make gen-check`、`make lint-go`、`make test`（本机通过）、`make lint-web`、`make knip`、`make test-web` 通过；`make build && make e2e` 452 过、1 败：F11 (page) [local]，与 `t16-gate` 同一签名、同一过程（第二次被拒后的撤销让编辑器重读已有图片，内容读取在故事粘贴普通文本 0.5 ms 后发出、11.3 ms 后中止）。把内容读取经路由延迟 150 ms 不能复现（`t16-red-f11-undo-race` 通过），所以不能简单归为“载入未完、下一次粘贴中止它”，未证实的修法不上；P5b 在该详情页只走到 `fields()` 的计算。依 [M6-M8-07](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-07) 的处理办法只重跑该文件一次通过（`t16-final-gate-e2e-f11-rerun`，7 例），再现与否定的实验补记其中。
   - 本记录所在提交只改文档与 `header.tsx` 的一处注释，另跑 `make lint-web`、`make knip`、`make test-web`、文档链接与关键词（收据 `t16-record-*`），其余以准确 HEAD 的分支 CI 为准。
+- **记录提交的分支 CI**：`496d905d58228ce81d83045ff0d319e18eff642b` 的 43098103752 自 2026-11-11T20:47:23Z 起一直 queued、没有建立任何作业（到 2026-11-13T02:41Z 约 30 小时；仓库公开、同一并发组里没有别的运行）。不能取消、也不能重跑未完成的运行；workflow 的 `concurrency`（分支上 `cancel-in-progress: true`）让同一分支的新推送取代它，所以以这条补记作为新的提交推送。
 - **最终候选的分支 CI 与合入后的 main CI**：见 §7。
 
 ## 6. 整分支审查
