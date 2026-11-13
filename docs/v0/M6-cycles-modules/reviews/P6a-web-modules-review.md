@@ -1,6 +1,6 @@
 # M6/P6a 阶段评审记录
 
-> 整分支审查 Ready after fixes（[re-69](../../../reviews/re-69-M6P6a整体审核.md)：没有 Critical、Important，三处 Minor），修复轮 F 处理这三处与主控留下的两项，经限定复审 Ready to merge（一处 Minor 措辞由本记录所在的提交改，re-69 §4）；最终候选的代码 `1f41c8ca`，其后只有本记录所在的提交（只改文档）。最终 HEAD 的分支 CI、合入、main CI 与归档清理见 §7（由 P6b 的 T1 回填）。基线 main `aadaf61a5929b57d8aa53b93e5ae04b03cc046c6`（P5b 的 noff `9675bb31` 与其 main CI 失败的根因修正 noff，main CI 43373039561 首次通过）。
+> 已完成（2026-11-14，noff `06b72d4b`，main CI 43469787621 attempt 2 通过：attempt 1 的 e2e 在 M4 的 C7 间歇失败，照 M6-M8-01 只重跑 e2e），整分支审查 Ready after fixes（[re-69](../../../reviews/re-69-M6P6a整体审核.md)：没有 Critical、Important，三处 Minor），修复轮 F 处理这三处与主控留下的两项，经限定复审 Ready to merge（一处 Minor 措辞由本记录所在的提交改，re-69 §4）；最终候选的代码 `1f41c8ca`，其后只有本记录所在的提交（只改文档），即最终 HEAD `8188582e`。最终 HEAD 的分支 CI、合入、main CI 与归档清理见 §7（由 P6b 的 T1 回填）。基线 main `aadaf61a5929b57d8aa53b93e5ae04b03cc046c6`（P5b 的 noff `9675bb31` 与其 main CI 失败的根因修正 noff，main CI 43373039561 首次通过）。
 
 ## 1. 评审方式与范围
 
@@ -95,11 +95,11 @@ fresh 只读审查（[re-69](../../../reviews/re-69-M6P6a整体审核.md)，`fab
 
 ## 7. 集成、归档与接续
 
-（待回填：由 P6b 的 T1 按归档里的台账、CI 原件与 `cleanup.log` 回填，作业号与时刻以 GitHub 公开的 jobs 接口核对。）
+由 P6b 的 T1 按归档里的台账、`manifest.json` 与 `cleanup.log` 回填；作业号、时刻与结论以 GitHub 公开的 jobs 接口（只读）核对，e2e 的条数与失败处以作业日志核对。
 
-- **最终 HEAD 的分支 CI**：待回填（含 e2e 作业的实际时长，与 §5 的估算对照）。
-- **合入与 main CI**：待回填。
-- **归档**：待回填。
-- **清理**：待回填。
+- **最终 HEAD 的分支 CI**：`8188582e184c14a4ae9f29baf512467dbef62e6f` 的 43463416098 attempt 1 成功（server (1) 132016072027、web 132016072634、server (0) 132016072832、e2e 132025064734；e2e 作业 16:45:49Z–17:07:27Z，21 分 38 秒，462 过，在 §5 估算的 20.5–22.5 分钟内）。
+- **合入与 main CI**：noff `06b72d4b65bcba911344a4ed3c358f164a5fdeeb`，双父 `aadaf61a`、`8188582e`，树与分支相同（`c8da8856`）。main CI 43469787621 attempt 1：server (0) 132038343932、web 132038344421、server (1) 132038344536 成功；e2e 132048379310（e2e 作业 17:25:42Z–17:49:59Z）461 过、1 败，失败的是 M4 的 C7（`e2e/stories/issue/collaboration-interactions.spec.ts:422`，键盘选主题：第二次 `reopenDuringExit("Meta+k")`（`:474`）期待面板停在 `data-leave`（`:464`），面板已 `hidden`、`data-leave` 为 null），即 [M6-M8-01](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-01) 记下的间歇失败；P6a 在命令面板只改了模块的命令与菜单（迭代的菜单改用共用的取数门），没有动主题选择与这个故事；照 M6-M8-01 的验收语只重跑一次。attempt 2 只重跑 e2e：132062963902（e2e 作业 17:51:22Z–18:16:22Z，25 分 00 秒，462 过）成功；web、server (0)、server (1) 沿用 attempt 1 的成功（attempt 2 中列为 132063047173、132062966245、132063053589，起止时刻与 attempt 1 的相同）。这次的 25 分 00 秒是 P6b 的 e2e 时长基线（[P6b spec](../specs/P6b-module-list.md) §2.10）。
+- **归档**（主目录，P6b 开工时以 `archive.py verify` 复核，收据 `t1-p6a-archive-verify`）：`.superpowers/sdd/M6-P6a-integration-20261114`：2910 个文件、1,011,232,897 字节、2938 个成员、未知 0、清单 sha256 `9c627e2ba4a8eaefe0cc1ed547a9cfd1885e3718f86e6b306dcaf7288ca157c4`，清单的 `head` 为 `8188582e`（台账、调研笔记、收据、变异、e2e 的 `test-results` 与 `playwright-report`、各包的 `.turbo`）。
+- **清理**：`cleanup.log`（2026-11-13T18:18:06Z）记录 `codex/m6-p6a`（`8188582e`）本地与远端一致、已含于 origin/main，main 与 origin/main 都在 `06b72d4b`；worktree `m6-p6`、本地分支与远端分支已删除。
 
-**接续**：P6b（模块页的工作项列表，P6a 合入后写 spec 与 plan，[P6a spec](../specs/P6a-web-modules.md) §1、§5）。
+**接续**：P6b（模块页的工作项列表，[P6b spec](../specs/P6b-module-list.md)、[P6b plan](../plans/P6b-module-list.md)，预检 [re-70](../../../reviews/re-70-M6P6b预检.md)），基线 main `06b72d4b`。
