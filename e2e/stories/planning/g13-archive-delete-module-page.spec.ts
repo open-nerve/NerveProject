@@ -1,5 +1,3 @@
-import type { Page } from "@playwright/test";
-
 import { createProject, createWorkspace, slugFor } from "../../fixtures/api";
 import { expectModules } from "../../fixtures/assert/planning";
 import { emailFor } from "../../fixtures/auth";
@@ -25,7 +23,7 @@ import {
 import {
   archivedModulesPath,
   changedModule,
-  linkedModules,
+  listedOn,
   madeModule,
   modulePagesWorld,
   modulePath,
@@ -44,11 +42,6 @@ import { expect, test } from "../../fixtures/test";
 // lets delete it; and the two pages S2 covered until the module pages read nerve's API (P6a T8, T11): a module nerve
 // does not have, and the archive while it holds no module. The API version is g13-archive-delete-module.spec.ts; both
 // assert the same rows.
-
-/** The ids of the modules page's list or archive shows, in their order. */
-function listedOn(page: Page): () => Promise<string[]> {
-  return () => linkedModules(page.getByRole("main").last());
-}
 
 test("G13 (page): Web's archive of modules, empty, says so at once, never a placeholder that waits, and asks nerve's API alone; on Web's list, Doing, in progress, offers its archive disabled with the reason, Done and Dropped theirs; Done's archive waits for nerve and goes, said once nerve has archived it; Dropped's, refused as Web's modules were turned off meanwhile, stays, saying why and never success, then goes; the archive lists them, Done previewed as nerve reads it, read only; Done's restore, from its row while it is previewed, is said once nerve has restored it, the archive shown without the preview; an archived module's menu offers no deletion, even to the admin", async ({
   api,

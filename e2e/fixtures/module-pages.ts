@@ -69,9 +69,16 @@ export async function linkedModules(within: Locator): Promise<string[]> {
   return [...new Set(hrefs.map((href) => href.slice(href.lastIndexOf("/") + 1)))];
 }
 
+/** The ids of the modules page's list or archive shows, in their order, read anew at each call (linkedModules). */
+export function listedOn(page: Page): () => Promise<string[]> {
+  return () => linkedModules(page.getByRole("main").last());
+}
+
 /**
  * The row of the module of id, named name, on page's list or archive: its link, its facts (its days, its status, its
- * lead) and its menu, named by the module as a cycle's is (common.item_options).
+ * lead, its progress) and its menu, named by the module as a cycle's is (common.item_options). Laid out as cards, the
+ * list shows the module's card instead, found alike: the card is the one element that holds the module's link and its
+ * menu, as the row is.
  */
 export function moduleRow(page: Page, id: string, name: string): Locator {
   return page
@@ -79,6 +86,14 @@ export function moduleRow(page: Page, id: string, name: string): Locator {
     .filter({ has: page.locator(`a[href$="/modules/${id}"]`) })
     .filter({ has: cycleMenu(page, name) })
     .last();
+}
+
+/**
+ * The button of the header of a project's modules list that lays it out as name says, as rows or as cards: pressed
+ * while the list is so laid out, which the browser keeps for the project (P6a spec 2.4, R4).
+ */
+export function layoutButton(page: Page, name: "List layout" | "Gallery layout"): Locator {
+  return page.getByRole("button", { name, exact: true });
 }
 
 /**
