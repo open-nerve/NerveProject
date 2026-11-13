@@ -1,6 +1,6 @@
 # M6 / P5b：迭代页的工作项列表
 
-> 状态：整分支审查 Ready to merge（[re-67](../../../reviews/re-67-M6P5b整体审核.md)，修复轮 F 另经限定复审），待合入；A1–A7 已勾选，A8 由 P6 的 T1 勾选（[阶段记录](../reviews/P5b-cycle-list-review.md)）。预检通过（修正后，[re-66](../../../reviews/re-66-M6P5b预检.md)）。基线 main `0b8efcd701edf7e73a37d5bb82ad176a7795b910`（P5a 的 noff，main CI 42995581409 首次通过）。设计见 [M6 设计](../M6-design.md) §2 的 G15、G19，§3.3、§7、§8、§12；P5 的拆分与 P5b 的边界见 [P5a spec](P5a-web-cycles.md) §1、R1、R10、§5。网页的长期规则见[总体设计 §7.2、§7.7](../../v0-design.md#77-stores-按会话分代长期有效m2-起)。接口合同见 [P3a spec](P3a-issue-membership.md)（工作项的 `cycle_id`）、[P3b spec](P3b-list-engine.md) §2.1、§2.3、R6、R8、R9（列表的词表与迭代页偏好）。现状调研见本阶段台账 `research/web.md`（网页的列表引擎）、`research/plane-contract.md`（Plane 的迭代页列表、nerve 的接口与交接）（ignored，随阶段归档）。负责人 2026-11-11 授权连续推进至 M6 收官，重要高风险决策仍停下确认；本段不改 `server/`、`api/`，本机 `make test` 若因 M6-M8-05 的签名失败，以分支 CI 的服务端两路为准（负责人 2026-11-11）。
+> 状态：已完成（2026-11-13，noff `9675bb31`，修复 noff `aadaf61a`，main CI 43373039561 首次通过），A1–A8 已勾选，整分支审查 Ready to merge（[re-67](../../../reviews/re-67-M6P5b整体审核.md)，修复轮 F 另经限定复审），[阶段记录](../reviews/P5b-cycle-list-review.md)。预检通过（修正后，[re-66](../../../reviews/re-66-M6P5b预检.md)）。基线 main `0b8efcd701edf7e73a37d5bb82ad176a7795b910`（P5a 的 noff，main CI 42995581409 首次通过）。设计见 [M6 设计](../M6-design.md) §2 的 G15、G19，§3.3、§7、§8、§12；P5 的拆分与 P5b 的边界见 [P5a spec](P5a-web-cycles.md) §1、R1、R10、§5。网页的长期规则见[总体设计 §7.2、§7.7](../../v0-design.md#77-stores-按会话分代长期有效m2-起)。接口合同见 [P3a spec](P3a-issue-membership.md)（工作项的 `cycle_id`）、[P3b spec](P3b-list-engine.md) §2.1、§2.3、R6、R8、R9（列表的词表与迭代页偏好）。现状调研见本阶段台账 `research/web.md`（网页的列表引擎）、`research/plane-contract.md`（Plane 的迭代页列表、nerve 的接口与交接）（ignored，随阶段归档）。负责人 2026-11-11 授权连续推进至 M6 收官，重要高风险决策仍停下确认；本段不改 `server/`、`api/`，本机 `make test` 若因 M6-M8-05 的签名失败，以分支 CI 的服务端两路为准（负责人 2026-11-11）。
 
 ## 1. 目标与边界
 
@@ -114,7 +114,7 @@ P5a 交付了迭代的页面，详情页的正文只有转移横幅与进度侧�
 - [x] A5 G15、G19 的迭代页列表部分（三种引擎）：四种布局、双向续页、本页偏好的读写（被拒在单测，§2.10）、迭代关闭时的停用空态、换迭代与后退前进与换会话时迟到的回答不进新页面、失权的迟到回答、OwnOnly 与工作区管理员兼访客、跨分组的写后计数、归档范围、附件列（M5-M6-02）、整页零非预期失败。
 - [x] A6 守卫：`project-address-route`、告警上限、knip、关键词；“按本页分组”的守卫。
 - [x] A7 文档：P5a 的回填（阶段记录 §7、spec A8、设计 §14、M6-M8-05 的补充）；交接回执（M4 交接 M6-01、M6-02 的迭代部分，M5 交接 M5-M6-02 的迭代部分，M3 交接 §1 的迭代 user-properties）；差异清单、前端改动清单、设计 §8/§12/§14。
-- [ ] A8 七项本地门禁（`make test` 照负责人 2026-11-11 的规则）、deep-review 修复闭环、准确的分支 CI 与 noff 后的 main CI 全绿、归档清理。（合入后由 P6 的 T1 勾选）
+- [x] A8 七项本地门禁（`make test` 照负责人 2026-11-11 的规则）、deep-review 修复闭环、准确的分支 CI 与 noff 后的 main CI 全绿、归档清理。（合入后由 P6a 的 T1 勾选：最终候选 `ded24135` 的分支 CI 43358881107 首次通过；noff `9675bb31` 的 main CI 43362963122 的 e2e 因 G15 故事三的测试缺陷未过，根因修正经修复 noff `aadaf61a`，main CI 43373039561 首次通过；归档 `M6-P5b-integration-20261113`；见[阶段记录](../reviews/P5b-cycle-list-review.md) §5、§7）（本段的 `make test` 在检查点 `00cf6c38` 与最终候选 `ebeb2cab` 都在本机通过，负责人 2026-11-11 的规则——因 M6-M8-05 的签名失败时以分支 CI 的服务端两路为准——没有用上；`ebeb2cab` 之后的 I21 测试修正只改 e2e，以聚焦的收据与分支 CI 为准）
 
 ## 5. 后续责任
 
