@@ -1,6 +1,6 @@
 # M6 / P6b：模块页的工作项列表
 
-> 状态：spec 与 plan 已写，待预检。基线 main `06b72d4b65bcba911344a4ed3c358f164a5fdeeb`（P6a 的 noff，双父 `aadaf61a`、`8188582e`；P6a 的 main CI 43469787621 attempt 1 的 e2e 因 M4 的 C7 未过，照 [M6-M8-01](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-01) 重跑一次，结论由本段 T1 回填）。设计见 [M6 设计](../M6-design.md) §2 的 G15、G19，§3.3、§7、§8、§11、§12 的 P6b 一行、§15 第 12 条；P6b 的边界见 [P6a spec](P6a-web-modules.md) §1、R15、R16、§5 的 P6b 一段；迭代页的先例见 [P5b spec](P5b-cycle-list.md)（R1–R11、§5 的 P6 一段）与[阶段记录](../reviews/P5b-cycle-list-review.md)。网页的长期规则见[总体设计 §7.2、§7.7](../../v0-design.md#77-stores-按会话分代长期有效m2-起)。接口合同见 [P3a spec](P3a-issue-membership.md)（工作项的 `module_ids`）、[P3b spec](P3b-list-engine.md) §2.1、§2.3、R8、R9（列表的 `module_id` 与模块页偏好）。现状调研见本阶段台账 `research/web.md`（网页的现状、P5b 的接法、工作项根 store 的拆法、交接各项、e2e 与守卫）、`research/plane-contract.md`（Plane 的模块页列表、nerve 的契约、差异）（ignored，随阶段归档）。负责人 2026-11-11 授权连续推进至 M6 收官，重要高风险决策仍停下确认；本段不改 `server/`、`api/`，本机 `make test` 若因 M6-M8-05 的签名失败，以分支 CI 的服务端两路为准（负责人 2026-11-11）。
+> 状态：预检通过（修正后，[re-70](../../../reviews/re-70-M6P6b预检.md)），可以按 T1 开始实施。基线 main `06b72d4b65bcba911344a4ed3c358f164a5fdeeb`（P6a 的 noff，双父 `aadaf61a`、`8188582e`；P6a 的 main CI 43469787621 attempt 1 的 e2e 因 M4 的 C7 未过，照 [M6-M8-01](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-01) 重跑一次，attempt 2 通过，由本段 T1 回填）。设计见 [M6 设计](../M6-design.md) §2 的 G15、G19，§3.3、§7、§8、§11、§12 的 P6b 一行、§15 第 12 条；P6b 的边界见 [P6a spec](P6a-web-modules.md) §1、R15、R16、§5 的 P6b 一段；迭代页的先例见 [P5b spec](P5b-cycle-list.md)（R1–R11、§5 的 P6 一段）与[阶段记录](../reviews/P5b-cycle-list-review.md)。网页的长期规则见[总体设计 §7.2、§7.7](../../v0-design.md#77-stores-按会话分代长期有效m2-起)。接口合同见 [P3a spec](P3a-issue-membership.md)（工作项的 `module_ids`）、[P3b spec](P3b-list-engine.md) §2.1、§2.3、R8、R9（列表的 `module_id` 与模块页偏好）。现状调研见本阶段台账 `research/web.md`（网页的现状、P5b 的接法、工作项根 store 的拆法、交接各项、e2e 与守卫）、`research/plane-contract.md`（Plane 的模块页列表、nerve 的契约、差异）（ignored，随阶段归档）。负责人 2026-11-11 授权连续推进至 M6 收官，重要高风险决策仍停下确认；本段不改 `server/`、`api/`，本机 `make test` 若因 M6-M8-05 的签名失败，以分支 CI 的服务端两路为准（负责人 2026-11-11）。
 
 ## 1. 目标与边界
 
@@ -31,7 +31,9 @@ P6a 交付了模块的页面，详情页的正文只有侧栏（[P6a spec](P6a-w
 
 - 成员的快照（原 `fields()`）改为一个纯函数，根的 `observeRead` 与写入单元的确认共用这一份。
 - 写入单元经根读取它登记的列表（只读的一个访问，不另存一份）、工作项 store、权限读与详情；类型随职责走（`IssueDrop` 等随写入单元，`IssueWriteScope` 随根的 `scope()`），导入随之改。
-- **调用方改为经写入单元**（R1 的选项 B）：写 spec 时 grep 到产品代码 12 个文件 18 处（`helpers/base-issues.store.ts` 6 处、`cycle/issue.store.ts`、`workspace-draft/issue.store.ts`、`issue-details/` 的评论、链接、表情、关系（2 处）、子项与描述版本 store、`issue-list-binding.ts` 的 `pendingIDs`、命令面板的 `mutation-commands.ts`、`issue-detail/use-issue-operations.ts`），测试约 20 个文件约 80 处（含 `vi.spyOn` 这些方法的与测试替身 `fake-issues.ts`）。合入的状态里根上没有这些方法的转发。
+- **没有值的循环导入**（re-70 F3）：写入单元对根只有 `import type`，或只依赖构造时传入的一个窄接口（根把自己或所需的几样传进来）；根以值导入写入单元来建立它。不出现 `root.store.ts` → 写入单元 → `root.store.ts` 的值导入（“没有循环依赖”的质量要求）。
+- **不加入 `project-address-route`**（re-70 F5）：写入单元带着 M4 的 router 退路（`this.workspaceSlug`，自 `:552` 原样搬来），规则的内容模式也认不出这种读法，列进去反而误导；P7 去掉这条退路时再加入（§5 的 P7）。
+- **调用方改为经写入单元**（R1 的选项 B）：写 spec 时 grep 到产品代码 12 个文件 18 处（`helpers/base-issues.store.ts` 6 处、`cycle/issue.store.ts`、`workspace-draft/issue.store.ts`、`issue-details/` 的评论、链接、表情、关系（2 处）、子项与描述版本 store、`issue-list-binding.ts` 的 `pendingIDs`、命令面板的 `mutation-commands.ts`、`issue-detail/use-issue-operations.ts`），测试约 22 个文件 84 处（预检 re-70 的计数，含 `vi.spyOn` 这些方法的与测试替身 `fake-issues.ts`）。合入的状态里根上没有这些方法的转发。
 - **行为不变**：只搬不改，包括 `updateIssue` 没有给出范围时退回 router 的工作区（`:552`，M4 起如此；§5 的 P7）。M4、M5 与 P5b 的测试是回归保护，断言不改。
 - **大小**：拆后根与写入单元各在约 400 行以内（写 spec 时估：根约 330 行，加上本段模块页的两个 store 约 340 行；写入单元约 300 行）。之后加写入（P7 的迭代、模块下拉框与“添加已有”）加在写入单元，不加回根。
 
@@ -49,10 +51,10 @@ P5b 的迭代页列表件逐个处理如下（“共用”指改为按域的一�
 | `core/hooks/use-cycle-list-state.ts` | 分开：新 `use-module-list-state.ts`，同形的 `{readOnly, joinable}`；共用件按域取 | 规则不同：迭代已结束或已归档只读；模块只看已归档，不看状态（设计 §3.3“模块不限状态”） |
 | `core/hooks/use-cycle-preferences-follow.ts` | 共用：按域，仍建立在 `use-page-preferences-follow.ts` 上 | 只差 store 类型、路由参数与页面范围的名字 |
 | `core/hooks/use-cycle-progress-follow.ts` | 共用：按域 | 只差进度所在的 store 与页面范围的名字 |
-| `issue-layouts/roots/cycle-layout-root.tsx` | 共用：按域的布局根；进入时打开预览（`PeekOnEntry`）只给迭代页 | 只差 store 类型、取数门的域、SWR 键、显示选项常量、预览宿主的前缀；进入时打开预览只来自进行中卡片，模块没有 |
-| `{list,kanban,calendar,spreadsheet}/roots/cycle-root.tsx`（各 38 行） | 共用：每种布局一件，按域 | 只差只读的来源与行的快捷操作 |
+| `issue-layouts/roots/cycle-layout-root.tsx` | 共用：按域的布局根；它不导入 `core/components/cycles/peek-on-entry.tsx`，迭代页把进入时打开预览（`PeekOnEntry`）作为子节点或插槽交给它（或在它旁边渲染）（re-70 F4） | 只差 store 类型、取数门的域、SWR 键、显示选项常量、预览宿主的前缀；进入时打开预览只来自进行中卡片，模块没有 |
+| `{list,kanban,calendar,spreadsheet}/roots/cycle-root.tsx`（各 38 行） | 共用：每种布局一件；只读的来源与行的快捷操作经 props 或一张按域的小表给出，不写 `if (domain === …)` 的分支（re-70 F4） | 只差只读的来源与行的快捷操作 |
 | `issue-layouts/roots/fake-cycle-page.tsx`（测试替身） | 共用：按域 | 同上 |
-| `issue-layouts/empty-states/cycle.tsx` | 共用：按域取文案、列表状态与 store 类型 | 只差这三者（文案见 R11） |
+| `issue-layouts/empty-states/cycle.tsx` | 共用：文案、列表状态与 store 类型经同一张按域的小表（或 props）给出 | 只差这三者（文案见 R11） |
 | `quick-action-dropdowns/cycle-issue.tsx`、`command-host.tsx` 的 `remove-from-cycle`、`helper.tsx` 的菜单项 | 共用：“移出本页”，按域的菜单文案与成功提示；移出经本域的命令 | 只差文案与命令；模块的命令不能是行的 `handleUpdate`（它发调用时固定的请求体，§2.5） |
 | `R/cycles/(detail)/header.tsx` 的数目、列表控件与新建的三个条件 | 共用：三个派生值抽成按域的一个 hook，两个页头各自排版 | 条件只差域；页头的其余部分（面包屑、侧栏开关、快捷操作）P5a、P6a 已各有一份 |
 | `cycles/progress-sidebar/progress-stats.tsx` 的行切换 | 共用：按 store 类型与 id 给出 `ProgressTabs` 的 `choices`（`core/components/core/sidebar/` 下） | 只差 store 类型与 id |
@@ -110,7 +112,7 @@ P5b 的迭代页列表件逐个处理如下（“共用”指改为按域的一�
 
 ### 2.9 守卫与告警
 
-- `project-address-route`：新建与改写的组件、hook、store 随各自的 Task 加入文件表并带样例；新文件只经路由参数或 props 取工作区、项目、模块。规则已列的 `empty-states/module.tsx`、`quick-action-dropdowns/module-issue.tsx` 与被共用件取代的迭代路径留在表里阻止复活。
+- `project-address-route`：新建与改写的组件、hook、store 随各自的 Task 加入文件表并带样例；新文件只经路由参数或 props 取工作区、项目、模块。规则已列的 `empty-states/module.tsx`、`quick-action-dropdowns/module-issue.tsx` 与被共用件取代的迭代路径留在表里阻止复活。写入单元本段不加入（§2.1，re-70 F5）。
 - `.oxlintrc.json` 的 swr 限制（只能从 `swr` 导入类型）：加入共用的布局根（取代 `cycle-layout-root.tsx`，后者今天不在其中）与 `cycles/active-cycle/priority-issues.tsx`（今天不在其中、本段不改，由 T1 加入），以及本段新的用 `useSessionSWR` 的文件。只收紧。
 - 新文案 en 与 zh-CN 在同一提交加入（`check:sync` 也不许一个键是另一个键的前缀，`tools/i18n-keys.mjs`）：`issue.remove.module.label`、模块页数目的提示、已归档模块的空态、重读失败的提示。`project_empty_state.module_work_items.cta_secondary` 与 `issue.remove.module.{loading,failed}` 不读（迭代的同名键也不读），交 P7（R11、§5）。
 - 告警上限 `lint-cap` 恰为 44，只降不升：清掉告警的提交同时下调。knip：新文件在第一个读者出现的 Task 里建立，只给测试读的导出不算读者（本阶段由审查执行）。
@@ -126,7 +128,12 @@ P5b 的迭代页列表件逐个处理如下（“共用”指改为按域的一�
 | `g15-module-list-page.spec.ts` | 模块页的列表在四种布局里只列本模块的工作项（别的模块的、没有模块的不出现，同在两个模块的在两页都出现），每种布局写进本页偏好；分组与显示属性改后由同一人另开的浏览器载入仍在，项目页的偏好不变；已归档模块的页面同样列出且只读；模块关闭时载入不读偏好与列表；每种布局以 `expectListPageQuiet` 收尾（M4 M6-01 的“整页零非预期失败”）。51 个工作项、两个带真实附件（1 个、3 个）：接口按附件数两个方向续页不重复、不丢、最后一页没有游标（`expectPages`，带 `module_id`），页面按分组的游标两个方向续完；表格的附件列与表头排序（`aria-sort`），换会话（另开的浏览器重新登录）后照常，增删附件后数目随读取更新（M5-M6-02）；按状态分组时跨组改一行，两组的数随 nerve 变化；在本页归档一行，行离开、数目随之（归档范围）。页头新建与快速新建各只发一个带本模块的 `module_ids` 的请求；一个工作项同在本模块、另一个模块与一个已归档的模块，移出本模块的请求体是另两个，数据库里只有本模块的归属被移除；行的修改弹窗不随核验关闭，请求体不带 `module_ids`；已归档模块的页面没有这些入口 |
 | `g19-module-list-page.spec.ts` | 页头的布局、筛选、显示与新建可用 Tab 到达、以名字命名；列表读被扣住时经面包屑换模块、后退前进、换到别的项目的模块页，各页只列自己的，迟到的回答不进新页面；列表重读被扣住时调用者被移出项目，页面说没有权限，重新加入后列出 nerve 此刻的工作项，迟到的回答不起作用；另一个标签页登录工作区管理员兼访客 wanda（只看自己的）：页面跟着换会话、列出她自己的、数目 1，她可新建、可移出自己的；纯访客 gus 只看到自己的、数目 1，没有新建与移出；侧栏的行把 mem 加入本页筛选又去掉（`aria-pressed`），模块列表页的预览里行不可点 |
 
-**时长**：T13、T14 从本机三种引擎的运行记下每个新文件在各引擎的时长；T16 推送之前据此估出 CI 的 e2e 作业时长：以 T1 回填的最后一次绿的 main CI 的 e2e 作业为基线（参考：P6a 的最终分支 CI 43463416098 的 e2e 作业 21 分 38 秒；main CI 43469787621 attempt 1 的 e2e 作业 17:25:42Z–17:49:59Z，E2E 一步与 attempt 2 的数以 T1 从 jobs 接口核对的为准），加上新文件 chromium 一栏的时长乘以页面故事在 CI 与本机的时长之比（P6a 记下的 1.67–2.25），期限 35 分钟，估出或实测超过 30 分钟时先报告负责人、不推送，不自行改期限或作业结构（M6-M8-06 的教训）。写 spec 时的估算：两个新文件本机 chromium 约 25–30 秒，CI 上加约 0.5 分钟墙钟，正常的 runner 约 22–23 分钟，慢的 runner 约 27–29 分钟，接近报告线。
+**时长**（re-70 F1）：期限 35 分钟，报告线 30 分钟。基线是最后一次绿的 main CI 的 e2e 作业：P6a 的 main CI 43469787621 attempt 2 的 e2e 作业 132062963902，**25 分 00 秒**（17:51:22Z–18:16:22Z；attempt 1 的 e2e 作业 24 分 17 秒，失败于 C7；P6a 的最终分支 CI 为 21 分 38 秒）。T13、T14 从本机三种引擎的运行记下每个新文件在各引擎的时长；T16 推送之前据此估出 CI 的 e2e 作业时长，三个数一起看：
+- **估算**：基线加上新文件 chromium 一栏的时长乘以页面故事在 CI 与本机的时长之比（P6a 记下的 1.67–2.25），两个 worker 摊开；
+- **上界**：基线加上新文件 chromium 一栏的时长乘以 P6a 实际的增量比——main 到 main 由 19 分 14 秒到 24 分 17 秒、25 分 00 秒，约 303–346 秒，除以 P6a 新故事本机 chromium 的 83.5 秒，约 3.6–4.1 倍（含 runner 的差异，P6a 原先的估算是加 1.2–3.1 分钟，低估了）；
+- **校准点**：T10 检查点的分支 CI 实测的 e2e 作业时长（那时跑的故事与 main 相同，还没有新故事），与基线之比就是那次 runner 的快慢。
+
+写 spec 时的数：两个新文件本机 chromium 约 25–30 秒；正常的 runner 约 25.5 分钟；慢的 runner（×1.31，[M6-M8-01](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-01) 记下的比值）约 29–33 分钟，**可能超过 30 分钟的报告线**。T16 以这三个数给出估算的范围，上界与校准点一并写进台账；估算或任一次实测（T10 的检查点、T16 推送后的分支 CI）超过 30 分钟时，T16 先停下报告负责人、不推送；改 CI 的期限或作业结构须负责人同意（M6-M8-06 的教训）。主控已预先告知负责人这种可能（[re-70](../../../reviews/re-70-M6P6b预检.md) §5）。
 
 **写法**（P5b、P6a 阶段记录 §5 的教训）：应用内跳转之后以目标页独有的内容为锚（等目标页自己的列表读答到）；“载入后仍在”由同一人另开的浏览器核对，不在重新载入之后核对控制台（M6-M8-09）；关通知只用共用的 `dismissToasts`（M6-M8-10）；有两道守卫时以嵌套的变异证明故事守着它们，并写明单去一道为何等价；没有能编译又让故事失败的产品变异时，以期望错误的 RED 证实断言起作用。
 
@@ -153,8 +160,8 @@ P5b 的迭代页列表件逐个处理如下（“共用”指改为按域的一�
 
 ## 4. 验收标准
 
-- [ ] A1 拆分：写入单元持有写队列、确认的流水线、六个命令与请求体，根与它各在约 400 行以内；合入的状态里根上没有这些方法的转发；调用方经写入单元；M4、M5、P5b 的测试只改接收者与名字、断言不改（基线收据同数）；白名单与在途的写各有能让测试失败的变异。
-- [ ] A2 共用：§2.2 的表逐个落实；迭代页的测试只改导入路径、构造与调用处的名字，断言不改（基线收据同数）。
+- [ ] A1 拆分：写入单元持有写队列、确认的流水线、六个命令与请求体，根与它各在约 400 行以内、之间没有值的循环导入；合入的状态里根上没有这些方法的转发；调用方经写入单元；M4、M5、P5b 的测试只改接收者与名字、断言不改（基线收据同数）；白名单与在途的写各有能让测试失败的变异。
+- [ ] A2 共用：§2.2 的表逐个落实（按域的差别经 props 或按域的小表，共用件不导入迭代独有的件）；迭代页的测试只改导入路径、构造与调用处的名字，断言不改（基线收据同数）。
 - [ ] A3 引擎与 store：MODULE 的 store、动作、路由映射、挂载键、本页筛选、空态；模块页偏好的 service 与筛选（按模块 id、不读 router、随一代退役、模块关闭时不读）；白名单放行 `module_ids`；本页新建只在可加入时带本模块并与给定的取并；移出的请求体轮到时算、保留已归档与别的模块；修改的请求体不带 `module_ids`。每个性质有单测，变异能让测试失败。
 - [ ] A4 页面：四种布局、页头（数目、布局、筛选、显示、新建）、空态、已归档只读、模块关闭的停用、新建（页头、快速新建、分组头）一个请求、移出模块、拖拽、修改与复制、被拒时说明、写后重读进度、侧栏的行切换；第 8、9 条在模块页、迭代页、项目页。
 - [ ] A5 G15、G19 的模块页列表部分（三种引擎，§2.10）：四种布局、双向续页、本页偏好的读写、模块关闭、已归档只读、换模块与后退前进与换项目时迟到的回答不进新页面、失权的迟到回答、OwnOnly 与工作区管理员兼访客、换会话、跨分组的写后计数、归档范围、附件列（M5-M6-02）、移出保留已归档的模块、整页零非预期失败（M4 M6-01）。
@@ -164,7 +171,7 @@ P5b 的迭代页列表件逐个处理如下（“共用”指改为按域的一�
 
 ## 5. 后续责任
 
-**P7**：“添加已有工作项”（空态的 `cta_secondary`、分组头、日历的 `addIssuesToView`、`existing-issues-list-modal.tsx` 的模块调用方，R10、R11）；模块下拉框与列表词表（工作项详情、行、新建弹窗的模块字段：请求体轮到发出时以所持的整集合算，保留已归档的 id，不照 Plane 把集合换成只有本模块，R5、R7）；模块页的移动端页头；词表加入迭代、模块之后按页收窄偏好的筛选类型，本页的键不进本页的偏好（R16）；`issue.remove.cycle.{loading,failed}` 与 `issue.remove.module.{loading,failed}` 随下拉框用上或一并删除；模块页“复制一份”描述带图片的工作项经内容复制建立，不加入本模块（迭代页同一条路）。往工作项写入加东西时加在写入单元（R1），并给写入单元的 `updateIssue` 明确的范围，去掉没有范围时退回 router 工作区的一支（`root.store.ts:552` 搬来的，M4 起如此）。
+**P7**：“添加已有工作项”（空态的 `cta_secondary`、分组头、日历的 `addIssuesToView`、`existing-issues-list-modal.tsx` 的模块调用方，R10、R11）；模块下拉框与列表词表（工作项详情、行、新建弹窗的模块字段：请求体轮到发出时以所持的整集合算，保留已归档的 id，不照 Plane 把集合换成只有本模块，R5、R7）；模块页的移动端页头；词表加入迭代、模块之后按页收窄偏好的筛选类型，本页的键不进本页的偏好（R16）；`issue.remove.cycle.{loading,failed}` 与 `issue.remove.module.{loading,failed}` 随下拉框用上或一并删除；模块页“复制一份”描述带图片的工作项经内容复制建立，不加入本模块（迭代页同一条路）。往工作项写入加东西时加在写入单元（R1），并给写入单元的 `updateIssue` 明确的范围，去掉没有范围时退回 router 工作区的一支（`root.store.ts:552` 搬来的，M4 起如此）；去掉之后把写入单元加入 `project-address-route`（本段因这条退路没有加入，re-70 F5）。P7 加入让三页的显示选项常量不再相同的词时，`cycle_issues`、`module_issues` 改为由 `issues` 去掉本页的键推出，不让这两份副本在理由消失之后还留着（re-70 F6；本段照 P5b R9 的先例让 `module_issues` 是 `issues` 的第三份副本）。
 
 **M8**：项目页第一次读偏好失败时只有 `role="alert"` 的文字、没有重试，与迭代页、模块页的可重试的读失败不同（M4 起如此，R4 没有改它）；随最终矩阵统一或写明理由。
 
@@ -176,5 +183,5 @@ P5b 的迭代页列表件逐个处理如下（“共用”指改为按域的一�
 | 共用的重构碰坏迭代页 | 单独的 Task（T4、T7）先跑迭代的测试留基线，断言不改；T9–T11 的共用部分同样先留基线 |
 | 整体替换误移出模块 | 请求体轮到时由所持的整集合算；单测以两个在途的写、已归档的模块钉住，变异“调用时算”“去掉已归档的”使它失败；e2e 以数据库的归属核对 |
 | 项目里的每个写都送到模块页的绑定 | 与项目页、迭代页同；成员判断的 `module_id` 已在 P5b 有单测与变异 |
-| e2e 时长接近报告线 | T13、T14 记下每个新文件在各引擎的时长，T16 推送前估算；估出或实测超过 30 分钟先报告负责人 |
+| e2e 时长在慢的 runner 上可能超过报告线 | 基线 25 分 00 秒（P6a 的 main CI attempt 2）；T13、T14 记下每个新文件在各引擎的时长，T16 推送前算估算、上界与 T10 的校准点（§2.10）；估出或实测超过 30 分钟先报告负责人、不推送，改期限或作业结构须负责人同意 |
 | Task 的量 | 拆分分两个 Task；MODULE 的联合分散到用它的 Task；T7 超出一个实现者的量时把空态移到 T8 |

@@ -1,7 +1,7 @@
 # M6 / P6b 模块页的工作项列表实施计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-> 状态：spec 与 plan 已写，待预检。基线 main `06b72d4b`（P6a 的 noff；main CI 43469787621 的结论由 T1 回填）。
+> 状态：预检通过（修正后，[re-70](../../../reviews/re-70-M6P6b预检.md)），可以按 T1 开始实施：F1（Important）e2e 的时长以 25 分 00 秒为基线、T16 另算上界与 T10 的校准点，慢的 runner 上可能超过报告线（T16）；F2 T1 的路径改为 P6a 的归档（T1）；F3 写入单元对根没有值的循环导入（T2）；F4 共用的布局根不导入 `PeekOnEntry`，按域的差别经 props 或按域的小表（T7、T8）；F5 写入单元不加入 `project-address-route`（T2，spec §5 的 P7）；F6 `module_issues` 的副本由 P7 改为推出（spec §5）；F7 T3 的收据只查方法的定义（T3）。基线 main `06b72d4b`（P6a 的 noff；main CI 43469787621 attempt 2 通过，由 T1 回填）。
 
 **Goal：**
 - 往工作项根 store 加模块之前，按职责拆出写入单元，调用方改经它（M6-M8-08）；
@@ -31,7 +31,7 @@
 - 不动既有容器，不 stash/clean/reset --hard/force；容器套件一次一个。
 
 **代码规则**
-- 手写文件约 400 行内（工作项根 store 与写入单元拆后各在其内，T3 以 `wc -l` 核对）；新文件的版权头为 `Copyright (c) 2026-present OpenNerve`，改写的 Plane 文件保留原头。
+- 手写文件约 400 行内（工作项根 store 与写入单元拆后各在其内，T3 以 `wc -l` 核对）；没有循环依赖：写入单元对根只有 `import type` 或构造时传入的窄接口（spec §2.1，re-70 F3）；新文件的版权头为 `Copyright (c) 2026-present OpenNerve`，改写的 Plane 文件保留原头。
 - 类型只来自 `@nerve/api-client`；service 不转换数据；没有模块级的带令牌 service 实例；SWR 只经 `useSessionSWR`；新代码不读 router store（页面读路由参数）。
 - 删掉不用的代码；不加开关、桩或兼容别名。唯一的过渡：T2 为让提交能编译与通过测试，在根上暂留测试所用写入方法的转发，T3 删去（spec R1）。
 - 不放宽 `tools/keywords.json` 的规则、`lint-cap`、knip、`error-messages.test.ts`、i18n 的 `check:sync`。
@@ -53,7 +53,7 @@
 
 **回归测试的边界**
 - 回归测试指 M2–M5 与 P1–P6a 的网页单测与 e2e。
-- **拆分（T2、T3）**：调用 `enqueueIssueChanges`、`confirmCreation`、`createIssue`、`updateIssue`、`deleteIssue`、`archiveIssue`、`unarchiveIssue`、`pendingIDs` 的测试（含 `vi.spyOn` 这些方法的与替身 `core/store/issue/fake-issues.ts`；写 plan 时 grep 到约 20 个文件、约 80 处）只改接收者（根 → 写入单元）与名字，断言不改。T2 第一步记下这些文件逐个的通过数与 `make test-web` 的总数，T2、T3 之后同数。`core/store/root.store.test.ts` 的 store 数（21）不变。
+- **拆分（T2、T3）**：调用 `enqueueIssueChanges`、`confirmCreation`、`createIssue`、`updateIssue`、`deleteIssue`、`archiveIssue`、`unarchiveIssue`、`pendingIDs` 的测试（含 `vi.spyOn` 这些方法的与替身 `core/store/issue/fake-issues.ts`；预检 re-70 数到约 22 个文件 84 处）只改接收者（根 → 写入单元）与名字，断言不改。T2 第一步记下这些文件逐个的通过数与 `make test-web` 的总数，T2、T3 之后同数。`core/store/root.store.test.ts` 的 store 数（21）不变。
 - **共用（T4、T7，T9–T11 中共用的部分）**：迭代页列表的测试（`core/store/issue/cycle/{issue,filter}.store.test.ts`、`core/hooks/use-issue-layout-store.test.tsx` 的迭代部分、`cycle-progress-follow.integration.test.tsx`、`cycle-preferences-follow.integration.test.tsx`、`issue-layouts/roots/{cycle-layout-root,cycle-layout-access,cycle-create,cycle-quick-actions,row-dialog-lifetime}.test.tsx`、`quick-action-dropdowns/cycle-issue.test.tsx`、`R/cycles/(detail)/header.test.tsx`、`R/cycles/(detail)/[cycleId]/page.test.tsx`、`cycles/progress-sidebar/row-filters.test.tsx`）只改导入路径、构造与调用处的名字（如本页的形状的字段、`CycleIssuesFilter` 改为直接构造、替身改为按域），断言不改；各 Task 第一步记基线收据。
 - **契约变化处**（只在这里改断言）：
   - `core/hooks/store/use-issues.test.ts` 中 `useIssues("MODULE")` 被拒的一例；`core/hooks/use-issue-layout-store.test.tsx` 中 `useIssuesActions("MODULE")` 被拒的一例与 `moduleId` 映射到 DEFAULT 的一例（只改映射到的 store 类型；在别的项目新建时请求体仍恰为 `{name}`）（T6）；
@@ -65,14 +65,14 @@
 - 其他断言不改。
 
 **检查点与证据**
-- 检查点：T10 结束时（拆分、共用、store、引擎、正文、页头、快捷操作完成）串行完整七项，推送并核分支 CI，记录 e2e 作业的实际时长（期限 35 分钟；超过 30 分钟先报告负责人，不改期限或作业结构）；这时还没有新的页面故事，量不到它们。T13、T14 记下每个新故事文件在本机三个引擎的时长，T16 推送之前照 spec §2.10 估出 CI 的 e2e 时长。T16 收尾再串行一次。`make test` 照负责人 2026-11-11 的规则（本段不改 Go；因 M6-M8-05 的签名失败时记录，以分支 CI 的服务端两路为准）。
+- 检查点：T10 结束时（拆分、共用、store、引擎、正文、页头、快捷操作完成）串行完整七项，推送并核分支 CI，记录 e2e 作业的实际时长（期限 35 分钟；超过 30 分钟先报告负责人，不改期限或作业结构）；这时还没有新的页面故事，跑的与 main 相同，这个数是 T16 的校准点（spec §2.10）。T13、T14 记下每个新故事文件在本机三个引擎的时长，T16 推送之前照 spec §2.10 算估算、上界与校准点（基线为 P6a 的 main CI 43469787621 attempt 2 的 e2e 作业 25 分 00 秒）；慢的 runner 上可能超过 30 分钟的报告线。T16 收尾再串行一次。`make test` 照负责人 2026-11-11 的规则（本段不改 Go；因 M6-M8-05 的签名失败时记录，以分支 CI 的服务端两路为准）。
 - 证据放在 worktree 的 `.superpowers/sdd/P6b-module-list/`：台账 `progress.md`，收据经 `run-check.py`，变异经 `mutate.py`，调研笔记在 `research/`。实现代理先读同目录的 `implementer-brief.md`。
 - e2e 的写法照 spec §2.10 的“写法”一段（P5b、P6a 阶段记录 §5 的教训）。
 
 ## Review Focus
 
-1. **拆分只搬不改（R1）**：写入单元持有写队列、确认的流水线、命令与请求体；根留下的读与登记不变；`observeRead` 与在途的写的配合不变；测试只改接收者；合入的状态里根上没有转发；两文件各约 400 行以内。
-2. **共用后迭代不变（R2）**：§2.2 的表逐个落实，迭代的测试断言不改；行为不同的（列表状态、加入与移出的请求体、偏好 service、显示选项常量）分开。
+1. **拆分只搬不改（R1）**：写入单元持有写队列、确认的流水线、命令与请求体；根留下的读与登记不变；`observeRead` 与在途的写的配合不变；测试只改接收者；合入的状态里根上没有转发；两文件各约 400 行以内，写入单元对根没有值的导入，不加入 `project-address-route`（它带着 M4 的 router 退路，P7 去掉后加入）。
+2. **共用后迭代不变（R2）**：§2.2 的表逐个落实，迭代的测试断言不改；按域的差别经 props 或按域的小表，不写 `if (domain === …)` 的分支，共用件不导入 `PeekOnEntry` 等迭代独有的件；行为不同的（列表状态、加入与移出的请求体、偏好 service、显示选项常量）分开。
 3. **整集合（R5–R7）**：移出的请求体在队列轮到时由所持的整集合算出、保留已归档与别的模块；本页新建只在可加入时带本模块、与给定的取并、只发一个请求；修改与复制不覆写集合；只在 nerve 确认后跟进（离开、提示、重读进度），被拒时说明。
 4. **会话与页面的范围（G19）**：挂载键与偏好的键带模块 id；换模块、后退前进、换项目、换会话时旧的回答不进新页面；预览宿主是模块页自己的。
 5. **权限与只读（R9、R15）**：新建与移出给项目的 ADMIN、MEMBER 且模块可加入；已归档只读、状态不看；模块关闭时不取偏好与列表；访客看得到列表、没有写。
@@ -89,14 +89,14 @@
 - `docs/v0/M8-open-release/handoffs/M6-closeout.md`：M6-M8-01 补 C7 的再现。
 - `.oxlintrc.json`：swr 限制的文件表加入 `web/apps/web/core/components/cycles/active-cycle/priority-issues.tsx`（它经 `useSessionSWR` 取数而不在表里，本段没有别的 Task 改它）。
 
-- [ ] Step 1：按 P6a 的台账（`/Users/xiaoruan/project/nerve-project/.codex/worktress/codex/m6-p6/.superpowers/sdd/P6a-web-modules/progress.md` 的 Task 16 末尾，或归档后的 `payload/worktree/…`）、CI 原件、归档与 `cleanup.log` 回填 §7，作业号与时刻以公开的 jobs 接口（`https://api.github.com/repos/open-nerve/NerveProject/actions/runs/<id>/jobs`）核对：
+- [ ] Step 1：以 P6a 的归档为准回填 §7（P6a 的 worktree 已删除）：台账 `/Users/xiaoruan/project/nerve-project/.superpowers/sdd/M6-P6a-integration-20261114/payload/worktree/.superpowers/sdd/P6a-web-modules/progress.md` 的 Task 16 末尾，同一归档的 `cleanup.log` 与 `manifest.json`；attempt 2 的结论、归档的数字与清理已记在本段台账的“P6a 收尾”一行，T1 以它们为线索、以原件核对；作业号与时刻以公开的 jobs 接口（`https://api.github.com/repos/open-nerve/NerveProject/actions/runs/<id>/jobs`）核对，归档以 `archive.py verify` 核对（收据 `t1-p6a-archive-verify`）：
   - **最终 HEAD 的分支 CI**：`8188582e184c14a4ae9f29baf512467dbef62e6f` 的 43463416098 attempt 1 成功（server (1) 132016072027、web 132016072634、server (0) 132016072832、e2e 132025064734；e2e 作业 16:45:49Z–17:07:27Z，21 分 38 秒，在 §5 估算的 20.5–22.5 分钟内）。
-  - **合入与 main CI**：noff `06b72d4b65bcba911344a4ed3c358f164a5fdeeb`，双父 `aadaf61a`、`8188582e`，树 `c8da8856` 与分支相同。main CI 43469787621 attempt 1：server (0) 132038343932、web 132038344421、server (1) 132038344536 成功；e2e 132048379310（17:25:42Z–17:49:59Z）461 过 1 败，M4 的 C7（`e2e/stories/issue/collaboration-interactions.spec.ts:422`），即 M6-M8-01 记下的间歇失败；照其验收语只重跑一次（attempt 2）。attempt 2 的作业号、时刻与结论从收据与 jobs 接口取，plan 不预写。
-  - **归档**：`M6-P6a-integration-20261114` 的文件数、字节、未知数、清单 sha256 与清单的 `head`，以本段开工时 `archive.py verify` 的收据（`t1-p6a-archive-verify`）为准。
-  - **清理**：照 `cleanup.log`（分支已含于 origin/main；worktree `m6-p6`、本地与远端分支 `codex/m6-p6a` 已删除；主目录停在的提交）。
-  - 若这时 attempt 2 仍未通过、或归档与清理还没做（Task 0 记下“在 main CI 通过后做”），停下告诉主控，不代做、不预写。
+  - **合入与 main CI**：noff `06b72d4b65bcba911344a4ed3c358f164a5fdeeb`，双父 `aadaf61a`、`8188582e`，树 `c8da8856` 与分支相同。main CI 43469787621 attempt 1：server (0) 132038343932、web 132038344421、server (1) 132038344536 成功；e2e 132048379310（17:25:42Z–17:49:59Z）461 过 1 败，M4 的 C7（`e2e/stories/issue/collaboration-interactions.spec.ts:422`），即 M6-M8-01 记下的间歇失败；照其验收语只重跑一次。attempt 2 只重跑 e2e：132062963902（17:51:22Z–18:16:22Z，25 分 00 秒）成功，其余三个作业沿用 attempt 1 的成功（以 jobs 接口核对）。
+  - **归档**：`M6-P6a-integration-20261114` 的文件数、字节、成员数、未知数、清单 sha256 与清单的 `head`（本段台账记为 2910 个文件、1,011,232,897 字节、2938 个成员、未知 0、`head` 为 `8188582e`），以 `archive.py verify` 的收据为准。
+  - **清理**：照 `cleanup.log`（本段台账记为 2026-11-13T18:18:06Z：`codex/m6-p6a` 本地与远端一致且含于 origin/main，main 与 origin/main 都在 `06b72d4b`，worktree `m6-p6`、本地与远端分支已删除）。
+  - 原件与台账的数字不一致时，以原件为准并停下告诉主控。
   - 勾选 P6a spec 的 A8（注明 `make test` 的规则与上面的证据）；阶段记录、spec、plan 的抬头改为“已完成（2026-11-14，noff `06b72d4b`，main CI 43469787621 attempt 2 …）”，attempt 与结论照收据写。
-- [ ] Step 2：设计的抬头与 §14；前端改动清单；M6-M8-01 补一段：P6a 合入的 main CI 43469787621 attempt 1 的 e2e 又在 C7 的同一处失败（P6a 只改了命令面板的模块文件，与主题选择无关），照本条重跑一次，attempt 2 的结论照收据；`.oxlintrc.json` 加入 `priority-issues.tsx`（它只经 `useSessionSWR` 取数，不从 `swr` 导入值）。
+- [ ] Step 2：设计的抬头与 §14；前端改动清单；M6-M8-01 补一段：P6a 合入的 main CI 43469787621 attempt 1 的 e2e 又在 C7 的同一处失败（P6a 只改了命令面板的模块文件，与主题选择无关），照本条重跑一次，attempt 2 通过（e2e 作业 25 分 00 秒，作为本段的 e2e 时长基线）；`.oxlintrc.json` 加入 `priority-issues.tsx`（它只经 `useSessionSWR` 取数，不从 `swr` 导入值）。
 - [ ] Step 3：`python3 .superpowers/sdd/P6b-module-list/doc-links.py`、`node tools/keywords.mjs`、`make lint-web`（收据 `t1-*`）；提交 `docs(M6/P6b): 回填P6a的集成结果，进入P6b`（正文写明 `.oxlintrc.json` 的收紧）。
 
 ## Task 2（T2）：拆分一——写入单元与产品代码的调用方
@@ -107,7 +107,7 @@
 - 不改：任何测试文件（T3）。
 
 - [ ] Step 1：先记基线：`make test-web`（收据 `t2-baseline-test-web`，记总数）；受影响的测试文件逐个聚焦跑（以 grep 找出提到这八个名字的测试与替身作候选，逐个核对接收者是工作项的根——页面 store 的同名方法不算——收据 `t2-baseline-affected`，台账记文件与各自的通过数）。
-- [ ] Step 2（GREEN）：按 spec §2.1 的表搬移，只搬不改（含 `updateIssue` 没有范围时退回 router 工作区的一支）；产品代码的调用方改经写入单元；根上暂留测试所用方法的转发（注释写明只为 T3 之前的测试，T3 删去），产品代码不经它们（grep 核对）。变异（落在搬过去的代码上，既有测试须失败）：更新的请求体去掉 `cycle_id`（`t2-mut-update-drops-cycle`）、创建的请求体去掉 `cycle_id`、`observeRead` 不看在途的写（`t2-mut-read-ignores-pending`）、`pendingIDs` 恒为空、写队列不等前一个（`t2-mut-queue-no-wait`）。
+- [ ] Step 2（GREEN）：按 spec §2.1 的表搬移，只搬不改（含 `updateIssue` 没有范围时退回 router 工作区的一支）；产品代码的调用方改经写入单元；写入单元对根只有 `import type` 或构造时传入的窄接口，没有 `root.store.ts` → 写入单元 → `root.store.ts` 的值导入（re-70 F3，以导入行核对并写进台账）；写入单元不加入 `project-address-route`（它带着搬来的 router 退路，spec §2.1，re-70 F5）；根上暂留测试所用方法的转发（注释写明只为 T3 之前的测试，T3 删去），产品代码不经它们（grep 核对）。变异（落在搬过去的代码上，既有测试须失败）：更新的请求体去掉 `cycle_id`（`t2-mut-update-drops-cycle`）、创建的请求体去掉 `cycle_id`、`observeRead` 不看在途的写（`t2-mut-read-ignores-pending`）、`pendingIDs` 恒为空、写队列不等前一个（`t2-mut-queue-no-wait`）。
 - [ ] Step 3：`make lint-web`、`make knip`、`make test-web`（总数与基线同）、受影响的测试逐个同数；`wc -l` 记根与写入单元的行数；提交 `refactor(M6/P6b): 工作项根 store 拆出写入单元，产品代码改经它`。
 
 ## Task 3（T3）：拆分二——测试的调用处，删去过渡的转发
@@ -115,7 +115,7 @@
 **Files：** T2 台账列出的测试文件与替身（只改接收者、spy 的对象与名字）；`core/store/issue/root.store.ts`（删去转发）。
 
 - [ ] Step 1：列出测试里的调用处（同 T2 的 grep，台账记文件与处数）。
-- [ ] Step 2（GREEN）：改接收者，删去根上的转发；核对根上没有这八个名字（grep 收据 `t3-root-has-no-writes`），测试的差异只有接收者、spy 的对象、导入与名字（以 `git diff -U0` 过一遍，台账写明）。在终树上重跑 T2 的两个变异（`t3-mut-update-drops-cycle`、`t3-mut-read-ignores-pending`），既有测试仍失败。
+- [ ] Step 2（GREEN）：改接收者，删去根上的转发；核对根上没有这八个方法的定义（只查定义，例如 `rg -n '^\s+(enqueueIssueChanges|confirmCreation|createIssue|updateIssue|deleteIssue|archiveIssue|unarchiveIssue)(<[^>]*>)?\(|get pendingIDs\(' web/apps/web/core/store/issue/root.store.ts` 没有结果，收据 `t3-root-has-no-writes`；留在根上的 `observeRead` 调写入单元的那一处不算，re-70 F7），测试的差异只有接收者、spy 的对象、导入与名字（以 `git diff -U0` 过一遍，台账写明）。在终树上重跑 T2 的两个变异（`t3-mut-update-drops-cycle`、`t3-mut-read-ignores-pending`），既有测试仍失败。
 - [ ] Step 3：`make lint-web`、`make knip`、`make test-web`（总数与 T2 的基线同）、受影响的测试逐个同数；`wc -l` 核对根与写入单元各约 400 行以内（收据 `t3-line-counts`）；提交 `refactor(M6/P6b): 测试改经写入单元，根上不留转发`。
 
 ## Task 4（T4）：共用一——迭代页的列表 store 与 hook 改为按域
@@ -155,15 +155,15 @@
 
 ## Task 7（T7）：共用二——布局根、四种布局与空态改为按域
 
-**Files：** 共用的布局根（取代 `issue-layouts/roots/cycle-layout-root.tsx`，`PeekOnEntry` 只给迭代）；四种布局的共用根（取代 `{list,kanban,calendar,spreadsheet}/roots/cycle-root.tsx`）；共用的空态（取代 `empty-states/cycle.tsx`）与 `empty-states/index.tsx`；按域的测试替身（取代 `roots/fake-cycle-page.tsx`）；`R/cycles/(detail)/[cycleId]/page.tsx` 的导入；迭代测试的导入；`.oxlintrc.json`（共用的布局根）；`tools/keywords.json`（新路径与样例，旧路径留着）。
+**Files：** 共用的布局根（取代 `issue-layouts/roots/cycle-layout-root.tsx`；不导入 `core/components/cycles/peek-on-entry.tsx`，re-70 F4）；四种布局的共用根（取代 `{list,kanban,calendar,spreadsheet}/roots/cycle-root.tsx`）；共用的空态（取代 `empty-states/cycle.tsx`）与 `empty-states/index.tsx`；按域的小表（只读的来源、行的快捷操作、空态的文案与列表状态，名字由实现定）；按域的测试替身（取代 `roots/fake-cycle-page.tsx`）；`R/cycles/(detail)/[cycleId]/page.tsx`（把 `PeekOnEntry` 作为子节点或插槽交给共用的布局根，或在它旁边渲染）；迭代测试的导入；`.oxlintrc.json`（共用的布局根）；`tools/keywords.json`（新路径与样例，旧路径留着）。
 
 - [ ] Step 1：先跑迭代的页面与布局测试留基线收据（`t7-baseline-cycle`）。
-- [ ] Step 2（GREEN）：改为按域，域只有迭代；迭代的测试断言不改全过（与基线同数）。变异（迭代的测试须失败）：共用的布局根在开关关闭时仍读偏好（`t7-mut-off-still-reads`）、共用的根忽略只读、空态在只读时仍给新建、预览宿主的前缀不带域。若本 Task 超出一个实现者的量，空态的共用移到 T8（台账写明），不加 Task。
+- [ ] Step 2（GREEN）：改为按域，域只有迭代；按域的差别经 props 或按域的小表给出，共用件里不写 `if (domain === …)` 的分支，共用的布局根不导入迭代的件（以导入行核对）；迭代的测试断言不改全过（与基线同数）。变异（迭代的测试须失败）：共用的布局根在开关关闭时仍读偏好（`t7-mut-off-still-reads`）、共用的根忽略只读、空态在只读时仍给新建、预览宿主的前缀不带域。若本 Task 超出一个实现者的量，空态的共用移到 T8（台账写明），不加 Task。
 - [ ] Step 3：`make lint-web`、`make knip`（被取代的迭代件没有残留）、`make test-web`、`node tools/keywords.mjs`；提交 `refactor(M6/P6b): 迭代页的布局根、四种布局与空态改为按域共用，迭代的行为不变`。
 
 ## Task 8（T8）：模块页的正文——布局根、四种布局、空态、只读与停用
 
-**Files：** `R/modules/(detail)/[moduleId]/page.tsx`（正文在侧栏左边放列表，同迭代页）与 `page.test.tsx`；共用的布局根、四种布局的根与空态加入模块（SWR 键 `MODULE_ISSUE_FILTERS`、`module_issues.filters`、预览宿主 `["module", …]`）；四个 base root、`use-group-dragndrop.ts`、`use-page-filter-expression.ts` 的 store 类型加 MODULE；`command-host.tsx` 的 `DialogStore`、`quick-action-dropdowns/project-issue.tsx` 的 `storeType` 加 MODULE（模块页的行先用项目页的快捷操作，修改与复制以 MODULE 打开，移出在 T10）；`R/domain-pages.test.tsx` 的模块用例；i18n（已归档模块的空态，en 与 zh-CN）；`tools/keywords.json`。
+**Files：** `R/modules/(detail)/[moduleId]/page.tsx`（正文在侧栏左边放列表，同迭代页）与 `page.test.tsx`；共用的布局根、四种布局的根与空态加入模块（按域的小表加模块的一行：SWR 键 `MODULE_ISSUE_FILTERS`、`module_issues.filters`、预览宿主 `["module", …]`、只读的来源、空态；模块页不给 `PeekOnEntry`）；四个 base root、`use-group-dragndrop.ts`、`use-page-filter-expression.ts` 的 store 类型加 MODULE；`command-host.tsx` 的 `DialogStore`、`quick-action-dropdowns/project-issue.tsx` 的 `storeType` 加 MODULE（模块页的行先用项目页的快捷操作，修改与复制以 MODULE 打开，移出在 T10）；`R/domain-pages.test.tsx` 的模块用例；i18n（已归档模块的空态，en 与 zh-CN）；`tools/keywords.json`。
 
 - [ ] Step 1（RED）：组件测试（模块的替身用 T7 的按域替身）：
   - 模块页的正文渲染列表根，`IssuesStoreContext` 为 MODULE；预览的宿主是模块页自己的；四种布局按本页偏好切换；偏好第一次读失败时说明并可重试；偏好修改确认后列表按现有分页重取；
@@ -234,7 +234,11 @@
 
 ## Task 16（T16）：门禁、整审与集成
 
-- [ ] Step 1：串行完整七项本地门禁（`gates.sh t16-gate`，留收据；`make test` 照负责人的规则），另以三种引擎的页面配置跑一次（收据）；推送之前照 spec §2.10 估出 CI 的 e2e 作业时长（基线为 T1 回填的最后一次绿的 main CI 的 e2e 作业，加上 T13、T14 记下的新文件 chromium 时长乘以页面故事 CI 与本机之比 1.67–2.25），估出超过 30 分钟先报告负责人、不推送；推送准确的 HEAD，核分支 CI，记录 e2e 作业的实际时长（超过 30 分钟同样先报告）。
+- [ ] Step 1：串行完整七项本地门禁（`gates.sh t16-gate`，留收据；`make test` 照负责人的规则），另以三种引擎的页面配置跑一次（收据）。推送之前照 spec §2.10 算出三个数并写进台账（re-70 F1）：
+  - **估算**：基线 25 分 00 秒（P6a 的 main CI 43469787621 attempt 2 的 e2e 作业）加上 T13、T14 记下的新文件 chromium 时长乘以页面故事 CI 与本机之比 1.67–2.25，两个 worker 摊开；
+  - **上界**：基线加上新文件 chromium 时长乘以 P6a 实际的增量比 3.6–4.1；
+  - **校准点**：T10 检查点的分支 CI 实测的 e2e 作业时长与基线之比（那时跑的与 main 相同），按它换算估算在那种 runner 上的数。
+  - 估算或任一次实测（T10 的检查点、推送后的分支 CI）超过 30 分钟时停下报告负责人、不推送；改 CI 的期限或作业结构须负责人同意。否则推送准确的 HEAD，核分支 CI，记录 e2e 作业的实际时长（超过 30 分钟同样先报告）。
 - [ ] Step 2：一次整分支 deep-review，由新的只读审者（fable）做：
   - Critical/Important 在一次修复轮里各有 RED/GREEN，Minor 记入台账；
   - 写阶段记录 `reviews/P6b-module-list-review.md`；
