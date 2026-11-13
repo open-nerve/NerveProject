@@ -17,6 +17,8 @@ import { cyclePath, entriesOf, turnCycles } from "./cycle-pages";
 import { createCycle, cycleCalls, type CycleCreate } from "./cycles";
 import { createIssue, type Issue, type IssueCreate } from "./issues";
 import { expectListPageQuiet } from "./issue-list-page";
+import { modulePath, turnModules } from "./module-pages";
+import { createModule, moduleCalls } from "./modules";
 import { registerOnboarded } from "./settings-pages";
 import { stateIds } from "./states";
 import { anotherBrowser } from "./workspace-pages";
@@ -109,6 +111,35 @@ export async function cycleListWorld(api: Api, testInfo: TestInfo) {
     guest: (label: string, name: string, cycleId: string, workspaceAdmin = false) =>
       world.guest(label, { name, cycle_id: cycleId }, workspaceAdmin),
     path: (cycleId: string) => cyclePath(world.slug, web.id, cycleId),
+  };
+}
+
+/**
+ * Acme's world of a module page's stories (listPageWorld), Web's modules on (a new project's are off). module makes a
+ * module of Web, in the backlog, as the admin; archive completes a module and archives it, nerve archiving only a
+ * completed or cancelled one (its work items joined it before: nerve refuses that one joins an archived module, not
+ * that one stays in it). guest's own work item, of name, is in the module of moduleId; path is the address of a
+ * module's page.
+ */
+export async function moduleListWorld(api: Api, testInfo: TestInfo) {
+  const world = await listPageWorld(api, testInfo);
+  const { token, web } = world;
+  await turnModules(api, token, web, true);
+  const module = (name: string) => createModule(api, token, web.id, { name });
+  const archive = async (moduleId: string) => {
+    const modules = moduleCalls(api);
+    expect(
+      [await modules.update(token, moduleId, { status: "completed" }), await modules.archive(token, moduleId)],
+      "the module completed and archived"
+    ).toEqual([{ status: 200 }, { status: 200 }]);
+  };
+  return {
+    ...world,
+    module,
+    archive,
+    guest: (label: string, name: string, moduleId: string, workspaceAdmin = false) =>
+      world.guest(label, { name, module_ids: [moduleId] }, workspaceAdmin),
+    path: (moduleId: string) => modulePath(world.slug, web.id, moduleId),
   };
 }
 
