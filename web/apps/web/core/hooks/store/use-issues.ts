@@ -12,6 +12,8 @@ import { merge } from "lodash-es";
 import { EIssuesStoreType } from "@nerve/types";
 import { StoreContext } from "@/lib/store-context";
 import type { IArchivedIssues, IArchivedIssuesFilter } from "@/store/issue/archived";
+import type { ICycleIssues } from "@/store/issue/cycle/issue.store";
+import type { IPagePreferencesFilter } from "@/store/issue/helpers/page-preferences-filter.store";
 import type { IProfileIssues, IProfileIssuesFilter } from "@/store/issue/profile";
 import type { IProjectIssues, IProjectIssuesFilter } from "@/store/issue/project";
 import type { IWorkspaceDraftIssues } from "@/store/issue/workspace-draft";
@@ -35,6 +37,11 @@ export type TStoreIssues = {
   [EIssuesStoreType.ARCHIVED]: defaultIssueStore & {
     issues: IArchivedIssues;
     issuesFilter: IArchivedIssuesFilter;
+  };
+  /** The cycle page's list and preferences, by the cycle each call names; neither follows the route. */
+  [EIssuesStoreType.CYCLE]: defaultIssueStore & {
+    issues: ICycleIssues;
+    issuesFilter: IPagePreferencesFilter;
   };
   [EIssuesStoreType.DEFAULT]: defaultIssueStore & {
     issues: IProjectIssues;
@@ -69,6 +76,11 @@ export const useIssues = <T extends EIssuesStoreType>(storeType?: T): TStoreIssu
       return merge(defaultStore, {
         issues: context.issue.archivedIssues,
         issuesFilter: context.issue.archivedIssuesFilter,
+      }) as TStoreIssues[T];
+    case EIssuesStoreType.CYCLE:
+      return merge(defaultStore, {
+        issues: context.issue.cycleIssues,
+        issuesFilter: context.issue.cycleIssuesFilter,
       }) as TStoreIssues[T];
     case undefined:
     case EIssuesStoreType.DEFAULT:

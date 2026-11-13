@@ -4,18 +4,17 @@
  * See the LICENSE file for details.
  */
 
-import { useCallback } from "react";
 import { observer } from "mobx-react";
 import { PreferencesOutline } from "@makeplane/propel/icons";
 // nerve imports
+import type { TSupportedFilterTypeForUpdate } from "@nerve/constants";
 import { EIssueFilterType, ISSUE_STORE_TO_FILTERS_MAP } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
-import type { IIssueDisplayFilterOptions, IIssueDisplayProperties } from "@nerve/types";
+import type { TSupportedFilterForUpdate } from "@nerve/types";
 import { EIssueLayoutTypes, EIssuesStoreType } from "@nerve/types";
 // hooks
-import { useIssues } from "@/hooks/store/use-issues";
-import { useProjectPreferencesFollow } from "@/hooks/use-project-preferences-follow";
-// nerve imports
+import { usePageIssueFilters } from "@/hooks/store/use-page-issue-filters";
+import { useIssuesActions } from "@/hooks/use-issues-actions";
 // local imports
 import { WorkItemFiltersToggle } from "../work-item-filters/filters-toggle";
 import {
@@ -26,8 +25,10 @@ import {
 } from "./issue-layouts/filters";
 
 type Props = {
-  projectId: string;
-  workspaceSlug: string;
+  /** The list page whose own preferences these controls show and change: the project's, or a cycle's. */
+  storeType: EIssuesStoreType.PROJECT | EIssuesStoreType.CYCLE;
+  /** The page's id, as the route gives it: the project's, or the cycle's. */
+  entityId: string;
 };
 const LAYOUTS = [
   EIssueLayoutTypes.LIST,
@@ -36,66 +37,37 @@ const LAYOUTS = [
   EIssueLayoutTypes.SPREADSHEET,
 ];
 
+/**
+ * The layouts, the toggle of the filters and the display of a list page (P5b spec 2.6), by its store type: the page's
+ * own preferences, their change followed as the page's commands follow it, and the page's own display options (a
+ * cycle's never group by cycle, R9).
+ */
 export const HeaderFilters = observer(function HeaderFilters(props: Props) {
-  const { projectId, workspaceSlug } = props;
+  const { storeType, entityId } = props;
   // i18n
   const { t } = useTranslation();
   // store hooks
-  const {
-    issuesFilter: { issueFilters, updateFilters },
-  } = useIssues(EIssuesStoreType.PROJECT);
-  const follow = useProjectPreferencesFollow();
+  const issueFilters = usePageIssueFilters(storeType);
+  const { updateFilters } = useIssuesActions(storeType);
   // derived values
   const activeLayout = issueFilters?.displayFilters?.layout;
-  const layoutDisplayFiltersOptions = ISSUE_STORE_TO_FILTERS_MAP[EIssuesStoreType.PROJECT]?.layoutOptions[activeLayout];
+  const layoutDisplayFiltersOptions = activeLayout
+    ? ISSUE_STORE_TO_FILTERS_MAP[storeType]?.layoutOptions[activeLayout]
+    : undefined;
 
-  const handleLayoutChange = useCallback(
-    (layout: EIssueLayoutTypes) => {
-      if (!workspaceSlug || !projectId) return;
-      void follow(workspaceSlug, projectId, () =>
-        updateFilters(workspaceSlug, projectId, EIssueFilterType.DISPLAY_FILTERS, { layout: layout })
-      );
-    },
-    [workspaceSlug, projectId, updateFilters, follow]
-  );
-
-  const handleDisplayFilters = useCallback(
-    (updatedDisplayFilter: Partial<IIssueDisplayFilterOptions>) => {
-      if (!workspaceSlug || !projectId) return;
-      void follow(workspaceSlug, projectId, () =>
-        updateFilters(workspaceSlug, projectId, EIssueFilterType.DISPLAY_FILTERS, updatedDisplayFilter)
-      );
-    },
-    [workspaceSlug, projectId, updateFilters, follow]
-  );
-
-  const handleDisplayProperties = useCallback(
-    (property: Partial<IIssueDisplayProperties>) => {
-      if (!workspaceSlug || !projectId) return;
-      void follow(workspaceSlug, projectId, () =>
-        updateFilters(workspaceSlug, projectId, EIssueFilterType.DISPLAY_PROPERTIES, property)
-      );
-    },
-    [workspaceSlug, projectId, updateFilters, follow]
-  );
+  const update = (filterType: TSupportedFilterTypeForUpdate, filters: TSupportedFilterForUpdate) =>
+    void updateFilters(entityId, filterType, filters);
+  const handleLayoutChange = (layout: EIssueLayoutTypes) => update(EIssueFilterType.DISPLAY_FILTERS, { layout });
 
   return (
     <>
       <div className="hidden @4xl:flex">
-        <LayoutSelection
-          layouts={LAYOUTS}
-          onChange={(layout) => handleLayoutChange(layout)}
-          selectedLayout={activeLayout}
-        />
+        <LayoutSelection layouts={LAYOUTS} onChange={handleLayoutChange} selectedLayout={activeLayout} />
       </div>
       <div className="flex @4xl:hidden">
-        <MobileLayoutSelection
-          layouts={LAYOUTS}
-          onChange={(layout) => handleLayoutChange(layout)}
-          activeLayout={activeLayout}
-        />
+        <MobileLayoutSelection layouts={LAYOUTS} onChange={handleLayoutChange} activeLayout={activeLayout} />
       </div>
-      <WorkItemFiltersToggle entityType={EIssuesStoreType.PROJECT} entityId={projectId} />
+      <WorkItemFiltersToggle entityType={storeType} entityId={entityId} />
       <FiltersDropdown
         miniIcon={<PreferencesOutline className="size-3.5" />}
         title={t("common.display")}
@@ -104,9 +76,9 @@ export const HeaderFilters = observer(function HeaderFilters(props: Props) {
         <DisplayFiltersSelection
           layoutDisplayFiltersOptions={layoutDisplayFiltersOptions}
           displayFilters={issueFilters?.displayFilters ?? {}}
-          handleDisplayFiltersUpdate={handleDisplayFilters}
+          handleDisplayFiltersUpdate={(change) => update(EIssueFilterType.DISPLAY_FILTERS, change)}
           displayProperties={issueFilters?.displayProperties ?? {}}
-          handleDisplayPropertiesUpdate={handleDisplayProperties}
+          handleDisplayPropertiesUpdate={(change) => update(EIssueFilterType.DISPLAY_PROPERTIES, change)}
         />
       </FiltersDropdown>
     </>

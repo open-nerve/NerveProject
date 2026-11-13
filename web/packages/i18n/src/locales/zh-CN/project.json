@@ -32,6 +32,7 @@
     "active_cycle": {
       "label": "活动周期",
       "progress": "进度",
+      "priority_issue": "优先工作项",
       "assignees": "受理人",
       "issue_burndown": "工作项燃尽",
       "pending_work_items": "待处理的工作项 - {count}",

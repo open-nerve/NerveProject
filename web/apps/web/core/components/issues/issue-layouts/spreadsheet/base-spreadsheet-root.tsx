@@ -14,6 +14,7 @@ import type { EIssuesStoreType, IIssueDisplayFilterOptions } from "@nerve/types"
 import { EIssueLayoutTypes } from "@nerve/types";
 // hooks
 import { useIssues } from "@/hooks/store/use-issues";
+import { usePageIssueFilters } from "@/hooks/store/use-page-issue-filters";
 import { useUserPermissions } from "@/hooks/store/user";
 import { useIssueStoreType } from "@/hooks/use-issue-layout-store";
 import { useIssuesActions } from "@/hooks/use-issues-actions";
@@ -25,21 +26,27 @@ import type { IQuickActionProps, TRenderQuickActions } from "../list/list-view-t
 import { SpreadsheetView } from "./spreadsheet-view";
 import { RowExpansionProvider } from "../row-expansion";
 
-type SpreadsheetStoreType = EIssuesStoreType.PROJECT;
+type SpreadsheetStoreType = EIssuesStoreType.PROJECT | EIssuesStoreType.CYCLE;
 
 interface IBaseSpreadsheetRoot {
   QuickActions: FC<IQuickActionProps>;
   canEditPropertiesBasedOnProject?: (projectId: string) => boolean;
+  /**
+   * The whole list is read-only, whatever the caller may do in the project (an ended or archived cycle's page): no
+   * creation, inline edit or drag, and the rows' quick actions are read-only.
+   */
+  readOnly?: boolean;
 }
 
 export const BaseSpreadsheetRoot = observer(function BaseSpreadsheetRoot(props: IBaseSpreadsheetRoot) {
-  const { QuickActions, canEditPropertiesBasedOnProject } = props;
+  const { QuickActions, canEditPropertiesBasedOnProject, readOnly = false } = props;
   // router
   const { workspaceSlug, projectId } = useParams();
   // store hooks
   const storeType = useIssueStoreType() as SpreadsheetStoreType;
   const { allowPermissions } = useUserPermissions();
-  const { issues, issuesFilter } = useIssues(storeType);
+  const { issues } = useIssues(storeType);
+  const filters = usePageIssueFilters(storeType);
   const {
     fetchIssues,
     fetchNextIssues,
@@ -67,6 +74,7 @@ export const BaseSpreadsheetRoot = observer(function BaseSpreadsheetRoot(props: 
 
   const canEditProperties = useCallback(
     (targetProjectId: string | undefined) => {
+      if (readOnly) return false;
       const isEditingAllowedBasedOnProject =
         canEditPropertiesBasedOnProject && targetProjectId
           ? canEditPropertiesBasedOnProject(targetProjectId)
@@ -74,7 +82,7 @@ export const BaseSpreadsheetRoot = observer(function BaseSpreadsheetRoot(props: 
 
       return enableInlineEditing && isEditingAllowedBasedOnProject;
     },
-    [canEditPropertiesBasedOnProject, enableInlineEditing, isEditingAllowed]
+    [canEditPropertiesBasedOnProject, enableInlineEditing, isEditingAllowed, readOnly]
   );
 
   const staleRefresh = useIssueListRefresh(issues.currentList, [{ group: "" }]);
@@ -115,8 +123,8 @@ export const BaseSpreadsheetRoot = observer(function BaseSpreadsheetRoot(props: 
       <IssueListRetry {...staleRefresh} />
       <IssueLayoutHOC layout={EIssueLayoutTypes.SPREADSHEET}>
         <SpreadsheetView
-          displayProperties={issuesFilter.issueFilters?.displayProperties ?? {}}
-          displayFilters={issuesFilter.issueFilters?.displayFilters ?? {}}
+          displayProperties={filters?.displayProperties ?? {}}
+          displayFilters={filters?.displayFilters ?? {}}
           handleDisplayFilterUpdate={handleDisplayFiltersUpdate}
           issueIds={issueIds}
           quickActions={renderQuickActions}
@@ -124,7 +132,7 @@ export const BaseSpreadsheetRoot = observer(function BaseSpreadsheetRoot(props: 
           canEditProperties={canEditProperties}
           quickAddCallback={createIssue}
           enableQuickCreateIssue={enableQuickAdd}
-          disableIssueCreation={!enableIssueCreation || !isEditingAllowed}
+          disableIssueCreation={readOnly || !enableIssueCreation || !isEditingAllowed}
           canLoadMoreIssues={!!nextCursor}
           loadMoreIssues={() => {
             void fetchNextIssues().catch(() => {});

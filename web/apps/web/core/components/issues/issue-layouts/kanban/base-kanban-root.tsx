@@ -12,10 +12,12 @@ import { autoScrollForElements } from "@atlaskit/pragmatic-drag-and-drop-auto-sc
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
 import { EIssueFilterType, EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
-import { EIssueLayoutTypes, EIssuesStoreType } from "@nerve/types";
+import type { EIssuesStoreType } from "@nerve/types";
+import { EIssueLayoutTypes } from "@nerve/types";
 //hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { useIssues } from "@/hooks/store/use-issues";
+import { usePageIssueFilters } from "@/hooks/store/use-page-issue-filters";
 import { useUserPermissions } from "@/hooks/store/user";
 import { useGroupIssuesDragNDrop } from "@/hooks/use-group-dragndrop";
 import { useIssueStoreType } from "@/hooks/use-issue-layout-store";
@@ -32,25 +34,30 @@ import { KanBan } from "./default";
 import { KanbanDeleteDropZone } from "./kanban-delete-drop-zone";
 import { KanBanSwimLanes } from "./swimlanes";
 
-type KanbanStoreType = EIssuesStoreType.PROJECT | EIssuesStoreType.PROFILE;
+type KanbanStoreType = EIssuesStoreType.PROJECT | EIssuesStoreType.PROFILE | EIssuesStoreType.CYCLE;
 
 export interface IBaseKanBanLayout {
   QuickActions: FC<IQuickActionProps>;
   canEditPropertiesBasedOnProject?: (projectId: string) => boolean;
   viewId?: TProfileViews;
+  /**
+   * The whole list is read-only, whatever the caller may do in the project (an ended or archived cycle's page): no
+   * creation, inline edit or drag, and the rows' quick actions are read-only.
+   */
+  readOnly?: boolean;
 }
 
 // Stable identity so an empty kanban-filter value doesn't churn the per-column cache's sharedDeps.
 const EMPTY_KANBAN_FILTERS = { group_by: [], sub_group_by: [] };
 
 export const BaseKanBanRoot = observer(function BaseKanBanRoot(props: IBaseKanBanLayout) {
-  const { QuickActions, canEditPropertiesBasedOnProject, viewId } = props;
+  const { QuickActions, canEditPropertiesBasedOnProject, viewId, readOnly = false } = props;
   // router
-  const { workspaceSlug, projectId, userId } = useParams();
+  const { workspaceSlug, projectId } = useParams();
   // store hooks
   const storeType = useIssueStoreType() as KanbanStoreType;
   const { allowPermissions } = useUserPermissions();
-  const { issueMap, issuesFilter, issues } = useIssues(storeType);
+  const { issueMap, issues } = useIssues(storeType);
   const {
     issue: { getIssueById },
   } = useIssueDetail();
@@ -65,10 +72,7 @@ export const BaseKanBanRoot = observer(function BaseKanBanRoot(props: IBaseKanBa
     updateFilters,
   } = useIssuesActions(storeType);
 
-  const localFilters =
-    storeType === EIssuesStoreType.PROFILE
-      ? issues.rootIssueStore.profileIssuesFilter.getIssueFilters(userId ?? "", workspaceSlug)
-      : issuesFilter.issueFilters;
+  const localFilters = usePageIssueFilters(storeType);
   const displayFilters = localFilters?.displayFilters;
   const displayProperties = localFilters?.displayProperties;
 
@@ -147,6 +151,7 @@ export const BaseKanBanRoot = observer(function BaseKanBanRoot(props: IBaseKanBa
 
   const canEditProperties = useCallback(
     (issueProjectId: string | undefined) => {
+      if (readOnly) return false;
       const isEditingAllowedBasedOnProject =
         canEditPropertiesBasedOnProject && issueProjectId
           ? canEditPropertiesBasedOnProject(issueProjectId)
@@ -154,7 +159,7 @@ export const BaseKanBanRoot = observer(function BaseKanBanRoot(props: IBaseKanBa
 
       return enableInlineEditing && isEditingAllowedBasedOnProject;
     },
-    [canEditPropertiesBasedOnProject, enableInlineEditing, isEditingAllowed]
+    [canEditPropertiesBasedOnProject, enableInlineEditing, isEditingAllowed, readOnly]
   );
 
   // The loading/verification gate can mount or replace the actual container later.
@@ -237,7 +242,7 @@ export const BaseKanBanRoot = observer(function BaseKanBanRoot(props: IBaseKanBa
                 enableQuickIssueCreate={enableQuickAdd}
                 showEmptyGroup={userDisplayFilters?.show_empty_groups ?? true}
                 quickAddCallback={createIssue}
-                disableIssueCreation={!enableIssueCreation || !isEditingAllowed}
+                disableIssueCreation={readOnly || !enableIssueCreation || !isEditingAllowed}
                 canEditProperties={canEditProperties}
                 scrollableContainerRef={scrollableContainerRef}
                 handleOnDrop={handleOnDrop}

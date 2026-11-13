@@ -16,8 +16,11 @@ const sortMidpoint = (a: number, b: number): number => {
   return Number.isFinite(sum) ? sum / 2 : a / 2 + b / 2;
 };
 
-/** The layout's selection; each query keeps its own registered reconciliation value. */
-export class BaseIssuesStore<TFilter extends IBaseIssueFilterStore = IBaseIssueFilterStore> {
+/**
+ * The layout's selection; each query keeps its own registered reconciliation value. The page's filter store is held for
+ * the page's own queries; the base reads nothing of it.
+ */
+export class BaseIssuesStore<TFilter = IBaseIssueFilterStore> {
   private readonly bindings = new Map<string, IssueListBinding>();
   currentList: IssueListBinding | undefined;
   protected options: IssueListOptions | undefined;

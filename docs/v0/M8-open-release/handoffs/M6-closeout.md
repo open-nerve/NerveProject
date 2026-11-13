@@ -5,7 +5,7 @@ to: M8
 created: 2026-11-07
 ---
 
-# M6 交给 M8：CI 的 e2e 作业期限与间歇失败的故事、清理分页器的副本、e2e 数据库的连接余量、server 作业的分路与 lint 工具的在线下载、本机测试容器的端口冲突
+# M6 交给 M8：CI 的 e2e 作业期限与间歇失败的故事、清理分页器的副本、e2e 数据库的连接余量、server 作业的分路与 lint 工具的在线下载、本机测试容器的端口冲突、e2e 作业在线安装浏览器的系统依赖、编辑器重建图片节点时中止的读取、工作项根 store 的行数、Firefox 再次载入后的字体预加载警告
 
 这是接收方尚待完成的工作。转交只表示责任和验收条件已落实到此处，不表示本页问题已经解决。M6 进行中发现的条目随发现写入；M6 收尾时补齐其余交接。延续 [M5 → M8 交接 M5-M8-06](M5-closeout.md#M5-M8-06) 中仍开放的观察。
 
@@ -42,6 +42,8 @@ M6/P3a 的最终候选 `070762f5` 的本地门禁（`t13-gate1-build-e2e`）又�
 
 M6/P5a 的最终候选 `5b5da6ea` 的本地门禁（`t16-gate3-build-e2e`）再一次：C12 的 LAN HTTP 一例（`e2e/stories/issue/collaboration-interactions.spec.ts:556`）页面上 `GET /api/v0/workspaces/<slug>/states` 回答 500，该测试 nerve 日志为 `FATAL: sorry, too many clients already`（53300）；只重跑这一项即 29 条全过（`t16-gate3-e2e-c12-rerun`）。按 M6-M8-01 对 C12 的要求按新问题定位，查实是本条，不是 M6-M8-01 的间歇失败。
 
+M6/P5b 的检查点（T10，2026-11-11，`00cf6c38672c0a21a63c0dab7026f339d8185f92`）的本地门禁（`t10-gate` 的 build+e2e）又一次：445 条通过、1 条失败，W7 (API)（`e2e/stories/workspace/w7-member-management.spec.ts:44`）在测试一侧的 pg 连接池上报 `error: sorry, too many clients already`（`e2e/fixtures/db.ts:88`，故事第 107 行 `expectWrittenLastBy` 的数据库断言）。P5b 没有改这个故事；同一输入只重跑这一项即通过（`t10-gate-e2e-w7-rerun`，exit 0）。同一检查点的分支 CI 没有跑到故事（见 M6-M8-06），之后 `f4a37007` 的分支 CI 全绿。
+
 **何时验收：** M8 的 CI 工作核算 e2e 的连接预算（工作进程数 × 每进程的连接上限 + 余量），按结果给测试容器设 `max_connections` 或收紧 e2e 服务器的 `database.max_conns`，并在 CI 与本地都留有余量；或负责人决定维持现状，并在此写明理由。
 
 <a id="M6-M8-04"></a>
@@ -62,6 +64,51 @@ M6/P5a 的最终候选 `5b5da6ea` 上，本机 `make test` 连续两次失败，
 
 根因：Docker Desktop 的 VM 从自己的 `ip_local_port_range`（55000–65535）给容器分配随机主机端口，再在 macOS 上监听同一个端口；macOS 自己的临时端口（`net.inet.ip.portrange.first`/`last`）是 49152–65535，两者重叠，分到的端口可能已被本机的出站连接或监听占用。`make test` 并行启动大量容器、开大量连接，撞上的机会随之增加。同一警告此前只在 2026-11-10 的两个时刻出现；M6/P2（`254d3255`）与 M6/P3b（t14-gate1）的“Docker API 超时、容器拿不到映射端口”是同一签名。Linux 的 CI 没有这一层端口转发，不受影响。
 
-负责人 2026-11-11 决定：P5a（没有 Go 改动）的服务端测试以分支 CI 为准，不改本机设置，不改测试代码，交 M8。
+负责人 2026-11-11 决定：P5a（没有 Go 改动）的服务端测试以分支 CI 为准，不改本机设置，不改测试代码，交 M8；同日延续到 P5b–P7 中不改 `server/`、`api/` 的阶段（本机 `make test` 因这一签名失败时记录，以分支 CI 的服务端两路为准）。
+
+M6/P2 的根因修复（`server/internal/platform/postgres/pgtest/hostport.go`、`server/internal/platform/s3test/hostport.go` 的 `startPublished`/`hostPortTaken`）只认 Docker 拒绝启动容器的那一种（“programming external connectivity … address already in use”，Linux 的 Docker 与 Docker Desktop 的 VM 内分配冲突时）；Docker Desktop 在 macOS 一侧转发失败时容器照常启动，错误只表现为等映射端口超时，这层重试认不出。
+
+M6/P5b 的 T13、T14（2026-11-12）在本机跑 e2e 的变异时，e2e 的全局准备（`e2e/global-setup.ts:13`）有三次因 testcontainers 等容器的端口映射到主机超时而失败（“Timed out after 10000ms while waiting for container ports to be bound to the host”，其中 T13 的一次在启动 reaper 时）：`t13-e2e-mut-archived-writable`、`t14-e2e-mut-create-for-guest-2`、`t14-e2e-mut-one-generation-2`。一条故事都没有跑，与所测的变异无关；各自重跑（`t13-e2e-mut-archived-writable-2`、`t14-e2e-mut-create-for-guest-3`、`t14-e2e-mut-one-generation-3`）都跑到了故事。签名与上文相同（同一台 Docker Desktop，映射端口迟迟不到主机一侧；台账没有记这几次的 Docker Desktop 后端日志），所以本条不只影响 Go 的 `make test`，也影响 e2e 的全局准备。
 
 **何时验收：** M8 在本机门禁的说明里给出不重叠的做法并验证（例如测试容器助手自己在本机选空闲端口并显式绑定、在端口转发失败时换端口重启容器，或在 README 写明把 macOS 的临时端口范围收到 55000 以下），使本机 `make test` 不再因此失败；或负责人决定维持现状，并在此写明理由。
+
+<a id="M6-M8-06"></a>
+## M6-M8-06 e2e 作业每次在线安装浏览器的系统依赖
+
+- e2e 作业的 “Install the Playwright browsers” 一步是 `pnpm exec playwright install --with-deps --only-shell chromium firefox`（`.github/workflows/ci.yml:120-122`）：`--with-deps` 每次经 apt 从 Ubuntu 的镜像在线安装浏览器的系统依赖，工作流只缓存 pnpm 的存储。镜像出故障时，这一步可以吃掉作业的 35 分钟期限（M6-M8-01）。
+- 2026-11-11，M6/P5b 检查点 `00cf6c38672c0a21a63c0dab7026f339d8185f92` 的分支 CI 43047769115：web、server (0)、server (1) 成功；e2e 两次都被取消，原因都是 runner 解析不了 `azure.archive.ubuntu.com`，与代码无关：
+  - attempt 1（作业 130626787723，15:40:38Z 开始）：apt 自 15:43:38Z 起 “Temporary failure resolving 'azure.archive.ubuntu.com'”，每个包等 20 秒超时；16:12:29Z 起 apt 反复打印 “W: Tried to start delayed item … ocl-icd-libopencl1 … but failed”，一直到作业期限到时被取消（开始后约 40 分钟），一条测试都没有跑。完整日志 2.47 GB，第 640 行之后的 1344 万行都是这一条警告。
+  - attempt 2（只重跑失败的作业，作业 130653659545，16:26:19Z–17:01:39Z）：这一步 16:27:05→16:57:02 用了 30 分钟后“成功”（InRelease 在 16:31:54–16:34:01 仍解析失败，包以 35.9 kB/s 取完，“Fetched 48.8 MB in 22min 40s”），Build 53 秒，E2E 一步只剩约 3 分半即到作业期限而被取消（“Running 446 tests using 2 workers”，已跑的都通过、没有失败）。
+  - 依规则只重跑一次、不改 CI 的时长或结构；该检查点的代码由下一次推送的分支 CI 覆盖。
+- 下一次推送（`f4a3700732eeda348ebf160b6aa8062fb168b1f1`）的分支 CI 43070304124 全绿：这一步 28 秒（镜像已恢复），e2e 作业 130704599852 共 20 分 41 秒（E2E 一步 18 分 49 秒），距 35 分钟期限约 14 分钟。
+- 可选的加固：缓存 Playwright 的系统依赖（例如以 Playwright 的版本为键缓存 apt 的包），或改用官方的 Playwright 容器镜像运行 e2e 作业。两者都改作业的结构，须负责人同意。
+
+**何时验收：** M8 的 CI 工作让 e2e 作业不再每次在线安装浏览器的系统依赖（上面任一做法，或负责人同意的其他做法），与 M6-M8-01 的余量复核一起做；或负责人决定维持现状，并在此写明理由。在此之前，这一步再因镜像故障超时，按“环境原因、只重跑一次、记下”处理，重跑仍不过就停下报告。
+
+<a id="M6-M8-07"></a>
+## M6-M8-07 编辑器在相邻的事务里重建已有图片的节点，e2e 把中止的内容读取记为失败
+
+M6/P5b 的 T16（2026-11-12）在 `8b11bc6381623717663ba986da74710668719494` 上串行跑本地门禁（`gates.sh t16-gate`）：build+e2e 一步 452 条通过、1 条失败——M5 的 F11 (page) [s3]（`e2e/stories/files/f11-editor-images-page.spec.ts`，失败于 `e2e/fixtures/content-files-page.ts:225` 的 finish）：页面的 `apiFailures` 多出一条 `net::ERR_ABORTED GET /api/v0/assets/{复制品}/content`。
+
+- 经过（本阶段台账记的 trace 分析，证据在台账的 `research/t16-f11-s3-failure/trace-summary.txt`，同目录有 `trace.zip`）：两次“被拒的粘贴”（伪造的标识、源不可读）之后的撤销，各在撤销后 6–9 ms 让编辑器把正文里已有的复制品图片重读一遍：先读资产的元数据、再读内容（trace 的单调时间：撤销 137.287 s → 137.295 s / 137.309 s；撤销 137.385 s → 137.390 s / 137.409 s，元数据都 200）；第二遍的内容读取发出 9.8 ms 后未答即被 Chromium 中止——此时故事已开始下一步（普通文件的拖放与粘贴），发起它的图片元素随即被替换或移除，trace 没有记下是哪一个事务。
+- 再现：同一阶段最终候选 `ebeb2cab699e15fb7cae13b9a611189c0c0c2cc8` 的门禁（`t16-final-gate`）里 F11 (page) [local] 以同一签名失败一次，过程相同（第二次撤销 26.539 s → 元数据 26.544 s、内容 26.561 s，内容读取在故事粘贴普通文本 0.5 ms 后发出、11.3 ms 后中止；证据在台账的 `research/t16-final-f11-local-failure/`）；只重跑该文件一次即通过（`t16-final-gate-e2e-f11-rerun`）。T16 的两次完整门禁都出现、分支 CI 与单独重跑从未出现。把内容读取经路由延迟 150 ms 并不能复现（`t16-red-f11-undo-race` 通过），所以不能简单归为“图片未载入完、下一次粘贴把它中止”，故事未改。`e2e/fixtures/browser.ts` 的 watch 把未答而中止的 API 请求记为失败。
+- 范围：P5b 没有改编辑器、资产与详情页的代码，也没有改 F11 用到的夹具（`browser.ts` 只多导出 `consoleProbe`，watch 不变）；同一故事此前在本机与 CI 多次通过。只重跑该故事文件一次即通过（`t16-gate-e2e-f11-rerun`，exit 0：F11 的 [local] 与 [s3] 都过，连同 s3 夹具的自检共 7 例）。
+- 待查：
+  - 为什么相邻的事务会让已有图片的节点重建、重读——用户看到的是图片重新载入；
+  - watch 是否应区别对待发起它的元素已被移除而中止的请求。
+
+**何时验收：** M8 查明重建的原因，修正编辑器（或写明这是预期的行为），并据此决定 watch 对这类中止请求的处理；或负责人决定维持现状，并在此写明理由。在此之前，F11 再因这一签名失败，按“已查明原因、与所在阶段无关、只重跑该文件一次、记下”处理，重跑仍不过就停下报告。
+
+<a id="M6-M8-08"></a>
+## M6-M8-08 工作项根 store 超过手写文件的行数上限
+
+观察（re-67 M10，M6/P5b 的整分支审查）：`web/apps/web/core/store/issue/root.store.ts` 有 615 行，超过手写文件约 400 行的上限。它是 M4 的文件，P5b 的基线 `0b8efcd701edf7e73a37d5bb82ad176a7795b910` 上已有 593 行；P5b 加了 22 行（迭代页的偏好筛选、列表与优先级页签三个 store 的声明与构造，`fields()` 的 `cycle_id`、`module_ids`，创建与更新放行 `cycle_id`）。P7 还要为迭代下拉框与“添加已有”往里加写入。
+
+**何时验收：** P7 往里加写入之前先把它按职责拆开，否则由 M8 拆，拆后不超过约 400 行；或负责人决定维持现状，并在此写明理由。
+
+<a id="M6-M8-09"></a>
+## M6-M8-09 Firefox 在同一浏览器的再次载入后报根预加载的字体未用
+
+观察（M6/P5b T16 的三引擎页面配置与修复轮 F2）：Firefox 在同一浏览器里任何一次再次载入文档之后（`page.reload()` 或再一次 `page.goto`，不论与前一次相隔 1.4 s 还是 13.5 s），约 10 s 报一条 JavaScript Warning：根预加载的 inter 字体 “preloaded with link preload was not used within a few seconds”。看控制台的故事若在这之后还检查，就会失败。G15 (page) 的故事一、二因此改为以页面自己的排序代替重载、以同一人另开的浏览器核对“再次载入后仍在”（修复轮 F2）；G19 的两次重载在装着扣住回答的路由时，探针 12 s 内没有这条警告；G1 的两次重载、G6 的重载、G8 的再次 `goto` 在三引擎配置里目前都通过，原因未逐一探查，同属潜在的间歇（证据在 P5b 台账的 `f-probe-g15s1-reload-a`、`f-probe-g15s1-late-reload`、`f-probe-g19-reloads`、`f2-probe-loaded-anew-12s-b` 收据）。
+
+**何时验收：** M8 查明 Firefox 为什么认定再次载入的文档没用到预加载（例如预加载与 `@font-face` 的属性不一致，或再次载入时字体来自前一个文档的缓存），改正预加载（或写明这是 Firefox 的预期行为并让相关故事避开再次载入）；或负责人决定维持现状，并在此写明理由。

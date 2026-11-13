@@ -12,18 +12,16 @@ import { ChevronLeftOutline, ChevronRightOutline } from "@makeplane/propel/icons
 // constants
 import { getDate } from "@nerve/utils";
 import { MONTHS_LIST } from "@nerve/constants";
+import type { TCalendarLayouts } from "@nerve/types";
 import { useCalendarView } from "@/hooks/store/use-calendar-view";
-import type { IProjectIssuesFilter } from "@/store/issue/project";
 
 interface Props {
-  issuesFilterStore: IProjectIssuesFilter;
+  calendarLayout: TCalendarLayouts;
 }
 export const CalendarMonthsDropdown = observer(function CalendarMonthsDropdown(props: Props) {
-  const { issuesFilterStore } = props;
+  const { calendarLayout } = props;
 
   const issueCalendarView = useCalendarView();
-
-  const calendarLayout = issuesFilterStore.issueFilters?.displayFilters?.calendar?.layout ?? "month";
 
   const [referenceElement, setReferenceElement] = useState<HTMLButtonElement | null>(null);
   const [popperElement, setPopperElement] = useState<HTMLDivElement | null>(null);

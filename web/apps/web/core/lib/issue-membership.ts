@@ -58,7 +58,9 @@ export function issueMembership(
     if (
       !alternatives(p.state_id, [issue.state_id], context.currentUserID) ||
       !alternatives(p.assignee_id, issue.assignee_ids.length ? issue.assignee_ids : ["none"], context.currentUserID) ||
-      !alternatives(p.created_by_id, issue.created_by_id ? [issue.created_by_id] : [], context.currentUserID)
+      !alternatives(p.created_by_id, issue.created_by_id ? [issue.created_by_id] : [], context.currentUserID) ||
+      !alternatives(p.cycle_id, [issue.cycle_id ?? "none"], context.currentUserID) ||
+      !alternatives(p.module_id, issue.module_ids.length ? issue.module_ids : ["none"], context.currentUserID)
     )
       return false;
     unknown = !!(p.mention_id?.length || p.subscriber_id?.length);

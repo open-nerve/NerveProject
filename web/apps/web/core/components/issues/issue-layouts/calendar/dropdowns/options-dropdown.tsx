@@ -6,37 +6,31 @@
 
 import React, { useState } from "react";
 import { observer } from "mobx-react";
-import { useParams } from "react-router";
 import { usePopper } from "react-popper";
 import { ChevronUpOutline, MoreVerticalOutline, TickOutline } from "@makeplane/propel/icons";
 import { Popover, Transition } from "@headlessui/react";
 // icons
-import type { TSupportedFilterTypeForUpdate } from "@nerve/constants";
-import { EIssueFilterType } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
-import type { TCalendarLayouts, TSupportedFilterForUpdate } from "@nerve/types";
+import type { IIssueDisplayFilterOptions, TCalendarLayouts } from "@nerve/types";
 import { Switch } from "@makeplane/propel/components/switch";
 // constants
 import { CALENDAR_LAYOUTS } from "@nerve/constants";
 import { useCalendarView } from "@/hooks/store/use-calendar-view";
 import useSize from "@/hooks/use-window-size";
-import type { IProjectIssuesFilter } from "@/store/issue/project";
 
-interface ICalendarHeader {
-  issuesFilterStore: IProjectIssuesFilter;
-  updateFilters?: (
-    projectId: string,
-    filterType: TSupportedFilterTypeForUpdate,
-    filters: TSupportedFilterForUpdate
-  ) => Promise<void>;
+/** Changes the page's calendar display (P5b spec 2.5): the fields given replace the page's, the others stay. */
+export type TUpdateCalendarDisplay = (change: NonNullable<IIssueDisplayFilterOptions["calendar"]>) => void;
+
+interface ICalendarOptionsDropdown {
+  calendarLayout: TCalendarLayouts;
+  showWeekends: boolean;
+  updateCalendar?: TUpdateCalendarDisplay;
 }
 
-export const CalendarOptionsDropdown = observer(function CalendarOptionsDropdown(props: ICalendarHeader) {
-  const { issuesFilterStore, updateFilters } = props;
+export const CalendarOptionsDropdown = observer(function CalendarOptionsDropdown(props: ICalendarOptionsDropdown) {
+  const { calendarLayout, showWeekends, updateCalendar } = props;
 
   const { t } = useTranslation();
-
-  const { projectId } = useParams();
 
   const issueCalendarView = useCalendarView();
   const [windowWidth] = useSize();
@@ -56,18 +50,10 @@ export const CalendarOptionsDropdown = observer(function CalendarOptionsDropdown
     ],
   });
 
-  const calendarLayout = issuesFilterStore.issueFilters?.displayFilters?.calendar?.layout ?? "month";
-  const showWeekends = issuesFilterStore.issueFilters?.displayFilters?.calendar?.show_weekends ?? false;
-
   const handleLayoutChange = (layout: TCalendarLayouts, closePopover: any) => {
-    if (!updateFilters || !projectId) return;
+    if (!updateCalendar) return;
 
-    updateFilters(projectId, EIssueFilterType.DISPLAY_FILTERS, {
-      calendar: {
-        ...issuesFilterStore.issueFilters?.displayFilters?.calendar,
-        layout,
-      },
-    });
+    updateCalendar({ layout });
 
     issueCalendarView.updateCalendarPayload(
       layout === "month"
@@ -78,14 +64,9 @@ export const CalendarOptionsDropdown = observer(function CalendarOptionsDropdown
   };
 
   const handleToggleWeekends = () => {
-    if (!updateFilters || !projectId) return;
+    if (!updateCalendar) return;
 
-    updateFilters(projectId, EIssueFilterType.DISPLAY_FILTERS, {
-      calendar: {
-        ...issuesFilterStore.issueFilters?.displayFilters?.calendar,
-        show_weekends: !showWeekends,
-      },
-    });
+    updateCalendar({ show_weekends: !showWeekends });
   };
 
   return (

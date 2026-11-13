@@ -319,9 +319,15 @@ test("I21 (API): a fresh purge after +61d physically removes old FK chains and P
     })
   );
   const watermark = await archiveWatermark(db); // after the final successful API write, never rounded through Date
+  // A purge leaves a row a constraint still protects (blocked) to its next run, as a tombstoned file whose object the
+  // asset cleanup, running in the same tick, has not removed yet: the old rows are gone once a fresh run went through
+  // every table (complete) and left none.
   await expect
     .poll(
-      async () => (await completedPeriodicJobs(db, "cleanup.purge_deleted", watermark, world.current.startedAt)).length,
+      async () =>
+        (await completedPeriodicJobs(db, "cleanup.purge_deleted", watermark, world.current.startedAt)).filter(
+          (run) => run.output?.complete === true && run.output?.blocked === 0
+        ).length,
       { timeout: 15_000 }
     )
     .toBeGreaterThan(0);

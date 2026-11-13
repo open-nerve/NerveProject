@@ -50,6 +50,7 @@ export const WorkItemLevelModals = observer(function WorkItemLevelModals(props: 
     toggleCreateIssueModal,
     isDeleteIssueModalOpen,
     toggleDeleteIssueModal,
+    createIssueStoreType,
     createWorkItemAllowedProjectIds,
   } = commands;
   // derived values
@@ -108,6 +109,9 @@ export const WorkItemLevelModals = observer(function WorkItemLevelModals(props: 
         }}
         onSubmit={handleCreateIssueSubmit}
         allowedProjectIds={createWorkItemAllowedProjectIds}
+        // the cycle page's own entries open it for a work item of the cycle, of its project (P5b spec 2.5); any other
+        // opening, the app's own included, lets the project be chosen
+        isProjectSelectionDisabled={createIssueStoreType === EIssuesStoreType.CYCLE}
       />
       {workspaceSlug && workItemId && workItemDetails && workItemDetails.project_id && (
         <DeleteIssueModal

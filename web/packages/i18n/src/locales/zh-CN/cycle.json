@@ -7,6 +7,9 @@
       "chart": {
         "title": "向周期添加工作项以查看燃尽图。"
       },
+      "priority_issue": {
+        "title": "一目了然地观察周期中处理的高优先级工作项。"
+      },
       "assignee": {
         "title": "为工作项添加负责人以查看按负责人划分的工作明细。"
       },
@@ -17,7 +20,8 @@
   },
   "cycle": {
     "label": "{count, plural, one {周期} other {周期}}",
-    "no_cycle": "无周期"
+    "no_cycle": "无周期",
+    "work_items_count": "此周期中有 {count} 个工作项"
   },
   "burndown": {
     "remaining": "剩余工作项",

@@ -45,6 +45,7 @@ vi.mock("./store/use-issues", () => ({
       return { issues: root.profileIssues, issuesFilter: root.profileIssuesFilter };
     if (type === EIssuesStoreType.ARCHIVED)
       return { issues: root.archivedIssues, issuesFilter: root.archivedIssuesFilter };
+    if (type === EIssuesStoreType.CYCLE) return { issues: root.cycleIssues, issuesFilter: root.cycleIssuesFilter };
     return { issues: root.projectIssues, issuesFilter: root.projectIssuesFilter };
   },
 }));
@@ -165,5 +166,41 @@ it("a non-manual sort never sends same-column manual reorder", async () => {
     .forEach((call) => call.answer(json(200, issueOf("x"))));
   await pending;
   expect(state.tab!.nerve.calls).toEqual([]);
+  await probe.close();
+});
+it("a cycle page's drag moves the row of the cycle page's own list", async () => {
+  const { app, nerve } = state.tab!;
+  const root = app.issue;
+  const cycle = "019a0000-0000-7000-8000-0000000000c1";
+  const list = new IssueListBinding(root, {
+    scope: "project",
+    workspaceSlug: "ws",
+    workspaceID: "id-ws",
+    projectID: "A",
+    query: { order_by: "sort_order", cycle_id: [cycle] },
+  });
+  const rows = [
+    { ...issueOf("x"), cycle_id: cycle },
+    { ...issueOf("n"), sort_order: 2000, cycle_id: cycle },
+  ];
+  const read = await requestedIssue(nerve, () => list.fetchFirst(), ["GET", "/api/v0/projects/A/issues"]);
+  read.call.answer(json(200, issuePageOf(rows)));
+  await read.promise;
+  // Only the cycle page has a list, so a drag that took the project page's would send nothing.
+  runInAction(() => {
+    root.cycleIssues.currentList = list;
+    root.projectIssues.currentList = undefined;
+  });
+  nerve.calls.length = 0;
+  const probe = await mounted(EIssuesStoreType.CYCLE);
+  const request = await requestedIssue(nerve, () => probe.drop({ groupId: "", id: "x" }, { groupId: "", id: "n" }), [
+    "PATCH",
+    "/api/v0/issues/x",
+  ]);
+  expect(request.call.body).toEqual({ sort_order: -63535 });
+  request.call.answer(json(200, { ...rows[0], sort_order: -63535, updated_at: "2026-10-29T00:00:00Z" }));
+  await request.promise;
+  expect(list.group()?.rows.map((row) => row.id)).toEqual(["x", "n"]);
+  expect(app.issue.issues.getIssueById("x")!.sort_order).toBe(-63535);
   await probe.close();
 });

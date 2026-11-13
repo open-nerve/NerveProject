@@ -23,23 +23,35 @@ import { SimpleEmptyState } from "@/components/empty-state/simple-empty-state-ro
 import useLocalStorage from "@/hooks/use-local-storage";
 // local imports
 import { AssigneeStats, LabelStats, useDistributionRows } from "../distribution-stats";
+import { ActiveCyclePriorityIssues } from "./priority-issues";
+import type { EnterFiltered } from "./use-enter-filtered";
 
-/** The card's tabs, in their order, each as the browser keeps it (localStorage activeCycleTab). */
-const TABS = ["Assignees", "Labels"] as const;
+/** The card's tabs, in their order (P5b spec 2.7), each as the browser keeps it (localStorage activeCycleTab). */
+const TABS = ["Priority-Issues", "Assignees", "Labels"] as const;
+/** The priorities of the tab of priority work items, which its row sets the cycle's page to (P5b spec 2.7). */
+const URGENT_AND_HIGH = ["urgent", "high"];
 
 type Props = {
+  workspaceSlug: string;
   projectId: string;
+  /** The cycle in progress the card shows. */
+  cycleId: string;
   /** The progress the card shows (cycleCounts' choice): its assignees and its labels. */
   progress: Progress;
+  /** Takes the cycle's page to the work items of a condition (useEnterFiltered). */
+  enterFiltered: EnterFiltered;
 };
 
 /**
- * The breakdowns of the cycle in progress (P5a spec 2.4, 2.5, R10), each a tab: by assignee (the first) and by label,
+ * The work items of the cycle in progress (P5a spec 2.4, 2.5, R10; P5b spec 2.7), each a tab, in the spec's order: its
+ * urgent and high ones (ActiveCyclePriorityIssues), then its breakdowns by assignee (the one first shown) and by label,
  * as nerve counts them, named by the project's members and labels (distribution-stats.tsx); without a row, how to see
- * one. The tab chosen is kept (localStorage). The tab of its priority work items comes with P5b; a row does not set the
- * page's filters (P5b).
+ * one. The tab chosen is kept (localStorage). A row of a work item, an assignee or a label (not the rows of none) takes
+ * the cycle's page to its work items: the urgent and high ones, previewing the row's there, or the assignee's, or the
+ * label's (P5b spec 2.7, 2.8).
  */
-export const ActiveCycleStats = observer(function ActiveCycleStats({ projectId, progress }: Props) {
+export const ActiveCycleStats = observer(function ActiveCycleStats(props: Props) {
+  const { workspaceSlug, projectId, cycleId, progress, enterFiltered } = props;
   // theme hook
   const { resolvedTheme } = useTheme();
   // nerve hooks
@@ -58,9 +70,13 @@ export const ActiveCycleStats = observer(function ActiveCycleStats({ projectId, 
       >
         <Tab.List
           as="div"
-          className="relative grid grid-cols-2 rounded-sm border-[0.5px] border-subtle bg-layer-1 p-[1px]"
+          className="relative grid grid-cols-3 rounded-sm border-[0.5px] border-subtle bg-layer-1 p-[1px]"
         >
-          {[t("project_cycles.active_cycle.assignees"), t("project_cycles.active_cycle.labels")].map((name) => (
+          {[
+            t("project_cycles.active_cycle.priority_issue"),
+            t("project_cycles.active_cycle.assignees"),
+            t("project_cycles.active_cycle.labels"),
+          ].map((name) => (
             <Tab
               key={name}
               className={({ selected }) =>
@@ -76,8 +92,21 @@ export const ActiveCycleStats = observer(function ActiveCycleStats({ projectId, 
         </Tab.List>
         <Tab.Panels>
           <StatsPanel>
+            <ActiveCyclePriorityIssues
+              workspaceSlug={workspaceSlug}
+              projectId={projectId}
+              cycleId={cycleId}
+              openIssue={(issueId) =>
+                enterFiltered({ property: "priority", operator: "in", value: URGENT_AND_HIGH }, issueId)
+              }
+            />
+          </StatsPanel>
+          <StatsPanel>
             {assignees.length > 0 ? (
-              <AssigneeStats rows={assignees} />
+              <AssigneeStats
+                rows={assignees}
+                choose={(id) => enterFiltered({ property: "assignee_id", operator: "in", value: [id] })}
+              />
             ) : (
               <NoRows
                 title={t("active_cycle.empty_state.assignee.title")}
@@ -87,7 +116,10 @@ export const ActiveCycleStats = observer(function ActiveCycleStats({ projectId, 
           </StatsPanel>
           <StatsPanel>
             {labels.length > 0 ? (
-              <LabelStats rows={labels} />
+              <LabelStats
+                rows={labels}
+                choose={(id) => enterFiltered({ property: "label_id", operator: "in", value: [id] })}
+              />
             ) : (
               <NoRows
                 title={t("active_cycle.empty_state.label.title")}

@@ -94,8 +94,9 @@ export function archivedCyclesPath(slug: string, projectId: string): string {
 
 /**
  * Goes to the cycles list of the project of projectId, which page shows, by its link in the sidebar's project: within
- * the app, as a person does, not by a load of another document a moment after this one's (Firefox then serves the
- * fonts the document before loaded, and reports the font its root preloads as unused).
+ * the app, as a person does, not by a load of another document after this one's (Firefox then serves the fonts the
+ * document before loaded, and about ten seconds later reports the font its root preloads as unused, however long
+ * after the first the second load comes; M6 P5b T16).
  */
 export async function openCyclesList(page: Page, slug: string, projectId: string): Promise<void> {
   const list = cyclesPath(slug, projectId);
@@ -241,17 +242,24 @@ export function toast(page: Page, text: string): Locator {
 }
 
 /**
- * Closes every toast page shows by its close button, one after another, each gone before the next: a story that then
- * checks that a toast does not come cannot see one of before. A toast's close button is hidden from assistive
- * technology (its toast is read without it), so it is found by its label.
+ * Leaves page with no toast of before, closed by its close button or gone on its own, so a story that then checks that
+ * a toast does not come cannot see one of them.
+ *
+ * A toast leaves on its own 5000 ms after it came: propel's Toast keeps the timeout of Base UI's toast provider
+ * (`timeout = 5000`, @base-ui-components/react 1.0.0-beta.3), and the toast then plays its 500 ms exit, marked
+ * data-ending-style, before it is removed. A click aimed at a toast as that exit begins finds its button moving, then
+ * gone, and waits for it until the test's time is up (G3 on Firefox and WebKit, M6 P5b T16). So the close buttons of
+ * the toasts not yet leaving are pressed in the page, all in one step that no exit can split, and the story then waits
+ * until none of them, nor any toast leaving on its own, remains. Pressed in the page, a button takes neither the focus
+ * nor the pointer, which stay where the story left them. A toast's close button is hidden from assistive technology
+ * (its toast is read without it), so it is found by its label.
  */
 export async function dismissToasts(page: Page): Promise<void> {
   const close = page.getByLabel("Notifications", { exact: true }).locator('button[aria-label="Close"]');
-  const shown = await close.count();
-  if (shown === 0) return;
-  await close.first().click();
-  await expect(close).toHaveCount(shown - 1);
-  return dismissToasts(page);
+  await close.evaluateAll((buttons: HTMLButtonElement[]) =>
+    buttons.filter((button) => !button.closest("[data-ending-style]")).forEach((button) => button.click())
+  );
+  await expect(close).toHaveCount(0);
 }
 
 /** What each status of an answer is called in the console's report of it. */

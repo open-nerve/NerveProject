@@ -4,6 +4,7 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { observer } from "mobx-react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { EIssuesStoreType } from "@nerve/types";
 import { StoreContext } from "@/lib/store-context";
 import { json, problem } from "@/lib/auth/fake-nerve";
 import { until } from "@/lib/auth/fake-time";
@@ -40,7 +41,7 @@ const View = observer(function View({ mobile = false }: { mobile?: boolean }) {
   const retry = useIssueListRefresh(tab.app.issue.projectIssues.currentList, []);
   return (
     <>
-      {mobile ? <ProjectIssuesMobileHeader /> : <HeaderFilters workspaceSlug="ws" projectId="A" />}
+      {mobile ? <ProjectIssuesMobileHeader /> : <HeaderFilters storeType={EIssuesStoreType.PROJECT} entityId="A" />}
       <IssueListRetry {...retry} />
     </>
   );

@@ -9,21 +9,32 @@ import { observer } from "mobx-react";
 import { useNavigate } from "react-router";
 // icons
 import { CyclesOutline, RightSidePaneOutline } from "@makeplane/propel/icons";
+import { Tooltip } from "@makeplane/propel/components/tooltip";
 // nerve imports
+import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
+import { Button } from "@nerve/propel/button";
 import { IconButton } from "@nerve/propel/icon-button";
 import type { ICustomSearchSelectOption } from "@nerve/types";
+import { EIssuesStoreType } from "@nerve/types";
 import { Breadcrumbs, BreadcrumbNavigationSearchDropdown, Header } from "@nerve/ui";
 import { cn } from "@nerve/utils";
 // components
 import { CommonProjectBreadcrumbs } from "@/components/breadcrumbs/common";
 import { BreadcrumbLink } from "@/components/common/breadcrumb-link";
+import { CountChip } from "@/components/common/count-chip";
 import { SwitcherLabel } from "@/components/common/switcher-label";
 import { CycleQuickActions } from "@/components/cycles/quick-actions";
+import { HeaderFilters } from "@/components/issues/filters";
 // hooks
+import { useCommandPalette } from "@/hooks/store/use-command-palette";
 import { useCycles } from "@/hooks/store/use-cycles";
+import { useIssues } from "@/hooks/store/use-issues";
 import { useProject } from "@/hooks/store/use-project";
+import { useUserPermissions } from "@/hooks/store/user";
+import { useCycleListState } from "@/hooks/use-cycle-list-state";
 import useLocalStorage from "@/hooks/use-local-storage";
+import { usePlatformOS } from "@/hooks/use-platform-os";
 
 type TProps = {
   workspaceSlug: string;
@@ -35,7 +46,11 @@ type TProps = {
  * The header of a cycle's page (P5a spec 2.5), of the route's project and cycle: its crumbs (the project, its cycles,
  * and the cycle, whose crumb switches to another of the project's cycles that are not archived, in nerve's order; an
  * archived cycle is not among them, its project's archive lists it), the toggle of the progress sidebar, and the
- * cycle's quick actions, under the host of its page (the layout's CycleActionsHost).
+ * cycle's quick actions, under the host of its page (the layout's CycleActionsHost). For those who see the page's
+ * work items while the project's cycles are on (P5b spec 2.6), their count as nerve gives it; the page's layouts,
+ * filters and display once nerve has given the page's preferences, which they change: not before its first answer, nor
+ * when that first read failed (re-67 M8); a later read that fails leaves them, while the layout root says it failed;
+ * and, for those who may create a work item, a new one of the cycle while it takes them.
  */
 export const CycleIssuesHeader = observer(function CycleIssuesHeader(props: TProps) {
   const { workspaceSlug, projectId, cycleId } = props;
@@ -47,7 +62,12 @@ export const CycleIssuesHeader = observer(function CycleIssuesHeader(props: TPro
   const { t } = useTranslation();
   // store hooks
   const { getCycleById, getProjectCycleIds } = useCycles();
-  const { loader } = useProject();
+  const { getProjectById, loader } = useProject();
+  const { issues, issuesFilter } = useIssues(EIssuesStoreType.CYCLE);
+  const { allowPermissions, getProjectRoleByWorkspaceSlugAndProjectId } = useUserPermissions();
+  const { toggleCreateIssueModal } = useCommandPalette();
+  const { joinable } = useCycleListState();
+  const { isMobile } = usePlatformOS();
 
   const { setValue, storedValue } = useLocalStorage("cycle_sidebar_collapsed", false);
 
@@ -58,6 +78,20 @@ export const CycleIssuesHeader = observer(function CycleIssuesHeader(props: TPro
 
   // derived values
   const cycleDetails = getCycleById(cycleId);
+  // the page's work items show for the project's members while its cycles are on (the layout root's own condition)
+  const listShown =
+    getProjectById(projectId)?.cycle_view === true &&
+    getProjectRoleByWorkspaceSlugAndProjectId(workspaceSlug, projectId) !== undefined;
+  const workItemsCount = listShown ? issues.pageTotal({ projectID: projectId, cycleID: cycleId }) : undefined;
+  const preferencesShown = listShown && issuesFilter.getIssueFilters(cycleId) !== undefined;
+  const canCreateWorkItem =
+    joinable &&
+    allowPermissions(
+      [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
+      EUserPermissionsLevel.PROJECT,
+      workspaceSlug,
+      projectId
+    );
   const switcherOptions = (getProjectCycleIds(projectId) ?? []).flatMap((id): ICustomSearchSelectOption[] => {
     const listed = getCycleById(id);
     if (!listed) return [];
@@ -105,10 +139,26 @@ export const CycleIssuesHeader = observer(function CycleIssuesHeader(props: TPro
               isLast
             />
           </Breadcrumbs>
+          {workItemsCount ? (
+            <Tooltip
+              label={t("cycle.work_items_count", { count: workItemsCount })}
+              layout="stacked"
+              side="bottom"
+              disabled={isMobile}
+            >
+              <CountChip count={workItemsCount} />
+            </Tooltip>
+          ) : null}
         </div>
       </Header.LeftItem>
       <Header.RightItem className="items-center">
         <div className="hidden items-center gap-2 md:flex">
+          {preferencesShown && <HeaderFilters storeType={EIssuesStoreType.CYCLE} entityId={cycleId} />}
+          {canCreateWorkItem && (
+            <Button variant="primary" size="lg" onClick={() => toggleCreateIssueModal(true, EIssuesStoreType.CYCLE)}>
+              {t("issue.add.label")}
+            </Button>
+          )}
           <IconButton
             variant="tertiary"
             size="lg"

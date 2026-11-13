@@ -11,15 +11,16 @@ import { useCallback } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
 // nerve imports
-import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
+import { EIssueFilterType, EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { useRefusalToast } from "@/hooks/use-refusal-toast";
 import { useDetailScope } from "@/components/issues/issue-detail-widgets/use-detail-scope";
 import { useDropHighlight } from "@/hooks/use-drop-highlight";
 
-import { EIssuesStoreType } from "@nerve/types";
+import type { EIssuesStoreType } from "@nerve/types";
 // hooks
 import { useCalendarView } from "@/hooks/store/use-calendar-view";
 import { useIssues } from "@/hooks/store/use-issues";
+import { usePageIssueFilters } from "@/hooks/store/use-page-issue-filters";
 import { useUserPermissions } from "@/hooks/store/user";
 import { useIssueStoreType } from "@/hooks/use-issue-layout-store";
 import { useIssuesActions } from "@/hooks/use-issues-actions";
@@ -28,17 +29,23 @@ import { useIssueListMount } from "@/hooks/use-issue-list-mount";
 // types
 import type { IQuickActionProps } from "../list/list-view-types";
 import { CalendarChart } from "./calendar";
+import type { TUpdateCalendarDisplay } from "./dropdowns";
 import { handleDragDrop } from "./utils";
 
-export type CalendarStoreType = EIssuesStoreType.PROJECT;
+export type CalendarStoreType = EIssuesStoreType.PROJECT | EIssuesStoreType.CYCLE;
 
 interface IBaseCalendarRoot {
   QuickActions: FC<IQuickActionProps>;
   canEditPropertiesBasedOnProject?: (projectId: string) => boolean;
+  /**
+   * The whole list is read-only, whatever the caller may do in the project (an ended or archived cycle's page): no
+   * creation, inline edit or drag, and the rows' quick actions are read-only.
+   */
+  readOnly?: boolean;
 }
 
 export const BaseCalendarRoot = observer(function BaseCalendarRoot(props: IBaseCalendarRoot) {
-  const { QuickActions, canEditPropertiesBasedOnProject } = props;
+  const { QuickActions, canEditPropertiesBasedOnProject, readOnly = false } = props;
 
   // router
   const { workspaceSlug, projectId } = useParams();
@@ -46,7 +53,7 @@ export const BaseCalendarRoot = observer(function BaseCalendarRoot(props: IBaseC
   // hooks
   const storeType = useIssueStoreType() as CalendarStoreType;
   const { allowPermissions } = useUserPermissions();
-  const { issues, issuesFilter, issueMap } = useIssues(storeType);
+  const { issues, issueMap } = useIssues(storeType);
   const {
     fetchIssues,
     fetchNextIssues,
@@ -70,14 +77,17 @@ export const BaseCalendarRoot = observer(function BaseCalendarRoot(props: IBaseC
       workspaceSlug,
       projectId
     );
+  // A read-only list or a caller who may not write here: no quick add, and no drag or drop of a day's row.
+  const isCalendarReadOnly = readOnly || !isEditingAllowed;
 
   const { enableInlineEditing } = issues?.viewFlags || {};
 
-  const displayFilters = issuesFilter.issueFilters?.displayFilters;
+  const calendar = usePageIssueFilters(storeType)?.displayFilters?.calendar;
 
   const groups = (issues.groups ?? new Map()) as Map<string, Group>;
 
-  const layout = displayFilters?.calendar?.layout ?? "month";
+  const layout = calendar?.layout ?? "month";
+  const showWeekends = calendar?.show_weekends ?? false;
   const { startDate, endDate } = issueCalendarView.getStartAndEndDate(layout) ?? {};
   const host = JSON.stringify([workspaceSlug, projectId, layout, startDate, endDate]);
   const capture = useDetailScope(workspaceSlug ?? "", projectId, host, true);
@@ -92,8 +102,7 @@ export const BaseCalendarRoot = observer(function BaseCalendarRoot(props: IBaseC
           endDate &&
           date >= startDate &&
           date <= endDate &&
-          (displayFilters?.calendar?.show_weekends !== false ||
-            ![0, 6].includes(new Date(`${date}T12:00:00Z`).getUTCDay()))
+          (calendar?.show_weekends !== false || ![0, 6].includes(new Date(`${date}T12:00:00Z`).getUTCDay()))
       )
       .map((group) => ({ group }))
   );
@@ -118,7 +127,7 @@ export const BaseCalendarRoot = observer(function BaseCalendarRoot(props: IBaseC
     sourceDate: string | undefined,
     destinationDate: string | undefined
   ) => {
-    if (!issueId || !destinationDate || !sourceDate || !issueProjectId || !dropIssue || !isEditingAllowed) return;
+    if (!issueId || !destinationDate || !sourceDate || !issueProjectId || !dropIssue || isCalendarReadOnly) return;
     if (sourceDate === destinationDate || issueProjectId !== projectId || issueMap[issueId]?.target_date !== sourceDate)
       return;
     const binding = issues.currentList;
@@ -156,8 +165,16 @@ export const BaseCalendarRoot = observer(function BaseCalendarRoot(props: IBaseC
     [issues]
   );
 
+  // A change of the page's calendar display keeps the rest of it; the page's own preferences take it.
+  const updateCalendar: TUpdateCalendarDisplay | undefined = projectId
+    ? (change) => {
+        void updateFilters(projectId, EIssueFilterType.DISPLAY_FILTERS, { calendar: { ...calendar, ...change } });
+      }
+    : undefined;
+
   const canEditProperties = useCallback(
     (targetProjectId: string | undefined) => {
+      if (readOnly) return false;
       const isEditingAllowedBasedOnProject =
         canEditPropertiesBasedOnProject && targetProjectId
           ? canEditPropertiesBasedOnProject(targetProjectId)
@@ -165,7 +182,7 @@ export const BaseCalendarRoot = observer(function BaseCalendarRoot(props: IBaseC
 
       return enableInlineEditing && isEditingAllowedBasedOnProject;
     },
-    [canEditPropertiesBasedOnProject, enableInlineEditing, isEditingAllowed]
+    [canEditPropertiesBasedOnProject, enableInlineEditing, isEditingAllowed, readOnly]
   );
 
   return (
@@ -173,12 +190,12 @@ export const BaseCalendarRoot = observer(function BaseCalendarRoot(props: IBaseC
       <IssueListRetry {...staleRefresh} />
       <div className="h-full w-full overflow-hidden bg-surface-1 pt-4">
         <CalendarChart
-          readOnly={!isEditingAllowed}
-          issuesFilterStore={issuesFilter}
+          readOnly={isCalendarReadOnly}
           issues={issueMap}
           groups={groups}
-          layout={displayFilters?.calendar?.layout}
-          showWeekends={displayFilters?.calendar?.show_weekends ?? false}
+          layout={layout}
+          showWeekends={showWeekends}
+          updateCalendar={updateCalendar}
           issueCalendarView={issueCalendarView}
           quickActions={({ issue, parentRef, customActionButton, placement }) => (
             <QuickActions
@@ -197,7 +214,6 @@ export const BaseCalendarRoot = observer(function BaseCalendarRoot(props: IBaseC
           getPaginationData={getPaginationData}
           getGroupIssueCount={getGroupIssueCount}
           quickAddCallback={createIssue}
-          updateFilters={updateFilters}
           handleDragAndDrop={handleDragAndDrop}
           canEditProperties={canEditProperties}
         />

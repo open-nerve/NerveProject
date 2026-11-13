@@ -101,3 +101,25 @@ it("keys a real list by login and drops a retired session's late answer; refusal
   expect(y.app.issue.projectIssues.currentList?.error).toBeDefined();
   y.app.dispose();
 });
+
+// P5b spec 2.1: a cycle page's list is its project's, gated as the project's, and each cycle has its own key.
+it("keys a cycle page's list by its cycle and gates it as its project's list", async () => {
+  const tab = await issueStoreTab();
+  const fetch = (() => Promise.resolve(undefined)) as never;
+  const keyOf = (params: Record<string, string>, role: number | undefined) => {
+    f.params = params;
+    f.role = role;
+    f.calls = [];
+    useIssueListMount(EIssuesStoreType.CYCLE, tab.app.issue, fetch, { limit: 20 });
+    const [key] = f.calls[0]!;
+    return key ? sessionKey({ status: "signed-in", loginId: "x" }, ...(key as [string, ...string[]])) : null;
+  };
+  const one = keyOf({ workspaceSlug: "ws", projectId: "A", cycleId: "C1" }, 5);
+  const two = keyOf({ workspaceSlug: "ws", projectId: "A", cycleId: "C2" }, 5);
+  expect(one).toContain("C1");
+  expect(two).toContain("C2");
+  expect(one).not.toEqual(two);
+  expect(keyOf({ workspaceSlug: "ws", projectId: "A" }, 15)).toBeNull();
+  expect(keyOf({ workspaceSlug: "ws", projectId: "A", cycleId: "C1" }, undefined)).toBeNull();
+  tab.app.dispose();
+});
