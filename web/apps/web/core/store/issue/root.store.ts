@@ -7,6 +7,7 @@
 import { computed, makeObservable, observable, runInAction } from "mobx";
 // types
 import type { ApiClient, MemberUser, State, Label, Issue } from "@nerve/api-client";
+import { EIssuesStoreType } from "@nerve/types";
 // store
 import type { IIssueDetail } from "@/store/issue/issue-details/root.store";
 import { IssueDetail } from "@/store/issue/issue-details/root.store";
@@ -25,10 +26,9 @@ import type { IProfileIssuesFilter, IProfileIssues } from "./profile";
 import { ProfileIssuesFilter, ProfileIssues } from "./profile";
 import type { IProjectIssuesFilter, IProjectIssues } from "./project";
 import { ProjectIssuesFilter, ProjectIssues } from "./project";
-import { CycleIssuesFilter } from "./cycle/filter.store";
 import { CycleIssues, type ICycleIssues } from "./cycle/issue.store";
 import { CyclePriorityIssues } from "./cycle/priority-issues.store";
-import type { IPagePreferencesFilter } from "./helpers/page-preferences-filter.store";
+import { PagePreferencesFilter, type IPagePreferencesFilter } from "./helpers/page-preferences-filter.store";
 import type { IWorkspaceDraftIssues } from "./workspace-draft";
 import { WorkspaceDraftIssues } from "./workspace-draft";
 import { IssueWrites } from "./issue-writes";
@@ -37,6 +37,7 @@ import { membershipFields } from "./issue-write-fields";
 import { IssueApiService } from "@/services/issue/issue-api.service";
 import { IssueListService } from "@/services/issue/issue-list.service";
 import { IssueSearchService } from "@/services/issue/issue-search.service";
+import { CyclePreferencesService } from "@/services/planning/cycle-preferences.service";
 import { SessionChangedError } from "@/lib/auth/token-manager";
 import type { IssueListBinding } from "./helpers/issue-list-binding";
 import { PermissionReads } from "./permission-reads";
@@ -89,7 +90,11 @@ export class IssueRootStore {
   projectIssuesFilter: IProjectIssuesFilter;
   projectIssues: IProjectIssues;
 
-  /** The cycle page's preferences, by cycle id; it ends with this generation (assertActive) as the project's. */
+  /**
+   * The cycle page's preferences (`/me/cycles/{id}/preferences`), by cycle id (P5b spec 2.4, P6b spec 2.2): no route
+   * followed, the page passes the cycle of its route params on each call; it ends with this generation (assertActive)
+   * as the project's.
+   */
   cycleIssuesFilter: IPagePreferencesFilter;
   /** The cycle page's list, one binding per cycle, registered in this generation as every list is. */
   cycleIssues: ICycleIssues;
@@ -178,7 +183,7 @@ export class IssueRootStore {
     this.projectIssuesFilter = new ProjectIssuesFilter(this, api);
     this.projectIssues = new ProjectIssues(this, this.projectIssuesFilter);
 
-    this.cycleIssuesFilter = new CycleIssuesFilter(this, api);
+    this.cycleIssuesFilter = new PagePreferencesFilter(this, new CyclePreferencesService(api), EIssuesStoreType.CYCLE);
     this.cycleIssues = new CycleIssues(this, this.cycleIssuesFilter);
     this.cyclePriorityIssues = new CyclePriorityIssues(this);
 

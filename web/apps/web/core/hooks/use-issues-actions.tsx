@@ -18,7 +18,7 @@ import { EUserPermissions } from "@nerve/constants";
 import type { TLoader, TProfileViews, TSupportedFilterForUpdate } from "@nerve/types";
 import { EIssuesStoreType } from "@nerve/types";
 import { useIssues } from "./store/use-issues";
-import { useCycleIssueActions } from "./use-cycle-issue-actions";
+import { usePlanningPageIssueActions } from "./use-planning-page-issue-actions";
 import { useProjectPreferencesFollow } from "./use-project-preferences-follow";
 import { useUserPermissions } from "./store/user";
 
@@ -53,7 +53,7 @@ export function useIssuesActions(storeType: EIssuesStoreType | undefined): Issue
   const projectIssueActions = useProjectIssueActions();
   const profileIssueActions = useProfileIssueActions();
   const archivedIssueActions = useArchivedIssueActions();
-  const cycleIssueActions = useCycleIssueActions();
+  const cycleIssueActions = usePlanningPageIssueActions(EIssuesStoreType.CYCLE);
 
   switch (storeType) {
     case undefined:

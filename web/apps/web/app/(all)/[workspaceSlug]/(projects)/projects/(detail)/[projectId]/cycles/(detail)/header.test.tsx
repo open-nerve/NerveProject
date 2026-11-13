@@ -186,7 +186,7 @@ it("hides the list's controls and its count once the project's cycles are turned
   await act(async () =>
     page.app.projectRoot.project.confirmProject(page.project, (project) => ({ ...project, cycle_view: false }))
   );
-  expect(page.app.issue.cycleIssues.pageTotal({ projectID: "A", cycleID: C1 })).toBe(7);
+  expect(page.app.issue.cycleIssues.pageTotal({ projectID: "A", entityID: C1 })).toBe(7);
   expect(offered()).toEqual({ count: undefined, layouts: [], filters: false, display: false, create: false });
 });
 

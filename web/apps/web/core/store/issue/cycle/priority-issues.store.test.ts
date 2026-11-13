@@ -100,7 +100,7 @@ it("leaves the cycle page's list, and the project page's, as they are (R7)", asy
   const page = app.issue.cycleIssues;
   await answered(
     nerve,
-    () => page.fetchIssues("ws", pageOf(C1), "init-loader", { limit: 20 }),
+    () => page.fetchIssues("ws", { projectID: "A", entityID: C1 }, "init-loader", { limit: 20 }),
     ["GET", "/api/v0/projects/A/issues"],
     issuePageOf([inCycle("low", "low", "2026-11-02T00:00:00Z"), a]),
     "the cycle page's list"

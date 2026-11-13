@@ -80,7 +80,7 @@ beforeEach(async () => {
   await read.promise;
   const list = await requestedIssue(
     tab.nerve,
-    () => tab.app.issue.cycleIssues.fetchIssues("ws", { projectID: "A", cycleID: C1 }, "init-loader", { limit: 10 }),
+    () => tab.app.issue.cycleIssues.fetchIssues("ws", { projectID: "A", entityID: C1 }, "init-loader", { limit: 10 }),
     ["GET", "/api/v0/projects/A/issues"]
   );
   list.call.answer(json(200, issuePageOf([{ ...issueOf("old"), cycle_id: C1 }])));

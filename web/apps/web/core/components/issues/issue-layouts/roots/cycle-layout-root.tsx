@@ -13,9 +13,9 @@ import { ProjectLevelWorkItemFiltersHOC } from "@/components/work-item-filters/f
 import { WorkItemFiltersRow } from "@/components/work-item-filters/filters-row";
 // hooks
 import { useIssues } from "@/hooks/store/use-issues";
-import { useCyclePreferencesFollow } from "@/hooks/use-cycle-preferences-follow";
 import { IssuesStoreContext } from "@/hooks/use-issue-layout-store";
 import { usePageFilterExpression } from "@/hooks/use-page-filter-expression";
+import { usePlanningPagePreferencesFollow } from "@/hooks/use-planning-page-preferences-follow";
 import { usePlanningReads } from "@/hooks/use-planning-reads";
 // lib
 import { useSessionSWR } from "@/lib/use-session-swr";
@@ -56,7 +56,7 @@ export const CycleLayoutRoot = observer(function CycleLayoutRoot() {
   // store hooks
   const { issues, issuesFilter } = useIssues(EIssuesStoreType.CYCLE);
   // hooks
-  const follow = useCyclePreferencesFollow();
+  const follow = usePlanningPagePreferencesFollow(EIssuesStoreType.CYCLE);
   const updateExpression = usePageFilterExpression(
     EIssuesStoreType.CYCLE,
     workspaceSlug,

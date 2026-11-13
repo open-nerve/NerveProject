@@ -4,34 +4,37 @@ import { useParams } from "react-router";
 import type { Issue, IssueCreate, IssueUpdate } from "@nerve/api-client";
 import type { TSupportedFilterTypeForUpdate } from "@nerve/constants";
 import type { TLoader, TSupportedFilterForUpdate } from "@nerve/types";
-import { EIssuesStoreType } from "@nerve/types";
 import type { IssueListOptions } from "@/lib/issue-filters";
-import type { CyclePage } from "@/store/issue/cycle/issue.store";
+import type { PlanningPage } from "@/store/issue/helpers/planning-page-issues.store";
 import type { IssueDrop } from "@/store/issue/issue-writes";
 import { useIssues } from "./store/use-issues";
 import { useUserPermissions } from "./store/user";
-import { cycleListState } from "./use-cycle-list-state";
-import { useCyclePreferencesFollow } from "./use-cycle-preferences-follow";
-import { useCycleProgressFollow } from "./use-cycle-progress-follow";
+import { PLANNING_PAGE_DOMAINS, type PlanningPageStoreType } from "./planning-page-domains";
+import { usePlanningPagePreferencesFollow } from "./use-planning-page-preferences-follow";
+import { usePlanningPageProgressFollow } from "./use-planning-page-progress-follow";
 
 /**
- * The cycle page's list commands (P5b spec 2.5): the workspace, project and cycle come from the page's route params,
- * never the router store. The list is read for any member of the project, as the project page's is (spec 2.1). Each
- * write it sends reads the cycle's progress again once nerve confirms it (useCycleProgressFollow, spec 2.6, R10).
+ * A cycle's or a module's page's list commands (P5b spec 2.5; P6b spec 2.2): the workspace, project and cycle or
+ * module come from the page's route params, never the router store. The list is read for any member of the project, as
+ * the project page's is (P5b spec 2.1). Each write it sends reads the page's progress again once nerve confirms it
+ * (usePlanningPageProgressFollow, P5b spec 2.6, R10).
  */
-export function useCycleIssueActions() {
-  const { workspaceSlug, projectId: routeProjectId, cycleId } = useParams();
-  const { issues, issuesFilter } = useIssues(EIssuesStoreType.CYCLE);
-  const follow = useCyclePreferencesFollow();
-  const followProgress = useCycleProgressFollow();
+export function usePlanningPageIssueActions(storeType: PlanningPageStoreType) {
+  const domain = PLANNING_PAGE_DOMAINS[storeType];
+  const params = useParams();
+  const { workspaceSlug, projectId: routeProjectId } = params;
+  const entityId = params[domain.param];
+  const { issues, issuesFilter } = useIssues(storeType);
+  const follow = usePlanningPagePreferencesFollow(storeType);
+  const followProgress = usePlanningPageProgressFollow(storeType);
   const permission = useUserPermissions();
   const role =
     workspaceSlug && routeProjectId
       ? permission.getProjectRoleByWorkspaceSlugAndProjectId(workspaceSlug, routeProjectId)
       : undefined;
-  const page = useMemo<CyclePage | undefined>(
-    () => (routeProjectId && cycleId ? { projectID: routeProjectId, cycleID: cycleId } : undefined),
-    [routeProjectId, cycleId]
+  const page = useMemo<PlanningPage | undefined>(
+    () => (routeProjectId && entityId ? { projectID: routeProjectId, entityID: entityId } : undefined),
+    [routeProjectId, entityId]
   );
 
   const fetchIssues = useCallback(
@@ -49,24 +52,20 @@ export function useCycleIssueActions() {
     [issues, workspaceSlug, page, role]
   );
   /**
-   * A creation joins the page's cycle while the page shows the cycle taking work items as it is sent (spec 2.5): the
-   * page's own entries offer it only then, and the app's own new work item, which resolves to these commands on a
-   * cycle's page, otherwise creates as the project's page does, with no cycle the form could not drop when nerve
-   * refused it. A creation of the cycle's project that joins it is the page's list's, whose confirmation reads the
-   * cycle's progress again (spec 2.6, R10); one in another project, or while the cycle takes none, is not the cycle's.
+   * A creation joins the page's cycle or module while the page shows it taking work items as it is sent (P5b spec
+   * 2.5): the page's own entries offer it only then, and the app's own new work item, which resolves to these commands
+   * on the page, otherwise creates as the project's page does, with nothing of the page the form could not drop when
+   * nerve refused it. A creation of the page's project that joins it is the page's list's, whose confirmation reads
+   * the progress again (P5b spec 2.6, R10); one in another project, or while the page takes none, is not the page's.
    */
   const createIssue = useCallback(
     async (projectId: string | undefined | null, data: IssueCreate) => {
       if (!workspaceSlug || !projectId || !page) return;
-      const { planning, projectRoot } = issues.rootIssueStore.rootStore;
-      const { joinable } = cycleListState(
-        planning.cycles.getCycleById(page.cycleID),
-        projectRoot.project.getProjectById(page.projectID)
-      );
-      if (!joinable || projectId !== page.projectID) return await issues.createIssue(workspaceSlug, projectId, data);
+      if (!domain.joinable(issues.rootIssueStore.rootStore, page) || projectId !== page.projectID)
+        return await issues.createIssue(workspaceSlug, projectId, data);
       return await followProgress(() => issues.createIssue(workspaceSlug, projectId, data, page));
     },
-    [issues, workspaceSlug, page, followProgress]
+    [issues, domain, workspaceSlug, page, followProgress]
   );
   const updateIssue = useCallback(
     async (projectId: string | undefined | null, issueId: string, data: IssueUpdate) => {
@@ -97,17 +96,17 @@ export function useCycleIssueActions() {
     [issues, workspaceSlug, followProgress]
   );
   /**
-   * The page's preferences are the cycle's, whatever project the caller names; their change is followed as the project
-   * page's (P5b spec 2.4): its list read again when its query changed, a refusal said.
+   * The page's preferences are its cycle's or module's, whatever project the caller names; their change is followed
+   * as the project page's (P5b spec 2.4): its list read again when its query changed, a refusal said.
    */
   const updateFilters = useCallback(
     async (_projectId: string, filterType: TSupportedFilterTypeForUpdate, filters: TSupportedFilterForUpdate) => {
-      if (!workspaceSlug || !cycleId) return;
-      return await follow(workspaceSlug, cycleId, () =>
-        issuesFilter.updateFilters(workspaceSlug, cycleId, filterType, filters)
+      if (!workspaceSlug || !entityId) return;
+      return await follow(workspaceSlug, entityId, () =>
+        issuesFilter.updateFilters(workspaceSlug, entityId, filterType, filters)
       );
     },
-    [issuesFilter, workspaceSlug, cycleId, follow]
+    [issuesFilter, workspaceSlug, entityId, follow]
   );
 
   return useMemo(

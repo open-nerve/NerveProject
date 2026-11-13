@@ -81,7 +81,7 @@ export const CycleIssuesHeader = observer(function CycleIssuesHeader(props: TPro
   const cycleDetails = getCycleById(cycleId);
   // the page's work items show for the project's members while its cycles are on (the layout root's own condition)
   const { listed: listShown } = usePlanningReads(workspaceSlug, projectId, "cycles");
-  const workItemsCount = listShown ? issues.pageTotal({ projectID: projectId, cycleID: cycleId }) : undefined;
+  const workItemsCount = listShown ? issues.pageTotal({ projectID: projectId, entityID: cycleId }) : undefined;
   const preferencesShown = listShown && issuesFilter.getIssueFilters(cycleId) !== undefined;
   const canCreateWorkItem =
     joinable &&
