@@ -6,12 +6,12 @@ import { anotherTabSignsIn } from "../../fixtures/auth";
 import { expectQuietConsole, refuseClipboardWrites, watchPage } from "../../fixtures/browser";
 import {
   chooseFromMenu,
-  cycleMenu,
   cyclePagesWorld,
   cyclePath,
   cycleSection,
   cyclesPath,
   dismissToasts,
+  itemMenu,
   linkedCycles,
   toast,
   turnCycles,
@@ -131,7 +131,7 @@ test("G19 (page): with mem's new cycle dialog open on Web's list and its cycle s
   // On Web's list, Roadmap's, no dialog is open: mem's dialog of the name given, its cycle sent and nerve's answer held.
   const heldOnWeb = async (name: string) => {
     await moveWithinApp(page, webList);
-    await expect(cycleMenu(page, "Roadmap")).toBeVisible();
+    await expect(itemMenu(page, "Roadmap")).toBeVisible();
     expect(await shownWithin(modalDialog(page)), "a dialog open on Web's list").toBe(false);
     const dialog = await newCycleDialog(page, name);
     const held = await sentHeld(page, "POST", listed, () =>
@@ -165,7 +165,7 @@ test("G19 (page): with mem's new cycle dialog open on Web's list and its cycle s
 
   // Back on Web, no dialog opens; its drafts are listed by name, the three made by nerve, mem's.
   await moveWithinApp(page, webList);
-  await expect(cycleMenu(page, "Roadmap")).toBeVisible();
+  await expect(itemMenu(page, "Roadmap")).toBeVisible();
   expect(await shownWithin(modalDialog(page)), "a dialog open on Web's list").toBe(false);
   const ids = Object.fromEntries(
     (
@@ -217,7 +217,7 @@ test("G19 (page): Web's list names each cycle's menu and its filters and their s
   await expect.poll(() => linkedCycles(cycleSection(page, "Upcoming cycle"))).toEqual([alpha.id, beta.id]);
 
   // Alpha's menu, named by it, says whether it is open; so do the filters, and each of their sections.
-  const menu = cycleMenu(page, "Alpha");
+  const menu = itemMenu(page, "Alpha");
   await expect(menu).toHaveAttribute("aria-expanded", "false");
   await menu.click();
   await expect(page.getByRole("menu")).toBeVisible();

@@ -3,12 +3,12 @@ import { expectQuietConsole, watchPage } from "../../fixtures/browser";
 import {
   archivedCyclesPath,
   chooseFromMenu,
-  cycleMenu,
   cyclePagesWorld,
   cycleSection,
   cyclesPath,
   dismissToasts,
   failedLoads,
+  itemMenu,
   linkedCycles,
   menuEntries,
   openCyclesList,
@@ -100,7 +100,7 @@ test("G8 (page): Web's archive of cycles, empty, says so at once and asks nerve'
   await expect.poll(() => linkedCycles(cycleSection(page, "Completed cycle"))).toEqual([q2.id, q1.id]);
   const reasoned = page.getByRole("menu").getByRole("menuitem", { name: /^Archive/ });
   const archiveOffered = async (name: string) => {
-    await cycleMenu(page, name).click();
+    await itemMenu(page, name).click();
     const offered = [(await reasoned.isDisabled()) ? "disabled" : "enabled", (await reasoned.textContent()) ?? ""];
     await page.keyboard.press("Escape");
     await expect(reasoned).toHaveCount(0);
@@ -169,7 +169,7 @@ test("G8 (page): Web's archive of cycles, empty, says so at once and asks nerve'
 
   // Q1 restored from its menu: said once nerve has restored it, and its row goes from the archive.
   const q1Restore = `/api/v0/cycles/${q1.id}/unarchive`;
-  await cycleMenu(page, "Q1").click();
+  await itemMenu(page, "Q1").click();
   const restoring = await sentHeld(page, "POST", q1Restore, () =>
     page.getByRole("menuitem", { name: "Restore", exact: true }).click()
   );
@@ -185,7 +185,7 @@ test("G8 (page): Web's archive of cycles, empty, says so at once and asks nerve'
   await dismissToasts(page);
   await turnCycles(api, token, web, false);
   const q2Restore = `/api/v0/cycles/${q2.id}/unarchive`;
-  await cycleMenu(page, "Q2").click();
+  await itemMenu(page, "Q2").click();
   const refused = await sentTo(page, "POST", q2Restore, () =>
     page.getByRole("menuitem", { name: "Restore", exact: true }).click()
   );

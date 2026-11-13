@@ -3,7 +3,7 @@ import { expect, type Locator, type Page, type TestInfo } from "@playwright/test
 import { changeProject, type Api, type Project } from "./api";
 import type { ModuleRow } from "./assert/planning";
 import { focusOutline } from "./browser";
-import { cycleMenu, cyclePagesWorld } from "./cycle-pages";
+import { cyclePagesWorld, itemMenu } from "./cycle-pages";
 
 // A project's module pages (M6 P6a spec 2.6, 2.7, 2.8, 2.11), as a person uses them: their addresses, what a story
 // finds on them by role and name, the world of their stories and the rows of the database they make. What the module
@@ -85,7 +85,7 @@ export function moduleRow(page: Page, id: string, name: string): Locator {
   return page
     .locator("div.relative")
     .filter({ has: page.locator(`a[href$="/modules/${id}"]`) })
-    .filter({ has: cycleMenu(page, name) })
+    .filter({ has: itemMenu(page, name) })
     .last();
 }
 

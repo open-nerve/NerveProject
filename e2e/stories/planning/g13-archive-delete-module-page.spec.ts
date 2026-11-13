@@ -4,9 +4,9 @@ import { emailFor } from "../../fixtures/auth";
 import { expectQuietConsole, watchPage } from "../../fixtures/browser";
 import {
   chooseFromMenu,
-  cycleMenu,
   dismissToasts,
   failedLoads,
+  itemMenu,
   menuEntries,
   recordApi,
   seenBy,
@@ -87,7 +87,7 @@ test("G13 (page): Web's archive of modules, empty, says so at once, never a plac
   await expect.poll(listed).toEqual([doing.id, done.id, dropped.id]);
   const reasoned = page.getByRole("menu").getByRole("menuitem", { name: /^Archive/ });
   const archiveOffered = async (name: string) => {
-    await cycleMenu(page, name).click();
+    await itemMenu(page, name).click();
     const offered = [(await reasoned.isDisabled()) ? "disabled" : "enabled", (await reasoned.textContent()) ?? ""];
     await page.keyboard.press("Escape");
     await expect(reasoned).toHaveCount(0);

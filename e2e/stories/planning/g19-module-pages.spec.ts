@@ -6,9 +6,9 @@ import { anotherTabSignsIn } from "../../fixtures/auth";
 import { expectQuietConsole, refuseClipboardWrites, watchPage } from "../../fixtures/browser";
 import {
   chooseFromMenu,
-  cycleMenu,
   dismissToasts,
   entriesOf,
+  itemMenu,
   rowMenusKept,
   tabKey,
   toast,
@@ -133,7 +133,7 @@ test("G19 (page): with mem's new module dialog open on Web's list and its module
   // held.
   const heldOnWeb = async (name: string) => {
     await moveWithinApp(page, webList);
-    await expect(cycleMenu(page, "Roadmap")).toBeVisible();
+    await expect(itemMenu(page, "Roadmap")).toBeVisible();
     expect(await shownWithin(modalDialog(page)), "a dialog open on Web's list").toBe(false);
     const dialog = await newModuleDialog(page, name);
     const held = await sentHeld(page, "POST", listed, () =>
@@ -167,7 +167,7 @@ test("G19 (page): with mem's new module dialog open on Web's list and its module
 
   // Back on Web, no dialog opens; its modules are listed by name, the three made by nerve, mem's.
   await moveWithinApp(page, webList);
-  await expect(cycleMenu(page, "Roadmap")).toBeVisible();
+  await expect(itemMenu(page, "Roadmap")).toBeVisible();
   expect(await shownWithin(modalDialog(page)), "a dialog open on Web's list").toBe(false);
   const ids = await moduleIds(db, web.id);
   await expect.poll(listedOn(page)).toEqual([ids["Held across"], ids["Held away"], ids["Held back"], roadmap.id]);
@@ -227,7 +227,7 @@ test("G19 (page): Web's list names each module's menu, its order, its filters an
     page,
     key,
     ...["Search", "Order by: Name", "Filters", "Add Module"].map(named),
-    cycleMenu(page, "Alpha")
+    itemMenu(page, "Alpha")
   );
 
   // Alpha's menu, named by it, says whether it is open; so do the order, named by the order chosen, and the filters,
@@ -237,7 +237,7 @@ test("G19 (page): Web's list names each module's menu, its order, its filters an
     await button.click();
     await expect(button).toHaveAttribute("aria-expanded", "true");
   };
-  const menu = cycleMenu(page, "Alpha");
+  const menu = itemMenu(page, "Alpha");
   await opens(menu);
   await expect(page.getByRole("menu")).toBeVisible();
   await page.keyboard.press("Escape");
@@ -278,7 +278,7 @@ test("G19 (page): Web's list names each module's menu, its order, its filters an
   if (wide) await page.setViewportSize(wide);
   await expect(cards).toHaveAttribute("aria-pressed", "true");
   await expect(rows).toHaveAttribute("aria-pressed", "false");
-  await expectOutlinesWhole(page, key, cycleMenu(page, "Alpha"));
+  await expectOutlinesWhole(page, key, itemMenu(page, "Alpha"));
   await rows.click();
   await expect(rows).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByText("1/3 work items", { exact: true })).toHaveCount(0);
@@ -334,7 +334,7 @@ test("G19 (page): Web's list names each module's menu, its order, its filters an
 
   // Reached by the keyboard, the header's details toggle (IconButton) and Beta's menu (CustomMenu) show their focus
   // outlines whole.
-  await expectOutlinesWhole(page, key, named("Toggle details"), cycleMenu(page, "Beta"));
+  await expectOutlinesWhole(page, key, named("Toggle details"), itemMenu(page, "Beta"));
 
   // Beta's Notes link copied, the clipboard still refused: the sidebar says the copy failed, never that it copied.
   await page.getByRole("button", { name: "Copy link: Notes", exact: true }).click();

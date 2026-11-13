@@ -135,12 +135,15 @@ export function cycleRow(page: Page, id: string, name: string): Locator {
   return page
     .locator("div.relative")
     .filter({ has: page.locator(`a[href$="/cycles/${id}"]`) })
-    .filter({ has: cycleMenu(page, name) })
+    .filter({ has: itemMenu(page, name) })
     .last();
 }
 
-/** The button of the menu of the cycle of name, or of the module: named by it (common.item_options). */
-export function cycleMenu(page: Page, name: string): Locator {
+/**
+ * The button of the menu of the item of name, a cycle or a module, on its row, its card or its page: named by it
+ * (common.item_options).
+ */
+export function itemMenu(page: Page, name: string): Locator {
   return page.getByRole("button", { name: `${name} options`, exact: true });
 }
 
@@ -165,7 +168,7 @@ export async function entriesOf(menu: Locator): Promise<string[]> {
  * menu is closed again by Escape.
  */
 export async function menuEntries(page: Page, name: string): Promise<string[]> {
-  await cycleMenu(page, name).click();
+  await itemMenu(page, name).click();
   const menu = page.getByRole("menu");
   const entries = await entriesOf(menu);
   await page.keyboard.press("Escape");
@@ -190,7 +193,7 @@ export async function rowMenusKept(page: Page): Promise<{ entries: number; focus
 
 /** Chooses entry from the menu of the cycle or the module of name, which page shows. */
 export async function chooseFromMenu(page: Page, name: string, entry: string): Promise<void> {
-  await cycleMenu(page, name).click();
+  await itemMenu(page, name).click();
   await page.getByRole("menu").getByRole("menuitem", { name: entry, exact: true }).click();
 }
 
