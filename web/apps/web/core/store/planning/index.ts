@@ -11,25 +11,30 @@ import type { ICycleFilterStore } from "./cycle_filter.store";
 import { CycleFilterStore } from "./cycle_filter.store";
 import type { IModuleStore } from "./module.store";
 import { ModuleStore } from "./module.store";
+import type { IModuleFilterStore } from "./module_filter.store";
+import { ModuleFilterStore } from "./module_filter.store";
 
 export interface IPlanningStore {
   cycles: ICycleStore;
   cycleFilters: ICycleFilterStore;
   modules: IModuleStore;
+  moduleFilters: IModuleFilterStore;
 }
 
 /**
  * The planning of a session's projects (M6): their cycles and their modules, and what each project's cycles list and
- * archive are filtered and searched by.
+ * archive, and its modules list and archive, are filtered and searched by.
  */
 export class PlanningStore implements IPlanningStore {
   cycles: ICycleStore;
   cycleFilters: ICycleFilterStore;
   modules: IModuleStore;
+  moduleFilters: IModuleFilterStore;
 
   constructor(rootStore: RootStore, api: ApiClient) {
     this.cycles = new CycleStore(rootStore, api);
     this.cycleFilters = new CycleFilterStore();
     this.modules = new ModuleStore(rootStore, api);
+    this.moduleFilters = new ModuleFilterStore();
   }
 }
