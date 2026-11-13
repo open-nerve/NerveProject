@@ -124,7 +124,7 @@ export class IssueSubIssuesStore {
     }, token);
   }
   createSubIssues = (ws: string, project: string, parentID: string, ids: string[]): Promise<void> =>
-    this.root.enqueueIssueChanges(
+    this.root.writes.enqueueIssueChanges(
       [parentID, ...ids],
       async () => {
         const resource = this.resources.entry(ws, project, parentID);

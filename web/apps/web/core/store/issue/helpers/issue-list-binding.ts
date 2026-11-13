@@ -76,7 +76,7 @@ export class IssueListBinding {
     return {
       ...this.scope,
       currentUserID: this.root.currentUserId ?? "",
-      pendingIDs: this.root.pendingIDs,
+      pendingIDs: this.root.writes.pendingIDs,
       catalog: {
         states: new Map(Object.entries(this.root.stateMap ?? {})),
         labels: new Map(Object.entries(this.root.labelMap ?? {})),

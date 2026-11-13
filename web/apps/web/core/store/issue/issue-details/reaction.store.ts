@@ -55,7 +55,7 @@ export class IssueReactionStore {
     send: () => Promise<T>,
     confirm: (answer: T, rows: IssueReaction[]) => IssueReaction[]
   ): Promise<T> {
-    return this.root.enqueueIssueChanges(
+    return this.root.writes.enqueueIssueChanges(
       [id],
       async () => {
         const resource = this.resources.entry(ws, project, id);

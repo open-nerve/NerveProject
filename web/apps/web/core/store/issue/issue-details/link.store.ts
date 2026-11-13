@@ -50,7 +50,7 @@ export class IssueLinkStore {
     request: () => Promise<IssueLink | void>,
     removed?: string
   ): Promise<IssueLink | void> {
-    return this.root.enqueueIssueChanges(
+    return this.root.writes.enqueueIssueChanges(
       [id],
       async () => {
         const resource = this.resources.entry(ws, project, id);

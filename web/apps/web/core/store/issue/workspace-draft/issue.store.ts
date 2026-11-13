@@ -171,7 +171,7 @@ export class WorkspaceDraftIssues {
     this.command(ws, id, async (resource, token) => {
       await this.save(ws, id, input, resource, token);
       const scope = { workspaceSlug: ws, workspaceID: resource.scope.workspaceID };
-      const issue = await this.issueStore.confirmCreation(scope, async () => {
+      const issue = await this.issueStore.writes.confirmCreation(scope, async () => {
         this.assertCurrent(ws, resource, token);
         const answer = await this.issueStore.draftApi.publish(id);
         this.assertCurrent(ws, resource, token);

@@ -1,4 +1,4 @@
-import type { IssueDrop } from "@/store/issue/root.store";
+import type { IssueDrop } from "@/store/issue/issue-writes";
 import type { PagedGroups } from "@/lib/paged-groups";
 import type { IssueListOptions } from "@/lib/issue-filters";
 /**

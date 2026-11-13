@@ -49,7 +49,7 @@ export class CycleIssues extends PagePreferencesIssues<IPagePreferencesFilter> {
    * nerve would refuse it with a `cycle_id` error the form cannot show before P7, so it goes without (re-66 M3).
    */
   override createIssue = (slug: string, project: string, body: IssueCreate, page?: CyclePage): Promise<IssueDetail> =>
-    this.rootIssueStore.createIssue(
+    this.rootIssueStore.writes.createIssue(
       this.rootIssueStore.scope(slug, project),
       page && project === page.projectID ? { ...body, cycle_id: page.cycleID } : body
     );

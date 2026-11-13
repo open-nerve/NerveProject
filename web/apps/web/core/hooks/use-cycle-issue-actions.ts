@@ -7,7 +7,7 @@ import type { TLoader, TSupportedFilterForUpdate } from "@nerve/types";
 import { EIssuesStoreType } from "@nerve/types";
 import type { IssueListOptions } from "@/lib/issue-filters";
 import type { CyclePage } from "@/store/issue/cycle/issue.store";
-import type { IssueDrop } from "@/store/issue/root.store";
+import type { IssueDrop } from "@/store/issue/issue-writes";
 import { useIssues } from "./store/use-issues";
 import { useUserPermissions } from "./store/user";
 import { cycleListState } from "./use-cycle-list-state";
