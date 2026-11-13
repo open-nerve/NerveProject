@@ -60,7 +60,7 @@ afterEach(async () => {
   vi.useRealTimers();
 });
 const create: NonNullable<ComponentProps<typeof QuickAddIssueRoot>["quickAddCallback"]> = (project, body) => {
-  const result = tab.app.issue.createIssue(tab.app.issue.scope("ws", project!), body);
+  const result = tab.app.issue.writes.createIssue(tab.app.issue.scope("ws", project!), body);
   writes.push(result);
   return result;
 };

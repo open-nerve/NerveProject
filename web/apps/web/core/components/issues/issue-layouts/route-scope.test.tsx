@@ -200,7 +200,7 @@ it.each(["list", "kanban"] as const)(
       loadMoreIssues: () => {},
       showEmptyGroup: true,
       quickAddCallback: (project: string | null | undefined, body: import("@nerve/api-client").IssueCreate) =>
-        tab.app.issue.createIssue(tab.app.issue.scope("ws", project!), body),
+        tab.app.issue.writes.createIssue(tab.app.issue.scope("ws", project!), body),
     };
     await act(async () =>
       renderer.render(

@@ -84,7 +84,7 @@ it("confirmedDeleteCannotBeResurrected", async () => {
   const oldToken = tab.app.issue.captureRead();
   const deleting = await requestedIssue(
     tab.nerve,
-    () => tab.app.issue.deleteIssue("x", tab.app.issue.scope("ws", "A")),
+    () => tab.app.issue.writes.deleteIssue("x", tab.app.issue.scope("ws", "A")),
     ["DELETE", "/api/v0/issues/x"]
   );
   deleting.call.answer(noContent());
@@ -109,7 +109,7 @@ async function inferredMove() {
   accept(before);
   const writing = await requestedIssue(
     tab.nerve,
-    () => tab.app.issue.updateIssue("x", () => ({ state_id: "B", sort_order: 20 })),
+    () => tab.app.issue.writes.updateIssue("x", () => ({ state_id: "B", sort_order: 20 })),
     ["PATCH", "/api/v0/issues/x"]
   );
   const page = {
@@ -269,10 +269,11 @@ it("ownPendingReadDoesNotMarkStale", async () => {
       { key: "B", total: 0, data: [], next_cursor: null },
     ],
   });
-  const writing = await requestedIssue(tab.nerve, () => tab.app.issue.updateIssue("x", () => ({ state_id: "B" })), [
-    "PATCH",
-    "/api/v0/issues/x",
-  ]);
+  const writing = await requestedIssue(
+    tab.nerve,
+    () => tab.app.issue.writes.updateIssue("x", () => ({ state_id: "B" })),
+    ["PATCH", "/api/v0/issues/x"]
+  );
   const after = { ...issueDetailOf("x"), state_id: "B", updated_at: version(3) };
   accept(after);
   expect(binding.group("A")?.stale).toBe(false);
@@ -301,7 +302,7 @@ it("unknownDescendantsRefreshOnlyTheirProject", async () => {
   const token = tab.app.issue.captureRead();
   const deleting = await requestedIssue(
     tab.nerve,
-    () => tab.app.issue.deleteIssue("parent", tab.app.issue.scope("ws", "A")),
+    () => tab.app.issue.writes.deleteIssue("parent", tab.app.issue.scope("ws", "A")),
     ["DELETE", "/api/v0/issues/parent"]
   );
   deleting.call.answer(noContent());
@@ -347,10 +348,11 @@ it("parallelPartsShareOneVerificationRound", async () => {
     total: 1,
     groups: ["A", "B"].map((key) => ({ key, total: 1, data: [before], next_cursor: null })),
   });
-  const writing = await requestedIssue(tab.nerve, () => tab.app.issue.updateIssue("x", () => ({ label_ids: ["C"] })), [
-    "PATCH",
-    "/api/v0/issues/x",
-  ]);
+  const writing = await requestedIssue(
+    tab.nerve,
+    () => tab.app.issue.writes.updateIssue("x", () => ({ label_ids: ["C"] })),
+    ["PATCH", "/api/v0/issues/x"]
+  );
   binding.markMembershipStale(before, before);
   const refreshing = binding.refreshStale([{ group: "A" }, { group: "B" }]);
   await until(() => tab.nerve.calls.length === 4, "parallel parts");
@@ -371,7 +373,7 @@ it("parallelPartsShareOneVerificationRound", async () => {
 it("refusedDeleteDoesNotCreateTombstoneAndArchiveIsReversible", async () => {
   accept(issueDetailOf("x"));
   const scope = tab.app.issue.scope("ws", "A");
-  const deleting = await requestedIssue(tab.nerve, () => tab.app.issue.deleteIssue("x", scope), [
+  const deleting = await requestedIssue(tab.nerve, () => tab.app.issue.writes.deleteIssue("x", scope), [
     "DELETE",
     "/api/v0/issues/x",
   ]);
@@ -379,7 +381,7 @@ it("refusedDeleteDoesNotCreateTombstoneAndArchiveIsReversible", async () => {
   deleting.call.answer(problem(403, "forbidden"));
   await refused;
   expect(tab.app.issue.issues.getIssueById("x")?.id).toBe("x");
-  const archiving = await requestedIssue(tab.nerve, () => tab.app.issue.archiveIssue("x", scope), [
+  const archiving = await requestedIssue(tab.nerve, () => tab.app.issue.writes.archiveIssue("x", scope), [
     "POST",
     "/api/v0/issues/x/archive",
   ]);
@@ -387,7 +389,7 @@ it("refusedDeleteDoesNotCreateTombstoneAndArchiveIsReversible", async () => {
     json(200, { ...issueDetailOf("x"), archived_at: "2026-10-29T00:00:00Z", updated_at: version(2) })
   );
   await archiving.promise;
-  const restoring = await requestedIssue(tab.nerve, () => tab.app.issue.unarchiveIssue("x", scope), [
+  const restoring = await requestedIssue(tab.nerve, () => tab.app.issue.writes.unarchiveIssue("x", scope), [
     "POST",
     "/api/v0/issues/x/unarchive",
   ]);
@@ -412,7 +414,7 @@ it("treeDeleteDiscardsWholeProfilePageAndKnownDescendants", async () => {
   ]);
   const deleting = await requestedIssue(
     tab.nerve,
-    () => tab.app.issue.deleteIssue("parent", tab.app.issue.scope("ws", "A")),
+    () => tab.app.issue.writes.deleteIssue("parent", tab.app.issue.scope("ws", "A")),
     ["DELETE", "/api/v0/issues/parent"]
   );
   deleting.call.answer(noContent());
@@ -461,7 +463,7 @@ it("confirmedDeleteEndsPendingVerificationAndOldGetCannotScheduleFollowup", asyn
   const oldGet = tab.nerve.calls.at(-1)!;
   const deleting = await requestedIssue(
     tab.nerve,
-    () => tab.app.issue.deleteIssue("x", tab.app.issue.scope("ws", "A")),
+    () => tab.app.issue.writes.deleteIssue("x", tab.app.issue.scope("ws", "A")),
     ["DELETE", "/api/v0/issues/x"]
   );
   deleting.call.answer(noContent());
@@ -477,7 +479,7 @@ it("SessionChangedDeleteDoesNotCreateTombstone", async () => {
   accept(issueDetailOf("x"));
   const deleting = await requestedIssue(
     tab.nerve,
-    () => tab.app.issue.deleteIssue("x", tab.app.issue.scope("ws", "A")),
+    () => tab.app.issue.writes.deleteIssue("x", tab.app.issue.scope("ws", "A")),
     ["DELETE", "/api/v0/issues/x"]
   );
   tab.app.dispose();
@@ -529,7 +531,7 @@ it("a confirmed create sent under restored permission becomes visible", async ()
   const create = await requestedIssue(
     tab.nerve,
     () =>
-      tab.app.issue.createIssue(
+      tab.app.issue.writes.createIssue(
         { workspaceSlug: "ws", workspaceID: tab.workspace.id, projectID: "A" },
         { name: "new" }
       ),
@@ -542,20 +544,22 @@ it("a confirmed create sent under restored permission becomes visible", async ()
 
 it("an old in-flight write does not gain fresh permission proof, while a new confirmed update does", async () => {
   accept(issueOf("x"));
-  const old = await requestedIssue(tab.nerve, () => tab.app.issue.updateIssue("x", () => ({ name: "old-write" })), [
-    "PATCH",
-    "/api/v0/issues/x",
-  ]);
+  const old = await requestedIssue(
+    tab.nerve,
+    () => tab.app.issue.writes.updateIssue("x", () => ({ name: "old-write" })),
+    ["PATCH", "/api/v0/issues/x"]
+  );
   await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, []);
   await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, [tab.project]);
   old.call.answer(json(200, { ...issueDetailOf("x"), name: "old-write", updated_at: version(2) }));
   await old.promise;
   expect(tab.app.issue.issues.getIssueById("x")).toBeUndefined();
   accept({ ...issueOf("x"), updated_at: version(2) });
-  const fresh = await requestedIssue(tab.nerve, () => tab.app.issue.updateIssue("x", () => ({ name: "fresh-write" })), [
-    "PATCH",
-    "/api/v0/issues/x",
-  ]);
+  const fresh = await requestedIssue(
+    tab.nerve,
+    () => tab.app.issue.writes.updateIssue("x", () => ({ name: "fresh-write" })),
+    ["PATCH", "/api/v0/issues/x"]
+  );
   fresh.call.answer(json(200, { ...issueDetailOf("x"), name: "fresh-write", updated_at: version(3) }));
   await fresh.promise;
   expect(tab.app.issue.issues.getIssueById("x")?.name).toBe("fresh-write");
@@ -600,10 +604,11 @@ it.each([false, true])(
   "old write after a recovered read keeps proof bound to the selected value (older=%s)",
   async (older) => {
     accept(issueOf("x"));
-    const old = await requestedIssue(tab.nerve, () => tab.app.issue.updateIssue("x", () => ({ name: "old-write" })), [
-      "PATCH",
-      "/api/v0/issues/x",
-    ]);
+    const old = await requestedIssue(
+      tab.nerve,
+      () => tab.app.issue.writes.updateIssue("x", () => ({ name: "old-write" })),
+      ["PATCH", "/api/v0/issues/x"]
+    );
     await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, []);
     await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, [tab.project]);
     const fresh = await requestedIssue(
@@ -637,10 +642,11 @@ it.each([false, true])(
 
 it.each([1, 2, 3])("retains the recovered whole and its usable list after an old write (version=%s)", async (n) => {
   accept(issueOf("x"));
-  const old = await requestedIssue(tab.nerve, () => tab.app.issue.updateIssue("x", () => ({ name: "old-write" })), [
-    "PATCH",
-    "/api/v0/issues/x",
-  ]);
+  const old = await requestedIssue(
+    tab.nerve,
+    () => tab.app.issue.writes.updateIssue("x", () => ({ name: "old-write" })),
+    ["PATCH", "/api/v0/issues/x"]
+  );
   await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, []);
   await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, [tab.project]);
   const fresh = await requestedIssue(
@@ -670,7 +676,7 @@ it.each([1, 2, 3])("retains the recovered whole and its usable list after an old
   expect.soft(tab.nerve.calls.filter((call) => call.method === "PATCH")).toHaveLength(1);
   const current = await requestedIssue(
     tab.nerve,
-    () => tab.app.issue.updateIssue("x", () => ({ name: "current-write" })),
+    () => tab.app.issue.writes.updateIssue("x", () => ({ name: "current-write" })),
     ["PATCH", "/api/v0/issues/x"]
   );
   current.call.answer(
@@ -687,10 +693,11 @@ it.each([1, 2, 3])("retains the recovered whole and its usable list after an old
 
 it("a current whole replaces an unproved newer stale write when the old write arrives first", async () => {
   accept({ ...issueOf("x"), updated_at: version(3) });
-  const old = await requestedIssue(tab.nerve, () => tab.app.issue.updateIssue("x", () => ({ name: "old-write" })), [
-    "PATCH",
-    "/api/v0/issues/x",
-  ]);
+  const old = await requestedIssue(
+    tab.nerve,
+    () => tab.app.issue.writes.updateIssue("x", () => ({ name: "old-write" })),
+    ["PATCH", "/api/v0/issues/x"]
+  );
   await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, []);
   await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, [tab.project]);
   old.call.answer(
@@ -714,10 +721,11 @@ it("a current whole replaces an unproved newer stale write when the old write ar
 
 it("an old write cannot move a recovered list using unproved membership fields", async () => {
   accept(issueOf("x"));
-  const old = await requestedIssue(tab.nerve, () => tab.app.issue.updateIssue("x", () => ({ name: "old-write" })), [
-    "PATCH",
-    "/api/v0/issues/x",
-  ]);
+  const old = await requestedIssue(
+    tab.nerve,
+    () => tab.app.issue.writes.updateIssue("x", () => ({ name: "old-write" })),
+    ["PATCH", "/api/v0/issues/x"]
+  );
   await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, []);
   await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, [tab.project]);
   const fresh = await requestedIssue(
@@ -742,10 +750,11 @@ it.each([false, true])("rechecks write permission after waiting for list directo
   );
   first.call.answer(json(200, issuePageOf([issueOf("x")])));
   await first.promise;
-  const old = await requestedIssue(tab.nerve, () => tab.app.issue.updateIssue("x", () => ({ name: "old-write" })), [
-    "PATCH",
-    "/api/v0/issues/x",
-  ]);
+  const old = await requestedIssue(
+    tab.nerve,
+    () => tab.app.issue.writes.updateIssue("x", () => ({ name: "old-write" })),
+    ["PATCH", "/api/v0/issues/x"]
+  );
   let release!: () => void;
   const waiting = new Promise<void>((resolve, fail) => {
     release = () => (reject ? fail(new Error("directory refused")) : resolve());

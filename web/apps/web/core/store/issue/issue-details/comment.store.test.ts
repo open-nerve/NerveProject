@@ -226,7 +226,7 @@ it("permission ABA revokes held comments and every outstanding page", async () =
 it("comments and their reactions share the parent issue queue and cannot write after retirement", async () => {
   await load();
   const gate = heldChange<void>();
-  const holding = tab.app.issue.enqueueIssueChanges(["x"], () => gate.sent);
+  const holding = tab.app.issue.writes.enqueueIssueChanges(["x"], () => gate.sent);
   const updating = track(write("update"));
   const adding = track(reactions().createCommentReaction("ws", "A", "x", row.id, "128077"));
   await vi.advanceTimersByTimeAsync(10);

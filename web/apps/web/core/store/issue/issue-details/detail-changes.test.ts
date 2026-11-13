@@ -27,7 +27,7 @@ afterEach(() => {
 });
 it("a core parent PATCH refreshes both old and new parents without guessing either count", async () => {
   const root = tab.app.issue;
-  const sent = await requestedIssue(tab.nerve, () => root.updateIssue("child", () => ({ parent_id: "other" })), [
+  const sent = await requestedIssue(tab.nerve, () => root.writes.updateIssue("child", () => ({ parent_id: "other" })), [
     "PATCH",
     "/api/v0/issues/child",
   ]);
@@ -112,7 +112,7 @@ it("a loaded child collection gets a fresh read after deletion invalidates its p
   );
   reading.call.answer(json(200, { data: [child] }));
   await reading.promise;
-  const deleting = await requestedIssue(tab.nerve, () => root.deleteIssue("child", root.scope("ws", "A")), [
+  const deleting = await requestedIssue(tab.nerve, () => root.writes.deleteIssue("child", root.scope("ws", "A")), [
     "DELETE",
     "/api/v0/issues/child",
   ]);

@@ -218,7 +218,7 @@ it.each([false, true].flatMap((identifier) => ["retire", "delete"].map((boundary
     else {
       const deleting = await requestedIssue(
         nerve,
-        () => app.issue.deleteIssue(source.id, app.issue.scope(ws.slug, project.id)),
+        () => app.issue.writes.deleteIssue(source.id, app.issue.scope(ws.slug, project.id)),
         ["DELETE", "/api/v0/issues/R1"]
       );
       deleting.call.answer(noContent());

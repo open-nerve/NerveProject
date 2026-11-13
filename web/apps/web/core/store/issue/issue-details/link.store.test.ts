@@ -136,7 +136,7 @@ it("rejects a link belonging to another issue without publishing it", async () =
 it("shares the core issue queue and rechecks scope after waiting", async () => {
   const root = tab.app.issue;
   const gate = heldChange<void>();
-  const holding = root.enqueueIssueChanges(["x"], () => gate.sent);
+  const holding = root.writes.enqueueIssueChanges(["x"], () => gate.sent);
   const writing = track(operation("create"));
   await vi.advanceTimersByTimeAsync(10);
   expect(tab.nerve.calls).toHaveLength(0);

@@ -99,7 +99,7 @@ const render = (id: string, open = true) =>
         isOpen={open}
         handleClose={binding.close}
         data={issueDetailOf(id)}
-        onSubmit={() => binding.tab!.app.issue.deleteIssue(id, binding.tab!.app.issue.scope("ws", "A"))}
+        onSubmit={() => binding.tab!.app.issue.writes.deleteIssue(id, binding.tab!.app.issue.scope("ws", "A"))}
       />
     )
   );

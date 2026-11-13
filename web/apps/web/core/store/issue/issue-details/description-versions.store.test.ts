@@ -158,7 +158,7 @@ it("a queued restoration cannot cross a permission ABA even after the new scope 
   await load();
   let release!: () => void;
   let started = false;
-  const gate = tab.app.issue.enqueueIssueChanges(["x"], async () => {
+  const gate = tab.app.issue.writes.enqueueIssueChanges(["x"], async () => {
     started = true;
     await new Promise<void>((yes) => {
       release = yes;

@@ -73,7 +73,7 @@ it("deletedParentDiscardsLateSubReadWithoutAuthoritativeFollowup", async () => {
   const loading = await requestedIssue(tab.nerve, read, ["GET", "/api/v0/issues/parent/sub-issues"]);
   const deleting = await requestedIssue(
     tab.nerve,
-    () => tab.app.issue.deleteIssue(parent.id, tab.app.issue.scope("ws", "A")),
+    () => tab.app.issue.writes.deleteIssue(parent.id, tab.app.issue.scope("ws", "A")),
     ["DELETE", "/api/v0/issues/parent"]
   );
   deleting.call.answer(noContent());
@@ -92,7 +92,7 @@ it("deletedParentDiscardsSubReadWaitingForAuthoritativeParent", async () => {
   await until(() => tab.nerve.to("/api/v0/issues/parent").length > 0, "parent verification");
   const deleting = await requestedIssue(
     tab.nerve,
-    () => tab.app.issue.deleteIssue(parent.id, tab.app.issue.scope("ws", "A")),
+    () => tab.app.issue.writes.deleteIssue(parent.id, tab.app.issue.scope("ws", "A")),
     ["DELETE", "/api/v0/issues/parent"]
   );
   deleting.call.answer(noContent());

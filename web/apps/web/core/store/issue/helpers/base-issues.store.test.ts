@@ -278,7 +278,7 @@ it("pageMergesDeduplicateDroppedRowAndKeepsServerCursorBoundary", async () => {
   const change = await requestedIssue(
     nerve,
     () =>
-      app.issue.updateIssue(
+      app.issue.writes.updateIssue(
         "a",
         () => ({ state_id: "B", sort_order: 20 }),
         { group: "B", binding: app.issue.projectIssues.currentList },
@@ -517,7 +517,7 @@ it("writeFreezesBodyBeforeAndHeldSourcesAfterRequiredDirectoryWait", async () =>
   const wait = await requestedIssue(
     nerve,
     () =>
-      app.issue.updateIssue(
+      app.issue.writes.updateIssue(
         "x",
         (held) => ({ name: `${held.name}!`, state_id: stateA.id }),
         undefined,

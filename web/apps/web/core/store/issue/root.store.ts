@@ -295,31 +295,4 @@ export class IssueRootStore {
         list.markVerificationStale();
       }
   }
-  // Forwarders for the tests' call sites only: P6b T3 points the tests at `writes` and deletes them (spec R1).
-  // Production code calls `writes` directly.
-  get pendingIDs(): ReadonlySet<string> {
-    return this.writes.pendingIDs;
-  }
-  enqueueIssueChanges<T>(
-    ids: readonly string[],
-    operation: () => Promise<T>,
-    requestedScope?: Pick<IssueWriteScope, "workspaceSlug" | "projectID">
-  ): Promise<T> {
-    return this.writes.enqueueIssueChanges(ids, operation, requestedScope);
-  }
-  createIssue(...args: Parameters<IssueWrites["createIssue"]>) {
-    return this.writes.createIssue(...args);
-  }
-  updateIssue(...args: Parameters<IssueWrites["updateIssue"]>) {
-    return this.writes.updateIssue(...args);
-  }
-  deleteIssue(...args: Parameters<IssueWrites["deleteIssue"]>) {
-    return this.writes.deleteIssue(...args);
-  }
-  archiveIssue(...args: Parameters<IssueWrites["archiveIssue"]>) {
-    return this.writes.archiveIssue(...args);
-  }
-  unarchiveIssue(...args: Parameters<IssueWrites["unarchiveIssue"]>) {
-    return this.writes.unarchiveIssue(...args);
-  }
 }
