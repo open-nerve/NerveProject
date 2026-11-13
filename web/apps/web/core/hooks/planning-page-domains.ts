@@ -12,7 +12,7 @@ export type PlanningPageStoreType = EIssuesStoreType.CYCLE | EIssuesStoreType.MO
 type PlanningPageDomain = {
   /** The route param naming the page's cycle or module. */
   param: string;
-  /** The page's name in the scopes its follow-ups hold from a sending to its answer. */
+  /** The page's name in the scopes its follow-ups hold from a sending to its answer, and in its preview host's. */
   name: string;
   /** The store that reads the page's cycle's or module's progress. */
   progress: (root: RootStore) => { fetchProgress: (id: string) => Promise<unknown> };

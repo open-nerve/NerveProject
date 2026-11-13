@@ -19,7 +19,7 @@ import { issueDetailOf } from "@/store/issue/fake-issues";
 import { cycleRequests } from "@/store/planning/fake-cycles";
 import type { RootStore } from "@/store/root.store";
 import type { IssuesModalProps } from "../../issue-modal/modal";
-import { C1, cyclePageTab, cyclePreferencesOf, layouts, type Layout } from "./fake-cycle-page";
+import { C1, planningPageTab, cyclePreferencesOf, layouts, type Layout } from "./fake-planning-page";
 
 const bound = vi.hoisted(() => ({
   app: undefined as RootStore | undefined,
@@ -58,7 +58,7 @@ vi.mock("@/components/issues/issue-modal/modal", () => ({
 
 const C2 = "019a0000-0000-7000-8000-0000000000c2";
 const LATER = "2026-12-31T13:00:00Z";
-let page: Awaited<ReturnType<typeof cyclePageTab>>;
+let page: Awaited<ReturnType<typeof planningPageTab>>;
 beforeEach(() => {
   bound.params = { workspaceSlug: "ws", projectId: "A", cycleId: C1 };
   bound.session.loginId = "one";
@@ -68,8 +68,8 @@ beforeEach(() => {
 afterEach(async () => page.close());
 
 /** Shows the page of the cycle as fields say to the caller of its role, its one work item in the layout. */
-async function shown(fields: Parameters<typeof cyclePageTab>[0] = {}, layout: Layout = "list") {
-  page = await cyclePageTab({ role: 15, ...fields });
+async function shown(fields: Parameters<typeof planningPageTab>[1] = {}, layout: Layout = "list") {
+  page = await planningPageTab(EIssuesStoreType.CYCLE, { role: 15, ...fields });
   bound.app = page.app;
   await page.show(cyclePreferencesOf(layouts[layout].display), layouts[layout].page());
 }

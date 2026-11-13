@@ -33,8 +33,8 @@ const selectedOf = (filter: IWorkItemFilterInstance, property: TWorkItemFilterPr
 
 /**
  * The breakdowns of a cycle's progress (P5a spec 2.4, 2.5), each a tab (ProgressTabs), the tab chosen kept for the
- * cycle (localStorage). While the cycle's page shows its work items by its filters (CycleLayoutRoot's instance of
- * them), a row of a state group, an assignee or a label toggles its value in them, saved as the page's own change of
+ * cycle (localStorage). While the cycle's page shows its work items by its filters (PlanningPageLayoutRoot's instance
+ * of them), a row of a state group, an assignee or a label toggles its value in them, saved as the page's own change of
  * them, and says whether it is chosen (P5b spec 2.8, R8); the rows are plain before the page has its filters, and in
  * the list page's preview (?peekCycle), which never has them: only the cycle's page makes them.
  */

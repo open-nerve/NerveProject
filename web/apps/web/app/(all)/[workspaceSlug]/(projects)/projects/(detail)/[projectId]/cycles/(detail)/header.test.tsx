@@ -17,10 +17,10 @@ import type { RootStore } from "@/store/root.store";
 import {
   buttonOf,
   C1,
-  cyclePageTab,
+  planningPageTab,
   cyclePreferencesOf,
   layouts,
-} from "@/components/issues/issue-layouts/roots/fake-cycle-page";
+} from "@/components/issues/issue-layouts/roots/fake-planning-page";
 import { CycleIssuesHeader } from "./header";
 
 const bound = vi.hoisted(() => ({ app: undefined as RootStore | undefined, params: {} as Record<string, string> }));
@@ -49,10 +49,10 @@ vi.mock("@/components/breadcrumbs/common", () => ({ CommonProjectBreadcrumbs: ()
 vi.mock("@/components/cycles/quick-actions", () => ({ CycleQuickActions: () => null }));
 
 const C2 = "019a0000-0000-7000-8000-0000000000c2";
-let page: Awaited<ReturnType<typeof cyclePageTab>>;
-/** A tab at the cycle's page of project A, as cyclePageTab, whose stores the page uses. */
-async function opened(fields: Parameters<typeof cyclePageTab>[0] = {}) {
-  page = await cyclePageTab(fields);
+let page: Awaited<ReturnType<typeof planningPageTab>>;
+/** A tab at the cycle's page of project A, as planningPageTab, whose stores the page uses. */
+async function opened(fields: Parameters<typeof planningPageTab>[1] = {}) {
+  page = await planningPageTab(EIssuesStoreType.CYCLE, fields);
   bound.app = page.app;
 }
 beforeEach(() => {

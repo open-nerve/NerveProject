@@ -1,18 +1,22 @@
 // Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only
-// A cycle's page's work items against a fake nerve (P5b spec 2.6), for the tests of its layout root: the route's
-// project A with the caller of a role, its cycle C1 as nerve last gave it, and the page's preferences and its list as
-// nerve answers them. The stores, rows, layouts and HTTP are real; the test file binds the stores and the route.
+// A planning page's work items against a fake nerve (P5b spec 2.6, P6b spec 2.2), per domain, for the tests of the
+// shared layout root: the route's project A with the caller of a role, the page's cycle C1 as nerve last gave it, and
+// the page's preferences and its list as nerve answers them. The stores, rows, layouts and HTTP are real; the test file
+// binds the stores and the route.
 import { act, type ReactNode } from "react";
 import { MemoryRouter } from "react-router";
 import { SWRConfig } from "swr";
 import { vi } from "vitest";
 import type { Cycle, CyclePreferences, IssueListDisplayFilters, Project, ProjectIssueFilters } from "@nerve/api-client";
+import { EIssuesStoreType } from "@nerve/types";
 import { answered, json } from "@/lib/auth/fake-nerve";
 import { until } from "@/lib/auth/fake-time";
 import { issueSelectionTab } from "@/components/core/modals/fake-issue-selection";
+import { PeekOnEntry } from "@/components/cycles/peek-on-entry";
 import { listIssue } from "@/store/issue/fake-issues";
 import { cycleOf, preferencesOf } from "@/store/project/fake-projects";
-import { CycleLayoutRoot } from "./cycle-layout-root";
+import type { PlanningPageLayoutStoreType } from "../planning-page-layouts";
+import { PlanningPageLayoutRoot } from "./planning-page-layout-root";
 
 export const C1 = "019a0000-0000-7000-8000-0000000000c1";
 export type Layout = "list" | "kanban" | "spreadsheet" | "calendar";
@@ -54,13 +58,49 @@ export function cyclePreferencesOf(
   return { filters, display_filters: { ...display_filters, ...display }, display_properties };
 }
 
+type Tab = Awaited<ReturnType<typeof issueSelectionTab>>;
+/** What a test says of the page: the caller's role (a member's unless it says), its project's fields, its cycle's. */
+type PageFields = { role?: Project["member_role"]; project?: Partial<Project>; cycle?: Partial<Cycle> };
+
+/** What each domain's page is to its tests (the page's store type picks it). */
+const pages: Record<
+  PlanningPageLayoutStoreType,
+  {
+    /** Where nerve keeps the page's preferences. */
+    preferences: string;
+    /** Has the tab hold the page's cycle as nerve gives it, as the fields say. */
+    hold: (tab: Tab, fields: PageFields) => Promise<void>;
+    /** What the page puts beside its preview host (PlanningPageLayoutRoot's children). */
+    beside: ReactNode;
+  }
+> = {
+  [EIssuesStoreType.CYCLE]: {
+    preferences: `/api/v0/me/cycles/${C1}/preferences`,
+    hold: async (tab, fields) => {
+      const cycle = cycleOf(tab.project, "Now", { id: C1, status: "current", ...fields.cycle });
+      await answered(
+        tab.nerve,
+        () => tab.app.planning.cycles.fetchCycle(C1),
+        ["GET", `/api/v0/cycles/${C1}`],
+        cycle,
+        "C1"
+      );
+    },
+    // the cycle's page: the preview the way in asked for (PeekOnEntry)
+    beside: <PeekOnEntry workspaceSlug="ws" projectId="A" />,
+  },
+};
+
+/** The page's work items as the page of the store type puts them: the shared layout root, with what is beside it. */
+export function PlanningPageWorkItems(props: { type: PlanningPageLayoutStoreType }) {
+  return <PlanningPageLayoutRoot storeType={props.type}>{pages[props.type].beside}</PlanningPageLayoutRoot>;
+}
+
 /**
- * A tab at the cycle's page: project A with the caller of role (a member's unless it says) and its fields, and its
- * cycle C1, current unless fields say otherwise. Today is Dec 31, 2026, the calendar's week Dec 27–Jan 2.
+ * A tab at the store type's page: project A with the caller of role (a member's unless it says) and its fields, and
+ * the page's cycle C1, current unless fields say otherwise. Today is Dec 31, 2026, the calendar's week Dec 27–Jan 2.
  */
-export async function cyclePageTab(
-  fields: { role?: Project["member_role"]; cycle?: Partial<Cycle>; project?: Partial<Project> } = {}
-) {
+export async function planningPageTab(type: PlanningPageLayoutStoreType, fields: PageFields = {}) {
   const tab = await issueSelectionTab();
   vi.stubGlobal(
     "IntersectionObserver",
@@ -81,10 +121,9 @@ export async function cyclePageTab(
     ...fields.project,
   }));
   await tab.app.state.fetchProjectStates("A");
-  const cycle = cycleOf(tab.project, "Now", { id: C1, status: "current", ...fields.cycle });
-  await answered(tab.nerve, () => tab.app.planning.cycles.fetchCycle(C1), ["GET", `/api/v0/cycles/${C1}`], cycle, "C1");
+  await pages[type].hold(tab, fields);
   tab.nerve.calls.length = 0;
-  const preferences = () => tab.nerve.to(`/api/v0/me/cycles/${C1}/preferences`);
+  const preferences = () => tab.nerve.to(pages[type].preferences);
   const lists = () => tab.nerve.to("/api/v0/projects/A/issues");
   /** Renders the page's work items, after what else of the page the test puts before them (its header, its modals). */
   const mount = (before?: ReactNode) =>
@@ -92,7 +131,7 @@ export async function cyclePageTab(
       <SWRConfig value={{ provider: () => new Map() }}>
         <MemoryRouter>
           {before}
-          <CycleLayoutRoot />
+          <PlanningPageWorkItems type={type} />
         </MemoryRouter>
       </SWRConfig>
     );

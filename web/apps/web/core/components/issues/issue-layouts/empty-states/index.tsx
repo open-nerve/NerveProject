@@ -8,7 +8,7 @@
 import { EIssuesStoreType } from "@nerve/types";
 // components
 import { ProjectArchivedEmptyState } from "./archived-issues";
-import { CycleEmptyState } from "./cycle";
+import { PlanningPageEmptyState } from "./planning-page";
 import { ProfileViewEmptyState } from "./profile-view";
 import { ProjectEmptyState } from "./project-issues";
 
@@ -25,7 +25,7 @@ export function IssueLayoutEmptyState(props: Props) {
     case EIssuesStoreType.PROFILE:
       return <ProfileViewEmptyState />;
     case EIssuesStoreType.CYCLE:
-      return <CycleEmptyState />;
+      return <PlanningPageEmptyState storeType={EIssuesStoreType.CYCLE} />;
     default:
       return null;
   }

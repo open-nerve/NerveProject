@@ -137,6 +137,7 @@
         "web/apps/web/core/components/issues/issue-layouts/spreadsheet/base-spreadsheet-root.tsx",
         "web/apps/web/core/components/issues/issue-layouts/roots/project-layout-root.tsx",
         "web/apps/web/core/components/issues/issue-layouts/roots/archived-issue-layout-root.tsx",
+        "web/apps/web/core/components/issues/issue-layouts/roots/planning-page-layout-root.tsx",
         "web/apps/web/core/components/profile/profile-issues.tsx",
         "web/apps/web/core/store/project/**",
         "web/apps/web/core/components/projects/page.tsx",

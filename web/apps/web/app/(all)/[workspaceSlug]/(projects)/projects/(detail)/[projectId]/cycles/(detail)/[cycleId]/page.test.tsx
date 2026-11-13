@@ -84,9 +84,10 @@ vi.mock("@/components/cycles/progress-sidebar", () => ({
 vi.mock("@/components/cycles/transfer-issues", () => ({
   TransferIssues: (props: { cycleId: string }) => <p data-banner={props.cycleId} />,
 }));
-vi.mock("@/components/issues/issue-layouts/roots/cycle-layout-root", () => ({
-  CycleLayoutRoot: () => <section data-work-items />,
+vi.mock("@/components/issues/issue-layouts/roots/planning-page-layout-root", () => ({
+  PlanningPageLayoutRoot: () => <section data-work-items />,
 }));
+vi.mock("@/components/cycles/peek-on-entry", () => ({ PeekOnEntry: () => null }));
 vi.mock("@/components/issues/filters", () => ({ HeaderFilters: () => null }));
 vi.mock("@/hooks/store/use-issues", () => ({
   useIssues: () => ({ issues: { pageTotal: () => undefined }, issuesFilter: { getIssueFilters: () => undefined } }),

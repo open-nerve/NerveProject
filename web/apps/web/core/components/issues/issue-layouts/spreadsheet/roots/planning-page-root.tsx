@@ -5,18 +5,23 @@ import { useParams } from "react-router";
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 // hooks
 import { useUserPermissions } from "@/hooks/store/user";
-import { useCycleListState } from "@/hooks/use-cycle-list-state";
 // local imports
-import { CycleIssueQuickActions } from "../../quick-action-dropdowns";
+import { PLANNING_PAGE_LAYOUTS, type PlanningPageLayoutStoreType } from "../../planning-page-layouts";
 import { BaseSpreadsheetRoot } from "../base-spreadsheet-root";
 
-/** The table of a cycle's page: the project page's, read-only once the cycle has ended or is archived (R5). */
-export const CycleSpreadsheetLayout = observer(function CycleSpreadsheetLayout() {
+/**
+ * The table of a planning page: the project page's, with the rows' quick actions of the page's domain, read-only as
+ * the domain's list state says (a cycle's: once it has ended or is archived, P5b R5).
+ */
+export const PlanningPageSpreadsheetLayout = observer(function PlanningPageSpreadsheetLayout(props: {
+  storeType: PlanningPageLayoutStoreType;
+}) {
   // router
   const { workspaceSlug } = useParams();
   // hooks
   const { allowPermissions } = useUserPermissions();
-  const { readOnly } = useCycleListState();
+  const { useListState, QuickActions } = PLANNING_PAGE_LAYOUTS[props.storeType];
+  const { readOnly } = useListState();
 
   if (!workspaceSlug) return null;
 
@@ -30,7 +35,7 @@ export const CycleSpreadsheetLayout = observer(function CycleSpreadsheetLayout()
 
   return (
     <BaseSpreadsheetRoot
-      QuickActions={CycleIssueQuickActions}
+      QuickActions={QuickActions}
       canEditPropertiesBasedOnProject={canEditPropertiesBasedOnProject}
       readOnly={readOnly}
     />

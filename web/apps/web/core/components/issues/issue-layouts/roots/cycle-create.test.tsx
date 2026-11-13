@@ -9,6 +9,7 @@
 import { act, createElement, forwardRef, useImperativeHandle, type ReactNode } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { Cycle } from "@nerve/api-client";
+import { EIssuesStoreType } from "@nerve/types";
 import { CycleIssuesHeader } from "@/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/cycles/(detail)/header";
 import { WorkItemLevelModals } from "@/components/modals/work-item-level";
 import { json, problem } from "@/lib/auth/fake-nerve";
@@ -16,7 +17,7 @@ import { until } from "@/lib/auth/fake-time";
 import { toasts } from "@/lib/fake-toast";
 import { issueDetailOf } from "@/store/issue/fake-issues";
 import type { RootStore } from "@/store/root.store";
-import { C1, buttonOf, cyclePageTab, cyclePreferencesOf, layouts, type Layout } from "./fake-cycle-page";
+import { C1, buttonOf, planningPageTab, cyclePreferencesOf, layouts, type Layout } from "./fake-planning-page";
 
 const bound = vi.hoisted(() => ({ app: undefined as RootStore | undefined, params: {} as Record<string, string> }));
 vi.mock("@/lib/store-context", async () => ({
@@ -60,10 +61,10 @@ vi.mock("@/components/issues/create-issue-toast-action-items", () => ({ CreateIs
 vi.mock("@/components/breadcrumbs/common", () => ({ CommonProjectBreadcrumbs: () => null }));
 vi.mock("@/components/cycles/quick-actions", () => ({ CycleQuickActions: () => null }));
 
-let page: Awaited<ReturnType<typeof cyclePageTab>>;
-/** A tab at the cycle's page of project A, as cyclePageTab, whose stores the page uses. */
-async function opened(fields: Parameters<typeof cyclePageTab>[0] = {}) {
-  page = await cyclePageTab(fields);
+let page: Awaited<ReturnType<typeof planningPageTab>>;
+/** A tab at the cycle's page of project A, as planningPageTab, whose stores the page uses. */
+async function opened(fields: Parameters<typeof planningPageTab>[1] = {}) {
+  page = await planningPageTab(EIssuesStoreType.CYCLE, fields);
   bound.app = page.app;
 }
 beforeEach(() => {
@@ -82,7 +83,7 @@ const around = (
   </>
 );
 /** Shows a member the page of the cycle as fields say, its one work item in the layout, grouped by state. */
-async function shown(fields: Parameters<typeof cyclePageTab>[0] = {}, layout: Layout = "list") {
+async function shown(fields: Parameters<typeof planningPageTab>[1] = {}, layout: Layout = "list") {
   await opened({ role: 15, ...fields });
   await page.show(cyclePreferencesOf(layouts[layout].display), layouts[layout].page(), around);
 }

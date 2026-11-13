@@ -10,11 +10,17 @@ import { MemoryRouter, Route, Routes, useLocation, useNavigate } from "react-rou
 import type { Location, NavigateFunction } from "react-router";
 import { SWRConfig } from "swr";
 import type { CyclePreferences, Progress, ProjectIssueFilters } from "@nerve/api-client";
+import { EIssuesStoreType } from "@nerve/types";
 import { answered, json } from "@/lib/auth/fake-nerve";
 import type { Call } from "@/lib/auth/fake-nerve";
 import { until } from "@/lib/auth/fake-time";
-import { C1, cyclePageTab, cyclePreferencesOf, layouts } from "@/components/issues/issue-layouts/roots/fake-cycle-page";
-import { CycleLayoutRoot } from "@/components/issues/issue-layouts/roots/cycle-layout-root";
+import {
+  C1,
+  PlanningPageWorkItems,
+  cyclePreferencesOf,
+  layouts,
+  planningPageTab,
+} from "@/components/issues/issue-layouts/roots/fake-planning-page";
 import { loadCycles, progressOf, rowOf } from "@/store/planning/fake-cycles";
 import { labelOf } from "@/store/project/fake-projects";
 import { ActiveCycleRoot } from "./active-cycle/root";
@@ -57,7 +63,7 @@ function Where() {
 function CyclePage() {
   return (
     <>
-      <CycleLayoutRoot />
+      <PlanningPageWorkItems type={EIssuesStoreType.CYCLE} />
       <aside aria-label="sidebar">
         <CycleDetailsSidebar handleClose={() => undefined} workspaceSlug="ws" projectId="A" cycleId={C1} />
       </aside>
@@ -82,7 +88,7 @@ function ListPage() {
  * labels. Nothing else is answered: the test answers the page's preferences and its lists.
  */
 export async function cycleRoutesTab() {
-  const tab = await cyclePageTab();
+  const tab = await planningPageTab(EIssuesStoreType.CYCLE);
   const cycle = tab.app.planning.cycles.getCycleById(C1)!;
   const progress = progressOf(cycle, live);
   const states = tab.nerve.respond;

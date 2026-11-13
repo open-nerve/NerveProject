@@ -10,13 +10,14 @@ import { MemoryRouter } from "react-router";
 import { SWRConfig } from "swr";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { IssueDetail } from "@nerve/api-client";
+import { EIssuesStoreType } from "@nerve/types";
 import { json, type Call } from "@/lib/auth/fake-nerve";
 import { until } from "@/lib/auth/fake-time";
 import { toasts } from "@/lib/fake-toast";
 import { issueDetailOf } from "@/store/issue/fake-issues";
 import { preferencesOf } from "@/store/project/fake-projects";
 import type { RootStore } from "@/store/root.store";
-import { C1, cyclePageTab, cyclePreferencesOf, layouts, type Layout } from "./fake-cycle-page";
+import { C1, planningPageTab, cyclePreferencesOf, layouts, type Layout } from "./fake-planning-page";
 import { ProjectLayoutRoot } from "./project-layout-root";
 
 const bound = vi.hoisted(() => ({
@@ -44,7 +45,7 @@ vi.mock("@/components/core/render-if-visible-HOC", () => ({
     as ? createElement(as, null, children) : children,
 }));
 
-let page: Awaited<ReturnType<typeof cyclePageTab>>;
+let page: Awaited<ReturnType<typeof planningPageTab>>;
 beforeEach(() => {
   toasts.length = 0;
 });
@@ -65,7 +66,7 @@ const dialogTitle = () => document.querySelector<HTMLInputElement>('[role="dialo
 /** Shows the cycle's page in layout, its one work item answered. */
 async function cyclePage(layout: Layout) {
   bound.params = { workspaceSlug: "ws", projectId: "A", cycleId: C1 };
-  page = await cyclePageTab();
+  page = await planningPageTab(EIssuesStoreType.CYCLE);
   bound.app = page.app;
   await page.show(cyclePreferencesOf(layouts[layout].display), layouts[layout].page());
   return layouts[layout].page();
@@ -73,7 +74,7 @@ async function cyclePage(layout: Layout) {
 /** Shows the project's page in its list grouped by state, of the same one work item. */
 async function projectPage() {
   bound.params = { workspaceSlug: "ws", projectId: "A" };
-  page = await cyclePageTab();
+  page = await planningPageTab(EIssuesStoreType.CYCLE);
   bound.app = page.app;
   await page.render(
     <SWRConfig value={{ provider: () => new Map() }}>
