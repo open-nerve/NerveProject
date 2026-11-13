@@ -13,11 +13,13 @@ import { ReconciledByKey } from "@/lib/reconciled";
 import { ModulesService } from "@/services/planning/modules.service";
 // store
 import type { RootStore } from "@/store/root.store";
+import type { IModuleChanges } from "./module-changes";
+import { ModuleChanges } from "./module-changes";
 
 /** A copy of a module the store holds, and when nerve answered it (Reconciled.answeredAt). */
 type Copy<T extends Module> = { module: T; answeredAt: number };
 
-export interface IModuleStore {
+export interface IModuleStore extends IModuleChanges {
   // computed actions
   getModuleById: (moduleId: string | null | undefined) => Module | undefined;
   getModuleRow: (moduleId: string | null | undefined) => ModuleListItem | undefined;
@@ -40,7 +42,8 @@ export interface IModuleStore {
  * list's row alone, which only a list gives. Every reader takes its project or module from its caller (the route's),
  * never from the address in the router store; the modules of a project the project store no longer gives (deleted,
  * left, or of a workspace no longer the caller's) do not show, nor do their progress and links. Its service sends with
- * the session's client; fetches do not queue.
+ * the session's client; fetches do not queue. Its changes go one at a time and write nerve's answers into every copy
+ * that holds the module or the link (module-changes.ts, v0 design 7.7).
  */
 export class ModuleStore implements IModuleStore {
   /** Each project's modules that are not archived, in nerve's order, reconciled between fetches and changes. */
@@ -55,6 +58,8 @@ export class ModuleStore implements IModuleStore {
   readonly links = new ReconciledByKey<ModuleLink[]>();
   // services
   private readonly service: ModulesService;
+  /** The changes of the modules and their links, which write nerve's answers into the values above. */
+  private readonly changes: ModuleChanges;
   // stores
   /** The project as the caller sees it, by the project store (ProjectStore.getProjectById). */
   private readonly projectOf: (projectId: string | undefined | null) => Project | undefined;
@@ -62,6 +67,7 @@ export class ModuleStore implements IModuleStore {
   constructor(rootStore: RootStore, api: ApiClient) {
     this.service = new ModulesService(api);
     this.projectOf = rootStore.projectRoot.project.getProjectById;
+    this.changes = new ModuleChanges(this, this.service);
   }
 
   /**
@@ -134,6 +140,17 @@ export class ModuleStore implements IModuleStore {
   /** @description reads the module's links, as fetchModules */
   fetchLinks = (moduleId: string): Promise<ModuleLink[] | undefined> =>
     this.links.fetch(moduleId, () => this.service.links(moduleId));
+
+  // changes (module-changes.ts)
+  create: IModuleStore["create"] = (projectId, body) => this.changes.create(projectId, body);
+  update: IModuleStore["update"] = (moduleId, body) => this.changes.update(moduleId, body);
+  changeMembers: IModuleStore["changeMembers"] = (moduleId, change) => this.changes.changeMembers(moduleId, change);
+  remove: IModuleStore["remove"] = (moduleId) => this.changes.remove(moduleId);
+  archive: IModuleStore["archive"] = (moduleId) => this.changes.archive(moduleId);
+  unarchive: IModuleStore["unarchive"] = (moduleId) => this.changes.unarchive(moduleId);
+  addLink: IModuleStore["addLink"] = (moduleId, body) => this.changes.addLink(moduleId, body);
+  changeLink: IModuleStore["changeLink"] = (linkId, body) => this.changes.changeLink(linkId, body);
+  removeLink: IModuleStore["removeLink"] = (linkId) => this.changes.removeLink(linkId);
 
   /** The project's list in lists (the unarchived or the archived), once fetched, of a project the project store gives. */
   private listed(lists: ReconciledByKey<ModuleListItem[]>, projectId: string | null | undefined) {

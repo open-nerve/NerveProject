@@ -43,10 +43,13 @@ export function moduleProgressOf(fields: Partial<Progress> = {}): Progress {
   };
 }
 
-/** A link of the module as nerve lists it: url names it in its module; no title, its metadata not read yet. */
+/**
+ * A link of the module as nerve lists it: url names it in its module, by its letters and digits (its id goes in a
+ * request's path); no title, its metadata not read yet.
+ */
 export function moduleLinkOf(item: Module, url: string, fields: Partial<ModuleLink> = {}): ModuleLink {
   return {
-    id: `ml-${item.id}-${url}`,
+    id: `ml-${item.id}-${url.replaceAll(/[^a-z0-9]+/gi, "-")}`,
     module_id: item.id,
     url,
     title: null,
@@ -58,12 +61,19 @@ export function moduleLinkOf(item: Module, url: string, fields: Partial<ModuleLi
   };
 }
 
-/** The requests of the modules: a project's lists (the archived one with archived=true); a module, its progress, its links. */
+/**
+ * The requests of the modules: a project's lists (the archived one with archived=true), where it creates its modules; a
+ * module, which is read, changed and deleted there; its progress, its archiving and unarchiving; its links, where it
+ * adds one; a link, which is changed and removed there.
+ */
 export const moduleRequests = {
   list: (project: Pick<Project, "id">) => `/api/v0/projects/${project.id}/modules`,
   at: (item: Pick<Module, "id">) => `/api/v0/modules/${item.id}`,
   progress: (item: Pick<Module, "id">) => `/api/v0/modules/${item.id}/progress`,
+  archive: (item: Pick<Module, "id">) => `/api/v0/modules/${item.id}/archive`,
+  unarchive: (item: Pick<Module, "id">) => `/api/v0/modules/${item.id}/unarchive`,
   links: (item: Pick<Module, "id">) => `/api/v0/modules/${item.id}/links`,
+  link: (link: Pick<ModuleLink, "id">) => `/api/v0/module-links/${link.id}`,
 };
 
 /** The store fetches the project's modules that are not archived, web's unless it says, and nerve lists these. */
