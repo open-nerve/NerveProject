@@ -231,11 +231,13 @@
 
 ## 5. 后续责任
 
-**P6b**（模块页的工作项列表）：§1 所列；研究笔记 §5 的第 7 条（模块页列表照 P5b：`EIssuesStoreType.MODULE`、偏好的筛选 store 用同一基类，成员判断的 `module_id` 已在 P5b）、第 8 条（模块页页头的版式、筛选、显示在本页偏好读到之后才出现，re-67 M8；项目页同因）、第 9 条（读到过偏好之后的重读失败时正文是否沿用已读的偏好、只提示重读失败，项目页与迭代页随之，re-67 限定复审 M1）、第 21 条（M4 交接 M6-02 的模块部分：同 fixture、双向分页、跨分组写后计数、OwnOnly 与工作区管理员兼访客、失权迟到答、归档范围、换会话）、第 23 条（M5 交接 M5-M6-02 的模块部分：附件列）、第 26 条（M6-M8-08：先拆工作项根 store，R16）；`module_ids` 整集合的写入（创建与“移出模块”，请求体由行当时持有的完整集合算出，保留已归档、看不到的模块）；侧栏的行切换本页筛选（`getFilter(EIssuesStoreType.MODULE, id)`，Plane 的 `handleFiltersUpdate`）；模块页偏好的 `user-properties`（M3 交接 §1）；G15、G19 的模块页列表部分。
+**P6b**（模块页的工作项列表）：§1 所列；研究笔记 §5 的第 7 条（模块页列表照 P5b：`EIssuesStoreType.MODULE`、偏好的筛选 store 用同一基类，成员判断的 `module_id` 已在 P5b）、第 8 条（模块页页头的版式、筛选、显示在本页偏好读到之后才出现，re-67 M8；项目页同因）、第 9 条（读到过偏好之后的重读失败时正文是否沿用已读的偏好、只提示重读失败，项目页与迭代页随之，re-67 限定复审 M1）、第 21 条（M4 交接 M6-02 的模块部分：同 fixture、双向分页、跨分组写后计数、OwnOnly 与工作区管理员兼访客、失权迟到答、归档范围、换会话）、第 23 条（M5 交接 M5-M6-02 的模块部分：附件列）、第 26 条（M6-M8-08：先拆工作项根 store，R16）；`module_ids` 整集合的写入（创建与“移出模块”，请求体由行当时持有的完整集合算出，保留已归档、看不到的模块）；侧栏的行切换本页筛选（`getFilter(EIssuesStoreType.MODULE, id)`，Plane 的 `handleFiltersUpdate`）；模块页偏好的 `user-properties`（M3 交接 §1）；G15、G19 的模块页列表部分；模块页列表的空态文案 `project_empty_state.module_work_items.{title,description,cta_primary,cta_secondary}` 在基线 `aadaf61a` 上就没有读者（T12 以 i18n-keys 的读法核对，本段未动），随模块页的空态用上或删除。
 
-**P7**：工作项一侧（模块的属性与下拉框、新建弹窗的模块、列表词表、添加已有、`existing-issues-list-modal.tsx` 的模块调用方）用本段的 `useModules()`；列表引擎的目录（P3b R9 的空 `Map`）改由本段的 store 提供；命令面板模块菜单的本地过滤与切换；命令面板“打开模块”在取数门为假（已归档的项目、不是成员）时菜单一直加载（与迭代的同一条，re-65 M7，并入 P5a §5 的 P7 一条）。
+**P7**：工作项一侧（模块的属性与下拉框、新建弹窗的模块、列表词表、添加已有、`existing-issues-list-modal.tsx` 的模块调用方）用本段的 `useModules()`；列表引擎的目录（P3b R9 的空 `Map`）改由本段的 store 提供；命令面板模块菜单的本地过滤与切换；命令面板“打开模块”在取数门为假（已归档的项目、不是成员）时菜单一直加载（与迭代的同一条，re-65 M7，并入 P5a §5 的 P7 一条）；工作项一侧的模块文案 `common.modules`、`issue.remove.module.{loading,success,failed}`、`module.no_module` 在基线 `aadaf61a` 上就没有读者（T12 核对，本段未动），随模块的属性与下拉框用上或删除。
 
-**P8**：模块表单里项目选择（`dropdowns/project/base.tsx`）的浏览器核对随最终矩阵（M2 交接 §5(d)，本段有组件测试）；“按规则清一类”的 oxlint（M1 收尾交接）。
+**P8**：模块表单里项目选择（`dropdowns/project/base.tsx`）的浏览器核对随最终矩阵（M2 交接 §5(d)，本段有组件测试）；模块表单名字的输入法（M4 交接 M6-04：组字中确认组字的 Enter 不提交、组字之后的 Enter 照常提交；迭代表单由 P5a 的 G1 核对，本段的 G9 没有，T15 写回执时发现）与模块页上共用组件的焦点轮廓是否被 `overflow-hidden` 裁掉（M3 交接 §3）随最终矩阵；“按规则清一类”的 oxlint（M1 收尾交接）。
+
+**M8**：新增 [M6-M8-10](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-10)（Base UI 1.0.0-beta.3 的通知在出现后约一帧内按下关闭会被复位、不再消失，T13 发现；真人几乎碰不到，e2e 的 `dismissToasts` 已容忍）；[M6-M8-03](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-03) 再现一次（T10 检查点本机 e2e 的 W6 (API)，只重跑这一项通过）；[M6-M8-01](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-01) 的余量复核多一个数据（T10 检查点的分支 CI 43418051413 的 e2e 作业 25 分 18 秒，比基线 main CI 43373039561 的 19 分 14 秒多约 6 分钟，逐条比对是 runner 的速度差异）。
 
 **M7**：模块的收藏随收藏一起恢复（本段删除了入口）；工作区级的模块列表（通知页、工作区视图）。
 
