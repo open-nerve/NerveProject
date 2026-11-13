@@ -5,7 +5,7 @@ to: M8
 created: 2026-11-07
 ---
 
-# M6 交给 M8：CI 的 e2e 作业期限与间歇失败的故事、清理分页器的副本、e2e 数据库的连接余量、server 作业的分路与 lint 工具的在线下载、本机测试容器的端口冲突、e2e 作业在线安装浏览器的系统依赖、编辑器重建图片节点时中止的读取、工作项根 store 的行数、Firefox 再次载入后的字体预加载警告、出现后一帧内按下关闭的通知不再消失
+# M6 交给 M8：CI 的 e2e 作业期限与间歇失败的故事、清理分页器的副本、e2e 数据库的连接余量、server 作业的分路与 lint 工具的在线下载、本机测试容器的端口冲突、e2e 作业在线安装浏览器的系统依赖、编辑器重建图片节点时中止的读取、工作项根 store 的行数、Firefox 再次载入后的字体预加载警告、出现后一帧内按下关闭的通知不再消失、两份相同的 useLocalStorage
 
 这是接收方尚待完成的工作。转交只表示责任和验收条件已落实到此处，不表示本页问题已经解决。M6 进行中发现的条目随发现写入；M6 收尾时补齐其余交接。延续 [M5 → M8 交接 M5-M8-06](M5-closeout.md#M5-M8-06) 中仍开放的观察。
 
@@ -125,3 +125,10 @@ M6/P5b 的 T16（2026-11-12）在 `8b11bc6381623717663ba986da74710668719494` 上
 - 影响：真人在通知出现的一帧之内点到关闭几乎不可能，产品代码没有改。e2e 的 `dismissToasts`（`e2e/fixtures/cycle-pages.ts`）改为按下尚未退场的通知的关闭、2 秒内都消失为止，未消失就再按，至多 10 秒（`expect.toPass`）；退回只按一次的变异 `t13-mut-dismiss-once` 让 G9 故事二三次全败。证据在 P6a 台账的 `t13-probe-g9-toast`、`t13-probe-g9-toast-2` 收据。
 
 **何时验收：** M8 升级 Base UI 时核对这一行为是否仍在（例如在通知出现后的第一帧内程序化地按关闭），仍在就向上游报告或在 propel 的 `Toast` 里绕开，并据此决定 `dismissToasts` 的重按是否还需要；或负责人决定维持现状，并在此写明理由。
+
+<a id="M6-M8-11"></a>
+## M6-M8-11 两份相同的 useLocalStorage
+
+观察（[re-69](../../../reviews/re-69-M6P6a整体审核.md) 的观察，M6/P6a 的整分支审查）：web 里有两份逐字相同的 `useLocalStorage`：`@nerve/hooks` 的 `web/packages/hooks/src/use-local-storage.tsx`，与应用里 Plane 留下的副本 `web/apps/web/core/hooks/use-local-storage.tsx`（它的注释写着 “TODO: Remove this once its callers use useLocalStorage from @nerve/hooks”）。模块一侧两份都用：版式与排序（`core/components/modules/use-module-display.ts`）读 `@nerve/hooks`，详情页与页头的 `module_sidebar_collapsed`、两域共用的进度页签 `core/components/core/sidebar/progress-tabs.tsx` 读应用的副本。副本在 P6a 之前就有，现有读者 8 个文件（迭代的进行中卡片 `cycles/active-cycle/cycle-stats.tsx`，迭代与模块的详情页与页头，`progress-tabs.tsx`，工作区侧栏的 `sidebar-menu-items.tsx` 与 `favorites/favorites-menu.tsx`），`@nerve/hooks` 的读者 6 个。两份读写同一个键时行为相同（都以 `local-storage:<key>` 事件互相通知），所以不是缺陷，只是重复。
+
+**何时验收：** M8 的清理把应用副本的读者改为 `@nerve/hooks` 的 `useLocalStorage` 并删去副本（M7 若先改侧栏的收藏，可顺手改它那一处）；或负责人决定维持现状，并在此写明理由。
