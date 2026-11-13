@@ -79,6 +79,9 @@ A1–A7 满足（[spec §4](../specs/P5b-cycle-list.md#4-验收标准)已勾选�
 - **补记之后的分支 CI**：`190a2bb6` 的 43354077443 当即派发（被取代的 43098103752 仍停在 queued，没有被取消）：web、server (0)、server (1) 成功；e2e 失败 452/1：M4 的 I21 (API)（`i21-purge.spec.ts:355`）快进 61 天后第一次新的清理之后，旧的工作项 “old root” 仍在。
   - **根因**（测试的缺陷，M4 起潜伏）：快进后的新进程里 `asset.cleanup`（river_job 194）与 `cleanup.purge_deleted`（195）在同一时刻（03:16:49.961）开始；文件清理正在删 22 个旧文件的对象，清理任务删一行遇到受保护的外键（`PurgeProtected` 的 23503）时只记 `blocked`、留给下一轮，于是这一轮 `complete: true`、`blocked: 14`、`deleted: 108`，旧的工作项、评论与两条文件记录留到 2 秒后的下一轮。故事只等“水位之后完成的第一轮清理”就核对物理删除；本机与之前的 CI 里，新进程的清理往往在水位之前就已删完，第一轮新的清理 `deleted: 0`、`blocked: 0`，所以一直通过。产品行为正确（受保护的行按设计留给下一轮），P5b 没有改服务端。
   - **修正**：`fixtures/auto-archive.ts` 的 `completedPeriodicJobs` 另回答每次运行记下的 `output`；I21 改为等到水位之后有一轮新的清理走完所有表（`complete`）且没有留下受保护的行（`blocked === 0`）再核对，等待期限不变（15 秒）。本机 I21 `--repeat-each=3`（`t16ci2-green-i21-repeat3`）与同一辅助函数的 I16、F15（`t16ci2-helper-users`）通过，`make lint-web` 通过；按负责人 2026-11-08 的规则不重跑，修正后以新提交推送。
+- **合入后的 main CI**：noff `9675bb313564722afd48b088624812074e6fcfb3` 的 43362963122：web、server (0)、server (1) 成功；e2e 失败 452/1：本段的 G15 (page) 故事三（`g15-cycle-list-page.spec.ts:361` 的第二次 `editStays`）在 Web 的页面上打开 Keep 行的菜单后，“Edit” 被移出 DOM，点击等到 30 秒超时。
+  - **根因**（本段故事的缺陷）：应用内跳到 Web 的页面之后，故事以 Keep 行的 “Options” 可见为锚——这一行在 Now 的页面上也有。CI 的 trace：跳转 863.84 s，路由的两个模块 863.86 s 载入，Web 的页面直到 864.19 s 才读它的偏好（React Router 在新页面渲染完之前一直显示原来的页面）；故事在 863.97 s 点开的是 Now 页面上 Keep 的菜单，Web 的页面随后提交，菜单随 Now 的页面卸载。本机渲染快，所以没有出现；而跳转后的路由模块延迟 500 ms 时，旧故事的第二次核对整个落在 Now 的页面上照样通过——这一步可能在错误的页面上通过。
+  - **修正**：跳转后先等 Web 的页面读它自己的列表（不带 `cycle_id` 的 `GET /projects/{id}/issues`）答到，再以行的菜单为锚。变异 `t16main-red-g15s3-stays-on-now`（跳转改为留在 Now 的页面）让修正后的故事失败；路由模块延迟 500 ms（`t16main-green-g15s3-route-chunk-late`）、chromium `--repeat-each=3`、三种引擎与 `make lint-web` 通过。G15、G19 其余的应用内跳转都以目标页独有的内容为锚，不改。按负责人 2026-11-08 的规则不重跑，修正经分支 `codex/m6-p5b-ci` 合入。
 - **最终候选的分支 CI 与合入后的 main CI**：见 §7。
 
 ## 6. 整分支审查

@@ -356,7 +356,18 @@ test("G15 (page): on Now's page the header's new work item and a quick one each 
     expect(await closedByEscape(page)).toBe(true);
   };
   await editStays();
+  // Until Web's page is drawn, its route's module in and its render done, Now's page stays, and Keep's row there
+  // answers: Web's page is there once it has read its own list (no cycle in the query), drawn from that answer.
+  const webList = page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return (
+      response.request().method() === "GET" &&
+      url.pathname === `/api/v0/projects/${w.web.id}/issues` &&
+      !url.searchParams.has("cycle_id")
+    );
+  });
   await moveWithinApp(page, w.projectPath);
+  await webList;
   await expect(rowOptions(page, "Keep")).toBeVisible();
   await editStays();
   await quiet();
