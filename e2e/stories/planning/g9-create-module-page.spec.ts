@@ -29,7 +29,7 @@ import {
 import {
   changedModule,
   expectMembersOffered,
-  linkedModules,
+  listedOn,
   madeModule,
   modulePagesWorld,
   modulePath,
@@ -152,7 +152,7 @@ test("G9 (page): Web's modules are off, so its member's list says so and reads n
   expect(await closedWithin(page)).toBe(true);
   await expect(toast(page, "Module created successfully.")).toBeVisible();
   await expect(add).toBeFocused();
-  const listedIds = () => linkedModules(page.getByRole("main").last());
+  const listedIds = listedOn(page);
   await expect.poll(listedIds).toEqual([docs]);
   let rows = [madeModule("Docs", "backlog", mem.email)];
   await expectModules(db, web.id, rows);
@@ -229,7 +229,7 @@ test("G9 (page): Web's modules are off, so its member's list says so and reads n
   // A workspace admin who is Web's guest, whom nerve shows only her own work items there, sees the modules and may make
   // none: no Add Module.
   await seenBy(browser, baseURL ?? "", api, wanda.email, path, async (other) => {
-    await expect.poll(() => linkedModules(other.getByRole("main").last())).toEqual([docs, releaseId]);
+    await expect.poll(listedOn(other)).toEqual([docs, releaseId]);
     await expect(other.getByRole("button", { name: "Add Module", exact: true })).toHaveCount(0);
   });
   expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([
@@ -270,7 +270,7 @@ test("G9 (page): mem's dialog of Alpha, named for a change and holding it, sends
   const page = await signedInPage(mem.tokens);
   const watch = await watchPage(page);
   await page.goto(modulesPath(slug, web.id));
-  await expect.poll(() => linkedModules(page.getByRole("main").last())).toEqual([alpha.id]);
+  await expect.poll(listedOn(page)).toEqual([alpha.id]);
   await chooseFromMenu(page, "Alpha", "Edit");
   const dialog = modalDialog(page);
   await expect(dialog).toHaveAccessibleName("Update Module");

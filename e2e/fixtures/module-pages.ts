@@ -62,7 +62,7 @@ export async function openModulesList(page: Page, slug: string, projectId: strin
  * The ids of the modules whose pages the links within lead to, each once, in the order of the links: a list's rows, an
  * archive's.
  */
-export async function linkedModules(within: Locator): Promise<string[]> {
+async function linkedModules(within: Locator): Promise<string[]> {
   const hrefs = await within
     .locator('a[href*="/modules/"]')
     .evaluateAll((links) => links.map((link) => link.getAttribute("href") ?? ""));
