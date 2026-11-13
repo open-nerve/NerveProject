@@ -2,7 +2,8 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 import { act } from "react";
 import { createRoot } from "react-dom/client";
-import { afterEach, beforeEach, expect, expectTypeOf, it, vi } from "vitest";
+import { MemoryRouter } from "react-router";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { Module } from "@nerve/api-client";
 import { heldChange, signedIn, switchAccount, type HeldChange } from "@/lib/auth/fake-tab";
 import { refusal } from "@/lib/fake-refusal";
@@ -18,7 +19,8 @@ import { emptyPickers } from "./fake-module-dialog";
 // module's dialog (useModulePage), and follows nerve's answer though the row has gone first (a rename the page's
 // filters or search hide, say); once the page has gone (a Back, another project: its host with it), nerve's late
 // answer reaches the store alone. The dialog and its form are real; the store is a stand-in whose change nerve settles
-// when the test says, the pickers fake-module-dialog.tsx's, the caller web's admin (fake-permissions.ts).
+// when the test says, the pickers fake-module-dialog.tsx's, the caller web's admin (fake-permissions.ts). The module's
+// archive, its deletion and its restore are actions-host.changes.test.tsx's.
 const ui = vi.hoisted(() => ({
   modules: new Map<string, Module>(),
   update: vi.fn(),
@@ -89,13 +91,15 @@ function Row({ module }: { module: Module }) {
 function render(page: "with its row" | "without its row" | "elsewhere") {
   return act(async () =>
     root.render(
-      page === "elsewhere" ? (
-        <p>elsewhere</p>
-      ) : (
-        <ModuleActionsHost workspaceSlug="acme" projectId={web.id}>
-          {page === "with its row" && <Row module={auth} />}
-        </ModuleActionsHost>
-      )
+      <MemoryRouter>
+        {page === "elsewhere" ? (
+          <p>elsewhere</p>
+        ) : (
+          <ModuleActionsHost workspaceSlug="acme" projectId={web.id}>
+            {page === "with its row" && <Row module={auth} />}
+          </ModuleActionsHost>
+        )}
+      </MemoryRouter>
     )
   );
 }
@@ -163,11 +167,6 @@ it("follows nothing of a change answered after another tab moved this one to ano
   await settle();
   expect(toasts).toEqual([]);
   expect(dialog()).not.toBeNull();
-});
-
-it("opens a module's change alone: its archive and its deletion are not the page's yet", () => {
-  // their dialogs take the old store's module until they are rewritten for a Module (P6a T7)
-  expectTypeOf<Parameters<ReturnType<typeof useModulePage>["openDialog"]>[0]>().toEqualTypeOf<"edit">();
 });
 
 it("is required by a module's row: none outside a page of modules", async () => {

@@ -150,6 +150,24 @@
           "title": "Success!",
           "description": "Module updated successfully."
         }
+      },
+      "delete": {
+        "success": {
+          "title": "Success!",
+          "description": "Module deleted successfully."
+        }
+      },
+      "archive": {
+        "success": {
+          "title": "Archive success",
+          "description": "Your archives can be found in project archives."
+        }
+      },
+      "restore": {
+        "success": {
+          "title": "Restore success",
+          "description": "Your module can be found in project modules."
+        }
       }
     },
     "empty_state": {
@@ -157,6 +175,15 @@
         "in_active": "This module isn't active yet.",
         "invalid_date": "Invalid date. Please enter valid date."
       }
+    },
+    "delete": {
+      "title": "Delete module",
+      "body": "Are you sure you want to delete the module {name}? All of the data related to the module will be permanently removed. This action cannot be undone."
+    },
+    "archive": {
+      "title": "Archive module {name}",
+      "body": "Are you sure you want to archive the module? All your archives can be restored later.",
+      "only_closed": "Only completed or cancelled modules can be archived"
     }
   },
   "disabled_project": {

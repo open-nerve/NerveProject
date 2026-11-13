@@ -150,6 +150,24 @@
           "title": "成功！",
           "description": "模块更新成功。"
         }
+      },
+      "delete": {
+        "success": {
+          "title": "成功！",
+          "description": "模块删除成功。"
+        }
+      },
+      "archive": {
+        "success": {
+          "title": "归档成功",
+          "description": "您可以在项目归档中找到归档的内容。"
+        }
+      },
+      "restore": {
+        "success": {
+          "title": "恢复成功",
+          "description": "您可以在项目模块中找到这个模块。"
+        }
       }
     },
     "empty_state": {
@@ -157,6 +175,15 @@
         "in_active": "此模块尚未激活。",
         "invalid_date": "日期无效。请输入有效日期。"
       }
+    },
+    "delete": {
+      "title": "删除模块",
+      "body": "确定要删除模块 {name} 吗？与这个模块相关的全部数据将被永久删除。此操作无法撤销。"
+    },
+    "archive": {
+      "title": "归档模块 {name}",
+      "body": "确定要归档这个模块吗？归档的内容以后都可以恢复。",
+      "only_closed": "只有已完成或已取消的模块才能归档"
     }
   },
   "disabled_project": {

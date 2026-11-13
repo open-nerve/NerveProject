@@ -4,13 +4,14 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { Cycle } from "@nerve/api-client";
+import { choose, dialog, dialogButton, row, settle, where } from "@/components/common/fake-quick-actions";
 import { signedIn, switchAccount } from "@/lib/auth/fake-tab";
 import { refusal } from "@/lib/fake-refusal";
 import { toasts } from "@/lib/fake-toast";
 import { cycleOf } from "@/store/project/fake-projects";
 import { callerInWeb, its } from "@/store/user/fake-permissions";
 import type { IUserPermissionStore } from "@/store/user/permissions.store";
-import { CyclePages, choose, dialog, dialogButton, row, settle, standInCycles, where } from "./fake-cycle-pages";
+import { CyclePages, standInCycles } from "./fake-cycle-pages";
 
 // What a cycle's page does with what its quick actions ask (P5a spec 2.5, R12): deleting, archiving and restoring the
 // cycle. The page follows nerve's answer: it closes the dialog, says so and goes where the change takes it only once

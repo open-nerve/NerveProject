@@ -3,12 +3,12 @@
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { dialog, settle } from "@/components/common/fake-quick-actions";
 import { signedIn, switchAccount } from "@/lib/auth/fake-tab";
 import { refusal } from "@/lib/fake-refusal";
 import { toasts } from "@/lib/fake-toast";
 import { callerInWeb, its, type Caller } from "@/store/user/fake-permissions";
 import type { IUserPermissionStore } from "@/store/user/permissions.store";
-import { dialog, settle } from "./fake-cycle-pages";
 import { TransferPages, cyclesOf, transferCycles, where } from "./fake-transfer-pages";
 
 // The transfer of an ended cycle's unfinished work items (P5a spec 2.2, 2.5, R8, R12): its two entries, its row's

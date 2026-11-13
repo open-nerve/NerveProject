@@ -7,14 +7,12 @@ import { createContext, useContext, useLayoutEffect, useMemo, useRef, useState, 
 // nerve imports
 import type { Module } from "@nerve/api-client";
 // local imports
+import { ArchiveModuleModal } from "./archived-modules/modal";
+import { DeleteModuleModal } from "./delete-module-modal";
 import { CreateUpdateModuleModal } from "./modal";
 
-/**
- * The dialogs of a module that its page opens: the change its quick actions ask for. Its archive and its deletion join
- * them once their dialogs take a Module (P6a spec 2.7; archived-modules/modal.tsx and delete-module-modal.tsx take the
- * old store's module until then).
- */
-type ModuleDialog = "edit";
+/** The dialogs of a module that its page opens: those of its quick actions, which change it, archive it or delete it. */
+type ModuleDialog = "edit" | "archive" | "delete";
 
 /** What a module's quick actions have of the page they are on (ModuleActionsHost). */
 type ModulePage = {
@@ -41,12 +39,13 @@ type Props = {
 
 /**
  * The host, on a page of a project's modules (their list, their archive, a module's own page), of what a module's
- * quick actions open and follow (P6a spec 2.7, as CycleActionsHost for cycles): the dialog that changes a module, and
- * the page's lifetime. They are the page's, not the row's: a change may take the module's row away as nerve confirms
- * it (a rename the page's search no longer finds, say) before the page follows nerve's answer; the host stays, so its
- * dialog closes and says so. Each follows the answer only in the session it was sent in (followInSession), and while
- * the page is the one shown: mounted by the page, the host goes with it (a Back, another project), and nerve's late
- * answer then reaches the store alone.
+ * quick actions open and follow (P6a spec 2.7, as CycleActionsHost for cycles): the dialogs that change, archive or
+ * delete a module, and the page's lifetime, by which its restore is followed. They are the page's, not the row's: a
+ * deletion, an archive or a restore takes the module's row away as nerve confirms it (a change too, a rename the page's
+ * search no longer finds, say), before the page follows nerve's answer; the host stays, so its dialog closes and says
+ * so, and the page goes where the change takes it. Each follows the answer only in the session it was sent in
+ * (followInSession), and while the page is the one shown: mounted by the page, the host goes with it (a Back, another
+ * project), and nerve's late answer then reaches the store alone.
  */
 export function ModuleActionsHost(props: Props) {
   const { workspaceSlug, projectId, children } = props;
@@ -78,6 +77,20 @@ export function ModuleActionsHost(props: Props) {
         workspaceSlug={workspaceSlug}
         projectId={projectId}
         moduleId={shown?.module.id}
+      />
+      <ArchiveModuleModal
+        isOpen={isOpen("archive")}
+        handleClose={close}
+        module={shown?.module}
+        workspaceSlug={workspaceSlug}
+        projectId={projectId}
+      />
+      <DeleteModuleModal
+        isOpen={isOpen("delete")}
+        handleClose={close}
+        module={shown?.module}
+        workspaceSlug={workspaceSlug}
+        projectId={projectId}
       />
     </ModulePageContext.Provider>
   );

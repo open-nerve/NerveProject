@@ -5,9 +5,9 @@
  */
 
 // types
-import type { Cycle } from "@nerve/api-client";
+import type { Cycle, Module } from "@nerve/api-client";
 import { useTranslation } from "@nerve/i18n";
-import type { IModule, IProjectView, IWorkspaceView } from "@nerve/types";
+import type { IProjectView, IWorkspaceView } from "@nerve/types";
 import type { TContextMenuItem } from "@nerve/ui";
 // hooks
 import { useQuickActionsFactory } from "@/components/common/quick-actions-factory";
@@ -28,11 +28,11 @@ interface UseCycleMenuItemsProps {
 }
 
 interface UseModuleMenuItemsProps {
-  moduleDetails: IModule | undefined;
-  isEditingAllowed: boolean;
-  workspaceSlug: string;
-  projectId: string;
-  moduleId: string;
+  module: Module;
+  /** The caller writes the module's project's modules (canWriteModules, P6a spec 2.3). */
+  canWrite: boolean;
+  /** The caller may delete the module: the project's admin, or its creator while its admin or member (R5). */
+  canDelete: boolean;
   handleEdit: () => void;
   handleArchive: () => void;
   handleRestore: () => void;
@@ -85,26 +85,33 @@ export const useCycleMenuItems = (props: UseCycleMenuItemsProps): TContextMenuIt
   return items;
 };
 
+/**
+ * A module's menu (P6a spec 2.6, R5): changing it, to the caller who writes its project's modules while it is not
+ * archived; opening it in a new tab and copying its link, to anyone; archiving it, to the caller who writes, while it
+ * is not archived, the item disabled with the reason until it is completed or cancelled; restoring it, to the caller
+ * who writes, once archived; deleting it, to the caller who may (canDelete), while it is not archived (nerve deletes
+ * an archived module too: R5).
+ */
 export const useModuleMenuItems = (props: UseModuleMenuItemsProps): TContextMenuItem[] => {
   const factory = useQuickActionsFactory();
-  const { moduleDetails, isEditingAllowed, ...handlers } = props;
+  const { t } = useTranslation();
+  const { module, canWrite, canDelete, ...handlers } = props;
 
-  const isArchived = !!moduleDetails?.archived_at;
-  const moduleState = moduleDetails?.status?.toLocaleLowerCase();
-  const isInArchivableGroup = !!moduleState && ["completed", "cancelled"].includes(moduleState);
+  const isArchived = module.archived_at !== null;
+  const isClosed = module.status === "completed" || module.status === "cancelled";
 
   // Assemble final menu items - order defined here
   const items = [
-    factory.createEditMenuItem(handlers.handleEdit, isEditingAllowed && !isArchived),
+    factory.createEditMenuItem(handlers.handleEdit, canWrite && !isArchived),
     factory.createOpenInNewTabMenuItem(handlers.handleOpenInNewTab),
     factory.createCopyLinkMenuItem(handlers.handleCopyLink),
     factory.createArchiveMenuItem(handlers.handleArchive, {
-      shouldRender: isEditingAllowed && !isArchived,
-      disabled: !isInArchivableGroup,
-      description: isInArchivableGroup ? undefined : "Only completed or cancelled modules can be archived",
+      shouldRender: canWrite && !isArchived,
+      disabled: !isClosed,
+      description: isClosed ? undefined : t("project_module.archive.only_closed"),
     }),
-    factory.createRestoreMenuItem(handlers.handleRestore, isEditingAllowed && isArchived),
-    factory.createDeleteMenuItem(handlers.handleDelete, isEditingAllowed && !isArchived),
+    factory.createRestoreMenuItem(handlers.handleRestore, canWrite && isArchived),
+    factory.createDeleteMenuItem(handlers.handleDelete, canDelete && !isArchived),
   ].filter((item) => item.shouldRender !== false);
 
   return items;

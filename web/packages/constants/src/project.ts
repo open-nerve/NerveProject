@@ -91,10 +91,6 @@ export const PROJECT_ERROR_MESSAGES = {
     i18n_title: "workspace_projects.error.permission",
     i18n_message: undefined,
   },
-  moduleDeleteError: {
-    i18n_title: "error",
-    i18n_message: "workspace_projects.error.module_delete",
-  },
   issueDeleteError: {
     i18n_title: "error",
     i18n_message: "workspace_projects.error.issue_delete",

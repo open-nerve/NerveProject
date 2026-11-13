@@ -4,12 +4,13 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { Cycle } from "@nerve/api-client";
+import { choose, menuButton, offered, openMenu, row, settle } from "@/components/common/fake-quick-actions";
 import { signedIn } from "@/lib/auth/fake-tab";
 import { toasts } from "@/lib/fake-toast";
 import { cycleOf } from "@/store/project/fake-projects";
 import { callerInWeb, its, type Caller } from "@/store/user/fake-permissions";
 import type { IUserPermissionStore } from "@/store/user/permissions.store";
-import { CyclePages, choose, menuButton, offered, openMenu, row, settle, standInCycles } from "./fake-cycle-pages";
+import { CyclePages, standInCycles } from "./fake-cycle-pages";
 
 // A cycle's quick actions (P5a spec 2.5, R8): what its menu offers its caller, by his role in its project (the
 // permission store's own, over acme and its project web as nerve lists them to him, fake-permissions.ts) and by the
