@@ -10,12 +10,13 @@ import { useTranslation } from "@nerve/i18n";
 import { PillButton } from "@makeplane/propel/components/pill";
 import { CloseOutline } from "@makeplane/propel/icons";
 import type { CycleFilters } from "@nerve/utils";
+// components
+import { AppliedDateFilters } from "@/components/planning/applied-date-filters";
 // hooks
 import { useCycleFilters } from "@/hooks/store/use-cycle-filters";
 // store
 import type { CycleList } from "@/store/planning/cycle_filter.store";
 // local imports
-import { AppliedDateFilters } from "./date";
 import { AppliedStatusFilters } from "./status";
 
 type Props = {

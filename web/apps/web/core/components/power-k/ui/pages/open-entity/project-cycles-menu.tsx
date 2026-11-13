@@ -14,8 +14,7 @@ import { PowerKCyclesMenu } from "@/components/power-k/menus/cycles";
 import { PowerKMenuEmptyState } from "@/components/power-k/menus/empty-state";
 // hooks
 import { useCycles } from "@/hooks/store/use-cycles";
-import { useProject } from "@/hooks/store/use-project";
-import { useUserPermissions } from "@/hooks/store/user";
+import { usePlanningReads } from "@/hooks/use-planning-reads";
 import { useRefusalMessage } from "@/hooks/use-refusal-toast";
 // lib
 import { useSessionSWR } from "@/lib/use-session-swr";
@@ -36,13 +35,9 @@ export const PowerKOpenProjectCyclesMenu = observer(function PowerKOpenProjectCy
   const { workspaceSlug, projectId } = context.params;
   // store hooks
   const { getProjectCycleIds, getCycleById, fetchCycles } = useCycles();
-  const { getProjectById } = useProject();
-  const { getProjectRoleByWorkspaceSlugAndProjectId } = useUserPermissions();
   const refusalMessage = useRefusalMessage();
   // a member's read, of a project not archived whose cycles are on: as the project's wrapper reads them
-  const project = getProjectById(projectId);
-  const role = workspaceSlug ? getProjectRoleByWorkspaceSlugAndProjectId(workspaceSlug, projectId) : undefined;
-  const listed = role !== undefined && project?.archived_at === null && project.cycle_view;
+  const { listed } = usePlanningReads(workspaceSlug, projectId, "cycles");
   const read = useSessionSWR(listed ? ["PROJECT_CYCLES", projectId] : null, (id) => fetchCycles(id));
   const cycleIds = getProjectCycleIds(projectId);
 

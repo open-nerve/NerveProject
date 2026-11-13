@@ -5,101 +5,100 @@
  */
 
 import { observer } from "mobx-react";
-
 import { CopyOutline, DeleteOutline, EditOutline } from "@makeplane/propel/icons";
-// nerve imports
-import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
-import type { ILinkDetails } from "@nerve/types";
-// nerve utils
-import { getIconForLink, copyTextToClipboard, calculateTimeAgo } from "@nerve/utils";
+// nerve imports
+import type { ModuleLink } from "@nerve/api-client";
+import { useTranslation } from "@nerve/i18n";
+import { calculateTimeAgo, getIconForLink } from "@nerve/utils";
 // hooks
 import { useMember } from "@/hooks/store/use-member";
+import { useCopyText } from "@/hooks/use-copy-link";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 
 type Props = {
-  handleDeleteLink: () => void;
-  handleEditLink: () => void;
-  isEditingAllowed: boolean;
-  link: ILinkDetails;
+  link: ModuleLink;
+  /** Whether the caller changes and removes the link. */
+  editable: boolean;
+  /** Whether its removal is out: it is not asked again until nerve has answered. */
+  removing: boolean;
+  onEdit: () => void;
+  onRemove: () => void;
 };
 
-export const ModulesLinksListItem = observer(function ModulesLinksListItem(props: Props) {
-  const { handleDeleteLink, handleEditLink, isEditingAllowed, link } = props;
+const ACTION = "grid place-items-center rounded-sm p-1 text-secondary hover:bg-layer-transparent-hover";
+
+/**
+ * A link of a module (P6a spec 2.8, R10): its icon, the one nerve keeps inline in its metadata (a data:image), else
+ * one by its address, never one the browser would fetch from elsewhere (favicon_url); its title, else its page's,
+ * else its address, which opens in a new tab with no hold on this one; when it was added, and by whom while that
+ * account is there. Every caller copies its address as it is; the caller who writes the module changes and removes it.
+ */
+export const ModuleLinkItem = observer(function ModuleLinkItem(props: Props) {
+  const { link, editable, removing, onEdit, onRemove } = props;
+  // nerve hooks
+  const { t } = useTranslation();
   // store hooks
   const { getUserDetails } = useMember();
-  // derived values
-  const createdByDetails = getUserDetails(link.created_by);
-  // platform os
+  // hooks
   const { isMobile } = usePlatformOS();
-
+  const copyText = useCopyText();
+  // derived values
+  const icon = link.metadata.favicon?.startsWith("data:image/") ? link.metadata.favicon : undefined;
   const Icon = getIconForLink(link.url);
-
-  const copyToClipboard = (text: string) => {
-    copyTextToClipboard(text).then(() =>
-      setToast({
-        type: TOAST_TYPE.SUCCESS,
-        title: "Copied to clipboard",
-        message: "The URL has been successfully copied to your clipboard",
-      })
-    );
-  };
+  const name = link.title || link.metadata.title || link.url;
+  const adder = link.created_by_id === null ? undefined : getUserDetails(link.created_by_id);
+  const ago = calculateTimeAgo(link.created_at);
 
   return (
-    <div className="relative flex flex-col rounded-md bg-layer-3 p-2.5">
+    <li className="relative flex flex-col rounded-md bg-layer-3 p-2.5">
       <div className="flex w-full items-start justify-between gap-2">
         <div className="flex items-start gap-2 truncate">
           <span className="py-1">
-            <Icon className="size-3 shrink-0 stroke-2 text-tertiary group-hover:text-primary" />
+            {icon ? (
+              <img src={icon} alt="" className="size-3 shrink-0" />
+            ) : (
+              <Icon className="size-3 shrink-0 stroke-2 text-tertiary group-hover:text-primary" />
+            )}
           </span>
-          <Tooltip label={link.title && link.title !== "" ? link.title : link.url} layout="stacked" disabled={isMobile}>
+          <Tooltip label={link.url} layout="stacked" disabled={isMobile}>
             <a href={link.url} target="_blank" rel="noopener noreferrer" className="cursor-pointer truncate text-11">
-              {link.title && link.title !== "" ? link.title : link.url}
+              {name}
             </a>
           </Tooltip>
         </div>
-
         <div className="z-1 flex shrink-0 items-center">
-          {isEditingAllowed && (
-            <button
-              type="button"
-              className="grid place-items-center rounded-sm p-1 text-secondary hover:bg-layer-transparent-hover"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                handleEditLink();
-              }}
-            >
+          {editable && (
+            <button type="button" aria-label={t("common.edit_item", { name })} className={ACTION} onClick={onEdit}>
               <EditOutline className="size-3 stroke-[1.5]" />
             </button>
           )}
           <button
             type="button"
-            onClick={() => copyToClipboard(link.url)}
-            className="grid place-items-center rounded-sm p-1 text-secondary hover:bg-layer-transparent-hover"
+            aria-label={`${t("common.actions.copy_link")}: ${name}`}
+            className={ACTION}
+            onClick={() => void copyText(link.url, t("common.link_copied_to_clipboard"))}
           >
             <CopyOutline className="size-3 stroke-[1.5]" />
           </button>
-          {isEditingAllowed && (
+          {editable && (
             <button
               type="button"
-              className="grid place-items-center rounded-sm p-1 text-secondary hover:bg-layer-transparent-hover"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                handleDeleteLink();
-              }}
+              aria-label={t("common.delete_item", { name })}
+              className={ACTION}
+              disabled={removing}
+              onClick={onRemove}
             >
               <DeleteOutline className="size-3 stroke-[1.5]" />
             </button>
           )}
         </div>
       </div>
-      <div className="px-5">
-        <p className="mt-0.5 flex items-center gap-1.5 stroke-[1.5] text-11 text-tertiary">
-          Added {calculateTimeAgo(link.created_at)} {createdByDetails && <>by {createdByDetails.display_name}</>}
-        </p>
-      </div>
-    </div>
+      <p className="mt-0.5 px-5 text-11 text-tertiary">
+        {adder
+          ? t("project_module.link.added_by", { time: ago, name: adder.display_name })
+          : t("project_module.link.added_at", { time: ago })}
+      </p>
+    </li>
   );
 });

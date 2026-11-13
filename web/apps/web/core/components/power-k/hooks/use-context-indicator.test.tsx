@@ -2,31 +2,40 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, expect, it, vi } from "vitest";
 import { listedCycles } from "@/components/cycles/fake-cycle-lists";
+import { listedModules } from "@/components/modules/fake-module-lists";
 import { web } from "@/store/fake-project-lists";
 import { rowOf } from "@/store/planning/fake-cycles";
-import { cycleOf } from "@/store/project/fake-projects";
+import { moduleRowOf } from "@/store/planning/fake-modules";
+import { cycleOf, moduleOf } from "@/store/project/fake-projects";
 import { useContextIndicator } from "./use-context-indicator";
 
-// The command palette's chip that names what its commands act on (P5a spec 2.7): on a cycle's page, the route's cycle by
-// its name, as the cycle store gives it (a stand-in, fake-cycle-lists.ts).
+// The command palette's chip that names what its commands act on (P5a spec 2.7, P6a spec 2.9): on a cycle's page, the
+// route's cycle by its name, as the cycle store gives it (a stand-in, fake-cycle-lists.ts); on a module's page, the
+// route's module by its name, as the module store gives it (fake-module-lists.ts).
 
 const held = vi.hoisted(() => ({
   params: {} as Record<string, string>,
   cycles: undefined as unknown as ReturnType<typeof listedCycles>,
+  modules: undefined as unknown as ReturnType<typeof listedModules>,
 }));
 vi.mock("react-router", () => ({ useParams: () => held.params }));
 vi.mock("@/hooks/store/use-cycles", () => ({ useCycles: () => held.cycles }));
-vi.mock("@/hooks/store/use-module", () => ({ useModule: () => ({ getModuleById: () => undefined }) }));
+vi.mock("@/hooks/store/use-modules", () => ({ useModules: () => held.modules }));
 
 let indicator: string | null;
+let context: "cycle" | "module" = "cycle";
 function Chip() {
-  indicator = useContextIndicator({ activeContext: "cycle" });
+  indicator = useContextIndicator({ activeContext: context });
   return null;
 }
 const sprint = cycleOf(web, "Sprint", { status: "current" });
+const auth = moduleOf(web, "Auth");
 beforeEach(() => {
+  context = "cycle";
   held.cycles = listedCycles();
   held.cycles.show("cycles", web.id, [rowOf(sprint)]);
+  held.modules = listedModules();
+  held.modules.show("modules", web.id, [moduleRowOf(auth)]);
 });
 
 it("names the route's cycle by its name as the cycle store gives it", () => {
@@ -37,6 +46,20 @@ it("names the route's cycle by its name as the cycle store gives it", () => {
 
 it("names nothing of a cycle the store does not give", () => {
   held.params = { workspaceSlug: "acme", projectId: web.id, cycleId: "c-gone" };
+  renderToStaticMarkup(<Chip />);
+  expect(indicator).toBeNull();
+});
+
+it("names the route's module by its name as the module store gives it", () => {
+  context = "module";
+  held.params = { workspaceSlug: "acme", projectId: web.id, moduleId: auth.id };
+  renderToStaticMarkup(<Chip />);
+  expect(indicator).toBe("Auth");
+});
+
+it("names nothing of a module the store does not give", () => {
+  context = "module";
+  held.params = { workspaceSlug: "acme", projectId: web.id, moduleId: "m-gone" };
   renderToStaticMarkup(<Chip />);
   expect(indicator).toBeNull();
 });

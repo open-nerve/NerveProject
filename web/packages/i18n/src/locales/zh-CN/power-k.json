@@ -34,11 +34,8 @@
         "indicator": "模块",
         "add_remove_members": "添加/移除成员",
         "change_status": "更改状态",
-        "add_to_favorites": "添加到收藏",
-        "remove_from_favorites": "从收藏中移除",
         "copy_url": "复制 URL",
-        "copy_url_toast_success": "模块 URL 已复制到剪贴板。",
-        "copy_url_toast_error": "复制模块 URL 到剪贴板时出错。"
+        "copy_url_toast_success": "模块 URL 已复制到剪贴板。"
       }
     },
     "creation_actions": {

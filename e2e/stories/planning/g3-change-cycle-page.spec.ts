@@ -6,7 +6,6 @@ import { emailFor } from "../../fixtures/auth";
 import { expectQuietConsole, watchPage } from "../../fixtures/browser";
 import {
   chooseFromMenu,
-  cycleMenu,
   cyclePagesWorld,
   cyclePath,
   cycleSection,
@@ -14,6 +13,7 @@ import {
   dismissToasts,
   entriesOf,
   failedLoads,
+  itemMenu,
   linkedCycles,
   menuEntries,
   openCyclesList,
@@ -148,7 +148,7 @@ test("G3 (page): a right-click on Beta's row opens its menu, inert while closed,
   expect((await renamed.release()).status()).toBe(200);
   expect(await closedWithin(page)).toBe(true);
   await expect(toast(page, "Cycle updated successfully.")).toBeVisible();
-  await expect(cycleMenu(page, "Sprint A")).toBeVisible();
+  await expect(itemMenu(page, "Sprint A")).toBeVisible();
   rows = changed(rows, "Alpha", { name: "Sprint A", end: "2031-01-20" });
   await expectCycles(db, web.id, rows);
 

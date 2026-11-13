@@ -9,12 +9,12 @@ import { expect, test } from "../../fixtures/test";
 
 const missing = "0199f1c2-7a1b-7c3d-8e4f-5a6b7c8d9e0f";
 // The cycle pages left this list in M6/P5a: they read nerve's /api/v0 cycles, and their missing-cycle and empty-archive
-// pages are covered by the G3 and G8 page stories (stories/planning/). The rest still mount without nerve's domain API.
+// pages are covered by the G3 and G8 page stories (stories/planning/). The module pages left it in M6/P6a: a module's
+// page reads nerve's /api/v0 module, and the archive of modules nerve's archived modules; the missing-module page and
+// the empty archive go to the G13 page story. The rest still mount without nerve's domain API.
 const entries = [
-  { name: "module", path: `modules/${missing}`, domain: `modules/${missing}/`, empty: "Module does not exist" },
   { name: "project view", path: `views/${missing}`, domain: `views/${missing}/`, empty: "View does not exist" },
   { name: "workspace view", path: "workspace-views/all-issues", domain: "views/" },
-  { name: "archived modules", path: "archives/modules", domain: "archived-modules/", tab: "Modules" },
 ] as const;
 
 /** A separate observation of the original events: watchPage's arrays are never filtered or reset. */
@@ -105,16 +105,6 @@ for (const entry of entries) {
         // The title comes from the actual child page, whereas the switcher belongs to its parent layout.
         await expect(page).toHaveTitle("Removal workspace - All Views");
         await expect(page.getByRole("button", { name: "All work items" })).toBeVisible();
-      } else {
-        await expect(
-          page
-            .locator(`a[href="/${slug}/projects/${project.id}/archives/issues"]`)
-            .getByText("Archives", { exact: true })
-        ).toBeVisible();
-        // Newly created projects disable M6 feature navigation; the direct route still renders its own breadcrumb
-        // and directory header. ArchiveTabsList only includes the enabled feature tabs.
-        await expect(page.getByText(entry.tab, { exact: true })).toBeVisible();
-        await expect(page.getByRole("textbox", { name: "Search", exact: true })).toBeAttached();
       }
       await expect(page.getByRole("button", { name: "Join project", exact: true })).toHaveCount(0);
       await expect(
@@ -123,10 +113,6 @@ for (const entry of entries) {
       // An exact complete set excludes generic issues/issues-detail/v2/issues, single workspace-view reads,
       // removed filters and writes too; no old API prefix or class of 4xx is broadly exempted.
       await expect.poll(whole).toEqual({ pending: 0, requests: expected.toSorted() });
-      if (!detail && !workspaceView) {
-        // M6's failed archive read leaves fetchedMap unset: record the real directory loader, not an empty success.
-        await expect(page.getByRole("main").last().locator(".animate-pulse")).toHaveCount(1);
-      }
       const origin = new URL(page.url()).origin;
       expect(observed.api().map(({ url }) => new URL(url).origin)).toEqual(expected.map(() => origin));
       const own = observed.api().filter(({ url }) => url === `${origin}${domain}`);

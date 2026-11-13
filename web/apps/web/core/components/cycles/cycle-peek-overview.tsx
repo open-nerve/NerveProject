@@ -9,13 +9,14 @@ import { useSearchParams } from "react-router";
 import { ChevronRightOutline } from "@makeplane/propel/icons";
 // nerve imports
 import { useTranslation } from "@nerve/i18n";
+// components
+import { PlanningReadFailure } from "@/components/planning/read-failure";
 // hooks
 import { useCycles } from "@/hooks/store/use-cycles";
 // lib
 import { useSessionSWR } from "@/lib/use-session-swr";
 // local imports
 import { CycleDetailsSidebar } from "./progress-sidebar";
-import { CyclesReadFailure } from "./read-failure";
 
 const PEEK = "peekCycle";
 
@@ -79,7 +80,10 @@ export const CyclePeekOverview = observer(function CyclePeekOverview(props: Prop
           >
             <ChevronRightOutline className="size-4 text-secondary" aria-hidden="true" />
           </button>
-          <CyclesReadFailure error={failed[0]?.error} onRetry={() => failed.forEach((fetch) => void fetch.mutate())} />
+          <PlanningReadFailure
+            error={failed[0]?.error}
+            onRetry={() => failed.forEach((fetch) => void fetch.mutate())}
+          />
         </>
       ) : (
         // Keyed by the cycle previewed (v0 design 7.7), as a cycle's own page is: the preview of another mounts its

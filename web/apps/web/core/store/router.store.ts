@@ -18,7 +18,6 @@ export interface IRouterStore {
   workspaceSlug: string | undefined;
   projectId: string | undefined;
   cycleId: string | undefined;
-  moduleId: string | undefined;
   viewId: string | undefined;
   globalViewId: string | undefined;
   userId: string | undefined;
@@ -39,7 +38,6 @@ export class RouterStore implements IRouterStore {
       workspaceSlug: computed,
       projectId: computed,
       cycleId: computed,
-      moduleId: computed,
       viewId: computed,
       globalViewId: computed,
       userId: computed,
@@ -71,14 +69,6 @@ export class RouterStore implements IRouterStore {
    */
   get projectId() {
     return this.query.projectId;
-  }
-
-  /**
-   * Returns the module id from the query
-   * @returns string|undefined
-   */
-  get moduleId() {
-    return this.query.moduleId;
   }
 
   /**

@@ -4,173 +4,136 @@
  * See the LICENSE file for details.
  */
 
-import { useState } from "react";
+import { useRef } from "react";
 import { observer } from "mobx-react";
+import { useNavigate } from "react-router";
 import { MoreHorizontalOutline } from "@makeplane/propel/icons";
 // nerve imports
-import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
+import type { Module } from "@nerve/api-client";
 import { useTranslation } from "@nerve/i18n";
-import { IconButton } from "@nerve/propel/icon-button";
+import { getIconButtonStyling } from "@nerve/propel/icon-button";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { ContextMenu, CustomMenu } from "@nerve/ui";
-import { copyUrlToClipboard, cn } from "@nerve/utils";
-// components
-import { useModuleMenuItems } from "@/components/common/quick-actions-helper";
-import { ArchiveModuleModal, CreateUpdateModuleModal, DeleteModuleModal } from "@/components/modules";
+import { cn } from "@nerve/utils";
 // hooks
-import { useModule } from "@/hooks/store/use-module";
-import { useUserPermissions } from "@/hooks/store/user";
-import { useNavigate } from "react-router";
+import { useModuleMenuItems } from "@/components/common/quick-actions-helper";
+import { useModules } from "@/hooks/store/use-modules";
+import { useUser, useUserPermissions } from "@/hooks/store/user";
+import { useCopyLink } from "@/hooks/use-copy-link";
+import { useRefusalToast } from "@/hooks/use-refusal-toast";
+// lib
+import { followInSession } from "@/lib/in-session";
+// local imports
+import { useModulePage } from "./actions-host";
 
 type Props = {
-  parentRef: React.RefObject<HTMLDivElement | null>;
+  parentRef: React.RefObject<HTMLElement | null>;
   moduleId: string;
   projectId: string;
   workspaceSlug: string;
   customClassName?: string;
 };
 
+/**
+ * A module's quick actions (P6a spec 2.6): its menu, by its button, named by the module, and by a right-click on its
+ * row (parentRef); none while the store does not give the module. Its dialogs are its page's (ModuleActionsHost), and
+ * what follows a change is the page's while it is mounted, though the change takes the row away.
+ */
 export const ModuleQuickActions = observer(function ModuleQuickActions(props: Props) {
-  const { parentRef, moduleId, projectId, workspaceSlug, customClassName } = props;
-  const { t } = useTranslation();
+  const { getModuleById } = useModules();
+  const module = getModuleById(props.moduleId);
+  return module ? <ModuleMenu {...props} module={module} /> : null;
+});
+
+/**
+ * The menu of the module of the project of projectId (useModuleMenuItems): what the caller may do with it, as nerve
+ * decides it (R5; canWriteModules, canDeleteModule): its admins and members write it; its admins delete it, and so does
+ * its creator while the project's admin or member; neither one whom nerve shows only his own work items, nor anyone
+ * while the project's modules are turned off.
+ */
+const ModuleMenu = observer(function ModuleMenu(props: Props & { module: Module }) {
+  const { parentRef, module, projectId, workspaceSlug, customClassName } = props;
   // router
   const navigate = useNavigate();
-  // states
-  const [editModal, setEditModal] = useState(false);
-  const [archiveModuleModal, setArchiveModuleModal] = useState(false);
-  const [deleteModal, setDeleteModal] = useState(false);
+  // nerve hooks
+  const { t } = useTranslation();
   // store hooks
-  const { allowPermissions } = useUserPermissions();
-
-  const { getModuleById, restoreModule } = useModule();
-
-  // derived values
-  const moduleDetails = getModuleById(moduleId);
+  const { unarchive } = useModules();
+  const { canWriteModules, canDeleteModule } = useUserPermissions();
+  const { data: currentUser } = useUser();
+  const { openDialog, pageMounted } = useModulePage();
+  const copyLink = useCopyLink();
+  const toastRefusal = useRefusalToast();
+  // states
+  const restoring = useRef(false);
   // auth
-  const isEditingAllowed = allowPermissions(
-    [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
-    EUserPermissionsLevel.PROJECT,
-    workspaceSlug,
-    projectId
-  );
+  const canWrite = canWriteModules(workspaceSlug, projectId);
+  const canDelete = canDeleteModule(workspaceSlug, projectId, module.created_by_id === currentUser?.id);
 
-  const moduleLink = `${workspaceSlug}/projects/${projectId}/modules/${moduleId}`;
-  const handleCopyText = () =>
-    copyUrlToClipboard(moduleLink).then(() => {
-      setToast({
-        type: TOAST_TYPE.SUCCESS,
-        title: "Link Copied!",
-        message: "Module link copied to clipboard.",
-      });
-      return;
-    });
-  const handleOpenInNewTab = () => window.open(`/${moduleLink}`, "_blank", "noopener,noreferrer");
-
-  const handleRestoreModule = async () => {
-    try {
-      await restoreModule(workspaceSlug, projectId, moduleId);
-      setToast({
-        type: TOAST_TYPE.SUCCESS,
-        title: "Restore success",
-        message: "Your module can be found in project modules.",
-      });
-      navigate(`/${workspaceSlug}/projects/${projectId}/archives/modules`);
-    } catch (_error) {
-      setToast({
-        type: TOAST_TYPE.ERROR,
-        title: "Error!",
-        message: "Module could not be restored. Please try again.",
-      });
-    }
-  };
-
-  const MENU_ITEMS = useModuleMenuItems({
-    moduleDetails: moduleDetails ?? undefined,
-    workspaceSlug,
-    projectId,
-    moduleId,
-    isEditingAllowed,
-    handleEdit: () => setEditModal(true),
-    handleArchive: () => setArchiveModuleModal(true),
-    handleRestore: handleRestoreModule,
-    handleDelete: () => setDeleteModal(true),
-    handleCopyLink: handleCopyText,
-    handleOpenInNewTab,
-  });
-
-  const CONTEXT_MENU_ITEMS = MENU_ITEMS.map(function CONTEXT_MENU_ITEMS(item) {
-    return {
-      ...item,
-
-      onClick: () => {
-        item.action();
+  const link = `/${workspaceSlug}/projects/${projectId}/modules/${module.id}`;
+  // Restored, the module goes back to its project's list, and its row from the archive; the page says so and goes to
+  // the archive, which closes a preview. Refused, it says nerve's reason, never success. While its restore is out, the
+  // module's restore asked again (by its button's menu or its right-click menu, which share the items) sends nothing.
+  const handleRestore = async () => {
+    if (restoring.current) return;
+    restoring.current = true;
+    await followInSession(() => unarchive(module.id), {
+      done: () => {
+        if (!pageMounted.current) return;
+        setToast({
+          type: TOAST_TYPE.SUCCESS,
+          title: t("project_module.action.restore.success.title"),
+          message: t("project_module.action.restore.success.description"),
+        });
+        return navigate(`/${workspaceSlug}/projects/${projectId}/archives/modules`);
       },
-    };
+      failed: (error) => {
+        if (pageMounted.current) toastRefusal(error);
+      },
+    });
+    restoring.current = false;
+  };
+  const MENU_ITEMS = useModuleMenuItems({
+    module,
+    canWrite,
+    canDelete,
+    handleEdit: () => openDialog("edit", module),
+    handleArchive: () => openDialog("archive", module),
+    handleRestore: () => void handleRestore(),
+    handleDelete: () => openDialog("delete", module),
+    handleCopyLink: () => void copyLink(link, t("common.link_copied_to_clipboard")),
+    handleOpenInNewTab: () => window.open(link, "_blank", "noopener,noreferrer"),
   });
 
   return (
     <>
-      {moduleDetails && (
-        <div className="fixed">
-          <CreateUpdateModuleModal
-            isOpen={editModal}
-            onClose={() => setEditModal(false)}
-            data={moduleDetails}
-            projectId={projectId}
-            workspaceSlug={workspaceSlug}
-          />
-          <ArchiveModuleModal
-            workspaceSlug={workspaceSlug}
-            projectId={projectId}
-            moduleId={moduleId}
-            isOpen={archiveModuleModal}
-            handleClose={() => setArchiveModuleModal(false)}
-          />
-          <DeleteModuleModal data={moduleDetails} isOpen={deleteModal} onClose={() => setDeleteModal(false)} />
-        </div>
-      )}
-      <ContextMenu parentRef={parentRef} items={CONTEXT_MENU_ITEMS} />
+      <ContextMenu parentRef={parentRef} items={MENU_ITEMS} />
       <CustomMenu
-        customButton={
-          <IconButton variant="tertiary" size="lg" icon={MoreHorizontalOutline} aria-label={t("common.options")} />
-        }
+        ariaLabel={t("common.item_options", { name: module.name })}
+        customButton={<MoreHorizontalOutline className="size-4" aria-hidden="true" />}
+        customButtonClassName={cn(getIconButtonStyling("tertiary", "lg"), customClassName)}
         placement="bottom-end"
         closeOnSelect
-        buttonClassName={customClassName}
+        maxHeight="lg"
       >
-        {MENU_ITEMS.map((item) => {
-          if (item.shouldRender === false) return null;
-          return (
-            <CustomMenu.MenuItem
-              key={item.key}
-              onClick={() => {
-                item.action();
-              }}
-              className={cn(
-                "flex items-center gap-2",
-                {
-                  "text-placeholder": item.disabled,
-                },
-                item.className
+        {MENU_ITEMS.map((item) => (
+          <CustomMenu.MenuItem
+            key={item.key}
+            onClick={() => item.action()}
+            className={cn("flex items-center gap-2", { "text-placeholder": item.disabled }, item.className)}
+            disabled={item.disabled}
+          >
+            {item.icon && <item.icon className={cn("h-3 w-3 flex-shrink-0", item.iconClassName)} />}
+            <div>
+              <h5>{item.title}</h5>
+              {item.description && (
+                <p className={cn("whitespace-pre-line text-tertiary", { "text-placeholder": item.disabled })}>
+                  {item.description}
+                </p>
               )}
-              disabled={item.disabled}
-            >
-              {item.icon && <item.icon className={cn("h-3 w-3 flex-shrink-0", item.iconClassName)} />}
-              <div>
-                <h5>{item.title}</h5>
-                {item.description && (
-                  <p
-                    className={cn("whitespace-pre-line text-tertiary", {
-                      "text-placeholder": item.disabled,
-                    })}
-                  >
-                    {item.description}
-                  </p>
-                )}
-              </div>
-            </CustomMenu.MenuItem>
-          );
-        })}
+            </div>
+          </CustomMenu.MenuItem>
+        ))}
       </CustomMenu>
     </>
   );

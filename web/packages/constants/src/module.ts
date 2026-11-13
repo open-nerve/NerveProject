@@ -4,11 +4,11 @@
  * See the LICENSE file for details.
  */
 
-// types
-import type { TModuleLayoutOptions, TModuleOrderByOptions, TModuleStatus } from "@nerve/types";
+// nerve imports
+import type { ModuleStatus } from "@nerve/api-client";
 
 const MODULE_STATUS_COLORS: {
-  [key in TModuleStatus]: string;
+  [key in ModuleStatus]: string;
 } = {
   backlog: "#a3a3a2",
   planned: "#3f76ff",
@@ -20,7 +20,7 @@ const MODULE_STATUS_COLORS: {
 
 export const MODULE_STATUS: {
   i18n_label: string;
-  value: TModuleStatus;
+  value: ModuleStatus;
   color: string;
   textColor: string;
   bgColor: string;
@@ -70,7 +70,7 @@ export const MODULE_STATUS: {
 ];
 
 export const MODULE_VIEW_LAYOUTS: {
-  key: TModuleLayoutOptions;
+  key: "list" | "board";
   i18n_title: string;
 }[] = [
   {
@@ -84,7 +84,7 @@ export const MODULE_VIEW_LAYOUTS: {
 ];
 
 export const MODULE_ORDER_BY_OPTIONS: {
-  key: TModuleOrderByOptions;
+  key: "name" | "progress" | "issues_length" | "target_date" | "created_at" | "sort_order";
   i18n_label: string;
 }[] = [
   {
@@ -112,3 +112,14 @@ export const MODULE_ORDER_BY_OPTIONS: {
     i18n_label: "project_modules.order_by.manual",
   },
 ];
+
+/** How a project's modules list and archive are laid out: one of MODULE_VIEW_LAYOUTS. */
+export type ModuleLayout = (typeof MODULE_VIEW_LAYOUTS)[number]["key"];
+
+/**
+ * What a project's modules list and archive are ordered by: an option of MODULE_ORDER_BY_OPTIONS, the lowest first,
+ * or, behind a "-", the highest first; the manual order ("sort_order") has no direction.
+ */
+export type ModuleOrderBy =
+  | (typeof MODULE_ORDER_BY_OPTIONS)[number]["key"]
+  | `-${Exclude<(typeof MODULE_ORDER_BY_OPTIONS)[number]["key"], "sort_order">}`;

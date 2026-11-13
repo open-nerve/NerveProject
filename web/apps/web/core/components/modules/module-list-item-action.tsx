@@ -4,188 +4,76 @@
  * See the LICENSE file for details.
  */
 
-import React from "react";
+import type React from "react";
 import { observer } from "mobx-react";
-import { useParams } from "react-router";
-import { UserAltOutline } from "@makeplane/propel/icons";
-// Nerve imports
-import { MODULE_STATUS, EUserPermissions, EUserPermissionsLevel, IS_FAVORITE_MENU_OPEN } from "@nerve/constants";
-import { useLocalStorage } from "@nerve/hooks";
+import { InfoOutline } from "@makeplane/propel/icons";
+// nerve imports
+import type { ModuleListItem } from "@nerve/api-client";
 import { useTranslation } from "@nerve/i18n";
-import { TOAST_TYPE, setPromiseToast, setToast } from "@nerve/propel/toast";
-import { Tooltip } from "@makeplane/propel/components/tooltip";
-import type { IModule } from "@nerve/types";
-import { FavoriteStar } from "@nerve/ui";
-import { renderFormattedPayloadDate, getDate } from "@nerve/utils";
-// components
-import { DateRangeDropdown } from "@/components/dropdowns/date-range";
-import { ModuleQuickActions } from "@/components/modules";
-import { ModuleStatusDropdown } from "@/components/modules/module-status-dropdown";
+import { cn } from "@nerve/utils";
 // hooks
-import { useMember } from "@/hooks/store/use-member";
-import { useModule } from "@/hooks/store/use-module";
 import { useUserPermissions } from "@/hooks/store/user";
-import { ButtonAvatars } from "../dropdowns/member/avatar";
+import { usePlatformOS } from "@/hooks/use-platform-os";
+// local imports
+import { ModuleLeadAvatar } from "./lead-avatar";
+import { ModuleDates } from "./module-dates";
+import { ModuleStatusDropdown } from "./module-status-dropdown";
+import { ModuleQuickActions } from "./quick-actions";
 
 type Props = {
-  moduleId: string;
-  moduleDetails: IModule;
+  workspaceSlug: string;
+  projectId: string;
+  row: ModuleListItem;
   parentRef: React.RefObject<HTMLDivElement | null>;
+  /** Previews the module, or closes its preview. */
+  onPeek: () => void;
 };
 
+/**
+ * The actions and the facts of a module's row (P6a spec 2.6, R5, R11, R13): "more details", which previews it; its
+ * days, calendar days, and its status, which the caller changes there while he writes the project's modules
+ * (canWriteModules) and it is not archived, each nerve's change to make (ModuleDates, ModuleStatusDropdown:
+ * useModuleChange); its lead; its quick actions, one menu for the row whatever the screen (its right-click menu is the
+ * row's). No star to favorite it: favorites are M7's.
+ */
 export const ModuleListItemAction = observer(function ModuleListItemAction(props: Props) {
-  const { moduleId, moduleDetails, parentRef } = props;
-  // router
-  const { workspaceSlug, projectId } = useParams();
-  //   store hooks
-  const { allowPermissions } = useUserPermissions();
-  const { addModuleToFavorites, removeModuleFromFavorites, updateModuleDetails } = useModule();
-  const { getUserDetails } = useMember();
-
+  const { workspaceSlug, projectId, row, parentRef, onPeek } = props;
+  // hooks
   const { t } = useTranslation();
+  const { isMobile } = usePlatformOS();
+  const { canWriteModules } = useUserPermissions();
 
-  // local storage
-  const { setValue: toggleFavoriteMenu, storedValue } = useLocalStorage<boolean>(IS_FAVORITE_MENU_OPEN, false);
-  // derived values
+  const editable = canWriteModules(workspaceSlug, projectId) && row.archived_at === null;
+  const dated = row.start_date !== null || row.target_date !== null;
 
-  const moduleStatus = MODULE_STATUS.find((status) => status.value === moduleDetails.status);
-  const isEditingAllowed = allowPermissions(
-    [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
-    EUserPermissionsLevel.PROJECT
-  );
-  const isDisabled = !isEditingAllowed || !!moduleDetails?.archived_at;
-  const renderIcon = Boolean(moduleDetails.start_date) || Boolean(moduleDetails.target_date);
-
-  // handlers
-  const handleAddToFavorites = (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.stopPropagation();
+  const handlePeek = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
-    if (!workspaceSlug || !projectId) return;
-
-    const addToFavoritePromise = addModuleToFavorites(workspaceSlug, projectId, moduleId).then(() => {
-      // open favorites menu if closed
-      if (!storedValue) toggleFavoriteMenu(true);
-      return;
-    });
-
-    setPromiseToast(addToFavoritePromise, {
-      loading: "Adding module to favorites...",
-      success: {
-        title: "Success!",
-        message: () => "Module added to favorites.",
-      },
-      error: {
-        title: "Error!",
-        message: () => "Couldn't add the module to favorites. Please try again.",
-      },
-    });
-  };
-
-  const handleRemoveFromFavorites = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
-    e.preventDefault();
-    if (!workspaceSlug || !projectId) return;
-
-    const removeFromFavoritePromise = removeModuleFromFavorites(workspaceSlug, projectId, moduleId);
-
-    setPromiseToast(removeFromFavoritePromise, {
-      loading: "Removing module from favorites...",
-      success: {
-        title: "Success!",
-        message: () => "Module removed from favorites.",
-      },
-      error: {
-        title: "Error!",
-        message: () => "Couldn't remove the module from favorites. Please try again.",
-      },
-    });
+    onPeek();
   };
-
-  const handleModuleDetailsChange = async (payload: Partial<IModule>) => {
-    if (!workspaceSlug || !projectId) return;
-
-    await updateModuleDetails(workspaceSlug, projectId, moduleId, payload)
-      .then(() => {
-        setToast({
-          type: TOAST_TYPE.SUCCESS,
-          title: "Success!",
-          message: "Module updated successfully.",
-        });
-        return;
-      })
-      .catch((err) => {
-        setToast({
-          type: TOAST_TYPE.ERROR,
-          title: "Error!",
-          message: err?.detail ?? "Module could not be updated. Please try again.",
-        });
-      });
-  };
-
-  const moduleLeadDetails = moduleDetails.lead_id ? getUserDetails(moduleDetails.lead_id) : undefined;
 
   return (
     <>
-      <DateRangeDropdown
-        buttonContainerClassName={`h-6 w-full flex ${isDisabled ? "cursor-not-allowed" : "cursor-pointer"} items-center gap-1.5 text-tertiary border-[0.5px] border-strong rounded-sm text-11`}
+      <button
+        type="button"
+        onClick={handlePeek}
+        aria-label={t("project_module.more_details")}
+        className={cn("z-[1] flex-shrink-0", isMobile ? "flex" : "hidden group-hover:flex")}
+      >
+        <InfoOutline className="h-4 w-4 text-placeholder" aria-hidden="true" />
+      </button>
+      <ModuleDates
+        module={row}
+        editable={editable}
+        buttonContainerClassName="h-6 w-full flex items-center gap-1.5 text-tertiary border-[0.5px] border-strong rounded-sm text-11"
         buttonVariant="transparent-with-text"
         className="h-7"
-        value={{
-          from: getDate(moduleDetails.start_date),
-          to: getDate(moduleDetails.target_date),
-        }}
-        onSelect={(val) => {
-          handleModuleDetailsChange({
-            start_date: val?.from ? renderFormattedPayloadDate(val.from) : null,
-            target_date: val?.to ? renderFormattedPayloadDate(val.to) : null,
-          });
-        }}
         mergeDates
-        placeholder={{
-          from: t("start_date"),
-          to: t("end_date"),
-        }}
-        disabled={isDisabled}
-        hideIcon={{ from: renderIcon ?? true, to: renderIcon }}
+        hideIcon={{ from: dated, to: dated }}
       />
-
-      {moduleStatus && (
-        <ModuleStatusDropdown
-          isDisabled={isDisabled}
-          moduleDetails={moduleDetails}
-          handleModuleDetailsChange={handleModuleDetailsChange}
-        />
-      )}
-
-      {moduleLeadDetails ? (
-        <span className="cursor-default">
-          <ButtonAvatars userIds={moduleLeadDetails?.id} />
-        </span>
-      ) : (
-        <Tooltip label="No lead">
-          <UserAltOutline className="h-4 w-4 text-tertiary" />
-        </Tooltip>
-      )}
-
-      {isEditingAllowed && !moduleDetails.archived_at && (
-        <FavoriteStar
-          onClick={(e) => {
-            if (moduleDetails.is_favorite) handleRemoveFromFavorites(e);
-            else handleAddToFavorites(e);
-          }}
-          selected={moduleDetails.is_favorite}
-        />
-      )}
-      {workspaceSlug && projectId && (
-        <div className="hidden md:block">
-          <ModuleQuickActions
-            parentRef={parentRef}
-            moduleId={moduleId}
-            projectId={projectId}
-            workspaceSlug={workspaceSlug}
-          />
-        </div>
-      )}
+      <ModuleStatusDropdown moduleId={row.id} editable={editable} />
+      <ModuleLeadAvatar leadId={row.lead_id} />
+      <ModuleQuickActions parentRef={parentRef} moduleId={row.id} projectId={projectId} workspaceSlug={workspaceSlug} />
     </>
   );
 });

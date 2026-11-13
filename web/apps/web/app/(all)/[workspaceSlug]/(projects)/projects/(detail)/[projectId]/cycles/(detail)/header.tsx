@@ -34,6 +34,7 @@ import { useProject } from "@/hooks/store/use-project";
 import { useUserPermissions } from "@/hooks/store/user";
 import { useCycleListState } from "@/hooks/use-cycle-list-state";
 import useLocalStorage from "@/hooks/use-local-storage";
+import { usePlanningReads } from "@/hooks/use-planning-reads";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 
 type TProps = {
@@ -62,9 +63,9 @@ export const CycleIssuesHeader = observer(function CycleIssuesHeader(props: TPro
   const { t } = useTranslation();
   // store hooks
   const { getCycleById, getProjectCycleIds } = useCycles();
-  const { getProjectById, loader } = useProject();
+  const { loader } = useProject();
   const { issues, issuesFilter } = useIssues(EIssuesStoreType.CYCLE);
-  const { allowPermissions, getProjectRoleByWorkspaceSlugAndProjectId } = useUserPermissions();
+  const { allowPermissions } = useUserPermissions();
   const { toggleCreateIssueModal } = useCommandPalette();
   const { joinable } = useCycleListState();
   const { isMobile } = usePlatformOS();
@@ -79,9 +80,7 @@ export const CycleIssuesHeader = observer(function CycleIssuesHeader(props: TPro
   // derived values
   const cycleDetails = getCycleById(cycleId);
   // the page's work items show for the project's members while its cycles are on (the layout root's own condition)
-  const listShown =
-    getProjectById(projectId)?.cycle_view === true &&
-    getProjectRoleByWorkspaceSlugAndProjectId(workspaceSlug, projectId) !== undefined;
+  const { listed: listShown } = usePlanningReads(workspaceSlug, projectId, "cycles");
   const workItemsCount = listShown ? issues.pageTotal({ projectID: projectId, cycleID: cycleId }) : undefined;
   const preferencesShown = listShown && issuesFilter.getIssueFilters(cycleId) !== undefined;
   const canCreateWorkItem =

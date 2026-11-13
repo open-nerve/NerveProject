@@ -468,8 +468,7 @@ describe("store-context", () => {
     await until(() => listed.settled, "Y's list");
     // The address's parameters are the page's: Y's stores go on with X's RouterStore, which X's project filters
     // followed (project_filter.store.ts). The project filters' reaction is the one RootStore.dispose releases; the
-    // cycle filters of planning have none (the next test, P5a spec R4); the module filters' is P6's (M3 design 7.1,
-    // 13.2).
+    // cycle and module filters of planning have none (the next two tests, P5a spec R4, P6a spec R4).
     expect(y.router).toBe(x.router);
     x.projectRoot.projectFilter.updateSearchQuery("x");
     y.projectRoot.projectFilter.updateSearchQuery("y");
@@ -502,6 +501,32 @@ describe("store-context", () => {
     expect(x.planning.cycleFilters.getSearchQuery(web, "default")).toBe("x");
     expect(y.planning.cycleFilters.getFilters(web, "default")).toEqual({});
     expect(y.planning.cycleFilters.getSearchQuery(web, "default")).toBe("y");
+  });
+
+  it("leaves a retired session's module filters as it left them: they follow no address, so there is no reaction to release", async () => {
+    const { context, signedIn, follow } = await load();
+    await signedIn();
+    const x = context.rootStore;
+    // X's filters and searches of web's modules list and archive, kept by web's id as the pages give it (P6a spec
+    // 2.4, R4).
+    const web = "p-web";
+    x.planning.moduleFilters.updateFilters(web, "default", { status: ["planned"], members: ["u-bo"] });
+    x.planning.moduleFilters.updateSearchQuery(web, "default", "x");
+    x.planning.moduleFilters.updateSearchQuery(web, "archived", "old");
+    await follow(Y);
+    const y = context.rootStore;
+    y.planning.moduleFilters.updateSearchQuery(web, "default", "y");
+    // Y's stores go on with X's RouterStore: the address moves into web, then on to another project.
+    expect(y.router).toBe(x.router);
+    y.router.setQuery({ workspaceSlug: "acme", projectId: web });
+    y.router.setQuery({ workspaceSlug: "acme", projectId: "p-ops" });
+    // Neither session's filters followed it (the old ones started a project's filters and cleared the searches): X's
+    // are as X left them, Y's as Y left them, each its own.
+    expect(x.planning.moduleFilters.getFilters(web, "default")).toEqual({ status: ["planned"], members: ["u-bo"] });
+    expect(x.planning.moduleFilters.getSearchQuery(web, "default")).toBe("x");
+    expect(x.planning.moduleFilters.getSearchQuery(web, "archived")).toBe("old");
+    expect(y.planning.moduleFilters.getFilters(web, "default")).toEqual({});
+    expect(y.planning.moduleFilters.getSearchQuery(web, "default")).toBe("y");
   });
 
   it("gives the code that reads the stores outside the components the RootStore of the session now", async () => {

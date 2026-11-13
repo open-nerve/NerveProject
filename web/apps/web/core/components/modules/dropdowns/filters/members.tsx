@@ -4,110 +4,95 @@
  * See the LICENSE file for details.
  */
 
-import { useMemo, useState } from "react";
-import { sortBy } from "lodash-es";
+import { useState } from "react";
 import { observer } from "mobx-react";
-// nerve ui
-import { useRouteWorkspace } from "@/hooks/use-route-workspace";
-import { ProfileAvatar } from "@/components/assets/profile-image";
-import { Loader } from "@nerve/ui";
+// nerve imports
+import { useTranslation } from "@nerve/i18n";
 // components
+import { ProfileAvatar } from "@/components/assets/profile-image";
 import { FilterHeader, FilterOption } from "@/components/issues/issue-layouts/filters";
 // hooks
 import { useMember } from "@/hooks/store/use-member";
 import { useUser } from "@/hooks/store/user";
+import { useRouteWorkspace } from "@/hooks/use-route-workspace";
+
+/** How many of the members the filter shows until the person asks for them all. */
+const FIRST = 5;
 
 type Props = {
-  appliedFilters: string[] | null;
-  handleUpdate: (val: string) => void;
-  memberIds: string[] | undefined;
+  /** What the members filter, in the page's language: a module's lead, or its members. */
+  title: string;
+  appliedFilters: readonly string[] | undefined;
+  /** Turns the member on, or off if on. */
+  handleUpdate: (memberId: string) => void;
+  /** The members the filter offers, in the order to offer them. */
+  memberIds: readonly string[];
   searchQuery: string;
 };
 
+/**
+ * The options of the filters' menu for the members who lead a module, or are its members (P6a spec 2.4, R14): the
+ * members given, in their order, whose names the menu's search finds, five of them until the person asks for all;
+ * the caller as "you".
+ */
 export const FilterMembers = observer(function FilterMembers(props: Props) {
-  const { appliedFilters, handleUpdate, memberIds, searchQuery } = props;
-  const imageWorkspace = useRouteWorkspace();
+  const { title, appliedFilters, handleUpdate, memberIds, searchQuery } = props;
   // states
-  const [itemsToRender, setItemsToRender] = useState(5);
+  const [showAll, setShowAll] = useState(false);
   const [previewEnabled, setPreviewEnabled] = useState(true);
-  // store hooks
+  // hooks
+  const { t } = useTranslation();
+  const imageWorkspace = useRouteWorkspace();
   const { getUserDetails } = useMember();
   const { data: currentUser } = useUser();
 
   const appliedFiltersCount = appliedFilters?.length ?? 0;
-
-  const sortedOptions = useMemo(() => {
-    const filteredOptions = (memberIds || []).filter((memberId) =>
-      getUserDetails(memberId)?.display_name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-
-    return sortBy(filteredOptions, [
-      (memberId) => !(appliedFilters ?? []).includes(memberId),
-      (memberId) => memberId !== currentUser?.id,
-      (memberId) => getUserDetails(memberId)?.display_name.toLowerCase(),
-    ]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery]);
-
-  const handleViewToggle = () => {
-    if (!sortedOptions) return;
-
-    if (itemsToRender === sortedOptions.length) setItemsToRender(5);
-    else setItemsToRender(sortedOptions.length);
-  };
+  const searched = searchQuery.toLowerCase();
+  const members = memberIds.flatMap((memberId) => {
+    const member = getUserDetails(memberId);
+    return member?.display_name.toLowerCase().includes(searched) ? [member] : [];
+  });
+  const shown = showAll ? members : members.slice(0, FIRST);
 
   return (
     <>
       <FilterHeader
-        title={`Members${appliedFiltersCount > 0 ? ` (${appliedFiltersCount})` : ""}`}
+        title={`${title}${appliedFiltersCount > 0 ? ` (${appliedFiltersCount})` : ""}`}
         isPreviewEnabled={previewEnabled}
         handleIsPreviewEnabled={() => setPreviewEnabled(!previewEnabled)}
       />
       {previewEnabled && (
         <div>
-          {sortedOptions ? (
-            sortedOptions.length > 0 ? (
-              <>
-                {sortedOptions.slice(0, itemsToRender).map((memberId) => {
-                  const member = getUserDetails(memberId);
-
-                  if (!member) return null;
-                  return (
-                    <FilterOption
-                      key={`member-${member.id}`}
-                      isChecked={!!appliedFilters?.includes(member.id)}
-                      onClick={() => handleUpdate(member.id)}
-                      icon={
-                        <ProfileAvatar
-                          alt={member.display_name}
-                          fallback={member.display_name?.[0]?.toUpperCase()}
-                          source={{ kind: "member", workspaceID: imageWorkspace?.id ?? "", memberID: member.id }}
-                          size="xs"
-                        />
-                      }
-                      title={currentUser?.id === member.id ? "You" : member?.display_name}
+          {members.length > 0 ? (
+            <>
+              {shown.map((member) => (
+                <FilterOption
+                  key={member.id}
+                  isChecked={!!appliedFilters?.includes(member.id)}
+                  onClick={() => handleUpdate(member.id)}
+                  icon={
+                    <ProfileAvatar
+                      alt={member.display_name}
+                      fallback={member.display_name[0]?.toUpperCase()}
+                      source={{ kind: "member", workspaceID: imageWorkspace?.id ?? "", memberID: member.id }}
+                      size="xs"
                     />
-                  );
-                })}
-                {sortedOptions.length > 5 && (
-                  <button
-                    type="button"
-                    className="ml-8 text-11 font-medium text-accent-primary"
-                    onClick={handleViewToggle}
-                  >
-                    {itemsToRender === sortedOptions.length ? "View less" : "View all"}
-                  </button>
-                )}
-              </>
-            ) : (
-              <p className="text-11 text-placeholder italic">No matches found</p>
-            )
+                  }
+                  title={currentUser?.id === member.id ? t("you") : member.display_name}
+                />
+              ))}
+              {members.length > FIRST && (
+                <button
+                  type="button"
+                  className="ml-8 text-11 font-medium text-accent-primary"
+                  onClick={() => setShowAll(!showAll)}
+                >
+                  {t(showAll ? "common.view_less" : "common.view_all")}
+                </button>
+              )}
+            </>
           ) : (
-            <Loader className="space-y-2">
-              <Loader.Item height="20px" />
-              <Loader.Item height="20px" />
-              <Loader.Item height="20px" />
-            </Loader>
+            <p className="text-11 text-placeholder italic">{t("common.search.no_matches_found")}</p>
           )}
         </div>
       )}

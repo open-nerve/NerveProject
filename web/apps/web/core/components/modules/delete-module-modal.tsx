@@ -4,85 +4,98 @@
  * See the LICENSE file for details.
  */
 
-import { useState } from "react";
-import { observer } from "mobx-react";
-// types
-import { PROJECT_ERROR_MESSAGES } from "@nerve/constants";
+import { useLayoutEffect, useRef, useState } from "react";
+import { useNavigate, useParams, useSearchParams } from "react-router";
+// nerve imports
+import type { Module } from "@nerve/api-client";
 import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { IModule } from "@nerve/types";
-// ui
 import { AlertModalCore } from "@nerve/ui";
+// components
+import { Translated } from "@/components/common/translated";
 // hooks
-import { useModule } from "@/hooks/store/use-module";
-import { useParams, useNavigate } from "react-router";
+import { useModules } from "@/hooks/store/use-modules";
+import { useRefusalToast } from "@/hooks/use-refusal-toast";
+// lib
+import { followInSession } from "@/lib/in-session";
 
 type Props = {
-  data: IModule;
   isOpen: boolean;
-  onClose: () => void;
+  handleClose: () => void;
+  /** The module to delete, as it was when the dialog was asked for. */
+  module: Module | undefined;
+  workspaceSlug: string;
+  projectId: string;
 };
 
-export const DeleteModuleModal = observer(function DeleteModuleModal(props: Props) {
-  const { data, isOpen, onClose } = props;
-  // states
-  const [isDeleteLoading, setIsDeleteLoading] = useState(false);
+/**
+ * The dialog that deletes a module (P6a spec 2.6, R11). It closes only once nerve has deleted the module, says so and,
+ * when the page shows the module (its own page, its preview: the address's peekModule), goes back to the modules' list;
+ * refused, it stays and says nerve's reason. While the deletion is out nothing closes it (Escape, the backdrop,
+ * Cancel). Its follow-ups are those of the session it was sent in (followInSession) and of its page: once the page has
+ * gone (a Back, another project), nerve's late answer reaches the store alone.
+ */
+export function DeleteModuleModal(props: Props) {
+  const { isOpen, handleClose, module, workspaceSlug, projectId } = props;
   // router
   const navigate = useNavigate();
-  const { workspaceSlug, projectId, moduleId, peekModule } = useParams();
-  // store hooks
-  const { deleteModule } = useModule();
+  const { moduleId: pageModuleId } = useParams();
+  const [searchParams] = useSearchParams();
+  // nerve hooks
   const { t } = useTranslation();
+  // store hooks
+  const { remove } = useModules();
+  const toastRefusal = useRefusalToast();
+  // states
+  const [busy, setBusy] = useState(false);
+  const out = useRef(false);
+  const mounted = useRef(false);
+  useLayoutEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
 
-  const handleClose = () => {
-    onClose();
-    setIsDeleteLoading(false);
-  };
-
-  const handleDeletion = async () => {
-    if (!workspaceSlug || !projectId) return;
-
-    setIsDeleteLoading(true);
-
-    await deleteModule(workspaceSlug, projectId, data.id)
-      .then(() => {
-        if (moduleId || peekModule) navigate(`/${workspaceSlug}/projects/${data.project_id}/modules`);
-        handleClose();
+  const submit = async () => {
+    if (!module || out.current) return;
+    out.current = true;
+    setBusy(true);
+    const shownByPage = pageModuleId === module.id || searchParams.get("peekModule") === module.id;
+    await followInSession(() => remove(module.id), {
+      done: () => {
+        if (!mounted.current) return;
         setToast({
           type: TOAST_TYPE.SUCCESS,
-          title: "Success!",
-          message: "Module deleted successfully.",
+          title: t("project_module.action.delete.success.title"),
+          message: t("project_module.action.delete.success.description"),
         });
-        return;
-      })
-      .catch((errors) => {
-        const isPermissionError = errors?.error === "You don't have the required permissions.";
-        const currentError = isPermissionError
-          ? PROJECT_ERROR_MESSAGES.permissionError
-          : PROJECT_ERROR_MESSAGES.moduleDeleteError;
-        setToast({
-          title: t(currentError.i18n_title),
-          type: TOAST_TYPE.ERROR,
-          message: currentError.i18n_message && t(currentError.i18n_message),
-        });
-      })
-      .finally(() => handleClose());
+        handleClose();
+        if (shownByPage) return navigate(`/${workspaceSlug}/projects/${projectId}/modules`);
+      },
+      failed: (error) => {
+        if (mounted.current) toastRefusal(error);
+      },
+    });
+    out.current = false;
+    if (mounted.current) setBusy(false);
   };
 
   return (
     <AlertModalCore
       handleClose={handleClose}
-      handleSubmit={handleDeletion}
-      isSubmitting={isDeleteLoading}
+      handleSubmit={() => void submit()}
+      isSubmitting={busy}
       isOpen={isOpen}
-      title="Delete module"
+      title={t("project_module.delete.title")}
+      primaryButtonText={{ default: t("delete"), loading: t("deleting") }}
+      secondaryButtonText={t("cancel")}
       content={
-        <>
-          Are you sure you want to delete module-{" "}
-          <span className="font-medium break-all text-primary">{data?.name}</span>? All of the data related to the
-          module will be permanently removed. This action cannot be undone.
-        </>
+        <Translated
+          i18nKey="project_module.delete.body"
+          values={{ name: <span className="font-medium break-words text-primary">{module?.name}</span> }}
+        />
       }
     />
   );
-});
+}

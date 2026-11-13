@@ -8,6 +8,7 @@ import type { Project } from "@nerve/api-client";
 import { useCycles } from "@/hooks/store/use-cycles";
 import { useLabel } from "@/hooks/store/use-label";
 import { useMember } from "@/hooks/store/use-member";
+import { useModules } from "@/hooks/store/use-modules";
 import { useProject } from "@/hooks/store/use-project";
 import { useProjectRead } from "@/hooks/use-project-read";
 import { useProjectPreferences } from "@/hooks/store/use-project-preferences";
@@ -15,6 +16,7 @@ import { useProjectState } from "@/hooks/store/use-project-state";
 import { useWorkspace } from "@/hooks/store/use-workspace";
 // lib
 import { problemCode } from "@/lib/api-error";
+import { planningOn } from "@/lib/planning-switch";
 import { useSessionSWR } from "@/lib/use-session-swr";
 
 /**
@@ -35,11 +37,12 @@ export type ProjectAccess =
  * The project side of what a page of a project fetches as it mounts (M3 design 3.1, 7.1), and the one decision what
  * the project is to the caller: nerve's read of the project, which decides it; once it says he is a member of a
  * project that is not archived, his tab bar in the project, its labels, its members and its states, which nerve gives
- * its members alone (an archived project's pages do not show, so they need none), and its cycles that are not
- * archived while they are turned on (cycle_view: its pages show none otherwise; M6 P5a spec 2.2). A project counts
- * in the address's workspace alone, workspaceSlug's (the route's, as useWorkspaceFetch reads it; the stores' current
- * workspace follows the address a render later): one of another of his workspaces is not found here. Gives what the
- * wrapper shows.
+ * its members alone (an archived project's pages do not show, so they need none), and its cycles and its modules that
+ * are not archived, each while it is turned on (cycle_view, module_view: their pages show none otherwise; M6 P5a spec
+ * 2.2, P6a spec 2.2), by the switch predicate the gate of their pages reads (planningOn, P6a spec 2.3). A project
+ * counts in the address's workspace alone, workspaceSlug's (the route's, as useWorkspaceFetch reads it; the stores'
+ * current workspace follows the address a render later): one of another of his workspaces is not found here. Gives
+ * what the wrapper shows.
  */
 export function useProjectFetch(workspaceSlug: string | undefined, projectId: string): ProjectAccess {
   const { getWorkspaceBySlug } = useWorkspace();
@@ -51,6 +54,7 @@ export function useProjectFetch(workspaceSlug: string | undefined, projectId: st
   } = useMember();
   const { fetchProjectStates } = useProjectState();
   const { fetchCycles } = useCycles();
+  const { fetchModules } = useModules();
   const read = useProjectRead(projectId);
   const workspace = workspaceSlug === undefined ? null : getWorkspaceBySlug(workspaceSlug);
   const held = getProjectById(projectId);
@@ -62,8 +66,10 @@ export function useProjectFetch(workspaceSlug: string | undefined, projectId: st
   useSessionSWR(member ? ["PROJECT_LABELS", member] : null, (id) => fetchProjectLabels(id));
   useSessionSWR(member ? ["PROJECT_MEMBERS", member] : null, (id) => fetchProjectMembers(id));
   useSessionSWR(member ? ["PROJECT_STATES", member] : null, (id) => fetchProjectStates(id));
-  const cycles = access.kind === "member" && access.project.cycle_view ? access.project.id : undefined;
+  const cycles = access.kind === "member" && planningOn(access.project, "cycles") ? access.project.id : undefined;
   useSessionSWR(cycles ? ["PROJECT_CYCLES", cycles] : null, (id) => fetchCycles(id));
+  const modules = access.kind === "member" && planningOn(access.project, "modules") ? access.project.id : undefined;
+  useSessionSWR(modules ? ["PROJECT_MODULES", modules] : null, (id) => fetchModules(id));
   return access;
 }
 

@@ -88,3 +88,14 @@ P4 落地设计 §6 余下的跨模块查询与写入，都走由使用方声明
 - **第 5 节**：(c) `BreadcrumbNavigationSearchDropdown` 在迭代页头切换迭代，G19 页面故事在三种引擎经它打开另一个迭代；(d) 迭代表单里的 `dropdowns/date-range.tsx` 在 G1、G3 页面故事中于三种引擎在弹窗里选日期、确认，浮层在弹窗之内可用；同一表单的 `dropdowns/project/base.tsx` 只给调用者能写迭代的项目（组件测试与变异 `t6-mut-project-any`），它的浏览器核对随 P8 的最终矩阵。(a) 在 P7，(b) 在 P6。
 - **第 6 节**：`cycles/quick-actions.tsx` 与命令面板迭代页的复制改经 `useCopyLink`，失败经 `t()` 提示（G19 页面故事拒绝剪贴板时核对）；`copy-hook` 中这两条例外随之删除。模块的两处在 P6。
 - 证据：提交 `b4911394dc2a92d4bd0224e572902e6d45275941`、`a21686c4a9827c1fb98d28eafa67c35a5b1150f7`、`5cdd61c28bba772e2b69332c1b96fb26cb900e0a`、`11ef5b52ab5b8497d887c0fe2c4d250fd0ce55b9`、`a415c86eb74295cd132d449c0ad49b512f93e91f`、`f497055055f00e0cdbfa74e08f5186d40a1297d3`、`5524a44dd6576da362a2588ec4079d307d565747`。本交接保持 open。
+
+## 处理结果（M6/P6a）：第 3、5、6 节（模块）
+
+- **第 3 节**：模块的筛选 store（`core/store/planning/module_filter.store.ts`）按项目 id 存取、不跟随 `router`，没有要随退役的一代释放的反应，也不再写 `localStorage`（[P6a spec](../specs/P6a-web-modules.md) R4）；`store-context.test.ts` 加一条，断言换代之后退役的一代的模块筛选不随 router 变（变异 `t4-mut-filters-follow-router`、`t4-mut-filters-persist` 各让测试失败），`RootStore.dispose()` 与 `store-context.tsx` 的说明改为迭代与模块的筛选都没有反应。模块的 service 由每一代以自己的客户端构造，没有模块级的实例；新加的 SWR 键 `PROJECT_MODULES`、`PROJECT_ARCHIVED_MODULES`、`MODULE`、`MODULE_PROGRESS`、`MODULE_LINKS` 都带 `loginId`。迭代的部分在 P5a，本节的关闭条件至此都已满足。
+- **第 5 节**：
+  - (b) P5 重建的 `CustomSelect` 在模块的调用方现在是 `modules/module-status-dropdown.tsx`（收模块 id、自己读 store，侧栏的页头、列表行与卡片共用）与 `modules/select/status.tsx`（表单）；`progress-sidebar/root.tsx` 不再直接用它。侧栏改状态在 G9 页面故事二中于三种引擎核对（等 nerve 确认、在途停用、被拒回到 nerve 的值）；表单的状态选择以真 `CustomSelect` 的组件测试核对（`select/status.test.tsx`：没过规则时有经 `t()` 的提示、`aria-invalid`、被拒时取得焦点）。
+  - (c) 模块页头切换模块的 `BreadcrumbNavigationSearchDropdown`：G19 页面故事三在三种引擎经它从 Alpha 打开 Beta，它列出本项目未归档的模块、服务端的次序。
+  - (d) 模块表单里的 `dropdowns/date-range.tsx`：G9 页面故事一在三种引擎于弹窗里选日期并提交，浮层在弹窗之内可用；`dropdowns/project/base.tsx` 只列调用者能写模块的项目（组件测试与变异 `t6-mut-project-picker-create-permissions`），它的浏览器核对随 P8 的最终矩阵。
+  - (a) 的 `dropdowns/module/module-options.tsx` 在 P7。
+- **第 6 节**：`modules/quick-actions.tsx` 的复制经 `useCopyLink`，`modules/links/list-item.tsx` 的复制经 `useCopyText`，命令面板模块页的复制也经 `useCopyLink`；失败经 `t()` 提示（G19 页面故事三拒绝剪贴板时核对快捷操作与链接一行两处）；`copy-hook` 中模块的三条例外随之删除，M6 的例外已全部删除（关键词的例外 10 → 7）。迭代的两处在 P5a，本节的关闭条件至此都已满足。
+- 证据：提交 `d71ab782f11899b7ae45452ac8cf7e0d47a73c89`（service、store 与 SWR 键）、`6a088615629ba2c7d127e53cea25cc0376c1e2b5`（筛选 store）、`cd366811af816d1ed317aa7491dfa46cdfdc6f54`（表单、状态选择与项目下拉）、`e9fc041b4a1cae06173fa29ec9b03f9ad0c109ca`（快捷操作的复制）、`c09d4f8d9d2544724887ad1ad34a5c6cf0b44ffc`（侧栏的状态与页头）、`d8c87d1adfceb28b9200a446f7c5748551190e4a`（链接一行的复制）、`dc9172b0fecf86c716bf50394b03c2a4e4a6fd6d`（命令面板、`dispose()` 的说明）、`b1d2578e2aab5a9769ea7f71cbd7dc6f6b9e232d`、`b8ed29df59bcb59fc30adfbafb8c79748af992b9`（页面故事）。本交接保持 open。

@@ -11,6 +11,8 @@ import type { TUserPermissions, TUserPermissionsLevel } from "@nerve/constants";
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import type { EUserProjectRoles } from "@nerve/types";
 import { EUserWorkspaceRoles } from "@nerve/types";
+// lib
+import { planningOn, type PlanningDomain } from "@/lib/planning-switch";
 // store
 import type { RootStore } from "@/store/root.store";
 
@@ -32,6 +34,8 @@ export interface IUserPermissionStore {
   canCreateProject: (workspaceSlug: string | undefined) => boolean;
   canWriteCycles: (workspaceSlug: string, projectId: string | undefined) => boolean;
   canDeleteCycle: (workspaceSlug: string, projectId: string | undefined, createdByCaller: boolean) => boolean;
+  canWriteModules: (workspaceSlug: string, projectId: string | undefined) => boolean;
+  canDeleteModule: (workspaceSlug: string, projectId: string | undefined, createdByCaller: boolean) => boolean;
 }
 
 /**
@@ -134,45 +138,87 @@ export class UserPermissionStore implements IUserPermissionStore {
    * @description Whether the caller may write the cycles of the project of the workspace named (make one, change,
    * archive or restore one, transfer its work items), as nerve's cycle.write decides (access/domain/decide.go, M6
    * design 3.7): his role in the project is an admin's or a member's (an admin's for the workspace's admin), and nerve
-   * takes a write of the project's cycles from him at all (cycleWritesRefused: not while it shows him only his own
+   * takes a write of the project's cycles from him at all (planningWritesRefused: not while it shows him only his own
    * work items there, nor while the project's cycles are turned off; planning/app/lock.go)
    * @param { string } workspaceSlug
    * @param { string } projectId
    * @returns { boolean }
    */
-  canWriteCycles = (workspaceSlug: string, projectId: string | undefined): boolean => {
-    const role = this.getProjectRoleByWorkspaceSlugAndProjectId(workspaceSlug, projectId);
-    return (role === EUserPermissions.ADMIN || role === EUserPermissions.MEMBER) && !this.cycleWritesRefused(projectId);
-  };
+  canWriteCycles = (workspaceSlug: string, projectId: string | undefined): boolean =>
+    this.canWritePlanning(workspaceSlug, projectId, "cycles");
 
   /**
    * @description Whether the caller may delete a cycle of the project of the workspace named, created by him or not,
    * as nerve's cycle.delete decides (decide.go): the project's admins may, and the workspace's admin, and the cycle's
    * creator while his role in the project, not the workspace's, is an admin's or a member's (AllowCreator); none while
-   * nerve refuses him every write of the project's cycles (cycleWritesRefused), a deletion being one
+   * nerve refuses him every write of the project's cycles (planningWritesRefused), a deletion being one
    * @param { string } workspaceSlug
    * @param { string } projectId
    * @param { boolean } createdByCaller
    * @returns { boolean }
    */
-  canDeleteCycle = (workspaceSlug: string, projectId: string | undefined, createdByCaller: boolean): boolean => {
+  canDeleteCycle = (workspaceSlug: string, projectId: string | undefined, createdByCaller: boolean): boolean =>
+    this.canDeletePlanning(workspaceSlug, projectId, createdByCaller, "cycles");
+
+  /**
+   * @description Whether the caller may write the modules of the project of the workspace named (make one, change
+   * one, its members and links among its fields, archive or restore one), as nerve's module.write decides (decide.go,
+   * M6 design 3.7, 3.8; P6a spec 2.3, R5): as a cycle's, his role in the project is an admin's or a member's, and
+   * nerve takes a write of the project's modules from him at all (planningWritesRefused, by module_view)
+   * @param { string } workspaceSlug
+   * @param { string } projectId
+   * @returns { boolean }
+   */
+  canWriteModules = (workspaceSlug: string, projectId: string | undefined): boolean =>
+    this.canWritePlanning(workspaceSlug, projectId, "modules");
+
+  /**
+   * @description Whether the caller may delete a module of the project of the workspace named, created by him or
+   * not, as nerve's module.delete decides (decide.go): as a cycle's, the project's admins and the workspace's admin,
+   * and the module's creator while his role in the project is an admin's or a member's; none while nerve refuses him
+   * every write of the project's modules (planningWritesRefused)
+   * @param { string } workspaceSlug
+   * @param { string } projectId
+   * @param { boolean } createdByCaller
+   * @returns { boolean }
+   */
+  canDeleteModule = (workspaceSlug: string, projectId: string | undefined, createdByCaller: boolean): boolean =>
+    this.canDeletePlanning(workspaceSlug, projectId, createdByCaller, "modules");
+
+  /** Whether the caller may write the project's cycles or modules (canWriteCycles, canWriteModules). */
+  private canWritePlanning(workspaceSlug: string, projectId: string | undefined, domain: PlanningDomain): boolean {
     const role = this.getProjectRoleByWorkspaceSlugAndProjectId(workspaceSlug, projectId);
-    if (role === undefined || this.cycleWritesRefused(projectId)) return false;
+    return (
+      (role === EUserPermissions.ADMIN || role === EUserPermissions.MEMBER) &&
+      !this.planningWritesRefused(projectId, domain)
+    );
+  }
+
+  /** Whether the caller may delete a cycle or a module of the project (canDeleteCycle, canDeleteModule). */
+  private canDeletePlanning(
+    workspaceSlug: string,
+    projectId: string | undefined,
+    createdByCaller: boolean,
+    domain: PlanningDomain
+  ): boolean {
+    const role = this.getProjectRoleByWorkspaceSlugAndProjectId(workspaceSlug, projectId);
+    if (role === undefined || this.planningWritesRefused(projectId, domain)) return false;
     const projectRole = this.store.projectRoot.project.getProjectById(projectId)?.member_role;
     const creatorRole = projectRole === EUserPermissions.ADMIN || projectRole === EUserPermissions.MEMBER;
     return role === EUserPermissions.ADMIN || (createdByCaller && creatorRole);
-  };
+  }
 
   /**
-   * Whether nerve refuses the caller every write of the project's cycles, whatever his role, as planning/app/lock.go
-   * decides each (decideOn): it shows him only his own work items there (its grant's OwnOnly, decide.go: by his role
-   * in the project alone, a guest's, though the workspace's admin, of a project not showing its guests every work
-   * item), 403; or the project's cycles are turned off (cycle_view; turnedOff, planning.cycles_disabled), 409. A
-   * project the caller is not given has no cycles he writes either.
+   * Whether nerve refuses the caller every write of the project's cycles or modules (domain), whatever his role, as
+   * planning/app/lock.go decides each (decideOn): it shows him only his own work items there (its grant's OwnOnly,
+   * decide.go: by his role in the project alone, a guest's, though the workspace's admin, of a project not showing its
+   * guests every work item), 403; or the domain is turned off in the project (planningOn: cycle_view, module_view;
+   * turnedOff, planning.cycles_disabled, planning.modules_disabled), 409. A project the caller is not given has no
+   * cycles nor modules he writes either.
    */
-  private cycleWritesRefused(projectId: string | undefined): boolean {
+  private planningWritesRefused(projectId: string | undefined, domain: PlanningDomain): boolean {
     const project = this.store.projectRoot.project.getProjectById(projectId);
-    if (!project?.cycle_view) return true;
+    if (!project || !planningOn(project, domain)) return true;
     return project.member_role === EUserPermissions.GUEST && !project.guest_view_all_features;
   }
 }

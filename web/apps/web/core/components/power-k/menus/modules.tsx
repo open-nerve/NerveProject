@@ -7,26 +7,24 @@
 import React from "react";
 import { observer } from "mobx-react";
 // nerve imports
+import type { Module } from "@nerve/api-client";
 import { ModuleStatusIcon } from "@nerve/propel/icons";
-import type { IModule } from "@nerve/types";
 // local imports
 import { PowerKMenuBuilder } from "./builder";
 
 type Props = {
-  modules: IModule[];
-  onSelect: (module: IModule) => void;
-  value?: string[];
+  modules: Module[];
+  onSelect: (module: Module) => void;
 };
 
-export const PowerKModulesMenu = observer(function PowerKModulesMenu({ modules, onSelect, value }: Props) {
+export const PowerKModulesMenu = observer(function PowerKModulesMenu({ modules, onSelect }: Props) {
   return (
     <PowerKMenuBuilder
       items={modules}
       getKey={(module) => module.id}
-      getIconNode={(module) => <ModuleStatusIcon status={module.status ?? "backlog"} className="size-3.5 shrink-0" />}
+      getIconNode={(module) => <ModuleStatusIcon status={module.status} className="size-3.5 shrink-0" />}
       getValue={(module) => module.name}
       getLabel={(module) => module.name}
-      isSelected={(module) => !!value?.includes(module.id)}
       onSelect={onSelect}
       emptyText="No modules found"
     />

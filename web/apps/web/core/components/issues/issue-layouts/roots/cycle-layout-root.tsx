@@ -6,18 +6,17 @@ import { ISSUE_DISPLAY_FILTERS_BY_PAGE } from "@nerve/constants";
 import { EIssueLayoutTypes, EIssuesStoreType } from "@nerve/types";
 import { Spinner } from "@nerve/ui";
 // components
-import { CyclesDisabled } from "@/components/cycles/disabled";
 import { PeekOnEntry } from "@/components/cycles/peek-on-entry";
-import { CyclesReadFailure } from "@/components/cycles/read-failure";
+import { PlanningDisabled } from "@/components/planning/disabled";
+import { PlanningReadFailure } from "@/components/planning/read-failure";
 import { ProjectLevelWorkItemFiltersHOC } from "@/components/work-item-filters/filters-hoc/project-level";
 import { WorkItemFiltersRow } from "@/components/work-item-filters/filters-row";
 // hooks
 import { useIssues } from "@/hooks/store/use-issues";
-import { useProject } from "@/hooks/store/use-project";
-import { useUserPermissions } from "@/hooks/store/user";
 import { useCyclePreferencesFollow } from "@/hooks/use-cycle-preferences-follow";
 import { IssuesStoreContext } from "@/hooks/use-issue-layout-store";
 import { usePageFilterExpression } from "@/hooks/use-page-filter-expression";
+import { usePlanningReads } from "@/hooks/use-planning-reads";
 // lib
 import { useSessionSWR } from "@/lib/use-session-swr";
 // local imports
@@ -56,8 +55,6 @@ export const CycleLayoutRoot = observer(function CycleLayoutRoot() {
   const { workspaceSlug, projectId, cycleId } = useParams();
   // store hooks
   const { issues, issuesFilter } = useIssues(EIssuesStoreType.CYCLE);
-  const { getProjectById } = useProject();
-  const { getProjectRoleByWorkspaceSlugAndProjectId } = useUserPermissions();
   // hooks
   const follow = useCyclePreferencesFollow();
   const updateExpression = usePageFilterExpression(
@@ -67,21 +64,18 @@ export const CycleLayoutRoot = observer(function CycleLayoutRoot() {
     issuesFilter,
     follow
   );
-  // derived values
-  const project = getProjectById(projectId);
-  const cyclesOn = project?.cycle_view === true;
-  const role =
-    workspaceSlug && projectId ? getProjectRoleByWorkspaceSlugAndProjectId(workspaceSlug, projectId) : undefined;
-  const preferences = useSessionSWR(
-    role !== undefined && cyclesOn ? ["CYCLE_ISSUE_FILTERS", workspaceSlug, cycleId] : null,
-    (slug, cycle) => issuesFilter.fetchFilters(slug, cycle)
+  // derived values: a member's read, of a project not archived (none under the project's wrapper is), while its cycles
+  // are on; with them off, the cycles' turned-off state
+  const { readable, listed } = usePlanningReads(workspaceSlug, projectId, "cycles");
+  const preferences = useSessionSWR(listed ? ["CYCLE_ISSUE_FILTERS", workspaceSlug, cycleId] : null, (slug, cycle) =>
+    issuesFilter.fetchFilters(slug, cycle)
   );
   const workItemFilters = cycleId ? issuesFilter.getIssueFilters(cycleId) : undefined;
 
-  if (!workspaceSlug || !projectId || !cycleId || !project || role === undefined) return null;
-  if (!cyclesOn) return <CyclesDisabled workspaceSlug={workspaceSlug} projectId={projectId} />;
+  if (!workspaceSlug || !projectId || !cycleId || !readable) return null;
+  if (!listed) return <PlanningDisabled workspaceSlug={workspaceSlug} projectId={projectId} domain="cycles" />;
   if (preferences.error !== undefined)
-    return <CyclesReadFailure error={preferences.error} onRetry={() => void preferences.mutate()} />;
+    return <PlanningReadFailure error={preferences.error} onRetry={() => void preferences.mutate()} />;
   if (!workItemFilters) return null;
 
   return (

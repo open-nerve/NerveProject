@@ -5,7 +5,7 @@ to: M8
 created: 2026-11-07
 ---
 
-# M6 交给 M8：CI 的 e2e 作业期限与间歇失败的故事、清理分页器的副本、e2e 数据库的连接余量、server 作业的分路与 lint 工具的在线下载、本机测试容器的端口冲突、e2e 作业在线安装浏览器的系统依赖、编辑器重建图片节点时中止的读取、工作项根 store 的行数、Firefox 再次载入后的字体预加载警告
+# M6 交给 M8：CI 的 e2e 作业期限与间歇失败的故事、清理分页器的副本、e2e 数据库的连接余量、server 作业的分路与 lint 工具的在线下载、本机测试容器的端口冲突、e2e 作业在线安装浏览器的系统依赖、编辑器重建图片节点时中止的读取、工作项根 store 的行数、Firefox 再次载入后的字体预加载警告、出现后一帧内按下关闭的通知不再消失、两份相同的 useLocalStorage
 
 这是接收方尚待完成的工作。转交只表示责任和验收条件已落实到此处，不表示本页问题已经解决。M6 进行中发现的条目随发现写入；M6 收尾时补齐其余交接。延续 [M5 → M8 交接 M5-M8-06](M5-closeout.md#M5-M8-06) 中仍开放的观察。
 
@@ -21,6 +21,7 @@ created: 2026-11-07
 - M6/P2 候选 `784d8e0a` 的分支 CI 42380907752 attempt 1：e2e 426 条中 425 过，M5 的 F16 (page)（`e2e/stories/files/f16-content-lifetime-page.spec.ts:672`，角色改变又改回的故事）失败——展开评论的“Attachments”折叠区后，5 秒内找不到 `Download owner-note.txt`（`:698`）。这与 [M5-closeout](M5-closeout.md) 所记 F16 重连故事的“点开折叠区与晚到的版面位移竞争”是同一类（该条已建议同类辅助函数一并检查）；P2 没有改动文件与评论的前端。只重跑失败的作业，attempt 2 的 F16 通过，但 I21 因 P2 自己的测试竞争失败（P2 在 `78c7f7d3` 修复，见 [P2 阶段记录](../../M6-cycles-modules/reviews/P2-modules-backend-review.md) §5），不属本条。
 - M6/P2 合入的 main CI 42399566014 两次未过（自动归档的锁探测被启动时的修剪任务骗过；S3 测试容器发布端口撞上本机连接的临时端口），按负责人指示由修复分支 `codex/m6-p2-ci` 修根因而非重跑：锁探测改为只看其行为者自己的锁与等待，测试容器在端口冲突时重建（至多三次），另修本地暴露的 S7 (page) 菜单按键竞争。M5-M8 交接所记“启动时运行的周期任务插到锁测试”一条，凡全局探测项目行锁的 bootstrap 测试已按此改写；其余仍开放的观察照旧。经过见 [P2 阶段记录](../../M6-cycles-modules/reviews/P2-modules-backend-review.md) §5。
 - **C12 的根因已查实并修复**（M6/P4）：P4 合入的 main CI 42809569341 的 e2e 又在 C12 的 list 布局同一处（`:117`）失败。这次从 trace 查实：弹窗刚打开时描述编辑器尚未建成，编辑器的引用却已挂上一套操作空编辑器的 API，`isEditorReadyToDiscard()` 答 false，弹窗把 Escape 当成“编辑器忙”而拒绝关闭（错误提示 “Editor is not ready to discard changes”）。修复分支 `codex/m6-p4-ci` 改为编辑器建成之前引用为 null，经过见 [P4 阶段记录](../../M6-cycles-modules/reviews/P4-progress-transfer-review.md) §5。此前留有详情的各次 C12 失败（M5-M8-06 与本条上文）都是“弹窗打开后不久按 Escape、5 秒内未关”，与此一致。收集箱新建弹窗的同类问题交 M7（[M6-M7-01](../../M7-collaboration/handoffs/M6-closeout.md#M6-M7-01)）。
+- 余量的一个数据（M6/P6a 的 T10 检查点）：分支 CI 43418051413（`82dac1ef`）全绿，e2e 作业 131867770453 用了 25 分 18 秒（E2E 一步 23 分 09 秒，452 条、2 个工作进程），比基线 main CI 43373039561 的 19 分 14 秒（E2E 一步 17 分 37 秒，453 条）多约 6 分钟。逐条比对：页面故事整体慢 36%、接口故事慢 11%，与模块无关的故事（工作项列表、文件、项目设置）同样变慢；本机同一套故事与 P5b 的最终门禁逐条持平（页面 1.00、接口 0.99、其他 1.02，总时长都是 3.4–3.5 分钟）；同一次运行中没有改 Go 的 server 两路也一快一慢。判为 runner 的速度差异，不是产品的回归；同一批故事在不同的 runner 上相差约三成，复核余量时要计入。
 
 **何时验收：** M8 的 CI 工作复核 35 分钟的余量（或缓存浏览器的系统依赖、拆分作业，任一调整须负责人同意），并查实或修好 C7；在此之前，C7 再失败时按“重跑一次，再不过就停下报告”处理。C12 若再失败，按新的问题定位，不按本条重跑。
 
@@ -43,6 +44,10 @@ M6/P3a 的最终候选 `070762f5` 的本地门禁（`t13-gate1-build-e2e`）又�
 M6/P5a 的最终候选 `5b5da6ea` 的本地门禁（`t16-gate3-build-e2e`）再一次：C12 的 LAN HTTP 一例（`e2e/stories/issue/collaboration-interactions.spec.ts:556`）页面上 `GET /api/v0/workspaces/<slug>/states` 回答 500，该测试 nerve 日志为 `FATAL: sorry, too many clients already`（53300）；只重跑这一项即 29 条全过（`t16-gate3-e2e-c12-rerun`）。按 M6-M8-01 对 C12 的要求按新问题定位，查实是本条，不是 M6-M8-01 的间歇失败。
 
 M6/P5b 的检查点（T10，2026-11-11，`00cf6c38672c0a21a63c0dab7026f339d8185f92`）的本地门禁（`t10-gate` 的 build+e2e）又一次：445 条通过、1 条失败，W7 (API)（`e2e/stories/workspace/w7-member-management.spec.ts:44`）在测试一侧的 pg 连接池上报 `error: sorry, too many clients already`（`e2e/fixtures/db.ts:88`，故事第 107 行 `expectWrittenLastBy` 的数据库断言）。P5b 没有改这个故事；同一输入只重跑这一项即通过（`t10-gate-e2e-w7-rerun`，exit 0）。同一检查点的分支 CI 没有跑到故事（见 M6-M8-06），之后 `f4a37007` 的分支 CI 全绿。
+
+M6/P6a 的检查点（T10，2026-11-13，`82dac1efd9dac3fe7b7d99bdcac18410cd12bb0a`）的本地门禁（`t10-gate-build-e2e`）又一次：451 条通过、1 条失败，W6 (API)（`e2e/stories/workspace/w6-sign-up-by-invitation.spec.ts:13`）在测试一侧的 pg 连接池上报 `error: sorry, too many clients already`（`e2e/fixtures/db.ts:88`，经 `e2e/fixtures/assert/identity.ts:307` 的 `countIdentity`，故事第 57 行的数据库断言）。P6a 没有改这个故事；同一输入只重跑这一个文件即 8 条全过（`t10-gate-rerun-w6`，exit 0）。同一检查点的分支 CI 43418051413 全绿。
+
+M6/P6a 的最终候选（T16，2026-11-14，`1f41c8ca78a3607174ba6bb3095a58a5dce87b2a`）的本地门禁（`f-final-gate-build-e2e`）又一次：461 条通过、1 条失败，W9（`e2e/stories/workspace/w9-deactivation.spec.ts:30`）第一次 `refusedBoth`（故事第 96 行，经第 91 行与 `e2e/fixtures/users.ts:44` 的 `nerveUsersFails`）的 `nerve users deactivate` 命令连不上数据库，报 `FATAL: sorry, too many clients already`（SQLSTATE 53300），与 P2 那次 W12 的命令一侧同类。P6a 没有改这个故事、`server/` 与命令；同一输入只重跑这一个文件即 7 条全过（`f-final-gate-rerun-w9`，exit 0）。最终 HEAD 的分支 CI 由 P6b 的 T1 回填到 P6a 阶段记录 §7。
 
 **何时验收：** M8 的 CI 工作核算 e2e 的连接预算（工作进程数 × 每进程的连接上限 + 余量），按结果给测试容器设 `max_connections` 或收紧 e2e 服务器的 `database.max_conns`，并在 CI 与本地都留有余量；或负责人决定维持现状，并在此写明理由。
 
@@ -112,3 +117,20 @@ M6/P5b 的 T16（2026-11-12）在 `8b11bc6381623717663ba986da74710668719494` 上
 观察（M6/P5b T16 的三引擎页面配置与修复轮 F2）：Firefox 在同一浏览器里任何一次再次载入文档之后（`page.reload()` 或再一次 `page.goto`，不论与前一次相隔 1.4 s 还是 13.5 s），约 10 s 报一条 JavaScript Warning：根预加载的 inter 字体 “preloaded with link preload was not used within a few seconds”。看控制台的故事若在这之后还检查，就会失败。G15 (page) 的故事一、二因此改为以页面自己的排序代替重载、以同一人另开的浏览器核对“再次载入后仍在”（修复轮 F2）；G19 的两次重载在装着扣住回答的路由时，探针 12 s 内没有这条警告；G1 的两次重载、G6 的重载、G8 的再次 `goto` 在三引擎配置里目前都通过，原因未逐一探查，同属潜在的间歇（证据在 P5b 台账的 `f-probe-g15s1-reload-a`、`f-probe-g15s1-late-reload`、`f-probe-g19-reloads`、`f2-probe-loaded-anew-12s-b` 收据）。
 
 **何时验收：** M8 查明 Firefox 为什么认定再次载入的文档没用到预加载（例如预加载与 `@font-face` 的属性不一致，或再次载入时字体来自前一个文档的缓存），改正预加载（或写明这是 Firefox 的预期行为并让相关故事避开再次载入）；或负责人决定维持现状，并在此写明理由。
+
+<a id="M6-M8-10"></a>
+## M6-M8-10 出现后约一帧内按下关闭的通知不再消失
+
+观察（M6/P6a 的 T13，2026-11-13）：G9 (page) 的故事二在被拒的通知出现约 7 ms 后按下它的关闭（共用帮手 `dismissToasts`），通知一直留着，故事 5 秒后失败（`--repeat-each=3` 三次中两次）。每次按下之前记下的关闭按钮都没有 `inert`、`data-starting-style`、`data-ending-style`。
+
+- 原因（第三方，`@base-ui-components/react` 1.0.0-beta.3，propel 的 `Toast` 用它）：`ToastRoot` 在挂载时与它的 `ResizeObserver` 第一次回报时（约一帧之后）各量一次高度，每次都把这条通知的 `transitionStatus` 写回 `undefined`（`esm/toast/root/ToastRoot.js:146-157` 的 `setHeights`）；关闭把它设为 `ending` 并清掉它的计时器（`esm/toast/provider/ToastProvider.js:118-140` 的 `close`）。两次测量之间按下的关闭被第二次测量撤销，计时器又已清掉，通知不再自己退场。P5a、P5b 的故事在通知出现之后总有别的等待才关闭它，碰不到这一帧。
+- 影响：真人在通知出现的一帧之内点到关闭几乎不可能，产品代码没有改。e2e 的 `dismissToasts`（`e2e/fixtures/cycle-pages.ts`）改为按下尚未退场的通知的关闭、2 秒内都消失为止，未消失就再按，至多 10 秒（`expect.toPass`）；退回只按一次的变异 `t13-mut-dismiss-once` 让 G9 故事二三次全败。证据在 P6a 台账的 `t13-probe-g9-toast`、`t13-probe-g9-toast-2` 收据。
+
+**何时验收：** M8 升级 Base UI 时核对这一行为是否仍在（例如在通知出现后的第一帧内程序化地按关闭），仍在就向上游报告或在 propel 的 `Toast` 里绕开，并据此决定 `dismissToasts` 的重按是否还需要；或负责人决定维持现状，并在此写明理由。
+
+<a id="M6-M8-11"></a>
+## M6-M8-11 两份相同的 useLocalStorage
+
+观察（[re-69](../../../reviews/re-69-M6P6a整体审核.md) 的观察，M6/P6a 的整分支审查）：web 里有两份行为相同（只差一行多余的重复判断、导出方式与 TODO 注释）的 `useLocalStorage`：`@nerve/hooks` 的 `web/packages/hooks/src/use-local-storage.tsx`（具名导出；第 10 行把 `typeof window === "undefined"` 判断了两次），与应用里 Plane 留下的副本 `web/apps/web/core/hooks/use-local-storage.tsx`（默认导出；它的注释写着 “TODO: Remove this once its callers use useLocalStorage from @nerve/hooks”）。模块一侧两份都用：版式与排序（`core/components/modules/use-module-display.ts`）读 `@nerve/hooks`，详情页与页头的 `module_sidebar_collapsed`、两域共用的进度页签 `core/components/core/sidebar/progress-tabs.tsx` 读应用的副本。副本在 P6a 之前就有，现有读者 8 个文件（迭代的进行中卡片 `cycles/active-cycle/cycle-stats.tsx`，迭代与模块的详情页与页头，`progress-tabs.tsx`，工作区侧栏的 `sidebar-menu-items.tsx` 与 `favorites/favorites-menu.tsx`），`@nerve/hooks` 的读者 6 个。两份读写同一个键时行为相同（都以 `local-storage:<key>` 事件互相通知），所以不是缺陷，只是重复。
+
+**何时验收：** M8 的清理把应用副本的读者改为 `@nerve/hooks` 的 `useLocalStorage` 并删去副本，同时删去留下的 `@nerve/hooks` 一份第 10 行重复的 `|| typeof window === "undefined"`（M7 若先改侧栏的收藏，可顺手改它那一处）；或负责人决定维持现状，并在此写明理由。

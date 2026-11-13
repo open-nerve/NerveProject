@@ -4,42 +4,15 @@
  * See the LICENSE file for details.
  */
 
-import * as React from "react";
 import { GridOutline, ListOutline } from "@makeplane/propel/icons";
-import type { TModuleLayoutOptions } from "@nerve/types";
-import { cn } from "@nerve/utils";
+// nerve imports
+import type { ModuleLayout } from "@nerve/constants";
 
-interface ILayoutIcon {
-  className?: string;
-  containerClassName?: string;
-  layoutType: TModuleLayoutOptions;
-  size?: number;
-  withContainer?: boolean;
-}
+/** The icon of each layout of a modules list: its rows, its cards. */
+const ICONS = { list: ListOutline, board: GridOutline } as const satisfies Record<ModuleLayout, unknown>;
 
-export function ModuleLayoutIcon(props: ILayoutIcon) {
-  const { layoutType, className = "", containerClassName = "", size = 14, withContainer = false } = props;
-
-  // get Layout icon
-  const icons = {
-    list: ListOutline,
-    board: GridOutline,
-  };
-  const Icon = icons[layoutType ?? "list"];
-
-  if (!Icon) return null;
-
-  return (
-    <>
-      {withContainer ? (
-        <div
-          className={cn("flex flex-shrink-0 items-center justify-center rounded-sm border p-0.5", containerClassName)}
-        >
-          <Icon width={size} height={size} className={cn(className)} />
-        </div>
-      ) : (
-        <Icon width={size} height={size} className={cn("flex-shrink-0", className)} />
-      )}
-    </>
-  );
+/** The icon of a layout of a project's modules list (P6a spec 2.4), beside the layout's name, which says it. */
+export function ModuleLayoutIcon({ layout }: { layout: ModuleLayout }) {
+  const Icon = ICONS[layout];
+  return <Icon width={14} height={14} className="flex-shrink-0" aria-hidden="true" />;
 }

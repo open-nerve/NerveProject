@@ -7,6 +7,10 @@ export type MemberDropdownProps = TDropdownProps & {
   tooltipContent?: string;
   onClose?: () => void;
   showUserDetails?: boolean;
+  /** As one of a form's fields: whether nerve refused its value (its select's button is aria-invalid). */
+  invalid?: boolean;
+  /** As one of a form's fields: the id of the message under it, which describes its select's button. */
+  describedBy?: string;
 } & (
     | {
         multiple: false;

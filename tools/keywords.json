@@ -1,5 +1,5 @@
 {
-  "phase": "M6/P5",
+  "phase": "M6/P6",
   "rules": [
     {
       "id": "deploy-files",
@@ -2335,11 +2335,11 @@
       "phase": "M3/P10",
       "why": "项目页面从路由参数读地址（项目、工作区），不从 router store 读：project store 的 currentProjectDetails 和 member store 的 projectMemberIds 读 router store 的 projectId，workspace store 的 currentWorkspace 读它的 workspaceSlug，allowPermissions 不传 slug 和项目时也退回 router store（permissions.store.ts）。router store 由 StoreWrapper 的 effect 在渲染之后写入，同一路由换了项目时晚一次提交，那一次页面按上一个项目显示、按上一个项目判断权限（M3/P10 修复轮，裁定 F-2；P10 规格 §5）。本规则只管 P10、P11 已经改过来的文件：常规设置页和它的控制区、四个功能页、自动化页、成员页、成员列表、成员选择、项目设置侧栏的头部（P10），状态设置页和它的根组件、标签设置页、标签列表和它的拖放组件（P11）；后面的阶段（M4、M6、M7 各自的页面）改它们的读法时，把那些文件加进本规则的 files，收尾删掉 projectMemberIds 这个 getter。测试不算；M4/P12 扩至原22列表路径（已删除路径仍阻止复活）、显式分组目录及调用点。目录 getter 不借 router 隐式范围，缺少地址先拒绝，不触发 allowPermissions 的旧回退。",
       "files": {
-        "source": "(?:^web/apps/web/(?:app/\\(all\\)/\\[workspaceSlug\\]/\\(settings\\)/settings/projects/\\[projectId\\]/(?:page|members/page|states/page|labels/page|automations/page|features/(?:cycles|intake|modules|views)/page)|core/components/(?:project/(?:settings/control-section|member-list|member-select)|project-states/root|labels/(?:project-setting-label-list|label-drag-n-drop-HOC)|settings/project/sidebar/header))\\.tsx$|^(?:web/apps/web/app/\\(all\\)/\\[workspaceSlug\\]/\\(projects\\)/projects/\\(detail\\)/\\[projectId\\]/issues/\\(list\\)/mobile\\-header\\.tsx|web/apps/web/app/\\(all\\)/\\[workspaceSlug\\]/\\(projects\\)/projects/\\(detail\\)/\\[projectId\\]/archives/issues/\\(detail\\)/header\\.tsx|web/apps/web/core/components/issues/header\\.tsx|web/apps/web/core/components/issues/archived\\-issues\\-header\\.tsx|web/apps/web/core/components/issues/issue\\-layouts/spreadsheet/spreadsheet\\-view\\.tsx|web/apps/web/core/components/issues/issue\\-layouts/utils\\.tsx|web/apps/web/core/components/issues/issue\\-layouts/calendar/base\\-calendar\\-root\\.tsx|web/apps/web/core/components/issues/issue\\-layouts/empty\\-states/archived\\-issues\\.tsx|web/apps/web/core/components/issues/issue\\-layouts/empty\\-states/cycle\\.tsx|web/apps/web/core/components/issues/issue\\-layouts/empty\\-states/module\\.tsx|web/apps/web/core/components/issues/issue\\-layouts/empty\\-states/project\\-issues\\.tsx|web/apps/web/core/components/issues/issue\\-layouts/empty\\-states/project\\-view\\.tsx|web/apps/web/core/components/issues/issue\\-layouts/kanban/base\\-kanban\\-root\\.tsx|web/apps/web/core/components/issues/issue\\-layouts/kanban/roots/cycle\\-root\\.tsx|web/apps/web/core/components/issues/issue\\-layouts/list/base\\-list\\-root\\.tsx|web/apps/web/core/components/issues/issue\\-layouts/list/roots/cycle\\-root\\.tsx|web/apps/web/core/components/issues/issue\\-layouts/quick\\-action\\-dropdowns/archived\\-issue\\.tsx|web/apps/web/core/components/issues/issue\\-layouts/quick\\-action\\-dropdowns/cycle\\-issue\\.tsx|web/apps/web/core/components/issues/issue\\-layouts/quick\\-action\\-dropdowns/module\\-issue\\.tsx|web/apps/web/core/components/issues/issue\\-layouts/spreadsheet/base\\-spreadsheet\\-root\\.tsx|web/apps/web/core/components/issues/issue\\-layouts/spreadsheet/roots/cycle\\-root\\.tsx|web/apps/web/core/components/issues/workspace\\-draft/delete\\-modal\\.tsx|web/apps/web/core/components/issues/issue\\-layouts/group\\-columns\\.tsx|web/apps/web/core/components/issues/issue\\-layouts/list/default\\.tsx|web/apps/web/core/components/issues/issue\\-layouts/kanban/default\\.tsx|web/apps/web/core/components/issues/issue\\-layouts/kanban/swimlanes\\.tsx|web/apps/web/core/components/issues/issue\\-detail\\-widgets/sub\\-issues/issues\\-list/root\\.tsx|web/apps/web/core/components/cycles/(?:actions\\-host|delete\\-modal|disabled|quick\\-actions|read\\-failure|cycles\\-view|cycles\\-view\\-header|cycle\\-peek\\-overview|archived\\-cycles/(?:modal|root|header|view)|list/(?:root|cycles\\-list\\-item|cycle\\-list\\-item\\-action|cycles\\-list\\-map|cycle\\-list\\-group\\-header)|applied\\-filters/(?:root|status|date)|dropdowns/filters/(?:root|status|date)|progress\\-sidebar/(?:root|sidebar\\-header|sidebar\\-details|issue\\-progress|progress\\-stats)|active\\-cycle/(?:root|progress|productivity|cycle\\-stats|priority\\-issues)|distribution\\-stats|peek\\-on\\-entry|transfer\\-issues(?:\\-modal)?)\\.tsx|web/apps/web/core/components/cycles/active\\-cycle/use\\-enter\\-filtered\\.ts|web/apps/web/core/components/core/sidebar/(?:single\\-progress\\-stats\\.tsx|progress\\-stats/shared\\.ts)|web/apps/web/app/\\(all\\)/\\[workspaceSlug\\]/\\(projects\\)/projects/\\(detail\\)/\\[projectId\\]/(?:cycles/\\(detail\\)/(?:layout|header|\\[cycleId\\]/page)|cycles/\\(list\\)/(?:layout|header|page)|archives/cycles/(?:layout|page))\\.tsx|web/apps/web/core/components/power-k/(?:ui/pages/open-entity/project-cycles-menu\\.tsx|ui/pages/context-based/cycle/commands\\.ts|hooks/use-context-indicator\\.ts|menus/cycles\\.tsx)|web/apps/web/core/store/issue/helpers/page\\-preferences\\-filter\\.store\\.ts|web/apps/web/core/store/issue/cycle/filter\\.store\\.ts|web/apps/web/core/store/issue/helpers/page\\-preferences\\-issues\\.store\\.ts|web/apps/web/core/store/issue/cycle/(?:issue|priority\\-issues)\\.store\\.ts|web/apps/web/core/hooks/store/use\\-cycle\\-priority\\-issues\\.ts|web/apps/web/core/hooks/use\\-cycle\\-issue\\-actions\\.ts|web/apps/web/core/hooks/use\\-issue\\-layout\\-store\\.ts|web/apps/web/core/hooks/use\\-issue\\-list\\-mount\\.ts|web/apps/web/core/hooks/store/use\\-page\\-issue\\-filters\\.ts|web/apps/web/core/components/issues/issue\\-layouts/calendar/(?:calendar|week\\-days|header|day\\-tile|issue\\-block|dropdowns/(?:months|options)\\-dropdown)\\.tsx|web/apps/web/core/components/issues/issue\\-layouts/roots/(?:cycle|project)\\-layout\\-root\\.tsx|web/apps/web/core/components/issues/issue\\-layouts/calendar/roots/cycle\\-root\\.tsx|web/apps/web/core/hooks/use\\-(?:page\\-preferences\\-follow|cycle\\-preferences\\-follow|page\\-filter\\-expression|cycle\\-list\\-state|cycle\\-progress\\-follow)\\.ts|web/apps/web/core/components/issues/(?:filters|issue\\-modal/base|issue\\-layouts/command\\-host|issue\\-layouts/quick\\-action\\-dropdowns/project\\-issue)\\.tsx)$)",
+        "source": "(?:^web/apps/web/(?:app/\\(all\\)/\\[workspaceSlug\\]/\\(settings\\)/settings/projects/\\[projectId\\]/(?:page|members/page|states/page|labels/page|automations/page|features/(?:cycles|intake|modules|views)/page)|core/components/(?:project/(?:settings/control-section|member-list|member-select)|project-states/root|labels/(?:project-setting-label-list|label-drag-n-drop-HOC)|settings/project/sidebar/header))\\.tsx$|^(?:web/apps/web/app/\\(all\\)/\\[workspaceSlug\\]/\\(projects\\)/projects/\\(detail\\)/\\[projectId\\]/issues/\\(list\\)/mobile\\-header\\.tsx|web/apps/web/app/\\(all\\)/\\[workspaceSlug\\]/\\(projects\\)/projects/\\(detail\\)/\\[projectId\\]/archives/issues/\\(detail\\)/header\\.tsx|web/apps/web/core/components/issues/header\\.tsx|web/apps/web/core/components/issues/archived\\-issues\\-header\\.tsx|web/apps/web/core/components/issues/issue\\-layouts/spreadsheet/spreadsheet\\-view\\.tsx|web/apps/web/core/components/issues/issue\\-layouts/utils\\.tsx|web/apps/web/core/components/issues/issue\\-layouts/calendar/base\\-calendar\\-root\\.tsx|web/apps/web/core/components/issues/issue\\-layouts/empty\\-states/archived\\-issues\\.tsx|web/apps/web/core/components/issues/issue\\-layouts/empty\\-states/cycle\\.tsx|web/apps/web/core/components/issues/issue\\-layouts/empty\\-states/module\\.tsx|web/apps/web/core/components/issues/issue\\-layouts/empty\\-states/project\\-issues\\.tsx|web/apps/web/core/components/issues/issue\\-layouts/empty\\-states/project\\-view\\.tsx|web/apps/web/core/components/issues/issue\\-layouts/kanban/base\\-kanban\\-root\\.tsx|web/apps/web/core/components/issues/issue\\-layouts/kanban/roots/cycle\\-root\\.tsx|web/apps/web/core/components/issues/issue\\-layouts/list/base\\-list\\-root\\.tsx|web/apps/web/core/components/issues/issue\\-layouts/list/roots/cycle\\-root\\.tsx|web/apps/web/core/components/issues/issue\\-layouts/quick\\-action\\-dropdowns/archived\\-issue\\.tsx|web/apps/web/core/components/issues/issue\\-layouts/quick\\-action\\-dropdowns/cycle\\-issue\\.tsx|web/apps/web/core/components/issues/issue\\-layouts/quick\\-action\\-dropdowns/module\\-issue\\.tsx|web/apps/web/core/components/issues/issue\\-layouts/spreadsheet/base\\-spreadsheet\\-root\\.tsx|web/apps/web/core/components/issues/issue\\-layouts/spreadsheet/roots/cycle\\-root\\.tsx|web/apps/web/core/components/issues/workspace\\-draft/delete\\-modal\\.tsx|web/apps/web/core/components/issues/issue\\-layouts/group\\-columns\\.tsx|web/apps/web/core/components/issues/issue\\-layouts/list/default\\.tsx|web/apps/web/core/components/issues/issue\\-layouts/kanban/default\\.tsx|web/apps/web/core/components/issues/issue\\-layouts/kanban/swimlanes\\.tsx|web/apps/web/core/components/issues/issue\\-detail\\-widgets/sub\\-issues/issues\\-list/root\\.tsx|web/apps/web/core/components/cycles/(?:actions\\-host|delete\\-modal|disabled|quick\\-actions|read\\-failure|cycles\\-view|cycles\\-view\\-header|cycle\\-peek\\-overview|archived\\-cycles/(?:modal|root|header|view)|list/(?:root|cycles\\-list\\-item|cycle\\-list\\-item\\-action|cycles\\-list\\-map|cycle\\-list\\-group\\-header)|applied\\-filters/(?:root|status|date)|dropdowns/filters/(?:root|status|date)|progress\\-sidebar/(?:root|sidebar\\-header|sidebar\\-details|issue\\-progress|progress\\-stats)|active\\-cycle/(?:root|progress|productivity|cycle\\-stats|priority\\-issues)|distribution\\-stats|peek\\-on\\-entry|transfer\\-issues(?:\\-modal)?)\\.tsx|web/apps/web/core/components/cycles/active\\-cycle/use\\-enter\\-filtered\\.ts|web/apps/web/core/components/core/sidebar/(?:single\\-progress\\-stats\\.tsx|progress\\-stats/shared\\.ts|distribution\\-stats\\.tsx|progress\\-tabs\\.tsx)|web/apps/web/core/components/planning/(?:read\\-failure|disabled|filter\\-date|applied\\-date\\-filters|list\\-search)\\.tsx|web/apps/web/core/components/modules/(?:actions\\-host|modal|form|select/status|quick\\-actions|delete\\-module\\-modal|archived\\-modules/(?:modal|root|header|view)|module\\-status\\-dropdown|progress\\-sidebar/(?:root|sidebar\\-header|sidebar\\-details|issue\\-progress|sidebar\\-links)|links/(?:list|list\\-item|create\\-update\\-modal)|modules\\-list\\-view|module\\-list\\-item(?:\\-action)?|module\\-card\\-item|module\\-view\\-header|module\\-peek\\-overview|module\\-dates|lead\\-avatar|applied\\-filters/(?:root|status|members)|dropdowns/filters/(?:root|status|members))\\.tsx|web/apps/web/core/components/modules/(?:use\\-module\\-change|links/use\\-metadata\\-refresh)\\.ts|web/apps/web/core/hooks/use\\-planning\\-reads\\.ts|web/apps/web/app/\\(all\\)/\\[workspaceSlug\\]/\\(projects\\)/projects/\\(detail\\)/\\[projectId\\]/(?:cycles/\\(detail\\)/(?:layout|header|\\[cycleId\\]/page)|cycles/\\(list\\)/(?:layout|header|page)|archives/cycles/(?:layout|page)|modules/\\((?:list|detail)\\)/layout|modules/\\(list\\)/(?:header|mobile\\-header|page)|modules/\\(detail\\)/(?:header|\\[moduleId\\]/page)|archives/modules/(?:layout|page))\\.tsx|web/apps/web/core/components/power-k/(?:ui/pages/open-entity/project-(?:cycles|modules)-menu\\.tsx|ui/pages/context-based/cycle/commands\\.ts|ui/pages/context-based/module/(?:commands|root|status-menu)\\.tsx|hooks/use-context-indicator\\.ts|menus/(?:cycles|modules)\\.tsx)|web/apps/web/core/store/issue/helpers/page\\-preferences\\-filter\\.store\\.ts|web/apps/web/core/store/issue/cycle/filter\\.store\\.ts|web/apps/web/core/store/issue/helpers/page\\-preferences\\-issues\\.store\\.ts|web/apps/web/core/store/issue/cycle/(?:issue|priority\\-issues)\\.store\\.ts|web/apps/web/core/hooks/store/use\\-cycle\\-priority\\-issues\\.ts|web/apps/web/core/hooks/use\\-cycle\\-issue\\-actions\\.ts|web/apps/web/core/hooks/use\\-issue\\-layout\\-store\\.ts|web/apps/web/core/hooks/use\\-issue\\-list\\-mount\\.ts|web/apps/web/core/hooks/store/use\\-page\\-issue\\-filters\\.ts|web/apps/web/core/components/issues/issue\\-layouts/calendar/(?:calendar|week\\-days|header|day\\-tile|issue\\-block|dropdowns/(?:months|options)\\-dropdown)\\.tsx|web/apps/web/core/components/issues/issue\\-layouts/roots/(?:cycle|project)\\-layout\\-root\\.tsx|web/apps/web/core/components/issues/issue\\-layouts/calendar/roots/cycle\\-root\\.tsx|web/apps/web/core/hooks/use\\-(?:page\\-preferences\\-follow|cycle\\-preferences\\-follow|page\\-filter\\-expression|cycle\\-list\\-state|cycle\\-progress\\-follow)\\.ts|web/apps/web/core/components/issues/(?:filters|issue\\-modal/base|issue\\-layouts/command\\-host|issue\\-layouts/quick\\-action\\-dropdowns/project\\-issue)\\.tsx)$)",
         "flags": ""
       },
       "content": {
-        "source": "\\bcurrentProjectDetails\\b|\\bprojectMemberIds\\b|\\bcurrentWorkspace\\b|\\ballowPermissions\\(\\s*\\[[^\\]]*\\]\\s*,\\s*[\\w.]+\\s*(?:,\\s*[\\w.?]+\\s*)?,?\\s*\\)|\\.(?:projectStates|projectLabels|joinedProjectIds|workspaceMemberIds)\\b|\\{[^{};=]*\\b(?:projectStates|projectLabels|joinedProjectIds|workspaceMemberIds)\\b[^{};=]*\\}\\s*=|\\brootStore\\.router\\b",
+        "source": "\\bcurrentProjectDetails\\b|\\bprojectMemberIds\\b|\\bcurrentWorkspace\\b|\\ballowPermissions\\(\\s*\\[[^\\]]*\\]\\s*,\\s*[\\w.]+\\s*(?:,\\s*[\\w.?]+\\s*)?,?\\s*\\)|\\.(?:projectStates|projectLabels|joinedProjectIds|workspaceMemberIds)\\b|\\{[^{};=]*\\b(?:projectStates|projectLabels|joinedProjectIds|workspaceMemberIds)\\b[^{};=]*\\}\\s*=|\\{[^{};=]*\\{[^{};=]*\\b(?:projectStates|projectLabels|joinedProjectIds|workspaceMemberIds)\\b[^{};=]*\\}[^{};=]*\\}\\s*=|\\brootStore\\.router\\b",
         "flags": ""
       },
       "samples": {
@@ -2352,9 +2352,12 @@
           "  allowPermissions([EUserPermissions.ADMIN], EUserPermissionsLevel.WORKSPACE, workspaceSlug)",
           "const { projectLabels } = rootStore.label;",
           "const ids = rootStore.projectRoot.project.joinedProjectIds;",
-          "const scope = rootStore.router.projectId;"
+          "const scope = rootStore.router.projectId;",
+          "  const { workspace: { workspaceMemberIds } } = useMember();",
+          "  const {\n    state: { projectStates },\n    label,\n  } = rootStore;"
         ],
         "miss": [
+          "  const { workspace: { getWorkspaceMemberIds } } = useMember();",
           "  const isAdmin = allowPermissions([EUserPermissions.ADMIN], EUserPermissionsLevel.PROJECT, workspaceSlug, projectId);",
           "  const canPerformProjectAdminActions = allowPermissions(\n    [EUserPermissions.ADMIN],\n    EUserPermissionsLevel.PROJECT,\n    workspaceSlug,\n    projectId\n  );",
           "    project: { getFilteredProjectMemberIds, getFilteredProjectMemberDetails, filters },",
@@ -2419,6 +2422,8 @@
             "web/apps/web/core/components/cycles/transfer-issues-modal.tsx",
             "web/apps/web/core/components/power-k/ui/pages/open-entity/project-cycles-menu.tsx",
             "web/apps/web/core/components/power-k/ui/pages/context-based/cycle/commands.ts",
+            "web/apps/web/core/components/power-k/ui/pages/open-entity/project-modules-menu.tsx",
+            "web/apps/web/core/components/power-k/ui/pages/context-based/module/commands.tsx",
             "web/apps/web/core/store/issue/helpers/page-preferences-filter.store.ts",
             "web/apps/web/core/store/issue/cycle/filter.store.ts",
             "web/apps/web/core/store/issue/helpers/page-preferences-issues.store.ts",
@@ -2453,7 +2458,59 @@
             "web/apps/web/core/components/core/sidebar/single-progress-stats.tsx",
             "web/apps/web/core/components/core/sidebar/progress-stats/shared.ts",
             "web/apps/web/core/components/cycles/active-cycle/use-enter-filtered.ts",
-            "web/apps/web/core/components/cycles/peek-on-entry.tsx"
+            "web/apps/web/core/components/cycles/peek-on-entry.tsx",
+            "web/apps/web/core/components/core/sidebar/distribution-stats.tsx",
+            "web/apps/web/core/components/core/sidebar/progress-tabs.tsx",
+            "web/apps/web/core/components/planning/read-failure.tsx",
+            "web/apps/web/core/components/planning/disabled.tsx",
+            "web/apps/web/core/hooks/use-planning-reads.ts",
+            "web/apps/web/core/components/modules/actions-host.tsx",
+            "web/apps/web/core/components/modules/modal.tsx",
+            "web/apps/web/core/components/modules/form.tsx",
+            "web/apps/web/core/components/modules/select/status.tsx",
+            "web/apps/web/core/components/modules/quick-actions.tsx",
+            "web/apps/web/core/components/modules/delete-module-modal.tsx",
+            "web/apps/web/core/components/modules/archived-modules/modal.tsx",
+            "web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/modules/(list)/layout.tsx",
+            "web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/modules/(detail)/layout.tsx",
+            "web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/modules/(detail)/header.tsx",
+            "web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/modules/(detail)/[moduleId]/page.tsx",
+            "web/apps/web/core/components/modules/module-status-dropdown.tsx",
+            "web/apps/web/core/components/modules/use-module-change.ts",
+            "web/apps/web/core/components/modules/progress-sidebar/root.tsx",
+            "web/apps/web/core/components/modules/progress-sidebar/sidebar-header.tsx",
+            "web/apps/web/core/components/modules/progress-sidebar/sidebar-details.tsx",
+            "web/apps/web/core/components/modules/progress-sidebar/issue-progress.tsx",
+            "web/apps/web/core/components/modules/progress-sidebar/sidebar-links.tsx",
+            "web/apps/web/core/components/modules/links/list.tsx",
+            "web/apps/web/core/components/modules/links/list-item.tsx",
+            "web/apps/web/core/components/modules/links/create-update-modal.tsx",
+            "web/apps/web/core/components/modules/links/use-metadata-refresh.ts",
+            "web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/archives/modules/layout.tsx",
+            "web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/modules/(list)/header.tsx",
+            "web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/modules/(list)/mobile-header.tsx",
+            "web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/modules/(list)/page.tsx",
+            "web/apps/web/core/components/modules/modules-list-view.tsx",
+            "web/apps/web/core/components/modules/module-list-item.tsx",
+            "web/apps/web/core/components/modules/module-list-item-action.tsx",
+            "web/apps/web/core/components/modules/module-card-item.tsx",
+            "web/apps/web/core/components/modules/module-view-header.tsx",
+            "web/apps/web/core/components/modules/module-peek-overview.tsx",
+            "web/apps/web/core/components/modules/module-dates.tsx",
+            "web/apps/web/core/components/modules/lead-avatar.tsx",
+            "web/apps/web/core/components/modules/applied-filters/root.tsx",
+            "web/apps/web/core/components/modules/applied-filters/status.tsx",
+            "web/apps/web/core/components/modules/applied-filters/members.tsx",
+            "web/apps/web/core/components/modules/dropdowns/filters/root.tsx",
+            "web/apps/web/core/components/modules/dropdowns/filters/status.tsx",
+            "web/apps/web/core/components/modules/dropdowns/filters/members.tsx",
+            "web/apps/web/core/components/modules/archived-modules/root.tsx",
+            "web/apps/web/core/components/modules/archived-modules/header.tsx",
+            "web/apps/web/core/components/modules/archived-modules/view.tsx",
+            "web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/archives/modules/page.tsx",
+            "web/apps/web/core/components/planning/filter-date.tsx",
+            "web/apps/web/core/components/planning/applied-date-filters.tsx",
+            "web/apps/web/core/components/planning/list-search.tsx"
           ],
           "miss": [
             "web/apps/web/app/(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/admin-pages.test.tsx",
@@ -2467,7 +2524,8 @@
             "web/apps/web/core/components/cycles/fake-transfer-pages.tsx",
             "web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/cycles/(list)/page.test.tsx",
             "web/apps/web/core/components/power-k/ui/pages/open-entity/project-cycles-menu.test.tsx",
-            "web/apps/web/core/components/power-k/ui/pages/context-based/module/commands.tsx",
+            "web/apps/web/core/components/power-k/ui/pages/open-entity/project-modules-menu.test.tsx",
+            "web/apps/web/core/components/power-k/ui/pages/context-based/module/commands.test.tsx",
             "web/apps/web/core/store/issue/helpers/page-preferences-filter.store.test.ts",
             "web/apps/web/core/store/issue/cycle/filter.store.test.ts",
             "web/apps/web/core/store/issue/cycle/issue.store.test.ts",
@@ -2494,7 +2552,41 @@
             "web/apps/web/core/store/issue/cycle/priority-issues.store.test.ts",
             "web/apps/web/core/components/cycles/active-cycle/row-filters.test.tsx",
             "web/apps/web/core/components/cycles/progress-sidebar/row-filters.test.tsx",
-            "web/apps/web/core/components/cycles/fake-cycle-routes.tsx"
+            "web/apps/web/core/components/cycles/fake-cycle-routes.tsx",
+            "web/apps/web/core/components/core/sidebar/progress-tabs.test.tsx",
+            "web/apps/web/core/components/core/sidebar/distribution-rows.ts",
+            "web/apps/web/core/components/planning/disabled.test.tsx",
+            "web/apps/web/core/hooks/use-planning-reads.test.ts",
+            "web/apps/web/core/lib/planning-switch.ts",
+            "web/apps/web/core/components/modules/actions-host.test.tsx",
+            "web/apps/web/core/components/modules/modal.test.tsx",
+            "web/apps/web/core/components/modules/select/status.test.tsx",
+            "web/apps/web/core/components/modules/fake-module-dialog.tsx",
+            "web/apps/web/core/components/modules/quick-actions.test.tsx",
+            "web/apps/web/core/components/modules/actions-host.changes.test.tsx",
+            "web/apps/web/core/components/modules/fake-module-pages.tsx",
+            "web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/modules/(detail)/[moduleId]/page.test.tsx",
+            "web/apps/web/core/components/modules/progress-sidebar/root.test.tsx",
+            "web/apps/web/core/components/modules/progress-sidebar/sidebar-changes.test.tsx",
+            "web/apps/web/core/components/modules/progress-sidebar/fake-sidebar.tsx",
+            "web/apps/web/core/components/modules/progress-sidebar/sidebar-links.test.tsx",
+            "web/apps/web/core/components/modules/links/create-update-modal.test.tsx",
+            "web/apps/web/core/components/modules/links/use-metadata-refresh.test.tsx",
+            "web/apps/web/core/components/common/fake-quick-actions.tsx",
+            "web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/modules/(list)/page.test.tsx",
+            "web/apps/web/core/components/modules/use-module-display.ts",
+            "web/apps/web/core/components/modules/use-module-display.test.tsx",
+            "web/apps/web/core/components/modules/module-layout-icon.tsx",
+            "web/apps/web/core/components/modules/dropdowns/order-by.tsx",
+            "web/apps/web/core/components/modules/fake-module-lists.ts",
+            "web/apps/web/core/components/modules/modules-list-view.test.tsx",
+            "web/apps/web/core/components/modules/module-view-header.test.tsx",
+            "web/apps/web/core/components/modules/inline-changes.test.tsx",
+            "web/apps/web/core/components/modules/module-peek-overview.test.tsx",
+            "web/apps/web/core/components/modules/module-peek-overview-another.test.tsx",
+            "web/apps/web/core/components/modules/module-filters.test.tsx",
+            "web/apps/web/core/components/modules/fake-module-members.ts",
+            "web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/archives/modules/page.test.tsx"
           ]
         }
       }
@@ -2684,7 +2776,7 @@
     {
       "id": "old-cycle-urls",
       "phase": "M6/P5",
-      "why": "M6 的网页迭代改调 /api/v0（P5a spec 2.1、2.8；设计 §13“没有旧的迭代、模块 service 与地址”）：Plane 的迭代地址（列表、详情、归档目录与归档、进度、date-check、迭代的工作项、转移、工作区级的列表）nerve 都不提供，旧 service 与 store 已删除，web 的源文件（测试也算）不得再出现。无尾段的（…/cycles 后接引号、查询或结尾）也算，cycles 之后不接字母、数字、下划线或连字符；照 old-issue-urls 以 /api/workspaces/ 前缀锚定：组件目录的导入（./archived-cycles/modal）、路由与网页内的链接（/${workspaceSlug}/projects/${projectId}/cycles/${cycleId}）、/api/v0 的地址都不碰；模块的地址到 P6 删除旧模块 service 时另加规则",
+      "why": "M6 的网页迭代改调 /api/v0（P5a spec 2.1、2.8；设计 §13“没有旧的迭代、模块 service 与地址”）：Plane 的迭代地址（列表、详情、归档目录与归档、进度、date-check、迭代的工作项、转移、工作区级的列表）nerve 都不提供，旧 service 与 store 已删除，web 的源文件（测试也算）不得再出现。无尾段的（…/cycles 后接引号、查询或结尾）也算，cycles 之后不接字母、数字、下划线或连字符；照 old-issue-urls 以 /api/workspaces/ 前缀锚定：组件目录的导入（./archived-cycles/modal）、路由与网页内的链接（/${workspaceSlug}/projects/${projectId}/cycles/${cycleId}）、/api/v0 的地址都不碰；模块的旧地址是 old-module-urls 的（P6a 删除旧模块 service 时加入）",
       "files": {
         "source": "^web/.*\\.(?:[cm]?[jt]sx?|json)$",
         "flags": ""
@@ -2733,6 +2825,65 @@
           "hit": ["web/apps/web/core/services/cycle.service.ts", "web/apps/web/core/services/cycle.service.test.ts"],
           "miss": [
             "docs/v0/M6-cycles-modules/specs/P5a-web-cycles.md",
+            "tools/keywords.json",
+            "server/main.go",
+            "web/apps/web/app/assets/brand/mark.svg"
+          ]
+        }
+      }
+    },
+    {
+      "id": "old-module-urls",
+      "phase": "M6/P6",
+      "why": "M6 的网页模块改调 /api/v0（P6a spec 2.1、2.10；设计 §13“没有旧的迭代、模块 service 与地址”）：Plane 的模块地址（工作区级与项目的列表、详情、归档目录与归档、模块的链接、模块的收藏）nerve 都不提供，旧 service 与 store 已删除，web 的源文件（测试也算）不得再出现。无尾段的（…/modules 后接引号、查询或结尾）也算，modules、archived-modules、module-links、user-favorite-modules 之后不接字母、数字、下划线或连字符；照 old-cycle-urls 以 /api/workspaces/ 前缀锚定：组件目录的导入（./archived-modules/modal）、路由与网页内的链接（/${workspaceSlug}/projects/${projectId}/modules/${moduleId}、…/archives/modules、?peekModule=）、/api/v0 的地址（/api/v0/projects/{project_id}/modules、/api/v0/module-links/{module_link_id}、/api/v0/me/modules/{module_id}/preferences）都不碰",
+      "files": {
+        "source": "^web/.*\\.(?:[cm]?[jt]sx?|json)$",
+        "flags": ""
+      },
+      "content": {
+        "source": "/api/workspaces/(?:[^/\"'`\\s]+/)+(?:modules|archived-modules|module-links|user-favorite-modules)(?![\\w-])[^\"'`\\s]*",
+        "flags": ""
+      },
+      "samples": {
+        "hit": [
+          "/api/workspaces/${workspaceSlug}/modules/",
+          "/api/workspaces/${workspaceSlug}/projects/${projectId}/modules/",
+          "/api/workspaces/${workspaceSlug}/projects/${projectId}/modules/${moduleId}/",
+          "/api/workspaces/${workspaceSlug}/projects/${projectId}/modules/${moduleId}/archive/",
+          "/api/workspaces/${workspaceSlug}/projects/${projectId}/modules/${moduleId}/module-links/",
+          "/api/workspaces/${workspaceSlug}/projects/${projectId}/modules/${moduleId}/module-links/${linkId}/",
+          "/api/workspaces/${workspaceSlug}/projects/${projectId}/archived-modules/",
+          "/api/workspaces/${workspaceSlug}/projects/${projectId}/archived-modules/${moduleId}/",
+          "/api/workspaces/${workspaceSlug}/projects/${projectId}/user-favorite-modules/",
+          "\"/api/workspaces/ws/projects/project/module-links/link/\"",
+          "/api/workspaces/${workspaceSlug}/projects/${projectId}/modules",
+          "\"/api/workspaces/ws/projects/project/modules\"",
+          "`/api/workspaces/${workspaceSlug}/projects/${projectId}/archived-modules?per_page=10`",
+          "/api/workspaces/${workspaceSlug}/modules"
+        ],
+        "miss": [
+          "/api/v0/projects/{project_id}/modules",
+          "/api/v0/projects/{project_id}/modules?archived=true",
+          "/api/v0/modules/{module_id}/progress",
+          "/api/v0/module-links/{module_link_id}",
+          "/api/v0/me/modules/{module_id}/preferences",
+          "import { ArchiveModuleModal } from \"./archived-modules/modal\";",
+          "/${workspaceSlug}/projects/${projectId}/modules/${moduleId}",
+          "/${workspaceSlug}/projects/${projectId}/archives/modules",
+          "/${workspaceSlug}/projects/${projectId}/modules",
+          "`/${workspaceSlug}/projects/${projectId}/modules?peekModule=${moduleId}`",
+          "/api/workspaces/${workspaceSlug}/projects/${projectId}/modules-overview/",
+          "/api/workspaces/${workspaceSlug}/projects/${projectId}/cycles/",
+          "/api/workspaces/${workspaceSlug}/projects/${projectId}/archived-cycles/${cycleId}/",
+          "/api/workspaces/${workspaceSlug}/cycles/"
+        ],
+        "files": {
+          "hit": [
+            "web/apps/web/core/services/module.service.ts",
+            "web/apps/web/core/services/module_archive.service.ts"
+          ],
+          "miss": [
+            "docs/v0/M6-cycles-modules/specs/P6a-web-modules.md",
             "tools/keywords.json",
             "server/main.go",
             "web/apps/web/app/assets/brand/mark.svg"
@@ -2858,27 +3009,6 @@
       "count": 3,
       "reason": "三行中文注释记录这份配置的来源：文件开头说 catalog 等各节来自 Plane 提交 02c19e1 的 pnpm-workspace.yaml、英文注释是 Plane 的原文（M0/P5 spec 2.4），allowBuilds 里说最后三项不来自 Plane（M0/P6）。来源说明随文件长期存在，在 v0 内不会消失",
       "until": "M9"
-    },
-    {
-      "rule": "copy-hook",
-      "path": "web/apps/web/core/components/modules/links/list-item.tsx",
-      "match": "copyTextToClipboard(",
-      "reason": "M6 的迭代、模块页面自己复制到剪贴板，成功和失败各自说；M6 改这些页面时改用 useCopyLink 或 useCopyText（web/apps/web/core/hooks/use-copy-link.ts），删除本例外（M3 收尾）",
-      "until": "M6/closeout"
-    },
-    {
-      "rule": "copy-hook",
-      "path": "web/apps/web/core/components/modules/quick-actions.tsx",
-      "match": "copyUrlToClipboard(",
-      "reason": "M6 的迭代、模块页面自己复制到剪贴板，成功和失败各自说；M6 改这些页面时改用 useCopyLink 或 useCopyText（web/apps/web/core/hooks/use-copy-link.ts），删除本例外（M3 收尾）",
-      "until": "M6/closeout"
-    },
-    {
-      "rule": "copy-hook",
-      "path": "web/apps/web/core/components/power-k/ui/pages/context-based/module/commands.tsx",
-      "match": "copyTextToClipboard(",
-      "reason": "M6 的迭代、模块页面自己复制到剪贴板，成功和失败各自说；M6 改这些页面时改用 useCopyLink 或 useCopyText（web/apps/web/core/hooks/use-copy-link.ts），删除本例外（M3 收尾）",
-      "until": "M6/closeout"
     },
     {
       "rule": "copy-hook",

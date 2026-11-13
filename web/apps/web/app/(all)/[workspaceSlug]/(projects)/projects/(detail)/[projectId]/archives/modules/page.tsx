@@ -5,28 +5,32 @@
  */
 
 import { observer } from "mobx-react";
+// nerve imports
+import { useTranslation } from "@nerve/i18n";
 // components
 import { PageHead } from "@/components/core/page-title";
-import { ArchivedModuleLayoutRoot, ArchivedModulesHeader } from "@/components/modules";
+import { ArchivedModulesHeader } from "@/components/modules/archived-modules/header";
+import { ArchivedModuleLayoutRoot } from "@/components/modules/archived-modules/root";
 // hooks
 import { useProject } from "@/hooks/store/use-project";
 import type { Route } from "./+types/page";
 
+/** A project's archive of modules (P6a spec 2.6), of the route's project. */
 function ProjectArchivedModulesPage({ params }: Route.ComponentProps) {
-  // router
-  const { projectId } = params;
+  const { workspaceSlug, projectId } = params;
+  // nerve hooks
+  const { t } = useTranslation();
   // store hooks
   const { getProjectById } = useProject();
   // derived values
   const project = getProjectById(projectId);
-  const pageTitle = project?.name && `${project?.name} - Archived modules`;
 
   return (
     <>
-      <PageHead title={pageTitle} />
+      <PageHead title={project ? `${project.name} - ${t("project_module.archived_modules")}` : undefined} />
       <div className="relative flex h-full w-full flex-col overflow-hidden">
-        <ArchivedModulesHeader />
-        <ArchivedModuleLayoutRoot />
+        <ArchivedModulesHeader workspaceSlug={workspaceSlug} projectId={projectId} />
+        <ArchivedModuleLayoutRoot workspaceSlug={workspaceSlug} projectId={projectId} />
       </div>
     </>
   );

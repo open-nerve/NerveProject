@@ -4,74 +4,56 @@
  * See the LICENSE file for details.
  */
 
-import React, { useRef } from "react";
+import { useRef } from "react";
 import { observer } from "mobx-react";
-// icons
-import { InfoOutline, TickOutline } from "@makeplane/propel/icons";
-// ui
 import { CircularProgress } from "@makeplane/propel/components/circular-progress";
+import { TickOutline } from "@makeplane/propel/icons";
+// nerve imports
+import { useTranslation } from "@nerve/i18n";
+import { progressPercent } from "@nerve/utils";
 // components
-import { generateQueryParams } from "@nerve/utils";
 import { ListItem } from "@/components/core/list";
-import { ModuleListItemAction, ModuleQuickActions } from "@/components/modules";
 // hooks
-import { useModule } from "@/hooks/store/use-module";
-import { useParams, useNavigate, useSearchParams, useLocation } from "react-router";
+import { useModules } from "@/hooks/store/use-modules";
 import { usePlatformOS } from "@/hooks/use-platform-os";
+// local imports
+import { ModuleListItemAction } from "./module-list-item-action";
+import { usePeekModule } from "./module-peek-overview";
 
 type Props = {
   moduleId: string;
+  workspaceSlug: string;
+  projectId: string;
 };
 
+/**
+ * A module's row in its project's list or archive (P6a spec 2.6, R8), its list's row as the store gives it: its name,
+ * a link to its page (an archived module's opens its preview instead, as the old row did); its progress, the completed of
+ * its work items not cancelled (progressPercent, the one reading of it), a tick once all are done, and a "!" for a
+ * module completed short of that; then its actions and its facts (ModuleListItemAction).
+ */
 export const ModuleListItem = observer(function ModuleListItem(props: Props) {
-  const { moduleId } = props;
+  const { moduleId, workspaceSlug, projectId } = props;
   // refs
-  const parentRef = useRef(null);
-  // router
-  const navigate = useNavigate();
-  const { workspaceSlug, projectId } = useParams();
-  const [searchParams] = useSearchParams();
-  const { pathname } = useLocation();
-  // store hooks
-  const { getModuleById } = useModule();
+  const parentRef = useRef<HTMLDivElement>(null);
+  // hooks
+  const { t } = useTranslation();
   const { isMobile } = usePlatformOS();
+  const [peekModule, peek] = usePeekModule();
+  // store hooks
+  const { getModuleRow } = useModules();
+  const row = getModuleRow(moduleId);
 
-  // derived values
-  const moduleDetails = getModuleById(moduleId);
+  if (!row) return null;
 
-  if (!workspaceSlug || !projectId || !moduleDetails) return null;
-
-  const completionPercentage =
-    ((moduleDetails.completed_issues + moduleDetails.cancelled_issues) / moduleDetails.total_issues) * 100;
-
-  const progress = isNaN(completionPercentage) ? 0 : Math.floor(completionPercentage);
-
-  const completedModuleCheck = moduleDetails.status === "completed";
-
-  // handlers
-  const openModuleOverview = (e: React.MouseEvent<HTMLButtonElement | HTMLAnchorElement>) => {
-    e.stopPropagation();
-    e.preventDefault();
-
-    const query = generateQueryParams(searchParams, ["peekModule"]);
-    if (searchParams.has("peekModule") && searchParams.get("peekModule") === moduleId) {
-      navigate(`${pathname}?${query}`);
-    } else {
-      navigate(`${pathname}?${query && `${query}&`}peekModule=${moduleId}`);
-    }
-  };
-
-  const handleArchivedModuleClick = (e: React.MouseEvent<HTMLButtonElement | HTMLAnchorElement>) => {
-    openModuleOverview(e);
-  };
-
-  const handleItemClick = moduleDetails.archived_at ? handleArchivedModuleClick : undefined;
+  const progress = progressPercent(row);
+  const togglePeek = () => peek(peekModule === row.id ? null : row.id);
 
   return (
     <ListItem
-      title={moduleDetails?.name ?? ""}
-      itemLink={`/${workspaceSlug}/projects/${moduleDetails.project_id}/modules/${moduleDetails.id}`}
-      onItemClick={handleItemClick}
+      title={row.name}
+      itemLink={`/${workspaceSlug}/projects/${projectId}/modules/${row.id}`}
+      onItemClick={row.archived_at === null ? undefined : togglePeek}
       prependTitleElement={
         <div className="relative size-[30px]">
           <div className="absolute inset-0 flex scale-150 items-center justify-center">
@@ -79,45 +61,32 @@ export const ModuleListItem = observer(function ModuleListItem(props: Props) {
               value={progress}
               size="md"
               variant={progress === 100 ? "success" : "brand"}
-              aria-label="Module progress"
+              aria-label={t("common.progress")}
             />
           </div>
-          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-            {completedModuleCheck ? (
-              progress === 100 ? (
-                <TickOutline className="h-3 w-3 stroke-[2] text-accent-primary" />
-              ) : (
-                <span className="text-13 text-accent-primary">!</span>
-              )
-            ) : progress === 100 ? (
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center" aria-hidden="true">
+            {progress === 100 ? (
               <TickOutline className="h-3 w-3 stroke-[2] text-accent-primary" />
+            ) : row.status === "completed" ? (
+              <span className="text-13 text-accent-primary">!</span>
             ) : (
               <span className="text-9 text-tertiary">{`${progress}%`}</span>
             )}
           </div>
         </div>
       }
-      appendTitleElement={
-        <button
-          onClick={openModuleOverview}
-          className={`z-[5] flex-shrink-0 ${isMobile ? "flex" : "hidden group-hover:flex"}`}
-        >
-          <InfoOutline className="h-4 w-4 text-placeholder" />
-        </button>
-      }
-      actionableItems={<ModuleListItemAction moduleId={moduleId} moduleDetails={moduleDetails} parentRef={parentRef} />}
-      quickActionElement={
-        <div className="block md:hidden">
-          <ModuleQuickActions
-            parentRef={parentRef}
-            moduleId={moduleId}
-            projectId={projectId}
-            workspaceSlug={workspaceSlug}
-          />
-        </div>
+      actionableItems={
+        <ModuleListItemAction
+          workspaceSlug={workspaceSlug}
+          projectId={projectId}
+          row={row}
+          parentRef={parentRef}
+          onPeek={togglePeek}
+        />
       }
       isMobile={isMobile}
       parentRef={parentRef}
+      isSidebarOpen={peekModule !== null}
     />
   );
 });

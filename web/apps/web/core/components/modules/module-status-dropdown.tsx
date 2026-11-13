@@ -4,54 +4,65 @@
  * See the LICENSE file for details.
  */
 
-import React from "react";
 import { observer } from "mobx-react";
+// nerve imports
+import type { ModuleStatus } from "@nerve/api-client";
 import { MODULE_STATUS } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
-import type { TModuleStatus } from "@nerve/propel/icons";
 import { ModuleStatusIcon } from "@nerve/propel/icons";
-import type { IModule } from "@nerve/types";
 import { CustomSelect } from "@nerve/ui";
+// hooks
+import { useModules } from "@/hooks/store/use-modules";
+// local imports
+import { useModuleChange } from "./use-module-change";
 
 type Props = {
-  isDisabled: boolean;
-  moduleDetails: IModule;
-  handleModuleDetailsChange: (payload: Partial<IModule>) => Promise<void>;
+  moduleId: string;
+  /** Whether the caller changes the module's status here: he writes its project's modules, and it is not archived. */
+  editable: boolean;
 };
 
-export const ModuleStatusDropdown = observer(function ModuleStatusDropdown(props: Props) {
-  const { isDisabled, moduleDetails, handleModuleDetailsChange } = props;
+/**
+ * A module's status as nerve gives it (P6a spec 2.6), a select of the six statuses while editable: a status picked is
+ * nerve's to make (useModuleChange), the select busy until it has, and the status then nerve's. None while the store
+ * does not give the module.
+ */
+export const ModuleStatusDropdown = observer(function ModuleStatusDropdown({ moduleId, editable }: Props) {
+  // hooks
   const { t } = useTranslation();
-  const moduleStatus = MODULE_STATUS.find((status) => status.value === moduleDetails.status);
-
-  if (!moduleStatus) return <></>;
+  const { getModuleById, update } = useModules();
+  const { busy, send } = useModuleChange();
+  const module = getModuleById(moduleId);
+  if (!module) return null;
+  const status = MODULE_STATUS.find((one) => one.value === module.status);
+  const disabled = !editable || busy;
 
   return (
     <CustomSelect
       customButton={
         <span
           className={`flex h-6 w-20 items-center justify-center rounded-sm text-center text-11 ${
-            isDisabled ? "cursor-not-allowed" : "cursor-pointer"
+            disabled ? "cursor-not-allowed" : "cursor-pointer"
           }`}
           style={{
-            color: moduleStatus ? moduleStatus.color : "#a3a3a2",
-            backgroundColor: moduleStatus ? `${moduleStatus.color}20` : "#a3a3a220",
+            color: status?.color,
+            backgroundColor: status && `${status.color}20`,
           }}
         >
-          {(moduleStatus && t(moduleStatus?.i18n_label)) ?? t("project_modules.status.backlog")}
+          {status && t(status.i18n_label)}
         </span>
       }
-      value={moduleStatus?.value}
-      onChange={(val: TModuleStatus) => {
-        handleModuleDetailsChange({ status: val });
+      value={module.status}
+      onChange={(picked: ModuleStatus) => {
+        if (picked !== module.status) void send(() => update(module.id, { status: picked }));
       }}
-      disabled={isDisabled}
+      disabled={disabled}
     >
-      {MODULE_STATUS.map((status) => (
-        <CustomSelect.Option key={status.value} value={status.value}>
+      {MODULE_STATUS.map((one) => (
+        <CustomSelect.Option key={one.value} value={one.value}>
           <div className="flex items-center gap-2">
-            <ModuleStatusIcon status={status.value} />
-            {t(status.i18n_label)}
+            <ModuleStatusIcon status={one.value} />
+            {t(one.i18n_label)}
           </div>
         </CustomSelect.Option>
       ))}

@@ -111,6 +111,12 @@ export function useCycles() {
   };
 }
 
+export function useModules() {
+  return {
+    fetchModules: (projectId: string) => fetching(`the modules of ${projectId}`),
+  };
+}
+
 export function useProjectState() {
   return {
     fetchWorkspaceStates: (workspace: Pick<Workspace, "id" | "slug">) => fetching(`the states of ${named(workspace)}`),

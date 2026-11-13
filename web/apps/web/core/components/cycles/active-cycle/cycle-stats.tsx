@@ -18,11 +18,11 @@ import lightAssigneeAsset from "@/app/assets/empty-state/active-cycle/assignee-l
 import darkLabelAsset from "@/app/assets/empty-state/active-cycle/label-dark.webp?url";
 import lightLabelAsset from "@/app/assets/empty-state/active-cycle/label-light.webp?url";
 // components
+import { AssigneeStats, LabelStats, useDistributionRows } from "@/components/core/sidebar/distribution-stats";
 import { SimpleEmptyState } from "@/components/empty-state/simple-empty-state-root";
 // hooks
 import useLocalStorage from "@/hooks/use-local-storage";
 // local imports
-import { AssigneeStats, LabelStats, useDistributionRows } from "../distribution-stats";
 import { ActiveCyclePriorityIssues } from "./priority-issues";
 import type { EnterFiltered } from "./use-enter-filtered";
 

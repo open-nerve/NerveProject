@@ -5,14 +5,16 @@
 
 import { sortBy } from "lodash-es";
 // nerve imports
-import type { Cycle, CycleStatus, FrozenCounts } from "@nerve/api-client";
+import type { Cycle, CycleStatus, FrozenCounts, Module, ModuleListItem, ModuleStatus } from "@nerve/api-client";
+import type { ModuleOrderBy } from "@nerve/constants";
 // local imports
 import { getDate } from "./datetime";
 import { satisfiesDateFilter } from "./filter";
 
-// The planning of a project as its pages show it (P5a spec 2.3): the order of its cycles list, its filters, and the
-// one reading of a cycle's progress. A cycle's status is nerve's, never worked out here from its days; its days are
-// days of the project's calendar ("YYYY-MM-DD", M6 design 3.1), read as the browser's local days, never as times.
+// The planning of a project as its pages show it (P5a spec 2.3, P6a spec 2.4): the order of its cycles list and of
+// its modules list, their filters, and the one reading of a cycle's (or a module's) progress. A status is nerve's,
+// never worked out here from the days; the days are days of the project's calendar ("YYYY-MM-DD", M6 design 3.1),
+// read as the browser's local days, never as times.
 
 /** The six counts of work items a cycle's row, its progress and what either was frozen with each have. */
 type WorkItemCounts = Omit<FrozenCounts, "frozen_at">;
@@ -77,4 +79,78 @@ export const progressPercent = (
 ): number => {
   const counted = counts.total_issues - counts.cancelled_issues;
   return counted > 0 ? Math.round((counts.completed_issues / counted) * 100) : 0;
+};
+
+/**
+ * What a modules list is filtered by (P6a spec 2.4): nerve's status, any of those chosen; the lead, any of those
+ * chosen; the members, a module with any of those chosen as a member; and the days it starts and is due on, every
+ * option chosen, written as a cycles list's are (CycleFilters). A filter with nothing chosen filters nothing.
+ */
+export type ModuleFilters = {
+  readonly status?: readonly ModuleStatus[];
+  readonly lead?: readonly string[];
+  readonly members?: readonly string[];
+  readonly start_date?: readonly string[];
+  readonly target_date?: readonly string[];
+};
+
+/** Whether a module (or its row) passes a modules list's filters (P6a spec 2.4). */
+export const matchesModuleFilters = (module: Module, filters: ModuleFilters): boolean =>
+  (!filters.status?.length || filters.status.includes(module.status)) &&
+  (!filters.lead?.length || (module.lead_id !== null && filters.lead.includes(module.lead_id))) &&
+  (!filters.members?.length || filters.members.some((member) => module.member_ids.includes(member))) &&
+  matchesDays(module.start_date, filters.start_date) &&
+  matchesDays(module.target_date, filters.target_date);
+
+/**
+ * The options chosen of a list's filter (CycleFilters, ModuleFilters) once options are picked in its menu: each turned
+ * on, after those held, or off if it was held; the others keep their order. A status, a lead or a member is picked
+ * alone; a date filter's options may be picked at once (P5a spec 2.3, P6a spec 2.4). What was held is left as it was.
+ */
+export const toggledOptions = <T extends string>(held: readonly T[] | undefined, options: readonly T[]): T[] => {
+  const next = new Set<T>(held);
+  for (const option of options) {
+    if (next.has(option)) next.delete(option);
+    else next.add(option);
+  }
+  return [...next];
+};
+
+/** An option of the modules list's order without its direction. */
+type ModuleOrderKey = Exclude<ModuleOrderBy, `-${string}`>;
+
+/** Names in their natural order: the numbers within them as numbers ("Sprint 9" before "Sprint 10"), any case. */
+const collator = new Intl.Collator("en-US", { numeric: true, sensitivity: "base" });
+
+/**
+ * What a row is ordered by, for each option: a name, or a number. A target day is that day's local midnight (getDate,
+ * never new Date("YYYY-MM-DD")); a row without one has none. A moment nerve wrote is read as a time: nerve writes the
+ * fraction of a second it has, so the texts are not in the moments' order.
+ */
+const ORDER_VALUE: Record<ModuleOrderKey, (row: ModuleListItem) => string | number | null> = {
+  name: (row) => row.name,
+  progress: progressPercent,
+  issues_length: (row) => row.total_issues,
+  target_date: (row) => getDate(row.target_date)?.getTime() ?? null,
+  created_at: (row) => Date.parse(row.created_at),
+  sort_order: (row) => row.sort_order,
+};
+
+const compareValues = (a: string | number, b: string | number): number =>
+  typeof a === "number" && typeof b === "number" ? a - b : collator.compare(String(a), String(b));
+
+/**
+ * A project's modules in the order its list and archive show them (P6a spec 2.4, R14): by the option chosen, the
+ * lowest first, or the highest first behind a "-"; a progress is progressPercent's, the one reading of it. Rows that
+ * order the same keep the order they were given (nerve's); a row without a target day goes last, whichever the
+ * direction. What was given is left as it was.
+ */
+export const orderModuleRows = <T extends ModuleListItem>(rows: readonly T[], orderBy: ModuleOrderBy): T[] => {
+  const descending = orderBy.startsWith("-");
+  const valueOf = ORDER_VALUE[(descending ? orderBy.slice(1) : orderBy) as ModuleOrderKey];
+  return rows.toSorted((a, b) => {
+    const [x, y] = [valueOf(a), valueOf(b)];
+    if (x === null || y === null) return Number(x === null) - Number(y === null);
+    return descending ? compareValues(y, x) : compareValues(x, y);
+  });
 };

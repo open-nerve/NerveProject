@@ -1,7 +1,7 @@
 # M6 / P5b 迭代页的工作项列表实施计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-> 状态：T1–T16 已完成，整分支审查 Ready to merge（[re-67](../../../reviews/re-67-M6P5b整体审核.md)），待合入（[阶段记录](../reviews/P5b-cycle-list-review.md)）。预检通过（修正后，[re-66](../../../reviews/re-66-M6P5b预检.md)）：H1 迭代关闭时列表区停用、不取列表与偏好，H2 日历子树的读改经本页筛选（T6），M1 整字段替换不依赖已读的值、先进入后打开预览，M2 base root 的只读 prop（T7），M3 别的项目新建不带 `cycle_id`、页头弹窗锁定项目，M4 优先级页签的 store 每代一个，M5 失权迟到答与归档范围进页面故事，M6 `project-address-route` 落到各 Task，L1–L9 已改入；Task 由 14 个拆为 16 个。
+> 状态：已完成（2026-11-13，noff `9675bb31`，修复 noff `aadaf61a`，main CI 43373039561 首次通过），T1–T16 已实施，整分支审查 Ready to merge（[re-67](../../../reviews/re-67-M6P5b整体审核.md)），[阶段记录](../reviews/P5b-cycle-list-review.md)。预检通过（修正后，[re-66](../../../reviews/re-66-M6P5b预检.md)）：H1 迭代关闭时列表区停用、不取列表与偏好，H2 日历子树的读改经本页筛选（T6），M1 整字段替换不依赖已读的值、先进入后打开预览，M2 base root 的只读 prop（T7），M3 别的项目新建不带 `cycle_id`、页头弹窗锁定项目，M4 优先级页签的 store 每代一个，M5 失权迟到答与归档范围进页面故事，M6 `project-address-route` 落到各 Task，L1–L9 已改入；Task 由 14 个拆为 16 个。
 
 **Goal：**
 - 迭代页的工作项列表接上 M4 的列表引擎：`EIssuesStoreType.CYCLE`、本页偏好、四种布局、页头、空态、只读、本页新建与移出迭代；

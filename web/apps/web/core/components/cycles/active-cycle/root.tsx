@@ -14,7 +14,7 @@ import { cycleCounts } from "@nerve/utils";
 // components
 import { CycleListGroupHeader } from "@/components/cycles/list/cycle-list-group-header";
 import { CyclesListItem } from "@/components/cycles/list/cycles-list-item";
-import { CyclesReadFailure } from "@/components/cycles/read-failure";
+import { PlanningReadFailure } from "@/components/planning/read-failure";
 // hooks
 import { useCycles } from "@/hooks/store/use-cycles";
 // lib
@@ -104,7 +104,7 @@ const ActiveCycle = observer(function ActiveCycle(props: ActiveCycleProps) {
       />
       <Row className="bg-surface-1 pt-3 pb-6">
         {read.error !== undefined ? (
-          <CyclesReadFailure error={read.error} onRetry={() => void read.mutate()} />
+          <PlanningReadFailure error={read.error} onRetry={() => void read.mutate()} />
         ) : (
           <div className="grid grid-cols-1 gap-3 bg-surface-1 lg:grid-cols-2 xl:grid-cols-3">
             {shown === undefined ? (

@@ -21,8 +21,7 @@
     "archived_cycles": "已归档的周期",
     "member_count": "{count} 名成员",
     "filters": {
-      "status": "状态",
-      "custom": "自定义"
+      "status": "状态"
     },
     "not_found": {
       "title": "周期不存在",
@@ -137,11 +136,63 @@
     "add_module": "添加模块",
     "update_module": "更新模块",
     "create_module": "创建模块",
-    "empty_state": {
-      "sidebar": {
-        "in_active": "此模块尚未激活。",
-        "invalid_date": "日期无效。请输入有效日期。"
+    "status": "状态",
+    "more_details": "更多详情",
+    "no_lead": "没有负责人",
+    "work_items_done": "{completed}/{total} 个工作项",
+    "archived_modules": "已归档的模块",
+    "no_matching_modules": "没有匹配的模块",
+    "remove_filters_to_see_all_modules": "移除筛选器以查看所有模块",
+    "remove_search_criteria_to_see_all_modules": "移除搜索条件以查看所有模块",
+    "not_found": {
+      "title": "模块不存在",
+      "description": "你要找的模块不存在或已被删除。",
+      "action": "查看其他模块"
+    },
+    "link": {
+      "added_at": "添加于 {time}",
+      "added_by": "由 {name} 添加于 {time}"
+    },
+    "action": {
+      "create": {
+        "success": {
+          "title": "成功！",
+          "description": "模块创建成功。"
+        }
+      },
+      "update": {
+        "success": {
+          "title": "成功！",
+          "description": "模块更新成功。"
+        }
+      },
+      "delete": {
+        "success": {
+          "title": "成功！",
+          "description": "模块删除成功。"
+        }
+      },
+      "archive": {
+        "success": {
+          "title": "归档成功",
+          "description": "您可以在项目归档中找到归档的内容。"
+        }
+      },
+      "restore": {
+        "success": {
+          "title": "恢复成功",
+          "description": "您可以在项目模块中找到这个模块。"
+        }
       }
+    },
+    "delete": {
+      "title": "删除模块",
+      "body": "确定要删除模块 {name} 吗？与这个模块相关的全部数据将被永久删除。此操作无法撤销。"
+    },
+    "archive": {
+      "title": "归档模块 {name}",
+      "body": "确定要归档这个模块吗？归档的内容以后都可以恢复。",
+      "only_closed": "只有已完成或已取消的模块才能归档"
     }
   },
   "disabled_project": {

@@ -5,12 +5,12 @@ import { observer } from "mobx-react";
 import { MemoryRouter, Route, Routes, useNavigate, useParams, type NavigateFunction } from "react-router";
 import { vi } from "vitest";
 import type { CycleListItem, CycleTransferResult, FrozenCounts, Project } from "@nerve/api-client";
+import { settle } from "@/components/common/fake-quick-actions";
 import { useCycles } from "@/hooks/store/use-cycles";
 import { heldChange, type HeldChange } from "@/lib/auth/fake-tab";
 import { rowOf } from "@/store/planning/fake-cycles";
 import { cycleOf, projectOf } from "@/store/project/fake-projects";
 import { CycleActionsHost } from "./actions-host";
-import { settle } from "./fake-cycle-pages";
 import { TransferIssues, TransferIssuesButton } from "./transfer-issues";
 
 // The pages of a project's cycles as the transfer of an ended cycle's work items is on them (P5a spec 2.5), for its

@@ -1,5 +1,6 @@
 import { c12Evidence } from "../../fixtures/c12-evidence";
 import { bearer } from "../../fixtures/auth";
+import { focusOutline } from "../../fixtures/browser";
 import type { Locator } from "@playwright/test";
 import { createDraft, createIssue } from "../../fixtures/issues";
 import { openIssueDetail } from "../../fixtures/issue-detail-page";
@@ -8,37 +9,11 @@ import { composingKey, modalDialog, pageBehindHidden } from "../../fixtures/dial
 import { answerTo, moveWithinApp } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 
-/** Check the actual focus indicator against the viewport and each clipping ancestor. */
+/** Check the actual focus indicator against the viewport and each clipping ancestor (focusOutline). */
 async function visibleFocus(control: Locator) {
   await expect(control).toBeFocused();
   await expect(control).toHaveCSS("opacity", "1");
-  const focus = await control.evaluate((element) => {
-    const style = getComputedStyle(element);
-    const width = Number.parseFloat(style.outlineWidth);
-    const rect = element.getBoundingClientRect();
-    const inset = Number.parseFloat(style.outlineOffset) + width;
-    const bounds = {
-      left: rect.left - inset,
-      top: rect.top - inset,
-      right: rect.right + inset,
-      bottom: rect.bottom + inset,
-    };
-    const clippedBy: string[] = [];
-    if (bounds.left < 0 || bounds.top < 0 || bounds.right > window.innerWidth || bounds.bottom > window.innerHeight)
-      clippedBy.push("viewport");
-    for (let ancestor = element.parentElement; ancestor; ancestor = ancestor.parentElement) {
-      const css = getComputedStyle(ancestor);
-      const box = ancestor.getBoundingClientRect();
-      if (
-        (/(auto|scroll|hidden|clip)/.test(css.overflowX) &&
-          (bounds.left < box.left - 1 || bounds.right > box.right + 1)) ||
-        (/(auto|scroll|hidden|clip)/.test(css.overflowY) &&
-          (bounds.top < box.top - 1 || bounds.bottom > box.bottom + 1))
-      )
-        clippedBy.push(ancestor.id || ancestor.tagName);
-    }
-    return { width, style: style.outlineStyle, clippedBy };
-  });
+  const focus = await focusOutline(control);
   expect(focus.width).toBeGreaterThanOrEqual(2);
   expect(focus.style).not.toBe("none");
   expect(focus.clippedBy).toEqual([]);

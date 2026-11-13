@@ -1,6 +1,6 @@
 # M6/P5b 阶段评审记录
 
-> 整分支审查 Ready to merge（[re-67](../../../reviews/re-67-M6P5b整体审核.md)），修复轮 F 经限定复审（Ready to merge，五处 Minor 以措辞与 spec §5 处理，re-67 §4）；最终候选的代码 `ebeb2cab`，其后只有本记录所在的提交（文档与页头的一处注释）。合入、main CI 与归档清理见 §7（由 P6 的 T1 回填）。基线 main `0b8efcd701edf7e73a37d5bb82ad176a7795b910`（P5a 的 noff，main CI 42995581409 首次通过）。
+> 已完成（2026-11-13，noff `9675bb31`，修复 noff `aadaf61a`，main CI 43373039561 首次通过），整分支审查 Ready to merge（[re-67](../../../reviews/re-67-M6P5b整体审核.md)），修复轮 F 经限定复审（Ready to merge，五处 Minor 以措辞与 spec §5 处理，re-67 §4）；最终候选的代码 `ebeb2cab`，其后是本记录所在的提交（文档与页头的一处注释）、§5 的排队补记与 I21 的测试修正，最终候选为 `ded24135`。分支 CI、合入、main CI 与归档清理见 §7（由 P6a 的 T1 回填）。基线 main `0b8efcd701edf7e73a37d5bb82ad176a7795b910`（P5a 的 noff，main CI 42995581409 首次通过）。
 
 ## 1. 评审方式与范围
 
@@ -98,6 +98,12 @@ fresh 只读审查（[re-67](../../../reviews/re-67-M6P5b整体审核.md)）逐�
 
 ## 7. 集成、归档与接续
 
-由 P6 的 T1 按归档里的台账、CI 收据与 `cleanup.log` 回填。
+由 P6a 的 T1 按归档里的台账、CI 原件与 `cleanup.log` 回填；作业号与时刻以 GitHub 公开的 jobs 接口核对。
 
-**接续**：P6（网页的模块）。
+- **最终候选的分支 CI**：`ded24135d4dd74aaec9ab73eb243f8efd9db47cb` 的 43358881107 attempt 1 成功（web 131667377966、server (1) 131667377944、server (0) 131667377578、e2e 131672956203；e2e 作业 03:41:19Z–04:02:16Z，约 21 分钟）。之前的两次（`496d905d` 的 43098103752 一直排队、`190a2bb6` 的 43354077443 的 e2e 因 I21 未过）见 §5。
+- **合入与第一次 main CI**：noff `9675bb313564722afd48b088624812074e6fcfb3`，双父 `0b8efcd7`、`ded24135`，树与候选相同（`eae78883`）。main CI 43362963122 attempt 1：web 131680551421、server (0) 131680551360、server (1) 131680551118 成功；e2e 131686841602 失败 452/1（G15 (page) 故事三，根因与修正见 §5；e2e 作业 04:20:37Z–04:45:34Z），按负责人 2026-11-08 的规则不重跑。
+- **修复分支与第二次 main CI**：`codex/m6-p5b-ci`（自 origin/main）的 `4a11baebd19772038339b5cd9f5074ea0da2afca` 的分支 CI 43368561953 attempt 1 成功（web 131698682381、server (1) 131698682592、server (0) 131698682764、e2e 131704307721；e2e 作业 05:11:03Z–05:34:11Z）。noff `aadaf61a5929b57d8aa53b93e5ae04b03cc046c6`，双父 `9675bb31`、`4a11baeb`，树与修复分支相同（`b8fa511c`）。main CI 43373039561 attempt 1 成功（server (1) 131713034462、web 131713034518、server (0) 131713034573、e2e 131717802511；e2e 作业 05:49:34Z–06:08:48Z，19 分 14 秒）。
+- **归档**（主目录，P6a 开工时以 `archive.py verify` 复核，收据 `t1-p5b-archive-verify`）：`.superpowers/sdd/M6-P5b-integration-20261113`：4761 个文件、857,799,986 字节、未知 0、清单 sha256 `5a1452e603b1a60f084dc8b7c01eab5b8a09c0c56764121957678b50c4ed445c`，清单的 `head` 为 `4a11baeb`（台账、调研笔记、收据、变异、三次 CI 的原件、scratchpad 的脚本与草稿）。
+- **清理**：`cleanup.log`（2026-11-13T06:09:58Z）记录 `codex/m6-p5b`（`ded24135`）与 `codex/m6-p5b-ci`（`4a11baeb`）本地与远端一致、都已含于 origin/main，main 与 origin/main 都在 `aadaf61a`；worktree `m6-p5b`、两个本地分支与两个远端分支已删除。
+
+**接续**：P6（网页的模块）因超出一段的上限拆为 P6a（数据层与页面，[P6a spec](../specs/P6a-web-modules.md)）与 P6b（模块页的工作项列表，P6a 合入后再写 spec 与 plan）。

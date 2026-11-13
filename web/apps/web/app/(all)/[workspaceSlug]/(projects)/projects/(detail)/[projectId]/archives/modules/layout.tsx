@@ -8,12 +8,14 @@ import { Outlet } from "react-router";
 // components
 import { AppHeader } from "@/components/core/app-header";
 import { ContentWrapper } from "@/components/core/content-wrapper";
+import { ModuleActionsHost } from "@/components/modules/actions-host";
 import { ProjectArchivesHeader } from "../header";
 import type { Route } from "./+types/layout";
 
 export default function ProjectArchiveModulesLayout({ params }: Route.ComponentProps) {
+  // the archive's modules' dialogs outlive the row that asked for them (ModuleActionsHost)
   return (
-    <>
+    <ModuleActionsHost workspaceSlug={params.workspaceSlug} projectId={params.projectId}>
       <AppHeader
         header={
           <ProjectArchivesHeader
@@ -26,6 +28,6 @@ export default function ProjectArchiveModulesLayout({ params }: Route.ComponentP
       <ContentWrapper>
         <Outlet />
       </ContentWrapper>
-    </>
+    </ModuleActionsHost>
   );
 }

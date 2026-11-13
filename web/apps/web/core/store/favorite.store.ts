@@ -53,7 +53,6 @@ export class FavoriteStore implements IFavoriteStore {
   favoriteService;
   rootStore;
   viewStore;
-  moduleStore;
 
   constructor(_rootStore: RootStore) {
     makeObservable(this, {
@@ -77,7 +76,6 @@ export class FavoriteStore implements IFavoriteStore {
     this.favoriteService = new FavoriteService();
     this.rootStore = _rootStore;
     this.viewStore = _rootStore.projectView;
-    this.moduleStore = _rootStore.module;
   }
 
   get currentWorkspaceFavorites() {
@@ -261,11 +259,6 @@ export class FavoriteStore implements IFavoriteStore {
       case "view":
         return (
           this.viewStore.viewMap[entity_identifier] && (this.viewStore.viewMap[entity_identifier].is_favorite = false)
-        );
-      case "module":
-        return (
-          this.moduleStore.moduleMap[entity_identifier] &&
-          (this.moduleStore.moduleMap[entity_identifier].is_favorite = false)
         );
       default:
         return;

@@ -8,10 +8,9 @@ import { CycleForm } from "./form";
 import { ModuleForm } from "../modules/form";
 
 vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
-vi.mock("@/hooks/store/user/user-user", () => ({
-  useUser: () => ({ projectsWithCreatePermissions: { project: true } }),
+vi.mock("@/hooks/store/user/user-permissions", () => ({
+  useUserPermissions: () => ({ canWriteCycles: () => true, canWriteModules: () => true }),
 }));
-vi.mock("@/hooks/store/user/user-permissions", () => ({ useUserPermissions: () => ({ canWriteCycles: () => true }) }));
 // Unrelated asynchronous fields are not involved in the dialog's initial focus contract.
 vi.mock("@/components/dropdowns/project/dropdown", () => ({
   ProjectDropdown: () => <button type="button">Project</button>,
@@ -20,7 +19,9 @@ vi.mock("@/components/dropdowns/member/dropdown", () => ({
   MemberDropdown: () => <button type="button">Member</button>,
 }));
 vi.mock("@/components/dropdowns/date-range", () => ({ DateRangeDropdown: () => <button type="button">Dates</button> }));
-vi.mock("@/components/modules", () => ({ ModuleStatusSelect: () => <button type="button">Status</button> }));
+vi.mock("@/components/modules/select/status", () => ({
+  ModuleStatusSelect: () => <button type="button">Status</button>,
+}));
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 let host: HTMLDivElement, root: ReturnType<typeof createRoot>;
 beforeEach(() => {
@@ -50,11 +51,12 @@ for (const kind of ["cycle", "module"] as const) {
     const submitted = vi.fn(),
       closed = vi.fn();
     const props = {
-      handleFormSubmit: submitted,
-      handleClose: closed,
-      status: false,
+      workspaceSlug: "ws",
       projectId: "project",
-      setActiveProject: vi.fn(),
+      editing: false,
+      busy: false,
+      onSubmit: submitted,
+      onCancel: closed,
     };
     await act(async () =>
       root.render(

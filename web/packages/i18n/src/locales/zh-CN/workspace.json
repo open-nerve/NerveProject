@@ -93,7 +93,6 @@
     },
     "error": {
       "permission": "您没有执行此操作的权限。",
-      "module_delete": "删除模块失败",
       "issue_delete": "删除工作项失败"
     },
     "sort": {

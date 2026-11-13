@@ -21,8 +21,7 @@
     "archived_cycles": "Archived cycles",
     "member_count": "{count, plural, one {# member} other {# members}}",
     "filters": {
-      "status": "Status",
-      "custom": "Custom"
+      "status": "Status"
     },
     "not_found": {
       "title": "Cycle does not exist",
@@ -137,11 +136,63 @@
     "add_module": "Add Module",
     "update_module": "Update Module",
     "create_module": "Create Module",
-    "empty_state": {
-      "sidebar": {
-        "in_active": "This module isn't active yet.",
-        "invalid_date": "Invalid date. Please enter valid date."
+    "status": "Status",
+    "more_details": "More details",
+    "no_lead": "No lead",
+    "work_items_done": "{completed}/{total} {total, plural, one {work item} other {work items}}",
+    "archived_modules": "Archived modules",
+    "no_matching_modules": "No matching modules",
+    "remove_filters_to_see_all_modules": "Remove the filters to see all modules",
+    "remove_search_criteria_to_see_all_modules": "Remove the search criteria to see all modules",
+    "not_found": {
+      "title": "Module does not exist",
+      "description": "The module you are looking for does not exist or has been deleted.",
+      "action": "View other modules"
+    },
+    "link": {
+      "added_at": "Added {time}",
+      "added_by": "Added {time} by {name}"
+    },
+    "action": {
+      "create": {
+        "success": {
+          "title": "Success!",
+          "description": "Module created successfully."
+        }
+      },
+      "update": {
+        "success": {
+          "title": "Success!",
+          "description": "Module updated successfully."
+        }
+      },
+      "delete": {
+        "success": {
+          "title": "Success!",
+          "description": "Module deleted successfully."
+        }
+      },
+      "archive": {
+        "success": {
+          "title": "Archive success",
+          "description": "Your archives can be found in project archives."
+        }
+      },
+      "restore": {
+        "success": {
+          "title": "Restore success",
+          "description": "Your module can be found in project modules."
+        }
       }
+    },
+    "delete": {
+      "title": "Delete module",
+      "body": "Are you sure you want to delete the module {name}? All of the data related to the module will be permanently removed. This action cannot be undone."
+    },
+    "archive": {
+      "title": "Archive module {name}",
+      "body": "Are you sure you want to archive the module? All your archives can be restored later.",
+      "only_closed": "Only completed or cancelled modules can be archived"
     }
   },
   "disabled_project": {

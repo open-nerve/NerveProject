@@ -275,3 +275,75 @@ describe("UserPermissionStore, of a project's cycles", () => {
     expect(permissions.canDeleteCycle("acme", undefined, true)).toBe(false);
   });
 });
+
+/**
+ * nerve's module.write and module.delete (rules.go, decide.go; M6 design 3.7, 3.8; P6a spec 2.3, R5): as a cycle's,
+ * the same callers write and delete a project's modules, the module's creator by his role in web alone; and nerve
+ * refuses every write of them to one it shows only his own work items there (OwnOnly), whatever his role
+ * (planning/app/lock.go).
+ */
+const MODULE_CALLERS = CYCLE_CALLERS;
+
+describe("UserPermissionStore, of a project's modules", () => {
+  it.each(MODULE_CALLERS)(
+    "lets $caller.who write them: $write; delete another's: $deleteAny; delete his own: $deleteOwn",
+    async ({ caller, write, deleteAny, deleteOwn }) => {
+      const { permissions, acme, web } = await callerInWeb(
+        caller.workspaceRole,
+        caller.projectRole,
+        caller.guestViewAll
+      );
+      expect([
+        permissions.canWriteModules(acme.slug, web.id),
+        permissions.canDeleteModule(acme.slug, web.id, false),
+        permissions.canDeleteModule(acme.slug, web.id, true),
+      ]).toEqual([write, deleteAny, deleteOwn]);
+    }
+  );
+
+  // nerve refuses every write of a project's modules while they are turned off (planning.modules_disabled, lock.go's
+  // turnedOff), whoever writes: its admin, its member, a module's creator
+  it.each(MODULE_CALLERS)(
+    "lets $caller.who neither write nor delete them while web's modules are turned off",
+    async ({ caller }) => {
+      const { permissions, acme, web } = await callerInWeb(
+        caller.workspaceRole,
+        caller.projectRole,
+        caller.guestViewAll,
+        { module_view: false }
+      );
+      expect([
+        permissions.canWriteModules(acme.slug, web.id),
+        permissions.canDeleteModule(acme.slug, web.id, false),
+        permissions.canDeleteModule(acme.slug, web.id, true),
+      ]).toEqual([false, false, false]);
+    }
+  );
+
+  // each domain by its own switch (planningOn): the cycles turned off leave the modules' writes as they are, and the
+  // modules turned off the cycles'
+  it("writes a project's modules by their own switch, not by the cycles'", async () => {
+    const cyclesOff = await callerInWeb(its.admin.workspaceRole, its.admin.projectRole, false, { cycle_view: false });
+    expect([
+      cyclesOff.permissions.canWriteModules(cyclesOff.acme.slug, cyclesOff.web.id),
+      cyclesOff.permissions.canDeleteModule(cyclesOff.acme.slug, cyclesOff.web.id, false),
+      cyclesOff.permissions.canWriteCycles(cyclesOff.acme.slug, cyclesOff.web.id),
+    ]).toEqual([true, true, false]);
+    const modulesOff = await callerInWeb(its.admin.workspaceRole, its.admin.projectRole, false, { module_view: false });
+    expect([
+      modulesOff.permissions.canWriteCycles(modulesOff.acme.slug, modulesOff.web.id),
+      modulesOff.permissions.canDeleteCycle(modulesOff.acme.slug, modulesOff.web.id, false),
+      modulesOff.permissions.canWriteModules(modulesOff.acme.slug, modulesOff.web.id),
+    ]).toEqual([true, true, false]);
+  });
+
+  it("lets no one write nor delete the modules of a project through another workspace, or of none", async () => {
+    const { permissions, web } = await callerInWeb(its.admin.workspaceRole, its.admin.projectRole);
+    expect(permissions.canWriteModules("elsewhere", web.id)).toBe(false);
+    expect(permissions.canDeleteModule("elsewhere", web.id, true)).toBe(false);
+    expect(permissions.canWriteModules("acme", undefined)).toBe(false);
+    expect(permissions.canDeleteModule("acme", undefined, true)).toBe(false);
+    expect(permissions.canWriteModules("acme", "p-not-his")).toBe(false);
+    expect(permissions.canDeleteModule("acme", "p-not-his", true)).toBe(false);
+  });
+});

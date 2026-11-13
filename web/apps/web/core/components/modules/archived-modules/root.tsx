@@ -4,76 +4,63 @@
  * See the LICENSE file for details.
  */
 
-import React, { useCallback } from "react";
 import { observer } from "mobx-react";
-import { useParams } from "react-router";
-import useSWR from "swr";
 // nerve imports
 import { useTranslation } from "@nerve/i18n";
 import { EmptyStateDetailed } from "@nerve/propel/empty-state";
-import type { TModuleFilters } from "@nerve/types";
-// components
 import { calculateTotalFilters } from "@nerve/utils";
-import { ArchivedModulesView, ModuleAppliedFiltersList } from "@/components/modules";
+// components
+import { PlanningReadFailure } from "@/components/planning/read-failure";
 import { CycleModuleListLayoutLoader } from "@/components/ui/loader/cycle-module-list-loader";
 // hooks
-import { useModule } from "@/hooks/store/use-module";
-import { useModuleFilter } from "@/hooks/store/use-module-filter";
+import { useModuleFilters } from "@/hooks/store/use-module-filters";
+import { useModules } from "@/hooks/store/use-modules";
+import { usePlanningReads } from "@/hooks/use-planning-reads";
+// lib
+import { useSessionSWR } from "@/lib/use-session-swr";
+// local imports
+import { ModuleAppliedFiltersList } from "../applied-filters/root";
+import { ArchivedModulesView } from "./view";
 
-export const ArchivedModuleLayoutRoot = observer(function ArchivedModuleLayoutRoot() {
-  // router
-  const { workspaceSlug, projectId } = useParams();
+type Props = {
+  workspaceSlug: string;
+  projectId: string;
+};
+
+/**
+ * A project's archive of modules (P6a spec 2.3, 2.6, R3, R12): it reads the project's archived modules, a member's
+ * (its guest's too) read of a project not archived (usePlanningReads' readable), whether its modules are turned on or
+ * not: nerve reads them, and the archive shows them read only. It waits for nerve's first answer, says why nerve could
+ * not give it, with a retry, or that the project has none yet; else the filters applied and the modules.
+ */
+export const ArchivedModuleLayoutRoot = observer(function ArchivedModuleLayoutRoot(props: Props) {
+  const { workspaceSlug, projectId } = props;
   // nerve hooks
   const { t } = useTranslation();
-  // hooks
-  const { fetchArchivedModules, projectArchivedModuleIds, loader } = useModule();
-  const { clearAllFilters, currentProjectArchivedFilters, updateFilters } = useModuleFilter();
-  // derived values
-  const totalArchivedModules = projectArchivedModuleIds?.length ?? 0;
-
-  useSWR(
-    workspaceSlug && projectId ? `ARCHIVED_MODULES_${workspaceSlug}_${projectId}` : null,
-    async () => {
-      if (workspaceSlug && projectId) {
-        await fetchArchivedModules(workspaceSlug, projectId);
-      }
-    },
-    { revalidateIfStale: false, revalidateOnFocus: false }
+  // store hooks
+  const { getArchivedModuleIds, fetchArchivedModules } = useModules();
+  const { getFilters } = useModuleFilters();
+  const { readable } = usePlanningReads(workspaceSlug, projectId, "modules");
+  const archive = useSessionSWR(readable ? ["PROJECT_ARCHIVED_MODULES", projectId] : null, (id) =>
+    fetchArchivedModules(id)
   );
+  const archivedModuleIds = getArchivedModuleIds(projectId);
 
-  const handleRemoveFilter = useCallback(
-    (key: keyof TModuleFilters, value: string | null) => {
-      if (!projectId) return;
-      let newValues = currentProjectArchivedFilters?.[key] ?? [];
+  if (!readable) return null;
 
-      if (!value) newValues = [];
-      else newValues = newValues.filter((val) => val !== value);
+  if (archive.error !== undefined)
+    return <PlanningReadFailure error={archive.error} onRetry={() => void archive.mutate()} />;
 
-      updateFilters(projectId, { [key]: newValues }, "archived");
-    },
-    [currentProjectArchivedFilters, projectId, updateFilters]
-  );
-
-  if (!workspaceSlug || !projectId) return <></>;
-
-  if (loader || !projectArchivedModuleIds) {
-    return <CycleModuleListLayoutLoader />;
-  }
+  if (archivedModuleIds === undefined) return <CycleModuleListLayoutLoader />;
 
   return (
     <>
-      {calculateTotalFilters(currentProjectArchivedFilters ?? {}) !== 0 && (
+      {calculateTotalFilters(getFilters(projectId, "archived")) !== 0 && (
         <div className="border-b border-subtle px-5 py-3">
-          <ModuleAppliedFiltersList
-            appliedFilters={currentProjectArchivedFilters ?? {}}
-            handleClearAllFilters={() => clearAllFilters(projectId, "archived")}
-            handleRemoveFilter={handleRemoveFilter}
-            alwaysAllowEditing
-            isArchived
-          />
+          <ModuleAppliedFiltersList projectId={projectId} list="archived" />
         </div>
       )}
-      {totalArchivedModules === 0 ? (
+      {archivedModuleIds.length === 0 ? (
         <div className="h-full place-items-center">
           <EmptyStateDetailed
             assetKey="archived-module"
