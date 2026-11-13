@@ -138,6 +138,12 @@
     "update_module": "更新模块",
     "create_module": "创建模块",
     "status": "状态",
+    "more_details": "更多详情",
+    "no_lead": "没有负责人",
+    "work_items_done": "{completed}/{total} 个工作项",
+    "no_matching_modules": "没有匹配的模块",
+    "remove_filters_to_see_all_modules": "移除筛选器以查看所有模块",
+    "remove_search_criteria_to_see_all_modules": "移除搜索条件以查看所有模块",
     "not_found": {
       "title": "模块不存在",
       "description": "你要找的模块不存在或已被删除。",

@@ -6,38 +6,49 @@
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { observer } from "mobx-react";
-import { useParams } from "react-router";
 import { CloseOutline, FilterOutline, SearchOutline } from "@makeplane/propel/icons";
-// nerve helpers
+import { Tooltip } from "@makeplane/propel/components/tooltip";
+// nerve imports
 import { MODULE_VIEW_LAYOUTS } from "@nerve/constants";
 import { useOutsideClickDetector } from "@nerve/hooks";
-// types
 import { useTranslation } from "@nerve/i18n";
-import { Tooltip } from "@makeplane/propel/components/tooltip";
+import { IconButton } from "@nerve/propel/icon-button";
 import type { TModuleFilters } from "@nerve/types";
-// ui
 import { cn, calculateTotalFilters } from "@nerve/utils";
 // components
 import { FiltersDropdown } from "@/components/issues/issue-layouts/filters";
-import { ModuleFiltersSelection, ModuleOrderByDropdown } from "@/components/modules/dropdowns";
 // hooks
 import { useMember } from "@/hooks/store/use-member";
 import { useModuleFilter } from "@/hooks/store/use-module-filter";
 import { usePlatformOS } from "@/hooks/use-platform-os";
+// local imports
+import { ModuleFiltersSelection } from "./dropdowns/filters";
+import { ModuleOrderByDropdown } from "./dropdowns/order-by";
 import { ModuleLayoutIcon } from "./module-layout-icon";
-import { IconButton } from "@nerve/propel/icon-button";
-// i18n
+import { useModuleDisplay } from "./use-module-display";
 
-export const ModuleViewHeader = observer(function ModuleViewHeader() {
+type Props = {
+  workspaceSlug: string;
+  projectId: string;
+};
+
+/**
+ * The view of a project's modules list, in its header (P6a spec 2.4, 2.6, R4, R14), for everyone who sees the list:
+ * its search, its order, its filters and its layout. The order and the layout are the browser's, kept for the project
+ * (useModuleDisplay), which the list follows; the order's menu is the keyboard's too. The filters' lead and members
+ * are the members of the route's workspace (getWorkspaceMemberIds, by the address's slug). The search and the filters
+ * themselves are still the old store's (T11 moves them to the session's filters, which the list reads).
+ */
+export const ModuleViewHeader = observer(function ModuleViewHeader({ workspaceSlug, projectId }: Props) {
   // refs
   const inputRef = useRef<HTMLInputElement>(null);
-  // router
-  const { projectId } = useParams();
   // hooks
   const { isMobile } = usePlatformOS();
+  const { t } = useTranslation();
+  const { layout, orderBy, setLayout, setOrderBy } = useModuleDisplay(projectId);
   // store hooks
   const {
-    workspace: { workspaceMemberIds },
+    workspace: { getWorkspaceMemberIds },
   } = useMember();
   const {
     currentProjectDisplayFilters: displayFilters,
@@ -47,7 +58,6 @@ export const ModuleViewHeader = observer(function ModuleViewHeader() {
     updateFilters,
     updateSearchQuery,
   } = useModuleFilter();
-  const { t } = useTranslation();
 
   // states
   const [isSearchOpen, setIsSearchOpen] = useState(searchQuery !== "");
@@ -55,7 +65,6 @@ export const ModuleViewHeader = observer(function ModuleViewHeader() {
   // handlers
   const handleFilters = useCallback(
     (key: keyof TModuleFilters, value: string | string[]) => {
-      if (!projectId) return;
       const newValues = filters?.[key] ?? [];
 
       if (Array.isArray(value))
@@ -132,7 +141,6 @@ export const ModuleViewHeader = observer(function ModuleViewHeader() {
               type="button"
               className="grid place-items-center"
               onClick={() => {
-                // updateSearchQuery("");
                 setIsSearchOpen(false);
               }}
             >
@@ -141,15 +149,7 @@ export const ModuleViewHeader = observer(function ModuleViewHeader() {
           )}
         </div>
       </div>
-      <ModuleOrderByDropdown
-        value={displayFilters?.order_by}
-        onChange={(val) => {
-          if (!projectId || val === displayFilters?.order_by) return;
-          updateDisplayFilters(projectId, {
-            order_by: val,
-          });
-        }}
-      />
+      <ModuleOrderByDropdown value={orderBy} onChange={setOrderBy} />
       <FiltersDropdown
         icon={<FilterOutline className="h-3 w-3" />}
         title="Filters"
@@ -159,32 +159,25 @@ export const ModuleViewHeader = observer(function ModuleViewHeader() {
         <ModuleFiltersSelection
           displayFilters={displayFilters ?? {}}
           filters={filters ?? {}}
-          handleDisplayFiltersUpdate={(val) => {
-            if (!projectId) return;
-            updateDisplayFilters(projectId, val);
-          }}
+          handleDisplayFiltersUpdate={(val) => updateDisplayFilters(projectId, val)}
           handleFiltersUpdate={handleFilters}
-          memberIds={workspaceMemberIds ?? undefined}
+          memberIds={getWorkspaceMemberIds(workspaceSlug)}
         />
       </FiltersDropdown>
       <div className="hidden items-center gap-1 rounded-sm bg-layer-3 p-1 md:flex">
-        {MODULE_VIEW_LAYOUTS.map((layout) => (
-          <Tooltip key={layout.key} label={t(layout.i18n_title)} disabled={isMobile}>
+        {MODULE_VIEW_LAYOUTS.map((one) => (
+          <Tooltip key={one.key} label={t(one.i18n_title)} disabled={isMobile}>
             <button
               type="button"
+              aria-label={t(one.i18n_title)}
+              aria-pressed={layout === one.key}
               className={cn(
                 "group grid h-5.5 w-7 place-items-center overflow-hidden rounded-sm transition-all hover:bg-layer-transparent-hover",
-                {
-                  "bg-layer-transparent-active hover:bg-layer-transparent-active":
-                    displayFilters?.layout === layout.key,
-                }
+                { "bg-layer-transparent-active hover:bg-layer-transparent-active": layout === one.key }
               )}
-              onClick={() => {
-                if (!projectId) return;
-                updateDisplayFilters(projectId, { layout: layout.key });
-              }}
+              onClick={() => setLayout(one.key)}
             >
-              <ModuleLayoutIcon layoutType={layout.key} />
+              <ModuleLayoutIcon layout={one.key} />
             </button>
           </Tooltip>
         ))}

@@ -3,21 +3,19 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { observer } from "mobx-react";
 import { MembersOutline, StartDateOutline, UserAltOutline, WorkItemsOutline } from "@makeplane/propel/icons";
 // nerve imports
 import type { Module, Progress } from "@nerve/api-client";
 import { useTranslation } from "@nerve/i18n";
-import type { DateRange } from "@nerve/propel/calendar";
 import { Loader } from "@nerve/ui";
-import { getDate, renderFormattedPayloadDate } from "@nerve/utils";
 // components
-import { DateRangeDropdown } from "@/components/dropdowns/date-range";
 import { MemberDropdown } from "@/components/dropdowns/member/dropdown";
 // hooks
 import { useModules } from "@/hooks/store/use-modules";
 // local imports
+import { ModuleDates } from "../module-dates";
 import { useModuleChange } from "../use-module-change";
 
 type Props = {
@@ -42,7 +40,12 @@ export const ModuleSidebarDetails = observer(function ModuleSidebarDetails(props
   return (
     <dl className="flex flex-col gap-5 pt-2.5 pb-6">
       <Detail icon={<StartDateOutline className="h-4 w-4" />} title={t("date_range")}>
-        <ModuleDates module={module} editable={editable} />
+        <ModuleDates
+          module={module}
+          editable={editable}
+          buttonContainerClassName="w-full"
+          buttonVariant="background-with-text"
+        />
       </Detail>
       <Detail icon={<UserAltOutline className="h-4 w-4" />} title={t("lead")}>
         <ModuleLead module={module} projectId={projectId} editable={editable} />
@@ -79,47 +82,6 @@ function Detail({ icon, title, children }: { icon: ReactNode; title: string; chi
 }
 
 type Control = { module: Module; editable: boolean };
-
-/**
- * The module's days, calendar days (R13), which the caller changes while editable. A range goes to nerve as a pair,
- * once both its days are picked or both cleared (a day picked alone waits for the other: one day alone is the dialog's
- * to set); the days the module has go nowhere. While the pair is out, the days picked show.
- */
-const ModuleDates = observer(function ModuleDates({ module, editable }: Control) {
-  // hooks
-  const { t } = useTranslation();
-  const { update } = useModules();
-  const { busy, send } = useModuleChange();
-  // states
-  const [picked, setPicked] = useState<DateRange>();
-
-  const change = async (start_date: string | null, target_date: string | null) => {
-    if (await send(() => update(module.id, { start_date, target_date }))) setPicked(undefined);
-  };
-
-  const select = (range: DateRange | undefined) => {
-    const start = renderFormattedPayloadDate(range?.from) ?? null;
-    const target = renderFormattedPayloadDate(range?.to) ?? null;
-    if (start === module.start_date && target === module.target_date) {
-      setPicked(undefined);
-      return;
-    }
-    setPicked(range ?? { from: undefined });
-    if ((start === null) === (target === null)) void change(start, target);
-  };
-
-  const shown = picked ?? { from: getDate(module.start_date), to: getDate(module.target_date) };
-  return (
-    <DateRangeDropdown
-      buttonContainerClassName="w-full"
-      buttonVariant="background-with-text"
-      value={{ from: shown.from, to: shown.to }}
-      onSelect={select}
-      placeholder={{ from: t("start_date"), to: t("end_date") }}
-      disabled={!editable || busy}
-    />
-  );
-});
 
 /** The module's lead, one of the project's members who is not its guest, which the caller changes while editable. */
 const ModuleLead = observer(function ModuleLead({ module, projectId, editable }: Control & { projectId: string }) {

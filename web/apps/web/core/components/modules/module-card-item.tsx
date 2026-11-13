@@ -4,252 +4,120 @@
  * See the LICENSE file for details.
  */
 
-import type { SyntheticEvent } from "react";
-import React, { useRef } from "react";
+import { useRef } from "react";
 import { observer } from "mobx-react";
-import { useParams, Link, useNavigate, useSearchParams, useLocation } from "react-router";
-import { InfoOutline, UserAltOutline, WorkItemsOutline } from "@makeplane/propel/icons";
-// nerve package imports
-import { MODULE_STATUS, EUserPermissions, EUserPermissionsLevel, IS_FAVORITE_MENU_OPEN } from "@nerve/constants";
-import { useLocalStorage } from "@nerve/hooks";
+import { Link } from "react-router";
+import { InfoOutline, WorkItemsOutline } from "@makeplane/propel/icons";
 import { LinearProgress } from "@makeplane/propel/components/linear-progress";
-import { TOAST_TYPE, setPromiseToast, setToast } from "@nerve/propel/toast";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
-import type { IModule } from "@nerve/types";
-import { Card, FavoriteStar } from "@nerve/ui";
-import { getDate, renderFormattedPayloadDate, generateQueryParams } from "@nerve/utils";
-// components
-import { DateRangeDropdown } from "@/components/dropdowns/date-range";
-import { ButtonAvatars } from "@/components/dropdowns/member/avatar";
-import { ModuleQuickActions } from "@/components/modules";
-import { ModuleStatusDropdown } from "@/components/modules/module-status-dropdown";
+// nerve imports
+import { useTranslation } from "@nerve/i18n";
+import { Card } from "@nerve/ui";
+import { progressPercent } from "@nerve/utils";
 // hooks
-import { useMember } from "@/hooks/store/use-member";
-import { useModule } from "@/hooks/store/use-module";
+import { useModules } from "@/hooks/store/use-modules";
 import { useUserPermissions } from "@/hooks/store/user";
 import { usePlatformOS } from "@/hooks/use-platform-os";
+// local imports
+import { ModuleLeadAvatar } from "./lead-avatar";
+import { ModuleDates } from "./module-dates";
+import { usePeekModule } from "./module-peek-overview";
+import { ModuleStatusDropdown } from "./module-status-dropdown";
+import { ModuleQuickActions } from "./quick-actions";
 
 type Props = {
   moduleId: string;
+  workspaceSlug: string;
+  projectId: string;
 };
 
+/**
+ * A module's card in its project's list laid out as cards (P6a spec 2.6, R5, R8, R11, R13), its list's row as the
+ * store gives it: its name, the link to its page, which the whole card is (the controls over it are buttons of their
+ * own, never a clickable element that is neither); its status, which the caller changes there while he writes the
+ * project's modules (canWriteModules) and it is not archived; "more details", which previews it; its progress, the
+ * completed of its work items not cancelled, as a count and a bar of the same reading (progressPercent); its lead; its
+ * days, changed as its status is; its quick actions. No star to favorite it: favorites are M7's.
+ */
 export const ModuleCardItem = observer(function ModuleCardItem(props: Props) {
-  const { moduleId } = props;
+  const { moduleId, workspaceSlug, projectId } = props;
   // refs
-  const parentRef = useRef(null);
-  // router
-  const navigate = useNavigate();
-  const { workspaceSlug, projectId } = useParams();
-  const [searchParams] = useSearchParams();
-  const { pathname } = useLocation();
-  // store hooks
-  const { allowPermissions } = useUserPermissions();
-  const { getModuleById, addModuleToFavorites, removeModuleFromFavorites, updateModuleDetails } = useModule();
-  const { getUserDetails } = useMember();
-  // local storage
-  const { setValue: toggleFavoriteMenu, storedValue } = useLocalStorage<boolean>(IS_FAVORITE_MENU_OPEN, false);
-  // derived values
-  const moduleDetails = getModuleById(moduleId);
-  const isEditingAllowed = allowPermissions(
-    [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
-    EUserPermissionsLevel.PROJECT
-  );
-  const isDisabled = !isEditingAllowed || !!moduleDetails?.archived_at;
-  const renderIcon = Boolean(moduleDetails?.start_date) || Boolean(moduleDetails?.target_date);
-
+  const parentRef = useRef<HTMLDivElement>(null);
+  // hooks
+  const { t } = useTranslation();
   const { isMobile } = usePlatformOS();
-  const handleAddToFavorites = (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.stopPropagation();
-    e.preventDefault();
-    if (!workspaceSlug || !projectId) return;
+  const [peekModule, peek] = usePeekModule();
+  // store hooks
+  const { getModuleRow } = useModules();
+  const { canWriteModules } = useUserPermissions();
+  const row = getModuleRow(moduleId);
 
-    const addToFavoritePromise = addModuleToFavorites(workspaceSlug, projectId, moduleId).then(() => {
-      if (!storedValue) toggleFavoriteMenu(true);
-      return;
-    });
+  if (!row) return null;
 
-    setPromiseToast(addToFavoritePromise, {
-      loading: "Adding module to favorites...",
-      success: {
-        title: "Success!",
-        message: () => "Module added to favorites.",
-      },
-      error: {
-        title: "Error!",
-        message: () => "Couldn't add the module to favorites. Please try again.",
-      },
-    });
-  };
-
-  const handleRemoveFromFavorites = (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.stopPropagation();
-    e.preventDefault();
-    if (!workspaceSlug || !projectId) return;
-
-    const removeFromFavoritePromise = removeModuleFromFavorites(workspaceSlug, projectId, moduleId);
-
-    setPromiseToast(removeFromFavoritePromise, {
-      loading: "Removing module from favorites...",
-      success: {
-        title: "Success!",
-        message: () => "Module removed from favorites.",
-      },
-      error: {
-        title: "Error!",
-        message: () => "Couldn't remove the module from favorites. Please try again.",
-      },
-    });
-  };
-
-  const handleEventPropagation = (e: SyntheticEvent<HTMLDivElement>) => {
-    e.stopPropagation();
-    e.preventDefault();
-  };
-
-  const handleModuleDetailsChange = async (payload: Partial<IModule>) => {
-    if (!workspaceSlug || !projectId) return;
-
-    await updateModuleDetails(workspaceSlug, projectId, moduleId, payload)
-      .then(() => {
-        setToast({
-          type: TOAST_TYPE.SUCCESS,
-          title: "Success!",
-          message: "Module updated successfully.",
-        });
-        return;
-      })
-      .catch((err) => {
-        setToast({
-          type: TOAST_TYPE.ERROR,
-          title: "Error!",
-          message: err?.detail ?? "Module could not be updated. Please try again.",
-        });
-      });
-  };
-
-  const openModuleOverview = (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.stopPropagation();
-    e.preventDefault();
-
-    const query = generateQueryParams(searchParams, ["peekModule"]);
-    if (searchParams.has("peekModule") && searchParams.get("peekModule") === moduleId) {
-      navigate(`${pathname}?${query}`);
-    } else {
-      navigate(`${pathname}?${query && `${query}&`}peekModule=${moduleId}`);
-    }
-  };
-
-  if (!moduleDetails) return null;
-
-  const moduleTotalIssues =
-    moduleDetails.backlog_issues +
-    moduleDetails.unstarted_issues +
-    moduleDetails.started_issues +
-    moduleDetails.completed_issues +
-    moduleDetails.cancelled_issues;
-
-  const moduleCompletedIssues = moduleDetails.completed_issues;
-
-  // const areYearsEqual = startDate.getFullYear() === endDate.getFullYear();
-
-  const moduleStatus = MODULE_STATUS.find((status) => status.value === moduleDetails.status);
-
-  const issueCount = moduleDetails
-    ? !moduleTotalIssues || moduleTotalIssues === 0
-      ? `0 work items`
-      : moduleTotalIssues === moduleCompletedIssues
-        ? `${moduleTotalIssues} Work item${moduleTotalIssues > 1 ? `s` : ``}`
-        : `${moduleCompletedIssues}/${moduleTotalIssues} Work items`
-    : `0 work items`;
-
-  const moduleLeadDetails = moduleDetails.lead_id ? getUserDetails(moduleDetails.lead_id) : undefined;
-  const progressValue = moduleTotalIssues > 0 ? (moduleCompletedIssues / moduleTotalIssues) * 100 : 0;
+  const editable = canWriteModules(workspaceSlug, projectId) && row.archived_at === null;
+  const dated = row.start_date !== null || row.target_date !== null;
 
   return (
-    <div className="relative" data-prevent-progress>
-      <Link ref={parentRef} to={`/${workspaceSlug}/projects/${moduleDetails.project_id}/modules/${moduleDetails.id}`}>
-        <Card>
-          <div>
-            <div className="flex items-center justify-between gap-2">
-              <Tooltip label={moduleDetails.name} layout="stacked" disabled={isMobile}>
-                <span className="truncate text-14 font-medium">{moduleDetails.name}</span>
-              </Tooltip>
-              <div className="flex items-center gap-2" onClick={handleEventPropagation}>
-                {moduleStatus && <ModuleStatusDropdown moduleId={moduleId} editable={!isDisabled} />}
-                <button onClick={openModuleOverview}>
-                  <InfoOutline className="h-4 w-4 text-placeholder" />
-                </button>
-              </div>
-            </div>
+    <Card ref={parentRef} className="relative" data-prevent-progress>
+      <div className="flex items-center justify-between gap-2">
+        <Link
+          to={`/${workspaceSlug}/projects/${projectId}/modules/${row.id}`}
+          className="truncate after:absolute after:inset-0"
+        >
+          <Tooltip label={row.name} layout="stacked" disabled={isMobile}>
+            <span className="truncate text-14 font-medium">{row.name}</span>
+          </Tooltip>
+        </Link>
+        <div className="relative z-[1] flex items-center gap-2">
+          <ModuleStatusDropdown moduleId={row.id} editable={editable} />
+          <button
+            type="button"
+            aria-label={t("project_module.more_details")}
+            onClick={() => peek(peekModule === row.id ? null : row.id)}
+          >
+            <InfoOutline className="h-4 w-4 text-placeholder" aria-hidden="true" />
+          </button>
+        </div>
+      </div>
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1.5 text-secondary">
+            <WorkItemsOutline className="h-4 w-4 text-tertiary" aria-hidden="true" />
+            <span className="text-11 text-tertiary">
+              {t("project_module.work_items_done", {
+                completed: row.completed_issues,
+                total: row.total_issues - row.cancelled_issues,
+              })}
+            </span>
           </div>
-          <div className="flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5 text-secondary">
-                <WorkItemsOutline className="h-4 w-4 text-tertiary" />
-                <span className="text-11 text-tertiary">{issueCount ?? "0 Work item"}</span>
-              </div>
-              {moduleLeadDetails ? (
-                <span className="cursor-default">
-                  <ButtonAvatars userIds={moduleLeadDetails?.id} />
-                </span>
-              ) : (
-                <Tooltip label="No lead">
-                  <UserAltOutline className="mx-1 h-4 w-4 text-tertiary" />
-                </Tooltip>
-              )}
-            </div>
-            <LinearProgress
-              value={progressValue}
-              size="md"
-              variant="brand"
-              showValue={false}
-              aria-label="Module progress"
-            />
-            <div className="flex items-center justify-between py-0.5" onClick={handleEventPropagation}>
-              <DateRangeDropdown
-                buttonContainerClassName={`h-6 w-full flex ${isDisabled ? "cursor-not-allowed" : "cursor-pointer"} items-center gap-1.5 text-tertiary border-[0.5px] border-strong rounded-sm text-11`}
-                buttonVariant="transparent-with-text"
-                className="h-7"
-                value={{
-                  from: getDate(moduleDetails.start_date),
-                  to: getDate(moduleDetails.target_date),
-                }}
-                onSelect={(val) => {
-                  handleModuleDetailsChange({
-                    start_date: val?.from ? renderFormattedPayloadDate(val.from) : null,
-                    target_date: val?.to ? renderFormattedPayloadDate(val.to) : null,
-                  });
-                }}
-                placeholder={{
-                  from: "Start date",
-                  to: "End date",
-                }}
-                disabled={isDisabled}
-                hideIcon={{ from: renderIcon ?? true, to: renderIcon }}
-              />
-            </div>
-          </div>
-        </Card>
-      </Link>
-      <div className="absolute right-4 bottom-[18px] flex items-center gap-1.5">
-        {isEditingAllowed && (
-          <FavoriteStar
-            onClick={(e) => {
-              if (moduleDetails.is_favorite) handleRemoveFromFavorites(e);
-              else handleAddToFavorites(e);
-            }}
-            selected={!!moduleDetails.is_favorite}
+          <span className="relative z-[1]">
+            <ModuleLeadAvatar leadId={row.lead_id} />
+          </span>
+        </div>
+        <LinearProgress
+          value={progressPercent(row)}
+          size="md"
+          variant="brand"
+          showValue={false}
+          aria-label={t("common.progress")}
+        />
+        <div className="relative z-[1] flex items-center justify-between gap-2 py-0.5">
+          <ModuleDates
+            module={row}
+            editable={editable}
+            buttonContainerClassName="h-6 w-full flex items-center gap-1.5 text-tertiary border-[0.5px] border-strong rounded-sm text-11"
+            buttonVariant="transparent-with-text"
+            className="h-7"
+            hideIcon={{ from: dated, to: dated }}
           />
-        )}
-        {workspaceSlug && projectId && (
           <ModuleQuickActions
             parentRef={parentRef}
-            moduleId={moduleId}
+            moduleId={row.id}
             projectId={projectId}
             workspaceSlug={workspaceSlug}
           />
-        )}
+        </div>
       </div>
-    </div>
+    </Card>
   );
 });

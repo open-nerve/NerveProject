@@ -9,14 +9,7 @@ export * from "./dropdowns";
 export * from "./select";
 export * from "./form";
 export * from "./modal";
-export * from "./modules-list-view";
-export * from "./module-card-item";
-export * from "./module-list-item";
-export * from "./module-peek-overview";
 export * from "./quick-actions";
-export * from "./module-list-item-action";
-export * from "./module-view-header";
-export * from "./module-layout-icon";
 export * from "./progress-sidebar";
 // archived modules
 export * from "./archived-modules";

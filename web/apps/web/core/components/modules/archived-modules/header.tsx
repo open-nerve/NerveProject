@@ -127,7 +127,7 @@ export const ArchivedModulesHeader = observer(function ArchivedModulesHeader() {
           )}
         </div>
         <ModuleOrderByDropdown
-          value={currentProjectDisplayFilters?.order_by}
+          value={currentProjectDisplayFilters?.order_by ?? "name"}
           onChange={(val) => {
             if (!projectId || val === currentProjectDisplayFilters?.order_by) return;
             updateDisplayFilters(projectId, {

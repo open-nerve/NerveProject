@@ -12,14 +12,16 @@ import { FakeNerve, json } from "@/lib/auth/fake-nerve";
 import { StoreContext } from "@/lib/store-context";
 import { RootStore } from "@/store/root.store";
 import { rowOf } from "@/store/planning/fake-cycles";
+import { loadArchivedModules, moduleRowOf } from "@/store/planning/fake-modules";
 import { ModulesStore } from "@/store/module.store";
 import { RouterStore } from "@/store/router.store";
 import { InstanceStore } from "@/store/instance.store";
 import { ThemeStore } from "@/store/theme.store";
 import { loadWorkspaces, workspaceOf } from "@/store/workspace/fake-workspaces";
-import { cycleOf, loadProjects, projectOf } from "@/store/project/fake-projects";
+import { cycleOf, loadProjects, moduleOf, projectOf } from "@/store/project/fake-projects";
 import { CycleActionsHost } from "@/components/cycles/actions-host";
 import { ArchivedCycleLayoutRoot } from "@/components/cycles/archived-cycles/root";
+import { ModuleActionsHost } from "@/components/modules/actions-host";
 import { ArchivedModuleLayoutRoot } from "@/components/modules/archived-modules/root";
 
 vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
@@ -131,11 +133,25 @@ it("preserves_domain_loading_without_issue_lists: archived cycle retains real di
 });
 
 it("preserves_domain_loading_without_issue_lists: archived module retains real directory items and search", async () => {
-  const current = await fixture();
+  const nerve = new FakeNerve();
+  const current = await fixture(nerve);
   runInAction(() => {
     current.module.moduleMap[module.id] = module;
     (current.module as ModulesStore).fetchedMap["p-proj"] = true;
   });
+  // the archive's row is the session's store's (P6a T10; the archive itself reads it with T11): nerve lists it there
+  vi.useFakeTimers();
+  await loadArchivedModules(
+    nerve,
+    current.planning.modules,
+    [
+      moduleRowOf(
+        moduleOf(projectOf("PROJ", "id-ws"), module.name, { id: module.id, archived_at: module.archived_at })
+      ),
+    ],
+    projectOf("PROJ", "id-ws")
+  );
+  vi.useRealTimers();
   const fetch = vi.spyOn((current.module as ModulesStore).moduleArchiveService, "getArchivedModules");
   // Valid entities are store fixtures, not fabricated HTTP success. Keep the real store's failure path too.
   fetch.mockRejectedValue(new Error("M6 archive API unavailable"));
@@ -145,7 +161,9 @@ it("preserves_domain_loading_without_issue_lists: archived module retains real d
       <MemoryRouter>
         <StoreContext.Provider value={current}>
           <SWRConfig value={{ provider: () => new Map() }}>
-            <ArchivedModuleLayoutRoot />
+            <ModuleActionsHost workspaceSlug="ws" projectId="p-proj">
+              <ArchivedModuleLayoutRoot />
+            </ModuleActionsHost>
           </SWRConfig>
         </StoreContext.Provider>
       </MemoryRouter>

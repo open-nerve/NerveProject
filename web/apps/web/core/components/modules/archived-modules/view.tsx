@@ -9,7 +9,8 @@ import { observer } from "mobx-react";
 import AllFiltersImage from "@/app/assets/empty-state/module/all-filters.svg?url";
 import NameFilterImage from "@/app/assets/empty-state/module/name-filter.svg?url";
 // components
-import { ModuleListItem, ModulePeekOverview } from "@/components/modules";
+import { ModuleListItem } from "@/components/modules/module-list-item";
+import { ModulePeekOverview } from "@/components/modules/module-peek-overview";
 // ui
 import { CycleModuleListLayoutLoader } from "@/components/ui/loader/cycle-module-list-loader";
 // hooks
@@ -55,10 +56,10 @@ export const ArchivedModulesView = observer(function ArchivedModulesView(props: 
       <div className="flex h-full w-full justify-between">
         <div className="vertical-scrollbar scrollbar-lg flex h-full w-full flex-col overflow-y-auto">
           {filteredArchivedModuleIds.map((moduleId) => (
-            <ModuleListItem key={moduleId} moduleId={moduleId} />
+            <ModuleListItem key={moduleId} moduleId={moduleId} workspaceSlug={workspaceSlug} projectId={projectId} />
           ))}
         </div>
-        <ModulePeekOverview projectId={projectId} workspaceSlug={workspaceSlug} isArchived />
+        <ModulePeekOverview projectId={projectId} workspaceSlug={workspaceSlug} />
       </div>
     </div>
   );

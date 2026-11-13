@@ -19,7 +19,7 @@ export default function ProjectModulesListLayout({ params }: Route.ComponentProp
     <ModuleActionsHost workspaceSlug={params.workspaceSlug} projectId={params.projectId}>
       <AppHeader
         header={<ModulesListHeader workspaceSlug={params.workspaceSlug} projectId={params.projectId} />}
-        mobileHeader={<ModulesListMobileHeader />}
+        mobileHeader={<ModulesListMobileHeader workspaceSlug={params.workspaceSlug} projectId={params.projectId} />}
       />
       <ContentWrapper>
         <Outlet />
