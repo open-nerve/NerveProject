@@ -25,13 +25,14 @@ import { useProjectIssueMenuItems } from "./helper";
 
 /**
  * A row's quick actions on a page of its project's work items, as the project's page has them; the page names its
- * store type, which the edit and copy dialogs open with (a cycle's page's copy then joins the cycle, re-66 L4), and may
- * add the removal of the work item from its cycle (cycle-issue.tsx). The layout's command host holds the dialogs, as
- * it does the confirmations: the check of the work item a dialog's read starts takes the row off the page meanwhile.
+ * store type, which the edit and copy dialogs open with (a cycle's or a module's page's copy then joins its cycle or
+ * module, re-66 L4, P6b spec 2.7), and may add the removal of the work item from its cycle (cycle-issue.tsx). The
+ * layout's command host holds the dialogs, as it does the confirmations: the check of the work item a dialog's read
+ * starts takes the row off the page meanwhile.
  */
 export const WorkItemQuickActions = observer(function WorkItemQuickActions(
   props: IQuickActionProps & {
-    storeType: EIssuesStoreType.PROJECT | EIssuesStoreType.CYCLE;
+    storeType: EIssuesStoreType.PROJECT | EIssuesStoreType.CYCLE | EIssuesStoreType.MODULE;
     /** Removes the work item from the page's cycle; the menu offers it while given. */
     handleRemoveFromCycle?: () => void;
   }
@@ -167,4 +168,12 @@ export const WorkItemQuickActions = observer(function WorkItemQuickActions(
 /** A row's quick actions on the project's page. */
 export const ProjectIssueQuickActions = observer(function ProjectIssueQuickActions(props: IQuickActionProps) {
   return <WorkItemQuickActions {...props} storeType={EIssuesStoreType.PROJECT} />;
+});
+
+/**
+ * A row's quick actions on a module's page (P6b spec 2.7): the project page's, whose edit and copy dialogs are the
+ * module page's (a copy joins the module while it takes work items).
+ */
+export const ModuleIssueQuickActions = observer(function ModuleIssueQuickActions(props: IQuickActionProps) {
+  return <WorkItemQuickActions {...props} storeType={EIssuesStoreType.MODULE} />;
 });

@@ -26,6 +26,8 @@ export function IssueLayoutEmptyState(props: Props) {
       return <ProfileViewEmptyState />;
     case EIssuesStoreType.CYCLE:
       return <PlanningPageEmptyState storeType={EIssuesStoreType.CYCLE} />;
+    case EIssuesStoreType.MODULE:
+      return <PlanningPageEmptyState storeType={EIssuesStoreType.MODULE} />;
     default:
       return null;
   }

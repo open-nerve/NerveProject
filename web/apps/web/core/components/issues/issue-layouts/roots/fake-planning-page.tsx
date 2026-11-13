@@ -1,53 +1,66 @@
 // Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only
 // A planning page's work items against a fake nerve (P5b spec 2.6, P6b spec 2.2), per domain, for the tests of the
-// shared layout root: the route's project A with the caller of a role, the page's cycle C1 as nerve last gave it, and
-// the page's preferences and its list as nerve answers them. The stores, rows, layouts and HTTP are real; the test file
-// binds the stores and the route.
+// shared layout root: the route's project A with the caller of a role, the page's cycle C1 or module M1 as nerve last
+// gave it, and the page's preferences and its list as nerve answers them. The stores, rows, layouts and HTTP are real;
+// the test file binds the stores and the route.
 import { act, type ReactNode } from "react";
 import { MemoryRouter } from "react-router";
 import { SWRConfig } from "swr";
 import { vi } from "vitest";
-import type { Cycle, CyclePreferences, IssueListDisplayFilters, Project, ProjectIssueFilters } from "@nerve/api-client";
+import type {
+  Cycle,
+  CyclePreferences,
+  Issue,
+  IssueListDisplayFilters,
+  Module,
+  ModuleIssueFilters,
+  ModulePreferences,
+  Project,
+  ProjectIssueFilters,
+} from "@nerve/api-client";
 import { EIssuesStoreType } from "@nerve/types";
 import { answered, json } from "@/lib/auth/fake-nerve";
 import { until } from "@/lib/auth/fake-time";
 import { issueSelectionTab } from "@/components/core/modals/fake-issue-selection";
 import { PeekOnEntry } from "@/components/cycles/peek-on-entry";
+import type { PlanningPageStoreType } from "@/hooks/planning-page-domains";
 import { listIssue } from "@/store/issue/fake-issues";
-import { cycleOf, preferencesOf } from "@/store/project/fake-projects";
-import type { PlanningPageLayoutStoreType } from "../planning-page-layouts";
+import { loadModule } from "@/store/planning/fake-modules";
+import { cycleOf, moduleOf, preferencesOf } from "@/store/project/fake-projects";
 import { PlanningPageLayoutRoot } from "./planning-page-layout-root";
 
 export const C1 = "019a0000-0000-7000-8000-0000000000c1";
+export const M1 = "019a0000-0000-7000-8000-0000000000d1";
 export type Layout = "list" | "kanban" | "spreadsheet" | "calendar";
 
-const first = listIssue("first", 1000, {
-  cycle_id: C1,
-  state_id: "state",
-  priority: "high",
-  target_date: "2026-12-31",
-});
-/** Each layout's display on the page, and nerve's list of the cycle for it, of its one work item or of none. */
-export const layouts: Record<Layout, { display: Partial<IssueListDisplayFilters>; page: (rows?: boolean) => unknown }> =
-  {
-    list: {
-      display: { layout: "list", group_by: "state_id", order_by: "sort_order" },
-      page: (rows = true) => ({ total: rows ? 1 : 0, groups: rows ? [group("state")] : [] }),
-    },
-    kanban: {
-      display: { layout: "kanban", group_by: "state_id", order_by: "sort_order" },
-      page: (rows = true) => ({ total: rows ? 1 : 0, groups: rows ? [group("state")] : [] }),
-    },
-    spreadsheet: {
-      display: { layout: "spreadsheet" },
-      page: (rows = true) => ({ total: rows ? 1 : 0, data: rows ? [first] : [], next_cursor: null }),
-    },
-    calendar: {
-      display: { layout: "calendar", calendar: { layout: "week", show_weekends: true } },
-      page: (rows = true) => ({ total: rows ? 1 : 0, groups: rows ? [group("2026-12-31")] : [] }),
-    },
-  };
-const group = (key: string) => ({ key, total: 1, data: [first], next_cursor: null });
+const shown = { state_id: "state", priority: "high", target_date: "2026-12-31" } as const;
+/** The page's one work item "first": the cycle's, or the module's. */
+const first = listIssue("first", 1000, { cycle_id: C1, ...shown });
+const moduleFirst = listIssue("first", 1000, { module_ids: [M1], ...shown });
+type Page = (rows?: boolean, row?: Issue) => unknown;
+/**
+ * Each layout's display on the page, and nerve's list of the page for it, of its one work item (the cycle's unless
+ * given) or of none.
+ */
+export const layouts: Record<Layout, { display: Partial<IssueListDisplayFilters>; page: Page }> = {
+  list: {
+    display: { layout: "list", group_by: "state_id", order_by: "sort_order" },
+    page: (rows = true, row = first) => ({ total: rows ? 1 : 0, groups: rows ? [group("state", row)] : [] }),
+  },
+  kanban: {
+    display: { layout: "kanban", group_by: "state_id", order_by: "sort_order" },
+    page: (rows = true, row = first) => ({ total: rows ? 1 : 0, groups: rows ? [group("state", row)] : [] }),
+  },
+  spreadsheet: {
+    display: { layout: "spreadsheet" },
+    page: (rows = true, row = first) => ({ total: rows ? 1 : 0, data: rows ? [row] : [], next_cursor: null }),
+  },
+  calendar: {
+    display: { layout: "calendar", calendar: { layout: "week", show_weekends: true } },
+    page: (rows = true, row = first) => ({ total: rows ? 1 : 0, groups: rows ? [group("2026-12-31", row)] : [] }),
+  },
+};
+const group = (key: string, row: Issue) => ({ key, total: 1, data: [row], next_cursor: null });
 
 /** The page's preferences as nerve answers them: the list defaults, with the page's own display and filters. */
 export function cyclePreferencesOf(
@@ -58,18 +71,37 @@ export function cyclePreferencesOf(
   return { filters, display_filters: { ...display_filters, ...display }, display_properties };
 }
 
+/** The module page's preferences as nerve answers them: the list defaults, with the page's own display and filters. */
+export function modulePreferencesOf(
+  display: Partial<IssueListDisplayFilters> = {},
+  filters: ModuleIssueFilters = {}
+): ModulePreferences {
+  const { display_filters, display_properties } = preferencesOf();
+  return { filters, display_filters: { ...display_filters, ...display }, display_properties };
+}
+
 type Tab = Awaited<ReturnType<typeof issueSelectionTab>>;
-/** What a test says of the page: the caller's role (a member's unless it says), its project's fields, its cycle's. */
-type PageFields = { role?: Project["member_role"]; project?: Partial<Project>; cycle?: Partial<Cycle> };
+/**
+ * What a test says of the page: the caller's role (a member's unless it says), its project's fields, its cycle's or its
+ * module's.
+ */
+type PageFields = {
+  role?: Project["member_role"];
+  project?: Partial<Project>;
+  cycle?: Partial<Cycle>;
+  module?: Partial<Module>;
+};
 
 /** What each domain's page is to its tests (the page's store type picks it). */
 const pages: Record<
-  PlanningPageLayoutStoreType,
+  PlanningPageStoreType,
   {
     /** Where nerve keeps the page's preferences. */
     preferences: string;
-    /** Has the tab hold the page's cycle as nerve gives it, as the fields say. */
+    /** Has the tab hold the page's cycle or module as nerve gives it, as the fields say. */
     hold: (tab: Tab, fields: PageFields) => Promise<void>;
+    /** The page's one work item "first", as nerve lists it. */
+    row: Issue;
     /** What the page puts beside its preview host (PlanningPageLayoutRoot's children). */
     beside: ReactNode;
   }
@@ -86,21 +118,36 @@ const pages: Record<
         "C1"
       );
     },
+    row: first,
     // the cycle's page: the preview the way in asked for (PeekOnEntry)
     beside: <PeekOnEntry workspaceSlug="ws" projectId="A" />,
+  },
+  [EIssuesStoreType.MODULE]: {
+    preferences: `/api/v0/me/modules/${M1}/preferences`,
+    hold: async (tab, fields) => {
+      await loadModule(
+        tab.nerve,
+        tab.app.planning.modules,
+        moduleOf(tab.project, "Core", { id: M1, ...fields.module })
+      );
+    },
+    row: moduleFirst,
+    // a module's page has nothing beside its preview host (no way in asks for a preview)
+    beside: null,
   },
 };
 
 /** The page's work items as the page of the store type puts them: the shared layout root, with what is beside it. */
-export function PlanningPageWorkItems(props: { type: PlanningPageLayoutStoreType }) {
+export function PlanningPageWorkItems(props: { type: PlanningPageStoreType }) {
   return <PlanningPageLayoutRoot storeType={props.type}>{pages[props.type].beside}</PlanningPageLayoutRoot>;
 }
 
 /**
  * A tab at the store type's page: project A with the caller of role (a member's unless it says) and its fields, and
- * the page's cycle C1, current unless fields say otherwise. Today is Dec 31, 2026, the calendar's week Dec 27–Jan 2.
+ * the page's cycle C1, current, or its module M1, in its backlog, unless fields say otherwise. Today is Dec 31, 2026,
+ * the calendar's week Dec 27–Jan 2.
  */
-export async function planningPageTab(type: PlanningPageLayoutStoreType, fields: PageFields = {}) {
+export async function planningPageTab(type: PlanningPageStoreType, fields: PageFields = {}) {
   const tab = await issueSelectionTab();
   vi.stubGlobal(
     "IntersectionObserver",
@@ -140,8 +187,10 @@ export async function planningPageTab(type: PlanningPageLayoutStoreType, fields:
     preferences,
     lists,
     mount,
+    /** nerve's list of the page for layout, of the page's one work item or of none. */
+    listOf: (layout: Layout, rows = true) => layouts[layout].page(rows, pages[type].row),
     /** Renders the page's work items, as mount; nerve answers its preferences and, when given, its list. */
-    show: async (page: CyclePreferences, list?: unknown, before?: ReactNode) => {
+    show: async (page: CyclePreferences | ModulePreferences, list?: unknown, before?: ReactNode) => {
       await mount(before);
       await until(() => preferences().length === 1, "the page's preferences");
       await act(async () => preferences()[0]!.answer(json(200, page)));

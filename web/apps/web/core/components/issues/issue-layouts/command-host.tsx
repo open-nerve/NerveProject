@@ -17,8 +17,11 @@ import type { IssueFormData } from "../issue-modal/types";
 
 type RequestConfirmation = (issue: Issue, submit: () => Promise<void>) => void;
 type RequestCommand = (issue: Issue, submit: () => Promise<void>) => Promise<void>;
-/** The page whose list a row's edit and copy dialogs write through: the project's, or a cycle's (re-66 L4). */
-type DialogStore = EIssuesStoreType.PROJECT | EIssuesStoreType.CYCLE;
+/**
+ * The page whose list a row's edit and copy dialogs write through: the project's, a cycle's (re-66 L4) or a module's
+ * (P6b spec 2.7).
+ */
+type DialogStore = EIssuesStoreType.PROJECT | EIssuesStoreType.CYCLE | EIssuesStoreType.MODULE;
 type RequestDialog = (kind: "edit" | "copy", issue: Issue, storeType: DialogStore) => void;
 const CommandsContext = createContext<
   | {

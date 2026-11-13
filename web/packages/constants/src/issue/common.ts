@@ -44,7 +44,11 @@ export const ISSUE_PRIORITIES: {
 
 export const DRAG_ALLOWED_GROUPS: TIssueGroupByOptions[] = ["state", "priority", "assignees", "labels"];
 
-export type TCreateModalStoreTypes = EIssuesStoreType.PROJECT | EIssuesStoreType.PROFILE | EIssuesStoreType.CYCLE;
+export type TCreateModalStoreTypes =
+  | EIssuesStoreType.PROJECT
+  | EIssuesStoreType.PROFILE
+  | EIssuesStoreType.CYCLE
+  | EIssuesStoreType.MODULE;
 
 export const ISSUE_GROUP_BY_OPTIONS: {
   key: TIssueGroupByOptions;

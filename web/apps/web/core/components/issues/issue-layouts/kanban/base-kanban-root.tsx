@@ -34,7 +34,11 @@ import { KanBan } from "./default";
 import { KanbanDeleteDropZone } from "./kanban-delete-drop-zone";
 import { KanBanSwimLanes } from "./swimlanes";
 
-type KanbanStoreType = EIssuesStoreType.PROJECT | EIssuesStoreType.PROFILE | EIssuesStoreType.CYCLE;
+type KanbanStoreType =
+  | EIssuesStoreType.PROJECT
+  | EIssuesStoreType.PROFILE
+  | EIssuesStoreType.CYCLE
+  | EIssuesStoreType.MODULE;
 
 export interface IBaseKanBanLayout {
   QuickActions: FC<IQuickActionProps>;

@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 // A module's page's work items (P6b spec 2.7, R9): read-only while the page does not have the module and once it is
 // archived, whatever its status; joinable by a new work item while not read-only and the project's modules are on.

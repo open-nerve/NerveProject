@@ -11,7 +11,7 @@ import { PlanningReadFailure } from "@/components/planning/read-failure";
 import { ProjectLevelWorkItemFiltersHOC } from "@/components/work-item-filters/filters-hoc/project-level";
 import { WorkItemFiltersRow } from "@/components/work-item-filters/filters-row";
 // hooks
-import { PLANNING_PAGE_DOMAINS } from "@/hooks/planning-page-domains";
+import { PLANNING_PAGE_DOMAINS, type PlanningPageStoreType } from "@/hooks/planning-page-domains";
 import { useIssues } from "@/hooks/store/use-issues";
 import { IssuesStoreContext } from "@/hooks/use-issue-layout-store";
 import { usePageFilterExpression } from "@/hooks/use-page-filter-expression";
@@ -24,11 +24,11 @@ import { IssuePeekOverview } from "../../peek-overview";
 import { PlanningPageCalendarLayout } from "../calendar/roots/planning-page-root";
 import { PlanningPageKanBanLayout } from "../kanban/roots/planning-page-root";
 import { PlanningPageListLayout } from "../list/roots/planning-page-root";
-import { PLANNING_PAGE_LAYOUTS, type PlanningPageLayoutStoreType } from "../planning-page-layouts";
+import { PLANNING_PAGE_LAYOUTS } from "../planning-page-layouts";
 import { PlanningPageSpreadsheetLayout } from "../spreadsheet/roots/planning-page-root";
 
 function PlanningPageIssueLayout(props: {
-  storeType: PlanningPageLayoutStoreType;
+  storeType: PlanningPageStoreType;
   activeLayout: EIssueLayoutTypes | undefined;
 }) {
   switch (props.activeLayout) {
@@ -47,7 +47,7 @@ function PlanningPageIssueLayout(props: {
 
 type Props = {
   /** The page's store type, which picks its domain's rows (PLANNING_PAGE_DOMAINS, PLANNING_PAGE_LAYOUTS). */
-  storeType: PlanningPageLayoutStoreType;
+  storeType: PlanningPageStoreType;
   /**
    * What the page puts beside its own preview host, there once the host is (the cycle's page: the preview that the way
    * in from the card of the cycle in progress asked for, PeekOnEntry, P5b spec 2.7; re-70 F4).
@@ -56,13 +56,14 @@ type Props = {
 };
 
 /**
- * A planning page's work items (P5b spec 2.1, 2.6; P6b spec 2.2), of the route's project and of the page's cycle (the
- * route param of its domain names it): the project's list with the cycle, under the page's own preferences, by the
- * page's store type. It reads them for a member of the project while the domain is on; with it off it is the domain's
- * turned-off state and reads nothing, nor does its list (re-66 H1). It says why nerve could not read the preferences,
- * with a retry; then the page's filters (their conditions saved as its preferences, followed as the project page's),
- * the row of their conditions, the layout they choose, and the page's own preview, whose host is the page's (re-66 L4),
- * with what the page puts beside it. Each difference of a domain is a row of the tables, never a branch here.
+ * A planning page's work items (P5b spec 2.1, 2.6; P6b spec 2.2, 2.7), of the route's project and of the page's cycle
+ * or module (the route param of its domain names it): the project's list with it, under the page's own preferences, by
+ * the page's store type. It reads them for a member of the project while the domain is on; with it off it is the
+ * domain's turned-off state and reads nothing, nor does its list (re-66 H1). It says why nerve could not read the
+ * preferences, with a retry; then the page's filters (their conditions saved as its preferences, followed as the
+ * project page's), the row of their conditions, the layout they choose, and the page's own preview, whose host is the
+ * page's (re-66 L4), with what the page puts beside it. Each difference of a domain is a row of the tables, never a
+ * branch here.
  */
 export const PlanningPageLayoutRoot = observer(function PlanningPageLayoutRoot({ storeType, children }: Props) {
   // router

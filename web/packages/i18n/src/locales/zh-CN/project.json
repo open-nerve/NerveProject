@@ -149,6 +149,12 @@
       "description": "你要找的模块不存在或已被删除。",
       "action": "查看其他模块"
     },
+    "empty_state": {
+      "archived": {
+        "title": "此已归档模块中没有要显示的工作项",
+        "description": "改动本页的筛选或显示属性，即可显示被它们隐藏的工作项。模块恢复之前不能加入新的工作项。"
+      }
+    },
     "link": {
       "added_at": "添加于 {time}",
       "added_by": "由 {name} 添加于 {time}"

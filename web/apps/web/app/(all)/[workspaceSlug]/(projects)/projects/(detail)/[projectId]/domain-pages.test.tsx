@@ -16,21 +16,24 @@ import { RouterStore } from "@/store/router.store";
 import { InstanceStore } from "@/store/instance.store";
 import { ThemeStore } from "@/store/theme.store";
 import { ProjectViewStore } from "@/store/project-view.store";
+import { ModulePreferencesService } from "@/services/planning/module-preferences.service";
 import { ModulesService } from "@/services/planning/modules.service";
 import { moduleRowOf } from "@/store/planning/fake-modules";
 import { ModuleActionsHost } from "@/components/modules/actions-host";
 import { loadWorkspaces, workspaceOf } from "@/store/workspace/fake-workspaces";
-import { loadProjects, moduleOf, projectOf } from "@/store/project/fake-projects";
+import { loadProjects, moduleOf, preferencesOf, projectOf } from "@/store/project/fake-projects";
 import ModulePage from "./modules/(detail)/[moduleId]/page";
 import { ModuleIssuesHeader } from "./modules/(detail)/header";
 import { ProjectViewIssuesHeader } from "./views/(detail)/[viewId]/header";
 import ViewPage from "./views/(detail)/[viewId]/page";
 
+// the route's params, a module's page's naming its module
+const route = vi.hoisted(() => ({ params: { workspaceSlug: "ws", projectId: "p-proj" } as Record<string, string> }));
 vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
 vi.mock("react-router", async (original) => ({
   ...(await original<typeof import("react-router")>()),
   useNavigate: () => vi.fn(),
-  useParams: () => ({ workspaceSlug: "ws", projectId: "p-proj" }),
+  useParams: () => route.params,
 }));
 vi.mock("@/components/breadcrumbs/common", () => ({ CommonProjectBreadcrumbs: () => null }));
 vi.mock("@/components/dropdowns/date-range", () => ({ DateRangeDropdown: () => null }));
@@ -46,6 +49,7 @@ const root = createRoot(container);
 afterEach(async () => {
   await act(async () => root.render(null));
   vi.restoreAllMocks();
+  route.params = { workspaceSlug: "ws", projectId: "p-proj" };
 });
 
 async function fixture() {
@@ -61,7 +65,9 @@ async function fixture() {
   return store;
 }
 
-it("preserves_domain_loading_without_issue_lists: module details and its own loader", async () => {
+it("module details and its own loader, then the module's work items under the page's own preferences (P6b)", async () => {
+  const params = { workspaceSlug: "ws", projectId: "p-proj", moduleId: "m" };
+  route.params = params;
   const store = await fixture();
   const project = store.projectRoot.project.getProjectById("p-proj")!;
   const module = moduleOf(project, "Milestone", { id: "m", description: "Module details retained" });
@@ -72,8 +78,11 @@ it("preserves_domain_loading_without_issue_lists: module details and its own loa
   vi.spyOn(ModulesService.prototype, "progress").mockReturnValue(new Promise<never>(() => {}));
   vi.spyOn(ModulesService.prototype, "links").mockReturnValue(new Promise<never>(() => {}));
   vi.spyOn(tokenManager, "state", "get").mockReturnValue({ status: "signed-in", loginId: "x" });
-  const issues = vi.spyOn(IssueListService.prototype, "listProject");
-  const params = { workspaceSlug: "ws", projectId: "p-proj", moduleId: "m" };
+  const { display_filters, display_properties } = preferencesOf();
+  const preferences = vi
+    .spyOn(ModulePreferencesService.prototype, "get")
+    .mockResolvedValue({ filters: {}, display_filters, display_properties });
+  const issues = vi.spyOn(IssueListService.prototype, "listProject").mockReturnValue(new Promise<never>(() => {}));
   await act(async () =>
     root.render(
       <MemoryRouter>
@@ -89,7 +98,10 @@ it("preserves_domain_loading_without_issue_lists: module details and its own loa
     )
   );
   expect(fetch).toHaveBeenCalledExactlyOnceWith("m");
-  expect(issues).not.toHaveBeenCalled();
+  expect(preferences).toHaveBeenCalledExactlyOnceWith("m");
+  await vi.waitFor(() =>
+    expect(issues).toHaveBeenCalledExactlyOnceWith("p-proj", expect.objectContaining({ module_id: ["m"] }))
+  );
   expect(document.title).toBe("PROJ - Milestone");
   expect(container.textContent).toContain("Milestone");
   expect(container.textContent).not.toContain("Add work item");

@@ -1,5 +1,8 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
+import { useParams } from "react-router";
 import type { Module, Project } from "@nerve/api-client";
+import { useModules } from "@/hooks/store/use-modules";
+import { useProject } from "@/hooks/store/use-project";
 
 /** What a module's page's work items can be: read-only, or joinable by a new work item. */
 type ModuleListState = { readOnly: boolean; joinable: boolean };
@@ -14,4 +17,12 @@ type ModuleListState = { readOnly: boolean; joinable: boolean };
 export function moduleListState(module: Module | undefined, project: Project | undefined): ModuleListState {
   const readOnly = !module || module.archived_at !== null;
   return { readOnly, joinable: !readOnly && project?.module_view === true };
+}
+
+/** The route's module's list state (moduleListState), as its page shows it. */
+export function useModuleListState(): ModuleListState {
+  const { projectId, moduleId } = useParams();
+  const { getModuleById } = useModules();
+  const { getProjectById } = useProject();
+  return moduleListState(getModuleById(moduleId), getProjectById(projectId));
 }

@@ -35,7 +35,8 @@ type ListStoreType =
   | EIssuesStoreType.PROJECT
   | EIssuesStoreType.PROFILE
   | EIssuesStoreType.ARCHIVED
-  | EIssuesStoreType.CYCLE;
+  | EIssuesStoreType.CYCLE
+  | EIssuesStoreType.MODULE;
 
 interface IBaseListRoot {
   QuickActions: FC<IQuickActionProps>;

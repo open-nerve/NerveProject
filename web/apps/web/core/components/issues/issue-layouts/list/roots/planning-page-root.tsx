@@ -4,17 +4,19 @@ import { useParams } from "react-router";
 // nerve imports
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 // hooks
+import type { PlanningPageStoreType } from "@/hooks/planning-page-domains";
 import { useUserPermissions } from "@/hooks/store/user";
 // local imports
-import { PLANNING_PAGE_LAYOUTS, type PlanningPageLayoutStoreType } from "../../planning-page-layouts";
+import { PLANNING_PAGE_LAYOUTS } from "../../planning-page-layouts";
 import { BaseListRoot } from "../base-list-root";
 
 /**
  * The list of a planning page: the project page's, with the rows' quick actions of the page's domain, read-only as
- * the domain's list state says (a cycle's: once it has ended or is archived, P5b R5).
+ * the domain's list state says (a cycle's: once it has ended or is archived, P5b R5; a module's: once it is archived,
+ * P6b R9).
  */
 export const PlanningPageListLayout = observer(function PlanningPageListLayout(props: {
-  storeType: PlanningPageLayoutStoreType;
+  storeType: PlanningPageStoreType;
 }) {
   // router
   const { workspaceSlug } = useParams();

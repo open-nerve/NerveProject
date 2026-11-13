@@ -7,21 +7,22 @@ import { useTranslation } from "@nerve/i18n";
 import { EmptyStateDetailed } from "@nerve/propel/empty-state";
 import { EUserProjectRoles } from "@nerve/types";
 // hooks
-import { PLANNING_PAGE_DOMAINS } from "@/hooks/planning-page-domains";
+import { PLANNING_PAGE_DOMAINS, type PlanningPageStoreType } from "@/hooks/planning-page-domains";
 import { useCommandPalette } from "@/hooks/store/use-command-palette";
 import { useUserPermissions } from "@/hooks/store/user";
 import { useWorkItemFilterInstance } from "@/hooks/store/work-item-filters/use-work-item-filter-instance";
 // local imports
-import { PLANNING_PAGE_LAYOUTS, type PlanningPageLayoutStoreType } from "../planning-page-layouts";
+import { PLANNING_PAGE_LAYOUTS } from "../planning-page-layouts";
 
 /**
- * A planning page without work items to show (P5b spec 2.6, P6b spec 2.2), in its domain's words: once its list is
- * read-only (a cycle's: once the cycle has ended or is archived), only why; else the clearing of the page's filters
- * while any is applied; else a new work item of the page, for those who may create one in the project (as the project
- * page's) while the page's cycle takes them. Adding existing work items comes with P7 (R11).
+ * A planning page without work items to show (P5b spec 2.6, P6b spec 2.2, 2.7), in its domain's words: once its list is
+ * read-only (a cycle's: once the cycle has ended or is archived; a module's: once it is archived), only why; else the
+ * clearing of the page's filters while any is applied; else a new work item of the page, for those who may create one
+ * in the project (as the project page's) while the page's cycle or module takes them. Adding existing work items comes
+ * with P7 (R11).
  */
 export const PlanningPageEmptyState = observer(function PlanningPageEmptyState(props: {
-  storeType: PlanningPageLayoutStoreType;
+  storeType: PlanningPageStoreType;
 }) {
   const { storeType } = props;
   // router

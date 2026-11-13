@@ -3,13 +3,12 @@ import type { FC } from "react";
 import { ISSUE_DISPLAY_FILTERS_BY_PAGE } from "@nerve/constants";
 import { EIssuesStoreType } from "@nerve/types";
 import type { TWorkItemFilterProperty } from "@nerve/types";
+import type { PlanningPageStoreType } from "@/hooks/planning-page-domains";
 import { useCycleListState } from "@/hooks/use-cycle-list-state";
+import { useModuleListState } from "@/hooks/use-module-list-state";
 import type { PlanningDomain } from "@/lib/planning-switch";
 import type { IQuickActionProps } from "./list/list-view-types";
-import { CycleIssueQuickActions } from "./quick-action-dropdowns";
-
-/** The store types of the planning pages whose work items the shared layout pieces show: a cycle's. */
-export type PlanningPageLayoutStoreType = EIssuesStoreType.CYCLE;
+import { CycleIssueQuickActions, ModuleIssueQuickActions } from "./quick-action-dropdowns";
 
 /** An empty state's texts, by their keys. */
 type EmptyTexts = { title: string; description: string };
@@ -26,7 +25,7 @@ type PlanningPageLayout = {
   preferences: string;
   /** The filters the page offers: its own display options' (P5b R9). */
   filters: TWorkItemFilterProperty[];
-  /** The page's list state, as the page shows its cycle and its project: read-only, joinable by a new work item. */
+  /** The page's list state, as the page shows its cycle or module and its project: read-only, joinable by a new one. */
   useListState: () => { readOnly: boolean; joinable: boolean };
   /** A row's quick actions on the page. */
   QuickActions: FC<IQuickActionProps>;
@@ -35,7 +34,7 @@ type PlanningPageLayout = {
 };
 
 /** Each domain's row; the store type picks it. */
-export const PLANNING_PAGE_LAYOUTS: Record<PlanningPageLayoutStoreType, PlanningPageLayout> = {
+export const PLANNING_PAGE_LAYOUTS: Record<PlanningPageStoreType, PlanningPageLayout> = {
   [EIssuesStoreType.CYCLE]: {
     domain: "cycles",
     preferences: "CYCLE_ISSUE_FILTERS",
@@ -52,6 +51,27 @@ export const PLANNING_PAGE_LAYOUTS: Record<PlanningPageLayoutStoreType, Planning
         title: "project_empty_state.cycle_work_items.title",
         description: "project_empty_state.cycle_work_items.description",
         create: "project_empty_state.cycle_work_items.cta_primary",
+      },
+    },
+  },
+  [EIssuesStoreType.MODULE]: {
+    domain: "modules",
+    preferences: "MODULE_ISSUE_FILTERS",
+    filters: ISSUE_DISPLAY_FILTERS_BY_PAGE.module_issues.filters,
+    // read-only once the module is archived, whatever its status (P6b R9)
+    useListState: useModuleListState,
+    // the project page's, whose edit and copy dialogs are the module page's; the removal from the module comes with
+    // the rows' shared quick actions (P6b T10)
+    QuickActions: ModuleIssueQuickActions,
+    empty: {
+      readOnly: {
+        title: "project_module.empty_state.archived.title",
+        description: "project_module.empty_state.archived.description",
+      },
+      none: {
+        title: "project_empty_state.module_work_items.title",
+        description: "project_empty_state.module_work_items.description",
+        create: "project_empty_state.module_work_items.cta_primary",
       },
     },
   },
