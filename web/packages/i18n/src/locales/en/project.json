@@ -143,6 +143,10 @@
       "description": "The module you are looking for does not exist or has been deleted.",
       "action": "View other modules"
     },
+    "link": {
+      "added_at": "Added {time}",
+      "added_by": "Added {time} by {name}"
+    },
     "action": {
       "create": {
         "success": {

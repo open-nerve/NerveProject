@@ -171,7 +171,8 @@
         "web/apps/web/core/components/cycles/archived-cycles/root.tsx",
         "web/apps/web/core/components/cycles/active-cycle/root.tsx",
         "web/apps/web/core/components/power-k/ui/pages/open-entity/project-cycles-menu.tsx",
-        "web/apps/web/app/(all)/\\[workspaceSlug\\]/(projects)/projects/(detail)/\\[projectId\\]/modules/(detail)/\\[moduleId\\]/page.tsx"
+        "web/apps/web/app/(all)/\\[workspaceSlug\\]/(projects)/projects/(detail)/\\[projectId\\]/modules/(detail)/\\[moduleId\\]/page.tsx",
+        "web/apps/web/core/components/modules/links/use-metadata-refresh.ts"
       ],
       "rules": {
         "no-restricted-imports": [

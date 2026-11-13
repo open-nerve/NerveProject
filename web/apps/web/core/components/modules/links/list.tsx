@@ -4,46 +4,48 @@
  * See the LICENSE file for details.
  */
 
-import { useCallback } from "react";
 import { observer } from "mobx-react";
-// nerve types
-import type { ILinkDetails } from "@nerve/types";
-// components
-import { ModulesLinksListItem } from "@/components/modules";
+// nerve imports
+import type { ModuleLink } from "@nerve/api-client";
 // hooks
-import { useModule } from "@/hooks/store/use-module";
+import { useModules } from "@/hooks/store/use-modules";
+// local imports
+import { ModuleLinkItem } from "./list-item";
+import { useModuleLinkMetadataRefresh } from "./use-metadata-refresh";
 
 type Props = {
-  disabled?: boolean;
-  handleDeleteLink: (linkId: string) => void;
-  handleEditLink: (link: ILinkDetails) => void;
   moduleId: string;
+  /** Whether the caller changes and removes the links (the sidebar's root decides it). */
+  editable: boolean;
+  /** The links whose removal is out. */
+  removing: ReadonlySet<string>;
+  onEdit: (link: ModuleLink) => void;
+  onRemove: (link: ModuleLink) => void;
 };
 
+/**
+ * A module's links as nerve lists them, the latest added first (P6a spec 2.8): to every caller who reads the module.
+ * While they show, the links whose pages nerve has yet to read are read again, within bounds (R10).
+ */
 export const ModuleLinksList = observer(function ModuleLinksList(props: Props) {
-  const { moduleId, handleDeleteLink, handleEditLink, disabled } = props;
+  const { moduleId, editable, removing, onEdit, onRemove } = props;
   // store hooks
-  const { getModuleById } = useModule();
-  // derived values
-  const currentModule = getModuleById(moduleId);
-  const moduleLinks = currentModule?.link_module;
-  // memoized link handlers
-  const memoizedDeleteLink = useCallback((id: string) => handleDeleteLink(id), [handleDeleteLink]);
-  const memoizedEditLink = useCallback((link: ILinkDetails) => handleEditLink(link), [handleEditLink]);
-
-  if (!moduleLinks) return null;
+  const { getModuleLinks } = useModules();
+  useModuleLinkMetadataRefresh(moduleId);
+  const links = getModuleLinks(moduleId) ?? [];
 
   return (
-    <>
-      {moduleLinks.map((link) => (
-        <ModulesLinksListItem
+    <ul className="flex flex-col gap-3">
+      {links.map((link) => (
+        <ModuleLinkItem
           key={link.id}
-          handleDeleteLink={() => memoizedDeleteLink(link.id)}
-          handleEditLink={() => memoizedEditLink(link)}
-          isEditingAllowed={!disabled}
           link={link}
+          editable={editable}
+          removing={removing.has(link.id)}
+          onEdit={() => onEdit(link)}
+          onRemove={() => onRemove(link)}
         />
       ))}
-    </>
+    </ul>
   );
 });

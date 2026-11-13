@@ -60,12 +60,7 @@ export const ModuleDetailsSidebar = observer(function ModuleDetailsSidebar(props
         <ModuleSidebarDetails module={module} projectId={projectId} progress={progress} editable={editable} />
       </div>
       <ModuleProgress module={module} projectId={projectId} progress={progress} />
-      <ModuleSidebarLinks
-        moduleId={module.id}
-        workspaceSlug={workspaceSlug}
-        projectId={projectId}
-        editable={editable}
-      />
+      <ModuleSidebarLinks moduleId={module.id} editable={editable} />
     </div>
   );
 });

@@ -4,108 +4,108 @@
  * See the LICENSE file for details.
  */
 
-import { useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { observer } from "mobx-react";
 import { AddOutline, ChevronDownOutline, InfoOutline } from "@makeplane/propel/icons";
 import { Disclosure, Transition } from "@headlessui/react";
 // nerve imports
+import type { ModuleLink } from "@nerve/api-client";
 import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { ILinkDetails, ModuleLink } from "@nerve/types";
 // hooks
-import { useModule } from "@/hooks/store/use-module";
+import { useModules } from "@/hooks/store/use-modules";
+import { useRefusalToast } from "@/hooks/use-refusal-toast";
+// lib
+import { followInSession } from "@/lib/in-session";
 // local imports
-import { CreateUpdateModuleLinkModal, ModuleLinksList } from "../links";
+import { ModuleLinkModal } from "../links/create-update-modal";
+import { ModuleLinksList } from "../links/list";
 
 type Props = {
   moduleId: string;
-  workspaceSlug: string;
-  projectId: string;
   /** Whether the caller adds, changes and removes the module's links (the sidebar's root decides it). */
   editable: boolean;
 };
 
-/** The links of a module's progress sidebar, as the module store before nerve's had them. */
+/**
+ * The links of a module's progress sidebar (P6a spec 2.8, R10, R11), once the store has them: every caller who reads
+ * the module sees them, a guest too (none yet, it says so); the caller who writes the module (editable: canWriteModules,
+ * the module not archived) adds and changes them in the link's dialog, which is this section's, and removes them at
+ * once. A link goes once nerve has removed it, and the section says so; refused, it stays, and the section says why.
+ * Its follow-ups are those of the session and the sidebar it was asked from (followInSession): once the sidebar has
+ * gone, nerve's late answer reaches the store alone.
+ */
 export const ModuleSidebarLinks = observer(function ModuleSidebarLinks(props: Props) {
-  const { moduleId, workspaceSlug, projectId, editable } = props;
-  // states
-  const [moduleLinkModal, setModuleLinkModal] = useState(false);
-  const [selectedLinkToUpdate, setSelectedLinkToUpdate] = useState<ILinkDetails | null>(null);
-  // store hooks
+  const { moduleId, editable } = props;
+  // nerve hooks
   const { t } = useTranslation();
-  const { getModuleById, createModuleLink, updateModuleLink, deleteModuleLink } = useModule();
-  const links = getModuleById(moduleId)?.link_module ?? [];
+  // store hooks
+  const { getModuleLinks, removeLink } = useModules();
+  const toastRefusal = useRefusalToast();
+  // states
+  const [dialog, setDialog] = useState<{ isOpen: boolean; link?: ModuleLink }>({ isOpen: false });
+  const [removing, setRemoving] = useState<ReadonlySet<string>>(new Set());
+  const out = useRef(new Set<string>());
+  const mounted = useRef(false);
+  useLayoutEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+  const links = getModuleLinks(moduleId);
 
-  const handleCreateLink = async (formData: ModuleLink) => {
-    const payload = { metadata: {}, ...formData };
-    await createModuleLink(workspaceSlug, projectId, moduleId, payload);
+  const remove = async (link: ModuleLink) => {
+    if (out.current.has(link.id)) return;
+    out.current.add(link.id);
+    setRemoving(new Set(out.current));
+    await followInSession(() => removeLink(link.id), {
+      done: () => {
+        if (!mounted.current) return;
+        setToast({
+          type: TOAST_TYPE.SUCCESS,
+          title: t("links.toasts.removed.title"),
+          message: t("links.toasts.removed.message"),
+        });
+      },
+      failed: (error) => {
+        if (mounted.current) toastRefusal(error);
+      },
+    });
+    out.current.delete(link.id);
+    if (mounted.current) setRemoving(new Set(out.current));
   };
 
-  const handleUpdateLink = async (formData: ModuleLink, linkId: string) => {
-    const payload = { metadata: {}, ...formData };
-    await updateModuleLink(workspaceSlug, projectId, moduleId, linkId, payload);
-  };
-
-  const handleDeleteLink = async (linkId: string) => {
-    try {
-      await deleteModuleLink(workspaceSlug, projectId, moduleId, linkId);
-      setToast({
-        type: TOAST_TYPE.SUCCESS,
-        title: "Success!",
-        message: "Module link deleted successfully.",
-      });
-    } catch (_error) {
-      setToast({
-        type: TOAST_TYPE.ERROR,
-        title: "Error!",
-        message: "Some error occurred",
-      });
-    }
-  };
-
-  const handleEditLink = (link: ILinkDetails) => {
-    setSelectedLinkToUpdate(link);
-    setModuleLinkModal(true);
-  };
+  // the store has yet to read them: the section opens on what nerve gives
+  if (links === undefined) return null;
 
   const addLink = editable && (
     <button
+      type="button"
       className="flex items-center gap-1.5 text-13 font-medium text-accent-primary"
-      onClick={() => setModuleLinkModal(true)}
+      onClick={() => setDialog({ isOpen: true })}
     >
       <AddOutline className="h-3 w-3" />
-      {t("add_link")}
+      {t("common.add_link")}
     </button>
   );
 
   return (
     <div className="flex flex-col">
-      <CreateUpdateModuleLinkModal
-        isOpen={moduleLinkModal}
-        handleClose={() => {
-          setModuleLinkModal(false);
-          setTimeout(() => {
-            setSelectedLinkToUpdate(null);
-          }, 500);
-        }}
-        data={selectedLinkToUpdate}
-        createLink={handleCreateLink}
-        updateLink={handleUpdateLink}
+      <ModuleLinkModal
+        isOpen={dialog.isOpen}
+        handleClose={() => setDialog((shown) => ({ ...shown, isOpen: false }))}
+        moduleId={moduleId}
+        link={dialog.link}
       />
+
       <div className="flex w-full flex-col items-center justify-start gap-2 border-t border-subtle px-1.5 py-5">
         <Disclosure defaultOpen={links.length > 0}>
           {({ open }) => (
             <div className={`relative flex h-full w-full flex-col ${open ? "" : "flex-row"}`}>
               <Disclosure.Button className="flex w-full items-center justify-between gap-2 p-1.5">
-                <div className="flex items-center justify-start gap-2 text-13">
-                  <span className="font-medium text-secondary">{t("common.links")}</span>
-                </div>
-                <div className="flex items-center gap-2.5">
-                  <ChevronDownOutline
-                    className={`h-3.5 w-3.5 ${open ? "rotate-180 transform" : ""}`}
-                    aria-hidden="true"
-                  />
-                </div>
+                <span className="text-13 font-medium text-secondary">{t("common.links")}</span>
+                <ChevronDownOutline className={`h-3.5 w-3.5 ${open ? "rotate-180 transform" : ""}`} aria-hidden />
               </Disclosure.Button>
               <Transition as="div" show={open}>
                 <Disclosure.Panel>
@@ -115,9 +115,10 @@ export const ModuleSidebarLinks = observer(function ModuleSidebarLinks(props: Pr
                         {addLink && <div className="flex w-full items-center justify-end">{addLink}</div>}
                         <ModuleLinksList
                           moduleId={moduleId}
-                          handleEditLink={handleEditLink}
-                          handleDeleteLink={handleDeleteLink}
-                          disabled={!editable}
+                          editable={editable}
+                          removing={removing}
+                          onEdit={(link) => setDialog({ isOpen: true, link })}
+                          onRemove={(link) => void remove(link)}
                         />
                       </>
                     ) : (

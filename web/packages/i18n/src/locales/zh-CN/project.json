@@ -143,6 +143,10 @@
       "description": "你要找的模块不存在或已被删除。",
       "action": "查看其他模块"
     },
+    "link": {
+      "added_at": "添加于 {time}",
+      "added_by": "由 {name} 添加于 {time}"
+    },
     "action": {
       "create": {
         "success": {

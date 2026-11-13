@@ -8,7 +8,6 @@ export * from "./applied-filters";
 export * from "./dropdowns";
 export * from "./select";
 export * from "./form";
-export * from "./links";
 export * from "./modal";
 export * from "./modules-list-view";
 export * from "./module-card-item";
