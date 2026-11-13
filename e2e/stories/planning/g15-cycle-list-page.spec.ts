@@ -2,6 +2,11 @@ import { readProjectPreferences } from "../../fixtures/api";
 import { anotherTabSignsIn } from "../../fixtures/auth";
 import { followAccessToken } from "../../fixtures/browser";
 import { toast, turnCycles } from "../../fixtures/cycle-pages";
+import { changeCyclePreferences, cyclePreferencesRead } from "../../fixtures/cycles";
+import { closedByEscape, modalDialog } from "../../fixtures/dialogs";
+import { displayPanel } from "../../fixtures/issue-filters-page";
+import { expectListOrder, listGroup, scrollToLastListRow } from "../../fixtures/issue-list-page";
+import { listIssues, type Issue } from "../../fixtures/issues";
 import {
   bodiesSent,
   chooseFromRow,
@@ -9,11 +14,10 @@ import {
   deleteAttachment,
   dialogReads,
   headerCount,
-  layoutButton,
   listQueries,
   listRow,
   loadedAnew,
-  openCyclePage,
+  openListPage,
   quickAddButton,
   quietEachTime,
   rowEntries,
@@ -21,12 +25,8 @@ import {
   shownItems,
   tableOrder,
   weekdayThisMonth,
-} from "../../fixtures/cycle-list-pages";
-import { changeCyclePreferences, cyclePreferencesRead } from "../../fixtures/cycles";
-import { closedByEscape, modalDialog } from "../../fixtures/dialogs";
-import { displayPanel } from "../../fixtures/issue-filters-page";
-import { expectListOrder, listGroup, scrollToLastListRow } from "../../fixtures/issue-list-page";
-import { listIssues, type Issue } from "../../fixtures/issues";
+  workItemLayoutButton,
+} from "../../fixtures/planning-list-pages";
 import { expectPages, ids, idsDown, memberships } from "../../fixtures/planning-lists";
 import { moveWithinApp } from "../../fixtures/settings-pages";
 import { storedFile } from "../../fixtures/storage";
@@ -65,7 +65,7 @@ test("G15 (page): Now's page lists only Now's work items in the list, the board,
     return { layout: display_filters.layout, group_by: display_filters.group_by, id: display_properties.key };
   };
 
-  const { page, watch } = await openCyclePage(signedInPage, w.mem, w.path(now.id));
+  const { page, watch } = await openListPage(signedInPage, w.mem, w.path(now.id));
   const quiet = quietEachTime(page, watch);
   // Each layout lists Now's two work items, each in that layout's own place for it (a list's group, a board's column of
   // its state, the calendar's day of its date, the table), and nerve keeps the layout as the page's own.
@@ -85,9 +85,9 @@ test("G15 (page): Now's page lists only Now's work items in the list, the board,
   ).reduce(async (before, [layout, key]) => {
     await before;
     await test.step(`the ${layout.toLowerCase()} layout`, async () => {
-      if ((await layoutButton(page, layout).getAttribute("aria-pressed")) !== "true")
-        await layoutButton(page, layout).click();
-      await expect(layoutButton(page, layout)).toHaveAttribute("aria-pressed", "true");
+      if ((await workItemLayoutButton(page, layout).getAttribute("aria-pressed")) !== "true")
+        await workItemLayoutButton(page, layout).click();
+      await expect(workItemLayoutButton(page, layout)).toHaveAttribute("aria-pressed", "true");
       await expect(places[layout].filter({ has: rowOptions(page, "Build") })).toHaveCount(1);
       await expect(places[layout].filter({ has: rowOptions(page, "Plan") })).toHaveCount(1);
       await expect.poll(() => shownItems(page)).toEqual(["Build", "Plan"]);
@@ -98,7 +98,7 @@ test("G15 (page): Now's page lists only Now's work items in the list, the board,
 
   // The list grouped by priority, without the work items' IDs: as the page's own preferences, which it shows when
   // loaded again, in another browser of mem's.
-  await layoutButton(page, "List").click();
+  await workItemLayoutButton(page, "List").click();
   const panel = await displayPanel(page);
   const groupBy = panel.getByRole("button", { name: "Group by", exact: true });
   if ((await groupBy.getAttribute("aria-expanded")) !== "true") await groupBy.click();
@@ -108,7 +108,7 @@ test("G15 (page): Now's page lists only Now's work items in the list, the board,
   await page.keyboard.press("Escape");
   await expect.poll(saved).toEqual({ layout: "list", group_by: "priority", id: false });
   await loadedAnew(browser, baseURL ?? "", api, w.mem, w.path(now.id), async (again) => {
-    await expect(layoutButton(again, "List")).toHaveAttribute("aria-pressed", "true");
+    await expect(workItemLayoutButton(again, "List")).toHaveAttribute("aria-pressed", "true");
     await expectListOrder(listGroup(again, "High"), [build.id]);
     await expect.poll(() => shownItems(again)).toEqual(["Build", "Plan"]);
     await expect((await displayPanel(again)).getByRole("button", { name: "ID", exact: true })).toHaveAttribute(
@@ -135,7 +135,7 @@ test("G15 (page): Now's page lists only Now's work items in the list, the board,
   await quiet();
   await loadedAnew(browser, baseURL ?? "", api, w.mem, w.path(now.id), async (again, seen) => {
     await expect(again.getByText("Cycles is not enabled for this project.", { exact: true })).toBeVisible();
-    await expect(layoutButton(again, "List")).toHaveCount(0);
+    await expect(workItemLayoutButton(again, "List")).toHaveCount(0);
     expect(
       seen.apiRequests.filter(
         (request) => request.endsWith(`/projects/${w.web.id}/issues`) || request.includes("/me/cycles/")
@@ -207,7 +207,7 @@ test("G15 (page): Now's 51 work items, two with real attachments (1 and 3), page
     display_properties: { ...display_properties, attachment_count: true },
   });
 
-  const { page, watch } = await openCyclePage(signedInPage, w.mem, w.path(now.id));
+  const { page, watch } = await openListPage(signedInPage, w.mem, w.path(now.id));
   const queries = listQueries(page, w.web.id);
   const quiet = quietEachTime(page, watch);
   const group = listGroup(page, "Todo");
@@ -235,7 +235,7 @@ test("G15 (page): Now's 51 work items, two with real attachments (1 and 3), page
 
   // The table sorted by its header, the fewest attachments first: the page's own order, which nerve keeps, and by
   // which the list then pages the other way. Sorted back, the most first, the table shows each count.
-  await layoutButton(page, "Table").click();
+  await workItemLayoutButton(page, "Table").click();
   const table = page.getByRole("table");
   const heading = table.getByRole("columnheader", { name: "Attachments", exact: true });
   const sortBy = async (label: string, direction: string, first: string[]) => {
@@ -246,10 +246,10 @@ test("G15 (page): Now's 51 work items, two with real attachments (1 and 3), page
   };
   await sortBy("Least Most", "ascending", up.slice(0, 2));
   await expect.poll(async () => (await preferences()).display_filters.order_by).toBe("attachment_count");
-  await layoutButton(page, "List").click();
+  await workItemLayoutButton(page, "List").click();
   await pages(up);
   await quiet();
-  await layoutButton(page, "Table").click();
+  await workItemLayoutButton(page, "Table").click();
   await sortBy("Most Least", "descending", down.slice(0, 2));
   const cell = (issue: Issue) => table.locator("tr").filter({ has: page.locator(`td[id="issue-${issue.id}"]`) });
   await expect(cell(three)).toContainText("3 attachments");
@@ -271,7 +271,7 @@ test("G15 (page): Now's 51 work items, two with real attachments (1 and 3), page
   await quiet();
 
   // The list again: the first row moved from Todo to Done, then archived; the groups and the page count as nerve does.
-  await layoutButton(page, "List").click();
+  await workItemLayoutButton(page, "List").click();
   const first = await group
     .locator('[id^="issue_"]')
     .first()
@@ -306,7 +306,7 @@ test("G15 (page): on Now's page the header's new work item and a quick one each 
   await w.item("Finished", { cycle_id: ended.id });
   await w.end(ended.id);
 
-  const { page, watch } = await openCyclePage(signedInPage, w.mem, w.path(now.id));
+  const { page, watch } = await openListPage(signedInPage, w.mem, w.path(now.id));
   const quiet = quietEachTime(page, watch);
   const created = `/api/v0/projects/${w.web.id}/issues`;
   const bodies = await bodiesSent(page, browserName, "POST", created);
