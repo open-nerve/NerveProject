@@ -114,8 +114,8 @@ export const ModuleQuickActions = observer(function ModuleQuickActions(props: Pr
         <div className="fixed">
           <CreateUpdateModuleModal
             isOpen={editModal}
-            onClose={() => setEditModal(false)}
-            data={moduleDetails}
+            handleClose={() => setEditModal(false)}
+            moduleId={moduleId}
             projectId={projectId}
             workspaceSlug={workspaceSlug}
           />

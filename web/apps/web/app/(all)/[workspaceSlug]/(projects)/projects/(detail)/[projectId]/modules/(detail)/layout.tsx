@@ -8,12 +8,14 @@ import { Outlet } from "react-router";
 // components
 import { AppHeader } from "@/components/core/app-header";
 import { ContentWrapper } from "@/components/core/content-wrapper";
+import { ModuleActionsHost } from "@/components/modules/actions-host";
 import { ModuleIssuesHeader } from "./header";
 import type { Route } from "./+types/layout";
 
 export default function ProjectModuleIssuesLayout({ params }: Route.ComponentProps) {
+  // the module's dialogs and their follow-ups are the page's, and outlive the header's quick actions (ModuleActionsHost)
   return (
-    <>
+    <ModuleActionsHost workspaceSlug={params.workspaceSlug} projectId={params.projectId}>
       <AppHeader
         header={
           <ModuleIssuesHeader
@@ -26,6 +28,6 @@ export default function ProjectModuleIssuesLayout({ params }: Route.ComponentPro
       <ContentWrapper>
         <Outlet />
       </ContentWrapper>
-    </>
+    </ModuleActionsHost>
   );
 }

@@ -137,6 +137,21 @@
     "add_module": "添加模块",
     "update_module": "更新模块",
     "create_module": "创建模块",
+    "status": "状态",
+    "action": {
+      "create": {
+        "success": {
+          "title": "成功！",
+          "description": "模块创建成功。"
+        }
+      },
+      "update": {
+        "success": {
+          "title": "成功！",
+          "description": "模块更新成功。"
+        }
+      }
+    },
     "empty_state": {
       "sidebar": {
         "in_active": "此模块尚未激活。",

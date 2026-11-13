@@ -21,7 +21,7 @@ type Pressed = { variant?: string; onClick?: (event: { preventDefault: () => voi
 type Select = Field & { children?: ReactNode };
 /**
  * A search select: what it gives, how its list opens, the button it shows and its own button's place in the Tab
- * order, and its options, each by its value.
+ * order, its options, each by its value, and, as a form's field, whether it is refused and what describes it.
  */
 type SearchSelect = Field & {
   focusSearchOnOpen?: boolean;
@@ -29,6 +29,8 @@ type SearchSelect = Field & {
   customButton?: ReactNode;
   tabIndex?: number;
   options?: { value: string }[];
+  invalid?: boolean;
+  describedBy?: string;
 };
 /** A switch: what a flip does, whether it can be flipped, and its name. */
 type Toggle = { onCheckedChange: (checked: boolean) => unknown; disabled?: boolean; "aria-label"?: string };

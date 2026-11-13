@@ -8,13 +8,15 @@ import { Outlet } from "react-router";
 // components
 import { AppHeader } from "@/components/core/app-header";
 import { ContentWrapper } from "@/components/core/content-wrapper";
+import { ModuleActionsHost } from "@/components/modules/actions-host";
 import { ModulesListHeader } from "./header";
 import { ModulesListMobileHeader } from "./mobile-header";
 import type { Route } from "./+types/layout";
 
 export default function ProjectModulesListLayout({ params }: Route.ComponentProps) {
+  // the page's modules' dialogs outlive the row that asked for them (ModuleActionsHost)
   return (
-    <>
+    <ModuleActionsHost workspaceSlug={params.workspaceSlug} projectId={params.projectId}>
       <AppHeader
         header={<ModulesListHeader workspaceSlug={params.workspaceSlug} projectId={params.projectId} />}
         mobileHeader={<ModulesListMobileHeader />}
@@ -22,6 +24,6 @@ export default function ProjectModulesListLayout({ params }: Route.ComponentProp
       <ContentWrapper>
         <Outlet />
       </ContentWrapper>
-    </>
+    </ModuleActionsHost>
   );
 }

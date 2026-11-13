@@ -52,7 +52,7 @@ export const ProjectLevelModals = observer(function ProjectLevelModals(props: TP
       />
       <CreateUpdateModuleModal
         isOpen={isCreateModuleModalOpen}
-        onClose={() => toggleCreateModuleModal(false)}
+        handleClose={() => toggleCreateModuleModal(false)}
         workspaceSlug={workspaceSlug}
         projectId={projectId}
       />

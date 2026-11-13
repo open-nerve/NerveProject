@@ -137,6 +137,21 @@
     "add_module": "Add Module",
     "update_module": "Update Module",
     "create_module": "Create Module",
+    "status": "Status",
+    "action": {
+      "create": {
+        "success": {
+          "title": "Success!",
+          "description": "Module created successfully."
+        }
+      },
+      "update": {
+        "success": {
+          "title": "Success!",
+          "description": "Module updated successfully."
+        }
+      }
+    },
     "empty_state": {
       "sidebar": {
         "in_active": "This module isn't active yet.",

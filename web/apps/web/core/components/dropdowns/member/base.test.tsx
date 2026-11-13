@@ -78,6 +78,27 @@ describe("MemberDropdownBase", () => {
     expect([shown.searchSelects[0]?.tabIndex, button.includes("tabindex=")]).toEqual([3, false]);
   });
 
+  // a form's field (a module's lead and members, P6a spec 2.7): its message describes the select, which nerve refused
+  it("gives the select what its form says of it: refused, and described by the message", () => {
+    emptyShown();
+    renderToStaticMarkup(
+      <MemberDropdownBase
+        getUserDetails={() => undefined}
+        memberIds={["u-me"]}
+        multiple
+        value={[]}
+        onChange={() => {}}
+        buttonVariant="border-with-text"
+        invalid
+        describedBy="members-message"
+      />
+    );
+    const field = shown.searchSelects.map(({ invalid, describedBy }) => [invalid, describedBy]);
+    render();
+    const plain = shown.searchSelects.map(({ invalid, describedBy }) => [invalid, describedBy]);
+    expect([field, plain]).toEqual([[[true, "members-message"]], [[undefined, undefined]]]);
+  });
+
   it("keeps its list 12 pixels inside the window", () => {
     render();
     expect(shown.searchSelects[0]?.popperModifiers).toEqual([{ name: "preventOverflow", options: { padding: 12 } }]);

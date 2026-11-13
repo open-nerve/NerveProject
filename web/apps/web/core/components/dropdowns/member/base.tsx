@@ -54,6 +54,8 @@ export const MemberDropdownBase = observer(function MemberDropdownBase(props: TM
     getUserDetails,
     hideIcon = false,
     icon,
+    invalid,
+    describedBy,
     memberIds,
     onClose,
     onDropdownOpen,
@@ -165,6 +167,9 @@ export const MemberDropdownBase = observer(function MemberDropdownBase(props: TM
       onOpen={onDropdownOpen}
       onClose={onClose}
       disabled={disabled}
+      // as one of a form's fields, its button is refused and described by the field's message
+      invalid={invalid}
+      describedBy={describedBy}
       // Tab stops at the select's native trigger once; DropdownButton is its presentation content.
       tabIndex={tabIndex}
       placement={placement}
