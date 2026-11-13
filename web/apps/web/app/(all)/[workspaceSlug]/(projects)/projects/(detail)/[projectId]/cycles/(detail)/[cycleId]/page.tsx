@@ -16,14 +16,14 @@ import emptyCycle from "@/app/assets/empty-state/cycle.svg?url";
 import { EmptyState } from "@/components/common/empty-state";
 import { PageHead } from "@/components/core/page-title";
 import { CycleDetailsSidebar } from "@/components/cycles/progress-sidebar";
-import { CyclesReadFailure } from "@/components/cycles/read-failure";
 import { TransferIssues } from "@/components/cycles/transfer-issues";
 import { CycleLayoutRoot } from "@/components/issues/issue-layouts/roots/cycle-layout-root";
+import { PlanningReadFailure } from "@/components/planning/read-failure";
 // hooks
 import { useCycles } from "@/hooks/store/use-cycles";
 import { useProject } from "@/hooks/store/use-project";
-import { useUserPermissions } from "@/hooks/store/user";
 import useLocalStorage from "@/hooks/use-local-storage";
+import { usePlanningReads } from "@/hooks/use-planning-reads";
 // lib
 import { problemCode } from "@/lib/api-error";
 import { useSessionSWR } from "@/lib/use-session-swr";
@@ -51,14 +51,12 @@ function CycleDetailPage({ params }: Route.ComponentProps) {
   // store hooks
   const { getCycleById, fetchCycle, fetchProgress, fetchCycles, fetchArchivedCycles } = useCycles();
   const { getProjectById } = useProject();
-  const { getProjectRoleByWorkspaceSlugAndProjectId } = useUserPermissions();
   // hooks
   const { setValue, storedValue } = useLocalStorage("cycle_sidebar_collapsed", false);
 
   // a member's reads, of a project not archived: nerve's read of the project decided both (ProjectAuthWrapper)
   const project = getProjectById(projectId);
-  const readable =
-    getProjectRoleByWorkspaceSlugAndProjectId(workspaceSlug, projectId) !== undefined && project?.archived_at === null;
+  const { readable } = usePlanningReads(workspaceSlug, projectId, "cycles");
   const read = useSessionSWR(readable ? ["CYCLE", cycleId] : null, (id) => fetchCycle(id));
   const progress = useSessionSWR(readable ? ["CYCLE_PROGRESS", cycleId] : null, (id) => fetchProgress(id));
   // the route's project's cycle alone: one of another project is not found here
@@ -101,7 +99,7 @@ function CycleDetailPage({ params }: Route.ComponentProps) {
 
   if (failed.length > 0)
     return (
-      <CyclesReadFailure error={failed[0]?.error} onRetry={() => failed.forEach((fetch) => void fetch.mutate())} />
+      <PlanningReadFailure error={failed[0]?.error} onRetry={() => failed.forEach((fetch) => void fetch.mutate())} />
     );
 
   if (cycle === undefined)

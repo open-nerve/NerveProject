@@ -16,10 +16,11 @@ type Props = {
 };
 
 /**
- * Why nerve could not read what a page of cycles shows (P5a spec 2.5: their list, their archive, a cycle's page and its
- * preview), in the page's language, and a retry: a read that failed never leaves the page waiting.
+ * Why nerve could not read what a page of cycles or of modules shows (P5a spec 2.5, P6a spec 2.5: their list, their
+ * archive, a cycle's or a module's page and its preview), in the page's language, and a retry: a read that failed
+ * never leaves the page waiting.
  */
-export function CyclesReadFailure({ error, onRetry }: Props) {
+export function PlanningReadFailure({ error, onRetry }: Props) {
   const { t } = useTranslation();
   const refusalMessage = useRefusalMessage();
   return (

@@ -5,10 +5,10 @@
 
 import type { AssigneeDistribution, Label, LabelDistribution, MemberUser } from "@nerve/api-client";
 
-// The rows of a cycle's work items by assignee and by label, named for the page (P5a spec 2.4). nerve's rows carry
-// ids alone (P4 R3): the project's members and labels give the names. One no longer the project's (a member who left,
-// a deleted label: a frozen progress keeps them) is named by a fallback text; the work items without any are the
-// row with a null id, named so too.
+// The rows of a cycle's or a module's work items by assignee and by label, named for the page (P5a spec 2.4, P6a spec
+// 2.5). nerve's rows carry ids alone (P4 R3): the project's members and labels give the names. One no longer the
+// project's (a member who left, a deleted label: a frozen progress keeps them) is named by a fallback text; the work
+// items without any are the row with a null id, named so too.
 
 /** The page's text of a key (useTranslation's t). */
 type Translate = (key: string) => string;

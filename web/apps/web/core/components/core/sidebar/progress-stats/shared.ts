@@ -7,6 +7,7 @@
 import type { TWorkItemFilterCondition } from "@nerve/shared-state";
 import type { TWorkItemFilterProperty } from "@nerve/types";
 
+/** The tabs of a progress's breakdowns, in their order: by state, by assignee, by label (progress-tabs.tsx). */
 export const PROGRESS_STATS = [
   {
     key: "stat-states",
@@ -20,7 +21,7 @@ export const PROGRESS_STATS = [
     key: "stat-labels",
     i18n_title: "common.labels",
   },
-];
+] as const;
 
 /**
  * The choice of a row of a progress's breakdown on a page whose filters it toggles (P5b spec 2.8): the row's value

@@ -5,7 +5,7 @@
  */
 
 import React, { useMemo, useState } from "react";
-import { Area, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis, Line, ComposedChart, CartesianGrid } from "recharts";
+import { Area, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis, ComposedChart, CartesianGrid } from "recharts";
 // nerve imports
 import { AXIS_LABEL_CLASSNAME } from "@nerve/constants";
 import type { TAreaChartProps } from "@nerve/types";
@@ -31,7 +31,6 @@ export const AreaChart = React.memo(function AreaChart<K extends string, T exten
     },
     customTicks,
     showTooltip = true,
-    comparisonLine,
   } = props;
   // states
   const [activeArea, setActiveArea] = useState<string | null>(null);
@@ -86,26 +85,6 @@ export const AreaChart = React.memo(function AreaChart<K extends string, T exten
     [activeLegend, areas]
   );
 
-  // create comparison line data for straight line from origin to last point
-  const comparisonLineData = useMemo(() => {
-    if (!data || data.length === 0) return [];
-    // get the last data point
-    const lastPoint = data[data.length - 1];
-    // for the y-value in the last point, use its yAxis key value
-    const lastYValue = lastPoint[yAxis.key] ?? 0;
-    // create data for a straight line that has points at each x-axis position
-    return data.map((item, index) => {
-      // calculate the y value for this point on the straight line
-      // using linear interpolation between (0,0) and (last_x, last_y)
-      const ratio = index / (data.length - 1);
-      const interpolatedValue = ratio * lastYValue;
-
-      return {
-        [xAxis.key]: item[xAxis.key],
-        comparisonLine: interpolatedValue,
-      };
-    });
-  }, [data, xAxis.key, yAxis.key]);
   return (
     <div className={className}>
       <ResponsiveContainer width="100%" height="100%">
@@ -189,20 +168,6 @@ export const AreaChart = React.memo(function AreaChart<K extends string, T exten
             />
           )}
           {renderAreas}
-          {comparisonLine && (
-            <Line
-              data={comparisonLineData}
-              type="linear"
-              dataKey="comparisonLine"
-              stroke={comparisonLine.strokeColor}
-              fill={comparisonLine.strokeColor}
-              strokeWidth={2}
-              strokeDasharray={comparisonLine.dashedLine ? "4 4" : "none"}
-              activeDot={false}
-              legendType="none"
-              name="Comparison line"
-            />
-          )}
         </ComposedChart>
       </ResponsiveContainer>
     </div>

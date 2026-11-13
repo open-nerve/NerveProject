@@ -14,8 +14,8 @@ import { calculateTotalFilters } from "@nerve/utils";
 import { PageHead } from "@/components/core/page-title";
 import { CycleAppliedFiltersList } from "@/components/cycles/applied-filters";
 import { CyclesView } from "@/components/cycles/cycles-view";
-import { CyclesDisabled } from "@/components/cycles/disabled";
-import { CyclesReadFailure } from "@/components/cycles/read-failure";
+import { PlanningDisabled } from "@/components/planning/disabled";
+import { PlanningReadFailure } from "@/components/planning/read-failure";
 import { CycleModuleListLayoutLoader } from "@/components/ui/loader/cycle-module-list-loader";
 // hooks
 import { useCommandPalette } from "@/hooks/store/use-command-palette";
@@ -23,6 +23,8 @@ import { useCycleFilters } from "@/hooks/store/use-cycle-filters";
 import { useCycles } from "@/hooks/store/use-cycles";
 import { useProject } from "@/hooks/store/use-project";
 import { useUserPermissions } from "@/hooks/store/user";
+import { planningOn } from "@/hooks/planning-switch";
+import { usePlanningReads } from "@/hooks/use-planning-reads";
 // lib
 import { useSessionSWR } from "@/lib/use-session-swr";
 import type { Route } from "./+types/page";
@@ -42,12 +44,11 @@ function ProjectCyclesPage({ params }: Route.ComponentProps) {
   const { getProjectCycleIds, fetchCycles } = useCycles();
   const { getFilters } = useCycleFilters();
   const { getProjectById } = useProject();
-  const { getProjectRoleByWorkspaceSlugAndProjectId, canWriteCycles } = useUserPermissions();
+  const { canWriteCycles } = useUserPermissions();
   const { toggleCreateCycleModal } = useCommandPalette();
   // a member's read, of a project not archived whose cycles are on: as the project's wrapper reads them
   const project = getProjectById(projectId);
-  const role = getProjectRoleByWorkspaceSlugAndProjectId(workspaceSlug, projectId);
-  const listed = role !== undefined && project?.archived_at === null && project.cycle_view;
+  const { listed } = usePlanningReads(workspaceSlug, projectId, "cycles");
   const cycles = useSessionSWR(listed ? ["PROJECT_CYCLES", projectId] : null, (id) => fetchCycles(id));
   const cycleIds = getProjectCycleIds(projectId);
 
@@ -55,18 +56,18 @@ function ProjectCyclesPage({ params }: Route.ComponentProps) {
 
   const pageHead = <PageHead title={`${project.name} - ${t("common.cycles", { count: 2 })}`} />;
 
-  if (!project.cycle_view)
+  if (!planningOn(project, "cycles"))
     return (
       <>
         {pageHead}
-        <CyclesDisabled workspaceSlug={workspaceSlug} projectId={projectId} />
+        <PlanningDisabled workspaceSlug={workspaceSlug} projectId={projectId} domain="cycles" />
       </>
     );
 
   if (!listed) return null;
 
   if (cycles.error !== undefined)
-    return <CyclesReadFailure error={cycles.error} onRetry={() => void cycles.mutate()} />;
+    return <PlanningReadFailure error={cycles.error} onRetry={() => void cycles.mutate()} />;
 
   if (cycleIds === undefined) return <CycleModuleListLayoutLoader />;
 
