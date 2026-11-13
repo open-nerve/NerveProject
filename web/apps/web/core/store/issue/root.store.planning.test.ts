@@ -123,3 +123,31 @@ it("a cycle page's list follows confirmed moves and creations by the answered cy
   expect(ids(project)).toEqual(["a", "b", "n", "c", "d"]);
   expect(project.value?.total).toBe(5);
 });
+
+// M6 P6b spec 2.5, R5, R6: the writes pass the caller's modules through, the whole set; nerve alone decides on them.
+it("a creation sends the modules it is created in", async () => {
+  const { app, nerve } = tab;
+  const request = await requestedIssue(
+    nerve,
+    () => app.issue.projectIssues.createIssue("ws", "A", { name: "R1", module_ids: [M1, M2] }),
+    ["POST", "/api/v0/projects/A/issues"]
+  );
+  expect(request.call.body).toEqual({ name: "R1", module_ids: [M1, M2] });
+  request.call.answer(json(201, { ...issueDetailOf("R1"), sort_order: 10, module_ids: [M1, M2] }));
+  await request.promise;
+  expect(app.issue.issues.getIssueById("R1")?.module_ids).toEqual([M1, M2]);
+});
+
+it.each([[[M2]], [[]]])("an update sends the modules %j it is in afterwards", async (module_ids) => {
+  await listed({}, [listIssue("a", 1, { module_ids: [M1] })]);
+  const { app, nerve } = tab;
+  const request = await requestedIssue(
+    nerve,
+    () => app.issue.projectIssues.updateIssue("ws", "A", "a", { module_ids }),
+    ["PATCH", "/api/v0/issues/a"]
+  );
+  expect(request.call.body).toEqual({ module_ids });
+  request.call.answer(json(200, { ...issueDetailOf("a"), sort_order: 1, module_ids, updated_at: LATER }));
+  await request.promise;
+  expect(app.issue.issues.getIssueById("a")?.module_ids).toEqual(module_ids);
+});

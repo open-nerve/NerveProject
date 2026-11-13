@@ -28,6 +28,7 @@ import type { IProjectIssuesFilter, IProjectIssues } from "./project";
 import { ProjectIssuesFilter, ProjectIssues } from "./project";
 import { CycleIssues, type ICycleIssues } from "./cycle/issue.store";
 import { CyclePriorityIssues } from "./cycle/priority-issues.store";
+import { ModuleIssues, type IModuleIssues } from "./module/issue.store";
 import { PagePreferencesFilter, type IPagePreferencesFilter } from "./helpers/page-preferences-filter.store";
 import type { IWorkspaceDraftIssues } from "./workspace-draft";
 import { WorkspaceDraftIssues } from "./workspace-draft";
@@ -38,6 +39,7 @@ import { IssueApiService } from "@/services/issue/issue-api.service";
 import { IssueListService } from "@/services/issue/issue-list.service";
 import { IssueSearchService } from "@/services/issue/issue-search.service";
 import { CyclePreferencesService } from "@/services/planning/cycle-preferences.service";
+import { ModulePreferencesService } from "@/services/planning/module-preferences.service";
 import { SessionChangedError } from "@/lib/auth/token-manager";
 import type { IssueListBinding } from "./helpers/issue-list-binding";
 import { PermissionReads } from "./permission-reads";
@@ -103,6 +105,14 @@ export class IssueRootStore {
    * page's (P5b R7), the one of this generation (re-66 M4).
    */
   cyclePriorityIssues: CyclePriorityIssues;
+
+  /**
+   * The module page's preferences (`/me/modules/{id}/preferences`), by module id as the cycle page's (P6b spec 2.4): no
+   * route followed; it ends with this generation (assertActive).
+   */
+  moduleIssuesFilter: IPagePreferencesFilter;
+  /** The module page's list, one binding per module, with the module's creation and removal (P6b spec 2.5). */
+  moduleIssues: IModuleIssues;
 
   archivedIssuesFilter: IArchivedIssuesFilter;
   archivedIssues: IArchivedIssues;
@@ -186,6 +196,13 @@ export class IssueRootStore {
     this.cycleIssuesFilter = new PagePreferencesFilter(this, new CyclePreferencesService(api), EIssuesStoreType.CYCLE);
     this.cycleIssues = new CycleIssues(this, this.cycleIssuesFilter);
     this.cyclePriorityIssues = new CyclePriorityIssues(this);
+
+    this.moduleIssuesFilter = new PagePreferencesFilter(
+      this,
+      new ModulePreferencesService(api),
+      EIssuesStoreType.MODULE
+    );
+    this.moduleIssues = new ModuleIssues(this, this.moduleIssuesFilter);
 
     this.archivedIssuesFilter = new ArchivedIssuesFilter(this);
     this.archivedIssues = new ArchivedIssues(this, this.archivedIssuesFilter);

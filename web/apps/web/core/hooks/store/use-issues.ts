@@ -14,6 +14,7 @@ import { StoreContext } from "@/lib/store-context";
 import type { IArchivedIssues, IArchivedIssuesFilter } from "@/store/issue/archived";
 import type { ICycleIssues } from "@/store/issue/cycle/issue.store";
 import type { IPagePreferencesFilter } from "@/store/issue/helpers/page-preferences-filter.store";
+import type { IModuleIssues } from "@/store/issue/module/issue.store";
 import type { IProfileIssues, IProfileIssuesFilter } from "@/store/issue/profile";
 import type { IProjectIssues, IProjectIssuesFilter } from "@/store/issue/project";
 import type { IWorkspaceDraftIssues } from "@/store/issue/workspace-draft";
@@ -41,6 +42,11 @@ export type TStoreIssues = {
   /** The cycle page's list and preferences, by the cycle each call names; neither follows the route. */
   [EIssuesStoreType.CYCLE]: defaultIssueStore & {
     issues: ICycleIssues;
+    issuesFilter: IPagePreferencesFilter;
+  };
+  /** The module page's list and preferences, by the module each call names; neither follows the route. */
+  [EIssuesStoreType.MODULE]: defaultIssueStore & {
+    issues: IModuleIssues;
     issuesFilter: IPagePreferencesFilter;
   };
   [EIssuesStoreType.DEFAULT]: defaultIssueStore & {

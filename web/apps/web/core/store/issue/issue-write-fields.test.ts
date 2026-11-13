@@ -97,3 +97,25 @@ it("skip_activity without description_html, beside another field, or not a boole
     refused
   );
 });
+// M6 P6b spec 2.5: the modules are passed through as the caller gives them; nerve alone decides whether they may be.
+it("a creation sends the modules it is given and leaves out none it is not", () => {
+  expect(sent(createBody(withHeld({ name: "Write the notes", module_ids: ["M1", "M2"] })))).toStrictEqual({
+    name: "Write the notes",
+    module_ids: ["M1", "M2"],
+  });
+  expect(sent(createBody({ name: "Write the notes", module_ids: [] }))).toStrictEqual({
+    name: "Write the notes",
+    module_ids: [],
+  });
+  expect(sent(createBody({ name: "Write the notes", module_ids: undefined }))).toStrictEqual({
+    name: "Write the notes",
+  });
+});
+it("an update sends the whole set of modules it is given, empty for none, and leaves them out when not given", () => {
+  expect(sent(updateBody(withHeld({ module_ids: ["M2", "M3"] })))).toStrictEqual({ module_ids: ["M2", "M3"] });
+  expect(sent(updateBody({ module_ids: [] }))).toStrictEqual({ module_ids: [] });
+  expect(sent(updateBody({ name: "Write the notes", module_ids: undefined }))).toStrictEqual({
+    name: "Write the notes",
+  });
+  expect(() => updateBody({ description_html: "<p>same</p>", skip_activity: true, module_ids: [] })).toThrow(refused);
+});

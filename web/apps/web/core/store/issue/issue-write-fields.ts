@@ -13,9 +13,13 @@ export const createBody = (input: IssueCreate): IssueCreate => ({
   target_date: input.target_date,
   parent_id: input.parent_id,
   cycle_id: input.cycle_id,
+  module_ids: input.module_ids,
 });
 
-/** The fields of an update the web sends; `skip_activity` goes only with `description_html` alone. */
+/**
+ * The fields of an update the web sends; `skip_activity` goes only with `description_html` alone. `module_ids` is the
+ * work item's whole new set: a caller works it out from the held set when its turn comes (P6b spec 2.5, R5).
+ */
 export function updateBody(input: IssueUpdate): IssueUpdate {
   const body: IssueUpdate = {
     name: input.name,
@@ -29,6 +33,7 @@ export function updateBody(input: IssueUpdate): IssueUpdate {
     target_date: input.target_date,
     parent_id: input.parent_id,
     cycle_id: input.cycle_id,
+    module_ids: input.module_ids,
     skip_activity: input.skip_activity,
   };
   if (
