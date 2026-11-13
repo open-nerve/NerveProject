@@ -4,7 +4,7 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import type { PlanningDomain } from "@/hooks/planning-switch";
+import type { PlanningDomain } from "@/lib/planning-switch";
 import { callerInWeb, its, type Caller } from "@/store/user/fake-permissions";
 import type { IUserPermissionStore } from "@/store/user/permissions.store";
 import { PlanningDisabled } from "./disabled";

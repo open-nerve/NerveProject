@@ -23,9 +23,9 @@ import { useCycleFilters } from "@/hooks/store/use-cycle-filters";
 import { useCycles } from "@/hooks/store/use-cycles";
 import { useProject } from "@/hooks/store/use-project";
 import { useUserPermissions } from "@/hooks/store/user";
-import { planningOn } from "@/hooks/planning-switch";
 import { usePlanningReads } from "@/hooks/use-planning-reads";
 // lib
+import { planningOn } from "@/lib/planning-switch";
 import { useSessionSWR } from "@/lib/use-session-swr";
 import type { Route } from "./+types/page";
 

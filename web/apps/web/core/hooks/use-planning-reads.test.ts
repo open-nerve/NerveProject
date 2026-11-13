@@ -5,12 +5,12 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Project } from "@nerve/api-client";
+import { planningOn } from "@/lib/planning-switch";
 import { loadArchivedProjects, loadProjects, projectOf } from "@/store/project/fake-projects";
 import type { IProjectStore } from "@/store/project/project.store";
 import { its, permissionsOver, type Caller } from "@/store/user/fake-permissions";
 import type { IUserPermissionStore } from "@/store/user/permissions.store";
 import { workspaceOf } from "@/store/workspace/fake-workspaces";
-import { planningOn } from "./planning-switch";
 
 // The one gate of what a page of a project's cycles or modules reads (P6a spec 2.3, R3): the project is readable to a
 // caller who has a role in it, a guest too, while it is not archived; its list of a domain is read while it is

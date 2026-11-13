@@ -14,8 +14,9 @@ const SWITCH: Record<PlanningDomain, "cycle_view" | "module_view"> = { cycles: "
 /**
  * Whether the project's domain is turned on (Project.cycle_view, module_view): while it is off, the list of the
  * domain's page is its turned-off state and nothing of the list is read (P5a spec 2.2, P6a spec 2.2, 2.3). The one
- * predicate that the project's wrapper (use-project-fetch.ts) and the gate of the domain's pages (use-planning-reads.ts)
- * decide by; a store-free module of its own, for the wrapper reads no permission store.
+ * predicate that the project's wrapper (use-project-fetch.ts), the gate of the domain's pages (use-planning-reads.ts)
+ * and the permission store's write gates (planningWritesRefused) decide by; a store-free module of lib, for the wrapper
+ * reads no permission store and a store depends on lib, not on hooks.
  */
 export function planningOn(project: Pick<Project, "cycle_view" | "module_view">, domain: PlanningDomain): boolean {
   return project[SWITCH[domain]];

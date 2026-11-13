@@ -10,13 +10,13 @@ import { useLabel } from "@/hooks/store/use-label";
 import { useMember } from "@/hooks/store/use-member";
 import { useModules } from "@/hooks/store/use-modules";
 import { useProject } from "@/hooks/store/use-project";
-import { planningOn } from "@/hooks/planning-switch";
 import { useProjectRead } from "@/hooks/use-project-read";
 import { useProjectPreferences } from "@/hooks/store/use-project-preferences";
 import { useProjectState } from "@/hooks/store/use-project-state";
 import { useWorkspace } from "@/hooks/store/use-workspace";
 // lib
 import { problemCode } from "@/lib/api-error";
+import { planningOn } from "@/lib/planning-switch";
 import { useSessionSWR } from "@/lib/use-session-swr";
 
 /**

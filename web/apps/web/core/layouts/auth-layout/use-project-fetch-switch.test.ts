@@ -11,7 +11,7 @@ import { projectOf } from "@/store/project/fake-projects";
 import { workspaceOf } from "@/store/workspace/fake-workspaces";
 
 // The project's wrapper fetches its cycles and its modules by the switch predicate the pages' gate reads (P6a spec
-// 2.3, R3: planningOn, planning-switch.ts), one predicate for both, under its own decision that the caller is a
+// 2.3, R3: planningOn, lib/planning-switch.ts), one predicate for both, under its own decision that the caller is a
 // member of the project (nerve's read of it). The predicate is a stand-in here that answers what the test says, so
 // the wrapper is seen to follow it, not the project's own fields; use-project-fetch.test.ts has the rest.
 
@@ -19,7 +19,7 @@ const gate = vi.hoisted(() => ({
   on: { cycles: true, modules: true } as Record<"cycles" | "modules", boolean>,
   asked: [] as string[],
 }));
-vi.mock("@/hooks/planning-switch", () => ({
+vi.mock("@/lib/planning-switch", () => ({
   planningOn: (project: Project, domain: "cycles" | "modules") => {
     gate.asked.push(`${domain} of ${project.id}`);
     return gate.on[domain];

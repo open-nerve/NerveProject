@@ -11,8 +11,8 @@ import type { TUserPermissions, TUserPermissionsLevel } from "@nerve/constants";
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import type { EUserProjectRoles } from "@nerve/types";
 import { EUserWorkspaceRoles } from "@nerve/types";
-// hooks
-import { planningOn, type PlanningDomain } from "@/hooks/planning-switch";
+// lib
+import { planningOn, type PlanningDomain } from "@/lib/planning-switch";
 // store
 import type { RootStore } from "@/store/root.store";
 

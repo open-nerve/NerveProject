@@ -2511,7 +2511,7 @@
             "web/apps/web/core/components/core/sidebar/distribution-rows.ts",
             "web/apps/web/core/components/planning/disabled.test.tsx",
             "web/apps/web/core/hooks/use-planning-reads.test.ts",
-            "web/apps/web/core/hooks/planning-switch.ts",
+            "web/apps/web/core/lib/planning-switch.ts",
             "web/apps/web/core/components/modules/actions-host.test.tsx",
             "web/apps/web/core/components/modules/modal.test.tsx",
             "web/apps/web/core/components/modules/select/status.test.tsx",

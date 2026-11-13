@@ -17,8 +17,9 @@ import lightModules from "@/app/assets/empty-state/disabled-feature/modules-ligh
 // components
 import { DetailedEmptyState } from "@/components/empty-state/detailed-empty-state-root";
 // hooks
-import type { PlanningDomain } from "@/hooks/planning-switch";
 import { useUserPermissions } from "@/hooks/store/user";
+// lib
+import type { PlanningDomain } from "@/lib/planning-switch";
 
 type Props = { workspaceSlug: string; projectId: string; domain: PlanningDomain };
 

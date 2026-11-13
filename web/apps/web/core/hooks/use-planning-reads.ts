@@ -6,8 +6,8 @@
 // hooks
 import { useProject } from "@/hooks/store/use-project";
 import { useUserPermissions } from "@/hooks/store/user";
-// local imports
-import { planningOn, type PlanningDomain } from "./planning-switch";
+// lib
+import { planningOn, type PlanningDomain } from "@/lib/planning-switch";
 
 /** What a page of a project's cycles or modules reads of them. */
 type PlanningReads = {
