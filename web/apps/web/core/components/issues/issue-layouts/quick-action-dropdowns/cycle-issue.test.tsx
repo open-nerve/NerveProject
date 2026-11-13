@@ -11,7 +11,7 @@ import { EIssuesStoreType } from "@nerve/types";
 import type { RootStore } from "@/store/root.store";
 import { IssueListCommandHost } from "../command-host";
 import { C1, planningPageTab } from "../roots/fake-planning-page";
-import { CycleIssueQuickActions } from "./cycle-issue";
+import { PlanningPageIssueQuickActions } from "./planning-page-issue";
 import { listIssue } from "@/store/issue/fake-issues";
 
 const bound = vi.hoisted(() => ({ app: undefined as RootStore | undefined, params: {} as Record<string, string> }));
@@ -45,11 +45,11 @@ async function offersRemoval(fields: Parameters<typeof planningPageTab>[1], read
   await page.render(
     <MemoryRouter>
       <IssueListCommandHost>
-        <CycleIssueQuickActions
+        <PlanningPageIssueQuickActions
           issue={listIssue("first", 1000, { cycle_id: C1 })}
           parentRef={{ current: host }}
           handleDelete={async () => {}}
-          handleUpdate={async () => {}}
+          handleRemoveFromView={async () => {}}
           readOnly={readOnly}
         />
       </IssueListCommandHost>

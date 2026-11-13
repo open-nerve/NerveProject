@@ -71,6 +71,7 @@ export const BaseKanBanRoot = observer(function BaseKanBanRoot(props: IBaseKanBa
     createIssue,
     updateIssue,
     removeIssue,
+    removeIssueFromView,
     archiveIssue,
     restoreIssue,
     updateFilters,
@@ -180,13 +181,14 @@ export const BaseKanBanRoot = observer(function BaseKanBanRoot(props: IBaseKanBa
         issue={issue}
         handleDelete={async () => removeIssue(issue.project_id, issue.id)}
         handleUpdate={async (data) => updateIssue && updateIssue(issue.project_id, issue.id, data)}
+        handleRemoveFromView={removeIssueFromView && (async () => removeIssueFromView(issue.project_id, issue.id))}
         handleArchive={async () => archiveIssue && archiveIssue(issue.project_id, issue.id)}
         handleRestore={async () => restoreIssue && restoreIssue(issue.project_id, issue.id)}
         readOnly={!canEditProperties(issue.project_id ?? undefined)}
       />
     ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [canEditProperties, removeIssue, updateIssue, archiveIssue, restoreIssue]
+    [canEditProperties, removeIssue, updateIssue, removeIssueFromView, archiveIssue, restoreIssue]
   );
 
   const handleDeleteIssue = async () => {

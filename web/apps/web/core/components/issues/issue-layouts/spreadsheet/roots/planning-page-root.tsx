@@ -8,6 +8,7 @@ import type { PlanningPageStoreType } from "@/hooks/planning-page-domains";
 import { useUserPermissions } from "@/hooks/store/user";
 // local imports
 import { PLANNING_PAGE_LAYOUTS } from "../../planning-page-layouts";
+import { PlanningPageIssueQuickActions } from "../../quick-action-dropdowns";
 import { BaseSpreadsheetRoot } from "../base-spreadsheet-root";
 
 /**
@@ -22,7 +23,7 @@ export const PlanningPageSpreadsheetLayout = observer(function PlanningPageSprea
   const { workspaceSlug } = useParams();
   // hooks
   const { allowPermissions } = useUserPermissions();
-  const { useListState, QuickActions } = PLANNING_PAGE_LAYOUTS[props.storeType];
+  const { useListState } = PLANNING_PAGE_LAYOUTS[props.storeType];
   const { readOnly } = useListState();
 
   if (!workspaceSlug) return null;
@@ -37,7 +38,7 @@ export const PlanningPageSpreadsheetLayout = observer(function PlanningPageSprea
 
   return (
     <BaseSpreadsheetRoot
-      QuickActions={QuickActions}
+      QuickActions={PlanningPageIssueQuickActions}
       canEditPropertiesBasedOnProject={canEditPropertiesBasedOnProject}
       readOnly={readOnly}
     />

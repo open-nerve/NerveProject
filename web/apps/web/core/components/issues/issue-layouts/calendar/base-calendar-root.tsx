@@ -61,6 +61,7 @@ export const BaseCalendarRoot = observer(function BaseCalendarRoot(props: IBaseC
     updateIssue,
     dropIssue,
     removeIssue,
+    removeIssueFromView,
     archiveIssue,
     restoreIssue,
     updateFilters,
@@ -204,6 +205,9 @@ export const BaseCalendarRoot = observer(function BaseCalendarRoot(props: IBaseC
               issue={issue}
               handleDelete={async () => removeIssue(issue.project_id, issue.id)}
               handleUpdate={async (data) => updateIssue && updateIssue(issue.project_id, issue.id, data)}
+              handleRemoveFromView={
+                removeIssueFromView && (async () => removeIssueFromView(issue.project_id, issue.id))
+              }
               handleArchive={async () => archiveIssue && archiveIssue(issue.project_id, issue.id)}
               handleRestore={async () => restoreIssue && restoreIssue(issue.project_id, issue.id)}
               readOnly={!canEditProperties(issue.project_id ?? undefined)}

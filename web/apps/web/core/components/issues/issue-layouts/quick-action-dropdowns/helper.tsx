@@ -85,8 +85,11 @@ export type MenuItemFactoryProps = DialogOpening & {
   // Action handlers
   setDeleteIssueModal: (open: boolean) => void;
   setArchiveIssueModal?: (open: boolean) => void;
-  /** Removes the work item from the page's cycle (P5b spec 2.6, R6); the menu offers it while given. */
-  handleRemoveFromCycle?: () => void;
+  /**
+   * The removal of the work item from the page's cycle or module (P5b spec 2.6, R6; P6b spec 2.7): the label its domain
+   * names it by (an i18n key), and its sending; the menu offers it while given.
+   */
+  removeFromView?: { label: string; remove: () => void };
   /** The caller owns native refusal/success and its UI lifetime; the menu only consumes the promise. */
   handleRestore?: () => Promise<void>;
 };
@@ -151,7 +154,7 @@ const useMenuItemFactory = (props: MenuItemFactoryProps) => {
     isInArchivableGroup = false,
     setDeleteIssueModal,
     setArchiveIssueModal,
-    handleRemoveFromCycle,
+    removeFromView,
   } = props;
 
   const createEditMenuItem = (): TContextMenuItem => ({
@@ -184,12 +187,12 @@ const useMenuItemFactory = (props: MenuItemFactoryProps) => {
     action: actionHandlers.handleCopyIssueLink,
   });
 
-  const createRemoveFromCycleMenuItem = (): TContextMenuItem => ({
-    key: "remove-from-cycle",
-    title: t("issue.remove.cycle.label"),
+  const createRemoveFromViewMenuItem = (): TContextMenuItem => ({
+    key: "remove-from-view",
+    title: removeFromView ? t(removeFromView.label) : "",
     icon: CloseCircleOutline,
-    action: () => handleRemoveFromCycle?.(),
-    shouldRender: handleRemoveFromCycle !== undefined,
+    action: () => removeFromView?.remove(),
+    shouldRender: removeFromView !== undefined,
   });
 
   const createArchiveMenuItem = (): TContextMenuItem => ({
@@ -225,7 +228,7 @@ const useMenuItemFactory = (props: MenuItemFactoryProps) => {
     createCopyMenuItem,
     createOpenInNewTabMenuItem,
     createCopyLinkMenuItem,
-    createRemoveFromCycleMenuItem,
+    createRemoveFromViewMenuItem,
     createArchiveMenuItem,
     createRestoreMenuItem,
     createDeleteMenuItem,
@@ -242,7 +245,7 @@ export const useProjectIssueMenuItems = (props: MenuItemFactoryProps): TContextM
       factory.createCopyMenuItem(),
       factory.createOpenInNewTabMenuItem(),
       factory.createCopyLinkMenuItem(),
-      factory.createRemoveFromCycleMenuItem(),
+      factory.createRemoveFromViewMenuItem(),
       factory.createArchiveMenuItem(),
       factory.createDeleteMenuItem(),
     ],

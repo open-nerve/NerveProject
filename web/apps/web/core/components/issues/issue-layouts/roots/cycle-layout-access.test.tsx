@@ -50,7 +50,7 @@ vi.mock("@atlaskit/pragmatic-drag-and-drop/element/adapter", async (original) =>
 // A row's quick actions say whether they were given read-only.
 vi.mock("../quick-action-dropdowns", async (original) => ({
   ...(await original<typeof import("../quick-action-dropdowns")>()),
-  CycleIssueQuickActions: ({ issue, readOnly }: IQuickActionProps) => (
+  PlanningPageIssueQuickActions: ({ issue, readOnly }: IQuickActionProps) => (
     <output data-quick-actions={issue.id}>{readOnly ? "read-only" : "writable"}</output>
   ),
 }));
