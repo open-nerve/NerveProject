@@ -77,7 +77,8 @@
         "kanban": "Board Layout",
         "calendar": "Calendar Layout",
         "spreadsheet": "Table Layout"
-      }
+      },
+      "preferences_reread_failed": "This page's preferences could not be read again; the list shows them as last read."
     },
     "comments": {
       "placeholder": "Add comment",

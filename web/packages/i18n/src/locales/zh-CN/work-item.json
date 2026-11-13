@@ -77,7 +77,8 @@
         "kanban": "看板布局",
         "calendar": "日历布局",
         "spreadsheet": "表格布局"
-      }
+      },
+      "preferences_reread_failed": "未能重新读取本页的偏好，列表按上次读到的偏好显示。"
     },
     "comments": {
       "placeholder": "添加评论",

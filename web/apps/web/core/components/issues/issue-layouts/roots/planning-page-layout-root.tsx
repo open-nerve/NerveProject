@@ -25,6 +25,7 @@ import { PlanningPageCalendarLayout } from "../calendar/roots/planning-page-root
 import { PlanningPageKanBanLayout } from "../kanban/roots/planning-page-root";
 import { PlanningPageListLayout } from "../list/roots/planning-page-root";
 import { PLANNING_PAGE_LAYOUTS } from "../planning-page-layouts";
+import { PreferencesRereadFailure } from "../preferences-reread-failure";
 import { PlanningPageSpreadsheetLayout } from "../spreadsheet/roots/planning-page-root";
 
 function PlanningPageIssueLayout(props: {
@@ -59,11 +60,12 @@ type Props = {
  * A planning page's work items (P5b spec 2.1, 2.6; P6b spec 2.2, 2.7), of the route's project and of the page's cycle
  * or module (the route param of its domain names it): the project's list with it, under the page's own preferences, by
  * the page's store type. It reads them for a member of the project while the domain is on; with it off it is the
- * domain's turned-off state and reads nothing, nor does its list (re-66 H1). It says why nerve could not read the
- * preferences, with a retry; then the page's filters (their conditions saved as its preferences, followed as the
- * project page's), the row of their conditions, the layout they choose, and the page's own preview, whose host is the
- * page's (re-66 L4), with what the page puts beside it. Each difference of a domain is a row of the tables, never a
- * branch here.
+ * domain's turned-off state and reads nothing, nor does its list (re-66 H1). It says why nerve could not give the
+ * preferences first, with a retry; once given, a read of them again that fails leaves the list under the preferences
+ * read, with a line above it that says so, with a retry (P6b spec 2.8, R4). Then the page's filters (their conditions
+ * saved as its preferences, followed as the project page's), the row of their conditions, the layout they choose, and
+ * the page's own preview, whose host is the page's (re-66 L4), with what the page puts beside it. Each difference of a
+ * domain is a row of the tables, never a branch here.
  */
 export const PlanningPageLayoutRoot = observer(function PlanningPageLayoutRoot({ storeType, children }: Props) {
   // router
@@ -84,12 +86,13 @@ export const PlanningPageLayoutRoot = observer(function PlanningPageLayoutRoot({
     issuesFilter.fetchFilters(slug, id)
   );
   const workItemFilters = entityId ? issuesFilter.getIssueFilters(entityId) : undefined;
+  const retry = () => void preferences.mutate();
 
   if (!workspaceSlug || !projectId || !entityId || !readable) return null;
   if (!listed) return <PlanningDisabled workspaceSlug={workspaceSlug} projectId={projectId} domain={domain} />;
-  if (preferences.error !== undefined)
-    return <PlanningReadFailure error={preferences.error} onRetry={() => void preferences.mutate()} />;
-  if (!workItemFilters) return null;
+  // nerve has not given the page's preferences yet: why its first read failed, or nothing while it is out
+  if (!workItemFilters)
+    return preferences.error === undefined ? null : <PlanningReadFailure error={preferences.error} onRetry={retry} />;
 
   return (
     <IssuesStoreContext.Provider value={storeType}>
@@ -105,6 +108,7 @@ export const PlanningPageLayoutRoot = observer(function PlanningPageLayoutRoot({
       >
         {({ filter: pageWorkItemsFilter }) => (
           <div className="relative flex h-full w-full flex-col overflow-hidden">
+            {preferences.error !== undefined && <PreferencesRereadFailure error={preferences.error} onRetry={retry} />}
             {pageWorkItemsFilter && <WorkItemFiltersRow filter={pageWorkItemsFilter} />}
             <div className="relative h-full w-full overflow-auto bg-surface-1">
               {/* mutation loader */}
