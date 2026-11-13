@@ -9,6 +9,7 @@ import { observer } from "mobx-react";
 import { CloseOutline, SearchOutline } from "@makeplane/propel/icons";
 // nerve imports
 import { useTranslation } from "@nerve/i18n";
+import { toggledOptions } from "@nerve/utils";
 // components
 import { FilterDate } from "@/components/planning/filter-date";
 // hooks
@@ -17,16 +18,6 @@ import { useCycleFilters } from "@/hooks/store/use-cycle-filters";
 import type { CycleList } from "@/store/planning/cycle_filter.store";
 // local imports
 import { FilterStatus } from "./status";
-
-/** The options held, with each of options turned on, or off if it was on. */
-const toggled = <T extends string>(held: readonly T[] | undefined, options: readonly T[]): T[] => {
-  const next = new Set<T>(held);
-  for (const option of options) {
-    if (next.has(option)) next.delete(option);
-    else next.add(option);
-  }
-  return [...next];
-};
 
 type Props = {
   projectId: string;
@@ -79,7 +70,9 @@ export const CycleFiltersSelection = observer(function CycleFiltersSelection(pro
           <div className="py-2">
             <FilterStatus
               appliedFilters={filters.status}
-              handleUpdate={(status) => updateFilters(projectId, list, { status: toggled(filters.status, [status]) })}
+              handleUpdate={(status) =>
+                updateFilters(projectId, list, { status: toggledOptions(filters.status, [status]) })
+              }
               searchQuery={filtersSearchQuery}
             />
           </div>
@@ -88,7 +81,9 @@ export const CycleFiltersSelection = observer(function CycleFiltersSelection(pro
           <FilterDate
             title={t("start_date")}
             appliedFilters={filters.start_date}
-            handleUpdate={(days) => updateFilters(projectId, list, { start_date: toggled(filters.start_date, days) })}
+            handleUpdate={(days) =>
+              updateFilters(projectId, list, { start_date: toggledOptions(filters.start_date, days) })
+            }
             searchQuery={filtersSearchQuery}
           />
         </div>
@@ -96,7 +91,9 @@ export const CycleFiltersSelection = observer(function CycleFiltersSelection(pro
           <FilterDate
             title={t("end_date")}
             appliedFilters={filters.end_date}
-            handleUpdate={(days) => updateFilters(projectId, list, { end_date: toggled(filters.end_date, days) })}
+            handleUpdate={(days) =>
+              updateFilters(projectId, list, { end_date: toggledOptions(filters.end_date, days) })
+            }
             searchQuery={filtersSearchQuery}
           />
         </div>

@@ -102,6 +102,20 @@ export const matchesModuleFilters = (module: Module, filters: ModuleFilters): bo
   matchesDays(module.start_date, filters.start_date) &&
   matchesDays(module.target_date, filters.target_date);
 
+/**
+ * The options chosen of a list's filter (CycleFilters, ModuleFilters) once options are picked in its menu: each turned
+ * on, after those held, or off if it was held; the others keep their order. A status, a lead or a member is picked
+ * alone; a date filter's options may be picked at once (P5a spec 2.3, P6a spec 2.4). What was held is left as it was.
+ */
+export const toggledOptions = <T extends string>(held: readonly T[] | undefined, options: readonly T[]): T[] => {
+  const next = new Set<T>(held);
+  for (const option of options) {
+    if (next.has(option)) next.delete(option);
+    else next.add(option);
+  }
+  return [...next];
+};
+
 /** An option of the modules list's order without its direction. */
 type ModuleOrderKey = Exclude<ModuleOrderBy, `-${string}`>;
 

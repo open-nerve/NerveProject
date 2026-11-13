@@ -9,6 +9,7 @@ import { observer } from "mobx-react";
 import { CloseOutline, SearchOutline } from "@makeplane/propel/icons";
 // nerve imports
 import { useTranslation } from "@nerve/i18n";
+import { toggledOptions } from "@nerve/utils";
 // components
 import { FilterDate } from "@/components/planning/filter-date";
 // hooks
@@ -19,16 +20,6 @@ import type { ModuleListKind } from "@/store/planning/module_filter.store";
 // local imports
 import { FilterMembers } from "./members";
 import { FilterStatus } from "./status";
-
-/** The options held, with each of options turned on, or off if it was on. */
-const toggled = <T extends string>(held: readonly T[] | undefined, options: readonly T[]): T[] => {
-  const next = new Set<T>(held);
-  for (const option of options) {
-    if (next.has(option)) next.delete(option);
-    else next.add(option);
-  }
-  return [...next];
-};
 
 type Props = {
   /** The workspace of the page's address. */
@@ -88,7 +79,9 @@ export const ModuleFiltersSelection = observer(function ModuleFiltersSelection(p
           <div className="py-2">
             <FilterStatus
               appliedFilters={filters.status}
-              handleUpdate={(status) => updateFilters(projectId, list, { status: toggled(filters.status, [status]) })}
+              handleUpdate={(status) =>
+                updateFilters(projectId, list, { status: toggledOptions(filters.status, [status]) })
+              }
               searchQuery={filtersSearchQuery}
             />
           </div>
@@ -97,7 +90,7 @@ export const ModuleFiltersSelection = observer(function ModuleFiltersSelection(p
           <FilterMembers
             title={t("lead")}
             appliedFilters={filters.lead}
-            handleUpdate={(lead) => updateFilters(projectId, list, { lead: toggled(filters.lead, [lead]) })}
+            handleUpdate={(lead) => updateFilters(projectId, list, { lead: toggledOptions(filters.lead, [lead]) })}
             memberIds={memberIds}
             searchQuery={filtersSearchQuery}
           />
@@ -106,7 +99,9 @@ export const ModuleFiltersSelection = observer(function ModuleFiltersSelection(p
           <FilterMembers
             title={t("members")}
             appliedFilters={filters.members}
-            handleUpdate={(member) => updateFilters(projectId, list, { members: toggled(filters.members, [member]) })}
+            handleUpdate={(member) =>
+              updateFilters(projectId, list, { members: toggledOptions(filters.members, [member]) })
+            }
             memberIds={memberIds}
             searchQuery={filtersSearchQuery}
           />
@@ -115,7 +110,9 @@ export const ModuleFiltersSelection = observer(function ModuleFiltersSelection(p
           <FilterDate
             title={t("start_date")}
             appliedFilters={filters.start_date}
-            handleUpdate={(days) => updateFilters(projectId, list, { start_date: toggled(filters.start_date, days) })}
+            handleUpdate={(days) =>
+              updateFilters(projectId, list, { start_date: toggledOptions(filters.start_date, days) })
+            }
             searchQuery={filtersSearchQuery}
           />
         </div>
@@ -123,7 +120,9 @@ export const ModuleFiltersSelection = observer(function ModuleFiltersSelection(p
           <FilterDate
             title={t("due_date")}
             appliedFilters={filters.target_date}
-            handleUpdate={(days) => updateFilters(projectId, list, { target_date: toggled(filters.target_date, days) })}
+            handleUpdate={(days) =>
+              updateFilters(projectId, list, { target_date: toggledOptions(filters.target_date, days) })
+            }
             searchQuery={filtersSearchQuery}
           />
         </div>

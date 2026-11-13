@@ -25,6 +25,7 @@ import {
   orderCycleRows,
   orderModuleRows,
   progressPercent,
+  toggledOptions,
 } from "./planning";
 
 // The planning of a project as its pages show it (P5a spec 2.3, R5, R7): the order of its cycles list, its filters,
@@ -436,5 +437,23 @@ describe("matchesModuleFilters", () => {
       ).toBe(false);
       expect(matchesModuleFilters(moduleOf("Auth"), { start_date: [], target_date: [] })).toBe(true);
     });
+  });
+});
+
+describe("toggledOptions", () => {
+  it("turns an option on after those held, or off if it was held, the others kept in their order", () => {
+    expect(toggledOptions(["draft"], ["upcoming"])).toEqual(["draft", "upcoming"]);
+    expect(toggledOptions(["draft", "current", "upcoming"], ["current"])).toEqual(["draft", "upcoming"]);
+    expect(toggledOptions(undefined, ["backlog"])).toEqual(["backlog"]);
+    expect(toggledOptions(["backlog"], ["backlog"])).toEqual([]);
+  });
+
+  it("toggles each of several options picked at once, as a date filter's are", () => {
+    const held = ["1_weeks;after;fromnow", "2026-11-01;after"];
+    expect(toggledOptions(held, ["2026-11-01;after", "2026-11-30;before"])).toEqual([
+      "1_weeks;after;fromnow",
+      "2026-11-30;before",
+    ]);
+    expect(held).toEqual(["1_weeks;after;fromnow", "2026-11-01;after"]);
   });
 });
