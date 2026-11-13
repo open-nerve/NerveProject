@@ -10,11 +10,13 @@ import { Disclosure } from "@headlessui/react";
 import { ChevronDownOutline, ChevronUpOutline } from "@makeplane/propel/icons";
 import type { Module, Progress } from "@nerve/api-client";
 import { useTranslation } from "@nerve/i18n";
+import { EIssuesStoreType } from "@nerve/types";
 import { Loader } from "@nerve/ui";
 import { progressPercent } from "@nerve/utils";
 // components
 import { BurndownChart } from "@/components/core/sidebar/burndown-chart";
 import { ProgressTabs } from "@/components/core/sidebar/progress-tabs";
+import { usePageRowChoices } from "@/components/core/sidebar/use-page-row-choices";
 
 type Props = {
   module: Module;
@@ -26,13 +28,18 @@ type Props = {
 /**
  * The progress of a module's sidebar (P6a spec 2.6, R8): how far it has come (progressPercent); its burndown, from its
  * start to its target day, when nerve gives one (none without either day, or over too long a span: no data yet); and,
- * either way, its breakdowns by state, assignee and label (ProgressTabs), in plain rows, the tab chosen kept for the
- * module.
+ * either way, its breakdowns by state, assignee and label (ProgressTabs), the tab chosen kept for the module. While the
+ * module's page shows its work items by its filters, a row of a state group, an assignee or a label toggles its value
+ * in them and says whether it is chosen, whatever the module's days and archived or not (usePageRowChoices, P6b spec
+ * 2.7, R14); the rows are plain before the page has its filters, and in the list page's preview (?peekModule), which
+ * never has them.
  */
 export const ModuleProgress = observer(function ModuleProgress(props: Props) {
   const { module, projectId, progress } = props;
   // nerve hooks
   const { t } = useTranslation();
+  // hooks
+  const choices = usePageRowChoices(EIssuesStoreType.MODULE, module.id);
   const percent = progress && progressPercent(progress);
 
   return (
@@ -74,6 +81,7 @@ export const ModuleProgress = observer(function ModuleProgress(props: Props) {
                       progress={progress}
                       projectId={projectId}
                       storageKey={`module-progress-tab-${module.id}`}
+                      choices={choices}
                     />
                   </div>
                 </>

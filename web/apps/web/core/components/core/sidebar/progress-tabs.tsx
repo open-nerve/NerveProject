@@ -50,7 +50,8 @@ type Props = {
  * own breakdown: the panels are laid out from the tabs' own list, so they cannot fall out of their order. The tab
  * chosen is kept under the caller's key (localStorage), the assignees' at first. A row of a state group, an assignee or
  * a label (not the row of none) is a button that chooses its value where the caller says what choosing does (a cycle's
- * page toggles its filters by it, P5b spec 2.8); else the rows are plain.
+ * or a module's page toggles its filters by it, usePageRowChoices: P5b spec 2.8, P6b spec 2.7); else the rows are
+ * plain.
  */
 export const ProgressTabs = observer(function ProgressTabs(props: Props) {
   const { progress, projectId, storageKey, choices } = props;

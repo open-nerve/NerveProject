@@ -3,17 +3,19 @@
 // with the card of its cycle C1 in progress and the preview of a cycle (?peekCycle), and C1's own page, its work items
 // and its progress sidebar, under one router whose address the test reads and moves (where); any other address is a
 // page elsewhere. Project A has the caller as a member and its labels Bug and UI; C1's progress has a row of each kind:
-// state groups, an assignee and none, the two labels and none. The stores, routes and HTTP are real; the test file
-// stands in for what the rows do not reach (the cycle's list row, the burndown chart, the sidebar's head and details).
+// state groups, an assignee and none, the two labels and none (fake-progress-rows.ts, where the tests find the rows).
+// The stores, routes and HTTP are real; the test file stands in for what the rows do not reach (the cycle's list row,
+// the burndown chart, the sidebar's head and details).
 import { act } from "react";
 import { MemoryRouter, Route, Routes, useLocation, useNavigate } from "react-router";
 import type { Location, NavigateFunction } from "react-router";
 import { SWRConfig } from "swr";
-import type { CyclePreferences, Progress, ProjectIssueFilters } from "@nerve/api-client";
+import type { CyclePreferences, ProjectIssueFilters } from "@nerve/api-client";
 import { EIssuesStoreType } from "@nerve/types";
 import { answered, json } from "@/lib/auth/fake-nerve";
 import type { Call } from "@/lib/auth/fake-nerve";
 import { until } from "@/lib/auth/fake-time";
+import { loadRowLabels, progressRows } from "@/components/core/sidebar/fake-progress-rows";
 import {
   C1,
   PlanningPageWorkItems,
@@ -22,34 +24,13 @@ import {
   planningPageTab,
 } from "@/components/issues/issue-layouts/roots/fake-planning-page";
 import { loadCycles, progressOf, rowOf } from "@/store/planning/fake-cycles";
-import { labelOf } from "@/store/project/fake-projects";
 import { ActiveCycleRoot } from "./active-cycle/root";
 import { CyclePeekOverview } from "./cycle-peek-overview";
 import { CycleDetailsSidebar } from "./progress-sidebar";
 
 export { C1 };
-export const ANN = "019a0000-0000-7000-8000-0000000000a1";
-export const BUG = "019a0000-0000-7000-8000-0000000000b1";
-export const UI = "019a0000-0000-7000-8000-0000000000b2";
 export const LIST = "/ws/projects/A/cycles";
 export const PAGE = `/ws/projects/A/cycles/${C1}`;
-
-/** C1's progress: work items backlog, started and completed; Ann's and none's; Bug's, UI's and none's. */
-const live: Partial<Progress> = {
-  total_issues: 6,
-  backlog_issues: 1,
-  started_issues: 3,
-  completed_issues: 2,
-  assignees: [
-    { assignee_id: ANN, total_issues: 4, completed_issues: 1, pending_issues: 3 },
-    { assignee_id: null, total_issues: 2, completed_issues: 1, pending_issues: 1 },
-  ],
-  labels: [
-    { label_id: BUG, total_issues: 3, completed_issues: 1, pending_issues: 2 },
-    { label_id: UI, total_issues: 2, completed_issues: 1, pending_issues: 1 },
-    { label_id: null, total_issues: 1, completed_issues: 0, pending_issues: 1 },
-  ],
-};
 
 /** Where the pages are: the router's address, and its navigate, which moves it as a link or a Back would. */
 export const where: { location?: Location; navigate?: NavigateFunction } = {};
@@ -90,7 +71,7 @@ function ListPage() {
 export async function cycleRoutesTab() {
   const tab = await planningPageTab(EIssuesStoreType.CYCLE);
   const cycle = tab.app.planning.cycles.getCycleById(C1)!;
-  const progress = progressOf(cycle, live);
+  const progress = progressOf(cycle, progressRows);
   const states = tab.nerve.respond;
   tab.nerve.respond = (call) => {
     if (call.path === `/api/v0/cycles/${C1}/progress`) call.answer(json(200, progress));
@@ -105,14 +86,7 @@ export async function cycleRoutesTab() {
     progress,
     "the progress"
   );
-  const labels = [labelOf(tab.project, "Bug", 1, { id: BUG }), labelOf(tab.project, "UI", 2, { id: UI })];
-  await answered(
-    tab.nerve,
-    () => tab.app.label.fetchProjectLabels("A"),
-    ["GET", "/api/v0/projects/A/labels"],
-    { data: labels },
-    "the labels"
-  );
+  await loadRowLabels(tab);
   tab.nerve.calls.length = 0;
   const cache = new Map();
   const preferences = () => tab.nerve.to(`/api/v0/me/cycles/${C1}/preferences`);
@@ -154,23 +128,3 @@ export const answerPreferences = (call: Call, filters: ProjectIssueFilters = {})
 
 /** Waits until the router's address is path. */
 export const arrived = (path: string) => until(() => where.location?.pathname === path, `the address ${path}`);
-
-/** The button of a row within a part of the page (or the page), whose text has name. */
-export const rowButton = (name: string, within: ParentNode = document) =>
-  [...within.querySelectorAll<HTMLButtonElement>("li button")].find((one) => one.textContent?.includes(name));
-
-/** The rows within a part of the page (or the page), each by whether it is a button, and its name before its share. */
-export const rowsIn = (within: ParentNode = document) =>
-  [...within.querySelectorAll("li")].map((row) => [
-    row.querySelector("button") !== null,
-    row.textContent?.split(/\d/)[0],
-  ]);
-
-/** The part of the page labelled label. */
-export const partOf = (label: string) => document.querySelector<HTMLElement>(`[aria-label="${label}"]`);
-
-/** Clicks the tab named name within a part of the page (or the page). */
-export const openTab = (name: string, within: ParentNode = document) =>
-  act(async () =>
-    [...within.querySelectorAll<HTMLButtonElement>('[role="tab"]')].find((one) => one.textContent === name)?.click()
-  );

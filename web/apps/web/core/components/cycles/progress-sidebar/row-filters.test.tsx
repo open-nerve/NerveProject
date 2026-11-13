@@ -12,20 +12,8 @@ import { json } from "@/lib/auth/fake-nerve";
 import { until } from "@/lib/auth/fake-time";
 import { toasts } from "@/lib/fake-toast";
 import type { ProjectIssueFilters } from "@nerve/api-client";
-import {
-  ANN,
-  BUG,
-  C1,
-  LIST,
-  PAGE,
-  UI,
-  answerPreferences,
-  cycleRoutesTab,
-  openTab,
-  partOf,
-  rowButton,
-  rowsIn,
-} from "../fake-cycle-routes";
+import { ANN, BUG, UI, openTab, partOf, rowButton, rowsIn } from "@/components/core/sidebar/fake-progress-rows";
+import { C1, LIST, PAGE, answerPreferences, cycleRoutesTab } from "../fake-cycle-routes";
 
 const fixture = vi.hoisted(() => ({ app: undefined as unknown }));
 vi.mock("@/lib/store-context", async () => ({
