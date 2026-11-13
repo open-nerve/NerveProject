@@ -8,7 +8,7 @@
  * 7.4); the workspace wrapper's, on every page of a workspace, whatever the role; the project's read, on every page of
  * a project; and the project's own resources, only once that read says the caller is a member of the project (M3
  * design 7.1). Of M6's and M7's addresses only a project's cycles and its modules are read (PROJECT_CYCLES, M6 P5a;
- * its modules, M6 P6a, below), none of the others (views, the intake's triage state, favourites, the unread
+ * PROJECT_MODULES, M6 P6a), none of the others (views, the intake's triage state, favourites, the unread
  * notifications, recents; M3 design 3.1), nor one outside /api/v0 (M2 design 3.1). These lists are the record of what
  * the pages load: a phase that adds a fetch to a page adds it here (the P8b spec's appendix A.5 is a copy, as of P8b).
  */
@@ -34,12 +34,14 @@ export const PROJECT_MEMBER = [
 ];
 /**
  * A project whose cycles are on: its members' pages read its cycles too, where the project's own resources are read
- * (M6 P5a spec 2.2, use-project-fetch.ts). A new project's cycles are off, so the lists above leave it out. So are
- * its modules: once they are on, its members' pages read them as well, "GET /api/v0/projects/{project}/modules" (M6
- * P6a spec 2.2). No story that checks a page's requests exactly turns a project's modules on yet; the first that does
- * lists that read here, as PROJECT_MODULES, where it reads it (P6a T13).
+ * (M6 P5a spec 2.2, use-project-fetch.ts). A new project's cycles are off, so the lists above leave it out.
  */
 export const PROJECT_CYCLES = ["GET /api/v0/projects/{project}/cycles"];
+/**
+ * A project whose modules are on: its members' pages read its modules too, where its cycles are read (M6 P6a spec 2.2,
+ * use-project-fetch.ts). A new project's modules are off, as its cycles are.
+ */
+export const PROJECT_MODULES = ["GET /api/v0/projects/{project}/modules"];
 /**
  * A general settings page lists the time zones (M2 design 5.3): the project's, for its members; the workspace's, for
  * its admins and members (the workspace's settings show a guest no general page, M3 design 9.2).

@@ -12,12 +12,13 @@ import {
   type Project,
 } from "./api";
 import { accountId, emailFor, login, type AuthTokens } from "./auth";
-import { expectQuietConsole, watchPage } from "./browser";
+import { expectQuietConsole, watchPage, type PageWatch } from "./browser";
 import { registerOnboarded } from "./settings-pages";
 import { anotherBrowser } from "./workspace-pages";
 
 // A project's cycle pages (M6 P5a spec 2.5, 2.6, 2.9), as a person uses them: their addresses, what a story finds on
-// them by role and name, a cycle's calendar, and the world of their stories. A page story and the API story of its
+// them by role and name, a cycle's calendar, and the world of their stories; the module pages' stories find their
+// menus, calendars, toasts and dialogs' Tab stops by these too (module-pages.ts). A page story and the API story of its
 // number assert the same rows of the database (assert/planning.ts).
 
 /** One of the world's people: his address, his id, and the tokens of his sign-in, which his first browser takes. */
@@ -138,14 +139,14 @@ export function cycleRow(page: Page, id: string, name: string): Locator {
     .last();
 }
 
-/** The button of the menu of the cycle of name: named by the cycle (common.item_options). */
+/** The button of the menu of the cycle of name, or of the module: named by it (common.item_options). */
 export function cycleMenu(page: Page, name: string): Locator {
   return page.getByRole("button", { name: `${name} options`, exact: true });
 }
 
 /**
- * The entries of menu, a cycle's menu that is open, as it offers them: each by its title, marked "(disabled)" when it
- * may not be chosen.
+ * The entries of menu, a cycle's or a module's menu that is open, as it offers them: each by its title, marked
+ * "(disabled)" when it may not be chosen.
  */
 export async function entriesOf(menu: Locator): Promise<string[]> {
   await expect(menu.getByRole("menuitem").first()).toBeVisible();
@@ -160,8 +161,8 @@ export async function entriesOf(menu: Locator): Promise<string[]> {
 }
 
 /**
- * The entries of the menu of the cycle of name, which page shows, opened by its button (entriesOf). The menu is closed
- * again by Escape.
+ * The entries of the menu of the cycle or the module of name, which page shows, opened by its button (entriesOf). The
+ * menu is closed again by Escape.
  */
 export async function menuEntries(page: Page, name: string): Promise<string[]> {
   await cycleMenu(page, name).click();
@@ -187,13 +188,13 @@ export async function rowMenusKept(page: Page): Promise<{ entries: number; focus
   }));
 }
 
-/** Chooses entry from the menu of the cycle of name, which page shows. */
+/** Chooses entry from the menu of the cycle or the module of name, which page shows. */
 export async function chooseFromMenu(page: Page, name: string, entry: string): Promise<void> {
   await cycleMenu(page, name).click();
   await page.getByRole("menu").getByRole("menuitem", { name: entry, exact: true }).click();
 }
 
-/** The calendar a cycle's days open in (DateRangeDropdown's), named as its button is. */
+/** The calendar a cycle's or a module's days open in (DateRangeDropdown's), named as its button is. */
 export function calendarOf(page: Page): Locator {
   return page.getByRole("dialog", { name: "Date range", exact: true });
 }
@@ -219,8 +220,8 @@ export async function pickDays(page: Page, button: Locator, days: readonly strin
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 /**
- * The days start to end, YYYY-MM-DD each, as a cycle's row and its sidebar show them (MergedDateDisplay): the days of
- * the project's calendar, whatever the browser's time zone (R6).
+ * The days start to end, YYYY-MM-DD each, as a cycle's row and its sidebar, or a module's row, show them
+ * (MergedDateDisplay): the days of the project's calendar, whatever the browser's time zone (R6).
  */
 export function shownDays(start: string, end: string): string {
   const [sy = "", sm = "", sd = ""] = start.split("-");
@@ -230,7 +231,7 @@ export function shownDays(start: string, end: string): string {
   return sm === em ? `${smon} ${sd} - ${ed}, ${sy}` : `${smon} ${sd} - ${emon} ${ed}, ${sy}`;
 }
 
-/** A day, YYYY-MM-DD, as a cycle's form shows it (renderFormattedDate): "Mar 01, 2031". */
+/** A day, YYYY-MM-DD, as a cycle's or a module's form shows it (renderFormattedDate): "Mar 01, 2031". */
 export function shownDay(day: string): string {
   const [year = "", month = "", date = ""] = day.split("-");
   return `${MONTHS[Number(month) - 1]} ${date}, ${year}`;
@@ -253,13 +254,21 @@ export function toast(page: Page, text: string): Locator {
  * until none of them, nor any toast leaving on its own, remains. Pressed in the page, a button takes neither the focus
  * nor the pointer, which stay where the story left them. A toast's close button is hidden from assistive technology
  * (its toast is read without it), so it is found by its label.
+ *
+ * A toast measures itself as it mounts, and again when its ResizeObserver first reports, a frame later; each measure
+ * marks it as neither coming nor leaving (Base UI's ToastRoot, setHeights), and the close clears its timer. A close
+ * pressed between the two measures, as a story that dismisses a toast the moment it shows can (G9 on its module's
+ * sidebar, M6 P6a T13), is undone by the second: the toast stays, for good. So the buttons of those still not leaving
+ * are pressed again until none remains.
  */
 export async function dismissToasts(page: Page): Promise<void> {
   const close = page.getByLabel("Notifications", { exact: true }).locator('button[aria-label="Close"]');
-  await close.evaluateAll((buttons: HTMLButtonElement[]) =>
-    buttons.filter((button) => !button.closest("[data-ending-style]")).forEach((button) => button.click())
-  );
-  await expect(close).toHaveCount(0);
+  await expect(async () => {
+    await close.evaluateAll((buttons: HTMLButtonElement[]) =>
+      buttons.filter((button) => !button.closest("[data-ending-style]")).forEach((button) => button.click())
+    );
+    await expect(close).toHaveCount(0, { timeout: 2_000 });
+  }).toPass({ timeout: 10_000 });
 }
 
 /** What each status of an answer is called in the console's report of it. */
@@ -340,7 +349,8 @@ export function recordApi(page: Page): () => { pending: number; requests: string
 
 /**
  * Opens path in a browser of its own, signed in anew as the account of email (a session of its own: nerve rotates a
- * session's refresh token), runs check on its page, and checks that nothing failed there and its console stayed quiet.
+ * session's refresh token), runs check on its page, given what the page was seen doing from its load (watchPage), and
+ * checks that nothing failed there and its console stayed quiet.
  */
 export async function seenBy(
   browser: Browser,
@@ -348,13 +358,13 @@ export async function seenBy(
   api: Api,
   email: string,
   path: string,
-  check: (page: Page) => Promise<void>
+  check: (page: Page, watch: PageWatch) => Promise<void>
 ): Promise<void> {
   const other = await anotherBrowser(browser, baseURL, await login(api, email));
   try {
     const watch = await watchPage(other.page);
     await other.page.goto(path);
-    await check(other.page);
+    await check(other.page, watch);
     expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors], `what failed for ${email}`).toEqual([
       [],
       [],
