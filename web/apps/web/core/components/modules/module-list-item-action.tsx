@@ -149,13 +149,7 @@ export const ModuleListItemAction = observer(function ModuleListItemAction(props
         hideIcon={{ from: renderIcon ?? true, to: renderIcon }}
       />
 
-      {moduleStatus && (
-        <ModuleStatusDropdown
-          isDisabled={isDisabled}
-          moduleDetails={moduleDetails}
-          handleModuleDetailsChange={handleModuleDetailsChange}
-        />
-      )}
+      {moduleStatus && <ModuleStatusDropdown moduleId={moduleId} editable={!isDisabled} />}
 
       {moduleLeadDetails ? (
         <span className="cursor-default">

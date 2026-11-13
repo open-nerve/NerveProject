@@ -4,121 +4,81 @@
  * See the LICENSE file for details.
  */
 
-import { Fragment, useMemo } from "react";
 import { observer } from "mobx-react";
-import { ChevronDownOutline, ChevronUpOutline, WarningCircleOutline } from "@makeplane/propel/icons";
-import { Disclosure, Transition } from "@headlessui/react";
+import { Disclosure } from "@headlessui/react";
+// nerve imports
+import { ChevronDownOutline, ChevronUpOutline } from "@makeplane/propel/icons";
+import type { Module, Progress } from "@nerve/api-client";
 import { useTranslation } from "@nerve/i18n";
-// helpers
-import { getDate } from "@nerve/utils";
-import ProgressChart from "@/components/core/sidebar/progress-chart";
-import { ModuleProgressStats } from "@/components/modules";
-// hooks
-import { useModule } from "@/hooks/store/use-module";
-type TModuleProgressProps = {
-  moduleId: string;
+import { Loader } from "@nerve/ui";
+import { progressPercent } from "@nerve/utils";
+// components
+import { BurndownChart } from "@/components/core/sidebar/burndown-chart";
+import { ProgressTabs } from "@/components/core/sidebar/progress-tabs";
+
+type Props = {
+  module: Module;
+  projectId: string;
+  /** nerve's progress of the module; undefined until nerve has read it. */
+  progress: Progress | undefined;
 };
 
-export const ModuleProgress = observer(function ModuleProgress(props: TModuleProgressProps) {
-  // props
-  const { moduleId } = props;
-  // router
+/**
+ * The progress of a module's sidebar (P6a spec 2.6, R8): how far it has come (progressPercent); its burndown, from its
+ * start to its target day, when nerve gives one (none without either day, or over too long a span: no data yet); and,
+ * either way, its breakdowns by state, assignee and label (ProgressTabs), in plain rows, the tab chosen kept for the
+ * module.
+ */
+export const ModuleProgress = observer(function ModuleProgress(props: Props) {
+  const { module, projectId, progress } = props;
   // nerve hooks
   const { t } = useTranslation();
-  // hooks
-  const { getModuleById } = useModule();
-  // derived values
-  const moduleDetails = getModuleById(moduleId);
-  const completedIssues = moduleDetails?.completed_issues || 0;
-  const totalIssues = moduleDetails?.total_issues || 0;
-  const progressHeaderPercentage =
-    completedIssues != 0 && totalIssues != 0 ? Math.round((completedIssues / totalIssues) * 100) : 0;
-  const chartDistributionData = moduleDetails?.distribution || undefined;
-  const completionChartDistributionData = chartDistributionData?.completion_chart || undefined;
-  const groupedIssues = useMemo(
-    () => ({
-      backlog: moduleDetails?.backlog_issues || 0,
-      unstarted: moduleDetails?.unstarted_issues || 0,
-      started: moduleDetails?.started_issues || 0,
-      completed: moduleDetails?.completed_issues || 0,
-      cancelled: moduleDetails?.cancelled_issues || 0,
-    }),
-    [moduleDetails]
-  );
-  const moduleStartDate = getDate(moduleDetails?.start_date);
-  const moduleEndDate = getDate(moduleDetails?.target_date);
-  const isModuleStartDateValid = moduleStartDate && moduleStartDate <= new Date();
-  const isModuleEndDateValid = moduleStartDate && moduleEndDate && moduleEndDate >= moduleStartDate;
-  const isModuleDateValid = isModuleStartDateValid && isModuleEndDateValid;
+  const percent = progress && progressPercent(progress);
 
-  if (!moduleDetails) return <></>;
   return (
-    <div className="space-y-4 border-t border-subtle px-3 py-4">
-      <Disclosure defaultOpen={!!isModuleDateValid}>
+    <div className="space-y-4 border-t border-subtle py-5">
+      <Disclosure defaultOpen>
         {({ open }) => (
-          <div className="space-y-6">
-            {/* progress bar header */}
-            {isModuleDateValid ? (
-              <div className="relative flex w-full items-center justify-between gap-2">
-                <Disclosure.Button className="relative flex w-full items-center gap-2">
-                  <div className="text-13 font-medium text-secondary">{t("common.progress")}</div>
-                  {progressHeaderPercentage > 0 && (
-                    <div className="bg-amber-500/20 text-amber-500 flex h-5 w-9 items-center justify-center rounded-sm text-11 font-medium">{`${progressHeaderPercentage}%`}</div>
-                  )}
-                </Disclosure.Button>
-                <Disclosure.Button className="ml-auto">
-                  {open ? (
-                    <ChevronUpOutline className="h-3.5 w-3.5" aria-hidden="true" />
+          <div className="flex flex-col">
+            <Disclosure.Button className="relative flex w-full items-center gap-2">
+              <span className="text-13 font-medium text-secondary">{t("common.progress")}</span>
+              {percent !== undefined && percent > 0 && (
+                <span className="bg-amber-500/20 text-amber-500 flex h-5 w-9 items-center justify-center rounded-sm text-11 font-medium">
+                  {`${percent}%`}
+                </span>
+              )}
+              {open ? (
+                <ChevronUpOutline className="ml-auto h-3.5 w-3.5" aria-hidden="true" />
+              ) : (
+                <ChevronDownOutline className="ml-auto h-3.5 w-3.5" aria-hidden="true" />
+              )}
+            </Disclosure.Button>
+            <Disclosure.Panel className="flex flex-col divide-y divide-subtle-1">
+              {progress === undefined ? (
+                <Loader className="mt-4 h-[160px] w-full">
+                  <Loader.Item width="100%" height="100%" />
+                </Loader>
+              ) : (
+                <>
+                  {progress.burndown ? (
+                    <div className="py-4">
+                      <BurndownChart burndown={progress.burndown} />
+                    </div>
                   ) : (
-                    <ChevronDownOutline className="h-3.5 w-3.5" aria-hidden="true" />
+                    <div className="my-2 w-full rounded-md bg-surface-2 px-2 py-2 text-13 text-tertiary">
+                      {t("no_data_yet")}
+                    </div>
                   )}
-                </Disclosure.Button>
-              </div>
-            ) : (
-              <div className="relative flex w-full items-center justify-between gap-2">
-                <div className="text-13 font-medium text-secondary">Progress</div>
-                <div className="flex items-center gap-1">
-                  <WarningCircleOutline height={14} width={14} className="text-secondary" />
-                  <span className="text-11 text-secondary italic">
-                    {moduleDetails?.start_date && moduleDetails?.target_date
-                      ? t("project_module.empty_state.sidebar.in_active")
-                      : t("project_module.empty_state.sidebar.invalid_date")}
-                  </span>
-                </div>
-              </div>
-            )}
-
-            <Transition as="div" show={open}>
-              <Disclosure.Panel className="space-y-4">
-                {/* progress burndown chart */}
-                <div>
-                  {moduleStartDate && moduleEndDate && completionChartDistributionData && (
-                    <Fragment>
-                      <ProgressChart
-                        distribution={completionChartDistributionData}
-                        totalIssues={totalIssues}
-                        plotTitle="work items"
-                      />
-                    </Fragment>
-                  )}
-                </div>
-
-                {/* progress detailed view */}
-                {chartDistributionData && (
-                  <div className="w-full border-t border-subtle pt-5">
-                    <ModuleProgressStats
-                      distribution={chartDistributionData}
-                      groupedIssues={groupedIssues}
-                      moduleId={moduleId}
-                      noBackground={false}
-                      roundedTab={false}
-                      size="xs"
-                      totalIssuesCount={totalIssues}
+                  <div className="w-full py-4">
+                    <ProgressTabs
+                      progress={progress}
+                      projectId={projectId}
+                      storageKey={`module-progress-tab-${module.id}`}
                     />
                   </div>
-                )}
-              </Disclosure.Panel>
-            </Transition>
+                </>
+              )}
+            </Disclosure.Panel>
           </div>
         )}
       </Disclosure>

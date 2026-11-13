@@ -7,17 +7,20 @@ import { createRoot } from "react-dom/client";
 import { MemoryRouter } from "react-router";
 import { SWRConfig } from "swr";
 import { afterEach, expect, it, vi } from "vitest";
-import { EViewAccess, type IModule, type IProjectView } from "@nerve/types";
+import { EViewAccess, type IProjectView } from "@nerve/types";
+import { tokenManager } from "@/lib/auth/api-client";
 import { FakeNerve } from "@/lib/auth/fake-nerve";
 import { StoreContext } from "@/lib/store-context";
 import { RootStore } from "@/store/root.store";
 import { RouterStore } from "@/store/router.store";
 import { InstanceStore } from "@/store/instance.store";
 import { ThemeStore } from "@/store/theme.store";
-import { ModulesStore } from "@/store/module.store";
 import { ProjectViewStore } from "@/store/project-view.store";
+import { ModulesService } from "@/services/planning/modules.service";
+import { moduleRowOf } from "@/store/planning/fake-modules";
+import { ModuleActionsHost } from "@/components/modules/actions-host";
 import { loadWorkspaces, workspaceOf } from "@/store/workspace/fake-workspaces";
-import { loadProjects, projectOf } from "@/store/project/fake-projects";
+import { loadProjects, moduleOf, projectOf } from "@/store/project/fake-projects";
 import ModulePage from "./modules/(detail)/[moduleId]/page";
 import { ModuleIssuesHeader } from "./modules/(detail)/header";
 import { ProjectViewIssuesHeader } from "./views/(detail)/[viewId]/header";
@@ -60,37 +63,15 @@ async function fixture() {
 
 it("preserves_domain_loading_without_issue_lists: module details and its own loader", async () => {
   const store = await fixture();
-  const module: IModule = {
-    id: "m",
-    name: "Milestone",
-    description: "Module details retained",
-    description_text: "",
-    description_html: "",
-    workspace_id: "id-ws",
-    project_id: "p-proj",
-    lead_id: null,
-    member_ids: [],
-    is_favorite: false,
-    sort_order: 0,
-    view_props: { filters: {} },
-    archived_at: null,
-    start_date: null,
-    target_date: null,
-    created_at: "",
-    updated_at: "",
-    total_issues: 0,
-    completed_issues: 0,
-    backlog_issues: 0,
-    started_issues: 0,
-    unstarted_issues: 0,
-    cancelled_issues: 0,
-  };
-  runInAction(() => {
-    store.module.moduleMap.m = module;
-  });
-  const fetch = vi
-    .spyOn((store.module as ModulesStore).moduleService, "getModuleDetails")
-    .mockReturnValue(new Promise<never>(() => {}));
+  const project = store.projectRoot.project.getProjectById("p-proj")!;
+  const module = moduleOf(project, "Milestone", { id: "m", description: "Module details retained" });
+  // the project's list holds the module (the project's wrapper read it); the page's own reads stay out
+  vi.spyOn(ModulesService.prototype, "list").mockResolvedValue([moduleRowOf(module)]);
+  await store.planning.modules.fetchModules("p-proj");
+  const fetch = vi.spyOn(ModulesService.prototype, "get").mockReturnValue(new Promise<never>(() => {}));
+  vi.spyOn(ModulesService.prototype, "progress").mockReturnValue(new Promise<never>(() => {}));
+  vi.spyOn(ModulesService.prototype, "links").mockReturnValue(new Promise<never>(() => {}));
+  vi.spyOn(tokenManager, "state", "get").mockReturnValue({ status: "signed-in", loginId: "x" });
   const issues = vi.spyOn(IssueListService.prototype, "listProject");
   const params = { workspaceSlug: "ws", projectId: "p-proj", moduleId: "m" };
   await act(async () =>
@@ -98,20 +79,22 @@ it("preserves_domain_loading_without_issue_lists: module details and its own loa
       <MemoryRouter>
         <StoreContext.Provider value={store}>
           <SWRConfig value={{ provider: () => new Map() }}>
-            <ModuleIssuesHeader {...params} />
-            <ModulePage {...({ params } as ComponentProps<typeof ModulePage>)} />
+            <ModuleActionsHost workspaceSlug="ws" projectId="p-proj">
+              <ModuleIssuesHeader {...params} />
+              <ModulePage {...({ params } as ComponentProps<typeof ModulePage>)} />
+            </ModuleActionsHost>
           </SWRConfig>
         </StoreContext.Provider>
       </MemoryRouter>
     )
   );
-  expect(fetch).toHaveBeenCalledExactlyOnceWith("ws", "p-proj", "m");
+  expect(fetch).toHaveBeenCalledExactlyOnceWith("m");
   expect(issues).not.toHaveBeenCalled();
   expect(document.title).toBe("PROJ - Milestone");
   expect(container.textContent).toContain("Milestone");
   expect(container.textContent).not.toContain("Add work item");
   expect(container.textContent).not.toContain("Display");
-  expect(container.querySelector("textarea")?.value).toBe("Module details retained");
+  expect(container.textContent).toContain("Module details retained");
   store.dispose();
 });
 

@@ -175,13 +175,7 @@ export const ModuleCardItem = observer(function ModuleCardItem(props: Props) {
                 <span className="truncate text-14 font-medium">{moduleDetails.name}</span>
               </Tooltip>
               <div className="flex items-center gap-2" onClick={handleEventPropagation}>
-                {moduleStatus && (
-                  <ModuleStatusDropdown
-                    isDisabled={isDisabled}
-                    moduleDetails={moduleDetails}
-                    handleModuleDetailsChange={handleModuleDetailsChange}
-                  />
-                )}
+                {moduleStatus && <ModuleStatusDropdown moduleId={moduleId} editable={!isDisabled} />}
                 <button onClick={openModuleOverview}>
                   <InfoOutline className="h-4 w-4 text-placeholder" />
                 </button>

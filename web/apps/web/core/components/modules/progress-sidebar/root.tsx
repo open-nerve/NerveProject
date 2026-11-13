@@ -4,136 +4,42 @@
  * See the LICENSE file for details.
  */
 
-import { useEffect, useState } from "react";
 import { observer } from "mobx-react";
-import { useParams } from "react-router";
-import { Controller, useForm } from "react-hook-form";
-import {
-  AddOutline,
-  ChevronDownOutline,
-  ChevronRightOutline,
-  InfoOutline,
-  MembersOutline,
-  StartDateOutline,
-  UserAltOutline,
-  WorkItemsOutline,
-} from "@makeplane/propel/icons";
-import { Disclosure, Transition } from "@headlessui/react";
-import { MODULE_STATUS, EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
-// nerve types
-import { useTranslation } from "@nerve/i18n";
-import { ModuleStatusIcon } from "@nerve/propel/icons";
-import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { ILinkDetails, IModule, ModuleLink } from "@nerve/types";
-// nerve ui
-import { Loader, CustomSelect } from "@nerve/ui";
-import { TextArea } from "@makeplane/propel/components/text-area";
-// helpers
-import { getDate, renderFormattedPayloadDate } from "@nerve/utils";
-import { DateRangeDropdown } from "@/components/dropdowns/date-range";
-import { MemberDropdown } from "@/components/dropdowns/member/dropdown";
-import { CreateUpdateModuleLinkModal, ModuleProgress, ModuleLinksList } from "@/components/modules";
+// nerve imports
+import { Loader } from "@nerve/ui";
 // hooks
-import { useModule } from "@/hooks/store/use-module";
+import { useModules } from "@/hooks/store/use-modules";
 import { useUserPermissions } from "@/hooks/store/user";
-const defaultValues: Partial<IModule> = {
-  lead_id: "",
-  member_ids: [],
-  start_date: null,
-  target_date: null,
-  status: "backlog",
-};
+// local imports
+import { ModuleProgress } from "./issue-progress";
+import { ModuleSidebarDetails } from "./sidebar-details";
+import { ModuleSidebarHeader } from "./sidebar-header";
+import { ModuleSidebarLinks } from "./sidebar-links";
 
 type Props = {
-  moduleId: string;
   handleClose: () => void;
-  isArchived?: boolean;
+  moduleId: string;
+  projectId: string;
+  workspaceSlug: string;
 };
 
-// TODO: refactor this component
-export const ModuleProgressSidebar = observer(function ModuleProgressSidebar(props: Props) {
-  const { moduleId, handleClose, isArchived } = props;
-  // states
-  const [moduleLinkModal, setModuleLinkModal] = useState(false);
-  const [selectedLinkToUpdate, setSelectedLinkToUpdate] = useState<ILinkDetails | null>(null);
-  // router
-  const { workspaceSlug, projectId } = useParams();
-
+/**
+ * A module's progress sidebar (P6a spec 2.6), of the module as the store shows it (its page or its preview reads it,
+ * an archived one's too, R12): its head, its details, its progress and its links. Its numbers are nerve's progress of
+ * the module (R8). The caller changes its status, days, lead and members here while he writes the project's modules
+ * (canWriteModules, R5) and the module is not archived; an archived module's sidebar is read-only.
+ */
+export const ModuleDetailsSidebar = observer(function ModuleDetailsSidebar(props: Props) {
+  const { handleClose, moduleId, projectId, workspaceSlug } = props;
   // store hooks
-  const { t } = useTranslation();
-  const { allowPermissions } = useUserPermissions();
+  const { getModuleById, getModuleProgress } = useModules();
+  const { canWriteModules } = useUserPermissions();
+  const module = getModuleById(moduleId);
+  const progress = getModuleProgress(moduleId);
 
-  const { getModuleById, updateModuleDetails, createModuleLink, updateModuleLink, deleteModuleLink } = useModule();
-
-  // derived values
-  const moduleDetails = getModuleById(moduleId);
-
-  const { reset, control } = useForm({
-    defaultValues,
-  });
-
-  const submitChanges = async (data: Partial<IModule>) => {
-    if (!workspaceSlug || !projectId || !moduleId) return;
-    await updateModuleDetails(workspaceSlug, projectId, moduleId, data);
-  };
-
-  const handleCreateLink = async (formData: ModuleLink) => {
-    if (!workspaceSlug || !projectId || !moduleId) return;
-    const payload = { metadata: {}, ...formData };
-    await createModuleLink(workspaceSlug, projectId, moduleId, payload);
-  };
-
-  const handleUpdateLink = async (formData: ModuleLink, linkId: string) => {
-    if (!workspaceSlug || !projectId) return;
-    const payload = { metadata: {}, ...formData };
-    await updateModuleLink(workspaceSlug, projectId, moduleId, linkId, payload);
-  };
-
-  const handleDeleteLink = async (linkId: string) => {
-    if (!workspaceSlug || !projectId) return;
-    try {
-      await deleteModuleLink(workspaceSlug, projectId, moduleId, linkId);
-      setToast({
-        type: TOAST_TYPE.SUCCESS,
-        title: "Success!",
-        message: "Module link deleted successfully.",
-      });
-    } catch (_error) {
-      setToast({
-        type: TOAST_TYPE.ERROR,
-        title: "Error!",
-        message: "Some error occurred",
-      });
-    }
-  };
-
-  const handleDateChange = async (startDate: Date | undefined, targetDate: Date | undefined) => {
-    submitChanges({
-      start_date: startDate ? renderFormattedPayloadDate(startDate) : null,
-      target_date: targetDate ? renderFormattedPayloadDate(targetDate) : null,
-    });
-    setToast({
-      type: TOAST_TYPE.SUCCESS,
-      title: "Success!",
-      message: "Module updated successfully.",
-    });
-  };
-
-  useEffect(() => {
-    if (moduleDetails)
-      reset({
-        ...moduleDetails,
-      });
-  }, [moduleDetails, reset]);
-
-  const handleEditLink = (link: ILinkDetails) => {
-    setSelectedLinkToUpdate(link);
-    setModuleLinkModal(true);
-  };
-
-  if (!moduleDetails)
+  if (!module)
     return (
-      <Loader>
+      <Loader className="px-5">
         <div className="space-y-2">
           <Loader.Item height="15px" width="50%" />
           <Loader.Item height="15px" width="30%" />
@@ -146,264 +52,20 @@ export const ModuleProgressSidebar = observer(function ModuleProgressSidebar(pro
       </Loader>
     );
 
-  const moduleStatus = MODULE_STATUS.find((status) => status.value === moduleDetails.status);
-
-  const issueCount =
-    moduleDetails.total_issues === 0
-      ? "0 work items"
-      : `${moduleDetails.completed_issues}/${moduleDetails.total_issues}`;
-
-  const isEditingAllowed = allowPermissions(
-    [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
-    EUserPermissionsLevel.PROJECT
-  );
-
+  const editable = canWriteModules(workspaceSlug, projectId) && module.archived_at === null;
   return (
-    <div className="relative">
-      <CreateUpdateModuleLinkModal
-        isOpen={moduleLinkModal}
-        handleClose={() => {
-          setModuleLinkModal(false);
-          setTimeout(() => {
-            setSelectedLinkToUpdate(null);
-          }, 500);
-        }}
-        data={selectedLinkToUpdate}
-        createLink={handleCreateLink}
-        updateLink={handleUpdateLink}
+    <div className="relative pb-2">
+      <div className="flex w-full flex-col gap-5">
+        <ModuleSidebarHeader module={module} editable={editable} handleClose={handleClose} />
+        <ModuleSidebarDetails module={module} projectId={projectId} progress={progress} editable={editable} />
+      </div>
+      <ModuleProgress module={module} projectId={projectId} progress={progress} />
+      <ModuleSidebarLinks
+        moduleId={module.id}
+        workspaceSlug={workspaceSlug}
+        projectId={projectId}
+        editable={editable}
       />
-      <>
-        <div className="sticky top-0 z-10 flex items-center justify-between bg-surface-1 pt-5 pb-5">
-          <div>
-            <button
-              className="flex h-5 w-5 items-center justify-center rounded-full bg-layer-3"
-              onClick={() => handleClose()}
-            >
-              <ChevronRightOutline className="h-3 w-3 text-on-color" />
-            </button>
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center gap-5 pt-2">
-            <Controller
-              control={control}
-              name="status"
-              render={({ field: { value } }) => (
-                <CustomSelect
-                  customButton={
-                    <span
-                      className={`flex h-6 w-20 items-center justify-center rounded-xs text-center text-11 ${
-                        isEditingAllowed && !isArchived ? "cursor-pointer" : "cursor-not-allowed"
-                      }`}
-                      style={{
-                        color: moduleStatus ? moduleStatus.color : "#a3a3a2",
-                        backgroundColor: moduleStatus ? `${moduleStatus.color}20` : "#a3a3a220",
-                      }}
-                    >
-                      {(moduleStatus && t(moduleStatus?.i18n_label)) ?? t("project_modules.status.backlog")}
-                    </span>
-                  }
-                  value={value ?? null}
-                  onChange={(status: IModule["status"]) => {
-                    submitChanges({ status });
-                  }}
-                  disabled={!isEditingAllowed || isArchived}
-                >
-                  {MODULE_STATUS.map((status) => (
-                    <CustomSelect.Option key={status.value} value={status.value}>
-                      <div className="flex items-center gap-2">
-                        <ModuleStatusIcon status={status.value} />
-                        {t(status.i18n_label)}
-                      </div>
-                    </CustomSelect.Option>
-                  ))}
-                </CustomSelect>
-              )}
-            />
-          </div>
-          <h4 className="w-full text-18 font-semibold wrap-break-word text-primary">{moduleDetails.name}</h4>
-          {moduleDetails.description && (
-            <TextArea size="lg" surface="inline" autoResize value={moduleDetails.description} disabled />
-          )}
-        </div>
-
-        <div className="flex flex-col gap-5 pt-2.5 pb-6">
-          <div className="flex items-center justify-start gap-1">
-            <div className="flex w-2/5 items-center justify-start gap-2 text-tertiary">
-              <StartDateOutline className="h-4 w-4" />
-              <span className="text-14">{t("date_range")}</span>
-            </div>
-            <div className="h-7">
-              <Controller
-                control={control}
-                name="start_date"
-                render={({ field: { value: startDateValue, onChange: onChangeStartDate } }) => (
-                  <Controller
-                    control={control}
-                    name="target_date"
-                    render={({ field: { value: endDateValue, onChange: onChangeEndDate } }) => {
-                      const startDate = getDate(startDateValue);
-                      const endDate = getDate(endDateValue);
-                      return (
-                        <DateRangeDropdown
-                          buttonContainerClassName="w-full"
-                          buttonVariant="background-with-text"
-                          value={{
-                            from: startDate,
-                            to: endDate,
-                          }}
-                          onSelect={(val) => {
-                            onChangeStartDate(val?.from ? renderFormattedPayloadDate(val.from) : null);
-                            onChangeEndDate(val?.to ? renderFormattedPayloadDate(val.to) : null);
-                            handleDateChange(val?.from, val?.to);
-                          }}
-                          placeholder={{
-                            from: t("start_date"),
-                            to: t("end_date"),
-                          }}
-                          disabled={!isEditingAllowed || isArchived}
-                        />
-                      );
-                    }}
-                  />
-                )}
-              />
-            </div>
-          </div>
-          <div className="flex items-center justify-start gap-1">
-            <div className="flex w-2/5 items-center justify-start gap-2 text-tertiary">
-              <UserAltOutline className="h-4 w-4" />
-              <span className="text-14">{t("lead")}</span>
-            </div>
-            <Controller
-              control={control}
-              name="lead_id"
-              render={({ field: { value } }) => (
-                <div className="h-7 w-3/5">
-                  <MemberDropdown
-                    value={value ?? null}
-                    onChange={(val) => {
-                      submitChanges({ lead_id: val });
-                    }}
-                    projectId={projectId ?? ""}
-                    multiple={false}
-                    buttonVariant="background-with-text"
-                    placeholder={t("lead")}
-                    disabled={!isEditingAllowed || isArchived}
-                    icon={UserAltOutline}
-                  />
-                </div>
-              )}
-            />
-          </div>
-          <div className="flex items-center justify-start gap-1">
-            <div className="flex w-2/5 items-center justify-start gap-2 text-tertiary">
-              <MembersOutline className="h-4 w-4" />
-              <span className="text-14">{t("members")}</span>
-            </div>
-            <Controller
-              control={control}
-              name="member_ids"
-              render={({ field: { value } }) => (
-                <div className="h-7 w-3/5">
-                  <MemberDropdown
-                    value={value ?? []}
-                    onChange={(val: string[]) => {
-                      submitChanges({ member_ids: val });
-                    }}
-                    multiple
-                    projectId={projectId ?? ""}
-                    buttonVariant={value && value?.length > 0 ? "transparent-without-text" : "background-with-text"}
-                    buttonClassName={value && value.length > 0 ? "hover:bg-transparent px-0" : ""}
-                    disabled={!isEditingAllowed || isArchived}
-                  />
-                </div>
-              )}
-            />
-          </div>
-          <div className="flex items-center justify-start gap-1">
-            <div className="flex w-2/5 items-center justify-start gap-2 text-tertiary">
-              <WorkItemsOutline className="h-4 w-4" />
-              <span className="text-14">{t("issues")}</span>
-            </div>
-            <div className="flex h-7 w-3/5 items-center">
-              <span className="px-1.5 text-13 text-tertiary">{issueCount}</span>
-            </div>
-          </div>
-        </div>
-
-        {workspaceSlug && projectId && moduleDetails?.id && <ModuleProgress moduleId={moduleDetails?.id} />}
-
-        <div className="flex flex-col">
-          <div className="flex w-full flex-col items-center justify-start gap-2 border-t border-subtle px-1.5 py-5">
-            {/* Accessing link outside the disclosure as mobx is not  considering the children inside Disclosure as part of the component hence not observing their state change*/}
-            <Disclosure defaultOpen={!!moduleDetails?.link_module?.length}>
-              {({ open }) => (
-                <div className={`relative flex h-full w-full flex-col ${open ? "" : "flex-row"}`}>
-                  <Disclosure.Button className="flex w-full items-center justify-between gap-2 p-1.5">
-                    <div className="flex items-center justify-start gap-2 text-13">
-                      <span className="font-medium text-secondary">{t("common.links")}</span>
-                    </div>
-                    <div className="flex items-center gap-2.5">
-                      <ChevronDownOutline
-                        className={`h-3.5 w-3.5 ${open ? "rotate-180 transform" : ""}`}
-                        aria-hidden="true"
-                      />
-                    </div>
-                  </Disclosure.Button>
-                  <Transition as="div" show={open}>
-                    <Disclosure.Panel>
-                      <div className="mt-2 flex min-h-72 w-full flex-col space-y-3 overflow-y-auto">
-                        {isEditingAllowed && moduleDetails.link_module && moduleDetails.link_module.length > 0 ? (
-                          <>
-                            {isEditingAllowed && !isArchived && (
-                              <div className="flex w-full items-center justify-end">
-                                <button
-                                  className="flex items-center gap-1.5 text-13 font-medium text-accent-primary"
-                                  onClick={() => setModuleLinkModal(true)}
-                                >
-                                  <AddOutline className="h-3 w-3" />
-                                  {t("add_link")}
-                                </button>
-                              </div>
-                            )}
-
-                            {moduleId && (
-                              <ModuleLinksList
-                                moduleId={moduleId}
-                                handleEditLink={handleEditLink}
-                                handleDeleteLink={handleDeleteLink}
-                                disabled={!isEditingAllowed || isArchived}
-                              />
-                            )}
-                          </>
-                        ) : (
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-2">
-                              <InfoOutline className="h-3.5 w-3.5 stroke-[1.5] text-tertiary" />
-                              <span className="p-0.5 text-11 text-tertiary">{t("common.no_links_added_yet")}</span>
-                            </div>
-                            {isEditingAllowed && !isArchived && (
-                              <button
-                                className="flex items-center gap-1.5 text-13 font-medium text-accent-primary"
-                                onClick={() => setModuleLinkModal(true)}
-                              >
-                                <AddOutline className="h-3 w-3" />
-                                {t("add_link")}
-                              </button>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </Disclosure.Panel>
-                  </Transition>
-                </div>
-              )}
-            </Disclosure>
-          </div>
-        </div>
-      </>
     </div>
   );
 });

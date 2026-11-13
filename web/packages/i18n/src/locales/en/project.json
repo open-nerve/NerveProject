@@ -138,6 +138,11 @@
     "update_module": "Update Module",
     "create_module": "Create Module",
     "status": "Status",
+    "not_found": {
+      "title": "Module does not exist",
+      "description": "The module you are looking for does not exist or has been deleted.",
+      "action": "View other modules"
+    },
     "action": {
       "create": {
         "success": {
@@ -168,12 +173,6 @@
           "title": "Restore success",
           "description": "Your module can be found in project modules."
         }
-      }
-    },
-    "empty_state": {
-      "sidebar": {
-        "in_active": "This module isn't active yet.",
-        "invalid_date": "Invalid date. Please enter valid date."
       }
     },
     "delete": {

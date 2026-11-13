@@ -9,36 +9,6 @@ import type { IIssueFilterOptions } from "../view-props";
 
 export type TModuleStatus = "backlog" | "planned" | "in-progress" | "paused" | "completed" | "cancelled";
 
-export type TModuleCompletionChartDistribution = {
-  [key: string]: number | null;
-};
-
-type TModuleDistributionBase = {
-  total_issues: number;
-  pending_issues: number;
-  completed_issues: number;
-};
-
-type TModuleAssigneesDistribution = {
-  assignee_id: string | null;
-  avatar_url: string | null;
-  first_name: string | null;
-  last_name: string | null;
-  display_name: string | null;
-};
-
-type TModuleLabelsDistribution = {
-  color: string | null;
-  label_id: string | null;
-  label_name: string | null;
-};
-
-export type TModuleDistribution = {
-  assignees: (TModuleAssigneesDistribution & TModuleDistributionBase)[];
-  completion_chart: TModuleCompletionChartDistribution;
-  labels: (TModuleLabelsDistribution & TModuleDistributionBase)[];
-};
-
 export interface IModule {
   total_issues: number;
   completed_issues: number;
@@ -46,7 +16,6 @@ export interface IModule {
   started_issues: number;
   unstarted_issues: number;
   cancelled_issues: number;
-  distribution?: TModuleDistribution;
 
   id: string;
   name: string;

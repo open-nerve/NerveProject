@@ -11,7 +11,7 @@ import { useNavigate, useLocation, useSearchParams } from "react-router";
 import { generateQueryParams } from "@nerve/utils";
 import { useModule } from "@/hooks/store/use-module";
 // components
-import { ModuleProgressSidebar } from "./";
+import { ModuleDetailsSidebar } from "./progress-sidebar";
 
 type Props = {
   projectId: string;
@@ -56,7 +56,12 @@ export const ModulePeekOverview = observer(function ModulePeekOverview({
               "0px 1px 4px 0px rgba(0, 0, 0, 0.06), 0px 2px 4px 0px rgba(16, 24, 40, 0.06), 0px 1px 8px -1px rgba(16, 24, 40, 0.06)",
           }}
         >
-          <ModuleProgressSidebar moduleId={peekModule} handleClose={handleClose} isArchived={isArchived} />
+          <ModuleDetailsSidebar
+            moduleId={peekModule}
+            projectId={projectId}
+            workspaceSlug={workspaceSlug}
+            handleClose={handleClose}
+          />
         </div>
       )}
     </>

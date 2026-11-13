@@ -138,6 +138,11 @@
     "update_module": "更新模块",
     "create_module": "创建模块",
     "status": "状态",
+    "not_found": {
+      "title": "模块不存在",
+      "description": "你要找的模块不存在或已被删除。",
+      "action": "查看其他模块"
+    },
     "action": {
       "create": {
         "success": {
@@ -168,12 +173,6 @@
           "title": "恢复成功",
           "description": "您可以在项目模块中找到这个模块。"
         }
-      }
-    },
-    "empty_state": {
-      "sidebar": {
-        "in_active": "此模块尚未激活。",
-        "invalid_date": "日期无效。请输入有效日期。"
       }
     },
     "delete": {
