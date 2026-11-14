@@ -2,6 +2,7 @@
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
 import type { Issue } from "@nerve/api-client";
+import { useTranslation } from "@nerve/i18n";
 import type { EIssuesStoreType, IssueChange } from "@nerve/types";
 import {
   ExistingIssuesListModal,
@@ -13,6 +14,7 @@ import {
   type PlanningPageStoreType,
 } from "@/hooks/planning-page-domains";
 import type { IssueSearchQuery } from "@/services/issue/issue-search.service";
+import { PLANNING_PAGE_LAYOUTS } from "./planning-page-layouts";
 
 /**
  * What an entry of "add existing" asks of the layout's command host (P7b spec 2.9, R11): the page whose actions add the
@@ -30,10 +32,11 @@ export type AddExistingRequest = {
 const PLANNING_SEARCH_LIMIT = 100;
 
 /**
- * The dialog of an "add existing" request the host holds (P7b spec 2.9, R2, R11): it searches the route's project,
+ * The dialog of an "add existing" request the host holds (P7b spec 2.9, R2, R11, R21): it searches the route's project,
  * starts the batch the host sends and, while it stays open, shows each chosen one's outcome. A cycle's or a module's
  * page searches nerve's most at once and hides the work items already in its cycle or module, nerve's search excluding
- * none; one in another cycle is listed, and adding it moves it.
+ * none, saying so once each found is; one in another cycle is listed with that cycle beside it (its domain's
+ * OptionCaption), and adding it moves it.
  */
 export const AddExistingDialog = observer(function AddExistingDialog(props: {
   request: AddExistingRequest;
@@ -42,9 +45,12 @@ export const AddExistingDialog = observer(function AddExistingDialog(props: {
   onClose: () => void;
 }) {
   const { request, submit, onClose } = props;
+  const { t } = useTranslation();
   const params = useParams();
   const { workspaceSlug, projectId } = params;
-  const domain = isPlanningPageStoreType(request.storeType) ? PLANNING_PAGE_DOMAINS[request.storeType] : undefined;
+  const planning = isPlanningPageStoreType(request.storeType) ? request.storeType : undefined;
+  const domain = planning ? PLANNING_PAGE_DOMAINS[planning] : undefined;
+  const { allFound, OptionCaption } = planning ? PLANNING_PAGE_LAYOUTS[planning].addExisting : {};
   const entityId = domain && params[domain.param];
   const page = projectId && entityId ? { projectID: projectId, entityID: entityId } : undefined;
   if (!workspaceSlug || !projectId) return null;
@@ -56,7 +62,11 @@ export const AddExistingDialog = observer(function AddExistingDialog(props: {
       isOpen
       handleClose={onClose}
       searchParams={domain ? { ...request.searchParams, limit: PLANNING_SEARCH_LIMIT } : (request.searchParams ?? {})}
-      shouldHideIssue={(issue) => !!request.hide?.(issue) || (!!page && !!domain?.holds(issue, page))}
+      shouldHideIssue={request.hide}
+      exclusion={
+        page && domain && allFound ? { excludes: (issue) => domain.holds(issue, page), hint: t(allFound) } : undefined
+      }
+      optionCaption={OptionCaption && ((issue) => <OptionCaption issue={issue} />)}
       handleOnSubmit={submit}
     />
   );

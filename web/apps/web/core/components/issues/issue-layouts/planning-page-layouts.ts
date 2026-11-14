@@ -1,4 +1,6 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
+import type { ComponentType } from "react";
+import type { Issue } from "@nerve/api-client";
 import { ISSUE_DISPLAY_FILTERS_BY_PAGE } from "@nerve/constants";
 import { EIssuesStoreType } from "@nerve/types";
 import type { TWorkItemFilterProperty } from "@nerve/types";
@@ -6,6 +8,7 @@ import type { PlanningPageStoreType } from "@/hooks/planning-page-domains";
 import { useCycleListState } from "@/hooks/use-cycle-list-state";
 import { useModuleListState } from "@/hooks/use-module-list-state";
 import type { PlanningDomain } from "@/lib/planning-switch";
+import { CurrentCycleCaption } from "./current-cycle-caption";
 
 /** An empty state's texts, by their keys. */
 type EmptyTexts = { title: string; description: string };
@@ -34,6 +37,12 @@ type PlanningPageLayout = {
    * adding of existing ones.
    */
   empty: { readOnly: EmptyTexts; none: EmptyTexts & { create: string; addExisting: string } };
+  /**
+   * The dialog of "add existing" (P7b spec 2.9, R2, R21): what it says once each work item nerve found is in the page's
+   * cycle or module already; and what each work item it lists shows beside its name, if anything: on a cycle's page,
+   * the cycle it is in, which it leaves for the page's (joining a module leaves no other).
+   */
+  addExisting: { allFound: string; OptionCaption?: ComponentType<{ issue: Issue }> };
 };
 
 /** Each domain's row; the store type picks it. */
@@ -57,6 +66,7 @@ export const PLANNING_PAGE_LAYOUTS: Record<PlanningPageStoreType, PlanningPageLa
         addExisting: "project_empty_state.cycle_work_items.cta_secondary",
       },
     },
+    addExisting: { allFound: "cycle.found_already_in", OptionCaption: CurrentCycleCaption },
   },
   [EIssuesStoreType.MODULE]: {
     domain: "modules",
@@ -77,5 +87,6 @@ export const PLANNING_PAGE_LAYOUTS: Record<PlanningPageStoreType, PlanningPageLa
         addExisting: "project_empty_state.module_work_items.cta_secondary",
       },
     },
+    addExisting: { allFound: "module.found_already_in" },
   },
 };

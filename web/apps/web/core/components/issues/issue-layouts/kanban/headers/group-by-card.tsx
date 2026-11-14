@@ -15,6 +15,7 @@ import { useTranslation } from "@nerve/i18n";
 import type { GroupJoinRefusal, TIssueKanbanFilters, TIssueGroupByOptions } from "@nerve/types";
 // components
 import { isDialogStore, useCreateDialogRequest } from "@/components/issues/issue-layouts/command-host";
+import { GroupAddExisting } from "@/components/issues/issue-layouts/group-add-existing";
 import { useGroupName } from "@/components/issues/issue-layouts/group-columns";
 // hooks
 import { useIssueStoreType } from "@/hooks/use-issue-layout-store";
@@ -56,6 +57,8 @@ export const HeaderGroupByCard = observer(function HeaderGroupByCard(props: IHea
   const requestCreate = useCreateDialogRequest();
   const { t } = useTranslation();
   const { label, caption } = useGroupName(title, archived);
+  // what the header adds work items by, its "+" and beside it "add existing" (P7b spec 2.9, R20), on one gate
+  const adding = !disableIssueCreation && !refusal;
   return (
     <div
       className={`relative flex flex-shrink-0 gap-1 py-1.5 ${
@@ -96,7 +99,7 @@ export const HeaderGroupByCard = observer(function HeaderGroupByCard(props: IHea
         </button>
       )}
 
-      {!disableIssueCreation && !refusal && (
+      {adding && (
         <button
           type="button"
           aria-label={`${t("create_work_item")}: ${label}`}
@@ -111,6 +114,13 @@ export const HeaderGroupByCard = observer(function HeaderGroupByCard(props: IHea
         >
           <AddOutline width={14} />
         </button>
+      )}
+
+      {adding && (
+        <GroupAddExisting
+          label={label}
+          className="flex h-[20px] w-[20px] flex-shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-sm bg-layer-transparent transition-all hover:bg-layer-transparent-hover"
+        />
       )}
     </div>
   );
