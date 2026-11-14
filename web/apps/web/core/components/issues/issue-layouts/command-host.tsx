@@ -74,8 +74,9 @@ export const useWorkItemDialogRequest = () => useContext(CommandsContext)?.openD
  */
 export const useCreateDialogRequest = () => useContext(CommandsContext)?.create;
 /**
- * The dialog of "add existing" (P7b spec 2.9, R11): the empty state it is asked from goes once the first one chosen is
- * confirmed, so the layout holds the dialog, as a row's, by the route's project.
+ * The dialog of "add existing" (P7b spec 2.9, 2.10, R11): the empty state it is asked from goes once the first one
+ * chosen is confirmed, a group's header or a calendar's day while the list is checked, so the layout holds the dialog,
+ * as a row's, by the route's project.
  */
 export const useAddExistingRequest = () => useContext(CommandsContext)?.addExisting;
 
