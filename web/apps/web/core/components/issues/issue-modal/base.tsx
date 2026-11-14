@@ -294,6 +294,7 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
     publishBlocked,
     notice: copy && workspaceSlug ? <CopyNotice copy={copy} slug={workspaceSlug} /> : undefined,
     planningLoading: start.planningLoading,
+    planningRefusals: start.planningRefusals,
   };
 
   return (

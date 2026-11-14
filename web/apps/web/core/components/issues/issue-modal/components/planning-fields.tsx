@@ -8,10 +8,11 @@ import { Field, FieldError } from "@makeplane/propel/components/field";
 import { useTranslation } from "@nerve/i18n";
 import { CycleDropdown } from "@/components/dropdowns/cycle/dropdown";
 import { ModuleDropdown } from "@/components/dropdowns/module/dropdown";
+import { DirectoryReadError } from "@/components/issues/issue-detail-widgets/directory-read";
 import { useProject } from "@/hooks/store/use-project";
-import { usePlanningNames } from "@/hooks/use-planning-names";
+import { usePlanningNames, type PlanningListRefusal } from "@/hooks/use-planning-names";
 import { modulesAfter } from "@/lib/planning-directory";
-import { planningOn } from "@/lib/planning-switch";
+import { planningOn, type PlanningDomain } from "@/lib/planning-switch";
 
 type Props = {
   control: Control<IssueFormValues>;
@@ -20,6 +21,8 @@ type Props = {
   projectId: string | null;
   /** Whether the form waits for its project's lists: the fields show loading, holding their values. */
   loading: boolean;
+  /** Each of those lists nerve refused: its field says so, with a retry. */
+  refusals?: Partial<Record<PlanningDomain, PlanningListRefusal>>;
   handleFormChange: () => void;
 };
 
@@ -29,10 +32,11 @@ type Props = {
  * does not have (usePlanningNames, R14). A pick changes the form's own value, which is what the form sends: the cycle
  * picked, none for No cycle; the module added to the form's set or taken out of it (modulesAfter). The values are the
  * form's start (the modal's, before the form mounts), never filled in here; loading while the form waits for its
- * project's lists. nerve's refusal of a field's value shows under it and describes it (R17).
+ * project's lists; under a field, nerve's refusal of its list, with a retry (the modal holds what it was given of it
+ * meanwhile). nerve's refusal of a field's value shows under it and describes it (R17).
  */
 export const IssuePlanningFields = observer(function IssuePlanningFields(props: Props) {
-  const { control, workspaceSlug, projectId, loading, handleFormChange } = props;
+  const { control, workspaceSlug, projectId, loading, refusals, handleFormChange } = props;
   const { t } = useTranslation();
   const id = useId();
   const { getProjectById } = useProject();
@@ -42,6 +46,11 @@ export const IssuePlanningFields = observer(function IssuePlanningFields(props: 
   usePlanningNames(workspaceSlug, project?.id, "cycles", cycleId ? [cycleId] : []);
   usePlanningNames(workspaceSlug, project?.id, "modules", moduleIds);
   if (!project) return null;
+  /** nerve's refusal of the project's list of the domain, with its retry. */
+  const refusalOf = (domain: PlanningDomain) => {
+    const refusal = refusals?.[domain];
+    return refusal && <DirectoryReadError error={refusal.error} retry={refusal.retry} />;
+  };
   return (
     <>
       {planningOn(project, "cycles") && (
@@ -70,6 +79,7 @@ export const IssuePlanningFields = observer(function IssuePlanningFields(props: 
                   {error.message}
                 </FieldError>
               )}
+              {refusalOf("cycles")}
             </Field>
           )}
         />
@@ -99,6 +109,7 @@ export const IssuePlanningFields = observer(function IssuePlanningFields(props: 
                   {error.message}
                 </FieldError>
               )}
+              {refusalOf("modules")}
             </Field>
           )}
         />

@@ -5,18 +5,22 @@
 // two lists; until both answer, its fields show loading and hold what was given. Once they have, it starts with those
 // the work item may join, its options (an ended cycle, an archived module are none), the page's module put beside
 // them, as its defaults, not as an edit; what it holds is what it sends. A form whose project was changed meanwhile
-// keeps its own. The page, the rows, the dialog's form and its fields, the stores and HTTP are real.
+// keeps its own. A list nerve refuses shows its refusal under its field, with a retry: the form holds none of what was
+// given of it, which the modal keeps until a retry answers (P7a T12, the controller's ruling on a failed read). The
+// pages, the rows, the dialog's form and its fields, the stores and HTTP are real.
 import { act, createElement, type ReactNode } from "react";
+import { MemoryRouter } from "react-router";
+import { SWRConfig } from "swr";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { Issue, IssueDetail } from "@nerve/api-client";
 import { EIssuesStoreType } from "@nerve/types";
 import { WorkItemLevelModals } from "@/components/modals/work-item-level";
-import { json, type Call } from "@/lib/auth/fake-nerve";
+import { json, problem, type Call } from "@/lib/auth/fake-nerve";
 import { until } from "@/lib/auth/fake-time";
 import { issueDetailOf, listIssue } from "@/store/issue/fake-issues";
 import { cycleRequests, loadCycle, rowOf } from "@/store/planning/fake-cycles";
 import { loadModule, moduleRequests, moduleRowOf } from "@/store/planning/fake-modules";
-import { cycleOf, loadProjects, moduleOf, projectOf } from "@/store/project/fake-projects";
+import { cycleOf, loadProjects, moduleOf, preferencesOf, projectOf } from "@/store/project/fake-projects";
 import type { RootStore } from "@/store/root.store";
 import {
   C1,
@@ -35,6 +39,7 @@ import {
   planningPageTab,
   projectField,
 } from "./fake-planning-page";
+import { ProjectLayoutRoot } from "./project-layout-root";
 
 const bound = vi.hoisted(() => ({ app: undefined as RootStore | undefined, params: {} as Record<string, string> }));
 vi.mock("@/lib/store-context", async () => ({
@@ -75,6 +80,8 @@ const GONE = "019a0000-0000-7000-8000-0000000000d9";
 const shownFields = { state_id: "state", priority: "high", target_date: "2026-12-31" } as const;
 /** The module page's work item "first", in the ended cycle and in the page's module, Edge and Gone. */
 const held: Issue = listIssue("first", 1000, { cycle_id: DONE, module_ids: [M1, EDGE, GONE], ...shownFields });
+/** The project page's work item "first", in the cycle Now, under way, and in Edge and Gone. */
+const own: Issue = listIssue("first", 1000, { cycle_id: C1, module_ids: [EDGE, GONE], ...shownFields });
 
 let page: Awaited<ReturnType<typeof planningPageTab>>;
 afterEach(async () => page.close());
@@ -107,14 +114,8 @@ const answerLists = () =>
     await vi.advanceTimersByTimeAsync(20);
   });
 
-/**
- * Shows the module's page, its one work item "first" in the list; the tab holds the ended cycle and the two other
- * modules as nerve gives them, by their names. nerve answers the reads a row's dialog makes: the work item's, its
- * resources', and the page's list's again once the check of the work item took the row off.
- */
-async function shown() {
-  page = await planningPageTab(EIssuesStoreType.MODULE, { role: 15 });
-  bound.app = page.app;
+/** The tab holds the ended cycle and the modules Edge and Gone as nerve gives them, by their names. */
+async function holdNames() {
   await loadCycle(
     page.nerve,
     page.app.planning.cycles,
@@ -124,9 +125,44 @@ async function shown() {
   const gone = { id: GONE, status: "completed" as const, archived_at: "2026-12-01T09:00:00Z" };
   await loadModule(page.nerve, page.app.planning.modules, moduleOf(page.project, "Gone", gone));
   page.nerve.calls.length = 0;
+}
+/** Shows the module's page, its one work item "first" (held) in the list, the names held. */
+async function shown() {
+  page = await planningPageTab(EIssuesStoreType.MODULE, { role: 15 });
+  bound.app = page.app;
+  await holdNames();
   const list = layouts.list.page(true, held);
   await page.show(modulePreferencesOf(layouts.list.display), list);
-  const detail: IssueDetail = { ...issueDetailOf("first"), ...held };
+  answerDialogReads(held, list);
+}
+/** Shows the project's page, its one work item "first" (own) in the list, the names held; the cycle Now is the tab's. */
+async function projectShown() {
+  bound.params = { workspaceSlug: "ws", projectId: "A" };
+  page = await planningPageTab(EIssuesStoreType.CYCLE, { role: 15 });
+  bound.app = page.app;
+  await holdNames();
+  await page.render(
+    <SWRConfig value={{ provider: () => new Map() }}>
+      <MemoryRouter>
+        <ProjectLayoutRoot />
+      </MemoryRouter>
+    </SWRConfig>
+  );
+  const preferences = () => page.nerve.to("/api/v0/me/projects/A/preferences");
+  await until(() => preferences().length === 1, "the project's preferences");
+  const display = { ...preferencesOf().display_filters, ...layouts.list.display };
+  await act(async () => preferences()[0]!.answer(json(200, preferencesOf({ display_filters: display }))));
+  await until(() => page.lists().length === 1, "the project's list");
+  const list = layouts.list.page(true, own);
+  await act(async () => page.lists()[0]!.answer(json(200, list)));
+  answerDialogReads(own, list);
+}
+/**
+ * nerve answers the reads a row's dialog makes of the work item row: the work item's, its resources', and the page's
+ * list's again once the check of the work item took the row off.
+ */
+function answerDialogReads(row: Issue, list: unknown) {
+  const detail: IssueDetail = { ...issueDetailOf("first"), ...row };
   const normal = page.nerve.respond;
   page.nerve.respond = (call: Call) => {
     if (call.method !== "GET") normal?.(call);
@@ -137,6 +173,23 @@ async function shown() {
     else normal?.(call);
   };
 }
+/** nerve refuses the reads of the project's two lists that are out. */
+const refuseLists = () =>
+  act(async () => {
+    for (const read of [...cycleReads(), ...moduleReads()]) read.answer(problem(403, "forbidden"));
+    await vi.advanceTimersByTimeAsync(20);
+  });
+/** What the form says of its lists' reads nerve refused: each refusal, with its retry. */
+const refusals = () => [...(form()?.querySelectorAll('[role="alert"]') ?? [])].map((node) => node.textContent);
+/** Retries the read of the list whose refusal is the form's index'th. */
+async function retry(index: number) {
+  const button = form()?.querySelectorAll('[role="alert"]')[index]?.querySelector("button");
+  expect(button?.textContent, "the refusal's retry").toBe("common.retry");
+  await act(async () => button!.click());
+}
+/** The form's "discard", which closes it. */
+const discard = () =>
+  act(async () => [...form()!.querySelectorAll("button")].find((button) => button.textContent === "discard")!.click());
 /** Opens the row's copy; resolves once its form has read the work item's description. */
 async function copied() {
   await until(() => !!document.querySelector('[id^="issue-first"]'), "the row");
@@ -167,9 +220,7 @@ it("starts the copy with what it may join as its defaults, not as an edit: disca
   await until(() => cycleReads().length === 1 && moduleReads().length === 1, "the reads of the two lists");
   await answerLists();
   expect(moduleField()?.textContent).toBe("common.modules: module.count: Core; Edge");
-  await act(async () =>
-    [...form()!.querySelectorAll("button")].find((button) => button.textContent === "discard")!.click()
-  );
+  await discard();
   expect(form(), "the copy's dialog").toBeNull();
   expect(document.body.textContent).not.toContain("issue.draft.save_prompt.title");
   expect(creates()).toEqual([]);
@@ -204,4 +255,65 @@ it("keeps a form's own cycle once its project changed before the lists of the pr
   await act(async () => form()!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })));
   await until(() => elsewhere().length === 1, "the creation in B");
   expect(elsewhere()[0]!.body).not.toHaveProperty("cycle_id");
+});
+
+it("shows under each field nerve's refusal of its project's list, with a retry; the form holds none of the copy's cycle and modules", async () => {
+  await projectShown();
+  await copied();
+  await until(() => cycleReads().length === 1 && moduleReads().length === 1, "the reads of the two lists");
+  expect(cycleField()?.textContent, "the source's cycle, held while the lists are out").toContain("Now");
+  await refuseLists();
+  expect([loading(cycleField()), loading(moduleField())], "the fields, once nerve refused the lists").toEqual([
+    false,
+    false,
+  ]);
+  expect(refusals()).toEqual(["errors.forbidden common.retry", "errors.forbidden common.retry"]);
+  expect(cycleField()?.textContent).toBe("common.cycle: cycle.label");
+  expect(moduleField()?.textContent).toBe("common.modules: module.no_module");
+});
+
+it("starts the copy with what it may join once a retry of each list answers, as its defaults, not as an edit", async () => {
+  await projectShown();
+  await copied();
+  await until(() => cycleReads().length === 1 && moduleReads().length === 1, "the reads of the two lists");
+  await refuseLists();
+  // the modules' first, then the cycles' (a list read again is out, and says nothing meanwhile)
+  await retry(1);
+  await retry(0);
+  await until(() => cycleReads().length === 2 && moduleReads().length === 2, "the reads of the two lists again");
+  await answerLists();
+  expect(refusals(), "the refusals, once a retry answered").toEqual([]);
+  expect(cycleField()?.textContent).toBe("common.cycle: Now");
+  expect(moduleField()?.textContent).toBe("common.modules: Edge");
+  await discard();
+  expect(form(), "the copy's dialog").toBeNull();
+  expect(document.body.textContent).not.toContain("issue.draft.save_prompt.title");
+});
+
+it("sends neither the cycle nor the modules of a copy whose project's lists nerve refused", async () => {
+  await projectShown();
+  await copied();
+  await until(() => cycleReads().length === 1 && moduleReads().length === 1, "the reads of the two lists");
+  await refuseLists();
+  await act(async () => form()!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })));
+  await until(() => creates().length === 1, "the copy");
+  expect(creates()[0]!.body).toMatchObject({ name: "first (copy)" });
+  expect(creates()[0]!.body).not.toHaveProperty("cycle_id");
+  expect(creates()[0]!.body).not.toHaveProperty("module_ids");
+});
+
+it("starts the copy with the modules it may join once its modules' field, opened, reads their list again", async () => {
+  await projectShown();
+  await copied();
+  await until(() => cycleReads().length === 1 && moduleReads().length === 1, "the reads of the two lists");
+  await refuseLists();
+  await act(async () => {
+    moduleField()!.click();
+    await vi.advanceTimersByTimeAsync(20);
+  });
+  await until(() => moduleReads().length === 2, "the field's read of the modules");
+  await answerLists();
+  expect(refusals(), "the cycles' refusal alone").toEqual(["errors.forbidden common.retry"]);
+  expect(moduleField()?.textContent).toBe("common.modules: Edge");
+  expect(cycleField()?.textContent).toBe("common.cycle: cycle.label");
 });

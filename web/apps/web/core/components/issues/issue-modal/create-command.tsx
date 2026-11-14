@@ -27,7 +27,7 @@ import { useProject } from "@/hooks/store/use-project";
 import { useWorkspaceDraftIssues } from "@/hooks/store/workspace-draft";
 import { isPlanningPageStoreType, PLANNING_PAGE_DOMAINS } from "@/hooks/planning-page-domains";
 import type { IssueActions } from "@/hooks/use-issues-actions";
-import { usePlanningListsAnswered } from "@/hooks/use-planning-names";
+import { usePlanningListReads } from "@/hooks/use-planning-names";
 import type { RootStore } from "@/store/root.store";
 // local imports
 import { CreateIssueToastActionItems } from "../create-issue-toast-action-items";
@@ -58,8 +58,9 @@ type PlanningValues = Pick<IssueFormData, "cycle_id" | "module_ids">;
 /**
  * Of the cycle and modules a new work item's caller gave (a row's copy, its source's: P7a spec 2.6, 2.7, R15; re-72
  * F8), those that are its options in the project (cycleOptions, moduleOptions, as the store holds the project's lists):
- * none of a domain the project has turned off, nor of one whose list the store does not hold (its read refused).
- * nerve refuses a creation that names any other (planning.cycle_completed, planning.archived).
+ * none of a domain the project has turned off, nor of one whose list the store does not hold (its read refused: the
+ * form then holds none of them, and sends none; the modal keeps what was given until a retry answers). nerve refuses a
+ * creation that names any other (planning.cycle_completed, planning.archived).
  */
 function givenOptions(root: RootStore, projectId: string, given: PlanningValues): Required<PlanningValues> {
   const project = root.projectRoot.project.getProjectById(projectId);
@@ -79,20 +80,21 @@ function givenOptions(root: RootStore, projectId: string, given: PlanningValues)
  * cycle and modules start with those the caller gave and, on a cycle's or a module's page whose creation sent now would
  * join it (joinable), in the page's project, the page's own beside them (the domain's start): merged into the form's
  * default values, so that the form holds them whatever fields it shows, and sends what it holds (useCreateCommand). As
- * it opens with its project it reads the project's two lists of what is not archived, the options; until both have
- * answered its fields show loading, holding what was given; then of those it keeps the options (givenOptions), which
- * the form takes as its defaults, not as an edit. A work item's edit and a draft's form start as they are and read
- * nothing here.
+ * it opens with its project it reads the project's two lists of what is not archived, the options; while either is out
+ * its fields show loading, holding what was given; then of those it keeps the options (givenOptions), which the form
+ * takes as its defaults, not as an edit. A list nerve refused its field says so, with a retry (planningRefusals). A
+ * work item's edit and a draft's form start as they are and read nothing here.
  */
 export function useCreateStart({ workspaceSlug, storeType, isDraft, projectId, data }: CreateStartInput) {
   const root = useContext(StoreContext);
   const params = useParams();
   const creating = !isDraft && !data?.id;
-  const answered = usePlanningListsAnswered(workspaceSlug, creating ? (projectId ?? undefined) : undefined);
-  if (!creating || !projectId) return { data, planningLoading: !answered };
+  const reads = usePlanningListReads(workspaceSlug, creating ? (projectId ?? undefined) : undefined);
+  const read = { planningLoading: reads.out, planningRefusals: reads.refusals };
+  if (!creating || !projectId) return { data, ...read };
   const given = pick(data ?? {}, ["cycle_id", "module_ids"]);
-  const kept = answered ? givenOptions(root, projectId, given) : given;
-  const start = { data: { ...data, ...kept }, planningLoading: !answered };
+  const kept = reads.out ? given : givenOptions(root, projectId, given);
+  const start = { data: { ...data, ...kept }, ...read };
   if (!isPlanningPageStoreType(storeType)) return start;
   const domain = PLANNING_PAGE_DOMAINS[storeType];
   const entityID = params[domain.param];

@@ -26,7 +26,9 @@ import { Button } from "@nerve/propel/button";
 // hooks
 import { getUpdateFormDataForReset } from "@nerve/utils";
 import { ModalTitle } from "@nerve/ui";
+import type { PlanningListRefusal } from "@/hooks/use-planning-names";
 import { useRefusedFocus } from "@/lib/refused-focus";
+import type { PlanningDomain } from "@/lib/planning-switch";
 // components
 import {
   IssueDefaultProperties,
@@ -79,6 +81,8 @@ export interface IssueFormProps {
   notice?: React.ReactNode;
   /** Whether the modal waits for the lists of the project the form opened with (P7a spec 2.6, re-72 F7). */
   planningLoading?: boolean;
+  /** Each of those lists nerve refused, which its field says, with a retry. */
+  planningRefusals?: Partial<Record<PlanningDomain, PlanningListRefusal>>;
 }
 
 export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormProps) {
@@ -113,6 +117,7 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
     publishBlocked = false,
     notice,
     planningLoading = false,
+    planningRefusals,
   } = props;
 
   // states
@@ -174,22 +179,23 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
-  // Once the lists of the project the form opened with answer, the modal's start of its cycle and modules (data) is
-  // what was given that is an option, beside the page's (P7a spec 2.6, re-72 F7): their defaults, not an edit, whether
-  // or not fields show them (registered here). A field changed meanwhile keeps its value, a form whose project changed
-  // its own.
-  const planningWaited = useRef(planningLoading);
+  // Each time the lists of the project the form opened with settle (answered, or refused: a retry may answer later),
+  // the modal's start of its cycle and modules (data) is what was given that is an option, beside the page's (P7a spec
+  // 2.6, re-72 F7): their defaults, not an edit, whether or not fields show them (registered here). A field changed
+  // meanwhile keeps its value, a form whose project changed its own.
+  const refused = Object.keys(planningRefusals ?? {}).join();
+  const planningSettled = useRef(planningLoading ? undefined : refused);
   useEffect(() => {
-    if (planningLoading) planningWaited.current = true;
-    if (planningLoading || !planningWaited.current) return;
-    planningWaited.current = false;
+    if (planningLoading) planningSettled.current = undefined;
+    if (planningLoading || planningSettled.current === refused) return;
+    planningSettled.current = refused;
     if (getValues("project_id") !== defaultProjectId) return;
     register("cycle_id");
     register("module_ids");
     if (!getFieldState("cycle_id").isDirty) resetField("cycle_id", { defaultValue: data?.cycle_id ?? null });
     if (!getFieldState("module_ids").isDirty) resetField("module_ids", { defaultValue: data?.module_ids ?? [] });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [planningLoading]);
+  }, [planningLoading, refused]);
 
   const condition =
     (watch("name") && watch("name") !== "") || (watch("description_html") && watch("description_html") !== "<p></p>");
@@ -322,6 +328,7 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
                   parentId={watch("parent_id") ?? null}
                   isDraft={isDraft}
                   planningLoading={planningLoading && projectId === defaultProjectId}
+                  planningRefusals={projectId === defaultProjectId ? planningRefusals : undefined}
                   handleFormChange={handleFormChange}
                   setSelectedParentIssue={setSelectedParentIssue}
                 />

@@ -5,7 +5,7 @@
  */
 
 import type { IssueFormValues } from "../types";
-import { useState } from "react";
+import { useState, type ComponentProps } from "react";
 import { observer } from "mobx-react";
 import type { Control } from "react-hook-form";
 import { Controller, useWatch } from "react-hook-form";
@@ -38,6 +38,8 @@ type TIssueDefaultPropertiesProps = {
   isDraft: boolean;
   /** Whether the form waits for its project's lists: its cycle and modules show loading. */
   planningLoading: boolean;
+  /** Each of its project's lists nerve refused: its field says so, with a retry. */
+  planningRefusals?: ComponentProps<typeof IssuePlanningFields>["refusals"];
   handleFormChange: () => void;
   setSelectedParentIssue: (issue: Issue) => void;
 };
@@ -52,6 +54,7 @@ export const IssueDefaultProperties = observer(function IssueDefaultProperties(p
     parentId,
     isDraft,
     planningLoading,
+    planningRefusals,
     handleFormChange,
     setSelectedParentIssue,
   } = props;
@@ -145,6 +148,7 @@ export const IssueDefaultProperties = observer(function IssueDefaultProperties(p
         workspaceSlug={workspaceSlug}
         projectId={projectId}
         loading={planningLoading}
+        refusals={planningRefusals}
         handleFormChange={handleFormChange}
       />
       <div className="h-7">
