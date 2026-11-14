@@ -133,3 +133,16 @@ P3b 落地 M6 设计 §4.3 中的 `cycle_user_properties`、`module_user_propert
 - **下拉框**：两个新的 `CustomSearchSelect` 调用方以键盘核对（G4：焦点在按钮上按 Enter 打开、搜索框取得焦点、Escape 关上后焦点回到按钮）；它们的焦点轮廓没有量，随 P8 的最终矩阵。
 - 其余各项：第 1 节与本节的 `existing-issues-list-modal.tsx`（搜索接口、打开时后面的页面、选项里只在指针经过时显示的链接、移除按钮的名字）在 P7b；第 1 节视图的跟进与第 4 节四个视图文件的地址在 P7c（P7a spec R1 的 X1）。
 - 证据：提交 `43d53c3521185f5de26b3138090dd9d49d8a8d3c`、`45889a0b2c330bbc1cc731d19cd94e97816e59ae`（两个下拉框）、`adb53eb61358209b5673abcad8ec4730c4f7f13c`、`f1646370f1396b755be0a03c5326f7d7e8a8d4fc`、`ca0f10be804552848684e6f850fff4a66724c819`（行与表格的格）、`2a8faa016131fbb4d2fb1aa6da6b604264191101`、`12070947d270fc93a47de19d8681a3f54afd9b0a`、`cc5dafeab6cd8a9a8f637d080baedfbdc9d61f1c`、`16473c1bc469203eb837a3088d1bc1ae0077f213`、`45b4c2ab31dac12fdd9634c572de4e0c36703d65`（弹窗与草稿的两栏）、`40cef888032479ddc8708857fb1789642b19701d`（G4、G11 的页面故事）。本交接保持 open。
+
+## 处理结果（M6/P7b）：第 1 节与第 3 节的 `existing-issues-list-modal.tsx`
+
+- **第 1 节（搜索接口与新的调用方）**：`core/modals/existing-issues-list-modal.tsx` 已在 M4/P12（`803f0c8b`）改用 M4 的工作项搜索接口（`useIssueSearch`，按会话与权限身份分代，迟到的回答不进来）。本段加的两域调用方——迭代页、模块页的空态与分组头的“添加已有”，迭代页、模块页日历的某天的“添加已有”（项目页的日历也改走同一条路）——保留它的取消、会话与异步的边界：都经列表的命令宿主（`IssueListCommandHost` 的 `useAddExistingRequest`）请求，对话由路由的项目与调用者在它的权限身份持有，换路由或权限身份变了即结束，入口自己不渲染弹窗；弹窗卸下（`owner.active` 为假）之后的结果照旧不报，整批的写与它的一次进度重读在宿主里跑完；规划页的搜索加 `limit: 100`，本页的排除在客户端（弹窗新的可省的 `exclusion`，子工作项、关联的调用者不给，照旧）（[P7b spec](../specs/P7b-list-vocabulary.md) §2.9、§2.10，R11）。G4 (page) 在真浏览器核对弹窗活过空态在第一项确认后的卸下（变异 `t15-e2e-mut-modal-in-empty-state` 让它失败），组件测试核对它活过列表核验时组头的卸下、换路由与权限身份变了时结束（`roots/add-existing.test.tsx`、`roots/add-existing-group.test.tsx`、`roots/calendar-add-existing.test.tsx`）。
+- **第 3 节（键盘与弹窗）**：弹窗的各项在 M4/P12（`803f0c8b`）已改——标题经 `ModalTitle`、列表 `static modal={false}`、选项里只在指针经过时显示的链接删去、已选的移除按钮以“{移除} {名字}”为名；本段在浏览器核对，G4 (page)、G11 (page) 在三种引擎（台账 `t15-three-engines`、`t15-repeat3`、`t15-full-pages`）：
+  - 弹窗的名字：三个入口打开的弹窗都以 `expect(modalDialog(page)).toHaveAccessibleName("Add existing work item")` 核对（G4 的空态与日历，G11 的分组头），逐项提交、一项被拒之后名字照旧；
+  - 打开时后面的页面隐藏：`pageBehindHidden` 为真（`main` 在 `inert`、`aria-hidden="true"` 之内）；列表本身是弹窗的内容；
+  - 方向键到达选项：焦点放进搜索框之后，`ArrowDown`、`Enter` 依次选中 Z、Y、X。弹窗打开时焦点不在搜索框（不在本节的各项之内），主控交 P7c，照下拉框“打开即聚焦搜索”（P7b spec §5）；
+  - 选项里没有链接：选项的列表里 `a` 的个数为 0；
+  - 已选的移除按钮以它那一项为名：依次是 “Remove Z”“Remove Y”“Remove X”，X、Y 确认之后只剩 “Remove Z”。
+  - 每一行的控件以它那一行为名：分组头新的“添加已有”按钮以“{添加已有}: {组}”为名（G11 的 “Add existing work item: Todo”），与“+”的 “{新建}: {组}” 并排。
+- 其余各项：第 1 节视图的跟进与第 4 节四个视图文件的地址在 P7c（P7a spec R1 的 X1）。
+- 证据：提交 `d2b390e0ca912a99fb6cc4135c62dffc518950d6`、`3d93c6c94bc22366e9df47336cd87b9dfe0e6228`（命令宿主的请求、空态的入口）、`8653ff3aa8cbb64440a3abbe600765f3d5e0ebb7`（`exclusion`、`optionCaption` 与分组头的入口）、`f6ce345cb4371ec13437958e76786d800d7bd908`（日历经宿主）、`55a225c8eaeb5e0e315e4b86306389caf74db66c`（G4、G11 的页面故事）。本交接保持 open。

@@ -99,7 +99,7 @@ P7a 交付了工作项自己的迭代与模块（写入单元的 `changeIssue` �
 **做法**：
 - **工厂**：`@nerve/utils` 加迭代、模块两个筛选工厂（照 Plane 的两个文件与本仓的 `label.ts` 的写法，类型来自 `@nerve/api-client` 的 `Cycle`、`Module`），运算符 `in`，单值时 `exact`，选项图标按状态。
 - **选项**（R7）：迭代是项目未归档的迭代（含已结束的：筛选可以指名任何未归档的，不取下拉框的“不列已结束”），nerve 的次序；模块是项目未归档的模块；两者都另有“无”一项（G15“含无”，Plane 没有，登记差异），文字读已有的 `cycle.no_cycle`、`module.no_module`。已存的条件里的已归档的值（以及当前开着的条件里的）列为已选的选项，以名字与“已归档”的说明显示（经 `usePlanningNames` 叫出），可以去掉；不另给已归档的作新选项。
-- **读**：两份未归档的列表经 P7a 的 `usePlanningListReads`（`core/hooks/use-planning-names.ts:99-106`，与包装层同一份键，开关关着时不读）；已归档的已持值经 `usePlanningNames`。两个配置放进一个新的小 hook（`useWorkItemFiltersConfig` 已 353 行，加两个配置会到约 400，E15），它组合两者；HOC 给出项目。
+- **读**（实施时改写，台账 T8 的裁定，主控接受）：两份未归档的列表用项目包装层读进规划 store 的（`core/layouts/auth-layout/use-project-fetch.ts:70-72` 以同一组键 `PROJECT_CYCLES`、`PROJECT_MODULES`，调用者是有效成员、项目未归档且开关打开时读；同标签、状态、成员的筛选取包装层读的），筛选这一行自己不读、不调 `usePlanningListReads`：照原先的写法经它读，`useSessionSWR` 的挂载时重新校验会让每次挂上筛选行都读两份列表，让 M4 的 `list-data`、`attachment-count`（以请求的序号与个数断言）与 P7a 的 `planning-create`、`module-quick-actions`、`cycle-row-planning`（表单的读被提前的读去重）共 5 个回归文件 26 例失败（回归的断言不能改），而好处只是筛选行自己重读。于是“与包装层同一份键、包装层已读时不再读、开关关着时不读”照旧成立（包装层的读就是这一份），“列表已读到”是配置的 `isEnabled` 的门（下面“开关”一条），包装层答到之前不给这两个筛选；代价是筛选行挂上时不重读两份列表，别处新建的迭代、模块要等包装层或迭代页、模块页的下一次读才进选项。已归档的已持值经 `usePlanningNames`（store 没有列表时先读未归档的，同一份键）。已持的值取筛选实例当下的条件（存下的与之后加的，`filters-hoc/base.tsx` 先算出实例再把条件交给配置的 hook），不取只是存下的初值。两个配置放进一个新的小 hook（`useWorkItemFiltersConfig` 已 353 行，加两个配置会到约 400，E15；实施后 `core/hooks/work-item-filters/use-planning-filter-configs.tsx` 135 行，组合它的一件 366 行）；HOC 给出项目。
 - **开关**（R8）：配置的 `isEnabled` 除了本页允许之外还要路由的项目打开该域（§2.5 的谓词）且列表已读到；关着时“加筛选”不列它，已应用的条件仍以条件显示（值叫不出时是“不可用的选项”）、可去掉，列表照 nerve 的回答。
 - **本页的键**：迭代页不给迭代的筛选、模块页不给模块的（常量，§2.5）。归档页不加（R10）。
 - **文案**：筛选的字段 `common.filter_options.fields.cycle_id`、`module_id` 两个新键（en 与 zh-CN 同一提交）。
@@ -169,7 +169,7 @@ P7a 交付了工作项自己的迭代与模块（写入单元的 `changeIssue` �
 |---|---|---|---|
 | 目录（`prepareCatalog`） | 行的各项目的两份列表（项目不在 store 时先读项目） | 列表自己的读（绑定的范围），不看开关（R17） | —（给比较器） |
 | 列表、看板、泳道的宿主 | 组的名字 | `usePlanningNames`（有角色、项目未归档、开关打开） | `usePlanningNames` |
-| 筛选的选项 | 两份未归档的列表 | `usePlanningListReads`（同上） | 已持的已归档值：`usePlanningNames` |
+| 筛选的选项 | 项目包装层读进 store 的两份未归档的列表（筛选自己不读，§2.6 的“读”） | 包装层的读（有效成员、项目未归档、开关打开）、列表已读到、本页允许、路由的项目开着该域 | 已持的已归档值：`usePlanningNames` |
 | 分组、子分组的选项 | — | 路由的项目的开关（已选的留着） | — |
 | “添加已有”选项的当前迭代 | 选项的工作项的迭代 | `usePlanningNames` | `usePlanningNames` |
 | “添加已有”的入口 | — | 可加入（`joinable`，含开关）且管理员、成员，列不拒收 | — |
@@ -261,13 +261,13 @@ T1 照 P6b spec §2.10 的公式（P7a spec §2.11）重算余量并写进台账
 
 ## 5. 后续责任
 
-**P7c**（命令面板、移动端页头与遗留）：分组时页头的数目（A19，项目页与归档页的页头在分组时读不到 `""` 组的数，`core/components/issues/header.tsx:49`）；迭代页、模块页与项目页的移动端页头（A15、X2：项目页的移动端页头的显示面板已随本段的组件一级的开关门给出两词的分组，P7c 只管页头本身）；命令面板（A16）、A17、A18、A20（本段读了 `cta_secondary`）、A21（`fake-planning-page.tsx` 的 `opened`）、X1；G19 的工作项一侧（其中“添加已有”的弹窗的键盘与迟到的回答可复用本段的宿主与故事的帮手）。e2e 预算 ≤ 8 秒本机 chromium（R13），余量以本段 T17 的实测与 T1 的重算为准。
+**P7c**（命令面板、移动端页头与遗留）：分组时页头的数目（A19，项目页与归档页的页头在分组时读不到 `""` 组的数，`core/components/issues/header.tsx:49`）；迭代页、模块页与项目页的移动端页头（A15、X2：项目页的移动端页头的显示面板已随本段的组件一级的开关门给出两词的分组，P7c 只管页头本身）；命令面板（A16）、A17、A18、A20（本段读了 `cta_secondary`）、A21（`fake-planning-page.tsx` 的 `opened`）、X1；G19 的工作项一侧（其中“添加已有”的弹窗的键盘与迟到的回答可复用本段的宿主与故事的帮手）；“添加已有”的弹窗打开时焦点不在搜索框（M4 的弹窗，不在 M3 交接 §3 的各项之内；本段的 G4 (page) 先把焦点放进搜索框再以方向键选，主控交 P7c，照下拉框“打开即聚焦搜索”的写法，台账 T15）。e2e 预算 ≤ 8 秒本机 chromium（R13）：本段两个新文件本机 chromium 实测合计 6.9 秒（G15 3.5 秒，G4 与 G11 3.4 秒，台账 T14、T15），T1 重算的 P7b 与 P7c 合计余量 22.4–27.1 秒除去它约剩 15.5–20.2 秒；P7c 的 8 秒不因此放宽，余量以本段 T17 的实测（推送后的分支 CI 与 T9 检查点的校准）与重算为准。
 
 **P8**：归档页的迭代、模块词表（R10）；[M6-M8-13](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-13)；新的筛选、分组控件与“添加已有”按钮的焦点轮廓随最终矩阵核对；开关关闭时存下的词的显示（R8 的“—”与“不可用的选项”）是否要更好的说法。
 
 **M7**：工作区级的迭代、模块列表出现之后，成员列表的目录与跨项目的视图可改读它；视图的筛选与分组的迭代、模块词随视图的页面。
 
-**M8**：[M6-M8-01](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-01) 多 P7a 的分支 CI、main CI 与本段 T9 检查点的数据点；[M6-M8-08](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-08) 在 M6 收尾核对根与写入单元的行数（本段不加，T17 记下）；[M6-M8-03](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-03)、[M6-M8-05](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-05)、[M6-M8-07](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-07) 照旧（再现时照各条的验收语记下）。
+**M8**：[M6-M8-01](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-01) 多 P7a 的分支 CI、main CI（T1 已记）与本段 T9 检查点的数据点（T16 已记）；[M6-M8-08](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-08) 在 M6 收尾核对根与写入单元的行数（本段不加：根 320 → 319、写入单元 302，T16 已记，T17 再核）；[M6-M8-13](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-13) 本段的新故事照它的写法（T16 已记）；[M6-M8-03](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-03)、[M6-M8-05](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-05)、[M6-M8-07](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-07) 照旧（再现时照各条的验收语记下）。
 
 **负责人**：e2e 的作业结构（分片）、期限与超时（R13）；搜索的服务端排除参数或批量写（R2、R6，`api/` 的变化）只在负责人要 Plane 的确切行为时才提出。
 
