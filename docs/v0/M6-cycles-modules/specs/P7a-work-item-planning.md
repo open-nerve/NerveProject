@@ -1,13 +1,13 @@
 # M6 / P7a：工作项一侧（一）——写入路径与工作项自己的迭代、模块
 
-> 状态：待预检。基线 main `954a1838bff44e98cc44f15df524da27e42fb1d8`（P6b 的 noff，双父 `06b72d4b`、`c0572192`；P6b 的最终分支 CI 43545459485 attempt 1 全绿，e2e 作业 23 分 09 秒；合入后的 main CI 43549053092 的结论、归档与清理由本段 T1 回填）。设计见 [M6 设计](../M6-design.md) §2 的 G4、G11，§3.3、§3.6、§8 的“工作项一侧”、§12 的 P7 一行；P7 的拆分与主控在写 spec 之前的裁定 D1–D10 见本阶段台账 `controller-rulings.md`（本段 R1–R10 照录）；交给 P7 的事见 [P5a spec](P5a-web-cycles.md) §5、[P5b spec](P5b-cycle-list.md) §5、[P6a spec](P6a-web-modules.md) §5、[P6b spec](P6b-module-list.md) §5 与 P6b 的[阶段记录](../reviews/P6b-module-list-review.md) §5。网页的长期规则见[总体设计 §7.2、§7.7](../../v0-design.md#77-stores-按会话分代长期有效m2-起)。接口合同见 [P3a spec](P3a-issue-membership.md)（工作项与草稿的 `cycle_id`、`module_ids`）。现状调研见本阶段台账 `research/web.md`（网页的现状、交接各项 A1–A24 与 X1–X2、e2e 与守卫、拆分的估算）、`research/plane-contract.md`（Plane 的工作项一侧、nerve 的契约、差异与风险）（ignored，随阶段归档）。负责人 2026-11-11 授权连续推进至 M6 收官，重要高风险决策仍停下确认；本段不改 `server/`、`api/`（D10），本机 `make test` 若因 [M6-M8-05](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-05) 的签名失败，以分支 CI 的服务端两路为准（负责人 2026-11-11）。
+> 状态：预检通过（修正后，[re-72](../../../reviews/re-72-M6P7a预检.md)），待实施。基线 main `954a1838bff44e98cc44f15df524da27e42fb1d8`（P6b 的 noff，双父 `06b72d4b`、`c0572192`；P6b 的最终分支 CI 43545459485 attempt 1 全绿，e2e 作业 23 分 09 秒；合入后的 main CI 43549053092 attempt 1 的 e2e 只在 M4 的 I4 (page) 的表格故事失败（故事的时间预算，没有重跑），由修复分支 `codex/m6-p6b-ci` 处理，修复的 noff 在 T1 之前并入本分支；这些与归档、清理由本段 T1 回填）。设计见 [M6 设计](../M6-design.md) §2 的 G4、G11，§3.3、§3.6、§8 的“工作项一侧”、§12 的 P7 一行；P7 的拆分与主控在写 spec 之前的裁定 D1–D10 见本阶段台账 `controller-rulings.md`（本段 R1–R10 照录）；交给 P7 的事见 [P5a spec](P5a-web-cycles.md) §5、[P5b spec](P5b-cycle-list.md) §5、[P6a spec](P6a-web-modules.md) §5、[P6b spec](P6b-module-list.md) §5 与 P6b 的[阶段记录](../reviews/P6b-module-list-review.md) §5。网页的长期规则见[总体设计 §7.2、§7.7](../../v0-design.md#77-stores-按会话分代长期有效m2-起)。接口合同见 [P3a spec](P3a-issue-membership.md)（工作项与草稿的 `cycle_id`、`module_ids`）。现状调研见本阶段台账 `research/web.md`（网页的现状、交接各项 A1–A24 与 X1–X2、e2e 与守卫、拆分的估算）、`research/plane-contract.md`（Plane 的工作项一侧、nerve 的契约、差异与风险）（ignored，随阶段归档）。负责人 2026-11-11 授权连续推进至 M6 收官，重要高风险决策仍停下确认；本段不改 `server/`、`api/`（D10），本机 `make test` 若因 [M6-M8-05](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-05) 的签名失败，以分支 CI 的服务端两路为准（负责人 2026-11-11）。
 
 ## 1. 目标与边界
 
 P5a–P6b 交付了迭代、模块自己的页面与两页的工作项列表；工作项一侧还什么都没有：网页上没有迭代、模块的下拉框，没有一处组件读工作项的 `cycle_id`、`module_ids`（`research/web.md` §0）。设计 §12 的 P7 一行（属性与下拉框、新建弹窗与草稿、列表的筛选/分组/显示、添加已有、日历、命令面板、两页的移动端页头）估为 P6b 的 1.3–1.6 倍（约 2,800–3,000 行产品代码、75–90 个文件，`research/web.md` §10.2），超过一段约 16 个 Task 的上限，实施之前拆为三段（R1，主控裁定 D1）：
 
 - **P7a（本段）——写入路径与工作项自己的迭代、模块**（G4、G11 的页面）：
-  - **回填与阶段**：P6b 的回填（阶段记录 §7、spec A8、设计 §14、M6-M8-01 的数据点，A22）；关键词阶段改为 `M6/P7`（A24）。
+  - **回填与阶段**：P6b 的回填（阶段记录 §7 含合入后 main CI 的失败与修复分支 `codex/m6-p6b-ci`、spec A8、设计 §14，A22；M6-M8-01 的新段随修复合入，本段只链接）；关键词阶段改为 `M6/P7`（A24）。
   - **写入路径**：写入单元的范围必给，去掉 M4 起的 router 退路，`issue-writes.ts` 加入 `project-address-route`（A10、A11，§2.1）；模块集合的变化以增减在写队列轮到时作用于所持的集合，迭代是单值字段（D3，§2.2）。
   - **按项目的规划目录**：下拉框的选项与工作项上的值的名字（未归档的与已归档的），P7b 的目录复用同一份读（D4、D5，§2.3）。
   - **两个下拉框**与交接的键盘各项（A1–A3，M2 交接 §4、§5(a)，M3 交接 §3，§2.4）。
@@ -19,7 +19,7 @@ P5a–P6b 交付了迭代、模块自己的页面与两页的工作项列表；�
 - **P7b——列表词表与“添加已有”**（G15 的工作项一侧）：目录（A7）、按页的显示选项常量（A8）、偏好的筛选按页收窄（A9，P6b R16）、筛选/分组/排序/拖拽（A6）、空态与分组头与日历的“添加已有”（A4、A5），M4 交接 M6-02 与 M3 交接 §1 的回执。
 - **P7c——命令面板、移动端页头与遗留**（G19 的工作项一侧）：命令面板（A16）、两页与项目页的移动端页头（A15、X2）、A17–A19、A21、其余没有读者的键（A20）、设计 §8 的四个视图文件（X1，主控把这项无人认领的事交给 P7c）、M2/M3/M1 其余的回执。
 
-P7b、P7c 在 P7a 合入之后各写自己的 spec、plan 与预检，各自的 §1 写自己的边界；设计 §12 的 P7 一行由本段 T14 拆为三行（P5、P6 的先例）。
+P7b、P7c 在 P7a 合入之后各写自己的 spec、plan 与预检，各自的 §1 写自己的边界；设计 §12 的 P7 一行由本段 T15 拆为三行（P5、P6 的先例）。
 
 **不做**：
 - P7b 与 P7c 的上述各项。具体地：本段的筛选、分组、排序词表里没有迭代与模块（`core/lib/issue-filters.ts`、`@nerve/constants` 的分组与排序选项不动）；表格里迭代、模块两列的表头没有按名字排序（R21）；没有“添加已有”与日历的 `addIssuesToView`；没有拖到迭代、模块的组；命令面板里没有改工作项的迭代、模块的命令。
@@ -36,15 +36,15 @@ P7b、P7c 在 P7a 合入之后各写自己的 spec、plan 与预检，各自的 
 - 32 处测试调用只加范围（`root.scope(…)`，同文件已有的写法），断言不改，以逐文件的基线收据核对同数。
 - 根上 router 的 getter（`core/store/issue/root.store.ts:62-67`）只在仍有读者时留着：以 grep 核对，没有读者的随之删去。
 - `issue-writes.ts` 加入 `project-address-route`（带样例）；P6b 因这条退路没有加入它（re-70 F5）。
-- 行数：根 320 行、写入单元 300 行（P6b 的 A1）；本段的写入加在写入单元（§2.2），不加回根，两者仍各在约 400 行以内（[M6-M8-08](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-08)），T15 以 `wc -l` 核对。
+- 行数：根 320 行、写入单元 300 行（P6b 的 A1）；本段的写入加在写入单元（§2.2），不加回根，两者仍各在约 400 行以内（[M6-M8-08](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-08)），T16 以 `wc -l` 核对。
 
 ### 2.2 模块集合的变化与迭代（D3，R3、R19）
 
 **现状**：列表与详情的写都在调用时定下请求体：`BaseIssuesStore.updateIssue` 发 `() => body`（`helpers/base-issues.store.ts:70-72`），`useIssuesActions`（`core/hooks/use-issues-actions.tsx:114-119`、`:199-204`）、规划页的动作（`core/hooks/use-planning-page-issue-actions.ts:70-76`）、详情（`issue-details/issue.store.ts:151` 经 `projectIssues.updateIssue`，`issue-detail/use-issue-operations.ts:50`）、行（`properties/all-properties.tsx:56-59`）、表格的列（`onChange(issue, data)`）与弹窗的修改（`issue-modal/base.tsx:295-303`）都经它。只有 P6b 的“移出模块”在轮到时由所持的集合算（`module/issue.store.ts:41-47`）。`module_ids` 是整体替换（`api/modules/issue.yaml:2152-2160`），已归档的模块在工作项上（`:1717-1728`）。
 
 **做法**：
-- **变化的类型**（名字由实现定，例如 `IssueChange`）：`IssueUpdate` 去掉 `module_ids`，加一个可省的模块增减 `{ add, remove }`（两组 id 互不相交：下拉框的一下只有一个 id，弹窗的差异按构造不相交）。列表、详情、行、表格与弹窗的修改都经它；这个类型上没有 `module_ids`，这些路径因此发不出调用时定下的整集合。
-- **写入单元的命令**（名字由实现定，例如 `changeIssue(id, change, scope)`）：经 `updateIssue` 的 `makeBody`，在队列轮到时以所持工作项的 `module_ids` 为底，去掉 `remove`、按次序补上 `add` 中还没有的，得出整集合（纯函数，放在 `issue-write-fields.ts`）；其余字段照给出的原样。已归档的、页面不认识的 id 都在所持的集合里，照样保留（设计 §3.3“PATCH 时保留工作项上已有的隐藏 id”）。同一工作项连续的两次变化各排一个，后一个以前一个的回答为底；前一个被拒时以没有变的所持为底。
+- **变化的类型**（名字由实现定，例如 `IssueChange`）：由 `IssueUpdate` 推出，声明 `module_ids?: never`，另加一个可省的模块增减 `{ add, remove }`（两组 id 互不相交：下拉框的一下只有一个 id，弹窗的差异按构造不相交）。列表、详情、行、表格与弹窗的修改都经它。今天行与表格的写的类型是 `Partial<IssueDetail>`（`properties/all-properties.tsx:37`、`spreadsheet/columns/label-column.tsx:20`），它带着 `module_ids?: string[]`；改为这个变化之后，这样带整集合的值赋不进去，这些路径因此发不出调用时定下的整集合（re-72 F1）。类型测试以一个类型为 `Partial<IssueDetail>` 的值核对，不只核对对象字面量。
+- **写入单元的命令**（名字由实现定，例如 `changeIssue(id, change, scope)`）：经 `updateIssue` 的 `makeBody`，在队列轮到时以所持工作项的 `module_ids` 为底，去掉 `remove`、按次序补上 `add` 中还没有的，得出整集合（纯函数，放在 `issue-write-fields.ts`）；请求体由变化的字段逐个点名写出（不写 `...change`），其余字段照给出的原样。`updateBody` 的白名单照旧放行 `module_ids`（`issue-write-fields.ts:35-36`），只给这个命令自己算出的整集合用（命令面板、拖拽与描述版本的 `makeBody` 不带它）。已归档的、页面不认识的 id 都在所持的集合里，照样保留（设计 §3.3“PATCH 时保留工作项上已有的隐藏 id”）。同一工作项连续的两次变化各排一个，后一个以前一个的回答为底；前一个被拒时以没有变的所持为底。
 - `BaseIssuesStore.updateIssue`（各页的 store 继承）改经这个命令；规划页的动作照旧经它并跟进进度（P5b R10）。`TIssueOperations`（`issue-detail/root.tsx:29-35`，已是以更新类型为参数的泛型）、详情 store 的 `updateIssue`、行的 `updateIssue` 与表格的 `onChange` 的类型随之改为这个变化。
 - P6b 的“移出模块”改为这个命令的 `{ remove: [本模块] }`（R19）：请求体与时机不变，P6b 的测试断言不改（基线收据）。
 - **迭代是单值**：变化里的 `cycle_id` 照调用时给出的发（`null` 移出），不按所持算：给出当前的迭代 nerve 什么都不改（`issue.yaml:670-688`），先后两次选择以后发的为准，正是用户最后的选择。
@@ -84,22 +84,27 @@ P7b、P7c 在 P7a 合入之后各写自己的 spec、plan 与预检，各自的 
 ### 2.6 新建与修改的弹窗（D2，R2、R3、R15、R17）
 
 - **字段**：`IssueFormValues`、`ISSUE_FORM_FIELDS`（`issue-modal/types.ts:6-30`）加 `cycle_id`、`module_ids`；`DEFAULT_WORK_ITEM_FORM_VALUES`（`web/packages/constants/src/issue/modal.ts:11-22`）加 `cycle_id: null`、`module_ids: []`；弹窗的默认属性一栏（`issue-modal/components/default-properties.tsx`）给两个字段（§2.4 的下拉框，表单内的模块字段把下拉框的增减作用于表单自己的值），只在表单的项目的开关打开时。非草稿的表单换项目时两者随 `getUpdateFormDataForReset`（`web/packages/utils/src/work-item/modal.ts:12-20`）回到默认、清空；草稿见 §2.8。
-- **新建的初值**（R2、R15）：迭代 = 调用者给的 `data.cycle_id` 中是选项的，否则本页可加入时的本页迭代；模块 = 调用者给的 `data.module_ids` 中是选项的，并上本页可加入时的本页模块。“本页”与“可加入”取自按域的表（`core/hooks/planning-page-domains.ts:26-47` 的 `joinable`，加一列本页的初值，名字由实现定，不写 `if (domain === …)`），只在表单的项目是本页的项目时。
+- **新建的初值**（R2、R15）：迭代 = 调用者给的 `data.cycle_id` 中是选项的，否则本页可加入时的本页迭代；模块 = 调用者给的 `data.module_ids` 中是选项的，并上本页可加入时的本页模块；表单的项目没开开关时不带这个键。“本页”与“可加入”取自按域的表（`core/hooks/planning-page-domains.ts:26-47` 的 `joinable`，加一列本页的初值，名字由实现定，不写 `if (domain === …)`），只在表单的项目是本页的项目时。
+- **初值在弹窗一级并进表单的默认值**（re-72 F2）：弹窗（`base.tsx` 或 T4 从它拆出的新建命令一件）在表单挂上之前把初值并进表单的默认值，而不是由字段的组件去填。`roots/cycle-create.test.tsx:66-68`、`module-create.test.tsx:66-68` 把 `IssueDefaultProperties` 换成 `() => null`，它们的断言（`cycle-create.test.tsx:155-160`、`module-create.test.tsx:162`）今天只靠 store 的注入成立；初值在弹窗一级并入，这些测试不改就仍是 R2 的回归保护（字段的组件不在场，请求体照样带本页的值）。
+- **按选项过滤要等两份未归档的列表**（re-72 F7）：弹窗带着项目打开时，经同一份 SWR 键（`PROJECT_CYCLES`、`PROJECT_MODULES`）读这个项目的两份未归档列表；调用者给的值只在两份列表答到之后才按选项过滤（以改默认值的方式，不算改动）；之前字段显示加载，值留着、不丢。调用者给的值的过滤与它的测试在 T12（第一个真正的调用者是复制，re-72 F8），T10 只有本页的初值。
 - **修改不预填本页**：修改显示工作项真实的值（含已结束、已归档的）；Plane 在修改时把路由的迭代、模块填进表单（`plane/apps/web/core/components/issues/issue-modal/modal.tsx:39-46`、`base.tsx:392-399`），不照搬（P6b R7）。
-- **新建发出表单所持的**（D2）：请求体（`issue-modal/base.tsx:246-256`）加 `cycle_id`（为空时省略：`IssueCreate.cycle_id` 不可为 `null`，`api/modules/issue.yaml:2065-2071`）与 `module_ids`（为空时省略）；“存为草稿”同样，两个值为空（`null`、`[]`）或字段因开关关着不显示时，新建与草稿的请求里都没有这两个键，于是 M4、M5 的新建与草稿的请求体（含数据库里草稿的 payload）不多出键。弹窗的新建不经本页的注入（迭代页的 store 覆写 `cycle_id`，`cycle/issue.store.ts:21-30`；模块页的并入本模块，`module/issue.store.ts:23-34`）：规划页的动作给表单另一个照给出的发出的新建（名字由实现定），确认的工作项在本页时照旧跟进进度；快速新建没有字段，照旧经本页的注入（`use-planning-page-issue-actions.ts:61-69`）。于是在迭代页选别的迭代或“无迭代”、在模块页去掉本模块时，nerve 收到的就是表单的值；照旧只发一个请求。
+- **新建发出表单所持的**（D2）：请求体（`issue-modal/base.tsx:246-256`）加 `cycle_id`（为空时省略：`IssueCreate.cycle_id` 不可为 `null`，`api/modules/issue.yaml:2065-2071`）与 `module_ids`（为空时省略）：两个值为空或字段因开关关着不显示时，新建的请求体没有这两个键，M4、M5 的新建请求体照旧。“存为草稿”照 §2.8 的一条规则。弹窗的新建不经本页的注入（迭代页的 store 覆写 `cycle_id`，`cycle/issue.store.ts:21-30`；模块页的并入本模块，`module/issue.store.ts:23-34`）：规划页的动作给表单另一个照给出的发出的新建（名字由实现定），确认的工作项在本页时照旧跟进进度；快速新建没有字段，照旧经本页的注入（`use-planning-page-issue-actions.ts:61-69`）。于是在迭代页选别的迭代或“无迭代”、在模块页去掉本模块时，nerve 收到的就是表单的值；照旧只发一个请求。
 - **修改发出差异**（D3）：修改的请求体照旧只带改过的字段（`form.tsx:165-174`）；`cycle_id` 改了就带；模块改了时以表单的初值（表单挂上时的值，不是之后随读取变化的 `data`）与终值算出增减，经 §2.2 的命令在轮到时作用于所持的集合：打开之后所持的集合里多出的模块（例如弹窗自己读工作项时读到的）留着。模块没改时请求体不带模块（P6b R7 的测试照旧成立）。
 - **拒绝落到字段**（R17）：`useFormRefusal`（`form.tsx:153`）加 `cycle_id`、`module_ids`（`module_ids[i]` 落到模块一栏，`core/lib/form-refusal.ts:20-26` 已如此）；`planning.cycle_completed` 落到迭代一栏（它只可能指迭代）；其余（`planning.archived`、`planning.{cycles,modules}_disabled`、`project.archived`）照旧提示。
 
 ### 2.7 分组头的弹窗与复制（A13、A14，R15、R16）
 
-- **分组头的新建弹窗移到列表的命令宿主**（R16）：列表与看板的分组头把弹窗放在组里（`list/headers/group-by-card.tsx:92-100`、`kanban/headers/group-by-card.tsx:56-64`）；列表核验时整个布局换成加载（`issue-layout-HOC.tsx:52-58`，`getIssueLoader` 在核验中给 `"init-loader"`，`helpers/base-issues.store.ts:64-67`），弹窗随之卸下，而命令宿主（`IssueListCommandHost`，`issue-layout-HOC.tsx:55`）留着。命令宿主的对话加一种“新建”，带分组的 `data` 与 store 类型（`command-host.tsx:27` 的 `RequestDialog`），照行的修改与复制（P5b T13）；锁定项目的条件照旧（P6b §2.6）。
-- **复制**（R15）：命令宿主的 `copyOf`（`command-host.tsx:54-66`）带上源的 `cycle_id`、`module_ids`；新建的初值（§2.6）只留其中是选项的（源的已结束、已归档的迭代与已归档的模块不带：nerve 会以 409 拒绝整个新建），模块页上再并上本模块。描述带图片的复制经内容复制（`issue-modal/content-copy.tsx`，草稿再发布；`base.tsx:227-241` 的 `draftInput`）：表单的两个值随 `draftInput` 进草稿、随发布加入，P5b §5、P6b §5 记下的“内容复制不加入本页”随之了结。P6b §5 的嵌套变异（`copyOf` 带源的模块、新建的请求体带表单的模块两处一起改）现在有能失败的断言。
+- **分组头的新建弹窗移到列表的命令宿主**（R16）：列表与看板的分组头把弹窗放在组里（`list/headers/group-by-card.tsx:92-100`、`kanban/headers/group-by-card.tsx:56-64`）；列表核验时整个布局换成加载（`issue-layout-HOC.tsx:52-58`，`getIssueLoader` 在核验中给 `"init-loader"`，`helpers/base-issues.store.ts:64-67`），弹窗随之卸下，而命令宿主（`IssueListCommandHost`，`issue-layout-HOC.tsx:55`）留着。命令宿主照行的修改与复制（P5b T13）改三处（re-72 F4）：
+  - 加一种“新建”的请求，带分组的 `data` 与 store 类型（`command-host.tsx:27` 的 `RequestDialog`）。今天宿主只在 `holds(dialog, dialog.data.project_id)` 时渲染对话（`:160-165`、`:196`），分组的 payload 多半没有 `project_id`（按状态分组是 `{state_id}`），照旧就永远不显示：新建的对话由路由的项目持有，按项目分组时由分组的 `project_id` 持有，没有路由的项目的页（个人页）由工作区的权限身份持有（项目列表为空）。
+  - 锁定项目（`isProjectSelectionDisabled`）由宿主按 `isPlanningPageStoreType` 给出，同今天的两个分组头（`list/headers/group-by-card.tsx:99`、`kanban/headers/group-by-card.tsx:63`；P6b §2.6）。
+  - `DialogStore`（`:26`）包括分组头会给“+”的每一种 store 类型（以各 store 的 `viewFlags.enableIssueCreation` 为准：项目、迭代、模块、个人页）。
+- **复制**（R15）：命令宿主的 `copyOf`（`command-host.tsx:54-66`）带上源的 `cycle_id`、`module_ids`；新建的初值（§2.6）只留其中是选项的（源的已结束、已归档的迭代与已归档的模块不带：nerve 会以 409 拒绝整个新建），模块页上再并上本模块；过滤等两份未归档的列表答到，之前字段显示加载、值留着（§2.6，re-72 F7）。描述带图片的复制经内容复制（`issue-modal/content-copy.tsx`，草稿再发布；`base.tsx:227-241` 的 `draftInput`）：表单的两个值随 `draftInput` 进草稿、随发布加入，P5b §5、P6b §5 记下的“内容复制不加入本页”随之了结。P6b §5 的嵌套变异（`copyOf` 带源的模块、新建的请求体带表单的模块两处一起改）现在有能失败的断言。
 
 ### 2.8 草稿（D6，R6）
 
 - **表单**：`draftPayloadFields`（`issue-modal/draft-form.ts:9-21`）加 `cycle_id`、`module_ids`；存下的值可以是已结束、已归档的，照 §2.3 显示。
-- **不发空的迭代**：`draftPayload`（`core/services/issue/draft-input.ts:20-40`）已把 `null`、`""` 的 `cycle_id` 省掉、`null` 的 `module_ids` 省掉（空数组照留）；表单为空的两个值在草稿里同样省掉（§2.6），本段以测试钉住新建与保存草稿都不发 `cycle_id: null` 或 `""`（plane-contract R10）、不多出空的 `module_ids`。
-- **换项目清空**：草稿的表单换项目时（`form.tsx:157-163` 只在非草稿时重置）清空两者，保存时随之省掉，免得发布时以 422 `cycle_id`、`module_ids[i]` 被拒（plane-contract R11）。
+- **一条规则：迭代为空就省掉，模块的空集合照发**（re-72 F6，主控裁定）：`draftPayload`（`core/services/issue/draft-input.ts:20-40`）不改。去掉迭代是一个带 `cycle_id: null`（或 `""`）的修改，键随之从存下的 payload 里去掉（修改里有的键以 `Object.hasOwn` 盖过 `before`）；`module_ids: []` 照留、照发：契约允许空集合，`[]` 正是清空草稿的模块的写法，省掉这个键反而留下 `before` 的集合。新草稿没有迭代时没有 `cycle_id`（不发 `null`、`""`，plane-contract R10），可以带 `module_ids: []`。本段以测试钉住这两点。
+- **换项目清空**：草稿的表单换项目时（`form.tsx:157-163` 只在非草稿时重置）清空两者，照上一条保存（`cycle_id: null` 去掉键，`module_ids: []` 清空集合），免得发布时以 422 `cycle_id`、`module_ids[i]` 被拒（plane-contract R11）。
 - **行**：`workspace-draft/draft-issue-properties.tsx`（165 行）加两个下拉框（草稿有项目、项目的开关打开时）；迭代经已有的 `change({ cycle_id })`（`:45-53`），模块的增减经草稿 store 的队列在轮到时以所持的草稿算（`workspace-draft/issue.store.ts:137-154` 的 `input(held)`，行已是 `(held) => draftInput(…, held.payload)`，`draft-issue-block.tsx:184-185`）。草稿的整个 payload 被替换（`api/modules/issue.yaml:1615-1621`），其余键照所持的保留。
 - **发布**：被拒（迭代已结束、已归档、已删除，开关关闭）时草稿留着；在草稿的弹窗里发布时，拒绝照 §2.6 落到字段（现在只提示，`base.tsx:321-342`、`form.tsx:205-223`）；草稿列表的行上发布照旧提示。
 
@@ -131,24 +136,30 @@ P7b、P7c 在 P7a 合入之后各写自己的 spec、plan 与预检，各自的 
 
 **写法**（P5b、P6a、P6b 阶段记录 §5 的教训）：应用内跳转之后以目标页独有的内容为锚；“载入后仍在”由另开的浏览器核对，不用 `page.reload()`、不在重新载入之后核对控制台（M6-M8-09）；关通知只用共用的 `dismissToasts`（M6-M8-10）；有两道守卫时以嵌套变异证明并写明单去一道为何等价；没有能编译又让故事失败的产品变异时，以期望错误的 RED 证实断言；e2e 变异的脚本先跑 `react-router typegen` 与两边的 `tsc --noEmit`，只计能编译、能构建的；写 e2e 变异之前先弄清页面手里有什么（P6b T13 的等价变异）。
 
-**时长**（D9）：本段两个新文件本机 chromium 合计约 20 秒（每个约 10 秒；超过 25 秒先压缩再继续，台账写明）。数据点：P6a 的 main CI 43469787621 attempt 2 的 e2e 作业 25 分 00 秒；P6b 的检查点分支 CI 43517662603 为 25 分 38 秒；P6b 的最终分支 CI 43545459485 为 23 分 09 秒；P6b 合入后的 main CI 43549053092 由 T1 回填。T15 推送之前照 P6b spec §2.10 的写法算三个数：
-- **估算**：基线（T1 回填的 P6b 的 main CI 的 e2e 作业；没有时用 25 分 38 秒）加上新文件 chromium 时长 × 1.67–2.25、两个 worker 摊开，约加 17–23 秒；
-- **上界**：已测到的最慢的数据点加上新文件 chromium 时长 × 3.6–4.1，约加 72–82 秒，约 27.0 分钟（以 25 分 38 秒计）；
-- **校准点**：T8 检查点的分支 CI 实测的 e2e 作业时长（那时还没有新故事，但迭代页、模块页的故事已打开开关、行上多了两个属性），与基线之比就是那次 runner 的快慢，也量出本段对既有故事的影响。
+**时长**（D9，re-72 F5）：本段两个新文件本机 chromium 合计约 20 秒（每个约 10 秒；超过 25 秒先压缩再继续，台账写明）。数据点：
+- P6a 的 main CI 43469787621 attempt 2 的 e2e 作业 25 分 00 秒；
+- P6b 的检查点分支 CI 43517662603 为 25 分 38 秒，最终分支 CI 43545459485 为 23 分 09 秒；
+- P6b 合入后的 main CI 43549053092（main `954a1838`）的 e2e 作业 132311928038 为 03:14:42Z–03:42:23Z，**27 分 41 秒**，故事本身约 25.4 分钟，是记下的最慢的 runner；它唯一的失败是 M4 的 I4 (page) 的表格故事超了时间预算，修复分支 `codex/m6-p6b-ci` 把它拆成四个（本机 chromium 约多 5 秒，经过见修复合入后 [M6-M8-01](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-01) 的新段）；
+- 修复合入后的 main CI 的 e2e 作业由 T1 回填。
 
-写 spec 时三个数都低于 30 分钟的报告线。估算、上界或任一次实测（T8、T15 推送后的分支 CI）超过 30 分钟时，T15 先停下报告负责人、不推送；改 CI 的期限或作业结构须负责人同意（D9，M6-M8-06 的教训）。
+T16 推送之前照 P6b spec §2.10 的写法算三个数：
+- **估算**：基线（最后一次绿的 main CI 的 e2e 作业，即修复合入后的那次，T1 回填）加上新文件 chromium 时长 × 1.67–2.25、两个 worker 摊开，约加 17–23 秒；
+- **上界**：已测到的最慢的数据点（现为 27 分 41 秒）加上新文件 chromium 时长 × 3.6–4.1（约 72–82 秒），那次运行还没有 I4 的拆分时再加它的 5 秒 × 3.6–4.1（约 18–21 秒）：约 29.2–29.4 分钟；
+- **校准点**：T9 检查点的分支 CI 实测的 e2e 作业时长（那时还没有新故事，但迭代页、模块页的故事已打开开关、行上多了两个属性），与基线之比就是那次 runner 的快慢，也量出本段对既有故事的影响。
+
+正常的 runner 上约 23.5–26 分钟；慢的 runner（×1.31，[M6-M8-01](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-01) 记下的比值）或像 43549053092 那样的 runner 上，本段的上界接近或超过 30 分钟的报告线。T9 的检查点是校准；估算、上界或任一次实测（T9、T16 推送后的分支 CI）超过 30 分钟时，T16 先停下报告负责人、不推送；改 CI 的期限或作业结构（例如分片）须负责人同意（D9，M6-M8-06 的教训）。
 
 ## 3. 局部裁定
 
-- **R1 P7 拆为 P7a、P7b、P7c（主控裁定 D1）**：设计 §12 要每段约 16 个 Task 以内、超限在实施前拆分；调研估出 P7 约为 P6b 的 1.3–1.6 倍，拆两段时第二段约 25 个 Task。拆缝取依赖的次序：写入路径与工作项自己的值在前（“添加已有”与拖拽都要复用 §2.2 的模块增减与 §2.3 的目录），列表词表与“添加已有”其次，命令面板、移动端页头与遗留最后。X1（设计 §8 的四个视图文件，没有阶段认领）交 P7c：只改网页、与 `project-address-route` 同一主题。不取两段（超上限），也不取一段。代价：三轮 spec、预检、整审与 CI；设计 §12 的 P7 一行拆为三行（T14）。
+- **R1 P7 拆为 P7a、P7b、P7c（主控裁定 D1）**：设计 §12 要每段约 16 个 Task 以内、超限在实施前拆分；调研估出 P7 约为 P6b 的 1.3–1.6 倍，拆两段时第二段约 25 个 Task。拆缝取依赖的次序：写入路径与工作项自己的值在前（“添加已有”与拖拽都要复用 §2.2 的模块增减与 §2.3 的目录），列表词表与“添加已有”其次，命令面板、移动端页头与遗留最后。X1（设计 §8 的四个视图文件，没有阶段认领）交 P7c：只改网页、与 `project-address-route` 同一主题。不取两段（超上限），也不取一段。代价：三轮 spec、预检、整审与 CI；设计 §12 的 P7 一行拆为三行（T15）。
 - **R2 表单优先于本页（主控裁定 D2）**：弹窗有了迭代、模块字段之后，本页的迭代、模块只是新建的初值（可加入时，照现在），表单所持的就是发出的；页面 store 不再覆写 `cycle_id`、不再把本模块并进表单给出的集合；本页的注入只留给没有字段的调用者（快速新建）；修改不预填路由的迭代、模块，显示工作项真实的值。理由：Plane 让表单的选择胜过页面（`plane/apps/web/core/components/issues/issue-modal/base.tsx:174-183`、`:200-216`）；留着 store 一级的注入会悄悄加回用户刚去掉的（plane-contract R2），P6b R6 的“取并”只防住了覆盖，防不住去掉。不取“页面优先”（表单显示的不是发出的），也不取模块“取并”（去不掉本模块）。代价：规划页的动作多一个给表单的新建；在迭代页以别的迭代新建的工作项不出现在本页（照用户所选）；登记差异。
-- **R3 模块集合以增减在写队列轮到时作用于所持的集合，迭代是单值（主控裁定 D3）**：下拉框（详情、预览、行、表格、草稿的行）的每一下是一个增减，在轮到时作用于最新的所持集合，连续的点击各排一个、不是下拉框的值的快照，已归档与页面不认识的 id 保留；弹窗的修改发出表单的差异（初值到终值），同样在轮到时作用。迭代是 `{cycle_id}` 的固定字段。新的写在写入单元（P6b R1）。理由：`module_ids` 整体替换，漏掉已归档的模块会把工作项移出它（设计 §3.3）；Plane 的行把加与减作为两个并发的请求发出（`plane/apps/web/core/components/issues/issue-layouts/properties/all-properties.tsx:133-134`），多选点了不关（`plane/apps/web/core/components/dropdowns/module/base.tsx:96-99`），照快照发会让第二下盖掉第一下；P6b R5 的先例。变化的类型上没有 `module_ids`，列表与详情的路径因此发不出整集合（编译器挡住）。不取“发下拉框的值”（第二下丢掉第一下），也不取“所持变了就拒绝修改”（接口没有前置条件，只会拒绝正当的修改）。代价：接口没有前置条件，别的标签页或别人在读与写之间的改动仍可能被盖掉（§6）；P6b 的“移出模块”改经同一命令（R19）。
+- **R3 模块集合以增减在写队列轮到时作用于所持的集合，迭代是单值（主控裁定 D3）**：下拉框（详情、预览、行、表格、草稿的行）的每一下是一个增减，在轮到时作用于最新的所持集合，连续的点击各排一个、不是下拉框的值的快照，已归档与页面不认识的 id 保留；弹窗的修改发出表单的差异（初值到终值），同样在轮到时作用。迭代是 `{cycle_id}` 的固定字段。新的写在写入单元（P6b R1）。理由：`module_ids` 整体替换，漏掉已归档的模块会把工作项移出它（设计 §3.3）；Plane 的行把加与减作为两个并发的请求发出（`plane/apps/web/core/components/issues/issue-layouts/properties/all-properties.tsx:133-134`），多选点了不关（`plane/apps/web/core/components/dropdowns/module/base.tsx:96-99`），照快照发会让第二下盖掉第一下；P6b R5 的先例。变化的类型声明 `module_ids?: never`，`Partial<IssueDetail>` 这样带整集合的值赋不进去，命令逐个点名写请求体，列表与详情的路径因此发不出整集合（编译器挡住，类型测试以 `Partial<IssueDetail>` 的值核对，re-72 F1）。不取“发下拉框的值”（第二下丢掉第一下），也不取“所持变了就拒绝修改”（接口没有前置条件，只会拒绝正当的修改）。代价：接口没有前置条件，别的标签页或别人在读与写之间的改动仍可能被盖掉（§6）；P6b 的“移出模块”改经同一命令（R19）。
 - **R4 选项与值分开（主控裁定 D4）**：选项是未归档且未结束的迭代加“无迭代”、未归档的模块；值是工作项真实的归属，以名字显示，含已归档的模块与已结束、已归档的迭代；已归档的模块可以去掉；选一个选项不丢隐藏的 id；现值不是选项的迭代只在按钮上显示。理由：G8、设计 §3.3、§3.6；nerve 以 409 拒绝加入已结束（`planning.cycle_completed`）、已归档（`planning.archived`）的；Plane 的工作项回答去掉已归档的模块（`plane/apps/api/plane/utils/grouper.py:59-68`，差异清单已登记），所以它不必显示或保留，nerve 的回答含着。不取“已归档的也作选项”（409），也不取“隐藏已归档的值”（G8 要显示，整体替换要保留）。代价：要显示已归档的名字时多读一次已归档的列表（R14）。
 - **R5 跨项目的行照状态下拉框按项目读（主控裁定 D5）**：工作区的草稿、个人页等列出多个项目的行时，每行读自己项目的目录（选项在打开时经 `useDirectoryRead`，按会话与权限分范围，迟到的回答不写；名字按 R14）；不建工作区级的目录（M7）。代价：这些页上按项目各读一次。
-- **R6 草稿（主控裁定 D6）**：没有迭代时省略 `cycle_id`（新建与保存草稿都不发 `null` 或 `""`，plane-contract R10）；草稿换项目时清空迭代与模块（R11）；发布的拒绝落到字段。理由：`IssueCreate.cycle_id` 与草稿 payload 的 `cycle_id` 都不可为 `null`（`api/modules/issue.yaml:2065-2071`、`:1604`），Plane 去掉迭代时发 `""`（`plane/apps/web/core/components/issues/workspace-draft/draft-issue-properties.tsx:68-71`）；换项目后留着旧项目的 id，发布时 422。代价：草稿换项目丢掉迭代与模块（同非草稿的表单换项目）。
+- **R6 草稿（主控裁定 D6）**：没有迭代时省略 `cycle_id`（新建与保存草稿都不发 `null` 或 `""`，plane-contract R10；`module_ids: []` 照发，它是清空草稿的模块的写法，`draftPayload` 不改，re-72 F6）；草稿换项目时清空迭代与模块（R11）；发布的拒绝落到字段。理由：`IssueCreate.cycle_id` 与草稿 payload 的 `cycle_id` 都不可为 `null`（`api/modules/issue.yaml:2065-2071`、`:1604`），Plane 去掉迭代时发 `""`（`plane/apps/web/core/components/issues/workspace-draft/draft-issue-properties.tsx:68-71`）；换项目后留着旧项目的 id，发布时 422。代价：草稿换项目丢掉迭代与模块（同非草稿的表单换项目）。
 - **R7 到上限的文件先拆（主控裁定 D7）**：`issue-modal/base.tsx`（452）、`form.tsx`（432）、`issue-layouts/utils.tsx`（399）本段要加代码，先按职责拆开（约 400 行的上限、没有大文件、没有兼容层）；工作项根 store（320）与写入单元（300）保持在约 400 行以内（M6-M8-08）。代价：一个只搬不改的 Task，以基线收据核对。
 - **R8 Plane 的缺陷不照搬（主控裁定 D8）**：下拉框从不取数（nerve 打开时读，§2.3）；popper 的 ref 不在列表上（共用件已在列表上）；改模块不接拒绝（nerve 说明原因）；新建之后的加入失败时提示“创建失败”（nerve 只有一个请求）；“添加已有”在模块页说“迭代”、命令面板的几处（P7b、P7c）。
-- **R9 e2e 的时长预算（主控裁定 D9）**：本段新的页面故事本机 chromium 合计约 20 秒；T15 照 P6b spec §2.10 的公式与已测的数据点估算；估算或上界超过 30 分钟时停下报告负责人、不推送；CI 的期限、超时与作业结构不经负责人不改。
+- **R9 e2e 的时长预算（主控裁定 D9）**：本段新的页面故事本机 chromium 合计约 20 秒；T16 照 P6b spec §2.10 的公式与已测的数据点（含 27 分 41 秒的最慢一次）估算，T9 的检查点校准；估算或上界超过 30 分钟时停下报告负责人、不推送；CI 的期限、超时与作业结构不经负责人不改。
 - **R10 只改网页（主控裁定 D10）**：不改 `server/`、`api/`；遇到网页上处理不了的契约缺口就停下报告（架构一级）。写 spec 时没有找到这样的缺口（§6）。
 - **R11 属性随项目的开关显示**：详情、预览、行、表格、弹窗与草稿的行只在工作项（表单、草稿）的项目打开 `cycle_view`、`module_view` 时显示迭代、模块；显示面板在项目的页上同此。理由：Plane 同（`plane/apps/web/core/components/issues/` 下的 `issue-detail/sidebar.tsx:206-229`、`issue-layouts/properties/all-properties.tsx:343-380`、`issue-layouts/filters/header/display-filters/display-properties.tsx:22-23` 的 `cycleViewDisabled`、`moduleViewDisabled`）；关闭时 nerve 拒绝任何变化（409），数据留着、再打开就在（G18）；新项目默认关闭（`00010_project_projects.sql:18`），M4、M5 的故事所在的项目因此不受影响。不取“关闭时只读地显示”（为项目关掉的功能给一个不能用的控件）。代价：开关关着时工作项上看不到它的迭代、模块；登记差异。
 - **R12 已归档的模块经列表去掉，按钮里没有嵌套的按钮**：已归档的模块在列表里是标明已归档、只能去掉的已选项。理由：设计 §3.3“移出不受归档的限制”，D4 允许去掉；Plane 的 chip 把 “x” 按钮放在下拉框的按钮里（`plane/apps/web/core/components/dropdowns/module/button-content.tsx:85-97`），是 M3 交接 §3 要去掉的嵌套按钮。不取“chip 上的 x”（嵌套的交互）、也不取“去不掉”。代价：去掉一个已归档的模块要先打开列表。
@@ -167,27 +178,29 @@ P7b、P7c 在 P7a 合入之后各写自己的 spec、plan 与预检，各自的 
 ## 4. 验收标准
 
 - [ ] A1 写入单元：`updateIssue` 的范围必给，`WritesRoot` 没有 `workspaceSlug`，没有 router 退路；`issue-writes.ts` 在 `project-address-route` 里（样例与变异）；32 处测试调用只加范围、断言不改（基线收据同数）；根与写入单元各在约 400 行以内。
-- [ ] A2 模块集合：增减在轮到时作用于所持的集合（连续两次的变化、前一个被拒、已归档与不认识的 id 保留）；迭代是单值；列表与详情的更新类型没有 `module_ids`；P6b 的“移出模块”改经同一命令（基线同数）。每个性质有单测，变异能让测试失败。
+- [ ] A2 模块集合：增减在轮到时作用于所持的集合（连续两次的变化、前一个被拒、已归档与不认识的 id 保留）；迭代是单值；列表与详情的更新类型声明 `module_ids?: never`（`Partial<IssueDetail>` 的值赋不进去）、命令逐个点名写请求体；P6b 的“移出模块”改经同一命令（基线同数）。每个性质有单测，变异能让测试失败。
 - [ ] A3 目录：选项在打开时读、按项目与权限分范围、迟到的不写、读失败可重试；名字含已结束与已归档的，按需、一个项目一次；跨项目的行按各自的项目；新 SWR 读者在 swr 限制里。
 - [ ] A4 下拉框：两个下拉框的选项、值、“无迭代”、已归档的已选项只能去掉、模块的 `onChange` 是增减、以行为名；列表开着时换项目关上并改读新项目；M2 交接 §4、§5(a) 与 M3 交接 §3 的两个下拉框各项在浏览器里核对（G4、G11 的页面故事）。
 - [ ] A5 各处：详情、预览、行、表格、显示属性 `cycle`/`modules`（类型、常量、默认、本地存的页、显示面板）；开关关闭时不显示；只读时不可改；被拒时说明；表头没有排序。
-- [ ] A6 弹窗：新建的初值（调用者的选项 + 本页可加入时的）、表单优先、只发一个请求、为空时省略；修改不预填本页、发出差异；拒绝落到字段；分组头的新建弹窗在命令宿主、活过核验；复制带源的可加入的值并本页的，内容复制随之加入。
-- [ ] A7 草稿：表单与行的两个字段、换项目清空、不发空的迭代、行的模块增减在轮到时算、发布的拒绝落到字段。
+- [ ] A6 弹窗：新建的初值（调用者的选项 + 本页可加入时的）在弹窗一级并进表单的默认值、按选项过滤等两份列表答到、表单优先、只发一个请求、为空时省略；修改不预填本页、发出差异；拒绝落到字段；分组头的新建弹窗在命令宿主（按状态分组也能打开）、活过核验；复制带源的可加入的值并本页的，内容复制随之加入。
+- [ ] A7 草稿：表单与行的两个字段、换项目清空、不发空的迭代（`module_ids: []` 照发）、行的模块增减在轮到时算、发布的拒绝落到字段。
 - [ ] A8 拆分：三个文件按职责拆开、各约 400 行以内，测试只改导入（基线收据同数）。
 - [ ] A9 G4、G11 的页面故事（三种引擎，§2.11）。
 - [ ] A10 守卫：`project-address-route`、swr 限制、告警上限 44、knip、关键词（phase `M6/P7`）、i18n（读、新键、删去的五个键）、`root.store.test.ts` 21 个 store。
-- [ ] A11 文档：P6b 的回填（阶段记录 §7、spec A8、设计 §14、M6-M8-01）；交接回执（M2 交接 §4、§5(a)，M3 交接 §3 的两个下拉框，M6-M8-08 的行数）；差异清单、前端改动清单、设计 §8/§12（P7 一行拆为三行）/§14。
+- [ ] A11 文档：P6b 的回填（阶段记录 §7 含 CI 的修复、spec A8、设计 §14）；交接回执（M2 交接 §4、§5(a)，M3 交接 §3 的两个下拉框，M6-M8-08 的行数）；差异清单、前端改动清单、设计 §8/§12（P7 一行拆为三行）/§14。
 - [ ] A12 七项本地门禁（`make test` 照负责人 2026-11-11 的规则）、deep-review 修复闭环、准确的分支 CI 与 noff 后的 main CI 全绿、归档清理。（合入后由 P7b 的 T1 勾选）
 
 ## 5. 后续责任
 
-**P7b**（列表词表与“添加已有”）：目录（A7）从 §2.3 的 store 读法与键建立，`prepareCatalog` 取两份列表，改写 `helpers/base-issues.store.test.ts:451-458` 的 `planningDirectoryIsUnavailableUntilP7`；`cycle_issues`、`module_issues` 由 `issues` 去掉本页的键推出（A8，re-70 F6）；偏好的筛选类型按页收窄（A9，P6b R16）；筛选（含“无”）、分组、排序、拖拽（A6；模块拖到“无”是只去掉来源的模块还是清空，由 P7b 定；拖拽的请求体用 §2.2 的增减）；表格两列表头的 `cycle_name`、`module_name` 排序（R21）与成员列表（个人页）上是否给名字排序；“添加已有”（空态的 `cta_secondary`、分组头、日历的 `addIssuesToView`、`existing-issues-list-modal.tsx` 的迭代与模块调用方，A4；排除“在本迭代”还是“在任一迭代”、搜索的页大小）与 M3 交接 §3 的弹窗核对（A5），逐个的 `PATCH` 用 §2.2 的命令；M4 交接 M6-02、M3 交接 §1 的回执。
+**P7b**（列表词表与“添加已有”）：目录（A7）从 §2.3 的 store 读法与键建立，`prepareCatalog` 取两份列表；`core/store/issue/helpers/issue-list-binding.ts` 已有 487 行，加目录之前先按职责拆开（D7，re-72 F9）；改写 `helpers/base-issues.store.test.ts:451-458` 的 `planningDirectoryIsUnavailableUntilP7`；`cycle_issues`、`module_issues` 由 `issues` 去掉本页的键推出（A8，re-70 F6）；偏好的筛选类型按页收窄（A9，P6b R16）；筛选（含“无”）、分组、排序、拖拽（A6；模块拖到“无”是只去掉来源的模块还是清空，由 P7b 定；拖拽的请求体用 §2.2 的增减）；表格两列表头的 `cycle_name`、`module_name` 排序（R21）与成员列表（个人页）上是否给名字排序；“添加已有”（空态的 `cta_secondary`、分组头、日历的 `addIssuesToView`、`existing-issues-list-modal.tsx` 的迭代与模块调用方，A4；排除“在本迭代”还是“在任一迭代”、搜索的页大小）与 M3 交接 §3 的弹窗核对（A5），逐个的 `PATCH` 用 §2.2 的命令；M4 交接 M6-02、M3 交接 §1 的回执。
 
 **P7c**（命令面板、移动端页头与遗留）：命令面板（A16：迭代、模块的本地过滤与切换，取数门为假时菜单一直加载，英文的 `emptyText`，命令的可见性；是否给工作项改迭代、模块的命令，若给就用 §2.2 的命令与 §2.4 的选项规则）；迭代页、模块页的移动端页头与项目页的（A15、X2）；快捷操作“恢复”在途时禁用（A17）、归档页行菜单的参数类型（A18）、分组时页头的数目（A19）、其余没有读者的键（A20）、`fake-planning-page.tsx` 的 `opened`（A21）；设计 §8 的四个视图文件（X1）；G19 的工作项一侧；M2、M3、M1 其余的回执。
 
+**e2e 的预算（P7b、P7c）**（re-72 F5）：照调研的余量（`research/web.md` §9.3：按上界算，P7 三段的新页面故事合计约 35–57 秒本机 chromium），本段用掉约 20 秒之后，P7b 与 P7c 两段合计约剩 15–37 秒；以 T16 的估算、上界与 27 分 41 秒那样的慢 runner 看，余量可能更少。e2e 作业的结构（例如分片）是负责人的决定，P7b、P7c 多半要提出来，不自行改。
+
 **M7**：工作区级的迭代、模块列表出现之后，跨项目的行（§2.3、R5）可改读它。
 
-**M8**：[M6-M8-08](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-08) 在 M6 收尾核对根与写入单元的行数（本段 T15 记下）；[M6-M8-01](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-01) 多 P6b、P7a 的 e2e 数据点；[M6-M8-05](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-05) 照旧。
+**M8**：[M6-M8-08](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-08) 在 M6 收尾核对根与写入单元的行数（本段 T16 记下）；[M6-M8-01](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-01) 多 P6b、P7a 的 e2e 数据点；[M6-M8-05](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-05) 照旧。
 
 ## 6. 风险
 
@@ -196,8 +209,8 @@ P7b、P7c 在 P7a 合入之后各写自己的 spec、plan 与预检，各自的 
 | 整体替换盖掉别处的改动 | 网页一侧以增减在轮到时作用于所持的集合（R3），同一标签页内的连续改动与弹窗打开期间的读不丢；别的标签页或别人在读与写之间的改动仍可能被盖掉：接口没有前置条件（`If-Match` 之类），这是 nerve 的合同，不是网页能补的，登记差异、不改接口（D10）。不是须停下的契约缺口：设计 §3.3 已接受整体替换与“添加已有”逐个 `PATCH` |
 | 已归档的名字要多读 | 按需、一个项目一次（R14）；跨项目的页按项目读（R5），工作区级的列表在 M7 |
 | 写入路径的改动碰坏 M4–P6b | T2、T3 先留基线收据，测试只加范围或改类型，断言不改；变化命令的变异（调用时算、丢掉已归档的）；P6b 的移出改经它后同数 |
-| 表单优先改变迭代页、模块页新建的行为 | P5b、P6b 的新建测试（页头、分组头、全局新建只在可加入时带本页）照旧成立、作回归；新测试钉住“表单选别的、去掉本页的”；快速新建照旧注入 |
-| 行与表格多了两个属性，影响既有的页面故事 | 只在开关打开的项目显示（R11）；迭代页、模块页的故事开着开关：T8 的检查点以默认配置跑全部故事，按契约补的只在回归边界允许处，台账写明 |
+| 表单优先改变迭代页、模块页新建的行为 | P5b、P6b 的新建测试（页头、分组头、全局新建只在可加入时带本页）照旧成立、作回归：它们把字段的组件换成 `() => null`，初值在弹窗一级并入，才不依赖字段（re-72 F2）；新测试钉住“表单选别的、去掉本页的”；快速新建照旧注入 |
+| 行与表格多了两个属性，影响既有的页面故事 | 只在开关打开的项目显示（R11）；迭代页、模块页的故事开着开关：T9 的检查点以默认配置跑全部故事，按契约补的只在回归边界允许处，台账写明 |
 | 三个大文件的拆分 | 单独的 Task（T4）只搬不改，以基线收据核对 |
-| e2e 时长 | 预算约 20 秒（D9）；T8 校准、T15 估算与上界，超过 30 分钟先报告负责人（§2.11） |
-| Task 的量 | 15 个 Task；弹窗分新建与修改两个 Task；若 T7（显示属性与行）超出一个实现者的量，把显示面板的开关门移到 T8，不加 Task |
+| e2e 时长 | 预算约 20 秒（D9）；T9 校准、T16 估算与上界；最慢的 runner（27 分 41 秒）上上界约 29.2–29.4 分钟，可能越过 30 分钟，越过就先报告负责人、不推送（§2.11） |
+| Task 的量 | 16 个 Task（re-72 F3 把目录与迭代下拉框拆成两个）；弹窗分新建与修改两个 Task；若 T8（显示属性与行）超出一个实现者的量，把显示面板的开关门移到 T9，不加 Task |
