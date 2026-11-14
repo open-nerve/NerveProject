@@ -40,6 +40,10 @@ vi.mock("@/hooks/store/use-member", () => ({
   useMember: () => ({ project: { getProjectMemberDetails: () => null } }),
 }));
 vi.mock("@/hooks/store/use-label", () => ({ useLabel: () => ({ getProjectLabels: () => [] }) }));
+// the module page's filters, whose values a row of the progress toggles (P6b): none here, so the rows are plain
+vi.mock("@/hooks/store/work-item-filters/use-work-item-filters", () => ({
+  useWorkItemFilters: () => ({ getFilter: () => undefined, updateFilterValueFromSidebar: () => undefined }),
+}));
 vi.mock("@/hooks/use-route-workspace", () => ({ useRouteWorkspace: () => null }));
 vi.mock("@/components/assets/profile-image", () => ({ ProfileAvatar: () => null }));
 vi.mock("@/components/dropdowns/member/dropdown", () => ({ MemberDropdown: () => null }));

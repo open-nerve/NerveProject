@@ -1,4 +1,4 @@
-import type { IssueDrop } from "@/store/issue/root.store";
+import type { IssueDrop } from "@/store/issue/issue-writes";
 import type { PagedGroups } from "@/lib/paged-groups";
 import type { IssueListOptions } from "@/lib/issue-filters";
 /**
@@ -18,7 +18,7 @@ import { EUserPermissions } from "@nerve/constants";
 import type { TLoader, TProfileViews, TSupportedFilterForUpdate } from "@nerve/types";
 import { EIssuesStoreType } from "@nerve/types";
 import { useIssues } from "./store/use-issues";
-import { useCycleIssueActions } from "./use-cycle-issue-actions";
+import { usePlanningPageIssueActions } from "./use-planning-page-issue-actions";
 import { useProjectPreferencesFollow } from "./use-project-preferences-follow";
 import { useUserPermissions } from "./store/user";
 
@@ -30,6 +30,8 @@ export interface IssueActions {
   ) => Promise<PagedGroups | undefined>;
   fetchNextIssues: (groupId?: string, subGroupId?: string) => Promise<PagedGroups | undefined>;
   removeIssue: (projectId: string | undefined | null, issueId: string) => Promise<void>;
+  /** A cycle's or a module's page's removal of a work item from its cycle or module (P6b spec 2.2, 2.5). */
+  removeIssueFromView?: (projectId: string | undefined | null, issueId: string) => Promise<void>;
   createIssue?: (projectId: string | undefined | null, data: IssueCreate) => Promise<Issue | undefined>;
   updateIssue?: (projectId: string | undefined | null, issueId: string, data: IssueUpdate) => Promise<void>;
   dropIssue?: (
@@ -53,7 +55,8 @@ export function useIssuesActions(storeType: EIssuesStoreType | undefined): Issue
   const projectIssueActions = useProjectIssueActions();
   const profileIssueActions = useProfileIssueActions();
   const archivedIssueActions = useArchivedIssueActions();
-  const cycleIssueActions = useCycleIssueActions();
+  const cycleIssueActions = usePlanningPageIssueActions(EIssuesStoreType.CYCLE);
+  const moduleIssueActions = usePlanningPageIssueActions(EIssuesStoreType.MODULE);
 
   switch (storeType) {
     case undefined:
@@ -64,6 +67,8 @@ export function useIssuesActions(storeType: EIssuesStoreType | undefined): Issue
       return archivedIssueActions;
     case EIssuesStoreType.CYCLE:
       return cycleIssueActions;
+    case EIssuesStoreType.MODULE:
+      return moduleIssueActions;
     case EIssuesStoreType.PROJECT:
     case EIssuesStoreType.DEFAULT:
       return projectIssueActions;

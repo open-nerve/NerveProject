@@ -17,7 +17,7 @@ vi.mock("@/lib/store-context", () => ({
 }));
 const C1 = "019a0000-0000-7000-8000-0000000000c1";
 const C2 = "019a0000-0000-7000-8000-0000000000c2";
-const pageOf = (cycleID: string) => ({ projectID: "A", cycleID });
+const pageOf = (cycleID: string) => ({ projectID: "A", entityID: cycleID });
 let tab: Awaited<ReturnType<typeof issueStoreTab>>;
 beforeEach(async () => {
   vi.useFakeTimers();
@@ -133,7 +133,7 @@ it("counts a cycle page's work items as nerve does, only while the current list 
   );
   expect(store.pageTotal(pageOf(C1)), "nerve's count, though it sent one row").toBe(7);
   expect(store.pageTotal(pageOf(C2)), "another cycle's page").toBeUndefined();
-  expect(store.pageTotal({ projectID: "B", cycleID: C1 }), "the cycle under another project").toBeUndefined();
+  expect(store.pageTotal({ projectID: "B", entityID: C1 }), "the cycle under another project").toBeUndefined();
   const two = await requestedIssue(nerve, () => store.fetchIssues("ws", pageOf(C2), "init-loader", { limit: 20 }), [
     "GET",
     "/api/v0/projects/A/issues",
@@ -157,7 +157,7 @@ it("reads the next page only for the cycle page whose list is current", async ()
   );
   nerve.calls.length = 0;
   await expect(store.fetchNextIssues("ws", pageOf(C2))).resolves.toBeUndefined();
-  await expect(store.fetchNextIssues("ws", { projectID: "B", cycleID: C1 })).resolves.toBeUndefined();
+  await expect(store.fetchNextIssues("ws", { projectID: "B", entityID: C1 })).resolves.toBeUndefined();
   expect(nerve.calls).toEqual([]);
   const next = await requestedIssue(nerve, () => store.fetchNextIssues("ws", pageOf(C1)), [
     "GET",

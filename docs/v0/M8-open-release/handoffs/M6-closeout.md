@@ -5,7 +5,7 @@ to: M8
 created: 2026-11-07
 ---
 
-# M6 交给 M8：CI 的 e2e 作业期限与间歇失败的故事、清理分页器的副本、e2e 数据库的连接余量、server 作业的分路与 lint 工具的在线下载、本机测试容器的端口冲突、e2e 作业在线安装浏览器的系统依赖、编辑器重建图片节点时中止的读取、工作项根 store 的行数、Firefox 再次载入后的字体预加载警告、出现后一帧内按下关闭的通知不再消失、两份相同的 useLocalStorage
+# M6 交给 M8：CI 的 e2e 作业期限与间歇失败的故事、清理分页器的副本、e2e 数据库的连接余量、server 作业的分路与 lint 工具的在线下载、本机测试容器的端口冲突、e2e 作业在线安装浏览器的系统依赖、编辑器重建图片节点时中止的读取、工作项根 store 的行数、Firefox 再次载入后的字体预加载警告、出现后一帧内按下关闭的通知不再消失、两份相同的 useLocalStorage、项目页第一次读偏好失败时没有重试
 
 这是接收方尚待完成的工作。转交只表示责任和验收条件已落实到此处，不表示本页问题已经解决。M6 进行中发现的条目随发现写入；M6 收尾时补齐其余交接。延续 [M5 → M8 交接 M5-M8-06](M5-closeout.md#M5-M8-06) 中仍开放的观察。
 
@@ -22,6 +22,8 @@ created: 2026-11-07
 - M6/P2 合入的 main CI 42399566014 两次未过（自动归档的锁探测被启动时的修剪任务骗过；S3 测试容器发布端口撞上本机连接的临时端口），按负责人指示由修复分支 `codex/m6-p2-ci` 修根因而非重跑：锁探测改为只看其行为者自己的锁与等待，测试容器在端口冲突时重建（至多三次），另修本地暴露的 S7 (page) 菜单按键竞争。M5-M8 交接所记“启动时运行的周期任务插到锁测试”一条，凡全局探测项目行锁的 bootstrap 测试已按此改写；其余仍开放的观察照旧。经过见 [P2 阶段记录](../../M6-cycles-modules/reviews/P2-modules-backend-review.md) §5。
 - **C12 的根因已查实并修复**（M6/P4）：P4 合入的 main CI 42809569341 的 e2e 又在 C12 的 list 布局同一处（`:117`）失败。这次从 trace 查实：弹窗刚打开时描述编辑器尚未建成，编辑器的引用却已挂上一套操作空编辑器的 API，`isEditorReadyToDiscard()` 答 false，弹窗把 Escape 当成“编辑器忙”而拒绝关闭（错误提示 “Editor is not ready to discard changes”）。修复分支 `codex/m6-p4-ci` 改为编辑器建成之前引用为 null，经过见 [P4 阶段记录](../../M6-cycles-modules/reviews/P4-progress-transfer-review.md) §5。此前留有详情的各次 C12 失败（M5-M8-06 与本条上文）都是“弹窗打开后不久按 Escape、5 秒内未关”，与此一致。收集箱新建弹窗的同类问题交 M7（[M6-M7-01](../../M7-collaboration/handoffs/M6-closeout.md#M6-M7-01)）。
 - 余量的一个数据（M6/P6a 的 T10 检查点）：分支 CI 43418051413（`82dac1ef`）全绿，e2e 作业 131867770453 用了 25 分 18 秒（E2E 一步 23 分 09 秒，452 条、2 个工作进程），比基线 main CI 43373039561 的 19 分 14 秒（E2E 一步 17 分 37 秒，453 条）多约 6 分钟。逐条比对：页面故事整体慢 36%、接口故事慢 11%，与模块无关的故事（工作项列表、文件、项目设置）同样变慢；本机同一套故事与 P5b 的最终门禁逐条持平（页面 1.00、接口 0.99、其他 1.02，总时长都是 3.4–3.5 分钟）；同一次运行中没有改 Go 的 server 两路也一快一慢。判为 runner 的速度差异，不是产品的回归；同一批故事在不同的 runner 上相差约三成，复核余量时要计入。
+- **C7 的再现**（M6/P6a 合入）：main CI 43469787621（main `06b72d4b`）attempt 1 的 e2e 作业 132048379310 中 462 条有 461 过，C7 在同一个故事（`collaboration-interactions.spec.ts:422`，键盘选主题）的同一个断言失败：第二次 `reopenDuringExit("Meta+k")`（`:474`，前一次 `Control+k` 已过、按 Escape 之后）期待面板停在 `data-leave`（`:464`），面板元素还在、已 `hidden`、`data-leave` 为 null（上文 42281169459 那次是第一次 `Control+k` 时 5 秒内找不到面板元素）。P6a 在命令面板只改了模块的命令与菜单（迭代的菜单改用共用的取数门），没有动主题选择与这个故事。照本条重跑一次（只重跑失败的作业），attempt 2 的 e2e 作业 132062963902 通过（462 过，作业 25 分 00 秒）；这个时长作为 P6b 的 e2e 时长基线（[P6b spec](../../M6-cycles-modules/specs/P6b-module-list.md) §2.10），也是余量的又一个数据：同一棵树的分支 CI 43463416098 的 e2e 作业为 21 分 38 秒。
+- 余量的又一个数据（M6/P6b 的 T10 检查点，2026-11-13）：分支 CI 43517662603（`3a5c3cf6`）全绿，e2e 作业 132209901127 用了 25 分 38 秒（22:28:06Z–22:53:44Z）；那时本段的页面故事还没有加入，跑的故事与 main 相同，比上一条的基线 25 分 00 秒多 38 秒，作为 P6b 推送前估算 e2e 时长的校准点（[P6b spec](../../M6-cycles-modules/specs/P6b-module-list.md) §2.10）。
 
 **何时验收：** M8 的 CI 工作复核 35 分钟的余量（或缓存浏览器的系统依赖、拆分作业，任一调整须负责人同意），并查实或修好 C7；在此之前，C7 再失败时按“重跑一次，再不过就停下报告”处理。C12 若再失败，按新的问题定位，不按本条重跑。
 
@@ -97,6 +99,7 @@ M6/P5b 的 T16（2026-11-12）在 `8b11bc6381623717663ba986da74710668719494` 上
 
 - 经过（本阶段台账记的 trace 分析，证据在台账的 `research/t16-f11-s3-failure/trace-summary.txt`，同目录有 `trace.zip`）：两次“被拒的粘贴”（伪造的标识、源不可读）之后的撤销，各在撤销后 6–9 ms 让编辑器把正文里已有的复制品图片重读一遍：先读资产的元数据、再读内容（trace 的单调时间：撤销 137.287 s → 137.295 s / 137.309 s；撤销 137.385 s → 137.390 s / 137.409 s，元数据都 200）；第二遍的内容读取发出 9.8 ms 后未答即被 Chromium 中止——此时故事已开始下一步（普通文件的拖放与粘贴），发起它的图片元素随即被替换或移除，trace 没有记下是哪一个事务。
 - 再现：同一阶段最终候选 `ebeb2cab699e15fb7cae13b9a611189c0c0c2cc8` 的门禁（`t16-final-gate`）里 F11 (page) [local] 以同一签名失败一次，过程相同（第二次撤销 26.539 s → 元数据 26.544 s、内容 26.561 s，内容读取在故事粘贴普通文本 0.5 ms 后发出、11.3 ms 后中止；证据在台账的 `research/t16-final-f11-local-failure/`）；只重跑该文件一次即通过（`t16-final-gate-e2e-f11-rerun`）。T16 的两次完整门禁都出现、分支 CI 与单独重跑从未出现。把内容读取经路由延迟 150 ms 并不能复现（`t16-red-f11-undo-race` 通过），所以不能简单归为“图片未载入完、下一次粘贴把它中止”，故事未改。`e2e/fixtures/browser.ts` 的 watch 把未答而中止的 API 请求记为失败。
+- 又一次再现（M6/P6b 的 T10 检查点，2026-11-13，`3a5c3cf6c3c6651052395d830ef22d615131eeb0`）：本地门禁的 build+e2e（`t10-gate-build-e2e`）461 条通过、1 条失败，F11 (page) [local] 以同一签名失败（`e2e/fixtures/content-files-page.ts:225` 的 finish，`apiFailures` 多出一条 `net::ERR_ABORTED GET /api/v0/assets/{复制品}/content`）；P6b 没有改编辑器、资产、详情页与 F11 用到的夹具；只重跑该文件一次即 7 条全过（`t10-gate-rerun-f11`，exit 0），同一检查点的分支 CI 43517662603 全绿。照下文的验收语记下。
 - 范围：P5b 没有改编辑器、资产与详情页的代码，也没有改 F11 用到的夹具（`browser.ts` 只多导出 `consoleProbe`，watch 不变）；同一故事此前在本机与 CI 多次通过。只重跑该故事文件一次即通过（`t16-gate-e2e-f11-rerun`，exit 0：F11 的 [local] 与 [s3] 都过，连同 s3 夹具的自检共 7 例）。
 - 待查：
   - 为什么相邻的事务会让已有图片的节点重建、重读——用户看到的是图片重新载入；
@@ -110,6 +113,13 @@ M6/P5b 的 T16（2026-11-12）在 `8b11bc6381623717663ba986da74710668719494` 上
 观察（re-67 M10，M6/P5b 的整分支审查）：`web/apps/web/core/store/issue/root.store.ts` 有 615 行，超过手写文件约 400 行的上限。它是 M4 的文件，P5b 的基线 `0b8efcd701edf7e73a37d5bb82ad176a7795b910` 上已有 593 行；P5b 加了 22 行（迭代页的偏好筛选、列表与优先级页签三个 store 的声明与构造，`fields()` 的 `cycle_id`、`module_ids`，创建与更新放行 `cycle_id`）。P7 还要为迭代下拉框与“添加已有”往里加写入。
 
 **何时验收：** P7 往里加写入之前先把它按职责拆开，否则由 M8 拆，拆后不超过约 400 行；或负责人决定维持现状，并在此写明理由。
+
+**处理结果（M6/P6b）**：P6a 的 R16 把拆分提前到 P6b，P6b 在往根上加模块页的任何东西之前按职责拆开（[P6b spec](../../M6-cycles-modules/specs/P6b-module-list.md) §2.1、R1，经预检 [re-70](../../../reviews/re-70-M6P6b预检.md)）：
+
+- 拆法：写的一侧整体移到写入单元 `IssueWrites`（`web/apps/web/core/store/issue/issue-writes.ts`，根以 `readonly writes` 建立并持有）——每个工作项一条的写队列与 `enqueueIssueChanges`、拖拽的队列、在途的写与 `pendingIDs`、确认的流水线（原 127 行的 `write()`）、`createIssue`/`confirmCreation`/`updateIssue`/`deleteIssue`/`archiveIssue`/`unarchiveIssue`；创建与更新的请求体（白名单与 `skip_activity` 的规则）和成员的快照写成纯函数（`issue-write-fields.ts`）。根留下组成、router 与目录的 getter、一代的身份与退役、读的凭据与可见性、列表与资源的登记和 `observeRead`。写入单元对根只有 `import type` 的窄接口（`Pick<IssueRootStore, …>`，根在构造时把自己传入），没有值的循环导入。调用方改经写入单元：产品代码 12 个文件 18 处、测试 21 个文件 83 处（测试只改接收者、断言不改），合入的状态里根上没有这些方法的转发。M4 的 router 退路照原样搬到写入单元（`issue-writes.ts:261`），P7 给 `updateIssue` 明确的范围、去掉它之后再把写入单元加入 `project-address-route`。
+- 行数：拆前根 615 行；拆后（`691302633b51d4b35e645efe46b0ec862824a905`）根 298 行、写入单元 300 行、请求体 70 行；本段加入模块页的偏好与列表两个 store、`module_ids` 的白名单之后（`61e6075e5afd7872317020914a22a1b4e2d2fd94`）根 320 行、写入单元 300 行、请求体 75 行，都在约 400 行之内。
+- 证据：提交 `c331aa9d5c044ec0c878a82d364bdde9c2111281`（拆出写入单元，产品代码改经它）、`691302633b51d4b35e645efe46b0ec862824a905`（测试改经写入单元，删去过渡的转发）；拆分前后受影响的 21 个文件 509 例与相关的 14 个文件 164 例逐个同数，`make test-web` 同数；白名单与在途的写各有能让测试失败的变异；M4 起没有能失败的测试的 `skip_activity` 规则由新单测 `issue-write-fields.test.ts` 钉住（P6b 台账 T2、T3）。
+- 验收的结论：本条的条件（P7 往里加写入之前拆开，拆后不超过约 400 行）已由 P6b 满足；P7 的写入（迭代、模块下拉框与“添加已有”）照 P6b spec §5 加在写入单元、不加回根。本条保持 open 到 M6 收尾，收尾时核对 P7 之后根与写入单元仍在上限之内再关闭。
 
 <a id="M6-M8-09"></a>
 ## M6-M8-09 Firefox 在同一浏览器的再次载入后报根预加载的字体未用
@@ -134,3 +144,10 @@ M6/P5b 的 T16（2026-11-12）在 `8b11bc6381623717663ba986da74710668719494` 上
 观察（[re-69](../../../reviews/re-69-M6P6a整体审核.md) 的观察，M6/P6a 的整分支审查）：web 里有两份行为相同（只差一行多余的重复判断、导出方式与 TODO 注释）的 `useLocalStorage`：`@nerve/hooks` 的 `web/packages/hooks/src/use-local-storage.tsx`（具名导出；第 10 行把 `typeof window === "undefined"` 判断了两次），与应用里 Plane 留下的副本 `web/apps/web/core/hooks/use-local-storage.tsx`（默认导出；它的注释写着 “TODO: Remove this once its callers use useLocalStorage from @nerve/hooks”）。模块一侧两份都用：版式与排序（`core/components/modules/use-module-display.ts`）读 `@nerve/hooks`，详情页与页头的 `module_sidebar_collapsed`、两域共用的进度页签 `core/components/core/sidebar/progress-tabs.tsx` 读应用的副本。副本在 P6a 之前就有，现有读者 8 个文件（迭代的进行中卡片 `cycles/active-cycle/cycle-stats.tsx`，迭代与模块的详情页与页头，`progress-tabs.tsx`，工作区侧栏的 `sidebar-menu-items.tsx` 与 `favorites/favorites-menu.tsx`），`@nerve/hooks` 的读者 6 个。两份读写同一个键时行为相同（都以 `local-storage:<key>` 事件互相通知），所以不是缺陷，只是重复。
 
 **何时验收：** M8 的清理把应用副本的读者改为 `@nerve/hooks` 的 `useLocalStorage` 并删去副本，同时删去留下的 `@nerve/hooks` 一份第 10 行重复的 `|| typeof window === "undefined"`（M7 若先改侧栏的收藏，可顺手改它那一处）；或负责人决定维持现状，并在此写明理由。
+
+<a id="M6-M8-12"></a>
+## M6-M8-12 项目页第一次读偏好失败时只有说明、没有重试
+
+观察（M6/P6b 的 T12，[P6b spec](../../M6-cycles-modules/specs/P6b-module-list.md) R4、§5 的 M8）：工作项列表的三页第一次读本页偏好失败时的样子不统一。迭代页、模块页是两域共用的 `PlanningReadFailure`（`web/apps/web/core/components/planning/read-failure.tsx`），说明原因并可重试；项目页（`web/apps/web/core/components/issues/issue-layouts/roots/project-layout-root.tsx:78`）是 M4 起的一行 `role="alert"` 文字，没有重试，要重新载入页面或离开再回来。P6b 只统一了“读到过偏好之后的重读失败”（三页都是正文沿用已读的偏好、上方一行可重试的提示 `PreferencesRereadFailure`）与页头控件出现的时机（三页都在本页偏好读到之后），项目页第一次读失败的那一行只加了“偏好还没有时”的条件，文字与无重试照旧（单测 `roots/preferences-reread.test.tsx` 钉住它照旧）。
+
+**何时验收：** M8 随最终矩阵把项目页第一次读偏好失败改为与迭代页、模块页一致（说明原因并可重试），或写明项目页保持 M4 样子的理由；或负责人决定维持现状，并在此写明理由。

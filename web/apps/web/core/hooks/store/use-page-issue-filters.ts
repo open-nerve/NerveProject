@@ -10,16 +10,18 @@ type PageStoreType =
   | EIssuesStoreType.PROJECT
   | EIssuesStoreType.PROFILE
   | EIssuesStoreType.ARCHIVED
-  | EIssuesStoreType.CYCLE;
+  | EIssuesStoreType.CYCLE
+  | EIssuesStoreType.MODULE;
 
 /**
  * The filters of the list page in the route, by its store type (P5b spec 2.5): the project's page, a profile and the
- * archive read them as they always have; a cycle's page reads its own preferences by the route's `cycleId`.
+ * archive read them as they always have; a cycle's page reads its own preferences by the route's `cycleId`, and a
+ * module's page its own by the route's `moduleId` (P6b spec 2.6).
  */
 export function usePageIssueFilters(storeType: PageStoreType): IIssueFilters | undefined {
   const context = useContext(StoreContext);
   if (context === undefined) throw new Error("usePageIssueFilters must be used within StoreProvider");
-  const { workspaceSlug, userId, cycleId } = useParams();
+  const { workspaceSlug, userId, cycleId, moduleId } = useParams();
   const root = context.issue;
   switch (storeType) {
     case EIssuesStoreType.PROJECT:
@@ -30,5 +32,7 @@ export function usePageIssueFilters(storeType: PageStoreType): IIssueFilters | u
       return root.archivedIssuesFilter.issueFilters;
     case EIssuesStoreType.CYCLE:
       return cycleId ? root.cycleIssuesFilter.getIssueFilters(cycleId) : undefined;
+    case EIssuesStoreType.MODULE:
+      return moduleId ? root.moduleIssuesFilter.getIssueFilters(moduleId) : undefined;
   }
 }

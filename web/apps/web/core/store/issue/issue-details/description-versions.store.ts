@@ -73,7 +73,7 @@ export class DescriptionVersionsStore {
       if (!root.isReadCurrent(token, [project], scope.workspaceID) || !this.canRead(ws, project))
         throw new SessionChangedError();
     };
-    const answer = await root.updateIssue(
+    const answer = await root.writes.updateIssue(
       id,
       () => {
         assertCurrent();

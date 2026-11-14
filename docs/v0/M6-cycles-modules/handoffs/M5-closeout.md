@@ -114,3 +114,14 @@ P3b 让附件列随共用的列表设置出现在迭代页、模块页：两页�
 ## 处理结果（M6/P6a）：M5-M6-02（模块）
 
 模块页的工作项列表不在 P6a：P6a 交付模块自身的页面，详情页的正文在 P6a 与 P6b 之间只有页头与侧栏（[P6a spec](../specs/P6a-web-modules.md) §1、R15）。模块页的附件列随模块页的列表在 P6b 开放：模块页偏好的 `display_properties` 已是三页共用的 14 个键（`attachment_count` 在其中、默认 `true`，见上文 P3b 的回执），行的计数、排序与续页由 nerve 给出；“何时验收”照迭代页的 G15 页面故事二由 P6b 以真实附件核对。本交接保持 open。证据：[P6a spec](../specs/P6a-web-modules.md) §1、§5。
+
+## 处理结果（M6/P6b）：M5-M6-02（模块）
+
+模块页的工作项列表在 P6b 开放，附件列随共用的列表设置出现，网页不另算计数：模块页偏好的 `display_properties` 就是三页共用的 14 个键（`attachment_count` 在其中、默认 `true`），行的 `attachment_count` 与 `±attachment_count` 的排序、续页都由 nerve 给出，网页只按回答显示（模块页的列表是项目列表加 `module_id`，走与项目页、迭代页同一个绑定与同一组布局，[P6b spec](../specs/P6b-module-list.md) §2.3、R2）。“何时验收”由 G15 页面故事二（`e2e/stories/planning/g15-module-list-page.spec.ts`，提交 `c65f7d1bca6fdff29a44a397c089fc4e67a4623e`）以真实附件核对：
+
+- **计数**：模块里 51 个工作项，其中两个各有真实上传的附件（1 个、3 个），列表行显示“Attachments1”“Attachments3”，表格的附件列显示“1 attachment”“3 attachments”，没有附件的显示“0 attachments”；另有不在模块里与在别的模块里的工作项，不出现。
+- **排序与分页**：接口按 `-attachment_count`、`attachment_count` 两个方向续页（带 `module_id`），每项一次、最后一页没有游标（`expectPages`）；页面以列表布局按状态分组（每组 50），两个方向各先列出 50 项、滚到底以组的游标续页，每项一次、之后没有“Load more”，续页的查询带 `module_id`、`group_key`、`order_by`；表格的表头两个方向排序（`aria-sort`），本页偏好存下 `attachment_count`。
+- **换会话与增删**：经接口给一个工作项加一个附件、给另一个删一个，另一个标签页重新登录同一个人，页面跟随新会话（换用了新令牌）读到 nerve 现在的数（2、2）。
+- 每一段以整页安静的断言收尾。e2e 变异“附件列恒为 0”（`t13-e2e-mut-attachments-uncounted`）让故事失败；三种引擎的页面配置与 `--repeat-each=3` 都通过。表格自身的续页（每页 100）不在故事里，续页由列表布局核对；附件部件本身的增删由 M5 F8 覆盖。
+
+迭代页（P5b）与模块页的附件列至此都已开放。本交接保持 open。证据：提交 `c65f7d1bca6fdff29a44a397c089fc4e67a4623e`；[P6b spec](../specs/P6b-module-list.md) §2.10。

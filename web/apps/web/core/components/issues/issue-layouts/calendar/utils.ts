@@ -5,7 +5,7 @@
  */
 
 import type { Issue, IssueUpdate } from "@nerve/api-client";
-import type { IssueDrop } from "@/store/issue/root.store";
+import type { IssueDrop } from "@/store/issue/issue-writes";
 
 export const handleDragDrop = async (
   issueId: string,

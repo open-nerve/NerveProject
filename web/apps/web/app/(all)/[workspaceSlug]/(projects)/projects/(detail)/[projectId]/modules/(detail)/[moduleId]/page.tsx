@@ -8,6 +8,7 @@ import { observer } from "mobx-react";
 import { useNavigate } from "react-router";
 // nerve imports
 import { useTranslation } from "@nerve/i18n";
+import { EIssuesStoreType } from "@nerve/types";
 import { Loader } from "@nerve/ui";
 import { cn } from "@nerve/utils";
 // assets
@@ -15,6 +16,7 @@ import emptyModule from "@/app/assets/empty-state/module.svg?url";
 // components
 import { EmptyState } from "@/components/common/empty-state";
 import { PageHead } from "@/components/core/page-title";
+import { PlanningPageLayoutRoot } from "@/components/issues/issue-layouts/roots/planning-page-layout-root";
 import { ModuleDetailsSidebar } from "@/components/modules/progress-sidebar";
 import { PlanningReadFailure } from "@/components/planning/read-failure";
 // hooks
@@ -28,13 +30,15 @@ import { useSessionSWR } from "@/lib/use-session-swr";
 import type { Route } from "./+types/page";
 
 /**
- * A module's page (P6a spec 2.6, R3, R12), of the route's project and module: its progress sidebar, on the right (its
- * work items come with P6b). It reads the module, its progress and its links for the caller who has a role in the
- * project, a guest too, while the project is not archived, whether the project's modules are turned on or not
+ * A module's page (P6a spec 2.6, R3, R12; P6b spec 2.7), of the route's project and module: its work items
+ * (PlanningPageLayoutRoot, which is the modules' turned-off state while the project's modules are off), and its
+ * progress sidebar on their right. It reads the module, its progress and its links for the caller who has a role in
+ * the project, a guest too, while the project is not archived, whether the project's modules are turned on or not
  * (usePlanningReads' readable); the sidebar's controls and the header's quick actions offer no change while they are
  * off (canWriteModules). It says that nerve finds no such module in the project (deleted, or never there), with the
  * way back to its list; why nerve could not read one of them, with a retry; and waits for nerve's first answer, unless
- * the project's list read already gives the module. An archived module shows as any other, read-only.
+ * the project's list read already gives the module. An archived module shows as any other, read-only: its work items
+ * too (P6b R9).
  */
 function ModuleDetailPage({ params }: Route.ComponentProps) {
   // router
@@ -97,6 +101,9 @@ function ModuleDetailPage({ params }: Route.ComponentProps) {
     <>
       <PageHead title={project ? `${project.name} - ${module.name}` : undefined} />
       <div className="flex h-full w-full">
+        <div className="h-full w-full overflow-hidden">
+          <PlanningPageLayoutRoot storeType={EIssuesStoreType.MODULE} />
+        </div>
         {!isSidebarCollapsed && (
           <div
             className={cn(

@@ -16,13 +16,15 @@ import type { IUserPermissionStore } from "@/store/user/permissions.store";
 import Layout from "../layout";
 import Page from "./page";
 
-// A module's page (P6a spec 2.6, R3, R12; M3 handoff 1): its layout, its header and its body, at the route's address.
-// It reads the module, its progress and its links for a member of the project, whether its modules are turned on or
-// not, and says that nerve finds no such module, or why it could not read one of them, with a retry. Its subtree is the
-// route module's: another module mounts it afresh, its host with it. The caller's role is the permission store's own
-// (fake-permissions.ts); the modules a stand-in store's, whose reads nerve settles when the test says; the sidebar,
-// the switcher of the header's crumb and the dialog that changes a module stand-ins that say what they got; the
-// header's quick actions the real ones.
+// A module's page (P6a spec 2.6, R3, R12; M3 handoff 1; P6b spec 2.7): its layout, its header and its body, at the
+// route's address. It reads the module, its progress and its links for a member of the project, whether its modules
+// are turned on or not, and says that nerve finds no such module, or why it could not read one of them, with a retry.
+// Its body is the module's work items, its sidebar on their right. Its subtree is the route module's: another module
+// mounts it afresh, its host with it. The caller's role is the permission store's own (fake-permissions.ts); the
+// modules a stand-in store's, whose reads nerve settles when the test says; the sidebar, the switcher of the header's
+// crumb, the dialog that changes a module and the module's work items (P6b, module-layout-root.test.tsx) stand-ins
+// that say what they got; the header's controls of those work items (P6b, header.test.tsx) stand-ins that offer
+// nothing; the header's quick actions the real ones.
 
 type Switcher = {
   title?: string;
@@ -79,6 +81,16 @@ vi.mock("@/components/modules/progress-sidebar", () => ({
       </aside>
     );
   },
+}));
+vi.mock("@/components/issues/issue-layouts/roots/planning-page-layout-root", () => ({
+  PlanningPageLayoutRoot: (props: { storeType: string }) => <section data-work-items={props.storeType} />,
+}));
+vi.mock("@/components/issues/filters", () => ({ HeaderFilters: () => null }));
+vi.mock("@/components/issues/issue-layouts/use-planning-page-header", () => ({
+  usePlanningPageHeader: () => ({ count: undefined, preferencesShown: false, canCreate: false }),
+}));
+vi.mock("@/hooks/store/use-command-palette", () => ({
+  useCommandPalette: () => ({ toggleCreateIssueModal: () => {} }),
 }));
 vi.mock("@/components/modules/modal", () => ({
   CreateUpdateModuleModal: (props: NonNullable<typeof held.edit>) => {
@@ -350,6 +362,15 @@ it("switches to the project's modules that are not archived, in nerve's order, b
     [beta.id, "Beta"],
     [module.id, "Gamma"],
   ]);
+});
+
+it("shows in its body the module's work items, by the module's store type, then its sidebar on their right", async () => {
+  const { alpha } = await opened(its.member, "Alpha");
+  const workItems = host.querySelector("[data-work-items]");
+  expect(workItems?.getAttribute("data-work-items")).toBe("MODULE");
+  const aside = host.querySelector("aside");
+  expect(aside?.getAttribute("aria-label")).toBe(alpha.id);
+  expect(aside && workItems?.compareDocumentPosition(aside)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
 });
 
 it("hides and shows its sidebar by the header's toggle, and hides it by the sidebar's close", async () => {

@@ -3,23 +3,23 @@ import type { Page, Response } from "@playwright/test";
 import { addProjectMembers, createProject, projectMembershipOf, projectMemberWrites } from "../../fixtures/api";
 import { anotherTabSignsIn, shownNameOf } from "../../fixtures/auth";
 import { watchPage } from "../../fixtures/browser";
-import {
-  chooseFromRow,
-  cycleListWorld,
-  headerCount,
-  listQueries,
-  openCyclePage,
-  quickAddButton,
-  quietEachTime,
-  rowEntries,
-  rowOptions,
-  shownItems,
-} from "../../fixtures/cycle-list-pages";
 import { cyclePath, cycleSection, cyclesPath, tabKey, tabStops, toast, turnCycles } from "../../fixtures/cycle-pages";
 import { changeCyclePreferences, createCycle, cyclePreferencesRead } from "../../fixtures/cycles";
 import { modalDialog, shownWithin } from "../../fixtures/dialogs";
 import { createIssue, updateIssue, type Issue } from "../../fixtures/issues";
 import { expectListPageQuiet } from "../../fixtures/issue-list-page";
+import {
+  chooseFromRow,
+  cycleListWorld,
+  headerCount,
+  listQueries,
+  openListPage,
+  quickAddButton,
+  quietEachTime,
+  rowEntries,
+  rowOptions,
+  shownItems,
+} from "../../fixtures/planning-list-pages";
 import { answerTo, moveWithinApp, sentHeld } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 
@@ -67,7 +67,7 @@ test("G19 (page): on Next's page the header's layouts, filters, display and new 
   const launch = await createCycle(api, w.token, ops.id, { name: "Launch" });
   await createIssue(api, w.token, ops.id, { name: "Deploy", cycle_id: launch.id });
 
-  const { page, watch } = await openCyclePage(signedInPage, w.mem, w.path(next.id));
+  const { page, watch } = await openListPage(signedInPage, w.mem, w.path(next.id));
   const quiet = quietEachTime(page, watch);
   await expect.poll(() => shownItems(page)).toEqual(["Ship"]);
 
@@ -180,7 +180,7 @@ test("G19 (page): Now's list read is held as another tab signs wanda in, Acme's 
   const gus = await w.guest("gus", "Gus's own", now.id);
   const wanda = await w.guest("wanda", "Wanda's own", now.id, true);
 
-  const { page, watch } = await openCyclePage(signedInPage, w.mem, w.path(now.id));
+  const { page, watch } = await openListPage(signedInPage, w.mem, w.path(now.id));
   const quiet = quietEachTime(page, watch);
   await expect.poll(() => shownItems(page)).toEqual(["Build", "Gus's own", "Plan", "Wanda's own"]);
   await expect(headerCount(page, "Now")).toHaveText("4");

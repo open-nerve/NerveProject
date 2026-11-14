@@ -87,7 +87,13 @@ it.each(["globalViewId", "viewId", "cycleId", "moduleId"])(
     await mount(
       () => {
         const selectedType = useIssueStoreType();
-        expect(selectedType).toBe(route === "cycleId" ? EIssuesStoreType.CYCLE : EIssuesStoreType.DEFAULT);
+        expect(selectedType).toBe(
+          route === "cycleId"
+            ? EIssuesStoreType.CYCLE
+            : route === "moduleId"
+              ? EIssuesStoreType.MODULE
+              : EIssuesStoreType.DEFAULT
+        );
         actions = useIssuesActions(selectedType);
       },
       undefined,
@@ -116,7 +122,7 @@ it("keeps project/profile route selection, explicit context and a generic route 
   fixture.params = { globalViewId: "view" };
   await mount(() => expect(useIssueStoreType()).toBe(EIssuesStoreType.ARCHIVED), EIssuesStoreType.ARCHIVED);
 });
-it.each(["GLOBAL", "MODULE", "PROJECT_VIEW", "unknown"])(
+it.each(["GLOBAL", "PROJECT_VIEW", "unknown"])(
   "rejects %s actions instead of silently dispatching project commands",
   async (kind) => {
     // Deliberately invalid runtime input verifies the dispatch guard.

@@ -35,7 +35,7 @@ import type {
 import { EIssuesStoreType } from "@nerve/types";
 
 // store
-import type { IssueDrop } from "@/store/issue/root.store";
+import type { IssueDrop } from "@/store/issue/issue-writes";
 import { DEFAULT_DISPLAY_PROPERTIES } from "@/store/issue/issue-details/sub_issues_filter.store";
 // constants
 import { ISSUE_GROUP_BY_OPTIONS } from "@nerve/constants";

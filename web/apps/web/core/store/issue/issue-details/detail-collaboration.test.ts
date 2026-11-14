@@ -51,7 +51,7 @@ function operate(kind: Kind): Promise<unknown> {
   const detail = root.issueDetail;
   switch (kind) {
     case "core":
-      return root.updateIssue("x", () => ({ name: "new" }));
+      return root.writes.updateIssue("x", () => ({ name: "new" }));
     case "link":
       return detail.createLink("ws", "A", "x", { url: "https://example.com" });
     case "comment":

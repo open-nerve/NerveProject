@@ -6,17 +6,32 @@
 // (the sidebar's, the command palette's, of no page) joins the cycle only while the page shows it taking work items;
 // once the cycle has ended, is archived or the project's cycles are off it creates as the project's page does. A
 // refusal is said, never a success. The header, the app's modals, the form, the list, the stores and HTTP are real.
-import { act, createElement, forwardRef, useImperativeHandle, type ReactNode } from "react";
+import { act, createElement, type ReactNode } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { Cycle } from "@nerve/api-client";
+import { EIssuesStoreType } from "@nerve/types";
 import { CycleIssuesHeader } from "@/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/cycles/(detail)/header";
 import { WorkItemLevelModals } from "@/components/modals/work-item-level";
 import { json, problem } from "@/lib/auth/fake-nerve";
 import { until } from "@/lib/auth/fake-time";
 import { toasts } from "@/lib/fake-toast";
-import { issueDetailOf } from "@/store/issue/fake-issues";
 import type { RootStore } from "@/store/root.store";
-import { C1, buttonOf, cyclePageTab, cyclePreferencesOf, layouts, type Layout } from "./fake-cycle-page";
+import {
+  C1,
+  buttonOf,
+  creates,
+  form,
+  globalCreate,
+  headerButton,
+  made,
+  planningPageTab,
+  projectField,
+  cyclePreferencesOf,
+  layouts,
+  quickAddForm,
+  send,
+  type Layout,
+} from "./fake-planning-page";
 
 const bound = vi.hoisted(() => ({ app: undefined as RootStore | undefined, params: {} as Record<string, string> }));
 vi.mock("@/lib/store-context", async () => ({
@@ -42,16 +57,12 @@ vi.mock("@/components/core/render-if-visible-HOC", () => ({
 vi.mock("@nerve/propel/emoji-icon-picker", () => ({ Logo: () => null }));
 vi.mock("@nerve/ui", async (original) => ({
   ...(await original<typeof import("@nerve/ui")>()),
-  ModalCore: (props: { isOpen: boolean; children: ReactNode }) =>
-    props.isOpen ? <div role="dialog">{props.children}</div> : null,
-  ModalTitle: (props: { children: ReactNode }) => <h3>{props.children}</h3>,
+  ...(await import("@/components/issues/issue-modal/fake-dialog")).modal,
 }));
-vi.mock("@/components/editor/rich-text", () => ({
-  RichTextEditor: forwardRef(function Editor(_props, ref) {
-    useImperativeHandle(ref, () => ({ isEditorReadyToDiscard: () => true, clearEditor: () => {} }));
-    return <textarea aria-label="description" />;
-  }),
-}));
+vi.mock(
+  "@/components/editor/rich-text",
+  async () => (await import("@/components/issues/issue-modal/fake-dialog")).editor
+);
 vi.mock("@/components/issues/issue-modal/components/default-properties", () => ({
   IssueDefaultProperties: () => null,
 }));
@@ -60,10 +71,10 @@ vi.mock("@/components/issues/create-issue-toast-action-items", () => ({ CreateIs
 vi.mock("@/components/breadcrumbs/common", () => ({ CommonProjectBreadcrumbs: () => null }));
 vi.mock("@/components/cycles/quick-actions", () => ({ CycleQuickActions: () => null }));
 
-let page: Awaited<ReturnType<typeof cyclePageTab>>;
-/** A tab at the cycle's page of project A, as cyclePageTab, whose stores the page uses. */
-async function opened(fields: Parameters<typeof cyclePageTab>[0] = {}) {
-  page = await cyclePageTab(fields);
+let page: Awaited<ReturnType<typeof planningPageTab>>;
+/** A tab at the cycle's page of project A, as planningPageTab, whose stores the page uses. */
+async function opened(fields: Parameters<typeof planningPageTab>[1] = {}) {
+  page = await planningPageTab(EIssuesStoreType.CYCLE, fields);
   bound.app = page.app;
 }
 beforeEach(() => {
@@ -82,35 +93,10 @@ const around = (
   </>
 );
 /** Shows a member the page of the cycle as fields say, its one work item in the layout, grouped by state. */
-async function shown(fields: Parameters<typeof cyclePageTab>[0] = {}, layout: Layout = "list") {
+async function shown(fields: Parameters<typeof planningPageTab>[1] = {}, layout: Layout = "list") {
   await opened({ role: 15, ...fields });
   await page.show(cyclePreferencesOf(layouts[layout].display), layouts[layout].page(), around);
 }
-const creates = () => page.nerve.to("/api/v0/projects/A/issues").filter((call) => call.method === "POST");
-const form = () => document.querySelector<HTMLFormElement>('[role="dialog"] form');
-/** The form's project field: its dropdown's button, which names the project. */
-const projectField = () =>
-  [...(form()?.querySelectorAll<HTMLButtonElement>("button") ?? [])].find(
-    (node) => node.textContent === "common.project: A"
-  );
-/** Types the name of the new work item in the input of selector and sends what it is in. */
-async function send(selector: string, name: string, at: () => HTMLFormElement | null) {
-  await act(async () => {
-    const input = at()!.querySelector<HTMLInputElement>(selector)!;
-    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(input, name);
-    input.dispatchEvent(new Event("input", { bubbles: true }));
-  });
-  await act(async () => at()!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })));
-  await until(() => creates().length === 1, "the creation");
-}
-/** The quick add's form, in the list, not in a dialog. */
-const quickAddForm = () =>
-  [...document.querySelectorAll<HTMLFormElement>("form")].find((node) => !node.closest('[role="dialog"]')) ?? null;
-/** The header's button of text. */
-const headerButton = (text: string) =>
-  [...document.querySelectorAll<HTMLButtonElement>("[data-header] button")].find(
-    (node) => node.textContent?.trim() === text
-  );
 /** Sends a new work item of name from the form a group's "+" opens, which keeps the cycle's project. */
 async function fromGroup(name: string) {
   await act(async () => document.querySelector<HTMLButtonElement>('button[aria-label^="create_work_item: "]')?.click());
@@ -137,7 +123,6 @@ const entries: Record<string, { layout: Layout; send: (name: string) => Promise<
     },
   },
 };
-const made = (name: string, fields: object = {}) => ({ ...issueDetailOf("made"), name, sort_order: 500, ...fields });
 
 it.each(Object.keys(entries))(
   "creates a work item of the cycle from %s in one request, says so and lists it",
@@ -166,13 +151,6 @@ it.each([
   expect(document.querySelector('[id^="issue-made"]')).toBeNull();
   expect(creates()).toHaveLength(1);
 });
-
-/** Sends a new work item from the app's own new work item, of no page, and nerve's answer to it. */
-async function globalCreate(name: string) {
-  await act(async () => page.app.commandPalette.toggleCreateIssueModal(true));
-  expect(projectField()?.disabled, "the app's form lets the project be changed").toBe(false);
-  await send("#name", name, form);
-}
 
 it("joins the cycle from the app's own new work item while the page shows it taking work items", async () => {
   await shown();

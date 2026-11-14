@@ -100,7 +100,7 @@ it("leaves the cycle page's list, and the project page's, as they are (R7)", asy
   const page = app.issue.cycleIssues;
   await answered(
     nerve,
-    () => page.fetchIssues("ws", pageOf(C1), "init-loader", { limit: 20 }),
+    () => page.fetchIssues("ws", { projectID: "A", entityID: C1 }, "init-loader", { limit: 20 }),
     ["GET", "/api/v0/projects/A/issues"],
     issuePageOf([inCycle("low", "low", "2026-11-02T00:00:00Z"), a]),
     "the cycle page's list"
@@ -155,7 +155,7 @@ it("keeps a row while nerve confirms it urgent or high in the cycle, and lets it
   await firstPage([b, a]);
   const change = await requestedIssue(
     nerve,
-    () => app.issue.updateIssue("a", () => ({ priority: "low" }), undefined, app.issue.scope("ws", "A")),
+    () => app.issue.writes.updateIssue("a", () => ({ priority: "low" }), undefined, app.issue.scope("ws", "A")),
     ["PATCH", "/api/v0/issues/a"]
   );
   change.call.answer(json(200, { ...a, priority: "low", updated_at: "2026-11-05T00:00:00Z" }));
@@ -172,7 +172,7 @@ it.each([
   await firstPage([b, a]);
   const change = await requestedIssue(
     nerve,
-    () => app.issue.updateIssue("b", () => ({ cycle_id }), undefined, app.issue.scope("ws", "A")),
+    () => app.issue.writes.updateIssue("b", () => ({ cycle_id }), undefined, app.issue.scope("ws", "A")),
     ["PATCH", "/api/v0/issues/b"]
   );
   expect(change.call.body).toEqual({ cycle_id });

@@ -13,11 +13,11 @@ import { AddOutline } from "@makeplane/propel/icons";
 import { useTranslation } from "@nerve/i18n";
 // types
 import type { TIssueGroupByOptions } from "@nerve/types";
-import { EIssuesStoreType } from "@nerve/types";
 // ui
 // components
 import { CreateUpdateIssueModal } from "@/components/issues/issue-modal/modal";
-// constants
+// hooks
+import { isPlanningPageStoreType } from "@/hooks/planning-page-domains";
 import { useIssueStoreType } from "@/hooks/use-issue-layout-store";
 
 interface IHeaderGroupByCard {
@@ -94,8 +94,9 @@ export const HeaderGroupByCard = observer(function HeaderGroupByCard(props: IHea
           onClose={() => setIsOpen(false)}
           data={issuePayload}
           storeType={storeType}
-          // a group's new work item of a cycle's page joins the cycle, so it stays in the cycle's project (P5b spec 2.5)
-          isProjectSelectionDisabled={storeType === EIssuesStoreType.CYCLE}
+          // a group's new work item of a cycle's or a module's page joins the page's cycle or module, so it stays in its
+          // project (P5b spec 2.5, P6b spec 2.6)
+          isProjectSelectionDisabled={isPlanningPageStoreType(storeType)}
         />
       </div>
     </>

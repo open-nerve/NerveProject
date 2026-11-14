@@ -59,11 +59,11 @@ const endpoint = (kind: Kind): ["GET" | "POST" | "PATCH" | "DELETE", string] => 
 function operate(kind: Kind, source?: IssueListBinding): Promise<unknown> {
   const root = tab.app.issue;
   const scope = root.scope("ws", "A");
-  if (kind === "create") return root.createIssue(scope, { name: "x" });
-  if (kind === "delete") return root.deleteIssue("x", scope);
-  if (kind === "archive") return root.archiveIssue("x", scope);
-  if (kind === "unarchive") return root.unarchiveIssue("x", scope);
-  return root.updateIssue(
+  if (kind === "create") return root.writes.createIssue(scope, { name: "x" });
+  if (kind === "delete") return root.writes.deleteIssue("x", scope);
+  if (kind === "archive") return root.writes.archiveIssue("x", scope);
+  if (kind === "unarchive") return root.writes.unarchiveIssue("x", scope);
+  return root.writes.updateIssue(
     "x",
     () => ({ name: "changed", sort_order: 500 }),
     kind === "drag" ? { group: "", binding: source } : undefined
@@ -158,7 +158,7 @@ it.each(kinds)("sixWriteCopies %s confirms each fetched copy and canonical exact
   expect(tab.app.issue.issues.held("x")).toEqual(kind === "delete" ? null : after);
   expect(unfetched.map((list) => list.value)).toEqual([undefined, undefined, undefined]);
   expect(tab.nerve.calls).toHaveLength(4);
-  expect(tab.app.issue.pendingIDs.size).toBe(0);
+  expect(tab.app.issue.writes.pendingIDs.size).toBe(0);
 });
 it.each(kinds.flatMap((kind) => (["refused", "retired"] as const).map((outcome) => ({ kind, outcome }))))(
   "sixWriteCopies $kind $outcome preserves every copy and deletion epoch",
@@ -239,7 +239,7 @@ it.each(["own", "third-party"] as const)(
     const confirmation = vi.spyOn(lists[0]!, "acceptConfirmed");
     const request = await requestedIssue(
       tab.nerve,
-      () => tab.app.issue.updateIssue("x", () => ({ state_id: "B", label_ids: ["new"] })),
+      () => tab.app.issue.writes.updateIssue("x", () => ({ state_id: "B", label_ids: ["new"] })),
       ["PATCH", "/api/v0/issues/x"]
     );
     const after = { ...issueDetailOf("x"), state_id: "B", sort_order: 50, label_ids: ["new"], updated_at: version(3) };
@@ -282,14 +282,15 @@ it("queuedBeforeIsFrozenOnlyWhenSentAndPreviousFinallyCannotClearPending", async
   accept({ ...issueOf("x"), state_id: "A", sort_order: 50 });
   const list = bindingOf("project", true);
   await load(list, grouped());
-  const first = await requestedIssue(tab.nerve, () => tab.app.issue.updateIssue("x", () => ({ state_id: "B" })), [
-    "PATCH",
-    "/api/v0/issues/x",
-  ]);
-  const second = track(tab.app.issue.updateIssue("x", () => ({ state_id: "A" })));
+  const first = await requestedIssue(
+    tab.nerve,
+    () => tab.app.issue.writes.updateIssue("x", () => ({ state_id: "B" })),
+    ["PATCH", "/api/v0/issues/x"]
+  );
+  const second = track(tab.app.issue.writes.updateIssue("x", () => ({ state_id: "A" })));
   first.call.answer(json(200, { ...issueDetailOf("x"), state_id: "B", sort_order: 50, updated_at: version(2) }));
   await until(() => tab.nerve.to("/api/v0/issues/x").length === 2, "second queued write");
-  expect(tab.app.issue.pendingIDs.has("x")).toBe(true);
+  expect(tab.app.issue.writes.pendingIDs.has("x")).toBe(true);
   expect([list.group("A")?.total, list.group("B")?.total]).toEqual([4, 5]);
   tab.nerve.calls
     .at(-1)!
@@ -297,7 +298,7 @@ it("queuedBeforeIsFrozenOnlyWhenSentAndPreviousFinallyCannotClearPending", async
   await until(() => second.settled, "second confirmation");
   expect(second.error).toBeUndefined();
   expect([list.group("A")?.total, list.group("B")?.total]).toEqual([5, 4]);
-  expect(tab.app.issue.pendingIDs.size).toBe(0);
+  expect(tab.app.issue.writes.pendingIDs.size).toBe(0);
 });
 
 it.each(["whole", "part", "get", "verify"] as const)(
@@ -343,7 +344,7 @@ it.each(["whole", "part", "get", "verify"] as const)(
       root.verification.require("Y", lists[1]!);
       await until(() => tab.nerve.to("/api/v0/issues/Y").length === 1, "unknown verification");
     }
-    const deleting = await requestedIssue(tab.nerve, () => root.deleteIssue("parent", root.scope("ws", "A")), [
+    const deleting = await requestedIssue(tab.nerve, () => root.writes.deleteIssue("parent", root.scope("ws", "A")), [
       "DELETE",
       "/api/v0/issues/parent",
     ]);
@@ -374,11 +375,11 @@ it("twoDeletesInvalidateRefreshBetweenThemButKeepAnotherProjectCurrent", async (
   const b = bindingOf("project", false, "B");
   await load(a, issuePageOf([issueOf("first"), issueOf("second")]));
   await load(b, issuePageOf([issueOf("other", "B")]));
-  const first = await requestedIssue(tab.nerve, () => root.deleteIssue("first", root.scope("ws", "A")), [
+  const first = await requestedIssue(tab.nerve, () => root.writes.deleteIssue("first", root.scope("ws", "A")), [
     "DELETE",
     "/api/v0/issues/first",
   ]);
-  const second = await requestedIssue(tab.nerve, () => root.deleteIssue("second", root.scope("ws", "A")), [
+  const second = await requestedIssue(tab.nerve, () => root.writes.deleteIssue("second", root.scope("ws", "A")), [
     "DELETE",
     "/api/v0/issues/second",
   ]);
@@ -416,7 +417,7 @@ async function missingReplay() {
   const archive = bindingOf("archived", true);
   const write = await requestedIssue(
     tab.nerve,
-    () => root.updateIssue("x", () => ({ state_id: "B", sort_order: 20 })),
+    () => root.writes.updateIssue("x", () => ({ state_id: "B", sort_order: 20 })),
     ["PATCH", "/api/v0/issues/x"]
   );
   const page = {
@@ -808,10 +809,11 @@ it("permission deletion and per-id freshness floors remain independent", async (
   expect(root.verification.canAccept("other", beforeMissing)).toBe(true);
   const beforeDelete = root.captureRead();
   expect(root.verification.canAccept("x", beforeDelete)).toBe(true);
-  const removal = await requestedIssue(tab.nerve, () => root.deleteIssue("unknown-parent", root.scope("ws", "A")), [
-    "DELETE",
-    "/api/v0/issues/unknown-parent",
-  ]);
+  const removal = await requestedIssue(
+    tab.nerve,
+    () => root.writes.deleteIssue("unknown-parent", root.scope("ws", "A")),
+    ["DELETE", "/api/v0/issues/unknown-parent"]
+  );
   removal.call.answer(noContent());
   await removal.promise;
   expect(root.isReadCurrent(beforeDelete, ["A"], "id-ws")).toBe(false);
@@ -925,7 +927,7 @@ it.each([2, 3])("newerWholeBeforeOlderWriteAnswerPreservesLatestEvidence version
   const list = bindingOf("project");
   const before = { ...issueDetailOf("x"), sort_order: 10, updated_at: version(1) };
   await load(list, issuePageOf([before]));
-  const write = await requestedIssue(tab.nerve, () => root.updateIssue("x", () => ({ sort_order: 20 })), [
+  const write = await requestedIssue(tab.nerve, () => root.writes.updateIssue("x", () => ({ sort_order: 20 })), [
     "PATCH",
     "/api/v0/issues/x",
   ]);

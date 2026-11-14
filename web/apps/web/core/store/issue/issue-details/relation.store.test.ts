@@ -200,7 +200,7 @@ it.each(["mismatch", "deleted"])("rejects a known %s source before reading its r
     id = "wrong-source";
     root.issues.acceptRead(issueOf(id, "B"), root.captureRead());
   } else {
-    const removal = await requestedIssue(tab.nerve, () => root.deleteIssue(id, root.scope("ws", "A")), [
+    const removal = await requestedIssue(tab.nerve, () => root.writes.deleteIssue(id, root.scope("ws", "A")), [
       "DELETE",
       "/api/v0/issues/source",
     ]);

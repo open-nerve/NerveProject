@@ -11,13 +11,13 @@ import type { IPagePreferencesFilter } from "@/store/issue/helpers/page-preferen
 type Follow = (slug: string, id: string, change: () => Promise<void>) => Promise<void>;
 
 /**
- * The save of a list page's filter conditions, whose preferences hold them (the project's page, a cycle's: P5b spec
- * 2.4), made under the page's follow. Once nerve confirms them and the page's draft is still the one sent, the
- * confirmation is the draft's saved baseline: as it is when nerve accepted the conditions unchanged, else as nerve
- * gave them.
+ * The save of a list page's filter conditions, whose preferences hold them (the project's page, a cycle's or a
+ * module's: P5b spec 2.4, P6b spec 2.4), made under the page's follow. Once nerve confirms them and the page's draft is
+ * still the one sent, the confirmation is the draft's saved baseline: as it is when nerve accepted the conditions
+ * unchanged, else as nerve gave them.
  */
 export function usePageFilterExpression(
-  storeType: EIssuesStoreType.PROJECT | EIssuesStoreType.CYCLE,
+  storeType: EIssuesStoreType.PROJECT | EIssuesStoreType.CYCLE | EIssuesStoreType.MODULE,
   workspaceSlug: string | undefined,
   id: string | undefined,
   issuesFilter: IPagePreferencesFilter,

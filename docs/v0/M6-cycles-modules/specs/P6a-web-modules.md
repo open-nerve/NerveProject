@@ -1,6 +1,6 @@
 # M6 / P6a：网页的模块（数据层与页面）
 
-> 状态：实现与审查已完成，待分支 CI 与合入：整分支审查 Ready after fixes（[re-69](../../../reviews/re-69-M6P6a整体审核.md)），修复轮 F 经限定复审 Ready to merge，最终候选 `1f41c8ca`；A1–A7 已勾选，A8 由 P6b 的 T1 勾选（[阶段记录](../reviews/P6a-web-modules-review.md)）。预检通过（修正后，[re-68](../../../reviews/re-68-M6P6a预检.md)）。基线 main `aadaf61a5929b57d8aa53b93e5ae04b03cc046c6`（P5b 的 noff `9675bb31` 与其 main CI 失败的根因修正 noff `aadaf61a`，main CI 43373039561 首次通过）。设计见 [M6 设计](../M6-design.md) §2 的 G9–G13、G19，§3.2、§3.5–§3.8、§5、§8、§11、§12；负责人 2026-11-07 的决定 A/B/C 见设计 §15（第 5、9、10、11、13、15、17 条与本段直接相关）。网页的长期规则见[总体设计 §7.2、§7.7](../../v0-design.md#77-stores-按会话分代长期有效m2-起)。接口合同见 [P2 spec](P2-modules-backend.md)、[P4 spec](P4-progress-transfer.md) §2.3；迭代一侧的先例与交给本段的事见 [P5a spec](P5a-web-cycles.md) §5、[P5b spec](P5b-cycle-list.md) §5 的 P6 一行。现状调研见本阶段台账 `research/web.md`（网页的模块现状、P5a/P5b 的约定、生成的客户端、守卫与交接）、`research/plane-contract.md`（Plane 的模块页面、nerve 的模块契约、两者的差异）（ignored，随阶段归档）。负责人 2026-11-11 授权连续推进至 M6 收官，重要高风险决策仍停下确认；本段不改 `server/`、`api/`，本机 `make test` 若因 M6-M8-05 的签名失败，以分支 CI 的服务端两路为准（负责人 2026-11-11）。
+> 状态：已完成（2026-11-14，noff `06b72d4b`，main CI 43469787621 attempt 2 通过：attempt 1 的 e2e 在 M4 的 C7 间歇失败，照 M6-M8-01 只重跑 e2e），A1–A8 已勾选，整分支审查 Ready after fixes（[re-69](../../../reviews/re-69-M6P6a整体审核.md)），修复轮 F 经限定复审 Ready to merge，最终候选 `1f41c8ca`（[阶段记录](../reviews/P6a-web-modules-review.md)）。预检通过（修正后，[re-68](../../../reviews/re-68-M6P6a预检.md)）。基线 main `aadaf61a5929b57d8aa53b93e5ae04b03cc046c6`（P5b 的 noff `9675bb31` 与其 main CI 失败的根因修正 noff `aadaf61a`，main CI 43373039561 首次通过）。设计见 [M6 设计](../M6-design.md) §2 的 G9–G13、G19，§3.2、§3.5–§3.8、§5、§8、§11、§12；负责人 2026-11-07 的决定 A/B/C 见设计 §15（第 5、9、10、11、13、15、17 条与本段直接相关）。网页的长期规则见[总体设计 §7.2、§7.7](../../v0-design.md#77-stores-按会话分代长期有效m2-起)。接口合同见 [P2 spec](P2-modules-backend.md)、[P4 spec](P4-progress-transfer.md) §2.3；迭代一侧的先例与交给本段的事见 [P5a spec](P5a-web-cycles.md) §5、[P5b spec](P5b-cycle-list.md) §5 的 P6 一行。现状调研见本阶段台账 `research/web.md`（网页的模块现状、P5a/P5b 的约定、生成的客户端、守卫与交接）、`research/plane-contract.md`（Plane 的模块页面、nerve 的模块契约、两者的差异）（ignored，随阶段归档）。负责人 2026-11-11 授权连续推进至 M6 收官，重要高风险决策仍停下确认；本段不改 `server/`、`api/`，本机 `make test` 若因 M6-M8-05 的签名失败，以分支 CI 的服务端两路为准（负责人 2026-11-11）。
 
 ## 1. 目标与边界
 
@@ -227,7 +227,7 @@
 - [x] A5 G19（模块页面）：换账号、换工作区/项目/模块、后退前进时迟到的回答不写进新页面；详情子树以 `moduleId` 为 key、预览侧栏以所预览的模块为 key；弹窗、菜单、下拉框的键盘、名字与焦点逐项（M3 交接 §3 的模块各项）；两处复制失败有提示。
 - [x] A6 删除与守卫：§2.9 的旧代码全部删除；`old-module-urls` 规则；`project-address-route` 收入改写的文件、加上嵌套解构的一支；`copy-hook` 模块的三条例外删除；改到的文件 oxlint 告警为零、上限下调到 44；模块的死成员与 progress-stats 8 行有结论；`root.store.test.ts` 21 个 store。
 - [x] A7 文档：差异清单、前端改动清单、输入交接的“处理结果（M6/P6a）”、设计 §8/§12/§14、总体设计 §7.7 一句；P5b 的阶段记录 §7、spec A8 与设计 §14 已回填。
-- [ ] A8 七项本地门禁（`make test` 照负责人 2026-11-11 的规则）、deep-review 修复闭环、准确的分支 CI 与 noff 后的 main CI 全绿、归档清理。（合入后由 P6b 的 T1 勾选）
+- [x] A8 七项本地门禁（`make test` 照负责人 2026-11-11 的规则）、deep-review 修复闭环、准确的分支 CI 与 noff 后的 main CI 全绿、归档清理。（合入后由 P6b 的 T1 勾选：最终 HEAD `8188582e` 的分支 CI 43463416098 首次通过；noff `06b72d4b` 的 main CI 43469787621 attempt 1 的 e2e 在 M4 的 C7 间歇失败（M6-M8-01，与本段无关），照其验收语只重跑 e2e，attempt 2 通过；归档 `M6-P6a-integration-20261114`；见[阶段记录](../reviews/P6a-web-modules-review.md) §5、§7）（本段的 `make test` 在检查点 `82dac1ef` 与最终候选 `1f41c8ca` 都在本机通过，负责人 2026-11-11 的规则——因 M6-M8-05 的签名失败时以分支 CI 的服务端两路为准——没有用上；`1f41c8ca` 之后的记录提交 `8188582e` 只改文档，以文档的收据与分支 CI 为准）
 
 ## 5. 后续责任
 

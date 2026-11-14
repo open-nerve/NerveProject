@@ -40,6 +40,7 @@
         "failed": "无法从周期中移除工作项。请重试。"
       },
       "module": {
+        "label": "从模块中移除",
         "loading": "正在从模块中移除工作项",
         "success": "已成功从模块中移除工作项。",
         "failed": "无法从模块中移除工作项。请重试。"
@@ -76,7 +77,8 @@
         "kanban": "看板布局",
         "calendar": "日历布局",
         "spreadsheet": "表格布局"
-      }
+      },
+      "preferences_reread_failed": "未能重新读取本页的偏好，列表按上次读到的偏好显示。"
     },
     "comments": {
       "placeholder": "添加评论",

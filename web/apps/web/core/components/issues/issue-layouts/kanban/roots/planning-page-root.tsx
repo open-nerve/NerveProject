@@ -4,19 +4,27 @@ import { useParams } from "react-router";
 // nerve imports
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 // hooks
+import type { PlanningPageStoreType } from "@/hooks/planning-page-domains";
 import { useUserPermissions } from "@/hooks/store/user";
-import { useCycleListState } from "@/hooks/use-cycle-list-state";
 // local imports
-import { CycleIssueQuickActions } from "../../quick-action-dropdowns";
-import { BaseListRoot } from "../base-list-root";
+import { PLANNING_PAGE_LAYOUTS } from "../../planning-page-layouts";
+import { PlanningPageIssueQuickActions } from "../../quick-action-dropdowns";
+import { BaseKanBanRoot } from "../base-kanban-root";
 
-/** The list of a cycle's page: the project page's, read-only once the cycle has ended or is archived (R5). */
-export const CycleListLayout = observer(function CycleListLayout() {
+/**
+ * The board of a planning page: the project page's, with the rows' quick actions of the page's domain, read-only as
+ * the domain's list state says (a cycle's: once it has ended or is archived, P5b R5; a module's: once it is archived,
+ * P6b R9).
+ */
+export const PlanningPageKanBanLayout = observer(function PlanningPageKanBanLayout(props: {
+  storeType: PlanningPageStoreType;
+}) {
   // router
   const { workspaceSlug } = useParams();
   // hooks
   const { allowPermissions } = useUserPermissions();
-  const { readOnly } = useCycleListState();
+  const { useListState } = PLANNING_PAGE_LAYOUTS[props.storeType];
+  const { readOnly } = useListState();
 
   if (!workspaceSlug) return null;
 
@@ -29,8 +37,8 @@ export const CycleListLayout = observer(function CycleListLayout() {
     );
 
   return (
-    <BaseListRoot
-      QuickActions={CycleIssueQuickActions}
+    <BaseKanBanRoot
+      QuickActions={PlanningPageIssueQuickActions}
       canEditPropertiesBasedOnProject={canEditPropertiesBasedOnProject}
       readOnly={readOnly}
     />

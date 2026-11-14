@@ -5,29 +5,39 @@ import { useParams } from "react-router";
 import { EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { EmptyStateDetailed } from "@nerve/propel/empty-state";
-import { EIssuesStoreType, EUserProjectRoles } from "@nerve/types";
+import { EUserProjectRoles } from "@nerve/types";
 // hooks
+import { PLANNING_PAGE_DOMAINS, type PlanningPageStoreType } from "@/hooks/planning-page-domains";
 import { useCommandPalette } from "@/hooks/store/use-command-palette";
 import { useUserPermissions } from "@/hooks/store/user";
 import { useWorkItemFilterInstance } from "@/hooks/store/work-item-filters/use-work-item-filter-instance";
-import { useCycleListState } from "@/hooks/use-cycle-list-state";
+// local imports
+import { PLANNING_PAGE_LAYOUTS } from "../planning-page-layouts";
 
 /**
- * A cycle's page without work items to show (P5b spec 2.6): once the cycle has ended or is archived, only why; else the
- * clearing of the page's filters while any is applied; else a new work item of the cycle, for those who may create one
- * in the project (as the project page's) while the cycle takes them. Adding existing work items comes with P7 (R11).
+ * A planning page without work items to show (P5b spec 2.6, P6b spec 2.2, 2.7), in its domain's words: once its list is
+ * read-only (a cycle's: once the cycle has ended or is archived; a module's: once it is archived), only why; else the
+ * clearing of the page's filters while any is applied; else a new work item of the page, for those who may create one
+ * in the project (as the project page's) while the page's cycle or module takes them. Adding existing work items comes
+ * with P7 (R11).
  */
-export const CycleEmptyState = observer(function CycleEmptyState() {
+export const PlanningPageEmptyState = observer(function PlanningPageEmptyState(props: {
+  storeType: PlanningPageStoreType;
+}) {
+  const { storeType } = props;
   // router
-  const { workspaceSlug, projectId, cycleId } = useParams();
+  const params = useParams();
+  const { workspaceSlug, projectId } = params;
+  const entityId = params[PLANNING_PAGE_DOMAINS[storeType].param];
   // nerve hooks
   const { t } = useTranslation();
   // store hooks
   const { toggleCreateIssueModal } = useCommandPalette();
   const { allowPermissions } = useUserPermissions();
   // derived values
-  const { readOnly, joinable } = useCycleListState();
-  const cycleWorkItemFilter = useWorkItemFilterInstance(EIssuesStoreType.CYCLE, cycleId);
+  const { useListState, empty } = PLANNING_PAGE_LAYOUTS[storeType];
+  const { readOnly, joinable } = useListState();
+  const pageWorkItemFilter = useWorkItemFilterInstance(storeType, entityId);
   const canCreate =
     joinable &&
     !!workspaceSlug &&
@@ -44,10 +54,10 @@ export const CycleEmptyState = observer(function CycleEmptyState() {
       {readOnly ? (
         <EmptyStateDetailed
           assetKey="work-item"
-          title={t("project_cycles.empty_state.completed_no_issues.title")}
-          description={t("project_cycles.empty_state.completed_no_issues.description")}
+          title={t(empty.readOnly.title)}
+          description={t(empty.readOnly.description)}
         />
-      ) : cycleWorkItemFilter?.hasActiveFilters ? (
+      ) : pageWorkItemFilter?.hasActiveFilters ? (
         <EmptyStateDetailed
           assetKey="search"
           title={t("common_empty_state.search.title")}
@@ -55,7 +65,7 @@ export const CycleEmptyState = observer(function CycleEmptyState() {
           actions={[
             {
               label: t("project_issues.empty_state.issues_empty_filter.secondary_button.text"),
-              onClick: cycleWorkItemFilter.clearFilters,
+              onClick: pageWorkItemFilter.clearFilters,
               variant: "secondary",
             },
           ]}
@@ -63,14 +73,14 @@ export const CycleEmptyState = observer(function CycleEmptyState() {
       ) : (
         <EmptyStateDetailed
           assetKey="work-item"
-          title={t("project_empty_state.cycle_work_items.title")}
-          description={t("project_empty_state.cycle_work_items.description")}
+          title={t(empty.none.title)}
+          description={t(empty.none.description)}
           actions={
             canCreate
               ? [
                   {
-                    label: t("project_empty_state.cycle_work_items.cta_primary"),
-                    onClick: () => toggleCreateIssueModal(true, EIssuesStoreType.CYCLE),
+                    label: t(empty.none.create),
+                    onClick: () => toggleCreateIssueModal(true, storeType),
                     variant: "primary",
                   },
                 ]

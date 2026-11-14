@@ -4,19 +4,27 @@ import { useParams } from "react-router";
 // nerve imports
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 // hooks
+import type { PlanningPageStoreType } from "@/hooks/planning-page-domains";
 import { useUserPermissions } from "@/hooks/store/user";
-import { useCycleListState } from "@/hooks/use-cycle-list-state";
 // local imports
-import { CycleIssueQuickActions } from "../../quick-action-dropdowns";
+import { PLANNING_PAGE_LAYOUTS } from "../../planning-page-layouts";
+import { PlanningPageIssueQuickActions } from "../../quick-action-dropdowns";
 import { BaseCalendarRoot } from "../base-calendar-root";
 
-/** The calendar of a cycle's page: the project page's, read-only once the cycle has ended or is archived (R5). */
-export const CycleCalendarLayout = observer(function CycleCalendarLayout() {
+/**
+ * The calendar of a planning page: the project page's, with the rows' quick actions of the page's domain, read-only as
+ * the domain's list state says (a cycle's: once it has ended or is archived, P5b R5; a module's: once it is archived,
+ * P6b R9).
+ */
+export const PlanningPageCalendarLayout = observer(function PlanningPageCalendarLayout(props: {
+  storeType: PlanningPageStoreType;
+}) {
   // router
   const { workspaceSlug } = useParams();
   // hooks
   const { allowPermissions } = useUserPermissions();
-  const { readOnly } = useCycleListState();
+  const { useListState } = PLANNING_PAGE_LAYOUTS[props.storeType];
+  const { readOnly } = useListState();
 
   if (!workspaceSlug) return null;
 
@@ -30,7 +38,7 @@ export const CycleCalendarLayout = observer(function CycleCalendarLayout() {
 
   return (
     <BaseCalendarRoot
-      QuickActions={CycleIssueQuickActions}
+      QuickActions={PlanningPageIssueQuickActions}
       canEditPropertiesBasedOnProject={canEditPropertiesBasedOnProject}
       readOnly={readOnly}
     />

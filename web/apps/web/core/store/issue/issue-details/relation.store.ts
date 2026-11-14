@@ -123,7 +123,7 @@ export class IssueRelationStore {
     );
   }
   createRelation = (ws: string, project: string, id: string, type: IssueRelationType, ids: string[]): Promise<void> =>
-    this.root.enqueueIssueChanges(
+    this.root.writes.enqueueIssueChanges(
       [id, ...ids],
       async () => {
         const resource = this.resources.entry(ws, project, id);
@@ -172,7 +172,7 @@ export class IssueRelationStore {
       { workspaceSlug: ws, projectID: project }
     );
   removeRelation = (ws: string, project: string, id: string, type: IssueRelationType, target: string): Promise<void> =>
-    this.root.enqueueIssueChanges(
+    this.root.writes.enqueueIssueChanges(
       [id, target],
       async () => {
         const resource = this.resources.entry(ws, project, id);

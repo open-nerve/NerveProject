@@ -14,6 +14,8 @@ const store = vi.hoisted(() => ({
     archivedIssuesFilter: {},
     cycleIssues: { marker: "cycle" },
     cycleIssuesFilter: { marker: "cycle preferences" },
+    moduleIssues: { marker: "module" },
+    moduleIssuesFilter: { marker: "module preferences" },
     workspaceDraftIssues: { marker: "draft" },
   },
 }));
@@ -21,7 +23,7 @@ vi.mock("react", () => ({ useContext: () => store }));
 vi.mock("@/lib/store-context", () => ({ StoreContext: {} }));
 
 describe("issue store selection", () => {
-  it.each(["GLOBAL", "MODULE", "PROJECT_VIEW", "unknown"])(
+  it.each(["GLOBAL", "PROJECT_VIEW", "unknown"])(
     "rejects the retired %s list instead of selecting project state",
     (kind) => {
       expect(() => useIssues(kind as EIssuesStoreType)).toThrow("Unsupported issue store");
@@ -40,5 +42,10 @@ describe("issue store selection", () => {
     const cycle = useIssues(EIssuesStoreType.CYCLE);
     expect(cycle.issues).toEqual(store.issue.cycleIssues);
     expect(cycle.issuesFilter).toEqual(store.issue.cycleIssuesFilter);
+  });
+  it("selects the module page's own list and preferences, not the project page's or the cycle page's", () => {
+    const module = useIssues(EIssuesStoreType.MODULE);
+    expect(module.issues).toEqual(store.issue.moduleIssues);
+    expect(module.issuesFilter).toEqual(store.issue.moduleIssuesFilter);
   });
 });

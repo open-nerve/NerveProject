@@ -4,7 +4,10 @@ import type { PagedGroups } from "@/lib/paged-groups";
 import type { ProjectIssueQuery } from "@/services/issue/issue-list.service";
 import { IssueListBinding } from "../helpers/issue-list-binding";
 import type { IIssueRootStore } from "../root.store";
-import type { CyclePage } from "./issue.store";
+
+/** A cycle in progress, as its card names it: the cycle and the project it belongs to. */
+// Deliberately not the shared PlanningPage: the priority list is cycle-only (P6b spec 2.2); entityID would blur it.
+type CyclePage = Readonly<{ projectID: string; cycleID: string }>;
 
 /**
  * What the tab shows of a cycle's priority work items once read: nerve's count of them, the rows the session may see

@@ -1,7 +1,7 @@
 # M6 / P6a 网页的模块实施计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-> 状态：T1–T15 与修复轮 F 已完成，T16 的整审与限定复审已完成：整分支审查 Ready after fixes（[re-69](../../../reviews/re-69-M6P6a整体审核.md)），修复轮 F 经限定复审 Ready to merge，最终候选 `1f41c8ca`，待分支 CI 与合入（[阶段记录](../reviews/P6a-web-modules-review.md)）。预检通过（修正后，[re-68](../../../reviews/re-68-M6P6a预检.md)）：I1 负责人与成员的筛选读按 slug 的 `getWorkspaceMemberIds`、`project-address-route` 加嵌套解构的一支（T8），I2 版式与排序经 `useLocalStorage` 按项目存在浏览器、筛选与搜索存在会话，M1 取数门的抽取移到 T5 并逐处定用哪一项，M2 宿主在 T6 只接修改、T7 接归档与删除，M3 版式与排序的类型放 `@nerve/constants`，M4 knip 把测试当入口、“测试不算读者”是本段的规则由审查执行，M5 每个新故事的时长与 T16 推送前的估算，M6 文件数不写死，已改入。基线 main `aadaf61a`（P5b 的 noff `9675bb31` 与其 main CI 失败的根因修正 noff，main CI 43373039561 首次通过）。
+> 状态：已完成（2026-11-14，noff `06b72d4b`，main CI 43469787621 attempt 2 通过：attempt 1 的 e2e 在 M4 的 C7 间歇失败，照 M6-M8-01 只重跑 e2e），T1–T16 与修复轮 F 已实施，整分支审查 Ready after fixes（[re-69](../../../reviews/re-69-M6P6a整体审核.md)），修复轮 F 经限定复审 Ready to merge，最终候选 `1f41c8ca`（[阶段记录](../reviews/P6a-web-modules-review.md)）。预检通过（修正后，[re-68](../../../reviews/re-68-M6P6a预检.md)）：I1 负责人与成员的筛选读按 slug 的 `getWorkspaceMemberIds`、`project-address-route` 加嵌套解构的一支（T8），I2 版式与排序经 `useLocalStorage` 按项目存在浏览器、筛选与搜索存在会话，M1 取数门的抽取移到 T5 并逐处定用哪一项，M2 宿主在 T6 只接修改、T7 接归档与删除，M3 版式与排序的类型放 `@nerve/constants`，M4 knip 把测试当入口、“测试不算读者”是本段的规则由审查执行，M5 每个新故事的时长与 T16 推送前的估算，M6 文件数不写死，已改入。基线 main `aadaf61a`（P5b 的 noff `9675bb31` 与其 main CI 失败的根因修正 noff，main CI 43373039561 首次通过）。
 
 **Goal：**
 - 模块的 service 与 store 按会话分代、只调 `/api/v0`、类型来自 OpenAPI；包装层按权限与开关取模块；迭代与模块共用一个取数门，模块的写与删照 nerve 的规则；

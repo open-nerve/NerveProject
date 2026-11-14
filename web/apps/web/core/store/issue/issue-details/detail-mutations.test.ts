@@ -15,9 +15,9 @@ vi.mock("@/lib/store-context", () => ({ rootStore: undefined }));
 let tab: Awaited<ReturnType<typeof issueStoreTab>>;
 const detail = () => tab.app.issue.issueDetail;
 const commands = {
-  description: () => tab.app.issue.updateIssue("x", () => ({ description_html: "<p>changed</p>" })),
-  parent: () => tab.app.issue.updateIssue("child", () => ({ parent_id: null })),
-  restore: () => tab.app.issue.unarchiveIssue("x", tab.app.issue.scope("ws", "A")),
+  description: () => tab.app.issue.writes.updateIssue("x", () => ({ description_html: "<p>changed</p>" })),
+  parent: () => tab.app.issue.writes.updateIssue("child", () => ({ parent_id: null })),
+  restore: () => tab.app.issue.writes.unarchiveIssue("x", tab.app.issue.scope("ws", "A")),
   subAdd: () => detail().createSubIssues("ws", "A", "x", ["child"]),
   subRemove: () => detail().removeSubIssue("ws", "A", "x", "child"),
   subDelete: () => detail().deleteSubIssue("ws", "A", "x", "child"),
@@ -103,7 +103,7 @@ it.each(names)("%s changes no held facts before confirmation or after a native r
 for (const boundary of ["retire", "permission ABA"] as const) {
   it.each(names)(`queued %s sends nothing after ${boundary}`, async (name) => {
     const held = heldChange<void>();
-    const first = tab.app.issue.enqueueIssueChanges(["x", "child"], () => held.sent);
+    const first = tab.app.issue.writes.enqueueIssueChanges(["x", "child"], () => held.sent);
     const waiting = commands[name]();
     const result = track<unknown>(waiting);
     await vi.advanceTimersByTimeAsync(1);
@@ -139,7 +139,7 @@ it("a queued command is independent of permission changes in another workspace",
   await loadWorkspaces(tab.nerve, tab.app.workspaceRoot, [tab.workspace, workspace]);
   await loadProjects(tab.nerve, tab.app.projectRoot.project, workspace, [project]);
   const hold = heldChange<void>();
-  const first = tab.app.issue.enqueueIssueChanges(["x"], () => hold.sent);
+  const first = tab.app.issue.writes.enqueueIssueChanges(["x"], () => hold.sent);
   const next = commands.linkAdd();
   const result = track(next);
   await loadProjects(tab.nerve, tab.app.projectRoot.project, workspace, []);
@@ -160,7 +160,7 @@ it("another root with the same IDs cannot retire or accept this root's queued co
   try {
     other.app.issue.issues.acceptRead(parent, other.app.issue.captureRead());
     const hold = heldChange<void>();
-    const first = tab.app.issue.enqueueIssueChanges(["x"], () => hold.sent);
+    const first = tab.app.issue.writes.enqueueIssueChanges(["x"], () => hold.sent);
     const next = commands.linkAdd();
     const result = track(next);
     other.app.issue.retire();
@@ -186,7 +186,7 @@ it("description, link, comment and a parent batch reserve the same issue before 
     commands.linkAdd(),
     commands.commentAdd(),
     commands.subAdd(),
-    tab.app.issue.updateIssue("child", () => ({ name: "edited child" })),
+    tab.app.issue.writes.updateIssue("child", () => ({ name: "edited child" })),
   ];
   const outcomes = rest.map((sent) => track<unknown>(sent));
   await vi.advanceTimersByTimeAsync(1);

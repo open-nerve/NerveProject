@@ -16,7 +16,7 @@ import { toasts } from "@/lib/fake-toast";
 import { StoreContext } from "@/lib/store-context";
 import { issueOf, issuePageOf, issueStoreTab, requestedIssue } from "@/store/issue/fake-issues";
 import { loadProjects, preferencesOf } from "@/store/project/fake-projects";
-import { useCyclePreferencesFollow } from "./use-cycle-preferences-follow";
+import { usePlanningPagePreferencesFollow } from "./use-planning-page-preferences-follow";
 import { useIssuesActions, type IssueActions } from "./use-issues-actions";
 
 const C1 = "019a0000-0000-7000-8000-0000000000c1";
@@ -26,7 +26,7 @@ const fixture = vi.hoisted(() => ({
   session: { loginId: "one" },
   params: {} as Record<string, string>,
   actions: undefined as IssueActions | undefined,
-  follow: undefined as ReturnType<typeof useCyclePreferencesFollow> | undefined,
+  follow: undefined as ReturnType<typeof usePlanningPagePreferencesFollow> | undefined,
 }));
 vi.mock("@/lib/store-context", async () => {
   const { createContext } = await import("react");
@@ -49,7 +49,7 @@ let tab: Awaited<ReturnType<typeof issueStoreTab>>;
 let view: ReturnType<typeof createRoot>;
 function Probe() {
   fixture.actions = useIssuesActions(EIssuesStoreType.CYCLE);
-  fixture.follow = useCyclePreferencesFollow();
+  fixture.follow = usePlanningPagePreferencesFollow(EIssuesStoreType.CYCLE);
   return null;
 }
 const render = () =>
@@ -79,7 +79,7 @@ beforeEach(async () => {
   ]);
   read.call.answer(json(200, cyclePreferences()));
   await read.promise;
-  const page = { projectID: "A", cycleID: C1 };
+  const page = { projectID: "A", entityID: C1 };
   const options = { limit: 10, query: { start_date: ["2026-01-01..2026-02-01"] } };
   const first = await requestedIssue(
     tab.nerve,

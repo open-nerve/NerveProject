@@ -100,7 +100,7 @@ it.each(["read", "write"] as const)("permission ABA hides held reactions and dis
 });
 it("uses the issue queue and sends no queued reaction after retirement", async () => {
   const gate = heldChange<void>();
-  const holding = tab.app.issue.enqueueIssueChanges(["x"], () => gate.sent);
+  const holding = tab.app.issue.writes.enqueueIssueChanges(["x"], () => gate.sent);
   const writing = track(change("add"));
   await vi.advanceTimersByTimeAsync(10);
   expect(tab.nerve.calls).toHaveLength(0);

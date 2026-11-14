@@ -8,6 +8,7 @@ import { observer } from "mobx-react";
 import { useNavigate } from "react-router";
 // nerve imports
 import { useTranslation } from "@nerve/i18n";
+import { EIssuesStoreType } from "@nerve/types";
 import { Loader } from "@nerve/ui";
 import { cn } from "@nerve/utils";
 // assets
@@ -15,9 +16,10 @@ import emptyCycle from "@/app/assets/empty-state/cycle.svg?url";
 // components
 import { EmptyState } from "@/components/common/empty-state";
 import { PageHead } from "@/components/core/page-title";
+import { PeekOnEntry } from "@/components/cycles/peek-on-entry";
 import { CycleDetailsSidebar } from "@/components/cycles/progress-sidebar";
 import { TransferIssues } from "@/components/cycles/transfer-issues";
-import { CycleLayoutRoot } from "@/components/issues/issue-layouts/roots/cycle-layout-root";
+import { PlanningPageLayoutRoot } from "@/components/issues/issue-layouts/roots/planning-page-layout-root";
 import { PlanningReadFailure } from "@/components/planning/read-failure";
 // hooks
 import { useCycles } from "@/hooks/store/use-cycles";
@@ -31,12 +33,12 @@ import type { Route } from "./+types/page";
 
 /**
  * A cycle's page (P5a spec 2.2, 2.5, R11; P5b spec 2.6), of the route's project and cycle: the banner of an ended
- * cycle's transfer (TransferIssues says when it shows), its work items under it (CycleLayoutRoot, which is the cycles'
- * turned-off state while the project's cycles are off), and its progress sidebar on their right. It reads the cycle
- * and its progress, and the list of its project that holds its row, whose assignees are its members: the project's
- * archive for an archived cycle, else the project's cycles not archived (the read the project's wrapper makes too while
- * they are on, which the two share, use-project-fetch.ts); a member's reads of a project not archived alone, as the
- * project's own.
+ * cycle's transfer (TransferIssues says when it shows), its work items under it (PlanningPageLayoutRoot, which is the
+ * cycles' turned-off state while the project's cycles are off), with the preview the way in asked for beside their
+ * preview host (PeekOnEntry), and its progress sidebar on their right. It reads the cycle and its progress, and the list
+ * of its project that holds its row, whose assignees are its members: the project's archive for an archived cycle, else
+ * the project's cycles not archived (the read the project's wrapper makes too while they are on, which the two share,
+ * use-project-fetch.ts); a member's reads of a project not archived alone, as the project's own.
  * It says that nerve finds no such cycle in the project (deleted, or never there), with the way back to its list; why
  * nerve could not read it, with a retry; and waits for nerve's first answer. An archived cycle shows as any other,
  * read-only: its quick actions and its dates offer no change of it, and its work items none, as an ended cycle's (R5).
@@ -117,7 +119,9 @@ function CycleDetailPage({ params }: Route.ComponentProps) {
         <div className="flex h-full w-full flex-col overflow-hidden">
           <TransferIssues cycleId={cycleId} workspaceSlug={workspaceSlug} projectId={projectId} />
           <div className="relative min-h-0 w-full flex-1">
-            <CycleLayoutRoot />
+            <PlanningPageLayoutRoot storeType={EIssuesStoreType.CYCLE}>
+              <PeekOnEntry workspaceSlug={workspaceSlug} projectId={projectId} />
+            </PlanningPageLayoutRoot>
           </div>
         </div>
         {!isSidebarCollapsed && (

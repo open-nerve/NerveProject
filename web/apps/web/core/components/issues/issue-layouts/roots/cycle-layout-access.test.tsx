@@ -12,7 +12,7 @@ import type { Cycle } from "@nerve/api-client";
 import { EIssuesStoreType } from "@nerve/types";
 import type { RootStore } from "@/store/root.store";
 import type { IQuickActionProps } from "../list/list-view-types";
-import { C1, buttonOf, cyclePageTab, cyclePreferencesOf, layouts, type Layout } from "./fake-cycle-page";
+import { C1, buttonOf, planningPageTab, cyclePreferencesOf, layouts, type Layout } from "./fake-planning-page";
 
 type Drag = Parameters<typeof import("@atlaskit/pragmatic-drag-and-drop/element/adapter").draggable>[0];
 const bound = vi.hoisted(() => ({
@@ -50,15 +50,15 @@ vi.mock("@atlaskit/pragmatic-drag-and-drop/element/adapter", async (original) =>
 // A row's quick actions say whether they were given read-only.
 vi.mock("../quick-action-dropdowns", async (original) => ({
   ...(await original<typeof import("../quick-action-dropdowns")>()),
-  CycleIssueQuickActions: ({ issue, readOnly }: IQuickActionProps) => (
+  PlanningPageIssueQuickActions: ({ issue, readOnly }: IQuickActionProps) => (
     <output data-quick-actions={issue.id}>{readOnly ? "read-only" : "writable"}</output>
   ),
 }));
 
-let page: Awaited<ReturnType<typeof cyclePageTab>>;
-/** A tab at the cycle's page of project A, as cyclePageTab, whose stores the page uses. */
-async function opened(fields: Parameters<typeof cyclePageTab>[0] = {}) {
-  page = await cyclePageTab(fields);
+let page: Awaited<ReturnType<typeof planningPageTab>>;
+/** A tab at the cycle's page of project A, as planningPageTab, whose stores the page uses. */
+async function opened(fields: Parameters<typeof planningPageTab>[1] = {}) {
+  page = await planningPageTab(EIssuesStoreType.CYCLE, fields);
   bound.app = page.app;
 }
 beforeEach(() => {

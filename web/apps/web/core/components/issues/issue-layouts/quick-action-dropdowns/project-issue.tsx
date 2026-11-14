@@ -25,15 +25,16 @@ import { useProjectIssueMenuItems } from "./helper";
 
 /**
  * A row's quick actions on a page of its project's work items, as the project's page has them; the page names its
- * store type, which the edit and copy dialogs open with (a cycle's page's copy then joins the cycle, re-66 L4), and may
- * add the removal of the work item from its cycle (cycle-issue.tsx). The layout's command host holds the dialogs, as
- * it does the confirmations: the check of the work item a dialog's read starts takes the row off the page meanwhile.
+ * store type, which the edit and copy dialogs open with (a cycle's or a module's page's copy then joins its cycle or
+ * module, re-66 L4, P6b spec 2.7), and may add the removal of the work item from its cycle or module
+ * (planning-page-issue.tsx). The layout's command host holds the dialogs, as it does the confirmations: the check of
+ * the work item a dialog's read starts takes the row off the page meanwhile.
  */
 export const WorkItemQuickActions = observer(function WorkItemQuickActions(
   props: IQuickActionProps & {
-    storeType: EIssuesStoreType.PROJECT | EIssuesStoreType.CYCLE;
-    /** Removes the work item from the page's cycle; the menu offers it while given. */
-    handleRemoveFromCycle?: () => void;
+    storeType: EIssuesStoreType.PROJECT | EIssuesStoreType.CYCLE | EIssuesStoreType.MODULE;
+    /** The removal of the work item from the page's cycle or module, by its domain's label; offered while given. */
+    removeFromView?: MenuItemFactoryProps["removeFromView"];
   }
 ) {
   const { t } = useTranslation();
@@ -47,7 +48,7 @@ export const WorkItemQuickActions = observer(function WorkItemQuickActions(
     placements = "bottom-end",
     parentRef,
     storeType,
-    handleRemoveFromCycle,
+    removeFromView,
   } = props;
   // router
   const { workspaceSlug } = useParams();
@@ -86,7 +87,7 @@ export const WorkItemQuickActions = observer(function WorkItemQuickActions(
       if (!requestDialog) throw new Error("Project issue actions require an IssueListCommandHost");
       requestDialog(kind, issue, storeType);
     },
-    handleRemoveFromCycle,
+    removeFromView,
     setDeleteIssueModal: () => {
       if (!requestDelete) throw new Error("Project issue actions require an IssueListCommandHost");
       requestDelete(issue, handleDelete);

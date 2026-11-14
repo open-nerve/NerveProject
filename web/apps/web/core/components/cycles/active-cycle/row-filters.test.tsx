@@ -15,22 +15,8 @@ import { toasts } from "@/lib/fake-toast";
 import { toFilterExpression } from "@/lib/issue-filters";
 import { listIssue, issuePageOf } from "@/store/issue/fake-issues";
 import type { ProjectIssueFilters } from "@nerve/api-client";
-import {
-  ANN,
-  BUG,
-  C1,
-  LIST,
-  PAGE,
-  answerOf,
-  answerPreferences,
-  arrived,
-  cycleRoutesTab,
-  openTab,
-  partOf,
-  rowButton,
-  rowsIn,
-  where,
-} from "../fake-cycle-routes";
+import { ANN, BUG, openTab, partOf, rowButton, rowsIn } from "@/components/core/sidebar/fake-progress-rows";
+import { C1, LIST, PAGE, answerOf, answerPreferences, arrived, cycleRoutesTab, where } from "../fake-cycle-routes";
 
 const fixture = vi.hoisted(() => ({ app: undefined as unknown, session: { loginId: "one" } }));
 vi.mock("@/lib/store-context", async () => ({

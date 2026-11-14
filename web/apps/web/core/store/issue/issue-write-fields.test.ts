@@ -1,0 +1,121 @@
+/** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
+import { expect, it } from "vitest";
+import type { IssueCreate, IssueUpdate } from "@nerve/api-client";
+import { createBody, updateBody } from "./issue-write-fields";
+
+/** What the client puts on the wire: it sends the body as JSON, so a field left undefined is not sent at all. */
+const sent = (body: IssueCreate | IssueUpdate): unknown => JSON.parse(JSON.stringify(body));
+/** A held issue's own fields spread into a request by a caller; none of them is a field of the request. */
+const withHeld = <T extends object>(input: T): T => ({
+  id: "x",
+  project_id: "A",
+  workspace_id: "W",
+  sequence_id: 7,
+  updated_at: "2026-11-14T00:00:00Z",
+  ...input,
+});
+const refused = "skip_activity requires description_html alone";
+
+it("a creation sends the fields it names and leaves out whatever else the caller passed", () => {
+  const input: IssueCreate = {
+    name: "Write the notes",
+    description_html: "<p>notes</p>",
+    state_id: "S",
+    priority: "high",
+    assignee_ids: ["U"],
+    label_ids: ["L"],
+    start_date: "2026-11-01",
+    target_date: "2026-11-30",
+    parent_id: "P",
+    cycle_id: "C",
+  };
+  expect(sent(createBody(withHeld(input)))).toStrictEqual(input);
+});
+it("a creation sends the cycle it is given and leaves out one it is not", () => {
+  expect(sent(createBody({ name: "Write the notes", cycle_id: "C" }))).toStrictEqual({
+    name: "Write the notes",
+    cycle_id: "C",
+  });
+  expect(sent(createBody({ name: "Write the notes", cycle_id: undefined }))).toStrictEqual({ name: "Write the notes" });
+});
+it("an update sends the fields it names and leaves out whatever else the caller passed", () => {
+  const input: IssueUpdate = {
+    name: "Write the notes",
+    description_html: "<p>notes</p>",
+    state_id: "S",
+    priority: "low",
+    assignee_ids: [],
+    label_ids: ["L"],
+    sort_order: 0,
+    start_date: "2026-11-01",
+    target_date: "2026-11-30",
+    parent_id: "P",
+    cycle_id: "C",
+  };
+  expect(sent(updateBody(withHeld(input)))).toStrictEqual(input);
+});
+it("an update sends a cleared cycle as null and leaves out a field it was not given", () => {
+  expect(sent(updateBody({ cycle_id: null }))).toStrictEqual({ cycle_id: null });
+  expect(sent(updateBody({ parent_id: null, start_date: null, target_date: null }))).toStrictEqual({
+    parent_id: null,
+    start_date: null,
+    target_date: null,
+  });
+  expect(sent(updateBody({ name: "Write the notes", cycle_id: undefined, skip_activity: undefined }))).toStrictEqual({
+    name: "Write the notes",
+  });
+});
+it("skip_activity goes with description_html alone", () => {
+  for (const skip_activity of [true, false]) {
+    const input = { description_html: "<p>same</p>", skip_activity };
+    expect(sent(updateBody(input))).toStrictEqual(input);
+    expect(sent(updateBody(withHeld(input))), "the held fields are left out before the check").toStrictEqual(input);
+  }
+});
+it("skip_activity without description_html, beside another field, or not a boolean is refused before sending", () => {
+  expect(() => updateBody({ skip_activity: true })).toThrow(refused);
+  const beside: IssueUpdate[] = [
+    { name: "Write the notes" },
+    { state_id: "S" },
+    { priority: "low" },
+    { assignee_ids: [] },
+    { label_ids: [] },
+    { sort_order: 0 },
+    { start_date: null },
+    { target_date: null },
+    { parent_id: null },
+    { cycle_id: null },
+    { cycle_id: "C" },
+  ];
+  for (const skip_activity of [true, false])
+    for (const field of beside)
+      expect(
+        () => updateBody({ description_html: "<p>same</p>", skip_activity, ...field }),
+        JSON.stringify({ skip_activity, ...field })
+      ).toThrow(refused);
+  expect(() => updateBody({ description_html: "<p>same</p>", skip_activity: "yes" } as unknown as IssueUpdate)).toThrow(
+    refused
+  );
+});
+// M6 P6b spec 2.5: the modules are passed through as the caller gives them; nerve alone decides whether they may be.
+it("a creation sends the modules it is given and leaves out none it is not", () => {
+  expect(sent(createBody(withHeld({ name: "Write the notes", module_ids: ["M1", "M2"] })))).toStrictEqual({
+    name: "Write the notes",
+    module_ids: ["M1", "M2"],
+  });
+  expect(sent(createBody({ name: "Write the notes", module_ids: [] }))).toStrictEqual({
+    name: "Write the notes",
+    module_ids: [],
+  });
+  expect(sent(createBody({ name: "Write the notes", module_ids: undefined }))).toStrictEqual({
+    name: "Write the notes",
+  });
+});
+it("an update sends the whole set of modules it is given, empty for none, and leaves them out when not given", () => {
+  expect(sent(updateBody(withHeld({ module_ids: ["M2", "M3"] })))).toStrictEqual({ module_ids: ["M2", "M3"] });
+  expect(sent(updateBody({ module_ids: [] }))).toStrictEqual({ module_ids: [] });
+  expect(sent(updateBody({ name: "Write the notes", module_ids: undefined }))).toStrictEqual({
+    name: "Write the notes",
+  });
+  expect(() => updateBody({ description_html: "<p>same</p>", skip_activity: true, module_ids: [] })).toThrow(refused);
+});

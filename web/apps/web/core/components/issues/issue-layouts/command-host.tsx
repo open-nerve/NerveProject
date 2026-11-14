@@ -17,15 +17,20 @@ import type { IssueFormData } from "../issue-modal/types";
 
 type RequestConfirmation = (issue: Issue, submit: () => Promise<void>) => void;
 type RequestCommand = (issue: Issue, submit: () => Promise<void>) => Promise<void>;
-/** The page whose list a row's edit and copy dialogs write through: the project's, or a cycle's (re-66 L4). */
-type DialogStore = EIssuesStoreType.PROJECT | EIssuesStoreType.CYCLE;
+/** A removal from the page's cycle or module, with what the page says once nerve confirms it (an i18n key). */
+type RequestRemoval = (issue: Issue, submit: () => Promise<void>, success: string) => Promise<void>;
+/**
+ * The page whose list a row's edit and copy dialogs write through: the project's, a cycle's (re-66 L4) or a module's
+ * (P6b spec 2.7).
+ */
+type DialogStore = EIssuesStoreType.PROJECT | EIssuesStoreType.CYCLE | EIssuesStoreType.MODULE;
 type RequestDialog = (kind: "edit" | "copy", issue: Issue, storeType: DialogStore) => void;
 const CommandsContext = createContext<
   | {
       archive: RequestConfirmation;
       remove: RequestConfirmation;
       restore: RequestCommand;
-      removeFromCycle: RequestCommand;
+      removeFromView: RequestRemoval;
       openDialog: RequestDialog;
     }
   | undefined
@@ -33,8 +38,11 @@ const CommandsContext = createContext<
 export const useArchiveRequest = () => useContext(CommandsContext)?.archive;
 export const useDeleteRequest = () => useContext(CommandsContext)?.remove;
 export const useRestoreRequest = () => useContext(CommandsContext)?.restore;
-/** The removal of a row's work item from the page's cycle (P5b spec 2.6, R6), whose confirmation takes the row off. */
-export const useCycleRemovalRequest = () => useContext(CommandsContext)?.removeFromCycle;
+/**
+ * The removal of a row's work item from the page's cycle or module (P5b spec 2.6, R6; P6b spec 2.7), whose
+ * confirmation takes the row off; the page's domain names what the page then says.
+ */
+export const useRemovalFromViewRequest = () => useContext(CommandsContext)?.removeFromView;
 /**
  * A row's edit or copy dialog. The dialog's own read of the work item ends in the work item's check against nerve
  * (its sub-issues verify their parent, M4 P12 D22), during which the list takes the row off the page: the layout holds
@@ -115,7 +123,7 @@ export const IssueListCommandHost = observer(function IssueListCommandHost({ chi
    * item, saying why nerve refused it; true once nerve confirmed it while the page is still the one that sent it.
    */
   const runRowCommand = useCallback(
-    async (kind: "restore" | "remove-from-cycle", issue: Issue, submit: () => Promise<void>) => {
+    async (kind: "restore" | "remove-from-view", issue: Issue, submit: () => Promise<void>) => {
       if (!workspace || issue.workspace_id !== workspace.id || issue.project_id !== projectId)
         throw new SessionChangedError();
       const key = JSON.stringify([kind, permission, issue.id]);
@@ -141,10 +149,10 @@ export const IssueListCommandHost = observer(function IssueListCommandHost({ chi
     },
     [runRowCommand, t]
   );
-  const requestCycleRemoval = useCallback<RequestCommand>(
-    async (issue, submit) => {
-      if (await runRowCommand("remove-from-cycle", issue, submit))
-        setToast({ type: TOAST_TYPE.SUCCESS, title: t("common.success"), message: t("issue.remove.cycle.success") });
+  const requestRemovalFromView = useCallback<RequestRemoval>(
+    async (issue, submit, success) => {
+      if (await runRowCommand("remove-from-view", issue, submit))
+        setToast({ type: TOAST_TYPE.SUCCESS, title: t("common.success"), message: t(success) });
     },
     [runRowCommand, t]
   );
@@ -161,10 +169,10 @@ export const IssueListCommandHost = observer(function IssueListCommandHost({ chi
       archive: (issue: Issue, submit: () => Promise<void>) => requestConfirmation("archive", issue, submit),
       remove: (issue: Issue, submit: () => Promise<void>) => requestConfirmation("delete", issue, submit),
       restore: requestRestore,
-      removeFromCycle: requestCycleRemoval,
+      removeFromView: requestRemovalFromView,
       openDialog: requestDialog,
     }),
-    [requestConfirmation, requestRestore, requestCycleRemoval, requestDialog]
+    [requestConfirmation, requestRestore, requestRemovalFromView, requestDialog]
   );
   return (
     <CommandsContext.Provider value={commands}>

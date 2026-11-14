@@ -40,6 +40,7 @@
         "failed": "Work item could not be removed from the cycle. Please try again."
       },
       "module": {
+        "label": "Remove from module",
         "loading": "Removing work item from the module",
         "success": "Work item removed from the module successfully.",
         "failed": "Work item could not be removed from the module. Please try again."
@@ -76,7 +77,8 @@
         "kanban": "Board Layout",
         "calendar": "Calendar Layout",
         "spreadsheet": "Table Layout"
-      }
+      },
+      "preferences_reread_failed": "This page's preferences could not be read again; the list shows them as last read."
     },
     "comments": {
       "placeholder": "Add comment",

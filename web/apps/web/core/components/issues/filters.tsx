@@ -25,9 +25,9 @@ import {
 } from "./issue-layouts/filters";
 
 type Props = {
-  /** The list page whose own preferences these controls show and change: the project's, or a cycle's. */
-  storeType: EIssuesStoreType.PROJECT | EIssuesStoreType.CYCLE;
-  /** The page's id, as the route gives it: the project's, or the cycle's. */
+  /** The list page whose own preferences these controls show and change: the project's, a cycle's or a module's. */
+  storeType: EIssuesStoreType.PROJECT | EIssuesStoreType.CYCLE | EIssuesStoreType.MODULE;
+  /** The page's id, as the route gives it: the project's, the cycle's or the module's. */
   entityId: string;
 };
 const LAYOUTS = [
@@ -40,7 +40,7 @@ const LAYOUTS = [
 /**
  * The layouts, the toggle of the filters and the display of a list page (P5b spec 2.6), by its store type: the page's
  * own preferences, their change followed as the page's commands follow it, and the page's own display options (a
- * cycle's never group by cycle, R9).
+ * cycle's never group by cycle, P5b R9; a module's never by module, P6b R12).
  */
 export const HeaderFilters = observer(function HeaderFilters(props: Props) {
   const { storeType, entityId } = props;

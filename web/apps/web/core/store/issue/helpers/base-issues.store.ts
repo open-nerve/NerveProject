@@ -6,7 +6,8 @@ import { pagePartKey, type Group } from "@/lib/paged-groups";
 import type { IssueListOptions } from "@/lib/issue-filters";
 import { issueMembership } from "@/lib/issue-membership";
 import { compareIssueTime } from "@/lib/issue-order";
-import type { IssueDrop, IIssueRootStore } from "../root.store";
+import type { IssueDrop } from "../issue-writes";
+import type { IIssueRootStore } from "../root.store";
 import type { IBaseIssueFilterStore } from "./issue-filter-helper.store";
 import { IssueListBinding, type IssueListScope } from "./issue-list-binding";
 
@@ -65,9 +66,9 @@ export class BaseIssuesStore<TFilter = IBaseIssueFilterStore> {
       ? "init-loader"
       : this.currentList?.loaders.get(group === undefined ? "whole" : pagePartKey({ group, subgroup }));
   createIssue = (slug: string, project: string, body: IssueCreate): Promise<IssueDetail> =>
-    this.rootIssueStore.createIssue(this.rootIssueStore.scope(slug, project), body);
+    this.rootIssueStore.writes.createIssue(this.rootIssueStore.scope(slug, project), body);
   updateIssue = async (slug: string, project: string, id: string, body: IssueUpdate): Promise<void> => {
-    await this.rootIssueStore.updateIssue(id, () => body, undefined, this.rootIssueStore.scope(slug, project));
+    await this.rootIssueStore.writes.updateIssue(id, () => body, undefined, this.rootIssueStore.scope(slug, project));
   };
   dropIssue = async (
     slug: string,
@@ -79,7 +80,7 @@ export class BaseIssuesStore<TFilter = IBaseIssueFilterStore> {
     const binding = this.currentList;
     if (!binding) return;
     const location = { ...drop, binding };
-    await this.rootIssueStore.updateIssue(
+    await this.rootIssueStore.writes.updateIssue(
       id,
       (held) => {
         if (!binding.value) throw new Error("Drop source requires a current list read");
@@ -144,11 +145,11 @@ export class BaseIssuesStore<TFilter = IBaseIssueFilterStore> {
     );
   };
   removeIssue = (slug: string, project: string, id: string): Promise<void> =>
-    this.rootIssueStore.deleteIssue(id, this.rootIssueStore.scope(slug, project));
+    this.rootIssueStore.writes.deleteIssue(id, this.rootIssueStore.scope(slug, project));
   archiveIssue = async (slug: string, project: string, id: string): Promise<void> => {
-    await this.rootIssueStore.archiveIssue(id, this.rootIssueStore.scope(slug, project));
+    await this.rootIssueStore.writes.archiveIssue(id, this.rootIssueStore.scope(slug, project));
   };
   restoreIssue = async (slug: string, project: string, id: string): Promise<void> => {
-    await this.rootIssueStore.unarchiveIssue(id, this.rootIssueStore.scope(slug, project));
+    await this.rootIssueStore.writes.unarchiveIssue(id, this.rootIssueStore.scope(slug, project));
   };
 }

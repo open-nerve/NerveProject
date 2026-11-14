@@ -244,7 +244,10 @@ describe("store-context", () => {
     expect(y.issue.issues.getIssueById("x")).toBeUndefined();
     expect(y.issue.projectIssues.groups).toBeUndefined();
     const creating = track(
-      y.issue.createIssue({ workspaceSlug: "ws", workspaceID: workspace.id, projectID: "A" }, { name: "new session" })
+      y.issue.writes.createIssue(
+        { workspaceSlug: "ws", workspaceID: workspace.id, projectID: "A" },
+        { name: "new session" }
+      )
     );
     await until(() => nerve.calls.length === count + 1, "Y refresh");
     nerve.calls[count]!.answer(json(200, nerve.tokens()));

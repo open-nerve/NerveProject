@@ -7,10 +7,11 @@
 import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { Cycle } from "@nerve/api-client";
+import { EIssuesStoreType } from "@nerve/types";
 import type { RootStore } from "@/store/root.store";
 import { IssueListCommandHost } from "../command-host";
-import { C1, cyclePageTab } from "../roots/fake-cycle-page";
-import { CycleIssueQuickActions } from "./cycle-issue";
+import { C1, planningPageTab } from "../roots/fake-planning-page";
+import { PlanningPageIssueQuickActions } from "./planning-page-issue";
 import { listIssue } from "@/store/issue/fake-issues";
 
 const bound = vi.hoisted(() => ({ app: undefined as RootStore | undefined, params: {} as Record<string, string> }));
@@ -30,25 +31,25 @@ vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
 vi.mock("@nerve/propel/toast", () => import("@/lib/fake-toast"));
 vi.mock("@/components/issues/issue-modal/modal", () => ({ CreateUpdateIssueModal: () => null }));
 
-let page: Awaited<ReturnType<typeof cyclePageTab>>;
+let page: Awaited<ReturnType<typeof planningPageTab>>;
 beforeEach(() => {
   bound.params = { workspaceSlug: "ws", projectId: "A", cycleId: C1 };
 });
 afterEach(async () => page.close());
 
 /** Whether the row's menu offers the removal, on the page fields say, the row read-only or not. */
-async function offersRemoval(fields: Parameters<typeof cyclePageTab>[0], readOnly: boolean) {
-  page = await cyclePageTab(fields);
+async function offersRemoval(fields: Parameters<typeof planningPageTab>[1], readOnly: boolean) {
+  page = await planningPageTab(EIssuesStoreType.CYCLE, fields);
   bound.app = page.app;
   const host = document.createElement("div");
   await page.render(
     <MemoryRouter>
       <IssueListCommandHost>
-        <CycleIssueQuickActions
+        <PlanningPageIssueQuickActions
           issue={listIssue("first", 1000, { cycle_id: C1 })}
           parentRef={{ current: host }}
           handleDelete={async () => {}}
-          handleUpdate={async () => {}}
+          handleRemoveFromView={async () => {}}
           readOnly={readOnly}
         />
       </IssueListCommandHost>

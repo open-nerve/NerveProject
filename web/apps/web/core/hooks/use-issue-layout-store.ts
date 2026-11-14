@@ -18,12 +18,13 @@ export const useIssueStoreType = () => {
   // If store type exists in context, use that store type
   if (storeType) return storeType;
 
-  // A cycle's page lists its cycle's work items (P5b spec 2.5).
+  // A cycle's page lists its cycle's work items (P5b spec 2.5), and a module's page its module's (P6b spec 2.6).
   if (cycleId) return EIssuesStoreType.CYCLE;
+  if (moduleId) return EIssuesStoreType.MODULE;
 
   // These domain routes no longer own a work item list. Shared creation and peek commands
   // still use DEFAULT with the selected work item/project.
-  if (globalViewId || viewId || moduleId) return EIssuesStoreType.DEFAULT;
+  if (globalViewId || viewId) return EIssuesStoreType.DEFAULT;
 
   if (userId) return EIssuesStoreType.PROFILE;
 

@@ -32,7 +32,7 @@ export function useWorkItemMutationCommands({ root, read, capture }: WorkItemCom
     if (!current()) return;
     const inSession = sessionGuard();
     try {
-      await root.updateIssue(
+      await root.writes.updateIssue(
         target.issue.id,
         (held) => {
           // Read the authoritative value when this command reaches the existing issue queue.

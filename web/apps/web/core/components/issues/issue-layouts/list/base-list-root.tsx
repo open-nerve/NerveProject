@@ -35,7 +35,8 @@ type ListStoreType =
   | EIssuesStoreType.PROJECT
   | EIssuesStoreType.PROFILE
   | EIssuesStoreType.ARCHIVED
-  | EIssuesStoreType.CYCLE;
+  | EIssuesStoreType.CYCLE
+  | EIssuesStoreType.MODULE;
 
 interface IBaseListRoot {
   QuickActions: FC<IQuickActionProps>;
@@ -54,8 +55,16 @@ export const BaseListRoot = observer(function BaseListRoot(props: IBaseListRoot)
   const storeType = useIssueStoreType() as ListStoreType;
   //stores
   const { issues } = useIssues(storeType);
-  const { fetchIssues, fetchNextIssues, createIssue, updateIssue, removeIssue, archiveIssue, restoreIssue } =
-    useIssuesActions(storeType);
+  const {
+    fetchIssues,
+    fetchNextIssues,
+    createIssue,
+    updateIssue,
+    removeIssue,
+    removeIssueFromView,
+    archiveIssue,
+    restoreIssue,
+  } = useIssuesActions(storeType);
   // mobx store
   const { allowPermissions } = useUserPermissions();
   const { issueMap } = useIssues();
@@ -122,12 +131,13 @@ export const BaseListRoot = observer(function BaseListRoot(props: IBaseListRoot)
         issue={issue}
         handleDelete={async () => removeIssue(issue.project_id, issue.id)}
         handleUpdate={async (data) => updateIssue && updateIssue(issue.project_id, issue.id, data)}
+        handleRemoveFromView={removeIssueFromView && (async () => removeIssueFromView(issue.project_id, issue.id))}
         handleArchive={async () => archiveIssue && archiveIssue(issue.project_id, issue.id)}
         handleRestore={async () => restoreIssue && restoreIssue(issue.project_id, issue.id)}
         readOnly={!canEditProperties(issue.project_id ?? undefined)}
       />
     ),
-    [QuickActions, canEditProperties, removeIssue, updateIssue, archiveIssue, restoreIssue]
+    [QuickActions, canEditProperties, removeIssue, updateIssue, removeIssueFromView, archiveIssue, restoreIssue]
   );
 
   const loadMoreIssues = useCallback(

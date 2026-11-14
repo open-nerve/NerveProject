@@ -77,7 +77,7 @@ export function useIssueOperations(
         };
       },
       restore: async (ws, project, id) => {
-        await run(() => detail.rootIssueStore.unarchiveIssue(id, detail.rootIssueStore.scope(ws, project)));
+        await run(() => detail.rootIssueStore.writes.unarchiveIssue(id, detail.rootIssueStore.scope(ws, project)));
         setToast({
           type: TOAST_TYPE.SUCCESS,
           title: t("issue.restore.success.title"),

@@ -28,6 +28,7 @@ import { CalendarLayout } from "../calendar/roots/project-root";
 import { KanBanLayout } from "../kanban/roots/project-root";
 import { ListLayout } from "../list/roots/project-root";
 import { ProjectSpreadsheetLayout } from "../spreadsheet/roots/project-root";
+import { PreferencesRereadFailure } from "../preferences-reread-failure";
 
 function ProjectIssueLayout(props: { activeLayout: EIssueLayoutTypes | undefined }) {
   switch (props.activeLayout) {
@@ -68,11 +69,13 @@ export const ProjectLayoutRoot = observer(function ProjectLayoutRoot() {
       : undefined;
   const allowed = role !== undefined;
   const { t } = useTranslation();
-  const { error } = useSessionSWR(
+  const { error, mutate } = useSessionSWR(
     allowed ? ["PROJECT_ISSUE_FILTERS", workspaceSlug, projectId] : null,
     (slug, project) => issuesFilter.fetchFilters(slug, project)
   );
-  if (error) return <div role="alert">{t(errorMessageKey(error))}</div>;
+  // nerve could not give the page's preferences first: M4's words (P6b spec 2.8 leaves them; M8). Once given, a read
+  // of them again that fails leaves the list under the preferences read, with a line above it that says so (R4).
+  if (error !== undefined && !workItemFilters) return <div role="alert">{t(errorMessageKey(error))}</div>;
   if (!allowed) return null;
 
   if (!workspaceSlug || !projectId || !workItemFilters) return <></>;
@@ -90,6 +93,7 @@ export const ProjectLayoutRoot = observer(function ProjectLayoutRoot() {
       >
         {({ filter: projectWorkItemsFilter }) => (
           <div className="relative flex h-full w-full flex-col overflow-hidden">
+            {error !== undefined && <PreferencesRereadFailure error={error} onRetry={() => void mutate()} />}
             {projectWorkItemsFilter && <WorkItemFiltersRow filter={projectWorkItemsFilter} />}
             <div className="relative h-full w-full overflow-auto bg-surface-1">
               {/* mutation loader */}

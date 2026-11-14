@@ -193,13 +193,13 @@ it("shares multi-ID changes with core updates and permits independent IDs", asyn
   root.issues.acceptRead(issueDetailOf("a"), root.captureRead());
   const gate = heldChange<void>();
   const entered = vi.fn();
-  const multi = root.enqueueIssueChanges(["b", "a", "b"], async () => {
+  const multi = root.writes.enqueueIssueChanges(["b", "a", "b"], async () => {
     entered();
     await gate.sent;
   });
   await until(() => entered.mock.calls.length === 1, "batch starts");
-  const patch = track(root.updateIssue("a", () => ({ name: "after batch" })));
-  expect(await root.enqueueIssueChanges(["c"], async () => "independent")).toBe("independent");
+  const patch = track(root.writes.updateIssue("a", () => ({ name: "after batch" })));
+  expect(await root.writes.enqueueIssueChanges(["c"], async () => "independent")).toBe("independent");
   await vi.advanceTimersByTimeAsync(10);
   expect(tab.nerve.calls).toHaveLength(0);
   gate.answer();
@@ -214,13 +214,13 @@ it("sorts overlapping ID sets and continues after rejection without deadlocking"
   const root = tab.app.issue;
   const order: string[] = [];
   const first = track(
-    root.enqueueIssueChanges(["b", "a", "b"], async () => {
+    root.writes.enqueueIssueChanges(["b", "a", "b"], async () => {
       order.push("first");
       throw new Error("refused");
     })
   );
   const second = track(
-    root.enqueueIssueChanges(["a", "b"], async () => {
+    root.writes.enqueueIssueChanges(["a", "b"], async () => {
       order.push("second");
     })
   );
@@ -234,16 +234,16 @@ it("reserves every batch ID immediately while an earlier parent change is still 
   const root = tab.app.issue;
   const gate = heldChange<void>();
   const entered = vi.fn();
-  const blocker = root.enqueueIssueChanges(["a"], async () => {
+  const blocker = root.writes.enqueueIssueChanges(["a"], async () => {
     entered();
     await gate.sent;
   });
   await until(() => entered.mock.calls.length === 1, "earlier parent change");
   const order: string[] = [];
-  const batch = root.enqueueIssueChanges(["b", "a"], async () => {
+  const batch = root.writes.enqueueIssueChanges(["b", "a"], async () => {
     order.push("batch");
   });
-  const child = root.enqueueIssueChanges(["b"], async () => {
+  const child = root.writes.enqueueIssueChanges(["b"], async () => {
     order.push("child");
   });
   await vi.advanceTimersByTimeAsync(10);
@@ -257,13 +257,13 @@ it("does not send a queued command after retirement", async () => {
   const root = tab.app.issue;
   const held = heldChange<void>();
   const entered = vi.fn();
-  const first = root.enqueueIssueChanges(["a"], () => {
+  const first = root.writes.enqueueIssueChanges(["a"], () => {
     entered();
     return held.sent;
   });
   await until(() => entered.mock.calls.length === 1, "first command started");
   const operation = vi.fn(async () => undefined);
-  const next = track(root.enqueueIssueChanges(["a"], operation));
+  const next = track(root.writes.enqueueIssueChanges(["a"], operation));
   root.retire();
   held.answer();
   await first;

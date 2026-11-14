@@ -6,21 +6,23 @@
 // new work item of the cycle for those who may create one while the cycle takes them. None of the list's while the
 // project's cycles are off. The stores, the work items below and HTTP are real.
 import { act, createElement, type ReactNode } from "react";
+import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { Cycle } from "@nerve/api-client";
 import { ISSUE_GROUP_BY_OPTIONS, ISSUE_STORE_TO_FILTERS_MAP } from "@nerve/constants";
 import { EIssuesStoreType } from "@nerve/types";
 import { answered, json, problem } from "@/lib/auth/fake-nerve";
 import { until } from "@/lib/auth/fake-time";
-import { cycleOf } from "@/store/project/fake-projects";
+import { cycleOf, loadProjects, projectOf } from "@/store/project/fake-projects";
 import type { RootStore } from "@/store/root.store";
 import {
   buttonOf,
   C1,
-  cyclePageTab,
+  inHeader,
+  planningPageTab,
   cyclePreferencesOf,
   layouts,
-} from "@/components/issues/issue-layouts/roots/fake-cycle-page";
+} from "@/components/issues/issue-layouts/roots/fake-planning-page";
 import { CycleIssuesHeader } from "./header";
 
 const bound = vi.hoisted(() => ({ app: undefined as RootStore | undefined, params: {} as Record<string, string> }));
@@ -49,10 +51,10 @@ vi.mock("@/components/breadcrumbs/common", () => ({ CommonProjectBreadcrumbs: ()
 vi.mock("@/components/cycles/quick-actions", () => ({ CycleQuickActions: () => null }));
 
 const C2 = "019a0000-0000-7000-8000-0000000000c2";
-let page: Awaited<ReturnType<typeof cyclePageTab>>;
-/** A tab at the cycle's page of project A, as cyclePageTab, whose stores the page uses. */
-async function opened(fields: Parameters<typeof cyclePageTab>[0] = {}) {
-  page = await cyclePageTab(fields);
+let page: Awaited<ReturnType<typeof planningPageTab>>;
+/** A tab at the cycle's page of project A, as planningPageTab, whose stores the page uses. */
+async function opened(fields: Parameters<typeof planningPageTab>[1] = {}) {
+  page = await planningPageTab(EIssuesStoreType.CYCLE, fields);
   bound.app = page.app;
 }
 beforeEach(() => {
@@ -66,10 +68,6 @@ const header = (cycleId = C1) => (
     <CycleIssuesHeader workspaceSlug="ws" projectId="A" cycleId={cycleId} />
   </div>
 );
-const inHeader = (name: string) =>
-  [...document.querySelectorAll<HTMLButtonElement>("[data-header] button")].find(
-    (node) => (node.getAttribute("aria-label") ?? node.textContent?.trim()) === name
-  );
 /** The count the header shows: a leaf of only digits. */
 const count = () =>
   [...document.querySelectorAll("[data-header] *")].find(
@@ -186,8 +184,54 @@ it("hides the list's controls and its count once the project's cycles are turned
   await act(async () =>
     page.app.projectRoot.project.confirmProject(page.project, (project) => ({ ...project, cycle_view: false }))
   );
-  expect(page.app.issue.cycleIssues.pageTotal({ projectID: "A", cycleID: C1 })).toBe(7);
+  expect(page.app.issue.cycleIssues.pageTotal({ projectID: "A", entityID: C1 })).toBe(7);
   expect(offered()).toEqual({ count: undefined, layouts: [], filters: false, display: false, create: false });
+});
+
+// The route names a cycle the tab holds of another project than the route's (P6b spec 5, review re-71 M2): the page
+// does not have it (it says there is no such cycle here), and its header offers no new work item of it.
+it("offers no new work item of a cycle the tab holds of another project than the route's", async () => {
+  await opened({ role: 15 });
+  const other = projectOf("B", page.workspace.id, { id: "B" });
+  await loadProjects(page.nerve, page.app.projectRoot.project, page.workspace, [page.project, other]);
+  expect(page.app.planning.cycles.getCycleById(C1)?.project_id).toBe("A");
+  bound.params = { workspaceSlug: "ws", projectId: "B", cycleId: C1 };
+  await page.render(
+    <MemoryRouter>
+      <div data-header>
+        <CycleIssuesHeader workspaceSlug="ws" projectId="B" cycleId={C1} />
+      </div>
+    </MemoryRouter>
+  );
+  expect(inHeader("aria_labels.toggle_details"), "the header of the route's page").toBeDefined();
+  expect(inHeader("issue.add.label")).toBeUndefined();
+});
+
+// The same, once the tab has shown the cycle's page in its own project, so that it holds the cycle's list and
+// preferences too (P6b spec 5, review re-71 M2, fix F9): the route's project's header shows nothing of the cycle,
+// neither its name in the crumb nor its quick actions, nor anything of its list.
+it("shows nothing of a cycle of another project than the route's, after its own project's page", async () => {
+  const quickActions = vi.spyOn(await import("@/components/cycles/quick-actions"), "CycleQuickActions");
+  await opened({ role: 15 });
+  await page.show(cyclePreferencesOf(layouts.list.display), seven, header());
+  expect(offered()).toEqual({ count: "7", layouts: all, filters: true, display: true, create: true });
+  expect(document.querySelector("[data-header]")!.textContent, "the crumb of the cycle").toContain("Now");
+  expect(quickActions.mock.calls.map(([props]) => props.cycleId)).toContain(C1);
+  const other = projectOf("B", page.workspace.id, { id: "B" });
+  await loadProjects(page.nerve, page.app.projectRoot.project, page.workspace, [page.project, other]);
+  quickActions.mockClear();
+  bound.params = { workspaceSlug: "ws", projectId: "B", cycleId: C1 };
+  await page.render(
+    <MemoryRouter>
+      <div data-header>
+        <CycleIssuesHeader workspaceSlug="ws" projectId="B" cycleId={C1} />
+      </div>
+    </MemoryRouter>
+  );
+  expect(inHeader("aria_labels.toggle_details"), "the header of the route's page").toBeDefined();
+  expect(offered()).toEqual({ count: undefined, layouts: [], filters: false, display: false, create: false });
+  expect(document.querySelector("[data-header]")!.textContent, "the crumb").not.toContain("Now");
+  expect(quickActions, "the cycle's quick actions").not.toHaveBeenCalled();
 });
 
 it("shows no count of the cycle before, on the page of another whose list nerve has not given", async () => {

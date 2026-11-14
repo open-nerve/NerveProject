@@ -11,7 +11,7 @@ import { EIssuesStoreType } from "@nerve/types";
 import type { RootStore } from "@/store/root.store";
 import { json, problem } from "@/lib/auth/fake-nerve";
 import { until } from "@/lib/auth/fake-time";
-import { C1, buttonOf, cyclePageTab, cyclePreferencesOf, layouts, type Layout } from "./fake-cycle-page";
+import { C1, buttonOf, planningPageTab, cyclePreferencesOf, layouts, type Layout } from "./fake-planning-page";
 
 const bound = vi.hoisted(() => ({
   app: undefined as RootStore | undefined,
@@ -50,10 +50,10 @@ vi.mock("../../peek-overview", async () => {
   };
 });
 
-let page: Awaited<ReturnType<typeof cyclePageTab>>;
-/** A tab at the cycle's page of project A, as cyclePageTab, whose stores the page uses. */
-async function opened(fields: Parameters<typeof cyclePageTab>[0] = {}) {
-  page = await cyclePageTab(fields);
+let page: Awaited<ReturnType<typeof planningPageTab>>;
+/** A tab at the cycle's page of project A, as planningPageTab, whose stores the page uses. */
+async function opened(fields: Parameters<typeof planningPageTab>[1] = {}) {
+  page = await planningPageTab(EIssuesStoreType.CYCLE, fields);
   bound.app = page.app;
 }
 beforeEach(() => {
