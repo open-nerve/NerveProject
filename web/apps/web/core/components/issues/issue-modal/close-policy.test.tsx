@@ -23,6 +23,9 @@ beforeEach(() => {
   formUI.extra = ParentField;
   tab.nerve.respond = (call) => {
     if (call.path === "/api/v0/workspaces/ws/issue-search") call.answer(json(200, { data: [] }));
+    // the project's two lists the new work item's form reads as it opens, which its save waits for (re-73 M1)
+    else if (call.method === "GET" && /^\/api\/v0\/projects\/A\/(cycles|modules)$/.test(call.path))
+      call.answer(json(200, { data: [] }));
   };
 });
 const dialogs = () => [...document.querySelectorAll<HTMLElement>('[role="dialog"][aria-modal="true"]')];

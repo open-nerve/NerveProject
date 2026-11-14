@@ -170,6 +170,8 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
   });
 
   const projectId = watch("project_id");
+  // The lists of the project the form opened with, while it holds that project (the fields' and the save's).
+  const planningPending = planningLoading && projectId === defaultProjectId;
 
   // On a change of its project a new work item's form starts over but for a few fields; a draft's leaves its cycle and
   // modules, which are its project's, as an edit, which its save sends (P7a spec 2.8, R6: no cycle, no modules).
@@ -332,7 +334,7 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
                   selectedParentIssue={selectedParentIssue}
                   parentId={watch("parent_id") ?? null}
                   isDraft={isDraft}
-                  planningLoading={planningLoading && projectId === defaultProjectId}
+                  planningLoading={planningPending}
                   planningRefusals={projectId === defaultProjectId ? planningRefusals : undefined}
                   handleFormChange={handleFormChange}
                   setSelectedParentIssue={setSelectedParentIssue}
@@ -343,6 +345,7 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
                 isDraft={isDraft}
                 canSaveDraft={canSaveDraft}
                 descriptionLoadState={descriptionLoadState}
+                planningLoading={planningPending}
                 isCreateMoreToggleEnabled={isCreateMoreToggleEnabled}
                 onCreateMoreToggleChange={onCreateMoreToggleChange}
                 isSubmitting={isSubmitting}

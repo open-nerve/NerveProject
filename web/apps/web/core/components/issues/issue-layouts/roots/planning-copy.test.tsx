@@ -2,12 +2,13 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 // What a new work item's caller gives its form of the cycle and the modules (M6 P7a spec 2.6, 2.7, R15; re-72 F7, F8):
 // a row's copy, the first such caller, gives its source's. As the form opens with its project it reads the project's
-// two lists; until both answer, its fields show loading and hold what was given. Once they have, it starts with those
-// the work item may join, its options (an ended cycle, an archived module are none), the page's module put beside
-// them, as its defaults, not as an edit; what it holds is what it sends. A form whose project was changed meanwhile
-// keeps its own. A list nerve refuses shows its refusal under its field, with a retry: the form holds none of what was
-// given of it, which the modal keeps until a retry answers (P7a T12, the controller's ruling on a failed read). The
-// pages, the rows, the dialog's form and its fields, the stores and HTTP are real.
+// two lists; until both answer, its fields show loading and hold what was given, and its save is disabled (re-73 M1).
+// Once they have, it starts with those the work item may join, its options (an ended cycle, an archived module are
+// none), the page's module put beside them, as its defaults, not as an edit; what it holds is what it sends. A form
+// whose project was changed meanwhile keeps its own. A list nerve refuses shows its refusal under its field, with a
+// retry: the form holds none of what was given of it, which the modal keeps until a retry answers (P7a T12, the
+// controller's ruling on a failed read). The pages, the rows, the dialog's form and its fields, the stores and HTTP
+// are real.
 import { act, createElement, type ReactNode } from "react";
 import { MemoryRouter } from "react-router";
 import { SWRConfig } from "swr";
@@ -190,12 +191,17 @@ async function retry(index: number) {
 /** The form's "discard", which closes it. */
 const discard = () =>
   act(async () => [...form()!.querySelectorAll("button")].find((button) => button.textContent === "discard")!.click());
-/** Opens the row's copy; resolves once its form has read the work item's description. */
+/**
+ * Opens the row's copy; resolves once its form has read the work item's description, its editor shown (its save waits
+ * for the project's two lists too, which the tests answer).
+ */
 async function copied() {
   await until(() => !!document.querySelector('[id^="issue-first"]'), "the row");
   await choose("common.actions.make_a_copy");
-  await until(() => form()?.querySelector<HTMLButtonElement>('button[type="submit"]')?.disabled === false, "the form");
+  await until(() => !!form()?.querySelector('textarea[aria-label="description"]'), "the form");
 }
+/** The form's save. */
+const save = () => form()?.querySelector<HTMLButtonElement>('button[type="submit"]');
 
 it("holds a copy's cycle and modules, its fields loading, until the project's two lists answer; then sends those it may join with the page's module", async () => {
   await shown();
@@ -209,6 +215,22 @@ it("holds a copy's cycle and modules, its fields loading, until the project's tw
   expect(cycleField()?.textContent).toBe("common.cycle: cycle.label");
   expect(moduleField()?.textContent).toBe("common.modules: module.count: Core; Edge");
   await act(async () => form()!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })));
+  await until(() => creates().length === 1, "the copy");
+  expect(creates()[0]!.body).toMatchObject({ name: "first (copy)", module_ids: [M1, EDGE] });
+  expect(creates()[0]!.body).not.toHaveProperty("cycle_id");
+});
+
+// re-73 M1: what the form holds of the copy's cycle and modules while the lists are out is not yet what it may send.
+it("saves a copy only once the project's two lists answered: its save is disabled meanwhile, then it sends the options alone", async () => {
+  await shown();
+  await copied();
+  await until(() => cycleReads().length === 1 && moduleReads().length === 1, "the reads of the two lists");
+  expect(save()?.disabled, "the save, while the lists are out").toBe(true);
+  await act(async () => save()!.click());
+  expect(creates(), "what a click on it sent").toEqual([]);
+  await answerLists();
+  expect(save()?.disabled, "the save, once both answered").toBe(false);
+  await act(async () => save()!.click());
   await until(() => creates().length === 1, "the copy");
   expect(creates()[0]!.body).toMatchObject({ name: "first (copy)", module_ids: [M1, EDGE] });
   expect(creates()[0]!.body).not.toHaveProperty("cycle_id");

@@ -18,6 +18,11 @@ type IssueFormFooterProps = {
   isDraft: boolean;
   canSaveDraft: boolean;
   descriptionLoadState: IssueDescriptionLoadState;
+  /**
+   * Whether the lists of the project the form opened with are out: until they answer, what it holds of the cycle and
+   * the modules a caller gave is not yet what it may send (P7a spec 2.6; re-73 M1), and it saves nothing.
+   */
+  planningLoading: boolean;
   isCreateMoreToggleEnabled: boolean;
   onCreateMoreToggleChange: (value: boolean) => void;
   isSubmitting: boolean;
@@ -42,6 +47,7 @@ export function IssueFormFooter(props: IssueFormFooterProps) {
     isDraft,
     canSaveDraft,
     descriptionLoadState,
+    planningLoading,
     isCreateMoreToggleEnabled,
     onCreateMoreToggleChange,
     isSubmitting,
@@ -82,7 +88,7 @@ export function IssueFormFooter(props: IssueFormFooterProps) {
             type="submit"
             ref={submitBtnRef}
             loading={isSubmitting}
-            disabled={isSubmitting || isPending || isMoving || descriptionLoadState !== "ready"}
+            disabled={isSubmitting || isPending || isMoving || descriptionLoadState !== "ready" || planningLoading}
           >
             {isSubmitting ? primaryButtonText.loading : primaryButtonText.default}
           </Button>

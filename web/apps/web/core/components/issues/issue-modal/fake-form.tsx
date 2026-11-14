@@ -12,6 +12,7 @@ import {
 import { createRoot } from "react-dom/client";
 import type React from "react";
 import { useFormContext } from "react-hook-form";
+import { SWRConfig } from "swr";
 import { afterEach, beforeEach, vi, type Mock } from "vitest";
 import type { Draft } from "@nerve/api-client";
 import type { EditorRefApi } from "@nerve/editor";
@@ -216,8 +217,16 @@ function DialogHost() {
     </main>
   );
 }
-/** The real root store under the form, as the application provides it. */
-const withStore = (node: React.ReactNode) => <StoreContext.Provider value={tab.app}>{node}</StoreContext.Provider>;
+/**
+ * The real root store under the form, as the application provides it, with an SWR cache of the test's own: the forms
+ * of a file read the same lists of the project in the same session (its save waits for them, re-73 M1), and a shared
+ * cache's dedupe would keep a later test's new store from them.
+ */
+const withStore = (node: React.ReactNode) => (
+  <StoreContext.Provider value={tab.app}>
+    <SWRConfig value={{ provider: () => new Map() }}>{node}</SWRConfig>
+  </StoreContext.Provider>
+);
 export const mountDialog = () => act(async () => root.render(withStore(<DialogHost />)));
 export async function mountExisting(kind: "issue" | "draft") {
   let draft: Draft | undefined;
