@@ -75,6 +75,8 @@ const displayPropertyNames = [
   "attachment_count",
   "created_on",
   "updated_on",
+  "cycle",
+  "modules",
 ] as const;
 
 function localDisplayFilters(value: unknown): IIssueDisplayFilterOptions {

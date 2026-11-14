@@ -88,6 +88,8 @@ export const getComputedDisplayProperties = (
   key: displayProperties?.key ?? true,
   created_on: displayProperties?.created_on ?? true,
   updated_on: displayProperties?.updated_on ?? true,
+  modules: displayProperties?.modules ?? true,
+  cycle: displayProperties?.cycle ?? true,
 });
 
 export const generateWorkItemLink = ({

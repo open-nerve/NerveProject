@@ -135,6 +135,8 @@ export interface IIssueDisplayProperties {
   attachment_count?: boolean;
   created_on?: boolean;
   updated_on?: boolean;
+  cycle?: boolean;
+  modules?: boolean;
 }
 
 export type TIssueKanbanFilters = {

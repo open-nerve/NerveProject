@@ -89,6 +89,8 @@ export const ISSUE_DISPLAY_PROPERTIES_KEYS: (keyof IIssueDisplayProperties)[] = 
   "attachment_count",
   "created_on",
   "updated_on",
+  "modules",
+  "cycle",
 ];
 
 export const SUB_ISSUES_DISPLAY_PROPERTIES_KEYS: (keyof IIssueDisplayProperties)[] = [
@@ -134,6 +136,8 @@ export const ISSUE_DISPLAY_PROPERTIES: {
   { key: "attachment_count", titleTranslationKey: "content_files.title" },
   { key: "created_on", titleTranslationKey: "common.sort.created_on" },
   { key: "updated_on", titleTranslationKey: "common.sort.updated_on" },
+  { key: "modules", titleTranslationKey: "common.modules" },
+  { key: "cycle", titleTranslationKey: "common.cycle" },
 ];
 
 export const SPREADSHEET_PROPERTY_LIST: (keyof IIssueDisplayProperties)[] = [

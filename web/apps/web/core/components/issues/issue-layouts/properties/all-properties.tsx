@@ -30,6 +30,7 @@ import { usePlatformOS } from "@/hooks/use-platform-os";
 // local components
 import { IssuePropertyLabels } from "./labels";
 import { useDetailCommand } from "../../issue-detail/use-issue-operations";
+import { IssueRowPlanningProperties } from "./row-planning-properties";
 import { WithDisplayPropertiesHOC } from "./with-display-properties-HOC";
 
 interface IIssueProperties {
@@ -255,6 +256,16 @@ export const IssueProperties = observer(function IssueProperties(props: IIssuePr
           />
         </div>
       </WithDisplayPropertiesHOC>
+
+      {/* modules and cycle */}
+      <IssueRowPlanningProperties
+        workspaceSlug={workspaceSlug}
+        issue={issue}
+        project={projectDetails}
+        displayProperties={displayProperties}
+        isReadOnly={isReadOnly}
+        onChange={change}
+      />
 
       {/* sub-issues */}
       <WithDisplayPropertiesHOC

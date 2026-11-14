@@ -335,3 +335,16 @@ it("does not let a retired root overwrite local settings", async () => {
   );
   expect(data.get("issue_local_filters")).toBe(before);
 });
+
+// M6 P7a spec 2.5: the archive keeps its display properties in the browser; a work item's cycle and modules show by
+// default, and a hidden choice of either survives a fresh store.
+it("shows the cycle and the modules by default and keeps both hidden in a fresh archive", async () => {
+  const first = (await archiveTab()).app.issue.archivedIssuesFilter;
+  await first.fetchFilters("ws", "A");
+  expect(first.getIssueFilters("A")?.displayProperties).toMatchObject({ cycle: true, modules: true });
+  const hidden = { cycle: false, modules: false };
+  await first.updateFilters("ws", "A", EIssueFilterType.DISPLAY_PROPERTIES, hidden);
+  const fresh = (await archiveTab()).app.issue.archivedIssuesFilter;
+  await fresh.fetchFilters("ws", "A");
+  expect(fresh.getIssueFilters("A")?.displayProperties).toMatchObject({ ...hidden, link: true });
+});
