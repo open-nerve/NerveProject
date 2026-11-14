@@ -4,8 +4,29 @@ import type { ModuleSetChange } from "@nerve/types";
 
 // A project's planning directory as a work item reads it (P7a spec 2.3, R4): its options, what the work item may join,
 // apart from its values, what it is in. A value shows by its name as the planning store has it (getCycleById,
-// getModuleById, which know the ended cycles and the archived cycles and modules it has read, as no option does); the
-// options are read as a dropdown opens (use-planning-options.ts).
+// getModuleById, which know the ended cycles and the archived cycles and modules it has read, as no option does), its
+// project's lists read in one order for one it cannot name (nextPlanningList); the options are read as a dropdown opens
+// (use-planning-options.ts).
+
+/** A project's two lists of a domain: its list of what is not archived, and its archive. */
+export type PlanningList = "list" | "archive";
+
+/**
+ * Which of a project's two lists of a domain to read next for a value of it the planning store cannot name (P7a spec
+ * 2.3; P7b spec 2.2, re-74 F2): its list of what is not archived first, then its archive; neither once both are read,
+ * nor while every value is named. The order alone, which every reader of names shares: what counts as read is the
+ * caller's. usePlanningNames counts a list the store holds, for it reads as it renders and must not read again for a
+ * value deleted meanwhile; a list's directory counts its own reads, so that it reads a list the store holds again for
+ * a value created elsewhere since (issue-list-catalog.ts).
+ */
+export function nextPlanningList(
+  unnamed: boolean,
+  read: Readonly<Record<PlanningList, boolean>>
+): PlanningList | undefined {
+  if (!unnamed) return undefined;
+  if (!read.list) return "list";
+  return read.archive ? undefined : "archive";
+}
 
 /**
  * A work item's cycle options: No cycle (null) first, which takes it out of its cycle; then those of the project's

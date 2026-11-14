@@ -193,6 +193,22 @@ describe.each(["cycles", "modules"] as const)("%s", (domain) => {
     expect(reads(domain)).toHaveLength(2);
   });
 
+  it("reads neither list again for a value still unnamed once the store holds both (deleted meanwhile)", async () => {
+    const { row, fetches } = DOMAINS[domain];
+    const listing = fetches[0](tab.project.id);
+    await readsUntil(domain, 1, "the store's own read of the list");
+    await answer(domain, 0, [row("Kept")]);
+    await listing;
+    const archiving = fetches[1](tab.project.id);
+    await readsUntil(domain, 2, "the store's own read of the archive");
+    await answer(domain, 1, [row("Shelved", true)]);
+    await archiving;
+    tab.nerve.calls.length = 0;
+    await show(<Reader domain={domain} ids={[row("Deleted").id]} />);
+    await settle();
+    expect(reads(domain)).toEqual([]);
+  });
+
   it("reads nothing for a caller without a role in the project, nor while the domain is off", async () => {
     const shelved = DOMAINS[domain].row("Shelved", true);
     await reproject({ member_role: null });

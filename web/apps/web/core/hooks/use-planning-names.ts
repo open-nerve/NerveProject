@@ -2,6 +2,7 @@
 import { useCycles } from "@/hooks/store/use-cycles";
 import { useModules } from "@/hooks/store/use-modules";
 import { usePlanningReads } from "@/hooks/use-planning-reads";
+import { nextPlanningList } from "@/lib/planning-directory";
 import type { PlanningDomain } from "@/lib/planning-switch";
 import { useSessionSWR } from "@/lib/use-session-swr";
 import type { IPlanningStore } from "@/store/planning";
@@ -43,10 +44,10 @@ const DIRECTORIES: Record<PlanningDomain, (planning: Pick<IPlanningStore, "cycle
  * modules, which show by their names, ended and archived ones too, as the planning store has them (getCycleById,
  * getModuleById). While the store cannot name one of them, and the caller reads the project's domain (a role in the
  * project, which is not archived, and the domain turned on: usePlanningReads), it reads the project's list of what is
- * not archived while the store has none, then the project's archive while it has none; one read a project, whoever
- * asks, by the keys the project's pages share (DIRECTORIES), never one a value. A value still unnamed once the store
- * has both lists (deleted meanwhile) shows no name. Its caller observes the store, so that it reads on as the store
- * answers.
+ * not archived while the store has none, then the project's archive while it has none, in the order every reader of
+ * names shares (nextPlanningList); one read a project, whoever asks, by the keys the project's pages share
+ * (DIRECTORIES), never one a value. A value still unnamed once the store has both lists (deleted meanwhile) shows no
+ * name. Its caller observes the store, so that it reads on as the store answers.
  */
 export function usePlanningNames(
   workspaceSlug: string | undefined,
@@ -56,11 +57,14 @@ export function usePlanningNames(
 ): void {
   const { listed } = usePlanningReads(workspaceSlug, projectId, domain);
   const { names, list, archive } = DIRECTORIES[domain]({ cycles: useCycles(), modules: useModules() });
-  const unnamed = listed && valueIds.some((id) => !names(id));
-  const readList = unnamed && list.held(projectId) === undefined;
-  const readArchive = unnamed && !readList && archive.held(projectId) === undefined;
-  useSessionSWR(readList ? [list.key, projectId] : null, (id) => list.fetch(id));
-  useSessionSWR(readArchive ? [archive.key, projectId] : null, (id) => archive.fetch(id));
+  // A list the store holds counts as read: the hook reads as it renders, and a value still unnamed once the store holds
+  // both (deleted meanwhile) must not have them read again and again.
+  const next = nextPlanningList(listed && valueIds.some((id) => !names(id)), {
+    list: list.held(projectId) !== undefined,
+    archive: archive.held(projectId) !== undefined,
+  });
+  useSessionSWR(next === "list" ? [list.key, projectId] : null, (id) => list.fetch(id));
+  useSessionSWR(next === "archive" ? [archive.key, projectId] : null, (id) => archive.fetch(id));
 }
 
 /** A project's list nerve refused, as a new work item's form says it: nerve's refusal, and a read of it again. */
