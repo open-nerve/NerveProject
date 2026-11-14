@@ -1,7 +1,7 @@
 # M6 / P6b 整体审核
 
 > 2026-11-14：Ready after fixes；修复轮 F 已提交，待限定复审（§4）。
-> - **目标**：分支 `codex/m6-p6b` 相对 main `06b72d4b65bcba911344a4ed3c358f164a5fdeeb` 的全部修改（`06b72d4b..513d2ff3`，`ca4e62ac` 至 `513d2ff3` 的 18 个提交）；修复轮 F（`5b1046b7` 起的七个提交，F1–F8，F5 并入 F2）另经一次限定复审（§4）。
+> - **目标**：分支 `codex/m6-p6b` 相对 main `06b72d4b65bcba911344a4ed3c358f164a5fdeeb` 的全部修改（`06b72d4b..513d2ff3`，`ca4e62ac` 至 `513d2ff3` 的 18 个提交）；修复轮 F（`5b1046b7` 起的九个提交，F1–F9：F5 并入 F2，F9 的文档另成一个提交）另经一次限定复审（§4）。
 > - **依据**：[P6b spec](../v0/M6-cycles-modules/specs/P6b-module-list.md)、[P6b plan](../v0/M6-cycles-modules/plans/P6b-module-list.md)、[预检 re-70](re-70-M6P6b预检.md)、[M6 设计](../v0/M6-cycles-modules/M6-design.md)、[总体设计 §7.2、§7.7](../v0/v0-design.md#77-stores-按会话分代长期有效m2-起)、[硬规则](../v0/claude_to_gpt/03-rules-and-pitfalls.md)。
 
 ## 1. 方法
@@ -21,7 +21,7 @@
 
 ## 3. 结论与处理
 
-结论 **Ready after fixes**：没有 Critical、Important，六处 Minor（M1–M4 即 spec §5 预先列出的修复轮清单，M5、M6 是新的）与四条观察，没有须负责人决定的事。修复轮 F 处理六处 Minor 与一条观察（主控裁定现在收紧），另三条观察不需动作：
+结论 **Ready after fixes**：没有 Critical、Important，六处 Minor（M1–M4 即 spec §5 预先列出的修复轮清单，M5、M6 是新的）与四条观察，没有须负责人决定的事。修复轮 F 处理六处 Minor 与一条观察（主控裁定现在收紧），另三条观察不需动作；修复轮中另见的两处同类边缘由 F9 修正（主控裁定）：
 
 | 编号 | 问题 | 处理 |
 |---|---|---|
@@ -35,10 +35,13 @@
 | 观察 | 列表的动作 hook 由每个调用者各自实例化 | 不需动作 |
 | 观察 | 四种布局（列表、看板、日历、表格）各有一个写法相同的 `roots/planning-page-root.tsx` | 有意如此（照各布局既有的按页的根），不需动作 |
 | 观察 | 模块的 G15 页面故事 `g15-module-list-page.spec.ts` 恰好 400 行 | 在约 400 行的上限之内，不需动作 |
+| 修复轮中发现 | 与 M2 同类、审查没有列出的两处边缘：页头的 `preferencesShown` 与数目（`usePlanningPageHeader`）只看本页偏好是否读到过，不看实体的项目——先在 P1 的模块页读过 X 的偏好，再打开 `/P2/modules/X`，页头仍给布局与显示的开关（临时探针证实；迭代经同一个 hook，同理）；迭代页头的面包屑标题与 `CycleQuickActions` 不核对 `project_id`（模块页头自 P6a 起核对）。都只在手改 URL 时出现，nerve 按实体自己的项目授权，没有越权 | F9 以 `core/hooks/planning-page-entity.ts` 的 `pageEntity` 为“本页持有”的唯一说法（F2 的项目核对移来，两个纯函数改调它）；两个列表状态的 hook 另给 `held`（已归档、已结束的照样算持有），页头的数目与偏好的控件要 `listed && held`，没有按域的分支；迭代页头照模块页头只在迭代属路由的项目时给面包屑标题与快捷操作。两个页头测试各加一例（先显示 P1 的页，再渲染 `/P2/…` 的页头：没有数目、布局、筛选、显示、新建，迭代另核面包屑与快捷操作），能编译的变异五个（两域的 `held` 不看项目、面包屑用别的项目的迭代、快捷操作不核对项目、页头不看 `held`）（`09aba5f8`） |
 
-F8 写本记录，并改 spec §5 的修复轮清单、spec 与 plan 的状态、设计 §14 的 P6b 一行（`docs` 提交，即本记录所在的提交）。
+F8 写本记录，并改 spec §5 的修复轮清单、spec 与 plan 的状态、设计 §14 的 P6b 一行（`45c5e665`）；F9 之后的文档提交把 F9 记进本节与 spec §5。
 
-修复轮中另见两处与 M2 同类、审查没有列出的边缘，未改，交主控裁定：页头的 `preferencesShown`（`usePlanningPageHeader`）只看本页偏好是否读到过，不看实体的项目——先在 P1 的模块页读过 X 的偏好，再打开 `/P2/modules/X`，页头仍给布局与显示的开关（迭代经同一个 hook，同理；临时探针证实，未提交）；迭代页头的面包屑标题与 `CycleQuickActions` 不核对 `project_id`（模块页头自 P6a 起核对）。两处都只在手改 URL 时出现，nerve 按实体自己的项目授权，没有越权。
+主控对修复轮的两处偏离的裁定：
+- F7 只加五个、不加第六个：接受——`core/components/workspace/settings/**` 已覆盖它，改前往它加 swr 的值导入 oxlint 就失败。
+- F1 在迭代测试里多改的导入行（`cycle-create` 的两处 `vi.mock` 工厂改为导入共用的替身，`cycle-quick-actions` 与迭代页头测试改为导入逐字相同的帮手）：接受——都是导入行或换成相同帮手的导入，断言不变，在回归边界之内。
 
 ## 4. 修复轮 F 的复审
 
