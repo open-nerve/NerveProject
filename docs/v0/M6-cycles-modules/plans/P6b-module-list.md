@@ -17,7 +17,7 @@
 
 **Tech Stack：** 既有 React/MobX/SWR/openapi-fetch/vitest/Playwright，不加依赖。
 
-**Spec：** [P6b-module-list](../specs/P6b-module-list.md)（§2 的合同与 §3 的 R1–R16 是本计划的约束）；设计 [M6](../M6-design.md) §3.3、§7、§8、§12；网页规则 [v0 §7.7](../../v0-design.md#77-stores-按会话分代长期有效m2-起)。模板：P5b 的迭代页列表（`core/store/issue/cycle/*`、`core/hooks/use-cycle-*.ts`、`core/components/issues/issue-layouts/roots/cycle-layout-root.tsx`、`*/roots/cycle-root.tsx`、`empty-states/cycle.tsx`、`quick-action-dropdowns/cycle-issue.tsx`、`command-host.tsx`、`R/cycles/(detail)/header.tsx` 及其测试与 `fake-cycle-page.tsx`）、`core/components/cycles/progress-sidebar/progress-stats.tsx`、`e2e/fixtures/cycle-list-pages.ts`、`e2e/stories/planning/g15-cycle-list-page.spec.ts`、`g19-cycle-list-page.spec.ts`。
+**Spec：** [P6b-module-list](../specs/P6b-module-list.md)（§2 的合同与 §3 的 R1–R16 是本计划的约束）；设计 [M6](../M6-design.md) §3.3、§7、§8、§12；网页规则 [v0 §7.7](../../v0-design.md#77-stores-按会话分代长期有效m2-起)。模板：P5b 的迭代页列表（`core/store/issue/cycle/*`、`core/hooks/use-cycle-*.ts`、`core/components/issues/issue-layouts/roots/cycle-layout-root.tsx`、`*/roots/cycle-root.tsx`、`empty-states/cycle.tsx`、`quick-action-dropdowns/cycle-issue.tsx`、`command-host.tsx`、`R/cycles/(detail)/header.tsx` 及其测试与 `fake-cycle-page.tsx`）、`core/components/cycles/progress-sidebar/progress-stats.tsx`、`e2e/fixtures/cycle-list-pages.ts`（T13 起为按域的 `e2e/fixtures/planning-list-pages.ts`）、`e2e/stories/planning/g15-cycle-list-page.spec.ts`、`g19-cycle-list-page.spec.ts`。
 
 ## Global Constraints
 
@@ -209,7 +209,7 @@
 
 ## Task 13（T13）：页面故事一（G15）
 
-**Files：** `e2e/stories/planning/g15-module-list-page.spec.ts`（新）；列表页的夹具改为按域（`e2e/fixtures/cycle-list-pages.ts` 的世界与帮手，名字与位置由实现定），迭代页的 G15、G19 故事只改调用处的名字与导入。
+**Files：** `e2e/stories/planning/g15-module-list-page.spec.ts`（新）；列表页的夹具改为按域（`e2e/fixtures/cycle-list-pages.ts` 的世界与帮手，名字与位置由实现定；实现为 `git mv` 到 `e2e/fixtures/planning-list-pages.ts`），迭代页的 G15、G19 故事只改调用处的名字与导入。
 
 - [ ] Step 1：夹具的共用先单独提交（迭代页的 G15、G19 以 chromium 跑通、断言不改，收据 `t13-cycle-stories-after-fixture`），再写故事（spec §2.10 的表中 G15 一行，三个故事照迭代页的三个）。每个故事先以期望错误的版本或 e2e 变异看到断言失败（收据），产品变异至少：移出时去掉已归档的模块（`t13-e2e-mut-removal-drops-archived`，故事三在数据库的归属处失败）、新建不带本模块、四种布局的根错映射（看板当作列表）。每种布局以 `expectListPageQuiet` 收尾。
 - [ ] Step 2：`make build build-s3-fixture` 后 chromium 聚焦跑通；以 `--config playwright.m6-pages.config.ts` 在三种引擎上跑一次（收据），新故事另 `--repeat-each=3`；从三种引擎那次运行的报告记下新文件在各引擎的时长（台账，供 T16）；`make lint-web`；提交 `test(M6/P6b): 模块页列表的页面故事（G15）`（夹具的共用为同一 Task 的前一个提交 `test(M6/P6b): 列表页的夹具改为按域，迭代与模块共用`）。

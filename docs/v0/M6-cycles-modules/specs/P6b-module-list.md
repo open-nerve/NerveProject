@@ -60,7 +60,7 @@ P5b 的迭代页列表件逐个处理如下（“共用”指改为按域的一�
 | `cycles/progress-sidebar/progress-stats.tsx` 的行切换 | 共用：按 store 类型与 id 给出 `ProgressTabs` 的 `choices`（`core/components/core/sidebar/` 下） | 只差 store 类型与 id |
 | `@nerve/constants` 的 `ISSUE_DISPLAY_FILTERS_BY_PAGE.cycle_issues` | 分开：新 `module_issues` | P7 加词后各页只藏自己的键（Plane 的模块页只藏“模块”，R12） |
 | `cycle/priority-issues.store.ts`、`cycles/active-cycle/*`、`use-enter-filtered.ts`、`peek-on-entry.tsx` | 迭代独有，不动 | 模块没有进行中卡片 |
-| e2e 夹具 `fixtures/cycle-list-pages.ts` 的 `cycleListWorld` 与列表页的帮手 | 共用：按域的世界（迭代或模块打开，访客的工作项在迭代或模块里），帮手从同一处导入，不复制 | P6a §2.11 的规则；迭代页故事只改调用处的名字与导入 |
+| e2e 夹具 `fixtures/cycle-list-pages.ts` 的 `cycleListWorld` 与列表页的帮手 | 共用：按域的世界（迭代或模块打开，访客的工作项在迭代或模块里），帮手从同一处导入，不复制；T13 把夹具改名为 `fixtures/planning-list-pages.ts`（私有的 `listPageWorld` 之上的 `cycleListWorld`、`moduleListWorld`） | P6a §2.11 的规则；迭代页故事只改调用处的名字与导入 |
 
 新的共用文件的名字由实现定；旧的迭代路径留在 `project-address-route` 的文件表里阻止复活（M4/P12 的做法）。
 
@@ -121,7 +121,7 @@ P5b 的迭代页列表件逐个处理如下（“共用”指改为按域的一�
 
 ### 2.10 e2e
 
-页面故事放在 `e2e/stories/planning/`，标题 `G<n> (page): …`，纳入三种引擎的页面配置 `e2e/playwright.m6-pages.config.ts`（文件名须合 `planning/g\d+-[\w-]+-pages?\.spec\.ts`）；CI 照常只跑默认配置。世界经接口建立（新项目的 `module_view` 默认关闭，故事先打开）；夹具按域共用（§2.2 的最后一行），与 P6a 共用的帮手（`dismissToasts`、`toast`、`tabStops`、`recordApi`、`seenBy`、`itemMenu`、`entriesOf`）从原处导入，不复制；名字冲突（`module-pages.ts` 与列表页夹具各有一个 `layoutButton`）时改名，不留别名。数据库断言用 `fixtures/planning-lists.ts` 的 `memberships` 与 `fixtures/assert/issue-planning.ts` 的模块断言。
+页面故事放在 `e2e/stories/planning/`，标题 `G<n> (page): …`，纳入三种引擎的页面配置 `e2e/playwright.m6-pages.config.ts`（文件名须合 `planning/g\d+-[\w-]+-pages?\.spec\.ts`）；CI 照常只跑默认配置。世界经接口建立（新项目的 `module_view` 默认关闭，故事先打开）；夹具按域共用（§2.2 的最后一行，T13 起为 `fixtures/planning-list-pages.ts`），与 P6a 共用的帮手（`dismissToasts`、`toast`、`tabStops`、`recordApi`、`seenBy`、`itemMenu`、`entriesOf`）从原处导入，不复制；名字冲突（`module-pages.ts` 与列表页夹具各有一个 `layoutButton`）时改名，不留别名（T13 把列表页夹具的一个改为 `workItemLayoutButton`）。数据库断言用 `fixtures/planning-lists.ts` 的 `memberships` 与 `fixtures/assert/issue-planning.ts` 的模块断言。
 
 | 文件 | 覆盖 |
 |---|---|
@@ -171,9 +171,15 @@ P5b 的迭代页列表件逐个处理如下（“共用”指改为按域的一�
 
 ## 5. 后续责任
 
-**P7**：“添加已有工作项”（空态的 `cta_secondary`、分组头、日历的 `addIssuesToView`、`existing-issues-list-modal.tsx` 的模块调用方，R10、R11）；模块下拉框与列表词表（工作项详情、行、新建弹窗的模块字段：请求体轮到发出时以所持的整集合算，保留已归档的 id，不照 Plane 把集合换成只有本模块，R5、R7）；模块页的移动端页头；词表加入迭代、模块之后按页收窄偏好的筛选类型，本页的键不进本页的偏好（R16）；`issue.remove.cycle.{loading,failed}` 与 `issue.remove.module.{loading,failed}` 随下拉框用上或一并删除；模块页“复制一份”描述带图片的工作项经内容复制建立，不加入本模块（迭代页同一条路）。往工作项写入加东西时加在写入单元（R1），并给写入单元的 `updateIssue` 明确的范围，去掉没有范围时退回 router 工作区的一支（`root.store.ts:552` 搬来的，M4 起如此）；去掉之后把写入单元加入 `project-address-route`（本段因这条退路没有加入，re-70 F5）。P7 加入让三页的显示选项常量不再相同的词时，`cycle_issues`、`module_issues` 改为由 `issues` 去掉本页的键推出，不让这两份副本在理由消失之后还留着（re-70 F6；本段照 P5b R9 的先例让 `module_issues` 是 `issues` 的第三份副本）。
+**P7**：“添加已有工作项”（空态的 `cta_secondary`、分组头、日历的 `addIssuesToView`、`existing-issues-list-modal.tsx` 的模块调用方，R10、R11）；模块下拉框与列表词表（工作项详情、行、新建弹窗的模块字段：请求体轮到发出时以所持的整集合算，保留已归档的 id，不照 Plane 把集合换成只有本模块，R5、R7）；模块页的移动端页头；词表加入迭代、模块之后按页收窄偏好的筛选类型，本页的键不进本页的偏好（R16）；`issue.remove.cycle.{loading,failed}` 与 `issue.remove.module.{loading,failed}` 随下拉框用上或一并删除；模块页“复制一份”描述带图片的工作项经内容复制建立，不加入本模块（迭代页同一条路）。往工作项写入加东西时加在写入单元（R1），并给写入单元的 `updateIssue` 明确的范围，去掉没有范围时退回 router 工作区的一支（`root.store.ts:552` 搬来的，T2 起在 `issue-writes.ts:261`，M4 起如此）；去掉之后把写入单元加入 `project-address-route`（本段因这条退路没有加入，re-70 F5）。P7 加入让三页的显示选项常量不再相同的词时，`cycle_issues`、`module_issues` 改为由 `issues` 去掉本页的键推出，不让这两份副本在理由消失之后还留着（re-70 F6；本段照 P5b R9 的先例让 `module_issues` 是 `issues` 的第三份副本）。P7 给新建与修改的表单加模块字段时另钉住“复制一份”的模块集合：今天源的其他模块到不了复制的请求，只因表单的字段（`ISSUE_FORM_FIELDS`）没有模块，命令宿主的 `copyOf` 带上源的 `module_ids` 与新建的请求体带上表单的 `module_ids` 两处一起改的嵌套变异在 T10 等价存活，由一次期望错误的运行证实断言起作用（R7）。
 
-**M8**：项目页第一次读偏好失败时只有 `role="alert"` 的文字、没有重试，与迭代页、模块页的可重试的读失败不同（M4 起如此，R4 没有改它）；随最终矩阵统一或写明理由。
+**修复轮（整审之后）**：下面各项在 T16 的整审之后的修复轮里做，不推到别的阶段；整审照此核对：
+- **测试帮手的重复**：`roots/module-row-dialogs.test.tsx` 复制了 `row-dialog-lifetime.test.tsx` 的 `outlivesTheRow`（约 40 行，T8）；`roots/module-create.test.tsx` 与 `cycle-create.test.tsx` 重复约 90 行的替身与帮手（`send`、`projectField`、`quickAddForm`、`headerButton` 等，T9）；`roots/module-quick-actions.test.tsx` 与 `module-create.test.tsx` 重复约 25 行的 `ModalCore`、编辑器等替身（T10）；`roots/preferences-reread.test.tsx` 与页头的测试重复约 25 行的装置（T12）。`vi.mock` 不能共用，帮手移进按域的替身（如 `fake-planning-page.tsx`），迭代的测试只改导入行（回归边界“共用”允许），断言不改。
+- **列表状态不核对实体属于路由的项目**：`moduleListState` 与 `cycleListState`（P5b 起）只看实体在不在、是否归档（迭代另看是否已结束），不看它的 `project_id`。路由里的模块或迭代属于别的项目时，页面说“这里没有这个模块（迭代）”，页头却仍可能给“新建工作项”，全局的“新建工作项”经按域的表也会带上它（nerve 以 422 `module_ids[i]`、`cycle_id` 拒绝）。两域一起改为：项目在、而实体的 `project_id` 不是路由的项目时，同“页面还没有这个实体”，只读、不可加入；迭代的行为在这一边缘处改变，迭代的测试只增不改（T9 留意、主控裁定）。
+- **测试文件名**：`core/store/issue/cycle/filter.store.test.ts` 旁边已没有同名的源文件（T4 删去 `cycle/filter.store.ts`），它测的是 `PagePreferencesFilter` 以 CYCLE 构造的用法，考虑按所测之物改名（模块的同类测试叫 `module/page-preferences.test.ts`）。
+- **两个相近的形状**：`cycle/priority-issues.store.ts` 留了文件内的 `CyclePage`（`{projectID, cycleID}`），与两域共用的 `PlanningPage`（`{projectID, entityID}`）相近（T4 的裁定：进行中卡片的优先级页签迭代独有，共用的形状不收它）；整审决定合并或写明保留的理由。
+
+**M8**：项目页第一次读偏好失败时只有 `role="alert"` 的文字、没有重试，与迭代页、模块页的可重试的读失败不同（M4 起如此，R4 没有改它）；随最终矩阵统一或写明理由，交接为 [M6-M8-12](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-12)。[M6-M8-08](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-08) 写下本段的拆法、行数与验收的结论（条件已满足，留到 M6 收尾核对）；[M6-M8-07](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-07) 再现一次（T10 检查点本机 e2e 的 F11 (page) [local]，只重跑该文件即通过）；[M6-M8-01](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-01) 的余量复核多一个数据（T10 检查点的分支 CI 43517662603 的 e2e 作业 25 分 38 秒，跑的故事与 main 相同）。
 
 ## 6. 风险
 
