@@ -310,18 +310,28 @@ it("shows nerve's refusal of a module it was sent under the modules, which take 
   expect(form()).not.toBeNull();
 });
 
-it("shows nerve's refusal of the cycle it was sent under the cycle, which takes the focus", async () => {
-  await shown(MODULE, { module_ids: [M1] });
-  await edit({ module_ids: [M1] });
-  await pick(cycleField, "Next");
-  const change = await sent();
-  await act(async () => change.answer(fieldRefused("cycle_id")));
-  expect(refusedAs(cycleField())).toEqual({ invalid: "true", message: "errors.field.not_allowed" });
-  expect(document.activeElement, "the focus").toBe(cycleField());
-  expect(refusedAs(moduleField()).invalid).toBeNull();
-  expect(toasts).toEqual([]);
-  expect(form()).not.toBeNull();
-});
+it.each([
+  { refusal: "of its field", answer: () => fieldRefused("cycle_id"), message: "errors.field.not_allowed" },
+  {
+    refusal: "that it has ended",
+    answer: () => problem(409, "planning.cycle_completed"),
+    message: "errors.planning_cycle_completed",
+  },
+])(
+  "shows nerve's refusal of the cycle it was sent, $refusal, under the cycle, which takes the focus",
+  async ({ answer, message }) => {
+    await shown(MODULE, { module_ids: [M1] });
+    await edit({ module_ids: [M1] });
+    await pick(cycleField, "Next");
+    const change = await sent();
+    await act(async () => change.answer(answer()));
+    expect(refusedAs(cycleField())).toEqual({ invalid: "true", message });
+    expect(document.activeElement, "the focus").toBe(cycleField());
+    expect(refusedAs(moduleField()).invalid).toBeNull();
+    expect(toasts).toEqual([]);
+    expect(form()).not.toBeNull();
+  }
+);
 
 it("says why nerve refused a module it was sent when nerve names no field (planning.archived), no field refused", async () => {
   await shown(MODULE, { module_ids: [M1] });

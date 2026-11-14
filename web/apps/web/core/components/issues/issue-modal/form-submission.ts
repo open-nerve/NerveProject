@@ -24,6 +24,8 @@ import { moduleSetChange } from "@/lib/planning-directory";
 
 /** The fields the form shows nerve's refusal under: the cycle's and the modules' too (P7a spec 2.6, R17). */
 const FIELDS = ["name", "project_id", "start_date", "target_date", "cycle_id", "module_ids"] as const;
+/** An ended cycle only the cycle can be (P7a spec 2.6, R17). */
+const TAKEN: Readonly<Record<string, (typeof FIELDS)[number]>> = { "planning.cycle_completed": "cycle_id" };
 
 type FormSubmissionInput = {
   methods: UseFormReturn<IssueFormValues>;
@@ -67,7 +69,7 @@ export function useFormSubmission({
     getValues,
     setError,
   } = methods;
-  const refuse = useFormRefusal(FIELDS, {});
+  const refuse = useFormRefusal(FIELDS, TAKEN);
   // The modules the form started with, the work item's own as the modal opened it: a work item's edit sends the change
   // from them to the set the form holds, never from what a read gave the form's data since (P7a spec 2.6, R3).
   const [startModules] = useState(() => getValues("module_ids"));
