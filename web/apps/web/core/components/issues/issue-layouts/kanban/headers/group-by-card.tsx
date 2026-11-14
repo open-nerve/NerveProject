@@ -15,6 +15,7 @@ import { useTranslation } from "@nerve/i18n";
 import type { TIssueKanbanFilters, TIssueGroupByOptions } from "@nerve/types";
 // components
 import { isDialogStore, useCreateDialogRequest } from "@/components/issues/issue-layouts/command-host";
+import { useGroupName } from "@/components/issues/issue-layouts/group-columns";
 // hooks
 import { useIssueStoreType } from "@/hooks/use-issue-layout-store";
 
@@ -24,6 +25,8 @@ interface IHeaderGroupByCard {
   column_id: string;
   icon?: React.ReactNode;
   title: string;
+  /** An archived cycle's or module's group, named so (P7b R4). */
+  archived?: boolean;
   count: number;
   collapsedGroups: TIssueKanbanFilters;
   handleCollapsedGroups: (toggle: "group_by" | "sub_group_by", value: string) => void;
@@ -37,6 +40,7 @@ export const HeaderGroupByCard = observer(function HeaderGroupByCard(props: IHea
     column_id,
     icon,
     title,
+    archived,
     count,
     collapsedGroups,
     handleCollapsedGroups,
@@ -48,6 +52,7 @@ export const HeaderGroupByCard = observer(function HeaderGroupByCard(props: IHea
   const storeType = useIssueStoreType();
   const requestCreate = useCreateDialogRequest();
   const { t } = useTranslation();
+  const { label, caption } = useGroupName(title, archived);
   return (
     <div
       className={`relative flex flex-shrink-0 gap-1 py-1.5 ${
@@ -69,6 +74,7 @@ export const HeaderGroupByCard = observer(function HeaderGroupByCard(props: IHea
           }`}
         >
           {title}
+          {caption}
         </div>
         <div className={`flex-shrink-0 text-13 font-medium text-tertiary ${verticalAlignPosition ? `pr-0.5` : `pl-2`}`}>
           {count || 0}
@@ -78,7 +84,7 @@ export const HeaderGroupByCard = observer(function HeaderGroupByCard(props: IHea
       {sub_group_by === null && (
         <button
           type="button"
-          aria-label={title}
+          aria-label={label}
           aria-expanded={!verticalAlignPosition}
           className="flex h-[20px] w-[20px] flex-shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-sm bg-layer-transparent transition-all hover:bg-layer-transparent-hover"
           onClick={() => handleCollapsedGroups("group_by", column_id)}
@@ -90,7 +96,7 @@ export const HeaderGroupByCard = observer(function HeaderGroupByCard(props: IHea
       {!disableIssueCreation && (
         <button
           type="button"
-          aria-label={`${t("create_work_item")}: ${title}`}
+          aria-label={`${t("create_work_item")}: ${label}`}
           className="flex h-[20px] w-[20px] flex-shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-sm bg-layer-transparent transition-all hover:bg-layer-transparent-hover"
           onClick={() => {
             // the layout's command host holds the dialog, which outlives the column while the list is checked

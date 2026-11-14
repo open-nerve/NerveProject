@@ -21,6 +21,8 @@ export type TIssueGroupByOptions =
   | "project"
   | "assignees"
   | "target_date"
+  | "cycle"
+  | "module"
   | null;
 
 // Existing filter controls retain their display vocabulary; wire-facing columns use IssueListOrder.

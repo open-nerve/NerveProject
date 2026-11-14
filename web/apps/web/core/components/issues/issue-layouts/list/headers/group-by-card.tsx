@@ -14,6 +14,7 @@ import { useTranslation } from "@nerve/i18n";
 import type { TIssueGroupByOptions } from "@nerve/types";
 // components
 import { isDialogStore, useCreateDialogRequest } from "@/components/issues/issue-layouts/command-host";
+import { useGroupName } from "@/components/issues/issue-layouts/group-columns";
 // hooks
 import { useIssueStoreType } from "@/hooks/use-issue-layout-store";
 
@@ -22,6 +23,8 @@ interface IHeaderGroupByCard {
   groupBy: TIssueGroupByOptions;
   icon?: React.ReactNode;
   title: string;
+  /** An archived cycle's or module's group, named so (P7b R4). */
+  archived?: boolean;
   count: number;
   issuePayload: Partial<IssueDetail>;
   disableIssueCreation?: boolean;
@@ -35,6 +38,7 @@ export const HeaderGroupByCard = observer(function HeaderGroupByCard(props: IHea
     groupBy,
     icon,
     title,
+    archived,
     count,
     issuePayload,
     disableIssueCreation,
@@ -44,9 +48,11 @@ export const HeaderGroupByCard = observer(function HeaderGroupByCard(props: IHea
   const storeType = useIssueStoreType();
   const requestCreate = useCreateDialogRequest();
   const { t } = useTranslation();
+  const { label, caption } = useGroupName(title, archived);
   const heading = (
     <>
       <span className="line-clamp-1 inline-block truncate font-medium text-primary">{title}</span>
+      {caption}
       <span className="pl-2 text-13 font-medium text-tertiary">{count || 0}</span>
       <span className="px-2.5" />
     </>
@@ -61,7 +67,7 @@ export const HeaderGroupByCard = observer(function HeaderGroupByCard(props: IHea
         {groupBy ? (
           <button
             type="button"
-            aria-label={title}
+            aria-label={label}
             aria-expanded={isExpanded}
             className="relative flex w-full cursor-pointer flex-row items-center gap-1 overflow-hidden rounded-xs text-left"
             onClick={() => handleCollapsedGroups(groupID)}
@@ -75,7 +81,7 @@ export const HeaderGroupByCard = observer(function HeaderGroupByCard(props: IHea
         {!disableIssueCreation && (
           <button
             type="button"
-            aria-label={`${t("create_work_item")}: ${title}`}
+            aria-label={`${t("create_work_item")}: ${label}`}
             className="flex h-5 w-5 flex-shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-xs transition-all hover:bg-layer-1"
             onClick={() => {
               // the layout's command host holds the dialog, which outlives the group while the list is checked

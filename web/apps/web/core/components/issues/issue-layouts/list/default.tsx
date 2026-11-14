@@ -1,4 +1,4 @@
-import { getGroupByColumns } from "../group-columns";
+import { getGroupByColumns, usePlanningGroupNames } from "../group-columns";
 import type { IssueCreate } from "@nerve/api-client";
 import type { Group } from "@/lib/paged-groups";
 /**
@@ -85,6 +85,7 @@ export const List = observer(function List(props: IList) {
 
   const containerRef = useRef<HTMLDivElement | null>(null);
 
+  usePlanningGroupNames(workspaceSlug, projectId, group_by, groups?.keys());
   const columns = getGroupByColumns({
     groupBy: group_by as GroupByColumnTypes,
     includeNone: true,

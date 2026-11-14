@@ -56,6 +56,8 @@ const groupWire: Record<string, string> = {
   assignees: "assignee_id",
   created_by: "created_by_id",
   target_date: "target_date",
+  cycle: "cycle_id",
+  module: "module_id",
 };
 const orderWire: Record<string, string> = {
   state__name: "state_name",
@@ -71,6 +73,8 @@ const groupValues: NonNullable<IIssueDisplayFilterOptions["group_by"]>[] = [
   "project",
   "assignees",
   "target_date",
+  "cycle",
+  "module",
 ];
 const orderValues: NonNullable<IIssueDisplayFilterOptions["order_by"]>[] = [
   "-created_at",

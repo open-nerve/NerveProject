@@ -58,6 +58,8 @@ export const ISSUE_GROUP_BY_OPTIONS: {
   { key: "state_detail.group", titleTranslationKey: "common.state_groups" },
   { key: "priority", titleTranslationKey: "common.priority" },
   { key: "project", titleTranslationKey: "common.project" }, // required this on my issues
+  { key: "cycle", titleTranslationKey: "common.cycle" },
+  { key: "module", titleTranslationKey: "common.modules" },
   { key: "labels", titleTranslationKey: "common.labels" },
   { key: "assignees", titleTranslationKey: "common.assignees" },
   { key: "created_by", titleTranslationKey: "common.created_by" },

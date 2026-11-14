@@ -231,6 +231,7 @@ export const ListGroup = observer(function ListGroup(props: Props) {
           groupBy={group_by}
           icon={group.icon}
           title={group.name}
+          archived={group.archived}
           count={groupIssueCount}
           issuePayload={group.payload}
           disableIssueCreation={disableIssueCreation || isGroupByCreatedBy}

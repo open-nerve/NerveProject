@@ -162,3 +162,33 @@ it.each<["project" | "cycle" | "module", string, string, ProjectIssueFilters]>([
   patch.call.answer(json(200, preferencesOf({ filters })));
   await patch.promise;
 });
+
+// The controls' words of nerve's groupings by cycle and by module (P7b spec 2.4): shown so, and written back so.
+it("shows a grouping by cycle and a subgrouping by module by the controls' words and writes them back", async () => {
+  const { app, nerve } = tab;
+  const store = app.issue.projectIssuesFilter;
+  const display = { ...preferencesOf().display_filters, layout: "kanban" as const };
+  const read = await requestedIssue(nerve, () => store.fetchFilters("ws", "A"), [
+    "GET",
+    "/api/v0/me/projects/A/preferences",
+  ]);
+  read.call.answer(
+    json(200, preferencesOf({ display_filters: { ...display, group_by: "cycle_id", sub_group_by: "module_id" } }))
+  );
+  await read.promise;
+  expect(store.getIssueFilters("A")?.displayFilters).toMatchObject({ group_by: "cycle", sub_group_by: "module" });
+  const patch = await requestedIssue(
+    nerve,
+    () =>
+      store.updateFilters("ws", "A", EIssueFilterType.DISPLAY_FILTERS, { group_by: "module", sub_group_by: "cycle" }),
+    ["PATCH", "/api/v0/me/projects/A/preferences"]
+  );
+  expect(patch.call.body).toEqual({
+    display_filters: { ...display, group_by: "module_id", sub_group_by: "cycle_id" },
+  });
+  patch.call.answer(
+    json(200, preferencesOf({ display_filters: { ...display, group_by: "module_id", sub_group_by: "cycle_id" } }))
+  );
+  await patch.promise;
+  expect(store.getIssueFilters("A")?.displayFilters).toMatchObject({ group_by: "module", sub_group_by: "cycle" });
+});

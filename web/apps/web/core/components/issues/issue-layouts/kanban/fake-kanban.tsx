@@ -33,7 +33,10 @@ vi.mock("@/lib/store-context", async () => ({
     return fixture.app;
   },
 }));
-vi.mock("@/lib/auth/api-client", () => ({ tokenManager: { state: { loginId: "A" } }, publicClient: {} }));
+vi.mock("@/lib/auth/api-client", () => ({
+  tokenManager: { state: { loginId: "A" }, subscribe: () => () => {} },
+  publicClient: {},
+}));
 vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
 vi.mock("react-router", async (original) => ({
   ...(await original<typeof import("react-router")>()),

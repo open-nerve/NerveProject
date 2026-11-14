@@ -1,5 +1,5 @@
 import { useParams } from "react-router";
-import { getGroupByColumns } from "../group-columns";
+import { getGroupByColumns, usePlanningGroupNames } from "../group-columns";
 import type { IssueCreate } from "@nerve/api-client";
 import type { Group } from "@/lib/paged-groups";
 /**
@@ -97,6 +97,7 @@ export const KanBan = observer(function KanBan(props: IKanBan) {
   // derived values
   const isDragDisabled = !issueKanBanView?.getCanUserDragDrop(group_by, sub_group_by);
 
+  usePlanningGroupNames(workspaceSlug, projectId, group_by, groups.keys());
   const list = getGroupByColumns({
     groupBy: group_by as GroupByColumnTypes,
     includeNone: true,
@@ -169,6 +170,7 @@ export const KanBan = observer(function KanBan(props: IKanBan) {
                     column_id={subList.id}
                     icon={subList.icon}
                     title={subList.name}
+                    archived={subList.archived}
                     count={getGroupIssueCount(subList.id, undefined, false) ?? 0}
                     issuePayload={subList.payload}
                     disableIssueCreation={disableIssueCreation || isGroupByCreatedBy}

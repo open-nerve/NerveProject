@@ -10,10 +10,13 @@ import { Circle } from "lucide-react";
 import { ChevronDownOutline, ChevronUpOutline } from "@makeplane/propel/icons";
 // Nerve
 import type { TIssueGroupByOptions, TIssueKanbanFilters } from "@nerve/types";
+import { useGroupName } from "@/components/issues/issue-layouts/group-columns";
 
 interface IHeaderSubGroupByCard {
   icon?: React.ReactNode;
   title: string;
+  /** An archived cycle's or module's lane, named so (P7b R4). */
+  archived?: boolean;
   count: number;
   column_id: string;
   collapsedGroups: TIssueKanbanFilters;
@@ -22,7 +25,8 @@ interface IHeaderSubGroupByCard {
 }
 
 export const HeaderSubGroupByCard = observer(function HeaderSubGroupByCard(props: IHeaderSubGroupByCard) {
-  const { icon, title, count, column_id, collapsedGroups, handleCollapsedGroups } = props;
+  const { icon, title, archived, count, column_id, collapsedGroups, handleCollapsedGroups } = props;
+  const { caption } = useGroupName(title, archived);
   return (
     <button
       type="button"
@@ -44,6 +48,7 @@ export const HeaderSubGroupByCard = observer(function HeaderSubGroupByCard(props
 
       <span className="flex flex-shrink-0 items-center gap-1 text-13">
         <span className="line-clamp-1 text-primary">{title}</span>
+        {caption}
         <span className="pl-2 text-13 font-medium text-tertiary">{count || 0}</span>
       </span>
     </button>
