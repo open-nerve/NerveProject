@@ -47,6 +47,9 @@ import { useLabel } from "@/hooks/store/use-label";
 import { useMember } from "@/hooks/store/use-member";
 import { useProject } from "@/hooks/store/use-project";
 import { useProjectState } from "@/hooks/store/use-project-state";
+// local imports
+import type { TPlanningFilterCondition } from "./use-planning-filter-configs";
+import { usePlanningFilterConfigs } from "./use-planning-filter-configs";
 
 export type TWorkItemFiltersEntityProps = {
   workspaceSlug: string;
@@ -59,6 +62,8 @@ export type TWorkItemFiltersEntityProps = {
 
 export type TUseWorkItemFiltersConfigProps = {
   allowedFilters: TWorkItemFilterProperty[];
+  /** The filter's conditions, whose values of a cycle or a module stay options (usePlanningFilterConfigs). */
+  conditions?: readonly TPlanningFilterCondition[];
 } & TWorkItemFiltersEntityProps;
 
 export type TWorkItemFiltersConfig = {
@@ -67,8 +72,8 @@ export type TWorkItemFiltersConfig = {
 };
 
 export const useWorkItemFiltersConfig = (props: TUseWorkItemFiltersConfigProps): TWorkItemFiltersConfig => {
-  const { allowedFilters, labelIds, memberIds, projectIds, stateIds } = props;
-  const imageWorkspaceID = useWorkspace().getWorkspaceBySlug(props.workspaceSlug)?.id;
+  const { allowedFilters, conditions, labelIds, memberIds, projectId, projectIds, stateIds, workspaceSlug } = props;
+  const imageWorkspaceID = useWorkspace().getWorkspaceBySlug(workspaceSlug)?.id;
   const { t } = useTranslation();
   const meLabel = t("common.filter_options.me");
   const noneLabel = t("common.none");
@@ -140,6 +145,13 @@ export const useWorkItemFiltersConfig = (props: TUseWorkItemFiltersConfigProps):
    * @returns True if the filter is enabled, false otherwise.
    */
   const isFilterEnabled = useCallback((key: TWorkItemFilterProperty) => filtersToShow.has(key), [filtersToShow]);
+  // cycle and module filter configs
+  const planningFilterConfigs = usePlanningFilterConfigs({
+    workspaceSlug,
+    projectId,
+    isFilterEnabled,
+    conditions: conditions ?? [],
+  });
 
   // state group filter config
   const stateGroupFilterConfig = useMemo(
@@ -343,6 +355,7 @@ export const useWorkItemFiltersConfig = (props: TUseWorkItemFiltersConfigProps):
       mentionFilterConfig,
       subscriberFilterConfig,
       labelFilterConfig,
+      ...planningFilterConfigs,
       startDateFilterConfig,
       targetDateFilterConfig,
       createdAtFilterConfig,

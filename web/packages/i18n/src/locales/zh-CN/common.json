@@ -597,7 +597,9 @@
         "target_date": "目标日期",
         "created_at": "创建时间",
         "updated_at": "更新时间",
-        "project_id": "项目"
+        "project_id": "项目",
+        "cycle_id": "周期",
+        "module_id": "模块"
       },
       "operators": {
         "exact": "是",
