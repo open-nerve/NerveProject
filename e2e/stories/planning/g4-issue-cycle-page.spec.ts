@@ -8,7 +8,7 @@ import {
   wrote,
 } from "../../fixtures/assert/issue-planning";
 import { watchPage } from "../../fixtures/browser";
-import { recordApi } from "../../fixtures/cycle-pages";
+import { dayFromToday, recordApi } from "../../fixtures/cycle-pages";
 import { modalDialog, shownWithin } from "../../fixtures/dialogs";
 import { expectListPageQuiet } from "../../fixtures/issue-list-page";
 import { bodiesSent, cycleListWorld, rowOptions, shownItems } from "../../fixtures/planning-list-pages";
@@ -21,11 +21,6 @@ import { expect, test } from "../../fixtures/test";
 // names the archived cycle its work item is in, the project's archive read once; and a cycle page's new work item
 // starts in that cycle, the form's pick winning over the page. The API version is g4-issue-cycle.spec.ts; both assert
 // the same rows. The world is made through the API, nerve's answers read back through the database.
-
-/** The day offset days from today, YYYY-MM-DD: a cycle over today is in progress, whatever day the story runs. */
-function dayFromToday(offset: number): string {
-  return new Date(Date.now() + offset * 86_400_000).toISOString().slice(0, 10);
-}
 
 test("G4 (page): on Fix the login's page its cycle, opened by the keyboard beside its button with its search focused, offers No cycle, Next and Now, in nerve's order, neither Done, ended, nor Old, archived; typed Now picks it in one change, Next moves it there and No cycle takes it out, each one change of its cycle alone, and Escape gives the button the focus back; Web's list names Legacy's cycle Old, archived, Web's archive read once; Now's page's new work item starts in Now, is moved to Next in the dialog and is created in Next alone, off Now's list", async ({
   api,

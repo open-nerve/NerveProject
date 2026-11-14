@@ -234,6 +234,14 @@ export function shownDays(start: string, end: string): string {
   return sm === em ? `${smon} ${sd} - ${ed}, ${sy}` : `${smon} ${sd} - ${emon} ${ed}, ${sy}`;
 }
 
+/**
+ * The calendar day, YYYY-MM-DD in UTC, days after today (before it when negative): a cycle from some days ago to some
+ * days ahead is in progress, whatever day the story runs.
+ */
+export function dayFromToday(days: number): string {
+  return new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 10);
+}
+
 /** A day, YYYY-MM-DD, as a cycle's or a module's form shows it (renderFormattedDate): "Mar 01, 2031". */
 export function shownDay(day: string): string {
   const [year = "", month = "", date = ""] = day.split("-");
