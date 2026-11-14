@@ -1,21 +1,23 @@
 // @vitest-environment jsdom
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
-// M6 P7a spec 2.3, 2.5, R11, R14: the cycle a work item is in, in its preview's properties, against the session's
-// stores and a fake nerve, as in its detail's sidebar: shown while its project's cycles are on, read-only while the
-// preview is, one PATCH a pick, nerve's refusal said. An archived cycle it is in is named once the project's lists
-// are read, with the caption Archived, the lists read once for the sidebar and the preview a narrow detail shows.
+// M6 P7a spec 2.3, 2.5, R3, R11, R14: the cycle and the modules a work item is in, in its preview's properties,
+// against the session's stores and a fake nerve, as in its detail's sidebar: each shown while its project's domain is
+// on, read-only while the preview is, one PATCH a pick (a module's as one addition to the set held), nerve's refusal
+// said. An archived cycle or module it is in is named once the project's lists are read, with the caption Archived,
+// the lists read once for the sidebar and the preview a narrow detail shows.
 import { act } from "react";
 import type { ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { SWRConfig } from "swr";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import type { Cycle, IssueDetail } from "@nerve/api-client";
+import type { Cycle, IssueDetail, Module } from "@nerve/api-client";
 import { json, problem } from "@/lib/auth/fake-nerve";
 import { until } from "@/lib/auth/fake-time";
 import { toasts } from "@/lib/fake-toast";
 import { issueDetailOf, issueStoreTab } from "@/store/issue/fake-issues";
 import { cycleRequests, loadCycles, rowOf } from "@/store/planning/fake-cycles";
-import { cycleOf, loadProjects } from "@/store/project/fake-projects";
+import { loadArchivedModules, loadModules, moduleRequests, moduleRowOf } from "@/store/planning/fake-modules";
+import { cycleOf, loadProjects, moduleOf } from "@/store/project/fake-projects";
 import { IssueDetailsSidebar } from "../issue-detail/sidebar";
 import { useIssueOperations } from "../issue-detail/use-issue-operations";
 import { PeekOverviewProperties } from "./properties";
@@ -46,9 +48,15 @@ let tab: Awaited<ReturnType<typeof issueStoreTab>>;
 let host: HTMLDivElement;
 let renderer: ReturnType<typeof createRoot>;
 let now: Cycle, next: Cycle, shelved: Cycle;
-const workItem = (cycle_id: string | null, updated_at = "2026-10-29T00:00:00Z"): IssueDetail => ({
+let alpha: Module, beta: Module, gamma: Module;
+const workItem = (
+  cycle_id: string | null,
+  updated_at = "2026-10-29T00:00:00Z",
+  module_ids: string[] = []
+): IssueDetail => ({
   ...issueDetailOf("x"),
   cycle_id,
+  module_ids,
   updated_at,
 });
 
@@ -59,6 +67,9 @@ beforeEach(async () => {
   now = cycleOf(tab.project, "Now", { status: "current" });
   next = cycleOf(tab.project, "Next", { status: "upcoming" });
   shelved = cycleOf(tab.project, "Shelved", { status: "completed", archived_at: "2026-10-20T00:00:00Z" });
+  alpha = moduleOf(tab.project, "Alpha", { status: "in-progress" });
+  beta = moduleOf(tab.project, "Beta");
+  gamma = moduleOf(tab.project, "Gamma", { status: "completed", archived_at: "2026-10-20T00:00:00Z" });
   toasts.length = 0;
   host = document.createElement("div");
   document.body.append(host);
@@ -140,6 +151,7 @@ it("shows the cycle after the due date while the project's cycles are on, and no
     "common.priority",
     "common.order_by.start_date",
     "common.order_by.due_date",
+    "common.modules",
     "common.cycle",
     "common.parent",
     "common.labels",
@@ -224,4 +236,116 @@ it("names an archived cycle it is in, with its caption, once the project's lists
     "common.cycle: Shelved, common.archived",
   ]);
   expect(reads()).toHaveLength(2);
+});
+
+const moduleButtons = () =>
+  [...host.querySelectorAll<HTMLButtonElement>("button")].filter((button) =>
+    button.textContent?.startsWith("common.modules: ")
+  );
+const moduleButton = () => moduleButtons()[0];
+/** The reads of the project's modules so far, by their query: {} for its list, archived=true for its archive. */
+const moduleReads = () =>
+  tab.nerve.calls.filter((call) => call.method === "GET" && call.path === moduleRequests.list(tab.project));
+/** The work item in the modules, in its preview, the project's lists of them read, the archived Gamma among them. */
+async function showInModules(moduleIds: string[], disabled = false) {
+  await loadModules(
+    tab.nerve,
+    tab.app.planning.modules,
+    [alpha, beta].map((item) => moduleRowOf(item)),
+    tab.project
+  );
+  await loadArchivedModules(tab.nerve, tab.app.planning.modules, [moduleRowOf(gamma)], tab.project);
+  tab.app.issue.issues.acceptRead(workItem(null, undefined, moduleIds), tab.app.issue.captureRead());
+  tab.nerve.calls.length = 0;
+  await render(<Preview disabled={disabled} />);
+}
+
+it("shows the modules before the cycle while the project's modules are on, and not while they are off", async () => {
+  await showInModules([alpha.id]);
+  expect(moduleButton()?.textContent).toBe("common.modules: Alpha");
+  await act(async () => {
+    await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, [{ ...tab.project, module_view: false }]);
+  });
+  expect(labels()).not.toContain("common.modules");
+  expect(labels()).toContain("common.cycle");
+  expect(moduleButton()).toBeUndefined();
+});
+
+it("keeps the modules read-only while the preview is", async () => {
+  await showInModules([alpha.id, gamma.id], true);
+  expect(moduleButton()?.disabled).toBe(true);
+  await act(async () => {
+    moduleButton()!.click();
+    await vi.advanceTimersByTimeAsync(50);
+  });
+  expect(document.querySelector('[role="listbox"]')).toBeNull();
+  expect(tab.nerve.calls).toEqual([]);
+});
+
+it("sends a module picked as one PATCH of the set the work item holds with it added", async () => {
+  await showInModules([alpha.id, gamma.id]);
+  await act(async () => {
+    moduleButton()!.click();
+    await until(() => moduleReads().length === 1, "the modules' read");
+  });
+  await act(async () => {
+    moduleReads()[0]!.answer(json(200, { data: [alpha, beta].map((item) => moduleRowOf(item)) }));
+    await vi.advanceTimersByTimeAsync(20);
+  });
+  const option = [...document.querySelectorAll<HTMLElement>('[role="option"]')].find(
+    (item) => item.textContent === "Beta"
+  );
+  await act(async () => {
+    option!.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true, button: 0 }));
+    await vi.advanceTimersByTimeAsync(20);
+  });
+  expect(patches().map((call) => [call.path, call.body])).toEqual([
+    ["/api/v0/issues/x", { module_ids: [alpha.id, gamma.id, beta.id] }],
+  ]);
+  await act(async () => {
+    patches()[0]!.answer(json(200, workItem(null, "2026-10-30T00:00:00Z", [alpha.id, gamma.id, beta.id])));
+    await vi.advanceTimersByTimeAsync(20);
+  });
+  expect(moduleButton()?.textContent).toBe("common.modules: module.count: Alpha; Gamma, common.archived; Beta");
+  expect(patches()).toHaveLength(1);
+  expect(toasts).toEqual([]);
+});
+
+it("names an archived module it is in, with its caption, once the project's lists are read, once for the sidebar and the preview", async () => {
+  tab.app.issue.issues.acceptRead(workItem(null, undefined, [gamma.id]), tab.app.issue.captureRead());
+  tab.nerve.calls.length = 0;
+  await render(
+    <>
+      <Sidebar />
+      <Preview />
+    </>
+  );
+  expect(
+    moduleButtons().map((button) => button.textContent),
+    "no name yet"
+  ).toEqual(["common.modules: ", "common.modules: "]);
+  await act(async () => until(() => moduleReads().length === 1, "the project's list"));
+  await act(async () => vi.advanceTimersByTimeAsync(50));
+  expect(
+    moduleReads().map((call) => call.query),
+    "its list first, once"
+  ).toEqual([{}]);
+  await act(async () => {
+    moduleReads()[0]!.answer(json(200, { data: [alpha, beta].map((item) => moduleRowOf(item)) }));
+    await until(() => moduleReads().length === 2, "the project's archive");
+  });
+  await act(async () => vi.advanceTimersByTimeAsync(50));
+  expect(
+    moduleReads().map((call) => call.query),
+    "then its archive, once"
+  ).toEqual([{}, { archived: "true" }]);
+  await act(async () => {
+    moduleReads()[1]!.answer(json(200, { data: [moduleRowOf(gamma)] }));
+    await vi.advanceTimersByTimeAsync(50);
+  });
+  expect(moduleButtons().map((button) => button.textContent)).toEqual([
+    "common.modules: Gamma, common.archived",
+    "common.modules: Gamma, common.archived",
+  ]);
+  expect(moduleReads()).toHaveLength(2);
 });

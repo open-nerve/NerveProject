@@ -1,9 +1,10 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
-// M6 P7a spec 2.3, R4, R13: a work item's cycle options are what it may join, apart from the values it holds.
+// M6 P7a spec 2.3, R4, R13: a work item's cycle and module options are what it may join, apart from the values it
+// holds.
 import { expect, it } from "vitest";
-import type { Cycle } from "@nerve/api-client";
-import { cycleOf, projectOf } from "@/store/project/fake-projects";
-import { cycleOptions } from "./planning-directory";
+import type { Cycle, Module } from "@nerve/api-client";
+import { cycleOf, moduleOf, projectOf } from "@/store/project/fake-projects";
+import { cycleOptions, moduleOptions } from "./planning-directory";
 
 const project = projectOf("WEB", "ws");
 const draft = cycleOf(project, "Draft");
@@ -31,4 +32,31 @@ it("gives No cycle alone when no cycle can be joined, and nothing until the proj
   expect(cycleOptions([ended.id], cycleById)).toEqual([null]);
   expect(cycleOptions([], cycleById)).toEqual([null]);
   expect(cycleOptions(undefined, cycleById)).toBeUndefined();
+});
+
+const backlog = moduleOf(project, "Backlog");
+const going = moduleOf(project, "Going", { status: "in-progress" });
+const done = moduleOf(project, "Done", { status: "completed" });
+const dropped = moduleOf(project, "Dropped", { status: "cancelled" });
+/** Archived after the project's list of the modules that are not archived was read: the store's copy says so. */
+const stored = moduleOf(project, "Stored", { status: "completed", archived_at: "2026-10-20T00:00:00Z" });
+const modules = new Map<string, Module>([backlog, going, done, dropped, stored].map((item) => [item.id, item]));
+const moduleById = (moduleId: string) => modules.get(moduleId);
+
+it("gives the modules a work item may join, whatever their status, in the order of nerve's list", () => {
+  expect(moduleOptions([done.id, backlog.id, dropped.id, going.id], moduleById)).toEqual([
+    done,
+    backlog,
+    dropped,
+    going,
+  ]);
+});
+
+it("leaves out a module archived since the list was read, and one the store no longer has", () => {
+  expect(moduleOptions([going.id, stored.id, "m-WEB-Deleted", backlog.id], moduleById)).toEqual([going, backlog]);
+});
+
+it("gives no module option until the project's list is read", () => {
+  expect(moduleOptions([], moduleById)).toEqual([]);
+  expect(moduleOptions(undefined, moduleById)).toBeUndefined();
 });
