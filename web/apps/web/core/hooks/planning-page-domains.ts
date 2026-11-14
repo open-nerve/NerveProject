@@ -1,6 +1,6 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 import type { Issue, IssueDetail } from "@nerve/api-client";
-import { EIssuesStoreType } from "@nerve/types";
+import { EIssuesStoreType, type IssueChange } from "@nerve/types";
 import type { PlanningPage } from "@/store/issue/helpers/planning-page-issues.store";
 import type { RootStore } from "@/store/root.store";
 import { cycleListState } from "./use-cycle-list-state";
@@ -29,6 +29,12 @@ type PlanningPageDomain = {
   start: (given: PlanningValues, page: PlanningPage) => PlanningValues;
   /** Whether a work item, as nerve confirmed it, is in the page's cycle or module: the page's list's. */
   holds: (issue: Issue, page: PlanningPage) => boolean;
+  /**
+   * The change that puts an existing work item in the page's cycle or module (P7b spec 2.9, R2): a work item is in one
+   * cycle at most, which it leaves for the page's; it may be in many modules, the page's added to those it holds when
+   * its write's turn comes.
+   */
+  join: (page: PlanningPage) => IssueChange;
   /** Sends the work item's removal from the page's cycle or module; nerve's answer or refusal is the caller's. */
   remove: (root: RootStore, slug: string, page: PlanningPage, id: string) => Promise<unknown>;
 };
@@ -44,6 +50,7 @@ export const PLANNING_PAGE_DOMAINS: Record<PlanningPageStoreType, PlanningPageDo
         .joinable,
     start: (given, page) => ({ ...given, cycle_id: given.cycle_id ?? page.entityID }),
     holds: (issue, page) => issue.cycle_id === page.entityID,
+    join: (page) => ({ cycle_id: page.entityID }),
     // A work item is in one cycle at most: it leaves it for none (P5b spec 2.5).
     remove: ({ issue }, slug, page, id) => issue.cycleIssues.updateIssue(slug, page.projectID, id, { cycle_id: null }),
   },
@@ -56,6 +63,7 @@ export const PLANNING_PAGE_DOMAINS: Record<PlanningPageStoreType, PlanningPageDo
         .joinable,
     start: (given, page) => ({ ...given, module_ids: [...new Set([...(given.module_ids ?? []), page.entityID])] }),
     holds: (issue, page) => issue.module_ids.includes(page.entityID),
+    join: (page) => ({ modules: { add: [page.entityID] } }),
     // A work item is in a set of modules, which nerve replaces whole: it is worked out in its turn (P6b spec 2.5, R5).
     remove: ({ issue }, slug, page, id) => issue.moduleIssues.removeIssueFromModule(slug, page, id),
   },

@@ -29,8 +29,11 @@ type PlanningPageLayout = {
   useListState: () => { held: boolean; readOnly: boolean; joinable: boolean };
   /** What a row's removal of its work item from the page's cycle or module is named, and says once nerve confirms it. */
   remove: { label: string; success: string };
-  /** The empty state's texts: once read-only, why there are none; else the page's own, with its new work item's. */
-  empty: { readOnly: EmptyTexts; none: EmptyTexts & { create: string } };
+  /**
+   * The empty state's texts: once read-only, why there are none; else the page's own, with its new work item's and its
+   * adding of existing ones.
+   */
+  empty: { readOnly: EmptyTexts; none: EmptyTexts & { create: string; addExisting: string } };
 };
 
 /** Each domain's row; the store type picks it. */
@@ -51,6 +54,7 @@ export const PLANNING_PAGE_LAYOUTS: Record<PlanningPageStoreType, PlanningPageLa
         title: "project_empty_state.cycle_work_items.title",
         description: "project_empty_state.cycle_work_items.description",
         create: "project_empty_state.cycle_work_items.cta_primary",
+        addExisting: "project_empty_state.cycle_work_items.cta_secondary",
       },
     },
   },
@@ -70,6 +74,7 @@ export const PLANNING_PAGE_LAYOUTS: Record<PlanningPageStoreType, PlanningPageLa
         title: "project_empty_state.module_work_items.title",
         description: "project_empty_state.module_work_items.description",
         create: "project_empty_state.module_work_items.cta_primary",
+        addExisting: "project_empty_state.module_work_items.cta_secondary",
       },
     },
   },

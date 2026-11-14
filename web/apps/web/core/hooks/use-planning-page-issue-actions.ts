@@ -4,7 +4,9 @@ import { useParams } from "react-router";
 import type { Issue, IssueCreate } from "@nerve/api-client";
 import type { TSupportedFilterTypeForUpdate } from "@nerve/constants";
 import type { TLoader, TSupportedFilterForUpdate, IssueChange } from "@nerve/types";
+import { SessionChangedError } from "@/lib/auth/token-manager";
 import type { IssueListOptions } from "@/lib/issue-filters";
+import { settleEach, WRITES_PER_PROJECT } from "@/lib/settle-each";
 import type { PlanningPage } from "@/store/issue/helpers/planning-page-issues.store";
 import type { IssueDrop } from "@/store/issue/issue-writes";
 import { useIssues } from "./store/use-issues";
@@ -16,8 +18,8 @@ import { usePlanningPageProgressFollow } from "./use-planning-page-progress-foll
 /**
  * A cycle's or a module's page's list commands (P5b spec 2.5; P6b spec 2.2): the workspace, project and cycle or
  * module come from the page's route params, never the router store. The list is read for any member of the project, as
- * the project page's is (P5b spec 2.1). Each write it sends reads the page's progress again once nerve confirms it
- * (usePlanningPageProgressFollow, P5b spec 2.6, R10).
+ * the project page's is (P5b spec 2.1). Each write it sends reads the page's progress again once nerve confirms it, a
+ * batch of them once (usePlanningPageProgressFollow, P5b spec 2.6, R10; P7b spec 2.9, R6).
  */
 export function usePlanningPageIssueActions(storeType: PlanningPageStoreType) {
   const domain = PLANNING_PAGE_DOMAINS[storeType];
@@ -122,6 +124,24 @@ export function usePlanningPageIssueActions(storeType: PlanningPageStoreType) {
     [issues, domain, workspaceSlug, page, followProgress]
   );
   /**
+   * Adds existing work items of the page's project to the page's cycle or module (P7b spec 2.9, 2.11, R2, R6): one
+   * change of each, what the caller gives (a calendar's day) with the page's join, the modules worked out in its write's
+   * turn from those the work item then holds; no more at once than nerve's write gate takes of a project; each one's
+   * outcome. The batch reads the progress again once, when nerve confirmed any of it.
+   */
+  const addIssuesToView = useCallback(
+    async (ids: readonly string[], extra: IssueChange = {}) => {
+      if (!workspaceSlug || !page) throw new SessionChangedError();
+      const change = { ...extra, ...domain.join(page) };
+      return await followProgress(
+        () =>
+          settleEach(ids, WRITES_PER_PROJECT, (id) => issues.updateIssue(workspaceSlug, page.projectID, id, change)),
+        (outcome) => outcome.confirmedIds.length > 0
+      );
+    },
+    [issues, domain, workspaceSlug, page, followProgress]
+  );
+  /**
    * The page's preferences are its cycle's or module's, whatever project the caller names; their change is followed
    * as the project page's (P5b spec 2.4): its list read again when its query changed, a refusal said.
    */
@@ -144,6 +164,7 @@ export function usePlanningPageIssueActions(storeType: PlanningPageStoreType) {
       updateIssue,
       removeIssue,
       removeIssueFromView,
+      addIssuesToView,
       archiveIssue,
       dropIssue,
       updateFilters,
@@ -156,6 +177,7 @@ export function usePlanningPageIssueActions(storeType: PlanningPageStoreType) {
       updateIssue,
       removeIssue,
       removeIssueFromView,
+      addIssuesToView,
       archiveIssue,
       dropIssue,
       updateFilters,
