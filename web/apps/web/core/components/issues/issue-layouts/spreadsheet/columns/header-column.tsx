@@ -14,7 +14,6 @@ import {
   TickOutline,
 } from "@makeplane/propel/icons";
 // constants
-import { SPREADSHEET_PROPERTY_DETAILS } from "@nerve/constants";
 // i18n
 import { useTranslation } from "@nerve/i18n";
 // types
@@ -30,28 +29,14 @@ interface Props {
   onClose: () => void;
 }
 
-/**
- * A table column's header: its icon and its title, which open the column's sort menu; a column that sorts by nothing
- * (a work item's modules and cycle until P7b, P7a spec R21) has its icon and its title alone.
- */
 export function HeaderColumn(props: Props) {
   const { displayFilters, handleDisplayFilterUpdate, property, onClose } = props;
   // i18n
   const { t } = useTranslation();
-  const details = SPREADSHEET_PROPERTY_DETAILS[property];
-  const sort = spreadsheetSort(property, displayFilters);
+  const { propertyDetails, selectedOrder, direction } = spreadsheetSort(property, displayFilters);
   const handleOrderBy = (order: TIssueOrderByOptions) => handleDisplayFilterUpdate({ order_by: order });
 
-  if (!details) return null;
-
-  const title = (
-    <div className="flex items-center gap-1.5">
-      <SpreadSheetPropertyIcon iconKey={details.icon} className="h-4 w-4 text-placeholder" />
-      {t(details.i18n_title)}
-    </div>
-  );
-  if (!sort) return <Row className="flex w-full items-center gap-1.5 py-2 text-13 text-secondary">{title}</Row>;
-  const { propertyDetails, selectedOrder, direction } = sort;
+  if (!propertyDetails) return null;
 
   return (
     <CustomMenu
@@ -60,7 +45,10 @@ export function HeaderColumn(props: Props) {
       className="!w-full"
       customButton={
         <Row className="flex w-full cursor-pointer items-center justify-between gap-1.5 py-2 text-13 text-secondary hover:text-primary">
-          {title}
+          <div className="flex items-center gap-1.5">
+            <SpreadSheetPropertyIcon iconKey={propertyDetails.icon} className="h-4 w-4 text-placeholder" />
+            {t(propertyDetails.i18n_title)}
+          </div>
           <div className="ml-3 flex">
             {direction !== "none" && (
               <div className="flex h-3.5 w-3.5 items-center justify-center rounded-full">

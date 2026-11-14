@@ -166,27 +166,15 @@ export const SPREADSHEET_PROPERTY_LIST: (keyof IIssueDisplayProperties)[] = [
   "sub_issue_count",
 ];
 
-/** A table column's sort as its header offers it: both orders, each with its title. */
-type TSpreadsheetPropertySort = {
-  ascendingOrderKey: IssueListOrder;
-  ascendingOrderTitle: string;
-  descendingOrderKey: IssueListOrder;
-  descendingOrderTitle: string;
-};
-
-/**
- * The columns that may sort by nothing: a work item's modules and cycle, by whose names the list sorts once its catalog
- * names them (P7b); until then a header sorting by them would fail the list (P7a spec R21).
- */
-type TUnsortedSpreadsheetProperty = "modules" | "cycle";
-
 export const SPREADSHEET_PROPERTY_DETAILS: {
   [key in keyof IIssueDisplayProperties]: {
     i18n_title: string;
+    ascendingOrderKey: IssueListOrder;
+    ascendingOrderTitle: string;
+    descendingOrderKey: IssueListOrder;
+    descendingOrderTitle: string;
     icon: string;
-  } & (key extends TUnsortedSpreadsheetProperty
-    ? TSpreadsheetPropertySort | { [sort in keyof TSpreadsheetPropertySort]?: never }
-    : TSpreadsheetPropertySort);
+  };
 } = {
   assignee: {
     i18n_title: "common.assignees",
@@ -276,8 +264,22 @@ export const SPREADSHEET_PROPERTY_DETAILS: {
     descendingOrderTitle: "Least",
     icon: "WorkItemsOutline",
   },
-  modules: { i18n_title: "common.modules", icon: "ModuleOutline" },
-  cycle: { i18n_title: "common.cycle", icon: "CyclesOutline" },
+  modules: {
+    i18n_title: "common.modules",
+    ascendingOrderKey: "module_name",
+    ascendingOrderTitle: "A",
+    descendingOrderKey: "-module_name",
+    descendingOrderTitle: "Z",
+    icon: "ModuleOutline",
+  },
+  cycle: {
+    i18n_title: "common.cycle",
+    ascendingOrderKey: "cycle_name",
+    ascendingOrderTitle: "A",
+    descendingOrderKey: "-cycle_name",
+    descendingOrderTitle: "Z",
+    icon: "CyclesOutline",
+  },
 };
 
 // Map filter keys to their corresponding issue property keys

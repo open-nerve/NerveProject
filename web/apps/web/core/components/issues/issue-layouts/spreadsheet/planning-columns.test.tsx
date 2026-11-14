@@ -1,12 +1,13 @@
 // @vitest-environment jsdom
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
-// M6 P7a spec 2.3, 2.5, R3, R11, R14, R20, R21 (re-72 F10): a work item's modules and cycle as two columns of a
-// project's table, after its labels, against the session's stores and a fake nerve. Each shows while its display
-// property is on and the page's project has the domain on; its header is its title and its icon, with no sort until
-// the list's catalog names cycles and modules (P7b); a cell is read-only for a caller who cannot edit the row, named by
-// its row, an archived value by its name and its caption, the project's lists read once for all its rows; a cycle
-// picked is the cycle alone, a module picked one addition or removal, applied in the work item's turn to the set it
-// then holds. The layout, the table, rows, dropdowns, stores and HTTP are real.
+// M6 P7a spec 2.3, 2.5, R3, R11, R14, R20, R21 (re-72 F10), P7b spec 2.8, R9: a work item's modules and cycle as two
+// columns of a project's table, after its labels, against the session's stores and a fake nerve. Each shows while its
+// display property is on and the page's project has the domain on; its header is its title and its icon, which open
+// its sort by the names both ways (the list's catalog names them, P7b), a saved name order shown and sent as it is; a
+// cell is read-only for a caller who cannot edit the row, named by its row, an archived value by its name and its
+// caption, the project's lists read once for all its rows; a cycle picked is the cycle alone, a module picked one
+// addition or removal, applied in the work item's turn to the set it then holds. The layout, the table, rows,
+// dropdowns, stores and HTTP are real.
 import { act, createElement, type ReactNode } from "react";
 import { MemoryRouter } from "react-router";
 import { SWRConfig } from "swr";
@@ -107,10 +108,17 @@ async function pick(text: string) {
   });
 }
 
-/** The project's table, its rows as nerve lists them; display changes the shown properties. */
-async function table(rows: Issue[], display: Partial<ProjectPreferences["display_properties"]> = {}) {
+/**
+ * The project's table, its rows as nerve lists them; display changes the shown properties, order_by the saved order.
+ */
+async function table(
+  rows: Issue[],
+  display: Partial<ProjectPreferences["display_properties"]> = {},
+  order_by: ProjectPreferences["display_filters"]["order_by"] = preferencesOf().display_filters.order_by
+) {
   const prefs = preferencesOf();
   prefs.display_filters.layout = "spreadsheet";
+  prefs.display_filters.order_by = order_by;
   prefs.display_properties = { ...prefs.display_properties, ...display };
   await tab.render(
     <SWRConfig value={{ provider: () => new Map() }}>
@@ -127,7 +135,7 @@ async function table(rows: Issue[], display: Partial<ProjectPreferences["display
   await settle();
 }
 
-it("shows the modules' and the cycle's columns after the labels, each header its title and its icon with no sort", async () => {
+it("shows the modules' and the cycle's columns after the labels, each header its title and its icon opening its sort", async () => {
   await table([row("one", null, [])]);
   expect(titles()).toEqual([
     "common.state",
@@ -147,8 +155,8 @@ it("shows the modules' and the cycle's columns after the labels, each header its
   for (const title of ["common.modules", "common.cycle"]) {
     const cell = header(title)!;
     expect(cell.querySelector("svg"), title).not.toBeNull();
-    expect(cell.querySelector("button"), title).toBeNull();
-    expect(cell.hasAttribute("aria-sort"), title).toBe(false);
+    expect(cell.querySelector("button"), title).not.toBeNull();
+    expect(cell.getAttribute("aria-sort"), title).toBe("none");
   }
   expect(header("common.labels")!.querySelector("button")).not.toBeNull();
   expect(header("common.labels")!.getAttribute("aria-sort")).toBe("none");
@@ -292,4 +300,99 @@ it("keeps both cells read-only for a caller who cannot edit the row", async () =
   });
   expect(document.querySelector('[role="listbox"]')).toBeNull();
   expect(tab.nerve.calls).toHaveLength(before);
+});
+
+/** The work items' names in the table's order. */
+const rowNames = () =>
+  [...document.querySelectorAll("tbody > tr > td:first-child .line-clamp-1 .truncate")].map((node) => node.textContent);
+const issueLists = () => tab.nerve.to("/api/v0/projects/A/issues");
+const preferenceWrites = () =>
+  tab.nerve.to("/api/v0/me/projects/A/preferences").filter((call) => call.method === "PATCH");
+/** Picks a column's sort from its header's menu, "AZ" (A → Z) or "ZA" (Z → A) by the item's text. */
+async function sortBy(title: string, item: "AZ" | "ZA") {
+  const trigger = header(title)?.querySelector("button");
+  if (!trigger) throw new Error(`The header ${title} offers no sort`);
+  vi.spyOn(trigger, "getBoundingClientRect").mockReturnValue(new DOMRect(1, 1, 180, 40));
+  await act(async () => trigger.click());
+  const option = [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find(
+    (node) => node.textContent === item
+  );
+  await act(async () => option!.click());
+}
+/**
+ * Picks a column's sort from its header, which writes the confirmed preferences with that order, confirms them and
+ * answers the list they read by that order with the rows of page; gives the preferences confirmed.
+ */
+async function sortAndList(
+  title: string,
+  item: "AZ" | "ZA",
+  wire: ProjectPreferences["display_filters"]["order_by"],
+  held: ProjectPreferences,
+  page: Issue[]
+) {
+  const [written, listed] = [preferenceWrites().length, issueLists().length];
+  await sortBy(title, item);
+  await until(() => preferenceWrites().length === written + 1, `the sort by ${wire}`);
+  const write = preferenceWrites()[written]!;
+  expect(write.body).toEqual({ display_filters: { ...held.display_filters, order_by: wire } });
+  const confirmed = { ...held, display_filters: { ...held.display_filters, order_by: wire } };
+  await act(async () => write.answer(json(200, confirmed)));
+  await until(() => issueLists().length === listed + 1, `the list by ${wire}`);
+  const list = issueLists()[listed]!;
+  expect(list.query.order_by).toBe(wire);
+  await act(async () => list.answer(json(200, { total: page.length, data: page, next_cursor: null })));
+  await settle();
+  return confirmed;
+}
+
+it.each([
+  {
+    title: "common.cycle",
+    other: "common.modules",
+    order: "cycle_name",
+    ascending: ["two", "one", "three"],
+    descending: ["one", "two", "three"],
+  },
+  {
+    title: "common.modules",
+    other: "common.cycle",
+    order: "module_name",
+    ascending: ["one", "two", "three"],
+    descending: ["two", "one", "three"],
+  },
+] as const)(
+  "sorts by $order both ways from its header: the preference, then the list's query, its rows and aria-sort",
+  async ({ title, other, order, ascending, descending }) => {
+    const { now, old, alpha, beta, gamma } = planning(tab.project);
+    const rows = [row("one", old.id, [alpha.id, gamma.id]), row("two", now.id, [beta.id]), row("three", null, [])];
+    await table(rows);
+    const page = (names: readonly string[]) => names.map((id) => rows.find((issue) => issue.id === id)!);
+    /** The headers' aria-sort: the column's own, then the other planning column's and the labels'. */
+    const sorts = () => [title, other, "common.labels"].map((cell) => header(cell)!.getAttribute("aria-sort"));
+    const held = preferencesOf();
+    held.display_filters.layout = "spreadsheet";
+    const confirmed = await sortAndList(title, "AZ", order, held, page(ascending));
+    expect(rowNames()).toEqual(ascending);
+    expect(sorts()).toEqual(["ascending", "none", "none"]);
+    await sortAndList(title, "ZA", `-${order}`, confirmed, page(descending));
+    expect(rowNames()).toEqual(descending);
+    expect(sorts()).toEqual(["descending", "none", "none"]);
+    expect(toasts).toEqual([]);
+  }
+);
+
+it("shows and sends a saved -module_name as it is: the list's query, its rows and the modules' header descending", async () => {
+  const { now, old, alpha, beta, gamma } = planning(tab.project);
+  await table(
+    [row("two", now.id, [beta.id]), row("one", old.id, [alpha.id, gamma.id]), row("three", null, [])],
+    {},
+    "-module_name"
+  );
+  expect(issueLists().map((call) => call.query.order_by)).toEqual(["-module_name"]);
+  expect(rowNames()).toEqual(["two", "one", "three"]);
+  expect(
+    ["common.modules", "common.cycle", "common.labels"].map((title) => header(title)!.getAttribute("aria-sort"))
+  ).toEqual(["descending", "none", "none"]);
+  expect(preferenceWrites()).toEqual([]);
+  expect(toasts).toEqual([]);
 });

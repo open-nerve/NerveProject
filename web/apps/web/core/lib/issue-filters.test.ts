@@ -68,6 +68,15 @@ it.each(["attachment_count", "-attachment_count"])("preserves attachment order %
   expect(memberListQuery({}, { order_by }, "assigned").order_by).toBe(order_by);
 });
 
+// M6 P7b spec 2.8: a table header's sort by the cycles' or the modules' names, saved or picked, is sent as it is.
+it.each(["cycle_name", "-cycle_name", "module_name", "-module_name"])(
+  "preserves the planning name order %s in both list scopes",
+  (order_by) => {
+    expect(projectListQuery({}, { order_by }).order_by).toBe(order_by);
+    expect(memberListQuery({}, { order_by }, "assigned").order_by).toBe(order_by);
+  }
+);
+
 it("F01 preserves subscriber filters on readback", () => {
   expect(toProjectFilters(toFilterExpression({ subscriber_id: ["me"] }))).toEqual({ subscriber_id: ["me"] });
 });
