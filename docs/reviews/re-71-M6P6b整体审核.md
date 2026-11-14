@@ -1,8 +1,9 @@
 # M6 / P6b 整体审核
 
-> 2026-11-14：Ready after fixes；修复轮 F 已提交，待限定复审（§4）。
+> 2026-11-14：Ready after fixes；修复轮 F 经限定复审 Ready to merge（§4）。
 > - **目标**：分支 `codex/m6-p6b` 相对 main `06b72d4b65bcba911344a4ed3c358f164a5fdeeb` 的全部修改（`06b72d4b..513d2ff3`，`ca4e62ac` 至 `513d2ff3` 的 18 个提交）；修复轮 F（`5b1046b7` 起的九个提交，F1–F9：F5 并入 F2，F9 的文档另成一个提交）另经一次限定复审（§4）。
 > - **依据**：[P6b spec](../v0/M6-cycles-modules/specs/P6b-module-list.md)、[P6b plan](../v0/M6-cycles-modules/plans/P6b-module-list.md)、[预检 re-70](re-70-M6P6b预检.md)、[M6 设计](../v0/M6-cycles-modules/M6-design.md)、[总体设计 §7.2、§7.7](../v0/v0-design.md#77-stores-按会话分代长期有效m2-起)、[硬规则](../v0/claude_to_gpt/03-rules-and-pitfalls.md)。
+> - **阶段记录**：[P6b 阶段记录](../v0/M6-cycles-modules/reviews/P6b-module-list-review.md)。
 
 ## 1. 方法
 
@@ -45,4 +46,20 @@ F8 写本记录，并改 spec §5 的修复轮清单、spec 与 plan 的状态�
 
 ## 4. 修复轮 F 的复审
 
-（待限定复审之后由主控填写。）
+修复轮 F（`5b1046b7..dd98bcaf`，9 个提交，F1–F9：F5 并入 F2，F9 的文档另成一个提交）经一次 fresh 限定复审（`fable`，范围 `513d2ff3..dd98bcaf`，与最终候选 `dd98bcaf` 的七项门禁并行）。原始报告没有另存，结论与核对过的性质由主控转述。逐项核对：
+
+- **范围**：F1–F9 各做了 §3 表中所说的，没有多做。
+- **回归边界**：迭代的测试只改了导入，用例名与数不变（F1 的 18 个文件 201 例同名同数；F3 是 `git mv`，内容不改）；F2、F9 对迭代的测试只加用例。
+- **F2、F9 的“持有”**：只在实体存在、且它的 `project_id` 等于路由的项目时算持有；属路由项目的已归档模块、已结束或已归档的迭代照样持有。没有按域的分支，不读 router；对持有的实体，原来显示的东西一样不少。
+- **F1 的帮手**：移进共用替身的帮手是对的（作用于 `planningPageTab` 最后打开的页），M1 列的重复已消除。
+- **F7**：只收紧（加五个既有的读者，没有放宽一条）。
+- **文档**：§3 与 spec §5 把每一条发现对到它的修复与提交。
+
+结论 **Ready to merge**：没有 Critical、Important，一处 Minor 与三条观察：
+
+| 编号 | 问题 | 处理 |
+|---|---|---|
+| M1 | `web/apps/web/core/components/issues/issue-layouts/roots/fake-planning-page.tsx:203-214` 的模块级 `opened` 在标签页关闭时不清空：今后一个忘了先打开页的测试，会作用于上一个测试已卸下的标签页。今天是安全的：每个测试都先打开页；`f1-mut-first-tab-kept`（帮手一直作用于本文件第一个打开的页）让 33 例失败，说明这个语义有读者 | 交 P7：在替身的 `close` 外包一层或以 `afterEach` 清空它（[P6b spec](../v0/M6-cycles-modules/specs/P6b-module-list.md) §5 的 P7） |
+| 观察 | `pageEntity` 在页面还没有项目时照旧放过实体 | 不泄漏：那时 `listed` 为假，`joinable` 也要有项目；不需动作 |
+| 观察 | 两个页头的项目核对写在页头里（内联），没有经 `pageEntity` | 不需动作 |
+| 观察 | 四个列表故事 `--repeat-each=3` 的 126 例收据是 F9 之后的（`f9-gate-repeat3-list-pages`，`09aba5f8`） | 不需动作 |
