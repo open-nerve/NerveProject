@@ -16,15 +16,9 @@ import type { IIssueDisplayProperties } from "@nerve/types";
 // hooks
 import { useProject } from "@/hooks/store/use-project";
 // lib
-import { planningOn, type PlanningDomain } from "@/lib/planning-switch";
+import { displayPropertyOn } from "@/lib/planning-switch";
 // components
 import { FilterHeader } from "../helpers/filter-header";
-
-/** The display properties of a project's planning, each its domain's: a work item's cycle, its modules. */
-const PLANNING_PROPERTIES: Partial<Record<keyof IIssueDisplayProperties, PlanningDomain>> = {
-  cycle: "cycles",
-  modules: "modules",
-};
 
 type Props = {
   displayProperties: IIssueDisplayProperties;
@@ -49,10 +43,7 @@ export const FilterDisplayProperties = observer(function FilterDisplayProperties
   const [previewEnabled, setPreviewEnabled] = React.useState(true);
 
   const project = projectId ? getProjectById(projectId) : undefined;
-  const offered = (key: keyof IIssueDisplayProperties) => {
-    const domain = PLANNING_PROPERTIES[key];
-    return !domain || !projectId || (project !== undefined && planningOn(project, domain));
-  };
+  const offered = (key: keyof IIssueDisplayProperties) => !projectId || displayPropertyOn(project, key);
   const filteredDisplayProperties = ISSUE_DISPLAY_PROPERTIES.filter(
     (property) => displayPropertiesToRender.includes(property.key) && offered(property.key)
   );

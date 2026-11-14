@@ -9,11 +9,16 @@ import type { Issue } from "@nerve/api-client";
 
 import React, { useRef } from "react";
 import { observer } from "mobx-react";
+import { useParams } from "react-router";
 // nerve constants
 import { SPREADSHEET_PROPERTY_LIST } from "@nerve/constants";
 // types
 import type { IIssueDisplayFilterOptions, IIssueDisplayProperties, IssueChange } from "@nerve/types";
 import { EIssueLayoutTypes } from "@nerve/types";
+// hooks
+import { useProject } from "@/hooks/store/use-project";
+// lib
+import { displayPropertyOn } from "@/lib/planning-switch";
 // local imports
 import type { TRenderQuickActions } from "../list/list-view-types";
 import { QuickAddIssueRoot, SpreadsheetAddIssueButton } from "../quick-add";
@@ -52,7 +57,13 @@ export const SpreadsheetView = observer(function SpreadsheetView(props: Props) {
   // refs
   const containerRef = useRef<HTMLDivElement | null>(null);
   const portalRef = useRef<HTMLDivElement | null>(null);
-  const spreadsheetColumnsList = SPREADSHEET_PROPERTY_LIST;
+  // router
+  const { projectId } = useParams();
+  const { getProjectById } = useProject();
+  // The table is a project's (its list, a cycle's, a module's): its cycle and its modules columns while the project
+  // has their domain turned on (P7a spec 2.5, R11).
+  const project = projectId ? getProjectById(projectId) : undefined;
+  const spreadsheetColumnsList = SPREADSHEET_PROPERTY_LIST.filter((property) => displayPropertyOn(project, property));
 
   if (!issueIds || issueIds.length === 0) return <></>;
   return (

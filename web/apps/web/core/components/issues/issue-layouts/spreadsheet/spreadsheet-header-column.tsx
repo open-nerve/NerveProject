@@ -30,7 +30,7 @@ export const SpreadsheetHeaderColumn = observer(function SpreadsheetHeaderColumn
       <th
         className="h-11 min-w-36 items-center border border-t-0 border-b-0 border-subtle bg-layer-1 py-1 text-13 font-medium"
         scope="col"
-        aria-sort={spreadsheetSort(property, displayFilters).direction}
+        aria-sort={spreadsheetSort(property, displayFilters)?.direction}
         ref={tableHeaderCellRef}
         tabIndex={0}
       >
