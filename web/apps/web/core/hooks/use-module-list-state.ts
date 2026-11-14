@@ -3,6 +3,7 @@ import { useParams } from "react-router";
 import type { Module, Project } from "@nerve/api-client";
 import { useModules } from "@/hooks/store/use-modules";
 import { useProject } from "@/hooks/store/use-project";
+import { pageEntity } from "./planning-page-entity";
 
 /** What a module's page's work items can be: read-only, or joinable by a new work item. */
 type ModuleListState = { readOnly: boolean; joinable: boolean };
@@ -16,15 +17,20 @@ type ModuleListState = { readOnly: boolean; joinable: boolean };
  * project is the reader's to add. The cycle's page has rules of its own (use-cycle-list-state.ts, P6b spec 2.2).
  */
 export function moduleListState(module: Module | undefined, project: Project | undefined): ModuleListState {
-  const own = project === undefined || module?.project_id === project.id ? module : undefined;
+  const own = pageEntity(module, project);
   const readOnly = !own || own.archived_at !== null;
   return { readOnly, joinable: !readOnly && project?.module_view === true };
 }
 
-/** The route's module's list state (moduleListState), as its page shows it. */
-export function useModuleListState(): ModuleListState {
+/**
+ * The route's module's list state (moduleListState), as its page shows it, and whether the page has the module (held:
+ * pageEntity, archived or not), without which its header shows nothing of its list (review re-71 M2, fix F9).
+ */
+export function useModuleListState(): ModuleListState & { held: boolean } {
   const { projectId, moduleId } = useParams();
   const { getModuleById } = useModules();
   const { getProjectById } = useProject();
-  return moduleListState(getModuleById(moduleId), getProjectById(projectId));
+  const module = getModuleById(moduleId);
+  const project = getProjectById(projectId);
+  return { held: pageEntity(module, project) !== undefined, ...moduleListState(module, project) };
 }

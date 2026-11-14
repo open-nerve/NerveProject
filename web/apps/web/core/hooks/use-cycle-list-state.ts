@@ -3,6 +3,7 @@ import { useParams } from "react-router";
 import type { Cycle, Project } from "@nerve/api-client";
 import { useCycles } from "@/hooks/store/use-cycles";
 import { useProject } from "@/hooks/store/use-project";
+import { pageEntity } from "./planning-page-entity";
 
 /** What a cycle's page's work items can be: read-only, or joinable by a new work item. */
 type CycleListState = { readOnly: boolean; joinable: boolean };
@@ -15,15 +16,20 @@ type CycleListState = { readOnly: boolean; joinable: boolean };
  * may write in the project is the reader's to add.
  */
 export function cycleListState(cycle: Cycle | undefined, project: Project | undefined): CycleListState {
-  const own = project === undefined || cycle?.project_id === project.id ? cycle : undefined;
+  const own = pageEntity(cycle, project);
   const readOnly = !own || own.status === "completed" || own.archived_at !== null;
   return { readOnly, joinable: !readOnly && project?.cycle_view === true };
 }
 
-/** The route's cycle's list state (cycleListState), as its page shows it. */
-export function useCycleListState(): CycleListState {
+/**
+ * The route's cycle's list state (cycleListState), as its page shows it, and whether the page has the cycle (held:
+ * pageEntity, ended or archived or not), without which its header shows nothing of its list (review re-71 M2, fix F9).
+ */
+export function useCycleListState(): CycleListState & { held: boolean } {
   const { projectId, cycleId } = useParams();
   const { getCycleById } = useCycles();
   const { getProjectById } = useProject();
-  return cycleListState(getCycleById(cycleId), getProjectById(projectId));
+  const cycle = getCycleById(cycleId);
+  const project = getProjectById(projectId);
+  return { held: pageEntity(cycle, project) !== undefined, ...cycleListState(cycle, project) };
 }

@@ -23,10 +23,11 @@ type PlanningPageHeader = {
  * What a cycle's or a module's page's header shows of the page's work items (P5b spec 2.6; P6b spec 2.2, 2.7, 2.8, R3,
  * R6), by the page's store type, whose domain's row of the layouts' table gives the switch and the list state: for
  * those whom the page lists them (the layout root's own condition: a member of the project while the domain is on),
- * their count, only while the current list is the page's own; the page's layouts, filters and display once nerve has
- * given the page's preferences, not before its first answer nor while that first read failed (re-67 M8); and a new work
- * item of the page for the project's admins and members while the page shows it taking them. Each header lays them out
- * itself.
+ * while the page has its cycle or module (held: of the route's project, read-only or not; one of another project the
+ * page says is not there, review re-71 M2, fix F9), their count, only while the current list is the page's own; the
+ * page's layouts, filters and display once nerve has given the page's preferences, not before its first answer nor
+ * while that first read failed (re-67 M8); and a new work item of the page for the project's admins and members while
+ * the page shows it taking them (joinable, which holds it). Each header lays them out itself.
  */
 export function usePlanningPageHeader(
   storeType: PlanningPageStoreType,
@@ -35,11 +36,12 @@ export function usePlanningPageHeader(
   const { domain, useListState } = PLANNING_PAGE_LAYOUTS[storeType];
   const { issues, issuesFilter } = useIssues(storeType);
   const { allowPermissions } = useUserPermissions();
-  const { joinable } = useListState();
+  const { held, joinable } = useListState();
   const { listed } = usePlanningReads(workspaceSlug, projectId, domain);
+  const shown = listed && held;
   return {
-    count: listed ? issues.pageTotal({ projectID: projectId, entityID: entityId }) : undefined,
-    preferencesShown: listed && issuesFilter.getIssueFilters(entityId) !== undefined,
+    count: shown ? issues.pageTotal({ projectID: projectId, entityID: entityId }) : undefined,
+    preferencesShown: shown && issuesFilter.getIssueFilters(entityId) !== undefined,
     canCreate:
       joinable &&
       allowPermissions(

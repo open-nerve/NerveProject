@@ -207,6 +207,33 @@ it("offers no new work item of a cycle the tab holds of another project than the
   expect(inHeader("issue.add.label")).toBeUndefined();
 });
 
+// The same, once the tab has shown the cycle's page in its own project, so that it holds the cycle's list and
+// preferences too (P6b spec 5, review re-71 M2, fix F9): the route's project's header shows nothing of the cycle,
+// neither its name in the crumb nor its quick actions, nor anything of its list.
+it("shows nothing of a cycle of another project than the route's, after its own project's page", async () => {
+  const quickActions = vi.spyOn(await import("@/components/cycles/quick-actions"), "CycleQuickActions");
+  await opened({ role: 15 });
+  await page.show(cyclePreferencesOf(layouts.list.display), seven, header());
+  expect(offered()).toEqual({ count: "7", layouts: all, filters: true, display: true, create: true });
+  expect(document.querySelector("[data-header]")!.textContent, "the crumb of the cycle").toContain("Now");
+  expect(quickActions.mock.calls.map(([props]) => props.cycleId)).toContain(C1);
+  const other = projectOf("B", page.workspace.id, { id: "B" });
+  await loadProjects(page.nerve, page.app.projectRoot.project, page.workspace, [page.project, other]);
+  quickActions.mockClear();
+  bound.params = { workspaceSlug: "ws", projectId: "B", cycleId: C1 };
+  await page.render(
+    <MemoryRouter>
+      <div data-header>
+        <CycleIssuesHeader workspaceSlug="ws" projectId="B" cycleId={C1} />
+      </div>
+    </MemoryRouter>
+  );
+  expect(inHeader("aria_labels.toggle_details"), "the header of the route's page").toBeDefined();
+  expect(offered()).toEqual({ count: undefined, layouts: [], filters: false, display: false, create: false });
+  expect(document.querySelector("[data-header]")!.textContent, "the crumb").not.toContain("Now");
+  expect(quickActions, "the cycle's quick actions").not.toHaveBeenCalled();
+});
+
 it("shows no count of the cycle before, on the page of another whose list nerve has not given", async () => {
   await opened({ role: 20 });
   await page.show(cyclePreferencesOf(layouts.list.display), seven, header());

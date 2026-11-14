@@ -22,8 +22,11 @@ type PlanningPageLayout = {
   preferences: string;
   /** The filters the page offers: its own display options' (P5b R9). */
   filters: TWorkItemFilterProperty[];
-  /** The page's list state, as the page shows its cycle or module and its project: read-only, joinable by a new one. */
-  useListState: () => { readOnly: boolean; joinable: boolean };
+  /**
+   * The page's list state, as the page shows its cycle or module and its project: whether the page has it (of the
+   * route's project, read-only or not), read-only, joinable by a new one.
+   */
+  useListState: () => { held: boolean; readOnly: boolean; joinable: boolean };
   /** What a row's removal of its work item from the page's cycle or module is named, and says once nerve confirms it. */
   remove: { label: string; success: string };
   /** The empty state's texts: once read-only, why there are none; else the page's own, with its new work item's. */

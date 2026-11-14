@@ -43,11 +43,13 @@ type TProps = {
  * The header of a cycle's page (P5a spec 2.5), of the route's project and cycle: its crumbs (the project, its cycles,
  * and the cycle, whose crumb switches to another of the project's cycles that are not archived, in nerve's order; an
  * archived cycle is not among them, its project's archive lists it), the toggle of the progress sidebar, and the
- * cycle's quick actions, under the host of its page (the layout's CycleActionsHost). For those who see the page's
- * work items while the project's cycles are on (P5b spec 2.6), their count as nerve gives it; the page's layouts,
- * filters and display once nerve has given the page's preferences, which they change: not before its first answer, nor
- * when that first read failed (re-67 M8); a later read that fails leaves them, while the layout root says it failed;
- * and, for those who may create a work item, a new one of the cycle while it takes them.
+ * cycle's quick actions, under the host of its page (the layout's CycleActionsHost); of a cycle the tab holds of
+ * another project than the route's, neither its name nor its quick actions, nor anything of its list, as the module's
+ * header (P6b review re-71 M2, fix F9). For those who see the page's work items while the project's cycles are on (P5b
+ * spec 2.6), their count as nerve gives it; the page's layouts, filters and display once nerve has given the page's
+ * preferences, which they change: not before its first answer, nor when that first read failed (re-67 M8); a later read
+ * that fails leaves them, while the layout root says it failed; and, for those who may create a work item, a new one of
+ * the cycle while it takes them.
  */
 export const CycleIssuesHeader = observer(function CycleIssuesHeader(props: TProps) {
   const { workspaceSlug, projectId, cycleId } = props;
@@ -70,8 +72,9 @@ export const CycleIssuesHeader = observer(function CycleIssuesHeader(props: TPro
     setValue(!isSidebarCollapsed);
   };
 
-  // derived values
-  const cycleDetails = getCycleById(cycleId);
+  // derived values: the route's project's cycle alone
+  const held = getCycleById(cycleId);
+  const cycleDetails = held?.project_id === projectId ? held : undefined;
   const {
     count: workItemsCount,
     preferencesShown,
@@ -155,13 +158,15 @@ export const CycleIssuesHeader = observer(function CycleIssuesHeader(props: TPro
               "bg-accent-subtle text-accent-primary": !isSidebarCollapsed,
             })}
           />
-          <CycleQuickActions
-            parentRef={parentRef}
-            cycleId={cycleId}
-            projectId={projectId}
-            workspaceSlug={workspaceSlug}
-            customClassName="flex-shrink-0 flex items-center justify-center size-[26px] bg-layer-1/70 rounded-sm"
-          />
+          {cycleDetails && (
+            <CycleQuickActions
+              parentRef={parentRef}
+              cycleId={cycleId}
+              projectId={projectId}
+              workspaceSlug={workspaceSlug}
+              customClassName="flex-shrink-0 flex items-center justify-center size-[26px] bg-layer-1/70 rounded-sm"
+            />
+          )}
         </div>
       </Header.RightItem>
     </Header>
