@@ -345,7 +345,7 @@ it("keeps the modules a work item holds when nerve refuses its removal, and hand
     "/api/v0/issues/x",
   ]);
   expect(refused.call.body).toEqual({ module_ids: [MB, MC] });
-  refused.call.answer(problem(400, "planning.modules_disabled"));
+  refused.call.answer(problem(409, "planning.modules_disabled"));
   await expect(refused.promise).rejects.toMatchObject({ problem: { code: "planning.modules_disabled" } });
   expect(app.issue.issues.getIssueById("x")?.module_ids).toEqual([MA, MB, MC]);
   expect(rowsOf(page)).toEqual(["x"]);
