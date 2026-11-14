@@ -36,8 +36,8 @@ import { useIssuesStore } from "@/hooks/use-issue-layout-store";
 // local imports
 import { GroupDragOverlay } from "../group-drag-overlay";
 import { ListQuickAddIssueButton, QuickAddIssueRoot } from "../quick-add";
-import type { GroupDropLocation } from "../utils";
-import { getDestinationFromDropPayload, getSourceFromDropPayload } from "../utils";
+import type { GroupDropLocation } from "../group-drop";
+import { getDestinationFromDropPayload, getSourceFromDropPayload } from "../group-drop";
 import { IssueBlocksList } from "./blocks-list";
 import { HeaderGroupByCard } from "./headers/group-by-card";
 import type { TRenderQuickActions } from "./list-view-types";

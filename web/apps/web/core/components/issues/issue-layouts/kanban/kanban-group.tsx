@@ -23,9 +23,9 @@ import { useTranslation } from "@nerve/i18n";
 import type { IIssueDisplayProperties, TIssueGroupByOptions, TIssueOrderByOptions, IssueChange } from "@nerve/types";
 import { EIssueLayoutTypes } from "@nerve/types";
 import { cn } from "@nerve/utils";
-import type { GroupDropLocation } from "@/components/issues/issue-layouts/utils";
+import type { GroupDropLocation } from "@/components/issues/issue-layouts/group-drop";
 // components
-import { getSourceFromDropPayload, getDestinationFromDropPayload } from "@/components/issues/issue-layouts/utils";
+import { getSourceFromDropPayload, getDestinationFromDropPayload } from "@/components/issues/issue-layouts/group-drop";
 import { KanbanIssueBlockLoader } from "@/components/ui/loader/layouts/kanban-layout-loader";
 // hooks
 import { useProjectState } from "@/hooks/store/use-project-state";

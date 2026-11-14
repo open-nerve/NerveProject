@@ -27,7 +27,7 @@ import { Row } from "@nerve/ui";
 import { useIssueStoreType } from "@/hooks/use-issue-layout-store";
 // local imports
 import type { TRenderQuickActions } from "../list/list-view-types";
-import type { GroupDropLocation } from "../utils";
+import type { GroupDropLocation } from "../group-drop";
 import { isWorkspaceLevel } from "../utils";
 import { KanBan } from "./default";
 import { HeaderGroupByCard } from "./headers/group-by-card";

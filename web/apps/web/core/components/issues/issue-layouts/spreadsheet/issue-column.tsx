@@ -13,7 +13,7 @@ import { observer } from "mobx-react";
 // types
 import type { IIssueDisplayProperties, IssueChange } from "@nerve/types";
 // constants
-import { SPREADSHEET_COLUMNS } from "../utils";
+import { SPREADSHEET_COLUMNS } from "./spreadsheet-columns";
 // components
 import { WithDisplayPropertiesHOC } from "../properties/with-display-properties-HOC";
 

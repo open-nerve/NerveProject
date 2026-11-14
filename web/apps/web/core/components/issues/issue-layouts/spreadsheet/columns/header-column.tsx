@@ -20,7 +20,7 @@ import { useTranslation } from "@nerve/i18n";
 import type { IIssueDisplayFilterOptions, IIssueDisplayProperties, TIssueOrderByOptions } from "@nerve/types";
 import { CustomMenu, Row } from "@nerve/ui";
 import { spreadsheetSort } from "../spreadsheet-sort";
-import { SpreadSheetPropertyIcon } from "../../utils";
+import { SpreadSheetPropertyIcon } from "../spreadsheet-columns";
 
 interface Props {
   property: keyof IIssueDisplayProperties;

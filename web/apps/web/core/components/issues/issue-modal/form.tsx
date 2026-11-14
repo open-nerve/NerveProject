@@ -1,4 +1,3 @@
-// oxlint-disable promise/always-return
 // oxlint-disable jsx_a11y/prefer-tag-over-role
 /**
  * Copyright (c) 2023-present Plane Software, Inc. and contributors
@@ -24,13 +23,10 @@ import type { EditorRefApi } from "@nerve/editor";
 // i18n
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
-import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 // hooks
-import { Switch } from "@makeplane/propel/components/switch";
-import { getUpdateFormDataForReset, getChangedIssuefields } from "@nerve/utils";
+import { getUpdateFormDataForReset } from "@nerve/utils";
 import { ModalTitle } from "@nerve/ui";
 import { useRefusedFocus } from "@/lib/refused-focus";
-import { useFormRefusal } from "@/lib/form-refusal";
 // components
 import {
   IssueDefaultProperties,
@@ -43,6 +39,8 @@ import {
 import { useIssueModal } from "@/hooks/context/use-issue-modal";
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { DraftFiles, type DraftContent } from "./draft-files";
+import { useFormSubmission } from "./form-submission";
+import { IssueFormFooter } from "./form-footer";
 
 export interface IssueFormProps {
   data?: IssueFormData;
@@ -115,7 +113,6 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
   } = props;
 
   // states
-  const [isMoving, setIsMoving] = useState<boolean>(false);
   const [draftSubmitCount, setDraftSubmitCount] = useState(0);
 
   // refs
@@ -137,20 +134,31 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
   });
   const {
     formState,
-    formState: { isDirty, isSubmitting, dirtyFields },
+    formState: { isDirty, isSubmitting },
     handleSubmit,
     reset,
     watch,
     control,
     getValues,
     setValue,
-    setError,
     getFieldState,
     resetField,
     clearErrors,
   } = methods;
   const formRef = useRefusedFocus<HTMLFormElement>(formState.submitCount + draftSubmitCount);
-  const refuse = useFormRefusal(["name", "project_id", "start_date", "target_date"] as const, {});
+  const { isMoving, submissionData, handleFormSubmit, handleMoveToProjects } = useFormSubmission({
+    methods,
+    data,
+    hasDraftSeed,
+    isDraft,
+    descriptionLoadState,
+    editorRef,
+    descriptionMigration,
+    isCreateMoreToggleEnabled,
+    onSubmit,
+    onPublish,
+    isPending,
+  });
 
   const projectId = watch("project_id");
 
@@ -161,66 +169,6 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
-
-  const submissionData = (formData: Partial<IssueFormValues>) => {
-    if (!data?.id && !hasDraftSeed) return formData;
-    // Seeded drafts retain wire fields that the display controls cannot resolve.
-    // Only actual edits replace those fields; the command owner merges the seed.
-    return {
-      ...getChangedIssuefields(formData, dirtyFields as { [key: string]: boolean | undefined }),
-      project_id: getValues("project_id"),
-      ...(data?.id ? { id: data.id, description_html: formData.description_html ?? "<p></p>" } : {}),
-    };
-  };
-
-  const handleFormSubmit = async (formData: Partial<IssueFormValues>, is_draft_issue = isDraft) => {
-    if (descriptionLoadState !== "ready") return;
-    // Check if the editor is ready to discard
-    if (!editorRef.current?.isEditorReadyToDiscard()) {
-      setToast({
-        type: TOAST_TYPE.ERROR,
-        title: t("error"),
-        message: t("editor_is_not_ready_to_discard_changes"),
-      });
-      return;
-    }
-
-    await onSubmit(submissionData(formData), is_draft_issue, {
-      isDescriptionMigration: descriptionMigration.current,
-      onRefused: (error) => refuse(error, (field, message) => setError(field, { type: "server", message })),
-    })
-      .then(() => {
-        descriptionMigration.current = false;
-        reset({
-          ...DEFAULT_WORK_ITEM_FORM_VALUES,
-          ...(isCreateMoreToggleEnabled ? pick(data, ISSUE_FORM_FIELDS) : {}),
-          project_id: getValues<"project_id">("project_id"),
-          description_html: data?.description_html ?? "<p></p>",
-        });
-        editorRef?.current?.clearEditor();
-      })
-      .catch(() => undefined);
-  };
-
-  const handleMoveToProjects = async () => {
-    if (!data?.id || !onPublish || isMoving || isSubmitting || isPending || descriptionLoadState !== "ready") return;
-    if (!editorRef.current?.isEditorReadyToDiscard()) {
-      setToast({ type: TOAST_TYPE.ERROR, title: t("error"), message: t("editor_is_not_ready_to_discard_changes") });
-      return;
-    }
-    setIsMoving(true);
-    try {
-      await onPublish({
-        ...getChangedIssuefields(getValues(), dirtyFields as { [key: string]: boolean | undefined }),
-        project_id: getValues("project_id"),
-        description_html: getValues("description_html"),
-      });
-    } catch {
-      /* The command owner displays the current refusal; retain the form. */
-    } finally {
-      setIsMoving(false);
-    }
-  };
 
   const condition =
     (watch("name") && watch("name") !== "") || (watch("description_html") && watch("description_html") !== "<p></p>");
@@ -356,73 +304,27 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
                   setSelectedParentIssue={setSelectedParentIssue}
                 />
               </div>
-              <div className="flex items-center justify-end gap-4 border-t-[0.5px] border-subtle pt-6 pb-3">
-                {!data?.id && (
-                  <div className="inline-flex items-center gap-1.5">
-                    <Switch
-                      size="sm"
-                      checked={isCreateMoreToggleEnabled}
-                      onCheckedChange={onCreateMoreToggleChange}
-                      disabled={isSubmitting || isPending}
-                      aria-label={t("create_more")}
-                    />
-                    <span className="text-caption-sm-regular">{t("create_more")}</span>
-                  </div>
-                )}
-                <div className="flex items-center gap-2">
-                  <div>
-                    <Button
-                      variant="secondary"
-                      size="lg"
-                      disabled={isSubmitting || isPending || isMoving}
-                      onClick={onClose}
-                    >
-                      {t("discard")}
-                    </Button>
-                  </div>
-                  <div>
-                    <Button
-                      variant={moveToIssue ? "secondary" : "primary"}
-                      size="lg"
-                      type="submit"
-                      ref={submitBtnRef}
-                      loading={isSubmitting}
-                      disabled={isSubmitting || isPending || isMoving || descriptionLoadState !== "ready"}
-                    >
-                      {isSubmitting ? primaryButtonText.loading : primaryButtonText.default}
-                    </Button>
-                  </div>
-
-                  {!data?.id && !isDraft && canSaveDraft && (
-                    <Button
-                      variant="secondary"
-                      type="button"
-                      size="lg"
-                      disabled={isSubmitting || isPending || descriptionLoadState !== "ready"}
-                      onClick={async () => {
-                        clearErrors();
-                        await handleFormSubmit(getValues(), true);
-                        setDraftSubmitCount((count) => count + 1);
-                      }}
-                    >
-                      {t("save_to_drafts")}
-                    </Button>
-                  )}
-
-                  {moveToIssue && (
-                    <Button
-                      variant="primary"
-                      type="button"
-                      loading={isMoving}
-                      onClick={handleMoveToProjects}
-                      disabled={isMoving || isSubmitting || isPending || descriptionLoadState !== "ready"}
-                      size="lg"
-                    >
-                      {t("add_to_project")}
-                    </Button>
-                  )}
-                </div>
-              </div>
+              <IssueFormFooter
+                id={data?.id}
+                isDraft={isDraft}
+                canSaveDraft={canSaveDraft}
+                descriptionLoadState={descriptionLoadState}
+                isCreateMoreToggleEnabled={isCreateMoreToggleEnabled}
+                onCreateMoreToggleChange={onCreateMoreToggleChange}
+                isSubmitting={isSubmitting}
+                isPending={isPending}
+                isMoving={isMoving}
+                moveToIssue={moveToIssue}
+                primaryButtonText={primaryButtonText}
+                submitBtnRef={submitBtnRef}
+                onClose={onClose}
+                onSaveDraft={async () => {
+                  clearErrors();
+                  await handleFormSubmit(getValues(), true);
+                  setDraftSubmitCount((count) => count + 1);
+                }}
+                onMoveToProjects={handleMoveToProjects}
+              />
             </div>
           </form>
         </div>

@@ -30,7 +30,7 @@ import type {
 // hooks
 import { useIssueStoreType } from "@/hooks/use-issue-layout-store";
 // utils
-import type { GroupDropLocation } from "../utils";
+import type { GroupDropLocation } from "../group-drop";
 import { isWorkspaceLevel } from "../utils";
 import { ListGroup } from "./list-group";
 import type { TRenderQuickActions } from "./list-view-types";

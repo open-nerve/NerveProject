@@ -31,7 +31,7 @@ import { useKanbanView } from "@/hooks/store/use-kanban-view";
 import { useIssueStoreType } from "@/hooks/use-issue-layout-store";
 // parent components
 import type { TRenderQuickActions } from "../list/list-view-types";
-import type { GroupDropLocation } from "../utils";
+import type { GroupDropLocation } from "../group-drop";
 import { isWorkspaceLevel, getApproximateCardHeight } from "../utils";
 // components
 import { HeaderGroupByCard } from "./headers/group-by-card";

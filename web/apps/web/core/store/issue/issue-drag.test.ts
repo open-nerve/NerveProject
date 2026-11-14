@@ -6,7 +6,7 @@ import { loadProjects } from "@/store/project/fake-projects";
 import { SessionChangedError } from "@/lib/auth/token-manager";
 import { track, until } from "@/lib/auth/fake-time";
 import { handleDragDrop } from "@/components/issues/issue-layouts/calendar/utils";
-import { handleGroupDragDrop } from "@/components/issues/issue-layouts/utils";
+import { handleGroupDragDrop } from "@/components/issues/issue-layouts/group-drop";
 import { IssueListBinding } from "./helpers/issue-list-binding";
 import { runInAction } from "mobx";
 import { toJS } from "mobx";

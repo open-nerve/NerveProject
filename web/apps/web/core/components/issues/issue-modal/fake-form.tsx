@@ -25,7 +25,7 @@ import { StoreContext } from "@/lib/store-context";
 import type { RootStore } from "@/store/root.store";
 import { CreateUpdateIssueModalBase } from "./base";
 import { IssueFormRoot, type IssueFormProps } from "./form";
-import type { IssueFormValues } from "./types";
+import type { IssueFormData, IssueFormValues } from "./types";
 
 vi.mock("@/lib/auth/api-client", () => ({ tokenManager: { state: { loginId: "form-login" } }, publicClient: {} }));
 vi.mock("@/lib/store-context", async () => ({
@@ -245,17 +245,11 @@ export async function mountExisting(kind: "issue" | "draft") {
     )
   );
 }
-export const mountNew = () =>
+export const mountNew = (data: IssueFormData = { name: "New", project_id: "A", description_html: "<p>New</p>" }) =>
   act(async () =>
     root.render(
       withStore(
-        <CreateUpdateIssueModalBase
-          isOpen
-          data={{ name: "New", project_id: "A", description_html: "<p>New</p>" }}
-          fetchIssueDetails={false}
-          onClose={close}
-          onSubmit={confirmed}
-        />
+        <CreateUpdateIssueModalBase isOpen data={data} fetchIssueDetails={false} onClose={close} onSubmit={confirmed} />
       )
     )
   );
