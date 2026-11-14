@@ -16,10 +16,11 @@ type Props = {
 /**
  * A work item's modules as a table's cell (P7a spec 2.5, R3, R14, R20): by their names, an archived one captioned, the
  * project's lists read once for all its rows while the planning store cannot name one; the control named by its row; a
- * pick is the one module added or taken out, applied in the work item's turn to the set it then holds.
+ * pick is the one module added or taken out, applied in the work item's turn to the set it then holds. As its list
+ * closes, the cell takes the focus back, as the table's other cells do.
  */
 export const SpreadsheetModuleColumn = observer(function SpreadsheetModuleColumn(props: Props) {
-  const { issue, onChange, disabled } = props;
+  const { issue, onChange, disabled, onClose } = props;
   const { workspaceSlug } = useParams();
   usePlanningNames(workspaceSlug, issue.project_id, "modules", issue.module_ids);
   return (
@@ -30,6 +31,7 @@ export const SpreadsheetModuleColumn = observer(function SpreadsheetModuleColumn
         value={issue.module_ids}
         onChange={(modules) => onChange(issue, { modules })}
         disabled={disabled}
+        onClose={onClose}
         buttonVariant="transparent-with-text"
         buttonClassName="text-left rounded-none px-page-x"
         buttonContainerClassName="w-full"

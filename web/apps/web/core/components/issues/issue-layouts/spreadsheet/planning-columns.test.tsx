@@ -254,6 +254,32 @@ it("sends two module picks in a cell as an addition and a removal, each applied 
   expect(toasts).toEqual([]);
 });
 
+it("returns the focus to its cell once a cell's list closes, the cycle's on a pick and the modules' on Escape", async () => {
+  const { now } = planning(tab.project);
+  await table([row("one", null, [])]);
+  const cell = (field: "common.cycle" | "common.modules") => control(field, "one")!.closest("td");
+  await act(async () => control("common.cycle", "one")!.click());
+  await act(async () => until(() => readsOf("cycles").length === 1, "the cycles' options"));
+  await settle();
+  await pick("Now");
+  expect(document.querySelector('[role="listbox"]')).toBeNull();
+  expect(document.activeElement).toBe(cell("common.cycle"));
+  await act(async () =>
+    patches()[0]!.answer(json(200, { ...issueDetailOf("one"), cycle_id: now.id, updated_at: "2026-10-30T00:00:00Z" }))
+  );
+  await act(async () => control("common.modules", "one")!.click());
+  await act(async () => until(() => readsOf("modules").length === 1, "the modules' options"));
+  await settle();
+  const search = document.querySelector<HTMLInputElement>('input[role="combobox"]')!;
+  expect(document.activeElement).toBe(search);
+  await act(async () => {
+    search.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
+    await vi.advanceTimersByTimeAsync(20);
+  });
+  expect(document.querySelector('[role="listbox"]')).toBeNull();
+  expect(document.activeElement).toBe(cell("common.modules"));
+});
+
 it("keeps both cells read-only for a caller who cannot edit the row", async () => {
   tab.app.projectRoot.project.confirmProject(tab.project, (project) => ({ ...project, member_role: 5 }));
   await table([row("one", null, [])]);

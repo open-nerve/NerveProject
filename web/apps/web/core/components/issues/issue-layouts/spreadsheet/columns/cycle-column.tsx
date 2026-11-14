@@ -16,10 +16,11 @@ type Props = {
 /**
  * A work item's cycle as a table's cell (P7a spec 2.5, R14, R20): by its name and status, an ended or archived one too
  * (captioned), the project's lists read once for all its rows while the planning store cannot name it; the control
- * named by its row; a pick is the cycle itself.
+ * named by its row; a pick is the cycle itself. As its list closes, the cell takes the focus back, as the table's other
+ * cells do.
  */
 export const SpreadsheetCycleColumn = observer(function SpreadsheetCycleColumn(props: Props) {
-  const { issue, onChange, disabled } = props;
+  const { issue, onChange, disabled, onClose } = props;
   const { workspaceSlug } = useParams();
   usePlanningNames(workspaceSlug, issue.project_id, "cycles", issue.cycle_id ? [issue.cycle_id] : []);
   return (
@@ -30,6 +31,7 @@ export const SpreadsheetCycleColumn = observer(function SpreadsheetCycleColumn(p
         value={issue.cycle_id}
         onChange={(cycleId) => onChange(issue, { cycle_id: cycleId })}
         disabled={disabled}
+        onClose={onClose}
         buttonVariant="transparent-with-text"
         buttonClassName="text-left rounded-none px-page-x"
         buttonContainerClassName="w-full"

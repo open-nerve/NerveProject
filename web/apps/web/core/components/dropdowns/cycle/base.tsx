@@ -25,6 +25,8 @@ export type TCycleDropdownBaseProps = TDropdownProps & {
   isInitializing?: boolean;
   /** The cycle picked, null for No cycle; never the cycle the work item is in. */
   onChange: (cycleId: string | null) => void;
+  /** Called as the list closes (a pick, Escape, a click outside): a table's cell takes the focus back. */
+  onClose?: () => void;
   onDropdownOpen?: () => void;
   /** No cycle (null) and the cycles the work item may join (cycleOptions); undefined until read. */
   options: (Cycle | null)[] | undefined;
@@ -53,6 +55,7 @@ export const CycleDropdownBase = observer(function CycleDropdownBase(props: TCyc
     issueName,
     isInitializing,
     onChange,
+    onClose,
     onDropdownOpen,
     placeholder,
     placement,
@@ -134,6 +137,7 @@ export const CycleDropdownBase = observer(function CycleDropdownBase(props: TCyc
       options={isInitializing ? undefined : readStatus ? [] : options}
       footerOption={readStatus}
       onOpen={onDropdownOpen}
+      onClose={onClose}
       disabled={disabled}
       tabIndex={tabIndex}
       customButton={

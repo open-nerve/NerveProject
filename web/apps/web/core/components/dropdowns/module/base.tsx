@@ -22,6 +22,8 @@ export type TModuleDropdownBaseProps = TDropdownProps & {
   isInitializing?: boolean;
   /** A pick: the one module it adds the work item to, or takes it out of; never the set it is in (R3). */
   onChange: (change: ModuleSetChange) => void;
+  /** Called as the list closes (a pick, Escape, a click outside): a table's cell takes the focus back. */
+  onClose?: () => void;
   onDropdownOpen?: () => void;
   /** The modules the work item may join (moduleOptions); undefined until read. */
   options: Module[] | undefined;
@@ -67,6 +69,7 @@ export const ModuleDropdownBase = observer(function ModuleDropdownBase(props: TM
     issueName,
     isInitializing,
     onChange,
+    onClose,
     onDropdownOpen,
     placeholder,
     placement,
@@ -141,6 +144,7 @@ export const ModuleDropdownBase = observer(function ModuleDropdownBase(props: TM
       options={isInitializing ? undefined : readStatus ? [] : options}
       footerOption={readStatus}
       onOpen={onDropdownOpen}
+      onClose={onClose}
       disabled={disabled}
       tabIndex={tabIndex}
       customButton={
