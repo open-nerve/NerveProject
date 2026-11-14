@@ -27,9 +27,10 @@ import { expect, test } from "../../fixtures/test";
 // offers the modules it may join, those it is in where they are, and an archived one it is in only to be taken out;
 // each pick is one module added or taken out, worked out in the work item's turn from the set it then holds, so that a
 // pick made while the one before is out builds on that one's answer, and the archived module stays. A row's edit
-// sends the form's change, applied to the set the work item holds, a module joined meanwhile kept. The API version is
-// g11-issue-modules.spec.ts; both assert the same rows. The world is made through the API, nerve's answers read back
-// through the database.
+// sends the form's change, applied to the set the work item holds, a module joined meanwhile kept. The archived module
+// picked in the row's list is one change taking it out alone; once nerve confirms it, it is offered no more (re-73
+// M3). The API version is g11-issue-modules.spec.ts; both assert the same rows. The world is made through the API,
+// nerve's answers read back through the database.
 
 /** A module as a work item's modules dropdown names it: an archived one captioned. */
 type Named = { id: string; name: string; archived?: boolean };
@@ -42,8 +43,10 @@ function modulesNamed(...held: Named[]): RegExp {
   const names = held.toSorted(byId).map((m) => (m.archived ? `${m.name} ?, Archived` : m.name));
   return new RegExp(`^Modules: ${held.length} modules ?: ${names.join(" ?; ")}$`);
 }
+/** The name of a row's control: the button's (named), then the row's (row), a box of its own. */
+const inRow = (named: RegExp, row: string) => new RegExp(`${named.source.slice(0, -1)} ?, ${row}$`);
 
-test("G11 (page): Write the guide's preview on Web's list shows its modules Alpha and Gamma, archived; the list, beside its button with its search focused, offers Alpha, picked, Beta and Delta, and Gamma only to be taken out; Beta picked and then Alpha while the first change is out send Alpha, Gamma and Beta, then Gamma and Beta from the first one's answer, Gamma kept; Delta joined behind the page, its row's edit takes Beta out of the form and sends Gamma and Delta, Delta kept", async ({
+test("G11 (page): Write the guide's preview on Web's list shows its modules Alpha and Gamma, archived; the list, beside its button with its search focused, offers Alpha, picked, Beta and Delta, and Gamma only to be taken out; Beta picked and then Alpha while the first change is out send Alpha, Gamma and Beta, then Gamma and Beta from the first one's answer, Gamma kept; Delta joined behind the page, its row's edit takes Beta out of the form and sends Gamma and Delta, Delta kept; Gamma picked in its row's list takes it out alone, Delta kept, and is offered no more", async ({
   api,
   db,
   signedInPage,
@@ -153,15 +156,32 @@ test("G11 (page): Write the guide's preview on Web's list shows its modules Alph
   const edited = await lastWrite(db, item.id);
 
   // In the database Delta stays and Beta left, by the edit.
-  await expectModuleRows(db, item.id, [
-    ...rows,
+  const later = [
     { target: "Beta", added: joined, removed: edited.at, adder: w.mem.email, by: w.mem.email },
     { target: "Delta", added: added.at, removed: null, adder: w.admin.email, by: w.admin.email },
-  ]);
-  await expectPlanningActivity(db, item.id, [
+  ];
+  await expectModuleRows(db, item.id, [...rows, ...later]);
+  const edits = [
     ...activity,
     ...wrote(w.admin.email, added.at, moduleJoined("Delta")),
     ...wrote(w.mem.email, edited.at, moduleLeft("Beta")),
-  ]);
+  ];
+  await expectPlanningActivity(db, item.id, edits);
+
+  // Gamma, archived, which the row's list has after the options, picked: picking it is one change that takes it alone
+  // out of the set the work item holds, Delta kept; once nerve confirms it, the list offers it no more.
+  await page.getByRole("button", { name: inRow(modulesNamed(delta, shelved), "Write the guide") }).click();
+  await expect(options).toHaveText(["Delta", "Beta", "Alpha", "Gamma, Archived"]);
+  await page.getByRole("option", { name: /^Gamma ?, Archived$/ }).click();
+  await expect(page.getByRole("button", { name: inRow(/^Modules: Delta$/, "Write the guide") })).toBeVisible();
+  await expect(options).toHaveText(["Delta", "Beta", "Alpha"]);
+  expect(changes).toHaveLength(4);
+  expect(changes[3]).toEqual({ module_ids: [delta.id] });
+  await page.keyboard.press("Escape");
+  const taken = await lastWrite(db, item.id);
+
+  // In the database Gamma left, by mem's pick, Delta staying.
+  await expectModuleRows(db, item.id, [rows[0]!, { ...rows[1]!, removed: taken.at, by: w.mem.email }, ...later]);
+  await expectPlanningActivity(db, item.id, [...edits, ...wrote(w.mem.email, taken.at, moduleLeft("Gamma"))]);
   await expectListPageQuiet(page, watch);
 });
