@@ -9,13 +9,15 @@ type ModuleListState = { readOnly: boolean; joinable: boolean };
 
 /**
  * A module's page's work items as the page shows its module and project (P6b spec 2.7, R9). Read-only once the module
- * is archived, though nerve refuses only that work items join it, and while the page does not have it yet; its status
- * (completed, cancelled or any other) is no matter, a module taking work items in each (M6 design 3.3). Joinable by a
- * new work item while its project's modules are on and it is not read-only. Whether the caller may write in the
+ * is archived, though nerve refuses only that work items join it, and while the page does not have it: not yet, or the
+ * module held is another project's than the page's, as the page's body and crumb say (spec 5, review re-71 M2); its
+ * status (completed, cancelled or any other) is no matter, a module taking work items in each (M6 design 3.3). Joinable
+ * by a new work item while its project's modules are on and it is not read-only. Whether the caller may write in the
  * project is the reader's to add. The cycle's page has rules of its own (use-cycle-list-state.ts, P6b spec 2.2).
  */
 export function moduleListState(module: Module | undefined, project: Project | undefined): ModuleListState {
-  const readOnly = !module || module.archived_at !== null;
+  const own = project === undefined || module?.project_id === project.id ? module : undefined;
+  const readOnly = !own || own.archived_at !== null;
   return { readOnly, joinable: !readOnly && project?.module_view === true };
 }
 

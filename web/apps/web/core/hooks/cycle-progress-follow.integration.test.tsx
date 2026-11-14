@@ -228,6 +228,27 @@ it.each([
   expect(progressReads()).toEqual([]);
 });
 
+// The route names a cycle the tab holds of another project than the route's (P6b spec 5, review re-71 M2): the page
+// does not have it, and the app's own new work item in the route's project goes as the project's page sends it.
+it("creates as the project's page does on the route's project's page of a cycle of another project", async () => {
+  const other = projectOf("B", tab.workspace.id, { id: "B" });
+  await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, [tab.project, other]);
+  expect(tab.app.planning.cycles.getCycleById(C1)?.project_id).toBe("A");
+  fixture.params = { workspaceSlug: "ws", projectId: "B", cycleId: C1 };
+  await render();
+  tab.nerve.calls.length = 0;
+  let promise!: Promise<unknown>;
+  const call = await act(async () => {
+    promise = fixture.actions!.createIssue!("B", { name: "Elsewhere" });
+    await until(() => tab.nerve.calls.length === 1, "the creation");
+    return tab.nerve.calls[0]!;
+  });
+  expect([call.method, call.path, call.body]).toEqual(["POST", "/api/v0/projects/B/issues", { name: "Elsewhere" }]);
+  await answer(call, json(201, { ...issueDetailOf("elsewhere", "B"), name: "Elsewhere" }));
+  await promise;
+  expect(progressReads()).toEqual([]);
+});
+
 for (const ending of ["another cycle and back", "another session", "a permission lost and regained", "unmount"]) {
   it(`reads nothing when nerve confirms a write after ${ending}`, async () => {
     const { call, promise } = await sent("a removal from the cycle");

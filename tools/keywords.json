@@ -2613,6 +2613,7 @@
             "web/apps/web/core/store/issue/module/issue.store.test.ts",
             "web/apps/web/core/store/issue/module/page-preferences.test.ts",
             "web/apps/web/core/hooks/use-module-list-state.test.ts",
+            "web/apps/web/core/hooks/use-cycle-list-state.test.ts",
             "web/apps/web/core/hooks/module-page-actions.integration.test.tsx",
             "web/apps/web/core/components/issues/issue-layouts/roots/fake-planning-page.tsx",
             "web/apps/web/core/components/issues/issue-modal/fake-dialog.tsx",

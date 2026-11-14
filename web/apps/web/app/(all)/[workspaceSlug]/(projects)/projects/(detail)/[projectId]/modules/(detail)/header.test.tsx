@@ -6,6 +6,7 @@
 // grouping, never by module; a new work item of the module for the project's admins and members while the module takes
 // them. None of the list's while the project's modules are off. The stores, the work items below and HTTP are real.
 import { act, createElement, type ReactNode } from "react";
+import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { Module } from "@nerve/api-client";
 import { ISSUE_GROUP_BY_OPTIONS, ISSUE_STORE_TO_FILTERS_MAP } from "@nerve/constants";
@@ -13,7 +14,7 @@ import { EIssuesStoreType } from "@nerve/types";
 import { json, problem } from "@/lib/auth/fake-nerve";
 import { until } from "@/lib/auth/fake-time";
 import { loadModule } from "@/store/planning/fake-modules";
-import { moduleOf } from "@/store/project/fake-projects";
+import { loadProjects, moduleOf, projectOf } from "@/store/project/fake-projects";
 import type { RootStore } from "@/store/root.store";
 import {
   buttonOf,
@@ -190,6 +191,25 @@ it("hides the list's controls, its count and the new work item once the project'
     7
   );
   expect(offered()).toEqual({ count: undefined, layouts: [], filters: false, display: false, create: false });
+});
+
+// The route names a module the tab holds of another project than the route's (P6b spec 5, review re-71 M2): the page
+// does not have it (it says there is no such module here), and its header offers no new work item of it.
+it("offers no new work item of a module the tab holds of another project than the route's", async () => {
+  await opened({ role: 15 });
+  const other = projectOf("B", page.workspace.id, { id: "B" });
+  await loadProjects(page.nerve, page.app.projectRoot.project, page.workspace, [page.project, other]);
+  expect(page.app.planning.modules.getModuleById(M1)?.project_id).toBe("A");
+  bound.params = { workspaceSlug: "ws", projectId: "B", moduleId: M1 };
+  await page.render(
+    <MemoryRouter>
+      <div data-header>
+        <ModuleIssuesHeader workspaceSlug="ws" projectId="B" moduleId={M1} />
+      </div>
+    </MemoryRouter>
+  );
+  expect(inHeader("aria_labels.toggle_details"), "the header of the route's page").toBeDefined();
+  expect(inHeader("issue.add.label")).toBeUndefined();
 });
 
 it("shows no count of the module before, on the page of another whose list nerve has not given", async () => {
