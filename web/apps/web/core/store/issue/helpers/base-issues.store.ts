@@ -9,7 +9,8 @@ import { compareIssueTime } from "@/lib/issue-order";
 import type { IssueDrop } from "../issue-writes";
 import type { IIssueRootStore } from "../root.store";
 import type { IBaseIssueFilterStore } from "./issue-filter-helper.store";
-import { IssueListBinding, type IssueListScope } from "./issue-list-binding";
+import { IssueListBinding } from "./issue-list-binding";
+import type { IssueListScope } from "./issue-list-read";
 
 const sortMidpoint = (a: number, b: number): number => {
   const sum = a + b;
