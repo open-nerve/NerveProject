@@ -35,8 +35,9 @@ export type TCycleDropdownBaseProps = TDropdownProps & {
 
 /**
  * A work item's cycle (P7a spec 2.4, R4): one pick, which closes the list. Its button shows the cycle the work item is
- * in by its name and status, an ended or an archived one too, which the list does not offer. The Popover owns the one
- * native trigger, named by the field and the value; the Combobox is only the search and the options in its panel.
+ * in by its name and status, an ended or an archived one too, which the list does not offer; an archived one with the
+ * caption Archived. The Popover owns the one native trigger, named by the field and the value; the Combobox is only
+ * the search and the options in its panel.
  */
 export const CycleDropdownBase = observer(function CycleDropdownBase(props: TCycleDropdownBaseProps) {
   const {
@@ -64,6 +65,9 @@ export const CycleDropdownBase = observer(function CycleDropdownBase(props: TCyc
   const { isMobile } = usePlatformOS();
   const selected = getCycleById(value);
   const text = value === null ? (placeholder ?? t("cycle.no_cycle")) : selected?.name;
+  const archived = selected?.archived_at ? t("common.archived") : undefined;
+  /** The value as the trigger is named by it: the name, and the caption of an archived cycle. */
+  const named = archived ? `${text}, ${archived}` : text;
   const withText = BUTTON_VARIANTS_WITH_TEXT.includes(buttonVariant);
   const content = (
     <DropdownButton
@@ -71,7 +75,7 @@ export const CycleDropdownBase = observer(function CycleDropdownBase(props: TCyc
       className={cn("group-data-open:bg-layer-transparent-active", buttonClassName)}
       isActive={false}
       tooltipHeading={t("common.cycle")}
-      tooltipContent={text}
+      tooltipContent={named}
       showTooltip={showTooltip}
       variant={buttonVariant}
     >
@@ -85,6 +89,12 @@ export const CycleDropdownBase = observer(function CycleDropdownBase(props: TCyc
             <CyclesOutline className="size-3 flex-shrink-0" />
           ))}
         {withText && text && <span className="flex-grow truncate text-left">{text}</span>}
+        {withText && archived && (
+          <span className="flex-shrink-0 text-caption-sm-regular text-placeholder">
+            <span className="sr-only">, </span>
+            {archived}
+          </span>
+        )}
         {dropdownArrow && (
           <ChevronDownOutline className={cn("h-2.5 w-2.5 flex-shrink-0", dropdownArrowClassName)} aria-hidden="true" />
         )}
@@ -130,7 +140,7 @@ export const CycleDropdownBase = observer(function CycleDropdownBase(props: TCyc
         <>
           <span className="sr-only">{t("common.cycle")}: </span>
           {content}
-          {!withText && <span className="sr-only">{text}</span>}
+          {!withText && <span className="sr-only">{named}</span>}
           {issueName && <span className="sr-only">, {issueName}</span>}
         </>
       }

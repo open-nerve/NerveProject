@@ -13,6 +13,7 @@ import { until } from "@/lib/auth/fake-time";
 import { issueStoreTab } from "@/store/issue/fake-issues";
 import { cycleRequests, loadArchivedCycles, rowOf } from "@/store/planning/fake-cycles";
 import { cycleOf, loadProjects, projectOf } from "@/store/project/fake-projects";
+import type { TButtonVariants } from "@/components/dropdowns/types";
 import { CycleDropdown } from "./dropdown";
 
 vi.mock("@/lib/auth/api-client", () => ({ tokenManager: { state: { loginId: "cycles" } }, publicClient: {} }));
@@ -62,7 +63,15 @@ const list = () => document.querySelector('[role="listbox"]');
 const options = () => [...document.querySelectorAll('[role="option"]')].map((option) => option.textContent);
 const alert = () => document.querySelector('[role="alert"]');
 
-async function show(props: { value?: string | null; projectId?: string; disabled?: boolean; issueName?: string } = {}) {
+async function show(
+  props: {
+    value?: string | null;
+    projectId?: string;
+    disabled?: boolean;
+    issueName?: string;
+    buttonVariant?: TButtonVariants;
+  } = {}
+) {
   const { value = null, projectId = tab.project.id, disabled = false, issueName } = props;
   await act(async () =>
     renderer.render(
@@ -72,7 +81,7 @@ async function show(props: { value?: string | null; projectId?: string; disabled
         onChange={changed}
         disabled={disabled}
         issueName={issueName}
-        buttonVariant="border-with-text"
+        buttonVariant={props.buttonVariant ?? "border-with-text"}
       />
     )
   );
@@ -142,7 +151,7 @@ it("gives the cycle picked and closes; No cycle gives null; the cycle it holds g
   expect(changed.mock.calls, "nor is No cycle while it is in none").toEqual([[draft.id], [null]]);
 });
 
-it("shows an ended or an archived cycle it is in on its button, by its name and status, and does not list it", async () => {
+it("shows an ended or an archived cycle it is in on its button, by its name and status, the archived one captioned, and does not list it", async () => {
   await loadArchivedCycles(tab.nerve, tab.app.planning.cycles, [rowOf(shelved)], tab.project);
   tab.nerve.calls.length = 0;
   await show({ value: ended.id });
@@ -152,9 +161,12 @@ it("shows an ended or an archived cycle it is in on its button, by its name and 
   expect(options()).toEqual(["cycle.no_cycle", "Now", "Draft", "Next"]);
   await act(async () => button().click());
   await show({ value: shelved.id });
-  expect(button().textContent).toBe("common.cycle: Shelved");
+  expect(button().textContent).toBe("common.cycle: Shelved, common.archived");
   await openRead();
   expect(options()).not.toContain("Shelved");
+  await act(async () => button().click());
+  await show({ value: shelved.id, buttonVariant: "border-without-text" });
+  expect(button().textContent, "named the same without its text").toBe("common.cycle: Shelved, common.archived");
 });
 
 it("is named by its field and value, and by the row's work item when it has one", async () => {

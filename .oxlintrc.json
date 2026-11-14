@@ -184,7 +184,8 @@
         "web/apps/web/app/(all)/\\[workspaceSlug\\]/(projects)/projects/(detail)/\\[projectId\\]/modules/(list)/page.tsx",
         "web/apps/web/core/components/modules/module-peek-overview.tsx",
         "web/apps/web/core/components/modules/archived-modules/root.tsx",
-        "web/apps/web/core/components/modules/links/use-metadata-refresh.ts"
+        "web/apps/web/core/components/modules/links/use-metadata-refresh.ts",
+        "web/apps/web/core/hooks/use-planning-names.ts"
       ],
       "rules": {
         "no-restricted-imports": [

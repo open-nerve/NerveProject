@@ -8,6 +8,7 @@ import { SidebarPropertyListItem } from "@/components/common/layout/sidebar/prop
 import { CycleDropdown } from "@/components/dropdowns/cycle/dropdown";
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { useProject } from "@/hooks/store/use-project";
+import { usePlanningNames } from "@/hooks/use-planning-names";
 import { planningOn } from "@/lib/planning-switch";
 import type { TIssueOperations } from "./root";
 
@@ -21,9 +22,10 @@ type Props = {
 };
 
 /**
- * A work item's planning among its detail's properties (P7a spec 2.5, R11): its cycle, while its project's cycles are
- * turned on. A pick is sent through the detail's operations, which say why nerve refused it; the value shown is the
- * one nerve confirmed (v0 design 7.7).
+ * A work item's planning among the properties of its detail's sidebar and of its preview (P7a spec 2.5, R11): its
+ * cycle, while its project's cycles are turned on, by its name, an ended or an archived one too (captioned); the
+ * project's lists are read for a name the store does not have (usePlanningNames, R14). A pick is sent through the
+ * detail's operations, which say why nerve refused it; the value shown is the one nerve confirmed (v0 design 7.7).
  */
 export const IssuePlanningProperties = observer(function IssuePlanningProperties(props: Props) {
   const { workspaceSlug, projectId, issueId, issueOperations, disabled } = props;
@@ -34,6 +36,7 @@ export const IssuePlanningProperties = observer(function IssuePlanningProperties
   const { getProjectById } = useProject();
   const issue = getIssueById(issueId);
   const project = getProjectById(projectId);
+  usePlanningNames(workspaceSlug, projectId, "cycles", issue?.cycle_id ? [issue.cycle_id] : []);
   if (!issue || !project) return null;
   // Terminal property events have no success follow-up; the operation reports native refusals.
   const change = (data: IssueChange) =>

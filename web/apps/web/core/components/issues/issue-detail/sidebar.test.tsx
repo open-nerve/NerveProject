@@ -4,6 +4,7 @@
 // fake nerve: shown while its project's cycles are on, changed through the detail's operations, one PATCH a pick.
 import { act } from "react";
 import { createRoot } from "react-dom/client";
+import { SWRConfig } from "swr";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { Cycle, IssueDetail } from "@nerve/api-client";
 import { json, problem } from "@/lib/auth/fake-nerve";
@@ -17,6 +18,7 @@ import { useIssueOperations } from "./use-issue-operations";
 
 vi.mock("@/lib/auth/api-client", () => ({ tokenManager: { state: { loginId: "sidebar" } }, publicClient: {} }));
 vi.mock("@/lib/store-context", () => ({ rootStore: {} }));
+vi.mock("@/lib/auth/use-session", () => ({ useSession: () => ({ status: "signed-in", loginId: "sidebar" }) }));
 vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
 vi.mock("@nerve/propel/toast", () => import("@/lib/fake-toast"));
 vi.mock("react-router", () => ({ useParams: () => ({ workspaceSlug: "ws" }) }));
@@ -24,6 +26,8 @@ vi.mock("@/hooks/use-platform-os", () => ({ usePlatformOS: () => ({ isMobile: fa
 vi.mock("@/hooks/store/use-issue-detail", () => ({ useIssueDetail: () => tab.app.issue.issueDetail }));
 vi.mock("@/hooks/store/use-project", () => ({ useProject: () => tab.app.projectRoot.project }));
 vi.mock("@/hooks/store/use-cycles", () => ({ useCycles: () => tab.app.planning.cycles }));
+vi.mock("@/hooks/store/use-modules", () => ({ useModules: () => tab.app.planning.modules }));
+vi.mock("@/hooks/store/user", () => ({ useUserPermissions: () => tab.app.user.permission }));
 vi.mock("@/hooks/store/use-project-state", () => ({ useProjectState: () => tab.app.state }));
 vi.mock("@/hooks/store/use-member", () => ({ useMember: () => ({ getUserDetails: () => undefined }) }));
 // The sidebar's other properties have their own tests; here they are absent.
@@ -77,7 +81,14 @@ function Sidebar({ isEditable }: { isEditable: boolean }) {
     />
   );
 }
-const show = (isEditable = true) => act(async () => renderer.render(<Sidebar isEditable={isEditable} />));
+const show = (isEditable = true) =>
+  act(async () =>
+    renderer.render(
+      <SWRConfig value={{ provider: () => new Map() }}>
+        <Sidebar isEditable={isEditable} />
+      </SWRConfig>
+    )
+  );
 const labels = () => [...host.querySelectorAll(".text-tertiary > span")].map((label) => label.textContent);
 const cycleButton = () =>
   [...host.querySelectorAll<HTMLButtonElement>("button")].find((button) =>
