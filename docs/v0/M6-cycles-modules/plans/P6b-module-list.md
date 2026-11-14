@@ -1,7 +1,7 @@
 # M6 / P6b 模块页的工作项列表实施计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-> 状态：预检通过（修正后，[re-70](../../../reviews/re-70-M6P6b预检.md)），可以按 T1 开始实施：F1（Important）e2e 的时长以 25 分 00 秒为基线、T16 另算上界与 T10 的校准点，慢的 runner 上可能超过报告线（T16）；F2 T1 的路径改为 P6a 的归档（T1）；F3 写入单元对根没有值的循环导入（T2）；F4 共用的布局根不导入 `PeekOnEntry`，按域的差别经 props 或按域的小表（T7、T8）；F5 写入单元不加入 `project-address-route`（T2，spec §5 的 P7）；F6 `module_issues` 的副本由 P7 改为推出（spec §5）；F7 T3 的收据只查方法的定义（T3）。基线 main `06b72d4b`（P6a 的 noff；main CI 43469787621 attempt 2 通过，由 T1 回填）。
+> 状态：预检通过（修正后，[re-70](../../../reviews/re-70-M6P6b预检.md)）：F1（Important）e2e 的时长以 25 分 00 秒为基线、T16 另算上界与 T10 的校准点，慢的 runner 上可能超过报告线（T16）；F2 T1 的路径改为 P6a 的归档（T1）；F3 写入单元对根没有值的循环导入（T2）；F4 共用的布局根不导入 `PeekOnEntry`，按域的差别经 props 或按域的小表（T7、T8）；F5 写入单元不加入 `project-address-route`（T2，spec §5 的 P7）；F6 `module_issues` 的副本由 P7 改为推出（spec §5）；F7 T3 的收据只查方法的定义（T3）。T1–T15 已实施，整分支审查 Ready after fixes（[re-71](../../../reviews/re-71-M6P6b整体审核.md)），修复轮 F 已提交，待限定复审。基线 main `06b72d4b`（P6a 的 noff；main CI 43469787621 attempt 2 通过，由 T1 回填）。
 
 **Goal：**
 - 往工作项根 store 加模块之前，按职责拆出写入单元，调用方改经它（M6-M8-08）；
