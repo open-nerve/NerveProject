@@ -140,7 +140,7 @@ P7b、P7c 在 P7a 合入之后各写自己的 spec、plan 与预检，各自的 
 - P6a 的 main CI 43469787621 attempt 2 的 e2e 作业 25 分 00 秒；
 - P6b 的检查点分支 CI 43517662603 为 25 分 38 秒，最终分支 CI 43545459485 为 23 分 09 秒；
 - P6b 合入后的 main CI 43549053092（main `954a1838`）的 e2e 作业 132311928038 为 03:14:42Z–03:42:23Z，**27 分 41 秒**，故事本身约 25.4 分钟，是记下的最慢的 runner；它唯一的失败是 M4 的 I4 (page) 的表格故事超了时间预算，修复分支 `codex/m6-p6b-ci` 把它拆成四个（本机 chromium 约多 5 秒，经过见修复合入后 [M6-M8-01](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-01) 的新段）；
-- 修复合入后的 main CI 的 e2e 作业由 T1 回填。
+- 修复合入后的 main CI 43557098427（main `7868a6b4`）的 e2e 作业 132336647667 为 04:48:59Z–05:09:19Z，20 分 20 秒（472 条，故事 18.5 分钟；T1 回填），是 T16 估算的基线；T9 检查点的分支 CI 43573631430（`f1646370`）的 e2e 作业 132386476220 为 08:13:18Z–08:32:50Z，19 分 32 秒（那时还没有本段的页面故事，校准点）。
 
 T16 推送之前照 P6b spec §2.10 的写法算三个数：
 - **估算**：基线（最后一次绿的 main CI 的 e2e 作业，即修复合入后的那次，T1 回填）加上新文件 chromium 时长 × 1.67–2.25、两个 worker 摊开，约加 17–23 秒；
@@ -192,15 +192,15 @@ T16 推送之前照 P6b spec §2.10 的写法算三个数：
 
 ## 5. 后续责任
 
-**P7b**（列表词表与“添加已有”）：目录（A7）从 §2.3 的 store 读法与键建立，`prepareCatalog` 取两份列表；`core/store/issue/helpers/issue-list-binding.ts` 已有 487 行，加目录之前先按职责拆开（D7，re-72 F9）；改写 `helpers/base-issues.store.test.ts:451-458` 的 `planningDirectoryIsUnavailableUntilP7`；`cycle_issues`、`module_issues` 由 `issues` 去掉本页的键推出（A8，re-70 F6）；偏好的筛选类型按页收窄（A9，P6b R16）；筛选（含“无”）、分组、排序、拖拽（A6；模块拖到“无”是只去掉来源的模块还是清空，由 P7b 定；拖拽的请求体用 §2.2 的增减）；表格两列表头的 `cycle_name`、`module_name` 排序（R21）与成员列表（个人页）上是否给名字排序；“添加已有”（空态的 `cta_secondary`、分组头、日历的 `addIssuesToView`、`existing-issues-list-modal.tsx` 的迭代与模块调用方，A4；排除“在本迭代”还是“在任一迭代”、搜索的页大小）与 M3 交接 §3 的弹窗核对（A5），逐个的 `PATCH` 用 §2.2 的命令；M4 交接 M6-02、M3 交接 §1 的回执。
+**P7b**（列表词表与“添加已有”）：目录（A7）从 §2.3 的 store 读法与键建立，`prepareCatalog` 取两份列表；`core/store/issue/helpers/issue-list-binding.ts` 已有 487 行，加目录之前先按职责拆开（D7，re-72 F9）；改写 `helpers/base-issues.store.test.ts:451-458` 的 `planningDirectoryIsUnavailableUntilP7`；`cycle_issues`、`module_issues` 由 `issues` 去掉本页的键推出（A8，re-70 F6）；偏好的筛选类型按页收窄（A9，P6b R16）；筛选（含“无”）、分组、排序、拖拽（A6；模块拖到“无”是只去掉来源的模块还是清空，由 P7b 定；拖拽的请求体用 §2.2 的增减）；表格两列表头的 `cycle_name`、`module_name` 排序（R21）与成员列表（个人页）上是否给名字排序；“添加已有”（空态的 `cta_secondary`、分组头、日历的 `addIssuesToView`、`existing-issues-list-modal.tsx` 的迭代与模块调用方，A4；排除“在本迭代”还是“在任一迭代”、搜索的页大小）与 M3 交接 §3 的弹窗核对（A5），逐个的 `PATCH` 用 §2.2 的命令；M4 交接 M6-02、M3 交接 §1 的回执。P7a 留下的接缝（台账 T3–T13）：选项与模块集合的纯函数在 `core/lib/planning-directory.ts`（`cycleOptions`、`moduleOptions`、`modulesAfter`、`moduleSetChange`），选项的读在 `core/hooks/use-planning-options.ts`，值的名字与两份未归档列表的读在 `core/hooks/use-planning-names.ts`（`usePlanningNames`、`usePlanningListReads`，键见 §2.3）；拖拽与“添加已有”的模块写经写入单元的 `changeIssue` 与 `IssueChange` 的 `modules: { add, remove }`（`@nerve/types` 的 `issues/issue-change.ts`）；`SPREADSHEET_PROPERTY_DETAILS` 的类型让 `modules`、`cycle` 两项的四个排序键可省（省就四个一起省），P7b 给出两向的 `module_name`、`cycle_name` 时不改类型，表头在条目有排序键时照旧给排序菜单与 `aria-sort`；显示面板与表格的开关门共用 `core/lib/planning-switch.ts` 的 `displayPropertyOn`。
 
 **P7c**（命令面板、移动端页头与遗留）：命令面板（A16：迭代、模块的本地过滤与切换，取数门为假时菜单一直加载，英文的 `emptyText`，命令的可见性；是否给工作项改迭代、模块的命令，若给就用 §2.2 的命令与 §2.4 的选项规则）；迭代页、模块页的移动端页头与项目页的（A15、X2）；快捷操作“恢复”在途时禁用（A17）、归档页行菜单的参数类型（A18）、分组时页头的数目（A19）、其余没有读者的键（A20）、`fake-planning-page.tsx` 的 `opened`（A21）；设计 §8 的四个视图文件（X1）；G19 的工作项一侧；M2、M3、M1 其余的回执。
 
-**e2e 的预算（P7b、P7c）**（re-72 F5）：照调研的余量（`research/web.md` §9.3：按上界算，P7 三段的新页面故事合计约 35–57 秒本机 chromium），本段用掉约 20 秒之后，P7b 与 P7c 两段合计约剩 15–37 秒；以 T16 的估算、上界与 27 分 41 秒那样的慢 runner 看，余量可能更少。e2e 作业的结构（例如分片）是负责人的决定，P7b、P7c 多半要提出来，不自行改。
+**e2e 的预算（P7b、P7c）**（re-72 F5）：照调研的余量（`research/web.md` §9.3：按上界算，P7 三段的新页面故事合计约 35–57 秒本机 chromium），本段两个新文件实际本机 chromium 合计 6.5 秒（G4 3.9 秒、G11 2.6 秒；firefox 5.6、3.9 秒，webkit 4.6、3.8 秒；T14 的三种引擎运行），少于约 20 秒的预算，P7b 与 P7c 两段合计约剩 28.5–50.5 秒；T9 检查点的分支 CI 的 e2e 作业 19 分 32 秒（基线 20 分 20 秒），T16 推送之前的估算、上界与推送后的实测由 T16 记下，以它们与 27 分 41 秒那样的慢 runner 看，余量可能更少。e2e 作业的结构（例如分片）是负责人的决定，P7b、P7c 多半要提出来，不自行改。
 
 **M7**：工作区级的迭代、模块列表出现之后，跨项目的行（§2.3、R5）可改读它。
 
-**M8**：[M6-M8-08](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-08) 在 M6 收尾核对根与写入单元的行数（本段 T16 记下）；[M6-M8-01](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-01) 多 P6b、P7a 的 e2e 数据点；[M6-M8-05](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-05) 照旧。
+**M8**：[M6-M8-08](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-08) 在 M6 收尾核对根与写入单元的行数（本段 T16 记下）；[M6-M8-01](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-01) 多 P6b、P7a 的 e2e 数据点；[M6-M8-05](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-05) 照旧。T15 记下：[M6-M8-08](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-08) 的本段之后的行数（根 320、写入单元 302、请求体 98，T16 以 `wc -l` 再核）；[M6-M8-01](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-01) 多 T9 检查点的数据（e2e 19 分 32 秒）；[M6-M8-03](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-03) 再现一次（T9 检查点本机 e2e 的 W1 (page) 与 W6 (API)，只重跑这两个文件即通过）；新 [M6-M8-13](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-13)：上方的内容晚到时，打开着的下拉列表不随按钮移动（T14 发现：预览的描述编辑器约晚 0.25 秒挂上、属性一栏下移约 40 像素；不是本段引入，以 react-popper 放置列表的下拉框共有，与 M5-closeout 所记详情页晚挂载描述编辑器的版面位移同源），G4、G11 在打开列表之前先等上方的内容到齐。
 
 ## 6. 风险
 

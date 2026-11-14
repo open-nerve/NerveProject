@@ -5,7 +5,7 @@ to: M8
 created: 2026-11-07
 ---
 
-# M6 交给 M8：CI 的 e2e 作业期限与间歇失败的故事、清理分页器的副本、e2e 数据库的连接余量、server 作业的分路与 lint 工具的在线下载、本机测试容器的端口冲突、e2e 作业在线安装浏览器的系统依赖、编辑器重建图片节点时中止的读取、工作项根 store 的行数、Firefox 再次载入后的字体预加载警告、出现后一帧内按下关闭的通知不再消失、两份相同的 useLocalStorage、项目页第一次读偏好失败时没有重试
+# M6 交给 M8：CI 的 e2e 作业期限与间歇失败的故事、清理分页器的副本、e2e 数据库的连接余量、server 作业的分路与 lint 工具的在线下载、本机测试容器的端口冲突、e2e 作业在线安装浏览器的系统依赖、编辑器重建图片节点时中止的读取、工作项根 store 的行数、Firefox 再次载入后的字体预加载警告、出现后一帧内按下关闭的通知不再消失、两份相同的 useLocalStorage、项目页第一次读偏好失败时没有重试、上方的内容晚到时打开着的下拉列表不随按钮移动
 
 这是接收方尚待完成的工作。转交只表示责任和验收条件已落实到此处，不表示本页问题已经解决。M6 进行中发现的条目随发现写入；M6 收尾时补齐其余交接。延续 [M5 → M8 交接 M5-M8-06](M5-closeout.md#M5-M8-06) 中仍开放的观察。
 
@@ -29,6 +29,7 @@ created: 2026-11-07
   - 余量：这条故事在此前四次 CI（P6a 的 main CI 两次、P6b 的检查点与最终分支 CI）用了 1.3、1.3、1.3、1.1 分钟（90 秒时限的 73–87%），本机 16.4 秒，CI 慢 4–6 倍；这次整套故事用了 25.4 分钟（那四次 20.9–23.6 分钟），是记录中最慢的一次 runner，余量就不够了。P6b 没有改表格、排序与这条故事；同一棵树的分支 CI 上它用了 1.1 分钟。
   - 修复（分支 `codex/m6-p6b-ci`，没有重跑）：按列拆成四条故事，各自准备同样的 101 条、走升降两向，各有 90 秒；故事的正文不改（`git diff -w` 只有外层的循环）。本机每条 5.2–5.7 秒（四条合计 21.6 秒，多出的 5.2 秒是多准备三次），`--repeat-each=3` 与整个 I4 文件在 chromium 上通过；按 4–6 倍推算，CI 上每条约 21–33 秒。
   - 同一次运行的余量排查（只记录、未改）：用掉自身时限 75% 以上而通过的故事有 I19 (page) `i19-member-issues.spec.ts:340` 26.8 秒（默认 30 秒，正常的一次 19.7 秒）、F11 (page) `fixtures/file-story.ts:37` 25.7 秒、G1 (page) `g1-create-cycle-page.spec.ts:39` 25.5 秒、I19 (page) `:287` 24.4 秒、F11 `:40` 22.9 秒、P5 (page) `p5-project-members-page.spec.ts:31` 22.8 秒，都是单一场景、用 Playwright 默认的 30 秒。改默认时限或逐条加时限属 CI 预算，交下文的验收语（M8 的 CI 工作一并复核，调整须负责人同意）；在此之前若其中一条超时失败，先照本条看 trace 里各步的用时，再定修法。
+- 余量的又一个数据（M6/P7a 的 T9 检查点，2026-11-14）：分支 CI 43573631430（`f1646370`）全绿，e2e 作业 132386476220 用了 19 分 32 秒（08:13:18Z–08:32:50Z）；那时本段的两个页面故事还没有加入，但迭代页、模块页的故事所在的项目开着开关，行上与表格里多了迭代、模块两项（本机门禁里 chromium 的 `stories/planning/` 各条合计由 P6b 最终门禁的 246.6 秒到 249.7 秒，9 个工作进程、只作对照）；比 P7a 的基线（修复合入后的 main CI 43557098427 的 e2e 作业 20 分 20 秒）少 48 秒，作为 P7a 推送前估算 e2e 时长的校准点（[P7a spec](../../M6-cycles-modules/specs/P7a-work-item-planning.md) §2.11）。本段的两个新页面故事（G4、G11）本机 chromium 合计 6.5 秒（预算约 20 秒）。
 
 **何时验收：** M8 的 CI 工作复核 35 分钟的余量（或缓存浏览器的系统依赖、拆分作业，任一调整须负责人同意），并查实或修好 C7；在此之前，C7 再失败时按“重跑一次，再不过就停下报告”处理。C12 若再失败，按新的问题定位，不按本条重跑。
 
@@ -55,6 +56,8 @@ M6/P5b 的检查点（T10，2026-11-11，`00cf6c38672c0a21a63c0dab7026f339d8185f
 M6/P6a 的检查点（T10，2026-11-13，`82dac1efd9dac3fe7b7d99bdcac18410cd12bb0a`）的本地门禁（`t10-gate-build-e2e`）又一次：451 条通过、1 条失败，W6 (API)（`e2e/stories/workspace/w6-sign-up-by-invitation.spec.ts:13`）在测试一侧的 pg 连接池上报 `error: sorry, too many clients already`（`e2e/fixtures/db.ts:88`，经 `e2e/fixtures/assert/identity.ts:307` 的 `countIdentity`，故事第 57 行的数据库断言）。P6a 没有改这个故事；同一输入只重跑这一个文件即 8 条全过（`t10-gate-rerun-w6`，exit 0）。同一检查点的分支 CI 43418051413 全绿。
 
 M6/P6a 的最终候选（T16，2026-11-14，`1f41c8ca78a3607174ba6bb3095a58a5dce87b2a`）的本地门禁（`f-final-gate-build-e2e`）又一次：461 条通过、1 条失败，W9（`e2e/stories/workspace/w9-deactivation.spec.ts:30`）第一次 `refusedBoth`（故事第 96 行，经第 91 行与 `e2e/fixtures/users.ts:44` 的 `nerveUsersFails`）的 `nerve users deactivate` 命令连不上数据库，报 `FATAL: sorry, too many clients already`（SQLSTATE 53300），与 P2 那次 W12 的命令一侧同类。P6a 没有改这个故事、`server/` 与命令；同一输入只重跑这一个文件即 7 条全过（`f-final-gate-rerun-w9`，exit 0）。最终 HEAD 的分支 CI 由 P6b 的 T1 回填到 P6a 阶段记录 §7。
+
+M6/P7a 的检查点（T9，2026-11-14，`f1646370f1396b755be0a03c5326f7d7e8a8d4fc`）的本地门禁（`t9-gate` 的 build+e2e）又一次，这次两条同时：470 条通过、2 条失败。W6 (API)（`e2e/stories/workspace/w6-sign-up-by-invitation.spec.ts:13`）在 `e2e/fixtures/db.ts:88` 的 `countIdentity` 查询拿不到连接；W1 (page)（`e2e/stories/workspace/w1-create-workspace.spec.ts:78`）启动的第二个 nerve（关掉创建工作区的那个）自启动起 `GET /api/v0/me` 与 River 都连不上数据库（53300，见该测试的 nerve 日志），页面因此是 “Cannot reach the server for now” 而不是 “Creating workspaces is switched off”。P7a 没有改这两个故事、工作区的创建与注册；同一输入只重跑这两个文件即 14 条全过（`t9-gate-e2e-rerun-w1-w6`，exit 0，含 s3 夹具的前置项目）。同一检查点的分支 CI 43573631430 全绿。
 
 **何时验收：** M8 的 CI 工作核算 e2e 的连接预算（工作进程数 × 每进程的连接上限 + 余量），按结果给测试容器设 `max_connections` 或收紧 e2e 服务器的 `database.max_conns`，并在 CI 与本地都留有余量；或负责人决定维持现状，并在此写明理由。
 
@@ -126,6 +129,8 @@ M6/P5b 的 T16（2026-11-12）在 `8b11bc6381623717663ba986da74710668719494` 上
 - 证据：提交 `c331aa9d5c044ec0c878a82d364bdde9c2111281`（拆出写入单元，产品代码改经它）、`691302633b51d4b35e645efe46b0ec862824a905`（测试改经写入单元，删去过渡的转发）；拆分前后受影响的 21 个文件 509 例与相关的 14 个文件 164 例逐个同数，`make test-web` 同数；白名单与在途的写各有能让测试失败的变异；M4 起没有能失败的测试的 `skip_activity` 规则由新单测 `issue-write-fields.test.ts` 钉住（P6b 台账 T2、T3）。
 - 验收的结论：本条的条件（P7 往里加写入之前拆开，拆后不超过约 400 行）已由 P6b 满足；P7 的写入（迭代、模块下拉框与“添加已有”）照 P6b spec §5 加在写入单元、不加回根。本条保持 open 到 M6 收尾，收尾时核对 P7 之后根与写入单元仍在上限之内再关闭。
 
+**处理结果（M6/P7a）**：本段往工作项写入加的东西都加在写入单元，没有加回根（[P7a spec](../../M6-cycles-modules/specs/P7a-work-item-planning.md) §2.1、§2.2）：`updateIssue` 的范围必给，M4 起退回 router 工作区的一支删去，写入单元随之加入 `project-address-route`（`6f543e6b`）；按变化写的命令 `changeIssue` 与逐个点名的请求体 `changeBody`（`bbbdaa80`）。行数（`wc -l`）：根 `root.store.ts` 一直是 320 行（本段没有改它）；写入单元 `issue-writes.ts` 300 → 293（T2，删去退路）→ 302（T3，加命令）；请求体 `issue-write-fields.ts` 75 → 105（T3）→ 98（T10 把增减的纯函数 `modulesAfter` 移到 `core/lib/planning-directory.ts`，表单与写入单元共用）；本段最后一个产品提交 `40cef888` 上仍是 320、302、98，都在约 400 行之内（台账 `t2-line-counts`、`t3-line-counts`、`t9-line-counts`、`t15-line-counts`；T16 在合入之前再以 `wc -l` 核对）。P7b、P7c 的写入（拖拽、“添加已有”、命令面板）同样加在写入单元、经 `changeIssue`。本条保持 open 到 M6 收尾。
+
 <a id="M6-M8-09"></a>
 ## M6-M8-09 Firefox 在同一浏览器的再次载入后报根预加载的字体未用
 
@@ -156,3 +161,14 @@ M6/P5b 的 T16（2026-11-12）在 `8b11bc6381623717663ba986da74710668719494` 上
 观察（M6/P6b 的 T12，[P6b spec](../../M6-cycles-modules/specs/P6b-module-list.md) R4、§5 的 M8）：工作项列表的三页第一次读本页偏好失败时的样子不统一。迭代页、模块页是两域共用的 `PlanningReadFailure`（`web/apps/web/core/components/planning/read-failure.tsx`），说明原因并可重试；项目页（`web/apps/web/core/components/issues/issue-layouts/roots/project-layout-root.tsx:78`）是 M4 起的一行 `role="alert"` 文字，没有重试，要重新载入页面或离开再回来。P6b 只统一了“读到过偏好之后的重读失败”（三页都是正文沿用已读的偏好、上方一行可重试的提示 `PreferencesRereadFailure`）与页头控件出现的时机（三页都在本页偏好读到之后），项目页第一次读失败的那一行只加了“偏好还没有时”的条件，文字与无重试照旧（单测 `roots/preferences-reread.test.tsx` 钉住它照旧）。
 
 **何时验收：** M8 随最终矩阵把项目页第一次读偏好失败改为与迭代页、模块页一致（说明原因并可重试），或写明项目页保持 M4 样子的理由；或负责人决定维持现状，并在此写明理由。
+
+<a id="M6-M8-13"></a>
+## M6-M8-13 上方的内容晚到时，打开着的下拉列表不随按钮移动
+
+观察（M6/P7a 的 T14，2026-11-14）：工作项预览里的描述编辑器（懒加载的 `contenteditable`）在预览其余的内容显示之后约 0.22–0.28 秒才挂上，它下面的属性一栏随之整体下移约 40 像素。若在这之前打开属性一栏里的下拉框，列表停在打开时的位置，离按钮约 40 像素：列表由 react-popper 放置（共用的 `CustomSearchSelect`，`web/packages/ui/src/dropdowns/custom-search-select.tsx`），按钮随祖先的布局移动时它不重算位置。
+
+- 发现：G11 (page) 在 m6-pages 全配置的三种引擎运行（`t14-full-pages`）中 117 条有 116 过，WebKit 一例失败：预览的模块列表离按钮 44 像素（`e2e/stories/planning/g11-issue-modules-page.spec.ts` 的 `expectListBesideButton`）。不是 M6-M8-03、M6-M8-07 的签名，没有重跑，查根因：只量位置的探针（WebKit，9 个工作进程）九次全部复现——页面安定时还没有描述的编辑器、按钮在 641 像素处，约 0.25 秒后编辑器高 28 像素、按钮到了 681 像素处（证据在 P7a 台账的 Task 14；探针文件已删）。
+- 范围：不是 P7a 引入的。P7a 的迭代、模块下拉框只是共用件的调用方；以同样方式放置列表的下拉框（共用件上的状态、成员、项目，自己用 react-popper 的优先级）在上方的内容晚到时按同一机制都会这样。源头与 [M5-closeout](M5-closeout.md#M5-M8-06) 所记 F16 重连故事的“详情页挂载描述编辑器时的版面位移”相同：描述编辑器晚挂载，下面的内容下移。真人要在预览显示之后约 0.25 秒之内打开下拉框才看得到。
+- 故事的处理：G4、G11 在打开列表之前先等页面第一次渲染之后才到的、位于该栏之上的内容（预览等描述的编辑器、上次编辑与创建者一行和过渡结束，详情页等侧栏的 “Created by”，弹窗等描述的编辑器与过渡结束），它们核的是列表在按钮旁，不是页面挂载的时机；之后三种引擎各 `--repeat-each=6` 共 36 条通过，m6-pages 全配置 117 条通过（`t14-full-pages-2`）。产品代码没有改。
+
+**何时验收：** M8 消除晚到的版面位移（例如详情页与预览为描述编辑器预留它的高度，挂上时下面的内容不动），或让共用的下拉列表在按钮移动时更新位置（例如观察按钮的位置，移动时调 react-popper 的 `update`），二者做其一或都做，并在浏览器中核对：预览刚显示时打开属性一栏的下拉框，列表在按钮旁；或负责人决定维持现状，并在此写明理由。在此之前，新故事照 G4、G11 的写法先等上方的内容到齐再打开列表。
