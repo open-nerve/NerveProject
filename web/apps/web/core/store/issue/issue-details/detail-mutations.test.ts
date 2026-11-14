@@ -15,8 +15,15 @@ vi.mock("@/lib/store-context", () => ({ rootStore: undefined }));
 let tab: Awaited<ReturnType<typeof issueStoreTab>>;
 const detail = () => tab.app.issue.issueDetail;
 const commands = {
-  description: () => tab.app.issue.writes.updateIssue("x", () => ({ description_html: "<p>changed</p>" })),
-  parent: () => tab.app.issue.writes.updateIssue("child", () => ({ parent_id: null })),
+  description: () =>
+    tab.app.issue.writes.updateIssue(
+      "x",
+      () => ({ description_html: "<p>changed</p>" }),
+      undefined,
+      tab.app.issue.scope("ws", "A")
+    ),
+  parent: () =>
+    tab.app.issue.writes.updateIssue("child", () => ({ parent_id: null }), undefined, tab.app.issue.scope("ws", "A")),
   restore: () => tab.app.issue.writes.unarchiveIssue("x", tab.app.issue.scope("ws", "A")),
   subAdd: () => detail().createSubIssues("ws", "A", "x", ["child"]),
   subRemove: () => detail().removeSubIssue("ws", "A", "x", "child"),
@@ -186,7 +193,12 @@ it("description, link, comment and a parent batch reserve the same issue before 
     commands.linkAdd(),
     commands.commentAdd(),
     commands.subAdd(),
-    tab.app.issue.writes.updateIssue("child", () => ({ name: "edited child" })),
+    tab.app.issue.writes.updateIssue(
+      "child",
+      () => ({ name: "edited child" }),
+      undefined,
+      tab.app.issue.scope("ws", "A")
+    ),
   ];
   const outcomes = rest.map((sent) => track<unknown>(sent));
   await vi.advanceTimersByTimeAsync(1);

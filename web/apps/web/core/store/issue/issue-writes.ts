@@ -28,7 +28,6 @@ type WritesRoot = Pick<
   | "issueDetail"
   | "permissionReads"
   | "registeredLists"
-  | "workspaceSlug"
   | "assertActive"
   | "scope"
   | "invalidateProjectReads"
@@ -239,29 +238,23 @@ export class IssueWrites {
   updateIssue(
     id: string,
     makeBody: (held: Issue) => IssueUpdate,
-    drop?: IssueDrop,
-    operationScope?: IssueWriteScope
+    drop: IssueDrop | undefined,
+    operationScope: IssueWriteScope
   ): Promise<IssueDetailAnswer> {
     const root = this.root;
     const dragPermission = drop ? root.permissionReads.capture() : undefined;
-    const initiating = drop ? root.issues.held(id) : undefined;
-    const dragWorkspace = operationScope?.workspaceID ?? initiating?.workspace_id;
-    const dragProject = operationScope?.projectID ?? initiating?.project_id;
     const update = () =>
       this.enqueueIssueChanges([id], async () => {
         root.assertActive();
         if (
           dragPermission !== undefined &&
-          !root.permissionReads.current(dragPermission, dragWorkspace, dragProject ? [dragProject] : [], true)
+          !root.permissionReads.current(dragPermission, operationScope.workspaceID, [operationScope.projectID], true)
         )
           throw new SessionChangedError();
-        const snapshot = root.issues.getIssueById(id);
-        if (!snapshot) throw new Error("Issue has not been read");
-        // Without a given scope this falls back to the router's workspace, as it has since M4 (P7 removes it, spec §5).
-        const scope = operationScope ?? root.scope(root.workspaceSlug!, snapshot.project_id);
+        if (!root.issues.getIssueById(id)) throw new Error("Issue has not been read");
         return (await this.write(
           id,
-          scope,
+          operationScope,
           (held) => {
             if (!held) throw new Error("Issue has not been read");
             return root.api.update(id, updateBody(makeBody(held)));

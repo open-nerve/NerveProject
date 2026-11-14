@@ -66,7 +66,8 @@ function operate(kind: Kind, source?: IssueListBinding): Promise<unknown> {
   return root.writes.updateIssue(
     "x",
     () => ({ name: "changed", sort_order: 500 }),
-    kind === "drag" ? { group: "", binding: source } : undefined
+    kind === "drag" ? { group: "", binding: source } : undefined,
+    scope
   );
 }
 const endpointOf = (binding: IssueListBinding): ["GET", string] => [
@@ -239,7 +240,13 @@ it.each(["own", "third-party"] as const)(
     const confirmation = vi.spyOn(lists[0]!, "acceptConfirmed");
     const request = await requestedIssue(
       tab.nerve,
-      () => tab.app.issue.writes.updateIssue("x", () => ({ state_id: "B", label_ids: ["new"] })),
+      () =>
+        tab.app.issue.writes.updateIssue(
+          "x",
+          () => ({ state_id: "B", label_ids: ["new"] }),
+          undefined,
+          tab.app.issue.scope("ws", "A")
+        ),
       ["PATCH", "/api/v0/issues/x"]
     );
     const after = { ...issueDetailOf("x"), state_id: "B", sort_order: 50, label_ids: ["new"], updated_at: version(3) };
@@ -284,10 +291,12 @@ it("queuedBeforeIsFrozenOnlyWhenSentAndPreviousFinallyCannotClearPending", async
   await load(list, grouped());
   const first = await requestedIssue(
     tab.nerve,
-    () => tab.app.issue.writes.updateIssue("x", () => ({ state_id: "B" })),
+    () => tab.app.issue.writes.updateIssue("x", () => ({ state_id: "B" }), undefined, tab.app.issue.scope("ws", "A")),
     ["PATCH", "/api/v0/issues/x"]
   );
-  const second = track(tab.app.issue.writes.updateIssue("x", () => ({ state_id: "A" })));
+  const second = track(
+    tab.app.issue.writes.updateIssue("x", () => ({ state_id: "A" }), undefined, tab.app.issue.scope("ws", "A"))
+  );
   first.call.answer(json(200, { ...issueDetailOf("x"), state_id: "B", sort_order: 50, updated_at: version(2) }));
   await until(() => tab.nerve.to("/api/v0/issues/x").length === 2, "second queued write");
   expect(tab.app.issue.writes.pendingIDs.has("x")).toBe(true);
@@ -417,7 +426,7 @@ async function missingReplay() {
   const archive = bindingOf("archived", true);
   const write = await requestedIssue(
     tab.nerve,
-    () => root.writes.updateIssue("x", () => ({ state_id: "B", sort_order: 20 })),
+    () => root.writes.updateIssue("x", () => ({ state_id: "B", sort_order: 20 }), undefined, root.scope("ws", "A")),
     ["PATCH", "/api/v0/issues/x"]
   );
   const page = {
@@ -927,10 +936,11 @@ it.each([2, 3])("newerWholeBeforeOlderWriteAnswerPreservesLatestEvidence version
   const list = bindingOf("project");
   const before = { ...issueDetailOf("x"), sort_order: 10, updated_at: version(1) };
   await load(list, issuePageOf([before]));
-  const write = await requestedIssue(tab.nerve, () => root.writes.updateIssue("x", () => ({ sort_order: 20 })), [
-    "PATCH",
-    "/api/v0/issues/x",
-  ]);
+  const write = await requestedIssue(
+    tab.nerve,
+    () => root.writes.updateIssue("x", () => ({ sort_order: 20 }), undefined, root.scope("ws", "A")),
+    ["PATCH", "/api/v0/issues/x"]
+  );
   const after = { ...before, sort_order: 20, updated_at: version(2) };
   const latest = { ...after, sort_order: readVersion * 10, updated_at: version(readVersion) };
   await load(list, issuePageOf([latest]));

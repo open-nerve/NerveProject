@@ -28,13 +28,14 @@ it.each([false, true])("secondDropUsesFirstConfirmedNeighbors; predecessor rejec
   const root = tab.app.issue;
   const first = await requestedIssue(
     tab.nerve,
-    () => root.writes.updateIssue("x", () => ({ sort_order: 50 }), { group: "" }),
+    () => root.writes.updateIssue("x", () => ({ sort_order: 50 }), { group: "" }, root.scope("ws", "A")),
     ["PATCH", "/api/v0/issues/x"]
   );
   const second = root.writes.updateIssue(
     "y",
     () => ({ sort_order: (root.issues.getIssueById("neighbor")!.sort_order + 2000) / 2 }),
-    { group: "" }
+    { group: "" },
+    root.scope("ws", "A")
   );
   const result = track(second);
   await vi.advanceTimersByTimeAsync(10);
@@ -60,10 +61,10 @@ it("waitingDropDoesNotCrossSession", async () => {
   tab.nerve.calls.length = 0;
   const first = await requestedIssue(
     tab.nerve,
-    () => root.writes.updateIssue("x", () => ({ sort_order: 50 }), { group: "" }),
+    () => root.writes.updateIssue("x", () => ({ sort_order: 50 }), { group: "" }, root.scope("ws", "A")),
     ["PATCH", "/api/v0/issues/x"]
   );
-  const waiting = track(root.writes.updateIssue("y", () => ({ sort_order: 60 }), { group: "" }));
+  const waiting = track(root.writes.updateIssue("y", () => ({ sort_order: 60 }), { group: "" }, root.scope("ws", "A")));
   root.retire();
   first.call.answer(json(200, { ...issueDetailOf("x"), sort_order: 50, name: "late answer" }));
   await until(() => waiting.settled, "retired queue");
@@ -136,7 +137,7 @@ it("captured binding uses current canonical neighbors; other query receives no d
   });
   const first = await requestedIssue(
     tab.nerve,
-    () => root.writes.updateIssue("x", () => ({ sort_order: 50 }), { group: "" }),
+    () => root.writes.updateIssue("x", () => ({ sort_order: 50 }), { group: "" }, root.scope("ws", "A")),
     ["PATCH", "/api/v0/issues/x"]
   );
   const second = facade.dropIssue("ws", "A", "y", () => ({}), { group: "", afterId: "removed-neighbor" });
@@ -203,7 +204,13 @@ it.each([4, 30])("calendar full day keeps confirmed move for page limit %s", asy
 it("update whitelist never sends a full entity", async () => {
   const move = await requestedIssue(
     tab.nerve,
-    () => tab.app.issue.writes.updateIssue("x", (held) => ({ ...held, sort_order: 2000 }), { group: "" }),
+    () =>
+      tab.app.issue.writes.updateIssue(
+        "x",
+        (held) => ({ ...held, sort_order: 2000 }),
+        { group: "" },
+        tab.app.issue.scope("ws", "A")
+      ),
     ["PATCH", "/api/v0/issues/x"]
   );
   expect(move.call.body).not.toHaveProperty("id");
@@ -431,10 +438,10 @@ it("a drag waiting for another issue preserves its initiating permission lifetim
   const root = tab.app.issue;
   const first = await requestedIssue(
     tab.nerve,
-    () => root.writes.updateIssue("x", () => ({ sort_order: 50 }), { group: "" }),
+    () => root.writes.updateIssue("x", () => ({ sort_order: 50 }), { group: "" }, root.scope("ws", "A")),
     ["PATCH", "/api/v0/issues/x"]
   );
-  const next = root.writes.updateIssue("y", () => ({ sort_order: 60 }), { group: "" });
+  const next = root.writes.updateIssue("y", () => ({ sort_order: 60 }), { group: "" }, root.scope("ws", "A"));
   const result = track(next);
   await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, []);
   await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, [tab.project]);

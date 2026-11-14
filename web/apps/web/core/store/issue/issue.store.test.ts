@@ -109,7 +109,13 @@ async function inferredMove() {
   accept(before);
   const writing = await requestedIssue(
     tab.nerve,
-    () => tab.app.issue.writes.updateIssue("x", () => ({ state_id: "B", sort_order: 20 })),
+    () =>
+      tab.app.issue.writes.updateIssue(
+        "x",
+        () => ({ state_id: "B", sort_order: 20 }),
+        undefined,
+        tab.app.issue.scope("ws", "A")
+      ),
     ["PATCH", "/api/v0/issues/x"]
   );
   const page = {
@@ -271,7 +277,7 @@ it("ownPendingReadDoesNotMarkStale", async () => {
   });
   const writing = await requestedIssue(
     tab.nerve,
-    () => tab.app.issue.writes.updateIssue("x", () => ({ state_id: "B" })),
+    () => tab.app.issue.writes.updateIssue("x", () => ({ state_id: "B" }), undefined, tab.app.issue.scope("ws", "A")),
     ["PATCH", "/api/v0/issues/x"]
   );
   const after = { ...issueDetailOf("x"), state_id: "B", updated_at: version(3) };
@@ -350,7 +356,8 @@ it("parallelPartsShareOneVerificationRound", async () => {
   });
   const writing = await requestedIssue(
     tab.nerve,
-    () => tab.app.issue.writes.updateIssue("x", () => ({ label_ids: ["C"] })),
+    () =>
+      tab.app.issue.writes.updateIssue("x", () => ({ label_ids: ["C"] }), undefined, tab.app.issue.scope("ws", "A")),
     ["PATCH", "/api/v0/issues/x"]
   );
   binding.markMembershipStale(before, before);
@@ -546,7 +553,8 @@ it("an old in-flight write does not gain fresh permission proof, while a new con
   accept(issueOf("x"));
   const old = await requestedIssue(
     tab.nerve,
-    () => tab.app.issue.writes.updateIssue("x", () => ({ name: "old-write" })),
+    () =>
+      tab.app.issue.writes.updateIssue("x", () => ({ name: "old-write" }), undefined, tab.app.issue.scope("ws", "A")),
     ["PATCH", "/api/v0/issues/x"]
   );
   await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, []);
@@ -557,7 +565,8 @@ it("an old in-flight write does not gain fresh permission proof, while a new con
   accept({ ...issueOf("x"), updated_at: version(2) });
   const fresh = await requestedIssue(
     tab.nerve,
-    () => tab.app.issue.writes.updateIssue("x", () => ({ name: "fresh-write" })),
+    () =>
+      tab.app.issue.writes.updateIssue("x", () => ({ name: "fresh-write" }), undefined, tab.app.issue.scope("ws", "A")),
     ["PATCH", "/api/v0/issues/x"]
   );
   fresh.call.answer(json(200, { ...issueDetailOf("x"), name: "fresh-write", updated_at: version(3) }));
@@ -606,7 +615,8 @@ it.each([false, true])(
     accept(issueOf("x"));
     const old = await requestedIssue(
       tab.nerve,
-      () => tab.app.issue.writes.updateIssue("x", () => ({ name: "old-write" })),
+      () =>
+        tab.app.issue.writes.updateIssue("x", () => ({ name: "old-write" }), undefined, tab.app.issue.scope("ws", "A")),
       ["PATCH", "/api/v0/issues/x"]
     );
     await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, []);
@@ -644,7 +654,8 @@ it.each([1, 2, 3])("retains the recovered whole and its usable list after an old
   accept(issueOf("x"));
   const old = await requestedIssue(
     tab.nerve,
-    () => tab.app.issue.writes.updateIssue("x", () => ({ name: "old-write" })),
+    () =>
+      tab.app.issue.writes.updateIssue("x", () => ({ name: "old-write" }), undefined, tab.app.issue.scope("ws", "A")),
     ["PATCH", "/api/v0/issues/x"]
   );
   await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, []);
@@ -676,7 +687,13 @@ it.each([1, 2, 3])("retains the recovered whole and its usable list after an old
   expect.soft(tab.nerve.calls.filter((call) => call.method === "PATCH")).toHaveLength(1);
   const current = await requestedIssue(
     tab.nerve,
-    () => tab.app.issue.writes.updateIssue("x", () => ({ name: "current-write" })),
+    () =>
+      tab.app.issue.writes.updateIssue(
+        "x",
+        () => ({ name: "current-write" }),
+        undefined,
+        tab.app.issue.scope("ws", "A")
+      ),
     ["PATCH", "/api/v0/issues/x"]
   );
   current.call.answer(
@@ -695,7 +712,8 @@ it("a current whole replaces an unproved newer stale write when the old write ar
   accept({ ...issueOf("x"), updated_at: version(3) });
   const old = await requestedIssue(
     tab.nerve,
-    () => tab.app.issue.writes.updateIssue("x", () => ({ name: "old-write" })),
+    () =>
+      tab.app.issue.writes.updateIssue("x", () => ({ name: "old-write" }), undefined, tab.app.issue.scope("ws", "A")),
     ["PATCH", "/api/v0/issues/x"]
   );
   await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, []);
@@ -723,7 +741,8 @@ it("an old write cannot move a recovered list using unproved membership fields",
   accept(issueOf("x"));
   const old = await requestedIssue(
     tab.nerve,
-    () => tab.app.issue.writes.updateIssue("x", () => ({ name: "old-write" })),
+    () =>
+      tab.app.issue.writes.updateIssue("x", () => ({ name: "old-write" }), undefined, tab.app.issue.scope("ws", "A")),
     ["PATCH", "/api/v0/issues/x"]
   );
   await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, []);
@@ -752,7 +771,8 @@ it.each([false, true])("rechecks write permission after waiting for list directo
   await first.promise;
   const old = await requestedIssue(
     tab.nerve,
-    () => tab.app.issue.writes.updateIssue("x", () => ({ name: "old-write" })),
+    () =>
+      tab.app.issue.writes.updateIssue("x", () => ({ name: "old-write" }), undefined, tab.app.issue.scope("ws", "A")),
     ["PATCH", "/api/v0/issues/x"]
   );
   let release!: () => void;

@@ -27,10 +27,11 @@ afterEach(() => {
 });
 it("a core parent PATCH refreshes both old and new parents without guessing either count", async () => {
   const root = tab.app.issue;
-  const sent = await requestedIssue(tab.nerve, () => root.writes.updateIssue("child", () => ({ parent_id: "other" })), [
-    "PATCH",
-    "/api/v0/issues/child",
-  ]);
+  const sent = await requestedIssue(
+    tab.nerve,
+    () => root.writes.updateIssue("child", () => ({ parent_id: "other" }), undefined, root.scope("ws", "A")),
+    ["PATCH", "/api/v0/issues/child"]
+  );
   expect(root.issues.getIssueById("parent")?.sub_issues_count).toBe(8);
   sent.call.answer(json(200, { ...child, parent_id: "other", updated_at: "2026-10-29T00:00:00Z" }));
   await until(() => tab.nerve.to("/api/v0/issues/parent").length > 0 || sent.result.settled, "old parent read");
