@@ -11,7 +11,7 @@ import { CircleDashed } from "lucide-react";
 import { AddOutline } from "@makeplane/propel/icons";
 import { useTranslation } from "@nerve/i18n";
 // types
-import type { TIssueGroupByOptions } from "@nerve/types";
+import type { GroupJoinRefusal, TIssueGroupByOptions } from "@nerve/types";
 // components
 import { isDialogStore, useCreateDialogRequest } from "@/components/issues/issue-layouts/command-host";
 import { useGroupName } from "@/components/issues/issue-layouts/group-columns";
@@ -25,6 +25,8 @@ interface IHeaderGroupByCard {
   title: string;
   /** An archived cycle's or module's group, named so (P7b R4). */
   archived?: boolean;
+  /** Why nerve refuses a work item's joining the group, which then offers no new work item (P7b R4). */
+  refusal?: GroupJoinRefusal;
   count: number;
   issuePayload: Partial<IssueDetail>;
   disableIssueCreation?: boolean;
@@ -39,6 +41,7 @@ export const HeaderGroupByCard = observer(function HeaderGroupByCard(props: IHea
     icon,
     title,
     archived,
+    refusal,
     count,
     issuePayload,
     disableIssueCreation,
@@ -78,7 +81,7 @@ export const HeaderGroupByCard = observer(function HeaderGroupByCard(props: IHea
           <div className="relative flex w-full flex-row items-center gap-1 overflow-hidden">{heading}</div>
         )}
 
-        {!disableIssueCreation && (
+        {!disableIssueCreation && !refusal && (
           <button
             type="button"
             aria-label={`${t("create_work_item")}: ${label}`}

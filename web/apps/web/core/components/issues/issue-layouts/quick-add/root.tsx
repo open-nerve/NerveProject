@@ -18,13 +18,14 @@ import { AddOutline } from "@makeplane/propel/icons";
 import { setToast, TOAST_TYPE } from "@nerve/propel/toast";
 import { followInSession, sessionGuard } from "@/lib/in-session";
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
+import { useProjectState } from "@/hooks/store/use-project-state";
 import { useDetailScope } from "../../issue-detail-widgets/use-detail-scope";
 import { useFormRefusal } from "@/lib/form-refusal";
 import { useRefusedFocus } from "@/lib/refused-focus";
 import { SessionChangedError } from "@/lib/auth/token-manager";
 import { EUserPermissions } from "@nerve/constants";
 import type { Project } from "@nerve/api-client";
-import type { EIssueLayoutTypes } from "@nerve/types";
+import type { EIssueLayoutTypes, IGroupByColumn } from "@nerve/types";
 import { cn } from "@nerve/utils";
 // local imports
 import { QuickAddIssueFormRoot } from "./form";
@@ -32,8 +33,32 @@ import { CreateIssueToastActionItems } from "../../create-issue-toast-action-ite
 
 type QuickAddValues = Pick<Issue, "name">;
 type QuickAddPrefill = Partial<
-  Pick<Issue, "state_id" | "priority" | "assignee_ids" | "label_ids" | "start_date" | "target_date" | "parent_id">
+  Pick<
+    Issue,
+    | "state_id"
+    | "priority"
+    | "assignee_ids"
+    | "label_ids"
+    | "start_date"
+    | "target_date"
+    | "parent_id"
+    | "cycle_id"
+    | "module_ids"
+  >
 >;
+
+/**
+ * A group's quick add's values (P7b spec 2.5, R12): the route's project's default state, then what the group's column
+ * gives a new work item and, in a cell of a board's lane, what the lane gives: its state, priority, label, assignee,
+ * cycle or module, None's nothing.
+ */
+export function useGroupQuickAddPrefill(column: IGroupByColumn, lane?: IGroupByColumn): QuickAddPrefill {
+  const { projectId } = useParams();
+  const defaultState = useProjectState()
+    .getProjectStates(projectId)
+    ?.find((state) => state.default);
+  return { state_id: defaultState?.id, ...column.payload, ...lane?.payload };
+}
 
 export type TQuickAddIssueForm = {
   ref: React.RefObject<HTMLFormElement | null>;
@@ -176,7 +201,7 @@ const QuickAddIssueScope = observer(function QuickAddIssueScope(
     setPending(true);
     try {
       // Only caller-owned editable values enter the existing create input contract.
-      const { state_id, priority, assignee_ids, label_ids, start_date, target_date, parent_id } =
+      const { state_id, priority, assignee_ids, label_ids, start_date, target_date, parent_id, cycle_id, module_ids } =
         prePopulatedData ?? {};
       await followInSession(
         () =>
@@ -189,6 +214,9 @@ const QuickAddIssueScope = observer(function QuickAddIssueScope(
             ...(start_date != null && { start_date }),
             ...(target_date != null && { target_date }),
             ...(parent_id != null && { parent_id }),
+            ...(cycle_id != null && { cycle_id }),
+            // a new work item is in no module unless given one: an empty set is as none given (P7b spec 2.5)
+            ...(!!module_ids?.length && { module_ids }),
           }).then((issue) => {
             if (!issue) throw new Error(t("common.error.message"));
             return issue;

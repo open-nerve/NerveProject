@@ -106,6 +106,19 @@ export const KanBan = observer(function KanBan(props: IKanBan) {
     workspaceSlug,
     projectId,
   });
+  // The board in a lane of a board's lanes takes the lane's column of the sub-grouping: what its cells give a new work
+  // item, and whether nerve refuses a work item's joining it (P7b spec 2.4, 2.5).
+  const lane =
+    sub_group_id === undefined
+      ? undefined
+      : getGroupByColumns({
+          groupBy: sub_group_by as GroupByColumnTypes,
+          includeNone: true,
+          isWorkspaceLevel: isWorkspaceLevel(storeType),
+          groupIds: [sub_group_id],
+          workspaceSlug,
+          projectId,
+        })?.find(({ id }) => id === sub_group_id);
 
   if (!list) return null;
 
@@ -171,6 +184,7 @@ export const KanBan = observer(function KanBan(props: IKanBan) {
                     icon={subList.icon}
                     title={subList.name}
                     archived={subList.archived}
+                    refusal={subList.refusal}
                     count={getGroupIssueCount(subList.id, undefined, false) ?? 0}
                     issuePayload={subList.payload}
                     disableIssueCreation={disableIssueCreation || isGroupByCreatedBy}
@@ -199,7 +213,8 @@ export const KanBan = observer(function KanBan(props: IKanBan) {
                   useIdleTime
                 >
                   <KanbanGroup
-                    groupId={subList.id}
+                    column={subList}
+                    lane={lane}
                     issuesMap={issuesMap}
                     groups={groups}
                     displayProperties={displayProperties}

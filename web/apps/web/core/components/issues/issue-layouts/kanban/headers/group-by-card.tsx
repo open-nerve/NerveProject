@@ -12,7 +12,7 @@ import { observer } from "mobx-react";
 import { Circle } from "lucide-react";
 import { AddOutline, ArrowCollapseOutline, FullScreenOutline } from "@makeplane/propel/icons";
 import { useTranslation } from "@nerve/i18n";
-import type { TIssueKanbanFilters, TIssueGroupByOptions } from "@nerve/types";
+import type { GroupJoinRefusal, TIssueKanbanFilters, TIssueGroupByOptions } from "@nerve/types";
 // components
 import { isDialogStore, useCreateDialogRequest } from "@/components/issues/issue-layouts/command-host";
 import { useGroupName } from "@/components/issues/issue-layouts/group-columns";
@@ -27,6 +27,8 @@ interface IHeaderGroupByCard {
   title: string;
   /** An archived cycle's or module's group, named so (P7b R4). */
   archived?: boolean;
+  /** Why nerve refuses a work item's joining the column, which then offers no new work item (P7b R4). */
+  refusal?: GroupJoinRefusal;
   count: number;
   collapsedGroups: TIssueKanbanFilters;
   handleCollapsedGroups: (toggle: "group_by" | "sub_group_by", value: string) => void;
@@ -41,6 +43,7 @@ export const HeaderGroupByCard = observer(function HeaderGroupByCard(props: IHea
     icon,
     title,
     archived,
+    refusal,
     count,
     collapsedGroups,
     handleCollapsedGroups,
@@ -93,7 +96,7 @@ export const HeaderGroupByCard = observer(function HeaderGroupByCard(props: IHea
         </button>
       )}
 
-      {!disableIssueCreation && (
+      {!disableIssueCreation && !refusal && (
         <button
           type="button"
           aria-label={`${t("create_work_item")}: ${label}`}

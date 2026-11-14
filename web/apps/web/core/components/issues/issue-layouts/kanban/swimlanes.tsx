@@ -90,6 +90,7 @@ const SubGroupSwimlaneHeader = observer(function SubGroupSwimlaneHeader({
                 icon={_list.icon}
                 title={_list.name}
                 archived={_list.archived}
+                refusal={_list.refusal}
                 count={groupCount}
                 collapsedGroups={collapsedGroups}
                 handleCollapsedGroups={handleCollapsedGroups}

@@ -1,4 +1,3 @@
-import { useParams } from "react-router";
 import type { IssueCreate } from "@nerve/api-client";
 /**
  * Copyright (c) 2023-present Plane Software, Inc. and contributors
@@ -30,12 +29,11 @@ import { cn } from "@nerve/utils";
 // components
 import { ListLoaderItemRow } from "@/components/ui/loader/layouts/list-layout-loader";
 // hooks
-import { useProjectState } from "@/hooks/store/use-project-state";
 import { useIntersectionObserver } from "@/hooks/use-intersection-observer";
 import { useIssuesStore } from "@/hooks/use-issue-layout-store";
 // local imports
 import { GroupDragOverlay } from "../group-drag-overlay";
-import { ListQuickAddIssueButton, QuickAddIssueRoot } from "../quick-add";
+import { ListQuickAddIssueButton, QuickAddIssueRoot, useGroupQuickAddPrefill } from "../quick-add";
 import type { GroupDropLocation } from "../group-drop";
 import { getDestinationFromDropPayload, getSourceFromDropPayload } from "../group-drop";
 import { IssueBlocksList } from "./blocks-list";
@@ -94,8 +92,7 @@ export const ListGroup = observer(function ListGroup(props: Props) {
   const isExpanded = !collapsedGroups?.group_by.includes(group.id);
   const groupRef = useRef<HTMLDivElement | null>(null);
   const { t } = useTranslation();
-  const projectState = useProjectState();
-  const { projectId } = useParams();
+  const prefill = useGroupQuickAddPrefill(group);
 
   const { issues } = useIssuesStore();
   const { getGroupIssueCount, getPaginationData, getIssueLoader } = issues;
@@ -134,31 +131,6 @@ export const ListGroup = observer(function ListGroup(props: Props) {
   const validateEmptyIssueGroups = (issueCount: number = 0) => {
     if (!showEmptyGroup && issueCount <= 0) return false;
     return true;
-  };
-
-  const prePopulateQuickAddData = (groupByKey: string | null, value: string) => {
-    const defaultState = projectState.getProjectStates(projectId)?.find((state) => state.default);
-    let preloadedData: object = { state_id: defaultState?.id };
-
-    if (groupByKey === null) {
-      preloadedData = { ...preloadedData };
-    } else {
-      if (groupByKey === "state") {
-        preloadedData = { ...preloadedData, state_id: value };
-      } else if (groupByKey === "priority") {
-        preloadedData = { ...preloadedData, priority: value };
-      } else if (groupByKey === "labels") {
-        if (value !== "none") preloadedData = { ...preloadedData, label_ids: [value] };
-      } else if (groupByKey === "assignees") {
-        if (value !== "none") preloadedData = { ...preloadedData, assignee_ids: [value] };
-      } else if (groupByKey === "created_by") {
-        preloadedData = { ...preloadedData };
-      } else {
-        preloadedData = { ...preloadedData, [groupByKey]: value };
-      }
-    }
-
-    return preloadedData;
   };
 
   useEffect(() => {
@@ -232,6 +204,7 @@ export const ListGroup = observer(function ListGroup(props: Props) {
           icon={group.icon}
           title={group.name}
           archived={group.archived}
+          refusal={group.refusal}
           count={groupIssueCount}
           issuePayload={group.payload}
           disableIssueCreation={disableIssueCreation || isGroupByCreatedBy}
@@ -270,13 +243,13 @@ export const ListGroup = observer(function ListGroup(props: Props) {
             </>
           )}
 
-          {enableIssueQuickAdd && !disableIssueCreation && !isGroupByCreatedBy && (
+          {enableIssueQuickAdd && !disableIssueCreation && !isGroupByCreatedBy && !group.refusal && (
             <div className="sticky bottom-0 z-[1] w-full flex-shrink-0">
               <QuickAddIssueRoot
                 scopeKey={JSON.stringify([group_by, group.id])}
                 layout={EIssueLayoutTypes.LIST}
                 QuickAddButton={ListQuickAddIssueButton}
-                prePopulatedData={prePopulateQuickAddData(group_by, group.id)}
+                prePopulatedData={prefill}
                 containerClassName="border-b border-t border-subtle bg-surface-1 "
                 quickAddCallback={quickAddCallback}
               />
