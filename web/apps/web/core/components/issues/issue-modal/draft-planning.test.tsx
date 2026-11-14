@@ -270,6 +270,28 @@ it("takes the draft out of its cycle and its modules as the form moves it to ano
   expect(body.payload?.module_ids).toEqual([]);
 });
 
+// re-73 M2: back at the project it opened with, the draft's cycle and modules are its own again, which its save leaves.
+it("keeps the cycle and the modules the draft holds once the form moves it to another project and back", async () => {
+  const { now, core, gone } = planning();
+  const draft = await stored({ cycle_id: now.id, module_ids: [core.id, gone.id] });
+  await opened(draft);
+  await tab.chooseProject(projectB.id);
+  await tab.waitFor(() => cycleField()?.textContent === "common.cycle: cycle.label", "B's form");
+  await tab.chooseProject(tab.project.id);
+  await tab.waitFor(() => cycleField()?.textContent === "common.cycle: Now", "A's form again");
+  expect(moduleField()?.textContent).toBe("common.modules: module.count: Core; Gone, common.archived");
+  await act(async () => {
+    const input = form()!.querySelector<HTMLInputElement>("#name")!;
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(input, "Renamed");
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+  const body = await saved(draft);
+  expect(body.project_id ?? tab.project.id).toBe(tab.project.id);
+  expect(body.payload).toMatchObject({ name: "Renamed", cycle_id: now.id, module_ids: [core.id, gone.id] });
+  await tab.waitFor(() => toasts.length === 1, "the saved draft");
+  expect(held(draft)?.payload).toMatchObject({ cycle_id: now.id, module_ids: [core.id, gone.id] });
+});
+
 it("moved to another project, leaves the cycle and the modules a write gave the draft since its form opened", async () => {
   const { now, core } = planning();
   const draft = await stored({});

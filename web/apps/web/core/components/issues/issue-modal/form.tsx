@@ -174,12 +174,17 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
   const planningPending = planningLoading && projectId === defaultProjectId;
 
   // On a change of its project a new work item's form starts over but for a few fields; a draft's leaves its cycle and
-  // modules, which are its project's, as an edit, which its save sends (P7a spec 2.8, R6: no cycle, no modules).
+  // modules, which are its project's, as an edit, which its save sends (P7a spec 2.8, R6: no cycle, no modules). Back
+  // at the project it opened with, they are the draft's own again, as stored: no edit, which its save leaves (re-73 M2).
   useEffect(() => {
     if (isDraft) {
-      if (!getFieldState("project_id").isDirty) return;
-      setValue("cycle_id", null, { shouldDirty: true });
-      setValue("module_ids", [], { shouldDirty: true });
+      if (getFieldState("project_id").isDirty) {
+        setValue("cycle_id", null, { shouldDirty: true });
+        setValue("module_ids", [], { shouldDirty: true });
+      } else {
+        resetField("cycle_id");
+        resetField("module_ids");
+      }
     } else if (isDirty)
       reset(getUpdateFormDataForReset(projectId ?? undefined, { ...getValues(), project_id: projectId ?? undefined }));
 
