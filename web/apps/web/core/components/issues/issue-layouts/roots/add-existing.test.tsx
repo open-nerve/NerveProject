@@ -153,6 +153,37 @@ it("lists the project's work items but the cycle's, joins those chosen, and keep
   expect(page.nerve.to(cycleRequests.progress({ id: C1 }))).toHaveLength(1);
 });
 
+// The page follows the batch, not the dialog (P6b T10's rule: a follow-up hangs on what lives as long as the page).
+it("reads the cycle's progress once after a batch whose dialog was closed while its writes were out", async () => {
+  await emptyPage("cycle");
+  await searched("cycle", [item("x", 1), item("y", 2), item("w", 3)]);
+  await act(async () => selectionButton("issue.select.select_all").click());
+  await act(async () => selectionButton("issue.select.add_selected").click());
+  await until(() => writes().length === 2, "the first two writes");
+  await act(async () => selectionButton("common.cancel").click());
+  expect(dialog(), "the dialog, closed while two writes are out").toBeNull();
+  const progress = () => page.nerve.to(cycleRequests.progress({ id: C1 }));
+  const answer = (index: number, id: string, sequence: number) =>
+    act(async () => {
+      writes()[index]!.answer(
+        json(200, { ...issueDetailOf(id), sequence_id: sequence, cycle_id: C1, updated_at: LATER })
+      );
+      await vi.advanceTimersByTimeAsync(100);
+    });
+  await answer(0, "x", 1);
+  // the third starts once one has settled: two out at most
+  expect(writes().map((call) => [call.path, call.body])).toEqual(
+    ["x", "y", "w"].map((id) => [`/api/v0/issues/${id}`, { cycle_id: C1 }])
+  );
+  expect(progress(), "the progress, while the batch is out").toEqual([]);
+  await answer(1, "y", 2);
+  await answer(2, "w", 3);
+  expect(writes()).toHaveLength(3);
+  expect(["x", "y", "w"].map((id) => page.app.issue.issues.getIssueById(id)?.cycle_id)).toEqual([C1, C1, C1]);
+  expect(progress(), "the batch's reads of the progress").toHaveLength(1);
+  expect(toasts).toEqual([]);
+});
+
 it("lists the project's work items but the module's, and joins one to the module, keeping its other modules", async () => {
   await emptyPage("module");
   await searched("module", [item("x", 1, { module_ids: [BETA, GAMMA] }), item("z", 2, { module_ids: [M1] })]);

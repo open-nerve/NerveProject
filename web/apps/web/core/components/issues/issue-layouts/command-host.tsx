@@ -9,6 +9,7 @@ import { setToast, TOAST_TYPE } from "@nerve/propel/toast";
 import { EIssuesStoreType } from "@nerve/types";
 import { isPlanningPageStoreType } from "@/hooks/planning-page-domains";
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
+import { useIssuesActions } from "@/hooks/use-issues-actions";
 import { SessionChangedError } from "@/lib/auth/token-manager";
 import { ArchiveIssueModal } from "../archive-issue-modal";
 import { DeleteIssueModal } from "../delete-issue-modal";
@@ -132,6 +133,9 @@ export const IssueListCommandHost = observer(function IssueListCommandHost({ chi
     projects: string[];
     permission: string;
   }>();
+  // the actions that add existing work items, the host's: a batch goes on, and the page follows it (its progress read
+  // again once), after its dialog is closed (P6b T10: a follow-up hangs on what lives as long as the page)
+  const addIssuesToView = useIssuesActions(adding?.request.storeType)?.addIssuesToView;
   const workspace = root.rootStore.workspaceRoot.getWorkspaceBySlug(workspaceSlug ?? "");
   const permission = workspace && root.permissionReads.identity(workspace.id, projectId ? [projectId] : [], true);
   const requestConfirmation = useCallback(
@@ -279,8 +283,12 @@ export const IssueListCommandHost = observer(function IssueListCommandHost({ chi
           isProjectSelectionDisabled={isPlanningPageStoreType(dialog.storeType)}
         />
       )}
-      {adding && holds(adding, adding.projects) && (
-        <AddExistingDialog request={adding.request} onClose={() => setAdding(undefined)} />
+      {adding && holds(adding, adding.projects) && addIssuesToView && (
+        <AddExistingDialog
+          request={adding.request}
+          submit={(ids) => addIssuesToView(ids, adding.request.extra)}
+          onClose={() => setAdding(undefined)}
+        />
       )}
     </CommandsContext.Provider>
   );

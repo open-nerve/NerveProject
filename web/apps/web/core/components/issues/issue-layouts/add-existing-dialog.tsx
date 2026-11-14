@@ -3,13 +3,15 @@ import { observer } from "mobx-react";
 import { useParams } from "react-router";
 import type { Issue } from "@nerve/api-client";
 import type { EIssuesStoreType, IssueChange } from "@nerve/types";
-import { ExistingIssuesListModal } from "@/components/core/modals/existing-issues-list-modal";
+import {
+  ExistingIssuesListModal,
+  type SelectionSubmitResult,
+} from "@/components/core/modals/existing-issues-list-modal";
 import {
   isPlanningPageStoreType,
   PLANNING_PAGE_DOMAINS,
   type PlanningPageStoreType,
 } from "@/hooks/planning-page-domains";
-import { useIssuesActions } from "@/hooks/use-issues-actions";
 import type { IssueSearchQuery } from "@/services/issue/issue-search.service";
 
 /**
@@ -28,23 +30,24 @@ export type AddExistingRequest = {
 const PLANNING_SEARCH_LIMIT = 100;
 
 /**
- * The dialog of an "add existing" request the host holds (P7b spec 2.9, R2, R11): it searches the route's project and
- * submits by the actions of the request's page, each chosen one's outcome. A cycle's or a module's page searches
- * nerve's most at once and hides the work items already in its cycle or module, nerve's search excluding none; one in
- * another cycle is listed, and adding it moves it.
+ * The dialog of an "add existing" request the host holds (P7b spec 2.9, R2, R11): it searches the route's project,
+ * starts the batch the host sends and, while it stays open, shows each chosen one's outcome. A cycle's or a module's
+ * page searches nerve's most at once and hides the work items already in its cycle or module, nerve's search excluding
+ * none; one in another cycle is listed, and adding it moves it.
  */
 export const AddExistingDialog = observer(function AddExistingDialog(props: {
   request: AddExistingRequest;
+  /** Sends the batch of the chosen ones by the host's actions, which outlive the dialog. */
+  submit: (ids: readonly string[]) => Promise<SelectionSubmitResult>;
   onClose: () => void;
 }) {
-  const { request, onClose } = props;
+  const { request, submit, onClose } = props;
   const params = useParams();
   const { workspaceSlug, projectId } = params;
-  const { addIssuesToView } = useIssuesActions(request.storeType);
   const domain = isPlanningPageStoreType(request.storeType) ? PLANNING_PAGE_DOMAINS[request.storeType] : undefined;
   const entityId = domain && params[domain.param];
   const page = projectId && entityId ? { projectID: projectId, entityID: entityId } : undefined;
-  if (!workspaceSlug || !projectId || !addIssuesToView) return null;
+  if (!workspaceSlug || !projectId) return null;
 
   return (
     <ExistingIssuesListModal
@@ -54,7 +57,7 @@ export const AddExistingDialog = observer(function AddExistingDialog(props: {
       handleClose={onClose}
       searchParams={domain ? { ...request.searchParams, limit: PLANNING_SEARCH_LIMIT } : (request.searchParams ?? {})}
       shouldHideIssue={(issue) => !!request.hide?.(issue) || (!!page && !!domain?.holds(issue, page))}
-      handleOnSubmit={(ids) => addIssuesToView(ids, request.extra)}
+      handleOnSubmit={submit}
     />
   );
 });
