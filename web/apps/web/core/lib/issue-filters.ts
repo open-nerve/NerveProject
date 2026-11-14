@@ -14,6 +14,8 @@ const fields = [
   "subscriber_id",
   "start_date",
   "target_date",
+  "cycle_id",
+  "module_id",
 ] as const;
 type Display = {
   layout?: string;
@@ -39,6 +41,8 @@ const groups: Record<string, IssueListGroupField> = {
   created_by: "created_by_id",
   target_date: "target_date",
   project: "project_id",
+  cycle: "cycle_id",
+  module: "module_id",
 };
 const orders: IssueListOrder[] = [
   "created_at",
@@ -100,6 +104,8 @@ function validValue(field: FilterField | "project_id", value: string): boolean {
     case "target_date":
       return isDateCondition(value);
     case "label_id":
+    case "cycle_id":
+    case "module_id":
       return value === "none" || isId(value);
     case "assignee_id":
       return value === "none" || value === "me" || isId(value);
@@ -179,6 +185,25 @@ export function toProjectFilters(expression: TWorkItemFilterExpression): Project
   }
   for (const field of invalid) delete result[field];
   return cleanFilters(result);
+}
+
+/**
+ * A cycle's page lists its cycle's work items, a module's page its module's: neither holds its own page's key, which
+ * nerve refuses (P5b R9, P6b R12). `never` keeps the key out of any value, literal or not (P7b R18).
+ */
+export type CyclePageFilters = Omit<ProjectIssueFilters, "cycle_id"> & { cycle_id?: never };
+export type ModulePageFilters = Omit<ProjectIssueFilters, "module_id"> & { module_id?: never };
+
+/** A cycle's page's filters: the project page's without its own key. */
+export function toCycleFilters(expression: TWorkItemFilterExpression): CyclePageFilters {
+  const { cycle_id: _own, ...filters } = toProjectFilters(expression);
+  return filters;
+}
+
+/** A module's page's filters: the project page's without its own key. */
+export function toModuleFilters(expression: TWorkItemFilterExpression): ModulePageFilters {
+  const { module_id: _own, ...filters } = toProjectFilters(expression);
+  return filters;
 }
 
 /** Member views additionally accept one validated project condition. */
@@ -266,7 +291,10 @@ export function memberListQuery(
     ...cleaned,
     order_by: order(display.order_by),
     sub_issue: display.sub_issue === false ? "false" : "true",
-    ...(groupBy && !["state_id", "assignee_id", "created_by_id"].includes(groupBy) ? { group_by: groupBy } : {}),
+    // Groupings nerve refuses on a member list (422); the cycle and module ones with them (P7b R22).
+    ...(groupBy && !["state_id", "assignee_id", "created_by_id", "cycle_id", "module_id"].includes(groupBy)
+      ? { group_by: groupBy }
+      : {}),
   };
 }
 

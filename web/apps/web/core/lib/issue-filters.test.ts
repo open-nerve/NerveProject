@@ -452,3 +452,35 @@ it("logical empty membership stays false even with unknown entities or relation 
   const context = { ...listContext({ subscriber_id: [A] }), empty: true };
   for (const issue of [undefined, null, listIssue("x", 1)]) expect(issueMembership(issue, context)).toBe(false);
 });
+
+// A work item's cycle and modules as filter words, "none" among them as for labels (P7b spec 2.3, R7).
+it("reads, writes back and cleans the cycle and module words, none among them", () => {
+  const saved: ProjectIssueFilters = { cycle_id: ["none", A], module_id: ["none", B] };
+  expect(
+    toProjectFilters({ and: [{ cycle_id__in: `None,${A.toUpperCase()}` }, { module_id__in: `none,${B}` }] })
+  ).toEqual(saved);
+  expect(toFilterExpression(saved)).toEqual({ and: [{ cycle_id__in: `none,${A}` }, { module_id__in: `none,${B}` }] });
+  const internal = workItemFiltersAdapter.toInternal(toFilterExpression(saved));
+  if (!internal) throw new Error("Missing filter tree");
+  expect(toProjectFilters(workItemFiltersAdapter.toExternal(internal))).toEqual(saved);
+  expect(projectListQuery({ cycle_id: ["none", A], module_id: [B, "me"] })).toEqual({
+    cycle_id: ["none", A],
+    order_by: "-created_at",
+    sub_issue: "true",
+  });
+  expect(toProjectFilters({ and: [{ cycle_id__in: "current" }, { module_id__exact: B }] })).toEqual({ module_id: [B] });
+});
+
+// "My work items" answers 422 to either word (P7b R22): neither filters nor groups a member list.
+it.each([
+  ["cycle", "cycle_id"],
+  ["module", "module_id"],
+])("a member list neither filters nor groups by the %s word that a project list groups by", (group_by, wire) => {
+  expect(projectListQuery({}, { group_by }).group_by).toBe(wire);
+  expect(memberListQuery({ cycle_id: [A], module_id: ["none"], priority: ["high"] }, { group_by }, "created")).toEqual({
+    relation: "created",
+    priority: ["high"],
+    order_by: "-created_at",
+    sub_issue: "true",
+  });
+});

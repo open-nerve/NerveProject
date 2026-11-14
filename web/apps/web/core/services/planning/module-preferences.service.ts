@@ -5,6 +5,10 @@
 
 import type { ApiClient, ModulePreferences, ModulePreferencesUpdate } from "@nerve/api-client";
 import { unwrap } from "@/lib/api-error";
+import type { ModulePageFilters } from "@/lib/issue-filters";
+
+/** nerve's update of a module's page with the page's filters, which never hold module_id (P7b R18). */
+type ModulePreferencesChange = Omit<ModulePreferencesUpdate, "filters"> & { filters?: ModulePageFilters };
 
 /** The caller's own list settings on a module's page: its filters, display filters and display properties. */
 export class ModulePreferencesService {
@@ -19,7 +23,7 @@ export class ModulePreferencesService {
   }
 
   /** Each named field replaces that field whole; the answer is the page's settings as changed. */
-  async update(moduleId: string, data: ModulePreferencesUpdate): Promise<ModulePreferences> {
+  async update(moduleId: string, data: ModulePreferencesChange): Promise<ModulePreferences> {
     return unwrap(
       await this.api.PATCH("/api/v0/me/modules/{module_id}/preferences", {
         params: { path: { module_id: moduleId } },

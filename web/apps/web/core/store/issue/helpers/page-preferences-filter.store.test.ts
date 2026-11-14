@@ -1,7 +1,8 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
-// The page-preferences base's own branches, through its project page; the page's shared rules are in
-// ../project/filter.store.test.ts.
+// The page-preferences base's own branches, through its project page, and its narrowing by page (P7b spec 2.3); the
+// page's shared rules are in ../project/filter.store.test.ts.
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import type { ProjectIssueFilters } from "@nerve/api-client";
 import { EIssueFilterType } from "@nerve/constants";
 import { ApiError } from "@/lib/api-error";
 import { json, problem } from "@/lib/auth/fake-nerve";
@@ -136,4 +137,28 @@ it("refuses a partial change of a field with nothing read, without a request", a
   );
   expect(nerve.calls).toHaveLength(0);
   expect(store.getIssueFilters("A")).toBeUndefined();
+});
+
+// A cycle's page holds no cycle_id and a module's page no module_id, even when the expression has them (P7b R18).
+const C = "019a0000-0000-7000-8000-0000000000c1";
+const M = "019a0000-0000-7000-8000-0000000000a1";
+const both = { and: [{ cycle_id__in: `none,${C}` }, { module_id__in: M }, { priority__in: "high" }] };
+it.each<["project" | "cycle" | "module", string, string, ProjectIssueFilters]>([
+  ["project", "A", "projects", { cycle_id: ["none", C], module_id: [M], priority: ["high"] }],
+  ["cycle", "C1", "cycles", { module_id: [M], priority: ["high"] }],
+  ["module", "M1", "modules", { cycle_id: ["none", C], priority: ["high"] }],
+])("the %s page's filter change sends no key of its own page", async (page, id, path, filters) => {
+  const { app, nerve } = tab;
+  const pages = {
+    project: app.issue.projectIssuesFilter,
+    cycle: app.issue.cycleIssuesFilter,
+    module: app.issue.moduleIssuesFilter,
+  };
+  const patch = await requestedIssue(nerve, () => pages[page].updateFilterExpression("ws", id, both), [
+    "PATCH",
+    `/api/v0/me/${path}/${id}/preferences`,
+  ]);
+  expect(patch.call.body).toEqual({ filters });
+  patch.call.answer(json(200, preferencesOf({ filters })));
+  await patch.promise;
 });

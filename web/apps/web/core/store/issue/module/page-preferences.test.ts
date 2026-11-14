@@ -94,11 +94,14 @@ it("reads a module page's preferences by module id and shows nerve's words as th
   expect(store.getIssueFilters("M1")).toEqual(app.issue.projectIssuesFilter.getIssueFilters("A"));
 });
 
-it("shows no cycle condition saved through the interface, and sends the web's conditions alone, never a module", async () => {
+it("shows a cycle condition saved through the interface, and sends the web's conditions alone, never a module", async () => {
   const { nerve } = tab;
   const store = await loaded("M1", modulePreferencesOf({ filters: { cycle_id: ["none"], priority: ["high"] } }));
-  expect(store.getIssueFilters("M1")?.richFilters).toEqual(high);
-  // The web's words have no module (P6b R16); a condition on one, from wherever it came, is not sent.
+  // The web's words have a cycle, "none" among its values (P7b R7).
+  expect(store.getIssueFilters("M1")?.richFilters).toEqual({
+    and: [{ priority__in: "high" }, { cycle_id__in: "none" }],
+  });
+  // A module's page holds no module (P6b R16, P7b R18); a condition on one, from wherever it came, is not sent.
   const withModule = { and: [{ priority__in: "low" }, { module_id__in: "M2" }] } as TWorkItemFilterExpression;
   const filters = await requestedIssue(nerve, () => store.updateFilterExpression("ws", "M1", withModule), write("M1"));
   expect(filters.call.body).toEqual({ filters: { priority: ["low"] } });

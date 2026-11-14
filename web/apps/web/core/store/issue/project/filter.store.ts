@@ -4,10 +4,11 @@
  * See the LICENSE file for details.
  */
 
-import type { ApiClient } from "@nerve/api-client";
+import type { ApiClient, ProjectIssueFilters } from "@nerve/api-client";
 import { computed, makeObservable } from "mobx";
 import type { IIssueFilters } from "@nerve/types";
 import { EIssuesStoreType } from "@nerve/types";
+import { toProjectFilters } from "@/lib/issue-filters";
 import { ProjectPreferencesService } from "@/services/project/project-preferences.service";
 import type { IPagePreferencesFilter } from "../helpers/page-preferences-filter.store";
 import { PagePreferencesFilter } from "../helpers/page-preferences-filter.store";
@@ -19,9 +20,9 @@ export interface IProjectIssuesFilter extends IPagePreferencesFilter {
 }
 
 /** The project page's preferences (`/me/projects/{id}/preferences`), by project id. */
-export class ProjectIssuesFilter extends PagePreferencesFilter implements IProjectIssuesFilter {
+export class ProjectIssuesFilter extends PagePreferencesFilter<ProjectIssueFilters> implements IProjectIssuesFilter {
   constructor(rootIssueStore: IIssueRootStore, api: ApiClient) {
-    super(rootIssueStore, new ProjectPreferencesService(api), EIssuesStoreType.PROJECT);
+    super(rootIssueStore, new ProjectPreferencesService(api), toProjectFilters, EIssuesStoreType.PROJECT);
     makeObservable(this, { issueFilters: computed });
   }
 

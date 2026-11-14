@@ -75,6 +75,8 @@ export const WORK_ITEM_FILTER_PROPERTY_KEYS = [
   "created_by_id",
   "label_id",
   "state_id",
+  "cycle_id",
+  "module_id",
   "project_id",
   "created_at",
   "updated_at",

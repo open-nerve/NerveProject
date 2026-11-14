@@ -1,7 +1,7 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 import { isEmpty, set } from "lodash-es";
 import { action, makeObservable, observable, runInAction } from "mobx";
-import type { IssueListDisplayFilters, ProjectPreferences } from "@nerve/api-client";
+import type { IssueListDisplayFilters, ProjectIssueFilters, ProjectPreferences } from "@nerve/api-client";
 import type { TSupportedFilterTypeForUpdate } from "@nerve/constants";
 import { EIssueFilterType } from "@nerve/constants";
 import type {
@@ -13,18 +13,26 @@ import type {
   TWorkItemFilterExpression,
 } from "@nerve/types";
 import { oneAtATime } from "@/lib/one-at-a-time";
-import { projectListQuery, toFilterExpression, toProjectFilters } from "@/lib/issue-filters";
+import { projectListQuery, toFilterExpression } from "@/lib/issue-filters";
 import type { IIssueRootStore } from "../root.store";
 import { IssueFilterHelperStore } from "./issue-filter-helper.store";
 
 /** The fields every list page's own preferences hold on nerve: the project's page and a cycle's page alike. */
 type PagePreferenceField = "filters" | "display_filters" | "display_properties";
-export type PagePreferences = Pick<ProjectPreferences, PagePreferenceField>;
+/** A page's preferences with the page's own filters `F`: the project page's, or a cycle's or module's page's. */
+export type PagePreferences<F extends ProjectIssueFilters> = Pick<
+  ProjectPreferences,
+  "display_filters" | "display_properties"
+> & { filters: F };
 
-/** A page's preferences on nerve, by the page's id; each field named in an update replaces that field whole. */
-export interface PagePreferencesService {
-  get(id: string): Promise<PagePreferences>;
-  update(id: string, body: Partial<PagePreferences>): Promise<PagePreferences>;
+/**
+ * A page's preferences on nerve, by the page's id; each field named in an update replaces that field whole. `update`
+ * is a property, not a method, so that its body is checked strictly: a service taking another page's filters does
+ * not fit (P7b R18).
+ */
+export interface PagePreferencesService<F extends ProjectIssueFilters> {
+  get(id: string): Promise<PagePreferences<F>>;
+  update: (id: string, body: Partial<PagePreferences<F>>) => Promise<PagePreferences<F>>;
 }
 
 export interface IPagePreferencesFilter {
@@ -100,18 +108,23 @@ function controlOrder(value: string): string {
 /**
  * One list page's preferences per page id (v0 design 7.7): reads in order, one queue of whole-field changes per field,
  * nerve's answers shown in the controls' vocabulary, and the kanban groups' collapse kept locally under the page's
- * store type. A page gives its service and store type and passes its id on each call; the base reads no route.
+ * store type. A page gives its service, its filters' converter and its store type and passes its id on each call; the
+ * base reads no route. The page's filters `F` are its converter's; its service must take them.
  */
-export class PagePreferencesFilter extends IssueFilterHelperStore implements IPagePreferencesFilter {
+export class PagePreferencesFilter<F extends ProjectIssueFilters>
+  extends IssueFilterHelperStore
+  implements IPagePreferencesFilter
+{
   filters: Record<string, IIssueFilters> = {};
-  private readonly values = new Map<string, PagePreferences>();
+  private readonly values = new Map<string, PagePreferences<F>>();
   private readonly queues = new Map<string, ReturnType<typeof oneAtATime>>();
   private readonly versions = new Map<string, number>();
   private readonly reads = new Map<string, number>();
 
   constructor(
     protected readonly rootIssueStore: IIssueRootStore,
-    private readonly service: PagePreferencesService,
+    private readonly service: PagePreferencesService<NoInfer<F>>,
+    private readonly toFilters: (expression: TWorkItemFilterExpression) => F,
     private readonly storeType: EIssuesStoreType
   ) {
     super();
@@ -130,7 +143,7 @@ export class PagePreferencesFilter extends IssueFilterHelperStore implements IPa
     return this.computedIssueFilters(displayFilters);
   }
 
-  private show(id: string, value: PagePreferences) {
+  private show(id: string, value: PagePreferences<F>) {
     const d = value.display_filters;
     const display: IIssueDisplayFilterOptions = {
       ...d,
@@ -182,7 +195,11 @@ export class PagePreferencesFilter extends IssueFilterHelperStore implements IPa
    * Replaces one field whole with what `next` gives once the field's earlier changes settled. It needs nothing read
    * (P5b spec 2.4): without a read the answer, the page's whole preferences, seeds the page.
    */
-  private replace<K extends PagePreferenceField>(id: string, field: K, next: () => PagePreferences[K]): Promise<void> {
+  private replace<K extends PagePreferenceField>(
+    id: string,
+    field: K,
+    next: () => PagePreferences<F>[K]
+  ): Promise<void> {
     const key = `${id}:${field}`;
     let queue = this.queues.get(key);
     if (!queue) {
@@ -205,7 +222,7 @@ export class PagePreferencesFilter extends IssueFilterHelperStore implements IPa
   private merge<K extends PagePreferenceField>(
     id: string,
     field: K,
-    make: (held: PagePreferences[K]) => PagePreferences[K]
+    make: (held: PagePreferences<F>[K]) => PagePreferences<F>[K]
   ): Promise<void> {
     return this.replace(id, field, () => {
       const held = this.values.get(id);
@@ -220,7 +237,7 @@ export class PagePreferencesFilter extends IssueFilterHelperStore implements IPa
    * For regular filter updates, use this method as a fallback function for the work item filter store methods instead.
    */
   updateFilterExpression: IPagePreferencesFilter["updateFilterExpression"] = (_workspaceSlug, id, filters) =>
-    this.replace(id, "filters", () => toProjectFilters(filters));
+    this.replace(id, "filters", () => this.toFilters(filters));
 
   updateFilters: IPagePreferencesFilter["updateFilters"] = async (workspaceSlug, id, type, filters) => {
     switch (type) {
@@ -258,6 +275,10 @@ export class PagePreferencesFilter extends IssueFilterHelperStore implements IPa
   };
 }
 
-function keep<K extends PagePreferenceField>(held: PagePreferences, value: PagePreferences, field: K) {
+function keep<F extends ProjectIssueFilters, K extends PagePreferenceField>(
+  held: PagePreferences<F>,
+  value: PagePreferences<F>,
+  field: K
+) {
   value[field] = held[field];
 }

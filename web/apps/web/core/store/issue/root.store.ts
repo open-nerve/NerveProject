@@ -41,6 +41,7 @@ import { IssueSearchService } from "@/services/issue/issue-search.service";
 import { CyclePreferencesService } from "@/services/planning/cycle-preferences.service";
 import { ModulePreferencesService } from "@/services/planning/module-preferences.service";
 import { SessionChangedError } from "@/lib/auth/token-manager";
+import { toCycleFilters, toModuleFilters } from "@/lib/issue-filters";
 import type { IssueListBinding } from "./helpers/issue-list-binding";
 import { PermissionReads } from "./permission-reads";
 import type { DetailRegistration } from "./issue-details/resource";
@@ -193,15 +194,13 @@ export class IssueRootStore {
     this.projectIssuesFilter = new ProjectIssuesFilter(this, api);
     this.projectIssues = new ProjectIssues(this, this.projectIssuesFilter);
 
-    this.cycleIssuesFilter = new PagePreferencesFilter(this, new CyclePreferencesService(api), EIssuesStoreType.CYCLE);
+    const cycleService = new CyclePreferencesService(api);
+    this.cycleIssuesFilter = new PagePreferencesFilter(this, cycleService, toCycleFilters, EIssuesStoreType.CYCLE);
     this.cycleIssues = new CycleIssues(this, this.cycleIssuesFilter);
     this.cyclePriorityIssues = new CyclePriorityIssues(this);
 
-    this.moduleIssuesFilter = new PagePreferencesFilter(
-      this,
-      new ModulePreferencesService(api),
-      EIssuesStoreType.MODULE
-    );
+    const moduleService = new ModulePreferencesService(api);
+    this.moduleIssuesFilter = new PagePreferencesFilter(this, moduleService, toModuleFilters, EIssuesStoreType.MODULE);
     this.moduleIssues = new ModuleIssues(this, this.moduleIssuesFilter);
 
     this.archivedIssuesFilter = new ArchivedIssuesFilter(this);
