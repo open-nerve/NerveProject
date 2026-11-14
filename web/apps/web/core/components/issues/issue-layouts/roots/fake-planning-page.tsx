@@ -2,15 +2,17 @@
 // A planning page's work items against a fake nerve (P5b spec 2.6, P6b spec 2.2), per domain, for the tests of the
 // shared layout root: the route's project A with the caller of a role, the page's cycle C1 or module M1 as nerve last
 // gave it, and the page's preferences and its list as nerve answers them. The stores, rows, layouts and HTTP are real;
-// the test file binds the stores and the route.
+// the test file binds the stores and the route. Below them, what the pages' tests do on the page the test opened: its
+// header's buttons, a row's quick actions and dialogs, and a new work item's form (P6b review re-71 M1).
 import { act, type ReactNode } from "react";
 import { MemoryRouter } from "react-router";
 import { SWRConfig } from "swr";
-import { vi } from "vitest";
+import { expect, vi } from "vitest";
 import type {
   Cycle,
   CyclePreferences,
   Issue,
+  IssueDetail,
   IssueListDisplayFilters,
   Module,
   ModuleIssueFilters,
@@ -19,12 +21,12 @@ import type {
   ProjectIssueFilters,
 } from "@nerve/api-client";
 import { EIssuesStoreType } from "@nerve/types";
-import { answered, json } from "@/lib/auth/fake-nerve";
+import { answered, json, type Call } from "@/lib/auth/fake-nerve";
 import { until } from "@/lib/auth/fake-time";
 import { issueSelectionTab } from "@/components/core/modals/fake-issue-selection";
 import { PeekOnEntry } from "@/components/cycles/peek-on-entry";
 import type { PlanningPageStoreType } from "@/hooks/planning-page-domains";
-import { listIssue } from "@/store/issue/fake-issues";
+import { issueDetailOf, listIssue } from "@/store/issue/fake-issues";
 import { loadModule } from "@/store/planning/fake-modules";
 import { cycleOf, moduleOf, preferencesOf } from "@/store/project/fake-projects";
 import { PlanningPageLayoutRoot } from "./planning-page-layout-root";
@@ -182,7 +184,7 @@ export async function planningPageTab(type: PlanningPageStoreType, fields: PageF
         </MemoryRouter>
       </SWRConfig>
     );
-  return {
+  const planningTab = {
     ...tab,
     preferences,
     lists,
@@ -198,8 +200,130 @@ export async function planningPageTab(type: PlanningPageStoreType, fields: PageF
       if (list !== undefined) await act(async () => lists()[0]!.answer(json(200, list)));
     },
   };
+  opened = planningTab;
+  return planningTab;
+}
+type PlanningPageTab = Awaited<ReturnType<typeof planningPageTab>>;
+/** The tab planningPageTab opened last: the test's page, which the helpers below act on (a test has one at a time). */
+let opened: PlanningPageTab | undefined;
+function current(): PlanningPageTab {
+  if (!opened) throw new Error("no planning page is open: planningPageTab opens one");
+  return opened;
 }
 
 /** The button of the page whose text is text. */
 export const buttonOf = (text: string) =>
   [...document.querySelectorAll<HTMLButtonElement>("button")].find((node) => node.textContent?.trim() === text);
+
+/** The header's button of name: its aria-label, or else its text. */
+export const inHeader = (name: string) =>
+  [...document.querySelectorAll<HTMLButtonElement>("[data-header] button")].find(
+    (node) => (node.getAttribute("aria-label") ?? node.textContent?.trim()) === name
+  );
+/** The header's button of text. */
+export const headerButton = (text: string) =>
+  [...document.querySelectorAll<HTMLButtonElement>("[data-header] button")].find(
+    (node) => node.textContent?.trim() === text
+  );
+
+/** Whether the row is on the page: its quick actions are its own. */
+export const rowShown = () => !!document.querySelector('[data-context-menu="true"] [role="menuitem"]');
+/** The title the open dialog shows, null without a dialog. */
+export const dialogTitle = () =>
+  document.querySelector<HTMLInputElement>('[role="dialog"] input[name="name"]')?.value ?? null;
+/** Chooses the row's quick action of name. */
+export const choose = (name: string) =>
+  act(async () =>
+    [...document.querySelectorAll<HTMLButtonElement>('[data-context-menu="true"] [role="menuitem"]')]
+      .find((node) => node.textContent === name)
+      ?.click()
+  );
+/** The page's work item "first" as nerve reads it: the row's own fields, with its description. */
+const detail = (): IssueDetail => {
+  const [row] = (current().listOf("spreadsheet") as { data: IssueDetail[] }).data;
+  return { ...issueDetailOf("first"), ...row };
+};
+/** The reads of the work item itself: the dialog's, then the check its sub-issues' read makes. */
+const reads = () =>
+  current()
+    .nerve.to("/api/v0/issues/first")
+    .filter((call) => call.method === "GET");
+
+/**
+ * A row's edit and copy dialogs outlive the row (P5b T13): chooses the row's quick action of name and answers the
+ * dialog's reads one at a time: the dialog shows title from the start, and still while a read is out with the row off
+ * the page (the check of the work item); the list's read again brings the row back, and the dialog still shows title.
+ */
+export async function outlivesTheRow(name: string, title: string, list: unknown) {
+  const page = current();
+  await until(rowShown, "the row");
+  const normal = page.nerve.respond;
+  page.nerve.respond = (call: Call) => {
+    if (
+      call.method === "GET" &&
+      /\/issues\/first\/(sub-issues|relations|links|reactions|activities|comments)$/.test(call.path)
+    )
+      call.answer(json(200, { data: [], next_cursor: null }));
+    else normal?.(call);
+  };
+  await choose(name);
+  expect(dialogTitle()).toBe(title);
+  const answeredReads = new Set<Call>();
+  const out = () => reads().find((call) => !answeredReads.has(call));
+  const titlesWhileOff: (string | null)[] = [];
+  // the dialog's read, then the check of the work item, each answered as nerve reads it, until the list reads again
+  const answerReads = async (left: number): Promise<void> => {
+    await until(() => out() !== undefined || page.lists().length === 2, "a read of the work item, or of the list");
+    const read = out();
+    if (read === undefined) return;
+    if (left === 0) throw new Error("the work item was read more than five times");
+    if (!rowShown()) titlesWhileOff.push(dialogTitle());
+    answeredReads.add(read);
+    await act(async () => read.answer(json(200, detail())));
+    return answerReads(left - 1);
+  };
+  await answerReads(5);
+  expect(titlesWhileOff).toEqual([title]);
+  await act(async () => page.lists()[1]!.answer(json(200, list)));
+  await until(rowShown, "the row again");
+  expect(dialogTitle()).toBe(title);
+}
+
+/** The page's creations: what was sent to nerve to create a work item in project A. */
+export const creates = () =>
+  current()
+    .nerve.to("/api/v0/projects/A/issues")
+    .filter((call) => call.method === "POST");
+/** The open dialog's form. */
+export const form = () => document.querySelector<HTMLFormElement>('[role="dialog"] form');
+/** The form's project field: its dropdown's button, which names the project. */
+export const projectField = () =>
+  [...(form()?.querySelectorAll<HTMLButtonElement>("button") ?? [])].find(
+    (node) => node.textContent === "common.project: A"
+  );
+/** Types the name of the new work item in the input of selector and sends what it is in. */
+export async function send(selector: string, name: string, at: () => HTMLFormElement | null) {
+  await act(async () => {
+    const input = at()!.querySelector<HTMLInputElement>(selector)!;
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(input, name);
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+  await act(async () => at()!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })));
+  await until(() => creates().length === 1, "the creation");
+}
+/** The quick add's form, in the list, not in a dialog. */
+export const quickAddForm = () =>
+  [...document.querySelectorAll<HTMLFormElement>("form")].find((node) => !node.closest('[role="dialog"]')) ?? null;
+/** nerve's answer to a creation of name: the work item "made", with fields. */
+export const made = (name: string, fields: object = {}) => ({
+  ...issueDetailOf("made"),
+  name,
+  sort_order: 500,
+  ...fields,
+});
+/** Sends a new work item from the app's own new work item, of no page, and nerve's answer to it. */
+export async function globalCreate(name: string) {
+  await act(async () => current().app.commandPalette.toggleCreateIssueModal(true));
+  expect(projectField()?.disabled, "the app's form lets the project be changed").toBe(false);
+  await send("#name", name, form);
+}

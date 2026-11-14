@@ -19,7 +19,7 @@ import { issueDetailOf } from "@/store/issue/fake-issues";
 import { cycleRequests } from "@/store/planning/fake-cycles";
 import type { RootStore } from "@/store/root.store";
 import type { IssuesModalProps } from "../../issue-modal/modal";
-import { C1, planningPageTab, cyclePreferencesOf, layouts, type Layout } from "./fake-planning-page";
+import { C1, choose, planningPageTab, cyclePreferencesOf, layouts, type Layout } from "./fake-planning-page";
 
 const bound = vi.hoisted(() => ({
   app: undefined as RootStore | undefined,
@@ -76,13 +76,6 @@ async function shown(fields: Parameters<typeof planningPageTab>[1] = {}, layout:
 /** The row's quick actions, by their names, as its menu offers them. */
 const offered = () =>
   [...document.querySelectorAll('[data-context-menu="true"] [role="menuitem"]')].map((node) => node.textContent);
-/** Chooses the row's quick action of name. */
-const choose = (name: string) =>
-  act(async () =>
-    [...document.querySelectorAll<HTMLButtonElement>('[data-context-menu="true"] [role="menuitem"]')]
-      .find((node) => node.textContent === name)
-      ?.click()
-  );
 const REMOVE = "issue.remove.cycle.label";
 const row = () => document.querySelector('[id^="issue-first"]');
 const writesOf = (id: string) => page.nerve.to(`/api/v0/issues/${id}`).filter((call) => call.method === "PATCH");

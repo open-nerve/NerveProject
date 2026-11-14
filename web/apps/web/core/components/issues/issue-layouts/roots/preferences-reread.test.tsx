@@ -24,6 +24,7 @@ import {
   buttonOf,
   C1,
   cyclePreferencesOf,
+  inHeader,
   layouts,
   M1,
   modulePreferencesOf,
@@ -159,10 +160,6 @@ async function open(make: () => Promise<Opened>) {
 /** The page's one work item, as its list shows it. */
 const row = () => document.querySelector('a[id="issue-first"]');
 const all = ["list", "kanban", "calendar", "spreadsheet"];
-const inHeader = (name: string) =>
-  [...document.querySelectorAll<HTMLButtonElement>("[data-header] button")].find(
-    (node) => (node.getAttribute("aria-label") ?? node.textContent?.trim()) === name
-  );
 /** What of the page's work items its header offers. */
 const offered = () => ({
   layouts: all.filter((layout) => inHeader(`issue.layouts.title.${layout}`)),

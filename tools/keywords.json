@@ -2615,6 +2615,7 @@
             "web/apps/web/core/hooks/use-module-list-state.test.ts",
             "web/apps/web/core/hooks/module-page-actions.integration.test.tsx",
             "web/apps/web/core/components/issues/issue-layouts/roots/fake-planning-page.tsx",
+            "web/apps/web/core/components/issues/issue-modal/fake-dialog.tsx",
             "web/apps/web/core/components/issues/issue-layouts/roots/module-layout-root.test.tsx",
             "web/apps/web/core/components/issues/issue-layouts/roots/module-layout-access.test.tsx",
             "web/apps/web/core/components/issues/issue-layouts/roots/module-row-dialogs.test.tsx",

@@ -17,6 +17,7 @@ import { moduleOf } from "@/store/project/fake-projects";
 import type { RootStore } from "@/store/root.store";
 import {
   buttonOf,
+  inHeader,
   layouts,
   M1,
   modulePreferencesOf,
@@ -67,10 +68,6 @@ const header = (moduleId = M1) => (
     <ModuleIssuesHeader workspaceSlug="ws" projectId="A" moduleId={moduleId} />
   </div>
 );
-const inHeader = (name: string) =>
-  [...document.querySelectorAll<HTMLButtonElement>("[data-header] button")].find(
-    (node) => (node.getAttribute("aria-label") ?? node.textContent?.trim()) === name
-  );
 /** The count the header shows: a leaf of only digits. */
 const count = () =>
   [...document.querySelectorAll("[data-header] *")].find(

@@ -17,6 +17,7 @@ import type { RootStore } from "@/store/root.store";
 import {
   buttonOf,
   C1,
+  inHeader,
   planningPageTab,
   cyclePreferencesOf,
   layouts,
@@ -66,10 +67,6 @@ const header = (cycleId = C1) => (
     <CycleIssuesHeader workspaceSlug="ws" projectId="A" cycleId={cycleId} />
   </div>
 );
-const inHeader = (name: string) =>
-  [...document.querySelectorAll<HTMLButtonElement>("[data-header] button")].find(
-    (node) => (node.getAttribute("aria-label") ?? node.textContent?.trim()) === name
-  );
 /** The count the header shows: a leaf of only digits. */
 const count = () =>
   [...document.querySelectorAll("[data-header] *")].find(

@@ -8,7 +8,7 @@
 // is read. While it is out, the row's removal again sends nothing, and neither follows once the page is another
 // module's or another session's. The edit dialog changes what its form changes, never the work item's modules; the
 // copy joins the page's module alone. The layouts, the menus, the dialog's form, the stores and HTTP are real.
-import { act, createElement, forwardRef, useImperativeHandle, type ReactNode } from "react";
+import { act, createElement, type ReactNode } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { Issue, IssueDetail, Module } from "@nerve/api-client";
 import { EIssuesStoreType } from "@nerve/types";
@@ -19,7 +19,16 @@ import { issueDetailOf, listIssue } from "@/store/issue/fake-issues";
 import { loadModule, moduleRequests } from "@/store/planning/fake-modules";
 import { moduleOf } from "@/store/project/fake-projects";
 import type { RootStore } from "@/store/root.store";
-import { M1, layouts, modulePreferencesOf, planningPageTab, type Layout } from "./fake-planning-page";
+import {
+  M1,
+  choose,
+  creates,
+  form,
+  layouts,
+  modulePreferencesOf,
+  planningPageTab,
+  type Layout,
+} from "./fake-planning-page";
 
 const bound = vi.hoisted(() => ({
   app: undefined as RootStore | undefined,
@@ -50,16 +59,12 @@ vi.mock("@/components/core/render-if-visible-HOC", () => ({
 vi.mock("@nerve/propel/emoji-icon-picker", () => ({ Logo: () => null }));
 vi.mock("@nerve/ui", async (original) => ({
   ...(await original<typeof import("@nerve/ui")>()),
-  ModalCore: (props: { isOpen: boolean; children: ReactNode }) =>
-    props.isOpen ? <div role="dialog">{props.children}</div> : null,
-  ModalTitle: (props: { children: ReactNode }) => <h3>{props.children}</h3>,
+  ...(await import("@/components/issues/issue-modal/fake-dialog")).modal,
 }));
-vi.mock("@/components/editor/rich-text", () => ({
-  RichTextEditor: forwardRef(function Editor(_props, ref) {
-    useImperativeHandle(ref, () => ({ isEditorReadyToDiscard: () => true, clearEditor: () => {} }));
-    return <textarea aria-label="description" />;
-  }),
-}));
+vi.mock(
+  "@/components/editor/rich-text",
+  async () => (await import("@/components/issues/issue-modal/fake-dialog")).editor
+);
 vi.mock("@/components/issues/issue-modal/components/default-properties", () => ({
   IssueDefaultProperties: () => null,
 }));
@@ -99,17 +104,9 @@ async function shown(pageFields: Parameters<typeof planningPageTab>[1] = {}, lay
 /** The row's quick actions, by their names, as its menu offers them. */
 const offered = () =>
   [...document.querySelectorAll('[data-context-menu="true"] [role="menuitem"]')].map((node) => node.textContent);
-/** Chooses the row's quick action of name. */
-const choose = (name: string) =>
-  act(async () =>
-    [...document.querySelectorAll<HTMLButtonElement>('[data-context-menu="true"] [role="menuitem"]')]
-      .find((node) => node.textContent === name)
-      ?.click()
-  );
 const REMOVE = "issue.remove.module.label";
 const row = () => document.querySelector('[id^="issue-first"]');
 const writesOf = (id: string) => page.nerve.to(`/api/v0/issues/${id}`).filter((call) => call.method === "PATCH");
-const creates = () => page.nerve.to("/api/v0/projects/A/issues").filter((call) => call.method === "POST");
 const progressReads = (id = M1) => page.nerve.to(moduleRequests.progress({ id }));
 /** The module's work item "first" as nerve answers a write or a read of it, with fields. */
 const first = (changes: Partial<IssueDetail> = {}): IssueDetail => ({
@@ -241,7 +238,6 @@ function answerDialogReads(list: unknown) {
     else normal?.(call);
   };
 }
-const form = () => document.querySelector<HTMLFormElement>('[role="dialog"] form');
 /** Sends the open dialog's form once it has read its work item, its name typed as name when given. */
 async function sendDialog(name?: string) {
   await until(() => form()?.querySelector<HTMLButtonElement>('button[type="submit"]')?.disabled === false, "the form");
