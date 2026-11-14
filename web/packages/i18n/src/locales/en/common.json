@@ -462,6 +462,7 @@
     "remove": "Remove",
     "archiving": "Archiving",
     "archive": "Archive",
+    "archived": "Archived",
     "access": {
       "public": "Public",
       "private": "Private"

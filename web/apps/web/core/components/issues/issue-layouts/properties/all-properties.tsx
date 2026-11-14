@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import type { Issue, IssueDetail } from "@nerve/api-client";
+import type { Issue } from "@nerve/api-client";
 
 import type { SyntheticEvent } from "react";
 import { observer } from "mobx-react";
@@ -13,7 +13,7 @@ import { AttachOutline, DueDateOutline, LinkOutline, StartDateOutline, ViewsOutl
 // i18n
 import { useTranslation } from "@nerve/i18n";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
-import type { IIssueDisplayProperties, TIssuePriorities } from "@nerve/types";
+import type { IIssueDisplayProperties, TIssuePriorities, IssueChange } from "@nerve/types";
 // ui
 import { getDate, renderFormattedPayloadDate, generateWorkItemLink, shouldHighlightIssueDueDate } from "@nerve/utils";
 // components
@@ -30,11 +30,12 @@ import { usePlatformOS } from "@/hooks/use-platform-os";
 // local components
 import { IssuePropertyLabels } from "./labels";
 import { useDetailCommand } from "../../issue-detail/use-issue-operations";
+import { IssueRowPlanningProperties } from "./row-planning-properties";
 import { WithDisplayPropertiesHOC } from "./with-display-properties-HOC";
 
 interface IIssueProperties {
   issue: Issue;
-  updateIssue: ((projectId: string | null, issueId: string, data: Partial<IssueDetail>) => Promise<void>) | undefined;
+  updateIssue: ((projectId: string | null, issueId: string, data: IssueChange) => Promise<void>) | undefined;
   displayProperties: IIssueDisplayProperties | undefined;
   isReadOnly: boolean;
   className: string;
@@ -55,7 +56,7 @@ export const IssueProperties = observer(function IssueProperties(props: IIssuePr
   const { workspaceSlug } = useParams();
 
   const run = useDetailCommand(workspaceSlug ?? "", issue.project_id, issue.id);
-  const change = (data: Partial<IssueDetail>) => {
+  const change = (data: IssueChange) => {
     if (updateIssue) void run(() => updateIssue(issue.project_id, issue.id, data)).catch(() => undefined);
   };
 
@@ -255,6 +256,16 @@ export const IssueProperties = observer(function IssueProperties(props: IIssuePr
           />
         </div>
       </WithDisplayPropertiesHOC>
+
+      {/* modules and cycle */}
+      <IssueRowPlanningProperties
+        workspaceSlug={workspaceSlug}
+        issue={issue}
+        project={projectDetails}
+        displayProperties={displayProperties}
+        isReadOnly={isReadOnly}
+        onChange={change}
+      />
 
       {/* sub-issues */}
       <WithDisplayPropertiesHOC

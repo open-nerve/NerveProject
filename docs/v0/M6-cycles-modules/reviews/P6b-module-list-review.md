@@ -1,6 +1,6 @@
 # M6/P6b 阶段评审记录
 
-> 实现与审查已完成，待分支 CI 与合入：整分支审查 Ready after fixes（[re-71](../../../reviews/re-71-M6P6b整体审核.md)：没有 Critical、Important，六处 Minor 与四条观察），修复轮 F（F1–F9）处理六处 Minor、一条观察与修复轮中另见的两处同类边缘，经限定复审 Ready to merge（一处 Minor 交 P7，re-71 §4）；最终候选 `dd98bcaf`（最后一个改代码的提交是 F9 的 `09aba5f8`，`dd98bcaf` 只改文档），其后只有本记录所在的提交（只改文档）。最终 HEAD 的分支 CI、合入、main CI 与归档清理见 §7（由 P7 的 T1 回填）。基线 main `06b72d4b65bcba911344a4ed3c358f164a5fdeeb`（P6a 的 noff，双父 `aadaf61a`、`8188582e`；main CI 43469787621 attempt 2 通过）。
+> 已完成（2026-11-14，noff `954a1838`，修复 noff `7868a6b4`，main CI 43557098427 attempt 1 通过：noff `954a1838` 的 main CI 43549053092 attempt 1 的 e2e 只在 M4 的 I4 (page) 表格排序故事超出它自己的时限，没有重跑，由修复分支 `codex/m6-p6b-ci` 把故事按列拆开），整分支审查 Ready after fixes（[re-71](../../../reviews/re-71-M6P6b整体审核.md)：没有 Critical、Important，六处 Minor 与四条观察），修复轮 F（F1–F9）处理六处 Minor、一条观察与修复轮中另见的两处同类边缘，经限定复审 Ready to merge（一处 Minor 交 P7，re-71 §4）；最终候选 `dd98bcaf`（最后一个改代码的提交是 F9 的 `09aba5f8`，`dd98bcaf` 只改文档），其后只有本记录所在的提交（只改文档），即最终 HEAD `c0572192`。最终 HEAD 的分支 CI、合入、main CI、修复分支与归档清理见 §7（由 P7a 的 T1 回填）。基线 main `06b72d4b65bcba911344a4ed3c358f164a5fdeeb`（P6a 的 noff，双父 `aadaf61a`、`8188582e`；main CI 43469787621 attempt 2 通过）。
 
 ## 1. 评审方式与范围
 
@@ -118,11 +118,12 @@ fresh 只读审查（[re-71](../../../reviews/re-71-M6P6b整体审核.md)，`fab
 
 ## 7. 集成、归档与接续
 
-（待回填：由 P7 的 T1 按归档里的台账、CI 原件与 `cleanup.log` 回填，作业号与时刻以 GitHub 公开的 jobs 接口核对。）
+由 P7a 的 T1 按归档里的台账（Task 16 的末尾与修复分支的台账 `ci-fix/progress.md`）、`manifest.json` 与 `cleanup.log` 回填；作业号、时刻、attempt 与结论以 GitHub 公开的 jobs 接口（只读）核对（收据 `t1-ci-jobs`），e2e 的条数与失败处以作业日志核对（归档的 `ci-fix/evidence/` 与修复的 main CI 的作业日志，收据 `t1-fix-main-e2e-log`），双父与树以 `git rev-parse` 核对（收据 `t1-p6b-trees`）。
 
-- **最终 HEAD 的分支 CI**：待回填（含 e2e 作业的实际时长，与 §5 的估算对照）。
-- **合入与 main CI**：待回填。
-- **归档**：待回填。
-- **清理**：待回填。
+- **最终 HEAD 的分支 CI**：`c0572192e831957dd63939b96ec007c3e1eb875b` 的 43545459485 attempt 1 成功（server (1) 132295623381、web 132295623598、server (0) 132295623771、e2e 132300181032；e2e 作业 02:32:37Z–02:55:46Z，23 分 09 秒，469 过）。低于 §5 的估算约 26.1 分钟与上界 27.3–27.6 分钟（主控推送前以 T13、T14 记下的 chromium 31.5 秒重算，上界约 27.8 分钟，同样低于报告线），也低于检查点的 25 分 38 秒：runner 的速度差异。
+- **合入与第一次 main CI**：noff `954a1838bff44e98cc44f15df524da27e42fb1d8`，双父 `06b72d4b`、`c0572192`，树与分支相同（`35b41a94`）。main CI 43549053092 attempt 1：server (1) 132307020272、web 132307020426、server (0) 132307020493 成功；e2e 132311928038 失败（e2e 作业 03:14:42Z–03:42:23Z，27 分 41 秒，故事本身 25.4 分钟）：469 条 468 过，只有 M4 的 I4 (page) 表格排序故事（`e2e/stories/issue/i4-list-order-calendar.spec.ts:267`，一条故事里四列各升降两向共八次排序）以 “Test timeout of 90000ms exceeded” 失败。这是故事的时间预算：trace 的 8 步都过、没有断言失败，此前四次 CI 这条用 1.1–1.3 分钟（其中同一棵树的分支 CI 1.1 分钟），这次的 runner 最慢；与 P6b 无关。照负责人的规则没有重跑，修根因。27 分 41 秒是至今 e2e 作业最慢的数据点（[P7a spec](../specs/P7a-work-item-planning.md) §2.11 的上界以它为准）。
+- **修复分支与第二次 main CI**：`codex/m6-p6b-ci`（自 `954a1838`）两个提交：`0cfe405d06df25b863a27915f288e95c073eefe7`（test，把那条故事按列拆成四条，循环在 `tableOrders` 之上、正文不改；本机 chromium 四条 5.2–5.7 秒，合计比原来的 16.4 秒约多 5 秒）与 `9ae1517f5863efa8bb27f8a1ed40a5e87097f46a`（docs，[M6-M8-01](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-01) 的新段——超时的经过、修法与同一次运行里用掉时限 75% 以上的六条——与 M5 交接的指引）。分支 CI 43553828486 attempt 1 成功（web 132322058782、server (0) 132322059012、server (1) 132322059213、e2e 132325804218；e2e 作业 04:07:08Z–04:30:26Z，23 分 18 秒，472 过，拆开的四条各 24.8–26.5 秒）。noff `7868a6b496d2587e2ed2cac7360c3ca6a86963be`，双父 `954a1838`、`9ae1517f`，树与修复分支相同（`fe41647e`）。main CI 43557098427 attempt 1 成功（web 132332312603、server (1) 132332312735、server (0) 132332312896、e2e 132336647667；e2e 作业 04:48:59Z–05:09:19Z，20 分 20 秒，472 过、故事 18.5 分钟，四条 I4 各 21.2–22.4 秒）。这次的 20 分 20 秒是 P7a 的 e2e 时长基线（[P7a spec](../specs/P7a-work-item-planning.md) §2.11）。
+- **归档**（主目录，P7a 开工时以 `archive.py verify` 复核，收据 `t1-p6b-archive-verify`）：`.superpowers/sdd/M6-P6b-integration-20261114`：4147 个文件、1,069,366,315 字节、4975 个成员、未知 0、清单 sha256 `0b69d0ba87e4039e777692111e5d1fed3925f9d2a7e8c7c4f6f148a9d0962c58`，清单的 `head` 为 `c0572192`（台账、调研笔记、收据、变异、e2e 的 `test-results` 与 `playwright-report`、各包的 `.turbo`；修复分支的台账与证据——失败那次的 e2e 日志与 I4 的 `test-results`、此前四次与修复分支 CI 的 e2e 日志——在台账的 `ci-fix/` 里）。
+- **清理**：`cleanup.log`（2026-11-14T05:11:06Z）记录 `codex/m6-p6b`（`c0572192`）与 `codex/m6-p6b-ci`（`9ae1517f`）本地与远端一致、都已含于 origin/main，main 与 origin/main 都在 `7868a6b4`（https 的 fetch 失败，远端的头以 GitHub API 核对）；worktree `m6-p6b`、`m6-p6b-ci` 与两个本地分支已删除；两个远端分支的删除第一次因连接中断失败，05:12:03Z 重试成功，GitHub API 对两者答 404。
 
-**接续**：P7（工作项一侧：属性与下拉框、列表词表、“添加已有”、迭代页与模块页的移动端页头，设计 §12 的 P7 一行；交给它的事见 [spec](../specs/P6b-module-list.md) §5 的 P7）。
+**接续**：P7（工作项一侧）在实施之前拆为 P7a/P7b/P7c（[P7a spec](../specs/P7a-work-item-planning.md) §1、R1；交给 P7 的事见 [spec](../specs/P6b-module-list.md) §5 的 P7）：P7a 写入路径与工作项自己的迭代、模块（[P7a plan](../plans/P7a-work-item-planning.md)，预检 [re-72](../../../reviews/re-72-M6P7a预检.md)），基线 main `954a1838`，修复的 noff `7868a6b4` 在 T1 之前并入；P7b 列表词表与“添加已有”、P7c 命令面板、移动端页头与遗留未开始（P7a spec §5）。

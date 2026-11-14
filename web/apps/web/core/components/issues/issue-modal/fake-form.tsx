@@ -12,6 +12,7 @@ import {
 import { createRoot } from "react-dom/client";
 import type React from "react";
 import { useFormContext } from "react-hook-form";
+import { SWRConfig } from "swr";
 import { afterEach, beforeEach, vi, type Mock } from "vitest";
 import type { Draft } from "@nerve/api-client";
 import type { EditorRefApi } from "@nerve/editor";
@@ -25,9 +26,10 @@ import { StoreContext } from "@/lib/store-context";
 import type { RootStore } from "@/store/root.store";
 import { CreateUpdateIssueModalBase } from "./base";
 import { IssueFormRoot, type IssueFormProps } from "./form";
-import type { IssueFormValues } from "./types";
+import type { IssueFormData, IssueFormValues } from "./types";
 
 vi.mock("@/lib/auth/api-client", () => ({ tokenManager: { state: { loginId: "form-login" } }, publicClient: {} }));
+vi.mock("@/lib/auth/use-session", () => ({ useSession: () => ({ status: "signed-in", loginId: "form-login" }) }));
 vi.mock("@/lib/store-context", async () => ({
   rootStore: {},
   StoreContext: (await import("react")).createContext<RootStore | undefined>(undefined),
@@ -45,11 +47,14 @@ vi.mock("@/hooks/store/use-project", () => ({ useProject: () => tab.app.projectR
 vi.mock("@/hooks/store/use-project-state", () => ({ useProjectState: () => tab.app.state }));
 vi.mock("@/hooks/store/use-workspace", () => ({ useWorkspace: () => tab.app.workspaceRoot }));
 vi.mock("@/hooks/store/workspace-draft", () => ({ useWorkspaceDraftIssues: () => tab.app.issue.workspaceDraftIssues }));
-vi.mock("@/hooks/store/user", () => ({ useUserProfile: () => ({ data: { start_of_the_week: 1 } }) }));
+vi.mock("@/hooks/store/user", () => ({
+  useUserProfile: () => ({ data: { start_of_the_week: 1 } }),
+  useUserPermissions: () => tab.app.user.permission,
+}));
 vi.mock("@/hooks/use-platform-os", () => ({ usePlatformOS: () => ({ isMobile: false }) }));
 vi.mock("@/hooks/use-issue-layout-store", () => ({ useIssueStoreType: () => EIssuesStoreType.PROJECT }));
 vi.mock("@/hooks/use-issues-actions", () => ({
-  useIssuesActions: () => ({ createIssue: create, updateIssue: update }),
+  useIssuesActions: () => ({ createIssueAsGiven: create, updateIssue: update }),
 }));
 vi.mock("@/components/issues/create-issue-toast-action-items", () => ({ CreateIssueToastActionItems: () => null }));
 vi.mock("./components/parent-tag", () => ({ IssueParentTag: () => null }));
@@ -212,8 +217,16 @@ function DialogHost() {
     </main>
   );
 }
-/** The real root store under the form, as the application provides it. */
-const withStore = (node: React.ReactNode) => <StoreContext.Provider value={tab.app}>{node}</StoreContext.Provider>;
+/**
+ * The real root store under the form, as the application provides it, with an SWR cache of the test's own: the forms
+ * of a file read the same lists of the project in the same session (its save waits for them, re-73 M1), and a shared
+ * cache's dedupe would keep a later test's new store from them.
+ */
+const withStore = (node: React.ReactNode) => (
+  <StoreContext.Provider value={tab.app}>
+    <SWRConfig value={{ provider: () => new Map() }}>{node}</SWRConfig>
+  </StoreContext.Provider>
+);
 export const mountDialog = () => act(async () => root.render(withStore(<DialogHost />)));
 export async function mountExisting(kind: "issue" | "draft") {
   let draft: Draft | undefined;
@@ -245,17 +258,11 @@ export async function mountExisting(kind: "issue" | "draft") {
     )
   );
 }
-export const mountNew = () =>
+export const mountNew = (data: IssueFormData = { name: "New", project_id: "A", description_html: "<p>New</p>" }) =>
   act(async () =>
     root.render(
       withStore(
-        <CreateUpdateIssueModalBase
-          isOpen
-          data={{ name: "New", project_id: "A", description_html: "<p>New</p>" }}
-          fetchIssueDetails={false}
-          onClose={close}
-          onSubmit={confirmed}
-        />
+        <CreateUpdateIssueModalBase isOpen data={data} fetchIssueDetails={false} onClose={close} onSubmit={confirmed} />
       )
     )
   );

@@ -6,7 +6,7 @@ import { expect, it, vi } from "vitest";
 import { json, problem } from "@/lib/auth/fake-nerve";
 import { until } from "@/lib/auth/fake-time";
 import { issueDetailOf, requestedIssue } from "@/store/issue/fake-issues";
-import { getDestinationFromDropPayload, getSourceFromDropPayload, handleGroupDragDrop } from "../utils";
+import { getDestinationFromDropPayload, getSourceFromDropPayload, handleGroupDragDrop } from "../group-drop";
 
 it.each([
   [false, "b", ["a", "first", "b", "c"], 2500],

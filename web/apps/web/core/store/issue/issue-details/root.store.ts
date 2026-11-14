@@ -5,7 +5,6 @@
  */
 
 import type {
-  IssueUpdate,
   IssueLinkCreate,
   IssueLinkPatch,
   IssueComment,
@@ -14,7 +13,7 @@ import type {
 } from "@nerve/api-client";
 import { action, makeObservable, observable } from "mobx";
 // types
-import type { TIssueRelationTypes, TWorkItemWidgets } from "@nerve/types";
+import type { TIssueRelationTypes, TWorkItemWidgets, IssueChange } from "@nerve/types";
 // local imports
 import { DescriptionVersionsStore } from "./description-versions.store";
 import { IssueActivityStore } from "./activity.store";
@@ -137,8 +136,8 @@ export class IssueDetail implements IIssueDetail {
     this.issue.fetchIssue(workspaceSlug, projectId, issueId);
   fetchIssueWithIdentifier = async (workspaceSlug: string, identifier: string) =>
     this.issue.fetchIssueWithIdentifier(workspaceSlug, identifier);
-  updateIssue = async (workspaceSlug: string, projectId: string, issueId: string, data: IssueUpdate) =>
-    this.issue.updateIssue(workspaceSlug, projectId, issueId, data);
+  updateIssue = async (workspaceSlug: string, projectId: string, issueId: string, change: IssueChange) =>
+    this.issue.updateIssue(workspaceSlug, projectId, issueId, change);
   removeIssue = async (workspaceSlug: string, projectId: string, issueId: string) =>
     this.issue.removeIssue(workspaceSlug, projectId, issueId);
   archiveIssue = async (workspaceSlug: string, projectId: string, issueId: string) =>
@@ -182,8 +181,8 @@ export class IssueDetail implements IIssueDetail {
     projectId: string,
     parentIssueId: string,
     issueId: string,
-    issueData: IssueUpdate
-  ) => this.subIssues.updateSubIssue(workspaceSlug, projectId, parentIssueId, issueId, issueData);
+    change: IssueChange
+  ) => this.subIssues.updateSubIssue(workspaceSlug, projectId, parentIssueId, issueId, change);
   removeSubIssue = async (workspaceSlug: string, projectId: string, parentIssueId: string, issueId: string) =>
     this.subIssues.removeSubIssue(workspaceSlug, projectId, parentIssueId, issueId);
   deleteSubIssue = async (workspaceSlug: string, projectId: string, parentIssueId: string, issueId: string) =>

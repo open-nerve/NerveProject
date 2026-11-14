@@ -6,7 +6,7 @@
 // (the sidebar's, the command palette's, of no page) joins the cycle only while the page shows it taking work items;
 // once the cycle has ended, is archived or the project's cycles are off it creates as the project's page does. A
 // refusal is said, never a success. The header, the app's modals, the form, the list, the stores and HTTP are real.
-import { act, createElement, type ReactNode } from "react";
+import { act, createElement, type ComponentProps, type ReactNode } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { Cycle } from "@nerve/api-client";
 import { EIssuesStoreType } from "@nerve/types";
@@ -20,6 +20,7 @@ import {
   C1,
   buttonOf,
   creates,
+  cycleField,
   form,
   globalCreate,
   headerButton,
@@ -63,9 +64,17 @@ vi.mock(
   "@/components/editor/rich-text",
   async () => (await import("@/components/issues/issue-modal/fake-dialog")).editor
 );
-vi.mock("@/components/issues/issue-modal/components/default-properties", () => ({
-  IssueDefaultProperties: () => null,
-}));
+// The form's default properties are out, but for the test that looks under the form's cycle field (P7a spec 2.6, R17):
+// the real cycle and modules fields alone.
+const properties = vi.hoisted(() => ({ planning: false }));
+vi.mock("@/components/issues/issue-modal/components/default-properties", async () => {
+  const { IssuePlanningFields } = await import("@/components/issues/issue-modal/components/planning-fields");
+  type Props = Omit<ComponentProps<typeof IssuePlanningFields>, "loading"> & { planningLoading: boolean };
+  return {
+    IssueDefaultProperties: ({ planningLoading, ...props }: Props) =>
+      properties.planning ? <IssuePlanningFields {...props} loading={planningLoading} /> : null,
+  };
+});
 vi.mock("@/components/issues/create-issue-toast-action-items", () => ({ CreateIssueToastActionItems: () => null }));
 // P5a's crumbs and the cycle's quick actions have their own tests (page.test.tsx, actions-host.test.tsx).
 vi.mock("@/components/breadcrumbs/common", () => ({ CommonProjectBreadcrumbs: () => null }));
@@ -79,6 +88,7 @@ async function opened(fields: Parameters<typeof planningPageTab>[1] = {}) {
 }
 beforeEach(() => {
   bound.params = { workspaceSlug: "ws", projectId: "A", cycleId: C1 };
+  properties.planning = false;
   toasts.length = 0;
 });
 afterEach(async () => page.close());
@@ -138,7 +148,6 @@ it.each(Object.keys(entries))(
 );
 
 it.each([
-  { entry: "the header's new work item", code: "planning.cycle_completed" },
   { entry: "the header's new work item", code: "planning.cycles_disabled" },
   { entry: "the quick add", code: "planning.cycle_completed" },
   { entry: "the quick add", code: "planning.cycles_disabled" },
@@ -148,6 +157,24 @@ it.each([
   expect(creates()[0]!.body).toMatchObject({ cycle_id: C1 });
   await act(async () => creates()[0]!.answer(problem(409, code)));
   expect(toasts).toEqual([expect.objectContaining({ type: "error", message: `errors.${code.replace(".", "_")}` })]);
+  expect(document.querySelector('[id^="issue-made"]')).toBeNull();
+  expect(creates()).toHaveLength(1);
+});
+
+it("shows under the cycle field of the header's new work item that nerve refused it as the cycle has ended (planning.cycle_completed), the field taking the focus, never a success", async () => {
+  properties.planning = true;
+  await shown();
+  await entries["the header's new work item"]!.send("Refused");
+  expect(creates()[0]!.body).toMatchObject({ cycle_id: C1 });
+  await act(async () => creates()[0]!.answer(problem(409, "planning.cycle_completed")));
+  const field = cycleField();
+  expect(field?.getAttribute("aria-invalid")).toBe("true");
+  expect(document.getElementById(field?.getAttribute("aria-describedby") ?? "")?.textContent).toBe(
+    "errors.planning_cycle_completed"
+  );
+  expect(document.activeElement, "the focus").toBe(field);
+  expect(toasts).toEqual([]);
+  expect(form()).not.toBeNull();
   expect(document.querySelector('[id^="issue-made"]')).toBeNull();
   expect(creates()).toHaveLength(1);
 });

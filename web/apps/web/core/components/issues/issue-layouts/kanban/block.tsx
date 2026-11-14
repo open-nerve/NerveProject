@@ -20,7 +20,7 @@ import { useOutsideClickDetector } from "@nerve/hooks";
 // types
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
-import type { IIssueDisplayProperties } from "@nerve/types";
+import type { IIssueDisplayProperties, IssueChange } from "@nerve/types";
 // ui
 import { ControlLink, DropIndicator } from "@nerve/ui";
 import { cn, generateWorkItemLink } from "@nerve/utils";
@@ -47,7 +47,7 @@ interface IssueBlockProps {
   draggableId: string;
   canDropOverIssue: boolean;
   canDragIssuesInCurrentGrouping: boolean;
-  updateIssue: ((projectId: string | null, issueId: string, data: Partial<IssueDetail>) => Promise<void>) | undefined;
+  updateIssue: ((projectId: string | null, issueId: string, data: IssueChange) => Promise<void>) | undefined;
   quickActions: TRenderQuickActions;
   canEditProperties: (projectId: string | undefined) => boolean;
   scrollableContainerRef?: MutableRefObject<HTMLDivElement | null>;
@@ -58,7 +58,7 @@ interface IssueDetailsBlockProps {
   cardRef: React.RefObject<HTMLElement | null>;
   issue: Issue;
   displayProperties: IIssueDisplayProperties | undefined;
-  updateIssue: ((projectId: string | null, issueId: string, data: Partial<IssueDetail>) => Promise<void>) | undefined;
+  updateIssue: ((projectId: string | null, issueId: string, data: IssueChange) => Promise<void>) | undefined;
   quickActions: TRenderQuickActions;
   isReadOnly: boolean;
 }

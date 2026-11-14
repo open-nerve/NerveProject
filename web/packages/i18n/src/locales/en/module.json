@@ -1,5 +1,6 @@
 {
   "module": {
+    "count": "{count, plural, one {# module} other {# modules}}",
     "no_module": "No module",
     "work_items_count": "{count, plural, one {There is # work item in this module} other {There are # work items in this module}}"
   }

@@ -87,7 +87,12 @@ vi.mock("../issue-modal/modal", () => ({
     const [error, setError] = useState(false);
     const submit = async () => {
       try {
-        const answer = await binding.tab!.app.issue.writes.updateIssue("target", () => ({ name: "Edited title" }));
+        const answer = await binding.tab!.app.issue.writes.updateIssue(
+          "target",
+          () => ({ name: "Edited title" }),
+          undefined,
+          binding.tab!.app.issue.scope("ws", "A")
+        );
         if (!props.isDraft) await props.onSubmit?.(answer);
         props.onClose();
       } catch {

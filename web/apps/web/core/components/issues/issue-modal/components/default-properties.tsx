@@ -5,7 +5,7 @@
  */
 
 import type { IssueFormValues } from "../types";
-import { useState } from "react";
+import { useState, type ComponentProps } from "react";
 import { observer } from "mobx-react";
 import type { Control } from "react-hook-form";
 import { Controller, useWatch } from "react-hook-form";
@@ -18,6 +18,7 @@ import type { Issue } from "@nerve/api-client";
 import { CustomMenu } from "@nerve/ui";
 // components
 import { IssueDateFields } from "./date-fields";
+import { IssuePlanningFields } from "./planning-fields";
 import { MemberDropdown } from "@/components/dropdowns/member/dropdown";
 import { PriorityDropdown } from "@/components/dropdowns/priority";
 import { StateDropdown } from "@/components/dropdowns/state/dropdown";
@@ -35,6 +36,10 @@ type TIssueDefaultPropertiesProps = {
   selectedParentIssue: Issue | null;
   parentId: string | null;
   isDraft: boolean;
+  /** Whether the form waits for its project's lists: its cycle and modules show loading. */
+  planningLoading: boolean;
+  /** Each of its project's lists nerve refused: its field says so, with a retry. */
+  planningRefusals?: ComponentProps<typeof IssuePlanningFields>["refusals"];
   handleFormChange: () => void;
   setSelectedParentIssue: (issue: Issue) => void;
 };
@@ -48,6 +53,8 @@ export const IssueDefaultProperties = observer(function IssueDefaultProperties(p
     selectedParentIssue,
     parentId,
     isDraft,
+    planningLoading,
+    planningRefusals,
     handleFormChange,
     setSelectedParentIssue,
   } = props;
@@ -136,6 +143,14 @@ export const IssueDefaultProperties = observer(function IssueDefaultProperties(p
         )}
       />
       <IssueDateFields control={control} isDraft={isDraft} handleFormChange={handleFormChange} />
+      <IssuePlanningFields
+        control={control}
+        workspaceSlug={workspaceSlug}
+        projectId={projectId}
+        loading={planningLoading}
+        refusals={planningRefusals}
+        handleFormChange={handleFormChange}
+      />
       <div className="h-7">
         {parentId ? (
           <CustomMenu

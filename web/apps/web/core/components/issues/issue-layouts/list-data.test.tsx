@@ -13,7 +13,7 @@ import { toasts } from "@/lib/fake-toast";
 import { until } from "@/lib/auth/fake-time";
 import { issueStoreTab, issuePageOf, issueDetailOf } from "@/store/issue/fake-issues";
 import { loadProjects, preferencesOf, projectOf } from "@/store/project/fake-projects";
-import { getSourceFromDropPayload, getDestinationFromDropPayload } from "./utils";
+import { getSourceFromDropPayload, getDestinationFromDropPayload } from "./group-drop";
 import { ProjectLayoutRoot } from "./roots/project-layout-root";
 import { ArchivedIssueLayoutRoot } from "./roots/archived-issue-layout-root";
 import { ProfileIssuesPage } from "@/components/profile/profile-issues";

@@ -26,6 +26,7 @@ const ui = vi.hoisted(() => ({
 }));
 vi.stubGlobal("localStorage", { getItem: () => null, setItem: () => {}, removeItem: () => {} });
 vi.mock("@/lib/auth/api-client", () => ({ tokenManager: { state: { loginId: "draft-login" } }, publicClient: {} }));
+vi.mock("@/lib/auth/use-session", () => ({ useSession: () => ({ status: "signed-in", loginId: "draft-login" }) }));
 vi.mock("@/lib/store-context", async () => ({
   rootStore: undefined,
   StoreContext: (await import("react")).createContext<RootStore | undefined>(undefined),

@@ -198,7 +198,7 @@ it("shares multi-ID changes with core updates and permits independent IDs", asyn
     await gate.sent;
   });
   await until(() => entered.mock.calls.length === 1, "batch starts");
-  const patch = track(root.writes.updateIssue("a", () => ({ name: "after batch" })));
+  const patch = track(root.writes.updateIssue("a", () => ({ name: "after batch" }), undefined, root.scope("ws", "A")));
   expect(await root.writes.enqueueIssueChanges(["c"], async () => "independent")).toBe("independent");
   await vi.advanceTimersByTimeAsync(10);
   expect(tab.nerve.calls).toHaveLength(0);

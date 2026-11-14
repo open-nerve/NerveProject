@@ -33,6 +33,7 @@ import { useProjectState } from "@/hooks/store/use-project-state";
 import { IssueParentSelectRoot } from "@/components/issues/parent-select-root";
 import { SidebarPropertyListItem } from "@/components/common/layout/sidebar/property-list-item";
 import { IssueLabel } from "./label";
+import { IssuePlanningProperties } from "./planning-properties";
 import type { TIssueOperations } from "./root";
 
 type Props = {
@@ -173,6 +174,14 @@ export const IssueDetailsSidebar = observer(function IssueDetailsSidebar(props: 
                 />
               </div>
             </SidebarPropertyListItem>
+
+            <IssuePlanningProperties
+              workspaceSlug={workspaceSlug}
+              projectId={projectId}
+              issueId={issueId}
+              issueOperations={issueOperations}
+              disabled={!isEditable}
+            />
 
             <SidebarPropertyListItem icon={ParentOutline} label={t("common.parent")}>
               <IssueParentSelectRoot

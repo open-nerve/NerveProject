@@ -20,9 +20,6 @@
     "add": {
       "press_enter": "按'Enter'添加另一个工作项",
       "label": "添加工作项",
-      "cycle": {
-        "failed": "无法将工作项添加到周期。请重试。"
-      },
       "assignee": "添加负责人",
       "start_date": "添加开始日期",
       "due_date": "添加截止日期",
@@ -35,15 +32,11 @@
     "remove": {
       "cycle": {
         "label": "从周期中移除",
-        "loading": "正在从周期中移除工作项",
-        "success": "已成功从周期中移除工作项。",
-        "failed": "无法从周期中移除工作项。请重试。"
+        "success": "已成功从周期中移除工作项。"
       },
       "module": {
         "label": "从模块中移除",
-        "loading": "正在从模块中移除工作项",
-        "success": "已成功从模块中移除工作项。",
-        "failed": "无法从模块中移除工作项。请重试。"
+        "success": "已成功从模块中移除工作项。"
       },
       "parent": {
         "label": "移除父工作项"

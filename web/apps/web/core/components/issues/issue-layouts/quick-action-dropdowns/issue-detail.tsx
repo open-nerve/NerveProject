@@ -45,7 +45,6 @@ export const WorkItemDetailQuickActions = observer(function WorkItemDetailQuickA
   const {
     issue,
     handleDelete,
-    handleUpdate,
     handleArchive,
     onArchiveConfirmed,
     handleRestore,
@@ -220,9 +219,6 @@ export const WorkItemDetailQuickActions = observer(function WorkItemDetailQuickA
         }}
         data={issueToEdit ?? duplicateIssuePayload}
         sourceIssueId={issueToEdit ? undefined : issue.id}
-        onSubmit={async (data) => {
-          if (issueToEdit && handleUpdate) await handleUpdate(data);
-        }}
         storeType={EIssuesStoreType.PROJECT}
         fetchIssueDetails={false}
       />

@@ -7,7 +7,8 @@ import { compareIssueTime } from "@/lib/issue-order";
 import type { Before, ConfirmedIssueChange } from "@/lib/paged-groups";
 import { heldCounterSources } from "@/lib/paged-groups.evidence";
 import type { IssueListBinding } from "./helpers/issue-list-binding";
-import { createBody, membershipFields, updateBody } from "./issue-write-fields";
+import type { IssueChange } from "@nerve/types";
+import { changeBody, createBody, membershipFields, updateBody } from "./issue-write-fields";
 import type { IssueRootStore, IssueWriteScope } from "./root.store";
 
 export type IssueDrop = NonNullable<ConfirmedIssueChange["drop"]> & { binding?: IssueListBinding };
@@ -28,7 +29,6 @@ type WritesRoot = Pick<
   | "issueDetail"
   | "permissionReads"
   | "registeredLists"
-  | "workspaceSlug"
   | "assertActive"
   | "scope"
   | "invalidateProjectReads"
@@ -36,7 +36,7 @@ type WritesRoot = Pick<
 
 /**
  * A change sent to nerve and, once nerve confirms it, written into every held copy: one queue per issue, the writes in
- * flight, the confirmation and the six commands with their request bodies (P6b R1).
+ * flight, the confirmation and the seven commands with their request bodies (P6b R1).
  */
 export class IssueWrites {
   private readonly queues = new Map<string, Promise<void>>();
@@ -239,29 +239,23 @@ export class IssueWrites {
   updateIssue(
     id: string,
     makeBody: (held: Issue) => IssueUpdate,
-    drop?: IssueDrop,
-    operationScope?: IssueWriteScope
+    drop: IssueDrop | undefined,
+    operationScope: IssueWriteScope
   ): Promise<IssueDetailAnswer> {
     const root = this.root;
     const dragPermission = drop ? root.permissionReads.capture() : undefined;
-    const initiating = drop ? root.issues.held(id) : undefined;
-    const dragWorkspace = operationScope?.workspaceID ?? initiating?.workspace_id;
-    const dragProject = operationScope?.projectID ?? initiating?.project_id;
     const update = () =>
       this.enqueueIssueChanges([id], async () => {
         root.assertActive();
         if (
           dragPermission !== undefined &&
-          !root.permissionReads.current(dragPermission, dragWorkspace, dragProject ? [dragProject] : [], true)
+          !root.permissionReads.current(dragPermission, operationScope.workspaceID, [operationScope.projectID], true)
         )
           throw new SessionChangedError();
-        const snapshot = root.issues.getIssueById(id);
-        if (!snapshot) throw new Error("Issue has not been read");
-        // Without a given scope this falls back to the router's workspace, as it has since M4 (P7 removes it, spec §5).
-        const scope = operationScope ?? root.scope(root.workspaceSlug!, snapshot.project_id);
+        if (!root.issues.getIssueById(id)) throw new Error("Issue has not been read");
         return (await this.write(
           id,
-          scope,
+          operationScope,
           (held) => {
             if (!held) throw new Error("Issue has not been read");
             return root.api.update(id, updateBody(makeBody(held)));
@@ -270,6 +264,14 @@ export class IssueWrites {
         ))!;
       });
     return drop ? this.dragQueue(update) : update();
+  }
+  /**
+   * Sends a change of the work item (P7a spec 2.2, R3): its modules' additions and removals made, in its turn, into the
+   * whole set from the set it then holds, so after a change still out it is that change's answer, and after a refusal
+   * the set as it was; ids no page knows, archived modules too, stay. Its other fields go as given.
+   */
+  changeIssue(id: string, change: IssueChange, scope: IssueWriteScope): Promise<IssueDetailAnswer> {
+    return this.updateIssue(id, (held) => changeBody(change, held.module_ids), undefined, scope);
   }
   deleteIssue(id: string, scope: IssueWriteScope): Promise<void> {
     return this.enqueueIssueChanges(

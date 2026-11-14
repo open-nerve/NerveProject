@@ -20,9 +20,6 @@
     "add": {
       "press_enter": "Press 'Enter' to add another work item",
       "label": "Add work item",
-      "cycle": {
-        "failed": "Work item could not be added to the cycle. Please try again."
-      },
       "assignee": "Add assignees",
       "start_date": "Add start date",
       "due_date": "Add due date",
@@ -35,15 +32,11 @@
     "remove": {
       "cycle": {
         "label": "Remove from cycle",
-        "loading": "Removing work item from the cycle",
-        "success": "Work item removed from the cycle successfully.",
-        "failed": "Work item could not be removed from the cycle. Please try again."
+        "success": "Work item removed from the cycle successfully."
       },
       "module": {
         "label": "Remove from module",
-        "loading": "Removing work item from the module",
-        "success": "Work item removed from the module successfully.",
-        "failed": "Work item could not be removed from the module. Please try again."
+        "success": "Work item removed from the module successfully."
       },
       "parent": {
         "label": "Remove parent work item"

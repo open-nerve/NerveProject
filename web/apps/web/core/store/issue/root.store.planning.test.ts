@@ -143,7 +143,7 @@ it.each([[[M2]], [[]]])("an update sends the modules %j it is in afterwards", as
   const { app, nerve } = tab;
   const request = await requestedIssue(
     nerve,
-    () => app.issue.projectIssues.updateIssue("ws", "A", "a", { module_ids }),
+    () => app.issue.projectIssues.updateIssue("ws", "A", "a", { modules: { remove: [M1], add: module_ids } }),
     ["PATCH", "/api/v0/issues/a"]
   );
   expect(request.call.body).toEqual({ module_ids });

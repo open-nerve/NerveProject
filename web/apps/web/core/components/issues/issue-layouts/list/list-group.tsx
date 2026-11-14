@@ -22,6 +22,7 @@ import type {
   TIssueOrderByOptions,
   IIssueDisplayProperties,
   TIssueKanbanFilters,
+  IssueChange,
 } from "@nerve/types";
 import { EIssueLayoutTypes } from "@nerve/types";
 import { Row } from "@nerve/ui";
@@ -35,8 +36,8 @@ import { useIssuesStore } from "@/hooks/use-issue-layout-store";
 // local imports
 import { GroupDragOverlay } from "../group-drag-overlay";
 import { ListQuickAddIssueButton, QuickAddIssueRoot } from "../quick-add";
-import type { GroupDropLocation } from "../utils";
-import { getDestinationFromDropPayload, getSourceFromDropPayload } from "../utils";
+import type { GroupDropLocation } from "../group-drop";
+import { getDestinationFromDropPayload, getSourceFromDropPayload } from "../group-drop";
 import { IssueBlocksList } from "./blocks-list";
 import { HeaderGroupByCard } from "./headers/group-by-card";
 import type { TRenderQuickActions } from "./list-view-types";
@@ -48,7 +49,7 @@ interface Props {
   group_by: TIssueGroupByOptions | null;
   orderBy: TIssueOrderByOptions | undefined;
   getGroupIndex: (groupId: string | undefined) => number;
-  updateIssue: ((projectId: string | null, issueId: string, data: Partial<IssueDetail>) => Promise<void>) | undefined;
+  updateIssue: ((projectId: string | null, issueId: string, data: IssueChange) => Promise<void>) | undefined;
   quickActions: TRenderQuickActions;
   displayProperties: IIssueDisplayProperties | undefined;
   enableIssueQuickAdd: boolean;

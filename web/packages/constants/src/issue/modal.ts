@@ -19,4 +19,6 @@ export const DEFAULT_WORK_ITEM_FORM_VALUES: Partial<IssueDetail> = {
   label_ids: [],
   start_date: null,
   target_date: null,
+  cycle_id: null,
+  module_ids: [],
 };

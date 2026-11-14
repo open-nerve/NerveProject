@@ -15,7 +15,7 @@ import { useCallback, useMemo } from "react";
 import { useParams } from "react-router";
 import type { TSupportedFilterTypeForUpdate } from "@nerve/constants";
 import { EUserPermissions } from "@nerve/constants";
-import type { TLoader, TProfileViews, TSupportedFilterForUpdate } from "@nerve/types";
+import type { TLoader, TProfileViews, TSupportedFilterForUpdate, IssueChange } from "@nerve/types";
 import { EIssuesStoreType } from "@nerve/types";
 import { useIssues } from "./store/use-issues";
 import { usePlanningPageIssueActions } from "./use-planning-page-issue-actions";
@@ -32,8 +32,11 @@ export interface IssueActions {
   removeIssue: (projectId: string | undefined | null, issueId: string) => Promise<void>;
   /** A cycle's or a module's page's removal of a work item from its cycle or module (P6b spec 2.2, 2.5). */
   removeIssueFromView?: (projectId: string | undefined | null, issueId: string) => Promise<void>;
+  /** A creation as the page makes it: a cycle's or a module's page's joins the page while it takes work items. */
   createIssue?: (projectId: string | undefined | null, data: IssueCreate) => Promise<Issue | undefined>;
-  updateIssue?: (projectId: string | undefined | null, issueId: string, data: IssueUpdate) => Promise<void>;
+  /** A form's creation: what the form gives, nothing of the page added (P7a spec 2.6, R2); elsewhere createIssue. */
+  createIssueAsGiven?: (projectId: string | undefined | null, data: IssueCreate) => Promise<Issue | undefined>;
+  updateIssue?: (projectId: string | undefined | null, issueId: string, change: IssueChange) => Promise<void>;
   dropIssue?: (
     projectId: string,
     issueId: string,
@@ -112,9 +115,9 @@ const useProjectIssueActions = () => {
     [issues.createIssue, workspaceSlug]
   );
   const updateIssue = useCallback(
-    async (projectId: string | undefined | null, issueId: string, data: IssueUpdate) => {
+    async (projectId: string | undefined | null, issueId: string, change: IssueChange) => {
       if (!workspaceSlug || !projectId) return;
-      return await issues.updateIssue(workspaceSlug, projectId, issueId, data);
+      return await issues.updateIssue(workspaceSlug, projectId, issueId, change);
     },
     [issues.updateIssue, workspaceSlug]
   );
@@ -155,6 +158,7 @@ const useProjectIssueActions = () => {
       fetchIssues,
       fetchNextIssues,
       createIssue,
+      createIssueAsGiven: createIssue,
       updateIssue,
       removeIssue,
       archiveIssue,
@@ -197,9 +201,9 @@ const useProfileIssueActions = () => {
     [issues.createIssue, workspaceSlug]
   );
   const updateIssue = useCallback(
-    async (projectId: string | undefined | null, issueId: string, data: IssueUpdate) => {
+    async (projectId: string | undefined | null, issueId: string, change: IssueChange) => {
       if (!workspaceSlug || !projectId) return;
-      return await issues.updateIssue(workspaceSlug, projectId, issueId, data);
+      return await issues.updateIssue(workspaceSlug, projectId, issueId, change);
     },
     [issues.updateIssue, workspaceSlug]
   );
@@ -238,6 +242,7 @@ const useProfileIssueActions = () => {
       fetchIssues,
       fetchNextIssues,
       createIssue,
+      createIssueAsGiven: createIssue,
       updateIssue,
       removeIssue,
       archiveIssue,

@@ -1,6 +1,7 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 
 import type { IssueDetail } from "@nerve/api-client";
+import type { ModuleSetChange } from "@nerve/types";
 
 /** Actual editable fields; resource relations and clone identity are separate context. */
 export type IssueFormValues = Pick<
@@ -14,6 +15,8 @@ export type IssueFormValues = Pick<
   | "label_ids"
   | "start_date"
   | "target_date"
+  | "cycle_id"
+  | "module_ids"
 > & { project_id: string | null };
 export type IssueFormData = Partial<IssueFormValues> & { id?: string };
 export const ISSUE_FORM_FIELDS = [
@@ -27,13 +30,18 @@ export const ISSUE_FORM_FIELDS = [
   "label_ids",
   "start_date",
   "target_date",
+  "cycle_id",
+  "module_ids",
 ] as const;
+export type IssueFormField = (typeof ISSUE_FORM_FIELDS)[number];
 
 export type IssueDescriptionLoadState = "loading" | "ready" | "error";
 export type IssueDescriptionChangeSource = "load" | "migration" | "edit";
-/** Local command metadata; never part of a work item or draft payload. */
+/** What the form says of a submission beside its values, for its command; never part of a draft's payload. */
 export type IssueFormSubmitOptions = {
   isDescriptionMigration?: boolean;
   closeAfterSave?: boolean;
+  /** A work item's edit's modules: the change from the form's start to the set it holds (P7a spec 2.6, R3). */
+  modules?: ModuleSetChange;
   onRefused?: (error: unknown) => void;
 };

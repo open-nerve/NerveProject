@@ -27,7 +27,8 @@ import { issueSelectionTab } from "@/components/core/modals/fake-issue-selection
 import { PeekOnEntry } from "@/components/cycles/peek-on-entry";
 import type { PlanningPageStoreType } from "@/hooks/planning-page-domains";
 import { issueDetailOf, listIssue } from "@/store/issue/fake-issues";
-import { loadModule } from "@/store/planning/fake-modules";
+import { cycleRequests } from "@/store/planning/fake-cycles";
+import { loadModule, moduleRequests } from "@/store/planning/fake-modules";
 import { cycleOf, moduleOf, preferencesOf } from "@/store/project/fake-projects";
 import { PlanningPageLayoutRoot } from "./planning-page-layout-root";
 
@@ -301,6 +302,54 @@ export const projectField = () =>
   [...(form()?.querySelectorAll<HTMLButtonElement>("button") ?? [])].find(
     (node) => node.textContent === "common.project: A"
   );
+/** The open form's field of name: its dropdown's button, named by the field and its value. */
+export const fieldOf = (name: string) =>
+  [...(form()?.querySelectorAll<HTMLButtonElement>("button") ?? [])].find((node) =>
+    node.textContent?.startsWith(`${name}: `)
+  );
+export const cycleField = () => fieldOf("common.cycle");
+export const moduleField = () => fieldOf("common.modules");
+/** Whether the field shows loading. */
+export const loading = (field: HTMLButtonElement | undefined) => field?.querySelector('[role="status"]') != null;
+/** Opens the field's list and picks its option of name, as a pointer does. */
+export async function pick(field: () => HTMLButtonElement | undefined, name: string) {
+  await act(async () => {
+    field()!.click();
+    await vi.advanceTimersByTimeAsync(20);
+  });
+  const option = () =>
+    [...document.querySelectorAll<HTMLElement>('[role="option"]')].find((node) => node.textContent === name);
+  await until(() => option() !== undefined, `the option ${name}`);
+  await act(async () => {
+    option()!.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true, button: 0 }));
+    await vi.advanceTimersByTimeAsync(20);
+  });
+}
+/** The project's lists of cycles and of modules, archived or not, as nerve gives them. */
+export type PlanningLists = {
+  cycles: unknown[];
+  archivedCycles?: unknown[];
+  modules: unknown[];
+  archivedModules: unknown[];
+};
+/** From now on nerve answers each read of the page's project's lists of cycles and of modules as lists says. */
+export function answeringPlanningLists(lists: PlanningLists) {
+  const page = current();
+  const normal = page.nerve.respond;
+  const answers: [string, boolean, unknown[]][] = [
+    [cycleRequests.list(page.project), false, lists.cycles],
+    [cycleRequests.list(page.project), true, lists.archivedCycles ?? []],
+    [moduleRequests.list(page.project), false, lists.modules],
+    [moduleRequests.list(page.project), true, lists.archivedModules],
+  ];
+  page.nerve.respond = (call: Call) => {
+    const answer = answers.find(
+      ([path, archived]) => call.method === "GET" && call.path === path && (call.query.archived === "true") === archived
+    );
+    if (answer) call.answer(json(200, { data: answer[2] }));
+    else normal?.(call);
+  };
+}
 /** Types the name of the new work item in the input of selector and sends what it is in. */
 export async function send(selector: string, name: string, at: () => HTMLFormElement | null) {
   await act(async () => {

@@ -4,7 +4,8 @@
  * See the LICENSE file for details.
  */
 
-import type { Issue, IssueDetail } from "@nerve/api-client";
+import type { Issue } from "@nerve/api-client";
+import type { IssueChange } from "@nerve/types";
 
 import React from "react";
 import { observer } from "mobx-react";
@@ -16,7 +17,7 @@ import { PriorityDropdown } from "@/components/dropdowns/priority";
 type Props = {
   issue: Issue;
   onClose: () => void;
-  onChange: (issue: Issue, data: Partial<IssueDetail>) => void;
+  onChange: (issue: Issue, data: IssueChange) => void;
   disabled: boolean;
 };
 

@@ -99,3 +99,14 @@ P4 落地设计 §6 余下的跨模块查询与写入，都走由使用方声明
   - (a) 的 `dropdowns/module/module-options.tsx` 在 P7。
 - **第 6 节**：`modules/quick-actions.tsx` 的复制经 `useCopyLink`，`modules/links/list-item.tsx` 的复制经 `useCopyText`，命令面板模块页的复制也经 `useCopyLink`；失败经 `t()` 提示（G19 页面故事三拒绝剪贴板时核对快捷操作与链接一行两处）；`copy-hook` 中模块的三条例外随之删除，M6 的例外已全部删除（关键词的例外 10 → 7）。迭代的两处在 P5a，本节的关闭条件至此都已满足。
 - 证据：提交 `d71ab782f11899b7ae45452ac8cf7e0d47a73c89`（service、store 与 SWR 键）、`6a088615629ba2c7d127e53cea25cc0376c1e2b5`（筛选 store）、`cd366811af816d1ed317aa7491dfa46cdfdc6f54`（表单、状态选择与项目下拉）、`e9fc041b4a1cae06173fa29ec9b03f9ad0c109ca`（快捷操作的复制）、`c09d4f8d9d2544724887ad1ad34a5c6cf0b44ffc`（侧栏的状态与页头）、`d8c87d1adfceb28b9200a446f7c5748551190e4a`（链接一行的复制）、`dc9172b0fecf86c716bf50394b03c2a4e4a6fd6d`（命令面板、`dispose()` 的说明）、`b1d2578e2aab5a9769ea7f71cbd7dc6f6b9e232d`、`b8ed29df59bcb59fc30adfbafb8c79748af992b9`（页面故事）。本交接保持 open。
+
+## 处理结果（M6/P7a）：第 4 节、第 5 节 (a)（工作项的迭代、模块下拉框）
+
+- **第 4 节**：Plane 的 `dropdowns/cycle/cycle-options.tsx` 已被 M4 删除；P7a 重建的迭代、模块下拉框（`web/apps/web/core/components/dropdowns/{cycle,module}/`）每次打开都读一次项目的列表（`core/hooks/use-planning-options.ts`，经 `useDirectoryRead`，按项目与权限身份分范围，读失败时列表底部说明并可重试），不再靠“这个项目还没取过”的判断。三点的结论：
+  - 列表开着时项目变了：外层以项目为 key，列表关上，再打开读新项目；旧项目在途的读不在新项目的按钮上显示为加载，它迟到的回答（含拒绝）不进新项目的列表（`dropdowns/cycle/dropdown.test.tsx`、`dropdowns/module/dropdown.test.tsx` 的 “closes as its project changes …”；去掉 key 的 `t5-mut-project-change-keeps-list`、`t7-mut-project-change-keeps-list` 与读不按项目分范围的 `t5-mut-late-options` 各让它失败）。
+  - 并发的两次取数不让旧的回答覆盖新的：照 P5a 的结论由规划 store 的 `Reconciled` 保证；本段的读另以 `useDirectoryRead` 的请求号挡住迟到的回答。
+  - `status` 是生成的 `CycleStatus`，网页不对它 `toLowerCase()`；选项的规则（`core/lib/planning-directory.ts` 的 `cycleOptions`）只比较 `status !== "completed"`。
+  - 本节的关闭条件至此已满足。
+- **第 5 节 (a)**：两个下拉框建在 M2/P5 重建的共用 `CustomSearchSelect`（`@nerve/ui`）上：popper 的 ref 在弹层放置的面板上，有搜索框的用 `Combobox` 一份打开的状态，打开时搜索框取得焦点；Plane 的 `cycle-options.tsx`、`module-options.tsx` 不恢复。浏览器核对在 G4、G11 的页面故事（`e2e/stories/planning/g4-issue-cycle-page.spec.ts`、`g11-issue-modules-page.spec.ts`），三种引擎（`t14-three-engines-2` 6 条、`--repeat-each=3` 的 `t14-repeat3-three-engines-2` 18 条、m6-pages 全配置的 `t14-full-pages-2` 117 条，都通过）：工作项详情的迭代一栏以键盘打开，列表在按钮旁（以两者的框核对，`expectListBesideButton`）、只有一个列表开着、搜索框取得焦点，输入过滤，Escape 关上、焦点回到按钮；预览的模块一栏同样在按钮旁、搜索框取得焦点，Escape 之后焦点回到按钮；迭代页新建与行的修改两个弹窗里打开的列表也在按钮旁。第 5 节的 (b)–(d) 在 P5a、P6a，(d) 中 `dropdowns/project/base.tsx` 的浏览器核对随 P8 的最终矩阵，本节没有全部关闭。
+- 不照搬 Plane 的部分见 [plane-diff](../../plane-diff.md) 的“迭代、模块下拉框的选项与值（M6/P7a）”一行；上方的内容晚到时打开着的列表不随按钮移动（共用件的放置，不是本段引入）交 M8（[M6-M8-13](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-13)）。
+- 证据：提交 `43d53c3521185f5de26b3138090dd9d49d8a8d3c`（选项的规则与读、迭代下拉框）、`45889a0b2c330bbc1cc731d19cd94e97816e59ae`（模块下拉框）、`40cef888032479ddc8708857fb1789642b19701d`（G4、G11 的页面故事）；[P7a spec](../specs/P7a-work-item-planning.md) §2.3、§2.4。本交接保持 open。

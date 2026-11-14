@@ -298,3 +298,16 @@ it("retains separate memory preferences for the same target across workspaces", 
   first.call.answer(json(200, issuePageOf([])));
   await first.promise;
 });
+
+// M6 P7a spec 2.5: the member view keeps its display properties in the browser; a work item's cycle and modules show
+// by default, and a hidden choice of either survives a fresh store.
+it("shows the cycle and the modules by default and keeps both hidden in a fresh member view", async () => {
+  const first = (await profileTab()).app.issue.profileIssuesFilter;
+  await first.fetchFilters("ws", "target");
+  expect(first.getIssueFilters("target")?.displayProperties).toMatchObject({ cycle: true, modules: true });
+  const hidden = { cycle: false, modules: false };
+  await first.updateFilters("ws", undefined, EIssueFilterType.DISPLAY_PROPERTIES, hidden, "target");
+  const fresh = (await profileTab()).app.issue.profileIssuesFilter;
+  await fresh.fetchFilters("ws", "target");
+  expect(fresh.getIssueFilters("target")?.displayProperties).toMatchObject({ ...hidden, link: true });
+});

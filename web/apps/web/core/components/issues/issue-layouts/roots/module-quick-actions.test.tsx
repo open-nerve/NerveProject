@@ -7,7 +7,8 @@
 // the list, the page says so and reads the module's progress again, once; a refusal is said, the row stays and nothing
 // is read. While it is out, the row's removal again sends nothing, and neither follows once the page is another
 // module's or another session's. The edit dialog changes what its form changes, never the work item's modules; the
-// copy joins the page's module alone. The layouts, the menus, the dialog's form, the stores and HTTP are real.
+// copy joins those of its source's modules it may join, the page's with them (P7a spec 2.7, R15). The layouts, the
+// menus, the dialog's form, the stores and HTTP are real.
 import { act, createElement, type ReactNode } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { Issue, IssueDetail, Module } from "@nerve/api-client";
@@ -16,11 +17,12 @@ import { json, problem, type Call } from "@/lib/auth/fake-nerve";
 import { until } from "@/lib/auth/fake-time";
 import { toasts } from "@/lib/fake-toast";
 import { issueDetailOf, listIssue } from "@/store/issue/fake-issues";
-import { loadModule, moduleRequests } from "@/store/planning/fake-modules";
+import { loadModule, moduleRequests, moduleRowOf } from "@/store/planning/fake-modules";
 import { moduleOf } from "@/store/project/fake-projects";
 import type { RootStore } from "@/store/root.store";
 import {
   M1,
+  answeringPlanningLists,
   choose,
   creates,
   form,
@@ -261,11 +263,16 @@ it("changes what the edit dialog's form changes of a work item in three modules,
   expect(change!.body).not.toHaveProperty("module_ids");
 });
 
-it("joins the copy of a work item in three modules to the page's module alone", async () => {
+// P7a spec 2.7, R15 (was "to the page's module alone", P6b R7): the copy's form starts with its source's modules that
+// are options once the project's lists answer, the archived one not among them.
+it("joins the copy of a work item in three modules to the two it may join, the page's and the other, never the archived one", async () => {
   const list = await shown();
   answerDialogReads(list);
+  const modules = [moduleOf(page.project, "Core", { id: M1 }), moduleOf(page.project, "Other", { id: M2 })];
+  answeringPlanningLists({ cycles: [], modules: modules.map((item) => moduleRowOf(item)), archivedModules: [] });
   await choose("common.actions.make_a_copy");
+  await until(() => page.nerve.to(moduleRequests.list(page.project)).length === 1, "the read of the modules");
   await sendDialog();
   await until(() => creates().length === 1, "the copy");
-  expect(creates()[0]!.body).toMatchObject({ name: "first (copy)", module_ids: [M1] });
+  expect(creates()[0]!.body).toMatchObject({ name: "first (copy)", module_ids: [M1, M2] });
 });

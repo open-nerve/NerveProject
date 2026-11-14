@@ -3,7 +3,7 @@ import { useCallback, useMemo } from "react";
 import { useParams } from "react-router";
 import type { Issue, IssueCreate, IssueUpdate } from "@nerve/api-client";
 import type { TSupportedFilterTypeForUpdate } from "@nerve/constants";
-import type { TLoader, TSupportedFilterForUpdate } from "@nerve/types";
+import type { TLoader, TSupportedFilterForUpdate, IssueChange } from "@nerve/types";
 import type { IssueListOptions } from "@/lib/issue-filters";
 import type { PlanningPage } from "@/store/issue/helpers/planning-page-issues.store";
 import type { IssueDrop } from "@/store/issue/issue-writes";
@@ -52,11 +52,10 @@ export function usePlanningPageIssueActions(storeType: PlanningPageStoreType) {
     [issues, workspaceSlug, page, role]
   );
   /**
-   * A creation joins the page's cycle or module while the page shows it taking work items as it is sent (P5b spec
-   * 2.5): the page's own entries offer it only then, and the app's own new work item, which resolves to these commands
-   * on the page, otherwise creates as the project's page does, with nothing of the page the form could not drop when
-   * nerve refused it. A creation of the page's project that joins it is the page's list's, whose confirmation reads
-   * the progress again (P5b spec 2.6, R10); one in another project, or while the page takes none, is not the page's.
+   * A creation that has no fields, the quick add's, joins the page's cycle or module while the page shows it taking
+   * work items as it is sent (P5b spec 2.5; P7a spec 2.6, R2): the page's own entries offer it only then. One of the
+   * page's project that joins it is the page's list's, whose confirmation reads the progress again (P5b spec 2.6, R10);
+   * one in another project, or while the page takes none, is not the page's.
    */
   const createIssue = useCallback(
     async (projectId: string | undefined | null, data: IssueCreate) => {
@@ -67,10 +66,25 @@ export function usePlanningPageIssueActions(storeType: PlanningPageStoreType) {
     },
     [issues, domain, workspaceSlug, page, followProgress]
   );
+  /**
+   * A form's creation, as the form gives it (P7a spec 2.6, R2): the form shows the page's cycle or module as its start
+   * (the domain's start), and what it holds is what is sent, nothing of the page added. Its confirmation reads the
+   * progress again when nerve's work item is in the page's cycle or module (the domain's holds), and not otherwise.
+   */
+  const createIssueAsGiven = useCallback(
+    async (projectId: string | undefined | null, data: IssueCreate) => {
+      if (!workspaceSlug || !projectId || !page) return;
+      return await followProgress(
+        () => issues.createIssue(workspaceSlug, projectId, data),
+        (issue) => domain.holds(issue, page)
+      );
+    },
+    [issues, domain, workspaceSlug, page, followProgress]
+  );
   const updateIssue = useCallback(
-    async (projectId: string | undefined | null, issueId: string, data: IssueUpdate) => {
+    async (projectId: string | undefined | null, issueId: string, change: IssueChange) => {
       if (!workspaceSlug || !projectId) return;
-      return await followProgress(() => issues.updateIssue(workspaceSlug, projectId, issueId, data));
+      return await followProgress(() => issues.updateIssue(workspaceSlug, projectId, issueId, change));
     },
     [issues, workspaceSlug, followProgress]
   );
@@ -126,6 +140,7 @@ export function usePlanningPageIssueActions(storeType: PlanningPageStoreType) {
       fetchIssues,
       fetchNextIssues,
       createIssue,
+      createIssueAsGiven,
       updateIssue,
       removeIssue,
       removeIssueFromView,
@@ -137,6 +152,7 @@ export function usePlanningPageIssueActions(storeType: PlanningPageStoreType) {
       fetchIssues,
       fetchNextIssues,
       createIssue,
+      createIssueAsGiven,
       updateIssue,
       removeIssue,
       removeIssueFromView,

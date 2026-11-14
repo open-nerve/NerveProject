@@ -1,7 +1,7 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 import type { Issue, IssueCreate, IssueDetail, IssueUpdate } from "@nerve/api-client";
 import { makeObservable, observable, runInAction } from "mobx";
-import type { TLoader } from "@nerve/types";
+import type { TLoader, IssueChange } from "@nerve/types";
 import { pagePartKey, type Group } from "@/lib/paged-groups";
 import type { IssueListOptions } from "@/lib/issue-filters";
 import { issueMembership } from "@/lib/issue-membership";
@@ -67,8 +67,9 @@ export class BaseIssuesStore<TFilter = IBaseIssueFilterStore> {
       : this.currentList?.loaders.get(group === undefined ? "whole" : pagePartKey({ group, subgroup }));
   createIssue = (slug: string, project: string, body: IssueCreate): Promise<IssueDetail> =>
     this.rootIssueStore.writes.createIssue(this.rootIssueStore.scope(slug, project), body);
-  updateIssue = async (slug: string, project: string, id: string, body: IssueUpdate): Promise<void> => {
-    await this.rootIssueStore.writes.updateIssue(id, () => body, undefined, this.rootIssueStore.scope(slug, project));
+  /** A change of a work item, its modules applied in its turn to the set it then holds (P7a spec 2.2). */
+  updateIssue = async (slug: string, project: string, id: string, change: IssueChange): Promise<void> => {
+    await this.rootIssueStore.writes.changeIssue(id, change, this.rootIssueStore.scope(slug, project));
   };
   dropIssue = async (
     slug: string,

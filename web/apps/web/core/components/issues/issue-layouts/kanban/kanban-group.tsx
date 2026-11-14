@@ -20,12 +20,12 @@ import { DRAG_ALLOWED_GROUPS } from "@nerve/constants";
 // i18n
 import { useTranslation } from "@nerve/i18n";
 //types
-import type { IIssueDisplayProperties, TIssueGroupByOptions, TIssueOrderByOptions } from "@nerve/types";
+import type { IIssueDisplayProperties, TIssueGroupByOptions, TIssueOrderByOptions, IssueChange } from "@nerve/types";
 import { EIssueLayoutTypes } from "@nerve/types";
 import { cn } from "@nerve/utils";
-import type { GroupDropLocation } from "@/components/issues/issue-layouts/utils";
+import type { GroupDropLocation } from "@/components/issues/issue-layouts/group-drop";
 // components
-import { getSourceFromDropPayload, getDestinationFromDropPayload } from "@/components/issues/issue-layouts/utils";
+import { getSourceFromDropPayload, getDestinationFromDropPayload } from "@/components/issues/issue-layouts/group-drop";
 import { KanbanIssueBlockLoader } from "@/components/ui/loader/layouts/kanban-layout-loader";
 // hooks
 import { useProjectState } from "@/hooks/store/use-project-state";
@@ -46,7 +46,7 @@ interface IKanbanGroup {
   group_by: TIssueGroupByOptions | undefined;
   sub_group_id?: string;
   isDragDisabled: boolean;
-  updateIssue: ((projectId: string | null, issueId: string, data: Partial<IssueDetail>) => Promise<void>) | undefined;
+  updateIssue: ((projectId: string | null, issueId: string, data: IssueChange) => Promise<void>) | undefined;
   quickActions: TRenderQuickActions;
   enableQuickIssueCreate?: boolean;
   quickAddCallback?: (projectId: string | null | undefined, data: IssueCreate) => Promise<Issue | undefined>;

@@ -282,6 +282,7 @@ it.each(["list", "kanban"] as const)(
     const shown = [...document.querySelectorAll("[data-header] button[aria-pressed]")].map((node) => node.textContent);
     for (const option of ISSUE_GROUP_BY_OPTIONS.filter(({ key }) => options.group_by?.includes(key)))
       expect(shown, option.titleTranslationKey).toContain(option.titleTranslationKey);
-    expect(shown.filter((title) => /cycle/i.test(title ?? ""))).toEqual([]);
+    // the one cycle control is the page's display property of the work items' cycles (P7a spec 2.5), no grouping
+    expect(shown.filter((title) => /cycle/i.test(title ?? ""))).toEqual(["common.cycle"]);
   }
 );

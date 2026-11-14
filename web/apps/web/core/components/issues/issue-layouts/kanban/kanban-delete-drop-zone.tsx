@@ -11,7 +11,7 @@ import { observer } from "mobx-react";
 // hooks
 import { useKanbanView } from "@/hooks/store/use-kanban-view";
 // helpers
-import { getSourceFromDropPayload } from "../utils";
+import { getSourceFromDropPayload } from "../group-drop";
 
 type Props = {
   onRequestDelete: (workItemId: string | undefined) => void;

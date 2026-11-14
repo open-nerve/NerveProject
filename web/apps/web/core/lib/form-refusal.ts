@@ -27,8 +27,8 @@ function messagesByField(error: unknown): Partial<Record<string, string>> {
 
 /**
  * nerve's refusal of what a form sent (a project's, a state's, a label's, a module's), as the form shows it, among its
- * fields: a code of a value another resource already has, under the field taken names for it, whatever fields the
- * problem names; field errors under the form's fields when they name only those (a field the form shows none under is
+ * fields: a code only one field's value causes (a value another resource already has, a cycle that has ended), under
+ * the field taken names for it, whatever fields the problem names; field errors under the form's fields when they name only those (a field the form shows none under is
  * not one of them, as for needsErrorBanner), an element of a list under the list's field; else nerve's reason in a
  * toast.
  */
