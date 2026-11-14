@@ -1,8 +1,9 @@
 # M6 / P7a 整体审核
 
-> 2026-11-14：Ready to merge；主控仍以修复轮 F 处理三处 Minor（同 P6b 的先例），修复轮 F 已提交，待限定复审（§4）。
+> 2026-11-14：Ready to merge；主控仍以修复轮 F 处理三处 Minor（同 P6b 的先例），修复轮 F 经限定复审 Ready to merge（§4）。
 > - **目标**：分支 `codex/m6-p7a` 相对 main `7868a6b496d2587e2ed2cac7360c3ca6a86963be`（P6b 合入后 CI 的修复 noff）的全部修改（`7868a6b4..01a10e66`，`ab4ef06b` 至 `01a10e66` 的 21 个提交，含并入那次修复的 `4b93ffd0`，163 个文件）；修复轮 F（`f113759f` 起的四个提交，F1–F4）另经一次限定复审（§4）。
 > - **依据**：[P7a spec](../v0/M6-cycles-modules/specs/P7a-work-item-planning.md)、[P7a plan](../v0/M6-cycles-modules/plans/P7a-work-item-planning.md)、[预检 re-72](re-72-M6P7a预检.md)、[M6 设计](../v0/M6-cycles-modules/M6-design.md)、[总体设计 §7.2、§7.7](../v0/v0-design.md#77-stores-按会话分代长期有效m2-起)、[硬规则](../v0/claude_to_gpt/03-rules-and-pitfalls.md)。
+> - **阶段记录**：[P7a 阶段记录](../v0/M6-cycles-modules/reviews/P7a-work-item-planning-review.md)。
 
 ## 1. 方法
 
@@ -44,4 +45,22 @@ F4 写本记录，并在 spec §5 加修复轮的清单、改 spec 与 plan 的�
 
 ## 4. 修复轮 F 的复审
 
-（待限定复审之后由主控填写。）
+修复轮 F（`f113759f..52c04d69`，4 个提交，F1–F4）经一次 fresh 限定复审（`fable`，范围 `01a10e66..52c04d69`，只读、没有跑构建与测试，与最终候选 `52c04d69` 的七项门禁并行）。原始报告没有另存，结论与核对过的性质照它转述。逐项核对：
+
+- **范围**：F1–F4 各只做了提交所说的，关掉 §3 的 M1–M3；主控接受的三项取舍（“存为草稿”在列表在途时仍可用、F3 在行上、F1 的测试准备改动）照实现。
+- **F1**：`form.tsx` 一处算出 `planningPending` 交给两栏与页脚，页脚主按钮的原生 `disabled` 并上它，没有省掉任何键。弹窗读列表的项目（`base.tsx` 的 `activeProjectId`）就是表单打开时的项目，所以条件恰为“在途的是表单所在项目的列表”；修改与草稿从不读列表、主按钮不受影响；“存为草稿”与“加入项目”不变。主按钮是表单唯一的提交按钮，禁用时 Enter 的隐式提交与描述编辑器的 `submitBtnRef.click()` 都不提交。产品代码没有动 store、SWR 的键与配置。
+- **F2**：项目一栏回到默认值时 RHF 去掉它的改动标记，`resetField` 把两栏恢复为存下的值并去掉改动，`form-submission.ts` 不再发这两键；与提交件的 `moved` 同以 `data.project_id` 为起点；新建的表单走另一支，不变；挂上时的那一次是幂等的。
+- **F3**：新的一步在修改之后，保住 spec §2.11 写着的修改请求体 {Gamma, Delta}；修改那一步的数据库核对不变，只提成常量复用；没有 `page.reload()`，锚是 nerve 确认的名字与记下的请求体；时长记在 §3 与 spec §5。
+- **测试**：RED、GREEN 与变异的收据都在台账；F1 的三处测试准备的改动不掩盖行为（`copied()` 等描述的编辑器出现，与原意等价，旧的等法在保存要等列表之后会一直等；`close-policy.test.tsx` 只多答两份空列表；`fake-form.tsx` 每个测试一份 SWR 缓存，是同目录两个测试已有的写法）；没有削弱的断言。
+- **文档**：本记录与审查者的结论相符，抬头的数（21 个提交、163 个文件）核过，各处链接都能打开。
+
+结论 **Ready to merge**：没有 Critical、Important、Minor，六条观察都不需动作，没有须负责人决定的事：
+
+| 编号 | 观察 | 处理 |
+|---|---|---|
+| 观察 | F1 只守按钮：`form-submission.ts:106`、`create-command.tsx:126` 不看 `planningLoading`；浏览器里没有绕过禁用的默认按钮的提交，测试里直接派发 `submit` 事件仍会发出 | 只是纵深防御，加上会超出裁定，不需动作 |
+| 观察 | F2 的一个既有角落（F2 没有扩大它）：草稿的表单挂上时打开时的项目就关着某个域，那一栏的 `Controller` 从未登记，`resetField` 对它无效，换走又换回仍会发那个域的 `null` 或 `[]`；挂上时开着、之后才关的照常 | 在设计 §3.3 B 接受的范围之内（§3 的第一条观察），不需动作 |
+| 观察 | `planning-copy.test.tsx:229-230` 在 jsdom 里点禁用的按钮什么也不做，“不发”由 `disabled` 推出 | 证明这道守卫的是变异 `f1-mut-save-not-disabled`，不需动作 |
+| 观察 | `close-policy.test.tsx` 的 `pendingCannotCloseOrResubmit` 在真实计时器下靠两份列表在点“保存”之前答到 | 假的 nerve 同步作答，结果确定；若间歇失败，签名是 “expected writes to have length 2”，不需动作 |
+| 观察 | §3 M1 引的 `form.tsx:341-365` 是 F1 之前的行号（现为 `:348-373`） | 历史引用，不需动作 |
+| 观察 | F1 禁用的保存没有文字说明原因 | 正上方两栏的 `role="status"` 加载即提示，不需动作 |
