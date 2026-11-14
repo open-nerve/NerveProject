@@ -18,6 +18,7 @@ import type { Issue } from "@nerve/api-client";
 import { CustomMenu } from "@nerve/ui";
 // components
 import { IssueDateFields } from "./date-fields";
+import { IssuePlanningFields } from "./planning-fields";
 import { MemberDropdown } from "@/components/dropdowns/member/dropdown";
 import { PriorityDropdown } from "@/components/dropdowns/priority";
 import { StateDropdown } from "@/components/dropdowns/state/dropdown";
@@ -35,6 +36,8 @@ type TIssueDefaultPropertiesProps = {
   selectedParentIssue: Issue | null;
   parentId: string | null;
   isDraft: boolean;
+  /** Whether the form waits for its project's lists: its cycle and modules show loading. */
+  planningLoading: boolean;
   handleFormChange: () => void;
   setSelectedParentIssue: (issue: Issue) => void;
 };
@@ -48,6 +51,7 @@ export const IssueDefaultProperties = observer(function IssueDefaultProperties(p
     selectedParentIssue,
     parentId,
     isDraft,
+    planningLoading,
     handleFormChange,
     setSelectedParentIssue,
   } = props;
@@ -136,6 +140,13 @@ export const IssueDefaultProperties = observer(function IssueDefaultProperties(p
         )}
       />
       <IssueDateFields control={control} isDraft={isDraft} handleFormChange={handleFormChange} />
+      <IssuePlanningFields
+        control={control}
+        workspaceSlug={workspaceSlug}
+        projectId={projectId}
+        loading={planningLoading}
+        handleFormChange={handleFormChange}
+      />
       <div className="h-7">
         {parentId ? (
           <CustomMenu

@@ -43,7 +43,7 @@ vi.mock("@/hooks/store/workspace-draft", () => ({
 }));
 vi.mock("@/hooks/use-issue-layout-store", () => ({ useIssueStoreType: () => EIssuesStoreType.PROJECT }));
 vi.mock("@/hooks/use-issues-actions", () => ({
-  useIssuesActions: () => ({ createIssue: boundary.create, updateIssue: boundary.update }),
+  useIssuesActions: () => ({ createIssueAsGiven: boundary.create, updateIssue: boundary.update }),
 }));
 vi.mock("@/components/issues/create-issue-toast-action-items", () => ({ CreateIssueToastActionItems: () => null }));
 vi.mock("./components/default-properties", () => ({ IssueDefaultProperties: () => null }));

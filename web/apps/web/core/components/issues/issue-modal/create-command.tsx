@@ -7,17 +7,26 @@
 import type { Issue, Draft, IssueDraftPayload } from "@nerve/api-client";
 
 import type { IssueFormData, IssueDescriptionLoadState, IssueFormSubmitOptions } from "./types";
+import { useContext } from "react";
+import { pick } from "lodash-es";
+import { useParams } from "react-router";
 // Nerve imports
 import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
+import type { EIssuesStoreType } from "@nerve/types";
 import { SessionChangedError } from "@/lib/auth/token-manager";
 import { sessionGuard } from "@/lib/in-session";
+import { planningOn, type PlanningDomain } from "@/lib/planning-switch";
+import { StoreContext } from "@/lib/store-context";
 import { draftInput } from "@/services/issue/draft-input";
 import { ContentCopy, CopyUnconfirmedError } from "./content-copy";
 import { useRefusalToast } from "@/hooks/use-refusal-toast";
 // hooks
+import { useProject } from "@/hooks/store/use-project";
 import { useWorkspaceDraftIssues } from "@/hooks/store/workspace-draft";
+import { isPlanningPageStoreType, PLANNING_PAGE_DOMAINS } from "@/hooks/planning-page-domains";
 import type { IssueActions } from "@/hooks/use-issues-actions";
+import { usePlanningListsAnswered } from "@/hooks/use-planning-names";
 // local imports
 import { CreateIssueToastActionItems } from "../create-issue-toast-action-items";
 
@@ -27,9 +36,43 @@ type CreateCommandInput = {
   draftSeed: IssueDraftPayload | undefined;
   copy: ContentCopy | undefined;
   formScope: () => () => boolean;
-  createIssue: IssueActions["createIssue"];
+  /** The page's creation of what the form gives (createIssueAsGiven), nothing of the page added. */
+  createIssue: IssueActions["createIssueAsGiven"];
   descriptionLoadState: IssueDescriptionLoadState;
 };
+
+type CreateStartInput = {
+  workspaceSlug: string | undefined;
+  storeType: EIssuesStoreType;
+  isDraft: boolean;
+  /** The project the form opens with. */
+  projectId: string | null;
+  /** What the form's caller gave; a work item's or a draft's own once it has an id. */
+  data: IssueFormData | undefined;
+};
+
+/**
+ * A new work item's form as the modal starts it (P7a spec 2.6, R2; re-72 F2, F7). Before the form mounts its cycle and
+ * modules start with those the caller gave and, on a cycle's or a module's page whose creation sent now would join it
+ * (joinable), in the page's project, the page's own (the domain's start): merged into the form's default values, so
+ * that the form holds them whatever fields it shows, and sends what it holds (useCreateCommand). As it opens with its
+ * project it reads the project's two lists of what is not archived, the options; until both have answered its fields
+ * show loading, holding their values. A work item's edit and a draft's form start as they are and read nothing here.
+ */
+export function useCreateStart({ workspaceSlug, storeType, isDraft, projectId, data }: CreateStartInput) {
+  const root = useContext(StoreContext);
+  const params = useParams();
+  const creating = !isDraft && !data?.id;
+  const answered = usePlanningListsAnswered(workspaceSlug, creating ? (projectId ?? undefined) : undefined);
+  const start = { data, planningLoading: !answered };
+  if (!creating || !isPlanningPageStoreType(storeType)) return start;
+  const domain = PLANNING_PAGE_DOMAINS[storeType];
+  const entityID = params[domain.param];
+  if (!entityID || !params.projectId || projectId !== params.projectId) return start;
+  const page = { projectID: params.projectId, entityID };
+  if (!domain.joinable(root, page)) return start;
+  return { ...start, data: { ...data, ...domain.start(pick(data ?? {}, ["cycle_id", "module_ids"]), page) } };
+}
 
 /** The modal's create: a work item, or a draft when the form saves one. */
 export function useCreateCommand({
@@ -43,6 +86,7 @@ export function useCreateCommand({
   const { t } = useTranslation();
   const refuse = useRefusalToast();
   const draftIssues = useWorkspaceDraftIssues();
+  const { getProjectById } = useProject();
 
   return async (
     payload: IssueFormData,
@@ -70,6 +114,9 @@ export function useCreateCommand({
         response = await draftIssues.createIssue(workspaceSlug, input);
       } else if (createIssue) {
         if (!payload.name?.trim()) return;
+        // The form's cycle and modules go as it shows them: none while empty, or while its project's switch hides them.
+        const project = getProjectById(payload.project_id ?? undefined);
+        const shows = (domain: PlanningDomain) => !!project && planningOn(project, domain);
         response = await createIssue(payload.project_id!, {
           name: payload.name,
           description_html: payload.description_html,
@@ -80,6 +127,8 @@ export function useCreateCommand({
           ...(payload.start_date != null ? { start_date: payload.start_date } : {}),
           ...(payload.target_date != null ? { target_date: payload.target_date } : {}),
           ...(payload.parent_id != null ? { parent_id: payload.parent_id } : {}),
+          ...(payload.cycle_id && shows("cycles") ? { cycle_id: payload.cycle_id } : {}),
+          ...(payload.module_ids?.length && shows("modules") ? { module_ids: payload.module_ids } : {}),
         });
       }
 

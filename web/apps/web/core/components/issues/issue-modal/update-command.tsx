@@ -6,7 +6,7 @@
 
 import type { Draft } from "@nerve/api-client";
 
-import type { IssueFormData, IssueFormSubmitOptions } from "./types";
+import type { IssueFormData, IssueFormField, IssueFormSubmitOptions } from "./types";
 import { ISSUE_FORM_FIELDS } from "./types";
 import { pick } from "lodash-es";
 // Nerve imports
@@ -67,9 +67,13 @@ export function useUpdateCommand({
           throw error;
         }
       } else if (updateIssue) {
+        // The project moves apart; the modules are a set nerve replaces whole, never sent as the form holds it (R3).
         const body = pick(
           payload,
-          ISSUE_FORM_FIELDS.filter((field) => field !== "project_id")
+          ISSUE_FORM_FIELDS.filter(
+            (field): field is Exclude<IssueFormField, "project_id" | "module_ids"> =>
+              field !== "project_id" && field !== "module_ids"
+          )
         );
         const migration =
           options?.isDescriptionMigration &&

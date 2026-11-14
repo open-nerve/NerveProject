@@ -9,7 +9,7 @@ import { CycleDropdownBase } from "./base";
 
 type TCycleDropdownProps = Omit<
   TCycleDropdownBaseProps,
-  "getCycleById" | "isInitializing" | "onDropdownOpen" | "options" | "readStatus"
+  "getCycleById" | "onDropdownOpen" | "options" | "readStatus"
 > & {
   /** The work item's project, whose cycles are its options. */
   projectId: string | undefined;
@@ -17,11 +17,12 @@ type TCycleDropdownProps = Omit<
 
 /**
  * A work item's cycle dropdown (P7a spec 2.4): its options read as it opens (useCycleOptions), its value named by the
- * planning store. Keyed by the project: a list open as the project changes closes, and opens next on the new project's
+ * planning store; loading while that read is out, or while its caller says so (a form waiting for its project's lists,
+ * P7a spec 2.6). Keyed by the project: a list open as the project changes closes, and opens next on the new project's
  * options (M2 closeout 4).
  */
 export const CycleDropdown = observer(function CycleDropdown(props: TCycleDropdownProps) {
-  const { projectId, ...dropdown } = props;
+  const { projectId, isInitializing, ...dropdown } = props;
   const { workspaceSlug } = useParams();
   const { getCycleById } = useCycles();
   const { options, read } = useCycleOptions(workspaceSlug, projectId);
@@ -30,7 +31,7 @@ export const CycleDropdown = observer(function CycleDropdown(props: TCycleDropdo
       key={projectId}
       {...dropdown}
       getCycleById={getCycleById}
-      isInitializing={read.loading}
+      isInitializing={read.loading || isInitializing}
       options={options}
       readStatus={read.error ? <DirectoryReadError error={read.error} retry={read.load} /> : undefined}
       onDropdownOpen={read.load}

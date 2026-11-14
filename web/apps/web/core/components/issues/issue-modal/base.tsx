@@ -32,7 +32,7 @@ import { useIssuesActions } from "@/hooks/use-issues-actions";
 // local imports
 import { DraftIssueLayout } from "./draft-issue-layout";
 import { useDescriptionRead } from "./description-read";
-import { useCreateCommand } from "./create-command";
+import { useCreateCommand, useCreateStart } from "./create-command";
 import { useUpdateCommand } from "./update-command";
 import { usePublishCommand } from "./publish-command";
 import type { IssueFormProps } from "./form";
@@ -83,7 +83,7 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
   const { getProjectByIdentifier } = useProject();
   const content = useDraftContent(workspaceSlug ?? "", isDraft ? data?.id : undefined);
   // current store details
-  const { createIssue, updateIssue } = useIssuesActions(
+  const { createIssueAsGiven, updateIssue } = useIssuesActions(
     storeType === EIssuesStoreType.WORKSPACE_DRAFT ? EIssuesStoreType.DEFAULT : storeType
   );
   // derived values
@@ -167,12 +167,13 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
     onClose();
   };
 
+  const start = useCreateStart({ workspaceSlug, storeType, isDraft, projectId: activeProjectId, data });
   const handleCreateIssue = useCreateCommand({
     workspaceSlug,
     draftSeed: props.isDraft ? props.draftSeed : undefined,
     copy,
     formScope,
-    createIssue,
+    createIssue: createIssueAsGiven,
     descriptionLoadState,
   });
   const handleUpdateIssue = useUpdateCommand({
@@ -273,7 +274,7 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
     descriptionLoadState,
     onRetryDescription: retryDescription,
     data: {
-      ...data,
+      ...start.data,
       description_html: description,
     },
     onClose: finishClose,
@@ -292,6 +293,7 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
     content,
     publishBlocked,
     notice: copy && workspaceSlug ? <CopyNotice copy={copy} slug={workspaceSlug} /> : undefined,
+    planningLoading: start.planningLoading,
   };
 
   return (

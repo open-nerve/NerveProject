@@ -9,7 +9,7 @@ import { ModuleDropdownBase } from "./base";
 
 type TModuleDropdownProps = Omit<
   TModuleDropdownBaseProps,
-  "getModuleById" | "isInitializing" | "onDropdownOpen" | "options" | "readStatus"
+  "getModuleById" | "onDropdownOpen" | "options" | "readStatus"
 > & {
   /** The work item's project, whose modules are its options. */
   projectId: string | undefined;
@@ -17,11 +17,12 @@ type TModuleDropdownProps = Omit<
 
 /**
  * A work item's module dropdown (P7a spec 2.4): its options read as it opens (useModuleOptions), its values named by
- * the planning store. Keyed by the project: a list open as the project changes closes, and opens next on the new
+ * the planning store; loading while that read is out, or while its caller says so (a form waiting for its project's
+ * lists, P7a spec 2.6). Keyed by the project: a list open as the project changes closes, and opens next on the new
  * project's options (M2 closeout 4).
  */
 export const ModuleDropdown = observer(function ModuleDropdown(props: TModuleDropdownProps) {
-  const { projectId, ...dropdown } = props;
+  const { projectId, isInitializing, ...dropdown } = props;
   const { workspaceSlug } = useParams();
   const { getModuleById } = useModules();
   const { options, read } = useModuleOptions(workspaceSlug, projectId);
@@ -30,7 +31,7 @@ export const ModuleDropdown = observer(function ModuleDropdown(props: TModuleDro
       key={projectId}
       {...dropdown}
       getModuleById={getModuleById}
-      isInitializing={read.loading}
+      isInitializing={read.loading || isInitializing}
       options={options}
       readStatus={read.error ? <DirectoryReadError error={read.error} retry={read.load} /> : undefined}
       onDropdownOpen={read.load}

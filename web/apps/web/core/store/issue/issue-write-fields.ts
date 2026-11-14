@@ -1,6 +1,7 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 import type { Issue, IssueCreate, IssueUpdate } from "@nerve/api-client";
-import type { IssueChange, ModuleSetChange } from "@nerve/types";
+import type { IssueChange } from "@nerve/types";
+import { modulesAfter } from "@/lib/planning-directory";
 
 /** The fields of a creation the web sends; whatever else the caller passed stays out of the request. */
 export const createBody = (input: IssueCreate): IssueCreate => ({
@@ -48,14 +49,6 @@ export function updateBody(input: IssueUpdate): IssueUpdate {
   )
     throw new Error("skip_activity requires description_html alone");
   return body;
-}
-
-/** The set of modules a change makes of the set held: its removals taken out, its additions not in it put after. */
-function modulesAfter(held: readonly string[], change: ModuleSetChange): string[] {
-  const removed = new Set(change.remove);
-  const modules = held.filter((module) => !removed.has(module));
-  for (const module of change.add ?? []) if (!modules.includes(module)) modules.push(module);
-  return modules;
 }
 
 /**

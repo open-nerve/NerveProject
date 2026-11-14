@@ -14,6 +14,8 @@ export type IssueFormValues = Pick<
   | "label_ids"
   | "start_date"
   | "target_date"
+  | "cycle_id"
+  | "module_ids"
 > & { project_id: string | null };
 export type IssueFormData = Partial<IssueFormValues> & { id?: string };
 export const ISSUE_FORM_FIELDS = [
@@ -27,7 +29,10 @@ export const ISSUE_FORM_FIELDS = [
   "label_ids",
   "start_date",
   "target_date",
+  "cycle_id",
+  "module_ids",
 ] as const;
+export type IssueFormField = (typeof ISSUE_FORM_FIELDS)[number];
 
 export type IssueDescriptionLoadState = "loading" | "ready" | "error";
 export type IssueDescriptionChangeSource = "load" | "migration" | "edit";

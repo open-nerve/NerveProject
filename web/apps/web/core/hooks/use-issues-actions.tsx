@@ -32,7 +32,10 @@ export interface IssueActions {
   removeIssue: (projectId: string | undefined | null, issueId: string) => Promise<void>;
   /** A cycle's or a module's page's removal of a work item from its cycle or module (P6b spec 2.2, 2.5). */
   removeIssueFromView?: (projectId: string | undefined | null, issueId: string) => Promise<void>;
+  /** A creation as the page makes it: a cycle's or a module's page's joins the page while it takes work items. */
   createIssue?: (projectId: string | undefined | null, data: IssueCreate) => Promise<Issue | undefined>;
+  /** A form's creation: what the form gives, nothing of the page added (P7a spec 2.6, R2); elsewhere createIssue. */
+  createIssueAsGiven?: (projectId: string | undefined | null, data: IssueCreate) => Promise<Issue | undefined>;
   updateIssue?: (projectId: string | undefined | null, issueId: string, change: IssueChange) => Promise<void>;
   dropIssue?: (
     projectId: string,
@@ -155,6 +158,7 @@ const useProjectIssueActions = () => {
       fetchIssues,
       fetchNextIssues,
       createIssue,
+      createIssueAsGiven: createIssue,
       updateIssue,
       removeIssue,
       archiveIssue,
@@ -238,6 +242,7 @@ const useProfileIssueActions = () => {
       fetchIssues,
       fetchNextIssues,
       createIssue,
+      createIssueAsGiven: createIssue,
       updateIssue,
       removeIssue,
       archiveIssue,

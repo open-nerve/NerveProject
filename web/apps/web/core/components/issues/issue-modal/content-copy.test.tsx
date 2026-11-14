@@ -30,7 +30,7 @@ vi.mock("@/hooks/use-platform-os", () => ({ usePlatformOS: () => ({ isMobile: fa
 vi.mock("@/hooks/use-issue-layout-store", () => ({ useIssueStoreType: () => EIssuesStoreType.PROJECT }));
 vi.mock("@/hooks/use-issues-actions", () => ({
   useIssuesActions: () => ({
-    createIssue: (project: string, body: IssueCreate) =>
+    createIssueAsGiven: (project: string, body: IssueCreate) =>
       (m.tab as Tab).app.issue.projectIssues.createIssue("ws", project, body),
   }),
 }));

@@ -151,6 +151,7 @@ it("saveToDraftsFromCreateKeepsFormOnRefusal: empty title bypasses publish valid
       priority: "none",
       assignee_ids: [],
       label_ids: [],
+      module_ids: [],
     },
   });
   expect(writes()[0]!.body).not.toHaveProperty("skip_activity");

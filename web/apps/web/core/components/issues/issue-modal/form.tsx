@@ -77,6 +77,8 @@ export interface IssueFormProps {
   publishBlocked?: boolean;
   /** The state of a command that outlives one submission, such as a kept copy. */
   notice?: React.ReactNode;
+  /** Whether the modal waits for the lists of the project the form opened with (P7a spec 2.6, re-72 F7). */
+  planningLoading?: boolean;
 }
 
 export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormProps) {
@@ -110,6 +112,7 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
     content,
     publishBlocked = false,
     notice,
+    planningLoading = false,
   } = props;
 
   // states
@@ -300,6 +303,7 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
                   selectedParentIssue={selectedParentIssue}
                   parentId={watch("parent_id") ?? null}
                   isDraft={isDraft}
+                  planningLoading={planningLoading && projectId === defaultProjectId}
                   handleFormChange={handleFormChange}
                   setSelectedParentIssue={setSelectedParentIssue}
                 />

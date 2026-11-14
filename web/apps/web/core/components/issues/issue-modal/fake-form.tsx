@@ -28,6 +28,7 @@ import { IssueFormRoot, type IssueFormProps } from "./form";
 import type { IssueFormData, IssueFormValues } from "./types";
 
 vi.mock("@/lib/auth/api-client", () => ({ tokenManager: { state: { loginId: "form-login" } }, publicClient: {} }));
+vi.mock("@/lib/auth/use-session", () => ({ useSession: () => ({ status: "signed-in", loginId: "form-login" }) }));
 vi.mock("@/lib/store-context", async () => ({
   rootStore: {},
   StoreContext: (await import("react")).createContext<RootStore | undefined>(undefined),
@@ -45,11 +46,14 @@ vi.mock("@/hooks/store/use-project", () => ({ useProject: () => tab.app.projectR
 vi.mock("@/hooks/store/use-project-state", () => ({ useProjectState: () => tab.app.state }));
 vi.mock("@/hooks/store/use-workspace", () => ({ useWorkspace: () => tab.app.workspaceRoot }));
 vi.mock("@/hooks/store/workspace-draft", () => ({ useWorkspaceDraftIssues: () => tab.app.issue.workspaceDraftIssues }));
-vi.mock("@/hooks/store/user", () => ({ useUserProfile: () => ({ data: { start_of_the_week: 1 } }) }));
+vi.mock("@/hooks/store/user", () => ({
+  useUserProfile: () => ({ data: { start_of_the_week: 1 } }),
+  useUserPermissions: () => tab.app.user.permission,
+}));
 vi.mock("@/hooks/use-platform-os", () => ({ usePlatformOS: () => ({ isMobile: false }) }));
 vi.mock("@/hooks/use-issue-layout-store", () => ({ useIssueStoreType: () => EIssuesStoreType.PROJECT }));
 vi.mock("@/hooks/use-issues-actions", () => ({
-  useIssuesActions: () => ({ createIssue: create, updateIssue: update }),
+  useIssuesActions: () => ({ createIssueAsGiven: create, updateIssue: update }),
 }));
 vi.mock("@/components/issues/create-issue-toast-action-items", () => ({ CreateIssueToastActionItems: () => null }));
 vi.mock("./components/parent-tag", () => ({ IssueParentTag: () => null }));

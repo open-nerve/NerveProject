@@ -1,5 +1,6 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 import type { Cycle, Module } from "@nerve/api-client";
+import type { ModuleSetChange } from "@nerve/types";
 
 // A project's planning directory as a work item reads it (P7a spec 2.3, R4): its options, what the work item may join,
 // apart from its values, what it is in. A value shows by its name as the planning store has it (getCycleById,
@@ -36,4 +37,15 @@ export function moduleOptions(
   return moduleIds
     .map((moduleId) => moduleOf(moduleId))
     .filter((item): item is Module => !!item && item.archived_at === null);
+}
+
+/**
+ * The set of modules a change makes of the set held: its removals taken out, its additions not in it put after. The
+ * write unit makes a change's request of it in the work item's turn (issue-write-fields.ts), and a form its own value.
+ */
+export function modulesAfter(held: readonly string[], change: ModuleSetChange): string[] {
+  const removed = new Set(change.remove);
+  const modules = held.filter((module) => !removed.has(module));
+  for (const module of change.add ?? []) if (!modules.includes(module)) modules.push(module);
+  return modules;
 }

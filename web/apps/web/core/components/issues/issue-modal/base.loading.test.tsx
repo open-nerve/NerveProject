@@ -24,6 +24,9 @@ vi.mock("@/lib/auth/api-client", () => ({
   tokenManager: { state: { loginId: "issue-modal-session" } },
   publicClient: {},
 }));
+vi.mock("@/lib/auth/use-session", () => ({
+  useSession: () => ({ status: "signed-in", loginId: "issue-modal-session" }),
+}));
 const binding = vi.hoisted(() => ({ app: undefined as unknown }));
 vi.mock("@/lib/store-context", async () => ({
   get rootStore() {
@@ -89,7 +92,7 @@ vi.mock("@/hooks/store/workspace-draft", () => ({
 }));
 vi.mock("@/hooks/use-issue-layout-store", () => ({ useIssueStoreType: () => EIssuesStoreType.PROJECT }));
 vi.mock("@/hooks/use-issues-actions", () => ({
-  useIssuesActions: () => ({ createIssue: ui.create, updateIssue: ui.update }),
+  useIssuesActions: () => ({ createIssueAsGiven: ui.create, updateIssue: ui.update }),
 }));
 vi.mock("@/components/issues/create-issue-toast-action-items", () => ({ CreateIssueToastActionItems: () => null }));
 vi.mock("./components/default-properties", () => ({ IssueDefaultProperties: () => null }));

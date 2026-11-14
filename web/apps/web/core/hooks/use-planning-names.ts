@@ -62,3 +62,27 @@ export function usePlanningNames(
   useSessionSWR(readList ? [list.key, projectId] : null, (id) => list.fetch(id));
   useSessionSWR(readArchive ? [archive.key, projectId] : null, (id) => archive.fetch(id));
 }
+
+/**
+ * The project's list of what is not archived of a domain, read while the caller reads the project's domain
+ * (usePlanningReads), by the key the project's pages read it by (DIRECTORIES): whether it has answered, that is
+ * whether the store holds it, its read failed, or nothing reads it (the domain off, no role).
+ */
+function useListAnswered(workspaceSlug: string | undefined, projectId: string | undefined, domain: PlanningDomain) {
+  const { listed } = usePlanningReads(workspaceSlug, projectId, domain);
+  const { list } = DIRECTORIES[domain]({ cycles: useCycles(), modules: useModules() });
+  const read = useSessionSWR(listed ? [list.key, projectId] : null, (id) => list.fetch(id));
+  return !listed || list.held(projectId) !== undefined || read.error !== undefined;
+}
+
+/**
+ * Reads a project's two lists of what is not archived, its cycles and its modules, of which a work item's options are
+ * (P7a spec 2.6, re-72 F7): a new work item's form reads them as it opens with its project, by the keys its pages share
+ * (one read, whoever asks), and holds its values, its fields loading, until both have answered (useListAnswered).
+ * Whether both have. Its caller observes the store.
+ */
+export function usePlanningListsAnswered(workspaceSlug: string | undefined, projectId: string | undefined): boolean {
+  const cycles = useListAnswered(workspaceSlug, projectId, "cycles");
+  const modules = useListAnswered(workspaceSlug, projectId, "modules");
+  return cycles && modules;
+}
