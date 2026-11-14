@@ -264,76 +264,78 @@ test("I4 (API): link counts 0/1/2/2 traverse two limit-two pages in both directi
   }
 });
 
-test("I4 (page): table label, assignee, child-count and due-date orders each traverse a real second page in both directions", async ({
-  api,
-  page,
-}, info) => {
-  test.setTimeout(90_000);
-  const seed = await issueListProject(api, info);
-  const { member, project, slug } = seed;
-  const people = await Promise.all(
-    ["Alpha", "Beta"].map(async (name) => {
-      const who = await newAccount(api, info, name);
-      await named(api, who.token, { display_name: name });
-      await inviteAndAccept(api, member.token, slug, who, 15);
-      await addProjectMembers(api, member.token, project.id, [{ member_id: who.id, role: 15 }]);
-      return who;
-    })
-  );
-  const labels = await Promise.all(
-    ["Alpha", "Beta"].map((name) => createLabel(api, member.token, project.id, { name }))
-  );
-  const rows: { id: string; label: number | null; assignee: number | null; children: number; date: string | null }[] =
-    [];
-  await Array.from({ length: 101 }, (_, index) => index).reduce(async (prior, index) => {
-    await prior;
-    const label = index % 3 === 2 ? null : index % 3;
-    const assignee = index % 3 === 0 ? null : (index % 3) - 1;
-    const children = index === 0 ? 1 : index === 100 ? 2 : 0;
-    const date = index % 3 === 1 ? null : index % 3 === 0 ? "2026-10-01" : "2026-10-03";
-    const issue = await createIssue(api, member.token, project.id, {
-      name: `Table ${String(index).padStart(3, "0")}`,
-      label_ids: label === null ? [] : [labels[label]!.id],
-      assignee_ids: assignee === null ? [] : [people[assignee]!.id],
-      ...(date ? { target_date: date } : {}),
-    });
-    rows.push({ id: issue.id, label, assignee, children, date });
-    await Promise.all(
-      Array.from({ length: children }, (_, child) =>
-        createIssue(api, member.token, project.id, { name: `Child ${index}-${child}`, parent_id: issue.id })
-      )
+const tableOrders = [
+  { column: "Labels", key: "label", order: "label_name", ascending: "A Z", descending: "Z A" },
+  { column: "Assignees", key: "assignee", order: "assignee_name", ascending: "A Z", descending: "Z A" },
+  {
+    column: "Sub-work item",
+    key: "children",
+    order: "sub_issues_count",
+    ascending: "Least Most",
+    descending: "Most Least",
+  },
+  { column: "Due date", key: "date", order: "target_date", ascending: "Old New", descending: "New Old" },
+] as const;
+
+// One story per column: re-rendering the hundred-row table after each order change takes seconds on a busy CI runner,
+// and the four columns in one story used 66–96 s of a 90 s budget there (16 s locally).
+for (const sort of tableOrders)
+  test(`I4 (page): table ${sort.order} order traverses a real second page in both directions`, async ({
+    api,
+    page,
+  }, info) => {
+    test.setTimeout(90_000);
+    const seed = await issueListProject(api, info);
+    const { member, project, slug } = seed;
+    const people = await Promise.all(
+      ["Alpha", "Beta"].map(async (name) => {
+        const who = await newAccount(api, info, name);
+        await named(api, who.token, { display_name: name });
+        await inviteAndAccept(api, member.token, slug, who, 15);
+        await addProjectMembers(api, member.token, project.id, [{ member_id: who.id, role: 15 }]);
+        return who;
+      })
     );
-  }, Promise.resolve());
-  const prefs = await readProjectPreferences(api, member.token, project.id);
-  await saveListPreferences(api, seed, {
-    filters: {},
-    display_filters: { ...prefs.display_filters, layout: "spreadsheet", order_by: "-created_at", sub_issue: false },
-    display_properties: {
-      ...prefs.display_properties,
-      labels: true,
-      assignee: true,
-      due_date: true,
-      sub_issue_count: true,
-    },
-  });
-  const { watch, queries } = await openIssueList(page, seed);
-  const table = page.getByRole("table");
-  const tableRows = table.locator("tbody > tr");
-  const sorts = [
-    { column: "Labels", key: "label", order: "label_name", ascending: "A Z", descending: "Z A" },
-    { column: "Assignees", key: "assignee", order: "assignee_name", ascending: "A Z", descending: "Z A" },
-    {
-      column: "Sub-work item",
-      key: "children",
-      order: "sub_issues_count",
-      ascending: "Least Most",
-      descending: "Most Least",
-    },
-    { column: "Due date", key: "date", order: "target_date", ascending: "Old New", descending: "New Old" },
-  ] as const;
-  await sorts
-    .flatMap((sort) => (["ascending", "descending"] as const).map((direction) => ({ sort, direction })))
-    .reduce(async (prior, { sort, direction }) => {
+    const labels = await Promise.all(
+      ["Alpha", "Beta"].map((name) => createLabel(api, member.token, project.id, { name }))
+    );
+    const rows: { id: string; label: number | null; assignee: number | null; children: number; date: string | null }[] =
+      [];
+    await Array.from({ length: 101 }, (_, index) => index).reduce(async (prior, index) => {
+      await prior;
+      const label = index % 3 === 2 ? null : index % 3;
+      const assignee = index % 3 === 0 ? null : (index % 3) - 1;
+      const children = index === 0 ? 1 : index === 100 ? 2 : 0;
+      const date = index % 3 === 1 ? null : index % 3 === 0 ? "2026-10-01" : "2026-10-03";
+      const issue = await createIssue(api, member.token, project.id, {
+        name: `Table ${String(index).padStart(3, "0")}`,
+        label_ids: label === null ? [] : [labels[label]!.id],
+        assignee_ids: assignee === null ? [] : [people[assignee]!.id],
+        ...(date ? { target_date: date } : {}),
+      });
+      rows.push({ id: issue.id, label, assignee, children, date });
+      await Promise.all(
+        Array.from({ length: children }, (_, child) =>
+          createIssue(api, member.token, project.id, { name: `Child ${index}-${child}`, parent_id: issue.id })
+        )
+      );
+    }, Promise.resolve());
+    const prefs = await readProjectPreferences(api, member.token, project.id);
+    await saveListPreferences(api, seed, {
+      filters: {},
+      display_filters: { ...prefs.display_filters, layout: "spreadsheet", order_by: "-created_at", sub_issue: false },
+      display_properties: {
+        ...prefs.display_properties,
+        labels: true,
+        assignee: true,
+        due_date: true,
+        sub_issue_count: true,
+      },
+    });
+    const { watch, queries } = await openIssueList(page, seed);
+    const table = page.getByRole("table");
+    const tableRows = table.locator("tbody > tr");
+    await (["ascending", "descending"] as const).reduce(async (prior, direction) => {
       await prior;
       await test.step(`${sort.order} ${direction}: actual header and scroll continuation`, async () => {
         const descending = direction === "descending";
@@ -386,8 +388,8 @@ test("I4 (page): table label, assignee, child-count and due-date orders each tra
         await expect(table.getByRole("button", { name: "Load more" })).toHaveCount(0);
       });
     }, Promise.resolve());
-  await expectListPageQuiet(page, watch);
-});
+    await expectListPageQuiet(page, watch);
+  });
 
 test.describe("calendar in UTC+14", () => {
   test.use({ timezoneId: "Pacific/Kiritimati" });
