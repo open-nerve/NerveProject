@@ -8,6 +8,8 @@ import React, { useState } from "react";
 import { observer } from "mobx-react";
 import { useTranslation } from "@nerve/i18n";
 import type { IIssueDisplayFilterOptions, TIssueGroupByOptions } from "@nerve/types";
+// hooks
+import { useRouteListWords } from "@/hooks/use-route-list-words";
 // helpers
 import { useGroupByOptions } from "../../../utils";
 // components
@@ -19,16 +21,22 @@ type Props = {
   handleUpdate: (val: TIssueGroupByOptions) => void;
 };
 
+/**
+ * The groupings a list page offers (P7b spec 2.5, R8): those of its options; on a page of a project the cycle and the
+ * module only while the route's project has their domain turned on, but the saved one always: nerve still groups by
+ * it, and here it is changed. The panel never changes a saved grouping by itself.
+ */
 export const FilterGroupBy = observer(function FilterGroupBy(props: Props) {
   const { displayFilters, groupByOptions, handleUpdate } = props;
   // hooks
   const { t } = useTranslation();
+  const offered = useRouteListWords();
   const [previewEnabled, setPreviewEnabled] = useState(true);
 
   const selectedGroupBy = displayFilters?.group_by ?? null;
   const selectedSubGroupBy = displayFilters?.sub_group_by ?? null;
 
-  const options = useGroupByOptions(groupByOptions);
+  const options = useGroupByOptions(groupByOptions).filter(({ key }) => key === selectedGroupBy || offered(key));
 
   return (
     <>

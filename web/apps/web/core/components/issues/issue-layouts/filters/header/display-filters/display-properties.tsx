@@ -6,7 +6,6 @@
 
 import React from "react";
 import { observer } from "mobx-react";
-import { useParams } from "react-router";
 // nerve constants
 import { ISSUE_DISPLAY_PROPERTIES } from "@nerve/constants";
 // nerve i18n
@@ -14,9 +13,7 @@ import { useTranslation } from "@nerve/i18n";
 // types
 import type { IIssueDisplayProperties } from "@nerve/types";
 // hooks
-import { useProject } from "@/hooks/store/use-project";
-// lib
-import { displayPropertyOn } from "@/lib/planning-switch";
+import { useRouteListWords } from "@/hooks/use-route-list-words";
 // components
 import { FilterHeader } from "../helpers/filter-header";
 
@@ -34,16 +31,12 @@ type Props = {
  */
 export const FilterDisplayProperties = observer(function FilterDisplayProperties(props: Props) {
   const { displayProperties, displayPropertiesToRender, handleUpdate } = props;
-  // router
-  const { projectId } = useParams();
   // hooks
   const { t } = useTranslation();
-  const { getProjectById } = useProject();
+  const offered = useRouteListWords();
   // states
   const [previewEnabled, setPreviewEnabled] = React.useState(true);
 
-  const project = projectId ? getProjectById(projectId) : undefined;
-  const offered = (key: keyof IIssueDisplayProperties) => !projectId || displayPropertyOn(project, key);
   const filteredDisplayProperties = ISSUE_DISPLAY_PROPERTIES.filter(
     (property) => displayPropertiesToRender.includes(property.key) && offered(property.key)
   );

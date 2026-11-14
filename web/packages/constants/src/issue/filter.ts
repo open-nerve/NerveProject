@@ -8,6 +8,7 @@ import type {
   IIssueFilterOptions,
   ILayoutDisplayFiltersOptions,
   TIssueActivityComment,
+  TIssueGroupByOptions,
   TWorkItemFilterProperty,
 } from "@nerve/types";
 import { EIssuesStoreType } from "@nerve/types";
@@ -37,6 +38,94 @@ type TFilterPropertiesByPageType = {
 type TIssueFiltersToDisplayByPageType = {
   [pageType: string]: TFilterPropertiesByPageType;
 };
+
+/** The project page's options: those of its work items' list, of which a cycle's and a module's page are derived. */
+const PROJECT_ISSUES: TFilterPropertiesByPageType = {
+  filters: [
+    "priority",
+    "state_group",
+    "state_id",
+    "cycle_id",
+    "module_id",
+    "assignee_id",
+    "mention_id",
+    "subscriber_id",
+    "created_by_id",
+    "label_id",
+    "start_date",
+    "target_date",
+  ],
+  layoutOptions: {
+    list: {
+      display_properties: ISSUE_DISPLAY_PROPERTIES_KEYS,
+      display_filters: {
+        group_by: ["state", "priority", "labels", "assignees", "created_by", "cycle", "module", null],
+        order_by: ["sort_order", "-created_at", "-updated_at", "start_date", "-priority", "target_date"],
+      },
+      extra_options: {
+        access: true,
+        values: ["show_empty_groups", "sub_issue"],
+      },
+    },
+    kanban: {
+      display_properties: ISSUE_DISPLAY_PROPERTIES_KEYS,
+      display_filters: {
+        group_by: ["state", "priority", "labels", "assignees", "created_by", "cycle", "module"],
+        sub_group_by: ["state", "priority", "labels", "assignees", "created_by", "cycle", "module", null],
+        order_by: ["sort_order", "-created_at", "-updated_at", "start_date", "-priority", "target_date"],
+      },
+      extra_options: {
+        access: true,
+        values: ["show_empty_groups", "sub_issue"],
+      },
+    },
+    calendar: {
+      display_properties: ["key"],
+      display_filters: {},
+      extra_options: {
+        access: true,
+        values: ["sub_issue"],
+      },
+    },
+    spreadsheet: {
+      display_properties: ISSUE_DISPLAY_PROPERTIES_KEYS,
+      display_filters: {
+        order_by: ["sort_order", "-created_at", "-updated_at", "start_date", "-priority"],
+      },
+      extra_options: {
+        access: true,
+        values: ["sub_issue"],
+      },
+    },
+  },
+};
+
+/**
+ * A cycle's or a module's page's options (P5b R9, P6b R12, P7b A8): the project page's without the page's own filter
+ * and grouping, every other option the same. The page lists its own cycle's or module's work items only: filtering or
+ * grouping by its own would name it everywhere, and nerve refuses the page's own key on the page's preferences.
+ */
+function withoutOwn(
+  options: TFilterPropertiesByPageType,
+  filter: TWorkItemFilterProperty,
+  grouping: TIssueGroupByOptions
+): TFilterPropertiesByPageType {
+  const groupings = (keys: TIssueGroupByOptions[]) => keys.filter((key) => key !== grouping);
+  const layoutOptions: TFiltersLayoutOptions = {};
+  for (const [layout, { display_filters, ...rest }] of Object.entries(options.layoutOptions)) {
+    // a layout with no grouping keeps none: the display panel shows a section for each key its options have
+    const { group_by, sub_group_by, ...ordering } = display_filters;
+    layoutOptions[layout] = {
+      ...rest,
+      display_filters: {
+        ...ordering,
+        ...(group_by && { group_by: groupings(group_by) }),
+        ...(sub_group_by && { sub_group_by: groupings(sub_group_by) }),
+      },
+    };
+  }
+  return { filters: options.filters.filter((key) => key !== filter), layoutOptions };
+}
 
 export const ISSUE_DISPLAY_FILTERS_BY_PAGE: TIssueFiltersToDisplayByPageType = {
   profile_issues: {
@@ -123,182 +212,9 @@ export const ISSUE_DISPLAY_FILTERS_BY_PAGE: TIssueFiltersToDisplayByPageType = {
       },
     },
   },
-  issues: {
-    filters: [
-      "priority",
-      "state_group",
-      "state_id",
-      "assignee_id",
-      "mention_id",
-      "subscriber_id",
-      "created_by_id",
-      "label_id",
-      "start_date",
-      "target_date",
-    ],
-    layoutOptions: {
-      list: {
-        display_properties: ISSUE_DISPLAY_PROPERTIES_KEYS,
-        display_filters: {
-          group_by: ["state", "priority", "labels", "assignees", "created_by", null],
-          order_by: ["sort_order", "-created_at", "-updated_at", "start_date", "-priority", "target_date"],
-        },
-        extra_options: {
-          access: true,
-          values: ["show_empty_groups", "sub_issue"],
-        },
-      },
-      kanban: {
-        display_properties: ISSUE_DISPLAY_PROPERTIES_KEYS,
-        display_filters: {
-          group_by: ["state", "priority", "labels", "assignees", "created_by"],
-          sub_group_by: ["state", "priority", "labels", "assignees", "created_by", null],
-          order_by: ["sort_order", "-created_at", "-updated_at", "start_date", "-priority", "target_date"],
-        },
-        extra_options: {
-          access: true,
-          values: ["show_empty_groups", "sub_issue"],
-        },
-      },
-      calendar: {
-        display_properties: ["key"],
-        display_filters: {},
-        extra_options: {
-          access: true,
-          values: ["sub_issue"],
-        },
-      },
-      spreadsheet: {
-        display_properties: ISSUE_DISPLAY_PROPERTIES_KEYS,
-        display_filters: {
-          order_by: ["sort_order", "-created_at", "-updated_at", "start_date", "-priority"],
-        },
-        extra_options: {
-          access: true,
-          values: ["sub_issue"],
-        },
-      },
-    },
-  },
-  /** The cycle page's own options: the project page's, with no grouping by cycle when P7 adds it (P5b R9). */
-  cycle_issues: {
-    filters: [
-      "priority",
-      "state_group",
-      "state_id",
-      "assignee_id",
-      "mention_id",
-      "subscriber_id",
-      "created_by_id",
-      "label_id",
-      "start_date",
-      "target_date",
-    ],
-    layoutOptions: {
-      list: {
-        display_properties: ISSUE_DISPLAY_PROPERTIES_KEYS,
-        display_filters: {
-          group_by: ["state", "priority", "labels", "assignees", "created_by", null],
-          order_by: ["sort_order", "-created_at", "-updated_at", "start_date", "-priority", "target_date"],
-        },
-        extra_options: {
-          access: true,
-          values: ["show_empty_groups", "sub_issue"],
-        },
-      },
-      kanban: {
-        display_properties: ISSUE_DISPLAY_PROPERTIES_KEYS,
-        display_filters: {
-          group_by: ["state", "priority", "labels", "assignees", "created_by"],
-          sub_group_by: ["state", "priority", "labels", "assignees", "created_by", null],
-          order_by: ["sort_order", "-created_at", "-updated_at", "start_date", "-priority", "target_date"],
-        },
-        extra_options: {
-          access: true,
-          values: ["show_empty_groups", "sub_issue"],
-        },
-      },
-      calendar: {
-        display_properties: ["key"],
-        display_filters: {},
-        extra_options: {
-          access: true,
-          values: ["sub_issue"],
-        },
-      },
-      spreadsheet: {
-        display_properties: ISSUE_DISPLAY_PROPERTIES_KEYS,
-        display_filters: {
-          order_by: ["sort_order", "-created_at", "-updated_at", "start_date", "-priority"],
-        },
-        extra_options: {
-          access: true,
-          values: ["sub_issue"],
-        },
-      },
-    },
-  },
-  /**
-   * The module page's own options: the project page's, with no grouping by module when P7 adds it (P6b R12); P7 then
-   * derives this and cycle_issues from issues without the page's own key.
-   */
-  module_issues: {
-    filters: [
-      "priority",
-      "state_group",
-      "state_id",
-      "assignee_id",
-      "mention_id",
-      "subscriber_id",
-      "created_by_id",
-      "label_id",
-      "start_date",
-      "target_date",
-    ],
-    layoutOptions: {
-      list: {
-        display_properties: ISSUE_DISPLAY_PROPERTIES_KEYS,
-        display_filters: {
-          group_by: ["state", "priority", "labels", "assignees", "created_by", null],
-          order_by: ["sort_order", "-created_at", "-updated_at", "start_date", "-priority", "target_date"],
-        },
-        extra_options: {
-          access: true,
-          values: ["show_empty_groups", "sub_issue"],
-        },
-      },
-      kanban: {
-        display_properties: ISSUE_DISPLAY_PROPERTIES_KEYS,
-        display_filters: {
-          group_by: ["state", "priority", "labels", "assignees", "created_by"],
-          sub_group_by: ["state", "priority", "labels", "assignees", "created_by", null],
-          order_by: ["sort_order", "-created_at", "-updated_at", "start_date", "-priority", "target_date"],
-        },
-        extra_options: {
-          access: true,
-          values: ["show_empty_groups", "sub_issue"],
-        },
-      },
-      calendar: {
-        display_properties: ["key"],
-        display_filters: {},
-        extra_options: {
-          access: true,
-          values: ["sub_issue"],
-        },
-      },
-      spreadsheet: {
-        display_properties: ISSUE_DISPLAY_PROPERTIES_KEYS,
-        display_filters: {
-          order_by: ["sort_order", "-created_at", "-updated_at", "start_date", "-priority"],
-        },
-        extra_options: {
-          access: true,
-          values: ["sub_issue"],
-        },
-      },
-    },
-  },
+  issues: PROJECT_ISSUES,
+  cycle_issues: withoutOwn(PROJECT_ISSUES, "cycle_id", "cycle"),
+  module_issues: withoutOwn(PROJECT_ISSUES, "module_id", "module"),
   sub_work_items: {
     filters: ["priority", "state_id", "assignee_id", "start_date", "target_date"],
     layoutOptions: {

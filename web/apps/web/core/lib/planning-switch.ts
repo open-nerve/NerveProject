@@ -4,7 +4,7 @@
  */
 
 import type { Project } from "@nerve/api-client";
-import type { IIssueDisplayProperties } from "@nerve/types";
+import type { IIssueDisplayProperties, TIssueGroupByOptions, TWorkItemFilterProperty } from "@nerve/types";
 
 /** A domain of a project's planning: its cycles, its modules. */
 export type PlanningDomain = "cycles" | "modules";
@@ -23,21 +23,29 @@ export function planningOn(project: Pick<Project, "cycle_view" | "module_view">,
   return project[SWITCH[domain]];
 }
 
-/** The display properties of a project's planning, each its domain's: a work item's cycle, its modules. */
-const DISPLAY_PROPERTIES: Partial<Record<keyof IIssueDisplayProperties, PlanningDomain>> = {
+/** A word of a work item list's options: a display property, a grouping, a filter. */
+export type ListWord = keyof IIssueDisplayProperties | TIssueGroupByOptions | TWorkItemFilterProperty;
+
+/**
+ * The words of a list's options that name a project's planning, each its domain's (P7b spec 2.5, R8): the display
+ * properties of a work item's cycle and modules, the groupings by its cycle and its module ("cycle" is both), the
+ * filters by them.
+ */
+const PLANNING_WORDS: Partial<Record<NonNullable<ListWord>, PlanningDomain>> = {
   cycle: "cycles",
   modules: "modules",
+  module: "modules",
+  cycle_id: "cycles",
+  module_id: "modules",
 };
 
 /**
- * Whether a display property shows for the work items of a project (P7a spec 2.5, R11): the cycle and the modules only
- * while the project is known and has their domain turned on; any other always. The display panel offers by it on a
- * project's page, and a project's table shows its columns by it.
+ * Whether a list of a project's work items offers a word of its options (P7a spec 2.5, R11; P7b spec 2.5, R8): a word
+ * of the planning only while the project is known and has the word's domain turned on; any other always. The display,
+ * grouping and sub-grouping panels offer by it on a project's page (use-route-list-words.ts), and a project's table
+ * shows its columns by it.
  */
-export function displayPropertyOn(
-  project: Pick<Project, "cycle_view" | "module_view"> | undefined,
-  property: keyof IIssueDisplayProperties
-): boolean {
-  const domain = DISPLAY_PROPERTIES[property];
+export function listWordOn(project: Pick<Project, "cycle_view" | "module_view"> | undefined, word: ListWord): boolean {
+  const domain = word === null ? undefined : PLANNING_WORDS[word];
   return !domain || (project !== undefined && planningOn(project, domain));
 }
