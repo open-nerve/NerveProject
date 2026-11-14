@@ -30,6 +30,10 @@ export type TModuleDropdownBaseProps = TDropdownProps & {
   readStatus?: ReactNode;
   /** The modules the work item is in. */
   value: readonly string[];
+  /** As one of a form's fields: whether nerve refused its value (its select's button is aria-invalid). */
+  invalid?: boolean;
+  /** As one of a form's fields: the id of the message under it, which describes its select's button. */
+  describedBy?: string;
 };
 
 /** A module's name in a list or on the button, with the caption of an archived one. */
@@ -61,11 +65,13 @@ export const ModuleDropdownBase = observer(function ModuleDropdownBase(props: TM
     buttonContainerClassName,
     buttonVariant,
     className,
+    describedBy,
     disabled = false,
     dropdownArrow,
     dropdownArrowClassName,
     getModuleById,
     hideIcon,
+    invalid,
     issueName,
     isInitializing,
     onChange,
@@ -147,6 +153,8 @@ export const ModuleDropdownBase = observer(function ModuleDropdownBase(props: TM
       onClose={onClose}
       disabled={disabled}
       tabIndex={tabIndex}
+      invalid={invalid}
+      describedBy={describedBy}
       customButton={
         <>
           <span className="sr-only">{t("common.modules")}: </span>

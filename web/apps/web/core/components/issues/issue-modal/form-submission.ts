@@ -20,6 +20,10 @@ import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 // hooks
 import { getChangedIssuefields } from "@nerve/utils";
 import { useFormRefusal } from "@/lib/form-refusal";
+import { moduleSetChange } from "@/lib/planning-directory";
+
+/** The fields the form shows nerve's refusal under: the cycle's and the modules' too (P7a spec 2.6, R17). */
+const FIELDS = ["name", "project_id", "start_date", "target_date", "cycle_id", "module_ids"] as const;
 
 type FormSubmissionInput = {
   methods: UseFormReturn<IssueFormValues>;
@@ -63,7 +67,10 @@ export function useFormSubmission({
     getValues,
     setError,
   } = methods;
-  const refuse = useFormRefusal(["name", "project_id", "start_date", "target_date"] as const, {});
+  const refuse = useFormRefusal(FIELDS, {});
+  // The modules the form started with, the work item's own as the modal opened it: a work item's edit sends the change
+  // from them to the set the form holds, never from what a read gave the form's data since (P7a spec 2.6, R3).
+  const [startModules] = useState(() => getValues("module_ids"));
 
   const submissionData = (formData: Partial<IssueFormValues>) => {
     if (!data?.id && !hasDraftSeed) return formData;
@@ -90,6 +97,7 @@ export function useFormSubmission({
 
     await onSubmit(submissionData(formData), is_draft_issue, {
       isDescriptionMigration: descriptionMigration.current,
+      modules: data?.id && !isDraft ? moduleSetChange(startModules, formData.module_ids ?? []) : undefined,
       onRefused: (error) => refuse(error, (field, message) => setError(field, { type: "server", message })),
     })
       .then(() => {

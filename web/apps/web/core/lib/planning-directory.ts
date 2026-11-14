@@ -49,3 +49,15 @@ export function modulesAfter(held: readonly string[], change: ModuleSetChange): 
   for (const module of change.add ?? []) if (!modules.includes(module)) modules.push(module);
   return modules;
 }
+
+/**
+ * The change that makes the set after of the set before, modulesAfter's inverse: the modules of after not in before
+ * added, those of before not in after taken out, none in both; none when both hold the same modules. A work item's
+ * edit sends its modules so, from the form's start to the set it holds, applied in the write's turn to the set the
+ * work item then holds (P7a spec 2.6, R3).
+ */
+export function moduleSetChange(before: readonly string[], after: readonly string[]): ModuleSetChange | undefined {
+  const add = after.filter((module) => !before.includes(module));
+  const remove = before.filter((module) => !after.includes(module));
+  return add.length > 0 || remove.length > 0 ? { add, remove } : undefined;
+}

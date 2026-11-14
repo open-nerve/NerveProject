@@ -33,6 +33,10 @@ export type TCycleDropdownBaseProps = TDropdownProps & {
   readStatus?: ReactNode;
   /** The cycle the work item is in, null for none. */
   value: string | null;
+  /** As one of a form's fields: whether nerve refused its value (its select's button is aria-invalid). */
+  invalid?: boolean;
+  /** As one of a form's fields: the id of the message under it, which describes its select's button. */
+  describedBy?: string;
 };
 
 /**
@@ -47,11 +51,13 @@ export const CycleDropdownBase = observer(function CycleDropdownBase(props: TCyc
     buttonContainerClassName,
     buttonVariant,
     className,
+    describedBy,
     disabled = false,
     dropdownArrow,
     dropdownArrowClassName,
     getCycleById,
     hideIcon,
+    invalid,
     issueName,
     isInitializing,
     onChange,
@@ -140,6 +146,8 @@ export const CycleDropdownBase = observer(function CycleDropdownBase(props: TCyc
       onClose={onClose}
       disabled={disabled}
       tabIndex={tabIndex}
+      invalid={invalid}
+      describedBy={describedBy}
       customButton={
         <>
           <span className="sr-only">{t("common.cycle")}: </span>

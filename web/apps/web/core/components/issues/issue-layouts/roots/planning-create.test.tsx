@@ -16,7 +16,7 @@ import { CycleIssuesHeader } from "@/app/(all)/[workspaceSlug]/(projects)/projec
 import { ModuleIssuesHeader } from "@/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/modules/(detail)/header";
 import { WorkItemLevelModals } from "@/components/modals/work-item-level";
 import type { PlanningPageStoreType } from "@/hooks/planning-page-domains";
-import { json, type Call } from "@/lib/auth/fake-nerve";
+import { json } from "@/lib/auth/fake-nerve";
 import { until } from "@/lib/auth/fake-time";
 import { toasts } from "@/lib/fake-toast";
 import { listIssue } from "@/store/issue/fake-issues";
@@ -27,14 +27,20 @@ import type { RootStore } from "@/store/root.store";
 import {
   C1,
   M1,
+  answeringPlanningLists,
   choose,
   creates,
+  cycleField,
   cyclePreferencesOf,
+  fieldOf,
   form,
   headerButton,
   layouts,
+  loading,
   made,
+  moduleField,
   modulePreferencesOf,
+  pick,
   planningPageTab,
   projectField,
   rowShown,
@@ -127,30 +133,6 @@ const fromHeader = () => act(async () => headerButton("issue.add.label")?.click(
 /** Opens the app's own new work item, of no page, whose form lets the project be changed. */
 const fromApp = () => act(async () => page.app.commandPalette.toggleCreateIssueModal(true));
 
-/** The form's field of name: its dropdown's button, named by the field and its value. */
-const fieldOf = (name: string) =>
-  [...(form()?.querySelectorAll<HTMLButtonElement>("button") ?? [])].find((node) =>
-    node.textContent?.startsWith(`${name}: `)
-  );
-const cycleField = () => fieldOf("common.cycle");
-const moduleField = () => fieldOf("common.modules");
-/** Whether the field shows loading. */
-const loading = (field: HTMLButtonElement | undefined) => field?.querySelector('[role="status"]') != null;
-/** Opens the field's list and picks its option of name, as a pointer does. */
-async function pick(field: () => HTMLButtonElement | undefined, name: string) {
-  await act(async () => {
-    field()!.click();
-    await vi.advanceTimersByTimeAsync(20);
-  });
-  const option = () =>
-    [...document.querySelectorAll<HTMLElement>('[role="option"]')].find((node) => node.textContent === name);
-  await until(() => option() !== undefined, `the option ${name}`);
-  await act(async () => {
-    option()!.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true, button: 0 }));
-    await vi.advanceTimersByTimeAsync(20);
-  });
-}
-
 /** The reads of the project's list of a domain that is not archived (path), and of its archive. */
 const listReads = (path: string, archived = false) =>
   page.nerve.to(path).filter((call) => call.method === "GET" && (call.query.archived === "true") === archived);
@@ -170,23 +152,7 @@ const listed = (project: Project, cycle: Partial<Cycle> = {}) => {
   };
 };
 /** From now on nerve answers each read of project A's lists as listed, the page's cycle as cycle says. */
-function answeringLists(cycle: Partial<Cycle> = {}) {
-  const normal = page.nerve.respond;
-  const lists = listed(page.project, cycle);
-  const answers: [string, boolean, unknown[]][] = [
-    [cycleRequests.list(page.project), false, lists.cycles],
-    [moduleRequests.list(page.project), false, lists.modules],
-    [moduleRequests.list(page.project), true, lists.archivedModules],
-    [cycleRequests.list(page.project), true, []],
-  ];
-  page.nerve.respond = (call: Call) => {
-    const answer = answers.find(
-      ([path, archived]) => call.method === "GET" && call.path === path && (call.query.archived === "true") === archived
-    );
-    if (answer) call.answer(json(200, { data: answer[2] }));
-    else normal?.(call);
-  };
-}
+const answeringLists = (cycle: Partial<Cycle> = {}) => answeringPlanningLists(listed(page.project, cycle));
 /** The reads of the progress of the page's cycle or module. */
 const progressReads = (type: PlanningPageStoreType) =>
   page.nerve.to(type === CYCLE ? cycleRequests.progress({ id: C1 }) : moduleRequests.progress({ id: M1 }));

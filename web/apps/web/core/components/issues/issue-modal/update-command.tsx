@@ -5,6 +5,7 @@
  */
 
 import type { Draft } from "@nerve/api-client";
+import type { IssueChange } from "@nerve/types";
 
 import type { IssueFormData, IssueFormField, IssueFormSubmitOptions } from "./types";
 import { ISSUE_FORM_FIELDS } from "./types";
@@ -67,18 +68,22 @@ export function useUpdateCommand({
           throw error;
         }
       } else if (updateIssue) {
-        // The project moves apart; the modules are a set nerve replaces whole, never sent as the form holds it (R3).
-        const body = pick(
-          payload,
-          ISSUE_FORM_FIELDS.filter(
-            (field): field is Exclude<IssueFormField, "project_id" | "module_ids"> =>
-              field !== "project_id" && field !== "module_ids"
-          )
-        );
+        // The project moves apart; the modules are a set nerve replaces whole, never sent as the form holds it: they go
+        // as the form's change, applied in the write's turn to the set the work item then holds (P7a spec 2.6, R3).
+        const change: IssueChange = {
+          ...pick(
+            payload,
+            ISSUE_FORM_FIELDS.filter(
+              (field): field is Exclude<IssueFormField, "project_id" | "module_ids"> =>
+                field !== "project_id" && field !== "module_ids"
+            )
+          ),
+          modules: options?.modules,
+        };
         const migration =
           options?.isDescriptionMigration &&
-          Object.entries(body).every(([field, value]) => value === undefined || field === "description_html");
-        await updateIssue(payload.project_id!, data.id, { ...body, ...(migration ? { skip_activity: true } : {}) });
+          Object.entries(change).every(([field, value]) => value === undefined || field === "description_html");
+        await updateIssue(payload.project_id!, data.id, { ...change, ...(migration ? { skip_activity: true } : {}) });
       }
       if (!inSession()) throw new SessionChangedError();
       setToast({
