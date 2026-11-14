@@ -147,6 +147,7 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
     getFieldState,
     resetField,
     clearErrors,
+    register,
   } = methods;
   const formRef = useRefusedFocus<HTMLFormElement>(formState.submitCount + draftSubmitCount);
   const { isMoving, submissionData, handleFormSubmit, handleMoveToProjects } = useFormSubmission({
@@ -172,6 +173,23 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
+
+  // Once the lists of the project the form opened with answer, the modal's start of its cycle and modules (data) is
+  // what was given that is an option, beside the page's (P7a spec 2.6, re-72 F7): their defaults, not an edit, whether
+  // or not fields show them (registered here). A field changed meanwhile keeps its value, a form whose project changed
+  // its own.
+  const planningWaited = useRef(planningLoading);
+  useEffect(() => {
+    if (planningLoading) planningWaited.current = true;
+    if (planningLoading || !planningWaited.current) return;
+    planningWaited.current = false;
+    if (getValues("project_id") !== defaultProjectId) return;
+    register("cycle_id");
+    register("module_ids");
+    if (!getFieldState("cycle_id").isDirty) resetField("cycle_id", { defaultValue: data?.cycle_id ?? null });
+    if (!getFieldState("module_ids").isDirty) resetField("module_ids", { defaultValue: data?.module_ids ?? [] });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [planningLoading]);
 
   const condition =
     (watch("name") && watch("name") !== "") || (watch("description_html") && watch("description_html") !== "<p></p>");

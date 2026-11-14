@@ -6,7 +6,8 @@ import { useLocation, useParams } from "react-router";
 import type { Issue } from "@nerve/api-client";
 import { useTranslation } from "@nerve/i18n";
 import { setToast, TOAST_TYPE } from "@nerve/propel/toast";
-import type { EIssuesStoreType } from "@nerve/types";
+import { EIssuesStoreType } from "@nerve/types";
+import { isPlanningPageStoreType } from "@/hooks/planning-page-domains";
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { SessionChangedError } from "@/lib/auth/token-manager";
 import { ArchiveIssueModal } from "../archive-issue-modal";
@@ -20,11 +21,23 @@ type RequestCommand = (issue: Issue, submit: () => Promise<void>) => Promise<voi
 /** A removal from the page's cycle or module, with what the page says once nerve confirms it (an i18n key). */
 type RequestRemoval = (issue: Issue, submit: () => Promise<void>, success: string) => Promise<void>;
 /**
- * The page whose list a row's edit and copy dialogs write through: the project's, a cycle's (re-66 L4) or a module's
- * (P6b spec 2.7).
+ * The pages whose list a dialog the host holds writes through: a row's edit and copy, the project's, a cycle's (re-66
+ * L4) or a module's (P6b spec 2.7); a group's new work item, each page whose groups offer one (its store's
+ * viewFlags.enableIssueCreation): those and a person's page (P7a spec 2.7, re-72 F4).
  */
-type DialogStore = EIssuesStoreType.PROJECT | EIssuesStoreType.CYCLE | EIssuesStoreType.MODULE;
+const DIALOG_STORES = [
+  EIssuesStoreType.PROJECT,
+  EIssuesStoreType.CYCLE,
+  EIssuesStoreType.MODULE,
+  EIssuesStoreType.PROFILE,
+] as const;
+type DialogStore = (typeof DIALOG_STORES)[number];
+/** Whether the page of the store type is one whose list's dialogs the host holds. */
+export const isDialogStore = (type: EIssuesStoreType): type is DialogStore =>
+  (DIALOG_STORES as readonly EIssuesStoreType[]).includes(type);
 type RequestDialog = (kind: "edit" | "copy", issue: Issue, storeType: DialogStore) => void;
+/** A group's new work item, with what the group gives it (its payload). */
+type RequestCreate = (data: IssueFormData, storeType: DialogStore) => void;
 const CommandsContext = createContext<
   | {
       archive: RequestConfirmation;
@@ -32,6 +45,7 @@ const CommandsContext = createContext<
       restore: RequestCommand;
       removeFromView: RequestRemoval;
       openDialog: RequestDialog;
+      create: RequestCreate;
     }
   | undefined
 >(undefined);
@@ -49,8 +63,16 @@ export const useRemovalFromViewRequest = () => useContext(CommandsContext)?.remo
  * the dialog so that it stays open with what it was opened with (M6 P5b T13).
  */
 export const useWorkItemDialogRequest = () => useContext(CommandsContext)?.openDialog;
+/**
+ * A group's new work item's dialog (P7a spec 2.7, R16): while the list is checked the layout shows its loader, its
+ * groups and their headers gone, so the layout holds the dialog, as a row's.
+ */
+export const useCreateDialogRequest = () => useContext(CommandsContext)?.create;
 
-/** A copy of issue, as a row's copy dialog starts it: its fields, named as its copy. */
+/**
+ * A copy of issue, as a row's copy dialog starts it: its fields, named as its copy, its cycle and modules with them,
+ * of which its form keeps those it may join (P7a spec 2.7, R15).
+ */
 const copyOf = (issue: Issue): IssueFormData =>
   pick({ ...issue, name: `${issue.name} (copy)` }, [
     "name",
@@ -63,6 +85,8 @@ const copyOf = (issue: Issue): IssueFormData =>
     "label_ids",
     "start_date",
     "target_date",
+    "cycle_id",
+    "module_ids",
   ]);
 
 /**
@@ -88,6 +112,8 @@ export const IssueListCommandHost = observer(function IssueListCommandHost({ chi
     data: IssueFormData;
     sourceIssueId: string | undefined;
     storeType: DialogStore;
+    /** The projects of the permission that holds it: its work item's; or a new one's (requestCreate). */
+    projects: string[];
     permission: string;
   }>();
   const workspace = root.rootStore.workspaceRoot.getWorkspaceBySlug(workspaceSlug ?? "");
@@ -113,10 +139,29 @@ export const IssueListCommandHost = observer(function IssueListCommandHost({ chi
         data: kind === "edit" ? issue : copyOf(issue),
         sourceIssueId: kind === "copy" ? issue.id : undefined,
         storeType,
+        projects: [issue.project_id],
         permission: root.permissionReads.identity(workspace.id, [issue.project_id], true),
       });
     },
     [root, workspace, owner]
+  );
+  const requestCreate = useCallback<RequestCreate>(
+    (data, storeType) => {
+      if (!root.active || !workspace) return;
+      // the group's project when grouped by project, else the route's; on a page of no project (a person's), none:
+      // the caller's workspace and its projects hold it
+      const project = data.project_id ?? projectId;
+      const projects = project ? [project] : [];
+      setDialog({
+        owner,
+        data,
+        sourceIssueId: undefined,
+        storeType,
+        projects,
+        permission: root.permissionReads.identity(workspace.id, projects, true),
+      });
+    },
+    [root, workspace, owner, projectId]
   );
   /**
    * Runs a row's command whose confirmation may take the row off the list, one at a time for each command and work
@@ -157,13 +202,12 @@ export const IssueListCommandHost = observer(function IssueListCommandHost({ chi
     [runRowCommand, t]
   );
   // a confirmation or a dialog of another route, or of a permission since changed, has ended
-  const holds = (held: { owner: typeof owner; permission: string }, projectID: string | null | undefined) =>
+  const holds = (held: { owner: typeof owner; permission: string }, projects: readonly string[]) =>
     held.owner === owner &&
     root.active &&
     !!workspace &&
-    !!projectID &&
-    held.permission === root.permissionReads.identity(workspace.id, [projectID], true);
-  const current = request && holds(request, request.issue.project_id);
+    held.permission === root.permissionReads.identity(workspace.id, projects, true);
+  const current = request && holds(request, [request.issue.project_id]);
   const commands = useMemo(
     () => ({
       archive: (issue: Issue, submit: () => Promise<void>) => requestConfirmation("archive", issue, submit),
@@ -171,8 +215,9 @@ export const IssueListCommandHost = observer(function IssueListCommandHost({ chi
       restore: requestRestore,
       removeFromView: requestRemovalFromView,
       openDialog: requestDialog,
+      create: requestCreate,
     }),
-    [requestConfirmation, requestRestore, requestRemovalFromView, requestDialog]
+    [requestConfirmation, requestRestore, requestRemovalFromView, requestDialog, requestCreate]
   );
   return (
     <CommandsContext.Provider value={commands}>
@@ -193,13 +238,16 @@ export const IssueListCommandHost = observer(function IssueListCommandHost({ chi
           onSubmit={request.submit}
         />
       )}
-      {dialog && holds(dialog, dialog.data.project_id) && (
+      {dialog && holds(dialog, dialog.projects) && (
         <CreateUpdateIssueModal
           isOpen
           onClose={() => setDialog(undefined)}
           data={dialog.data}
           sourceIssueId={dialog.sourceIssueId}
           storeType={dialog.storeType}
+          // a new work item of a cycle's or a module's page joins the page's cycle or module, so it stays in its
+          // project (P5b spec 2.5, P6b spec 2.6); an edit's and a copy's form keep theirs anyway
+          isProjectSelectionDisabled={isPlanningPageStoreType(dialog.storeType)}
         />
       )}
     </CommandsContext.Provider>

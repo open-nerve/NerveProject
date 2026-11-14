@@ -16,6 +16,7 @@ import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type { EIssuesStoreType } from "@nerve/types";
 import { SessionChangedError } from "@/lib/auth/token-manager";
 import { sessionGuard } from "@/lib/in-session";
+import { cycleOptions, moduleOptions } from "@/lib/planning-directory";
 import { planningOn, type PlanningDomain } from "@/lib/planning-switch";
 import { StoreContext } from "@/lib/store-context";
 import { draftInput } from "@/services/issue/draft-input";
@@ -27,6 +28,7 @@ import { useWorkspaceDraftIssues } from "@/hooks/store/workspace-draft";
 import { isPlanningPageStoreType, PLANNING_PAGE_DOMAINS } from "@/hooks/planning-page-domains";
 import type { IssueActions } from "@/hooks/use-issues-actions";
 import { usePlanningListsAnswered } from "@/hooks/use-planning-names";
+import type { RootStore } from "@/store/root.store";
 // local imports
 import { CreateIssueToastActionItems } from "../create-issue-toast-action-items";
 
@@ -51,27 +53,53 @@ type CreateStartInput = {
   data: IssueFormData | undefined;
 };
 
+type PlanningValues = Pick<IssueFormData, "cycle_id" | "module_ids">;
+
 /**
- * A new work item's form as the modal starts it (P7a spec 2.6, R2; re-72 F2, F7). Before the form mounts its cycle and
- * modules start with those the caller gave and, on a cycle's or a module's page whose creation sent now would join it
- * (joinable), in the page's project, the page's own (the domain's start): merged into the form's default values, so
- * that the form holds them whatever fields it shows, and sends what it holds (useCreateCommand). As it opens with its
- * project it reads the project's two lists of what is not archived, the options; until both have answered its fields
- * show loading, holding their values. A work item's edit and a draft's form start as they are and read nothing here.
+ * Of the cycle and modules a new work item's caller gave (a row's copy, its source's: P7a spec 2.6, 2.7, R15; re-72
+ * F8), those that are its options in the project (cycleOptions, moduleOptions, as the store holds the project's lists):
+ * none of a domain the project has turned off, nor of one whose list the store does not hold (its read refused).
+ * nerve refuses a creation that names any other (planning.cycle_completed, planning.archived).
+ */
+function givenOptions(root: RootStore, projectId: string, given: PlanningValues): Required<PlanningValues> {
+  const project = root.projectRoot.project.getProjectById(projectId);
+  const { cycles, modules } = root.planning;
+  const on = (domain: PlanningDomain) => !!project && planningOn(project, domain);
+  const cycleIds = (on("cycles") && cycleOptions(cycles.getProjectCycleIds(projectId), cycles.getCycleById)) || [];
+  const moduleIds =
+    (on("modules") && moduleOptions(modules.getProjectModuleIds(projectId), modules.getModuleById)) || [];
+  return {
+    cycle_id: cycleIds.find((cycle) => !!cycle && cycle.id === given.cycle_id)?.id ?? null,
+    module_ids: (given.module_ids ?? []).filter((id) => moduleIds.some((item) => item.id === id)),
+  };
+}
+
+/**
+ * A new work item's form as the modal starts it (P7a spec 2.6, R2, R15; re-72 F2, F7, F8). Before the form mounts its
+ * cycle and modules start with those the caller gave and, on a cycle's or a module's page whose creation sent now would
+ * join it (joinable), in the page's project, the page's own beside them (the domain's start): merged into the form's
+ * default values, so that the form holds them whatever fields it shows, and sends what it holds (useCreateCommand). As
+ * it opens with its project it reads the project's two lists of what is not archived, the options; until both have
+ * answered its fields show loading, holding what was given; then of those it keeps the options (givenOptions), which
+ * the form takes as its defaults, not as an edit. A work item's edit and a draft's form start as they are and read
+ * nothing here.
  */
 export function useCreateStart({ workspaceSlug, storeType, isDraft, projectId, data }: CreateStartInput) {
   const root = useContext(StoreContext);
   const params = useParams();
   const creating = !isDraft && !data?.id;
   const answered = usePlanningListsAnswered(workspaceSlug, creating ? (projectId ?? undefined) : undefined);
-  const start = { data, planningLoading: !answered };
-  if (!creating || !isPlanningPageStoreType(storeType)) return start;
+  if (!creating || !projectId) return { data, planningLoading: !answered };
+  const given = pick(data ?? {}, ["cycle_id", "module_ids"]);
+  const kept = answered ? givenOptions(root, projectId, given) : given;
+  const start = { data: { ...data, ...kept }, planningLoading: !answered };
+  if (!isPlanningPageStoreType(storeType)) return start;
   const domain = PLANNING_PAGE_DOMAINS[storeType];
   const entityID = params[domain.param];
   if (!entityID || !params.projectId || projectId !== params.projectId) return start;
   const page = { projectID: params.projectId, entityID };
   if (!domain.joinable(root, page)) return start;
-  return { ...start, data: { ...data, ...domain.start(pick(data ?? {}, ["cycle_id", "module_ids"]), page) } };
+  return { ...start, data: { ...start.data, ...domain.start(kept, page) } };
 }
 
 /** The modal's create: a work item, or a draft when the form saves one. */

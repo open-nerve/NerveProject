@@ -82,6 +82,9 @@ export async function draftFilesTab() {
         workspace_id: draft.workspace_id,
         name: draft.payload.name ?? "",
         description_html: draft.payload.description_html ?? "<p></p>",
+        // nerve publishes the work item in the draft's cycle and modules
+        cycle_id: draft.payload.cycle_id ?? null,
+        module_ids: draft.payload.module_ids ?? [],
       };
       issues.push(issue);
       call.answer(json(200, issue));

@@ -6,18 +6,15 @@
 
 import type { IssueDetail } from "@nerve/api-client";
 
-import { useState } from "react";
 import { observer } from "mobx-react";
 import { CircleDashed } from "lucide-react";
 import { AddOutline } from "@makeplane/propel/icons";
 import { useTranslation } from "@nerve/i18n";
 // types
 import type { TIssueGroupByOptions } from "@nerve/types";
-// ui
 // components
-import { CreateUpdateIssueModal } from "@/components/issues/issue-modal/modal";
+import { isDialogStore, useCreateDialogRequest } from "@/components/issues/issue-layouts/command-host";
 // hooks
-import { isPlanningPageStoreType } from "@/hooks/planning-page-domains";
 import { useIssueStoreType } from "@/hooks/use-issue-layout-store";
 
 interface IHeaderGroupByCard {
@@ -44,9 +41,8 @@ export const HeaderGroupByCard = observer(function HeaderGroupByCard(props: IHea
     isExpanded,
     handleCollapsedGroups,
   } = props;
-  // states
-  const [isOpen, setIsOpen] = useState(false);
   const storeType = useIssueStoreType();
+  const requestCreate = useCreateDialogRequest();
   const { t } = useTranslation();
   const heading = (
     <>
@@ -82,22 +78,16 @@ export const HeaderGroupByCard = observer(function HeaderGroupByCard(props: IHea
             aria-label={`${t("create_work_item")}: ${title}`}
             className="flex h-5 w-5 flex-shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-xs transition-all hover:bg-layer-1"
             onClick={() => {
-              setIsOpen(true);
+              // the layout's command host holds the dialog, which outlives the group while the list is checked
+              // (P7a spec 2.7, R16)
+              if (!requestCreate || !isDialogStore(storeType))
+                throw new Error("A group's new work item requires an IssueListCommandHost");
+              requestCreate(issuePayload, storeType);
             }}
           >
             <AddOutline width={14} />
           </button>
         )}
-
-        <CreateUpdateIssueModal
-          isOpen={isOpen}
-          onClose={() => setIsOpen(false)}
-          data={issuePayload}
-          storeType={storeType}
-          // a group's new work item of a cycle's or a module's page joins the page's cycle or module, so it stays in its
-          // project (P5b spec 2.5, P6b spec 2.6)
-          isProjectSelectionDisabled={isPlanningPageStoreType(storeType)}
-        />
       </div>
     </>
   );

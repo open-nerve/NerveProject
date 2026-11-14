@@ -6,18 +6,16 @@
 
 import type { IssueDetail } from "@nerve/api-client";
 
-import React from "react";
+import type React from "react";
 import { observer } from "mobx-react";
 // lucide icons
 import { Circle } from "lucide-react";
 import { AddOutline, ArrowCollapseOutline, FullScreenOutline } from "@makeplane/propel/icons";
 import { useTranslation } from "@nerve/i18n";
 import type { TIssueKanbanFilters, TIssueGroupByOptions } from "@nerve/types";
-// ui
 // components
-import { CreateUpdateIssueModal } from "@/components/issues/issue-modal/modal";
+import { isDialogStore, useCreateDialogRequest } from "@/components/issues/issue-layouts/command-host";
 // hooks
-import { isPlanningPageStoreType } from "@/hooks/planning-page-domains";
 import { useIssueStoreType } from "@/hooks/use-issue-layout-store";
 
 interface IHeaderGroupByCard {
@@ -46,76 +44,65 @@ export const HeaderGroupByCard = observer(function HeaderGroupByCard(props: IHea
     disableIssueCreation,
   } = props;
   const verticalAlignPosition = sub_group_by ? false : collapsedGroups?.group_by.includes(column_id);
-  // states
-  const [isOpen, setIsOpen] = React.useState(false);
   // hooks
   const storeType = useIssueStoreType();
+  const requestCreate = useCreateDialogRequest();
   const { t } = useTranslation();
   return (
-    <>
-      <CreateUpdateIssueModal
-        isOpen={isOpen}
-        onClose={() => setIsOpen(false)}
-        data={issuePayload}
-        storeType={storeType}
-        // a group's new work item of a cycle's or a module's page joins the page's cycle or module, so it stays in its
-        // project (P5b spec 2.5, P6b spec 2.6)
-        isProjectSelectionDisabled={isPlanningPageStoreType(storeType)}
-      />
+    <div
+      className={`relative flex flex-shrink-0 gap-1 py-1.5 ${
+        verticalAlignPosition ? `w-[44px] flex-col items-center` : `w-full flex-row items-center`
+      }`}
+    >
+      <div className="flex size-5 flex-shrink-0 items-center justify-center overflow-hidden rounded-xs">
+        {icon ? icon : <Circle width={14} strokeWidth={2} />}
+      </div>
 
       <div
-        className={`relative flex flex-shrink-0 gap-1 py-1.5 ${
-          verticalAlignPosition ? `w-[44px] flex-col items-center` : `w-full flex-row items-center`
+        className={`relative flex gap-1 ${
+          verticalAlignPosition ? `flex-col items-center` : `w-full flex-row items-baseline overflow-hidden`
         }`}
       >
-        <div className="flex size-5 flex-shrink-0 items-center justify-center overflow-hidden rounded-xs">
-          {icon ? icon : <Circle width={14} strokeWidth={2} />}
-        </div>
-
         <div
-          className={`relative flex gap-1 ${
-            verticalAlignPosition ? `flex-col items-center` : `w-full flex-row items-baseline overflow-hidden`
+          className={`line-clamp-1 inline-block truncate overflow-hidden font-medium text-primary ${
+            verticalAlignPosition ? `max-h-[400px] vertical-lr` : ``
           }`}
         >
-          <div
-            className={`line-clamp-1 inline-block truncate overflow-hidden font-medium text-primary ${
-              verticalAlignPosition ? `max-h-[400px] vertical-lr` : ``
-            }`}
-          >
-            {title}
-          </div>
-          <div
-            className={`flex-shrink-0 text-13 font-medium text-tertiary ${verticalAlignPosition ? `pr-0.5` : `pl-2`}`}
-          >
-            {count || 0}
-          </div>
+          {title}
         </div>
-
-        {sub_group_by === null && (
-          <button
-            type="button"
-            aria-label={title}
-            aria-expanded={!verticalAlignPosition}
-            className="flex h-[20px] w-[20px] flex-shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-sm bg-layer-transparent transition-all hover:bg-layer-transparent-hover"
-            onClick={() => handleCollapsedGroups("group_by", column_id)}
-          >
-            {verticalAlignPosition ? <FullScreenOutline width={14} /> : <ArrowCollapseOutline width={14} />}
-          </button>
-        )}
-
-        {!disableIssueCreation && (
-          <button
-            type="button"
-            aria-label={`${t("create_work_item")}: ${title}`}
-            className="flex h-[20px] w-[20px] flex-shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-sm bg-layer-transparent transition-all hover:bg-layer-transparent-hover"
-            onClick={() => {
-              setIsOpen(true);
-            }}
-          >
-            <AddOutline width={14} />
-          </button>
-        )}
+        <div className={`flex-shrink-0 text-13 font-medium text-tertiary ${verticalAlignPosition ? `pr-0.5` : `pl-2`}`}>
+          {count || 0}
+        </div>
       </div>
-    </>
+
+      {sub_group_by === null && (
+        <button
+          type="button"
+          aria-label={title}
+          aria-expanded={!verticalAlignPosition}
+          className="flex h-[20px] w-[20px] flex-shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-sm bg-layer-transparent transition-all hover:bg-layer-transparent-hover"
+          onClick={() => handleCollapsedGroups("group_by", column_id)}
+        >
+          {verticalAlignPosition ? <FullScreenOutline width={14} /> : <ArrowCollapseOutline width={14} />}
+        </button>
+      )}
+
+      {!disableIssueCreation && (
+        <button
+          type="button"
+          aria-label={`${t("create_work_item")}: ${title}`}
+          className="flex h-[20px] w-[20px] flex-shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-sm bg-layer-transparent transition-all hover:bg-layer-transparent-hover"
+          onClick={() => {
+            // the layout's command host holds the dialog, which outlives the column while the list is checked
+            // (P7a spec 2.7, R16)
+            if (!requestCreate || !isDialogStore(storeType))
+              throw new Error("A group's new work item requires an IssueListCommandHost");
+            requestCreate(issuePayload, storeType);
+          }}
+        >
+          <AddOutline width={14} />
+        </button>
+      )}
+    </div>
   );
 });

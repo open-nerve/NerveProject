@@ -1,13 +1,17 @@
 // @vitest-environment jsdom
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 import React, { act } from "react";
+import { SWRConfig } from "swr";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { DraftCreate, DraftUpdate, IssueCreate } from "@nerve/api-client";
 import { EIssuesStoreType } from "@nerve/types";
 import type { RootStore } from "@/store/root.store";
 import { StoreContext } from "@/lib/store-context";
 import { contentAssetOf } from "@/store/asset/fake-assets";
-import { problem, type Call } from "@/lib/auth/fake-nerve";
+import { cycleRequests, rowOf } from "@/store/planning/fake-cycles";
+import { moduleRequests, moduleRowOf } from "@/store/planning/fake-modules";
+import { cycleOf, moduleOf } from "@/store/project/fake-projects";
+import { json, problem, type Call } from "@/lib/auth/fake-nerve";
 import { toasts } from "@/lib/fake-toast";
 import { editor } from "../fake-body-images";
 import { DraftIssueBlock } from "../workspace-draft/draft-issue-block";
@@ -169,6 +173,59 @@ it("an ordinary copy with images makes one target draft, copies the images in or
     expect.objectContaining({ id: tab.issues[0]!.id, sequence_id: expect.any(Number) })
   );
   await tab.waitFor(() => tab.close.mock.calls.length === 1, "closed after the Issue");
+});
+
+// P7a spec 2.7, R15: the copy's form starts with its source's cycle and modules that it may join, which go into the
+// target draft with the rest of the form and into the work item nerve publishes of it.
+it("an ordinary copy with images carries the cycle and modules its form starts with into the target draft, which nerve publishes in them", async () => {
+  const now = cycleOf(tab.project, "Now", { status: "current" });
+  const core = moduleOf(tab.project, "Core");
+  const gone = moduleOf(tab.project, "Gone", { status: "completed", archived_at: "2026-12-01T09:00:00Z" });
+  const respond = tab.nerve.respond;
+  tab.nerve.respond = (call) => {
+    const listed = call.method === "GET" && call.query.archived !== "true";
+    if (listed && call.path === cycleRequests.list(tab.project)) call.answer(json(200, { data: [rowOf(now)] }));
+    else if (listed && call.path === moduleRequests.list(tab.project))
+      call.answer(json(200, { data: [moduleRowOf(core)] }));
+    else respond?.(call);
+  };
+  for (const id of [s1, s2]) tab.assets.set(id, contentAssetOf(id, tab.hosts.issue, "description"));
+  // the copy as the quick action opens it, with its source's cycle and modules; an SWR cache of its own, for this
+  // file's earlier forms read the same lists in the same session
+  await act(async () =>
+    tab.renderer.render(
+      <StoreContext.Provider value={tab.app}>
+        <SWRConfig value={{ provider: () => new Map() }}>
+          <CreateUpdateIssueModalBase
+            isOpen
+            data={{
+              name: "Copy",
+              project_id: tab.project.id,
+              description_html: body,
+              cycle_id: now.id,
+              module_ids: [core.id, gone.id],
+            }}
+            sourceIssueId={tab.issue.id}
+            storeType={EIssuesStoreType.PROJECT}
+            fetchIssueDetails={false}
+            withDraftIssueWrapper={false}
+            onClose={tab.close}
+            onSubmit={tab.confirmed}
+          />
+        </SWRConfig>
+      </StoreContext.Provider>
+    )
+  );
+  await tab.waitFor(() => !!editor(), "copy editor");
+  const lists = [cycleRequests.list(tab.project), moduleRequests.list(tab.project)];
+  await tab.waitFor(() => lists.every((path) => tab.calls("GET", path).length === 1), "the project's two lists");
+  await act(async () => vi.advanceTimersByTimeAsync(20));
+  await tab.submit();
+  await tab.waitFor(() => tab.issues.length === 1, "published copy");
+  expect((creates()[0]!.body as DraftCreate).payload).toMatchObject({ cycle_id: now.id, module_ids: [core.id] });
+  expect(publishes()).toHaveLength(1);
+  expect(tab.issues[0]).toMatchObject({ cycle_id: now.id, module_ids: [core.id] });
+  expect(tab.calls("POST", /\/projects\/[^/]+\/issues$/)).toEqual([]);
 });
 
 it("the draft row's copy with images ends as a Draft after one target, ordered copies and one save", async () => {
