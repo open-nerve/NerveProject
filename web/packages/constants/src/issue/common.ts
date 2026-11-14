@@ -42,7 +42,15 @@ export const ISSUE_PRIORITIES: {
   },
 ];
 
-export const DRAG_ALLOWED_GROUPS: TIssueGroupByOptions[] = ["state", "priority", "assignees", "labels"];
+/** The groupings a work item is dragged between, its drop sending the target group's value (P7b spec 2.7). */
+export const DRAG_ALLOWED_GROUPS: TIssueGroupByOptions[] = [
+  "state",
+  "priority",
+  "assignees",
+  "labels",
+  "cycle",
+  "module",
+];
 
 export type TCreateModalStoreTypes =
   | EIssuesStoreType.PROJECT

@@ -7,7 +7,7 @@ import type { IssueListOptions } from "@/lib/issue-filters";
  * See the LICENSE file for details.
  */
 
-import type { Issue, IssueCreate, IssueUpdate } from "@nerve/api-client";
+import type { Issue, IssueCreate } from "@nerve/api-client";
 
 /* eslint-disable react-hooks/exhaustive-deps */
 import { useCallback, useMemo } from "react";
@@ -37,10 +37,11 @@ export interface IssueActions {
   /** A form's creation: what the form gives, nothing of the page added (P7a spec 2.6, R2); elsewhere createIssue. */
   createIssueAsGiven?: (projectId: string | undefined | null, data: IssueCreate) => Promise<Issue | undefined>;
   updateIssue?: (projectId: string | undefined | null, issueId: string, change: IssueChange) => Promise<void>;
+  /** A drop's change, made in the write's turn from the work item then held (P7b spec 2.7, R3). */
   dropIssue?: (
     projectId: string,
     issueId: string,
-    makeBody: (held: Issue) => IssueUpdate,
+    makeChange: (held: Issue) => IssueChange,
     drop: IssueDrop
   ) => Promise<void>;
   archiveIssue?: (projectId: string | undefined | null, issueId: string) => Promise<void>;
@@ -122,9 +123,9 @@ const useProjectIssueActions = () => {
     [issues.updateIssue, workspaceSlug]
   );
   const dropIssue = useCallback(
-    async (targetProject: string, issueId: string, makeBody: (held: Issue) => IssueUpdate, drop: IssueDrop) => {
+    async (targetProject: string, issueId: string, makeChange: (held: Issue) => IssueChange, drop: IssueDrop) => {
       if (!workspaceSlug) return;
-      await issues.dropIssue(workspaceSlug, targetProject, issueId, makeBody, drop);
+      await issues.dropIssue(workspaceSlug, targetProject, issueId, makeChange, drop);
     },
     [issues, workspaceSlug]
   );
@@ -208,9 +209,9 @@ const useProfileIssueActions = () => {
     [issues.updateIssue, workspaceSlug]
   );
   const dropIssue = useCallback(
-    async (targetProject: string, issueId: string, makeBody: (held: Issue) => IssueUpdate, drop: IssueDrop) => {
+    async (targetProject: string, issueId: string, makeChange: (held: Issue) => IssueChange, drop: IssueDrop) => {
       if (!workspaceSlug) return;
-      await issues.dropIssue(workspaceSlug, targetProject, issueId, makeBody, drop);
+      await issues.dropIssue(workspaceSlug, targetProject, issueId, makeChange, drop);
     },
     [issues, workspaceSlug]
   );

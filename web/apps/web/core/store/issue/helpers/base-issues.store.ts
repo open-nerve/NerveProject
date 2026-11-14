@@ -1,11 +1,12 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
-import type { Issue, IssueCreate, IssueDetail, IssueUpdate } from "@nerve/api-client";
+import type { Issue, IssueCreate, IssueDetail } from "@nerve/api-client";
 import { makeObservable, observable, runInAction } from "mobx";
 import type { TLoader, IssueChange } from "@nerve/types";
 import { pagePartKey, type Group } from "@/lib/paged-groups";
 import type { IssueListOptions } from "@/lib/issue-filters";
 import { issueMembership } from "@/lib/issue-membership";
 import { compareIssueTime } from "@/lib/issue-order";
+import { changeBody } from "../issue-write-fields";
 import type { IssueDrop } from "../issue-writes";
 import type { IIssueRootStore } from "../root.store";
 import type { IBaseIssueFilterStore } from "./issue-filter-helper.store";
@@ -72,11 +73,15 @@ export class BaseIssuesStore<TFilter = IBaseIssueFilterStore> {
   updateIssue = async (slug: string, project: string, id: string, change: IssueChange): Promise<void> => {
     await this.rootIssueStore.writes.changeIssue(id, change, this.rootIssueStore.scope(slug, project));
   };
+  /**
+   * A drop of a work item: its change, made in the write's turn from the work item then held, its modules applied to
+   * the set it then holds (changeBody; P7b spec 2.7, R3), and its order among the drop's neighbors then (M4).
+   */
   dropIssue = async (
     slug: string,
     project: string,
     id: string,
-    makeBody: (held: Issue) => IssueUpdate,
+    makeChange: (held: Issue) => IssueChange,
     drop: IssueDrop
   ): Promise<void> => {
     const binding = this.currentList;
@@ -86,7 +91,7 @@ export class BaseIssuesStore<TFilter = IBaseIssueFilterStore> {
       id,
       (held) => {
         if (!binding.value) throw new Error("Drop source requires a current list read");
-        const body = makeBody(held);
+        const body = changeBody(makeChange(held), held.module_ids);
         // Calendar uses its date query; a day move does not reorder the issue.
         if (binding.scope.query.group_by === "target_date") return body;
         const group = binding.group(location.group, location.subgroup);

@@ -30,11 +30,16 @@ import { EIssueLayoutTypes } from "@nerve/types";
 import { cn } from "@nerve/utils";
 import type { GroupDropLocation } from "@/components/issues/issue-layouts/group-drop";
 // components
-import { getSourceFromDropPayload, getDestinationFromDropPayload } from "@/components/issues/issue-layouts/group-drop";
+import {
+  dropRefusal,
+  getSourceFromDropPayload,
+  getDestinationFromDropPayload,
+} from "@/components/issues/issue-layouts/group-drop";
 import { KanbanIssueBlockLoader } from "@/components/ui/loader/layouts/kanban-layout-loader";
 // hooks
 import { useIntersectionObserver } from "@/hooks/use-intersection-observer";
 import { useIssuesStore } from "@/hooks/use-issue-layout-store";
+import { useJoinRefusalWarning } from "@/hooks/use-refusal-toast";
 // local imports
 import { GroupDragOverlay } from "../group-drag-overlay";
 import type { TRenderQuickActions } from "../list/list-view-types";
@@ -91,8 +96,11 @@ export const KanbanGroup = observer(function KanbanGroup(props: IKanbanGroup) {
   // hooks
   const groupId = column.id;
   const prefill = useGroupQuickAddPrefill(column, lane);
+  const columnRefusal = column.refusal;
+  const laneRefusal = lane?.refusal;
   // A cell nerve refuses a work item's joining, its column's or its lane's, offers no new work item (P7b R4).
-  const refusal = column.refusal ?? lane?.refusal;
+  const refusal = columnRefusal ?? laneRefusal;
+  const warnRefusal = useJoinRefusalWarning();
 
   const { issues } = useIssuesStore();
   const { getGroupIssueCount, getPaginationData, getIssueLoader } = issues;
@@ -142,6 +150,9 @@ export const KanbanGroup = observer(function KanbanGroup(props: IKanbanGroup) {
           const destination = getDestinationFromDropPayload(payload);
 
           if (!source || !destination) return;
+          // A drop into its column or its lane from another nerve refuses is not sent; the page says nerve's sentence.
+          const dropRefused = dropRefusal(source, destination, columnRefusal, laneRefusal);
+          if (dropRefused) return warnRefusal(dropRefused);
 
           handleOnDrop(source, destination);
         },
@@ -150,7 +161,18 @@ export const KanbanGroup = observer(function KanbanGroup(props: IKanbanGroup) {
         element,
       })
     );
-  }, [columnRef, groupId, sub_group_id, setIsDraggingOverColumn, orderBy, handleOnDrop, t]);
+  }, [
+    columnRef,
+    groupId,
+    sub_group_id,
+    setIsDraggingOverColumn,
+    orderBy,
+    handleOnDrop,
+    columnRefusal,
+    laneRefusal,
+    warnRefusal,
+    t,
+  ]);
 
   const isSubGroup = sub_group_id !== undefined;
 

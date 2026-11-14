@@ -1,7 +1,7 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 import { useCallback, useMemo } from "react";
 import { useParams } from "react-router";
-import type { Issue, IssueCreate, IssueUpdate } from "@nerve/api-client";
+import type { Issue, IssueCreate } from "@nerve/api-client";
 import type { TSupportedFilterTypeForUpdate } from "@nerve/constants";
 import type { TLoader, TSupportedFilterForUpdate, IssueChange } from "@nerve/types";
 import type { IssueListOptions } from "@/lib/issue-filters";
@@ -89,9 +89,9 @@ export function usePlanningPageIssueActions(storeType: PlanningPageStoreType) {
     [issues, workspaceSlug, followProgress]
   );
   const dropIssue = useCallback(
-    async (targetProject: string, issueId: string, makeBody: (held: Issue) => IssueUpdate, drop: IssueDrop) => {
+    async (targetProject: string, issueId: string, makeChange: (held: Issue) => IssueChange, drop: IssueDrop) => {
       if (!workspaceSlug) return;
-      await followProgress(() => issues.dropIssue(workspaceSlug, targetProject, issueId, makeBody, drop));
+      await followProgress(() => issues.dropIssue(workspaceSlug, targetProject, issueId, makeChange, drop));
     },
     [issues, workspaceSlug, followProgress]
   );

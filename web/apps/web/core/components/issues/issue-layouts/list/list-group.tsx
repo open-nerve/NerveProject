@@ -31,11 +31,12 @@ import { ListLoaderItemRow } from "@/components/ui/loader/layouts/list-layout-lo
 // hooks
 import { useIntersectionObserver } from "@/hooks/use-intersection-observer";
 import { useIssuesStore } from "@/hooks/use-issue-layout-store";
+import { useJoinRefusalWarning } from "@/hooks/use-refusal-toast";
 // local imports
 import { GroupDragOverlay } from "../group-drag-overlay";
 import { ListQuickAddIssueButton, QuickAddIssueRoot, useGroupQuickAddPrefill } from "../quick-add";
 import type { GroupDropLocation } from "../group-drop";
-import { getDestinationFromDropPayload, getSourceFromDropPayload } from "../group-drop";
+import { dropRefusal, getDestinationFromDropPayload, getSourceFromDropPayload } from "../group-drop";
 import { IssueBlocksList } from "./blocks-list";
 import { HeaderGroupByCard } from "./headers/group-by-card";
 import type { TRenderQuickActions } from "./list-view-types";
@@ -93,6 +94,7 @@ export const ListGroup = observer(function ListGroup(props: Props) {
   const groupRef = useRef<HTMLDivElement | null>(null);
   const { t } = useTranslation();
   const prefill = useGroupQuickAddPrefill(group);
+  const warnRefusal = useJoinRefusalWarning();
 
   const { issues } = useIssuesStore();
   const { getGroupIssueCount, getPaginationData, getIssueLoader } = issues;
@@ -170,6 +172,9 @@ export const ListGroup = observer(function ListGroup(props: Props) {
           const destination = getDestinationFromDropPayload(payload);
 
           if (!source || !destination) return;
+          // A drop nerve refuses is not sent; the page says nerve's sentence (P7b R4).
+          const refusal = dropRefusal(source, destination, group.refusal);
+          if (refusal) return warnRefusal(refusal);
 
           handleOnDrop(source, destination);
 
@@ -179,7 +184,7 @@ export const ListGroup = observer(function ListGroup(props: Props) {
         },
       })
     );
-  }, [group, orderBy, getGroupIndex, handleOnDrop, isExpanded, handleCollapsedGroups, t]);
+  }, [group, orderBy, getGroupIndex, handleOnDrop, isExpanded, handleCollapsedGroups, warnRefusal, t]);
   const isDragAllowed = group_by ? DRAG_ALLOWED_GROUPS.includes(group_by) : true;
   const canOverlayBeVisible = orderBy !== "sort_order";
 

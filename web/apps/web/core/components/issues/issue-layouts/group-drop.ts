@@ -4,10 +4,10 @@
  * See the LICENSE file for details.
  */
 
-import type { Issue, IssueUpdate } from "@nerve/api-client";
+import type { Issue } from "@nerve/api-client";
 
 import { extractClosestEdge } from "@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge";
-import type { IPragmaticDropPayload, TIssueGroupByOptions } from "@nerve/types";
+import type { GroupJoinRefusal, IPragmaticDropPayload, IssueChange, TIssueGroupByOptions } from "@nerve/types";
 
 // store
 import type { IssueDrop } from "@/store/issue/issue-writes";
@@ -97,6 +97,26 @@ export const getDestinationFromDropPayload = (payload: IPragmaticDropPayload): G
   };
 };
 
+/**
+ * Why nerve refuses the drop, which is then not sent (P7b spec 2.4, 2.7; R4): the refusal of the column the work item is
+ * dragged into from another (column, the column's field), or of the board's cell's lane it is dragged into from another
+ * (lane). A move within a column or a lane joins nothing and changes only the order, which nerve takes.
+ */
+export const dropRefusal = (
+  source: GroupDropLocation,
+  destination: GroupDropLocation,
+  column: GroupJoinRefusal | undefined,
+  lane?: GroupJoinRefusal
+): GroupJoinRefusal | undefined =>
+  (source.groupId === destination.groupId ? undefined : column) ??
+  (source.subGroupId === destination.subGroupId ? undefined : lane);
+
+/**
+ * Sends a drop as the change of the target's values (P7b spec 2.7, 2.11; R3), worked out in the write's turn from the
+ * work item then held: a cycle as one value, None's null; the modules as the source left and the target joined, applied
+ * to the set held then (changeBody), so a module the page does not show, archived too, stays and None leaves the source
+ * only; labels and assignees as the set held with the source replaced, None's empty.
+ */
 export const handleGroupDragDrop = async (
   source: GroupDropLocation,
   destination: GroupDropLocation,
@@ -105,7 +125,7 @@ export const handleGroupDragDrop = async (
   updateIssueOnDrop: (
     project: string,
     id: string,
-    makeBody: (held: Issue) => IssueUpdate,
+    makeChange: (held: Issue) => IssueChange,
     drop: IssueDrop
   ) => Promise<void>,
   groupBy: TIssueGroupByOptions | undefined,
@@ -126,33 +146,42 @@ export const handleGroupDragDrop = async (
     beforeId: ids[index],
     afterId: ids[index - 1],
   };
-  const makeBody = (held: Issue): IssueUpdate => {
-    const body: IssueUpdate = {};
+  const makeChange = (held: Issue): IssueChange => {
+    const change: IssueChange = {};
     const move = (field: TIssueGroupByOptions | undefined, from: string | undefined, to: string | undefined) => {
       if (!field || to === undefined || from === to) return;
       switch (field) {
         case "priority":
           if (!["none", "low", "medium", "high", "urgent"].includes(to)) throw new Error("Invalid priority drop");
-          body.priority = to as IssueUpdate["priority"];
+          change.priority = to as IssueChange["priority"];
           break;
         case "state":
           if (!to || to === "none") throw new Error("Invalid state drop");
-          body.state_id = to;
+          change.state_id = to;
           break;
         case "assignees":
         case "labels": {
           const key = field === "assignees" ? "assignee_ids" : "label_ids";
-          body[key] = to === "none" ? [] : [...new Set([...held[key].filter((id) => id !== from), to])];
+          change[key] = to === "none" ? [] : [...new Set([...held[key].filter((id) => id !== from), to])];
           break;
         }
+        case "cycle":
+          change.cycle_id = to === "none" ? null : to;
+          break;
+        case "module":
+          change.modules = {
+            remove: from === undefined || from === "none" ? [] : [from],
+            add: to === "none" ? [] : [to],
+          };
+          break;
         default:
           throw new Error("Unsupported drop group");
       }
     };
     move(groupBy, source.groupId, destination.groupId);
     move(subGroupBy, source.subGroupId, destination.subGroupId);
-    return body;
+    return change;
   };
-  await updateIssueOnDrop(issue.project_id, issue.id, makeBody, drop);
+  await updateIssueOnDrop(issue.project_id, issue.id, makeChange, drop);
   return true;
 };
