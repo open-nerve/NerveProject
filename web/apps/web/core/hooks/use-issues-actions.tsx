@@ -15,7 +15,7 @@ import { useCallback, useMemo } from "react";
 import { useParams } from "react-router";
 import type { TSupportedFilterTypeForUpdate } from "@nerve/constants";
 import { EUserPermissions } from "@nerve/constants";
-import type { TLoader, TProfileViews, TSupportedFilterForUpdate } from "@nerve/types";
+import type { TLoader, TProfileViews, TSupportedFilterForUpdate, IssueChange } from "@nerve/types";
 import { EIssuesStoreType } from "@nerve/types";
 import { useIssues } from "./store/use-issues";
 import { usePlanningPageIssueActions } from "./use-planning-page-issue-actions";
@@ -33,7 +33,7 @@ export interface IssueActions {
   /** A cycle's or a module's page's removal of a work item from its cycle or module (P6b spec 2.2, 2.5). */
   removeIssueFromView?: (projectId: string | undefined | null, issueId: string) => Promise<void>;
   createIssue?: (projectId: string | undefined | null, data: IssueCreate) => Promise<Issue | undefined>;
-  updateIssue?: (projectId: string | undefined | null, issueId: string, data: IssueUpdate) => Promise<void>;
+  updateIssue?: (projectId: string | undefined | null, issueId: string, change: IssueChange) => Promise<void>;
   dropIssue?: (
     projectId: string,
     issueId: string,
@@ -112,9 +112,9 @@ const useProjectIssueActions = () => {
     [issues.createIssue, workspaceSlug]
   );
   const updateIssue = useCallback(
-    async (projectId: string | undefined | null, issueId: string, data: IssueUpdate) => {
+    async (projectId: string | undefined | null, issueId: string, change: IssueChange) => {
       if (!workspaceSlug || !projectId) return;
-      return await issues.updateIssue(workspaceSlug, projectId, issueId, data);
+      return await issues.updateIssue(workspaceSlug, projectId, issueId, change);
     },
     [issues.updateIssue, workspaceSlug]
   );
@@ -197,9 +197,9 @@ const useProfileIssueActions = () => {
     [issues.createIssue, workspaceSlug]
   );
   const updateIssue = useCallback(
-    async (projectId: string | undefined | null, issueId: string, data: IssueUpdate) => {
+    async (projectId: string | undefined | null, issueId: string, change: IssueChange) => {
       if (!workspaceSlug || !projectId) return;
-      return await issues.updateIssue(workspaceSlug, projectId, issueId, data);
+      return await issues.updateIssue(workspaceSlug, projectId, issueId, change);
     },
     [issues.updateIssue, workspaceSlug]
   );

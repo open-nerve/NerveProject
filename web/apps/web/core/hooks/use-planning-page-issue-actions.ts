@@ -3,7 +3,7 @@ import { useCallback, useMemo } from "react";
 import { useParams } from "react-router";
 import type { Issue, IssueCreate, IssueUpdate } from "@nerve/api-client";
 import type { TSupportedFilterTypeForUpdate } from "@nerve/constants";
-import type { TLoader, TSupportedFilterForUpdate } from "@nerve/types";
+import type { TLoader, TSupportedFilterForUpdate, IssueChange } from "@nerve/types";
 import type { IssueListOptions } from "@/lib/issue-filters";
 import type { PlanningPage } from "@/store/issue/helpers/planning-page-issues.store";
 import type { IssueDrop } from "@/store/issue/issue-writes";
@@ -68,9 +68,9 @@ export function usePlanningPageIssueActions(storeType: PlanningPageStoreType) {
     [issues, domain, workspaceSlug, page, followProgress]
   );
   const updateIssue = useCallback(
-    async (projectId: string | undefined | null, issueId: string, data: IssueUpdate) => {
+    async (projectId: string | undefined | null, issueId: string, change: IssueChange) => {
       if (!workspaceSlug || !projectId) return;
-      return await followProgress(() => issues.updateIssue(workspaceSlug, projectId, issueId, data));
+      return await followProgress(() => issues.updateIssue(workspaceSlug, projectId, issueId, change));
     },
     [issues, workspaceSlug, followProgress]
   );

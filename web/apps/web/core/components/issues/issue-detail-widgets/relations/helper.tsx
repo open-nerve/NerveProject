@@ -5,7 +5,7 @@
  */
 
 import { useMemo } from "react";
-import type { IssueUpdate } from "@nerve/api-client";
+import type { IssueChange } from "@nerve/types";
 import { useTranslation } from "@nerve/i18n";
 import { useCopyLink } from "@/hooks/use-copy-link";
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
@@ -16,7 +16,7 @@ import { useDetailScope } from "../use-detail-scope";
 
 export type TRelationIssueOperations = {
   copyLink: (path: string) => Promise<void>;
-  update: (workspaceSlug: string, projectId: string, issueId: string, body: IssueUpdate) => Promise<void>;
+  update: (workspaceSlug: string, projectId: string, issueId: string, body: IssueChange) => Promise<void>;
   remove: (workspaceSlug: string, projectId: string, issueId: string) => Promise<void>;
 };
 export function useRelationOperations(workspaceSlug: string, hostId: string): TRelationIssueOperations {
@@ -29,7 +29,7 @@ export function useRelationOperations(workspaceSlug: string, hostId: string): TR
   return useMemo(
     () => ({
       copyLink: (path: string) => copyLink(path, t("common.copied_to_clipboard")),
-      update: async (ws: string, projectId: string, id: string, body: IssueUpdate) => {
+      update: async (ws: string, projectId: string, id: string, body: IssueChange) => {
         const current = capture();
         if (!current()) return;
         await followInSession(() => detail.updateIssue(ws, projectId, id, body), {

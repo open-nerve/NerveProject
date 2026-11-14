@@ -12,7 +12,7 @@ import { useMemo } from "react";
 import { observer } from "mobx-react";
 import { useTranslation } from "@nerve/i18n";
 import { DueDateOutline, StartDateOutline } from "@makeplane/propel/icons";
-import type { IIssueDisplayProperties } from "@nerve/types";
+import type { IIssueDisplayProperties, IssueChange } from "@nerve/types";
 import { getDate, renderFormattedPayloadDate, shouldHighlightIssueDueDate } from "@nerve/utils";
 // components
 import { DateDropdown } from "@/components/dropdowns/date";
@@ -34,7 +34,7 @@ type Props = {
     projectId: string,
     parentIssueId: string,
     issueId: string,
-    issueData: Partial<IssueDetail>,
+    issueData: IssueChange,
     oldIssue?: Partial<IssueDetail>
   ) => Promise<void>;
   displayProperties?: IIssueDisplayProperties;

@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import type { IssueDetail } from "@nerve/api-client";
+import type { IssueChange } from "@nerve/types";
 
 import { useMemo, useRef, useState } from "react";
 import { observer } from "mobx-react";
@@ -29,7 +29,7 @@ export type TIssueLabel = {
 };
 
 export type TLabelOperations = {
-  updateIssue: (workspaceSlug: string, projectId: string, issueId: string, data: Partial<IssueDetail>) => Promise<void>;
+  updateIssue: (workspaceSlug: string, projectId: string, issueId: string, data: IssueChange) => Promise<void>;
   create: IssueLabelCreation;
 };
 
@@ -54,7 +54,7 @@ const IssueLabelContent = observer(function IssueLabelContent(props: TIssueLabel
 
   const labelOperations: TLabelOperations = useMemo(
     () => ({
-      updateIssue: async (slug: string, issueProjectId: string, workItemId: string, data: Partial<IssueDetail>) => {
+      updateIssue: async (slug: string, issueProjectId: string, workItemId: string, data: IssueChange) => {
         if (pending.current) return;
         pending.current = true;
         setSubmitting(true);

@@ -5,14 +5,14 @@ import type { IssueCreate } from "@nerve/api-client";
  * See the LICENSE file for details.
  */
 
-import type { Issue, IssueDetail } from "@nerve/api-client";
+import type { Issue } from "@nerve/api-client";
 
 import React, { useRef } from "react";
 import { observer } from "mobx-react";
 // nerve constants
 import { SPREADSHEET_PROPERTY_LIST } from "@nerve/constants";
 // types
-import type { IIssueDisplayFilterOptions, IIssueDisplayProperties } from "@nerve/types";
+import type { IIssueDisplayFilterOptions, IIssueDisplayProperties, IssueChange } from "@nerve/types";
 import { EIssueLayoutTypes } from "@nerve/types";
 // local imports
 import type { TRenderQuickActions } from "../list/list-view-types";
@@ -25,7 +25,7 @@ type Props = {
   handleDisplayFilterUpdate: (data: Partial<IIssueDisplayFilterOptions>) => void;
   issueIds: string[] | undefined;
   quickActions: TRenderQuickActions;
-  updateIssue: ((projectId: string | null, issueId: string, data: Partial<IssueDetail>) => Promise<void>) | undefined;
+  updateIssue: ((projectId: string | null, issueId: string, data: IssueChange) => Promise<void>) | undefined;
   quickAddCallback?: (projectId: string | null | undefined, data: IssueCreate) => Promise<Issue | undefined>;
   canEditProperties: (projectId: string | undefined) => boolean;
   canLoadMoreIssues: boolean;

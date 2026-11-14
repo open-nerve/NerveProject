@@ -1,7 +1,8 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 import { expect, it } from "vitest";
-import type { IssueCreate, IssueUpdate } from "@nerve/api-client";
-import { createBody, updateBody } from "./issue-write-fields";
+import type { IssueCreate, IssueDetail, IssueUpdate } from "@nerve/api-client";
+import type { IssueChange, ModuleSetChange } from "@nerve/types";
+import { changeBody, createBody, updateBody } from "./issue-write-fields";
 
 /** What the client puts on the wire: it sends the body as JSON, so a field left undefined is not sent at all. */
 const sent = (body: IssueCreate | IssueUpdate): unknown => JSON.parse(JSON.stringify(body));
@@ -118,4 +119,59 @@ it("an update sends the whole set of modules it is given, empty for none, and le
     name: "Write the notes",
   });
   expect(() => updateBody({ description_html: "<p>same</p>", skip_activity: true, module_ids: [] })).toThrow(refused);
+});
+// M6 P7a spec 2.2, R3: a change of a work item's modules is additions and removals, made into the whole set nerve
+// replaces from the set the work item holds when its turn comes; ids the page does not know stay as they are held.
+it("a change of the modules removes and adds to the set held, keeping its order and the ids it does not name", () => {
+  const held = ["A", "G"];
+  const modulesAfter = (from: readonly string[], modules: ModuleSetChange) => changeBody({ modules }, from).module_ids;
+  expect(modulesAfter(held, { add: ["B"] })).toEqual(["A", "G", "B"]);
+  expect(modulesAfter(held, { remove: ["A"] })).toEqual(["G"]);
+  expect(modulesAfter(held, { add: ["A"] }), "adding one it is in").toEqual(["A", "G"]);
+  expect(modulesAfter(held, { remove: ["B"] }), "removing one it is not in").toEqual(["A", "G"]);
+  expect(modulesAfter(["G", "A", "C"], { add: ["B", "D"], remove: ["A"] })).toEqual(["G", "C", "B", "D"]);
+  expect(modulesAfter([], { add: ["B"] })).toEqual(["B"]);
+  expect(held, "the set held is not changed").toEqual(["A", "G"]);
+});
+it("a change's request names each field it sends: its fields as given, the modules as the whole set they make", () => {
+  const held = ["A", "G"];
+  const fields: IssueChange = {
+    name: "Write the notes",
+    state_id: "S",
+    priority: "low",
+    assignee_ids: [],
+    label_ids: ["L"],
+    sort_order: 0,
+    start_date: "2026-11-01",
+    target_date: null,
+    parent_id: "P",
+    cycle_id: null,
+  };
+  expect(sent(changeBody(withHeld(fields), held))).toStrictEqual(fields);
+  expect(sent(changeBody({ name: "Write the notes", modules: { add: ["B"] } }, held))).toStrictEqual({
+    name: "Write the notes",
+    module_ids: ["A", "G", "B"],
+  });
+  expect(sent(changeBody({ modules: { remove: ["A", "G"] } }, held))).toStrictEqual({ module_ids: [] });
+  expect(sent(changeBody({ description_html: "<p>same</p>", skip_activity: true }, held))).toStrictEqual({
+    description_html: "<p>same</p>",
+    skip_activity: true,
+  });
+});
+it("a change's request leaves out whatever else a caller slipped into it, a whole set of modules too", () => {
+  const slipped = { ...withHeld({ name: "Write the notes" }), module_ids: ["Z"] } as unknown as IssueChange;
+  expect(sent(changeBody(slipped, ["A", "G"]))).toStrictEqual({ name: "Write the notes" });
+  const both = { module_ids: ["Z"], modules: { add: ["B"] } } as unknown as IssueChange;
+  expect(sent(changeBody(both, ["A", "G"]))).toStrictEqual({ module_ids: ["A", "G", "B"] });
+});
+it("a change cannot carry a whole set of modules, from a literal or from a work item's fields", () => {
+  const detail: Partial<IssueDetail> = { name: "Write the notes", module_ids: ["A"] };
+  // @ts-expect-error the change declares module_ids as never
+  const declared: Required<IssueChange>["module_ids"] = ["A"];
+  // @ts-expect-error a literal whole set is not a change
+  const literal: IssueChange = { module_ids: ["A"] };
+  // @ts-expect-error a work item's fields, as the rows and the spreadsheet held them, carry the whole set
+  const fromDetail: IssueChange = detail;
+  const change: IssueChange = { name: "Write the notes", cycle_id: null, modules: { add: ["B"], remove: ["A"] } };
+  expect([declared, literal, fromDetail, change]).toHaveLength(4);
 });

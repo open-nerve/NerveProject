@@ -1,8 +1,8 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
-import type { Issue, IssueUpdate } from "@nerve/api-client";
+import type { Issue } from "@nerve/api-client";
 import { action, makeObservable, observable } from "mobx";
 import { computedFn } from "mobx-utils";
-import type { TSubIssuesStateDistribution } from "@nerve/types";
+import type { TSubIssuesStateDistribution, IssueChange } from "@nerve/types";
 import type { ConfirmedIssueChange } from "@/lib/paged-groups";
 import { SessionChangedError } from "@/lib/auth/token-manager";
 import type { IssueReadToken, IssueWriteScope } from "../root.store";
@@ -179,9 +179,9 @@ export class IssueSubIssuesStore {
     project: string,
     _parentID: string,
     id: string,
-    body: IssueUpdate
+    change: IssueChange
   ): Promise<void> => {
-    await this.root.projectIssues.updateIssue(ws, project, id, body);
+    await this.root.projectIssues.updateIssue(ws, project, id, change);
   };
   removeSubIssue = async (ws: string, project: string, parent: string, id: string) =>
     this.updateSubIssue(ws, project, parent, id, { parent_id: null });

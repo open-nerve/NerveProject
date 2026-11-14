@@ -4,14 +4,14 @@
  * See the LICENSE file for details.
  */
 
-import type { Issue, IssueDetail } from "@nerve/api-client";
+import type { Issue } from "@nerve/api-client";
 
 import { useParams } from "react-router";
 import { useDetailCommand } from "../../issue-detail/use-issue-operations";
 import { useRef } from "react";
 import { observer } from "mobx-react";
 // types
-import type { IIssueDisplayProperties } from "@nerve/types";
+import type { IIssueDisplayProperties, IssueChange } from "@nerve/types";
 // constants
 import { SPREADSHEET_COLUMNS } from "../utils";
 // components
@@ -22,7 +22,7 @@ type Props = {
   issueDetail: Issue;
   disableUserActions: boolean;
   property: keyof IIssueDisplayProperties;
-  updateIssue: ((projectId: string | null, issueId: string, data: Partial<IssueDetail>) => Promise<void>) | undefined;
+  updateIssue: ((projectId: string | null, issueId: string, data: IssueChange) => Promise<void>) | undefined;
 };
 
 export const IssueColumn = observer(function IssueColumn(props: Props) {
@@ -36,7 +36,7 @@ export const IssueColumn = observer(function IssueColumn(props: Props) {
 
   if (!Column) return null;
 
-  const handleUpdateIssue = async (issue: Issue, data: Partial<IssueDetail>) => {
+  const handleUpdateIssue = async (issue: Issue, data: IssueChange) => {
     if (!updateIssue) return;
     // The label picker awaits and reports its own command; other inline controls are void event boundaries.
     if (property === "labels") await updateIssue(issue.project_id, issue.id, data);

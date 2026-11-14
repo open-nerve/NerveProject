@@ -4,11 +4,12 @@
  * See the LICENSE file for details.
  */
 
-import type { Issue, IssueDetail, IssueListOrder } from "@nerve/api-client";
+import type { Issue, IssueListOrder } from "@nerve/api-client";
 
 import type { FC } from "react";
 
 import type { LOGICAL_OPERATOR, TSupportedOperators } from "./rich-filters";
+import type { IssueChange } from "./issues/issue-change";
 import type { CompleteOrEmpty } from "./utils";
 
 export type TIssueGroupByOptions =
@@ -169,6 +170,6 @@ export interface IWorkspaceViewProps {
 export type TSpreadsheetColumn = FC<{
   issue: Issue;
   onClose: () => void;
-  onChange: (issue: Issue, data: Partial<IssueDetail>) => void;
+  onChange: (issue: Issue, data: IssueChange) => void;
   disabled: boolean;
 }>;

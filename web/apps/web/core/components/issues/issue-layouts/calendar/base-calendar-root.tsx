@@ -58,7 +58,6 @@ export const BaseCalendarRoot = observer(function BaseCalendarRoot(props: IBaseC
     fetchIssues,
     fetchNextIssues,
     createIssue,
-    updateIssue,
     dropIssue,
     removeIssue,
     removeIssueFromView,
@@ -204,7 +203,6 @@ export const BaseCalendarRoot = observer(function BaseCalendarRoot(props: IBaseC
               customActionButton={customActionButton}
               issue={issue}
               handleDelete={async () => removeIssue(issue.project_id, issue.id)}
-              handleUpdate={async (data) => updateIssue && updateIssue(issue.project_id, issue.id, data)}
               handleRemoveFromView={
                 removeIssueFromView && (async () => removeIssueFromView(issue.project_id, issue.id))
               }

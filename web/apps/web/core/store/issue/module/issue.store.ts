@@ -33,16 +33,16 @@ export class ModuleIssues extends PlanningPageIssues {
         : body
     );
   /**
-   * Takes the work item out of the page's module (R5): the whole set it is in without the module, worked out from the
-   * held work item when its turn in the item's queue comes, so after a write still out it is that write's answer. The
-   * other modules stay, archived ones too (nerve checks only the modules a work item joins). Once nerve confirms it the
-   * page's list no longer lists the work item; a refusal leaves what is held and goes to the caller.
+   * Takes the work item out of the page's module (R5; P7a R19): the change that removes the module, which the write
+   * unit makes, when its turn in the item's queue comes, into the whole set held without it, so after a write still
+   * out it is that write's answer. The other modules stay, archived ones too (nerve checks only the modules a work item
+   * joins). Once nerve confirms it the page's list no longer lists the work item; a refusal leaves what is held and
+   * goes to the caller.
    */
   removeIssueFromModule = (slug: string, page: PlanningPage, id: string): Promise<IssueDetail> =>
-    this.rootIssueStore.writes.updateIssue(
+    this.rootIssueStore.writes.changeIssue(
       id,
-      (held) => ({ module_ids: held.module_ids.filter((module) => module !== page.entityID) }),
-      undefined,
+      { modules: { remove: [page.entityID] } },
       this.rootIssueStore.scope(slug, page.projectID)
     );
 }

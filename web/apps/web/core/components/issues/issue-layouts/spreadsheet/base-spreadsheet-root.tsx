@@ -106,7 +106,6 @@ export const BaseSpreadsheetRoot = observer(function BaseSpreadsheetRoot(props: 
         customActionButton={customActionButton}
         issue={issue}
         handleDelete={async () => removeIssue(issue.project_id, issue.id)}
-        handleUpdate={async (data) => updateIssue && updateIssue(issue.project_id, issue.id, data)}
         handleRemoveFromView={removeIssueFromView && (async () => removeIssueFromView(issue.project_id, issue.id))}
         handleArchive={async () => archiveIssue && archiveIssue(issue.project_id, issue.id)}
         handleRestore={async () => restoreIssue && restoreIssue(issue.project_id, issue.id)}
@@ -115,7 +114,7 @@ export const BaseSpreadsheetRoot = observer(function BaseSpreadsheetRoot(props: 
         placements={placement}
       />
     ),
-    [QuickActions, canEditProperties, removeIssue, updateIssue, removeIssueFromView, archiveIssue, restoreIssue]
+    [QuickActions, canEditProperties, removeIssue, removeIssueFromView, archiveIssue, restoreIssue]
   );
 
   if (!Array.isArray(issueIds)) return null;

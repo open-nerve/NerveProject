@@ -3,15 +3,16 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  * See the LICENSE file for details.
  */
-import type { Issue, IssueDetail, IssueUpdate } from "@nerve/api-client";
+import type { Issue, IssueDetail } from "@nerve/api-client";
 import { computedFn } from "mobx-utils";
 import { SessionChangedError } from "@/lib/auth/token-manager";
+import type { IssueChange } from "@nerve/types";
 import { DetailResource, type DetailRead } from "./resource";
 import type { IIssueDetail } from "./root.store";
 
 export interface IIssueStoreActions {
   fetchIssue: (workspaceSlug: string, projectId: string, issueId: string) => Promise<IssueDetail | undefined>;
-  updateIssue: (workspaceSlug: string, projectId: string, issueId: string, data: IssueUpdate) => Promise<void>;
+  updateIssue: (workspaceSlug: string, projectId: string, issueId: string, change: IssueChange) => Promise<void>;
   removeIssue: (workspaceSlug: string, projectId: string, issueId: string) => Promise<void>;
   archiveIssue: (workspaceSlug: string, projectId: string, issueId: string) => Promise<void>;
   fetchIssueWithIdentifier: (workspaceSlug: string, identifier: string) => Promise<IssueDetail | undefined>;
@@ -145,10 +146,10 @@ export class IssueStore implements IIssueStore {
     this.root.issues.addIssueIdentifier(identifier, id);
     return this.root.issues.getIssueDetailById(id);
   };
-  updateIssue = async (workspaceSlug: string, projectId: string, issueId: string, data: IssueUpdate) => {
+  updateIssue = async (workspaceSlug: string, projectId: string, issueId: string, change: IssueChange) => {
     const scope = this.root.scope(workspaceSlug, projectId);
     const token = this.root.captureRead();
-    await this.root.projectIssues.updateIssue(workspaceSlug, projectId, issueId, data);
+    await this.root.projectIssues.updateIssue(workspaceSlug, projectId, issueId, change);
     if (!this.root.isReadCurrent(token, [projectId], scope.workspaceID)) throw new SessionChangedError();
   };
   removeIssue = (workspaceSlug: string, projectId: string, issueId: string) =>

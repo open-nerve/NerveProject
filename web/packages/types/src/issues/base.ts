@@ -8,6 +8,7 @@
 export * from "./issue";
 export * from "./issue_relation";
 export * from "./issue_sub_issues";
+export * from "./issue-change";
 export * from "./activity/base";
 
 export type TLoader = "init-loader" | "mutation" | "pagination" | "loaded" | undefined;

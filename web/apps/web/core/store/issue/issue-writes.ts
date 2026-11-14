@@ -7,7 +7,8 @@ import { compareIssueTime } from "@/lib/issue-order";
 import type { Before, ConfirmedIssueChange } from "@/lib/paged-groups";
 import { heldCounterSources } from "@/lib/paged-groups.evidence";
 import type { IssueListBinding } from "./helpers/issue-list-binding";
-import { createBody, membershipFields, updateBody } from "./issue-write-fields";
+import type { IssueChange } from "@nerve/types";
+import { changeBody, createBody, membershipFields, updateBody } from "./issue-write-fields";
 import type { IssueRootStore, IssueWriteScope } from "./root.store";
 
 export type IssueDrop = NonNullable<ConfirmedIssueChange["drop"]> & { binding?: IssueListBinding };
@@ -35,7 +36,7 @@ type WritesRoot = Pick<
 
 /**
  * A change sent to nerve and, once nerve confirms it, written into every held copy: one queue per issue, the writes in
- * flight, the confirmation and the six commands with their request bodies (P6b R1).
+ * flight, the confirmation and the seven commands with their request bodies (P6b R1).
  */
 export class IssueWrites {
   private readonly queues = new Map<string, Promise<void>>();
@@ -263,6 +264,14 @@ export class IssueWrites {
         ))!;
       });
     return drop ? this.dragQueue(update) : update();
+  }
+  /**
+   * Sends a change of the work item (P7a spec 2.2, R3): its modules' additions and removals made, in its turn, into the
+   * whole set from the set it then holds, so after a change still out it is that change's answer, and after a refusal
+   * the set as it was; ids no page knows, archived modules too, stay. Its other fields go as given.
+   */
+  changeIssue(id: string, change: IssueChange, scope: IssueWriteScope): Promise<IssueDetailAnswer> {
+    return this.updateIssue(id, (held) => changeBody(change, held.module_ids), undefined, scope);
   }
   deleteIssue(id: string, scope: IssueWriteScope): Promise<void> {
     return this.enqueueIssueChanges(

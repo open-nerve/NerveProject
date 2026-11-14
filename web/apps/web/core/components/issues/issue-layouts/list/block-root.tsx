@@ -15,7 +15,7 @@ import { observer } from "mobx-react";
 // nerve helpers
 import { useOutsideClickDetector } from "@nerve/hooks";
 // types
-import type { IIssueDisplayProperties } from "@nerve/types";
+import type { IIssueDisplayProperties, IssueChange } from "@nerve/types";
 // components
 import { DropIndicator } from "@nerve/ui";
 import RenderIfVisible from "@/components/core/render-if-visible-HOC";
@@ -33,7 +33,7 @@ import type { TRenderQuickActions } from "./list-view-types";
 type Props = {
   issueId: string;
   issuesMap: Readonly<Record<string, Issue | IssueDetail>>;
-  updateIssue: ((projectId: string | null, issueId: string, data: Partial<IssueDetail>) => Promise<void>) | undefined;
+  updateIssue: ((projectId: string | null, issueId: string, data: IssueChange) => Promise<void>) | undefined;
   quickActions: TRenderQuickActions;
   canEditProperties: (projectId: string | undefined) => boolean;
   displayProperties: IIssueDisplayProperties | undefined;

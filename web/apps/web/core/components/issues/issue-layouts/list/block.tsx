@@ -16,7 +16,7 @@ import { ChevronRightOutline } from "@makeplane/propel/icons";
 // types
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
-import type { IIssueDisplayProperties } from "@nerve/types";
+import type { IIssueDisplayProperties, IssueChange } from "@nerve/types";
 // ui
 import { ControlLink, Row } from "@nerve/ui";
 import { cn, generateWorkItemLink } from "@nerve/utils";
@@ -38,7 +38,7 @@ interface IssueBlockProps {
   issueId: string;
   issuesMap: Readonly<Record<string, Issue | IssueDetail>>;
   groupId: string;
-  updateIssue: ((projectId: string | null, issueId: string, data: Partial<IssueDetail>) => Promise<void>) | undefined;
+  updateIssue: ((projectId: string | null, issueId: string, data: IssueChange) => Promise<void>) | undefined;
   quickActions: TRenderQuickActions;
   displayProperties: IIssueDisplayProperties | undefined;
   canEditProperties: (projectId: string | undefined) => boolean;

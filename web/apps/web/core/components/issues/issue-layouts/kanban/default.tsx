@@ -19,6 +19,7 @@ import type {
   TIssueKanbanFilters,
   TIssueGroupByOptions,
   TIssueOrderByOptions,
+  IssueChange,
 } from "@nerve/types";
 // constants
 import { ContentWrapper } from "@nerve/ui";
@@ -49,7 +50,7 @@ export interface IKanBan {
   group_by: TIssueGroupByOptions | undefined;
   orderBy: TIssueOrderByOptions | undefined;
   sub_group_id?: string;
-  updateIssue: ((projectId: string | null, issueId: string, data: Partial<IssueDetail>) => Promise<void>) | undefined;
+  updateIssue: ((projectId: string | null, issueId: string, data: IssueChange) => Promise<void>) | undefined;
   quickActions: TRenderQuickActions;
   collapsedGroups: TIssueKanbanFilters;
   handleCollapsedGroups: (toggle: "group_by" | "sub_group_by", value: string) => void;

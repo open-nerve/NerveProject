@@ -22,6 +22,7 @@ import type {
   TIssueOrderByOptions,
   IIssueDisplayProperties,
   TIssueKanbanFilters,
+  IssueChange,
 } from "@nerve/types";
 import { EIssueLayoutTypes } from "@nerve/types";
 import { Row } from "@nerve/ui";
@@ -48,7 +49,7 @@ interface Props {
   group_by: TIssueGroupByOptions | null;
   orderBy: TIssueOrderByOptions | undefined;
   getGroupIndex: (groupId: string | undefined) => number;
-  updateIssue: ((projectId: string | null, issueId: string, data: Partial<IssueDetail>) => Promise<void>) | undefined;
+  updateIssue: ((projectId: string | null, issueId: string, data: IssueChange) => Promise<void>) | undefined;
   quickActions: TRenderQuickActions;
   displayProperties: IIssueDisplayProperties | undefined;
   enableIssueQuickAdd: boolean;

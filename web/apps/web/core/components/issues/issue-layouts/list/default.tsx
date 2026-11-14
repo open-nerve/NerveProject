@@ -25,6 +25,7 @@ import type {
   TIssueOrderByOptions,
   IGroupByColumn,
   TIssueKanbanFilters,
+  IssueChange,
 } from "@nerve/types";
 // hooks
 import { useIssueStoreType } from "@/hooks/use-issue-layout-store";
@@ -40,7 +41,7 @@ export interface IList {
   issuesMap: Readonly<Record<string, Issue | IssueDetail>>;
   group_by: TIssueGroupByOptions | null;
   orderBy: TIssueOrderByOptions | undefined;
-  updateIssue: ((projectId: string | null, issueId: string, data: Partial<IssueDetail>) => Promise<void>) | undefined;
+  updateIssue: ((projectId: string | null, issueId: string, data: IssueChange) => Promise<void>) | undefined;
   quickActions: TRenderQuickActions;
   displayProperties: IIssueDisplayProperties | undefined;
   enableIssueQuickAdd: boolean;

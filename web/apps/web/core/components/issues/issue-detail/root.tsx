@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import type { IssueUpdate } from "@nerve/api-client";
+import type { IssueChange } from "@nerve/types";
 import { ConfirmedContentNotice, IssueDetailHost } from "../detail-host";
 import { useIssueOperations } from "./use-issue-operations";
 import { observer } from "mobx-react";
@@ -26,7 +26,7 @@ import { IssueMainContent } from "./main-content";
 import { IssueDetailsSidebar } from "./sidebar";
 import { DetailResourceError } from "../issue-detail-widgets/resource-error";
 
-export type TIssueOperations<TUpdate = IssueUpdate> = {
+export type TIssueOperations<TUpdate = IssueChange> = {
   fetch: (workspaceSlug: string, projectId: string, issueId: string, loader?: boolean) => Promise<void>;
   update: (workspaceSlug: string, projectId: string, issueId: string, data: TUpdate) => Promise<void>;
   /** Capture persistence authorization while the input's host is alive, for its final unmount flush. */
