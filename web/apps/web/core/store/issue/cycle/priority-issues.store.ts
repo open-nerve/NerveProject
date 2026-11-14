@@ -6,6 +6,7 @@ import { IssueListBinding } from "../helpers/issue-list-binding";
 import type { IIssueRootStore } from "../root.store";
 
 /** A cycle in progress, as its card names it: the cycle and the project it belongs to. */
+// Deliberately not the shared PlanningPage: the priority list is cycle-only (P6b spec 2.2); entityID would blur it.
 type CyclePage = Readonly<{ projectID: string; cycleID: string }>;
 
 /**
