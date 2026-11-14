@@ -2548,7 +2548,7 @@
             "web/apps/web/core/components/power-k/ui/pages/open-entity/project-modules-menu.test.tsx",
             "web/apps/web/core/components/power-k/ui/pages/context-based/module/commands.test.tsx",
             "web/apps/web/core/store/issue/helpers/page-preferences-filter.store.test.ts",
-            "web/apps/web/core/store/issue/cycle/filter.store.test.ts",
+            "web/apps/web/core/store/issue/cycle/page-preferences.test.ts",
             "web/apps/web/core/store/issue/cycle/issue.store.test.ts",
             "web/apps/web/core/hooks/use-issue-layout-store.test.tsx",
             "web/apps/web/core/hooks/use-issue-list-mount.test.ts",
