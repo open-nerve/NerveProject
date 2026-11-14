@@ -67,7 +67,7 @@ export interface IssueFormProps {
   projectId: string | null;
   isDraft: boolean;
   moveToIssue?: boolean;
-  onPublish?: (values: IssueFormData) => Promise<void>;
+  onPublish?: (values: IssueFormData, options?: Pick<IssueFormSubmitOptions, "onRefused">) => Promise<void>;
   modalTitle?: string;
   primaryButtonText?: {
     default: string;
@@ -120,7 +120,7 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
     planningRefusals,
   } = props;
 
-  // states
+  // states: the form's attempts beside its submit (saved to drafts, a draft published), for a refused field's focus
   const [draftSubmitCount, setDraftSubmitCount] = useState(0);
 
   // refs
@@ -171,9 +171,14 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
 
   const projectId = watch("project_id");
 
-  //reset few fields on projectId change
+  // On a change of its project a new work item's form starts over but for a few fields; a draft's leaves its cycle and
+  // modules, which are its project's, as an edit, which its save sends (P7a spec 2.8, R6: no cycle, no modules).
   useEffect(() => {
-    if (isDirty && !isDraft)
+    if (isDraft) {
+      if (!getFieldState("project_id").isDirty) return;
+      setValue("cycle_id", null, { shouldDirty: true });
+      setValue("module_ids", [], { shouldDirty: true });
+    } else if (isDirty)
       reset(getUpdateFormDataForReset(projectId ?? undefined, { ...getValues(), project_id: projectId ?? undefined }));
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -352,7 +357,11 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
                   await handleFormSubmit(getValues(), true);
                   setDraftSubmitCount((count) => count + 1);
                 }}
-                onMoveToProjects={handleMoveToProjects}
+                onMoveToProjects={async () => {
+                  clearErrors();
+                  await handleMoveToProjects();
+                  setDraftSubmitCount((count) => count + 1);
+                }}
               />
             </div>
           </form>

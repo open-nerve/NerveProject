@@ -13,6 +13,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { Issue, IssueDetail, Project } from "@nerve/api-client";
 import { EIssuesStoreType } from "@nerve/types";
 import { CreateUpdateIssueModal } from "@/components/issues/issue-modal/modal";
+import { fieldRefused, refusedAs } from "@/components/issues/issue-modal/fake-dialog";
 import type { PlanningPageStoreType } from "@/hooks/planning-page-domains";
 import { json, problem, type Call } from "@/lib/auth/fake-nerve";
 import { until } from "@/lib/auth/fake-time";
@@ -170,21 +171,6 @@ const titled = (name: string) =>
     const input = form()!.querySelector<HTMLInputElement>("#name")!;
     Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(input, name);
     input.dispatchEvent(new Event("input", { bubbles: true }));
-  });
-/** What a field's button says of nerve's refusal: whether it is refused, and the message that describes it. */
-const refusedAs = (field: HTMLButtonElement | undefined) => ({
-  invalid: field?.getAttribute("aria-invalid") ?? null,
-  message: (field?.getAttribute("aria-describedby")?.split(/\s+/) ?? [])
-    .map((id) => document.getElementById(id)?.textContent ?? "")
-    .join(" "),
-});
-/** nerve's refusal of what it was sent, naming the field at path. */
-const fieldRefused = (path: string) =>
-  json(422, {
-    status: 422,
-    code: "validation_failed",
-    title: "",
-    errors: [{ field: path, code: "not_allowed", message: "" }],
   });
 
 it.each<{ page: PlanningPageStoreType; of: string; held: string; fields: Partial<Issue>; shows: string[] }>([

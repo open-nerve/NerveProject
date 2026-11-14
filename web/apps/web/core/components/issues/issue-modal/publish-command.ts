@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import type { IssueFormData, IssueDescriptionLoadState } from "./types";
+import type { IssueFormData, IssueDescriptionLoadState, IssueFormSubmitOptions } from "./types";
 import { useState } from "react";
 // Nerve imports
 import { useTranslation } from "@nerve/i18n";
@@ -29,7 +29,10 @@ type PublishCommandInput = {
   finishClose: () => void;
 };
 
-/** The modal's publish of the stored draft it edits, and whether nerve refused it for files not yet uploaded. */
+/**
+ * The modal's publish of the stored draft it edits, and whether nerve refused it for files not yet uploaded. nerve's
+ * refusal goes to the form's onRefused, under the field it names (the cycle, a module: P7a spec 2.8, R17), else said.
+ */
 export function usePublishCommand({
   workspaceSlug,
   isDraft,
@@ -45,7 +48,7 @@ export function usePublishCommand({
   const refuse = useRefusalToast();
   const draftIssues = useWorkspaceDraftIssues();
 
-  const executePublish = async (payload: IssueFormData) => {
+  const executePublish = async (payload: IssueFormData, options?: Pick<IssueFormSubmitOptions, "onRefused">) => {
     if (!workspaceSlug || !isDraft || !data?.id || descriptionLoadState !== "ready") return;
     assertSettled();
     const current = formScope();
@@ -62,7 +65,7 @@ export function usePublishCommand({
       content.restore();
       if (inSession() && current()) {
         if (problemCode(error) === "asset.not_uploaded") setPublishBlocked(true);
-        refuse(error);
+        (options?.onRefused ?? refuse)(error);
       }
       throw error;
     }

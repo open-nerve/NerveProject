@@ -42,7 +42,9 @@ type FormSubmissionInput = {
     is_draft_issue?: boolean,
     options?: IssueFormSubmitOptions
   ) => Promise<void>;
-  onPublish: ((values: IssueFormData) => Promise<void>) | undefined;
+  onPublish:
+    | ((values: IssueFormData, options?: Pick<IssueFormSubmitOptions, "onRefused">) => Promise<void>)
+    | undefined;
   isPending: boolean;
 };
 
@@ -73,13 +75,29 @@ export function useFormSubmission({
   // The modules the form started with, the work item's own as the modal opened it: a work item's edit sends the change
   // from them to the set the form holds, never from what a read gave the form's data since (P7a spec 2.6, R3).
   const [startModules] = useState(() => getValues("module_ids"));
+  /** nerve's refusal of what the form sent, under the fields it names, else said (R17). */
+  const underFields = (error: unknown) =>
+    refuse(error, (field, message) => setError(field, { type: "server", message }));
+
+  /**
+   * What the form changed, of a work item or of a stored or seeded draft. A draft the form moved to another project
+   * than the one it opened with leaves its cycle and modules, which are its project's, whatever wrote them since the
+   * form opened: they go as the form holds them, none unless picked since (P7a spec 2.8, R6).
+   */
+  const changed = (formData: Partial<IssueFormValues>) => {
+    const moved = isDraft && (getValues("project_id") ?? null) !== (data?.project_id ?? null);
+    return {
+      ...getChangedIssuefields(formData, dirtyFields as { [key: string]: boolean | undefined }),
+      ...(moved ? { cycle_id: formData.cycle_id ?? null, module_ids: formData.module_ids ?? [] } : {}),
+    };
+  };
 
   const submissionData = (formData: Partial<IssueFormValues>) => {
     if (!data?.id && !hasDraftSeed) return formData;
     // Seeded drafts retain wire fields that the display controls cannot resolve.
     // Only actual edits replace those fields; the command owner merges the seed.
     return {
-      ...getChangedIssuefields(formData, dirtyFields as { [key: string]: boolean | undefined }),
+      ...changed(formData),
       project_id: getValues("project_id"),
       ...(data?.id ? { id: data.id, description_html: formData.description_html ?? "<p></p>" } : {}),
     };
@@ -100,7 +118,7 @@ export function useFormSubmission({
     await onSubmit(submissionData(formData), is_draft_issue, {
       isDescriptionMigration: descriptionMigration.current,
       modules: data?.id && !isDraft ? moduleSetChange(startModules, formData.module_ids ?? []) : undefined,
-      onRefused: (error) => refuse(error, (field, message) => setError(field, { type: "server", message })),
+      onRefused: underFields,
     })
       .then(() => {
         descriptionMigration.current = false;
@@ -123,11 +141,15 @@ export function useFormSubmission({
     }
     setIsMoving(true);
     try {
-      await onPublish({
-        ...getChangedIssuefields(getValues(), dirtyFields as { [key: string]: boolean | undefined }),
-        project_id: getValues("project_id"),
-        description_html: getValues("description_html"),
-      });
+      // nerve's refusal to publish names the cycle or a module under its field as a save's would (P7a spec 2.8, R17)
+      await onPublish(
+        {
+          ...changed(getValues()),
+          project_id: getValues("project_id"),
+          description_html: getValues("description_html"),
+        },
+        { onRefused: underFields }
+      );
     } catch {
       /* The command owner displays the current refusal; retain the form. */
     } finally {

@@ -17,5 +17,8 @@ export function draftPayloadFields(payload: IssueDraftPayload): IssueFormData {
     parent_id: payload.parent_id,
     start_date: payload.start_date,
     target_date: payload.target_date,
+    // as the draft holds them, an ended cycle and archived modules too: its form shows them by their names (P7a spec 2.8)
+    cycle_id: payload.cycle_id ?? null,
+    module_ids: payload.module_ids ?? [],
   };
 }

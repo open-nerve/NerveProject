@@ -252,7 +252,8 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
   };
   const handleFormSubmit = (payload: IssueFormData, saveDraft = false, options?: IssueFormSubmitOptions) =>
     withPending(() => executeFormSubmit(payload, saveDraft, options));
-  const handlePublish = (payload: IssueFormData) => withPending(() => executePublish(payload));
+  const handlePublish = (payload: IssueFormData, options?: Pick<IssueFormSubmitOptions, "onRefused">) =>
+    withPending(() => executePublish(payload, options));
 
   const handleFormChange = (formData: IssueFormData | null) => setChangesMade(formData);
 

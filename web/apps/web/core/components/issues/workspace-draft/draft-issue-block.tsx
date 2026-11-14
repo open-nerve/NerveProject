@@ -180,9 +180,10 @@ export const DraftIssueBlock = observer(function DraftIssueBlock(props: Props) {
             <DraftIssueProperties
               className={`relative flex flex-wrap ${isSidebarCollapsed ? "md:flex-shrink-0 md:flex-grow" : "lg:flex-shrink-0 lg:flex-grow"} items-center gap-2 whitespace-nowrap`}
               issue={issue}
+              name={name}
               workspaceSlug={workspaceSlug}
-              updateIssue={async (data) => {
-                await updateIssue(workspaceSlug, issueId, (held) => draftInput(data, held.payload));
+              updateIssue={async (change) => {
+                await updateIssue(workspaceSlug, issueId, (held) => draftInput(change(held.payload), held.payload));
               }}
             />
             <div
