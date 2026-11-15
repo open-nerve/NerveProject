@@ -19,7 +19,11 @@ type Props = {
   isDisabled?: boolean;
   isSelected?: boolean;
   keySequence?: string;
-  /** The texts the search finds the item by, in place of its value (powerKFilter). */
+  /**
+   * The texts the search finds the item by, in place of its value (powerKFilter). cmdk takes an item's keywords anew
+   * only when its value changes, so the item is keyed by them: new keywords (a cycle renamed while its list is open,
+   * its id the same) make it anew, found by them, no longer by the old ones (re-77's re-review, m1).
+   */
   keywords?: string[];
   label: string | React.ReactNode;
   onSelect: () => void;
@@ -44,6 +48,7 @@ export function PowerKModalCommandItem(props: Props) {
 
   return (
     <Command.Item
+      key={keywords?.join("\n")}
       value={value}
       keywords={keywords}
       onSelect={onSelect}
