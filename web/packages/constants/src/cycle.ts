@@ -6,7 +6,6 @@
 
 // types
 export const CYCLE_STATUS: {
-  i18n_label: string;
   value: "current" | "upcoming" | "completed" | "draft";
   i18n_title: string;
   color: string;
@@ -14,7 +13,6 @@ export const CYCLE_STATUS: {
   bgColor: string;
 }[] = [
   {
-    i18n_label: "project_cycles.status.days_left",
     value: "current",
     i18n_title: "project_cycles.status.in_progress",
     color: "#F59E0B",
@@ -22,7 +20,6 @@ export const CYCLE_STATUS: {
     bgColor: "bg-amber-50",
   },
   {
-    i18n_label: "project_cycles.status.yet_to_start",
     value: "upcoming",
     i18n_title: "project_cycles.status.yet_to_start",
     color: "#3F76FF",
@@ -30,7 +27,6 @@ export const CYCLE_STATUS: {
     bgColor: "bg-indigo-50",
   },
   {
-    i18n_label: "project_cycles.status.completed",
     value: "completed",
     i18n_title: "project_cycles.status.completed",
     color: "#16A34A",
@@ -38,7 +34,6 @@ export const CYCLE_STATUS: {
     bgColor: "bg-success-subtle",
   },
   {
-    i18n_label: "project_cycles.status.draft",
     value: "draft",
     i18n_title: "project_cycles.status.draft",
     color: "#525252",

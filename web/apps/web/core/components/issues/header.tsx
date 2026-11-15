@@ -33,10 +33,7 @@ export const IssuesHeader = observer(function IssuesHeader() {
   const navigate = useNavigate();
   const { workspaceSlug, projectId } = useParams();
   // store hooks
-  const {
-    issues: { getGroupIssueCount },
-    issuesFilter,
-  } = useIssues(EIssuesStoreType.PROJECT);
+  const { issues, issuesFilter } = useIssues(EIssuesStoreType.PROJECT);
   // i18n
   const { t } = useTranslation();
 
@@ -46,7 +43,8 @@ export const IssuesHeader = observer(function IssuesHeader() {
   const { allowPermissions } = useUserPermissions();
   const { isMobile } = usePlatformOS();
 
-  const issuesCount = getGroupIssueCount(undefined, undefined, false);
+  // the project's work items as nerve counts them, grouped or not, while the current list is the project's (P7c R10)
+  const issuesCount = projectId ? issues.pageTotal(projectId) : undefined;
   // the page's layouts, filters and display once nerve has given its preferences, as its work items show them: not
   // before its first answer, nor while that first read failed (P6b spec 2.8, R3)
   const preferencesShown = !!projectId && issuesFilter.getIssueFilters(projectId) !== undefined;

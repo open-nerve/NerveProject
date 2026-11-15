@@ -51,14 +51,14 @@ export const ProjectArchivesHeader = observer(function ProjectArchivesHeader(pro
   // router
   const navigate = useNavigate();
   // store hooks
-  const {
-    issues: { getGroupIssueCount },
-  } = useIssues(EIssuesStoreType.ARCHIVED);
+  const { issues } = useIssues(EIssuesStoreType.ARCHIVED);
   const { loader } = useProject();
   // hooks
   const { isMobile } = usePlatformOS();
 
-  const issueCount = getGroupIssueCount(undefined, undefined, false);
+  // the project's archived work items as nerve counts them, grouped or not, while the current list is the project's
+  // (P7c R10)
+  const issueCount = issues.pageTotal(projectId);
 
   const activeTabBreadcrumbDetail =
     PROJECT_ARCHIVES_BREADCRUMB_LIST[activeTab as keyof typeof PROJECT_ARCHIVES_BREADCRUMB_LIST];

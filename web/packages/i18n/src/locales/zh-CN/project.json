@@ -46,7 +46,6 @@
       "label": "已完成的周期"
     },
     "status": {
-      "days_left": "剩余天数",
       "completed": "已完成",
       "yet_to_start": "尚未开始",
       "in_progress": "进行中",

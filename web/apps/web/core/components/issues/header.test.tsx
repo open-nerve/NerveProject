@@ -3,7 +3,8 @@
 // The header of a project's work items page (P6b spec 2.8, R3; handoff item 8): the page's layouts, the toggle of its
 // filters and its display once nerve has given the page's own preferences, which they change, as its work items show
 // them: not before nerve's first answer, nor while that first read failed. Its new work item is the project's members',
-// as before. The page's work items below, the stores and HTTP are real.
+// as before. Its count is nerve's total of the page's list, grouped or not (P7c spec 2.8, R10). The page's work items
+// below, the stores and HTTP are real.
 import { act, createElement, type ReactNode } from "react";
 import { MemoryRouter } from "react-router";
 import { SWRConfig } from "swr";
@@ -11,6 +12,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { json, problem } from "@/lib/auth/fake-nerve";
 import { until } from "@/lib/auth/fake-time";
 import { issueSelectionTab } from "@/components/core/modals/fake-issue-selection";
+import { issueOf } from "@/store/issue/fake-issues";
 import { preferencesOf } from "@/store/project/fake-projects";
 import type { RootStore } from "@/store/root.store";
 import { ProjectLayoutRoot } from "./issue-layouts/roots/project-layout-root";
@@ -101,4 +103,25 @@ it("offers no layout, filter or display while nerve could not give the page's fi
   expect(offered()).toEqual({ layouts: [], filters: false, display: false, create: true });
   await act(async () => vi.advanceTimersByTimeAsync(1000));
   expect(preferences().map(({ method }) => method)).toEqual(["GET"]);
+});
+
+/** The count the header shows: a leaf of only digits. */
+const count = () =>
+  [...document.querySelectorAll("[data-header] *")].find(
+    (node) => node.children.length === 0 && /^\d+$/.test(node.textContent ?? "")
+  )?.textContent;
+
+it("counts the project's work items as nerve does while the page groups them by state (P7c spec 2.8)", async () => {
+  await mount();
+  await until(() => preferences().length === 1, "the page's preferences");
+  const byState = { ...preferencesOf().display_filters, group_by: "state_id" };
+  await act(async () => preferences()[0]!.answer(json(200, preferencesOf({ display_filters: byState }))));
+  const lists = () => tab.nerve.to("/api/v0/projects/A/issues");
+  await until(() => lists().length === 1, "the page's list");
+  expect(lists()[0]!.query.group_by).toBe("state_id");
+  expect(count(), "before nerve's answer").toBeUndefined();
+  // nerve counts seven work items in the project though it sends the first page's one
+  const seven = { total: 7, groups: [{ key: "state", total: 7, data: [issueOf("first")], next_cursor: "next" }] };
+  await act(async () => lists()[0]!.answer(json(200, seven)));
+  expect(count()).toBe("7");
 });
