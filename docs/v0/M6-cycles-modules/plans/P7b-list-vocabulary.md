@@ -1,7 +1,7 @@
 # M6 / P7b 工作项一侧（二）——列表词表、目录与“添加已有”实施计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-> 状态：spec 与 plan 已写（2026-11-14），预检通过（修正后，[re-74](../../../reviews/re-74-M6P7b预检.md)：F4 把原 T6 拆为 T6、T7，计划由 16 个 Task 变为 17 个，其后顺延），待实施。基线 main `f42f9d6457ccc9540a687019f3530e253fe0f7b5`（P7a 的 noff，双父 `7868a6b4`、`5d6dab04`；P7a 的最终分支 CI 43600392398 全绿，e2e 作业 23 分 48 秒；合入后的 main CI 43603772626 attempt 1 全绿，e2e 作业 132478430823 为 23 分 43 秒；归档 `.superpowers/sdd/M6-P7a-integration-20261114/`；T1 核对后回填）。P7 在实施之前拆为 P7a/P7b/P7c（[P7a spec](../specs/P7a-work-item-planning.md) R1），本计划只管 P7b；主控在写 spec 之前的裁定 E1–E15 是 spec 的 R1–R15。
+> 状态：spec 与 plan 已写（2026-11-14），预检通过（修正后，[re-74](../../../reviews/re-74-M6P7b预检.md)：F4 把原 T6 拆为 T6、T7，计划由 16 个 Task 变为 17 个，其后顺延）。T1–T16 已实施，整分支审查 Ready to merge（[re-75](../../../reviews/re-75-M6P7b整体审核.md)），主控以修复轮 F 处理两处 Minor（另两处不改），已提交，待限定复审。基线 main `f42f9d6457ccc9540a687019f3530e253fe0f7b5`（P7a 的 noff，双父 `7868a6b4`、`5d6dab04`；P7a 的最终分支 CI 43600392398 全绿，e2e 作业 23 分 48 秒；合入后的 main CI 43603772626 attempt 1 全绿，e2e 作业 132478430823 为 23 分 43 秒；归档 `.superpowers/sdd/M6-P7a-integration-20261114/`；T1 核对后回填）。P7 在实施之前拆为 P7a/P7b/P7c（[P7a spec](../specs/P7a-work-item-planning.md) R1），本计划只管 P7b；主控在写 spec 之前的裁定 E1–E15 是 spec 的 R1–R15。
 
 **Goal：**
 - 先拆 `issue-list-binding.ts`；列表的目录从 P7a 的规划 store 叫出迭代、模块的名字（含已归档的），按名字排序不再失败；
