@@ -1,7 +1,7 @@
 # M6 / P7c 工作项一侧（三）——命令面板、移动端页头与遗留实施计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-> 状态：spec 与 plan 已写（2026-11-15），待预检。基线 main `d052213f82aa4fba234f5684722335e1a5cbb5be`（P7b 的 noff，双父 `f42f9d64`、`4fe308ce`；P7b 的最终分支 CI 43702923005 全绿，e2e 作业 27 分 50 秒；合入后的 main CI 43706438924 attempt 1 全绿，e2e 作业 23 分 42 秒；归档 `.superpowers/sdd/M6-P7b-integration-20261115/`；T1 核对后回填）。本计划只管 P7c（P7 的第三段，[P7a spec](../specs/P7a-work-item-planning.md) R1）；主控在写 spec 之前的裁定 H1–H16 是 spec 的 R1–R16。
+> 状态：spec 与 plan 已写（2026-11-15），预检通过（修正后，[re-76](../../../reviews/re-76-M6P7c预检.md)：F1–F16 已改入），T1 已完成（`b5e1c615`）。基线 main `d052213f82aa4fba234f5684722335e1a5cbb5be`（P7b 的 noff，双父 `f42f9d64`、`4fe308ce`；P7b 的最终分支 CI 43702923005 全绿，e2e 作业 27 分 50 秒；合入后的 main CI 43706438924 attempt 1 全绿，e2e 作业 23 分 42 秒；归档 `.superpowers/sdd/M6-P7b-integration-20261115/`；T1 核对后回填）。本计划只管 P7c（P7 的第三段，[P7a spec](../specs/P7a-work-item-planning.md) R1）；主控在写 spec 之前的裁定 H1–H16 是 spec 的 R1–R16。
 
 **Goal：**
 - 命令面板：先拆导航的命令；规划入口一条规则，打开的菜单不再转圈；菜单的空文案经键；搜索有项目范围的迭代、模块结果；工作项有“改迭代”“改模块”两个命令；
@@ -33,7 +33,7 @@
 **代码规则**
 - 手写文件约 400 行内（R16）：`navigation/commands.ts`（466）在 T2 先拆再改；`fake-planning-page.tsx`（378）在 T11 只加几行；`e2e/fixtures/planning-list-pages.ts`（359）、`cycle-pages.ts`（388）不加东西（新的帮手放在故事文件或新的夹具里）。新文件的版权头为 `Copyright (c) 2026-present OpenNerve`，改写或拆出的 Plane 文件保留原头。
 - 类型只来自 `@nerve/api-client`（`IssueChange` 由 `IssueUpdate` 推出）；SWR 只经 `useSessionSWR`；新代码不读 router store（页面读路由参数）。
-- 删掉不用的代码；不加开关、桩或兼容别名（项目页手写的移动端页头删去；`CYCLE_STATUS[].i18n_label` 删去；空的设置函数删去）。
+- 删掉不用的代码；不加开关、桩或兼容别名（项目页移动端页头手写的读写删去、文件改写为薄包装件；`CYCLE_STATUS[].i18n_label` 删去；空的设置函数删去）。
 - 不放宽 `tools/keywords.json` 的规则、`lint-cap`、knip、`error-messages.test.ts`、i18n 的 `check:sync`。
 - **告警上限**：`lint-cap` 要求 oxlint 告警数恰好等于 `web/apps/web/package.json` 的上限（现为 44）；清掉告警的提交同时下调，新文件不得新增告警；本段改过的文件以 oxlint 0 告警为目标（M1 交接，T14 收据）。
 - **knip**：新文件在第一个产品读者出现的 Task 里建立；只给测试读的导出不算读者（本阶段更严的规则，逐 Task 的审查执行）；删掉某件最后一个外部读者的 Task 同时删去它或收回导出。
@@ -54,13 +54,13 @@
 
 **回归测试的边界**
 - 回归测试指 M2–M5 与 P1–P7b 的网页单测与 e2e。
-- **拆分（T2）**：没有单测直接执行导航的命令（写 plan 时 grep `usePowerKNavigationCommandsRecord|config/navigation` 只有 `config/commands.ts`、`navigation/root.ts`）；T2 先加特征测试（命令的 id、`keySequence`、`page`、`group` 与 `usePowerKNavigationCommands` 的次序，加几种上下文下的显示），基线后再搬，之后同数；`PK/` 下既有的测试逐文件同名同数。
-- **入口规则（T3）**：`open-entity/project-cycles-menu.test.tsx`、`project-modules-menu.test.tsx` 的既有三例（列出与打开、共用外壳的读、拒绝结束等待）一行不改；T2 的特征测试中归档项目的那一格按契约改（台账写明）。
+- **拆分（T2）**：没有单测直接执行导航的命令（写 plan 时 grep `usePowerKNavigationCommandsRecord|config/navigation` 只有 `config/commands.ts`、`navigation/root.ts`）；T2 先加特征测试（命令的 id、`keySequence`、`page`、`group` 与 `usePowerKNavigationCommands` 的次序，加几种上下文下的显示：工作区页、项目页的 ADMIN、GUEST、开关关闭、**项目已归档**），基线后再搬，之后同数；`PK/` 下既有的测试逐文件同名同数。
+- **入口规则（T3）**：`open-entity/project-cycles-menu.test.tsx`、`project-modules-menu.test.tsx` 的既有三例（`:121` 列出与打开、`:134` 共用外壳的读、`:139` 拒绝结束等待）与 `:147` 的 `it.each` 三行（开关关闭、已归档、不是成员：门为假时什么都不读）一行不改，T3 的“说原因、不转圈”加在这三行旁（re-76 F6）；T2 的特征测试中归档项目的那一格按契约改（台账写明）。
 - **空文案（T4）**：菜单的既有测试若断言英文的空文案，按契约改为翻译后的文案（台账逐条写明）。
 - **搜索（T5）**：`PK/ui/modal/search-menu.test.tsx` 既有五例一行不改。
 - **工作项命令（T6、T7）**：`work-item/commands.test.tsx` 的既有表格行与守卫的例一行不改，新命令加行。
 - **快捷操作（T8）**：`cycles/actions-host.test.tsx`、`modules/actions-host.changes.test.tsx` 的“只发一次”（`:225`、`:243`、`:251`；`:228`、`:246`、`:254`）与两个 `quick-actions.test.tsx` 一行不改；归档页的 `menus.test.tsx`、`roots/archive-page.test.tsx` 不改。
-- **移动端页头（T9、T10）**：`issue-layouts/filters/preferences-controls.test.tsx` 的三个移动端的例只改挂载（项目页的件 → 共用的件），断言不改，基线同数；两页页头的测试（`R/cycles/(detail)/header.test.tsx`、`R/modules/(detail)/header.test.tsx`）既有的例一行不改（迭代页的开关、快捷操作在各宽度都给只加例）。e2e 的 C2（`e2e/stories/issue/filter-archive-profile-interactions.spec.ts:89`）、C12 review（`review-boundaries.spec.ts:158`）一行不改，是项目页移动端页头的回归保护。
+- **移动端页头（T9、T10）**：`issue-layouts/filters/preferences-controls.test.tsx` 的四个移动端的例（`:228` 的 `it.each` 三行与 `:251` 一例，帮手 `mountMobile` 在 `:218`；re-76 F5）断言不改，只在挂载的帮手要变时改它（项目页的件仍是 `R/issues/(list)/mobile-header.tsx`，改写为包装件），基线同数 4；两页页头的测试（`R/cycles/(detail)/header.test.tsx`、`R/modules/(detail)/header.test.tsx`）既有的例一行不改（迭代页的开关、快捷操作在各宽度都给只加例）。e2e 的 C2（`e2e/stories/issue/filter-archive-profile-interactions.spec.ts:89`）、C12 review（`review-boundaries.spec.ts:158`）一行不改，是项目页移动端页头的回归保护。
 - **页头的数目（T11）**：`core/components/issues/header.test.tsx` 既有的例一行不改；项目页 store 的既有测试一行不改。
 - **焦点（T11）**：`existing-issues-list-modal.test.tsx` 既有的例一行不改；P7b 的 G4 (page)（`g4-add-existing-page.spec.ts`）先 `field.focus()` 的一步不改（仍过）。
 - **视图（T12）**：视图的既有测试（若有）一行不改。
@@ -76,7 +76,7 @@
 1. **入口规则（R2）**：一个纯函数、一个原因函数，角色以 slug 与项目取；四个导航命令与搜索的两组调它；打开的菜单门为假时说原因、不转圈；侧栏不改。
 2. **拆分（R3）**：只搬不改，特征测试前后同数；项目一级一件进守卫，工作区一级不进。
 3. **工作项命令（R6）**：选项与下拉框同一规则（`cycleOptions`、`moduleOptions`）；写经 `IssueChange` 的增减、在守卫之内、在轮到时算；类型让整集合赋不进去；`shift+c`、`shift+m` 不与既有的冲突。
-4. **移动端页头（R8、R9）**：共用的件只读写按 store 类型的那一组；偏好读到之前不给；项目页手写的删去、既有测试同数；迭代页的开关与快捷操作各宽度都给。
+4. **移动端页头（R8、R9）**：共用的件只读写按 store 类型的那一组；门在每页的 `observer` 包装件里算、偏好读到之前不给；项目页手写的读写删去、既有测试同数（4）；迭代页的开关与快捷操作各宽度都给。
 5. **遗留（R10、R11）**：页头的数目按范围读在 store 一侧；键与字段删净；替身只清自己；聚焦只在非移动端。
 6. **X1（R12）**：四个文件的地址读不经路由；视图写之后的跟进经 `followInSession`；没有动 M7 的东西。
 7. **e2e（R13、R14）**：三条故事合计 ≤ 8 秒；写法照 P7b 记录 §5 的教训；变异落在被证的一步。
@@ -84,24 +84,27 @@
 
 ## Task 1（T1）：P7b 回填与 e2e 余量的重算
 
-- [ ] 以归档核对 P7b 的事实：`/Users/xiaoruan/project/nerve-project/.superpowers/sdd/M6-P7b-integration-20261115/`（`manifest.json`、`cleanup.log`、`payload/worktree/.superpowers/sdd/P7b-list-vocabulary/progress.md`）经 `archive.py verify`（收据 `t1-p7b-archive-verify`；主控记的是 3964 个文件、920,634,424 字节、5216 个成员、未知 0、清单 sha256 `7a17a397fa181c56c3d46425d07783d2b689ec482e8f6c0f2cb041eca582799c`、head `4fe308ce`）；两次 CI 以公开的 jobs 接口（只读：`https://api.github.com/repos/open-nerve/NerveProject/actions/runs/<id>/jobs`，43702923005 与 43706438924，收据 `t1-ci-jobs`）核对作业号、时刻、attempt 与结论；e2e 的条数与逐条时长以作业日志核对（可得时，收据 `t1-e2e-job-logs`）；合并的双父与树以 `git rev-parse d052213f^1 d052213f^2 d052213f^{tree} 4fe308ce^{tree}`（`t1-merge-tree`）。原件与台账不一致、归档缺失或 main CI 不绿时停下报告。
-- [ ] 回填 P7b 阶段记录 §7（体例同 P7a 记录 §7：最终 HEAD 的分支 CI 与估算、上界的对照，合入与 main CI，归档，清理，接续指向本段）、P7b spec A15 勾选与状态行、P7b plan 的状态行、设计 §14 的 P7b 一行改为已完成、P7c 一行改为进行中（链接本 spec 与 plan）、设计 §3 状态行。
-- [ ] [M6-M8-01](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-01) 记 P7b 的两个数据点（分支 CI 1670 秒是至今最慢的，main CI 1422 秒），按 spec §2.12 重算余量（台账写算式；关系一支的等待约 0.9 秒算作故事时长，余量 14.6–19.3 秒）；P7b 的 `t1-…` 与本段的收据各写在台账。
-- [ ] 关键词 phase 仍为 `M6/P7`，核对 `tools/keywords.json` 没有在本段到期的例外（`node tools/keywords.mjs`，收据 `t1-keywords`）；文档链接（`t1-doc-links`）。
-- [ ] 提交 `docs(M6/P7c)`。
+已完成（`b5e1c615`，台账 Task 1 的各行）。
+
+- [x] 以归档核对 P7b 的事实：`/Users/xiaoruan/project/nerve-project/.superpowers/sdd/M6-P7b-integration-20261115/`（`manifest.json`、`cleanup.log`、`payload/worktree/.superpowers/sdd/P7b-list-vocabulary/progress.md`）经 `archive.py verify`（收据 `t1-p7b-archive-verify`；主控记的是 3964 个文件、920,634,424 字节、5216 个成员、未知 0、清单 sha256 `7a17a397fa181c56c3d46425d07783d2b689ec482e8f6c0f2cb041eca582799c`、head `4fe308ce`）；两次 CI 以公开的 jobs 接口（只读：`https://api.github.com/repos/open-nerve/NerveProject/actions/runs/<id>/jobs`，43702923005 与 43706438924，收据 `t1-ci-jobs`）核对作业号、时刻、attempt 与结论；e2e 的条数与逐条时长以作业日志核对（可得时，收据 `t1-e2e-job-logs`）；合并的双父与树以 `git rev-parse d052213f^1 d052213f^2 d052213f^{tree} 4fe308ce^{tree}`（`t1-merge-tree`）。原件与台账不一致、归档缺失或 main CI 不绿时停下报告。
+- [x] 回填 P7b 阶段记录 §7（体例同 P7a 记录 §7：最终 HEAD 的分支 CI 与估算、上界的对照，合入与 main CI，归档，清理，接续指向本段）、P7b spec A15 勾选与状态行、P7b plan 的状态行、设计 §14 的 P7b 一行改为已完成、P7c 一行改为进行中（链接本 spec 与 plan）、设计 §3 状态行。
+- [x] [M6-M8-01](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-01) 记 P7b 的两个数据点（分支 CI 1670 秒是至今最慢的，main CI 1422 秒），按 spec §2.12 重算余量（台账写算式；关系一支的等待约 0.9 秒算作故事时长，余量 14.6–19.3 秒）；P7b 的 `t1-…` 与本段的收据各写在台账。
+- [x] 关键词 phase 仍为 `M6/P7`，核对 `tools/keywords.json` 没有在本段到期的例外（`node tools/keywords.mjs`，收据 `t1-keywords`）；文档链接（`t1-doc-links`）。
+- [x] 提交 `docs(M6/P7c)`。
 
 ## Task 2（T2）：先拆 `navigation/commands.ts`（R3，spec §2.1）
 
-- [ ] 特征测试：`PK/config/navigation/commands.test.ts(x)`（新）以真实的权限 store 替身（`fake-permissions.ts`）、项目 store 替身给出几种上下文（工作区页、项目页的 ADMIN、GUEST、开关关闭），核对 `usePowerKNavigationCommands` 的命令次序与每个的 `id`、`keySequence`、`page`、`group`，与各上下文下 `isVisible`/`isEnabled` 的答（显式的期望表，不用快照）。收据 `t2-baseline-characterize`。
-- [ ] 按层级拆为工作区一级与项目一级两件（文件名由本 Task 定，例如 `workspace-commands.ts`、`project-commands.ts`，`commands.ts` 只组合两者与键的类型，或删去而由 `root.ts` 组合），只搬不改（`git diff -M` 的移动行，台账记 `t2-moved-lines`），各在约 400 行以内；特征测试与 `PK/` 下的既有测试同数（`t2-after`）。
+- [ ] oxlint 基线（re-76 F15）：本段要改的文件（plan 各 Task 点名的，含 T12 的视图文件）逐文件的告警数（收据 `t2-oxlint-baseline`），有告警的文件在它的 Task 里清掉并同时下调上限。
+- [ ] 特征测试：`PK/config/navigation/commands.test.ts(x)`（新）以真实的权限 store 替身（`fake-permissions.ts` 的 `callerInWeb(workspaceRole, projectRole, guestViewAll, fields)`，`fields` 可给 `archived_at`、`cycle_view`）、`useUser` 的 mock（回 `{ data, permission }`，`config/creation/command.test.tsx:16` 的写法）与项目 store 替身给出几种上下文（工作区页、项目页的 ADMIN、GUEST、开关关闭、项目已归档），核对 `usePowerKNavigationCommands` 的命令次序与每个的 `id`、`keySequence`、`page`、`group`，与各上下文下 `isVisible`/`isEnabled` 的答（显式的期望表，不用快照）。收据 `t2-baseline-characterize`。
+- [ ] 按层级拆为工作区一级与项目一级两件（文件名由本 Task 定，例如 `workspace-commands.ts`、`project-commands.ts`，`commands.ts` 只组合两者与键的类型，或删去而由 `root.ts` 组合），只搬不改（一拆为二 `git diff -M` 显示不出，以 `git diff --color-moved` 或命令块的行多重集比较证明，台账记 `t2-moved-lines`；新的只有胶水：一个 hook 变两个、各自的 `useUser()`/`useProject()`、两级都用的 `baseProjectConditions` 的去处、键的联合类型拆开——台账写明这是唯一不是搬来的代码，re-76 F11），各在约 400 行以内；特征测试与 `PK/` 下的既有测试同数（`t2-after`）。
 - [ ] 项目一级一件加入 `project-address-route`（样例），工作区一级一件不加（台账写理由）；`node tools/keywords.mjs`、`make lint-web`、`make knip`。
 - [ ] 提交 `refactor(M6/P7c)`。
 
 ## Task 3（T3）：规划入口一条规则与菜单的说明（R2，spec §2.2）
 
-- [ ] RED：`core/lib/planning-switch.test.ts` 的入口规则（ADMIN、MEMBER 给；GUEST、没有角色、项目已归档、开关关闭不给；两域）与原因函数（各一码）；T2 的特征测试加“归档的项目里四个导航命令不给”；两个打开的菜单各加“项目已归档、开关关闭时说原因、不转圈”。
-- [ ] GREEN：两个纯函数（`planning-switch.ts`）；四个命令改调入口规则（角色以 `getProjectRoleByWorkspaceSlugAndProjectId(ctx.params.workspaceSlug, ctx.params.projectId)`）；两个菜单门为假时经原因函数与 `errorMessageKey` 说明。
-- [ ] 变异：`t3-mut-archived-entry`（入口规则不看归档）、`t3-mut-guest-entry`（不看角色）、`t3-mut-spinner`（门为假时回到转圈）各让测试失败。
+- [ ] RED：`core/lib/planning-switch.test.ts` 的入口规则（ADMIN、MEMBER、工作区管理员而项目访客（映射为 ADMIN）给；GUEST、没有角色、项目已归档、开关关闭不给；两域）与原因函数（各一码）；T2 的特征测试中归档项目的那一格改为“四个导航命令不给”；两个打开的菜单在 `:147` 的 `it.each` 旁各加：门为假时说出具体的键（`errors.project_archived`、`errors.planning_cycles_disabled` / `planning_modules_disabled`）、不转圈；store 里持有这一域的列表而开关已关时也说原因、不列（re-76 F10）。
+- [ ] GREEN：两个纯函数（`planning-switch.ts`）；四个命令改调入口规则（角色以 `getProjectRoleByWorkspaceSlugAndProjectId(ctx.params.workspaceSlug, ctx.params.projectId)`）；两个菜单门为假时经原因函数与 `problemMessageKey(code)`（`core/lib/error-messages.ts:129`；不是 `errorMessageKey`，re-76 F3）说明，原因优先于持有的列表。
+- [ ] 变异：`t3-mut-archived-entry`（入口规则不看归档）、`t3-mut-guest-entry`（不看角色）、`t3-mut-spinner`（门为假时回到转圈）、`t3-mut-held-list`（门为假而持有列表时照列）各让测试失败。
 - [ ] 提交 `feat(M6/P7c)`。
 
 ## Task 4（T4）：菜单的空文案（R4，spec §2.3）
@@ -113,48 +116,48 @@
 
 ## Task 5（T5）：搜索的迭代、模块结果（R5，spec §2.4）
 
-- [ ] RED：`search-menu.test.tsx` 加：项目范围下两组按名字本地过滤（大小写、子串）、含已结束的迭代、不含已归档的、行有项目标识、选中即关面板并转到；工作区范围没有两组；访客、归档的项目、开关关闭没有该组；store 没有时以同一个键读（`/browse/:workItem`）、读失败不挡工作项与项目的结果。
+- [ ] RED：`search-menu.test.tsx` 加：项目范围下两组按名字本地过滤（大小写、子串）、含已结束的迭代、不含已归档的、行有项目标识、选中即关面板并转到；工作区范围没有两组；访客、归档的项目、开关关闭没有该组；store 没有时以同一个键读（`/browse/:workItem`）、读失败或还没回答时这一组不显示、不挡工作项与项目的结果；只有迭代一组有结果时不给“没有结果”，四组都空时才给（re-76 F9）。
 - [ ] GREEN：搜索的件（`search-menu.tsx`、`search-results.tsx`，或新件）；读用 `useSessionSWR` 的文件加入 swr 限制表；守卫的文件表。
 - [ ] 变异：`t5-mut-workspace-scope`（工作区范围也给）、`t5-mut-no-filter`（不过滤）、`t5-mut-guest`（不看入口规则）各让测试失败。
 - [ ] 提交 `feat(M6/P7c)`。
 
 ## Task 6（T6）：工作项的“改迭代”（R6，spec §2.5）
 
-- [ ] 决定选项的读（`useCycleOptions` 在命令面板的页里是否成立：`useDirectoryRead` 要详情的 store 与范围；不成立时用打开的菜单的读加 `cycleOptions`），台账 Ruling 写明。
+- [ ] 选项的读已由预检定（re-76 F14，spec §2.5）：打开的菜单的门控 `useSessionSWR` 读加纯函数 `cycleOptions`，不用 `useCycleOptions`（它的 `load` 要挂载的 effect，会碰 `exhaustive-deps` 而上限恰为 44）。快捷键声明为 `modifierShortcut: "shift+c"`（带 Shift 的走 `handleModifierShortcut`，re-76 F8）。
 - [ ] RED：`work-item/commands.test.tsx` 的表格加“改迭代”一行（选 Sprint → 恰为 `{cycle_id}`）、选“无迭代” → `{cycle_id: null}`、选所持的 → 不发请求；选项（“无迭代”在前、没有已结束与已归档的、所持的标为当前、所持的已结束的以名字显示为当前）；显示（不可改、开关关闭时不给）；守卫（换项目、换人、轮到时不可改不发，拒绝说原因）；`shift+c` 的快捷键（与既有的不冲突）。
-- [ ] GREEN：页类型、页、菜单（`PK/menus/cycles.tsx` 若要给当前值就加 prop）、命令（`mutation-commands.ts` 加 `change(change: IssueChange)`）、占位与命令的键（en 与 zh-CN）。
+- [ ] GREEN：页类型、页、菜单（`PK/menus/cycles.tsx` 若要给当前值就加 prop）、命令（`mutation-commands.ts` 加 `change(change: IssueChange)`）、占位与命令的键（en 与 zh-CN）；`PK/ui/pages/context-based/work-item/root.tsx` 的局部变量 `projectMemberIds` 改名为 `memberIds`，文件加入 `project-address-route`（re-76 F7）。
 - [ ] 变异：`t6-mut-completed-option`（选项含已结束的）、`t6-mut-held-sends`（选所持的也发）、`t6-mut-no-guard`（轮到时不再看 `canEdit`）各让测试失败。
 - [ ] 提交 `feat(M6/P7c)`。
 
 ## Task 7（T7）：工作项的“改模块”（R6，spec §2.5）
 
-- [ ] RED：表格加“改模块”（选 Alpha → `{module_ids: [所持的…, Alpha]}`，再选 → 移出），请求体在轮到时以所持的算出（所持的在队列里先变了，结果照变了的）；所持的已归档模块列出、勾着、只可移出；列表不关；类型测试：给整集合编译不过；`shift+m`。
+- [ ] RED：表格加“改模块”（选 Alpha → `{module_ids: [所持的…, Alpha]}`，再选 → 移出），请求体在轮到时以所持的算出（所持的在队列里先变了，结果照变了的）；所持的已归档模块列出、勾着、只可移出；列表不关；类型测试：给整集合编译不过；`modifierShortcut: "shift+m"`。
 - [ ] GREEN：页类型、页、菜单（给当前值的勾选）、命令、键。
 - [ ] 变异：`t7-mut-whole-set`（以打开时的集合算）、`t7-mut-archived-hidden`（不列所持的已归档的）、`t7-mut-closes`（选后关上）各让测试失败。
 - [ ] 提交 `feat(M6/P7c)`。
 
 ## Task 8（T8）：A17、A18（R7，spec §2.6）
 
-- [ ] RED：两个快捷操作的“恢复”在途时 `disabled`（按钮菜单与右键菜单各一例，键盘选中不发第二个请求），回答（成功、被拒）之后可用；归档页行菜单的类型测试（给设置函数编译不过）。
-- [ ] GREEN：在途为状态；工厂的恢复项收 `disabled`；归档页的输入类型收窄，两个空的设置函数删去。
-- [ ] 变异：`t8-mut-restore-enabled`（不传 `disabled`）让测试失败；类型的收据 `t8-type-setters`（放回设置函数即 `tsc` 报错）。
+- [ ] RED：两个快捷操作的“恢复”在途时 `disabled`（按钮菜单与右键菜单各一例），回答（成功、被拒）之后可用；同一个 `act` 里调两次恢复的处理（或在重绘之前触发两个菜单）只发一个请求（re-76 F4：既有的“只发一次”的第二次 `choose` 点的是已禁用的按钮，碰不到处理里的守卫）；归档页行菜单的类型测试（给设置函数编译不过）。
+- [ ] GREEN：同步的 ref 照旧守卫发送，另加状态只为禁用的显示；工厂的恢复项收 `disabled`；归档页的输入类型收窄，两个空的设置函数删去。
+- [ ] 变异：`t8-mut-restore-enabled`（不传 `disabled`）、`t8-mut-no-sync-guard`（去掉 ref 的守卫、只看状态）各让测试失败；类型的收据 `t8-type-setters`（放回设置函数即 `tsc` 报错）。
 - [ ] 提交 `fix(M6/P7c)`。
 
 ## Task 9（T9）：共用的移动端页头与项目页（R8，spec §2.7，X2）
 
-- [ ] 基线：`preferences-controls.test.tsx` 的三个移动端的例（`t9-baseline-mobile`）。
-- [ ] RED：共用的件的测试（布局显示当前的、选项是列表、看板、日历；“显示”面板按页的常量；`preferencesShown` 为假时不给；写经 `updateFilters`）；项目页“偏好读到之前不给移动端的控件”。
-- [ ] GREEN：`core/components/issues/` 下的共用件；项目页的 layout 改传它；`R/issues/(list)/mobile-header.tsx` 删去（守卫表里留着）；三例改挂共用的件，断言不改，同数（`t9-after-mobile`）。
+- [ ] 基线：`preferences-controls.test.tsx` 的四个移动端的例（`:228` 的三行与 `:251`，`t9-baseline-mobile`）。
+- [ ] RED：共用的件的测试（布局显示当前的、选项是列表、看板、日历；“显示”面板按页的常量；写经 `updateFilters`）；项目页经 layout 挂载、偏好在挂载之后才答回：答回之前不给移动端的控件、答回之后给（门在 `observer` 包装件里算，re-76 F1）。
+- [ ] GREEN：`core/components/issues/` 下的共用件（只管布局与显示）；`R/issues/(list)/mobile-header.tsx` 改写为薄的 `observer` 包装件（门同桌面页头 `header.tsx:52`），手写的读写（`:32-66`）删去；四例断言不改，同数（`t9-after-mobile`）。
 - [ ] 变异：`t9-mut-no-gate`（不看 `preferencesShown`）让测试失败。
 - [ ] 提交 `feat(M6/P7c)`。
 
 ## Task 10（T10）：迭代页、模块页的移动端页头与顶行（检查点，R8、R9，spec §2.7）
 
-- [ ] RED：两页 layout 的测试（窄屏一行在偏好读到之后出现；布局的修改写本页的偏好；“显示”没有本页的分组）；迭代页页头：侧栏开关与快捷操作不在 `md:flex` 的包里（各宽度都给）。
-- [ ] GREEN：两页 layout 传共用的件（`preferencesShown` 取自 `usePlanningPageHeader`）；迭代页页头的开关与快捷操作移出；`plane-diff.md` 的两行（`:382`、`:401`）改写、迭代页顶行的差异。
-- [ ] 变异：`t10-mut-own-grouping`（共用的件用项目页的常量）让模块页或迭代页的测试失败；`t10-mut-toggle-hidden`（开关放回 `md:flex`）让页头的测试失败。
-- [ ] **检查点**：`sh .superpowers/sdd/P7c-palette-mobile/gates.sh t10-gate`（七项），三种引擎的 m6-pages（`t10-m6-pages`）；主控推送并核分支 CI，记 e2e 作业的时长（校准点）。
+- [ ] RED：两页经 layout 挂载、偏好在挂载之后才答回：窄屏一行答回之后才出现（re-76 F1）；布局的修改写本页的偏好；“显示”没有本页的分组；迭代页页头：侧栏开关与快捷操作不在 `md:flex` 的包里（各宽度都给）。
+- [ ] GREEN：规划页一个按 store 类型的 `observer` 包装件（门取自 `usePlanningPageHeader(storeType, address).preferencesShown`），两页 layout 传它；迭代页页头的开关与快捷操作移出；`plane-diff.md` 的两行（`:382`、`:401`）改写、迭代页顶行的差异。
+- [ ] 变异：`t10-mut-own-grouping`（共用的件用项目页的常量）让模块页或迭代页的测试失败；`t10-mut-toggle-hidden`（开关放回 `md:flex`）让页头的测试失败；`t10-mut-gate-outside-observer`（门在 layout 里算、以 prop 传入）让“答回之后才出现”的测试失败。
 - [ ] 提交 `feat(M6/P7c)`。
+- [ ] **检查点**（在提交之后，re-76 F13）：`sh .superpowers/sdd/P7c-palette-mobile/gates.sh t10-gate`（七项），三种引擎的 m6-pages（`t10-m6-pages`）；主控推送这个提交并核分支 CI，记 e2e 作业的时长（校准点）。
 
 ## Task 11（T11）：A19、A20、A21 与“添加已有”的焦点（R10、R11，spec §2.8）
 
@@ -174,13 +177,13 @@
 ## Task 13（T13）：页面故事 G19 (page) 的工作项一侧（R13，spec §2.12）
 
 - [ ] 写 `e2e/stories/planning/g19-work-item-side-page.spec.ts` 的三条故事（spec §2.12 的表）；构建 `make build build-s3-fixture`，chromium 先跑（`t13-chromium`），再三种引擎（`t13-m6-pages-file`），`--repeat-each=3`（`t13-repeat3`），以 `durations.py` 记各引擎各故事的时长；合计 chromium ≤ 8 秒，超过先压缩，仍超停下报告主控。
-- [ ] 变异（产品，落在被证的一步）：`t13-mut-search-group`（搜索不给迭代组）、`t13-mut-cycle-body`（改迭代发整个工作项的值）、`t13-mut-mobile-gate`（移动端页头不看偏好）、`t13-mut-focus`（不聚焦）各让对应的故事失败；变异之后以干净的源重建。
+- [ ] 变异（产品，落在被证的一步）：`t13-mut-search-group`（搜索不给迭代组）、`t13-mut-cycle-body`（改迭代发整个工作项的值）、`t13-mut-own-grouping`（移动端的“显示”用项目页的常量）或 `t13-mut-toggle-hidden`（迭代页的开关放回 `md:flex`）、`t13-mut-focus`（不聚焦）各让对应的故事失败；“偏好答回之前不给”只由 T9 的单测与 `t9-mut-no-gate` 证（故事里偏好在缩窄之前已答回，re-76 F2）；变异之后以干净的源重建。
 - [ ] 提交 `test(M6/P7c)`。
 
 ## Task 14（T14）：文档与交接回执
 
 - [ ] `docs/v0/plane-diff.md`（搜索、两个命令、迭代页的顶行、移动端页头）与前端改动清单（本段改动的文件与理由）；设计 §8 的“工作项一侧”“命令面板”“交给 M6 的视图文件”收尾的说法、§12 的 P7c 一行、§14 的 P7c 一行（进行中的已提交列表）。
-- [ ] 交接回执“处理结果（M6/P7c）”：M3 §1（视图的跟进）、§3（“添加已有”打开即聚焦搜索框）、§4（四个视图文件的地址）；M4 M6-02（分组时页头的数目）；M1（本段改过的文件 oxlint 0 告警，收据 `t14-oxlint-touched`；死成员的收敛在 P8）；M8 的 M6-M8-01（T10 检查点的数据点）、M6-M8-08（根与写入单元的行数，`t14-line-counts`）。
+- [ ] 交接回执“处理结果（M6/P7c）”：M3 §1（视图的跟进）、§3（“添加已有”打开即聚焦搜索框）、§4（四个视图文件的地址）；M4 M6-02（分组时页头的数目）；M1（本段改过的文件 oxlint 0 告警，收据 `t14-oxlint-touched`，对照 T2 的基线；死成员的收敛在 P8）；M2 §3（本段新的 SWR 读都经 `useSessionSWR`、键带 `loginId`，re-76 F12）；M8 的 M6-M8-01（T10 检查点的数据点）、M6-M8-08（根与写入单元的行数，`t14-line-counts`）。
 - [ ] 文档链接、关键词、`make lint-web`；提交 `docs(M6/P7c)`。
 
 ## Task 15（T15）：门禁、整审与合入（主控）

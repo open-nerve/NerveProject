@@ -1,6 +1,6 @@
 # M6 / P7c：工作项一侧（三）——命令面板、移动端页头与遗留
 
-> 状态：spec 与 plan 已写（2026-11-15），待预检。基线 main `d052213f82aa4fba234f5684722335e1a5cbb5be`（P7b 的 noff，双父 `f42f9d64`、`4fe308ce`，树与 `4fe308ce` 相同；P7b 的最终分支 CI 43702923005 attempt 1 全绿，e2e 作业 132781366495 为 10:26:46Z–10:54:36Z，27 分 50 秒，至今最慢；合入后的 main CI 43706438924 attempt 1 全绿，e2e 作业 132792042944 为 11:10:31Z–11:34:13Z，23 分 42 秒；P7b 的归档在主目录的 `.superpowers/sdd/M6-P7b-integration-20261115/`，含 `cleanup.log`；这些由本段 T1 以归档与公开的 jobs 接口核对后回填进 P7b 的记录）。设计见 [M6 设计](../M6-design.md) §2 的 G19，§8 的“工作项一侧”“命令面板”与“交给 M6 的视图文件”，§12 的 P7c 一行，§13–§15；P7 的拆分见 [P7a spec](P7a-work-item-planning.md) §1、R1，交给本段的事见 P7a spec §5、[P7b spec](P7b-list-vocabulary.md) §5 与 P7b 的[阶段记录](../reviews/P7b-list-vocabulary-review.md) §5；主控在写 spec 之前的裁定 H1–H16 见本阶段台账 `controller-rulings.md`（本段 R1–R16 照录）。网页的长期规则见[总体设计 §7.2、§7.7](../../v0-design.md#77-stores-按会话分代长期有效m2-起)。现状调研见本阶段台账 `research/palette-views.md`（命令面板、快捷操作、四个视图文件、G19 的工作项一侧）与 `research/mobile-carryovers.md`（移动端页头、A19–A21、交接回执、e2e 的余量与放置、估算）（ignored，随阶段归档；本 spec 引用的行号都在 `d052213f` 的树上）。负责人 2026-11-11 授权连续推进至 M6 收官，重要高风险决策仍停下确认；本段不改 `server/`、`api/`（R15），本机 `make test` 若因 [M6-M8-05](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-05) 的签名失败，以分支 CI 的服务端两路为准（负责人 2026-11-11）。
+> 状态：spec 与 plan 已写（2026-11-15），预检通过（修正后，[re-76](../../../reviews/re-76-M6P7c预检.md)：F1–F16 已改入），T1 已回填 P7b（`b5e1c615`）。基线 main `d052213f82aa4fba234f5684722335e1a5cbb5be`（P7b 的 noff，双父 `f42f9d64`、`4fe308ce`，树与 `4fe308ce` 相同；P7b 的最终分支 CI 43702923005 attempt 1 全绿，e2e 作业 132781366495 为 10:26:46Z–10:54:36Z，27 分 50 秒，至今最慢；合入后的 main CI 43706438924 attempt 1 全绿，e2e 作业 132792042944 为 11:10:31Z–11:34:13Z，23 分 42 秒；P7b 的归档在主目录的 `.superpowers/sdd/M6-P7b-integration-20261115/`，含 `cleanup.log`；这些由本段 T1 以归档与公开的 jobs 接口核对后回填进 P7b 的记录）。设计见 [M6 设计](../M6-design.md) §2 的 G19，§8 的“工作项一侧”“命令面板”与“交给 M6 的视图文件”，§12 的 P7c 一行，§13–§15；P7 的拆分见 [P7a spec](P7a-work-item-planning.md) §1、R1，交给本段的事见 P7a spec §5、[P7b spec](P7b-list-vocabulary.md) §5 与 P7b 的[阶段记录](../reviews/P7b-list-vocabulary-review.md) §5；主控在写 spec 之前的裁定 H1–H16 见本阶段台账 `controller-rulings.md`（本段 R1–R16 照录）。网页的长期规则见[总体设计 §7.2、§7.7](../../v0-design.md#77-stores-按会话分代长期有效m2-起)。现状调研见本阶段台账 `research/palette-views.md`（命令面板、快捷操作、四个视图文件、G19 的工作项一侧）与 `research/mobile-carryovers.md`（移动端页头、A19–A21、交接回执、e2e 的余量与放置、估算）（ignored，随阶段归档；本 spec 引用的行号都在 `d052213f` 的树上）。负责人 2026-11-11 授权连续推进至 M6 收官，重要高风险决策仍停下确认；本段不改 `server/`、`api/`（R15），本机 `make test` 若因 [M6-M8-05](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-05) 的签名失败，以分支 CI 的服务端两路为准（负责人 2026-11-11）。
 
 文中的路径：`core/…` 在 `web/apps/web/` 下；`PK/…` 是 `core/components/power-k/…`；`R/…` 是 `web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/…`；`issue-layouts/…` 是 `core/components/issues/issue-layouts/…`；`@nerve/…` 的包在 `web/packages/` 下。
 
@@ -11,7 +11,7 @@ P7a、P7b 交付了工作项自己的迭代与模块和列表的词表；P7 余�
 - **回填与余量**：P7b 的回填（阶段记录 §7、spec A15、设计 §14、[M6-M8-01](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-01) 的数据点），以 P7b 实测的 CI 重算 e2e 的余量（R14，§2.12）；关键词 phase 仍是 `M6/P7`。
 - **命令面板**（A16）：先按层级拆 `navigation/commands.ts`（466 行，§2.1）；规划入口一条规则、菜单不再转圈（§2.2）；菜单的空文案经构造件的键（§2.3）；搜索的迭代、模块结果（§2.4）；工作项的“改迭代”“改模块”两个命令（§2.5）。
 - **快捷操作与归档页的行菜单**（A17、A18，§2.6）。
-- **移动端页头**（A15、X2）：一个共用的页的移动端页头，项目页改用它并删去手写的那份，迭代页、模块页接上；两页的窄屏顶行一条规则（§2.7）。
+- **移动端页头**（A15、X2）：一个共用的页的移动端页头，每页一个薄的 `observer` 包装件算本页的门（项目页的那份改写为包装件、手写的读写删去），迭代页、模块页接上；两页的窄屏顶行一条规则（§2.7）。
 - **遗留**：分组时页头的数目（A19）、没有读者的键（A20）、规划页替身的 `opened`（A21）、“添加已有”打开即聚焦搜索框（§2.8）；设计 §8 的四个视图文件（X1，§2.9）。
 - **验收**：G19 的工作项一侧的页面（§2.12）；交接回执：[M3 交接](../handoffs/M3-closeout.md) §1、§3、§4，[M4 交接 M6-02](../handoffs/M4-closeout.md#M6-02) 的“分组时页头的数目”，[M1 交接](../handoffs/M1-closeout.md) 本段改过的文件的 oxlint（§2.11）。
 
@@ -30,7 +30,7 @@ P7a、P7b 交付了工作项自己的迭代与模块和列表的词表；P7 余�
 
 - **规则**：`core/lib/planning-switch.ts` 加一个纯函数（名字由 T3 定，下称“入口规则”）：给出项目、调用者在其中的角色与域，答“这一域的规划入口给不给”——角色是 ADMIN 或 MEMBER、项目没有归档、域的开关打开（`planningOn`）。另一个纯函数给“这一域的列表读不了的原因”（问题码）：没有角色 → `planning.cycle_not_found` / `planning.module_not_found`，项目已归档 → `project.archived`，开关关闭 → `planning.cycles_disabled` / `planning.modules_disabled`，读得了 → 无；`usePlanningReads` 的 `listed`（`core/hooks/use-planning-reads.ts:37-39`）与它同一组事实，调用者的角色一律以 `getProjectRoleByWorkspaceSlugAndProjectId(slug, project)` 取（不经路由）。
 - **命令**：`open_project_cycle`、`nav_project_cycles`、`open_project_module`、`nav_project_modules` 的显示改由入口规则判断（今天只看角色与开关，`:310-313`、`:325-328`、`:349-352`、`:364-367`），归档的项目里不再给出。侧栏的两张声明表（`core/components/workspace/sidebar/project-navigation.tsx:78-97`、`core/components/navigation/use-navigation-items.ts:45-66`）是同一条规则的声明写法（`access: [ADMIN, MEMBER]` 加 `shouldRender: <开关>`，归档的项目不在侧栏），不改。
-- **打开的菜单**：`project-cycles-menu.tsx`、`project-modules-menu.tsx` 在门为假时不再渲染 `<Spinner />`：以上面的原因函数给出的问题码经 `errorMessageKey` 说明（`PowerKMenuEmptyState`），读的失败照旧以 `refusalMessage(read.error)` 说明，只有门为真而还没回答时才转圈。
+- **打开的菜单**：`project-cycles-menu.tsx`、`project-modules-menu.tsx` 在门为假时不再渲染 `<Spinner />`：以上面的原因函数给出的问题码经 `problemMessageKey(code)`（`core/lib/error-messages.ts:129`，`useJoinRefusalWarning` 的先例 `core/hooks/use-refusal-toast.ts:44`；`errorMessageKey` 收的是错误对象，给码只得 `errors.unknown`，re-76 F3）说明（`PowerKMenuEmptyState`）；门为假时原因优先，store 里即使还持有这一域的列表（例如开关在已读过它的页上被关掉，`:44-48` 今天照列）也不列（re-76 F10）；读的失败照旧以 `refusalMessage(read.error)` 说明，只有门为真而还没回答时才转圈。
 - 访客照旧可按地址读（读门不变），没有入口（Plane 同：侧栏的迭代、模块对访客不给）。
 
 ### 2.3 菜单的空文案（R4）
@@ -40,30 +40,32 @@ P7a、P7b 交付了工作项自己的迭代与模块和列表的词表；P7 余�
 ### 2.4 搜索的迭代、模块结果（R5）
 
 - 只在项目范围（路由的项目，或 `/browse/:workItem` 所在工作项的项目，`PK/projects-app-provider.tsx:51-53`）；工作区范围不给（M7）。
-- 两组“Cycles”“Modules”（标题读 `common.cycles`、`common.modules`），只在入口规则给出时；项来自 store 里该项目未归档的列表（含已结束的迭代：这是导航、不是加入的选项），按名字不分大小写的子串本地过滤（今天项目一组的写法，`PK/ui/modal/search-menu.tsx:42-52`；搜索时 cmdk 的根过滤关着，`PK/ui/modal/wrapper.tsx:140`，新组自己过滤）；store 里没有时以 `["PROJECT_CYCLES", projectId]`、`["PROJECT_MODULES", projectId]` 读（与项目的外壳、打开的菜单同一个键，`/browse/:workItem` 没有项目的外壳），门同 §2.2；读失败时这一组不显示、不挡工作项与项目的结果。
+- 两组“Cycles”“Modules”（标题读 `common.cycles`、`common.modules`），只在入口规则给出时；项来自 store 里该项目未归档的列表（含已结束的迭代：这是导航、不是加入的选项），按名字不分大小写的子串本地过滤（今天项目一组的写法，`PK/ui/modal/search-menu.tsx:42-52`；搜索时 cmdk 的根过滤关着，`PK/ui/modal/wrapper.tsx:140`，新组自己过滤）；store 里没有时以 `["PROJECT_CYCLES", projectId]`、`["PROJECT_MODULES", projectId]` 读（与项目的外壳、打开的菜单同一个键，`/browse/:workItem` 没有项目的外壳），门同 §2.2；读失败或还没回答时这一组不显示、不挡工作项与项目的结果。“没有结果”（`PowerKModalNoSearchResultsCommand`，今天在工作项与项目都空时给出，`search-menu.tsx:85`）改为四组都空时才给（re-76 F9）。
 - 一行是项目的标识与名字（Plane 的行，`plane/apps/web/core/components/power-k/ui/modal/search-results-map.tsx:36-46`），选中即关面板并转到 `/{slug}/projects/{pid}/cycles/{id}`、`/modules/{id}`（同“打开一个迭代”的导航）。
 - 与 Plane 的差异（本地过滤、只有未归档的、只在项目范围）登记在 `plane-diff.md`。
 
 ### 2.5 工作项的“改迭代”“改模块”（R6）
 
 - **位置**：工作项上下文的命令（`PK/ui/pages/context-based/work-item/`），两个新页类型（`PK/core/types.ts`），占位文案（`PK/ui/modal/constants.ts`）。显示：工作项可改（上下文的 `canEdit`：ADMIN/MEMBER、工作项与项目都没有归档，`context.ts:24-30`）且该域开关打开（`planningOn`）。
+- **快捷键**：两个都声明为 `modifierShortcut`（`shift+c`、`shift+m`）——带 Shift 的按键都走 `handleModifierShortcut`（`PK/core/shortcut-handler.ts:71`、`:83-86`），写成 `shortcut` 永远不会触发；两者在 nerve 里都没被占用（既有的是 `c`、`m`、`cmd+shift+c`）。Plane 的两个命令没有快捷键（`plane/apps/web/core/components/power-k/ui/pages/context-based/work-item/commands.ts:296-304`、`:337-343`），这是 nerve 加的，登记差异（re-76 F8）。
 - **改迭代**：`shift+c`，打开一个列表：“无迭代”（读 `cycle.no_cycle`）在前，然后是可加入的（`cycleOptions`：未归档、未结束，nerve 的次序，`core/lib/planning-directory.ts:37-46`）；所持的值标为当前；所持的是已结束、已归档的迭代时它不是选项，以名字（经 `usePlanningNames`，含说明）显示为当前；选中即关，选所持的值不发请求，选“无迭代”发 `{cycle_id: null}`。
 - **改模块**：`shift+m`，列表是可加入的模块（`moduleOptions`）加所持的已归档模块（勾着，只为移出，同下拉框 `core/components/dropdowns/module/base.tsx:137-149`）；每选一项发一个增或减（`{modules: {add: [id]}}` 或 `{modules: {remove: [id]}}`），列表不关、勾选随 nerve 的确认。
-- **读**：页打开时读该项目的选项（T6 定用 `useCycleOptions`/`useModuleOptions`（`core/hooks/use-planning-options.ts`）还是打开的菜单的读加选项的纯函数，台账写明理由）；读的失败说原因并可重试（同下拉框的 `DirectoryReadError`），换项目、换人之后旧的回答不进新页（G19）。
+- **读**：页打开时以打开的菜单的读（`useSessionSWR(listed ? ["PROJECT_CYCLES", projectId] : null, …)`，模块同；门 `usePlanningReads(...).listed`）读该项目未归档的列表，选项由纯函数 `cycleOptions`、`moduleOptions` 得出（re-76 F14：`useCycleOptions` 的 `load` 是命令式、每次渲染新建，命令面板的页要在挂载的 effect 里调它，会碰 `react-hooks/exhaustive-deps` 而告警上限恰为 44；SWR 的读按会话分代，换项目、换人之后旧的回答不进新页，G19）；读的失败说原因（`refusalMessage`），还没回答时转圈。所持的已结束、已归档的值的名字经 `usePlanningNames`。
 - **写**：命令的写在 `mutation-commands.ts` 的守卫（`:28-48`：捕获的范围、`sessionGuard`、写队列轮到时再看 `canEdit`、拒绝经 `useRefusalToast`）之内，经 `IssueChange` 的增减：一个 `change(change: IssueChange)` 即 `update(held => changeBody(change, held.module_ids))`（`core/store/issue/issue-write-fields.ts:58-70`），模块集合在轮到时以所持的算出（P7a R3），菜单不给整集合。命令的类型让整集合赋不进去（`IssueChange` 的 `module_ids?: never`）。
 - **文案**：Plane 的键 `power_k.contextual_actions.work_item.add_to_cycle`、`add_to_modules`，`power_k.page_placeholders.update_work_item_cycle`、`update_work_item_module`（en 与 zh-CN；en 的说法由 T6 照 nerve 的语义定，例如“Change cycle”“Change modules”）。
 - 与 Plane 的差异（有“无迭代”、不给已结束的、模块的已归档值只可移出）登记在 `plane-diff.md`。
 
 ### 2.6 快捷操作的“恢复”与归档页的行菜单（R7）
 
-- **A17**：迭代、模块的快捷操作（`core/components/cycles/quick-actions.tsx:68-102`、`modules/quick-actions.tsx:68-106`）的“恢复”在途时禁用：在途改为组件的状态（今天是 ref，项不重绘），工厂的恢复项收 `disabled`（同归档项，`core/components/common/quick-actions-factory.tsx:48-69`），按钮菜单与右键菜单都照它渲染（`disabled={item.disabled}`），键盘选中禁用的项不发请求；回答之后（成功或被拒）恢复可用。
+- **A17**：迭代、模块的快捷操作（`core/components/cycles/quick-actions.tsx:68-102`、`modules/quick-actions.tsx:68-106`）的“恢复”在途时禁用：同步的 ref（`:68`，守卫 `:77-78`）照旧是发送的守卫（只用状态会让同一拍里的两次触发——按钮菜单与右键菜单、或连按两次 Enter——都看到“不在途”，re-76 F4），另加一个状态只为让项重绘成 `disabled`；工厂的恢复项收 `disabled`（同归档项，`core/components/common/quick-actions-factory.tsx:48-69`），按钮菜单与右键菜单都照它渲染（`disabled={item.disabled}`）；回答之后（成功或被拒）恢复可用。
 - **A18**：归档页的行菜单（`issue-layouts/quick-action-dropdowns/archived-issue.tsx:58-71`）不再给工厂两个空的设置函数（`:64-65`）：它用的项（恢复、新标签页、复制链接、删除，`helper.tsx:272-283`）不打开对话，它的输入类型收窄为不含 `DialogOpening`（`helper.tsx:64-74`）的那一份，给了就编译不过。
 
 ### 2.7 移动端页头（R8、R9）
 
-- **共用的件**：`core/components/issues/` 下一个按 store 类型的页的移动端页头（与 `HeaderFilters`（`filters.tsx:45-86`）同一组读与写：`usePageIssueFilters(storeType)`、`useIssuesActions(storeType).updateFilters`、`ISSUE_STORE_TO_FILTERS_MAP[storeType]`（`@nerve/constants` 的 `issue/filter.ts:236-240`，已去掉本页的分组））：`md:hidden` 的一行，布局（列表、看板、日历，`MobileLayoutSelection` 带 `activeLayout`）与“显示”面板（`DisplayFiltersSelection`）；只在本页的偏好读到之后给出（调用者给 `preferencesShown`，P6b R3），读失败时不给控件（同桌面的页头）。没有筛选的开关与分析（Plane 也没有筛选；nerve 没有分析）。
-- **项目页**（X2）：`R/issues/(list)/layout.tsx` 改传共用的件（`preferencesShown` 同桌面页头的 `core/components/issues/header.tsx:52`），手写的 `R/issues/(list)/mobile-header.tsx`（98 行）删去；`issue-layouts/filters/preferences-controls.test.tsx` 里挂它的三例（`:218`、`:229`、`:251`）改挂共用的件，断言不改（基线同数），另加“偏好读到之前不给控件”。
-- **迭代页、模块页**（A15）：两页的 layout（`R/cycles/(detail)/layout.tsx:22-33`、`R/modules/(detail)/layout.tsx:23-34`）传共用的件，`preferencesShown` 取自 `usePlanningPageHeader`（`issue-layouts/use-planning-page-header.ts:44`）；“显示”面板因按页的常量没有本页的分组；布局的改动写本页的偏好（`/me/cycles|modules/{id}/preferences`）。
+- **共用的件**：`core/components/issues/` 下一个按 store 类型的页的移动端页头（与 `HeaderFilters`（`filters.tsx:45-86`）同一组读与写：`usePageIssueFilters(storeType)`、`useIssuesActions(storeType).updateFilters`、`ISSUE_STORE_TO_FILTERS_MAP[storeType]`（`@nerve/constants` 的 `issue/filter.ts:236-240`，已去掉本页的分组））：`md:hidden` 的一行，布局（列表、看板、日历，`MobileLayoutSelection` 带 `activeLayout`）与“显示”面板（`DisplayFiltersSelection`）；只在本页的偏好读到之后给出，读失败时不给控件（同桌面的页头，P6b R3）。没有筛选的开关与分析（Plane 也没有筛选；nerve 没有分析）。
+- **门在观察者里算**（re-76 F1）：三个 layout 都是普通的函数组件、不是 `observer`（`R/issues/(list)/layout.tsx:14`、`R/cycles/(detail)/layout.tsx:16`、模块同），在那里算出的 `preferencesShown` 读的是 MobX 的状态，偏好答回之后不会翻转。所以每一页一个薄的 `observer` 包装件算本页的门、再渲染共用的件：项目页一个（门同桌面页头的 `core/components/issues/header.tsx:52`），迭代页与模块页共用一个按 store 类型的（门取自 `usePlanningPageHeader(storeType, address).preferencesShown`，`issue-layouts/use-planning-page-header.ts:44`）；layout 只传路由的参数。测试经 layout 挂载、偏好在挂载之后才答回。
+- **项目页**（X2）：`R/issues/(list)/mobile-header.tsx`（98 行）改写为上面的薄包装件，手写的读与写（`:32-66`）删去；`issue-layouts/filters/preferences-controls.test.tsx` 里挂它的四例（`:228` 的 `it.each` 三行与 `:251` 一例，挂载的帮手 `mountMobile` 在 `:218`）断言不改（基线同数 4），另加“偏好读到之前不给控件”。共用的件带 `activeLayout`，项目页的布局按钮从此显示当前布局的图标（今天只有箭头，`:69-72`）——这是门之外唯一的可见变化，C2、C12 不受影响（re-76 F15）。
+- **迭代页、模块页**（A15）：两页的 layout（`R/cycles/(detail)/layout.tsx:22-33`、`R/modules/(detail)/layout.tsx:23-34`）传规划页的包装件；“显示”面板因按页的常量没有本页的分组；布局的改动写本页的偏好（`/me/cycles|modules/{id}/preferences`）。
 - **顶行**（R9）：迭代页的侧栏开关与快捷操作移出 `hidden … md:flex`（`R/cycles/(detail)/header.tsx:143`），与模块页（`R/modules/(detail)/header.tsx:145-164`）一样在各宽度都给；列表的控件与“新建工作项”两页照旧从 `md` 起。窄屏上迭代的侧栏关上之后可再打开。与 Plane（迭代页的开关与快捷操作在 `md` 以下藏起）的差异登记在 `plane-diff.md`（`:382`、`:401` 两行改写）。
 
 ### 2.8 遗留（R10、R11）
@@ -92,7 +94,7 @@ P7a、P7b 交付了工作项自己的迭代与模块和列表的词表；P7 余�
 
 ### 2.11 守卫、文案与告警
 
-- `project-address-route`：§2.1 的项目一级一件、§2.2 改的两个菜单（已在表里的照旧）、§2.4 改的搜索两件、§2.5 的新件、§2.7 的共用件与两个 layout、§2.9 的四个视图文件，都在表里并带样例（命中与不命中各至少一例）；删去的 `R/issues/(list)/mobile-header.tsx` 留在表里阻止复活。用 `useSessionSWR` 的新文件加入 `.oxlintrc.json` 的 swr 限制。
+- `project-address-route`：§2.1 的项目一级一件、§2.2 改的两个菜单（已在表里的照旧）、§2.4 改的搜索两件、§2.5 的新件与改写的 `PK/ui/pages/context-based/work-item/root.tsx`（它的局部变量 `projectMemberIds`（`:39`、`:57`）不读路由，却命中规则的 `\bprojectMemberIds\b`：改名为 `memberIds` 再加入，re-76 F7）、§2.7 的共用件、包装件与两个 layout（`R/issues/(list)/mobile-header.tsx` 已在表里）、§2.9 的四个视图文件与两个视图弹窗，都在表里并带样例（命中与不命中各至少一例）。用 `useSessionSWR` 的新文件加入 `.oxlintrc.json` 的 swr 限制（`search-menu.tsx` 与两个打开的菜单已在）。
 - 新键（en 与 zh-CN 同一提交，没有一个键是另一个的前缀）：七个菜单的空文案（§2.3）、两个命令与两个占位（§2.5）；删去的键：`project_cycles.status.days_left`（§2.8）。读到的已有键：`errors.project_archived`、`errors.planning_*`、`common.cycles`、`common.modules`、`cycle.no_cycle`、`power_k.search_menu.no_results`。
 - 告警上限 44（`web/apps/web/package.json`）：新文件不加告警，清掉告警的提交同时下调；本段改过的文件 oxlint 0 告警（M1 交接的回执，T14 以收据核对）。
 - knip：新文件在第一个产品读者出现的 Task 里建立；只给测试读的导出不算读者（逐 Task 审查执行）。
@@ -104,7 +106,7 @@ P7a、P7b 交付了工作项自己的迭代与模块和列表的词表；P7 余�
 | 故事 | 覆盖 | 本机 chromium（指引） |
 |---|---|---|
 | 命令面板 | 项目里迭代 Sprint（进行中）、Ended（已结束）、模块 Alpha、Beta；在项目页打开命令面板搜 “spr”：“Cycles”一组恰有 Sprint（行有项目标识），选中即到 Sprint 页（以本页独有的内容为锚）；工作项 W 的页上打开命令面板 → “改迭代”：列表以“无迭代”开头、没有 Ended，选 Sprint：只一个 `PATCH`，请求体恰为 `{cycle_id: Sprint}`，页上显示 Sprint；“改模块”：选 Alpha 发 `{module_ids: [Alpha]}`、列表不关，再选 Alpha 发 `{module_ids: []}`（请求体在轮到时算） | ≤ 3.5 秒 |
-| 移动端页头 | 390 × 844：迭代页（打开之后再缩窄，`openListPage` 在宽屏关侧栏）的布局与“显示”在本页偏好的回答之后出现；选“看板”只发本迭代偏好的一个 `PATCH`；“显示”的分组没有 “Cycle”；侧栏开关可见、可再打开侧栏；模块页的“显示”分组没有 “Modules” | ≤ 3 秒 |
+| 移动端页头 | 390 × 844：迭代页（打开之后再缩窄，`openListPage` 在宽屏关侧栏）的窄屏一行给出布局与“显示”；选“看板”只发本迭代偏好的一个 `PATCH`；“显示”的分组没有 “Cycle”；侧栏开关可见、可再打开侧栏；模块页的“显示”分组没有 “Modules”。“偏好答回之前不给”由单测与它的变异证（`t9-mut-no-gate`；故事里偏好在缩窄之前已答回，证不了它，re-76 F2） | ≤ 3 秒 |
 | “添加已有”的焦点 | 模块页的空态点“添加已有”：弹窗打开时焦点就在搜索框（`toBeFocused`），不先点它即可以方向键选到一项 | ≤ 1.5 秒 |
 
 **写法**照 P7b 阶段记录 §5 的教训（打开列表之前先等上方的内容与过渡，M6-M8-13；扣住回答、读请求体的路由在页面载入之后才装，WebKit、Firefox 不装路由而以 `request` 事件记；弹窗自己的读以 `answerTo` 等它；e2e 的变异落在被证的一步；变异之后以干净的源重建；不用 `page.reload()`；关通知只用 `dismissToasts`；e2e 的 lint 上限是 0，按键序列不在循环里 `await`）。窄屏以 `page.setViewportSize({ width: 390, height: 844 })`（C2、C12 的先例），不用 `devices`（会改 UA 与 `isMobile`）；命令面板的快捷键经 `fixtures/power-k.ts`（各引擎的修饰键已在其中）。
@@ -133,7 +135,7 @@ T1 照 P7b spec §2.14 的公式重算并写进台账；T10 的检查点与 T15 
 - **R5 搜索的结果（主控裁定 H5）**：只在项目范围、本地过滤、未归档的、入口规则。理由：设计 §8 `:202` 与 M4 设计 `:40`、`:671`（“在已取得的项目列表里本地过滤”，工作区范围属 M7）；nerve 没有跨项目列迭代的接口。不取 Plane 的服务端搜索（要新接口，R15）。代价：只在项目范围；登记差异。
 - **R6 两个工作项命令（主控裁定 H6）**：给，以 nerve 的选项规则（P7a 的下拉框）与 `IssueChange` 的增减。理由：设计 §8 `:202` 的“切换”与 §12 的问句；写的路径（P7a 的 `changeBody`）与选项的规则都已在，命令只是另一种入口；命令面板是键盘优先的入口，与下拉框同一规则才不会两处说两种话。不取 Plane 的选项（列已结束的、没有“无迭代”：nerve 拒绝加入已结束的迭代）。代价：两个页类型、四个键、两组单测；登记差异。
 - **R7 A17、A18（主控裁定 H7）**：理由：P5a §5（re-65 F3 n1）与 P5b §5；在途的 ref 不让项重绘，禁用要状态；空的设置函数是死参数，类型收窄让它给不进来。代价：两个快捷操作各一个状态。
-- **R8 一个共用的移动端页头（主控裁定 H8）**：理由：项目页的那份手写了 `HeaderFilters` 已按 store 类型做好的读与写（`research/mobile-carryovers.md` §1.2），三页一份；P6b 的共用规则（只差领域的件两域共用）。不取 Plane 的每页一份（三份几乎相同）。代价：项目页的移动端测试改挂共用的件。
+- **R8 一个共用的移动端页头（主控裁定 H8）**：理由：项目页的那份手写了 `HeaderFilters` 已按 store 类型做好的读与写（`research/mobile-carryovers.md` §1.2），三页一份；P6b 的共用规则（只差领域的件两域共用）。不取 Plane 的每页一份（三份几乎相同）。门在每页的 `observer` 包装件里算（layout 不是观察者，re-76 F1），共用的件只管布局与显示。代价：项目页一个、规划页一个包装件。
 - **R9 两页的窄屏顶行一条规则（主控裁定 H9）**：理由：迭代页在 `md` 以下藏起侧栏开关，侧栏默认打开、关上之后再也打不开（`research/mobile-carryovers.md` §1.3）；模块页的开关与快捷操作各宽度都给。不取照 Plane（同一缺陷）。代价：与 Plane 的差异登记。
 - **R10 页头的数目按范围读（主控裁定 H10）**：理由：同 `pageTotal` 的规则（P5b R10 的 G19：换项目时不显示别的项目的数）；Plane 分组时也显示总数。不取直接读 `total`（换项目的瞬间显示上一个项目的数）。代价：两个 store 各一个按页的读。
 - **R11 A20、A21 与焦点（主控裁定 H11）**：理由：删掉没有读者的键与字段（项目的规则）；替身的 `opened` 是 re-71 §4 M1 的遗留；“打开即聚焦搜索”是下拉框的规则（M2/M3 交接），移动端不聚焦免得弹出键盘。代价：无。
@@ -148,18 +150,18 @@ T1 照 P7b spec §2.14 的公式重算并写进台账；T10 的检查点与 T15 
 ## 4. 验收标准
 
 - [ ] A1 拆分：`navigation/commands.ts` 按层级拆为两件，只搬不改，各在约 400 行以内，命令的输出逐项相同（基线同名同数），项目一级一件在 `project-address-route` 里。
-- [ ] A2 入口规则：纯函数与原因函数各有单测（ADMIN、MEMBER 给，GUEST、没有角色、项目已归档、开关关闭不给；原因各一码）；四个导航命令改调它（归档的项目里不给，单测与变异）；两个打开的菜单门为假时说原因、不转圈（单测：归档的项目、开关关闭；变异回到转圈即失败）。
+- [ ] A2 入口规则：纯函数与原因函数各有单测（ADMIN、MEMBER、工作区管理员而项目访客（映射为 ADMIN，`core/store/user/permissions.store.ts:68-74`）给，GUEST、没有角色、项目已归档、开关关闭不给；原因各一码）；四个导航命令改调它（归档的项目里不给，单测与变异）；两个打开的菜单门为假时以 `problemMessageKey` 说出那一码的话（断言具体的键：`errors.project_archived`、`errors.planning_cycles_disabled`）、不转圈、持有的列表也不列（单测；变异回到转圈即失败）。
 - [ ] A3 空文案：构造件只收键，七个菜单各有新键，默认 `power_k.search_menu.no_results`；en 与 zh-CN 同步。
 - [ ] A4 搜索：项目范围的两组（本地过滤、未归档、含已结束的迭代、入口规则、行有项目标识、选中即转到）；工作区范围没有；`/browse/:workItem` 上自己读；读失败不挡别的结果（单测与变异）。
 - [ ] A5 改迭代：选项（“无迭代”在前、不给已结束与已归档的、所持的标为当前、所持的已结束的以名字显示为当前）、选所持的不发请求、请求体 `{cycle_id}`、守卫（换项目、换人、不可改时不发、拒绝说原因）；`shift+c`；单测表与变异。
 - [ ] A6 改模块：选项（可加入的加所持的已归档的、只可移出）、每选一项一个增减、请求体在轮到时以所持的算出、列表不关；`shift+m`；类型让整集合赋不进去（类型测试）；单测与变异。
 - [ ] A7 A17、A18：恢复在途时禁用（按钮菜单与右键菜单、键盘），回答之后恢复；归档页的行菜单不给设置函数（类型测试）。
-- [ ] A8 移动端页头：共用的件（布局带当前的、显示面板按页的常量、偏好读到之前不给、读失败不给）；项目页改用它、手写的删去、既有的移动端测试同数；迭代页、模块页接上（写本页的偏好、没有本页的分组）；迭代页的侧栏开关与快捷操作各宽度都给（两页页头的测试）。
+- [ ] A8 移动端页头：共用的件（布局带当前的、显示面板按页的常量、偏好读到之前不给、读失败不给）与每页的 `observer` 包装件（经 layout 挂载、偏好后答回的测试）；项目页的移动端页头改写为包装件、手写的读写删去、既有的移动端测试同数（4）；迭代页、模块页接上（写本页的偏好、没有本页的分组）；迭代页的侧栏开关与快捷操作各宽度都给（两页页头的测试）。
 - [ ] A9 A19：项目页与归档页的数目分组时显示 nerve 的总数，别的项目的列表在时不显示（store 的单测与页头的测试，变异读 `""` 组即失败）。
 - [ ] A10 A20、A21、焦点：键与字段删去（i18n 守卫过）；替身关上即清空（替身一级的测试）；“添加已有”打开即聚焦搜索框、移动端不聚焦（组件测试与变异）。
 - [ ] A11 X1：四个文件的地址读与守卫（`node tools/keywords.mjs` 过、样例）；视图写之后的跟进经 `followInSession`（单测：会话换了之后不跟进）。
 - [ ] A12 页面故事：`g19-work-item-side-page.spec.ts` 三条故事在三种引擎通过，本机 chromium 合计 ≤ 8 秒（台账以 `durations.py` 记各引擎的时长）。
-- [ ] A13 守卫与文档：`project-address-route`、swr 限制、告警上限、knip、关键词（phase `M6/P7`）、i18n；P7b 的回填（阶段记录 §7、spec A15、设计 §14、M6-M8-01 的数据点）与余量的重算；交接回执（M3 §1/§3/§4、M4 M6-02 的“分组时页头的数目”、M1 的改过的文件 oxlint 0）；差异清单、前端改动清单、设计 §8/§12/§14、M8 交接的相关条目。
+- [ ] A13 守卫与文档：`project-address-route`、swr 限制、告警上限、knip、关键词（phase `M6/P7`）、i18n；P7b 的回填（阶段记录 §7、spec A15、设计 §14、M6-M8-01 的数据点）与余量的重算；交接回执（M3 §1/§3/§4、M4 M6-02 的“分组时页头的数目”、M1 的改过的文件 oxlint 0、M2 §3 的新的 SWR 读按会话分代（键带 `loginId`，经 `useSessionSWR`，re-76 F12））；差异清单、前端改动清单、设计 §8/§12/§14、M8 交接的相关条目（M6-M8-01 的检查点数据点、[M6-M8-08](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-08) 根与写入单元的行数）。
 - [ ] A14 七项本地门禁（`make test` 照负责人 2026-11-11 的规则）、整分支审查的修复闭环、准确的分支 CI 与 noff 后的 main CI 全绿、归档清理。（合入后由 P8 的 T1 勾选）
 
 ## 5. 后续责任
@@ -177,9 +179,12 @@ T1 照 P7b spec §2.14 的公式重算并写进台账；T10 的检查点与 T15 
 | 风险 | 处理 |
 |---|---|
 | 拆分碰坏命令 | T2 只搬不改、基线逐文件同数；命令的 id 与快捷键不变 |
-| 两个新快捷键与既有的冲突 | `shift+c`、`shift+m` 只在工作项上下文；既有的是 `c`、`m`、`cmd+shift+c`（`research/palette-views.md` 核对）；T6、T7 以快捷键的单测核对 |
+| 两个新快捷键与既有的冲突或不触发 | `shift+c`、`shift+m` 只在工作项上下文，声明为 `modifierShortcut`（带 Shift 的走 `handleModifierShortcut`，re-76 F8）；既有的是 `c`、`m`、`cmd+shift+c`；T6、T7 以快捷键的单测核对 |
 | 命令面板的选项读在 `/browse/:workItem` 上没有项目的外壳 | 页打开时自己读（§2.5），与下拉框同一份 store；换项目、换人之后的回答不进新页 |
-| 共用的移动端页头改了项目页的行为 | 项目页的既有移动端测试断言不改（基线同数）；唯一的变化是偏好读到之前不给控件（X2，同桌面） |
+| 共用的移动端页头改了项目页的行为 | 项目页的既有移动端测试断言不改（基线同数 4）；变化只有两处：偏好读到之前不给控件（X2，同桌面），布局按钮显示当前布局的图标（re-76 F15） |
+| 门在非观察者里算，偏好答回之后不翻转 | 每页一个 `observer` 包装件算门（re-76 F1），测试经 layout 挂载、偏好后答回 |
+| “恢复”同一拍里被触发两次 | 同步的 ref 照旧守卫发送，状态只管禁用的显示（re-76 F4），单测在一个 `act` 里触发两次 |
+| T12 改到 M7 的视图文件，碰 M1 的“改过的文件 oxlint 0” | T2 开工前取本段要改的文件的 oxlint 基线（re-76 F15），清掉告警的提交同时下调上限 |
 | 页头的数目在换项目的瞬间显示旧数 | 按范围读（R10），单测覆盖 |
 | 视图页今天读不到数据 | 只改地址读与跟进（R12），内容属 M7；单测以 store 的替身核 |
 | e2e 时长 | 本段 ≤ 8 秒；T1 重算、T10 校准、T15 估算与上界；越过 30 分钟先报告负责人、不推送 |
