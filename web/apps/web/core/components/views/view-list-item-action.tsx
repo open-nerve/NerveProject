@@ -6,7 +6,6 @@
 
 import React, { useState } from "react";
 import { observer } from "mobx-react";
-import { useParams } from "react-router";
 import { GlobeOutline, LockOutline } from "@makeplane/propel/icons";
 // nerve imports
 import { EUserPermissions, EUserPermissionsLevel, IS_FAVORITE_MENU_OPEN } from "@nerve/constants";
@@ -28,15 +27,19 @@ import { ViewQuickActions } from "./quick-actions";
 type Props = {
   parentRef: React.RefObject<HTMLElement | null>;
   view: IProjectView;
+  workspaceSlug: string;
+  projectId: string;
 };
 
+/**
+ * The actions of a view's row, of the project of projectId at its page's address (its row's, M3 handoff §4): whether
+ * the caller may star the view follows his role in that project, never in the project the router store holds.
+ */
 export const ViewListItemAction = observer(function ViewListItemAction(props: Props) {
-  const { parentRef, view } = props;
+  const { parentRef, view, workspaceSlug, projectId } = props;
   // states
   const [createUpdateViewModal, setCreateUpdateViewModal] = useState(false);
   const [deleteViewModal, setDeleteViewModal] = useState(false);
-  // router
-  const { workspaceSlug, projectId } = useParams();
   // store
   const { allowPermissions } = useUserPermissions();
 
@@ -52,22 +55,20 @@ export const ViewListItemAction = observer(function ViewListItemAction(props: Pr
   // derived values
   const isEditingAllowed = allowPermissions(
     [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
-    EUserPermissionsLevel.PROJECT
+    EUserPermissionsLevel.PROJECT,
+    workspaceSlug,
+    projectId
   );
 
   const access = view.access;
 
   // handlers
   const handleAddToFavorites = async () => {
-    if (!workspaceSlug || !projectId) return;
-
     await addViewToFavorites(workspaceSlug, projectId, view.id);
     if (!isFavoriteOpen) toggleFavoriteMenu(true);
   };
 
   const handleRemoveFromFavorites = () => {
-    if (!workspaceSlug || !projectId) return;
-
     removeViewFromFavorites(workspaceSlug, projectId, view.id);
   };
 
@@ -75,15 +76,13 @@ export const ViewListItemAction = observer(function ViewListItemAction(props: Pr
 
   return (
     <>
-      {workspaceSlug && projectId && view && (
-        <CreateUpdateProjectViewModal
-          isOpen={createUpdateViewModal}
-          onClose={() => setCreateUpdateViewModal(false)}
-          workspaceSlug={workspaceSlug}
-          projectId={projectId}
-          data={view}
-        />
-      )}
+      <CreateUpdateProjectViewModal
+        isOpen={createUpdateViewModal}
+        onClose={() => setCreateUpdateViewModal(false)}
+        workspaceSlug={workspaceSlug}
+        projectId={projectId}
+        data={view}
+      />
       <DeleteProjectViewModal data={view} isOpen={deleteViewModal} onClose={() => setDeleteViewModal(false)} />
       <div className="cursor-default text-tertiary">
         <Tooltip label={access === EViewAccess.PUBLIC ? "Public" : "Private"}>
@@ -105,11 +104,9 @@ export const ViewListItemAction = observer(function ViewListItemAction(props: Pr
           selected={view.is_favorite}
         />
       )}
-      {projectId && workspaceSlug && (
-        <div className="hidden md:block">
-          <ViewQuickActions parentRef={parentRef} projectId={projectId} view={view} workspaceSlug={workspaceSlug} />
-        </div>
-      )}
+      <div className="hidden md:block">
+        <ViewQuickActions parentRef={parentRef} projectId={projectId} view={view} workspaceSlug={workspaceSlug} />
+      </div>
     </>
   );
 });

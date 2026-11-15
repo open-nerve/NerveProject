@@ -38,13 +38,18 @@ function ProjectViewsPage({ params }: Route.ComponentProps) {
   // nerve hooks
   const { t } = useTranslation();
   // store
-  const { getProjectById, currentProjectDetails } = useProject();
+  const { getProjectById } = useProject();
   const { filters, updateFilters, clearAllFilters } = useProjectView();
   const { allowPermissions } = useUserPermissions();
-  // derived values
+  // derived values: of the address's project, never the router store's (M3 handoff §4)
   const project = getProjectById(projectId);
   const pageTitle = project?.name ? `${project?.name} - Views` : undefined;
-  const canPerformEmptyStateActions = allowPermissions([EUserProjectRoles.ADMIN], EUserPermissionsLevel.PROJECT);
+  const canPerformEmptyStateActions = allowPermissions(
+    [EUserProjectRoles.ADMIN],
+    EUserPermissionsLevel.PROJECT,
+    workspaceSlug,
+    projectId
+  );
   const resolvedPath = resolvedTheme === "light" ? lightViewsAsset : darkViewsAsset;
 
   const handleRemoveFilter = useCallback(
@@ -67,7 +72,7 @@ function ProjectViewsPage({ params }: Route.ComponentProps) {
   const isFiltersApplied = calculateTotalFilters(filters?.filters ?? {}) !== 0;
 
   // No access to
-  if (currentProjectDetails?.issue_views_view === false)
+  if (project?.issue_views_view === false)
     return (
       <div className="flex h-full w-full items-center justify-center">
         <DetailedEmptyState
@@ -98,7 +103,7 @@ function ProjectViewsPage({ params }: Route.ComponentProps) {
           />
         </Header>
       )}
-      <ProjectViewsList />
+      <ProjectViewsList workspaceSlug={workspaceSlug} projectId={projectId} />
     </>
   );
 }

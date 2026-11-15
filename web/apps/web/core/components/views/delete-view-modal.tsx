@@ -15,6 +15,8 @@ import type { IProjectView } from "@nerve/types";
 import { AlertModalCore } from "@nerve/ui";
 // hooks
 import { useProjectView } from "@/hooks/store/use-project-view";
+// lib
+import { followInSession } from "@/lib/in-session";
 
 type Props = {
   data: IProjectView;
@@ -37,25 +39,29 @@ export const DeleteProjectViewModal = observer(function DeleteProjectViewModal(p
     setIsDeleteLoading(false);
   };
 
+  // What follows the deletion (closing, going to the project's views, saying so) follows it only while the tab is in
+  // the session it was sent in (followInSession, M3 handoff §1): after another tab moved this one to another account,
+  // the page is that account's.
   const handleDeleteView = async () => {
     if (!workspaceSlug || !projectId) return;
-    try {
-      setIsDeleteLoading(true);
-      await deleteView(workspaceSlug, projectId, data.id);
-      handleClose();
-      navigate(`/${workspaceSlug}/projects/${projectId}/views`);
-      setToast({
-        type: TOAST_TYPE.SUCCESS,
-        title: "Success!",
-        message: "View deleted successfully.",
-      });
-    } catch (_error) {
-      setToast({
-        type: TOAST_TYPE.ERROR,
-        title: "Error!",
-        message: "View could not be deleted. Please try again.",
-      });
-    }
+    setIsDeleteLoading(true);
+    await followInSession(() => deleteView(workspaceSlug, projectId, data.id), {
+      done: () => {
+        handleClose();
+        setToast({
+          type: TOAST_TYPE.SUCCESS,
+          title: "Success!",
+          message: "View deleted successfully.",
+        });
+        return navigate(`/${workspaceSlug}/projects/${projectId}/views`);
+      },
+      failed: () =>
+        setToast({
+          type: TOAST_TYPE.ERROR,
+          title: "Error!",
+          message: "View could not be deleted. Please try again.",
+        }),
+    });
     setIsDeleteLoading(false);
   };
 

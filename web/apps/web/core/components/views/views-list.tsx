@@ -5,7 +5,6 @@
  */
 
 import { observer } from "mobx-react";
-import { useParams } from "react-router";
 // nerve imports
 import { EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
@@ -21,8 +20,17 @@ import { useUserPermissions } from "@/hooks/store/user";
 // local imports
 import { ProjectViewListItem } from "./view-list-item";
 
-export const ProjectViewsList = observer(function ProjectViewsList() {
-  const { projectId } = useParams();
+type Props = {
+  workspaceSlug: string;
+  projectId: string;
+};
+
+/**
+ * The views of the project of projectId, at its page's address (its route's params, M3 handoff §4): what the caller may
+ * do there follows his role in that project, never in the project the router store holds.
+ */
+export const ProjectViewsList = observer(function ProjectViewsList(props: Props) {
+  const { workspaceSlug, projectId } = props;
   // nerve hooks
   const { t } = useTranslation();
   // store hooks
@@ -30,11 +38,13 @@ export const ProjectViewsList = observer(function ProjectViewsList() {
   const { getProjectViews, getFilteredProjectViews, loader } = useProjectView();
   const { allowPermissions } = useUserPermissions();
   // derived values
-  const projectViews = projectId ? getProjectViews(projectId) : undefined;
-  const filteredProjectViews = projectId ? getFilteredProjectViews(projectId) : undefined;
+  const projectViews = getProjectViews(projectId);
+  const filteredProjectViews = getFilteredProjectViews(projectId);
   const canPerformEmptyStateActions = allowPermissions(
     [EUserProjectRoles.ADMIN, EUserProjectRoles.MEMBER, EUserProjectRoles.GUEST],
-    EUserPermissionsLevel.PROJECT
+    EUserPermissionsLevel.PROJECT,
+    workspaceSlug,
+    projectId
   );
 
   if (loader || !projectViews || !filteredProjectViews) return <ViewListLoader />;
