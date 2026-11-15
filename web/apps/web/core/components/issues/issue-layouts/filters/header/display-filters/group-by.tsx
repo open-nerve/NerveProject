@@ -6,12 +6,11 @@
 
 import React, { useState } from "react";
 import { observer } from "mobx-react";
+import { ISSUE_GROUP_BY_OPTIONS } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import type { IIssueDisplayFilterOptions, TIssueGroupByOptions } from "@nerve/types";
 // hooks
 import { useRouteListWords } from "@/hooks/use-route-list-words";
-// helpers
-import { useGroupByOptions } from "../../../utils";
 // components
 import { FilterHeader, FilterOption } from "@/components/issues/issue-layouts/filters";
 
@@ -24,7 +23,9 @@ type Props = {
 /**
  * The groupings a list page offers (P7b spec 2.5, R8): those of its options; on a page of a project the cycle and the
  * module only while the route's project has their domain turned on, but the saved one always: nerve still groups by
- * it, and here it is changed. The panel never changes a saved grouping by itself.
+ * it, and here it is changed. That holds for one the page's options lack too: a cycle's or a module's page never offers
+ * its own grouping (P5b R9, P6b R12), yet nerve accepts it through its API, and the list is grouped by it; once another
+ * is picked it is no longer listed. The panel never changes a saved grouping by itself.
  */
 export const FilterGroupBy = observer(function FilterGroupBy(props: Props) {
   const { displayFilters, groupByOptions, handleUpdate } = props;
@@ -36,7 +37,9 @@ export const FilterGroupBy = observer(function FilterGroupBy(props: Props) {
   const selectedGroupBy = displayFilters?.group_by ?? null;
   const selectedSubGroupBy = displayFilters?.sub_group_by ?? null;
 
-  const options = useGroupByOptions(groupByOptions).filter(({ key }) => key === selectedGroupBy || offered(key));
+  const options = ISSUE_GROUP_BY_OPTIONS.filter(
+    ({ key }) => key === selectedGroupBy || (groupByOptions.includes(key) && offered(key))
+  );
 
   return (
     <>

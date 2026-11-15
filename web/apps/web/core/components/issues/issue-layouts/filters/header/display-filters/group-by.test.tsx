@@ -4,7 +4,8 @@
 // cycle's, a module's: the route names the project) the cycle and the module are offered while the route's project has
 // each domain turned on; one saved stays shown and checked while its domain is off, and is changed as any other: nerve
 // still groups by it, and the panel never changes a saved query by itself. On the member view, which has no project of
-// its route, the panels offer what the page's options give. Every other grouping is offered as the options say.
+// its route, the panels offer what the page's options give. Every other grouping is offered as the options say. A
+// cycle's or a module's page's own grouping, never offered there, is listed checked while it is the saved one.
 import { act, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -118,5 +119,59 @@ describe.each(panels)("the $panel panel", ({ render }) => {
     bound.params = { workspaceSlug: "ws", userId: "u-bob" };
     const shown = await offered(render(null, vi.fn()), { cycle_view: false, module_view: false });
     expect(shown.filter((title) => planning.includes(title))).toEqual(planning);
+  });
+});
+
+// A cycle's or a module's page never offers its own grouping (P5b R9, P6b R12), but nerve keeps one saved through its
+// API (`group_by: module_id` on a module's page): the list is grouped by it, so the panel lists it checked, changed as
+// any other, and no longer once another is picked.
+const own: {
+  panel: string;
+  route: Record<string, string>;
+  saved: TIssueGroupByOptions;
+  title: string;
+  render: (saved: TIssueGroupByOptions, update: Update) => ReactNode;
+}[] = [
+  {
+    panel: "grouping of a module's list",
+    route: { moduleId: "M1" },
+    saved: "module",
+    title: "common.modules",
+    render: (saved, update) => (
+      <FilterGroupBy
+        displayFilters={{ layout: "list", group_by: saved } as IIssueDisplayFilterOptions}
+        groupByOptions={ISSUE_DISPLAY_FILTERS_BY_PAGE.module_issues.layoutOptions.list!.display_filters.group_by!}
+        handleUpdate={update}
+      />
+    ),
+  },
+  {
+    panel: "sub-grouping of a cycle's board",
+    route: { cycleId: "C1" },
+    saved: "cycle",
+    title: "common.cycle",
+    render: (saved, update) => (
+      <FilterSubGroupBy
+        displayFilters={{ layout: "kanban", group_by: "priority", sub_group_by: saved } as IIssueDisplayFilterOptions}
+        subGroupByOptions={
+          ISSUE_DISPLAY_FILTERS_BY_PAGE.cycle_issues.layoutOptions.kanban!.display_filters.sub_group_by!
+        }
+        handleUpdate={update}
+      />
+    ),
+  },
+];
+
+describe.each(own)("the $panel", ({ route, saved, title, render }) => {
+  it("lists the page's own grouping, saved through nerve's API, checked, and no longer once another is picked", async () => {
+    bound.params = { workspaceSlug: "ws", projectId: "A", ...route };
+    const update = vi.fn<Update>();
+    const shown = await offered(render(saved, update));
+    expect(shown.filter((name) => name.startsWith(title))).toEqual([`${title} (checked)`]);
+    await act(async () => option("common.labels")?.click());
+    expect(update).toHaveBeenCalledWith("labels");
+    await act(async () => renderer.render(render("labels", update)));
+    expect(option(title)).toBeUndefined();
+    expect(option("common.labels")?.getAttribute("aria-pressed")).toBe("true");
   });
 });

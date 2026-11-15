@@ -22,8 +22,9 @@ type Props = {
 
 /**
  * The sub-groupings a board offers (P7b spec 2.5, R8): those of its options but its grouping; on a page of a project the
- * cycle and the module only while the route's project has their domain turned on, but the saved one always, as the
- * grouping panel (group-by.tsx).
+ * cycle and the module only while the route's project has their domain turned on, but the saved one always, even one
+ * the options lack (a cycle's or a module's own, saved through nerve's API) until another is picked, as the grouping
+ * panel (group-by.tsx).
  */
 export const FilterSubGroupBy = observer(function FilterSubGroupBy(props: Props) {
   // hooks
@@ -47,7 +48,7 @@ export const FilterSubGroupBy = observer(function FilterSubGroupBy(props: Props)
       {previewEnabled && (
         <div>
           {ISSUE_GROUP_BY_OPTIONS.filter(
-            ({ key }) => subGroupByOptions.includes(key) && (key === selectedSubGroupBy || offered(key))
+            ({ key }) => key === selectedSubGroupBy || (subGroupByOptions.includes(key) && offered(key))
           ).map((subGroupBy) => {
             if (selectedGroupBy !== null && subGroupBy.key === selectedGroupBy) return null;
 
