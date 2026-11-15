@@ -5,7 +5,7 @@ to: M8
 created: 2026-11-07
 ---
 
-# M6 交给 M8：CI 的 e2e 作业期限与间歇失败的故事、清理分页器的副本、e2e 数据库的连接余量、server 作业的分路与 lint 工具的在线下载、本机测试容器的端口冲突、e2e 作业在线安装浏览器的系统依赖、编辑器重建图片节点时中止的读取、工作项根 store 的行数、Firefox 再次载入后的字体预加载警告、出现后一帧内按下关闭的通知不再消失、两份相同的 useLocalStorage、项目页第一次读偏好失败时没有重试、上方的内容晚到时打开着的下拉列表不随按钮移动、经接口存下的按截止日期分组网页没有它的列、项目地址的守卫只按变量名认 router store
+# M6 交给 M8：CI 的 e2e 作业期限与间歇失败的故事、清理分页器的副本、e2e 数据库的连接余量、server 作业的分路与 lint 工具的在线下载、本机测试容器的端口冲突、e2e 作业在线安装浏览器的系统依赖、编辑器重建图片节点时中止的读取、工作项根 store 的行数、Firefox 再次载入后的字体预加载警告、出现后一帧内按下关闭的通知不再消失、两份相同的 useLocalStorage、项目页第一次读偏好失败时没有重试、上方的内容晚到时打开着的下拉列表不随按钮移动、经接口存下的按截止日期分组网页没有它的列、项目地址的守卫只按变量名认 router store 与列表的正文经 router store 读项目页的偏好
 
 这是接收方尚待完成的工作。转交只表示责任和验收条件已落实到此处，不表示本页问题已经解决。M6 进行中发现的条目随发现写入；M6 收尾时补齐其余交接。延续 [M5 → M8 交接 M5-M8-06](M5-closeout.md#M5-M8-06) 中仍开放的观察。
 
@@ -66,6 +66,8 @@ M6/P6a 的最终候选（T16，2026-11-14，`1f41c8ca78a3607174ba6bb3095a58a5dce
 M6/P7a 的检查点（T9，2026-11-14，`f1646370f1396b755be0a03c5326f7d7e8a8d4fc`）的本地门禁（`t9-gate` 的 build+e2e）又一次，这次两条同时：470 条通过、2 条失败。W6 (API)（`e2e/stories/workspace/w6-sign-up-by-invitation.spec.ts:13`）在 `e2e/fixtures/db.ts:88` 的 `countIdentity` 查询拿不到连接；W1 (page)（`e2e/stories/workspace/w1-create-workspace.spec.ts:78`）启动的第二个 nerve（关掉创建工作区的那个）自启动起 `GET /api/v0/me` 与 River 都连不上数据库（53300，见该测试的 nerve 日志），页面因此是 “Cannot reach the server for now” 而不是 “Creating workspaces is switched off”。P7a 没有改这两个故事、工作区的创建与注册；同一输入只重跑这两个文件即 14 条全过（`t9-gate-e2e-rerun-w1-w6`，exit 0，含 s3 夹具的前置项目）。同一检查点的分支 CI 43573631430 全绿。
 
 M6/P7b 的 T17（2026-11-14，`93229770c6f02cd9af54ed09c108c839e7fe6a08`）的本地门禁（`t17-gate` 的 build+e2e）又一次：477 条中 474 条通过、3 条失败，其中 W12（`e2e/stories/workspace/w12-reactivate-member.spec.ts:143`，与 P2 那次同处）的 `nerve workspaces reactivate-member` 命令连不上数据库（53300）；同一时刻相邻的 C8 command-url（`e2e/stories/issue/collaboration-interactions.spec.ts:556`，即上文 P5a 那次记作 C12 的 LAN HTTP 一例的同一行）详情页 5 秒内没有出现标题的输入框（`e2e/fixtures/issue-detail-page.ts:22`），它的附件被随后的一次运行覆盖、nerve 日志已不在，签名无从核实，记为“很可能是本条、未核实”（P5a 时同一行查实是本条）；第三条是 F11，见 M6-M8-07。P7b 没有改这些故事、工作区的命令与 e2e 的数据库夹具；只重跑失败的三个文件一次即 42 条全过（`t17-gate-e2e-failed-rerun`，exit 0）。同一阶段的最终候选（2026-11-15，`16c52f418cdd75d76b6a26eb365b7eaf704ff46f`，`f-final-build-e2e`）再一次：476 条通过、1 条失败，W2 (API)（`e2e/stories/workspace/w2-landing.spec.ts:40`）在测试一侧的 pg 连接池上报 `error: sorry, too many clients already`（`e2e/fixtures/db.ts:88`，经 `e2e/fixtures/assert/workspace.ts` 的 `expectWorkspaceDeleted`（`:282` 调 `:249` 的查询），故事第 89 行），失败之后的 `pg_dump` 也连不上；只重跑这一个文件即 7 条全过（`f-final-e2e-w2-rerun`，exit 0）。教训：门禁的 e2e 失败时先把 `e2e/test-results` 拷进台账，再跑下一个配置。
+
+M6/P7c 的 T15 第一次最终门禁（2026-11-16，`5087b09ee6191453ddf67b8c449109894daee459`，`t15-gate` 的 build+e2e）又一次：480 条中 479 条通过、1 条失败，S1（`e2e/stories/smoke/s1-server-ready.spec.ts:12`）的 `nerve migrate status` 连数据库（`e2e_w1`）时收到 `FATAL: sorry, too many clients already`（SQLSTATE 53300），失败之后的 `pg_dump` 也连不上；`e2e/test-results` 先存进台账（`t15-gate-test-results`）。P7c 没有改这个故事、`server/` 与 e2e 的数据库夹具；只重跑这一个文件即 6 条全过（`t15-gate-e2e-s1-rerun`，exit 0）。
 
 **何时验收：** M8 的 CI 工作核算 e2e 的连接预算（工作进程数 × 每进程的连接上限 + 余量），按结果给测试容器设 `max_connections` 或收紧 e2e 服务器的 `database.max_conns`，并在 CI 与本地都留有余量；或负责人决定维持现状，并在此写明理由。
 
@@ -210,7 +212,7 @@ M6/P5b 的 T16（2026-11-12）在 `8b11bc6381623717663ba986da74710668719494` 上
 **何时验收：** M8 定下其一并在浏览器里核对：网页学会这一分组（`GroupByColumnTypes` 与 `getGroupByColumns` 给按日子的列与“无”，分组面板给出它，或至少照 P7b 的 F1 在存下时列出并勾着）；或 nerve 不再为这三种页的列表偏好接受它（`ListSettings` 拒绝它，已存下的偏好随之处理；这是 `server/`、`api/` 的变化）；或保持现状，并在此写明理由（只能经接口存下、选任一分组即恢复）。不论哪一种，表外的分组都不应让版式在渲染时抛错（例如 `getGroupByColumns` 对表外的分组回答 `undefined`，同 Plane），这一点随之定下。
 
 <a id="M6-M8-15"></a>
-## M6-M8-15 项目地址的守卫只按变量名认 router store
+## M6-M8-15 项目地址的守卫只按变量名认 router store；列表的正文经 router store 读项目页的偏好
 
 观察（M6/P7c 的 T5，2026-11-16；T14 交 M8）：关键词规则 `project-address-route`（`tools/keywords.json`，M3/P10 立下，M4、M6 各自加入改过的文件）管的是“项目的页面从路由参数读地址，不从 router store 读”。它的内容式认 router store 的只有一式 `\brootStore\.router\b`（另几式是 `currentProjectDetails`、`projectMemberIds`、`currentWorkspace`、不带 slug 与项目的 `allowPermissions` 与几个由 router 驱动的 getter），按变量名认：把根 store 存在别的名字下的件（例如参数名是 `store`，再读 `store.router.projectId`）读 router store 的地址，规则看不见。
 
@@ -218,4 +220,11 @@ M6/P5b 的 T16（2026-11-12）在 `8b11bc6381623717663ba986da74710668719494` 上
 - 现状（只读的扫描，台账 `t14-route-guard-scan`，HEAD `3b5b0a78`）：规则的文件表现在管 257 个文件，其中没有一处经 `rootStore` 以外的接收者读 `.router`，也没有解构出 `router`（注释与 `react-router` 的导入不算）——漏洞还没有被用到。文件表之外有经别的名字读 router store 的地址的 store：`web/apps/web/core/store/label.store.ts:114`、`state.store.ts:102`（`this.router.projectId`）、`user/index.ts:181`（`this.store.router.workspaceSlug`）、`workspace/index.ts:101`（`this.router.workspaceSlug`），它们由 router 驱动、本不在规则的范围里。
 - 范围：规则由 M3 立下，文件表里有 M3、M4、M6 的件，M7 改视图的页面时还要加入；收紧它是这几个 M 共用的守卫的事，不只是 M6 的，M6 收尾之前没有命中要改，所以交 M8。
 
-**何时验收：** M8 收紧规则的内容式，让它认任何接收者的 router store（例如任何 `.router` 的成员，加解构出的 `router`），样例里加一条命中（如 `store.router.projectId`）与一条不命中（如 `import { useNavigate } from "react-router";`），`node tools/keywords.mjs` 对那时的文件表无命中（有命中的先改读路由参数）；或负责人决定维持现状（以命名的约定与审查防），并在此写明理由。
+同一类的另一种读（M6/P7c 的修复轮，2026-11-16，主控裁定并入本条）：P7c 的整分支审查 [re-77](../../../reviews/re-77-M6P7c整体审核.md) 的 M2 指出，页头的控件经 `usePageIssueFilters`（`web/apps/web/core/hooks/store/use-page-issue-filters.ts:27-28`）→ `projectIssuesFilter.issueFilters`（`core/store/issue/project/filter.store.ts:29-34`，其中 `rootIssueStore.projectId` 即 `rootStore.router.projectId`，`core/store/issue/root.store.ts:66-67`）以 router store 的项目读项目页的偏好，门却按地址读：地址由项目 A 换到 B、B 的偏好已在 store 里时，在 router 落后的那一次提交里显示 A 的布局与显示。这种读守卫管不到：组件只调一个 hook，router store 藏在 store 的 getter 后面，规则的内容式（不论按不按变量名）都看不见它。
+
+- 已修的一处（先例）：P7c 的修复轮 F3（`10ca6ae6`）把页头的 `usePageDisplay`（`core/components/issues/use-page-display.ts`）改为读 `useIssues(storeType).issuesFilter.getIssueFilters(entityId)`，三种 store 同一读法（同 `core/components/issues/issue-layouts/use-planning-page-header.ts:44`），单测以“router store 的项目是 A、地址的是 B、两者的偏好都在”钉住（`core/components/issues/mobile-header-filters.test.tsx`，变异 `f3-mut-router-read` 改回 `usePageIssueFilters` 即失败）。
+- 余下的（P7c 台账 F3 的观察，早于 P7c，是 P5b 的读法）：`usePageIssueFilters` 还有 5 个产品读者，在项目页上都经 router store 的项目读本页的偏好，列表本身在那一次提交里照 A 的显示（分组、排序、显示的属性）——四种布局的根 `core/components/issues/issue-layouts/list/base-list-root.tsx:72`、`kanban/base-kanban-root.tsx:80`、`spreadsheet/base-spreadsheet-root.tsx:49`、`calendar/base-calendar-root.tsx:85`，与日历的块 `calendar/issue-block.tsx:56`。归档页的一支同形（`archivedIssuesFilter.issueFilters`，`core/store/issue/archived/filter.store.ts:66-71`）；迭代页、模块页的两支按路由参数的 `cycleId`、`moduleId` 读，不受影响。
+
+**何时验收：** 两件都做完，或负责人对其中一件决定维持现状并在此写明理由：
+- 守卫：M8 收紧规则的内容式，让它认任何接收者的 router store（例如任何 `.router` 的成员，加解构出的 `router`），样例里加一条命中（如 `store.router.projectId`）与一条不命中（如 `import { useNavigate } from "react-router";`），`node tools/keywords.mjs` 对那时的文件表无命中（有命中的先改读路由参数）；或维持现状（以命名的约定与审查防）。
+- 列表的正文：上面 5 个读者在项目页（与归档页）上按地址的项目读本页的偏好（照 P7c F3 的 `usePageDisplay`：`getIssueFilters(<地址的项目>)`，不经 router store），`usePageIssueFilters` 经 router store 的两支随之去掉（hook 没有读者时删去）；单测钉住“router store 的项目是 A、地址的是 B、两者的偏好都在时，列表照 B 的显示”，并有一个改回经 router store 读即失败的变异。
