@@ -49,7 +49,10 @@ type TProps = {
  * spec 2.6), their count as nerve gives it; the page's layouts, filters and display once nerve has given the page's
  * preferences, which they change: not before its first answer, nor when that first read failed (re-67 M8); a later read
  * that fails leaves them, while the layout root says it failed; and, for those who may create a work item, a new one of
- * the cycle while it takes them.
+ * the cycle while it takes them. The list's controls and the new work item show from a medium width, the sidebar's
+ * toggle and the quick actions at any width, as the module's page's (P7c spec 2.7, R9: the sidebar closed on a small
+ * screen opens again); the small screen's row of the page's layouts and display is the layout's
+ * (PlanningPageMobileHeader).
  */
 export const CycleIssuesHeader = observer(function CycleIssuesHeader(props: TProps) {
   const { workspaceSlug, projectId, cycleId } = props;
@@ -147,27 +150,27 @@ export const CycleIssuesHeader = observer(function CycleIssuesHeader(props: TPro
               {t("issue.add.label")}
             </Button>
           )}
-          <IconButton
-            variant="tertiary"
-            size="lg"
-            icon={RightSidePaneOutline}
-            aria-label={t("aria_labels.toggle_details")}
-            aria-pressed={!isSidebarCollapsed}
-            onClick={toggleSidebar}
-            className={cn({
-              "bg-accent-subtle text-accent-primary": !isSidebarCollapsed,
-            })}
-          />
-          {cycleDetails && (
-            <CycleQuickActions
-              parentRef={parentRef}
-              cycleId={cycleId}
-              projectId={projectId}
-              workspaceSlug={workspaceSlug}
-              customClassName="flex-shrink-0 flex items-center justify-center size-[26px] bg-layer-1/70 rounded-sm"
-            />
-          )}
         </div>
+        <IconButton
+          variant="tertiary"
+          size="lg"
+          icon={RightSidePaneOutline}
+          aria-label={t("aria_labels.toggle_details")}
+          aria-pressed={!isSidebarCollapsed}
+          onClick={toggleSidebar}
+          className={cn({
+            "bg-accent-subtle text-accent-primary": !isSidebarCollapsed,
+          })}
+        />
+        {cycleDetails && (
+          <CycleQuickActions
+            parentRef={parentRef}
+            cycleId={cycleId}
+            projectId={projectId}
+            workspaceSlug={workspaceSlug}
+            customClassName="flex-shrink-0 flex items-center justify-center size-[26px] bg-layer-1/70 rounded-sm"
+          />
+        )}
       </Header.RightItem>
     </Header>
   );

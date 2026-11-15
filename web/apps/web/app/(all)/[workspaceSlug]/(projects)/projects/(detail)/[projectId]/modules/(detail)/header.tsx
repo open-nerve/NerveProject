@@ -48,7 +48,8 @@ type TProps = {
  * filters and display (never by module, R12) once nerve has given the page's preferences, which they change: not before
  * its first answer, nor when that first read failed (R3); and, for the project's admins and members, a new work item of
  * the module while it takes them (R6), whose form keeps the module's project. The list's controls and the new work item
- * show from a medium width, as the cycle's page's (its mobile header comes with P7).
+ * show from a medium width, the sidebar's toggle and the quick actions at any width, as the cycle's page's (P7c spec
+ * 2.7, R9); the small screen's row of the page's layouts and display is the layout's (PlanningPageMobileHeader).
  */
 export const ModuleIssuesHeader = observer(function ModuleIssuesHeader(props: TProps) {
   const { workspaceSlug, projectId, moduleId } = props;
