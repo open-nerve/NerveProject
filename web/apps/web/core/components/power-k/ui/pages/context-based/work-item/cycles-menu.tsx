@@ -27,6 +27,9 @@ type Props = {
   handleSelect: (cycleId: string | null) => void;
 };
 
+/** No cycle's value to cmdk: never a cycle's, whose ids are UUIDs. */
+const NO_CYCLE = "no-cycle";
+
 /** A cycle's icon on the page: its status's, as the cycle dropdown's options show it. */
 const icon = (cycle: Cycle) => <CycleGroupIcon cycleGroup={cycle.status} className="size-3.5 shrink-0" />;
 
@@ -38,7 +41,8 @@ const icon = (cycle: Cycle) => <CycleGroupIcon cycleGroup={cycle.status} classNa
  * picked. The project's cycles are read as the page opens, by the read the open menus make (project-cycles-menu.tsx:
  * its key, its gate; the page has no project's wrapper on /browse); it waits for nerve's first answer, or says why
  * nerve could not give it, and while the gate is closed (the project archived, its cycles turned off, no role) why
- * it lists none (PowerKPlanningListRefusal), the cycles the store may still hold too.
+ * it lists none (PowerKPlanningListRefusal), the cycles the store may still hold too. A row is valued by its cycle's
+ * id, No cycle by its own, and found by its name (powerKFilter): names need not be unique (re-77 M1).
  */
 export const PowerKWorkItemCyclesMenu = observer(function PowerKWorkItemCyclesMenu(props: Props) {
   const { workspaceSlug, workItem, handleSelect } = props;
@@ -74,7 +78,8 @@ export const PowerKWorkItemCyclesMenu = observer(function PowerKWorkItemCyclesMe
               )}
             </>
           }
-          value={current.name}
+          value={current.id}
+          keywords={[current.name]}
           isSelected
           isDisabled
           onSelect={() => handleSelect(current.id)}
@@ -86,7 +91,8 @@ export const PowerKWorkItemCyclesMenu = observer(function PowerKWorkItemCyclesMe
             key={cycle.id}
             iconNode={icon(cycle)}
             label={cycle.name}
-            value={cycle.name}
+            value={cycle.id}
+            keywords={[cycle.name]}
             isSelected={cycle.id === workItem.cycle_id}
             onSelect={() => handleSelect(cycle.id)}
           />
@@ -95,7 +101,8 @@ export const PowerKWorkItemCyclesMenu = observer(function PowerKWorkItemCyclesMe
             key="no-cycle"
             icon={CyclesOutline}
             label={t("cycle.no_cycle")}
-            value={t("cycle.no_cycle")}
+            value={NO_CYCLE}
+            keywords={[t("cycle.no_cycle")]}
             isSelected={workItem.cycle_id === null}
             onSelect={() => handleSelect(null)}
           />

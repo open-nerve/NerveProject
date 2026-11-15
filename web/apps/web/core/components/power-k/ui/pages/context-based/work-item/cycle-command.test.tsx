@@ -5,8 +5,9 @@
 // first, then the cycles the work item may join (cycleOptions: none ended, none archived), the one it is in marked; an
 // ended or an archived cycle it is in shows by its name as its current value, not offered. A pick closes the page: the
 // cycle it is in sends nothing, No cycle sends null. The write is the palette's guarded one (mutation-commands.ts), its
-// body the change's in the work item's turn. The table of the commands' bodies is commands.test.tsx's; the stores and
-// HTTP here are real (issueStoreTab), the page under the palette's host as wrapper.tsx runs one.
+// body the change's in the work item's turn. The page's search finds the cycles by their names, which need not be
+// unique: the keys reach and pick each row (re-77 M1). The table of the commands' bodies is commands.test.tsx's; the
+// stores and HTTP here are real (issueStoreTab), the page under the palette's host as wrapper.tsx runs one.
 import { act, createContext, useContext, useMemo } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { Command } from "cmdk";
@@ -17,6 +18,7 @@ import type { Cycle, IssueDetail, Project } from "@nerve/api-client";
 import { PowerKCommandRegistry } from "@/components/power-k/core/registry";
 import { ShortcutHandler } from "@/components/power-k/core/shortcut-handler";
 import type { TPowerKCommandConfig, TPowerKContext, TPowerKPageType } from "@/components/power-k/core/types";
+import { powerKFilter } from "@/components/power-k/ui/modal/filter";
 import { json, problem } from "@/lib/auth/fake-nerve";
 import { until } from "@/lib/auth/fake-time";
 import { toasts } from "@/lib/fake-toast";
@@ -70,31 +72,33 @@ const select = (data: unknown) => {
   const command = cycleCommand();
   return command.type === "change-page" ? command.onSelect(data, ctx) : undefined;
 };
-const Palette = observer(function Palette({ page }: { page: TPowerKPageType | null }) {
+/** The palette's list under its search, filtered once there is one as the palette's hosts filter it. */
+const Palette = observer(function Palette({ page, search }: { page: TPowerKPageType | null; search: string }) {
   commands = usePowerKWorkItemContextBasedCommands();
   return (
-    <Command shouldFilter={false}>
+    <Command shouldFilter={search !== ""} filter={powerKFilter}>
+      <Command.Input value={search} />
       <Command.List>
         <PowerKWorkItemContextBasedPages activePage={page} handleSelection={(data) => void select(data)} />
       </Command.List>
     </Command>
   );
 });
-type Address = { page: TPowerKPageType | null; workItem: string };
-function View({ page, workItem }: Address) {
+type Address = { page: TPowerKPageType | null; workItem: string; search: string };
+function View({ page, workItem, search }: Address) {
   const value = useMemo(() => ({ workspaceSlug: "ws", workItem }), [workItem]);
   return (
     <SWRConfig value={{ provider: () => cache as never }}>
       <StoreContext.Provider value={tab.app}>
         <route.Provider value={value}>
-          <Palette page={page} />
+          <Palette page={page} search={search} />
         </route.Provider>
       </StoreContext.Provider>
     </SWRConfig>
   );
 }
-const render = (page: TPowerKPageType | null = PAGE, workItem = "A-1") =>
-  act(async () => view.render(<View page={page} workItem={workItem} />));
+const render = (page: TPowerKPageType | null = PAGE, workItem = "A-1", search = "") =>
+  act(async () => view.render(<View page={page} workItem={workItem} search={search} />));
 const settle = () => act(async () => vi.advanceTimersByTimeAsync(100));
 const patches = () => tab.nerve.calls.filter((call) => call.method === "PATCH");
 const lists = (archived = false) =>
@@ -109,6 +113,11 @@ const rows = () =>
   }));
 const press = (init: KeyboardEventInit) =>
   document.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, cancelable: true, ...init }));
+/** A key pressed in the palette's search, as its list hears it. */
+const key = (name: string) =>
+  act(async () => {
+    host.querySelector("input")!.dispatchEvent(new KeyboardEvent("keydown", { key: name, bubbles: true }));
+  });
 const pick = (text: string) => {
   const option = options().find((item) => item.textContent === text)!;
   return act(async () => option.click());
@@ -298,6 +307,25 @@ it.each([
   await pick(text);
   await settle();
   expect(patches()).toEqual([]);
+});
+
+it.each([
+  ["the second of two cycles of one name", ["Sprint", "Sprint"], false, null, "spr", true, "c-2"],
+  ["a cycle named as No cycle, not No cycle", ["cycle.no_cycle", "Next"], false, "c-2", "no_cycle", true, "c-1"],
+  ["the one it may join, named as the ended one it is in", ["Sprint", "Sprint"], true, "c-1", "spr", false, "c-2"],
+] as const)("the search and the keys pick %s, whose id is sent", async (_, names, ended, held, search, down, id) => {
+  // Project A's cycles c-1, c-2 of these names (c-1 ended if marked), ids that are not their names: the search finds
+  // two rows by the name, the keys pick one.
+  const status = (at: number) => (ended && at === 0 ? "completed" : "current");
+  listing(names.map((name, at) => cycleOf(tab.project, name, { id: `c-${at + 1}`, status: status(at) })));
+  await setup(held);
+  await render(PAGE, "A-1", search);
+  await settle();
+  expect(rows().map((row) => row.text)).toEqual([names[0], names[0]]);
+  if (down) await key("ArrowDown");
+  await key("Enter");
+  await act(async () => until(() => patches().length === 1, "the pick"));
+  expect(patches()[0]!.body).toEqual({ cycle_id: id });
 });
 
 it("says why once the project's cycles are turned off while its page is open, waiting no more", async () => {

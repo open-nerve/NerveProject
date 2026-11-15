@@ -19,17 +19,37 @@ type Props = {
   isDisabled?: boolean;
   isSelected?: boolean;
   keySequence?: string;
+  /** The texts the search finds the item by, in place of its value (powerKFilter). */
+  keywords?: string[];
   label: string | React.ReactNode;
   onSelect: () => void;
   shortcut?: string;
+  /** The item's value to cmdk, which keeps the list's selection by it: to its keys, two items of one value are one. */
   value?: string;
 };
 
 export function PowerKModalCommandItem(props: Props) {
-  const { icon: Icon, iconNode, isDisabled, isSelected, keySequence, label, onSelect, shortcut, value } = props;
+  const {
+    icon: Icon,
+    iconNode,
+    isDisabled,
+    isSelected,
+    keySequence,
+    keywords,
+    label,
+    onSelect,
+    shortcut,
+    value,
+  } = props;
 
   return (
-    <Command.Item value={value} onSelect={onSelect} className="focus:outline-none" disabled={isDisabled}>
+    <Command.Item
+      value={value}
+      keywords={keywords}
+      onSelect={onSelect}
+      className="focus:outline-none"
+      disabled={isDisabled}
+    >
       <div
         className={cn("flex items-center gap-2 text-secondary", {
           "opacity-70": isDisabled,
