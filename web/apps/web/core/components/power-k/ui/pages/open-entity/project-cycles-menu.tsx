@@ -7,21 +7,17 @@
 import { observer } from "mobx-react";
 // nerve types
 import type { Cycle } from "@nerve/api-client";
-import { useTranslation } from "@nerve/i18n";
 import { Spinner } from "@nerve/ui";
 // components
 import type { TPowerKContext } from "@/components/power-k/core/types";
 import { PowerKCyclesMenu } from "@/components/power-k/menus/cycles";
 import { PowerKMenuEmptyState } from "@/components/power-k/menus/empty-state";
+import { PowerKPlanningListRefusal } from "@/components/power-k/menus/planning-list-refusal";
 // hooks
 import { useCycles } from "@/hooks/store/use-cycles";
-import { useProject } from "@/hooks/store/use-project";
-import { useUserPermissions } from "@/hooks/store/user";
 import { usePlanningReads } from "@/hooks/use-planning-reads";
 import { useRefusalMessage } from "@/hooks/use-refusal-toast";
 // lib
-import { problemMessageKey } from "@/lib/error-messages";
-import { planningListRefusal } from "@/lib/planning-switch";
 import { useSessionSWR } from "@/lib/use-session-swr";
 
 type Props = {
@@ -34,16 +30,14 @@ type Props = {
  * read the project's pages make (its wrapper's, use-project-fetch.ts, whose key this one shares: the archives' pages
  * have no wrapper), a member's of a project not archived whose cycles are on. It waits for nerve's first answer, or
  * says why nerve could not give it; to any other caller, or while the project is archived or its cycles turned off,
- * it says at once why it lists none (planningListRefusal, P7c spec 2.2), the cycles the store may still hold too.
+ * it says at once why it lists none (PowerKPlanningListRefusal, P7c spec 2.2), the cycles the store may still hold
+ * too.
  */
 export const PowerKOpenProjectCyclesMenu = observer(function PowerKOpenProjectCyclesMenu(props: Props) {
   const { context, handleSelect } = props;
   const { workspaceSlug, projectId } = context.params;
   // store hooks
   const { getProjectCycleIds, getCycleById, fetchCycles } = useCycles();
-  const { getProjectById } = useProject();
-  const { getProjectRoleByWorkspaceSlugAndProjectId } = useUserPermissions();
-  const { t } = useTranslation();
   const refusalMessage = useRefusalMessage();
   // a member's read, of a project not archived whose cycles are on: as the project's wrapper reads them
   const { listed } = usePlanningReads(workspaceSlug, projectId, "cycles");
@@ -51,11 +45,7 @@ export const PowerKOpenProjectCyclesMenu = observer(function PowerKOpenProjectCy
   const cycleIds = getProjectCycleIds(projectId);
 
   // while the gate is closed, why (P7c spec 2.2, R2): before any list the store still holds, and waiting for nothing
-  if (!listed) {
-    const role = workspaceSlug ? getProjectRoleByWorkspaceSlugAndProjectId(workspaceSlug, projectId) : undefined;
-    const refusal = planningListRefusal(getProjectById(projectId), role, "cycles");
-    return <PowerKMenuEmptyState emptyText={t(problemMessageKey(refusal))} />;
-  }
+  if (!listed) return <PowerKPlanningListRefusal workspaceSlug={workspaceSlug} projectId={projectId} domain="cycles" />;
   if (cycleIds === undefined)
     return read.error === undefined ? <Spinner /> : <PowerKMenuEmptyState emptyText={refusalMessage(read.error)} />;
 

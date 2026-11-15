@@ -8,18 +8,15 @@ import { CycleGroupIcon } from "@nerve/propel/icons";
 import { Spinner } from "@nerve/ui";
 // components
 import { PowerKMenuEmptyState } from "@/components/power-k/menus/empty-state";
+import { PowerKPlanningListRefusal } from "@/components/power-k/menus/planning-list-refusal";
 import { PowerKModalCommandItem } from "@/components/power-k/ui/modal/command-item";
 // hooks
 import { useCycles } from "@/hooks/store/use-cycles";
-import { useProject } from "@/hooks/store/use-project";
-import { useUserPermissions } from "@/hooks/store/user";
 import { usePlanningNames } from "@/hooks/use-planning-names";
 import { usePlanningReads } from "@/hooks/use-planning-reads";
 import { useRefusalMessage } from "@/hooks/use-refusal-toast";
 // lib
-import { problemMessageKey } from "@/lib/error-messages";
 import { cycleOptions } from "@/lib/planning-directory";
-import { planningListRefusal } from "@/lib/planning-switch";
 import { useSessionSWR } from "@/lib/use-session-swr";
 
 type Props = {
@@ -41,26 +38,20 @@ const icon = (cycle: Cycle) => <CycleGroupIcon cycleGroup={cycle.status} classNa
  * picked. The project's cycles are read as the page opens, by the read the open menus make (project-cycles-menu.tsx:
  * its key, its gate; the page has no project's wrapper on /browse); it waits for nerve's first answer, or says why
  * nerve could not give it, and while the gate is closed (the project archived, its cycles turned off, no role) why
- * it lists none (planningListRefusal), the cycles the store may still hold too.
+ * it lists none (PowerKPlanningListRefusal), the cycles the store may still hold too.
  */
 export const PowerKWorkItemCyclesMenu = observer(function PowerKWorkItemCyclesMenu(props: Props) {
   const { workspaceSlug, workItem, handleSelect } = props;
   const projectId = workItem.project_id;
   // store hooks
   const { getProjectCycleIds, getCycleById, fetchCycles } = useCycles();
-  const { getProjectById } = useProject();
-  const { getProjectRoleByWorkspaceSlugAndProjectId } = useUserPermissions();
   const { t } = useTranslation();
   const refusalMessage = useRefusalMessage();
   const { listed } = usePlanningReads(workspaceSlug, projectId, "cycles");
   const read = useSessionSWR(listed ? ["PROJECT_CYCLES", projectId] : null, (id) => fetchCycles(id));
   usePlanningNames(workspaceSlug, projectId, "cycles", workItem.cycle_id ? [workItem.cycle_id] : []);
 
-  if (!listed) {
-    const role = workspaceSlug ? getProjectRoleByWorkspaceSlugAndProjectId(workspaceSlug, projectId) : undefined;
-    const refusal = planningListRefusal(getProjectById(projectId), role, "cycles");
-    return <PowerKMenuEmptyState emptyText={t(problemMessageKey(refusal))} />;
-  }
+  if (!listed) return <PowerKPlanningListRefusal workspaceSlug={workspaceSlug} projectId={projectId} domain="cycles" />;
   const options = cycleOptions(getProjectCycleIds(projectId), getCycleById);
   if (options === undefined)
     return read.error === undefined ? <Spinner /> : <PowerKMenuEmptyState emptyText={refusalMessage(read.error)} />;
