@@ -136,6 +136,15 @@
       "no_results": "No results found",
       "clear_search": "Clear search"
     },
+    "menus": {
+      "no_cycles": "No cycles found",
+      "no_modules": "No modules found",
+      "no_labels": "No labels found",
+      "no_views": "No views found",
+      "no_projects": "No projects found",
+      "no_settings": "No settings found",
+      "no_workspaces": "No workspaces found"
+    },
     "footer": {
       "workspace_level": "Workspace level"
     },

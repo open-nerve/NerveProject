@@ -6,9 +6,16 @@
 
 import React from "react";
 import { Command } from "cmdk";
+import { useTranslation } from "@nerve/i18n";
 // local imports
 import { PowerKModalCommandItem } from "../ui/modal/command-item";
 import { PowerKMenuEmptyState } from "./empty-state";
+
+/**
+ * A key of the command palette's texts (power-k.json), never a text itself (P7c spec 2.3); that a menu's key is
+ * defined is tools/i18n-keys.mjs's check, which reads it at the menu.
+ */
+type PowerKTextKey = `power_k.${string}`;
 
 type Props<T> = {
   heading?: string;
@@ -20,7 +27,8 @@ type Props<T> = {
   getLabel: (item: T) => React.ReactNode;
   getValue: (item: T) => string;
   isSelected?: (item: T) => boolean;
-  emptyText?: string;
+  /** The key of what the menu says when it has no items; the empty state's own (no results) when none is given. */
+  emptyTextKey?: PowerKTextKey;
 };
 
 export function PowerKMenuBuilder<T>({
@@ -33,9 +41,11 @@ export function PowerKMenuBuilder<T>({
   getLabel,
   getValue,
   isSelected,
-  emptyText,
+  emptyTextKey,
 }: Props<T>) {
-  if (items.length === 0) return <PowerKMenuEmptyState emptyText={emptyText} />;
+  const { t } = useTranslation();
+
+  if (items.length === 0) return <PowerKMenuEmptyState emptyText={emptyTextKey && t(emptyTextKey)} />;
 
   return (
     <Command.Group heading={heading}>

@@ -26,7 +26,7 @@ export const PowerKModulesMenu = observer(function PowerKModulesMenu({ modules, 
       getValue={(module) => module.name}
       getLabel={(module) => module.name}
       onSelect={onSelect}
-      emptyText="No modules found"
+      emptyTextKey="power_k.menus.no_modules"
     />
   );
 });
