@@ -1,6 +1,6 @@
 # M6/P7c 阶段评审记录
 
-> 实现、整分支审查与修复轮完成（2026-11-16），待最终候选的门禁、分支 CI 与合入（T15，主控）。整分支审查 Ready to merge after fixes（[re-77](../../../reviews/re-77-M6P7c整体审核.md)：一处 Important、两处 Minor，没有须负责人决定的事），主控三处都接受，以修复轮 F 处理（F2 `98d9f985`、F3 `10ca6ae6`、F1 `165b252b`；F4 是本记录所在的提交，只改文档），修复轮另经一次限定复审（re-77 §4）；修复轮另发现的两处同一类的问题交 P8 与 M8（§6）。最终候选的门禁、推送前的估算与推送后的分支 CI 见 §5；合入、main CI、归档与清理见 §7（由 P8 的 T1 回填）。基线 main `d052213f82aa4fba234f5684722335e1a5cbb5be`（P7b 的 noff，双父 `f42f9d64`、`4fe308ce`，树与 `4fe308ce` 相同）。
+> 实现、整分支审查与修复轮完成（2026-11-16），待最终候选的门禁、分支 CI 与合入（T15，主控）。整分支审查 Ready to merge after fixes（[re-77](../../../reviews/re-77-M6P7c整体审核.md)：一处 Important、两处 Minor，没有须负责人决定的事），主控三处都接受，以修复轮 F 处理（F2 `98d9f985`、F3 `10ca6ae6`、F1 `165b252b`；F4 `396bd5f7` 写本记录，只改文档），修复轮另经一次限定复审（re-77 §4：Ready to merge，一处 Minor m1 以 F5 `6b79fee4` 修）；修复轮另发现的两处同一类的问题交 P8 与 M8（§6）。最终候选的门禁、推送前的估算与推送后的分支 CI 见 §5；合入、main CI、归档与清理见 §7（由 P8 的 T1 回填）。基线 main `d052213f82aa4fba234f5684722335e1a5cbb5be`（P7b 的 noff，双父 `f42f9d64`、`4fe308ce`，树与 `4fe308ce` 相同）。
 
 ## 1. 评审方式与范围
 
@@ -79,9 +79,10 @@ A1–A13 满足（[spec §4](../specs/P7c-palette-mobile.md#4-验收标准)已�
 | F2 | `98d9f985` | 改迭代页的行以 id 作 value、名字作 keywords，两个宿主共用 `powerKFilter`（re-77 M1）；power-k 与 top-nav 17 个文件 198 例同名同状态；+1/9；变异 1 个、探针 4 个 |
 | F3 | `10ca6ae6` | `usePageDisplay` 按地址读本页的偏好（re-77 M2）；页头与窄屏一行的 17 个文件 153 例同名同状态；+0/1；变异 1 个 |
 | F1 | `165b252b` | 移动端一条的模块页以只在 Alpha 的 Review 为锚（re-77 I1），只改故事（195 → 197 行） |
-| F4 记录 | 本记录所在提交 | re-77 的记录、本记录、spec §5 的修复轮与交出的两项、spec 与 plan 的状态、设计抬头与 §14、前端改动清单（总览与两行）、M8 交接的 M6-M8-03 与 M6-M8-15 |
+| F4 记录 | `396bd5f7` | re-77 的记录、本记录、spec §5 的修复轮与交出的两项、spec 与 plan 的状态、设计抬头与 §14、前端改动清单（总览与两行）、M8 交接的 M6-M8-03 与 M6-M8-15 |
+| F5 | `6b79fee4` | `PowerKModalCommandItem` 以 keywords 作 cmdk 的项的 key，改名之后搜索认新名字（限定复审 m1）；power-k 与 top-nav 18 个文件 207 例同名同状态；+1/1；变异 1 个 |
 
-网页包从基线的 466 个文件 5309 例（P7b 的终点）到 479 个文件 5452 例（F3 之后的全量收据 `f3-web-count`）；常量包 2 个文件 22 例不变（T11 删了字段，例数不变），其余包同基线；e2e 由 477 条到 480 条（G19 (page) 的工作项一侧三条）。
+网页包从基线的 466 个文件 5309 例（P7b 的终点）到 480 个文件 5453 例（F5 之后的全量收据 `f5-web-count`）；常量包 2 个文件 22 例不变（T11 删了字段，例数不变），其余包同基线；e2e 由 477 条到 480 条（G19 (page) 的工作项一侧三条）。
 
 ## 5. 门禁与 CI
 
@@ -93,7 +94,7 @@ A1–A13 满足（[spec §4](../specs/P7c-palette-mobile.md#4-验收标准)已�
   - F1：本文件 chromium 单独 3.8 秒（2.0、1.3、0.6），三种引擎 9 例（chromium 4.3、firefox 6.9、webkit 6.0 秒），`--repeat-each=3` 9 例无 flaky、没有重试（各故事取最大 2.2 + 1.4 + 1.0 = 4.6 秒）。
   - 预算 8 秒（R14），没有间歇失败、没有重跑。
 - **T15 的第一次门禁**（`t15-gate`，`5087b09e`，2026-11-15T19:02:34Z 起，串行，与整分支审查 re-77 并行）：`make gen-check`、`make lint-go`、`make test`（本机 897 秒通过，没有 M6-M8-05 的签名）、`make lint-web`、`make knip`、`make test-web` 通过；`make build && make e2e` 480 条中 479 过、1 条失败（3.7 分钟）：S1 server-ready（`e2e/stories/smoke/s1-server-ready.spec.ts:12`）的 `nerve migrate status` 连数据库时与之后的 `pg_dump` 都收到 “FATAL: sorry, too many clients already (SQLSTATE 53300)”，即 [M6-M8-03](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-03) 的签名，`e2e/test-results` 存为 `t15-gate-test-results`；照该条只重跑这一个文件一次 6 条通过（`t15-gate-e2e-s1-rerun`，16.9 秒）。三种引擎的页面配置 `t15-gate-m6-pages` 135 例通过（126 加本段的 9 例，2.2 分钟，flaky 0）。全部收据的 `inputs_unchanged` 为真。修复轮在这次门禁之后开始。
-- **修复轮各自的检查**：F2、F3 各跑焦点测试、改过的文件 oxlint（0 告警，上限 44 不变）、关键词、`make lint-web`、`make knip`、`make test-web`；F1 跑 e2e 的检查、上面的三组 e2e 与 `make lint-web`、`make knip`、关键词（台账的 `Fix F<N>:` 行）。
+- **修复轮各自的检查**：F2、F3、F5 各跑焦点测试、改过的文件 oxlint（0 告警，上限 44 不变）、关键词、`make lint-web`、`make knip`、`make test-web`；F1 跑 e2e 的检查、上面的三组 e2e 与 `make lint-web`、`make knip`、关键词（台账的 `Fix F<N>:` 行）。
 - **最终候选**：（待主控填写：最终候选的七项门禁、三种引擎的页面配置，推送与分支 CI。）
 - **CI 的 e2e 时长估算**（推送前，R14、spec §2.12；台账“T15 估算（主控）”，在 T13 之后算，修复轮的 F1 只换锚，X 仍是 4.6 秒）：
   - **X**：本段新文件本机 chromium 4.6 秒（各故事取较慢的一次）。
@@ -105,7 +106,7 @@ A1–A13 满足（[spec §4](../specs/P7c-palette-mobile.md#4-验收标准)已�
   - 估算与上界都低于 30 分钟的报告线，可以推送；实测超过 30 分钟仍先停下报告负责人。实际的 e2e 作业时长见 §7。
 - **测试与 e2e 的教训**（交 P8）：
   - **应用内导航之后以目标页独有的内容为锚**（F1）：`moveWithinApp` 什么都不等，前一页还挂着时它的行可能仍在 DOM 里（看板留着行的快捷操作按钮 “Options: <名字>”）；两页共用一个世界时，给目标页一个只在它那里的工作项作锚（同 G15）。
-  - **cmdk 以 value 认选中的行**（F2）：行的 value 要唯一（取 id），名字作 keywords；面板的 `powerKFilter` 在行给了 keywords 时只比它们。
+  - **cmdk 以 value 认选中的行**（F2）：行的 value 要唯一（取 id），名字作 keywords；面板的 `powerKFilter` 在行给了 keywords 时只比它们。cmdk 又只在 value 变了时重新登记 keywords（F5）：`PowerKModalCommandItem` 以 keywords 作项的 key，改名之后项重新挂上。
   - **命令面板之后页面是 `aria-hidden`**（T13）：`ModalCore` 把面板背后的页设为 `aria-hidden`，在面板开着时查页上的确认要 `includeHidden`；“改模块”的第二次选先等第一次的确认，免得与它的回答赛跑。
   - **组合框打开时 Escape 先关它的列表**（T13）：Headless UI 的标准行为；关弹窗点 Cancel。
   - **门禁的 e2e 失败时先留下 `test-results`**（T10、T15 照做）：签名因此都核实了（M6-M8-07、M6-M8-03）。
@@ -115,13 +116,13 @@ A1–A13 满足（[spec §4](../specs/P7c-palette-mobile.md#4-验收标准)已�
 
 fresh 只读审查（[re-77](../../../reviews/re-77-M6P7c整体审核.md)，`fable`，范围 `d052213f..5087b09e`，19 个提交、103 个文件，与 `5087b09e` 的第一次最终门禁并行）逐项核对了：入口规则（`planningListRefusal` 恰在 `listed` 为真时为无，同一次序两处写、测试钉住）；搜索（项目范围、入口规则、同一份 SWR 键、“没有结果”的规则、`/browse` 上面板打开即读、搜索词不去空白）；工作项的两个命令（选项、所持的已结束迭代禁用、已归档的模块只可移出、写在守卫之内轮到时算、`null` 经宿主交给命令、增或减以确认过的集合判断，开关在轮到时不再核对、由 nerve 拒绝）；A17、A18（类型拆分不改别的菜单）；移动端页头（`observer` 包装件、路由的参数、迭代页页头的 DOM 次序，T10 的两行 mock）；A19–A21、打开即聚焦、X1；守卫与回归边界；e2e 的故事 1、3 与文档。
 
-结论 Ready to merge after fixes：没有 Critical；一处 Important（I1 移动端的故事在应用内导航之后的锚不唯一，Plan 两页都有，Sprint 的看板留着 “Options: Plan”），两处 Minor（M1 改迭代以名字作 cmdk 的 value，同名的迭代或名为 No cycle 的迭代键盘选错；M2 `usePageDisplay` 对项目页经 router store 读偏好、门按地址，与基线相同）与五条观察，没有须负责人决定的事。主控三处都接受，以修复轮 F 处理：F1（`165b252b`）给模块页一个只在 Alpha 的工作项 Review 作锚；F2（`98d9f985`）改迭代页的行以 id 作 value、名字作 keywords，两个宿主共用 `powerKFilter`；F3（`10ca6ae6`）`usePageDisplay` 按地址读；F4 写记录（本记录所在的提交）。
+结论 Ready to merge after fixes：没有 Critical；一处 Important（I1 移动端的故事在应用内导航之后的锚不唯一，Plan 两页都有，Sprint 的看板留着 “Options: Plan”），两处 Minor（M1 改迭代以名字作 cmdk 的 value，同名的迭代或名为 No cycle 的迭代键盘选错；M2 `usePageDisplay` 对项目页经 router store 读偏好、门按地址，与基线相同）与五条观察，没有须负责人决定的事。主控三处都接受，以修复轮 F 处理：F1（`165b252b`）给模块页一个只在 Alpha 的工作项 Review 作锚；F2（`98d9f985`）改迭代页的行以 id 作 value、名字作 keywords，两个宿主共用 `powerKFilter`；F3（`10ca6ae6`）`usePageDisplay` 按地址读；F4 写记录（`396bd5f7`）。
 
 修复轮另发现两处同一类的问题，主控裁定交出（re-77 §3）：
 - **(a)** “打开迭代”（`PK/menus/cycles.tsx`）、视图、工作区三个菜单也以名字作 cmdk 的 value（名字不唯一，只是导航）——交 P8，照 F2 的 keywords 写法、给 `PowerKMenuBuilder` 加 `getKeywords`（[spec](../specs/P7c-palette-mobile.md) §5）。
 - **(b)** `usePageIssueFilters` 余下的 5 个读者（四种布局的根与日历的块）在项目页上经 router store 读本页的偏好（早于本段）——并入 M8 的 [M6-M8-15](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-15)，以 F3 的 `usePageDisplay` 为先例。
 
-修复轮的限定复审：（待主控填写：结论与其后的处理，见 re-77 §4。）
+修复轮的限定复审（[re-77](../../../reviews/re-77-M6P7c整体审核.md) §4，`fable`，只读，范围 `5087b09e..165b252b`）：结论 Ready to merge，没有 Critical、没有 Important。它核对了：F2 解决 M1（各行的 value 唯一；没给 keywords 的行行为不变——cmdk 交来 `[]`，`powerKFilter` 退回比 value；给 keywords 的只有 `command-item.tsx` 与 `cycles-menu.tsx`；`powerKFilter` 的签名合 cmdk 的 `CommandFilter`；id 永远搜不到）；F3 解决 M2（三种 store 按 `entityId` 读，调用者传地址的 id，`usePageIssueFilters` 余下五个产品读者）；F1 解决 I1；回归边界与负责人的规则守住；它自己跑的焦点 vitest 6 个文件 63 例通过。一处 Minor m1，F2 带来的回退：cmdk 1.1.1 只在项的 value 变了时重新登记 keywords，改迭代页开着时迭代被改名，标签变了、搜索仍只认旧名字（选中仍发对的 id）。主控定为修复 F5（`6b79fee4`）：`PowerKModalCommandItem` 以 keywords 作 `Command.Item` 的 key，keywords 变了项重新挂上（修在把 keywords 交给 cmdk 的唯一一处，凡给 keywords 的行都管住，不在改迭代页各写组合的 key，实现者的裁定）；RED `f5-red`、GREEN `f5-green`，变异 `f5-mut-id-key`（去掉这个 key）失败、`restored=yes`，`f5-after-pk` 19 个文件 208 例，oxlint 0 告警（上限 44），关键词、`make lint-web`、`make knip`、`make test-web` 通过（台账 `Fix F5:` 行）。
 
 ## 7. 集成、归档与接续
 

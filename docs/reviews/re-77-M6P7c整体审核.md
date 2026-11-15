@@ -1,6 +1,6 @@
 # M6 / P7c 整体审核
 
-> 2026-11-16：Ready to merge after fixes（一处 Important、两处 Minor，没有须负责人决定的事）；主控三处都接受，以修复轮 F 处理（F1–F3 三个提交，F4 写记录），修复轮另经一次限定复审（§4）。
+> 2026-11-16：Ready to merge after fixes（一处 Important、两处 Minor，没有须负责人决定的事）；主控三处都接受，以修复轮 F 处理（F1–F3 三个提交，F4 写记录），修复轮另经一次限定复审（§4：Ready to merge，一处 Minor m1 以 F5 `6b79fee4` 修）。
 > - **目标**：分支 `codex/m6-p7c` 相对 main `d052213f82aa4fba234f5684722335e1a5cbb5be`（P7b 的 noff）的全部修改（`d052213f..5087b09e`，`bee18397` 至 `5087b09e` 的 19 个提交，含 spec 与 plan、按预检的修正、F8 的事实更正与 T1–T14，103 个文件）；修复轮 F（`98d9f985`、`10ca6ae6`、`165b252b` 三个提交，即 F2、F3、F1；F4 只改文档）另经一次限定复审（§4）。
 > - **依据**：[P7c spec](../v0/M6-cycles-modules/specs/P7c-palette-mobile.md)、[P7c plan](../v0/M6-cycles-modules/plans/P7c-palette-mobile.md)、[预检 re-76](re-76-M6P7c预检.md)、[M6 设计](../v0/M6-cycles-modules/M6-design.md)、[总体设计 §7.2、§7.7](../v0/v0-design.md#77-stores-按会话分代长期有效m2-起)、[硬规则](../v0/claude_to_gpt/03-rules-and-pitfalls.md)。
 > - **阶段记录**：[P7c 阶段记录](../v0/M6-cycles-modules/reviews/P7c-palette-mobile-review.md)。
@@ -42,7 +42,7 @@
 | 观察 | `mutation-commands.ts` 可以免费加入 `project-address-route` | 不需动作（T6、T7 的裁定照旧） |
 | 观察 | 故事 1 证不了 `/browse/:workItem` 上面板自己读列表 | 不需动作（单测证，`search-menu.test.tsx` 的 `readsTheListsTheStoreLacksByThePagesKeys`） |
 
-F4 写本记录与 [P7c 阶段记录](../v0/M6-cycles-modules/reviews/P7c-palette-mobile-review.md)，并在 spec §5 加修复轮的清单与交出的两项、改 spec 与 plan 的状态、设计 §14 的 P7c 一行、前端改动清单的两行与 M8 交接的 M6-M8-03、M6-M8-15（`docs` 提交，即本记录所在的提交）。
+F4 写本记录与 [P7c 阶段记录](../v0/M6-cycles-modules/reviews/P7c-palette-mobile-review.md)，并在 spec §5 加修复轮的清单与交出的两项、改 spec 与 plan 的状态、设计 §14 的 P7c 一行、前端改动清单的两行与 M8 交接的 M6-M8-03、M6-M8-15（`396bd5f7`，只改文档）。
 
 修复轮中实现者的局部裁定（台账修复轮 F 的 Ruling，交限定复审核对）：
 - F2 的 value 取迭代的 id，不取简报举例的 `${name} ${id}`：宿主的过滤是 value 的子串匹配，id 进了 value，只由十六进制的字母与数字组成的搜索词（“a”“1”“de”）就会以 id 找到名字里没有它的迭代；照 cmdk 自己的语义（keywords 加在 value 之外）id 也仍被搜索，所以 `powerKFilter` 在行给了 keywords 时只比 keywords。代价：动了两个宿主（Plane 的同一段过滤合为一个函数）与 `PowerKModalCommandItem` 的一个 prop；宿主的接线（各一行 `filter={powerKFilter}`）没有在页上搜索的单测（`wrapper.test` 的页头是替身、`top-nav-power-k.test` 把页 mock 掉），由类型与审查管；e2e 的“改迭代”以方向键选、不搜索。
@@ -52,13 +52,24 @@ F4 写本记录与 [P7c 阶段记录](../v0/M6-cycles-modules/reviews/P7c-palett
 
 ## 4. 修复轮 F 的限定复审
 
-修复轮 F（`5087b09e..165b252b`，3 个提交：F2、F3、F1）另经一次 fresh 限定复审（`fable`，只读）。
+修复轮 F（`5087b09e..165b252b`，3 个提交：F2、F3、F1）另经一次 fresh 限定复审（`fable`，只读），原始报告没有另存文件，以下照主控的转述。
 
-（待主控填写：限定复审的结论、核对过的性质与其后的处理。）
+结论 **Ready to merge**：没有 Critical、没有 Important；一处 Minor（m1）。
+
+核对过的性质：
+- **F2 解决了 M1**：改迭代页各行的 value 唯一（迭代的 id，“无迭代”是 `no-cycle`）；没给 keywords 的行行为不变（cmdk 交来的是 `[]`，`powerKFilter` 退回比 value）；给 keywords 的只有 `PK/ui/modal/command-item.tsx` 与 `work-item/cycles-menu.tsx`；`powerKFilter` 的签名合 cmdk 的 `CommandFilter`（`(value, search, keywords?) => number`）；id 永远搜不到。
+- **F3 解决了 M2**：三种 store 一律按 `entityId` 读，调用者传的都是地址的 id；`usePageIssueFilters` 余下五个产品读者（§3 的修复轮发现 (b)）。
+- **F1 解决了 I1**：模块页以只在 Alpha 的 Review 为锚，Sprint 的页从不列它。
+- **回归边界**守住了；负责人的规则守住了。
+- 它自己跑的焦点 vitest 6 个文件 63 例通过。
+
+| 编号 | 问题 | 处理 |
+|---|---|---|
+| m1（Minor） | F2 带来的回退：cmdk 1.1.1 只在项的 value 变了时重新登记它的 keywords（`dist/index.mjs` 项的 `value` 回调：value 与所存的不同时才存 `{value, keywords}`）。value 是迭代的 id、React 的 key 也是 id，改迭代页开着时迭代被改名（store 持着旧名字，页自己的 `fetchCycles` 读带来新名字），标签变成新名字，搜索却仍只认旧名字，直到重开页；选中仍发对的 id。位置 `work-item/cycles-menu.tsx:81-82`、`:91-95`（“无迭代”一行在换语言时同理，`:104-105`）；建议行的 key 带上可搜索的文本 | F5（`6b79fee4`）：修在把 keywords 交给 cmdk 的唯一一处——`PowerKModalCommandItem` 以 keywords 作 `Command.Item` 的 key（`key={keywords?.join("\n")}`），keywords 变了，项重新挂上、以新的 keywords 登记；不给 keywords 的项不变；凡给 keywords 的行都管住（今天是改迭代页的三行，P8 的修复轮发现 (a) 还要加），不在改迭代页各写组合的 key（实现者的裁定，台账 `Fix F5: Ruling`；代价：keywords 变了的那一行若正被键盘选中，cmdk 把选中移回第一行，建议的写法同样如此）。RED `f5-red`（新 `PK/ui/modal/command-item.test.tsx`：一行 value 不变、名字由 Sprint 改为 Launch，搜新名字找不到——`expected [] to deeply equal [ 'Launch' ]`），GREEN `f5-green`；变异 `f5-mut-id-key`（去掉这个 key，行只以列表给的 key、即改迭代页的 `cycle.id` 为身份）失败、`restored=yes`；`f5-after-pk` power-k 与 top-nav 19 个文件 208 例逐例同名同状态（只多新例），改过与新建的 2 个文件 oxlint 0 告警（上限 44 不变），关键词、`make lint-web`、`make knip`、`make test-web` 通过，网页包 480 个文件 5453 例（`f5-web-count`） |
 
 ## 5. 负责人须知
 
-本段没有须负责人决定的事：re-77 的三处与修复轮交出的两项都是局部的，不改 `server/`、`api/`，没有改 CI 的结构。
+本段没有须负责人决定的事：re-77 的三处、限定复审的一处与修复轮交出的两项都是局部的，不改 `server/`、`api/`，没有改 CI 的结构。
 
 需要负责人知道的一件事：
 
