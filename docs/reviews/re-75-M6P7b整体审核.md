@@ -1,7 +1,7 @@
 # M6 / P7b 整体审核
 
-> 2026-11-15：Ready to merge；主控仍以修复轮 F 处理两处 Minor（M1、M2，同 P6b、P7a 的先例），另两处不改（M3、M4），修复轮 F 已提交，待限定复审（§4）。
-> - **目标**：分支 `codex/m6-p7b` 相对 main `f42f9d6457ccc9540a687019f3530e253fe0f7b5`（P7a 的 noff）的全部修改（`f42f9d64..93229770`，`cf92e3d5` 至 `93229770` 的 19 个提交，含 spec 与 plan、按预检的修正与 T1–T16，114 个文件）；修复轮 F（`e0fe04ea` 起，F1–F3；F2 只有收据，没有提交）另经一次限定复审（§4）。
+> 2026-11-15：Ready to merge；主控仍以修复轮 F 处理两处 Minor（M1、M2，同 P6b、P7a 的先例），另两处不改（M3、M4），修复轮 F 经限定复审 Ready to merge（§4）。
+> - **目标**：分支 `codex/m6-p7b` 相对 main `f42f9d6457ccc9540a687019f3530e253fe0f7b5`（P7a 的 noff）的全部修改（`f42f9d64..93229770`，`cf92e3d5` 至 `93229770` 的 19 个提交，含 spec 与 plan、按预检的修正与 T1–T16，114 个文件）；修复轮 F（`e0fe04ea`、`16c52f41` 两个提交，F1–F3；F2 只有收据，没有提交）另经一次限定复审（§4）。
 > - **依据**：[P7b spec](../v0/M6-cycles-modules/specs/P7b-list-vocabulary.md)、[P7b plan](../v0/M6-cycles-modules/plans/P7b-list-vocabulary.md)、[预检 re-74](re-74-M6P7b预检.md)、[M6 设计](../v0/M6-cycles-modules/M6-design.md)、[总体设计 §7.2、§7.7](../v0/v0-design.md#77-stores-按会话分代长期有效m2-起)、[硬规则](../v0/claude_to_gpt/03-rules-and-pitfalls.md)。
 > - **阶段记录**：[P7b 阶段记录](../v0/M6-cycles-modules/reviews/P7b-list-vocabulary-review.md)。
 
@@ -32,7 +32,7 @@
 | M2 | spec §2.5 要两页页头的测试在本页的词漏出时都失败，台账只有迭代一侧的收据（`t6-mut-cycle-page-keeps-cycle`：页头 2 例、常量 3 例），`t6-mut-module-page-keeps-filter` 只跑了常量的测试 | F2 只补收据，没有提交：变异 `f2-mut-module-page-keeps-grouping`（模块页的常量推出为 `withoutOwn(PROJECT_ISSUES, "module_id", "cycle")`，留着按模块分组，能编译）让模块页页头的 “never by a module (R12)” 两例与常量测试三例都失败，`restored=yes`，之后以干净的源重建常量（`f2-rebuild-constants`） |
 | M3 | 看板（`kanban/default.tsx:111-121`）经 `getGroupByColumns({groupBy: sub_group_by, groupIds: [sub_group_id]})` 找泳道，离开项目的成员的一道泳道会得 `undefined` | 不改（主控核过）：泳道本身由同一函数、同一范围的 `getGroupByColumns` 生成（`swimlanes.tsx:295-302`），成员的列 `memberColumns`（`group-columns.tsx:295-319`）只列现有的成员，离开的成员没有泳道，查找总能找到渲染它的那一道 |
 | M4 | `base-issues.store.test.ts` 1640 行 | 是测试文件，不在 E15 产品文件的上限之内；记为观察，后面的段再动它时按关注点拆，不另立交接 |
-| 观察 | spec §2.7、§2.9 在三处有裁定的地方比实现窄（T9 只拒拖拽改变的那一维；T11 整批与一次 `followProgress` 在宿主里；T12 以 `exclusion` 取代 `shouldHideIssue` 里的本页排除）；台账 T16 把它们写进了前端改动清单与差异清单 | 主控的阶段记录 §3 逐一列出 |
+| 观察 | spec §2.7、§2.9 在三处有裁定的地方比实现窄（T9 只拒拖拽改变的那一维；T11 整批与一次 `followProgress` 在宿主里；T12 以 `exclusion` 取代 `shouldHideIssue` 里的本页排除）；台账 T16 把它们写进了前端改动清单与差异清单 | 主控的[阶段记录](../v0/M6-cycles-modules/reviews/P7b-list-vocabulary-review.md) §3 逐一列出 |
 | 观察 | `NoInfer` 要 TypeScript ≥ 5.4（catalog 的版本满足，门禁通过） | 不需动作 |
 | 观察 | `t8-mut-filter-ignores-switch(-module)` 最初的收据在测试加强之前存活，`-2`、`-3`、`-final` 都失败（台账） | 不需动作 |
 | 观察 | “添加已有”的弹窗打开时不把焦点放进搜索框 | 已交 P7c（spec §5） |
@@ -49,4 +49,20 @@ F3 写本记录，并在 spec §5 加修复轮的清单、改 spec 与 plan 的�
 
 ## 4. 修复轮 F 的复审
 
-（待限定复审）
+修复轮 F（`93229770..16c52f41`，2 个提交，F1、F3；F2 只有收据）经一次 fresh 限定复审（`fable`，范围 `93229770..16c52f41`，只读，只跑了文档链接的检查，没有跑构建与测试，与最终候选 `16c52f41` 的七项门禁并行）。原始报告没有另存，结论与核对过的性质照它转述。逐项核对：
+
+- **范围**：F1 只改两个分组面板与 `utils.tsx`（`useGroupByOptions` 连同只为它的导入删去，不留别名，没有别的读者），没有别的产品改动；F2 只有收据；F3 只改文档。
+- **F1 的规则**：两个面板（`group-by.tsx:40-42`、`sub-group-by.tsx:50-52`）一项列出当且仅当它是存下的那一项，或在本页的选项里且被给出，次序照 `ISSUE_GROUP_BY_OPTIONS`；看板上分组与子分组互藏对方的键不变；两处的文档注释属实。
+- **别的页**：个人页（`profile/filter.store.ts:87-97` 把分组规范到它的选项）、归档页与子工作项的组件不受影响：它们存下的分组总在自己的选项里；每个子分组的选项都有“无”，那里的 “None” 不变。
+- **副作用**（合意）：经接口存下 `group_by: state_group` 的项目列表从此勾着 “State groups”；经接口存下 `group_by: null` 的看板勾着 “None”，板为一列 “All work items”（`group-columns.tsx:44`），合 R8 与主控接受的裁定（§3）。
+- **M3 不改**：泳道（`swimlanes.tsx:295-302`）以 `sub_group_id={_list.id}`（`:206`）交给看板，看板的查找（`kanban/default.tsx:111-121`）是同一函数、同一范围；成员的列 `memberColumns` 不看 `groupIds`、只列现有的成员；规划的泳道由 `[sub_group_id]` 复现。主控的理由成立。
+- **测试**：两例新测试（`group-by.test.tsx:125-177`）是具体的，既有断言一行不改；RED `f1-red-own-grouping-listed` 2 例失败、14 例通过；F1 的两个变异都 `TSC_EXIT=0`、各只让自己那个面板的一例失败；F2 的 `f2-mut-module-page-keeps-grouping` 页头 `HEADER_EXIT=1`（R12 两例）、常量 `FILTER_EXIT=1`（三例），收据的 HEAD 为 `e0fe04ea`、`inputs_unchanged` 为真。
+- **文档**：本记录的 19 个提交、114 个文件核过，§2、§3 照审查者的报告；spec §5、状态行、设计 §14 的一行（与台账一致）、差异清单与前端改动清单相符；唯一的断链是当时还没写的阶段记录（随后由 T17 的记录提交补上）。
+
+结论 **Ready to merge**：没有 Critical、Important、Minor，三条观察都不需本段动作，没有须负责人决定的事：
+
+| 编号 | 观察 | 处理 |
+|---|---|---|
+| 观察 | F2 的页头失败落在该例开头对本页常量的断言（模块页页头 `header.test.tsx:270`），在面板渲染之前；面板对存下的本页分组的行为由 F1 的两例钉住 | 不需动作 |
+| 观察 | 经接口存下 `group_by: null` 的看板，点勾着的 “None” 会按状态分组（`page-preferences-filter.store.ts:268` 把看板的 `null` 规范为 `state_id`）；早于 F1，是用户自己的写 | 不需动作 |
+| 观察 | 经接口存下 `group_by: target_date` 的项目列表（nerve 接受，`server/internal/modules/issue/domain/listvocab.go:49`）：`show()` 认得它（`groupValues`），`ISSUE_GROUP_BY_OPTIONS` 没有这一项，`getGroupByColumns` 也没有它的列；只能经接口到达，早于 P7b | 主控按只读追踪交 M8（[M6-M8-14](../v0/M8-open-release/handoffs/M6-closeout.md#M6-M8-14)）：迭代页、模块页同样；有工作项时列表与看板在渲染时抛错，正文落到版式的出错说明，选任一分组即恢复 |

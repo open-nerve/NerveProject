@@ -1,6 +1,6 @@
 # M6 / P7b：工作项一侧（二）——列表词表、目录与“添加已有”
 
-> 状态：spec 与 plan 已写（2026-11-14），预检通过（修正后，[re-74](../../../reviews/re-74-M6P7b预检.md)）；T1–T16 已实施，整分支审查 Ready to merge（[re-75](../../../reviews/re-75-M6P7b整体审核.md)），主控以修复轮 F 处理两处 Minor（另两处不改），已提交，待限定复审。基线 main `f42f9d6457ccc9540a687019f3530e253fe0f7b5`（P7a 的 noff，双父 `7868a6b4`、`5d6dab04`，树与 `5d6dab04` 相同；P7a 的最终分支 CI 43600392398 全绿，e2e 作业 23 分 48 秒；合入后的 main CI 43603772626 attempt 1 全绿，e2e 作业 132478430823 为 14:31:09Z–14:54:52Z，23 分 43 秒；P7a 的归档在主目录的 `.superpowers/sdd/M6-P7a-integration-20261114/`，含 `cleanup.log`；这些由本段 T1 以归档与公开的 jobs 接口核对后回填进 P7a 的记录）。设计见 [M6 设计](../M6-design.md) §2 的 G4、G11、G15，§3.3、§3.6、§7、§8 的“工作项一侧”、§12 的 P7b 一行、§13–§15；P7 的拆分见 [P7a spec](P7a-work-item-planning.md) §1、R1，交给本段的事见它的 §5 与 P7a 的[阶段记录](../reviews/P7a-work-item-planning-review.md) §3、§5；主控在写 spec 之前的裁定 E1–E15 见本阶段台账 `controller-rulings.md`（本段 R1–R15 照录）。网页的长期规则见[总体设计 §7.2、§7.7](../../v0-design.md#77-stores-按会话分代长期有效m2-起)。接口合同见 [P3b spec](P3b-list-engine.md)（列表的筛选、分组、排序与迭代页、模块页的偏好）与 [P3a spec](P3a-issue-membership.md)（工作项的 `cycle_id`、`module_ids`）。现状调研见本阶段台账 `research/web-delta.md`（P7a 合入之后的增量：P7a 造好的接缝、目录、词表、“添加已有”、e2e 的余量、Task 的估算）与 P7 的两份 `research/web.md`、`research/plane-contract.md`（写于 P7a 之前的 `c0572192`，Plane 的行为与 nerve 的合同；本 spec 引用的行号都在本段的树上重核过）（ignored，随阶段归档）。负责人 2026-11-11 授权连续推进至 M6 收官，重要高风险决策仍停下确认；本段不改 `server/`、`api/`（E14），本机 `make test` 若因 [M6-M8-05](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-05) 的签名失败，以分支 CI 的服务端两路为准（负责人 2026-11-11）。
+> 状态：实现与审查已完成，待分支 CI 与合入：整分支审查 Ready to merge（[re-75](../../../reviews/re-75-M6P7b整体审核.md)），主控仍以修复轮 F（F1–F3）处理两处 Minor（另两处不改），经限定复审 Ready to merge，最终候选 `16c52f41`；A1–A14 已勾选，A15 由 P7c 的 T1 勾选（[阶段记录](../reviews/P7b-list-vocabulary-review.md)）。spec 与 plan 已写（2026-11-14），预检通过（修正后，[re-74](../../../reviews/re-74-M6P7b预检.md)）。基线 main `f42f9d6457ccc9540a687019f3530e253fe0f7b5`（P7a 的 noff，双父 `7868a6b4`、`5d6dab04`，树与 `5d6dab04` 相同；P7a 的最终分支 CI 43600392398 全绿，e2e 作业 23 分 48 秒；合入后的 main CI 43603772626 attempt 1 全绿，e2e 作业 132478430823 为 14:31:09Z–14:54:52Z，23 分 43 秒；P7a 的归档在主目录的 `.superpowers/sdd/M6-P7a-integration-20261114/`，含 `cleanup.log`；这些由本段 T1 以归档与公开的 jobs 接口核对后回填进 P7a 的记录）。设计见 [M6 设计](../M6-design.md) §2 的 G4、G11、G15，§3.3、§3.6、§7、§8 的“工作项一侧”、§12 的 P7b 一行、§13–§15；P7 的拆分见 [P7a spec](P7a-work-item-planning.md) §1、R1，交给本段的事见它的 §5 与 P7a 的[阶段记录](../reviews/P7a-work-item-planning-review.md) §3、§5；主控在写 spec 之前的裁定 E1–E15 见本阶段台账 `controller-rulings.md`（本段 R1–R15 照录）。网页的长期规则见[总体设计 §7.2、§7.7](../../v0-design.md#77-stores-按会话分代长期有效m2-起)。接口合同见 [P3b spec](P3b-list-engine.md)（列表的筛选、分组、排序与迭代页、模块页的偏好）与 [P3a spec](P3a-issue-membership.md)（工作项的 `cycle_id`、`module_ids`）。现状调研见本阶段台账 `research/web-delta.md`（P7a 合入之后的增量：P7a 造好的接缝、目录、词表、“添加已有”、e2e 的余量、Task 的估算）与 P7 的两份 `research/web.md`、`research/plane-contract.md`（写于 P7a 之前的 `c0572192`，Plane 的行为与 nerve 的合同；本 spec 引用的行号都在本段的树上重核过）（ignored，随阶段归档）。负责人 2026-11-11 授权连续推进至 M6 收官，重要高风险决策仍停下确认；本段不改 `server/`、`api/`（E14），本机 `make test` 若因 [M6-M8-05](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-05) 的签名失败，以分支 CI 的服务端两路为准（负责人 2026-11-11）。
 
 文中的路径：`core/…` 在 `web/apps/web/` 下；`issue-layouts/…` 是 `core/components/issues/issue-layouts/…`；`@nerve/…` 的包在 `web/packages/` 下。
 
@@ -243,37 +243,38 @@ T1 照 P6b spec §2.10 的公式（P7a spec §2.11）重算余量并写进台账
 
 ## 4. 验收标准
 
-- [ ] A1 拆分：`issue-list-binding.ts` 拆为读、目录与绑定三件，各在约 400 行以内，只搬不改（`git diff -M`），测试只改导入（基线逐文件同名同数），三件在 `project-address-route` 里。
-- [ ] A2 目录：两项取自规划 store 的查找（`IssueCatalog` 收窄）；只在按名字排序时读：行的各项目不在 store 的先读项目，有叫不出的值时重读未归档的列表（store 已有也读）、仍叫不出再重读已归档的，每次各至多一次，都叫得出时不读，与 `usePlanningNames` 同一条定次序的纯函数（hook 另有“已持则不读”）；别处新建的迭代被行加入后叫得出；两份都重读了仍叫不出时大声失败；开关关闭时照读；写的确认为新的 id 读；根不加 getter。每个性质有单测，变异能让测试失败。
-- [ ] A3 筛选的词与按页收窄：`cycle_id`、`module_id` 含 `none`；成员列表排除两词的分组；迭代页的筛选修改不发 `cycle_id`、模块页不发 `module_id`（单测与变异）；本页的键在类型上赋不进去：本页的类型以 `never` 禁止本页的键，类型测试含转换配错、service 配错与一个不是字面量的 `ProjectIssueFilters` 的值，去掉 `never` 的变异让它们失效（收据）。
-- [ ] A4 分组与泳道：列的次序（未归档的、已归档的以名字与说明、回答里被删除的、“无”最后）；多模块的工作项在每个模块的组；泳道并入回答的组；组头与泳道头的名字经 `usePlanningNames`；拒收的列（已结束、已归档、开关关闭）一个字段。
-- [ ] A5 按页的常量与开关：`issues` 有两词的筛选、分组、子分组，`cycle_issues`、`module_issues` 由它推出、不含本页的词（两页页头的测试不改即通过）；开关关闭时不给未选的、已选的留着；`displayPropertyOn` 由同一张表的谓词取代。
-- [ ] A6 分组里的新建：快速新建带组的值（按迭代、模块分组时 `{cycle_id}`、`{module_ids}`），一个共用的预填函数，`quick-add/root.tsx` 的预填类型与白名单加两键，既有的快速新建测试同数；拒收的列没有“+”、快速新建与“添加已有”。
-- [ ] A7 筛选的界面：两个工厂、选项（未归档的，含“无”，状态图标）、已持的已归档值以名字与说明显示、开关关闭时不列入“加筛选”而已应用的条件留着；配置另出一件，`use-work-item-filters-config.tsx` 在上限内。
-- [ ] A8 拖拽：迭代、模块的组可拖；请求体在轮到时经 `changeBody`（迭代单值，模块增减，拖到“无”只移出来源，已归档与不认识的留着）；拖拽函数给 `IssueChange`（类型测试）；拒收的列不发请求、提示那一句；nerve 的拒绝说原因；既有的拖拽测试断言不改。
-- [ ] A9 表头的排序：两列两向的名字排序（查询、行的次序、`aria-sort`）；存下的名字排序照原样显示与发出；死分支删去。
-- [ ] A10 “添加已有”：三个入口都经命令宿主，弹窗活过空态的卸下与列表的核验；排除已在本页的、迭代页的选项显示当前的迭代（`usePlanningNames`）、全被排除时说明、规划页的搜索 `limit: 100`；每项一个 `changeIssue`、至多 2 个在途、一批一次进度重读、逐项结果、失败的留着；分组头只加入本页、只在规划页可加入时且列不拒收、以组为名；空态的入口条件同“新建”。
-- [ ] A11 日历：规划页每项一个 `{target_date, ...加入本页}`、原子、隐藏已在本页的；项目页的搜索参数与请求体不变（I4 一行不改）。
-- [ ] A12 页面故事：G15 (page) 的工作项一侧与 G4、G11 (page) 的“添加已有”在三种引擎（§2.14），含 M3 交接 §3 的弹窗各项（A5）；两个新文件本机 chromium 合计 ≤ 14 秒。
-- [ ] A13 守卫：`project-address-route`（各 Task 的新件与改写的件）、swr 限制、告警上限 44、knip、关键词（phase `M6/P7`）、i18n（新键、读的键）、`root.store.test.ts` 21 个 store、根与写入单元的行数（M6-M8-08）。
-- [ ] A14 文档：P7a 的回填（阶段记录 §7、spec A12、设计 §14、M6-M8-01 的数据点）与 e2e 余量的重算；交接回执（M4 M6-02 含“何时验收”的逐项，M3 §1、§3 的 `existing-issues-list-modal.tsx`）；差异清单、前端改动清单、设计 §8/§12/§14、M8 交接的相关条目。
+- [x] A1 拆分：`issue-list-binding.ts` 拆为读、目录与绑定三件，各在约 400 行以内，只搬不改（`git diff -M`），测试只改导入（基线逐文件同名同数），三件在 `project-address-route` 里。
+- [x] A2 目录：两项取自规划 store 的查找（`IssueCatalog` 收窄）；只在按名字排序时读：行的各项目不在 store 的先读项目，有叫不出的值时重读未归档的列表（store 已有也读）、仍叫不出再重读已归档的，每次各至多一次，都叫得出时不读，与 `usePlanningNames` 同一条定次序的纯函数（hook 另有“已持则不读”）；别处新建的迭代被行加入后叫得出；两份都重读了仍叫不出时大声失败；开关关闭时照读；写的确认为新的 id 读；根不加 getter。每个性质有单测，变异能让测试失败。
+- [x] A3 筛选的词与按页收窄：`cycle_id`、`module_id` 含 `none`；成员列表排除两词的分组；迭代页的筛选修改不发 `cycle_id`、模块页不发 `module_id`（单测与变异）；本页的键在类型上赋不进去：本页的类型以 `never` 禁止本页的键，类型测试含转换配错、service 配错与一个不是字面量的 `ProjectIssueFilters` 的值，去掉 `never` 的变异让它们失效（收据）。
+- [x] A4 分组与泳道：列的次序（未归档的、已归档的以名字与说明、回答里被删除的、“无”最后）；多模块的工作项在每个模块的组；泳道并入回答的组；组头与泳道头的名字经 `usePlanningNames`；拒收的列（已结束、已归档、开关关闭）一个字段。
+- [x] A5 按页的常量与开关：`issues` 有两词的筛选、分组、子分组，`cycle_issues`、`module_issues` 由它推出、不含本页的词（两页页头的测试不改即通过）；开关关闭时不给未选的、已选的留着；`displayPropertyOn` 由同一张表的谓词取代。
+- [x] A6 分组里的新建：快速新建带组的值（按迭代、模块分组时 `{cycle_id}`、`{module_ids}`），一个共用的预填函数，`quick-add/root.tsx` 的预填类型与白名单加两键，既有的快速新建测试同数；拒收的列没有“+”、快速新建与“添加已有”。
+- [x] A7 筛选的界面：两个工厂、选项（未归档的，含“无”，状态图标）、已持的已归档值以名字与说明显示、开关关闭时不列入“加筛选”而已应用的条件留着；配置另出一件，`use-work-item-filters-config.tsx` 在上限内。
+- [x] A8 拖拽：迭代、模块的组可拖；请求体在轮到时经 `changeBody`（迭代单值，模块增减，拖到“无”只移出来源，已归档与不认识的留着）；拖拽函数给 `IssueChange`（类型测试）；拒收的列不发请求、提示那一句；nerve 的拒绝说原因；既有的拖拽测试断言不改。
+- [x] A9 表头的排序：两列两向的名字排序（查询、行的次序、`aria-sort`）；存下的名字排序照原样显示与发出；死分支删去。
+- [x] A10 “添加已有”：三个入口都经命令宿主，弹窗活过空态的卸下与列表的核验；排除已在本页的、迭代页的选项显示当前的迭代（`usePlanningNames`）、全被排除时说明、规划页的搜索 `limit: 100`；每项一个 `changeIssue`、至多 2 个在途、一批一次进度重读、逐项结果、失败的留着；分组头只加入本页、只在规划页可加入时且列不拒收、以组为名；空态的入口条件同“新建”。
+- [x] A11 日历：规划页每项一个 `{target_date, ...加入本页}`、原子、隐藏已在本页的；项目页的搜索参数与请求体不变（I4 一行不改）。
+- [x] A12 页面故事：G15 (page) 的工作项一侧与 G4、G11 (page) 的“添加已有”在三种引擎（§2.14），含 M3 交接 §3 的弹窗各项（A5）；两个新文件本机 chromium 合计 ≤ 14 秒。
+- [x] A13 守卫：`project-address-route`（各 Task 的新件与改写的件）、swr 限制、告警上限 44、knip、关键词（phase `M6/P7`）、i18n（新键、读的键）、`root.store.test.ts` 21 个 store、根与写入单元的行数（M6-M8-08）。
+- [x] A14 文档：P7a 的回填（阶段记录 §7、spec A12、设计 §14、M6-M8-01 的数据点）与 e2e 余量的重算；交接回执（M4 M6-02 含“何时验收”的逐项，M3 §1、§3 的 `existing-issues-list-modal.tsx`）；差异清单、前端改动清单、设计 §8/§12/§14、M8 交接的相关条目。
 - [ ] A15 七项本地门禁（`make test` 照负责人 2026-11-11 的规则）、deep-review 修复闭环、准确的分支 CI 与 noff 后的 main CI 全绿、归档清理。（合入后由 P7c 的 T1 勾选）
 
 ## 5. 后续责任
 
 **P7c**（命令面板、移动端页头与遗留）：分组时页头的数目（A19，项目页与归档页的页头在分组时读不到 `""` 组的数，`core/components/issues/header.tsx:49`）；迭代页、模块页与项目页的移动端页头（A15、X2：项目页的移动端页头的显示面板已随本段的组件一级的开关门给出两词的分组，P7c 只管页头本身）；命令面板（A16）、A17、A18、A20（本段读了 `cta_secondary`）、A21（`fake-planning-page.tsx` 的 `opened`）、X1；G19 的工作项一侧（其中“添加已有”的弹窗的键盘与迟到的回答可复用本段的宿主与故事的帮手）；“添加已有”的弹窗打开时焦点不在搜索框（M4 的弹窗，不在 M3 交接 §3 的各项之内；本段的 G4 (page) 先把焦点放进搜索框再以方向键选，主控交 P7c，照下拉框“打开即聚焦搜索”的写法，台账 T15）。e2e 预算 ≤ 8 秒本机 chromium（R13）：本段两个新文件本机 chromium 实测合计 6.9 秒（G15 3.5 秒，G4 与 G11 3.4 秒，台账 T14、T15），T1 重算的 P7b 与 P7c 合计余量 22.4–27.1 秒除去它约剩 15.5–20.2 秒；P7c 的 8 秒不因此放宽，余量以本段 T17 的实测（推送后的分支 CI 与 T9 检查点的校准）与重算为准。
 
-**修复轮（整审之后）**：整审 [re-75](../../../reviews/re-75-M6P7b整体审核.md) Ready to merge，列四处 Minor（M1–M4）；主控仍以修复轮 F 处理 M1、M2（同 P6b、P7a 的先例），M3、M4 不改（各项的处理与提交见 re-75 §3）：
+**修复轮（整审之后）**：整审 [re-75](../../../reviews/re-75-M6P7b整体审核.md) Ready to merge，列四处 Minor（M1–M4）；主控仍以修复轮 F 处理 M1、M2（同 P6b、P7a 的先例），M3、M4 不改（各项的处理与提交见 re-75 §3），经限定复审 Ready to merge（没有 Minor，re-75 §4）：
 - **存着的本页分组在面板里**（re-75 M1）：迭代页、模块页的选项不给本页的分组（§2.5，P5b R9、P6b R12），而 nerve 接受经接口存下的 `group_by: module_id`（迭代页的 `cycle_id` 同），列表照它分组，分组、子分组两个面板却只在本页的选项里留住存下的，一项都不勾。**已做**（F1，`e0fe04ea`）：存下的那一项总列出并勾着（R8 的“已选的留着”对本页的选项里没有的也成立），改选别的之后不再列出；`useGroupByOptions` 删去。
 - **模块页页头的变异收据**（re-75 M2）：§2.5 要两页页头“不按本页分组”的测试在本页的词漏出时都失败，台账只有迭代一侧的收据。**已做**（F2，只有收据，没有提交）：变异 `f2-mut-module-page-keeps-grouping`（模块页推出时留着按模块分组）让模块页页头两例与常量测试三例都失败。
 - **看板按 id 找泳道**（re-75 M3）：不改——泳道由同一函数、同一范围生成，成员的列只列现有的成员，离开项目的成员没有泳道，查找总能找到渲染它的那一道。`base-issues.store.test.ts` 的 1640 行（re-75 M4）是测试文件，不在 E15 的上限之内，后面的段再动它时按关注点拆。
 - F3 写 re-75 的记录、本 spec 与 plan 的状态、设计 §14 的 P7b 一行；e2e 的两个新文件与上面的余量不变（修复轮没有改故事）。
+- 限定复审的三条观察不需本段动作；其中经接口存下 `group_by: target_date` 的列表（nerve 接受，网页的面板与列都不认得，早于本段）交 M8（[M6-M8-14](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-14)）。最终候选 `16c52f41` 的门禁与推送前的 CI 估算见[阶段记录](../reviews/P7b-list-vocabulary-review.md) §5。
 
 **P8**：归档页的迭代、模块词表（R10）；[M6-M8-13](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-13)；新的筛选、分组控件与“添加已有”按钮的焦点轮廓随最终矩阵核对；开关关闭时存下的词的显示（R8 的“—”与“不可用的选项”）是否要更好的说法。
 
 **M7**：工作区级的迭代、模块列表出现之后，成员列表的目录与跨项目的视图可改读它；视图的筛选与分组的迭代、模块词随视图的页面。
 
-**M8**：[M6-M8-01](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-01) 多 P7a 的分支 CI、main CI（T1 已记）与本段 T9 检查点的数据点（T16 已记）；[M6-M8-08](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-08) 在 M6 收尾核对根与写入单元的行数（本段不加：根 320 → 319、写入单元 302，T16 已记，T17 再核）；[M6-M8-13](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-13) 本段的新故事照它的写法（T16 已记）；[M6-M8-03](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-03)、[M6-M8-05](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-05)、[M6-M8-07](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-07) 照旧（再现时照各条的验收语记下）。
+**M8**：[M6-M8-01](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-01) 多 P7a 的分支 CI、main CI（T1 已记）与本段 T9 检查点的数据点（T16 已记）；[M6-M8-08](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-08) 在 M6 收尾核对根与写入单元的行数（本段不加：根 320 → 319、写入单元 302，T16 已记，T17 在最终候选上再核、数同）；[M6-M8-13](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-13) 本段的新故事照它的写法（T16 已记）；[M6-M8-03](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-03)、[M6-M8-07](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-07) 在 T17 的门禁与最终候选再现，已照各条的验收语记下，[M6-M8-05](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-05) 照旧；新 [M6-M8-14](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-14)（经接口存下的按截止日期分组，限定复审的观察）。
 
 **负责人**：e2e 的作业结构（分片）、期限与超时（R13）；搜索的服务端排除参数或批量写（R2、R6，`api/` 的变化）只在负责人要 Plane 的确切行为时才提出。
 
