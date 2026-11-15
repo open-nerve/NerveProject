@@ -2,7 +2,7 @@ import { c12Evidence } from "../../fixtures/c12-evidence";
 import { createLabel } from "../../fixtures/api";
 import { createIssue, createIssueRelations } from "../../fixtures/issues";
 import { createIssueLink } from "../../fixtures/links";
-import { openIssueDetail } from "../../fixtures/issue-detail-page";
+import { descriptionEditorMounted, openIssueDetail } from "../../fixtures/issue-detail-page";
 import { refuseClipboardWrites } from "../../fixtures/browser";
 import { expect, test } from "../../fixtures/test";
 import { expectListPageQuiet, issueListProject, openIssueList } from "../../fixtures/issue-list-page";
@@ -37,6 +37,7 @@ for (const control of ["identifier", "detail", "link", "relation", "sub-item", "
     }
     if (control === "relation") {
       const relations = page.getByRole("button", { name: "Relations 1", exact: true });
+      await descriptionEditorMounted(page, source);
       await relations.click();
       // A row clipped by the opening panel is not yet a visible keyboard target.
       await transitionsEnded(relations.locator("../.."));

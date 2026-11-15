@@ -183,6 +183,11 @@ M6/P5b 的 T16（2026-11-12）在 `8b11bc6381623717663ba986da74710668719494` 上
 
 **处理结果（M6/P7b）**：本段的两个新页面故事照上面的写法，先等页面的内容到了再打开列表与弹窗：G15 (page) 在列表的组显示（组头的名字照次序到齐）之后才打开显示面板与“加筛选”，表头的菜单在换到表格的偏好答到之后才打开；G4 (page) 在空态的说明显示、G11 (page) 在列表的行显示之后才打开“添加已有”的弹窗。它们不量列表与按钮的相对位置（不用 `expectListBesideButton`），也不打开预览里属性一栏的下拉框。三种引擎各一次与 `--repeat-each=3`（台账 `t14-three-engines`、`t14-repeat3`、`t15-three-engines`、`t15-repeat3`）、m6-pages 全配置三种引擎 126 条（`t15-full-pages`）都通过，本条的现象没有再现。产品代码没有为本条改动。本条保持 open。
 
+**处理结果（M6/P7b 的分支 CI）**：同一机制这次落在详情页、作用在点击上。P7b 推送的 HEAD `5d7adaaa` 的分支 CI 43696983860 attempt 1 中，e2e 作业 132762846784（09:11:46Z–09:37:57Z）477 条有 476 过，M4 的 C4 (page) relation（`e2e/stories/issue/detail-interactions.spec.ts:13`）在 `:54` 的 `options.focus()` 30 秒等不到 “Related target options”。不是 M6-M8-03、-07 的签名，没有重跑，从 trace 查根因：接口的回答都是 200；失败时 “Relations 1” 收着、按钮有焦点；录屏里故事在 `openIssueDetail` 看到标题之后随即点 “Relations 1”，点击开始时还没有描述的编辑器，点击结束之后的一帧里编辑器已挂上，其下的 Attachments、Relations 下移约 28 像素——按下时指针在 Relations 上（焦点移到它），抬起时指针下已是另一元素，按下与抬起不在同一元素上，不触发 click，面板没有展开。P7b 没有改详情页。
+
+- 探针（台账 `ci-probe-*`，探针文件留在台账、不入库）：照抄 C4 与 C8/C12 的 relation 一支，只在打开详情页之前加条件，新旧两版条件相同。只以 CDP 降速（`Emulation.setCPUThrottlingRate` 4、6、8 倍，各 15 例）复现不了：降速同样拖慢 Playwright 在页面里做的可操作性检查，按下与抬起之间只有约 4–20 毫秒，编辑器落不进去（4 倍时 15 例里有 10 例按下时还没有编辑器，仍都点开了）。把按下与抬起之间放宽到 2 秒（click 的 `delay`；CI 上那次点击约 0.3 秒）后，旧故事在 4 倍降速下 15 例有 12 例在同一步失败，恰是按下时还没有编辑器的那 12 例（`ci-probe-old-rate4-press`）；再让编辑器的懒加载块晚 1 秒到（`page.route`），旧故事 15 例全在同一步失败（按下在 Relations 上、其顶 316 像素，抬起时编辑器已在、Relations 顶 344 像素、指针下是 “Attachments 0”，click 落到共同的祖先上，`ci-probe-old-hold`）；新故事在这两种条件下各 15 例全过（`ci-probe-new-rate4-press`、`ci-probe-new`）。
+- 故事的处理：C4 与 C8/C12（`collaboration-interactions.spec.ts:556`）的 relation 一支在点 “Relations 1” 之前先等描述的编辑器——`e2e/fixtures/issue-detail-page.ts` 新的 `descriptionEditorMounted`，等 `[id="editor-container-<源>"] [contenteditable="true"]` 可见（I9 等故事等编辑器的写法），只用于这两处；`openIssueDetail` 不改（以只读打开、描述不可编辑的故事也用它）。两个文件里其余打开详情页的分支与故事只以键盘聚焦（与位置无关），或点的是页头的命令框与弹窗里的按钮，不在描述之下，不加等待。两个文件默认配置 48 条（`ci-after-two-files`）与 chromium `--repeat-each=3` 134 条（`ci-repeat3`）通过；多出的等待就是编辑器自己挂载的时间，每条 relation 约 0.25–0.3 秒，两个文件一次合计约 0.8 秒（103.8 → 104.6 秒）。产品代码没有改，验收语不变。本条保持 open。
+
 <a id="M6-M8-14"></a>
 ## M6-M8-14 经接口存下按截止日期分组的列表，网页没有这一分组的列
 

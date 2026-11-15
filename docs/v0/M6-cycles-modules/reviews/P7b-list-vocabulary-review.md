@@ -1,6 +1,6 @@
 # M6/P7b 阶段评审记录
 
-> 实现与审查已完成，待分支 CI 与合入：整分支审查 Ready to merge（[re-75](../../../reviews/re-75-M6P7b整体审核.md)：没有 Critical、Important，四处 Minor 与六条观察），主控仍以修复轮 F（F1–F3）处理两处 Minor（M1、M2；M3、M4 不改），经限定复审 Ready to merge（没有 Minor，re-75 §4）；最终候选 `16c52f41`（最后一个改代码的提交是 F1 的 `e0fe04ea`，改两个分组面板、`utils.tsx` 与分组面板的测试；最后一个改 e2e 故事的是 T15 的 `55a225c8`；`16c52f41` 只改文档），其后只有本记录所在的提交（只改文档）。最终 HEAD 的分支 CI、合入、main CI 与归档清理见 §7（由 P7c 的 T1 回填）。基线 main `f42f9d6457ccc9540a687019f3530e253fe0f7b5`（P7a 的 noff，双父 `7868a6b4`、`5d6dab04`，树与 `5d6dab04` 相同）。
+> 实现与审查已完成，待分支 CI 与合入：整分支审查 Ready to merge（[re-75](../../../reviews/re-75-M6P7b整体审核.md)：没有 Critical、Important，四处 Minor 与六条观察），主控仍以修复轮 F（F1–F3）处理两处 Minor（M1、M2；M3、M4 不改），经限定复审 Ready to merge（没有 Minor，re-75 §4）；最终候选 `16c52f41`（最后一个改代码的提交是 F1 的 `e0fe04ea`，改两个分组面板、`utils.tsx` 与分组面板的测试；最后一个改 e2e 故事的是 T15 的 `55a225c8`；`16c52f41` 只改文档），其后是本记录所在的提交 `5d7adaaa`（只改文档）。`5d7adaaa` 推送后的分支 CI 43696983860 的 e2e 在 C4 (page) relation 失败，原因是描述的编辑器晚挂载、点 “Relations 1” 的按下与抬起落在不同的元素上（[M6-M8-13](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-13) 一类），本提交改这两个故事（只改 e2e 的故事、夹具与文档），最终 HEAD 因此是本提交。最终 HEAD 的分支 CI、合入、main CI 与归档清理见 §7（由 P7c 的 T1 回填）。基线 main `f42f9d6457ccc9540a687019f3530e253fe0f7b5`（P7a 的 noff，双父 `7868a6b4`、`5d6dab04`，树与 `5d6dab04` 相同）。
 
 ## 1. 评审方式与范围
 
@@ -119,6 +119,7 @@ A1–A14 满足（[spec §4](../specs/P7b-list-vocabulary.md#4-验收标准)已�
   - **世界的建法**（T14、T15）：nerve 以 `sort_order` 列出迭代与模块、新建的在前，故事按要列出的次序倒着建；要归档的先完成、先加入再归档；偏好先经接口存下，页面上只经界面改。
   - **e2e 的 lint 上限是 0**（T15）：按键的序列以 `reduce` 串起，不在循环里 `await`（`no-await-in-loop`）。
   - **时长**：台账里的 `durations.py` 从 JSON 报告取每个结果自己的时长、可按故事分；P7c 的 8 秒照此量。
+- **`5d7adaaa` 的分支 CI 与本提交**：43696983860 attempt 1 的 web、server 两路通过，e2e 作业 132762846784 477 条中 1 条失败——C4 (page) relation（`detail-interactions.spec.ts:13`，`:54` 等不到 “Related target options”）。不是登记过的签名，没有重跑；trace 查实描述的编辑器在点击 “Relations 1” 的按下与抬起之间挂上、Relations 下移约 28 像素，click 没有落在按钮上（[M6-M8-13](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-13) 一类，P7b 没有改详情页）。本提交照主控的裁定改故事、不改产品：C4 与 C8/C12 的 relation 一支先等描述的编辑器再点（夹具新的 `descriptionEditorMounted`）；探针在旧故事上复现、新故事通过（`ci-probe-old-hold` 15 例全在同一步失败、`ci-probe-new` 15 例全过），两个文件默认配置 48 条（`ci-after-two-files`）与 chromium `--repeat-each=3` 134 条（`ci-repeat3`）通过，一次多约 0.8 秒；经过见 M6-M8-13 的“处理结果（M6/P7b 的分支 CI）”。
 - **最终 HEAD 的分支 CI 与合入后的 main CI**：见 §7。
 
 ## 6. 整分支审查

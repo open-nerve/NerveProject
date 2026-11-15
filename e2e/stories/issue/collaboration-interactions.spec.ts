@@ -13,7 +13,7 @@ import { modalDialog, pageBehindHidden } from "../../fixtures/dialogs";
 import { signInPath, submitSignIn } from "../../fixtures/auth-pages";
 import { watchPage } from "../../fixtures/browser";
 import { createIssueComment } from "../../fixtures/comments";
-import { openIssueDetail } from "../../fixtures/issue-detail-page";
+import { descriptionEditorMounted, openIssueDetail } from "../../fixtures/issue-detail-page";
 import { expectListPageQuiet, issueListProject, openIssueList } from "../../fixtures/issue-list-page";
 import { createDraft, createIssue, createIssueRelations, updateIssue } from "../../fixtures/issues";
 import { expect, test } from "../../fixtures/test";
@@ -607,6 +607,7 @@ for (const control of [
           }
           if (control === "relation") {
             const relations = page.getByRole("button", { name: "Relations 1", exact: true });
+            await descriptionEditorMounted(page, source);
             await relations.click();
             await transitionsEnded(relations.locator("../.."));
           }
