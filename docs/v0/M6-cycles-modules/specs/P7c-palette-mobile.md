@@ -28,7 +28,7 @@ P7a、P7b 交付了工作项自己的迭代与模块和列表的词表；P7 余�
 
 ### 2.2 规划入口一条规则，打开的菜单不再转圈（R2）
 
-- **规则**：`core/lib/planning-switch.ts` 加一个纯函数（名字由 T3 定，下称“入口规则”）：给出项目、调用者在其中的角色与域，答“这一域的规划入口给不给”——角色是 ADMIN 或 MEMBER、项目没有归档、域的开关打开（`planningOn`）。另一个纯函数给“这一域的列表读不了的原因”（问题码）：没有角色 → `planning.cycle_not_found` / `planning.module_not_found`，项目已归档 → `project.archived`，开关关闭 → `planning.cycles_disabled` / `planning.modules_disabled`，读得了 → 无；`usePlanningReads` 的 `listed`（`core/hooks/use-planning-reads.ts:37-39`）与它同一组事实，调用者的角色一律以 `getProjectRoleByWorkspaceSlugAndProjectId(slug, project)` 取（不经路由）。
+- **规则**：`core/lib/planning-switch.ts` 加一个纯函数（名字由 T3 定，下称“入口规则”）：给出项目、调用者在其中的角色与域，答“这一域的规划入口给不给”——角色是 ADMIN 或 MEMBER、项目没有归档、域的开关打开（`planningOn`）。另一个纯函数给“这一域的列表读不了的原因”（问题码）：没有角色（或项目不在 store）→ `project.not_found`（nerve 读这一域的列表时的回答，`api/modules/planning.yaml:29`、`:331`），项目已归档 → `project.archived`，开关关闭 → `planning.cycles_disabled` / `planning.modules_disabled`，读得了 → 无；`usePlanningReads` 的 `listed`（`core/hooks/use-planning-reads.ts:37-39`）与它同一组事实，调用者的角色一律以 `getProjectRoleByWorkspaceSlugAndProjectId(slug, project)` 取（不经路由）。
 - **命令**：`open_project_cycle`、`nav_project_cycles`、`open_project_module`、`nav_project_modules` 的显示改由入口规则判断（今天只看角色与开关，`:310-313`、`:325-328`、`:349-352`、`:364-367`），归档的项目里不再给出。侧栏的两张声明表（`core/components/workspace/sidebar/project-navigation.tsx:78-97`、`core/components/navigation/use-navigation-items.ts:45-66`）是同一条规则的声明写法（`access: [ADMIN, MEMBER]` 加 `shouldRender: <开关>`，归档的项目不在侧栏），不改。
 - **打开的菜单**：`project-cycles-menu.tsx`、`project-modules-menu.tsx` 在门为假时不再渲染 `<Spinner />`：以上面的原因函数给出的问题码经 `problemMessageKey(code)`（`core/lib/error-messages.ts:129`，`useJoinRefusalWarning` 的先例 `core/hooks/use-refusal-toast.ts:44`；`errorMessageKey` 收的是错误对象，给码只得 `errors.unknown`，re-76 F3）说明（`PowerKMenuEmptyState`）；门为假时原因优先，store 里即使还持有这一域的列表（例如开关在已读过它的页上被关掉，`:44-48` 今天照列）也不列（re-76 F10）；读的失败照旧以 `refusalMessage(read.error)` 说明，只有门为真而还没回答时才转圈。
 - 访客照旧可按地址读（读门不变），没有入口（Plane 同：侧栏的迭代、模块对访客不给）。
@@ -150,7 +150,7 @@ T1 照 P7b spec §2.14 的公式重算并写进台账；T10 的检查点与 T15 
 ## 4. 验收标准
 
 - [ ] A1 拆分：`navigation/commands.ts` 按层级拆为两件，只搬不改，各在约 400 行以内，命令的输出逐项相同（基线同名同数），项目一级一件在 `project-address-route` 里。
-- [ ] A2 入口规则：纯函数与原因函数各有单测（ADMIN、MEMBER、工作区管理员而项目访客（映射为 ADMIN，`core/store/user/permissions.store.ts:68-74`）给，GUEST、没有角色、项目已归档、开关关闭不给；原因各一码）；四个导航命令改调它（归档的项目里不给，单测与变异）；两个打开的菜单门为假时以 `problemMessageKey` 说出那一码的话（断言具体的键：`errors.project_archived`、`errors.planning_cycles_disabled`）、不转圈、持有的列表也不列（单测；变异回到转圈即失败）。
+- [ ] A2 入口规则：纯函数与原因函数各有单测（ADMIN、MEMBER、工作区管理员而项目访客（映射为 ADMIN，`core/store/user/permissions.store.ts:68-74`）给，GUEST、没有角色、项目已归档、开关关闭不给；原因各一码）；四个导航命令改调它（归档的项目里不给，单测与变异）；两个打开的菜单门为假时以 `problemMessageKey` 说出那一码的话（断言具体的键：`errors.project_archived`、`errors.planning_cycles_disabled` / `errors.planning_modules_disabled`、`errors.project_not_found`）、不转圈、持有的列表也不列（单测；变异回到转圈即失败）。
 - [ ] A3 空文案：构造件只收键，七个菜单各有新键，默认 `power_k.search_menu.no_results`；en 与 zh-CN 同步。
 - [ ] A4 搜索：项目范围的两组（本地过滤、未归档、含已结束的迭代、入口规则、行有项目标识、选中即转到）；工作区范围没有；`/browse/:workItem` 上自己读；读失败不挡别的结果（单测与变异）。
 - [ ] A5 改迭代：选项（“无迭代”在前、不给已结束与已归档的、所持的标为当前、所持的已结束的以名字显示为当前）、选所持的不发请求、请求体 `{cycle_id}`、守卫（换项目、换人、不可改时不发、拒绝说原因）；`shift+c`；单测表与变异。

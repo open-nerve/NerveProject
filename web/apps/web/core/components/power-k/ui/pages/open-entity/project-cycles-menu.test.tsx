@@ -158,7 +158,7 @@ it.each([
 it.each([
   ["its cycles are turned off", its.member, { cycle_view: false }, "errors.planning_cycles_disabled"],
   ["it is archived", its.member, { archived_at: "2026-10-31T00:00:00Z" }, "errors.project_archived"],
-  ["the caller is not its member", its.outsider, {}, "errors.planning_cycle_not_found"],
+  ["the caller is not its member", its.outsider, {}, "errors.project_not_found"],
 ] as const)(
   "says why it lists none of the project's cycles when %s, waiting for nothing",
   async (_, caller, project, why) => {

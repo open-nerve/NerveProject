@@ -56,7 +56,7 @@ it.each<ListWord>([
 type Held = Pick<Project, "archived_at" | "cycle_view" | "module_view">;
 const open: Held = { archived_at: null, cycle_view: true, module_view: true };
 const archived: Held = { ...open, archived_at: "2026-10-31T00:00:00Z" };
-const unknownTo = { cycles: "planning.cycle_not_found", modules: "planning.module_not_found" };
+const unknownTo = { cycles: "project.not_found", modules: "project.not_found" };
 
 /** The caller's role in web, as the permission store gives it. */
 async function roleOf(caller: Caller) {
