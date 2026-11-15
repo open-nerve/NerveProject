@@ -34,7 +34,7 @@
 | F5 | 项目页移动端测试的引用错：`preferences-controls.test.tsx:218` 是帮手 `mountMobile`，`:228` 是 `it.each` 三行，`:251` 一例，共四例 | spec §2.7 与 plan 的回归边界、T9 改为四例、基线同数 4 |
 | F6 | 两个打开的菜单的测试除 `:121`、`:134`、`:139` 三例外还有 `:147` 的 `it.each` 三行（开关关闭、已归档、不是成员：门为假时什么都不读） | plan 回归边界“入口规则”写全，T3 的 RED 加在这三行旁 |
 | F7 | T6、T7 改写的 `PK/ui/pages/context-based/work-item/root.tsx` 不在守卫表里，它的局部变量 `projectMemberIds`（`:39`、`:57`）不读路由却命中 `\bprojectMemberIds\b` | spec §2.11 与 plan T6：局部变量改名为 `memberIds` 再加入守卫（审者另核过 `mutation-commands.ts`、`context.ts`、两个搜索件、七个菜单、两个视图弹窗加入时都不命中） |
-| F8 | `shift+c`、`shift+m` 带 Shift，按键走 `handleModifierShortcut`（`PK/core/shortcut-handler.ts:71`、`:83-86`），要声明为 `modifierShortcut`；Plane 的两个命令没有快捷键（调研笔记说“Plane 有”是错的） | spec §2.5、§6 与 plan T6、T7 写明 `modifierShortcut`；两个快捷键是 nerve 加的，登记差异 |
+| F8 | `shift+c`、`shift+m` 带 Shift，按键走 `handleModifierShortcut`（`PK/core/shortcut-handler.ts:71`、`:83-86`），要声明为 `modifierShortcut`；审者说 Plane 的两个命令没有快捷键（**更正**：T6 核实 Plane 有，`commands.ts:331` 的 `"shift+c"`、`:363` 的 `"shift+m"`，调研笔记是对的；实现不受影响，差异清单写“与 Plane 相同”） | spec §2.5、§6 与 plan T6、T7 写明 `modifierShortcut`；两个快捷键与 Plane 相同（T6 更正） |
 | F9 | “没有结果”今天在工作项与项目都空时给出（`search-menu.tsx:85`），只有迭代一组有结果时会出现在组的上方；两组的读还没回答时 spec 没有说 | spec §2.4：四组都空时才给；还没回答时这一组不显示、不挡别的；plan T5 的 RED 两例 |
 | F10 | 门为假而 store 持有列表时（开关在已读过它的页上被关），菜单今天照列（`project-cycles-menu.tsx:44-48`） | spec §2.2：门为假时原因优先、不列；plan T3 的 RED 一行与变异 `t3-mut-held-list` |
 | F11 | 一拆为二 `git diff -M` 显示不出；新的胶水（一个 hook 变两个、各自的 `useUser()`/`useProject()`、两级都用的 `baseProjectConditions`、键的联合）要写明；T3 改的“归档项目的那一格”在 T2 的上下文表里没有 | plan T2：以 `--color-moved` 或行多重集比较证明，台账写明唯一的胶水；特征测试的上下文加“项目已归档”；替身 `callerInWeb(…, fields)` 与 `useUser` 的 mock（`config/creation/command.test.tsx:16`）可用 |
