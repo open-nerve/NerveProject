@@ -13,7 +13,7 @@ type Toast = { type: string; title: string; message: string };
 /** Every toast shown so far, in order; a test empties it before each case. */
 export const toasts: Toast[] = [];
 
-export const TOAST_TYPE = { SUCCESS: "success", ERROR: "error" };
+export const TOAST_TYPE = { SUCCESS: "success", ERROR: "error", WARNING: "warning" };
 
 export function setToast(toast: Toast) {
   toasts.push(toast);

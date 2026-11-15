@@ -119,7 +119,15 @@ export const FIELD_ERROR_MESSAGES: Readonly<Record<FieldError["code"], string>> 
  */
 export function errorMessageKey(error: unknown): string {
   if (error instanceof SessionUnavailableError) return "errors.unreachable";
-  return PROBLEM_MESSAGES[problemCode(error) ?? ""] ?? "errors.unknown";
+  return problemMessageKey(problemCode(error));
+}
+
+/**
+ * The i18n key of the message of nerve's problem code, the one errorMessageKey gives nerve's refusal by it, or the
+ * general one: a refusal the page foresees and does not send says the same sentence (P7b spec 2.4, R4).
+ */
+export function problemMessageKey(code: string | undefined): string {
+  return PROBLEM_MESSAGES[code ?? ""] ?? "errors.unknown";
 }
 
 /** The i18n keys of the messages for the fields a problem names, by field. */

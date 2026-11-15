@@ -23,7 +23,10 @@ vi.mock("@/lib/store-context", () => ({
     return bound.app;
   },
 }));
-vi.mock("@/lib/auth/api-client", () => ({ tokenManager: { state: bound.session }, publicClient: {} }));
+vi.mock("@/lib/auth/api-client", () => ({
+  tokenManager: { state: bound.session, subscribe: () => () => {} },
+  publicClient: {},
+}));
 vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
 vi.mock("@nerve/propel/toast", () => ({ setToast: () => {}, TOAST_TYPE: { SUCCESS: "success", ERROR: "error" } }));
 vi.mock("react-router", async (original) => ({
@@ -33,6 +36,9 @@ vi.mock("react-router", async (original) => ({
 vi.mock("@/hooks/store/use-issue-detail", () => ({ useIssueDetail: () => app().issue.issueDetail }));
 vi.mock("@/hooks/store/use-project-state", () => ({ useProjectState: () => app().state }));
 vi.mock("@/hooks/store/use-project", () => ({ useProject: () => app().projectRoot.project }));
+vi.mock("@/hooks/store/use-cycles", () => ({ useCycles: () => app().planning.cycles }));
+vi.mock("@/hooks/store/use-modules", () => ({ useModules: () => app().planning.modules }));
+vi.mock("@/hooks/store/user", () => ({ useUserPermissions: () => app().user.permission }));
 vi.mock("@/hooks/store/use-kanban-view", () => ({ useKanbanView: () => ({ getCanUserDragDrop: () => false }) }));
 vi.mock("@/hooks/use-issue-layout-store", () => ({
   useIssueStoreType: () => EIssuesStoreType.PROJECT,

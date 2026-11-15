@@ -1,10 +1,10 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 // M6 P7a spec 2.3, R4, R13: a work item's cycle and module options are what it may join, apart from the values it
-// holds.
+// holds. M6 P7b spec 2.2, R17: what names a value is read in one order, its project's list, then its archive.
 import { expect, it } from "vitest";
 import type { Cycle, Module } from "@nerve/api-client";
 import { cycleOf, moduleOf, projectOf } from "@/store/project/fake-projects";
-import { cycleOptions, moduleOptions } from "./planning-directory";
+import { cycleOptions, moduleOptions, nextPlanningList } from "./planning-directory";
 
 const project = projectOf("WEB", "ws");
 const draft = cycleOf(project, "Draft");
@@ -59,4 +59,15 @@ it("leaves out a module archived since the list was read, and one the store no l
 it("gives no module option until the project's list is read", () => {
   expect(moduleOptions([], moduleById)).toEqual([]);
   expect(moduleOptions(undefined, moduleById)).toBeUndefined();
+});
+
+it("reads the project's list first for a value it cannot name, then its archive, then neither", () => {
+  expect(nextPlanningList(true, { list: false, archive: false })).toBe("list");
+  expect(nextPlanningList(true, { list: true, archive: false })).toBe("archive");
+  expect(nextPlanningList(true, { list: true, archive: true })).toBeUndefined();
+});
+
+it("reads neither list while every value is named, whatever has been read", () => {
+  expect(nextPlanningList(false, { list: false, archive: false })).toBeUndefined();
+  expect(nextPlanningList(false, { list: true, archive: false })).toBeUndefined();
 });

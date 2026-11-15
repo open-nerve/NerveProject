@@ -5,6 +5,10 @@
 
 import type { ApiClient, CyclePreferences, CyclePreferencesUpdate } from "@nerve/api-client";
 import { unwrap } from "@/lib/api-error";
+import type { CyclePageFilters } from "@/lib/issue-filters";
+
+/** nerve's update of a cycle's page with the page's filters, which never hold cycle_id (P7b R18). */
+type CyclePreferencesChange = Omit<CyclePreferencesUpdate, "filters"> & { filters?: CyclePageFilters };
 
 /** The caller's own list settings on a cycle's page: its filters, display filters and display properties. */
 export class CyclePreferencesService {
@@ -19,7 +23,7 @@ export class CyclePreferencesService {
   }
 
   /** Each named field replaces that field whole; the answer is the page's settings as changed. */
-  async update(cycleId: string, data: CyclePreferencesUpdate): Promise<CyclePreferences> {
+  async update(cycleId: string, data: CyclePreferencesChange): Promise<CyclePreferences> {
     return unwrap(
       await this.api.PATCH("/api/v0/me/cycles/{cycle_id}/preferences", {
         params: { path: { cycle_id: cycleId } },

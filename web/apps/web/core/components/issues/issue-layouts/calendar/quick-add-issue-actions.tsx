@@ -17,15 +17,12 @@ import { AddOutline } from "@makeplane/propel/icons";
 import { EIssueLayoutTypes } from "@nerve/types";
 import { CustomMenu } from "@nerve/ui";
 import { cn } from "@nerve/utils";
-// components
-import {
-  ExistingIssuesListModal,
-  type SelectionSubmitResult,
-} from "@/components/core/modals/existing-issues-list-modal";
 // hooks
-import { SessionChangedError } from "@/lib/auth/token-manager";
-import { useIssueDetail } from "@/hooks/store/use-issue-detail";
+import { useIssueStoreType } from "@/hooks/use-issue-layout-store";
+// local imports
+import { useAddExistingRequest } from "../command-host";
 import { QuickAddIssueRoot } from "../quick-add";
+import type { CalendarStoreType } from "./base-calendar-root";
 
 type TCalendarQuickAddIssueActions = {
   prePopulatedData?: Partial<IssueDetail>;
@@ -38,52 +35,40 @@ export const CalendarQuickAddIssueActions = observer(function CalendarQuickAddIs
   const { prePopulatedData, quickAddCallback } = props;
   const { t } = useTranslation();
   // router
-  const { workspaceSlug, projectId } = useParams();
+  const { projectId } = useParams();
   // states
   const [isOpen, setIsOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isExistingIssueModalOpen, setIsExistingIssueModalOpen] = useState(false);
-  const { updateIssue } = useIssueDetail();
-  const handleAddIssuesToView = async (ids: readonly string[]): Promise<SelectionSubmitResult> => {
-    if (!workspaceSlug || !projectId || !prePopulatedData?.target_date) throw new SessionChangedError();
-    const unique = [...new Set(ids)];
-    const answers = await Promise.allSettled(
-      unique.map((id) => updateIssue(workspaceSlug, projectId, id, { target_date: prePopulatedData.target_date }))
-    );
-    return {
-      confirmedIds: unique.filter((_, index) => answers[index]!.status === "fulfilled"),
-      failures: answers.flatMap((answer, index) =>
-        answer.status === "rejected" ? [{ id: unique[index]!, error: answer.reason as unknown }] : []
-      ),
-    };
-  };
+  // the page's own list, whose actions add the work items chosen (P7b spec 2.10)
+  const storeType = useIssueStoreType() as CalendarStoreType;
+  const requestAddExisting = useAddExistingRequest();
+  const day = prePopulatedData?.target_date;
 
   const handleNewIssue = () => {
     setIsOpen(true);
   };
+  /**
+   * The day's existing work items (P7b spec 2.10, R6, R11): the layout's command host holds the dialog, which outlives
+   * the day while the list is checked, and adds those chosen by the page's actions: the project's page gives each the
+   * day alone (M4 I4); a cycle's or a module's page gives each the day and joins it to the page in one change, which
+   * nerve makes whole or refuses whole, its search hiding too those already in the page's cycle or module. Those of no
+   * day are searched for; those starting after the day are hidden.
+   */
   const handleExistingIssue = () => {
-    setIsExistingIssueModalOpen(true);
+    if (!requestAddExisting) throw new Error("Adding existing work items requires an IssueListCommandHost");
+    if (!day) throw new Error("A day's existing work items require its day");
+    requestAddExisting({
+      storeType,
+      extra: { target_date: day },
+      searchParams: { target_date: ["none"] },
+      hide: (issue) => !!issue.target_date || !!(issue.start_date && issue.start_date > day),
+    });
   };
 
   if (!projectId) return null;
 
   return (
     <>
-      {workspaceSlug && projectId && (
-        <ExistingIssuesListModal
-          workspaceSlug={workspaceSlug}
-          projectId={projectId}
-          isOpen={isExistingIssueModalOpen}
-          handleClose={() => setIsExistingIssueModalOpen(false)}
-          key={prePopulatedData?.target_date}
-          searchParams={{ target_date: ["none"] }}
-          handleOnSubmit={handleAddIssuesToView}
-          shouldHideIssue={(issue) =>
-            !!issue.target_date ||
-            !!(issue.start_date && prePopulatedData?.target_date && issue.start_date > prePopulatedData.target_date)
-          }
-        />
-      )}
       <QuickAddIssueRoot
         isQuickAddOpen={isOpen}
         setIsQuickAddOpen={setIsOpen}

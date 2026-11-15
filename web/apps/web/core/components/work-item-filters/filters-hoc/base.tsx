@@ -70,12 +70,14 @@ const WorkItemFilterRoot = observer(function WorkItemFilterRoot(props: TWorkItem
   );
   // memoize initial values to prevent re-computations when reference changes
   const initialUserFilters = useMemo(() => initialWorkItemFilters.richFilters, [initialWorkItemFilters]);
-  const workItemFiltersConfig = useWorkItemFiltersConfig({
-    allowedFilters: filtersToShowByLayout ? filtersToShowByLayout : [],
-    ...entityConfigProps,
-  });
   const key = JSON.stringify([entityType, workItemEntityID]);
   const [current, setCurrent] = useState<{ store: typeof store; key: string; filter: IWorkItemFilterInstance }>();
+  const workItemLayoutFilter = current?.store === store && current.key === key ? current.filter : undefined;
+  const workItemFiltersConfig = useWorkItemFiltersConfig({
+    allowedFilters: filtersToShowByLayout ? filtersToShowByLayout : [],
+    conditions: workItemLayoutFilter?.allConditions,
+    ...entityConfigProps,
+  });
   // Registry writes and option notifications belong to the commit phase, never a render memo.
   useLayoutEffect(() => {
     const filter = getOrCreateFilter({
@@ -105,7 +107,6 @@ const WorkItemFilterRoot = observer(function WorkItemFilterRoot(props: TWorkItem
       if (getFilter(entityType, workItemEntityID) === owned) deleteFilter(entityType, workItemEntityID);
     };
   }, [getFilter, deleteFilter, entityType, workItemEntityID]);
-  const workItemLayoutFilter = current?.store === store && current.key === key ? current.filter : undefined;
 
   useEffect(() => {
     if (!workItemLayoutFilter) return;

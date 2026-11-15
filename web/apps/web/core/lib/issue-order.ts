@@ -6,9 +6,12 @@ export type IssueCatalog = {
   states: ReadonlyMap<string, State>;
   labels: ReadonlyMap<string, Label>;
   members: ReadonlyMap<string, MemberUser>;
-  /** Archived cycles and modules included: they key their work items as any other. */
-  cycles: ReadonlyMap<string, Cycle>;
-  modules: ReadonlyMap<string, Module>;
+  /**
+   * Archived cycles and modules included: they key their work items as any other. Lookups alone, which the planning
+   * store answers (getCycleById, getModuleById; M6 P7b spec 2.2, R17).
+   */
+  cycles: Pick<ReadonlyMap<string, Cycle>, "get" | "has">;
+  modules: Pick<ReadonlyMap<string, Module>, "get" | "has">;
 };
 
 /** Match the server's ASCII fold and PostgreSQL C collation, without locale rules. */

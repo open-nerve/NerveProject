@@ -7,7 +7,7 @@ import type { IssueListOptions } from "@/lib/issue-filters";
  * See the LICENSE file for details.
  */
 
-import type { Issue, IssueCreate, IssueUpdate } from "@nerve/api-client";
+import type { Issue, IssueCreate } from "@nerve/api-client";
 
 /* eslint-disable react-hooks/exhaustive-deps */
 import { useCallback, useMemo } from "react";
@@ -17,6 +17,9 @@ import type { TSupportedFilterTypeForUpdate } from "@nerve/constants";
 import { EUserPermissions } from "@nerve/constants";
 import type { TLoader, TProfileViews, TSupportedFilterForUpdate, IssueChange } from "@nerve/types";
 import { EIssuesStoreType } from "@nerve/types";
+import type { SelectionSubmitResult } from "@/components/core/modals/existing-issues-list-modal";
+import { SessionChangedError } from "@/lib/auth/token-manager";
+import { settleEach, WRITES_PER_PROJECT } from "@/lib/settle-each";
 import { useIssues } from "./store/use-issues";
 import { usePlanningPageIssueActions } from "./use-planning-page-issue-actions";
 import { useProjectPreferencesFollow } from "./use-project-preferences-follow";
@@ -32,15 +35,22 @@ export interface IssueActions {
   removeIssue: (projectId: string | undefined | null, issueId: string) => Promise<void>;
   /** A cycle's or a module's page's removal of a work item from its cycle or module (P6b spec 2.2, 2.5). */
   removeIssueFromView?: (projectId: string | undefined | null, issueId: string) => Promise<void>;
+  /**
+   * Adds existing work items of the route's project to the page (P7b spec 2.9, R6), one change of each, no more at once
+   * than nerve takes; each one's outcome: a cycle's or a module's page joins them to its cycle or module, with what the
+   * caller gives; the project's page sends what the caller gives.
+   */
+  addIssuesToView?: (ids: readonly string[], extra?: IssueChange) => Promise<SelectionSubmitResult>;
   /** A creation as the page makes it: a cycle's or a module's page's joins the page while it takes work items. */
   createIssue?: (projectId: string | undefined | null, data: IssueCreate) => Promise<Issue | undefined>;
   /** A form's creation: what the form gives, nothing of the page added (P7a spec 2.6, R2); elsewhere createIssue. */
   createIssueAsGiven?: (projectId: string | undefined | null, data: IssueCreate) => Promise<Issue | undefined>;
   updateIssue?: (projectId: string | undefined | null, issueId: string, change: IssueChange) => Promise<void>;
+  /** A drop's change, made in the write's turn from the work item then held (P7b spec 2.7, R3). */
   dropIssue?: (
     projectId: string,
     issueId: string,
-    makeBody: (held: Issue) => IssueUpdate,
+    makeChange: (held: Issue) => IssueChange,
     drop: IssueDrop
   ) => Promise<void>;
   archiveIssue?: (projectId: string | undefined | null, issueId: string) => Promise<void>;
@@ -122,9 +132,9 @@ const useProjectIssueActions = () => {
     [issues.updateIssue, workspaceSlug]
   );
   const dropIssue = useCallback(
-    async (targetProject: string, issueId: string, makeBody: (held: Issue) => IssueUpdate, drop: IssueDrop) => {
+    async (targetProject: string, issueId: string, makeChange: (held: Issue) => IssueChange, drop: IssueDrop) => {
       if (!workspaceSlug) return;
-      await issues.dropIssue(workspaceSlug, targetProject, issueId, makeBody, drop);
+      await issues.dropIssue(workspaceSlug, targetProject, issueId, makeChange, drop);
     },
     [issues, workspaceSlug]
   );
@@ -141,6 +151,16 @@ const useProjectIssueActions = () => {
       return await issues.archiveIssue(workspaceSlug, projectId, issueId);
     },
     [issues.archiveIssue, workspaceSlug]
+  );
+  // what the caller gives each of the work items of the route's project, and only that (a calendar's day, M4 I4)
+  const addIssuesToView = useCallback(
+    async (ids: readonly string[], extra: IssueChange = {}) => {
+      if (!workspaceSlug || !routeProjectId) throw new SessionChangedError();
+      return await settleEach(ids, WRITES_PER_PROJECT, (id) =>
+        issues.updateIssue(workspaceSlug, routeProjectId, id, extra)
+      );
+    },
+    [issues, workspaceSlug, routeProjectId]
   );
 
   const updateFilters = useCallback(
@@ -161,11 +181,22 @@ const useProjectIssueActions = () => {
       createIssueAsGiven: createIssue,
       updateIssue,
       removeIssue,
+      addIssuesToView,
       archiveIssue,
       dropIssue,
       updateFilters,
     }),
-    [fetchIssues, fetchNextIssues, createIssue, updateIssue, removeIssue, archiveIssue, dropIssue, updateFilters]
+    [
+      fetchIssues,
+      fetchNextIssues,
+      createIssue,
+      updateIssue,
+      removeIssue,
+      addIssuesToView,
+      archiveIssue,
+      dropIssue,
+      updateFilters,
+    ]
   );
 };
 
@@ -208,9 +239,9 @@ const useProfileIssueActions = () => {
     [issues.updateIssue, workspaceSlug]
   );
   const dropIssue = useCallback(
-    async (targetProject: string, issueId: string, makeBody: (held: Issue) => IssueUpdate, drop: IssueDrop) => {
+    async (targetProject: string, issueId: string, makeChange: (held: Issue) => IssueChange, drop: IssueDrop) => {
       if (!workspaceSlug) return;
-      await issues.dropIssue(workspaceSlug, targetProject, issueId, makeBody, drop);
+      await issues.dropIssue(workspaceSlug, targetProject, issueId, makeChange, drop);
     },
     [issues, workspaceSlug]
   );

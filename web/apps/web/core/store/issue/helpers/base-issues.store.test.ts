@@ -1,13 +1,26 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 import { accountOf } from "@/store/member/fake-users";
 import { seedAccount } from "@/store/user/fake-account";
-import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { runInAction } from "mobx";
+import type { Issue, Project } from "@nerve/api-client";
+import type { IssueChange } from "@nerve/types";
+import type { IssueCatalog } from "@/lib/issue-order";
 import { FakeNerve, answered, json, problem } from "@/lib/auth/fake-nerve";
 import { until } from "@/lib/auth/fake-time";
 import { issueDetailOf, issuePageOf, listIssue, requestedIssue } from "../fake-issues";
 import { loadWorkspaces, workspaceOf } from "@/store/workspace/fake-workspaces";
-import { loadProject, loadProjects, projectOf, stateOf, labelOf } from "@/store/project/fake-projects";
+import {
+  loadProject,
+  loadProjects,
+  projectOf,
+  stateOf,
+  labelOf,
+  cycleOf,
+  moduleOf,
+} from "@/store/project/fake-projects";
+import { cycleRequests, rowOf } from "@/store/planning/fake-cycles";
+import { moduleRequests, moduleRowOf } from "@/store/planning/fake-modules";
 import { membershipOf } from "@/store/member/workspace/fake-members";
 vi.stubGlobal("localStorage", { getItem: () => null, setItem: () => {}, removeItem: () => {} });
 vi.mock("@/lib/auth/api-client", () => ({ tokenManager: {}, publicClient: {} }));
@@ -448,29 +461,274 @@ it("authoritativeDirectoryStillMissingAReferenceRejectsWithoutRetryLoop", async 
   expect(app.issue.issues.getIssueById("x")).toBeUndefined();
 });
 
-// Until P7 the web has no cycle or module directory (M6 P3b spec R9): a list ordered by their names, which no web
-// control asks for yet, refuses loudly when a work item is in one, and orders one in none last, as nerve does.
-it.each<[import("@nerve/api-client").IssueListOrder, Partial<import("@nerve/api-client").Issue>]>([
-  ["cycle_name", { cycle_id: "c-A-Sprint" }],
-  ["-cycle_name", { cycle_id: "c-A-Sprint" }],
-  ["module_name", { module_ids: ["m-A-Core"] }],
-  ["-module_name", { module_ids: ["m-A-Core"] }],
-])("planningDirectoryIsUnavailableUntilP7 %s", async (order_by, fields) => {
-  const request = await requestedIssue(
-    nerve,
-    () =>
-      app.issue.projectIssues.fetchIssues("ws", "A", "init-loader", {
-        limit: 10,
-        query: { group_by: undefined, order_by },
-      }),
-    ["GET", "/api/v0/projects/A/issues"]
+// The list's directory names a cycle or a module as the planning store does (M6 P7b spec 2.2, R17; until P7b it had
+// none and refused, P3b R9). A list ordered by their names reads, for a value the store cannot name, its project's list
+// of what is not archived, then its archive, each once at most and whether the store holds it or not, so that a value
+// created elsewhere after both were held is named; one still unnamed then (deleted meanwhile) fails loudly. A project
+// the project store does not give is read first; the project's switch gates nothing, the list's own read does.
+type PlanningOrder = {
+  order: "cycle_name" | "module_name";
+  /** A value of the owner as its lists give it, archived when it says so. */
+  row: (owner: Project, name: string, archived?: boolean) => { id: string };
+  /** A work item's fields holding the value. */
+  holds: (id: string) => { cycle_id: string } | { module_ids: string[] };
+  /** The change that takes a work item from one value to another. */
+  move: (from: string, to: string) => IssueChange;
+  /** The list's directory of the domain. */
+  lookup: (catalog: IssueCatalog) => Pick<ReadonlyMap<string, { name: string }>, "get" | "has">;
+  /** The path of the owner's lists, its archive with archived=true. */
+  path: (owner: Pick<Project, "id">) => string;
+  /** The planning store's fetches of a project's list and of its archive. */
+  fetches: () => readonly [(projectId: string) => Promise<unknown>, (projectId: string) => Promise<unknown>];
+  /** The project with the domain turned off. */
+  off: Partial<Project>;
+};
+const ARCHIVED_AT = "2026-10-20T00:00:00Z";
+const PLANNING_ORDERS: Record<"cycles" | "modules", PlanningOrder> = {
+  cycles: {
+    order: "cycle_name",
+    row: (owner, name, archived = false) => rowOf(cycleOf(owner, name, archived ? { archived_at: ARCHIVED_AT } : {})),
+    holds: (id) => ({ cycle_id: id }),
+    move: (_from, to) => ({ cycle_id: to }),
+    lookup: (catalog) => catalog.cycles,
+    path: cycleRequests.list,
+    fetches: () => [app.planning.cycles.fetchCycles, app.planning.cycles.fetchArchivedCycles],
+    off: { cycle_view: false },
+  },
+  modules: {
+    order: "module_name",
+    row: (owner, name, archived = false) =>
+      moduleRowOf(moduleOf(owner, name, archived ? { archived_at: ARCHIVED_AT } : {})),
+    holds: (id) => ({ module_ids: [id] }),
+    move: (from, to) => ({ modules: { add: [to], remove: [from] } }),
+    lookup: (catalog) => catalog.modules,
+    path: moduleRequests.list,
+    fetches: () => [app.planning.modules.fetchModules, app.planning.modules.fetchArchivedModules],
+    off: { module_view: false },
+  },
+};
+
+describe.each(["cycles", "modules"] as const)("the list's directory of the %s", (domain) => {
+  const { order, row, holds, move, lookup, path, fetches, off } = PLANNING_ORDERS[domain];
+  const other = projectOf("B", ws.id, { id: "B" });
+  /** The reads of the owner's lists of the domain so far: {} its list, { archived: "true" } its archive. */
+  const reads = (owner: Project = project) =>
+    nerve.calls.filter((call) => call.method === "GET" && call.path === path(owner)).map((call) => call.query);
+  /** nerve answers the owner's read at its place with these values, once it is made. */
+  const answerRead = async (at: number, values: { id: string }[], owner: Project = project) => {
+    await until(() => reads(owner).length > at, `read ${at} of ${owner.id}'s ${domain}`);
+    nerve.calls.filter((call) => call.path === path(owner))[at]!.answer(json(200, { data: values }));
+  };
+  /** The store holds the project's list (0) or its archive (1) with these values; the requests so far forgotten. */
+  const hold = async (at: 0 | 1, values: { id: string }[]) => {
+    await answered(nerve, () => fetches()[at](project.id), ["GET", path(project)], { data: values }, "held");
+    nerve.calls.length = 0;
+  };
+  /** The project's list ordered by the domain's name, ascending or descending ("-"), as nerve answers it with rows. */
+  const listOrdered = async (rows: Issue[], direction: "" | "-" = "") => {
+    const request = await requestedIssue(
+      nerve,
+      () =>
+        app.issue.projectIssues.fetchIssues("ws", "A", "init-loader", {
+          limit: 10,
+          query: { group_by: undefined, order_by: `${direction}${order}` as const },
+        }),
+      ["GET", "/api/v0/projects/A/issues"]
+    );
+    request.call.answer(json(200, issuePageOf(rows)));
+    return request.promise;
+  };
+  /** The rows of the list as it shows them, each with its key. */
+  const ordered = () => app.issue.projectIssues.groups?.get("")?.rows.map((each) => [each.id, each.key]);
+  /** A member list of the caller's work items in every project, ordered by the domain's name. */
+  const memberList = async () => {
+    const { IssueListBinding } = await import("./issue-list-binding");
+    return new IssueListBinding(app.issue, {
+      scope: "member",
+      workspaceSlug: "ws",
+      workspaceID: ws.id,
+      userID: "actor",
+      query: { relation: "assigned", order_by: order, limit: 10 },
+    });
+  };
+
+  it.each(["", "-"] as const)(
+    "reads the list, then the archive, each once, and orders by the names (%s)",
+    async (direction) => {
+      const kept = row(project, "Beta");
+      const shelved = row(project, "Alpha", true);
+      const [x, y, z] = [listIssue("x", 1, holds(kept.id)), listIssue("y", 2, holds(shelved.id)), listIssue("z", 3)];
+      const listing = listOrdered(direction ? [x, y, z] : [y, x, z], direction);
+      await answerRead(0, [kept]);
+      await answerRead(1, [shelved]);
+      await listing;
+      expect(reads()).toEqual([{}, { archived: "true" }]);
+      const named = [
+        ["y", "alpha"],
+        ["x", "beta"],
+      ];
+      expect(ordered()).toEqual([...(direction ? named.toReversed() : named), ["z", null]]);
+    }
   );
-  const refused = expect(request.promise).rejects.toThrow("Required issue directory is unavailable");
-  request.call.answer(json(200, issuePageOf([listIssue("x", 1, fields)])));
-  await refused;
-  expect(nerve.calls).toHaveLength(1);
-  expect(app.issue.projectIssues.groups).toBeUndefined();
-  expect(app.issue.issues.getIssueById("x")).toBeUndefined();
+
+  it("reads no archive while the list names every value", async () => {
+    const kept = row(project, "Beta");
+    const listing = listOrdered([listIssue("x", 1, holds(kept.id)), listIssue("z", 2)]);
+    await answerRead(0, [kept]);
+    await listing;
+    expect(reads()).toEqual([{}]);
+    expect(ordered()).toEqual([
+      ["x", "beta"],
+      ["z", null],
+    ]);
+  });
+
+  it("reads nothing while the store names every value", async () => {
+    const kept = row(project, "Beta");
+    await hold(0, [kept]);
+    await listOrdered([listIssue("x", 1, holds(kept.id))]);
+    expect(reads()).toEqual([]);
+    expect(ordered()).toEqual([["x", "beta"]]);
+  });
+
+  it("reads the list it holds again for a value created elsewhere since, and not the archive", async () => {
+    const kept = row(project, "Beta");
+    const fresh = row(project, "Gamma");
+    await hold(0, [kept]);
+    await hold(1, [row(project, "Alpha", true)]);
+    const listing = listOrdered([listIssue("x", 1, holds(kept.id)), listIssue("y", 2, holds(fresh.id))]);
+    await answerRead(0, [kept, fresh]);
+    await listing;
+    expect(reads()).toEqual([{}]);
+    expect(ordered()).toEqual([
+      ["x", "beta"],
+      ["y", "gamma"],
+    ]);
+  });
+
+  it("fails loudly for a value neither list names once both are read again, each once", async () => {
+    const kept = row(project, "Beta");
+    const shelved = row(project, "Alpha", true);
+    await hold(0, [kept]);
+    await hold(1, [shelved]);
+    const listing = listOrdered([listIssue("x", 1, holds(row(project, "Gone").id))]);
+    const refused = expect(listing).rejects.toThrow("Required issue directory is unavailable");
+    await answerRead(0, [kept]);
+    await answerRead(1, [shelved]);
+    await refused;
+    expect(reads()).toEqual([{}, { archived: "true" }]);
+    expect(app.issue.projectIssues.groups).toBeUndefined();
+    expect(app.issue.issues.getIssueById("x")).toBeUndefined();
+  });
+
+  it("reads none of the lists for a list not ordered by the names", async () => {
+    await answered(
+      nerve,
+      () =>
+        app.issue.projectIssues.fetchIssues("ws", "A", "init-loader", {
+          limit: 10,
+          query: { group_by: undefined, order_by: "sort_order" },
+        }),
+      ["GET", "/api/v0/projects/A/issues"],
+      issuePageOf([listIssue("x", 1, holds(row(project, "Beta").id))]),
+      "the list"
+    );
+    expect(reads()).toEqual([]);
+    expect(ordered()).toEqual([["x", 1]]);
+  });
+
+  it("reads and orders by the names while the project has the domain off", async () => {
+    await loadProjects(nerve, app.projectRoot.project, ws, [{ ...project, ...off }]);
+    nerve.calls.length = 0;
+    const kept = row(project, "Beta");
+    const listing = listOrdered([listIssue("x", 1, holds(kept.id))]);
+    await answerRead(0, [kept]);
+    await listing;
+    expect(reads()).toEqual([{}]);
+    expect(ordered()).toEqual([["x", "beta"]]);
+  });
+
+  it("names the values of a project the project store gives, alone, as the planning store does", async () => {
+    await loadProjects(nerve, app.projectRoot.project, ws, [project, other]);
+    const theirs = row(other, "Alpha");
+    await answered(nerve, () => fetches()[0](other.id), ["GET", path(other)], { data: [theirs] }, "their list");
+    const { listCatalog } = await import("./issue-list-catalog");
+    expect(lookup(listCatalog(app.issue)).get(theirs.id)?.name).toBe("Alpha");
+    await loadProjects(nerve, app.projectRoot.project, ws, [project]);
+    expect(lookup(listCatalog(app.issue)).has(theirs.id)).toBe(false);
+  });
+
+  it("a member list reads a project the project store does not give first, then each project's own list", async () => {
+    const mine = row(project, "Beta");
+    const theirs = row(other, "Alpha");
+    const member = await memberList();
+    const read = await requestedIssue(nerve, () => member.fetchFirst(), [
+      "GET",
+      "/api/v0/workspaces/ws/members/actor/issues",
+    ]);
+    read.call.answer(
+      json(
+        200,
+        issuePageOf([listIssue("w", 1, { project_id: "B", ...holds(theirs.id) }), listIssue("x", 2, holds(mine.id))])
+      )
+    );
+    await until(() => nerve.calls.some((call) => call.path === "/api/v0/projects/B"), "the project");
+    nerve.calls.find((call) => call.path === "/api/v0/projects/B")!.answer(json(200, other));
+    await answerRead(0, [mine]);
+    await answerRead(0, [theirs], other);
+    await read.promise;
+    const at = (where: string) => nerve.calls.findIndex((call) => call.path === where);
+    expect(at("/api/v0/projects/B")).toBeLessThan(at(path(other)));
+    expect([reads(), reads(other)]).toEqual([[{}], [{}]]);
+    expect(member.value?.groups.get("")?.rows.map((each) => [each.id, each.key])).toEqual([
+      ["w", "alpha"],
+      ["x", "beta"],
+    ]);
+  });
+
+  it("a creation's confirmation reads the project the project store does not give before its list", async () => {
+    const theirs = row(other, "Alpha");
+    const member = await memberList();
+    await answered(
+      nerve,
+      () => member.fetchFirst(),
+      ["GET", "/api/v0/workspaces/ws/members/actor/issues"],
+      issuePageOf([]),
+      "the member list"
+    );
+    const creating = await requestedIssue(
+      nerve,
+      () => app.issue.writes.createIssue(app.issue.scope("ws", "B"), { name: "new", ...holds(theirs.id) }),
+      ["POST", "/api/v0/projects/B/issues"]
+    );
+    creating.call.answer(json(201, { ...issueDetailOf("n", "B"), ...holds(theirs.id) }));
+    await until(() => nerve.calls.some((call) => call.path === "/api/v0/projects/B"), "the project");
+    expect(reads(other)).toEqual([]);
+    nerve.calls.find((call) => call.path === "/api/v0/projects/B")!.answer(json(200, other));
+    await answerRead(0, [theirs], other);
+    await creating.promise;
+    expect(reads(other)).toEqual([{}]);
+    expect(member.error).toBeUndefined();
+  });
+
+  it("a change's confirmation reads the list again for the value created elsewhere it moved a work item to", async () => {
+    const kept = row(project, "Beta");
+    const fresh = row(project, "Gamma");
+    const listing = listOrdered([listIssue("x", 1, holds(kept.id))]);
+    await answerRead(0, [kept]);
+    await listing;
+    const changing = await requestedIssue(
+      nerve,
+      () => app.issue.writes.changeIssue("x", move(kept.id, fresh.id), app.issue.scope("ws", "A")),
+      ["PATCH", "/api/v0/issues/x"]
+    );
+    changing.call.answer(json(200, { ...issueDetailOf("x"), ...holds(fresh.id), updated_at: "2026-10-29T00:00:00Z" }));
+    await answerRead(1, [kept, fresh]);
+    await changing.promise;
+    expect(reads()).toEqual([{}, {}]);
+    expect(app.issue.projectIssues.currentList?.error).toBeUndefined();
+    expect(app.issue.issues.getIssueById("x")).toMatchObject(holds(fresh.id));
+  });
 });
 
 it.each(["cycle_name", "-module_name"] as const)("workItemInNoCycleOrModuleNeedsNoDirectory %s", async (order_by) => {

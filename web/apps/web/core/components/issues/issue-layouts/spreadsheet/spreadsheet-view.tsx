@@ -18,7 +18,7 @@ import { EIssueLayoutTypes } from "@nerve/types";
 // hooks
 import { useProject } from "@/hooks/store/use-project";
 // lib
-import { displayPropertyOn } from "@/lib/planning-switch";
+import { listWordOn } from "@/lib/planning-switch";
 // local imports
 import type { TRenderQuickActions } from "../list/list-view-types";
 import { QuickAddIssueRoot, SpreadsheetAddIssueButton } from "../quick-add";
@@ -63,7 +63,7 @@ export const SpreadsheetView = observer(function SpreadsheetView(props: Props) {
   // The table is a project's (its list, a cycle's, a module's): its cycle and its modules columns while the project
   // has their domain turned on (P7a spec 2.5, R11).
   const project = projectId ? getProjectById(projectId) : undefined;
-  const spreadsheetColumnsList = SPREADSHEET_PROPERTY_LIST.filter((property) => displayPropertyOn(project, property));
+  const spreadsheetColumnsList = SPREADSHEET_PROPERTY_LIST.filter((property) => listWordOn(project, property));
 
   if (!issueIds || issueIds.length === 0) return <></>;
   return (

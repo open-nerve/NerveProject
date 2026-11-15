@@ -22,3 +22,12 @@ export async function openIssueDetail(
   else await expect(page.getByRole("textbox", { name: "Work item title", exact: true })).toBeVisible();
   return watch;
 }
+
+/**
+ * Waits for the issue's editable description. Its editor mounts after the title and moves the sections below it down
+ * (M6-M8-13): a click there that starts earlier can press one element and release on another. Focus by keyboard does
+ * not depend on their position.
+ */
+export async function descriptionEditorMounted(page: Page, issue: Pick<Issue, "id">) {
+  await expect(page.locator(`[id="editor-container-${issue.id}"] [contenteditable="true"]`)).toBeVisible();
+}

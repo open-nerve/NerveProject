@@ -2,6 +2,7 @@
   "module": {
     "count": "{count} 个模块",
     "no_module": "无模块",
-    "work_items_count": "此模块中有 {count} 个工作项"
+    "work_items_count": "此模块中有 {count} 个工作项",
+    "found_already_in": "找到的工作项都已在此模块中。"
   }
 }

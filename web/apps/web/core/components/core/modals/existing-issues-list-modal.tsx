@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  * See the LICENSE file for details.
  */
-import { useLayoutEffect, useMemo, useState } from "react";
+import { useLayoutEffect, useMemo, useState, type ReactNode } from "react";
 import { observer } from "mobx-react";
 import { Combobox } from "@headlessui/react";
 import { CloseOutline, SearchOutline } from "@makeplane/propel/icons";
@@ -35,6 +35,13 @@ type Props = {
   handleOnSubmit: (ids: readonly string[]) => Promise<SelectionSubmitResult>;
   workspaceLevelToggle?: boolean;
   shouldHideIssue?: (issue: Issue) => boolean;
+  /**
+   * The work items the caller's page already has (P7b spec 2.9, R2, R21), hidden as shouldHideIssue's are; once each
+   * work item nerve found is one of them, the dialog says the hint, not that it found none.
+   */
+  exclusion?: { excludes: (issue: Issue) => boolean; hint: string };
+  /** What each work item listed shows beside its name (P7b spec 2.9, R2: a cycle's page, the cycle it is in). */
+  optionCaption?: (issue: Issue) => ReactNode;
 };
 type Choice = { id: string; proof: IssueReadToken };
 
@@ -69,6 +76,8 @@ const ExistingIssuesSelection = observer(function ExistingIssuesSelection({
   handleOnSubmit,
   workspaceLevelToggle = false,
   shouldHideIssue,
+  exclusion,
+  optionCaption,
   workspaceLevel,
   setWorkspaceLevel,
 }: Props & { workspaceLevel: boolean; setWorkspaceLevel: (value: boolean) => void }) {
@@ -100,6 +109,7 @@ const ExistingIssuesSelection = observer(function ExistingIssuesSelection({
     root.active &&
     !!workspaceID &&
     root.permissionReads.identity(workspaceID, projectIDs) === owner.permission;
+  const hidden = (issue: Issue) => !!shouldHideIssue?.(issue) || !!exclusion?.excludes(issue);
   const visible = (choice: Choice) => {
     const issue = root.issues.getIssueById(choice.id);
     return (
@@ -108,14 +118,14 @@ const ExistingIssuesSelection = observer(function ExistingIssuesSelection({
       (!query.project_id || issue.project_id === query.project_id) &&
       root.isReadCurrent(choice.proof, projectIDs, workspaceID) &&
       root.isReadCurrent(choice.proof, [issue.project_id], workspaceID) &&
-      !shouldHideIssue?.(issue)
+      !hidden(issue)
     );
   };
   const selected = selection.owner === owner ? selection.choices.filter(visible) : [];
-  const issues = search.ids.flatMap((id) => {
-    const issue = root.issues.getIssueById(id);
-    return issue && !shouldHideIssue?.(issue) ? [issue] : [];
-  });
+  const found = search.ids.flatMap((id) => root.issues.getIssueById(id) ?? []);
+  const issues = found.filter((issue) => !hidden(issue));
+  // nerve found work items, each already the page's: its search excludes none, and the dialog hides them (R21)
+  const allExcluded = !!exclusion && found.length > 0 && found.every(exclusion.excludes);
   const pending = pendingOwner === owner;
   const setChoices = (choices: Choice[]) => setSelection({ owner, choices });
   const choose = (ids: string[]) => {
@@ -248,6 +258,7 @@ const ExistingIssuesSelection = observer(function ExistingIssuesSelection({
                 />
                 {identifier(issue)}
                 <span className="truncate">{issue.name}</span>
+                {optionCaption?.(issue)}
               </Combobox.Option>
             ))}
         </Combobox.Options>
@@ -256,14 +267,21 @@ const ExistingIssuesSelection = observer(function ExistingIssuesSelection({
             {t("common.loading")}
           </p>
         )}
-        {!search.loading && search.error === undefined && issues.length === 0 && (
-          <IssueSearchModalEmptyState
-            issueCount={issues.length}
-            searchTerm={term}
-            debouncedSearchTerm={term}
-            isSearching={false}
-          />
-        )}
+        {!search.loading &&
+          search.error === undefined &&
+          issues.length === 0 &&
+          (allExcluded ? (
+            <p role="status" className="px-3 py-8 text-center text-13 text-secondary">
+              {exclusion.hint}
+            </p>
+          ) : (
+            <IssueSearchModalEmptyState
+              issueCount={issues.length}
+              searchTerm={term}
+              debouncedSearchTerm={term}
+              isSearching={false}
+            />
+          ))}
       </Combobox>
       <div className="flex items-center justify-between p-3">
         <Button

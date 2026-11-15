@@ -3,7 +3,16 @@ import type { Page, Response } from "@playwright/test";
 import { addProjectMembers, createProject, projectMembershipOf, projectMemberWrites } from "../../fixtures/api";
 import { anotherTabSignsIn, shownNameOf } from "../../fixtures/auth";
 import { watchPage } from "../../fixtures/browser";
-import { cyclePath, cycleSection, cyclesPath, tabKey, tabStops, toast, turnCycles } from "../../fixtures/cycle-pages";
+import {
+  cyclePath,
+  cycleSection,
+  cyclesPath,
+  dayFromToday,
+  tabKey,
+  tabStops,
+  toast,
+  turnCycles,
+} from "../../fixtures/cycle-pages";
 import { changeCyclePreferences, createCycle, cyclePreferencesRead } from "../../fixtures/cycles";
 import { modalDialog, shownWithin } from "../../fixtures/dialogs";
 import { createIssue, updateIssue, type Issue } from "../../fixtures/issues";
@@ -43,11 +52,6 @@ async function switchCycle(page: Page, from: string, to: string): Promise<void> 
 async function lateAnswerAway(page: Page, late: { release: () => Promise<Response> }, name: string): Promise<void> {
   expect((await late.release()).status()).toBe(200);
   expect(await shownWithin(rowOptions(page, name)), `${name}, of the late answer`).toBe(false);
-}
-
-/** The calendar day, YYYY-MM-DD in UTC, days after today: a cycle from three days ago to three ahead is in progress. */
-function dayFromToday(days: number): string {
-  return new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 10);
 }
 
 test("G19 (page): on Next's page the header's layouts, filters, display and new work item are reached by Tab, each by its name; Now's list read is held as the switcher opens Now and Next again, as Back and Forward come back to Next, and as Ops's Launch opens: each page lists its own work items, and Now's late answer comes to none", async ({

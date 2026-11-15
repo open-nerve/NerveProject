@@ -9,12 +9,14 @@ import { setToast, TOAST_TYPE } from "@nerve/propel/toast";
 import { EIssuesStoreType } from "@nerve/types";
 import { isPlanningPageStoreType } from "@/hooks/planning-page-domains";
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
+import { useIssuesActions } from "@/hooks/use-issues-actions";
 import { SessionChangedError } from "@/lib/auth/token-manager";
 import { ArchiveIssueModal } from "../archive-issue-modal";
 import { DeleteIssueModal } from "../delete-issue-modal";
 import { useDetailCommand } from "../issue-detail/use-issue-operations";
 import { CreateUpdateIssueModal } from "../issue-modal/modal";
 import type { IssueFormData } from "../issue-modal/types";
+import { AddExistingDialog, type AddExistingRequest } from "./add-existing-dialog";
 
 type RequestConfirmation = (issue: Issue, submit: () => Promise<void>) => void;
 type RequestCommand = (issue: Issue, submit: () => Promise<void>) => Promise<void>;
@@ -38,6 +40,8 @@ export const isDialogStore = (type: EIssuesStoreType): type is DialogStore =>
 type RequestDialog = (kind: "edit" | "copy", issue: Issue, storeType: DialogStore) => void;
 /** A group's new work item, with what the group gives it (its payload). */
 type RequestCreate = (data: IssueFormData, storeType: DialogStore) => void;
+/** Existing work items of the route's project, added to the page as the entry asks. */
+type RequestAddExisting = (request: AddExistingRequest) => void;
 const CommandsContext = createContext<
   | {
       archive: RequestConfirmation;
@@ -46,6 +50,7 @@ const CommandsContext = createContext<
       removeFromView: RequestRemoval;
       openDialog: RequestDialog;
       create: RequestCreate;
+      addExisting: RequestAddExisting;
     }
   | undefined
 >(undefined);
@@ -68,6 +73,12 @@ export const useWorkItemDialogRequest = () => useContext(CommandsContext)?.openD
  * groups and their headers gone, so the layout holds the dialog, as a row's.
  */
 export const useCreateDialogRequest = () => useContext(CommandsContext)?.create;
+/**
+ * The dialog of "add existing" (P7b spec 2.9, 2.10, R11): the empty state it is asked from goes once the first one
+ * chosen is confirmed, a group's header or a calendar's day while the list is checked, so the layout holds the dialog,
+ * as a row's, by the route's project.
+ */
+export const useAddExistingRequest = () => useContext(CommandsContext)?.addExisting;
 
 /**
  * A copy of issue, as a row's copy dialog starts it: its fields, named as its copy, its cycle and modules with them,
@@ -91,7 +102,8 @@ const copyOf = (issue: Issue): IssueFormData =>
 
 /**
  * The layout owns row command feedback and row dialogs even when a confirmation, or a check of the work item, removes
- * the initiating row.
+ * the initiating row; and the dialogs of its groups and its empty state, which the list's check or its first new row
+ * removes.
  */
 export const IssueListCommandHost = observer(function IssueListCommandHost({ children }: { children: ReactNode }) {
   const { rootIssueStore: root } = useIssueDetail();
@@ -116,6 +128,15 @@ export const IssueListCommandHost = observer(function IssueListCommandHost({ chi
     projects: string[];
     permission: string;
   }>();
+  const [adding, setAdding] = useState<{
+    owner: typeof owner;
+    request: AddExistingRequest;
+    projects: string[];
+    permission: string;
+  }>();
+  // the actions that add existing work items, the host's: a batch goes on, and the page follows it (its progress read
+  // again once), after its dialog is closed (P6b T10: a follow-up hangs on what lives as long as the page)
+  const addIssuesToView = useIssuesActions(adding?.request.storeType)?.addIssuesToView;
   const workspace = root.rootStore.workspaceRoot.getWorkspaceBySlug(workspaceSlug ?? "");
   const permission = workspace && root.permissionReads.identity(workspace.id, projectId ? [projectId] : [], true);
   const requestConfirmation = useCallback(
@@ -159,6 +180,18 @@ export const IssueListCommandHost = observer(function IssueListCommandHost({ chi
         storeType,
         projects,
         permission: root.permissionReads.identity(workspace.id, projects, true),
+      });
+    },
+    [root, workspace, owner, projectId]
+  );
+  const requestAddExisting = useCallback<RequestAddExisting>(
+    (addition) => {
+      if (!root.active || !workspace || !projectId) return;
+      setAdding({
+        owner,
+        request: addition,
+        projects: [projectId],
+        permission: root.permissionReads.identity(workspace.id, [projectId], true),
       });
     },
     [root, workspace, owner, projectId]
@@ -216,8 +249,9 @@ export const IssueListCommandHost = observer(function IssueListCommandHost({ chi
       removeFromView: requestRemovalFromView,
       openDialog: requestDialog,
       create: requestCreate,
+      addExisting: requestAddExisting,
     }),
-    [requestConfirmation, requestRestore, requestRemovalFromView, requestDialog, requestCreate]
+    [requestConfirmation, requestRestore, requestRemovalFromView, requestDialog, requestCreate, requestAddExisting]
   );
   return (
     <CommandsContext.Provider value={commands}>
@@ -248,6 +282,13 @@ export const IssueListCommandHost = observer(function IssueListCommandHost({ chi
           // a new work item of a cycle's or a module's page joins the page's cycle or module, so it stays in its
           // project (P5b spec 2.5, P6b spec 2.6); an edit's and a copy's form keep theirs anyway
           isProjectSelectionDisabled={isPlanningPageStoreType(dialog.storeType)}
+        />
+      )}
+      {adding && holds(adding, adding.projects) && addIssuesToView && (
+        <AddExistingDialog
+          request={adding.request}
+          submit={(ids) => addIssuesToView(ids, adding.request.extra)}
+          onClose={() => setAdding(undefined)}
         />
       )}
     </CommandsContext.Provider>

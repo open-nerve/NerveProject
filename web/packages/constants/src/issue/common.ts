@@ -42,7 +42,15 @@ export const ISSUE_PRIORITIES: {
   },
 ];
 
-export const DRAG_ALLOWED_GROUPS: TIssueGroupByOptions[] = ["state", "priority", "assignees", "labels"];
+/** The groupings a work item is dragged between, its drop sending the target group's value (P7b spec 2.7). */
+export const DRAG_ALLOWED_GROUPS: TIssueGroupByOptions[] = [
+  "state",
+  "priority",
+  "assignees",
+  "labels",
+  "cycle",
+  "module",
+];
 
 export type TCreateModalStoreTypes =
   | EIssuesStoreType.PROJECT
@@ -58,6 +66,8 @@ export const ISSUE_GROUP_BY_OPTIONS: {
   { key: "state_detail.group", titleTranslationKey: "common.state_groups" },
   { key: "priority", titleTranslationKey: "common.priority" },
   { key: "project", titleTranslationKey: "common.project" }, // required this on my issues
+  { key: "cycle", titleTranslationKey: "common.cycle" },
+  { key: "module", titleTranslationKey: "common.modules" },
   { key: "labels", titleTranslationKey: "common.labels" },
   { key: "assignees", titleTranslationKey: "common.assignees" },
   { key: "created_by", titleTranslationKey: "common.created_by" },
@@ -156,27 +166,15 @@ export const SPREADSHEET_PROPERTY_LIST: (keyof IIssueDisplayProperties)[] = [
   "sub_issue_count",
 ];
 
-/** A table column's sort as its header offers it: both orders, each with its title. */
-type TSpreadsheetPropertySort = {
-  ascendingOrderKey: IssueListOrder;
-  ascendingOrderTitle: string;
-  descendingOrderKey: IssueListOrder;
-  descendingOrderTitle: string;
-};
-
-/**
- * The columns that may sort by nothing: a work item's modules and cycle, by whose names the list sorts once its catalog
- * names them (P7b); until then a header sorting by them would fail the list (P7a spec R21).
- */
-type TUnsortedSpreadsheetProperty = "modules" | "cycle";
-
 export const SPREADSHEET_PROPERTY_DETAILS: {
   [key in keyof IIssueDisplayProperties]: {
     i18n_title: string;
+    ascendingOrderKey: IssueListOrder;
+    ascendingOrderTitle: string;
+    descendingOrderKey: IssueListOrder;
+    descendingOrderTitle: string;
     icon: string;
-  } & (key extends TUnsortedSpreadsheetProperty
-    ? TSpreadsheetPropertySort | { [sort in keyof TSpreadsheetPropertySort]?: never }
-    : TSpreadsheetPropertySort);
+  };
 } = {
   assignee: {
     i18n_title: "common.assignees",
@@ -266,8 +264,22 @@ export const SPREADSHEET_PROPERTY_DETAILS: {
     descendingOrderTitle: "Least",
     icon: "WorkItemsOutline",
   },
-  modules: { i18n_title: "common.modules", icon: "ModuleOutline" },
-  cycle: { i18n_title: "common.cycle", icon: "CyclesOutline" },
+  modules: {
+    i18n_title: "common.modules",
+    ascendingOrderKey: "module_name",
+    ascendingOrderTitle: "A",
+    descendingOrderKey: "-module_name",
+    descendingOrderTitle: "Z",
+    icon: "ModuleOutline",
+  },
+  cycle: {
+    i18n_title: "common.cycle",
+    ascendingOrderKey: "cycle_name",
+    ascendingOrderTitle: "A",
+    descendingOrderKey: "-cycle_name",
+    descendingOrderTitle: "Z",
+    icon: "CyclesOutline",
+  },
 };
 
 // Map filter keys to their corresponding issue property keys

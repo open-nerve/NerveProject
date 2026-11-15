@@ -1,4 +1,3 @@
-import { useParams } from "react-router";
 import type { IssueCreate } from "@nerve/api-client";
 import type { Group } from "@/lib/paged-groups";
 /**
@@ -20,25 +19,37 @@ import { DRAG_ALLOWED_GROUPS } from "@nerve/constants";
 // i18n
 import { useTranslation } from "@nerve/i18n";
 //types
-import type { IIssueDisplayProperties, TIssueGroupByOptions, TIssueOrderByOptions, IssueChange } from "@nerve/types";
+import type {
+  IGroupByColumn,
+  IIssueDisplayProperties,
+  TIssueGroupByOptions,
+  TIssueOrderByOptions,
+  IssueChange,
+} from "@nerve/types";
 import { EIssueLayoutTypes } from "@nerve/types";
 import { cn } from "@nerve/utils";
 import type { GroupDropLocation } from "@/components/issues/issue-layouts/group-drop";
 // components
-import { getSourceFromDropPayload, getDestinationFromDropPayload } from "@/components/issues/issue-layouts/group-drop";
+import {
+  dropRefusal,
+  getSourceFromDropPayload,
+  getDestinationFromDropPayload,
+} from "@/components/issues/issue-layouts/group-drop";
 import { KanbanIssueBlockLoader } from "@/components/ui/loader/layouts/kanban-layout-loader";
 // hooks
-import { useProjectState } from "@/hooks/store/use-project-state";
 import { useIntersectionObserver } from "@/hooks/use-intersection-observer";
 import { useIssuesStore } from "@/hooks/use-issue-layout-store";
+import { useJoinRefusalWarning } from "@/hooks/use-refusal-toast";
 // local imports
 import { GroupDragOverlay } from "../group-drag-overlay";
 import type { TRenderQuickActions } from "../list/list-view-types";
-import { KanbanQuickAddIssueButton, QuickAddIssueRoot } from "../quick-add";
+import { KanbanQuickAddIssueButton, QuickAddIssueRoot, useGroupQuickAddPrefill } from "../quick-add";
 import { KanbanIssueBlocksList } from "./blocks-list";
 
 interface IKanbanGroup {
-  groupId: string;
+  column: IGroupByColumn;
+  /** The column of the sub-grouping whose lane the board is in, of a board's lanes. */
+  lane: IGroupByColumn | undefined;
   issuesMap: Readonly<Record<string, Issue | IssueDetail>>;
   groups: Map<string, Group>;
   displayProperties: IIssueDisplayProperties | undefined;
@@ -60,7 +71,8 @@ interface IKanbanGroup {
 
 export const KanbanGroup = observer(function KanbanGroup(props: IKanbanGroup) {
   const {
-    groupId,
+    column,
+    lane,
     sub_group_id,
     group_by,
     orderBy,
@@ -82,8 +94,13 @@ export const KanbanGroup = observer(function KanbanGroup(props: IKanbanGroup) {
   // i18n
   const { t } = useTranslation();
   // hooks
-  const projectState = useProjectState();
-  const { projectId } = useParams();
+  const groupId = column.id;
+  const prefill = useGroupQuickAddPrefill(column, lane);
+  const columnRefusal = column.refusal;
+  const laneRefusal = lane?.refusal;
+  // A cell nerve refuses a work item's joining, its column's or its lane's, offers no new work item (P7b R4).
+  const refusal = columnRefusal ?? laneRefusal;
+  const warnRefusal = useJoinRefusalWarning();
 
   const { issues } = useIssuesStore();
   const { getGroupIssueCount, getPaginationData, getIssueLoader } = issues;
@@ -133,6 +150,9 @@ export const KanbanGroup = observer(function KanbanGroup(props: IKanbanGroup) {
           const destination = getDestinationFromDropPayload(payload);
 
           if (!source || !destination) return;
+          // A drop into its column or its lane from another nerve refuses is not sent; the page says nerve's sentence.
+          const dropRefused = dropRefusal(source, destination, columnRefusal, laneRefusal);
+          if (dropRefused) return warnRefusal(dropRefused);
 
           handleOnDrop(source, destination);
         },
@@ -141,51 +161,18 @@ export const KanbanGroup = observer(function KanbanGroup(props: IKanbanGroup) {
         element,
       })
     );
-  }, [columnRef, groupId, sub_group_id, setIsDraggingOverColumn, orderBy, handleOnDrop, t]);
-
-  const prePopulateQuickAddData = (
-    groupByKey: string | undefined,
-    subGroupByKey: string | undefined | null,
-    groupValue: string,
-    subGroupValue: string | undefined
-  ) => {
-    const defaultState = projectState.getProjectStates(projectId)?.find((state) => state.default);
-    let preloadedData: object = { state_id: defaultState?.id };
-
-    if (groupByKey) {
-      if (groupByKey === "state") {
-        preloadedData = { ...preloadedData, state_id: groupValue };
-      } else if (groupByKey === "priority") {
-        preloadedData = { ...preloadedData, priority: groupValue };
-      } else if (groupByKey === "labels") {
-        if (groupValue !== "none") preloadedData = { ...preloadedData, label_ids: [groupValue] };
-      } else if (groupByKey === "assignees") {
-        if (groupValue !== "none") preloadedData = { ...preloadedData, assignee_ids: [groupValue] };
-      } else if (groupByKey === "created_by") {
-        preloadedData = { ...preloadedData };
-      } else {
-        preloadedData = { ...preloadedData, [groupByKey]: groupValue };
-      }
-    }
-
-    if (subGroupByKey && subGroupValue !== undefined) {
-      if (subGroupByKey === "state") {
-        preloadedData = { ...preloadedData, state_id: subGroupValue };
-      } else if (subGroupByKey === "priority") {
-        preloadedData = { ...preloadedData, priority: subGroupValue };
-      } else if (subGroupByKey === "labels") {
-        if (subGroupValue !== "none") preloadedData = { ...preloadedData, label_ids: [subGroupValue] };
-      } else if (subGroupByKey === "assignees") {
-        if (subGroupValue !== "none") preloadedData = { ...preloadedData, assignee_ids: [subGroupValue] };
-      } else if (subGroupByKey === "created_by") {
-        preloadedData = { ...preloadedData };
-      } else {
-        preloadedData = { ...preloadedData, [subGroupByKey]: subGroupValue };
-      }
-    }
-
-    return preloadedData;
-  };
+  }, [
+    columnRef,
+    groupId,
+    sub_group_id,
+    setIsDraggingOverColumn,
+    orderBy,
+    handleOnDrop,
+    columnRefusal,
+    laneRefusal,
+    warnRefusal,
+    t,
+  ]);
 
   const isSubGroup = sub_group_id !== undefined;
 
@@ -258,15 +245,13 @@ export const KanbanGroup = observer(function KanbanGroup(props: IKanbanGroup) {
         </>
       )}
 
-      {enableQuickIssueCreate && !disableIssueCreation && (
+      {enableQuickIssueCreate && !disableIssueCreation && !refusal && (
         <div className="sticky bottom-0 w-full bg-surface-2 py-0.5">
           <QuickAddIssueRoot
             scopeKey={JSON.stringify([group_by, groupId, sub_group_by, sub_group_id])}
             layout={EIssueLayoutTypes.KANBAN}
             QuickAddButton={KanbanQuickAddIssueButton}
-            prePopulatedData={{
-              ...(group_by && prePopulateQuickAddData(group_by, sub_group_by, groupId, sub_group_id)),
-            }}
+            prePopulatedData={prefill}
             quickAddCallback={quickAddCallback}
           />
         </div>

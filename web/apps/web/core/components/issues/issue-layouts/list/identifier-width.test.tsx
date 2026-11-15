@@ -36,6 +36,7 @@ vi.mock("@/hooks/use-issue-layout-store", () => ({ useIssueStoreType: () => ui.k
 vi.mock("../group-columns", async (original) => ({
   ...(await original<typeof import("../group-columns")>()),
   getGroupByColumns: () => [{ id: "first" }, { id: "second" }],
+  usePlanningGroupNames: () => {},
 }));
 vi.mock("../properties", () => ({ IssueProperties: () => null }));
 vi.mock("@/components/issues/issue-detail/identifier-text", () => ({

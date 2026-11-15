@@ -10,7 +10,6 @@ import { clone, isNil } from "lodash-es";
 // nerve types
 import type {
   IIssueDisplayProperties,
-  TIssueGroupByOptions,
   IIssueFilterOptions,
   IIssueFilters,
   IIssueDisplayFilterOptions,
@@ -19,8 +18,6 @@ import { EIssuesStoreType } from "@nerve/types";
 
 // store
 import { DEFAULT_DISPLAY_PROPERTIES } from "@/store/issue/issue-details/sub_issues_filter.store";
-// constants
-import { ISSUE_GROUP_BY_OPTIONS } from "@nerve/constants";
 
 export const HIGHLIGHT_CLASS = "highlight";
 
@@ -171,14 +168,4 @@ export const isFiltersApplied = (filters: IIssueFilterOptions): boolean =>
 export const calculateIdentifierWidth = (projectIdentifierLength: number, sequenceId: number): number => {
   const sequenceDigits = Math.max(1, Math.floor(Math.log10(sequenceId)) + 1);
   return projectIdentifierLength * 7 + 7 + sequenceDigits * 7; // project identifier chars + dash + sequence digits
-};
-
-export const useGroupByOptions = (
-  options: TIssueGroupByOptions[]
-): {
-  key: TIssueGroupByOptions;
-  titleTranslationKey: string;
-}[] => {
-  const groupByOptions = ISSUE_GROUP_BY_OPTIONS.filter((option) => options.includes(option.key));
-  return groupByOptions;
 };

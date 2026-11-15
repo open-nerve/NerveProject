@@ -20,6 +20,11 @@ vi.mock("@/hooks/store/use-project", () => ({ useProject: () => tab.app.projectR
 vi.mock("@/hooks/store/use-project-state", () => ({ useProjectState: () => tab.app.state }));
 vi.mock("@/hooks/store/use-label", () => ({ useLabel: () => tab.app.label }));
 vi.mock("@/hooks/store/use-member", () => ({ useMember: () => tab.app.memberRoot }));
+// The filters by cycle and module read the planning store and the caller's role (use-planning-filter-configs.tsx).
+vi.mock("@/hooks/store/use-cycles", () => ({ useCycles: () => tab.app.planning.cycles }));
+vi.mock("@/hooks/store/use-modules", () => ({ useModules: () => tab.app.planning.modules }));
+vi.mock("@/hooks/store/user", () => ({ useUserPermissions: () => tab.app.user.permission }));
+vi.mock("@/lib/auth/use-session", () => ({ useSession: () => ({ status: "signed-in", loginId: "filters" }) }));
 
 let tab: Awaited<ReturnType<typeof issueStoreTab>>;
 let filters: WorkItemFilterStore;

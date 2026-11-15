@@ -1,12 +1,14 @@
 // @vitest-environment jsdom
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 import { act, type ReactNode } from "react";
+import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { RootStore } from "@/store/root.store";
 import { issueOf, issueDetailOf } from "@/store/issue/fake-issues";
 import { json, problem } from "@/lib/auth/fake-nerve";
 import { toasts } from "@/lib/fake-toast";
 import { issueSelectionTab, clickSelection, selectionButton } from "@/components/core/modals/fake-issue-selection";
+import { IssueListCommandHost } from "../command-host";
 import { CalendarQuickAddIssueActions } from "./quick-add-issue-actions";
 vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
 vi.mock("@nerve/propel/toast", () => import("@/lib/fake-toast"));
@@ -32,10 +34,15 @@ afterEach(async () => tab.close());
 const writes = () => tab.nerve.calls.filter((call) => call.method === "PATCH");
 const send = () => act(async () => selectionButton("issue.select.add_selected").click());
 async function open() {
+  // the day asks the layout's command host for the dialog (P7b spec 2.10, R11), which the layout puts around its days
   await tab.render(
-    <CalendarQuickAddIssueActions
-      prePopulatedData={{ target_date: "2026-11-01", priority: "urgent", label_ids: ["unrelated"] }}
-    />
+    <MemoryRouter>
+      <IssueListCommandHost>
+        <CalendarQuickAddIssueActions
+          prePopulatedData={{ target_date: "2026-11-01", priority: "urgent", label_ids: ["unrelated"] }}
+        />
+      </IssueListCommandHost>
+    </MemoryRouter>
   );
   await clickSelection('button[aria-haspopup="menu"]');
   await act(async () => {

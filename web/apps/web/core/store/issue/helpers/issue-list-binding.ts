@@ -2,12 +2,10 @@
 import type { Issue } from "@nerve/api-client";
 import { makeObservable, observable, runInAction } from "mobx";
 import type { TLoader } from "@nerve/types";
-import { EUserPermissions } from "@nerve/constants";
 import { SessionChangedError } from "@/lib/auth/token-manager";
 import { Reconciled } from "@/lib/reconciled";
 import {
   confirmGroups,
-  decodePage,
   mergePages,
   pagePartKey,
   type ConfirmedIssueChange,
@@ -16,32 +14,13 @@ import {
   type PagePart,
   type PagedGroups,
   type Group,
-  type Boundary,
 } from "@/lib/paged-groups";
 import { replayGroups } from "@/lib/paged-groups.replay";
 import { issueParts } from "@/lib/issue-membership";
 import type { VerificationRound } from "../issue-verification";
 import type { IIssueRootStore, IssueWriteScope } from "../root.store";
-
-export type IssueListScope =
-  | {
-      scope: "project";
-      /** Proven empty date intersection; never a server query term or read answer. */
-      empty?: boolean;
-      workspaceSlug: string;
-      workspaceID: string;
-      projectID: string;
-      query: import("@/services/issue/issue-list.service").ProjectIssueQuery;
-    }
-  | {
-      scope: "member";
-      workspaceSlug: string;
-      workspaceID: string;
-      userID: string;
-      query: import("@/services/issue/issue-list.service").MemberIssueQuery;
-    };
-
-type ReadRequest = Readonly<{ part: PagePart | null; first: boolean; cursor: string | null; lower: Boundary | null }>;
+import { listCatalog, prepareListCatalog } from "./issue-list-catalog";
+import { allowsRole, readPage, scopeRole, type IssueListScope, type ReadRequest } from "./issue-list-read";
 
 /** One immutable scope/query, retained when another list is selected. */
 export class IssueListBinding {
@@ -77,14 +56,7 @@ export class IssueListBinding {
       ...this.scope,
       currentUserID: this.root.currentUserId ?? "",
       pendingIDs: this.root.writes.pendingIDs,
-      catalog: {
-        states: new Map(Object.entries(this.root.stateMap ?? {})),
-        labels: new Map(Object.entries(this.root.labelMap ?? {})),
-        members: new Map(Object.entries(this.root.memberMap ?? {})),
-        // No cycle or module directory before P7 (M6 P3b spec R9): prepareCatalog refuses an order that needs one.
-        cycles: new Map(),
-        modules: new Map(),
-      },
+      catalog: listCatalog(this.root),
     };
   }
   covers(scope: IssueWriteScope): boolean {
@@ -108,184 +80,11 @@ export class IssueListBinding {
   get value(): PagedGroups | undefined {
     return this.permissionStale ? undefined : this.reconciled.value;
   }
-  private scopeRole(): number | undefined {
-    const stores = this.root.rootStore;
-    if (stores.workspaceRoot.getWorkspaceBySlug(this.scope.workspaceSlug)?.id !== this.scope.workspaceID)
-      return undefined;
-    const permission = stores.user.permission;
-    return this.scope.scope === "project"
-      ? permission.getProjectRoleByWorkspaceSlugAndProjectId(this.scope.workspaceSlug, this.scope.projectID)
-      : permission.getWorkspaceRoleByWorkspaceSlug(this.scope.workspaceSlug);
+  private read(request: ReadRequest): Promise<PageAnswer> {
+    return readPage(this, request, () => ++this.source);
   }
-  private allowsRole(role: number | undefined): boolean {
-    return this.scope.scope === "member" || this.scope.query.archived === "true"
-      ? role === EUserPermissions.ADMIN || role === EUserPermissions.MEMBER
-      : role !== undefined;
-  }
-  private async read(request: ReadRequest): Promise<PageAnswer> {
-    const role = this.scopeRole();
-    if (!this.allowsRole(role)) throw new SessionChangedError();
-    const currentScope = () => this.scopeRole() === role && this.allowsRole(role);
-    const { part, first, cursor, lower } = request;
-    const token = this.root.captureRead(this.scope.scope === "member");
-    const query = {
-      ...this.scope.query,
-      ...(part
-        ? {
-            ...(this.scope.query.group_by ? { group_key: part.group } : {}),
-            ...(part.subgroup === undefined ? {} : { sub_group_key: part.subgroup }),
-            ...(!first && cursor ? { cursor } : {}),
-          }
-        : {}),
-    };
-    const page =
-      this.scope.scope === "project"
-        ? await this.root.listApi.listProject(this.scope.projectID, query)
-        : await this.root.listApi.listMember(this.scope.workspaceSlug, this.scope.userID, {
-            ...query,
-            relation: this.scope.query.relation,
-          });
-    const projects = this.scope.scope === "project" ? [this.scope.projectID] : (this.scope.query.project_id ?? []);
-    if (!currentScope() || !this.root.isReadCurrent(token, projects, this.scope.workspaceID))
-      throw new SessionChangedError();
-    const issues = page.groups
-      ? page.groups.flatMap((group) =>
-          group.subgroups ? group.subgroups.flatMap((cell) => cell.data) : (group.data ?? [])
-        )
-      : (page.data ?? []);
-    if (
-      issues.some(
-        (issue) =>
-          issue.workspace_id !== this.scope.workspaceID ||
-          (this.scope.scope === "project" && issue.project_id !== this.scope.projectID) ||
-          (this.scope.scope === "member" &&
-            !!this.scope.query.project_id?.length &&
-            !this.scope.query.project_id.includes(issue.project_id))
-      )
-    )
-      throw new Error("Issue page does not match its scope");
-    const returnedProjects = [...new Set(issues.map((issue) => issue.project_id))];
-    const returnedCurrent = () =>
-      !returnedProjects.length || this.root.isReadCurrent(token, returnedProjects, this.scope.workspaceID);
-    if (!returnedCurrent()) throw new SessionChangedError();
-    const projectStore = this.root.rootStore.projectRoot.project;
-    await Promise.all(
-      returnedProjects.map(async (projectID) => {
-        if (!projectStore.getProjectById(projectID)) await projectStore.fetchProject(projectID);
-      })
-    );
-    if (!returnedCurrent() || !currentScope() || !this.root.isReadCurrent(token, projects, this.scope.workspaceID))
-      throw new SessionChangedError();
-    if (issues.some((issue) => !this.root.canSeeIssue(issue)))
-      throw new Error("Required issue project permission is unavailable");
-    await this.prepareCatalog(issues);
-    if (!returnedCurrent() || !currentScope() || !this.root.isReadCurrent(token, projects, this.scope.workspaceID))
-      throw new SessionChangedError();
-    const known = this.reconciled.value;
-    const rowParts: PagePart[] = part
-      ? []
-      : [...(known?.groups ?? [])].flatMap(([group, data]) =>
-          data.subgroups ? [...data.subgroups.keys()].map((subgroup) => ({ group, subgroup })) : [{ group }]
-        );
-    let answer = decodePage(
-      page,
-      {
-        sourceID: ++this.source,
-        part: this.scope.query.group_by ? part : null,
-        first,
-        rowParts,
-        resetCounters: !part
-          ? [...(known?.subgroupTotals?.keys() ?? [])].map((subgroup) => ({ kind: "subgroup", subgroup }))
-          : [],
-        ranges: new Map(part ? [[pagePartKey(part), { lower, upper: null, complete: false }]] : []),
-      },
-      this.context
-    );
-    // Decode every row before touching canonical; malformed trailing rows cannot partially publish a page.
-    if (this.root.verification.blocksPage(this, token)) throw new SessionChangedError();
-    this.root.acceptListIssues(issues, token);
-    for (const issue of issues) {
-      if (this.root.issues.held(issue.id) === null)
-        answer = {
-          ...confirmGroups(
-            answer,
-            { id: issue.id, beforeSnapshot: { kind: "known", issue }, after: null },
-            this.context
-          ).value,
-          read: answer.read,
-        };
-      else if (this.root.verification.isUncertain(issue.id))
-        for (const affected of issueParts(issue, this.context)) {
-          const group = answer.groups.get(affected.group);
-          const cell = affected.subgroup === undefined ? group : group?.subgroups?.get(affected.subgroup);
-          if (cell) cell.stale = true;
-        }
-    }
-    return answer;
-  }
-  async prepareCatalog(issues: Issue[]): Promise<void> {
-    // A proven empty scope needs no sort or membership facts, even during write confirmation.
-    if (this.scope.scope === "project" && this.scope.empty) return;
-    const stores = this.root.rootStore;
-    const order = this.scope.query.order_by?.replace(/^-/, "");
-    const states =
-      order === "state_name" ||
-      this.scope.query.group_by === "state_group" ||
-      ("sub_group_by" in this.scope.query && this.scope.query.sub_group_by === "state_group") ||
-      !!this.scope.query.state_group?.length;
-    const labels = order === "label_name";
-    const members = order === "assignee_name";
-    const cycles = order === "cycle_name";
-    const modules = order === "module_name";
-    if (!states && !labels && !members && !cycles && !modules) return;
-    if (states || labels)
-      await Promise.all(
-        [...new Set(issues.map((issue) => issue.project_id))].map(async (project) => {
-          this.root.assertActive();
-          if (!stores.projectRoot.project.getProjectById(project))
-            await stores.projectRoot.project.fetchProject(project);
-          this.root.assertActive();
-          await Promise.all([
-            states &&
-            (stores.state.getProjectStates(project) === undefined ||
-              issues.some((issue) => issue.project_id === project && !stores.state.getStateById(issue.state_id)))
-              ? stores.state.fetchProjectStates(project)
-              : undefined,
-            labels &&
-            (stores.label.getProjectLabels(project) === undefined ||
-              issues.some(
-                (issue) => issue.project_id === project && issue.label_ids.some((id) => !stores.label.getLabelById(id))
-              ))
-              ? stores.label.fetchProjectLabels(project)
-              : undefined,
-          ]);
-          this.root.assertActive();
-        })
-      );
-    if (members && issues.some((issue) => issue.assignee_ids.length)) {
-      this.root.assertActive();
-      if (
-        !stores.memberRoot.workspace.getMemberships(this.scope.workspaceSlug) ||
-        issues.some((issue) => issue.assignee_ids.some((id) => !stores.memberRoot.getUserDetails(id)))
-      )
-        await stores.memberRoot.workspace.fetchWorkspaceMembers({
-          id: this.scope.workspaceID,
-          slug: this.scope.workspaceSlug,
-        });
-      this.root.assertActive();
-    }
-    const catalog = this.context.catalog;
-    if (
-      issues.some(
-        (issue) =>
-          (states && !catalog.states.has(issue.state_id)) ||
-          (labels && issue.label_ids.some((id) => !catalog.labels.has(id))) ||
-          (members && issue.assignee_ids.some((id) => !catalog.members.has(id))) ||
-          (cycles && issue.cycle_id !== null && !catalog.cycles.has(issue.cycle_id)) ||
-          (modules && issue.module_ids.some((id) => !catalog.modules.has(id)))
-      )
-    )
-      throw new Error("Required issue directory is unavailable");
+  prepareCatalog(issues: Issue[]): Promise<void> {
+    return prepareListCatalog(this.root, this.scope, issues);
   }
   private async fetch(
     part: PagePart | null,
@@ -296,7 +95,7 @@ export class IssueListBinding {
     this.root.assertActive();
     if (this.scope.scope === "project" && this.scope.empty) {
       // This is a synchronous logical result, not a server read: no token/source/answer is minted.
-      if (!this.allowsRole(this.scopeRole())) return undefined;
+      if (!allowsRole(this.scope, scopeRole(this.root, this.scope))) return undefined;
       this.reconciled.invalidate();
       const value: PagedGroups = { total: 0, groups: new Map() };
       runInAction(() => {

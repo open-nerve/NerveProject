@@ -68,6 +68,15 @@ it.each(["attachment_count", "-attachment_count"])("preserves attachment order %
   expect(memberListQuery({}, { order_by }, "assigned").order_by).toBe(order_by);
 });
 
+// M6 P7b spec 2.8: a table header's sort by the cycles' or the modules' names, saved or picked, is sent as it is.
+it.each(["cycle_name", "-cycle_name", "module_name", "-module_name"])(
+  "preserves the planning name order %s in both list scopes",
+  (order_by) => {
+    expect(projectListQuery({}, { order_by }).order_by).toBe(order_by);
+    expect(memberListQuery({}, { order_by }, "assigned").order_by).toBe(order_by);
+  }
+);
+
 it("F01 preserves subscriber filters on readback", () => {
   expect(toProjectFilters(toFilterExpression({ subscriber_id: ["me"] }))).toEqual({ subscriber_id: ["me"] });
 });
@@ -451,4 +460,36 @@ it("member expression cleaning excludes project-only filters while keeping suppo
 it("logical empty membership stays false even with unknown entities or relation fields", () => {
   const context = { ...listContext({ subscriber_id: [A] }), empty: true };
   for (const issue of [undefined, null, listIssue("x", 1)]) expect(issueMembership(issue, context)).toBe(false);
+});
+
+// A work item's cycle and modules as filter words, "none" among them as for labels (P7b spec 2.3, R7).
+it("reads, writes back and cleans the cycle and module words, none among them", () => {
+  const saved: ProjectIssueFilters = { cycle_id: ["none", A], module_id: ["none", B] };
+  expect(
+    toProjectFilters({ and: [{ cycle_id__in: `None,${A.toUpperCase()}` }, { module_id__in: `none,${B}` }] })
+  ).toEqual(saved);
+  expect(toFilterExpression(saved)).toEqual({ and: [{ cycle_id__in: `none,${A}` }, { module_id__in: `none,${B}` }] });
+  const internal = workItemFiltersAdapter.toInternal(toFilterExpression(saved));
+  if (!internal) throw new Error("Missing filter tree");
+  expect(toProjectFilters(workItemFiltersAdapter.toExternal(internal))).toEqual(saved);
+  expect(projectListQuery({ cycle_id: ["none", A], module_id: [B, "me"] })).toEqual({
+    cycle_id: ["none", A],
+    order_by: "-created_at",
+    sub_issue: "true",
+  });
+  expect(toProjectFilters({ and: [{ cycle_id__in: "current" }, { module_id__exact: B }] })).toEqual({ module_id: [B] });
+});
+
+// "My work items" answers 422 to either word (P7b R22): neither filters nor groups a member list.
+it.each([
+  ["cycle", "cycle_id"],
+  ["module", "module_id"],
+])("a member list neither filters nor groups by the %s word that a project list groups by", (group_by, wire) => {
+  expect(projectListQuery({}, { group_by }).group_by).toBe(wire);
+  expect(memberListQuery({ cycle_id: [A], module_id: ["none"], priority: ["high"] }, { group_by }, "created")).toEqual({
+    relation: "created",
+    priority: ["high"],
+    order_by: "-created_at",
+    sub_issue: "true",
+  });
 });

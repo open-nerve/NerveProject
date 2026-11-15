@@ -4,7 +4,8 @@
  * See the LICENSE file for details.
  */
 
-import type { Issue, IssueUpdate } from "@nerve/api-client";
+import type { Issue } from "@nerve/api-client";
+import type { IssueChange } from "@nerve/types";
 import type { IssueDrop } from "@/store/issue/issue-writes";
 
 export const handleDragDrop = async (
@@ -16,7 +17,7 @@ export const handleDragDrop = async (
   updateIssue?: (
     projectId: string,
     issueId: string,
-    makeBody: (held: Issue) => IssueUpdate,
+    makeChange: (held: Issue) => IssueChange,
     drop: IssueDrop
   ) => Promise<void>
 ) => {

@@ -1,6 +1,6 @@
 # M6/P7a 阶段评审记录
 
-> 实现与审查已完成，待分支 CI 与合入：整分支审查 Ready to merge（[re-73](../../../reviews/re-73-M6P7a整体审核.md)：没有 Critical、Important，三处 Minor 与六条观察），主控仍以修复轮 F（F1–F4）处理三处 Minor，经限定复审 Ready to merge（没有 Minor，re-73 §4）；最终候选 `52c04d69`（最后一个改代码的提交是 F3 的 `9b4a5f77`，改 e2e 故事；最后一个改产品代码的是 F2 的 `72c39da1`；`52c04d69` 只改文档），其后只有本记录所在的提交（只改文档）。最终 HEAD 的分支 CI、合入、main CI 与归档清理见 §7（由 P7b 的 T1 回填）。基线 main `954a1838bff44e98cc44f15df524da27e42fb1d8`（P6b 的 noff，双父 `06b72d4b`、`c0572192`）；P6b 合入后 CI 的修复 noff `7868a6b496d2587e2ed2cac7360c3ca6a86963be`（main CI 43557098427 attempt 1 通过）在 T1 之前并入（`4b93ffd0`）。
+> 已完成（2026-11-14，noff `f42f9d64`，main CI 43603772626 attempt 1 通过），整分支审查 Ready to merge（[re-73](../../../reviews/re-73-M6P7a整体审核.md)：没有 Critical、Important，三处 Minor 与六条观察），主控仍以修复轮 F（F1–F4）处理三处 Minor，经限定复审 Ready to merge（没有 Minor，re-73 §4）；最终候选 `52c04d69`（最后一个改代码的提交是 F3 的 `9b4a5f77`，改 e2e 故事；最后一个改产品代码的是 F2 的 `72c39da1`；`52c04d69` 只改文档），其后只有本记录所在的提交（只改文档），即最终 HEAD `5d6dab04`。最终 HEAD 的分支 CI、合入、main CI 与归档清理见 §7（由 P7b 的 T1 回填）。基线 main `954a1838bff44e98cc44f15df524da27e42fb1d8`（P6b 的 noff，双父 `06b72d4b`、`c0572192`）；P6b 合入后 CI 的修复 noff `7868a6b496d2587e2ed2cac7360c3ca6a86963be`（main CI 43557098427 attempt 1 通过）在 T1 之前并入（`4b93ffd0`）。
 
 ## 1. 评审方式与范围
 
@@ -124,11 +124,11 @@ fresh 只读审查（[re-73](../../../reviews/re-73-M6P7a整体审核.md)，`fab
 
 ## 7. 集成、归档与接续
 
-（待回填：由 P7b 的 T1 按归档里的台账、CI 原件与 `cleanup.log` 回填，作业号与时刻以 GitHub 公开的 jobs 接口核对。）
+由 P7b 的 T1 按归档里的台账（Task 16 的末尾）、`manifest.json` 与 `cleanup.log` 回填；作业号、时刻、attempt 与结论以 GitHub 公开的 jobs 接口（只读）核对（收据 `t1-main-ci-jobs`），e2e 的条数与逐条的时长以作业日志核对（收据 `t1-e2e-job-logs-2`、`t1-e2e-per-test`），双父与树以 `git rev-parse` 核对（收据 `t1-merge-tree`）。
 
-- **最终 HEAD 的分支 CI**：待回填（含 e2e 作业的实际时长，与 §5 的估算对照）。
-- **合入与 main CI**：待回填。
-- **归档**：待回填。
-- **清理**：待回填。
+- **最终 HEAD 的分支 CI**：`5d6dab04e116d645f7628baae6497b857d693128` 的 43600392398 attempt 1 全绿（web 132463680596、server (1) 132463680788、server (0) 132463680873、e2e 132467556854；e2e 作业 13:49:22Z–14:13:10Z，23 分 48 秒，474 过、故事 21.8 分钟）。高于 §5 的估算约 20 分 25–27 秒（约 1.16 倍），低于上界约 28 分 22–28 秒（约 0.84 倍）与 30 分钟的报告线。比检查点 43573631430 的 19 分 32 秒（472 过、故事 17.6 分钟）多 4 分 16 秒（1.22 倍）：两次共有的 472 条逐条比对，接口故事 (API) 慢 13%，页面故事 (page) 与其余的故事慢 24–25%，与本段无关的故事同样变慢；本机门禁里同一套故事的时长持平（检查点 3.7 分钟、`t16-gate` 3.6 分钟、最终候选 3.7 分钟，9 个工作进程）。判为 runner 的速度差异，不是本段的回归（同 [M6-M8-01](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-01) 所记 P6a 检查点的那次）。两个新页面故事在这次 CI 上 G4 7.9 秒、G11 5.8 秒。
+- **合入与 main CI**：noff `f42f9d6457ccc9540a687019f3530e253fe0f7b5`，双父 `7868a6b4`、`5d6dab04`，树与分支相同（`181e63bf`）。main CI 43603772626 attempt 1 全绿，没有重跑（web 132473890468、server (1) 132473890618、server (0) 132473890658、e2e 132478430823；e2e 作业 14:31:09Z–14:54:52Z，23 分 43 秒，474 过、故事 21.6 分钟；与检查点共有的 472 条同样慢 1.22 倍）。这次的 23 分 43 秒是 P7b 的 e2e 时长基线（[P7b spec](../specs/P7b-list-vocabulary.md) §2.14）；它比至今最慢的 27 分 41 秒（43549053092）快，上界的锚不变。
+- **归档**（主目录，P7b 开工时以 `archive.py verify` 复核，收据 `t1-p7a-archive-verify`）：`.superpowers/sdd/M6-P7a-integration-20261114`：3133 个文件、684,086,276 字节、3956 个成员、未知 0、清单 sha256 `d16a2da0715c52072308ae71e1a117cedd24aee4e508b5d87cb7c37d7a232a4f`，清单的 `head` 为 `5d6dab04`（台账、调研笔记、收据、变异、e2e 的 `test-results` 与 `playwright-report`、各包的 `.turbo`）。
+- **清理**：`cleanup.log`（2026-11-14T14:56:06Z）记录 `codex/m6-p7a` 本地、远端与 GitHub API 都在 `5d6dab04`、已含于 main，main 与远端 main（以 GitHub API 核对）都在 `f42f9d64`；worktree `m6-p7a` 与本地分支已删除，远端分支删除之后 GitHub API 对它答 404。
 
-**接续**：P7b 列表词表与“添加已有”（G15 的工作项一侧：目录、按页的显示选项常量、偏好的筛选按页收窄、筛选/分组/排序/拖拽、空态与分组头与日历的“添加已有”，表格两列表头的排序；`issue-list-binding.ts` 先拆）、P7c 命令面板、移动端页头与遗留（G19 的工作项一侧，设计 §8 的四个视图文件，`fake-planning-page.tsx` 的 `opened`），各在 P7a 合入之后写自己的 spec、plan 与预检；P7a 留下的接缝与 e2e 的余量见 [spec](../specs/P7a-work-item-planning.md) §5。
+**接续**：P7b 列表词表与“添加已有”进行中（[P7b spec](../specs/P7b-list-vocabulary.md)、[P7b plan](../plans/P7b-list-vocabulary.md)，预检 [re-74](../../../reviews/re-74-M6P7b预检.md)），基线 main `f42f9d64`：G15 的工作项一侧（目录、按页的显示选项常量、偏好的筛选按页收窄、筛选/分组/排序/拖拽、表格两列表头的排序）与空态、分组头、日历的“添加已有”，`issue-list-binding.ts` 先拆；它的 T1 以本节的实测重算 e2e 的余量（P7b 与 P7c 合计约 22.4–27.1 秒，见 P7b spec §2.14）。P7c 命令面板、移动端页头与遗留（G19 的工作项一侧，设计 §8 的四个视图文件，`fake-planning-page.tsx` 的 `opened`）未开始；P7a 留下的接缝见 [spec](../specs/P7a-work-item-planning.md) §5。

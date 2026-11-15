@@ -21,7 +21,8 @@
   "cycle": {
     "label": "{count, plural, one {周期} other {周期}}",
     "no_cycle": "无周期",
-    "work_items_count": "此周期中有 {count} 个工作项"
+    "work_items_count": "此周期中有 {count} 个工作项",
+    "found_already_in": "找到的工作项都已在此周期中。"
   },
   "burndown": {
     "remaining": "剩余工作项",

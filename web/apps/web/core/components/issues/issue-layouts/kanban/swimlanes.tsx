@@ -1,5 +1,5 @@
 import { useParams } from "react-router";
-import { getGroupByColumns } from "../group-columns";
+import { getGroupByColumns, usePlanningGroupNames } from "../group-columns";
 import type { IssueCreate } from "@nerve/api-client";
 import type { Group } from "@/lib/paged-groups";
 /**
@@ -89,6 +89,8 @@ const SubGroupSwimlaneHeader = observer(function SubGroupSwimlaneHeader({
                 column_id={_list.id}
                 icon={_list.icon}
                 title={_list.name}
+                archived={_list.archived}
+                refusal={_list.refusal}
                 count={groupCount}
                 collapsedGroups={collapsedGroups}
                 handleCollapsedGroups={handleCollapsedGroups}
@@ -183,6 +185,7 @@ const SubGroupSwimlane = observer(function SubGroupSwimlane(props: ISubGroupSwim
                     column_id={_list.id}
                     icon={_list.icon}
                     title={_list.name}
+                    archived={_list.archived}
                     count={issueCount}
                     collapsedGroups={collapsedGroups}
                     handleCollapsedGroups={handleCollapsedGroups}
@@ -276,11 +279,16 @@ export const KanBanSwimLanes = observer(function KanBanSwimLanes(props: IKanBanS
   // store hooks
   const storeType = useIssueStoreType();
   const { workspaceSlug, projectId } = useParams();
-  // derived values
+  // derived values: both levels have the groups nerve answered, an archived cycle's or module's too (P7b spec 2.4)
+  const subgroupIds = new Set<string>();
+  for (const group of groups.values()) for (const id of group.subgroups?.keys() ?? []) subgroupIds.add(id);
+  usePlanningGroupNames(workspaceSlug, projectId, group_by, groups.keys());
+  usePlanningGroupNames(workspaceSlug, projectId, sub_group_by, subgroupIds);
   const groupByList = getGroupByColumns({
     groupBy: group_by as GroupByColumnTypes,
     includeNone: true,
     isWorkspaceLevel: isWorkspaceLevel(storeType),
+    groupIds: groups.keys(),
     workspaceSlug,
     projectId,
   });
@@ -288,6 +296,7 @@ export const KanBanSwimLanes = observer(function KanBanSwimLanes(props: IKanBanS
     groupBy: sub_group_by as GroupByColumnTypes,
     includeNone: true,
     isWorkspaceLevel: isWorkspaceLevel(storeType),
+    groupIds: subgroupIds,
     workspaceSlug,
     projectId,
   });

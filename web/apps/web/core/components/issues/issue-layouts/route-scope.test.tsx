@@ -30,7 +30,10 @@ vi.mock("@/lib/store-context", async () => ({
   },
   StoreContext: (await import("react")).createContext<RootStore | undefined>(undefined),
 }));
-vi.mock("@/lib/auth/api-client", () => ({ tokenManager: { state: { loginId: "one" } }, publicClient: {} }));
+vi.mock("@/lib/auth/api-client", () => ({
+  tokenManager: { state: { loginId: "one" }, subscribe: () => () => {} },
+  publicClient: {},
+}));
 vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
 vi.mock("@nerve/propel/toast", () => import("@/lib/fake-toast"));
 vi.mock("react-router", async (original) => ({

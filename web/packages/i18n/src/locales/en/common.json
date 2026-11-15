@@ -597,7 +597,9 @@
         "target_date": "Target date",
         "created_at": "Created on",
         "updated_at": "Updated on",
-        "project_id": "Projects"
+        "project_id": "Projects",
+        "cycle_id": "Cycle",
+        "module_id": "Module"
       },
       "operators": {
         "exact": "is",
