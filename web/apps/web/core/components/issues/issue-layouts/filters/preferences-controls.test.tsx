@@ -41,7 +41,11 @@ const View = observer(function View({ mobile = false }: { mobile?: boolean }) {
   const retry = useIssueListRefresh(tab.app.issue.projectIssues.currentList, []);
   return (
     <>
-      {mobile ? <ProjectIssuesMobileHeader /> : <HeaderFilters storeType={EIssuesStoreType.PROJECT} entityId="A" />}
+      {mobile ? (
+        <ProjectIssuesMobileHeader projectId="A" />
+      ) : (
+        <HeaderFilters storeType={EIssuesStoreType.PROJECT} entityId="A" />
+      )}
       <IssueListRetry {...retry} />
     </>
   );
