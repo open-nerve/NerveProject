@@ -109,7 +109,9 @@ test("G19 (page): Sprint's page opened wide and narrowed to 390 px gives its row
   await turnModules(api, w.token, w.web, true);
   const sprint = await w.cycle("Sprint", { start_date: dayFromToday(-7), end_date: dayFromToday(7) });
   const alpha = await createModule(api, w.token, w.web.id, { name: "Alpha" });
-  await w.item("Plan", { cycle_id: sprint.id, module_ids: [alpha.id] });
+  // Plan is in Sprint alone and Review in Alpha alone: each page is known by its own work item.
+  await w.item("Plan", { cycle_id: sprint.id });
+  await w.item("Review", { module_ids: [alpha.id] });
 
   // Sprint's page, opened wide (openListPage closes its sidebar) and narrowed once it lists Plan: the narrow row's
   // layouts and display. The API requests are recorded from now on (recordApi, every engine).
@@ -150,9 +152,9 @@ test("G19 (page): Sprint's page opened wide and narrowed to 390 px gives its row
   await expect(toggle).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByRole("heading", { name: "Sprint", level: 4 })).toBeVisible();
 
-  // Alpha's page, as narrow, once it lists Plan: its display groups by cycle, never by module.
+  // Alpha's page, as narrow, once it lists Review (Sprint's never does): its display groups by cycle, never by module.
   await moveWithinApp(page, modulePath(w.slug, w.web.id, alpha.id));
-  await expect.poll(() => shownItems(page)).toEqual(["Plan"]);
+  await expect.poll(() => shownItems(page)).toEqual(["Review"]);
   await expect(await groupings(page)).toHaveText([
     "States",
     "Priority",
