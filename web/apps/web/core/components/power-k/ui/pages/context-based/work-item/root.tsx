@@ -15,6 +15,7 @@ import { useMember } from "@/hooks/store/use-member";
 import { PowerKMembersMenu } from "../../../../menus/members";
 import { PowerKWorkItemCyclesMenu } from "./cycles-menu";
 import { PowerKWorkItemLabelsMenu } from "./labels-menu";
+import { PowerKWorkItemModulesMenu } from "./modules-menu";
 import { PowerKWorkItemPrioritiesMenu } from "./priorities-menu";
 import { PowerKProjectStatesMenu } from "./states-menu";
 
@@ -62,6 +63,14 @@ export const PowerKWorkItemContextBasedPages = observer(function PowerKWorkItemC
       {/* cycles menu */}
       {activePage === "update-work-item-cycle" && (
         <PowerKWorkItemCyclesMenu
+          workspaceSlug={workspaceSlug}
+          workItem={entityDetails}
+          handleSelect={handleSelection}
+        />
+      )}
+      {/* modules menu */}
+      {activePage === "update-work-item-module" && (
+        <PowerKWorkItemModulesMenu
           workspaceSlug={workspaceSlug}
           workItem={entityDetails}
           handleSelect={handleSelection}

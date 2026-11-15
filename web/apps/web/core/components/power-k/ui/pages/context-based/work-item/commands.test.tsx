@@ -131,6 +131,7 @@ it.each([
   ["assign_work_item_to_me", undefined, { assignee_ids: ["u-actor"] }],
   ["add_work_item_labels", { id: "label-next" }, { label_ids: ["label-next"] }],
   ["add_work_item_to_cycle", "c-A-Sprint", { cycle_id: "c-A-Sprint" }],
+  ["add_work_item_to_modules", "m-A-Alpha", { module_ids: ["m-A-Alpha"] }],
 ])("commandWritesOnlyNativeFieldsInCurrentScope: %s waits for confirmation", async (id, value, body) => {
   await setup();
   await start(id, value);

@@ -6,13 +6,14 @@ import {
   DeleteOutline,
   LabelsOutline,
   MembersOutline,
+  ModuleOutline,
   StateOutline,
   UserMinusOutline,
   UserPlusOutline,
 } from "@makeplane/propel/icons";
 import type { TPowerKCommandConfig } from "@/components/power-k/core/types";
 import { useCommandPalette } from "@/hooks/store/use-command-palette";
-import { planningOn } from "@/lib/planning-switch";
+import { planningOn, type PlanningDomain } from "@/lib/planning-switch";
 import type { WorkItemCommandContext } from "./context";
 import { useWorkItemWrites } from "./writes";
 
@@ -25,11 +26,13 @@ export function useWorkItemMutationCommands(context: WorkItemCommandContext): TP
   const editable = () => !!read()?.canEdit;
   const deletable = () => !!read()?.canDelete;
   const assigned = !!read()?.issue.assignee_ids.includes(root.rootStore.user.data?.id ?? "");
-  /** The work item may be changed and its project's cycles are on (P7c spec 2.5). */
-  const cyclesEditable = () => {
+  /** The work item may be changed and its project's cycles, or its modules, are on (P7c spec 2.5). */
+  const planningEditable = (domain: PlanningDomain) => () => {
     const target = read();
-    return !!target?.canEdit && planningOn(target.project, "cycles");
+    return !!target?.canEdit && planningOn(target.project, domain);
   };
+  const cyclesEditable = planningEditable("cycles");
+  const modulesEditable = planningEditable("modules");
   const assign = (value: unknown) =>
     typeof value === "string" && value
       ? update((held) => ({ assignee_ids: toggled(held.assignee_ids, value) }))
@@ -112,6 +115,27 @@ export function useWorkItemMutationCommands(context: WorkItemCommandContext): TP
         const cycleId = value === null ? null : typeof value === "string" && value ? value : undefined;
         if (cycleId === undefined || cycleId === read()?.issue.cycle_id) return;
         return change({ cycle_id: cycleId });
+      },
+    },
+    {
+      // P7c spec 2.5: its page offers the modules it may join and the archived ones it is in, and stays open. A pick
+      // adds it to one module, or takes it out of one it is in as nerve confirmed it (the page's ticks); the set it
+      // makes is worked out in the work item's turn, of the set it then holds (change).
+      id: "add_work_item_to_modules",
+      i18n_title: "power_k.contextual_actions.work_item.add_to_modules",
+      icon: ModuleOutline,
+      group: "contextual",
+      contextType: "work-item",
+      type: "change-page",
+      page: "update-work-item-module",
+      modifierShortcut: "shift+m",
+      closeOnSelect: false,
+      isEnabled: modulesEditable,
+      isVisible: modulesEditable,
+      onSelect: (value) => {
+        const held = read()?.issue.module_ids;
+        if (typeof value !== "string" || !value || !held) return;
+        return change({ modules: held.includes(value) ? { remove: [value] } : { add: [value] } });
       },
     },
     {
