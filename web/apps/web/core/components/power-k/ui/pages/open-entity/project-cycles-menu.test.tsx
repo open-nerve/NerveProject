@@ -152,3 +152,27 @@ it.each([
   await opened(caller, project);
   expect(held.cycles.asked()).toEqual([]);
 });
+
+// P7c spec 2.2, R2: while the gate is closed the page says why, by the message of nerve's problem code, and waits for
+// nothing; nor lists the cycles the store still holds of a project whose cycles were turned off after they were read.
+it.each([
+  ["its cycles are turned off", its.member, { cycle_view: false }, "errors.planning_cycles_disabled"],
+  ["it is archived", its.member, { archived_at: "2026-10-31T00:00:00Z" }, "errors.project_archived"],
+  ["the caller is not its member", its.outsider, {}, "errors.planning_cycle_not_found"],
+] as const)(
+  "says why it lists none of the project's cycles when %s, waiting for nothing",
+  async (_, caller, project, why) => {
+    await opened(caller, project);
+    expect(host.querySelector('[role="status"]')).toBeNull();
+    expect(host.textContent).toBe(why);
+  }
+);
+
+it("says why rather than list the cycles the store still holds once they are turned off", async () => {
+  const web = await opened(its.member, { cycle_view: false });
+  await act(async () => held.cycles.show("cycles", web.id, [rowOf(cycleOf(web, "Sprint", { status: "current" }))]));
+  await settle();
+  expect(held.cycles.getProjectCycleIds(web.id)).toHaveLength(1);
+  expect(options()).toEqual([]);
+  expect(host.textContent).toBe("errors.planning_cycles_disabled");
+});

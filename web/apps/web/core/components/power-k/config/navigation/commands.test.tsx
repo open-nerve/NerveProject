@@ -102,19 +102,20 @@ function routeOf(command: TPowerKCommandConfig, context: TPowerKContext) {
 
 // Each command in the palette's order: id, type, key sequence, page, title (power_k.navigation_actions.<id>), where it
 // goes from web's page as its admin, and whether it is offered (shown and enabled) on each page — workspace, admin,
-// guest, off, archived.
+// guest, off, archived. The four ways into web's cycles and modules follow the planning entry rule (P7c spec 2.2, R2):
+// none on the archived web's page either.
 const T = true,
   F = false;
 type Row = [string, "action" | "change-page", string | undefined, string | undefined, string, boolean[]];
 const table: Row[] = [
-  ["open_project_cycle", "change-page", "oc", "open-project-cycle", "/acme/projects/p-web/cycles/c-1", [F, T, F, F, T]],
+  ["open_project_cycle", "change-page", "oc", "open-project-cycle", "/acme/projects/p-web/cycles/c-1", [F, T, F, F, F]],
   [
     "open_project_module",
     "change-page",
     "om",
     "open-project-module",
     "/acme/projects/p-web/modules/m-1",
-    [F, T, F, F, T],
+    [F, T, F, F, F],
   ],
   ["open_project_view", "change-page", "ov", "open-project-view", "/acme/projects/p-web/views/v-1", [F, T, T, F, T]],
   [
@@ -132,8 +133,8 @@ const table: Row[] = [
   ["nav_inbox", "action", "gx", undefined, "/acme/notifications", [T, T, T, T, T]],
   ["nav_your_work", "action", "gy", undefined, "/acme/profile/me", [T, T, F, T, T]],
   ["nav_project_work_items", "action", "gi", undefined, "/acme/projects/p-web/issues", [F, T, T, T, T]],
-  ["nav_project_cycles", "action", "gc", undefined, "/acme/projects/p-web/cycles", [F, T, F, F, T]],
-  ["nav_project_modules", "action", "gm", undefined, "/acme/projects/p-web/modules", [F, T, F, F, T]],
+  ["nav_project_cycles", "action", "gc", undefined, "/acme/projects/p-web/cycles", [F, T, F, F, F]],
+  ["nav_project_modules", "action", "gm", undefined, "/acme/projects/p-web/modules", [F, T, F, F, F]],
   ["nav_project_views", "action", "gv", undefined, "/acme/projects/p-web/views", [F, T, T, F, T]],
   ["nav_project_intake", "action", "gk", undefined, "/acme/projects/p-web/intake", [F, T, T, F, T]],
   ["nav_project_settings", "action", "gs", undefined, "/acme/settings/projects/p-web", [F, T, T, T, T]],

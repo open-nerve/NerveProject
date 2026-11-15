@@ -23,6 +23,8 @@ import { handlePowerKNavigate } from "@/components/power-k/utils/navigation";
 // hooks
 import { useProject } from "@/hooks/store/use-project";
 import { useUser } from "@/hooks/store/user";
+// lib
+import { planningEntryOn, type PlanningDomain } from "@/lib/planning-switch";
 
 type TPowerKProjectNavigationCommandKeys =
   | "nav_project_work_items"
@@ -48,7 +50,7 @@ export const usePowerKProjectNavigationCommandsRecord = (): Record<
 > => {
   // store hooks
   const {
-    permission: { allowPermissions },
+    permission: { allowPermissions, getProjectRoleByWorkspaceSlugAndProjectId },
   } = useUser();
   const { getProjectById } = useProject();
   // derived values
@@ -60,6 +62,13 @@ export const usePowerKProjectNavigationCommandsRecord = (): Record<
       ctx.params.projectId
     );
   const getContextProject = (ctx: TPowerKContext) => getProjectById(ctx.params.projectId);
+  // the ways into the project's cycles and modules: the planning entry rule, by the caller's role in the address's
+  // project (P7c spec 2.2, R2)
+  const hasPlanningEntry = (ctx: TPowerKContext, domain: PlanningDomain) => {
+    const { workspaceSlug, projectId } = ctx.params;
+    const role = workspaceSlug ? getProjectRoleByWorkspaceSlugAndProjectId(workspaceSlug, projectId) : undefined;
+    return planningEntryOn(getContextProject(ctx), role, domain);
+  };
 
   return {
     nav_project_work_items: {
@@ -93,10 +102,8 @@ export const usePowerKProjectNavigationCommandsRecord = (): Record<
           cycleDetails.id,
         ]);
       },
-      isEnabled: (ctx) =>
-        baseProjectConditions(ctx) && hasProjectMemberLevelPermissions(ctx) && !!getContextProject(ctx)?.cycle_view,
-      isVisible: (ctx) =>
-        baseProjectConditions(ctx) && hasProjectMemberLevelPermissions(ctx) && !!getContextProject(ctx)?.cycle_view,
+      isEnabled: (ctx) => baseProjectConditions(ctx) && hasPlanningEntry(ctx, "cycles"),
+      isVisible: (ctx) => baseProjectConditions(ctx) && hasPlanningEntry(ctx, "cycles"),
       closeOnSelect: true,
     },
     nav_project_cycles: {
@@ -108,10 +115,8 @@ export const usePowerKProjectNavigationCommandsRecord = (): Record<
       keySequence: "gc",
       action: (ctx) =>
         handlePowerKNavigate(ctx, [ctx.params.workspaceSlug, "projects", ctx.params.projectId, "cycles"]),
-      isEnabled: (ctx) =>
-        baseProjectConditions(ctx) && hasProjectMemberLevelPermissions(ctx) && !!getContextProject(ctx)?.cycle_view,
-      isVisible: (ctx) =>
-        baseProjectConditions(ctx) && hasProjectMemberLevelPermissions(ctx) && !!getContextProject(ctx)?.cycle_view,
+      isEnabled: (ctx) => baseProjectConditions(ctx) && hasPlanningEntry(ctx, "cycles"),
+      isVisible: (ctx) => baseProjectConditions(ctx) && hasPlanningEntry(ctx, "cycles"),
       closeOnSelect: true,
     },
     open_project_module: {
@@ -132,10 +137,8 @@ export const usePowerKProjectNavigationCommandsRecord = (): Record<
           moduleDetails.id,
         ]);
       },
-      isEnabled: (ctx) =>
-        baseProjectConditions(ctx) && hasProjectMemberLevelPermissions(ctx) && !!getContextProject(ctx)?.module_view,
-      isVisible: (ctx) =>
-        baseProjectConditions(ctx) && hasProjectMemberLevelPermissions(ctx) && !!getContextProject(ctx)?.module_view,
+      isEnabled: (ctx) => baseProjectConditions(ctx) && hasPlanningEntry(ctx, "modules"),
+      isVisible: (ctx) => baseProjectConditions(ctx) && hasPlanningEntry(ctx, "modules"),
       closeOnSelect: true,
     },
     nav_project_modules: {
@@ -147,10 +150,8 @@ export const usePowerKProjectNavigationCommandsRecord = (): Record<
       keySequence: "gm",
       action: (ctx) =>
         handlePowerKNavigate(ctx, [ctx.params.workspaceSlug, "projects", ctx.params.projectId, "modules"]),
-      isEnabled: (ctx) =>
-        baseProjectConditions(ctx) && hasProjectMemberLevelPermissions(ctx) && !!getContextProject(ctx)?.module_view,
-      isVisible: (ctx) =>
-        baseProjectConditions(ctx) && hasProjectMemberLevelPermissions(ctx) && !!getContextProject(ctx)?.module_view,
+      isEnabled: (ctx) => baseProjectConditions(ctx) && hasPlanningEntry(ctx, "modules"),
+      isVisible: (ctx) => baseProjectConditions(ctx) && hasPlanningEntry(ctx, "modules"),
       closeOnSelect: true,
     },
     open_project_view: {
