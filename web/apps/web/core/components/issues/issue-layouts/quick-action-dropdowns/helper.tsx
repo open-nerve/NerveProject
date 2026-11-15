@@ -59,7 +59,7 @@ function handleOptionalAction<T>(
 /**
  * How the menu's edit and copy open the work item's dialog. A list's rows name the dialog's kind (openDialog) to the
  * list's command host, which holds the dialog while the row may leave the page (P5b T13). A page holding a dialog of
- * its own, the work item's detail or the archive, sets the work item to edit, if any, and then opens the dialog.
+ * its own, the work item's detail, sets the work item to edit, if any, and then opens the dialog.
  */
 type DialogOpening =
   | {
@@ -73,11 +73,17 @@ type DialogOpening =
       setCreateUpdateIssueModal: (open: boolean) => void;
     };
 
-export type MenuItemFactoryProps = DialogOpening & {
+/** The menu's edit and copy: offered while the caller may edit the work item, each opening its dialog. */
+type Editing = DialogOpening & { isEditingAllowed: boolean };
+
+/**
+ * What a menu whose items open no dialog is given (the archive's row menu, P7c spec 2.6): what every item reads but
+ * the edit and the copy (Editing).
+ */
+export type ArchivedIssueMenuProps = {
   issue: Issue;
   workspaceSlug?: string;
   projectIdentifier?: string;
-  isEditingAllowed: boolean;
   isArchivingAllowed?: boolean;
   isDeletingAllowed: boolean;
   isRestoringAllowed?: boolean;
@@ -94,18 +100,21 @@ export type MenuItemFactoryProps = DialogOpening & {
   handleRestore?: () => Promise<void>;
 };
 
-/** Opens the work item's dialog of kind as the menu's caller holds it (DialogOpening). */
-function openDialogOf(props: MenuItemFactoryProps, kind: "edit" | "copy") {
-  if (props.openDialog) {
-    props.openDialog(kind);
+/** What a menu that edits and copies the work item is given. */
+export type MenuItemFactoryProps = Editing & ArchivedIssueMenuProps;
+
+/** Opens the dialog of kind for issue as the menu's caller holds it (DialogOpening). */
+function openDialogOf(dialog: DialogOpening, issue: Issue, kind: "edit" | "copy") {
+  if (dialog.openDialog) {
+    dialog.openDialog(kind);
     return;
   }
-  if (kind === "edit") props.setIssueToEdit(props.issue);
-  props.setCreateUpdateIssueModal(true);
+  if (kind === "edit") dialog.setIssueToEdit(issue);
+  dialog.setCreateUpdateIssueModal(true);
 }
 
 // Common action handlers hook
-const useIssueActionHandlers = (props: MenuItemFactoryProps) => {
+const useIssueActionHandlers = (props: ArchivedIssueMenuProps) => {
   const { issue, workspaceSlug, projectIdentifier, handleRestore } = props;
   const copyLink = useCopyLink();
   const { t } = useTranslation();
@@ -142,12 +151,12 @@ const useIssueActionHandlers = (props: MenuItemFactoryProps) => {
   };
 };
 
-const useMenuItemFactory = (props: MenuItemFactoryProps) => {
+const useMenuItemFactory = (props: ArchivedIssueMenuProps) => {
   const { t } = useTranslation();
   const actionHandlers = useIssueActionHandlers(props);
 
   const {
-    isEditingAllowed,
+    issue,
     isArchivingAllowed = false,
     isDeletingAllowed,
     isRestoringAllowed = false,
@@ -157,20 +166,20 @@ const useMenuItemFactory = (props: MenuItemFactoryProps) => {
     removeFromView,
   } = props;
 
-  const createEditMenuItem = (): TContextMenuItem => ({
+  const createEditMenuItem = (editing: Editing): TContextMenuItem => ({
     key: "edit",
     title: t("common.actions.edit"),
     icon: EditOutline,
-    action: () => openDialogOf(props, "edit"),
-    shouldRender: isEditingAllowed,
+    action: () => openDialogOf(editing, issue, "edit"),
+    shouldRender: editing.isEditingAllowed,
   });
 
-  const createCopyMenuItem = (): TContextMenuItem => ({
+  const createCopyMenuItem = (editing: Editing): TContextMenuItem => ({
     key: "make-a-copy",
     title: t("common.actions.make_a_copy"),
     icon: CopyOutline,
-    action: () => openDialogOf(props, "copy"),
-    shouldRender: isEditingAllowed,
+    action: () => openDialogOf(editing, issue, "copy"),
+    shouldRender: editing.isEditingAllowed,
   });
 
   const createOpenInNewTabMenuItem = (): TContextMenuItem => ({
@@ -241,15 +250,15 @@ export const useProjectIssueMenuItems = (props: MenuItemFactoryProps): TContextM
 
   return useMemo(
     () => [
-      factory.createEditMenuItem(),
-      factory.createCopyMenuItem(),
+      factory.createEditMenuItem(props),
+      factory.createCopyMenuItem(props),
       factory.createOpenInNewTabMenuItem(),
       factory.createCopyLinkMenuItem(),
       factory.createRemoveFromViewMenuItem(),
       factory.createArchiveMenuItem(),
       factory.createDeleteMenuItem(),
     ],
-    [factory]
+    [factory, props]
   );
 };
 
@@ -258,18 +267,17 @@ export const useWorkItemDetailMenuItems = (props: MenuItemFactoryProps): TContex
 
   return useMemo(
     () => [
-      factory.createCopyMenuItem(),
+      factory.createCopyMenuItem(props),
       factory.createOpenInNewTabMenuItem(),
       factory.createArchiveMenuItem(),
       factory.createRestoreMenuItem(),
       factory.createDeleteMenuItem(),
     ],
-    // oxlint-disable-next-line eslint-plugin-react-hooks/exhaustive-deps
-    [factory]
+    [factory, props]
   );
 };
 
-export const useArchivedIssueMenuItems = (props: MenuItemFactoryProps): TContextMenuItem[] => {
+export const useArchivedIssueMenuItems = (props: ArchivedIssueMenuProps): TContextMenuItem[] => {
   const factory = useMenuItemFactory(props);
 
   return useMemo(

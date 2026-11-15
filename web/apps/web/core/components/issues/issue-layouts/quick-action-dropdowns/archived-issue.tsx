@@ -15,7 +15,7 @@ import { cn } from "@nerve/utils";
 import { useUser, useUserPermissions } from "@/hooks/store/user";
 // local imports
 import type { IQuickActionProps } from "../list/list-view-types";
-import type { MenuItemFactoryProps } from "./helper";
+import type { ArchivedIssueMenuProps } from "./helper";
 import { useArchivedIssueMenuItems } from "./helper";
 import { useDeleteRequest, useRestoreRequest } from "../command-host";
 
@@ -54,15 +54,12 @@ export const ArchivedIssueQuickActions = observer(function ArchivedIssueQuickAct
     (issue.created_by_id === currentUser?.id ||
       allowPermissions([EUserPermissions.ADMIN], EUserPermissionsLevel.PROJECT, workspaceSlug, issue.project_id));
 
-  // Menu items and modals using helper
-  const menuItemProps: MenuItemFactoryProps = {
+  // Menu items using helper: they open no dialog, so the menu is given none
+  const menuItemProps: ArchivedIssueMenuProps = {
     issue,
     workspaceSlug,
-    isEditingAllowed: false,
     isDeletingAllowed,
     isRestoringAllowed: !!isRestoringAllowed,
-    setIssueToEdit: () => {},
-    setCreateUpdateIssueModal: () => {},
     setDeleteIssueModal: () => {
       if (!requestDelete) throw new Error("Archived issue actions require an IssueListCommandHost");
       requestDelete(issue, handleDelete);

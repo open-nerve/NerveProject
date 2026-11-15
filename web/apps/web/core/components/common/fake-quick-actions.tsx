@@ -36,9 +36,20 @@ export async function openMenu(id: string) {
   return [...(menu?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]') ?? [])];
 }
 
+/** Opens the row's right-click menu: its items. */
+export async function openRightClickMenu(id: string) {
+  await act(async () => row(id)?.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true })));
+  await settle();
+  return [...(row(id)?.querySelectorAll<HTMLButtonElement>('[data-context-menu="true"] [role="menuitem"]') ?? [])];
+}
+
+/** The item of title among a menu's items. */
+export const itemOf = (items: HTMLButtonElement[], title: string) =>
+  items.find((item) => item.querySelector("h5")?.textContent === title);
+
 /** Chooses the item of title in the row's menu. */
 export async function choose(id: string, title: string) {
-  const item = (await openMenu(id)).find((button) => button.querySelector("h5")?.textContent === title);
+  const item = itemOf(await openMenu(id), title);
   if (!item) throw new Error(`The menu of ${id} offers no ${title}`);
   await act(async () => item.click());
   await settle();
