@@ -95,7 +95,7 @@ A1–A13 满足（[spec §4](../specs/P7c-palette-mobile.md#4-验收标准)已�
   - 预算 8 秒（R14），没有间歇失败、没有重跑。
 - **T15 的第一次门禁**（`t15-gate`，`5087b09e`，2026-11-15T19:02:34Z 起，串行，与整分支审查 re-77 并行）：`make gen-check`、`make lint-go`、`make test`（本机 897 秒通过，没有 M6-M8-05 的签名）、`make lint-web`、`make knip`、`make test-web` 通过；`make build && make e2e` 480 条中 479 过、1 条失败（3.7 分钟）：S1 server-ready（`e2e/stories/smoke/s1-server-ready.spec.ts:12`）的 `nerve migrate status` 连数据库时与之后的 `pg_dump` 都收到 “FATAL: sorry, too many clients already (SQLSTATE 53300)”，即 [M6-M8-03](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-03) 的签名，`e2e/test-results` 存为 `t15-gate-test-results`；照该条只重跑这一个文件一次 6 条通过（`t15-gate-e2e-s1-rerun`，16.9 秒）。三种引擎的页面配置 `t15-gate-m6-pages` 135 例通过（126 加本段的 9 例，2.2 分钟，flaky 0）。全部收据的 `inputs_unchanged` 为真。修复轮在这次门禁之后开始。
 - **修复轮各自的检查**：F2、F3、F5 各跑焦点测试、改过的文件 oxlint（0 告警，上限 44 不变）、关键词、`make lint-web`、`make knip`、`make test-web`；F1 跑 e2e 的检查、上面的三组 e2e 与 `make lint-web`、`make knip`、关键词（台账的 `Fix F<N>:` 行）。
-- **最终候选**：（待主控填写：最终候选的七项门禁、三种引擎的页面配置，推送与分支 CI。）
+- **最终候选**：`f-final`（`a51d6360ee66651c786974ec553ce3d9ad35d4f8`，修复轮 F1–F5 之后）——`make gen-check`、`make lint-go`、`make test`（本机 918 秒通过，没有 M6-M8-05 的签名）、`make lint-web`、`make knip`、`make test-web`、`make build && make e2e`（480 条全过，3.7 分钟，没有 M6-M8-03、-07 的签名）都第一次就通过、没有重跑；三种引擎的页面配置 `f-final-m6-pages` 135 例通过（P7b 的 126 例加本段的三条故事各三种引擎，136 秒，flaky 0）。全部收据的 `inputs_unchanged` 为真。推送前的估算照上面“T15 估算”一条（X = 4.6 秒；F1–F5 没有使新故事变慢），估算与上界都在 30 分钟以内，所以推送；推送之后的分支 CI 见 §7（由 P8 的 T1 回填）。
 - **CI 的 e2e 时长估算**（推送前，R14、spec §2.12；台账“T15 估算（主控）”，在 T13 之后算，修复轮的 F1 只换锚，X 仍是 4.6 秒）：
   - **X**：本段新文件本机 chromium 4.6 秒（各故事取较慢的一次）。
   - **估算**：基线 1422 秒（P7b 合入后的 main CI 43706438924）加 4.6 秒 × 1.67–2.25、两个工作进程摊开，1425.84–1427.17 秒（23 分 45.8 秒至 23 分 47.2 秒）。
