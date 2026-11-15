@@ -1,16 +1,19 @@
 // @vitest-environment jsdom
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
-import { act } from "react";
+import { act, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { Command } from "cmdk";
 import { SWRConfig, type SWRConfiguration } from "swr";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import type { Project } from "@nerve/api-client";
+import type { Cycle, Module, Project } from "@nerve/api-client";
 import type { TPowerKContext } from "@/components/power-k/core/types";
 import { issueOf, issueStoreTab } from "@/store/issue/fake-issues";
-import { projectOf, stateOf } from "@/store/project/fake-projects";
+import { cycleOf, loadProject, moduleOf, projectOf, stateOf } from "@/store/project/fake-projects";
+import { loadArchivedCycles, loadCycles, rowOf } from "@/store/planning/fake-cycles";
+import { loadArchivedModules, loadModules, moduleRowOf } from "@/store/planning/fake-modules";
 import { loadWorkspaces, workspaceOf } from "@/store/workspace/fake-workspaces";
 import { json, problem } from "@/lib/auth/fake-nerve";
+import { useSessionSWR } from "@/lib/use-session-swr";
 import { PowerKModalSearchMenu } from "./search-menu";
 const ui = vi.hoisted(() => ({
   open: true,
@@ -41,10 +44,16 @@ const context = (): TPowerKContext => ({
   setActiveCommand: () => {},
   setActivePage: () => {},
 });
-const render = (searchTerm = "", isWorkspaceLevel = false, activePage: "update-theme" | null = null) =>
+const render = (
+  searchTerm = "",
+  isWorkspaceLevel = false,
+  activePage: "update-theme" | null = null,
+  beside?: ReactNode
+) =>
   act(async () => {
     root.render(
       <SWRConfig value={config}>
+        {beside}
         <Command shouldFilter={false}>
           <Command.List>
             <PowerKModalSearchMenu
@@ -231,4 +240,126 @@ it("closing or retiring the root immediately hides loaded rows", async () => {
   expect(options()).toHaveLength(1);
   await act(async () => tab.app.issue.retire());
   expect(options()).toEqual([]);
+});
+
+// P7c spec 2.4, R5: at a project's scope the search names its cycles and modules not archived, filtered here by name,
+// while the caller is offered the ways into them (planningEntryOn); none at the workspace's (M7). The store holds the
+// lists as the project's pages read them, or the search reads them by their keys (/browse/:workItem has no wrapper).
+const archivedAt = "2026-10-31T00:00:00Z";
+const listReads = (domain: "cycles" | "modules") =>
+  tab.nerve.calls.filter((call) => call.path === `/api/v0/projects/A/${domain}`);
+const headings = () => [...host.querySelectorAll("[cmdk-group-heading]")].map((heading) => heading.textContent);
+const noResults = () => host.textContent!.includes("power_k.search_menu.no_results");
+const choose = (index: number) =>
+  act(async () => (host.querySelectorAll('[role="option"]')[index] as HTMLElement).click());
+async function hold(cycles: Cycle[], modules: Module[], archived: [Cycle[], Module[]] = [[], []]) {
+  const { cycles: held, modules: heldModules } = tab.app.planning;
+  await loadCycles(
+    tab.nerve,
+    held,
+    cycles.map((cycle) => rowOf(cycle)),
+    tab.project
+  );
+  await loadModules(
+    tab.nerve,
+    heldModules,
+    modules.map((item) => moduleRowOf(item)),
+    tab.project
+  );
+  await loadArchivedCycles(
+    tab.nerve,
+    held,
+    archived[0].map((cycle) => rowOf(cycle)),
+    tab.project
+  );
+  await loadArchivedModules(
+    tab.nerve,
+    heldModules,
+    archived[1].map((item) => moduleRowOf(item)),
+    tab.project
+  );
+}
+const searched = async (term: string, isWorkspaceLevel = false) => {
+  await render(term, isWorkspaceLevel);
+  await tick(500);
+  await answer([]);
+};
+const sprint = () => cycleOf(tab.project, "Sprint 1", { id: "c1", status: "completed" });
+const board = () => moduleOf(tab.project, "Sprint board", { id: "m1" });
+/** The reads of the project's pages' wrapper (use-project-fetch.ts), by their keys. */
+function WrapperReads() {
+  useSessionSWR(["PROJECT_CYCLES", "A"], (id) => tab.app.planning.cycles.fetchCycles(id));
+  useSessionSWR(["PROJECT_MODULES", "A"], (id) => tab.app.planning.modules.fetchModules(id));
+  return null;
+}
+it("projectScopeNamesCyclesAndModulesNotArchived, ended ones too, filtered here by name, and goes to the one chosen", async () => {
+  const cycles = [sprint(), cycleOf(tab.project, "Next SPRINT", { id: "c2", status: "current" })];
+  const others: [Cycle, Module] = [cycleOf(tab.project, "Release", { id: "c3" }), moduleOf(tab.project, "Docs")];
+  await hold(
+    [...cycles, others[0]],
+    [board(), others[1]],
+    [
+      [cycleOf(tab.project, "Sprint 0", { id: "c0", archived_at: archivedAt })],
+      [moduleOf(tab.project, "Old sprint", { id: "m0", archived_at: archivedAt })],
+    ]
+  );
+  await searched("sPrInT");
+  expect(headings()).toEqual(["common.cycles", "common.modules"]);
+  expect(options()).toEqual(["A Sprint 1", "A Next SPRINT", "A Sprint board"]);
+  expect(noResults()).toBe(false);
+  await choose(1);
+  await choose(2);
+  expect(ui.navigate.mock.calls).toEqual([["/ws/projects/A/cycles/c2"], ["/ws/projects/A/modules/m1"]]);
+  expect(ui.close).toHaveBeenCalledTimes(2);
+});
+it("workspaceScopeNamesNoCyclesOrModules, the route's project's neither", async () => {
+  await hold([sprint()], [board()]);
+  await searched("sprint", true);
+  expect(host.textContent).not.toContain("Sprint");
+  expect(noResults()).toBe(true);
+});
+it.each([
+  ["the caller is its guest", { member_role: 5 }],
+  ["it is archived", { archived_at: archivedAt }],
+  ["its cycles and modules are turned off", { cycle_view: false, module_view: false }],
+] as const)("names none of the project's cycles or modules the store holds when %s", async (_, fields) => {
+  await hold([sprint()], [board()]);
+  const project = { ...tab.project, ...fields };
+  projects = [project];
+  await loadProject(tab.nerve, tab.app.projectRoot.project, tab.project, project);
+  await searched("sprint");
+  expect(tab.app.projectRoot.project.getProjectById("A")).toMatchObject(fields);
+  expect(host.textContent).not.toContain("Sprint");
+  expect(noResults()).toBe(true);
+});
+it("readsTheListsTheStoreLacksByThePagesKeys: nerve is asked once beside the wrapper's reads", async () => {
+  await render("sprint");
+  await tick(500);
+  expect([listReads("cycles").length, listReads("modules").length]).toEqual([1, 1]);
+  await render("sprint", false, null, <WrapperReads />);
+  expect([listReads("cycles").length, listReads("modules").length]).toEqual([1, 1]);
+  await answer([]);
+  expect(noResults()).toBe(true);
+  await act(async () => listReads("cycles")[0]!.answer(json(200, { data: [rowOf(sprint())] })));
+  await act(async () => listReads("modules")[0]!.answer(json(200, { data: [] })));
+  expect(options()).toEqual(["A Sprint 1"]);
+  expect(noResults()).toBe(false);
+});
+it("a list not answered or refused names nothing of its domain and holds up no other result", async () => {
+  await render("a");
+  await tick(500);
+  await answer([{ ...issueOf("i1"), name: "Alpha notes", sequence_id: 7 }]);
+  expect(options()).toEqual(["A-7Alpha notes", "A"]);
+  await act(async () => listReads("cycles")[0]!.answer(problem(500, "internal_error")));
+  await act(async () => listReads("modules")[0]!.answer(problem(403, "forbidden")));
+  expect(options()).toEqual(["A-7Alpha notes", "A"]);
+  expect(host.querySelector('[role="alert"]')).toBeNull();
+});
+it("noResultsOnlyWhenAllFourGroupsAreEmpty: a cycle alone is a result", async () => {
+  await hold([sprint()], [moduleOf(tab.project, "Docs")]);
+  await searched("sprint 1");
+  expect(options()).toEqual(["A Sprint 1"]);
+  expect(noResults()).toBe(false);
+  await searched("nothing");
+  expect(noResults()).toBe(true);
 });
