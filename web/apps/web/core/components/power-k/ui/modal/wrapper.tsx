@@ -14,6 +14,7 @@ import { usePowerK } from "@/hooks/store/use-power-k";
 // local imports
 import type { TPowerKCommandConfig, TPowerKContext } from "../../core/types";
 import type { TPowerKCommandsListProps } from "./commands-list";
+import { powerKFilter } from "./filter";
 import { PowerKModalFooter } from "./footer";
 import { PowerKModalHeader } from "./header";
 
@@ -132,11 +133,7 @@ export const ProjectsAppPowerKModalWrapper = observer(function ProjectsAppPowerK
       <Command
         // An exiting list must release Ctrl+K to the document opener, not consume it as Vim navigation.
         vimBindings={isOpen}
-        filter={(i18nValue: string, search: string) => {
-          if (i18nValue === "no-results") return 1;
-          if (i18nValue.toLowerCase().includes(search.toLowerCase())) return 1;
-          return 0;
-        }}
+        filter={powerKFilter}
         shouldFilter={searchTerm.length > 0 && (!!activePage || !context.params.workspaceSlug)}
         onKeyDown={handleKeyDown}
         className="w-full"

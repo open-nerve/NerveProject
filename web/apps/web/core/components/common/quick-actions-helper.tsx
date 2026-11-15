@@ -19,6 +19,8 @@ interface UseCycleMenuItemsProps {
   canWrite: boolean;
   /** The caller may delete the cycle: the project's admin, or its creator while the project's admin or member (R8). */
   canDelete: boolean;
+  /** The cycle's restore is out (sent, nerve has not answered): its item stays, disabled (P7c spec 2.6). */
+  restoreOut: boolean;
   handleEdit: () => void;
   handleArchive: () => void;
   handleRestore: () => void;
@@ -33,6 +35,8 @@ interface UseModuleMenuItemsProps {
   canWrite: boolean;
   /** The caller may delete the module: the project's admin, or its creator while its admin or member (R5). */
   canDelete: boolean;
+  /** The module's restore is out (sent, nerve has not answered): its item stays, disabled (P7c spec 2.6). */
+  restoreOut: boolean;
   handleEdit: () => void;
   handleArchive: () => void;
   handleRestore: () => void;
@@ -57,13 +61,13 @@ interface UseViewMenuItemsProps {
  * A cycle's menu (P5a spec 2.5, R8): changing it, to the caller who writes its project while it has not ended and is
  * not archived; opening it in a new tab and copying its link, to anyone; archiving it, to the caller who writes, while
  * it is not archived, the item disabled with the reason until it has ended; restoring it, to the caller who writes,
- * once archived; deleting it, to the caller who may (canDelete), while it has not ended and is not archived. Its state
- * is the status nerve gives it.
+ * once archived, the item disabled while its restore is out; deleting it, to the caller who may (canDelete), while it
+ * has not ended and is not archived. Its state is the status nerve gives it.
  */
 export const useCycleMenuItems = (props: UseCycleMenuItemsProps): TContextMenuItem[] => {
   const factory = useQuickActionsFactory();
   const { t } = useTranslation();
-  const { cycle, canWrite, canDelete, ...handlers } = props;
+  const { cycle, canWrite, canDelete, restoreOut, ...handlers } = props;
 
   const isArchived = cycle.archived_at !== null;
   const isCompleted = cycle.status === "completed";
@@ -78,7 +82,10 @@ export const useCycleMenuItems = (props: UseCycleMenuItemsProps): TContextMenuIt
       disabled: !isCompleted,
       description: isCompleted ? undefined : t("project_cycles.archive.only_completed"),
     }),
-    factory.createRestoreMenuItem(handlers.handleRestore, canWrite && isArchived),
+    factory.createRestoreMenuItem(handlers.handleRestore, {
+      shouldRender: canWrite && isArchived,
+      disabled: restoreOut,
+    }),
     factory.createDeleteMenuItem(handlers.handleDelete, canDelete && !isCompleted && !isArchived),
   ].filter((item) => item.shouldRender !== false);
 
@@ -89,13 +96,13 @@ export const useCycleMenuItems = (props: UseCycleMenuItemsProps): TContextMenuIt
  * A module's menu (P6a spec 2.6, R5): changing it, to the caller who writes its project's modules while it is not
  * archived; opening it in a new tab and copying its link, to anyone; archiving it, to the caller who writes, while it
  * is not archived, the item disabled with the reason until it is completed or cancelled; restoring it, to the caller
- * who writes, once archived; deleting it, to the caller who may (canDelete), while it is not archived (nerve deletes
- * an archived module too: R5).
+ * who writes, once archived, the item disabled while its restore is out; deleting it, to the caller who may
+ * (canDelete), while it is not archived (nerve deletes an archived module too: R5).
  */
 export const useModuleMenuItems = (props: UseModuleMenuItemsProps): TContextMenuItem[] => {
   const factory = useQuickActionsFactory();
   const { t } = useTranslation();
-  const { module, canWrite, canDelete, ...handlers } = props;
+  const { module, canWrite, canDelete, restoreOut, ...handlers } = props;
 
   const isArchived = module.archived_at !== null;
   const isClosed = module.status === "completed" || module.status === "cancelled";
@@ -110,7 +117,10 @@ export const useModuleMenuItems = (props: UseModuleMenuItemsProps): TContextMenu
       disabled: !isClosed,
       description: isClosed ? undefined : t("project_module.archive.only_closed"),
     }),
-    factory.createRestoreMenuItem(handlers.handleRestore, canWrite && isArchived),
+    factory.createRestoreMenuItem(handlers.handleRestore, {
+      shouldRender: canWrite && isArchived,
+      disabled: restoreOut,
+    }),
     factory.createDeleteMenuItem(handlers.handleDelete, canDelete && !isArchived),
   ].filter((item) => item.shouldRender !== false);
 

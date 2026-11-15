@@ -4,7 +4,18 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { Cycle } from "@nerve/api-client";
-import { choose, dialog, dialogButton, row, settle, where } from "@/components/common/fake-quick-actions";
+import {
+  choose,
+  dialog,
+  dialogButton,
+  itemOf,
+  offered,
+  openMenu,
+  openRightClickMenu,
+  row,
+  settle,
+  where,
+} from "@/components/common/fake-quick-actions";
 import { signedIn, switchAccount } from "@/lib/auth/fake-tab";
 import { refusal } from "@/lib/fake-refusal";
 import { toasts } from "@/lib/fake-toast";
@@ -254,6 +265,40 @@ it("says nerve's refusal of a restore, never success, and stays", async () => {
   await held.cycles.refuse(refusal(409, "planning.cycles_disabled"));
   expect(toasts).toEqual([{ type: "error", title: "toast.error", message: "errors.planning_cycles_disabled" }]);
   expect(address()).toBe(`${project}/cycles/${sprint.id}`);
+});
+
+it("disables the cycle's restore in its button's menu and its right-click menu while it is out, and gives it back once nerve has refused it", async () => {
+  const { sprint } = await at("archives/cycles", { ...ended, archived_at: ARCHIVED });
+  await choose(sprint.id, "restore");
+  expect(itemOf(await openRightClickMenu(sprint.id), "restore")?.disabled).toBe(true);
+  await escape();
+  expect(offered(await openMenu(sprint.id))).toEqual(["open_in_new_tab", "copy_link", "restore (disabled)"]);
+  await escape();
+  await held.cycles.refuse(refusal(409, "planning.cycles_disabled"));
+  expect(itemOf(await openRightClickMenu(sprint.id), "restore")?.disabled).toBe(false);
+  await escape();
+  expect(offered(await openMenu(sprint.id))).toEqual(["open_in_new_tab", "copy_link", "restore"]);
+});
+
+it("sends the cycle's restore once though its right-click menu and its button's menu both ask in one turn, neither yet showing it out", async () => {
+  const { sprint } = await at("archives/cycles", { ...ended, archived_at: ARCHIVED });
+  const byRightClick = itemOf(await openRightClickMenu(sprint.id), "restore");
+  const byButton = itemOf(await openMenu(sprint.id), "restore");
+  expect([byRightClick?.isConnected, byRightClick?.disabled, byButton?.isConnected, byButton?.disabled]).toEqual([
+    true,
+    false,
+    true,
+    false,
+  ]);
+  // one turn: the second asks before the page has re-rendered the first's item disabled
+  await act(async () => {
+    byRightClick?.click();
+    byButton?.click();
+  });
+  await settle();
+  expect(held.cycles.unarchive.mock.calls).toEqual([[sprint.id]]);
+  await held.cycles.answer();
+  expect(toasts).toEqual([restored]);
 });
 
 const late = [

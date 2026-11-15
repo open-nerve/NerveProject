@@ -187,6 +187,11 @@ export async function planningPageTab(type: PlanningPageStoreType, fields: PageF
     );
   const planningTab = {
     ...tab,
+    /** Closes the tab; the helpers below then act on no page, unless another was opened since (A21). */
+    close: async () => {
+      if (opened === planningTab) opened = undefined;
+      await tab.close();
+    },
     preferences,
     lists,
     mount,
@@ -205,7 +210,10 @@ export async function planningPageTab(type: PlanningPageStoreType, fields: PageF
   return planningTab;
 }
 type PlanningPageTab = Awaited<ReturnType<typeof planningPageTab>>;
-/** The tab planningPageTab opened last: the test's page, which the helpers below act on (a test has one at a time). */
+/**
+ * The tab planningPageTab opened last, until it closes: the test's page, which the helpers below act on (a test has one
+ * at a time).
+ */
 let opened: PlanningPageTab | undefined;
 function current(): PlanningPageTab {
   if (!opened) throw new Error("no planning page is open: planningPageTab opens one");

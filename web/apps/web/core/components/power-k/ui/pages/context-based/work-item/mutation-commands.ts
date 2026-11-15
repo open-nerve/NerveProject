@@ -1,51 +1,38 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
-import type { Issue, IssueUpdate } from "@nerve/api-client";
 import { ISSUE_PRIORITIES } from "@nerve/constants";
 import { Signal } from "lucide-react";
 import {
+  CyclesOutline,
   DeleteOutline,
   LabelsOutline,
   MembersOutline,
+  ModuleOutline,
   StateOutline,
   UserMinusOutline,
   UserPlusOutline,
 } from "@makeplane/propel/icons";
 import type { TPowerKCommandConfig } from "@/components/power-k/core/types";
 import { useCommandPalette } from "@/hooks/store/use-command-palette";
-import { useRefusalToast } from "@/hooks/use-refusal-toast";
-import { sessionGuard } from "@/lib/in-session";
-import { SessionChangedError } from "@/lib/auth/token-manager";
+import { planningOn, type PlanningDomain } from "@/lib/planning-switch";
 import type { WorkItemCommandContext } from "./context";
+import { useWorkItemWrites } from "./writes";
 
 const toggled = (ids: string[], id: string) => (ids.includes(id) ? ids.filter((held) => held !== id) : [...ids, id]);
 
-export function useWorkItemMutationCommands({ root, read, capture }: WorkItemCommandContext): TPowerKCommandConfig[] {
+export function useWorkItemMutationCommands(context: WorkItemCommandContext): TPowerKCommandConfig[] {
+  const { root, read, capture } = context;
   const { toggleDeleteIssueModal } = useCommandPalette();
-  const refuse = useRefusalToast();
+  const { update, change } = useWorkItemWrites(context);
   const editable = () => !!read()?.canEdit;
   const deletable = () => !!read()?.canDelete;
   const assigned = !!read()?.issue.assignee_ids.includes(root.rootStore.user.data?.id ?? "");
-  const update = async (makeBody: (held: Issue) => IssueUpdate) => {
+  /** The work item may be changed and its project's cycles, or its modules, are on (P7c spec 2.5). */
+  const planningEditable = (domain: PlanningDomain) => () => {
     const target = read();
-    if (!target?.canEdit) return;
-    const current = capture();
-    if (!current()) return;
-    const inSession = sessionGuard();
-    try {
-      await root.writes.updateIssue(
-        target.issue.id,
-        (held) => {
-          // Read the authoritative value when this command reaches the existing issue queue.
-          if (!current() || !inSession() || !read()?.canEdit) throw new SessionChangedError();
-          return makeBody(held);
-        },
-        undefined,
-        root.scope(target.workspaceSlug, target.project.id)
-      );
-    } catch (error) {
-      if (current() && inSession() && !(error instanceof SessionChangedError)) refuse(error);
-    }
+    return !!target?.canEdit && planningOn(target.project, domain);
   };
+  const cyclesEditable = planningEditable("cycles");
+  const modulesEditable = planningEditable("modules");
   const assign = (value: unknown) =>
     typeof value === "string" && value
       ? update((held) => ({ assignee_ids: toggled(held.assignee_ids, value) }))
@@ -110,6 +97,46 @@ export function useWorkItemMutationCommands({ root, read, capture }: WorkItemCom
       isEnabled: editable,
       isVisible: editable,
       action: () => assign(root.rootStore.user.data?.id),
+    },
+    {
+      // P7c spec 2.5: its page offers No cycle (null) and the cycles it may join; the cycle it is in sends nothing.
+      id: "add_work_item_to_cycle",
+      i18n_title: "power_k.contextual_actions.work_item.add_to_cycle",
+      icon: CyclesOutline,
+      group: "contextual",
+      contextType: "work-item",
+      type: "change-page",
+      page: "update-work-item-cycle",
+      modifierShortcut: "shift+c",
+      closeOnSelect: true,
+      isEnabled: cyclesEditable,
+      isVisible: cyclesEditable,
+      onSelect: (value) => {
+        const cycleId = value === null ? null : typeof value === "string" && value ? value : undefined;
+        if (cycleId === undefined || cycleId === read()?.issue.cycle_id) return;
+        return change({ cycle_id: cycleId });
+      },
+    },
+    {
+      // P7c spec 2.5: its page offers the modules it may join and the archived ones it is in, and stays open. A pick
+      // adds it to one module, or takes it out of one it is in as nerve confirmed it (the page's ticks); the set it
+      // makes is worked out in the work item's turn, of the set it then holds (change).
+      id: "add_work_item_to_modules",
+      i18n_title: "power_k.contextual_actions.work_item.add_to_modules",
+      icon: ModuleOutline,
+      group: "contextual",
+      contextType: "work-item",
+      type: "change-page",
+      page: "update-work-item-module",
+      modifierShortcut: "shift+m",
+      closeOnSelect: false,
+      isEnabled: modulesEditable,
+      isVisible: modulesEditable,
+      onSelect: (value) => {
+        const held = read()?.issue.module_ids;
+        if (typeof value !== "string" || !value || !held) return;
+        return change({ modules: held.includes(value) ? { remove: [value] } : { add: [value] } });
+      },
     },
     {
       id: "add_work_item_labels",

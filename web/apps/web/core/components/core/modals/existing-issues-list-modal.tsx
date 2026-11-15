@@ -15,6 +15,7 @@ import { Button } from "@nerve/propel/button";
 import { EModalPosition, EModalWidth, ModalCore, ModalTitle } from "@nerve/ui";
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { useIssueSearch } from "@/hooks/use-issue-search";
+import { usePlatformOS } from "@/hooks/use-platform-os";
 import { useRefusalMessage, useRefusalToast } from "@/hooks/use-refusal-toast";
 import { SessionChangedError } from "@/lib/auth/token-manager";
 import type { IssueSearchQuery } from "@/services/issue/issue-search.service";
@@ -83,6 +84,7 @@ const ExistingIssuesSelection = observer(function ExistingIssuesSelection({
 }: Props & { workspaceLevel: boolean; setWorkspaceLevel: (value: boolean) => void }) {
   const { t } = useTranslation();
   const { rootIssueStore: root } = useIssueDetail();
+  const { isMobile } = usePlatformOS();
   const [term, setTerm] = useState("");
   const query: IssueSearchQuery = {
     ...searchParams,
@@ -187,7 +189,10 @@ const ExistingIssuesSelection = observer(function ExistingIssuesSelection({
             className="pointer-events-none absolute top-3.5 left-4 h-5 w-5 text-secondary"
             aria-hidden="true"
           />
+          {/* the dialog gives its search the focus as it opens, as the dropdowns do; not on a phone, whose keyboard would
+              come up over it (P7c spec 2.8) */}
           <Combobox.Input
+            data-autofocus={isMobile ? undefined : true}
             aria-label={t("common.search.placeholder")}
             className="h-12 w-full bg-transparent pr-4 pl-11 text-13 outline-none"
             placeholder={t("common.search.placeholder")}

@@ -45,6 +45,12 @@ export const POWER_K_MODAL_PAGE_DETAILS: Record<TPowerKPageType, TPowerKModalPag
   "update-work-item-labels": {
     i18n_placeholder: "power_k.page_placeholders.update_work_item_labels",
   },
+  "update-work-item-cycle": {
+    i18n_placeholder: "power_k.page_placeholders.update_work_item_cycle",
+  },
+  "update-work-item-module": {
+    i18n_placeholder: "power_k.page_placeholders.update_work_item_module",
+  },
   "update-module-member": {
     i18n_placeholder: "power_k.page_placeholders.update_module_member",
   },

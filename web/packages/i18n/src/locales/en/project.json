@@ -46,7 +46,6 @@
       "label": "Completed cycle"
     },
     "status": {
-      "days_left": "Days left",
       "completed": "Completed",
       "yet_to_start": "Yet to start",
       "in_progress": "In progress",

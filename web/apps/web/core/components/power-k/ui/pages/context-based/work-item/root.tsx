@@ -13,7 +13,9 @@ import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { useMember } from "@/hooks/store/use-member";
 // local imports
 import { PowerKMembersMenu } from "../../../../menus/members";
+import { PowerKWorkItemCyclesMenu } from "./cycles-menu";
 import { PowerKWorkItemLabelsMenu } from "./labels-menu";
+import { PowerKWorkItemModulesMenu } from "./modules-menu";
 import { PowerKWorkItemPrioritiesMenu } from "./priorities-menu";
 import { PowerKProjectStatesMenu } from "./states-menu";
 
@@ -25,7 +27,7 @@ type Props = {
 export const PowerKWorkItemContextBasedPages = observer(function PowerKWorkItemContextBasedPages(props: Props) {
   const { activePage, handleSelection } = props;
   // navigation
-  const { workItem: entityIdentifier } = useParams();
+  const { workspaceSlug, workItem: entityIdentifier } = useParams();
   // store hooks
   const {
     issue: { getIssueById, getIssueIdByIdentifier },
@@ -36,7 +38,7 @@ export const PowerKWorkItemContextBasedPages = observer(function PowerKWorkItemC
   // derived values
   const entityId = entityIdentifier ? getIssueIdByIdentifier(entityIdentifier) : null;
   const entityDetails = entityId ? getIssueById(entityId) : null;
-  const projectMemberIds = entityDetails?.project_id ? getProjectMemberIds(entityDetails.project_id, false) : [];
+  const memberIds = entityDetails?.project_id ? getProjectMemberIds(entityDetails.project_id, false) : [];
 
   if (!entityDetails) return null;
 
@@ -54,8 +56,24 @@ export const PowerKWorkItemContextBasedPages = observer(function PowerKWorkItemC
       {activePage === "update-work-item-assignee" && (
         <PowerKMembersMenu
           handleSelect={handleSelection}
-          userIds={projectMemberIds ?? undefined}
+          userIds={memberIds ?? undefined}
           value={entityDetails.assignee_ids}
+        />
+      )}
+      {/* cycles menu */}
+      {activePage === "update-work-item-cycle" && (
+        <PowerKWorkItemCyclesMenu
+          workspaceSlug={workspaceSlug}
+          workItem={entityDetails}
+          handleSelect={handleSelection}
+        />
+      )}
+      {/* modules menu */}
+      {activePage === "update-work-item-module" && (
+        <PowerKWorkItemModulesMenu
+          workspaceSlug={workspaceSlug}
+          workItem={entityDetails}
+          handleSelect={handleSelection}
         />
       )}
       {/* labels menu */}

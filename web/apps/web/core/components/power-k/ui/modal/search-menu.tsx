@@ -8,6 +8,7 @@ import { useSessionSWR } from "@/lib/use-session-swr";
 import type { TPowerKContext, TPowerKPageType } from "../../core/types";
 import { PowerKModalNoSearchResultsCommand } from "./no-results-command";
 import { PowerKModalSearchResults } from "./search-results";
+import { usePlanningSearch } from "./use-planning-search";
 
 type Props = {
   activePage: TPowerKPageType | null;
@@ -37,9 +38,17 @@ export const PowerKModalSearchMenu = observer(function PowerKModalSearchMenu(pro
     { q: searchTerm, ...(!isWorkspaceLevel && projectId ? { project_id: projectId } : {}) },
     searching
   );
+  const needle = searchTerm.toLowerCase();
+  // the cycles and modules of the search's project, at a project's scope alone (P7c spec 2.4)
+  const planning = usePlanningSearch(
+    root.rootStore,
+    workspaceSlug,
+    isWorkspaceLevel ? undefined : projectId,
+    needle,
+    open
+  );
   if (!searching || !workspace) return null;
 
-  const needle = searchTerm.toLowerCase();
   const projects = directory.knownProjectIds(workspace.id).flatMap((id) => {
     const project = directory.getProjectById(id);
     return project &&
@@ -82,13 +91,15 @@ export const PowerKModalSearchMenu = observer(function PowerKModalSearchMenu(pro
 
   return (
     <>
-      {issues.length === 0 && projects.length === 0 && (
+      {issues.length + projects.length + planning.cycles.length + planning.modules.length === 0 && (
         <PowerKModalNoSearchResultsCommand updateSearchTerm={updateSearchTerm} />
       )}
       <PowerKModalSearchResults
         workspaceSlug={workspace.slug}
         issues={issues}
         projects={projects}
+        cycles={planning.cycles}
+        modules={planning.modules}
         closePalette={context.closePalette}
       />
     </>

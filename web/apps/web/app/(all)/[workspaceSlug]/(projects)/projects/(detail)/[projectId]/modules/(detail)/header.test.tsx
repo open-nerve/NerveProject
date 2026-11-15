@@ -278,3 +278,21 @@ it.each(["list", "kanban"] as const)(
     expect(shown.filter((title) => /module/i.test(title ?? ""))).toEqual(["common.modules"]);
   }
 );
+
+// The two pages' top row, one rule (P7c spec 2.7, R9): the sidebar's toggle and the module's quick actions show at any
+// width, as the cycle's page's; the list's controls and the new work item from a medium width.
+it("offers the sidebar's toggle and the module's quick actions at any width, the list's controls from a medium width", async () => {
+  vi.spyOn(await import("@/components/modules/quick-actions"), "ModuleQuickActions").mockImplementation(() => (
+    <span data-quick-actions />
+  ));
+  await opened({ role: 15 });
+  await page.show(modulePreferencesOf(layouts.list.display), seven(), header());
+  const fromMedium = (node: Element | null | undefined) => {
+    expect(node).toBeTruthy();
+    return node!.closest(".hidden.md\\:flex") !== null;
+  };
+  expect(fromMedium(inHeader("aria_labels.toggle_details")), "the sidebar's toggle").toBe(false);
+  expect(fromMedium(document.querySelector("[data-header] [data-quick-actions]")), "the quick actions").toBe(false);
+  expect(fromMedium(inHeader("common.display")), "the display").toBe(true);
+  expect(fromMedium(inHeader("issue.add.label")), "the new work item").toBe(true);
+});

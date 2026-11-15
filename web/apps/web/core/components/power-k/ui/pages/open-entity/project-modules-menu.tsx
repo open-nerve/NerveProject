@@ -12,6 +12,7 @@ import { Spinner } from "@nerve/ui";
 import type { TPowerKContext } from "@/components/power-k/core/types";
 import { PowerKMenuEmptyState } from "@/components/power-k/menus/empty-state";
 import { PowerKModulesMenu } from "@/components/power-k/menus/modules";
+import { PowerKPlanningListRefusal } from "@/components/power-k/menus/planning-list-refusal";
 // hooks
 import { useModules } from "@/hooks/store/use-modules";
 import { usePlanningReads } from "@/hooks/use-planning-reads";
@@ -28,7 +29,9 @@ type Props = {
  * The modules of the route's project, to open one of (P6a spec 2.3, 2.9): nerve's list of its modules not archived, by
  * the read the project's pages make (its wrapper's, use-project-fetch.ts, whose key this one shares: the archives' pages
  * have no wrapper), a member's of a project not archived whose modules are on. It waits for nerve's first answer, or
- * says why nerve could not give it.
+ * says why nerve could not give it; to any other caller, or while the project is archived or its modules turned off,
+ * it says at once why it lists none (PowerKPlanningListRefusal, P7c spec 2.2), the modules the store may still hold
+ * too.
  */
 export const PowerKOpenProjectModulesMenu = observer(function PowerKOpenProjectModulesMenu(props: Props) {
   const { context, handleSelect } = props;
@@ -41,6 +44,9 @@ export const PowerKOpenProjectModulesMenu = observer(function PowerKOpenProjectM
   const read = useSessionSWR(listed ? ["PROJECT_MODULES", projectId] : null, (id) => fetchModules(id));
   const moduleIds = getProjectModuleIds(projectId);
 
+  // while the gate is closed, why (P7c spec 2.2, R2): before any list the store still holds, and waiting for nothing
+  if (!listed)
+    return <PowerKPlanningListRefusal workspaceSlug={workspaceSlug} projectId={projectId} domain="modules" />;
   if (moduleIds === undefined)
     return read.error === undefined ? <Spinner /> : <PowerKMenuEmptyState emptyText={refusalMessage(read.error)} />;
 

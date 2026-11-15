@@ -26,7 +26,7 @@ export const PowerKCyclesMenu = observer(function PowerKCyclesMenu({ cycles, onS
       getValue={(cycle) => cycle.name}
       getLabel={(cycle) => cycle.name}
       onSelect={onSelect}
-      emptyText="No cycles found"
+      emptyTextKey="power_k.menus.no_cycles"
     />
   );
 });

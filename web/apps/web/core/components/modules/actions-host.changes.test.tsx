@@ -4,7 +4,18 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { Module } from "@nerve/api-client";
-import { choose, dialog, dialogButton, row, settle, where } from "@/components/common/fake-quick-actions";
+import {
+  choose,
+  dialog,
+  dialogButton,
+  itemOf,
+  offered,
+  openMenu,
+  openRightClickMenu,
+  row,
+  settle,
+  where,
+} from "@/components/common/fake-quick-actions";
 import { signedIn, switchAccount } from "@/lib/auth/fake-tab";
 import { refusal } from "@/lib/fake-refusal";
 import { toasts } from "@/lib/fake-toast";
@@ -257,6 +268,40 @@ it("says nerve's refusal of a restore, never success, and stays", async () => {
   await held.modules.refuse(refusal(409, "planning.modules_disabled"));
   expect(toasts).toEqual([{ type: "error", title: "toast.error", message: "errors.planning_modules_disabled" }]);
   expect(address()).toBe(`${project}/modules/${auth.id}`);
+});
+
+it("disables the module's restore in its button's menu and its right-click menu while it is out, and gives it back once nerve has refused it", async () => {
+  const { auth } = await at("archives/modules", { ...completed, archived_at: ARCHIVED });
+  await choose(auth.id, "restore");
+  expect(itemOf(await openRightClickMenu(auth.id), "restore")?.disabled).toBe(true);
+  await escape();
+  expect(offered(await openMenu(auth.id))).toEqual(["open_in_new_tab", "copy_link", "restore (disabled)"]);
+  await escape();
+  await held.modules.refuse(refusal(409, "planning.modules_disabled"));
+  expect(itemOf(await openRightClickMenu(auth.id), "restore")?.disabled).toBe(false);
+  await escape();
+  expect(offered(await openMenu(auth.id))).toEqual(["open_in_new_tab", "copy_link", "restore"]);
+});
+
+it("sends the module's restore once though its right-click menu and its button's menu both ask in one turn, neither yet showing it out", async () => {
+  const { auth } = await at("archives/modules", { ...completed, archived_at: ARCHIVED });
+  const byRightClick = itemOf(await openRightClickMenu(auth.id), "restore");
+  const byButton = itemOf(await openMenu(auth.id), "restore");
+  expect([byRightClick?.isConnected, byRightClick?.disabled, byButton?.isConnected, byButton?.disabled]).toEqual([
+    true,
+    false,
+    true,
+    false,
+  ]);
+  // one turn: the second asks before the page has re-rendered the first's item disabled
+  await act(async () => {
+    byRightClick?.click();
+    byButton?.click();
+  });
+  await settle();
+  expect(held.modules.unarchive.mock.calls).toEqual([[auth.id]]);
+  await held.modules.answer();
+  expect(toasts).toEqual([restored]);
 });
 
 const late = [

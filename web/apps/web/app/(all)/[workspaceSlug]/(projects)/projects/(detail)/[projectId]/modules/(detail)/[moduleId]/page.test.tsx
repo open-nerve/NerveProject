@@ -89,6 +89,9 @@ vi.mock("@/components/issues/filters", () => ({ HeaderFilters: () => null }));
 vi.mock("@/components/issues/issue-layouts/use-planning-page-header", () => ({
   usePlanningPageHeader: () => ({ count: undefined, preferencesShown: false, canCreate: false }),
 }));
+vi.mock("@/components/issues/issue-layouts/planning-page-mobile-header", () => ({
+  PlanningPageMobileHeader: () => null,
+}));
 vi.mock("@/hooks/store/use-command-palette", () => ({
   useCommandPalette: () => ({ toggleCreateIssueModal: () => {} }),
 }));

@@ -14,6 +14,8 @@ import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
 import { useProjectView } from "@/hooks/store/use-project-view";
 import { useNavigate } from "react-router";
 import useKeypress from "@/hooks/use-keypress";
+// lib
+import { followInSession } from "@/lib/in-session";
 // local imports
 import { ProjectViewForm } from "./form";
 
@@ -37,38 +39,38 @@ export const CreateUpdateProjectViewModal = observer(function CreateUpdateProjec
     onClose();
   };
 
-  const handleCreateView = async (payload: IProjectView) => {
-    try {
-      const res = await createView(workspaceSlug, projectId, payload);
-      handleClose();
-      navigate(`/${workspaceSlug}/projects/${projectId}/views/${res.id}`);
-      setToast({
-        type: TOAST_TYPE.SUCCESS,
-        title: "Success!",
-        message: "View created successfully.",
-      });
-    } catch (_error) {
-      setToast({
-        type: TOAST_TYPE.ERROR,
-        title: "Error!",
-        message: "Failed to create view. Please try again.",
-      });
-    }
-  };
+  // What follows a creation or a change (closing, going to the view, saying so) follows it only while the tab is in the
+  // session it was sent in (followInSession, M3 handoff §1): after another tab moved this one to another account, the
+  // page is that account's.
+  const handleCreateView = (payload: IProjectView) =>
+    followInSession(() => createView(workspaceSlug, projectId, payload), {
+      done: (view) => {
+        handleClose();
+        setToast({
+          type: TOAST_TYPE.SUCCESS,
+          title: "Success!",
+          message: "View created successfully.",
+        });
+        return navigate(`/${workspaceSlug}/projects/${projectId}/views/${view.id}`);
+      },
+      failed: () =>
+        setToast({
+          type: TOAST_TYPE.ERROR,
+          title: "Error!",
+          message: "Failed to create view. Please try again.",
+        }),
+    });
 
-  const handleUpdateView = async (payload: IProjectView) => {
-    try {
-      await updateView(workspaceSlug, projectId, data?.id as string, payload);
-
-      handleClose();
-    } catch (_error) {
-      setToast({
-        type: TOAST_TYPE.ERROR,
-        title: "Error!",
-        message: "Failed to update view. Please try again.",
-      });
-    }
-  };
+  const handleUpdateView = (payload: IProjectView) =>
+    followInSession(() => updateView(workspaceSlug, projectId, data?.id as string, payload), {
+      done: handleClose,
+      failed: () =>
+        setToast({
+          type: TOAST_TYPE.ERROR,
+          title: "Error!",
+          message: "Failed to update view. Please try again.",
+        }),
+    });
 
   const handleFormSubmit = async (formData: IProjectView) => {
     if (!data) await handleCreateView(formData);

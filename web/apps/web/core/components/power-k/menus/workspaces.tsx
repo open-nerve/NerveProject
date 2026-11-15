@@ -32,7 +32,7 @@ export function PowerKWorkspacesMenu({ workspaces, onSelect }: Props) {
       getValue={(workspace) => workspace.name}
       getLabel={(workspace) => workspace.name}
       onSelect={onSelect}
-      emptyText="No workspaces found"
+      emptyTextKey="power_k.menus.no_workspaces"
     />
   );
 }

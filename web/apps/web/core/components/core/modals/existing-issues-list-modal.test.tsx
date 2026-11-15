@@ -17,6 +17,9 @@ vi.mock("@/lib/store-context", async () => ({
   rootStore: undefined,
   StoreContext: (await import("react")).createContext<RootStore | undefined>(undefined),
 }));
+// a desktop's, unless a test says a phone
+const device = vi.hoisted(() => ({ isMobile: false }));
+vi.mock("@/hooks/use-platform-os", () => ({ usePlatformOS: () => device }));
 let tab: Awaited<ReturnType<typeof issueSelectionTab>>;
 let pending: ReturnType<typeof heldChange<SelectionSubmitResult>>;
 const close = vi.fn();
@@ -34,6 +37,9 @@ beforeEach(async () => {
   ]);
 });
 afterEach(async () => tab.close());
+afterEach(() => {
+  device.isMobile = false;
+});
 const render = (project = "A", source = "parent", open = true) =>
   tab.render(
     <ExistingIssuesListModal
@@ -172,4 +178,22 @@ it("retries only the unconfirmed candidates after a partial confirmation", async
   expect(submit).toHaveBeenLastCalledWith(["Refused"]);
   await act(async () => pending.answer({ confirmedIds: ["Refused"], failures: [] }));
   expect(close).toHaveBeenCalledOnce();
+});
+
+/** The dialog's search field. */
+const searchField = () => document.querySelector<HTMLInputElement>('[role="dialog"] input[role="combobox"]');
+it("gives its search field the focus as it opens, as the dropdowns do (P7c spec 2.8)", async () => {
+  await render();
+  expect(searchField()).not.toBeNull();
+  expect(document.activeElement).toBe(searchField());
+});
+it("leaves its search field without the focus on a phone, whose keyboard would come up over it", async () => {
+  device.isMobile = true;
+  await render();
+  expect(searchField()).not.toBeNull();
+  expect(document.activeElement).not.toBe(searchField());
+  expect(
+    document.querySelector('[role="dialog"]')?.contains(document.activeElement),
+    "the focus is in the dialog"
+  ).toBe(true);
 });

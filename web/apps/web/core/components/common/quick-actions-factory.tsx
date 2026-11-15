@@ -60,12 +60,16 @@ export const useQuickActionsFactory = () => {
       shouldRender: opts.shouldRender,
     }),
 
-    createRestoreMenuItem: (handler: () => void, shouldRender: boolean = true): TContextMenuItem => ({
+    createRestoreMenuItem: (
+      handler: () => void,
+      opts: { shouldRender?: boolean; disabled?: boolean }
+    ): TContextMenuItem => ({
       key: "restore",
       title: t("restore"),
       icon: RestoreOutline,
       action: handler,
-      shouldRender,
+      disabled: opts.disabled,
+      shouldRender: opts.shouldRender,
     }),
 
     createDeleteMenuItem: (handler: () => void, shouldRender: boolean = true): TContextMenuItem => ({

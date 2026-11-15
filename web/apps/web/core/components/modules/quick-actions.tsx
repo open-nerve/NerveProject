@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { observer } from "mobx-react";
 import { useNavigate } from "react-router";
 import { MoreHorizontalOutline } from "@makeplane/propel/icons";
@@ -64,19 +64,22 @@ const ModuleMenu = observer(function ModuleMenu(props: Props & { module: Module 
   const { openDialog, pageMounted } = useModulePage();
   const copyLink = useCopyLink();
   const toastRefusal = useRefusalToast();
-  // states
+  // states: the restore's guard is the ref, read in the turn it is asked; the state only shows it out
   const restoring = useRef(false);
+  const [restoreOut, setRestoreOut] = useState(false);
   // auth
   const canWrite = canWriteModules(workspaceSlug, projectId);
   const canDelete = canDeleteModule(workspaceSlug, projectId, module.created_by_id === currentUser?.id);
 
   const link = `/${workspaceSlug}/projects/${projectId}/modules/${module.id}`;
   // Restored, the module goes back to its project's list, and its row from the archive; the page says so and goes to
-  // the archive, which closes a preview. Refused, it says nerve's reason, never success. While its restore is out, the
-  // module's restore asked again (by its button's menu or its right-click menu, which share the items) sends nothing.
+  // the archive, which closes a preview. Refused, it says nerve's reason, never success. While its restore is out, its
+  // item is disabled in its button's menu and its right-click menu, which share the items, until nerve answers; asked
+  // again before they show it (both menus, or a double Enter, in one turn), it sends nothing: the ref guards the send.
   const handleRestore = async () => {
     if (restoring.current) return;
     restoring.current = true;
+    setRestoreOut(true);
     await followInSession(() => unarchive(module.id), {
       done: () => {
         if (!pageMounted.current) return;
@@ -92,11 +95,13 @@ const ModuleMenu = observer(function ModuleMenu(props: Props & { module: Module 
       },
     });
     restoring.current = false;
+    setRestoreOut(false);
   };
   const MENU_ITEMS = useModuleMenuItems({
     module,
     canWrite,
     canDelete,
+    restoreOut,
     handleEdit: () => openDialog("edit", module),
     handleArchive: () => openDialog("archive", module),
     handleRestore: () => void handleRestore(),

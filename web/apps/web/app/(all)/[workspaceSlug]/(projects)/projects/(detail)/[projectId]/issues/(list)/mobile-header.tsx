@@ -4,95 +4,30 @@
  * See the LICENSE file for details.
  */
 
-import { useCallback } from "react";
 import { observer } from "mobx-react";
-import { useParams } from "react-router";
 // nerve imports
-import { EIssueFilterType, ISSUE_DISPLAY_FILTERS_BY_PAGE } from "@nerve/constants";
-import { useTranslation } from "@nerve/i18n";
-import { ChevronDownOutline } from "@makeplane/propel/icons";
-import type { IIssueDisplayFilterOptions, IIssueDisplayProperties } from "@nerve/types";
-import { EIssuesStoreType, EIssueLayoutTypes } from "@nerve/types";
+import { EIssuesStoreType } from "@nerve/types";
 // components
-import {
-  DisplayFiltersSelection,
-  FiltersDropdown,
-  MobileLayoutSelection,
-} from "@/components/issues/issue-layouts/filters";
+import { MobileHeaderFilters } from "@/components/issues/mobile-header-filters";
 // hooks
 import { useIssues } from "@/hooks/store/use-issues";
-import { useProjectPreferencesFollow } from "@/hooks/use-project-preferences-follow";
 
-export const ProjectIssuesMobileHeader = observer(function ProjectIssuesMobileHeader() {
-  // i18n
-  const { t } = useTranslation();
-  const { workspaceSlug, projectId } = useParams();
+type Props = {
+  /** The page's project, as the route gives it. */
+  projectId: string;
+};
 
-  // store hooks
-  const {
-    issuesFilter: { issueFilters, updateFilters },
-  } = useIssues(EIssuesStoreType.PROJECT);
-  const follow = useProjectPreferencesFollow();
-  const activeLayout = issueFilters?.displayFilters?.layout;
+/**
+ * The small screen's header of a project's work items page (P7c spec 2.7, X2): the page's layouts and display
+ * (MobileHeaderFilters) once nerve has given the page's preferences, as the header at a wider width gives its controls
+ * (IssuesHeader): not before nerve's first answer, nor while that first read failed. An observer, so that an answer
+ * after the page opened shows them: the layout that passes it is not one (re-76 F1).
+ */
+export const ProjectIssuesMobileHeader = observer(function ProjectIssuesMobileHeader({ projectId }: Props) {
+  const { issuesFilter } = useIssues(EIssuesStoreType.PROJECT);
+  const preferencesShown = !!projectId && issuesFilter.getIssueFilters(projectId) !== undefined;
 
-  const handleLayoutChange = useCallback(
-    (layout: EIssueLayoutTypes) => {
-      if (!workspaceSlug || !projectId) return;
-      void follow(workspaceSlug, projectId, () =>
-        updateFilters(workspaceSlug, projectId, EIssueFilterType.DISPLAY_FILTERS, { layout: layout })
-      );
-    },
-    [workspaceSlug, projectId, updateFilters, follow]
-  );
+  if (!preferencesShown) return null;
 
-  const handleDisplayFilters = useCallback(
-    (updatedDisplayFilter: Partial<IIssueDisplayFilterOptions>) => {
-      if (!workspaceSlug || !projectId) return;
-      void follow(workspaceSlug, projectId, () =>
-        updateFilters(workspaceSlug, projectId, EIssueFilterType.DISPLAY_FILTERS, updatedDisplayFilter)
-      );
-    },
-    [workspaceSlug, projectId, updateFilters, follow]
-  );
-
-  const handleDisplayProperties = useCallback(
-    (property: Partial<IIssueDisplayProperties>) => {
-      if (!workspaceSlug || !projectId) return;
-      void follow(workspaceSlug, projectId, () =>
-        updateFilters(workspaceSlug, projectId, EIssueFilterType.DISPLAY_PROPERTIES, property)
-      );
-    },
-    [workspaceSlug, projectId, updateFilters, follow]
-  );
-
-  return (
-    <div className="z-[13] flex justify-evenly border-b border-subtle bg-surface-1 py-2 md:hidden">
-      <MobileLayoutSelection
-        layouts={[EIssueLayoutTypes.LIST, EIssueLayoutTypes.KANBAN, EIssueLayoutTypes.CALENDAR]}
-        onChange={handleLayoutChange}
-      />
-      <div className="flex flex-grow items-center justify-center border-l border-subtle text-13 text-secondary">
-        <FiltersDropdown
-          title={t("common.display")}
-          placement="bottom-end"
-          menuButton={
-            <span className="flex items-center text-13 text-secondary">
-              {t("common.display")}
-              <ChevronDownOutline className="ml-2 h-4 w-4 text-secondary" />
-            </span>
-          }
-        >
-          <DisplayFiltersSelection
-            layoutDisplayFiltersOptions={
-              activeLayout ? ISSUE_DISPLAY_FILTERS_BY_PAGE.issues.layoutOptions[activeLayout] : undefined
-            }
-            displayFilters={issueFilters?.displayFilters ?? {}}
-            handleDisplayFiltersUpdate={handleDisplayFilters}
-            displayProperties={issueFilters?.displayProperties ?? {}}
-            handleDisplayPropertiesUpdate={handleDisplayProperties}
-          />
-        </FiltersDropdown>
-      </div>
-    </div>
-  );
+  return <MobileHeaderFilters storeType={EIssuesStoreType.PROJECT} entityId={projectId} />;
 });

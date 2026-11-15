@@ -9,6 +9,8 @@
         "change_assignees": "分配给",
         "assign_to_me": "分配给我",
         "unassign_from_me": "从我处取消分配",
+        "add_to_cycle": "更改周期",
+        "add_to_modules": "更改模块",
         "add_labels": "添加标签",
         "subscribe": "订阅通知",
         "unsubscribe": "取消订阅通知",
@@ -125,6 +127,8 @@
       "update_work_item_priority": "更改优先级",
       "update_work_item_assignee": "分配给",
       "update_work_item_labels": "添加标签",
+      "update_work_item_cycle": "更改周期",
+      "update_work_item_module": "更改模块",
       "update_module_member": "更改成员",
       "update_module_status": "更改状态",
       "update_theme": "更改主题",
@@ -135,6 +139,15 @@
     "search_menu": {
       "no_results": "未找到结果",
       "clear_search": "清除搜索"
+    },
+    "menus": {
+      "no_cycles": "未找到周期",
+      "no_modules": "未找到模块",
+      "no_labels": "未找到标签",
+      "no_views": "未找到视图",
+      "no_projects": "未找到项目",
+      "no_settings": "未找到设置",
+      "no_workspaces": "未找到工作区"
     },
     "footer": {
       "workspace_level": "工作区级别"
