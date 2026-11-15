@@ -1,8 +1,10 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 import type { Issue, IssueUpdate } from "@nerve/api-client";
 import { ISSUE_PRIORITIES } from "@nerve/constants";
+import type { IssueChange } from "@nerve/types";
 import { Signal } from "lucide-react";
 import {
+  CyclesOutline,
   DeleteOutline,
   LabelsOutline,
   MembersOutline,
@@ -15,6 +17,8 @@ import { useCommandPalette } from "@/hooks/store/use-command-palette";
 import { useRefusalToast } from "@/hooks/use-refusal-toast";
 import { sessionGuard } from "@/lib/in-session";
 import { SessionChangedError } from "@/lib/auth/token-manager";
+import { planningOn } from "@/lib/planning-switch";
+import { changeBody } from "@/store/issue/issue-write-fields";
 import type { WorkItemCommandContext } from "./context";
 
 const toggled = (ids: string[], id: string) => (ids.includes(id) ? ids.filter((held) => held !== id) : [...ids, id]);
@@ -45,6 +49,17 @@ export function useWorkItemMutationCommands({ root, read, capture }: WorkItemCom
     } catch (error) {
       if (current() && inSession() && !(error instanceof SessionChangedError)) refuse(error);
     }
+  };
+  /**
+   * A change of the work item as its dropdowns send one (IssueChange, P7a spec 2.2, R3), through the guards above: its
+   * request made in the work item's turn (changeBody), its modules' additions and removals applied to the set it then
+   * holds; the type takes no whole set (P7c spec 2.5).
+   */
+  const change = (requested: IssueChange) => update((held) => changeBody(requested, held.module_ids));
+  /** The work item may be changed and its project's cycles are on (P7c spec 2.5). */
+  const cyclesEditable = () => {
+    const target = read();
+    return !!target?.canEdit && planningOn(target.project, "cycles");
   };
   const assign = (value: unknown) =>
     typeof value === "string" && value
@@ -110,6 +125,25 @@ export function useWorkItemMutationCommands({ root, read, capture }: WorkItemCom
       isEnabled: editable,
       isVisible: editable,
       action: () => assign(root.rootStore.user.data?.id),
+    },
+    {
+      // P7c spec 2.5: its page offers No cycle (null) and the cycles it may join; the cycle it is in sends nothing.
+      id: "add_work_item_to_cycle",
+      i18n_title: "power_k.contextual_actions.work_item.add_to_cycle",
+      icon: CyclesOutline,
+      group: "contextual",
+      contextType: "work-item",
+      type: "change-page",
+      page: "update-work-item-cycle",
+      modifierShortcut: "shift+c",
+      closeOnSelect: true,
+      isEnabled: cyclesEditable,
+      isVisible: cyclesEditable,
+      onSelect: (value) => {
+        const cycleId = value === null ? null : typeof value === "string" && value ? value : undefined;
+        if (cycleId === undefined || cycleId === read()?.issue.cycle_id) return;
+        return change({ cycle_id: cycleId });
+      },
     },
     {
       id: "add_work_item_labels",
