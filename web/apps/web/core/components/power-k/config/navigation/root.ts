@@ -7,11 +7,13 @@
 // components
 import type { TPowerKCommandConfig } from "@/components/power-k/core/types";
 // local imports
-import type { TPowerKNavigationCommandKeys } from "./commands";
-import { usePowerKNavigationCommandsRecord } from "./commands";
+import { usePowerKProjectNavigationCommandsRecord } from "./project-commands";
+import { usePowerKWorkspaceNavigationCommandsRecord } from "./workspace-commands";
 
 export const usePowerKNavigationCommands = (): TPowerKCommandConfig[] => {
-  const optionsList: Record<TPowerKNavigationCommandKeys, TPowerKCommandConfig> = usePowerKNavigationCommandsRecord();
+  const workspaceCommands = usePowerKWorkspaceNavigationCommandsRecord();
+  const projectCommands = usePowerKProjectNavigationCommandsRecord();
+  const optionsList = { ...workspaceCommands, ...projectCommands };
 
   return [
     // Open actions from lowest to highest scope
