@@ -1,6 +1,6 @@
 # M6 / P7c：工作项一侧（三）——命令面板、移动端页头与遗留
 
-> 状态：spec 与 plan 已写（2026-11-15），预检通过（修正后，[re-76](../../../reviews/re-76-M6P7c预检.md)：F1–F16 已改入），T1 已回填 P7b（`b5e1c615`）。基线 main `d052213f82aa4fba234f5684722335e1a5cbb5be`（P7b 的 noff，双父 `f42f9d64`、`4fe308ce`，树与 `4fe308ce` 相同；P7b 的最终分支 CI 43702923005 attempt 1 全绿，e2e 作业 132781366495 为 10:26:46Z–10:54:36Z，27 分 50 秒，至今最慢；合入后的 main CI 43706438924 attempt 1 全绿，e2e 作业 132792042944 为 11:10:31Z–11:34:13Z，23 分 42 秒；P7b 的归档在主目录的 `.superpowers/sdd/M6-P7b-integration-20261115/`，含 `cleanup.log`；这些由本段 T1 以归档与公开的 jobs 接口核对后回填进 P7b 的记录）。设计见 [M6 设计](../M6-design.md) §2 的 G19，§8 的“工作项一侧”“命令面板”与“交给 M6 的视图文件”，§12 的 P7c 一行，§13–§15；P7 的拆分见 [P7a spec](P7a-work-item-planning.md) §1、R1，交给本段的事见 P7a spec §5、[P7b spec](P7b-list-vocabulary.md) §5 与 P7b 的[阶段记录](../reviews/P7b-list-vocabulary-review.md) §5；主控在写 spec 之前的裁定 H1–H16 见本阶段台账 `controller-rulings.md`（本段 R1–R16 照录）。网页的长期规则见[总体设计 §7.2、§7.7](../../v0-design.md#77-stores-按会话分代长期有效m2-起)。现状调研见本阶段台账 `research/palette-views.md`（命令面板、快捷操作、四个视图文件、G19 的工作项一侧）与 `research/mobile-carryovers.md`（移动端页头、A19–A21、交接回执、e2e 的余量与放置、估算）（ignored，随阶段归档；本 spec 引用的行号都在 `d052213f` 的树上）。负责人 2026-11-11 授权连续推进至 M6 收官，重要高风险决策仍停下确认；本段不改 `server/`、`api/`（R15），本机 `make test` 若因 [M6-M8-05](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-05) 的签名失败，以分支 CI 的服务端两路为准（负责人 2026-11-11）。
+> 状态：实现完成（T1–T14，2026-11-16；各 Task 的提交见 [M6 设计](../M6-design.md) §14 的 P7c 一行），A1–A13 已勾选，待 T15（最终候选的门禁、整分支审查与合入；A14 由 P8 的 T1 勾选）。T10 的检查点 `d96ed7b2` 的分支 CI 43742488275 全绿，e2e 作业 19 分 06 秒 = 1146 秒（T15 的校准点）；新页面故事本机 chromium 单独跑 4.0 秒（三种引擎的页面配置里 chromium 4.6、firefox 7.0、webkit 6.4 秒）。spec 与 plan 已写（2026-11-15），预检通过（修正后，[re-76](../../../reviews/re-76-M6P7c预检.md)：F1–F16 已改入），T1 已回填 P7b（`b5e1c615`）。基线 main `d052213f82aa4fba234f5684722335e1a5cbb5be`（P7b 的 noff，双父 `f42f9d64`、`4fe308ce`，树与 `4fe308ce` 相同；P7b 的最终分支 CI 43702923005 attempt 1 全绿，e2e 作业 132781366495 为 10:26:46Z–10:54:36Z，27 分 50 秒，至今最慢；合入后的 main CI 43706438924 attempt 1 全绿，e2e 作业 132792042944 为 11:10:31Z–11:34:13Z，23 分 42 秒；P7b 的归档在主目录的 `.superpowers/sdd/M6-P7b-integration-20261115/`，含 `cleanup.log`；这些由本段 T1 以归档与公开的 jobs 接口核对后回填进 P7b 的记录）。设计见 [M6 设计](../M6-design.md) §2 的 G19，§8 的“工作项一侧”“命令面板”与“交给 M6 的视图文件”，§12 的 P7c 一行，§13–§15；P7 的拆分见 [P7a spec](P7a-work-item-planning.md) §1、R1，交给本段的事见 P7a spec §5、[P7b spec](P7b-list-vocabulary.md) §5 与 P7b 的[阶段记录](../reviews/P7b-list-vocabulary-review.md) §5；主控在写 spec 之前的裁定 H1–H16 见本阶段台账 `controller-rulings.md`（本段 R1–R16 照录）。网页的长期规则见[总体设计 §7.2、§7.7](../../v0-design.md#77-stores-按会话分代长期有效m2-起)。现状调研见本阶段台账 `research/palette-views.md`（命令面板、快捷操作、四个视图文件、G19 的工作项一侧）与 `research/mobile-carryovers.md`（移动端页头、A19–A21、交接回执、e2e 的余量与放置、估算）（ignored，随阶段归档；本 spec 引用的行号都在 `d052213f` 的树上）。负责人 2026-11-11 授权连续推进至 M6 收官，重要高风险决策仍停下确认；本段不改 `server/`、`api/`（R15），本机 `make test` 若因 [M6-M8-05](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-05) 的签名失败，以分支 CI 的服务端两路为准（负责人 2026-11-11）。
 
 文中的路径：`core/…` 在 `web/apps/web/` 下；`PK/…` 是 `core/components/power-k/…`；`R/…` 是 `web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/…`；`issue-layouts/…` 是 `core/components/issues/issue-layouts/…`；`@nerve/…` 的包在 `web/packages/` 下。
 
@@ -149,28 +149,28 @@ T1 照 P7b spec §2.14 的公式重算并写进台账；T10 的检查点与 T15 
 
 ## 4. 验收标准
 
-- [ ] A1 拆分：`navigation/commands.ts` 按层级拆为两件，只搬不改，各在约 400 行以内，命令的输出逐项相同（基线同名同数），项目一级一件在 `project-address-route` 里。
-- [ ] A2 入口规则：纯函数与原因函数各有单测（ADMIN、MEMBER、工作区管理员而项目访客（映射为 ADMIN，`core/store/user/permissions.store.ts:68-74`）给，GUEST、没有角色、项目已归档、开关关闭不给；原因各一码）；四个导航命令改调它（归档的项目里不给，单测与变异）；两个打开的菜单门为假时以 `problemMessageKey` 说出那一码的话（断言具体的键：`errors.project_archived`、`errors.planning_cycles_disabled` / `errors.planning_modules_disabled`、`errors.project_not_found`）、不转圈、持有的列表也不列（单测；变异回到转圈即失败）。
-- [ ] A3 空文案：构造件只收键，七个菜单各有新键，默认 `power_k.search_menu.no_results`；en 与 zh-CN 同步。
-- [ ] A4 搜索：项目范围的两组（本地过滤、未归档、含已结束的迭代、入口规则、行有项目标识、选中即转到）；工作区范围没有；`/browse/:workItem` 上自己读；读失败不挡别的结果（单测与变异）。
-- [ ] A5 改迭代：选项（“无迭代”在前、不给已结束与已归档的、所持的标为当前、所持的已结束的以名字显示为当前）、选所持的不发请求、请求体 `{cycle_id}`、守卫（换项目、换人、不可改时不发、拒绝说原因）；`shift+c`；单测表与变异。
-- [ ] A6 改模块：选项（可加入的加所持的已归档的、只可移出）、每选一项一个增减、请求体在轮到时以所持的算出、列表不关；`shift+m`；类型让整集合赋不进去（类型测试）；单测与变异。
-- [ ] A7 A17、A18：恢复在途时禁用（按钮菜单与右键菜单、键盘），回答之后恢复；归档页的行菜单不给设置函数（类型测试）。
-- [ ] A8 移动端页头：共用的件（布局带当前的、显示面板按页的常量、偏好读到之前不给、读失败不给）与每页的 `observer` 包装件（经 layout 挂载、偏好后答回的测试）；项目页的移动端页头改写为包装件、手写的读写删去、既有的移动端测试同数（4）；迭代页、模块页接上（写本页的偏好、没有本页的分组）；迭代页的侧栏开关与快捷操作各宽度都给（两页页头的测试）。
-- [ ] A9 A19：项目页与归档页的数目分组时显示 nerve 的总数，别的项目的列表在时不显示（store 的单测与页头的测试，变异读 `""` 组即失败）。
-- [ ] A10 A20、A21、焦点：键与字段删去（i18n 守卫过）；替身关上即清空（替身一级的测试）；“添加已有”打开即聚焦搜索框、移动端不聚焦（组件测试与变异）。
-- [ ] A11 X1：四个文件的地址读与守卫（`node tools/keywords.mjs` 过、样例）；视图写之后的跟进经 `followInSession`（单测：会话换了之后不跟进）。
-- [ ] A12 页面故事：`g19-work-item-side-page.spec.ts` 三条故事在三种引擎通过，本机 chromium 合计 ≤ 8 秒（台账以 `durations.py` 记各引擎的时长）。
-- [ ] A13 守卫与文档：`project-address-route`、swr 限制、告警上限、knip、关键词（phase `M6/P7`）、i18n；P7b 的回填（阶段记录 §7、spec A15、设计 §14、M6-M8-01 的数据点）与余量的重算；交接回执（M3 §1/§3/§4、M4 M6-02 的“分组时页头的数目”、M1 的改过的文件 oxlint 0、M2 §3 的新的 SWR 读按会话分代（键带 `loginId`，经 `useSessionSWR`，re-76 F12））；差异清单、前端改动清单、设计 §8/§12/§14、M8 交接的相关条目（M6-M8-01 的检查点数据点、[M6-M8-08](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-08) 根与写入单元的行数）。
+- [x] A1 拆分：`navigation/commands.ts` 按层级拆为两件，只搬不改，各在约 400 行以内，命令的输出逐项相同（基线同名同数），项目一级一件在 `project-address-route` 里。
+- [x] A2 入口规则：纯函数与原因函数各有单测（ADMIN、MEMBER、工作区管理员而项目访客（映射为 ADMIN，`core/store/user/permissions.store.ts:68-74`）给，GUEST、没有角色、项目已归档、开关关闭不给；原因各一码）；四个导航命令改调它（归档的项目里不给，单测与变异）；两个打开的菜单门为假时以 `problemMessageKey` 说出那一码的话（断言具体的键：`errors.project_archived`、`errors.planning_cycles_disabled` / `errors.planning_modules_disabled`、`errors.project_not_found`）、不转圈、持有的列表也不列（单测；变异回到转圈即失败）。
+- [x] A3 空文案：构造件只收键，七个菜单各有新键，默认 `power_k.search_menu.no_results`；en 与 zh-CN 同步。
+- [x] A4 搜索：项目范围的两组（本地过滤、未归档、含已结束的迭代、入口规则、行有项目标识、选中即转到）；工作区范围没有；`/browse/:workItem` 上自己读；读失败不挡别的结果（单测与变异）。
+- [x] A5 改迭代：选项（“无迭代”在前、不给已结束与已归档的、所持的标为当前、所持的已结束的以名字显示为当前）、选所持的不发请求、请求体 `{cycle_id}`、守卫（换项目、换人、不可改时不发、拒绝说原因）；`shift+c`；单测表与变异。
+- [x] A6 改模块：选项（可加入的加所持的已归档的、只可移出）、每选一项一个增减、请求体在轮到时以所持的算出、列表不关；`shift+m`；类型让整集合赋不进去（类型测试）；单测与变异。
+- [x] A7 A17、A18：恢复在途时禁用（按钮菜单与右键菜单、键盘），回答之后恢复；归档页的行菜单不给设置函数（类型测试）。（键盘没有单列的例：两个菜单都渲染 `<button disabled>`，禁用的项方向键到不了、按不下，“连按两次 Enter 在重绘之前”与同一拍的两次触发同一个守卫，T8 的裁定。）
+- [x] A8 移动端页头：共用的件（布局带当前的、显示面板按页的常量、偏好读到之前不给、读失败不给）与每页的 `observer` 包装件（经 layout 挂载、偏好后答回的测试）；项目页的移动端页头改写为包装件、手写的读写删去、既有的移动端测试同数（4）；迭代页、模块页接上（写本页的偏好、没有本页的分组）；迭代页的侧栏开关与快捷操作各宽度都给（两页页头的测试）。
+- [x] A9 A19：项目页与归档页的数目分组时显示 nerve 的总数，别的项目的列表在时不显示（store 的单测与页头的测试，变异读 `""` 组即失败）。
+- [x] A10 A20、A21、焦点：键与字段删去（i18n 守卫过）；替身关上即清空（替身一级的测试）；“添加已有”打开即聚焦搜索框、移动端不聚焦（组件测试与变异）。
+- [x] A11 X1：四个文件的地址读与守卫（`node tools/keywords.mjs` 过、样例）；视图写之后的跟进经 `followInSession`（单测：会话换了之后不跟进）。
+- [x] A12 页面故事：`g19-work-item-side-page.spec.ts` 三条故事在三种引擎通过，本机 chromium 合计 ≤ 8 秒（台账以 `durations.py` 记各引擎的时长）。
+- [x] A13 守卫与文档：`project-address-route`、swr 限制、告警上限、knip、关键词（phase `M6/P7`）、i18n；P7b 的回填（阶段记录 §7、spec A15、设计 §14、M6-M8-01 的数据点）与余量的重算；交接回执（M3 §1/§3/§4、M4 M6-02 的“分组时页头的数目”、M1 的改过的文件 oxlint 0、M2 §3 的新的 SWR 读按会话分代（键带 `loginId`，经 `useSessionSWR`，re-76 F12））；差异清单、前端改动清单、设计 §8/§12/§14、M8 交接的相关条目（M6-M8-01 的检查点数据点、[M6-M8-08](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-08) 根与写入单元的行数）。
 - [ ] A14 七项本地门禁（`make test` 照负责人 2026-11-11 的规则）、整分支审查的修复闭环、准确的分支 CI 与 noff 后的 main CI 全绿、归档清理。（合入后由 P8 的 T1 勾选）
 
 ## 5. 后续责任
 
-**P8**：归档页的迭代、模块词表（P7b R10）；[M6-M8-13](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-13)；新的控件（菜单、移动端页头、顶行）的焦点轮廓随最终矩阵核对；M1 交接的死成员收敛；命令面板快捷键说明的英文字面量（R4）；P8 的 T1 回填本段的阶段记录 §7 与 A14。
+**P8**：归档页的迭代、模块词表（P7b R10）；[M6-M8-13](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-13)；新的控件（菜单、移动端页头、顶行）的焦点轮廓随最终矩阵核对；M1 交接的死成员收敛；i18n 的清理，两处同一类的英文字面量：命令面板快捷键说明的 “No shortcuts found for”（`PK/ui/renderer/shortcut.tsx:105`，R4）与归档页行菜单的 “Restore”（`issue-layouts/quick-action-dropdowns/helper.tsx:219`，T8 的观察，主控交 P8）；最终矩阵的一条观察：项目页上访客照旧看到项目设置与视图的命令（`open_project_setting`、`nav_project_settings`、`open_project_view`、`nav_project_views` 不看角色，收集箱的 `nav_project_intake` 同样只看开关；M3、M4 的行为，T2 的特征测试照今天的行为钉住，不在本段范围，主控复核 T2 时记下）；P8 的 T1 回填本段的阶段记录 §7 与 A14。
 
 **M7**：工作区范围的迭代、模块搜索；视图的 store、读与页面（R12）。
 
-**M8**：[M6-M8-01](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-01) 多 P7b 的分支 CI、main CI（T1 记）与本段 T10 检查点的数据点；e2e 的余量至此约剩 6.6–11.3 秒（本段用满 8 秒时），之后的段再加故事前要负责人对作业结构的决定（R14）。
+**M8**：[M6-M8-01](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-01) 多 P7b 的分支 CI、main CI（T1 已记）与本段 T10 检查点的数据点、新故事的本机时长（T14 已记）；e2e 的余量：本段的新文件本机 chromium 4.0–4.6 秒（预算 8 秒），以 T1 的余量 14.6–19.3 秒算至此约剩 10.0–14.7 秒（以 T15 推送前的估算与上界为准），之后的段再加故事前要负责人对作业结构的决定（R14）；[M6-M8-07](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-07) 在 T10 的检查点再现一次（F11 (page) [s3]，只重跑该文件即过，T14 已记）；[M6-M8-08](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-08) 本段不加（根 319、写入单元 302、请求体 98，T14 已记，M6 收尾再核）；新的 [M6-M8-15](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-15)：`project-address-route` 的内容式只按变量名 `rootStore.router` 认 router store（T5 的观察；规则是 M3 立下、几个 M 共用的守卫，今天的文件表里没有别名的读，T14 的裁定交 M8）。
 
 **负责人**：e2e 的作业结构（分片）、期限与超时。
 
