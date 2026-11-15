@@ -10,7 +10,7 @@ import type { TSupportedFilterTypeForUpdate } from "@nerve/constants";
 import { EIssueFilterType, ISSUE_STORE_TO_FILTERS_MAP } from "@nerve/constants";
 import type { EIssueLayoutTypes, EIssuesStoreType, TSupportedFilterForUpdate } from "@nerve/types";
 // hooks
-import { usePageIssueFilters } from "@/hooks/store/use-page-issue-filters";
+import { useIssues } from "@/hooks/store/use-issues";
 import { useIssuesActions } from "@/hooks/use-issues-actions";
 // local imports
 import type { DisplayFiltersSelection } from "./issue-layouts/filters";
@@ -29,12 +29,13 @@ type PageDisplay = {
 
 /**
  * The preferences a list page's header shows and changes, at any width (P5b spec 2.6; P7c spec 2.7, R8), by the page's
- * store type: the page's own (usePageIssueFilters), changed by the page's update, which follows the change as the
- * page's commands follow it (useIssuesActions), with the page's own display options (a cycle's never group by cycle,
- * P5b R9; a module's never by module, P6b R12).
+ * store type: the page's own, read by the page's id as its address gives it (never by the router store's project,
+ * which lags a commit when the address changes project, re-77 M2), changed by the page's update, which follows the
+ * change as the page's commands follow it (useIssuesActions), with the page's own display options (a cycle's never
+ * group by cycle, P5b R9; a module's never by module, P6b R12).
  */
 export function usePageDisplay(storeType: PageDisplayStoreType, entityId: string): PageDisplay {
-  const issueFilters = usePageIssueFilters(storeType);
+  const issueFilters = useIssues(storeType).issuesFilter.getIssueFilters(entityId);
   const { updateFilters } = useIssuesActions(storeType);
   const layout = issueFilters?.displayFilters?.layout;
   const update = (filterType: TSupportedFilterTypeForUpdate, filters: TSupportedFilterForUpdate) =>

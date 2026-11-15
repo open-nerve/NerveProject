@@ -3,8 +3,10 @@
 // The small screen's row of a list page's header (P7c spec 2.7, R8), by the page's store type: the page's layouts, the
 // list, the board and the calendar, its trigger showing the one the page's preferences hold, and its display with the
 // page's own options, both changing the page's preferences by the page's update, as the header's controls at a wider
-// width do (HeaderFilters); its trigger follows what nerve confirmed. Whether the page shows the row is its wrapper's
-// (the project's: issues/(list)/layout.test.tsx). The stores and HTTP are real; the page is a project's.
+// width do (HeaderFilters); its trigger follows what nerve confirmed. Both show the preferences of the page their address
+// names, never the router store's project, which lags a commit when the address changes project (re-77 M2). Whether
+// the page shows the row is its wrapper's (the project's: issues/(list)/layout.test.tsx). The stores and HTTP are real;
+// the page is a project's.
 import { act } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { ISSUE_GROUP_BY_OPTIONS, ISSUE_STORE_TO_FILTERS_MAP } from "@nerve/constants";
@@ -15,6 +17,7 @@ import { issueSelectionTab } from "@/components/core/modals/fake-issue-selection
 import { requestedIssue } from "@/store/issue/fake-issues";
 import { preferencesOf } from "@/store/project/fake-projects";
 import type { RootStore } from "@/store/root.store";
+import { HeaderFilters } from "./filters";
 import { MobileHeaderFilters } from "./mobile-header-filters";
 
 const bound = vi.hoisted(() => ({ app: undefined as RootStore | undefined }));
@@ -98,4 +101,29 @@ it("offers the page's own display options, whose change is the page's update of 
   await act(async () => button("common.priority")!.click());
   await until(() => preferences().length === 1, "the change of the page's display");
   expect(preferences()[0]).toMatchObject({ method: "PATCH", body: { display_properties: { priority: false } } });
+});
+
+it("shows the layout of the page its address names, in the row and the wider controls, the router store naming another", async () => {
+  // Project B's preferences, its layout the board, held beside A's; the router store still names A.
+  const board = preferencesOf({ display_filters: { ...preferencesOf().display_filters, layout: "kanban" } });
+  const read = await requestedIssue(tab.nerve, () => tab.app.issue.projectIssuesFilter.fetchFilters("ws", "B"), [
+    "GET",
+    "/api/v0/me/projects/B/preferences",
+  ]);
+  read.call.answer(json(200, board));
+  await read.promise;
+  await tab.render(
+    <>
+      <MobileHeaderFilters storeType={EIssuesStoreType.PROJECT} entityId="B" />
+      <HeaderFilters storeType={EIssuesStoreType.PROJECT} entityId="B" />
+    </>
+  );
+  expect(tab.app.router.projectId).toBe("A");
+  // the row's trigger and the wider controls' narrow one show the board, as the wide ones' pressed layout does
+  const triggers = [...document.querySelectorAll('button[aria-label="common.layout"]')];
+  const pressed = [...document.querySelectorAll('button[aria-pressed="true"]')];
+  expect({
+    triggers: triggers.map((trigger) => trigger.querySelector("[data-layout]")?.getAttribute("data-layout")),
+    pressed: pressed.map((layout) => layout.getAttribute("aria-label")),
+  }).toEqual({ triggers: ["kanban", "kanban"], pressed: ["issue.layouts.title.kanban"] });
 });
