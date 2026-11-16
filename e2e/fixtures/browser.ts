@@ -205,6 +205,25 @@ export async function focusOutline(control: Locator): Promise<FocusOutline> {
   });
 }
 
+/**
+ * Checks that each of controls on page, reached by the keyboard, shows its focus outline whole: each in turn focused,
+ * then left for the stop before it by Shift with key (tabKey) and come back to by key, as a person tabs to it; its
+ * outline is drawn and neither the viewport nor a box that hides what overflows it cuts it (focusOutline; M3 handoff
+ * 3, the shared controls on the cycle and module pages).
+ */
+export async function expectOutlinesWhole(page: Page, key: string, ...controls: Locator[]): Promise<void> {
+  await controls.reduce(async (previous, control) => {
+    await previous;
+    await control.focus();
+    await page.keyboard.press(`Shift+${key}`);
+    await page.keyboard.press(key);
+    await expect(control).toBeFocused();
+    const outline = await focusOutline(control);
+    expect(outline.style, `the focus outline of ${control}`).not.toBe("none");
+    expect(outline.clippedBy, `what cuts the focus outline of ${control}`).toEqual([]);
+  }, Promise.resolve());
+}
+
 /** Run in a page: its navigator.clipboard.writeText rejects with a NotAllowedError, as a browser's refusal does. */
 function refuseWrites(): void {
   navigator.clipboard.writeText = () => Promise.reject(new DOMException("Write permission denied.", "NotAllowedError"));

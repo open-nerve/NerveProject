@@ -3,7 +3,7 @@ import type { Locator, Page } from "@playwright/test";
 import { addProjectMembers, createProject, createWorkspace, slugFor } from "../../fixtures/api";
 import { expectModules } from "../../fixtures/assert/planning";
 import { anotherTabSignsIn } from "../../fixtures/auth";
-import { expectQuietConsole, refuseClipboardWrites, watchPage } from "../../fixtures/browser";
+import { expectOutlinesWhole, expectQuietConsole, refuseClipboardWrites, watchPage } from "../../fixtures/browser";
 import {
   chooseFromMenu,
   dismissToasts,
@@ -18,7 +18,6 @@ import type { Database } from "../../fixtures/db";
 import { closedByEscape, closedWithin, modalDialog, shownWithin } from "../../fixtures/dialogs";
 import { createIssue } from "../../fixtures/issues";
 import {
-  expectOutlinesWhole,
   layoutButton,
   listedOn,
   madeModule,
