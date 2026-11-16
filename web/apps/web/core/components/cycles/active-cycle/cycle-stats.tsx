@@ -81,7 +81,8 @@ export const ActiveCycleStats = observer(function ActiveCycleStats(props: Props)
               key={name}
               className={({ selected }) =>
                 cn(
-                  "relative z-[1] rounded-[3px] py-1.5 text-11 font-semibold text-placeholder transition duration-500 focus:outline-none",
+                  // the keyboard's ring inside its edge, as the sidebar's progress tabs' (core/sidebar/progress-tabs.tsx)
+                  "relative z-[1] rounded-[3px] py-1.5 text-11 font-semibold text-placeholder transition duration-500 focus-visible:outline-1 focus-visible:-outline-offset-1 focus-visible:outline-accent-strong",
                   { "bg-surface-1 text-tertiary": selected, "hover:text-tertiary": !selected }
                 )
               }

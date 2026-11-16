@@ -34,7 +34,9 @@ export function MobileLayoutSelection({
           <ChevronDownOutline className="my-auto size-3 text-secondary" />
         </span>
       }
-      customButtonClassName="flex flex-grow justify-center text-secondary text-13"
+      // the button grows to its half of the small screen's row, from the page's edge: the keyboard's ring is inside its
+      // edge, which the page's box would cut outside
+      customButtonClassName="flex flex-grow justify-center text-secondary text-13 focus-visible:outline-1 focus-visible:-outline-offset-1 focus-visible:outline-accent-strong"
       closeOnSelect
     >
       {ISSUE_LAYOUTS.filter((l) => layouts.includes(l.key)).map((layout) => (

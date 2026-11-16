@@ -26,10 +26,11 @@ export const FilterItemCloseButton = observer(function FilterItemCloseButton<
     filter.removeCondition(conditionId);
   };
 
+  // the keyboard's ring inside its edge, as the condition's other controls': the condition's box would cut one outside
   return (
     <button
       onClick={handleRemoveFilter}
-      className="bg-layer-transparent px-1.5 text-placeholder hover:bg-layer-transparent-hover hover:text-tertiary focus:outline-none"
+      className="bg-layer-transparent px-1.5 text-placeholder hover:bg-layer-transparent-hover hover:text-tertiary focus-visible:outline-1 focus-visible:-outline-offset-1 focus-visible:outline-accent-strong"
       type="button"
       aria-label="Remove filter"
     >

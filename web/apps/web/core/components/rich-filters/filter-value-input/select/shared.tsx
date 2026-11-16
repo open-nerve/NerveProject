@@ -41,7 +41,9 @@ export const getFormattedOptions = <V extends TFilterValue>(options: IFilterOpti
 
 export const getCommonCustomSearchSelectProps = (isDisabled?: boolean) => ({
   customButtonClassName: cn(
-    "h-full w-full px-2 text-13 font-regular transition-all duration-300 ease-in-out",
+    // only the colours ease: the keyboard's ring (the select's, inside its edge) is drawn at once, not grown in from
+    // outside the condition's box, which would cut it meanwhile
+    "h-full w-full px-2 text-13 font-regular transition-colors duration-300 ease-in-out",
     !isDisabled && COMMON_FILTER_ITEM_BORDER_CLASSNAME,
     isDisabled && "hover:bg-surface-1"
   ),
