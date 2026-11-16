@@ -23,6 +23,21 @@ describe("the project page's display options", () => {
   });
 });
 
+// The archive lists the project's archived work items through the project's list (`archived=true`), whose words it
+// shares: it filters and groups its one layout, the list, by the cycle and the module too (P8 spec 2.4).
+describe("the archived page's display options", () => {
+  const archived = ISSUE_DISPLAY_FILTERS_BY_PAGE.archived_issues;
+
+  it("filter by the cycle and the modules", () => {
+    expect(archived.filters).toEqual(expect.arrayContaining(["cycle_id", "module_id"]));
+  });
+
+  it("group the list by the cycle and the module, before no grouping", () => {
+    expect(Object.keys(archived.layoutOptions)).toEqual(["list"]);
+    expect(archived.layoutOptions.list!.display_filters.group_by!.slice(-3)).toEqual(["cycle", "module", null]);
+  });
+});
+
 // A cycle's and a module's page list their own cycle's or module's work items under options of their own (P5b R9,
 // P6b R12): filtering or grouping by the page's own cycle or module would name it everywhere, and nerve refuses it on
 // the page's preferences. Each is the project page's options without the page's own filter and grouping, every other

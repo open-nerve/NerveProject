@@ -155,11 +155,15 @@ export const ISSUE_DISPLAY_FILTERS_BY_PAGE: TIssueFiltersToDisplayByPageType = {
       },
     },
   },
+  // The project's archived work items, of the project's list (archived=true) and its words, the cycle and the module
+  // among them (P8 spec 2.4).
   archived_issues: {
     filters: [
       "priority",
       "state_group",
       "state_id",
+      "cycle_id",
+      "module_id",
       "assignee_id",
       "created_by_id",
       "label_id",
@@ -170,7 +174,7 @@ export const ISSUE_DISPLAY_FILTERS_BY_PAGE: TIssueFiltersToDisplayByPageType = {
       list: {
         display_properties: ISSUE_DISPLAY_PROPERTIES_KEYS,
         display_filters: {
-          group_by: ["state", "priority", "labels", "assignees", "created_by", null],
+          group_by: ["state", "priority", "labels", "assignees", "created_by", "cycle", "module", null],
           order_by: ["sort_order", "-created_at", "-updated_at", "start_date", "-priority"],
         },
         extra_options: {

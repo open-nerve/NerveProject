@@ -5,6 +5,7 @@ import { EIssueFilterType } from "@nerve/constants";
 import { accountOf } from "@/store/member/fake-users";
 import { issueStoreTab, issuePageOf, requestedIssue } from "../fake-issues";
 import { json, problem } from "@/lib/auth/fake-nerve";
+import { toProjectFilters } from "@/lib/issue-filters";
 import { SessionChangedError } from "@/lib/auth/token-manager";
 import { EIssuesStoreType } from "@nerve/types";
 vi.mock("@/lib/auth/api-client", () => ({ tokenManager: { state: { loginId: "archive" } }, publicClient: {} }));
@@ -335,6 +336,27 @@ it("does not let a retired root overwrite local settings", async () => {
   );
   expect(data.get("issue_local_filters")).toBe(before);
 });
+
+// M6 P8 spec 2.4: the archive groups and filters by a work item's cycle and module as the project's list does, and its
+// browser keeps either grouping and both filters for a fresh store.
+const cycleId = "019a0000-0000-7000-8000-0000000000c1";
+const moduleId = "019a0000-0000-7000-8000-0000000000d1";
+it.each(["cycle", "module"] as const)(
+  "keeps a grouping by the %s and the filters by a cycle and a module in a fresh archive",
+  async (group_by) => {
+    const first = (await archiveTab()).app.issue.archivedIssuesFilter;
+    await first.fetchFilters("ws", "A");
+    await first.updateFilters("ws", "A", EIssueFilterType.DISPLAY_FILTERS, { group_by });
+    await first.updateFilterExpression("ws", "A", { and: [{ cycle_id__in: cycleId }, { module_id__in: moduleId }] });
+    const fresh = (await archiveTab()).app.issue.archivedIssuesFilter;
+    await fresh.fetchFilters("ws", "A");
+    expect(fresh.getIssueFilters("A")?.displayFilters?.group_by).toBe(group_by);
+    expect(toProjectFilters(fresh.getIssueFilters("A")!.richFilters)).toEqual({
+      cycle_id: [cycleId],
+      module_id: [moduleId],
+    });
+  }
+);
 
 // M6 P7a spec 2.5: the archive keeps its display properties in the browser; a work item's cycle and modules show by
 // default, and a hidden choice of either survives a fresh store.
