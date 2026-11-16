@@ -39,6 +39,7 @@
     "no-shadow": "error",
     "valid-typeof": "error",
     "no-constant-binary-expression": "error",
+    "no-unused-expressions": "error",
     "unicorn/filename-case": "off",
     "unicorn/no-null": "off",
     "unicorn/prevent-abbreviations": "off",
