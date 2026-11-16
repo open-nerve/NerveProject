@@ -1,6 +1,6 @@
 # M6/P8 阶段评审记录
 
-> 进行中（2026-11-16）：T1–T13 已完成（T9 没有可删的真死成员，没有提交）。检查点 `d94a0999` 的本机七项（`t11-gate`）与分支 CI 43831815008 全绿（§5）。T12 的最终矩阵在产品 HEAD `d94a0999` 上跑完（Go 的几次运行结束于只多了文档提交的 `de1e8881`），G1–G20 的证据表、间歇项、规模与设计 §13 的对照见 §4.3。整分支审查与它的修复轮（T14）在进行，最终候选与分支 CI（T15）、合入、main CI、归档与清理（T16）待做：§5 的最终候选由 T15 补，§6 由 T14 写，§7 由 closeout 的第一个 Task 回填。基线 main `ea971606b829fb3ade4beb9d204ecbc23d3af674`（P7c 的 noff，双父 `d052213f`、`cf215555`）。
+> 进行中（2026-11-16）：T1–T15 的本机部分已完成（T9 没有可删的真死成员，没有提交）。检查点 `d94a0999` 的本机七项（`t11-gate`）与分支 CI 43831815008 全绿；T12 的最终矩阵见 §4.3；整分支审查 re-79 与修复轮、限定复审见 §6；最终候选 `0ef66139` 的 `final.sh t15-final` 七项（e2e 一条以 M6-M8-03 的签名失败、只重跑该文件即过）、m6-pages 与 m6-acceptance 全过（§5）。最终候选的分支 CI、合入、main CI、归档与清理（T16）的数字由 closeout 的第一个 Task 回填 §5 与 §7。基线 main `ea971606b829fb3ade4beb9d204ecbc23d3af674`（P7c 的 noff）。
 
 ## 1. 评审方式与范围
 
@@ -248,7 +248,7 @@ A1–A13 满足，[spec §4](../specs/P8-final-acceptance.md#4-验收标准)由�
 | `t12-m4-repeat-i11-webkit` | I11 (page) 两种回应，WebKit，×5 | `de1e8881` | 0 | 18.6 | 5 过 |
 | `t12-m4-repeat-c12-webkit` | C12 (review) 子工作项的相对与自定日期，WebKit，×5 | `de1e8881` | 0 | 20.1 | 5 过 |
 
-- **JSON 报告在日志里**：三个页面配置的命令把 `PLAYWRIGHT_JSON_OUTPUT_NAME=…` 写在 `cd e2e` 之前，这个变量只作用于 `cd`，json reporter 于是写到标准输出：报告在 `t12-default.log` 第 489 行、`t12-m6-pages.log` 第 141 行、`t12-acceptance.log` 第 30 行起到文件末尾，没有另存的 `.json`。报告的 stats：480 / 135 / 24 例 expected，unexpected 0、flaky 0。逐条的秒数以 `durations.py` 读这段 JSON 取出（台账的工具，单例自身的时长）。
+- **JSON 报告在日志里**：三个页面配置的命令把 `PLAYWRIGHT_JSON_OUTPUT_NAME=…` 写在 `cd e2e` 之前，这个变量只作用于 `cd`，json reporter 于是写到标准输出：报告在 `t12-default.log` 第 489 行、`t12-m6-pages.log` 第 141 行、`t12-acceptance.log` 第 30 行起到文件末尾；运行之后由主控从日志抽出为台账的 `t12-default.json`、`t12-m6-pages.json`、`t12-acceptance.json`（台账 Task 12 的主控一行）。报告的 stats：480 / 135 / 24 例 expected，unexpected 0、flaky 0。逐条的秒数以 `durations.py` 读这段 JSON 取出（台账的工具，单例自身的时长）。
 - **逐条的时长**：m6-acceptance 的 8 条在 chromium 合计 26.5 秒、firefox 53.5 秒、webkit 32.9 秒（T11 的 `t11-acceptance-final` 是 22.4、46.7、30.8 秒）；最长的是 G18 (acceptance)（firefox 11.2 秒）与 G15 (acceptance)（firefox 9.1 秒）。m6-pages 的 45 条在 chromium 合计 283.6 秒、firefox 381.5 秒、webkit 362.5 秒，其中 G19 的 17 条是 76.9、105.6、101.3 秒。默认套件里 `stories/planning/` 的 64 条在 chromium 合计 293.4 秒（G19 的 17 条 75.1 秒），9 个 worker 并行，只作对照。
 - **Go 的全量**：`make test` 先跑 server 模块，失败之后不再跑 `server/tools` 模块，所以 `t12-go-full` 里没有 `server/tools` 的两个包（`bodyshapegen`、`s3fixture`）；它们在检查点 `t11-gate-test`（`d94a0999`）通过，之后 `server/tools` 没有改动。server 模块的顶层用例 2623 个 `--- PASS`、1 个 FAIL（`TestImageStorageContract`，其 local 子例过、s3 子例失败）、7 个 SKIP：六个以环境变量打开的测量与演练（`TestFilesCleanupDrill`、`TestIssueListScale`、`TestTheDeletionsAtTheScaleTarget`、`TestTheFreezeAtTheScaleTarget`、`TestPurgeScale`、`TestSearch100KPerformance`）与一个子进程入口（`TestS3RecoveryProcess`）。bootstrap 包 1030.7 秒。
 
@@ -326,7 +326,8 @@ A1–A13 满足，[spec §4](../specs/P8-final-acceptance.md#4-验收标准)由�
 - **推送前的估算**：P8 不给默认套件加故事（480 条不变），基线 1664 秒（P7c 的 main CI 43764306705 attempt 2），上界取至今最慢的 1670 秒，都低于 30 分钟的报告线；2026-11-16T08:30:36Z 推送。
 - **分支 CI** 43831815008（head `d94a0999`）attempt 1 全绿、没有重跑：server (0) 133178687666（08:30:48Z–08:45:13Z，865 秒）、server (1) 133178688013（08:30:49Z–08:39:42Z，533 秒）、web 133178688146（08:30:48Z–08:42:13Z，685 秒）、e2e 133185272705（08:45:15Z–09:05:51Z，1236 秒 = 20 分 36 秒）。都在期限与报告线之内：e2e 低于 30 分钟（比基线 1664 秒少 428 秒），web 低于 15 分钟的期限，server 两路都低于 20 分钟的报告线。
 - 检查点之后的提交——T13 的 `dac255a9`、`de1e8881`（只改文档、`config.yaml:120` 的注释与关键词的一个样例），T14 修复轮的 `c52fcc6487e0ab7a7d9fde20e3e21610ef991bd2`（只改 e2e 的验收核对与 `e2e/fixtures/browser.ts`，产品代码未改，经过由 T14 写入 §6）与本提交（只改文档）——都没有推送：写本记录时远端分支仍在 `d94a0999`，照 plan 由 T15 推送最终候选。
-- **最终候选与分支 CI**：由 T15 补（`final.sh t15-final`：七项、m6-pages、m6-acceptance）。
+- **最终候选**（T15，`0ef661393be56c1fc0d88f1c65ca6314f430e6c2`，T14 的修复轮与文档之后；与检查点相比产品代码未变，只有 e2e 的核对与文档）：`final.sh t15-final`（2026-11-16T09:44:33Z 起，串行）：`make gen-check` 4.1 秒；`make lint-go` 1.8 秒（两个模块 0 issues）；`make test` 957.6 秒（66 个包 ok，含 `server/tools` 的两个；没有 M6-M8-05 的签名）；`make lint-web` 5.5 秒（关键词 78 条规则、7 个例外、无命中；turbo 50 个任务、32 个取缓存）；`make knip` 2.5 秒；`make test-web` 0.6 秒（turbo 16 个任务全部取缓存：自检查点以来 `web/` 未改，缓存即 `t11-gate-test-web` 的那次运行）；build+e2e 246.8 秒 exit 2——480 条中 479 条通过，P1 (page)（`e2e/stories/project/p1-create-project-page.spec.ts:63`）在 `expectProjectCreated` 的查询处收到 `sorry, too many clients already`，之后的 `pg_dump` 同样连不上：M6-M8-03 的签名，照规则只重跑该文件一次，`t15-final-rerun-p1` exit 0（8 过，含 s3-fixture 的依赖），失败的 `test-results` 留在台账 `t15-final-test-results`；m6-pages 150.5 秒 exit 0（三种引擎 135 过，`t15-final-m6-pages.json`）；m6-acceptance 35.8 秒 exit 0（三种引擎 24 过，`t15-final-m6-acceptance.json`）。本条之后只有本提交（文档）。
+- **最终候选的分支 CI**：本提交推送之后运行，结果、时长与合入后的 main CI 由 closeout 的第一个 Task 回填（同 P7c 的 §5 由 P8 的 T1 回填）。
 
 ## 6. 整分支审查
 
