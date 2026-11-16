@@ -1,6 +1,6 @@
 # M6/P7c 阶段评审记录
 
-> 实现、整分支审查与修复轮完成（2026-11-16），待最终候选的门禁、分支 CI 与合入（T15，主控）。整分支审查 Ready to merge after fixes（[re-77](../../../reviews/re-77-M6P7c整体审核.md)：一处 Important、两处 Minor，没有须负责人决定的事），主控三处都接受，以修复轮 F 处理（F2 `98d9f985`、F3 `10ca6ae6`、F1 `165b252b`；F4 `396bd5f7` 写本记录，只改文档），修复轮另经一次限定复审（re-77 §4：Ready to merge，一处 Minor m1 以 F5 `6b79fee4` 修）；修复轮另发现的两处同一类的问题交 P8 与 M8（§6）。最终候选的门禁、推送前的估算与推送后的分支 CI 见 §5；合入、main CI、归档与清理见 §7（由 P8 的 T1 回填）。基线 main `d052213f82aa4fba234f5684722335e1a5cbb5be`（P7b 的 noff，双父 `f42f9d64`、`4fe308ce`，树与 `4fe308ce` 相同）。
+> 已完成（2026-11-16，noff `ea971606`，main CI 43764306705 attempt 2 通过；attempt 1 的 e2e 以 M4 的 C7 失败一条，只重跑失败的作业）。整分支审查 Ready to merge after fixes（[re-77](../../../reviews/re-77-M6P7c整体审核.md)：一处 Important、两处 Minor，没有须负责人决定的事），主控三处都接受，以修复轮 F 处理（F2 `98d9f985`、F3 `10ca6ae6`、F1 `165b252b`；F4 `396bd5f7` 写本记录，只改文档），修复轮另经一次限定复审（re-77 §4：Ready to merge，一处 Minor m1 以 F5 `6b79fee4` 修）；修复轮另发现的两处同一类的问题交 P8 与 M8（§6）。最终候选 `a51d6360` 的门禁与推送前的估算见 §5；最终 HEAD `cf215555`（只改文档）的分支 CI（attempt 1 的 web 作业在 15 分钟的期限被取消，只重跑失败的作业）、合入、main CI、归档与清理见 §7（由 P8 的 T1 回填）。基线 main `d052213f82aa4fba234f5684722335e1a5cbb5be`（P7b 的 noff，双父 `f42f9d64`、`4fe308ce`，树与 `4fe308ce` 相同）。
 
 ## 1. 评审方式与范围
 
@@ -19,7 +19,7 @@ P7c 交付设计 §12 的 P7c 一行（P7 在实施之前拆为 P7a/P7b/P7c，[P
 
 ## 2. 验收状态
 
-A1–A13 满足（[spec §4](../specs/P7c-palette-mobile.md#4-验收标准)已勾选），A14 合入后由 P8 的 T1 勾选。证据见 §4、§5：
+A1–A14 满足（[spec §4](../specs/P7c-palette-mobile.md#4-验收标准)已勾选；A14 由 P8 的 T1 在合入后勾选，见 §7）。证据见 §4、§5：
 
 | 验收 | 内容 | Task |
 |---|---|---|
@@ -126,6 +126,15 @@ fresh 只读审查（[re-77](../../../reviews/re-77-M6P7c整体审核.md)，`fab
 
 ## 7. 集成、归档与接续
 
-由 P8 的 T1 按归档里的台账、`manifest.json`、`cleanup.log` 与 CI 证据回填：最终 HEAD 的分支 CI、合入与 main CI（作业号、时刻、attempt 与结论以公开的 jobs 接口核对，e2e 的条数与逐条的时长以作业日志核对）、归档与清理；spec 的 A14 随之勾选。
+由 P8 的 T1 按归档里的台账（T15 的末尾与其后几行）、`manifest.json`、`cleanup.log` 与 CI 证据（`ci-evidence/`、各次 web 作业的 jobs JSON `ci-web/`、main CI 的 e2e 日志 `ci-main/`）回填；作业号、时刻、attempt 与结论以 GitHub 公开的 jobs 接口（只读）核对（P8 台账的收据 `t1-ci-jobs`），三份 e2e 作业日志经接口取得，条数与逐条的时长以 `ci-e2e-summary.py` 核对（收据 `t1-e2e-summary`），双父与树以 `git rev-parse` 核对（收据 `t1-merge-tree`）；spec 的 A14 已勾选。
 
-**接续**：P8（[spec](../specs/P7c-palette-mobile.md) §5）——归档页的迭代、模块词表（P7b R10）；[M6-M8-13](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-13)；新控件（菜单、移动端页头、顶行）的焦点轮廓随最终矩阵核对；M1 交接的死成员收敛；i18n 的两处英文字面量（快捷键说明的 “No shortcuts found for”、归档页行菜单的 “Restore”）；命令面板其余菜单以名字作 cmdk 的 value（修复轮发现 (a)）；访客在项目页上看到项目设置与视图的命令（最终矩阵的观察）；它的 T1 回填本记录的 §7 与 spec 的 A14，以本段的实测重算 e2e 的余量。之后是 M6 的收尾。M8 另接 [M6-M8-15](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-15)（守卫按变量名认 router store；列表的正文经 router store 读项目页的偏好）。
+- **最终 HEAD 的分支 CI**：`cf21555577455704d42528d7e466e121c9d0d050`（最终候选 `a51d6360` 之后的记录提交，只改文档）的 43759328881 两个 attempt：
+  - attempt 1：server (0) 132950361365、server (1) 132950361530 通过；web 132950361275（20:39:49Z–20:54:51Z，902 秒）每一步都成功（Lint 92 秒、Unit tests 762 秒），在收尾的 Post Cache 一步碰到作业的 15 分钟期限被取消，e2e 132954638213 因此跳过。主控以各次 web 作业的 jobs 接口（归档的 `ci-web/`）判为慢的 runner：web 作业随 runner 在 516–870 秒之间（本段的检查点 581 秒，P7b 的分支 854、main 870 秒），同一步 Lint 与测试数无关、在 56–92 秒之间，这次的 92 秒与 P7b 那两次慢的 runner 相同；本段多出的约 140 个单测在慢的 runner 上约多 30 秒。照规则只重跑失败的作业一次。期限只剩约 3% 的余量是作业结构的问题，提给负责人（[P8 spec](../specs/P8-final-acceptance.md) §5），本段与 P8 都不改期限与作业结构。
+  - attempt 2（只重跑失败的作业）全绿：web 132955284177（20:57:12Z–21:07:14Z，602 秒，正常的 runner）、e2e 132958271577（21:07:18Z–21:32:00Z，24 分 42 秒 = 1482 秒，480 过、故事 22.3 分钟）；server 两路沿用 attempt 1。e2e 作业是 §5 估算约 23 分 45.8–47.2 秒的约 1.04 倍、上界约 29 分 07.0–19.0 秒的约 0.84–0.85 倍，低于 30 分钟的报告线；是校准点约 19 分 09.8–11.2 秒的约 1.29 倍。本段的三条新故事（G19 (page) 的工作项一侧）在这次 CI 上 6.0 + 3.8 + 3.3 = 13.1 秒，是本机 X = 4.6 秒的约 2.8 倍，在上界所取的 f = 3.6–4.1 之下。
+- **合入与 main CI**：noff `ea971606b829fb3ade4beb9d204ecbc23d3af674`（2026-11-15T21:33:14Z 推送 main），双父 `d052213f`、`cf215555`，树与分支相同（`ed7af4ff`）。main CI 43764306705 两个 attempt：
+  - attempt 1：server (1) 132965846876、web 132965847149（595 秒）、server (0) 132965847233 通过；e2e 132970815083（21:50:35Z–22:18:22Z，27 分 47 秒）480 条中 479 过（故事 25.8 分钟）、1 条失败：M4 的 C7（`e2e/stories/issue/collaboration-interactions.spec.ts:422`，键盘选主题）在第二次 `reopenDuringExit("Meta+k")`（`:474`）里的 `selectCommand`（`:465`）——选项先可见，约 30 毫秒后整个面板已卸下，`getAttribute` 等到故事的 30 秒期限；即测试注入的 30 秒慢退场在一次反转之后的再一次退场没有挡住面板，与 [M6-M8-01](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-01) 所记 C7 的签名同一类（P6a 合入的那次同在第二次 `Meta+k`）。本段对命令面板的宿主只换了过滤函数（没有 keywords 的行与原来等价）与项的 key（F5），没有动 Headless UI 的过渡（主控以 `git diff d052213f..cf215555` 核对）。trace 的摘要在归档的 `ci-evidence/ci-main-43764306705/`（`c7-trace.txt`，报告的 zip 同在），作业日志在 `ci-main/e2e.log`。照 M6-M8-01 只重跑失败的作业一次。
+  - attempt 2（只重跑失败的作业）全绿：e2e 132979921078（22:21:26Z–22:49:10Z，27 分 44 秒 = 1664 秒，480 过、故事 25.6 分钟）；web、server 两路沿用 attempt 1；远端 main 在 `ea971606`（GitHub API）。e2e 作业是估算的约 1.17 倍、上界的约 0.95 倍，低于 30 分钟；P7b 的分支 CI 的 1670 秒仍是至今最慢的 e2e 作业。同一棵树、同样的 480 条，这次比分支 CI 的 attempt 2 慢约 1.12 倍（Playwright 汇总的故事时长 25.6 对 22.3 分钟，约 1.15 倍），判为 runner 的速度差异。本段的三条新故事在这次是 8.0 + 5.2 + 3.3 = 16.5 秒（attempt 1 是 16.8 秒），本机的约 3.6 倍。
+- **归档**（主目录，P8 开工时以 `archive.py verify` 复核，收据 `t1-p7c-archive-verify`）：`.superpowers/sdd/M6-P7c-integration-20261116`：4718 个文件、751,178,965 字节、6493 个成员、未知 0、清单 sha256 `cfb5ce03c0f8812c478df8a9074da3b3d5ca21f143d83646a01f5ac8a3419399`，清单的 `head` 为 `cf215555`（台账、调研笔记、收据、变异与探针、CI 证据 `ci-evidence/`（合入信息、等待器与它们的输出、main CI 的报告与 C7 trace 的摘要）、`ci-web/`、`ci-main/`、门禁失败时存下的 `test-results`、e2e 的 `test-results` 与 `playwright-report`、各包的 `.turbo`）。
+- **清理**：`cleanup.log`（2026-11-16T03:35:26Z）记录 `codex/m6-p7c` 本地、远端与 GitHub API 都在 `cf215555`、已含于 main，main 与远端 main（以 GitHub API 核对）都在 `ea971606`；worktree `m6-p7c` 与本地分支已删除，远端分支删除之后 GitHub API 对它答 404。
+
+**接续**：P8 最终验收进行中（[P8 spec](../specs/P8-final-acceptance.md)、[P8 plan](../plans/P8-final-acceptance.md)，16 个 Task），基线 main `ea971606`：它的 T1 回填本节与 spec 的 A14、关键词的 phase 改为 `M6/P8`；接着是网页的遗留——命令面板其余三个菜单以 id 作 cmdk 的 value（本记录 §6 的修复轮发现 (a)）、英文字面量（快捷键说明的 “No shortcuts found for”、归档页行菜单的 “Restore” 与同文件的两条提示，[spec](../specs/P7c-palette-mobile.md) §5）与表格的列宽、归档页的迭代、模块词（P7b R10）、共用控件的焦点轮廓——与冻结任务逐项目继续、权限矩阵的访客一列、规模、死成员与告警的收敛，矩阵专用的页面核对（`e2e/acceptance/`，只在本机跑）与 G1–G20 的最终矩阵（含 [M6-M8-13](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-13) 等间歇项的重复运行），文档与七份输入交接的最终处理结果、给 M7 与 M8 的交接。访客在项目页上看到项目设置与视图的命令不在 P8 改（P8 spec §3 第 6 条：视图交 M7、项目设置交 M8）。P8 不给默认套件加故事（默认 480 条），CI 的 e2e 余量不因它变化，所以不再重算。之后是 M6 的收尾（closeout）。M8 另接 [M6-M8-15](../../M8-open-release/handoffs/M6-closeout.md#M6-M8-15)（守卫按变量名认 router store；列表的正文经 router store 读项目页的偏好）。
