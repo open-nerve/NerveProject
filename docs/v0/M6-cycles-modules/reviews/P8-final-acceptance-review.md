@@ -330,7 +330,12 @@ A1–A13 满足，[spec §4](../specs/P8-final-acceptance.md#4-验收标准)由�
 
 ## 6. 整分支审查
 
-由 T14 写。
+一次 fresh 只读审查（`fable`，范围 `ea971606..de1e8881`，20 个提交、90 个文件），与 T12 的阶段记录的写作同时进行；结论 **Ready after fixes**，没有 Critical，两处 Important、六处 Minor，没有须负责人决定的事。逐条与处理见 [re-79](../../../reviews/re-79-M6P8整体审核.md)，要点：
+
+- **I1**（记录是骨架）由本记录的 T12 提交 `9a420c1f` 解决；**I2**（冷打开的归档页“添加筛选”没有迭代、模块）照 T4 的裁定不改（同 Plane 与归档页的状态、标签、成员筛选，`plane-diff.md` 写明）。
+- **修复轮** `c52fcc6487e0ab7a7d9fde20e3e21610ef991bd2`（只改 e2e）：`expectOutlinesWhole` 另核轮廓至少 1 像素宽（m1；`t14-red-outline-width` exit 0 → `t14-mut-outline-width` exit 1）；G18 核开关关闭时条件的值——同一会话里是关之前读到的名字、冷打开的浏览器里是“不可用的选项”（m4；`t14-mut-g18-value-2`、`t14-mut-g18-value-held` exit 1）；三种引擎的验收 24 例与 m6-pages 135 例照过（`t14-fix-acceptance-2`、`t14-fix-m6-pages`）。修复轮发现 `plane-diff.md` 把条件的值写成无条件的“不可用的选项”，照代码与 P7b spec §2.6 改写。
+- **文档**：P4 spec `:199` 加“处理结果（M6/P8）”（m2）；M6-M8-20 补冻结任务一次运行的时长上限（River 的默认 `JobTimeout` 1 分钟，m5）；m3 由 `9a420c1f` 补入 M6-M8-17；m6 确认无须改动。
+- 本机七项未在 T14 另跑（`t14-gate`）：`d94a0999` 之后到修复轮只有文档与 e2e 核对的提交，产品代码与 `t11-gate`、分支 CI 43831815008 相同；T15 的 `final.sh` 在最终候选上重跑七项与两个页面配置。默认套件的条数 `t14-list`：480（m6-pages 135、m6-acceptance 24）。
 
 ## 7. 集成、归档与接续
 

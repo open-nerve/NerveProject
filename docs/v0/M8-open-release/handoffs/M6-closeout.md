@@ -280,6 +280,7 @@ M6 的页面在三种引擎上的对等、矩阵专用的核对与规模，持�
 - 冒烟 `t8-smoke-freeze-3`：Bitmap Index Scan on `cycles_freeze_due_idx`，代价 35745.38 对关掉索引扫描时的 48339.92（余量约 26%），估 17757 行、实际 2500，执行 0.748 毫秒、112 个堆页；一次运行冻结 2500 个迭代共 3.227 秒，逐项目的锁持有 p50 0.976、p95 1.109、最大 6.508 毫秒。
 - 夹具先用每项目 20 个迭代、16 个冻结（冻结占 80%）时，选中的计划代价 21287.64 对 22085.27，余量只有 3.6%（`t8-smoke-freeze-2`）：规划器把 `progress_snapshot IS NULL` 与 `end_date` 不晚于今天当作互相独立，估计偏高 6–7 倍。冻结的迭代少的年轻部署里规划器会选顺序扫描；那时表小、任务每小时一次，不是性能缺陷。要估计准确需加扩展统计，是产品的迁移，不在 P8（本阶段台账 Task 8 的发现与主控的裁定）。
 - 最终代码上的正式运行（T12 的 `t12-freeze-scale`）的计划与数字在 [P8 阶段记录](../../M6-cycles-modules/reviews/P8-final-acceptance-review.md)。
+- 一次运行的时长上限（P8 整分支审查 re-79 m5）：P8 起冻结任务逐项目继续（[P8 spec](../../M6-cycles-modules/specs/P8-final-acceptance.md) §2.6），一次运行要走完全部候选；`FreezeCyclesWorker` 没有自己的 `Timeout`，nerve 的 River 配置（`server/internal/platform/jobs/jobs.go:71`）也没设 `JobTimeout`，取 River 的默认 1 分钟（river v0.47.0 `JobTimeoutDefault`）。按规模测试每项目约 1.4 毫秒，一分钟约容 4 万个候选；多数候选都在等锁到各自的期限时，一次运行在一分钟处以 `ctx` 的错误结束（已提交的项目保留，`errors.Join` 带上已记下的失败），下一次接着做。M8 的规模评估一并决定是否给它设自己的 `Timeout`。
 
 **何时验收：** M8 的规模与部署评估在目标规模与年轻部署两种形状下复核这条查询的计划（以 `TestTheFreezeAtTheScaleTarget` 的 EXPLAIN 证据），决定是否加扩展统计（迁移，附加前加后的计划对照）；或负责人决定维持现状，并在此写明理由。
 
