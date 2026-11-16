@@ -113,6 +113,7 @@
       "report_bug": "报告 Bug"
     },
     "search_shortcuts": "搜索快捷键",
+    "no_shortcuts_found": "未找到与“{query}”匹配的快捷键",
     "search_commands": "搜索命令...",
     "page_placeholders": {
       "default": "输入命令或搜索",

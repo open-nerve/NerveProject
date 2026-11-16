@@ -130,6 +130,10 @@
         "message": "Work item could not be restored. Please try again."
       }
     },
+    "action_unavailable": {
+      "title": "Action not available",
+      "message": "{action} action is not implemented."
+    },
     "relation": {
       "relates_to": "Relates to",
       "duplicate": "Duplicate of",

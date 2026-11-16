@@ -18,7 +18,6 @@ import { useIssuesStore } from "@/hooks/use-issue-layout-store";
 import { useTableKeyboardNavigation } from "@/hooks/use-table-keyboard-navigation";
 // local imports
 import type { TRenderQuickActions } from "../list/list-view-types";
-import { getDisplayPropertiesCount } from "../utils";
 import { SpreadsheetIssueRow } from "./issue-row";
 import { SpreadsheetHeader } from "./spreadsheet-header";
 
@@ -106,8 +105,10 @@ export const SpreadsheetTable = observer(function SpreadsheetTable(props: Props)
 
   const handleKeyBoardNavigation = useTableKeyboardNavigation();
 
-  const ignoreFieldsForCounting: (keyof IIssueDisplayProperties)[] = ["key"];
-  const displayPropertiesCount = getDisplayPropertiesCount(displayProperties, ignoreFieldsForCounting);
+  // The header's columns after the work items' own, which the continuation's cell and its loading rows span (P8 spec
+  // 2.3): the table's columns (none of a domain the project turned off) that the display properties show, as each
+  // SpreadsheetHeaderColumn decides.
+  const columnCount = spreadsheetColumnsList.filter((property) => displayProperties[property]).length;
 
   return (
     <table className="w-full overflow-y-auto bg-surface-1" onKeyDown={handleKeyBoardNavigation}>
@@ -137,7 +138,7 @@ export const SpreadsheetTable = observer(function SpreadsheetTable(props: Props)
       {canLoadMoreIssues && (
         <tfoot ref={setIntersectionElement}>
           <tr>
-            <td colSpan={displayPropertiesCount + 1}>
+            <td colSpan={columnCount + 1}>
               <button
                 type="button"
                 disabled={isPaginating}
@@ -151,7 +152,7 @@ export const SpreadsheetTable = observer(function SpreadsheetTable(props: Props)
           </tr>
           {isPaginating &&
             ["first", "second", "third"].map((slot) => (
-              <SpreadsheetIssueRowLoader key={slot} columnCount={displayPropertiesCount} />
+              <SpreadsheetIssueRowLoader key={slot} columnCount={columnCount} />
             ))}
         </tfoot>
       )}

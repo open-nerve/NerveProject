@@ -141,7 +141,7 @@ it("keeps the actual archived title and sidebar read-only while exposing authori
   await openMenu();
   expect(menu("common.actions.edit")).toBeUndefined();
   expect(menu("common.actions.make_a_copy")).toBeUndefined();
-  expect(menu("Restore")).toBeDefined();
+  expect(menu("common.actions.restore")).toBeDefined();
   expect(menu("common.actions.delete")).toBeDefined();
   expect(writes()).toEqual([]);
 });
@@ -149,7 +149,7 @@ it("a permitted guest can read archived detail but has no restore or delete comm
   await role(5);
   await mount();
   await openMenu();
-  expect(menu("Restore")).toBeUndefined();
+  expect(menu("common.actions.restore")).toBeUndefined();
   expect(menu("common.actions.delete")).toBeUndefined();
   expect(tab.nerve.calls.some((call) => call.path === "/api/v0/issues/new")).toBe(true);
   expect(writes()).toEqual([]);
@@ -181,7 +181,7 @@ it.each([true, false])(
     );
     await tab.render(<RouterProvider router={router} />);
     await openMenu();
-    expect(menu("Restore")).toBeDefined();
+    expect(menu("common.actions.restore")).toBeDefined();
     expect(!!menu("common.actions.delete")).toBe(creator);
   }
 );
@@ -243,7 +243,7 @@ it("a non-creator project member can restore archived detail but cannot delete i
   await role(15);
   await mount();
   await openMenu();
-  expect(menu("Restore")).toBeDefined();
+  expect(menu("common.actions.restore")).toBeDefined();
   expect(menu("common.actions.delete")).toBeUndefined();
 });
 

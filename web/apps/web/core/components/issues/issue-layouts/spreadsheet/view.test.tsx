@@ -7,6 +7,7 @@ import { MemoryRouter } from "react-router";
 import { SWRConfig } from "swr";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { IssueListPage, ProjectPreferences } from "@nerve/api-client";
+import { SPREADSHEET_PROPERTY_LIST } from "@nerve/constants";
 import { StoreContext } from "@/lib/store-context";
 import type { RootStore } from "@/store/root.store";
 import { json, problem } from "@/lib/auth/fake-nerve";
@@ -95,12 +96,16 @@ async function render(children: ReactNode) {
     )
   );
 }
-async function mount(page: IssueListPage | Response) {
+/** The project's table with its first page; it shows the properties shown says, by default the sub-items alone. */
+async function mount(
+  page: IssueListPage | Response,
+  shown: (key: string) => boolean = (key) => key === "sub_issue_count" || key === "key"
+) {
   const prefs = preferencesOf();
   prefs.display_filters.layout = "spreadsheet";
   prefs.display_filters.order_by = "sub_issues_count";
   for (const key of Object.keys(prefs.display_properties) as (keyof ProjectPreferences["display_properties"])[])
-    prefs.display_properties[key] = key === "sub_issue_count" || key === "key";
+    prefs.display_properties[key] = shown(key);
   await render(<ProjectLayoutRoot />);
   await until(() => tab.nerve.calls.length === 1, "preferences");
   await act(async () => tab.nerve.calls[0]!.answer(json(200, prefs)));
@@ -233,3 +238,20 @@ it("another project in the same session and its preference reload drive their ow
   expect(pagesB().map((call) => call.query.order_by)).toEqual(["-sub_issues_count", "-sub_issues_count"]);
   expect(writes()).toHaveLength(0);
 });
+
+it.each([{ cycle_view: false }, { module_view: false }])(
+  "with the project's %o, the continuation's cell and its loading rows span the header's columns",
+  async (switches) => {
+    await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, [{ ...tab.project, ...switches }]);
+    tab.nerve.calls.length = 0;
+    await mount({ total: 2, data: [second], next_cursor: "count:more" }, () => true);
+    // the work items' own column and every property's but the one of the domain turned off
+    const columns = host.querySelectorAll("thead th").length;
+    expect(columns).toBe(SPREADSHEET_PROPERTY_LIST.length);
+    expect(host.querySelector<HTMLTableCellElement>("tfoot td")?.colSpan).toBe(columns);
+    await act(async () => button("common.load_more")!.click());
+    await until(() => lists().length === 2, "continuation");
+    const loading = [...host.querySelectorAll("tfoot tr")].slice(1);
+    expect(loading.map((row) => row.children.length)).toEqual([columns, columns, columns]);
+  }
+);

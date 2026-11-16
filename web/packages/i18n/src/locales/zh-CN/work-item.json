@@ -130,6 +130,10 @@
         "message": "无法恢复工作项。请重试。"
       }
     },
+    "action_unavailable": {
+      "title": "操作不可用",
+      "message": "“{action}”操作尚未实现。"
+    },
     "relation": {
       "relates_to": "关联到",
       "duplicate": "重复于",
