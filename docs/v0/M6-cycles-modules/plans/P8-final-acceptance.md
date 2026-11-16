@@ -145,7 +145,7 @@
 ## Task 11（T11）：矩阵专用的页面核对与检查点（spec §2.11）
 
 - [ ] `e2e/playwright.m6-acceptance.config.ts`（继承默认配置，`testDir: "acceptance"`，`projects` 整个换成三种引擎，同 `playwright.m5-slow.config.ts`，不继承 `s3-fixture` 与 Firefox 的 `grep`）、`e2e/package.json` 的 `test:m6-acceptance`；核对 e2e 的 `tsconfig.json`（`**/*.ts`）与 `check:lint`（`.`）已覆盖 `acceptance/`（不改）；默认配置不改。
-- [ ] 五类核对（标题 `G<n> (acceptance): …`）：焦点轮廓（迭代页、模块页、§2.5 的七处与迭代页的四种共用控件、P7a–P7c 的新控件，含 390 × 844 的移动端页头）；命令面板的行（`aria-selected`、可见的高亮、整行在滚动区之内，不用 `expectOutlinesWhole`）；新建表单里换项目；归档页的迭代、模块词；模块的开关（G18）。第一次量到的控件轮廓不完整时，在本 Task 于根因处修（RED 即这条核对，台账写明），跨模块的停下报告主控。写法照 P7b 阶段记录 §5 与 P7c 的教训（锚在目标页独有的内容、不 reload、`dismissToasts`、窄屏用 `setViewportSize`）。
+- [ ] 五类核对（标题 `G<n> (acceptance): …`）：焦点轮廓（迭代页、模块页、§2.5 的七处与迭代页的四种共用控件、P7a–P7c 的新控件，含 390 × 844 的移动端页头；另量行上 M4 的单日期下拉框 `dropdowns/date.tsx:94`——它同为 `outline-none`，T5 的观察，轮廓不完整时照 T5 的内缩轮廓修）；命令面板的行（`aria-selected`、可见的高亮、整行在滚动区之内，不用 `expectOutlinesWhole`）；新建表单里换项目；归档页的迭代、模块词；模块的开关（G18）。第一次量到的控件轮廓不完整时，在本 Task 于根因处修（RED 即这条核对，台账写明），跨模块的停下报告主控。写法照 P7b 阶段记录 §5 与 P7c 的教训（锚在目标页独有的内容、不 reload、`dismissToasts`、窄屏用 `setViewportSize`）。
 - [ ] 三种引擎各过（`t11-acceptance`），逐条时长（`durations.py`）。
 - [ ] 变异（以干净的源重建）：`t11-mut-outline-a`、`t11-mut-outline-d`、`t11-mut-outline-e`（恢复修改之前的类 → 轮廓的核对失败）、`t11-mut-outline-c`（Firefox、WebKit）、`t11-mut-outline-g`（WebKit）；`t11-mut-archived-vocab`（归档页的过滤表去掉 `cycle_id` → 核对失败）。
 - [ ] 提交 `test(M6/P8)`（本 Task 修的产品代码另提交 `fix(M6/P8)`）。
