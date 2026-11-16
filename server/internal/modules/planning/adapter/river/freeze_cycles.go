@@ -35,8 +35,9 @@ func NewFreezeCyclesWorker(uc FreezeCyclesUseCase) *FreezeCyclesWorker {
 	return &FreezeCyclesWorker{uc: uc}
 }
 
-// Work freezes the cycles that have ended. A failure makes River retry the
-// job; the projects committed before it stay.
+// Work freezes the cycles that have ended. A project's failure does not stop
+// the others; the failures, joined, make River retry the job, and the
+// projects committed stay.
 func (w *FreezeCyclesWorker) Work(ctx context.Context, _ *river.Job[FreezeCyclesArgs]) error {
 	_, err := w.uc.Execute(ctx)
 	return err
