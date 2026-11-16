@@ -159,6 +159,8 @@ M6/P5b 的 T16（2026-11-12）在 `8b11bc6381623717663ba986da74710668719494` 上
 
 **处理结果（M6/P8）**：本段没有改这六个文件（`git diff ea971606..` 对它们为空，T13 时核对）：根 `root.store.ts` 319、写入单元 `issue-writes.ts` 302、请求体 `issue-write-fields.ts` 98、列表绑定 `issue-list-binding.ts` 286、读 `issue-list-read.ts` 163、目录 `issue-list-catalog.ts` 148 行（`wc -l`），都在约 400 行之内。本条的条件已满足，由 M6 收尾关闭。
 
+**处理结果（M6/closeout）**：已核对，关闭。收尾在 `e1cf6f4d` 上以 `wc -l` 再核六个文件（收据 `t2-m6-m8-08-lines`）：根 `web/apps/web/core/store/issue/root.store.ts` 319、写入单元 `issue-writes.ts` 302、请求体 `issue-write-fields.ts` 98、列表绑定 `helpers/issue-list-binding.ts` 286、读 `helpers/issue-list-read.ts` 163、目录 `helpers/issue-list-catalog.ts` 148 行，都在约 400 行之内；`git diff ea971606..e1cf6f4d` 对它们为空（收据 `t2-m6-m8-08-unchanged`），P7 之后没有再改。本条关闭；本文件的其余各条照旧，`status` 仍 open。
+
 <a id="M6-M8-09"></a>
 ## M6-M8-09 Firefox 在同一浏览器的再次载入后报根预加载的字体未用
 

@@ -1,5 +1,5 @@
 ---
-status: open
+status: closed
 from: M1/closeout
 to: M6
 created: 2026-09-25
@@ -73,3 +73,13 @@ M1 收尾 T19 让活动迭代卡片的进度经 `@nerve/utils` 的 `calculateCyc
 - **谁改谁清（M6 全期）**：`git diff --diff-filter=AMR --name-only ba3fd6e0..HEAD`（`ba3fd6e0` 是 M5 收尾的 noff）的 1327 个文件中有 698 个 JS/TS，`.oxlintrc.json` 的 ignorePatterns 跳过 2 个（`e2e/playwright.m6-pages.config.ts`、`api-client` 的 `schema.gen.ts`），可 lint 的 696 个（web 584、e2e 77、`@nerve/constants` 10、`@nerve/types` 8、`@nerve/utils` 8、`@nerve/editor` 4、`@nerve/propel` 3、`@nerve/api-client` 2）全部 0 告警、0 错误，没有落在受上限管的包之外的（收据 `t10-oxlint-m6`，HEAD `8342965d`；向一个 M6 的文件加一条告警的变异 `t10-mut-m6-receipt-2` 让收据失败）。P5b、P6b、P7a、P7b 没有单独的收据，由这份全期的收据覆盖；之后 T11 改过与新建的 12 个文件同样 0 告警（`t11-oxlint-files`）。
 - **进度的口径**：三条在 P4、P5a、P6a 已改（上文的回执），P8 没有改动。
 - 关闭条件：死成员一节由阶段记录的读者表满足（每一行已消失或写明读者）；oxlint 一节写明了改到的文件的告警数（0）、清掉的规则（`no-unused-expressions`）与各包上限的变化；进度一节在 P6a 已满足。证据：提交 `8342965d2de648d80ab98a3cd5b6c522ceeadf02`、`f46d29d950295aa594c1327bbf290f54ea954a00`；收据 `t9-before`、`t9-after`、`t9-probe-drop-fieldof`、`t9-probe-drop-decls`、`t10-baseline-2`、`t10-after`、`t10-mut-rule`、`t10-mut-rule-e2e`、`t10-oxlint-m6`、`t10-mut-m6-receipt-2`、`t11-oxlint-files`；本阶段台账 Task 9、10。本交接由收尾改为 `closed`。
+
+## 关闭（M6/closeout，2026-11-16）
+
+三节全部完成，见上面各阶段的处理结果与 [P8 阶段记录](../reviews/P8-final-acceptance-review.md)：
+
+- **死成员和死 prop**：`--rows M6` 的 245 行各有结论——没有真死成员；产品文件的 24 行与替身的 15 行逐行写明读者，测试的 206 行按文件计数；M1 交来的 84 行中 78 行已消失、余下 6 行是误报（[P8 阶段记录 §4.2 的读者表](../reviews/P8-final-acceptance-review.md#42-t9-的读者表)）。
+- **oxlint**：M6 全期改动的 696 个可 lint 的文件 0 告警（收据 `t10-oxlint-m6`），清掉的一类规则是 `no-unused-expressions`（全仓清零并设为 error），上限 web 44 → 40、`@nerve/utils` 3 → 2（P8 的 T10）；更早各段的上限变化见 P5a、P6a 的回执。
+- **进度的口径**：完成 ÷（总数 − 已取消），取消的不算在分母里（P4 定，写进设计 §3.5）；迭代、模块的每处显示都经 `@nerve/utils` 的 `progressPercent`，迭代的计数与快照的读取条件只在 `cycleCounts` 一处（P5a、P6a）。
+
+没有转交项，`status` 改为 `closed`。原文与各阶段处理结果保留不改。

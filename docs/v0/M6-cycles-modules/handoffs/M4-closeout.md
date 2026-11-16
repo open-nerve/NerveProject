@@ -1,5 +1,5 @@
 ---
-status: open
+status: closed
 from: M4/closeout
 to: M6
 created: 2026-11-02
@@ -210,3 +210,7 @@ P3b 加两张表 `cycle_user_properties`（`00046`）、`module_user_properties`
 - **M6-03**（关系表与删除）：每张表合入时的同步验收在 P1–P3b（上文的回执）。“M6 收尾前完成全图与有限批次清理”的规模一侧：SP2 的删除规模夹具原来不播种规划的数据，`TestTheDeletionsAtTheScaleTarget` 走不到 M6 的删除步骤；T8（`0f2d331f`，[P8 spec](../specs/P8-final-acceptance.md) §2.8）给每个项目播种 8 个迭代、6 个模块（各 3 个成员、2 个链接），每个工作项在一个迭代、两个模块里，项目一步与工作区一步各等每个被删项目的 `planning.delete_rows` 完成，再断言规划的表与 `cycle_issues`、`module_issues` 活的行为 0、总行数不变、邻域不受影响（两张归属表由 `issue.delete_rows` 删，迭代、模块、成员、链接由 `planning.delete_rows` 删）；既有的断言不改。全量的冒烟 `t8-smoke-deletion`（105 秒）通过：项目一步的 issue 任务一次运行 7.66 秒（M5 为 7.6 秒）、planning 任务 0.160 秒，工作区一步五个 issue 任务各 16.29 秒（M5 为 14.3 秒；每个项目多删 6 万行归属）、planning 任务各 0.171–0.289 秒，邻域的 PATCH 至多 66.0 毫秒；漏删 `module_links`、`cycle_issues` 的变异（`t8-mut-planning-skip-links`、`t8-mut-issue-skip-cycle-issues`）各让它失败，后者在没有本段的断言时规模测试看不出。`TestPurgeScale` 与扩展后的删除规模在最终代码上的正式运行（`t12-purge-scale`、`t12-delete-scale`）在 T12，数字记入阶段记录。
 - **M6-04**（表单、焦点和最后一个旧工具读者）：表单的 Tab、日期、Escape、焦点返回、拒绝保留输入与图表的单点在 P4、P5a、P6a 完成，M6 的 `getTabIndex` 读者与两处归档按钮的正 `tabIndex` 在 P5a、P6a 删去（上文的回执）；本段另把日期范围按钮与侧栏页签的 `outline-none` 换成内缩环（`0fed290d`）。最后的删除（`getTabIndex`、两份 `tab-indices.ts`、桶文件、枚举与映射）只等 M7 的读者，转交 [M6-M7-05](../../M7-collaboration/handoffs/M6-closeout.md#M6-M7-05)，本条“同步另一份交接”即该条。
 - 证据：提交 `cff437313106ebe17872f851d084aff0d75f0d6a`、`c3cb2719d120f56e3bd26386fd4232fdd3df6cc6`、`d90d9a99637f2f4b667e8f34666a29b17d7d56e9`、`0f2d331fb3ef39a96c93fceacf52734c00f91cbb`、`0fed290d19c6e6ad771c920e92d5a315cb828f5d`；收据 `t7-archived-vocab`、`t8-smoke-deletion`、`t8-mut-planning-skip-links`、`t8-mut-issue-skip-cycle-issues`、`t11-mut-archived-vocab`；本阶段台账 Task 3、4、7、8、11。本交接由收尾改为 `closed`（M6-03 的规模数字以阶段记录的 T12 为准）。
+
+## 关闭（M6/closeout，2026-11-16）
+
+M6-01 至 M6-04 已完成，见上面各阶段的处理结果与 [P8 阶段记录](../reviews/P8-final-acceptance-review.md)。M6-03 的“M6 收尾前完成全图与有限批次清理”：`TestPurgeScale` 与扩展到规划数据的 `TestTheDeletionsAtTheScaleTarget` 在最终代码上的正式运行 `t12-purge-scale`、`t12-delete-scale` 都通过，数字见 [P8 阶段记录 §4.3 的规模](../reviews/P8-final-acceptance-review.md#规模)。M6-04 的最后删除（`getTabIndex`、两份 `tab-indices.ts`、桶文件、枚举与映射）只等 M7 的读者（收尾以 `git grep` 再核，读者只剩 M7 的五个文件，收据 `t2-handoff-claims-2`），转交 [M6-M7-05](../../M7-collaboration/handoffs/M6-closeout.md#M6-M7-05)，本条“同步另一份交接”即该条；转交不表示已实现。`status` 改为 `closed`。原文与各阶段处理结果保留不改。

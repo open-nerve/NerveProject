@@ -1,5 +1,5 @@
 ---
-status: open
+status: closed
 from: M2/closeout
 to: M6
 created: 2026-09-28
@@ -120,3 +120,14 @@ P4 落地设计 §6 余下的跨模块查询与写入，都走由使用方声明
 
 - **第 5 节 (d)**：`dropdowns/project/base.tsx` 在迭代、模块的新建表单里的浏览器核对在矩阵专用的页面核对 `e2e/acceptance/g1-g9-form-project.spec.ts`（`G1 (acceptance)`、`G9 (acceptance)`，Chromium、Firefox、WebKit；`playwright.m6-acceptance.config.ts`，不在默认套件与 CI 里，[P8 spec](../specs/P8-final-acceptance.md) §2.11）：成员在 Web 的迭代（模块）列表打开新建弹窗，以键盘打开项目一栏，搜索框取得焦点，列出 Web 与 Ops、不列关着迭代（模块）的 Infra；输入 “Op”、以方向键选中 Ops，弹窗的项目随之是 Ops，建出的 Held 在 Ops、Web 里没有。收据 `t11-acceptance-final`（三种引擎 24 例过）、`t11-acceptance-final-repeat3`（72 例过）；两条的时长 G1 为 Chromium 1.5、Firefox 3.2、WebKit 2.6 秒，G9 为 1.5、2.6、2.4 秒（`t11-durations`）。同一表单的 `dropdowns/date-range.tsx` 在 P5a、P6a 已核对；它的焦点轮廓在本段改为内缩环（`0fed290d`，见 [M3 → M6 交接](M3-closeout.md)的“处理结果（M6/P8）”）。
 - 各节至此都已做完，没有转交项：第 1 节（P3a、P3b、P4）、第 2 节（P1–P3b）、第 3 节（P5a、P6a、P7c）、第 4 节（P5a、P7a）、第 5 节 (a)（P7a）、(b)（P6a）、(c)（P5a、P6a）、(d)（P5a、P6a 的组件测试与本段的浏览器核对）、第 6 节（P5a、P6a）。证据：提交 `d94a09997682db603d3ff0352381bbb45d50de99`（页面核对与配置）；本阶段台账 Task 11。本交接由收尾改为 `closed`。
+
+## 关闭（M6/closeout，2026-11-16）
+
+§1–§6 全部完成，见上面各阶段的处理结果（P8 的一段列出各节的落点）：
+
+- **§1、§2**：设计 §6 列出每个跨模块的写入与查询，全部走端口与事件，`TestSQLCSchemaScope` 不加例外（P3a、P3b、P4）；设计 §4.3 的图延伸到 M6 的全部表，迭代负责人改为 `ON DELETE SET NULL` 并登记在 [plane-diff](../../plane-diff.md) 按表的 `cycles` 行（P1–P3b）。
+- **§3**：两个跟随 router 的反应已不存在、`store-context.test.ts` 核对（P5a、P6a），新的 SWR 键都带 `loginId`（P5a、P6a、P7c）；收尾以 `git grep` 再核，`web/apps/web` 里没有 `new CycleService(`（收据 `t2-handoff-claims-2`）。
+- **§4、§5**：关闭条件是“M6 的 review 写明”三点的结论与两个下拉框、各调用方的浏览器核对；它们分散在 P5a、P6a、P7a、P8 的回执里，逐项汇总在 M6 的收尾记录（`reviews/closeout-integration.md`，收尾的 T3 写出）的“M2 第 4、5 节”一表：条款 → 阶段的处理结果 → 故事或收据。
+- **§6**：三处复制都经 `useCopyLink`、`useCopyText`，失败经 `t()` 提示（P5a、P6a）；`copy-hook` 没有 M6 的例外，余下的 5 条都在 M7、M8 的文件（`until` 为 `M7/closeout`、`M8/closeout`，收据 `t2-handoff-claims-2`）。
+
+没有转交项，`status` 改为 `closed`。原文与各阶段处理结果保留不改。
