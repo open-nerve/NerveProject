@@ -125,3 +125,11 @@ P3b 让附件列随共用的列表设置出现在迭代页、模块页：两页�
 - 每一段以整页安静的断言收尾。e2e 变异“附件列恒为 0”（`t13-e2e-mut-attachments-uncounted`）让故事失败；三种引擎的页面配置与 `--repeat-each=3` 都通过。表格自身的续页（每页 100）不在故事里，续页由列表布局核对；附件部件本身的增删由 M5 F8 覆盖。
 
 迭代页（P5b）与模块页的附件列至此都已开放。本交接保持 open。证据：提交 `c65f7d1bca6fdff29a44a397c089fc4e67a4623e`；[P6b spec](../specs/P6b-module-list.md) §2.10。
+
+## 处理结果（M6/P8）：M5-M6-01 至 M5-M6-03 的最终处理，M5-04 的转交
+
+- **M5-M6-01**：以“未触发”结束。M6 没有成为资产的宿主：迭代、模块的描述是纯文本（表单的 `TextArea`；`modules.description` 只拒 NUL），模块链接只存地址、标题与抓取的元数据（图标以 `data:` 地址内嵌，同工作项链接）；`api/modules/asset.yaml` 与 `server/internal/modules/asset` 在 M6 全期没有改动（`git diff ba3fd6e0..` 对它们为空）。条件原文（六步、“不能做的”与“何时验收”）转交 M7：[M6-M7-09](../../M7-collaboration/handoffs/M6-closeout.md#M6-M7-09)（主控裁定 H8）。
+- **M5-M6-02**：迭代页（P5b）、模块页（P6b）的附件列以真实附件核对过计数、排序、分页与换会话（上文的回执），已完成。
+- **M5-M6-03**：每张新表的清理步骤与 `purgeScaleTables` 在 P1、P2、P3a、P3b 同步扩展（上文的回执）。“收尾前在 M6 代码上重跑 `TestPurgeScale` 与 `TestTheDeletionsAtTheScaleTarget`”：后者的夹具原来走不到 M6 的删除步骤，T8 补上规划的数据与对 `planning.delete_rows` 的等待（`0f2d331f`，全量的冒烟 `t8-smoke-deletion` 通过，见 [M4 → M6 交接](M4-closeout.md)的“处理结果（M6/P8）”的 M6-03）；两者在最终代码上的正式运行在 T12（`t12-purge-scale`、`t12-delete-scale`），数字记入 [P8 阶段记录](../reviews/P8-final-acceptance-review.md)。
+- **M5-04**：M6 没有加入投递任务的命令。CLI 的组合（`server/cmd/nerve` 与 `bootstrap/users.go`、`workspaces.go`、`commands.go`）不构造 River 客户端，`jobs.NewInserter` 唯一的非测试调用仍在 `bootstrap/app.go`（serve）；M6 新加的投递都在服务里：`planning.delete_rows` 由 `project.deleted`、`workspace.deleted` 的订阅者在发布者的事务里投递，`planning.crawl_link` 在模块链接的写事务里投递，`planning.freeze_cycles` 是周期任务。本节原文连同 M6 的这一事实转交 M7：[M6-M7-08](../../M7-collaboration/handoffs/M6-closeout.md#M6-M7-08)；M8 已持有 M5 的原文（[M8 的 M5-closeout](../../M8-open-release/handoffs/M5-closeout.md#M5-04)），转交不表示已实现。
+- 证据：上文各段的回执；提交 `0f2d331fb3ef39a96c93fceacf52734c00f91cbb`；收据 `t8-smoke-deletion`；本阶段台账 Task 8、Task 13。本交接由收尾改为 `closed`（M5-M6-01、M5-04 转交 M7）。
