@@ -56,7 +56,7 @@ P6a 交下的七处在根因处修（[P6a spec](P6a-web-modules.md) §5 的 P8 �
 
 ### 2.9 死成员
 
-M1 收尾 plan 附录 A 的三个脚本（`docs/v0/M1-frontend-trim/plans/closeout.md:1062`、`:1368`、`:1512`）在最终代码上跑 `--rows M6`，照 M5 P8 T7：前后的 tsv 入台账；删除唯一的真死成员（`fake-module-dialog.tsx:32-33` 的 `invalid`、`describedBy`，没有读写者），删除之后复扫没有新行；产品文件里有读者的行（调研时 24 行：`satisfies` 的筛选表、经 `in` 读、结构类型的服务方法、按字符串键读、展开传递、经 `SPREADSHEET_COLUMNS` 传递的两列）在阶段记录逐行写明文件、名字与读者。M1 交接的 84 行：78 行已消失，6 行是表格两列的假阳性；M3 交接 §2 的 8 行随 P6a `c09d4f8d` 删去。
+M1 收尾 plan 附录 A 的三个脚本（`docs/v0/M1-frontend-trim/plans/closeout.md:1062`、`:1368`、`:1512`）在最终代码上跑 `--rows M6`，照 M5 P8 T7：前后的 tsv 入台账；删除真死成员、之后复扫没有新行——T9 在 HEAD 上没有找到真死成员：调研以为是的 `fake-module-dialog.tsx:32-33` 的 `invalid`、`describedBy` 有写者（`modules/form.tsx:239-240`、`:265-266` 经真的 `MemberDropdown` 的 `{...props}`）与读者（替身 `:84` 的 `{...fieldOf(props)}`，脚本认不出经参数类型的解构），`modal.test.tsx:358-359` 断言它们渲染的 `aria-invalid`、`aria-describedby`，故留下、列入替身的有读者的行，T9 不提交；产品文件里有读者的行（调研时 24 行：`satisfies` 的筛选表、经 `in` 读、结构类型的服务方法、按字符串键读、展开传递、经 `SPREADSHEET_COLUMNS` 传递的两列）在阶段记录逐行写明文件、名字与读者。M1 交接的 84 行：78 行已消失，6 行是表格两列的假阳性；M3 交接 §2 的 8 行随 P6a `c09d4f8d` 删去。
 
 ### 2.10 告警
 
@@ -117,7 +117,7 @@ M1 收尾 plan 附录 A 的三个脚本（`docs/v0/M1-frontend-trim/plans/closeo
 - [ ] A6 冻结任务逐项目继续，单测与变异（§2.6）。
 - [ ] A7 权限矩阵的访客一列与变异（§2.7）。
 - [ ] A8 删除规模的夹具含规划的数据、冻结的规模测试；三个规模测试的本次证据（§2.8）。
-- [ ] A9 死成员 `--rows M6` 的前后与读者表，真死成员删除（§2.9）。
+- [ ] A9 死成员 `--rows M6` 的前后与读者表，真死成员删除（T9 时没有）（§2.9）。
 - [ ] A10 `no-unused-expressions` 为零且为 error，cap 等于实际；M6 全期改动文件 oxlint 0 的收据（§2.10）。
 - [ ] A11 `e2e/acceptance/` 与 `m6-acceptance` 配置的五类核对在三种引擎通过（§2.11）。
 - [ ] A12 G1–G20 的最终证据表与设计 §13 的对照，每条指向本次运行的原件；间歇项有重复运行的结论（§2.12）。

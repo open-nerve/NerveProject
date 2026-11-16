@@ -131,7 +131,7 @@
 ## Task 9（T9）：死成员（spec §2.9）
 
 - [ ] 照 M1 收尾 plan 附录 A（`docs/v0/M1-frontend-trim/plans/closeout.md:1062`、`:1368`、`:1512`）建脚本于台账（不入库），先 `react-router typegen`，再在 HEAD 跑 `--rows M6`（`t9-before`，tsv 入台账）。
-- [ ] 删除 `fake-module-dialog.tsx:32-33` 的 `invalid`、`describedBy` 与只为它们存在的代码；复扫（`t9-after`），没有新行。
+- [ ] 删除真死成员与只为它们存在的代码；复扫（`t9-after`），没有新行。（T9 的结论：没有真死成员，`fake-module-dialog.tsx:32-33` 的两个字段有读写者，见 spec §2.9；T9 不提交，读者表在台账 `t9-readers.md`，T12 抄入阶段记录。）
 - [ ] 产品文件里有读者的行逐行写明文件、名字与读者（写进阶段记录的草稿，台账 `t9-readers`）；M1 交接的 84 行与 M3 §2 的 8 行的去向。
 - [ ] `make lint-web`、`make knip`；提交 `refactor(M6/P8)`。
 
