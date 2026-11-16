@@ -13,9 +13,11 @@ import { expect, test } from "../fixtures/test";
 // G18's acceptance check of a project's modules turned off and on again in its settings (M6 design 3.6; P8 spec 2.11;
 // P7b R8): off, the project's sidebar and the command palette give no way to its modules, a module's page read by its
 // address still shows the module, its sidebar and its link, and the project's work items list shows no modules column
-// and offers no module filter, the condition already applied staying, removable, with nerve's answer; on again, the
-// way back, the column, the condition's name and the module's page with its work item and its link are all there. The
-// admin turns the switch as a person does, in his browser; the world is made through the API.
+// and offers no module filter, the condition already applied staying, removable, with nerve's answer, its value named
+// by the list the page read while the modules were on and, on a page that has read none, the unavailable option's
+// wording (common.filter_options.unavailable); on again, the way back, the column, the condition's name and the
+// module's page with its work item and its link are all there. The admin turns the switch as a person does, in his
+// browser; the world is made through the API.
 
 /**
  * The ways page gives to the project's modules, whose list is at path: whether the sidebar's project links to it (the
@@ -35,7 +37,7 @@ async function waysToModules(page: Page, path: string): Promise<{ sidebar: boole
   return { sidebar, palette: palette.map((text) => text.replace(/[A-Z]then[A-Z]$/, "")) };
 }
 
-test("G18 (acceptance): the admin turns Web's modules off: its sidebar and the palette give no way to them, Alpha's page read by its address still shows Alpha and its link Notes, and Web's list shows no modules column and offers no module filter, Alpha's condition staying with Plan; turned on again, the way back, the column, the condition's Alpha and Alpha's page with Plan and Notes are all there", async ({
+test("G18 (acceptance): the admin turns Web's modules off: its sidebar and the palette give no way to them, Alpha's page read by its address still shows Alpha and its link Notes, and Web's list shows no modules column and offers no module filter, Alpha's condition staying with Plan, its value Alpha as read before and unavailable in a browser opened anew; turned on again, the way back, the column, the condition's Alpha and Alpha's page with Plan and Notes are all there", async ({
   api,
   baseURL,
   browser,
@@ -84,7 +86,8 @@ test("G18 (acceptance): the admin turns Web's modules off: its sidebar and the p
   };
 
   // Off: no way to the modules; Plan's row has no modules column; no module filter is offered, Alpha's condition stays,
-  // removable, and nerve's answer lists Plan alone.
+  // removable, its value named by the list the page read while the modules were on (usePlanningFilterConfigs), and
+  // nerve's answer lists Plan alone.
   await turn(false);
   await expect.poll(() => shownItems(page)).toEqual(["Plan"]);
   await expect(column).toHaveCount(0);
@@ -94,8 +97,18 @@ test("G18 (acceptance): the admin turns Web's modules off: its sidebar and the p
   await expect(page.getByRole("option", { name: "Module", exact: true })).toHaveCount(0);
   await page.keyboard.press("Escape");
   await expect(condition.getByRole("button", { name: "Module", exact: true })).toBeVisible();
+  await expect(condition.getByRole("button", { name: "Alpha", exact: true })).toBeVisible();
   await expect(condition.getByRole("button", { name: "Remove filter", exact: true })).toBeEnabled();
   expect(queries.at(-1)?.get("module_id")).toBe(alpha.id);
+
+  // Web's list in a browser of the admin's own, opened now, reads no module's name while the modules are off: Alpha's
+  // condition, saved, shows its value as the unavailable option (P7b R8), and the list is Plan alone.
+  await seenBy(browser, baseURL ?? "", api, admin.email, w.projectPath, async (other) => {
+    await expect.poll(() => shownItems(other)).toEqual(["Plan"]);
+    const kept = other.getByRole("button", { name: "Remove filter", exact: true }).locator("..");
+    await expect(kept.getByRole("button", { name: "Module", exact: true })).toBeVisible();
+    await expect(kept.getByRole("button", { name: "Unavailable option", exact: true })).toBeVisible();
+  });
 
   // Alpha's page, read by its address by mem in a browser of his own: Alpha, its sidebar and its link, its work items
   // the switch's.
