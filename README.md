@@ -91,7 +91,7 @@ M4列表专用三浏览器矩阵在当前 `make build` 之后运行 `pnpm --filt
   cd e2e && pnpm exec playwright install chromium firefox
   ```
 
-- **运行**：`make e2e`。它先执行 `make build`（没有改动时约 1 秒），再运行全部故事。需要 Docker：测试用 testcontainers 启动一个 Postgres 容器，运行结束后自动删除。
+- **运行**：`make e2e`。它先执行 `make build`（没有改动时约 1 秒），再运行全部故事；`make e2e E2E_SHARD=1/2` 只跑两片中的第一片（Playwright 的 `--shard`，持续集成的 e2e 任务分两片并行，每片各跑一遍 `s3-fixture` 的依赖）。需要 Docker：测试用 testcontainers 启动一个 Postgres 容器，运行结束后自动删除。
 - **测试环境**：`e2e/global-setup.ts` 启动 Postgres，用 `bin/nerve migrate up` 迁移模板库 `nerve_template`。每个 Playwright worker 从模板复制出自己的库，用 test 配置启动自己的 `nerve serve`：nerve 在 `127.0.0.1:0` 上监听，把实际地址写进地址文件（`server.addr_file`），fixture 读出地址，`/readyz` 返回 200 之后才运行故事。故事从 `e2e/fixtures/test.ts` 导入 `test`：用 `api`（生成的 TS 客户端）、`request`、`page` 访问本 worker 的 nerve，用 `db` 查询它的数据库（每个 worker 一个连接池；断言函数按表放在 `e2e/fixtures/assert/`）。需要另一种配置的故事（例如关闭注册）用 `nerveWith` 在同一个库上另起一个 nerve。
 - **页面的登录状态**：`signedInPage(tokens)` 给出一个已经登录、还没有加载任何东西的页面，`tokens` 来自 `login` 或 `register`（`nerveWith` 另起的 nerve 把它的地址作为第二个参数）。页面第一次加载时，在它的任何脚本运行之前，一条新的 `nerve.auth` 记录写进 localStorage；之后的加载、刷新和同一上下文里的其他标签页不再写，看到的是页面自己续期或删除之后的记录，和真实的浏览器一样。`e2e/fixtures/browser.ts` 的 `watchPage` 记录页面的接口请求、失败的接口请求、发往旧接口（`/api/v0` 之外）的请求、未处理的异常、控制台的错误和警告、CSP 违规，要在页面第一次打开之前调用；同一文件的 `expectQuietConsole` 先让页面写一条探针错误和一条探针警告、要求收到，再断言控制台没有别的错误和警告（参数点名允许的第三方警告，以及浏览器对 401 这类回答的报错）。
 - **版本号**：`make build` 把 `VERSION`（默认 `0.1.0-dev`）写进 `bin/nerve`，例如 `make build VERSION=0.1.0`。`make e2e` 把同一个值放进环境变量 `NERVE_VERSION` 交给测试，S3 核对 `/api/v0/instance` 返回的版本号。
