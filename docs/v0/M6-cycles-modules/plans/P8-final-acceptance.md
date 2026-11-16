@@ -116,7 +116,7 @@
 - [ ] 读 `bootstrap/permission_matrix*_test.go` 与转移的访客变体（`permission_matrix_transfer_test.go:37-39`、`guestsSeeAll` 在 `permission_matrix_counts_test.go:164`）；改前聚焦运行一次，记 `TestPermissionMatrix` 的时长（`t7-matrix-before`）。
 - [ ] 新文件为 spec §2.7 列出的 13 个写操作各加一个 `variant: "guests see all"` 的行（已有 prepare 的组合它）；期望：访客 `forbidden`，工作区管理员兼访客照过；框架支持时变体只跑这两列。不加的四类在文件头的注释写明理由（spec §2.7）。聚焦运行 `-run 'TestPermissionMatrix|Coverage|Matrix|EveryColumnCalls'`（`t7-matrix`），时长与改前比较：增加超过 60 秒即停下报告主控。
 - [ ] 变异：`t7-mut-cycle-write-as-read`、`t7-mut-module-write-as-read`（各把一个写的动作名换成读 → 变体行失败）。
-- [ ] 归档列表的词：在 bootstrap 的列表测试加一例，`archived=true` 与 `cycle_id`、`module_id` 筛选、`group_by=module` 合在一起的回答恰如所选（`t7-archived-vocab`）。
+- [ ] 归档列表的词：在 bootstrap 的列表测试加一例，`archived=true` 与 `cycle_id`、`module_id` 筛选、`group_by=module_id`（接口的分组键；网页的分组键是 `module`）合在一起的回答恰如所选（`t7-archived-vocab`）。
 - [ ] `make lint-go`；提交 `test(M6/P8)`。
 
 ## Task 8（T8）：规模（spec §2.8）
