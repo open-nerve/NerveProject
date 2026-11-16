@@ -1,6 +1,6 @@
 # M6/closeout 完成标记、输入交接关闭与两轮集成实施计划
 
-> 状态：已写（2026-11-16），经预检 [re-80](../../../reviews/re-80-M6收尾预检.md) 修正后可实施。分支 `codex/m6-closeout`，基线 main `c4cd1880dc6dfc7d3f063b397de63a80e284ad28`（P8 的 noff，main CI 43851660778 attempt 1 全绿）。
+> 状态：已实施（2026-11-16）：经预检 [re-80](../../../reviews/re-80-M6收尾预检.md) 修正后实施；T0–T5 Step 1 完成，首次 noff `9440e0fc`（main CI 43871234997 attempt 2 全绿）；第二次集成、归档与清理由集成收据签结（[收尾记录](../reviews/closeout-integration.md) §5.2）。分支 `codex/m6-closeout`，基线 main `c4cd1880dc6dfc7d3f063b397de63a80e284ad28`（P8 的 noff，main CI 43851660778 attempt 1 全绿）。
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans 逐 Task 实施；本阶段只有文档与集成，不做整分支审查（P8 已做，见 re-79）。
 
