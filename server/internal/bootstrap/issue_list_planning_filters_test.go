@@ -2,6 +2,7 @@ package bootstrap
 
 import (
 	"fmt"
+	"maps"
 	"net/http"
 	"slices"
 	"strings"
@@ -136,4 +137,72 @@ func TestIssueListPlanningFilters(t *testing.T) {
 			}
 		}
 	})
+}
+
+// The archive (archived=true) takes the project list's planning words (M6
+// P8 spec 2.4, 2.7): the same cycle and module filters, and the grouping by
+// module (group_by=module_id, the page's module), answer its archived work
+// items alone, as the project's list answers its others. Each work item is alice's, in Done: a, archived, is in
+// Sprint, Core and UI; b, archived, in Sprint alone; c, not archived, in
+// Sprint and Core; d, archived, in Old and Core; e, archived, in Sprint and
+// UI; f, archived, in Core alone. In Sprint, and in Core or no module, the
+// archive answers a and b, a in Core's group and in UI's, b in none's; the
+// project's list, of the same words, answers c alone, in Core's group.
+func TestArchivedIssueListPlanningWords(t *testing.T) {
+	w := newIssueWorld(t)
+	sprint, old := w.seedPlanningTarget(t, "cycles", "Sprint"), w.seedPlanningTarget(t, "cycles", "Old")
+	core, ui := w.seedPlanningTarget(t, "modules", "Core"), w.seedPlanningTarget(t, "modules", "UI")
+	item := func(cycle *uuid.UUID, archived bool, modules ...uuid.UUID) uuid.UUID {
+		id := w.doneWorkItem(t)
+		if cycle != nil {
+			w.seedMembership(t, "cycle_issues", "cycle_id", id, *cycle, false)
+		}
+		for _, m := range modules {
+			w.seedMembership(t, "module_issues", "module_id", id, m, false)
+		}
+		if archived {
+			w.send(t, "alice", http.MethodPost, "/api/v0/issues/"+id.String()+"/archive", "", http.StatusOK)
+		}
+		return id
+	}
+	a, b, c := item(&sprint, true, core, ui), item(&sprint, true), item(&sprint, false, core)
+	item(&old, true, core)
+	item(&sprint, true, ui)
+	item(nil, true, core)
+	path := "/api/v0/projects/" + w.web.String() + "/issues?"
+	words := "cycle_id=" + sprint.String() + "&module_id=" + core.String() + ",none"
+	for _, tc := range []struct {
+		query  string
+		want   []uuid.UUID
+		groups map[string][]uuid.UUID
+	}{
+		{"archived=true&" + words, []uuid.UUID{a, b}, map[string][]uuid.UUID{core.String(): {a}, ui.String(): {a}, "none": {b}}},
+		{words, []uuid.UUID{c}, map[string][]uuid.UUID{core.String(): {c}}},
+	} {
+		want := slices.SortedFunc(slices.Values(tc.want), uuid.UUID.Compare)
+		flat := checkListEnvelope(t, w.send(t, "alice", http.MethodGet, path+tc.query, "", http.StatusOK), false, false)
+		var got []uuid.UUID
+		for _, row := range flat.Data {
+			got = append(got, row.ID)
+		}
+		slices.SortFunc(got, uuid.UUID.Compare)
+		if flat.Total != int64(len(want)) || !slices.Equal(got, want) {
+			t.Errorf("%s: %d work items %v; want %v", tc.query, flat.Total, got, want)
+		}
+		grouped := checkListEnvelope(t, w.send(t, "alice", http.MethodGet, path+tc.query+"&group_by=module_id", "", http.StatusOK), true, false)
+		groups := map[string][]uuid.UUID{}
+		for _, g := range grouped.Groups {
+			var ids []uuid.UUID
+			for _, row := range g.Data {
+				ids = append(ids, row.ID)
+			}
+			if g.Total != int64(len(ids)) {
+				t.Errorf("%s&group_by=module_id: group %s of %d, with %v", tc.query, g.Key, g.Total, ids)
+			}
+			groups[g.Key] = slices.SortedFunc(slices.Values(ids), uuid.UUID.Compare)
+		}
+		if grouped.Total != int64(len(want)) || !maps.EqualFunc(groups, tc.groups, slices.Equal) {
+			t.Errorf("%s&group_by=module_id: %d work items in %v; want %d in %v", tc.query, grouped.Total, groups, len(want), tc.groups)
+		}
+	}
 }
