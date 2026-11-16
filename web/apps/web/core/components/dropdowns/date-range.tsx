@@ -120,7 +120,8 @@ export const DateRangeDropdown = observer(function DateRangeDropdown(props: Prop
       tabIndex={tabIndex}
       type="button"
       className={cn(
-        "clickable block h-full max-w-full outline-none",
+        // the keyboard's ring inside its edge, as the selects' (issues/select/base.tsx, @nerve/ui's CustomSearchSelect)
+        "clickable block h-full max-w-full rounded-sm focus-visible:outline-1 focus-visible:-outline-offset-1 focus-visible:outline-accent-strong",
         {
           "cursor-not-allowed text-secondary": disabled,
           "cursor-pointer": !disabled,

@@ -75,8 +75,13 @@ export const BreadcrumbLink = observer(function BreadcrumbLink(props: Props) {
   const content = useMemo(() => <BreadcrumbContent icon={icon} label={label} />, [icon, label]);
 
   if (href) {
+    // The link is as high as its crumb (h-full of the item's h-6), not its wrapper's padded content, so the breadcrumbs'
+    // box, which hides what overflows it, holds the link whole; the keyboard's ring is inside its edge.
     return (
-      <Link to={href}>
+      <Link
+        to={href}
+        className="h-full rounded-sm focus-visible:outline-1 focus-visible:-outline-offset-1 focus-visible:outline-accent-strong"
+      >
         <ItemWrapper {...itemWrapperProps}>{content}</ItemWrapper>
       </Link>
     );

@@ -61,8 +61,14 @@ export const ModuleLinkItem = observer(function ModuleLinkItem(props: Props) {
               <Icon className="size-3 shrink-0 stroke-2 text-tertiary group-hover:text-primary" />
             )}
           </span>
+          {/* the keyboard's ring is inside the link's edge: the truncating box around it would cut one outside */}
           <Tooltip label={link.url} layout="stacked" disabled={isMobile}>
-            <a href={link.url} target="_blank" rel="noopener noreferrer" className="cursor-pointer truncate text-11">
+            <a
+              href={link.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="cursor-pointer truncate rounded-sm text-11 focus-visible:outline-1 focus-visible:-outline-offset-1 focus-visible:outline-accent-strong"
+            >
               {name}
             </a>
           </Tooltip>
