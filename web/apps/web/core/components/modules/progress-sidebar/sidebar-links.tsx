@@ -79,10 +79,12 @@ export const ModuleSidebarLinks = observer(function ModuleSidebarLinks(props: Pr
   // the store has yet to read them: the section opens on what nerve gives
   if (links === undefined) return null;
 
+  // the keyboard's ring is inside the button's edge: the links' scrolling box, whose corner it sits at, would cut one
+  // outside
   const addLink = editable && (
     <button
       type="button"
-      className="flex items-center gap-1.5 text-13 font-medium text-accent-primary"
+      className="flex items-center gap-1.5 rounded-sm text-13 font-medium text-accent-primary focus-visible:outline-1 focus-visible:-outline-offset-1 focus-visible:outline-accent-strong"
       onClick={() => setDialog({ isOpen: true })}
     >
       <AddOutline className="h-3 w-3" />

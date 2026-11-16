@@ -37,3 +37,12 @@ M6 合并时：进度接口只提供按状态组的计数，没有点数字段�
 ## 处理结果（M6/P6a）
 
 网页的模块改读新接口：模块的 service 只调 `/api/v0`（`web/apps/web/core/services/planning/modules.service.ts`），进度读 `GET /api/v0/modules/{module_id}/progress`（`Progress`），列表行读 `ModuleListItem` 的六个计数，都没有点数字段；模块侧栏的燃尽改用 P5a 的 `BurndownChart`，分布与页签用与迭代共用的件，百分比只经 `@nerve/utils` 的 `progressPercent`。读 Plane 地址的旧 `core/services/module.service.ts`、`module_archive.service.ts`，`@nerve/types` 的 `module/`（含 `TModuleDistribution`、`TModuleCompletionChartDistribution` 与各个点数字段）与 `@nerve/utils` 的 `module.ts` 删除，新规则 `old-module-urls`（同 `old-cycle-urls` 以 `/api/workspaces/` 前缀锚定）拦住 Plane 的模块接口地址。迭代与模块两部分都已改读新接口；本交接照设计 §11 保持 open 至收尾。证据：提交 `d71ab782f11899b7ae45452ac8cf7e0d47a73c89`（service 与读）、`c09d4f8d9d2544724887ad1ad34a5c6cf0b44ffc`（侧栏的进度改用共用的件，`ProgressChart` 与模块的分布类型删除）、`82dac1efd9dac3fe7b7d99bdcac18410cd12bb0a`（列表行与卡片）、`dc9172b0fecf86c716bf50394b03c2a4e4a6fd6d`（旧 service 与类型删除、`old-module-urls`）、`b8ed29df59bcb59fc30adfbafb8c79748af992b9`（G12 页面故事）；[P6a spec](../specs/P6a-web-modules.md) §2.1、§2.5、§2.9。
+
+## 处理结果（M6/P8）
+
+关闭条件在 M6 的最终代码上逐项成立，没有转交项：
+
+- **只按状态组计数、没有点数字段**：迭代、模块的进度接口与列表行在 P4，网页的迭代、模块在 P5a、P6a 改读它们（上文的回执）；`api/modules/planning.yaml` 没有 `estimate_distribution`、`*_estimate_points` 一类的字段（燃尽的 `Burndown.points` 是逐日的剩余工作项，不是估算点数）。
+- **网页不再读 `…/analytics?type=`**：P8 的 HEAD 上 `git grep 'analytics?type' -- web` 没有命中；读 Plane 地址的旧迭代、模块 service 已删，关键词规则 `old-cycle-urls`、`old-module-urls` 拦住它们（P5a、P6a）。
+- **守卫的 `analytics` 例外已删**（P1）：P8 的 `tools/keywords.json` 有 7 条例外，`until` 为 M9 ×2、`M7/closeout` ×4、`M8/closeout` ×1，没有 M6 的；收尾把 phase 改为 `M6/closeout` 时没有到期的例外（收据 `t1-keywords-2`、`t13-keywords`）。
+- 证据：上文 P1、P4、P5a、P6a 的回执；本阶段台账 Task 1、Task 13。本交接与 M1/P3 的交接一起由收尾改为 `closed`。

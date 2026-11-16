@@ -269,8 +269,8 @@ func TestFreezeCyclesCountsWhatItWrote(t *testing.T) {
 	}
 }
 
-// A project's failure ends the run with it and the number frozen before it: the projects before it stay committed,
-// its own writes are rolled back, and the projects after it wait for the next run (M6 P4 spec 2.5).
+// A project's failure is the run's, with the number frozen: the projects before it stay committed, its own writes are
+// rolled back, and the run goes on to the projects after it (M6 P4 spec 2.5, M6 P8 spec 2.6).
 func TestFreezeCyclesKeepsTheProjectsBeforeAFailure(t *testing.T) {
 	t.Run("a freeze", func(t *testing.T) {
 		w := newFreezeWorld(t)
@@ -284,8 +284,8 @@ func TestFreezeCyclesKeepsTheProjectsBeforeAFailure(t *testing.T) {
 		if n != 2 || !errors.Is(err, w.failure) {
 			t.Fatalf("Execute = %d, %v; want Shanghai's 2 and the failure", n, err)
 		}
-		if len(w.frozen) != 2 || !slices.Contains(w.calls, "Rollback") || slices.Contains(w.calls, "Lock After") {
-			t.Errorf("frozen %v, calls %q; want Shanghai's two committed, UTC's rolled back, After not locked", w.frozen, w.calls)
+		if len(w.frozen) != 2 || !slices.Contains(w.calls, "Rollback") || !slices.Contains(w.calls, "Lock After") {
+			t.Errorf("frozen %v, calls %q; want Shanghai's two committed, UTC's rolled back, After locked", w.frozen, w.calls)
 		}
 		if _, ok := w.frozen[freezeOld]; ok {
 			t.Error("Old, frozen in UTC's failed transaction, is committed")

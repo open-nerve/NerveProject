@@ -25,7 +25,13 @@ type Props<T> = {
   getIconNode?: (item: T) => React.ReactNode;
   getKey: (item: T) => string;
   getLabel: (item: T) => React.ReactNode;
+  /**
+   * The item's value to cmdk, which keeps the list's selection by it: an item whose name another may share is valued
+   * by its id, and found by its getKeywords.
+   */
   getValue: (item: T) => string;
+  /** The texts the palette's search finds the item by, in place of its value (powerKFilter); by its value when none. */
+  getKeywords?: (item: T) => string[];
   isSelected?: (item: T) => boolean;
   /** The key of what the menu says when it has no items; the empty state's own (no results) when none is given. */
   emptyTextKey?: PowerKTextKey;
@@ -40,6 +46,7 @@ export function PowerKMenuBuilder<T>({
   getKey,
   getLabel,
   getValue,
+  getKeywords,
   isSelected,
   emptyTextKey,
 }: Props<T>) {
@@ -55,6 +62,7 @@ export function PowerKMenuBuilder<T>({
           icon={getIcon?.(item)}
           iconNode={getIconNode?.(item)}
           value={getValue(item)}
+          keywords={getKeywords?.(item)}
           label={getLabel(item)}
           isSelected={isSelected?.(item)}
           onSelect={() => onSelect(item)}

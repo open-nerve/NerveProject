@@ -24,21 +24,34 @@ import type { TContextMenuItem } from "@nerve/ui";
 import { generateWorkItemLink } from "@nerve/utils";
 import { useCopyLink } from "@/hooks/use-copy-link";
 
-// Generic helper function to handle optional function calls gracefully
+/** The toast of a menu item whose caller gave it no action, in the page's language (P8 spec 2.3). */
+type UnavailableToast = { title: string; message: string };
+
+/** The UnavailableToast of the action that actionKey names, in t's language. */
+const unavailable = (t: ReturnType<typeof useTranslation>["t"], actionKey: string): UnavailableToast => ({
+  title: t("issue.action_unavailable.title"),
+  message: t("issue.action_unavailable.message", { action: t(actionKey) }),
+});
+
+// Generic helper function to handle optional function calls gracefully: without the function, the toast its caller
+// translated
 // Overload for functions without parameters
-function handleOptionalAction(optionalFn: (() => void) | (() => Promise<void>) | undefined, actionName: string): void;
+function handleOptionalAction(
+  optionalFn: (() => void) | (() => Promise<void>) | undefined,
+  toast: UnavailableToast
+): void;
 
 // Overload for functions with one parameter
 function handleOptionalAction<T>(
   optionalFn: ((param: T) => void) | ((param: T) => Promise<void>) | undefined,
-  actionName: string,
+  toast: UnavailableToast,
   param: T
 ): void;
 
 // Implementation
 function handleOptionalAction<T>(
   optionalFn: (() => void) | (() => Promise<void>) | ((param: T) => void) | ((param: T) => Promise<void>) | undefined,
-  actionName: string,
+  toast: UnavailableToast,
   param?: T
 ): void {
   if (optionalFn) {
@@ -48,11 +61,7 @@ function handleOptionalAction<T>(
       (optionalFn as () => void | Promise<void>)();
     }
   } else {
-    setToast({
-      type: TOAST_TYPE.ERROR,
-      title: "Action not available",
-      message: `${actionName} action is not implemented.`,
-    });
+    setToast({ type: TOAST_TYPE.ERROR, ...toast });
   }
 }
 
@@ -137,7 +146,7 @@ const useIssueActionHandlers = (props: ArchivedIssueMenuProps) => {
 
   const handleIssueRestore = async () => {
     if (!handleRestore) {
-      handleOptionalAction(handleRestore, "Restore");
+      handleOptionalAction(handleRestore, unavailable(t, "common.actions.restore"));
       return;
     }
     // Presentation owners already report confirmed outcomes. Never turn their refusal into a success toast.
@@ -210,13 +219,13 @@ const useMenuItemFactory = (props: ArchivedIssueMenuProps) => {
     icon: ArchiveOutline,
     className: "items-start",
     iconClassName: "mt-1",
-    action: () => handleOptionalAction(setArchiveIssueModal, "Archive", true),
+    action: () => handleOptionalAction(setArchiveIssueModal, unavailable(t, "common.actions.archive"), true),
     shouldRender: isArchivingAllowed && isInArchivableGroup,
   });
 
   const createRestoreMenuItem = (): TContextMenuItem => ({
     key: "restore",
-    title: "Restore",
+    title: t("common.actions.restore"),
     icon: RestoreOutline,
     action: actionHandlers.handleIssueRestore,
     shouldRender: isRestoringAllowed,

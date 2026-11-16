@@ -49,7 +49,9 @@ export const ActiveCycleRoot = observer(function ActiveCycleRoot(props: Props) {
     <Disclosure as="section" aria-label={title} className="flex flex-shrink-0 flex-col" defaultOpen>
       {({ open }) => (
         <>
-          <Disclosure.Button className="sticky top-0 z-[2] w-full flex-shrink-0 cursor-pointer border-b border-subtle bg-layer-1">
+          {/* the keyboard's ring is inside the button's edge, as the list's sections' (list/root.tsx): as wide as the
+              list's scrolling box, that would cut one outside */}
+          <Disclosure.Button className="sticky top-0 z-[2] w-full flex-shrink-0 cursor-pointer border-b border-subtle bg-layer-1 focus-visible:outline-1 focus-visible:-outline-offset-1 focus-visible:outline-accent-strong">
             <CycleListGroupHeader title={title} type="current" isExpanded={open} />
           </Disclosure.Button>
           <Disclosure.Panel>

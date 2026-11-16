@@ -104,7 +104,7 @@ async function render(id = "old", kind: "peek" | "archived" | "detail" = "peek")
 async function restore() {
   await act(async () => document.querySelector<HTMLButtonElement>("[data-main-menu] > button")!.click());
   const item = [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find(
-    (option) => option.textContent === "Restore" && !option.closest("[inert]")
+    (option) => option.textContent === "common.actions.restore" && !option.closest("[inert]")
   )!;
   expect(item).toBeDefined();
   await act(async () => item.click());

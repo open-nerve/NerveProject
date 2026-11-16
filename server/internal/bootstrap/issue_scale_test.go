@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 	"time"
 	"uuid"
@@ -48,6 +49,12 @@ func TestTheDeletionsAtTheScaleTarget(t *testing.T) {
 	}
 	seeded, analyzed := w.seedAtScale(t, ids)
 	listEvidence(t, dir, "fixture", map[string]any{"seed_seconds": seeded.Seconds(), "analyze_seconds": analyzed.Seconds(), "projects": projects, "probe_issue": probe, "seed_context": "15m", "count_context": "3m", "probe_pairs": 20})
+	// The planning rows of each project and of the neighbour (M6 P8 spec 2.8).
+	planned := append(slices.Clip(ids), queryIDs(t, pool, "SELECT project_id FROM issues WHERE id=$1", probe)...)
+	planningSeeded, planningAnalyzed := w.seedPlanningAtScale(t, planned)
+	listEvidence(t, dir, "planning-fixture", map[string]any{"seed_seconds": planningSeeded.Seconds(), "analyze_seconds": planningAnalyzed.Seconds(), "projects": planned, "tables": scalePlanningTables})
+	gone := map[uuid.UUID]bool{}
+	w.checkScalePlanningRows(t, planned, gone, dir, "planning-initial")
 	w.checkScaleRows(t, projects, false, dir, "initial")
 	marks := w.scaleMarkers(t, projects)
 	listEvidence(t, dir, "markers", marks)
@@ -59,7 +66,7 @@ func TestTheDeletionsAtTheScaleTarget(t *testing.T) {
 		{"workspace", "/api/v0/workspaces/beta", projects[1:]},
 	} {
 		var active int
-		if err := pool.QueryRow(pgtest.Soon(t), "SELECT count(*) FROM river_job WHERE kind='issue.delete_rows' AND state NOT IN ('completed','cancelled','discarded')").Scan(&active); err != nil {
+		if err := pool.QueryRow(pgtest.Soon(t), "SELECT count(*) FROM river_job WHERE kind IN ('issue.delete_rows','planning.delete_rows') AND state NOT IN ('completed','cancelled','discarded')").Scan(&active); err != nil {
 			t.Fatal(err)
 		}
 		if active != 0 {
@@ -90,6 +97,8 @@ func TestTheDeletionsAtTheScaleTarget(t *testing.T) {
 			jobIDs = append(jobIDs, job.ID)
 		}
 		listEvidence(t, dir, s.name+"-jobs", map[string]any{"ids": jobIDs, "args": jobs})
+		planningJobs := scalePlanningJobs(t, w, s.projects)
+		listEvidence(t, dir, s.name+"-planning-jobs", planningJobs)
 		w.scaleProcessingSamples(t, probe, s.name, jobs, marks, dir)
 		requestEventuallyWithin(t, "SP2 jobs completed", 90*time.Second, func(context.Context) bool {
 			done := true
@@ -122,9 +131,17 @@ func TestTheDeletionsAtTheScaleTarget(t *testing.T) {
 			t.Logf("SP2 job=%d scope=%s runningCount=1 attempt=1 state=completed errors=0 snoozes=0 running_seconds=%.6f", job.ID, job.Scope, completed.Sub(running).Seconds())
 		}
 		w.checkScaleRows(t, s.projects, true, dir, s.name+"-final")
+		// The issue jobs above have soft-deleted cycle_issues and module_issues;
+		// the planning jobs, the cycles, modules, members and links.
+		w.awaitScalePlanningDeletions(t, planningJobs, dir, s.name)
+		for _, p := range s.projects {
+			gone[p.ID] = true
+		}
+		w.checkScalePlanningRows(t, planned, gone, dir, s.name+"-planning-final")
 	}
 	w.scaleHTTP(t, "GET", "/api/v0/issues/"+probe.String(), "", probe.String())
 	t.Log("SP2 verified: six projects x 660000; beta 3300000; seven jobs each one running, attempt1, completed, zero errors/snoozes")
+	t.Log("SP2 planning verified: six projects' planning rows soft-deleted by their planning.delete_rows and issue.delete_rows jobs; the neighbour's live")
 }
 
 // Check during processing as well as at the end. Snooze decrements River's

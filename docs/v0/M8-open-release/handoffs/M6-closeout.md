@@ -5,9 +5,9 @@ to: M8
 created: 2026-11-07
 ---
 
-# M6 交给 M8：CI 的 e2e 作业期限与间歇失败的故事、清理分页器的副本、e2e 数据库的连接余量、server 作业的分路与 lint 工具的在线下载、本机测试容器的端口冲突、e2e 作业在线安装浏览器的系统依赖、编辑器重建图片节点时中止的读取、工作项根 store 的行数、Firefox 再次载入后的字体预加载警告、出现后一帧内按下关闭的通知不再消失、两份相同的 useLocalStorage、项目页第一次读偏好失败时没有重试、上方的内容晚到时打开着的下拉列表不随按钮移动、经接口存下的按截止日期分组网页没有它的列、项目地址的守卫只按变量名认 router store 与列表的正文经 router store 读项目页的偏好
+# M6 交给 M8：CI 的 e2e 作业期限与间歇失败的故事、清理分页器的副本、e2e 数据库的连接余量、server 作业的分路与 lint 工具的在线下载、本机测试容器的端口冲突、e2e 作业在线安装浏览器的系统依赖、编辑器重建图片节点时中止的读取、工作项根 store 的行数、Firefox 再次载入后的字体预加载警告、出现后一帧内按下关闭的通知不再消失、两份相同的 useLocalStorage、项目页第一次读偏好失败时没有重试、上方的内容晚到时打开着的下拉列表不随按钮移动、经接口存下的按截止日期分组网页没有它的列、项目地址的守卫只按变量名认 router store 与列表的正文经 router store 读项目页的偏好、G2 页面故事在上海午夜前后的几秒会失败、默认 CI 不跑的对等与发布前的运行、自动归档遇到失败的项目即停、访客在命令面板看到项目设置的命令、冻结候选查询的规划器余量、命令面板打开子菜单时没有选中的行、富筛选的 “Remove filter” 是英文字面量
 
-这是接收方尚待完成的工作。转交只表示责任和验收条件已落实到此处，不表示本页问题已经解决。M6 进行中发现的条目随发现写入；M6 收尾时补齐其余交接。延续 [M5 → M8 交接 M5-M8-06](M5-closeout.md#M5-M8-06) 中仍开放的观察。
+这是接收方尚待完成的工作。转交只表示责任和验收条件已落实到此处，不表示本页问题已经解决。M6 进行中发现的条目随发现写入；其余由 M6/P8 补齐（M6-M8-16 起，[P8 spec](../../M6-cycles-modules/specs/P8-final-acceptance.md) §2.13、§3），各条写明出处。延续 [M5 → M8 交接 M5-M8-06](M5-closeout.md#M5-M8-06) 中仍开放的观察。
 
 <a id="M6-M8-01"></a>
 ## M6-M8-01 e2e 作业期限由 25 改为 35 分钟，C7 与 C12 再次间歇失败
@@ -35,7 +35,12 @@ created: 2026-11-07
 - 余量的又一个数据（M6/P7b 推送之前的估算，2026-11-15，最终候选 `16c52f41`）：本段的三个新页面故事本机 chromium 合计 6.9 秒（修复轮没有改 e2e）。估算：基线 1423 秒（P7a 的 main CI 43603772626）加 6.9 秒 × 1.67–2.25、两个工作进程摊开，约 23 分 49–51 秒；上界：S = 1702.40–1708.15 秒（P7b 的 T1）加 6.9 秒 × 3.6–4.1，约 28 分 47–56 秒；校准点：上一条的检查点 1225 秒加同一增量，约 20 分 31–33 秒；慢的 runner（× 1.31）乘在估算上约 31 分 12–14 秒，是 P7b T1 的观察、不是 spec 的停下条件（负责人已知）。P7c 的余量 (1800 − S) / f − 6.9 = 15.5–20.2 秒，不少于 P7c 的 8 秒。估算与上界都低于 30 分钟，所以推送；P7b 最终 HEAD 的分支 CI 与合入后的 main CI 的实测见下一条（[P7b 阶段记录](../../M6-cycles-modules/reviews/P7b-list-vocabulary-review.md) §7，P7c 的 T1 回填）。
 - 余量的又一个数据（M6/P7b 合入，2026-11-15，P7c 的 T1 以公开的 jobs 接口与作业日志核对）：最终 HEAD `4fe308ce` 的分支 CI 43702923005 attempt 1 全绿，e2e 作业 132781366495 用了 27 分 50 秒 = 1670 秒（10:26:46Z–10:54:36Z，477 过、故事 25.7 分钟），是至今最慢的 e2e 作业（在上文 43549053092 的 27 分 41 秒之上）：上一条估算的约 1.17 倍、上界的约 0.96–0.97 倍，低于 30 分钟；是校准点约 20 分 31–33 秒的约 1.36 倍。合入后的 main CI 43706438924（main `d052213f`，树与 `4fe308ce` 相同）attempt 1 全绿、没有重跑，e2e 作业 132792042944 用了 23 分 42 秒 = 1422 秒（11:10:31Z–11:34:13Z，477 过、故事 21.7 分钟）。同一棵树、同样的 477 条逐条比对，分支 CI 慢 1.20 倍：接口故事 (API) 持平（0.999），页面故事 (page) 慢 22%、其余慢 19%，与上文 P6a、P7a 的几次同形，是 runner 的速度差异；相对校准点的 1.36 倍里，同一棵树在两个 runner 上就差 1.17 倍（main CI 是校准点的约 1.15 倍）。P7b 的三个新页面故事在这两次 CI 上合计 21.5、17.3 秒，是本机 6.9 秒的约 3.1、2.5 倍，低于上界所取的 f = 3.6–4.1。
   - 1422 秒是 P7c 的 e2e 时长基线。P7c 的 T1 照 [P7c spec](../../M6-cycles-modules/specs/P7c-palette-mobile.md) §2.12 重算：S 取 1661 + 19.3 × f（19.3 秒 = I4 拆分的 5、P7a 的 6.5、P7b 的 6.9 与 C4、C8 关系一支的等待约 0.9，后者算作加进来的故事时长）与已含这些故事的实测（1670、1422 秒）中的大者，f = 3.6–4.1 时 S = 1730.48–1740.13 秒；P7c 的余量 X ≤ (1800 − S) / f = 14.6–19.3 秒（不计那 0.9 秒即上一条的 15.5–20.2 秒），本段的新文件 ≤ 8 秒；X = 8 秒时上界 S + 8 × f = 1759.3–1772.9 秒，约 29 分 19–33 秒；估算 1422 + 8 × (1.67–2.25) / 2 = 1428.7–1431.0 秒，约 23 分 49–51 秒。慢的 runner（× 1.31）乘在 1422 秒上约 31 分 03 秒，若照这次相对校准点的 1.355–1.357 倍则约 32 分 07–10 秒；都是观察、不是 spec 的停下条件（负责人已知 e2e 作业的结构迟早要他决定）。
-- 余量的又一个数据（M6/P7c 的 T10 检查点，2026-11-16）：分支 CI 43742488275（`d96ed7b2`）attempt 1 全绿、没有重跑，e2e 作业 132902462743 用了 19 分 06 秒 = 1146 秒（17:55:04Z–18:14:10Z）；那时本段的页面故事还没有加入，既有故事一行不改，但命令面板、快捷操作与三页的移动端页头已改（本机门禁 477 条中 476 条通过，F11 (page) [s3] 以 M6-M8-07 的签名失败、只重跑该文件即过；chromium 的 `stories/planning/` 61 条合计 264.0 秒，9 个工作进程、只作对照）。比 P7c 的基线 1422 秒（上一条的 main CI 43706438924）少 276 秒（约 0.81 倍），比 P7b 的检查点 20 分 25 秒少 79 秒，作为 P7c 推送前估算 e2e 时长的校准点（[P7c spec](../../M6-cycles-modules/specs/P7c-palette-mobile.md) §2.12）。本段的新页面故事 G19 (page) 的工作项一侧（`e2e/stories/planning/g19-work-item-side-page.spec.ts` 的三条：命令面板、移动端页头、“添加已有”的焦点）本机 chromium 单独跑合计 4.0 秒（2.2、1.2、0.6 秒；预算 8 秒），在三种引擎的页面配置里（3 个工作进程）chromium 4.6 秒、firefox 7.0 秒、webkit 6.4 秒；chromium `--repeat-each=3` 通过，各故事取最大是 2.3 + 1.3 + 1.0 = 4.6 秒。P7c 的 T15 推送之前照 spec §2.12 以这些数（X 取 4.6 秒）算估算、上界与校准。
+- 余量的又一个数据（M6/P7c 的 T10 检查点，2026-11-16）：分支 CI 43742488275（`d96ed7b2`）attempt 1 全绿、没有重跑，e2e 作业 132902462743 用了 19 分 06 秒 = 1146 秒（17:55:04Z–18:14:10Z）；那时本段的页面故事还没有加入，既有故事一行不改，但命令面板、快捷操作与三页的移动端页头已改（本机门禁 477 条中 476 条通过，F11 (page) [s3] 以 M6-M8-07 的签名失败、只重跑该文件即过；chromium 的 `stories/planning/` 61 条合计 264.0 秒，9 个工作进程、只作对照）。比 P7c 的基线 1422 秒（上一条的 main CI 43706438924）少 276 秒（约 0.81 倍），比 P7b 的检查点 20 分 25 秒少 79 秒，作为 P7c 推送前估算 e2e 时长的校准点（[P7c spec](../../M6-cycles-modules/specs/P7c-palette-mobile.md) §2.12）。本段的新页面故事 G19 (page) 的工作项一侧（`e2e/stories/planning/g19-work-item-side-page.spec.ts` 的三条：命令面板、移动端页头、“添加已有”的焦点）本机 chromium 单独跑合计 4.0 秒（2.2、1.2、0.6 秒；预算 8 秒），在三种引擎的页面配置里（3 个工作进程）chromium 4.6 秒、firefox 7.0 秒、webkit 6.4 秒；chromium `--repeat-each=3` 通过，各故事取最大是 2.3 + 1.3 + 1.0 = 4.6 秒。P7c 的 T15 推送之前照 spec §2.12 以这些数（X 取 4.6 秒）算估算、上界与校准；估算与实测见下面三条（[P7c 阶段记录](../../M6-cycles-modules/reviews/P7c-palette-mobile-review.md) §5、§7，P8 的 T1 回填）。
+- **web 作业碰到 15 分钟的期限**（M6/P7c 的最终分支 CI，2026-11-16）：最终 HEAD `cf215555` 的分支 CI 43759328881 attempt 1 的 web 作业 132950361275 每一步都成功（Lint 92 秒、Unit tests 762 秒），在收尾的 Post Cache 一步碰到作业的 15 分钟期限被取消（20:39:49Z–20:54:51Z，902 秒），e2e 因此跳过，server 两路通过。web 作业随 runner 在 516–870 秒之间（P7c 的检查点 581 秒，P7b 的分支 854 秒、main 870 秒），同一步 Lint 与测试数无关、在 56–92 秒之间，这次的 92 秒与 P7b 那两次慢的 runner 相同；P7c 多出的约 140 个单测在慢的 runner 上约多 30 秒。判为慢的 runner 越过只剩约 3% 余量的期限（870 秒对 900 秒），只重跑失败的作业一次，attempt 2 的 web 作业 132955284177 用了 602 秒。web 作业的期限与 e2e 的作业结构一样是负责人的开放问题（[P8 spec](../../M6-cycles-modules/specs/P8-final-acceptance.md) §5），P7c、P8 都不改；M8 复核 CI 的预算时一并复核。
+- 余量的又一个数据（M6/P7c 合入，2026-11-16，P8 的 T1 以公开的 jobs 接口与作业日志核对）：推送前的估算（P7c 的 T15，X = 4.6 秒）：基线 1422 秒加 4.6 秒 × 1.67–2.25、两个工作进程摊开，约 23 分 46–47 秒；上界 S + X × f（S = 1730.48–1740.13 秒）约 29 分 07–19 秒；校准点（上文 P7c 的 T10 检查点的 1146 秒加同一增量）约 19 分 10–11 秒；估算与上界都低于 30 分钟，所以推送。最终 HEAD `cf215555` 的分支 CI 43759328881 attempt 2（上一条）的 e2e 作业 132958271577 用了 24 分 42 秒 = 1482 秒（21:07:18Z–21:32:00Z，480 过、故事 22.3 分钟）：估算的约 1.04 倍、上界的约 0.84–0.85 倍、校准点的约 1.29 倍。合入后的 main CI 43764306705（main `ea971606`，树与 `cf215555` 相同）attempt 1 的 e2e 以 C7 失败一条（下一条），只重跑失败的作业，attempt 2 全绿：e2e 作业 132979921078 用了 27 分 44 秒 = 1664 秒（22:21:26Z–22:49:10Z，480 过、故事 25.6 分钟），估算的约 1.17 倍、上界的约 0.95 倍，低于 30 分钟；上文 43702923005 的 1670 秒仍是至今最慢的 e2e 作业。同一棵树、同样的 480 条，main 的作业比分支 CI 的慢约 1.12 倍（Playwright 汇总的故事时长 25.6 对 22.3 分钟，约 1.15 倍），是 runner 的速度差异。P7c 的三条新页面故事（G19 (page) 的工作项一侧）在分支 CI 上 13.1 秒、main CI 的 attempt 2 上 16.5 秒（attempt 1 16.8 秒），是本机 4.6 秒的约 2.8、3.6 倍（attempt 1 约 3.7 倍），没有超过上界所取的 f = 4.1。
+- **C7 的再现**（M6/P7c 合入）：main CI 43764306705（main `ea971606`）attempt 1 的 e2e 作业 132970815083（21:50:35Z–22:18:22Z，27 分 47 秒）中 480 条有 479 过，C7 在同一个故事（`collaboration-interactions.spec.ts:422`，键盘选主题）的第二次 `reopenDuringExit("Meta+k")`（`:474`）失败：其中的 `selectCommand`（`:465`）看到选项先可见，约 30 毫秒后整个面板已卸下，`getAttribute` 等到故事的 30 秒期限——测试注入的 30 秒慢退场在一次反转之后的再一次退场没有挡住面板，与上文 P6a 合入那次同在第二次 `Meta+k`（那次面板还在、已 `hidden`、`data-leave` 为 null）。P7c 对命令面板的宿主只换了过滤函数（没有 keywords 的行与原来等价）与项的 key，没有动 Headless UI 的过渡，web、server 两路通过。照本条只重跑失败的作业一次，attempt 2 通过（上一条）。trace 的摘要与作业日志在 P7c 的归档 `.superpowers/sdd/M6-P7c-integration-20261116`（`ci-evidence/ci-main-43764306705/`、`ci-main/`）。
+- 余量的又一个数据（M6/P8，2026-11-16）：P8 不给默认套件加故事（[P8 spec](../../M6-cycles-modules/specs/P8-final-acceptance.md) §3 第 1 条），条数照旧 480，矩阵专用的页面核对放在默认配置不跑的 `e2e/acceptance/`（`test:m6-acceptance`，[M6-M8-17](#M6-M8-17)），所以 e2e 的余量不变（P8 的 T1 不再重算）。检查点 `d94a0999` 的本机门禁（`t11-gate`）七项一次全过，build+e2e 480 条 254 秒、没有间歇失败；推送前的估算以 P7c 的 main CI attempt 2 的 1664 秒为基线、至今最慢的 1670 秒为上界，都低于 30 分钟。
+- 余量的又一个数据（M6/P8 的 T11 检查点，2026-11-16）：分支 CI 43831815008（`d94a0999`）attempt 1 全绿、没有重跑，e2e 作业 133185272705 用了 20 分 36 秒 = 1236 秒（08:45:15Z–09:05:51Z，480 条），web 作业 685 秒，server 两路 865、533 秒。P8 不给默认套件加故事（480 条不变），推送前的估算取基线 1664 秒、上界取至今最慢的 1670 秒，都低于 30 分钟。最终候选的分支 CI 与合入后的 main CI 的数字由 M6 收尾的第一个 Task 补在这里。
 
 **何时验收：** M8 的 CI 工作复核 35 分钟的余量（或缓存浏览器的系统依赖、拆分作业，任一调整须负责人同意），并查实或修好 C7；在此之前，C7 再失败时按“重跑一次，再不过就停下报告”处理。C12 若再失败，按新的问题定位，不按本条重跑。
 
@@ -69,6 +74,8 @@ M6/P7b 的 T17（2026-11-14，`93229770c6f02cd9af54ed09c108c839e7fe6a08`）的�
 
 M6/P7c 的 T15 第一次最终门禁（2026-11-16，`5087b09ee6191453ddf67b8c449109894daee459`，`t15-gate` 的 build+e2e）又一次：480 条中 479 条通过、1 条失败，S1（`e2e/stories/smoke/s1-server-ready.spec.ts:12`）的 `nerve migrate status` 连数据库（`e2e_w1`）时收到 `FATAL: sorry, too many clients already`（SQLSTATE 53300），失败之后的 `pg_dump` 也连不上；`e2e/test-results` 先存进台账（`t15-gate-test-results`）。P7c 没有改这个故事、`server/` 与 e2e 的数据库夹具；只重跑这一个文件即 6 条全过（`t15-gate-e2e-s1-rerun`，exit 0）。
 
+M6/P8 的 T15 最终候选（2026-11-16，`0ef661393be56c1fc0d88f1c65ca6314f430e6c2`，`t15-final` 的 build+e2e）又一次：480 条中 479 条通过，P1 (page)（`e2e/stories/project/p1-create-project-page.spec.ts:63`）在 `expectProjectCreated`（`e2e/fixtures/assert/project.ts:57`）经 `e2e/fixtures/db.ts:88` 的查询收到 `sorry, too many clients already`，失败之后的 `pg_dump` 也连不上；只重跑该文件即过（`t15-final-rerun-p1`）。同阶段的检查点（`t11-gate`）与最终矩阵的默认套件（`t12-default`）没有撞上（[P8 阶段记录](../../M6-cycles-modules/reviews/P8-final-acceptance-review.md) §4.3、§5）。
+
 **何时验收：** M8 的 CI 工作核算 e2e 的连接预算（工作进程数 × 每进程的连接上限 + 余量），按结果给测试容器设 `max_connections` 或收紧 e2e 服务器的 `database.max_conns`，并在 CI 与本地都留有余量；或负责人决定维持现状，并在此写明理由。
 
 <a id="M6-M8-04"></a>
@@ -94,6 +101,8 @@ M6/P5a 的最终候选 `5b5da6ea` 上，本机 `make test` 连续两次失败，
 M6/P2 的根因修复（`server/internal/platform/postgres/pgtest/hostport.go`、`server/internal/platform/s3test/hostport.go` 的 `startPublished`/`hostPortTaken`）只认 Docker 拒绝启动容器的那一种（“programming external connectivity … address already in use”，Linux 的 Docker 与 Docker Desktop 的 VM 内分配冲突时）；Docker Desktop 在 macOS 一侧转发失败时容器照常启动，错误只表现为等映射端口超时，这层重试认不出。
 
 M6/P5b 的 T13、T14（2026-11-12）在本机跑 e2e 的变异时，e2e 的全局准备（`e2e/global-setup.ts:13`）有三次因 testcontainers 等容器的端口映射到主机超时而失败（“Timed out after 10000ms while waiting for container ports to be bound to the host”，其中 T13 的一次在启动 reaper 时）：`t13-e2e-mut-archived-writable`、`t14-e2e-mut-create-for-guest-2`、`t14-e2e-mut-one-generation-2`。一条故事都没有跑，与所测的变异无关；各自重跑（`t13-e2e-mut-archived-writable-2`、`t14-e2e-mut-create-for-guest-3`、`t14-e2e-mut-one-generation-3`）都跑到了故事。签名与上文相同（同一台 Docker Desktop，映射端口迟迟不到主机一侧；台账没有记这几次的 Docker Desktop 后端日志），所以本条不只影响 Go 的 `make test`，也影响 e2e 的全局准备。
+
+M6/P8 的 T8（2026-11-16）开发冻结的规模测试时（项目数临时改为 20 的本地运行，不是收据，证据在本阶段台账的 `t8-dev/`）四次撞上同一签名：Docker Desktop 的 `com.docker.backend.log` 记 “listen tcp 0.0.0.0:55210（55212、55214、55216）: bind: address already in use”，容器内的 postgres 已就绪，testcontainers 等映射端口约 60 秒到期；本机的临时端口离开这一段之后第五次通过。本段收据的运行（`t8-smoke-*`、检查点 `t11-gate` 的 `make test` 等）都没有撞上。最终矩阵的 Go 全量（`t12-go-full`，`GOFLAGS='-p=1 -v'`）撞上一次：bootstrap 包的 `TestImageStorageContract/s3` 启动 S3 测试容器时 `wait until ready: get state … context deadline exceeded`，Docker Desktop 的日志记 08:49:51Z “listen tcp4 127.0.0.1:55236: bind: address already in use”；该包其余各例都过，只重跑这一例即过（`t12-go-rerun-image-storage`）。
 
 **何时验收：** M8 在本机门禁的说明里给出不重叠的做法并验证（例如测试容器助手自己在本机选空闲端口并显式绑定、在端口转发失败时换端口重启容器，或在 README 写明把 macOS 的临时端口范围收到 55000 以下），使本机 `make test` 不再因此失败；或负责人决定维持现状，并在此写明理由。
 
@@ -146,6 +155,8 @@ M6/P5b 的 T16（2026-11-12）在 `8b11bc6381623717663ba986da74710668719494` 上
 **处理结果（M6/P7b）**：本段的写都经写入单元，没有加回根，根也不加 getter（[P7b spec](../../M6-cycles-modules/specs/P7b-list-vocabulary.md) §2.2、§2.7、§2.9）：拖拽的 `dropIssue`（`helpers/base-issues.store.ts`）改收变化，在写入单元的 `updateIssue` 轮到时以 `changeBody` 与所持的集合得出请求体；“添加已有”的每一项经写入单元的 `changeIssue`；列表的目录的查找取自规划 store 的 `getCycleById`、`getModuleById`。行数（`wc -l`，台账 `t16-line-counts`，HEAD `55a225c8`）：根 `root.store.ts` 320 → 319（T4：迭代页、模块页的偏好先以局部的 service 常量建立、再与本页的转换交给基类）；写入单元 `issue-writes.ts` 302、请求体 `issue-write-fields.ts` 98，本段没有改；另 T2 按职责拆开的列表绑定 `issue-list-binding.ts` 487 → 286，拆出的读 `issue-list-read.ts` 163、目录 `issue-list-catalog.ts` 148，都在约 400 行之内。T17 在最终候选 `16c52f41` 上以 `wc -l` 再核，这几件的行数同上（修复轮只改了两个分组面板与 `utils.tsx`，收据 `t17-record-line-counts`）。本条保持 open 到 M6 收尾。
 
 **处理结果（M6/P7c）**：本段的写（命令面板的“改迭代”“改模块”）经写入单元的 `updateIssue`，请求体在工作项的写队列轮到时经 `changeBody` 以所持的集合算（`web/apps/web/core/components/power-k/ui/pages/context-based/work-item/writes.ts` 的 `useWorkItemWrites`，在命令面板既有的守卫之内），没有加回根，根也不加 getter；页头的数目的按页的读（`pageTotal`）加在项目页、归档页两个 store，不在根上（[P7c spec](../../M6-cycles-modules/specs/P7c-palette-mobile.md) §2.5、§2.8）。行数（`wc -l`，台账 `t14-line-counts`，HEAD `3b5b0a78`）：根 `root.store.ts` 319、写入单元 `issue-writes.ts` 302、请求体 `issue-write-fields.ts` 98，列表绑定 `issue-list-binding.ts` 286、读 `issue-list-read.ts` 163、目录 `issue-list-catalog.ts` 148，与 P7b 合入时相同（本段没有改这六个文件，`git diff d052213f..3b5b0a78` 对它们为空），都在约 400 行之内。本条保持 open 到 M6 收尾。
+
+**处理结果（M6/P8）**：本段没有改这六个文件（`git diff ea971606..` 对它们为空，T13 时核对）：根 `root.store.ts` 319、写入单元 `issue-writes.ts` 302、请求体 `issue-write-fields.ts` 98、列表绑定 `issue-list-binding.ts` 286、读 `issue-list-read.ts` 163、目录 `issue-list-catalog.ts` 148 行（`wc -l`），都在约 400 行之内。本条的条件已满足，由 M6 收尾关闭。
 
 <a id="M6-M8-09"></a>
 ## M6-M8-09 Firefox 在同一浏览器的再次载入后报根预加载的字体未用
@@ -228,3 +239,63 @@ M6/P5b 的 T16（2026-11-12）在 `8b11bc6381623717663ba986da74710668719494` 上
 **何时验收：** 两件都做完，或负责人对其中一件决定维持现状并在此写明理由：
 - 守卫：M8 收紧规则的内容式，让它认任何接收者的 router store（例如任何 `.router` 的成员，加解构出的 `router`），样例里加一条命中（如 `store.router.projectId`）与一条不命中（如 `import { useNavigate } from "react-router";`），`node tools/keywords.mjs` 对那时的文件表无命中（有命中的先改读路由参数）；或维持现状（以命名的约定与审查防）。
 - 列表的正文：上面 5 个读者在项目页（与归档页）上按地址的项目读本页的偏好（照 P7c F3 的 `usePageDisplay`：`getIssueFilters(<地址的项目>)`，不经 router store），`usePageIssueFilters` 经 router store 的两支随之去掉（hook 没有读者时删去）；单测钉住“router store 的项目是 A、地址的是 B、两者的偏好都在时，列表照 B 的显示”，并有一个改回经 router store 读即失败的变异。
+
+<a id="M6-M8-16"></a>
+## M6-M8-16 G2 页面故事在上海午夜前后的几秒会失败
+
+观察（M6/P5a，[P5a spec](../../M6-cycles-modules/specs/P5a-web-cycles.md) §5 的 M8 一条；P8 写入）：G2 (page)（`e2e/stories/planning/g2-cycle-status-page.spec.ts`）要浏览器的日子与项目（上海，UTC+8）的日子不同，按上海此刻的小时选浏览器的时区（`anotherDayZone`，`:38-48`：上海 18 点之前选 Pago Pago，UTC−11；之后选 Kiritimati，UTC+14），并在故事开始时与读完列表之后各核一次（`:63`：浏览器的日子不是上海的；`:121`：上海的日子在读列表期间没有变）。跑的时候跨过上海的午夜（UTC 16:00），这两处会以明确的消息失败，与产品无关。
+
+**何时验收：** M8 复核间歇项时三选一：照“已知的时间窗——失败的时刻在上海午夜前后——只重跑一次、记下”处理；或改写故事，使它不依赖跑的时刻；或负责人决定维持现状，并在此写明理由。
+
+<a id="M6-M8-17"></a>
+## M6-M8-17 默认 CI 不跑的对等与发布前的运行
+
+M6 的页面在三种引擎上的对等、矩阵专用的核对与规模，持续集成都不跑：e2e 作业跑默认配置（`make e2e`：`e2e/stories/`，Chromium，另 A4 的页面在 Firefox），CI 不装 WebKit（`.github/workflows/ci.yml:118-122`）；`make test` 不设规模测试的环境变量，它们默认跳过（[P8 spec](../../M6-cycles-modules/specs/P8-final-acceptance.md) §2.8、§2.11、§3 第 1 条；[M6 设计](../../M6-cycles-modules/M6-design.md) §11 的“对等验收”）。发布前要在发布候选上跑：
+
+- `pnpm --filter @nerve/e2e run test:m6-pages`（`e2e/playwright.m6-pages.config.ts`）：`e2e/stories/planning/` 的 `G<n> (page)` 故事在 Chromium、Firefox、WebKit 各一遍（P8 时 45 条 × 3 = 135 例）；默认套件只在 Chromium 里跑它们。
+- `pnpm --filter @nerve/e2e run test:m6-acceptance`（`e2e/playwright.m6-acceptance.config.ts`）：`e2e/acceptance/` 五个文件 8 条 × 三种引擎 = 24 例（焦点轮廓、命令面板的行、新建表单里换项目、归档页的迭代与模块词、模块的开关）；默认配置的 `testDir` 是 `stories`，不跑这个目录。
+- 三个规模测试（在 `server/` 下，一次一个容器套件；命令见仓库根目录 README 的“M6 的验收运行”）：`TestPurgeScale`（`NERVE_PURGE_SCALE=1`；证据目录 `NERVE_PURGE_SCALE_EVIDENCE`，不给时写进测试的临时目录、跑完即删）、`TestTheDeletionsAtTheScaleTarget`（`NERVE_MEASURE_SCALE=1`；`NERVE_SCALE_EVIDENCE`，不给时写到 `.superpowers/sdd/P9-purge/scale/<时刻>`，即 M4/P9 的台账路径）、`TestTheFreezeAtTheScaleTarget`（`NERVE_MEASURE_SCALE=1`；不给 `NERVE_SCALE_EVIDENCE` 即失败）。P8 在 T12 以 `go test -p=1 -count=1 -v ./internal/bootstrap -run '^<测试名>$'` 各跑一次（期限 30、60、30 分钟）。
+- P8 的结果：`t11-m6-pages`（135 例过）、`t11-acceptance-final`（24 例过），T12 的最终矩阵与规模的数字在 [P8 阶段记录](../../M6-cycles-modules/reviews/P8-final-acceptance-review.md)。
+- M4 的三引擎并集 `test:m4-cleanup`（`e2e/playwright.m4-cleanup.config.ts`，M4 P16 的组合配置）：P8 的 T12 在 `d94a0999` 上一次跑三种引擎、默认的 worker 数（本机 9 个，`t12-m4-cleanup`），510 例中 507 过；三条时序失败——Firefox 的 I4 (page) 表格按 `sub_issues_count` 换序之后 5 秒内表头没回来、WebKit 的 I11 (page) 回应的 DELETE 5 秒内没有发出、WebKit 的 C12 (review) 子工作项的 Filters 点开之后下拉没有开——在各自的引擎隔离重复 5 次都过（`t12-m4-repeat-i4-firefox`、`t12-m4-repeat-i11-webkit`、`t12-m4-repeat-c12-webkit`），判为三种引擎同时跑时的负载，不是 P8 的回归（[P8 阶段记录](../../M6-cycles-modules/reviews/P8-final-acceptance-review.md) §4.3 的间歇项）。M4 P16 的配方是每个引擎各跑一次、`--workers=2`（[P16-C12-preparation](../../M4-issue-core/reviews/P16-C12-preparation.md) §1 的命令）；发布前照那个配方跑。
+
+**何时验收：** M8 的发布流程把这些运行写进发布前的清单，在发布候选上各跑一次并留下原件；或经负责人同意把其中一部分放进 CI（e2e 的作业结构与期限是负责人的开放问题，见 M6-M8-01）。规模测试不给证据目录时的去处（上面三者各不相同，其一指向旧台账）一并定下。
+
+<a id="M6-M8-18"></a>
+## M6-M8-18 自动归档遇到失败的项目即停
+
+观察（M6/P8，[P8 spec](../../M6-cycles-modules/specs/P8-final-acceptance.md) §2.6、§3 第 4 条）：M4 的自动归档 `server/internal/modules/issue/app/auto_archive.go` 的 `Execute` 每个项目一个事务，一个项目的事务失败即返回（`:103` 的 `return total, err`），id 在它之后的项目这一次轮不到，River 的每次重试都在同一处失败，直到那个项目恢复；`ctx` 结束时同样返回（`:46`）。P8 修了同形的冻结任务（`server/internal/modules/planning/app/freeze_cycles.go`，`c1c0fb55`）：一个项目失败只回滚它自己的事务、接着做后面的，跑完以 `errors.Join` 交回（只留前 5 个项目的错误、各带项目 id，其余只计个数），已提交的不再是候选，`ctx` 结束即停并交回此前的失败与 `ctx` 的错误；单测在 `planning/app/freeze_cycles_failures_test.go`。自动归档属 issue 模块，跨模块，P8 不改。
+
+**何时验收：** M8（或更早改 issue 模块自动归档的阶段）照冻结的做法改自动归档，并有同样的单测：中间一个项目失败时它前后的都提交，错误含它的原错误与 id；`ctx` 取消即停且不丢此前的失败；错误有上限。或负责人决定维持现状，并在此写明理由。
+
+<a id="M6-M8-19"></a>
+## M6-M8-19 访客在命令面板看到项目设置的命令
+
+观察（M6/P7c 复核，[P7c 阶段记录](../../M6-cycles-modules/reviews/P7c-palette-mobile-review.md) §1；P8 写入，[P8 spec](../../M6-cycles-modules/specs/P8-final-acceptance.md) §3 第 6 条）：命令面板项目一级的“打开项目设置”`open_project_setting` 与“转到项目设置”`nav_project_settings` 只看地址里有工作区与项目（`baseProjectConditions`，`web/apps/web/core/components/power-k/config/navigation/project-commands.ts:235-236`、`:248-249`），不看角色：项目的访客也看得到这两个入口。对照：“转到归档”`nav_project_archives` 以 `hasProjectMemberLevelPermissions` 给（`:213-214`）。这是 M3 的代码，P7c 的特征测试（`power-k/config/navigation/commands.test.tsx`）钉住现状，P8 不改（不是 M6 的领域）；视图、收集箱的同类命令交 M7（[M6-M7-07](../../M7-collaboration/handoffs/M6-closeout.md#M6-M7-07)）。
+
+**何时验收：** M8 的对等验收以 Plane 的行为为准，定访客是否该看到这两个命令：不该，就照“转到归档”的条件给，命令面板与侧栏同一规则，单测钉住访客与成员；该，在此写明理由。
+
+<a id="M6-M8-20"></a>
+## M6-M8-20 冻结候选查询的规划器余量
+
+观察（M6/P8 的 T8，[P8 spec](../../M6-cycles-modules/specs/P8-final-acceptance.md) §2.8）：冻结任务的候选查询 `FreezeDueProjects`（`server/internal/modules/planning/adapter/postgres/queries/progress.sql:26`）靠部分索引 `cycles_freeze_due_idx`（`server/migrations/sql/00048_planning_cycles_progress_snapshot.sql:13`）。新的冻结规模测试 `TestTheFreezeAtTheScaleTarget`（`server/internal/bootstrap/planning_freeze_scale_test.go`，`NERVE_MEASURE_SCALE=1`）在 5000 个项目、每项目 40 个两周的迭代（36 个已由一次更早的运行冻结）、2500 个项目各有一个迭代到期的夹具上，以连接池同样的规划设置 `EXPLAIN (ANALYZE, BUFFERS)` store 实际发出的语句，断言计划用到这个索引：
+
+- 冒烟 `t8-smoke-freeze-3`：Bitmap Index Scan on `cycles_freeze_due_idx`，代价 35745.38 对关掉索引扫描时的 48339.92（余量约 26%），估 17757 行、实际 2500，执行 0.748 毫秒、112 个堆页；一次运行冻结 2500 个迭代共 3.227 秒，逐项目的锁持有 p50 0.976、p95 1.109、最大 6.508 毫秒。
+- 夹具先用每项目 20 个迭代、16 个冻结（冻结占 80%）时，选中的计划代价 21287.64 对 22085.27，余量只有 3.6%（`t8-smoke-freeze-2`）：规划器把 `progress_snapshot IS NULL` 与 `end_date` 不晚于今天当作互相独立，估计偏高 6–7 倍。冻结的迭代少的年轻部署里规划器会选顺序扫描；那时表小、任务每小时一次，不是性能缺陷。要估计准确需加扩展统计，是产品的迁移，不在 P8（本阶段台账 Task 8 的发现与主控的裁定）。
+- 最终代码上的正式运行（T12 的 `t12-freeze-scale`）的计划与数字在 [P8 阶段记录](../../M6-cycles-modules/reviews/P8-final-acceptance-review.md)。
+- 一次运行的时长上限（P8 整分支审查 re-79 m5）：P8 起冻结任务逐项目继续（[P8 spec](../../M6-cycles-modules/specs/P8-final-acceptance.md) §2.6），一次运行要走完全部候选；`FreezeCyclesWorker` 没有自己的 `Timeout`，nerve 的 River 配置（`server/internal/platform/jobs/jobs.go:71`）也没设 `JobTimeout`，取 River 的默认 1 分钟（river v0.47.0 `JobTimeoutDefault`）。按规模测试每项目约 1.4 毫秒，一分钟约容 4 万个候选；多数候选都在等锁到各自的期限时，一次运行在一分钟处以 `ctx` 的错误结束（已提交的项目保留，`errors.Join` 带上已记下的失败），下一次接着做。M8 的规模评估一并决定是否给它设自己的 `Timeout`。
+
+**何时验收：** M8 的规模与部署评估在目标规模与年轻部署两种形状下复核这条查询的计划（以 `TestTheFreezeAtTheScaleTarget` 的 EXPLAIN 证据），决定是否加扩展统计（迁移，附加前加后的计划对照）；或负责人决定维持现状，并在此写明理由。
+
+<a id="M6-M8-21"></a>
+## M6-M8-21 命令面板打开子菜单时没有选中的行
+
+观察（M6/P8 的 T11，矩阵专用的页面核对 `e2e/acceptance/g19-palette-rows.spec.ts`）：命令面板打开子菜单（如 “Open a cycle”）时没有选中的行——cmdk 保留根列表里所选那一行的 value，子菜单里没有它，第一次按方向键才选中第一行，按 Enter 之前要先按一次方向键。Plane 同；不在 [P8 spec](../../M6-cycles-modules/specs/P8-final-acceptance.md) §2.11 之内，P8 不改（核对先以方向键选中再断言）。
+
+**何时验收：** M8 的对等验收决定是否在打开子菜单时选中第一行，改则以页面核对钉住；或照 Plane 维持，并在此写明理由。
+
+<a id="M6-M8-22"></a>
+## M6-M8-22 富筛选的 “Remove filter” 是英文字面量
+
+观察（M6/P8 的 T11）：富筛选条件的移除按钮 `web/apps/web/core/components/rich-filters/filter-item/close-button.tsx:35` 的 `aria-label="Remove filter"` 是写死的英文（Plane 原样，M4 的件），中文界面下读屏也读出英文；与 P8 改为键的三处英文字面量（[P8 spec](../../M6-cycles-modules/specs/P8-final-acceptance.md) §2.3）同一类。P8 只把它的 `focus:outline-none` 换成内缩的焦点环（`ea7580d6`），文字没改。
+
+**何时验收：** M8 的文案收尾把它改读键（en 与 zh-CN 在同一提交，过 `check:sync`），以单测钉住；或负责人决定维持现状，并在此写明理由。

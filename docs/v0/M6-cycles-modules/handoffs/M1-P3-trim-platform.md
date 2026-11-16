@@ -25,3 +25,7 @@ M6 合并时：迭代进度改用新接口，`analytics` 的守卫例外已删�
 ## 处理结果（M6/P5a）
 
 迭代的进度改用 `GET /api/v0/cycles/{cycle_id}/progress`（没有结尾斜杠的问题）；读 Plane 地址的旧 `core/services/cycle.service.ts` 与它的测试删除，新规则 `old-cycle-urls`（以 `/api/workspaces/` 前缀锚定，同 `old-issue-urls`）拦住旧的迭代接口地址；新接口没有 `TCycleProgress`、`IWorkspaceProgressResponse` 的对应结构，`@nerve/types` 的 `cycle/` 整目录删除。关闭条件的迭代部分已满足，与 M1/P2 的交接一起在收尾关闭。证据：提交 `b4911394dc2a92d4bd0224e572902e6d45275941`、`f497055055f00e0cdbfa74e08f5186d40a1297d3`；[P5a spec](../specs/P5a-web-cycles.md) §2.7、§2.8。
+
+## 处理结果（M6/P8）
+
+关闭条件在 M6 的最终代码上成立，没有转交项：迭代的进度读 `GET /api/v0/cycles/{cycle_id}/progress`（P4、P5a），没有结尾斜杠的问题；`analytics` 的守卫例外已删（P1），P8 的 `tools/keywords.json` 没有 M6 的例外（收据 `t13-keywords`）；`TCycleProgress`、`IWorkspaceProgressResponse` 在 `web/`、`api/`、`server/` 都不存在（P8 的 HEAD 上 `git grep` 没有命中），新接口没有工作区级的进度。证据：上文 P4、P5a 的回执。本交接与 M1/P2 的交接一起由收尾改为 `closed`。

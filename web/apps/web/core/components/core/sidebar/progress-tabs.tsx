@@ -111,7 +111,8 @@ export const ProgressTabs = observer(function ProgressTabs(props: Props) {
         {PROGRESS_STATS.map((stat, index) => (
           <Tab
             className={cn(
-              "w-full cursor-pointer rounded-sm p-1 text-primary transition-all outline-none focus:outline-none",
+              // the keyboard's ring inside its edge, as the selects', drawn at once: only the colours ease
+              "w-full cursor-pointer rounded-sm p-1 text-primary transition-colors focus-visible:outline-1 focus-visible:-outline-offset-1 focus-visible:outline-accent-strong",
               index === selected
                 ? "bg-layer-transparent-active text-secondary"
                 : "text-placeholder hover:text-secondary"

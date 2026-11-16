@@ -6,11 +6,11 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-//TODO: remove temp flag isActive later and use showAlert as the source of truth
-const useReloadConfirmations = (isActive = true, message?: string, defaultShowAlert = false, onLeave?: () => void) => {
-  const [showAlert, setShowAlert] = useState(defaultShowAlert);
+const ALERT_MESSAGE = "Are you sure you want to leave? Changes you made may not be saved.";
 
-  const alertMessage = message ?? "Are you sure you want to leave? Changes you made may not be saved.";
+//TODO: remove temp flag isActive later and use showAlert as the source of truth
+const useReloadConfirmations = (isActive = true) => {
+  const [showAlert, setShowAlert] = useState(false);
 
   const handleBeforeUnload = useCallback(
     (event: BeforeUnloadEvent) => {
@@ -35,11 +35,8 @@ const useReloadConfirmations = (isActive = true, message?: string, defaultShowAl
       const anchorElement = eventTarget.closest("a") as HTMLAnchorElement;
       const isAnchorTargetBlank = anchorElement.getAttribute("target") === "_blank";
       if (isAnchorTargetBlank) return;
-      // show confirm dialog
-      const isLeaving = window.confirm(alertMessage);
-      if (isLeaving) {
-        onLeave && onLeave();
-      } else {
+      // show confirm dialog; staying cancels the click
+      if (!window.confirm(ALERT_MESSAGE)) {
         event.preventDefault();
         event.stopPropagation();
       }

@@ -67,8 +67,9 @@ export function ListItem(props: IListItemProps) {
         )}
       >
         <div className="relative flex w-full items-center justify-between gap-3 truncate">
+          {/* the keyboard's ring is inside the link's edge: the truncating box around it would cut one outside */}
           <ControlLink
-            className="relative flex w-full items-center gap-3 overflow-hidden"
+            className="relative flex w-full items-center gap-3 overflow-hidden rounded-sm focus-visible:outline-1 focus-visible:-outline-offset-1 focus-visible:outline-accent-strong"
             href={itemLink}
             target="_self"
             onClick={handleControlLinkClick}

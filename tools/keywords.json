@@ -1,5 +1,5 @@
 {
-  "phase": "M6/P7",
+  "phase": "M6/P8",
   "rules": [
     {
       "id": "deploy-files",
@@ -194,7 +194,7 @@
           "export type { TTranslationKeys } from \"./keys.generated\";",
           "\"build\": \"pnpm run generate:types && tsdown\""
         ],
-        "miss": ["export type TWorkItemDetailRoot = {", "import { generateQueryParams } from \"@nerve/utils\";"],
+        "miss": ["export type TWorkItemDetailRoot = {", "import { generateWorkItemLink } from \"@nerve/utils\";"],
         "files": {
           "hit": ["web/packages/i18n/src/index.ts", ".gitignore", ".oxfmtrc.json", "knip.jsonc", "turbo.json"],
           "miss": ["server/cmd/nerve/main.go", "docs/v0/M1-frontend-trim/M1-design.md"]

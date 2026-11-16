@@ -27,6 +27,8 @@ const strings = (value: unknown): string[] =>
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === "object" && !Array.isArray(value);
+// The groupings the browser keeps for the two pages whose preferences it holds: the archive's, by a work item's cycle
+// and module among them (P8 spec 2.4); the member view narrows them to its own (profileDisplayFilters, P7b R22).
 const displayGroups = new Set([
   "state",
   "priority",
@@ -36,6 +38,8 @@ const displayGroups = new Set([
   "project",
   "assignees",
   "target_date",
+  "cycle",
+  "module",
 ]);
 const displayOrders = new Set([
   "-created_at",

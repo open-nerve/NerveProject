@@ -5,6 +5,7 @@
  */
 
 import { observer } from "mobx-react";
+import { useTranslation } from "@nerve/i18n";
 // ui
 import type { IIssueDisplayFilterOptions, IIssueDisplayProperties } from "@nerve/types";
 // hooks
@@ -19,6 +20,7 @@ interface Props {
 
 export const SpreadsheetHeader = observer(function SpreadsheetHeader(props: Props) {
   const { displayProperties, displayFilters, handleDisplayFilterUpdate, spreadsheetColumnsList } = props;
+  const { t } = useTranslation();
 
   return (
     <thead className="sticky top-0 left-0 z-[12] border-b-[0.5px] border-subtle">
@@ -31,7 +33,7 @@ export const SpreadsheetHeader = observer(function SpreadsheetHeader(props: Prop
           <div className="flex h-full w-full items-center gap-2 px-page-x">
             {/* Workitem header section */}
             <div className="flex h-full min-w-80 flex-grow items-center gap-1 py-2.5">
-              <span className="text-13 font-medium">Work items</span>
+              <span className="text-13 font-medium">{t("work_items")}</span>
             </div>
           </div>
         </th>

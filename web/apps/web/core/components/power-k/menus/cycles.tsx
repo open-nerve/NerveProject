@@ -23,7 +23,8 @@ export const PowerKCyclesMenu = observer(function PowerKCyclesMenu({ cycles, onS
       items={cycles}
       getIcon={() => CyclesOutline}
       getKey={(cycle) => cycle.id}
-      getValue={(cycle) => cycle.name}
+      getValue={(cycle) => cycle.id}
+      getKeywords={(cycle) => [cycle.name]}
       getLabel={(cycle) => cycle.name}
       onSelect={onSelect}
       emptyTextKey="power_k.menus.no_cycles"

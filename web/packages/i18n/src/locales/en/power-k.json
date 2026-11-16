@@ -113,6 +113,7 @@
       "report_bug": "Report a bug"
     },
     "search_shortcuts": "Search for shortcuts",
+    "no_shortcuts_found": "No shortcuts found for \"{query}\"",
     "search_commands": "Search commands...",
     "page_placeholders": {
       "default": "Type a command or search",

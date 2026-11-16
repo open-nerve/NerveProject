@@ -8,6 +8,7 @@
 import { useTranslation } from "@nerve/i18n";
 import { substringMatch } from "@nerve/utils";
 // components
+import { Translated } from "@/components/common/translated";
 import type { TPowerKCommandConfig, TPowerKCommandGroup } from "@/components/power-k/core/types";
 import { KeySequenceBadge, ShortcutBadge } from "@/components/power-k/ui/modal/command-item-shortcut-badge";
 // types
@@ -102,12 +103,10 @@ export function ShortcutRenderer(props: Props) {
         ))
       ) : (
         <p className="flex justify-center text-center text-13 text-secondary">
-          No shortcuts found for{" "}
-          <span className="font-semibold italic">
-            {`"`}
-            {searchQuery}
-            {`"`}
-          </span>
+          <Translated
+            i18nKey="power_k.no_shortcuts_found"
+            values={{ query: <span className="font-semibold italic">{searchQuery}</span> }}
+          />
         </p>
       )}
     </div>

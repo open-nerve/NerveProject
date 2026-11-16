@@ -24,22 +24,6 @@ export const HIGHLIGHT_CLASS = "highlight";
 export const isWorkspaceLevel = (type: EIssuesStoreType) =>
   [EIssuesStoreType.PROFILE, EIssuesStoreType.WORKSPACE_DRAFT].includes(type);
 
-export const getDisplayPropertiesCount = (
-  displayProperties: IIssueDisplayProperties,
-  ignoreFields?: (keyof IIssueDisplayProperties)[]
-) => {
-  const propertyKeys = Object.keys(displayProperties) as (keyof IIssueDisplayProperties)[];
-
-  let count = 0;
-
-  for (const propertyKey of propertyKeys) {
-    if (ignoreFields && ignoreFields.includes(propertyKey)) continue;
-    if (displayProperties[propertyKey]) count++;
-  }
-
-  return count;
-};
-
 /**
  * Returns Sort order of the issue block at the position of drop
  * @param destinationIssues

@@ -91,7 +91,8 @@ export const DateDropdown = observer(function DateDropdown(props: Props) {
     <Popover.Button
       type="button"
       className={cn(
-        "clickable block h-full max-w-full outline-none",
+        // the keyboard's ring inside its edge, as the range's (date-range.tsx) and the selects' beside it in a row
+        "clickable block h-full max-w-full rounded-sm focus-visible:outline-1 focus-visible:-outline-offset-1 focus-visible:outline-accent-strong",
         {
           "cursor-not-allowed text-secondary": disabled,
           "cursor-pointer": !disabled,

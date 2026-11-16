@@ -29,7 +29,8 @@ export function PowerKWorkspacesMenu({ workspaces, onSelect }: Props) {
           classNames="shrink-0"
         />
       )}
-      getValue={(workspace) => workspace.name}
+      getValue={(workspace) => workspace.id}
+      getKeywords={(workspace) => [workspace.name]}
       getLabel={(workspace) => workspace.name}
       onSelect={onSelect}
       emptyTextKey="power_k.menus.no_workspaces"

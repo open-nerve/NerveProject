@@ -2,6 +2,8 @@ package app
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/planning/domain"
@@ -65,9 +67,13 @@ func NewFreezeCycles(d FreezeCyclesDeps) *FreezeCycles { return &FreezeCycles{d:
 // any time zone, today is at most the day after that one, so they hold
 // every project with a cycle that has ended. That reading only bounds them;
 // no freeze is taken at it. Then each candidate in a transaction of its own
-// (freezeProject). A failure ends the run with its error chain whole, a lock
-// timeout PostgreSQL's, for River to retry, and the number frozen before it:
-// the projects before it stay committed, and the next run goes on with it.
+// (freezeProject). A project's failure rolls back its own transaction alone,
+// and the run goes on to the next (M6 P8 spec 2.6): one project that breaks
+// an invariant, a time zone that does not load, does not keep the projects
+// after it from their freezes. The run's error joins the failures, bounded
+// (failures), for River to retry: a retry finds the projects committed no
+// longer candidates, their cycles frozen. A context that ends stops the run
+// before the next project, with the failures before it and its own error.
 func (u *FreezeCycles) Execute(ctx context.Context) (int, error) {
 	if err := ctx.Err(); err != nil {
 		return 0, err
@@ -76,10 +82,10 @@ func (u *FreezeCycles) Execute(ctx context.Context) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	total := 0
+	total, failed := 0, failures{}
 	for _, id := range projects {
 		if err := ctx.Err(); err != nil {
-			return total, err
+			return total, failed.join(err)
 		}
 		n := 0
 		err := u.d.Tx.WithinTx(ctx, func(ctx context.Context) error {
@@ -88,11 +94,44 @@ func (u *FreezeCycles) Execute(ctx context.Context) (int, error) {
 			return err
 		})
 		if err != nil {
-			return total, err
+			failed.add(id, err)
+			continue
 		}
 		total += n
 	}
-	return total, nil
+	return total, failed.join(nil)
+}
+
+// failuresKept is how many failed projects' errors a run's error keeps.
+const failuresKept = 5
+
+// failures are a run's failed projects: the first failuresKept projects'
+// errors, each with its project's id and its chain whole (a lock timeout
+// stays PostgreSQL's error), and how many more failed, so that the count
+// stays exact. River keeps each attempt's error on the job's row: a failure
+// that takes every candidate, a pool lost midway, leaves six lines there,
+// not one for each project.
+type failures struct {
+	errs []error
+	more int
+}
+
+func (f *failures) add(project uuid.UUID, err error) {
+	if len(f.errs) == failuresKept {
+		f.more++
+		return
+	}
+	f.errs = append(f.errs, fmt.Errorf("project %s: %w", project, err))
+}
+
+// join is the run's error: the failures, then end, the context's error, if
+// any; nil without either.
+func (f failures) join(end error) error {
+	errs := f.errs
+	if f.more > 0 {
+		errs = append(errs, fmt.Errorf("and %d more of the projects failed", f.more))
+	}
+	return errors.Join(append(errs, end)...)
 }
 
 // freezeProject freezes, in the transaction ctx carries, the cycles of the

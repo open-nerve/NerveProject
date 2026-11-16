@@ -142,7 +142,7 @@ it("shows a first-read refusal and retries only the archive GET", async () => {
 async function startRestore(doubleClick = false) {
   await click(`common.options: ${archived.name}`);
   const restore = [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find(
-    (item) => item.textContent === "Restore"
+    (item) => item.textContent === "common.actions.restore"
   );
   expect(restore).toBeDefined();
   await act(async () => {
