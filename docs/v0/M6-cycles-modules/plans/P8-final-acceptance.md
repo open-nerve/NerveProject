@@ -1,7 +1,7 @@
 # M6 / P8 最终验收——最终矩阵、规模重跑、遗留收敛与交接实施计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-> 状态：已写（2026-11-16），待预检。
+> 状态：已写（2026-11-16），经预检 [re-78](../../../reviews/re-78-M6P8预检.md) 修正后可实施；T1 已完成（`54976c83`）。
 
 **Goal：**
 - 回填 P7c，phase 改 `M6/P8`；
@@ -22,7 +22,7 @@
 **分支与提交**
 - worktree `/Users/xiaoruan/project/nerve-project/.codex/worktress/codex/m6-p8`，分支 `codex/m6-p8`，基线 main `ea971606`；主目录永远在 main。
 - 提交用详细中文，前缀 `feat/fix/refactor/test/docs(M6/P8)`，结尾 `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`；推送由主控用 `/usr/bin/git`；noff 已获连续授权。
-- 关键词 phase 在 T1 改 `M6/P8`；不延长任何 `until`。`api/` 不改；`server/` 只在 T6（产品代码只有 `planning/app/freeze_cycles.go`）、T7、T8（只改测试）改。
+- 关键词 phase 在 T1 改 `M6/P8`；不延长任何 `until`。`api/` 不改；`server/` 只在 T6（产品代码只有 `planning/app/freeze_cycles.go` 与 worker `planning/adapter/river/freeze_cycles.go` 的注释）、T7、T8（只改测试）改。
 
 **只读与禁区**
 - `plane/`、`refer/` 只读，不在其内跑 git（读主目录的 `/Users/xiaoruan/project/nerve-project/plane/`）。
@@ -44,16 +44,16 @@
 **回归测试的边界**
 - 回归测试指 M2–M5 与 P1–P7c 的网页单测、Go 测试与 e2e。除下列，断言不改：
   - **T2**：`PK/menus/` 与 `PK/ui/modal/` 既有的测试一行不改（新的例加在旁边）。
-  - **T3**：断言 “Restore”、两条提示或 “No shortcuts found for” 英文原文的测试按契约改为翻译后的文案（台账逐条写明）。
+  - **T3**：`common.actions.restore` 的 en 就是 “Restore”，断言它的既有测试（`roots/archive-page.test.tsx:145`、`roots/archive-detail.test.tsx:144`、`:152`、`:184`、`:246`、`peek-overview/restore-menu.test.tsx:107`）照过、不改；断言两条提示或 “No shortcuts found for” 英文原文的测试（若有）按契约改为翻译后的文案（台账逐条写明）。
   - **T4**：归档页的既有测试（`roots/archive-page.test.tsx`、`@nerve/constants` 的过滤表测试）只加例；断言“归档页没有迭代、模块词”的例（若有）按契约改（台账写明）。
   - **T5**：`e2e/fixtures/module-pages.ts` 的 `expectOutlinesWhole` 的调用处只改导入（`g19-module-pages.spec.ts` 等）；面包屑、行、侧栏的既有单测与默认套件的页面故事不改，是截断与滚动照旧的回归保护。
-  - **T6**：`planning/app/freeze_cycles_test.go` 断言“遇错即返回”的例（若有）按契约改（台账写明），其余不改；`bootstrap` 的冻结测试不改。
-  - **T7**：既有的矩阵行不改，只加列。
+  - **T6**：`planning/app/freeze_cycles_test.go` 的 `TestFreezeCyclesKeepsTheProjectsBeforeAFailure`（`:288` 断言失败之后不再锁下一个）按契约改（台账写明），其余不改；`bootstrap/planning_freeze_test.go` 的 `TestFreezeJobLockTimeoutPreservesPostgresError`（`:176`）、`TestFreezeJobPartialCommitAndRetry`（`:227`）不改、照过。
+  - **T7**：既有的矩阵行与列不改，只加变体行（新文件）。
   - **T8**：`TestTheDeletionsAtTheScaleTarget` 既有的断言不改，只加规划表的断言；`TestPurgeScale` 不改。
 - 默认套件（`e2e/stories/`）不加文件、不加例；条数照旧 480（T14 以 `--list` 核对）。
 
 **检查点与证据**
-- 检查点：T10 结束时（全部产品变化完成）串行完整七项（`gates.sh t10-gate`，本段改 Go，`make test` 必须通过；M6-M8-03 的签名只重跑那一个文件一次，M6-M8-05 的签名记录之后重跑那一个包一次，再失败即停下报告主控），主控推送并核分支 CI；e2e 作业应与 P7c 的同量级（默认套件不变），超过 30 分钟时停下报告负责人。
+- 检查点：T11 结束时（全部产品变化与页面核对完成）串行完整七项（`gates.sh t11-gate`，本段改 Go，`make test` 必须通过；M6-M8-03 的签名只重跑那一个文件一次，M6-M8-05 的签名记录之后重跑那一个包一次，再失败即停下报告主控），主控推送并核分支 CI；e2e 作业应与 P7c 的同量级（默认套件不变），超过 30 分钟时停下报告负责人；web 作业（期限 15 分钟）与服务端两路（期限 25 分钟）每次记下时长：web 作业再被期限取消时按 P7c 的先例只重跑失败的作业一次、在阶段报告里告诉负责人，服务端任一路超过 20 分钟时报告负责人。检查点之后若改了产品代码（修复轮），T15 的最终候选再串行一次完整门禁。
 - 证据在 `.superpowers/sdd/P8-final-acceptance/`：台账 `progress.md`，收据经 `run-check.py <label> <命令…>`（在 worktree 的根跑），变异经 `mutate.py`，七项门禁经 `gates.sh`，最终候选经 `final.sh`（七项、m6-pages 与 m6-acceptance），文档链接经 `doc-links.py`，时长经 `durations.py`，CI 日志摘要经 `ci-e2e-summary.py`，归档经 `archive.py`。实现代理先读同目录的 `implementer-brief.md`。
 - 台账的行：`Task N: Step k RED/GREEN — <label> exit <code>（…）`、`Task N: 基线 — …`、`Task N: 变异 — <label>（…）→ 失败（哪个测试），restored=yes`、`Task N: Ruling: <决定> — <理由> — 代价：<代价>`、`Task N: complete (commits <first>..<last>, tests: <summary>)`。
 
@@ -85,14 +85,14 @@
 ## Task 3（T3）：英文字面量与表格的列宽（spec §2.3）
 
 - [ ] RED：`helper.tsx` 的“恢复”与两条提示、`shortcut.tsx` 的空结果以 zh-CN 渲染的例（`t3-red-i18n`）；开关关时表格的 `colSpan` 与加载行的列数等于表头的列数（`t3-red-colspan`）。
-- [ ] 改为键（en、zh-CN，新键名在台账写明）；表格的列数改为与表头同源；GREEN `t3-green`。
+- [ ] 改为键（en、zh-CN，新键名在台账写明；`handleOptionalAction` 没有 `t`，调用处传已翻译的提示，不插英文的动作名，spec §2.3）；表格的列数改为与表头同源，`getDisplayPropertiesCount`（`issue-layouts/utils.tsx:27`）随之删去；GREEN `t3-green`。
 - [ ] 变异：`t3-mut-literal`（“Restore”换回字面量）、`t3-mut-colspan`（恢复原来的计数）。
-- [ ] `make lint-web`；提交 `fix(M6/P8)`。
+- [ ] `make lint-web`、`make knip`；提交 `fix(M6/P8)`。
 
 ## Task 4（T4）：归档页的迭代、模块词（spec §2.4）
 
 - [ ] 读 Plane 的归档页（主目录 `plane/packages/constants/src/issue/filter.ts:142-160` 与归档页的筛选、分组的件）与 nerve 的 `archived_issues`（`web/packages/constants/src/issue/filter.ts:158-181`）、归档页的本地偏好与面板，台账写明落点。
-- [ ] RED：`@nerve/constants` 的过滤表例（归档页有 `cycle_id`、`module_id` 与 `cycle`、`modules` 分组）；归档页的面板例（开关开时给、关时不给未选的、已选的留着可去掉）；组头与条件的名字经 `usePlanningNames`（已归档的带说明）。收据 `t4-red`。
+- [ ] RED：`@nerve/constants` 的过滤表例（归档页有 `cycle_id`、`module_id` 筛选与 `cycle`、`module` 分组键——网页的分组键是单数的 `module`，`filter.ts:62`、`:217`）；归档页的面板例（开关开时给、关时不给未选的、已选的留着可去掉）；组头与条件的名字经 `usePlanningNames`（已归档的带说明）。收据 `t4-red`。
 - [ ] 实现；归档页没有拖放、快速新建、“添加已有”（核对既有的只读守卫，不加写的入口）；`plane-diff.md` 的“归档页的迭代、模块词（M6/P7b）”一行改写。GREEN `t4-green`。
 - [ ] 变异：`t4-mut-no-vocab`（从过滤表去掉 `cycle_id` → 例失败）、`t4-mut-switch-ignored`（开关关时照给 → 例失败）。
 - [ ] `pnpm --filter @nerve/constants build`、`make lint-web`、`make knip`；提交 `feat(M6/P8)`。
@@ -101,58 +101,61 @@
 
 - [ ] 读 M3 交接 §3 已核对的写法（`Button`、`IconButton` 的 `focus-visible` 类）与 `e2e/fixtures/browser.ts` 的 `focusOutline`、`e2e/fixtures/module-pages.ts:106` 的 `expectOutlinesWhole`；台账记七处各自的改法。
 - [ ] 把 `expectOutlinesWhole` 移到 `browser.ts`（原处删去、调用处改导入），默认套件里用到它的故事在 chromium 照过（`t5-move`）。
-- [ ] 七处的修改（只改轮廓的类与可聚焦元素的空间，不改截断与滚动）；`@nerve/ui` 改后 `pnpm --filter @nerve/ui build`。页面证明在 T11 的核对（三种引擎）；本 Task 先以一个临时的本机探针（不入库）在 chromium 量七处，记 `t5-probe`。
+- [ ] 七处的修改（只改轮廓的类与可聚焦元素的空间，不改截断与滚动）；`@nerve/ui` 改后 `pnpm --filter @nerve/ui build`。页面证明在 T11 的核对（三种引擎）；本 Task 先以一个临时的本机探针（不入库）在三种引擎量七处（(c)、(g) 只在 Firefox、WebKit 出现），改前改后各一次，记 `t5-probe-before`、`t5-probe-after`；面包屑的可聚焦链接由调用处渲染（`@nerve/ui` 的 `breadcrumbs.tsx:46`、`:132` 是容器），修改可能落在两处。
 - [ ] `make lint-web`、`make knip`；提交 `fix(M6/P8)`。
 
 ## Task 6（T6）：冻结任务逐项目继续（spec §2.6）
 
-- [ ] RED：`planning/app/freeze_cycles_test.go` 加例：三个候选项目、中间的一个事务失败——第一、第三个都提交、数目是两者之和、返回的错误 `errors.Is` 中间那个的原错误且带它的 id；`ctx` 在第二个之后取消——不再往下、返回 `ctx` 的错误。收据 `t6-red`。
-- [ ] 实现（`errors.Join`；注释与 [P4 spec](../specs/P4-progress-transfer.md) §2.5 那句改写，台账写明）；GREEN `t6-green`。
-- [ ] 变异：`t6-mut-stop-at-first`（恢复遇错即返回 → 例失败）、`t6-mut-drop-error`（继续但不交回错误 → 例失败）。
+- [ ] RED：加例（`planning/app/freeze_cycles_test.go` 将过约 400 行时放新的测试文件）：三个候选项目、中间的一个事务失败——第一、第三个都提交、数目是两者之和、返回的错误 `errors.Is` 中间那个的原错误且带它的 id；`ctx` 在第二个之后取消——不再往下、返回的错误含此前的失败与 `ctx.Err()`；七个项目都失败——错误里恰有前 5 个的原错误与“另有 2 个”。收据 `t6-red`。
+- [ ] 实现（`errors.Join`，前 5 个项目的错误加其余的计数；`app/freeze_cycles.go` 与 worker `adapter/river/freeze_cycles.go:41-42` 的注释、`README.md:129`、[P4 spec](../specs/P4-progress-transfer.md) `:104` 那句改写，台账写明）；GREEN `t6-green`。
+- [ ] 变异：`t6-mut-stop-at-first`（恢复遇错即返回 → 例失败）、`t6-mut-drop-error`（继续但不交回错误 → 例失败）、`t6-mut-no-cap`（不设上限 → 七个都失败的例失败）、`t6-mut-drop-ctx`（`ctx` 结束时丢掉此前的失败 → 例失败）。
 - [ ] `make lint-go`、`go test ./internal/modules/planning/...`（`t6-pkg`）与 `bootstrap` 的冻结测试（`-run 'Freeze'`，`t6-bootstrap`）；提交 `fix(M6/P8)`。
 
-## Task 7（T7）：权限矩阵的访客一列（spec §2.7）
+## Task 7（T7）：权限矩阵的访客变体行与归档列表的词（spec §2.7、§2.4）
 
-- [ ] 读 `bootstrap/permission_matrix*_test.go` 的迭代、模块、链接、成员的表与转移的访客变体（`permission_matrix_transfer_test.go:37`），台账列出 P1–P3a 的写操作全集（对照 `api/modules/planning.yaml` 的写路径）。
-- [ ] 每个写加“看得到全部工作项的访客”一列（读得到、写不了：403 `forbidden` 或接口的既有问题码）；聚焦运行 `-run 'TestPermissionMatrix|Coverage|Matrix|EveryColumnCalls'`（`t7-matrix`）。
-- [ ] 变异：`t7-mut-cycle-write-as-read`、`t7-mut-module-write-as-read`（各把一个写的动作名换成读 → 新列失败）。
+- [ ] 读 `bootstrap/permission_matrix*_test.go` 与转移的访客变体（`permission_matrix_transfer_test.go:37-39`、`guestsSeeAll` 在 `permission_matrix_counts_test.go:164`）；改前聚焦运行一次，记 `TestPermissionMatrix` 的时长（`t7-matrix-before`）。
+- [ ] 新文件为 spec §2.7 列出的 13 个写操作各加一个 `variant: "guests see all"` 的行（已有 prepare 的组合它）；期望：访客 `forbidden`，工作区管理员兼访客照过；框架支持时变体只跑这两列。不加的四类在文件头的注释写明理由（spec §2.7）。聚焦运行 `-run 'TestPermissionMatrix|Coverage|Matrix|EveryColumnCalls'`（`t7-matrix`），时长与改前比较：增加超过 60 秒即停下报告主控。
+- [ ] 变异：`t7-mut-cycle-write-as-read`、`t7-mut-module-write-as-read`（各把一个写的动作名换成读 → 变体行失败）。
+- [ ] 归档列表的词：在 bootstrap 的列表测试加一例，`archived=true` 与 `cycle_id`、`module_id` 筛选、`group_by=module` 合在一起的回答恰如所选（`t7-archived-vocab`）。
 - [ ] `make lint-go`；提交 `test(M6/P8)`。
 
 ## Task 8（T8）：规模（spec §2.8）
 
 - [ ] 读 `bootstrap/issue_scale_fixture_test.go:81-102` 与 `TestTheDeletionsAtTheScaleTarget`、`TestPurgeScale` 的开关与证据目录；M5 P8 阶段记录的规模数（一个项目 7.6 秒、五个 14.3 秒、邻域编辑至多 68 毫秒）。
-- [ ] 夹具播种规划的数据（每项目的迭代、模块、成员、链接与工作项的 `cycle_issues`、`module_issues`；数目在台账写明，以工作项规模的固定比例），删除之后的断言加规划表精确归零与邻域不受影响。
-- [ ] 冻结的规模测试（新文件，`NERVE_MEASURE_SCALE=1` 才跑；`EXPLAIN` 证候选查询用到部分索引，量一次运行的总时长与逐项目的锁持有时长，证据写入 `NERVE_SCALE_EVIDENCE`）。
+- [ ] 夹具播种规划的数据：每项目 8 个迭代、6 个模块（每个模块 3 个成员、2 个链接），每个工作项在一个迭代、两个模块里；`ANALYZE`（`issue_scale_fixture_test.go:109`）加上规划的表。
+- [ ] “没有在跑的删除任务”的基线加上 `planning.delete_rows`；项目一步与工作区一步各找到每个被删项目的一个 `planning.delete_rows` 任务，以 `waitPlanningDeletion`（`bootstrap/planning_deletion_fixture_test.go:93`）等它们完成（完成、没有错误；snooze 与批数记下而不禁止；运行秒数），然后才断言规划的表与 `cycle_issues`、`module_issues` 活的行为 0、总行数不变（软删除），写明这两张关系表由哪一个任务删；邻域不受影响。既有的断言不改；若加进来的任务扰动了既有的 90 秒等待或单次运行的断言，停下报告主控。
+- [ ] 冻结的规模测试（新文件，`NERVE_MEASURE_SCALE=1` 才跑）：夹具里绝大多数迭代已冻结或未结束并 `ANALYZE`；`EXPLAIN` 断言候选查询用到 `cycles_freeze_due_idx`（规划器仍选顺序扫描时记下计划、停下报告主控）；量一次运行的总时长与逐项目的锁持有时长，证据写入 `NERVE_SCALE_EVIDENCE`。
 - [ ] 默认 `make test` 下两者跳过（`t8-default-skip`）；本 Task 只跑一次小规模的冒烟以证测试能跑（`t8-smoke`，台账写明参数）；正式的规模运行在 T12。
 - [ ] `make lint-go`；提交 `test(M6/P8)`。
 
 ## Task 9（T9）：死成员（spec §2.9）
 
-- [ ] 照 M1 收尾 plan 附录 A（`docs/v0/M1-frontend-trim/plans/closeout.md:1062`、`:1368`、`:1512`）建脚本于台账（不入库），在 HEAD 跑 `--rows M6`（`t9-before`，tsv 入台账）。
+- [ ] 照 M1 收尾 plan 附录 A（`docs/v0/M1-frontend-trim/plans/closeout.md:1062`、`:1368`、`:1512`）建脚本于台账（不入库），先 `react-router typegen`，再在 HEAD 跑 `--rows M6`（`t9-before`，tsv 入台账）。
 - [ ] 删除 `fake-module-dialog.tsx:32-33` 的 `invalid`、`describedBy` 与只为它们存在的代码；复扫（`t9-after`），没有新行。
 - [ ] 产品文件里有读者的行逐行写明文件、名字与读者（写进阶段记录的草稿，台账 `t9-readers`）；M1 交接的 84 行与 M3 §2 的 8 行的去向。
 - [ ] `make lint-web`、`make knip`；提交 `refactor(M6/P8)`。
 
-## Task 10（T10）：告警的一类与检查点（spec §2.10）
+## Task 10（T10）：告警的一类（spec §2.10）
 
 - [ ] 基线：全仓 oxlint 按规则计数（`t10-baseline`）。
-- [ ] 清 `no-unused-expressions`（4 条；删 `@nerve/utils` 的 `generateQueryParams` 这个死导出，其余等价改写），`.oxlintrc.json` 设为 error，`tools/lint-cap.mjs` 的 cap 随实际下调；`make lint-web` 过（`t10-lint`）。
+- [ ] 清 `no-unused-expressions`（4 条；删 `@nerve/utils` 的 `generateQueryParams` 这个死导出，其余等价改写），`.oxlintrc.json` 设为 error（全仓生效，含 e2e），各包 `check:lint` 脚本里的 cap（`web/apps/web/package.json:10`、`web/packages/utils/package.json:18`）随实际下调；`make lint-web` 过（`t10-lint`）。
 - [ ] M6 全期改动文件的收据：`git diff --diff-filter=AMR --name-only ba3fd6e0..HEAD` 的可 lint 文件 oxlint 0（`t10-oxlint-m6`）。
 - [ ] 提交 `refactor(M6/P8)`。
-- [ ] **检查点**：`sh .superpowers/sdd/P8-final-acceptance/gates.sh t10-gate`；主控推送并核分支 CI。
 
-## Task 11（T11）：矩阵专用的页面核对（spec §2.11）
+## Task 11（T11）：矩阵专用的页面核对与检查点（spec §2.11）
 
-- [ ] `e2e/playwright.m6-acceptance.config.ts`（继承默认配置，`testDir: "acceptance"`，三种引擎）、`e2e/package.json` 的 `test:m6-acceptance`，e2e 的 lint、类型检查覆盖 `acceptance/`；默认配置不改。
-- [ ] 四类核对（标题 `G<n> (acceptance): …`）：焦点轮廓（迭代页、模块页、§2.5 的七处与 P7a–P7c 的新控件，含 390 × 844 的移动端页头）；表单里的项目选择；归档页的迭代、模块词；模块的开关（G18）。写法照 P7b 阶段记录 §5 与 P7c 的教训（锚在目标页独有的内容、不 reload、`dismissToasts`、窄屏用 `setViewportSize`）。
+- [ ] `e2e/playwright.m6-acceptance.config.ts`（继承默认配置，`testDir: "acceptance"`，`projects` 整个换成三种引擎，同 `playwright.m5-slow.config.ts`，不继承 `s3-fixture` 与 Firefox 的 `grep`）、`e2e/package.json` 的 `test:m6-acceptance`；核对 e2e 的 `tsconfig.json`（`**/*.ts`）与 `check:lint`（`.`）已覆盖 `acceptance/`（不改）；默认配置不改。
+- [ ] 五类核对（标题 `G<n> (acceptance): …`）：焦点轮廓（迭代页、模块页、§2.5 的七处与迭代页的四种共用控件、P7a–P7c 的新控件，含 390 × 844 的移动端页头）；命令面板的行（`aria-selected`、可见的高亮、整行在滚动区之内，不用 `expectOutlinesWhole`）；新建表单里换项目；归档页的迭代、模块词；模块的开关（G18）。第一次量到的控件轮廓不完整时，在本 Task 于根因处修（RED 即这条核对，台账写明），跨模块的停下报告主控。写法照 P7b 阶段记录 §5 与 P7c 的教训（锚在目标页独有的内容、不 reload、`dismissToasts`、窄屏用 `setViewportSize`）。
 - [ ] 三种引擎各过（`t11-acceptance`），逐条时长（`durations.py`）。
-- [ ] 变异（以干净的源重建）：`t11-mut-outline-a`、`t11-mut-outline-d`、`t11-mut-outline-e`（恢复修改之前的类 → 轮廓的核对失败）；`t11-mut-archived-vocab`（归档页的过滤表去掉 `cycle_id` → 核对失败）。
-- [ ] 提交 `test(M6/P8)`。
+- [ ] 变异（以干净的源重建）：`t11-mut-outline-a`、`t11-mut-outline-d`、`t11-mut-outline-e`（恢复修改之前的类 → 轮廓的核对失败）、`t11-mut-outline-c`（Firefox、WebKit）、`t11-mut-outline-g`（WebKit）；`t11-mut-archived-vocab`（归档页的过滤表去掉 `cycle_id` → 核对失败）。
+- [ ] 提交 `test(M6/P8)`（本 Task 修的产品代码另提交 `fix(M6/P8)`）。
+- [ ] **检查点**：`sh .superpowers/sdd/P8-final-acceptance/gates.sh t11-gate`；主控推送并核分支 CI（e2e、web、服务端两路的时长照“检查点与证据”的规则）。
 
 ## Task 12（T12）：最终矩阵的运行（主控，spec §2.12）
 
 - [ ] 串行：`make build build-s3-fixture`；默认套件加 JSON 报告（`t12-default`）；`test:m6-pages`（`t12-m6-pages`）；`test:m6-acceptance`（`t12-acceptance`）；间歇项隔离重复至少 5 次（`t12-repeat-*`）；`GOFLAGS='-p=1 -v' make test`（`t12-go-full`）；矩阵的聚焦运行（`t12-matrix`）；`TestPurgeScale`（`t12-purge-scale`）、扩展后的删除规模（`t12-delete-scale`）、冻结的规模（`t12-freeze-scale`）。
-- [ ] [阶段记录](../reviews/P8-final-acceptance-review.md)的 G1–G20 表：每个 G 的接口、数据库与页面证据，指向本次运行的原件；间歇项的结论；规模的数字。
+- [ ] [阶段记录](../reviews/P8-final-acceptance-review.md)的 G1–G20 表：每个 G 的接口、数据库与页面证据，指向本次运行的原件与它所在的 HEAD；间歇项的结论；规模的数字。
+- [ ] 设计 §13 的 14 条（`M6-design.md:257-270`）逐条对到本次运行的收据或写明“closeout”（spec §2.12 的对照）；H3 的理由写进阶段记录。
 - [ ] 提交 `docs(M6/P8)`。
 
 ## Task 13（T13）：文档与交接（spec §2.13）
@@ -164,7 +167,7 @@
 ## Task 14（T14）：整分支审查与修复（主控）
 
 - [ ] 整分支 deep-review（fable，只读）与本机七项（`gates.sh t14-gate`）并行；默认套件的条数核对（`t14-list`：480）。
-- [ ] 修复轮（若有）：Critical/Important 一次修复、RED/GREEN；Minor 入台账；限定复审。修复改了产品代码时，最终矩阵受影响的行在 T15 的最终候选上重跑。
+- [ ] 修复轮（若有）：Critical/Important 一次修复、RED/GREEN；Minor 入台账；限定复审。修复改了产品代码时，最终矩阵受影响的行在 T15 的最终候选上重跑；自 T12 以来只改了文档或无关测试的行沿用 T12 的原件；规模、隔离重复与 `-v` 的 Go 全量不在 `final.sh` 里，受影响时单独重跑。
 
 ## Task 15（T15）：最终候选与分支 CI（主控）
 

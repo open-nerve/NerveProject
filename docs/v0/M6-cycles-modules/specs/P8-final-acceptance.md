@@ -1,6 +1,6 @@
 # M6 / P8：最终验收——最终矩阵、规模重跑、遗留收敛与交接
 
-> 状态：spec 与 plan 已写（2026-11-16），待预检。基线 main `ea971606b829fb3ade4beb9d204ecbc23d3af674`（P7c 的 noff；main CI 43764306705 attempt 2 全绿）。
+> 状态：spec 与 plan 已写（2026-11-16），经预检 [re-78](../../../reviews/re-78-M6P8预检.md) 修正后可实施（I1–I6、m1–m11 改入，m8 不改）。基线 main `ea971606b829fb3ade4beb9d204ecbc23d3af674`（P7c 的 noff；main CI 43764306705 attempt 2 全绿）。
 
 文中的路径：`core/…` 在 `web/apps/web/` 下；`PK/…` 是 `core/components/power-k/…`；`issue-layouts/…` 是 `core/components/issues/issue-layouts/…`；`@nerve/…` 的包在 `web/packages/` 下；`planning/…` 是 `server/internal/modules/planning/…`；`bootstrap/…` 是 `server/internal/bootstrap/…`。台账 `.superpowers/sdd/P8-final-acceptance/`（不入库）的 `research/p8-inbound.md`、`research/g-matrix.md`、`research/cleanup-lint-docs.md` 是本 spec 的事实来源（于 `ea971606`）。
 
@@ -28,13 +28,13 @@ P8 是 M6 最后一个编号阶段（[M6 设计](../M6-design.md) §12 的 P8 �
 
 ### 2.3 英文字面量与表格的列宽
 
-- `core/components/issues/issue-layouts/quick-action-dropdowns/helper.tsx:219` 的 “Restore” 改读已有的 `common.actions.restore`；同文件 `:53-54` 的两条提示（“Action not available”等）同类，改为键（en、zh-CN）。
+- `core/components/issues/issue-layouts/quick-action-dropdowns/helper.tsx:219` 的 “Restore” 改读已有的 `common.actions.restore`（en 的文案就是 “Restore”，断言它的既有测试照过）；同文件 `:53-54` 的两条提示（“Action not available”等）同类，改为键（en、zh-CN）：`handleOptionalAction`（`:39-57`）是模块级的函数、没有 `t`，调用处传的是英文的动作名（`:140` 的 “Restore”、`:213` 的 “Archive”），改为调用处传已翻译的提示（或动作的键），不在提示里插英文的动作名。
 - `PK/ui/renderer/shortcut.tsx:105` 的 “No shortcuts found for” 改为新键（en、zh-CN），插值照旧。
-- 项目关着迭代（模块）时，表格的合并单元格与加载行仍按迭代、模块两列计数（`issue-layouts/spreadsheet/spreadsheet-table.tsx:110` 对 `spreadsheet-view.tsx:66`），宽出一两列：改为与表头同一个列的来源。单测：开关关时 `colSpan` 等于表头的列数。
+- 项目关着迭代（模块）时，表格的合并单元格与加载行仍按迭代、模块两列计数（`issue-layouts/spreadsheet/spreadsheet-table.tsx:110` 对 `spreadsheet-view.tsx:66`），宽出一两列：改为与表头同一个列的来源；`getDisplayPropertiesCount`（`issue-layouts/utils.tsx:27`）只有这一个读者，换掉之后删去。单测：开关关时 `colSpan` 等于表头的列数。
 
 ### 2.4 归档页的迭代、模块词
 
-给。Plane 的归档页给 `cycle_id`、`module_id` 的筛选与按 `cycle`、`modules` 分组（plane `packages/constants/src/issue/filter.ts:142-160`）；nerve 的归档列表是同一个 `GET /api/v0/projects/{project_id}/issues?archived=true`，筛选与分组的词同项目页（`api/modules/issue.yaml:381` 起），服务端不改。`@nerve/constants` 的 `archived_issues`（`web/packages/constants/src/issue/filter.ts:158-181`）加两个筛选与两个分组；归档页的本地偏好照收这四个词。归档页只读：没有拖放、快速新建与“添加已有”，拒收的列不适用；名字经 `usePlanningNames`（已归档的带说明）；开关关闭时同项目页（P7b R8、R17：不给未选的分组与筛选，已选的留着可去掉，组头 “—”，条件的值“不可用的选项”）。`plane-diff.md` 的“归档页的迭代、模块词（M6/P7b）”一行改写为本段。单测：归档页的词表与开关关闭时的面板；页面核对见 §2.11。
+给。Plane 的归档页给 `cycle_id`、`module_id` 的筛选与按 `cycle`、`module` 分组（plane `packages/constants/src/issue/filter.ts:142-160`）；nerve 的归档列表是同一个 `GET /api/v0/projects/{project_id}/issues?archived=true`，与项目页经同一个解析（`issue/app/list_issues.go:26-41` 的 `ParseListQuery(raw, domain.ProjectList, …)`），服务端不改；今天没有服务端测试把 `archived=true` 与 `cycle_id`/`module_id`/`group_by` 合在一起，T7 补一例。`@nerve/constants` 的 `archived_issues`（`web/packages/constants/src/issue/filter.ts:158-181`）加 `cycle_id`、`module_id` 两个筛选与 `cycle`、`module` 两个分组键（网页的分组键是单数的 `module`，`filter.ts:62`、`:217`；`modules` 是显示属性）；归档页的本地偏好照收这四个词。归档页只读：没有拖放、快速新建与“添加已有”，拒收的列不适用；名字经 `usePlanningNames`（已归档的带说明）；开关关闭时同项目页（P7b R8、R17：不给未选的分组与筛选，已选的留着可去掉，组头 “—”，条件的值“不可用的选项”）。`plane-diff.md` 的“归档页的迭代、模块词（M6/P7b）”一行改写为本段。单测：归档页的词表与开关关闭时的面板；页面核对见 §2.11。
 
 ### 2.5 共用控件的焦点轮廓
 
@@ -42,16 +42,16 @@ P6a 交下的七处在根因处修（[P6a spec](P6a-web-modules.md) §5 的 P8 �
 
 ### 2.6 冻结任务逐项目继续
 
-`planning/app/freeze_cycles.go` 的 `Execute` 今天在第一个失败的项目处返回：一个违反不变量的项目（时区载不进、状态在五组之外）让 id 在它之后的项目每次重试都轮不到，是活性缺陷（P4 spec §5、re-63 m2）。改为：每个项目照旧一个事务；一个项目失败时记下以项目 id 包裹的错误、接着下一个项目；`ctx` 结束时立即停并返回；跑完以 `errors.Join` 交回全部错误与已冻结的数目（River 照旧重试并记录，已提交的项目不重做：冻结过的迭代不再是候选）。注释与 P4 spec §2.5 的那句随之改写。单测：三个项目中间的一个失败，第一个与第三个都已提交，返回的错误含中间那个的原错误与 id；`ctx` 取消时不再往下。变异：恢复“遇错即返回”被单测杀死。M4 的自动归档（`issue/app/auto_archive.go`）同形，属 issue 模块，不在本段改，写入 M8 交接（§2.13）。
+`planning/app/freeze_cycles.go` 的 `Execute` 今天在第一个失败的项目处返回：一个违反不变量的项目（时区载不进、状态在五组之外）让 id 在它之后的项目每次重试都轮不到，是活性缺陷（P4 spec §5、re-63 m2）。改为：每个项目照旧一个事务；一个项目失败时记下以项目 id 包裹的错误、接着下一个项目；`ctx` 结束时立即停，返回 `errors.Join(已记下的…, ctx.Err())`，此前的失败不丢；跑完以 `errors.Join` 交回错误与已冻结的数目（River 照旧重试，把每次的错误文字存在任务行上；已提交的项目不重做：冻结过的迭代不再是候选，`progress.sql:31-34` 的 `progress_snapshot IS NULL`）。**交回的错误有上限**：保留前 5 个项目的错误（`errors.Is`/`errors.As` 照样穿过，`LockNotAvailable` 与 `isBusy` 都经 `errors.As`），其余只计数（“另有 N 个项目失败”），失败的项目数精确——连接池中途断了这类会让每个候选都失败的错误不会把成百条错误写进任务行。锁序与“锁后读时钟”不变。注释（`app/freeze_cycles.go` 与 worker 的 `adapter/river/freeze_cycles.go:41-42`）、`README.md:129` 与 [P4 spec](P4-progress-transfer.md) `:104` 的那句随之改写。单测：三个项目中间的一个失败，第一个与第三个都已提交，返回的错误含中间那个的原错误与 id；`ctx` 在第二个之后取消时不再往下、返回的错误含此前的失败与 `ctx.Err()`；七个项目都失败时错误里恰有 5 个原错误与“另有 2 个”。变异：恢复“遇错即返回”、去掉上限，各被单测杀死。既有的 `TestFreezeCyclesKeepsTheProjectsBeforeAFailure`（`planning/app/freeze_cycles_test.go:288` 断言失败之后不再锁下一个）按契约改；`bootstrap/planning_freeze_test.go` 的 `TestFreezeJobLockTimeoutPreservesPostgresError`（`:176`）、`TestFreezeJobPartialCommitAndRetry`（`:227`）不改、照过。M4 的自动归档（`issue/app/auto_archive.go`）同形，属 issue 模块，不在本段改，写入 M8 交接（§2.13）。
 
 ### 2.7 权限矩阵的访客一列
 
-迭代、模块、模块链接与模块成员的全部写操作（P1–P3a）在权限矩阵补“看得到全部工作项的访客”一列（今天只有转移有，`bootstrap/permission_matrix_transfer_test.go:37`）：这样的访客读得到、写不了，把任一写操作的 `*.write` 换成 `*.read` 时矩阵失败。聚焦运行连同覆盖守卫（`-run 'TestPermissionMatrix|Coverage|Matrix|EveryColumnCalls'`）；变异：一个迭代的写、一个模块的写各把动作名换成读，都被杀死。
+照转移的先例（`bootstrap/permission_matrix_transfer_test.go:37-39`：`{op, variant: "guests see all", prepare: preparing(guestsSeeAll, …)}`，`guestsSeeAll` 在 `permission_matrix_counts_test.go:164`）为 P1–P2 的写操作各加一个**变体行**（不是给全部行加一列）：`createCycle`、`updateCycle`、`deleteCycle`、`archiveCycle`、`unarchiveCycle`、`createModule`、`updateModule`、`deleteModule`、`archiveModule`、`unarchiveModule`、`createModuleLink`、`updateModuleLink`、`deleteModuleLink`，共 13 个（`api/modules/planning.yaml` 的写路径）。不加的：`updateCyclePreferences`/`updateModulePreferences` 是 `*Preferences` 的动作、访客本可写（`permission_matrix_cycles_test.go:212-213`）；转移已有；模块成员没有自己的接口，是建立、修改模块的 `member_ids`；P3a 的归属写经 issue 模块的动作，不是 `*.write`。期望同转移的变体：访客 `forbidden`，工作区管理员兼访客照过。已有 prepare 的行组合它（如 `unarchiveCycle` 的 `preparing(guestsSeeAll, cycleArchived)`、`archiveModule` 的 `moduleCompleted`）。变体行放新文件（`permission_matrix_cycles_test.go` 394 行、`permission_matrix_modules_test.go` 351 行）。这样的访客读得到、写不了，把任一写操作的 `*.write` 换成 `*.read` 时矩阵失败。聚焦运行连同覆盖守卫（`-run 'TestPermissionMatrix|Coverage|Matrix|EveryColumnCalls'`）；变异：一个迭代的写、一个模块的写各把动作名换成读，都被杀死。**代价**：写的行每格一份数据库副本（`permission_matrix_test.go:161`），13 行若跑满 14 列约 182 份；变体只需访客与工作区管理员兼访客两列时只跑这两列（矩阵的框架若支持；不支持就跑满）。记下 `TestPermissionMatrix` 改前改后的时长；增加超过 60 秒时停下报告主控（服务端分片的余量属负责人的开放问题）。另补一例归档列表的词：`archived=true` 与 `cycle_id`、`module_id` 筛选、`group_by=module` 合在一起的回答（§2.4）。
 
 ### 2.8 规模
 
-- **删除规模的夹具**：`bootstrap/issue_scale_fixture_test.go`（`:81-102`）的规模夹具今天不播种规划的数据，`TestTheDeletionsAtTheScaleTarget` 因此走不到 M6 的删除步骤。补上：每个项目的迭代、模块、模块成员、模块链接与工作项的 `cycle_issues`、`module_issues` 行（数目在 plan 里定，与工作项的规模同一量级的比例），断言项目、工作区删除与 `planning.delete_rows` 之后这些表的行精确归零、邻域的项目不受影响，证据（时长、批数、邻域的编辑延迟）写入 `NERVE_SCALE_EVIDENCE` 目录。
-- **冻结的规模**：新增以环境变量打开、默认跳过的规模测试（同 `NERVE_MEASURE_SCALE` 的做法）：多项目、每项目若干已结束的迭代与工作项，量候选查询 `FreezeDueProjects` 的计划（用到部分索引）与一次运行的总时长、逐项目的锁持有时长。
+- **删除规模的夹具**：`bootstrap/issue_scale_fixture_test.go`（`:77-103`）的规模夹具今天不播种规划的数据，`TestTheDeletionsAtTheScaleTarget` 只看 `issue.delete_rows`（基线 `issue_scale_test.go:62`、`issue_project_deletion_jobs_test.go:55` 的 `kind='issue.delete_rows'`、`issue_scale_test.go:93-102` 的 90 秒等待），走不到 M6 的删除步骤。M6 的删除是另一个 River 任务：`planning/app/delete_rows_on_deletion.go:24` 订阅 `project.deleted`、`workspace.deleted`，入队 `planning.delete_rows`（`{project_id, at, by}`，`planning/adapter/river/delete_rows.go:17-25`），超出预算时 snooze（`:60-62`）。补上：(1) 夹具每个项目播种 8 个迭代、6 个模块（每个模块 3 个成员、2 个链接），每个工作项在一个迭代、两个模块里，`ANALYZE`（`issue_scale_fixture_test.go:109`）加上规划的表；(2) “没有在跑的删除任务”的基线加上 `planning.delete_rows`；(3) 项目一步与工作区一步各找到每个被删项目的一个 `planning.delete_rows` 任务，以 `waitPlanningDeletion`（`bootstrap/planning_deletion_fixture_test.go:93`）等它们完成：断言完成、没有错误，snooze 与批数记下而不禁止（`scaleSingleRun` 的“一次运行、attempt 1、零 snooze”不套在它上面），记下运行秒数；(4) 然后才断言规划的表与 `cycle_issues`、`module_issues`：活的行为 0、总行数不变（软删除，同 `checkScaleRows`；物理删除属 `TestPurgeScale`），并写明 `cycle_issues`、`module_issues` 由哪一个任务删；邻域的项目不受影响。证据（时长、批数、邻域的编辑延迟）写入 `NERVE_SCALE_EVIDENCE` 目录。既有的断言不改；加进来的规划任务若扰动了既有的 90 秒等待或单次运行的断言，停下报告主控，不放宽。
+- **冻结的规模**：新增以环境变量打开、默认跳过的规模测试（同 `NERVE_MEASURE_SCALE` 的做法）：多项目、每项目若干已结束的迭代与工作项，量候选查询 `FreezeDueProjects` 的计划与一次运行的总时长、逐项目的锁持有时长。夹具里绝大多数迭代是已冻结或未结束的并 `ANALYZE`，使 `cycles_freeze_due_idx` 有选择性；断言计划用到它——规划器仍选顺序扫描时记下计划、停下报告主控，不悄悄放宽断言。
 - **重跑**：`TestPurgeScale`（`NERVE_PURGE_SCALE=1`）、扩展后的删除规模测试（`NERVE_MEASURE_SCALE=1`）与冻结的规模测试在最终代码上各跑一次（§2.12），一次一个容器套件。只改测试，不改产品代码；若规模测试暴露产品的缺陷，按纪律先提交证据再判断（§6）。
 
 ### 2.9 死成员
@@ -60,16 +60,17 @@ M1 收尾 plan 附录 A 的三个脚本（`docs/v0/M1-frontend-trim/plans/closeo
 
 ### 2.10 告警
 
-清 `no-unused-expressions` 一类：全仓 4 条（其一在没有读者的 `@nerve/utils` 的 `router.ts` `generateQueryParams`，连同这个死导出删除），其余以等价的语句改写、行为不变；`.oxlintrc.json` 把这条规则设为 error，`tools/lint-cap.mjs` 的 cap 随实际下调（调研时 web 44→41、utils 3→2，以实测为准）。M6 全期改动的文件（`git diff --diff-filter=AMR ba3fd6e0..HEAD` 的可 lint 文件，`ba3fd6e0` 是 M5 收尾的 noff）oxlint 0 告警的收据（M1 交接的“改到的文件 oxlint 为零”）。
+清 `no-unused-expressions` 一类：全仓 4 条（其一在没有读者的 `@nerve/utils` 的 `router.ts` `generateQueryParams`，连同这个死导出删除），其余以等价的语句改写、行为不变；`.oxlintrc.json` 把这条规则设为 error（全仓生效，含 e2e），各包 `check:lint` 脚本里的 cap 随实际下调（`web/apps/web/package.json:10` 的 44、`web/packages/utils/package.json:18` 的 3；`tools/lint-cap.mjs` 只收 cap 作参数；调研时 web 44→41、utils 3→2，以实测为准）。M6 全期改动的文件（`git diff --diff-filter=AMR ba3fd6e0..HEAD` 的可 lint 文件，`ba3fd6e0` 是 M5 收尾的 noff）oxlint 0 告警的收据（M1 交接的“改到的文件 oxlint 为零”）。
 
 ### 2.11 矩阵专用的页面核对
 
-新目录 `e2e/acceptance/`（默认配置的 `testDir` 是 `stories`，不跑它）与新配置 `e2e/playwright.m6-acceptance.config.ts`（继承默认配置，`testDir: "acceptance"`，chromium、firefox、webkit 三种引擎，`package.json` 加 `test:m6-acceptance`），e2e 的 lint 与类型检查覆盖新目录。帮手从原处导入不复制。核对（标题 `G<n> (acceptance): …`）：
+新目录 `e2e/acceptance/`（默认配置的 `testDir` 是 `stories`，`make e2e` 与 CI 跑默认配置，不跑它；`e2e/drills` 与 `playwright.m5-slow.config.ts` 是先例）与新配置 `e2e/playwright.m6-acceptance.config.ts`（继承默认配置，`testDir: "acceptance"`，`projects` 整个换成 chromium、firefox、webkit 三种引擎——不继承默认配置的 `s3-fixture` 项目与 Firefox 的 `grep`；`package.json` 加 `test:m6-acceptance`）。e2e 的 `tsconfig.json` 已含 `**/*.ts`、`check:lint` 在 `.` 上跑 oxlint，新目录自然被覆盖（核对，不改）。帮手从原处导入不复制。核对（标题 `G<n> (acceptance): …`）：
 
 | 核对 | 覆盖 |
 |---|---|
-| 焦点轮廓（迭代页、模块页） | 逐个 Tab 量 §2.5 的七处与迭代页的 M3 交接 §3 四种共用控件、P7a 的两个下拉框、P7b 的筛选与分组控件和“添加已有”的两个入口、P7c 的命令面板菜单行、移动端页头（390 × 844）与迭代页的顶行；`expectOutlinesWhole` 断言轮廓完整；以变异脚本恢复修改之前的类名时至少 (a)、(d)、(e) 三处失败 |
-| 表单里的项目选择 | 迭代、模块的新建表单在工作区级入口打开时的项目选择（`dropdowns/project/base.tsx`，M2 交接 §5(d)）：键盘打开、搜索、选中，表单随之换项目 |
+| 焦点轮廓（迭代页、模块页） | 逐个 Tab 量 §2.5 的七处与迭代页的 M3 交接 §3 四种共用控件、P7a 的两个下拉框、P7b 的筛选与分组控件和“添加已有”的两个入口、移动端页头（390 × 844）与迭代页的顶行；`expectOutlinesWhole` 断言轮廓完整；以变异脚本恢复修改之前的类名时 (a)、(d)、(e) 与只在 Firefox、WebKit 出现的 (c)、(g) 各在其引擎失败。第一次量到的控件（迭代页的四种、P7a–P7c 的新控件）若轮廓不完整，在本 Task 于根因处修（RED 即这条核对），跨模块的停下报告 |
+| 命令面板的行 | cmdk 的行不是 Tab 的停靠点（`PK/ui/modal/command-item.tsx:50-56` 的 `focus:outline-none`，选中是 `aria-selected` 的样式，`styles/power-k.css:14`；焦点留在 `Command.Input`，它也是 `outline-none`，`PK/ui/modal/header.tsx:49`）：以方向键选到的行 `aria-selected`、有可见的高亮、整行在列表的滚动区之内；输入框的 `outline-none` 照 Plane 保留（面板本身就是焦点所在的明示），不用 `expectOutlinesWhole` 量行 |
+| 表单里的项目选择 | 迭代、模块的新建表单里换项目（`cycles/form.tsx:91-105`、`modules/form.tsx:118` 的 `dropdowns/project/base.tsx`，M2 交接 §5(d)）：键盘打开、搜索、选中，表单随之换项目 |
 | 归档页的迭代、模块词 | 归档页按迭代筛选、按模块分组，请求的查询与组恰如所选；开关关闭时未选的不给 |
 | 模块的开关（G18） | 关掉模块：侧栏与命令面板没有入口，按地址读模块页照旧可读，工作项的模块列与筛选按 P7b R8；再打开，数据完好 |
 
@@ -77,7 +78,9 @@ M1 收尾 plan 附录 A 的三个脚本（`docs/v0/M1-frontend-trim/plans/closeo
 
 ### 2.12 最终矩阵
 
-在最终产品候选上运行（收据经 `run-check.py`，原件入台账）：`make build`；默认套件加 JSON 报告；`test:m6-pages`（45 条 × 三种引擎）；`test:m6-acceptance`；间歇项隔离重复至少 5 次（M6-M8-13 的 G11 页面在 WebKit、G2 页面、M6-M8-03、M6-M8-07、M6-M8-01 的 C7；其中会撞上外因的写明外因）；Go 全量 `GOFLAGS='-p=1 -v' make test`；矩阵的聚焦运行（§2.7）；三个规模测试（§2.8）。[阶段记录](../reviews/P8-final-acceptance-review.md)每个 G 一行：接口与数据库的证据（Go 用例名与本次的通过数）、页面的证据（故事、引擎与本次的结果），每条指向本次运行的原件。G14、G16、G17、G20 没有带编号的页面故事：G16（自动归档保留开着的迭代、模块的工作项）与 G17（权限与 OwnOnly）以 Go 为主，页面一侧指向已有故事里的断言（G5、G7、G12、G13、G19 的访客与 OwnOnly），G14、G20 写明它们的证据所在；不为凑编号写重复的故事。
+在最终产品候选上运行（收据经 `run-check.py`，原件入台账）：`make build`；默认套件加 JSON 报告；`test:m6-pages`（45 条 × 三种引擎）；`test:m6-acceptance`；间歇项隔离重复至少 5 次（M6-M8-13 的 G11 页面在 WebKit、G2 页面、M6-M8-03、M6-M8-07、M6-M8-01 的 C7；其中会撞上外因的写明外因）；Go 全量 `GOFLAGS='-p=1 -v' make test`；矩阵的聚焦运行（§2.7）；三个规模测试（§2.8）。[阶段记录](../reviews/P8-final-acceptance-review.md)每个 G 一行：接口与数据库的证据（Go 用例名与本次的通过数）、页面的证据（故事、引擎与本次的结果），每条指向本次运行的原件。G14、G16、G17、G20 没有带编号的页面故事：G16（自动归档保留开着的迭代、模块的工作项）与 G17（权限与 OwnOnly）以 Go 为主，页面一侧指向已有故事里的断言（G5、G7、G12、G13、G19 的访客与 OwnOnly），G14、G20 写明它们的证据所在；不为凑编号写重复的故事。每行记下证据所在的 HEAD；修复轮之后，自 T12 以来只改了文档或无关测试的行沿用 T12 的原件，其余的行在最终候选上重跑（规模、隔离重复与 `-v` 的 Go 全量不在 `final.sh` 里，要单独重跑）。
+
+**设计 §13 的对照**：§13 的 14 条（`M6-design.md:257-270`）逐条对到本次运行的收据或写明“closeout”，closeout 只勾选：除 G1–G20 外，“Go 与前端同 fixture”（列表引擎的顺序测试）、“无 Plane 的默认 PUT 或跨项目漏洞”、“前端只调 `/api/v0`、旧 service/类型/地址删除”（`old-cycle-urls`、`old-module-urls` 等关键词规则）、“无到期例外”、“进度口径每域一个函数”各有本次的收据。H3（开关关闭时存下的词保留“—”与“不可用的选项”）的理由写进阶段记录。
 
 ### 2.13 文档与交接
 
@@ -88,7 +91,7 @@ M1 收尾 plan 附录 A 的三个脚本（`docs/v0/M1-frontend-trim/plans/closeo
 
 ### 2.14 门禁与 CI
 
-本机七项（`gates.sh`）加 `test:m6-pages` 与 `test:m6-acceptance`；有产品变化的检查点先过七项再推送；默认套件的条数照旧 480（§3 第 1 条，台账核对）；分支 CI 与 noff 之后的 main CI 分开记录（含环境失败与测试失败的区分）。已知的间歇（M6-M8-01、-03、-07）照既有规则至多一次只重跑失败的文件或作业并记录；估算、上界或实测的 e2e 超过 30 分钟时停下报告负责人。
+本机七项（`gates.sh`）加 `test:m6-pages` 与 `test:m6-acceptance`；有产品变化的检查点先过七项再推送；默认套件的条数照旧 480（§3 第 1 条，台账核对）；分支 CI 与 noff 之后的 main CI 分开记录（含环境失败与测试失败的区分）。已知的间歇（M6-M8-01、-03、-07）照既有规则至多一次只重跑失败的文件或作业并记录；估算、上界或实测的 e2e 超过 30 分钟时停下报告负责人。web 作业（期限 15 分钟，P7c 时 902 秒碰到过一次）与服务端两路（期限 25 分钟）每次 CI 记下时长：web 作业再被期限取消时按 P7c 的先例（已知的环境原因）只重跑失败的作业一次并在阶段报告里告诉负责人；服务端任一路超过 20 分钟时报告负责人。
 
 ## 3. 局部裁定
 
@@ -116,8 +119,8 @@ M1 收尾 plan 附录 A 的三个脚本（`docs/v0/M1-frontend-trim/plans/closeo
 - [ ] A8 删除规模的夹具含规划的数据、冻结的规模测试；三个规模测试的本次证据（§2.8）。
 - [ ] A9 死成员 `--rows M6` 的前后与读者表，真死成员删除（§2.9）。
 - [ ] A10 `no-unused-expressions` 为零且为 error，cap 等于实际；M6 全期改动文件 oxlint 0 的收据（§2.10）。
-- [ ] A11 `e2e/acceptance/` 与 `m6-acceptance` 配置的四类核对在三种引擎通过（§2.11）。
-- [ ] A12 G1–G20 的最终证据表，每条指向本次运行的原件；间歇项有重复运行的结论（§2.12）。
+- [ ] A11 `e2e/acceptance/` 与 `m6-acceptance` 配置的五类核对在三种引擎通过（§2.11）。
+- [ ] A12 G1–G20 的最终证据表与设计 §13 的对照，每条指向本次运行的原件；间歇项有重复运行的结论（§2.12）。
 - [ ] A13 文档同步、七份输入交接的最终处理结果、M7 与 M8 的 `M6-closeout` 补全（§2.13）。
 - [ ] A14 七项门禁、页面配置与验收配置、一次整分支 deep-review 与修复闭环、分支 CI、noff 之后的 main CI、归档与清理（§2.14）；由 closeout 的第一个 Task 回填阶段记录 §7 时勾选。
 
