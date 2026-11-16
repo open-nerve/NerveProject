@@ -127,7 +127,7 @@ P4 落地设计 §6 余下的跨模块查询与写入，都走由使用方声明
 
 - **§1、§2**：设计 §6 列出每个跨模块的写入与查询，全部走端口与事件，`TestSQLCSchemaScope` 不加例外（P3a、P3b、P4）；设计 §4.3 的图延伸到 M6 的全部表，迭代负责人改为 `ON DELETE SET NULL` 并登记在 [plane-diff](../../plane-diff.md) 按表的 `cycles` 行（P1–P3b）。
 - **§3**：两个跟随 router 的反应已不存在、`store-context.test.ts` 核对（P5a、P6a），新的 SWR 键都带 `loginId`（P5a、P6a、P7c）；收尾以 `git grep` 再核，`web/apps/web` 里没有 `new CycleService(`（收据 `t2-handoff-claims-2`）。
-- **§4、§5**：关闭条件是“M6 的 review 写明”三点的结论与两个下拉框、各调用方的浏览器核对；它们分散在 P5a、P6a、P7a、P8 的回执里，逐项汇总在 M6 的收尾记录（`reviews/closeout-integration.md`，收尾的 T3 写出）的“M2 第 4、5 节”一表：条款 → 阶段的处理结果 → 故事或收据。
+- **§4、§5**：关闭条件是“M6 的 review 写明”三点的结论与两个下拉框、各调用方的浏览器核对；它们分散在 P5a、P6a、P7a、P8 的回执里，逐项汇总在 M6 的[收尾记录 §3.2](../reviews/closeout-integration.md#32-m2-第-45-节)（收尾的 T3 写出）：条款 → 阶段的处理结果 → 故事或收据。
 - **§6**：三处复制都经 `useCopyLink`、`useCopyText`，失败经 `t()` 提示（P5a、P6a）；`copy-hook` 没有 M6 的例外，余下的 5 条都在 M7、M8 的文件（`until` 为 `M7/closeout`、`M8/closeout`，收据 `t2-handoff-claims-2`）。
 
 没有转交项，`status` 改为 `closed`。原文与各阶段处理结果保留不改。
