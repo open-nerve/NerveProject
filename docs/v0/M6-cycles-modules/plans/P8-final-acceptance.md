@@ -1,7 +1,7 @@
 # M6 / P8 最终验收——最终矩阵、规模重跑、遗留收敛与交接实施计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-> 状态：已写（2026-11-16），经预检 [re-78](../../../reviews/re-78-M6P8预检.md) 修正后可实施；T1 已完成（`54976c83`）。
+> 状态：已完成（2026-11-16，noff `c4cd1880`，main CI 43851660778 attempt 1 全绿、没有重跑），T1–T16 已实施（T9 没有提交）：最终候选 `0ef66139` 的七项与两个页面配置、最终 HEAD `352740ac` 的分支 CI 43846387746 attempt 1 全绿，合入、归档与清理由 M6 收尾的第一个 Task 回填（[阶段记录](../reviews/P8-final-acceptance-review.md) §5、§7）。已写（2026-11-16），经预检 [re-78](../../../reviews/re-78-M6P8预检.md) 修正后实施；T1 `54976c83`。
 
 **Goal：**
 - 回填 P7c，phase 改 `M6/P8`；

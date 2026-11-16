@@ -1,5 +1,5 @@
 ---
-status: open
+status: closed
 from: M3/closeout
 to: M6
 created: 2026-10-13
@@ -162,3 +162,12 @@ P3b 落地 M6 设计 §4.3 中的 `cycle_user_properties`、`module_user_propert
 - **第 5 节（焦点索引）**：M6 的读者在 P5a、P6a 已删尽（`PROJECT_CYCLE`、`PROJECT_MODULE` 与两处归档按钮的 `tabIndex={1}`）。P8 的 HEAD 上以 `git grep` 核对，`getTabIndex` 的读者只剩 M7 的 `views/form.tsx`（`PROJECT_VIEW`）与收集箱新建弹窗的四个文件（`INTAKE_ISSUE_FORM`）；最后的删除（`getTabIndex`、两份 `tab-indices.ts` 与桶文件的导出、`IDropdownProps.tabIndex` 的收口）转交 M7：[M6-M7-05](../../M7-collaboration/handoffs/M6-closeout.md#M6-M7-05)。
 - **视图的遗留**（上文 P7c 的回执中“不改、属 M7”的各项：视图的 store 与读、`projectViewIds`、`views/(list)/mobile-header.tsx` 的 `projectMemberIds`、视图的文案、`views/quick-actions.tsx` 嵌套的按钮）转交 M7：[M6-M7-04](../../M7-collaboration/handoffs/M6-closeout.md#M6-M7-04)。
 - 其余各节已做完：第 1 节（P5a、P5b、P6a、P6b、P7b、P7c）、第 2 节（P1–P3b、P6a）、第 4 节（P5a、P6a、P7c）。证据：提交 `f3ed4d2230fc5426be03129a15f8715d62142dd7`、`0fed290d19c6e6ad771c920e92d5a315cb828f5d`、`ea7580d6fdf74bf665d6ebae58d9fc532549b762`、`d94a09997682db603d3ff0352381bbb45d50de99`；本阶段台账 Task 5、Task 11。本交接由收尾改为 `closed`。
+
+## 关闭（M6/closeout，2026-11-16）
+
+- **§1、§2、§4 完成**，见上面各阶段的处理结果（P8 的一段列出各节的落点）：§1 的关闭条件（包装层按权限取数的 vitest；两个跟随 router 的反应已不存在，`store-context.test.ts` 核对）在 P5a、P6a 满足；§2 的图在 P1–P3b 延伸到 M6 的全部表，8 行死成员在 P6a 了结；§4 的关闭条件（`project-address-route` 含这些文件、`copy-hook` 没有 `M6/closeout` 的例外）在 P6a 满足、P7c 补上视图的四个文件——phase 改为 `M6/closeout` 之后守卫无命中（收据 `t1-keywords`），`copy-hook` 余下的例外都在 M7、M8 的文件（收据 `t2-handoff-claims-2`）。
+- **§5 与 §3 的正 `tabIndex`**：M6 的读者在 P5a、P6a 删尽；收尾以 `git grep` 再核，`getTabIndex` 的读者只剩 M7 的 `views/form.tsx`（`PROJECT_VIEW`，即 `:34` 的视图表单）与收集箱新建弹窗的四个文件（收据 `t2-handoff-claims-2`）；最后的删除转交 M7：[M6-M7-05](../../M7-collaboration/handoffs/M6-closeout.md#M6-M7-05)。
+- **§3 的逐项**：关闭条件是“M6 的评审写明上面每一项的浏览器核对”。P8 的处理结果说它“由 P8 阶段记录的最终矩阵（T12）逐项汇总”，所指不确：P8 阶段记录的 §4.3 是 G1–G20 的证据表，没有按本节条款的汇总（预检 [re-80](../../../reviews/re-80-M6收尾预检.md) I3）。更正：本节的逐项浏览器核对汇总在 M6 的[收尾记录 §3.1](../reviews/closeout-integration.md#31-m3-第-3-节)（收尾的 T3 写出）：条款 → 阶段的处理结果 → 故事或收据。汇总时发现两项在 M6 的页面上没有断言——`:32` 的点外面关上迭代、模块的弹窗，`:38` 的 Escape 之后焦点回到筛选的按钮——另有 `:36` 模块一侧的右键菜单没有点它的项；收尾补核了这三项（`f27cce7a3e934d6b57c1d09d4fae04031d720123`，`e2e/acceptance/g19-m3-dialogs-and-filters.spec.ts`，三种引擎，在干净的代码上都过），见收尾记录 §3.1。
+- **§3 中视图的三项**：视图的弹窗的 Tab、Escape、关上之后的焦点与弹窗的名字（`:32-33`）、视图列表的右键菜单（`:36`）、视图页头的 `CustomSearchSelect` 的键盘（`:37`）M6 走不到——视图的 store 与读今天没有东西填，视图页一直在加载（P7c 的回执）。它们既没有处理结果，也没有在 P8 转交（re-80 I4）；收尾转交 M7：[M6-M7-04](../../M7-collaboration/handoffs/M6-closeout.md#M6-M7-04) 加一条写明这三项，指向 M7 自己的 [M3-closeout §3](../../M7-collaboration/handoffs/M3-closeout.md#3-键盘弹窗和下拉框)（视图的弹窗与右键菜单本在其中，视图页头的切换在 M6-M7-04 的“何时验收”里）。视图的其余遗留已由 P8 转交同一条。
+
+视图的各项转交 M7，转交不表示已实现；§1、§2、§4、§5 完成，§3 的逐项与上面两项的去向见收尾记录 §3.1。`status` 改为 `closed`。原文与各阶段处理结果保留不改。

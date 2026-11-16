@@ -1,5 +1,5 @@
 ---
-status: open
+status: closed
 from: M1/P2
 to: M6
 created: 2026-09-23
@@ -46,3 +46,7 @@ M6 合并时：进度接口只提供按状态组的计数，没有点数字段�
 - **网页不再读 `…/analytics?type=`**：P8 的 HEAD 上 `git grep 'analytics?type' -- web` 没有命中；读 Plane 地址的旧迭代、模块 service 已删，关键词规则 `old-cycle-urls`、`old-module-urls` 拦住它们（P5a、P6a）。
 - **守卫的 `analytics` 例外已删**（P1）：P8 的 `tools/keywords.json` 有 7 条例外，`until` 为 M9 ×2、`M7/closeout` ×4、`M8/closeout` ×1，没有 M6 的；收尾把 phase 改为 `M6/closeout` 时没有到期的例外（收据 `t1-keywords-2`、`t13-keywords`）。
 - 证据：上文 P1、P4、P5a、P6a 的回执；本阶段台账 Task 1、Task 13。本交接与 M1/P3 的交接一起由收尾改为 `closed`。
+
+## 关闭（M6/closeout，2026-11-16）
+
+两条关闭条件都已满足，见上面各阶段的处理结果与 [P8 阶段记录](../reviews/P8-final-acceptance-review.md)：进度接口只给按状态组的计数、没有点数字段（P4；收尾在 `e1cf6f4d` 上以 `git grep` 再核，`api`、`server`、`web` 里没有 `estimate_distribution` 与 `_estimate_points`，收据 `t2-handoff-claims-2`）；网页的迭代、模块进度不再读 `…/analytics?type=`（P5a、P6a；`web` 里没有命中，同一收据），守卫的 `analytics` 例外已删（P1；phase 改为 `M6/closeout` 之后 `tools/keywords.json` 的 7 条例外没有到期的，收据 `t1-keywords`）。与 [M1/P3 的交接](M1-P3-trim-platform.md)一起关闭。没有转交项，`status` 改为 `closed`。原文与各阶段处理结果保留不改。

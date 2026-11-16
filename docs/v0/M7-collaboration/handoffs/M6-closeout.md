@@ -47,8 +47,9 @@ created: 2026-11-10
   - 视图的文案：拒绝的提示照旧是英文（视图的 service 仍调 Plane 的旧地址，nerve 的问题码对不上）；
   - 嵌套的按钮：`web/apps/web/core/components/views/quick-actions.tsx` 的菜单按钮里套 `IconButton`（单测渲染视图的行时 React 报出）。
 - **命令面板的视图菜单**：`web/apps/web/core/components/power-k/menus/views.tsx` 在 M6/P8 改为以 id 作 cmdk 的 value、名字作 keywords（`83aaea3f`），它的行仍以 `@nerve/types` 的 `IProjectView` 为类型（`views.tsx:11`；P8 T2 的裁定：视图属 M7，不顺带换类型的来源）。
+- **M3 第 3 节视图的三项**（M6/closeout 补，预检 [re-80](../../../reviews/re-80-M6收尾预检.md) I4）：[M3 → M6 交接](../../M6-cycles-modules/handoffs/M3-closeout.md)第 3 节有三项落在视图的页面上，M6 走不到（视图页没有读），没有处理结果：视图的弹窗的 Tab、Escape、点外面、关上之后的焦点与弹窗的名字（`:32-33`）；视图列表的右键菜单关着时 `inert`、右键打开它并点它的项（`:36`）；视图页头的 `CustomSearchSelect` 以键盘核对（`:37`）。前两项 M7 自己的 [M3-closeout §3](M3-closeout.md#3-键盘弹窗和下拉框) 已有（弹窗、右键菜单两条）；视图页头的切换不在其中，照本条核对。
 
-**何时验收：** M7 接通视图时：视图的 store 与读只调 `/api/v0`、按会话分代，类型来自 `@nerve/api-client`（命令面板的视图菜单一并换掉 `IProjectView`）；上面的 getter 改为读路由参数，改过的文件加入关键词规则 `project-address-route`；视图的文案经 `t()`；菜单按钮不再嵌按钮。
+**何时验收：** M7 接通视图时：视图的 store 与读只调 `/api/v0`、按会话分代，类型来自 `@nerve/api-client`（命令面板的视图菜单一并换掉 `IProjectView`）；上面的 getter 改为读路由参数，改过的文件加入关键词规则 `project-address-route`；视图的文案经 `t()`；菜单按钮不再嵌按钮；上面 M3 第 3 节视图的三项在浏览器核对（视图的弹窗与右键菜单随 M7 自己的 M3-closeout §3 的关闭条件，视图页头的 `CustomSearchSelect` 以键盘）。
 
 <a id="M6-M7-05"></a>
 ## M6-M7-05 `getTabIndex` 与两份 `tab-indices.ts` 的最后删除

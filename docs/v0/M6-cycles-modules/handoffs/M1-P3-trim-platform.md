@@ -1,5 +1,5 @@
 ---
-status: open
+status: closed
 from: M1/P3
 to: M6
 created: 2026-09-24
@@ -29,3 +29,7 @@ M6 合并时：迭代进度改用新接口，`analytics` 的守卫例外已删�
 ## 处理结果（M6/P8）
 
 关闭条件在 M6 的最终代码上成立，没有转交项：迭代的进度读 `GET /api/v0/cycles/{cycle_id}/progress`（P4、P5a），没有结尾斜杠的问题；`analytics` 的守卫例外已删（P1），P8 的 `tools/keywords.json` 没有 M6 的例外（收据 `t13-keywords`）；`TCycleProgress`、`IWorkspaceProgressResponse` 在 `web/`、`api/`、`server/` 都不存在（P8 的 HEAD 上 `git grep` 没有命中），新接口没有工作区级的进度。证据：上文 P4、P5a 的回执。本交接与 M1/P2 的交接一起由收尾改为 `closed`。
+
+## 关闭（M6/closeout，2026-11-16）
+
+三条关闭条件逐条满足，见上面的处理结果：迭代的进度改用 `GET /api/v0/cycles/{cycle_id}/progress`（P4、P5a），没有结尾斜杠的问题；`analytics` 的守卫例外已删（P1；phase 改为 `M6/closeout` 之后没有到期的例外，收据 `t1-keywords`）；新接口没有 `TCycleProgress`、`IWorkspaceProgressResponse` 的对应结构，两个名字在 `web`、`api`、`server` 都不存在（收尾以 `git grep` 再核，收据 `t2-handoff-claims-2`）。与 [M1/P2 的交接](M1-P2-trim-content.md)一起关闭。没有转交项，`status` 改为 `closed`。原文与各阶段处理结果保留不改。

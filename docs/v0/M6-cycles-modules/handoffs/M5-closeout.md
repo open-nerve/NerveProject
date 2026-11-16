@@ -1,5 +1,5 @@
 ---
-status: open
+status: closed
 from: M5/closeout
 to: M6
 created: 2026-11-06
@@ -133,3 +133,12 @@ P3b 让附件列随共用的列表设置出现在迭代页、模块页：两页�
 - **M5-M6-03**：每张新表的清理步骤与 `purgeScaleTables` 在 P1、P2、P3a、P3b 同步扩展（上文的回执）。“收尾前在 M6 代码上重跑 `TestPurgeScale` 与 `TestTheDeletionsAtTheScaleTarget`”：后者的夹具原来走不到 M6 的删除步骤，T8 补上规划的数据与对 `planning.delete_rows` 的等待（`0f2d331f`，全量的冒烟 `t8-smoke-deletion` 通过，见 [M4 → M6 交接](M4-closeout.md)的“处理结果（M6/P8）”的 M6-03）；两者在最终代码上的正式运行在 T12（`t12-purge-scale`、`t12-delete-scale`），数字记入 [P8 阶段记录](../reviews/P8-final-acceptance-review.md)。
 - **M5-04**：M6 没有加入投递任务的命令。CLI 的组合（`server/cmd/nerve` 与 `bootstrap/users.go`、`workspaces.go`、`commands.go`）不构造 River 客户端，`jobs.NewInserter` 唯一的非测试调用仍在 `bootstrap/app.go`（serve）；M6 新加的投递都在服务里：`planning.delete_rows` 由 `project.deleted`、`workspace.deleted` 的订阅者在发布者的事务里投递，`planning.crawl_link` 在模块链接的写事务里投递，`planning.freeze_cycles` 是周期任务。本节原文连同 M6 的这一事实转交 M7：[M6-M7-08](../../M7-collaboration/handoffs/M6-closeout.md#M6-M7-08)；M8 已持有 M5 的原文（[M8 的 M5-closeout](../../M8-open-release/handoffs/M5-closeout.md#M5-04)），转交不表示已实现。
 - 证据：上文各段的回执；提交 `0f2d331fb3ef39a96c93fceacf52734c00f91cbb`；收据 `t8-smoke-deletion`；本阶段台账 Task 8、Task 13。本交接由收尾改为 `closed`（M5-M6-01、M5-04 转交 M7）。
+
+## 关闭（M6/closeout，2026-11-16）
+
+- **M5-M6-01** 以“未触发”关闭：M6 没有成为资产的宿主，`api/modules/asset.yaml` 与 `server/internal/modules/asset` 自 `ba3fd6e0` 没有改动（收尾以 `git diff` 再核，收据 `t2-handoff-claims-2`）；条件的原文转交 M7：[M6-M7-09](../../M7-collaboration/handoffs/M6-closeout.md#M6-M7-09)。
+- **M5-M6-02** 已完成：迭代页（P5b）、模块页（P6b）的附件列以真实附件核对过计数、排序、分页与换会话。
+- **M5-M6-03** 已完成：每张新表的清理步骤与目录测试在 P1–P3b 同步扩展；`TestPurgeScale` 与 `TestTheDeletionsAtTheScaleTarget` 在最终代码上重跑（`t12-purge-scale`、`t12-delete-scale`，[P8 阶段记录 §4.3 的规模](../reviews/P8-final-acceptance-review.md#规模)）。
+- **M5-04** 在 M6 仍未触发：M6 没有加入投递任务的命令，`jobs.NewInserter` 唯一的非测试调用仍在 `server/internal/bootstrap/app.go`（收尾再核，同一收据）；原文整段转交 M7：[M6-M7-08](../../M7-collaboration/handoffs/M6-closeout.md#M6-M7-08)，M8 已持有 M5 的原文（[M8 的 M5-closeout](../../M8-open-release/handoffs/M5-closeout.md#M5-04)）。那些交接保持 open，转交不表示该项已实现。
+
+`status` 改为 `closed`。原文与各阶段处理结果保留不改。
