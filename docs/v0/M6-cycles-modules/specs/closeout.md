@@ -25,7 +25,8 @@
 - 输入交接的关闭以各阶段写的“处理结果（M6/P<k>）”为逐条依据（P8 的 T13 已为每份写了最终的处理结果），不另建交接索引；关闭段只写结论与链接，处理结果所指不确之处在关闭段更正（预检 I3），不改原文。
 - 本阶段只有文档与关键词 phase 的变更。本地检查：`python3 .superpowers/sdd/M6-closeout/doc-links.py`（取自 P8 的台账，从仓库根运行）、`node tools/keywords.mjs` 与 `make lint-web`（phase 在其中检查，worktree 已 `pnpm install --frozen-lockfile`）；Go 与 e2e 由准确的分支、main CI 覆盖。`tools/keywords.mjs` 接受 `M6/closeout` 并排在全部编号阶段之后，phase 只影响例外的到期；`tools/keywords.json` 的七条例外最早到 `M7/closeout`，§13 的“无到期例外”照此成立。
 - 运行证据放 worktree 的 `.superpowers/sdd/M6-closeout/`（台账 `progress.md`、`run-check.py` 的收据、预检的原文、有上限的 CI 等待 `wait-run.sh`：排队 0 个作业约 20 分钟或总计约 70 分钟即停），由 T6 归档；归档工具 `archive.py` 取自 P8 的台账（SHA-256 记入台账）。
-- 本阶段不派实现者、不做整分支审查（P8 已做，re-79）；预检一次（`fable`，只读，[re-80](../../../reviews/re-80-M6收尾预检.md)）。
+- 本阶段不做整分支审查（P8 已做，re-79）；预检一次（`fable`，只读，[re-80](../../../reviews/re-80-M6收尾预检.md)）。
+- **补核 M3 交接第 3 节的三项**（主控在 T3 之后的裁定）：T3 写逐项表时发现 `:32` 点外面关上迭代、模块的弹窗、`:38` Escape 之后焦点回到筛选的按钮在 M6 的页面上没有断言，`:36` 模块一侧的右键菜单没有点它的项。这是 M3 写明“对接时逐个核对”交给 M6 的条款，补上便宜，在本阶段补核、不转交：放在默认套件与 CI 不跑的 `e2e/acceptance/`（P8 的 H1，默认套件仍 480 条），由一个实现者照 P8 的 e2e 规则写、各以变异证明；§1 的“不改测试”为此收窄为“不改产品代码、不改默认套件与 CI”。核对在干净的代码上失败即为产品缺陷，须停下评估（实际三条都过，`f27cce7a`）。
 
 ## 4. 验收标准
 

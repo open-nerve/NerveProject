@@ -39,6 +39,11 @@
 - [ ] Step 1：新建 `docs/v0/M6-cycles-modules/reviews/closeout-integration.md`：各阶段的合并、main CI 与归档根（P1–P8 与各修复分支）；§13 十四条逐条列证据（阶段记录、整分支审查、P8 的 G1–G20 表与设计 §13 的对照、收据名），此时不勾选；第 8、9、10 条写明“本领域”的范围（spec T3）；M3 第 3 节与 M2 第 4、5 节的逐项表（条款 → 阶段的处理结果 → 故事或收据）；本阶段预检的结论与集成收据的路径，写明“第二次 main CI、归档与清理由它签结”。M6 设计 §14 的 closeout 行此时链接它。
 - [ ] Step 2：跑 `doc-links.py`；提交 `docs(M6/closeout): 列出完成标准的最终证据`。
 
+## Task 3a：补核 M3 交接第 3 节的三项（主控在 T3 之后的裁定，spec §3）
+
+- [ ] Step 1：一个实现者照 P8 的 e2e 规则在 `e2e/acceptance/` 加一个文件：迭代、模块的弹窗点外面关上（`:32`）、筛选按钮 Escape 之后焦点回到它（`:38`）、模块一行右键菜单点它的项（`:36`）；三种引擎、`--repeat-each=3`、各一个变异；默认套件仍 480；提交 `test(M6/closeout): …`。在干净的代码上失败即停下评估。
+- [ ] Step 2：收尾记录 §2 第 9、11 条与 §3.1、M3 交接的关闭段、README 与 M6-M8-17 的条数随之改写；跑 `doc-links.py` 与关键词；提交 `docs(M6/closeout): …`。
+
 ## Task 4（T4）：首次集成
 
 - [ ] Step 1：串行的本地检查 `doc-links.py`、`node tools/keywords.mjs`、`make lint-web`；推送分支，核准确 HEAD 的 server 两路、web、e2e 全绿（中途推送被取消的运行不计）。
