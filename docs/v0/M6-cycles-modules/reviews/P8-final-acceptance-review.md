@@ -1,6 +1,6 @@
 # M6/P8 阶段评审记录
 
-> 进行中（2026-11-16）：T1–T15 的本机部分已完成（T9 没有可删的真死成员，没有提交）。检查点 `d94a0999` 的本机七项（`t11-gate`）与分支 CI 43831815008 全绿；T12 的最终矩阵见 §4.3；整分支审查 re-79 与修复轮、限定复审见 §6；最终候选 `0ef66139` 的 `final.sh t15-final` 七项（e2e 一条以 M6-M8-03 的签名失败、只重跑该文件即过）、m6-pages 与 m6-acceptance 全过（§5）。最终候选的分支 CI、合入、main CI、归档与清理（T16）的数字由 closeout 的第一个 Task 回填 §5 与 §7。基线 main `ea971606b829fb3ade4beb9d204ecbc23d3af674`（P7c 的 noff）。
+> 已完成（2026-11-16，noff `c4cd1880`，main CI 43851660778 attempt 1 全绿、没有重跑），A1–A14 满足：T1–T16 已完成（T9 没有可删的真死成员，没有提交）。检查点 `d94a0999` 的本机七项（`t11-gate`）与分支 CI 43831815008 全绿；T12 的最终矩阵见 §4.3；整分支审查 re-79 与修复轮、限定复审见 §6；最终候选 `0ef66139` 的 `final.sh t15-final` 七项（e2e 一条以 M6-M8-03 的签名失败、只重跑该文件即过）、m6-pages 与 m6-acceptance 全过，最终 HEAD `352740ac`（与最终候选只差五个文档文件）的分支 CI 43846387746 attempt 1 全绿、没有重跑（§5）；合入、main CI、归档与清理见 §7（由 M6 收尾的第一个 Task 回填，A14 随之勾选）。基线 main `ea971606b829fb3ade4beb9d204ecbc23d3af674`（P7c 的 noff）。
 
 ## 1. 评审方式与范围
 
@@ -13,7 +13,7 @@ P8 是 M6 最后一个编号阶段（[M6 设计](../M6-design.md) §12 的 P8 �
 
 ## 2. 验收状态
 
-A1–A13 满足，[spec §4](../specs/P8-final-acceptance.md#4-验收标准)由本提交勾选；A14（七项门禁、整分支审查、分支 CI、main CI、归档与清理）由 closeout 的第一个 Task 回填 §7 时勾选。证据见 §4、§5：
+A1–A14 满足（[spec §4](../specs/P8-final-acceptance.md#4-验收标准)已勾选：A1–A13 由 T12 的记录提交 `9a420c1f` 勾选，A14 由 M6 收尾的第一个 Task 在合入后勾选，见 §7）。证据见 §4、§5、§7：
 
 | 验收 | 内容 | Task |
 |---|---|---|
@@ -30,7 +30,7 @@ A1–A13 满足，[spec §4](../specs/P8-final-acceptance.md#4-验收标准)由�
 | A11 | `e2e/acceptance/` 与 `playwright.m6-acceptance.config.ts`：五类核对 8 条 × 三种引擎 = 24 例通过（`t11-acceptance-final`，本次 `t12-acceptance`） | T11、T12 |
 | A12 | G1–G20 的证据表、设计 §13 的对照、间歇项的重复运行与规模的数字（§4.3），各指向本次运行的原件与 HEAD | T12（本提交） |
 | A13 | README、`config.yaml:120` 的注释、`frontend-changes.md`、设计；七份输入交接的处理结果；M7、M8 的 `M6-closeout` | T13（`dac255a9`、`de1e8881`） |
-| A14 | 由 closeout 的第一个 Task 回填 §7 时勾选 | T14–T16 |
+| A14 | 最终候选 `0ef66139` 的七项（`t15-final`；build+e2e 以 M6-M8-03 的签名失败一条，只重跑该文件即过）与两个页面配置（m6-pages 135、m6-acceptance 24，三种引擎）；整分支审查 re-79、修复轮 `c52fcc64` 与限定复审（§6）；最终 HEAD `352740ac` 的分支 CI 43846387746 与 noff `c4cd1880` 的 main CI 43851660778 都是 attempt 1 全绿、没有重跑（§5、§7）；归档、清理与清理之后的再核 `t1-p8-archive-verify`（§7）；由 M6 收尾的第一个 Task 勾选 | T14–T16 |
 
 ## 3. 局部裁定
 
@@ -327,7 +327,10 @@ A1–A13 满足，[spec §4](../specs/P8-final-acceptance.md#4-验收标准)由�
 - **分支 CI** 43831815008（head `d94a0999`）attempt 1 全绿、没有重跑：server (0) 133178687666（08:30:48Z–08:45:13Z，865 秒）、server (1) 133178688013（08:30:49Z–08:39:42Z，533 秒）、web 133178688146（08:30:48Z–08:42:13Z，685 秒）、e2e 133185272705（08:45:15Z–09:05:51Z，1236 秒 = 20 分 36 秒）。都在期限与报告线之内：e2e 低于 30 分钟（比基线 1664 秒少 428 秒），web 低于 15 分钟的期限，server 两路都低于 20 分钟的报告线。
 - 检查点之后的提交——T13 的 `dac255a9`、`de1e8881`（只改文档、`config.yaml:120` 的注释与关键词的一个样例），T14 修复轮的 `c52fcc6487e0ab7a7d9fde20e3e21610ef991bd2`（只改 e2e 的验收核对与 `e2e/fixtures/browser.ts`，产品代码未改，经过由 T14 写入 §6）与本提交（只改文档）——都没有推送：写本记录时远端分支仍在 `d94a0999`，照 plan 由 T15 推送最终候选。
 - **最终候选**（T15，`0ef661393be56c1fc0d88f1c65ca6314f430e6c2`，T14 的修复轮与文档之后；与检查点相比产品代码未变，只有 e2e 的核对与文档）：`final.sh t15-final`（2026-11-16T09:44:33Z 起，串行）：`make gen-check` 4.1 秒；`make lint-go` 1.8 秒（两个模块 0 issues）；`make test` 957.6 秒（66 个包 ok，含 `server/tools` 的两个；没有 M6-M8-05 的签名）；`make lint-web` 5.5 秒（关键词 78 条规则、7 个例外、无命中；turbo 50 个任务、32 个取缓存）；`make knip` 2.5 秒；`make test-web` 0.6 秒（turbo 16 个任务全部取缓存：自检查点以来 `web/` 未改，缓存即 `t11-gate-test-web` 的那次运行）；build+e2e 246.8 秒 exit 2——480 条中 479 条通过，P1 (page)（`e2e/stories/project/p1-create-project-page.spec.ts:63`）在 `expectProjectCreated` 的查询处收到 `sorry, too many clients already`，之后的 `pg_dump` 同样连不上：M6-M8-03 的签名，照规则只重跑该文件一次，`t15-final-rerun-p1` exit 0（8 过，含 s3-fixture 的依赖），失败的 `test-results` 留在台账 `t15-final-test-results`；m6-pages 150.5 秒 exit 0（三种引擎 135 过，`t15-final-m6-pages.json`）；m6-acceptance 35.8 秒 exit 0（三种引擎 24 过，`t15-final-m6-acceptance.json`）。本条之后只有本提交（文档）。
-- **最终候选的分支 CI**：本提交推送之后运行，结果、时长与合入后的 main CI 由 closeout 的第一个 Task 回填（同 P7c 的 §5 由 P8 的 T1 回填）。
+- **最终候选的分支 CI**（M6 收尾的第一个 Task 回填，同 P7c 的 §5 由 P8 的 T1 回填；读数取台账 Task 15 的末两行、归档 `ci-evidence/` 的 `waiter-branch-43846387746.txt` 与 `jobs-43846387746.json`，以 GitHub 的 jobs 接口只读再核，收尾台账的收据 `t1-p8-ci-jobs`）：
+  - 本机七项与两个页面配置跑在最终候选 `0ef661393be56c1fc0d88f1c65ca6314f430e6c2`，分支 CI 跑在其后的记录提交 `352740ac79d31d282f2539383644e7cd1741b2b2`（最终候选的门禁、限定复审与四处文档的修正）。两者之间只差五个文档文件（收尾台账的收据 `t1-p8-final-diff`：re-79、本记录、P7b spec、M8 的 `M6-closeout` 与 `plane-diff.md`，+21 −8），产品代码、测试与 e2e 都没有变。
+  - 推送前的估算：默认套件 480 条、产品代码与检查点相同，估算取检查点的 1236 秒、上界取至今最慢的 1670 秒，都低于 30 分钟；2026-11-16T10:10:03Z 推送。
+  - 43846387746 attempt 1 全绿、没有重跑（等待器 2076 秒后见完成）：web 133227497033（10:10:14Z–10:20:09Z，595 秒）、server (0) 133227497345（10:10:13Z–10:23:58Z，825 秒）、server (1) 133227497382（10:10:13Z–10:20:43Z，630 秒）、e2e 133234600667（10:24:01Z–10:44:35Z，1234 秒 = 20 分 34 秒）。都在期限与报告线之内：e2e 低于 30 分钟（与检查点的 1236 秒持平），web 低于 15 分钟的期限，server 两路都低于 20 分钟的报告线。
 
 ## 6. 整分支审查
 
@@ -340,4 +343,11 @@ A1–A13 满足，[spec §4](../specs/P8-final-acceptance.md#4-验收标准)由�
 
 ## 7. 集成、归档与接续
 
-由 closeout 的第一个 Task 回填。
+由 M6 收尾的第一个 Task 按归档里的台账（Task 15 的末两行与 Task 16 的三行）、`ci-evidence/`（三个等待器的输出、三次运行的 jobs JSON、合入说明 `merge-p8.txt`）、`manifest.json` 与 `cleanup.log` 回填；作业号、时刻、attempt 与结论以 GitHub 的 jobs 接口（只读）再核（收尾台账的收据 `t1-p8-ci-jobs`），双父与树以 `git rev-parse` 核对（`t1-p8-merge-tree`），清单的头与根以 `t1-p8-manifest` 读出，归档以 `archive.py verify` 再核（`t1-p8-archive-verify`）；时刻照台账所记；spec 的 A14 已勾选。
+
+- **合入**：noff `c4cd1880dc6dfc7d3f063b397de63a80e284ad28`（合入说明即归档的 `ci-evidence/merge-p8.txt`），2026-11-16T10:45:25Z 推送 main；双父 `ea971606`（P7c 的 noff）、`352740ac`（最终 HEAD），树 `d192b4c4` 与 `352740ac` 的树相同。
+- **main CI** 43851660778 attempt 1 全绿、没有重跑（head `c4cd1880`，等待器 2134 秒后见完成）：web 133245465772（10:45:21Z–10:55:23Z，602 秒）、server (1) 133245466122（10:45:21Z–10:54:45Z，564 秒）、server (0) 133245466188（10:45:21Z–10:59:10Z，829 秒）、e2e 133252389009（10:59:12Z–11:20:10Z，1258 秒 = 20 分 58 秒）。都在期限与报告线之内：e2e 低于 30 分钟、比最终 HEAD 的分支 CI 多 24 秒，web 低于 15 分钟的期限，server 两路都低于 20 分钟的报告线。P8 的三次 CI（检查点、最终 HEAD、main）都是 attempt 1 全绿：没有间歇失败，web 作业也没有碰到期限。
+- **归档**（主目录）：2026-11-16T11:21:36Z 建 `.superpowers/sdd/M6-P8-integration-20261116`（台账 Task 16 的末行；之后台账不再写，`cleanup.log` 写在归档目录）。清单的 `head` 为 `352740ac`、`source_unchanged` 为真，根 18 个：台账所在的 `.superpowers`，仓库根与 e2e 的 `.turbo`，e2e 的 `test-results` 与 `playwright-report`，web 的应用与 12 个包的 `.turbo`。P8 的归档没有建立与清理之后的核验收据（预检 [re-80](../../../reviews/re-80-M6收尾预检.md) I2），由 M6 收尾的第一个 Task 以 `archive.py verify` 再核（`t1-p8-archive-verify`，2026-11-16T11:35:06Z 起，exit 0）：4747 个文件、539,117,657 字节、7271 个成员、未知 0，清单 sha256 `511f280f1928146c2ee70e3d8ef20e4f550b956d36ecaa22cc037f0c48ab48fd`（1,847,474 字节）。这一次就是清理之后的归档再核（P8 的 T1 对 P7c 的同一做法）。
+- **清理**：`cleanup.log`（2026-11-16T11:21:53Z）记录 `codex/m6-p8` 本地、远端与 GitHub API 都在 `352740ac`、已含于 main（`c4cd1880`），main 与远端 main（以 GitHub API 核对）都在 `c4cd1880`；worktree `m6-p8` 与本地分支已删除，远端分支删除之后 GitHub API 对它答 404。
+
+**接续**：M6 的收尾（[spec](../specs/closeout.md)、[plan](../plans/closeout.md)，预检 [re-80](../../../reviews/re-80-M6收尾预检.md)），基线 main `c4cd1880`：它的第一个 Task 回填本节与 spec 的 A14、关键词的 phase 改为 `M6/closeout`；接着关闭七份输入交接与 M6-M8-08，为[设计 §13](../M6-design.md#13-完成标准) 的十四条给出最终证据；首次 `--no-ff` 与 main CI 全绿之后才勾选 §13、把总体 §9.4 的 M6 标为已完成，经第二次 `--no-ff` 与 main CI 全绿，再归档、清理并向负责人报告。负责人的开放问题照旧：CI 的 web 作业 15 分钟的期限与 e2e 的作业结构（spec §5）。

@@ -1,6 +1,6 @@
 # M6 / P8：最终验收——最终矩阵、规模重跑、遗留收敛与交接
 
-> 状态：spec 与 plan 已写（2026-11-16），经预检 [re-78](../../../reviews/re-78-M6P8预检.md) 修正后可实施（I1–I6、m1–m11 改入，m8 不改）。基线 main `ea971606b829fb3ade4beb9d204ecbc23d3af674`（P7c 的 noff；main CI 43764306705 attempt 2 全绿）。
+> 状态：已完成（2026-11-16，noff `c4cd1880`，main CI 43851660778 attempt 1 全绿、没有重跑），A1–A14 已勾选（A1–A13 由 T12 的记录提交 `9a420c1f`，A14 由 M6 收尾的第一个 Task 在合入后勾选；[阶段记录](../reviews/P8-final-acceptance-review.md) §5、§7）。spec 与 plan 已写（2026-11-16），经预检 [re-78](../../../reviews/re-78-M6P8预检.md) 修正后实施（I1–I6、m1–m11 改入，m8 不改）。基线 main `ea971606b829fb3ade4beb9d204ecbc23d3af674`（P7c 的 noff；main CI 43764306705 attempt 2 全绿）。
 
 文中的路径：`core/…` 在 `web/apps/web/` 下；`PK/…` 是 `core/components/power-k/…`；`issue-layouts/…` 是 `core/components/issues/issue-layouts/…`；`@nerve/…` 的包在 `web/packages/` 下；`planning/…` 是 `server/internal/modules/planning/…`；`bootstrap/…` 是 `server/internal/bootstrap/…`。台账 `.superpowers/sdd/P8-final-acceptance/`（不入库）的 `research/p8-inbound.md`、`research/g-matrix.md`、`research/cleanup-lint-docs.md` 是本 spec 的事实来源（于 `ea971606`）。
 
@@ -122,11 +122,11 @@ M1 收尾 plan 附录 A 的三个脚本（`docs/v0/M1-frontend-trim/plans/closeo
 - [x] A11 `e2e/acceptance/` 与 `m6-acceptance` 配置的五类核对在三种引擎通过（§2.11）。
 - [x] A12 G1–G20 的最终证据表与设计 §13 的对照，每条指向本次运行的原件；间歇项有重复运行的结论（§2.12）。
 - [x] A13 文档同步、七份输入交接的最终处理结果、M7 与 M8 的 `M6-closeout` 补全（§2.13）。
-- [ ] A14 七项门禁、页面配置与验收配置、一次整分支 deep-review 与修复闭环、分支 CI、noff 之后的 main CI、归档与清理（§2.14）；由 closeout 的第一个 Task 回填阶段记录 §7 时勾选。
+- [x] A14 七项门禁、页面配置与验收配置、一次整分支 deep-review 与修复闭环、分支 CI、noff 之后的 main CI、归档与清理（§2.14）。（合入后由 M6 收尾的第一个 Task 勾选：最终候选 `0ef66139` 的七项 `t15-final`——build+e2e 以 M6-M8-03 的签名失败一条，只重跑该文件即过——与 m6-pages 135、m6-acceptance 24 三种引擎全过；整分支审查 re-79 Ready after fixes，修复轮 `c52fcc64` 之后的限定复审 Ready to merge；最终 HEAD `352740ac`（与最终候选只差五个文档文件）的分支 CI 43846387746 与 noff `c4cd1880` 的 main CI 43851660778 都是 attempt 1 全绿、没有重跑；归档 `M6-P8-integration-20261116` 与清理，清理之后的再核 `t1-p8-archive-verify`；见[阶段记录](../reviews/P8-final-acceptance-review.md) §5、§6、§7）
 
 ## 5. 后续责任
 
-**closeout**（设计 §12 的最后一行）：首次 noff/main 绿 → 设计 §13 逐条勾选与总体 §9.4 → 第二次 noff/main 绿 → 归档清理；七份输入交接与 M7、M8 的交接改 `status`；它的第一个 Task 回填本段阶段记录的 §7 与 A14。**M7**、**M8**：见 §2.13。**负责人**：CI 的 web 作业 15 分钟的期限（慢的 runner 上约 3% 的余量）与 e2e 的作业结构。
+**closeout**（设计 §12 的最后一行）：首次 noff/main 绿 → 设计 §13 逐条勾选与总体 §9.4 → 第二次 noff/main 绿 → 归档清理；七份输入交接改 `status`、M7 与 M8 的交接保持 open；它的第一个 Task 回填本段阶段记录的 §7 与 A14。**M7**、**M8**：见 §2.13。**负责人**：CI 的 web 作业 15 分钟的期限（慢的 runner 上约 3% 的余量）与 e2e 的作业结构。
 
 ## 6. 风险
 
