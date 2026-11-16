@@ -239,6 +239,11 @@ it("another project in the same session and its preference reload drive their ow
   expect(writes()).toHaveLength(0);
 });
 
+it("names the work items' own column by its key", async () => {
+  await mount({ total: 1, data: [first], next_cursor: null });
+  expect(host.querySelector("thead th")?.textContent).toBe("work_items");
+});
+
 it.each([{ cycle_view: false }, { module_view: false }])(
   "with the project's %o, the continuation's cell and its loading rows span the header's columns",
   async (switches) => {
