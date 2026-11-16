@@ -23,7 +23,8 @@ export const PowerKViewsMenu = observer(function PowerKViewsMenu({ views, onSele
       items={views}
       getKey={(view) => view.id}
       getIcon={() => WorkItemsOutline}
-      getValue={(view) => view.name}
+      getValue={(view) => view.id}
+      getKeywords={(view) => [view.name]}
       getLabel={(view) => view.name}
       onSelect={onSelect}
       emptyTextKey="power_k.menus.no_views"
