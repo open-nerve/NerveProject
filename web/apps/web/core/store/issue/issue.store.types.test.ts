@@ -20,7 +20,7 @@ const accept = (issues: (Issue | IssueDetail)[]) => tab.app.issue.acceptListIssu
 it("keeps_detail_when_a_list_row_arrives", () => {
   const store = tab.app.issue.issues;
   const row: Issue = issueOf("R1");
-  const detail: IssueDetail = { ...row, name: "detail name", description_html: "<p>kept</p>" };
+  const detail: IssueDetail = { ...row, name: "detail name", description_html: "<p>kept</p>", is_subscribed: false };
   accept([detail]);
   accept([{ ...row, name: "latest list name", priority: "high" }]);
   expect(store.getIssueById(row.id)?.name).toBe("latest list name");
@@ -34,13 +34,22 @@ it("keeps_detail_when_a_list_row_arrives", () => {
   expect(reverse.getIssueById("reverse")?.name).toBe("detail name");
 });
 
+it("keeps_is_subscribed_when_a_list_row_arrives", () => {
+  const store = tab.app.issue.issues;
+  const row: Issue = issueOf("R1");
+  accept([{ ...row, description_html: "<p>kept</p>", is_subscribed: true }]);
+  accept([{ ...row, name: "latest list name" }]);
+  expect(store.getIssueById(row.id)?.name).toBe("latest list name");
+  expect(store.getIssueDetailById(row.id)?.is_subscribed).toBe(true);
+});
+
 it("does_not_claim_list_rows_are_details", () => {
   const store = tab.app.issue.issues;
   const row: Issue = issueOf("R1");
   accept([row]);
   expect(store.getIssueDetailById("missing")).toBeUndefined();
   expect(store.getIssueDetailById(row.id)).toBeUndefined();
-  const emptyDetail: IssueDetail = { ...row, description_html: "" };
+  const emptyDetail: IssueDetail = { ...row, description_html: "", is_subscribed: false };
   accept([emptyDetail]);
   expect(store.getIssueDetailById(row.id)).toEqual(emptyDetail);
 });

@@ -11,9 +11,10 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apitest"
 )
 
-// The three explicit directories share contract coverage, not lock semantics:
-// ordinary writes P(N), draft CRUD W(S)/P(S)/D(U), publication W(S)/P(N)/D(U).
-// Publication also requires the project gate before acquiring W(S).
+// The four explicit directories share contract coverage, not lock semantics:
+// ordinary writes P(N), draft CRUD W(S)/P(S)/D(U), publication W(S)/P(N)/D(U),
+// the caller's subscription I(S) alone. Publication also requires the project
+// gate before acquiring W(S); draft CRUD and subscriptions enter no gate.
 type draftWriteLock struct {
 	op, method, path, workspace, project, draft, gate string
 	want                                              int
@@ -26,6 +27,20 @@ var draftCRUDWrites = []draftWriteLock{
 }
 var draftPublishWrites = []draftWriteLock{
 	{"publishDraft", "POST", "/api/v0/drafts/{draft_id}/publish", "FOR SHARE", "FOR NO KEY UPDATE", "FOR UPDATE", "project", 201},
+}
+
+// subscriptionWriteLock is a write of the caller's own subscription to a
+// work item (M7 P1a spec 2.4): neither its workspace's row nor its
+// project's, the work item's row FOR SHARE, no place in the write gate, and
+// a caller its precheck refuses takes no lock (checkShareLocks).
+type subscriptionWriteLock struct {
+	op, method, path, workspace, project, issue, gate string
+	want                                              int
+}
+
+var subscriptionWrites = []subscriptionWriteLock{
+	{"subscribeIssue", "POST", "/api/v0/issues/{issue_id}/subscribe", "no lock", "no lock", "FOR SHARE", "none", 204},
+	{"unsubscribeIssue", "POST", "/api/v0/issues/{issue_id}/unsubscribe", "no lock", "no lock", "FOR SHARE", "none", 204},
 }
 
 func checkIssueWriteDirectories(t *testing.T, contract *apitest.Contract) {
@@ -59,9 +74,15 @@ func checkIssueWriteDirectories(t *testing.T, contract *apitest.Contract) {
 			}
 		}
 	}
+	for _, row := range subscriptionWrites {
+		check(row.op, row.method, row.path)
+		if row.workspace != "no lock" || row.project != "no lock" || row.issue != "FOR SHARE" || row.gate != "none" {
+			t.Fatalf("%s has an invalid declared lock shape: %+v", row.op, row)
+		}
+	}
 	slices.Sort(ops)
 	if want := writesOnIssues(contract.Operations()); !slices.Equal(ops, want) {
-		t.Fatalf("ordinary issue / draft CRUD / draft publish union %q, want every tagged non-GET issue write %q", ops, want)
+		t.Fatalf("ordinary issue / draft CRUD / draft publish / subscription union %q, want every tagged non-GET issue write %q", ops, want)
 	}
 }
 

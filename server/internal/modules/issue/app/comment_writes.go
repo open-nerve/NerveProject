@@ -70,11 +70,16 @@ func (u *UpdateIssueComment) Execute(ctx context.Context, id uuid.UUID, html str
 			}
 			return embedCommentReactions(ctx, u.d.Comments, []domain.Comment{current}, func(rows []domain.Comment) { current = rows[0] })
 		}
-		targets, err := visibleMentionSubscribers(ctx, u.d.Members, h.issue, actor.UserID, clean.Identity.MentionIDs)
+		// The edit newly mentions whom the body it replaces, the one read
+		// again under the lock, does not mention (M7 P1a spec 2.2); only
+		// those of them who can see the work item subscribe, with the
+		// caller (R7). The stored body is clean already; cleaning it again
+		// answers its mentions.
+		oldHTML := current.HTML
+		mentions, targets, err := commentMentions(ctx, u.d.Members, h.issue, actor.UserID, newlyMentioned(clean.Identity.MentionIDs, u.d.Sanitizer.Clean(oldHTML).Identity.MentionIDs))
 		if err != nil {
 			return err
 		}
-		oldHTML := current.HTML
 		var at time.Time
 		if len(q.ImageIDs) > 0 {
 			at, err = u.d.ContentBindings.LockContent(ctx, q)
@@ -103,7 +108,7 @@ func (u *UpdateIssueComment) Execute(ctx context.Context, id uuid.UUID, html str
 		if err := embedCommentReactions(ctx, u.d.Comments, []domain.Comment{current}, func(rows []domain.Comment) { current = rows[0] }); err != nil {
 			return err
 		}
-		return u.d.Events.Publish(ctx, stamp.commentEvent(domain.EventCommentUpdated, current.ID, &oldHTML, eventPtr(current.HTML)))
+		return u.d.Events.Publish(ctx, stamp.commentEvent(domain.EventCommentUpdated, current.ID, &oldHTML, eventPtr(current.HTML), mentions))
 	})
 	if err != nil {
 		return domain.Comment{}, err
@@ -158,7 +163,7 @@ func (u *DeleteIssueComment) Execute(ctx context.Context, id uuid.UUID) error {
 			return err
 		}
 		stamp := stamp{workspace: h.issue.WorkspaceID, project: h.issue.ProjectID, issue: h.issue.ID, by: actor.UserID, at: at}
-		return u.d.Events.Publish(ctx, stamp.commentEvent(domain.EventCommentDeleted, current.ID, eventPtr(current.HTML), nil))
+		return u.d.Events.Publish(ctx, stamp.commentEvent(domain.EventCommentDeleted, current.ID, eventPtr(current.HTML), nil, nil))
 	})
 }
 

@@ -20,6 +20,7 @@ func (f linkCrawlCall) Enqueue(ctx context.Context, id uuid.UUID, url string) er
 // fail before a malformed event can enqueue work or silently lose it.
 func TestCrawlOnLinkChange(t *testing.T) {
 	old, url, title := "http://169.254.169.254/old", "http://169.254.169.254/New?x=%2F", "Named"
+	issue := uuid.NewV7()
 	for _, tc := range []struct {
 		name, kind string
 		changes    []shared.Change
@@ -29,6 +30,9 @@ func TestCrawlOnLinkChange(t *testing.T) {
 		{"created", "issue.link_created", []shared.Change{{Field: "title", New: &title}, {Field: "url", Old: &old, New: &url}}, 1, false},
 		{"updated", "issue.link_updated", []shared.Change{{Field: "url", Old: &old, New: &url}, {Field: "title", New: &title}}, 1, false},
 		{"title only", "issue.link_updated", []shared.Change{{Field: "title", New: &title}}, 0, false},
+		// The work item change the link events carry (M7 P1a spec 2.2) is not a URL.
+		{"created with issue", "issue.link_created", []shared.Change{{Field: "url", New: &url}, {Field: "title", New: &title}, {Field: "issue", NewID: &issue}}, 1, false},
+		{"title only with issue", "issue.link_updated", []shared.Change{{Field: "title", New: &title}, {Field: "issue", NewID: &issue}}, 0, false},
 		{"updated empty", "issue.link_updated", nil, 0, false},
 		{"created missing", "issue.link_created", []shared.Change{{Field: "title", New: &title}}, 0, true},
 		{"created duplicate", "issue.link_created", []shared.Change{{Field: "url", New: &url}, {Field: "url", New: &url}}, 0, true},

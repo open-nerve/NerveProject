@@ -13,7 +13,7 @@
 
 ## Global Constraints
 
-- worktree `/Users/xiaoruan/project/nerve-project/.codex/worktress/codex/m7-p1a`，分支 `codex/m7-p1a`，基线为设计合入 main 的 noff；主目录永远 main。提交详细中文，前缀 `feat/fix/docs/test/refactor(M7/P1a)`，结尾 `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`，推送用 `/usr/bin/git`；noff 已获连续授权。
+- worktree `/Users/xiaoruan/project/nerve-project/.codex/worktress/codex/m7-p1a`，分支 `codex/m7-p1a`，基线 main `8d17eed7`（设计的 noff）；主目录永远 main。提交详细中文，前缀 `feat/fix/docs/test/refactor(M7/P1a)`，结尾 `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`，推送用 `/usr/bin/git`；noff 已获连续授权。
 - `plane/`、`refer/` 只读且不在其内跑 git；不动既有容器，不 stash/clean/reset --hard/force；容器套件一次一个。
 - T1 改 phase 为 `M7/P1`；不延长任何 `until`。
 - 手写文件约 400 行内；SQL 只经本模块 sqlc；不放宽 `TestSQLCSchemaScope`、`rawsql_test`、`archtest`、删除/清理/运行角色守卫。

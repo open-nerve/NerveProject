@@ -259,6 +259,11 @@ func TestAProjectTooBusyForAWriteAnswersServerBusy(t *testing.T) {
 // place is taken. Once the row is free, her change goes through, and so do
 // the writes the gate refused. That a write across projects gives back
 // each place it took is TestAWriteAcrossProjectsGivesBackEachPlaceItTook.
+// Not every write on the work-item side enters the gate: the writes of a
+// draft but its publication (draftCRUDWrites), and the caller's
+// subscription to a work item and its end, subscribeIssue and
+// unsubscribeIssue (subscriptionWrites; M7 P1a spec 2.4), take no place
+// in it, which TestEachIssueWriteLocksItsProjectFirst observes.
 func TestEachWriteOnAWorkItemOfAProjectTooBusyAnswersServerBusy(t *testing.T) {
 	w := newObservedIssueWorldWith(t, func(cfg *config.Config) {
 		cfg.Issue = config.IssueConfig{AutoArchiveInterval: 24 * time.Hour, TrimVersionsInterval: 24 * time.Hour, WriteGate: config.WriteGateConfig{PerProject: 1, MaxWait: time.Minute},

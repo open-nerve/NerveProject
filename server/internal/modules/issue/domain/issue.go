@@ -87,6 +87,11 @@ type Issue struct {
 	// answer is built (the app's Locks.seen); creation answers 0, a new
 	// work item having none.
 	SubIssuesCount int
+	// The caller's view (M7 P1a spec 2.3, R5): whether he has an undeleted
+	// row among its subscribers. Only a detail answer reads it (the app's
+	// Locks.seenOne, and a creation's answer read back in its
+	// transaction); a list's row leaves it false and does not show it.
+	Subscribed bool
 	// Live links, independent of their creator or metadata state.
 	LinkCount int64
 	// Uploaded, bound, live ordinary attachments, projected by their owner.

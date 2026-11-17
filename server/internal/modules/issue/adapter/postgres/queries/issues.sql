@@ -36,6 +36,13 @@ SELECT unnest(sqlc.arg(ids)::uuid[]), sqlc.arg(workspace_id), sqlc.arg(project_i
 -- name: InsertSubscribers :exec
 -- A work item's new subscribers' rows, one statement, as InsertAssignees; an account that already subscribes to it, or
 -- that the accounts name twice, is subscribed once: the partial unique key skips the row (M4 design 3.12).
+-- The lock order of these rows (M7 P1a spec 2.4): every path that writes them locks the work item's row first. A
+-- creation's work item is a new row; a comment's write marks it changed (MarkChanged), an update writes it (UpdateIssue,
+-- WriteDescription), a deletion deletes it (DeleteIssueRows), each an UPDATE of issues, under the project's FOR NO KEY
+-- UPDATE; subscribeIssue and unsubscribeIssue take the work item's row FOR SHARE (ShareIssue), and no project lock, then
+-- write the row (here, RemoveSubscriber). A project's or workspace's deletion writes them in batches once its work items
+-- are deleted (DeleteProjectIssueRows before DeleteProjectSubscriberRows). So no two writes of these rows lock in
+-- opposite orders. A new path that writes these rows must lock the work item's row first too.
 INSERT INTO issue_subscribers (id, workspace_id, project_id, issue_id, subscriber_id, created_by_id, updated_by_id, created_at,
                                updated_at)
 SELECT unnest(sqlc.arg(ids)::uuid[]), sqlc.arg(workspace_id), sqlc.arg(project_id), sqlc.arg(issue_id),

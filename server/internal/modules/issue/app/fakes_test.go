@@ -233,7 +233,9 @@ func (f fakeProfiles) DisplayNames(ctx context.Context, ids []uuid.UUID) (map[uu
 // ancestries, counts the work items' numbers of sub-items, subItems the
 // sub-items it answers, and parented the last addition of sub-items' rows
 // (fakes_parents_test.go). cycle is the cycle the work item is in, nil for
-// none, modules the modules it is in (fakes_planning_test.go).
+// none, modules the modules it is in (fakes_planning_test.go). sharing,
+// when set, runs as ShareIssue's lock waits, and subscribers, when set, are
+// the accounts subscribed to the work item (fakes_subscriptions_test.go).
 type fakeIssues struct {
 	relationWrites    int
 	log               *callLog
@@ -258,6 +260,8 @@ type fakeIssues struct {
 	subItems          []domain.Issue
 	parented          *app.ParentRows
 	lost              bool
+	sharing           func()
+	subscribers       []uuid.UUID
 }
 
 func (f *fakeIssues) GreatestSortOrder(ctx context.Context, projectID, stateID uuid.UUID) (*float64, error) {

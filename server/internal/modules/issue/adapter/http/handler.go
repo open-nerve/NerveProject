@@ -176,6 +176,8 @@ type UseCases struct {
 	DeleteIssue             DeleteIssueUseCase
 	ArchiveIssue            ArchiveIssueUseCase
 	UnarchiveIssue          ArchiveIssueUseCase
+	SubscribeIssue          SubscriptionUseCase
+	UnsubscribeIssue        SubscriptionUseCase
 	ListSubIssues           ListSubIssuesUseCase
 	AddSubIssues            AddSubIssuesUseCase
 	ListIssueRelations      ListIssueRelationsUseCase

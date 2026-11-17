@@ -2,6 +2,7 @@ package app_test
 
 import (
 	"context"
+	"slices"
 	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/app"
@@ -40,11 +41,14 @@ func (f *fakeComments) Comments(ctx context.Context, id uuid.UUID, after *domain
 	f.limit, f.after = limit, after
 	return f.listed, nil
 }
+
+// MentionMembers answers, as the project's read does, only the members
+// among those asked: the ones of mentionVisibility whose ids are in ids.
 func (f *fakeProject) MentionMembers(ctx context.Context, id uuid.UUID, ids []uuid.UUID) ([]app.MemberVisibility, error) {
 	if err := f.log.add(ctx, "MentionMembers", id, ids); err != nil {
 		return nil, err
 	}
-	return f.mentionVisibility, nil
+	return slices.DeleteFunc(slices.Clone(f.mentionVisibility), func(m app.MemberVisibility) bool { return !slices.Contains(ids, m.ID) }), nil
 }
 
 func (f *fakeComments) CommentReactions(ctx context.Context, ids []uuid.UUID) ([]domain.CommentReaction, error) {

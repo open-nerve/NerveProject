@@ -34,7 +34,8 @@ func NewCreateIssue(d CreateIssueDeps) *CreateIssue { return &CreateIssue{d: d} 
 // by his display name (domain.CreationActivity), and no row of its parent
 // (3.13). All of it is the caller's at that moment. The answer is the work
 // item as stored, read back in the transaction, which has no sub-items to
-// count yet (Issue.SubIssuesCount).
+// count yet (Issue.SubIssuesCount), and whether the caller subscribes to
+// it (IssueCreation.answer).
 func (u *CreateIssue) Execute(ctx context.Context, projectID uuid.UUID, in domain.NewIssue) (domain.Issue, error) {
 	actor, err := shared.RequireActor(ctx)
 	if err != nil {

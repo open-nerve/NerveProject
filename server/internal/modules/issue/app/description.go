@@ -8,6 +8,8 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/domain"
 )
 
+// descriptionRelations are what a description write changes in the rows
+// under the work item: its mention rows, and the accounts it subscribes.
 type descriptionRelations struct {
 	mentions    domain.Diff
 	subscribers []uuid.UUID
@@ -33,6 +35,12 @@ func descriptionTargets(ctx context.Context, members ProjectMembers, i domain.Is
 	return ascending(mentions), ascending(subscribers), nil
 }
 
+// prepareDescription reads, under the project's lock, the relations a
+// description write c of the work item i changes: the members it mentions
+// against the mention rows i has, and, of those it newly mentions
+// (mentions.Added), the ones who can see i subscribed (M7 P1a spec R7).
+// Someone still mentioned, who may have unsubscribed since, is not
+// subscribed again by a later save.
 func prepareDescription(ctx context.Context, store MentionStore, members ProjectMembers, i domain.Issue, c *domain.DescriptionChange) (descriptionRelations, error) {
 	var r descriptionRelations
 	if c == nil || !c.Write {
@@ -46,7 +54,6 @@ func prepareDescription(ctx context.Context, store MentionStore, members Project
 	if err != nil {
 		return r, err
 	}
-	r.subscribers = subscribers
 	for _, id := range targets {
 		if !slices.Contains(old, id) {
 			r.mentions.Added = append(r.mentions.Added, id)
@@ -55,6 +62,11 @@ func prepareDescription(ctx context.Context, store MentionStore, members Project
 	for _, id := range old {
 		if !slices.Contains(targets, id) {
 			r.mentions.Removed = append(r.mentions.Removed, id)
+		}
+	}
+	for _, id := range subscribers {
+		if slices.Contains(r.mentions.Added, id) {
+			r.subscribers = append(r.subscribers, id)
 		}
 	}
 	return r, nil

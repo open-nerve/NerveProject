@@ -75,6 +75,8 @@ P3 加了这条路的两种形式，不是第二条路：
 - `lock_across.go`（加关联）：调用者看不到的另一端不到达，它的项目不进闸门、不加锁，拒绝与不存在的相同；
 - `lock_either.go`（删除关联）：先判定 `issue_id` 一端，被拒绝时再判定另一端，预检通过之后两个项目都进闸门、都加锁。
 
+M7/P1a 的手动关注、取消关注是写明理由的例外：编排是 `Locks.share`（`lock_share.go`，与 `Locks.run`、`DraftLocks.run` 并列，不在用例里写近似副本），不进写闸门、不取项目锁——不加锁地预检（拒绝在那里答、不开事务），事务里以 `FOR SHARE` 锁住工作项行（已删除 404），在锁住的行上再判定，再只写关注行；它的锁下判定不与成员关系的变更串行，安全的理由（撤权留下的行与“自动关注后被移出”同一状态，通知发送时复核，列表按成员关系过滤）与锁序不变式（每个写关注行的路径都先锁工作项行）见 [M7 P1a spec](../M7-collaboration/specs/P1a-subscriptions-events.md) §2.4，以后写关注行的新路径必须守它。
+
 P8 草稿已按设计3.5的既定形式补齐：`DraftLocks`组合上述`Locks`并复用授权、闸门与写事务，不在各用例另接一套。保存/修改/删除为工作区S → 旧新项目S（去重升序）→ 草稿U；发布先在无连接、无锁时进入项目闸门，再工作区S → 项目N → 草稿U。等待后重读、权限重判、全部锁后读时钟照旧，普通工作项写仍不取工作区锁。具体端口见[P8 spec](../M4-issue-core/specs/P8-drafts-search.md)，T7真实PID/交错16/17、T15 race五遍及首次整审证据见[P8 review](../M4-issue-core/reviews/P8-drafts-search-review.md)；文档a65e8605已独评Approved/D1 ADDRESSED（task-16-review.md）；最终分支 `cde70d9735994cb6a579e0b800469f32631e9981` 的CI通过后，已授权 `--no-ff` 合并为main `6b9d08d4821f1423c7bb9795557727c206b7880f`，[main CI 40520609987](https://github.com/open-nerve/NerveProject/actions/runs/40520609987)三任务全绿。1,598文件、37,552,117字节及1空目录归档核验后，P8本地/远端分支与worktree已正常清理；原件新根和清理后哈希核验见[P8 review §9](../M4-issue-core/reviews/P8-drafts-search-review.md#9-授权合并main-ci-与归档清理2026-10-27)。
 
 另外：

@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"slices"
 	"testing"
 	"time"
 	"uuid"
@@ -30,6 +31,12 @@ func (r *coreRows) GreatestSortOrder(context.Context, uuid.UUID, uuid.UUID) (*fl
 func (r *coreRows) InsertSubscribers(_ context.Context, rows LinkRows) error {
 	r.subscribers = rows
 	return nil
+}
+
+// IsSubscribed answers whether the subscribers' rows inserted under the
+// work item issueID name the account.
+func (r *coreRows) IsSubscribed(_ context.Context, issueID, account uuid.UUID) (bool, error) {
+	return r.subscribers.IssueID == issueID && slices.Contains(r.subscribers.Targets, account), nil
 }
 func (r *coreRows) InsertActivities(_ context.Context, rows []ActivityRow) error {
 	r.activities = rows

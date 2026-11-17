@@ -150,7 +150,7 @@ func (u *AddSubIssues) Execute(ctx context.Context, id uuid.UUID, ids []uuid.UUI
 		for _, m := range moved {
 			under := s
 			under.issue = m.item.ID
-			changes := updatedChanges(domain.Update{Parent: &m.parent}, nil)
+			changes := updatedChanges(domain.Update{Parent: &m.parent}, nil, nil)
 			if err := u.d.Events.Publish(ctx, under.event(domain.EventIssueUpdated, changes)); err != nil {
 				return err
 			}

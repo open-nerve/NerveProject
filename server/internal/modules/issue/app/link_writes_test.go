@@ -79,7 +79,7 @@ func TestUpdateIssueLink(t *testing.T) {
 			if !reflect.DeepEqual(got.Metadata, f.returnedMetadata) || f.updated == nil || f.marked == nil || f.updated.By != alice || !f.updated.At.Equal(clockNow) || !got.UpdatedAt.Equal(clockNow) || !got.CreatedAt.Equal(earlier) || got.CreatedByID == nil || *got.CreatedByID != bob || f.reads != 3 || eventClockReads(w) != 1 {
 				t.Fatalf("write/result stamp or locked reads: %+v %v", got, w.log.calls)
 			}
-			wantCollaborationEvent(t, p, "issue.link_updated", "issue_link", old.ID, tc.changes)
+			wantCollaborationEvent(t, p, "issue.link_updated", "issue_link", old.ID, append(tc.changes, shared.Change{Field: "issue", NewID: &old.IssueID}))
 			if tc.activity {
 				want := domain.Activity{Field: evptr("link"), Verb: domain.VerbUpdated, OldValue: evptr(old.URL), NewValue: evptr(got.URL), OldIdentifier: &old.ID, NewIdentifier: &old.ID, Comment: "updated a link"}
 				if len(w.issues.activities) != 1 || !reflect.DeepEqual(w.issues.activities[0].Activity, want) {
@@ -125,7 +125,7 @@ func TestDeleteIssueLink(t *testing.T) {
 	if len(w.issues.activities) != 1 || !reflect.DeepEqual(w.issues.activities[0].Activity, want) {
 		t.Fatal("deletion activity empty/nil slots", w.issues.activities)
 	}
-	wantCollaborationEvent(t, p, "issue.link_deleted", "issue_link", old.ID, []shared.Change{{Field: "url", Old: evptr(old.URL)}, {Field: "title", Old: old.Title}})
+	wantCollaborationEvent(t, p, "issue.link_deleted", "issue_link", old.ID, []shared.Change{{Field: "url", Old: evptr(old.URL)}, {Field: "title", Old: old.Title}, {Field: "issue", OldID: &old.IssueID}})
 }
 func TestUpdateIssueLinkNoopAndArchiveOrder(t *testing.T) {
 	for _, state := range []string{"noop", "project and issue archived", "issue archived"} {

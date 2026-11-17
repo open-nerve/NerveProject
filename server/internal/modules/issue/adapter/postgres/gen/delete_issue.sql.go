@@ -233,7 +233,9 @@ type DeleteIssueRowsParams struct {
 // deleteIssue's work items, its subtree (M4 design 3.6), under their project's FOR NO KEY UPDATE, archived or not:
 // soft-deleted at the moment and by the account given, in one statement, which locks them in its scan's order. Every
 // write of a work item's rows holds its project's lock first (3.5), so the rows are as the use case read them; they are
-// not locked by id first (M3 design 3.6, convention 5). A row deleted before keeps its deletion.
+// not locked by id first (M3 design 3.6, convention 5). A subscription's FOR SHARE of one of them (ShareIssue, M7 P1a
+// spec 2.4), which holds no project lock, makes the statement wait until the subscription ends. A row deleted before
+// keeps its deletion.
 func (q *Queries) DeleteIssueRows(ctx context.Context, arg DeleteIssueRowsParams) error {
 	_, err := q.db.Exec(ctx, deleteIssueRows, arg.At, arg.DeletedBy, arg.IssueIds)
 	return err
@@ -251,7 +253,14 @@ type DeleteIssueSubscriberRowsParams struct {
 	IssueIds  []uuid.UUID
 }
 
-// DeleteIssueAssigneeRows' statement, of the deleted work items' subscribers.
+// The deleted work items' subscribers: their undeleted rows, soft-deleted at the moment and by the account given, in one
+// statement, which locks them in its scan's order. Not every write of these rows holds the project's FOR NO KEY UPDATE:
+// subscribeIssue and unsubscribeIssue hold the work item's row FOR SHARE instead (ShareIssue, M7 P1a spec 2.4). The
+// deletion holds both locks: the project's, and each deleted work item's row since DeleteIssueRows, which a FOR SHARE
+// waits for. A subscription that held the row first has committed before DeleteIssueRows went on, and this later
+// statement reads its row; one that waited finds the work item deleted and writes nothing. So no other write reaches
+// these rows meanwhile, and they are not locked by id first (M3 design 3.6, convention 5); InsertSubscribers gives the
+// rows' lock order. A row deleted before keeps its deletion. The index on issue_id serves it.
 func (q *Queries) DeleteIssueSubscriberRows(ctx context.Context, arg DeleteIssueSubscriberRowsParams) error {
 	_, err := q.db.Exec(ctx, deleteIssueSubscriberRows, arg.At, arg.DeletedBy, arg.IssueIds)
 	return err

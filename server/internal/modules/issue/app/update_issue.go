@@ -365,7 +365,7 @@ func (u *UpdateIssue) write(ctx context.Context, s stamp, i domain.Issue, c doma
 			return nil, err
 		}
 	}
-	event := s.event(domain.EventIssueUpdated, updatedChanges(activity, c.SortOrder))
+	event := s.event(domain.EventIssueUpdated, updatedChanges(activity, c.SortOrder, relations.mentions.Added))
 	return &event, nil
 }
 

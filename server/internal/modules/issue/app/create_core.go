@@ -85,11 +85,29 @@ func (u *IssueCreation) createLocked(ctx context.Context, actorID, projectID uui
 			return domain.Issue{}, time.Time{}, err
 		}
 	}
-	items := []domain.Issue{created}
-	if err := projectAttachments(ctx, u.d.Attachments, items); err != nil {
+	answer, err := u.answer(ctx, actorID, created)
+	if err != nil {
 		return domain.Issue{}, time.Time{}, err
 	}
-	return items[0], at, nil
+	return answer, at, nil
+}
+
+// answer is the work item created, as read back, as its creator actorID is
+// answered it, in the creation's transaction, once every row is written:
+// its attachments counted (projectAttachments), and whether he subscribes
+// to it, read last (M7 P1a spec 2.3), which the creation's subscribing him
+// makes so. A creation and a draft's publication answer it alike.
+func (u *IssueCreation) answer(ctx context.Context, actorID uuid.UUID, created domain.Issue) (domain.Issue, error) {
+	items := []domain.Issue{created}
+	if err := projectAttachments(ctx, u.d.Attachments, items); err != nil {
+		return domain.Issue{}, err
+	}
+	subscribed, err := u.d.Issues.IsSubscribed(ctx, created.ID, actorID)
+	if err != nil {
+		return domain.Issue{}, err
+	}
+	items[0].Subscribed = subscribed
+	return items[0], nil
 }
 
 func (u *IssueCreation) prepareLocked(ctx context.Context, actorID, projectID uuid.UUID, h held, in domain.NewIssue) (preparedIssue, error) {

@@ -40,7 +40,8 @@ type issueWrite struct {
 }
 
 // issueWrites are ordinary issue writes, explicitly P(N) without a W lock.
-// Their union with draft CRUD and draft publish covers writesOnIssues.
+// Their union with draft CRUD, draft publish and subscriptions covers
+// writesOnIssues.
 var issueWrites = []issueWrite{
 	{workspaceLock: "no lock", projectLock: "FOR NO KEY UPDATE", op: "updateIssueLink", method: http.MethodPatch, path: "/api/v0/issue-links/{link_id}", target: func(t *testing.T, w issueWorld) string {
 		link := createLink(t, w, "bob", w.newWorkItem(t), "http://169.254.169.254/locks")
@@ -187,7 +188,10 @@ func writesOnIssues(ops []apitest.Operation) []string {
 //     its projects does (M3 design 3.3); alice's write answers meanwhile.
 //
 // Each wait has a deadline; a write that waited where it may not fails
-// there.
+// there. The other directories' writes have shapes of their own, each
+// observed here too: a draft's, but its publication (checkCRUDLocks), its
+// publication (checkPublishLocks), and the caller's subscription, which
+// locks the work item's row and not its project (checkShareLocks).
 func TestEachIssueWriteLocksItsProjectFirst(t *testing.T) {
 	contract := apitest.Load(t)
 	checkIssueWriteDirectories(t, contract)
@@ -202,6 +206,9 @@ func TestEachIssueWriteLocksItsProjectFirst(t *testing.T) {
 	}
 	for _, row := range draftPublishWrites {
 		t.Run(row.op, func(t *testing.T) { row.checkPublishLocks(t, w) })
+	}
+	for _, row := range subscriptionWrites {
+		t.Run(row.op, func(t *testing.T) { row.checkShareLocks(t, w) })
 	}
 }
 

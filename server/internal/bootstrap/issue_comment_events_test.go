@@ -7,12 +7,14 @@ import (
 	"maps"
 	"net/http"
 	"reflect"
+	"slices"
 	"testing"
 	"time"
 	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
+	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
@@ -78,9 +80,9 @@ func TestCommentEventsComposition(t *testing.T) {
 		t.Fatalf("comment event/job/clock count=%d/%d/%d", len(events), issueEventCount(t, w), clock.calls.Load())
 	}
 	changes := [][]shared.Change{
-		{{Field: "comment_html", New: eventValue("<p>Clean</p>")}},
-		{{Field: "comment_html", Old: eventValue("<p>Clean</p>"), New: eventValue("<p>Edited</p>")}},
-		{{Field: "comment_html", Old: eventValue("<p>Edited</p>")}},
+		{{Field: "comment_html", New: eventValue("<p>Clean</p>")}, {Field: "issue", NewID: &id}},
+		{{Field: "comment_html", Old: eventValue("<p>Clean</p>"), New: eventValue("<p>Edited</p>")}, {Field: "issue", NewID: &id}},
+		{{Field: "comment_html", Old: eventValue("<p>Edited</p>")}, {Field: "issue", OldID: &id}},
 	}
 	types := []string{"issue.comment_created", "issue.comment_updated", "issue.comment_deleted"}
 	seen := map[uuid.UUID]bool{}
@@ -94,6 +96,58 @@ func TestCommentEventsComposition(t *testing.T) {
 			t.Error("event ID reused")
 		}
 		seen[e.ID] = true
+	}
+}
+
+// A comment's mentions in its events (M7 P1a spec 2.2): its creation's are
+// the members its body mentions, walt, a guest who sees only his own, among
+// them, olga, no member, not, in id order, before the work item; an edit's
+// only those the body it replaces does not mention, an account that is no
+// one's not among them, and none when it mentions no one new. An edit
+// subscribes only the caller and the visible newly mentioned (R7): bob,
+// still mentioned after his subscription row was deleted (as P1a's
+// unsubscribe deletes it), is not subscribed again; wanda is.
+func TestCommentEventMentions(t *testing.T) {
+	w := newIssueWorld(t)
+	w.adminGuest(t)
+	w.makeMember(t, "wanda", w.web, shared.RoleAdmin)
+	id := w.newWorkItemIn(t, w.web, `{"name":"Comments"}`)
+	var events []shared.Event
+	var failure error
+	route := issueEventRouteFor(t, w, clockAt(time.Date(2044, 5, 6, 7, 8, 9, 0, time.UTC)), &events, &failure, issue.EventTypes(), nil)
+	mentions := func(names ...string) []shared.Change {
+		ids := make([]uuid.UUID, 0, len(names))
+		for _, name := range names {
+			ids = append(ids, w.ids[name])
+		}
+		slices.SortFunc(ids, uuid.UUID.Compare)
+		changes := make([]shared.Change, 0, len(ids)+1)
+		for _, account := range ids {
+			changes = append(changes, shared.Change{Field: "mention", NewID: &account})
+		}
+		return append(changes, shared.Change{Field: "issue", NewID: &id})
+	}
+	var c answeredComment
+	decodeAnswer(t, route.answerWithin(t, w.contract, http.MethodPost, commentsOf(id), w.ids["alice"], fmt.Sprintf(`{"comment_html":%q}`, mentionHTML(w.ids["olga"], w.ids["walt"], w.ids["bob"], w.ids["bob"])), 201), &c)
+	if _, err := w.pool.Exec(pgtest.Soon(t), "UPDATE issue_subscribers SET deleted_at=now() WHERE issue_id=$1 AND subscriber_id=$2", id, w.ids["bob"]); err != nil {
+		t.Fatal(err)
+	}
+	stranger := uuid.NewV7()
+	for _, html := range []string{mentionHTML(w.ids["bob"], stranger, w.ids["olga"], w.ids["wanda"], w.ids["walt"]), mentionHTML(w.ids["bob"])} {
+		route.answerWithin(t, w.contract, http.MethodPatch, commentPath(c.ID), w.ids["alice"], fmt.Sprintf(`{"comment_html":%q}`, html), 200)
+	}
+	if len(events) != 3 {
+		t.Fatalf("comment events=%d, want three", len(events))
+	}
+	for n, want := range [][]shared.Change{mentions("bob", "walt"), mentions("wanda"), mentions()} {
+		if e := events[n]; len(e.Changes) != len(want)+1 || e.Changes[0].Field != "comment_html" || !reflect.DeepEqual(e.Changes[1:], want) {
+			t.Errorf("comment event %d changes=%+v, want comment_html then %+v", n, e.Changes, want)
+		}
+	}
+	want := []uuid.UUID{w.ids["alice"], w.ids["wanda"]}
+	slices.SortFunc(want, uuid.UUID.Compare)
+	if got := queryIDs(t, w.pool, "SELECT subscriber_id FROM issue_subscribers WHERE issue_id=$1 AND deleted_at IS NULL ORDER BY subscriber_id", id); !slices.Equal(got, want) {
+		t.Fatalf("subscribers=%v, want %v: an edit subscribes only the visible newly mentioned", got, want)
 	}
 }
 

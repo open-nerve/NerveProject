@@ -46,7 +46,7 @@ func (u *CreateIssueComment) Execute(ctx context.Context, id uuid.UUID, in domai
 		if h.issue.ArchivedAt != nil {
 			return domain.ErrIssueArchived
 		}
-		targets, err := visibleMentionSubscribers(ctx, u.d.Members, h.issue, actor.UserID, clean.Identity.MentionIDs)
+		mentions, targets, err := commentMentions(ctx, u.d.Members, h.issue, actor.UserID, clean.Identity.MentionIDs)
 		if err != nil {
 			return err
 		}
@@ -80,7 +80,7 @@ func (u *CreateIssueComment) Execute(ctx context.Context, id uuid.UUID, in domai
 				return err
 			}
 		}
-		return u.d.Events.Publish(ctx, stamp.commentEvent(domain.EventCommentCreated, created.ID, nil, eventPtr(created.HTML)))
+		return u.d.Events.Publish(ctx, stamp.commentEvent(domain.EventCommentCreated, created.ID, nil, eventPtr(created.HTML), mentions))
 	})
 	if err != nil {
 		return domain.Comment{}, err

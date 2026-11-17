@@ -80,7 +80,7 @@ func TestCreateIssueLink(t *testing.T) {
 			if row.ID == (uuid.UUID{}) || row.ID == got.ID || row.WorkspaceID != acme || row.ProjectID != web || row.IssueID != id || row.ActorID == nil || *row.ActorID != alice || !row.At.Equal(clockNow) || !reflect.DeepEqual(row.Activity, activity) {
 				t.Fatalf("activity=%+v", row)
 			}
-			wantCollaborationEvent(t, p, "issue.link_created", "issue_link", got.ID, []shared.Change{{Field: "url", New: evptr(want.URL)}, {Field: "title", New: title}})
+			wantCollaborationEvent(t, p, "issue.link_created", "issue_link", got.ID, []shared.Change{{Field: "url", New: evptr(want.URL)}, {Field: "title", New: title}, {Field: "issue", NewID: &id}})
 			calls := append(locked(id), line("LinkURLExists", id, uuid.UUID{}, want.URL), "Now", line("MarkChanged", []uuid.UUID{id}), line("InsertLink", id), line("InsertActivities", 1))
 			if !slices.Equal(w.log.calls, calls) || eventClockReads(w) != 1 {
 				t.Fatalf("calls=%q want=%q", w.log.calls, calls)
