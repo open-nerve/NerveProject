@@ -25,7 +25,11 @@ import (
 // read of a work item takes the same decision on its project, without a
 // lock (see), and a read in a workspace its decision in the workspace
 // (seeWorkspace). Every decision on a work item applies the guest rule
-// first (decide). issue.New builds one Locks for every use case: none
+// first (decide). A write of the caller's own subscription to a work item
+// is the one exception (M7 P1a spec 2.4): share, the same precheck, then
+// in the same transaction the work item's row FOR SHARE and the decision
+// again on it, without the write gate and without the project's lock
+// (lock_share.go). issue.New builds one Locks for every use case: none
 // holds an Authorizer, a write gate or a transaction of its own.
 type Locks struct {
 	projects    ProjectGate

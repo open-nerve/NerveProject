@@ -131,6 +131,11 @@ type IssueReader interface {
 	// SubIssueCounts counts the undeleted, unarchived direct sub-items of
 	// each of the work items ids that has any (M4 design 3.9).
 	SubIssueCounts(ctx context.Context, actor uuid.UUID, ids []uuid.UUID) (map[uuid.UUID]SubIssueCount, error)
+	// ShareIssue locks the undeleted work item id, archived or not, FOR
+	// SHARE, its row alone, in the transaction ctx carries, and answers it
+	// as its row has it (M7 P1a spec 2.4); found is false when there is
+	// none, also when it was deleted while the lock waited.
+	ShareIssue(ctx context.Context, id uuid.UUID) (i SharedIssue, found bool, err error)
 }
 
 // SubIssueCount is a work item's number of undeleted, unarchived direct
@@ -147,6 +152,18 @@ type SubIssueCount struct {
 type SharedIssue struct {
 	ID, WorkspaceID, ProjectID uuid.UUID
 	CreatedByID                *uuid.UUID
+}
+
+// SubscriptionWriter is the subscribers' store as subscribeIssue and
+// unsubscribeIssue write it, in the transaction ctx carries, under the
+// work item's row FOR SHARE (M7 P1a spec 2.4).
+type SubscriptionWriter interface {
+	// InsertSubscribers inserts the rows, but of an account that
+	// subscribes to the work item already.
+	InsertSubscribers(ctx context.Context, r LinkRows) error
+	// RemoveSubscriber soft-deletes the work item's one undeleted row of
+	// the account r names; none for none.
+	RemoveSubscriber(ctx context.Context, r SubscriberRemoval) error
 }
 
 // SubIssueLister reads the sub-items of a work item (M4 design 3.9).
