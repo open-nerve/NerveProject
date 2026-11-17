@@ -99,8 +99,41 @@ func TestNotifiableOf(t *testing.T) {
 		if !reflect.DeepEqual(got, want) {
 			t.Errorf("%s: NotifiableOf() = %s, want %s", name, show(got), show(want))
 		}
-		if got.Any() != (len(want.Changes)+len(want.Mentions) > 0) {
-			t.Errorf("%s: Any() = %v", name, got.Any())
+		if e := all[name]; got.AnyBut(e.ActorID) != (len(want.Changes)+len(want.Mentions) > 0) {
+			t.Errorf("%s: AnyBut(its actor) = %v", name, got.AnyBut(e.ActorID))
+		}
+	}
+}
+
+// A write notifies anyone but its actor of a change, which the work item's
+// subscribers receive, or of a mention of another account than its actor:
+// a write whose only notifiable item is its actor's mention of himself
+// notifies no one (spec 2.9; Recipients leaves the actor out), nerve's own
+// write any mention.
+func TestAnyBut(t *testing.T) {
+	mentionOf := func(account uuid.UUID) Mention {
+		return Mention{Account: account, Item: Item{Seq: 1, Field: "description", Verb: VerbMentioned}}
+	}
+	change := Item{Seq: 0, Field: "name", Verb: VerbUpdated}
+	for _, tt := range []struct {
+		name  string
+		n     Notifiable
+		actor *uuid.UUID
+		want  bool
+	}{
+		{"nothing", Notifiable{}, &alice, false},
+		{"nothing by nerve", Notifiable{}, nil, false},
+		{"the actor mentioning himself", Notifiable{Mentions: []Mention{mentionOf(alice)}}, &alice, false},
+		{"the actor mentioning himself twice", Notifiable{Mentions: []Mention{mentionOf(alice), mentionOf(alice)}}, &alice, false},
+		{"the actor mentioning another", Notifiable{Mentions: []Mention{mentionOf(bob)}}, &alice, true},
+		{"the actor mentioning himself and another", Notifiable{Mentions: []Mention{mentionOf(alice), mentionOf(bob)}}, &alice, true},
+		{"nerve mentioning an account", Notifiable{Mentions: []Mention{mentionOf(alice)}}, nil, true},
+		{"a change", Notifiable{Changes: []Item{change}}, &alice, true},
+		{"a change and the actor's mention of himself", Notifiable{Changes: []Item{change}, Mentions: []Mention{mentionOf(alice)}}, &alice, true},
+		{"a change by nerve", Notifiable{Changes: []Item{change}}, nil, true},
+	} {
+		if got := tt.n.AnyBut(tt.actor); got != tt.want {
+			t.Errorf("%s: AnyBut() = %v, want %v", tt.name, got, tt.want)
 		}
 	}
 }

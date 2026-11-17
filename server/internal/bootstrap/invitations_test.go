@@ -237,8 +237,12 @@ func tokensIn(t *testing.T, tables map[string]string, links []invitationLink) []
 // registrationRows keeps every ordinary table's complete rows and appends
 // the stable id/kind/args of declared request jobs. River's progress and
 // scheduling are left out; request inserts and payload replacements are not.
+// It reads them once the notification fan-outs enqueued so far have run
+// (waitForFanouts): they write notifications in the background, after the
+// write that enqueued them (M7 P1b spec 2.9, R10).
 func registrationRows(t *testing.T, pool *pgxpool.Pool) string {
 	t.Helper()
+	waitForFanouts(t, pool)
 	tables := tableRows(t, pool, riversOwn)
 	kinds := slices.Concat(identity.EnqueuedKinds(), issue.EnqueuedKinds(), asset.EnqueuedKinds())
 	var requests string

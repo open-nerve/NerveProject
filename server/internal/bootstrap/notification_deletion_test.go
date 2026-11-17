@@ -22,11 +22,11 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
-// The notification module declares its request kind and registers its
-// worker, with no periodic schedule; leaving the worker out fails the
-// registration.
+// The notification module declares its request kinds, the fan-out and the
+// deletion, and registers their workers, with no periodic schedule; leaving
+// the workers out fails the registration.
 func TestNewAppNotificationJobCatalog(t *testing.T) {
-	kinds := []string{"notification.delete_rows"}
+	kinds := []string{"notification.fanout", "notification.delete_rows"}
 	if got := notification.EnqueuedKinds(); !slices.Equal(got, kinds) {
 		t.Fatalf("enqueued kinds=%v; want %v", got, kinds)
 	}
@@ -37,15 +37,17 @@ func TestNewAppNotificationJobCatalog(t *testing.T) {
 	defer pool.Close()
 	definitions := notification.New(notification.Deps{Pool: pool, DeleteBatch: 1000, DeleteBudget: 45 * time.Second, RuntimeNow: time.Now,
 		Logger: slog.New(slog.DiscardHandler)}).Jobs()
-	if len(definitions) != 1 || definitions[0].Worker == nil || definitions[0].Periodic != nil {
-		t.Fatalf("notification jobs=%+v; want the deletion's worker alone", definitions)
+	if len(definitions) != 2 || slices.ContainsFunc(definitions, func(j jobs.Job) bool { return j.Worker == nil || j.Periodic != nil }) {
+		t.Fatalf("notification jobs=%+v; want the fan-out's and the deletion's workers alone", definitions)
 	}
 	cfg := jobs.Config{DefaultWorkers: 1, PeriodicWorkers: 1, Logger: slog.New(slog.DiscardHandler)}
 	if _, err := jobs.New(pool, cfg, definitions, kinds); err != nil {
 		t.Fatalf("module request worker registration: %v", err)
 	}
-	if _, err := jobs.New(pool, cfg, nil, kinds); err == nil {
-		t.Fatal("notification.delete_rows declared without its worker registered")
+	for n, kind := range kinds {
+		if _, err := jobs.New(pool, cfg, slices.Delete(slices.Clone(definitions), n, n+1), kinds); err == nil {
+			t.Fatalf("%s declared without its worker registered", kind)
+		}
 	}
 }
 

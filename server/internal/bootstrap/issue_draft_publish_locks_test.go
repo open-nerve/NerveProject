@@ -20,6 +20,10 @@ func (row draftWriteLock) checkPublishLocks(t *testing.T, w issueWorld) {
 			case "core":
 				tables, mode, wantTable = "states", "ACCESS EXCLUSIVE", "states"
 			}
+			// The earlier publications' notification fan-outs lock their work
+			// items' rows FOR SHARE: they end before the hold, so that none
+			// queues on it with one of the app's connections (R10).
+			waitForFanouts(t, w.pool)
 			held := lockedTables(t, w.pool, tables, mode)
 			tx := requestTx(w.pool)
 			var e exchange

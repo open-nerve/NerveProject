@@ -80,10 +80,22 @@ type Notifiable struct {
 	Mentions []Mention
 }
 
-// Any tells whether there is anything to notify of, a change or a mention:
-// the subscriber enqueues the job only then (spec 2.9).
-func (n Notifiable) Any() bool {
-	return len(n.Changes) > 0 || len(n.Mentions) > 0
+// AnyBut tells whether there is anything to notify anyone but actor, nil
+// for nerve's own write, of: a change, which the work item's subscribers are
+// notified of, or a mention of another account than actor. The subscriber
+// enqueues the job only then (spec 2.9): a write whose only notifiable item
+// is its actor's mention of himself notifies no one (Recipients leaves the
+// actor out).
+func (n Notifiable) AnyBut(actor *uuid.UUID) bool {
+	if len(n.Changes) > 0 {
+		return true
+	}
+	for _, m := range n.Mentions {
+		if actor == nil || m.Account != *actor {
+			return true
+		}
+	}
+	return false
 }
 
 // notified is how an event of a type notifies (spec 2.3): the verb of its

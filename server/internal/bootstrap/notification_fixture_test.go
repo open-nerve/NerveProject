@@ -143,10 +143,39 @@ func notificationDeps(pool *pgxpool.Pool, cfg config.Config) notification.Deps {
 		DeleteBatch: cfg.Notification.DeleteBatch, DeleteBudget: cfg.Notification.DeleteBudget}
 }
 
-// notificationDeletionJobsForTest are the notification module's request
-// workers as newApp registers them, for a test that runs its own Runner in
-// place of the app's: the deletion events it publishes enqueue
-// notification.delete_rows too.
-func notificationDeletionJobsForTest(pool *pgxpool.Pool, cfg config.Config) []jobs.Job {
+// notificationJobsForTest are the notification module's request workers as
+// newApp registers them, for a test that runs its own Runner in place of the
+// app's: the writes it publishes enqueue notification.fanout, and its
+// deletion events notification.delete_rows too.
+func notificationJobsForTest(pool *pgxpool.Pool, cfg config.Config) []jobs.Job {
 	return notification.New(notificationDeps(pool, cfg)).Jobs()
+}
+
+// waitForFanouts returns once every notification.fanout job inserted so far
+// has completed: the writes of a fixture each enqueue the fan-out of their
+// notifications (M7 P1b spec 2.9), which locks the work item's row FOR SHARE
+// and inserts notifications, its foreign keys locking their workspace's,
+// project's and receivers' rows FOR KEY SHARE. A test that then holds such a
+// row or the issues table, observes their locks, or reads River's pending
+// jobs, waits for them first, as for the start-time runs
+// (waitForStartupRuns), so that no pending fan-out queues on what it holds,
+// fails at a lock timeout meanwhile or shows among its locks (R10). The
+// failure lists the fan-outs not completed.
+func waitForFanouts(t *testing.T, pool *pgxpool.Pool) {
+	t.Helper()
+	deadline := time.Now().Add(15 * time.Second)
+	for {
+		var left string
+		if err := pool.QueryRow(pgtest.Soon(t), `SELECT coalesce(string_agg(format('%s %s attempt %s errors %s', id, state, attempt, coalesce(to_json(errors)::text, '[]')), E'\n' ORDER BY id), '')
+			FROM river_job WHERE kind = $1 AND state <> 'completed'`, notificationriver.FanoutKind).Scan(&left); err != nil {
+			t.Fatal(err)
+		}
+		if left == "" {
+			return
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("notification fan-outs not completed within 15s:\n%s", left)
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
 }

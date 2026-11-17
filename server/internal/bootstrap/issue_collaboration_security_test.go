@@ -89,6 +89,10 @@ func TestCollaborationSecurity(t *testing.T) {
 		edit := issueapp.NewUpdateIssueComment(issueapp.UpdateIssueCommentDeps{Events: discardIssueEvents{}, Locks: locks, Comments: store, Members: projects, Sanitizer: content.NewSanitizer(), Clock: clock.System{}})
 		remove := issueapp.NewDeleteIssueComment(issueapp.DeleteIssueCommentDeps{Events: discardIssueEvents{}, Locks: locks, Comments: store, Clock: clock.System{}})
 		ctx := shared.WithActor(pgtest.Soon(t), shared.Actor{UserID: w.ids["bob"]})
+		// The fixture's notification fan-outs lock work items' rows FOR SHARE
+		// and, inserting, acme's and Web's FOR KEY SHARE: one still running as
+		// the tables are locked in turn would deadlock with them (R10).
+		waitForFanouts(t, w.pool)
 		before := collaborationState(t, w)
 		// Exclusive table locks permit precheck SELECTs while excluding any row
 		// locks or writes. The real authorizer/store share a single-connection pool.

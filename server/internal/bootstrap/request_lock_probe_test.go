@@ -166,6 +166,9 @@ func TestRequestLockProbeWaitsForItsFixtureAfterUpstreamProject(t *testing.T) {
 	}
 	target := write.target(t, w)
 	waitForStartupRuns(t, w.pool)
+	// The target's notification fan-out takes acme's row FOR KEY SHARE as it
+	// inserts, which the workspace's lock below would read (R10).
+	waitForFanouts(t, w.pool)
 	upstream := holding(t, w.pool, "SELECT id FROM projects WHERE id=$1 FOR NO KEY UPDATE", w.web)
 	downstream := lockedTables(t, w.pool, write.waits, write.mode)
 	upstreamPID := upstream.Conn().PgConn().PID()

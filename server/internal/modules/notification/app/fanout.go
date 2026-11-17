@@ -52,9 +52,9 @@ func NewFanout(d FanoutDeps) *Fanout { return &Fanout{d: d} }
 // more, is read by no one: nothing is written. A row already sent is not
 // written again, so a retry writes none twice.
 func (u *Fanout) Execute(ctx context.Context, e shared.Event) error {
-	item, ok := domain.WorkItem(e)
-	if !ok || e.ID == (uuid.UUID{}) || e.OccurredAt.IsZero() || (e.ActorID != nil && *e.ActorID == (uuid.UUID{})) {
-		return errors.New("invalid notification event shape")
+	item, err := workItemOf(e)
+	if err != nil {
+		return err
 	}
 	return u.d.Tx.WithinTx(ctx, func(ctx context.Context) error {
 		row, found, err := u.d.Lock.ShareIssue(ctx, item)
@@ -111,6 +111,17 @@ func (u *Fanout) Execute(ctx context.Context, e shared.Event) error {
 		}
 		return u.d.Rows.InsertNotifications(ctx, n)
 	})
+}
+
+// workItemOf is the work item the event e is about (domain.WorkItem), once
+// e names it, its id, its moment and, unless nerve wrote it, a real actor:
+// the shape the fan-out runs on, and the subscriber enqueues.
+func workItemOf(e shared.Event) (uuid.UUID, error) {
+	item, ok := domain.WorkItem(e)
+	if !ok || e.ID == (uuid.UUID{}) || e.OccurredAt.IsZero() || (e.ActorID != nil && *e.ActorID == (uuid.UUID{})) {
+		return uuid.Nil(), errors.New("invalid notification event shape")
+	}
+	return item, nil
 }
 
 // snapshot is the work item item as its notifications show it: its own

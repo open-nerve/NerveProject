@@ -173,6 +173,9 @@ func TestLateDeleteRowsAndPurgeRetry(t *testing.T) {
 			// dedicated purge connection uses a heap scan; observed ownership below
 			// is authoritative, never an assumption about the planner's row order.
 			w.send(t, "alice", "PATCH", "/api/v0/issues/"+a.String(), `{"parent_id":"`+b.String()+`"}`, 200)
+			// A's and B's notification fan-outs lock their rows FOR SHARE: they
+			// end before the pause and the locks observed below (R10).
+			waitForFanouts(t, w.pool)
 			catalog := map[foreignKey][]uuid.UUID{}
 			for _, k := range keysTo(t, w.pool, "projects") {
 				catalog[k] = append(k.undeleted(t, w.pool, w.web), k.deleted(t, w.pool, w.web)...)

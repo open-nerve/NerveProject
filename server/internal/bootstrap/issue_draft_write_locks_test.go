@@ -121,6 +121,11 @@ func (row draftWriteLock) checkCRUDLocks(t *testing.T, w issueWorld) {
 					if stage == "draft" {
 						tables, mode = "draft_issues", "SHARE"
 					}
+					// The earlier writes' notification fan-outs lock work items'
+					// rows FOR SHARE and, inserting, acme's and Web's FOR KEY SHARE:
+					// one still running as the tables are locked in turn would
+					// deadlock with them (R10).
+					waitForFanouts(t, w.pool)
 					held := lockedTables(t, w.pool, tables, mode)
 					tx := requestTx(w.pool)
 					var e exchange

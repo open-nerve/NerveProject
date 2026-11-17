@@ -78,6 +78,9 @@ func preparePurgeScale(t *testing.T, roles splitRoles, dir string) purgeScaleFix
 				waitNotificationDeletion(t, roles.owner, project)
 			}
 		}
+		// Each write above enqueued its notifications' fan-out, which the
+		// pending jobs below count once the app stops.
+		waitForFanouts(t, roles.owner)
 	}) {
 		t.Fatal("purge scale preparation failed")
 	}
