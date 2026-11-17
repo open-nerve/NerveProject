@@ -140,6 +140,15 @@ type SubIssueCount struct {
 	All, Own int
 }
 
+// SharedIssue is a work item as its row FOR SHARE answers it (M7 P1a spec
+// 2.4): its id, its workspace, its project, and its creator, nil when not
+// known, all a decision on it reads (Locks.decide) and all a write of the
+// caller's own row under it stamps.
+type SharedIssue struct {
+	ID, WorkspaceID, ProjectID uuid.UUID
+	CreatedByID                *uuid.UUID
+}
+
 // SubIssueLister reads the sub-items of a work item (M4 design 3.9).
 type SubIssueLister interface {
 	// SubIssues reads the undeleted, unarchived work items directly under

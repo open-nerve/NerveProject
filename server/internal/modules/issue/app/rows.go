@@ -110,6 +110,15 @@ type UnlinkRows struct {
 	At      time.Time
 }
 
+// SubscriberRemoval is the row of a work item's subscribers that an
+// unsubscription removes (M7 P1a spec 2.4): the work item's one undeleted
+// row of SubscriberID, soft-deleted at the moment and by the account given.
+type SubscriberRemoval struct {
+	IssueID, SubscriberID uuid.UUID
+	By                    uuid.UUID
+	At                    time.Time
+}
+
 // ActivityRow is a new row of a work item's activity (M4 design 3.13):
 // its id, the work item's, the row's values, and its actor, who writes it,
 // at the moment given.
