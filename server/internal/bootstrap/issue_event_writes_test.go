@@ -339,6 +339,48 @@ func TestIssueEventDescriptionMentions(t *testing.T) {
 	}
 }
 
+// A description save written unchanged (skip_activity, the same content,
+// only a block id changed) has no event yet writes the rows of whom it newly
+// mentions (R7): wanda and walt, mentioned before they were Web's members,
+// then its admin and its own-only guest, get mention rows of the write; only
+// wanda, who sees the item, a subscription; bob, unsubscribed, none again.
+func TestAnUnchangedDescriptionSaveSubscribesTheVisibleNewlyMentioned(t *testing.T) {
+	w := newIssueWorld(t)
+	mentioned := mentionHTML(w.ids["bob"], w.ids["walt"], w.ids["wanda"])
+	id := w.newWorkItemIn(t, w.web, fmt.Sprintf(`{"name":"Unchanged","description_html":%q}`, "<p>Same</p>"+mentioned))
+	w.send(t, "bob", http.MethodPost, subscriptionOf(id, "unsubscribe"), "", http.StatusNoContent)
+	w.makeMember(t, "wanda", w.web, shared.RoleAdmin)
+	w.adminGuest(t)
+	at := time.Date(2044, 5, 6, 7, 8, 9, 0, time.UTC)
+	var received []shared.Event
+	route := issueEventRoute(t, w, clockAt(at), &received, new(error))
+	route.answerWithin(t, w.contract, http.MethodPatch, "/api/v0/issues/"+id.String(), w.ids["alice"],
+		fmt.Sprintf(`{"description_html":%q,"skip_activity":true}`, `<p data-id="kept">Same</p>`+mentioned), 200)
+	if len(received) != 0 || issueEventCount(t, w) != 0 {
+		t.Fatalf("events=%+v jobs=%d, want none for the save written unchanged", received, issueEventCount(t, w))
+	}
+	// The live rows of table are names'; ofTheWrite: those alice wrote at it.
+	live := func(table, column string, ofTheWrite bool, names ...string) {
+		t.Helper()
+		want := make([]uuid.UUID, 0, len(names))
+		for _, name := range names {
+			want = append(want, w.ids[name])
+		}
+		slices.SortFunc(want, uuid.UUID.Compare)
+		query, args := "SELECT "+column+" FROM "+table+" WHERE issue_id=$1 AND deleted_at IS NULL", []any{id}
+		if ofTheWrite {
+			query, args = query+" AND created_at=$2 AND updated_at=$2 AND created_by_id=$3 AND updated_by_id=$3", append(args, at, w.ids["alice"])
+		}
+		if got := queryIDs(t, w.pool, query+" ORDER BY "+column, args...); !slices.Equal(got, want) {
+			t.Errorf("live %s (of the write only: %t)=%v, want %v", table, ofTheWrite, got, want)
+		}
+	}
+	live("issue_mentions", "mention_id", false, "bob", "walt", "wanda")
+	live("issue_mentions", "mention_id", true, "walt", "wanda")
+	live("issue_subscribers", "subscriber_id", false, "alice", "wanda")
+	live("issue_subscribers", "subscriber_id", true, "wanda")
+}
+
 func TestIssueUpdatedEventHiddenOldParent(t *testing.T) {
 	w := newIssueWorld(t)
 	w.adminGuest(t)
