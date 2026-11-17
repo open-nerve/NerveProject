@@ -28,11 +28,12 @@ export interface Database {
 }
 
 /**
- * The connections one worker may hold at once: its nerve's pool, a second nerve or a nerve command beside it (each
- * pool up to database.max_conns, 10, server/configs/config.yaml), its own pool (openDatabase, 2), and a database
- * creation and a pg_dump (one each).
+ * The connections one worker may hold at once: its nerve's pool, a second nerve or a nerve command beside it (each up
+ * to database.max_conns, 10, server/configs/config.yaml, and one more: a running nerve's River listener hijacks a
+ * pooled connection, which the pool then no longer counts, so it may open max_conns besides), its own pool
+ * (openDatabase, 2), and a database creation and a pg_dump (one each).
  */
-const connectionsPerWorker = 2 * 10 + 2 + 2;
+const connectionsPerWorker = 2 * 11 + 2 + 2;
 
 /**
  * The server's max_connections for workers workers: each worker's connections and a margin for the run's own (the
