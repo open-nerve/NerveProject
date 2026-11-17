@@ -43,3 +43,36 @@ type ProjectAccess interface {
 	// ActiveRole does.
 	ProjectFacts(ctx context.Context, projectID, userID uuid.UUID) (f ProjectFacts, found bool, err error)
 }
+
+// WorkspaceRolesMany reads many accounts' memberships of a workspace at once,
+// for DecideMany (M7 P1b spec 2.7). The workspace module implements it
+// (workspace.Provide); bootstrap wires it.
+type WorkspaceRolesMany interface {
+	// ActiveRoles returns the role of each of accountIDs whose membership of
+	// workspaceID is active, as ActiveRole reads one's: its row is_active
+	// and not deleted, and the workspace not deleted. An account without one
+	// is not in it. It reads in the transaction ctx carries.
+	ActiveRoles(ctx context.Context, workspaceID uuid.UUID, accountIDs []uuid.UUID) (map[uuid.UUID]shared.Role, error)
+}
+
+// ProjectFactsMany are what ProjectAccessMany reads of a project for many
+// accounts' decisions: the facts of the project ProjectFacts has, and the
+// project role of each account asked about that is its active member, by
+// account; one that is not is not in Roles.
+type ProjectFactsMany struct {
+	WorkspaceID  uuid.UUID
+	Public       bool
+	GuestViewAll bool
+	Roles        map[uuid.UUID]shared.Role
+}
+
+// ProjectAccessMany reads a project for many accounts' decisions at once (M7
+// P1b spec 2.7). The project module implements it (project.Provide);
+// bootstrap wires it, converting the facts.
+type ProjectAccessMany interface {
+	// ProjectFactsMany returns the facts of the undeleted project projectID,
+	// archived or not, for accountIDs; found is false for a project that
+	// does not exist or is deleted. It reads in the transaction ctx carries,
+	// as ProjectFacts does.
+	ProjectFactsMany(ctx context.Context, projectID uuid.UUID, accountIDs []uuid.UUID) (f ProjectFactsMany, found bool, err error)
+}

@@ -1,7 +1,15 @@
 import type { TestInfo } from "@playwright/test";
 import { escapeIdentifier } from "pg";
 
-import { createLabel, createProject, createWorkspace, slugFor, type Api } from "../../fixtures/api";
+import {
+  addProjectMembers,
+  createLabel,
+  createProject,
+  createWorkspace,
+  inviteAndAccept,
+  slugFor,
+  type Api,
+} from "../../fixtures/api";
 import { accountId, bearer, createPAT, emailFor, login, newAccount } from "../../fixtures/auth";
 import { keysBelow, projectTables, workspaceTables } from "../../fixtures/assert/catalog";
 import { expectIssueDeleted } from "../../fixtures/assert/issue";
@@ -115,6 +123,9 @@ async function finishLinks(db: Database, ids: Map<string, Set<string>>) {
 async function seed(api: Api, db: Database, info: TestInfo, admin: Account, member: Account, age: string) {
   const token = admin.token;
   const keeper = await createWorkspace(api, token, { name: `${age} keeper`, slug: slugFor(info, `${age}-keep`) });
+  // The member, keeper's and a member of its target and neighboring projects, is assigned a work item of each, which
+  // notifies him (furnishIssueRows).
+  await inviteAndAccept(api, token, keeper.slug, member, 15);
   const project = await createProject(api, token, keeper.slug, { name: "Independent issue", identifier: "ISS" });
   const usedLabel = await createLabel(api, token, project.id, { name: "Attached" });
   const label = await createLabel(api, token, project.id, { name: "Independent label" });
@@ -145,16 +156,28 @@ async function seed(api: Api, db: Database, info: TestInfo, admin: Account, memb
   await relate("relates_to");
   await relate("blocking");
   const doomed = await createProject(api, token, keeper.slug, { name: "Project target", identifier: "DEL" });
+  await addProjectMembers(api, token, doomed.id, [{ member_id: member.id, role: 15 }]);
   const projectLabel = await createLabel(api, token, doomed.id, { name: "Bug" });
   const doomedPlanning = await furnishPlanningRows(api, token, doomed.id);
-  await furnishIssueRows(api, token, keeper.slug, doomed.id, admin.id, projectLabel.id, doomedPlanning);
+  await furnishIssueRows(api, db, token, keeper.slug, doomed.id, admin.id, member.id, projectLabel.id, doomedPlanning);
   const workspace = await createWorkspace(api, token, { name: "Workspace target", slug: slugFor(info, `${age}-del`) });
-  await furnishWorkspace(api, token, workspace.slug, member, emailFor(info, `${age}-pending`));
+  await furnishWorkspace(api, db, token, workspace.slug, member, emailFor(info, `${age}-pending`));
   // A neighboring project remains live even when already 61 days old.
   const neighbor = await createProject(api, token, keeper.slug, { name: "Neighbor", identifier: "LIVE" });
+  await addProjectMembers(api, token, neighbor.id, [{ member_id: member.id, role: 15 }]);
   const neighborLabel = await createLabel(api, token, neighbor.id, { name: "Keep" });
   const neighborPlanning = await furnishPlanningRows(api, token, neighbor.id);
-  await furnishIssueRows(api, token, keeper.slug, neighbor.id, admin.id, neighborLabel.id, neighborPlanning);
+  await furnishIssueRows(
+    api,
+    db,
+    token,
+    keeper.slug,
+    neighbor.id,
+    admin.id,
+    member.id,
+    neighborLabel.id,
+    neighborPlanning
+  );
   const preparationHost = await createIssue(api, token, neighbor.id, { name: "Unreferenced image preparation" });
   await storedFile(
     api,

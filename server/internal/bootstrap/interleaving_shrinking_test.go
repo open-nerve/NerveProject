@@ -298,7 +298,9 @@ func TestTwoAdminsDeactivatedAtOnceLeaveAnAdmin(t *testing.T) {
 				ended := run(deactivate(first, at.holding(workspacepg.New(w.pool), g)))
 				held(t, ctx, g, ended, "the first deactivation")
 				refused := run(deactivate(second, workspacepg.New(w.pool)))
-				pgtest.WaitForLockWaitOn(t, w.pool, "workspaces", 5*time.Second)
+				// Named by its statement: the app's River jobs wait for rows too
+				// (M7 P1b spec R10).
+				pgtest.WaitForStatementLockWaitOn(t, w.pool, "workspaces", 5*time.Second, "LockMemberWorkspaces")
 				if got := w.standing(t); got != worldStanding {
 					t.Errorf("while the first holds acme: %s; want %s", got, worldStanding)
 				}

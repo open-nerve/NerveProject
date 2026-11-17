@@ -78,11 +78,13 @@ func TestHierarchyEvents(t *testing.T) {
 	}
 }
 
-func wantRelationEvent(t *testing.T, e shared.Event, kind string, row, project, from, to uuid.UUID, relation string) {
+func wantRelationEvent(t *testing.T, e shared.Event, kind string, row, project, from, to uuid.UUID, relation string, on uuid.UUID, onType string) {
 	t.Helper()
-	want := []shared.Change{{Field: "relation_type", New: evptr(relation)}, {Field: "issue", NewID: &from}, {Field: "related_issue", NewID: &to}}
+	want := []shared.Change{{Field: "relation_type", New: evptr(relation)}, {Field: "issue", NewID: &from}, {Field: "related_issue", NewID: &to},
+		{Field: "requested_on", New: evptr(onType), NewID: &on}}
 	if kind == "issue.relation_removed" {
-		want = []shared.Change{{Field: "relation_type", Old: evptr(relation)}, {Field: "issue", OldID: &from}, {Field: "related_issue", OldID: &to}}
+		want = []shared.Change{{Field: "relation_type", Old: evptr(relation)}, {Field: "issue", OldID: &from}, {Field: "related_issue", OldID: &to},
+			{Field: "requested_on", Old: evptr(onType), OldID: &on}}
 	}
 	if e.ID == (uuid.UUID{}) || e.ID == row || e.Type != kind || e.Entity != (shared.EntityRef{Kind: "issue_relation", ID: row}) || e.WorkspaceID != acme || e.ProjectID != project || e.ActorID == nil || *e.ActorID != alice || !e.OccurredAt.Equal(clockNow) || !reflect.DeepEqual(e.Changes, want) {
 		t.Fatalf("relation event=%+v changes=%+v want=%+v", e, e.Changes, want)
@@ -120,7 +122,7 @@ func TestRelationEvents(t *testing.T) {
 							storedProject = ops
 						}
 					}
-					wantRelationEvent(t, p.rows[n], "issue.relation_added", rel.inserted[n].ID, storedProject, storedFrom, storedTo, storedType)
+					wantRelationEvent(t, p.rows[n], "issue.relation_added", rel.inserted[n].ID, storedProject, storedFrom, storedTo, storedType, from, string(kind))
 				}
 				if p.rows[0].ID == p.rows[1].ID || eventClockReads(w) != 1 {
 					t.Fatal("relation batch identity/clock")
@@ -149,7 +151,7 @@ func TestRelationEvents(t *testing.T) {
 				if len(p.rows) != 1 {
 					t.Fatalf("removed events=%d want one", len(p.rows))
 				}
-				wantRelationEvent(t, p.rows[0], "issue.relation_removed", r.ID, r.ProjectID, r.IssueID, r.RelatedID, "blocked_by")
+				wantRelationEvent(t, p.rows[0], "issue.relation_removed", r.ID, r.ProjectID, r.IssueID, r.RelatedID, "blocked_by", r.IssueID, "blocked_by")
 			})
 		}
 	}

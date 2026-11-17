@@ -37,6 +37,8 @@ M4 的最终 C12、准确分支 CI 和未来 main 集成分别由[验收台账](
 
 **处理结果（M7/P1a）：** 关注、取消关注的接口与 `IssueDetail.is_subscribed` 已实现（[P1a spec](../specs/P1a-subscriptions-events.md) §2.3、§2.4）：按 `issue.read` 与只看自己判定，事务里 `FOR SHARE` 锁工作项行后再判定，与删除串行；描述、评论的保存只让新被提及的人自动关注（R7）。通知要用的事件已补：评论、链接事件带所在工作项（删除类在 Old 一侧），工作项与评论的事件带这一次新提及的账户（§2.2）；“写入但未改变”与正文不变的保存照旧不发布。动态的 `comment` 列不进公开接口（页面按字段与值渲染，设计 §11）。发送时的复核、通知内容不引用看不到的另一端、各反例由 P1b 交付；本条保持 open。
 
+**处理结果（M7/P1b）：** 发送时复核已实现（[P1b spec](../specs/P1b-notification-core.md) §2.4、§2.7、§2.9）：订阅者只在写的事务里投 `notification.fanout`，任务在事务外以 `FOR SHARE` 锁工作项行后，按那一刻的 `issue.read` 与只看自己（发送时快照里的创建者，`HiddenFrom`）批量判定收件人（`DecideMany`，与 `Authorize` 在权限矩阵的种子上逐格等价，含工作区管理员兼项目访客与 `guest_view_all_features` 的两种取值）。反例都在 bootstrap：排队→撤权→发送（移出项目、结束工作区成员、降为只看自己的访客、移出私有项目、管理员兼访客，`notification_recheck_test.go`）；系统执行者（自动归档，执行者为空，`notification_issue_writes_test.go`）；父范围删除（项目删除时通知的删除等工作项删完再删，`notification_interleaving_test.go`）；回滚不发通知（`notification_rollback_test.go`）。通知不引用旧描述：描述的变化不通知，HTML 不进任务参数，评论只存纯文本摘录；父工作项与关联的另一端只存 id，按读的人此刻的可见解析由 P1c 交付。本条保持 open，到 P1c 的读与另一端的解析合入时关闭。
+
 <a id="M7-03"></a>
 ## M7-03 视图与跨项目列表
 

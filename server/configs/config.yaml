@@ -125,6 +125,11 @@ planning:
   delete_budget: 45s
   freeze_interval: 1h
 
+# 通知的维护（M7 P1b spec 2.8）：已删除项目的通知等它的工作项删完后按批软删，每批一个事务，每次运行至多 delete_budget 后由 River 稍后续跑
+notification:
+  delete_batch: 1000
+  delete_budget: 45s
+
 files:
   # 运行时期限，不使用业务时间偏移。测试覆盖可显式缩短，默认不变
   upload_ttl: 15m           # 10s–15m，新上传授权；实际 expires_at 持久化，API 提交成功后返回

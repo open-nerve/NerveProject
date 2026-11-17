@@ -308,9 +308,12 @@ func TestDeletionInterleaving25(t *testing.T) {
 				waitDeletionJob(t, w.pool, oldJob, "completed")
 			}
 			// The catalog holds furnishDeletionIssue's cycles and modules, which the
-			// planning module's own job deletes: wait for it too.
+			// planning module's own job deletes, and the notifications the writes
+			// above sent bob, which the notification module's own job deletes:
+			// wait for them too.
 			for _, p := range []uuid.UUID{old, w.web, q} {
 				waitPlanningDeletion(t, w.pool, p)
+				waitNotificationDeletion(t, w.pool, p)
 			}
 			assertDeletionAudit(t, w.pool, "issue_relations", skipped, oldJob)
 			assertDeletionAudit(t, w.pool, "issue_relations", sharedIDs, pj)

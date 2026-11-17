@@ -77,6 +77,9 @@ planning:
   delete_batch: 1000
   delete_budget: 45s
   freeze_interval: 1h
+notification:
+  delete_batch: 1000
+  delete_budget: 45s
 files:
   upload_ttl: 15m
   operation_timeout: 10s
@@ -196,7 +199,8 @@ func TestLoadAppliesLayersInOrder(t *testing.T) {
 			WriteLockTimeout:    5 * time.Second,
 			AutoArchiveInterval: 24 * time.Hour,
 		},
-		Planning: PlanningConfig{DeleteBatch: 1000, DeleteBudget: 45 * time.Second, FreezeInterval: time.Hour},
+		Planning:     PlanningConfig{DeleteBatch: 1000, DeleteBudget: 45 * time.Second, FreezeInterval: time.Hour},
+		Notification: NotificationConfig{DeleteBatch: 1000, DeleteBudget: 45 * time.Second},
 		Files: FilesConfig{
 			UploadTTL: 15 * time.Minute, OperationTimeout: 10 * time.Second, CleanupInterval: time.Hour, CleanupBatch: 100, CleanupBudget: 10 * time.Second, SizeLimit: 1024, Driver: "local", Local: LocalFilesConfig{Root: "./data/files"}, // size: environment
 			MinTransferBytesPerSecond: 131072, TransferGrace: 15 * time.Second, TransferIdleTimeout: 30 * time.Second,

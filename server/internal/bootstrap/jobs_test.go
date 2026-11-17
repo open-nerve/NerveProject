@@ -195,8 +195,9 @@ func TestRunStopsTheJobsAfterHTTP(t *testing.T) {
 		answered <- status
 	}()
 	// The login is in flight: it waits on drain's row. River runs its jobs
-	// on the same database, so only a wait for a row of users counts.
-	pgtest.WaitForLockWaitOn(t, pool, "users", 5*time.Second)
+	// on the same database, and they wait for rows too (M7 P1b spec R10), so
+	// only the login's lock of the account's row counts.
+	pgtest.WaitForStatementLockWaitOn(t, pool, "users", 5*time.Second, "LockUserForCredentials")
 
 	cancel()
 	waitForLog(`msg="http server shutting down"`)

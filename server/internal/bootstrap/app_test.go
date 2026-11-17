@@ -88,13 +88,14 @@ func testConfig(t *testing.T, dbURL string, autoMigrate bool) config.Config {
 			Anonymous:     roomy, AuthFailure: roomy, Authenticated: roomy,
 			LoginIP: roomy, LoginIPEmail: roomy, RegisterIP: roomy, PasswordUser: roomy,
 		},
-		Cleanup:   config.CleanupConfig{PurgeAfter: 60 * 24 * time.Hour, PurgeInterval: time.Hour, PurgeBatch: 1000},
-		Jobs:      config.JobsConfig{DefaultWorkers: 10, PeriodicWorkers: 2, ShutdownTimeout: 5 * time.Second},
-		Workspace: config.WorkspaceConfig{CreationEnabled: true},
-		Issue:     testIssueConfig,
-		Planning:  config.PlanningConfig{DeleteBatch: 1000, DeleteBudget: 45 * time.Second, FreezeInterval: time.Hour},
-		Files:     testFilesConfig(t),
-		Log:       config.LogConfig{Level: "error", Format: "text"},
+		Cleanup:      config.CleanupConfig{PurgeAfter: 60 * 24 * time.Hour, PurgeInterval: time.Hour, PurgeBatch: 1000},
+		Jobs:         config.JobsConfig{DefaultWorkers: 10, PeriodicWorkers: 2, ShutdownTimeout: 5 * time.Second},
+		Workspace:    config.WorkspaceConfig{CreationEnabled: true},
+		Issue:        testIssueConfig,
+		Planning:     config.PlanningConfig{DeleteBatch: 1000, DeleteBudget: 45 * time.Second, FreezeInterval: time.Hour},
+		Notification: config.NotificationConfig{DeleteBatch: 1000, DeleteBudget: 45 * time.Second},
+		Files:        testFilesConfig(t),
+		Log:          config.LogConfig{Level: "error", Format: "text"},
 	}
 }
 

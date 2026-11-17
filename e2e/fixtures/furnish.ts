@@ -1,18 +1,21 @@
 import { expect } from "@playwright/test";
 
 import {
+  addProjectMembers,
   changeProject,
   changeWorkspacePreferences,
   createLabel,
   createProject,
   invite,
   inviteAndAccept,
+  projectMemberWrites,
   type Api,
 } from "./api";
 
 import { accountId } from "./auth";
 import { createCommentReaction, createIssueComment, createIssueReaction } from "./comments";
 import { changeCyclePreferences, createCycle } from "./cycles";
+import type { Database } from "./db";
 import { createDraft, createIssue, createIssueRelations, updateIssue } from "./issues";
 import { createIssueLink } from "./links";
 import { changeModulePreferences, createModule, createModuleLink } from "./modules";
@@ -28,21 +31,46 @@ export interface PlanningRows {
 }
 
 /**
+ * Waits, a bounded while, for the account of receiverId to have a notification of the work item of issueId: nerve
+ * sends a write's notifications from its notification.fanout job, after the write has answered (M7 P1b spec 2.9), and
+ * a fan-out still pending when the work item is deleted, or when the account no longer reads it, sends him nothing.
+ */
+async function notified(db: Database, receiverId: string, issueId: string): Promise<void> {
+  await expect
+    .poll(
+      async () =>
+        (
+          await db.query<{ count: number }>(
+            "SELECT count(*)::int AS count FROM notifications WHERE receiver_id = $1 AND issue_id = $2 AND deleted_at IS NULL",
+            [receiverId, issueId]
+          )
+        )[0]?.count,
+      { timeout: 10_000, intervals: [20, 50, 100], message: `the notification of ${issueId} sent to ${receiverId}` }
+    )
+    .toBeGreaterThan(0);
+}
+
+/**
  * Gives the project of projectId a row of each of the work items' tables: a work item that the caller of token, a
  * member of it, creates, assigned to the account of assigneeId, a member of it who is not its guest, and labelled the
  * label of labelId, one of its labels; the creator and the assignee its subscribers, and its activity the creation
- * and the assignee; and a second work item, which the first blocks: their relation, and a row of each one's activity
- * on it. The first also carries a description mention, its initial version, a link, a comment and both reaction resources,
- * all created through their APIs so deletion catalog assertions cover the collaboration tables, links and a project draft.
- * The caller then puts the first in the cycle and the module of planning, furnishPlanningRows' of the project (whose
- * cycles and modules it turned on), through its own fields: a row of each of the memberships' tables (M6 P3a spec 2.5).
+ * and the assignee; and a second work item, assigned to the account of notifiedId, a member of it who is neither its
+ * guest nor the caller, which the first blocks: their relation, and a row of each one's activity on it. The first also
+ * carries a description mention, its initial version, a link, a comment and both reaction resources, all created
+ * through their APIs so deletion catalog assertions cover the collaboration tables, links and a project draft. The
+ * second's creation sends its assignee his notifications of it (M7 P1b), which the furnishing waits for in db
+ * (notified), so that a deletion finds them written. The caller then puts the first in the cycle and the module of
+ * planning, furnishPlanningRows' of the project (whose cycles and modules it turned on), through its own fields: a row
+ * of each of the memberships' tables (M6 P3a spec 2.5).
  */
 export async function furnishIssueRows(
   api: Api,
+  db: Database,
   token: string,
   workspaceSlug: string,
   projectId: string,
   assigneeId: string,
+  notifiedId: string,
   labelId: string,
   planning: PlanningRows
 ): Promise<void> {
@@ -62,9 +90,10 @@ export async function furnishIssueRows(
   await furnishIssueFiles(api, token, fix.id, comment.id);
   await createCommentReaction(api, token, comment.id);
   await createIssueReaction(api, token, fix.id);
-  const test = await createIssue(api, token, projectId, { name: "Test the login" });
+  const test = await createIssue(api, token, projectId, { name: "Test the login", assignee_ids: [notifiedId] });
   await createIssueRelations(api, token, fix.id, { relation_type: "blocking", issue_ids: [test.id] });
   await updateIssue(api, token, fix.id, { cycle_id: planning.cycleId, module_ids: [planning.moduleId] });
+  await notified(db, notifiedId, test.id);
 }
 
 /**
@@ -95,10 +124,13 @@ export async function furnishPlanningRows(api: Api, adminToken: string, projectI
  * (expectWorkspaceDeleted): the membership of member, by an invitation he accepts (deleted as he accepts it); a pending
  * invitation of inviteeEmail; the admin's display settings; and the project Web, with its own rows: its label Bug
  * among them, a cycle and a module with its member and link (furnishPlanningRows), and a work item assigned to the admin
- * and labelled Bug, in the two, with its own (furnishIssueRows).
+ * and labelled Bug, in the two, with its own (furnishIssueRows). The member is Web's for a while: the admin adds him,
+ * assigns him the second work item, which sends him its notifications, and once they are written he leaves Web, so
+ * that the only active membership of his in the workspace is the one he wrote (W2).
  */
 export async function furnishWorkspace(
   api: Api,
+  db: Database,
   adminToken: string,
   slug: string,
   member: { email: string; token: string },
@@ -108,9 +140,15 @@ export async function furnishWorkspace(
   await invite(api, adminToken, slug, [{ email: inviteeEmail, role: 15 }]);
   await changeWorkspacePreferences(api, adminToken, slug, { navigation_project_limit: 3 });
   const web = await createProject(api, adminToken, slug, { name: "Web", identifier: "WEB" });
+  const memberId = await accountId(api, member.token);
+  await addProjectMembers(api, adminToken, web.id, [{ member_id: memberId, role: 15 }]);
   const bug = await createLabel(api, adminToken, web.id, { name: "Bug" });
   const draft = await createDraft(api, adminToken, slug, { payload: { name: "Unassigned" } });
   await storedFile(api, adminToken, "DRAFT_ISSUE_ATTACHMENT", { kind: "draft", id: draft.id });
   const planning = await furnishPlanningRows(api, adminToken, web.id);
-  await furnishIssueRows(api, adminToken, slug, web.id, await accountId(api, adminToken), bug.id, planning);
+  const adminId = await accountId(api, adminToken);
+  await furnishIssueRows(api, db, adminToken, slug, web.id, adminId, memberId, bug.id, planning);
+  expect(await projectMemberWrites(api, web.id).leave(member.token), `${member.email} leaves Web`).toEqual({
+    status: 204,
+  });
 }

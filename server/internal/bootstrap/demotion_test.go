@@ -124,13 +124,15 @@ func sendHoldingTheMemberships(t *testing.T, contract *apitest.Contract, pool *p
 		WHERE w.slug = 'acme' AND m.member_id = $1 FOR SHARE OF m`)
 	contract.CheckRequest(t, req)
 	answered := sendInBackground(req)
-	// req is the one backend waiting behind each held membership. Each probe
-	// reads req's own lock of his projects in acme (deactivationRowLock): a
-	// start-time run locks each project in turn (waitForStartupRuns).
-	waiter := func(holder pgx.Tx) uint32 {
+	// req is the one backend waiting behind each held membership, known by
+	// the statement that waits (statements): River jobs of the app wait for
+	// rows too (M7 P1b spec R10). Each probe reads req's own lock of his
+	// projects in acme (deactivationRowLock): a start-time run locks each
+	// project in turn (waitForStartupRuns).
+	waiter := func(holder pgx.Tx, statements ...string) uint32 {
 		t.Helper()
-		pgtest.WaitForLockWaitBehind(t, pool, holder.Conn().PgConn(), 10*time.Second)
-		waiters := deactivationWaiters(t, pool, holder.Conn().PgConn().PID())
+		pgtest.WaitForStatementLockWaitBehind(t, pool, holder.Conn().PgConn(), 10*time.Second, statements...)
+		waiters := deactivationWaiters(t, pool, holder.Conn().PgConn().PID(), statements...)
 		if len(waiters) != 1 {
 			t.Fatalf("waiters %v for a held membership of his; want %s %s alone", waiters, req.Method, req.URL.Path)
 		}
@@ -153,14 +155,17 @@ func sendHoldingTheMemberships(t *testing.T, contract *apitest.Contract, pool *p
 		}
 		return modes
 	}
-	pid := waiter(membership)
+	// The change of his role writes his membership with UpdateMemberRole,
+	// the acceptance with RestoreMember; both then demote his project
+	// memberships with DemoteMemberships.
+	pid := waiter(membership, "UpdateMemberRole", "RestoreMember")
 	if got := locks(pid); slices.ContainsFunc(got, func(lock string) bool { return lock != "no lock" }) {
 		t.Errorf("%s %s holds his projects in acme %v while it waits for his membership of acme; want none", req.Method, req.URL.Path, got)
 	}
 	projectMembership := hold(`SELECT 1 FROM project_members m JOIN workspaces w ON w.id = m.workspace_id
 		WHERE w.slug = 'acme' AND m.member_id = $1 FOR UPDATE OF m NOWAIT`)
 	release(membership)
-	if waiter(projectMembership) != pid {
+	if waiter(projectMembership, "DemoteMemberships") != pid {
 		t.Fatalf("another backend than %s %s waits for his project membership", req.Method, req.URL.Path)
 	}
 	if got := locks(pid); slices.ContainsFunc(got, func(lock string) bool { return lock != "FOR NO KEY UPDATE" }) {

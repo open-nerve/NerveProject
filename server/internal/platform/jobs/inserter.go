@@ -28,3 +28,12 @@ func (i *Inserter) InsertTx(ctx context.Context, tx pgx.Tx, args river.JobArgs, 
 	_, err := i.client.InsertTx(ctx, tx, args, opts)
 	return err
 }
+
+// InsertManyTx inserts the jobs of params at once in tx, each with its own
+// options, with River's COPY (InsertManyFastTx); the caller commits or rolls
+// them back. River refuses an empty params, and a unique option's conflict
+// fails the whole insert.
+func (i *Inserter) InsertManyTx(ctx context.Context, tx pgx.Tx, params []river.InsertManyParams) error {
+	_, err := i.client.InsertManyFastTx(ctx, tx, params)
+	return err
+}

@@ -183,6 +183,9 @@ func TestAProjectTooBusyForAWriteAnswersServerBusy(t *testing.T) {
 		creations = append(creations, create)
 	}
 
+	// The work item's notification fan-out takes Web's row FOR KEY SHARE as
+	// it inserts: it ends before the hold (R10).
+	waitForFanouts(t, w.pool)
 	held := holding(t, w.pool, "SELECT 1 FROM projects WHERE id = $1 FOR UPDATE", w.web)
 	start := time.Now()
 	changeProbe := w.observe(change)
@@ -306,6 +309,11 @@ func TestEachWriteOnAWorkItemOfAProjectTooBusyAnswersServerBusy(t *testing.T) {
 		changes++
 		change := newRequest(t, http.MethodPatch, w.base+"/api/v0/issues/"+item.String(), w.tokens["alice"], fmt.Appendf(nil, `{"name":"Mend %d"}`, changes))
 		w.contract.CheckRequest(t, change)
+		// The earlier writes' notification fan-outs insert rows whose foreign
+		// key takes Web's row FOR KEY SHARE: one still pending would queue on
+		// the hold, keeping one of the app's connections till its lock
+		// timeout and retrying into the next probe's hold (R10).
+		waitForFanouts(t, w.pool)
 		held := holding(t, w.pool, "SELECT 1 FROM projects WHERE id = $1 FOR UPDATE", w.web)
 		changeProbe := w.observe(change)
 		changed := sendInBackground(change)
@@ -415,6 +423,9 @@ func TestAWriteWhoseRequestEndsWhileItWaitsAtTheGateIsServerBusy(t *testing.T) {
 	w.contract.CheckRequest(t, change)
 	create := newRequest(t, http.MethodPost, w.base+"/api/v0/projects/"+w.web.String()+"/issues", w.tokens["alice"], []byte(`{"name":"Fix"}`))
 	w.contract.CheckRequest(t, create)
+	// The work item's notification fan-out takes Web's row FOR KEY SHARE as
+	// it inserts: it ends before the holds (R10).
+	waitForFanouts(t, w.pool)
 
 	labels := lockedTables(t, w.pool, "issue_labels", "ACCESS EXCLUSIVE")
 	changeProbe, createProbe := w.observe(change), w.observe(create)

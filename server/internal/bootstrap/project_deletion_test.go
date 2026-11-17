@@ -31,7 +31,8 @@ import (
 // settings in it and its states, through createProject, a label of hers,
 // Bug, with its child, UI, two cycles of hers, a module of hers with its
 // member and link, and a work item of hers with a row of each table under
-// it, written directly (seedLabels, seedCycles, seedModules, seedIssues).
+// it, written directly (seedLabels, seedCycles, seedModules, seedIssues),
+// with a notification of its Seeded for her (seedItemNotification).
 func twoProjects(t *testing.T) (contract *apitest.Contract, base string, pool *pgxpool.Pool, alice string, aliceID, web, ops uuid.UUID) {
 	t.Helper()
 	contract = apitest.Load(t)
@@ -49,6 +50,7 @@ func twoProjects(t *testing.T) (contract *apitest.Contract, base string, pool *p
 		seedCycles(t, pool, project, aliceID)
 		seedModules(t, pool, project, aliceID)
 		seedIssues(t, pool, project, aliceID)
+		seedItemNotification(t, pool, project, "Seeded", aliceID)
 		for _, id := range queryIDs(t, pool, "SELECT id FROM issues WHERE project_id=$1", project) {
 			status, body := call(t, contract, http.MethodPatch, base+"/api/v0/issues/"+id.String(), alice, fmt.Sprintf(`{"description_html":%q}`, mentionHTML(aliceID)))
 			if status != http.StatusOK {

@@ -109,7 +109,7 @@ func TestEachLockOfADeactivationIsItsStrength(t *testing.T) {
 			holdsBeta := holding(t, w.pool, "SELECT 1 FROM workspaces WHERE id = $1 FOR SHARE", beta)
 			holdsAccount := holding(t, w.pool, "SELECT 1 FROM users WHERE id = $1 FOR SHARE", bob)
 			shared := []string{"his account", "beta", "kappa's invitation", "delta's invitation", "his membership", "Lab"}
-			if ids := deactivationWaiters(t, w.pool, holdsAccount.Conn().PgConn().PID()); len(ids) != 0 {
+			if ids := deactivationWaiters(t, w.pool, holdsAccount.Conn().PgConn().PID(), deactivationLocks...); len(ids) != 0 {
 				t.Fatalf("users already has waiters %v", ids)
 			}
 			owners = map[string]string{}
@@ -283,7 +283,7 @@ func TestAnInterruptedDeactivationChangesNothing(t *testing.T) {
 	cfg := testConfig(t, w.url, false)
 	cfg.Server.RequestTimeout = 200 * time.Millisecond
 	done := deactivatingUser(ctx, cfg, "bob@example.com")
-	pgtest.WaitForLockWaitOn(t, w.pool, "project_members", 5*time.Second)
+	pgtest.WaitForStatementLockWaitOn(t, w.pool, "project_members", 5*time.Second, "EndMemberships")
 	select {
 	case run := <-done:
 		t.Fatalf("the deactivation ended while bob's membership of Lab was held = %q, %v; want it waiting until interrupted", run.out, run.err)

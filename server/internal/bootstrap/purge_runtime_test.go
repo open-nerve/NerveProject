@@ -17,9 +17,10 @@ import (
 	"github.com/open-nerve/NerveProject/server/migrations"
 )
 
-// Hosts are created and soft deleted through the runtime app. Asset rows and
-// the planning module's rows are explicit storage fixtures written with the
-// same restricted runtime role.
+// Hosts are created and soft deleted through the runtime app. Asset rows,
+// the planning module's rows and a live notification, which the runtime
+// app's notification.delete_rows deletes with its workspace, are explicit
+// storage fixtures written with the same restricted runtime role.
 // Only the isolated owner connection ages tombstones and observes results.
 func TestPurgeDeletedRunsWithRuntimeRole(t *testing.T) {
 	roles := newSplitRoles(t)
@@ -45,6 +46,7 @@ func TestPurgeDeletedRunsWithRuntimeRole(t *testing.T) {
 		tables []string
 	}{
 		{"asset", []string{"file_assets"}},
+		{"notification", []string{"notifications"}},
 		{"issue", []string{"issue_labels", "issue_subscribers", "module_issues", "cycle_issues", "issue_comments", "issue_activities", "issues"}},
 		{"planning", []string{"cycles", "modules", "module_members", "module_links", "cycle_user_properties", "module_user_properties"}},
 		{"project", []string{"project_members", "labels", "states", "projects"}},
@@ -83,6 +85,7 @@ func TestPurgeDeletedRunsWithRuntimeRole(t *testing.T) {
 			seedCycles(t, roles.server, project, accountID(t, contract, base, token))
 			seedModules(t, roles.server, project, accountID(t, contract, base, token))
 			seedMemberships(t, roles.server, item, accountID(t, contract, base, token))
+			seedNotification(t, roles.server, item, accountID(t, contract, base, token))
 			w.send(t, "alice", http.MethodPost, commentsOf(item), `{"comment_html":"<p>Keep the child visible to cleanup</p>"}`, 201)
 			credential := createPAT(t, contract, base, token)
 			w.send(t, "alice", http.MethodDelete, "/api/v0/api-tokens/"+credential.ID, "", 204)
@@ -100,7 +103,7 @@ func TestPurgeDeletedRunsWithRuntimeRole(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = tx.Rollback(context.Background()) }()
-	tables := []string{"file_assets", "issue_labels", "issue_subscribers", "module_issues", "cycle_issues", "issue_comments", "issue_activities", "issues", "module_user_properties", "module_links", "module_members", "modules", "cycle_user_properties", "cycles", "labels", "states", "project_members", "projects", "workspace_members", "workspaces"}
+	tables := []string{"file_assets", "notifications", "issue_labels", "issue_subscribers", "module_issues", "cycle_issues", "issue_comments", "issue_activities", "issues", "module_user_properties", "module_links", "module_members", "modules", "cycle_user_properties", "cycles", "labels", "states", "project_members", "projects", "workspace_members", "workspaces"}
 	for i, f := range fixtures {
 		age := 61
 		if i == 1 {
@@ -191,8 +194,8 @@ func TestPurgeDeletedRunsWithRuntimeRole(t *testing.T) {
 		t.Fatal(err)
 	}
 	moduleOrder = slices.Compact(moduleOrder)
-	if !slices.Equal(moduleOrder, []string{"asset", "issue", "planning", "project", "workspace", "identity"}) {
-		t.Fatalf("runtime DELETE module order=%v tables=%v; want [asset issue planning project workspace identity]", moduleOrder, observed)
+	if !slices.Equal(moduleOrder, []string{"asset", "notification", "issue", "planning", "project", "workspace", "identity"}) {
+		t.Fatalf("runtime DELETE module order=%v tables=%v; want [asset notification issue planning project workspace identity]", moduleOrder, observed)
 	}
 	if wrongRole != 0 {
 		t.Fatalf("DELETEs outside runtime role %s: %d; tables=%v", roles.serverName, wrongRole, observed)

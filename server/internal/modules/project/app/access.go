@@ -19,3 +19,15 @@ type AccessFacts struct {
 	Role         shared.Role
 	GuestViewAll bool
 }
+
+// AccessFactsMany are what project.Provide's ProjectAccessMany answers the
+// access module for many accounts at once (M7 P1b spec 2.7): the facts of
+// the project AccessFacts has, and the project role of each account asked
+// about that is its active member, by account; one that is not is not in
+// Roles. bootstrap converts them into access's value.
+type AccessFactsMany struct {
+	WorkspaceID  uuid.UUID
+	Public       bool
+	GuestViewAll bool
+	Roles        map[uuid.UUID]shared.Role
+}

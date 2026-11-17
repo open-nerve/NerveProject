@@ -44,3 +44,54 @@ func (q *Queries) ProjectFacts(ctx context.Context, arg ProjectFactsParams) (Pro
 	)
 	return i, err
 }
+
+const projectFactsMany = `-- name: ProjectFactsMany :many
+SELECT p.workspace_id, p.network, p.guest_view_all_features, m.member_id, m.role AS member_role
+FROM projects p
+LEFT JOIN project_members m
+       ON m.project_id = p.id AND m.member_id = ANY ($1::uuid[]) AND m.is_active AND m.deleted_at IS NULL
+WHERE p.id = $2 AND p.deleted_at IS NULL
+ORDER BY m.member_id
+`
+
+type ProjectFactsManyParams struct {
+	Ids       []uuid.UUID
+	ProjectID uuid.UUID
+}
+
+type ProjectFactsManyRow struct {
+	WorkspaceID          uuid.UUID
+	Network              int16
+	GuestViewAllFeatures bool
+	MemberID             *uuid.UUID
+	MemberRole           *int16
+}
+
+// ProjectFacts for each of the accounts ids at once, access's DecideMany (M7 P1b spec 2.7): the undeleted project,
+// archived or not, once per active membership of it among the accounts, in member order, or once with no member when
+// none of them has one; no row for a project that does not exist or is deleted.
+func (q *Queries) ProjectFactsMany(ctx context.Context, arg ProjectFactsManyParams) ([]ProjectFactsManyRow, error) {
+	rows, err := q.db.Query(ctx, projectFactsMany, arg.Ids, arg.ProjectID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ProjectFactsManyRow
+	for rows.Next() {
+		var i ProjectFactsManyRow
+		if err := rows.Scan(
+			&i.WorkspaceID,
+			&i.Network,
+			&i.GuestViewAllFeatures,
+			&i.MemberID,
+			&i.MemberRole,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

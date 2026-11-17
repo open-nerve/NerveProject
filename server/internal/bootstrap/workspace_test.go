@@ -102,8 +102,9 @@ func TestAnAccountDeactivatedMeanwhileCannotCreateAWorkspace(t *testing.T) {
 	contract.CheckRequest(t, req)
 	answered := sendInBackground(req)
 	// The creation waits on alice's row. The app runs River's jobs on the
-	// same database, so only a wait for a row of users counts.
-	pgtest.WaitForLockWaitOn(t, pool, "users", 5*time.Second)
+	// same database, and they wait for rows too (M7 P1b spec R10), so only
+	// the creation's share of her account counts.
+	pgtest.WaitForStatementLockWaitOn(t, pool, "users", 5*time.Second, "ShareAccount")
 	if err := deactivation.Commit(context.Background()); err != nil {
 		t.Fatal(err)
 	}
@@ -179,9 +180,9 @@ func TestAnAdminDemotedMeanwhileCannotUpdateTheWorkspace(t *testing.T) {
 	req := newRequest(t, http.MethodPatch, base+"/api/v0/workspaces/acme", alice, []byte(`{"name":"Renamed"}`))
 	contract.CheckRequest(t, req)
 	answered := sendInBackground(req)
-	// The app runs River's jobs on the same database: only a wait for a row
-	// of workspaces counts.
-	pgtest.WaitForLockWaitOn(t, pool, "workspaces", 5*time.Second)
+	// The app runs River's jobs on the same database, and they wait for rows
+	// too (M7 P1b spec R10): only the update's lock of acme counts.
+	pgtest.WaitForStatementLockWaitOn(t, pool, "workspaces", 5*time.Second, "LockWorkspaceBySlug")
 	if err := demotion.Commit(context.Background()); err != nil {
 		t.Fatal(err)
 	}
@@ -235,7 +236,9 @@ func TestAMembershipEndedMeanwhileIsNotFound(t *testing.T) {
 	req := newRequest(t, http.MethodPatch, base+"/api/v0/workspace-members/"+bob.String(), alice, []byte(`{"role":5}`))
 	contract.CheckRequest(t, req)
 	answered := sendInBackground(req)
-	pgtest.WaitForLockWaitOn(t, pool, "workspaces", 5*time.Second)
+	// Named by its statement, the change's lock of acme: the app's River jobs
+	// wait for rows too (M7 P1b spec R10).
+	pgtest.WaitForStatementLockWaitOn(t, pool, "workspaces", 5*time.Second, "LockWorkspace")
 	if err := end.Commit(context.Background()); err != nil {
 		t.Fatal(err)
 	}
@@ -290,9 +293,10 @@ func TestAPasswordResetMeanwhileLeavesNoInvitation(t *testing.T) {
 	req := newRequest(t, http.MethodPost, base+"/api/v0/workspaces/acme/invitations", admin, []byte(inviting("carol@example.com")))
 	contract.CheckRequest(t, req)
 	answered := sendInBackground(req)
-	// The app runs River's jobs on the same database: only a wait for a row
-	// of users counts.
-	pgtest.WaitForLockWaitOn(t, pool, "users", 5*time.Second)
+	// The app runs River's jobs on the same database, and they wait for rows
+	// too (M7 P1b spec R10): only the invitation's lock of the admin's account
+	// counts.
+	pgtest.WaitForStatementLockWaitOn(t, pool, "users", 5*time.Second, "LockUserForCredentials")
 	if err := reset.Commit(ctx); err != nil {
 		t.Fatal(err)
 	}

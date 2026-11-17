@@ -28,12 +28,32 @@ export interface Database {
 }
 
 /**
- * Starts the PostgreSQL server of this run and publishes its URL and
- * container to the workers. The testcontainers reaper (Ryuk) removes the
- * container if the run dies before stop is called.
+ * The connections one worker may hold at once: its nerve's pool, a second nerve or a nerve command beside it (each up
+ * to database.max_conns, 10, server/configs/config.yaml, and one more: a running nerve's River listener hijacks a
+ * pooled connection, which the pool then no longer counts, so it may open max_conns besides), its own pool
+ * (openDatabase, 2), and a database creation and a pg_dump (one each).
  */
-export async function startPostgres(): Promise<{ stop: () => Promise<void> }> {
-  const container = await new PostgreSqlContainer(image).withDatabase("postgres").start();
+const connectionsPerWorker = 2 * 11 + 2 + 2;
+
+/**
+ * The server's max_connections for workers workers: each worker's connections and a margin for the run's own (the
+ * template's migration, the superuser's reserved ones), never under PostgreSQL's default 100. With the default alone
+ * nine local workers outgrew it whenever their pools filled at once (M8 handoff M6-M8-03), which the background jobs
+ * of every write (M7 notification.fanout) made common.
+ */
+function maxConnections(workers: number): number {
+  return Math.max(100, workers * connectionsPerWorker + 20);
+}
+
+/**
+ * Starts the PostgreSQL server of this run, admitting maxConnections(workers), and publishes its URL and container to
+ * the workers. The testcontainers reaper (Ryuk) removes the container if the run dies before stop is called.
+ */
+export async function startPostgres(workers: number): Promise<{ stop: () => Promise<void> }> {
+  const container = await new PostgreSqlContainer(image)
+    .withDatabase("postgres")
+    .withCommand(["postgres", "-c", `max_connections=${maxConnections(workers)}`])
+    .start();
   process.env[serverUrlVariable] = databaseUrl(container.getConnectionUri(), "postgres");
   process.env[containerVariable] = container.getId();
   return {

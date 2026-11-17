@@ -13,7 +13,8 @@ import (
 // AutoArchiveDeps supplies the system job's raw transaction manager, without
 // request admission or conversion of PostgreSQL lock failures to HTTP errors.
 // Planning answers the cycles and modules that keep a project's work items
-// (M6 P3a spec R9).
+// (M6 P3a spec R9). Events publishes a project's round's events at once (M7
+// P1b spec R12).
 type AutoArchiveDeps struct {
 	Policies ArchivePolicies
 	Projects ProjectGate
@@ -22,7 +23,7 @@ type AutoArchiveDeps struct {
 	Issues   AutoArchiveStore
 	Tx       shared.TxManager
 	Clock    Clock
-	Events   shared.EventPublisher
+	Events   shared.EventBatchPublisher
 }
 
 // AutoArchive archives inactive terminal issues, one committed project at a time.
@@ -90,11 +91,12 @@ func (u *AutoArchive) Execute(ctx context.Context) (int, error) {
 			if err := u.d.Issues.InsertActivities(ctx, rows); err != nil {
 				return err
 			}
-			for _, issue := range ids {
-				e := shared.Event{ID: uuid.NewV7(), Type: domain.EventIssueArchived, OccurredAt: at, WorkspaceID: p.WorkspaceID, ProjectID: id, Entity: shared.EntityRef{Kind: "issue", ID: issue}, Changes: []shared.Change{{Field: "archived_at", New: eventPtr("archive")}}}
-				if err := u.d.Events.Publish(ctx, e); err != nil {
-					return err
-				}
+			events := make([]shared.Event, len(ids))
+			for i, issue := range ids {
+				events[i] = shared.Event{ID: uuid.NewV7(), Type: domain.EventIssueArchived, OccurredAt: at, WorkspaceID: p.WorkspaceID, ProjectID: id, Entity: shared.EntityRef{Kind: "issue", ID: issue}, Changes: []shared.Change{{Field: "archived_at", New: eventPtr("archive")}}}
+			}
+			if err := u.d.Events.PublishAll(ctx, events); err != nil {
+				return err
 			}
 			count = len(ids)
 			return nil

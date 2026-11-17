@@ -8,6 +8,7 @@ import (
 
 	assetriver "github.com/open-nerve/NerveProject/server/internal/modules/asset/adapter/river"
 	issueriver "github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/river"
+	notificationriver "github.com/open-nerve/NerveProject/server/internal/modules/notification/adapter/river"
 	planningriver "github.com/open-nerve/NerveProject/server/internal/modules/planning/adapter/river"
 	"github.com/open-nerve/NerveProject/server/internal/platform/jobs"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
@@ -23,9 +24,10 @@ var errInserterRequiresTransaction = errors.New("job insert requires a transacti
 type jobInserter struct{ client *jobs.Inserter }
 
 var (
-	_ issueriver.Inserter    = jobInserter{}
-	_ planningriver.Inserter = jobInserter{}
-	_ assetriver.Inserter    = jobInserter{}
+	_ issueriver.Inserter        = jobInserter{}
+	_ planningriver.Inserter     = jobInserter{}
+	_ assetriver.Inserter        = jobInserter{}
+	_ notificationriver.Inserter = jobInserter{}
 )
 
 func (i jobInserter) InsertTx(ctx context.Context, args river.JobArgs, opts *river.InsertOpts) error {
@@ -34,4 +36,12 @@ func (i jobInserter) InsertTx(ctx context.Context, args river.JobArgs, opts *riv
 		return errInserterRequiresTransaction
 	}
 	return i.client.InsertTx(ctx, tx, args, opts)
+}
+
+func (i jobInserter) InsertManyTx(ctx context.Context, params []river.InsertManyParams) error {
+	tx, ok := postgres.Tx(ctx)
+	if !ok {
+		return errInserterRequiresTransaction
+	}
+	return i.client.InsertManyTx(ctx, tx, params)
 }

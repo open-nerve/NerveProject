@@ -211,7 +211,8 @@ func seedWorkspace(t *testing.T, contract *apitest.Contract, base string, pool *
 // admin, his display settings in it, one state, a label with its child and
 // two cycles, a module with its member and link, and a work item with a row
 // of each table under it, by member (seedLabels, seedCycles, seedModules,
-// seedIssues), directly: the seed does not depend on which of the project
+// seedIssues), and nerve's notification of it for member
+// (seedItemNotification), directly: the seed does not depend on which of the project
 // module's writes exist, nor on what they write besides. member, a project
 // admin who is a member of the workspace (PA in M3 design 9.2), may write
 // the project's labels. No row under the project is the last writing of
@@ -241,6 +242,7 @@ func seedProject(t *testing.T, pool *pgxpool.Pool, id, admin, member uuid.UUID, 
 	seedCycles(t, pool, project, member)
 	seedModules(t, pool, project, member)
 	seedIssues(t, pool, project, member)
+	seedItemNotification(t, pool, project, "Seeded", member)
 }
 
 // A failing projects' step fails the whole deletion (M3 design 3.3, 9.3):

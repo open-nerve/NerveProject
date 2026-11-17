@@ -8,9 +8,11 @@
 // workspace's projects one is a member of, listing, creating, changing and
 // deleting a project's labels, carries out the workspace module's cascades
 // on the projects (ProjectCascade), and offers the access module its reads
-// of a project (ProjectAccess), the workspace module its count of an
-// account's ended project memberships (ProjectMembershipCounts), and the
-// issue module the project's lock, numbers and catalogs (IssueProjects).
+// of a project (ProjectAccess, ProjectAccessMany), the workspace module its
+// count of an account's ended project memberships
+// (ProjectMembershipCounts), the issue module the project's lock, numbers
+// and catalogs (IssueProjects), and the notification module the names of a
+// work item's project and state (NotificationNames).
 package project
 
 import (
@@ -78,6 +80,19 @@ type ProjectAccess interface {
 // AccessFacts are the facts ProjectAccess hands over: bootstrap converts
 // them into access's value (M3 design 6.5).
 type AccessFacts = app.AccessFacts
+
+// ProjectAccessMany reads a project for the access module's decisions of
+// many accounts at once (M7 P1b spec 2.7): ProjectAccess's facts of the
+// undeleted project projectID, and the project roles of those of ids that
+// are its active members; found is false for a project that does not exist
+// or is deleted. It reads in the transaction ctx carries.
+type ProjectAccessMany interface {
+	ProjectFactsMany(ctx context.Context, projectID uuid.UUID, ids []uuid.UUID) (f AccessFactsMany, found bool, err error)
+}
+
+// AccessFactsMany are the facts ProjectAccessMany hands over: bootstrap
+// converts them into access's value.
+type AccessFactsMany = app.AccessFactsMany
 
 // ProjectMembershipCounts counts an account's memberships of a workspace's
 // projects, for the workspace module's reactivate-member (M3 design 3.11,
@@ -196,9 +211,11 @@ type Provided struct {
 	Purger                  *app.Purger
 	ArchivePolicies         ArchivePolicies
 	ProjectAccess           ProjectAccess
+	ProjectAccessMany       ProjectAccessMany
 	ProjectMembershipCounts ProjectMembershipCounts
 	IssueProjects           IssueProjects
 	PlanningProjects        PlanningProjects
+	NotificationNames       NotificationNames
 }
 
 // Provide builds project's adapters for the other modules.
@@ -213,8 +230,8 @@ func Provide(pool *pgxpool.Pool, protected []postgres.ProtectedReference) Provid
 			{Table: "states", Protected: true, Delete: store.PurgeStates},
 			{Table: "projects", Protected: true, Delete: store.PurgeProjects},
 		}),
-		AssetParents: store, ArchivePolicies: store, ProjectAccess: store,
-		ProjectMembershipCounts: store, IssueProjects: store, PlanningProjects: store,
+		AssetParents: store, ArchivePolicies: store, ProjectAccess: store, ProjectAccessMany: store,
+		ProjectMembershipCounts: store, IssueProjects: store, PlanningProjects: store, NotificationNames: store,
 	}
 }
 

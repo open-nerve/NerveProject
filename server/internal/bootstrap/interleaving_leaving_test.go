@@ -231,7 +231,10 @@ func TestALeavingAndAnEndingOfAWorkspaceMembershipSerialize(t *testing.T) {
 					held(t, ctx, g, removed, "the removal")
 					left = run(func() error { return w.leaveProject(ctx, tt.leaver, w.ops, projectpg.New(w.pool)) })
 				}
-				pgtest.WaitForLockWaitOn(t, w.pool, "workspaces", 5*time.Second)
+				// The second waits for acme's row: the removal at its lock of
+				// acme, the leaving at its share of it. The probe names them, as
+				// the app's River jobs wait for rows too (M7 P1b spec R10).
+				pgtest.WaitForStatementLockWaitOn(t, w.pool, "workspaces", 5*time.Second, "LockWorkspace", "ShareDirectoryWorkspaceByID")
 				if got := w.standing(t); got != worldStanding {
 					t.Errorf("while the first holds acme: %s; want %s", got, worldStanding)
 				}

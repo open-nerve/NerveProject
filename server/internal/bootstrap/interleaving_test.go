@@ -210,29 +210,31 @@ func result(t *testing.T, ctx context.Context, done <-chan error, what string) e
 	}
 }
 
-// serializeOn is serializeOnTable on projects.
+// serializeOn is serializeOnTable on projects, where the second write waits
+// at its lock of the project, LockProject.
 func serializeOn(t *testing.T, ctx context.Context, pool *pgxpool.Pool, g *gate, first, second func() error) (opened time.Time,
 	firstErr, secondErr error) {
 	t.Helper()
-	return serializeOnTable(t, ctx, pool, g, "projects", first, second)
+	return serializeOnTable(t, ctx, pool, g, "projects", "LockProject", first, second)
 }
 
 // serializeOnTable runs first, a write that waits at g holding its locks,
 // then second, once the first is held there; once the second waits for a
-// row lock of table on pool's database (pgtest.WaitForLockWaitOn), it
-// opens g. It answers the moment g opened, and each write's error. Every
-// wait has a deadline: ctx's, g's or the probe's.
-func serializeOnTable(t *testing.T, ctx context.Context, pool *pgxpool.Pool, g *gate, table string, first, second func() error) (
+// row lock of table on pool's database running statement
+// (pgtest.WaitForStatementLockWaitOn: the app's River jobs wait for rows
+// too, M7 P1b spec R10), it opens g. It answers the moment g opened, and
+// each write's error. Every wait has a deadline: ctx's, g's or the probe's.
+func serializeOnTable(t *testing.T, ctx context.Context, pool *pgxpool.Pool, g *gate, table, statement string, first, second func() error) (
 	opened time.Time, firstErr, secondErr error) {
 	t.Helper()
-	return serializeOnTableAfter(t, ctx, pool, g, table, first, second, nil)
+	return serializeOnTableAfter(t, ctx, pool, g, table, statement, first, second, nil)
 }
 
 // serializeOnTableAfter calls afterWait while the proven waiter is still blocked.
-func serializeOnTableAfter(t *testing.T, ctx context.Context, pool *pgxpool.Pool, g *gate, table string, first, second func() error,
+func serializeOnTableAfter(t *testing.T, ctx context.Context, pool *pgxpool.Pool, g *gate, table, statement string, first, second func() error,
 	afterWait func()) (opened time.Time, firstErr, secondErr error) {
 	t.Helper()
-	return serializeWaiting(t, ctx, g, first, second, func() { pgtest.WaitForLockWaitOn(t, pool, table, 5*time.Second) }, afterWait)
+	return serializeWaiting(t, ctx, g, first, second, func() { pgtest.WaitForStatementLockWaitOn(t, pool, table, 5*time.Second, statement) }, afterWait)
 }
 
 // serializeWaiting holds the first write until probe proves the second waits.

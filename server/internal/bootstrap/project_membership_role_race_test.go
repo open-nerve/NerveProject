@@ -124,7 +124,9 @@ func TestARoleChangeCapsItsMemberByHisWorkspaceRoleUnderItsLocks(t *testing.T) {
 	req := newRequest(t, http.MethodPatch, w.base+"/api/v0/project-members/"+inProjects[0].String(), w.tokens["bob"], []byte(`{"role":15}`))
 	w.contract.CheckRequest(t, req)
 	answered := sendInBackground(req)
-	pgtest.WaitForLockWaitOn(t, w.pool, "workspaces", 5*time.Second)
+	// Named by its statement, the change's share of acme: the app's River
+	// jobs wait for rows too (M7 P1b spec R10).
+	pgtest.WaitForStatementLockWaitOn(t, w.pool, "workspaces", 5*time.Second, "ShareDirectoryWorkspaceByID")
 	if err := other.Commit(pgtest.Soon(t)); err != nil {
 		t.Fatal(err)
 	}

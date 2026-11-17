@@ -104,6 +104,10 @@ func testIssueLinkPrecheckResources(t *testing.T) {
 	projects := issueProjects{projects: project.Provide(one, nil).IssueProjects}
 	resources := &collaborationWriteResources{}
 	locks := issueapp.NewLocks(projects, store, authorizerOn(one), resources, resources, attachmentCounterOn(one))
+	// The fixture's notification fan-outs lock work items' rows FOR SHARE and,
+	// inserting, acme's and Web's FOR KEY SHARE: one still running as the
+	// tables are locked in turn would deadlock with them (R10).
+	waitForFanouts(t, w.pool)
 	before := collaborationState(t, w)
 	held := lockedTables(t, w.pool, issueTables, "EXCLUSIVE")
 	for _, who := range []string{"walt", "wanda", "olga"} {

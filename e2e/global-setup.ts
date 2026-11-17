@@ -1,16 +1,18 @@
+import type { FullConfig } from "@playwright/test";
+
 import { createDatabase, startPostgres, templateDatabase } from "./fixtures/db";
 import { shareS3, startS3 } from "./fixtures/s3";
 import { runNerve } from "./fixtures/server";
 
 /**
- * Starts PostgreSQL and the S3 service once per run, before any browser, and
+ * Starts PostgreSQL, sized for the run's workers, and the S3 service once per run, before any browser, and
  * migrates the template database with bin/nerve migrate up; every worker
  * copies the template (fixtures/test.ts) and every S3 world takes its own
  * bucket from the shared service (fixtures/s3-world.ts). The returned function
  * is the global teardown.
  */
-export default async function globalSetup(): Promise<() => Promise<void>> {
-  const [postgres, s3] = await Promise.allSettled([startPostgres(), startS3()]);
+export default async function globalSetup(config: FullConfig): Promise<() => Promise<void>> {
+  const [postgres, s3] = await Promise.allSettled([startPostgres(config.workers), startS3()]);
   const releases = [
     ...(s3.status === "fulfilled" ? [() => s3.value.close()] : []),
     ...(postgres.status === "fulfilled" ? [() => postgres.value.stop()] : []),

@@ -19,6 +19,7 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity"
 	"github.com/open-nerve/NerveProject/server/internal/modules/instance"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue"
+	"github.com/open-nerve/NerveProject/server/internal/modules/notification"
 	"github.com/open-nerve/NerveProject/server/internal/modules/planning"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project"
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace"
@@ -137,6 +138,7 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 	projectPorts := project.Provide(pool, protected)
 	issuePorts := issue.Provide(pool, protected)
 	planningPorts := planning.Provide(pool, planningProjects{projects: projectPorts.PlanningProjects})
+	notificationPorts := notification.Provide(pool)
 	imageBindings := asset.NewImageBindings(assetPorts, businessClock)
 	imageReader := asset.NewImageReader(assetPorts, assets.store, assets.runtimeNow)
 	assetPurger := asset.NewPurger(assetPorts, assetImageReferences{identityPorts.ImageReferences, workspacePorts.ImageReferences, projectPorts.ImageReferences}, tx)
@@ -144,13 +146,20 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 		WorkspaceRoles: workspacePorts.WorkspaceRoles,
 		ProjectAccess:  accessProjects{projects: projectPorts.ProjectAccess},
 	})
+	// The recheck of a notification's recipients, Authorize's rule for many
+	// accounts at once (M7 P1b spec 2.7).
+	decider := access.NewDecider(access.DeciderDeps{
+		WorkspaceRoles: workspacePorts.WorkspaceRolesMany,
+		ProjectAccess:  accessProjectsMany{projects: projectPorts.ProjectAccessMany},
+	})
 	client, err := jobs.NewInserter(pool)
 	if err != nil {
 		a.close()
 		return nil, err
 	}
 	inserter := jobInserter{client: client}
-	events, err := newDispatcher(eventTypes(), slices.Concat(issue.Subscribers(issuePorts, inserter), planning.Subscribers(inserter), asset.Subscribers(assetPorts, inserter)))
+	events, err := newDispatcher(eventTypes(), slices.Concat(issue.Subscribers(issuePorts, inserter), planning.Subscribers(inserter), asset.Subscribers(assetPorts, inserter),
+		notification.Subscribers(notificationPorts, inserter)))
 	if err != nil {
 		a.close()
 		return nil, err
@@ -169,8 +178,8 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 		DraftAssetTransfer: issueDraftAssetTransfer{assets: asset.NewDraftAssetTransfer(assetPorts, businessClock, events)},
 		DraftAssets:        issueDraftAssets{assets: assetPorts.DraftAssets},
 		LinkCrawler:        previews, Logger: logger,
-		Events: events,
-		Pool:   pool, Tx: busyTx{tx: issueTx}, JobTx: issueTx, ArchivePolicies: projectPorts.ArchivePolicies, AutoArchiveInterval: cfg.Issue.AutoArchiveInterval, TrimVersionsInterval: cfg.Issue.TrimVersionsInterval,
+		Events: events, ArchiveEvents: events,
+		Pool: pool, Tx: busyTx{tx: issueTx}, JobTx: issueTx, ArchivePolicies: projectPorts.ArchivePolicies, AutoArchiveInterval: cfg.Issue.AutoArchiveInterval, TrimVersionsInterval: cfg.Issue.TrimVersionsInterval,
 		DeleteBatch: cfg.Issue.DeleteBatch, DeleteBudget: cfg.Issue.DeleteBudget, RuntimeNow: time.Now,
 		ReadTx:    readTx,
 		WriteGate: projectWrites, Clock: businessClock, Authorizer: authorizer,
@@ -189,6 +198,11 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 		IssueTransfer: planningTransfer{transfer: issuePorts.PlanningTransfer},
 		ListSettings:  issuePorts.ListSettings,
 		LinkCrawls:    inserter, LinkCrawler: previews,
+	})
+	notes := notification.New(notification.Deps{
+		Pool: pool, Issues: notificationIssues{issues: issuePorts.NotificationIssues}, JobTx: issueTx, RuntimeNow: time.Now, Logger: logger,
+		Projects: notificationProjects{names: projectPorts.NotificationNames}, Readers: notificationReaders{decider: decider},
+		DeleteBatch: cfg.Notification.DeleteBatch, DeleteBudget: cfg.Notification.DeleteBudget,
 	})
 	// project before workspace: workspace's writes take its cascade.
 	proj := project.New(project.Deps{
@@ -250,9 +264,9 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 		a.close()
 		return nil, err
 	}
-	purge := newPurgeDeleted([]purgeModule{{"asset", forAssetPurge(assetPurger)}, {"issue", forIssuePurge(issuePorts.Purger)}, {"planning", forPlanningPurge(planningPorts.Purger)}, {"project", forProjectPurge(projectPorts.Purger)}, {"workspace", forWorkspacePurge(workspacePorts.Purger)}, {"identity", forIdentityPurge(identityPorts.Purger)}}, businessClock, time.Now, cfg.Cleanup.PurgeAfter, cfg.Cleanup.PurgeBatch, cfg.Files.CleanupBudget)
-	definitions := append(slices.Concat(ident.Jobs(), issues.Jobs(), plans.Jobs(), files.Jobs()), purgeJob(purge, cfg.Cleanup.PurgeInterval))
-	a.jobs, err = jobs.New(pool, jobs.Config{ShutdownTimeout: cfg.Jobs.ShutdownTimeout, Logger: logger, DefaultWorkers: cfg.Jobs.DefaultWorkers, PeriodicWorkers: cfg.Jobs.PeriodicWorkers}, definitions, slices.Concat(identity.EnqueuedKinds(), issue.EnqueuedKinds(), planning.EnqueuedKinds(), asset.EnqueuedKinds()))
+	purge := newPurgeDeleted([]purgeModule{{"asset", forAssetPurge(assetPurger)}, {"notification", forNotificationPurge(notificationPorts.Purger)}, {"issue", forIssuePurge(issuePorts.Purger)}, {"planning", forPlanningPurge(planningPorts.Purger)}, {"project", forProjectPurge(projectPorts.Purger)}, {"workspace", forWorkspacePurge(workspacePorts.Purger)}, {"identity", forIdentityPurge(identityPorts.Purger)}}, businessClock, time.Now, cfg.Cleanup.PurgeAfter, cfg.Cleanup.PurgeBatch, cfg.Files.CleanupBudget)
+	definitions := append(slices.Concat(ident.Jobs(), issues.Jobs(), plans.Jobs(), files.Jobs(), notes.Jobs()), purgeJob(purge, cfg.Cleanup.PurgeInterval))
+	a.jobs, err = jobs.New(pool, jobs.Config{ShutdownTimeout: cfg.Jobs.ShutdownTimeout, Logger: logger, DefaultWorkers: cfg.Jobs.DefaultWorkers, PeriodicWorkers: cfg.Jobs.PeriodicWorkers}, definitions, slices.Concat(identity.EnqueuedKinds(), issue.EnqueuedKinds(), planning.EnqueuedKinds(), asset.EnqueuedKinds(), notification.EnqueuedKinds()))
 	if err != nil {
 		a.close()
 		return nil, err

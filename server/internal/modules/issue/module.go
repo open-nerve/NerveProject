@@ -10,7 +10,10 @@
 // work items are in a state and takes deleted labels off them; its
 // PlanningStats tells the planning module the facts of the work items of a
 // project's cycles and modules, and its PlanningTransfer moves the
-// unfinished work items of a cycle that has ended to another for it.
+// unfinished work items of a cycle that has ended to another for it. Its
+// NotificationIssues locks a work item's row, reads what the notification
+// module's fan-out and deletions need of work items and hands over the
+// guest rule the fan-out's recheck applies.
 package issue
 
 import (
@@ -58,6 +61,7 @@ type Provided struct {
 	AssetParents       AssetParents
 	IssueCascade       Cascade
 	ListSettings       ListSettings
+	NotificationIssues NotificationIssues
 	PlanningStats      PlanningStats
 	PlanningTransfer   PlanningTransfer
 	Purger             *app.Purger
@@ -82,7 +86,7 @@ func Provide(pool *pgxpool.Pool, protected []postgres.ProtectedReference) Provid
 		{Table: "module_issues", Delete: store.PurgeModuleIssues},
 		{Table: "cycle_issues", Delete: store.PurgeCycleIssues},
 		{Table: "issues", Protected: true, Delete: store.PurgeIssues},
-	}), IssueCascade: app.NewCascade(store), ListSettings: app.ListSettings{}, PlanningStats: store,
+	}), IssueCascade: app.NewCascade(store), ListSettings: app.ListSettings{}, NotificationIssues: notificationIssues{store}, PlanningStats: store,
 		PlanningTransfer: app.NewCycleTransfers(store)}
 }
 
@@ -154,7 +158,11 @@ type Deps struct {
 	LinkCrawler app.LinkCrawler
 	Logger      *slog.Logger
 	Events      shared.EventPublisher
-	Pool        *pgxpool.Pool
+	// ArchiveEvents publishes each project's round of the automatic
+	// archival's events at once (M7 P1b spec R12): the app's dispatcher,
+	// which Events also is.
+	ArchiveEvents shared.EventBatchPublisher
+	Pool          *pgxpool.Pool
 	// Tx are the transactions of the module's writes, each of which waits
 	// for a lock at most issue.write_lock_timeout (bootstrap/gate.go).
 	Tx shared.TxManager
@@ -224,7 +232,7 @@ func New(d Deps) *Module {
 	return &Module{
 		assets: assetAccess, deleteRows: app.NewDeleteRows(app.DeleteRowsDeps{Rows: store, Relations: app.NewRelationDeletions(store, d.Projects), Remaining: store, Tx: d.JobTx, RuntimeNow: d.RuntimeNow, Batch: d.DeleteBatch, Budget: d.DeleteBudget}), deleteBudget: d.DeleteBudget, logger: d.Logger,
 		trimVersions: app.NewTrimVersions(app.TrimVersionsDeps{Projects: d.Projects, Gate: d.Projects, Rows: store, Tx: d.JobTx}), trimVersionsInterval: d.TrimVersionsInterval,
-		crawlLink: app.NewCrawlLink(app.CrawlLinkDeps{Crawler: d.LinkCrawler, Links: store}), autoArchive: app.NewAutoArchive(app.AutoArchiveDeps{Policies: d.ArchivePolicies, Projects: d.Projects, States: d.Projects, Planning: d.Planning, Issues: store, Tx: d.JobTx, Clock: d.Clock, Events: d.Events}), autoArchiveInterval: d.AutoArchiveInterval,
+		crawlLink: app.NewCrawlLink(app.CrawlLinkDeps{Crawler: d.LinkCrawler, Links: store}), autoArchive: app.NewAutoArchive(app.AutoArchiveDeps{Policies: d.ArchivePolicies, Projects: d.Projects, States: d.Projects, Planning: d.Planning, Issues: store, Tx: d.JobTx, Clock: d.Clock, Events: d.ArchiveEvents}), autoArchiveInterval: d.AutoArchiveInterval,
 		uc: httpadapter.UseCases{
 			GetIssueAttachments:     app.NewGetAttachments("issue", attachments),
 			GetCommentAttachments:   app.NewGetAttachments("comment", attachments),

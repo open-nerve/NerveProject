@@ -91,9 +91,10 @@ test("W3 (API): the admin changes the workspace and deletes it with its members,
   const { project: otherWeb } = await furnish(otherWorkspace, 20);
   const { project: acmeWeb, bug: acmeBug } = await furnish(acme, 15);
   // Acme's Web has a work item too, the member's, assigned to him and labelled Bug, whose rows Acme's deletion must
-  // write again as the admin's; Other's Web has none, as made (expectProjectCreated).
+  // write again as the admin's, and his second one, assigned to the admin, whom it notifies; Other's Web has none, as
+  // made (expectProjectCreated).
   const acmePlanning = await furnishPlanningRows(api, member, acmeWeb.id);
-  await furnishIssueRows(api, member, slug, acmeWeb.id, memberId, acmeBug.id, acmePlanning);
+  await furnishIssueRows(api, db, member, slug, acmeWeb.id, memberId, adminId, acmeBug.id, acmePlanning);
   const projectless = await createDraft(api, member, slug, { project_id: null, payload: { name: "Unassigned" } });
   /** Web's labels, as the member made them; deleted by the admin, as Acme's deletion writes them. */
   const webLabels = (deleted: boolean): LabelRow[] => [
@@ -168,10 +169,10 @@ test("W3 (API): the admin changes the workspace and deletes it with its members,
   const old = await createProject(api, admin, slug, { name: "Old", identifier: "OLD", project_lead_id: memberId });
   // The member moves Old in his sidebar, labels it and creates a work item in it, assigned to him and labelled Bug: his
   // display settings in it, its label and the work item's rows are his own writing, which Old's deletion must write
-  // again as the admin's.
+  // again as the admin's. His second one there is assigned to the admin, whom it notifies.
   const oldBug = await createLabel(api, member, old.id, { name: "Bug" });
   const oldPlanning = await furnishPlanningRows(api, member, old.id);
-  await furnishIssueRows(api, member, slug, old.id, memberId, oldBug.id, oldPlanning);
+  await furnishIssueRows(api, db, member, slug, old.id, memberId, adminId, oldBug.id, oldPlanning);
   const moved = await api.PATCH("/api/v0/me/projects/{project_id}/preferences", {
     params: { path: { project_id: old.id } },
     body: { sort_order: 75535 },

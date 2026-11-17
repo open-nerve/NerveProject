@@ -30,6 +30,8 @@ type archiveWorld struct {
 	// openCycles and openModules are each project's cycles and modules
 	// that keep its work items (OpenPlanning), on any day asked about.
 	openCycles, openModules map[uuid.UUID][]uuid.UUID
+	// publications are the work items of each PublishAll, in their order.
+	publications [][]uuid.UUID
 }
 
 func archiveSetup() (*archiveWorld, app.AutoArchiveDeps) {
@@ -78,9 +80,19 @@ func (f *archiveWorld) InsertActivities(ctx context.Context, rows []app.Activity
 	f.activities = append(f.activities, rows...)
 	return f.log.add(ctx, "Activities")
 }
-func (f *archiveWorld) Publish(ctx context.Context, e shared.Event) error {
-	f.events = append(f.events, e)
-	return f.log.add(ctx, "Event", e.Entity.ID)
+func (f *archiveWorld) PublishAll(ctx context.Context, events []shared.Event) error {
+	var items []uuid.UUID
+	for _, e := range events {
+		items = append(items, e.Entity.ID)
+	}
+	f.publications = append(f.publications, items)
+	for _, e := range events {
+		f.events = append(f.events, e)
+		if err := f.log.add(ctx, "Event", e.Entity.ID); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 func (f *archiveWorld) WithinTx(ctx context.Context, fn func(context.Context) error) error {
 	oldA, oldE, oldC := len(f.activities), len(f.events), len(f.committed)
@@ -118,6 +130,10 @@ func TestAutoArchiveProjectTransactionsAndSystemIdentity(t *testing.T) {
 	want := []string{"Scan outside tx", "Begin", "Tx", line("Lock", web), line("States", web), "Now", line("OpenTargets", web, archiveNow), line("Update", web), "Activities", line("Event", bob), line("Event", dave), "Commit", "Begin", "Tx", line("Lock", acme), line("States", acme), "Now", line("OpenTargets", acme, archiveNow), line("Update", acme), "Activities", line("Event", alice), "Commit"}
 	if !slices.Equal(f.log.calls, want) {
 		t.Fatalf("calls = %v; want %v", f.log.calls, want)
+	}
+	// A project's round is one publication of its events (M7 P1b spec R12).
+	if !reflect.DeepEqual(f.publications, [][]uuid.UUID{{bob, dave}, {alice}}) {
+		t.Fatalf("publications = %v; want one a project", f.publications)
 	}
 	cutoffs := []time.Time{time.Date(2026, 1, 30, 10, 0, 0, 123456000, time.UTC), time.Date(2026, 3, 1, 10, 0, 0, 123456000, time.UTC)}
 	if len(f.rows) != len(cutoffs) {

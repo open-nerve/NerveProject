@@ -228,6 +228,10 @@ func (iw issueWrite) checkProjectLocksWith(t *testing.T, w issueWorld, hold func
 		}
 		targets = append(targets, target)
 	}
+	// The targets' notification fan-outs lock their work items' rows FOR
+	// SHARE and, inserting, acme's and Web's FOR KEY SHARE: they end before
+	// the holds, so that none queues on them or shows as acme's lock (R10).
+	waitForFanouts(t, w.pool)
 	alices := 0
 	send := func(name string) <-chan answer {
 		target := targets[0]
@@ -308,6 +312,8 @@ func (iw issueWrite) checkProjectLocksWith(t *testing.T, w issueWorld, hold func
 	release(t, tables)
 	collect()
 
+	// So does the fan-out of the write just answered.
+	waitForFanouts(t, w.pool)
 	waited := hold(t, w.pool, iw.waits, iw.mode)
 	tx, collect = observe(waited)
 	pid := requestTableBlocked(t, w.pool, tx, waited.Conn().PgConn().PID(), iw.waits)

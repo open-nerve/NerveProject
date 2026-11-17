@@ -32,6 +32,14 @@ type WorkspaceRoles interface {
 	ActiveRole(ctx context.Context, workspaceID, userID uuid.UUID) (role shared.Role, ok bool, err error)
 }
 
+// WorkspaceRolesMany reads many accounts' active roles in a workspace at
+// once: access's port for its DecideMany (M7 P1b spec 2.7). The roles of
+// those of ids whose membership is active, as ActiveRole reads one's, by
+// account. It reads in the transaction ctx carries.
+type WorkspaceRolesMany interface {
+	ActiveRoles(ctx context.Context, workspaceID uuid.UUID, ids []uuid.UUID) (map[uuid.UUID]shared.Role, error)
+}
+
 // WorkspaceDirectory finds an undeleted workspace by its slug for the
 // project and issue modules, or locks one by its id (M3 design 6.5, M4
 // design 3.3); found is false when there is none.
@@ -76,6 +84,7 @@ type Provided struct {
 	AssetParents             AssetParents
 	Purger                   *app.Purger
 	WorkspaceRoles           WorkspaceRoles
+	WorkspaceRolesMany       WorkspaceRolesMany
 	WorkspaceDirectory       WorkspaceDirectory
 	WorkspaceMembers         WorkspaceMembers
 	WorkspaceMemberDirectory WorkspaceMemberDirectory
@@ -93,7 +102,7 @@ func Provide(pool *pgxpool.Pool, protected []postgres.ProtectedReference) Provid
 			{Table: "workspace_members", Delete: store.PurgeWorkspaceMembers},
 			{Table: "workspaces", Protected: true, Delete: store.PurgeWorkspaces},
 		}),
-		AssetParents: store, WorkspaceRoles: store, WorkspaceDirectory: directory,
+		AssetParents: store, WorkspaceRoles: store, WorkspaceRolesMany: store, WorkspaceDirectory: directory,
 		WorkspaceMembers: directory, WorkspaceMemberDirectory: directory,
 	}
 }

@@ -81,6 +81,8 @@ M6/P8 的 T15 最终候选（2026-11-16，`0ef661393be56c1fc0d88f1c65ca6314f430e
 
 **何时验收：** M8 的 CI 工作核算 e2e 的连接预算（工作进程数 × 每进程的连接上限 + 余量），按结果给测试容器设 `max_connections` 或收紧 e2e 服务器的 `database.max_conns`，并在 CI 与本地都留有余量；或负责人决定维持现状，并在此写明理由。
 
+**处理结果（M7/P1b）：** M7/P1b 的通知分发让每次写都投一个后台任务，每个 nerve 进程的池（上限 10）更常用满，本机撞线随之变多：检查点 1（`3311c058`）481 条中 3 条、检查点 2（`13394220`）5 条，现场都是 `sorry, too many clients already`（G5、P7、C12、C8、I4、G15、G7；台账 `cp1-e2e-test-results`、`cp2-e2e-test-results`）。按本条的验收核算并处理（`d954456f`）：每个工作进程同时最多持有自己的 nerve（10）、旁边第二个 nerve 或一条 nerve 命令（10）、测试一侧的池（`openDatabase`，2）、建库与 `pg_dump`（各 1），共 24；global setup 按 Playwright 解出的工作进程数给测试容器设 `max_connections = max(100, 工作进程数 × 24 + 20)`（`e2e/fixtures/db.ts` 的 `maxConnections`），本机 9 个工作进程为 236，CI 的 2 个仍为 100、用量约 68。没有收紧 nerve 的 `max_conns`（那会改变被测程序在池等待上的行为）。修复后本机完整 e2e 481 条全过、没有一处 53300（`cp2-fix-build-e2e`）。本条关闭；工作进程数或每进程的池变了，改 `connectionsPerWorker` 并在此补记。
+
 <a id="M6-M8-04"></a>
 ## M6-M8-04 server 作业：Go 测试分两路并行，lint 工具每次在线下载
 

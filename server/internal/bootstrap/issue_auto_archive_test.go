@@ -27,7 +27,7 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
-func autoArchiveOn(w issueWorld, c issueapp.Clock, events shared.EventPublisher) *issueapp.AutoArchive {
+func autoArchiveOn(w issueWorld, c issueapp.Clock, events shared.EventBatchPublisher) *issueapp.AutoArchive {
 	p := project.Provide(w.pool, nil)
 	return issueapp.NewAutoArchive(issueapp.AutoArchiveDeps{Policies: p.ArchivePolicies, Projects: issueProjects{projects: p.IssueProjects}, States: issueProjects{projects: p.IssueProjects}, Planning: archivePlanning(w), Issues: issuepostgres.New(w.pool), Tx: newIssueJobTx(w.pool, config.Config{Database: config.DatabaseConfig{CommitTimeout: 2 * time.Second}, Issue: testIssueConfig}), Clock: c, Events: events})
 }
@@ -141,7 +141,7 @@ func archiveStableRow(t *testing.T, w issueWorld, id uuid.UUID) string {
 
 // A subscriber inserts a real River job after observing the complete write.
 // Its error must roll back the UPDATE, activities and inserted job together.
-func archiveDispatcher(t *testing.T, w issueWorld, received *[]shared.Event, fail error) shared.EventPublisher {
+func archiveDispatcher(t *testing.T, w issueWorld, received *[]shared.Event, fail error) *dispatcher {
 	t.Helper()
 	client, err := jobs.NewInserter(w.pool)
 	if err != nil {
@@ -251,7 +251,7 @@ func TestAutoArchiveDatabasePartialCommitAndRetry(t *testing.T) {
 	}
 	sentinel := errors.New("second project fails")
 	var received []shared.Event
-	publisher := archiveProjectFailure{EventPublisher: archiveDispatcher(t, w, &received, nil), project: ops, err: sentinel}
+	publisher := archiveProjectFailure{EventBatchPublisher: archiveDispatcher(t, w, &received, nil), project: ops, err: sentinel}
 	uc := autoArchiveOn(w, clocktest.At(at), publisher)
 	if n, err := uc.Execute(pgtest.Soon(t)); n != 1 || !errors.Is(err, sentinel) || issueEventCount(t, w) != 1 {
 		t.Fatalf("partial commit=%d,%v jobs=%d", n, err, issueEventCount(t, w))
@@ -273,17 +273,19 @@ func TestAutoArchiveDatabasePartialCommitAndRetry(t *testing.T) {
 }
 
 type archiveProjectFailure struct {
-	shared.EventPublisher
+	shared.EventBatchPublisher
 	project uuid.UUID
 	err     error
 }
 
-func (p archiveProjectFailure) Publish(ctx context.Context, e shared.Event) error {
-	if err := p.EventPublisher.Publish(ctx, e); err != nil {
+func (p archiveProjectFailure) PublishAll(ctx context.Context, events []shared.Event) error {
+	if err := p.EventBatchPublisher.PublishAll(ctx, events); err != nil {
 		return err
 	}
-	if e.ProjectID == p.project {
-		return p.err
+	for _, e := range events {
+		if e.ProjectID == p.project {
+			return p.err
+		}
 	}
 	return nil
 }

@@ -94,6 +94,10 @@ func p5ReadsWithoutRowLocks(t *testing.T) {
 	// EXCLUSIVE admits AccessShare (ordinary SELECT), but conflicts with
 	// every SELECT FOR mode's RowShare, as well as writes' RowExclusive.
 	// users supplies profile names; it is deliberately absent from issueTables.
+	// The work item's notification fan-out locks its row FOR SHARE and,
+	// inserting, acme's, Web's and bob's FOR KEY SHARE: one still running as
+	// the tables are locked in turn would deadlock with them (R10).
+	waitForFanouts(t, w.pool)
 	tables := lockedTables(t, w.pool, issueTables+", users, project_user_properties", "EXCLUSIVE")
 	defer release(t, tables)
 	for _, query := range []string{"", "?group_by=label_id", "?group_by=label_id&sub_group_by=assignee_id"} {
