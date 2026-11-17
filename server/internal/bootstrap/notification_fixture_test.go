@@ -9,6 +9,7 @@ import (
 	"uuid"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/riverqueue/river"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/access"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue"
@@ -161,9 +162,23 @@ func notificationJobsForTest(pool *pgxpool.Pool, cfg config.Config) []jobs.Job {
 // (waitForStartupRuns), so that no pending fan-out queues on what it holds,
 // fails at a lock timeout meanwhile or shows among its locks (R10). The
 // failure lists the fan-outs not completed.
+//
+// While fan-outs wait to be fetched it wakes the app's producer itself, at
+// most once per River's fetch cooldown: a River client sends a queue's insert
+// notification at most once per FetchCooldown (100 ms), so a fan-out inserted
+// within 100 ms of another job of its queue sends none and waits for the
+// producer's poll (FetchPollInterval, 1 s), half a second on average (P1b
+// T10's measurement). The nudge copies River v0.47's internals: the channel
+// "<current schema>.river_insert" (riverpgxv5's PGNotifyMany and Listener;
+// the app sets no schema) and the payload {"queue": …} the producer decodes.
+// Should River change them, the nudge wakes nothing and the wait falls back
+// to the poll: slower, still only returning once the fan-outs have completed.
+// A fan-out done still reads running until River's batch completer writes
+// its state, which it does every 250 ms.
 func waitForFanouts(t *testing.T, pool *pgxpool.Pool) {
 	t.Helper()
 	deadline := time.Now().Add(15 * time.Second)
+	var nudged time.Time
 	for {
 		var left string
 		if err := pool.QueryRow(pgtest.Soon(t), `SELECT coalesce(string_agg(format('%s %s attempt %s errors %s', id, state, attempt, coalesce(to_json(errors)::text, '[]')), E'\n' ORDER BY id), '')
@@ -175,6 +190,13 @@ func waitForFanouts(t *testing.T, pool *pgxpool.Pool) {
 		}
 		if time.Now().After(deadline) {
 			t.Fatalf("notification fan-outs not completed within 15s:\n%s", left)
+		}
+		if time.Since(nudged) >= river.FetchCooldownDefault {
+			if _, err := pool.Exec(pgtest.Soon(t), `SELECT pg_notify(current_schema() || '.river_insert', json_build_object('queue', queue)::text)
+				FROM (SELECT DISTINCT queue FROM river_job WHERE kind = $1 AND state = 'available') AS waiting`, notificationriver.FanoutKind); err != nil {
+				t.Fatal(err)
+			}
+			nudged = time.Now()
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
