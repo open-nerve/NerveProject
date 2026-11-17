@@ -1,6 +1,6 @@
 # M7 / P1a 阶段记录：关注接口与通知要用的事件
 
-> 状态：T1–T13 已完成，待整分支审查、最终候选与合入（§7 在合入后回填）。spec 与 plan 见 [P1a spec](../specs/P1a-subscriptions-events.md)、[P1a plan](../plans/P1a-subscriptions-events.md)，预检 [re-82](../../../reviews/re-82-M7P1a预检.md)。基线 main `8d17eed7`（M7 设计的 noff）。原始证据在 worktree 的 `.superpowers/sdd/P1a-subscriptions-events/`（台账 `progress.md`、每次检查的日志与收据、变异），随阶段归档。
+> 状态：已完成，合入 main（noff `9a3a388a`），§7 为集成的记录。spec 与 plan 见 [P1a spec](../specs/P1a-subscriptions-events.md)、[P1a plan](../plans/P1a-subscriptions-events.md)，预检 [re-82](../../../reviews/re-82-M7P1a预检.md)。基线 main `8d17eed7`（M7 设计的 noff）。原始证据在 worktree 的 `.superpowers/sdd/P1a-subscriptions-events/`（台账 `progress.md`、每次检查的日志与收据、变异），随阶段归档。
 
 ## 1. 交付
 
@@ -64,4 +64,7 @@ T11 提到 T9 之后、检查点之前：plan 漏了权限矩阵的覆盖守卫�
 
 ## 7. 集成
 
-（合入后回填：整分支审查、修复轮、最终候选、分支 CI、noff、main CI、归档与清理。）
+- 整分支审查（fable，只读，`32877ae2`）：Ready to merge，无 Critical、Important，五处 Minor。修复轮：m1 变异计数、m3 M4 事件表的链接、m5 R7 的副作用写进 spec 与 plane-diff（`8f164a3d`）；m2 “写入但未改变”且有新提及的分支补一个 bootstrap 例（`71b44377`，五个变异全杀）；m4 交给 P1b（spec §5）。限定复审（`71b44377`）：Ready to merge，无发现。
+- 最终候选（`71b44377`）七项本地门禁全过：test 940 秒、build+e2e 228 秒 481 passed。分支 CI 44031219603 attempt 1 全绿：server (0) Test 728 秒、server (1) Test 780 秒。推送前网络四次断开（`Connection closed`），有界重试的第五次成功。
+- `--no-ff` 合入 main `9a3a388a`（父 `8d17eed7`、`71b44377`，树与分支相同）；main CI 44034770817 attempt 1 全绿：server (0) Test 570 秒、server (1) Test 708 秒、web 544 秒、e2e (1) 636 秒、e2e (2) 716 秒。
+- 归档 `.superpowers/sdd/M7-P1a-integration-20261117`（unknown 0，清理后复核一致）；worktree、本地与远端分支已删除（远端分支先核实已含在 main）。

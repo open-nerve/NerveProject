@@ -217,6 +217,7 @@ M7 让五件协作功能经真实接口工作：站内通知（关注工作项�
 - `issue.created`、`issue.updated`、评论的建立与修改，每个这次新被提及的人加一个 `mention` 变化（`NewID` 为账户），集合按 §3.1 由 issue 算出，未经可见性过滤（通知发送时自己复核）。
 - 收集箱的接受发布普通的 `issue.updated`（状态变化）。
 - planning 新增 `planning.cycle_archived`、`planning.module_archived`，project 新增 `project.archived`，供收藏的连带；恢复不发布。
+- 关联的两个事件追加 `requested_on`：建立时是请求所在的工作项，移除时是移除被授权的那一端，值为那一端读到的类型（[P1b spec](specs/P1b-notification-core.md) §2.3、R11），通知只发到这一端。
 - 只加变化与类型，不改已有变化；事件形状测试同改；asset、planning 现有的订阅者不看新变化。
 
 ### 6.2 通知的订阅者与任务
@@ -289,7 +290,8 @@ M7 让五件协作功能经真实接口工作：站内通知（关注工作项�
 | Phase | 交付边界 | 必须同时完成的验证 |
 |---|---|---|
 | P1a | 工作项一侧的关注与事件：issue 事件的扩展（§6.1 的前两条：评论、链接事件的工作项 id，新提及）、关注接口与 `is_subscribed`；关键词 phase 改为 `M7/P1`（P1a、P1b 共用，关键词工具只认 `M<n>/P<k>`，M6/P3 先例） | H1 的接口与数据库；事件形状测试 |
-| P1b | `notification` 模块：表、订阅者与分发任务、通知要用的 issue 与 access 端口（快照与行锁、批量判定，随消费方一起到）、列表 / 修改 / 全部已读 / 未读数、读时的可见过滤与另一端、删除图与清理、权限矩阵 | H2–H7 的接口与数据库；幂等、复核、交错、规模；批量判定的等价测试；写入基准与自动归档前后 |
+| P1b | `notification` 模块的核心：表、订阅者与分发任务、通知要用的 issue 与 access 端口（快照与行锁、批量判定，随消费方一起到）、关联事件追加请求端、删除图与清理（[P1b spec](specs/P1b-notification-core.md) R1 拆段） | H2–H4 的数据库证据；幂等、复核、交错、规模；批量判定的等价测试；写入基准与自动归档前后 |
+| P1c | 通知的接口：列表 / 修改 / 全部已读 / 未读数、读时的可见过滤（含已归档项目）与另一端、权限矩阵 | H2–H7 的接口证据与 e2e 故事 |
 | P2a | 收集箱的提交与读（issue 模块）：`intake_issues`、Triage 的新建路径、条目作为工作项的读写边界（§3.6，含搜索等排除与资产的判定）、收集箱列表、开关 | H8、H9、H11 的接口与数据库 |
 | P2b | 分诊与其余：迁移规则、接受、动态、内容的修改与删除、待处理数、删除图、权限矩阵 | H10、H11 的接口与数据库；交错 |
 | P3a | `navigation` 模块与视图：`issue_views`、两种视图的接口与权限、工作区跨项目列表与规模测试 | H12–H14 的接口与数据库 |
@@ -326,7 +328,8 @@ P1a 的第一个实现提交把关键词 phase 改为 `M7/P1`（P1a、P1b 共用
 | 阶段 | 状态 | spec / plan / review |
 |---|---|---|
 | 设计 | 已合入 main（noff `8d17eed7`，与 P1a 的 spec、plan 一起）；预检 Ready after fixes，修正已改入；负责人 2026-11-17 决定 §15 A–D 按推荐 | [re-81](../../reviews/re-81-M7设计预检.md) |
-| P1a 关注接口与通知要用的事件 | 进行中：spec 与 plan 经预检 [re-82](../../reviews/re-82-M7P1a预检.md) 修正后通过，基线 main `8d17eed7`（设计的 noff）；T1–T13 已提交，检查点的分支 CI 44021715408 全绿，待整分支审查与合入 | [P1a spec](specs/P1a-subscriptions-events.md) / [P1a plan](plans/P1a-subscriptions-events.md) / [P1a 阶段记录](reviews/P1a-subscriptions-events-review.md) |
+| P1a 关注接口与通知要用的事件 | 已完成：合入 main（noff `9a3a388a`），main CI 44034770817 全绿；整分支审查 Ready to merge（五处次要由修复轮处理，限定复审 Ready to merge） | [P1a spec](specs/P1a-subscriptions-events.md) / [P1a plan](plans/P1a-subscriptions-events.md) / [P1a 阶段记录](reviews/P1a-subscriptions-events-review.md) |
+| P1b 通知模块的核心 | 进行中：spec 与 plan 经预检 [re-83](../../reviews/re-83-M7P1b预检.md) 修正后通过，基线 main `9a3a388a`（P1a 的 noff）；原 P1b 拆为 P1b、P1c | [P1b spec](specs/P1b-notification-core.md) / [P1b plan](plans/P1b-notification-core.md) |
 
 ## 15. 决定记录
 
