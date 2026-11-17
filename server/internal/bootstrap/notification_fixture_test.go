@@ -3,6 +3,7 @@ package bootstrap
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"testing"
 	"time"
@@ -163,18 +164,10 @@ func notificationJobsForTest(pool *pgxpool.Pool, cfg config.Config) []jobs.Job {
 // fails at a lock timeout meanwhile or shows among its locks (R10). The
 // failure lists the fan-outs not completed.
 //
-// While fan-outs wait to be fetched it wakes the app's producer itself, at
-// most once per River's fetch cooldown: a River client sends a queue's insert
-// notification at most once per FetchCooldown (100 ms), so a fan-out inserted
-// within 100 ms of another job of its queue sends none and waits for the
-// producer's poll (FetchPollInterval, 1 s), half a second on average (P1b
-// T10's measurement). The nudge copies River v0.47's internals: the channel
-// "<current schema>.river_insert" (riverpgxv5's PGNotifyMany and Listener;
-// the app sets no schema) and the payload {"queue": …} the producer decodes.
-// Should River change them, the nudge wakes nothing and the wait falls back
-// to the poll: slower, still only returning once the fan-outs have completed.
-// A fan-out done still reads running until River's batch completer writes
-// its state, which it does every 250 ms.
+// While fan-outs wait to be fetched it wakes the app's producer itself
+// (nudgeFanouts), at most once per River's fetch cooldown. A fan-out done
+// still reads running until River's batch completer writes its state, which
+// it does every 250 ms.
 func waitForFanouts(t *testing.T, pool *pgxpool.Pool) {
 	t.Helper()
 	deadline := time.Now().Add(15 * time.Second)
@@ -192,12 +185,82 @@ func waitForFanouts(t *testing.T, pool *pgxpool.Pool) {
 			t.Fatalf("notification fan-outs not completed within 15s:\n%s", left)
 		}
 		if time.Since(nudged) >= river.FetchCooldownDefault {
-			if _, err := pool.Exec(pgtest.Soon(t), `SELECT pg_notify(current_schema() || '.river_insert', json_build_object('queue', queue)::text)
-				FROM (SELECT DISTINCT queue FROM river_job WHERE kind = $1 AND state = 'available') AS waiting`, notificationriver.FanoutKind); err != nil {
-				t.Fatal(err)
-			}
+			nudgeFanouts(t, pool)
 			nudged = time.Now()
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
+}
+
+// nudgeFanouts wakes the app's producer for each queue an available fan-out
+// is on: a River client sends a queue's insert notification at most once per
+// FetchCooldown (100 ms), so a fan-out inserted within 100 ms of another job
+// of its queue sends none and waits for the producer's poll
+// (FetchPollInterval, 1 s), half a second on average (P1b T10's
+// measurement); a job made due by an update sends none at all. The nudge
+// copies River v0.47's internals: the channel "<current schema>.river_insert"
+// (riverpgxv5's PGNotifyMany and Listener; the app sets no schema) and the
+// payload {"queue": …} the producer decodes. Should River change them, the
+// nudge wakes nothing and the fan-outs wait for the poll: slower, no
+// different.
+func nudgeFanouts(t *testing.T, pool *pgxpool.Pool) {
+	t.Helper()
+	if _, err := pool.Exec(pgtest.Soon(t), `SELECT pg_notify(current_schema() || '.river_insert', json_build_object('queue', queue)::text)
+		FROM (SELECT DISTINCT queue FROM river_job WHERE kind = $1 AND state = 'available') AS waiting`, notificationriver.FanoutKind); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// newHeldFanoutWorld is newIssueWorldWith, configure's, whose fan-outs wait
+// until the test releases them (holdFanouts): when each runs, against what
+// the test holds, changes or deletes, is the test's to set. The hold is put
+// in place before the app starts, so that the app's cleanup stops its
+// workers before the hold's cleanup removes it.
+func newHeldFanoutWorld(t *testing.T, configure func(*config.Config)) issueWorld {
+	t.Helper()
+	dbURL := pgtest.NewDatabase(t)
+	pool := openPool(t, dbURL)
+	holdFanouts(t, pool)
+	return newIssueWorldOn(t, dbURL, pool, configure)
+}
+
+// holdFanouts has every notification.fanout job inserted into pool's
+// database wait until releaseFanouts lets it run: a trigger schedules it a
+// day ahead as it is inserted, and River's producer fetches only the jobs
+// that are due. The job is otherwise the app's own, which its subscriber
+// inserts in the write's transaction, its arguments untouched (M7 P1b spec
+// 2.9).
+func holdFanouts(t *testing.T, pool *pgxpool.Pool) {
+	t.Helper()
+	for _, sql := range []string{
+		`CREATE SCHEMA fanout_hold`,
+		`CREATE FUNCTION fanout_hold.later() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN NEW.scheduled_at = clock_timestamp() + interval '1 day'; RETURN NEW; END $$`,
+		fmt.Sprintf(`CREATE TRIGGER hold_fanouts BEFORE INSERT ON river_job FOR EACH ROW WHEN (NEW.kind = '%s') EXECUTE FUNCTION fanout_hold.later()`,
+			notificationriver.FanoutKind),
+	} {
+		if _, err := pool.Exec(pgtest.Soon(t), sql); err != nil {
+			t.Fatal(err)
+		}
+	}
+	t.Cleanup(func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if _, err := pool.Exec(ctx, `DROP TRIGGER hold_fanouts ON river_job; DROP SCHEMA fanout_hold CASCADE`); err != nil {
+			t.Error(err)
+		}
+	})
+}
+
+// releaseFanouts lets every fan-out held so far run (holdFanouts), wakes
+// the app's producer to fetch them (nudgeFanouts), and answers how many it
+// released. A retry River scheduled is not held, and is left to its time.
+func releaseFanouts(t *testing.T, pool *pgxpool.Pool) int {
+	t.Helper()
+	tag, err := pool.Exec(pgtest.Soon(t), `UPDATE river_job SET scheduled_at = clock_timestamp()
+		WHERE kind = $1 AND state = 'available' AND scheduled_at > clock_timestamp() + interval '1 hour'`, notificationriver.FanoutKind)
+	if err != nil {
+		t.Fatal(err)
+	}
+	nudgeFanouts(t, pool)
+	return int(tag.RowsAffected())
 }
