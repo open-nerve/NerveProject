@@ -688,12 +688,12 @@ M2 设计 3.5 的全局顺序和 M3 设计 3.6 的六条约定照旧。M4 的表
   |---|---|---|---|
   | `project.deleted` | 删除项目（`deleteProject` 的事务里，M3 的连带之后） | 项目 | 空 |
   | `workspace.deleted` | 删除工作区（`deleteWorkspace` 的事务里，M3 的连带之后；它的项目不另发 `project.deleted`） | 工作区 | 这次锁住、删除的每个项目一项（`Field = project`，`OldID` 是项目的 id）；更早删除的项目不在其中 |
-  | `issue.created` | 创建、快速添加、发布草稿 | 工作项 | 创建时的各字段（含负责人、标签） |
-  | `issue.updated` | 修改、加子工作项（每个被改的子工作项一个）、只补块 id 之外的描述修改 | 工作项 | 每个改了的字段一项，负责人、标签的增减各一项 |
+  | `issue.created` | 创建、快速添加、发布草稿 | 工作项 | 创建时的各字段（含负责人、标签）；M7/P1a 起另带描述新提及的 `mention`（同上） |
+  | `issue.updated` | 修改、加子工作项（每个被改的子工作项一个）、只补块 id 之外的描述修改 | 工作项 | 每个改了的字段一项，负责人、标签的增减各一项；M7/P1a 起另带描述新提及的 `mention`（同上） |
   | `issue.deleted` | 删除（子树里每个被删除的工作项一个，3.6） | 工作项 | 空 |
   | `issue.archived`、`issue.unarchived` | 手动归档、自动归档（`ActorID` 为空）、恢复 | 工作项 | `archived_at` |
-  | `issue.comment_created`、`issue.comment_updated`、`issue.comment_deleted` | 评论的增改删 | 评论 | `comment_html` |
-  | `issue.link_created`、`issue.link_updated`、`issue.link_deleted` | 链接的增改删 | 链接 | `url`、`title` |
+  | `issue.comment_created`、`issue.comment_updated`、`issue.comment_deleted` | 评论的增改删 | 评论 | `comment_html`；M7/P1a 起另带这一次新提及的 `mention` 与所在工作项 `issue`（[M7 P1a spec](../M7-collaboration/specs/P1a-subscriptions-events.md) §2.2） |
+  | `issue.link_created`、`issue.link_updated`、`issue.link_deleted` | 链接的增改删 | 链接 | `url`、`title`；M7/P1a 起另带所在工作项 `issue`（同上） |
   | `issue.relation_added`、`issue.relation_removed` | 关联的增删（一个关联一个事件，不分正反） | 关联 | `relation_type`、按存储方向的 `issue` 与 `related_issue` 两端 id（P6 spec） |
   | `issue.reaction_added`、`issue.reaction_removed` | 工作项和评论的表情 | 表情 | `reaction`、它所在的工作项或评论 |
 
