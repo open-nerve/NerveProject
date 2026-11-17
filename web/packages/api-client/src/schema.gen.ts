@@ -1339,6 +1339,52 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v0/issues/{issue_id}/subscribe": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A work item's id (IssueDetail.id). */
+                issue_id: components["parameters"]["IssueID"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Subscribe to a work item
+         * @description For the admins, members and guests of its project, as getIssue: the caller subscribes himself to the work item. A work item that does not exist, is deleted, whose project the caller does not see, whose project or workspace is being deleted, or that he did not create as a guest who sees only his own answers issue.not_found, whatever his role may do; one whose project he sees but whose work items he may not read, forbidden; both are answered before any lock. Then, with the work item's row locked, and not its project, the work item and the caller's sight of it and role are decided again. A caller who subscribes already is answered the same, and nothing is written. An archived work item, or one of an archived project, is subscribed to as any other. The subscription is made by the caller at the moment of the request; the work item itself is not changed and has no activity for it. A wait for the work item's row longer than the lock timeout of the writes on work items answers server_busy, with Retry-After: try again then.
+         */
+        post: operations["subscribeIssue"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v0/issues/{issue_id}/unsubscribe": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A work item's id (IssueDetail.id). */
+                issue_id: components["parameters"]["IssueID"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Unsubscribe from a work item
+         * @description For whom subscribeIssue is, with its refusals in its order and its lock: the caller's subscription to the work item is deleted, by him at the moment of the request. A caller who does not subscribe is answered the same, and nothing is written. An archived work item, or one of an archived project, is unsubscribed from as any other; the work item itself is not changed and has no activity for it. A wait for the work item's row longer than the lock timeout of the writes on work items answers server_busy, with Retry-After: try again then.
+         */
+        post: operations["unsubscribeIssue"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v0/issues/{issue_id}/sub-issues": {
         parameters: {
             query?: never;
@@ -6568,6 +6614,50 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["IssueDetail"];
                 };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    subscribeIssue: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A work item's id (IssueDetail.id). */
+                issue_id: components["parameters"]["IssueID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller subscribes to the work item. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    unsubscribeIssue: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A work item's id (IssueDetail.id). */
+                issue_id: components["parameters"]["IssueID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller does not subscribe to the work item. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             default: components["responses"]["Problem"];
         };

@@ -1,6 +1,7 @@
 // Package issue is the work items module (M4 design 3.3, 6.2): it owns the
 // work items' tables and brings creating, reading, by id or by identifier,
-// changing, archiving, unarchiving and deleting a work item, listing the
+// changing, archiving, unarchiving and deleting a work item, subscribing
+// the caller to it and unsubscribing him (M7 P1a spec 2.3), listing the
 // work items under one and putting work items under it, and listing a
 // work item's relations, relating it to others and deleting a relation.
 // Project and workspace deletion events enqueue asynchronous work-item row
@@ -215,6 +216,7 @@ func New(d Deps) *Module {
 	sanitizer := content.NewSanitizer()
 	listing := app.NewListing(app.ListingDeps{Attachments: d.AttachmentCounter, AttachmentCatalog: d.AttachmentCatalog, Rows: store, States: d.Projects, Labels: d.Projects, Assignees: store, Profiles: d.Profiles, Issues: store, Planning: d.Planning})
 	archive := app.ArchiveIssueDeps{Events: d.Events, Locks: locks, Issues: store, States: d.Projects, Clock: d.Clock}
+	subscriptions := app.SubscriptionDeps{Locks: locks, Subscriptions: store, Clock: d.Clock}
 	creation := app.NewIssueCreation(app.IssueCreationDeps{Events: d.Events,
 		Issues: store, Sequences: d.Projects, States: d.Projects, Labels: d.Projects, Members: d.Projects, Planning: d.Planning,
 		Profiles: d.Profiles, Clock: d.Clock, Sanitizer: sanitizer, Attachments: d.AttachmentCounter, ContentBindings: d.ContentBindings,
@@ -263,6 +265,8 @@ func New(d Deps) *Module {
 			DeleteIssue:        app.NewDeleteIssue(app.DeleteIssueDeps{Events: d.Events, Locks: locks, Rows: store, Relations: app.NewRelationDeletions(store, d.Projects), Clock: d.Clock}),
 			ArchiveIssue:       app.NewArchiveIssue(archive),
 			UnarchiveIssue:     app.NewUnarchiveIssue(archive),
+			SubscribeIssue:     app.NewSubscribeIssue(subscriptions),
+			UnsubscribeIssue:   app.NewUnsubscribeIssue(subscriptions),
 			ListSubIssues:      app.NewListSubIssues(locks, store, d.ReadTx),
 			AddSubIssues:       app.NewAddSubIssues(app.AddSubIssuesDeps{Events: d.Events, Locks: locks, Issues: store, Clock: d.Clock}),
 			ListIssueRelations: app.NewListIssueRelations(app.ListIssueRelationsDeps{Locks: locks, Relations: store, Projects: d.Projects, ReadTx: d.ReadTx}),

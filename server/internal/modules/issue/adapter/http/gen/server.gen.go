@@ -1069,9 +1069,15 @@ type ServerInterface interface {
 	// AddSubIssues Put work items under a work item
 	// (POST /api/v0/issues/{issue_id}/sub-issues)
 	AddSubIssues(w http.ResponseWriter, r *http.Request, issueID IssueID)
+	// SubscribeIssue Subscribe to a work item
+	// (POST /api/v0/issues/{issue_id}/subscribe)
+	SubscribeIssue(w http.ResponseWriter, r *http.Request, issueID IssueID)
 	// UnarchiveIssue Unarchive a work item
 	// (POST /api/v0/issues/{issue_id}/unarchive)
 	UnarchiveIssue(w http.ResponseWriter, r *http.Request, issueID IssueID)
+	// UnsubscribeIssue Unsubscribe from a work item
+	// (POST /api/v0/issues/{issue_id}/unsubscribe)
+	UnsubscribeIssue(w http.ResponseWriter, r *http.Request, issueID IssueID)
 	// ListIssues List a project's work items
 	// (GET /api/v0/projects/{project_id}/issues)
 	ListIssues(w http.ResponseWriter, r *http.Request, projectID ProjectID, params ListIssuesParams)
@@ -2128,6 +2134,32 @@ func (siw *ServerInterfaceWrapper) AddSubIssues(w http.ResponseWriter, r *http.R
 	handler.ServeHTTP(w, r)
 }
 
+// SubscribeIssue operation middleware
+func (siw *ServerInterfaceWrapper) SubscribeIssue(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "issue_id" -------------
+	var issueID IssueID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "issue_id", r.PathValue("issue_id"), &issueID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "issue_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SubscribeIssue(w, r, issueID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // UnarchiveIssue operation middleware
 func (siw *ServerInterfaceWrapper) UnarchiveIssue(w http.ResponseWriter, r *http.Request) {
 
@@ -2145,6 +2177,32 @@ func (siw *ServerInterfaceWrapper) UnarchiveIssue(w http.ResponseWriter, r *http
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UnarchiveIssue(w, r, issueID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UnsubscribeIssue operation middleware
+func (siw *ServerInterfaceWrapper) UnsubscribeIssue(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "issue_id" -------------
+	var issueID IssueID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "issue_id", r.PathValue("issue_id"), &issueID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "issue_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UnsubscribeIssue(w, r, issueID)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -3063,6 +3121,8 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/issues/{issue_id}", wrapper.UpdateIssue)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/issues/{issue_id}/archive", wrapper.ArchiveIssue)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/issues/{issue_id}/unarchive", wrapper.UnarchiveIssue)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/issues/{issue_id}/subscribe", wrapper.SubscribeIssue)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/issues/{issue_id}/unsubscribe", wrapper.UnsubscribeIssue)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/issues/{issue_id}/sub-issues", wrapper.ListSubIssues)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/issues/{issue_id}/sub-issues", wrapper.AddSubIssues)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/issues/{issue_id}/relations", wrapper.ListIssueRelations)
@@ -4547,6 +4607,46 @@ func (response AddSubIssuesdefaultApplicationProblemPlusJSONResponse) VisitAddSu
 	return err
 }
 
+type SubscribeIssueRequestObject struct {
+	IssueID IssueID `json:"issue_id"`
+}
+
+type SubscribeIssueResponseObject interface {
+	VisitSubscribeIssueResponse(w http.ResponseWriter) error
+}
+
+type SubscribeIssue204Response struct {
+}
+
+func (response SubscribeIssue204Response) VisitSubscribeIssueResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type SubscribeIssuedefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response SubscribeIssuedefaultApplicationProblemPlusJSONResponse) VisitSubscribeIssueResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type UnarchiveIssueRequestObject struct {
 	IssueID IssueID `json:"issue_id"`
 }
@@ -4576,6 +4676,46 @@ type UnarchiveIssuedefaultApplicationProblemPlusJSONResponse struct {
 }
 
 func (response UnarchiveIssuedefaultApplicationProblemPlusJSONResponse) VisitUnarchiveIssueResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UnsubscribeIssueRequestObject struct {
+	IssueID IssueID `json:"issue_id"`
+}
+
+type UnsubscribeIssueResponseObject interface {
+	VisitUnsubscribeIssueResponse(w http.ResponseWriter) error
+}
+
+type UnsubscribeIssue204Response struct {
+}
+
+func (response UnsubscribeIssue204Response) VisitUnsubscribeIssueResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type UnsubscribeIssuedefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response UnsubscribeIssuedefaultApplicationProblemPlusJSONResponse) VisitUnsubscribeIssueResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -5021,9 +5161,15 @@ type StrictServerInterface interface {
 	// AddSubIssues Put work items under a work item
 	// (POST /api/v0/issues/{issue_id}/sub-issues)
 	AddSubIssues(ctx context.Context, request AddSubIssuesRequestObject) (AddSubIssuesResponseObject, error)
+	// SubscribeIssue Subscribe to a work item
+	// (POST /api/v0/issues/{issue_id}/subscribe)
+	SubscribeIssue(ctx context.Context, request SubscribeIssueRequestObject) (SubscribeIssueResponseObject, error)
 	// UnarchiveIssue Unarchive a work item
 	// (POST /api/v0/issues/{issue_id}/unarchive)
 	UnarchiveIssue(ctx context.Context, request UnarchiveIssueRequestObject) (UnarchiveIssueResponseObject, error)
+	// UnsubscribeIssue Unsubscribe from a work item
+	// (POST /api/v0/issues/{issue_id}/unsubscribe)
+	UnsubscribeIssue(ctx context.Context, request UnsubscribeIssueRequestObject) (UnsubscribeIssueResponseObject, error)
 	// ListIssues List a project's work items
 	// (GET /api/v0/projects/{project_id}/issues)
 	ListIssues(ctx context.Context, request ListIssuesRequestObject) (ListIssuesResponseObject, error)
@@ -5996,6 +6142,32 @@ func (sh *strictHandler) AddSubIssues(w http.ResponseWriter, r *http.Request, is
 	}
 }
 
+// SubscribeIssue operation middleware
+func (sh *strictHandler) SubscribeIssue(w http.ResponseWriter, r *http.Request, issueID IssueID) {
+	var request SubscribeIssueRequestObject
+
+	request.IssueID = issueID
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SubscribeIssue(ctx, request.(SubscribeIssueRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SubscribeIssue")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SubscribeIssueResponseObject); ok {
+		if err := validResponse.VisitSubscribeIssueResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // UnarchiveIssue operation middleware
 func (sh *strictHandler) UnarchiveIssue(w http.ResponseWriter, r *http.Request, issueID IssueID) {
 	var request UnarchiveIssueRequestObject
@@ -6015,6 +6187,32 @@ func (sh *strictHandler) UnarchiveIssue(w http.ResponseWriter, r *http.Request, 
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(UnarchiveIssueResponseObject); ok {
 		if err := validResponse.VisitUnarchiveIssueResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UnsubscribeIssue operation middleware
+func (sh *strictHandler) UnsubscribeIssue(w http.ResponseWriter, r *http.Request, issueID IssueID) {
+	var request UnsubscribeIssueRequestObject
+
+	request.IssueID = issueID
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UnsubscribeIssue(ctx, request.(UnsubscribeIssueRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UnsubscribeIssue")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UnsubscribeIssueResponseObject); ok {
+		if err := validResponse.VisitUnsubscribeIssueResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
