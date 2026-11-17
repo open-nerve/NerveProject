@@ -37,9 +37,20 @@ type EventPublisher interface {
 	Publish(context.Context, Event) error
 }
 
-// EventSubscriber is a named handler for declared event types.
+// EventBatchPublisher delivers the events of one publication synchronously in
+// the caller's context, as publishing each in turn would to independent
+// subscribers, a subscriber that takes them all at once with one call (M7 P1b
+// spec R12).
+type EventBatchPublisher interface {
+	PublishAll(context.Context, []Event) error
+}
+
+// EventSubscriber is a named handler for declared event types, with exactly
+// one of Handle, which takes a publication's events one at a time, and
+// HandleAll, which takes them at once, in their order.
 type EventSubscriber struct {
-	Name   string
-	Types  []string
-	Handle func(context.Context, Event) error
+	Name      string
+	Types     []string
+	Handle    func(context.Context, Event) error
+	HandleAll func(context.Context, []Event) error
 }

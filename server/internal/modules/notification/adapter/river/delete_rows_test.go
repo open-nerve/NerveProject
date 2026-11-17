@@ -98,6 +98,10 @@ func (f insertCall) InsertTx(ctx context.Context, args river.JobArgs, opts *rive
 	return f(ctx, args, opts)
 }
 
+func (f insertCall) InsertManyTx(context.Context, []river.InsertManyParams) error {
+	return errors.New("a deletion inserted its job with others")
+}
+
 // The job carries the project and the deletion's moment and actor, on the default queue with River's default
 // attempts, inserted in the caller's context (its transaction).
 func TestRowDeletionsEnqueue(t *testing.T) {

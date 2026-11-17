@@ -174,7 +174,7 @@ func turnAutoArchive(t *testing.T, pool *pgxpool.Pool, project uuid.UUID, months
 
 // archivePublishers are the app's publisher over pool, its subscribers as
 // newApp registers them, and the same without the notification module's.
-func archivePublishers(t *testing.T, pool *pgxpool.Pool) (without, with shared.EventPublisher) {
+func archivePublishers(t *testing.T, pool *pgxpool.Pool) (without, with shared.EventBatchPublisher) {
 	t.Helper()
 	client, err := jobs.NewInserter(pool)
 	if err != nil {

@@ -54,11 +54,12 @@ type RowDeletions interface {
 	Enqueue(ctx context.Context, projectID uuid.UUID, at time.Time, by uuid.UUID) error
 }
 
-// Fanouts enqueue the fan-out of an event's notifications in the publishing
-// transaction, ctx's (spec 2.9): the job carries e as it is handed over, and
-// rebuilds it to run the fan-out.
+// Fanouts enqueue the fan-outs of events' notifications in the publishing
+// transaction, ctx's, all at once (spec 2.9, R12): a job for each event, in
+// their order, which carries it as it is handed over and rebuilds it to run
+// the fan-out; none for none.
 type Fanouts interface {
-	Enqueue(ctx context.Context, e shared.Event) error
+	Enqueue(ctx context.Context, events []shared.Event) error
 }
 
 // IssueRowLock locks a work item's row, the fan-out's one lock (spec 2.6,

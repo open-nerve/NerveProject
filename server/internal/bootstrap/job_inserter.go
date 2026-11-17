@@ -37,3 +37,11 @@ func (i jobInserter) InsertTx(ctx context.Context, args river.JobArgs, opts *riv
 	}
 	return i.client.InsertTx(ctx, tx, args, opts)
 }
+
+func (i jobInserter) InsertManyTx(ctx context.Context, params []river.InsertManyParams) error {
+	tx, ok := postgres.Tx(ctx)
+	if !ok {
+		return errInserterRequiresTransaction
+	}
+	return i.client.InsertManyTx(ctx, tx, params)
+}

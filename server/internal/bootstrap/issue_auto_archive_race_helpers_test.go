@@ -48,7 +48,7 @@ func (p archiveHeldPolicies) ArchiveProjects(ctx context.Context) ([]uuid.UUID, 
 	return ids, err
 }
 
-func archiveRaceJob(w issueWorld, c issueapp.Clock, e shared.EventPublisher, scanned, locked *gate) *issueapp.AutoArchive {
+func archiveRaceJob(w issueWorld, c issueapp.Clock, e shared.EventBatchPublisher, scanned, locked *gate) *issueapp.AutoArchive {
 	return archiveRaceJobOn(w, archiveJobTx(w), c, e, scanned, locked)
 }
 
@@ -59,7 +59,7 @@ func archiveJobTx(w issueWorld) shared.TxManager {
 }
 
 // archiveRaceJobOn is archiveRaceJob in transactions of tx.
-func archiveRaceJobOn(w issueWorld, tx shared.TxManager, c issueapp.Clock, e shared.EventPublisher, scanned, locked *gate) *issueapp.AutoArchive {
+func archiveRaceJobOn(w issueWorld, tx shared.TxManager, c issueapp.Clock, e shared.EventBatchPublisher, scanned, locked *gate) *issueapp.AutoArchive {
 	p := project.Provide(w.pool, nil)
 	var policies issueapp.ArchivePolicies = p.ArchivePolicies
 	var states issueapp.StateCatalog = issueProjects{projects: p.IssueProjects}
@@ -77,7 +77,7 @@ func archiveRaceJobOn(w issueWorld, tx shared.TxManager, c issueapp.Clock, e sha
 type archiveRaceEvents struct {
 	mu        sync.Mutex
 	events    []shared.Event
-	publisher shared.EventPublisher
+	publisher *dispatcher
 }
 
 func newArchiveRaceEvents(t *testing.T, w issueWorld) *archiveRaceEvents {
@@ -103,6 +103,11 @@ func (e *archiveRaceEvents) Publish(ctx context.Context, event shared.Event) err
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	return e.publisher.Publish(ctx, event)
+}
+func (e *archiveRaceEvents) PublishAll(ctx context.Context, events []shared.Event) error {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	return e.publisher.PublishAll(ctx, events)
 }
 func (e *archiveRaceEvents) snapshot() []shared.Event {
 	e.mu.Lock()

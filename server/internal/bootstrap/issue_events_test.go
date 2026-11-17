@@ -11,3 +11,5 @@ import (
 type discardIssueEvents struct{}
 
 func (discardIssueEvents) Publish(context.Context, shared.Event) error { return nil }
+
+func (discardIssueEvents) PublishAll(context.Context, []shared.Event) error { return nil }

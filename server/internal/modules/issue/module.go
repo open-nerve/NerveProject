@@ -157,7 +157,11 @@ type Deps struct {
 	LinkCrawler app.LinkCrawler
 	Logger      *slog.Logger
 	Events      shared.EventPublisher
-	Pool        *pgxpool.Pool
+	// ArchiveEvents publishes each project's round of the automatic
+	// archival's events at once (M7 P1b spec R12): the app's dispatcher,
+	// which Events also is.
+	ArchiveEvents shared.EventBatchPublisher
+	Pool          *pgxpool.Pool
 	// Tx are the transactions of the module's writes, each of which waits
 	// for a lock at most issue.write_lock_timeout (bootstrap/gate.go).
 	Tx shared.TxManager
@@ -227,7 +231,7 @@ func New(d Deps) *Module {
 	return &Module{
 		assets: assetAccess, deleteRows: app.NewDeleteRows(app.DeleteRowsDeps{Rows: store, Relations: app.NewRelationDeletions(store, d.Projects), Remaining: store, Tx: d.JobTx, RuntimeNow: d.RuntimeNow, Batch: d.DeleteBatch, Budget: d.DeleteBudget}), deleteBudget: d.DeleteBudget, logger: d.Logger,
 		trimVersions: app.NewTrimVersions(app.TrimVersionsDeps{Projects: d.Projects, Gate: d.Projects, Rows: store, Tx: d.JobTx}), trimVersionsInterval: d.TrimVersionsInterval,
-		crawlLink: app.NewCrawlLink(app.CrawlLinkDeps{Crawler: d.LinkCrawler, Links: store}), autoArchive: app.NewAutoArchive(app.AutoArchiveDeps{Policies: d.ArchivePolicies, Projects: d.Projects, States: d.Projects, Planning: d.Planning, Issues: store, Tx: d.JobTx, Clock: d.Clock, Events: d.Events}), autoArchiveInterval: d.AutoArchiveInterval,
+		crawlLink: app.NewCrawlLink(app.CrawlLinkDeps{Crawler: d.LinkCrawler, Links: store}), autoArchive: app.NewAutoArchive(app.AutoArchiveDeps{Policies: d.ArchivePolicies, Projects: d.Projects, States: d.Projects, Planning: d.Planning, Issues: store, Tx: d.JobTx, Clock: d.Clock, Events: d.ArchiveEvents}), autoArchiveInterval: d.AutoArchiveInterval,
 		uc: httpadapter.UseCases{
 			GetIssueAttachments:     app.NewGetAttachments("issue", attachments),
 			GetCommentAttachments:   app.NewGetAttachments("comment", attachments),

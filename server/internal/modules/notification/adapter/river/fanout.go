@@ -79,16 +79,25 @@ func (a FanoutArgs) event() shared.Event {
 		ActorID: a.ActorID, Entity: shared.EntityRef{Kind: a.EntityKind, ID: a.EntityID}, Changes: changes}
 }
 
-// Fanouts adapt the subscriber's enqueueing to a transactional River insert
-// (app.Fanouts).
+// Fanouts adapt the subscriber's enqueueing to one transactional River insert
+// of all its jobs (app.Fanouts, M7 P1b spec R12).
 type Fanouts struct{ inserter Inserter }
 
 func NewFanouts(i Inserter) *Fanouts { return &Fanouts{inserter: i} }
 
-func (f *Fanouts) Enqueue(ctx context.Context, e shared.Event) error {
-	args := fanoutArgs(e)
-	opts := args.InsertOpts()
-	return f.inserter.InsertTx(ctx, args, &opts)
+// Enqueue inserts a job for each event, in their order, at once; none for
+// none, which River's batch insert would refuse.
+func (f *Fanouts) Enqueue(ctx context.Context, events []shared.Event) error {
+	if len(events) == 0 {
+		return nil
+	}
+	params := make([]river.InsertManyParams, len(events))
+	for n, e := range events {
+		args := fanoutArgs(e)
+		opts := args.InsertOpts()
+		params[n] = river.InsertManyParams{Args: args, InsertOpts: &opts}
+	}
+	return f.inserter.InsertManyTx(ctx, params)
 }
 
 // FanoutUseCase keeps River out of the application layer.

@@ -225,14 +225,16 @@ func TestWorkItemWritesNotifyThroughTheApp(t *testing.T) {
 	}
 	w.send(t, "alice", http.MethodPost, "/api/v0/issues/"+archived.ID.String()+"/archive", "", http.StatusOK)
 	w.send(t, "alice", http.MethodPost, "/api/v0/issues/"+archived.ID.String()+"/unarchive", "", http.StatusOK)
-	// nerve's own archiving (M4's autoArchiveOn, with the app's subscribers), 20 days ahead: auto, done 40 days before,
-	// is the one work item due then; on the real clock, which the app's start-time run reads, it is not due.
+	// nerve's own archiving (M4's autoArchiveOn, with the app's subscribers, archivePublishers' with), 20 days ahead:
+	// auto, done 40 days before, is the one work item due then; on the real clock, which the app's start-time run
+	// reads, it is not due.
 	at := time.Now().Add(20 * 24 * time.Hour).UTC().Truncate(time.Microsecond)
 	if _, err := w.pool.Exec(pgtest.Soon(t), "UPDATE issues SET updated_at = $2 WHERE id = $1", auto.ID, at.Add(-40*24*time.Hour)); err != nil {
 		t.Fatal(err)
 	}
 	w.send(t, "alice", http.MethodPatch, "/api/v0/projects/"+w.web.String(), `{"archive_in":1}`, http.StatusOK)
-	if n, err := autoArchiveOn(w, clocktest.At(at), projectDeletionPublisher(t, w.pool)).Execute(pgtest.Soon(t)); err != nil || n != 1 {
+	_, notifying := archivePublishers(t, w.pool)
+	if n, err := autoArchiveOn(w, clocktest.At(at), notifying).Execute(pgtest.Soon(t)); err != nil || n != 1 {
 		t.Fatalf("nerve's archiving = %d, %v; want auto alone", n, err)
 	}
 	waitForFanouts(t, w.pool)

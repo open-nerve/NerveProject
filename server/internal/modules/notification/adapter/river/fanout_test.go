@@ -30,50 +30,78 @@ func fanoutEvent() shared.Event {
 			{Field: "issue", NewID: &item}}}
 }
 
-type insertCalls func(context.Context, river.JobArgs, *river.InsertOpts) error
+// insertManyCalls is an Inserter that answers InsertManyTx with itself; a
+// fan-out never inserts a job alone.
+type insertManyCalls func(context.Context, []river.InsertManyParams) error
 
-func (f insertCalls) InsertTx(ctx context.Context, args river.JobArgs, opts *river.InsertOpts) error {
-	return f(ctx, args, opts)
+func (f insertManyCalls) InsertTx(context.Context, river.JobArgs, *river.InsertOpts) error {
+	return errors.New("a fan-out inserted a job alone")
 }
 
-// The job carries the event as the subscriber hands it over, in the caller's context (its transaction), on the
-// default queue with five attempts: its id, type, moment, workspace, project, actor, entity and every change in order,
-// a nil value or id left out, so "" stays apart from none.
-func TestFanoutsEnqueueTheEvent(t *testing.T) {
+func (f insertManyCalls) InsertManyTx(ctx context.Context, params []river.InsertManyParams) error {
+	return f(ctx, params)
+}
+
+// fanoutPayload is the JSON fanoutEvent's e is carried as: its id, type, moment, workspace, project, actor, entity and
+// every change in order, a nil value or id left out, so "" stays apart from none.
+func fanoutPayload(e shared.Event) map[string]any {
+	var actor any
+	if e.ActorID != nil {
+		actor = e.ActorID.String()
+	}
+	return map[string]any{"event_id": e.ID.String(), "type": e.Type, "occurred_at": "2026-11-17T09:30:00.123456789Z",
+		"workspace_id": e.WorkspaceID.String(), "project_id": e.ProjectID.String(), "actor_id": actor,
+		"entity_kind": "issue_comment", "entity_id": e.Entity.ID.String(), "changes": []any{
+			map[string]any{"field": "comment_html"},
+			map[string]any{"field": "mention", "new_id": e.Changes[1].NewID.String()},
+			map[string]any{"field": "reply", "old": "", "new": "x"},
+			map[string]any{"field": "issue", "new_id": e.Changes[3].NewID.String()}}}
+}
+
+// The events are enqueued at once, with one InsertManyTx in the caller's context (its transaction, M7 P1b spec R12),
+// a job each, in their order, each carrying its event as the subscriber hands it over, on the default queue with five
+// attempts, as each was alone before; nerve's own event, without an actor, too. None are enqueued with no insert,
+// and the insert's failure is the enqueueing's.
+func TestFanoutsEnqueueTheEventsAtOnce(t *testing.T) {
 	ctx := t.Context()
-	e := fanoutEvent()
+	nerve := fanoutEvent()
+	nerve.ActorID = nil
+	events := []shared.Event{fanoutEvent(), nerve, fanoutEvent()}
 	failure := errors.New("insert failed")
 	calls := 0
-	q := NewFanouts(insertCalls(func(got context.Context, args river.JobArgs, opts *river.InsertOpts) error {
+	q := NewFanouts(insertManyCalls(func(got context.Context, params []river.InsertManyParams) error {
 		calls++
-		if got != ctx || args.Kind() != "notification.fanout" {
-			t.Fatal("context/kind")
+		if got != ctx || len(params) != len(events) {
+			t.Fatalf("context replaced or %d jobs for %d events", len(params), len(events))
 		}
-		if opts == nil || !reflect.DeepEqual(*opts, river.InsertOpts{Queue: "default", MaxAttempts: 5}) {
-			t.Fatalf("opts=%+v", opts)
-		}
-		raw, err := json.Marshal(args)
-		if err != nil {
-			t.Fatal(err)
-		}
-		var payload map[string]any
-		if err := json.Unmarshal(raw, &payload); err != nil {
-			t.Fatal(err)
-		}
-		want := map[string]any{"event_id": e.ID.String(), "type": e.Type, "occurred_at": "2026-11-17T09:30:00.123456789Z",
-			"workspace_id": e.WorkspaceID.String(), "project_id": e.ProjectID.String(), "actor_id": e.ActorID.String(),
-			"entity_kind": "issue_comment", "entity_id": e.Entity.ID.String(), "changes": []any{
-				map[string]any{"field": "comment_html"},
-				map[string]any{"field": "mention", "new_id": e.Changes[1].NewID.String()},
-				map[string]any{"field": "reply", "old": "", "new": "x"},
-				map[string]any{"field": "issue", "new_id": e.Changes[3].NewID.String()}}}
-		if !reflect.DeepEqual(payload, want) {
-			t.Fatalf("payload=%v\nwant     %v", payload, want)
+		for n, p := range params {
+			if p.Args.Kind() != "notification.fanout" {
+				t.Fatalf("job %d kind %s", n, p.Args.Kind())
+			}
+			if p.InsertOpts == nil || !reflect.DeepEqual(*p.InsertOpts, river.InsertOpts{Queue: "default", MaxAttempts: 5}) {
+				t.Fatalf("job %d opts=%+v", n, p.InsertOpts)
+			}
+			raw, err := json.Marshal(p.Args)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var payload map[string]any
+			if err := json.Unmarshal(raw, &payload); err != nil {
+				t.Fatal(err)
+			}
+			if want := fanoutPayload(events[n]); !reflect.DeepEqual(payload, want) {
+				t.Fatalf("job %d payload=%v\nwant     %v", n, payload, want)
+			}
 		}
 		return failure
 	}))
-	if err := q.Enqueue(ctx, e); !errors.Is(err, failure) || calls != 1 {
+	if err := q.Enqueue(ctx, events); !errors.Is(err, failure) || calls != 1 {
 		t.Fatalf("Enqueue=%v calls=%d; want the inserter's failure once", err, calls)
+	}
+	for _, none := range [][]shared.Event{nil, {}} {
+		if err := q.Enqueue(ctx, none); err != nil || calls != 1 {
+			t.Fatalf("Enqueue of none = %v after %d calls; want no insert", err, calls)
+		}
 	}
 }
 
@@ -101,10 +129,10 @@ func TestFanoutWorkerRunsTheRebuiltEvent(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			var raw []byte
-			if err := NewFanouts(insertCalls(func(_ context.Context, args river.JobArgs, _ *river.InsertOpts) (err error) {
-				raw, err = json.Marshal(args)
+			if err := NewFanouts(insertManyCalls(func(_ context.Context, params []river.InsertManyParams) (err error) {
+				raw, err = json.Marshal(params[0].Args)
 				return err
-			})).Enqueue(t.Context(), tt.event); err != nil {
+			})).Enqueue(t.Context(), []shared.Event{tt.event}); err != nil {
 				t.Fatal(err)
 			}
 			var args FanoutArgs

@@ -93,6 +93,7 @@ func TestDispatcherRejectsInvalidRegistration(t *testing.T) {
 		{"empty name", []string{"known"}, []shared.EventSubscriber{{Types: []string{"known"}, Handle: handle}}},
 		{"blank name", []string{"known"}, []shared.EventSubscriber{{Name: " \t", Types: []string{"known"}, Handle: handle}}},
 		{"nil handle", []string{"known"}, []shared.EventSubscriber{{Name: "nil", Types: []string{"known"}}}},
+		{"both handlers", []string{"known"}, []shared.EventSubscriber{{Name: "both", Types: []string{"known"}, Handle: handle, HandleAll: func(context.Context, []shared.Event) error { return nil }}}},
 		{"duplicate subscription", []string{"known"}, []shared.EventSubscriber{{Name: "duplicate", Types: []string{"known", "known"}, Handle: handle}}},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
