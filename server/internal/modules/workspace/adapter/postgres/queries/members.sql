@@ -53,6 +53,17 @@ JOIN workspaces w ON w.id = m.workspace_id
 WHERE m.workspace_id = sqlc.arg(workspace_id) AND m.member_id = sqlc.arg(user_id)
   AND m.is_active AND m.deleted_at IS NULL AND w.deleted_at IS NULL;
 
+-- name: ActiveRoles :many
+-- ActiveRole of each of the accounts ids at once, access's DecideMany (M7 P1b spec 2.7): the roles of those whose
+-- membership is active, its row not deleted and the workspace not deleted, in member order. The partial unique index
+-- holds at most one undeleted row per pair, so an account is answered once.
+SELECT m.member_id, m.role
+FROM workspace_members m
+JOIN workspaces w ON w.id = m.workspace_id
+WHERE m.workspace_id = sqlc.arg(workspace_id) AND m.member_id = ANY (sqlc.arg(ids)::uuid[])
+  AND m.is_active AND m.deleted_at IS NULL AND w.deleted_at IS NULL
+ORDER BY m.member_id;
+
 -- name: EndMember :execrows
 -- removeWorkspaceMember and leaveWorkspace, under the workspace's FOR NO KEY UPDATE (M3 design 3.6): the user's active
 -- membership of the workspace ends, the row stays (4.3). The partial unique index holds at most one undeleted row per

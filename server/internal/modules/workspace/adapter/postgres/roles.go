@@ -26,3 +26,19 @@ func (s *Store) ActiveRole(ctx context.Context, workspaceID, userID uuid.UUID) (
 	}
 	return shared.Role(role), true, nil
 }
+
+// ActiveRoles is ActiveRole for each of ids at once, access's
+// WorkspaceRolesMany (M7 P1b spec 2.7): the roles of those whose membership
+// of workspaceID is active, by account; one without is not in it. It reads
+// in the transaction ctx carries.
+func (s *Store) ActiveRoles(ctx context.Context, workspaceID uuid.UUID, ids []uuid.UUID) (map[uuid.UUID]shared.Role, error) {
+	rows, err := s.queries(ctx).ActiveRoles(ctx, gen.ActiveRolesParams{WorkspaceID: workspaceID, Ids: ids})
+	if err != nil {
+		return nil, fmt.Errorf("read the workspace roles of %d accounts: %w", len(ids), err)
+	}
+	roles := make(map[uuid.UUID]shared.Role, len(rows))
+	for _, r := range rows {
+		roles[r.MemberID] = shared.Role(r.Role)
+	}
+	return roles, nil
+}

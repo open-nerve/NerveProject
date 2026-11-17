@@ -84,6 +84,17 @@ func (a accessProjects) ProjectFacts(ctx context.Context, projectID, userID uuid
 	return access.ProjectFacts(f), found, err
 }
 
+// accessProjectsMany is project's ProjectAccessMany as access's port: the
+// same read, the facts converted, the roles as they come.
+type accessProjectsMany struct {
+	projects project.ProjectAccessMany
+}
+
+func (a accessProjectsMany) ProjectFactsMany(ctx context.Context, projectID uuid.UUID, ids []uuid.UUID) (access.ProjectFactsMany, bool, error) {
+	f, found, err := a.projects.ProjectFactsMany(ctx, projectID, ids)
+	return access.ProjectFactsMany(f), found, err
+}
+
 // planningProjects is project's PlanningProjects as planning's Projects:
 // the same reads and locks, the facts converted, the roles as they come,
 // the states' groups by state.

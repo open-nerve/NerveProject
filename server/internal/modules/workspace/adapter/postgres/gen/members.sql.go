@@ -34,6 +34,48 @@ func (q *Queries) ActiveRole(ctx context.Context, arg ActiveRoleParams) (int16, 
 	return role, err
 }
 
+const activeRoles = `-- name: ActiveRoles :many
+SELECT m.member_id, m.role
+FROM workspace_members m
+JOIN workspaces w ON w.id = m.workspace_id
+WHERE m.workspace_id = $1 AND m.member_id = ANY ($2::uuid[])
+  AND m.is_active AND m.deleted_at IS NULL AND w.deleted_at IS NULL
+ORDER BY m.member_id
+`
+
+type ActiveRolesParams struct {
+	WorkspaceID uuid.UUID
+	Ids         []uuid.UUID
+}
+
+type ActiveRolesRow struct {
+	MemberID uuid.UUID
+	Role     int16
+}
+
+// ActiveRole of each of the accounts ids at once, access's DecideMany (M7 P1b spec 2.7): the roles of those whose
+// membership is active, its row not deleted and the workspace not deleted, in member order. The partial unique index
+// holds at most one undeleted row per pair, so an account is answered once.
+func (q *Queries) ActiveRoles(ctx context.Context, arg ActiveRolesParams) ([]ActiveRolesRow, error) {
+	rows, err := q.db.Query(ctx, activeRoles, arg.WorkspaceID, arg.Ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ActiveRolesRow
+	for rows.Next() {
+		var i ActiveRolesRow
+		if err := rows.Scan(&i.MemberID, &i.Role); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const createMember = `-- name: CreateMember :exec
 INSERT INTO workspace_members (id, workspace_id, member_id, role, created_by_id, updated_by_id, created_at, updated_at)
 VALUES ($1, $2, $3, $4,
