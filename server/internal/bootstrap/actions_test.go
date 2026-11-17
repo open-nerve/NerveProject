@@ -42,6 +42,8 @@ var actionlessModules = []string{
 	// authorization to workspace/project/issue facades, and lock the caller's
 	// credential before signing a capability. Raw transfers use their signatures.
 	"asset",
+	// No endpoint yet: nerve's jobs alone write it (M7 P1b spec R2); P1c adds its actions.
+	"notification",
 }
 
 // moduleViolations reports where the module directories and the two lists

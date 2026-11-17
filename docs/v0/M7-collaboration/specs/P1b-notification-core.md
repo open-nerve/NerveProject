@@ -34,7 +34,7 @@ P1b 不做：任何通知的接口与读（P1c）；网页（P4）。模块在 P
 
 - `id`；`workspace_id NOT NULL REFERENCES workspaces ON DELETE CASCADE`；`project_id NOT NULL REFERENCES projects ON DELETE CASCADE`；`receiver_id NOT NULL REFERENCES users ON DELETE CASCADE`；`triggered_by_id REFERENCES users ON DELETE SET NULL`（空 = nerve 自己）。
 - `issue_id NOT NULL`、`issue_created_by_id`（都不是外键）；`sender NOT NULL`（CHECK：`created`、`assigned`、`subscribed`、`mentioned`）；`data jsonb NOT NULL`（CHECK：顶层恰为 `issue`、`change` 两个对象，§2.5）；`event_id NOT NULL`、`change_seq smallint NOT NULL CHECK (change_seq >= -1)`。
-- `read_at`、`archived_at`、`snoozed_till`、`created_at NOT NULL`、`updated_at NOT NULL`、`deleted_at`。审计的 `created_by_id`、`updated_by_id` 不建：行由 nerve 写，之后只有收件人自己改。
+- `read_at`、`archived_at`、`snoozed_till`、`created_at NOT NULL`、`updated_at NOT NULL`、`deleted_at`；审计列 `created_by_id`、`updated_by_id`（`REFERENCES users ON DELETE SET NULL`，设计 §4.2 五张新表都带）。nerve 写的行两者为空；软删时 `deleted_at`、`updated_at` 取事件的时刻，`updated_by_id` 取删除者（自动的删除为空），与别的表一样受删除守卫检查；P1c 里收件人的修改写 `updated_by_id`。
 
 索引：部分唯一 `(event_id, change_seq, receiver_id) WHERE deleted_at IS NULL`（任务重试幂等）；`(receiver_id, workspace_id, created_at DESC, id DESC) WHERE deleted_at IS NULL`（列表）；`(receiver_id, workspace_id) WHERE deleted_at IS NULL AND read_at IS NULL AND archived_at IS NULL`（未读数）；`(workspace_id, issue_id) WHERE deleted_at IS NULL`（工作项删除）；三条外键各一个不带条件的索引；`notifications_deleted_at_idx (deleted_at) WHERE deleted_at IS NOT NULL`（清理）。
 

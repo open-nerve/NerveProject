@@ -17,10 +17,11 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
-// Independent observation directory: all fifteen issue tables, the six
-// planning tables, then the project tables with rows in this fixture. It does
-// not read Module.Tables.
+// Independent observation directory: the notifications, all fifteen issue
+// tables, the six planning tables, then the project tables with rows in this
+// fixture. It does not read Module.Tables.
 var purgeScaleTables = []string{
+	"notifications",
 	"comment_reactions", "issue_reactions", "issue_mentions", "issue_description_versions",
 	"issue_activities", "issue_comments", "issue_links", "issue_relations", "issue_assignees",
 	"issue_labels", "issue_subscribers", "draft_issues", "module_issues", "cycle_issues", "issues",
@@ -141,6 +142,7 @@ func seedPurgeSparseRows(t *testing.T, w issueWorld, project uuid.UUID, ids []uu
 	seedCycles(t, w.pool, project, w.ids["alice"])
 	seedModules(t, w.pool, project, w.ids["alice"])
 	seedMemberships(t, w.pool, ids[0], w.ids["alice"])
+	seedNotification(t, w.pool, ids[0], w.ids["bob"])
 }
 
 func checkPurgeScaleSeed(t *testing.T, w issueWorld, dir string) {
