@@ -36,12 +36,12 @@ type recheckCase struct {
 // ShareIssue behind it (the statement probe), when the changes are made through the API; the transaction then lets
 // go. On alice's work item of Web, a public project: bob, removed from Web, sees Web as acme's member and may not read
 // it (Forbidden); walt, whose membership of acme ended, sees nothing of acme; olga, made Web's guest, sees only the
-// work items she created; wanda, acme's admin made Web's guest, too: issue.read allows a project guest
-// (access/domain/rules.go:140), and the guest rule is the project role's alone, the workspace's admin included
-// (access/domain/decide.go:86-89), so she may read Web's work items, hers only (OwnOnly), and is sent nothing of
-// alice's. keith, Web's member still, is sent his mention. On wanda's work item of Ops, a private project: bob,
-// removed from Ops, sees nothing of it; wanda, made Ops' guest, is sent hers, the work item being one she created
-// (HiddenFrom over the snapshot's creator); keith is sent his.
+// work items she created; wanda, acme's admin made Web's guest, too: the access rule of issue.read allows a project
+// guest, and the guest rule is the project role's alone, the workspace's admin included (OwnOnly, as decideProject
+// sets it), so she may read Web's work items, hers only, and is sent nothing of alice's. keith, Web's member still, is
+// sent his mention. On wanda's work item of Ops, a private project: bob, removed from Ops, sees nothing of it; wanda,
+// made Ops' guest, is sent hers, the work item being one she created (the issue module's HiddenFrom over the creator
+// the work item's columns name); keith is sent his.
 func TestTheFanoutDecidesItsReceiversWhenItRuns(t *testing.T) {
 	w := newHeldFanoutWorld(t, func(*config.Config) {})
 	w.tokens["keith"] = registerAccount(t, w.contract, w.base, "keith@example.com").AccessToken
