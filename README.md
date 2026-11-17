@@ -128,13 +128,15 @@ M4列表专用三浏览器矩阵在当前 `make build` 之后运行 `pnpm --filt
   | `notification.delete_batch` | `1000` | `NERVE_NOTIFICATION__DELETE_BATCH` | `1..2147483647` |
   | `notification.delete_budget` | `45s` | `NERVE_NOTIFICATION__DELETE_BUDGET` | `>0`且加5s不溢出 |
 
-  `cleanup.purge_deleted` 是一个无参周期任务，一次读取业务时钟固定截止点，依次调用asset→issue→planning→project→workspace→identity。每表按id键集分批、每批独立提交，只选择 `deleted_at < cutoff`；精确截止点和较新的直接候选保留。父行的CASCADE可带走仍活或较新的子行。不物理删除账户；会话仍由原会话清理任务负责。
+  `cleanup.purge_deleted` 是一个无参周期任务，一次读取业务时钟固定截止点，依次调用asset→notification→issue→planning→project→workspace→identity。每表按id键集分批、每批独立提交，只选择 `deleted_at < cutoff`；精确截止点和较新的直接候选保留。父行的CASCADE可带走仍活或较新的子行。不物理删除账户；会话仍由原会话清理任务负责。
 
   `planning.freeze_cycles`（M6/P4）在 `periodic` 队列，启动时与此后每 `planning.freeze_interval` 一次：不加锁取有未冻结、`end_date` 不晚于UTC今天的迭代的项目，再每个项目一个事务，先取项目行锁、锁后读业务时钟，把按项目时区已结束的迭代的进度（全部工作项，不按调用者过滤）写入 `cycles.progress_snapshot`，只写一次，不改 `updated_at`/`updated_by_id`；已归档的项目、关闭迭代的项目与已归档的迭代照样冻结。某个项目失败只回滚它自己的事务，任务接着做后面的项目；跑完把各项目的失败合并交River重试（只留前5个项目的错误、各带项目id，其余只计个数），已提交的项目不再是候选；任务的context结束（取消或超时）时立即停，交回此前的失败与context的错误。
 
   `issue.trim_description_versions` 对每个未删除项目分别加N锁、开事务；已归档项目和工作项仍参与。只保留活工作项的活版本按 `last_saved_at DESC,id DESC` 排序的最新20条，不产生审计改写、动态或事件。软删版本由purge回收。
 
   项目/工作区DELETE在原事务同步完成M3行，并投递 `issue.delete_rows`；每个本次删除项目一条project任务，工作区另投一条workspace_drafts任务（零项目也投，更早删除的项目不重归属）。提交后即使issue行尚未分批软删，相关API已不可见；204不表示后台任务全部完成。任务始终沿用原请求At/By。同一事务里还为每个本次删除项目投递一条 `planning.delete_rows`（参数为项目id与原At/By），按 `planning.delete_batch` 分批软删该项目的迭代、模块、模块成员、模块链接与迭代页、模块页的个人偏好（`cycles → modules → module_members → module_links → cycle_user_properties → module_user_properties`，父先于子），不取项目锁，超出 `planning.delete_budget` 时由River续跑；工作项在迭代、模块里的归属（`cycle_issues`、`module_issues`）是issue的表，随 `issue.delete_rows` 软删。
+
+  `notification.fanout`（M7/P1b）在 `default` 队列：工作项、评论、链接、关联、附件的写与自动归档有可通知的变化时，订阅者在写的同一事务里投递（一次发布的一批事件一次批量插入），参数是事件本身，描述与评论的 HTML 置空。任务先以 `FOR SHARE` 锁工作项行（已删除则什么都不写），之后只做不加锁的读，按此刻的 `issue.read` 与只看自己复核收件人，一条 `INSERT … ON CONFLICT DO NOTHING` 写出 `notifications`，重试不多写；超时30秒、最多5次，末次失败记 `notification fan-out exhausted`；等锁超过 `issue.write_lock_timeout` 时出错交River重试。工作项删除在原事务软删它的通知；项目/工作区删除为每个项目投一条 `notification.delete_rows`：先等该项目的工作项都被 `issue.delete_rows` 软删（每500毫秒snooze一次，以任务的创建时刻计满1小时仍未删完就报错交River退避），再按 `notification.delete_batch` 分批软删，超出 `notification.delete_budget` 时续跑。见 [P1b spec](docs/v0/M7-collaboration/specs/P1b-notification-core.md) §2.8、§2.9。
 
   删除预算采用monotonic运行时钟；还有候选时以 `JobSnooze(0)` 继续，不消耗真实失败attempt。worker超时为预算+5s，真实错误按River默认最多25次尝试；末次失败记录 `issue row deletion exhausted`。数据库阻塞不承诺必在额外5s内结束。任务失败/耗尽后窗口仍隐藏；超过保留期的父project/workspace物理清理可通过CASCADE回收子链，迟到任务无害。迟到软删与父purge恰好交叠允许原40P01交River重试收敛，不承诺全系统无死锁。
 
