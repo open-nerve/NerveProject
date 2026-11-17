@@ -123,9 +123,15 @@ func TestADeactivationFindsWhatChangedMeanwhile(t *testing.T) {
 				req := newRequest(t, http.MethodDelete, w.base+path, w.tokens["alice"], nil)
 				w.contract.CheckRequest(t, req)
 				written := sendInBackground(req)
-				pgtest.WaitForLockWaitOn(t, w.pool, tt.waitsOn, 5*time.Second)
+				// Each probe names the statement that waits, as the app's River
+				// jobs wait for rows too (M7 P1b spec R10): alice's write waits
+				// for the held row of tt.waitsOn, acme's deletion at its lock of
+				// the invitations, Docs's at its lock of Docs, bob's removal from
+				// beta at its end of his project memberships; bob's deactivation,
+				// behind it, at its lock of his workspaces.
+				pgtest.WaitForStatementLockWaitOn(t, w.pool, tt.waitsOn, 5*time.Second, "LockWorkspaceInvitations", "LockProject", "EndMemberships")
 				answer := p.sent(w, t, "bob")
-				pgtest.WaitForLockWaitOn(t, w.pool, "workspaces", 5*time.Second)
+				pgtest.WaitForStatementLockWaitOn(t, w.pool, "workspaces", 5*time.Second, "LockMemberWorkspaces")
 				if err := holder.Rollback(context.Background()); err != nil {
 					t.Fatal(err)
 				}
@@ -192,7 +198,7 @@ func TestADeactivationReadsTheAddressUnderItsLock(t *testing.T) {
 			changed := run(func() error { return setBobsEmail(ctx, w.pool, gatedSessions{identitypg.New(w.pool), g}) })
 			held(t, ctx, g, changed, "the change of address")
 			answer := tt.path.sent(w, t, "bob")
-			pgtest.WaitForLockWaitOn(t, w.pool, "users", 5*time.Second)
+			pgtest.WaitForStatementLockWaitOn(t, w.pool, "users", 5*time.Second, deactivationLocks...)
 			close(g.open)
 
 			if err := result(t, ctx, changed, "the change of address"); err != nil {

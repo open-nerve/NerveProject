@@ -168,6 +168,10 @@ func holdProjectDeletion(t *testing.T, pool *pgxpool.Pool, project uuid.UUID) pg
 // The sole committed deletion job is running and its worker is directly
 // blocked by this fixture on the expected table. A periodic worker can also
 // wait on this transaction; stable backend/query identities exclude that wait.
+// The worker is known by the statement with which it waits for table
+// (deletionWorkerStatement), not by a query naming the table: another job's
+// query may name it too, as notification.fanout's lock of a work item names
+// issues (M7 P1b spec R10).
 func deletionWorkerBlocked(t *testing.T, pool *pgxpool.Pool, holder pgx.Tx, job deletionJob, table string) uint32 {
 	t.Helper()
 	return deletionWorkerBlockedBy(t, pool, holder.Conn().PgConn().PID(), job, table)
@@ -175,10 +179,11 @@ func deletionWorkerBlocked(t *testing.T, pool *pgxpool.Pool, holder pgx.Tx, job 
 
 func deletionWorkerBlockedBy(t *testing.T, pool *pgxpool.Pool, holder uint32, job deletionJob, table string) uint32 {
 	t.Helper()
+	statement := deletionWorkerStatement(t, job, table)
 	waitDeletionJob(t, pool, job, "running")
 	var pid uint32
 	requestEventuallyWithin(t, "deletion worker at row barrier", 10*time.Second, func(ctx context.Context) bool {
-		rows, err := pool.Query(ctx, "SELECT pid FROM pg_stat_activity WHERE datname=current_database() AND $1::int=ANY(pg_blocking_pids(pid)) AND wait_event_type='Lock' AND strpos(query,$2)>0", holder, table)
+		rows, err := pool.Query(ctx, "SELECT pid FROM pg_stat_activity WHERE datname=current_database() AND $1::int=ANY(pg_blocking_pids(pid)) AND wait_event_type='Lock' AND "+pgtest.StatementIn(2), holder, []string{statement})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -196,6 +201,23 @@ func deletionWorkerBlockedBy(t *testing.T, pool *pgxpool.Pool, holder uint32, jo
 	probe.pid.Store(pid)
 	requestBlocked(t, pool, probe, holder, table)
 	return pid
+}
+
+// deletionWorkerStatement is the statement with which the worker of job, an
+// issue.delete_rows, waits for a row of table: the project's drafts, its
+// relations or its work items, or a workspace's drafts without a project.
+func deletionWorkerStatement(t *testing.T, job deletionJob, table string) string {
+	t.Helper()
+	statement, ok := map[[2]string]string{
+		{"project", "draft_issues"}:          "DeleteProjectDraftRows",
+		{"project", "issue_relations"}:       "LockProjectRelationRows",
+		{"project", "issues"}:                "DeleteProjectIssueRows",
+		{"workspace_drafts", "draft_issues"}: "DeleteWorkspaceDraftRows",
+	}[[2]string{job.Scope, table}]
+	if !ok {
+		t.Fatalf("no statement of a %s deletion waits for a row of %s", job.Scope, table)
+	}
+	return statement
 }
 
 // Small routes use the same producer union and real InsertTx subscribers as newApp.

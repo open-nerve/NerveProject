@@ -75,7 +75,10 @@ func TestAnEndingFindsWhatEndedMeanwhile(t *testing.T) {
 			}
 			changed := rowJSON(t, other, table, id)
 			req, answered := tt.ending.sent(w, t, "bob")
-			pgtest.WaitForLockWaitOn(t, w.pool, "workspaces", 5*time.Second)
+			// The removal waits at its lock of acme by id, the leaving by its
+			// slug: the probe names them, as the app's River jobs wait for rows
+			// too (M7 P1b spec R10).
+			pgtest.WaitForStatementLockWaitOn(t, w.pool, "workspaces", 5*time.Second, "LockWorkspace", "LockWorkspaceBySlug")
 			if err := other.Commit(context.Background()); err != nil {
 				t.Fatal(err)
 			}

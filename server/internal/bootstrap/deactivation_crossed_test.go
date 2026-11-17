@@ -109,7 +109,9 @@ func TestTwoDeactivationsWithCrossedInvitationsBothGoThrough(t *testing.T) {
 				})
 				held(t, ctx, g, done, "the first deactivation")
 				answer := p.sent(w, t, second)
-				pgtest.WaitForLockWaitOn(t, w.pool, "workspace_member_invites", 5*time.Second)
+				// Named by its statement: the app's River jobs wait for rows too
+				// (M7 P1b spec R10).
+				pgtest.WaitForStatementLockWaitOn(t, w.pool, "workspace_member_invites", 5*time.Second, "LockInvitationsToDelete")
 				opened := time.Now()
 				close(g.open)
 
@@ -175,7 +177,7 @@ func TestAnInvitationCreatedAfterADeactivationsLockIsLeftToTheOther(t *testing.T
 				t.Fatal(err)
 			}
 			answer := p.sent(w, t, "carol")
-			pgtest.WaitForLockWaitOn(t, w.pool, "workspace_member_invites", 5*time.Second)
+			pgtest.WaitForStatementLockWaitOn(t, w.pool, "workspace_member_invites", 5*time.Second, "LockInvitationsToDelete")
 			close(g.open)
 
 			if err := result(t, ctx, done, "bob's deactivation"); err != nil {

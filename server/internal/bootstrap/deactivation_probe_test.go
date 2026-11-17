@@ -27,9 +27,17 @@ func deactivationIdentityOf(t *testing.T, pool *pgxpool.Pool, pid uint32) deacti
 	return id
 }
 
-func deactivationWaiters(t *testing.T, pool *pgxpool.Pool, holder uint32) []uint32 {
+// deactivationLocks are the statements with which a deactivation waits for
+// its account's row: deactivateMe's LockUserForCredentials, the command's
+// LockAccountByEmail.
+var deactivationLocks = []string{"LockUserForCredentials", "LockAccountByEmail"}
+
+// deactivationWaiters are the backends that wait behind holder running one
+// of statements: the app's River jobs wait for rows of the same database,
+// such as notification.fanout, and do not count (M7 P1b spec R10).
+func deactivationWaiters(t *testing.T, pool *pgxpool.Pool, holder uint32, statements ...string) []uint32 {
 	t.Helper()
-	rows, err := pool.Query(pgtest.Soon(t), `SELECT pid FROM pg_stat_activity WHERE datname=current_database() AND wait_event_type='Lock' AND $1::int=ANY(pg_blocking_pids(pid))`, holder)
+	rows, err := pool.Query(pgtest.Soon(t), `SELECT pid FROM pg_stat_activity WHERE datname=current_database() AND wait_event_type='Lock' AND $1::int=ANY(pg_blocking_pids(pid)) AND `+pgtest.StatementIn(2), holder, statements)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -43,8 +51,8 @@ func deactivationWaiters(t *testing.T, pool *pgxpool.Pool, holder uint32) []uint
 
 func identifyDeactivation(t *testing.T, pool *pgxpool.Pool, holder pgx.Tx) deactivationIdentity {
 	t.Helper()
-	pgtest.WaitForLockWaitBehind(t, pool, holder.Conn().PgConn(), 5*time.Second)
-	ids := deactivationWaiters(t, pool, holder.Conn().PgConn().PID())
+	pgtest.WaitForStatementLockWaitBehind(t, pool, holder.Conn().PgConn(), 5*time.Second, deactivationLocks...)
+	ids := deactivationWaiters(t, pool, holder.Conn().PgConn().PID(), deactivationLocks...)
 	if len(ids) != 1 {
 		t.Fatalf("exclusive users holder has waiters %v, want exactly the sent deactivation", ids)
 	}
