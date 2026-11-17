@@ -332,7 +332,7 @@ M4/P6 已实现的差异以 [P6 review](M4-issue-core/reviews/P6-issue-events-re
 | 工作项的负责人、标签不合格 | 静默去掉 | 负责人不是项目中不是访客的有效成员、标签不是这个项目未删除的标签：422 `not_allowed`（`assignee_ids[i]`、`label_ids[i]`）；同一个 id 给两次：422 `duplicate`（M4 设计 3.7） |
 | 默认负责人 | 指派但不关注 | 指派并关注；建工作项时现查他仍是项目中不是访客的有效成员，不是就不指派、不报错（M4 设计 3.7、3.12） |
 | 负责人的动态 | 按请求里的 id 写，含被去掉的 | 只为实际指派的写（M4 设计 3.13） |
-| 自动关注 | 每个产生通知的动态的执行者；被提及的人都关注 | 创建者、负责人、评论者，以及被提及的有效成员中能读这个工作项的人；按被提及者自身项目角色及 `OwnOnly` 检查，描述修改者不因编辑自动关注（M4/P4，设计 3.12）；描述的保存、评论的修改只让这一次新被提及的人关注，仍被提及的人不因再次保存被加回（M7/P1a，[P1a spec](M7-collaboration/specs/P1a-subscriptions-events.md) R7） |
+| 自动关注 | 每个产生通知的动态的执行者；被提及的人都关注 | 创建者、负责人、评论者，以及被提及的有效成员中能读这个工作项的人；按被提及者自身项目角色及 `OwnOnly` 检查，描述修改者不因编辑自动关注（M4/P4，设计 3.12）；描述的保存、评论的修改只让这一次新被提及的人关注，仍被提及的人不因再次保存被加回，被提及时看不到工作项、后来才看得到的人也不因再次保存而关注（M7/P1a，[P1a spec](M7-collaboration/specs/P1a-subscriptions-events.md) R7） |
 | 手动关注、取消关注 | 只看项目成员关系：看不到工作项的访客也能关注；有替别人增删关注的接口 | `POST /issues/{id}/subscribe`、`/unsubscribe`，204、重复是空操作；按 `issue.read` 与只看自己判定，看不到 404；只关注、取消自己；已归档的工作项与项目照常（M7/P1a，[P1a spec](M7-collaboration/specs/P1a-subscriptions-events.md) §2.3、R3） |
 | 工作项详情的 `is_subscribed` | 工作项详情的注解 | 七个回答 `IssueDetail` 的操作都带调用者此刻是否关注；列表行不带（M7/P1a，[P1a spec](M7-collaboration/specs/P1a-subscriptions-events.md) R5） |
 | 删除状态 | 有工作项时 400 | 有工作项在它里面（已归档的也算）时 409 `project.state_in_use`，这一检查在默认状态的检查之前（M4 设计 3.6） |
