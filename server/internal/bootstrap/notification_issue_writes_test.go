@@ -42,6 +42,18 @@ func fanoutOf(t *testing.T, pool *pgxpool.Pool, eventType string, item uuid.UUID
 	return job
 }
 
+// fanoutPriority is the River priority of the one notification.fanout job of the event of type on the work item item,
+// as river_job stores it.
+func fanoutPriority(t *testing.T, pool *pgxpool.Pool, eventType string, item uuid.UUID) int {
+	t.Helper()
+	var priority int
+	if err := pool.QueryRow(pgtest.Soon(t), `SELECT priority FROM river_job WHERE kind = $1 AND args->>'type' = $2 AND args->>'entity_id' = $3`,
+		notificationriver.FanoutKind, eventType, item.String()).Scan(&priority); err != nil {
+		t.Fatalf("the fan-out of %s on %s: %v", eventType, item, err)
+	}
+	return priority
+}
+
 // assignedAt is the position of the job's change assigning the account, as positionOf reads an event's; mentionedAt,
 // of its first mention of the account.
 func assignedAt(t *testing.T, job notificationriver.FanoutArgs, account uuid.UUID) int16 {
@@ -276,6 +288,10 @@ func TestWorkItemWritesNotifyThroughTheApp(t *testing.T) {
 		run := fanoutOf(t, w.pool, "issue.archived", auto.ID)
 		if run.ActorID != nil || !run.OccurredAt.Equal(at) {
 			t.Fatalf("nerve's archiving of %s by %v at %s; want no one at %s", auto.ID, run.ActorID, run.OccurredAt, at)
+		}
+		// nerve's own write's fan-out waits behind every other job of its queue, an account's does not (spec 2.9).
+		if own, created := fanoutPriority(t, w.pool, "issue.archived", auto.ID), fanoutPriority(t, w.pool, "issue.created", auto.ID); own != 4 || created != 1 {
+			t.Fatalf("river_job priorities: nerve's archiving %d, alice's creation %d; want 4 and 1", own, created)
 		}
 		archive := changed("archived_at", nil, v("archive"), nil, nil)
 		assertSent(t, w.pool, auto.ID, []uuid.UUID{job.EventID, run.EventID}, append(want,
