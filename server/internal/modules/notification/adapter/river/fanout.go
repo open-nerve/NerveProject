@@ -20,6 +20,19 @@ const FanoutKind = "notification.fanout"
 // them (spec 2.9).
 const FanoutMaxAttempts = 5
 
+// fanoutPriority and nerveFanoutPriority are a fan-out's River priority
+// (spec 2.9), 1 the highest and 4 the lowest, by which, then scheduled_at
+// and id, River fetches a queue's jobs: a fan-out of an account's write has
+// River's default, as every other job of the default queue; one of nerve's
+// own write, an event without an actor (an auto-archive round's, thousands
+// at once), the lowest, so that such a backlog drains behind every other
+// job of the queue, an account's notifications and the deletions among
+// them, at its own pace.
+const (
+	fanoutPriority      = river.PriorityDefault
+	nerveFanoutPriority = 4
+)
+
 // fanoutTimeout bounds a fan-out's run (spec 2.9).
 const fanoutTimeout = 30 * time.Second
 
@@ -54,9 +67,14 @@ type FanoutChange struct {
 func (FanoutArgs) Kind() string { return FanoutKind }
 
 // InsertOpts keeps the fan-outs on the default queue, each with its own
-// attempts, without deduplication: each event is its own.
-func (FanoutArgs) InsertOpts() river.InsertOpts {
-	return river.InsertOpts{Queue: river.QueueDefault, MaxAttempts: FanoutMaxAttempts}
+// attempts, without deduplication: each event is its own; at
+// nerveFanoutPriority when the event has no actor, else at fanoutPriority.
+func (a FanoutArgs) InsertOpts() river.InsertOpts {
+	priority := fanoutPriority
+	if a.ActorID == nil {
+		priority = nerveFanoutPriority
+	}
+	return river.InsertOpts{Queue: river.QueueDefault, MaxAttempts: FanoutMaxAttempts, Priority: priority}
 }
 
 // fanoutArgs are the arguments of the event e.
@@ -85,8 +103,9 @@ type Fanouts struct{ inserter Inserter }
 
 func NewFanouts(i Inserter) *Fanouts { return &Fanouts{inserter: i} }
 
-// Enqueue inserts a job for each event, in their order, at once; none for
-// none, which River's batch insert would refuse.
+// Enqueue inserts a job for each event, in their order, at once, each with
+// its args' InsertOpts; none for none, which River's batch insert would
+// refuse.
 func (f *Fanouts) Enqueue(ctx context.Context, events []shared.Event) error {
 	if len(events) == 0 {
 		return nil

@@ -60,8 +60,10 @@ func fanoutPayload(e shared.Event) map[string]any {
 
 // The events are enqueued at once, with one InsertManyTx in the caller's context (its transaction, M7 P1b spec R12),
 // a job each, in their order, each carrying its event as the subscriber hands it over, on the default queue with five
-// attempts, as each was alone before; nerve's own event, without an actor, too. None are enqueued with no insert,
-// and the insert's failure is the enqueueing's.
+// attempts, as each was alone before; nerve's own event, without an actor, too. An account's event has River's
+// default priority, 1; nerve's, in the same batch, the lowest, 4, so that a round's backlog of them is fetched after
+// every other job of the queue (spec 2.9). The args' own InsertOpts, which River reads when a job is inserted without
+// opts, are the same. None are enqueued with no insert, and the insert's failure is the enqueueing's.
 func TestFanoutsEnqueueTheEventsAtOnce(t *testing.T) {
 	ctx := t.Context()
 	nerve := fanoutEvent()
@@ -78,8 +80,15 @@ func TestFanoutsEnqueueTheEventsAtOnce(t *testing.T) {
 			if p.Args.Kind() != "notification.fanout" {
 				t.Fatalf("job %d kind %s", n, p.Args.Kind())
 			}
-			if p.InsertOpts == nil || !reflect.DeepEqual(*p.InsertOpts, river.InsertOpts{Queue: "default", MaxAttempts: 5}) {
-				t.Fatalf("job %d opts=%+v", n, p.InsertOpts)
+			want := river.InsertOpts{Queue: "default", MaxAttempts: 5, Priority: 1}
+			if events[n].ActorID == nil {
+				want.Priority = 4
+			}
+			if p.InsertOpts == nil || !reflect.DeepEqual(*p.InsertOpts, want) {
+				t.Fatalf("job %d opts=%+v; want %+v", n, p.InsertOpts, want)
+			}
+			if own := p.Args.(river.JobArgsWithInsertOpts).InsertOpts(); !reflect.DeepEqual(own, want) {
+				t.Fatalf("job %d's args' own opts=%+v; want %+v", n, own, want)
 			}
 			raw, err := json.Marshal(p.Args)
 			if err != nil {

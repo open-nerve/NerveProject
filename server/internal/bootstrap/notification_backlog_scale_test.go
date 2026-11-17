@@ -2,6 +2,7 @@ package bootstrap
 
 import (
 	"fmt"
+	"net/http"
 	"testing"
 	"time"
 	"uuid"
@@ -55,9 +56,17 @@ type backlogProgress struct {
 // of acme, and on hers of Archive, which the round leaves be, after a
 // warm-up of the same pairs on each. Once backlogUnderWay of the round's
 // fan-outs have completed, the same pairs on each, while the others remain;
-// then the time until every one has completed, and their notifications. A
-// request that fails stops the run (scaleSamples); a p95 of the drain above
-// both three times its idle one and 50 ms is reported as an error.
+// then, while they still remain, an account's write that notifies: alice's
+// comment on Watched, a work item of Web bob subscribes to, and the time
+// from its answer, and from its request, until bob's notification is there,
+// and its fan-out's wait in the queue (attempted_at less created_at, the
+// app's clock and the database's). Its fan-out has
+// River's default priority and the round's, nerve's own, the lowest (spec
+// 2.9), so it is sent while at least backlogUnderWay of them remain. Then
+// the time until every one of the round's has completed, and their
+// notifications. A request that fails stops the run (scaleSamples); a p95 of
+// the drain above both three times its idle one and 50 ms, or the comment's
+// notification sent behind the backlog, is reported as an error.
 func TestRequestsWhileAFanoutBacklogDrains(t *testing.T) {
 	dir := measuredScale(t)
 	t.Log("fan-out backlog evidence:", dir)
@@ -85,8 +94,10 @@ func TestRequestsWhileAFanoutBacklogDrains(t *testing.T) {
 		t.Fatal(err)
 	}
 	other, same := w.newWorkItemIn(t, w.web, `{"name":"Probe"}`), w.newWorkItemIn(t, archive, `{"name":"Probe"}`)
+	watched := w.newWorkItemIn(t, w.web, `{"name":"Watched"}`)
+	w.send(t, "bob", http.MethodPost, subscriptionOf(watched, "subscribe"), "", http.StatusNoContent)
 	listEvidence(t, dir, "fanout-backlog-fixture", map[string]any{"archive": archive, "items": archiveScaleItems, "subscriber": w.ids["bob"],
-		"probe_other": other, "probe_same": same, "seed_seconds": seeded.Seconds()})
+		"probe_other": other, "probe_same": same, "watched": watched, "seed_seconds": seeded.Seconds()})
 	drainDefaultQueue(t, w.pool)
 	w.scaleSamples(t, other, "fanout-backlog-warmup-other", dir)
 	w.scaleSamples(t, same, "fanout-backlog-warmup-same", dir)
@@ -135,6 +146,39 @@ func TestRequestsWhileAFanoutBacklogDrains(t *testing.T) {
 	if groups["same_left_after"] == 0 {
 		t.Fatalf("the backlog drained before the samples ended, %v: they were not taken while it drained", groups)
 	}
+	answeredLeft, requested := left(), time.Now()
+	w.send(t, "alice", http.MethodPost, commentsOf(watched), `{"comment_html":"<p>Look</p>"}`, http.StatusCreated)
+	answered := time.Now()
+	for deadline := answered.Add(10 * time.Minute); ; time.Sleep(20 * time.Millisecond) {
+		var sent bool
+		// The comment's own notification: bob was sent Watched's creation too, its fan-out having run once he subscribed.
+		if err := w.pool.QueryRow(pgtest.Soon(t), `SELECT EXISTS (SELECT 1 FROM notifications n JOIN river_job j ON n.event_id = (j.args->>'event_id')::uuid
+			WHERE j.kind = $1 AND j.args->>'type' = 'issue.comment_created' AND n.issue_id = $2 AND n.receiver_id = $3 AND n.deleted_at IS NULL)`,
+			notificationriver.FanoutKind, watched, w.ids["bob"]).Scan(&sent); err != nil {
+			t.Fatal(err)
+		}
+		if sent {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("alice's comment did not notify bob within 10 minutes")
+		}
+	}
+	commentMS, requestMS, sentLeft := float64(time.Since(answered))/float64(time.Millisecond), float64(time.Since(requested))/float64(time.Millisecond), left()
+	var commentPriority int
+	var queuedMS float64
+	var roundPriorities []int32
+	if err := w.pool.QueryRow(pgtest.Soon(t), `SELECT priority, extract(epoch FROM attempted_at - created_at) * 1000 FROM river_job
+		WHERE kind = $1 AND args->>'type' = 'issue.comment_created'`, notificationriver.FanoutKind).Scan(&commentPriority, &queuedMS); err != nil {
+		t.Fatal(err)
+	}
+	if err := w.pool.QueryRow(pgtest.Soon(t), "SELECT array_agg(DISTINCT priority ORDER BY priority) FROM river_job WHERE "+round,
+		notificationriver.FanoutKind, archive.String()).Scan(&roundPriorities); err != nil {
+		t.Fatal(err)
+	}
+	comment := map[string]any{"ms": commentMS, "ms_from_request": requestMS, "queued_ms": queuedMS, "left_when_answered": answeredLeft, "left_when_sent": sentLeft, "priority": commentPriority,
+		"round_priorities": roundPriorities, "seconds_after_commit": answered.Sub(committed).Seconds()}
+	listEvidence(t, dir, "fanout-backlog-comment", comment)
 
 	var progress []backlogProgress
 	for deadline := committed.Add(30 * time.Minute); ; time.Sleep(time.Second) {
@@ -179,10 +223,12 @@ func TestRequestsWhileAFanoutBacklogDrains(t *testing.T) {
 		"idle_other": scaleSummary(idleOther), "idle_same": scaleSummary(idleSame), "drain_other": scaleSummary(drainOther), "drain_same": scaleSummary(drainSame),
 		"fanouts": jobs, "completed": completed, "retried": retried, "errored": errored, "drain_seconds": lastFinalized.Sub(firstAttempt).Seconds(),
 		"complete_seconds": lastFinalized.Sub(committedAt).Seconds(), "observed_seconds": observed.Seconds(), "notifications": notifications,
-		"notified_items": items, "notifications_to_bob": toBob, "exceeded": exceeded}
+		"notified_items": items, "notifications_to_bob": toBob, "exceeded": exceeded, "comment": comment}
 	listEvidence(t, dir, "fanout-backlog-summary", summary)
 	t.Logf("fan-out backlog: %d fan-outs, %d completed (%d retried, %d with errors), drained in %.1f s (first attempt to last end), all complete %.1f s after the round committed; %d notifications of %d work items, %d to bob",
 		jobs, completed, retried, errored, summary["drain_seconds"], summary["complete_seconds"], notifications, items, toBob)
+	t.Logf("alice's comment: bob notified %.1f ms after its answer, %.1f ms after its request, its fan-out queued %.1f ms; %d of the round's fan-outs left then, %d when it was answered; its fan-out's priority %d, the round's %v",
+		commentMS, requestMS, queuedMS, sentLeft, answeredLeft, commentPriority, roundPriorities)
 	for _, g := range []string{"idle_other", "drain_other", "idle_same", "drain_same"} {
 		s := summary[g].(map[string]any)
 		get, patch := s["GET"].(map[string]any), s["PATCH"].(map[string]any)
@@ -195,5 +241,9 @@ func TestRequestsWhileAFanoutBacklogDrains(t *testing.T) {
 	}
 	if len(exceeded) > 0 {
 		t.Errorf("a p95 of the drain above three times its idle one and 50 ms: %v", exceeded)
+	}
+	if sentLeft < backlogUnderWay {
+		t.Errorf("alice's comment notified bob %.1f ms after its answer, with %d of the round's fan-outs left; want it sent ahead of the backlog, with %d or more left",
+			commentMS, sentLeft, backlogUnderWay)
 	}
 }
