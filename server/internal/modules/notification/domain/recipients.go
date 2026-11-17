@@ -91,23 +91,21 @@ type Decision struct {
 	OwnOnly bool
 }
 
+// HiddenFrom is the guest rule (M4 design 3.4): whether a work item whose
+// creator is creator, nil when not known, is hidden from the account, whose
+// grant on its project is ownOnly. The issue module's Issue.HiddenFrom is
+// the one predicate; the fan-out hands it to Visible.
+type HiddenFrom func(creator *uuid.UUID, account uuid.UUID, ownOnly bool) bool
+
 // Visible are the rows whose receivers decisions allow to read the work
-// item i (spec 2.4): one who sees only his own work items only when he
-// created i (hiddenFrom); one decisions do not name is not allowed.
-func Visible(rows []Row, decisions map[uuid.UUID]Decision, i Issue) []Row {
+// item i (spec 2.4) and from whom hiddenFrom does not hide it, by the
+// creator i names; one decisions do not name is not allowed.
+func Visible(rows []Row, decisions map[uuid.UUID]Decision, i Issue, hiddenFrom HiddenFrom) []Row {
 	var kept []Row
 	for _, r := range rows {
-		if d := decisions[r.Receiver]; d.Allowed && !hiddenFrom(i, r.Receiver, d.OwnOnly) {
+		if d := decisions[r.Receiver]; d.Allowed && !hiddenFrom(i.CreatedByID, r.Receiver, d.OwnOnly) {
 			kept = append(kept, r)
 		}
 	}
 	return kept
-}
-
-// hiddenFrom reports whether the guest rule hides i from the account, whose
-// grant on its project is ownOnly (M4 design 3.4): the issue module's
-// Issue.HiddenFrom over the creator i's snapshot names, nil for one not
-// known, which is hidden from one who sees only his own.
-func hiddenFrom(i Issue, account uuid.UUID, ownOnly bool) bool {
-	return ownOnly && (i.CreatedByID == nil || *i.CreatedByID != account)
 }

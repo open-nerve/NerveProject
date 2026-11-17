@@ -11,8 +11,9 @@
 // PlanningStats tells the planning module the facts of the work items of a
 // project's cycles and modules, and its PlanningTransfer moves the
 // unfinished work items of a cycle that has ended to another for it. Its
-// NotificationIssues locks a work item's row and reads what the
-// notification module's fan-out and deletions need of work items.
+// NotificationIssues locks a work item's row, reads what the notification
+// module's fan-out and deletions need of work items and hands over the
+// guest rule the fan-out's recheck applies.
 package issue
 
 import (
@@ -85,7 +86,7 @@ func Provide(pool *pgxpool.Pool, protected []postgres.ProtectedReference) Provid
 		{Table: "module_issues", Delete: store.PurgeModuleIssues},
 		{Table: "cycle_issues", Delete: store.PurgeCycleIssues},
 		{Table: "issues", Protected: true, Delete: store.PurgeIssues},
-	}), IssueCascade: app.NewCascade(store), ListSettings: app.ListSettings{}, NotificationIssues: store, PlanningStats: store,
+	}), IssueCascade: app.NewCascade(store), ListSettings: app.ListSettings{}, NotificationIssues: notificationIssues{store}, PlanningStats: store,
 		PlanningTransfer: app.NewCycleTransfers(store)}
 }
 

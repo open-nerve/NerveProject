@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 	"strings"
 	"time"
 	"uuid"
@@ -65,8 +66,9 @@ func (fanoutTx) WithinTx(ctx context.Context, fn func(context.Context) error) er
 
 // fanoutPorts are every port of a fan-out, as fakes over the work item: its row (none unless exists), its columns,
 // its subscribers, its comment's text (nil for none), its state's name (nil for none), its project's identifier (nil
-// for none) and the recheck's decisions. Each call is recorded, in order, as its name and arguments, marked when it
-// is made outside the transaction; the call named fail fails.
+// for none), the recheck's decisions and the guest rule, which hides the work item from the accounts hidden names.
+// Each call is recorded, in order, as its name and arguments, marked when it is made outside the transaction; the
+// call named fail fails. Each question of the guest rule, which reads nothing, is recorded apart, in asked.
 type fanoutPorts struct {
 	exists      bool
 	locked      app.LockedIssue
@@ -78,7 +80,9 @@ type fanoutPorts struct {
 	decisions   map[uuid.UUID]domain.Decision
 	fail        string
 	failure     error
+	hidden      []uuid.UUID
 	calls       []string
+	asked       []string
 	inserted    []app.Notifications
 }
 
@@ -161,6 +165,17 @@ func (f *fanoutPorts) DecideMany(ctx context.Context, action shared.Action, work
 	return f.decisions, nil
 }
 
+// HiddenFrom is the guest rule as a fake: it hides the work item from the accounts f.hidden names, whatever its
+// creator and the grant; the question, its creator ("-" for none), the account and the grant's OwnOnly, is recorded.
+func (f *fanoutPorts) HiddenFrom(creator *uuid.UUID, account uuid.UUID, ownOnly bool) bool {
+	who := "-"
+	if creator != nil {
+		who = creator.String()
+	}
+	f.asked = append(f.asked, callLine("HiddenFrom", who, account, ownOnly))
+	return slices.Contains(f.hidden, account)
+}
+
 func (f *fanoutPorts) InsertNotifications(ctx context.Context, n app.Notifications) error {
 	if err := f.call(ctx, "InsertNotifications", len(n.Rows)); err != nil {
 		return err
@@ -171,7 +186,7 @@ func (f *fanoutPorts) InsertNotifications(ctx context.Context, n app.Notificatio
 
 // fanout is the use case over the ports, logging into logs.
 func fanout(f *fanoutPorts, logs *bytes.Buffer) *app.Fanout {
-	return app.NewFanout(app.FanoutDeps{Lock: f, Issues: f, Projects: f, Readers: f, Rows: f, Tx: fanoutTx{},
+	return app.NewFanout(app.FanoutDeps{Lock: f, Issues: f, Projects: f, Readers: f, GuestRule: f, Rows: f, Tx: fanoutTx{},
 		Logger: slog.New(slog.NewTextHandler(logs, nil))})
 }
 

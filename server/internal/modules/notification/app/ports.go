@@ -133,6 +133,15 @@ type Readers interface {
 	DecideMany(ctx context.Context, action shared.Action, workspaceID, projectID uuid.UUID, accountIDs []uuid.UUID) (map[uuid.UUID]domain.Decision, error)
 }
 
+// GuestRule is the guest rule the recheck applies (spec 2.4, M4 design
+// 3.4): whether a work item whose creator is creator, nil when not known, is
+// hidden from the account, whose grant on its project is ownOnly. It is the
+// issue module's one predicate, Issue.HiddenFrom, which its
+// NotificationIssues hands over and bootstrap converts; it reads nothing.
+type GuestRule interface {
+	HiddenFrom(creator *uuid.UUID, account uuid.UUID, ownOnly bool) bool
+}
+
 // NotificationWriter inserts a fan-out's notifications, in one statement in
 // the transaction ctx carries (spec 2.9): a notification of the same event,
 // change and receiver as an undeleted one is not inserted, so a retried or

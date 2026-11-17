@@ -12,8 +12,9 @@ import (
 )
 
 // notificationIssues is issue's NotificationIssues as the notification
-// module's Issues (M7 P1b spec 2.6): the same lock and reads, each value
-// converted; the lock answers the work item's workspace and project.
+// module's Issues (M7 P1b spec 2.4, 2.6): the same lock, reads and guest
+// rule, each value converted; the lock answers the work item's workspace
+// and project.
 type notificationIssues struct {
 	issues issue.NotificationIssues
 }
@@ -38,6 +39,10 @@ func (n notificationIssues) SubscriberIDs(ctx context.Context, id uuid.UUID) ([]
 
 func (n notificationIssues) CommentText(ctx context.Context, id uuid.UUID) (string, bool, error) {
 	return n.issues.CommentText(ctx, id)
+}
+
+func (n notificationIssues) HiddenFrom(creator *uuid.UUID, account uuid.UUID, ownOnly bool) bool {
+	return n.issues.HiddenFrom(creator, account, ownOnly)
 }
 
 // notificationProjectReads are the two reads of project's IssueProjects a

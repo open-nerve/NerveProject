@@ -60,17 +60,30 @@ func TestFanoutOfADeletedWorkItemWritesNothing(t *testing.T) {
 
 // The recipients are the domain's (spec 2.4): each mention its account's, the actor's not; each subscriber, but the
 // actor and the mentioned, of each change, as the creator, an assignee or a subscriber. The recheck asks issue.read on
-// the locked row's workspace and project for each once, in id order, and keeps those it allows: one refused, one it
-// does not answer and one who sees only the work items he created, of another's, are dropped; the creator who sees
-// only his own keeps his. Each row is the event's, by its actor, at its moment, of the work item and its creator.
+// the locked row's workspace and project for each once, in id order, and keeps those it allows from whom the issue
+// module's guest rule, the port, does not hide the work item, asked with the creator its columns name and each one's
+// OwnOnly: one refused and one it does not answer are dropped, and so are the two the rule hides; the creator who sees
+// only his own keeps his, the rule not hiding it. Each row is the event's, by its actor, at its moment, of the work
+// item and its creator.
 func TestFanoutSendsToTheRecipientsTheRecheckAllows(t *testing.T) {
 	f := newFanoutPorts()
 	f.subscribers = []uuid.UUID{alice, bob, carol, dave, eve, frank, gina, hank}
 	f.decisions = map[uuid.UUID]domain.Decision{bob: {Allowed: true}, carol: {Allowed: true, OwnOnly: true}, dave: {Allowed: true},
 		eve: {Allowed: true}, frank: {}, gina: {Allowed: true, OwnOnly: true}, gus: {Allowed: true, OwnOnly: true}}
+	f.hidden = []uuid.UUID{gina, gus}
 	e := renamed()
 	if err := fanout(f, &bytes.Buffer{}).Execute(t.Context(), e); err != nil {
 		t.Fatal(err)
+	}
+	var questions []string
+	for account, d := range f.decisions {
+		if d.Allowed {
+			questions = append(questions, callLine("HiddenFrom", carol, account, d.OwnOnly))
+		}
+	}
+	slices.Sort(questions)
+	if asked := slices.Compact(slices.Sorted(slices.Values(f.asked))); !slices.Equal(asked, questions) {
+		t.Fatalf("the guest rule asked\n%s\nwant\n%s", strings.Join(asked, "\n"), strings.Join(questions, "\n"))
 	}
 	asked := callLine("DecideMany", shared.Action("issue.read"), rowWorkspace, rowProject, []uuid.UUID{bob, carol, dave, eve, frank, gina, gus, hank})
 	if !slices.Contains(f.calls, asked) || slices.Contains(f.calls, callLine("CommentText", comment)) || len(f.inserted) != 1 {
@@ -217,7 +230,7 @@ func TestFanoutFailsAtAPortsFailure(t *testing.T) {
 	}
 	f := newFanoutPorts()
 	ports := &unreadIssue{f}
-	err := app.NewFanout(app.FanoutDeps{Lock: f, Issues: ports, Projects: f, Readers: f, Rows: f, Tx: fanoutTx{}}).Execute(t.Context(), commented())
+	err := app.NewFanout(app.FanoutDeps{Lock: f, Issues: ports, Projects: f, Readers: f, GuestRule: f, Rows: f, Tx: fanoutTx{}}).Execute(t.Context(), commented())
 	if err == nil || !strings.Contains(err.Error(), workItem.String()) || len(f.inserted) != 0 {
 		t.Fatalf("a locked work item not read: %v; want a failure naming it", err)
 	}

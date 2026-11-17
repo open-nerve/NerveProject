@@ -292,7 +292,7 @@ func fanoutAtScale(pool *pgxpool.Pool, cfg config.Config, job heldFanout, gate *
 	d := notificationDeps(pool, cfg)
 	r := &fanoutScaleRun{JobID: job.ID, EventID: job.Args.EventID}
 	uc := notificationapp.NewFanout(notificationapp.FanoutDeps{Lock: timedShareIssue{d.Issues, r, gate}, Issues: d.Issues, Projects: d.Projects,
-		Readers: d.Readers, Rows: notificationpg.New(pool), Tx: timedFanoutTx{d.JobTx, r}, Logger: d.Logger})
+		Readers: d.Readers, GuestRule: d.Issues, Rows: notificationpg.New(pool), Tx: timedFanoutTx{d.JobTx, r}, Logger: d.Logger})
 	worker := notificationriver.NewFanoutWorker(uc, d.Logger)
 	run := &river.Job[notificationriver.FanoutArgs]{JobRow: &rivertype.JobRow{ID: job.ID, Attempt: 1, MaxAttempts: notificationriver.FanoutMaxAttempts},
 		Args: job.Args}

@@ -40,12 +40,14 @@ func Provide(pool *pgxpool.Pool) Provided {
 }
 
 // Issues are what the module asks of the issue module (spec 2.6): whether
-// a project has an undeleted work item; a work item's row lock, and the
-// reads of it the fan-out makes after the lock.
+// a project has an undeleted work item; a work item's row lock, the reads
+// of it the fan-out makes after the lock, and the guest rule its recheck
+// applies.
 type Issues interface {
 	app.ProjectIssues
 	app.IssueRowLock
 	app.IssueReads
+	app.GuestRule
 }
 
 // LockedIssue, IssueColumns, StateName and Decision are the values the
@@ -95,8 +97,8 @@ type Module struct {
 func New(d Deps) *Module {
 	store := postgresadapter.New(d.Pool)
 	return &Module{
-		fanout: app.NewFanout(app.FanoutDeps{Lock: d.Issues, Issues: d.Issues, Projects: d.Projects, Readers: d.Readers, Rows: store,
-			Tx: d.JobTx, Logger: d.Logger}),
+		fanout: app.NewFanout(app.FanoutDeps{Lock: d.Issues, Issues: d.Issues, Projects: d.Projects, Readers: d.Readers,
+			GuestRule: d.Issues, Rows: store, Tx: d.JobTx, Logger: d.Logger}),
 		deleteRows: app.NewDeleteRows(app.DeleteRowsDeps{Issues: d.Issues, Rows: store, Tx: d.JobTx, RuntimeNow: d.RuntimeNow,
 			Batch: d.DeleteBatch, Budget: d.DeleteBudget}),
 		deleteBudget: d.DeleteBudget, logger: d.Logger,

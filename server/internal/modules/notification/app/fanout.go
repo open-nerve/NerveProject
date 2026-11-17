@@ -20,13 +20,14 @@ const recheck shared.Action = "issue.read"
 // transactions: read-write, READ COMMITTED, each lock wait bounded as a
 // work item's write's (spec 2.9).
 type FanoutDeps struct {
-	Lock     IssueRowLock
-	Issues   IssueReads
-	Projects ProjectNames
-	Readers  Readers
-	Rows     NotificationWriter
-	Tx       shared.TxManager
-	Logger   *slog.Logger
+	Lock      IssueRowLock
+	Issues    IssueReads
+	Projects  ProjectNames
+	Readers   Readers
+	GuestRule GuestRule
+	Rows      NotificationWriter
+	Tx        shared.TxManager
+	Logger    *slog.Logger
 }
 
 // Fanout sends the notifications of an event of a work item (M7 P1b spec
@@ -45,12 +46,13 @@ func NewFanout(d FanoutDeps) *Fanout { return &Fanout{d: d} }
 // subscribers, the recipients of what e notifies of (domain.Recipients),
 // the names of its state and its project, the recheck of issue.read on its
 // row's workspace and project, and the text of a comment e is of; and the
-// insert of the rows the recheck allows (domain.Visible), each of e's change
-// at its position, by e's actor at e's moment, in the workspace and the
-// project of the work item's row, which an event naming others is logged
-// for. A project deleted since, whose state or identifier is not read any
-// more, is read by no one: nothing is written. A row already sent is not
-// written again, so a retry writes none twice.
+// insert of the rows the recheck allows, by the issue module's guest rule
+// over the creator the work item's columns name (domain.Visible), each of
+// e's change at its position, by e's actor at e's moment, in the workspace
+// and the project of the work item's row, which an event naming others is
+// logged for. A project deleted since, whose state or identifier is not
+// read any more, is read by no one: nothing is written. A row already sent
+// is not written again, so a retry writes none twice.
 func (u *Fanout) Execute(ctx context.Context, e shared.Event) error {
 	item, err := workItemOf(e)
 	if err != nil {
@@ -91,7 +93,7 @@ func (u *Fanout) Execute(ctx context.Context, e shared.Event) error {
 		if err != nil {
 			return err
 		}
-		rows = domain.Visible(rows, decisions, issue)
+		rows = domain.Visible(rows, decisions, issue, u.d.GuestRule.HiddenFrom)
 		if len(rows) == 0 {
 			return nil
 		}

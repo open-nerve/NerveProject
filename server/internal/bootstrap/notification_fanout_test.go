@@ -29,7 +29,7 @@ import (
 func newTestFanout(pool *pgxpool.Pool) *notificationapp.Fanout {
 	d := notificationDeps(pool, config.Config{Database: config.DatabaseConfig{CommitTimeout: 2 * time.Second}, Issue: testIssueConfig})
 	return notificationapp.NewFanout(notificationapp.FanoutDeps{Lock: d.Issues, Issues: d.Issues, Projects: d.Projects, Readers: d.Readers,
-		Rows: notificationpg.New(pool), Tx: d.JobTx, Logger: slog.New(slog.DiscardHandler)})
+		GuestRule: d.Issues, Rows: notificationpg.New(pool), Tx: d.JobTx, Logger: slog.New(slog.DiscardHandler)})
 }
 
 // sentNotification is a notification as the table holds it, its id aside: its receiver, sender, position and snapshot,

@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"fmt"
 	"reflect"
 	"slices"
 	"testing"
@@ -78,9 +79,12 @@ func TestReceivers(t *testing.T) {
 }
 
 // The recheck keeps the rows of the receivers allowed to read the work
-// item (spec 2.4): one who sees only his own work items only when he
-// created it, by the creator its snapshot names, none when it names none;
-// one not decided on is not allowed.
+// item (spec 2.4) from whom the guest rule it is given does not hide it:
+// the rule is asked of each allowed row, with the creator the work item
+// names, none when it names none, the row's receiver and his grant's
+// OwnOnly, and its answer is the recheck's, whatever the grant: Visible
+// applies no rule of its own (M4 design 3.4). One refused, or not decided
+// on, is not allowed, and the rule is not asked of him.
 func TestVisible(t *testing.T) {
 	item := Item{Seq: 0, Field: "name", Verb: VerbUpdated}
 	rows := []Row{{alice, SenderSubscribed, item}, {bob, SenderCreated, item}, {carol, SenderAssigned, item},
@@ -88,18 +92,26 @@ func TestVisible(t *testing.T) {
 	decisions := map[uuid.UUID]Decision{alice: {Allowed: true}, bob: {Allowed: true, OwnOnly: true}, carol: {Allowed: true, OwnOnly: true},
 		dave: {}}
 	tests := []struct {
-		name  string
-		issue Issue
-		want  []Row
+		name   string
+		issue  Issue
+		hidden []uuid.UUID
+		want   []Row
 	}{
-		{"created by bob", Issue{CreatedByID: &bob}, []Row{rows[0], rows[1]}},
-		{"created by carol", Issue{CreatedByID: &carol}, []Row{rows[0], rows[2]}},
-		{"created by someone else", Issue{CreatedByID: &eve}, []Row{rows[0]}},
-		{"creator not known", Issue{}, []Row{rows[0]}},
+		{"none hidden", Issue{CreatedByID: &bob}, nil, []Row{rows[0], rows[1], rows[2]}},
+		{"one who sees his own hidden", Issue{CreatedByID: &bob}, []uuid.UUID{carol}, []Row{rows[0], rows[1]}},
+		{"one of each grant hidden", Issue{}, []uuid.UUID{alice, bob}, []Row{rows[2]}},
+		{"the refused and the undecided hidden too", Issue{CreatedByID: &eve}, []uuid.UUID{dave, eve}, []Row{rows[0], rows[1], rows[2]}},
 	}
 	for _, tt := range tests {
-		if got := Visible(rows, decisions, tt.issue); !reflect.DeepEqual(got, tt.want) {
-			t.Errorf("%s: Visible() = %s, want %s", tt.name, showRows(got), showRows(tt.want))
+		var asked []string
+		hiddenFrom := func(creator *uuid.UUID, account uuid.UUID, ownOnly bool) bool {
+			asked = append(asked, fmt.Sprintf("%s %s %t", named(creator), name(account), ownOnly))
+			return slices.Contains(tt.hidden, account)
+		}
+		creator := named(tt.issue.CreatedByID)
+		wantAsked := []string{creator + " alice false", creator + " bob true", creator + " carol true"}
+		if got := Visible(rows, decisions, tt.issue, hiddenFrom); !reflect.DeepEqual(got, tt.want) || !slices.Equal(asked, wantAsked) {
+			t.Errorf("%s: Visible() = %s asking %q, want %s asking %q", tt.name, showRows(got), asked, showRows(tt.want), wantAsked)
 		}
 	}
 }
