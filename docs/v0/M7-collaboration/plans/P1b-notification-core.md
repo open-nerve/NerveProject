@@ -18,6 +18,8 @@
   - 自带任务种类清单的运行器（`app_test.go`、`issue_delete_job_fixture_test.go`、`request_jobs_test.go`）：加通知的两个种类。
   - 锁探针：只限 T8 开头按 `grep -lE "pg_blocking_pids|wait_event_type *= *'Lock'|WaitForLockWait"` 生成、记入台账的文件；只改认等锁者的方式，不改断言。
   - e2e 的 `asynchronousDeletionTable` 与删除故事的夹具。
+  - 起应用的测试在持锁（`FOR UPDATE`、逐表 `LOCK TABLE`）或整库快照之前等分发跑完（T9 主控裁定：R10 的同一类，T8 的 grep 只认得探针写法）：`gate_test`、`issue_draft_publish_locks_test`、`issue_draft_write_locks_test`、`issue_collaboration_security_test`、`issue_link_security_test`、`p5_read_boundary_test`、`invitations_test` 的 `registrationRows`；只加等待，不改断言。
+  - 自动归档的事件发布者假件（T14b，R12）：`issue/app/auto_archive_test.go`、`issue_auto_archive_test.go`、`issue_auto_archive_race_helpers_test.go` 的发布者实现 `PublishAll`，断言不改；事件总线自己的测试加批量的情形。
   
   其余 M4–M6 与 P1a 的断言是回归，不改。
 - 证据：每次检查经 `run-check.py`，变异经 `mutate.py`，失败的运行也留着；每个加锁、可见、幂等性质至少一个能让测试失败的变异。
@@ -86,6 +88,13 @@ spec §2.3–§2.5：可通知的变化与动词、变化序号（原始位置�
 ### T14 规模与写入基准（R9）
 - 一个工作项 1000 个关注者的一次分发（选择性运行）：行锁持有 ≤ 1 秒、持锁期间同一工作项一次 PATCH 的等待、行数、幂等重跑。
 - 轻量的写入基准（R9）：分支上两组（等队列空与不等）；把测试文件复制到基线 `9a3a388a` 的临时 worktree 里再跑一次作对照（只用基线已有的辅助函数），跑完删除那个 worktree。自动归档一轮，同一次运行里带与不带通知订阅者。数字写进阶段记录。
+
+### T14b 批量发布与批量投递（R12，负责人 2026-11-18 决定）
+- `shared`：`EventSubscriber.HandleAll`（与 `Handle` 恰有其一）、`EventBatchPublisher`（`PublishAll`）；bootstrap 的分发器实现它并校验登记；`Publish(e)` 即 `PublishAll([e])`。
+- `platform/jobs` 的 `Inserter.InsertManyTx`（River 的 `InsertManyFastTx`）、bootstrap 的 `jobInserter`、notification 的 river 适配器 `Fanouts.Enqueue` 收一批。
+- notification：`notify_on_issue_events` 为批量订阅者，逐个事件的 `AnyBut`、形状检查与 `WithoutHTML` 不变。
+- issue：自动归档的依赖改为 `EventBatchPublisher`，每个项目的事务里一次 `PublishAll`。
+- 测试：分发器的批量语义（类型先检、登记次序、逐个与批量、拷贝、错误即停）；订阅者批量与逐个投出相同的参数；自动归档的事件与行不变（已有测试只换假件）；T14 的自动归档 A/B 重跑达到 R12 的验收。变异：批量订阅者漏事件、分发器对批量订阅者逐个调用或跳过、批量插入不在写的事务里。
 
 ### T15 文档与交接（主控）
 `plane-diff.md`（通知的生成、复核、类型、关联的请求端、草稿附件 R5、评论摘录 R6、`issue.updated` 的动词）；README 的任务与配置；M4 交接 M7-02、M5 交接 M5-M7-02 的“处理结果（M7/P1b）”；设计 §14；阶段记录。

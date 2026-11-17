@@ -17,7 +17,7 @@ P1b 不做：任何通知的接口与读（P1c）；网页（P4）。模块在 P
 
 | 路径 | 职责 |
 |---|---|
-| `server/internal/modules/notification/` | 新模块：`module.go`（`Provide`、`New`、`Register` 空、`Jobs`、`EnqueuedKinds`）、`module_events.go`（`Subscribers`）、`module_purge.go`；`domain/`（可通知的变化、动词、变化序号、收件人、类型、快照的形状，§2.3–§2.5）；`app/`（端口、订阅者、分发用例、删除与清理）；`adapter/postgres/`（sqlc）；`adapter/river/`（分发与分批删除的任务） |
+| `server/internal/modules/notification/` | 新模块：`module.go`（`Provide`、`New`、`Jobs`、`EnqueuedKinds`）、`module_events.go`（`Subscribers`）、`module_purge.go`；`domain/`（可通知的变化、动词、变化序号、收件人、类型、快照的形状，§2.3–§2.5）；`app/`（端口、订阅者、分发用例、删除与清理）；`adapter/postgres/`（sqlc）；`adapter/river/`（分发与分批删除的任务） |
 | `server/migrations/sql/00049_notification_notifications.sql` | 表、约束、索引（§2.2），含 Down |
 | `server/migrations/` 测试 | `notification_schema_test.go`（约束与索引名、CHECK 的反例）；`purge_indexes_test` 32 → 33；`trigram_schema_test` 迁移数 48 → 49、表清单、Down 起点 |
 | `server/sqlc.yaml`、`deploy/runtime-grants.sql` | 新模块的条目；运行角色对新表的四种 DML |
@@ -105,7 +105,7 @@ access 加 `DecideMany(ctx, action, workspace, project, accounts)`：workspace �
 
 ### 2.9 分发任务
 
-- 订阅者 `notify_on_issue_events`：只看 §2.3 的事件；按 §2.3 在原始变化列表上算出有没有可通知的变化（含 `mention`），没有就不投；有就在原事务 `InsertTx` 一个 `notification.fanout`。参数：事件 id、类型、时刻、工作区、项目、工作项、执行者、实体（评论 id 等），以及**保留全部位置**的变化列表，其中 `description`、`comment_html` 的 Old、New 置空（HTML 不进 `river_job`，序号不变）。
+- 订阅者 `notify_on_issue_events`：只看 §2.3 的事件；按 §2.3 在原始变化列表上算出有没有可通知的变化（含 `mention`），没有就不投；有就在原事务投一个 `notification.fanout`（一次发布的一批事件一次批量插入，R12）。参数：事件 id、类型、时刻、工作区、项目、执行者、实体（评论 id 等），以及**保留全部位置**的变化列表，其中 `description`、`comment_html` 的 Old、New 置空（HTML 不进 `river_job`，序号不变）；工作项不单列，任务从重建的事件按 §2.3 得出（单一来源，T9 裁定）。
 - 任务：`default` 队列，`Timeout` 30 秒，`MaxAttempts` 5，次数用尽记错误日志（`planning.delete_rows` 的先例）；事务是工作项写的那个（READ COMMITTED、读写、`lock_timeout`）。在事务里：`ShareIssue` 锁工作项行（已删除则什么都不写、完成）→ 读 issue 的列、关注者、评论正文与补齐的状态名、项目标识 → `DecideMany` → `HiddenFrom` → 按 §2.4 算出行 → 一条 `INSERT … ON CONFLICT DO NOTHING`。行的工作区、项目取锁住的行（与参数不一致时记日志并以行为准）。重试与重复投递不多写。
 - 与工作项删除串行：删除先提交，任务的 `FOR SHARE` 在新版本上复核 `deleted_at IS NULL`、读不到行；任务先提交，删除事务里的订阅者软删掉刚写的行。与项目删除的先后见 §2.8。
 
@@ -122,6 +122,7 @@ access 加 `DecideMany(ctx, action, workspace, project, accounts)`：workspace �
 - **R9 写入基准**：M4 记录的 PATCH 数字来自 6 个 66 万行项目的删除规模测试，太重，不拿来做前后对比。另写一个轻量的选择性运行的基准（一个项目、探针工作项带若干关注者、M4 的 `scaleSamples` 20 次 PATCH 的 p50、p95、最大），只用基线已有的辅助函数，记两组：每次 PATCH 之前等队列空（`InsertTx` 的成本）与不等（含分发持行锁时的等待）；在基线 `9a3a388a` 的临时 worktree 里（复制这个测试文件）与分支上各跑一次，同一台机器。自动归档一轮另加一个选择性运行的计时（仿 `TestTheFreezeAtTheScaleTarget`），同一次运行里比较带与不带通知订阅者的发布者。
 - **R10 锁探针与后台分发**：分发任务会在工作项行上取 `FOR SHARE`，bootstrap 里数等锁者的探针可能看到它。上线之前（plan T8）按固定的 grep 列出用探针的文件，探针一律按自己语句的文本认等锁者（已有先例 `-- name: LockIssueProject`），或在探针之前等队列里的 `notification.fanout` 跑完。
 - **R11 关联的请求端**：追加 `requested_on` 变化而不是改用存储行的起点，使“以 `blocking` 发起”也通知发起端的关注者（与 Plane 一致）；对 P1a §2.2 的公开约定只加不改。移除按关联 id、不指明一端，取存储为 `issue_id` 的那一端（与动态的第一行一致）：以 `blocking` 发起的关联，建立通知发起端、移除通知对方，照此接受（T4 实施时发现，主控裁定）。
+- **R12 批量发布与批量投递**（T14 的规模测试发现、负责人 2026-11-18 决定）：自动归档一轮在一个项目的事务里逐个发布被归档的工作项的事件，P1b 让每个多一次 `InsertTx`（约 0.2 毫秒），2 万个时一轮由 3.2 秒到 7.1 秒，越过 `issue.write_lock_timeout`（5 秒），这一轮期间该项目的写答 503。改为：`shared` 的事件总线加批量发布 `EventBatchPublisher.PublishAll`，订阅者可以是逐个的 `Handle` 或批量的 `HandleAll`（二者恰有其一）；`PublishAll` 先检查全部类型，再按登记次序对每个订阅者交出它的类型的事件（原有次序、各自一份拷贝）——逐个的照常逐个调用，批量的调用一次；`Publish(e)` 即 `PublishAll([e])`。对彼此独立的订阅者，这与逐个发布等价。自动归档每个项目的事务里一次 `PublishAll` 这一轮的事件；`notify_on_issue_events` 改为批量订阅者，逐个事件的过滤与形状检查不变，要投的一次经 River 的批量插入（`InsertManyFastTx`，同一事务）投完。保留 M4“每个项目一个事务”。验收：2 万个时带通知的一轮不超过不带的 1.3 倍、且在 5 秒以内。
 
 ## 4. 验收标准
 
@@ -131,7 +132,7 @@ access 加 `DecideMany(ctx, action, workspace, project, accounts)`：workspace �
 - 交错：分发与工作项删除两种先后；分发与项目删除（等工作项删完再删通知）；`issue.delete_rows` 被扣住时通知的删除任务 `metadata.snoozes` 递增、`attempt` 不超过 1、不写；锁超时让分发重试。
 - 删除与清理：工作项删除的同事务软删；项目、工作区删除的分批任务与守卫；60 天清理与 `TestPurgeScale`。
 - 等价：`DecideMany` 与 `Authorize` 在矩阵种子上逐格一致。
-- 规模：一个工作项 1000 个关注者的一次分发，行锁持有不超过 1 秒（`write_lock_timeout` 是 5 秒；超过先报告），另记持锁期间同一工作项一次 PATCH 的等待；写入基准两组与自动归档一轮写进阶段记录。
+- 规模：一个工作项 1000 个关注者的一次分发，行锁持有不超过 1 秒（`write_lock_timeout` 是 5 秒；超过先报告），另记持锁期间同一工作项一次 PATCH 的等待；写入基准两组与自动归档一轮写进阶段记录；自动归档一轮 2 万个工作项带通知不超过不带的 1.3 倍、在 5 秒以内（R12）。
 - 每个加锁、可见、幂等性质至少一个能让测试失败的变异。本地七项、分支 CI、deep-review 与修复复审、`--no-ff` 后的 main CI；两路的时间写进阶段记录（每路增量预算 ≤ 150 秒，含删除等待；接近单次 `go test` 的 20 分钟或作业 25 分钟的八成先报告）。
 
 ## 5. 后续责任
@@ -142,6 +143,6 @@ access 加 `DecideMany(ctx, action, workspace, project, accounts)`：workspace �
 ## 6. 风险
 
 - 后台分发与 bootstrap 的锁探针（R10）。
-- 每次写多一个 `InsertTx`（R9 量化）；自动归档一轮的事务里每个被归档的工作项多一个。
+- 每次写多一个 `InsertTx`（R9 量化）；自动归档一轮的事务里每个被归档的工作项多一个，2 万个时越过写的等锁期限（T14 实测），由 R12 的批量投递消除。
 - 新表让删除守卫要求每张表都有被删的行：Go 的在 T3 转绿；e2e 的删除故事从 T2 起红，到经接口的夹具（plan T10）才转绿。
 - 删除测试多出通知删除任务的等待（每次约一个 500 毫秒），计入两路的预算。
