@@ -325,7 +325,8 @@ P1a 的第一个实现提交把关键词 phase 改为 `M7/P1`（P1a、P1b 共用
 
 | 阶段 | 状态 | spec / plan / review |
 |---|---|---|
-| 设计 | 预检 Ready after fixes，修正已改入；负责人 2026-11-17 决定 §15 A–D 按推荐 | [re-81](../../reviews/re-81-M7设计预检.md) |
+| 设计 | 已合入 main（noff `8d17eed7`，与 P1a 的 spec、plan 一起）；预检 Ready after fixes，修正已改入；负责人 2026-11-17 决定 §15 A–D 按推荐 | [re-81](../../reviews/re-81-M7设计预检.md) |
+| P1a 关注接口与通知要用的事件 | 进行中：spec 与 plan 经预检 [re-82](../../reviews/re-82-M7P1a预检.md) 修正后通过，基线 main `8d17eed7`（设计的 noff） | [P1a spec](specs/P1a-subscriptions-events.md) / [P1a plan](plans/P1a-subscriptions-events.md) |
 
 ## 15. 决定记录
 

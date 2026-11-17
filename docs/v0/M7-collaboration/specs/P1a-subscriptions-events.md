@@ -1,6 +1,6 @@
 # M7 / P1a：关注接口与通知要用的事件
 
-> 状态：spec 经预检 [re-82](../../../reviews/re-82-M7P1a预检.md) 修正后通过。基线为设计合入 main 的 noff（合入后回填）。设计见 [M7 设计](../M7-design.md) §3.1、§3.2、§6.1、§12，负责人 2026-11-17 的决定见设计 §15；加锁之路与拒绝次序沿用 M4（[硬规则 §4](../../claude_to_gpt/03-rules-and-pitfalls.md)），关注是其中一个写明理由的例外（§2.4）。现状调研见设计分支台账 `research/p1a-facts.md`（ignored，随阶段归档）。
+> 状态：spec 经预检 [re-82](../../../reviews/re-82-M7P1a预检.md) 修正后通过。基线 main `8d17eed75f25487a8710bc32019fe3239f1fe81f`（设计与本 spec、plan 合入 main 的 noff）。设计见 [M7 设计](../M7-design.md) §3.1、§3.2、§6.1、§12，负责人 2026-11-17 的决定见设计 §15；加锁之路与拒绝次序沿用 M4（[硬规则 §4](../../claude_to_gpt/03-rules-and-pitfalls.md)），关注是其中一个写明理由的例外（§2.4）。现状调研见设计分支台账 `research/p1a-facts.md`（ignored，随阶段归档）。
 
 ## 1. 目标与边界
 
