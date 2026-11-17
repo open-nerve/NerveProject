@@ -19,7 +19,7 @@
   - 锁探针：只限 T8 开头按 `grep -lE "pg_blocking_pids|wait_event_type *= *'Lock'|WaitForLockWait"` 生成、记入台账的文件；只改认等锁者的方式，不改断言。
   - e2e 的 `asynchronousDeletionTable` 与删除故事的夹具。
   - 起应用的测试在持锁（`FOR UPDATE`、逐表 `LOCK TABLE`）或整库快照之前等分发跑完（T9 主控裁定：R10 的同一类，T8 的 grep 只认得探针写法）：`gate_test`、`issue_draft_publish_locks_test`、`issue_draft_write_locks_test`、`issue_collaboration_security_test`、`issue_link_security_test`、`p5_read_boundary_test`、`invitations_test` 的 `registrationRows`；只加等待，不改断言。
-  - 自动归档的事件发布者假件（T14b，R12）：`issue/app/auto_archive_test.go`、`issue_auto_archive_test.go`、`issue_auto_archive_race_helpers_test.go` 的发布者实现 `PublishAll`，断言不改；事件总线自己的测试加批量的情形。
+  - 自动归档的事件发布者假件（T14b，R12）：`issue/app/auto_archive_test.go`、`issue_auto_archive_test.go`、`issue_auto_archive_race_helpers_test.go` 的发布者与 `issue_events_test.go` 的 `discardIssueEvents` 实现 `PublishAll`，断言不改；事件总线自己的测试加批量的情形。
   
   其余 M4–M6 与 P1a 的断言是回归，不改。
 - 证据：每次检查经 `run-check.py`，变异经 `mutate.py`，失败的运行也留着；每个加锁、可见、幂等性质至少一个能让测试失败的变异。
