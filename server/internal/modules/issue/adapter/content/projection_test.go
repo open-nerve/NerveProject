@@ -54,3 +54,25 @@ func TestContentIdentityMentions(t *testing.T) {
 		t.Fatalf("non-user mention treated as content: %+v", invalid)
 	}
 }
+
+// A comment edit reads the mentions of the body it replaces by cleaning the
+// stored body, already clean, again (M7 P1a spec 2.2): that keeps its HTML
+// and its mentions, in their order, repetitions included.
+func TestContentIdentityMentionsSurviveCleaningAgain(t *testing.T) {
+	sanitizer := NewSanitizer()
+	bob, walt := "11111111-1111-4111-8111-111111111111", "22222222-2222-4222-8222-222222222222"
+	mention := func(id string) string {
+		return `<mention-component entity_name="user_mention" entity_identifier="` + id + `" id="m" label="Name" style="color:red" onclick="x()">Name</mention-component>`
+	}
+	for _, input := range []string{
+		`<p>Hi ` + mention(walt) + ` and ` + mention(bob) + `</p>` + mention(walt),
+		`<ul><li><p><strong>` + mention(bob) + `</strong></p></li></ul><script>` + mention(walt) + `</script><blockquote>` + mention(walt) + `</blockquote>`,
+		`<p><mention-component entity_name="project_mention" entity_identifier="` + bob + `"></mention-component>` + mention("invalid") + mention(bob) + `</p>`,
+	} {
+		once := sanitizer.Clean(input)
+		twice := sanitizer.Clean(once.HTML)
+		if len(once.Identity.MentionIDs) == 0 || twice.HTML != once.HTML || !reflect.DeepEqual(twice.Identity.MentionIDs, once.Identity.MentionIDs) {
+			t.Fatalf("cleaning again changed mentions: %v -> %v\n%q -> %q", once.Identity.MentionIDs, twice.Identity.MentionIDs, once.HTML, twice.HTML)
+		}
+	}
+}

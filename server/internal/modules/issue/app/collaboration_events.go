@@ -7,9 +7,11 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
-// commentEvent keeps HTML snapshots separate from the mutable response value.
-func (s stamp) commentEvent(kind string, id uuid.UUID, old, new *string) shared.Event {
-	e := s.event(kind, s.withIssue(kind, []shared.Change{{Field: "comment_html", Old: old, New: new}}))
+// commentEvent keeps HTML snapshots separate from the mutable response value;
+// the members the comment newly mentions (mentionChanges) follow them.
+func (s stamp) commentEvent(kind string, id uuid.UUID, old, new *string, mentioned []uuid.UUID) shared.Event {
+	changes := append([]shared.Change{{Field: "comment_html", Old: old, New: new}}, mentionChanges(mentioned)...)
+	e := s.event(kind, s.withIssue(kind, changes))
 	e.Entity = shared.EntityRef{Kind: "issue_comment", ID: id}
 	return e
 }

@@ -74,7 +74,8 @@ func updatedChanges(activity domain.Update, sortOrder *domain.Changed[float64], 
 // in id order, on the New side (M7 P1a spec 2.2): the project's active
 // members its content names, whatever they can see (descriptionTargets);
 // for a description, all of them at its creation, then those it has no
-// mention row of.
+// mention row of; for a comment, all of them at its creation, then those
+// its body before the edit does not name (commentMentions).
 func mentionChanges(ids []uuid.UUID) []shared.Change {
 	var changes []shared.Change
 	for _, id := range ascending(ids) {
