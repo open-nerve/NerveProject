@@ -119,9 +119,22 @@ type PublicProfiles interface {
 	DisplayNames(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]string, error)
 }
 
+// IssueRowLock locks a work item's row alone (M7 P1a spec 2.4, P1b spec
+// 2.6, R8): the lock of a write of the caller's own row under it
+// (Locks.share), and of the notification module's fan-out, which
+// issue.Provide hands it.
+type IssueRowLock interface {
+	// ShareIssue locks the undeleted work item id, archived or not, FOR
+	// SHARE, its row alone, in the transaction ctx carries, and answers it
+	// as its row has it (M7 P1a spec 2.4); found is false when there is
+	// none, also when it was deleted while the lock waited.
+	ShareIssue(ctx context.Context, id uuid.UUID) (i SharedIssue, found bool, err error)
+}
+
 // IssueReader reads work items, in the transaction ctx carries, or
-// without one (M4 design 3.5, 5.2).
+// without one (M4 design 3.5, 5.2), and locks a work item's row alone.
 type IssueReader interface {
+	IssueRowLock
 	// GetIssue reads the undeleted work item, archived or not, with its
 	// assignees and labels; found is false when there is none.
 	GetIssue(ctx context.Context, id uuid.UUID) (i domain.Issue, found bool, err error)
@@ -131,11 +144,6 @@ type IssueReader interface {
 	// SubIssueCounts counts the undeleted, unarchived direct sub-items of
 	// each of the work items ids that has any (M4 design 3.9).
 	SubIssueCounts(ctx context.Context, actor uuid.UUID, ids []uuid.UUID) (map[uuid.UUID]SubIssueCount, error)
-	// ShareIssue locks the undeleted work item id, archived or not, FOR
-	// SHARE, its row alone, in the transaction ctx carries, and answers it
-	// as its row has it (M7 P1a spec 2.4); found is false when there is
-	// none, also when it was deleted while the lock waited.
-	ShareIssue(ctx context.Context, id uuid.UUID) (i SharedIssue, found bool, err error)
 	// IsSubscribed reads whether the account has an undeleted row among
 	// the subscribers of the work item issueID: a detail answer's
 	// is_subscribed for its caller (M7 P1a spec 2.3, R5).

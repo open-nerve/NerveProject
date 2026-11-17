@@ -197,7 +197,7 @@ func TestRelationEventsComposition(t *testing.T) {
 						if !reject {
 							rowID = made[n].ID
 						}
-						wantStoredRelationEvent(t, w, e, "issue.relation_added", rowID, project, issueID, relatedID, storedType, w.ids["alice"], at)
+						wantStoredRelationEvent(t, w, e, "issue.relation_added", rowID, project, issueID, relatedID, storedType, w.ids["alice"], at, from, kind)
 						if ids[e.ID] {
 							t.Fatal("batch event identity reused")
 						}
@@ -244,7 +244,7 @@ func TestRelationEventsComposition(t *testing.T) {
 						if blocking {
 							project, issueID, relatedID, storedType = ops, targets[n], from, "blocked_by"
 						}
-						wantStoredRelationEvent(t, w, e, "issue.relation_removed", made[n].ID, project, issueID, relatedID, storedType, w.ids[actor], at)
+						wantStoredRelationEvent(t, w, e, "issue.relation_removed", made[n].ID, project, issueID, relatedID, storedType, w.ids[actor], at, issueID, storedType)
 						if issueEventCount(t, w) != 3+n {
 							t.Fatal("successful removal job missing")
 						}
@@ -255,11 +255,14 @@ func TestRelationEventsComposition(t *testing.T) {
 	}
 }
 
-func wantStoredRelationEvent(t *testing.T, w issueWorld, e shared.Event, kind string, row, project, from, to uuid.UUID, typ string, actor uuid.UUID, at time.Time) {
+func wantStoredRelationEvent(t *testing.T, w issueWorld, e shared.Event, kind string, row, project, from, to uuid.UUID, typ string, actor uuid.UUID, at time.Time,
+	on uuid.UUID, onType string) {
 	t.Helper()
-	want := []shared.Change{{Field: "relation_type", New: eventValue(typ)}, {Field: "issue", NewID: &from}, {Field: "related_issue", NewID: &to}}
+	want := []shared.Change{{Field: "relation_type", New: eventValue(typ)}, {Field: "issue", NewID: &from}, {Field: "related_issue", NewID: &to},
+		{Field: "requested_on", New: eventValue(onType), NewID: &on}}
 	if kind == "issue.relation_removed" {
-		want = []shared.Change{{Field: "relation_type", Old: eventValue(typ)}, {Field: "issue", OldID: &from}, {Field: "related_issue", OldID: &to}}
+		want = []shared.Change{{Field: "relation_type", Old: eventValue(typ)}, {Field: "issue", OldID: &from}, {Field: "related_issue", OldID: &to},
+			{Field: "requested_on", Old: eventValue(onType), OldID: &on}}
 	}
 	if e.ID == (uuid.UUID{}) || e.ID == row || e.Type != kind || e.Entity != (shared.EntityRef{Kind: "issue_relation", ID: row}) || e.WorkspaceID != w.acme || e.ProjectID != project || e.ActorID == nil || *e.ActorID != actor || !e.OccurredAt.Equal(at) || !reflect.DeepEqual(e.Changes, want) {
 		t.Errorf("canonical relation event=%+v changes=%+v want=%+v", e, e.Changes, want)

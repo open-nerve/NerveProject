@@ -10,7 +10,9 @@
 // work items are in a state and takes deleted labels off them; its
 // PlanningStats tells the planning module the facts of the work items of a
 // project's cycles and modules, and its PlanningTransfer moves the
-// unfinished work items of a cycle that has ended to another for it.
+// unfinished work items of a cycle that has ended to another for it. Its
+// NotificationIssues locks a work item's row and reads what the
+// notification module's fan-out and deletions need of work items.
 package issue
 
 import (

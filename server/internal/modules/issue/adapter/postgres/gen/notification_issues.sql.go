@@ -11,6 +11,54 @@ import (
 	"uuid"
 )
 
+const commentText = `-- name: CommentText :one
+SELECT comment_stripped
+FROM issue_comments
+WHERE id = $1 AND deleted_at IS NULL
+`
+
+// The plain text the undeleted comment stores, comment_stripped (M7 P1b spec 2.5, R6): a notification's excerpt of it.
+// A deleted comment has none. A plain read of what is committed, without a lock.
+func (q *Queries) CommentText(ctx context.Context, id uuid.UUID) (string, error) {
+	row := q.db.QueryRow(ctx, commentText, id)
+	var comment_stripped string
+	err := row.Scan(&comment_stripped)
+	return comment_stripped, err
+}
+
+const notificationIssue = `-- name: NotificationIssue :one
+SELECT i.name, i.sequence_id, i.state_id, i.created_by_id,
+       array(SELECT a.assignee_id FROM issue_assignees a WHERE a.issue_id = i.id AND a.deleted_at IS NULL
+             ORDER BY a.assignee_id)::uuid[] AS assignee_ids
+FROM issues i
+WHERE i.id = $1 AND i.deleted_at IS NULL
+`
+
+type NotificationIssueRow struct {
+	Name        string
+	SequenceID  int32
+	StateID     uuid.UUID
+	CreatedByID *uuid.UUID
+	AssigneeIds []uuid.UUID
+}
+
+// The undeleted work item's own columns a notification keeps (M7 P1b spec 2.4, 2.5, 2.6), archived or not: its name, its
+// number, its state by id, whose name and group are the project module's, its creator, NULL when not known, and its
+// current assignees, the accounts of its undeleted assignees' rows (GetIssue's), each once by the partial unique key on
+// (issue_id, assignee_id), in id order, none for none. A plain read of what is committed, without a lock.
+func (q *Queries) NotificationIssue(ctx context.Context, id uuid.UUID) (NotificationIssueRow, error) {
+	row := q.db.QueryRow(ctx, notificationIssue, id)
+	var i NotificationIssueRow
+	err := row.Scan(
+		&i.Name,
+		&i.SequenceID,
+		&i.StateID,
+		&i.CreatedByID,
+		&i.AssigneeIds,
+	)
+	return i, err
+}
+
 const projectIssuesRemain = `-- name: ProjectIssuesRemain :one
 SELECT EXISTS (SELECT 1 FROM issues WHERE project_id = $1 AND deleted_at IS NULL) AS remain
 `
@@ -24,4 +72,35 @@ func (q *Queries) ProjectIssuesRemain(ctx context.Context, projectID uuid.UUID) 
 	var remain bool
 	err := row.Scan(&remain)
 	return remain, err
+}
+
+const subscriberIDs = `-- name: SubscriberIDs :many
+SELECT subscriber_id
+FROM issue_subscribers
+WHERE issue_id = $1 AND deleted_at IS NULL
+ORDER BY subscriber_id
+`
+
+// The accounts of the work item's undeleted subscribers' rows, in id order (M7 P1b spec 2.4, 2.6): those the fan-out of
+// an event of it notifies, the ones the write itself subscribed too. Each once: the partial unique key on (issue_id,
+// subscriber_id) holds one undeleted row of an account, and serves the read in this order. A plain read of what is
+// committed, in the fan-out's transaction after its FOR SHARE of the work item's row (ShareIssue): no lock of its own.
+func (q *Queries) SubscriberIDs(ctx context.Context, issueID uuid.UUID) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, subscriberIDs, issueID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []uuid.UUID
+	for rows.Next() {
+		var subscriber_id uuid.UUID
+		if err := rows.Scan(&subscriber_id); err != nil {
+			return nil, err
+		}
+		items = append(items, subscriber_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

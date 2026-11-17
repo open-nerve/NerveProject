@@ -94,11 +94,17 @@ func eventFloat(v float64) string { return strconv.FormatFloat(v, 'g', -1, 64) }
 
 // relationEvent uses the canonical stored row, independently of the end that
 // authorized the request. Relation endpoints occupy only identifier slots.
+// Last, requested_on names the end the request was on (M7 P1b spec 2.3,
+// R11), the work item of s, h.own()'s, which the use case writes its first
+// activity row on: the one an addition was asked on, though blocking is
+// stored the other way round, or, for a removal, the one stored as
+// issue_id; with the type that end reads.
 func (s stamp) relationEvent(kind string, r domain.Relation) shared.Event {
 	changes := []shared.Change{
 		{Field: "relation_type", New: eventPtr(string(r.Type))},
 		{Field: "issue", NewID: eventPtr(r.IssueID)},
 		{Field: "related_issue", NewID: eventPtr(r.RelatedID)},
+		{Field: "requested_on", New: eventPtr(string(r.TypeFrom(s.issue))), NewID: eventPtr(s.issue)},
 	}
 	if kind == domain.EventRelationRemoved {
 		for n := range changes {
