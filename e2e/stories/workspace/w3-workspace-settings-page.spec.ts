@@ -27,7 +27,7 @@ test("W3 (page): the admin changes the name, size and time zone, which hold afte
   await createWorkspace(api, admin.access_token, { name: "Acme", slug });
   await createWorkspace(api, admin.access_token, { name: "Zeta", slug: other });
   const memberAccount = { email: memberEmail, token: member.access_token };
-  await furnishWorkspace(api, admin.access_token, slug, memberAccount, emailFor(testInfo, "invitee"));
+  await furnishWorkspace(api, db, admin.access_token, slug, memberAccount, emailFor(testInfo, "invitee"));
   const memberId = await accountId(api, member.access_token);
 
   const page = await signedInPage(admin);
