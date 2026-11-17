@@ -75,6 +75,7 @@ func preparePurgeScale(t *testing.T, roles splitRoles, dir string) purgeScaleFix
 				w.send(t, "alice", http.MethodDelete, "/api/v0/projects/"+project.String(), "", 204)
 				waitDeletionJobWithin(t, roles.owner, projectDeletionJob(t, roles.owner, project), "completed", 90*time.Second)
 				waitPlanningDeletion(t, roles.owner, project)
+				waitNotificationDeletion(t, roles.owner, project)
 			}
 		}
 	}) {

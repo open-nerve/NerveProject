@@ -19,20 +19,21 @@ const (
 type Config struct {
 	// Env is the profile the configuration was loaded for. It comes from
 	// NERVE_ENV and is not a configuration key.
-	Env       string          `koanf:"-"`
-	Server    ServerConfig    `koanf:"server"`
-	Database  DatabaseConfig  `koanf:"database"`
-	Auth      AuthConfig      `koanf:"auth"`
-	RateLimit RateLimitConfig `koanf:"ratelimit"`
-	Clock     ClockConfig     `koanf:"clock"`
-	Outbound  OutboundConfig  `koanf:"outbound"`
-	Jobs      JobsConfig      `koanf:"jobs"`
-	Workspace WorkspaceConfig `koanf:"workspace"`
-	Issue     IssueConfig     `koanf:"issue"`
-	Planning  PlanningConfig  `koanf:"planning"`
-	Cleanup   CleanupConfig   `koanf:"cleanup"`
-	Files     FilesConfig     `koanf:"files"`
-	Log       LogConfig       `koanf:"log"`
+	Env          string             `koanf:"-"`
+	Server       ServerConfig       `koanf:"server"`
+	Database     DatabaseConfig     `koanf:"database"`
+	Auth         AuthConfig         `koanf:"auth"`
+	RateLimit    RateLimitConfig    `koanf:"ratelimit"`
+	Clock        ClockConfig        `koanf:"clock"`
+	Outbound     OutboundConfig     `koanf:"outbound"`
+	Jobs         JobsConfig         `koanf:"jobs"`
+	Workspace    WorkspaceConfig    `koanf:"workspace"`
+	Issue        IssueConfig        `koanf:"issue"`
+	Planning     PlanningConfig     `koanf:"planning"`
+	Notification NotificationConfig `koanf:"notification"`
+	Cleanup      CleanupConfig      `koanf:"cleanup"`
+	Files        FilesConfig        `koanf:"files"`
+	Log          LogConfig          `koanf:"log"`
 }
 
 // ServerConfig configures the HTTP server. The timeouts bound the reads and
@@ -198,6 +199,16 @@ type PlanningConfig struct {
 	FreezeInterval time.Duration `koanf:"freeze_interval"`
 }
 
+// NotificationConfig configures the notifications' maintenance: the
+// asynchronous deletion of a deleted project's notifications, once its work
+// items are deleted, soft-deletes at most DeleteBatch of them per
+// transaction and runs for at most DeleteBudget before River snoozes it (M7
+// P1b spec 2.8).
+type NotificationConfig struct {
+	DeleteBatch  int           `koanf:"delete_batch"`
+	DeleteBudget time.Duration `koanf:"delete_budget"`
+}
+
 // WriteGateConfig is the work items' write gate (platform/gate): at most
 // PerProject writes on a project's work items hold a connection at once in
 // this process, at most MaxQueue others wait for it, holding none, each at
@@ -295,6 +306,10 @@ func (c Config) LogValue() slog.Value {
 			slog.Int("delete_batch", c.Planning.DeleteBatch),
 			slog.Duration("delete_budget", c.Planning.DeleteBudget),
 			slog.Duration("freeze_interval", c.Planning.FreezeInterval),
+		),
+		slog.Group("notification",
+			slog.Int("delete_batch", c.Notification.DeleteBatch),
+			slog.Duration("delete_budget", c.Notification.DeleteBudget),
 		),
 		slog.Any("files", c.Files),
 		slog.Group("log",

@@ -1,11 +1,20 @@
 package bootstrap
 
 import (
+	"context"
+	"encoding/json"
+	"log/slog"
 	"testing"
+	"time"
 	"uuid"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/open-nerve/NerveProject/server/internal/modules/issue"
+	"github.com/open-nerve/NerveProject/server/internal/modules/notification"
+	notificationriver "github.com/open-nerve/NerveProject/server/internal/modules/notification/adapter/river"
+	"github.com/open-nerve/NerveProject/server/internal/platform/config"
+	"github.com/open-nerve/NerveProject/server/internal/platform/jobs"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 )
 
@@ -28,4 +37,101 @@ func seedNotification(t *testing.T, pool *pgxpool.Pool, item, receiver uuid.UUID
 		FROM issues WHERE id = $4`, uuid.NewV7(), receiver, uuid.NewV7(), item); err != nil || tag.RowsAffected() != 1 {
 		t.Fatalf("seeding a notification of %s: %d rows, %v; want 1", item, tag.RowsAffected(), err)
 	}
+}
+
+// seedItemNotification is seedNotification of the project's work item
+// named name, which seedIssues writes.
+func seedItemNotification(t *testing.T, pool *pgxpool.Pool, project uuid.UUID, name string, receiver uuid.UUID) {
+	t.Helper()
+	items := queryIDs(t, pool, "SELECT id FROM issues WHERE project_id = $1 AND name = $2", project, name)
+	if len(items) != 1 {
+		t.Fatalf("the work items %s of %s: %v; want one", name, project, items)
+	}
+	seedNotification(t, pool, items[0], receiver)
+}
+
+// notificationJob is a deleted project's notification.delete_rows job as
+// River holds it.
+type notificationJob struct {
+	ID                         int64
+	State                      string
+	Attempt, Failures, Snoozes int
+}
+
+// notificationDeletionJob reads the one notification.delete_rows job of the
+// deleted project, false while there is none: the project's deletion
+// moment and deleter its arguments, on the default queue with River's 25
+// attempts. A second job fails the test.
+func notificationDeletionJob(ctx context.Context, t *testing.T, pool *pgxpool.Pool, project uuid.UUID) (notificationJob, bool) {
+	t.Helper()
+	var at time.Time
+	var by uuid.UUID
+	if err := pool.QueryRow(ctx, "SELECT deleted_at,updated_by_id FROM projects WHERE id=$1", project).Scan(&at, &by); err != nil {
+		t.Fatal(err)
+	}
+	rows, err := pool.Query(ctx, `SELECT id,args,state::text,attempt,coalesce(cardinality(errors),0),coalesce((metadata->>'snoozes')::int,0),queue,max_attempts
+		FROM river_job WHERE kind=$1 AND args->>'project_id'=$2`, notificationriver.DeleteRowsKind, project.String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	var found []notificationJob
+	for rows.Next() {
+		var job notificationJob
+		var raw []byte
+		var queue string
+		var maxAttempts int
+		if err := rows.Scan(&job.ID, &raw, &job.State, &job.Attempt, &job.Failures, &job.Snoozes, &queue, &maxAttempts); err != nil {
+			t.Fatal(err)
+		}
+		var args notificationriver.DeleteRowsArgs
+		var fields map[string]any
+		if err := json.Unmarshal(raw, &args); err != nil {
+			t.Fatal(err)
+		}
+		if err := json.Unmarshal(raw, &fields); err != nil {
+			t.Fatal(err)
+		}
+		if args.ProjectID != project || !args.At.Equal(at) || args.By != by || len(fields) != 3 || queue != "default" || maxAttempts != 25 {
+			t.Fatalf("notification deletion job lost the deletion's context: %s %s/%d; want project %s at %s by %s", raw, queue, maxAttempts, project, at, by)
+		}
+		found = append(found, job)
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatal(err)
+	}
+	if len(found) > 1 {
+		t.Fatalf("project %s notification deletion jobs=%d want exactly one", project, len(found))
+	}
+	if len(found) == 0 {
+		return notificationJob{}, false
+	}
+	return found[0], true
+}
+
+// waitNotificationDeletion waits for the one notification.delete_rows job
+// of the deleted project (notificationDeletionJob) to complete in its first
+// attempt without a failure: its snoozes while the project's work items
+// were being deleted consumed no attempt.
+func waitNotificationDeletion(t *testing.T, pool *pgxpool.Pool, project uuid.UUID) {
+	t.Helper()
+	requestEventuallyWithin(t, "notification deletion completed", 15*time.Second, func(ctx context.Context) bool {
+		job, ok := notificationDeletionJob(ctx, t, pool, project)
+		if !ok {
+			return false
+		}
+		if job.Failures != 0 || job.Attempt > 1 || job.State == "cancelled" || job.State == "discarded" {
+			t.Fatalf("notification deletion job failed: %+v", job)
+		}
+		return job.State == "completed"
+	})
+}
+
+// notificationDeletionJobsForTest are the notification module's request
+// workers as newApp registers them, for a test that runs its own Runner in
+// place of the app's: the deletion events it publishes enqueue
+// notification.delete_rows too.
+func notificationDeletionJobsForTest(pool *pgxpool.Pool, cfg config.Config) []jobs.Job {
+	return notification.New(notification.Deps{Pool: pool, Issues: issue.Provide(pool, nil).NotificationIssues, JobTx: newIssueJobTx(pool, cfg), RuntimeNow: time.Now,
+		Logger: slog.New(slog.DiscardHandler), DeleteBatch: cfg.Notification.DeleteBatch, DeleteBudget: cfg.Notification.DeleteBudget}).Jobs()
 }

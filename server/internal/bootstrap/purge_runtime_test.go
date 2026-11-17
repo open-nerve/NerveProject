@@ -18,8 +18,9 @@ import (
 )
 
 // Hosts are created and soft deleted through the runtime app. Asset rows,
-// the planning module's rows and a notification deleted with its work item
-// are explicit storage fixtures written with the same restricted runtime role.
+// the planning module's rows and a live notification, which the runtime
+// app's notification.delete_rows deletes with its workspace, are explicit
+// storage fixtures written with the same restricted runtime role.
 // Only the isolated owner connection ages tombstones and observes results.
 func TestPurgeDeletedRunsWithRuntimeRole(t *testing.T) {
 	roles := newSplitRoles(t)
@@ -84,12 +85,12 @@ func TestPurgeDeletedRunsWithRuntimeRole(t *testing.T) {
 			seedCycles(t, roles.server, project, accountID(t, contract, base, token))
 			seedModules(t, roles.server, project, accountID(t, contract, base, token))
 			seedMemberships(t, roles.server, item, accountID(t, contract, base, token))
+			seedNotification(t, roles.server, item, accountID(t, contract, base, token))
 			w.send(t, "alice", http.MethodPost, commentsOf(item), `{"comment_html":"<p>Keep the child visible to cleanup</p>"}`, 201)
 			credential := createPAT(t, contract, base, token)
 			w.send(t, "alice", http.MethodDelete, "/api/v0/api-tokens/"+credential.ID, "", 204)
 			w.send(t, "alice", http.MethodDelete, "/api/v0/workspaces/"+slug, "", 204)
 			waitWorkspaceDeletion(t, roles.owner, workspace)
-			seedNotification(t, roles.server, item, accountID(t, contract, base, token))
 			fixtures = append(fixtures, fixture{workspace, credential.ID})
 		}
 	}) {

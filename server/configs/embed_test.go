@@ -112,6 +112,7 @@ func TestBuiltInProfiles(t *testing.T) {
 				},
 				Planning: config.PlanningConfig{DeleteBatch: 1000, DeleteBudget: 45 * time.Second,
 					FreezeInterval: map[string]time.Duration{"test": 2 * time.Second, "dev": time.Hour, "prod": time.Hour}[tt.env]},
+				Notification: config.NotificationConfig{DeleteBatch: 1000, DeleteBudget: 45 * time.Second},
 				Files: config.FilesConfig{
 					UploadTTL: 15 * time.Minute, OperationTimeout: 10 * time.Second, CleanupInterval: time.Hour, CleanupBatch: 100, CleanupBudget: 10 * time.Second,
 					SizeLimit: 5 << 20, Driver: "local", Local: config.LocalFilesConfig{Root: "./data/files"}, S3: config.S3FilesConfig{PathStyle: true},

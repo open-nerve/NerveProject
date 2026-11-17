@@ -152,7 +152,8 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 		return nil, err
 	}
 	inserter := jobInserter{client: client}
-	events, err := newDispatcher(eventTypes(), slices.Concat(issue.Subscribers(issuePorts, inserter), planning.Subscribers(inserter), asset.Subscribers(assetPorts, inserter)))
+	events, err := newDispatcher(eventTypes(), slices.Concat(issue.Subscribers(issuePorts, inserter), planning.Subscribers(inserter), asset.Subscribers(assetPorts, inserter),
+		notification.Subscribers(notificationPorts, inserter)))
 	if err != nil {
 		a.close()
 		return nil, err
@@ -191,6 +192,10 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 		IssueTransfer: planningTransfer{transfer: issuePorts.PlanningTransfer},
 		ListSettings:  issuePorts.ListSettings,
 		LinkCrawls:    inserter, LinkCrawler: previews,
+	})
+	notes := notification.New(notification.Deps{
+		Pool: pool, Issues: issuePorts.NotificationIssues, JobTx: issueTx, RuntimeNow: time.Now, Logger: logger,
+		DeleteBatch: cfg.Notification.DeleteBatch, DeleteBudget: cfg.Notification.DeleteBudget,
 	})
 	// project before workspace: workspace's writes take its cascade.
 	proj := project.New(project.Deps{
@@ -253,8 +258,8 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 		return nil, err
 	}
 	purge := newPurgeDeleted([]purgeModule{{"asset", forAssetPurge(assetPurger)}, {"notification", forNotificationPurge(notificationPorts.Purger)}, {"issue", forIssuePurge(issuePorts.Purger)}, {"planning", forPlanningPurge(planningPorts.Purger)}, {"project", forProjectPurge(projectPorts.Purger)}, {"workspace", forWorkspacePurge(workspacePorts.Purger)}, {"identity", forIdentityPurge(identityPorts.Purger)}}, businessClock, time.Now, cfg.Cleanup.PurgeAfter, cfg.Cleanup.PurgeBatch, cfg.Files.CleanupBudget)
-	definitions := append(slices.Concat(ident.Jobs(), issues.Jobs(), plans.Jobs(), files.Jobs()), purgeJob(purge, cfg.Cleanup.PurgeInterval))
-	a.jobs, err = jobs.New(pool, jobs.Config{ShutdownTimeout: cfg.Jobs.ShutdownTimeout, Logger: logger, DefaultWorkers: cfg.Jobs.DefaultWorkers, PeriodicWorkers: cfg.Jobs.PeriodicWorkers}, definitions, slices.Concat(identity.EnqueuedKinds(), issue.EnqueuedKinds(), planning.EnqueuedKinds(), asset.EnqueuedKinds()))
+	definitions := append(slices.Concat(ident.Jobs(), issues.Jobs(), plans.Jobs(), files.Jobs(), notes.Jobs()), purgeJob(purge, cfg.Cleanup.PurgeInterval))
+	a.jobs, err = jobs.New(pool, jobs.Config{ShutdownTimeout: cfg.Jobs.ShutdownTimeout, Logger: logger, DefaultWorkers: cfg.Jobs.DefaultWorkers, PeriodicWorkers: cfg.Jobs.PeriodicWorkers}, definitions, slices.Concat(identity.EnqueuedKinds(), issue.EnqueuedKinds(), planning.EnqueuedKinds(), asset.EnqueuedKinds(), notification.EnqueuedKinds()))
 	if err != nil {
 		a.close()
 		return nil, err

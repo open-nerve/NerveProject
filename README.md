@@ -112,7 +112,7 @@ M4列表专用三浏览器矩阵在当前 `make build` 之后运行 `pnpm --filt
 
 - **后台任务与自动归档（M4/P6–P9）**：`jobs.default_workers` 默认10、`jobs.periodic_workers` 默认2，均须为正整数。`issue.auto_archive_interval` 默认24小时、测试环境2秒，最小1秒；River的 `periodic` 队列运行会话清理、工作项自动归档、物理清理与描述版本保留（M6/P4 起另有迭代的冻结 `planning.freeze_cycles`，见下一条），`default` 运行链接抓取与删除行任务（M6 起含模块链接的抓取与迭代、模块的删除行）。项目 `archive_in=0` 关闭自动归档，1–12按每月30天计；只归档完成/取消且 `updated_at` 到阈值的未归档工作项。系统活动和事件均无操作者。`clock.offset` 默认0，仅 `NERVE_ENV=test` 可设非零（可用 `NERVE_CLOCK__OFFSET` 覆盖），只影响业务时钟，不改变River调度、限速和等待期限；生产环境非零启动失败。配置及实测见 [P6 review](docs/v0/M4-issue-core/reviews/P6-issue-events-review.md)。
 
-- **后台删除、保留与冻结（M4/P9、M6/P1、M6/P4）**：以下九项支持同名环境覆盖；test的三个周期间隔（`cleanup.purge_interval`、`issue.trim_versions_interval`、`planning.freeze_interval`）为2s，其他默认值与基础配置相同。启动会记录有效配置，非法值启动失败。
+- **后台删除、保留与冻结（M4/P9、M6/P1、M6/P4、M7/P1b）**：以下十一项支持同名环境覆盖；test的三个周期间隔（`cleanup.purge_interval`、`issue.trim_versions_interval`、`planning.freeze_interval`）为2s，其他默认值与基础配置相同。启动会记录有效配置，非法值启动失败。
 
   | 配置 | 默认 | 环境变量 | 合法值 |
   |---|---|---|---|
@@ -125,6 +125,8 @@ M4列表专用三浏览器矩阵在当前 `make build` 之后运行 `pnpm --filt
   | `planning.delete_batch` | `1000` | `NERVE_PLANNING__DELETE_BATCH` | `1..2147483647` |
   | `planning.delete_budget` | `45s` | `NERVE_PLANNING__DELETE_BUDGET` | `>0`且加5s不溢出 |
   | `planning.freeze_interval` | `1h` | `NERVE_PLANNING__FREEZE_INTERVAL` | `≥1s` |
+  | `notification.delete_batch` | `1000` | `NERVE_NOTIFICATION__DELETE_BATCH` | `1..2147483647` |
+  | `notification.delete_budget` | `45s` | `NERVE_NOTIFICATION__DELETE_BUDGET` | `>0`且加5s不溢出 |
 
   `cleanup.purge_deleted` 是一个无参周期任务，一次读取业务时钟固定截止点，依次调用asset→issue→planning→project→workspace→identity。每表按id键集分批、每批独立提交，只选择 `deleted_at < cutoff`；精确截止点和较新的直接候选保留。父行的CASCADE可带走仍活或较新的子行。不物理删除账户；会话仍由原会话清理任务负责。
 

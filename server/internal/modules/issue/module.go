@@ -58,6 +58,7 @@ type Provided struct {
 	AssetParents       AssetParents
 	IssueCascade       Cascade
 	ListSettings       ListSettings
+	NotificationIssues NotificationIssues
 	PlanningStats      PlanningStats
 	PlanningTransfer   PlanningTransfer
 	Purger             *app.Purger
@@ -82,7 +83,7 @@ func Provide(pool *pgxpool.Pool, protected []postgres.ProtectedReference) Provid
 		{Table: "module_issues", Delete: store.PurgeModuleIssues},
 		{Table: "cycle_issues", Delete: store.PurgeCycleIssues},
 		{Table: "issues", Protected: true, Delete: store.PurgeIssues},
-	}), IssueCascade: app.NewCascade(store), ListSettings: app.ListSettings{}, PlanningStats: store,
+	}), IssueCascade: app.NewCascade(store), ListSettings: app.ListSettings{}, NotificationIssues: store, PlanningStats: store,
 		PlanningTransfer: app.NewCycleTransfers(store)}
 }
 

@@ -90,10 +90,11 @@ export async function keysBelow(db: Database, table: string): Promise<ForeignKey
   return keys;
 }
 
-/** The explicitly asynchronous issue/asset/planning owners wait for their committed jobs; unknown tables remain immediate. */
+/** The explicitly asynchronous issue/asset/planning/notification owners wait for their committed jobs; unknown tables remain immediate. */
 export function asynchronousDeletionTable(name: string): boolean {
   return (
     name === "file_assets" ||
+    name === "notifications" ||
     name === "cycles" ||
     name === "modules" ||
     name === "module_members" ||
