@@ -31,11 +31,19 @@ func TestIssueDetailShape(t *testing.T) {
 			t.Fatal("Issue module_ids must be a required array of uuids")
 		}
 	}
+	// The detail's own fields (M7 P1a spec 2.3): its description, and
+	// whether the caller subscribes to it, a required boolean.
+	own := []string{"description_html", "is_subscribed"}
 	properties := maps.Clone(detail.Properties)
-	if _, ok := properties["description_html"]; !ok {
-		t.Fatal("detail lacks description_html")
+	for _, name := range own {
+		if _, ok := properties[name]; !ok {
+			t.Fatalf("detail lacks %s", name)
+		}
+		delete(properties, name)
 	}
-	delete(properties, "description_html")
+	if subscribed := detail.Properties["is_subscribed"]; subscribed.Value == nil || !subscribed.Value.Type.Is("boolean") {
+		t.Fatal("is_subscribed must be a boolean")
+	}
 	// Compare serialized schemas, excluding parser-origin metadata that differs by source location.
 	gotProperties, err := json.Marshal(properties)
 	if err != nil {
@@ -46,18 +54,20 @@ func TestIssueDetailShape(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !bytes.Equal(gotProperties, wantProperties) {
-		t.Fatal("IssueDetail properties must equal Issue plus description_html")
+		t.Fatal("IssueDetail properties must equal Issue plus description_html and is_subscribed")
 	}
 	required := slices.Clone(detail.Required)
-	if !slices.Contains(required, "description_html") {
-		t.Fatal("description must be required")
+	for _, name := range own {
+		if !slices.Contains(required, name) {
+			t.Fatalf("%s must be required", name)
+		}
 	}
-	required = slices.DeleteFunc(required, func(s string) bool { return s == "description_html" })
+	required = slices.DeleteFunc(required, func(s string) bool { return slices.Contains(own, s) })
 	slices.Sort(required)
 	want := slices.Clone(issue.Required)
 	slices.Sort(want)
 	if !slices.Equal(required, want) {
-		t.Fatal("IssueDetail required must equal Issue plus description_html")
+		t.Fatal("IssueDetail required must equal Issue plus description_html and is_subscribed")
 	}
 	if len(detail.AllOf) > 0 {
 		t.Fatal("detail must be explicit")

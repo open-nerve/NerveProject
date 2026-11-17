@@ -497,6 +497,9 @@ type IssueDetail struct {
 	DescriptionHTML string    `json:"description_html"`
 	ID              uuid.UUID `json:"id"`
 
+	// IsSubscribed Whether the caller subscribes to the work item at the moment of the answer. A list's row does not carry it.
+	IsSubscribed bool `json:"is_subscribed"`
+
 	// LabelIds Its labels, by id.
 	LabelIds []uuid.UUID `json:"label_ids"`
 

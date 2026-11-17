@@ -90,10 +90,15 @@ func hideParents(ctx context.Context, issues IssueReader, actor uuid.UUID, items
 }
 
 // seenOne is the work item i as the caller actor sees it (seen), by his
-// grant on its project.
+// grant on its project, in full: with whether he subscribes to it, read
+// last, in the same transaction or read snapshot (M7 P1a spec 2.3, R5).
+// Every answer of one work item in full but a creation's is this one.
 func (l Locks) seenOne(ctx context.Context, actor uuid.UUID, grant shared.Grant, i domain.Issue) (domain.Issue, error) {
 	out, err := l.seen(ctx, actor, grants{i.ProjectID: grant}, i)
 	if err != nil {
+		return domain.Issue{}, err
+	}
+	if out[0].Subscribed, err = l.issues.IsSubscribed(ctx, i.ID, actor); err != nil {
 		return domain.Issue{}, err
 	}
 	return out[0], nil

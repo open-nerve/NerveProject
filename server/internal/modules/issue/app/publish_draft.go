@@ -60,12 +60,8 @@ func (u *PublishDraft) Execute(ctx context.Context, id uuid.UUID) (domain.Issue,
 		if err = u.d.Drafts.DeleteDraft(ctx, DraftDeletion{ID: id, By: actor.UserID, At: at}); err != nil {
 			return err
 		}
-		items := []domain.Issue{row}
-		if err := projectAttachments(ctx, u.d.Creation.d.Attachments, items); err != nil {
-			return err
-		}
-		created = items[0]
-		return nil
+		created, err = u.d.Creation.answer(ctx, actor.UserID, row)
+		return err
 	})
 	if err != nil {
 		return domain.Issue{}, err

@@ -191,7 +191,9 @@ func TestTheGuestRuleHoldsForAParent(t *testing.T) {
 // Up (his GET of it is 404), under which alice puts his His. Each answer
 // of His to walt, his read of it by its id and by its identifier and his
 // change of its name, is alice's answer of it then, compared whole, with
-// parent_id null. Below, under his own Mine, he is answered under Mine;
+// parent_id null, but for is_subscribed, each caller's own (M7 P1a spec
+// 2.3): walt, who created His, subscribes to it, and alice does not. Below,
+// under his own Mine, he is answered under Mine;
 // bob, Web's member, who sees every work item, His under Up.
 func TestAHiddenParentIsNotInTheAnswer(t *testing.T) {
 	w := newIssueWorld(t)
@@ -215,6 +217,8 @@ func TestAHiddenParentIsNotInTheAnswer(t *testing.T) {
 			t.Fatalf("%s: alice is answered His under %v, want Up, %s", step.name, want["parent_id"], up)
 		}
 		want["parent_id"] = nil
+		delete(got, "is_subscribed")
+		delete(want, "is_subscribed")
 		if !reflect.DeepEqual(got, want) {
 			t.Errorf("%s, by walt: %v; want alice's answer with parent_id null, %v", step.name, got, want)
 		}

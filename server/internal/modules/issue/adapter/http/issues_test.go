@@ -19,9 +19,10 @@ import (
 // to the 19th of October, completed, with an assignee and a label, in a
 // cycle and two modules, made by alice, archived half a minute later and
 // changed last by bob a minute after its creation: each field that may be
-// null has a value of its own, so each shows as its own. WEB-8, new, with
-// none of them, without a creator or a last writer (created_by_id and
-// updated_by_id null).
+// null has a value of its own, so each shows as its own; the caller
+// subscribes to it, which only its detail shows (is_subscribed). WEB-8,
+// new, with none of them, without a creator or a last writer (created_by_id
+// and updated_by_id null), the caller not subscribed.
 var (
 	stateID   = uuid.MustParse("0199a2b4-0000-7000-8000-0000000000c1")
 	bobID     = uuid.MustParse("0199a2b4-0000-7000-8000-000000000002")
@@ -37,7 +38,7 @@ var (
 	webSeven  = domain.Issue{ID: uuid.MustParse("0199a2b4-0000-7000-8000-0000000000e7"), WorkspaceID: acmeID, ProjectID: webID, SequenceID: 7,
 		Name: "Fix the login", DescriptionHTML: "<p>Seven</p>", StateID: stateID, Priority: domain.PriorityHigh, StartDate: &startDay, TargetDate: &targetDay, ParentID: &webSixID,
 		SortOrder: 75535.5, CompletedAt: &completed, ArchivedAt: &archived, AssigneeIDs: []uuid.UUID{bobID}, LabelIDs: []uuid.UUID{bugID},
-		CycleID: &sprintID, ModuleIDs: moduleIDs, SubIssuesCount: 2, AttachmentCount: 9007199254740993, LinkCount: 9007199254740993, CreatedByID: &aliceID, UpdatedByID: &bobID, CreatedAt: created, UpdatedAt: updated}
+		CycleID: &sprintID, ModuleIDs: moduleIDs, SubIssuesCount: 2, Subscribed: true, AttachmentCount: 9007199254740993, LinkCount: 9007199254740993, CreatedByID: &aliceID, UpdatedByID: &bobID, CreatedAt: created, UpdatedAt: updated}
 	webSevenJSON = `{"archived_at":"2026-10-17T10:00:30.123456Z","assignee_ids":["0199a2b4-0000-7000-8000-000000000002"],"attachment_count":9007199254740993,` +
 		`"completed_at":"2026-10-17T10:00:00.123455999Z","created_at":"2026-10-17T10:00:00.123456Z",` +
 		`"created_by_id":"0199a2b4-0000-7000-8000-000000000001","cycle_id":"0199a2b4-0000-7000-8000-0000000000b1","id":"0199a2b4-0000-7000-8000-0000000000e7",` +
@@ -59,8 +60,10 @@ var (
 )
 
 var (
-	webSevenDetailJSON = strings.Replace(webSevenJSON, `"id":`, `"description_html":"\u003cp\u003eSeven\u003c/p\u003e","id":`, 1)
-	webEightDetailJSON = strings.Replace(webEightJSON, `"id":`, `"description_html":"\u003cp\u003e\u003c/p\u003e","id":`, 1)
+	webSevenDetailJSON = strings.NewReplacer(`"id":`, `"description_html":"\u003cp\u003eSeven\u003c/p\u003e","id":`,
+		`"label_ids":`, `"is_subscribed":true,"label_ids":`).Replace(webSevenJSON)
+	webEightDetailJSON = strings.NewReplacer(`"id":`, `"description_html":"\u003cp\u003e\u003c/p\u003e","id":`,
+		`"label_ids":`, `"is_subscribed":false,"label_ids":`).Replace(webEightJSON)
 )
 
 // POST goes to the use case for the caller and the path's project, with

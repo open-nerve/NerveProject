@@ -3154,6 +3154,8 @@ export interface components {
         IssueDetail: {
             /** @description Sanitized rich text HTML; at most 500000 characters on input. */
             description_html: string;
+            /** @description Whether the caller subscribes to the work item at the moment of the answer. A list's row does not carry it. */
+            is_subscribed: boolean;
             /** Format: uuid */
             id: string;
             /** Format: uuid */

@@ -24,12 +24,13 @@ export class IssueStore {
       )
     );
   }
-  private choose = (held: Entity | undefined, answer: Entity, keepDescription = true): Entity => {
+  /** A list row landing over a held detail keeps the detail's own fields: its HTML and the caller's subscription. */
+  private choose = (held: Entity | undefined, answer: Entity, keepDetail = true): Entity => {
     if (held === null || answer === null) return null;
     if (held && compareIssueTime(answer.updated_at, held.updated_at) < 0) return held;
     const merged =
-      keepDescription && held && "description_html" in held && !("description_html" in answer)
-        ? { ...answer, description_html: held.description_html }
+      keepDetail && held && "description_html" in held && !("description_html" in answer)
+        ? { ...answer, description_html: held.description_html, is_subscribed: held.is_subscribed }
         : { ...answer };
     Object.freeze(merged.assignee_ids);
     Object.freeze(merged.label_ids);

@@ -136,6 +136,10 @@ type IssueReader interface {
 	// as its row has it (M7 P1a spec 2.4); found is false when there is
 	// none, also when it was deleted while the lock waited.
 	ShareIssue(ctx context.Context, id uuid.UUID) (i SharedIssue, found bool, err error)
+	// IsSubscribed reads whether the account has an undeleted row among
+	// the subscribers of the work item issueID: a detail answer's
+	// is_subscribed for its caller (M7 P1a spec 2.3, R5).
+	IsSubscribed(ctx context.Context, issueID, account uuid.UUID) (bool, error)
 }
 
 // SubIssueCount is a work item's number of undeleted, unarchived direct

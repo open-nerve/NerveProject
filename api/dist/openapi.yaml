@@ -5923,6 +5923,7 @@ components:
       additionalProperties: false
       required:
         - description_html
+        - is_subscribed
         - id
         - workspace_id
         - project_id
@@ -5951,6 +5952,9 @@ components:
         description_html:
           description: Sanitized rich text HTML; at most 500000 characters on input.
           type: string
+        is_subscribed:
+          description: Whether the caller subscribes to the work item at the moment of the answer. A list's row does not carry it.
+          type: boolean
         id:
           type: string
           format: uuid
