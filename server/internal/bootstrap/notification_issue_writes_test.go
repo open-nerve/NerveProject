@@ -42,16 +42,36 @@ func fanoutOf(t *testing.T, pool *pgxpool.Pool, eventType string, item uuid.UUID
 	return job
 }
 
-// assignedAt is the position of the job's change assigning the account, as positionOf reads an event's.
+// assignedAt is the position of the job's change assigning the account, as positionOf reads an event's; mentionedAt,
+// of its first mention of the account.
 func assignedAt(t *testing.T, job notificationriver.FanoutArgs, account uuid.UUID) int16 {
 	t.Helper()
+	return namingAt(t, job, "assignees", account)
+}
+
+func mentionedAt(t *testing.T, job notificationriver.FanoutArgs, account uuid.UUID) int16 {
+	t.Helper()
+	return namingAt(t, job, "mention", account)
+}
+
+// namingAt is the position of the job's first change of field whose new id is the account.
+func namingAt(t *testing.T, job notificationriver.FanoutArgs, field string, account uuid.UUID) int16 {
+	t.Helper()
 	for n, c := range job.Changes {
-		if c.Field == "assignees" && c.NewID != nil && *c.NewID == account {
+		if c.Field == field && c.NewID != nil && *c.NewID == account {
 			return int16(n)
 		}
 	}
-	t.Fatalf("%s has no assignment of %s: %+v", job.Type, account, job.Changes)
+	t.Fatalf("%s has no %s change of %s: %+v", job.Type, field, account, job.Changes)
 	return 0
+}
+
+// madeIt is the change of a work item's creation itself; assigning, of its creation assigning it to the account of
+// the name (spec 2.3).
+var madeIt = notificationdomain.ChangeSnapshot{Field: "issue", Verb: "created"}
+
+func assigning(name *string, account *uuid.UUID) notificationdomain.ChangeSnapshot {
+	return notificationdomain.ChangeSnapshot{Field: "assignees", Verb: "created", NewValue: name, NewID: account}
 }
 
 // sending is a notification a fan-out sends: its receiver, its sender, its position and its change.
@@ -111,6 +131,20 @@ type webState struct {
 	name, group string
 }
 
+// itemMade is the work item the account by creates in Web through the API, named name, in the state s and assigned to
+// the assignees, as its notifications show it.
+func (w issueWorld) itemMade(t *testing.T, by, name string, s webState, assignees ...uuid.UUID) notificationdomain.IssueSnapshot {
+	t.Helper()
+	var answer struct {
+		ID         uuid.UUID `json:"id"`
+		SequenceID int       `json:"sequence_id"`
+	}
+	body := fmt.Sprintf(`{"name":%q,"state_id":%q,"assignee_ids":%s}`, name, s.id, idArray(assignees...))
+	decodeAnswer(t, w.send(t, by, http.MethodPost, "/api/v0/projects/"+w.web.String()+"/issues", body, http.StatusCreated), &answer)
+	return notificationdomain.IssueSnapshot{ID: answer.ID, Name: name, SequenceID: answer.SequenceID, Identifier: "WEB", StateName: s.name,
+		StateGroup: s.group}
+}
+
 // changed is a change of field an update notifies of, verb updated, with the values and ids it has, nil for none.
 func changed(field string, before, after *string, beforeID, afterID *uuid.UUID) notificationdomain.ChangeSnapshot {
 	return notificationdomain.ChangeSnapshot{Field: field, Verb: "updated", OldValue: before, NewValue: after, OldID: beforeID, NewID: afterID}
@@ -155,19 +189,8 @@ func TestWorkItemWritesNotifyThroughTheApp(t *testing.T) {
 	bobName, waltName := names[bob], names[walt]
 	todo, done := webState{w.todo, "Todo", "unstarted"}, webState{w.done, "Done", "completed"}
 	started := webState{stateID(t, w.pool, w.web, "In Progress"), "In Progress", "started"}
-	made := func(by, name string, s webState, assignees ...uuid.UUID) notificationdomain.IssueSnapshot {
-		t.Helper()
-		var answer struct {
-			ID         uuid.UUID `json:"id"`
-			SequenceID int       `json:"sequence_id"`
-		}
-		body := fmt.Sprintf(`{"name":%q,"state_id":%q,"assignee_ids":%s}`, name, s.id, idArray(assignees...))
-		decodeAnswer(t, w.send(t, by, http.MethodPost, "/api/v0/projects/"+w.web.String()+"/issues", body, http.StatusCreated), &answer)
-		return notificationdomain.IssueSnapshot{ID: answer.ID, Name: name, SequenceID: answer.SequenceID, Identifier: "WEB", StateName: s.name,
-			StateGroup: s.group}
-	}
-	parent := made("alice", "Parent", todo)
-	team := made("bob", "Fix the login", todo, bob, walt)
+	parent := w.itemMade(t, "alice", "Parent", todo)
+	team := w.itemMade(t, "bob", "Fix the login", todo, bob, walt)
 	none, v := eventValue(""), eventValue[string]
 	writes := []fieldWrite{
 		{"name", `{"name":"Fix it"}`, "Fix it", todo, []sending{{bob, "assigned", 0, changed("name", v("Fix"), v("Fix it"), nil, nil)}}},
@@ -188,9 +211,9 @@ func TestWorkItemWritesNotifyThroughTheApp(t *testing.T) {
 	}
 	items := make([]notificationdomain.IssueSnapshot, len(writes))
 	for i := range writes {
-		items[i] = made("alice", "Fix", todo, bob)
+		items[i] = w.itemMade(t, "alice", "Fix", todo, bob)
 	}
-	archived, auto := made("alice", "Fix", done, bob), made("alice", "Fix", done, bob)
+	archived, auto := w.itemMade(t, "alice", "Fix", done, bob), w.itemMade(t, "alice", "Fix", done, bob)
 	// A fan-out reads the work item's snapshot, subscribers and assignees when it runs: the creations' have run before
 	// any work item is written again, and each is written once more, or, archived, by writes that change none of them.
 	waitForFanouts(t, w.pool)
@@ -214,11 +237,6 @@ func TestWorkItemWritesNotifyThroughTheApp(t *testing.T) {
 	}
 	waitForFanouts(t, w.pool)
 
-	// madeIt is the change of a work item's creation itself; assigning, of its assignment to the account of the name.
-	madeIt := notificationdomain.ChangeSnapshot{Field: "issue", Verb: "created"}
-	assigning := func(name *string, account *uuid.UUID) notificationdomain.ChangeSnapshot {
-		return notificationdomain.ChangeSnapshot{Field: "assignees", Verb: "created", NewValue: name, NewID: account}
-	}
 	creation := func(t *testing.T, item notificationdomain.IssueSnapshot) (notificationriver.FanoutArgs, []sentNotification) {
 		t.Helper()
 		job := fanoutOf(t, w.pool, "issue.created", item.ID)
