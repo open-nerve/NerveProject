@@ -159,6 +159,27 @@ export async function issueUnarchived(api: Api, token: string, issueId: string) 
   return data ? { status: response.status, issue: data } : answer(response, error);
 }
 
+/**
+ * The answer of POST /api/v0/issues/{issue_id}/subscribe by the caller of token: its status, 204 without a body, or the
+ * problem's code (M7 P1a spec 2.3).
+ */
+export async function issueSubscribed(api: Api, token: string, issueId: string) {
+  const { error, response } = await api.POST("/api/v0/issues/{issue_id}/subscribe", {
+    params: { path: { issue_id: issueId } },
+    headers: bearer(token),
+  });
+  return answer(response, error);
+}
+
+/** The answer of POST /api/v0/issues/{issue_id}/unsubscribe by the caller of token, as issueSubscribed's. */
+export async function issueUnsubscribed(api: Api, token: string, issueId: string) {
+  const { error, response } = await api.POST("/api/v0/issues/{issue_id}/unsubscribe", {
+    params: { path: { issue_id: issueId } },
+    headers: bearer(token),
+  });
+  return answer(response, error);
+}
+
 /** The answer of DELETE /api/v0/issues/{issue_id} by the caller of token: its status, or the problem's code. */
 export async function issueDeleted(api: Api, token: string, issueId: string) {
   const { error, response } = await api.DELETE("/api/v0/issues/{issue_id}", {
