@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
+	"slices"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -267,6 +268,74 @@ func TestIssueUpdatedEventComposition(t *testing.T) {
 	send(`{"description_html":"<p>Rejected</p>"}`, 500)
 	if len(received) != 0 || issueEventCount(t, w) != 7 {
 		t.Fatal("update published before failed description version")
+	}
+}
+
+// The description's mentions in the work item's events (M7 P1a spec 2.2): a
+// creation's and a draft's publication's are the members it mentions, walt,
+// a guest who sees only his own, among them, olga, no member, not, in id
+// order, last; an update's are those it newly mentions, after the rest, and
+// a save written unchanged or a patch without a description has none. A
+// description save subscribes only the newly mentioned who can see the work
+// item (R7): bob, still mentioned after his subscription row was deleted
+// (as P1a's unsubscribe deletes it), is not subscribed again; wanda is.
+func TestIssueEventDescriptionMentions(t *testing.T) {
+	w := newIssueWorld(t)
+	w.adminGuest(t)
+	w.makeMember(t, "wanda", w.web, shared.RoleAdmin)
+	var received []shared.Event
+	var failure error
+	route := issueEventRoute(t, w, clockAt(time.Date(2044, 5, 6, 7, 8, 9, 0, time.UTC)), &received, &failure)
+	mentions := func(names ...string) []shared.Change {
+		ids := make([]uuid.UUID, 0, len(names))
+		for _, name := range names {
+			ids = append(ids, w.ids[name])
+		}
+		slices.SortFunc(ids, uuid.UUID.Compare)
+		changes := make([]shared.Change, 0, len(ids))
+		for _, id := range ids {
+			changes = append(changes, shared.Change{Field: "mention", NewID: &id})
+		}
+		return changes
+	}
+	html := mentionHTML(w.ids["olga"], w.ids["walt"], w.ids["wanda"], w.ids["bob"], w.ids["bob"])
+	route.answerWithin(t, w.contract, http.MethodPost, "/api/v0/projects/"+w.web.String()+"/issues", w.ids["alice"], fmt.Sprintf(`{"name":"Mentions","description_html":%q}`, html), 201)
+	d := createDraftHTTP(t, w, "alice", fmt.Sprintf(`{"project_id":%q,"payload":{"name":"Draft","description_html":%q}}`, w.web, html))
+	route.answerWithin(t, w.contract, http.MethodPost, publishPath(d.ID), w.ids["alice"], "", 201)
+	if len(received) != 2 {
+		t.Fatalf("creation events=%d, want two", len(received))
+	}
+	for _, e := range received {
+		if e.Type != "issue.created" || len(e.Changes) != 13 || !reflect.DeepEqual(e.Changes[10:], mentions("bob", "wanda", "walt")) {
+			t.Errorf("created changes=%+v", e.Changes)
+		}
+	}
+	id := w.newWorkItemIn(t, w.web, fmt.Sprintf(`{"name":"Patch","description_html":%q}`, mentionHTML(w.ids["bob"])))
+	if _, err := w.pool.Exec(pgtest.Soon(t), "UPDATE issue_subscribers SET deleted_at=now() WHERE issue_id=$1 AND subscriber_id=$2", id, w.ids["bob"]); err != nil {
+		t.Fatal(err)
+	}
+	received = nil
+	for _, body := range []string{
+		fmt.Sprintf(`{"description_html":%q}`, "<p>Kept</p>"+mentionHTML(w.ids["bob"], w.ids["wanda"])),
+		fmt.Sprintf(`{"description_html":%q}`, "<p>Guest</p>"+mentionHTML(w.ids["walt"], w.ids["bob"], w.ids["olga"], w.ids["wanda"])),
+		fmt.Sprintf(`{"state_id":%q}`, w.done),
+		fmt.Sprintf(`{"description_html":%q,"skip_activity":true}`, `<p data-id="kept">Guest</p>`+mentionHTML(w.ids["walt"], w.ids["bob"], w.ids["olga"], w.ids["wanda"])),
+	} {
+		route.answerWithin(t, w.contract, http.MethodPatch, "/api/v0/issues/"+id.String(), w.ids["alice"], body, 200)
+	}
+	if len(received) != 3 {
+		t.Fatalf("update events=%d, want three: none for the save written unchanged", len(received))
+	}
+	for n, want := range [][]shared.Change{mentions("wanda"), mentions("walt"), nil} {
+		e := received[n]
+		if field := []string{"description", "description", "state"}[n]; len(e.Changes) != len(want)+1 || e.Changes[0].Field != field || len(want) > 0 && !reflect.DeepEqual(e.Changes[1:], want) {
+			t.Errorf("updated %d changes=%+v, want %s then %+v", n, e.Changes, field, want)
+		}
+	}
+	want := []uuid.UUID{w.ids["alice"], w.ids["wanda"]}
+	slices.SortFunc(want, uuid.UUID.Compare)
+	if got := queryIDs(t, w.pool, "SELECT subscriber_id FROM issue_subscribers WHERE issue_id=$1 AND deleted_at IS NULL ORDER BY subscriber_id", id); !slices.Equal(got, want) {
+		t.Fatalf("subscribers=%v, want %v: only the visible newly mentioned subscribe", got, want)
 	}
 }
 

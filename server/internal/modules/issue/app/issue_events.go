@@ -19,7 +19,8 @@ func (s stamp) event(kind string, changes []shared.Change) shared.Event {
 // createdChanges is the complete initial state, including fields that have no
 // activity rows. Names are snapshots already read under the project lock.
 // The cycle it joins comes after the labels, as they do, then the modules it
-// joins, in id order (M6 P3a spec 2.4).
+// joins, in id order (M6 P3a spec 2.4), then the members its description
+// mentions (mentionChanges).
 func createdChanges(row IssueRow, c checked, accounts []domain.Assignee) []shared.Change {
 	changes := []shared.Change{
 		{Field: "name", New: eventPtr(row.Name)},
@@ -51,18 +52,33 @@ func createdChanges(row IssueRow, c checked, accounts []domain.Assignee) []share
 	for _, m := range c.modules {
 		changes = append(changes, shared.Change{Field: "modules", New: eventPtr(m.Name), NewID: eventPtr(m.ID)})
 	}
-	return changes
+	return append(changes, mentionChanges(c.mentions)...)
 }
 
 // updatedChanges projects this write's changes, independent of persisted
-// activity/version coalescing. Sorting has no activity and is appended last.
-func updatedChanges(activity domain.Update, sortOrder *domain.Changed[float64]) []shared.Change {
+// activity/version coalescing. Sorting has no activity and is appended
+// after them, then the members its description newly mentions
+// (mentionChanges).
+func updatedChanges(activity domain.Update, sortOrder *domain.Changed[float64], mentioned []uuid.UUID) []shared.Change {
 	var changes []shared.Change
 	for _, a := range domain.UpdateActivity(activity) {
 		changes = append(changes, shared.Change{Field: *a.Field, Old: a.OldValue, New: a.NewValue, OldID: a.OldIdentifier, NewID: a.NewIdentifier})
 	}
 	if sortOrder != nil {
 		changes = append(changes, shared.Change{Field: "sort_order", Old: eventPtr(eventFloat(sortOrder.Old)), New: eventPtr(eventFloat(sortOrder.New))})
+	}
+	return append(changes, mentionChanges(mentioned)...)
+}
+
+// mentionChanges are the accounts a write newly mentions, one change each
+// in id order, on the New side (M7 P1a spec 2.2): the project's active
+// members its content names, whatever they can see (descriptionTargets);
+// for a description, all of them at its creation, then those it has no
+// mention row of.
+func mentionChanges(ids []uuid.UUID) []shared.Change {
+	var changes []shared.Change
+	for _, id := range ascending(ids) {
+		changes = append(changes, shared.Change{Field: "mention", NewID: eventPtr(id)})
 	}
 	return changes
 }
