@@ -10,9 +10,12 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/open-nerve/NerveProject/server/internal/modules/access"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue"
 	"github.com/open-nerve/NerveProject/server/internal/modules/notification"
 	notificationriver "github.com/open-nerve/NerveProject/server/internal/modules/notification/adapter/river"
+	"github.com/open-nerve/NerveProject/server/internal/modules/project"
+	"github.com/open-nerve/NerveProject/server/internal/modules/workspace"
 	"github.com/open-nerve/NerveProject/server/internal/platform/config"
 	"github.com/open-nerve/NerveProject/server/internal/platform/jobs"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
@@ -127,11 +130,23 @@ func waitNotificationDeletion(t *testing.T, pool *pgxpool.Pool, project uuid.UUI
 	})
 }
 
+// notificationDeps are the notification module's dependencies over pool as
+// newApp builds them, with cfg's job settings: the issue, the project and
+// the access modules' ports, each from its own Provide, converted.
+func notificationDeps(pool *pgxpool.Pool, cfg config.Config) notification.Deps {
+	workspaces, projects := workspace.Provide(pool, nil), project.Provide(pool, nil)
+	decider := access.NewDecider(access.DeciderDeps{WorkspaceRoles: workspaces.WorkspaceRolesMany,
+		ProjectAccess: accessProjectsMany{projects: projects.ProjectAccessMany}})
+	return notification.Deps{Pool: pool, Issues: notificationIssues{issues: issue.Provide(pool, nil).NotificationIssues},
+		Projects: notificationProjects{projects: projects.IssueProjects}, Readers: notificationReaders{decider: decider},
+		JobTx: newIssueJobTx(pool, cfg), RuntimeNow: time.Now, Logger: slog.New(slog.DiscardHandler),
+		DeleteBatch: cfg.Notification.DeleteBatch, DeleteBudget: cfg.Notification.DeleteBudget}
+}
+
 // notificationDeletionJobsForTest are the notification module's request
 // workers as newApp registers them, for a test that runs its own Runner in
 // place of the app's: the deletion events it publishes enqueue
 // notification.delete_rows too.
 func notificationDeletionJobsForTest(pool *pgxpool.Pool, cfg config.Config) []jobs.Job {
-	return notification.New(notification.Deps{Pool: pool, Issues: issue.Provide(pool, nil).NotificationIssues, JobTx: newIssueJobTx(pool, cfg), RuntimeNow: time.Now,
-		Logger: slog.New(slog.DiscardHandler), DeleteBatch: cfg.Notification.DeleteBatch, DeleteBudget: cfg.Notification.DeleteBudget}).Jobs()
+	return notification.New(notificationDeps(pool, cfg)).Jobs()
 }

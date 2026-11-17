@@ -146,6 +146,12 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 		WorkspaceRoles: workspacePorts.WorkspaceRoles,
 		ProjectAccess:  accessProjects{projects: projectPorts.ProjectAccess},
 	})
+	// The recheck of a notification's recipients, Authorize's rule for many
+	// accounts at once (M7 P1b spec 2.7).
+	decider := access.NewDecider(access.DeciderDeps{
+		WorkspaceRoles: workspacePorts.WorkspaceRolesMany,
+		ProjectAccess:  accessProjectsMany{projects: projectPorts.ProjectAccessMany},
+	})
 	client, err := jobs.NewInserter(pool)
 	if err != nil {
 		a.close()
@@ -194,7 +200,8 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 		LinkCrawls:    inserter, LinkCrawler: previews,
 	})
 	notes := notification.New(notification.Deps{
-		Pool: pool, Issues: issuePorts.NotificationIssues, JobTx: issueTx, RuntimeNow: time.Now, Logger: logger,
+		Pool: pool, Issues: notificationIssues{issues: issuePorts.NotificationIssues}, JobTx: issueTx, RuntimeNow: time.Now, Logger: logger,
+		Projects: notificationProjects{projects: projectPorts.IssueProjects}, Readers: notificationReaders{decider: decider},
 		DeleteBatch: cfg.Notification.DeleteBatch, DeleteBudget: cfg.Notification.DeleteBudget,
 	})
 	// project before workspace: workspace's writes take its cascade.
