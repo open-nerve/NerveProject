@@ -78,9 +78,9 @@ func TestCommentEventsComposition(t *testing.T) {
 		t.Fatalf("comment event/job/clock count=%d/%d/%d", len(events), issueEventCount(t, w), clock.calls.Load())
 	}
 	changes := [][]shared.Change{
-		{{Field: "comment_html", New: eventValue("<p>Clean</p>")}},
-		{{Field: "comment_html", Old: eventValue("<p>Clean</p>"), New: eventValue("<p>Edited</p>")}},
-		{{Field: "comment_html", Old: eventValue("<p>Edited</p>")}},
+		{{Field: "comment_html", New: eventValue("<p>Clean</p>")}, {Field: "issue", NewID: &id}},
+		{{Field: "comment_html", Old: eventValue("<p>Clean</p>"), New: eventValue("<p>Edited</p>")}, {Field: "issue", NewID: &id}},
+		{{Field: "comment_html", Old: eventValue("<p>Edited</p>")}, {Field: "issue", OldID: &id}},
 	}
 	types := []string{"issue.comment_created", "issue.comment_updated", "issue.comment_deleted"}
 	seen := map[uuid.UUID]bool{}

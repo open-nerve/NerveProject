@@ -44,10 +44,10 @@ func TestCommentEvents(t *testing.T) {
 					}
 				}
 				clock := clockAt{at: clockNow, log: w.log}
-				id := f.current.ID
+				id, issue := f.current.ID, f.current.IssueID
 				html := "<p>After</p><script>bad()</script>"
 				var err error
-				changes := []shared.Change{{Field: "comment_html", New: evptr("<p>After</p>")}}
+				changes := []shared.Change{{Field: "comment_html", New: evptr("<p>After</p>")}, {Field: "issue", NewID: &issue}}
 				switch operation {
 				case "create":
 					c := app.NewCreateIssueComment(app.CreateIssueCommentDeps{Events: p, Locks: w.locks, Comments: f, Members: w.project, Sanitizer: content.NewSanitizer(), Clock: clock})
@@ -72,7 +72,7 @@ func TestCommentEvents(t *testing.T) {
 					w.project.waited = func() { f.current.HTML = "<p>Locked</p>" }
 					d := app.NewDeleteIssueComment(app.DeleteIssueCommentDeps{Events: p, Locks: w.locks, Comments: f, Clock: clock})
 					err = d.Execute(as(alice), id)
-					changes[0] = shared.Change{Field: "comment_html", Old: evptr("<p>Locked</p>")}
+					changes = []shared.Change{{Field: "comment_html", Old: evptr("<p>Locked</p>")}, {Field: "issue", OldID: &issue}}
 				}
 				if operation == "same HTML" {
 					if err != nil || len(p.rows) != 0 || eventClockReads(w) != 0 {

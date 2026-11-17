@@ -173,7 +173,7 @@ func TestCreateIssueLinkEventComposition(t *testing.T) {
 			if len(events) != 1 || issueEventCount(t, w) != 1 || clock.calls.Load() != 1 {
 				t.Fatalf("events/jobs/clock=%d/%d/%d", len(events), issueEventCount(t, w), clock.calls.Load())
 			}
-			wantCollaborationEnvelope(t, w, events[0], "issue.link_created", "issue_link", got.ID, w.ids["bob"], at, []shared.Change{{Field: "url", New: eventValue(got.URL)}, {Field: "title", New: title}})
+			wantCollaborationEnvelope(t, w, events[0], "issue.link_created", "issue_link", got.ID, w.ids["bob"], at, []shared.Change{{Field: "url", New: eventValue(got.URL)}, {Field: "title", New: title}, {Field: "issue", NewID: &id}})
 			var field, verb, comment string
 			var old, new *string
 			var oldID, newID *uuid.UUID

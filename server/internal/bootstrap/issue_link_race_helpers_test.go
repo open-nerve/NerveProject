@@ -179,7 +179,7 @@ func (c *linkReadClock) Now() time.Time {
 	return time.Date(2044, 10, 11, 12, 13, 14, 0, time.UTC)
 }
 
-func linkRaceTitleRoute(t *testing.T, w issueWorld, clock *linkReadClock, tx shared.TxManager) moduleRoute {
+func linkRaceTitleRoute(t *testing.T, w issueWorld, clock *linkReadClock, tx shared.TxManager, item uuid.UUID) moduleRoute {
 	t.Helper()
 	client, err := jobs.NewInserter(w.pool)
 	if err != nil {
@@ -190,7 +190,7 @@ func linkRaceTitleRoute(t *testing.T, w issueWorld, clock *linkReadClock, tx sha
 		if _, ok := postgres.Tx(ctx); !ok {
 			return fmt.Errorf("title publication lost original transaction")
 		}
-		if !reflect.DeepEqual(e.Changes, []shared.Change{{Field: "title", New: eventValue("User title")}}) {
+		if !reflect.DeepEqual(e.Changes, []shared.Change{{Field: "title", New: eventValue("User title")}, {Field: "issue", NewID: &item}}) {
 			return fmt.Errorf("title publication changes=%+v", e.Changes)
 		}
 		return nil
@@ -208,7 +208,7 @@ func startLinkRaceTitle(t *testing.T, w issueWorld, link answeredLink) (*linkRea
 	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
 	clock := &linkReadClock{gate: newGate(), ctx: ctx}
 	title := requestTx(w.pool)
-	route := linkRaceTitleRoute(t, w, clock, title)
+	route := linkRaceTitleRoute(t, w, clock, title, link.IssueID)
 	var answer exchange
 	done := run(func() error {
 		answer.req, answer.rec = route.sendContext(ctx, http.MethodPatch, linkPath(link.ID), w.ids["alice"], `{"title":"User title"}`)

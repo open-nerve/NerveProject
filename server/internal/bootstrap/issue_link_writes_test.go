@@ -114,9 +114,9 @@ func TestUpdateIssueLinkEventsAndDeleteIssueLink(t *testing.T) {
 		t.Fatal("write event/clock count")
 	}
 	want := [][]shared.Change{
-		{{Field: "title", New: eventValue("Named")}},
-		{{Field: "url", Old: eventValue(l.URL), New: eventValue("http://169.254.169.254/after")}, {Field: "title", Old: eventValue("Named")}},
-		{{Field: "url", Old: eventValue("http://169.254.169.254/after")}, {Field: "title"}},
+		{{Field: "title", New: eventValue("Named")}, {Field: "issue", NewID: &id}},
+		{{Field: "url", Old: eventValue(l.URL), New: eventValue("http://169.254.169.254/after")}, {Field: "title", Old: eventValue("Named")}, {Field: "issue", NewID: &id}},
+		{{Field: "url", Old: eventValue("http://169.254.169.254/after")}, {Field: "title"}, {Field: "issue", OldID: &id}},
 	}
 	for i, e := range events {
 		kind := "issue.link_updated"
