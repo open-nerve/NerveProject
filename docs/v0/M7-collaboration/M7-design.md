@@ -329,7 +329,8 @@ P1a 的第一个实现提交把关键词 phase 改为 `M7/P1`（P1a、P1b 共用
 |---|---|---|
 | 设计 | 已合入 main（noff `8d17eed7`，与 P1a 的 spec、plan 一起）；预检 Ready after fixes，修正已改入；负责人 2026-11-17 决定 §15 A–D 按推荐 | [re-81](../../reviews/re-81-M7设计预检.md) |
 | P1a 关注接口与通知要用的事件 | 已完成：合入 main（noff `9a3a388a`），main CI 44034770817 全绿；整分支审查 Ready to merge（五处次要由修复轮处理，限定复审 Ready to merge） | [P1a spec](specs/P1a-subscriptions-events.md) / [P1a plan](plans/P1a-subscriptions-events.md) / [P1a 阶段记录](reviews/P1a-subscriptions-events-review.md) |
-| P1b 通知模块的核心 | 进行中：spec 与 plan 经预检 [re-83](../../reviews/re-83-M7P1b预检.md) 修正后通过，基线 main `9a3a388a`（P1a 的 noff）；原 P1b 拆为 P1b、P1c | [P1b spec](specs/P1b-notification-core.md) / [P1b plan](plans/P1b-notification-core.md) |
+| P1b 通知模块的核心 | 实施完成、待整分支审查与集成：spec 与 plan 经预检 [re-83](../../reviews/re-83-M7P1b预检.md) 修正后通过，基线 main `9a3a388a`（P1a 的 noff）；原 P1b 拆为 P1b、P1c；负责人 2026-11-18 决定自动归档的通知批量投递（spec R12） | [P1b spec](specs/P1b-notification-core.md) / [P1b plan](plans/P1b-notification-core.md) / [P1b 阶段记录](reviews/P1b-notification-core-review.md) |
+| P1c 通知的接口与读 | 未开始 | — |
 
 ## 15. 决定记录
 
