@@ -45,47 +45,20 @@ func (n notificationIssues) HiddenFrom(creator *uuid.UUID, account uuid.UUID, ow
 	return n.issues.HiddenFrom(creator, account, ownOnly)
 }
 
-// notificationProjectReads are the two reads of project's IssueProjects a
-// notification's snapshot is completed with, neither of which locks: the
-// fan-out, which holds a work item's row, takes no lock of a project, which
-// the writes take before a work item's (spec 2.6).
-type notificationProjectReads interface {
-	IssueStates(ctx context.Context, projectID uuid.UUID) ([]project.IssueState, error)
-	ProjectIdentifiers(ctx context.Context, workspaceID uuid.UUID) ([]project.IssueProjectIdentifier, error)
-}
-
-// notificationProjects is project's reads as the notification module's
-// ProjectNames: a state among the project's undeleted states, its triage
-// state too; a project's identifier among the workspace's undeleted
-// projects, archived ones too.
+// notificationProjects is project's NotificationNames as the notification
+// module's ProjectNames (spec 2.5, 2.6): the same reads, each alone and
+// without a lock, each value converted.
 type notificationProjects struct {
-	projects notificationProjectReads
+	names project.NotificationNames
 }
 
 func (p notificationProjects) State(ctx context.Context, projectID, stateID uuid.UUID) (notification.StateName, bool, error) {
-	states, err := p.projects.IssueStates(ctx, projectID)
-	if err != nil {
-		return notification.StateName{}, false, err
-	}
-	for _, s := range states {
-		if s.ID == stateID {
-			return notification.StateName{Name: s.Name, Group: s.Group}, true, nil
-		}
-	}
-	return notification.StateName{}, false, nil
+	s, found, err := p.names.NotificationState(ctx, projectID, stateID)
+	return notification.StateName(s), found, err
 }
 
 func (p notificationProjects) Identifier(ctx context.Context, workspaceID, projectID uuid.UUID) (string, bool, error) {
-	projects, err := p.projects.ProjectIdentifiers(ctx, workspaceID)
-	if err != nil {
-		return "", false, err
-	}
-	for _, pr := range projects {
-		if pr.ID == projectID {
-			return pr.Identifier, true, nil
-		}
-	}
-	return "", false, nil
+	return p.names.NotificationIdentifier(ctx, workspaceID, projectID)
 }
 
 // notificationReaders is access's Decider as the notification module's

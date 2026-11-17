@@ -201,7 +201,7 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 	})
 	notes := notification.New(notification.Deps{
 		Pool: pool, Issues: notificationIssues{issues: issuePorts.NotificationIssues}, JobTx: issueTx, RuntimeNow: time.Now, Logger: logger,
-		Projects: notificationProjects{projects: projectPorts.IssueProjects}, Readers: notificationReaders{decider: decider},
+		Projects: notificationProjects{names: projectPorts.NotificationNames}, Readers: notificationReaders{decider: decider},
 		DeleteBatch: cfg.Notification.DeleteBatch, DeleteBudget: cfg.Notification.DeleteBudget,
 	})
 	// project before workspace: workspace's writes take its cascade.

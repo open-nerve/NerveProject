@@ -180,7 +180,7 @@ func TestFanoutSendsAWorkItemsNotificationsOnce(t *testing.T) {
 	if again, got := sentNotifications(t, w.pool, item.ID, created.ID, commented.ID); !slices.Equal(again, ids) || !reflect.DeepEqual(got, want) {
 		t.Fatalf("each fan-out again: %v %+v; want the first copies alone %v", again, got, ids)
 	}
-	names := notificationProjects{projects: project.Provide(w.pool, nil).IssueProjects}
+	names := notificationProjects{names: project.Provide(w.pool, nil).NotificationNames}
 	if s, found, err := names.State(t.Context(), w.web, w.todo); err != nil || !found || s != (notification.StateName{Name: "Todo", Group: group}) {
 		t.Errorf("State(Todo) = %+v, %v, %v", s, found, err)
 	}

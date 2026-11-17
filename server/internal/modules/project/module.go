@@ -10,8 +10,9 @@
 // on the projects (ProjectCascade), and offers the access module its reads
 // of a project (ProjectAccess, ProjectAccessMany), the workspace module its
 // count of an account's ended project memberships
-// (ProjectMembershipCounts), and the issue module the project's lock,
-// numbers and catalogs (IssueProjects).
+// (ProjectMembershipCounts), the issue module the project's lock, numbers
+// and catalogs (IssueProjects), and the notification module the names of a
+// work item's project and state (NotificationNames).
 package project
 
 import (
@@ -214,6 +215,7 @@ type Provided struct {
 	ProjectMembershipCounts ProjectMembershipCounts
 	IssueProjects           IssueProjects
 	PlanningProjects        PlanningProjects
+	NotificationNames       NotificationNames
 }
 
 // Provide builds project's adapters for the other modules.
@@ -229,7 +231,7 @@ func Provide(pool *pgxpool.Pool, protected []postgres.ProtectedReference) Provid
 			{Table: "projects", Protected: true, Delete: store.PurgeProjects},
 		}),
 		AssetParents: store, ArchivePolicies: store, ProjectAccess: store, ProjectAccessMany: store,
-		ProjectMembershipCounts: store, IssueProjects: store, PlanningProjects: store,
+		ProjectMembershipCounts: store, IssueProjects: store, PlanningProjects: store, NotificationNames: store,
 	}
 }
 

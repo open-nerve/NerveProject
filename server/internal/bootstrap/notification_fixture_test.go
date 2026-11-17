@@ -140,7 +140,7 @@ func notificationDeps(pool *pgxpool.Pool, cfg config.Config) notification.Deps {
 	decider := access.NewDecider(access.DeciderDeps{WorkspaceRoles: workspaces.WorkspaceRolesMany,
 		ProjectAccess: accessProjectsMany{projects: projects.ProjectAccessMany}})
 	return notification.Deps{Pool: pool, Issues: notificationIssues{issues: issue.Provide(pool, nil).NotificationIssues},
-		Projects: notificationProjects{projects: projects.IssueProjects}, Readers: notificationReaders{decider: decider},
+		Projects: notificationProjects{names: projects.NotificationNames}, Readers: notificationReaders{decider: decider},
 		JobTx: newIssueJobTx(pool, cfg), RuntimeNow: time.Now, Logger: slog.New(slog.DiscardHandler),
 		DeleteBatch: cfg.Notification.DeleteBatch, DeleteBudget: cfg.Notification.DeleteBudget}
 }
