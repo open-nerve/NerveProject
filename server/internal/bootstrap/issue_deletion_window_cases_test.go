@@ -44,6 +44,8 @@ func deletionWindowCases() []deletionWindowCase {
 		{"deleteIssue", "DELETE", "/api/v0/issues/{issue_id}", ""},
 		{"archiveIssue", "POST", "/api/v0/issues/{issue_id}/archive", ""},
 		{"unarchiveIssue", "POST", "/api/v0/issues/{issue_id}/unarchive", ""},
+		{"subscribeIssue", "POST", "/api/v0/issues/{issue_id}/subscribe", ""},
+		{"unsubscribeIssue", "POST", "/api/v0/issues/{issue_id}/unsubscribe", ""},
 		{"addSubIssues", "POST", "/api/v0/issues/{issue_id}/sub-issues", `{"sub_issue_ids":["{other_id}"]}`},
 		{"createIssueRelations", "POST", "/api/v0/issues/{issue_id}/relations", `{"relation_type":"relates_to","issue_ids":["{other_id}"]}`},
 		{"deleteIssueRelation", "DELETE", "/api/v0/issue-relations/{relation_id}", ""},
@@ -85,13 +87,13 @@ func TestDeletionWindowCoversEveryIssueOperation(t *testing.T) {
 	}
 	slices.Sort(actual)
 	slices.Sort(want)
-	if len(reads) != 18 || len(writes) != 22 || !slices.Equal(actual, want) {
+	if len(reads) != 18 || len(writes) != 24 || !slices.Equal(actual, want) {
 		t.Fatalf("window reads=%d writes=%d operations=%q; contract=%q", len(reads), len(writes), actual, want)
 	}
 	checkIssueWriteDirectories(t, contract)
 	slices.Sort(writes)
 	if !slices.Equal(writes, writesOnIssues(contract.Operations())) {
-		t.Fatal("window writes lost the ordinary/draft lock directory union")
+		t.Fatal("window writes lost the ordinary/draft/subscription lock directory union")
 	}
 }
 
