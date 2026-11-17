@@ -107,7 +107,7 @@ access 加 `DecideMany(ctx, action, workspace, project, accounts)`：workspace �
 ### 2.9 分发任务
 
 - 订阅者 `notify_on_issue_events`：只看 §2.3 的事件；按 §2.3 在原始变化列表上算出有没有可通知的变化（含 `mention`），没有就不投；有就在原事务投一个 `notification.fanout`（一次发布的一批事件一次批量插入，R12）。参数：事件 id、类型、时刻、工作区、项目、执行者、实体（评论 id 等），以及**保留全部位置**的变化列表，其中 `description`、`comment_html` 的 Old、New 置空（HTML 不进 `river_job`，序号不变）；工作项不单列，任务从重建的事件按 §2.3 得出（单一来源，T9 裁定）。
-- 任务：`default` 队列，`Timeout` 30 秒，`MaxAttempts` 5，次数用尽记错误日志（`planning.delete_rows` 的先例）；事务是工作项写的那个（READ COMMITTED、读写、`lock_timeout`）。在事务里：`ShareIssue` 锁工作项行（已删除则什么都不写、完成）→ 读 issue 的列、关注者、评论正文与补齐的状态名、项目标识 → `DecideMany` → `HiddenFrom` → 按 §2.4 算出行 → 一条 `INSERT … ON CONFLICT DO NOTHING`。行的工作区、项目取锁住的行（与参数不一致时记日志并以行为准；关联的两个事件的项目可以合法地不同——以 `blocking` 发起的跨项目关联存在对方——只比工作区）。nerve 自己的写（执行者为空，现只有自动归档）的任务以 River 的最低优先级（4）插入，其余照默认（1）：一轮几万个的积压按 River 的节奏（default 队列每 100 毫秒至多取 worker 数个）排空约需数分钟，人的写的通知与 default 队列里别的任务排在它前面（整分支审查 I2 的测量）。重试与重复投递不多写。
+- 任务：`default` 队列，`Timeout` 30 秒，`MaxAttempts` 5，次数用尽记错误日志（`planning.delete_rows` 的先例）；事务是工作项写的那个（READ COMMITTED、读写、`lock_timeout`）。在事务里：`ShareIssue` 锁工作项行（已删除则什么都不写、完成）→ 读 issue 的列、关注者、评论正文与补齐的状态名、项目标识 → `DecideMany` → `HiddenFrom` → 按 §2.4 算出行 → 一条 `INSERT … ON CONFLICT DO NOTHING`。行的工作区、项目取锁住的行（与参数不一致时记日志并以行为准；关联的两个事件的项目可以合法地不同——以 `blocking` 发起的跨项目关联存在对方——只比工作区）。nerve 自己的写（执行者为空，现只有自动归档）的任务以 River 的最低优先级（4）插入，其余照默认（1）：一轮几万个的积压按 River 的节奏（default 队列每 100 毫秒至多取 worker 数个）排空约需数分钟，人的写的通知与 default 队列里别的任务排在它前面（整分支审查 I2 的测量）。低优先级的任务没有等待的上限：优先级 1 的任务持续到得比排空快（约 100 个/秒，例如上千个项目的工作区删除时各自每 500 毫秒重排的 `notification.delete_rows`）时，系统的通知一直等，负载过去后照常发出、不丢（限定复审 N1）。重试与重复投递不多写。
 - 与工作项删除串行：删除先提交，任务的 `FOR SHARE` 在新版本上复核 `deleted_at IS NULL`、读不到行；任务先提交，删除事务里的订阅者软删掉刚写的行。与项目删除的先后见 §2.8。
 
 ## 3. 局部裁定
