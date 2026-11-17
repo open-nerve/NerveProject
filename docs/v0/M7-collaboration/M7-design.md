@@ -217,7 +217,7 @@ M7 让五件协作功能经真实接口工作：站内通知（关注工作项�
 - `issue.created`、`issue.updated`、评论的建立与修改，每个这次新被提及的人加一个 `mention` 变化（`NewID` 为账户），集合按 §3.1 由 issue 算出，未经可见性过滤（通知发送时自己复核）。
 - 收集箱的接受发布普通的 `issue.updated`（状态变化）。
 - planning 新增 `planning.cycle_archived`、`planning.module_archived`，project 新增 `project.archived`，供收藏的连带；恢复不发布。
-- 关联的两个事件追加 `requested_on`：建立时是请求所在的工作项，移除时是移除被授权的那一端，值为那一端读到的类型（[P1b spec](specs/P1b-notification-core.md) §2.3、R11），通知只发到这一端。
+- 关联的两个事件追加 `requested_on`：建立时是请求所在的工作项，移除时是存储为 `issue_id` 的那一端（移除按关联 id），值为那一端读到的类型（[P1b spec](specs/P1b-notification-core.md) §2.3、R11），通知只发到这一端。
 - 只加变化与类型，不改已有变化；事件形状测试同改；asset、planning 现有的订阅者不看新变化。
 
 ### 6.2 通知的订阅者与任务
