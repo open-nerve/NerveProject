@@ -141,6 +141,67 @@ func TestFanoutTakesTheWorkspaceAndProjectOfTheLockedRow(t *testing.T) {
 	}
 }
 
+// blocking is alice's relation event of kind, of a relation of the workspace across two projects, stored as the
+// other end's blocked_by and so of the other end's project, which the event names, asked on the work item as
+// blocking (R11): its type (0), its stored ends (1, 2) and the end it was requested on (3), on the New side for an
+// addition, the Old for a removal.
+func blocking(kind string, other, otherProject uuid.UUID) shared.Event {
+	changes := []shared.Change{{Field: "relation_type", New: str("blocked_by")}, {Field: "issue", NewID: idOf(other)},
+		{Field: "related_issue", NewID: idOf(workItem)}, {Field: "requested_on", New: str("blocking"), NewID: idOf(workItem)}}
+	if kind == "issue.relation_removed" {
+		for n, c := range changes {
+			changes[n] = shared.Change{Field: c.Field, Old: c.New, OldID: c.NewID}
+		}
+	}
+	e := fanoutEvent(kind, shared.EntityRef{Kind: "issue_relation", ID: uuid.NewV7()}, &alice, changes...)
+	e.ProjectID = otherProject
+	return e
+}
+
+// A relation's event names its stored row's project, which is not the work item's when it was asked on the other end
+// of a relation across projects (R11): one that names another project than the locked row's is not logged, its rows
+// are the locked row's workspace's and project's; one that names another workspace is logged. Any other event that
+// names another project alone is logged.
+func TestFanoutComparesARelationsWorkspaceAlone(t *testing.T) {
+	other, otherProject := uuid.NewV7(), uuid.NewV7()
+	for kind, verb := range map[string]domain.Verb{"issue.relation_added": domain.VerbCreated, "issue.relation_removed": domain.VerbDeleted} {
+		f := newFanoutPorts()
+		f.subscribers = []uuid.UUID{bob}
+		f.decisions = map[uuid.UUID]domain.Decision{bob: {Allowed: true}}
+		var logs bytes.Buffer
+		e := blocking(kind, other, otherProject)
+		if err := fanout(f, &logs).Execute(t.Context(), e); err != nil || logs.Len() != 0 {
+			t.Fatalf("%s of another project: %v, logs %q; want no warning", kind, err, logs.String())
+		}
+		change := domain.ChangeSnapshot{Field: "blocking", Verb: verb}
+		if verb == domain.VerbDeleted {
+			change.OldID = &other
+		} else {
+			change.NewID = &other
+		}
+		n := f.inserted[0]
+		if rows, bad := sentRows(n); n.WorkspaceID != rowWorkspace || n.ProjectID != rowProject || len(bad) > 0 ||
+			!reflect.DeepEqual(rows, []sent{{bob, domain.SenderSubscribed, 3, change}}) {
+			t.Fatalf("%s: notifications of %s/%s, rows %+v (bad %v); want bob's of the locked row's", kind, n.WorkspaceID, n.ProjectID, rows, bad)
+		}
+		e.WorkspaceID = uuid.NewV7()
+		if err := fanout(f, &logs).Execute(t.Context(), e); err != nil || !strings.Contains(logs.String(), "level=WARN") ||
+			!strings.Contains(logs.String(), e.WorkspaceID.String()) {
+			t.Fatalf("%s of another workspace: %v, logs %q; want a warning", kind, err, logs.String())
+		}
+	}
+	f := newFanoutPorts()
+	f.subscribers = []uuid.UUID{bob}
+	f.decisions = map[uuid.UUID]domain.Decision{bob: {Allowed: true}}
+	var logs bytes.Buffer
+	e := renamed()
+	e.ProjectID = otherProject
+	if err := fanout(f, &logs).Execute(t.Context(), e); err != nil || !strings.Contains(logs.String(), "level=WARN") ||
+		!strings.Contains(logs.String(), otherProject.String()) || f.inserted[0].ProjectID != rowProject {
+		t.Fatalf("an update of another project: %v, logs %q; want a warning and the locked row's project", err, logs.String())
+	}
+}
+
 // A change's position is notifications.change_seq, a smallint: the last position it holds is sent; one past it fails
 // the fan-out, which writes nothing.
 func TestFanoutNumbersTheChangesAsSmallints(t *testing.T) {

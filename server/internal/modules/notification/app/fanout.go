@@ -50,9 +50,10 @@ func NewFanout(d FanoutDeps) *Fanout { return &Fanout{d: d} }
 // over the creator the work item's columns name (domain.Visible), each of
 // e's change at its position, by e's actor at e's moment, in the workspace
 // and the project of the work item's row, which an event naming others is
-// logged for. A project deleted since, whose state or identifier is not
-// read any more, is read by no one: nothing is written. A row already sent
-// is not written again, so a retry writes none twice.
+// logged for, but a relation's naming another project alone, which it may
+// (domain.MayNameAnotherProject). A project deleted since, whose state or
+// identifier is not read any more, is read by no one: nothing is written.
+// A row already sent is not written again, so a retry writes none twice.
 func (u *Fanout) Execute(ctx context.Context, e shared.Event) error {
 	item, err := workItemOf(e)
 	if err != nil {
@@ -63,7 +64,7 @@ func (u *Fanout) Execute(ctx context.Context, e shared.Event) error {
 		if err != nil || !found {
 			return err
 		}
-		if row.WorkspaceID != e.WorkspaceID || row.ProjectID != e.ProjectID {
+		if row.WorkspaceID != e.WorkspaceID || (row.ProjectID != e.ProjectID && !domain.MayNameAnotherProject(e)) {
 			u.d.Logger.WarnContext(ctx, "notification event names another workspace or project than its work item's row, which is taken",
 				slog.String("event", e.ID.String()), slog.String("work_item", item.String()),
 				slog.String("event_workspace", e.WorkspaceID.String()), slog.String("event_project", e.ProjectID.String()),

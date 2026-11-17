@@ -3,6 +3,7 @@ package domain
 import (
 	"reflect"
 	"slices"
+	"strings"
 	"testing"
 	"uuid"
 
@@ -157,6 +158,20 @@ func TestWorkItem(t *testing.T) {
 	for kind, e := range none {
 		if got, ok := WorkItem(e); ok {
 			t.Errorf("%s: WorkItem() = %s, want none", kind, name(got))
+		}
+	}
+}
+
+// A relation's event names its stored row's project, its issue end's,
+// while its work item is the end it was requested on (R11), which is of
+// another project when a blocking relation across projects is asked on its
+// blocking end: it may name another project than its work item's. Every
+// other event names its work item's.
+func TestMayNameAnotherProject(t *testing.T) {
+	for kind, e := range events() {
+		want := strings.HasPrefix(kind, "relation ")
+		if got := MayNameAnotherProject(e); got != want {
+			t.Errorf("%s: MayNameAnotherProject() = %v, want %v", kind, got, want)
 		}
 	}
 }

@@ -281,6 +281,16 @@ func WorkItem(e shared.Event) (uuid.UUID, bool) {
 	return uuid.Nil(), false
 }
 
+// MayNameAnotherProject tells whether the event e may name another project
+// than its work item's (WorkItem): a relation's names its stored row's,
+// its issue end's, while its work item is the end it was requested on,
+// which is of another project of the workspace when a relation across
+// projects is stored from the other end (R11). Every other event names its
+// work item's.
+func MayNameAnotherProject(e shared.Event) bool {
+	return e.Type == relationAdded || e.Type == relationRemoved
+}
+
 // WithoutHTML is changes as the job's arguments carry them (spec 2.9, R4):
 // every change at its position, so the positions notifications are numbered
 // with are the event's, the values of description and comment_html, the
