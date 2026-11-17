@@ -4,7 +4,7 @@
 
 ## Global Constraints
 
-- spec §2 是合同，§3 的 R1–R11 是裁定；超出 spec 的契约或架构改动先停下报告。
+- spec §2 是合同，§3 的 R1–R12 是裁定；超出 spec 的契约或架构改动先停下报告。
 - 模块之间只经端口：notification 不 import 别的模块；issue、project、workspace、access 交出的端口由 bootstrap 转换（`notification_ports.go`）。SQL 只经各模块自己的 sqlc；夹具不进产品包；手写文件约 400 行以内。
 - P1b 不改 `api/`（没有接口）。
 - 允许改的已有测试（改之前在台账逐条写明，每处只照这里写的改法）：
@@ -15,8 +15,8 @@
   - 用 `IssueReader` 假件的单元测试（内嵌的新接口）。
   - 关联事件的形状断言（追加 `requested_on`，只加不改）。
   - 整表的 `river_job` 快照（`issue_draft_snapshot_test.go`、`issue_draft_publish_test.go`）：按 `kind` 过滤或多认 `notification.fanout`，原有的行照旧断言。
-  - 自带任务种类清单的运行器（`app_test.go`、`issue_delete_job_fixture_test.go`、`request_jobs_test.go`）：加通知的两个种类。
-  - 锁探针：只限 T8 开头按 `grep -lE "pg_blocking_pids|wait_event_type *= *'Lock'|WaitForLockWait"` 生成、记入台账的文件；只改认等锁者的方式，不改断言。
+  - 自带任务种类清单的运行器（`app_test.go`、`issue_delete_job_fixture_test.go`、`request_jobs_test.go`，以及 T3 裁定补上的 `issue_lifecycle_events_test.go`）：加通知的两个种类。
+  - 锁探针：只限 T8 开头按 `grep -lE "pg_blocking_pids|wait_event_type *= *'Lock'|WaitForLockWait"` 生成、记入台账的文件；只改认等锁者的方式，或在探针之前等 `notification.fanout` 跑完（R10 的两种做法；T9 在 `issue_write_locks_test.go`、`issue_delete_late_purge_test.go`、`request_lock_probe_test.go` 用后一种），不改断言。
   - e2e 的 `asynchronousDeletionTable` 与删除故事的夹具。
   - 起应用的测试在持锁（`FOR UPDATE`、逐表 `LOCK TABLE`）或整库快照之前等分发跑完（T9 主控裁定：R10 的同一类，T8 的 grep 只认得探针写法）：`gate_test`、`issue_draft_publish_locks_test`、`issue_draft_write_locks_test`、`issue_collaboration_security_test`、`issue_link_security_test`、`p5_read_boundary_test`、`invitations_test` 的 `registrationRows`；只加等待，不改断言。
   - 自动归档的事件发布者假件（T14b，R12）：`issue/app/auto_archive_test.go`、`issue_auto_archive_test.go`、`issue_auto_archive_race_helpers_test.go` 的发布者与 `issue_events_test.go` 的 `discardIssueEvents` 实现 `PublishAll`，断言不改；事件总线自己的测试加批量的情形。
