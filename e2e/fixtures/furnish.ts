@@ -16,6 +16,7 @@ import { accountId } from "./auth";
 import { createCommentReaction, createIssueComment, createIssueReaction } from "./comments";
 import { changeCyclePreferences, createCycle } from "./cycles";
 import type { Database } from "./db";
+import { submitIntakeIssue, triageIntakeIssue } from "./intake";
 import { createDraft, createIssue, createIssueRelations, updateIssue } from "./issues";
 import { createIssueLink } from "./links";
 import { changeModulePreferences, createModule, createModuleLink } from "./modules";
@@ -60,8 +61,9 @@ async function notified(db: Database, receiverId: string, issueId: string): Prom
  * through their APIs so deletion catalog assertions cover the collaboration tables, links and a project draft. The
  * second's creation sends its assignee his notifications of it (M7 P1b), which the furnishing waits for in db
  * (notified), so that a deletion finds them written. The caller then puts the first in the cycle and the module of
- * planning, furnishPlanningRows' of the project (whose cycles and modules it turned on), through its own fields: a row
- * of each of the memberships' tables (M6 P3a spec 2.5).
+ * planning, furnishPlanningRows' of the project (whose cycles, modules and intake it turned on), through its own
+ * fields: a row of each of the memberships' tables (M6 P3a spec 2.5); and submits a third to the project's intake,
+ * where it waits for a triage: an intake row (M7 P2a spec 2.10).
  */
 export async function furnishIssueRows(
   api: Api,
@@ -93,19 +95,27 @@ export async function furnishIssueRows(
   const test = await createIssue(api, token, projectId, { name: "Test the login", assignee_ids: [notifiedId] });
   await createIssueRelations(api, token, fix.id, { relation_type: "blocking", issue_ids: [test.id] });
   await updateIssue(api, token, fix.id, { cycle_id: planning.cycleId, module_ids: [planning.moduleId] });
+  await submitIntakeIssue(api, token, projectId, { name: "Support the login" });
   await notified(db, notifiedId, test.id);
 }
 
 /**
  * Gives the project of projectId a row of each of the planning tables: its cycles and modules turned on by the caller of
- * adminToken, an admin of it (they are off by default); a cycle he creates, the draft Sprint 1; and a module he creates,
- * Release 1, which he leads and is the member of, with a link; and his display settings on each one's page, which his
- * first change stores (M6 P3b spec 2.5). It answers the two, for work items to join (furnishIssueRows): a deletion
- * story furnishes its planning rows before its work items' rows.
+ * adminToken, an admin of it (they are off by default), and its intake, for a work item to be submitted to
+ * (furnishIssueRows); a cycle he creates, the draft Sprint 1; and a module he creates, Release 1, which he leads and is
+ * the member of, with a link; and his display settings on each one's page, which his first change stores (M6 P3b spec
+ * 2.5). It answers the two, for work items to join (furnishIssueRows): a deletion story furnishes its planning rows
+ * before its work items' rows.
  */
 export async function furnishPlanningRows(api: Api, adminToken: string, projectId: string): Promise<PlanningRows> {
-  const changed = await changeProject(api, adminToken, projectId, { cycle_view: true, module_view: true });
-  expect(changed.status, `turn on the cycles and modules of ${projectId}: ${JSON.stringify(changed)}`).toBe(200);
+  const changed = await changeProject(api, adminToken, projectId, {
+    cycle_view: true,
+    module_view: true,
+    intake_view: true,
+  });
+  expect(changed.status, `turn on the cycles, modules and intake of ${projectId}: ${JSON.stringify(changed)}`).toBe(
+    200
+  );
   const sprint = await createCycle(api, adminToken, projectId, { name: "Sprint 1" });
   const admin = await accountId(api, adminToken);
   const release = await createModule(api, adminToken, projectId, {
@@ -117,6 +127,26 @@ export async function furnishPlanningRows(api: Api, adminToken: string, projectI
   await changeCyclePreferences(api, adminToken, sprint.id, { filters: { priority: ["high"] } });
   await changeModulePreferences(api, adminToken, release.id, { filters: { priority: ["high"] } });
   return { cycleId: sprint.id, moduleId: release.id };
+}
+
+/**
+ * Puts under the work item of parentId, of the project of projectId, a work item that was in the project's intake, so
+ * that its intake row is under that work item, which a deletion of it writes (expectIssueDeleted; M7 P2a spec 2.10):
+ * the caller of adminToken, an admin of the project, turns its intake on (it is off by default), submits the work item
+ * to it and accepts it, which moves it to the project's default state, out of the intake (P2a spec 2.4, 2.5); a work
+ * item as any other then, he puts it under the work item of parentId.
+ */
+export async function furnishAcceptedIntake(
+  api: Api,
+  adminToken: string,
+  projectId: string,
+  parentId: string
+): Promise<void> {
+  const changed = await changeProject(api, adminToken, projectId, { intake_view: true });
+  expect(changed.status, `turn on the intake of ${projectId}: ${JSON.stringify(changed)}`).toBe(200);
+  const request = await submitIntakeIssue(api, adminToken, projectId, { name: "Accepted request" });
+  await triageIntakeIssue(api, adminToken, request.id, { status: "accepted" });
+  await updateIssue(api, adminToken, request.id, { parent_id: parentId });
 }
 
 /**

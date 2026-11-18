@@ -1,5 +1,5 @@
 import { furnishIssueFiles } from "../../fixtures/storage";
-import { furnishPlanningRows } from "../../fixtures/furnish";
+import { furnishAcceptedIntake, furnishPlanningRows } from "../../fixtures/furnish";
 import { c12Evidence } from "../../fixtures/c12-evidence";
 import {
   addProjectMembers,
@@ -226,6 +226,9 @@ test("I15 (API): a member's work item in a started state is not archived (409); 
     by: ann.email,
     activity: createdFor(),
   });
+  // The admin puts a work item he accepted from Web's intake under Write the test (furnishAcceptedIntake), not under
+  // Fix the login, which, archived, takes none: its intake row is under Fix the login all the same.
+  await furnishAcceptedIntake(api, admin.token, web.id, part.id);
 
   // It is deleted as any other: the admin deletes it, and with it every row under it, Write the test and its relations
   // either way among them.
@@ -431,6 +434,8 @@ test("I15 (page): an admin deletes an archived item through its read-only detail
   await furnishIssueFiles(api, member.token, item.id, comment.id);
   await createCommentReaction(api, member.token, comment.id);
   await createIssueReaction(api, member.token, item.id);
+  // A work item accepted from the project's intake is under the item too, with its intake row (furnishAcceptedIntake).
+  await furnishAcceptedIntake(api, member.token, project.id, item.id);
   expect((await issueArchived(api, member.token, item.id)).status).toBe(200);
   const archives = `/${slug}/projects/${project.id}/archives/issues`;
   const { watch } = await openIssueList(page, { ...seed, path: `${archives}/${item.id}` });
