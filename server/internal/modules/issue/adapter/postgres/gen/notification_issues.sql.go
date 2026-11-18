@@ -26,6 +26,52 @@ func (q *Queries) CommentText(ctx context.Context, id uuid.UUID) (string, error)
 	return comment_stripped, err
 }
 
+const issueRefRows = `-- name: IssueRefRows :many
+SELECT id, project_id, sequence_id, name, created_by_id
+FROM issues
+WHERE id = ANY ($1::uuid[]) AND deleted_at IS NULL
+ORDER BY id
+`
+
+type IssueRefRowsRow struct {
+	ID          uuid.UUID
+	ProjectID   uuid.UUID
+	SequenceID  int32
+	Name        string
+	CreatedByID *uuid.UUID
+}
+
+// The undeleted work items among ids, archived or not, each with what names it, its project, its number and its name,
+// and with its creator, NULL when not known, which the guest rule asks (M7 P1c spec 2.6, R4): a notification's change
+// names them, its parent and its relations' other ends. The module answers those a reader sees now (IssueRefs), so the
+// statement reads any project's, another workspace's too. A plain read of what is committed, without a lock, in id
+// order; the primary key serves it.
+func (q *Queries) IssueRefRows(ctx context.Context, ids []uuid.UUID) ([]IssueRefRowsRow, error) {
+	rows, err := q.db.Query(ctx, issueRefRows, ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []IssueRefRowsRow
+	for rows.Next() {
+		var i IssueRefRowsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProjectID,
+			&i.SequenceID,
+			&i.Name,
+			&i.CreatedByID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const notificationIssue = `-- name: NotificationIssue :one
 SELECT i.name, i.sequence_id, i.state_id, i.created_by_id,
        array(SELECT a.assignee_id FROM issue_assignees a WHERE a.issue_id = i.id AND a.deleted_at IS NULL

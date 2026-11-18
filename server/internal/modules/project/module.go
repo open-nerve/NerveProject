@@ -13,7 +13,9 @@
 // count of an account's ended project memberships
 // (ProjectMembershipCounts), the issue module the project's lock, numbers
 // and catalogs (IssueProjects), and the notification module the names of a
-// work item's project and state (NotificationNames).
+// work item's project and state (NotificationNames) and the identifiers of
+// the projects of the work items a page of notifications names
+// (NotificationIdentifiers).
 package project
 
 import (
@@ -231,6 +233,7 @@ type Provided struct {
 	IssueProjects           IssueProjects
 	PlanningProjects        PlanningProjects
 	NotificationNames       NotificationNames
+	NotificationIdentifiers NotificationIdentifiers
 }
 
 // Provide builds project's adapters for the other modules.
@@ -247,6 +250,7 @@ func Provide(pool *pgxpool.Pool, protected []postgres.ProtectedReference) Provid
 		}),
 		AssetParents: store, ArchivePolicies: store, ProjectAccess: store, ProjectAccessMany: store, MemberProjectAccess: store,
 		ProjectMembershipCounts: store, IssueProjects: store, PlanningProjects: store, NotificationNames: store,
+		NotificationIdentifiers: store,
 	}
 }
 

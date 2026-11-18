@@ -63,3 +63,20 @@ func (s *Store) CommentText(ctx context.Context, id uuid.UUID) (string, bool, er
 	}
 	return text, true, nil
 }
+
+// IssueRefRows reads, without a lock, the undeleted work items among ids,
+// archived or not, of any project, each with its project, its number, its
+// name and its creator, in id order (notification_issues.sql), in the
+// transaction ctx carries or on the pool.
+func (s *Store) IssueRefRows(ctx context.Context, ids []uuid.UUID) ([]app.IssueRefRow, error) {
+	rows, err := s.queries(ctx).IssueRefRows(ctx, ids)
+	if err != nil {
+		return nil, fmt.Errorf("read %d work items another names: %w", len(ids), err)
+	}
+	refs := make([]app.IssueRefRow, len(rows))
+	for n, r := range rows {
+		refs[n] = app.IssueRefRow{IssueRef: app.IssueRef{ID: r.ID, ProjectID: r.ProjectID, SequenceID: int(r.SequenceID), Name: r.Name},
+			CreatedByID: r.CreatedByID}
+	}
+	return refs, nil
+}

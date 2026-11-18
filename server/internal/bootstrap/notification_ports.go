@@ -2,6 +2,8 @@ package bootstrap
 
 import (
 	"context"
+	"maps"
+	"slices"
 	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/access"
@@ -59,6 +61,52 @@ func (p notificationProjects) State(ctx context.Context, projectID, stateID uuid
 
 func (p notificationProjects) Identifier(ctx context.Context, workspaceID, projectID uuid.UUID) (string, bool, error) {
 	return p.names.NotificationIdentifier(ctx, workspaceID, projectID)
+}
+
+// notificationIssueRefs is issue's IssueRefs and project's
+// NotificationIdentifiers composed (M7 P1c spec 2.6, R4; pre-flight re-84
+// m6): what the notification module names the work items a page of
+// notifications names with, its changes' parents and relations' other
+// ends, in one IssueRefs of the page's ids and, only when it answered any,
+// one read of the identifiers of their projects, each project once.
+type notificationIssueRefs struct {
+	issues   issue.IssueRefs
+	projects project.NotificationIdentifiers
+}
+
+// namedIssue is a work item as a notification names it to its reader:
+// its id, its number, its project's identifier and its name.
+type namedIssue struct {
+	ID         uuid.UUID
+	SequenceID int
+	Identifier string
+	Name       string
+}
+
+// IssueRefs answers, by id, those of the work items ids that reader sees
+// now by grants, as issue's IssueRefs answers them, each named with its
+// project's identifier; one whose project has none, deleted since it was
+// read, is not among them. None for none.
+func (r notificationIssueRefs) IssueRefs(ctx context.Context, reader uuid.UUID, grants []issue.ProjectGrant, ids []uuid.UUID) (map[uuid.UUID]namedIssue, error) {
+	refs, err := r.issues.IssueRefs(ctx, reader, grants, ids)
+	if err != nil || len(refs) == 0 {
+		return nil, err
+	}
+	projects := make(map[uuid.UUID]struct{}, len(refs))
+	for _, ref := range refs {
+		projects[ref.ProjectID] = struct{}{}
+	}
+	identifiers, err := r.projects.NotificationIdentifiers(ctx, slices.SortedFunc(maps.Keys(projects), uuid.UUID.Compare))
+	if err != nil {
+		return nil, err
+	}
+	named := make(map[uuid.UUID]namedIssue, len(refs))
+	for id, ref := range refs {
+		if identifier, ok := identifiers[ref.ProjectID]; ok {
+			named[id] = namedIssue{ID: ref.ID, SequenceID: ref.SequenceID, Identifier: identifier, Name: ref.Name}
+		}
+	}
+	return named, nil
 }
 
 // notificationReaders is access's Decider as the notification module's
