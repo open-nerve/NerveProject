@@ -75,6 +75,10 @@ func newDeletionWindowFixture(t *testing.T) deletionWindowFixture {
 	f.qDraft = createDraftHTTP(t, w, "alice", `{"project_id":"`+f.q.String()+`","payload":{"name":"Kept"}}`).ID
 	f.noProject = createDraftHTTP(t, w, "alice", `{"payload":{"name":"Unassigned"}}`).ID
 	f.x.draft = createDraftHTTP(t, w, "alice", `{"project_id":"`+w.web.String()+`","payload":{"name":"Old project"}}`).ID
+	// Web's intake is on and holds a pending work item: a submission or a
+	// triage that skipped the deletion would be answered 201 or 200, not the
+	// absent one's 404. Lists and searches leave it out (M7 P2a spec 2.6).
+	f.x.intake = w.submitted(t)
 	return f
 }
 

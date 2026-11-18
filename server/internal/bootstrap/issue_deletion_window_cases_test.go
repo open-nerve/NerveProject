@@ -59,6 +59,8 @@ func deletionWindowCases() []deletionWindowCase {
 		{"createIssueComment", "POST", "/api/v0/issues/{issue_id}/comments", `{"comment_html":"<p>Changed</p>"}`},
 		{"updateIssueComment", "PATCH", "/api/v0/issue-comments/{comment_id}", `{"comment_html":"<p>Changed</p>"}`},
 		{"deleteIssueComment", "DELETE", "/api/v0/issue-comments/{comment_id}", ""},
+		{"submitIntakeIssue", "POST", "/api/v0/projects/{project_id}/intake-issues", `{"name":"Submitted"}`},
+		{"triageIntakeIssue", "POST", "/api/v0/intake-issues/{issue_id}/triage", `{"status":"declined"}`},
 	}
 }
 
@@ -87,7 +89,7 @@ func TestDeletionWindowCoversEveryIssueOperation(t *testing.T) {
 	}
 	slices.Sort(actual)
 	slices.Sort(want)
-	if len(reads) != 18 || len(writes) != 24 || !slices.Equal(actual, want) {
+	if len(reads) != 18 || len(writes) != 26 || !slices.Equal(actual, want) {
 		t.Fatalf("window reads=%d writes=%d operations=%q; contract=%q", len(reads), len(writes), actual, want)
 	}
 	checkIssueWriteDirectories(t, contract)
@@ -98,8 +100,8 @@ func TestDeletionWindowCoversEveryIssueOperation(t *testing.T) {
 }
 
 type deletionWindowTargets struct {
-	project, issue, archived, other, comment, link, version, relation, draft, user uuid.UUID
-	identifier, slug                                                               string
+	project, issue, archived, intake, other, comment, link, version, relation, draft, user uuid.UUID
+	identifier, slug                                                                       string
 }
 
 func (x deletionWindowTargets) replace(s string) string {
@@ -110,7 +112,7 @@ func (x deletionWindowTargets) replace(s string) string {
 }
 
 func (x deletionWindowTargets) absent(workspace bool) deletionWindowTargets {
-	x.project, x.issue, x.archived, x.other = uuid.NewV7(), uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
+	x.project, x.issue, x.archived, x.intake, x.other = uuid.NewV7(), uuid.NewV7(), uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
 	x.comment, x.link, x.version, x.relation, x.draft = uuid.NewV7(), uuid.NewV7(), uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
 	x.identifier = "ABSENT-999999"
 	if workspace {
@@ -119,9 +121,15 @@ func (x deletionWindowTargets) absent(workspace bool) deletionWindowTargets {
 	return x
 }
 
+// request is r's path and body on x. A triage targets the work item in the
+// deleted project's intake, pending: an ordinary work item's triage is the
+// absent one's 404 with the deletion or without it.
 func (r deletionWindowCase) request(x deletionWindowTargets) (string, string) {
-	if r.op == "unarchiveIssue" {
+	switch r.op {
+	case "unarchiveIssue":
 		x.issue = x.archived
+	case "triageIntakeIssue":
+		x.issue = x.intake
 	}
 	path := x.replace(r.pattern)
 	switch r.op {
