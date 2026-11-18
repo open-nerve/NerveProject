@@ -232,6 +232,24 @@ var issueNames = []string{
 	"module_issues_updated_by_id_fkey f n",
 	"module_issues_workspace_id_fkey f c",
 	"module_issues_workspace_id_idx i",
+
+	// The intake (intake_schema_test.go).
+	"intake_issues_created_by_id_fkey f n",
+	"intake_issues_deleted_at_idx iw",
+	"intake_issues_duplicate_to_id_check c",
+	"intake_issues_issue_id_fkey f c",
+	"intake_issues_issue_id_idx i",
+	"intake_issues_issue_id_key iuw",
+	"intake_issues_pkey iu",
+	"intake_issues_pkey p",
+	"intake_issues_project_id_fkey f c",
+	"intake_issues_project_id_idx i",
+	"intake_issues_project_id_status_idx iw",
+	"intake_issues_snoozed_till_check c",
+	"intake_issues_status_check c",
+	"intake_issues_updated_by_id_fkey f n",
+	"intake_issues_workspace_id_fkey f c",
+	"intake_issues_workspace_id_idx i",
 }
 
 // The ids the issue tables' tests write, as SQL literals: an account, a
@@ -285,12 +303,14 @@ func relationOf(project, issue, related, kind string) string {
 
 // The issue tables' CHECKs accept what the domain writes and reject what
 // bypasses it (M4 design 4.2, 4.6, 4.11): every priority, verb and stored
-// relation type, a start on its target date or with no target, a top-level
+// relation type, a triage status as the verb of the intake field (M7 P2a
+// spec 2.2), a start on its target date or with no target, a top-level
 // work item, the number 1; and refuse an empty title, a priority outside
 // the five, in another case too, the number 0, a work item its own parent,
-// a start after its target, a verb outside the three, a relation type
-// outside the three stored ones (blocking, which is stored reversed, and
-// Plane's start_before among them), a work item related to itself.
+// a start after its target, a verb outside the three, a triage status as
+// the verb of no field or of another field, a relation type outside the
+// three stored ones (blocking, which is stored reversed, and Plane's
+// start_before among them), a work item related to itself.
 func TestIssueChecksRejectCounterexamples(t *testing.T) {
 	ctx := context.Background()
 	pool := newIssueDatabase(t)
@@ -301,7 +321,8 @@ func TestIssueChecksRejectCounterexamples(t *testing.T) {
 		"UPDATE issues SET start_date = '2026-10-18', target_date = NULL",
 		"UPDATE issues SET parent_id = NULL", "UPDATE issues SET sequence_id = 1",
 		"UPDATE issue_activities SET verb = 'updated'", "UPDATE issue_activities SET verb = 'deleted'",
-		"UPDATE issue_activities SET verb = 'created'", "UPDATE issue_relations SET relation_type = 'blocked_by'",
+		"UPDATE issue_activities SET verb = 'created'", "UPDATE issue_activities SET field = 'intake', verb = 'accepted'",
+		"UPDATE issue_relations SET relation_type = 'blocked_by'",
 		"UPDATE issue_relations SET relation_type = 'duplicate'", "UPDATE issue_relations SET relation_type = 'relates_to'",
 	} {
 		if _, err := pool.Exec(ctx, stmt); err != nil {
@@ -316,6 +337,8 @@ func TestIssueChecksRejectCounterexamples(t *testing.T) {
 		{"its own parent", "UPDATE issues SET parent_id = id", "issues_not_own_parent_check"},
 		{"a start after the target", "UPDATE issues SET start_date = '2026-10-18', target_date = '2026-10-17'", "issues_dates_check"},
 		{"unknown verb", "UPDATE issue_activities SET verb = 'commented'", "issue_activities_verb_check"},
+		{"an intake verb without a field", "UPDATE issue_activities SET field = NULL, verb = 'accepted'", "issue_activities_verb_check"},
+		{"an intake verb of another field", "UPDATE issue_activities SET field = 'state', verb = 'accepted'", "issue_activities_verb_check"},
 		{"blocking stored", "UPDATE issue_relations SET relation_type = 'blocking'", "issue_relations_relation_type_check"},
 		{"Plane's start_before", "UPDATE issue_relations SET relation_type = 'start_before'", "issue_relations_relation_type_check"},
 		{"related to itself", "UPDATE issue_relations SET related_issue_id = issue_id", "issue_relations_not_self_check"},
