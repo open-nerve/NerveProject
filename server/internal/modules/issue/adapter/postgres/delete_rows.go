@@ -33,6 +33,13 @@ func (s *Store) DeleteProjectIssueRows(ctx context.Context, b app.RowBatch) ([]u
 	return deleted(ids, err, "work items")
 }
 
+// DeleteProjectIntakeRows soft-deletes a batch of the project's work items'
+// intake rows.
+func (s *Store) DeleteProjectIntakeRows(ctx context.Context, b app.RowBatch) ([]uuid.UUID, error) {
+	ids, err := s.queries(ctx).DeleteProjectIntakeRows(ctx, gen.DeleteProjectIntakeRowsParams(batch(b)))
+	return deleted(ids, err, "intake rows")
+}
+
 // DeleteProjectAssigneeRows soft-deletes a batch of the project's work
 // items' assignees.
 func (s *Store) DeleteProjectAssigneeRows(ctx context.Context, b app.RowBatch) ([]uuid.UUID, error) {

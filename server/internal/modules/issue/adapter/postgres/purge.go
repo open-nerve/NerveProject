@@ -186,6 +186,19 @@ func (s *Store) PurgeCycleIssues(ctx context.Context, b app.PurgeBatch) (app.Pur
 	return app.PurgePage{Scanned: int(row.Scanned), Deleted: int(row.Deleted), After: row.AfterID}, nil
 }
 
+// PurgeIntakeIssues commits one bounded batch on the pool, independently of
+// any request transaction carried in ctx.
+func (s *Store) PurgeIntakeIssues(ctx context.Context, b app.PurgeBatch) (app.PurgePage, error) {
+	if b.Limit < 1 || b.Limit > math.MaxInt32 {
+		return app.PurgePage{After: b.After}, fmt.Errorf("purge batch must be from 1 to 2147483647, got %d", b.Limit)
+	}
+	row, err := gen.New(s.pool).PurgeIntakeIssues(ctx, gen.PurgeIntakeIssuesParams{Cutoff: &b.Cutoff, AfterID: b.After, BatchLimit: int32(b.Limit)})
+	if err != nil {
+		return app.PurgePage{After: b.After}, fmt.Errorf("purge intake_issues: %w", err)
+	}
+	return app.PurgePage{Scanned: int(row.Scanned), Deleted: int(row.Deleted), After: row.AfterID}, nil
+}
+
 // PurgeDraftIssues scans candidates before deleting, retaining blocked progress.
 func (s *Store) PurgeDraftIssues(ctx context.Context, b app.PurgeBatch) (app.PurgePage, error) {
 	q := gen.New(s.pool)

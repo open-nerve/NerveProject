@@ -350,15 +350,16 @@ func TestDeletionInterleaving25(t *testing.T) {
 }
 
 // Fill every issue-owned table without adding relations that would change the
-// ordered candidate fixture. Links and the cycle and module memberships use the
-// existing catalog seeds (seedIssueLinks, seedCycles, seedModules,
-// seedMemberships); the remaining rows are created through the real
-// authenticated HTTP handlers.
+// ordered candidate fixture. Links, the cycle and module memberships and the
+// intake row use the existing catalog seeds (seedIssueLinks, seedCycles,
+// seedModules, seedMemberships, seedIntake); the remaining rows are created
+// through the real authenticated HTTP handlers.
 func furnishDeletionIssue(t *testing.T, w issueWorld, projectID, issueID uuid.UUID) {
 	t.Helper()
 	seedCycles(t, w.pool, projectID, w.ids["alice"])
 	seedModules(t, w.pool, projectID, w.ids["alice"])
 	seedMemberships(t, w.pool, issueID, w.ids["alice"])
+	seedIntake(t, w.pool, issueID, w.ids["alice"])
 	var label struct {
 		ID uuid.UUID `json:"id"`
 	}

@@ -21,6 +21,15 @@ UPDATE issues
 SET deleted_at = sqlc.arg(at)::timestamptz, updated_at = sqlc.arg(at), updated_by_id = sqlc.arg(deleted_by)::uuid
 WHERE id = ANY (sqlc.arg(issue_ids)::uuid[]) AND deleted_at IS NULL;
 
+-- name: DeleteIssueIntakeRows :exec
+-- DeleteIssueAssigneeRows' statement, of the deleted work items' intake rows (M7 P2a spec 2.10): a work item's intake row
+-- goes with it, at its moment, whatever its status. Another row that names it as its duplicate stays as it is and reads
+-- as no target (spec 2.8). Every write of an intake row holds the project's FOR NO KEY UPDATE first (spec 2.4, 2.5).
+-- The index on issue_id serves it.
+UPDATE intake_issues
+SET deleted_at = sqlc.arg(at)::timestamptz, updated_at = sqlc.arg(at), updated_by_id = sqlc.arg(deleted_by)::uuid
+WHERE issue_id = ANY (sqlc.arg(issue_ids)::uuid[]) AND deleted_at IS NULL;
+
 -- name: DeleteIssueAssigneeRows :exec
 -- The deleted work items' assignees (M4 design 3.6): their undeleted rows, soft-deleted at the moment and by the account
 -- given, in one statement, which locks them in its scan's order. Every write of these rows holds the project's FOR NO

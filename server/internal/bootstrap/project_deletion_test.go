@@ -92,8 +92,9 @@ func seedLabels(t *testing.T, pool *pgxpool.Pool, project, by uuid.UUID) {
 // and a row of each of the issue module's tables under it: by its assignee
 // and its subscriber, the project's label Bug (seedLabels) on it, its
 // relation to another work item of the project, its blocker (relate), its
-// activity's first row, and its memberships of the project's cycle Sprint
-// and module Platform (seedMemberships), directly: the seed does not depend
+// activity's first row, its memberships of the project's cycle Sprint and
+// module Platform (seedMemberships) and its intake row (seedIntake),
+// directly: the seed does not depend
 // on which of the issue module's writes exist. Each number is the project's
 // counter, moved on, as a creation moves it.
 func seedIssues(t *testing.T, pool *pgxpool.Pool, project, by uuid.UUID) {
@@ -128,6 +129,7 @@ func seedIssues(t *testing.T, pool *pgxpool.Pool, project, by uuid.UUID) {
 	}
 	relate(t, pool, issue, blocker, "blocked_by", by)
 	seedMemberships(t, pool, issue, by)
+	seedIntake(t, pool, issue, by)
 	seedIssueLinks(t, pool, issue, by)
 	seedIssueDrafts(t, pool, project, by)
 	seedIssueAsset(t, pool, issue, by)

@@ -98,6 +98,7 @@ func TestTheStatementsOfADeletedSubtreeDeleteItsRows(t *testing.T) {
 		method func(*postgresadapter.Store, context.Context, app.IssueDeletion) error
 	}{
 		{"issues", (*postgresadapter.Store).DeleteIssueRows},
+		// intake_issues, one undeleted row a work item: TestTheIntakeStatementOfADeletedSubtreeDeletesItsRows.
 		{"issue_assignees", (*postgresadapter.Store).DeleteIssueAssigneeRows},
 		{"issue_labels", (*postgresadapter.Store).DeleteIssueLabelRows},
 		// cycle_issues, one undeleted row a work item: TestTheCycleStatementOfADeletedSubtreeDeletesItsRows.
@@ -208,6 +209,62 @@ func TestTheCycleStatementOfADeletedSubtreeDeletesItsRows(t *testing.T) {
 	cancelled, cancel := context.WithCancel(context.Background())
 	cancel()
 	if err := s.DeleteIssueCycleRows(cancelled, app.IssueDeletion{IssueIDs: []uuid.UUID{other}, By: bob, At: later}); !errors.Is(err, context.Canceled) {
+		t.Errorf("the statement on a cancelled context = %v; want context.Canceled", err)
+	}
+}
+
+// The intake statement of a deleted subtree (M7 P2a spec 2.10) is
+// TestTheStatementsOfADeletedSubtreeDeleteItsRows' over intake_issues,
+// whose rows fit its one undeleted row a work item
+// (intake_issues_issue_id_key): the work item item had an intake row, c,
+// deleted an hour before by alice, and has another, a, accepted; the work
+// item sub has one, d, declined; the work item gone had one, g, deleted
+// then too; the work item other has one, o, pending, other's id after
+// gone's and before item's and sub's. One statement names sub, item and
+// gone, in descending id order, by bob at later: a and d are deleted at
+// later by bob, whatever their status; c and g keep alice's deletion, and o
+// its row as it was; every other column of every row is kept. It answers a
+// failed write as its failure.
+func TestTheIntakeStatementOfADeletedSubtreeDeletesItsRows(t *testing.T) {
+	s, pool := newStore(t)
+	alice, bob := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com")
+	web := newProject(t, pool, newWorkspace(t, pool, "acme"), "WEB")
+	gone, other, item, sub := uuid.NewV7(), uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
+	for n, id := range []uuid.UUID{item, gone, other, sub} {
+		newIssue(t, pool, web, id, n+1, alice)
+	}
+	before, later := now.Add(-time.Hour), now.Add(time.Hour)
+	c, a, d, g, o := uuid.NewV7(), uuid.NewV7(), uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
+	for _, row := range []struct {
+		issue, id uuid.UUID
+		status    string
+		earlier   bool
+	}{{item, c, "pending", true}, {item, a, "accepted", false}, {sub, d, "declined", false}, {gone, g, "accepted", true}, {other, o, "pending", false}} {
+		exec(t, pool, `INSERT INTO intake_issues (id, workspace_id, project_id, issue_id, status, created_by_id, updated_by_id, created_at, updated_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $6, $7, $7)`, row.id, web.workspace, web.id, row.issue, row.status, alice, now)
+		if row.earlier {
+			exec(t, pool, "UPDATE intake_issues SET deleted_at = $2, updated_at = $2, updated_by_id = $3 WHERE id = $1", row.id, before, alice)
+		}
+	}
+	rows, stamps := rowsAsText(t, pool, "intake_issues"), audits(t, pool, "intake_issues")
+
+	if err := s.DeleteIssueIntakeRows(context.Background(), app.IssueDeletion{IssueIDs: []uuid.UUID{sub, item, gone}, By: bob, At: later}); err != nil {
+		t.Fatal(err)
+	}
+
+	if after := rowsAsText(t, pool, "intake_issues"); !maps.Equal(after, rows) {
+		t.Errorf("the rows but their audit columns:\n%v\nwant them as they were:\n%v", after, rows)
+	}
+	want := maps.Clone(stamps)
+	for _, id := range []uuid.UUID{a, d} {
+		want[id] = deletion(later, bob)
+	}
+	if after := audits(t, pool, "intake_issues"); !maps.Equal(after, want) {
+		t.Errorf("the audit columns:\n%v\nwant\n%v", after, want)
+	}
+	cancelled, cancel := context.WithCancel(context.Background())
+	cancel()
+	if err := s.DeleteIssueIntakeRows(cancelled, app.IssueDeletion{IssueIDs: []uuid.UUID{other}, By: bob, At: later}); !errors.Is(err, context.Canceled) {
 		t.Errorf("the statement on a cancelled context = %v; want context.Canceled", err)
 	}
 }

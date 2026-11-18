@@ -201,6 +201,38 @@ func (q *Queries) PurgeDraftIssuesCandidates(ctx context.Context, arg PurgeDraft
 	return items, nil
 }
 
+const purgeIntakeIssues = `-- name: PurgeIntakeIssues :one
+WITH candidates AS MATERIALIZED (
+    SELECT candidate.id FROM intake_issues AS candidate
+    WHERE candidate.deleted_at < $2 AND candidate.id > $1
+    ORDER BY candidate.id LIMIT $3
+), deleted AS (
+    DELETE FROM intake_issues AS target WHERE target.deleted_at < $2 AND target.id IN (SELECT candidates.id FROM candidates) RETURNING target.id
+)
+SELECT (SELECT count(*)::integer FROM candidates) AS scanned,
+       (SELECT count(*)::integer FROM deleted) AS deleted,
+       coalesce((SELECT id FROM candidates ORDER BY id DESC LIMIT 1), $1::uuid)::uuid AS after_id
+`
+
+type PurgeIntakeIssuesParams struct {
+	AfterID    uuid.UUID
+	Cutoff     *time.Time
+	BatchLimit int32
+}
+
+type PurgeIntakeIssuesRow struct {
+	Scanned int32
+	Deleted int32
+	AfterID uuid.UUID
+}
+
+func (q *Queries) PurgeIntakeIssues(ctx context.Context, arg PurgeIntakeIssuesParams) (PurgeIntakeIssuesRow, error) {
+	row := q.db.QueryRow(ctx, purgeIntakeIssues, arg.AfterID, arg.Cutoff, arg.BatchLimit)
+	var i PurgeIntakeIssuesRow
+	err := row.Scan(&i.Scanned, &i.Deleted, &i.AfterID)
+	return i, err
+}
+
 const purgeIssueActivities = `-- name: PurgeIssueActivities :one
 WITH candidates AS MATERIALIZED (
     SELECT candidate.id FROM issue_activities AS candidate

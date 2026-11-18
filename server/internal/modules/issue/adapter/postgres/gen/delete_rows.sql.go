@@ -327,6 +327,51 @@ func (q *Queries) DeleteProjectDraftRows(ctx context.Context, arg DeleteProjectD
 	return items, nil
 }
 
+const deleteProjectIntakeRows = `-- name: DeleteProjectIntakeRows :many
+UPDATE intake_issues AS t
+SET deleted_at = $1::timestamptz, updated_at = $1, updated_by_id = $2::uuid
+WHERE t.id IN (
+    SELECT r.id FROM intake_issues r
+    WHERE r.project_id = $3 AND r.deleted_at IS NULL AND r.id > $4::uuid
+    ORDER BY r.id LIMIT $5 FOR NO KEY UPDATE)
+RETURNING t.id
+`
+
+type DeleteProjectIntakeRowsParams struct {
+	At        time.Time
+	DeletedBy uuid.UUID
+	ProjectID uuid.UUID
+	After     uuid.UUID
+	Batch     int32
+}
+
+// DeleteProjectIssueRows' batch, of the work items' intake rows (M7 P2a spec 2.10).
+func (q *Queries) DeleteProjectIntakeRows(ctx context.Context, arg DeleteProjectIntakeRowsParams) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, deleteProjectIntakeRows,
+		arg.At,
+		arg.DeletedBy,
+		arg.ProjectID,
+		arg.After,
+		arg.Batch,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const deleteProjectIssueRows = `-- name: DeleteProjectIssueRows :many
 UPDATE issues AS t
 SET deleted_at = $1::timestamptz, updated_at = $1, updated_by_id = $2::uuid

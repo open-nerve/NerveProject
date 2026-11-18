@@ -125,6 +125,27 @@ func (q *Queries) DeleteIssueDescriptionVersionRows(ctx context.Context, arg Del
 	return err
 }
 
+const deleteIssueIntakeRows = `-- name: DeleteIssueIntakeRows :exec
+UPDATE intake_issues
+SET deleted_at = $1::timestamptz, updated_at = $1, updated_by_id = $2::uuid
+WHERE issue_id = ANY ($3::uuid[]) AND deleted_at IS NULL
+`
+
+type DeleteIssueIntakeRowsParams struct {
+	At        time.Time
+	DeletedBy uuid.UUID
+	IssueIds  []uuid.UUID
+}
+
+// DeleteIssueAssigneeRows' statement, of the deleted work items' intake rows (M7 P2a spec 2.10): a work item's intake row
+// goes with it, at its moment, whatever its status. Another row that names it as its duplicate stays as it is and reads
+// as no target (spec 2.8). Every write of an intake row holds the project's FOR NO KEY UPDATE first (spec 2.4, 2.5).
+// The index on issue_id serves it.
+func (q *Queries) DeleteIssueIntakeRows(ctx context.Context, arg DeleteIssueIntakeRowsParams) error {
+	_, err := q.db.Exec(ctx, deleteIssueIntakeRows, arg.At, arg.DeletedBy, arg.IssueIds)
+	return err
+}
+
 const deleteIssueLabelRows = `-- name: DeleteIssueLabelRows :exec
 UPDATE issue_labels
 SET deleted_at = $1::timestamptz, updated_at = $1, updated_by_id = $2::uuid
