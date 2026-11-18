@@ -65,12 +65,15 @@ func (u *SearchIssues) Execute(ctx context.Context, slug string, raw map[string]
 		}
 		scope := visible
 		if query.IssueID != nil {
+			// The source, read with its intake row (GetIssue), is not found
+			// when it is archived or in its project's intake (M7 P2a spec
+			// 2.6, DP-5), as when the caller does not see it.
 			source, found, err := u.d.Issues.GetIssue(ctx, *query.IssueID)
 			if err != nil {
 				return err
 			}
 			grant, ok := g[source.ProjectID]
-			if !found || source.WorkspaceID != wid || !ok || source.ArchivedAt != nil || source.HiddenFrom(actor.UserID, grant.OwnOnly) {
+			if !found || source.WorkspaceID != wid || !ok || source.ArchivedAt != nil || source.InTriage() || source.HiddenFrom(actor.UserID, grant.OwnOnly) {
 				return domain.ErrIssueNotFound
 			}
 			if query.For == "parent" || query.For == "sub_issue" {

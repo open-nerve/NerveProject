@@ -78,11 +78,13 @@ func NewDeleteIssue(d DeleteIssueDeps) *DeleteIssue {
 
 // Execute runs, through Locks, the deletion of the work item id (M4 design
 // 3.5, 3.6, 3.9, 11.11): its precheck, the work item read and the decision
-// on issue.delete on it, the guest rule first, before any lock: the
-// project's admins may, and the member who made it (AllowCreator); then
-// the project's write gate (503 server_busy); then in one transaction, the
-// project FOR NO KEY UPDATE, the work item read again and the decision
-// again, and under them: an archived project refuses it (409
+// on issue.delete on it, the guest rule first: the project's admins may,
+// and the member who made it (AllowCreator); then a work item in its
+// project's intake refused (409 issue.in_triage, refuseTriage; M7 P2a spec
+// 2.6), before any lock; then the project's write gate (503 server_busy);
+// then in one transaction, the project FOR NO KEY UPDATE, the work item
+// read again, the decision and the intake's refusal again, and under
+// them: an archived project refuses it (409
 // project.archived); its subtree, the work item and each one under it,
 // however deep, archived ones too, read under the lock, which every write
 // of a parent holds; the clock; the subtree's work items and each row
@@ -95,7 +97,7 @@ func (u *DeleteIssue) Execute(ctx context.Context, id uuid.UUID) error {
 	if err != nil {
 		return err
 	}
-	w := write{issue: &id, action: domain.ActionDelete, notFound: domain.ErrIssueNotFound}
+	w := write{issue: &id, action: domain.ActionDelete, notFound: domain.ErrIssueNotFound, check: refuseTriage}
 	return u.d.Locks.run(ctx, actor, w, func(ctx context.Context, h held) error {
 		if h.project.Archived {
 			return domain.ErrProjectArchived

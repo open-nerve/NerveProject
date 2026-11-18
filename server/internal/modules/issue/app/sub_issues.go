@@ -84,12 +84,14 @@ func NewAddSubIssues(d AddSubIssuesDeps) *AddSubIssues {
 // Execute checks ids (domain.CheckSubIssueIDs), before any read; then
 // Locks runs the write on the work item id, the parent (M4 design 3.5,
 // 11.11): its precheck, the decision on issue.update on it, the guest rule
-// first, before any lock; then the project's write gate, which refuses a
-// write that may wait no longer (503 server_busy); then in one
-// transaction, the project FOR NO KEY UPDATE, the parent read again and
-// the decision again, and under them, in this order: an archived project
-// refuses it (409 project.archived), then an archived parent (409
-// issue.archived); the work items ids name, each in the caller's reach
+// first, then a parent in its project's intake refused (409
+// issue.in_triage, refuseTriage; M7 P2a spec 2.6), before any lock; then
+// the project's write gate, which refuses a write that may wait no longer
+// (503 server_busy); then in one transaction, the project FOR NO KEY
+// UPDATE, the parent read again, the decision and the intake's refusal
+// again, and under them, in this order: an archived project refuses it
+// (409 project.archived), then an archived parent (409 issue.archived);
+// the work items ids name, each in the caller's reach, none in the intake,
 // and not the parent or above it (check), every problem in one 422; then,
 // when any is not under the parent yet, the clock; those work items under
 // the parent, in id order, each changed last by the caller; for each of
@@ -106,7 +108,7 @@ func (u *AddSubIssues) Execute(ctx context.Context, id uuid.UUID, ids []uuid.UUI
 	if err := domain.CheckSubIssueIDs(ids); err != nil {
 		return nil, err
 	}
-	w := write{issue: &id, action: domain.ActionUpdate, notFound: domain.ErrIssueNotFound}
+	w := write{issue: &id, action: domain.ActionUpdate, notFound: domain.ErrIssueNotFound, check: refuseTriage}
 	var added []domain.Issue
 	err = u.d.Locks.run(ctx, actor, w, func(ctx context.Context, h held) error {
 		switch {
@@ -172,8 +174,9 @@ type move struct {
 }
 
 // check reads the work items ids, which the caller actor's addition puts
-// under the work item h holds, under h (M4 design 3.4, 3.9): each an
-// undeleted work item in his reach (inReach) that is neither the work item
+// under the work item h holds, under h (M4 design 3.4, 3.9), as the
+// GetIssue family reads them, with their intake rows: each an undeleted
+// work item in his reach (inReach) that is neither the work item
 // nor one above it, in its ancestry (domain.Loops). Every problem is
 // reported at once, in one 422, each at its place in ids. It answers those
 // not under the work item yet, in id order: the ones it moves (moves).
