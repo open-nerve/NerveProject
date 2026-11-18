@@ -2169,6 +2169,98 @@ export interface paths {
         patch: operations["updateModulePreferences"];
         trace?: never;
     };
+    "/api/v0/workspaces/{slug}/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A workspace's slug, as in the web app's address. */
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        /**
+         * List the caller's notifications in a workspace
+         * @description The caller's own notifications in the workspace, for any active member: those of the projects he reads now, archived ones too, and in a project where he sees only his own work items, those of the work items he created; what he reads now decides, not what he read when they were sent. The newest first, by created_at, the moment of the change, then by id, both descending. A notification sent late keeps the moment of its change, so it can land on a page already read: the first page's cursor does not tell whether there are new ones. The filters are ANDed. Each is a string the server parses: a value that is none of those listed, an empty type member or one given twice answers 422 validation_failed, invalid_format on that parameter, and type with tab=mentions not_allowed on type. An unknown parameter answers 422 not_allowed on it, and a parameter given more than once invalid_format. A cursor that does not decode answers 400 bad_request on cursor; a limit that is not an integer, 400, and one outside 1–100, 422. A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found. What he reads and the page are read in one snapshot. data is each notification's snapshot as it was sent, but for the ids of its change, which NotificationChange answers as the caller reads them now.
+         */
+        get: operations["listNotifications"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v0/workspaces/{slug}/notifications/unread-count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A workspace's slug, as in the web app's address. */
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Count the caller's unread notifications in a workspace
+         * @description How many of the caller's notifications in the workspace, of those he sees as listNotifications lists them, are unread, not archived and not snoozed at the moment of the read (one whose snooze is over counts): one count for each of its tabs. Any query parameter answers 422 not_allowed on it. A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found.
+         */
+        get: operations["getNotificationUnreadCount"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v0/workspaces/{slug}/notifications/mark-all-read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A workspace's slug, as in the web app's address. */
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mark the caller's unread notifications in a workspace read
+         * @description Marks read the caller's unread notifications in the workspace that the body's filters select, as listNotifications' filters of the same names select them, of those he sees as it lists them. When it starts it reads its moment and what he sees, once: a notification of a change after that moment is not marked, nor one of a project he no longer reads, and read_at is that moment for every one it marks. It marks them in batches, each in a transaction of its own, and never waits for a notification another write holds: it passes over one being deleted, or being changed at that moment, which it may then leave unread. A notification of a change before its moment that is sent while it runs may be marked. When a batch fails it answers that error, and the batches before it stay marked: asking again marks the rest. A tab or a type that listNotifications would refuse answers 422 validation_failed on it. A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found.
+         */
+        post: operations["markAllNotificationsRead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v0/notifications/{notification_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A notification's id (Notification.id). */
+                notification_id: components["parameters"]["NotificationID"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Change the caller's notification
+         * @description Changes the states of the caller's own notification, each on its own: read true marks it read when it is not, with read_at the moment of the change, and keeps it as it is when it is; false marks it unread. archived does the same with archived_at. snoozed_till, a moment after now, snoozes it until then; null ends its snooze. A field left out stays as it is; {} changes nothing and answers the notification. A notification that does not exist, is deleted, is another's, is of a workspace of which the caller is not an active member, of a project he does not read now, or, in a project where he sees only his own work items, of a work item he did not create, answers notification.not_found, the same answer as an id that never was. That is decided before the values are: a snoozed_till that is not after now answers 422 must_be_future on snoozed_till on the caller's own notification that he sees, and notification.not_found on any other. null for read or archived, or a value of another type, answers 400 bad_request. The notification is locked and the moment read after the lock; a lock not had within the work items' lock wait answers server_busy. The answer is the notification as listNotifications answers it.
+         */
+        patch: operations["updateNotification"];
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -4250,6 +4342,159 @@ export interface components {
             display_filters?: components["schemas"]["IssueListDisplayFilters"];
             display_properties?: components["schemas"]["IssueListDisplayProperties"];
         };
+        /**
+         * @description Why the caller was notified, settled when the notification was sent: mentioned, he was mentioned; else created, he created the work item; assigned, he was one of its assignees; subscribed, he subscribes to it.
+         * @enum {string}
+         */
+        NotificationSender: "created" | "assigned" | "subscribed" | "mentioned";
+        /** @description The work item as it was when the notification was sent: its name, its number, its project's identifier, and its state's name and group, a StateGroup of the project API (backlog, unstarted, started, completed or cancelled). */
+        NotificationIssue: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** @description Its number in its project, from 1; with the project's identifier, as in WEB-12. */
+            sequence_id: number;
+            identifier: string;
+            state_name: string;
+            state_group: string;
+        };
+        /**
+         * @description What the change did: created, updated or deleted, as the work item's activity says it; mentioned for a mention.
+         * @enum {string}
+         */
+        NotificationVerb: "created" | "updated" | "deleted" | "mentioned";
+        /** @description A work item a change names, as the caller reads it now, archived or not: its number, its project's identifier and its name, now. */
+        NotificationIssueRef: {
+            /** Format: uuid */
+            id: string;
+            /** @description Its number in its project, from 1; with the project's identifier, as in WEB-12. */
+            sequence_id: number;
+            identifier: string;
+            name: string;
+        };
+        /** @description The change the notification is of, as it was sent, but for its ids: old_id and new_id are an account's for assignees, a label's for labels and a state's for state; for parent and a relation's fields, a work item's, given only when the caller reads that work item now, with old_issue or new_issue; null for every other field. Every key is there; null where the change has no such value. */
+        NotificationChange: {
+            /** @description What changed: issue, for the work item's creation; a field of the work item (name, parent, priority, state, start_date, target_date, labels, assignees, archived_at); comment, link or attachment; a relation's type as the work item reads it (relates_to, duplicate, blocking, blocked_by); for a mention, description or comment, where the caller was mentioned. */
+            field: string;
+            verb: components["schemas"]["NotificationVerb"];
+            /** @description The value before the change, as the work item's activity writes it; null for none. */
+            old_value: string | null;
+            /** @description The value after the change, as the work item's activity writes it; null for none. */
+            new_value: string | null;
+            /**
+             * Format: uuid
+             * @description The id of the value before the change, as NotificationChange says; null for none.
+             */
+            old_id: string | null;
+            /**
+             * Format: uuid
+             * @description The id of the value after the change, as NotificationChange says; null for none.
+             */
+            new_id: string | null;
+            /** @description The work item old_id names, for parent and a relation's fields, when the caller reads it now; null otherwise. */
+            old_issue: components["schemas"]["NotificationIssueRef"] | null;
+            /** @description The work item new_id names, for parent and a relation's fields, when the caller reads it now; null otherwise. */
+            new_issue: components["schemas"]["NotificationIssueRef"] | null;
+            /**
+             * Format: uuid
+             * @description The comment the change is of; null for none.
+             */
+            comment_id: string | null;
+            /** @description The first 200 characters of the comment's plain text when the notification was sent, for its creation, its change and a mention in it; null for none. */
+            excerpt: string | null;
+        };
+        /** @description The work item and the change, as they were when the notification was sent. */
+        NotificationData: {
+            issue: components["schemas"]["NotificationIssue"];
+            change: components["schemas"]["NotificationChange"];
+        };
+        /** @description One of the caller's notifications, of one change of a work item: why he was notified, who made the change, the work item and the change as they were when it was sent, and its three states, each changed on its own. */
+        Notification: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            workspace_id: string;
+            /** Format: uuid */
+            project_id: string;
+            /**
+             * Format: uuid
+             * @description The work item the change is of.
+             */
+            issue_id: string;
+            sender: components["schemas"]["NotificationSender"];
+            /**
+             * Format: uuid
+             * @description The account that made the change; null when nerve itself made it, or once that account is gone.
+             */
+            triggered_by_id: string | null;
+            data: components["schemas"]["NotificationData"];
+            /**
+             * Format: date-time
+             * @description When it was read; null while it is unread.
+             */
+            read_at: string | null;
+            /**
+             * Format: date-time
+             * @description When it was archived; null while it is not.
+             */
+            archived_at: string | null;
+            /**
+             * Format: date-time
+             * @description Till when it is snoozed: while this is after now it is snoozed, and after that it is listed and counted as any other; null when it was never snoozed, or its snooze was ended.
+             */
+            snoozed_till: string | null;
+            /**
+             * Format: date-time
+             * @description The moment of the change, not when the notification was written; the notifications of one change share it.
+             */
+            created_at: string;
+        };
+        NotificationPage: {
+            data: components["schemas"]["Notification"][];
+            next_cursor: components["schemas"]["NextCursor"];
+        };
+        /** @description The caller's unread notifications that are neither archived nor snoozed, of those he sees: all, of the all tab, every sender but mentioned; mentions, of the mentions tab. */
+        NotificationUnreadCount: {
+            /** Format: int64 */
+            all: number;
+            /** Format: int64 */
+            mentions: number;
+        };
+        /**
+         * @description A tab of the caller's notifications: all, every notification but the mentions; mentions, the mentions alone (sender mentioned).
+         * @enum {string}
+         */
+        NotificationTab: "all" | "mentions";
+        /**
+         * @description A sender that a filter's type may name, only in the all tab.
+         * @enum {string}
+         */
+        NotificationType: "assigned" | "created" | "subscribed";
+        /** @description Which unread notifications to mark read, as listNotifications' filters of the same names select them: tab, all when left out; type, only in the all tab, one or more of its senders, each once, every sender of the tab when left out; archived and snoozed, false when left out. {} marks the unread ones of the all tab that are neither archived nor snoozed. */
+        NotificationMarkAllRead: {
+            tab?: components["schemas"]["NotificationTab"];
+            type?: components["schemas"]["NotificationType"][];
+            archived?: boolean;
+            snoozed?: boolean;
+        };
+        NotificationsMarked: {
+            /**
+             * Format: int64
+             * @description How many notifications it marked read.
+             */
+            marked: number;
+        };
+        NotificationUpdate: {
+            /** @description true marks it read, false unread. */
+            read?: boolean;
+            /** @description true archives it, false unarchives it. */
+            archived?: boolean;
+            /**
+             * Format: date-time
+             * @description A moment after now snoozes it until then; null ends its snooze.
+             */
+            snoozed_till?: string | null;
+        };
     };
     responses: {
         /** @description Error (RFC 9457 problem details). */
@@ -4297,6 +4542,8 @@ export interface components {
         ModuleID: string;
         /** @description A module link's id (ModuleLink.id). */
         ModuleLinkID: string;
+        /** @description A notification's id (Notification.id). */
+        NotificationID: string;
     };
     requestBodies: never;
     headers: never;
@@ -4467,6 +4714,20 @@ export type CyclePreferencesUpdate = components['schemas']['CyclePreferencesUpda
 export type ModuleIssueFilters = components['schemas']['ModuleIssueFilters'];
 export type ModulePreferences = components['schemas']['ModulePreferences'];
 export type ModulePreferencesUpdate = components['schemas']['ModulePreferencesUpdate'];
+export type NotificationSender = components['schemas']['NotificationSender'];
+export type NotificationIssue = components['schemas']['NotificationIssue'];
+export type NotificationVerb = components['schemas']['NotificationVerb'];
+export type NotificationIssueRef = components['schemas']['NotificationIssueRef'];
+export type NotificationChange = components['schemas']['NotificationChange'];
+export type NotificationData = components['schemas']['NotificationData'];
+export type Notification = components['schemas']['Notification'];
+export type NotificationPage = components['schemas']['NotificationPage'];
+export type NotificationUnreadCount = components['schemas']['NotificationUnreadCount'];
+export type NotificationTab = components['schemas']['NotificationTab'];
+export type NotificationType = components['schemas']['NotificationType'];
+export type NotificationMarkAllRead = components['schemas']['NotificationMarkAllRead'];
+export type NotificationsMarked = components['schemas']['NotificationsMarked'];
+export type NotificationUpdate = components['schemas']['NotificationUpdate'];
 export type ResponseProblem = components['responses']['Problem'];
 export type ParameterLimit = components['parameters']['Limit'];
 export type ParameterCursor = components['parameters']['Cursor'];
@@ -4484,6 +4745,7 @@ export type ParameterIssueIdentifier = components['parameters']['IssueIdentifier
 export type ParameterCycleId = components['parameters']['CycleID'];
 export type ParameterModuleId = components['parameters']['ModuleID'];
 export type ParameterModuleLinkId = components['parameters']['ModuleLinkID'];
+export type ParameterNotificationId = components['parameters']['NotificationID'];
 export type $defs = Record<string, never>;
 export interface operations {
     listDraftAssetPreparations: {
@@ -7909,6 +8171,125 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ModulePreferences"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listNotifications: {
+        parameters: {
+            query?: {
+                /** @description all, the default: every notification but the mentions; mentions: the mentions alone (sender mentioned). */
+                tab?: string;
+                /** @description Only in the all tab: the senders to list, a comma-separated set of one or more of assigned, created and subscribed, each once, e.g. assigned,created. Absent, every sender of the tab. */
+                type?: string;
+                /** @description false lists the unread notifications alone, true the read ones alone; absent, both. Only the strings true and false are allowed. */
+                read?: string;
+                /** @description false, the default, lists the notifications that are not archived, true the archived ones alone. Only the strings true and false are allowed. */
+                archived?: string;
+                /** @description A notification is snoozed while its snoozed_till is after the moment of the read. false, the default, lists the notifications that are not snoozed, those whose snooze is over among them; true the snoozed ones alone. Only the strings true and false are allowed. */
+                snoozed?: string;
+                /** @description The page size, 1–100; 50 when absent. Outside that range the answer is 422 validation_failed on limit. */
+                limit?: components["parameters"]["Limit"];
+                /** @description The next_cursor of the page before; absent for the first page. A cursor that does not decode, has an unknown version or a payload of another shape than this list's, or is not spelled as the server writes it is 400 bad_request on cursor. */
+                cursor?: components["parameters"]["Cursor"];
+            };
+            header?: never;
+            path: {
+                /** @description A workspace's slug, as in the web app's address. */
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A page of the caller's notifications, with null next_cursor on the last page. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationPage"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getNotificationUnreadCount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A workspace's slug, as in the web app's address. */
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The two counts. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationUnreadCount"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    markAllNotificationsRead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A workspace's slug, as in the web app's address. */
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NotificationMarkAllRead"];
+            };
+        };
+        responses: {
+            /** @description How many notifications it marked. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationsMarked"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateNotification: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A notification's id (Notification.id). */
+                notification_id: components["parameters"]["NotificationID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NotificationUpdate"];
+            };
+        };
+        responses: {
+            /** @description The notification, changed. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Notification"];
                 };
             };
             default: components["responses"]["Problem"];

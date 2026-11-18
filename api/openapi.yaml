@@ -30,6 +30,8 @@ tags:
     description: Private file preparations and content capabilities.
   - name: planning
     description: Cycles and modules of a project.
+  - name: notification
+    description: The caller's own notifications of changes of work items.
 paths:
   /api/v0/drafts/{draft_id}/asset-preparations:
     $ref: 'modules/asset.yaml#/paths/~1api~1v0~1drafts~1{draft_id}~1asset-preparations'
@@ -209,6 +211,14 @@ paths:
     $ref: 'modules/planning.yaml#/paths/~1api~1v0~1me~1cycles~1{cycle_id}~1preferences'
   /api/v0/me/modules/{module_id}/preferences:
     $ref: 'modules/planning.yaml#/paths/~1api~1v0~1me~1modules~1{module_id}~1preferences'
+  /api/v0/workspaces/{slug}/notifications:
+    $ref: 'modules/notification.yaml#/paths/~1api~1v0~1workspaces~1{slug}~1notifications'
+  /api/v0/workspaces/{slug}/notifications/unread-count:
+    $ref: 'modules/notification.yaml#/paths/~1api~1v0~1workspaces~1{slug}~1notifications~1unread-count'
+  /api/v0/workspaces/{slug}/notifications/mark-all-read:
+    $ref: 'modules/notification.yaml#/paths/~1api~1v0~1workspaces~1{slug}~1notifications~1mark-all-read'
+  /api/v0/notifications/{notification_id}:
+    $ref: 'modules/notification.yaml#/paths/~1api~1v0~1notifications~1{notification_id}'
 components:
   # 模块文件的 securitySchemes 在打包时被丢掉，操作引用的 scheme 写在这里（M0-P3 交接 3）
   securitySchemes:

@@ -81,6 +81,7 @@
     "planning_module_not_found": "The module does not exist, or you cannot see it.",
     "planning_module_link_not_found": "The link does not exist, or you cannot see it.",
     "planning_module_link_exists": "This module already has this link.",
+    "notification_not_found": "The notification does not exist, or you cannot see it.",
     "unreachable": "Cannot reach the server for now. Please try again.",
     "unknown": "Something went wrong. Please try again.",
     "field": {

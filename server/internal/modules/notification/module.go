@@ -104,3 +104,9 @@ func New(d Deps) *Module {
 		deleteBudget: d.DeleteBudget, logger: d.Logger,
 	}
 }
+
+// Actions lists the module's actions: bootstrap's test holds the union of
+// every module's actions equal to access's rule table (M3 design 3.4).
+func Actions() []shared.Action {
+	return domain.Actions()
+}

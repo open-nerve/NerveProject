@@ -153,6 +153,11 @@ var rules = map[shared.Action]Rule{
 	"issue_draft.write": {Level: LevelWorkspace, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember}},
 	"member_issue.list": {Level: LevelWorkspace, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember}},
 	"issue.search":      {Level: LevelWorkspace, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember, shared.RoleGuest}},
+	// One's own notifications: every active member of the workspace (M7
+	// design 3.10). Which of them he sees is the notification module's, by
+	// what he reads now (M7 P1c spec 2.5).
+	"notification.read":  {Level: LevelWorkspace, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember, shared.RoleGuest}},
+	"notification.write": {Level: LevelWorkspace, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember, shared.RoleGuest}},
 	// Every active member of the project reads cycles; the guest's OwnOnly
 	// filtering is the planning module's (M6 design 3.7).
 	"cycle.read": {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember, shared.RoleGuest}},
