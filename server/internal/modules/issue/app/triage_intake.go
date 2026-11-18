@@ -47,16 +47,18 @@ func NewTriageIntakeIssue(d TriageIntakeIssueDeps) *TriageIntakeIssue {
 // and every row the request writes is at it; the transition from the
 // row's effective status at it (domain.IntakeFacts.Transition), else 409
 // issue.intake_transition_not_allowed; the 422s that need the moment or a
-// read under the lock (checked); the intake row (IntakeWriter.TriageIntake);
-// its activity, from the effective status to the new one, naming no
-// duplicate's target (domain.TriageActivity, R7). An accept then moves the
-// work item to the project's default state, read under the lock, through
-// the update core at the same moment (updateLocked, R6): the state's
-// activity after the triage's, its completion, issue.updated, and the
-// work item read back as the caller sees it. Any other triage changes no
-// work item, publishes no event and notifies no one; the work item is read
-// back and answered as the caller sees it at the triage's moment
-// (Locks.seenAt), as an accept's is.
+// read under the lock (checked); an accept's state, the project's default
+// state read under the lock, an error when there is none or it is of the
+// triage group (acceptance), before anything is written; the intake row
+// (IntakeWriter.TriageIntake); its activity, from the effective status to
+// the new one, naming no duplicate's target (domain.TriageActivity, R7). An
+// accept then moves the work item to its state through the update core at
+// the same moment (updateLocked, R6): the state's activity after the
+// triage's, its completion, issue.updated, and the work item read back as
+// the caller sees it. Any other triage changes no work item, publishes no
+// event and notifies no one; the work item is read back and answered as
+// the caller sees it at the triage's moment (Locks.seenAt), as an accept's
+// is.
 func (u *TriageIntakeIssue) Execute(ctx context.Context, id uuid.UUID, t domain.Triage) (domain.Issue, error) {
 	actor, err := shared.RequireActor(ctx)
 	if err != nil {
@@ -80,6 +82,10 @@ func (u *TriageIntakeIssue) Execute(ctx context.Context, id uuid.UUID, t domain.
 		if err != nil {
 			return err
 		}
+		accept, err := u.acceptance(ctx, h, t)
+		if err != nil {
+			return err
+		}
 		if err := u.d.Intake.TriageIntake(ctx, row); err != nil {
 			return err
 		}
@@ -87,8 +93,8 @@ func (u *TriageIntakeIssue) Execute(ctx context.Context, id uuid.UUID, t domain.
 		if err := u.d.Issues.InsertActivities(ctx, s.activity([]domain.Activity{domain.TriageActivity(from, t.Status)})); err != nil {
 			return err
 		}
-		if t.Status == domain.IntakeAccepted {
-			triaged, err = u.accept(ctx, actor.UserID, h, now)
+		if accept != nil {
+			triaged, err = u.d.Update.updateLocked(ctx, actor.UserID, h, *accept, moment(now))
 			return err
 		}
 		back, err := readBack(ctx, u.d.Issues, id)
@@ -159,19 +165,28 @@ func (u *TriageIntakeIssue) duplicable(ctx context.Context, actor uuid.UUID, h h
 	return found && i.ProjectID == h.issue.ProjectID && !i.HiddenFrom(actor, h.grant.OwnOnly) && !i.InTriage(), nil
 }
 
-// accept moves the work item h holds, accepted by the caller actor at the
-// triage's moment now, to the project's default state, read under the
-// lock (pickState), through the update core at the same moment (R6), and
-// answers its answer. A project without a default state is an error, as
-// it is for a creation.
-func (u *TriageIntakeIssue) accept(ctx context.Context, actor uuid.UUID, h held, now time.Time) (domain.Issue, error) {
+// acceptance is the change the triage t makes to the work item h holds
+// through the update core (R6): none, nil, unless t accepts it; an
+// accept's moves it to the project's default state, read under the lock
+// (pickState). What cannot be is an error, found before anything is
+// written: a project without a default state, as for a creation; one whose
+// default state is of the triage group, into which an accept would leave
+// the work item in Triage while its intake row says accepted, against the
+// row's agreement with the state (spec 2.3).
+func (u *TriageIntakeIssue) acceptance(ctx context.Context, h held, t domain.Triage) (*domain.IssuePatch, error) {
+	if t.Status != domain.IntakeAccepted {
+		return nil, nil
+	}
 	states, err := u.d.States.States(ctx, h.issue.ProjectID)
 	if err != nil {
-		return domain.Issue{}, err
+		return nil, err
 	}
 	state, found := pickState(states, nil)
-	if !found {
-		return domain.Issue{}, fmt.Errorf("project %s has no default state", h.issue.ProjectID)
+	switch {
+	case !found:
+		return nil, fmt.Errorf("project %s has no default state", h.issue.ProjectID)
+	case state.Group == domain.GroupTriage:
+		return nil, fmt.Errorf("project %s has its default state %s in the triage group", h.issue.ProjectID, state.ID)
 	}
-	return u.d.Update.updateLocked(ctx, actor, h, domain.IssuePatch{StateID: &state.ID}, moment(now))
+	return &domain.IssuePatch{StateID: &state.ID}, nil
 }

@@ -150,15 +150,14 @@ var issueWrites = []issueWrite{
 			return `{"name":"Fix","assignee_ids":["` + w.ids["bob"].String() + `"],"label_ids":["` + w.bug.String() + `"]}`
 		}, want: http.StatusCreated, waits: "states", mode: "ACCESS EXCLUSIVE"},
 	// A work item submitted to Web's intake (submitted), which the send
-	// accepts: it reads nothing under the lock that its precheck did not
-	// before it writes its intake row, so it waits for the intake rows'
-	// table, which it writes first (spec 2.5).
+	// accepts: the project's default state is read under the lock before
+	// its intake row is written (spec 2.5), so it waits for the states.
 	{workspaceLock: "no lock", projectLock: "FOR NO KEY UPDATE", op: "triageIntakeIssue", method: http.MethodPost,
 		path: "/api/v0/intake-issues/{issue_id}/triage",
 		target: func(t *testing.T, w issueWorld) string {
 			return "/api/v0/intake-issues/" + w.submitted(t).String() + "/triage"
 		},
-		body: func(*testing.T, issueWorld) string { return `{"status":"accepted"}` }, want: http.StatusOK, waits: "intake_issues", mode: "SHARE"},
+		body: func(*testing.T, issueWorld) string { return `{"status":"accepted"}` }, want: http.StatusOK, waits: "states", mode: "ACCESS EXCLUSIVE"},
 }
 
 // issueTables are the tables a write on the work-item side reads or

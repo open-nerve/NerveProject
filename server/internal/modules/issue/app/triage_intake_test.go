@@ -2,6 +2,7 @@ package app_test
 
 import (
 	"context"
+	"errors"
 	"reflect"
 	"slices"
 	"testing"
@@ -101,10 +102,10 @@ func wantAnswer(t *testing.T, w *triageWorld, got domain.Issue, facts domain.Int
 }
 
 // A triage that accepts a work item (M7 P2a spec 2.5, R6), under the
-// lock, in this order: the clock, read once; the intake row, accepted,
-// alice's at that moment; its activity, from the row's effective status,
-// pending for a snooze run out, to accepted; then the project's default
-// state read, and the update core with the patch {state: Backlog}, at the
+// lock, in this order: the clock, read once; the project's default state
+// read; the intake row, accepted, alice's at that moment; its activity,
+// from the row's effective status, pending for a snooze run out, to
+// accepted; then the update core with the patch {state: Backlog}, at the
 // same moment: the state read again and checked, the work item moved from
 // Triage to Backlog, not completed, its activity after the triage's,
 // issue.updated with the state's change alone, the work item read back as
@@ -127,7 +128,7 @@ func TestTriageIntakeIssueAcceptsIntoTheDefaultState(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Execute() = %v", err)
 			}
-			calls := append(triaged(id), line("TriageIntake", id, domain.IntakeAccepted), line("InsertActivities", 1), line("States", web),
+			calls := append(triaged(id), line("States", web), line("TriageIntake", id, domain.IntakeAccepted), line("InsertActivities", 1),
 				line("States", web), line("UpdateIssue", id), line("InsertActivities", 1), line("GetIssue", id), counted(id))
 			if !slices.Equal(w.log.calls, calls) {
 				t.Errorf("calls:\n%q\nwant\n%q", w.log.calls, calls)
@@ -164,6 +165,42 @@ func TestTriageIntakeIssueAcceptsIntoADefaultStateThatCompletes(t *testing.T) {
 	}
 	if f := w.issues.changed; f == nil || f.StateID != done.ID || f.CompletedAt == nil || !f.CompletedAt.Equal(clockNow) {
 		t.Errorf("the fields written %+v, want Done, completed at %v", f, clockNow)
+	}
+}
+
+// What cannot be is an error, not a refusal, and an accept it stops writes
+// nothing (M7 P2a spec 2.3, 2.5): a project without a default state, as
+// for a creation; one whose default state is of the triage group, into
+// which an accept would leave the work item in Triage while its intake row
+// says accepted. The default state is read under the lock, after the
+// clock, before the intake row: no row is written, no activity, the work
+// item is not changed and no event is published.
+func TestTriageIntakeIssueAcceptNeedsADefaultStateOutsideTriage(t *testing.T) {
+	notDefault, triageDefault := backlog, triage
+	notDefault.Default, triageDefault.Default = false, true
+	for _, tt := range []struct {
+		name   string
+		states []app.StateRef
+	}{
+		{"no default state", []app.StateRef{notDefault, done, triage}},
+		{"a default state of the triage group", []app.StateRef{notDefault, done, triageDefault}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			w := newTriage(t)
+			w.project.states = tt.states
+			_, err := w.uc.Execute(as(alice), w.id, domain.Triage{Status: domain.IntakeAccepted})
+			var se *shared.Error
+			if err == nil || errors.As(err, &se) {
+				t.Errorf("Execute() = %v, want an error that is no refusal", err)
+			}
+			if calls := append(triaged(w.id), line("States", web)); !slices.Equal(w.log.calls, calls) {
+				t.Errorf("calls:\n%q\nwant\n%q", w.log.calls, calls)
+			}
+			if len(w.intake.triages) != 0 || len(w.intake.written) != 0 || w.issues.changed != nil || len(w.events.rows) != 0 {
+				t.Errorf("the triages %+v, the activity %+v, the fields %+v, the events %+v; want none", w.intake.triages, w.intake.written,
+					w.issues.changed, w.events.rows)
+			}
+		})
 	}
 }
 
