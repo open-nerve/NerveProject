@@ -1,6 +1,6 @@
 # M7 / P1b 阶段记录：通知模块的核心（生成与删除）
 
-> 状态：实施完成，待整分支审查与集成。spec 与 plan 见 [P1b spec](../specs/P1b-notification-core.md)、[P1b plan](../plans/P1b-notification-core.md)，预检 [re-83](../../../reviews/re-83-M7P1b预检.md)。基线 main `9a3a388a`（P1a 的 noff）。原始证据在 worktree 的 `.superpowers/sdd/P1b-notifications/`（台账 `progress.md`、每次检查的日志与收据、变异、`t14-evidence/` 的规模数字），随阶段归档。
+> 状态：已完成，合入 main（noff `1a23f6f8`），§9 为审查与集成的记录。spec 与 plan 见 [P1b spec](../specs/P1b-notification-core.md)、[P1b plan](../plans/P1b-notification-core.md)，预检 [re-83](../../../reviews/re-83-M7P1b预检.md)。基线 main `9a3a388a`（P1a 的 noff）。原始证据在 worktree 的 `.superpowers/sdd/P1b-notifications/`（台账 `progress.md`、每次检查的日志与收据、变异、`t14-evidence/` 的规模数字），随阶段归档。
 
 ## 1. 交付
 
@@ -116,4 +116,8 @@ T14 的规模测试发现：自动归档一轮（一个项目一个事务、持�
 
 - 整分支审查（fable，只读，`8d46e447`）：Ready after fixes，无 Critical。Important 两处：I1 通知 domain 复制了 issue 的 `HiddenFrom`（硬规则 03 §4）；I2 分发与请求共用池，积压排空时请求的等待没有测。Minor 七处：M1 跨项目关联的误报 WARN；M2 快照的补齐读整个工作区的项目与整个项目的状态；M3 e2e 每个 nerve 实为 11 个连接；M4 Plane 的索引是九个；M5 plan 写 R1–R11；M6 测试注释里的行号；M7 允许清单的名单与实际差两处。
 - 修复轮：I1 由 issue 交出谓词、删除副本（`fbef678c`，修前 issue 谓词的变异不红、修后红）；M1 关联只比工作区（`8ffabdce`）；M2 project 的两条单行读（`bb9ad51a`）；M3 每个 nerve 11 个连接（`4bf0cded`）；M6（`4f5207d4`）；I2 的测量（`a5dc8a43`）与由它发现的系统积压的最低优先级（`218a24e5`）；M4、M5、M7 与 spec、README（`490f2687`、`77c3750a`）。
-- 限定复审、最终门禁、分支 CI、合入与归档：（待填。）
+- 限定复审（`8d46e447..99df9ad3`）：Ready to merge；两处次要——N1 低优先级没有等待上限（spec §2.9 与 README 写明，`9f148376`）、N2 常跑的测试钉住 `river_job` 的优先级（`TestWorkItemWritesNotifyThroughTheApp`，变异致败，`5b351fd6`）。
+- 最终候选 `9f148376`：第一遍门禁 `fin` 的 test-shard0 中 M4 的存储测试 `TestABatchPassesOverARowDeletedWhileItWaits/comment_reactions` 未在 5 秒内看到等锁——P1b 不改这个测试、分批语句与探针的语义，测试里分批的锁超时 2 秒，同一路并行跑六十多个包、各起容器时探针错过这个窗口；单独跑 5 次全过，按环境原因整套重跑一次（`fin2`）七项全过：bootstrap 第 0 路 523.3 秒、第 1 路 500.0 秒（737 个），build+e2e 481 passed、没有 53300。再现则按根因加宽窗口并报告。
+- 分支 CI 44174581302 attempt 1 全绿：server (0) Test 780 秒、server (1) 564 秒、web Unit 478 秒、e2e (1) 501 秒、e2e (2) 718 秒。
+- `--no-ff` 合入 main `1a23f6f8`（父 `9a3a388a`、`9f148376`，树与分支相同）；main CI 44179902213 attempt 1 全绿：server (0) Test 749 秒、server (1) 517 秒、web 463 秒、e2e (1) 536 秒、e2e (2) 645 秒。
+- 归档 `.superpowers/sdd/M7-P1b-integration-20261118`（6221 个文件、unknown 0，清理后复核一致）；worktree、本地与远端分支已删除（远端分支先核实已含在 main）。
