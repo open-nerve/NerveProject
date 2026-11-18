@@ -75,7 +75,7 @@ func TestEachDetailAnswerCarriesItsIntakeRow(t *testing.T) {
 	}
 	answers("Fix", fix.ID, fix.SequenceID, nil)
 
-	w.send(t, "alice", http.MethodPatch, "/api/v0/projects/"+w.web.String(), `{"intake_view":true}`, http.StatusOK)
+	w.intakeOn(t)
 	var login struct {
 		ID         uuid.UUID `json:"id"`
 		SequenceID int       `json:"sequence_id"`

@@ -1,6 +1,7 @@
 package bootstrap
 
 import (
+	"net/http"
 	"testing"
 	"uuid"
 
@@ -24,4 +25,25 @@ func seedIntake(t testing.TB, pool *pgxpool.Pool, issue, by uuid.UUID) {
 		tag.RowsAffected() != 1 {
 		t.Fatalf("seeding the intake row of %s: %d rows, %v; want 1", issue, tag.RowsAffected(), err)
 	}
+}
+
+// intakeOn has alice, Web's admin, turn its intake on through the API
+// (updateProject; M7 P2a spec 2.4: it is off as a project starts).
+func (w issueWorld) intakeOn(t *testing.T) {
+	t.Helper()
+	w.send(t, "alice", http.MethodPatch, "/api/v0/projects/"+w.web.String(), `{"intake_view":true}`, http.StatusOK)
+}
+
+// submitted is the id of a work item alice submits to Web's intake through
+// the API, once she has turned it on (intakeOn): in Web's triage state, its
+// intake row pending.
+func (w issueWorld) submitted(t *testing.T) uuid.UUID {
+	t.Helper()
+	w.intakeOn(t)
+	var created struct {
+		ID uuid.UUID `json:"id"`
+	}
+	decodeAnswer(t, w.send(t, "alice", http.MethodPost, "/api/v0/projects/"+w.web.String()+"/intake-issues", `{"name":"Login breaks"}`,
+		http.StatusCreated), &created)
+	return created.ID
 }
