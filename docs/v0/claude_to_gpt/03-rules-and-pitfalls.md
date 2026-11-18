@@ -77,6 +77,8 @@ P3 加了这条路的两种形式，不是第二条路：
 
 M7/P1a 的手动关注、取消关注是写明理由的例外：编排是 `Locks.share`（`lock_share.go`，与 `Locks.run`、`DraftLocks.run` 并列，不在用例里写近似副本），不进写闸门、不取项目锁——不加锁地预检（拒绝在那里答、不开事务），事务里以 `FOR SHARE` 锁住工作项行（已删除 404），在锁住的行上再判定，再只写关注行；它的锁下判定不与成员关系的变更串行，安全的理由（撤权留下的行与“自动关注后被移出”同一状态，通知发送时复核，列表按成员关系过滤）与锁序不变式（每个写关注行的路径都先锁工作项行）见 [M7 P1a spec](../M7-collaboration/specs/P1a-subscriptions-events.md) §2.4，以后写关注行的新路径必须守它。
 
+M7/P1c 的通知的两个写（单条修改、全部已读）也是例外：通知是收件人自己的行，不决定别的写的判定，两个写都不进写闸门、不取工作项与项目的锁，只锁通知行。`notifications` 各个写者的锁序（以后写它的新路径必须守）：分发只插入；工作项删除在原事务里逐个工作项按 id 升序软删它的通知（子树逐个，整体不是全局升序）；项目删除的分批按 id 升序；单条修改锁一行，带 `issue.write_lock_timeout`，超时 503；全部已读 `FOR NO KEY UPDATE SKIP LOCKED`、从不等待（等待会与子树删除成环）；清理照 P1b。全部已读的业务时刻在请求开始时读一次，它同时是“只标事件不晚于它的”的界，是“最后一把锁之后读时钟”的登记例外。见 [M7 P1c spec](../M7-collaboration/specs/P1c-notification-api.md) §2.7、R5。
+
 P8 草稿已按设计3.5的既定形式补齐：`DraftLocks`组合上述`Locks`并复用授权、闸门与写事务，不在各用例另接一套。保存/修改/删除为工作区S → 旧新项目S（去重升序）→ 草稿U；发布先在无连接、无锁时进入项目闸门，再工作区S → 项目N → 草稿U。等待后重读、权限重判、全部锁后读时钟照旧，普通工作项写仍不取工作区锁。具体端口见[P8 spec](../M4-issue-core/specs/P8-drafts-search.md)，T7真实PID/交错16/17、T15 race五遍及首次整审证据见[P8 review](../M4-issue-core/reviews/P8-drafts-search-review.md)；文档a65e8605已独评Approved/D1 ADDRESSED（task-16-review.md）；最终分支 `cde70d9735994cb6a579e0b800469f32631e9981` 的CI通过后，已授权 `--no-ff` 合并为main `6b9d08d4821f1423c7bb9795557727c206b7880f`，[main CI 40520609987](https://github.com/open-nerve/NerveProject/actions/runs/40520609987)三任务全绿。1,598文件、37,552,117字节及1空目录归档核验后，P8本地/远端分支与worktree已正常清理；原件新根和清理后哈希核验见[P8 review §9](../M4-issue-core/reviews/P8-drafts-search-review.md#9-授权合并main-ci-与归档清理2026-10-27)。
 
 另外：
@@ -86,6 +88,7 @@ P8 草稿已按设计3.5的既定形式补齐：`DraftLocks`组合上述`Locks`�
 **访客规则**（设计 3.4、6.7）：
 - 访客看不到的工作项，在每个指名它的操作上回答 404，从不 403；与不存在的**逐值**相同（码、体、头、数目、次序、422 的位置都不透露）。
 - 判定只有一个谓词 `domain.Issue.HiddenFrom`，不复制"创建者 ≠ 调用者"。
+- 登记的例外（M7/P1c R2）：通知的列表、未读数、全部已读三条 SQL 要在 SQL 里分页与计数，按各项目 `OwnOnly` 加 `issue_created_by_id = 调用者`（M4 设计 3.4 列表与搜索的同一写法，创建者未知时不选中），由六格等价测试（`bootstrap/notification_guest_rule_sql_test.go`）钉在经 issue 交出的 `HiddenFrom` 上；单条修改不写这一份，经 `GuestRule` 端口。
 - 列表和计数只算调用者在各项目里能看到的：`sub_issues_count`、`listSubIssues`、`listIssueRelations`、内嵌的 `Issue`。
 - 回答里不指名看不到的工作项：`seen` 把看不到的父工作项的 `parent_id` 回答为 `null`。
 - 负责人裁定 A（2026-10-24）：修改时 patch 里的父工作项与"调用者看到的父工作项"比较，看不到的当前父工作项算作没有。
