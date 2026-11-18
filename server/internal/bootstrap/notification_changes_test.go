@@ -102,17 +102,19 @@ func (w issueWorld) wholeChange(t *testing.T, name, id, body string) (int, strin
 
 // A receiver's change of his notification through the app (M7 P1c spec
 // 2.7, R5, R7; H6). bob is sent, by alice, the creation of Fix and of Two
-// assigned to him, and of Gone, of Far in Ops and of Away in Site of beta,
-// all assigned to him; alice, his comment on her Fix. read true stamps
-// read_at with the change's moment and the change's writer, keeps it as it
-// is when it is set, writing nothing, and false clears it; archived the
-// same. snoozed_till stores a moment after now as the microsecond it is,
-// refuses one before now 422 must_be_future and clears for null. {}
-// answers the notification and writes nothing; read null breaks the body.
-// Each state changes alone. alice's notification, his of Gone once she
-// deletes it, of Away once beta no longer has him and of Far once he left
-// Ops are each answered the very answer of an id that never was, and so
-// with a snoozed_till before now too: never the 422. On a clock that
+// assigned to him, and of Gone, of Far in Ops, of Theirs in Desk and of
+// Away in Site of beta, all assigned to him; alice, his comment on her
+// Fix. read true stamps read_at with the change's moment and the change's
+// writer, keeps it as it is when it is set, writing nothing, and false
+// clears it; archived the same. snoozed_till stores a moment after now as
+// the microsecond it is, refuses one before now 422 must_be_future and
+// clears for null. {} answers the notification and writes nothing; read
+// null breaks the body. Each state changes alone. alice's notification,
+// his of Gone once she deletes it, of Away once beta no longer has him, of
+// Far once he left Ops and of Theirs, which alice made, once he is only a
+// guest of Desk, which does not show its guests every work item, are each
+// answered the very answer of an id that never was, and so with a
+// snoozed_till before now too: never the 422. On a clock that
 // stands still, the module wired as bootstrap wires it refuses a
 // snoozed_till at now, or within its microsecond, and takes one a
 // microsecond after it, and once the clock is at that moment the snooze
@@ -123,6 +125,8 @@ func TestChangingANotificationThroughTheApp(t *testing.T) {
 	alice, bob := w.ids["alice"], w.ids["bob"]
 	ops := createdProject(t, w.contract, w.base, w.tokens["alice"], "acme", "Ops", "OPS")
 	w.makeMember(t, "bob", ops, shared.RoleMember)
+	desk := createdProject(t, w.contract, w.base, w.tokens["alice"], "acme", "Desk", "DESK")
+	w.makeMember(t, "bob", desk, shared.RoleMember)
 	w.send(t, "alice", http.MethodPost, "/api/v0/workspaces", `{"name":"Beta","slug":"beta"}`, http.StatusCreated)
 	site := createdProject(t, w.contract, w.base, w.tokens["alice"], "beta", "Site", "SITE")
 	beta := inWorkspaceOf(t, w.pool, site, bob, alice, shared.RoleMember)
@@ -131,7 +135,7 @@ func TestChangingANotificationThroughTheApp(t *testing.T) {
 	for _, m := range []struct {
 		name    string
 		project uuid.UUID
-	}{{"Fix", w.web}, {"Two", w.web}, {"Gone", w.web}, {"Far", ops}, {"Away", site}} {
+	}{{"Fix", w.web}, {"Two", w.web}, {"Gone", w.web}, {"Far", ops}, {"Theirs", desk}, {"Away", site}} {
 		items[m.name] = w.newWorkItemIn(t, m.project, fmt.Sprintf(`{"name":%q,"assignee_ids":%s}`, m.name, idArray(bob)))
 	}
 	w.send(t, "bob", http.MethodPost, commentsOf(items["Fix"]), `{"comment_html":"<p>On it</p>"}`, http.StatusCreated)
@@ -222,11 +226,26 @@ func TestChangingANotificationThroughTheApp(t *testing.T) {
 		w.send(t, "alice", http.MethodDelete, "/api/v0/workspace-members/"+w.memberRow(t, "workspace_members", "workspace_id", beta, "bob"), "",
 			http.StatusNoContent)
 		w.send(t, "bob", http.MethodPost, "/api/v0/projects/"+ops.String()+"/leave", "", http.StatusNoContent)
+		w.send(t, "alice", http.MethodPatch, "/api/v0/project-members/"+w.memberRow(t, "project_members", "project_id", desk, "bob"), `{"role":5}`,
+			http.StatusOK)
+		theirs := w.noteIDOf(t, "bob", items["Theirs"], "issue created")
+		var role int
+		var guestsSeeAll bool
+		var creator uuid.UUID
+		if err := w.pool.QueryRow(pgtest.Soon(t), `SELECT m.role, p.guest_view_all_features, n.issue_created_by_id FROM notifications n
+			JOIN projects p ON p.id = n.project_id JOIN project_members m ON m.project_id = n.project_id AND m.member_id = n.receiver_id
+			WHERE n.id = $1 AND m.deleted_at IS NULL AND m.is_active`, theirs).Scan(&role, &guestsSeeAll, &creator); err != nil {
+			t.Fatalf("bob's membership of Desk, which his notification %s of Theirs is in: %v", theirs, err)
+		}
+		if got, want := fmt.Sprintf("%d %t %s", role, guestsSeeAll, w.names()[creator]), fmt.Sprintf("%d false alice", shared.RoleGuest); got != want {
+			t.Fatalf("bob's role in Desk, whether Desk shows its guests every work item, and who made Theirs: %s; want %s", got, want)
+		}
 		hidden := []struct{ what, id, row string }{
 			{"alice's", w.noteIDOf(t, "alice", items["Fix"], "comment created"), "alice false"},
 			{"deleted", w.noteIDOf(t, "bob", items["Gone"], "issue created"), "bob true"},
 			{"of beta, which has him no more", w.noteIDOf(t, "bob", items["Away"], "issue created"), "bob false"},
 			{"of Ops, which he left", w.noteIDOf(t, "bob", items["Far"], "issue created"), "bob false"},
+			{"of Theirs, alice's, in Desk, whose guest he is", theirs, "bob false"},
 		}
 		ids := make([]string, len(hidden))
 		for n, h := range hidden {

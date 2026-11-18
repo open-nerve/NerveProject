@@ -63,6 +63,11 @@ async function acmeWeb(api: Api, testInfo: TestInfo) {
 }
 
 const notFound = { status: 404, code: "notification.not_found" };
+const mustBeFuture = {
+  status: 422,
+  code: "validation_failed",
+  errors: [{ field: "snoozed_till", code: "must_be_future" }],
+};
 
 test("H5–H7 (API): a member reads, archives, snoozes and unsnoozes his notifications and marks one unread, alike with a personal access token and his browser session, and the filters and the two tabs' unread counts follow; a snooze ends by itself; marking the all tab read leaves the mentions and the archived unread; a past snooze is refused, and another's notification as none", async ({
   api,
@@ -168,11 +173,7 @@ test("H5–H7 (API): a member reads, archives, snoozes and unsnoozes his notific
   expect(
     await notificationUpdated(api, pat.token, creation.id, { snoozed_till: past }),
     "bob's snooze till the past"
-  ).toEqual({
-    status: 422,
-    code: "validation_failed",
-    errors: [{ field: "snoozed_till", code: "must_be_future" }],
-  });
+  ).toEqual(mustBeFuture);
   const refused = [{ read: true }, { snoozed_till: past }].flatMap((body) => [
     { what: `alice's ${JSON.stringify(body)} of bob's`, id: creation.id, body },
     { what: `alice's ${JSON.stringify(body)} of none`, id: crypto.randomUUID(), body },
@@ -207,10 +208,25 @@ test("H5–H7 (API): a member reads, archives, snoozes and unsnoozes his notific
   await shows({ all: 1, mentions: 1 }, [[{ read: "false" }, [looks]]]);
 
   // Snoozed till two seconds from now with his session, the comment is counted again once they are over, with no
-  // write: not before, as nerve reads the snooze at the moment of each read. Two, not one: the change must reach nerve
-  // before the moment it names, or it is refused as past (422), also on a loaded runner.
-  const soon = Date.now() + 2000;
-  await change(session, looks, { snoozed_till: new Date(soon).toISOString() });
+  // write: not before, as nerve reads the snooze at the moment of each read. The change must reach nerve before the
+  // moment it names, or it is refused as past (422 must_be_future): on a runner stalled that long it is sent again, till
+  // a fresh moment, three times at most. The moment accepted is the one its end is measured against.
+  const snoozedSoon = async (attempt: number): Promise<number> => {
+    const soon = Date.now() + 2000;
+    const answered = await notificationUpdated(api, session.token, looks.id, {
+      snoozed_till: new Date(soon).toISOString(),
+    });
+    if ("notification" in answered) {
+      expect(answered.status, "the comment snoozed till two seconds on").toBe(200);
+      return soon;
+    }
+    expect(answered, `the comment's snooze till two seconds on, attempt ${attempt}`).toEqual(mustBeFuture);
+    if (attempt === 3) {
+      throw new Error("the comment's snooze till two seconds on was refused as past three times");
+    }
+    return snoozedSoon(attempt + 1);
+  };
+  const soon = await snoozedSoon(1);
   await expect
     .poll(() => unreadNotifications(api, pat.token, slug), { intervals: [50, 100], message: "the snooze over" })
     .toEqual({ all: 1, mentions: 1 });

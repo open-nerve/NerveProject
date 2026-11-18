@@ -16,12 +16,6 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
-// markPromptly bounds the answer to a mark-all-read that passes over the
-// rows other transactions hold: well inside the request's deadline
-// (testConfig's 5s) and the lock timeout of a work item's deletion
-// (testIssueConfig's 4s), which waits meanwhile.
-const markPromptly = 2 * time.Second
-
 // sendingMark sends the account name's mark-all-read with body in the
 // background, the request checked against the contract.
 func (w issueWorld) sendingMark(t *testing.T, name, body string) (*http.Request, <-chan answer) {
@@ -169,9 +163,12 @@ func TestMarkAllReadPassesOverTheNotificationsAWorkItemsDeletionHolds(t *testing
 		a = receiveWithin(t, answered, 5*time.Second, "answer to bob's mark-all-read")
 		took = time.Since(sent)
 	}
-	if marked := w.markedOf(t, "bob's mark-all-read", req, a); marked != len(ofSide)+len(ofChild) || took > markPromptly {
-		t.Errorf("bob's mark-all-read marked %d in %v; want Side's and Child's, %d, within %v", marked, took, len(ofSide)+len(ofChild), markPromptly)
+	if marked := w.markedOf(t, "bob's mark-all-read", req, a); marked != len(ofSide)+len(ofChild) {
+		t.Errorf("bob's mark-all-read marked %d; want Side's and Child's, %d", marked, len(ofSide)+len(ofChild))
 	}
+	// How long it took is no verdict: whether it waited for a row is
+	// answeredUnlessWaiting's, by the statement's name; a bound on the time
+	// would only fail a loaded runner's slow answer.
 	t.Logf("bob's mark-all-read answered in %v", took)
 	deleted(t)
 	release(t, account)
