@@ -96,6 +96,22 @@ type Issue struct {
 	LinkCount int64
 	// Uploaded, bound, live ordinary attachments, projected by their owner.
 	AttachmentCount int64
+	// Its undeleted intake row, nil when it has none (M7 P2a spec 2.3,
+	// R2). Only the rows of GetIssue, GetIssues and SubIssues carry it; a
+	// list's rows and a search's do not, and leave it nil whatever the
+	// work item's intake row: InTriage must not be asked of them. They are
+	// safe without it, holding no work item in triage (the invariant of
+	// spec 2.3).
+	Intake *IntakeFacts
+}
+
+// InTriage reports whether i is in its project's intake (M7 P2a spec 2.3,
+// R2): it has an undeleted intake row, of any status but accepted, which
+// alone takes it out. Such a work item is in the project's triage state.
+// Ask it only of a work item that a read of the GetIssue family answers
+// (Issue.Intake).
+func (i Issue) InTriage() bool {
+	return i.Intake != nil && i.Intake.Status != IntakeAccepted
 }
 
 // HiddenFrom reports whether the guest rule hides i from the account actor,
