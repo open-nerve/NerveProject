@@ -13,6 +13,7 @@ import (
 	issueapp "github.com/open-nerve/NerveProject/server/internal/modules/issue/app"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/domain"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project"
+	"github.com/open-nerve/NerveProject/server/internal/platform/clock"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
@@ -65,7 +66,7 @@ func TestCollaborationSnapshot(t *testing.T) {
 				}
 			}
 			projects := activitySnapshotProjects{issueProjects: issueProjects{projects: project.Provide(w.pool, nil).IssueProjects}, inspect: inspect}
-			plainLocks := issueapp.NewLocks(projects, store, authorizerOn(w.pool), versionReadOnly{}, versionReadOnly{}, attachmentCounterOn(w.pool))
+			plainLocks := issueapp.NewLocks(projects, store, authorizerOn(w.pool), versionReadOnly{}, versionReadOnly{}, attachmentCounterOn(w.pool), clock.System{})
 			readTx := postgres.NewTxManager(w.pool, 2*time.Second, postgres.ReadOnlySnapshot())
 			rows := collaborationSnapshotRows{Store: store, inspect: inspect}
 			execute := func(locks issueapp.Locks) (any, error) {
@@ -121,7 +122,7 @@ func TestCollaborationSnapshot(t *testing.T) {
 					t.Fatal(err)
 				}
 			}}
-			locks := issueapp.NewLocks(projects, wrapped, authorizerOn(w.pool), versionReadOnly{}, versionReadOnly{}, attachmentCounterOn(w.pool))
+			locks := issueapp.NewLocks(projects, wrapped, authorizerOn(w.pool), versionReadOnly{}, versionReadOnly{}, attachmentCounterOn(w.pool), clock.System{})
 			during, err := execute(locks)
 			expectedChecks := 2
 			if kind == "comments" || kind == "activities" {

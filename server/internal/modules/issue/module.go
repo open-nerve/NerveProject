@@ -220,7 +220,7 @@ type Module struct {
 // registered or injected after it (M4 design 6.6).
 func New(d Deps) *Module {
 	store := postgresadapter.New(d.Pool)
-	locks := app.NewLocks(d.Projects, store, d.Authorizer, d.WriteGate, d.Tx, d.AttachmentCounter)
+	locks := app.NewLocks(d.Projects, store, d.Authorizer, d.WriteGate, d.Tx, d.AttachmentCounter, d.Clock)
 	draftLocks := app.NewDraftLocks(locks, d.Workspaces, d.Projects, store)
 	assetAccess := app.NewAssetAccess(app.AssetAccessDeps{Locks: locks, Drafts: draftLocks, Comments: store, Projects: d.Projects})
 	attachments := app.GetAttachmentsDeps{Access: assetAccess, Rows: d.AttachmentReader, ReadTx: d.ReadTx}

@@ -10,6 +10,7 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/domain"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project"
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace"
+	"github.com/open-nerve/NerveProject/server/internal/platform/clock"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
 )
 
@@ -48,6 +49,6 @@ func snapshotSearchUseCase(w issueWorld, p *listSnapshotProbe) *issueapp.SearchI
 	return issueapp.NewSearchIssues(issueapp.SearchIssuesDeps{
 		ReadTx: postgres.NewTxManager(w.pool, 3*time.Second, postgres.ReadOnlySnapshot()), Authorizer: auth,
 		Workspaces: snapshotListWorkspace{issueWorkspaces{directory: workspaces.WorkspaceDirectory}, p},
-		Projects:   dirs, Identifiers: dirs, Issues: store, Locks: issueapp.NewLocks(dirs, store, auth, nil, nil, attachmentCounterOn(w.pool)), Rows: store,
+		Projects:   dirs, Identifiers: dirs, Issues: store, Locks: issueapp.NewLocks(dirs, store, auth, nil, nil, attachmentCounterOn(w.pool), clock.System{}), Rows: store,
 	})
 }

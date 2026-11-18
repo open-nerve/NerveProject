@@ -41,8 +41,11 @@ func NewSubmitIntakeIssue(d SubmitIntakeIssueDeps) *SubmitIntakeIssue {
 // is inserted. That is safe (M7 P2a spec 2.4): no subscriber of the event
 // within the transaction reads an intake row, and what they enqueue runs
 // after the commit, which the work item and its intake row reach together.
-// The answer is the core's, whether the caller subscribes too, with the
-// intake row as the work item read back after it carries it.
+// The answer is the work item read back after its intake row, as the
+// caller sees it at the creation's moment (Locks.seenAt), as every other
+// answer of a work item in full is (M7 P2a spec 2.8): its intake row, and
+// whether he subscribes to it. The core's own answer, read before the
+// intake row is, is not it.
 func (u *SubmitIntakeIssue) Execute(ctx context.Context, projectID uuid.UUID, in domain.NewIntakeIssue) (domain.Issue, error) {
 	actor, err := shared.RequireActor(ctx)
 	if err != nil {
@@ -70,9 +73,8 @@ func (u *SubmitIntakeIssue) Execute(ctx context.Context, projectID uuid.UUID, in
 		if err != nil {
 			return err
 		}
-		created.Intake = back.Intake
-		submitted = created
-		return nil
+		submitted, err = u.d.Locks.seenAt(ctx, actor.UserID, h.grant, back, moment(at))
+		return err
 	})
 	if err != nil {
 		return domain.Issue{}, err

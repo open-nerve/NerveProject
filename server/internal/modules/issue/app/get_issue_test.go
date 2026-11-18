@@ -18,7 +18,7 @@ import (
 // alice, who reads it, is neither.
 func newGet() (*app.GetIssue, *world, uuid.UUID) {
 	_, w := newCreate()
-	w.locks = app.NewLocks(w.project, w.issues, w.auth, fakeGate{log: w.log}, fakeTx{log: w.log}, noIssueAttachments{})
+	w.locks = app.NewLocks(w.project, w.issues, w.auth, fakeGate{log: w.log}, fakeTx{log: w.log}, noIssueAttachments{}, fixedAt(clockNow))
 	id := uuid.NewV7()
 	w.issues.issue = &app.IssueRow{ID: id, WorkspaceID: acme, ProjectID: web, SequenceID: 7, Name: "Fix", StateID: backlog.ID,
 		Priority: domain.PriorityHigh, SortOrder: 65535, By: carol, At: clockNow}

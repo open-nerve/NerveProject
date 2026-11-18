@@ -30,13 +30,14 @@ func newSubmit() (*app.SubmitIntakeIssue, *world, *fakeIntake) {
 
 // submitted are the calls of a submission by alice in web: a creation's
 // (created), in the triage state, decided on intake.submit; whether alice
-// subscribes, read for the core's answer; then the intake row inserted and
-// the work item read back.
+// subscribes, read for the core's answer; then the intake row inserted,
+// the work item read back and answered as she sees it (M7 P2a spec 2.8):
+// its sub-items counted and whether she subscribes, read again.
 func submitted(id uuid.UUID, asked, labelsAsked, assignees, labels, subscribers []uuid.UUID, rows int) []string {
 	calls := created(id, triage.ID, asked, labelsAsked, assignees, labels, subscribers, rows)
 	calls[1] = line("Authorize", alice, domain.ActionSubmitIntake, acme, web, "outside tx")
 	calls[4] = line("Authorize", alice, domain.ActionSubmitIntake, acme, web)
-	return append(calls, line("IsSubscribed", id, alice), line("InsertIntake", id), line("GetIssue", id))
+	return append(calls, line("IsSubscribed", id, alice), line("InsertIntake", id), line("GetIssue", id), counted(id), line("IsSubscribed", id, alice))
 }
 
 // A submission (M7 P2a spec 2.4) is a creation by the one core, in the
@@ -44,9 +45,9 @@ func submitted(id uuid.UUID, asked, labelsAsked, assignees, labels, subscribers 
 // intake.submit, the work item and its rows written as a creation writes
 // them, sorted after the greatest of the triage state's work items, not
 // completed; then, in the same transaction, its intake row, the
-// submitter's, at the creation's one moment. The answer is the core's,
-// whether the caller subscribes too, with the intake row, pending, as the
-// work item read back after it carries it.
+// submitter's, at the creation's one moment. The answer is the work item
+// read back after it, as the caller sees it: whether she subscribes too,
+// and its intake row, pending.
 func TestSubmitIntakeIssuePutsTheWorkItemInTriage(t *testing.T) {
 	uc, w, intake := newSubmit()
 	w.issues.subscribers = []uuid.UUID{alice}

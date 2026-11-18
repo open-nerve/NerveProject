@@ -39,12 +39,17 @@ type triageWorld struct {
 }
 
 func newTriage(t *testing.T) *triageWorld {
+	return newTriageWith(t, fixedAt(clockNow))
+}
+
+// newTriageWith is newTriage with Locks' clock locks.
+func newTriageWith(t *testing.T, locks app.Clock) *triageWorld {
 	_, w, id := newUpdate()
 	w.project.locked.IntakeView = true
 	w.issues.issue.StateID = triage.ID
 	w.issues.others = map[uuid.UUID]domain.Issue{dup: {ID: dup, WorkspaceID: acme, ProjectID: web, SequenceID: 9, CreatedByID: &carol}}
 	intake := &fakeIntake{fakeIssues: w.issues, facts: map[uuid.UUID]domain.IntakeFacts{id: {Status: domain.IntakePending}}}
-	w.locks = app.NewLocks(w.project, intake, w.auth, fakeGate{}, fakeTx{log: w.log}, noIssueAttachments{})
+	w.locks = app.NewLocks(w.project, intake, w.auth, fakeGate{}, fakeTx{log: w.log}, noIssueAttachments{}, locks)
 	events := &recordedEvents{t: t}
 	clock := clockAt{at: clockNow, log: w.log}
 	update := app.NewUpdateIssue(app.UpdateIssueDeps{Events: events, Sanitizer: descriptionSanitizer{}, Locks: w.locks, Issues: intake,
@@ -168,8 +173,9 @@ func TestTriageIntakeIssueAcceptsIntoADefaultStateThatCompletes(t *testing.T) {
 // too, moves as pending. Under the lock, the clock is read once; a
 // duplicate's target read; the intake row written, its snooze stored at
 // the microsecond, alice's at that moment; its activity, from the
-// effective status; the work item read back as alice sees it. The work
-// item is not changed, no event is published, no one is notified.
+// effective status; the work item read back as alice sees it, a
+// duplicate's target read again for the answer. The work item is not
+// changed, no event is published, no one is notified.
 func TestTriageIntakeIssueMovesItsRow(t *testing.T) {
 	pending, snoozed := domain.IntakeFacts{Status: domain.IntakePending}, domain.IntakeFacts{Status: domain.IntakeSnoozed, SnoozedTill: &soon}
 	runOut, atTheMoment := domain.IntakeFacts{Status: domain.IntakeSnoozed, SnoozedTill: &gone}, domain.IntakeFacts{Status: domain.IntakeSnoozed, SnoozedTill: &clockNow}
@@ -209,6 +215,9 @@ func TestTriageIntakeIssueMovesItsRow(t *testing.T) {
 				calls = append(calls, line("GetIssue", dup))
 			}
 			calls = append(calls, line("TriageIntake", id, tt.asked.Status), line("InsertActivities", 1), line("GetIssue", id), counted(id))
+			if tt.asked.DuplicateToID != nil {
+				calls = append(calls, line("GetIssue", dup)) // the answer's target, read as any detail's (M7 P2a spec 2.8)
+			}
 			if !slices.Equal(w.log.calls, calls) {
 				t.Errorf("calls:\n%q\nwant\n%q", w.log.calls, calls)
 			}

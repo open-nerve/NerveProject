@@ -69,7 +69,8 @@ func (u *UnarchiveIssue) Execute(ctx context.Context, id uuid.UUID) (domain.Issu
 // work item's archived_at, the moment or none, and its last writer and
 // moment, the caller's; its activity's row, 14 or 16. The answer is the
 // work item as stored, read back in the transaction, as the caller sees
-// it (Locks.seen), the work item as read when nothing is written.
+// it at that moment (Locks.seenAt), the work item as read when nothing is
+// written, at the moment Locks' clock answers (Locks.seenOne).
 func (d ArchiveIssueDeps) archive(ctx context.Context, id uuid.UUID, on bool) (domain.Issue, error) {
 	actor, err := shared.RequireActor(ctx)
 	if err != nil {
@@ -104,7 +105,7 @@ func (d ArchiveIssueDeps) archive(ctx context.Context, id uuid.UUID, on bool) (d
 		if answer, err = readBack(ctx, d.Issues, id); err != nil {
 			return err
 		}
-		if answer, err = d.Locks.seenOne(ctx, actor.UserID, h.grant, answer); err != nil {
+		if answer, err = d.Locks.seenAt(ctx, actor.UserID, h.grant, answer, moment(s.at)); err != nil {
 			return err
 		}
 		kind := domain.EventIssueUnarchived

@@ -22,7 +22,7 @@ var part = uuid.NewV7()
 // spec R2).
 func intoIntake(w *world, id uuid.UUID, facts domain.IntakeFacts) *fakeIntake {
 	intake := &fakeIntake{fakeIssues: w.issues, facts: map[uuid.UUID]domain.IntakeFacts{id: facts}}
-	w.locks = app.NewLocks(w.project, intake, w.auth, fakeGate{}, fakeTx{log: w.log}, noIssueAttachments{})
+	w.locks = app.NewLocks(w.project, intake, w.auth, fakeGate{}, fakeTx{log: w.log}, noIssueAttachments{}, fixedAt(clockNow))
 	return intake
 }
 

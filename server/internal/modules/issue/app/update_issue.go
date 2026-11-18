@@ -105,9 +105,9 @@ func (u *UpdateIssue) Execute(ctx context.Context, id uuid.UUID, p domain.IssueP
 // All of it is the caller's at that moment. An update passes its use
 // case's clock; a triage's accept, whose patch binds no content, passes
 // the triage's one moment (moment), so that the whole request writes at
-// it. The answer is the work item as stored, read back in the
-// transaction, as the caller sees it (Locks.seen), the work item as read
-// when nothing is written.
+// it. The answer is the work item as stored, read back, as the caller
+// sees it then (Locks.seenAt); when nothing is written, as read, at the
+// moment of Locks' clock (Locks.seenOne).
 func (u *UpdateIssue) updateLocked(ctx context.Context, actorID uuid.UUID, h held, p domain.IssuePatch, clock Clock) (domain.Issue, error) {
 	switch {
 	case h.project.Archived:
@@ -177,7 +177,7 @@ func (u *UpdateIssue) updateLocked(ctx context.Context, actorID uuid.UUID, h hel
 	if err != nil {
 		return domain.Issue{}, err
 	}
-	return u.d.Locks.seenOne(ctx, actorID, h.grant, updated)
+	return u.d.Locks.seenAt(ctx, actorID, h.grant, updated, moment(at))
 }
 
 // check checks the dependent rows that c adds to the work item that h, the

@@ -111,3 +111,12 @@ func readBack(ctx context.Context, issues IssueReader, id uuid.UUID) (domain.Iss
 	}
 	return i, nil
 }
+
+// moment is a request's one moment as a Clock, every read of which
+// answers it: the moment a write read once after its last lock, which it
+// passes on so that all it does is at it, a triage's accept to the update
+// core (updateLocked) and a write's answer to Locks.seenAt.
+type moment time.Time
+
+// Now answers the moment.
+func (m moment) Now() time.Time { return time.Time(m) }

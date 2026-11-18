@@ -55,7 +55,8 @@ func NewTriageIntakeIssue(d TriageIntakeIssueDeps) *TriageIntakeIssue {
 // activity after the triage's, its completion, issue.updated, and the
 // work item read back as the caller sees it. Any other triage changes no
 // work item, publishes no event and notifies no one; the work item is read
-// back and answered as the caller sees it (Locks.seenOne).
+// back and answered as the caller sees it at the triage's moment
+// (Locks.seenAt), as an accept's is.
 func (u *TriageIntakeIssue) Execute(ctx context.Context, id uuid.UUID, t domain.Triage) (domain.Issue, error) {
 	actor, err := shared.RequireActor(ctx)
 	if err != nil {
@@ -94,7 +95,7 @@ func (u *TriageIntakeIssue) Execute(ctx context.Context, id uuid.UUID, t domain.
 		if err != nil {
 			return err
 		}
-		triaged, err = u.d.Locks.seenOne(ctx, actor.UserID, h.grant, back)
+		triaged, err = u.d.Locks.seenAt(ctx, actor.UserID, h.grant, back, moment(now))
 		return err
 	})
 	if err != nil {
@@ -174,11 +175,3 @@ func (u *TriageIntakeIssue) accept(ctx context.Context, actor uuid.UUID, h held,
 	}
 	return u.d.Update.updateLocked(ctx, actor, h, domain.IssuePatch{StateID: &state.ID}, moment(now))
 }
-
-// moment is a request's one moment as a Clock, every read of which
-// answers it: a triage's, read once after its last lock, which its accept
-// passes the update core, so that the work item's change is at it too.
-type moment time.Time
-
-// Now answers the moment.
-func (m moment) Now() time.Time { return time.Time(m) }

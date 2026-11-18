@@ -86,6 +86,26 @@ type IntakeFacts struct {
 	DuplicateToID *uuid.UUID
 }
 
+// AsOf is f as a work item's detail answers it at the moment now gives
+// (spec 2.8), which it asks once, and only of a snooze, the one status
+// whose answer the moment changes: its effective status; till when it is
+// snoozed only while that is snoozed, none once the snooze has run out;
+// the work item it duplicates only while it is a duplicate, as stored,
+// whose sight by the reader is the use case's to decide. f itself is not
+// changed.
+func (f IntakeFacts) AsOf(now func() time.Time) IntakeFacts {
+	shown := IntakeFacts{Status: f.Status}
+	switch f.Status {
+	case IntakeSnoozed:
+		if shown.Status = EffectiveStatus(f.Status, f.SnoozedTill, now()); shown.Status == IntakeSnoozed {
+			shown.SnoozedTill = f.SnoozedTill
+		}
+	case IntakeDuplicate:
+		shown.DuplicateToID = f.DuplicateToID
+	}
+	return shown
+}
+
 // Transition checks a triage of f to the status to, one CheckTriage
 // accepted, at now (spec 2.5, R3), and answers the status it moves from,
 // f's effective one, which its activity records: a move the transitions

@@ -16,6 +16,7 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/domain"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project"
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace"
+	"github.com/open-nerve/NerveProject/server/internal/platform/clock"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
@@ -184,7 +185,7 @@ func snapshotListUseCases(w issueWorld, p *listSnapshotProbe) (*issueapp.ListIss
 	listing := issueapp.NewListing(issueapp.ListingDeps{Attachments: attachmentCounterOn(w.pool), Rows: store, States: dirs, Labels: dirs, Assignees: store,
 		Profiles: snapshotListProfiles{issueProfiles{profiles: identity.Provide(w.pool).PublicProfiles}, p}, Issues: store})
 	tx := postgres.NewTxManager(w.pool, 3*time.Second, postgres.ReadOnlySnapshot())
-	return issueapp.NewListIssues(issueapp.ListIssuesDeps{ReadTx: tx, Locks: issueapp.NewLocks(dirs, store, auth, nil, nil, attachmentCounterOn(w.pool)), Listing: listing}),
+	return issueapp.NewListIssues(issueapp.ListIssuesDeps{ReadTx: tx, Locks: issueapp.NewLocks(dirs, store, auth, nil, nil, attachmentCounterOn(w.pool), clock.System{}), Listing: listing}),
 		issueapp.NewListMemberIssues(issueapp.ListMemberIssuesDeps{ReadTx: tx, Authorizer: auth, Projects: dirs, Listing: listing,
 			Workspaces: snapshotListWorkspace{issueWorkspaces{directory: workspaces.WorkspaceDirectory}, p},
 			Members:    snapshotListMembers{issueMembers{members: workspaces.WorkspaceMemberDirectory}, p}})
