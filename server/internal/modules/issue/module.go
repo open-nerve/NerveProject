@@ -266,6 +266,7 @@ func New(d Deps) *Module {
 			CreateIssueComment:      app.NewCreateIssueComment(app.CreateIssueCommentDeps{ContentBindings: d.ContentBindings, Events: d.Events, Locks: locks, Comments: store, Members: d.Projects, Sanitizer: sanitizer, Clock: d.Clock}),
 			ListIssueComments:       app.NewListIssueComments(app.ListIssueCommentsDeps{Locks: locks, Comments: store, ReadTx: d.ReadTx}),
 			CreateIssue:             app.NewCreateIssue(app.CreateIssueDeps{Locks: locks, Creation: creation}),
+			SubmitIntakeIssue:       app.NewSubmitIntakeIssue(app.SubmitIntakeIssueDeps{Locks: locks, Creation: creation, Intake: store, Issues: store}),
 			GetIssue:                app.NewGetIssue(locks, d.ReadTx),
 			GetIssueByIdentifier: app.NewGetIssueByIdentifier(app.GetIssueByIdentifierDeps{
 				Locks: locks, Workspaces: d.Workspaces, Projects: d.Projects, Issues: store, ReadTx: d.ReadTx,

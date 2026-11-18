@@ -19,6 +19,11 @@ type CreateIssueUseCase interface {
 	Execute(ctx context.Context, projectID uuid.UUID, in domain.NewIssue) (domain.Issue, error)
 }
 
+// SubmitIntakeIssueUseCase is app.SubmitIntakeIssue.
+type SubmitIntakeIssueUseCase interface {
+	Execute(ctx context.Context, projectID uuid.UUID, in domain.NewIntakeIssue) (domain.Issue, error)
+}
+
 // GetIssueUseCase is app.GetIssue.
 type GetIssueUseCase interface {
 	Execute(ctx context.Context, id uuid.UUID) (domain.Issue, error)
@@ -170,6 +175,7 @@ type UseCases struct {
 	CreateIssueComment      CreateIssueCommentUseCase
 	ListIssueComments       ListIssueCommentsUseCase
 	CreateIssue             CreateIssueUseCase
+	SubmitIntakeIssue       SubmitIntakeIssueUseCase
 	GetIssue                GetIssueUseCase
 	GetIssueByIdentifier    GetIssueByIdentifierUseCase
 	UpdateIssue             UpdateIssueUseCase

@@ -23,6 +23,28 @@ const (
 	IntakeDuplicate IntakeStatus = "duplicate"
 )
 
+// NewIntakeIssue is what the caller asks for when submitting a work item
+// to a project's intake (M7 P2a spec 2.4): a new work item's name,
+// description, priority, assignees, labels and target date, each as
+// NewIssue has it. It has no state, start date, parent, cycle or modules:
+// a submission is put in the project's triage state, outside its plans,
+// until a triage accepts it.
+type NewIntakeIssue struct {
+	DescriptionHTML *string
+	Name            string
+	Priority        *Priority
+	AssigneeIDs     []uuid.UUID
+	LabelIDs        []uuid.UUID
+	TargetDate      *shared.Date
+}
+
+// CheckNewIntakeIssue checks n as CheckNewIssue checks the new work item
+// it asks for, and answers that work item as it is stored.
+func CheckNewIntakeIssue(n NewIntakeIssue) (NewIssue, error) {
+	return CheckNewIssue(NewIssue{DescriptionHTML: n.DescriptionHTML, Name: n.Name, Priority: n.Priority, AssigneeIDs: n.AssigneeIDs,
+		LabelIDs: n.LabelIDs, TargetDate: n.TargetDate})
+}
+
 // intakeStatuses are the values intake_issues.status takes, as the
 // contract lists them.
 var intakeStatuses = []IntakeStatus{IntakePending, IntakeSnoozed, IntakeAccepted, IntakeDeclined, IntakeDuplicate}

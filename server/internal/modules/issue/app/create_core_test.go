@@ -80,7 +80,7 @@ func TestCreateCoreReturnsItsWriteMoment(t *testing.T) {
 		t.Fatal(err)
 	}
 	actor, project, workspace := uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
-	got, at, err := core.createLocked(context.Background(), actor, project, held{project: LockedProject{WorkspaceID: workspace}}, in)
+	got, at, err := core.createLocked(context.Background(), actor, project, held{project: LockedProject{WorkspaceID: workspace}}, in, asAsked)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -103,7 +103,7 @@ func TestCreateCorePreparationDoesNotReadClockOrWriteRows(t *testing.T) {
 		t.Fatal(err)
 	}
 	actor, project, workspace := uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
-	p, err := u.prepareLocked(context.Background(), actor, project, held{project: LockedProject{WorkspaceID: workspace}}, in)
+	p, err := u.prepareLocked(context.Background(), actor, project, held{project: LockedProject{WorkspaceID: workspace}}, in, asAsked)
 	if err != nil {
 		t.Fatal(err)
 	}

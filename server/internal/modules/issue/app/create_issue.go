@@ -48,7 +48,7 @@ func (u *CreateIssue) Execute(ctx context.Context, projectID uuid.UUID, in domai
 	var created domain.Issue
 	err = u.d.Locks.run(ctx, actor, w, func(ctx context.Context, h held) error {
 		var err error
-		created, _, err = u.d.Creation.createLocked(ctx, actor.UserID, projectID, h, in)
+		created, _, err = u.d.Creation.createLocked(ctx, actor.UserID, projectID, h, in, asAsked)
 		return err
 	})
 	if err != nil {

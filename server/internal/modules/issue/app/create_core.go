@@ -59,10 +59,39 @@ type preparedIssue struct {
 	content domain.RichText
 }
 
+// placement is the state a creation puts its work item in (M7 P2a spec
+// 2.4).
+type placement int
+
+const (
+	// asAsked is the state the creation asks for, or the project's
+	// default state when it asks for none (pickState): an ordinary
+	// creation's and a draft's publication's.
+	asAsked placement = iota
+	// inTriage is the project's triage state, whatever the creation asks
+	// for: a submission's to the project's intake, which asks for none.
+	inTriage
+)
+
+// state is the state among states, the project's, that p puts a work item
+// in, which asks for the state asked, nil for none; found is false when
+// there is none.
+func (p placement) state(states []StateRef, asked *uuid.UUID) (StateRef, bool) {
+	if p == asAsked {
+		return pickState(states, asked)
+	}
+	at := slices.IndexFunc(states, func(s StateRef) bool { return s.Group == domain.GroupTriage })
+	if at < 0 {
+		return StateRef{}, false
+	}
+	return states[at], true
+}
+
 // createLocked requires pure domain validation and the project's write lock.
 // Its returned moment is the sole clock reading used by all of its writes.
-func (u *IssueCreation) createLocked(ctx context.Context, actorID, projectID uuid.UUID, h held, in domain.NewIssue) (domain.Issue, time.Time, error) {
-	p, err := u.prepareLocked(ctx, actorID, projectID, h, in)
+// The work item is put in the state place picks.
+func (u *IssueCreation) createLocked(ctx context.Context, actorID, projectID uuid.UUID, h held, in domain.NewIssue, place placement) (domain.Issue, time.Time, error) {
+	p, err := u.prepareLocked(ctx, actorID, projectID, h, in, place)
 	if err != nil {
 		return domain.Issue{}, time.Time{}, err
 	}
@@ -110,12 +139,12 @@ func (u *IssueCreation) answer(ctx context.Context, actorID uuid.UUID, created d
 	return items[0], nil
 }
 
-func (u *IssueCreation) prepareLocked(ctx context.Context, actorID, projectID uuid.UUID, h held, in domain.NewIssue) (preparedIssue, error) {
+func (u *IssueCreation) prepareLocked(ctx context.Context, actorID, projectID uuid.UUID, h held, in domain.NewIssue, place placement) (preparedIssue, error) {
 	project := h.project
 	if project.Archived {
 		return preparedIssue{}, domain.ErrProjectArchived
 	}
-	c, err := u.check(ctx, h, actorID, projectID, in)
+	c, err := u.check(ctx, h, actorID, projectID, in, place)
 	if err != nil {
 		return preparedIssue{}, err
 	}
@@ -158,15 +187,18 @@ func (u *IssueCreation) writePreparedAt(ctx context.Context, p preparedIssue, at
 // check checks the dependent rows of in, by the caller actor, under h, his
 // write's lock on the project (M4 design 3.7, 3.9): first the cycle and the
 // modules it joins, when it joins any, whose refusals come before any
-// other's (readMembership, M6 P3a spec R2); the state asked for is the project's
-// and not its triage state, or the project's default state when none is;
-// the assignees by domain.Assignees, from the roles of the
-// accounts asked for, or of the project's default assignee when none is;
+// other's (readMembership, M6 P3a spec R2); the state place picks
+// (placement): the one asked for, the project's and not its triage state,
+// or the project's default state when none is; or, for a submission, the
+// project's triage state, a project without which is an error, as one
+// without a default state is; the assignees by domain.Assignees, from the
+// roles of the accounts asked for, or of the project's default assignee
+// when none is;
 // each label asked for is the project's; the parent asked for may be one
 // (parentOf); the cycle and each module are the project's, each module's
 // problem at its place in module_ids. Every problem is reported at once,
 // in one 422.
-func (u *IssueCreation) check(ctx context.Context, h held, actor, projectID uuid.UUID, in domain.NewIssue) (checked, error) {
+func (u *IssueCreation) check(ctx context.Context, h held, actor, projectID uuid.UUID, in domain.NewIssue, place placement) (checked, error) {
 	p := h.project
 	var c checked
 	var problems []shared.FieldError
@@ -187,8 +219,10 @@ func (u *IssueCreation) check(ctx context.Context, h held, actor, projectID uuid
 		return checked{}, err
 	}
 	var found bool
-	c.state, found = pickState(states, in.StateID)
+	c.state, found = place.state(states, in.StateID)
 	switch {
+	case !found && place == inTriage:
+		return checked{}, fmt.Errorf("project %s has no triage state", projectID)
 	case !found && in.StateID != nil:
 		problems = append(problems, domain.StateNotAllowed())
 	case !found:
