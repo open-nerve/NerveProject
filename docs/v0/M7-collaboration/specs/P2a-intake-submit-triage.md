@@ -56,7 +56,7 @@ P2a 不做：网页（P5）；Plane 的 `source`、`source_email`、`external_*`
 
 - **权威的标记是条目行**：工作项“在收集箱里”当且仅当它有未删除的条目行且 `status <> 'accepted'`；这样的工作项的状态就是项目的 Triage 状态。两者按构造等价：只有 `InsertIssue`、`UpdateIssue` 写 `state_id`；只有提交把工作项放进 Triage，只有接受把它移出；状态接口碰不到 Triage 状态，工作项的修改不能以 Triage 为目标。一个 bootstrap 不变式测试在提交、各种分诊、删除之后钉住等价，并钉住“在收集箱里的工作项没有父、没有子、没有关联行、不在迭代模块里”（DP-7）。
 - `domain.Issue` 加 `Intake *IntakeFacts{Status, SnoozedTill, DuplicateToID}`：`GetIssue`、`GetIssues`、`SubIssues` 三条查询共用一种行，同步 `LEFT JOIN intake_issues ii ON ii.issue_id = i.id AND ii.deleted_at IS NULL`（条件在 `ON` 里，用得上部分唯一索引）。注释写明：只有这三条的行带 `Intake`；列表与搜索的行不带，不得在它们上面调 `InTriage()`（靠不变式安全：它们不含在收集箱里的工作项）。
-- **有效状态**：存的状态为 `snoozed` 且 `snoozed_till <= now` 时为 `pending`（设计 §3.5，按读那一刻到期）。分诊、回答、守卫都用有效状态，存的值不因到期而改写。`now`：写用那一次写在最后一把锁之后读的时刻；读的回答由 `Locks` 新加的时钟读一次（`seenOne`）。
+- **有效状态**：存的状态为 `snoozed` 且 `snoozed_till <= now` 时为 `pending`（设计 §3.5，按读那一刻到期）。分诊、回答、守卫都用有效状态，存的值不因到期而改写。`now`：写用那一次写在最后一把锁之后读的时刻；读的回答由 `Locks` 新加的时钟按需读（只有存的状态为暂缓时要此刻，每个回答至多一次；每个回答都读会让无改动的归档也读时钟，打破 M4 的 `TestIssueArchivalEvents`，T9 的裁定）。
 
 ### 2.4 提交 `POST /projects/{project_id}/intake-issues`
 
@@ -95,7 +95,7 @@ P2a 不做：网页（P5）；Plane 的 `source`、`source_email`、`external_*`
 
 ### 2.7 修改核心的接缝（R6）
 
-把 `UpdateIssue.Execute` 闭包里的那一段原样抽成 `updateLocked(ctx, actor, h held, p domain.IssuePatch, at time.Time) (domain.Issue, error)`（时刻由调用者给，像 `createLocked` 的时刻交给调用者那样）；`Execute` 只剩 `CheckIssuePatch`、`write{…, check: 源端守卫}`、读时钟与调用它。接受以补丁 `{StateID: 默认状态}` 调它；源端守卫挂在 `Execute` 的 `write.check` 上，不在抽出的那一段里，所以接受不经它。P2b 的内容修改用同一个接缝换白名单与授权。
+把 `UpdateIssue.Execute` 闭包里的那一段原样抽成 `updateLocked(ctx, actor, h held, p domain.IssuePatch, clock Clock) (domain.Issue, error)`（实施时由 `at time.Time` 改为时钟：照字面由调用者先读时刻，会让不变的修改也读时钟、把读时钟提前到检查之前、带图片时早于最后那把内容锁；传时钟则搬移的代码一字不改，T6 的裁定）；`Execute` 只剩 `CheckIssuePatch`、`write{…, check: 源端守卫}` 与调用它（传业务时钟）。接受以补丁 `{StateID: 默认状态}` 与一个只答分诊那一刻的时钟调它（一个请求一个时刻）；源端守卫挂在 `Execute` 的 `write.check` 上，不在抽出的那一段里，所以接受不经它。P2b 的内容修改用同一个接缝换白名单与授权。
 
 ### 2.8 详情的 `intake`（DP-16）
 
@@ -115,7 +115,7 @@ P2a 不做：网页（P5）；Plane 的 `source`、`source_email`、`external_*`
 - 60 天清理：issue 的清理步骤在 `issues` 之前加 `intake_issues`；清理目录 33 → 34。
 - `duplicate_to_id` 指向的工作项被删：不动，读时为 `null`（§2.8）。
 - Go 守卫：删除守卫以 SQL 种条目行（P1b 先例）；`issue_project_deletion_jobs_test` 的 `projectIssueTable` 显式加 `intake_issues`（前缀不是 `issue_`）。
-- e2e（预检 I2）：`asynchronousDeletionTable` 加 `intake_issues`；新夹具 `furnishAcceptedIntake`（管理员打开开关、提交、接受、再经 `updateIssue` 放到指定工作项之下）由 `expectIssueDeleted` 的五处调用（i15 两处、i17 两处、i21 一处）各调一次；`furnishPlanningRows`（已收管理员的 token、已在改项目的开关）里加一次提交（待处理即可），供项目、工作区的删除断言。
+- e2e（预检 I2）：`asynchronousDeletionTable` 加 `intake_issues`；新夹具 `furnishAcceptedIntake`（管理员打开开关、提交、接受、再经 `updateIssue` 放到指定工作项之下）由 `expectIssueDeleted` 的四处调用（i15 两处、i17 两处）各调一次，i21 以它代替孙工作项的新建（那里断言根之下恰为三个工作项，断言不变）；`furnishPlanningRows` 在已有的 `changeProject` 里打开开关，待处理的那一次提交放在 `furnishIssueRows`（放进 `furnishPlanningRows` 会让 i15 写死的编号后移一位；项目、工作区的删除故事都经 `furnishIssueRows`），供项目、工作区的删除断言（T10 的两条裁定）。
 
 ## 3. 局部裁定
 

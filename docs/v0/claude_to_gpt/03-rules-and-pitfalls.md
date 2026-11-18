@@ -79,6 +79,8 @@ M7/P1a 的手动关注、取消关注是写明理由的例外：编排是 `Locks
 
 M7/P1c 的通知的两个写（单条修改、全部已读）也是例外：通知是收件人自己的行，不决定别的写的判定，两个写都不进写闸门、不取工作项与项目的锁，只锁通知行。`notifications` 各个写者的锁序（以后写它的新路径必须守）：分发只插入；工作项删除在原事务里逐个工作项按 id 升序软删它的通知（子树逐个，整体不是全局升序）；项目删除的分批按 id 升序；单条修改锁一行，带 `issue.write_lock_timeout`，超时 503；全部已读 `FOR NO KEY UPDATE SKIP LOCKED`、从不等待通知行（等待会与子树删除成环）；它的批在不带锁期限的普通事务里，唯一可能的等待是 `updated_by_id` 外键对账户行的 `KEY SHARE`，今天没有路径与它冲突（没有删除账户行的路径，identity 只取 `FOR NO KEY UPDATE`）——以后若有路径删除账户行或以 `FOR UPDATE` 锁它，要给批加锁期限；清理照 P1b。全部已读的业务时刻在请求开始时读一次，它同时是“只标事件不晚于它的”的界，是“最后一把锁之后读时钟”的登记例外。见 [M7 P1c spec](../M7-collaboration/specs/P1c-notification-api.md) §2.7、R5。
 
+M7/P2a 的收集箱：条目行（`intake_issues` 里未删除且 `status <> 'accepted'` 的）是“在收集箱里”的权威标记，与 Triage 状态按构造等价（不变式测试 `bootstrap/intake_invariant_test.go`）。只有 `GetIssue`、`GetIssues`、`SubIssues` 三条查询的行带 `Intake`，列表与搜索的行不带，不在它们上面调 `InTriage()`。选择性的 Triage 守卫：六个源端写（修改、归档、取消归档、删除、加子工作项的父端、建关联的源端）经 `write.check` 答 409 `issue.in_triage`，在 404、403 之后、上面第 7 步的“已归档的项目 → 已归档的工作项”之前（登记的例外）；链接、评论、表情、关注不拦，另一端沿用 422（`inReach`、关联的另一端）。守卫挂在 `UpdateIssue.Execute` 的 `write.check` 上，不在修改核心 `updateLocked` 里（分诊的接受经它）。以后给工作项加的写，要写明它对在收集箱里的工作项加不加这个守卫。提交与分诊的开关 `intake_view` 只在锁下判，归档先于开关。
+
 P8 草稿已按设计3.5的既定形式补齐：`DraftLocks`组合上述`Locks`并复用授权、闸门与写事务，不在各用例另接一套。保存/修改/删除为工作区S → 旧新项目S（去重升序）→ 草稿U；发布先在无连接、无锁时进入项目闸门，再工作区S → 项目N → 草稿U。等待后重读、权限重判、全部锁后读时钟照旧，普通工作项写仍不取工作区锁。具体端口见[P8 spec](../M4-issue-core/specs/P8-drafts-search.md)，T7真实PID/交错16/17、T15 race五遍及首次整审证据见[P8 review](../M4-issue-core/reviews/P8-drafts-search-review.md)；文档a65e8605已独评Approved/D1 ADDRESSED（task-16-review.md）；最终分支 `cde70d9735994cb6a579e0b800469f32631e9981` 的CI通过后，已授权 `--no-ff` 合并为main `6b9d08d4821f1423c7bb9795557727c206b7880f`，[main CI 40520609987](https://github.com/open-nerve/NerveProject/actions/runs/40520609987)三任务全绿。1,598文件、37,552,117字节及1空目录归档核验后，P8本地/远端分支与worktree已正常清理；原件新根和清理后哈希核验见[P8 review §9](../M4-issue-core/reviews/P8-drafts-search-review.md#9-授权合并main-ci-与归档清理2026-10-27)。
 
 另外：
@@ -122,6 +124,8 @@ P8 草稿已按设计3.5的既定形式补齐：`DraftLocks`组合上述`Locks`�
 - 关联要两个方向、每种存储的类型；
 - 项目对要两种 `id` 次序；
 - 拒绝的次序要在两个交叉方向上都钉住；
+- 加 issue 的操作时，按目录驱动的守卫一起补（M7/P2a 检查点 1 漏了一个）：权限矩阵、写锁表、删除窗口 `deletionWindowCases`（遍历它的 `issue_null_creator_test.go` 随之跟进）、逐码的处理器测试；红窗口的清单按 `contract.Operations()` 的使用者找全。
+- 锁检查的测试在每次持表锁或行锁之前 `waitForFanouts`（R10）：分发先 `FOR SHARE` 工作项行、有收件人时再插入（外键 `FOR KEY SHARE` 工作区与项目），与 `LOCK TABLE workspaces … issues` 的次序相反，会死锁（M7/P2a 检查点 1 的 CI）。
 - 访客与成员、自己的与别人的、管理员兼访客、已归档与否、已删除与否都要有。
 
 **其他测试的坑**：
