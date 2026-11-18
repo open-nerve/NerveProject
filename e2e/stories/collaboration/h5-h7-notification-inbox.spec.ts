@@ -206,9 +206,10 @@ test("H5–H7 (API): a member reads, archives, snoozes and unsnoozes his notific
   expect(await change(pat, looks, { read: false }), "the comment unread").toEqual(looks);
   await shows({ all: 1, mentions: 1 }, [[{ read: "false" }, [looks]]]);
 
-  // Snoozed till a second from now with his session, the comment is counted again once that second is over, with no
-  // write: not before, as nerve reads the snooze at the moment of each read.
-  const soon = Date.now() + 1000;
+  // Snoozed till two seconds from now with his session, the comment is counted again once they are over, with no
+  // write: not before, as nerve reads the snooze at the moment of each read. Two, not one: the change must reach nerve
+  // before the moment it names, or it is refused as past (422), also on a loaded runner.
+  const soon = Date.now() + 2000;
   await change(session, looks, { snoozed_till: new Date(soon).toISOString() });
   await expect
     .poll(() => unreadNotifications(api, pat.token, slug), { intervals: [50, 100], message: "the snooze over" })
