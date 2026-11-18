@@ -209,6 +209,16 @@ type IntakeWriter interface {
 	TriageIntake(ctx context.Context, r IntakeTriage) error
 }
 
+// IssueTriager is the work items' store as triageIntakeIssue reads and
+// writes them, in the transaction ctx carries (M7 P2a spec 2.5): a
+// duplicate's target and the work item read back, and the triage's row of
+// its activity.
+type IssueTriager interface {
+	IssueReader
+	// InsertActivities inserts the rows in their order.
+	InsertActivities(ctx context.Context, rows []ActivityRow) error
+}
+
 // SubIssueLister reads the sub-items of a work item (M4 design 3.9).
 type SubIssueLister interface {
 	// SubIssues reads the undeleted, unarchived work items directly under

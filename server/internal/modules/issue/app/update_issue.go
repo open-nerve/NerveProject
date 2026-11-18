@@ -103,9 +103,11 @@ func (u *UpdateIssue) Execute(ctx context.Context, id uuid.UUID, p domain.IssueP
 // accounts it adds subscribed; its activity (domain.UpdateActivity), each
 // account by his display name, each parent by its identifier; issue.updated.
 // All of it is the caller's at that moment. An update passes its use
-// case's clock. The answer is the work item as stored, read back in the transaction, as
-// the caller sees it (Locks.seen), the work item as read when nothing is
-// written.
+// case's clock; a triage's accept, whose patch binds no content, passes
+// the triage's one moment (moment), so that the whole request writes at
+// it. The answer is the work item as stored, read back in the
+// transaction, as the caller sees it (Locks.seen), the work item as read
+// when nothing is written.
 func (u *UpdateIssue) updateLocked(ctx context.Context, actorID uuid.UUID, h held, p domain.IssuePatch, clock Clock) (domain.Issue, error) {
 	switch {
 	case h.project.Archived:

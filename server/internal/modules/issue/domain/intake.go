@@ -151,3 +151,23 @@ func CheckSnoozedTill(till, now time.Time) (time.Time, error) {
 	}
 	return till, nil
 }
+
+// DuplicateNotAllowed is the problem of a duplicate's target that may not
+// be one (spec 2.5): a work item not there or deleted, of another project,
+// hidden from the caller by the guest rule, in the project's intake, or
+// the work item triaged itself. Each is the same problem, so that it tells
+// nothing of the target; an archived target may be one (pre-flight m6).
+func DuplicateNotAllowed() shared.FieldError {
+	return shared.FieldError{Field: "duplicate_to_id", Code: shared.FieldNotAllowed,
+		Message: "must be another work item of the project that you see and that is not in its intake"}
+}
+
+// TriageActivity is the row of a triage's activity (spec 2.5, R7): on
+// intake, the new status its verb, from the status the row moved from,
+// its effective one, to the new one, each by its name, Plane's sentence.
+// It names no work item a duplicate duplicates, which its reader may not
+// see.
+func TriageActivity(from, to IntakeStatus) Activity {
+	return Activity{Field: ptr("intake"), Verb: Verb(to), OldValue: ptr(string(from)), NewValue: ptr(string(to)),
+		Comment: "updated the intake status"}
+}

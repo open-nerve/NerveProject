@@ -232,6 +232,9 @@ func New(d Deps) *Module {
 		Issues: store, Sequences: d.Projects, States: d.Projects, Labels: d.Projects, Members: d.Projects, Planning: d.Planning,
 		Profiles: d.Profiles, Clock: d.Clock, Sanitizer: sanitizer, Attachments: d.AttachmentCounter, ContentBindings: d.ContentBindings,
 	})
+	update := app.NewUpdateIssue(app.UpdateIssueDeps{Events: d.Events,
+		Locks: locks, Issues: store, States: d.Projects, Labels: d.Projects, Members: d.Projects, Planning: d.Planning, Profiles: d.Profiles, Clock: d.Clock, Sanitizer: sanitizer, ContentBindings: d.ContentBindings,
+	})
 	return &Module{
 		assets: assetAccess, deleteRows: app.NewDeleteRows(app.DeleteRowsDeps{Rows: store, Relations: app.NewRelationDeletions(store, d.Projects), Remaining: store, Tx: d.JobTx, RuntimeNow: d.RuntimeNow, Batch: d.DeleteBatch, Budget: d.DeleteBudget}), deleteBudget: d.DeleteBudget, logger: d.Logger,
 		trimVersions: app.NewTrimVersions(app.TrimVersionsDeps{Projects: d.Projects, Gate: d.Projects, Rows: store, Tx: d.JobTx}), trimVersionsInterval: d.TrimVersionsInterval,
@@ -267,13 +270,12 @@ func New(d Deps) *Module {
 			ListIssueComments:       app.NewListIssueComments(app.ListIssueCommentsDeps{Locks: locks, Comments: store, ReadTx: d.ReadTx}),
 			CreateIssue:             app.NewCreateIssue(app.CreateIssueDeps{Locks: locks, Creation: creation}),
 			SubmitIntakeIssue:       app.NewSubmitIntakeIssue(app.SubmitIntakeIssueDeps{Locks: locks, Creation: creation, Intake: store, Issues: store}),
+			TriageIntakeIssue:       app.NewTriageIntakeIssue(app.TriageIntakeIssueDeps{Locks: locks, Update: update, Intake: store, Issues: store, States: d.Projects, Clock: d.Clock}),
 			GetIssue:                app.NewGetIssue(locks, d.ReadTx),
 			GetIssueByIdentifier: app.NewGetIssueByIdentifier(app.GetIssueByIdentifierDeps{
 				Locks: locks, Workspaces: d.Workspaces, Projects: d.Projects, Issues: store, ReadTx: d.ReadTx,
 			}),
-			UpdateIssue: app.NewUpdateIssue(app.UpdateIssueDeps{Events: d.Events,
-				Locks: locks, Issues: store, States: d.Projects, Labels: d.Projects, Members: d.Projects, Planning: d.Planning, Profiles: d.Profiles, Clock: d.Clock, Sanitizer: sanitizer, ContentBindings: d.ContentBindings,
-			}),
+			UpdateIssue:        update,
 			DeleteIssue:        app.NewDeleteIssue(app.DeleteIssueDeps{Events: d.Events, Locks: locks, Rows: store, Relations: app.NewRelationDeletions(store, d.Projects), Clock: d.Clock}),
 			ArchiveIssue:       app.NewArchiveIssue(archive),
 			UnarchiveIssue:     app.NewUnarchiveIssue(archive),
