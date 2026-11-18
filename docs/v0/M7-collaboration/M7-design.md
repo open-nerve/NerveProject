@@ -292,8 +292,8 @@ M7 让五件协作功能经真实接口工作：站内通知（关注工作项�
 | P1a | 工作项一侧的关注与事件：issue 事件的扩展（§6.1 的前两条：评论、链接事件的工作项 id，新提及）、关注接口与 `is_subscribed`；关键词 phase 改为 `M7/P1`（P1a、P1b 共用，关键词工具只认 `M<n>/P<k>`，M6/P3 先例） | H1 的接口与数据库；事件形状测试 |
 | P1b | `notification` 模块的核心：表、订阅者与分发任务、通知要用的 issue 与 access 端口（快照与行锁、批量判定，随消费方一起到）、关联事件追加请求端、删除图与清理（[P1b spec](specs/P1b-notification-core.md) R1 拆段） | H2–H4 的数据库证据；幂等、复核、交错、规模；批量判定的等价测试；写入基准与自动归档前后 |
 | P1c | 通知的接口：列表 / 修改 / 全部已读 / 未读数、读时的可见过滤（含已归档项目）与另一端、权限矩阵 | H2–H7 的接口证据与 e2e 故事 |
-| P2a | 收集箱的提交与读（issue 模块）：`intake_issues`、Triage 的新建路径、条目作为工作项的读写边界（§3.6，含搜索等排除与资产的判定）、收集箱列表、开关 | H8、H9、H11 的接口与数据库 |
-| P2b | 分诊与其余：迁移规则、接受、动态、内容的修改与删除、待处理数、删除图、权限矩阵 | H10、H11 的接口与数据库；交错 |
+| P2a | 收集箱条目的生命周期（issue 模块）：`intake_issues` 与删除图、清理；Triage 的新建路径与开关；分诊（迁移规则、接受、动态）；条目作为工作项的写入边界（§3.6，含搜索等排除）；详情的 `intake`；两个操作的权限矩阵（P2a 实施前按删除守卫重新划分，见 [P2a spec](specs/P2a-intake-submit-triage.md) §1） | H8、H10 的接口与数据库；H11 的读写边界；交错 |
+| P2b | 列表与其余：收集箱列表、内容的修改与删除、待处理数、Triage 宿主的资产判定、它们的权限矩阵 | H9、H11 的其余的接口与数据库 |
 | P3a | `navigation` 模块与视图：`issue_views`、两种视图的接口与权限、工作区跨项目列表与规模测试 | H12–H14 的接口与数据库 |
 | P3b | 收藏与最近访问：两张表与接口、planning / project 的归档事件与连带、可见过滤 | H15–H17 的接口与数据库 |
 | P4 | 网页的通知与关注；收起“保存为视图” | H1–H7 的页面、H20 的通知页 |
@@ -330,7 +330,8 @@ P1a 的第一个实现提交把关键词 phase 改为 `M7/P1`（P1a、P1b 共用
 | 设计 | 已合入 main（noff `8d17eed7`，与 P1a 的 spec、plan 一起）；预检 Ready after fixes，修正已改入；负责人 2026-11-17 决定 §15 A–D 按推荐 | [re-81](../../reviews/re-81-M7设计预检.md) |
 | P1a 关注接口与通知要用的事件 | 已完成：合入 main（noff `9a3a388a`），main CI 44034770817 全绿；整分支审查 Ready to merge（五处次要由修复轮处理，限定复审 Ready to merge） | [P1a spec](specs/P1a-subscriptions-events.md) / [P1a plan](plans/P1a-subscriptions-events.md) / [P1a 阶段记录](reviews/P1a-subscriptions-events-review.md) |
 | P1b 通知模块的核心 | 已完成：合入 main（noff `1a23f6f8`），main CI 44179902213 全绿；整分支审查 Ready after fixes，修复轮后限定复审 Ready to merge；spec 与 plan 经预检 [re-83](../../reviews/re-83-M7P1b预检.md) 修正后通过，基线 main `9a3a388a`（P1a 的 noff）；原 P1b 拆为 P1b、P1c；负责人 2026-11-18 决定自动归档的通知批量投递（spec R12） | [P1b spec](specs/P1b-notification-core.md) / [P1b plan](plans/P1b-notification-core.md) / [P1b 阶段记录](reviews/P1b-notification-core-review.md) |
-| P1c 通知的接口与读 | 实施完成、待整分支审查与集成：spec 与 plan 经预检 [re-84](../../reviews/re-84-M7P1c预检.md) 修正后通过，基线 main `1a23f6f8`（P1b 的 noff）；两个检查点七项全过，检查点 1 的分支 CI 全绿；阶段记录 [P1c review](reviews/P1c-notification-api-review.md) | [P1c spec](specs/P1c-notification-api.md) / [P1c plan](plans/P1c-notification-api.md) |
+| P1c 通知的接口与读 | 已完成：合入 main（noff `31f38580`），main CI 44337846563 全绿；整分支审查与限定复审都是 Ready to merge；本机最终门禁的第 0 路因 M6-M8-05 失败，负责人 2026-11-18 决定服务端以分支 CI 为准；spec 与 plan 经预检 [re-84](../../reviews/re-84-M7P1c预检.md) 修正后通过，基线 main `1a23f6f8`（P1b 的 noff）；两个检查点七项全过，检查点 1 的分支 CI 全绿；阶段记录 [P1c review](reviews/P1c-notification-api-review.md) | [P1c spec](specs/P1c-notification-api.md) / [P1c plan](plans/P1c-notification-api.md) |
+| P2a 收集箱条目的生命周期 | 进行中：spec 与 plan 经预检 [re-85](../../reviews/re-85-M7P2a预检.md) 修正后通过，基线 main `31f38580`（P1c 的 noff）；实施前按删除守卫与 P2b 重新划分（spec §1、R1） | [P2a spec](specs/P2a-intake-submit-triage.md) / [P2a plan](plans/P2a-intake-submit-triage.md) |
 
 ## 15. 决定记录
 
