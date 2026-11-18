@@ -231,7 +231,7 @@ func (q *Queries) IssueStates(ctx context.Context, projectID uuid.UUID) ([]Issue
 }
 
 const lockIssueProject = `-- name: LockIssueProject :one
-SELECT workspace_id, (archived_at IS NOT NULL)::boolean AS archived, default_assignee_id, identifier, archive_in
+SELECT workspace_id, (archived_at IS NOT NULL)::boolean AS archived, default_assignee_id, identifier, archive_in, intake_view
 FROM projects
 WHERE id = $1 AND deleted_at IS NULL
 FOR NO KEY UPDATE
@@ -243,12 +243,15 @@ type LockIssueProjectRow struct {
 	DefaultAssigneeID *uuid.UUID
 	Identifier        string
 	ArchiveIn         int32
+	IntakeView        bool
 }
 
 // ProjectGate.Lock, what project.Provide offers the issue module (M4 design 6.5): the first lock of a write on the
 // work-item side (3.5, decision point 1: B), the project's row FOR NO KEY UPDATE, its workspace's row not locked.
 // After a wait Postgres evaluates deleted_at IS NULL again on the row's newest version, so a project deleted meanwhile
-// reads no row. The identifier names the project's work items in their activity (3.13), as it is under the lock.
+// reads no row. The identifier names the project's work items in their activity (3.13), as it is under the lock. Whether
+// its intake is turned on is read under the lock alone: a submission's and a triage's toggle (M7 P2a spec 2.4), which
+// updateProject writes under the same row lock.
 func (q *Queries) LockIssueProject(ctx context.Context, id uuid.UUID) (LockIssueProjectRow, error) {
 	row := q.db.QueryRow(ctx, lockIssueProject, id)
 	var i LockIssueProjectRow
@@ -258,12 +261,13 @@ func (q *Queries) LockIssueProject(ctx context.Context, id uuid.UUID) (LockIssue
 		&i.DefaultAssigneeID,
 		&i.Identifier,
 		&i.ArchiveIn,
+		&i.IntakeView,
 	)
 	return i, err
 }
 
 const lockIssueProjects = `-- name: LockIssueProjects :many
-SELECT id, workspace_id, (archived_at IS NOT NULL)::boolean AS archived, default_assignee_id, identifier, archive_in
+SELECT id, workspace_id, (archived_at IS NOT NULL)::boolean AS archived, default_assignee_id, identifier, archive_in, intake_view
 FROM projects
 WHERE id = ANY ($1::uuid[]) AND deleted_at IS NULL
 ORDER BY id
@@ -277,6 +281,7 @@ type LockIssueProjectsRow struct {
 	DefaultAssigneeID *uuid.UUID
 	Identifier        string
 	ArchiveIn         int32
+	IntakeView        bool
 }
 
 // ProjectGate.LockMany (M4 design 6.5): the first locks of a write across projects (convention 7, 3.5), the undeleted
@@ -299,6 +304,7 @@ func (q *Queries) LockIssueProjects(ctx context.Context, ids []uuid.UUID) ([]Loc
 			&i.DefaultAssigneeID,
 			&i.Identifier,
 			&i.ArchiveIn,
+			&i.IntakeView,
 		); err != nil {
 			return nil, err
 		}

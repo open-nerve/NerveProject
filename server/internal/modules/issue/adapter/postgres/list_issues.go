@@ -31,6 +31,9 @@ func (s *Store) Flat(ctx context.Context, in app.ListRead) ([]app.ListRecord, er
 }
 
 // listRecord consumes the identical narrow projection of each list query.
+// It reads no intake row: a list holds no work item in triage (its state
+// catalog leaves the triage state out), and its rows leave Intake nil (M7
+// P2a spec 2.3).
 func listRecord(r gen.FlatIssuesRow, order domain.ListOrder) (app.ListRecord, error) {
 	position, err := listPosition(r, order)
 	if err != nil {

@@ -2,8 +2,10 @@
 -- ProjectGate.Lock, what project.Provide offers the issue module (M4 design 6.5): the first lock of a write on the
 -- work-item side (3.5, decision point 1: B), the project's row FOR NO KEY UPDATE, its workspace's row not locked.
 -- After a wait Postgres evaluates deleted_at IS NULL again on the row's newest version, so a project deleted meanwhile
--- reads no row. The identifier names the project's work items in their activity (3.13), as it is under the lock.
-SELECT workspace_id, (archived_at IS NOT NULL)::boolean AS archived, default_assignee_id, identifier, archive_in
+-- reads no row. The identifier names the project's work items in their activity (3.13), as it is under the lock. Whether
+-- its intake is turned on is read under the lock alone: a submission's and a triage's toggle (M7 P2a spec 2.4), which
+-- updateProject writes under the same row lock.
+SELECT workspace_id, (archived_at IS NOT NULL)::boolean AS archived, default_assignee_id, identifier, archive_in, intake_view
 FROM projects
 WHERE id = sqlc.arg(id) AND deleted_at IS NULL
 FOR NO KEY UPDATE;
@@ -13,7 +15,7 @@ FOR NO KEY UPDATE;
 -- projects among ids FOR NO KEY UPDATE, as LockIssueProject, in one statement, in id order. The lock is taken as the
 -- sorted rows come, so the order is the ids' (S5 E4). After a wait, Postgres evaluates deleted_at IS NULL again on the
 -- row's newest version: a project deleted meanwhile is left out.
-SELECT id, workspace_id, (archived_at IS NOT NULL)::boolean AS archived, default_assignee_id, identifier, archive_in
+SELECT id, workspace_id, (archived_at IS NOT NULL)::boolean AS archived, default_assignee_id, identifier, archive_in, intake_view
 FROM projects
 WHERE id = ANY (sqlc.arg(ids)::uuid[]) AND deleted_at IS NULL
 ORDER BY id

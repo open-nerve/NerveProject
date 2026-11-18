@@ -1,6 +1,9 @@
 -- name: SearchIssues :many
 -- Scope, dates and the entire relationship exclusion precede LIMIT. Recursive
 -- paths intentionally traverse invisible, archived and deleted intermediate rows.
+-- A work item in triage, with an undeleted intake row that is not accepted, is no candidate (M7 P2a spec 2.6): the
+-- intake row is the authoritative mark (spec 2.3, R2), and intake_issues_issue_id_key serves the NOT EXISTS. The rows
+-- read no intake columns: a search finds no work item in triage, and its answer carries none.
 WITH RECURSIVE projects AS (
     SELECT * FROM ROWS FROM(unnest(sqlc.arg(project_ids)::uuid[]), unnest(sqlc.arg(project_own)::boolean[])) AS p(id, own_only)
 ), source AS (
@@ -20,6 +23,7 @@ WITH RECURSIVE projects AS (
            similarity(i.name, @query) AS score
     FROM issues i JOIN projects p ON p.id=i.project_id
     WHERE i.deleted_at IS NULL AND i.archived_at IS NULL
+      AND NOT EXISTS(SELECT 1 FROM intake_issues ii WHERE ii.issue_id=i.id AND ii.deleted_at IS NULL AND ii.status<>'accepted')
       AND (NOT p.own_only OR i.created_by_id=sqlc.arg(actor_id)::uuid)
       AND (sqlc.arg(query)::text='' OR i.project_id=sqlc.narg(exact_project_id)::uuid AND i.sequence_id=sqlc.narg(identifier_number)::integer
            OR i.sequence_id=sqlc.narg(sequence_number)::integer OR i.name ILIKE sqlc.arg(pattern)::text ESCAPE E'\\')

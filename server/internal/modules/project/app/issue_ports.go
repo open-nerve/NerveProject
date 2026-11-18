@@ -26,14 +26,16 @@ type IssueCascade interface {
 // IssueProject is a project as project.Provide's lock for the issue
 // module answers it (M4 design 6.5, ProjectGate.Lock): its workspace,
 // whether it is archived, its default assignee, nil for none, and its
-// identifier and archive policy in months (zero disables it). bootstrap
-// converts it into issue's value.
+// identifier and archive policy in months (zero disables it), and whether
+// its intake is turned on (M7 P2a spec 2.4). bootstrap converts it into
+// issue's value by type, so the two keep their fields alike.
 type IssueProject struct {
 	WorkspaceID       uuid.UUID
 	Archived          bool
 	DefaultAssigneeID *uuid.UUID
 	Identifier        string
 	ArchiveIn         int
+	IntakeView        bool
 }
 
 // IssueState is a state of a project as project.Provide's catalog for the
