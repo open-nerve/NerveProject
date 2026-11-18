@@ -31,3 +31,15 @@ type AccessFactsMany struct {
 	GuestViewAll bool
 	Roles        map[uuid.UUID]shared.Role
 }
+
+// MemberAccessFacts are what project.Provide's MemberProjectAccess answers
+// the access module of each project the user is an active member of (M7
+// P1c spec 2.5): the project, whether it is public, his project role, and
+// whether it shows its guests every work item, as AccessFacts has them.
+// bootstrap converts them into access's value.
+type MemberAccessFacts struct {
+	ProjectID    uuid.UUID
+	Public       bool
+	Role         shared.Role
+	GuestViewAll bool
+}

@@ -57,3 +57,21 @@ func (s *Store) ProjectFactsMany(ctx context.Context, projectID uuid.UUID, ids [
 	}
 	return f, true, nil
 }
+
+// MemberProjectFacts is ProjectFacts for each project of workspaceID that
+// userID is an active member of, what project.Provide offers the access
+// module's ReadableProjects (M7 P1c spec 2.5): the undeleted projects,
+// archived or not, of his active memberships, each with his project role,
+// in id order. It reads in the transaction ctx carries.
+func (s *Store) MemberProjectFacts(ctx context.Context, workspaceID, userID uuid.UUID) ([]app.MemberAccessFacts, error) {
+	rows, err := s.queries(ctx).MemberProjectFacts(ctx, gen.MemberProjectFactsParams{WorkspaceID: workspaceID, UserID: userID})
+	if err != nil {
+		return nil, fmt.Errorf("read the projects of workspace %s that %s is a member of, for a decision: %w", workspaceID, userID, err)
+	}
+	facts := make([]app.MemberAccessFacts, len(rows))
+	for i, r := range rows {
+		facts[i] = app.MemberAccessFacts{ProjectID: r.ID, Public: domain.Network(r.Network) == domain.NetworkPublic,
+			Role: shared.Role(r.MemberRole), GuestViewAll: r.GuestViewAllFeatures}
+	}
+	return facts, nil
+}

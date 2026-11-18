@@ -5,7 +5,6 @@ import (
 	"time"
 	"uuid"
 
-	"github.com/open-nerve/NerveProject/server/internal/modules/access"
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue"
 	"github.com/open-nerve/NerveProject/server/internal/modules/planning"
@@ -71,28 +70,6 @@ func (d projectWorkspaces) ShareWorkspaceBySlug(ctx context.Context, slug string
 func (d projectWorkspaces) ShareWorkspaceByID(ctx context.Context, id uuid.UUID) (project.Workspace, bool, error) {
 	w, found, err := d.directory.ShareWorkspaceByID(ctx, id)
 	return project.Workspace(w), found, err
-}
-
-// accessProjects is project's ProjectAccess as access's port: the same read,
-// the facts converted.
-type accessProjects struct {
-	projects project.ProjectAccess
-}
-
-func (a accessProjects) ProjectFacts(ctx context.Context, projectID, userID uuid.UUID) (access.ProjectFacts, bool, error) {
-	f, found, err := a.projects.ProjectFacts(ctx, projectID, userID)
-	return access.ProjectFacts(f), found, err
-}
-
-// accessProjectsMany is project's ProjectAccessMany as access's port: the
-// same read, the facts converted, the roles as they come.
-type accessProjectsMany struct {
-	projects project.ProjectAccessMany
-}
-
-func (a accessProjectsMany) ProjectFactsMany(ctx context.Context, projectID uuid.UUID, ids []uuid.UUID) (access.ProjectFactsMany, bool, error) {
-	f, found, err := a.projects.ProjectFactsMany(ctx, projectID, ids)
-	return access.ProjectFactsMany(f), found, err
 }
 
 // planningProjects is project's PlanningProjects as planning's Projects:

@@ -76,3 +76,26 @@ type ProjectAccessMany interface {
 	// as ProjectFacts does.
 	ProjectFactsMany(ctx context.Context, projectID uuid.UUID, accountIDs []uuid.UUID) (f ProjectFactsMany, found bool, err error)
 }
+
+// MemberProjectFacts are what MemberProjectAccess reads of a project the
+// caller is an active member of, for Readable (M7 P1c spec 2.5): the
+// project, whether it is public, his project role, and whether it shows its
+// guests every work item, as ProjectFacts has them.
+type MemberProjectFacts struct {
+	ProjectID    uuid.UUID
+	Public       bool
+	Role         shared.Role
+	GuestViewAll bool
+}
+
+// MemberProjectAccess reads the projects of a workspace a caller is an
+// active member of, for Readable (M7 P1c spec 2.5). The project module
+// implements it (project.Provide); bootstrap wires it, converting the
+// facts.
+type MemberProjectAccess interface {
+	// MemberProjectFacts returns the facts of each undeleted project of
+	// workspaceID, archived or not, that userID is an active member of: his
+	// row is_active and not deleted; in project id order. It reads in the
+	// transaction ctx carries, as ProjectFacts does.
+	MemberProjectFacts(ctx context.Context, workspaceID, userID uuid.UUID) ([]MemberProjectFacts, error)
+}
