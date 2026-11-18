@@ -19,7 +19,7 @@ import { expectWorkspaceDeleted } from "../../fixtures/assert/workspace";
 import { archiveWatermark, completedPeriodicJobs } from "../../fixtures/auto-archive";
 import { createCommentReaction, createIssueComment, createIssueReaction } from "../../fixtures/comments";
 import type { Database } from "../../fixtures/db";
-import { furnishIssueRows, furnishPlanningRows, furnishWorkspace } from "../../fixtures/furnish";
+import { furnishAcceptedIntake, furnishIssueRows, furnishPlanningRows, furnishWorkspace } from "../../fixtures/furnish";
 import { createIssue, createIssueRelations, issueDeleted, issueRead } from "../../fixtures/issues";
 import { completedLinkCrawl, createIssueLink } from "../../fixtures/links";
 import { expectModuleLinkCrawled } from "../../fixtures/modules";
@@ -142,7 +142,8 @@ async function seed(api: Api, db: Database, info: TestInfo, admin: Account, memb
     module_ids: [planning.moduleId],
   });
   const child = await createIssue(api, token, project.id, { name: "Child", parent_id: root.id });
-  await createIssue(api, token, project.id, { name: "Grandchild", parent_id: child.id });
+  // The grandchild arrives through the intake, accepted (furnishAcceptedIntake): the tree has an intake_issues row.
+  await furnishAcceptedIntake(api, token, project.id, child.id);
   const comment = await createIssueComment(api, token, root.id, "<p>Physical second-level reaction</p>");
   await furnishIssueFiles(api, token, root.id, comment.id);
   await createCommentReaction(api, token, comment.id);
