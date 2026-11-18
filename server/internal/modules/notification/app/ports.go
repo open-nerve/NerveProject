@@ -179,6 +179,46 @@ type Grant struct {
 	OwnOnly   bool
 }
 
+// Clock reads the business moment (P1c spec 2.3, 2.7, R6): what is snoozed
+// at it, the moment a change stamps under its lock, and mark-all-read's
+// bound. Bootstrap hands over the business clock, UTC at the microsecond.
+type Clock interface {
+	Now() time.Time
+}
+
+// WorkspaceDirectory finds a workspace by its slug (spec 2.2): the
+// workspace module's directory, which bootstrap converts.
+type WorkspaceDirectory interface {
+	// WorkspaceBySlug reads the id of the undeleted workspace slug names,
+	// without a lock, in the transaction ctx carries or on the pool; found
+	// is false when there is none.
+	WorkspaceBySlug(ctx context.Context, slug string) (id uuid.UUID, found bool, err error)
+}
+
+// ReadableProjects are the projects a reader reads in a workspace now
+// (spec 2.5, R1): the access module's ReadableProjects, which bootstrap
+// converts. It decides each by the same rule as Authorize's issue.read: the
+// workspace's undeleted projects, archived or not, he is an active member
+// of while he is one of the workspace, each OwnOnly by his project role;
+// none when he is no member of the workspace. It reads without a lock, in
+// the transaction ctx carries or on the pool.
+type ReadableProjects interface {
+	Readable(ctx context.Context, actor shared.Actor, workspaceID uuid.UUID) ([]Grant, error)
+}
+
+// IssueRefs name the work items a page of notifications names (spec 2.6,
+// R4): the issue module's IssueRefs and the project module's identifiers,
+// composed and converted by bootstrap. It answers, by id, those of ids
+// that are undeleted, archived or not, in a project of grants, archived or
+// not, and that the guest rule does not hide from reader by his grant
+// there, each named with its number, its project's identifier and its
+// name; one it does not answer the reader does not read. It reads once
+// each, without a lock, in the transaction ctx carries, and not at all for
+// no ids.
+type IssueRefs interface {
+	IssueRefs(ctx context.Context, reader uuid.UUID, grants []Grant, ids []uuid.UUID) (map[uuid.UUID]domain.IssueRef, error)
+}
+
 // Inbox is a receiver's notifications in a workspace that he may see at
 // Now (spec 2.5, R2): his undeleted ones of the projects of Grants, in an
 // own-only one only those of the work items he created, one of an unknown
