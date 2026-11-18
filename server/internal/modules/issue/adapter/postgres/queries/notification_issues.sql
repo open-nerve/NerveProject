@@ -32,3 +32,14 @@ WHERE i.id = sqlc.arg(id) AND i.deleted_at IS NULL;
 SELECT comment_stripped
 FROM issue_comments
 WHERE id = sqlc.arg(id) AND deleted_at IS NULL;
+
+-- name: IssueRefRows :many
+-- The undeleted work items among ids, archived or not, each with what names it, its project, its number and its name,
+-- and with its creator, NULL when not known, which the guest rule asks (M7 P1c spec 2.6, R4): a notification's change
+-- names them, its parent and its relations' other ends. The module answers those a reader sees now (IssueRefs), so the
+-- statement reads any project's, another workspace's too. A plain read of what is committed, without a lock, in id
+-- order; the primary key serves it.
+SELECT id, project_id, sequence_id, name, created_by_id
+FROM issues
+WHERE id = ANY (sqlc.arg(ids)::uuid[]) AND deleted_at IS NULL
+ORDER BY id;

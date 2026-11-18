@@ -31,7 +31,7 @@ M7 让五件协作功能经真实接口工作：站内通知（关注工作项�
 | H4 | 收件人在发送那一刻按读权限复核：离开项目、成为只看自己的访客、关注后被移出私有项目的人不收；通知里另一端的工作项（父、关联）按读的人此刻的可见显示 |
 | H5 | 通知列表：“全部 / 提及”两页签、类型（分配给我 / 我创建的 / 我关注的）、未读、已归档、已暂缓；游标分页；只列他现在看得到的项目里的通知 |
 | H6 | 单条的已读 / 未读、归档 / 取消、暂缓 / 取消；暂缓到期即回到收件箱并计入未读；全部已读只作用于当前页签与筛选 |
-| H7 | 未读数（总数、提及数）在侧栏与顶栏，不计已归档和仍在暂缓期的 |
+| H7 | 未读数（“全部”页签的、提及的）在侧栏与顶栏，不计已归档和仍在暂缓期的 |
 | H8 | 项目管理员、成员、访客向收集箱提交；开关关闭时被拒；条目处在 Triage，项目的列表、看板、搜索、工作区列表都没有它；提交时的负责人、提及照常关注与通知 |
 | H9 | 收集箱列表：未处理（待处理 + 暂缓）/ 已处理（接受、拒绝、重复）、筛选与排序、分页；只看自己的访客只看到自己提交的；侧栏的待处理数 |
 | H10 | 分诊：接受（移到默认状态、写一条状态动态、关注者收到通知）、拒绝、暂缓（到期回到待处理）、标重复（同项目里看得到的、不是收集箱条目、不是自己）；不合迁移规则的被拒；只有项目管理员能分诊（§15 B） |
@@ -86,7 +86,7 @@ M7 让五件协作功能经真实接口工作：站内通知（关注工作项�
 
 - 三个状态独立：`read_at`、`archived_at`、`snoozed_till`。暂缓按读那一刻的业务时钟算：`snoozed_till` 在将来为“暂缓中”，已过即回到收件箱（Plane 方向反了且永不到期，D1、D2）。不设定时任务。
 - 列表 `GET /workspaces/{slug}/notifications`：页签 `tab=all|mentions`；`type` 为 `assigned,created,subscribed` 的子集（`all` 页签用）；`read=false` 只看未读；`archived=true` 只看已归档（默认不含）；`snoozed=true` 只看暂缓中（默认不含）。按 `(created_at, id)` 倒序游标分页。只列收件人此刻是有效成员的项目里的通知；只看自己的项目里只列他建的工作项的通知（读时过滤，通知行存工作项的创建者）。项目归档不影响（项目照样读得到）。
-- 未读数 `GET /workspaces/{slug}/notifications/unread-count`：`{total, mentions}`，不计已归档、暂缓中的，同样按可见过滤；有一个只含未读、未归档行的部分索引。
+- 未读数 `GET /workspaces/{slug}/notifications/unread-count`：`{all, mentions}`（P1c R3 由 `total` 改名：两个页签各自的数，“全部”不含提及，照 Plane），不计已归档、暂缓中的，同样按可见过滤；有一个只含未读、未归档行的部分索引。
 - 全部已读 `POST /workspaces/{slug}/notifications/mark-all-read`：请求体与列表的筛选同一组（`tab`、`type`、`archived`、`snoozed`），只作用于那组筛选选中的未读通知（Plane 的参数与列表对不上、“全部”页签会连提及一起标掉，D5）；分批更新，回答标了几条。
 - 单条 `PATCH /notifications/{id}`：`read`、`archived`（布尔）、`snoozed_till`（将来的时刻或 `null`）。只有收件人自己，别人的 404。
 - 保留期：通知不设保留期（Plane 相同）；软删的照 60 天清理；M8 观察增长。
@@ -196,7 +196,7 @@ M7 让五件协作功能经真实接口工作：站内通知（关注工作项�
 |---|---|
 | `POST /issues/{id}/subscribe`、`POST /issues/{id}/unsubscribe` | 204；`IssueDetail.is_subscribed` |
 | `GET /workspaces/{slug}/notifications` | 游标分页，§3.4 的筛选 |
-| `GET /workspaces/{slug}/notifications/unread-count` | `{total, mentions}` |
+| `GET /workspaces/{slug}/notifications/unread-count` | `{all, mentions}` |
 | `POST /workspaces/{slug}/notifications/mark-all-read` | 请求体为列表的筛选，回答标了几条 |
 | `PATCH /notifications/{id}` | `read`、`archived`、`snoozed_till`，回答通知 |
 | `POST /projects/{id}/intake-issues`、`GET /projects/{id}/intake-issues` | 提交；列表（`status`、优先级、标签、负责人、创建者、建立与更新日期，排序为建立、更新时间与编号，游标） |
@@ -329,8 +329,8 @@ P1a 的第一个实现提交把关键词 phase 改为 `M7/P1`（P1a、P1b 共用
 |---|---|---|
 | 设计 | 已合入 main（noff `8d17eed7`，与 P1a 的 spec、plan 一起）；预检 Ready after fixes，修正已改入；负责人 2026-11-17 决定 §15 A–D 按推荐 | [re-81](../../reviews/re-81-M7设计预检.md) |
 | P1a 关注接口与通知要用的事件 | 已完成：合入 main（noff `9a3a388a`），main CI 44034770817 全绿；整分支审查 Ready to merge（五处次要由修复轮处理，限定复审 Ready to merge） | [P1a spec](specs/P1a-subscriptions-events.md) / [P1a plan](plans/P1a-subscriptions-events.md) / [P1a 阶段记录](reviews/P1a-subscriptions-events-review.md) |
-| P1b 通知模块的核心 | 实施完成、待整分支审查与集成：spec 与 plan 经预检 [re-83](../../reviews/re-83-M7P1b预检.md) 修正后通过，基线 main `9a3a388a`（P1a 的 noff）；原 P1b 拆为 P1b、P1c；负责人 2026-11-18 决定自动归档的通知批量投递（spec R12） | [P1b spec](specs/P1b-notification-core.md) / [P1b plan](plans/P1b-notification-core.md) / [P1b 阶段记录](reviews/P1b-notification-core-review.md) |
-| P1c 通知的接口与读 | 未开始 | — |
+| P1b 通知模块的核心 | 已完成：合入 main（noff `1a23f6f8`），main CI 44179902213 全绿；整分支审查 Ready after fixes，修复轮后限定复审 Ready to merge；spec 与 plan 经预检 [re-83](../../reviews/re-83-M7P1b预检.md) 修正后通过，基线 main `9a3a388a`（P1a 的 noff）；原 P1b 拆为 P1b、P1c；负责人 2026-11-18 决定自动归档的通知批量投递（spec R12） | [P1b spec](specs/P1b-notification-core.md) / [P1b plan](plans/P1b-notification-core.md) / [P1b 阶段记录](reviews/P1b-notification-core-review.md) |
+| P1c 通知的接口与读 | 实施完成、待整分支审查与集成：spec 与 plan 经预检 [re-84](../../reviews/re-84-M7P1c预检.md) 修正后通过，基线 main `1a23f6f8`（P1b 的 noff）；两个检查点七项全过，检查点 1 的分支 CI 全绿；阶段记录 [P1c review](reviews/P1c-notification-api-review.md) | [P1c spec](specs/P1c-notification-api.md) / [P1c plan](plans/P1c-notification-api.md) |
 
 ## 15. 决定记录
 

@@ -41,3 +41,21 @@ func (s *Store) NotificationIdentifier(ctx context.Context, workspaceID, project
 	}
 	return identifier, true, nil
 }
+
+// NotificationIdentifiers reads, in one statement and without a lock, the
+// identifiers of the undeleted projects among ids, archived or not, by
+// project (notification_names.sql): what project.Provide offers the
+// notification module's names of the work items a page of notifications
+// names (M7 P1c spec 2.6). A deleted project and an id of none are not
+// among them. It reads in the transaction ctx carries or on the pool.
+func (s *Store) NotificationIdentifiers(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]string, error) {
+	rows, err := s.queries(ctx).NotificationIdentifiers(ctx, ids)
+	if err != nil {
+		return nil, fmt.Errorf("read the identifiers of %d projects for notifications: %w", len(ids), err)
+	}
+	identifiers := make(map[uuid.UUID]string, len(rows))
+	for _, r := range rows {
+		identifiers[r.ID] = r.Identifier
+	}
+	return identifiers, nil
+}

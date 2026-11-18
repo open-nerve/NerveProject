@@ -96,6 +96,7 @@ export const PROBLEM_MESSAGES: Readonly<Record<string, string>> = {
   "planning.module_not_found": "errors.planning_module_not_found",
   "planning.module_link_not_found": "errors.planning_module_link_not_found",
   "planning.module_link_exists": "errors.planning_module_link_exists",
+  "notification.not_found": "errors.notification_not_found",
 };
 
 /** The message of every FieldError.code, shown under the field it names. */

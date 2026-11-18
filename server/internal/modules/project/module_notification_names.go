@@ -28,3 +28,17 @@ type NotificationNames interface {
 // NotificationState is the value NotificationNames hands over: bootstrap
 // converts it into notification's.
 type NotificationState = app.NotificationState
+
+// NotificationIdentifiers are the identifiers of the projects of the work
+// items a page of notifications names, the parents and the relations'
+// other ends its changes name (M7 P1c spec 2.6; pre-flight re-84 m6),
+// read by project ids, in one statement for the page, without a lock, in
+// the transaction ctx carries or on the pool. project.Provide builds them
+// over the pool; bootstrap composes them with issue's IssueRefs for the
+// notification module.
+type NotificationIdentifiers interface {
+	// NotificationIdentifiers reads the identifiers of the undeleted
+	// projects among ids, archived or not, by project; a deleted project
+	// and an id of none are not among them.
+	NotificationIdentifiers(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]string, error)
+}

@@ -218,7 +218,7 @@ func decodeAnswer(t *testing.T, answer string, v any) {
 // matrixRows are the rows, each module's from its file.
 func matrixRows() []matrixRow {
 	return slices.Concat(workspaceMatrixRows(), projectMatrixRows(), memberMatrixRows(), membershipMatrixRows(), stateMatrixRows(),
-		labelMatrixRows(), draftMatrixRows(), searchMatrixRows(), issueMatrixRows(), issueUpdateMatrixRows(), issueArchiveMatrixRows(), issueListMatrixRows(), memberIssueMatrixRows(), subIssueMatrixRows(), relationMatrixRows(), collaborationMatrixRows(), subscriptionMatrixRows(), linkMatrixRows(), assetMatrixRows(), cycleMatrixRows(), transferMatrixRows(), moduleMatrixRows(), moduleLinkMatrixRows(), guestsSeeAllMatrixRows(), countMatrixRows())
+		labelMatrixRows(), draftMatrixRows(), searchMatrixRows(), issueMatrixRows(), issueUpdateMatrixRows(), issueArchiveMatrixRows(), issueListMatrixRows(), memberIssueMatrixRows(), subIssueMatrixRows(), relationMatrixRows(), collaborationMatrixRows(), subscriptionMatrixRows(), linkMatrixRows(), assetMatrixRows(), cycleMatrixRows(), transferMatrixRows(), moduleMatrixRows(), moduleLinkMatrixRows(), guestsSeeAllMatrixRows(), countMatrixRows(), notificationMatrixRows())
 }
 
 // matrixApps is how many cells may run an app of their own at once: each
@@ -262,18 +262,20 @@ func (d matrixData) config(t *testing.T, url string, change func(*config.Config)
 // the freeze job freezes them (freezeSeededCycles), and the modules of
 // matrixModules, each with its link; through the issue
 // store, the work items of seededItems, once guestViewAll shows its guests
-// every one (issueSeed), and the relations of seededRelations; through the
-// project store, acme's archived project archived. Through both stores,
-// the removed member's removal; then, through the workspace store, the
-// invitations of matrixInvitations. Through the project store, the
+// every one (issueSeed), and the relations of seededRelations; through SQL,
+// the notifications of matrixNotifications (seedMatrixNotifications);
+// through the project store, acme's archived project archived. Through
+// both stores, the removed member's removal; then, through the workspace
+// store, the invitations of matrixInvitations. Through the project store, the
 // memberships P5b's writes end (endings); through SQL, the membership
 // states no store makes alone (partingStates). Through the API, gone
 // deleted by its admin, which soft-deletes its memberships and its
-// project, with its states, labels, work items and relation, with it;
+// project, with its states, labels, work items, relation and notification,
+// with it;
 // then the checks that the rows the cells rest on are there
 // (preconditions), the states, the labels, the work items and the
 // relations among them (seededStates, seededLabels, seededIssues,
-// seededRelationRows).
+// seededRelationRows), and the notifications (seededNotificationRows).
 // Everything that connected to the database is closed when it returns, so
 // that it can be copied. A -run that leaves out prepare fails here, not
 // with a 401 in every cell.
@@ -335,6 +337,7 @@ func prepareMatrix(t *testing.T) matrixData {
 				t.Fatal(err)
 			}
 		}
+		seedMatrixNotifications(t, pool, s, seed.now)
 		seedMatrixAssets(t, pool, s, seed.now)
 		projects.archive("acme/archived")
 		projects.removal(s)
@@ -359,6 +362,7 @@ func prepareMatrix(t *testing.T) matrixData {
 		issues.seededRelationRows(s)
 		issues.seededCommentRows(s)
 		issues.seededLinkRows(s)
+		seededNotificationRows(t, pool, s)
 	})
 	if !prepared {
 		t.FailNow()

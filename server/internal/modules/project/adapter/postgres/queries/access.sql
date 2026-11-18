@@ -17,3 +17,14 @@ LEFT JOIN project_members m
        ON m.project_id = p.id AND m.member_id = ANY (sqlc.arg(ids)::uuid[]) AND m.is_active AND m.deleted_at IS NULL
 WHERE p.id = sqlc.arg(project_id) AND p.deleted_at IS NULL
 ORDER BY m.member_id;
+
+-- name: MemberProjectFacts :many
+-- ProjectFacts for each project of the workspace the user is an active member of, access's ReadableProjects (M7 P1c
+-- spec 2.5): the undeleted projects, archived or not, of his active memberships (is_active and not deleted), each with
+-- his project role, in id order; none for a workspace he is no active member of a project of.
+SELECT p.id, p.network, p.guest_view_all_features, m.role AS member_role
+FROM projects p
+JOIN project_members m
+  ON m.project_id = p.id AND m.member_id = sqlc.arg(user_id) AND m.is_active AND m.deleted_at IS NULL
+WHERE p.workspace_id = sqlc.arg(workspace_id) AND p.deleted_at IS NULL
+ORDER BY p.id;

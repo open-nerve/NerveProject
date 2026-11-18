@@ -39,6 +39,8 @@ M4 的最终 C12、准确分支 CI 和未来 main 集成分别由[验收台账](
 
 **处理结果（M7/P1b）：** 发送时复核已实现（[P1b spec](../specs/P1b-notification-core.md) §2.4、§2.7、§2.9）：订阅者只在写的事务里投 `notification.fanout`，任务在事务外以 `FOR SHARE` 锁工作项行后，按那一刻的 `issue.read` 与只看自己（发送时快照里的创建者，`HiddenFrom`）批量判定收件人（`DecideMany`，与 `Authorize` 在权限矩阵的种子上逐格等价，含工作区管理员兼项目访客与 `guest_view_all_features` 的两种取值）。反例都在 bootstrap：排队→撤权→发送（移出项目、结束工作区成员、降为只看自己的访客、移出私有项目、管理员兼访客，`notification_recheck_test.go`）；系统执行者（自动归档，执行者为空，`notification_issue_writes_test.go`）；父范围删除（项目删除时通知的删除等工作项删完再删，`notification_interleaving_test.go`）；回滚不发通知（`notification_rollback_test.go`）。通知不引用旧描述：描述的变化不通知，HTML 不进任务参数，评论只存纯文本摘录；父工作项与关联的另一端只存 id，按读的人此刻的可见解析由 P1c 交付。本条保持 open，到 P1c 的读与另一端的解析合入时关闭。
 
+**处理结果（M7/P1c）：** 读时的可见与另一端已实现（[P1c spec](../specs/P1c-notification-api.md) §2.5、§2.6、R4、R7）：通知的四个接口只列读的人此刻读得到的项目（含已归档的）里的，只看自己按存下的创建者（与 `Authorize`、`HiddenFrom` 的等价测试）；父工作项与关联的另一端按读的人此刻的可见给出编号与名字，读不到的连 id 也不给，回答里的 id 按白名单（新加关联类型而通知没跟上时不漏出 id，守卫测试）。排队→撤权→读的各种情形见 `notification_visibility_test.go`、`notification_other_ends_test.go`。**本条关闭。**
+
 <a id="M7-03"></a>
 ## M7-03 视图与跨项目列表
 

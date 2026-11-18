@@ -1,0 +1,501 @@
+# notification 模块的接口（M7 设计 §5、P1c spec §2）。生成的 Go 代码在
+# server/internal/modules/notification/adapter/http/gen（make gen-go）。
+# 列表的筛选参数都声明为字符串，由 domain 解析（P1c spec §2.3，预检 re-84 I6）：
+# 声明为布尔时非法值由绑定回答 400，声明为数组时网页客户端要改序列化。
+openapi: 3.1.0
+info:
+  title: Nerve notification API
+  version: v0
+paths:
+  /api/v0/workspaces/{slug}/notifications:
+    parameters:
+      - $ref: '#/components/parameters/Slug'
+    get:
+      operationId: listNotifications
+      tags: [notification]
+      summary: List the caller's notifications in a workspace
+      description: >-
+        The caller's own notifications in the workspace, for any active
+        member: those of the projects he reads now, archived ones too, and in
+        a project where he sees only his own work items, those of the work
+        items he created; what he reads now decides, not what he read when
+        they were sent. The newest first, by created_at, the moment of the
+        change, then by id, both descending. A notification sent late keeps
+        the moment of its change, so it can land on a page already read: the
+        first page's cursor does not tell whether there are new ones. The
+        filters are ANDed. Each is a string the server parses: a value that
+        is none of those listed, an empty type member or one given twice
+        answers 422 validation_failed, invalid_format on that parameter, and
+        type with tab=mentions not_allowed on type. An unknown parameter
+        answers 422 not_allowed on it, and a parameter given more than once
+        invalid_format. A cursor that does not decode answers 400 bad_request
+        on cursor; a limit that is not an integer, 400, and one outside
+        1–100, 422. A workspace that does not exist, is deleted, or of which
+        the caller is not an active member answers workspace.not_found. What
+        he reads and the page are read in one snapshot. data is each
+        notification's snapshot as it was sent, but for the ids of its
+        change, which NotificationChange answers as the caller reads them
+        now.
+      security: [{bearer: []}]
+      x-problem-codes: [workspace.not_found, validation_failed, bad_request]
+      parameters:
+        - name: tab
+          in: query
+          description: >-
+            all, the default: every notification but the mentions; mentions:
+            the mentions alone (sender mentioned).
+          schema: {type: string, default: all}
+        - name: type
+          in: query
+          description: >-
+            Only in the all tab: the senders to list, a comma-separated set of
+            one or more of assigned, created and subscribed, each once, e.g.
+            assigned,created. Absent, every sender of the tab.
+          schema: {type: string}
+        - name: read
+          in: query
+          description: >-
+            false lists the unread notifications alone, true the read ones
+            alone; absent, both. Only the strings true and false are allowed.
+          schema: {type: string}
+        - name: archived
+          in: query
+          description: >-
+            false, the default, lists the notifications that are not
+            archived, true the archived ones alone. Only the strings true and
+            false are allowed.
+          schema: {type: string, default: 'false'}
+        - name: snoozed
+          in: query
+          description: >-
+            A notification is snoozed while its snoozed_till is after the
+            moment of the read. false, the default, lists the notifications
+            that are not snoozed, those whose snooze is over among them; true
+            the snoozed ones alone. Only the strings true and false are
+            allowed.
+          schema: {type: string, default: 'false'}
+        - $ref: '../common.yaml#/components/parameters/Limit'
+        - $ref: '../common.yaml#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: A page of the caller's notifications, with null next_cursor on the last page.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationPage'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/workspaces/{slug}/notifications/unread-count:
+    parameters:
+      - $ref: '#/components/parameters/Slug'
+    get:
+      operationId: getNotificationUnreadCount
+      tags: [notification]
+      summary: Count the caller's unread notifications in a workspace
+      description: >-
+        How many of the caller's notifications in the workspace, of those he
+        sees as listNotifications lists them, are unread, not archived and
+        not snoozed at the moment of the read (one whose snooze is over
+        counts): one count for each of its tabs. Any query parameter answers
+        422 not_allowed on it. A workspace that does not exist, is deleted,
+        or of which the caller is not an active member answers
+        workspace.not_found.
+      security: [{bearer: []}]
+      x-problem-codes: [workspace.not_found, validation_failed]
+      responses:
+        '200':
+          description: The two counts.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationUnreadCount'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/workspaces/{slug}/notifications/mark-all-read:
+    parameters:
+      - $ref: '#/components/parameters/Slug'
+    post:
+      operationId: markAllNotificationsRead
+      tags: [notification]
+      summary: Mark the caller's unread notifications in a workspace read
+      description: >-
+        Marks read the caller's unread notifications in the workspace that
+        the body's filters select, as listNotifications' filters of the same
+        names select them, of those he sees as it lists them. When it starts
+        it reads its moment and what he sees, once: a notification of a
+        change after that moment is not marked, nor one of a project he no
+        longer reads, and read_at is that moment for every one it marks. It
+        marks them in batches, each in a transaction of its own, and never
+        waits for a notification another write holds: it passes over one
+        being deleted, or being changed at that moment, which it may then
+        leave unread. A notification of a change before its moment that is
+        sent while it runs may be marked. When a batch fails it answers that
+        error, and the batches before it stay marked: asking again marks the
+        rest. A tab or a type that listNotifications would refuse answers 422
+        validation_failed on it, and any query parameter 422 not_allowed on
+        it. A workspace that does not exist, is deleted,
+        or of which the caller is not an active member answers
+        workspace.not_found.
+      security: [{bearer: []}]
+      x-problem-codes: [workspace.not_found, validation_failed]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationMarkAllRead'
+      responses:
+        '200':
+          description: How many notifications it marked.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationsMarked'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/notifications/{notification_id}:
+    parameters:
+      - $ref: '#/components/parameters/NotificationID'
+    patch:
+      operationId: updateNotification
+      tags: [notification]
+      summary: Change the caller's notification
+      description: >-
+        Changes the states of the caller's own notification, each on its
+        own: read true marks it read when it is not, with read_at the moment
+        of the change, and keeps it as it is when it is; false marks it
+        unread. archived does the same with archived_at. snoozed_till, a
+        moment after now, snoozes it until then; null ends its snooze. A
+        field left out stays as it is; {} changes nothing and answers the
+        notification. A notification that does not exist, is deleted, is
+        another's, is of a workspace of which the caller is not an active
+        member, of a project he does not read now, or, in a project where he
+        sees only his own work items, of a work item he did not create,
+        answers notification.not_found, the same answer as an id that never
+        was. That is decided before the values are: a snoozed_till that is
+        not after now answers 422 must_be_future on snoozed_till on the
+        caller's own notification that he sees, and notification.not_found
+        on any other. null for read or archived, or a value of another type,
+        answers 400 bad_request. The notification is locked and the moment
+        read after the lock; a lock not had within the work items' lock wait
+        answers server_busy. The answer is the notification as
+        listNotifications answers it.
+      security: [{bearer: []}]
+      x-problem-codes: [notification.not_found, validation_failed, server_busy]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationUpdate'
+      responses:
+        '200':
+          description: The notification, changed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notification'
+        default:
+          $ref: '#/components/responses/Problem'
+components:
+  # 与 api/openapi.yaml 的相同：打包时丢掉模块文件的 securitySchemes，oapi-codegen 读这一份（M0-P3 交接 3）
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer
+  parameters:
+    Slug:
+      name: slug
+      in: path
+      required: true
+      description: A workspace's slug, as in the web app's address.
+      schema:
+        type: string
+    NotificationID:
+      name: notification_id
+      in: path
+      required: true
+      description: A notification's id (Notification.id).
+      schema:
+        type: string
+        format: uuid
+  responses:
+    Problem:
+      description: Error (RFC 9457 problem details).
+      headers:
+        Retry-After:
+          description: >-
+            Whole seconds to wait before trying again, rounded up; sent with
+            rate_limited and server_busy.
+          schema:
+            type: integer
+            minimum: 1
+        WWW-Authenticate:
+          description: >-
+            Sent with every 401 (RFC 9110 15.5.2): Bearer error="invalid_token"
+            (RFC 6750 3) when the bearer token sent is refused before the
+            operation runs, being invalid or expired; plain Bearer for every
+            other 401, including a credential that the operation finds revoked
+            while it runs.
+          schema:
+            type: string
+      content:
+        application/problem+json:
+          schema:
+            $ref: '../common.yaml#/components/schemas/Problem'
+  schemas:
+    NotificationSender:
+      description: >-
+        Why the caller was notified, settled when the notification was sent:
+        mentioned, he was mentioned; else created, he created the work item;
+        assigned, he was one of its assignees; subscribed, he subscribes to
+        it.
+      type: string
+      enum: [created, assigned, subscribed, mentioned]
+    NotificationTab:
+      description: >-
+        A tab of the caller's notifications: all, every notification but the
+        mentions; mentions, the mentions alone (sender mentioned).
+      type: string
+      enum: [all, mentions]
+    NotificationType:
+      description: A sender that a filter's type may name, only in the all tab.
+      type: string
+      enum: [assigned, created, subscribed]
+    NotificationVerb:
+      description: >-
+        What the change did: created, updated or deleted, as the work item's
+        activity says it; mentioned for a mention.
+      type: string
+      enum: [created, updated, deleted, mentioned]
+    Notification:
+      description: >-
+        One of the caller's notifications, of one change of a work item: why
+        he was notified, who made the change, the work item and the change as
+        they were when it was sent, and its three states, each changed on
+        its own.
+      type: object
+      additionalProperties: false
+      required: [id, workspace_id, project_id, issue_id, sender, triggered_by_id, data, read_at, archived_at, snoozed_till, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        workspace_id:
+          type: string
+          format: uuid
+        project_id:
+          type: string
+          format: uuid
+        issue_id:
+          description: The work item the change is of.
+          type: string
+          format: uuid
+        sender:
+          $ref: '#/components/schemas/NotificationSender'
+        triggered_by_id:
+          description: The account that made the change; null when nerve itself made it, or once that account is gone.
+          type: [string, 'null']
+          format: uuid
+        data:
+          $ref: '#/components/schemas/NotificationData'
+        read_at:
+          description: When it was read; null while it is unread.
+          type: [string, 'null']
+          format: date-time
+        archived_at:
+          description: When it was archived; null while it is not.
+          type: [string, 'null']
+          format: date-time
+        snoozed_till:
+          description: >-
+            Till when it is snoozed: while this is after now it is snoozed,
+            and after that it is listed and counted as any other; null when
+            it was never snoozed, or its snooze was ended.
+          type: [string, 'null']
+          format: date-time
+        created_at:
+          description: >-
+            The moment of the change, not when the notification was written;
+            the notifications of one change share it.
+          type: string
+          format: date-time
+    NotificationData:
+      description: The work item and the change, as they were when the notification was sent.
+      type: object
+      additionalProperties: false
+      required: [issue, change]
+      properties:
+        issue:
+          $ref: '#/components/schemas/NotificationIssue'
+        change:
+          $ref: '#/components/schemas/NotificationChange'
+    NotificationIssue:
+      description: >-
+        The work item as it was when the notification was sent: its name, its
+        number, its project's identifier, and its state's name and group, a
+        StateGroup of the project API (backlog, unstarted, started, completed
+        or cancelled).
+      type: object
+      additionalProperties: false
+      required: [id, name, sequence_id, identifier, state_name, state_group]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        sequence_id:
+          description: Its number in its project, from 1; with the project's identifier, as in WEB-12.
+          type: integer
+        identifier:
+          type: string
+        state_name:
+          type: string
+        state_group:
+          type: string
+    NotificationChange:
+      description: >-
+        The change the notification is of, as it was sent, but for its ids:
+        old_id and new_id are an account's for assignees, a label's for
+        labels and a state's for state; for parent and a relation's fields,
+        a work item's, given only when the caller reads that work item now,
+        with old_issue or new_issue; null for every other field. Every key is
+        there; null where the change has no such value.
+      type: object
+      additionalProperties: false
+      required: [field, verb, old_value, new_value, old_id, new_id, old_issue, new_issue, comment_id, excerpt]
+      properties:
+        field:
+          description: >-
+            What changed: issue, for the work item's creation; a field of the
+            work item (name, parent, priority, state, start_date, target_date,
+            labels, assignees, archived_at); comment, link or attachment; a
+            relation's type as the work item reads it (relates_to, duplicate,
+            blocking, blocked_by); for a mention, description or comment,
+            where the caller was mentioned.
+          type: string
+        verb:
+          $ref: '#/components/schemas/NotificationVerb'
+        old_value:
+          description: The value before the change, as the work item's activity writes it; null for none.
+          type: [string, 'null']
+        new_value:
+          description: The value after the change, as the work item's activity writes it; null for none.
+          type: [string, 'null']
+        old_id:
+          description: The id of the value before the change, as NotificationChange says; null for none.
+          type: [string, 'null']
+          format: uuid
+        new_id:
+          description: The id of the value after the change, as NotificationChange says; null for none.
+          type: [string, 'null']
+          format: uuid
+        old_issue:
+          description: The work item old_id names, for parent and a relation's fields, when the caller reads it now; null otherwise.
+          oneOf:
+            - $ref: '#/components/schemas/NotificationIssueRef'
+            - type: 'null'
+        new_issue:
+          description: The work item new_id names, for parent and a relation's fields, when the caller reads it now; null otherwise.
+          oneOf:
+            - $ref: '#/components/schemas/NotificationIssueRef'
+            - type: 'null'
+        comment_id:
+          description: The comment the change is of; null for none.
+          type: [string, 'null']
+          format: uuid
+        excerpt:
+          description: >-
+            The first 200 characters of the comment's plain text when the
+            notification was sent, for its creation, its change and a mention
+            in it; null for none.
+          type: [string, 'null']
+    NotificationIssueRef:
+      description: >-
+        A work item a change names, as the caller reads it now, archived or
+        not: its number, its project's identifier and its name, now.
+      type: object
+      additionalProperties: false
+      required: [id, sequence_id, identifier, name]
+      properties:
+        id:
+          type: string
+          format: uuid
+        sequence_id:
+          description: Its number in its project, from 1; with the project's identifier, as in WEB-12.
+          type: integer
+        identifier:
+          type: string
+        name:
+          type: string
+    NotificationPage:
+      type: object
+      additionalProperties: false
+      required: [data, next_cursor]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Notification'
+        next_cursor:
+          $ref: '../common.yaml#/components/schemas/NextCursor'
+    NotificationUnreadCount:
+      description: >-
+        The caller's unread notifications that are neither archived nor
+        snoozed, of those he sees: all, of the all tab, every sender but
+        mentioned; mentions, of the mentions tab.
+      type: object
+      additionalProperties: false
+      required: [all, mentions]
+      properties:
+        all:
+          type: integer
+          format: int64
+        mentions:
+          type: integer
+          format: int64
+    NotificationMarkAllRead:
+      description: >-
+        Which unread notifications to mark read, as listNotifications'
+        filters of the same names select them: tab, all when left out; type,
+        only in the all tab, one or more of its senders, each once, every
+        sender of the tab when left out; archived and snoozed, false when
+        left out. {} marks the unread ones of the all tab that are neither
+        archived nor snoozed.
+      type: object
+      additionalProperties: false
+      properties:
+        tab:
+          $ref: '#/components/schemas/NotificationTab'
+        type:
+          type: array
+          items:
+            $ref: '#/components/schemas/NotificationType'
+        archived:
+          type: boolean
+        snoozed:
+          type: boolean
+    NotificationsMarked:
+      type: object
+      additionalProperties: false
+      required: [marked]
+      properties:
+        marked:
+          description: How many notifications it marked read.
+          type: integer
+          format: int64
+    NotificationUpdate:
+      type: object
+      additionalProperties: false
+      properties:
+        read:
+          description: true marks it read, false unread.
+          type: boolean
+        archived:
+          description: true archives it, false unarchives it.
+          type: boolean
+        snoozed_till:
+          description: A moment after now snoozes it until then; null ends its snooze.
+          type: [string, 'null']
+          format: date-time

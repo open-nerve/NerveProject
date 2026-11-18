@@ -171,3 +171,158 @@ type NotificationRow struct {
 	ChangeSeq      int16
 	Data           domain.Data
 }
+
+// Grant is a project whose notifications a reader may see (P1c spec 2.5):
+// one he reads the work items of, only those he created when OwnOnly.
+type Grant struct {
+	ProjectID uuid.UUID
+	OwnOnly   bool
+}
+
+// Clock reads the business moment (P1c spec 2.3, 2.7, R6): what is snoozed
+// at it, the moment a change stamps under its lock, and mark-all-read's
+// bound. Bootstrap hands over the business clock, UTC at the microsecond.
+type Clock interface {
+	Now() time.Time
+}
+
+// WorkspaceDirectory finds a workspace by its slug (spec 2.2): the
+// workspace module's directory, which bootstrap converts.
+type WorkspaceDirectory interface {
+	// WorkspaceBySlug reads the id of the undeleted workspace slug names,
+	// without a lock, in the transaction ctx carries or on the pool; found
+	// is false when there is none.
+	WorkspaceBySlug(ctx context.Context, slug string) (id uuid.UUID, found bool, err error)
+}
+
+// ReadableProjects are the projects a reader reads in a workspace now
+// (spec 2.5, R1): the access module's ReadableProjects, which bootstrap
+// converts. It decides each by the same rule as Authorize's issue.read: the
+// workspace's undeleted projects, archived or not, he is an active member
+// of while he is one of the workspace, each OwnOnly by his project role;
+// none when he is no member of the workspace. It reads without a lock, in
+// the transaction ctx carries or on the pool.
+type ReadableProjects interface {
+	Readable(ctx context.Context, actor shared.Actor, workspaceID uuid.UUID) ([]Grant, error)
+}
+
+// IssueRefs name the work items a page of notifications names (spec 2.6,
+// R4): the issue module's IssueRefs and the project module's identifiers,
+// composed and converted by bootstrap. It answers, by id, those of ids
+// that are undeleted, archived or not, in a project of grants, archived or
+// not, and that the guest rule does not hide from reader by his grant
+// there, each named with its number, its project's identifier and its
+// name; one it does not answer the reader does not read. It reads once
+// each, without a lock, in the transaction ctx carries, and not at all for
+// no ids.
+type IssueRefs interface {
+	IssueRefs(ctx context.Context, reader uuid.UUID, grants []Grant, ids []uuid.UUID) (map[uuid.UUID]domain.IssueRef, error)
+}
+
+// Inbox is a receiver's notifications in a workspace that he may see at
+// Now (spec 2.5, R2): his undeleted ones of the projects of Grants, in an
+// own-only one only those of the work items he created, one of an unknown
+// creator not; Now also decides what is snoozed (R6).
+type Inbox struct {
+	ReceiverID, WorkspaceID uuid.UUID
+	Grants                  []Grant
+	Now                     time.Time
+}
+
+// Notification is a receiver's notification as he is answered it (spec
+// 2.4): its work item, its sender and the account that sent it, nil for
+// nerve, its snapshot, its three states and its event's moment.
+type Notification struct {
+	ID, WorkspaceID, ProjectID, IssueID uuid.UUID
+	Sender                              domain.Sender
+	TriggeredByID                       *uuid.UUID
+	Data                                domain.Data
+	State                               domain.State
+	CreatedAt                           time.Time
+}
+
+// StoredNotification is a notification read alone (spec 2.7, steps 1 and
+// 4): it, and its work item's creator, nil when not known, which the guest
+// rule decides on.
+type StoredNotification struct {
+	Notification
+	IssueCreatedByID *uuid.UUID
+}
+
+// ListRead is a page of the list (spec 2.3): the Inbox's notifications
+// Filter selects, newest first and then by id, after the row of After when
+// it is not nil, at most Limit of them, which includes the lookahead.
+type ListRead struct {
+	Inbox
+	Filter domain.ListFilter
+	After  *domain.ListCursor
+	Limit  int
+}
+
+// UnreadRead is the unread counts' read (spec 2.2, R3): the Inbox's
+// unread, unarchived notifications not snoozed at its Now, counted for the
+// senders of each tab, All's and Mentions'.
+type UnreadRead struct {
+	Inbox
+	All, Mentions []domain.Sender
+}
+
+// UnreadCounts are the two unread counts, the all tab's and the mentions
+// tab's.
+type UnreadCounts struct {
+	All, Mentions int
+}
+
+// NotificationLists read a receiver's notifications without a lock, in the
+// transaction ctx carries (spec 2.3, R2, R3): every condition, the guest
+// rule's own-only one too, is the SQL's, before its LIMIT.
+type NotificationLists interface {
+	ListNotifications(ctx context.Context, r ListRead) ([]Notification, error)
+	CountUnread(ctx context.Context, r UnreadRead) (UnreadCounts, error)
+}
+
+// StateWrite is a receiver's change of his notification ID's three states
+// to State, at At (spec 2.7, step 7).
+type StateWrite struct {
+	ID, ReceiverID uuid.UUID
+	State          domain.State
+	At             time.Time
+}
+
+// NotificationRows read a receiver's undeleted notification alone, and
+// change it, in the transaction ctx carries (spec 2.7); another receiver's,
+// a deleted one and none at all are alike not found. LockNotification
+// locks its row alone FOR NO KEY UPDATE and reads it as the lock does, so
+// one deleted while it waited is not found; UpdateNotification writes, only
+// under that lock, the states, the moment and the receiver as the last
+// writer, and answers the row as it now stores it.
+type NotificationRows interface {
+	GetNotification(ctx context.Context, id, receiverID uuid.UUID) (n StoredNotification, found bool, err error)
+	LockNotification(ctx context.Context, id, receiverID uuid.UUID) (n StoredNotification, found bool, err error)
+	UpdateNotification(ctx context.Context, w StateWrite) (Notification, error)
+}
+
+// ReadBatch is a batch of mark-all-read (spec 2.7): of the Inbox's unread
+// notifications of an event at or before its Now that Filter selects,
+// those after the id After, at most Limit of them in id order.
+type ReadBatch struct {
+	Inbox
+	Filter domain.Filter
+	After  uuid.UUID
+	Limit  int
+}
+
+// MarkedBatch is what a batch marked: how many rows, and the greatest of
+// their ids, the next batch's After; After itself when it marked none.
+type MarkedBatch struct {
+	Marked int
+	Last   uuid.UUID
+}
+
+// ReadMarks mark a batch read at its Now by its receiver, in the
+// transaction ctx carries (spec 2.7, R5): it never waits for a row lock,
+// it passes over a row another transaction holds, and a batch that marks
+// fewer than its Limit is the last.
+type ReadMarks interface {
+	MarkReadBatch(ctx context.Context, b ReadBatch) (MarkedBatch, error)
+}

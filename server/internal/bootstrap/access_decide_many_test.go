@@ -9,6 +9,8 @@ import (
 	"time"
 	"uuid"
 
+	"github.com/jackc/pgx/v5/pgxpool"
+
 	"github.com/open-nerve/NerveProject/server/internal/modules/access"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project"
 	projectpg "github.com/open-nerve/NerveProject/server/internal/modules/project/adapter/postgres"
@@ -77,7 +79,22 @@ func TestDecideManyIsAuthorizeOnTheMatrixSeed(t *testing.T) {
 		}
 	}
 	compare("the seed")
+	statesNoRequestMakes(t, pool, s)
+	compare("the seed with the states no request makes alone")
+}
 
+// statesNoRequestMakes puts the copy pool holds of the matrix's seed s in
+// the states, made by SQL and the project store, in which a read of many
+// accounts' or many projects' facts could part from Authorize's read of one
+// and that no request makes alone (M7 P1b spec 2.7, P1c spec 2.5): the
+// removed member's membership of acme's public project active again, his
+// of acme still ended; PM's membership of acme deleted, his project
+// memberships left; acme's archived project deleted alone, its memberships
+// left; other deleted alone, its memberships and project left; and acme's
+// member a member of other's project. Each SQL statement must change one
+// row (matrixSeed.exec).
+func statesNoRequestMakes(t *testing.T, pool *pgxpool.Pool, s seeded) {
+	t.Helper()
 	now, exec := time.Now(), func(sql string, args ...any) { matrixSeed{}.exec(t, pool, sql, args...) }
 	exec("UPDATE project_members SET is_active = true WHERE project_id = $1 AND member_id = $2 AND NOT is_active AND deleted_at IS NULL",
 		s.project("acme/public"), s.account(callerRemoved))
@@ -85,12 +102,11 @@ func TestDecideManyIsAuthorizeOnTheMatrixSeed(t *testing.T) {
 		s.workspace("acme"), s.account(callerProjectMember), now)
 	exec("UPDATE projects SET deleted_at = $2 WHERE id = $1 AND deleted_at IS NULL", s.project("acme/archived"), now)
 	exec("UPDATE workspaces SET deleted_at = $2 WHERE id = $1 AND deleted_at IS NULL", s.workspace("other"), now)
-	if err := projectpg.New(pool).CreateMember(ctx, projectapp.MemberRow{ID: uuid.NewV7(), WorkspaceID: s.workspace("other"),
+	if err := projectpg.New(pool).CreateMember(context.Background(), projectapp.MemberRow{ID: uuid.NewV7(), WorkspaceID: s.workspace("other"),
 		ProjectID: s.project("other/project"), MemberID: s.account(callerMember), Role: shared.RoleMember, CreatedBy: s.account(callerNever),
 		Now: now}); err != nil {
 		t.Fatal(err)
 	}
-	compare("the seed with the states no request makes alone")
 }
 
 // fakeProjectAccessMany answers the facts it holds by project, and records

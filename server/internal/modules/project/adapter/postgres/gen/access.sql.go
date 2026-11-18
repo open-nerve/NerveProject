@@ -11,6 +11,55 @@ import (
 	"uuid"
 )
 
+const memberProjectFacts = `-- name: MemberProjectFacts :many
+SELECT p.id, p.network, p.guest_view_all_features, m.role AS member_role
+FROM projects p
+JOIN project_members m
+  ON m.project_id = p.id AND m.member_id = $1 AND m.is_active AND m.deleted_at IS NULL
+WHERE p.workspace_id = $2 AND p.deleted_at IS NULL
+ORDER BY p.id
+`
+
+type MemberProjectFactsParams struct {
+	UserID      uuid.UUID
+	WorkspaceID uuid.UUID
+}
+
+type MemberProjectFactsRow struct {
+	ID                   uuid.UUID
+	Network              int16
+	GuestViewAllFeatures bool
+	MemberRole           int16
+}
+
+// ProjectFacts for each project of the workspace the user is an active member of, access's ReadableProjects (M7 P1c
+// spec 2.5): the undeleted projects, archived or not, of his active memberships (is_active and not deleted), each with
+// his project role, in id order; none for a workspace he is no active member of a project of.
+func (q *Queries) MemberProjectFacts(ctx context.Context, arg MemberProjectFactsParams) ([]MemberProjectFactsRow, error) {
+	rows, err := q.db.Query(ctx, memberProjectFacts, arg.UserID, arg.WorkspaceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []MemberProjectFactsRow
+	for rows.Next() {
+		var i MemberProjectFactsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Network,
+			&i.GuestViewAllFeatures,
+			&i.MemberRole,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const projectFacts = `-- name: ProjectFacts :one
 SELECT p.workspace_id, p.network, p.guest_view_all_features, m.role AS member_role
 FROM projects p

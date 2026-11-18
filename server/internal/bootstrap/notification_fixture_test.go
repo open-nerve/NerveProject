@@ -20,6 +20,7 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace"
 	"github.com/open-nerve/NerveProject/server/internal/platform/config"
 	"github.com/open-nerve/NerveProject/server/internal/platform/jobs"
+	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 )
 
@@ -133,16 +134,26 @@ func waitNotificationDeletion(t *testing.T, pool *pgxpool.Pool, project uuid.UUI
 }
 
 // notificationDeps are the notification module's dependencies over pool as
-// newApp builds them, with cfg's job settings: the issue, the project and
-// the access modules' ports, each from its own Provide, converted.
+// newApp builds them, with cfg's job settings: the issue, the project, the
+// workspace and the access modules' ports, each from its own Provide,
+// converted; cfg's business clock and the transactions of its API.
 func notificationDeps(pool *pgxpool.Pool, cfg config.Config) notification.Deps {
-	workspaces, projects := workspace.Provide(pool, nil), project.Provide(pool, nil)
+	workspaces, projects, issues := workspace.Provide(pool, nil), project.Provide(pool, nil), issue.Provide(pool, nil)
 	decider := access.NewDecider(access.DeciderDeps{WorkspaceRoles: workspaces.WorkspaceRolesMany,
 		ProjectAccess: accessProjectsMany{projects: projects.ProjectAccessMany}})
-	return notification.Deps{Pool: pool, Issues: notificationIssues{issues: issue.Provide(pool, nil).NotificationIssues},
+	authorizer := access.New(access.Deps{WorkspaceRoles: workspaces.WorkspaceRoles, ProjectAccess: accessProjects{projects: projects.ProjectAccess}})
+	readable := access.NewReadableProjects(access.ReadableDeps{WorkspaceRoles: workspaces.WorkspaceRoles,
+		Projects: accessMemberProjects{projects: projects.MemberProjectAccess}})
+	issueTx := newIssueJobTx(pool, cfg)
+	return notification.Deps{Pool: pool, Issues: notificationIssues{issues: issues.NotificationIssues},
 		Projects: notificationProjects{names: projects.NotificationNames}, Readers: notificationReaders{decider: decider},
-		JobTx: newIssueJobTx(pool, cfg), RuntimeNow: time.Now, Logger: slog.New(slog.DiscardHandler),
-		DeleteBatch: cfg.Notification.DeleteBatch, DeleteBudget: cfg.Notification.DeleteBudget}
+		JobTx: issueTx, RuntimeNow: time.Now, Logger: slog.New(slog.DiscardHandler),
+		DeleteBatch: cfg.Notification.DeleteBatch, DeleteBudget: cfg.Notification.DeleteBudget,
+		Workspaces: notificationWorkspaces{directory: workspaces.WorkspaceDirectory}, Authorizer: authorizer,
+		Readable:  notificationReadable{readable: readable},
+		IssueRefs: notificationIssueRefs{issues: issues.IssueRefs, projects: projects.NotificationIdentifiers},
+		Clock:     newClock(cfg), ReadTx: postgres.NewTxManager(pool, cfg.Database.CommitTimeout, postgres.ReadOnlySnapshot()),
+		Tx: busyTx{tx: issueTx}, MarkTx: postgres.NewTxManager(pool, cfg.Database.CommitTimeout)}
 }
 
 // notificationJobsForTest are the notification module's request workers as

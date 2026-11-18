@@ -31,6 +31,40 @@ func (q *Queries) NotificationIdentifier(ctx context.Context, arg NotificationId
 	return identifier, err
 }
 
+const notificationIdentifiers = `-- name: NotificationIdentifiers :many
+SELECT id, identifier
+FROM projects
+WHERE id = ANY ($1::uuid[]) AND deleted_at IS NULL
+`
+
+type NotificationIdentifiersRow struct {
+	ID         uuid.UUID
+	Identifier string
+}
+
+// The identifiers of the undeleted projects among ids, archived or not (M7 P1c spec 2.6; pre-flight re-84 m6): those of
+// the projects of the work items a page of notifications names, read in one statement for the page, by the ids, not by
+// a workspace, without a lock; a deleted project and an id of none have no row. The primary key serves it.
+func (q *Queries) NotificationIdentifiers(ctx context.Context, ids []uuid.UUID) ([]NotificationIdentifiersRow, error) {
+	rows, err := q.db.Query(ctx, notificationIdentifiers, ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []NotificationIdentifiersRow
+	for rows.Next() {
+		var i NotificationIdentifiersRow
+		if err := rows.Scan(&i.ID, &i.Identifier); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const notificationState = `-- name: NotificationState :one
 SELECT name, "group"
 FROM states

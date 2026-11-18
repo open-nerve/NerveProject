@@ -131,6 +131,21 @@ type IssueRowLock interface {
 	ShareIssue(ctx context.Context, id uuid.UUID) (i SharedIssue, found bool, err error)
 }
 
+// IssueRefReader reads the work items IssueRefs names (M7 P1c spec 2.6).
+type IssueRefReader interface {
+	// IssueRefRows reads, without a lock, the undeleted work items among
+	// ids, archived or not, of any project, in id order, in the
+	// transaction ctx carries or on the pool.
+	IssueRefRows(ctx context.Context, ids []uuid.UUID) ([]IssueRefRow, error)
+}
+
+// IssueRefRow is a work item as IssueRefReader reads it: what names it,
+// and its creator, nil when not known, which the guest rule asks.
+type IssueRefRow struct {
+	IssueRef
+	CreatedByID *uuid.UUID
+}
+
 // IssueReader reads work items, in the transaction ctx carries, or
 // without one (M4 design 3.5, 5.2), and locks a work item's row alone.
 type IssueReader interface {
