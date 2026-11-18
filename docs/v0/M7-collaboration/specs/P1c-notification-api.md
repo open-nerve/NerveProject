@@ -100,7 +100,7 @@ P1c 不做：网页（P4，旧的 8 个 Plane 地址与 `TNotification` 随 P4 �
 6. 校验：`snoozed_till` 是时刻时须晚于 `now`（截到微秒后比较，identity 的 `CheckAPIToken` 先例），否则 422 `must_be_future`（字段 `snoozed_till`）；`null` 清空。所以别人的通知配过去的 `snoozed_till` 回答 404，不是 422。
 7. 算新值：`read: true` 时 `read_at` 若为空写 `now`、已读的不变，`false` 清空；`archived` 同理作用于 `archived_at`。什么都没变的不写，回答锁下读到的行；变了的写 `updated_at = now`、`updated_by_id = 调用者`（P1b 的迁移头）。回答经 §2.6 解析。
 
-**全部已读** `POST /workspaces/{slug}/notifications/mark-all-read`，请求体 `{tab?, type?, archived?, snoozed?}`（请求体里是真正的枚举与布尔，由 bodyshape 把关），含义与列表的同名参数相同；`read` 不在其中：只作用于未读的。
+**全部已读** `POST /workspaces/{slug}/notifications/mark-all-read`，请求体 `{tab?, type?, archived?, snoozed?}`（请求体里是真正的枚举与布尔：类型与 `null` 由 bodyshape 把关回答 400，枚举的值由 domain 判定回答 422），含义与列表的同名参数相同；`read` 不在其中：只作用于未读的。
 
 - 请求开始时读一次业务时钟 `now` 与 §2.5 的可见集合（R5：`now` 同时是界，各批共用一个时刻），之后的批不重算。
 - 只标可见、未读、未删除、事件时刻 `created_at <= now`、符合筛选的行。事件早于 `now` 而分发在批循环结束前才写出的行可能被标（与用户点击前一刻才到的通知同一类，登记为已知性质）；事件晚于 `now` 的不标。
@@ -120,7 +120,7 @@ P1c 不做：网页（P4，旧的 8 个 Plane 地址与 `TNotification` 随 P4 �
 - **R1 读得到的项目由 access 给出**：没有现成端口（`VisibleIssueProjects` 不含已归档的项目，`HistoricalIssueProjects` 含已删除的项目与已删除的成员行）。照设计 §6.3 放在 access，与 `Authorize` 同一个判定函数，两遍的等价测试钉住；project 新加一条批量读（有效成员资格、未删除、含已归档）。
 - **R2 只看自己在 SQL 里过滤**：分页与计数必须在 SQL 里过滤；硬规则 03 §4 说判定只有 `domain.Issue.HiddenFrom` 一个谓词。依据 M4 设计 3.4“列表和搜索：同一条规则，SQL 按各项目 `OwnOnly` 加 `created_by_id = $actor`”（issue 的 `list_issues.sql`、`search_issues.sql` 如此）：通知的三条 SQL 以 `(project_id, own_only)` 两个数组传入可见的集合（`ROWS FROM(unnest…)` 的先例），过滤 `NOT own_only OR issue_created_by_id = 调用者`（`issue_created_by_id` 为空时得 NULL、不选中，与 `HiddenFrom` 对未知创建者一致）。一个 bootstrap 等价测试在 {创建者为空、是调用者、是别人} × {只看自己、不是} 六格上比对三条 SQL 的取舍与经 issue 交出的 `HiddenFrom`；三条语句各一个变异（去掉过滤）。这是 issue 之外的第一处，T15 在硬规则 03 §4 登记为例外。单条修改走端口，不写副本。
 - **R3 页签与未读数**：`tab=all` 不含提及、`mentions` 只含提及（照 Plane 的两个页签；网页按页签分别显示两个数，`top-navigation-root.tsx`）。设计 §3.4、§5 的 `{total, mentions}` 改名为 `{all, mentions}`：各是那个页签里未读、未归档、不在暂缓中的可见条数（Plane 的 `total` 也不含提及，名字有歧义）；只改名字，行为照 Plane，阶段记录向负责人说明。全部已读只作用于请求的页签与筛选（Plane 在“全部”页签连提及一起标，D5，不照搬）。
-- **R4 另一端的可见**：读的人此刻读得到的另一端都给出编号与名字，已归档的工作项、已归档项目里的工作项也给（通知是历史，读得到就该认得出；与关联列表隐去已归档的另一端不同，那是工作项详情的现状视图）；读不到的给 `null`，连 id 也不给。
+- **R4 另一端的可见**：读的人此刻读得到的另一端都给出编号与名字，已归档的工作项、已归档项目里的工作项也给（通知是历史，读得到就该认得出；与关联列表隐去已归档的另一端不同，那是工作项详情的现状视图）；读不到的给 `null`，连 id 也不给。通知本身照列：关联到读不到的工作项的那条通知仍以它的 `field`（如 `blocking`）列出、两对为 `null`，不透露 id 与名字（整分支审查 m4；动态里同类的行是整行不列，通知是给收件人的“这个工作项有过一次变化”，保留它不泄露另一端）。
 - **R5 通知的写与锁序**：两个写都不进写闸门、不取工作项与项目的锁，只锁通知行。单条修改锁一行，带锁的期限（`issue.write_lock_timeout`，超时 503）。全部已读用 `SKIP LOCKED`、从不等待：工作项删除在一个事务里对子树逐个工作项按 id 升序软删它的通知，整个事务的取锁次序不是全局升序，全部已读若按全局升序等锁会与它互等（预检 re-84 I1）。全部已读的时刻在请求开始时读一次（它同时是界，各批共用），不在最后一把锁之后读，这是硬规则 03 §4“锁后读时钟”的登记例外。`notifications` 的写者与锁序在 T15 登记进硬规则 03 §4：分发只插入；两种软删按 id 升序（同一事务内逐工作项）；单条修改锁一行；全部已读跳过被锁的行；清理照 P1b。
 - **R6 暂缓不设定时任务**：读时按业务时钟算（设计 §3.4）；`snoozed=false` 的列表与未读数含已到期的暂缓行。
 - **R7 回答里的 id 按白名单放行**：只有 `assignees`、`labels`、`state` 的 id 照存；工作项引用经解析；其余字段的 id 一律不给（新增一种关联类型而通知没跟上时不漏出 id）。已读、归档与暂缓三个状态相互独立，各自修改，没有迁移规则（Plane 相同）。
