@@ -10,6 +10,7 @@ import (
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/access"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue"
+	"github.com/open-nerve/NerveProject/server/internal/modules/notification"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project"
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
@@ -62,15 +63,16 @@ func (f *fakeNotificationIdentifiers) NotificationIdentifiers(_ context.Context,
 
 // notificationIssueRefs names a page's other ends in one IssueRefs and one
 // read of their projects' identifiers (M7 P1c spec 2.6; pre-flight re-84
-// m6): IssueRefs is asked once, with the reader, the grants and the ids as
-// they came; the identifiers once, of the projects of the refs it answered,
+// m6): IssueRefs is asked once, with the reader, the grants, converted,
+// and the ids as they came; the identifiers once, of the projects of the refs it answered,
 // each once, in id order; and each ref is answered with its project's
 // identifier, but one whose project has none, deleted since. No refs read
 // no identifiers; a failure of either read is its error, and no answer.
 func TestNotificationIssueRefsReadOnceEach(t *testing.T) {
 	gail, web, ops, gone := uuid.NewV7(), uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
 	a, b, c, d := uuid.NewV7(), uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
-	grants := []issue.ProjectGrant{{ProjectID: web, OwnOnly: true}, {ProjectID: ops}, {ProjectID: gone}}
+	grants := []notification.Grant{{ProjectID: web, OwnOnly: true}, {ProjectID: ops}, {ProjectID: gone}}
+	projectGrants := []issue.ProjectGrant{{ProjectID: web, OwnOnly: true}, {ProjectID: ops}, {ProjectID: gone}}
 	ids := []uuid.UUID{d, c, b, a, uuid.NewV7()}
 	issues := &fakeIssueRefs{refs: map[uuid.UUID]issue.IssueRef{
 		a: {ID: a, ProjectID: ops, SequenceID: 4, Name: "A"}, b: {ID: b, ProjectID: web, SequenceID: 7, Name: "B"},
@@ -80,12 +82,12 @@ func TestNotificationIssueRefsReadOnceEach(t *testing.T) {
 	refs := notificationIssueRefs{issues: issues, projects: identifiers}
 	ctx := context.Background()
 	got, err := refs.IssueRefs(ctx, gail, grants, ids)
-	want := map[uuid.UUID]namedIssue{a: {ID: a, SequenceID: 4, Identifier: "OPS", Name: "A"}, b: {ID: b, SequenceID: 7, Identifier: "WEB", Name: "B"},
+	want := map[uuid.UUID]notification.IssueRef{a: {ID: a, SequenceID: 4, Identifier: "OPS", Name: "A"}, b: {ID: b, SequenceID: 7, Identifier: "WEB", Name: "B"},
 		c: {ID: c, SequenceID: 9, Identifier: "OPS", Name: "C"}}
 	if err != nil || !maps.Equal(got, want) {
 		t.Errorf("IssueRefs() = %+v, %v; want %+v", got, err, want)
 	}
-	if len(issues.asked) != 1 || issues.asked[0].reader != gail || !slices.Equal(issues.asked[0].grants, grants) || !slices.Equal(issues.asked[0].ids, ids) {
+	if len(issues.asked) != 1 || issues.asked[0].reader != gail || !slices.Equal(issues.asked[0].grants, projectGrants) || !slices.Equal(issues.asked[0].ids, ids) {
 		t.Errorf("IssueRefs was asked %+v; want gail's grants and ids once", issues.asked)
 	}
 	if wantAsked := slices.SortedFunc(slices.Values([]uuid.UUID{web, ops, gone}), uuid.UUID.Compare); len(identifiers.asked) != 1 ||
@@ -183,17 +185,17 @@ func TestNotificationIssueRefsNameWhatTheReaderSees(t *testing.T) {
 		Projects: accessMemberProjects{projects: pp.MemberProjectAccess}})
 	answered, err := readable.Readable(ctx, shared.Actor{UserID: gail}, acme)
 	ownOnly := map[uuid.UUID]bool{}
-	grants := make([]issue.ProjectGrant, len(answered))
+	grants := make([]notification.Grant, len(answered))
 	for i, g := range answered {
 		ownOnly[g.ProjectID] = g.OwnOnly
-		grants[i] = issue.ProjectGrant(g)
+		grants[i] = notification.Grant(g)
 	}
 	if want := map[uuid.UUID]bool{web: true, old: false}; err != nil || len(answered) != len(want) || !maps.Equal(ownOnly, want) {
 		t.Fatalf("Readable(gail, acme) = %+v, %v; want Web own-only and Old", answered, err)
 	}
 	refs := notificationIssueRefs{issues: issue.Provide(pool, nil).IssueRefs, projects: pp.NotificationIdentifiers}
 	got, err := refs.IssueRefs(ctx, gail, grants, []uuid.UUID{far, secrets, olds, deleted, unknown, alices, shelved, hers, uuid.NewV7()})
-	want := map[uuid.UUID]namedIssue{hers: {ID: hers, SequenceID: 1, Identifier: "WEB", Name: "Hers"},
+	want := map[uuid.UUID]notification.IssueRef{hers: {ID: hers, SequenceID: 1, Identifier: "WEB", Name: "Hers"},
 		shelved: {ID: shelved, SequenceID: 2, Identifier: "WEB", Name: "Shelved"}, olds: {ID: olds, SequenceID: 1, Identifier: "OLD", Name: "Old's"}}
 	if err != nil || !maps.Equal(got, want) {
 		t.Errorf("IssueRefs(gail, acme) = %+v, %v; want %+v", got, err, want)

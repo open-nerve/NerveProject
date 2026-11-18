@@ -132,7 +132,8 @@ paths:
         sent while it runs may be marked. When a batch fails it answers that
         error, and the batches before it stay marked: asking again marks the
         rest. A tab or a type that listNotifications would refuse answers 422
-        validation_failed on it. A workspace that does not exist, is deleted,
+        validation_failed on it, and any query parameter 422 not_allowed on
+        it. A workspace that does not exist, is deleted,
         or of which the caller is not an active member answers
         workspace.not_found.
       security: [{bearer: []}]

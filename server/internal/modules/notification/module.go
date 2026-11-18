@@ -6,7 +6,10 @@
 // item's deletion deletes its notifications in its transaction; a project's
 // or a workspace's deletion enqueues the deletion of each deleted project's
 // notifications, which waits for the project's work items to be deleted
-// (spec 2.8). The 60-day purge removes the deleted ones (Provide).
+// (spec 2.8). The 60-day purge removes the deleted ones (Provide). Its API
+// lists a receiver's notifications in a workspace, counts his unread ones,
+// marks them read, and changes one's states, each as he reads its project
+// and its work item now (M7 P1c spec 2).
 package notification
 
 import (
@@ -15,9 +18,11 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	httpadapter "github.com/open-nerve/NerveProject/server/internal/modules/notification/adapter/http"
 	postgresadapter "github.com/open-nerve/NerveProject/server/internal/modules/notification/adapter/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/modules/notification/app"
 	"github.com/open-nerve/NerveProject/server/internal/modules/notification/domain"
+	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
@@ -50,14 +55,16 @@ type Issues interface {
 	app.GuestRule
 }
 
-// LockedIssue, IssueColumns, StateName and Decision are the values the
-// module's ports answer, which bootstrap converts the issue, the project
-// and the access modules' into.
+// LockedIssue, IssueColumns, StateName, Decision, Grant and IssueRef are
+// the values the module's ports answer or take, which bootstrap converts
+// the issue, the project and the access modules' into and out of.
 type (
 	LockedIssue  = app.LockedIssue
 	IssueColumns = app.IssueColumns
 	StateName    = app.StateName
 	Decision     = domain.Decision
+	Grant        = app.Grant
+	IssueRef     = domain.IssueRef
 )
 
 // Deps are what the module needs.
@@ -77,6 +84,30 @@ type Deps struct {
 	// gate, and a lock failure kept as PostgreSQL's for River's retry
 	// (bootstrap/gate.go).
 	JobTx shared.TxManager
+	// Workspaces is the workspace module's directory, converted: a
+	// workspace by its slug (P1c spec 2.2).
+	Workspaces app.WorkspaceDirectory
+	Authorizer shared.Authorizer
+	// Readable is the access module's ReadableProjects, converted: the
+	// projects a reader reads in a workspace now (spec 2.5, R1).
+	Readable app.ReadableProjects
+	// IssueRefs are the issue module's IssueRefs and the project module's
+	// identifiers, composed and converted: the work items a page names, as
+	// its reader reads them now (spec 2.6, R4).
+	IssueRefs app.IssueRefs
+	// Clock is the business clock (spec 2.3, 2.7, R6).
+	Clock app.Clock
+	// ReadTx supplies the reads' read-only snapshot transactions, each its
+	// own: the list's, the unread counts' and mark-all-read's start.
+	ReadTx shared.TxManager
+	// Tx are the transactions of a change of a notification, which lock its
+	// row: each lock wait at most issue.write_lock_timeout, answered
+	// server_busy past it (bootstrap's busyTx, spec 2.7 step 4).
+	Tx shared.TxManager
+	// MarkTx are mark-all-read's batches' transactions, read-write, with no
+	// lock wait of their own: a batch never waits for a notification's row
+	// (SKIP LOCKED, R5).
+	MarkTx shared.TxManager
 	// RuntimeNow is the monotonic clock of the deletion job's budget and of
 	// its wait for the project's work items.
 	RuntimeNow   func() time.Time
@@ -87,6 +118,7 @@ type Deps struct {
 
 // Module is the notification module.
 type Module struct {
+	uc           httpadapter.UseCases
 	fanout       *app.Fanout
 	deleteRows   *app.DeleteRows
 	deleteBudget time.Duration
@@ -96,13 +128,26 @@ type Module struct {
 // New builds the module from d.
 func New(d Deps) *Module {
 	store := postgresadapter.New(d.Pool)
+	inbox := app.InboxDeps{Workspaces: d.Workspaces, Authorizer: d.Authorizer, Readable: d.Readable, Clock: d.Clock}
 	return &Module{
+		uc: httpadapter.UseCases{
+			ListNotifications: app.NewListNotifications(app.ListNotificationsDeps{InboxDeps: inbox, ReadTx: d.ReadTx, Lists: store, Refs: d.IssueRefs}),
+			GetUnreadCount:    app.NewGetUnreadCount(app.GetUnreadCountDeps{InboxDeps: inbox, ReadTx: d.ReadTx, Lists: store}),
+			MarkAllRead:       app.NewMarkAllRead(app.MarkAllReadDeps{InboxDeps: inbox, ReadTx: d.ReadTx, Tx: d.MarkTx, Marks: store}),
+			UpdateNotification: app.NewUpdateNotification(app.UpdateNotificationDeps{Authorizer: d.Authorizer, Readable: d.Readable, GuestRule: d.Issues,
+				Clock: d.Clock, Rows: store, Refs: d.IssueRefs, Tx: d.Tx}),
+		},
 		fanout: app.NewFanout(app.FanoutDeps{Lock: d.Issues, Issues: d.Issues, Projects: d.Projects, Readers: d.Readers,
 			GuestRule: d.Issues, Rows: store, Tx: d.JobTx, Logger: d.Logger}),
 		deleteRows: app.NewDeleteRows(app.DeleteRowsDeps{Issues: d.Issues, Rows: store, Tx: d.JobTx, RuntimeNow: d.RuntimeNow,
 			Batch: d.DeleteBatch, Budget: d.DeleteBudget}),
 		deleteBudget: d.DeleteBudget, logger: d.Logger,
 	}
+}
+
+// Register mounts the module's routes on router behind api's middlewares.
+func (m *Module) Register(router *httpserver.Router, api *httpserver.API) {
+	httpadapter.Register(router, api, m.uc)
 }
 
 // Actions lists the module's actions: bootstrap's test holds the union of

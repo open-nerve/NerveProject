@@ -152,6 +152,12 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 		WorkspaceRoles: workspacePorts.WorkspaceRolesMany,
 		ProjectAccess:  accessProjectsMany{projects: projectPorts.ProjectAccessMany},
 	})
+	// The projects a notification's reader reads now, Authorize's rule of
+	// issue.read for each (M7 P1c spec 2.5).
+	readable := access.NewReadableProjects(access.ReadableDeps{
+		WorkspaceRoles: workspacePorts.WorkspaceRoles,
+		Projects:       accessMemberProjects{projects: projectPorts.MemberProjectAccess},
+	})
 	client, err := jobs.NewInserter(pool)
 	if err != nil {
 		a.close()
@@ -199,10 +205,18 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 		ListSettings:  issuePorts.ListSettings,
 		LinkCrawls:    inserter, LinkCrawler: previews,
 	})
+	// A change of a notification waits for its row at most
+	// issue.write_lock_timeout, 503 past it (busyTx); mark-all-read's
+	// batches never wait for a row (SKIP LOCKED) and run in tx (M7 P1c spec
+	// 2.7, R5).
 	notes := notification.New(notification.Deps{
 		Pool: pool, Issues: notificationIssues{issues: issuePorts.NotificationIssues}, JobTx: issueTx, RuntimeNow: time.Now, Logger: logger,
 		Projects: notificationProjects{names: projectPorts.NotificationNames}, Readers: notificationReaders{decider: decider},
 		DeleteBatch: cfg.Notification.DeleteBatch, DeleteBudget: cfg.Notification.DeleteBudget,
+		Workspaces: notificationWorkspaces{directory: workspacePorts.WorkspaceDirectory}, Authorizer: authorizer,
+		Readable:  notificationReadable{readable: readable},
+		IssueRefs: notificationIssueRefs{issues: issuePorts.IssueRefs, projects: projectPorts.NotificationIdentifiers},
+		Clock:     businessClock, ReadTx: readTx, Tx: busyTx{tx: issueTx}, MarkTx: tx,
 	})
 	// project before workspace: workspace's writes take its cascade.
 	proj := project.New(project.Deps{
@@ -312,6 +326,7 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 	issues.Register(a.router, api)
 	plans.Register(a.router, api)
 	files.Register(a.router, api, bucket(limiter, "file_transfer", cfg.Files.TransferRate))
+	notes.Register(a.router, api)
 	// The web UI takes every path no other pattern claims. It must be the
 	// method-less "/": "GET /" and the method-less "/api/" would conflict.
 	webHandler, err := webui.Handler(webFiles, webui.Options{StorageOrigin: assets.origin})

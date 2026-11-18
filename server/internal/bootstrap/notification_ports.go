@@ -10,6 +10,7 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue"
 	"github.com/open-nerve/NerveProject/server/internal/modules/notification"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project"
+	"github.com/open-nerve/NerveProject/server/internal/modules/workspace"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
@@ -63,32 +64,59 @@ func (p notificationProjects) Identifier(ctx context.Context, workspaceID, proje
 	return p.names.NotificationIdentifier(ctx, workspaceID, projectID)
 }
 
+// notificationWorkspaces is workspace's WorkspaceDirectory as the
+// notification module's (M7 P1c spec 2.2): the same lookup by slug,
+// without a lock, answering the workspace's id.
+type notificationWorkspaces struct {
+	directory workspace.WorkspaceDirectory
+}
+
+func (d notificationWorkspaces) WorkspaceBySlug(ctx context.Context, slug string) (uuid.UUID, bool, error) {
+	w, found, err := d.directory.WorkspaceBySlug(ctx, slug)
+	return w.ID, found, err
+}
+
+// notificationReadable is access's ReadableProjects as the notification
+// module's (spec 2.5, R1): the same projects, in their order, each grant
+// converted.
+type notificationReadable struct {
+	readable *access.ReadableProjects
+}
+
+func (r notificationReadable) Readable(ctx context.Context, actor shared.Actor, workspaceID uuid.UUID) ([]notification.Grant, error) {
+	grants, err := r.readable.Readable(ctx, actor, workspaceID)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]notification.Grant, len(grants))
+	for i, g := range grants {
+		out[i] = notification.Grant(g)
+	}
+	return out, nil
+}
+
 // notificationIssueRefs is issue's IssueRefs and project's
-// NotificationIdentifiers composed (M7 P1c spec 2.6, R4; pre-flight re-84
-// m6): what the notification module names the work items a page of
-// notifications names with, its changes' parents and relations' other
-// ends, in one IssueRefs of the page's ids and, only when it answered any,
-// one read of the identifiers of their projects, each project once.
+// NotificationIdentifiers composed as the notification module's IssueRefs
+// (M7 P1c spec 2.6, R4; pre-flight re-84 m6): what it names the work items
+// a page of notifications names with, its changes' parents and relations'
+// other ends, in one IssueRefs of the page's ids, with the reader's grants
+// converted, and, only when it answered any, one read of the identifiers
+// of their projects, each project once.
 type notificationIssueRefs struct {
 	issues   issue.IssueRefs
 	projects project.NotificationIdentifiers
-}
-
-// namedIssue is a work item as a notification names it to its reader:
-// its id, its number, its project's identifier and its name.
-type namedIssue struct {
-	ID         uuid.UUID
-	SequenceID int
-	Identifier string
-	Name       string
 }
 
 // IssueRefs answers, by id, those of the work items ids that reader sees
 // now by grants, as issue's IssueRefs answers them, each named with its
 // project's identifier; one whose project has none, deleted since it was
 // read, is not among them. None for none.
-func (r notificationIssueRefs) IssueRefs(ctx context.Context, reader uuid.UUID, grants []issue.ProjectGrant, ids []uuid.UUID) (map[uuid.UUID]namedIssue, error) {
-	refs, err := r.issues.IssueRefs(ctx, reader, grants, ids)
+func (r notificationIssueRefs) IssueRefs(ctx context.Context, reader uuid.UUID, grants []notification.Grant, ids []uuid.UUID) (map[uuid.UUID]notification.IssueRef, error) {
+	projectGrants := make([]issue.ProjectGrant, len(grants))
+	for i, g := range grants {
+		projectGrants[i] = issue.ProjectGrant(g)
+	}
+	refs, err := r.issues.IssueRefs(ctx, reader, projectGrants, ids)
 	if err != nil || len(refs) == 0 {
 		return nil, err
 	}
@@ -100,10 +128,10 @@ func (r notificationIssueRefs) IssueRefs(ctx context.Context, reader uuid.UUID, 
 	if err != nil {
 		return nil, err
 	}
-	named := make(map[uuid.UUID]namedIssue, len(refs))
+	named := make(map[uuid.UUID]notification.IssueRef, len(refs))
 	for id, ref := range refs {
 		if identifier, ok := identifiers[ref.ProjectID]; ok {
-			named[id] = namedIssue{ID: ref.ID, SequenceID: ref.SequenceID, Identifier: identifier, Name: ref.Name}
+			named[id] = notification.IssueRef{ID: ref.ID, SequenceID: ref.SequenceID, Identifier: identifier, Name: ref.Name}
 		}
 	}
 	return named, nil
