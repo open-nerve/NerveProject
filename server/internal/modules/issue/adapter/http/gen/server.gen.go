@@ -21,6 +21,33 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
+// Defines values for IntakeStatus.
+const (
+	IntakeStatusAccepted  IntakeStatus = "accepted"
+	IntakeStatusDeclined  IntakeStatus = "declined"
+	IntakeStatusDuplicate IntakeStatus = "duplicate"
+	IntakeStatusPending   IntakeStatus = "pending"
+	IntakeStatusSnoozed   IntakeStatus = "snoozed"
+)
+
+// Valid indicates whether the value is a known member of the IntakeStatus enum.
+func (e IntakeStatus) Valid() bool {
+	switch e {
+	case IntakeStatusAccepted:
+		return true
+	case IntakeStatusDeclined:
+		return true
+	case IntakeStatusDuplicate:
+		return true
+	case IntakeStatusPending:
+		return true
+	case IntakeStatusSnoozed:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for IssueListGroupField.
 const (
 	IssueListGroupFieldAssigneeID  IssueListGroupField = "assignee_id"
@@ -315,6 +342,42 @@ type DraftUpdate struct {
 	ProjectID nullable.Nullable[uuid.UUID] `json:"project_id,omitempty"`
 }
 
+// IntakeIssueCreate A work item submitted to a project's intake: createIssue's body but for the state, the start date, the parent, the cycle and the modules.
+type IntakeIssueCreate struct {
+	// AssigneeIds At most 100 accounts, each named once, each an active member of the project who is not its guest; left out, or empty, for the project's default assignee while he is one, else no one.
+	AssigneeIds *[]uuid.UUID `json:"assignee_ids,omitempty"`
+
+	// DescriptionHTML Sanitized rich text HTML; at most 500000 characters on input.
+	DescriptionHTML *string `json:"description_html,omitempty"`
+
+	// LabelIds At most 100 of the project's labels, each named once.
+	LabelIds *[]uuid.UUID `json:"label_ids,omitempty"`
+
+	// Name 1–255 characters without the white space around it, which is not stored.
+	Name string `json:"name"`
+
+	// Priority A work item's priority, from the most to the least urgent.
+	Priority *IssuePriority `json:"priority,omitempty"`
+
+	// TargetDate The day it is due, as YYYY-MM-DD; left out for none.
+	TargetDate *shared.Date `json:"target_date,omitempty"`
+}
+
+// IntakeStatus An intake row's status: pending, waiting for a triage; snoozed, till a time, then pending again; accepted, out of the intake into the project's work; declined; duplicate, of another work item. accepted, declined and duplicate are final.
+type IntakeStatus string
+
+// IntakeTriage A triage of a work item of a project's intake.
+type IntakeTriage struct {
+	// DuplicateToID For duplicate, and for it alone: the work item it duplicates, another of the project's, archived or not, that the caller sees and that is not in the project's intake.
+	DuplicateToID *uuid.UUID `json:"duplicate_to_id,omitempty"`
+
+	// SnoozedTill For snoozed, and for it alone: till when, after the moment of the request; the work item is pending again from then.
+	SnoozedTill *time.Time `json:"snoozed_till,omitempty"`
+
+	// Status An intake row's status: pending, waiting for a triage; snoozed, till a time, then pending again; accepted, out of the intake into the project's work; declined; duplicate, of another work item. accepted, declined and duplicate are final.
+	Status IntakeStatus `json:"status"`
+}
+
 // Issue A work item of a project, as a list shows it.
 type Issue struct {
 	// ArchivedAt When it was archived; null when it is not.
@@ -497,6 +560,9 @@ type IssueDetail struct {
 	DescriptionHTML string    `json:"description_html"`
 	ID              uuid.UUID `json:"id"`
 
+	// Intake The work item's intake row, as of the moment of the answer; null for a work item never submitted to its project's intake (submitIntakeIssue). A work item is in the intake while its status is not accepted, and is then in the project's triage state. A list's row does not carry it.
+	Intake nullable.Nullable[IssueIntake] `json:"intake"`
+
 	// IsSubscribed Whether the caller subscribes to the work item at the moment of the answer. A list's row does not carry it.
 	IsSubscribed bool `json:"is_subscribed"`
 
@@ -552,6 +618,18 @@ type IssueDraftPayload struct {
 	StartDate       *shared.Date `json:"start_date,omitempty"`
 	StateID         *uuid.UUID   `json:"state_id,omitempty"`
 	TargetDate      *shared.Date `json:"target_date,omitempty"`
+}
+
+// IssueIntake A work item's intake row, as its detail shows it.
+type IssueIntake struct {
+	// DuplicateToID The work item it duplicates; null unless its status is duplicate, and null when that work item is deleted or the caller does not see it.
+	DuplicateToID nullable.Nullable[uuid.UUID] `json:"duplicate_to_id"`
+
+	// SnoozedTill Till when the work item is snoozed; null unless its status is snoozed, a snooze whose time has come showing as pending.
+	SnoozedTill nullable.Nullable[time.Time] `json:"snoozed_till"`
+
+	// Status An intake row's status: pending, waiting for a triage; snoozed, till a time, then pending again; accepted, out of the intake into the project's work; declined; duplicate, of another work item. accepted, declined and duplicate are final.
+	Status IntakeStatus `json:"status"`
 }
 
 // IssueLink defines model for IssueLink.
@@ -941,6 +1019,9 @@ type ListMemberIssuesParamsRelation string
 // UpdateDraftJSONRequestBody defines body for UpdateDraft for application/json ContentType.
 type UpdateDraftJSONRequestBody = DraftUpdate
 
+// TriageIntakeIssueJSONRequestBody defines body for TriageIntakeIssue for application/json ContentType.
+type TriageIntakeIssueJSONRequestBody = IntakeTriage
+
 // UpdateIssueCommentJSONRequestBody defines body for UpdateIssueComment for application/json ContentType.
 type UpdateIssueCommentJSONRequestBody = IssueCommentUpdate
 
@@ -968,6 +1049,9 @@ type CreateIssueRelationsJSONRequestBody = IssueRelationsCreate
 // AddSubIssuesJSONRequestBody defines body for AddSubIssues for application/json ContentType.
 type AddSubIssuesJSONRequestBody = SubIssuesAdd
 
+// SubmitIntakeIssueJSONRequestBody defines body for SubmitIntakeIssue for application/json ContentType.
+type SubmitIntakeIssueJSONRequestBody = IntakeIssueCreate
+
 // CreateIssueJSONRequestBody defines body for CreateIssue for application/json ContentType.
 type CreateIssueJSONRequestBody = IssueCreate
 
@@ -991,6 +1075,9 @@ type ServerInterface interface {
 	// PublishDraft Publish your stored issue draft
 	// (POST /api/v0/drafts/{draft_id}/publish)
 	PublishDraft(w http.ResponseWriter, r *http.Request, draftID DraftID)
+	// TriageIntakeIssue Triage a work item of a project's intake
+	// (POST /api/v0/intake-issues/{issue_id}/triage)
+	TriageIntakeIssue(w http.ResponseWriter, r *http.Request, issueID IssueID)
 	// DeleteIssueComment Delete a comment as its author or project administrator
 	// (DELETE /api/v0/issue-comments/{comment_id})
 	DeleteIssueComment(w http.ResponseWriter, r *http.Request, commentID uuid.UUID)
@@ -1081,6 +1168,9 @@ type ServerInterface interface {
 	// UnsubscribeIssue Unsubscribe from a work item
 	// (POST /api/v0/issues/{issue_id}/unsubscribe)
 	UnsubscribeIssue(w http.ResponseWriter, r *http.Request, issueID IssueID)
+	// SubmitIntakeIssue Submit a work item to a project's intake
+	// (POST /api/v0/projects/{project_id}/intake-issues)
+	SubmitIntakeIssue(w http.ResponseWriter, r *http.Request, projectID ProjectID)
 	// ListIssues List a project's work items
 	// (GET /api/v0/projects/{project_id}/issues)
 	ListIssues(w http.ResponseWriter, r *http.Request, projectID ProjectID, params ListIssuesParams)
@@ -1263,6 +1353,32 @@ func (siw *ServerInterfaceWrapper) PublishDraft(w http.ResponseWriter, r *http.R
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PublishDraft(w, r, draftID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// TriageIntakeIssue operation middleware
+func (siw *ServerInterfaceWrapper) TriageIntakeIssue(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "issue_id" -------------
+	var issueID IssueID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "issue_id", r.PathValue("issue_id"), &issueID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "issue_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.TriageIntakeIssue(w, r, issueID)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -2215,6 +2331,32 @@ func (siw *ServerInterfaceWrapper) UnsubscribeIssue(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r)
 }
 
+// SubmitIntakeIssue operation middleware
+func (siw *ServerInterfaceWrapper) SubmitIntakeIssue(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "project_id" -------------
+	var projectID ProjectID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "project_id", r.PathValue("project_id"), &projectID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "project_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SubmitIntakeIssue(w, r, projectID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListIssues operation middleware
 func (siw *ServerInterfaceWrapper) ListIssues(w http.ResponseWriter, r *http.Request) {
 
@@ -3119,6 +3261,8 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/workspaces/{slug}/members/{user_id}/issues", wrapper.ListMemberIssues)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/projects/{project_id}/issues", wrapper.ListIssues)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/projects/{project_id}/issues", wrapper.CreateIssue)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/projects/{project_id}/intake-issues", wrapper.SubmitIntakeIssue)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/intake-issues/{issue_id}/triage", wrapper.TriageIntakeIssue)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v0/issues/{issue_id}", wrapper.DeleteIssue)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/issues/{issue_id}", wrapper.GetIssue)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/issues/{issue_id}", wrapper.UpdateIssue)
@@ -3371,6 +3515,53 @@ type PublishDraftdefaultApplicationProblemPlusJSONResponse struct {
 }
 
 func (response PublishDraftdefaultApplicationProblemPlusJSONResponse) VisitPublishDraftResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type TriageIntakeIssueRequestObject struct {
+	IssueID IssueID `json:"issue_id"`
+	Body    *TriageIntakeIssueJSONRequestBody
+}
+
+type TriageIntakeIssueResponseObject interface {
+	VisitTriageIntakeIssueResponse(w http.ResponseWriter) error
+}
+
+type TriageIntakeIssue200JSONResponse IssueDetail
+
+func (response TriageIntakeIssue200JSONResponse) VisitTriageIntakeIssueResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type TriageIntakeIssuedefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response TriageIntakeIssuedefaultApplicationProblemPlusJSONResponse) VisitTriageIntakeIssueResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -4736,6 +4927,53 @@ func (response UnsubscribeIssuedefaultApplicationProblemPlusJSONResponse) VisitU
 	return err
 }
 
+type SubmitIntakeIssueRequestObject struct {
+	ProjectID ProjectID `json:"project_id"`
+	Body      *SubmitIntakeIssueJSONRequestBody
+}
+
+type SubmitIntakeIssueResponseObject interface {
+	VisitSubmitIntakeIssueResponse(w http.ResponseWriter) error
+}
+
+type SubmitIntakeIssue201JSONResponse IssueDetail
+
+func (response SubmitIntakeIssue201JSONResponse) VisitSubmitIntakeIssueResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SubmitIntakeIssuedefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response SubmitIntakeIssuedefaultApplicationProblemPlusJSONResponse) VisitSubmitIntakeIssueResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ListIssuesRequestObject struct {
 	ProjectID ProjectID `json:"project_id"`
 	Params    ListIssuesParams
@@ -5083,6 +5321,9 @@ type StrictServerInterface interface {
 	// PublishDraft Publish your stored issue draft
 	// (POST /api/v0/drafts/{draft_id}/publish)
 	PublishDraft(ctx context.Context, request PublishDraftRequestObject) (PublishDraftResponseObject, error)
+	// TriageIntakeIssue Triage a work item of a project's intake
+	// (POST /api/v0/intake-issues/{issue_id}/triage)
+	TriageIntakeIssue(ctx context.Context, request TriageIntakeIssueRequestObject) (TriageIntakeIssueResponseObject, error)
 	// DeleteIssueComment Delete a comment as its author or project administrator
 	// (DELETE /api/v0/issue-comments/{comment_id})
 	DeleteIssueComment(ctx context.Context, request DeleteIssueCommentRequestObject) (DeleteIssueCommentResponseObject, error)
@@ -5173,6 +5414,9 @@ type StrictServerInterface interface {
 	// UnsubscribeIssue Unsubscribe from a work item
 	// (POST /api/v0/issues/{issue_id}/unsubscribe)
 	UnsubscribeIssue(ctx context.Context, request UnsubscribeIssueRequestObject) (UnsubscribeIssueResponseObject, error)
+	// SubmitIntakeIssue Submit a work item to a project's intake
+	// (POST /api/v0/projects/{project_id}/intake-issues)
+	SubmitIntakeIssue(ctx context.Context, request SubmitIntakeIssueRequestObject) (SubmitIntakeIssueResponseObject, error)
 	// ListIssues List a project's work items
 	// (GET /api/v0/projects/{project_id}/issues)
 	ListIssues(ctx context.Context, request ListIssuesRequestObject) (ListIssuesResponseObject, error)
@@ -5366,6 +5610,39 @@ func (sh *strictHandler) PublishDraft(w http.ResponseWriter, r *http.Request, dr
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(PublishDraftResponseObject); ok {
 		if err := validResponse.VisitPublishDraftResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// TriageIntakeIssue operation middleware
+func (sh *strictHandler) TriageIntakeIssue(w http.ResponseWriter, r *http.Request, issueID IssueID) {
+	var request TriageIntakeIssueRequestObject
+
+	request.IssueID = issueID
+
+	var body TriageIntakeIssueJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.TriageIntakeIssue(ctx, request.(TriageIntakeIssueRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "TriageIntakeIssue")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(TriageIntakeIssueResponseObject); ok {
+		if err := validResponse.VisitTriageIntakeIssueResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -6216,6 +6493,39 @@ func (sh *strictHandler) UnsubscribeIssue(w http.ResponseWriter, r *http.Request
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(UnsubscribeIssueResponseObject); ok {
 		if err := validResponse.VisitUnsubscribeIssueResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SubmitIntakeIssue operation middleware
+func (sh *strictHandler) SubmitIntakeIssue(w http.ResponseWriter, r *http.Request, projectID ProjectID) {
+	var request SubmitIntakeIssueRequestObject
+
+	request.ProjectID = projectID
+
+	var body SubmitIntakeIssueJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SubmitIntakeIssue(ctx, request.(SubmitIntakeIssueRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SubmitIntakeIssue")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SubmitIntakeIssueResponseObject); ok {
+		if err := validResponse.VisitSubmitIntakeIssueResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

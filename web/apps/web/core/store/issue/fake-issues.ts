@@ -43,11 +43,12 @@ export const issueOf = (id: string, projectId = "A", workspaceId = "id-ws"): Iss
   updated_by_id: "actor",
 });
 
-/** A detail answer includes HTML and the caller's subscription; a list row deliberately does not. */
+/** A detail answer includes HTML, the caller's subscription and the intake row; a list row deliberately does not. */
 export const issueDetailOf = (id: string, projectId = "A"): IssueDetail => ({
   ...issueOf(id, projectId),
   description_html: "<p>Server detail</p>",
   is_subscribed: false,
+  intake: null,
 });
 
 /** A flat server page; opaque continuation tokens are copied, never interpreted. */

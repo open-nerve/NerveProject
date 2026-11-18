@@ -61,9 +61,9 @@ var (
 
 var (
 	webSevenDetailJSON = strings.NewReplacer(`"id":`, `"description_html":"\u003cp\u003eSeven\u003c/p\u003e","id":`,
-		`"label_ids":`, `"is_subscribed":true,"label_ids":`).Replace(webSevenJSON)
+		`"label_ids":`, `"intake":null,"is_subscribed":true,"label_ids":`).Replace(webSevenJSON)
 	webEightDetailJSON = strings.NewReplacer(`"id":`, `"description_html":"\u003cp\u003e\u003c/p\u003e","id":`,
-		`"label_ids":`, `"is_subscribed":false,"label_ids":`).Replace(webEightJSON)
+		`"label_ids":`, `"intake":null,"is_subscribed":false,"label_ids":`).Replace(webEightJSON)
 )
 
 // POST goes to the use case for the caller and the path's project, with

@@ -1649,7 +1649,7 @@ paths:
       tags:
         - issue
       summary: Search visible work items
-      description: Workspace admins, members and guests search only their active memberships of undeleted, unarchived projects, retaining each project's OwnOnly scope. Work items are undeleted and unarchived. Unknown queries answer 422; repeated scalars answer 422 invalid_format. Malformed query encoding and noninteger limit answer 400. UUID, date and for values are validated as domain values with 422. The trimmed q is at most 100 Unicode characters. Empty q orders by updated_at then id descending. Nonempty q matches identifiers, sequence numbers or literal title substrings, ordered by match rank, similarity descending, created_at descending and id descending. Source visibility is checked before parent/sub_issue project conflicts. Results are a bounded collection without pagination or totals.
+      description: Workspace admins, members and guests search only their active memberships of undeleted, unarchived projects, retaining each project's OwnOnly scope. Work items are undeleted, unarchived and not in their project's intake (IssueDetail.intake). Unknown queries answer 422; repeated scalars answer 422 invalid_format. Malformed query encoding and noninteger limit answer 400. UUID, date and for values are validated as domain values with 422. The trimmed q is at most 100 Unicode characters. Empty q orders by updated_at then id descending. Nonempty q matches identifiers, sequence numbers or literal title substrings, ordered by match rank, similarity descending, created_at descending and id descending. A source that is archived or in its project's intake answers issue.not_found, as one the caller does not see. Source visibility is checked before parent/sub_issue project conflicts. Results are a bounded collection without pagination or totals.
       security:
         - bearer: []
       x-problem-codes:
@@ -2253,7 +2253,7 @@ paths:
       tags:
         - issue
       summary: Create a work item in a project
-      description: 'Canonical asset IDs in description images must belong to this final work item. A new item has no existing asset scope, so references to another item or draft answer asset.not_found and roll back its sequence. For the project''s admins and members; not in an archived project (project.archived). The name, without the white space around it, has 1–255 characters, without NUL, and is stored so; at most 100 assignees and 100 labels, each named once; the start date not after the target date (validation_failed), checked before the project is looked at. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but may not create work items in, forbidden; both are answered before the project is locked, and with the project locked the role is decided again. Then the state, when it is given, is one of the project''s, not its triage state; each assignee is an active member of the project who is not its guest; each label is one of the project''s; the parent, when it is given, is a work item of the project that is not archived and that the caller sees (validation_failed, every problem at once). A work item created in a cycle needs the project''s cycles turned on (planning.cycles_disabled), then a cycle that is not archived (planning.archived); one that is not an undeleted cycle of the project is refused with the other problems (validation_failed, cycle_id); one that has ended on the day of the write in the project''s time zone is refused last, after the description''s images (planning.cycle_completed). A work item created in modules, at most 100, each named once (validation_failed, before the project is looked at), needs the project''s modules turned on (planning.modules_disabled), after its cycles; then modules that are not archived (planning.archived); one that is not an undeleted module of the project is refused at its place in module_ids with the other problems (validation_failed, module_ids[i]). Left out, the state is the project''s default, the priority none, and the assignee the project''s default assignee while he is still an active member of it who is not its guest, else no one, and the work item is in no cycle and no module. The work item takes the project''s next number, never used again, also after a deletion; it comes after its state''s work items, archived ones too: its sort order is their greatest plus 10000, or 65535 for the state''s first; in a state of the completed group it is completed at its creation. The caller and the assignees subscribe to it; its activity says it was created, assigned to each assignee, added to its cycle, and added to each module. Every row it writes is the caller''s, at one moment. A project with too many writes on its work items at once answers server_busy, with Retry-After: try again then.'
+      description: 'Canonical asset IDs in description images must belong to this final work item. A new item has no existing asset scope, so references to another item or draft answer asset.not_found and roll back its sequence. For the project''s admins and members; not in an archived project (project.archived). The name, without the white space around it, has 1–255 characters, without NUL, and is stored so; at most 100 assignees and 100 labels, each named once; the start date not after the target date (validation_failed), checked before the project is looked at. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but may not create work items in, forbidden; both are answered before the project is locked, and with the project locked the role is decided again. Then the state, when it is given, is one of the project''s, not its triage state; each assignee is an active member of the project who is not its guest; each label is one of the project''s; the parent, when it is given, is a work item of the project that is not archived, that the caller sees and that is not in the project''s intake (validation_failed, every problem at once). A work item created in a cycle needs the project''s cycles turned on (planning.cycles_disabled), then a cycle that is not archived (planning.archived); one that is not an undeleted cycle of the project is refused with the other problems (validation_failed, cycle_id); one that has ended on the day of the write in the project''s time zone is refused last, after the description''s images (planning.cycle_completed). A work item created in modules, at most 100, each named once (validation_failed, before the project is looked at), needs the project''s modules turned on (planning.modules_disabled), after its cycles; then modules that are not archived (planning.archived); one that is not an undeleted module of the project is refused at its place in module_ids with the other problems (validation_failed, module_ids[i]). Left out, the state is the project''s default, the priority none, and the assignee the project''s default assignee while he is still an active member of it who is not its guest, else no one, and the work item is in no cycle and no module. The work item takes the project''s next number, never used again, also after a deletion; it comes after its state''s work items, archived ones too: its sort order is their greatest plus 10000, or 65535 for the state''s first; in a state of the completed group it is completed at its creation. The caller and the assignees subscribe to it; its activity says it was created, assigned to each assignee, added to its cycle, and added to each module. Every row it writes is the caller''s, at one moment. A project with too many writes on its work items at once answers server_busy, with Retry-After: try again then.'
       security:
         - bearer: []
       x-problem-codes:
@@ -2276,6 +2276,74 @@ paths:
       responses:
         '201':
           description: The new work item.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IssueDetail'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/projects/{project_id}/intake-issues:
+    parameters:
+      - $ref: '#/components/parameters/ProjectID'
+    post:
+      operationId: submitIntakeIssue
+      tags:
+        - issue
+      summary: Submit a work item to a project's intake
+      description: 'For the project''s admins, members and guests, while its intake is turned on. The body is createIssue''s but for the state, the start date, the parent, the cycle and the modules, which a triage''s acceptance leaves to the project: its values follow createIssue''s rules (validation_failed), checked before the project is looked at. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but may not submit to, forbidden; both are answered before the project is locked, and with the project locked the role is decided again. Then an archived project refuses it (project.archived), then a project whose intake is turned off (issue.intake_disabled), as the project locked reads it; then each assignee and each label, as createIssue checks them (validation_failed, every problem at once). Description images follow createIssue''s rule (asset.not_found). The work item is created as createIssue creates it, with the project''s next number, its default assignee, its subscribers, its activity and the notifications of its assignees and of those it mentions, but in the project''s triage state: it is in the project''s intake, out of the project''s lists and of searches, and a write on it answers issue.in_triage, until a triage accepts it (triageIntakeIssue). With it, its intake row, pending, the caller''s. Every row it writes is the caller''s, at one moment. A project with too many writes on its work items at once answers server_busy, with Retry-After: try again then.'
+      security:
+        - bearer: []
+      x-problem-codes:
+        - validation_failed
+        - project.not_found
+        - forbidden
+        - project.archived
+        - issue.intake_disabled
+        - server_busy
+        - asset.not_found
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IntakeIssueCreate'
+      responses:
+        '201':
+          description: The new work item, its intake pending.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IssueDetail'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/intake-issues/{issue_id}/triage:
+    parameters:
+      - $ref: '#/components/parameters/IssueID'
+    post:
+      operationId: triageIntakeIssue
+      tags:
+        - issue
+      summary: Triage a work item of a project's intake
+      description: 'For the project''s admins, and the workspace''s admins who are members of the project. Refused from the request alone, before the work item is looked at (validation_failed): a status that is none of the five (status invalid_format, the one problem then); snoozed_till left out for snoozed (required) or given for another status (not_allowed); duplicate_to_id the same for duplicate. A work item that does not exist, is deleted, whose project the caller does not see, or that he did not create as a guest who sees only his own (getIssue) answers issue.intake_not_found, whatever his role may do; one whose project he sees but whose intake he may not triage, forbidden; then one without an intake row, never submitted, issue.intake_not_found again, the same answer; each before the project is locked, and with the project locked the role and the intake row are decided again. Then an archived project refuses it (project.archived), then a project whose intake is turned off (issue.intake_disabled), as the project locked reads it. The status moves from the intake row''s status at the moment of the request, a snooze whose time has come being pending: from pending to snoozed, accepted, declined or duplicate; from snoozed to any of the five, snoozed with another time, or pending to end the snooze; never from accepted, declined or duplicate (issue.intake_transition_not_allowed, pending to pending too, and a request repeated once it moved). Then snoozed_till, at the microsecond, is after the moment of the request (snoozed_till must_be_future); duplicate_to_id names another work item of the project, archived or not, that the caller sees and that is not in the project''s intake (duplicate_to_id not_allowed, the one answer whatever it is not). The intake row takes the status, and the time or the work item it is given; the activity of the work item says its intake status moved, from the status at the moment to the new one, and names no work item. An acceptance then moves the work item to the project''s default state as updateIssue would, its activity after the triage''s: it is completed in a state of the completed group, its subscribers are notified, and it is out of the intake, in the project''s lists and searches, changed as any other. Any other triage changes no work item and notifies no one. Every row it writes is the caller''s, at one moment. A project with too many writes on its work items at once answers server_busy, with Retry-After: try again then.'
+      security:
+        - bearer: []
+      x-problem-codes:
+        - validation_failed
+        - issue.intake_not_found
+        - forbidden
+        - project.archived
+        - issue.intake_disabled
+        - issue.intake_transition_not_allowed
+        - server_busy
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IntakeTriage'
+      responses:
+        '200':
+          description: The work item, triaged.
           content:
             application/json:
               schema:
@@ -2310,13 +2378,14 @@ paths:
       tags:
         - issue
       summary: Change a work item
-      description: 'Description image references are checked after host authorization and archival rules. New references must be uploaded preparations of this author, purpose and full host; other members may retain bound images of this host. Invalid references answer asset.not_found, unfinished ones asset.not_uploaded. Even an unchanged body validates its references; binding a legitimate legacy preparation preserves the issue audit and versions. Removing an image never unbinds its historical asset. For the admins and members of its project. The fields given change and the others stay; a list given is the work item''s new list, empty for none. The values follow createIssue''s rules, but for the order of the dates (validation_failed), checked before the work item is looked at. A work item that does not exist, is deleted, whose project the caller does not see, or that he did not create as a guest who sees only his own (getIssue) answers issue.not_found, whatever his role may do; one whose project he sees but whose work items he may not change, forbidden; both are answered before the project is locked, and with the project locked the role is decided again. A work item of an archived project cannot be changed (project.archived), nor then an archived work item (issue.archived), even by a change that changes nothing. Then the state, when it changes, is one of the project''s, not its triage state; each account the work item is newly assigned to is an active member of the project who is not its guest, while one it keeps stays assigned whatever has become of him; each label added is one of the project''s; the start date the work item then has is not after its target date, each as given or, not given, as it is: at start_date when the start date alone is given, else at target_date; the parent, when it changes to a work item, is one of the project''s that is not archived and that the caller sees, and neither the work item nor one under it (validation_failed, every problem at once). A change that changes nothing writes nothing, and the work item is answered as it is; giving the cycle it is in changes nothing. A change of its cycle, its leaving one too, needs the project''s cycles turned on (planning.cycles_disabled), checked before the values; a cycle it joins, the one it moves to, is not archived (planning.archived), is an undeleted cycle of the project (validation_failed, cycle_id, with the other problems), and has not ended on the day of the write in the project''s time zone, refused last, after the description''s images (planning.cycle_completed); the cycle it leaves is not checked, archived or ended too. A change of its modules, a new set replacing the whole, at most 100, each named once, its leaving one too, needs the project''s modules turned on (planning.modules_disabled), after its cycles; each module it joins is not archived (planning.archived) and is an undeleted module of the project (validation_failed, module_ids[i], at its place in module_ids, with the other problems); the modules it keeps and leaves are not checked, archived too, and giving the modules it is in, in any order, changes nothing. Otherwise the work item is changed last by the caller; moved into a state of the completed group, it is completed at the change, and moved into another, not completed; the accounts newly assigned subscribe to it; its activity says what changed: the name, the parent, the priority, the state, the start and the target dates, each label and each assignee added and removed, the cycle it joins, moves to or leaves, and each module it joins and leaves. Every row it writes is the caller''s, at one moment. A project with too many writes on its work items at once answers server_busy, with Retry-After: try again then.'
+      description: 'Description image references are checked after host authorization and archival rules. New references must be uploaded preparations of this author, purpose and full host; other members may retain bound images of this host. Invalid references answer asset.not_found, unfinished ones asset.not_uploaded. Even an unchanged body validates its references; binding a legitimate legacy preparation preserves the issue audit and versions. Removing an image never unbinds its historical asset. For the admins and members of its project. The fields given change and the others stay; a list given is the work item''s new list, empty for none. The values follow createIssue''s rules, but for the order of the dates (validation_failed), checked before the work item is looked at. A work item that does not exist, is deleted, whose project the caller does not see, or that he did not create as a guest who sees only his own (getIssue) answers issue.not_found, whatever his role may do; one whose project he sees but whose work items he may not change, forbidden; both are answered before the project is locked, and with the project locked the role is decided again. A work item in its project''s intake (IssueDetail.intake, not accepted) cannot be changed (issue.in_triage), answered after them, before the project is locked and again with it locked. A work item of an archived project cannot be changed (project.archived), nor then an archived work item (issue.archived), even by a change that changes nothing. Then the state, when it changes, is one of the project''s, not its triage state; each account the work item is newly assigned to is an active member of the project who is not its guest, while one it keeps stays assigned whatever has become of him; each label added is one of the project''s; the start date the work item then has is not after its target date, each as given or, not given, as it is: at start_date when the start date alone is given, else at target_date; the parent, when it changes to a work item, is one of the project''s that is not archived, that the caller sees and that is not in the project''s intake, and neither the work item nor one under it (validation_failed, every problem at once). A change that changes nothing writes nothing, and the work item is answered as it is; giving the cycle it is in changes nothing. A change of its cycle, its leaving one too, needs the project''s cycles turned on (planning.cycles_disabled), checked before the values; a cycle it joins, the one it moves to, is not archived (planning.archived), is an undeleted cycle of the project (validation_failed, cycle_id, with the other problems), and has not ended on the day of the write in the project''s time zone, refused last, after the description''s images (planning.cycle_completed); the cycle it leaves is not checked, archived or ended too. A change of its modules, a new set replacing the whole, at most 100, each named once, its leaving one too, needs the project''s modules turned on (planning.modules_disabled), after its cycles; each module it joins is not archived (planning.archived) and is an undeleted module of the project (validation_failed, module_ids[i], at its place in module_ids, with the other problems); the modules it keeps and leaves are not checked, archived too, and giving the modules it is in, in any order, changes nothing. Otherwise the work item is changed last by the caller; moved into a state of the completed group, it is completed at the change, and moved into another, not completed; the accounts newly assigned subscribe to it; its activity says what changed: the name, the parent, the priority, the state, the start and the target dates, each label and each assignee added and removed, the cycle it joins, moves to or leaves, and each module it joins and leaves. Every row it writes is the caller''s, at one moment. A project with too many writes on its work items at once answers server_busy, with Retry-After: try again then.'
       security:
         - bearer: []
       x-problem-codes:
         - validation_failed
         - issue.not_found
         - forbidden
+        - issue.in_triage
         - project.archived
         - issue.archived
         - planning.cycles_disabled
@@ -2346,12 +2415,13 @@ paths:
       tags:
         - issue
       summary: Delete a work item
-      description: 'For the admins of its project, and for the member of it who created the work item, while he is an admin or a member of the project. A work item that does not exist, is deleted, whose project the caller does not see, or that he did not create as a guest who sees only his own (getIssue) answers issue.not_found, whatever his role may do; one whose project he sees but that he may not delete, forbidden; both are answered before the project is locked, and with the project locked the role is decided again. A work item of an archived project cannot be deleted (project.archived); an archived work item is deleted as any other. The work item and each work item under it, however deep, archived ones too, with their assignees, labels, relations, subscribers and activity, are deleted by the caller at one moment; their numbers are not used again. A project with too many writes on its work items at once answers server_busy, with Retry-After: try again then.'
+      description: 'For the admins of its project, and for the member of it who created the work item, while he is an admin or a member of the project. A work item that does not exist, is deleted, whose project the caller does not see, or that he did not create as a guest who sees only his own (getIssue) answers issue.not_found, whatever his role may do; one whose project he sees but that he may not delete, forbidden; both are answered before the project is locked, and with the project locked the role is decided again. A work item in its project''s intake (IssueDetail.intake, not accepted) cannot be deleted (issue.in_triage), answered after them, before the project is locked and again with it locked. A work item of an archived project cannot be deleted (project.archived); an archived work item is deleted as any other. The work item and each work item under it, however deep, archived ones too, with their assignees, labels, relations, subscribers and activity, are deleted by the caller at one moment; their numbers are not used again. A project with too many writes on its work items at once answers server_busy, with Retry-After: try again then.'
       security:
         - bearer: []
       x-problem-codes:
         - issue.not_found
         - forbidden
+        - issue.in_triage
         - project.archived
         - server_busy
       responses:
@@ -2367,12 +2437,13 @@ paths:
       tags:
         - issue
       summary: Archive a work item
-      description: 'For the admins and members of its project. A work item that does not exist, is deleted, whose project the caller does not see, or that he did not create as a guest who sees only his own (getIssue) answers issue.not_found, whatever his role may do; one whose project he sees but whose work items he may not archive, forbidden; both are answered before the project is locked, and with the project locked the role is decided again. A work item of an archived project cannot be archived (project.archived). An archived work item is answered as it is, and nothing is written. Only a work item in a state of the completed or the cancelled group is archived (issue.not_archivable). It is archived at the moment of the request, and changed last by the caller then; its activity says it was archived, by the caller then. A project with too many writes on its work items at once answers server_busy, with Retry-After: try again then.'
+      description: 'For the admins and members of its project. A work item that does not exist, is deleted, whose project the caller does not see, or that he did not create as a guest who sees only his own (getIssue) answers issue.not_found, whatever his role may do; one whose project he sees but whose work items he may not archive, forbidden; both are answered before the project is locked, and with the project locked the role is decided again. A work item in its project''s intake (IssueDetail.intake, not accepted) cannot be archived (issue.in_triage), answered after them, before the project is locked and again with it locked. A work item of an archived project cannot be archived (project.archived). An archived work item is answered as it is, and nothing is written. Only a work item in a state of the completed or the cancelled group is archived (issue.not_archivable). It is archived at the moment of the request, and changed last by the caller then; its activity says it was archived, by the caller then. A project with too many writes on its work items at once answers server_busy, with Retry-After: try again then.'
       security:
         - bearer: []
       x-problem-codes:
         - issue.not_found
         - forbidden
+        - issue.in_triage
         - project.archived
         - issue.not_archivable
         - server_busy
@@ -2393,12 +2464,13 @@ paths:
       tags:
         - issue
       summary: Unarchive a work item
-      description: 'For the admins and members of its project, as archiveIssue. A work item of an archived project cannot be unarchived (project.archived). A work item that is not archived is answered as it is, and nothing is written. Whatever its state, it is unarchived at the moment of the request, and changed last by the caller then; its activity says it was restored, by the caller then. A project with too many writes on its work items at once answers server_busy, with Retry-After: try again then.'
+      description: 'For the admins and members of its project, as archiveIssue. A work item in its project''s intake cannot be unarchived (issue.in_triage), as archiveIssue, even one that is not archived. A work item of an archived project cannot be unarchived (project.archived). A work item that is not archived is answered as it is, and nothing is written. Whatever its state, it is unarchived at the moment of the request, and changed last by the caller then; its activity says it was restored, by the caller then. A project with too many writes on its work items at once answers server_busy, with Retry-After: try again then.'
       security:
         - bearer: []
       x-problem-codes:
         - issue.not_found
         - forbidden
+        - issue.in_triage
         - project.archived
         - server_busy
       responses:
@@ -2478,13 +2550,14 @@ paths:
       tags:
         - issue
       summary: Put work items under a work item
-      description: 'For the admins and members of its project. Refused from the request alone, before the work item is looked at (validation_failed): no work item, or more than 100 (sub_issue_ids too_short, too_long; more than 100 is the one problem named), and a work item named twice (sub_issue_ids[i] duplicate). A work item that does not exist, is deleted, whose project the caller does not see, or that he did not create as a guest who sees only his own (getIssue) answers issue.not_found, whatever his role may do; one whose project he sees but whose work items he may not change, forbidden; both are answered before the project is locked, and with the project locked the role is decided again. A work item of an archived project takes none under it (project.archived), nor then an archived work item (issue.archived). Then each work item named is one of the project''s that is not archived and that the caller sees, and neither this work item nor one above it (sub_issue_ids[i] not_allowed, every problem at once). One under another work item moves under this one; one under it already stays as it is. Each that moves is changed last by the caller, and its activity says its parent changed, from the one it was under. Every row it writes is the caller''s, at one moment. A project with too many writes on its work items at once answers server_busy, with Retry-After: try again then.'
+      description: 'For the admins and members of its project. Refused from the request alone, before the work item is looked at (validation_failed): no work item, or more than 100 (sub_issue_ids too_short, too_long; more than 100 is the one problem named), and a work item named twice (sub_issue_ids[i] duplicate). A work item that does not exist, is deleted, whose project the caller does not see, or that he did not create as a guest who sees only his own (getIssue) answers issue.not_found, whatever his role may do; one whose project he sees but whose work items he may not change, forbidden; both are answered before the project is locked, and with the project locked the role is decided again. A work item in its project''s intake (IssueDetail.intake, not accepted) takes none under it (issue.in_triage), answered after them, before the project is locked and again with it locked. A work item of an archived project takes none under it (project.archived), nor then an archived work item (issue.archived). Then each work item named is one of the project''s that is not archived, that the caller sees and that is not in the project''s intake, and neither this work item nor one above it (sub_issue_ids[i] not_allowed, every problem at once). One under another work item moves under this one; one under it already stays as it is. Each that moves is changed last by the caller, and its activity says its parent changed, from the one it was under. Every row it writes is the caller''s, at one moment. A project with too many writes on its work items at once answers server_busy, with Retry-After: try again then.'
       security:
         - bearer: []
       x-problem-codes:
         - validation_failed
         - issue.not_found
         - forbidden
+        - issue.in_triage
         - project.archived
         - issue.archived
         - server_busy
@@ -3007,13 +3080,14 @@ paths:
       tags:
         - issue
       summary: Relate a work item to others
-      description: 'For the admins and members of its project. Refused from the request alone, before the work item is looked at (validation_failed): a type that is none of the four (relation_type invalid_format), no work item or more than 20 (issue_ids too_short, too_long; more than 20 is the one problem of issue_ids named), and a work item named twice (issue_ids[i] duplicate). A work item that does not exist, is deleted, whose project the caller does not see, or that he did not create as a guest who sees only his own (getIssue) answers issue.not_found, whatever his role may do; one whose project he sees but whose work items he may not change, forbidden. Both are answered before any project is locked, and so is whether he sees each work item named: one he does not takes no lock, and is refused below. Then the work item''s project and those of the work items named are locked together, and his role is decided again. A work item of an archived project relates to none (project.archived), nor then an archived work item (issue.archived). Each work item named is another work item of the workspace, of any of its projects, that the caller sees, as getIssue would answer it, not archived, of a project not archived (issue_ids[i] not_allowed), and that does not relate to this one yet, of any type, either way (issue_ids[i] duplicate): every problem at once. Two work items have one relation at most. A work item blocking another is stored the other way round, as the other''s blocked_by, and reads as blocking from this one alone. Both work items of each relation are changed last by the caller, and the activity of each says it relates to the other, with the type it reads. Every row it writes is the caller''s, at one moment. A project with too many writes on its work items at once answers server_busy, with Retry-After: try again then.'
+      description: 'For the admins and members of its project. Refused from the request alone, before the work item is looked at (validation_failed): a type that is none of the four (relation_type invalid_format), no work item or more than 20 (issue_ids too_short, too_long; more than 20 is the one problem of issue_ids named), and a work item named twice (issue_ids[i] duplicate). A work item that does not exist, is deleted, whose project the caller does not see, or that he did not create as a guest who sees only his own (getIssue) answers issue.not_found, whatever his role may do; one whose project he sees but whose work items he may not change, forbidden. Both are answered before any project is locked, and so is whether he sees each work item named: one he does not takes no lock, and is refused below. A work item in its project''s intake (IssueDetail.intake, not accepted) relates to none (issue.in_triage), answered after the 404 and the 403, before any project is locked and again with them locked. Then the work item''s project and those of the work items named are locked together, and his role is decided again. A work item of an archived project relates to none (project.archived), nor then an archived work item (issue.archived). Each work item named is another work item of the workspace, of any of its projects, that the caller sees, as getIssue would answer it, not archived, of a project not archived, not in its project''s intake (issue_ids[i] not_allowed), and that does not relate to this one yet, of any type, either way (issue_ids[i] duplicate): every problem at once. Two work items have one relation at most. A work item blocking another is stored the other way round, as the other''s blocked_by, and reads as blocking from this one alone. Both work items of each relation are changed last by the caller, and the activity of each says it relates to the other, with the type it reads. Every row it writes is the caller''s, at one moment. A project with too many writes on its work items at once answers server_busy, with Retry-After: try again then.'
       security:
         - bearer: []
       x-problem-codes:
         - validation_failed
         - issue.not_found
         - forbidden
+        - issue.in_triage
         - project.archived
         - issue.archived
         - server_busy
@@ -6064,6 +6138,38 @@ components:
           format: uuid
         payload:
           $ref: '#/components/schemas/IssueDraftPayload'
+    IntakeStatus:
+      description: 'An intake row''s status: pending, waiting for a triage; snoozed, till a time, then pending again; accepted, out of the intake into the project''s work; declined; duplicate, of another work item. accepted, declined and duplicate are final.'
+      type: string
+      enum:
+        - pending
+        - snoozed
+        - accepted
+        - declined
+        - duplicate
+    IssueIntake:
+      description: A work item's intake row, as its detail shows it.
+      type: object
+      additionalProperties: false
+      required:
+        - status
+        - snoozed_till
+        - duplicate_to_id
+      properties:
+        status:
+          $ref: '#/components/schemas/IntakeStatus'
+        snoozed_till:
+          description: Till when the work item is snoozed; null unless its status is snoozed, a snooze whose time has come showing as pending.
+          type:
+            - string
+            - 'null'
+          format: date-time
+        duplicate_to_id:
+          description: The work item it duplicates; null unless its status is duplicate, and null when that work item is deleted or the caller does not see it.
+          type:
+            - string
+            - 'null'
+          format: uuid
     IssueDetail:
       description: A work item of a project.
       type: object
@@ -6071,6 +6177,7 @@ components:
       required:
         - description_html
         - is_subscribed
+        - intake
         - id
         - workspace_id
         - project_id
@@ -6102,6 +6209,11 @@ components:
         is_subscribed:
           description: Whether the caller subscribes to the work item at the moment of the answer. A list's row does not carry it.
           type: boolean
+        intake:
+          description: The work item's intake row, as of the moment of the answer; null for a work item never submitted to its project's intake (submitIntakeIssue). A work item is in the intake while its status is not accepted, and is then in the project's triage state. A list's row does not carry it.
+          oneOf:
+            - $ref: '#/components/schemas/IssueIntake'
+            - type: 'null'
         id:
           type: string
           format: uuid
@@ -6385,6 +6497,54 @@ components:
           items:
             type: string
             format: uuid
+    IntakeIssueCreate:
+      description: 'A work item submitted to a project''s intake: createIssue''s body but for the state, the start date, the parent, the cycle and the modules.'
+      type: object
+      additionalProperties: false
+      required:
+        - name
+      properties:
+        description_html:
+          description: Sanitized rich text HTML; at most 500000 characters on input.
+          type: string
+        name:
+          description: 1–255 characters without the white space around it, which is not stored.
+          type: string
+        priority:
+          $ref: '#/components/schemas/IssuePriority'
+        assignee_ids:
+          description: At most 100 accounts, each named once, each an active member of the project who is not its guest; left out, or empty, for the project's default assignee while he is one, else no one.
+          type: array
+          items:
+            type: string
+            format: uuid
+        label_ids:
+          description: At most 100 of the project's labels, each named once.
+          type: array
+          items:
+            type: string
+            format: uuid
+        target_date:
+          description: The day it is due, as YYYY-MM-DD; left out for none.
+          type: string
+          format: date
+    IntakeTriage:
+      description: A triage of a work item of a project's intake.
+      type: object
+      additionalProperties: false
+      required:
+        - status
+      properties:
+        status:
+          $ref: '#/components/schemas/IntakeStatus'
+        snoozed_till:
+          description: 'For snoozed, and for it alone: till when, after the moment of the request; the work item is pending again from then.'
+          type: string
+          format: date-time
+        duplicate_to_id:
+          description: 'For duplicate, and for it alone: the work item it duplicates, another of the project''s, archived or not, that the caller sees and that is not in the project''s intake.'
+          type: string
+          format: uuid
     IssueUpdate:
       description: Changes the fields it names; a field left out keeps its value.
       type: object
@@ -8243,7 +8403,7 @@ components:
         - subscribed
         - mentioned
     NotificationIssue:
-      description: 'The work item as it was when the notification was sent: its name, its number, its project''s identifier, and its state''s name and group, a StateGroup of the project API (backlog, unstarted, started, completed or cancelled).'
+      description: 'The work item as it was when the notification was sent: its name, its number, its project''s identifier, and its state''s name and group, a StateGroup of the project API (backlog, unstarted, started, completed or cancelled), or triage, the group of the project''s triage state, for a work item in its project''s intake (IssueDetail.intake), as a submission''s notifications have it.'
       type: object
       additionalProperties: false
       required:
