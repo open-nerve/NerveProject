@@ -123,6 +123,46 @@ func TestAssetHostAccessRealMatrix(t *testing.T) {
 			}
 		}
 	}
+	// A work item in Web's intake, turned on, as host (M7 P2c spec 2.2):
+	// bob's submission and walt's, pending. A write on either is decided on
+	// intake.update and its submitter rule, a read on issue.read: alice,
+	// Web's admin, and the item's submitter, bob its member or walt its
+	// guest, write; bob, who did not submit walt's, reads it and is refused
+	// its writes; walt, whom Web shows only his own work items, does not see
+	// bob's, nor olga either.
+	w.intakeOn(t)
+	submitted := map[string]uuid.UUID{"bob": w.submit(t, "bob", `{"name":"Bob's"}`).ID, "walt": w.submit(t, "walt", `{"name":"Walt's"}`).ID}
+	for _, submitter := range []string{"bob", "walt"} {
+		for _, purpose := range []assetdomain.Purpose{assetdomain.IssueAttachment, assetdomain.IssueDescription} {
+			for _, intent := range []assetapp.AccessIntent{assetapp.ReadAsset, assetapp.PrepareAsset, assetapp.RemoveAsset} {
+				for _, who := range []string{"alice", "bob", "walt", "olga"} {
+					t.Run(fmt.Sprintf("in the intake/%s's/%s/%d/%s", submitter, purpose, intent, who), func(t *testing.T) {
+						q := assetapp.HostRequest{Scope: assetdomain.Scope{Kind: assetdomain.ScopeIssue, ID: submitted[submitter]}, Intent: intent}
+						if !q.Scope.ValidFor(purpose) {
+							t.Fatal("invalid purpose fixture")
+						}
+						var want error
+						switch {
+						case who == "olga", who == "walt" && submitter != "walt":
+							want = assetdomain.ErrAssetNotFound
+						case who == "bob" && submitter != "bob" && intent != assetapp.ReadAsset:
+							want = shared.Forbidden()
+						}
+						actor := shared.Actor{UserID: w.ids[who]}
+						h, err := a.Inspect(t.Context(), actor, q)
+						if !errors.Is(err, want) {
+							t.Fatalf("Inspect=%v want %v", err, want)
+						}
+						if err == nil {
+							if err := checkAssetOwner(t, w, a, actor, q, h); err != nil {
+								t.Fatal(err)
+							}
+						}
+					})
+				}
+			}
+		}
+	}
 	t.Run("archive refusal follows authority and drafts remain private", func(t *testing.T) {
 		q := assetapp.HostRequest{Scope: assetdomain.Scope{Kind: assetdomain.ScopeIssue, ID: id}, Intent: assetapp.PrepareAsset}
 		actor := shared.Actor{UserID: w.ids["alice"]}
