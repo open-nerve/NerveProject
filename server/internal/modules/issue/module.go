@@ -276,6 +276,7 @@ func New(d Deps) *Module {
 			TriageIntakeIssue:       app.NewTriageIntakeIssue(app.TriageIntakeIssueDeps{Locks: locks, Update: update, Intake: store, Issues: store, States: d.Projects, Clock: d.Clock}),
 			ListIntakeIssues:        app.NewListIntakeIssues(app.ListIntakeIssuesDeps{ReadTx: d.ReadTx, Locks: locks, Rows: store, Refs: app.NewIssueRefs(store), Clock: d.Clock}),
 			CountIntakeIssues:       app.NewCountIntakeIssues(app.CountIntakeIssuesDeps{ReadTx: d.ReadTx, Locks: locks, Workspaces: d.Workspaces, Projects: d.Projects, Intakes: d.Projects, Counts: store, Clock: d.Clock}),
+			UpdateIntakeIssue:       app.NewUpdateIntakeIssue(app.UpdateIntakeIssueDeps{Locks: locks, Update: update, Clock: d.Clock}),
 			DeleteIntakeIssue:       app.NewDeleteIntakeIssue(app.DeleteIntakeIssueDeps{Locks: locks, Delete: removal, Intake: store, Clock: d.Clock}),
 			GetIssue:                app.NewGetIssue(locks, d.ReadTx),
 			GetIssueByIdentifier: app.NewGetIssueByIdentifier(app.GetIssueByIdentifierDeps{
