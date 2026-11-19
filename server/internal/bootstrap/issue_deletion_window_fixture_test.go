@@ -76,10 +76,15 @@ func newDeletionWindowFixture(t *testing.T) deletionWindowFixture {
 	f.qDraft = createDraftHTTP(t, w, "alice", `{"project_id":"`+f.q.String()+`","payload":{"name":"Kept"}}`).ID
 	f.noProject = createDraftHTTP(t, w, "alice", `{"payload":{"name":"Unassigned"}}`).ID
 	f.x.draft = createDraftHTTP(t, w, "alice", `{"project_id":"`+w.web.String()+`","payload":{"name":"Old project"}}`).ID
-	// Web's intake is on and holds a pending work item: a submission or a
-	// triage that skipped the deletion would be answered 201 or 200, not the
-	// absent one's 404. Lists and searches leave it out (M7 P2a spec 2.6).
+	// Web's intake is on and holds a pending work item: a submission, a
+	// triage, a content edit or a deletion of it that skipped the deletion
+	// would be answered 201, 200 or 204, not the absent one's 404. Lists
+	// and searches leave it out (M7 P2a spec 2.6). Kept's is on and holds
+	// one too: alice's counts during Web's deletion are Kept's alone, one
+	// pending (M7 P2b spec 2.6).
 	f.x.intake = w.submitted(t)
+	w.send(t, "alice", http.MethodPatch, "/api/v0/projects/"+f.q.String(), `{"intake_view":true}`, http.StatusOK)
+	w.send(t, "alice", http.MethodPost, "/api/v0/projects/"+f.q.String()+"/intake-issues", `{"name":"Kept intake"}`, http.StatusCreated)
 	return f
 }
 

@@ -1,8 +1,10 @@
 package bootstrap
 
 import (
+	"slices"
 	"strings"
 	"testing"
+	"uuid"
 )
 
 type deletionWindowRequest struct {
@@ -55,7 +57,7 @@ func (f deletionWindowFixture) requests(t *testing.T, workspace bool) []deletion
 		r := deletionWindowRequest{name: row.op, actor: "alice", method: row.method, path: path, body: body, want: 404}
 		if !workspace {
 			switch row.op {
-			case "searchIssues", "listMemberIssues", "listDrafts":
+			case "searchIssues", "listMemberIssues", "listDrafts", "getIntakeCounts":
 				r.want = 200
 			case "createDraft":
 				r.want = 422
@@ -75,6 +77,8 @@ func (f deletionWindowFixture) requests(t *testing.T, workspace bool) []deletion
 				r.check = windowPageIDs(3, f.kept[2], f.kept[1], f.kept[0])
 			case "listDrafts":
 				r.check = windowPageIDs(2, f.noProject, f.qDraft)
+			case "getIntakeCounts":
+				r.check = windowCounts(f.q, 1)
 			}
 		}
 		requests = append(requests, r)
@@ -112,6 +116,18 @@ func TestIssueDeletionWindowAnswersAreStable(t *testing.T) {
 				f.unassignedWrites(t)
 			}
 		})
+	}
+}
+
+// windowCounts checks the answer of getIntakeCounts: project alone, with
+// pending work items pending; the deleted project, whose intake is on and
+// holds one pending, is not listed.
+func windowCounts(project uuid.UUID, pending int64) func(*testing.T, string) {
+	return func(t *testing.T, body string) {
+		t.Helper()
+		if got, want := countsIn(t, body), []answeredCount{{ProjectID: project, Pending: pending}}; !slices.Equal(got, want) {
+			t.Fatalf("counts=%+v want %+v; %s", got, want, body)
+		}
 	}
 }
 
