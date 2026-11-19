@@ -56,13 +56,12 @@ func issueRowSteps(d IssueRowsDeleter, relations func(context.Context, IssueDele
 	}
 }
 
-// DeleteIssueDeps are what deleteIssue writes through.
+// DeleteIssueDeps supplies lock orchestration, the shared deletion core
+// and the clock a deletion's moment is read from.
 type DeleteIssueDeps struct {
-	Events    shared.EventPublisher
-	Locks     Locks
-	Rows      IssueRowsDeleter
-	Relations *RelationDeletions
-	Clock     Clock
+	Locks  Locks
+	Delete *IssueRemoval
+	Clock  Clock
 }
 
 // DeleteIssue deletes a work item: DELETE /api/v0/issues/{issue_id} (M4
@@ -83,15 +82,9 @@ func NewDeleteIssue(d DeleteIssueDeps) *DeleteIssue {
 // project's intake refused (409 issue.in_triage, refuseTriage; M7 P2a spec
 // 2.6), before any lock; then the project's write gate (503 server_busy);
 // then in one transaction, the project FOR NO KEY UPDATE, the work item
-// read again, the decision and the intake's refusal again, and under
-// them: an archived project refuses it (409
-// project.archived); its subtree, the work item and each one under it,
-// however deep, archived ones too, read under the lock, which every write
-// of a parent holds; the clock; the subtree's work items and each row
-// under them soft-deleted, table by table in the global order
-// (issueRowSteps), all of it the caller's at that moment. An archived work
-// item is deleted as any other (3.8). A failing statement ends it with its
-// failure, and none after it runs.
+// read again, the decision and the intake's refusal again, and under them
+// the deletion itself (deleteLocked), its moment read from the use case's
+// clock after its last lock.
 func (u *DeleteIssue) Execute(ctx context.Context, id uuid.UUID) error {
 	actor, err := shared.RequireActor(ctx)
 	if err != nil {
@@ -99,27 +92,6 @@ func (u *DeleteIssue) Execute(ctx context.Context, id uuid.UUID) error {
 	}
 	w := write{issue: &id, action: domain.ActionDelete, notFound: domain.ErrIssueNotFound, check: refuseTriage}
 	return u.d.Locks.run(ctx, actor, w, func(ctx context.Context, h held) error {
-		if h.project.Archived {
-			return domain.ErrProjectArchived
-		}
-		subtree, err := u.d.Rows.Subtree(ctx, id)
-		if err != nil {
-			return err
-		}
-		d := IssueDeletion{IssueIDs: subtree, By: actor.UserID, At: u.d.Clock.Now()}
-		for _, step := range issueRowSteps(u.d.Rows, func(ctx context.Context, d IssueDeletion) error {
-			return u.d.Relations.ForIssues(ctx, h.issue.ProjectID, d)
-		}) {
-			if err := step(ctx, d); err != nil {
-				return err
-			}
-		}
-		for _, issueID := range subtree {
-			s := stamp{workspace: h.issue.WorkspaceID, project: h.issue.ProjectID, issue: issueID, by: d.By, at: d.At}
-			if err := u.d.Events.Publish(ctx, s.event(domain.EventIssueDeleted, nil)); err != nil {
-				return err
-			}
-		}
-		return nil
+		return u.d.Delete.deleteLocked(ctx, actor.UserID, h, u.d.Clock)
 	})
 }

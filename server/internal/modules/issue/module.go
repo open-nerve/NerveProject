@@ -237,6 +237,7 @@ func New(d Deps) *Module {
 	update := app.NewIssueUpdate(app.IssueUpdateDeps{Events: d.Events,
 		Locks: locks, Issues: store, States: d.Projects, Labels: d.Projects, Members: d.Projects, Planning: d.Planning, Profiles: d.Profiles, Sanitizer: sanitizer, ContentBindings: d.ContentBindings,
 	})
+	removal := app.NewIssueRemoval(app.IssueRemovalDeps{Events: d.Events, Rows: store, Relations: app.NewRelationDeletions(store, d.Projects)})
 	return &Module{
 		assets: assetAccess, deleteRows: app.NewDeleteRows(app.DeleteRowsDeps{Rows: store, Relations: app.NewRelationDeletions(store, d.Projects), Remaining: store, Tx: d.JobTx, RuntimeNow: d.RuntimeNow, Batch: d.DeleteBatch, Budget: d.DeleteBudget}), deleteBudget: d.DeleteBudget, logger: d.Logger,
 		trimVersions: app.NewTrimVersions(app.TrimVersionsDeps{Projects: d.Projects, Gate: d.Projects, Rows: store, Tx: d.JobTx}), trimVersionsInterval: d.TrimVersionsInterval,
@@ -280,7 +281,7 @@ func New(d Deps) *Module {
 				Locks: locks, Workspaces: d.Workspaces, Projects: d.Projects, Issues: store, ReadTx: d.ReadTx,
 			}),
 			UpdateIssue:        app.NewUpdateIssue(app.UpdateIssueDeps{Locks: locks, Update: update, Clock: d.Clock}),
-			DeleteIssue:        app.NewDeleteIssue(app.DeleteIssueDeps{Events: d.Events, Locks: locks, Rows: store, Relations: app.NewRelationDeletions(store, d.Projects), Clock: d.Clock}),
+			DeleteIssue:        app.NewDeleteIssue(app.DeleteIssueDeps{Locks: locks, Delete: removal, Clock: d.Clock}),
 			ArchiveIssue:       app.NewArchiveIssue(archive),
 			UnarchiveIssue:     app.NewUnarchiveIssue(archive),
 			SubscribeIssue:     app.NewSubscribeIssue(subscriptions),
