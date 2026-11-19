@@ -142,6 +142,15 @@ type IntakeTriage struct {
 	At            time.Time
 }
 
+// IntakeDeletion is the soft deletion of a work item's undeleted intake
+// row alone, the work item staying (M7 P2b spec 2.5): deleted and last
+// changed at the moment and by the account given.
+type IntakeDeletion struct {
+	IssueID uuid.UUID
+	By      uuid.UUID
+	At      time.Time
+}
+
 // ActivityRow is a new row of a work item's activity (M4 design 3.13):
 // its id, the work item's, the row's values, and its actor, who writes it,
 // at the moment given.

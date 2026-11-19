@@ -141,6 +141,10 @@ type IssueProjects interface {
 	// VisibleIssueProjects reads active, undeleted memberships in undeleted,
 	// unarchived projects, using the project role for guest scope.
 	VisibleIssueProjects(ctx context.Context, workspaceID, actorID uuid.UUID) ([]VisibleIssueProject, error)
+	// IntakeIssueProjects reads which of the projects ids are undeleted,
+	// unarchived and have their intake turned on, in id order, without
+	// reading any membership (M7 P2b spec 2.6).
+	IntakeIssueProjects(ctx context.Context, ids []uuid.UUID) ([]uuid.UUID, error)
 	// IssueListStates reads complete undeleted non-triage state catalogs.
 	IssueListStates(ctx context.Context, projectIDs []uuid.UUID) ([]IssueState, error)
 	// IssueListLabels reads complete undeleted label catalogs.

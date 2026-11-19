@@ -43,3 +43,31 @@ type IntakeLister interface {
 	// alone when in.OwnOnly.
 	ListIntake(ctx context.Context, in IntakeListRead) ([]IntakeRecord, error)
 }
+
+// IntakeCount is a project's number of pending intake work items as the
+// caller counts them (M7 P2b spec 2.6).
+type IntakeCount struct {
+	ProjectID uuid.UUID
+	Pending   int64
+}
+
+// IntakeCounter counts the pending work items of projects' intakes (M7
+// P2b spec 2.6), in the read transaction ctx carries.
+type IntakeCounter interface {
+	// CountPendingIntake counts, in each of the projects, each given once,
+	// its undeleted intake rows of undeleted work items whose effective
+	// status at now is pending (R3); of a project whose grant sees only the
+	// actor's own work items, those he created alone, an unknown creator's
+	// none. Every project, in id order, one with none too.
+	CountPendingIntake(ctx context.Context, actor uuid.UUID, projects []VisibleProject, now time.Time) ([]IntakeCount, error)
+}
+
+// IntakeProjects reads which projects have their intake turned on (M7 P2b
+// spec 2.6, DP-20): project.Provide's, converted (bootstrap/ports.go).
+type IntakeProjects interface {
+	// IntakeOn reads which of the projects ids are undeleted, unarchived
+	// and have their intake turned on, in id order, in the read transaction
+	// ctx carries. It reads no membership: the caller gives the projects he
+	// sees (VisibleProjects.Visible).
+	IntakeOn(ctx context.Context, ids []uuid.UUID) ([]uuid.UUID, error)
+}

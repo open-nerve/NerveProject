@@ -221,3 +221,18 @@ func (s *Store) DeletedIssueProjects(ctx context.Context, ids []uuid.UUID) (map[
 	}
 	return out, nil
 }
+
+// IntakeIssueProjects reads which of the projects ids are undeleted,
+// unarchived and have their intake turned on, in id order, none when no
+// one is (M7 P2b spec 2.6): the issue module's pending counts, after
+// VisibleIssueProjects in the same read transaction.
+func (s *Store) IntakeIssueProjects(ctx context.Context, ids []uuid.UUID) ([]uuid.UUID, error) {
+	on, err := s.queries(ctx).IntakeIssueProjects(ctx, ids)
+	if err != nil {
+		return nil, fmt.Errorf("read which of %d projects have their intake turned on: %w", len(ids), err)
+	}
+	if on == nil {
+		on = []uuid.UUID{}
+	}
+	return on, nil
+}

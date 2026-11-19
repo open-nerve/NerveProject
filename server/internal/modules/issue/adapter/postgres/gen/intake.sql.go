@@ -12,6 +12,30 @@ import (
 	"uuid"
 )
 
+const deleteIntakeIssueRow = `-- name: DeleteIntakeIssueRow :execrows
+UPDATE intake_issues
+SET deleted_at = $1::timestamptz, updated_at = $1, updated_by_id = $2::uuid
+WHERE issue_id = $3 AND deleted_at IS NULL
+`
+
+type DeleteIntakeIssueRowParams struct {
+	At      time.Time
+	By      uuid.UUID
+	IssueID uuid.UUID
+}
+
+// deleteIntakeIssue's write of an accepted work item (M7 P2b spec 2.5, DP-10): its undeleted intake row alone,
+// soft-deleted and last changed at the moment and by the account given, under the project's FOR NO KEY UPDATE, as
+// InsertIntakeIssue; the work item stays, and the 60-day purge takes the row by its own deleted_at. Its other columns,
+// its creator and its status too, stay as they were. intake_issues_issue_id_key serves it: one row at most.
+func (q *Queries) DeleteIntakeIssueRow(ctx context.Context, arg DeleteIntakeIssueRowParams) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteIntakeIssueRow, arg.At, arg.By, arg.IssueID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const insertIntakeIssue = `-- name: InsertIntakeIssue :exec
 INSERT INTO intake_issues (id, workspace_id, project_id, issue_id, status, created_by_id, updated_by_id, created_at, updated_at)
 VALUES ($1, $2, $3, $4, 'pending', $5::uuid,

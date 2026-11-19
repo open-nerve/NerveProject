@@ -97,7 +97,8 @@ func Provide(pool *pgxpool.Pool, protected []postgres.ProtectedReference) Provid
 // gate, its numbers, its states', labels' and members' catalogs, for its
 // writes; a workspace's projects' identifiers, for a read by identifier;
 // ordinary and historical memberships, and complete list state and label
-// catalogs.
+// catalogs; and which projects have their intake turned on, for the
+// pending counts (M7 P2b spec 2.6).
 // project.Provide's IssueProjects is them, converted (bootstrap/ports.go).
 type ProjectPorts interface {
 	app.AssetProjectReader
@@ -112,6 +113,7 @@ type ProjectPorts interface {
 	app.VisibleProjects
 	app.ListStateCatalog
 	app.ListLabelCatalog
+	app.IntakeProjects
 }
 
 // PlanningPorts are what the module asks of planning (M6 P3a spec R1,
