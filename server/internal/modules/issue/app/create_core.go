@@ -89,7 +89,10 @@ func (p placement) state(states []StateRef, asked *uuid.UUID) (StateRef, bool) {
 
 // createLocked requires pure domain validation and the project's write lock.
 // Its returned moment is the sole clock reading used by all of its writes.
-// The work item is put in the state place picks.
+// The work item is put in the state place picks. It returns the work item
+// as read back once every row is written, and that moment; its caller
+// composes its own answer from them (answer, Locks.seenAt), as a draft's
+// publication does.
 func (u *IssueCreation) createLocked(ctx context.Context, actorID, projectID uuid.UUID, h held, in domain.NewIssue, place placement) (domain.Issue, time.Time, error) {
 	p, err := u.prepareLocked(ctx, actorID, projectID, h, in, place)
 	if err != nil {
@@ -114,11 +117,7 @@ func (u *IssueCreation) createLocked(ctx context.Context, actorID, projectID uui
 			return domain.Issue{}, time.Time{}, err
 		}
 	}
-	answer, err := u.answer(ctx, actorID, created)
-	if err != nil {
-		return domain.Issue{}, time.Time{}, err
-	}
-	return answer, at, nil
+	return created, at, nil
 }
 
 // answer is the work item created, as read back, as its creator actorID is

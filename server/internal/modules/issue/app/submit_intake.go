@@ -44,8 +44,8 @@ func NewSubmitIntakeIssue(d SubmitIntakeIssueDeps) *SubmitIntakeIssue {
 // The answer is the work item read back after its intake row, as the
 // caller sees it at the creation's moment (Locks.seenAt), as every other
 // answer of a work item in full is (M7 P2a spec 2.8): its intake row, and
-// whether he subscribes to it. The core's own answer, read before the
-// intake row is, is not it.
+// whether he subscribes to it. The core builds no answer of its own: what
+// it reads back, before the intake row is written, is not it.
 func (u *SubmitIntakeIssue) Execute(ctx context.Context, projectID uuid.UUID, in domain.NewIntakeIssue) (domain.Issue, error) {
 	actor, err := shared.RequireActor(ctx)
 	if err != nil {
