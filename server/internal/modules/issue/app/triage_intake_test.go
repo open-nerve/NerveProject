@@ -53,8 +53,8 @@ func newTriageWith(t *testing.T, locks app.Clock) *triageWorld {
 	w.locks = app.NewLocks(w.project, intake, w.auth, fakeGate{}, fakeTx{log: w.log}, noIssueAttachments{}, locks)
 	events := &recordedEvents{t: t}
 	clock := clockAt{at: clockNow, log: w.log}
-	update := app.NewUpdateIssue(app.UpdateIssueDeps{Events: events, Sanitizer: descriptionSanitizer{}, Locks: w.locks, Issues: intake,
-		States: w.project, Labels: w.project, Members: w.project, Profiles: w.profiles, Clock: clock})
+	update := app.NewIssueUpdate(app.IssueUpdateDeps{Events: events, Sanitizer: descriptionSanitizer{}, Locks: w.locks, Issues: intake,
+		States: w.project, Labels: w.project, Members: w.project, Profiles: w.profiles})
 	uc := app.NewTriageIntakeIssue(app.TriageIntakeIssueDeps{Locks: w.locks, Update: update, Intake: intake, Issues: intake, States: w.project,
 		Clock: clock})
 	return &triageWorld{world: w, uc: uc, intake: intake, events: events, id: id}

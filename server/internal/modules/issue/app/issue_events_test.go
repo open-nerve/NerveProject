@@ -36,7 +36,7 @@ func eventCreate(w *world, p shared.EventPublisher) *app.CreateIssue {
 	return app.NewCreateIssue(app.CreateIssueDeps{Locks: w.locks, Creation: app.NewIssueCreation(app.IssueCreationDeps{Attachments: noIssueAttachments{}, Events: p, Issues: w.issues, Sequences: w.project, States: w.project, Labels: w.project, Members: w.project, Profiles: w.profiles, Clock: clockAt{at: clockNow, log: w.log}, Sanitizer: descriptionSanitizer{}})})
 }
 func eventUpdate(w *world, p shared.EventPublisher) *app.UpdateIssue {
-	return app.NewUpdateIssue(app.UpdateIssueDeps{Events: p, Locks: w.locks, Issues: w.issues, States: w.project, Labels: w.project, Members: w.project, Profiles: w.profiles, Clock: clockAt{at: clockNow, log: w.log}, Sanitizer: descriptionSanitizer{}})
+	return app.NewUpdateIssue(app.UpdateIssueDeps{Locks: w.locks, Clock: clockAt{at: clockNow, log: w.log}, Update: app.NewIssueUpdate(app.IssueUpdateDeps{Events: p, Locks: w.locks, Issues: w.issues, States: w.project, Labels: w.project, Members: w.project, Profiles: w.profiles, Sanitizer: descriptionSanitizer{}})})
 }
 func evptr[T any](v T) *T { return &v }
 func wantIssueEvent(t *testing.T, p *recordedEvents, kind string, id uuid.UUID, changes []shared.Change) shared.Event {

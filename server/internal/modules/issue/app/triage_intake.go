@@ -15,7 +15,7 @@ import (
 // the work items' store, the project's states and the clock.
 type TriageIntakeIssueDeps struct {
 	Locks  Locks
-	Update *UpdateIssue
+	Update *IssueUpdate
 	Intake IntakeWriter
 	Issues IssueTriager
 	States StateCatalog
