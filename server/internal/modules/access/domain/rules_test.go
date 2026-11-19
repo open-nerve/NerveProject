@@ -38,6 +38,10 @@ var tableCells = map[shared.Action][]outcome{
 	"issue.search":                 {allowed, allowed, allowed, invisible, invisible, invisible, forbidden},
 	"notification.read":            {allowed, allowed, allowed, invisible, invisible, invisible, forbidden},
 	"notification.write":           {allowed, allowed, allowed, invisible, invisible, invisible, forbidden},
+	// As issue.search: every active member of the workspace counts the
+	// pending work items of the intakes of the projects he sees (M7 P2b
+	// spec 2.6).
+	"intake.count": {allowed, allowed, allowed, invisible, invisible, invisible, forbidden},
 	// PA, PM, PG, WM demoted to PG, PM+WA, WA- private, WM- public, WM- private, WG- public, WG- private, P-before,
 	// P-before public, X, workspace role outside the three public, above the three public, project role outside the
 	// three, workspace role outside the three project admin (projectIdentities)
@@ -126,6 +130,18 @@ var tableCells = map[shared.Action][]outcome{
 	// is its active member (M7 design 3.10, 15 B).
 	"intake.triage": {allowed, forbidden, forbidden, forbidden, allowed, forbidden, forbidden, invisible, invisible, invisible, invisible,
 		forbidden, invisible, invisible, invisible, forbidden, forbidden},
+	// As issue.read: every active member of the project reads its intake,
+	// and changes a work item of it, its guest too; whose submission he
+	// sees and changes, and what a guest changes, are the issue module's
+	// (M7 design 3.10, P2b spec 2.3, 2.4).
+	"intake.read": {allowed, allowed, allowed, allowed, allowed, forbidden, forbidden, invisible, invisible, invisible, invisible,
+		forbidden, invisible, invisible, invisible, forbidden, forbidden},
+	"intake.update": {allowed, allowed, allowed, allowed, allowed, forbidden, forbidden, invisible, invisible, invisible, invisible,
+		forbidden, invisible, invisible, invisible, forbidden, forbidden},
+	// As issue.delete for a caller who did not submit the work item;
+	// creatorCells has its submitters' (M7 design 3.10, P2b spec 2.5).
+	"intake.delete": {allowed, forbidden, forbidden, forbidden, allowed, forbidden, forbidden, invisible, invisible, invisible, invisible,
+		forbidden, invisible, invisible, invisible, forbidden, forbidden},
 	// As issue.read: every active member of the project, the guest's
 	// OwnOnly filtering the planning module's (M6 design 3.7).
 	"cycle.read": {allowed, allowed, allowed, allowed, allowed, forbidden, forbidden, invisible, invisible, invisible, invisible,
@@ -172,6 +188,8 @@ var creatorCells = map[shared.Action][]outcome{
 	"cycle.delete": {allowed, allowed, forbidden, forbidden, allowed, forbidden, forbidden, invisible, invisible, invisible, invisible,
 		forbidden, invisible, invisible, invisible, forbidden, forbidden},
 	"module.delete": {allowed, allowed, forbidden, forbidden, allowed, forbidden, forbidden, invisible, invisible, invisible, invisible,
+		forbidden, invisible, invisible, invisible, forbidden, forbidden},
+	"intake.delete": {allowed, allowed, forbidden, forbidden, allowed, forbidden, forbidden, invisible, invisible, invisible, invisible,
 		forbidden, invisible, invisible, invisible, forbidden, forbidden},
 }
 

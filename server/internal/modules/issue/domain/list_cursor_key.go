@@ -30,11 +30,11 @@ func canonicalListKey(order ListOrder, raw json.RawMessage) (json.RawMessage, er
 		if err := json.Unmarshal(raw, &value); err != nil {
 			return nil, shared.InvalidCursor()
 		}
-		at, err := time.Parse(time.RFC3339Nano, value)
-		if err != nil || at.Year() < 1 || at.Year() > 9999 || at.UTC().Year() < 1 || at.UTC().Year() > 9999 || !listMicrosecondAligned(value) {
+		at, ok := listTimestamp(value)
+		if !ok {
 			return nil, shared.InvalidCursor()
 		}
-		return json.Marshal(at.UTC().Format(listTimestampLayout))
+		return json.Marshal(at.Format(listTimestampLayout))
 	case "start_date", "target_date":
 		var value string
 		if err := json.Unmarshal(raw, &value); err != nil {
@@ -68,6 +68,17 @@ func canonicalListKey(order ListOrder, raw json.RawMessage) (json.RawMessage, er
 		return json.Marshal(value)
 	}
 	return nil, shared.InvalidCursor()
+}
+
+// listTimestamp reads a cursor's timestamp key, RFC 3339 of a year 1–9999
+// where it is written and in UTC, at most microseconds, and answers it in
+// UTC. The list's and the intake list's cursors read their time keys so.
+func listTimestamp(value string) (time.Time, bool) {
+	at, err := time.Parse(time.RFC3339Nano, value)
+	if err != nil || at.Year() < 1 || at.Year() > 9999 || at.UTC().Year() < 1 || at.UTC().Year() > 9999 || !listMicrosecondAligned(value) {
+		return time.Time{}, false
+	}
+	return at.UTC(), true
 }
 
 // time.Parse truncates fractions beyond nanoseconds. Inspect the original

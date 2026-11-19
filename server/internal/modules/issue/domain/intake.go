@@ -106,6 +106,18 @@ func (f IntakeFacts) AsOf(now func() time.Time) IntakeFacts {
 	return shown
 }
 
+// CheckOpen answers 409 issue.intake_closed when f's stored status is
+// accepted, declined or duplicate (M7 P2b spec 2.4, DP-7): a content edit
+// is for an item still to triage, pending or snoozed. The stored status
+// alone decides, read under the project's lock, no moment: a snooze is
+// open whether its time has come or not.
+func (f IntakeFacts) CheckOpen() error {
+	if f.Status == IntakePending || f.Status == IntakeSnoozed {
+		return nil
+	}
+	return ErrIntakeClosed
+}
+
 // Transition checks a triage of f to the status to, one CheckTriage
 // accepted, at now (spec 2.5, R3), and answers the status it moves from,
 // f's effective one, which its activity records: a move the transitions

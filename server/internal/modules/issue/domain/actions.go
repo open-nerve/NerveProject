@@ -36,11 +36,25 @@ const (
 	// ActionTriageIntake is triaging a work item of a project's intake (M7
 	// design 3.10, P2a spec 2.5).
 	ActionTriageIntake shared.Action = "intake.triage"
+	// ActionReadIntake is listing a project's intake (M7 design 3.10, P2b
+	// spec 2.3).
+	ActionReadIntake shared.Action = "intake.read"
+	// ActionUpdateIntake is changing the content of a work item of a
+	// project's intake (M7 design 3.10, P2b spec 2.4); that one who is not
+	// the project's admin submitted it, and what a guest changes, are the
+	// use case's relative rules.
+	ActionUpdateIntake shared.Action = "intake.update"
+	// ActionDeleteIntake is deleting a work item of a project's intake, or
+	// the intake row of one accepted (M7 design 3.10, P2b spec 2.5).
+	ActionDeleteIntake shared.Action = "intake.delete"
+	// ActionCountIntake is counting, in a workspace, the pending work items
+	// of the intakes of the projects the caller sees (P2b spec 2.6).
+	ActionCountIntake shared.Action = "intake.count"
 )
 
 // Actions lists the module's actions. bootstrap's test holds the union of
 // every module's Actions equal to the rule table's keys (M3 design 3.4).
 func Actions() []shared.Action {
 	return []shared.Action{ActionDraftWrite, ActionListMemberIssues, ActionReadDescriptionVersion, ActionWriteReaction, ActionCreate, ActionRead, ActionUpdate, ActionDelete, ActionArchive, ActionSearch, ActionCreateComment, ActionWriteComment,
-		ActionSubmitIntake, ActionTriageIntake}
+		ActionSubmitIntake, ActionTriageIntake, ActionReadIntake, ActionUpdateIntake, ActionDeleteIntake, ActionCountIntake}
 }

@@ -94,4 +94,9 @@ var (
 	// terminal status, and pending to pending.
 	ErrIntakeTransitionNotAllowed = shared.NewError(shared.KindConflict, "issue.intake_transition_not_allowed",
 		"The intake work item cannot move from its status to the one asked for.")
+	// ErrIntakeClosed answers a content edit of a work item whose intake
+	// row is stored accepted, declined or duplicate (M7 P2b spec 2.4, R5):
+	// it is triaged, no longer an item to edit in the intake.
+	ErrIntakeClosed = shared.NewError(shared.KindConflict, "issue.intake_closed",
+		"The intake work item has been accepted, declined or marked a duplicate; it can no longer be edited in the intake.")
 )
