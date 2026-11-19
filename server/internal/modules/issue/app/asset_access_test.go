@@ -17,8 +17,8 @@ type assetArchiveReader struct {
 	found    bool
 }
 
-func (p assetArchiveReader) AssetProjectArchived(context.Context, uuid.UUID) (bool, bool, error) {
-	return p.archived, p.found, nil
+func (p assetArchiveReader) AssetProject(context.Context, uuid.UUID) (app.AssetProject, bool, error) {
+	return app.AssetProject{Archived: p.archived}, p.found, nil
 }
 
 func TestAssetHostAccessMatrix(t *testing.T) {

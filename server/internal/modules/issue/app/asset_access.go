@@ -35,10 +35,19 @@ type AssetHost struct{ WorkspaceID, ProjectID, IssueID, CommentID, DraftID uuid.
 
 var ErrAssetScopeChanged = errors.New("issue asset host scope changed")
 
-// AssetProjectReader reads archive state under a project lock already held by
-// the caller. It must not take a second project lock or enter a write gate.
+// AssetProject is the project of an asset's host as AssetProjectReader
+// reads it: whether it is archived, and whether its intake is turned on,
+// read in one statement (M7 P2c spec 2.4, R4).
+type AssetProject struct {
+	Archived   bool
+	IntakeView bool
+}
+
+// AssetProjectReader reads the project id under a project lock already held
+// by the caller; found is false when there is none. It must not take a
+// second project lock or enter a write gate.
 type AssetProjectReader interface {
-	AssetProjectArchived(context.Context, uuid.UUID) (bool, bool, error)
+	AssetProject(ctx context.Context, id uuid.UUID) (p AssetProject, found bool, err error)
 }
 type AssetAccessDeps struct {
 	Locks    Locks
@@ -64,7 +73,7 @@ func (a *AssetAccess) Check(ctx context.Context, actor shared.Actor, q AssetRequ
 	if q.Kind == AssetDraft || q.Intent == AssetRead {
 		return nil
 	}
-	archived, found, err := a.d.Projects.AssetProjectArchived(ctx, h.ProjectID)
+	p, found, err := a.d.Projects.AssetProject(ctx, h.ProjectID)
 	if err != nil {
 		return err
 	}
@@ -74,7 +83,7 @@ func (a *AssetAccess) Check(ctx context.Context, actor shared.Actor, q AssetRequ
 		}
 		return domain.ErrIssueNotFound
 	}
-	if archived {
+	if p.Archived {
 		return domain.ErrProjectArchived
 	}
 	if item.ArchivedAt != nil {

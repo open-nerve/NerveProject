@@ -38,6 +38,16 @@ type IssueProject struct {
 	IntakeView        bool
 }
 
+// AssetProject is a project as project.Provide's read for the issue
+// module's asset hosts answers it (M7 P2c spec 2.4): whether it is
+// archived, and whether its intake is turned on, read in one statement.
+// bootstrap converts it into issue's value by type, so the two keep their
+// fields alike.
+type AssetProject struct {
+	Archived   bool
+	IntakeView bool
+}
+
 // IssueState is a state of a project as project.Provide's catalog for the
 // issue module reads it (M4 design 6.5, StateCatalog): its id, its name,
 // its group, and whether it is the project's default. bootstrap converts

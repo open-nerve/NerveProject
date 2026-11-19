@@ -370,6 +370,9 @@ func (p issueProjects) DeletedAt(ctx context.Context, ids []uuid.UUID) (map[uuid
 	return p.projects.DeletedIssueProjects(ctx, ids)
 }
 
-func (p issueProjects) AssetProjectArchived(ctx context.Context, id uuid.UUID) (bool, bool, error) {
-	return p.projects.AssetProjectArchived(ctx, id)
+// AssetProject is project's AssetProject, converted by type: the archive
+// and the intake toggle, found and the error as they came.
+func (p issueProjects) AssetProject(ctx context.Context, id uuid.UUID) (issue.AssetProject, bool, error) {
+	ap, found, err := p.projects.AssetProject(ctx, id)
+	return issue.AssetProject(ap), found, err
 }

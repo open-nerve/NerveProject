@@ -11,15 +11,17 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/project/app"
 )
 
-func (s *Store) AssetProjectArchived(ctx context.Context, id uuid.UUID) (bool, bool, error) {
-	archived, err := s.queries(ctx).AssetProjectArchived(ctx, id)
+// AssetProject reads the undeleted project id: whether it is archived and
+// whether its intake is turned on, in one statement, without a lock.
+func (s *Store) AssetProject(ctx context.Context, id uuid.UUID) (app.AssetProject, bool, error) {
+	r, err := s.queries(ctx).AssetProject(ctx, id)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return false, false, nil
+		return app.AssetProject{}, false, nil
 	}
 	if err != nil {
-		return false, false, fmt.Errorf("read asset project state: %w", err)
+		return app.AssetProject{}, false, fmt.Errorf("read asset project state: %w", err)
 	}
-	return archived, true, nil
+	return app.AssetProject{Archived: r.Archived, IntakeView: r.IntakeView}, true, nil
 }
 func (s *Store) AssetProjectFacts(ctx context.Context, ids []uuid.UUID) ([]app.AssetParent, error) {
 	rows, err := s.queries(ctx).AssetProjectFacts(ctx, ids)

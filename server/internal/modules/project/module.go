@@ -129,7 +129,12 @@ type ProjectMembershipCounts interface {
 // write of a state, a label or a membership holds too, so they stay as
 // read until the write commits (M4 design 3.5).
 type IssueProjects interface {
-	AssetProjectArchived(context.Context, uuid.UUID) (bool, bool, error)
+	// AssetProject reads the undeleted project id, archived or not, in one
+	// statement and without a lock of its own: whether it is archived and
+	// whether its intake is turned on (M7 P2c spec 2.4). The asset path
+	// reads it under the project's lock it already holds. found is false
+	// when there is none.
+	AssetProject(ctx context.Context, id uuid.UUID) (p AssetProject, found bool, err error)
 	// DeletedIssueProjects reads real deletion times without locking; absent IDs are omitted.
 	DeletedIssueProjects(context.Context, []uuid.UUID) (map[uuid.UUID]time.Time, error)
 	// AllUndeletedIssueProjectIDs is the complete retention directory, in id order.
@@ -209,10 +214,11 @@ type PlanningProjects interface {
 // it into planning's.
 type PlanningFacts = app.PlanningFacts
 
-// IssueProject, IssueState, IssueLabel and IssueProjectIdentifier are the
-// values IssueProjects hands over: bootstrap converts them into issue's
-// (M4 design 6.5).
+// IssueProject, IssueState, IssueLabel, IssueProjectIdentifier and
+// AssetProject are the values IssueProjects hands over: bootstrap converts
+// them into issue's (M4 design 6.5).
 type (
+	AssetProject           = app.AssetProject
 	HistoricalIssueProject = app.HistoricalIssueProject
 	VisibleIssueProject    = app.VisibleIssueProject
 	IssueMemberVisibility  = app.IssueMemberVisibility

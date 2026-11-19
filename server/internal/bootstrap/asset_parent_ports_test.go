@@ -15,9 +15,9 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 )
 
-func (f *fakeIssueProjects) AssetProjectArchived(_ context.Context, id uuid.UUID) (bool, bool, error) {
+func (f *fakeIssueProjects) AssetProject(_ context.Context, id uuid.UUID) (project.AssetProject, bool, error) {
 	f.asked = append(f.asked, "archive state")
-	return f.locked.Archived, id == f.web, f.err
+	return project.AssetProject{Archived: f.locked.Archived}, id == f.web, f.err
 }
 
 func TestAssetParentLocksAndFacts(t *testing.T) {
@@ -73,14 +73,14 @@ func TestAssetParentLocksAndFacts(t *testing.T) {
 	}
 	at := time.Date(2020, 3, 4, 5, 6, 7, 123456000, time.UTC)
 	by := w.ids["bob"]
-	if archived, found, err := projects.IssueProjects.AssetProjectArchived(t.Context(), w.web); err != nil || !found || archived {
-		t.Fatalf("live archive state: %v %v %v", archived, found, err)
+	if p, found, err := projects.IssueProjects.AssetProject(t.Context(), w.web); err != nil || !found || p.Archived {
+		t.Fatalf("live archive state: %v %v %v", p.Archived, found, err)
 	}
 	if _, err := w.pool.Exec(pgtest.Soon(t), "UPDATE projects SET archived_at=$2 WHERE id=$1", w.web, at); err != nil {
 		t.Fatal(err)
 	}
-	if archived, found, err := projects.IssueProjects.AssetProjectArchived(t.Context(), w.web); err != nil || !found || !archived {
-		t.Fatalf("archived state: %v %v %v", archived, found, err)
+	if p, found, err := projects.IssueProjects.AssetProject(t.Context(), w.web); err != nil || !found || !p.Archived {
+		t.Fatalf("archived state: %v %v %v", p.Archived, found, err)
 	}
 	for table, id := range map[string]uuid.UUID{"workspaces": ws.ID, "projects": w.web, "issues": i, "issue_comments": c.ID, "draft_issues": d1.ID} {
 		if _, err := w.pool.Exec(pgtest.Soon(t), "UPDATE "+table+" SET deleted_at=$2,updated_by_id=$3 WHERE id=$1", id, at, by); err != nil {
@@ -160,7 +160,7 @@ func TestAssetParentLocksAndFacts(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, found, err := projects.IssueProjects.AssetProjectArchived(t.Context(), w.web); err != nil || found {
+	if _, found, err := projects.IssueProjects.AssetProject(t.Context(), w.web); err != nil || found {
 		t.Fatalf("deleted project archive state: %v %v", found, err)
 	}
 }
