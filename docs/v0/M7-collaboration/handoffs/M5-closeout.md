@@ -17,6 +17,8 @@ created: 2026-11-06
 - **M7 接通收集箱时**先定宿主：收集箱条目若就是工作项，复用 `ISSUE_DESCRIPTION`/`ISSUE_ATTACHMENT` 与工作项宿主的读取、权限、删除和清理；条目建成之前就要上传的，需要一个准备件范围（先例：以工作项为 id 的 `new_comment`、以工作区为 id 的 `new_project`、草稿的私有准备件与原子发布）。服务端的内容绑定只接受工作项宿主（`asset/app/content_bindings.go`），用途与放置规则只认 issue/comment（`content_binding_rules.go`），新宿主须扩展这两处；前端 `ContentHost` 与 EditorImages 能力随之扩展。正文只存资产 ID，不存签名地址。
 - **不能做的**：恢复 Plane 的 `/api/assets/v2` 或 bulk 地址；为收集箱另写一条上传链；在旧 scope（换工作区、换账户、撤权）的迟到结果上写新宿主。
 
+**处理结果（M7/P2c，服务端）：** 收集箱条目就是工作项，复用 `ISSUE_DESCRIPTION`、`ISSUE_ATTACHMENT` 与工作项宿主的读取、删除和清理，没有新宿主、新范围、新上传链。工作项在收集箱里时资产的写按 `intake.update` 加提交者、时段与开关判定（[P2c spec](../specs/P2c-intake-assets.md) §2.2）；描述图片经 `PATCH /intake-issues/{issue_id}` 走修改核心的内容绑定（P2b）；提交（新建）不带图片（设计 §15 E），所以不需要条目建成之前的准备件范围。组合测试、交错、宿主矩阵与 e2e 的接口故事在 P2c。**页面与三浏览器、local 与 S3 的页面故事仍待 P5**（收集箱页面接通时），本条的“何时验收”到那时再结。
+
 **何时验收：** 收集箱的图片或附件第一次开放前。上传、拒绝、取消、换宿主与迟到结果、权限与访客、删除与清理，需与 M5 的 F8–F12、F16 页面故事同等的证据（三浏览器，local 与 S3）。
 
 <a id="M5-M7-02"></a>
