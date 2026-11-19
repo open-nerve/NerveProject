@@ -15,6 +15,7 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue"
 	"github.com/open-nerve/NerveProject/server/internal/modules/notification"
 	"github.com/open-nerve/NerveProject/server/internal/modules/planning"
+	"github.com/open-nerve/NerveProject/server/internal/platform/config"
 	"github.com/open-nerve/NerveProject/server/internal/platform/jobs"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
@@ -22,10 +23,11 @@ import (
 
 // Only the explicitly owned portions are asynchronous; unknown catalog tables still
 // participate in the immediate assertions rather than receiving an exemption.
-// The issue module's memberships (M6 P3a spec 2.5) are named for their targets.
+// The issue module's memberships (M6 P3a spec 2.5) are named for their targets,
+// and its intake rows (M7 P2a spec 2.10) for the intake.
 func projectIssueTable(table string) bool {
 	return table == "draft_issues" || table == "issues" || table == "comment_reactions" || table == "cycle_issues" || table == "module_issues" ||
-		len(table) > 6 && table[:6] == "issue_"
+		table == "intake_issues" || len(table) > 6 && table[:6] == "issue_"
 }
 
 // The planning module's tables are deleted by its own planning.delete_rows job (M6 P1 spec 2.4, P2 spec 2.4, P3b
@@ -163,6 +165,20 @@ func holdProjectDeletion(t *testing.T, pool *pgxpool.Pool, project uuid.UUID) pg
 		t.Fatal("draft barrier not held")
 	}
 	return holder
+}
+
+// barriersOutlasted configures the world of a test that holds deletion
+// workers at its barriers (holdProjectDeletion, holdPlanningDeletion,
+// holding) across work its design does not bound: a loop over the whole
+// catalog or API, or other jobs' pickup, completion and snoozes. Each lock
+// wait of the work-item side's transactions, the issue, planning and
+// notification jobs' among them, then ends far past any such hold and under
+// those jobs' River timeout (delete_budget + 5 s), so a held worker keeps its
+// first attempt however slowly the runner goes. In production a job waiting
+// past issue.write_lock_timeout fails and River retries it; the barriers are
+// the test's own, not the contention that timeout is for.
+func barriersOutlasted(cfg *config.Config) {
+	cfg.Issue.WriteLockTimeout = 30 * time.Second
 }
 
 // The sole committed deletion job is running and its worker is directly

@@ -13,6 +13,7 @@ import (
 	issueapp "github.com/open-nerve/NerveProject/server/internal/modules/issue/app"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/domain"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project"
+	"github.com/open-nerve/NerveProject/server/internal/platform/clock"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
@@ -193,7 +194,7 @@ func TestActivityPagesReadSnapshot(t *testing.T) {
 			t.Fatal(err)
 		}
 	}}
-	locks := issueapp.NewLocks(projects, wrapped, authorizerOn(w.pool), versionReadOnly{}, versionReadOnly{}, attachmentCounterOn(w.pool))
+	locks := issueapp.NewLocks(projects, wrapped, authorizerOn(w.pool), versionReadOnly{}, versionReadOnly{}, attachmentCounterOn(w.pool), clock.System{})
 	list := issueapp.NewListIssueActivities(issueapp.ListIssueActivitiesDeps{Locks: locks, Projects: projects, Activities: activitySnapshotRows{Store: store, inspect: inspect}, ReadTx: postgres.NewTxManager(w.pool, 2*time.Second, postgres.ReadOnlySnapshot())})
 	ctx := shared.WithActor(pgtest.Soon(t), shared.Actor{UserID: w.ids["alice"]})
 	page, err := list.Execute(ctx, id, nil, nil)

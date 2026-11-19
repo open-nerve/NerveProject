@@ -147,6 +147,13 @@ var rules = map[shared.Action]Rule{
 	// As issue.create: archiving and unarchiving a work item (M4 design 3.4,
 	// 3.8).
 	"issue.archive": {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember}},
+	// As issue.read: every active member of the project submits to its
+	// intake, its guest too (M7 design 3.10); whether the intake is turned
+	// on is the issue module's, under the project's lock (P2a spec 2.4).
+	"intake.submit": {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember, shared.RoleGuest}},
+	// As state.create: the project's admins, and the workspace's admin who
+	// is its active member, triage its intake (M7 design 3.10, 15 B).
+	"intake.triage": {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin}},
 	// Every active member of the workspace: getIssueByIdentifier's decision
 	// in the workspace, before issue.read on the project of the work item
 	// it finds, which the guest rule follows (M4 design 3.4, 3.7).

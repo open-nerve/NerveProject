@@ -188,7 +188,11 @@ func logRelationLockPlan(t *testing.T, w issueWorld, pid uint32, p uuid.UUID) {
 }
 
 func testDeletionCandidateProgress(t *testing.T) {
-	w := newIssueWorldWith(t, func(c *config.Config) { c.Issue.DeleteBatch = 2 })
+	// Old's worker stays at its barrier while Web's job is picked up and completes.
+	w := newIssueWorldWith(t, func(c *config.Config) {
+		c.Issue.DeleteBatch = 2
+		barriersOutlasted(c)
+	})
 	old := createdProject(t, w.contract, w.base, w.tokens["alice"], "acme", "Old", "OLD")
 	createDraftHTTP(t, w, "alice", `{"project_id":"`+old.String()+`","payload":{}}`)
 	x := w.newWorkItem(t)
@@ -231,7 +235,12 @@ func testDeletionCandidateProgress(t *testing.T) {
 func TestDeletionInterleaving25(t *testing.T) {
 	for _, oldFirst := range []bool{false, true} {
 		t.Run(fmt.Sprintf("OldCompletesFirst=%t", oldFirst), func(t *testing.T) {
-			w := newIssueWorldWith(t, func(c *config.Config) { c.Issue.DeleteBatch = 2 })
+			// Old's worker stays at its barrier while the workspace's jobs are
+			// picked up, wait for one another and complete.
+			w := newIssueWorldWith(t, func(c *config.Config) {
+				c.Issue.DeleteBatch = 2
+				barriersOutlasted(c)
+			})
 			old := createdProject(t, w.contract, w.base, w.tokens["alice"], "acme", "Old", "OLD")
 			q := createdProject(t, w.contract, w.base, w.tokens["alice"], "acme", "Q", "Q")
 			for _, p := range []uuid.UUID{old, w.web, q} {
@@ -350,15 +359,16 @@ func TestDeletionInterleaving25(t *testing.T) {
 }
 
 // Fill every issue-owned table without adding relations that would change the
-// ordered candidate fixture. Links and the cycle and module memberships use the
-// existing catalog seeds (seedIssueLinks, seedCycles, seedModules,
-// seedMemberships); the remaining rows are created through the real
-// authenticated HTTP handlers.
+// ordered candidate fixture. Links, the cycle and module memberships and the
+// intake row use the existing catalog seeds (seedIssueLinks, seedCycles,
+// seedModules, seedMemberships, seedIntake); the remaining rows are created
+// through the real authenticated HTTP handlers.
 func furnishDeletionIssue(t *testing.T, w issueWorld, projectID, issueID uuid.UUID) {
 	t.Helper()
 	seedCycles(t, w.pool, projectID, w.ids["alice"])
 	seedModules(t, w.pool, projectID, w.ids["alice"])
 	seedMemberships(t, w.pool, issueID, w.ids["alice"])
+	seedIntake(t, w.pool, issueID, w.ids["alice"])
 	var label struct {
 		ID uuid.UUID `json:"id"`
 	}

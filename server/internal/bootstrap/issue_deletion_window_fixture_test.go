@@ -23,9 +23,10 @@ type deletionWindowFixture struct {
 
 // All business rows are made through their API. Storage is only observed for
 // the real worker barrier; NULL creator's deliberate corruption is separate.
+// suspend holds the workers across a request for each operation of the API.
 func newDeletionWindowFixture(t *testing.T) deletionWindowFixture {
 	t.Helper()
-	w := newIssueWorld(t)
+	w := newIssueWorldWith(t, barriersOutlasted)
 	f := deletionWindowFixture{w: w}
 	f.q = createdProject(t, w.contract, w.base, w.tokens["alice"], "acme", "Kept", "KEEP")
 	w.makeMember(t, "bob", f.q, shared.RoleMember)
@@ -75,6 +76,10 @@ func newDeletionWindowFixture(t *testing.T) deletionWindowFixture {
 	f.qDraft = createDraftHTTP(t, w, "alice", `{"project_id":"`+f.q.String()+`","payload":{"name":"Kept"}}`).ID
 	f.noProject = createDraftHTTP(t, w, "alice", `{"payload":{"name":"Unassigned"}}`).ID
 	f.x.draft = createDraftHTTP(t, w, "alice", `{"project_id":"`+w.web.String()+`","payload":{"name":"Old project"}}`).ID
+	// Web's intake is on and holds a pending work item: a submission or a
+	// triage that skipped the deletion would be answered 201 or 200, not the
+	// absent one's 404. Lists and searches leave it out (M7 P2a spec 2.6).
+	f.x.intake = w.submitted(t)
 	return f
 }
 

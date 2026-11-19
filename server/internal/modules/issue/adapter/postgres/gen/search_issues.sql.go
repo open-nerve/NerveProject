@@ -32,6 +32,7 @@ WITH RECURSIVE projects AS (
            similarity(i.name, $1) AS score
     FROM issues i JOIN projects p ON p.id=i.project_id
     WHERE i.deleted_at IS NULL AND i.archived_at IS NULL
+      AND NOT EXISTS(SELECT 1 FROM intake_issues ii WHERE ii.issue_id=i.id AND ii.deleted_at IS NULL AND ii.status<>'accepted')
       AND (NOT p.own_only OR i.created_by_id=$9::uuid)
       AND ($1::text='' OR i.project_id=$6::uuid AND i.sequence_id=$7::integer
            OR i.sequence_id=$8::integer OR i.name ILIKE $10::text ESCAPE E'\\')
@@ -122,6 +123,9 @@ type SearchIssuesRow struct {
 
 // Scope, dates and the entire relationship exclusion precede LIMIT. Recursive
 // paths intentionally traverse invisible, archived and deleted intermediate rows.
+// A work item in triage, with an undeleted intake row that is not accepted, is no candidate (M7 P2a spec 2.6): the
+// intake row is the authoritative mark (spec 2.3, R2), and intake_issues_issue_id_key serves the NOT EXISTS. The rows
+// read no intake columns: a search finds no work item in triage, and its answer carries none.
 func (q *Queries) SearchIssues(ctx context.Context, arg SearchIssuesParams) ([]SearchIssuesRow, error) {
 	rows, err := q.db.Query(ctx, searchIssues,
 		arg.Query,

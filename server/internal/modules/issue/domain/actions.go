@@ -30,10 +30,17 @@ const (
 	// ActionSearch is looking for a work item in a workspace: finding one
 	// by its identifier, which then reads it as ActionRead.
 	ActionSearch shared.Action = "issue.search"
+	// ActionSubmitIntake is submitting a work item to a project's intake
+	// (M7 design 3.10, P2a spec 2.4).
+	ActionSubmitIntake shared.Action = "intake.submit"
+	// ActionTriageIntake is triaging a work item of a project's intake (M7
+	// design 3.10, P2a spec 2.5).
+	ActionTriageIntake shared.Action = "intake.triage"
 )
 
 // Actions lists the module's actions. bootstrap's test holds the union of
 // every module's Actions equal to the rule table's keys (M3 design 3.4).
 func Actions() []shared.Action {
-	return []shared.Action{ActionDraftWrite, ActionListMemberIssues, ActionReadDescriptionVersion, ActionWriteReaction, ActionCreate, ActionRead, ActionUpdate, ActionDelete, ActionArchive, ActionSearch, ActionCreateComment, ActionWriteComment}
+	return []shared.Action{ActionDraftWrite, ActionListMemberIssues, ActionReadDescriptionVersion, ActionWriteReaction, ActionCreate, ActionRead, ActionUpdate, ActionDelete, ActionArchive, ActionSearch, ActionCreateComment, ActionWriteComment,
+		ActionSubmitIntake, ActionTriageIntake}
 }

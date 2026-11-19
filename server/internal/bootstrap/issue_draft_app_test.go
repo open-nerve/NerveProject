@@ -31,7 +31,7 @@ func TestDraftAppPersonalProjectsWithRealAuthorization(t *testing.T) {
 	ws := issueWorkspaces{directory: workspace.Provide(r.server, nil).WorkspaceDirectory}
 	tx := postgres.NewTxManager(r.server, time.Second)
 	readTx := postgres.NewTxManager(r.server, time.Second, postgres.ReadOnlySnapshot())
-	locks := issueapp.NewDraftLocks(issueapp.NewLocks(p, store, authorizerOn(r.server), nil, tx, attachmentCounterOn(r.server)), ws, p, store)
+	locks := issueapp.NewDraftLocks(issueapp.NewLocks(p, store, authorizerOn(r.server), nil, tx, attachmentCounterOn(r.server), clock.System{}), ws, p, store)
 	transfer := issueDraftAssetTransfer{assets: asset.NewDraftAssetTransfer(asset.Provide(r.server), clock.System{}, discardIssueEvents{})}
 	create := issueapp.NewCreateDraft(issueapp.CreateDraftDeps{Locks: locks, Workspaces: ws, Drafts: store, Sanitizer: content.NewSanitizer(), Transfer: transfer, Clock: clock.System{}})
 	update := issueapp.NewUpdateDraft(issueapp.UpdateDraftDeps{Locks: locks, Drafts: store, Sanitizer: content.NewSanitizer(), Transfer: transfer})

@@ -335,7 +335,9 @@ components:
         The work item as it was when the notification was sent: its name, its
         number, its project's identifier, and its state's name and group, a
         StateGroup of the project API (backlog, unstarted, started, completed
-        or cancelled).
+        or cancelled), or triage, the group of the project's triage state, for
+        a work item in its project's intake (IssueDetail.intake), as a
+        submission's notifications have it.
       type: object
       additionalProperties: false
       required: [id, name, sequence_id, identifier, state_name, state_group]

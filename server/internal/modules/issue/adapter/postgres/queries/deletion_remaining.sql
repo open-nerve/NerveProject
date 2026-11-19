@@ -5,6 +5,8 @@ WHEN 'draft_issues' THEN EXISTS (SELECT 1 FROM draft_issues r WHERE r.project_id
     AND r.deleted_at IS NULL AND r.id > sqlc.arg(after)::uuid)
 WHEN 'issues' THEN EXISTS (SELECT 1 FROM issues r WHERE r.project_id = sqlc.arg(project_id)::uuid
     AND r.deleted_at IS NULL AND r.id > sqlc.arg(after)::uuid)
+WHEN 'intake_issues' THEN EXISTS (SELECT 1 FROM intake_issues r WHERE r.project_id = sqlc.arg(project_id)::uuid
+    AND r.deleted_at IS NULL AND r.id > sqlc.arg(after)::uuid)
 WHEN 'issue_assignees' THEN EXISTS (SELECT 1 FROM issue_assignees r WHERE r.project_id = sqlc.arg(project_id)::uuid
     AND r.deleted_at IS NULL AND r.id > sqlc.arg(after)::uuid)
 WHEN 'issue_labels' THEN EXISTS (SELECT 1 FROM issue_labels r WHERE r.project_id = sqlc.arg(project_id)::uuid

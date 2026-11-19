@@ -20,7 +20,9 @@ import (
 // Old's real pending task keeps its identity and request audit. Only projects
 // locked by this workspace request appear in its event, in ascending order.
 func TestWorkspaceDeletionPublishesOnlyLockedProjects(t *testing.T) {
-	w := newIssueWorld(t)
+	// Old's worker stays at its barrier while the workspace's deletion jobs
+	// complete, the notifications' snoozing until their work items are gone.
+	w := newIssueWorldWith(t, barriersOutlasted)
 	old := createdProject(t, w.contract, w.base, w.tokens["alice"], "acme", "Old", "OLD")
 	q := createdProject(t, w.contract, w.base, w.tokens["alice"], "acme", "Q", "Q")
 	var kept struct {

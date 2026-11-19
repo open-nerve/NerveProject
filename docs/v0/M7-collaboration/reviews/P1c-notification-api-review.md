@@ -1,6 +1,6 @@
 # M7 / P1c 阶段记录：通知的接口与读
 
-> 状态：实施完成，待整分支审查与集成。spec 与 plan 见 [P1c spec](../specs/P1c-notification-api.md)、[P1c plan](../plans/P1c-notification-api.md)，预检 [re-84](../../../reviews/re-84-M7P1c预检.md)（修正后通过，8 处重要、9 处次要全部采纳）。基线 main `1a23f6f8`（P1b 的 noff）。
+> 状态：已完成，合入 main（noff `31f38580`），§9 为审查与集成的记录。spec 与 plan 见 [P1c spec](../specs/P1c-notification-api.md)、[P1c plan](../plans/P1c-notification-api.md)，预检 [re-84](../../../reviews/re-84-M7P1c预检.md)（修正后通过，8 处重要、9 处次要全部采纳）。基线 main `1a23f6f8`（P1b 的 noff）。
 
 ## 1. 交付
 
@@ -78,4 +78,9 @@ P1c 新增的 bootstrap 测试本机合计约 15 秒；两路的轻重随按名�
 
 ## 9. 整分支审查与集成
 
-（待填。）
+- 整分支审查（fable，只读，`1a23f6f8..a840a03f`）：Ready to merge，没有严重、重要的发现，6 处次要。修复轮：m1 e2e 的暂缓自行到期只在 422 `must_be_future` 时换新时刻重发、至多三次；m2 交错测试去掉多余的 2 秒时长界（去掉 `SKIP LOCKED` 的变异仍被探针与死锁杀）；m3 逐字节相同的 404 补上只看自己隐藏的一种（`37621862`）；m4 看不到的另一端的通知照列、m5 请求体的 400 与 422、m6 全部已读的批唯一可能的等待（`9a0239b1`）。
+- 限定复审（`a840a03f..37621862`）：Ready to merge；两处文字 n1（硬规则说清理删账户行，实无此路径）、n2（e2e 的实测时长与 T13 的重发）在 `b5e8d139` 改正。
+- 最终候选 `b5e8d139`：本机 `fin` 与重跑一次的 `fin2` 的第 0 路都因 M6-M8-05 失败——testcontainers 起容器等映射端口约 60 秒到期，Docker Desktop 的 `com.docker.backend.log` 在同一时刻记主机端口“address already in use”（Docker 的主机端口与 macOS 的临时端口范围重叠），与 P1c 的改动无关。按规则停下报告；**负责人 2026-11-18 决定服务端以分支 CI 为准**（照 2026-11-11 对 M6 后几段的决定），本机设置与测试代码不改，M6-M8-05 仍归 M8，以后 M7 的阶段同样处理并记录。`fin2` 未跑的五项补跑全过（第 1 路 bootstrap 556.0 秒、lint-web、knip、test-web、build+e2e 484 passed、没有 53300）。
+- 分支 CI 44299424971 attempt 1 全绿：server (0) Test 724 秒、server (1) 859 秒（T12 加的两个测试名让按名字轮流的分路整体错开，在 CI 两核机器上偏慢的一批换到第 1 路；与负责人待答的两路再平衡是同一件事）、web Unit 499 秒、e2e (1) 751 秒、e2e (2) 606 秒（作业 1429 秒，其中装浏览器 738 秒，M6-M8-06 的签名）。
+- `--no-ff` 合入 main `31f38580`（父 `1a23f6f8`、`b5e8d139`，树与分支相同）；main CI 44337846563 attempt 1 全绿：server (0) Test 670 秒、server (1) 670 秒（20 分钟的 56%）、web Unit 497 秒、e2e (1) 755 秒、e2e (2) 800 秒。
+- 归档 `.superpowers/sdd/M7-P1c-integration-20261118`（2954 个文件、unknown 0，清理后复核一致）；worktree、本地与远端分支已删除（远端分支先核实已含在 main）。

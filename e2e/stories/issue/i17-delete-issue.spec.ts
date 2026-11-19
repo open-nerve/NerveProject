@@ -1,5 +1,5 @@
 import { furnishIssueFiles } from "../../fixtures/storage";
-import { furnishPlanningRows } from "../../fixtures/furnish";
+import { furnishAcceptedIntake, furnishPlanningRows } from "../../fixtures/furnish";
 import { c12Evidence } from "../../fixtures/c12-evidence";
 import {
   addProjectMembers,
@@ -107,6 +107,9 @@ test("I17 (page): the confirmation names the whole subtree including archived de
   const ship = await createIssue(api, seed.member.token, ops.id, { name: "Ship stays" });
   await createIssueRelations(api, seed.member.token, root.id, { relation_type: "relates_to", issue_ids: [deploy.id] });
   await createIssueRelations(api, seed.member.token, root.id, { relation_type: "blocking", issue_ids: [ship.id] });
+  // A work item the admin accepted from the project's intake is under the root too, with its intake row
+  // (furnishAcceptedIntake).
+  await furnishAcceptedIntake(api, seed.member.token, seed.project.id, root.id);
   const watch = await openIssueDetail(page, seed, root);
   await page.getByRole("button", { name: `Options: ${root.name}`, exact: true }).click();
   await page.getByRole("menuitem", { name: "Delete", exact: true }).click();
@@ -274,6 +277,8 @@ test("I17 (API): a member does not delete another's work item (403), a guest his
   const ship = await createIssue(api, ann.token, ops.id, { name: "Ship it" });
   await createIssueRelations(api, ann.token, plan.id, { relation_type: "relates_to", issue_ids: [deploy.id] });
   await createIssueRelations(api, ann.token, plan.id, { relation_type: "blocking", issue_ids: [ship.id] });
+  // And a work item the admin accepted from Web's intake, under Plan the release: its intake row (furnishAcceptedIntake).
+  await furnishAcceptedIntake(api, admin.token, web.id, plan.id);
 
   // gus' Draft the notice, made while he was Web's member, before the admin made him its guest; lea's Tag the build,
   // made before she left Web.

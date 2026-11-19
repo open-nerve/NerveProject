@@ -45,6 +45,12 @@ func (s *Store) DeleteIssueRows(ctx context.Context, d app.IssueDeletion) error 
 	return deletedRows(s.queries(ctx).DeleteIssueRows(ctx, deletion(d)), "the rows", d)
 }
 
+// DeleteIssueIntakeRows soft-deletes the work items' intake rows, whatever
+// their status (M7 P2a spec 2.10).
+func (s *Store) DeleteIssueIntakeRows(ctx context.Context, d app.IssueDeletion) error {
+	return deletedRows(s.queries(ctx).DeleteIssueIntakeRows(ctx, gen.DeleteIssueIntakeRowsParams(deletion(d))), "the intake rows", d)
+}
+
 // DeleteIssueAssigneeRows soft-deletes the work items' assignees' rows.
 func (s *Store) DeleteIssueAssigneeRows(ctx context.Context, d app.IssueDeletion) error {
 	return deletedRows(s.queries(ctx).DeleteIssueAssigneeRows(ctx, gen.DeleteIssueAssigneeRowsParams(deletion(d))), "the assignees", d)

@@ -22,8 +22,10 @@ SELECT i.id, i.workspace_id, i.project_id, i.sequence_id, i.name, i.description_
        ci.cycle_id,
        (SELECT array_agg(m.module_id ORDER BY m.module_id) FROM module_issues m
         WHERE m.issue_id = i.id AND m.deleted_at IS NULL)::uuid[] AS module_ids,
-       (SELECT count(*) FROM issue_links l WHERE l.issue_id=i.id AND l.deleted_at IS NULL)::bigint AS link_count
+       (SELECT count(*) FROM issue_links l WHERE l.issue_id=i.id AND l.deleted_at IS NULL)::bigint AS link_count,
+       ii.status AS intake_status, ii.snoozed_till AS intake_snoozed_till, ii.duplicate_to_id AS intake_duplicate_to_id
 FROM issues i LEFT JOIN cycle_issues ci ON ci.issue_id = i.id AND ci.deleted_at IS NULL
+     LEFT JOIN intake_issues ii ON ii.issue_id = i.id AND ii.deleted_at IS NULL
 WHERE i.id = $1 AND i.deleted_at IS NULL
 `
 
@@ -52,13 +54,19 @@ type GetIssueRow struct {
 	CycleID             *uuid.UUID
 	ModuleIds           []uuid.UUID
 	LinkCount           int64
+	IntakeStatus        *string
+	IntakeSnoozedTill   *time.Time
+	IntakeDuplicateToID *uuid.UUID
 }
 
 // The undeleted work item, archived or not, as the API shows it (M4 design 5.2): with the accounts of its undeleted
 // assignees' rows and the labels of its undeleted labels' rows, in the accounts' and the labels' id order, NULL for
 // none; an assignee who left the project is still one (3.6). With the cycle of its undeleted cycle row, one at most
 // (cycle_issues_issue_id_key), and the modules of its undeleted modules' rows, in their id order, NULL for none;
-// archived cycles and modules too (M6 P3a spec 2.3). Every read of work items has these columns (spec 6).
+// archived cycles and modules too (M6 P3a spec 2.3). Every read of work items has these columns (spec 6). With its
+// undeleted intake row's status, time and target, NULL for none (M7 P2a spec 2.3): the condition is in the ON, so the
+// join stays a left join and intake_issues_issue_id_key, one undeleted row a work item at most, serves it. GetIssues and
+// SubIssues read the same columns, so their rows convert to this one's; a list's and a search's do not read them.
 func (q *Queries) GetIssue(ctx context.Context, id uuid.UUID) (GetIssueRow, error) {
 	row := q.db.QueryRow(ctx, getIssue, id)
 	var i GetIssueRow
@@ -87,6 +95,9 @@ func (q *Queries) GetIssue(ctx context.Context, id uuid.UUID) (GetIssueRow, erro
 		&i.CycleID,
 		&i.ModuleIds,
 		&i.LinkCount,
+		&i.IntakeStatus,
+		&i.IntakeSnoozedTill,
+		&i.IntakeDuplicateToID,
 	)
 	return i, err
 }
@@ -101,8 +112,10 @@ SELECT i.id, i.workspace_id, i.project_id, i.sequence_id, i.name, i.description_
        ci.cycle_id,
        (SELECT array_agg(m.module_id ORDER BY m.module_id) FROM module_issues m
         WHERE m.issue_id = i.id AND m.deleted_at IS NULL)::uuid[] AS module_ids,
-       (SELECT count(*) FROM issue_links l WHERE l.issue_id=i.id AND l.deleted_at IS NULL)::bigint AS link_count
+       (SELECT count(*) FROM issue_links l WHERE l.issue_id=i.id AND l.deleted_at IS NULL)::bigint AS link_count,
+       ii.status AS intake_status, ii.snoozed_till AS intake_snoozed_till, ii.duplicate_to_id AS intake_duplicate_to_id
 FROM issues i LEFT JOIN cycle_issues ci ON ci.issue_id = i.id AND ci.deleted_at IS NULL
+     LEFT JOIN intake_issues ii ON ii.issue_id = i.id AND ii.deleted_at IS NULL
 WHERE i.id = ANY ($1::uuid[]) AND i.deleted_at IS NULL
 ORDER BY i.id
 `
@@ -132,6 +145,9 @@ type GetIssuesRow struct {
 	CycleID             *uuid.UUID
 	ModuleIds           []uuid.UUID
 	LinkCount           int64
+	IntakeStatus        *string
+	IntakeSnoozedTill   *time.Time
+	IntakeDuplicateToID *uuid.UUID
 }
 
 // The undeleted work items among ids, archived or not, each as GetIssue reads it, in id order (M4 design 3.4, 3.9), in a
@@ -170,6 +186,9 @@ func (q *Queries) GetIssues(ctx context.Context, ids []uuid.UUID) ([]GetIssuesRo
 			&i.CycleID,
 			&i.ModuleIds,
 			&i.LinkCount,
+			&i.IntakeStatus,
+			&i.IntakeSnoozedTill,
+			&i.IntakeDuplicateToID,
 		); err != nil {
 			return nil, err
 		}

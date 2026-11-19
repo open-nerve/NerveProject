@@ -15,6 +15,7 @@ import (
 	issuedomain "github.com/open-nerve/NerveProject/server/internal/modules/issue/domain"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project"
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace"
+	"github.com/open-nerve/NerveProject/server/internal/platform/clock"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
@@ -53,7 +54,7 @@ func TestIssueListReadSnapshot(t *testing.T) {
 	store := issuepg.New(one)
 	listing := issueapp.NewListing(issueapp.ListingDeps{Attachments: attachmentCounterOn(one), Rows: store, States: dirs, Labels: dirs, Assignees: store, Profiles: issueProfiles{profiles: identity.Provide(one).PublicProfiles}, Issues: store})
 	tx := &checkedListSnapshot{t: t, pool: one, tx: postgres.NewTxManager(one, 3*time.Second, postgres.ReadOnlySnapshot())}
-	u := issueapp.NewListIssues(issueapp.ListIssuesDeps{ReadTx: tx, Locks: issueapp.NewLocks(dirs, store, auth, nil, nil, attachmentCounterOn(one)), Listing: listing})
+	u := issueapp.NewListIssues(issueapp.ListIssuesDeps{ReadTx: tx, Locks: issueapp.NewLocks(dirs, store, auth, nil, nil, attachmentCounterOn(one), clock.System{}), Listing: listing})
 	ctx, cancel := context.WithTimeout(shared.WithActor(context.Background(), shared.Actor{UserID: w.ids["walt"]}), 5*time.Second)
 	defer cancel()
 	for _, raw := range []map[string][]string{nil, {"group_by": {"label_id"}}, {"group_by": {"label_id"}, "sub_group_by": {"assignee_id"}}} {

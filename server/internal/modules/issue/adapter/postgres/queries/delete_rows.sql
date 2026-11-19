@@ -13,6 +13,16 @@ WHERE t.id IN (
     ORDER BY r.id LIMIT sqlc.arg(batch) FOR NO KEY UPDATE)
 RETURNING t.id;
 
+-- name: DeleteProjectIntakeRows :many
+-- DeleteProjectIssueRows' batch, of the work items' intake rows (M7 P2a spec 2.10).
+UPDATE intake_issues AS t
+SET deleted_at = sqlc.arg(at)::timestamptz, updated_at = sqlc.arg(at), updated_by_id = sqlc.arg(deleted_by)::uuid
+WHERE t.id IN (
+    SELECT r.id FROM intake_issues r
+    WHERE r.project_id = sqlc.arg(project_id) AND r.deleted_at IS NULL AND r.id > sqlc.arg(after)::uuid
+    ORDER BY r.id LIMIT sqlc.arg(batch) FOR NO KEY UPDATE)
+RETURNING t.id;
+
 -- name: DeleteProjectAssigneeRows :many
 -- DeleteProjectIssueRows' batch, of the work items' assignees.
 UPDATE issue_assignees AS t

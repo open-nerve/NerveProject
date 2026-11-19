@@ -49,6 +49,21 @@ type DraftIssue struct {
 	DeletedAt   *time.Time
 }
 
+type IntakeIssue struct {
+	ID            uuid.UUID
+	WorkspaceID   uuid.UUID
+	ProjectID     uuid.UUID
+	IssueID       uuid.UUID
+	Status        string
+	SnoozedTill   *time.Time
+	DuplicateToID *uuid.UUID
+	CreatedByID   *uuid.UUID
+	UpdatedByID   *uuid.UUID
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+	DeletedAt     *time.Time
+}
+
 type Issue struct {
 	ID                  uuid.UUID
 	WorkspaceID         uuid.UUID

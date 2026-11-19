@@ -175,11 +175,11 @@ type NotificationData struct {
 	// Change The change the notification is of, as it was sent, but for its ids: old_id and new_id are an account's for assignees, a label's for labels and a state's for state; for parent and a relation's fields, a work item's, given only when the caller reads that work item now, with old_issue or new_issue; null for every other field. Every key is there; null where the change has no such value.
 	Change NotificationChange `json:"change"`
 
-	// Issue The work item as it was when the notification was sent: its name, its number, its project's identifier, and its state's name and group, a StateGroup of the project API (backlog, unstarted, started, completed or cancelled).
+	// Issue The work item as it was when the notification was sent: its name, its number, its project's identifier, and its state's name and group, a StateGroup of the project API (backlog, unstarted, started, completed or cancelled), or triage, the group of the project's triage state, for a work item in its project's intake (IssueDetail.intake), as a submission's notifications have it.
 	Issue NotificationIssue `json:"issue"`
 }
 
-// NotificationIssue The work item as it was when the notification was sent: its name, its number, its project's identifier, and its state's name and group, a StateGroup of the project API (backlog, unstarted, started, completed or cancelled).
+// NotificationIssue The work item as it was when the notification was sent: its name, its number, its project's identifier, and its state's name and group, a StateGroup of the project API (backlog, unstarted, started, completed or cancelled), or triage, the group of the project's triage state, for a work item in its project's intake (IssueDetail.intake), as a submission's notifications have it.
 type NotificationIssue struct {
 	ID         uuid.UUID `json:"id"`
 	Identifier string    `json:"identifier"`

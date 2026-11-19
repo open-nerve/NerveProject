@@ -46,6 +46,10 @@ func (f *fakeIssues) DeleteIssueLabelRows(ctx context.Context, d app.IssueDeleti
 	return f.deleteRows(ctx, "DeleteIssueLabelRows", d)
 }
 
+func (f *fakeIssues) DeleteIssueIntakeRows(ctx context.Context, d app.IssueDeletion) error {
+	return f.deleteRows(ctx, "DeleteIssueIntakeRows", d)
+}
+
 func (f *fakeIssues) DeleteIssueCycleRows(ctx context.Context, d app.IssueDeletion) error {
 	return f.deleteRows(ctx, "DeleteIssueCycleRows", d)
 }

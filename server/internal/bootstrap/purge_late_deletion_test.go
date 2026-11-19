@@ -9,6 +9,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	assetriver "github.com/open-nerve/NerveProject/server/internal/modules/asset/adapter/river"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 )
 
@@ -32,6 +33,11 @@ func TestPurgeParentCascadesUnprocessedIssueRows(t *testing.T) {
 				}
 				parents = append(parents, id)
 			}
+			// The app's start-time asset cleanup completes before any snapshot;
+			// its next run is an hour away. Run after the tombstones, it would
+			// recover the 61-day parent's assets at the parent's stamp, and the
+			// first pass below would meet them recovered instead of blocking.
+			waitForCompletedKinds(t, w.pool, map[string]int{assetriver.CleanupKind: 1}, &lockedBuffer{})
 			keys := keysTo(t, w.pool, parent)
 			// Every FK endpoint has fixture rows, including comment_reactions and
 			// drafts. Record IDs now so an absent parent cannot hide surviving children.

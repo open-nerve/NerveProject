@@ -89,17 +89,60 @@ func hideParents(ctx context.Context, issues IssueReader, actor uuid.UUID, items
 	return nil
 }
 
-// seenOne is the work item i as the caller actor sees it (seen), by his
-// grant on its project, in full: with whether he subscribes to it, read
-// last, in the same transaction or read snapshot (M7 P1a spec 2.3, R5).
-// Every answer of one work item in full but a creation's is this one.
+// seenOne is the work item i as the caller actor sees it, by his grant on
+// its project, in full, at the moment Locks' clock answers (seenAt, M7 P2a
+// spec 2.3): a read's answer, and that of a write that wrote nothing and
+// so has no moment of its own.
 func (l Locks) seenOne(ctx context.Context, actor uuid.UUID, grant shared.Grant, i domain.Issue) (domain.Issue, error) {
+	return l.seenAt(ctx, actor, grant, i, l.clock)
+}
+
+// seenAt is the work item i as the caller actor sees it (seen), by his
+// grant on its project, in full, at the moment clock answers: with its
+// intake row as he is answered it then (intakeSeen); and with whether he
+// subscribes to it, read last, in the same transaction or read snapshot
+// (M7 P1a spec 2.3, R5). A write that wrote at a moment answers at it
+// (moment), so that its answer shows what it wrote. Every answer of one
+// work item in full but a creation's, which has no intake row, is this
+// one.
+func (l Locks) seenAt(ctx context.Context, actor uuid.UUID, grant shared.Grant, i domain.Issue, clock Clock) (domain.Issue, error) {
 	out, err := l.seen(ctx, actor, grants{i.ProjectID: grant}, i)
 	if err != nil {
+		return domain.Issue{}, err
+	}
+	if out[0].Intake, err = l.intakeSeen(ctx, actor, grant, i, clock); err != nil {
 		return domain.Issue{}, err
 	}
 	if out[0].Subscribed, err = l.issues.IsSubscribed(ctx, i.ID, actor); err != nil {
 		return domain.Issue{}, err
 	}
 	return out[0], nil
+}
+
+// intakeSeen is the intake row of the work item i as the caller actor, by
+// his grant on its project, is answered it at the moment clock answers (M7
+// P2a spec 2.8): none when i has none; else as it is then
+// (domain.IntakeFacts.AsOf), its effective status, the clock read once and
+// for a snooze alone, so that an answer that does not need the moment
+// reads none; and the work item it duplicates only when that is an
+// undeleted work item of i's project he sees (Issue.HiddenFrom), read by
+// its id, for a duplicate alone: one not there, deleted since (design 15
+// D2), of another project or hidden from him is none, so that the answer
+// tells nothing of it.
+func (l Locks) intakeSeen(ctx context.Context, actor uuid.UUID, grant shared.Grant, i domain.Issue, clock Clock) (*domain.IntakeFacts, error) {
+	if i.Intake == nil {
+		return nil, nil
+	}
+	f := i.Intake.AsOf(clock.Now)
+	if f.DuplicateToID == nil {
+		return &f, nil
+	}
+	target, found, err := l.issues.GetIssue(ctx, *f.DuplicateToID)
+	if err != nil {
+		return nil, err
+	}
+	if !found || target.ProjectID != i.ProjectID || target.HiddenFrom(actor, grant.OwnOnly) {
+		f.DuplicateToID = nil
+	}
+	return &f, nil
 }

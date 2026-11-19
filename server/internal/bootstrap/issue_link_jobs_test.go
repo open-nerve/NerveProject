@@ -16,6 +16,7 @@ import (
 	issueapp "github.com/open-nerve/NerveProject/server/internal/modules/issue/app"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/domain"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project"
+	"github.com/open-nerve/NerveProject/server/internal/platform/clock"
 	"github.com/open-nerve/NerveProject/server/internal/platform/jobs"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
@@ -104,7 +105,7 @@ func TestLinkJobCommitRollback(t *testing.T) {
 		t.Fatal(err)
 	}
 	store := issuepg.New(w.pool)
-	locks := issueapp.NewLocks(issueProjects{projects: project.Provide(w.pool, nil).IssueProjects}, store, authorizerOn(w.pool), newWriteGate(testIssueConfig.WriteGate), postgres.NewTxManager(w.pool, 2*time.Second), attachmentCounterOn(w.pool))
+	locks := issueapp.NewLocks(issueProjects{projects: project.Provide(w.pool, nil).IssueProjects}, store, authorizerOn(w.pool), newWriteGate(testIssueConfig.WriteGate), postgres.NewTxManager(w.pool, 2*time.Second), attachmentCounterOn(w.pool), clock.System{})
 	for _, scenario := range []string{"commit created", "commit updated", "rollback", "title only", "created missing url", "created duplicate url", "updated duplicate url", "created nil url", "updated nil url", "enqueue error", "second fails"} {
 		t.Run(scenario, func(t *testing.T) {
 			item := w.newWorkItem(t)

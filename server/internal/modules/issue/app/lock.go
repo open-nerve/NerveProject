@@ -30,7 +30,11 @@ import (
 // in the same transaction the work item's row FOR SHARE and the decision
 // again on it, without the write gate and without the project's lock
 // (lock_share.go). issue.New builds one Locks for every use case: none
-// holds an Authorizer, a write gate or a transaction of its own.
+// holds an Authorizer, a write gate or a transaction of its own. Its clock
+// is the business clock, which the answer of a work item in full that has
+// no moment of its own reads once at most, for a snoozed intake row's
+// effective status (seenOne, M7 P2a spec 2.3); a write's answer is at the
+// write's own moment (seenAt).
 type Locks struct {
 	projects    ProjectGate
 	issues      IssueReader
@@ -38,12 +42,15 @@ type Locks struct {
 	gate        WriteGate
 	tx          shared.TxManager
 	attachments AttachmentCounter
+	clock       Clock
 }
 
 // NewLocks returns the locks over project's gate, the work items' reads,
-// the Authorizer, the write gate, write transactions and output attachment counts.
-func NewLocks(projects ProjectGate, issues IssueReader, auth shared.Authorizer, gate WriteGate, tx shared.TxManager, attachments AttachmentCounter) Locks {
-	return Locks{projects: projects, issues: issues, auth: auth, gate: gate, tx: tx, attachments: attachments}
+// the Authorizer, the write gate, write transactions, output attachment
+// counts and the business clock.
+func NewLocks(projects ProjectGate, issues IssueReader, auth shared.Authorizer, gate WriteGate, tx shared.TxManager, attachments AttachmentCounter,
+	clock Clock) Locks {
+	return Locks{projects: projects, issues: issues, auth: auth, gate: gate, tx: tx, attachments: attachments, clock: clock}
 }
 
 // write is a write on the work-item side, as Locks takes its lock: the

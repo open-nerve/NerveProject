@@ -40,13 +40,16 @@ type ProjectGate interface {
 // workspace, whether it is archived, its default assignee, nil for none,
 // and its identifier, which names its work items in their activity (M4
 // design 3.13). ArchiveIn is the policy read under the lock, in months;
-// zero disables automatic archival.
+// zero disables automatic archival. IntakeView is whether its intake is
+// turned on, which a submission and a triage read under the lock alone (M7
+// P2a spec 2.4). bootstrap converts project's value into it by type.
 type LockedProject struct {
 	WorkspaceID       uuid.UUID
 	Archived          bool
 	DefaultAssigneeID *uuid.UUID
 	Identifier        string
 	ArchiveIn         int
+	IntakeView        bool
 }
 
 // WriteGate bounds the writes on one project's work items that hold a
@@ -191,6 +194,29 @@ type SubscriptionWriter interface {
 	// RemoveSubscriber soft-deletes the work item's one undeleted row of
 	// the account r names; none for none.
 	RemoveSubscriber(ctx context.Context, r SubscriberRemoval) error
+}
+
+// IntakeWriter is the intake rows' store as submitIntakeIssue and
+// triageIntakeIssue write them, in the transaction ctx carries, under the
+// project's lock (M7 P2a spec 2.4, 2.5). Every path that writes an intake
+// row holds that lock, so a row takes no lock of its own: a triage reads
+// it as the work item's re-read under the lock carries it (Issue.Intake).
+type IntakeWriter interface {
+	// InsertIntake inserts the work item's intake row r, pending.
+	InsertIntake(ctx context.Context, r IntakeRow) error
+	// TriageIntake writes the triage r of the work item's undeleted intake
+	// row.
+	TriageIntake(ctx context.Context, r IntakeTriage) error
+}
+
+// IssueTriager is the work items' store as triageIntakeIssue reads and
+// writes them, in the transaction ctx carries (M7 P2a spec 2.5): a
+// duplicate's target and the work item read back, and the triage's row of
+// its activity.
+type IssueTriager interface {
+	IssueReader
+	// InsertActivities inserts the rows in their order.
+	InsertActivities(ctx context.Context, rows []ActivityRow) error
 }
 
 // SubIssueLister reads the sub-items of a work item (M4 design 3.9).

@@ -18,7 +18,8 @@ import (
 // workspace not locked, and answers it: the first lock of a write on the
 // work-item side (M4 design 3.5, 6.5); found is false for a project that
 // is not there or is deleted, also when it was deleted while the lock
-// waited. It locks in the transaction ctx carries.
+// waited. It locks in the transaction ctx carries; the answer carries
+// whether the project's intake is on (M7 P2a spec 2.4).
 func (s *Store) LockIssueProject(ctx context.Context, id uuid.UUID) (p app.IssueProject, found bool, err error) {
 	r, err := s.queries(ctx).LockIssueProject(ctx, id)
 	switch {
@@ -27,8 +28,8 @@ func (s *Store) LockIssueProject(ctx context.Context, id uuid.UUID) (p app.Issue
 	case err != nil:
 		return app.IssueProject{}, false, fmt.Errorf("lock project %s for its work items: %w", id, err)
 	}
-	return app.IssueProject{WorkspaceID: r.WorkspaceID, Archived: r.Archived, DefaultAssigneeID: r.DefaultAssigneeID, Identifier: r.Identifier, ArchiveIn: int(r.ArchiveIn)},
-		true, nil
+	return app.IssueProject{WorkspaceID: r.WorkspaceID, Archived: r.Archived, DefaultAssigneeID: r.DefaultAssigneeID, Identifier: r.Identifier, ArchiveIn: int(r.ArchiveIn),
+		IntakeView: r.IntakeView}, true, nil
 }
 
 // LockIssueProjects locks the undeleted projects among ids as
@@ -45,7 +46,7 @@ func (s *Store) LockIssueProjects(ctx context.Context, ids []uuid.UUID) (map[uui
 	locked := make(map[uuid.UUID]app.IssueProject, len(rows))
 	for _, r := range rows {
 		locked[r.ID] = app.IssueProject{WorkspaceID: r.WorkspaceID, Archived: r.Archived, DefaultAssigneeID: r.DefaultAssigneeID,
-			Identifier: r.Identifier, ArchiveIn: int(r.ArchiveIn)}
+			Identifier: r.Identifier, ArchiveIn: int(r.ArchiveIn), IntakeView: r.IntakeView}
 	}
 	return locked, nil
 }

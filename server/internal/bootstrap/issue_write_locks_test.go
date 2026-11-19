@@ -137,6 +137,27 @@ var issueWrites = []issueWrite{
 			return relationPath(related[0].ID)
 		},
 		body: func(*testing.T, issueWorld) string { return "" }, want: http.StatusNoContent, waits: "issue_relations", mode: "SHARE"},
+	// A submission to Web's intake, which the target turns on (intakeOn):
+	// as a creation, its triage state is read under the lock (M7 P2a spec
+	// 2.4).
+	{workspaceLock: "no lock", projectLock: "FOR NO KEY UPDATE", op: "submitIntakeIssue", method: http.MethodPost,
+		path: "/api/v0/projects/{project_id}/intake-issues",
+		target: func(t *testing.T, w issueWorld) string {
+			w.intakeOn(t)
+			return "/api/v0/projects/" + w.web.String() + "/intake-issues"
+		},
+		body: func(_ *testing.T, w issueWorld) string {
+			return `{"name":"Fix","assignee_ids":["` + w.ids["bob"].String() + `"],"label_ids":["` + w.bug.String() + `"]}`
+		}, want: http.StatusCreated, waits: "states", mode: "ACCESS EXCLUSIVE"},
+	// A work item submitted to Web's intake (submitted), which the send
+	// accepts: the project's default state is read under the lock before
+	// its intake row is written (spec 2.5), so it waits for the states.
+	{workspaceLock: "no lock", projectLock: "FOR NO KEY UPDATE", op: "triageIntakeIssue", method: http.MethodPost,
+		path: "/api/v0/intake-issues/{issue_id}/triage",
+		target: func(t *testing.T, w issueWorld) string {
+			return "/api/v0/intake-issues/" + w.submitted(t).String() + "/triage"
+		},
+		body: func(*testing.T, issueWorld) string { return `{"status":"accepted"}` }, want: http.StatusOK, waits: "states", mode: "ACCESS EXCLUSIVE"},
 }
 
 // issueTables are the tables a write on the work-item side reads or
@@ -145,7 +166,8 @@ var issueWrites = []issueWrite{
 // memberships its decision reads, the states and labels it checks, and
 // the work-item side's own.
 const issueTables = "workspaces, workspace_members, projects, project_members, states, labels, issues, issue_assignees, issue_labels, " +
-	"draft_issues, issue_links, issue_relations, issue_subscribers, issue_mentions, issue_comments, issue_reactions, comment_reactions, issue_activities, issue_description_versions"
+	"draft_issues, issue_links, issue_relations, issue_subscribers, issue_mentions, issue_comments, issue_reactions, comment_reactions, issue_activities, issue_description_versions, " +
+	"intake_issues"
 
 // writesOnIssues lists the operations of ops tagged issue, but GET, sorted.
 func writesOnIssues(ops []apitest.Operation) []string {

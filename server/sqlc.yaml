@@ -106,6 +106,8 @@ sql:
       - migrations/sql/00033_issue_purge_indexes.sql
       - migrations/sql/00043_issue_cycle_issues.sql
       - migrations/sql/00044_issue_module_issues.sql
+      - migrations/sql/00050_issue_intake_issues.sql
+      - migrations/sql/00051_issue_issue_activities_intake_verbs.sql
     queries: internal/modules/issue/adapter/postgres/queries
     gen:
       go:

@@ -33,7 +33,7 @@ func TestIssueDetailShape(t *testing.T) {
 	}
 	// The detail's own fields (M7 P1a spec 2.3): its description, and
 	// whether the caller subscribes to it, a required boolean.
-	own := []string{"description_html", "is_subscribed"}
+	own := []string{"description_html", "is_subscribed", "intake"}
 	properties := maps.Clone(detail.Properties)
 	for _, name := range own {
 		if _, ok := properties[name]; !ok {

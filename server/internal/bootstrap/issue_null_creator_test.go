@@ -13,7 +13,7 @@ import (
 func TestNullCreatorRemainsHiddenAndUnowned(t *testing.T) {
 	f := newDeletionWindowFixture(t)
 	w := f.w
-	if _, err := w.pool.Exec(pgtest.Soon(t), "UPDATE issues SET created_by_id=NULL WHERE id=ANY($1)", []uuid.UUID{f.x.issue, f.x.archived, f.x.other}); err != nil {
+	if _, err := w.pool.Exec(pgtest.Soon(t), "UPDATE issues SET created_by_id=NULL WHERE id=ANY($1)", []uuid.UUID{f.x.issue, f.x.archived, f.x.other, f.x.intake}); err != nil {
 		t.Fatal(err)
 	}
 	// The member cannot inherit the vanished creator's deletion permission.
@@ -34,7 +34,7 @@ func TestNullCreatorRemainsHiddenAndUnowned(t *testing.T) {
 		}
 		checkNullCreatorTree(t, w, actor, tree)
 		for _, row := range deletionWindowCases() {
-			if slices.Contains([]string{"searchIssues", "listDrafts", "getDraft", "listMemberIssues", "listIssues", "createDraft", "updateDraft", "deleteDraft", "publishDraft", "createIssue"}, row.op) {
+			if slices.Contains([]string{"searchIssues", "listDrafts", "getDraft", "listMemberIssues", "listIssues", "createDraft", "updateDraft", "deleteDraft", "publishDraft", "createIssue", "submitIntakeIssue"}, row.op) {
 				continue
 			}
 			t.Run(actor+"/"+row.op, func(t *testing.T) {

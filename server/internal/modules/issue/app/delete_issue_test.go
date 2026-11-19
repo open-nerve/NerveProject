@@ -27,10 +27,11 @@ func newDelete() (*app.DeleteIssue, *world, uuid.UUID) {
 
 // deletingRows are the calls of the deletion of the rows of the work items
 // ids, a subtree, in the global order of M4 design 3.5: the work items,
-// their assignees, their labels, their cycle and module memberships (M6
-// P3a spec 2.5), their relations, their subscribers, their activity.
+// their intake rows (M7 P2a spec 2.10), their assignees, their labels,
+// their cycle and module memberships (M6 P3a spec 2.5), their relations,
+// their subscribers, their activity.
 func deletingRows(ids []uuid.UUID) []string {
-	return []string{line("DeleteIssueRows", ids), line("DeleteIssueAssigneeRows", ids), line("DeleteIssueLabelRows", ids),
+	return []string{line("DeleteIssueRows", ids), line("DeleteIssueIntakeRows", ids), line("DeleteIssueAssigneeRows", ids), line("DeleteIssueLabelRows", ids),
 		line("DeleteIssueCycleRows", ids), line("DeleteIssueModuleRows", ids), line("LockIssueRelationRows", ids), line("DeletedAt", []uuid.UUID(nil)), line("DeleteLockedRelationRows", ids[:1]), line("DeleteIssueLinkRows", ids), line("DeleteIssueSubscriberRows", ids), line("DeleteIssueMentionRows", ids), line("DeleteIssueCommentRows", ids), line("DeleteIssueReactionRows", ids), line("DeleteIssueCommentReactionRows", ids), line("DeleteIssueActivityRows", ids), line("DeleteIssueDescriptionVersionRows", ids)}
 }
 
@@ -68,7 +69,7 @@ func TestDeleteIssueDeletesTheWorkItemsSubtreeAndItsRows(t *testing.T) {
 				t.Errorf("calls:\n%q\nwant\n%q", w.log.calls, calls)
 			}
 			deletion := app.IssueDeletion{IssueIDs: subtree, By: alice, At: clockNow}
-			if want := slices.Repeat([]app.IssueDeletion{deletion}, 13); !reflect.DeepEqual(w.issues.deletions, want) {
+			if want := slices.Repeat([]app.IssueDeletion{deletion}, 14); !reflect.DeepEqual(w.issues.deletions, want) {
 				t.Errorf("the deletions %+v, want %+v", w.issues.deletions, want)
 			}
 		})
@@ -113,7 +114,7 @@ func TestDeleteIssueRefusals(t *testing.T) {
 // A port that fails ends the deletion with its failure, as itself, and no
 // call after it runs: the transaction rolls back whatever was deleted.
 func TestDeleteIssueStopsAtAFailingPort(t *testing.T) {
-	for _, port := range []string{"GetIssue", "Authorize", "Lock", "Subtree", "DeleteIssueRows", "DeleteIssueAssigneeRows",
+	for _, port := range []string{"GetIssue", "Authorize", "Lock", "Subtree", "DeleteIssueRows", "DeleteIssueIntakeRows", "DeleteIssueAssigneeRows",
 		"DeleteIssueLabelRows", "DeleteIssueCycleRows", "DeleteIssueModuleRows", "LockIssueRelationRows", "DeletedAt", "DeleteLockedRelationRows", "DeleteIssueLinkRows", "DeleteIssueSubscriberRows", "DeleteIssueMentionRows", "DeleteIssueCommentRows", "DeleteIssueReactionRows", "DeleteIssueCommentReactionRows", "DeleteIssueActivityRows", "DeleteIssueDescriptionVersionRows"} {
 		t.Run(port, func(t *testing.T) {
 			uc, w, id := newDelete()

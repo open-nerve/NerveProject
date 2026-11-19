@@ -35,6 +35,8 @@ func (s *Store) Search(ctx context.Context, in app.SearchRead) ([]domain.Issue, 
 	for n, r := range rows {
 		// Similarity is a native float32 SQL result, used only for ranking. Map
 		// the remaining full projection through the shared Issue conversion.
+		// It has no intake columns: a search finds no work item in triage,
+		// and its rows carry no intake row, nil (M7 P2a spec 2.3, 2.6).
 		out[n] = issueOf(gen.GetIssueRow{
 			ID: r.ID, WorkspaceID: r.WorkspaceID, ProjectID: r.ProjectID, SequenceID: r.SequenceID, Name: r.Name,
 			DescriptionHtml: r.DescriptionHtml, DescriptionStripped: r.DescriptionStripped, StateID: r.StateID, Priority: r.Priority,

@@ -53,29 +53,13 @@ type named struct {
 }
 
 // Execute checks p (domain.CheckIssuePatch), before any read; then Locks
-// runs the write on the work item id (M4 design 3.5, 6.7, 11.11): its
-// precheck, the work item read and the decision on issue.update on it, the
-// guest rule first, before any lock; then the project's write gate, which
-// refuses a write that may wait no longer (503 server_busy); then in one
-// transaction, the project FOR NO KEY UPDATE, the work item read again and
-// the decision again, and under them, in this order: an archived project
-// refuses it (409 project.archived), then an archived work item (409
-// issue.archived), a change of nothing too; what p changes in the work item
-// as the caller is answered it, a parent he does not see counted as none
-// (asAnswered, domain.ChangesOf), and when it changes nothing, nothing is
-// written and the answer is the work item as read; the dependent rows it
-// adds, the order of the dates it leaves, the parent it sets, the cycle and
-// the modules it joins (check), every problem in one 422; the clock;
-// whether the cycle it joins has ended then (M6 P3a spec R2); the work
-// item's fields, its completion by its new state's group when its state
-// changes (domain.CompletedAt); the accounts and the labels it removes and
-// adds, in id order; its cycle's rows (cycleRows); the modules it leaves
-// and joins, the same; the accounts it adds subscribed;
-// its activity (domain.UpdateActivity), each account
-// by his display name, each parent by its identifier. All of it is the
-// caller's at that moment. The answer is the work item as stored, read
-// back in the transaction, as the caller sees it (Locks.seen), the work
-// item as read when nothing is written.
+// runs the write on the work item id (M4 design 3.5, 6.7, 11.11): before
+// any lock, the work item read, the decision on issue.update, the guest
+// rule first, then refuseTriage (409 issue.in_triage, M7 P2a spec 2.6);
+// the project's write gate (503 server_busy); then in one transaction, the
+// project FOR NO KEY UPDATE, the work item read again, the decision and
+// refuseTriage again, and under them the update itself (updateLocked), its
+// moment read from the use case's clock after its last lock.
 func (u *UpdateIssue) Execute(ctx context.Context, id uuid.UUID, p domain.IssuePatch) (domain.Issue, error) {
 	actor, err := shared.RequireActor(ctx)
 	if err != nil {
@@ -84,83 +68,116 @@ func (u *UpdateIssue) Execute(ctx context.Context, id uuid.UUID, p domain.IssueP
 	if p, err = domain.CheckIssuePatch(p); err != nil {
 		return domain.Issue{}, err
 	}
-	w := write{issue: &id, action: domain.ActionUpdate, notFound: domain.ErrIssueNotFound}
+	w := write{issue: &id, action: domain.ActionUpdate, notFound: domain.ErrIssueNotFound, check: refuseTriage}
 	var updated domain.Issue
 	err = u.d.Locks.run(ctx, actor, w, func(ctx context.Context, h held) error {
-		switch {
-		case h.project.Archived:
-			return domain.ErrProjectArchived
-		case h.issue.ArchivedAt != nil:
-			return domain.ErrIssueArchived
-		}
-		answered, old, err := asAnswered(ctx, u.d.Issues, h, actor.UserID, p)
-		if err != nil {
-			return err
-		}
-		c := domain.ChangesOf(answered, p)
-		q := ContentBindRequest{ActorID: actor.UserID, Host: ContentHost{WorkspaceID: h.issue.WorkspaceID, ProjectID: h.issue.ProjectID, IssueID: id}}
-		if p.DescriptionHTML != nil {
-			change := domain.CompareDescription(u.d.Sanitizer.Clean(h.issue.DescriptionHTML), u.d.Sanitizer.Clean(*p.DescriptionHTML), p.SkipActivity != nil && *p.SkipActivity)
-			c.Description = &change
-			q.ImageIDs = change.Content.Identity.AssetImageIDs()
-		}
-		if c.None() {
-			// An unchanged legacy body can still contain an unbound reference.
-			// Validate it even though no issue version or activity is written.
-			if len(q.ImageIDs) > 0 {
-				at, err := u.d.ContentBindings.LockContent(ctx, q)
-				if err != nil {
-					return err
-				}
-				if err := u.d.ContentBindings.BindContent(ctx, q, at); err != nil {
-					return err
-				}
-			}
-			updated, err = u.d.Locks.seenOne(ctx, actor.UserID, h.grant, h.issue)
-			return err
-		}
-		n, err := u.check(ctx, h, actor.UserID, p, c, old)
-		if err != nil {
-			return err
-		}
-		relations, err := prepareDescription(ctx, u.d.Issues, u.d.Members, h.issue, c.Description)
-		if err != nil {
-			return err
-		}
-		var at time.Time
-		if len(q.ImageIDs) > 0 {
-			at, err = u.d.ContentBindings.LockContent(ctx, q)
-			if err != nil {
-				return err
-			}
-		} else {
-			at = u.d.Clock.Now()
-		}
-		s := stamp{workspace: h.issue.WorkspaceID, project: h.issue.ProjectID, issue: id, by: actor.UserID, at: at}
-		event, err := u.write(ctx, s, h.issue, c, n, relations)
-		if err != nil {
-			return err
-		}
-		if len(q.ImageIDs) > 0 {
-			if err := u.d.ContentBindings.BindContent(ctx, q, at); err != nil {
-				return err
-			}
-		}
-		if event != nil {
-			if err := u.d.Events.Publish(ctx, *event); err != nil {
-				return err
-			}
-		}
-		if updated, err = readBack(ctx, u.d.Issues, id); err != nil {
-			return err
-		}
-		updated, err = u.d.Locks.seenOne(ctx, actor.UserID, h.grant, updated)
+		updated, err = u.updateLocked(ctx, actor.UserID, h, p, u.d.Clock)
 		return err
 	})
 	if err != nil {
 		return domain.Issue{}, err
 	}
 	return updated, nil
+}
+
+// updateLocked is the update core (M7 P2a spec 2.7, R6): the update p,
+// checked (domain.CheckIssuePatch), by the caller actorID, of the work item
+// that h, his write's lock and decision, holds, in its transaction. It
+// owns no authorization, gate or transaction boundary, and no guard of its
+// caller's write (write.check): an update's and a triage's accept each
+// decide their own action before it. Under the lock, in this order: an
+// archived project refuses it (409 project.archived), then an archived work
+// item (409 issue.archived), a change of nothing too; what p changes in
+// the work item as the caller is answered it, a parent he does not see
+// counted as none (asAnswered, domain.ChangesOf), and when it changes
+// nothing, nothing is written, the clock is not read, and the answer is
+// the work item as read; the dependent rows it adds, the order of the
+// dates it leaves, the parent it sets, the cycle and the modules it joins
+// (check), every problem in one 422; the moment, read once after the last
+// lock: the content's lock's (ContentBinding.LockContent) when p's
+// description binds images, else clock's; whether the cycle it joins has
+// ended then (M6 P3a spec R2); the work item's fields, its completion by
+// its new state's group when its state changes (domain.CompletedAt); the
+// accounts and the labels it removes and adds, in id order; its cycle's
+// rows (cycleRows); the modules it leaves and joins, the same; the
+// accounts it adds subscribed; its activity (domain.UpdateActivity), each
+// account by his display name, each parent by its identifier; issue.updated.
+// All of it is the caller's at that moment. An update passes its use
+// case's clock; a triage's accept, whose patch binds no content, passes
+// the triage's one moment (moment), so that the whole request writes at
+// it. The answer is the work item as stored, read back, as the caller
+// sees it then (Locks.seenAt); when nothing is written, as read, at the
+// moment of Locks' clock (Locks.seenOne).
+func (u *UpdateIssue) updateLocked(ctx context.Context, actorID uuid.UUID, h held, p domain.IssuePatch, clock Clock) (domain.Issue, error) {
+	switch {
+	case h.project.Archived:
+		return domain.Issue{}, domain.ErrProjectArchived
+	case h.issue.ArchivedAt != nil:
+		return domain.Issue{}, domain.ErrIssueArchived
+	}
+	id := h.issue.ID
+	answered, old, err := asAnswered(ctx, u.d.Issues, h, actorID, p)
+	if err != nil {
+		return domain.Issue{}, err
+	}
+	c := domain.ChangesOf(answered, p)
+	q := ContentBindRequest{ActorID: actorID, Host: ContentHost{WorkspaceID: h.issue.WorkspaceID, ProjectID: h.issue.ProjectID, IssueID: id}}
+	if p.DescriptionHTML != nil {
+		change := domain.CompareDescription(u.d.Sanitizer.Clean(h.issue.DescriptionHTML), u.d.Sanitizer.Clean(*p.DescriptionHTML), p.SkipActivity != nil && *p.SkipActivity)
+		c.Description = &change
+		q.ImageIDs = change.Content.Identity.AssetImageIDs()
+	}
+	if c.None() {
+		// An unchanged legacy body can still contain an unbound reference.
+		// Validate it even though no issue version or activity is written.
+		if len(q.ImageIDs) > 0 {
+			at, err := u.d.ContentBindings.LockContent(ctx, q)
+			if err != nil {
+				return domain.Issue{}, err
+			}
+			if err := u.d.ContentBindings.BindContent(ctx, q, at); err != nil {
+				return domain.Issue{}, err
+			}
+		}
+		return u.d.Locks.seenOne(ctx, actorID, h.grant, h.issue)
+	}
+	n, err := u.check(ctx, h, actorID, p, c, old)
+	if err != nil {
+		return domain.Issue{}, err
+	}
+	relations, err := prepareDescription(ctx, u.d.Issues, u.d.Members, h.issue, c.Description)
+	if err != nil {
+		return domain.Issue{}, err
+	}
+	var at time.Time
+	if len(q.ImageIDs) > 0 {
+		at, err = u.d.ContentBindings.LockContent(ctx, q)
+		if err != nil {
+			return domain.Issue{}, err
+		}
+	} else {
+		at = clock.Now()
+	}
+	s := stamp{workspace: h.issue.WorkspaceID, project: h.issue.ProjectID, issue: id, by: actorID, at: at}
+	event, err := u.write(ctx, s, h.issue, c, n, relations)
+	if err != nil {
+		return domain.Issue{}, err
+	}
+	if len(q.ImageIDs) > 0 {
+		if err := u.d.ContentBindings.BindContent(ctx, q, at); err != nil {
+			return domain.Issue{}, err
+		}
+	}
+	if event != nil {
+		if err := u.d.Events.Publish(ctx, *event); err != nil {
+			return domain.Issue{}, err
+		}
+	}
+	updated, err := readBack(ctx, u.d.Issues, id)
+	if err != nil {
+		return domain.Issue{}, err
+	}
+	return u.d.Locks.seenAt(ctx, actorID, h.grant, updated, moment(at))
 }
 
 // check checks the dependent rows that c adds to the work item that h, the

@@ -55,8 +55,8 @@ func relate(t testing.TB, pool *pgxpool.Pool, from, to uuid.UUID, kind string, b
 // Bug, with another he makes under it (underWorkItem) and a third, Kin; he
 // relates it to Kin and the one under it to it (relate), puts it in the
 // project's cycle Sprint and module Platform (seedMemberships: the project
-// is twoProjects', which seeds them), and deletes it through the API: a row
-// of each table under it, deleted.
+// is twoProjects', which seeds them), gives it an intake row (seedIntake),
+// and deletes it through the API: a row of each table under it, deleted.
 func deletedWorkItem(t *testing.T, contract *apitest.Contract, base string, pool *pgxpool.Pool, token string, account,
 	project uuid.UUID) uuid.UUID {
 	t.Helper()
@@ -99,6 +99,7 @@ func deletedWorkItem(t *testing.T, contract *apitest.Contract, base string, pool
 	relate(t, pool, gone, made[2], "relates_to", account)
 	relate(t, pool, made[1], gone, "relates_to", account)
 	seedMemberships(t, pool, gone, account)
+	seedIntake(t, pool, gone, account)
 	if status, body := call(t, contract, http.MethodDelete, base+"/api/v0/issues/"+gone.String(), token, ""); status != http.StatusNoContent {
 		t.Fatalf("deleting the work item = %d %s, want 204", status, body)
 	}
@@ -113,7 +114,8 @@ func deletedWorkItem(t *testing.T, contract *apitest.Contract, base string, pool
 // assigned to him and labelled Bug (fullIssue), whom he unassigned and
 // unlabelled, then assigned and labelled again, with a work item of his
 // under it (underWorkItem), in Web's cycle Sprint and module Platform
-// (seedCycles, seedModules, seedMemberships): a row of each table under it,
+// (seedCycles, seedModules, seedMemberships), with an intake row
+// (seedIntake): a row of each table under it,
 // and of its assignees and its labels one deleted before, all of bob's
 // writing; and,
 // of his writing too, written directly (relate), a relation of each stored
@@ -132,6 +134,7 @@ func TestDeletingAWorkItemLeavesNoUndeletedRowUnderIt(t *testing.T) {
 	seedModules(t, w.pool, w.web, w.ids["bob"])
 	for _, parent := range []uuid.UUID{deleted, kept} {
 		seedMemberships(t, w.pool, parent, w.ids["bob"])
+		seedIntake(t, w.pool, parent, w.ids["bob"])
 		seedIssueLinks(t, w.pool, parent, w.ids["bob"])
 		seedIssueAsset(t, w.pool, parent, w.ids["bob"])
 		for _, html := range []string{mentionHTML(w.ids["bob"]), "<p>Removed</p>", mentionHTML(w.ids["bob"])} {

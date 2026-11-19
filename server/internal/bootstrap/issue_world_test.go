@@ -94,10 +94,12 @@ func newIssueWorldOnRequests(t *testing.T, dbURL string, pool *pgxpool.Pool, con
 // for such a run where a test shows its probe tells them apart. Only the
 // tests whose fixture such a run would change wait: those that observe every
 // request's lock waits, those whose auto-archive candidate is due on the
-// real clock too (archiveAhead), and those with a cycle that has ended on
+// real clock too (archiveAhead), those with a cycle that has ended on
 // the app's clock, which the freeze's run locks the project of and freezes
-// (planning.freeze_cycles). Every world waiting would double the package's
-// run time.
+// (planning.freeze_cycles), and those whose barriers leave the app's requests
+// a single connection, which a run queued on a barrier would take
+// (TestProjectDeletionPublishesAndEnqueuesAtomically). Every world waiting
+// would double the package's run time.
 func waitForStartupRuns(t *testing.T, pool *pgxpool.Pool) {
 	t.Helper()
 	waitForCompletedKinds(t, pool, map[string]int{identityriver.CleanupKind: 1, issueriver.AutoArchiveKind: 1,

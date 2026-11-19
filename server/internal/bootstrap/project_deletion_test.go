@@ -11,6 +11,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/open-nerve/NerveProject/server/internal/platform/config"
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apitest"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
@@ -35,9 +36,19 @@ import (
 // with a notification of its Seeded for her (seedItemNotification).
 func twoProjects(t *testing.T) (contract *apitest.Contract, base string, pool *pgxpool.Pool, alice string, aliceID, web, ops uuid.UUID) {
 	t.Helper()
+	return twoProjectsWith(t, func(*config.Config) {})
+}
+
+// twoProjectsWith is twoProjects in an app whose configuration, testConfig's,
+// configure changes first.
+func twoProjectsWith(t *testing.T, configure func(*config.Config)) (contract *apitest.Contract, base string, pool *pgxpool.Pool, alice string,
+	aliceID, web, ops uuid.UUID) {
+	t.Helper()
 	contract = apitest.Load(t)
 	url := pgtest.NewDatabase(t)
-	base = startApp(t, testConfig(t, url, false), migrations.FS())
+	cfg := testConfig(t, url, false)
+	configure(&cfg)
+	base = startApp(t, cfg, migrations.FS())
 	pool = openPool(t, url)
 	alice = registerAccount(t, contract, base, "alice@example.com").AccessToken
 	aliceID = accountID(t, contract, base, alice)
@@ -92,8 +103,9 @@ func seedLabels(t *testing.T, pool *pgxpool.Pool, project, by uuid.UUID) {
 // and a row of each of the issue module's tables under it: by its assignee
 // and its subscriber, the project's label Bug (seedLabels) on it, its
 // relation to another work item of the project, its blocker (relate), its
-// activity's first row, and its memberships of the project's cycle Sprint
-// and module Platform (seedMemberships), directly: the seed does not depend
+// activity's first row, its memberships of the project's cycle Sprint and
+// module Platform (seedMemberships) and its intake row (seedIntake),
+// directly: the seed does not depend
 // on which of the issue module's writes exist. Each number is the project's
 // counter, moved on, as a creation moves it.
 func seedIssues(t *testing.T, pool *pgxpool.Pool, project, by uuid.UUID) {
@@ -128,6 +140,7 @@ func seedIssues(t *testing.T, pool *pgxpool.Pool, project, by uuid.UUID) {
 	}
 	relate(t, pool, issue, blocker, "blocked_by", by)
 	seedMemberships(t, pool, issue, by)
+	seedIntake(t, pool, issue, by)
 	seedIssueLinks(t, pool, issue, by)
 	seedIssueDrafts(t, pool, project, by)
 	seedIssueAsset(t, pool, issue, by)

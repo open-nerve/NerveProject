@@ -50,6 +50,10 @@ func (f *fakeRows) DeleteProjectIssueRows(ctx context.Context, b app.RowBatch) (
 	return f.batch(ctx, "issues", b)
 }
 
+func (f *fakeRows) DeleteProjectIntakeRows(ctx context.Context, b app.RowBatch) ([]uuid.UUID, error) {
+	return f.batch(ctx, "intake_issues", b)
+}
+
 func (f *fakeRows) DeleteProjectAssigneeRows(ctx context.Context, b app.RowBatch) ([]uuid.UUID, error) {
 	return f.batch(ctx, "assignees", b)
 }
@@ -85,14 +89,15 @@ func ids(n int) []uuid.UUID {
 
 // twoProjects are the rows of web and ops, each with three drafts. Web has
 // three work items, an assignee, a relation and two activity rows; ops a work
-// item, a label on it, its cycle and its module, a relation and a subscriber.
-// Several tables fill a batch of two, which fakeRows alternates greatest
-// first and least first.
+// item, its intake row, a label on it, its cycle and its module, a relation
+// and a subscriber. Several tables fill a batch of two, which fakeRows
+// alternates greatest first and least first.
 func twoProjects(web, ops uuid.UUID) *fakeRows {
-	w, o := ids(13), ids(10)
+	w, o := ids(13), ids(11)
 	return &fakeRows{deleted: map[uuid.UUID]string{}, rows: map[string]map[uuid.UUID][]uuid.UUID{
 		"drafts":        {web: w[10:13], ops: o[5:8]},
 		"issues":        {web: w[0:3], ops: o[0:1]},
+		"intake_issues": {ops: o[10:11]},
 		"assignees":     {web: w[3:4]},
 		"labels":        {ops: o[1:2]},
 		"cycle_issues":  {ops: o[8:9]},
@@ -109,7 +114,7 @@ func twoProjects(web, ops uuid.UUID) *fakeRows {
 // zero id, then after the greatest id of each batch, until one finds none.
 func batches(f *fakeRows, project uuid.UUID) []string {
 	var calls []string
-	for _, statement := range []string{"drafts", "issues", "assignees", "labels", "cycle_issues", "module_issues", "relations", "links", "subscribers", "mentions", "comments", "reactions", "comment_reactions", "activities", "description_versions"} {
+	for _, statement := range []string{"drafts", "issues", "intake_issues", "assignees", "labels", "cycle_issues", "module_issues", "relations", "links", "subscribers", "mentions", "comments", "reactions", "comment_reactions", "activities", "description_versions"} {
 		rows := f.rows[statement][project]
 		after := uuid.UUID{}
 		for i := 0; ; i += 2 {

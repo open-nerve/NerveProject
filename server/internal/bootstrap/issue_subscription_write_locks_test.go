@@ -88,6 +88,12 @@ func (row subscriptionWriteLock) checkShareLocks(t *testing.T, w issueWorld) {
 	}
 
 	first := target(t)
+	// The earlier writes' and the targets' notification fan-outs lock their
+	// work items' rows FOR SHARE and, inserting, acme's and Web's FOR KEY
+	// SHARE: one still running as the tables are locked in turn would
+	// deadlock with them (R10). Each hold below waits for them to end,
+	// after its target's creation has enqueued its own.
+	waitForFanouts(t, w.pool)
 	tables := lockedTables(t, w.pool, issueTables, "EXCLUSIVE")
 	for name, want := range map[string]int{"walt": http.StatusForbidden, "wanda": http.StatusForbidden, "olga": http.StatusNotFound} {
 		answers(name, first, want)
@@ -101,6 +107,7 @@ func (row subscriptionWriteLock) checkShareLocks(t *testing.T, w issueWorld) {
 	collect()
 
 	second := target(t)
+	waitForFanouts(t, w.pool)
 	subscribers := lockedTables(t, w.pool, "issue_subscribers", "SHARE")
 	tx, collect = observe(second, subscribers)
 	pid = requestTableBlocked(t, w.pool, tx, subscribers.Conn().PgConn().PID(), "issue_subscribers")
@@ -120,6 +127,7 @@ func (row subscriptionWriteLock) checkShareLocks(t *testing.T, w issueWorld) {
 	collect()
 
 	third := target(t)
+	waitForFanouts(t, w.pool)
 	project := holding(t, w.pool, "SELECT 1 FROM projects WHERE id = $1 FOR NO KEY UPDATE", w.web)
 	cascade := holding(t, w.pool, "SELECT 1 FROM workspaces WHERE id = $1 FOR NO KEY UPDATE", w.acme)
 	answers("alice", third, row.want)

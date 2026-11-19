@@ -72,4 +72,26 @@ var (
 	// with this one value (M4 design 3.10, 5.3).
 	ErrRelationNotFound = shared.NewError(shared.KindNotFound, "issue.relation_not_found",
 		"The relation does not exist, or you cannot see either of its work items.")
+	// ErrInTriage answers a change of a work item in its project's intake
+	// (M7 P2a spec 2.6, R4) by the writes that guard their own work item:
+	// its update, archiving and unarchiving, deletion, sub-items added
+	// under it, and relations added from it; after the 404 and the 403,
+	// before project.archived and issue.archived.
+	ErrInTriage = shared.NewError(shared.KindConflict, "issue.in_triage",
+		"The work item is in the project's intake; triage it before changing it.")
+	// ErrIntakeDisabled answers a submission and a triage while the
+	// project's intake is turned off (M7 design 3.11, P2a spec 2.4, 2.5);
+	// reads go on, and the rows stay for when it is turned on again.
+	ErrIntakeDisabled = shared.NewError(shared.KindConflict, "issue.intake_disabled",
+		"Intake is turned off in this project; turn it on to submit or triage work items.")
+	// ErrIntakeNotFound answers a triage of a work item that does not
+	// exist or is deleted, one the caller does not see, and one without an
+	// intake row, all with this one value (M7 P2a spec 2.5).
+	ErrIntakeNotFound = shared.NewError(shared.KindNotFound, "issue.intake_not_found",
+		"The intake work item does not exist, or you cannot see it.")
+	// ErrIntakeTransitionNotAllowed answers a triage that the intake row's
+	// effective status does not allow (M7 P2a spec 2.5, R3): any from a
+	// terminal status, and pending to pending.
+	ErrIntakeTransitionNotAllowed = shared.NewError(shared.KindConflict, "issue.intake_transition_not_allowed",
+		"The intake work item cannot move from its status to the one asked for.")
 )

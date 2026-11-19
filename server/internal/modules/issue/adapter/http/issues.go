@@ -88,9 +88,10 @@ func (h handler) UnarchiveIssue(ctx context.Context, req gen.UnarchiveIssueReque
 
 // issueDetail is i as the API shows it: each field that may be null null
 // when it is nil, each list [] when it is empty; with whether the caller
-// subscribes to it, which a list's row (issueRow) does not show.
+// subscribes to it and its intake row (intakeOf), which a list's row
+// (issueRow) does not show.
 func issueDetail(i domain.Issue) gen.IssueDetail {
-	return gen.IssueDetail{DescriptionHTML: i.DescriptionHTML, IsSubscribed: i.Subscribed, ID: i.ID, WorkspaceID: i.WorkspaceID, ProjectID: i.ProjectID, SequenceID: i.SequenceID, Name: i.Name,
+	return gen.IssueDetail{DescriptionHTML: i.DescriptionHTML, IsSubscribed: i.Subscribed, Intake: intakeOf(i.Intake), ID: i.ID, WorkspaceID: i.WorkspaceID, ProjectID: i.ProjectID, SequenceID: i.SequenceID, Name: i.Name,
 		StateID: i.StateID, Priority: gen.IssuePriority(i.Priority), StartDate: orNull(i.StartDate), TargetDate: orNull(i.TargetDate),
 		ParentID: orNull(i.ParentID), SortOrder: i.SortOrder,
 		CompletedAt: orNull(i.CompletedAt), ArchivedAt: orNull(i.ArchivedAt), AssigneeIds: orEmpty(i.AssigneeIDs), LabelIds: orEmpty(i.LabelIDs),

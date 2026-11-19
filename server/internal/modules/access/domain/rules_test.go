@@ -118,6 +118,14 @@ var tableCells = map[shared.Action][]outcome{
 	// As issue.create (M4 design 3.4).
 	"issue.archive": {allowed, allowed, forbidden, forbidden, allowed, forbidden, forbidden, invisible, invisible, invisible, invisible,
 		forbidden, invisible, invisible, invisible, forbidden, forbidden},
+	// As issue.read: every active member of the project submits to its
+	// intake, its guest too (M7 design 3.10).
+	"intake.submit": {allowed, allowed, allowed, allowed, allowed, forbidden, forbidden, invisible, invisible, invisible, invisible,
+		forbidden, invisible, invisible, invisible, forbidden, forbidden},
+	// As state.create: the project's admins, and the workspace's admin who
+	// is its active member (M7 design 3.10, 15 B).
+	"intake.triage": {allowed, forbidden, forbidden, forbidden, allowed, forbidden, forbidden, invisible, invisible, invisible, invisible,
+		forbidden, invisible, invisible, invisible, forbidden, forbidden},
 	// As issue.read: every active member of the project, the guest's
 	// OwnOnly filtering the planning module's (M6 design 3.7).
 	"cycle.read": {allowed, allowed, allowed, allowed, allowed, forbidden, forbidden, invisible, invisible, invisible, invisible,

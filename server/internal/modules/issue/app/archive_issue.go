@@ -56,23 +56,27 @@ func (u *UnarchiveIssue) Execute(ctx context.Context, id uuid.UUID) (domain.Issu
 
 // archive archives the work item id, or unarchives it when on is false (M4
 // design 3.5, 3.8, 3.13): Locks runs the write, issue.archive decided on
-// it, the guest rule first, before any lock; then the project's write
-// gate, which refuses a write that may wait no longer (503 server_busy);
-// then in one transaction, the project FOR NO KEY UPDATE, the work item
-// read again and the decision again, and under them, in this order: an
+// it, the guest rule first, then a work item in its project's intake
+// refused (409 issue.in_triage, refuseTriage; M7 P2a spec 2.6), before any
+// lock; then the project's write gate, which refuses a write that may wait
+// no longer (503 server_busy); then in one transaction, the project FOR NO
+// KEY UPDATE, the work item read again, the decision and the intake's
+// refusal again, so that a work item in the intake is refused even when
+// already as on would make it, and under them, in this order: an
 // archived project refuses it (409 project.archived); a work item already
 // as on would make it is answered as read, and nothing is written; an
 // archiving checks the work item's state (archivable); then the clock; the
 // work item's archived_at, the moment or none, and its last writer and
 // moment, the caller's; its activity's row, 14 or 16. The answer is the
 // work item as stored, read back in the transaction, as the caller sees
-// it (Locks.seen), the work item as read when nothing is written.
+// it at that moment (Locks.seenAt), the work item as read when nothing is
+// written, at the moment Locks' clock answers (Locks.seenOne).
 func (d ArchiveIssueDeps) archive(ctx context.Context, id uuid.UUID, on bool) (domain.Issue, error) {
 	actor, err := shared.RequireActor(ctx)
 	if err != nil {
 		return domain.Issue{}, err
 	}
-	w := write{issue: &id, action: domain.ActionArchive, notFound: domain.ErrIssueNotFound}
+	w := write{issue: &id, action: domain.ActionArchive, notFound: domain.ErrIssueNotFound, check: refuseTriage}
 	var answer domain.Issue
 	err = d.Locks.run(ctx, actor, w, func(ctx context.Context, h held) error {
 		switch {
@@ -101,7 +105,7 @@ func (d ArchiveIssueDeps) archive(ctx context.Context, id uuid.UUID, on bool) (d
 		if answer, err = readBack(ctx, d.Issues, id); err != nil {
 			return err
 		}
-		if answer, err = d.Locks.seenOne(ctx, actor.UserID, h.grant, answer); err != nil {
+		if answer, err = d.Locks.seenAt(ctx, actor.UserID, h.grant, answer, moment(s.at)); err != nil {
 			return err
 		}
 		kind := domain.EventIssueUnarchived

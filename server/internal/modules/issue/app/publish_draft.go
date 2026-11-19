@@ -40,7 +40,7 @@ func (u *PublishDraft) Execute(ctx context.Context, id uuid.UUID) (domain.Issue,
 		if err != nil {
 			return err
 		}
-		prepared, err := u.d.Creation.prepareLocked(ctx, actor.UserID, *h.Draft.ProjectID, h.Issue, in)
+		prepared, err := u.d.Creation.prepareLocked(ctx, actor.UserID, *h.Draft.ProjectID, h.Issue, in, asAsked)
 		if err != nil {
 			return err
 		}

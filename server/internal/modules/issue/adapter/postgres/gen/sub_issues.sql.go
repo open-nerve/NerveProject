@@ -93,8 +93,10 @@ SELECT i.id, i.workspace_id, i.project_id, i.sequence_id, i.name, i.description_
        ci.cycle_id,
        (SELECT array_agg(m.module_id ORDER BY m.module_id) FROM module_issues m
         WHERE m.issue_id = i.id AND m.deleted_at IS NULL)::uuid[] AS module_ids,
-       (SELECT count(*) FROM issue_links l WHERE l.issue_id=i.id AND l.deleted_at IS NULL)::bigint AS link_count
+       (SELECT count(*) FROM issue_links l WHERE l.issue_id=i.id AND l.deleted_at IS NULL)::bigint AS link_count,
+       ii.status AS intake_status, ii.snoozed_till AS intake_snoozed_till, ii.duplicate_to_id AS intake_duplicate_to_id
 FROM issues i LEFT JOIN cycle_issues ci ON ci.issue_id = i.id AND ci.deleted_at IS NULL
+     LEFT JOIN intake_issues ii ON ii.issue_id = i.id AND ii.deleted_at IS NULL
 WHERE i.parent_id = $1::uuid AND i.deleted_at IS NULL AND i.archived_at IS NULL
   AND ($2::uuid IS NULL OR i.created_by_id = $2::uuid)
 ORDER BY i.created_at, i.id
@@ -130,6 +132,9 @@ type SubIssuesRow struct {
 	CycleID             *uuid.UUID
 	ModuleIds           []uuid.UUID
 	LinkCount           int64
+	IntakeStatus        *string
+	IntakeSnoozedTill   *time.Time
+	IntakeDuplicateToID *uuid.UUID
 }
 
 // The undeleted, unarchived work items directly under the work item parent_id, each as GetIssue reads it, those the
@@ -169,6 +174,9 @@ func (q *Queries) SubIssues(ctx context.Context, arg SubIssuesParams) ([]SubIssu
 			&i.CycleID,
 			&i.ModuleIds,
 			&i.LinkCount,
+			&i.IntakeStatus,
+			&i.IntakeSnoozedTill,
+			&i.IntakeDuplicateToID,
 		); err != nil {
 			return nil, err
 		}

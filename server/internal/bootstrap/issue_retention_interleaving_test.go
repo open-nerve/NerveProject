@@ -23,6 +23,8 @@ import (
 // Keep all real periodic workers active at the task's two-second cadence.
 // Fixtures are atomic and expectations allow a background pass to win; no
 // startup drain, delayed schedule or elapsed-time exclusion protects the test.
+// The hourly asset cleanup is no such pass: a test that tombstones an asset's
+// parent waits for its start-time run first (TestPurgeParentCascadesUnprocessedIssueRows).
 func newRetentionWorld(t *testing.T) issueWorld {
 	t.Helper()
 	return newIssueWorldWith(t, func(cfg *config.Config) {

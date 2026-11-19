@@ -44,25 +44,28 @@ func NewCreateIssueRelations(d CreateIssueRelationsDeps) *CreateIssueRelations {
 // Execute checks t and ids (domain.CheckNewRelations), before any read;
 // then Locks runs the write on the work item id across projects (M4 design
 // 3.5, 11.11, convention 7): its precheck, the decision on issue.update on
-// it, the guest rule first, then each of ids read and decided on, on
-// issue.read, the guest rule first, before any lock, so that one the
-// caller may not reach takes no lock; then the write gates of the work
-// item's project and of the others' it reaches, all at once in ascending
-// id order, which refuse a write that may wait no longer (503
-// server_busy); then in one transaction those projects FOR NO KEY UPDATE,
-// in ascending id order, the work item and each other read and decided on
+// it, the guest rule first, then a work item in its project's intake
+// refused (409 issue.in_triage, refuseTriage; M7 P2a spec 2.6), then each
+// of ids read and decided on, on issue.read, the guest rule first, before
+// any lock, so that one the caller may not reach takes no lock; then the
+// write gates of the work item's project and of the others' it reaches,
+// all at once in ascending id order, which refuse a write that may wait no
+// longer (503 server_busy); then in one transaction those projects FOR NO
+// KEY UPDATE, in ascending id order, the work item read and decided on
+// again and refused again in the intake, each other read and decided on
 // again, and under them, in this order: an archived project refuses it
 // (409 project.archived), then an archived work item (409 issue.archived);
-// each of ids reached, not archived, of a project not archived, and not
-// related to the work item yet (check), every problem in one 422; then the
-// clock; the relations, in the others' id order, each as stored
-// (domain.NewRelation); the work item and each other last changed by the
-// caller; for each relation a row of the work item's activity and one of
-// the other's, each of its own project, the type as its work item reads
-// it, the other work item by its identifier (rows 20 and 21 of 3.13). All
-// of it is the caller's at that moment. The answer is the relations as the
-// work item reads them, in the others' id order, each other read back in
-// the transaction, as the caller sees it (Locks.seen).
+// each of ids reached, not archived, not in its project's intake, of a
+// project not archived, and not related to the work item yet (check),
+// every problem in one 422; then the clock; the relations, in the others'
+// id order, each as stored (domain.NewRelation); the work item and each
+// other last changed by the caller; for each relation a row of the work
+// item's activity and one of the other's, each of its own project, the
+// type as its work item reads it, the other work item by its identifier
+// (rows 20 and 21 of 3.13). All of it is the caller's at that moment. The
+// answer is the relations as the work item reads them, in the others' id
+// order, each other read back in the transaction, as the caller sees it
+// (Locks.seen).
 func (u *CreateIssueRelations) Execute(ctx context.Context, id uuid.UUID, t domain.RelationType, ids []uuid.UUID) ([]IssueRelation, error) {
 	actor, err := shared.RequireActor(ctx)
 	if err != nil {
@@ -71,7 +74,7 @@ func (u *CreateIssueRelations) Execute(ctx context.Context, id uuid.UUID, t doma
 	if err := domain.CheckNewRelations(t, ids); err != nil {
 		return nil, err
 	}
-	w := write{issue: &id, action: domain.ActionUpdate, notFound: domain.ErrIssueNotFound, reach: ids}
+	w := write{issue: &id, action: domain.ActionUpdate, notFound: domain.ErrIssueNotFound, reach: ids, check: refuseTriage}
 	var created []IssueRelation
 	err = u.d.Locks.run(ctx, actor, w, func(ctx context.Context, h held) error {
 		switch {
@@ -107,11 +110,12 @@ func (u *CreateIssueRelations) Execute(ctx context.Context, id uuid.UUID, t doma
 }
 
 // check holds the work items the caller's addition relates the work item h
-// holds to, as h reached them under the locks (M4 design 3.4, 3.8, 3.10):
-// each reached, not archived, of a project that is not archived, and not
-// related to the work item yet, of any type, either way. Every problem is
-// reported at once, in one 422, each at its place in the addition's work
-// items. It answers them, in id order.
+// holds to, as h reached them under the locks (M4 design 3.4, 3.8, 3.10),
+// each read by GetIssue, with its intake row: each reached, not archived,
+// not in its project's intake (M7 P2a spec 2.6), of a project that is not
+// archived, and not related to the work item yet, of any type, either way.
+// Every problem is reported at once, in one 422, each at its place in the
+// addition's work items. It answers them, in id order.
 func (u *CreateIssueRelations) check(ctx context.Context, h held) ([]end, error) {
 	var reached []uuid.UUID
 	for _, e := range h.reached {
@@ -129,7 +133,7 @@ func (u *CreateIssueRelations) check(ctx context.Context, h held) ([]end, error)
 	var problems []shared.FieldError
 	for n, e := range h.reached {
 		switch {
-		case !e.ok || e.issue.ArchivedAt != nil || e.project.Archived:
+		case !e.ok || e.issue.ArchivedAt != nil || e.issue.InTriage() || e.project.Archived:
 			problems = append(problems, domain.RelatedNotAllowed(n))
 		case slices.Contains(related, e.issue.ID):
 			problems = append(problems, domain.RelatedAlready(n))

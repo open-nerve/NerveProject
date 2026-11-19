@@ -87,6 +87,7 @@ func Provide(pool *pgxpool.Pool, protected []postgres.ProtectedReference) Provid
 		{Table: "draft_issues", Protected: true, Delete: store.PurgeDraftIssues},
 		{Table: "module_issues", Delete: store.PurgeModuleIssues},
 		{Table: "cycle_issues", Delete: store.PurgeCycleIssues},
+		{Table: "intake_issues", Delete: store.PurgeIntakeIssues},
 		{Table: "issues", Protected: true, Delete: store.PurgeIssues},
 	}), IssueCascade: app.NewCascade(store), ListSettings: app.ListSettings{}, IssueRefs: app.NewIssueRefs(store),
 		NotificationIssues: notificationIssues{store}, PlanningStats: store, PlanningTransfer: app.NewCycleTransfers(store)}
@@ -219,7 +220,7 @@ type Module struct {
 // registered or injected after it (M4 design 6.6).
 func New(d Deps) *Module {
 	store := postgresadapter.New(d.Pool)
-	locks := app.NewLocks(d.Projects, store, d.Authorizer, d.WriteGate, d.Tx, d.AttachmentCounter)
+	locks := app.NewLocks(d.Projects, store, d.Authorizer, d.WriteGate, d.Tx, d.AttachmentCounter, d.Clock)
 	draftLocks := app.NewDraftLocks(locks, d.Workspaces, d.Projects, store)
 	assetAccess := app.NewAssetAccess(app.AssetAccessDeps{Locks: locks, Drafts: draftLocks, Comments: store, Projects: d.Projects})
 	attachments := app.GetAttachmentsDeps{Access: assetAccess, Rows: d.AttachmentReader, ReadTx: d.ReadTx}
@@ -230,6 +231,9 @@ func New(d Deps) *Module {
 	creation := app.NewIssueCreation(app.IssueCreationDeps{Events: d.Events,
 		Issues: store, Sequences: d.Projects, States: d.Projects, Labels: d.Projects, Members: d.Projects, Planning: d.Planning,
 		Profiles: d.Profiles, Clock: d.Clock, Sanitizer: sanitizer, Attachments: d.AttachmentCounter, ContentBindings: d.ContentBindings,
+	})
+	update := app.NewUpdateIssue(app.UpdateIssueDeps{Events: d.Events,
+		Locks: locks, Issues: store, States: d.Projects, Labels: d.Projects, Members: d.Projects, Planning: d.Planning, Profiles: d.Profiles, Clock: d.Clock, Sanitizer: sanitizer, ContentBindings: d.ContentBindings,
 	})
 	return &Module{
 		assets: assetAccess, deleteRows: app.NewDeleteRows(app.DeleteRowsDeps{Rows: store, Relations: app.NewRelationDeletions(store, d.Projects), Remaining: store, Tx: d.JobTx, RuntimeNow: d.RuntimeNow, Batch: d.DeleteBatch, Budget: d.DeleteBudget}), deleteBudget: d.DeleteBudget, logger: d.Logger,
@@ -265,13 +269,13 @@ func New(d Deps) *Module {
 			CreateIssueComment:      app.NewCreateIssueComment(app.CreateIssueCommentDeps{ContentBindings: d.ContentBindings, Events: d.Events, Locks: locks, Comments: store, Members: d.Projects, Sanitizer: sanitizer, Clock: d.Clock}),
 			ListIssueComments:       app.NewListIssueComments(app.ListIssueCommentsDeps{Locks: locks, Comments: store, ReadTx: d.ReadTx}),
 			CreateIssue:             app.NewCreateIssue(app.CreateIssueDeps{Locks: locks, Creation: creation}),
+			SubmitIntakeIssue:       app.NewSubmitIntakeIssue(app.SubmitIntakeIssueDeps{Locks: locks, Creation: creation, Intake: store, Issues: store}),
+			TriageIntakeIssue:       app.NewTriageIntakeIssue(app.TriageIntakeIssueDeps{Locks: locks, Update: update, Intake: store, Issues: store, States: d.Projects, Clock: d.Clock}),
 			GetIssue:                app.NewGetIssue(locks, d.ReadTx),
 			GetIssueByIdentifier: app.NewGetIssueByIdentifier(app.GetIssueByIdentifierDeps{
 				Locks: locks, Workspaces: d.Workspaces, Projects: d.Projects, Issues: store, ReadTx: d.ReadTx,
 			}),
-			UpdateIssue: app.NewUpdateIssue(app.UpdateIssueDeps{Events: d.Events,
-				Locks: locks, Issues: store, States: d.Projects, Labels: d.Projects, Members: d.Projects, Planning: d.Planning, Profiles: d.Profiles, Clock: d.Clock, Sanitizer: sanitizer, ContentBindings: d.ContentBindings,
-			}),
+			UpdateIssue:        update,
 			DeleteIssue:        app.NewDeleteIssue(app.DeleteIssueDeps{Events: d.Events, Locks: locks, Rows: store, Relations: app.NewRelationDeletions(store, d.Projects), Clock: d.Clock}),
 			ArchiveIssue:       app.NewArchiveIssue(archive),
 			UnarchiveIssue:     app.NewUnarchiveIssue(archive),

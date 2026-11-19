@@ -119,6 +119,29 @@ type SubscriberRemoval struct {
 	At                    time.Time
 }
 
+// IntakeRow is a work item's intake row as a submission inserts it (M7
+// P2a spec 2.4): its id and the work item's, pending, created and last
+// changed at the moment and by the account given, the submitter, who
+// created the work item too.
+type IntakeRow struct {
+	ID, WorkspaceID, ProjectID, IssueID uuid.UUID
+	By                                  uuid.UUID
+	At                                  time.Time
+}
+
+// IntakeTriage is a triage of a work item's undeleted intake row as it is
+// written (M7 P2a spec 2.5): its new status, till when it is snoozed and
+// the work item it duplicates, each nil unless the status has it, last
+// changed at the moment and by the account given.
+type IntakeTriage struct {
+	IssueID       uuid.UUID
+	Status        domain.IntakeStatus
+	SnoozedTill   *time.Time
+	DuplicateToID *uuid.UUID
+	By            uuid.UUID
+	At            time.Time
+}
+
 // ActivityRow is a new row of a work item's activity (M4 design 3.13):
 // its id, the work item's, the row's values, and its actor, who writes it,
 // at the moment given.

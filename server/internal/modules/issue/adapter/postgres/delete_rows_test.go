@@ -73,6 +73,20 @@ func aCycleRow(t *testing.T, pool *pgxpool.Pool, p project, issue, id, by uuid.U
 	child("cycle_issues", "cycle_id", aCycle)(t, pool, p, own, id, by, n)
 }
 
+// anIntakeRow inserts the accepted intake row id under the work item issue
+// of p. A work item has one intake row at most among the undeleted rows
+// (intake_issues_issue_id_key), and the tests put several undeleted rows
+// under one work item: so the row is of a work item of its own for the n-th
+// row, numbered 400 + n, under issue, in issue's subtree, as aCycleRow's.
+func anIntakeRow(t *testing.T, pool *pgxpool.Pool, p project, issue, id, by uuid.UUID, n int) {
+	t.Helper()
+	own := uuid.NewV7()
+	newIssue(t, pool, p, own, 400+n, by)
+	exec(t, pool, "UPDATE issues SET parent_id = $2 WHERE id = $1", own, issue)
+	exec(t, pool, `INSERT INTO intake_issues (id, workspace_id, project_id, issue_id, status, created_by_id, updated_by_id, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, 'accepted', $5, $5, $6, $6)`, id, p.workspace, p.id, own, by, now)
+}
+
 // aRelation inserts the relation id of the work item issue of p to a work
 // item of p of its own for the n-th row, numbered 200 + n.
 func aRelation(t *testing.T, pool *pgxpool.Pool, p project, issue, id, by uuid.UUID, n int) {
@@ -93,6 +107,7 @@ var batchStatements = []batchStatement{
 	{"issues", (*postgresadapter.Store).DeleteProjectIssueRows, func(t *testing.T, pool *pgxpool.Pool, p project, _, id, by uuid.UUID, n int) {
 		newIssue(t, pool, p, id, 100+n, by)
 	}},
+	{"intake_issues", (*postgresadapter.Store).DeleteProjectIntakeRows, anIntakeRow},
 	{"issue_assignees", (*postgresadapter.Store).DeleteProjectAssigneeRows, child("issue_assignees", "assignee_id", anAccount)},
 	{"issue_labels", (*postgresadapter.Store).DeleteProjectLabelRows, child("issue_labels", "label_id", aLabel)},
 	{"cycle_issues", (*postgresadapter.Store).DeleteProjectCycleRows, aCycleRow},

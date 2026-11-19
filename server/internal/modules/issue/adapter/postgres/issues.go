@@ -159,7 +159,9 @@ func (s *Store) GetIssues(ctx context.Context, ids []uuid.UUID) ([]domain.Issue,
 }
 
 // issueOf is the work item a read answers as r: each read of work items
-// has GetIssue's columns.
+// has GetIssue's columns. GetIssue's, GetIssues' and SubIssues' carry its
+// undeleted intake row, none when the row's status is NULL (M7 P2a spec
+// 2.3); a search's row has no intake columns, so it reads none.
 func issueOf(r gen.GetIssueRow) domain.Issue {
 	return domain.Issue{
 		ID: r.ID, WorkspaceID: r.WorkspaceID, ProjectID: r.ProjectID, SequenceID: int(r.SequenceID), Name: r.Name, StateID: r.StateID,
@@ -167,7 +169,17 @@ func issueOf(r gen.GetIssueRow) domain.Issue {
 		Priority: domain.Priority(r.Priority), StartDate: dayOf(r.StartDate), TargetDate: dayOf(r.TargetDate), ParentID: r.ParentID,
 		SortOrder: r.SortOrder, CompletedAt: r.CompletedAt, ArchivedAt: r.ArchivedAt, AssigneeIDs: r.AssigneeIds, LabelIDs: r.LabelIds, LinkCount: r.LinkCount,
 		CycleID: r.CycleID, ModuleIDs: r.ModuleIds, CreatedByID: r.CreatedByID, UpdatedByID: r.UpdatedByID, CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt,
+		Intake: intakeOf(r.IntakeStatus, r.IntakeSnoozedTill, r.IntakeDuplicateToID),
 	}
+}
+
+// intakeOf is the intake row a read of a work item left-joins, of the
+// status, NULL when it has none, the time and the target.
+func intakeOf(status *string, till *time.Time, target *uuid.UUID) *domain.IntakeFacts {
+	if status == nil {
+		return nil
+	}
+	return &domain.IntakeFacts{Status: domain.IntakeStatus(*status), SnoozedTill: till, DuplicateToID: target}
 }
 
 // dayOf is the day of a date column as pgx reads it, midnight UTC; nil for

@@ -16,17 +16,20 @@ import (
 // inReach reports whether the caller actor may put the undeleted work
 // item i under another of the project projectID, or another under it,
 // under h, his write's lock on the project (M4 design 3.4, 3.8, 3.9): it
-// is the project's, not archived, and he sees it (the guest rule with h's
-// grant, Issue.HiddenFrom). Whether that makes a loop is the write's to
-// check (domain.Loops).
+// is the project's, not archived, not in the project's intake
+// (domain.Issue.InTriage, M7 P2a spec 2.6), and he sees it (the guest rule
+// with h's grant, Issue.HiddenFrom). i is read by the GetIssue family,
+// which carries its intake row. Whether that makes a loop is the write's
+// to check (domain.Loops).
 func inReach(h held, actor, projectID uuid.UUID, i domain.Issue) bool {
-	return i.ProjectID == projectID && i.ArchivedAt == nil && !i.HiddenFrom(actor, h.grant.OwnOnly)
+	return i.ProjectID == projectID && i.ArchivedAt == nil && !i.InTriage() && !i.HiddenFrom(actor, h.grant.OwnOnly)
 }
 
 // parentOf reads the work item id that the caller actor asks for as the
 // parent of a work item of the project projectID, under h, his write's
-// lock on it, and answers it when it may be one: an undeleted work item in
-// his reach (inReach); ok is false for any other.
+// lock on it (GetIssue, with its intake row), and answers it when it may
+// be one: an undeleted work item in his reach (inReach); ok is false for
+// any other.
 func parentOf(ctx context.Context, issues IssueReader, h held, actor, projectID, id uuid.UUID) (p domain.Issue, ok bool, err error) {
 	p, found, err := issues.GetIssue(ctx, id)
 	if err != nil || !found || !inReach(h, actor, projectID, p) {
