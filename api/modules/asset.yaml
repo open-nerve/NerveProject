@@ -49,8 +49,14 @@ paths:
         Creates an unbound asset owned by the caller after authorizing its current
         host. The upload capability is returned only after the record commits.
         Send its exact method and headers with the declared number of bytes.
+        On a work item in its project's intake, not yet accepted, as host, only
+        the project's admins and its submitter, who created it, may prepare
+        (forbidden), and only while it is pending or snoozed and the project's
+        intake is turned on: after project.archived, an intake turned off answers
+        issue.intake_disabled, then a declined or duplicate work item
+        issue.intake_closed.
       security: [{bearer: []}]
-      x-problem-codes: [validation_failed, forbidden, issue.not_author, project.archived, issue.archived, asset.not_found, asset.scope_changed, asset.too_large, asset.type_unsupported, server_busy]
+      x-problem-codes: [validation_failed, forbidden, issue.not_author, project.archived, issue.intake_disabled, issue.intake_closed, issue.archived, asset.not_found, asset.scope_changed, asset.too_large, asset.type_unsupported, server_busy]
       requestBody:
         required: true
         content:
@@ -102,8 +108,14 @@ paths:
         returns 204 with the original audit data. A missing or invisible host
         still answers asset.not_found. Bound description and profile images cannot
         be removed through this endpoint.
+        On a work item in its project's intake, not yet accepted, as host, only
+        the project's admins and its submitter, who created it, may delete
+        (forbidden), and only while it is pending or snoozed and the project's
+        intake is turned on: after project.archived, an intake turned off answers
+        issue.intake_disabled, then a declined or duplicate work item
+        issue.intake_closed, a repeated deletion too.
       security: [{bearer: []}]
-      x-problem-codes: [forbidden, issue.not_author, project.archived, issue.archived, asset.not_found, asset.scope_changed, asset.bound, server_busy]
+      x-problem-codes: [forbidden, issue.not_author, project.archived, issue.intake_disabled, issue.intake_closed, issue.archived, asset.not_found, asset.scope_changed, asset.bound, server_busy]
       responses:
         '204':
           description: Asset deleted or already deleted; objects remain subject to their safe retention periods.
@@ -128,8 +140,14 @@ paths:
         Failed or losing candidates remain recoverable; a storage failure does not
         mean the object is absent. asset.busy and asset.storage_unavailable
         include Retry-After of one second.
+        On a work item in its project's intake, not yet accepted, as host, only
+        the project's admins and its submitter, who created it, may confirm
+        (forbidden), and only while it is pending or snoozed and the project's
+        intake is turned on: after project.archived, an intake turned off answers
+        issue.intake_disabled, then a declined or duplicate work item
+        issue.intake_closed, a repeated confirmation too.
       security: [{bearer: []}]
-      x-problem-codes: [forbidden, issue.not_author, project.archived, issue.archived, asset.not_found, asset.scope_changed, asset.too_large, asset.type_unsupported, asset.object_missing, asset.object_changed, asset.content_invalid, asset.busy, asset.storage_unavailable, server_busy]
+      x-problem-codes: [forbidden, issue.not_author, project.archived, issue.intake_disabled, issue.intake_closed, issue.archived, asset.not_found, asset.scope_changed, asset.too_large, asset.type_unsupported, asset.object_missing, asset.object_changed, asset.content_invalid, asset.busy, asset.storage_unavailable, server_busy]
       requestBody:
         required: true
         content:
@@ -164,8 +182,14 @@ paths:
         private. Every request creates a distinct target; repeating after a lost
         response can create an extra attachment. Only unbound preparations are
         reclaimed by the ordinary preparation expiry rule.
+        On a work item in its project's intake, not yet accepted, as destination,
+        only the project's admins and its submitter, who created it, may copy to
+        it (forbidden), and only while it is pending or snoozed and the project's
+        intake is turned on: after project.archived, an intake turned off answers
+        issue.intake_disabled, then a declined or duplicate work item
+        issue.intake_closed; reading the source is unchanged.
       security: [{bearer: []}]
-      x-problem-codes: [validation_failed, forbidden, issue.not_author, project.archived, issue.archived, asset.not_found, asset.scope_changed, asset.not_uploaded, asset.too_large, asset.type_unsupported, asset.object_missing, asset.object_changed, asset.content_invalid, asset.storage_unavailable, server_busy]
+      x-problem-codes: [validation_failed, forbidden, issue.not_author, project.archived, issue.intake_disabled, issue.intake_closed, issue.archived, asset.not_found, asset.scope_changed, asset.not_uploaded, asset.too_large, asset.type_unsupported, asset.object_missing, asset.object_changed, asset.content_invalid, asset.storage_unavailable, server_busy]
       requestBody:
         required: true
         content:

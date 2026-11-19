@@ -37,7 +37,7 @@ export interface paths {
         put?: never;
         /**
          * Prepare a private upload
-         * @description Creates an unbound asset owned by the caller after authorizing its current host. The upload capability is returned only after the record commits. Send its exact method and headers with the declared number of bytes.
+         * @description Creates an unbound asset owned by the caller after authorizing its current host. The upload capability is returned only after the record commits. Send its exact method and headers with the declared number of bytes. On a work item in its project's intake, not yet accepted, as host, only the project's admins and its submitter, who created it, may prepare (forbidden), and only while it is pending or snoozed and the project's intake is turned on: after project.archived, an intake turned off answers issue.intake_disabled, then a declined or duplicate work item issue.intake_closed.
          */
         post: operations["createAsset"];
         delete?: never;
@@ -64,7 +64,7 @@ export interface paths {
         post?: never;
         /**
          * Delete an authorized attachment or private preparation
-         * @description Rechecks current host removal permission. Unbound preparations remain applicant-only; bound ordinary attachments follow their host's permission. Records a tombstone without deleting objects synchronously or forgetting recovery records. Repeated authorized deletion on a still-visible host returns 204 with the original audit data. A missing or invisible host still answers asset.not_found. Bound description and profile images cannot be removed through this endpoint.
+         * @description Rechecks current host removal permission. Unbound preparations remain applicant-only; bound ordinary attachments follow their host's permission. Records a tombstone without deleting objects synchronously or forgetting recovery records. Repeated authorized deletion on a still-visible host returns 204 with the original audit data. A missing or invisible host still answers asset.not_found. Bound description and profile images cannot be removed through this endpoint. On a work item in its project's intake, not yet accepted, as host, only the project's admins and its submitter, who created it, may delete (forbidden), and only while it is pending or snoozed and the project's intake is turned on: after project.archived, an intake turned off answers issue.intake_disabled, then a declined or duplicate work item issue.intake_closed, a repeated deletion too.
          */
         delete: operations["deleteAsset"];
         options?: never;
@@ -85,7 +85,7 @@ export interface paths {
         put?: never;
         /**
          * Verify and publish immutable content
-         * @description Commits an independent candidate before inspecting, validating and sealing the uploaded bytes without database resources. Rechecks current host write permission and the candidate lease before publishing. Only the applicant may confirm. Ordinary attachments on existing issue, comment or draft hosts bind in the final transaction; description and new-comment preparations remain unbound. Repeated authorized confirmation returns the existing result without changing its audit data, except that a legacy uploaded ordinary attachment receives its first binding on a valid retry. Failed or losing candidates remain recoverable; a storage failure does not mean the object is absent. asset.busy and asset.storage_unavailable include Retry-After of one second.
+         * @description Commits an independent candidate before inspecting, validating and sealing the uploaded bytes without database resources. Rechecks current host write permission and the candidate lease before publishing. Only the applicant may confirm. Ordinary attachments on existing issue, comment or draft hosts bind in the final transaction; description and new-comment preparations remain unbound. Repeated authorized confirmation returns the existing result without changing its audit data, except that a legacy uploaded ordinary attachment receives its first binding on a valid retry. Failed or losing candidates remain recoverable; a storage failure does not mean the object is absent. asset.busy and asset.storage_unavailable include Retry-After of one second. On a work item in its project's intake, not yet accepted, as host, only the project's admins and its submitter, who created it, may confirm (forbidden), and only while it is pending or snoozed and the project's intake is turned on: after project.archived, an intake turned off answers issue.intake_disabled, then a declined or duplicate work item issue.intake_closed, a repeated confirmation too.
          */
         post: operations["completeAsset"];
         delete?: never;
@@ -107,7 +107,7 @@ export interface paths {
         put?: never;
         /**
          * Copy authorized content to a new asset
-         * @description Authorizes the source for reading before the destination for preparation. Commits a new pending target and an independent candidate, then validates and seals real bytes without database resources. Rechecks both scopes and source identity before publishing. A failed copy remains recoverable. Ordinary attachments on existing issue, comment or draft hosts bind in the final transaction; description and new-comment preparations stay private. Every request creates a distinct target; repeating after a lost response can create an extra attachment. Only unbound preparations are reclaimed by the ordinary preparation expiry rule.
+         * @description Authorizes the source for reading before the destination for preparation. Commits a new pending target and an independent candidate, then validates and seals real bytes without database resources. Rechecks both scopes and source identity before publishing. A failed copy remains recoverable. Ordinary attachments on existing issue, comment or draft hosts bind in the final transaction; description and new-comment preparations stay private. Every request creates a distinct target; repeating after a lost response can create an extra attachment. Only unbound preparations are reclaimed by the ordinary preparation expiry rule. On a work item in its project's intake, not yet accepted, as destination, only the project's admins and its submitter, who created it, may copy to it (forbidden), and only while it is pending or snoozed and the project's intake is turned on: after project.archived, an intake turned off answers issue.intake_disabled, then a declined or duplicate work item issue.intake_closed; reading the source is unchanged.
          */
         post: operations["duplicateAsset"];
         delete?: never;
