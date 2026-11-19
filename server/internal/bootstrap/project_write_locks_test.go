@@ -130,19 +130,18 @@ var projectWrites = []projectWrite{
 // the work-item side (tagged issue), which locks its project's row first
 // and its workspace's not at all (M4 design 3.5, decision point 1: B), nor
 // one on the planning side (tagged planning), which takes the same way (M6
-// design 6); nor one whose row names the work items' or the cycles' table
-// (issueColumns, cycleColumns), which is on those sides whatever its tag:
-// an asset's write on a work item, its host, takes the work item's locks
-// (M7 P2c spec 2.2).
+// design 6); nor an asset's write (tagged asset), whatever its host and
+// its row's columns: it takes the asset module's own lock order, its
+// caller, its hosts' workspaces FOR SHARE, their projects, its drafts
+// (M5 P2 spec 2), which assets_lock_order_test.go pins, and is no project
+// write of the project's lock table (M7 P2c's createAsset row on a work
+// item in the intake names the work items' columns).
 func writesOnAProject(ops []apitest.Operation, rows []matrixRow) []string {
 	ofTheProjectLevel := func(c caller) bool {
 		return !slices.Contains(workspaceColumns, c) && slices.ContainsFunc(projectTables, func(table []caller) bool { return slices.Contains(table, c) })
 	}
 	projectLevel := map[string]bool{}
 	for _, r := range rows {
-		if slices.Equal(r.columns, issueColumns) || slices.Equal(r.columns, cycleColumns) {
-			continue
-		}
 		if slices.ContainsFunc(r.columns, ofTheProjectLevel) {
 			projectLevel[r.op] = true
 		}
@@ -150,6 +149,7 @@ func writesOnAProject(ops []apitest.Operation, rows []matrixRow) []string {
 	var writes []string
 	for _, op := range ops {
 		if op.Method != http.MethodGet && !slices.Contains(op.Tags, "issue") && !slices.Contains(op.Tags, "planning") &&
+			!slices.Contains(op.Tags, "asset") &&
 			(slices.Contains(strings.Split(op.Path, "/"), "{project_id}") || projectLevel[op.ID]) {
 			writes = append(writes, op.ID)
 		}
@@ -165,7 +165,7 @@ func writesOnAProject(ops []apitest.Operation, rows []matrixRow) []string {
 // nor a write at the workspace level, also when the only admin's table
 // asks it, nor a write on the work-item or the planning side, also when its
 // path names the project and its rows a project table's columns, nor an
-// asset's write whose row names the work items' table.
+// asset's write, also when its row names a project table's columns.
 func TestWritesOnAProjectAreEachShape(t *testing.T) {
 	ops := []apitest.Operation{
 		{ID: "createIssue", Tags: []string{"issue"}, Method: http.MethodPost, Path: "/api/v0/projects/{project_id}/issues"},
