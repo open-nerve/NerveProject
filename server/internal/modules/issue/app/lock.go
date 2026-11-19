@@ -242,6 +242,23 @@ func (l Locks) seeAs(ctx context.Context, actor shared.Actor, id uuid.UUID, acti
 	return i, grant, nil
 }
 
+// seeProject decides action on the undeleted project projectID, archived
+// or not, for actor, without a lock (M4 design 3.4): a project that is not
+// there, or not visible to actor, is notFound; a role the rule does not
+// allow is the Authorizer's shared.Forbidden. It answers the decision's
+// grant, whose OwnOnly a read of the project's work items applies: a
+// project's list reads so (ListIssues, ListIntakeIssues).
+func (l Locks) seeProject(ctx context.Context, actor shared.Actor, action shared.Action, projectID uuid.UUID, notFound error) (shared.Grant, error) {
+	workspaceID, found, err := l.projects.Find(ctx, projectID)
+	switch {
+	case err != nil:
+		return shared.Grant{}, err
+	case !found:
+		return shared.Grant{}, notFound
+	}
+	return l.decide(ctx, actor, action, workspaceID, projectID, nil, notFound)
+}
+
 // seeWorkspace decides action in the workspace workspaceID for actor,
 // without a lock (M4 design 3.4): a workspace of which actor is not an
 // active member, or deleted, is workspace.not_found; a role the rule does
