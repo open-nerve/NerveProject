@@ -81,6 +81,8 @@ M7/P1c 的通知的两个写（单条修改、全部已读）也是例外：通�
 
 M7/P2a 的收集箱：条目行（`intake_issues` 里未删除且 `status <> 'accepted'` 的）是“在收集箱里”的权威标记，与 Triage 状态按构造等价（不变式测试 `bootstrap/intake_invariant_test.go`）。只有 `GetIssue`、`GetIssues`、`SubIssues` 三条查询的行带 `Intake`，列表与搜索的行不带，不在它们上面调 `InTriage()`。选择性的 Triage 守卫：六个源端写（修改、归档、取消归档、删除、加子工作项的父端、建关联的源端）经 `write.check` 答 409 `issue.in_triage`，在 404、403 之后、上面第 7 步的“已归档的项目 → 已归档的工作项”之前（登记的例外）；链接、评论、表情、关注不拦，另一端沿用 422（`inReach`、关联的另一端）。守卫挂在 `UpdateIssue.Execute` 的 `write.check` 上，不在修改核心 `updateLocked` 里（分诊的接受经它）。以后给工作项加的写，要写明它对在收集箱里的工作项加不加这个守卫。提交与分诊的开关 `intake_view` 只在锁下判，归档先于开关。
 
+M7/P2b 的收集箱：“提交者”就是工作项的创建者，只有一个定义 `Issue.CreatedBy`（访客规则的 `HiddenFrom` 也用它），创建者为空即没有提交者；内容修改的相对规则写在 `write.check` 里，它收到的 `Grant` 就是那一次的判定（`ProjectAdmin`、`ProjectRole`），不要再调一次 Authorizer。修改核心 `IssueUpdate`、删除核心 `IssueRemoval` 各是自己的类型，第三个调用者经它们，不复制编排；工作项修改的源端守卫仍在 `UpdateIssue` 的 `write.check`。有效状态（到期的暂缓算待处理）在列表与计数的 SQL 里按请求读一次的时刻算，回答里按同一时刻 `AsOf`。
+
 P8 草稿已按设计3.5的既定形式补齐：`DraftLocks`组合上述`Locks`并复用授权、闸门与写事务，不在各用例另接一套。保存/修改/删除为工作区S → 旧新项目S（去重升序）→ 草稿U；发布先在无连接、无锁时进入项目闸门，再工作区S → 项目N → 草稿U。等待后重读、权限重判、全部锁后读时钟照旧，普通工作项写仍不取工作区锁。具体端口见[P8 spec](../M4-issue-core/specs/P8-drafts-search.md)，T7真实PID/交错16/17、T15 race五遍及首次整审证据见[P8 review](../M4-issue-core/reviews/P8-drafts-search-review.md)；文档a65e8605已独评Approved/D1 ADDRESSED（task-16-review.md）；最终分支 `cde70d9735994cb6a579e0b800469f32631e9981` 的CI通过后，已授权 `--no-ff` 合并为main `6b9d08d4821f1423c7bb9795557727c206b7880f`，[main CI 40520609987](https://github.com/open-nerve/NerveProject/actions/runs/40520609987)三任务全绿。1,598文件、37,552,117字节及1空目录归档核验后，P8本地/远端分支与worktree已正常清理；原件新根和清理后哈希核验见[P8 review §9](../M4-issue-core/reviews/P8-drafts-search-review.md#9-授权合并main-ci-与归档清理2026-10-27)。
 
 另外：
@@ -127,6 +129,8 @@ P8 草稿已按设计3.5的既定形式补齐：`DraftLocks`组合上述`Locks`�
 - 加 issue 的操作时，按目录驱动的守卫一起补（M7/P2a 检查点 1 漏了一个）：权限矩阵、写锁表、删除窗口 `deletionWindowCases`（遍历它的 `issue_null_creator_test.go` 随之跟进）、逐码的处理器测试；红窗口的清单按 `contract.Operations()` 的使用者找全。
 - 锁检查的测试在每次持表锁或行锁之前 `waitForFanouts`（R10）：分发先 `FOR SHARE` 工作项行、有收件人时再插入（外键 `FOR KEY SHARE` 工作区与项目），与 `LOCK TABLE workspaces … issues` 的次序相反，会死锁（M7/P2a 检查点 1 的 CI）。
 - 造好数据后扣锁、写墓碑再断言的测试，先 `waitForStartupRuns`：应用一启动就跑的周期任务（资产清理等，River 随机延迟插入）会落进测试的窗口，改写资产或排在屏障后占住测试应用 4 个连接里的一个（M7/P2a 最终候选与最终 CI 各一次）；扣锁时间没有上界的测试，任务的等锁时限放宽到长过扣锁（`barriersOutlasted`）。
+- 生成的网页客户端按路由决定数组参数怎么发（`web/packages/api-client/src/index.ts` 的 `csvListPaths` 与 `csvKeys`）：新的列表若用逗号分隔的多值参数，要把路由与参数加进去，否则客户端发重复参数、服务端答 422（M7/P2b T9，`client.test.mjs` 按契约钉住）。
+- 契约里加操作，生成的服务端接口（`StrictServerInterface`）要求处理器，契约与处理器放在同一个 Task；抽一个核心先单独提交纯搬移（断言不改，只为编译改构造处），再加新的调用者（M7/P2b T2、T7）。
 - 访客与成员、自己的与别人的、管理员兼访客、已归档与否、已删除与否都要有。
 
 **其他测试的坑**：
