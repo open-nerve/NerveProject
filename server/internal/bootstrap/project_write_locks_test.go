@@ -130,13 +130,19 @@ var projectWrites = []projectWrite{
 // the work-item side (tagged issue), which locks its project's row first
 // and its workspace's not at all (M4 design 3.5, decision point 1: B), nor
 // one on the planning side (tagged planning), which takes the same way (M6
-// design 6).
+// design 6); nor one whose row names the work items' or the cycles' table
+// (issueColumns, cycleColumns), which is on those sides whatever its tag:
+// an asset's write on a work item, its host, takes the work item's locks
+// (M7 P2c spec 2.2).
 func writesOnAProject(ops []apitest.Operation, rows []matrixRow) []string {
 	ofTheProjectLevel := func(c caller) bool {
 		return !slices.Contains(workspaceColumns, c) && slices.ContainsFunc(projectTables, func(table []caller) bool { return slices.Contains(table, c) })
 	}
 	projectLevel := map[string]bool{}
 	for _, r := range rows {
+		if slices.Equal(r.columns, issueColumns) || slices.Equal(r.columns, cycleColumns) {
+			continue
+		}
 		if slices.ContainsFunc(r.columns, ofTheProjectLevel) {
 			projectLevel[r.op] = true
 		}
@@ -158,7 +164,8 @@ func writesOnAProject(ops []apitest.Operation, rows []matrixRow) []string {
 // (a self-only one, until it is listed there), nor a read of a project,
 // nor a write at the workspace level, also when the only admin's table
 // asks it, nor a write on the work-item or the planning side, also when its
-// path names the project and its rows a project table's columns.
+// path names the project and its rows a project table's columns, nor an
+// asset's write whose row names the work items' table.
 func TestWritesOnAProjectAreEachShape(t *testing.T) {
 	ops := []apitest.Operation{
 		{ID: "createIssue", Tags: []string{"issue"}, Method: http.MethodPost, Path: "/api/v0/projects/{project_id}/issues"},
@@ -169,6 +176,7 @@ func TestWritesOnAProjectAreEachShape(t *testing.T) {
 		{ID: "updateProjectMember", Tags: []string{"project"}, Method: http.MethodPatch, Path: "/api/v0/project-members/{project_member_id}"},
 		{ID: "leaveProjectSelf", Tags: []string{"project"}, Method: http.MethodPost, Path: "/api/v0/project-members/{project_member_id}/leave"},
 		{ID: "leaveWorkspace", Tags: []string{"workspace"}, Method: http.MethodPost, Path: "/api/v0/workspaces/{slug}/leave"},
+		{ID: "createAsset", Tags: []string{"asset"}, Method: http.MethodPost, Path: "/api/v0/assets"},
 	}
 	rows := []matrixRow{
 		{op: "createIssue", write: true, columns: projectColumns},
@@ -178,6 +186,7 @@ func TestWritesOnAProjectAreEachShape(t *testing.T) {
 		{op: "updateProjectMember", write: true, columns: []caller{callerProjectAdmin, callerProjectMember}},
 		{op: "leaveProjectSelf", write: true, columns: []caller{"a project's member, himself"}},
 		{op: "leaveWorkspace", write: true, columns: soleAdminColumns},
+		{op: "createAsset", write: true, columns: issueColumns},
 	}
 	if got, want := writesOnAProject(ops, rows), []string{"leaveProject", "updateProjectMember"}; !slices.Equal(got, want) {
 		t.Errorf("writesOnAProject() = %q, want %q", got, want)

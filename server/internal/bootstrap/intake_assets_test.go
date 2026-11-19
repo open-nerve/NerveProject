@@ -73,7 +73,10 @@ func attachedTo(t *testing.T, w issueWorld, name string, item uuid.UUID, want ..
 // off, last, a write on Pending or Declined is refused 409
 // issue.intake_disabled, bob's 403 first; Accepted is written; the reads
 // are unchanged; a comment on Declined and a new one on Pending take
-// bob's attachment and image.
+// bob's attachment and image. The subtests are one story told in order,
+// not to be run alone: the later ones read the image and attachment the
+// first one makes, and the last one writes on Accepted once the third
+// has accepted it.
 func TestIntakeItemAssetsThroughTheApp(t *testing.T) {
 	w := newIssueWorld(t)
 	w.makeMember(t, "walt", w.web, shared.RoleGuest)
@@ -128,6 +131,8 @@ func TestIntakeItemAssetsThroughTheApp(t *testing.T) {
 		putAssetHTTP(t, w, waiting, notes, http.StatusNoContent)
 		spare := prepareAssetHTTP(t, w, "walt", "ISSUE_DESCRIPTION", attachmentScope("issue", declined), "spare.png", "image/png", 8).Asset.ID
 		kept := attach(t, "walt", declined)
+		gone := prepareAssetHTTP(t, w, "walt", "ISSUE_ATTACHMENT", attachmentScope("issue", declined), "gone.txt", "text/plain", len(notes)).Asset.ID
+		assetAPICall(t, w, "walt", http.MethodDelete, "/api/v0/assets/"+gone.String(), "", http.StatusNoContent)
 		w.triage(t, "alice", declined, `{"status":"declined"}`, http.StatusOK)
 		for _, name := range []string{"walt", "alice"} {
 			assetRefused(t, w, name, http.MethodPost, "/api/v0/assets", prepare(declined), http.StatusConflict, "issue.intake_closed")
@@ -135,6 +140,9 @@ func TestIntakeItemAssetsThroughTheApp(t *testing.T) {
 		assetRefused(t, w, "walt", http.MethodPost, completeAssetPath(waiting.Asset.ID), `{}`, http.StatusConflict, "issue.intake_closed")
 		assetRefused(t, w, "walt", http.MethodDelete, "/api/v0/assets/"+spare.String(), "", http.StatusConflict, "issue.intake_closed")
 		assetRefused(t, w, "alice", http.MethodDelete, "/api/v0/assets/"+kept.String(), "", http.StatusConflict, "issue.intake_closed")
+		// A repeated deletion and a repeated confirmation are writes too.
+		assetRefused(t, w, "walt", http.MethodDelete, "/api/v0/assets/"+gone.String(), "", http.StatusConflict, "issue.intake_closed")
+		assetRefused(t, w, "walt", http.MethodPost, completeAssetPath(kept), `{}`, http.StatusConflict, "issue.intake_closed")
 		assetRefused(t, w, "walt", http.MethodPost, duplicateAssetPath(attachment), `{"purpose":"ISSUE_ATTACHMENT","scope":`+attachmentScope("issue", declined)+`}`,
 			http.StatusConflict, "issue.intake_closed")
 		attachedTo(t, w, "bob", declined, kept)

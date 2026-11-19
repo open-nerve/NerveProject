@@ -22,8 +22,9 @@
 | T6 | `79e4be74` | 真实宿主矩阵 |
 | T7 | `c4ad6c8a` | H11 的 HTTP 组合测试 |
 | T8 | `bfa60ba6` | 交错与权限矩阵的一行 |
-| T9 | （待填） | e2e 故事 |
-| T10 | （待填） | 文档与交接 |
+| T9 | `c61258e0` | e2e 故事（H11 的资产，PAT 与会话对等） |
+| T10 | `92a0e11b` | 文档与交接 |
+| 审查修复 | （见 §9） | 整分支审查的 m2、m3、m4 与检查点 2 暴露的项目写锁守卫的归类 |
 
 ## 3. 局部裁定（实施中）
 
@@ -32,6 +33,7 @@
 - T5：一个谓词 `inIntake`（工作项宿主、写的意图、`InTriage()`）决定选动作、提交者规则与锁下的判定；`refuseIntakeOff` 保留 `LockedProject` 参数，在 `Check` 里就地转换，不动 P2a、P2b 的四个调用者；“开关先于提交者规则”没有能编译的变异（开关只在 `Check` 读得到），由两个交叉格钉住。
 - T6：矩阵按意图（读、准备、删除）× 用途，另加局外人一列。
 - T7：“附件挂上”就是确认上传（这套接口没有另外的挂接操作）；访客提交者删掉管理员在他条目上已绑定的附件（spec §2.5）一并测了；`waitForStartupRuns` 在造好数据后、第一个子测试前等一次（每个拒绝都比对整张 `file_assets`）。
+- 检查点 2：`TestEachWriteOnAProjectSharesItsWorkspaceFirst` 确定失败——T8 给 `createAsset` 加的矩阵行用工作项表的列（`issueColumns`），守卫 `writesOnAProject` 按“行名项目表的列”把它算成项目上的写。守卫本只按标签排除工作项与计划一侧的写；资产在工作项宿主上的写经 issue 的 `Locks`，先锁项目行、不锁工作区（M4 设计 3.5），同属工作项一侧。修法：行名工作项表或迭代表的同样排除，守卫自己的形状测试加一格。**偏离 plan 的允许清单**（改了已有的守卫），去掉排除的变异让形状测试失败。
 - T8：锁等待的一格放在 `TestAssetLateHostInterleaving`（宿主在 Inspect 之后变化正是它测的），锁的持有者是真实的拒绝；接受那一行先把 bob 降为访客（表里写死了 bob，成员非提交者到不了 `Check`）。
 
 ## 4. 向负责人说明
@@ -43,7 +45,7 @@
 ## 5. 本地门禁与 CI
 
 - 检查点 1（`c4ad6c8a`）：本机七项全过（cp1）；分支 CI 44620044098 attempt 1 全绿。
-- 检查点 2：（待填）
+- 检查点 2（`c61258e0`）：gen-check、lint-go 通过，第 0 路的 `TestEachWriteOnAProjectSharesItsWorkspaceFirst` 确定失败（见 §3），修后由最终候选补全七项。
 
 ## 6. 测试时间与两路
 
@@ -57,7 +59,8 @@ P2c 只加了一个 bootstrap 顶层名（T7 的 `TestIntakeItemAssetsThroughThe
 
 ## 7. 交给 M8（M7 收官时写进 M8 的交接）
 
-- （待填，整分支审查后）
+- `server/internal/modules/issue/app/ports_test.go` 522 行（基线 486，P2c 加 36），超过约 400 行，下次动它之前先拆。
+- `writesOnAProject` 现在按标签（issue、planning）与行的列表（工作项表、迭代表）两种方式排除工作项与计划一侧的写；以后给别的模块加以工作项为宿主的写，照这一条。
 
 ## 8. 文档与交接（T10）
 
