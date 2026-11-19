@@ -15,6 +15,7 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue"
 	"github.com/open-nerve/NerveProject/server/internal/modules/notification"
 	"github.com/open-nerve/NerveProject/server/internal/modules/planning"
+	"github.com/open-nerve/NerveProject/server/internal/platform/config"
 	"github.com/open-nerve/NerveProject/server/internal/platform/jobs"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
@@ -164,6 +165,20 @@ func holdProjectDeletion(t *testing.T, pool *pgxpool.Pool, project uuid.UUID) pg
 		t.Fatal("draft barrier not held")
 	}
 	return holder
+}
+
+// barriersOutlasted configures the world of a test that holds deletion
+// workers at its barriers (holdProjectDeletion, holdPlanningDeletion,
+// holding) across work its design does not bound: a loop over the whole
+// catalog or API, or other jobs' pickup, completion and snoozes. Each lock
+// wait of the work-item side's transactions, the issue, planning and
+// notification jobs' among them, then ends far past any such hold and under
+// those jobs' River timeout (delete_budget + 5 s), so a held worker keeps its
+// first attempt however slowly the runner goes. In production a job waiting
+// past issue.write_lock_timeout fails and River retries it; the barriers are
+// the test's own, not the contention that timeout is for.
+func barriersOutlasted(cfg *config.Config) {
+	cfg.Issue.WriteLockTimeout = 30 * time.Second
 }
 
 // The sole committed deletion job is running and its worker is directly

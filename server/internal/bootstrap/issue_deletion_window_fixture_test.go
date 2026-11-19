@@ -23,9 +23,10 @@ type deletionWindowFixture struct {
 
 // All business rows are made through their API. Storage is only observed for
 // the real worker barrier; NULL creator's deliberate corruption is separate.
+// suspend holds the workers across a request for each operation of the API.
 func newDeletionWindowFixture(t *testing.T) deletionWindowFixture {
 	t.Helper()
-	w := newIssueWorld(t)
+	w := newIssueWorldWith(t, barriersOutlasted)
 	f := deletionWindowFixture{w: w}
 	f.q = createdProject(t, w.contract, w.base, w.tokens["alice"], "acme", "Kept", "KEEP")
 	w.makeMember(t, "bob", f.q, shared.RoleMember)

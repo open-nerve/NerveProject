@@ -15,7 +15,15 @@ import (
 )
 
 func TestProjectDeletionPublishesAndEnqueuesAtomically(t *testing.T) {
-	contract, base, pool, alice, aliceID, web, _ := twoProjects(t)
+	// The barriers below hold the workers across a loop over the whole catalog.
+	contract, base, pool, alice, aliceID, web, _ := twoProjectsWith(t, barriersOutlasted)
+	// They keep the issue, planning and asset deletion workers on three of the
+	// app's four connections (testConfig), leaving the requests below one. A
+	// start-time run still pending would queue on a barrier and take it too
+	// (the asset cleanup locks each asset in turn, without a lock timeout):
+	// the requests would then wait for a connection until the held workers'
+	// lock timeout gave theirs back. The runs' next ones are hours away.
+	waitForStartupRuns(t, pool)
 	keys := keysTo(t, pool, "projects")
 	before := map[string]string{}
 	recorded := map[string][]uuid.UUID{}

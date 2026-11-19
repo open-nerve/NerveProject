@@ -188,7 +188,11 @@ func logRelationLockPlan(t *testing.T, w issueWorld, pid uint32, p uuid.UUID) {
 }
 
 func testDeletionCandidateProgress(t *testing.T) {
-	w := newIssueWorldWith(t, func(c *config.Config) { c.Issue.DeleteBatch = 2 })
+	// Old's worker stays at its barrier while Web's job is picked up and completes.
+	w := newIssueWorldWith(t, func(c *config.Config) {
+		c.Issue.DeleteBatch = 2
+		barriersOutlasted(c)
+	})
 	old := createdProject(t, w.contract, w.base, w.tokens["alice"], "acme", "Old", "OLD")
 	createDraftHTTP(t, w, "alice", `{"project_id":"`+old.String()+`","payload":{}}`)
 	x := w.newWorkItem(t)
@@ -231,7 +235,12 @@ func testDeletionCandidateProgress(t *testing.T) {
 func TestDeletionInterleaving25(t *testing.T) {
 	for _, oldFirst := range []bool{false, true} {
 		t.Run(fmt.Sprintf("OldCompletesFirst=%t", oldFirst), func(t *testing.T) {
-			w := newIssueWorldWith(t, func(c *config.Config) { c.Issue.DeleteBatch = 2 })
+			// Old's worker stays at its barrier while the workspace's jobs are
+			// picked up, wait for one another and complete.
+			w := newIssueWorldWith(t, func(c *config.Config) {
+				c.Issue.DeleteBatch = 2
+				barriersOutlasted(c)
+			})
 			old := createdProject(t, w.contract, w.base, w.tokens["alice"], "acme", "Old", "OLD")
 			q := createdProject(t, w.contract, w.base, w.tokens["alice"], "acme", "Q", "Q")
 			for _, p := range []uuid.UUID{old, w.web, q} {
