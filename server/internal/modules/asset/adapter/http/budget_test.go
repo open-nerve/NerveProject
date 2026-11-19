@@ -290,6 +290,13 @@ func TestLocalTransferDeadlines(t *testing.T) {
 		if n, err := response.Body.Read(chunk[:1]); n != 0 || err != io.EOF {
 			t.Fatalf("download end = %d, %v", n, err)
 		}
+		// Content-Length EOF arrives as soon as the handler's last Write reaches
+		// the socket, which can precede its deferred release of the only slot.
+		select {
+		case <-w.finished:
+		case <-time.After(time.Second):
+			t.Fatal("completed download retained its transfer slot")
+		}
 		w.nextUploadWorks(t)
 	})
 }
