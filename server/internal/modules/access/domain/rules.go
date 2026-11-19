@@ -160,9 +160,10 @@ var rules = map[shared.Action]Rule{
 	// (M7 design 3.10, 3.11, P2b spec 2.3).
 	"intake.read": {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember, shared.RoleGuest}},
 	// As intake.submit: every active member of the project changes a work
-	// item of its intake; that one who is not its admin submitted it, and
-	// that a guest changes only its name and description, are the issue
-	// module's relative rules (M7 design 3.10, P2b spec 2.4).
+	// item of its intake, and writes its assets while it is in the intake;
+	// that one who is not its admin submitted it, and that a guest changes
+	// only its name and description of its content, are the issue module's
+	// relative rules (M7 design 3.6, 3.10, P2b spec 2.4, P2c spec 2.2).
 	"intake.update": {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember, shared.RoleGuest}},
 	// As issue.delete: the project's admins, and the work item's submitter,
 	// its creator, while a member or an admin of the project, not a guest

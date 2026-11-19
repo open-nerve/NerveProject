@@ -104,7 +104,8 @@ func intakeEditor(actorID uuid.UUID, contentOnly bool) func(context.Context, dom
 // workspace's admin who is its member, its guest too) passes; any other
 // caller is 403 forbidden for a work item he did not submit, which he did
 // not create (Issue.CreatedBy), so for one of no known creator too. A
-// content edit's (intakeEditor).
+// content edit's (intakeEditor), and an asset's write's on a work item in
+// the intake (AssetAccess.read, P2c spec 2.2).
 func refuseNonSubmitter(actorID uuid.UUID, i domain.Issue, g shared.Grant) error {
 	if !g.ProjectAdmin && !i.CreatedBy(actorID) {
 		return shared.Forbidden()

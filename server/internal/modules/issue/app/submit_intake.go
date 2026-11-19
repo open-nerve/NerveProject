@@ -83,12 +83,14 @@ func (u *SubmitIntakeIssue) Execute(ctx context.Context, projectID uuid.UUID, in
 }
 
 // refuseIntakeOff refuses a write on the intake of the project p, as its
-// write's lock answers it (M7 P2a spec 2.4, 2.5): an archived project
-// first (409 project.archived), as planning's toggles come after it, then
-// its intake turned off (409 issue.intake_disabled). The toggle is read
-// under the lock alone, as the cycles' and modules' toggles are for a work
-// item's write (readMembership): the project's update that turns it off
-// takes the same lock.
+// write's lock answers it (M7 P2a spec 2.4, 2.5), an asset's write on a
+// work item in it too, p then as AssetProject reads it under that lock
+// (P2c spec 2.2): an archived project first (409 project.archived), as
+// planning's toggles come after it, then its intake turned off (409
+// issue.intake_disabled). The toggle is read under the lock alone, as the
+// cycles' and modules' toggles are for a work item's write
+// (readMembership): the project's update that turns it off takes the same
+// lock.
 func refuseIntakeOff(p LockedProject) error {
 	switch {
 	case p.Archived:
