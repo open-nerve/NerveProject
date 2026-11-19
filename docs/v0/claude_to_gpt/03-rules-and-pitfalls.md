@@ -126,6 +126,7 @@ P8 草稿已按设计3.5的既定形式补齐：`DraftLocks`组合上述`Locks`�
 - 拒绝的次序要在两个交叉方向上都钉住；
 - 加 issue 的操作时，按目录驱动的守卫一起补（M7/P2a 检查点 1 漏了一个）：权限矩阵、写锁表、删除窗口 `deletionWindowCases`（遍历它的 `issue_null_creator_test.go` 随之跟进）、逐码的处理器测试；红窗口的清单按 `contract.Operations()` 的使用者找全。
 - 锁检查的测试在每次持表锁或行锁之前 `waitForFanouts`（R10）：分发先 `FOR SHARE` 工作项行、有收件人时再插入（外键 `FOR KEY SHARE` 工作区与项目），与 `LOCK TABLE workspaces … issues` 的次序相反，会死锁（M7/P2a 检查点 1 的 CI）。
+- 造好数据后扣锁、写墓碑再断言的测试，先 `waitForStartupRuns`：应用一启动就跑的周期任务（资产清理等，River 随机延迟插入）会落进测试的窗口，改写资产或排在屏障后占住测试应用 4 个连接里的一个（M7/P2a 最终候选与最终 CI 各一次）；扣锁时间没有上界的测试，任务的等锁时限放宽到长过扣锁（`barriersOutlasted`）。
 - 访客与成员、自己的与别人的、管理员兼访客、已归档与否、已删除与否都要有。
 
 **其他测试的坑**：
