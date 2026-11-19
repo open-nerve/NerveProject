@@ -97,7 +97,8 @@ func Provide(pool *pgxpool.Pool, protected []postgres.ProtectedReference) Provid
 // gate, its numbers, its states', labels' and members' catalogs, for its
 // writes; a workspace's projects' identifiers, for a read by identifier;
 // ordinary and historical memberships, and complete list state and label
-// catalogs.
+// catalogs; and which projects have their intake turned on, for the
+// pending counts (M7 P2b spec 2.6).
 // project.Provide's IssueProjects is them, converted (bootstrap/ports.go).
 type ProjectPorts interface {
 	app.AssetProjectReader
@@ -112,6 +113,7 @@ type ProjectPorts interface {
 	app.VisibleProjects
 	app.ListStateCatalog
 	app.ListLabelCatalog
+	app.IntakeProjects
 }
 
 // PlanningPorts are what the module asks of planning (M6 P3a spec R1,
@@ -232,9 +234,10 @@ func New(d Deps) *Module {
 		Issues: store, Sequences: d.Projects, States: d.Projects, Labels: d.Projects, Members: d.Projects, Planning: d.Planning,
 		Profiles: d.Profiles, Clock: d.Clock, Sanitizer: sanitizer, Attachments: d.AttachmentCounter, ContentBindings: d.ContentBindings,
 	})
-	update := app.NewUpdateIssue(app.UpdateIssueDeps{Events: d.Events,
-		Locks: locks, Issues: store, States: d.Projects, Labels: d.Projects, Members: d.Projects, Planning: d.Planning, Profiles: d.Profiles, Clock: d.Clock, Sanitizer: sanitizer, ContentBindings: d.ContentBindings,
+	update := app.NewIssueUpdate(app.IssueUpdateDeps{Events: d.Events,
+		Locks: locks, Issues: store, States: d.Projects, Labels: d.Projects, Members: d.Projects, Planning: d.Planning, Profiles: d.Profiles, Sanitizer: sanitizer, ContentBindings: d.ContentBindings,
 	})
+	removal := app.NewIssueRemoval(app.IssueRemovalDeps{Events: d.Events, Rows: store, Relations: app.NewRelationDeletions(store, d.Projects)})
 	return &Module{
 		assets: assetAccess, deleteRows: app.NewDeleteRows(app.DeleteRowsDeps{Rows: store, Relations: app.NewRelationDeletions(store, d.Projects), Remaining: store, Tx: d.JobTx, RuntimeNow: d.RuntimeNow, Batch: d.DeleteBatch, Budget: d.DeleteBudget}), deleteBudget: d.DeleteBudget, logger: d.Logger,
 		trimVersions: app.NewTrimVersions(app.TrimVersionsDeps{Projects: d.Projects, Gate: d.Projects, Rows: store, Tx: d.JobTx}), trimVersionsInterval: d.TrimVersionsInterval,
@@ -271,12 +274,16 @@ func New(d Deps) *Module {
 			CreateIssue:             app.NewCreateIssue(app.CreateIssueDeps{Locks: locks, Creation: creation}),
 			SubmitIntakeIssue:       app.NewSubmitIntakeIssue(app.SubmitIntakeIssueDeps{Locks: locks, Creation: creation, Intake: store, Issues: store}),
 			TriageIntakeIssue:       app.NewTriageIntakeIssue(app.TriageIntakeIssueDeps{Locks: locks, Update: update, Intake: store, Issues: store, States: d.Projects, Clock: d.Clock}),
+			ListIntakeIssues:        app.NewListIntakeIssues(app.ListIntakeIssuesDeps{ReadTx: d.ReadTx, Locks: locks, Rows: store, Refs: app.NewIssueRefs(store), Clock: d.Clock}),
+			CountIntakeIssues:       app.NewCountIntakeIssues(app.CountIntakeIssuesDeps{ReadTx: d.ReadTx, Locks: locks, Workspaces: d.Workspaces, Projects: d.Projects, Intakes: d.Projects, Counts: store, Clock: d.Clock}),
+			UpdateIntakeIssue:       app.NewUpdateIntakeIssue(app.UpdateIntakeIssueDeps{Locks: locks, Update: update, Clock: d.Clock}),
+			DeleteIntakeIssue:       app.NewDeleteIntakeIssue(app.DeleteIntakeIssueDeps{Locks: locks, Delete: removal, Intake: store, Clock: d.Clock}),
 			GetIssue:                app.NewGetIssue(locks, d.ReadTx),
 			GetIssueByIdentifier: app.NewGetIssueByIdentifier(app.GetIssueByIdentifierDeps{
 				Locks: locks, Workspaces: d.Workspaces, Projects: d.Projects, Issues: store, ReadTx: d.ReadTx,
 			}),
-			UpdateIssue:        update,
-			DeleteIssue:        app.NewDeleteIssue(app.DeleteIssueDeps{Events: d.Events, Locks: locks, Rows: store, Relations: app.NewRelationDeletions(store, d.Projects), Clock: d.Clock}),
+			UpdateIssue:        app.NewUpdateIssue(app.UpdateIssueDeps{Locks: locks, Update: update, Clock: d.Clock}),
+			DeleteIssue:        app.NewDeleteIssue(app.DeleteIssueDeps{Locks: locks, Delete: removal, Clock: d.Clock}),
 			ArchiveIssue:       app.NewArchiveIssue(archive),
 			UnarchiveIssue:     app.NewUnarchiveIssue(archive),
 			SubscribeIssue:     app.NewSubscribeIssue(subscriptions),

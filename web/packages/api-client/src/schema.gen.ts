@@ -1272,7 +1272,11 @@ export interface paths {
             };
             cookie?: never;
         };
-        get?: never;
+        /**
+         * List a project's intake
+         * @description For the project's admins, members and guests, the project archived or not, its intake turned on or off. The query is checked first: CSV alternatives use OR and different filters AND; each parameter is given once. Unknown parameters, invalid business values and repeated parameters are 422 not_allowed; malformed query encoding and a noninteger limit are 400. Parameter binding precedes authentication: repeated parameters are 422 even without a token. Then a project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but whose intake he may not read, forbidden. The work items listed are the project's undeleted ones with an intake row: pending, snoozed, declined and duplicate ones, in the project's triage state, and accepted ones, out of the intake into the project's work, archived ones too. A guest of a project that does not show its guests every work item (guest_view_all_features false) lists only those he created, none of no known creator. Each status is the one at the moment of the request: a snooze whose time has come is pending, filtered and shown so. The rows are in the order of order_by, -created_at when it is left out, work items of equal keys by their id the same way; total is the number the filters select, the cursor aside. Each row is the project list's (Issue), its sub-items counted and its parent shown as the caller sees them, with its intake row as the work item's detail shows it at the moment of the request (IssueDetail.intake). The page is read at that one moment, in one snapshot.
+         */
+        get: operations["listIntakeIssues"];
         put?: never;
         /**
          * Submit a work item to a project's intake
@@ -1302,6 +1306,56 @@ export interface paths {
          * @description For the project's admins, and the workspace's admins who are members of the project. Refused from the request alone, before the work item is looked at (validation_failed): a status that is none of the five (status invalid_format, the one problem then); snoozed_till left out for snoozed (required) or given for another status (not_allowed); duplicate_to_id the same for duplicate. A work item that does not exist, is deleted, whose project the caller does not see, or that he did not create as a guest who sees only his own (getIssue) answers issue.intake_not_found, whatever his role may do; one whose project he sees but whose intake he may not triage, forbidden; then one without an intake row, never submitted, issue.intake_not_found again, the same answer; each before the project is locked, and with the project locked the role and the intake row are decided again. Then an archived project refuses it (project.archived), then a project whose intake is turned off (issue.intake_disabled), as the project locked reads it. The status moves from the intake row's status at the moment of the request, a snooze whose time has come being pending: from pending to snoozed, accepted, declined or duplicate; from snoozed to any of the five, snoozed with another time, or pending to end the snooze; never from accepted, declined or duplicate (issue.intake_transition_not_allowed, pending to pending too, and a request repeated once it moved). Then snoozed_till, at the microsecond, is after the moment of the request (snoozed_till must_be_future); duplicate_to_id names another work item of the project, archived or not, that the caller sees and that is not in the project's intake (duplicate_to_id not_allowed, the one answer whatever it is not). The intake row takes the status, and the time or the work item it is given; the activity of the work item says its intake status moved, from the status at the moment to the new one, and names no work item. An acceptance then moves the work item to the project's default state as updateIssue would, its activity after the triage's: it is completed in a state of the completed group, its subscribers are notified, and it is out of the intake, in the project's lists and searches, changed as any other. Any other triage changes no work item and notifies no one. Every row it writes is the caller's, at one moment. A project with too many writes on its work items at once answers server_busy, with Retry-After: try again then.
          */
         post: operations["triageIntakeIssue"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v0/intake-issues/{issue_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A work item's id (IssueDetail.id). */
+                issue_id: components["parameters"]["IssueID"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete a work item of a project's intake
+         * @description For the project's admins, and for the member of it who submitted the work item, which he created (created_by_id), while he is an admin or a member of the project; whatever its intake row's status. A work item that does not exist, is deleted, whose project the caller does not see, or that he did not create as a guest who sees only his own (getIssue) answers issue.intake_not_found, whatever his role may do; one whose project he sees but that he may not delete, forbidden, one he did not submit too; then one without an intake row, never submitted, issue.intake_not_found again, the same answer; each before the project is locked, and with the project locked the role and the intake row are decided again. Then an archived project refuses it (project.archived), then a project whose intake is turned off (issue.intake_disabled), as the project locked reads it. A work item whose intake row is pending, snoozed, declined or duplicate is deleted as deleteIssue deletes one, its intake row with it: it and each work item under it, however deep, archived ones too, with their assignees, labels, relations, subscribers and activity, by the caller at one moment; their numbers are not used again. An accepted one, out of the intake into the project's work, archived or not, stays as it is: its intake row alone is deleted, by the caller, and it is listed in the intake no more. A project with too many writes on its work items at once answers server_busy, with Retry-After: try again then.
+         */
+        delete: operations["deleteIntakeIssue"];
+        options?: never;
+        head?: never;
+        /**
+         * Change a work item of a project's intake
+         * @description For the project's admins, and for the member or guest who submitted the work item, which he created (created_by_id): one of no known creator has no submitter. A guest changes its name, its description and skip_activity alone. The fields given change and the others stay; a list given is the work item's new list, empty for none. The values follow updateIssue's rules (validation_failed), checked before the work item is looked at. A work item that does not exist, is deleted, whose project the caller does not see, or that he did not create as a guest who sees only his own (getIssue) answers issue.intake_not_found, whatever his role may do; one whose project he sees but whose intake he may not change, forbidden; then one without an intake row, never submitted, issue.intake_not_found again, the same answer; then, but for the project's admins, one the caller did not submit, forbidden, and a guest's field but the name, the description and skip_activity, forbidden, given even as it is; each before the project is locked, and with the project locked the role, the intake row and the submitter are decided again. Then an archived project refuses it (project.archived), then a project whose intake is turned off (issue.intake_disabled), as the project locked reads it; then a work item whose intake row is stored accepted, declined or duplicate (issue.intake_closed): pending and snoozed ones are changed, a snooze whose time has come too. Then each account the work item is newly assigned to, each label added and the description's images, as updateIssue checks them (validation_failed, asset.not_found, asset.not_uploaded). A change that changes nothing writes nothing, and the work item is answered as it is. Otherwise it is changed last by the caller, with the activity, the subscriptions, the notifications and the description versions updateIssue writes; it stays in the intake, its intake row as it was. Every row it writes is the caller's, at one moment. A project with too many writes on its work items at once answers server_busy, with Retry-After: try again then.
+         */
+        patch: operations["updateIntakeIssue"];
+        trace?: never;
+    };
+    "/api/v0/workspaces/{slug}/intake-counts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A workspace's slug, as in the web app's address. */
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Count the pending work items of a workspace's intakes
+         * @description For the workspace's admins, members and guests. A workspace that does not exist, is deleted, or that the caller is no active member of answers workspace.not_found; one in which his role may not count them, forbidden. Each project of the workspace the caller is an active member of that is undeleted, unarchived and has its intake turned on is listed once, in id order, one without a pending work item too, with its undeleted work items whose intake row is pending at the moment of the request, a snooze whose time has come among them; a guest of a project that does not show its guests every work item (guest_view_all_features false) counts only those he created. The projects and their numbers are read at that one moment, in one snapshot.
+         */
+        get: operations["getIntakeCounts"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -3293,7 +3347,7 @@ export interface components {
          * @enum {string}
          */
         IntakeStatus: "pending" | "snoozed" | "accepted" | "declined" | "duplicate";
-        /** @description A work item's intake row, as its detail shows it. */
+        /** @description A work item's intake row, as its detail and its project's intake list show it. */
         IssueIntake: {
             status: components["schemas"]["IntakeStatus"];
             /**
@@ -3313,7 +3367,7 @@ export interface components {
             description_html: string;
             /** @description Whether the caller subscribes to the work item at the moment of the answer. A list's row does not carry it. */
             is_subscribed: boolean;
-            /** @description The work item's intake row, as of the moment of the answer; null for a work item never submitted to its project's intake (submitIntakeIssue). A work item is in the intake while its status is not accepted, and is then in the project's triage state. A list's row does not carry it. */
+            /** @description The work item's intake row, as of the moment of the answer; null for a work item never submitted to its project's intake (submitIntakeIssue). A work item is in the intake while its status is not accepted, and is then in the project's triage state. A list's row does not carry it, but the intake list's (IntakeIssue). */
             intake: components["schemas"]["IssueIntake"] | null;
             /** Format: uuid */
             id: string;
@@ -3470,6 +3524,93 @@ export interface components {
             /** @description The modules it is created in: at most 100 of the project's, each named once, none archived, while the project's modules are turned on; left out, or empty, for none. */
             module_ids?: string[];
         };
+        /** @description A work item of a project's intake, as the intake list shows it: the row a list of the project's work items shows (Issue), and its intake row, never null here. */
+        IntakeIssue: {
+            intake: components["schemas"]["IssueIntake"];
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            workspace_id: string;
+            /** Format: uuid */
+            project_id: string;
+            /** @description Its number in its project, from 1; with the project's identifier, as in WEB-12. */
+            sequence_id: number;
+            name: string;
+            /** Format: uuid */
+            state_id: string;
+            priority: components["schemas"]["IssuePriority"];
+            /**
+             * Format: date
+             * @description The day it starts; null for none.
+             */
+            start_date: string | null;
+            /**
+             * Format: date
+             * @description The day it is due, not before its start date; null for none.
+             */
+            target_date: string | null;
+            /**
+             * Format: uuid
+             * @description The work item it is under, in the same project; null for none, or for one the caller does not see (a guest who sees only his own work items).
+             */
+            parent_id: string | null;
+            /** @description Its place among its state's work items, the lowest first. */
+            sort_order: number;
+            /**
+             * Format: date-time
+             * @description When it was put in a state of the completed group; null in any other state.
+             */
+            completed_at: string | null;
+            /**
+             * Format: date-time
+             * @description When it was archived; null when it is not.
+             */
+            archived_at: string | null;
+            /** @description The accounts it is assigned to, by id; one who has left the project since is still one. */
+            assignee_ids: string[];
+            /** @description Its labels, by id. */
+            label_ids: string[];
+            /**
+             * Format: uuid
+             * @description The cycle it is in, an archived one too; null for none. A work item is in one cycle at most.
+             */
+            cycle_id: string | null;
+            /** @description The modules it is in, archived ones too, by id, in id order. */
+            module_ids: string[];
+            /**
+             * Format: int64
+             * @description Uploaded, bound, undeleted ordinary issue attachments, read in the same snapshot.
+             */
+            attachment_count: number;
+            /**
+             * Format: int64
+             * @description The number of undeleted links, regardless of creator or metadata state.
+             */
+            link_count: number;
+            /** @description The number of the work items directly under it that are not archived and that the caller sees: a guest of the project who sees only his own work items counts only his own. */
+            sub_issues_count: number;
+            /**
+             * Format: uuid
+             * @description The account that created it; null for none.
+             */
+            created_by_id: string | null;
+            /**
+             * Format: uuid
+             * @description The account that changed it last; null for none.
+             */
+            updated_by_id: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        /** @description A page of a project's intake list: the number of work items its filters select, the cursor aside; the page's work items; and the cursor of the page after it, null on the last. */
+        IntakeIssuePage: {
+            /** Format: int64 */
+            total: number;
+            data: components["schemas"]["IntakeIssue"][];
+            next_cursor: components["schemas"]["NextCursor"];
+        };
         /** @description A work item submitted to a project's intake: createIssue's body but for the state, the start date, the parent, the cycle and the modules. */
         IntakeIssueCreate: {
             /** @description Sanitized rich text HTML; at most 500000 characters on input. */
@@ -3500,6 +3641,39 @@ export interface components {
              * @description For duplicate, and for it alone: the work item it duplicates, another of the project's, archived or not, that the caller sees and that is not in the project's intake.
              */
             duplicate_to_id?: string;
+        };
+        /** @description Changes the content of a work item of a project's intake: the fields it names, a field left out keeping its value. Its state, its start date, its parent, its cycle and its modules stay as the submission left them, until a triage accepts it. A guest who submitted it gives name, description_html and skip_activity alone. */
+        IntakeIssueUpdate: {
+            /** @description Only with description_html alone; preserves audit when content identity is unchanged. */
+            skip_activity?: boolean;
+            /** @description Sanitized rich text HTML; at most 500000 characters on input. */
+            description_html?: string;
+            /** @description 1–255 characters without the white space around it, which is not stored. */
+            name?: string;
+            priority?: components["schemas"]["IssuePriority"];
+            /** @description The work item's new assignees, empty for none: at most 100 accounts, each named once; each it is not assigned to yet an active member of the project who is not its guest. */
+            assignee_ids?: string[];
+            /** @description The work item's new labels, empty for none: at most 100 of the project's labels, each named once. */
+            label_ids?: string[];
+            /**
+             * Format: date
+             * @description The day it is due, as YYYY-MM-DD; null for none.
+             */
+            target_date?: string | null;
+        };
+        /** @description A project's number of pending work items in its intake, as the caller counts them. */
+        IntakeCount: {
+            /** Format: uuid */
+            project_id: string;
+            /**
+             * Format: int64
+             * @description Its undeleted work items whose intake row is pending at the moment of the answer, a snooze whose time has come among them; a guest who sees only his own work items counts only his own.
+             */
+            pending: number;
+        };
+        /** @description The number of pending work items of each project's intake that the caller counts in a workspace, each project once, in id order. */
+        IntakeCounts: {
+            data: components["schemas"]["IntakeCount"][];
         };
         /** @description Changes the fields it names; a field left out keeps its value. */
         IssueUpdate: {
@@ -4749,8 +4923,13 @@ export type IssueListGroup = components['schemas']['IssueListGroup'];
 export type IssueListTotal = components['schemas']['IssueListTotal'];
 export type IssueListPage = components['schemas']['IssueListPage'];
 export type IssueCreate = components['schemas']['IssueCreate'];
+export type IntakeIssue = components['schemas']['IntakeIssue'];
+export type IntakeIssuePage = components['schemas']['IntakeIssuePage'];
 export type IntakeIssueCreate = components['schemas']['IntakeIssueCreate'];
 export type IntakeTriage = components['schemas']['IntakeTriage'];
+export type IntakeIssueUpdate = components['schemas']['IntakeIssueUpdate'];
+export type IntakeCount = components['schemas']['IntakeCount'];
+export type IntakeCounts = components['schemas']['IntakeCounts'];
 export type IssueUpdate = components['schemas']['IssueUpdate'];
 export type SubIssuesAdd = components['schemas']['SubIssuesAdd'];
 export type IssueCommentUpdate = components['schemas']['IssueCommentUpdate'];
@@ -6862,6 +7041,51 @@ export interface operations {
             default: components["responses"]["Problem"];
         };
     };
+    listIntakeIssues: {
+        parameters: {
+            query?: {
+                /** @description pending, snoozed, accepted, declined or duplicate alternatives, each the status at the moment of the request: pending takes a snooze whose time has come, snoozed one whose time has not; left out, every status. CSV; repeated parameters are not allowed. */
+                status?: string[];
+                /** @description urgent, high, medium, low or none. CSV; repeated parameters are not allowed. */
+                priority?: string[];
+                /** @description UUID or none alternatives. CSV; repeated parameters are not allowed. */
+                label_id?: string[];
+                /** @description UUID, me or none alternatives. CSV; repeated parameters are not allowed. */
+                assignee_id?: string[];
+                /** @description UUID or me alternatives. CSV; repeated parameters are not allowed. */
+                created_by_id?: string[];
+                /** @description A day, a..b, ..b or a.., not none, of the work item's creation: from the first day's midnight UTC, in it, to the midnight after the last, out of it. Repeated parameters are not allowed. */
+                created_at?: string;
+                /** @description A day, a..b, ..b or a.., not none, of the work item's last change: from the first day's midnight UTC, in it, to the midnight after the last, out of it. Repeated parameters are not allowed. */
+                updated_at?: string;
+                /** @description By the work item's creation, its last change or its number, descending with a leading minus; -created_at when left out. */
+                order_by?: "created_at" | "-created_at" | "updated_at" | "-updated_at" | "sequence_id" | "-sequence_id";
+                /** @description The page size, 1–100; 50 when absent. Outside that range the answer is 422 validation_failed on limit. */
+                limit?: components["parameters"]["Limit"];
+                /** @description The next_cursor of the page before; absent for the first page. A cursor that does not decode, has an unknown version or a payload of another shape than this list's, or is not spelled as the server writes it is 400 bad_request on cursor. */
+                cursor?: components["parameters"]["Cursor"];
+            };
+            header?: never;
+            path: {
+                /** @description A project's id (Project.id). */
+                project_id: components["parameters"]["ProjectID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A page of the project's intake. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntakeIssuePage"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
     submitIntakeIssue: {
         parameters: {
             query?: never;
@@ -6913,6 +7137,80 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["IssueDetail"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    deleteIntakeIssue: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A work item's id (IssueDetail.id). */
+                issue_id: components["parameters"]["IssueID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The work item, or the intake row of an accepted one, is deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateIntakeIssue: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A work item's id (IssueDetail.id). */
+                issue_id: components["parameters"]["IssueID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IntakeIssueUpdate"];
+            };
+        };
+        responses: {
+            /** @description The work item as changed, its intake row with it. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssueDetail"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getIntakeCounts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A workspace's slug, as in the web app's address. */
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The number of pending work items of each project's intake. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntakeCounts"];
                 };
             };
             default: components["responses"]["Problem"];

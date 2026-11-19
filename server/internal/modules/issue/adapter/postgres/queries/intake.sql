@@ -16,3 +16,12 @@ UPDATE intake_issues
 SET status = sqlc.arg(status), snoozed_till = sqlc.narg(snoozed_till), duplicate_to_id = sqlc.narg(duplicate_to_id),
     updated_by_id = sqlc.arg(by)::uuid, updated_at = sqlc.arg(at)
 WHERE issue_id = sqlc.arg(issue_id) AND deleted_at IS NULL;
+
+-- name: DeleteIntakeIssueRow :execrows
+-- deleteIntakeIssue's write of an accepted work item (M7 P2b spec 2.5, DP-10): its undeleted intake row alone,
+-- soft-deleted and last changed at the moment and by the account given, under the project's FOR NO KEY UPDATE, as
+-- InsertIntakeIssue; the work item stays, and the 60-day purge takes the row by its own deleted_at. Its other columns,
+-- its creator and its status too, stay as they were. intake_issues_issue_id_key serves it: one row at most.
+UPDATE intake_issues
+SET deleted_at = sqlc.arg(at)::timestamptz, updated_at = sqlc.arg(at), updated_by_id = sqlc.arg(by)::uuid
+WHERE issue_id = sqlc.arg(issue_id) AND deleted_at IS NULL;

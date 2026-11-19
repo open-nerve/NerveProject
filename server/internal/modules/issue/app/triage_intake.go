@@ -15,7 +15,7 @@ import (
 // the work items' store, the project's states and the clock.
 type TriageIntakeIssueDeps struct {
 	Locks  Locks
-	Update *UpdateIssue
+	Update *IssueUpdate
 	Intake IntakeWriter
 	Issues IssueTriager
 	States StateCatalog
@@ -48,8 +48,9 @@ func NewTriageIntakeIssue(d TriageIntakeIssueDeps) *TriageIntakeIssue {
 // row's effective status at it (domain.IntakeFacts.Transition), else 409
 // issue.intake_transition_not_allowed; the 422s that need the moment or a
 // read under the lock (checked); an accept's state, the project's default
-// state read under the lock, an error when there is none or it is of the
-// triage group (acceptance), before anything is written; the intake row
+// state read under the lock, an error when there is none, it is of the
+// triage group or the work item is in it already (acceptance), before
+// anything is written; the intake row
 // (IntakeWriter.TriageIntake); its activity, from the effective status to
 // the new one, naming no duplicate's target (domain.TriageActivity, R7). An
 // accept then moves the work item to its state through the update core at
@@ -110,9 +111,12 @@ func (u *TriageIntakeIssue) Execute(ctx context.Context, id uuid.UUID, t domain.
 	return triaged, nil
 }
 
-// hasIntakeRow is a triage's check of its work item i (write.check), as
-// read before the lock and again under it: one without an undeleted intake
-// row is 404 issue.intake_not_found, the value of one not there.
+// hasIntakeRow is the check (write.check) of the work item i of a write
+// on an intake item, as read before the lock and again under it: one
+// without an undeleted intake row is 404 issue.intake_not_found, the value
+// of one not there. A triage's and a deletion's check (M7 P2a spec 2.5,
+// P2b spec 2.5), and the first of a content edit's (intakeEditor, P2b spec
+// 2.4).
 func hasIntakeRow(_ context.Context, i domain.Issue, _ shared.Grant) error {
 	if i.Intake == nil {
 		return domain.ErrIntakeNotFound
@@ -172,7 +176,10 @@ func (u *TriageIntakeIssue) duplicable(ctx context.Context, actor uuid.UUID, h h
 // written: a project without a default state, as for a creation; one whose
 // default state is of the triage group, into which an accept would leave
 // the work item in Triage while its intake row says accepted, against the
-// row's agreement with the state (spec 2.3).
+// row's agreement with the state (spec 2.3); a default state the work item
+// is in already, which the accept would leave it in, changing nothing,
+// while its intake row, not yet accepted, says otherwise: the same
+// agreement broken (M7 P2b spec 2.2, n1).
 func (u *TriageIntakeIssue) acceptance(ctx context.Context, h held, t domain.Triage) (*domain.IssuePatch, error) {
 	if t.Status != domain.IntakeAccepted {
 		return nil, nil
@@ -187,6 +194,8 @@ func (u *TriageIntakeIssue) acceptance(ctx context.Context, h held, t domain.Tri
 		return nil, fmt.Errorf("project %s has no default state", h.issue.ProjectID)
 	case state.Group == domain.GroupTriage:
 		return nil, fmt.Errorf("project %s has its default state %s in the triage group", h.issue.ProjectID, state.ID)
+	case state.ID == h.issue.StateID:
+		return nil, fmt.Errorf("work item %s, not yet accepted, is in its project's default state %s already", h.issue.ID, state.ID)
 	}
 	return &domain.IssuePatch{StateID: &state.ID}, nil
 }

@@ -196,17 +196,21 @@ type SubscriptionWriter interface {
 	RemoveSubscriber(ctx context.Context, r SubscriberRemoval) error
 }
 
-// IntakeWriter is the intake rows' store as submitIntakeIssue and
-// triageIntakeIssue write them, in the transaction ctx carries, under the
-// project's lock (M7 P2a spec 2.4, 2.5). Every path that writes an intake
-// row holds that lock, so a row takes no lock of its own: a triage reads
-// it as the work item's re-read under the lock carries it (Issue.Intake).
+// IntakeWriter is the intake rows' store as submitIntakeIssue,
+// triageIntakeIssue and deleteIntakeIssue write them, in the transaction
+// ctx carries, under the project's lock (M7 P2a spec 2.4, 2.5, P2b spec
+// 2.5). Every path that writes an intake row holds that lock, so a row
+// takes no lock of its own: a triage reads it as the work item's re-read
+// under the lock carries it (Issue.Intake).
 type IntakeWriter interface {
 	// InsertIntake inserts the work item's intake row r, pending.
 	InsertIntake(ctx context.Context, r IntakeRow) error
 	// TriageIntake writes the triage r of the work item's undeleted intake
 	// row.
 	TriageIntake(ctx context.Context, r IntakeTriage) error
+	// DeleteIntake soft-deletes the work item's undeleted intake row, the
+	// work item staying.
+	DeleteIntake(ctx context.Context, d IntakeDeletion) error
 }
 
 // IssueTriager is the work items' store as triageIntakeIssue reads and

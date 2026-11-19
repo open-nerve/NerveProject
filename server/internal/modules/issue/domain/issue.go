@@ -114,13 +114,21 @@ func (i Issue) InTriage() bool {
 	return i.Intake != nil && i.Intake.Status != IntakeAccepted
 }
 
+// CreatedBy reports whether the account actor created i: never for a work
+// item whose creator is not known. The guest rule's own work items
+// (HiddenFrom) and an intake item's submitter (M7 P2b spec R11) are the
+// work items so created.
+func (i Issue) CreatedBy(actor uuid.UUID) bool {
+	return i.CreatedByID != nil && *i.CreatedByID == actor
+}
+
 // HiddenFrom reports whether the guest rule hides i from the account actor,
 // whose grant on i's project is ownOnly (M4 design 3.4): the project's
 // guest who sees only his own work items does not see one another created,
 // nor one whose creator is not known. It hides nothing from any other
 // caller.
 func (i Issue) HiddenFrom(actor uuid.UUID, ownOnly bool) bool {
-	return ownOnly && (i.CreatedByID == nil || *i.CreatedByID != actor)
+	return ownOnly && !i.CreatedBy(actor)
 }
 
 // NewIssue is what the caller asks for when creating a work item (M4

@@ -613,6 +613,117 @@ paths:
   /api/v0/projects/{project_id}/intake-issues:
     parameters:
       - $ref: '#/components/parameters/ProjectID'
+    get:
+      operationId: listIntakeIssues
+      tags: [issue]
+      summary: List a project's intake
+      description: >-
+        For the project's admins, members and guests, the project archived
+        or not, its intake turned on or off. The query is checked first:
+        CSV alternatives use OR and different filters AND; each parameter is
+        given once. Unknown parameters, invalid business values and repeated
+        parameters are 422 not_allowed; malformed query encoding and a
+        noninteger limit are 400. Parameter binding precedes
+        authentication: repeated parameters are 422 even without a token.
+        Then a project that does not exist, is deleted, or that the caller
+        does not see answers project.not_found; one he sees but whose intake
+        he may not read, forbidden. The work items listed are the project's
+        undeleted ones with an intake row: pending, snoozed, declined and
+        duplicate ones, in the project's triage state, and accepted ones,
+        out of the intake into the project's work, archived ones too. A
+        guest of a project that does not show its guests every work item
+        (guest_view_all_features false) lists only those he created, none
+        of no known creator. Each status is the one at the moment of the
+        request: a snooze whose time has come is pending, filtered and
+        shown so. The rows are in the order of order_by, -created_at when
+        it is left out, work items of equal keys by their id the same way;
+        total is the number the filters select, the cursor aside. Each row
+        is the project list's (Issue), its sub-items counted and its parent
+        shown as the caller sees them, with its intake row as the work
+        item's detail shows it at the moment of the request
+        (IssueDetail.intake). The page is read at that one moment, in one
+        snapshot.
+      security: [{bearer: []}]
+      x-problem-codes: [validation_failed, project.not_found, forbidden]
+      parameters:
+        - name: status
+          in: query
+          description: >-
+            pending, snoozed, accepted, declined or duplicate alternatives,
+            each the status at the moment of the request: pending takes a
+            snooze whose time has come, snoozed one whose time has not; left
+            out, every status. CSV; repeated parameters are not allowed.
+          style: form
+          explode: false
+          schema:
+            type: array
+            items: {type: string}
+        - name: priority
+          in: query
+          description: urgent, high, medium, low or none. CSV; repeated parameters are not allowed.
+          style: form
+          explode: false
+          schema:
+            type: array
+            items: {type: string}
+        - name: label_id
+          in: query
+          description: UUID or none alternatives. CSV; repeated parameters are not allowed.
+          style: form
+          explode: false
+          schema:
+            type: array
+            items: {type: string}
+        - name: assignee_id
+          in: query
+          description: UUID, me or none alternatives. CSV; repeated parameters are not allowed.
+          style: form
+          explode: false
+          schema:
+            type: array
+            items: {type: string}
+        - name: created_by_id
+          in: query
+          description: UUID or me alternatives. CSV; repeated parameters are not allowed.
+          style: form
+          explode: false
+          schema:
+            type: array
+            items: {type: string}
+        - name: created_at
+          in: query
+          description: >-
+            A day, a..b, ..b or a.., not none, of the work item's creation:
+            from the first day's midnight UTC, in it, to the midnight after
+            the last, out of it. Repeated parameters are not allowed.
+          schema: {type: string}
+        - name: updated_at
+          in: query
+          description: >-
+            A day, a..b, ..b or a.., not none, of the work item's last
+            change: from the first day's midnight UTC, in it, to the
+            midnight after the last, out of it. Repeated parameters are not
+            allowed.
+          schema: {type: string}
+        - name: order_by
+          in: query
+          description: >-
+            By the work item's creation, its last change or its number,
+            descending with a leading minus; -created_at when left out.
+          schema:
+            type: string
+            enum: [created_at, '-created_at', updated_at, '-updated_at', sequence_id, '-sequence_id']
+        - $ref: '../common.yaml#/components/parameters/Limit'
+        - $ref: '../common.yaml#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: A page of the project's intake.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntakeIssuePage'
+        default:
+          $ref: '#/components/responses/Problem'
     post:
       operationId: submitIntakeIssue
       tags: [issue]
@@ -719,6 +830,129 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/IssueDetail'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/intake-issues/{issue_id}:
+    parameters:
+      - $ref: '#/components/parameters/IssueID'
+    patch:
+      operationId: updateIntakeIssue
+      tags: [issue]
+      summary: Change a work item of a project's intake
+      description: >-
+        For the project's admins, and for the member or guest who submitted
+        the work item, which he created (created_by_id): one of no known
+        creator has no submitter. A guest changes its name, its description
+        and skip_activity alone. The fields given change and the others
+        stay; a list given is the work item's new list, empty for none. The
+        values follow updateIssue's rules (validation_failed), checked
+        before the work item is looked at. A work item that does not exist,
+        is deleted, whose project the caller does not see, or that he did
+        not create as a guest who sees only his own (getIssue) answers
+        issue.intake_not_found, whatever his role may do; one whose project
+        he sees but whose intake he may not change, forbidden; then one
+        without an intake row, never submitted, issue.intake_not_found
+        again, the same answer; then, but for the project's admins, one the
+        caller did not submit, forbidden, and a guest's field but the name,
+        the description and skip_activity, forbidden, given even as it is;
+        each before the project is locked, and with the project locked the
+        role, the intake row and the submitter are decided again. Then an
+        archived project refuses it (project.archived), then a project
+        whose intake is turned off (issue.intake_disabled), as the project
+        locked reads it; then a work item whose intake row is stored
+        accepted, declined or duplicate (issue.intake_closed): pending and
+        snoozed ones are changed, a snooze whose time has come too. Then each
+        account the work item is newly assigned to, each label added and
+        the description's images, as updateIssue checks them
+        (validation_failed, asset.not_found, asset.not_uploaded). A change
+        that changes nothing writes nothing, and the work item is answered
+        as it is. Otherwise it is changed last by the caller, with the
+        activity, the subscriptions, the notifications and the description
+        versions updateIssue writes; it stays in the intake, its intake row
+        as it was. Every row it writes is the caller's, at one moment. A
+        project with too many writes on its work items at once answers
+        server_busy, with Retry-After: try again then.
+      security: [{bearer: []}]
+      x-problem-codes: [validation_failed, issue.intake_not_found, forbidden, project.archived, issue.intake_disabled, issue.intake_closed, server_busy, asset.not_found, asset.not_uploaded]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IntakeIssueUpdate'
+      responses:
+        '200':
+          description: The work item as changed, its intake row with it.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IssueDetail'
+        default:
+          $ref: '#/components/responses/Problem'
+    delete:
+      operationId: deleteIntakeIssue
+      tags: [issue]
+      summary: Delete a work item of a project's intake
+      description: >-
+        For the project's admins, and for the member of it who submitted
+        the work item, which he created (created_by_id), while he is an
+        admin or a member of the project; whatever its intake row's status.
+        A work item that does not exist, is deleted, whose project the
+        caller does not see, or that he did not create as a guest who sees
+        only his own (getIssue) answers issue.intake_not_found, whatever his
+        role may do; one whose project he sees but that he may not delete,
+        forbidden, one he did not submit too; then one without an intake
+        row, never submitted, issue.intake_not_found again, the same answer;
+        each before the project is locked, and with the project locked the
+        role and the intake row are decided again. Then an archived project
+        refuses it (project.archived), then a project whose intake is
+        turned off (issue.intake_disabled), as the project locked reads it.
+        A work item whose intake row is pending, snoozed, declined or
+        duplicate is deleted as deleteIssue deletes one, its intake row with
+        it: it and each work item under it, however deep, archived ones too,
+        with their assignees, labels, relations, subscribers and activity,
+        by the caller at one moment; their numbers are not used again. An
+        accepted one, out of the intake into the project's work, archived or
+        not, stays as it is: its intake row alone is deleted, by the caller,
+        and it is listed in the intake no more. A project with too many
+        writes on its work items at once answers server_busy, with
+        Retry-After: try again then.
+      security: [{bearer: []}]
+      x-problem-codes: [issue.intake_not_found, forbidden, project.archived, issue.intake_disabled, server_busy]
+      responses:
+        '204':
+          description: The work item, or the intake row of an accepted one, is deleted.
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/workspaces/{slug}/intake-counts:
+    parameters:
+      - $ref: '#/components/parameters/Slug'
+    get:
+      operationId: getIntakeCounts
+      tags: [issue]
+      summary: Count the pending work items of a workspace's intakes
+      description: >-
+        For the workspace's admins, members and guests. A workspace that
+        does not exist, is deleted, or that the caller is no active member
+        of answers workspace.not_found; one in which his role may not count
+        them, forbidden. Each project of the workspace the caller is an
+        active member of that is undeleted, unarchived and has its intake
+        turned on is listed once, in id order, one without a pending work
+        item too, with its undeleted work items whose intake row is pending
+        at the moment of the request, a snooze whose time has come among
+        them; a guest of a project that does not show its guests every work
+        item (guest_view_all_features false) counts only those he created.
+        The projects and their numbers are read at that one moment, in one
+        snapshot.
+      security: [{bearer: []}]
+      x-problem-codes: [workspace.not_found, forbidden]
+      responses:
+        '200':
+          description: The number of pending work items of each project's intake.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntakeCounts'
         default:
           $ref: '#/components/responses/Problem'
   /api/v0/issues/{issue_id}:
@@ -1854,7 +2088,8 @@ components:
             for a work item never submitted to its project's intake
             (submitIntakeIssue). A work item is in the intake while its
             status is not accepted, and is then in the project's triage
-            state. A list's row does not carry it.
+            state. A list's row does not carry it, but the intake list's
+            (IntakeIssue).
           oneOf:
             - $ref: '#/components/schemas/IssueIntake'
             - type: 'null'
@@ -1968,7 +2203,7 @@ components:
       type: string
       enum: [pending, snoozed, accepted, declined, duplicate]
     IssueIntake:
-      description: A work item's intake row, as its detail shows it.
+      description: A work item's intake row, as its detail and its project's intake list show it.
       type: object
       additionalProperties: false
       required: [status, snoozed_till, duplicate_to_id]
@@ -2045,6 +2280,204 @@ components:
             and that is not in the project's intake.
           type: string
           format: uuid
+    IntakeIssue:
+      description: >-
+        A work item of a project's intake, as the intake list shows it: the
+        row a list of the project's work items shows (Issue), and its intake
+        row, never null here.
+      type: object
+      additionalProperties: false
+      required: [intake, id, workspace_id, project_id, sequence_id, name, state_id, priority, start_date, target_date, parent_id, sort_order,
+        completed_at, archived_at, assignee_ids, label_ids, cycle_id, module_ids, sub_issues_count, link_count, attachment_count, created_by_id,
+        updated_by_id, created_at, updated_at]
+      properties:
+        intake:
+          $ref: '#/components/schemas/IssueIntake'
+        id:
+          type: string
+          format: uuid
+        workspace_id:
+          type: string
+          format: uuid
+        project_id:
+          type: string
+          format: uuid
+        sequence_id:
+          description: Its number in its project, from 1; with the project's identifier, as in WEB-12.
+          type: integer
+        name:
+          type: string
+        state_id:
+          type: string
+          format: uuid
+        priority:
+          $ref: '#/components/schemas/IssuePriority'
+        start_date:
+          description: The day it starts; null for none.
+          type: [string, 'null']
+          format: date
+        target_date:
+          description: The day it is due, not before its start date; null for none.
+          type: [string, 'null']
+          format: date
+        parent_id:
+          description: >-
+            The work item it is under, in the same project; null for none, or
+            for one the caller does not see (a guest who sees only his own
+            work items).
+          type: [string, 'null']
+          format: uuid
+        sort_order:
+          description: Its place among its state's work items, the lowest first.
+          type: number
+        completed_at:
+          description: When it was put in a state of the completed group; null in any other state.
+          type: [string, 'null']
+          format: date-time
+        archived_at:
+          description: When it was archived; null when it is not.
+          type: [string, 'null']
+          format: date-time
+        assignee_ids:
+          description: >-
+            The accounts it is assigned to, by id; one who has left the
+            project since is still one.
+          type: array
+          items:
+            type: string
+            format: uuid
+        label_ids:
+          description: Its labels, by id.
+          type: array
+          items:
+            type: string
+            format: uuid
+        cycle_id:
+          description: >-
+            The cycle it is in, an archived one too; null for none. A work item
+            is in one cycle at most.
+          type: [string, 'null']
+          format: uuid
+        module_ids:
+          description: The modules it is in, archived ones too, by id, in id order.
+          type: array
+          items:
+            type: string
+            format: uuid
+        attachment_count:
+          description: Uploaded, bound, undeleted ordinary issue attachments, read in the same snapshot.
+          type: integer
+          format: int64
+          minimum: 0
+        link_count:
+          description: The number of undeleted links, regardless of creator or metadata state.
+          type: integer
+          format: int64
+          minimum: 0
+        sub_issues_count:
+          description: >-
+            The number of the work items directly under it that are not
+            archived and that the caller sees: a guest of the project who
+            sees only his own work items counts only his own.
+          type: integer
+        created_by_id:
+          description: The account that created it; null for none.
+          type: [string, 'null']
+          format: uuid
+        updated_by_id:
+          description: The account that changed it last; null for none.
+          type: [string, 'null']
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    IntakeIssuePage:
+      description: >-
+        A page of a project's intake list: the number of work items its
+        filters select, the cursor aside; the page's work items; and the
+        cursor of the page after it, null on the last.
+      type: object
+      additionalProperties: false
+      required: [total, data, next_cursor]
+      properties:
+        total: {type: integer, format: int64}
+        data:
+          type: array
+          items: {$ref: '#/components/schemas/IntakeIssue'}
+        next_cursor: {$ref: '../common.yaml#/components/schemas/NextCursor'}
+    IntakeIssueUpdate:
+      description: >-
+        Changes the content of a work item of a project's intake: the fields
+        it names, a field left out keeping its value. Its state, its start
+        date, its parent, its cycle and its modules stay as the submission
+        left them, until a triage accepts it. A guest who submitted it gives
+        name, description_html and skip_activity alone.
+      type: object
+      additionalProperties: false
+      properties:
+        skip_activity:
+          description: Only with description_html alone; preserves audit when content identity is unchanged.
+          type: boolean
+        description_html:
+          description: Sanitized rich text HTML; at most 500000 characters on input.
+          type: string
+        name:
+          description: 1–255 characters without the white space around it, which is not stored.
+          type: string
+        priority:
+          $ref: '#/components/schemas/IssuePriority'
+        assignee_ids:
+          description: >-
+            The work item's new assignees, empty for none: at most 100
+            accounts, each named once; each it is not assigned to yet an
+            active member of the project who is not its guest.
+          type: array
+          items:
+            type: string
+            format: uuid
+        label_ids:
+          description: >-
+            The work item's new labels, empty for none: at most 100 of the
+            project's labels, each named once.
+          type: array
+          items:
+            type: string
+            format: uuid
+        target_date:
+          description: The day it is due, as YYYY-MM-DD; null for none.
+          type: [string, 'null']
+          format: date
+    IntakeCounts:
+      description: >-
+        The number of pending work items of each project's intake that the
+        caller counts in a workspace, each project once, in id order.
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: array
+          items: {$ref: '#/components/schemas/IntakeCount'}
+    IntakeCount:
+      description: A project's number of pending work items in its intake, as the caller counts them.
+      type: object
+      additionalProperties: false
+      required: [project_id, pending]
+      properties:
+        project_id:
+          type: string
+          format: uuid
+        pending:
+          description: >-
+            Its undeleted work items whose intake row is pending at the
+            moment of the answer, a snooze whose time has come among them;
+            a guest who sees only his own work items counts only his own.
+          type: integer
+          format: int64
+          minimum: 0
     Issue:
       description: A work item of a project, as a list shows it.
       type: object

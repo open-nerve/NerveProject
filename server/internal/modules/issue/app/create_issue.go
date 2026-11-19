@@ -47,8 +47,11 @@ func (u *CreateIssue) Execute(ctx context.Context, projectID uuid.UUID, in domai
 	w := write{project: projectID, action: domain.ActionCreate, notFound: domain.ErrProjectNotFound}
 	var created domain.Issue
 	err = u.d.Locks.run(ctx, actor, w, func(ctx context.Context, h held) error {
-		var err error
-		created, _, err = u.d.Creation.createLocked(ctx, actor.UserID, projectID, h, in, asAsked)
+		row, _, err := u.d.Creation.createLocked(ctx, actor.UserID, projectID, h, in, asAsked)
+		if err != nil {
+			return err
+		}
+		created, err = u.d.Creation.answer(ctx, actor.UserID, row)
 		return err
 	})
 	if err != nil {

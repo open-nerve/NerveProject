@@ -37,7 +37,7 @@ func mentionCreate(w *world, p shared.EventPublisher) *app.CreateIssue {
 	return app.NewCreateIssue(app.CreateIssueDeps{Locks: w.locks, Creation: app.NewIssueCreation(app.IssueCreationDeps{Attachments: noIssueAttachments{}, Events: p, Issues: w.issues, Sequences: w.project, States: w.project, Labels: w.project, Members: w.project, Profiles: w.profiles, Clock: clockAt{at: clockNow, log: w.log}, Sanitizer: content.NewSanitizer()})})
 }
 func mentionUpdate(w *world, p shared.EventPublisher) *app.UpdateIssue {
-	return app.NewUpdateIssue(app.UpdateIssueDeps{Events: p, Locks: w.locks, Issues: w.issues, States: w.project, Labels: w.project, Members: w.project, Profiles: w.profiles, Clock: clockAt{at: clockNow, log: w.log}, Sanitizer: content.NewSanitizer()})
+	return app.NewUpdateIssue(app.UpdateIssueDeps{Locks: w.locks, Clock: clockAt{at: clockNow, log: w.log}, Update: app.NewIssueUpdate(app.IssueUpdateDeps{Events: p, Locks: w.locks, Issues: w.issues, States: w.project, Labels: w.project, Members: w.project, Profiles: w.profiles, Sanitizer: content.NewSanitizer()})})
 }
 
 // subscribed are the InsertSubscribers calls of w's log, each with the

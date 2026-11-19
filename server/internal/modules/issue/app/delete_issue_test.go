@@ -15,7 +15,7 @@ import (
 // called, its clock at clockNow: after gated rebuilds w's locks, it is
 // deleteIssue over the gated ones.
 func deleteOver(w *world) *app.DeleteIssue {
-	return app.NewDeleteIssue(app.DeleteIssueDeps{Events: discardEvents{}, Locks: w.locks, Rows: w.issues, Relations: app.NewRelationDeletions(w.issues, w.project), Clock: clockAt{at: clockNow, log: w.log}})
+	return app.NewDeleteIssue(app.DeleteIssueDeps{Locks: w.locks, Clock: clockAt{at: clockNow, log: w.log}, Delete: app.NewIssueRemoval(app.IssueRemovalDeps{Events: discardEvents{}, Rows: w.issues, Relations: app.NewRelationDeletions(w.issues, w.project)})})
 }
 
 // newDelete is deleteIssue over newUpdate's world: web's work item 7, made

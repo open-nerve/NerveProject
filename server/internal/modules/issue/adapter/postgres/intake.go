@@ -36,3 +36,18 @@ func (s *Store) TriageIntake(ctx context.Context, r app.IntakeTriage) error {
 	}
 	return nil
 }
+
+// DeleteIntake soft-deletes the work item's undeleted intake row alone
+// (M7 P2b spec 2.5): an accepted work item's deletion from the intake. The
+// use case read the row under the project's lock, which every write of it
+// holds, so one not deleted is an error.
+func (s *Store) DeleteIntake(ctx context.Context, d app.IntakeDeletion) error {
+	n, err := s.queries(ctx).DeleteIntakeIssueRow(ctx, gen.DeleteIntakeIssueRowParams{At: d.At, By: d.By, IssueID: d.IssueID})
+	switch {
+	case err != nil:
+		return fmt.Errorf("delete the intake row of work item %s: %w", d.IssueID, err)
+	case n != 1:
+		return fmt.Errorf("delete the intake row of work item %s: %d rows written, want 1", d.IssueID, n)
+	}
+	return nil
+}

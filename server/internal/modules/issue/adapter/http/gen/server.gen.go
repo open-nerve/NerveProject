@@ -234,6 +234,36 @@ func (e IssueRelationType) Valid() bool {
 	}
 }
 
+// Defines values for ListIntakeIssuesParamsOrderBy.
+const (
+	ListIntakeIssuesParamsOrderByCreatedAt       ListIntakeIssuesParamsOrderBy = "created_at"
+	ListIntakeIssuesParamsOrderByMinusCreatedAt  ListIntakeIssuesParamsOrderBy = "-created_at"
+	ListIntakeIssuesParamsOrderByMinusSequenceID ListIntakeIssuesParamsOrderBy = "-sequence_id"
+	ListIntakeIssuesParamsOrderByMinusUpdatedAt  ListIntakeIssuesParamsOrderBy = "-updated_at"
+	ListIntakeIssuesParamsOrderBySequenceID      ListIntakeIssuesParamsOrderBy = "sequence_id"
+	ListIntakeIssuesParamsOrderByUpdatedAt       ListIntakeIssuesParamsOrderBy = "updated_at"
+)
+
+// Valid indicates whether the value is a known member of the ListIntakeIssuesParamsOrderBy enum.
+func (e ListIntakeIssuesParamsOrderBy) Valid() bool {
+	switch e {
+	case ListIntakeIssuesParamsOrderByCreatedAt:
+		return true
+	case ListIntakeIssuesParamsOrderByMinusCreatedAt:
+		return true
+	case ListIntakeIssuesParamsOrderByMinusSequenceID:
+		return true
+	case ListIntakeIssuesParamsOrderByMinusUpdatedAt:
+		return true
+	case ListIntakeIssuesParamsOrderBySequenceID:
+		return true
+	case ListIntakeIssuesParamsOrderByUpdatedAt:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListMemberIssuesParamsRelation.
 const (
 	ListMemberIssuesParamsRelationAssigned   ListMemberIssuesParamsRelation = "assigned"
@@ -342,6 +372,82 @@ type DraftUpdate struct {
 	ProjectID nullable.Nullable[uuid.UUID] `json:"project_id,omitempty"`
 }
 
+// IntakeCount A project's number of pending work items in its intake, as the caller counts them.
+type IntakeCount struct {
+	// Pending Its undeleted work items whose intake row is pending at the moment of the answer, a snooze whose time has come among them; a guest who sees only his own work items counts only his own.
+	Pending   int64     `json:"pending"`
+	ProjectID uuid.UUID `json:"project_id"`
+}
+
+// IntakeCounts The number of pending work items of each project's intake that the caller counts in a workspace, each project once, in id order.
+type IntakeCounts struct {
+	Data []IntakeCount `json:"data"`
+}
+
+// IntakeIssue A work item of a project's intake, as the intake list shows it: the row a list of the project's work items shows (Issue), and its intake row, never null here.
+type IntakeIssue struct {
+	// ArchivedAt When it was archived; null when it is not.
+	ArchivedAt nullable.Nullable[time.Time] `json:"archived_at"`
+
+	// AssigneeIds The accounts it is assigned to, by id; one who has left the project since is still one.
+	AssigneeIds []uuid.UUID `json:"assignee_ids"`
+
+	// AttachmentCount Uploaded, bound, undeleted ordinary issue attachments, read in the same snapshot.
+	AttachmentCount int64 `json:"attachment_count"`
+
+	// CompletedAt When it was put in a state of the completed group; null in any other state.
+	CompletedAt nullable.Nullable[time.Time] `json:"completed_at"`
+	CreatedAt   time.Time                    `json:"created_at"`
+
+	// CreatedByID The account that created it; null for none.
+	CreatedByID nullable.Nullable[uuid.UUID] `json:"created_by_id"`
+
+	// CycleID The cycle it is in, an archived one too; null for none. A work item is in one cycle at most.
+	CycleID nullable.Nullable[uuid.UUID] `json:"cycle_id"`
+	ID      uuid.UUID                    `json:"id"`
+
+	// Intake A work item's intake row, as its detail and its project's intake list show it.
+	Intake IssueIntake `json:"intake"`
+
+	// LabelIds Its labels, by id.
+	LabelIds []uuid.UUID `json:"label_ids"`
+
+	// LinkCount The number of undeleted links, regardless of creator or metadata state.
+	LinkCount int64 `json:"link_count"`
+
+	// ModuleIds The modules it is in, archived ones too, by id, in id order.
+	ModuleIds []uuid.UUID `json:"module_ids"`
+	Name      string      `json:"name"`
+
+	// ParentID The work item it is under, in the same project; null for none, or for one the caller does not see (a guest who sees only his own work items).
+	ParentID nullable.Nullable[uuid.UUID] `json:"parent_id"`
+
+	// Priority A work item's priority, from the most to the least urgent.
+	Priority  IssuePriority `json:"priority"`
+	ProjectID uuid.UUID     `json:"project_id"`
+
+	// SequenceID Its number in its project, from 1; with the project's identifier, as in WEB-12.
+	SequenceID int `json:"sequence_id"`
+
+	// SortOrder Its place among its state's work items, the lowest first.
+	SortOrder float64 `json:"sort_order"`
+
+	// StartDate The day it starts; null for none.
+	StartDate nullable.Nullable[shared.Date] `json:"start_date"`
+	StateID   uuid.UUID                      `json:"state_id"`
+
+	// SubIssuesCount The number of the work items directly under it that are not archived and that the caller sees: a guest of the project who sees only his own work items counts only his own.
+	SubIssuesCount int `json:"sub_issues_count"`
+
+	// TargetDate The day it is due, not before its start date; null for none.
+	TargetDate nullable.Nullable[shared.Date] `json:"target_date"`
+	UpdatedAt  time.Time                      `json:"updated_at"`
+
+	// UpdatedByID The account that changed it last; null for none.
+	UpdatedByID nullable.Nullable[uuid.UUID] `json:"updated_by_id"`
+	WorkspaceID uuid.UUID                    `json:"workspace_id"`
+}
+
 // IntakeIssueCreate A work item submitted to a project's intake: createIssue's body but for the state, the start date, the parent, the cycle and the modules.
 type IntakeIssueCreate struct {
 	// AssigneeIds At most 100 accounts, each named once, each an active member of the project who is not its guest; left out, or empty, for the project's default assignee while he is one, else no one.
@@ -361,6 +467,39 @@ type IntakeIssueCreate struct {
 
 	// TargetDate The day it is due, as YYYY-MM-DD; left out for none.
 	TargetDate *shared.Date `json:"target_date,omitempty"`
+}
+
+// IntakeIssuePage A page of a project's intake list: the number of work items its filters select, the cursor aside; the page's work items; and the cursor of the page after it, null on the last.
+type IntakeIssuePage struct {
+	Data []IntakeIssue `json:"data"`
+
+	// NextCursor The cursor of the next page; null on the last page.
+	NextCursor nullable.Nullable[externalRef0.NextCursor] `json:"next_cursor"`
+	Total      int64                                      `json:"total"`
+}
+
+// IntakeIssueUpdate Changes the content of a work item of a project's intake: the fields it names, a field left out keeping its value. Its state, its start date, its parent, its cycle and its modules stay as the submission left them, until a triage accepts it. A guest who submitted it gives name, description_html and skip_activity alone.
+type IntakeIssueUpdate struct {
+	// AssigneeIds The work item's new assignees, empty for none: at most 100 accounts, each named once; each it is not assigned to yet an active member of the project who is not its guest.
+	AssigneeIds *[]uuid.UUID `json:"assignee_ids,omitempty"`
+
+	// DescriptionHTML Sanitized rich text HTML; at most 500000 characters on input.
+	DescriptionHTML *string `json:"description_html,omitempty"`
+
+	// LabelIds The work item's new labels, empty for none: at most 100 of the project's labels, each named once.
+	LabelIds *[]uuid.UUID `json:"label_ids,omitempty"`
+
+	// Name 1–255 characters without the white space around it, which is not stored.
+	Name *string `json:"name,omitempty"`
+
+	// Priority A work item's priority, from the most to the least urgent.
+	Priority *IssuePriority `json:"priority,omitempty"`
+
+	// SkipActivity Only with description_html alone; preserves audit when content identity is unchanged.
+	SkipActivity *bool `json:"skip_activity,omitempty"`
+
+	// TargetDate The day it is due, as YYYY-MM-DD; null for none.
+	TargetDate nullable.Nullable[shared.Date] `json:"target_date,omitempty"`
 }
 
 // IntakeStatus An intake row's status: pending, waiting for a triage; snoozed, till a time, then pending again; accepted, out of the intake into the project's work; declined; duplicate, of another work item. accepted, declined and duplicate are final.
@@ -560,7 +699,7 @@ type IssueDetail struct {
 	DescriptionHTML string    `json:"description_html"`
 	ID              uuid.UUID `json:"id"`
 
-	// Intake The work item's intake row, as of the moment of the answer; null for a work item never submitted to its project's intake (submitIntakeIssue). A work item is in the intake while its status is not accepted, and is then in the project's triage state. A list's row does not carry it.
+	// Intake The work item's intake row, as of the moment of the answer; null for a work item never submitted to its project's intake (submitIntakeIssue). A work item is in the intake while its status is not accepted, and is then in the project's triage state. A list's row does not carry it, but the intake list's (IntakeIssue).
 	Intake nullable.Nullable[IssueIntake] `json:"intake"`
 
 	// IsSubscribed Whether the caller subscribes to the work item at the moment of the answer. A list's row does not carry it.
@@ -620,7 +759,7 @@ type IssueDraftPayload struct {
 	TargetDate      *shared.Date `json:"target_date,omitempty"`
 }
 
-// IssueIntake A work item's intake row, as its detail shows it.
+// IssueIntake A work item's intake row, as its detail and its project's intake list show it.
 type IssueIntake struct {
 	// DuplicateToID The work item it duplicates; null unless its status is duplicate, and null when that work item is deleted or the caller does not see it.
 	DuplicateToID nullable.Nullable[uuid.UUID] `json:"duplicate_to_id"`
@@ -883,6 +1022,42 @@ type ListDescriptionVersionsParams struct {
 	Cursor *externalRef0.Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 }
 
+// ListIntakeIssuesParams defines parameters for ListIntakeIssues.
+type ListIntakeIssuesParams struct {
+	// Status pending, snoozed, accepted, declined or duplicate alternatives, each the status at the moment of the request: pending takes a snooze whose time has come, snoozed one whose time has not; left out, every status. CSV; repeated parameters are not allowed.
+	Status *[]string `form:"status,omitempty" json:"status,omitempty"`
+
+	// Priority urgent, high, medium, low or none. CSV; repeated parameters are not allowed.
+	Priority *[]string `form:"priority,omitempty" json:"priority,omitempty"`
+
+	// LabelID UUID or none alternatives. CSV; repeated parameters are not allowed.
+	LabelID *[]string `form:"label_id,omitempty" json:"label_id,omitempty"`
+
+	// AssigneeID UUID, me or none alternatives. CSV; repeated parameters are not allowed.
+	AssigneeID *[]string `form:"assignee_id,omitempty" json:"assignee_id,omitempty"`
+
+	// CreatedByID UUID or me alternatives. CSV; repeated parameters are not allowed.
+	CreatedByID *[]string `form:"created_by_id,omitempty" json:"created_by_id,omitempty"`
+
+	// CreatedAt A day, a..b, ..b or a.., not none, of the work item's creation: from the first day's midnight UTC, in it, to the midnight after the last, out of it. Repeated parameters are not allowed.
+	CreatedAt *string `form:"created_at,omitempty" json:"created_at,omitempty"`
+
+	// UpdatedAt A day, a..b, ..b or a.., not none, of the work item's last change: from the first day's midnight UTC, in it, to the midnight after the last, out of it. Repeated parameters are not allowed.
+	UpdatedAt *string `form:"updated_at,omitempty" json:"updated_at,omitempty"`
+
+	// OrderBy By the work item's creation, its last change or its number, descending with a leading minus; -created_at when left out.
+	OrderBy *ListIntakeIssuesParamsOrderBy `form:"order_by,omitempty" json:"order_by,omitempty"`
+
+	// Limit The page size, 1–100; 50 when absent. Outside that range the answer is 422 validation_failed on limit.
+	Limit *externalRef0.Limit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Cursor The next_cursor of the page before; absent for the first page. A cursor that does not decode, has an unknown version or a payload of another shape than this list's, or is not spelled as the server writes it is 400 bad_request on cursor.
+	Cursor *externalRef0.Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
+
+// ListIntakeIssuesParamsOrderBy defines parameters for ListIntakeIssues.
+type ListIntakeIssuesParamsOrderBy string
+
 // ListIssuesParams defines parameters for ListIssues.
 type ListIssuesParams struct {
 	// StateID UUID alternatives. CSV; repeated parameters are not allowed.
@@ -1019,6 +1194,9 @@ type ListMemberIssuesParamsRelation string
 // UpdateDraftJSONRequestBody defines body for UpdateDraft for application/json ContentType.
 type UpdateDraftJSONRequestBody = DraftUpdate
 
+// UpdateIntakeIssueJSONRequestBody defines body for UpdateIntakeIssue for application/json ContentType.
+type UpdateIntakeIssueJSONRequestBody = IntakeIssueUpdate
+
 // TriageIntakeIssueJSONRequestBody defines body for TriageIntakeIssue for application/json ContentType.
 type TriageIntakeIssueJSONRequestBody = IntakeTriage
 
@@ -1075,6 +1253,12 @@ type ServerInterface interface {
 	// PublishDraft Publish your stored issue draft
 	// (POST /api/v0/drafts/{draft_id}/publish)
 	PublishDraft(w http.ResponseWriter, r *http.Request, draftID DraftID)
+	// DeleteIntakeIssue Delete a work item of a project's intake
+	// (DELETE /api/v0/intake-issues/{issue_id})
+	DeleteIntakeIssue(w http.ResponseWriter, r *http.Request, issueID IssueID)
+	// UpdateIntakeIssue Change a work item of a project's intake
+	// (PATCH /api/v0/intake-issues/{issue_id})
+	UpdateIntakeIssue(w http.ResponseWriter, r *http.Request, issueID IssueID)
 	// TriageIntakeIssue Triage a work item of a project's intake
 	// (POST /api/v0/intake-issues/{issue_id}/triage)
 	TriageIntakeIssue(w http.ResponseWriter, r *http.Request, issueID IssueID)
@@ -1168,6 +1352,9 @@ type ServerInterface interface {
 	// UnsubscribeIssue Unsubscribe from a work item
 	// (POST /api/v0/issues/{issue_id}/unsubscribe)
 	UnsubscribeIssue(w http.ResponseWriter, r *http.Request, issueID IssueID)
+	// ListIntakeIssues List a project's intake
+	// (GET /api/v0/projects/{project_id}/intake-issues)
+	ListIntakeIssues(w http.ResponseWriter, r *http.Request, projectID ProjectID, params ListIntakeIssuesParams)
 	// SubmitIntakeIssue Submit a work item to a project's intake
 	// (POST /api/v0/projects/{project_id}/intake-issues)
 	SubmitIntakeIssue(w http.ResponseWriter, r *http.Request, projectID ProjectID)
@@ -1183,6 +1370,9 @@ type ServerInterface interface {
 	// CreateDraft Save an unfinished issue draft
 	// (POST /api/v0/workspaces/{slug}/drafts)
 	CreateDraft(w http.ResponseWriter, r *http.Request, slug Slug)
+	// GetIntakeCounts Count the pending work items of a workspace's intakes
+	// (GET /api/v0/workspaces/{slug}/intake-counts)
+	GetIntakeCounts(w http.ResponseWriter, r *http.Request, slug Slug)
 	// SearchIssues Search visible work items
 	// (GET /api/v0/workspaces/{slug}/issue-search)
 	SearchIssues(w http.ResponseWriter, r *http.Request, slug Slug, params SearchIssuesParams)
@@ -1353,6 +1543,58 @@ func (siw *ServerInterfaceWrapper) PublishDraft(w http.ResponseWriter, r *http.R
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PublishDraft(w, r, draftID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteIntakeIssue operation middleware
+func (siw *ServerInterfaceWrapper) DeleteIntakeIssue(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "issue_id" -------------
+	var issueID IssueID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "issue_id", r.PathValue("issue_id"), &issueID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "issue_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteIntakeIssue(w, r, issueID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateIntakeIssue operation middleware
+func (siw *ServerInterfaceWrapper) UpdateIntakeIssue(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "issue_id" -------------
+	var issueID IssueID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "issue_id", r.PathValue("issue_id"), &issueID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "issue_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateIntakeIssue(w, r, issueID)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -2331,6 +2573,165 @@ func (siw *ServerInterfaceWrapper) UnsubscribeIssue(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r)
 }
 
+// ListIntakeIssues operation middleware
+func (siw *ServerInterfaceWrapper) ListIntakeIssues(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "project_id" -------------
+	var projectID ProjectID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "project_id", r.PathValue("project_id"), &projectID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "project_id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListIntakeIssuesParams
+
+	// ------------- Optional query parameter "status" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", false, false, "status", r.URL.Query(), &params.Status, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "status"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "status", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "priority" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", false, false, "priority", r.URL.Query(), &params.Priority, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "priority"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "priority", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "label_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", false, false, "label_id", r.URL.Query(), &params.LabelID, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "label_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "label_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "assignee_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", false, false, "assignee_id", r.URL.Query(), &params.AssigneeID, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "assignee_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "assignee_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "created_by_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", false, false, "created_by_id", r.URL.Query(), &params.CreatedByID, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "created_by_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "created_by_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "created_at" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "created_at", r.URL.Query(), &params.CreatedAt, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "created_at"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "created_at", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "updated_at" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "updated_at", r.URL.Query(), &params.UpdatedAt, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "updated_at"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "updated_at", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "order_by" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "order_by", r.URL.Query(), &params.OrderBy, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "order_by"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "order_by", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListIntakeIssues(w, r, projectID, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // SubmitIntakeIssue operation middleware
 func (siw *ServerInterfaceWrapper) SubmitIntakeIssue(w http.ResponseWriter, r *http.Request) {
 
@@ -2757,6 +3158,32 @@ func (siw *ServerInterfaceWrapper) CreateDraft(w http.ResponseWriter, r *http.Re
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.CreateDraft(w, r, slug)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetIntakeCounts operation middleware
+func (siw *ServerInterfaceWrapper) GetIntakeCounts(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "slug" -------------
+	var slug Slug
+
+	err = runtime.BindStyledParameterWithOptions("simple", "slug", r.PathValue("slug"), &slug, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "slug", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetIntakeCounts(w, r, slug)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -3261,8 +3688,12 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/workspaces/{slug}/members/{user_id}/issues", wrapper.ListMemberIssues)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/projects/{project_id}/issues", wrapper.ListIssues)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/projects/{project_id}/issues", wrapper.CreateIssue)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/projects/{project_id}/intake-issues", wrapper.ListIntakeIssues)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/projects/{project_id}/intake-issues", wrapper.SubmitIntakeIssue)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/intake-issues/{issue_id}/triage", wrapper.TriageIntakeIssue)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v0/intake-issues/{issue_id}", wrapper.DeleteIntakeIssue)
+	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/intake-issues/{issue_id}", wrapper.UpdateIntakeIssue)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/workspaces/{slug}/intake-counts", wrapper.GetIntakeCounts)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v0/issues/{issue_id}", wrapper.DeleteIssue)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/issues/{issue_id}", wrapper.GetIssue)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/issues/{issue_id}", wrapper.UpdateIssue)
@@ -3515,6 +3946,93 @@ type PublishDraftdefaultApplicationProblemPlusJSONResponse struct {
 }
 
 func (response PublishDraftdefaultApplicationProblemPlusJSONResponse) VisitPublishDraftResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteIntakeIssueRequestObject struct {
+	IssueID IssueID `json:"issue_id"`
+}
+
+type DeleteIntakeIssueResponseObject interface {
+	VisitDeleteIntakeIssueResponse(w http.ResponseWriter) error
+}
+
+type DeleteIntakeIssue204Response struct {
+}
+
+func (response DeleteIntakeIssue204Response) VisitDeleteIntakeIssueResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteIntakeIssuedefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response DeleteIntakeIssuedefaultApplicationProblemPlusJSONResponse) VisitDeleteIntakeIssueResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateIntakeIssueRequestObject struct {
+	IssueID IssueID `json:"issue_id"`
+	Body    *UpdateIntakeIssueJSONRequestBody
+}
+
+type UpdateIntakeIssueResponseObject interface {
+	VisitUpdateIntakeIssueResponse(w http.ResponseWriter) error
+}
+
+type UpdateIntakeIssue200JSONResponse IssueDetail
+
+func (response UpdateIntakeIssue200JSONResponse) VisitUpdateIntakeIssueResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateIntakeIssuedefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response UpdateIntakeIssuedefaultApplicationProblemPlusJSONResponse) VisitUpdateIntakeIssueResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -4927,6 +5445,53 @@ func (response UnsubscribeIssuedefaultApplicationProblemPlusJSONResponse) VisitU
 	return err
 }
 
+type ListIntakeIssuesRequestObject struct {
+	ProjectID ProjectID `json:"project_id"`
+	Params    ListIntakeIssuesParams
+}
+
+type ListIntakeIssuesResponseObject interface {
+	VisitListIntakeIssuesResponse(w http.ResponseWriter) error
+}
+
+type ListIntakeIssues200JSONResponse IntakeIssuePage
+
+func (response ListIntakeIssues200JSONResponse) VisitListIntakeIssuesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListIntakeIssuesdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response ListIntakeIssuesdefaultApplicationProblemPlusJSONResponse) VisitListIntakeIssuesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type SubmitIntakeIssueRequestObject struct {
 	ProjectID ProjectID `json:"project_id"`
 	Body      *SubmitIntakeIssueJSONRequestBody
@@ -5162,6 +5727,52 @@ func (response CreateDraftdefaultApplicationProblemPlusJSONResponse) VisitCreate
 	return err
 }
 
+type GetIntakeCountsRequestObject struct {
+	Slug Slug `json:"slug"`
+}
+
+type GetIntakeCountsResponseObject interface {
+	VisitGetIntakeCountsResponse(w http.ResponseWriter) error
+}
+
+type GetIntakeCounts200JSONResponse IntakeCounts
+
+func (response GetIntakeCounts200JSONResponse) VisitGetIntakeCountsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetIntakeCountsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response GetIntakeCountsdefaultApplicationProblemPlusJSONResponse) VisitGetIntakeCountsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type SearchIssuesRequestObject struct {
 	Slug   Slug `json:"slug"`
 	Params SearchIssuesParams
@@ -5321,6 +5932,12 @@ type StrictServerInterface interface {
 	// PublishDraft Publish your stored issue draft
 	// (POST /api/v0/drafts/{draft_id}/publish)
 	PublishDraft(ctx context.Context, request PublishDraftRequestObject) (PublishDraftResponseObject, error)
+	// DeleteIntakeIssue Delete a work item of a project's intake
+	// (DELETE /api/v0/intake-issues/{issue_id})
+	DeleteIntakeIssue(ctx context.Context, request DeleteIntakeIssueRequestObject) (DeleteIntakeIssueResponseObject, error)
+	// UpdateIntakeIssue Change a work item of a project's intake
+	// (PATCH /api/v0/intake-issues/{issue_id})
+	UpdateIntakeIssue(ctx context.Context, request UpdateIntakeIssueRequestObject) (UpdateIntakeIssueResponseObject, error)
 	// TriageIntakeIssue Triage a work item of a project's intake
 	// (POST /api/v0/intake-issues/{issue_id}/triage)
 	TriageIntakeIssue(ctx context.Context, request TriageIntakeIssueRequestObject) (TriageIntakeIssueResponseObject, error)
@@ -5414,6 +6031,9 @@ type StrictServerInterface interface {
 	// UnsubscribeIssue Unsubscribe from a work item
 	// (POST /api/v0/issues/{issue_id}/unsubscribe)
 	UnsubscribeIssue(ctx context.Context, request UnsubscribeIssueRequestObject) (UnsubscribeIssueResponseObject, error)
+	// ListIntakeIssues List a project's intake
+	// (GET /api/v0/projects/{project_id}/intake-issues)
+	ListIntakeIssues(ctx context.Context, request ListIntakeIssuesRequestObject) (ListIntakeIssuesResponseObject, error)
 	// SubmitIntakeIssue Submit a work item to a project's intake
 	// (POST /api/v0/projects/{project_id}/intake-issues)
 	SubmitIntakeIssue(ctx context.Context, request SubmitIntakeIssueRequestObject) (SubmitIntakeIssueResponseObject, error)
@@ -5429,6 +6049,9 @@ type StrictServerInterface interface {
 	// CreateDraft Save an unfinished issue draft
 	// (POST /api/v0/workspaces/{slug}/drafts)
 	CreateDraft(ctx context.Context, request CreateDraftRequestObject) (CreateDraftResponseObject, error)
+	// GetIntakeCounts Count the pending work items of a workspace's intakes
+	// (GET /api/v0/workspaces/{slug}/intake-counts)
+	GetIntakeCounts(ctx context.Context, request GetIntakeCountsRequestObject) (GetIntakeCountsResponseObject, error)
 	// SearchIssues Search visible work items
 	// (GET /api/v0/workspaces/{slug}/issue-search)
 	SearchIssues(ctx context.Context, request SearchIssuesRequestObject) (SearchIssuesResponseObject, error)
@@ -5610,6 +6233,65 @@ func (sh *strictHandler) PublishDraft(w http.ResponseWriter, r *http.Request, dr
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(PublishDraftResponseObject); ok {
 		if err := validResponse.VisitPublishDraftResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteIntakeIssue operation middleware
+func (sh *strictHandler) DeleteIntakeIssue(w http.ResponseWriter, r *http.Request, issueID IssueID) {
+	var request DeleteIntakeIssueRequestObject
+
+	request.IssueID = issueID
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteIntakeIssue(ctx, request.(DeleteIntakeIssueRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteIntakeIssue")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteIntakeIssueResponseObject); ok {
+		if err := validResponse.VisitDeleteIntakeIssueResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateIntakeIssue operation middleware
+func (sh *strictHandler) UpdateIntakeIssue(w http.ResponseWriter, r *http.Request, issueID IssueID) {
+	var request UpdateIntakeIssueRequestObject
+
+	request.IssueID = issueID
+
+	var body UpdateIntakeIssueJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateIntakeIssue(ctx, request.(UpdateIntakeIssueRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateIntakeIssue")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateIntakeIssueResponseObject); ok {
+		if err := validResponse.VisitUpdateIntakeIssueResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -6500,6 +7182,33 @@ func (sh *strictHandler) UnsubscribeIssue(w http.ResponseWriter, r *http.Request
 	}
 }
 
+// ListIntakeIssues operation middleware
+func (sh *strictHandler) ListIntakeIssues(w http.ResponseWriter, r *http.Request, projectID ProjectID, params ListIntakeIssuesParams) {
+	var request ListIntakeIssuesRequestObject
+
+	request.ProjectID = projectID
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListIntakeIssues(ctx, request.(ListIntakeIssuesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListIntakeIssues")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListIntakeIssuesResponseObject); ok {
+		if err := validResponse.VisitListIntakeIssuesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // SubmitIntakeIssue operation middleware
 func (sh *strictHandler) SubmitIntakeIssue(w http.ResponseWriter, r *http.Request, projectID ProjectID) {
 	var request SubmitIntakeIssueRequestObject
@@ -6646,6 +7355,32 @@ func (sh *strictHandler) CreateDraft(w http.ResponseWriter, r *http.Request, slu
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(CreateDraftResponseObject); ok {
 		if err := validResponse.VisitCreateDraftResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetIntakeCounts operation middleware
+func (sh *strictHandler) GetIntakeCounts(w http.ResponseWriter, r *http.Request, slug Slug) {
+	var request GetIntakeCountsRequestObject
+
+	request.Slug = slug
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetIntakeCounts(ctx, request.(GetIntakeCountsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetIntakeCounts")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetIntakeCountsResponseObject); ok {
+		if err := validResponse.VisitGetIntakeCountsResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

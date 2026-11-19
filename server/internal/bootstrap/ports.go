@@ -313,6 +313,15 @@ func (p issueProjects) Visible(ctx context.Context, workspaceID, actorID uuid.UU
 	return out, nil
 }
 
+// IntakeOn is project's IntakeIssueProjects: no project with an error.
+func (p issueProjects) IntakeOn(ctx context.Context, ids []uuid.UUID) ([]uuid.UUID, error) {
+	on, err := p.projects.IntakeIssueProjects(ctx, ids)
+	if err != nil {
+		return nil, err
+	}
+	return on, nil
+}
+
 func (p issueProjects) ListStates(ctx context.Context, projectIDs []uuid.UUID) ([]issue.StateRef, error) {
 	states, err := p.projects.IssueListStates(ctx, projectIDs)
 	if err != nil {

@@ -39,9 +39,10 @@ func intakeIn(t *testing.T, raw string) *answeredIntake {
 // change, archiving and unarchiving of Fix. With Web's intake turned on,
 // bob's submission of Login breaks answers it pending, without a time or a
 // work item it duplicates, and so do its read and its read by its
-// identifier, by bob and by alice; alice's acceptance answers it accepted,
-// and so do then bob's read, read by its identifier, change into Done,
-// archiving and unarchiving of it.
+// identifier, by bob and by alice, and bob's change of it in the intake
+// (updateIntakeIssue, M7 P2b spec 2.4); alice's acceptance answers it
+// accepted, and so do then bob's read, read by its identifier, change into
+// Done, archiving and unarchiving of it.
 func TestEachDetailAnswerCarriesItsIntakeRow(t *testing.T) {
 	w := newIssueWorld(t)
 	var fix struct {
@@ -92,6 +93,10 @@ func TestEachDetailAnswerCarriesItsIntakeRow(t *testing.T) {
 				t.Errorf("GET %s by %s: intake %+v, want %+v", path, name, got, pending)
 			}
 		}
+	}
+	raw = w.send(t, "bob", http.MethodPatch, intakeItemPath(login.ID), `{"name":"Login breaks, mended"}`, http.StatusOK)
+	if got := intakeIn(t, raw); !reflect.DeepEqual(got, pending) {
+		t.Errorf("bob's change of Login breaks in the intake answers intake %+v, want %+v", got, pending)
 	}
 	accepted := &answeredIntake{Status: "accepted"}
 	raw = w.send(t, "alice", http.MethodPost, "/api/v0/intake-issues/"+login.ID.String()+"/triage", `{"status":"accepted"}`, http.StatusOK)

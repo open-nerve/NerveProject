@@ -143,6 +143,10 @@ paths:
     $ref: 'modules/issue.yaml#/paths/~1api~1v0~1projects~1{project_id}~1intake-issues'
   /api/v0/intake-issues/{issue_id}/triage:
     $ref: 'modules/issue.yaml#/paths/~1api~1v0~1intake-issues~1{issue_id}~1triage'
+  /api/v0/intake-issues/{issue_id}:
+    $ref: 'modules/issue.yaml#/paths/~1api~1v0~1intake-issues~1{issue_id}'
+  /api/v0/workspaces/{slug}/intake-counts:
+    $ref: 'modules/issue.yaml#/paths/~1api~1v0~1workspaces~1{slug}~1intake-counts'
   /api/v0/issues/{issue_id}:
     $ref: 'modules/issue.yaml#/paths/~1api~1v0~1issues~1{issue_id}'
   /api/v0/issues/{issue_id}/archive:

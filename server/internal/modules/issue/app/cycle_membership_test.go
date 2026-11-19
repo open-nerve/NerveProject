@@ -37,8 +37,8 @@ func joinCreate(w *world, p *fakePlanning, events shared.EventPublisher) *app.Cr
 }
 
 func joinUpdate(w *world, p *fakePlanning, events shared.EventPublisher) *app.UpdateIssue {
-	return app.NewUpdateIssue(app.UpdateIssueDeps{Events: events, Sanitizer: descriptionSanitizer{}, Locks: w.locks, Issues: w.issues,
-		States: w.project, Labels: w.project, Members: w.project, Planning: p, Profiles: w.profiles, Clock: clockAt{at: clockNow, log: w.log}})
+	return app.NewUpdateIssue(app.UpdateIssueDeps{Locks: w.locks, Clock: clockAt{at: clockNow, log: w.log}, Update: app.NewIssueUpdate(app.IssueUpdateDeps{Events: events, Sanitizer: descriptionSanitizer{}, Locks: w.locks, Issues: w.issues,
+		States: w.project, Labels: w.project, Members: w.project, Planning: p, Profiles: w.profiles})})
 }
 
 // namedCycle is the cycle t as an activity names it.

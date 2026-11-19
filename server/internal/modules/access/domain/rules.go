@@ -154,12 +154,31 @@ var rules = map[shared.Action]Rule{
 	// As state.create: the project's admins, and the workspace's admin who
 	// is its active member, triage its intake (M7 design 3.10, 15 B).
 	"intake.triage": {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin}},
+	// As issue.read: every active member of the project reads its intake,
+	// its guest too, who sees only his own submissions when he sees only
+	// his own work items: the issue module's guest rule; turned off or not
+	// (M7 design 3.10, 3.11, P2b spec 2.3).
+	"intake.read": {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember, shared.RoleGuest}},
+	// As intake.submit: every active member of the project changes a work
+	// item of its intake; that one who is not its admin submitted it, and
+	// that a guest changes only its name and description, are the issue
+	// module's relative rules (M7 design 3.10, P2b spec 2.4).
+	"intake.update": {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember, shared.RoleGuest}},
+	// As issue.delete: the project's admins, and the work item's submitter,
+	// its creator, while a member or an admin of the project, not a guest
+	// who submitted it (M7 design 3.10, P2b spec 2.5).
+	"intake.delete": {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin}, AllowCreator: true},
 	// Every active member of the workspace: getIssueByIdentifier's decision
 	// in the workspace, before issue.read on the project of the work item
 	// it finds, which the guest rule follows (M4 design 3.4, 3.7).
 	"issue_draft.write": {Level: LevelWorkspace, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember}},
 	"member_issue.list": {Level: LevelWorkspace, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember}},
 	"issue.search":      {Level: LevelWorkspace, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember, shared.RoleGuest}},
+	// As issue.search: every active member of the workspace counts the
+	// pending work items of the intakes of the projects he sees; which
+	// projects, and whose work items a guest counts, are the issue
+	// module's (M7 design 3.10, P2b spec 2.6).
+	"intake.count": {Level: LevelWorkspace, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember, shared.RoleGuest}},
 	// One's own notifications: every active member of the workspace (M7
 	// design 3.10). Which of them he sees is the notification module's, by
 	// what he reads now (M7 P1c spec 2.5).

@@ -158,6 +158,28 @@ var issueWrites = []issueWrite{
 			return "/api/v0/intake-issues/" + w.submitted(t).String() + "/triage"
 		},
 		body: func(*testing.T, issueWorld) string { return `{"status":"accepted"}` }, want: http.StatusOK, waits: "states", mode: "ACCESS EXCLUSIVE"},
+	// A work item submitted to Web's intake, which the send renames and
+	// labels Bug: through the update core, the labels are the first table it
+	// reads under the lock that its precheck did not (M7 P2b spec 2.4).
+	{workspaceLock: "no lock", projectLock: "FOR NO KEY UPDATE", op: "updateIntakeIssue", method: http.MethodPatch,
+		path: "/api/v0/intake-issues/{issue_id}",
+		target: func(t *testing.T, w issueWorld) string {
+			return "/api/v0/intake-issues/" + w.submitted(t).String()
+		},
+		body: func(_ *testing.T, w issueWorld) string {
+			return `{"name":"Mend","label_ids":["` + w.bug.String() + `"]}`
+		}, want: http.StatusOK,
+		waits: "labels", mode: "ACCESS EXCLUSIVE"},
+	// A work item submitted to Web's intake, pending, which the send
+	// deletes through the deletion core (spec 2.5): as deleteIssue, it reads
+	// nothing under the lock that its precheck did not, so it waits for the
+	// work items' table, which it writes first.
+	{workspaceLock: "no lock", projectLock: "FOR NO KEY UPDATE", op: "deleteIntakeIssue", method: http.MethodDelete,
+		path: "/api/v0/intake-issues/{issue_id}",
+		target: func(t *testing.T, w issueWorld) string {
+			return "/api/v0/intake-issues/" + w.submitted(t).String()
+		},
+		body: func(*testing.T, issueWorld) string { return "" }, want: http.StatusNoContent, waits: "issues", mode: "SHARE"},
 }
 
 // issueTables are the tables a write on the work-item side reads or

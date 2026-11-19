@@ -29,18 +29,11 @@ func (u *ListIssues) Execute(ctx context.Context, projectID uuid.UUID, raw map[s
 	}
 	var page IssueListPage
 	err = u.d.ReadTx.WithinTx(ctx, func(ctx context.Context) error {
-		wid, found, err := u.d.Locks.projects.Find(ctx, projectID)
-		if err != nil {
-			return err
-		}
-		if !found {
-			return domain.ErrProjectNotFound
-		}
 		action := domain.ActionRead
 		if q.Filters.Archived {
 			action = domain.ActionArchive
 		}
-		grant, err := u.d.Locks.decide(ctx, actor, action, wid, projectID, nil, domain.ErrProjectNotFound)
+		grant, err := u.d.Locks.seeProject(ctx, actor, action, projectID, domain.ErrProjectNotFound)
 		if err != nil {
 			return err
 		}

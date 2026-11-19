@@ -50,6 +50,17 @@ func (f *fakeIntake) TriageIntake(ctx context.Context, r app.IntakeTriage) error
 	return nil
 }
 
+func (f *fakeIntake) DeleteIntake(ctx context.Context, d app.IntakeDeletion) error {
+	if err := f.log.add(ctx, "DeleteIntake", d.IssueID); err != nil {
+		return err
+	}
+	if _, ok := f.facts[d.IssueID]; !ok {
+		return fmt.Errorf("DeleteIntake: the work item %s has no intake row", d.IssueID)
+	}
+	delete(f.facts, d.IssueID)
+	return nil
+}
+
 func (f *fakeIntake) InsertActivities(ctx context.Context, rows []app.ActivityRow) error {
 	if err := f.fakeIssues.InsertActivities(ctx, rows); err != nil {
 		return err

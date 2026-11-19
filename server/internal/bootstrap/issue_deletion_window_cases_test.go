@@ -61,6 +61,10 @@ func deletionWindowCases() []deletionWindowCase {
 		{"deleteIssueComment", "DELETE", "/api/v0/issue-comments/{comment_id}", ""},
 		{"submitIntakeIssue", "POST", "/api/v0/projects/{project_id}/intake-issues", `{"name":"Submitted"}`},
 		{"triageIntakeIssue", "POST", "/api/v0/intake-issues/{issue_id}/triage", `{"status":"declined"}`},
+		{"listIntakeIssues", "GET", "/api/v0/projects/{project_id}/intake-issues", ""},
+		{"getIntakeCounts", "GET", "/api/v0/workspaces/{slug}/intake-counts", ""},
+		{"updateIntakeIssue", "PATCH", "/api/v0/intake-issues/{issue_id}", `{"name":"Changed"}`},
+		{"deleteIntakeIssue", "DELETE", "/api/v0/intake-issues/{issue_id}", ""},
 	}
 }
 
@@ -89,7 +93,7 @@ func TestDeletionWindowCoversEveryIssueOperation(t *testing.T) {
 	}
 	slices.Sort(actual)
 	slices.Sort(want)
-	if len(reads) != 18 || len(writes) != 26 || !slices.Equal(actual, want) {
+	if len(reads) != 20 || len(writes) != 28 || !slices.Equal(actual, want) {
 		t.Fatalf("window reads=%d writes=%d operations=%q; contract=%q", len(reads), len(writes), actual, want)
 	}
 	checkIssueWriteDirectories(t, contract)
@@ -121,14 +125,15 @@ func (x deletionWindowTargets) absent(workspace bool) deletionWindowTargets {
 	return x
 }
 
-// request is r's path and body on x. A triage targets the work item in the
-// deleted project's intake, pending: an ordinary work item's triage is the
-// absent one's 404 with the deletion or without it.
+// request is r's path and body on x. A triage, a content edit and a
+// deletion of an intake item target the work item in the deleted project's
+// intake, pending: an ordinary work item's is the absent one's 404 with the
+// deletion or without it.
 func (r deletionWindowCase) request(x deletionWindowTargets) (string, string) {
 	switch r.op {
 	case "unarchiveIssue":
 		x.issue = x.archived
-	case "triageIntakeIssue":
+	case "triageIntakeIssue", "updateIntakeIssue", "deleteIntakeIssue":
 		x.issue = x.intake
 	}
 	path := x.replace(r.pattern)

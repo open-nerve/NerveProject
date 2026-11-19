@@ -73,3 +73,35 @@ func TestIssueDetailShape(t *testing.T) {
 		t.Fatal("detail must be explicit")
 	}
 }
+
+// IntakeIssue, a row of a project's intake list (M7 P2b spec 2.3, DP-11),
+// is the row a project list shows (Issue) and its intake row, required
+// and never null: the detail's (IssueIntake), not oneOf it and null.
+func TestIntakeIssueShape(t *testing.T) {
+	c := Load(t)
+	issue, row := c.doc.Components.Schemas["Issue"].Value, c.doc.Components.Schemas["IntakeIssue"].Value
+	intake := row.Properties["intake"]
+	if intake == nil || intake.Ref != "#/components/schemas/IssueIntake" || !slices.Contains(row.Required, "intake") {
+		t.Fatal("IntakeIssue intake must be a required IssueIntake, not null")
+	}
+	properties := maps.Clone(row.Properties)
+	delete(properties, "intake")
+	gotProperties, err := json.Marshal(properties)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantProperties, err := json.Marshal(issue.Properties)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(gotProperties, wantProperties) {
+		t.Fatal("IntakeIssue properties must equal Issue plus intake")
+	}
+	required := slices.DeleteFunc(slices.Clone(row.Required), func(s string) bool { return s == "intake" })
+	slices.Sort(required)
+	want := slices.Clone(issue.Required)
+	slices.Sort(want)
+	if !slices.Equal(required, want) || len(row.AllOf) > 0 {
+		t.Fatal("IntakeIssue required must equal Issue plus intake, spelled out")
+	}
+}

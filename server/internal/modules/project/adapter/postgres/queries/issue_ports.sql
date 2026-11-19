@@ -95,3 +95,11 @@ ORDER BY id;
 -- Facts only: no project locks, synthetic deletion times, or issue-table joins.
 SELECT id, deleted_at FROM projects
 WHERE id = ANY(sqlc.arg(ids)::uuid[]) AND deleted_at IS NOT NULL;
+
+-- name: IntakeIssueProjects :many
+-- The issue module's pending counts (M7 P2b spec 2.6, DP-20): which of the projects it sees, VisibleIssueProjects' in
+-- the same read transaction, are undeleted, unarchived and have their intake turned on, in id order. It reads no
+-- membership; which projects the caller sees is the one rule of VisibleIssueProjects.
+SELECT id FROM projects
+WHERE id = ANY(sqlc.arg(ids)::uuid[]) AND deleted_at IS NULL AND archived_at IS NULL AND intake_view
+ORDER BY id;

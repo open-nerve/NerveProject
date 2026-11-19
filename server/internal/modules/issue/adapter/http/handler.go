@@ -29,6 +29,26 @@ type TriageIntakeIssueUseCase interface {
 	Execute(ctx context.Context, id uuid.UUID, t domain.Triage) (domain.Issue, error)
 }
 
+// ListIntakeIssuesUseCase is app.ListIntakeIssues.
+type ListIntakeIssuesUseCase interface {
+	Execute(ctx context.Context, projectID uuid.UUID, raw map[string][]string) (app.IntakeIssuePage, error)
+}
+
+// CountIntakeIssuesUseCase is app.CountIntakeIssues.
+type CountIntakeIssuesUseCase interface {
+	Execute(ctx context.Context, slug string) ([]app.IntakeCount, error)
+}
+
+// UpdateIntakeIssueUseCase is app.UpdateIntakeIssue.
+type UpdateIntakeIssueUseCase interface {
+	Execute(ctx context.Context, id uuid.UUID, edit domain.IntakeIssueUpdate) (domain.Issue, error)
+}
+
+// DeleteIntakeIssueUseCase is app.DeleteIntakeIssue.
+type DeleteIntakeIssueUseCase interface {
+	Execute(ctx context.Context, id uuid.UUID) error
+}
+
 // GetIssueUseCase is app.GetIssue.
 type GetIssueUseCase interface {
 	Execute(ctx context.Context, id uuid.UUID) (domain.Issue, error)
@@ -182,6 +202,10 @@ type UseCases struct {
 	CreateIssue             CreateIssueUseCase
 	SubmitIntakeIssue       SubmitIntakeIssueUseCase
 	TriageIntakeIssue       TriageIntakeIssueUseCase
+	ListIntakeIssues        ListIntakeIssuesUseCase
+	CountIntakeIssues       CountIntakeIssuesUseCase
+	UpdateIntakeIssue       UpdateIntakeIssueUseCase
+	DeleteIntakeIssue       DeleteIntakeIssueUseCase
 	GetIssue                GetIssueUseCase
 	GetIssueByIdentifier    GetIssueByIdentifierUseCase
 	UpdateIssue             UpdateIssueUseCase

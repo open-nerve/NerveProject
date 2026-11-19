@@ -1,6 +1,6 @@
 # M7 / P2a 阶段记录：收集箱条目的生命周期——提交、分诊与工作项的边界
 
-> 状态：实施完成，待整分支审查。spec 与 plan 见 [P2a spec](../specs/P2a-intake-submit-triage.md)、[P2a plan](../plans/P2a-intake-submit-triage.md)，预检 [re-85](../../../reviews/re-85-M7P2a预检.md)（修正后通过，9 处重要、10 处次要全部采纳）。基线 main `31f38580`（P1c 的 noff）。
+> 状态：已完成，合入 main（noff `670399c4`），§9 为审查与集成的记录。spec 与 plan 见 [P2a spec](../specs/P2a-intake-submit-triage.md)、[P2a plan](../plans/P2a-intake-submit-triage.md)，预检 [re-85](../../../reviews/re-85-M7P2a预检.md)（修正后通过，9 处重要、10 处次要全部采纳）。基线 main `31f38580`（P1c 的 noff）。
 
 ## 1. 交付
 
@@ -94,4 +94,10 @@ web 作业在两次分支 CI 上的 Unit tests 为 718、724 秒（main 44337846
 
 ## 9. 整分支审查与集成
 
-（待填）
+- 整分支审查（fable，只读，`31f38580..497f82fe`）：Ready after fixes，没有严重的，1 处重要、5 处次要。I1 plane-diff 说 Plane 的搜索不排除在收集箱里的工作项——Plane 的 `Issue.issue_objects` 排除 Triage 状态组，列表、搜索、修改、归档都当它不存在，主控逐处核实后改写；m5 补 Plane 分诊动态的取值（`fdd2eee3`）；m1 接受的默认状态改在任何写之前读与核（`636b1fed`）；m2、m3 留到 P2b（修改核心的第三个调用者时一并处理），m4 记下不拆。
+- 限定复审（`497f82fe..636b1fed`）：Ready to merge；观察 n1（在收集箱里的工作项已在默认状态时接受不改什么）随 m3 留到 P2b。
+- 最终候选 `fin`（`636b1fed`）第 0 路失败于 M4 的 `TestPurgeParentCascadesUnprocessedIssueRows`：资产的启动清理落进测试窗口（§4），确定性复现后以 `2c1aaedc` 修；`fin2`（`3cb89348`）六项通过，F11 以 M6-M8-07 按规定重跑一次通过。
+- 分支 CI 44423757542（`3cb89348`）失败于 M4 的 `TestProjectDeletionPublishesAndEnqueuesAtomically`：连接池耗尽（§4），确定性复现后以 `a4bc78d5` 修；两路本机全过。分支 CI 44436473289（`51277005`）attempt 1 全绿：server (0) Test 671 秒、server (1) 681 秒、web Unit 498 秒、e2e 628/678 秒。
+- `--no-ff` 合入 main `670399c4`（父 `31f38580`、`51277005`，树与分支相同）。main CI 44439978269 失败于 M5 的 `TestLocalTransferDeadlines/active_download_is_not_canceled_by_an_idle_request_side`（“next transfer = 503”）：与 P2a 无关的测试竞态——带 Content-Length 的下载在客户端读满即 EOF，服务端还没归还唯一的传输槽，测试随即发下一次上传。没有重跑，开 `codex/m7-p2a-cifix` 按根因修（照同文件的兄弟子测试先等处理器的 finished 信号；确定性复现 10/10、修后通过、变异 10/10 失败），分支 CI 44443683237 全绿，`--no-ff` 合入 main `057176e5`。
+- main CI 44448217339 attempt 1 全绿：server (0) Test 857 秒、server (1) 881 秒（同样的代码上一次是 686、671 秒，运行机器的快慢约 25%；20 分钟的 73%、75%，P2b 盯住）、web Unit 480 秒、e2e 533/604 秒。
+- 归档 `.superpowers/sdd/M7-P2a-integration-20261119`（2946 个文件、unknown 0，清理后复核一致）；P2a 与修复分支的 worktree、本地与远端分支已删除（先核实已含在 main）。修复分支的原始证据日志放在它被忽略的目录里，随 worktree 删除而失去（结论见提交 `85ee570d` 与合入 `057176e5` 的说明及台账）；以后先归档修复分支的证据再删它。

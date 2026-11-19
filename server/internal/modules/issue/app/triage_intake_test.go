@@ -53,8 +53,8 @@ func newTriageWith(t *testing.T, locks app.Clock) *triageWorld {
 	w.locks = app.NewLocks(w.project, intake, w.auth, fakeGate{}, fakeTx{log: w.log}, noIssueAttachments{}, locks)
 	events := &recordedEvents{t: t}
 	clock := clockAt{at: clockNow, log: w.log}
-	update := app.NewUpdateIssue(app.UpdateIssueDeps{Events: events, Sanitizer: descriptionSanitizer{}, Locks: w.locks, Issues: intake,
-		States: w.project, Labels: w.project, Members: w.project, Profiles: w.profiles, Clock: clock})
+	update := app.NewIssueUpdate(app.IssueUpdateDeps{Events: events, Sanitizer: descriptionSanitizer{}, Locks: w.locks, Issues: intake,
+		States: w.project, Labels: w.project, Members: w.project, Profiles: w.profiles})
 	uc := app.NewTriageIntakeIssue(app.TriageIntakeIssueDeps{Locks: w.locks, Update: update, Intake: intake, Issues: intake, States: w.project,
 		Clock: clock})
 	return &triageWorld{world: w, uc: uc, intake: intake, events: events, id: id}
@@ -188,6 +188,49 @@ func TestTriageIntakeIssueAcceptNeedsADefaultStateOutsideTriage(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			w := newTriage(t)
 			w.project.states = tt.states
+			_, err := w.uc.Execute(as(alice), w.id, domain.Triage{Status: domain.IntakeAccepted})
+			var se *shared.Error
+			if err == nil || errors.As(err, &se) {
+				t.Errorf("Execute() = %v, want an error that is no refusal", err)
+			}
+			if calls := append(triaged(w.id), line("States", web)); !slices.Equal(w.log.calls, calls) {
+				t.Errorf("calls:\n%q\nwant\n%q", w.log.calls, calls)
+			}
+			if len(w.intake.triages) != 0 || len(w.intake.written) != 0 || w.issues.changed != nil || len(w.events.rows) != 0 {
+				t.Errorf("the triages %+v, the activity %+v, the fields %+v, the events %+v; want none", w.intake.triages, w.intake.written,
+					w.issues.changed, w.events.rows)
+			}
+		})
+	}
+}
+
+// An accept of a work item its project's default state already holds would
+// change nothing in it while its intake row says accepted: the row's
+// agreement with the state (M7 P2a spec 2.3) is broken, which no request
+// makes. It is an error, not a refusal, found where a default state of the
+// triage group is (M7 P2b spec 2.2, n1), before anything is written: no
+// intake row, no activity, no change of the work item, no event. From each
+// status an accept moves from, the effective one, and with a default state
+// of the completed group too.
+func TestTriageIntakeIssueAcceptNeedsADefaultStateOtherThanItsOwn(t *testing.T) {
+	notDefault, completing := backlog, done
+	notDefault.Default, completing.Default = false, true
+	for _, tt := range []struct {
+		name   string
+		stored domain.IntakeFacts
+		states []app.StateRef
+		in     uuid.UUID
+	}{
+		{"pending, in Backlog", domain.IntakeFacts{Status: domain.IntakePending}, []app.StateRef{backlog, done, triage}, backlog.ID},
+		{"snoozed, in Backlog", domain.IntakeFacts{Status: domain.IntakeSnoozed, SnoozedTill: &soon}, []app.StateRef{backlog, done, triage}, backlog.ID},
+		{"a snooze run out, in Done, the default", domain.IntakeFacts{Status: domain.IntakeSnoozed, SnoozedTill: &gone},
+			[]app.StateRef{notDefault, completing, triage}, done.ID},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			w := newTriage(t)
+			w.project.states = tt.states
+			w.issues.issue.StateID = tt.in
+			w.intake.facts[w.id] = tt.stored
 			_, err := w.uc.Execute(as(alice), w.id, domain.Triage{Status: domain.IntakeAccepted})
 			var se *shared.Error
 			if err == nil || errors.As(err, &se) {

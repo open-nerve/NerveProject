@@ -109,6 +109,35 @@ func (q *Queries) DeletedIssueProjects(ctx context.Context, ids []uuid.UUID) ([]
 	return items, nil
 }
 
+const intakeIssueProjects = `-- name: IntakeIssueProjects :many
+SELECT id FROM projects
+WHERE id = ANY($1::uuid[]) AND deleted_at IS NULL AND archived_at IS NULL AND intake_view
+ORDER BY id
+`
+
+// The issue module's pending counts (M7 P2b spec 2.6, DP-20): which of the projects it sees, VisibleIssueProjects' in
+// the same read transaction, are undeleted, unarchived and have their intake turned on, in id order. It reads no
+// membership; which projects the caller sees is the one rule of VisibleIssueProjects.
+func (q *Queries) IntakeIssueProjects(ctx context.Context, ids []uuid.UUID) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, intakeIssueProjects, ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const issueLabels = `-- name: IssueLabels :many
 SELECT id, name
 FROM labels

@@ -22,7 +22,7 @@ func TestIssueDeletionEvents(t *testing.T) {
 			if fail {
 				p.fail = errDisk
 			}
-			uc := app.NewDeleteIssue(app.DeleteIssueDeps{Events: p, Locks: w.locks, Rows: w.issues, Relations: app.NewRelationDeletions(w.issues, w.project), Clock: clockAt{at: clockNow, log: w.log}})
+			uc := app.NewDeleteIssue(app.DeleteIssueDeps{Locks: w.locks, Clock: clockAt{at: clockNow, log: w.log}, Delete: app.NewIssueRemoval(app.IssueRemovalDeps{Events: p, Rows: w.issues, Relations: app.NewRelationDeletions(w.issues, w.project)})})
 			err := uc.Execute(as(alice), id)
 			if fail {
 				if !errors.Is(err, errDisk) || len(p.rows) != 1 {
