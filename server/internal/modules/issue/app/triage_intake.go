@@ -111,9 +111,12 @@ func (u *TriageIntakeIssue) Execute(ctx context.Context, id uuid.UUID, t domain.
 	return triaged, nil
 }
 
-// hasIntakeRow is a triage's check of its work item i (write.check), as
-// read before the lock and again under it: one without an undeleted intake
-// row is 404 issue.intake_not_found, the value of one not there.
+// hasIntakeRow is the check (write.check) of the work item i of a write
+// on an intake item, as read before the lock and again under it: one
+// without an undeleted intake row is 404 issue.intake_not_found, the value
+// of one not there. A triage's and a deletion's check (M7 P2a spec 2.5,
+// P2b spec 2.5), and the first of a content edit's (intakeEditor, P2b spec
+// 2.4).
 func hasIntakeRow(_ context.Context, i domain.Issue, _ shared.Grant) error {
 	if i.Intake == nil {
 		return domain.ErrIntakeNotFound

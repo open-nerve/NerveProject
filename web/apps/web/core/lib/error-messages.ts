@@ -85,6 +85,7 @@ export const PROBLEM_MESSAGES: Readonly<Record<string, string>> = {
   "issue.not_archivable": "errors.issue_not_archivable",
   "issue.relation_not_found": "errors.issue_relation_not_found",
   "issue.in_triage": "errors.issue_in_triage",
+  "issue.intake_closed": "errors.issue_intake_closed",
   "issue.intake_disabled": "errors.issue_intake_disabled",
   "issue.intake_not_found": "errors.issue_intake_not_found",
   "issue.intake_transition_not_allowed": "errors.issue_intake_transition_not_allowed",

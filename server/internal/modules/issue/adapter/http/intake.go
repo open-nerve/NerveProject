@@ -42,13 +42,19 @@ func (h handler) TriageIntakeIssue(ctx context.Context, req gen.TriageIntakeIssu
 }
 
 // intakeOf is a work item's intake row f as its detail shows it (M7 P2a
-// spec 2.8): null for none; its status, and its time and the work item it
-// duplicates each null when it has none. Which of them the caller is
-// answered, at which moment, is the use case's (Locks.seenOne).
+// spec 2.8): null for none, else as issueIntake shows it. Which of them
+// the caller is answered, at which moment, is the use case's
+// (Locks.seenOne).
 func intakeOf(f *domain.IntakeFacts) nullable.Nullable[gen.IssueIntake] {
 	if f == nil {
 		return nullable.NewNullNullable[gen.IssueIntake]()
 	}
-	return nullable.NewNullableWithValue(gen.IssueIntake{Status: gen.IntakeStatus(f.Status), SnoozedTill: orNull(f.SnoozedTill),
-		DuplicateToID: orNull(f.DuplicateToID)})
+	return nullable.NewNullableWithValue(issueIntake(*f))
+}
+
+// issueIntake is an intake row f as a work item's detail and its project's
+// intake list show it: its status, and its time and the work item it
+// duplicates each null when it has none.
+func issueIntake(f domain.IntakeFacts) gen.IssueIntake {
+	return gen.IssueIntake{Status: gen.IntakeStatus(f.Status), SnoozedTill: orNull(f.SnoozedTill), DuplicateToID: orNull(f.DuplicateToID)}
 }

@@ -29,14 +29,17 @@ export function createClient(options?: ClientOptions) {
   return client;
 }
 
-// These two operations mix CSV alternatives with repeated date conditions.
-// OpenAPI types do not configure openapi-fetch's runtime serialization.
+// The lists whose query arrays are CSV alternatives: the two lists of work items mix them with repeated date
+// conditions; a project's intake list has CSV ones alone. OpenAPI types do not configure openapi-fetch's runtime
+// serialization.
+const csvListPaths = new Set([
+  "/api/v0/projects/{project_id}/issues",
+  "/api/v0/workspaces/{slug}/members/{user_id}/issues",
+  "/api/v0/projects/{project_id}/intake-issues",
+]);
+
 function listQueryOptions<Init extends { querySerializer?: unknown }>(path: string, init: Init): Init {
-  if (
-    (path !== "/api/v0/projects/{project_id}/issues" &&
-      path !== "/api/v0/workspaces/{slug}/members/{user_id}/issues") ||
-    init?.querySerializer !== undefined
-  ) {
+  if (!csvListPaths.has(path) || init?.querySerializer !== undefined) {
     return init;
   }
   return Object.assign({}, init, { querySerializer: listQueryString });
@@ -55,6 +58,7 @@ function listQueryString(query: Record<string, unknown>): string {
     "cycle_id",
     "module_id",
     "project_id",
+    "status",
   ]);
   const normal = createQuerySerializer();
   const csv = createQuerySerializer({ array: { style: "form", explode: false } });

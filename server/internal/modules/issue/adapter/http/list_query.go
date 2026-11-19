@@ -40,9 +40,19 @@ func listQueryBindingError(api *httpserver.API) func(http.ResponseWriter, *http.
 	}
 }
 
+// intakeListPattern is the route of a project's intake list (M7 P2b spec
+// 2.3), and intakeListQuery its query's parameters, each given once, its
+// days too (domain.ParseIntakeQuery).
+const intakeListPattern = "GET /api/v0/projects/{project_id}/intake-issues"
+
+var intakeListQuery = []string{"status", "priority", "label_id", "assignee_id", "created_by_id", "created_at", "updated_at", "order_by", "limit", "cursor"}
+
 // Each route declares its own single-valued query vocabulary; path and date
 // parameters must never be remapped just because a query uses the same name.
 func listSingleQuery(pattern, name string) bool {
+	if pattern == intakeListPattern {
+		return slices.Contains(intakeListQuery, name)
+	}
 	project := pattern == "GET /api/v0/projects/{project_id}/issues"
 	member := pattern == "GET /api/v0/workspaces/{slug}/members/{user_id}/issues"
 	if !project && !member {
@@ -60,7 +70,7 @@ func listSingleQuery(pattern, name string) bool {
 }
 
 func withListQuery(next gen.StrictHandlerFunc, operationID string) gen.StrictHandlerFunc {
-	if operationID != "ListIssues" && operationID != "ListMemberIssues" && operationID != "ListDrafts" && operationID != "SearchIssues" {
+	if !slices.Contains([]string{"ListIssues", "ListMemberIssues", "ListDrafts", "SearchIssues", "ListIntakeIssues"}, operationID) {
 		return next
 	}
 	return func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error) {

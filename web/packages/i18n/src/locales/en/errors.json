@@ -70,6 +70,7 @@
     "issue_not_archivable": "Only a completed or cancelled work item can be archived. Move it to such a state first.",
     "issue_relation_not_found": "The relation does not exist, or you cannot see either of its work items.",
     "issue_in_triage": "The work item is in the project's intake. Triage it before changing it.",
+    "issue_intake_closed": "The intake work item has been accepted, declined or marked a duplicate. It can no longer be edited in the intake.",
     "issue_intake_disabled": "Intake is turned off in this project. Turn it on to submit or triage work items.",
     "issue_intake_not_found": "The intake work item does not exist, or you cannot see it.",
     "issue_intake_transition_not_allowed": "The intake work item cannot move from its status to the one you chose.",
