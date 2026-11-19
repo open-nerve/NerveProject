@@ -177,11 +177,17 @@ func TestIntakeEditsDeletionsAndCountsInterleave(t *testing.T) {
 		}
 	})
 	t.Run("the counts, a submission holding Web", func(t *testing.T) {
+		// The pending count before the submission is read here, not assumed,
+		// so the subtest does not depend on what the ones before it left.
+		before := countsIn(t, w.reading("alice")(t, "/api/v0/workspaces/acme/intake-counts"))
+		if len(before) != 1 || before[0].ProjectID != w.web {
+			t.Fatalf("alice counts %+v before bob's submission; want Web's alone", before)
+		}
 		counts := func(what string, pending int64) {
 			t.Helper()
 			countsAre(t, "alice, "+what, w.reading("alice"), answeredCount{ProjectID: w.web, Pending: pending})
 		}
-		counts("before bob's submission", 1)
+		n := before[0].Pending
 		probe, g := requestTx(w.pool), newGate()
 		var e exchange
 		var done <-chan error
@@ -191,13 +197,13 @@ func TestIntakeEditsDeletionsAndCountsInterleave(t *testing.T) {
 		if !pgtest.RowWaits(t, w.pool, "projects", w.web, "FOR NO KEY UPDATE") {
 			t.Fatal("bob's submission, held past its writes, does not hold Web's row")
 		}
-		counts("while bob's submission holds Web", 1)
+		counts("while bob's submission holds Web", n)
 		requestOpen(g)
 		if err := result(t, pgtest.Soon(t), done, "bob's submission"); err != nil {
 			t.Fatal(err)
 		}
 		done = nil
 		intakeIs(t, "bob's submission", w.answered(t, e, http.StatusCreated), &answeredIntake{Status: "pending"})
-		counts("once bob's submission has committed", 2)
+		counts("once bob's submission has committed", n+1)
 	})
 }
