@@ -79,26 +79,35 @@ func (u *UpdateIntakeIssue) Execute(ctx context.Context, id uuid.UUID, edit doma
 // (domain.IntakeIssueUpdate.ContentOnly), as Locks reads it before the
 // lock and again under it, each time on the grant its decision answered
 // (spec 2.4, R4, R11, DP-5, DP-6): a work item without an intake row is
-// 404 issue.intake_not_found (hasIntakeRow); then a caller who is not the
-// project's admin (Grant.ProjectAdmin: its admin, or the workspace's admin
-// who is its member, its guest too) is 403 forbidden for a work item he
-// did not submit, which he did not create (Issue.CreatedBy), so for one of
-// no known creator too; then such a caller who is the project's guest is
-// 403 forbidden for fields but its name, its description and
-// skip_activity, given even as they are.
+// 404 issue.intake_not_found (hasIntakeRow); then the submitter rule
+// (refuseNonSubmitter); then a caller who is not the project's admin and
+// is its guest is 403 forbidden for fields but its name, its description
+// and skip_activity, given even as they are.
 func intakeEditor(actorID uuid.UUID, contentOnly bool) func(context.Context, domain.Issue, shared.Grant) error {
 	return func(ctx context.Context, i domain.Issue, g shared.Grant) error {
 		if err := hasIntakeRow(ctx, i, g); err != nil {
 			return err
 		}
-		switch {
-		case g.ProjectAdmin:
-			return nil
-		case !i.CreatedBy(actorID):
-			return shared.Forbidden()
-		case g.ProjectRole == shared.RoleGuest && !contentOnly:
+		if err := refuseNonSubmitter(actorID, i, g); err != nil {
+			return err
+		}
+		if !g.ProjectAdmin && g.ProjectRole == shared.RoleGuest && !contentOnly {
 			return shared.Forbidden()
 		}
 		return nil
 	}
+}
+
+// refuseNonSubmitter is the submitter rule of a write by actorID on the
+// work item i in the intake, on the grant g its decision answered (spec
+// 2.4, R4): the project's admin (Grant.ProjectAdmin: its admin, or the
+// workspace's admin who is its member, its guest too) passes; any other
+// caller is 403 forbidden for a work item he did not submit, which he did
+// not create (Issue.CreatedBy), so for one of no known creator too. A
+// content edit's (intakeEditor).
+func refuseNonSubmitter(actorID uuid.UUID, i domain.Issue, g shared.Grant) error {
+	if !g.ProjectAdmin && !i.CreatedBy(actorID) {
+		return shared.Forbidden()
+	}
+	return nil
 }

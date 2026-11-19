@@ -226,8 +226,19 @@ func (l Locks) see(ctx context.Context, actor shared.Actor, id uuid.UUID, action
 	return l.seeAs(ctx, actor, id, action, domain.ErrIssueNotFound)
 }
 
-// seeAs decides visibility using the named resource's not-found value.
+// seeAs decides visibility using the named resource's not-found value:
+// seeChoosing, action whatever the work item.
 func (l Locks) seeAs(ctx context.Context, actor shared.Actor, id uuid.UUID, action shared.Action, notFound error) (domain.Issue, shared.Grant, error) {
+	return l.seeChoosing(ctx, actor, id, func(domain.Issue) shared.Action { return action }, notFound)
+}
+
+// seeChoosing reads the undeleted work item id, archived or not, once,
+// without a lock, and decides for actor the action choose answers of the
+// work item as read (decide), with notFound for the work item that is not
+// there and for every 404 the decision answers. It answers the work item
+// as read, and the decision's grant.
+func (l Locks) seeChoosing(ctx context.Context, actor shared.Actor, id uuid.UUID, choose func(domain.Issue) shared.Action,
+	notFound error) (domain.Issue, shared.Grant, error) {
 	i, found, err := l.issues.GetIssue(ctx, id)
 	switch {
 	case err != nil:
@@ -235,7 +246,7 @@ func (l Locks) seeAs(ctx context.Context, actor shared.Actor, id uuid.UUID, acti
 	case !found:
 		return domain.Issue{}, shared.Grant{}, notFound
 	}
-	grant, err := l.decide(ctx, actor, action, i.WorkspaceID, i.ProjectID, &i, notFound)
+	grant, err := l.decide(ctx, actor, choose(i), i.WorkspaceID, i.ProjectID, &i, notFound)
 	if err != nil {
 		return domain.Issue{}, shared.Grant{}, err
 	}
