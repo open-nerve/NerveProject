@@ -166,6 +166,35 @@ it("a current row label replacement refusal is visible once and leaves the confi
   expect(document.querySelector('[role="option"]')?.getAttribute("aria-selected")).toBe("false");
 });
 
+const options = () => [...document.querySelectorAll<HTMLElement>('[role="option"]')];
+/** Picks the option named name as a pointer does: Headless UI's options select on the left button's mousedown. */
+const press = (name: string) =>
+  act(async () => {
+    options()
+      .find((option) => option.textContent === name)!
+      .dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true, button: 0 }));
+  });
+it.each(choices)("$name shows its options disabled while a selection is out, then takes the next", async (choice) => {
+  const labels = [labelOf(tab.project, "First", 1), labelOf(tab.project, "Second", 2)];
+  const write = heldChange<void>();
+  changed.mockReturnValueOnce(write.sent);
+  tab.nerve.respond = (call) => {
+    if (call.method === "GET" && call.path.endsWith("/labels")) call.answer(json(200, { data: labels }));
+  };
+  await open(choice);
+  await press("First");
+  expect(changed).toHaveBeenCalledExactlyOnceWith([labels[0]!.id]);
+  // One write at a time: while it is out the picker takes no selection, and each option says so.
+  expect(options().map((option) => option.getAttribute("aria-disabled"))).toEqual(["true", "true"]);
+  await press("Second");
+  expect(changed).toHaveBeenCalledTimes(1);
+  await act(async () => write.answer());
+  expect(options().map((option) => option.getAttribute("aria-disabled"))).toEqual([null, null]);
+  await press("Second");
+  expect(changed).toHaveBeenCalledTimes(2);
+  expect(changed).toHaveBeenLastCalledWith([labels[1]!.id]);
+});
+
 it("a refused row replacement after its popup closed cannot toast into the next opening", async () => {
   const existing = labelOf(tab.project, "Existing", 1);
   const write = heldChange<void>();
