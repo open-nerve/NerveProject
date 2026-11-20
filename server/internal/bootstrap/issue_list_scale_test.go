@@ -94,68 +94,10 @@ func TestIssueListScale(t *testing.T) {
 			var scenarios []listScaleScenario
 			matched, medians := map[string]int{}, map[string]float64{}
 			for _, db := range dbs {
-				f, pool, trace := db.f, db.pool, db.trace
-				scenarios = append(scenarios, f.scenarios()...)
-				for _, s := range f.scenarios() {
+				scenarios = append(scenarios, db.f.scenarios()...)
+				for _, s := range db.f.scenarios() {
 					t.Run(s.Name, func(t *testing.T) {
-						// A route of its own: a scenario's nine requests stay
-						// within the test route's rate limit (burst 100, 600 a
-						// minute), which a size's scenarios together would pass.
-						route := newIssueRoute(t, pool, postgres.NewTxManager(pool, 2*time.Second))
-						want := f.expected(s)
-						if len(want) <= s.Tail {
-							t.Fatal("empty performance scenario")
-						}
-						q := maps.Clone(s.Query)
-						if q == nil {
-							q = url.Values{}
-						}
-						offset := 0
-						if s.Tail > 0 {
-							offset = len(want) - s.Tail
-							q.Set("cursor", scaleCursor(t, s, want[offset-1]))
-						}
-						samples := make([]listScaleSample, 0, 6)
-						for i := 0; i < 6; i++ {
-							samples = append(samples, scaleRequest(t, f, route, trace, s, q, fmt.Sprintf("%s-%d", s.Name, i)))
-						}
-						listEvidence(t, target, s.Name+"-samples", samples)
-						var continuation listScaleContinuation
-						for _, sample := range samples {
-							continuation = f.checkPage(t, s, sample.Body, want, offset)
-						}
-						times, sqlTimes := []float64{}, []float64{}
-						for _, sample := range samples[1:] {
-							times = append(times, sample.ModuleMS)
-							sqlTimes = append(sqlTimes, sample.SQLMS["list"])
-						}
-						sorted, sqlSorted := slices.Sorted(slices.Values(times)), slices.Sorted(slices.Values(sqlTimes))
-						matched[s.Name], medians[s.Name] = len(want), sqlSorted[2]
-						t.Logf("%s roots=%d physical=%d matched=%d warmup_ms=%.3f samples_ms=%v min/median/max=%.3f/%.3f/%.3f sql_list_ms=%v sql_median=%.3f", s.Name, n, len(f.rows), len(want), samples[0].ModuleMS, times, sorted[0], sorted[2], sorted[4], sqlTimes, sqlSorted[2])
-						listEvidence(t, target, s.Name+"-summary", map[string]any{"matched": len(want), "physical": len(f.rows), "warmup_ms": samples[0].ModuleMS, "samples_ms": times, "min_ms": sorted[0], "median_ms": sorted[2], "max_ms": sorted[4], "sql_list_ms": sqlTimes, "sql_list_median_ms": sqlSorted[2]})
-						explainListStatements(t, pool, filepath.Join(target, "plans"), s.Name, samples[5].Statements)
-						// Actual first cursor -> next page, independent penultimate -> last, last -> empty fallback.
-						rows := continuation.Rows
-						if continuation.Cursor != "" {
-							continuation.Query.Set("cursor", continuation.Cursor)
-							next := scaleRequest(t, f, route, trace, s, continuation.Query, s.Name+"-next")
-							f.checkRows(t, s, checkListEnvelope(t, next.Body, false, false), rows, 50)
-							listEvidence(t, target, s.Name+"-next", next)
-						}
-						if len(rows) > 1 {
-							continuation.Query.Set("cursor", scaleCursor(t, s, rows[len(rows)-2]))
-							last := scaleRequest(t, f, route, trace, s, continuation.Query, s.Name+"-last")
-							f.checkRows(t, s, checkListEnvelope(t, last.Body, false, false), rows, len(rows)-1)
-							listEvidence(t, target, s.Name+"-last", last)
-						}
-						continuation.Query.Set("cursor", scaleCursor(t, s, rows[len(rows)-1]))
-						empty := scaleRequest(t, f, route, trace, s, continuation.Query, s.Name+"-empty")
-						listEvidence(t, target, s.Name+"-empty", empty)
-						f.checkRows(t, s, checkListEnvelope(t, empty.Body, false, false), rows, len(rows))
-						if _, ok := empty.SQLMS["fallback"]; !ok {
-							t.Fatal("missing actual fallback SQL")
-						}
-						explainListStatements(t, pool, filepath.Join(target, "plans"), s.Name+"-empty", empty.Statements)
+						matched[s.Name], medians[s.Name] = db.measureScenario(t, target, n, s)
 					})
 				}
 			}
@@ -171,6 +113,72 @@ type listScaleDB struct {
 	f     listScaleFixture
 	pool  *pgxpool.Pool
 	trace *listTrace
+}
+
+// measureScenario is TestIssueListScale's measurement of one scenario of
+// db, its size n, on a route of its own: a scenario's nine requests stay
+// within the test route's rate limit (burst 100, 600 a minute), which a
+// size's scenarios together would pass. 1 warmup and 5 samples of the first
+// page or, with s.Tail, of the last, then the actual next, last and empty
+// pages, with the EXPLAIN of the last sample and of the empty page. It
+// returns the rows s matches and their list-SQL median.
+func (db listScaleDB) measureScenario(t *testing.T, target string, n int, s listScaleScenario) (int, float64) {
+	f, pool, trace := db.f, db.pool, db.trace
+	route := newIssueRoute(t, pool, postgres.NewTxManager(pool, 2*time.Second))
+	want := f.expected(s)
+	if len(want) <= s.Tail {
+		t.Fatal("empty performance scenario")
+	}
+	q := maps.Clone(s.Query)
+	if q == nil {
+		q = url.Values{}
+	}
+	offset := 0
+	if s.Tail > 0 {
+		offset = len(want) - s.Tail
+		q.Set("cursor", scaleCursor(t, s, want[offset-1]))
+	}
+	samples := make([]listScaleSample, 0, 6)
+	for i := 0; i < 6; i++ {
+		samples = append(samples, scaleRequest(t, f, route, trace, s, q, fmt.Sprintf("%s-%d", s.Name, i)))
+	}
+	listEvidence(t, target, s.Name+"-samples", samples)
+	var continuation listScaleContinuation
+	for _, sample := range samples {
+		continuation = f.checkPage(t, s, sample.Body, want, offset)
+	}
+	times, sqlTimes := []float64{}, []float64{}
+	for _, sample := range samples[1:] {
+		times = append(times, sample.ModuleMS)
+		sqlTimes = append(sqlTimes, sample.SQLMS["list"])
+	}
+	sorted, sqlSorted := slices.Sorted(slices.Values(times)), slices.Sorted(slices.Values(sqlTimes))
+	t.Logf("%s roots=%d physical=%d matched=%d warmup_ms=%.3f samples_ms=%v min/median/max=%.3f/%.3f/%.3f sql_list_ms=%v sql_median=%.3f", s.Name, n, len(f.rows), len(want), samples[0].ModuleMS, times, sorted[0], sorted[2], sorted[4], sqlTimes, sqlSorted[2])
+	listEvidence(t, target, s.Name+"-summary", map[string]any{"matched": len(want), "physical": len(f.rows), "warmup_ms": samples[0].ModuleMS, "samples_ms": times, "min_ms": sorted[0], "median_ms": sorted[2], "max_ms": sorted[4], "sql_list_ms": sqlTimes, "sql_list_median_ms": sqlSorted[2]})
+	explainListStatements(t, pool, filepath.Join(target, "plans"), s.Name, samples[5].Statements)
+	// Actual first cursor -> next page, independent penultimate -> last, last -> empty fallback.
+	rows := continuation.Rows
+	if continuation.Cursor != "" {
+		continuation.Query.Set("cursor", continuation.Cursor)
+		next := scaleRequest(t, f, route, trace, s, continuation.Query, s.Name+"-next")
+		f.checkRows(t, s, checkListEnvelope(t, next.Body, false, false), rows, 50)
+		listEvidence(t, target, s.Name+"-next", next)
+	}
+	if len(rows) > 1 {
+		continuation.Query.Set("cursor", scaleCursor(t, s, rows[len(rows)-2]))
+		last := scaleRequest(t, f, route, trace, s, continuation.Query, s.Name+"-last")
+		f.checkRows(t, s, checkListEnvelope(t, last.Body, false, false), rows, len(rows)-1)
+		listEvidence(t, target, s.Name+"-last", last)
+	}
+	continuation.Query.Set("cursor", scaleCursor(t, s, rows[len(rows)-1]))
+	empty := scaleRequest(t, f, route, trace, s, continuation.Query, s.Name+"-empty")
+	listEvidence(t, target, s.Name+"-empty", empty)
+	f.checkRows(t, s, checkListEnvelope(t, empty.Body, false, false), rows, len(rows))
+	if _, ok := empty.SQLMS["fallback"]; !ok {
+		t.Fatal("missing actual fallback SQL")
+	}
+	explainListStatements(t, pool, filepath.Join(target, "plans"), s.Name+"-empty", empty.Statements)
+	return len(want), sqlSorted[2]
 }
 
 // newListScaleDB seeds a database of its own with n roots, the scope's or,
