@@ -61,10 +61,13 @@ func stateNamed(name string) underRow { return underRow{"states", "name", [2]str
 // labelNamed is the label name of each phase's project.
 func labelNamed(name string) underRow { return underRow{"labels", "name", [2]string{name, name}} }
 
+// viewNamed is the view name of each phase's project.
+func viewNamed(name string) underRow { return underRow{"issue_views", "name", [2]string{name, name}} }
+
 // rowPaths are the paths that name a row under a project by its id, by
 // their beginning, and the parameter each names it by.
 var rowPaths = map[string]string{"/api/v0/project-members/": "{project_member_id}", "/api/v0/states/": "{state_id}",
-	"/api/v0/labels/": "{label_id}"}
+	"/api/v0/labels/": "{label_id}", "/api/v0/views/": "{view_id}"}
 
 // param is the parameter w's path names: a row's id for a path of one
 // (rowPaths), else the project's.
@@ -111,6 +114,14 @@ var projectWrites = []projectWrite{
 	{op: "updateLabel", method: http.MethodPatch, path: "/api/v0/labels/%s", body: `{"name":"Checked"}`, want: http.StatusOK, row: labelNamed("QA")},
 	// The label renamed before, deleted.
 	{op: "deleteLabel", method: http.MethodDelete, path: "/api/v0/labels/%s", want: http.StatusNoContent, row: labelNamed("Checked")},
+	// A view of the project's, its views turned on: /views/{view_id} names a
+	// workspace's own view too, whose writes take no project's row
+	// (TestEachWriteOnAWorkspaceViewSharesItsWorkspaceFirst).
+	{op: "createProjectView", method: http.MethodPost, path: "/api/v0/projects/%s/views", body: `{"name":"QA"}`, want: http.StatusCreated},
+	// The view made before, renamed.
+	{op: "updateView", method: http.MethodPatch, path: "/api/v0/views/%s", body: `{"name":"Checked"}`, want: http.StatusOK, row: viewNamed("QA")},
+	// The view renamed before, deleted.
+	{op: "deleteView", method: http.MethodDelete, path: "/api/v0/views/%s", want: http.StatusNoContent, row: viewNamed("Checked")},
 	// Last: it deletes the project every write before it needs.
 	{op: "deleteProject", method: http.MethodDelete, path: "/api/v0/projects/%s", want: http.StatusNoContent},
 }
@@ -121,8 +132,8 @@ var projectWrites = []projectWrite{
 // level (a column of a project table, projectTables, that is no column of
 // the workspace level). The second takes in a write on a project addressed
 // by a row under it (P5b's /project-members/{project_member_id}, P7a's
-// /states/{state_id}, P7b's /labels/{label_id}) whose row names a project
-// table's columns; a column set of a row's own counts only once it is
+// /states/{state_id}, P7b's /labels/{label_id}, M7 P3b's /views/{view_id})
+// whose row names a project table's columns; a column set of a row's own counts only once it is
 // listed in projectTables, so a new table of the project level goes there,
 // one of the workspace level in workspaceLevelTables, and neither into
 // matrixTables alone (TestEachMatrixTableIsOfOneLevel); not a workspace's
@@ -261,7 +272,8 @@ func lockOn(t *testing.T, pool *pgxpool.Pool, from string, args ...any) string {
 //     UPDATE, as every cascade over its projects does (3.3). The write on
 //     Web waits for that row, and meanwhile holds neither Web's row, nor
 //     its target's membership of acme, nor the row under Web it changes, a
-//     membership, a state or a label: a FOR UPDATE NOWAIT of each succeeds.
+//     membership, a state, a label or a view: a FOR UPDATE NOWAIT of each
+//     succeeds.
 //   - In its transaction, FOR SHARE, before its target and its project:
 //     another transaction holds Ops's row FOR NO KEY UPDATE. The write on
 //     Ops waits for it, and meanwhile holds acme's row at FOR SHARE, no
@@ -306,6 +318,15 @@ func TestEachWriteOnAProjectSharesItsWorkspaceFirst(t *testing.T) {
 	decodeAnswer(t, body, &acme)
 	projects := [2]uuid.UUID{createdProject(t, contract, base, alice, "acme", "Web", "WEB"),
 		createdProject(t, contract, base, alice, "acme", "Ops", "OPS")}
+	// Their views turned on, by alice, their admin (M7 P3b spec 2.6): they
+	// are off as a project starts, and a write of a view on a project whose
+	// views are off answers navigation.views_disabled under its locks.
+	for _, project := range projects {
+		if status, body := call(t, contract, http.MethodPatch, base+"/api/v0/projects/"+project.String(), alice,
+			`{"issue_views_view":true}`); status != http.StatusOK {
+			t.Fatalf("turning the views of %s on = %d %s", project, status, body)
+		}
+	}
 	tokens, ids, aliceID := map[string]string{}, map[string]uuid.UUID{}, accountID(t, contract, base, alice)
 	for _, w := range projectWrites {
 		accounts := slices.Concat(w.targets[:], w.by[:])
