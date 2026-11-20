@@ -57,7 +57,7 @@ func (f deletionWindowFixture) requests(t *testing.T, workspace bool) []deletion
 		r := deletionWindowRequest{name: row.op, actor: "alice", method: row.method, path: path, body: body, want: 404}
 		if !workspace {
 			switch row.op {
-			case "searchIssues", "listMemberIssues", "listDrafts", "getIntakeCounts":
+			case "searchIssues", "listMemberIssues", "listWorkspaceIssues", "listDrafts", "getIntakeCounts":
 				r.want = 200
 			case "createDraft":
 				r.want = 422
@@ -74,6 +74,8 @@ func (f deletionWindowFixture) requests(t *testing.T, workspace bool) []deletion
 			case "searchIssues":
 				r.check = windowIDs(f.kept[2], f.kept[1], f.kept[0])
 			case "listMemberIssues":
+				r.check = windowPageIDs(3, f.kept[2], f.kept[1], f.kept[0])
+			case "listWorkspaceIssues":
 				r.check = windowPageIDs(3, f.kept[2], f.kept[1], f.kept[0])
 			case "listDrafts":
 				r.check = windowPageIDs(2, f.noProject, f.qDraft)

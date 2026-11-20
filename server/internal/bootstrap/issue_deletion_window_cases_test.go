@@ -22,6 +22,7 @@ func deletionWindowCases() []deletionWindowCase {
 		{"getDraft", "GET", "/api/v0/drafts/{draft_id}", ""},
 		{"getDraftAttachments", "GET", "/api/v0/drafts/{draft_id}/attachments", ""},
 		{"listMemberIssues", "GET", "/api/v0/workspaces/{slug}/members/{user_id}/issues", ""},
+		{"listWorkspaceIssues", "GET", "/api/v0/workspaces/{slug}/issues", ""},
 		{"listIssues", "GET", "/api/v0/projects/{project_id}/issues", ""},
 		{"getIssue", "GET", "/api/v0/issues/{issue_id}", ""},
 		{"getIssueAttachments", "GET", "/api/v0/issues/{issue_id}/attachments", ""},
@@ -93,7 +94,7 @@ func TestDeletionWindowCoversEveryIssueOperation(t *testing.T) {
 	}
 	slices.Sort(actual)
 	slices.Sort(want)
-	if len(reads) != 20 || len(writes) != 28 || !slices.Equal(actual, want) {
+	if len(reads) != 21 || len(writes) != 28 || !slices.Equal(actual, want) {
 		t.Fatalf("window reads=%d writes=%d operations=%q; contract=%q", len(reads), len(writes), actual, want)
 	}
 	checkIssueWriteDirectories(t, contract)
@@ -142,6 +143,8 @@ func (r deletionWindowCase) request(x deletionWindowTargets) (string, string) {
 		path += "?q=Window&limit=100"
 	case "listMemberIssues":
 		path += "?relation=created&order_by=-created_at"
+	case "listWorkspaceIssues":
+		path += "?created_by_id=" + x.user.String() + "&order_by=-created_at"
 	}
 	return path, x.replace(r.body)
 }
