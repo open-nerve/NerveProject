@@ -24,7 +24,7 @@
 | T6 | `c7017160` | 存储：两种列表、取、锁、建、改、软删 |
 | T7 | `7fbadb37` | 删除图、config、接线、R8；红窗口 (a) 关闭 |
 | T8a | `f5713fbd` | 端口、读与建 |
-| T8b | `b3c1aeed` | 改与删 |
+| T8b | `b3c1aeea` | 改与删 |
 | T9 | `ff1cdc63` | 契约、处理器、接线与网页的码；红窗口 (c) 起 |
 | T10a | `530ca390` | 权限矩阵、项目写锁表、工作区视图的锁序；红窗口 (c) 关闭 |
 | T10b | `896880ff` | e2e 删除夹具；红窗口 (b) 关闭；检查点 1 |
@@ -37,7 +37,7 @@
 
 - **词的校验在 app 层**（T5）：领域不声明端口（全仓的先例）；用例按视图种类选 issue 的 `ListSettings` / `WorkspaceListSettings`，一个 422 里领域问题在前、词在后（T8a、T8b 钉住）。一个 `Filters` 类型装契约的 13 键并集，按种类的拒绝由 issue 的两种词表与列的 CHECK 负责。
 - **表不设时刻与三个 jsonb 列的默认值**（T4）：漏给即 `NOT NULL` 报错，不悄悄取数据库时钟；名字的 CHECK 只 `<> ''`，去空白与 255 字归领域。
-- **R3**：Go 与 e2e 的删除守卫各给 navigation 一个谓词，`issue_` 前缀不再误认 `issue_views`。
+- **R3**：Go 的删除守卫给 navigation 一个谓词，`issue_` 前缀不再把 `issue_views` 认作 issue 的表；e2e 的 `asynchronousDeletionTable` 只分异步与立即，`issue_views` 作为 navigation 的一项列出。
 - **工作区删除时的项目视图**（T7）：`workspace.deleted` 只有一条、把锁住的项目列在 `Changes` 里，订阅者照 issue 为每个列出的项目投一条项目范围的任务，另投一条工作区范围的只删 `project_id IS NULL`。
 - **允许清单外的两处跟随**（T7）：`server/configs/embed_test.go`（内置配置整体比较）、`bootstrap/app_test.go` 的 `testConfig`（不经 Load，缺这一行任务批量为 0 会一直 snooze），各只加 navigation 的一行。
 - **开关只在锁下判**（T8a，照 spec §2.5）：预检时关、锁下开照样建。工作区视图的建在锁下按 slug 重读。视图的写用普通事务（不进写闸门，没有 `lock_timeout`，与项目的写同）。
@@ -68,8 +68,9 @@
 | main `17e0b1ac`（44743168952） | | 618（bootstrap 456.4） | 766（bootstrap 746.7） |
 | 检查点 1（44777446942） | 421.6 / 651.0 | 626（bootstrap 452.7） | 760（bootstrap 740.1） |
 | 检查点 2（44793862354） | 432.9 / 667.9 | 855（bootstrap 578.8，慢的 runner，见下） | 777（bootstrap 757.0） |
+| T14 `6f062a61`（44809593146，代码同检查点 2） | | 625 | 770 |
 
-- 检查点 2 的第 0 路慢在 runner：P3b 没碰的非 bootstrap 包合计 605.5 → 965.0 秒（1.59 倍，如 `issue/adapter/http` 108.4 → 206.2），bootstrap 只 1.28 倍；第 1 路 757.0 秒约为 `go test` 期限的 63%。
+- 检查点 2 的第 0 路慢在 runner（同一份代码在 `6f062a61` 上 625 秒，比基线 +7）：P3b 没碰的非 bootstrap 包合计 605.5 → 965.0 秒（1.59 倍，如 `issue/adapter/http` 108.4 → 206.2），bootstrap 只 1.28 倍；第 1 路 757.0 秒约为 `go test` 期限的 63%。
 
 - 新的 bootstrap 顶层名（桶 = `cksum % 100`，0–45 第 0 路）：
 
@@ -87,7 +88,7 @@
 
 ## 7. 交给 M8（M7 收官时写进 M8 的交接）
 
-- 无新增。
+- 删除订阅者里校验 `project.deleted` / `workspace.deleted` 载荷的 `deletedProjects` 已有四份逐字相同（issue、planning、notification、navigation），各模块的 `app/purge.go` 有七份除包注释外逐字相同（identity、issue、notification、planning、project、workspace、navigation；asset 另是一种）。P3b 照已有形状加了各自的又一份；是否抽到 shared 交 M8 评估（整分支审查 m5）。
 
 ## 8. 文档与交接（T14）
 
