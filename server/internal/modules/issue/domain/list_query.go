@@ -41,7 +41,7 @@ type ListQuery struct {
 // caller, and checks page capabilities without looking up any referenced ID.
 func ParseListQuery(raw map[string][]string, scope ListScope, actorID uuid.UUID) (ListQuery, error) {
 	q := ListQuery{Order: "-created_at", Filters: ListFilters{SubIssues: true}}
-	if scope != ProjectList && scope != MemberList {
+	if scope != ProjectList && scope != MemberList && scope != WorkspaceList {
 		return ListQuery{}, listNotAllowed("scope")
 	}
 	// Stable validation order also makes requests with several bad fields

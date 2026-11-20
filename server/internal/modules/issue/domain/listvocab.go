@@ -15,6 +15,9 @@ type ListScope uint8
 const (
 	ProjectList ListScope = iota + 1
 	MemberList
+	// WorkspaceList is a workspace's cross-project list (M7 P3a spec 2.2):
+	// no cycle, module, archive or relation word, and flat only.
+	WorkspaceList
 )
 
 // ListOrder is a list ordering word, with a leading minus for descending.
@@ -37,11 +40,18 @@ func ListFilterAllowed(field string, scope ListScope) bool {
 		case "state_group", "priority", "label_id", "project_id", "start_date", "target_date", "sub_issue":
 			return true
 		}
+	case WorkspaceList:
+		switch field {
+		case "project_id", "state_id", "state_group", "priority", "label_id", "assignee_id", "created_by_id", "mention_id", "subscriber_id", "start_date", "target_date", "sub_issue":
+			return true
+		}
 	}
 	return false
 }
 
-// ListGroupAllowed reports whether group is available on scope.
+// ListGroupAllowed reports whether group is available on scope. The
+// workspace's list has no group (M7 P3a spec 2.2, R2), so its group_key and
+// sub_group_key are refused as keys without a group.
 func ListGroupAllowed(group ListGroup, scope ListScope) bool {
 	switch scope {
 	case ProjectList:
