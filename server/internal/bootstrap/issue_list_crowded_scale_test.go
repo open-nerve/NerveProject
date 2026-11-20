@@ -136,9 +136,9 @@ func listScaleStatistics(t *testing.T, owner *pgxpool.Pool) map[string]any {
 }
 
 // measureScenario is TestIssueListScale's measurement of one scenario, on a
-// route of its own (one size's scenarios together outrun the test route's
-// rate limit): 1 warmup and 5 samples, then the actual next, last and empty
-// pages, with the EXPLAIN of the last sample and of the empty page.
+// route of its own (keeps each scenario's requests apart from the others'):
+// 1 warmup and 5 samples, then the actual next, last and empty pages, with the
+// EXPLAIN of the last sample and of the empty page.
 func (f listScaleFixture) measureScenario(t *testing.T, pool *pgxpool.Pool, trace *listTrace, target string, s listScaleScenario) {
 	route := newIssueRoute(t, pool, postgres.NewTxManager(pool, 2*time.Second))
 	want := f.expected(s)
