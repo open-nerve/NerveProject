@@ -87,19 +87,27 @@ func TestIssueListScale(t *testing.T) {
 	for _, n := range []int{10000, 20000, 100000} {
 		t.Run(strconv.Itoa(n), func(t *testing.T) {
 			target := filepath.Join(dir, strconv.Itoa(n))
-			// The sub-seed has a database of its own: its projects in the
-			// scope's would change the statistics the scope's plans are made
-			// from, and so the 13 scenarios M4 measured.
-			dbs := []listScaleDB{newListScaleDB(t, n, false, target, ""), newListScaleDB(t, n, true, target, "spread-")}
 			var scenarios []listScaleScenario
 			matched, medians := map[string]int{}, map[string]float64{}
-			for _, db := range dbs {
-				scenarios = append(scenarios, db.f.scenarios()...)
-				for _, s := range db.f.scenarios() {
-					t.Run(s.Name, func(t *testing.T) {
-						matched[s.Name], medians[s.Name] = db.measureScenario(t, target, n, s)
-					})
-				}
+			// The sub-seed has a database of its own: its projects in the
+			// scope's would change the statistics the scope's plans are made
+			// from, and so the 13 scenarios M4 measured. Each database is
+			// seeded just before its scenarios are measured and dropped with
+			// its subtest, as M4's one was: one is alive at a time.
+			for _, seed := range []struct {
+				name   string
+				spread bool
+				prefix string
+			}{{"scope", false, ""}, {"spread", true, "spread-"}} {
+				t.Run(seed.name, func(t *testing.T) {
+					db := newListScaleDB(t, n, seed.spread, target, seed.prefix)
+					scenarios = append(scenarios, db.f.scenarios()...)
+					for _, s := range db.f.scenarios() {
+						t.Run(s.Name, func(t *testing.T) {
+							matched[s.Name], medians[s.Name] = db.measureScenario(t, target, n, s)
+						})
+					}
+				})
 			}
 			listEvidence(t, target, "pairs", scalePairs(t, scenarios, matched, medians))
 		})

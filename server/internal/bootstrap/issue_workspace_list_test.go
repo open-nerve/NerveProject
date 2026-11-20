@@ -2,6 +2,7 @@ package bootstrap
 
 import (
 	"context"
+	"maps"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -23,8 +24,8 @@ import (
 // The workspace's list across its projects (H13's list, M7 P3a spec 2.2,
 // 2.3, 4), on the real app, in newWorkspaceListWorld's world. Walt, the
 // caller, is Web's guest who sees only his own and Alpha's member: his
-// list is a7, a3, w3, a2, w2, a1 by -created_at. It leaves out w1 and w4,
-// which are not his, in Web; Open, which he is no member of though it is
+// list is a7, a3, w3, a2, w2, a1 by -created_at. It leaves out w1, w4 and
+// w5, which are not his, in Web; Open, which he is no member of though it is
 // public; the work item in Alpha's intake (a6), the archived (a4) and the
 // deleted (a5) ones; Shelf, archived; Former, which he left. w1, a4, a5,
 // a6 and Shelf's and Former's work items are each his or assigned to him,
@@ -36,14 +37,29 @@ func TestWorkspaceIssueList(t *testing.T) {
 	everything := []uuid.UUID{w.a7, w.a3, w.w3, w.a2, w.w2, w.a1}
 	t.Run("default views", func(t *testing.T) {
 		p := w.listed(t, "walt", "", 6, false, everything...)
-		// w3's parent, w1, is not his: the row does not name it.
-		if p.Data[2].ParentID != nil {
-			t.Fatal("hidden parent named", p.Data[2])
+		// w2's parent, w1, is not his: the row does not name it; w3's, w2, is.
+		if p.Data[4].ParentID != nil || p.Data[2].ParentID == nil || *p.Data[2].ParentID != w.w2 {
+			t.Fatal("parents", p.Data[4], p.Data[2])
 		}
 		w.listed(t, "walt", "assignee_id=me", 2, false, w.a2, w.w2)
 		w.listed(t, "walt", "created_by_id=me", 3, false, w.a3, w.w3, w.w2)
 		// Subscribed by making a3, w3, w2, by being assigned a2, by hand a1.
 		w.listed(t, "walt", "subscriber_id=me", 5, false, w.a3, w.w3, w.a2, w.w2, w.a1)
+	})
+	t.Run("sub-issue counts", func(t *testing.T) {
+		// A row counts the children its reader sees, project by project, in
+		// either way the count is read: w2's, in Web, his own w3 and not
+		// bob's w5; a3's, in Alpha, bob's a7. Alice, Web's admin, counts both
+		// of w2's.
+		want := map[uuid.UUID]int{w.a7: 0, w.a3: 1, w.w3: 0, w.a2: 0, w.w2: 1, w.a1: 0}
+		for _, query := range []string{"", "order_by=-sub_issues_count"} {
+			if got := w.subIssueCounts(t, "walt", query); !maps.Equal(got, want) {
+				t.Errorf("walt ?%s: %v; want %v", query, got, want)
+			}
+			if got := w.subIssueCounts(t, "alice", query); got[w.w2] != 2 || got[w.a3] != 1 {
+				t.Errorf("alice ?%s: w2 %d, a3 %d; want 2, 1", query, got[w.w2], got[w.a3])
+			}
+		}
 	})
 	t.Run("projects not his", func(t *testing.T) {
 		// A project filter only narrows the projects he is a member of.
@@ -76,7 +92,7 @@ func TestWorkspaceIssueList(t *testing.T) {
 			{"subscriber_id=" + w.ids["walt"].String(), []uuid.UUID{w.a3, w.w3, w.a2, w.w2, w.a1}},
 			{"start_date=2026-10-10..2026-10-13", []uuid.UUID{w.a2}},
 			{"target_date=2026-10-14..2026-10-16", []uuid.UUID{w.a2}},
-			{"sub_issue=false", []uuid.UUID{w.a7, w.a3, w.a2, w.w2, w.a1}},
+			{"sub_issue=false", []uuid.UUID{w.a3, w.a2, w.a1}},
 			{"project_id=" + w.alpha.String() + "&assignee_id=me", []uuid.UUID{w.a2}},
 		} {
 			t.Run(tc.query, func(t *testing.T) {
@@ -171,7 +187,7 @@ func workspaceListSnapshot(t *testing.T, w workspaceListWorld, want []uuid.UUID)
 		t.Fatal(page, err)
 	}
 	for n, item := range page.Data {
-		if item.ID != want[n] || item.ID == w.w3 && item.ParentID != nil {
+		if item.ID != want[n] || item.ID == w.w2 && item.ParentID != nil {
 			t.Fatal(n, item)
 		}
 	}
