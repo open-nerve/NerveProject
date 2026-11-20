@@ -12,10 +12,10 @@ usage="usage: bash tools/go-test-shard.sh <shard> <shards> <timeout>"
 shard=$1 shards=$2 timeout=$3
 [[ $shard =~ ^[0-9]+$ && $shards =~ ^[0-9]+$ ]] && ((shard < shards)) || { echo "$usage" >&2; exit 2; }
 
-# 第 0 路的桶数 p0：第 0 路另跑其他包、lint 等步骤（持续集成上约 300 秒）。按持续集成上逐个测试的时间（并行子测试的时间
-# 不算进父测试：TestPermissionMatrix 在桶 46、约 85 秒，报告里只有 2 秒）折算，47 让两路离各自期限（作业 25 分钟、
-# go test 20 分钟）最近的那一路余量最大（M7 分路段的阶段记录）
-p0=47
+# 第 0 路的桶数 p0：第 0 路另跑其他包、lint 等步骤（持续集成上约 300 秒）。并行子测试的时间不算进父测试，TestPermissionMatrix
+# 报告只有 2 秒、持续集成上实际约 85 秒，在桶 46。p0=47 时三次持续集成第 0 路作业 906–1214 秒、第 1 路 644–683 秒，
+# 46 把桶 46 移到第 1 路，两路离各自期限（作业 25 分钟、go test 20 分钟）都在约七成（M7 分路段的阶段记录）
+p0=46
 if ((shard == 0)); then
 	lo=0 hi=$((shards == 1 ? 100 : p0))
 else
