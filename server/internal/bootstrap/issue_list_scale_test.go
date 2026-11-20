@@ -155,4 +155,5 @@ func TestIssueListScale(t *testing.T) {
 			}
 		})
 	}
+	t.Run("crowded", func(t *testing.T) { listScaleCrowded(t, dir) })
 }
