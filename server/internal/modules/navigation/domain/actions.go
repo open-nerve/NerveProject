@@ -1,6 +1,7 @@
 // Package domain holds the navigation module's rules (M7 design 3.7, 3.10,
 // P3b spec 2): its actions, the keys of its rows in the access module's
-// rule table.
+// rule table; a saved view, its content, a change of it and the checks of
+// both; who sees, changes and deletes a view; and the module's errors.
 package domain
 
 import "github.com/open-nerve/NerveProject/server/internal/shared"
