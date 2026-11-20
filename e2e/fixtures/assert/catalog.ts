@@ -90,11 +90,15 @@ export async function keysBelow(db: Database, table: string): Promise<ForeignKey
   return keys;
 }
 
-/** The explicitly asynchronous issue/asset/planning/notification owners wait for their committed jobs; unknown tables remain immediate. */
+/**
+ * The explicitly asynchronous issue/asset/planning/notification/navigation owners wait for their committed jobs; unknown
+ * tables remain immediate. The saved views are named for the work items they show, but are the navigation module's.
+ */
 export function asynchronousDeletionTable(name: string): boolean {
   return (
     name === "file_assets" ||
     name === "notifications" ||
+    name === "issue_views" ||
     name === "cycles" ||
     name === "modules" ||
     name === "module_members" ||
@@ -107,6 +111,6 @@ export function asynchronousDeletionTable(name: string): boolean {
     name === "cycle_issues" ||
     name === "module_issues" ||
     name === "intake_issues" ||
-    name.startsWith("issue_")
+    (name.startsWith("issue_") && name !== "issue_views")
   );
 }

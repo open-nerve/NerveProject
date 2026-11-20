@@ -19,6 +19,7 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity"
 	"github.com/open-nerve/NerveProject/server/internal/modules/instance"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue"
+	"github.com/open-nerve/NerveProject/server/internal/modules/navigation"
 	"github.com/open-nerve/NerveProject/server/internal/modules/notification"
 	"github.com/open-nerve/NerveProject/server/internal/modules/planning"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project"
@@ -139,6 +140,7 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 	issuePorts := issue.Provide(pool, protected)
 	planningPorts := planning.Provide(pool, planningProjects{projects: projectPorts.PlanningProjects})
 	notificationPorts := notification.Provide(pool)
+	navigationPorts := navigation.Provide(pool)
 	imageBindings := asset.NewImageBindings(assetPorts, businessClock)
 	imageReader := asset.NewImageReader(assetPorts, assets.store, assets.runtimeNow)
 	assetPurger := asset.NewPurger(assetPorts, assetImageReferences{identityPorts.ImageReferences, workspacePorts.ImageReferences, projectPorts.ImageReferences}, tx)
@@ -278,7 +280,7 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 		a.close()
 		return nil, err
 	}
-	purge := newPurgeDeleted([]purgeModule{{"asset", forAssetPurge(assetPurger)}, {"notification", forNotificationPurge(notificationPorts.Purger)}, {"issue", forIssuePurge(issuePorts.Purger)}, {"planning", forPlanningPurge(planningPorts.Purger)}, {"project", forProjectPurge(projectPorts.Purger)}, {"workspace", forWorkspacePurge(workspacePorts.Purger)}, {"identity", forIdentityPurge(identityPorts.Purger)}}, businessClock, time.Now, cfg.Cleanup.PurgeAfter, cfg.Cleanup.PurgeBatch, cfg.Files.CleanupBudget)
+	purge := newPurgeDeleted([]purgeModule{{"asset", forAssetPurge(assetPurger)}, {"notification", forNotificationPurge(notificationPorts.Purger)}, {"navigation", forNavigationPurge(navigationPorts.Purger)}, {"issue", forIssuePurge(issuePorts.Purger)}, {"planning", forPlanningPurge(planningPorts.Purger)}, {"project", forProjectPurge(projectPorts.Purger)}, {"workspace", forWorkspacePurge(workspacePorts.Purger)}, {"identity", forIdentityPurge(identityPorts.Purger)}}, businessClock, time.Now, cfg.Cleanup.PurgeAfter, cfg.Cleanup.PurgeBatch, cfg.Files.CleanupBudget)
 	definitions := append(slices.Concat(ident.Jobs(), issues.Jobs(), plans.Jobs(), files.Jobs(), notes.Jobs()), purgeJob(purge, cfg.Cleanup.PurgeInterval))
 	a.jobs, err = jobs.New(pool, jobs.Config{ShutdownTimeout: cfg.Jobs.ShutdownTimeout, Logger: logger, DefaultWorkers: cfg.Jobs.DefaultWorkers, PeriodicWorkers: cfg.Jobs.PeriodicWorkers}, definitions, slices.Concat(identity.EnqueuedKinds(), issue.EnqueuedKinds(), planning.EnqueuedKinds(), asset.EnqueuedKinds(), notification.EnqueuedKinds()))
 	if err != nil {

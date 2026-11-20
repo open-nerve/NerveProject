@@ -11,6 +11,7 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue"
 	issuepg "github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/postgres"
+	"github.com/open-nerve/NerveProject/server/internal/modules/navigation"
 	"github.com/open-nerve/NerveProject/server/internal/modules/notification"
 	"github.com/open-nerve/NerveProject/server/internal/modules/planning"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project"
@@ -19,7 +20,7 @@ import (
 )
 
 func retentionPurge(w issueWorld, at time.Time) *purgeDeleted {
-	return newPurgeDeleted([]purgeModule{{"asset", forAssetPurge(imageReferencePurger(w.pool))}, {"notification", forNotificationPurge(notification.Provide(w.pool).Purger)}, {"issue", forIssuePurge(issue.Provide(w.pool, protectedAssetReferences()).Purger)}, {"planning", forPlanningPurge(planning.Provide(w.pool, nil).Purger)}, {"project", forProjectPurge(project.Provide(w.pool, protectedAssetReferences()).Purger)}, {"workspace", forWorkspacePurge(workspace.Provide(w.pool, protectedAssetReferences()).Purger)}, {"identity", forIdentityPurge(identity.Provide(w.pool).Purger)}}, clockAt(at), time.Now, 60*24*time.Hour, 2, 10*time.Second)
+	return newPurgeDeleted([]purgeModule{{"asset", forAssetPurge(imageReferencePurger(w.pool))}, {"notification", forNotificationPurge(notification.Provide(w.pool).Purger)}, {"navigation", forNavigationPurge(navigation.Provide(w.pool).Purger)}, {"issue", forIssuePurge(issue.Provide(w.pool, protectedAssetReferences()).Purger)}, {"planning", forPlanningPurge(planning.Provide(w.pool, nil).Purger)}, {"project", forProjectPurge(project.Provide(w.pool, protectedAssetReferences()).Purger)}, {"workspace", forWorkspacePurge(workspace.Provide(w.pool, protectedAssetReferences()).Purger)}, {"identity", forIdentityPurge(identity.Provide(w.pool).Purger)}}, clockAt(at), time.Now, 60*24*time.Hour, 2, 10*time.Second)
 }
 
 // Each scenario publishes its complete fixture atomically. The live parent

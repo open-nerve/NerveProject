@@ -217,6 +217,25 @@ var rules = map[shared.Action]Rule{
 	"module.delete": {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin}, AllowCreator: true},
 	// As cycle.preferences, on a module's page.
 	"module.preferences": {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember, shared.RoleGuest}},
+	// As cycle.read: every active member of the project reads its saved
+	// views; whose views an OwnOnly grant sees is the navigation module's
+	// (M7 design 3.7, 3.10, P3b spec 2.2).
+	"view.read": {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember, shared.RoleGuest}},
+	// As cycle.write: the project's admins and members create, change and
+	// delete its saved views; the toggle issue_views_view, that only the
+	// owner changes a view and that the owner or the project's admin
+	// deletes one are the navigation module's (P3b spec 2.2).
+	"view.create": {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember}},
+	"view.update": {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember}},
+	"view.delete": {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember}},
+	// A workspace's saved views: its admins and members, not its guests,
+	// who have the four default views only (M7 design 3.7, 3.10, P3b spec
+	// 2.2, R1). That only the owner changes a view and that the owner or
+	// the workspace's admin deletes one are the navigation module's.
+	"workspace_view.read":   {Level: LevelWorkspace, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember}},
+	"workspace_view.create": {Level: LevelWorkspace, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember}},
+	"workspace_view.update": {Level: LevelWorkspace, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember}},
+	"workspace_view.delete": {Level: LevelWorkspace, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember}},
 }
 
 // RuleFor returns a copy of the row of action, every field of it and its

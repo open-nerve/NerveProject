@@ -17,11 +17,11 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
-// Independent observation directory: the notifications, all sixteen issue
-// tables, the six planning tables, then the project tables with rows in this
-// fixture. It does not read Module.Tables.
+// Independent observation directory: the notifications, the saved views, all
+// sixteen issue tables, the six planning tables, then the project tables with
+// rows in this fixture. It does not read Module.Tables.
 var purgeScaleTables = []string{
-	"notifications",
+	"notifications", "issue_views",
 	"comment_reactions", "issue_reactions", "issue_mentions", "issue_description_versions",
 	"issue_activities", "issue_comments", "issue_links", "issue_relations", "issue_assignees",
 	"issue_labels", "issue_subscribers", "draft_issues", "module_issues", "cycle_issues", "intake_issues", "issues",
@@ -77,6 +77,8 @@ func preparePurgeScale(t *testing.T, roles splitRoles, dir string) purgeScaleFix
 				waitPlanningDeletion(t, roles.owner, project)
 				waitNotificationDeletion(t, roles.owner, project)
 			}
+			// Written as the project is now: deleted with it in the two deleted scopes.
+			seedViews(t, w.pool, project, w.ids["alice"])
 		}
 		// Each write above enqueued its notifications' fan-out, which the
 		// pending jobs below count once the app stops.
