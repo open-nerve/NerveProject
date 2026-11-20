@@ -337,7 +337,9 @@ P1a 的第一个实现提交把关键词 phase 改为 `M7/P1`（P1a、P1b 共用
 | P2a 收集箱条目的生命周期 | 已完成：合入 main（noff `670399c4`；合入后 main CI 暴露的 M5 测试竞态另以 `057176e5` 修复），审查与集成见阶段记录 §9；spec 与 plan 经预检 [re-85](../../reviews/re-85-M7P2a预检.md) 修正后通过，基线 main `31f38580`（P1c 的 noff）；实施前按删除守卫与 P2b 重新划分（spec §1、R1）；阶段记录 [P2a 记录](reviews/P2a-intake-submit-triage-review.md) | [P2a spec](specs/P2a-intake-submit-triage.md) / [P2a plan](plans/P2a-intake-submit-triage.md) |
 | P2b 收集箱的列表、内容修改、删除与待处理数 | 已完成：合入 main（noff `f25cccad`），审查与集成见阶段记录 §9；spec 与 plan 经预检 [re-86](../../reviews/re-86-M7P2b预检.md) 修正后通过，基线 main `057176e5`；实施前把 Triage 宿主的资产判定再划到 P2c（spec §1、R1） | [P2b spec](specs/P2b-intake-list-edit-delete.md) / [P2b plan](plans/P2b-intake-list-edit-delete.md) / [P2b 记录](reviews/P2b-intake-list-edit-delete-review.md) |
 | P2c Triage 宿主的资产判定 | 已完成：合入 main（noff `7dfaa8a1`），审查与集成见阶段记录 §9；spec 与 plan 经预检 [re-87](../../reviews/re-87-M7P2c预检.md) 修正后通过，基线 main `f25cccad` | [P2c spec](specs/P2c-intake-assets.md) / [P2c plan](plans/P2c-intake-assets.md) / [P2c 记录](reviews/P2c-intake-assets-review.md) |
-| P3a 工作区跨项目列表 | 进行中：spec 与 plan 经预检 [re-88](../../reviews/re-88-M7P3a预检.md) 修正后通过，基线 main `7dfaa8a1`；实施前把 P3 再划为 P3a（工作区列表）、P3b（视图）、P3c（收藏与最近访问）（spec §1、R1） | [P3a spec](specs/P3a-workspace-list.md) / [P3a plan](plans/P3a-workspace-list.md) |
+| P3a 工作区跨项目列表 | 实施完成，待整分支审查：spec 与 plan 经预检 [re-88](../../reviews/re-88-M7P3a预检.md) 修正后通过，基线 main `7dfaa8a1`；实施前把 P3 再划为 P3a（工作区列表）、P3b（视图）、P3c（收藏与最近访问）（spec §1、R1）；T7 后暂停，先做下面两个插入段，合并 main（`32ea59b8`）后继续 | [P3a spec](specs/P3a-workspace-list.md) / [P3a plan](plans/P3a-workspace-list.md) / [P3a 记录](reviews/P3a-workspace-list-review.md) |
+| 插入段：bootstrap 测试按名字的哈希分路 | 已完成：负责人 2026-11-20 批准；合入 main（noff `33a19ee1`），main CI 44720865989 全绿；p0=46 的依据与 M4 周期整理测试的修复见记录 | [分路记录](reviews/shard-hash-review.md) |
+| 插入段：M4 泳道查询的计划翻转 | 已完成：负责人 2026-11-20 裁定在 M7 里单独修；合入 main（noff `2083c0b7`），main CI 44724861021 全绿；预检 [re-89](../../reviews/re-89-M4泳道计划预检.md) | [spec 与 plan](specs/M4fix-swimlanes-plan.md) / [记录](reviews/M4fix-swimlanes-plan-review.md) |
 
 ## 15. 决定记录
 

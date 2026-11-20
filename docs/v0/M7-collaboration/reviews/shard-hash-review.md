@@ -1,6 +1,6 @@
 # M7 插入段：bootstrap 测试按名字的哈希分路（阶段记录）
 
-> 状态：待合入（p0 由 47 改为 46 后的最终分支 CI 见 §8）。基线 main `7dfaa8a1`，分支 `codex/m7-shard-hash`。台账 `.superpowers/sdd/Shard-hash/progress.md`（ignored，随段归档）。
+> 状态：已完成，合入 main（noff `33a19ee1`），§8 为集成的记录。基线 main `7dfaa8a1`，分支 `codex/m7-shard-hash`。台账 `.superpowers/sdd/Shard-hash/progress.md`（ignored，随段归档）。
 
 ## 1. 负责人的批准（2026-11-20）
 
@@ -56,4 +56,7 @@ With fixes：I 1、m 5。
 
 ## 8. 集成
 
-（待填）
+- 分支 CI 44716691785（`aab77adb`，p0=46）attempt 1 全绿：server (0) 作业 960 秒（Test 785、bootstrap 544，350 个，名单 `cksum` `3364999843 13294` 与本地相同），server (1) 792 秒（753、734，420 个，`2206366795 15758`）。
+- `--no-ff` 合入 main `33a19ee1`（树与分支相同）；main CI 44720865989 attempt 1 全绿：server (0) 作业 742 / Test 607 秒，server (1) 783 / 749 秒。
+- 一次性的测量分支 `codex/m7-shard-measure`（`36e4a9e9`）量完即删，日志存在台账 `measure-ci-44708811784/`。
+- 归档 `.superpowers/sdd/M7-shard-hash-20261120`（231 个文件、unknown 0，清理后复核一致）；worktree、本地与远端分支已删除（先核实已含在 main）。

@@ -53,6 +53,8 @@ M4 的最终 C12、准确分支 CI 和未来 main 集成分别由[验收台账](
 
 **何时验收：** 有效视图首次开放前，替换旧接口/例外并删除对应过渡记录；用真实有效实体测详情、列表、筛选、跨项目访客、无权项计数、失败重试与会话切换，整页零非预期失败。
 
+**处理结果（M7/P3a，跨项目列表一支）：** 工作区跨项目列表已接通 `GET /workspaces/{slug}/issues`：只读 REPEATABLE READ 快照、范围为有效成员的未归档项目（`VisibleProjects.Visible`）、逐项目只看自己、共享游标与比较器（[P3a spec](../specs/P3a-workspace-list.md)，规模证据见 [P3a 阶段记录](../reviews/P3a-workspace-list-review.md) §4）。项目视图与工作区视图随 P3b；页面、完整的工作区标签目录（个人主页按标签分组与工作区列表的标签筛选两个使用者）与旧 `WorkspaceService` 四个方法的删除随 P6b（设计 §12）。保持 open。
+
 <a id="M7-04"></a>
 ## M7-04 收集箱旧 DTO、版本与命令面板
 
