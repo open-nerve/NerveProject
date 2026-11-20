@@ -43,7 +43,7 @@ var viewKinds = []struct {
 // twelve for a project's view and eleven for a workspace's, each an array of
 // strings, and refusing the other kind's, sub_issue and archived; the
 // display settings shaped as a list page's; the icon shaped as a project's;
-// a non-empty name; and where the rows go: the writer's purge keeps them
+// a non-empty name of up to 255 characters; and where the rows go: the writer's purge keeps them
 // without him, the owner's, the project's and the workspace's take their
 // own.
 func TestIssueViewsSchema(t *testing.T) {
@@ -139,6 +139,10 @@ func TestIssueViewsSchema(t *testing.T) {
 		refusedBy(t, pool, set("logo_props", value), "23514", "issue_views_logo_props_check")
 	}
 	refusedBy(t, pool, set("name", ""), "23514", "issue_views_name_check")
+	// The name holds 255 characters, however many bytes each takes, and
+	// not 256.
+	accepted(t, pool, set("name", strings.Repeat("视", 255)), set("name", "carol web"))
+	refusedBy(t, pool, set("name", strings.Repeat("视", 256)), "22001", "")
 	for _, column := range []string{"workspace_id", "name", "description", "logo_props", "filters", "display_filters", "display_properties",
 		"owned_by_id", "created_at", "updated_at"} {
 		nullRefused(t, pool, "UPDATE issue_views SET "+column+"=NULL WHERE id="+webView, column)

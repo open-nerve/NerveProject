@@ -111,6 +111,6 @@ export function asynchronousDeletionTable(name: string): boolean {
     name === "cycle_issues" ||
     name === "module_issues" ||
     name === "intake_issues" ||
-    (name.startsWith("issue_") && name !== "issue_views")
+    name.startsWith("issue_")
   );
 }
