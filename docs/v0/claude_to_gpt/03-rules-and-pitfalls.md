@@ -130,7 +130,7 @@ P8 草稿已按设计3.5的既定形式补齐：`DraftLocks`组合上述`Locks`�
 - 拒绝的次序要在两个交叉方向上都钉住；
 - 加 issue 的操作时，按目录驱动的守卫一起补（M7/P2a 检查点 1 漏了一个）：权限矩阵、写锁表、删除窗口 `deletionWindowCases`（遍历它的 `issue_null_creator_test.go` 随之跟进）、逐码的处理器测试；红窗口的清单按 `contract.Operations()` 的使用者找全。
 - 锁检查的测试在每次持表锁或行锁之前 `waitForFanouts`（R10）：分发先 `FOR SHARE` 工作项行、有收件人时再插入（外键 `FOR KEY SHARE` 工作区与项目），与 `LOCK TABLE workspaces … issues` 的次序相反，会死锁（M7/P2a 检查点 1 的 CI）。
-- 造好数据后扣锁、写墓碑再断言的测试，先 `waitForStartupRuns`：应用一启动就跑的周期任务（资产清理等，River 随机延迟插入）会落进测试的窗口，改写资产或排在屏障后占住测试应用 4 个连接里的一个（M7/P2a 最终候选与最终 CI 各一次）；扣锁时间没有上界的测试，任务的等锁时限放宽到长过扣锁（`barriersOutlasted`）。
+- 造好数据后扣锁、写墓碑再断言的测试，先 `waitForStartupRuns`：应用一启动就跑的周期任务（资产清理等，River 随机延迟插入）会落进测试的窗口，改写资产或排在屏障后占住测试应用 4 个连接里的一个（M7/P2a 最终候选与最终 CI 各一次）。等真实周期任务出现的窗口要盖住首次插入的延迟：River 选主后依次启动六个维护服务、各自随机睡 0–1 秒，首次周期插入最晚约 6 秒，先 `waitForStartupRuns` 再只等每个周期的节奏（M4 的 `TestPublishSnapshotIgnoresPeriodicProgress` 在 5 秒窗口里超时一次，M7 分路段）；扣锁时间没有上界的测试，任务的等锁时限放宽到长过扣锁（`barriersOutlasted`）。
 - 生成的网页客户端按路由决定数组参数怎么发（`web/packages/api-client/src/index.ts` 的 `csvListPaths` 与 `csvKeys`）：新的列表若用逗号分隔的多值参数，要把路由与参数加进去，否则客户端发重复参数、服务端答 422（M7/P2b T9，`client.test.mjs` 按契约钉住）。
 - 契约里加操作，生成的服务端接口（`StrictServerInterface`）要求处理器，契约与处理器放在同一个 Task；抽一个核心先单独提交纯搬移（断言不改，只为编译改构造处），再加新的调用者（M7/P2b T2、T7）。
 - bootstrap 的顶层测试按名字的哈希固定分路（算法在 `tools/go-test-shard.sh` 开头，`printf %s 名字 | cksum` 可查一个名字的桶）：加一个顶层名不让别的测试换路，一路的增量就是落在这一路的新测试（第 0 路还有 bootstrap 以外的包）。不靠改名调路。

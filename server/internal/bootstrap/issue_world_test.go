@@ -98,7 +98,9 @@ func newIssueWorldOnRequests(t *testing.T, dbURL string, pool *pgxpool.Pool, con
 // the app's clock, which the freeze's run locks the project of and freezes
 // (planning.freeze_cycles), and those whose barriers leave the app's requests
 // a single connection, which a run queued on a barrier would take
-// (TestProjectDeletionPublishesAndEnqueuesAtomically). Every world waiting
+// (TestProjectDeletionPublishesAndEnqueuesAtomically), and those that hold a
+// lock for a periodic job to queue on, which River does not insert before
+// these runs (TestPublishSnapshotIgnoresPeriodicProgress). Every world waiting
 // would double the package's run time.
 func waitForStartupRuns(t *testing.T, pool *pgxpool.Pool) {
 	t.Helper()
