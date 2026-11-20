@@ -24,6 +24,11 @@ import (
 func TestPublishSnapshotIgnoresPeriodicProgress(t *testing.T) {
 	w := newIssueWorldWith(t, func(cfg *config.Config) { cfg.Issue.TrimVersionsInterval = time.Second })
 	createDraftHTTP(t, w, "alice", `{"project_id":"`+w.web.String()+`","payload":{}}`)
+	// River inserts no trim, the one-second ones included, before its start-time
+	// runs, which can come more than five seconds after the app starts (each of
+	// its six maintenance services first sleeps up to a second, one after the
+	// other). Once they have run, the next trim is a second away.
+	waitForStartupRuns(t, w.pool)
 	holder := holding(t, w.pool, "SELECT 1 FROM projects WHERE id=$1 FOR NO KEY UPDATE", w.web)
 	holderPID := holder.Conn().PgConn().PID()
 	rawJobs := func() string {
