@@ -120,7 +120,7 @@ const (
 // taken is the database's to say.
 func CheckNewState(s StateCreate) error {
 	return invalid(checkRequiredText("name", s.Name, maxStateText), checkRequiredText("color", s.Color, maxStateText), checkGroup(s.Group),
-		checkText("description", s.Description))
+		shared.CheckText("description", s.Description))
 }
 
 // CheckStatePatch checks the fields p gives by CheckNewState's rules; a
@@ -137,7 +137,7 @@ func CheckStatePatch(p StatePatch) error {
 		found = append(found, checkGroup(*p.Group))
 	}
 	if p.Description != nil {
-		found = append(found, checkText("description", *p.Description))
+		found = append(found, shared.CheckText("description", *p.Description))
 	}
 	return invalid(found...)
 }

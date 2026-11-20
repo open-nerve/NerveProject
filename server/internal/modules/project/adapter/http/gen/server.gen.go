@@ -20,24 +20,6 @@ import (
 	externalRef0 "github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apigen"
 )
 
-// Defines values for LogoPropsInUse.
-const (
-	LogoPropsInUseEmoji LogoPropsInUse = "emoji"
-	LogoPropsInUseIcon  LogoPropsInUse = "icon"
-)
-
-// Valid indicates whether the value is a known member of the LogoPropsInUse enum.
-func (e LogoPropsInUse) Valid() bool {
-	switch e {
-	case LogoPropsInUseEmoji:
-		return true
-	case LogoPropsInUseIcon:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for ProjectNetwork.
 const (
 	ProjectNetworkN0 ProjectNetwork = 0
@@ -186,34 +168,6 @@ type LabelUpdate struct {
 	SortOrder *float64 `json:"sort_order,omitempty"`
 }
 
-// LogoEmoji defines model for LogoEmoji.
-type LogoEmoji struct {
-	// URL The address of a custom emoji.
-	URL *string `json:"url,omitempty"`
-
-	// Value The emoji, as the web app's picker gives it.
-	Value *string `json:"value,omitempty"`
-}
-
-// LogoIcon defines model for LogoIcon.
-type LogoIcon struct {
-	BackgroundColor *string `json:"background_color,omitempty"`
-	Color           *string `json:"color,omitempty"`
-	Name            *string `json:"name,omitempty"`
-}
-
-// LogoProps A project's icon, the web app's TLogoProps: every field optional, and {} no icon.
-type LogoProps struct {
-	Emoji *LogoEmoji `json:"emoji,omitempty"`
-	Icon  *LogoIcon  `json:"icon,omitempty"`
-
-	// InUse Which of the two icons the project shows.
-	InUse *LogoPropsInUse `json:"in_use,omitempty"`
-}
-
-// LogoPropsInUse Which of the two icons the project shows.
-type LogoPropsInUse string
-
 // Project A project, as the caller sees it: member_role and sort_order are his, null when he is not an active member.
 type Project struct {
 	// ArchiveIn Automatic archival threshold, 0–12 months of 30 days each; 0 disables it. Inactive completed or cancelled work items are archived by a periodic job after this threshold, using their last update time.
@@ -251,8 +205,8 @@ type Project struct {
 	// IssueViewsView Whether the project shows views.
 	IssueViewsView bool `json:"issue_views_view"`
 
-	// LogoProps A project's icon, the web app's TLogoProps: every field optional, and {} no icon.
-	LogoProps LogoProps `json:"logo_props"`
+	// LogoProps An icon, the web app's TLogoProps: every field optional, and {} no icon.
+	LogoProps externalRef0.LogoProps `json:"logo_props"`
 
 	// MemberIds The accounts of the active members, in the order they joined, then by id.
 	MemberIds []uuid.UUID `json:"member_ids"`
@@ -289,8 +243,8 @@ type ProjectCreate struct {
 	// Identifier 1–10 of A-Z, 0-9 and ÇŞĞİÖÜ, once upper-cased.
 	Identifier string `json:"identifier"`
 
-	// LogoProps A project's icon, the web app's TLogoProps: every field optional, and {} no icon.
-	LogoProps *LogoProps `json:"logo_props,omitempty"`
+	// LogoProps An icon, the web app's TLogoProps: every field optional, and {} no icon.
+	LogoProps *externalRef0.LogoProps `json:"logo_props,omitempty"`
 
 	// Name 1–255 characters, not blank, without any of & + , : ; $ ^ } { * = ? @ # | ' < > . ( ) % ! -
 	Name string `json:"name"`
@@ -440,9 +394,9 @@ type ProjectUpdate struct {
 	IntakeView     *bool   `json:"intake_view,omitempty"`
 	IssueViewsView *bool   `json:"issue_views_view,omitempty"`
 
-	// LogoProps A project's icon, the web app's TLogoProps: every field optional, and {} no icon.
-	LogoProps  *LogoProps `json:"logo_props,omitempty"`
-	ModuleView *bool      `json:"module_view,omitempty"`
+	// LogoProps An icon, the web app's TLogoProps: every field optional, and {} no icon.
+	LogoProps  *externalRef0.LogoProps `json:"logo_props,omitempty"`
+	ModuleView *bool                   `json:"module_view,omitempty"`
 
 	// Name 1–255 characters, not blank, without any of & + , : ; $ ^ } { * = ? @ # | ' < > . ( ) % ! -
 	Name *string `json:"name,omitempty"`

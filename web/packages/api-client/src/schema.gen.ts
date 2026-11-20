@@ -2936,10 +2936,10 @@ export interface components {
             color?: string;
             background_color?: string;
         };
-        /** @description A project's icon, the web app's TLogoProps: every field optional, and {} no icon. */
+        /** @description An icon, the web app's TLogoProps: every field optional, and {} no icon. */
         LogoProps: {
             /**
-             * @description Which of the two icons the project shows.
+             * @description Which of the two icons is shown.
              * @enum {string}
              */
             in_use?: "emoji" | "icon";

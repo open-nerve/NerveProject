@@ -112,7 +112,7 @@ func TestCreateProject(t *testing.T) {
 	}{
 		{"a member, the admin as the lead", alice, "acme",
 			domain.NewProject{Name: "Web", Identifier: "web", Description: "The app", LeadID: &bob,
-				LogoProps: domain.LogoProps{InUse: ptr("emoji"), Emoji: &domain.Emoji{Value: ptr("128640")}}}, acme, &bob,
+				LogoProps: shared.LogoProps{InUse: ptr("emoji"), Emoji: &shared.LogoEmoji{Value: ptr("128640")}}}, acme, &bob,
 			`"Web" "WEB" "The app" network 2 lead ` + bob.String() + ` logo {"in_use":"emoji","emoji":{"value":"128640"}} timezone Asia/Shanghai`,
 			map[uuid.UUID]string{alice: "65535", bob: "-9900"}},
 		{"the admin, himself the lead, private, in his time zone", bob, "acme",

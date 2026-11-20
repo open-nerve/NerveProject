@@ -9,6 +9,8 @@ import (
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/project/adapter/http/gen"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project/domain"
+	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apigen"
+	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
 // ListProjects serves GET /api/v0/workspaces/{slug}/projects.
@@ -191,33 +193,33 @@ func orNull[T any](v *T) nullable.Nullable[T] {
 }
 
 // logoIn is the request's icon as the domain takes it.
-func logoIn(l gen.LogoProps) domain.LogoProps {
-	var out domain.LogoProps
+func logoIn(l apigen.LogoProps) shared.LogoProps {
+	var out shared.LogoProps
 	if l.InUse != nil {
 		inUse := string(*l.InUse)
 		out.InUse = &inUse
 	}
 	if e := l.Emoji; e != nil {
-		out.Emoji = &domain.Emoji{Value: e.Value, URL: e.URL}
+		out.Emoji = &shared.LogoEmoji{Value: e.Value, URL: e.URL}
 	}
 	if i := l.Icon; i != nil {
-		out.Icon = &domain.Icon{Name: i.Name, Color: i.Color, BackgroundColor: i.BackgroundColor}
+		out.Icon = &shared.LogoIcon{Name: i.Name, Color: i.Color, BackgroundColor: i.BackgroundColor}
 	}
 	return out
 }
 
 // logoOut is a project's icon as the API shows it: {} for none.
-func logoOut(l domain.LogoProps) gen.LogoProps {
-	var out gen.LogoProps
+func logoOut(l shared.LogoProps) apigen.LogoProps {
+	var out apigen.LogoProps
 	if l.InUse != nil {
-		inUse := gen.LogoPropsInUse(*l.InUse)
+		inUse := apigen.LogoPropsInUse(*l.InUse)
 		out.InUse = &inUse
 	}
 	if e := l.Emoji; e != nil {
-		out.Emoji = &gen.LogoEmoji{Value: e.Value, URL: e.URL}
+		out.Emoji = &apigen.LogoEmoji{Value: e.Value, URL: e.URL}
 	}
 	if i := l.Icon; i != nil {
-		out.Icon = &gen.LogoIcon{Name: i.Name, Color: i.Color, BackgroundColor: i.BackgroundColor}
+		out.Icon = &apigen.LogoIcon{Name: i.Name, Color: i.Color, BackgroundColor: i.BackgroundColor}
 	}
 	return out
 }

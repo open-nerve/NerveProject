@@ -884,41 +884,6 @@ components:
         0 private, nobody; 2 public, the workspace's members too.
       type: integer
       enum: [0, 2]
-    LogoProps:
-      description: >-
-        A project's icon, the web app's TLogoProps: every field optional, and
-        {} no icon.
-      type: object
-      additionalProperties: false
-      properties:
-        in_use:
-          description: Which of the two icons the project shows.
-          type: string
-          enum: [emoji, icon]
-        emoji:
-          $ref: '#/components/schemas/LogoEmoji'
-        icon:
-          $ref: '#/components/schemas/LogoIcon'
-    LogoEmoji:
-      type: object
-      additionalProperties: false
-      properties:
-        value:
-          description: The emoji, as the web app's picker gives it.
-          type: string
-        url:
-          description: The address of a custom emoji.
-          type: string
-    LogoIcon:
-      type: object
-      additionalProperties: false
-      properties:
-        name:
-          type: string
-        color:
-          type: string
-        background_color:
-          type: string
     Project:
       description: >-
         A project, as the caller sees it: member_role and sort_order are his,
@@ -982,7 +947,7 @@ components:
           type: [string, 'null']
           format: date-time
         logo_props:
-          $ref: '#/components/schemas/LogoProps'
+          $ref: '../common.yaml#/components/schemas/LogoProps'
         timezone:
           description: An IANA time zone name.
           type: string
@@ -1066,7 +1031,7 @@ components:
           type: string
           format: uuid
         logo_props:
-          $ref: '#/components/schemas/LogoProps'
+          $ref: '../common.yaml#/components/schemas/LogoProps'
         timezone:
           description: An IANA time zone name, e.g. from GET /api/v0/timezones; the workspace's when not given.
           type: string
@@ -1119,7 +1084,7 @@ components:
           description: Automatic archival threshold, 0–12 months of 30 days each; 0 disables it. Inactive completed or cancelled work items are archived by a periodic job after this threshold, using their last update time.
           type: integer
         logo_props:
-          $ref: '#/components/schemas/LogoProps'
+          $ref: '../common.yaml#/components/schemas/LogoProps'
         timezone:
           description: An IANA time zone name.
           type: string

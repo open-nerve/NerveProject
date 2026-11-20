@@ -26,8 +26,8 @@ func TestCheckNewProjectAcceptsValidProjects(t *testing.T) {
 		{NewProject{Name: "w", Identifier: "w"}, "W", NetworkPublic},
 		{NewProject{Name: strings.Repeat("项", 255), Identifier: "abcdefghij"}, "ABCDEFGHIJ", NetworkPublic},
 		{NewProject{Name: "研发 Web_2 [beta] \\ /", Identifier: "çşğiöü09", Network: ptr(NetworkPrivate), Timezone: ptr("Asia/Shanghai"),
-			Description: "多行\n说明", LogoProps: LogoProps{InUse: ptr(LogoIcon), Icon: &Icon{Name: ptr("home")}}}, "ÇŞĞIÖÜ09", NetworkPrivate},
-		{NewProject{Name: "Ops", Identifier: "İ1", Network: ptr(NetworkPublic), LogoProps: LogoProps{InUse: ptr(LogoEmoji)}}, "İ1", NetworkPublic},
+			Description: "多行\n说明", LogoProps: shared.LogoProps{InUse: ptr(shared.LogoInUseIcon), Icon: &shared.LogoIcon{Name: ptr("home")}}}, "ÇŞĞIÖÜ09", NetworkPrivate},
+		{NewProject{Name: "Ops", Identifier: "İ1", Network: ptr(NetworkPublic), LogoProps: shared.LogoProps{InUse: ptr(shared.LogoInUseEmoji)}}, "İ1", NetworkPublic},
 	}
 	for _, tt := range tests {
 		got, err := CheckNewProject(tt.p)
@@ -48,7 +48,7 @@ func TestCheckNewProjectReportsEveryField(t *testing.T) {
 	}
 	name := func(n string) NewProject { return with(func(p *NewProject) { p.Name = n }) }
 	identifier := func(s string) NewProject { return with(func(p *NewProject) { p.Identifier = s }) }
-	logo := func(l LogoProps) NewProject { return with(func(p *NewProject) { p.LogoProps = l }) }
+	logo := func(l shared.LogoProps) NewProject { return with(func(p *NewProject) { p.LogoProps = l }) }
 	field := func(f, code, message string) []shared.FieldError {
 		return []shared.FieldError{{Field: f, Code: code, Message: message}}
 	}
@@ -82,17 +82,17 @@ func TestCheckNewProjectReportsEveryField(t *testing.T) {
 			field("timezone", "invalid_format", "is not a known time zone")},
 		{"the host's zone", with(func(p *NewProject) { p.Timezone = ptr("Local") }), field("timezone", "invalid_format", "is not a known time zone")},
 		{"empty time zone", with(func(p *NewProject) { p.Timezone = ptr("") }), field("timezone", "invalid_format", "is not a known time zone")},
-		{"in_use other", logo(LogoProps{InUse: ptr("other")}), field("logo_props.in_use", "invalid_format", "must be emoji or icon")},
-		{"in_use empty", logo(LogoProps{InUse: ptr("")}), field("logo_props.in_use", "invalid_format", "must be emoji or icon")},
-		{"emoji value with NUL", logo(LogoProps{Emoji: &Emoji{Value: ptr("\x00")}}), field("logo_props.emoji.value", "invalid_format", nul)},
-		{"emoji url with NUL", logo(LogoProps{Emoji: &Emoji{URL: ptr("a\x00")}}), field("logo_props.emoji.url", "invalid_format", nul)},
-		{"icon name with NUL", logo(LogoProps{Icon: &Icon{Name: ptr("\x00")}}), field("logo_props.icon.name", "invalid_format", nul)},
-		{"icon color with NUL", logo(LogoProps{Icon: &Icon{Color: ptr("\x00")}}), field("logo_props.icon.color", "invalid_format", nul)},
-		{"icon background with NUL", logo(LogoProps{Icon: &Icon{BackgroundColor: ptr("\x00")}}),
+		{"in_use other", logo(shared.LogoProps{InUse: ptr("other")}), field("logo_props.in_use", "invalid_format", "must be emoji or icon")},
+		{"in_use empty", logo(shared.LogoProps{InUse: ptr("")}), field("logo_props.in_use", "invalid_format", "must be emoji or icon")},
+		{"emoji value with NUL", logo(shared.LogoProps{Emoji: &shared.LogoEmoji{Value: ptr("\x00")}}), field("logo_props.emoji.value", "invalid_format", nul)},
+		{"emoji url with NUL", logo(shared.LogoProps{Emoji: &shared.LogoEmoji{URL: ptr("a\x00")}}), field("logo_props.emoji.url", "invalid_format", nul)},
+		{"icon name with NUL", logo(shared.LogoProps{Icon: &shared.LogoIcon{Name: ptr("\x00")}}), field("logo_props.icon.name", "invalid_format", nul)},
+		{"icon color with NUL", logo(shared.LogoProps{Icon: &shared.LogoIcon{Color: ptr("\x00")}}), field("logo_props.icon.color", "invalid_format", nul)},
+		{"icon background with NUL", logo(shared.LogoProps{Icon: &shared.LogoIcon{BackgroundColor: ptr("\x00")}}),
 			field("logo_props.icon.background_color", "invalid_format", nul)},
 		{"all at once", NewProject{Name: "", Identifier: "web-2", Description: "\x00", Network: ptr(Network(1)), Timezone: ptr(""),
-			LogoProps: LogoProps{InUse: ptr("x"), Emoji: &Emoji{Value: ptr("\x00"), URL: ptr("\x00")},
-				Icon: &Icon{Name: ptr("\x00"), Color: ptr("\x00"), BackgroundColor: ptr("\x00")}}}, []shared.FieldError{
+			LogoProps: shared.LogoProps{InUse: ptr("x"), Emoji: &shared.LogoEmoji{Value: ptr("\x00"), URL: ptr("\x00")},
+				Icon: &shared.LogoIcon{Name: ptr("\x00"), Color: ptr("\x00"), BackgroundColor: ptr("\x00")}}}, []shared.FieldError{
 			{Field: "name", Code: "too_short", Message: "must not be empty"},
 			{Field: "identifier", Code: "invalid_format", Message: "may hold only A-Z, 0-9 and ÇŞĞİÖÜ"},
 			{Field: "description", Code: "invalid_format", Message: nul},

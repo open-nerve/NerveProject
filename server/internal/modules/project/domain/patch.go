@@ -32,7 +32,7 @@ type ProjectPatch struct {
 	IntakeView           *bool
 	GuestViewAllFeatures *bool
 	ArchiveIn            *int
-	LogoProps            *LogoProps
+	LogoProps            *shared.LogoProps
 	Timezone             *string
 }
 
@@ -57,7 +57,7 @@ func CheckProjectPatch(p ProjectPatch) (ProjectPatch, error) {
 		found = append(found, checkIdentifier(identifier))
 	}
 	if p.Description != nil {
-		found = append(found, checkText("description", *p.Description))
+		found = append(found, shared.CheckText("description", *p.Description))
 	}
 	if p.Network != nil {
 		found = append(found, checkNetwork(*p.Network))
@@ -77,7 +77,7 @@ func CheckProjectPatch(p ProjectPatch) (ProjectPatch, error) {
 	}
 	found = append(found, checkCover(cover, builtin)...)
 	if p.LogoProps != nil {
-		found = append(found, checkLogoProps(*p.LogoProps)...)
+		found = append(found, p.LogoProps.Check()...)
 	}
 	if err := invalid(found...); err != nil {
 		return ProjectPatch{}, err

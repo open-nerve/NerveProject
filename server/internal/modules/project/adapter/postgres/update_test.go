@@ -12,6 +12,7 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/project/domain"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
+	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
 // LockProject reads the undeleted project's workspace and whether it is
@@ -164,7 +165,7 @@ func TestUpdateProject(t *testing.T) {
 	update(domain.ProjectPatch{Name: ptr("研发 Web"), Description: ptr("The app"), Identifier: ptr("WEBÇ"), Network: ptr(domain.NetworkPrivate),
 		SetLead: true, LeadID: &carol, SetDefaultAssignee: true, DefaultAssigneeID: &alice, CycleView: ptr(true), ModuleView: ptr(true),
 		IssueViewsView: ptr(true), IntakeView: ptr(true), GuestViewAllFeatures: ptr(true), ArchiveIn: ptr(12),
-		LogoProps: &domain.LogoProps{InUse: ptr("icon"), Icon: &domain.Icon{Name: ptr("home")}}, Timezone: ptr("Asia/Shanghai")}, bob, later.Add(time.Hour))
+		LogoProps: &shared.LogoProps{InUse: ptr("icon"), Icon: &shared.LogoIcon{Name: ptr("home")}}, Timezone: ptr("Asia/Shanghai")}, bob, later.Add(time.Hour))
 	want := changed(before, audit(bob, later.Add(time.Hour)))
 	// The default assignee changes from bob to alice, the lead from alice to carol: neither can stand for the other.
 	maps.Copy(want, map[string]string{"name": `"研发 Web"`, "description": `"The app"`, "identifier": `"WEBÇ"`, "network": "0",

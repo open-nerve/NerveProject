@@ -124,5 +124,5 @@ func checkLabelColor(c string) *shared.FieldError {
 	if f := checkMaxLength("color", c, maxLabelText); f != nil {
 		return f
 	}
-	return checkText("color", c)
+	return shared.CheckText("color", c)
 }

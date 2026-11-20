@@ -118,6 +118,42 @@ components:
           oneOf:
             - $ref: '#/components/schemas/LinkMetadataError'
             - type: 'null'
+    # 图标（M3 设计 3.19）：项目与视图共用（M7/P3b spec R5）
+    LogoProps:
+      description: >-
+        An icon, the web app's TLogoProps: every field optional, and {} no
+        icon.
+      type: object
+      additionalProperties: false
+      properties:
+        in_use:
+          description: Which of the two icons is shown.
+          type: string
+          enum: [emoji, icon]
+        emoji:
+          $ref: '#/components/schemas/LogoEmoji'
+        icon:
+          $ref: '#/components/schemas/LogoIcon'
+    LogoEmoji:
+      type: object
+      additionalProperties: false
+      properties:
+        value:
+          description: The emoji, as the web app's picker gives it.
+          type: string
+        url:
+          description: The address of a custom emoji.
+          type: string
+    LogoIcon:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+        color:
+          type: string
+        background_color:
+          type: string
     # 工作项列表的显示设置（M6/P3b spec R5）：项目、迭代、模块三页共用；筛选按页各自，不在这里
     IssueListCalendar:
       type: object
