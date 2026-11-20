@@ -21,7 +21,7 @@ func TestListQueryCopy(t *testing.T) {
 	if raw["start_date"][0] != "a" || len(raw) != 2 {
 		t.Fatal("copy aliases input", raw)
 	}
-	for _, op := range []string{"ListIssues", "ListMemberIssues", "ListDrafts", "SearchIssues", "ListIssueComments"} {
+	for _, op := range []string{"ListIssues", "ListMemberIssues", "ListWorkspaceIssues", "ListDrafts", "SearchIssues", "ListIssueComments"} {
 		r := httptest.NewRequest(http.MethodGet, "/?start_date=a&start_date=b&unknown=kept", nil)
 		next := func(ctx context.Context, _ http.ResponseWriter, _ *http.Request, req any) (any, error) {
 			got := rawListQuery(ctx)
@@ -64,6 +64,14 @@ func TestListBindingErrorIsLocal(t *testing.T) {
 		{"member module not declared", member, "module_id", "module_id=a&module_id=b", nil, 400},
 		{"project query not declared", project, "project_id", "project_id=a&project_id=b", nil, 400},
 		{"member query not declared", member, "archived", "archived=true&archived=false", nil, 400},
+		{"workspace duplicate", "GET /api/v0/workspaces/{slug}/issues", "project_id", "project_id=a&project_id=b", nil, 422},
+		{"workspace assignee duplicate", "GET /api/v0/workspaces/{slug}/issues", "assignee_id", "assignee_id=me&assignee_id=me", nil, 422},
+		{"workspace limit duplicate", "GET /api/v0/workspaces/{slug}/issues", "limit", "limit=1&limit=2", nil, 422},
+		{"workspace group not declared", "GET /api/v0/workspaces/{slug}/issues", "group_by", "group_by=a&group_by=b", nil, 400},
+		{"workspace group key not declared", "GET /api/v0/workspaces/{slug}/issues", "group_key", "group_key=a&group_key=b", nil, 400},
+		{"workspace cycle not declared", "GET /api/v0/workspaces/{slug}/issues", "cycle_id", "cycle_id=a&cycle_id=b", nil, 400},
+		{"workspace relation not declared", "GET /api/v0/workspaces/{slug}/issues", "relation", "relation=a&relation=b", nil, 400},
+		{"workspace date", "GET /api/v0/workspaces/{slug}/issues", "start_date", "start_date=a&start_date=b", nil, 400},
 		{"date", project, "start_date", "start_date=a&start_date=b", nil, 400},
 		{"single", project, "limit", "limit=x", nil, 400},
 		{"other API", "GET /api/v0/issues/{issue_id}/comments", "limit", "limit=1&limit=2", nil, 400},

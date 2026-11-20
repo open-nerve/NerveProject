@@ -137,6 +137,8 @@ paths:
     $ref: 'modules/issue.yaml#/paths/~1api~1v0~1drafts~1{draft_id}~1publish'
   /api/v0/workspaces/{slug}/members/{user_id}/issues:
     $ref: 'modules/issue.yaml#/paths/~1api~1v0~1workspaces~1{slug}~1members~1{user_id}~1issues'
+  /api/v0/workspaces/{slug}/issues:
+    $ref: 'modules/issue.yaml#/paths/~1api~1v0~1workspaces~1{slug}~1issues'
   /api/v0/projects/{project_id}/issues:
     $ref: 'modules/issue.yaml#/paths/~1api~1v0~1projects~1{project_id}~1issues'
   /api/v0/projects/{project_id}/intake-issues:

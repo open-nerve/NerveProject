@@ -159,6 +159,11 @@ type ListMemberIssuesUseCase interface {
 	Execute(context.Context, string, uuid.UUID, map[string][]string) (app.IssueListPage, error)
 }
 
+// ListWorkspaceIssuesUseCase reads the caller's ordinary scope in a workspace.
+type ListWorkspaceIssuesUseCase interface {
+	Execute(context.Context, string, map[string][]string) (app.IssueListPage, error)
+}
+
 // ListIssuesUseCase reads the explicitly authorized project scope.
 type ListIssuesUseCase interface {
 	Execute(context.Context, uuid.UUID, map[string][]string) (app.IssueListPage, error)
@@ -186,6 +191,7 @@ type UseCases struct {
 	CreateIssueLink         CreateIssueLinkUseCase
 	ListIssueLinks          ListIssueLinksUseCase
 	ListMemberIssues        ListMemberIssuesUseCase
+	ListWorkspaceIssues     ListWorkspaceIssuesUseCase
 	ListIssues              ListIssuesUseCase
 	ListIssueActivities     ListIssueActivitiesUseCase
 	ListDescriptionVersions ListDescriptionVersionsUseCase
