@@ -11,6 +11,7 @@ export type IssueCreate = components["schemas"]["IssueCreate"];
 export type IssueUpdate = components["schemas"]["IssueUpdate"];
 export type IssueQuery = NonNullable<operations["listIssues"]["parameters"]["query"]>;
 export type MemberIssueQuery = operations["listMemberIssues"]["parameters"]["query"];
+export type WorkspaceIssueQuery = NonNullable<operations["listWorkspaceIssues"]["parameters"]["query"]>;
 export type IssuePage = components["schemas"]["IssueListPage"];
 export type IssueSearchQuery = NonNullable<operations["searchIssues"]["parameters"]["query"]>;
 export type IssueCollection = components["schemas"]["IssueCollection"];
@@ -80,6 +81,27 @@ export async function listMemberIssues(
   const result = await memberIssuesListed(api, token, slug, userId, query);
   expect(result.status, JSON.stringify(result)).toBe(200);
   if (!("page" in result)) throw new Error("listMemberIssues answered without a page");
+  return result.page;
+}
+
+/** The caller's work items across the projects of the workspace of slug he is a member of (M7 P3a spec 2.3). */
+export async function workspaceIssuesListed(api: Api, token: string, slug: string, query: WorkspaceIssueQuery = {}) {
+  const { data, error, response } = await api.GET("/api/v0/workspaces/{slug}/issues", {
+    params: { path: { slug }, query },
+    headers: bearer(token),
+  });
+  return data ? { status: response.status, page: data } : answer(response, error);
+}
+
+export async function listWorkspaceIssues(
+  api: Api,
+  token: string,
+  slug: string,
+  query: WorkspaceIssueQuery = {}
+): Promise<IssuePage> {
+  const result = await workspaceIssuesListed(api, token, slug, query);
+  expect(result.status, JSON.stringify(result)).toBe(200);
+  if (!("page" in result)) throw new Error("listWorkspaceIssues answered without a page");
   return result.page;
 }
 
