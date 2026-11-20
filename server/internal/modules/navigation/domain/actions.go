@@ -30,3 +30,27 @@ func Actions() []shared.Action {
 	return []shared.Action{ActionViewRead, ActionViewCreate, ActionViewUpdate, ActionViewDelete,
 		ActionWorkspaceViewRead, ActionWorkspaceViewCreate, ActionWorkspaceViewUpdate, ActionWorkspaceViewDelete}
 }
+
+// Verb is what an operation does with a view: read, create, update or
+// delete it.
+type Verb int
+
+// The four verbs.
+const (
+	Read Verb = iota + 1
+	Create
+	Update
+	Delete
+)
+
+// actionsOf are each kind's actions, by verb.
+var actionsOf = map[Kind]map[Verb]shared.Action{
+	ProjectView:   {Read: ActionViewRead, Create: ActionViewCreate, Update: ActionViewUpdate, Delete: ActionViewDelete},
+	WorkspaceView: {Read: ActionWorkspaceViewRead, Create: ActionWorkspaceViewCreate, Update: ActionWorkspaceViewUpdate, Delete: ActionWorkspaceViewDelete},
+}
+
+// ActionOf is the action of verb on a view of kind k (spec 2.2, 2.5): a
+// project's view's view.*, which Authorize decides on the view's project;
+// a workspace's view's workspace_view.*, decided on its workspace. A
+// /views/{view_id} call reads the view first and chooses by its kind.
+func ActionOf(k Kind, verb Verb) shared.Action { return actionsOf[k][verb] }

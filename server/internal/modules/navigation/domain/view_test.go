@@ -85,7 +85,8 @@ func TestTheOwnerRules(t *testing.T) {
 }
 
 // The module's two codes (spec 2.4): every 404 on /views/{view_id} is navigation.view_not_found, and a write on a
-// project's views while its toggle issue_views_view is off is 409 navigation.views_disabled.
+// project's views while its toggle issue_views_view is off is 409 navigation.views_disabled. And the 404s of the
+// routes on a project's and a workspace's views (spec 2.2), the codes their modules answer.
 func TestTheModulesErrors(t *testing.T) {
 	for _, tt := range []struct {
 		err    *shared.Error
@@ -94,6 +95,8 @@ func TestTheModulesErrors(t *testing.T) {
 	}{
 		{domain.ErrViewNotFound, 404, "navigation.view_not_found"},
 		{domain.ErrViewsDisabled, 409, "navigation.views_disabled"},
+		{domain.ErrProjectNotFound, 404, "project.not_found"},
+		{domain.ErrWorkspaceNotFound, 404, "workspace.not_found"},
 	} {
 		if tt.err.ProblemStatus() != tt.status || tt.err.ProblemCode() != tt.code || tt.err.Detail == "" {
 			t.Errorf("%+v; want %d %s with a detail", tt.err, tt.status, tt.code)

@@ -220,8 +220,11 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 		IssueRefs: notificationIssueRefs{issues: issuePorts.IssueRefs, projects: projectPorts.NotificationIdentifiers},
 		Clock:     businessClock, ReadTx: readTx, Tx: busyTx{tx: issueTx}, MarkTx: tx,
 	})
-	views := navigation.New(navigation.Deps{Pool: pool, JobTx: issueTx, RuntimeNow: time.Now, Logger: logger,
-		DeleteBatch: cfg.Navigation.DeleteBatch, DeleteBudget: cfg.Navigation.DeleteBudget})
+	// A view's write enters no write gate and answers no server_busy (M7 P3b spec 2.4): tx.
+	views := navigation.New(navigation.Deps{Pool: pool, Tx: tx, ReadTx: readTx, JobTx: issueTx, RuntimeNow: time.Now, Logger: logger,
+		DeleteBatch: cfg.Navigation.DeleteBatch, DeleteBudget: cfg.Navigation.DeleteBudget, Clock: businessClock, Authorizer: authorizer,
+		Projects: navigationProjects{projects: projectPorts.NavigationProjects}, Workspaces: navigationWorkspaces{directory: workspacePorts.WorkspaceDirectory},
+		ListSettings: issuePorts.ListSettings, WorkspaceListSettings: issuePorts.WorkspaceListSettings})
 	// project before workspace: workspace's writes take its cascade.
 	proj := project.New(project.Deps{
 		Caller: identityPorts.CredentialLock, ImageGate: projectImageGate{gate: projectWrites},
