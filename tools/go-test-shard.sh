@@ -12,7 +12,9 @@ usage="usage: bash tools/go-test-shard.sh <shard> <shards> <timeout>"
 shard=$1 shards=$2 timeout=$3
 [[ $shard =~ ^[0-9]+$ && $shards =~ ^[0-9]+$ ]] && ((shard < shards)) || { echo "$usage" >&2; exit 2; }
 
-# 第 0 路的桶数 p0：它另跑其他包（持续集成上约 150 秒），按 7dfaa8a1 逐个测试的计时折算，47 让两路的 Test 步最接近（预计约 697 与 678 秒）
+# 第 0 路的桶数 p0：第 0 路另跑其他包、lint 等步骤（持续集成上约 300 秒）。按持续集成上逐个测试的时间（并行子测试的时间
+# 不算进父测试：TestPermissionMatrix 在桶 46、约 85 秒，报告里只有 2 秒）折算，47 让两路离各自期限（作业 25 分钟、
+# go test 20 分钟）最近的那一路余量最大（M7 分路段的阶段记录）
 p0=47
 if ((shard == 0)); then
 	lo=0 hi=$((shards == 1 ? 100 : p0))
@@ -27,6 +29,7 @@ list() { go test -list "$1" "$pkg" | grep -E '^[^[:space:]]+$'; }
 all=$(list .)
 mine=$(while IFS= read -r name; do
 	read -r crc _ < <(printf %s "$name" | cksum)
+	[[ $crc =~ ^[0-9]+$ ]] || { echo "cksum 没有给出 $name 的校验值" >&2; exit 1; }
 	if ((crc % 100 >= lo && crc % 100 < hi)); then echo "$name"; fi
 done <<<"$all" | LC_ALL=C sort)
 [ -n "$mine" ] || { echo "第 $shard 路没有分到 bootstrap 包的测试" >&2; exit 1; }
