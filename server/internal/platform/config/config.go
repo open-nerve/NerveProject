@@ -31,6 +31,7 @@ type Config struct {
 	Issue        IssueConfig        `koanf:"issue"`
 	Planning     PlanningConfig     `koanf:"planning"`
 	Notification NotificationConfig `koanf:"notification"`
+	Navigation   NavigationConfig   `koanf:"navigation"`
 	Cleanup      CleanupConfig      `koanf:"cleanup"`
 	Files        FilesConfig        `koanf:"files"`
 	Log          LogConfig          `koanf:"log"`
@@ -209,6 +210,16 @@ type NotificationConfig struct {
 	DeleteBudget time.Duration `koanf:"delete_budget"`
 }
 
+// NavigationConfig configures the saved views' maintenance: the
+// asynchronous deletion of the views of a deleted project, or of a deleted
+// workspace's own, soft-deletes at most DeleteBatch of them per transaction
+// and runs for at most DeleteBudget before River snoozes it (M7 P3b spec
+// 2.7).
+type NavigationConfig struct {
+	DeleteBatch  int           `koanf:"delete_batch"`
+	DeleteBudget time.Duration `koanf:"delete_budget"`
+}
+
 // WriteGateConfig is the work items' write gate (platform/gate): at most
 // PerProject writes on a project's work items hold a connection at once in
 // this process, at most MaxQueue others wait for it, holding none, each at
@@ -310,6 +321,10 @@ func (c Config) LogValue() slog.Value {
 		slog.Group("notification",
 			slog.Int("delete_batch", c.Notification.DeleteBatch),
 			slog.Duration("delete_budget", c.Notification.DeleteBudget),
+		),
+		slog.Group("navigation",
+			slog.Int("delete_batch", c.Navigation.DeleteBatch),
+			slog.Duration("delete_budget", c.Navigation.DeleteBudget),
 		),
 		slog.Any("files", c.Files),
 		slog.Group("log",

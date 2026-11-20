@@ -13,6 +13,7 @@ import (
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/asset"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue"
+	"github.com/open-nerve/NerveProject/server/internal/modules/navigation"
 	"github.com/open-nerve/NerveProject/server/internal/modules/notification"
 	"github.com/open-nerve/NerveProject/server/internal/modules/planning"
 	"github.com/open-nerve/NerveProject/server/internal/platform/config"
@@ -118,6 +119,7 @@ func waitProjectDeletion(t *testing.T, pool *pgxpool.Pool, project uuid.UUID) {
 	waitDeletionJob(t, pool, job, "completed")
 	waitPlanningDeletion(t, pool, project)
 	waitNotificationDeletion(t, pool, project)
+	waitNavigationDeletion(t, pool, "project", project)
 	waitAssetScopeDeletion(t, pool, "project", project)
 }
 
@@ -251,7 +253,7 @@ func projectDeletionPublisher(t *testing.T, pool *pgxpool.Pool, observers ...sha
 		t.Fatal(err)
 	}
 	subscribers := slices.Concat(issue.Subscribers(issue.Provide(pool, nil), jobInserter{client: client}), planning.Subscribers(jobInserter{client: client}), asset.Subscribers(asset.Provide(pool), jobInserter{client: client}),
-		notification.Subscribers(notification.Provide(pool), jobInserter{client: client}))
+		notification.Subscribers(notification.Provide(pool), jobInserter{client: client}), navigation.Subscribers(jobInserter{client: client}))
 	subscribers = append(subscribers, observers...)
 	d, err := newDispatcher(eventTypes(), subscribers)
 	if err != nil {
@@ -282,7 +284,9 @@ func waitWorkspaceDeletion(t *testing.T, pool *pgxpool.Pool, workspace uuid.UUID
 		waitDeletionJob(t, pool, projectDeletionJob(t, pool, project), "completed")
 		waitPlanningDeletion(t, pool, project)
 		waitNotificationDeletion(t, pool, project)
+		waitNavigationDeletion(t, pool, "project", project)
 	}
 	waitDeletionJob(t, pool, parentDeletionJob(t, pool, "workspace_drafts", workspace), "completed")
+	waitNavigationDeletion(t, pool, "workspace", workspace)
 	waitAssetScopeDeletion(t, pool, "workspace", workspace)
 }

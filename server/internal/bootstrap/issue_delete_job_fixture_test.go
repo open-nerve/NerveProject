@@ -14,6 +14,7 @@ import (
 	issuepg "github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/postgres"
 	issueriver "github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/river"
 	issueapp "github.com/open-nerve/NerveProject/server/internal/modules/issue/app"
+	"github.com/open-nerve/NerveProject/server/internal/modules/navigation"
 	"github.com/open-nerve/NerveProject/server/internal/modules/notification"
 	"github.com/open-nerve/NerveProject/server/internal/modules/planning"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project"
@@ -114,11 +115,12 @@ func newDeletionLifecycle(t *testing.T, configure func(*config.Config), runtimeN
 	uc := issueapp.NewDeleteRows(issueapp.DeleteRowsDeps{Rows: store, Relations: issueapp.NewRelationDeletions(store, issueProjects{projects: project.Provide(a.pool, nil).IssueProjects}), Remaining: store, Tx: tx, RuntimeNow: runtimeNow, Batch: cfg.Issue.DeleteBatch, Budget: cfg.Issue.DeleteBudget})
 	execution := &deletionExecution{DeleteRowsUseCase: uc}
 	definitions := slices.Concat([]jobs.Job{issueriver.DeleteRowsJob(execution, cfg.Issue.DeleteBudget, logger), assetDeletionJobForTest(a.pool, cfg)}, planningDeletionJobsForTest(a.pool, cfg),
-		notificationJobsForTest(a.pool, cfg))
+		notificationJobsForTest(a.pool, cfg), navigationDeletionJobsForTest(a.pool, cfg))
 	if extra != nil {
 		definitions = append(definitions, extra(a.pool)...)
 	}
-	runner, err := jobs.New(a.pool, jobs.Config{ShutdownTimeout: cfg.Jobs.ShutdownTimeout, Logger: logger, DefaultWorkers: cfg.Jobs.DefaultWorkers, PeriodicWorkers: cfg.Jobs.PeriodicWorkers}, definitions, slices.Concat([]string{issueriver.DeleteRowsKind, "asset.delete_scope"}, planning.EnqueuedKinds(), notification.EnqueuedKinds()))
+	runner, err := jobs.New(a.pool, jobs.Config{ShutdownTimeout: cfg.Jobs.ShutdownTimeout, Logger: logger, DefaultWorkers: cfg.Jobs.DefaultWorkers, PeriodicWorkers: cfg.Jobs.PeriodicWorkers}, definitions, slices.Concat([]string{issueriver.DeleteRowsKind, "asset.delete_scope"}, planning.EnqueuedKinds(), notification.EnqueuedKinds(),
+		navigation.EnqueuedKinds()))
 	if err != nil {
 		t.Fatal(err)
 	}

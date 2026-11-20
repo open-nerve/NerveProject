@@ -7,6 +7,7 @@ import (
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue"
+	"github.com/open-nerve/NerveProject/server/internal/modules/navigation"
 	"github.com/open-nerve/NerveProject/server/internal/modules/notification"
 	"github.com/open-nerve/NerveProject/server/internal/modules/planning"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
@@ -16,9 +17,9 @@ import (
 // Worker progress and periodic scheduling must not look like request writes.
 func TestRegistrationRowsSeeRequestJobs(t *testing.T) {
 	t.Run("declared request kinds", func(t *testing.T) {
-		if kinds := slices.Concat(identity.EnqueuedKinds(), issue.EnqueuedKinds(), planning.EnqueuedKinds(), notification.EnqueuedKinds()); !slices.Contains(kinds, "issue.crawl_link") || !slices.Contains(kinds, "issue.delete_rows") || !slices.Contains(kinds, "planning.delete_rows") ||
-			!slices.Contains(kinds, "planning.crawl_link") || !slices.Contains(kinds, "notification.delete_rows") || !slices.Contains(kinds, "notification.fanout") {
-			t.Fatalf("request kinds=%v; want independently expected issue.crawl_link, issue.delete_rows, planning.delete_rows, planning.crawl_link, notification.delete_rows and notification.fanout", kinds)
+		if kinds := slices.Concat(identity.EnqueuedKinds(), issue.EnqueuedKinds(), planning.EnqueuedKinds(), notification.EnqueuedKinds(), navigation.EnqueuedKinds()); !slices.Contains(kinds, "issue.crawl_link") || !slices.Contains(kinds, "issue.delete_rows") || !slices.Contains(kinds, "planning.delete_rows") ||
+			!slices.Contains(kinds, "planning.crawl_link") || !slices.Contains(kinds, "notification.delete_rows") || !slices.Contains(kinds, "notification.fanout") || !slices.Contains(kinds, "navigation.delete_rows") {
+			t.Fatalf("request kinds=%v; want independently expected issue.crawl_link, issue.delete_rows, planning.delete_rows, planning.crawl_link, notification.delete_rows, notification.fanout and navigation.delete_rows", kinds)
 		}
 	})
 	pool := openPool(t, pgtest.NewDatabase(t))

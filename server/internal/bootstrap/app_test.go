@@ -94,6 +94,7 @@ func testConfig(t *testing.T, dbURL string, autoMigrate bool) config.Config {
 		Issue:        testIssueConfig,
 		Planning:     config.PlanningConfig{DeleteBatch: 1000, DeleteBudget: 45 * time.Second, FreezeInterval: time.Hour},
 		Notification: config.NotificationConfig{DeleteBatch: 1000, DeleteBudget: 45 * time.Second},
+		Navigation:   config.NavigationConfig{DeleteBatch: 1000, DeleteBudget: 45 * time.Second},
 		Files:        testFilesConfig(t),
 		Log:          config.LogConfig{Level: "error", Format: "text"},
 	}

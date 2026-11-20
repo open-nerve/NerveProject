@@ -33,7 +33,8 @@ import (
 // Bug, with its child, UI, two cycles of hers, a module of hers with its
 // member and link, and a work item of hers with a row of each table under
 // it, written directly (seedLabels, seedCycles, seedModules, seedIssues),
-// with a notification of its Seeded for her (seedItemNotification).
+// with a notification of its Seeded for her (seedItemNotification), and a
+// saved view of hers of it and of acme (seedViews).
 func twoProjects(t *testing.T) (contract *apitest.Contract, base string, pool *pgxpool.Pool, alice string, aliceID, web, ops uuid.UUID) {
 	t.Helper()
 	return twoProjectsWith(t, func(*config.Config) {})
@@ -62,6 +63,7 @@ func twoProjectsWith(t *testing.T, configure func(*config.Config)) (contract *ap
 		seedModules(t, pool, project, aliceID)
 		seedIssues(t, pool, project, aliceID)
 		seedItemNotification(t, pool, project, "Seeded", aliceID)
+		seedViews(t, pool, project, aliceID)
 		for _, id := range queryIDs(t, pool, "SELECT id FROM issues WHERE project_id=$1", project) {
 			status, body := call(t, contract, http.MethodPatch, base+"/api/v0/issues/"+id.String(), alice, fmt.Sprintf(`{"description_html":%q}`, mentionHTML(aliceID)))
 			if status != http.StatusOK {
