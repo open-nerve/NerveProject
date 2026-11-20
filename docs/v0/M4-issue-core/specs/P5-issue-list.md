@@ -116,7 +116,7 @@ P5 恰好 19 码：sort_order 仅升序；created_at/updated_at/start_date/targe
 
 三条 SQL：list_issues.sql、list_issue_groups.sql、list_issue_subgroups.sql；参数目录采用 `ROWS FROM(unnest(...),unnest(...))` 并列数组，长度一致，不交叉相乘。接口类型为 interface{} 的列若选出需显式转型。所有数组适配端规整非 nil，SQL 同时 `coalesce(cardinality(...),0)=0` 防御。
 
-filtered AS MATERIALIZED 在分页前完成范围/可见性/全部过滤，每 issue 一行。窄键 CTE 计算 k_null/k_num/k_text，ORDER BY 与游标谓词每条 SQL 各一份；分组 LEFT JOIN LATERAL 展开，row_number 按组/格全序取 limit+1。总体窗口在 filtered，组窗口在组展开后、子组展开前，泳道窗口在独立子组展开层，格窗口在双展开后。完整数组及非排序计数仅对返回行计算；排序用名/计数才对候选行算键。
+filtered AS MATERIALIZED 在分页前完成范围/可见性/全部过滤，每 issue 一行。窄键 CTE 计算 k_null/k_num/k_text，ORDER BY 与游标谓词每条 SQL 各一份；分组 LEFT JOIN LATERAL 展开，row_number 按组/格全序取 limit+1。总体窗口在 filtered，分组的组窗口在组展开后；泳道只展开一次（每个工作项每个组键 × 子组键一行，两边各带序号），组、泳道、格三个窗口都在这一条流上，组与泳道只数另一方向上的第一行，不把分别计数的两条流相连（M7 插入段取代了原来“泳道窗口在独立子组展开层、格窗口在两路按 id 连接之后”的写法，见 [M4 设计 3.16](../M4-design.md#316-列表引擎总体设计-3334架构问题-56) 第 5 条）。完整数组及非排序计数仅对返回行计算；排序用名/计数才对候选行算键。
 
 空的无 cursor 页 total=0；cursor 页没有行时同事务、同原筛选及组格选择、去 cursor、limit=1 再查 total。不得换目录、换连接、扩大查询范围。
 

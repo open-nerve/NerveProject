@@ -100,7 +100,10 @@ WITH projects AS (
 ), keyed AS (
     SELECT n.id, n.own_only, n.total, n.child_count, n.link_count, n.attachment_count, n.k_text, n.k_num, (n.k_num IS NULL AND n.k_text IS NULL) AS k_null FROM numeric_keys n
 ), expanded AS (
-    SELECT k.id, k.own_only, k.total, k.child_count, k.link_count, k.attachment_count, k.k_text, k.k_num, k.k_null, coalesce(g.key,'none')::text AS group_key
+    -- One stream: an issue once per (group key, lane key); the ordinals mark
+    -- its first row on either side.
+    SELECT k.id, k.own_only, k.total, k.child_count, k.link_count, k.attachment_count, k.k_text, k.k_num, k.k_null, coalesce(g.key,'none')::text AS group_key, coalesce(l.key,'none')::text AS sub_group_key,
+           coalesce(g.n,1)=1 AS first_group, coalesce(l.n,1)=1 AS first_lane
     FROM keyed k JOIN issues i ON i.id=k.id JOIN states s ON s.id=i.state_id
     LEFT JOIN LATERAL unnest(CASE $3::text
         WHEN 'label_id' THEN ARRAY(SELECT r.label_id::text FROM issue_labels r WHERE r.issue_id=i.id AND r.deleted_at IS NULL)
@@ -113,12 +116,7 @@ WITH projects AS (
         WHEN 'created_by_id' THEN ARRAY[i.created_by_id::text]
         WHEN 'target_date' THEN ARRAY[to_char(i.target_date,'YYYY-MM-DD')]
         WHEN 'project_id' THEN ARRAY[i.project_id::text]
-    END) AS g(key) ON true
-), group_counts AS (
-    SELECT e.id, e.own_only, e.total, e.child_count, e.link_count, e.attachment_count, e.k_text, e.k_num, e.k_null, e.group_key, count(*) OVER (PARTITION BY e.group_key) AS group_total FROM expanded e
-), subgroup_expanded AS (
-    SELECT k.id, coalesce(g.key,'none')::text AS sub_group_key
-    FROM keyed k JOIN issues i ON i.id=k.id JOIN states s ON s.id=i.state_id
+    END) WITH ORDINALITY AS g(key, n) ON true
     LEFT JOIN LATERAL unnest(CASE $4::text
         WHEN 'label_id' THEN ARRAY(SELECT r.label_id::text FROM issue_labels r WHERE r.issue_id=i.id AND r.deleted_at IS NULL)
         WHEN 'assignee_id' THEN ARRAY(SELECT r.assignee_id::text FROM issue_assignees r WHERE r.issue_id=i.id AND r.deleted_at IS NULL)
@@ -129,18 +127,20 @@ WITH projects AS (
         WHEN 'priority' THEN ARRAY[i.priority::text]
         WHEN 'created_by_id' THEN ARRAY[i.created_by_id::text]
         WHEN 'target_date' THEN ARRAY[to_char(i.target_date,'YYYY-MM-DD')]
-    END) AS g(key) ON true
-), subgroup_counts AS (
-    SELECT e.id, e.sub_group_key, count(*) OVER (PARTITION BY e.sub_group_key) AS subgroup_total FROM subgroup_expanded e
-), cells AS MATERIALIZED (
-    -- Keep cell selection outside the join of independently counted streams.
-    -- Pushing a single cell's keys down misestimates both streams and can turn
-    -- their identity join into a quadratic nested loop before the empty fallback.
-    SELECT g.id, g.own_only, g.total, g.child_count, g.link_count, g.attachment_count, g.k_text, g.k_num, g.k_null, g.group_key, g.group_total, s.sub_group_key, s.subgroup_total,
-           count(*) OVER (PARTITION BY g.group_key, s.sub_group_key) AS cell_total
-    FROM group_counts g JOIN subgroup_counts s ON s.id=g.id
+    END) WITH ORDINALITY AS l(key, n) ON true
+), cells AS (
+    -- Every total is a window over the one stream that counts an issue once: a
+    -- group's on its first lane row, a lane's on its first group row. Joining
+    -- separately counted streams would leave the join method to estimates. No
+    -- column is in all three partitions, so ranked's key and cursor filters
+    -- cannot be pushed below these windows.
+    SELECT e.id, e.own_only, e.total, e.child_count, e.link_count, e.attachment_count, e.k_text, e.k_num, e.k_null, e.group_key, e.sub_group_key, e.first_group, e.first_lane,
+           count(*) FILTER (WHERE e.first_lane) OVER (PARTITION BY e.group_key) AS group_total,
+           count(*) FILTER (WHERE e.first_group) OVER (PARTITION BY e.sub_group_key) AS subgroup_total,
+           count(*) OVER (PARTITION BY e.group_key, e.sub_group_key) AS cell_total
+    FROM expanded e
 ), ranked AS (
-    SELECT k.id, k.own_only, k.total, k.child_count, k.link_count, k.attachment_count, k.k_text, k.k_num, k.k_null, k.group_key, k.group_total, k.sub_group_key, k.subgroup_total, k.cell_total, row_number() OVER (PARTITION BY k.group_key, k.sub_group_key
+    SELECT k.id, k.own_only, k.total, k.child_count, k.link_count, k.attachment_count, k.k_text, k.k_num, k.k_null, k.group_key, k.sub_group_key, k.first_group, k.first_lane, k.group_total, k.subgroup_total, k.cell_total, row_number() OVER (PARTITION BY k.group_key, k.sub_group_key
         ORDER BY k.k_null,
          CASE WHEN NOT $46::boolean THEN k.k_num END ASC,
          CASE WHEN $46::boolean THEN k.k_num END DESC,
