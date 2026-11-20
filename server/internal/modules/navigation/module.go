@@ -1,9 +1,10 @@
 // Package navigation is the saved views module (M7 design 3.7, 4): it owns
 // the issue_views table, each row a saved view, a project's or, without a
 // project, a workspace's: its name, description, icon and the list
-// settings it shows its work items with, and its owner. Its use cases list
-// a project's and a workspace's views, create them, and read, change and
-// delete one by its id (P3b spec 2.4, 2.5). A project's or a workspace's
+// settings it shows its work items with, and its owner. Its API
+// (api/modules/navigation.yaml) lists a project's and a workspace's views,
+// creates them, and reads, changes and deletes one by its id (P3b spec
+// 2.4, 2.5). A project's or a workspace's
 // deletion enqueues, in its transaction, the deletion of each deleted
 // project's views and of the workspace's own (P3b spec 2.7); the 60-day
 // purge removes the deleted ones (Provide).
@@ -15,9 +16,11 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	httpadapter "github.com/open-nerve/NerveProject/server/internal/modules/navigation/adapter/http"
 	postgresadapter "github.com/open-nerve/NerveProject/server/internal/modules/navigation/adapter/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/modules/navigation/app"
 	"github.com/open-nerve/NerveProject/server/internal/modules/navigation/domain"
+	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
@@ -74,16 +77,10 @@ type Deps struct {
 
 // Module is the navigation module.
 type Module struct {
-	listProjectViews    *app.ListProjectViews
-	listWorkspaceViews  *app.ListWorkspaceViews
-	getView             *app.GetView
-	createProjectView   *app.CreateProjectView
-	createWorkspaceView *app.CreateWorkspaceView
-	updateView          *app.UpdateView
-	deleteView          *app.DeleteView
-	deleteRows          *app.DeleteRows
-	deleteBudget        time.Duration
-	logger              *slog.Logger
+	uc           httpadapter.UseCases
+	deleteRows   *app.DeleteRows
+	deleteBudget time.Duration
+	logger       *slog.Logger
 }
 
 // New builds the module from d.
@@ -93,13 +90,20 @@ func New(d Deps) *Module {
 	writes := app.WriteDeps{Locks: app.NewLocks(d.Workspaces, d.Projects, store, store, d.Authorizer, d.Tx), Views: store, Clock: d.Clock,
 		Words: app.Words{Project: d.ListSettings, Workspace: d.WorkspaceListSettings}}
 	return &Module{
-		listProjectViews: app.NewListProjectViews(reads), listWorkspaceViews: app.NewListWorkspaceViews(reads), getView: app.NewGetView(reads),
-		createProjectView: app.NewCreateProjectView(writes), createWorkspaceView: app.NewCreateWorkspaceView(writes),
-		updateView: app.NewUpdateView(writes), deleteView: app.NewDeleteView(writes),
+		uc: httpadapter.UseCases{
+			ListProjectViews: app.NewListProjectViews(reads), ListWorkspaceViews: app.NewListWorkspaceViews(reads), GetView: app.NewGetView(reads),
+			CreateProjectView: app.NewCreateProjectView(writes), CreateWorkspaceView: app.NewCreateWorkspaceView(writes),
+			UpdateView: app.NewUpdateView(writes), DeleteView: app.NewDeleteView(writes),
+		},
 		deleteRows: app.NewDeleteRows(app.DeleteRowsDeps{Rows: store, Tx: d.JobTx, RuntimeNow: d.RuntimeNow, Batch: d.DeleteBatch,
 			Budget: d.DeleteBudget}),
 		deleteBudget: d.DeleteBudget, logger: d.Logger,
 	}
+}
+
+// Register mounts the module's routes on router behind api's middlewares.
+func (m *Module) Register(router *httpserver.Router, api *httpserver.API) {
+	httpadapter.Register(router, api, m.uc)
 }
 
 // Actions lists the module's actions: bootstrap's test holds the union of

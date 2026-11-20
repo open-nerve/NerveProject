@@ -335,6 +335,7 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 	plans.Register(a.router, api)
 	files.Register(a.router, api, bucket(limiter, "file_transfer", cfg.Files.TransferRate))
 	notes.Register(a.router, api)
+	views.Register(a.router, api)
 	// The web UI takes every path no other pattern claims. It must be the
 	// method-less "/": "GET /" and the method-less "/api/" would conflict.
 	webHandler, err := webui.Handler(webFiles, webui.Options{StorageOrigin: assets.origin})
