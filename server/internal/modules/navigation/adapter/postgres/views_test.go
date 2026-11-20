@@ -21,6 +21,7 @@ import (
 
 var (
 	_ app.ViewReader = (*postgresadapter.Store)(nil)
+	_ app.ViewLocker = (*postgresadapter.Store)(nil)
 	_ app.ViewWriter = (*postgresadapter.Store)(nil)
 )
 

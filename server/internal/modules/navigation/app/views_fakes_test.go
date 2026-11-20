@@ -23,9 +23,9 @@ var (
 )
 
 // world is the fakes of the ports of a call on the views, one value for all of them but the transactions and the
-// words: Workspaces, Projects, ViewReader, ViewWriter, the Authorizer and the Clock. calls logs each call, in order,
-// with the transaction it is in (begin and end), so a test holds the whole order of a call's reads, locks, decisions,
-// clock and writes.
+// words: Workspaces, Projects, ViewReader, ViewLocker, ViewWriter, the Authorizer and the Clock. calls logs each call,
+// in order, with the transaction it is in (begin and end), so a test holds the whole order of a call's reads, locks,
+// decisions, clock and writes.
 type world struct {
 	calls []string
 	names map[uuid.UUID]string
@@ -38,18 +38,28 @@ type world struct {
 	// lock, nil for one deleted while it waited.
 	projects  map[uuid.UUID]app.ProjectFacts
 	underLock map[uuid.UUID]*app.ProjectFacts
-	// views are the undeleted views; listed, what a list answers.
-	views  map[uuid.UUID]domain.View
-	listed []domain.View
+	// views are the undeleted views as read without a lock; viewsLocked, those that differ as LockView reads them,
+	// nil for one deleted while it waited; listed, what a list answers.
+	views       map[uuid.UUID]domain.View
+	viewsLocked map[uuid.UUID]*domain.View
+	listed      []domain.View
 	// decide answers Authorize, told whether the call is in a transaction (under the locks, for a write).
-	decide   func(action shared.Action, t shared.Target, inTx bool) (shared.Grant, error)
-	inserted []insertion
+	decide func(action shared.Action, t shared.Target, inTx bool) (shared.Grant, error)
+	// inserted and updated are the views InsertView and UpdateView stored, deleted the views DeleteView deleted.
+	inserted, updated []insertion
+	deleted           []deletion
 }
 
-// insertion is a view InsertView stored and its writer.
+// insertion is a view InsertView or UpdateView stored and its writer.
 type insertion struct {
 	view domain.View
 	by   uuid.UUID
+}
+
+// deletion is a view DeleteView deleted, when and by whom.
+type deletion struct {
+	id, by uuid.UUID
+	at     time.Time
 }
 
 // member is a project member's grant, which every rule of the views allows.
@@ -157,6 +167,12 @@ func (w *world) View(_ context.Context, id uuid.UUID) (domain.View, bool, error)
 
 func (w *world) LockView(_ context.Context, id uuid.UUID) (domain.View, bool, error) {
 	w.log("lock view %s", w.name(id))
+	if v, differs := w.viewsLocked[id]; differs {
+		if v == nil {
+			return domain.View{}, false, nil
+		}
+		return *v, true, nil
+	}
 	v, found := w.views[id]
 	return v, found, nil
 }
@@ -169,11 +185,13 @@ func (w *world) InsertView(_ context.Context, v domain.View, by uuid.UUID) error
 
 func (w *world) UpdateView(_ context.Context, v domain.View, by uuid.UUID) error {
 	w.log("update %s by %s", w.name(v.ID), w.name(by))
+	w.updated = append(w.updated, insertion{v, by})
 	return nil
 }
 
-func (w *world) DeleteView(_ context.Context, id uuid.UUID, _ time.Time, by uuid.UUID) error {
+func (w *world) DeleteView(_ context.Context, id uuid.UUID, at time.Time, by uuid.UUID) error {
 	w.log("delete %s by %s", w.name(id), w.name(by))
+	w.deleted = append(w.deleted, deletion{id: id, by: by, at: at})
 	return nil
 }
 
@@ -216,10 +234,23 @@ func as(t *testing.T) context.Context {
 // reads are the world's reads, in its "read" transactions.
 func (w *world) reads() app.Reads { return app.NewReads(w, w, w, w, tx{w, "read"}) }
 
-// creations are the world's creations of a view, in its "write" transactions, with the kinds' words.
-func (w *world) creations(project, workspace *words) app.CreateViewDeps {
-	return app.CreateViewDeps{Locks: app.NewLocks(w, w, w, tx{w, "write"}), Words: app.Words{Project: project, Workspace: workspace}, Views: w,
+// writes are the world's writes of a view, in its "write" transactions, with the kinds' words.
+func (w *world) writes(project, workspace *words) app.WriteDeps {
+	return app.WriteDeps{Locks: app.NewLocks(w, w, w, w, w, tx{w, "write"}), Words: app.Words{Project: project, Workspace: workspace}, Views: w,
 		Clock: w}
+}
+
+// wroteNothing fails t unless the world stored, changed and deleted no view and read no clock.
+func wroteNothing(t *testing.T, w *world) {
+	t.Helper()
+	if len(w.inserted)+len(w.updated)+len(w.deleted) != 0 {
+		t.Errorf("wrote: inserted %+v, updated %+v, deleted %+v; want nothing", w.inserted, w.updated, w.deleted)
+	}
+	for _, call := range w.calls {
+		if call == "now" {
+			t.Error("the clock was read")
+		}
+	}
 }
 
 // wantCalls fails t unless the world's calls are want, in order.

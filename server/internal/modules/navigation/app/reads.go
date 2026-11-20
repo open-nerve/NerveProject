@@ -15,16 +15,15 @@ import (
 // 3.7).
 type Reads struct {
 	containers
-	views ViewReader
-	auth  shared.Authorizer
-	tx    shared.TxManager
+	auth shared.Authorizer
+	tx   shared.TxManager
 }
 
 // NewReads returns the reads over the workspace module's directory, the
 // project's facts, the views, the Authorizer and read-only snapshot
 // transactions.
 func NewReads(workspaces Workspaces, projects Projects, views ViewReader, auth shared.Authorizer, tx shared.TxManager) Reads {
-	return Reads{containers: containers{workspaces: workspaces, projects: projects}, views: views, auth: auth, tx: tx}
+	return Reads{containers: containers{workspaces: workspaces, projects: projects, views: views}, auth: auth, tx: tx}
 }
 
 // list lists the views of what n names (listProjectViews,
@@ -89,19 +88,31 @@ type GetView struct{ r Reads }
 // NewGetView returns the use case over r.
 func NewGetView(r Reads) *GetView { return &GetView{r: r} }
 
-// Execute reads the view id and decides its kind's read on it (seeView):
-// every view it cannot answer is navigation.view_not_found; a role refused
-// on one the caller sees is the Authorizer's shared.Forbidden.
+// Execute reads the view id, in one read-only snapshot transaction, and
+// decides its kind's read on it (spec 2.5): on its project, a project's
+// view, by view.read, a workspace's on its workspace by workspace_view.read
+// (containers.find, decide). Every view it cannot answer is
+// navigation.view_not_found: one that is not there, one whose project or
+// workspace the caller does not see, and another's while he sees only his
+// own (View.HiddenFrom); a role refused on one he sees is the
+// Authorizer's shared.Forbidden.
 func (u *GetView) Execute(ctx context.Context, id uuid.UUID) (domain.View, error) {
 	actor, err := shared.RequireActor(ctx)
 	if err != nil {
 		return domain.View{}, err
 	}
+	n := named{view: &id}
 	var out domain.View
 	err = u.r.tx.WithinTx(ctx, func(ctx context.Context) error {
-		v, _, err := seeView(ctx, u.r.views, u.r.auth, actor, id, domain.Read)
-		out = v
-		return err
+		h, err := u.r.find(ctx, n)
+		if err != nil {
+			return err
+		}
+		if h, err = decide(ctx, u.r.auth, actor, domain.Read, h, n.notFound()); err != nil {
+			return err
+		}
+		out = *h.view
+		return nil
 	})
 	if err != nil {
 		return domain.View{}, err

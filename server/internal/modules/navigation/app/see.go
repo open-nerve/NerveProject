@@ -9,15 +9,17 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
-// named is what a call on the views of a project or of a workspace names
-// (P3b spec 2.4): the project project, or, when it is nil, the workspace
-// slug names.
+// named is what a call on the views names (P3b spec 2.4): the views of
+// the project project, or, when it is nil, of the workspace slug names;
+// or, when view is not nil, the view view, /views/{view_id}, whose kind
+// its row tells.
 type named struct {
 	project *uuid.UUID
 	slug    string
+	view    *uuid.UUID
 }
 
-// kind is the kind of the views n's call is on.
+// kind is the kind of the views of the project or the workspace n names.
 func (n named) kind() domain.Kind {
 	if n.project != nil {
 		return domain.ProjectView
@@ -25,22 +27,27 @@ func (n named) kind() domain.Kind {
 	return domain.WorkspaceView
 }
 
-// notFound is the 404 of what n names (spec 2.2): project.not_found, or
-// workspace.not_found.
+// notFound is the 404 of what n names (spec 2.2, 2.5): project.not_found,
+// workspace.not_found, or for a view navigation.view_not_found, whatever
+// it is that the caller cannot have.
 func (n named) notFound() error {
-	if n.project != nil {
+	switch {
+	case n.view != nil:
+		return domain.ErrViewNotFound
+	case n.project != nil:
 		return domain.ErrProjectNotFound
 	}
 	return domain.ErrWorkspaceNotFound
 }
 
-// held is what a call on the views of a project or of a workspace holds once
-// decided: the workspace; for a project's views the project and its facts,
-// projectID nil for a workspace's; and the caller's grant.
+// held is what a call on the views holds once decided: the workspace; for
+// a project's views the project and its facts, projectID nil for a
+// workspace's; for a call on a view, the view; and the caller's grant.
 type held struct {
 	workspaceID uuid.UUID
 	projectID   *uuid.UUID
 	project     ProjectFacts
+	view        *domain.View
 	grant       shared.Grant
 }
 
@@ -63,18 +70,31 @@ func (h held) ownedBy(actor shared.Actor) *uuid.UUID {
 	return &id
 }
 
-// containers find and lock the project or the workspace a call on the views
-// names.
+// containers find what a call on the views names: a project, a workspace,
+// or a view, and through it its project or its workspace.
 type containers struct {
 	workspaces Workspaces
 	projects   Projects
+	views      ViewReader
 }
 
 // find reads what n names without a lock, in the transaction ctx carries,
-// if any: the project's facts, or the workspace slug names. One that is not
-// there is n's 404.
+// if any: the project's facts, the workspace slug names, or the view and
+// with it its workspace and project. One that is not there is n's 404.
+// A view's project's facts are left for its write's locks, which alone
+// read its toggle.
 func (c containers) find(ctx context.Context, n named) (held, error) {
-	if n.project != nil {
+	switch {
+	case n.view != nil:
+		v, found, err := c.views.View(ctx, *n.view)
+		switch {
+		case err != nil:
+			return held{}, err
+		case !found:
+			return held{}, n.notFound()
+		}
+		return held{workspaceID: v.WorkspaceID, projectID: v.ProjectID, view: &v}, nil
+	case n.project != nil:
 		f, found, err := c.projects.Facts(ctx, *n.project)
 		switch {
 		case err != nil:
@@ -95,40 +115,6 @@ func (c containers) find(ctx context.Context, n named) (held, error) {
 	return held{workspaceID: id}, nil
 }
 
-// share takes, in the transaction ctx carries, the locks of a write on what
-// n names, whose check found pre, and reads it again under them (spec 2.6,
-// M3 design 3.6 convention 2): for a project's views, the workspace's row
-// FOR SHARE, then the project's row FOR SHARE and its facts; for a
-// workspace's, the workspace's row FOR SHARE as its slug names it now. A
-// project or a workspace deleted while its lock waited is n's 404.
-func (c containers) share(ctx context.Context, n named, pre held) (held, error) {
-	if n.project == nil {
-		id, found, err := c.workspaces.ShareWorkspaceBySlug(ctx, n.slug)
-		switch {
-		case err != nil:
-			return held{}, err
-		case !found:
-			return held{}, n.notFound()
-		}
-		return held{workspaceID: id}, nil
-	}
-	found, err := c.workspaces.ShareWorkspaceByID(ctx, pre.workspaceID)
-	switch {
-	case err != nil:
-		return held{}, err
-	case !found:
-		return held{}, n.notFound()
-	}
-	f, found, err := c.projects.Share(ctx, *pre.projectID)
-	switch {
-	case err != nil:
-		return held{}, err
-	case !found:
-		return held{}, n.notFound()
-	}
-	return held{workspaceID: pre.workspaceID, projectID: pre.projectID, project: f}, nil
-}
-
 // target is what Authorize decides an action on the views of the workspace
 // and, when projectID is not nil, of its project, on.
 func target(workspaceID uuid.UUID, projectID *uuid.UUID) shared.Target {
@@ -142,42 +128,36 @@ func target(workspaceID uuid.UUID, projectID *uuid.UUID) shared.Target {
 // decide asks auth for verb's action on h's views for actor, the action of
 // their kind (domain.ActionOf), on h's project or workspace, and answers h
 // with the grant: a project or a workspace actor does not see is notFound;
-// a role the rule refuses is the Authorizer's shared.Forbidden.
+// a role the rule refuses is the Authorizer's shared.Forbidden. On the view
+// h holds, a /views/{view_id} call's, one the guest rule hides from actor
+// (View.HiddenFrom) is notFound too, the one value, also when the rule
+// refuses his role, before any 403 (spec 2.2, 2.5); then a change of it
+// by anyone but its owner, or a deletion by anyone but its owner or its
+// admin, is shared.Forbidden (permits).
 func decide(ctx context.Context, auth shared.Authorizer, actor shared.Actor, verb domain.Verb, h held, notFound error) (held, error) {
 	grant, err := auth.Authorize(ctx, actor, domain.ActionOf(h.kind(), verb), target(h.workspaceID, h.projectID))
 	switch {
-	case errors.Is(err, shared.ErrNotVisible):
+	case errors.Is(err, shared.ErrNotVisible), h.view != nil && h.view.HiddenFrom(actor.UserID, grant):
 		return held{}, notFound
 	case err != nil:
 		return held{}, err
+	case h.view != nil && !permits(*h.view, verb, actor.UserID, grant):
+		return held{}, shared.Forbidden()
 	}
 	h.grant = grant
 	return h, nil
 }
 
-// seeView reads the undeleted view id without a lock, in the transaction
-// ctx carries, then decides verb's action on it for actor, the action its
-// kind chooses (spec 2.5, domain.ActionOf): a project's view's on its
-// project, a workspace's on its workspace. A view that is not there, one
-// whose project or workspace actor does not see, and one the guest rule
-// hides from him (View.HiddenFrom), also when the rule refuses his role,
-// are each navigation.view_not_found, the one value; a role refused on a
-// view he sees is the Authorizer's shared.Forbidden. It answers the view as
-// read, and the grant.
-func seeView(ctx context.Context, views ViewReader, auth shared.Authorizer, actor shared.Actor, id uuid.UUID, verb domain.Verb) (domain.View, shared.Grant, error) {
-	v, found, err := views.View(ctx, id)
-	switch {
-	case err != nil:
-		return domain.View{}, shared.Grant{}, err
-	case !found:
-		return domain.View{}, shared.Grant{}, domain.ErrViewNotFound
+// permits tells whether actor, whose decision on v gave g, may do verb
+// with v by its owner rules (spec 2.2): change it only as its owner
+// (View.UpdatableBy), delete it as its owner or its admin
+// (View.DeletableBy); read it as the decision lets him.
+func permits(v domain.View, verb domain.Verb, actor uuid.UUID, g shared.Grant) bool {
+	switch verb {
+	case domain.Update:
+		return v.UpdatableBy(actor)
+	case domain.Delete:
+		return v.DeletableBy(actor, g)
 	}
-	grant, err := auth.Authorize(ctx, actor, domain.ActionOf(v.Kind(), verb), target(v.WorkspaceID, v.ProjectID))
-	switch {
-	case errors.Is(err, shared.ErrNotVisible), v.HiddenFrom(actor.UserID, grant):
-		return domain.View{}, shared.Grant{}, domain.ErrViewNotFound
-	case err != nil:
-		return domain.View{}, shared.Grant{}, err
-	}
-	return v, grant, nil
+	return true
 }

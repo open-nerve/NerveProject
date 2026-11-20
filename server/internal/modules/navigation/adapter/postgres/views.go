@@ -44,7 +44,7 @@ func (s *Store) View(ctx context.Context, id uuid.UUID) (domain.View, bool, erro
 }
 
 // LockView reads the undeleted view id locked FOR UPDATE; found is false
-// when there is none (app.ViewWriter).
+// when there is none (app.ViewLocker).
 func (s *Store) LockView(ctx context.Context, id uuid.UUID) (domain.View, bool, error) {
 	r, err := s.queries(ctx).LockView(ctx, id)
 	return found(gen.GetViewRow(r), err, "lock", id)

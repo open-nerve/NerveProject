@@ -2,11 +2,11 @@
 // the issue_views table, each row a saved view, a project's or, without a
 // project, a workspace's: its name, description, icon and the list
 // settings it shows its work items with, and its owner. Its use cases list
-// a project's and a workspace's views, read one by its id and create them
-// (P3b spec 2.4, 2.5). A project's or a workspace's deletion enqueues, in
-// its transaction, the deletion of each deleted project's views and of the
-// workspace's own (P3b spec 2.7); the 60-day purge removes the deleted ones
-// (Provide).
+// a project's and a workspace's views, create them, and read, change and
+// delete one by its id (P3b spec 2.4, 2.5). A project's or a workspace's
+// deletion enqueues, in its transaction, the deletion of each deleted
+// project's views and of the workspace's own (P3b spec 2.7); the 60-day
+// purge removes the deleted ones (Provide).
 package navigation
 
 import (
@@ -79,6 +79,8 @@ type Module struct {
 	getView             *app.GetView
 	createProjectView   *app.CreateProjectView
 	createWorkspaceView *app.CreateWorkspaceView
+	updateView          *app.UpdateView
+	deleteView          *app.DeleteView
 	deleteRows          *app.DeleteRows
 	deleteBudget        time.Duration
 	logger              *slog.Logger
@@ -88,11 +90,12 @@ type Module struct {
 func New(d Deps) *Module {
 	store := postgresadapter.New(d.Pool)
 	reads := app.NewReads(d.Workspaces, d.Projects, store, d.Authorizer, d.ReadTx)
-	creations := app.CreateViewDeps{Locks: app.NewLocks(d.Workspaces, d.Projects, d.Authorizer, d.Tx), Views: store, Clock: d.Clock,
+	writes := app.WriteDeps{Locks: app.NewLocks(d.Workspaces, d.Projects, store, store, d.Authorizer, d.Tx), Views: store, Clock: d.Clock,
 		Words: app.Words{Project: d.ListSettings, Workspace: d.WorkspaceListSettings}}
 	return &Module{
 		listProjectViews: app.NewListProjectViews(reads), listWorkspaceViews: app.NewListWorkspaceViews(reads), getView: app.NewGetView(reads),
-		createProjectView: app.NewCreateProjectView(creations), createWorkspaceView: app.NewCreateWorkspaceView(creations),
+		createProjectView: app.NewCreateProjectView(writes), createWorkspaceView: app.NewCreateWorkspaceView(writes),
+		updateView: app.NewUpdateView(writes), deleteView: app.NewDeleteView(writes),
 		deleteRows: app.NewDeleteRows(app.DeleteRowsDeps{Rows: store, Tx: d.JobTx, RuntimeNow: d.RuntimeNow, Batch: d.DeleteBatch,
 			Budget: d.DeleteBudget}),
 		deleteBudget: d.DeleteBudget, logger: d.Logger,

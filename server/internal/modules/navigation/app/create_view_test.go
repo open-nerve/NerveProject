@@ -25,7 +25,7 @@ var (
 
 // create runs the creation c of body as alice in w, with the kinds' words.
 func (c creating) create(t *testing.T, w *world, project, workspace *words, body domain.NewView) (domain.View, error) {
-	d := w.creations(project, workspace)
+	d := w.writes(project, workspace)
 	if c.kind == "project" {
 		return app.NewCreateProjectView(d).Execute(as(t), c.project, body)
 	}

@@ -77,16 +77,23 @@ type ViewReader interface {
 	View(ctx context.Context, id uuid.UUID) (v domain.View, found bool, err error)
 }
 
-// ViewWriter writes the views in the transaction ctx carries, which holds
-// the view's workspace FOR SHARE and, for a project's view, its project
-// FOR SHARE (spec 2.6). LockView reads a view locked FOR UPDATE, found
-// false for one that is not there or is deleted. InsertView stores a new
-// view made by by at its CreatedAt; UpdateView replaces a view's content
-// whole, last changed by by at its UpdatedAt; DeleteView soft-deletes a
-// view, deleted and last changed by by at at. A change or deletion of a
-// view deleted already changes nothing.
-type ViewWriter interface {
+// ViewLocker reads the undeleted view id locked FOR UPDATE until the
+// transaction ctx carries ends, which holds the view's workspace FOR SHARE
+// and, for a project's view, its project FOR SHARE: the last lock of a
+// change or a deletion of it (spec 2.6). found is false for one that is
+// not there or is deleted, also one deleted while the lock waited.
+type ViewLocker interface {
 	LockView(ctx context.Context, id uuid.UUID) (v domain.View, found bool, err error)
+}
+
+// ViewWriter writes the views in the transaction ctx carries, which holds
+// the view's workspace FOR SHARE, for a project's view its project FOR
+// SHARE, and for a change or a deletion the view FOR UPDATE (spec 2.6).
+// InsertView stores a new view made by by at its CreatedAt; UpdateView
+// replaces a view's content whole, last changed by by at its UpdatedAt;
+// DeleteView soft-deletes a view, deleted and last changed by by at at. A
+// change or deletion of a view deleted already changes nothing.
+type ViewWriter interface {
 	InsertView(ctx context.Context, v domain.View, by uuid.UUID) error
 	UpdateView(ctx context.Context, v domain.View, by uuid.UUID) error
 	DeleteView(ctx context.Context, id uuid.UUID, at time.Time, by uuid.UUID) error
