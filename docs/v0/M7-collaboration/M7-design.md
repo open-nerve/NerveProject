@@ -118,7 +118,7 @@ M7 让五件协作功能经真实接口工作：站内通知（关注工作项�
 - **权限**：建：项目视图为项目管理员、成员（开关要开着），工作区视图为工作区管理员、成员（Plane 的新建不鉴权，D25）；改：只有所有者（Plane 相同，D29 照搬）；删：所有者或项目 / 工作区管理员；读：项目视图为项目的有效成员，只看自己的访客看不到别人的视图（也就是全部）；工作区视图为工作区管理员、成员，访客只看自己的（照 Plane，也就是没有）。Plane 的路由 PUT 绕过一切检查（D24），不做 PUT；看不到的 404（D26）。删除视图时所有人对它的收藏随之移除。
 - **视图列表是集合型**，不分页（大小由成员的操作决定，同标签、状态），按 `created_at` 倒序、同值按 `id`；页面在本地排序、筛选（Plane 相同）。所以 M2 交接 §1 的“每种排序一个游标载荷”不适用。
 - **视图页的工作项**：前端把视图的筛选与显示作为查询发给项目列表（Plane 相同，不另设“视图的工作项”接口）。改了筛选或显示而未保存时，改动只在这个页面里（Plane 相同）；“更新视图”（所有者）存回视图，“另存为新视图”新建。
-- **工作区跨项目列表** `GET /workspaces/{slug}/issues`：工作区的管理员、成员、访客；范围是他是有效成员的全部未归档项目，逐项目执行只看自己；只读快照、统一游标与比较器（M4 交接 M7-03）。四个默认视图是同一接口加 `assignee_id=me`、`created_by=me`、`subscriber_id=me`（Plane 相同）。“我关注的”按关注行算，含自己建的、被指派的（Plane 的工作区视图就这样，D30 的另一个定义只在通知里）。工作区的词：项目、状态、状态组、优先级、标签、负责人、创建者、关注者、提及、起止日期；没有迭代、模块（§15 D4），目录取看得到的项目的并集。默认视图的显示设置照 Plane 存在浏览器（按账户、工作区、视图）。
+- **工作区跨项目列表** `GET /workspaces/{slug}/issues`：工作区的管理员、成员、访客；范围是他是有效成员的全部未归档项目，逐项目执行只看自己；只读快照、统一游标与比较器（M4 交接 M7-03）。四个默认视图是同一接口加 `assignee_id=me`、`created_by_id=me`、`subscriber_id=me`（Plane 相同）。不是成员的项目不在范围内（工作区管理员与公开项目也一样），`project_id` 只与范围相交；排除收集箱里的、已归档的、已删除的工作项。“我关注的”按关注行算，含自己建的、被指派的（Plane 的工作区视图就这样，D30 的另一个定义只在通知里）。工作区的词（12 个）：`project_id`、`state_id`、`state_group`、`priority`、`label_id`、`assignee_id`、`created_by_id`、`mention_id`、`subscriber_id`、`start_date`、`target_date`、`sub_issue`；没有迭代、模块（§15 D4），也不收 `archived`、`relation`（422）。只平铺：`group_by`、`sub_group_by`、`group_key`、`sub_group_key` 一律 422（Plane 的工作区接口只平铺、页面只渲染表格）；次序同项目列表。目录取看得到的项目的并集（工作区标签目录随 P6b）。实现见 [P3a spec](specs/P3a-workspace-list.md)。默认视图的显示设置照 Plane 存在浏览器（按账户、工作区、视图）。
 
 ### 3.8 收藏
 
@@ -274,7 +274,7 @@ M7 让五件协作功能经真实接口工作：站内通知（关注工作项�
 | 输入 | 条款落点 | 关闭阶段 |
 |---|---|---|
 | [M1-P2-trim-content](handoffs/M1-P2-trim-content.md) | 收藏、最近访问没有页（§3.8、§3.9）；首页最近访问只列工作项、项目，读新接口；通知没有已删功能的字段 | P4、P7 |
-| [M1-P3-trim-platform](handoffs/M1-P3-trim-platform.md) | 收藏的类型恰五种、前端用生成类型；通知没有工时 | P3b、P7 |
+| [M1-P3-trim-platform](handoffs/M1-P3-trim-platform.md) | 收藏的类型恰五种、前端用生成类型；通知没有工时 | P3c、P7 |
 | [M1-closeout](handoffs/M1-closeout.md) | 本领域死成员与死 prop（首个页面阶段跑基线）、改到的文件 oxlint 为零并另清一类规则（`no-shadow` 已清零，另选） | P4–P8 |
 | [M2-closeout](handoffs/M2-closeout.md) | §1 视图列表是集合型（§3.7）；§2 会话分代与两个单例（§7）；§3 下拉框的浏览器核对；§4 复制；§5 删除图与指向账户的外键（§4.2、§4.3）；§6 不嵌 iframe、不改 CSP | P1–P3（后端）、P4–P8 |
 | [M3-closeout](handoffs/M3-closeout.md) | §1 取数按权限与开关、S2 清单、§1.2 分诊状态不加回（§3.6）、§1.4 项目收藏（§7）；§2 视图 store、通知预览的取数、布局的 key、17 行死成员（§7）、收藏的 `console.error`、其余三项 P8 结论；§3 弹窗与键盘逐项；§4 地址规则、复制、文案、`projectMemberIds`、守卫阶段；§5–§7 回执 | P4–P8 |
@@ -296,12 +296,13 @@ M7 让五件协作功能经真实接口工作：站内通知（关注工作项�
 | P2a | 收集箱条目的生命周期（issue 模块）：`intake_issues` 与删除图、清理；Triage 的新建路径与开关；分诊（迁移规则、接受、动态）；条目作为工作项的写入边界（§3.6，含搜索等排除）；详情的 `intake`；两个操作的权限矩阵（P2a 实施前按删除守卫重新划分，见 [P2a spec](specs/P2a-intake-submit-triage.md) §1） | H8、H10 的接口与数据库；H11 的读写边界；交错 |
 | P2b | 列表与其余：收集箱列表、内容的修改与删除、待处理数、它们的权限矩阵；P2a 审查留下的 m2、m3、n1（实施前再划分，见 [P2b spec](specs/P2b-intake-list-edit-delete.md) §1） | H9、H11 其余的接口与数据库（描述图片除外） |
 | P2c | Triage 宿主的资产判定：资产的四个操作按 `intake.update` 与同一时段、资产路径读开关、先读工作项再选动作；`asset.yaml` 与资产处理器测试 | H11 里“描述的图片同此”的接口与数据库 |
-| P3a | `navigation` 模块与视图：`issue_views`、两种视图的接口与权限、工作区跨项目列表与规模测试 | H12–H14 的接口与数据库 |
-| P3b | 收藏与最近访问：两张表与接口、planning / project 的归档事件与连带、可见过滤 | H15–H17 的接口与数据库 |
+| P3a | 工作区跨项目列表：issue 列表引擎的新范围 `WorkspaceList`、`GET /workspaces/{slug}/issues` 与规模测试（实施前再划分，见 [P3a spec](specs/P3a-workspace-list.md) §1） | H13 的列表一半的接口与数据库 |
+| P3b | `navigation` 模块与视图：`issue_views`、两种视图的接口与权限、删除图与清理 | H12、H14 与 H13 的已存工作区视图的接口与数据库 |
+| P3c | 收藏与最近访问：两张表与接口、planning / project 的归档事件与连带、可见过滤 | H15–H17 的接口与数据库 |
 | P4 | 网页的通知与关注；收起“保存为视图” | H1–H7 的页面、H20 的通知页 |
 | P5 | 网页的收集箱，通知预览里的分诊 | H8–H11 的页面、H20 的收集箱页、M5-M7-01 的证据 |
 | P6a | 网页的项目视图：列表、详情、保存与更新视图、命令面板的视图 | H12 的页面、H20 的视图页 |
-| P6b | 网页的工作区视图与跨项目列表 | H13、H14 的页面、H20 的工作区视图 |
+| P6b | 网页的工作区视图与跨项目列表；工作区标签目录（M4 交接 M7-03：个人主页按标签分组与工作区列表的标签筛选，P3a R5） | H13、H14 的页面、H20 的工作区视图 |
 | P7 | 网页的收藏与最近访问 | H15–H17 的页面、H20 的收藏与首页 |
 | P8 | 最终矩阵、清理规模重跑、死成员与告警收敛、`getTabIndex` 与 `projectMemberIds` 的删除核对、M3 交接 §2 其余三项的结论、文档同步（总体设计 §3.2 的 `mark-all-read` 路径、§5.2 的 `intakes` 与表数、§6.2 的目录、§6.6、§9.4，plane-diff，前端改动清单）、M8 交接 | H1–H21 最终证据、deep-review |
 | closeout | 首次 noff / main 绿 → §13 勾选与总体 §9.4 → 第二次 noff / main 绿 → 归档清理 | §13 每条证据、全部输入关闭 |
@@ -335,7 +336,10 @@ P1a 的第一个实现提交把关键词 phase 改为 `M7/P1`（P1a、P1b 共用
 | P1c 通知的接口与读 | 已完成：合入 main（noff `31f38580`），main CI 44337846563 全绿；整分支审查与限定复审都是 Ready to merge；本机最终门禁的第 0 路因 M6-M8-05 失败，负责人 2026-11-18 决定服务端以分支 CI 为准；spec 与 plan 经预检 [re-84](../../reviews/re-84-M7P1c预检.md) 修正后通过，基线 main `1a23f6f8`（P1b 的 noff）；两个检查点七项全过，检查点 1 的分支 CI 全绿；阶段记录 [P1c review](reviews/P1c-notification-api-review.md) | [P1c spec](specs/P1c-notification-api.md) / [P1c plan](plans/P1c-notification-api.md) |
 | P2a 收集箱条目的生命周期 | 已完成：合入 main（noff `670399c4`；合入后 main CI 暴露的 M5 测试竞态另以 `057176e5` 修复），审查与集成见阶段记录 §9；spec 与 plan 经预检 [re-85](../../reviews/re-85-M7P2a预检.md) 修正后通过，基线 main `31f38580`（P1c 的 noff）；实施前按删除守卫与 P2b 重新划分（spec §1、R1）；阶段记录 [P2a 记录](reviews/P2a-intake-submit-triage-review.md) | [P2a spec](specs/P2a-intake-submit-triage.md) / [P2a plan](plans/P2a-intake-submit-triage.md) |
 | P2b 收集箱的列表、内容修改、删除与待处理数 | 已完成：合入 main（noff `f25cccad`），审查与集成见阶段记录 §9；spec 与 plan 经预检 [re-86](../../reviews/re-86-M7P2b预检.md) 修正后通过，基线 main `057176e5`；实施前把 Triage 宿主的资产判定再划到 P2c（spec §1、R1） | [P2b spec](specs/P2b-intake-list-edit-delete.md) / [P2b plan](plans/P2b-intake-list-edit-delete.md) / [P2b 记录](reviews/P2b-intake-list-edit-delete-review.md) |
-| P2c Triage 宿主的资产判定 | 进行中：spec 与 plan 经预检 [re-87](../../reviews/re-87-M7P2c预检.md) 修正后通过，基线 main `f25cccad` | [P2c spec](specs/P2c-intake-assets.md) / [P2c plan](plans/P2c-intake-assets.md) |
+| P2c Triage 宿主的资产判定 | 已完成：合入 main（noff `7dfaa8a1`），审查与集成见阶段记录 §9；spec 与 plan 经预检 [re-87](../../reviews/re-87-M7P2c预检.md) 修正后通过，基线 main `f25cccad` | [P2c spec](specs/P2c-intake-assets.md) / [P2c plan](plans/P2c-intake-assets.md) / [P2c 记录](reviews/P2c-intake-assets-review.md) |
+| P3a 工作区跨项目列表 | 实施完成，待整分支审查：spec 与 plan 经预检 [re-88](../../reviews/re-88-M7P3a预检.md) 修正后通过，基线 main `7dfaa8a1`；实施前把 P3 再划为 P3a（工作区列表）、P3b（视图）、P3c（收藏与最近访问）（spec §1、R1）；T7 后暂停，先做下面两个插入段，合并 main（`32ea59b8`）后继续 | [P3a spec](specs/P3a-workspace-list.md) / [P3a plan](plans/P3a-workspace-list.md) / [P3a 记录](reviews/P3a-workspace-list-review.md) |
+| 插入段：bootstrap 测试按名字的哈希分路 | 已完成：负责人 2026-11-20 批准；合入 main（noff `33a19ee1`），main CI 44720865989 全绿；p0=46 的依据与 M4 周期整理测试的修复见记录 | [分路记录](reviews/shard-hash-review.md) |
+| 插入段：M4 泳道查询的计划翻转 | 已完成：负责人 2026-11-20 裁定在 M7 里单独修；合入 main（noff `2083c0b7`），main CI 44724861021 全绿；预检 [re-89](../../reviews/re-89-M4泳道计划预检.md) | [spec 与 plan](specs/M4fix-swimlanes-plan.md) / [记录](reviews/M4fix-swimlanes-plan-review.md) |
 
 ## 15. 决定记录
 

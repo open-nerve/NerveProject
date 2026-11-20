@@ -47,11 +47,21 @@ const intakeListPattern = "GET /api/v0/projects/{project_id}/intake-issues"
 
 var intakeListQuery = []string{"status", "priority", "label_id", "assignee_id", "created_by_id", "created_at", "updated_at", "order_by", "limit", "cursor"}
 
+// workspaceListPattern is the route of a workspace's list (M7 P3a spec
+// 2.3), and workspaceListQuery its declared single-valued parameters: no
+// group word, the list being flat.
+const workspaceListPattern = "GET /api/v0/workspaces/{slug}/issues"
+
+var workspaceListQuery = []string{"project_id", "state_id", "state_group", "priority", "label_id", "assignee_id", "created_by_id", "mention_id", "subscriber_id", "sub_issue", "order_by", "limit", "cursor"}
+
 // Each route declares its own single-valued query vocabulary; path and date
 // parameters must never be remapped just because a query uses the same name.
 func listSingleQuery(pattern, name string) bool {
-	if pattern == intakeListPattern {
+	switch pattern {
+	case intakeListPattern:
 		return slices.Contains(intakeListQuery, name)
+	case workspaceListPattern:
+		return slices.Contains(workspaceListQuery, name)
 	}
 	project := pattern == "GET /api/v0/projects/{project_id}/issues"
 	member := pattern == "GET /api/v0/workspaces/{slug}/members/{user_id}/issues"
@@ -70,7 +80,7 @@ func listSingleQuery(pattern, name string) bool {
 }
 
 func withListQuery(next gen.StrictHandlerFunc, operationID string) gen.StrictHandlerFunc {
-	if !slices.Contains([]string{"ListIssues", "ListMemberIssues", "ListDrafts", "SearchIssues", "ListIntakeIssues"}, operationID) {
+	if !slices.Contains([]string{"ListIssues", "ListMemberIssues", "ListWorkspaceIssues", "ListDrafts", "SearchIssues", "ListIntakeIssues"}, operationID) {
 		return next
 	}
 	return func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error) {

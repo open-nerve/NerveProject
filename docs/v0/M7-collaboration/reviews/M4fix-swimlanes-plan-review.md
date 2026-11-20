@@ -1,6 +1,6 @@
 # M7 插入段：M4 泳道查询的计划翻转（阶段记录）
 
-> 状态：待合入。spec 与 plan 见 [M4fix spec](../specs/M4fix-swimlanes-plan.md)，预检 [re-89](../../../reviews/re-89-M4泳道计划预检.md)。基线 main `7dfaa8a1`，分支 `codex/m7-swimlanes`。台账 `.superpowers/sdd/Swimlanes-plan/progress.md`（ignored，随段归档）。
+> 状态：已完成，合入 main（noff `2083c0b7`），§8 为集成的记录。spec 与 plan 见 [M4fix spec](../specs/M4fix-swimlanes-plan.md)，预检 [re-89](../../../reviews/re-89-M4泳道计划预检.md)。基线 main `7dfaa8a1`，分支 `codex/m7-swimlanes`。台账 `.superpowers/sdd/Swimlanes-plan/progress.md`（ignored，随段归档）。
 
 ## 1. 来由与裁定
 
@@ -54,3 +54,10 @@ With fixes：I 2、m 3；SQL、生成文件与测试代码不用改。
 - B4 `label_name` 排序的相关子查询（P3a 已交）。
 - B5 `filtered` 里的 `EXISTS` 筛选在哈希子计划与逐行相关探查之间翻转（`list_issue_subgroups.sql:30-51` 与另两条列表 SQL 的同一段），拥挤库实测 1.2–1.6 倍。
 - 100k 空页仍写临时文件（来自三个窗口的排序）：temp 读写块 14,328 / 17,302 → 18,005 / 15,388，执行时间 687–697 → 520–540 ms，归在 M8 的“100k 临时文件代价”一项。
+
+## 8. 集成
+
+- 最终七项 fin（`5075f234`）全过（bootstrap 506.4 / 551.7 秒，e2e 488 passed）；分支 CI 44720248589 attempt 1 全绿。
+- `--no-ff` 合入 main `2083c0b7`（父 `33a19ee1`、`5075f234`，与分路段的文件不相交）；main CI 44724861021 attempt 1 全绿：server (0) 作业 748 / Test 615 秒，server (1) 859 / 832 秒。
+- P3a 合并 main（`32ea59b8`）时按 §6 接上：两处调用点、拥挤库只跑 M4 的 13 个场景（`m4Scenarios()`）；测量循环合为一份（`1c90864e`）。
+- 归档 `.superpowers/sdd/M7-swimlanes-20261120`（5397 个文件、unknown 0，清理后复核一致）；worktree、本地与远端分支已删除。

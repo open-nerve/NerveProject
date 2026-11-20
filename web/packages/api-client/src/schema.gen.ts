@@ -1235,6 +1235,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v0/workspaces/{slug}/issues": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A workspace's slug, as in the web app's address. */
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        /**
+         * List the work items of a workspace's projects
+         * @description Workspace admins, members and guests may read. Only projects the caller actively belongs to that are undeleted and unarchived are included, applying the caller's OwnOnly restriction in each; a workspace admin role or a public project adds no project the caller is not a member of. Deleted, archived and triage work items are excluded. project_id only intersects this scope. CSV alternatives use OR; different filters and repeated dates use AND. Unknown parameters, among them cycle_id, module_id, archived, relation and the grouping parameters, and repeated non-date parameters answer 422. Binding precedes authentication: malformed parameters answer 400; repeated declared non-date queries answer 422 even without a token. The answer is always a flat page.
+         */
+        get: operations["listWorkspaceIssues"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v0/projects/{project_id}/issues": {
         parameters: {
             query?: never;
@@ -6938,6 +6961,60 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description A flat page or grouped pages. Group continuation returns a flat page. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssueListPage"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listWorkspaceIssues: {
+        parameters: {
+            query?: {
+                /** @description UUID alternatives intersected with the caller's ordinary visible projects. */
+                project_id?: string[];
+                /** @description UUID alternatives. CSV; repeated parameters are not allowed. */
+                state_id?: string[];
+                /** @description backlog, unstarted, started, completed or cancelled. CSV; repeated parameters are not allowed. */
+                state_group?: string[];
+                /** @description urgent, high, medium, low or none. CSV; repeated parameters are not allowed. */
+                priority?: string[];
+                /** @description UUID or none alternatives. CSV; repeated parameters are not allowed. */
+                label_id?: string[];
+                /** @description UUID, me or none alternatives. CSV; repeated parameters are not allowed. */
+                assignee_id?: string[];
+                /** @description UUID or me alternatives. CSV; repeated parameters are not allowed. */
+                created_by_id?: string[];
+                /** @description UUID or me alternatives. CSV; repeated parameters are not allowed. */
+                mention_id?: string[];
+                /** @description UUID or me alternatives. CSV; repeated parameters are not allowed. */
+                subscriber_id?: string[];
+                /** @description A day, a..b, ..b, a.. or none; repeated conditions use AND. */
+                start_date?: string[];
+                /** @description A day, a..b, ..b, a.. or none; repeated conditions use AND. */
+                target_date?: string[];
+                /** @description Whether to include child work items. Only the strings true and false are allowed. */
+                sub_issue?: string;
+                order_by?: components["schemas"]["IssueListOrder"];
+                /** @description The page size, 1–100; 50 when absent. Outside that range the answer is 422 validation_failed on limit. */
+                limit?: components["parameters"]["Limit"];
+                /** @description The next_cursor of the page before; absent for the first page. A cursor that does not decode, has an unknown version or a payload of another shape than this list's, or is not spelled as the server writes it is 400 bad_request on cursor. */
+                cursor?: components["parameters"]["Cursor"];
+            };
+            header?: never;
+            path: {
+                /** @description A workspace's slug, as in the web app's address. */
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Always a flat page with total, data and next_cursor; a cursor past the end answers no data with the total. */
             200: {
                 headers: {
                     [name: string]: unknown;

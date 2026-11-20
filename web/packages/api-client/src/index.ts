@@ -29,12 +29,13 @@ export function createClient(options?: ClientOptions) {
   return client;
 }
 
-// The lists whose query arrays are CSV alternatives: the two lists of work items mix them with repeated date
-// conditions; a project's intake list has CSV ones alone. OpenAPI types do not configure openapi-fetch's runtime
-// serialization.
+// The lists whose query arrays are CSV alternatives: the lists of work items (a project's, a member's, a
+// workspace's) mix them with repeated date conditions; a project's intake list has CSV ones alone. OpenAPI types do
+// not configure openapi-fetch's runtime serialization.
 const csvListPaths = new Set([
   "/api/v0/projects/{project_id}/issues",
   "/api/v0/workspaces/{slug}/members/{user_id}/issues",
+  "/api/v0/workspaces/{slug}/issues",
   "/api/v0/projects/{project_id}/intake-issues",
 ]);
 

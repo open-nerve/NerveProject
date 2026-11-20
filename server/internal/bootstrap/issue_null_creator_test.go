@@ -34,7 +34,7 @@ func TestNullCreatorRemainsHiddenAndUnowned(t *testing.T) {
 		}
 		checkNullCreatorTree(t, w, actor, tree)
 		for _, row := range deletionWindowCases() {
-			if slices.Contains([]string{"searchIssues", "listDrafts", "getDraft", "listMemberIssues", "listIssues", "createDraft", "updateDraft", "deleteDraft", "publishDraft", "createIssue", "submitIntakeIssue", "listIntakeIssues", "getIntakeCounts"}, row.op) {
+			if slices.Contains([]string{"searchIssues", "listDrafts", "getDraft", "listMemberIssues", "listWorkspaceIssues", "listIssues", "createDraft", "updateDraft", "deleteDraft", "publishDraft", "createIssue", "submitIntakeIssue", "listIntakeIssues", "getIntakeCounts"}, row.op) {
 				continue
 			}
 			t.Run(actor+"/"+row.op, func(t *testing.T) {
@@ -49,7 +49,7 @@ func TestNullCreatorRemainsHiddenAndUnowned(t *testing.T) {
 			})
 		}
 		for _, path := range []string{"/api/v0/projects/" + w.web.String() + "/issues", "/api/v0/workspaces/acme/issue-search?q=Target",
-			"/api/v0/projects/" + w.web.String() + "/intake-issues"} {
+			"/api/v0/projects/" + w.web.String() + "/intake-issues", "/api/v0/workspaces/acme/issues"} {
 			body := w.send(t, actor, "GET", path, "", 200)
 			for _, row := range listIn[storedIssue](t, body) {
 				if row.ID == f.x.issue || row.ID == f.x.archived || row.ID == f.x.other || row.ID == f.x.intake {

@@ -1,6 +1,6 @@
 # M7 / P2c 阶段记录：Triage 宿主的资产判定
 
-> 状态：实施完成，待整分支审查。spec 与 plan 见 [P2c spec](../specs/P2c-intake-assets.md)、[P2c plan](../plans/P2c-intake-assets.md)，预检 [re-87](../../../reviews/re-87-M7P2c预检.md)（修正后通过，4 处重要、12 处次要全部采纳）。基线 main `f25cccad`（P2b 的 noff）。
+> 状态：已完成，合入 main（noff `7dfaa8a1`），§9 为审查与集成的记录。spec 与 plan 见 [P2c spec](../specs/P2c-intake-assets.md)、[P2c plan](../plans/P2c-intake-assets.md)，预检 [re-87](../../../reviews/re-87-M7P2c预检.md)（修正后通过，4 处重要、12 处次要全部采纳）。基线 main `f25cccad`（P2b 的 noff）。
 
 ## 1. 交付
 
@@ -54,7 +54,8 @@
 |---|---|---|---|---|---|
 | P2b 基线（P2b fin；main CI 44488525189） | 552.0 秒 | 519.5 秒 | 1071.5 | 814 秒 | 642 秒 |
 | 检查点 1（`c4ad6c8a`） | 523.8 | 560.8 | 1084.6 | 708 | 662 |
-| 检查点 2 | （待填） | | | | |
+| 检查点 2 / 最终候选（fin2 `0a48086f`、fin3 `612d77c9`） | 532.4 / 518.2 | 545.9 / 555.7 | 1078.3 / 1073.9 | 719（最终分支 CI） | 706 |
+| main（`7dfaa8a1`，main CI 44647295601） | | | | 705 | 670 |
 
 P2c 只加了一个 bootstrap 顶层名（T7 的 `TestIntakeItemAssetsThroughTheApp`），它让 366 个测试换路，T6 提交前算好的清单与实际逐行相同；新测试自己约 2–3 秒，宿主矩阵 +0.15 秒，`TestAssetLateHostInterleaving` +4.4 秒。检查点 1 的 CI 上第 0 路 −106 秒、第 1 路 +20 秒（对合入 P2b 后的 main），都在 90 秒以内；那一次的运行机器正常（`issue/adapter/http` 92.8 秒）。
 
@@ -73,4 +74,10 @@ P2c 只加了一个 bootstrap 顶层名（T7 的 `TestIntakeItemAssetsThroughThe
 
 ## 9. 整分支审查与集成
 
-（待填）
+- 检查点 2（`c61258e0`）：第 0 路的 `TestEachWriteOnAProjectSharesItsWorkspaceFirst` 确定失败（§3），检查点 2 的分支 CI 被修复的推送取代。
+- 整分支审查（fable，只读，`f25cccad..c61258e0`）：Ready to merge，没有严重、重要的，5 处次要：m1 阶段记录的待填（在此回填）；m2 T7 的子测试按次序成故事（写明）；m3 拒绝的子测试加重复删除、重复确认两格；m4 设计 §3.10 的 `intake.update` 一行补资产；m5 `bootstrap/ports_test.go` 522 行（§7）。与守卫的修复一起在 `9b5426b4`。
+- 限定复审（`9b5426b4`）：R1 重要——守卫修复写的原因不对（资产的写走自己的锁序、先 `FOR SHARE` 工作区，不是“经 issue 的 `Locks`、不锁工作区”），主控在代码里核实后改为按标签 `asset` 排除并写明真正的原因（`0a48086f`）；R2、R3 随之消失，R4 §7 的路径更正。
+- 最终候选 fin（`9b5426b4`）：六项通过，F11 (page) 以 M6-M8-07 的签名失败一次（随 R1 的修改整套重跑，不单独重跑）；fin2（`0a48086f`）七项全过。
+- 分支 CI 44635307447（`0a48086f`）failure：e2e (1) 的 M4 I2 页面故事——标签选择器吞掉快速的第二次点击（§4），不是已知的偶发，没有重跑；按根因在 `1880d4e2` 修（选项随忙禁用），阶段记录 `612d77c9`；fin3 七项全过；分支 CI 44642775608 attempt 1 全绿（server (0) Test 719 秒、server (1) 706 秒、web Unit 493 秒、e2e 520/622 秒）。
+- `--no-ff` 合入 main `7dfaa8a1`（父 `f25cccad`、`612d77c9`，树与分支相同）；main CI 44647295601 attempt 1 全绿：server (0) Test 705 秒、server (1) 670 秒、web Unit 490 秒、e2e 647/607 秒。
+- 归档 `.superpowers/sdd/M7-P2c-integration-20261120`（3095 个文件、unknown 0，清理后复核一致）；P2c 的 worktree、本地与远端分支已删除（先核实已含在 main）。

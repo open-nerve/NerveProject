@@ -3,8 +3,6 @@ package bootstrap
 import (
 	"context"
 	"fmt"
-	"maps"
-	"net/url"
 	"path/filepath"
 	"slices"
 	"strconv"
@@ -13,22 +11,20 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-
-	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
 )
 
-// listScaleCrowded runs TestIssueListScale's scenarios on its seed with ten
-// more projects in the same database, n/10 roots each, none of walt's or
-// bob's: every scenario's scope and expectation stay the same, while the
-// planner's statistics see fifteen projects instead of five. Its evidence
-// is under dir/crowded/<roots>.
+// listScaleCrowded runs TestIssueListScale's scenarios M4 measured
+// (m4Scenarios) on its seed with ten more projects in the same database,
+// n/10 roots each, none of walt's or bob's: every scenario's scope and
+// expectation stay the same, while the planner's statistics see fifteen
+// projects instead of five. Its evidence is under dir/crowded/<roots>.
 func listScaleCrowded(t *testing.T, dir string) {
 	for _, n := range []int{10000, 20000, 100000} {
 		t.Run(strconv.Itoa(n), func(t *testing.T) {
 			roles := newSplitRoles(t)
 			trace := &listTrace{}
 			pool := listTracePool(t, roles.serverURL, trace)
-			f := seedListScale(t, n, roles, pool)
+			f := seedListScale(t, n, roles, pool, false)
 			target := filepath.Join(dir, "crowded", strconv.Itoa(n))
 			listEvidence(t, target, "metadata", listScaleMetadata(t, roles, pool))
 			// The distribution counts every issue in the database: before the crowd.
@@ -43,8 +39,9 @@ func listScaleCrowded(t *testing.T, dir string) {
 				Accounts    any
 			}{n, f.projects, crowd, f.SeedSeconds, f.w.ids})
 			listEvidence(t, target, "statistics", map[string]any{"seeded": seeded, "crowded": listScaleStatistics(t, f.owner)})
-			for _, s := range f.scenarios() {
-				t.Run(s.Name, func(t *testing.T) { f.measureScenario(t, pool, trace, target, s) })
+			db := listScaleDB{f: f, pool: pool, trace: trace}
+			for _, s := range f.m4Scenarios() {
+				t.Run(s.Name, func(t *testing.T) { db.measureScenario(t, target, n, s) })
 			}
 		})
 	}
@@ -133,60 +130,4 @@ func listScaleStatistics(t *testing.T, owner *pgxpool.Pool) map[string]any {
 		t.Fatal("issues statistics", columns)
 	}
 	return map[string]any{"reltuples": reltuples, "columns": columns}
-}
-
-// measureScenario is TestIssueListScale's measurement of one scenario, on a
-// route of its own (keeps each scenario's requests apart from the others'):
-// 1 warmup and 5 samples, then the actual next, last and empty pages, with the
-// EXPLAIN of the last sample and of the empty page.
-func (f listScaleFixture) measureScenario(t *testing.T, pool *pgxpool.Pool, trace *listTrace, target string, s listScaleScenario) {
-	route := newIssueRoute(t, pool, postgres.NewTxManager(pool, 2*time.Second))
-	want := f.expected(s)
-	if len(want) == 0 {
-		t.Fatal("empty performance scenario")
-	}
-	q := maps.Clone(s.Query)
-	if q == nil {
-		q = url.Values{}
-	}
-	samples := make([]listScaleSample, 0, 6)
-	for i := 0; i < 6; i++ {
-		samples = append(samples, scaleRequest(t, f, route, trace, s, q, fmt.Sprintf("%s-%d", s.Name, i)))
-	}
-	listEvidence(t, target, s.Name+"-samples", samples)
-	var continuation listScaleContinuation
-	for _, sample := range samples {
-		continuation = f.checkPage(t, s, sample.Body, want)
-	}
-	var times, sql []float64
-	for _, sample := range samples[1:] {
-		times = append(times, sample.ModuleMS)
-		sql = append(sql, sample.SQLMS["list"])
-	}
-	sorted, sortedSQL := slices.Sorted(slices.Values(times)), slices.Sorted(slices.Values(sql))
-	t.Logf("%s roots=%d physical=%d matched=%d warmup_ms=%.3f samples_ms=%v min/median/max=%.3f/%.3f/%.3f sql_list_median_ms=%.3f", s.Name, f.projects[0].Roots, len(f.rows), len(want), samples[0].ModuleMS, times, sorted[0], sorted[2], sorted[4], sortedSQL[2])
-	listEvidence(t, target, s.Name+"-summary", map[string]any{"matched": len(want), "physical": len(f.rows), "warmup_ms": samples[0].ModuleMS, "samples_ms": times, "min_ms": sorted[0], "median_ms": sorted[2], "max_ms": sorted[4], "sql_list_ms": sql, "sql_list_median_ms": sortedSQL[2]})
-	explainListStatements(t, pool, filepath.Join(target, "plans"), s.Name, samples[5].Statements)
-	// Actual first cursor -> next page, independent penultimate -> last, last -> empty fallback.
-	rows := continuation.Rows
-	if continuation.Cursor != "" {
-		continuation.Query.Set("cursor", continuation.Cursor)
-		next := scaleRequest(t, f, route, trace, s, continuation.Query, s.Name+"-next")
-		f.checkRows(t, s, checkListEnvelope(t, next.Body, false, false), rows, 50)
-		listEvidence(t, target, s.Name+"-next", next)
-	}
-	if len(rows) > 1 {
-		continuation.Query.Set("cursor", scaleCursor(t, s, rows[len(rows)-2]))
-		last := scaleRequest(t, f, route, trace, s, continuation.Query, s.Name+"-last")
-		f.checkRows(t, s, checkListEnvelope(t, last.Body, false, false), rows, len(rows)-1)
-		listEvidence(t, target, s.Name+"-last", last)
-	}
-	continuation.Query.Set("cursor", scaleCursor(t, s, rows[len(rows)-1]))
-	empty := scaleRequest(t, f, route, trace, s, continuation.Query, s.Name+"-empty")
-	listEvidence(t, target, s.Name+"-empty", empty)
-	f.checkRows(t, s, checkListEnvelope(t, empty.Body, false, false), rows, len(rows))
-	if _, ok := empty.SQLMS["fallback"]; !ok {
-		t.Fatal("missing actual fallback SQL")
-	}
-	explainListStatements(t, pool, filepath.Join(target, "plans"), s.Name+"-empty", empty.Statements)
 }

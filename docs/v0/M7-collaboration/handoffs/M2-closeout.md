@@ -16,6 +16,8 @@ created: 2026-09-28
 - **游标不签名**：改成另一个合格的位置照样可用。载荷只决定从哪里接着读；游标内容会影响能看到什么的列表（视图会带筛选条件），要自己另加检查（M2/P3a 评审第 7 节）。
 - **关闭条件**：每种排序有自己的载荷和测试（翻页不重复、不遗漏）；改过的游标只能在调用者看得到的数据里换起点，有测试；跨模块的联表有结论。
 
+**处理结果（M7/P3a，工作区跨项目列表的部分）：** 工作区跨项目列表 `GET /workspaces/{slug}/issues` 用列表引擎的共享游标 `[order, key, id]`（与项目、成员列表相同，每种次序的键由比较器定），改过的游标只换起点、换不出看不到的行（组合测试 `TestWorkspaceIssueList` 的格，[P3a spec](../specs/P3a-workspace-list.md) §2.2）。视图的列表是集合型、不分页（设计 §3.7），本条的视图部分与跨模块联表的结论随 P3b。保持 open。
+
 ## 2. stores 按会话分代（规则在总体设计 7.7）
 
 - **做什么**：M7 接上新接口的 stores、services 和页面照 [总体设计 7.7](../../v0-design.md) 写。M7 的范围（`d97c513` 上数出）：`git grep -n -E '^(export )?const [A-Za-z]+ = new [A-Za-z]+Service\(' -- web/apps/web` 中的 `WorkspaceNotificationService`、`IntakeWorkItemVersionService` 各 1 处，以及最近访问的 `WorkspaceService.fetchWorkspaceRecents` 1 处（`web/apps/web/core/components/home/widgets/recents/index.tsx`）。

@@ -17,7 +17,8 @@ type listScaleContinuation struct {
 }
 
 // Assert the captured response only after request timing and rows consumption end.
-func (f listScaleFixture) checkPage(t *testing.T, s listScaleScenario, body string, want []listScaleRow) listScaleContinuation {
+// A flat page starts at want's offset: a last page's (listScaleScenario.Tail).
+func (f listScaleFixture) checkPage(t *testing.T, s listScaleScenario, body string, want []listScaleRow, offset int) listScaleContinuation {
 	t.Helper()
 	grouped := s.Query.Get("group_by") != "" && s.Query.Get("group_key") == ""
 	lanes := s.Query.Get("sub_group_by") != ""
@@ -30,7 +31,7 @@ func (f listScaleFixture) checkPage(t *testing.T, s listScaleScenario, body stri
 		q = url.Values{}
 	}
 	if !grouped {
-		f.checkRows(t, s, page, want, 0)
+		f.checkRows(t, s, page, want, offset)
 		return listScaleContinuation{q, want, cursorText(page)}
 	}
 	keys, groups := f.groupRows(want, s.Query.Get("group_by"))
@@ -97,7 +98,7 @@ func (f listScaleFixture) checkRows(t *testing.T, s listScaleScenario, p issueLi
 	creators := map[uuid.UUID]uuid.UUID{}
 	for _, r := range f.rows {
 		creators[r.ID] = r.Creator
-		if !r.deleted() && !r.archived() && r.Parent != (uuid.UUID{}) && (r.Project != 2 || r.Creator == f.w.ids["walt"]) {
+		if !r.deleted() && !r.archived() && r.Parent != (uuid.UUID{}) && (!f.projects[r.Project].ownOnly() || r.Creator == f.w.ids["walt"]) {
 			children[r.Parent]++
 		}
 	}
@@ -110,7 +111,7 @@ func (f listScaleFixture) checkRows(t *testing.T, s listScaleScenario, p issueLi
 		one.Data = p.Data[i : i+1]
 		checkListPageRow(t, one, listRowWant{labels: r.Labels, assignees: r.Assignees, children: children[r.ID]})
 		parent := r.Parent
-		if r.Project == 2 && creators[parent] != f.w.ids["walt"] {
+		if f.projects[r.Project].ownOnly() && creators[parent] != f.w.ids["walt"] {
 			parent = uuid.UUID{}
 		}
 		if parent == (uuid.UUID{}) {
