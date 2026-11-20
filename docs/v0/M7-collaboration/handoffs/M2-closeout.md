@@ -18,6 +18,8 @@ created: 2026-09-28
 
 **处理结果（M7/P3a，工作区跨项目列表的部分）：** 工作区跨项目列表 `GET /workspaces/{slug}/issues` 用列表引擎的共享游标 `[order, key, id]`（与项目、成员列表相同，每种次序的键由比较器定），改过的游标只换起点、换不出看不到的行（组合测试 `TestWorkspaceIssueList` 的格，[P3a spec](../specs/P3a-workspace-list.md) §2.2）。视图的列表是集合型、不分页（设计 §3.7），本条的视图部分与跨模块联表的结论随 P3b。保持 open。
 
+**处理结果（M7/P3b，视图的部分）：** 两种视图的列表都是集合型、不分页，按 `created_at` 倒序、同值按 `id`，没有游标载荷（“每种排序一个载荷”不适用，设计 §3.7）。跨模块的联表：navigation 的 SQL 不联表 `projects`、`workspaces`，项目的事实（工作区、`issue_views_view`）、项目与工作区的 `FOR SHARE` 都经端口（project 的 `navigation_ports.sql`、workspace 的 `WorkspaceDirectory`），`TestSQLCSchemaScope` 不加例外（[P3b spec](../specs/P3b-views.md) §2.1）。本条剩下收藏与最近访问的列表（P3c）。保持 open。
+
 ## 2. stores 按会话分代（规则在总体设计 7.7）
 
 - **做什么**：M7 接上新接口的 stores、services 和页面照 [总体设计 7.7](../../v0-design.md) 写。M7 的范围（`d97c513` 上数出）：`git grep -n -E '^(export )?const [A-Za-z]+ = new [A-Za-z]+Service\(' -- web/apps/web` 中的 `WorkspaceNotificationService`、`IntakeWorkItemVersionService` 各 1 处，以及最近访问的 `WorkspaceService.fetchWorkspaceRecents` 1 处（`web/apps/web/core/components/home/widgets/recents/index.tsx`）。
@@ -43,6 +45,8 @@ created: 2026-09-28
 - **做什么**：M7 的每张新表（评论、通知、保存视图、收集箱等）照 M2 设计 3.13 搬 Django 模型的 `on_delete`，在 M2 设计 4.7 的图上延伸，写明物理删除时每条指向 `users` 和工作项的外键的去向（M3、M4、M6 各自延伸自己的表）。跨模块的联表见第 1 节。
 - **为什么**：M2 设计 3.14 把"跨模块的联表查询、物理删除时的外键链由各 M 的设计逐个写明"交给 M3、M4、M6、M7；13.2 的关系图一行只写了 M3、M4、M6。
 - **关闭条件**：M7 设计有延伸后的图，每条指向 `users`、工作项的外键写明去向。
+
+**处理结果（M7/P3b，`issue_views` 的部分）：** `owned_by_id → users` 照 Plane `ON DELETE CASCADE`，`created_by_id`、`updated_by_id → users` `SET NULL`；不指向工作项；`workspace_id`、`project_id` `CASCADE`，删除项目、工作区经 `navigation.delete_rows` 任务软删（设计 §4 的表与删除图，[P3b spec](../specs/P3b-views.md) §2.3、§2.7）。收藏与最近访问的两张表随 P3c。保持 open。
 
 ## 6. CSP 的 `frame-src`
 
