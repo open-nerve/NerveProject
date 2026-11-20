@@ -19,27 +19,69 @@ import (
 type listScaleProject struct {
 	ID             uuid.UUID
 	States, Labels []uuid.UUID
+	People         []uuid.UUID // its two assignees and subscribers: alice and bob; in spread alice and walt
 	Roots          int
+	Role           shared.Role // walt's, once seeded
+	Left, Archived bool        // walt left it; it is archived
 }
 type listScaleFixture struct {
 	w           issueWorld
 	owner       *pgxpool.Pool
+	spread      bool // the sub-seed
 	projects    []listScaleProject
 	rows        []listScaleRow
 	SeedSeconds float64
 }
 
+// scaleSpreadProjects is the sub-seed's projects, which share its N roots evenly.
+const scaleSpreadProjects = 10
+
 // v1: N normal roots in Web, 200 in each of four scope neighbours. Per 100
 // roots add triage/archive/deleted roots and four children (own/other/archive/deleted).
+// Spread, the sub-seed (M7 P3a spec 2.4), spreads the N roots evenly over
+// scaleSpreadProjects projects of acme instead, walt a member of each and in
+// bob's place their second assignee and subscriber.
 // SQL creates the data; the oracle independently enumerates rows in Go.
-func seedListScale(t *testing.T, n int, roles splitRoles, pool *pgxpool.Pool) listScaleFixture {
+func seedListScale(t *testing.T, n int, roles splitRoles, pool *pgxpool.Pool, spread bool) listScaleFixture {
 	t.Helper()
 	w := newIssueWorldOn(t, roles.serverURL, pool, func(*config.Config) {})
 	// The fixture deliberately includes expired tombstones. Finish RunOnStart
 	// before inserting them; the configured hourly purge cannot recur during
 	// this suite's 40-minute deadline. Readiness alone does not join workers.
 	waitForCompletedKinds(t, roles.owner, map[string]int{"cleanup.purge_deleted": 1}, &lockedBuffer{})
-	f := listScaleFixture{w: w, owner: roles.owner}
+	f := listScaleFixture{w: w, owner: roles.owner, spread: spread}
+	if spread {
+		f.projects = spreadListScaleProjects(t, w, pool, n)
+	} else {
+		f.projects = scopeListScaleProjects(t, w, pool, n)
+	}
+	start := time.Now()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+	for p, project := range f.projects {
+		f.seedProject(t, ctx, p, project)
+	}
+	// End/downgrade memberships after assignment, retaining historical assignees.
+	if !spread {
+		pm := queryIDs(t, pool, "SELECT id FROM project_members WHERE project_id=$1 AND member_id=$2", f.projects[2].ID, w.ids["walt"])[0]
+		w.send(t, "alice", http.MethodPatch, "/api/v0/project-members/"+pm.String(), `{"role":5}`, 200)
+		w.send(t, "walt", http.MethodPost, "/api/v0/projects/"+f.projects[3].ID.String()+"/leave", "", 204)
+		w.send(t, "alice", http.MethodPost, "/api/v0/projects/"+f.projects[4].ID.String()+"/archive", "", 200)
+		f.projects[2].Role, f.projects[3].Left, f.projects[4].Archived = shared.RoleGuest, true, true
+	}
+	if _, err := roles.owner.Exec(ctx, "ANALYZE issues, issue_labels, issue_assignees, issue_subscribers, issue_mentions, projects, project_members, states, labels"); err != nil {
+		t.Fatal(err)
+	}
+	f.SeedSeconds = time.Since(start).Seconds()
+	f.rows = f.expectedRows()
+	return f
+}
+
+// scopeListScaleProjects are Web, of n roots, and its four scope neighbours,
+// Visible, Own, Exited and Archived, of 200: walt and bob members of each.
+func scopeListScaleProjects(t *testing.T, w issueWorld, pool *pgxpool.Pool, n int) []listScaleProject {
+	t.Helper()
+	var projects []listScaleProject
 	for p, name := range []string{"Web", "Visible", "Own", "Exited", "Archived"} {
 		id := w.web
 		if p != 0 {
@@ -49,37 +91,44 @@ func seedListScale(t *testing.T, n int, roles splitRoles, pool *pgxpool.Pool) li
 		if p != 0 {
 			w.makeMember(t, "bob", id, shared.RoleMember)
 		}
-		project := listScaleProject{ID: id, Roots: 200}
+		roots := 200
 		if p == 0 {
-			project.Roots = n
+			roots = n
 		}
-		for _, state := range []string{"Backlog", "Todo", "In Progress", "Done", "Cancelled", "Triage"} {
-			project.States = append(project.States, stateID(t, pool, id, state))
-		}
-		for _, label := range []string{"Alpha", "Charlie"} {
-			var made struct{ ID uuid.UUID }
-			decodeAnswer(t, w.send(t, "alice", http.MethodPost, "/api/v0/projects/"+id.String()+"/labels", fmt.Sprintf(`{"name":%q}`, label), 201), &made)
-			project.Labels = append(project.Labels, made.ID)
-		}
-		f.projects = append(f.projects, project)
+		projects = append(projects, newListScaleProject(t, w, pool, id, roots, w.ids["bob"]))
 	}
-	start := time.Now()
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
-	defer cancel()
-	for p, project := range f.projects {
-		f.seedProject(t, ctx, p, project)
+	return projects
+}
+
+// spreadListScaleProjects are the sub-seed's scaleSpreadProjects projects of
+// n/scaleSpreadProjects roots each, walt a member of each and their second
+// assignee and subscriber.
+func spreadListScaleProjects(t *testing.T, w issueWorld, pool *pgxpool.Pool, n int) []listScaleProject {
+	t.Helper()
+	var projects []listScaleProject
+	for p := range scaleSpreadProjects {
+		id := createdProject(t, w.contract, w.base, w.tokens["alice"], "acme", fmt.Sprintf("Spread %d", p), fmt.Sprintf("S%d", p))
+		w.makeMember(t, "walt", id, shared.RoleMember)
+		projects = append(projects, newListScaleProject(t, w, pool, id, n/scaleSpreadProjects, w.ids["walt"]))
 	}
-	// End/downgrade memberships after assignment, retaining historical assignees.
-	pm := queryIDs(t, pool, "SELECT id FROM project_members WHERE project_id=$1 AND member_id=$2", f.projects[2].ID, w.ids["walt"])[0]
-	w.send(t, "alice", http.MethodPatch, "/api/v0/project-members/"+pm.String(), `{"role":5}`, 200)
-	w.send(t, "walt", http.MethodPost, "/api/v0/projects/"+f.projects[3].ID.String()+"/leave", "", 204)
-	w.send(t, "alice", http.MethodPost, "/api/v0/projects/"+f.projects[4].ID.String()+"/archive", "", 200)
-	if _, err := roles.owner.Exec(ctx, "ANALYZE issues, issue_labels, issue_assignees, issue_subscribers, issue_mentions, projects, project_members, states, labels"); err != nil {
-		t.Fatal(err)
+	return projects
+}
+
+// newListScaleProject is project id of acme, walt its member: its six
+// states, the labels Alpha and Charlie alice makes in it, roots normal
+// roots, and alice and second its assignees and subscribers.
+func newListScaleProject(t *testing.T, w issueWorld, pool *pgxpool.Pool, id uuid.UUID, roots int, second uuid.UUID) listScaleProject {
+	t.Helper()
+	project := listScaleProject{ID: id, People: []uuid.UUID{w.ids["alice"], second}, Roots: roots, Role: shared.RoleMember}
+	for _, state := range []string{"Backlog", "Todo", "In Progress", "Done", "Cancelled", "Triage"} {
+		project.States = append(project.States, stateID(t, pool, id, state))
 	}
-	f.SeedSeconds = time.Since(start).Seconds()
-	f.rows = f.expectedRows()
-	return f
+	for _, label := range []string{"Alpha", "Charlie"} {
+		var made struct{ ID uuid.UUID }
+		decodeAnswer(t, w.send(t, "alice", http.MethodPost, "/api/v0/projects/"+id.String()+"/labels", fmt.Sprintf(`{"name":%q}`, label), 201), &made)
+		project.Labels = append(project.Labels, made.ID)
+	}
+	return project
 }
 
 func (f listScaleFixture) seedProject(t *testing.T, ctx context.Context, p int, project listScaleProject) {
@@ -118,10 +167,10 @@ func (f listScaleFixture) seedProject(t *testing.T, ctx context.Context, p int, 
  WHERE (n/25)%4=3 OR (n/25)%4=v`, []any{f.w.acme, project.ID, project.Labels, f.w.ids["alice"]}},
 		{`INSERT INTO issue_assignees(id,workspace_id,project_id,issue_id,assignee_id,created_by_id)
  SELECT uuidv7(),$1,$2,id,($3::uuid[])[v],$4 FROM list_seed CROSS JOIN generate_series(1,2) v
- WHERE (n/100)%4=3 OR (n/100)%4=v`, []any{f.w.acme, project.ID, []uuid.UUID{f.w.ids["alice"], f.w.ids["bob"]}, f.w.ids["alice"]}},
+ WHERE (n/100)%4=3 OR (n/100)%4=v`, []any{f.w.acme, project.ID, project.People, f.w.ids["alice"]}},
 		{`INSERT INTO issue_subscribers(id,workspace_id,project_id,issue_id,subscriber_id,created_by_id)
  SELECT uuidv7(),$1,$2,id,($3::uuid[])[v],$4 FROM list_seed CROSS JOIN generate_series(1,2) v
- WHERE (n/7)%4=3 OR (n/7)%4=v`, []any{f.w.acme, project.ID, []uuid.UUID{f.w.ids["alice"], f.w.ids["bob"]}, f.w.ids["alice"]}},
+ WHERE (n/7)%4=3 OR (n/7)%4=v`, []any{f.w.acme, project.ID, project.People, f.w.ids["alice"]}},
 		{`INSERT INTO issue_mentions(id,workspace_id,project_id,issue_id,mention_id,created_by_id)
  SELECT uuidv7(),$1,$2,id,$3,$3 FROM list_seed WHERE n%13=0`, []any{f.w.acme, project.ID, f.w.ids["bob"]}},
 		{`INSERT INTO issue_labels(id,workspace_id,project_id,issue_id,label_id,deleted_at)

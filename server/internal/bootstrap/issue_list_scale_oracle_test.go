@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"time"
 	"uuid"
+
+	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
 type listScaleRow struct {
@@ -25,6 +27,7 @@ func (f listScaleFixture) expectedRows() []listScaleRow {
 	var out []listScaleRow
 	alice, bob, walt := f.w.ids["alice"], f.w.ids["bob"], f.w.ids["walt"]
 	for p, project := range f.projects {
+		first, second := project.People[0], project.People[1]
 		appendRow := func(n, seq, kind int) {
 			r := listScaleRow{ID: scaleID(p, seq), Project: p, N: n, Seq: seq, Kind: kind, State: n / 5 % 5,
 				Priority: []string{"urgent", "high", "medium", "low", "none"}[n%5], Creator: []uuid.UUID{alice, bob, walt, {}}[n%4], Created: scaleEpochMicros + int64(n/4), Sort: 1000 + n%8}
@@ -47,8 +50,8 @@ func (f listScaleFixture) expectedRows() []listScaleRow {
 				r.Target = fmt.Sprintf("2026-01-%02d", 21+n%7)
 			}
 			r.Labels = [][]uuid.UUID{{}, {project.Labels[0]}, {project.Labels[1]}, {project.Labels[0], project.Labels[1]}}[n/25%4]
-			r.Assignees = [][]uuid.UUID{{}, {alice}, {bob}, {alice, bob}}[n/100%4]
-			r.Subscribers = [][]uuid.UUID{{}, {alice}, {bob}, {alice, bob}}[n/7%4]
+			r.Assignees = [][]uuid.UUID{{}, {first}, {second}, {first, second}}[n/100%4]
+			r.Subscribers = [][]uuid.UUID{{}, {first}, {second}, {first, second}}[n/7%4]
 			out = append(out, r)
 		}
 		for n := 0; n < project.Roots; n++ {
@@ -69,12 +72,8 @@ func (f listScaleFixture) expectedDistribution() map[string]map[string]int64 {
 	for _, name := range []string{"rows", "degrees", "creators", "subscribers", "mentions", "relations", "scope"} {
 		out[name] = map[string]int64{}
 	}
-	for i, p := range f.projects {
-		role := 15
-		if i == 2 {
-			role = 5
-		}
-		out["scope"][fmt.Sprintf("%s/%t/%d/%t/false", p.ID, i == 4, role, i != 3)] = 1
+	for _, p := range f.projects {
+		out["scope"][fmt.Sprintf("%s/%t/%d/%t/false", p.ID, p.Archived, p.Role, !p.Left)] = 1
 	}
 	for _, r := range f.rows {
 		p := f.projects[r.Project].ID.String()
@@ -102,11 +101,32 @@ func (f listScaleFixture) expectedDistribution() map[string]map[string]int64 {
 	return out
 }
 
+// listScaleRoute is the endpoint a scenario reads, as walt, and so the
+// scope its expected rows come from (inScope).
+type listScaleRoute int
+
+const (
+	// scaleProjectList is the project list of the scenario's Project.
+	scaleProjectList listScaleRoute = iota
+	// scaleMemberList is bob's member list in acme, of the projects walt sees.
+	scaleMemberList
+	// scaleWorkspaceList is acme's workspace list (M7 P3a), of the projects
+	// walt sees, like the member list.
+	scaleWorkspaceList
+)
+
 type listScaleScenario struct {
 	Name    string
-	Project int // -1 is the member endpoint, target bob, actor walt.
-	Query   url.Values
-	Accept  func(listScaleRow) bool
+	Route   listScaleRoute
+	Project int // the project a project scenario reads
+	// Tail is the rows of a last page: the request's cursor is the row
+	// before them. 0 is the first page.
+	Tail int
+	// Pair is the project scenario a workspace scenario is judged against:
+	// its list-SQL median at the same total, in the same run (M7 P3a spec 2.4).
+	Pair   string
+	Query  url.Values
+	Accept func(listScaleRow) bool
 }
 
 func (s listScaleScenario) order() string {
@@ -115,7 +135,30 @@ func (s listScaleScenario) order() string {
 	}
 	return "-created_at"
 }
+
+// scenarios are the scope's, or the sub-seed's when f is spread. The
+// workspace list's five (M7 P3a spec 2.4) are in each, paired with Web's
+// project list at the same total; assigned and subscribed are by bob's id
+// in the scope, where walt is neither (me is the caller's id once parsed:
+// the same SQL), and by me in spread, where walt is both in bob's place,
+// as the default views ask.
 func (f listScaleFixture) scenarios() []listScaleScenario {
+	assigned := func(id uuid.UUID) func(listScaleRow) bool {
+		return func(r listScaleRow) bool { return slices.Contains(r.Assignees, id) }
+	}
+	subscribed := func(id uuid.UUID) func(listScaleRow) bool {
+		return func(r listScaleRow) bool { return slices.Contains(r.Subscribers, id) }
+	}
+	if f.spread {
+		walt := f.w.ids["walt"]
+		return []listScaleScenario{
+			{Name: "spread_default", Route: scaleWorkspaceList, Pair: "default"},
+			{Name: "spread_assigned", Route: scaleWorkspaceList, Pair: "assigned", Query: url.Values{"assignee_id": {"me"}}, Accept: assigned(walt)},
+			{Name: "spread_subscribed", Route: scaleWorkspaceList, Pair: "subscribed", Query: url.Values{"subscriber_id": {"me"}}, Accept: subscribed(walt)},
+			{Name: "spread_label_name", Route: scaleWorkspaceList, Pair: "label_name", Query: url.Values{"order_by": {"label_name"}}},
+			{Name: "spread_last_page", Route: scaleWorkspaceList, Pair: "last_page", Tail: 25},
+		}
+	}
 	a, c := f.projects[0].Labels[0], f.projects[0].Labels[1]
 	bob := f.w.ids["bob"]
 	return []listScaleScenario{
@@ -127,22 +170,56 @@ func (f listScaleFixture) scenarios() []listScaleScenario {
 		{Name: "intersection", Query: url.Values{"group_by": {"label_id"}, "group_key": {c.String()}, "label_id": {a.String()}}, Accept: func(r listScaleRow) bool { return slices.Contains(r.Labels, a) && slices.Contains(r.Labels, c) }},
 		{Name: "none", Query: url.Values{"label_id": {a.String() + ",none"}}, Accept: func(r listScaleRow) bool { return len(r.Labels) == 0 || slices.Contains(r.Labels, a) }},
 		{Name: "date_and", Query: url.Values{"target_date": {"2026-01-22..2026-01-26", "2026-01-24.."}}, Accept: func(r listScaleRow) bool { return r.Target >= "2026-01-24" && r.Target <= "2026-01-26" }},
-		{Name: "member_created", Project: -1, Query: url.Values{"relation": {"created"}, "group_by": {"project_id"}}, Accept: func(r listScaleRow) bool { return r.Creator == bob }},
-		{Name: "member_assigned", Project: -1, Query: url.Values{"relation": {"assigned"}}, Accept: func(r listScaleRow) bool { return slices.Contains(r.Assignees, bob) }},
-		{Name: "member_subscribed", Project: -1, Query: url.Values{"relation": {"subscribed"}}, Accept: func(r listScaleRow) bool { return slices.Contains(r.Subscribers, bob) }},
+		{Name: "member_created", Route: scaleMemberList, Query: url.Values{"relation": {"created"}, "group_by": {"project_id"}}, Accept: func(r listScaleRow) bool { return r.Creator == bob }},
+		{Name: "member_assigned", Route: scaleMemberList, Query: url.Values{"relation": {"assigned"}}, Accept: func(r listScaleRow) bool { return slices.Contains(r.Assignees, bob) }},
+		{Name: "member_subscribed", Route: scaleMemberList, Query: url.Values{"relation": {"subscribed"}}, Accept: func(r listScaleRow) bool { return slices.Contains(r.Subscribers, bob) }},
 		{Name: "own_only", Project: 2},
+		{Name: "assigned", Query: url.Values{"assignee_id": {bob.String()}}, Accept: assigned(bob)},
+		{Name: "subscribed", Query: url.Values{"subscriber_id": {bob.String()}}, Accept: subscribed(bob)},
+		{Name: "last_page", Tail: 25},
+		{Name: "workspace_default", Route: scaleWorkspaceList, Pair: "default"},
+		{Name: "workspace_assigned", Route: scaleWorkspaceList, Pair: "assigned", Query: url.Values{"assignee_id": {bob.String()}}, Accept: assigned(bob)},
+		{Name: "workspace_subscribed", Route: scaleWorkspaceList, Pair: "subscribed", Query: url.Values{"subscriber_id": {bob.String()}}, Accept: subscribed(bob)},
+		{Name: "workspace_label_name", Route: scaleWorkspaceList, Pair: "label_name", Query: url.Values{"order_by": {"label_name"}}},
+		{Name: "workspace_last_page", Route: scaleWorkspaceList, Pair: "last_page", Tail: 25},
 	}
 }
+
+// path is the endpoint s reads.
+func (f listScaleFixture) path(s listScaleScenario) string {
+	switch s.Route {
+	case scaleMemberList:
+		return memberIssuesPath(f.w, "bob")
+	case scaleWorkspaceList:
+		return "/api/v0/workspaces/acme/issues"
+	}
+	return "/api/v0/projects/" + f.projects[s.Project].ID.String() + "/issues"
+}
+
+// inScope is whether r is of a project s reads: a project scenario's
+// Project; for the member and the workspace list, a project walt sees, one
+// he has not left that is not archived.
+func (f listScaleFixture) inScope(s listScaleScenario, r listScaleRow) bool {
+	if s.Route == scaleProjectList {
+		return r.Project == s.Project
+	}
+	p := f.projects[r.Project]
+	return !p.Left && !p.Archived
+}
+
+// ownOnly is whether walt sees only his own work items of the project: he
+// is its guest.
+func (p listScaleProject) ownOnly() bool { return p.Role == shared.RoleGuest }
 func (f listScaleFixture) expected(s listScaleScenario) []listScaleRow {
 	var rows []listScaleRow
 	for _, r := range f.rows {
 		if r.deleted() || r.archived() || r.State == 5 {
 			continue
 		}
-		if s.Project >= 0 && r.Project != s.Project || s.Project < 0 && r.Project > 2 {
+		if !f.inScope(s, r) {
 			continue
 		}
-		if r.Project == 2 && r.Creator != f.w.ids["walt"] {
+		if f.projects[r.Project].ownOnly() && r.Creator != f.w.ids["walt"] {
 			continue
 		}
 		if s.Accept != nil && !s.Accept(r) {
