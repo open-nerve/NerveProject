@@ -18,7 +18,7 @@
   其余断言是回归，不改。
 - 红的窗口（台账记下）：T4 加了操作，`TestThePermissionMatrixCoversEveryOperation` 与 `TestDeletionWindowCoversEveryIssueOperation` 红到 T5；T4 验证处理器包、契约、网页与非 bootstrap 包，这两个守卫在 T5 转绿。
 - 证据：每次检查经 `run-check.py`，变异经 `mutate.py`；下表每个性质至少一个能让测试失败的变异。
-- 测试时间：CI 每一路 Test 步的增量 ≤ 90 秒，两路各自记；新的 bootstrap 顶层名只有 T6 的一个（以 `TestWorkspaceIssueList` 开头，第 764 位、落第 1 路，换 7 个：第 1 → 0 路 `TestWorkspaceProfilesConvertsIdentitysAnswer`、`TestWorkspacesCreateErrors`、`TestWorkspacesReactivateMemberErrors`、`TestWritesOnTwoProjectsOfAWorkspaceDoNotWait`；第 0 → 1 路 `TestWorkspacesCreate`、`TestWorkspacesReactivateMember`、`TestWritesOnAProjectAreEachShape`），检查点对照。造好数据后扣锁或写墓碑的测试先 `waitForStartupRuns`。本机两路因 M6-M8-05 失败且重跑一次仍不过时，以分支 CI 为准并记录。
+- 测试时间：CI 每一路 Test 步的增量 ≤ 90 秒，两路各自记；新的 bootstrap 顶层名只有 T6 的一个（合并 main 后分路改为按名字的哈希，下面的换路清单作废，见阶段记录 §4；当时的轮流分：以 `TestWorkspaceIssueList` 开头，第 764 位、落第 1 路，换 7 个：第 1 → 0 路 `TestWorkspaceProfilesConvertsIdentitysAnswer`、`TestWorkspacesCreateErrors`、`TestWorkspacesReactivateMemberErrors`、`TestWritesOnTwoProjectsOfAWorkspaceDoNotWait`；第 0 → 1 路 `TestWorkspacesCreate`、`TestWorkspacesReactivateMember`、`TestWritesOnAProjectAreEachShape`），检查点对照。造好数据后扣锁或写墓碑的测试先 `waitForStartupRuns`。本机两路因 M6-M8-05 失败且重跑一次仍不过时，以分支 CI 为准并记录。
 
 ## 性质与变异
 
