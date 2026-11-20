@@ -38,7 +38,9 @@ func exec(t *testing.T, pool *pgxpool.Pool, sql string, args ...any) {
 	}
 }
 
-func purgeID(n int) uuid.UUID { return uuid.MustParse(fmt.Sprintf("0199a2b4-0000-7000-8000-%012x", n)) }
+func numberedID(n int) uuid.UUID {
+	return uuid.MustParse(fmt.Sprintf("0199a2b4-0000-7000-8000-%012x", n))
+}
 
 // world is an account, a workspace and its project, written directly: identity, workspace and project own them.
 type world struct{ owner, workspace, project uuid.UUID }
@@ -82,20 +84,20 @@ func TestPurgeIssueViews(t *testing.T) {
 		project bool
 		at      *time.Time
 	}{{30, false, &older}, {10, true, &old}, {20, true, &cutoff}, {40, false, &recent}, {50, true, nil}, {60, false, &old}} {
-		viewRow(t, pool, w, purgeID(row.n), row.project, row.at)
+		viewRow(t, pool, w, numberedID(row.n), row.project, row.at)
 	}
 	first, err := s.PurgeIssueViews(ctx, app.PurgeBatch{Cutoff: cutoff, Limit: 1})
-	if err != nil || first.Scanned != 1 || first.Deleted != 1 || first.After != purgeID(10) {
+	if err != nil || first.Scanned != 1 || first.Deleted != 1 || first.After != numberedID(10) {
 		t.Fatalf("first batch=%+v,%v; want the lowest eligible id only", first, err)
 	}
-	skipped, err := s.PurgeIssueViews(ctx, app.PurgeBatch{Cutoff: cutoff, After: purgeID(60), Limit: 1})
-	if err != nil || skipped.Scanned != 0 || skipped.Deleted != 0 || skipped.After != purgeID(60) {
+	skipped, err := s.PurgeIssueViews(ctx, app.PurgeBatch{Cutoff: cutoff, After: numberedID(60), Limit: 1})
+	if err != nil || skipped.Scanned != 0 || skipped.Deleted != 0 || skipped.After != numberedID(60) {
 		t.Fatalf("after the greatest=%+v,%v; want empty", skipped, err)
 	}
 	rollback := errors.New("rollback the caller")
 	err = postgres.NewTxManager(pool, time.Second).WithinTx(ctx, func(txctx context.Context) error {
-		page, err := s.PurgeIssueViews(txctx, app.PurgeBatch{Cutoff: cutoff, After: purgeID(10), Limit: 1})
-		if err != nil || page.Scanned != 1 || page.Deleted != 1 || page.After != purgeID(30) {
+		page, err := s.PurgeIssueViews(txctx, app.PurgeBatch{Cutoff: cutoff, After: numberedID(10), Limit: 1})
+		if err != nil || page.Scanned != 1 || page.Deleted != 1 || page.After != numberedID(30) {
 			t.Fatalf("page in a caller's transaction=%+v,%v; want 30", page, err)
 		}
 		return rollback
@@ -127,7 +129,7 @@ func TestPurgeIssueViews(t *testing.T) {
 	if err := pool.QueryRow(ctx, "SELECT coalesce(array_agg(id ORDER BY id),'{}') FROM issue_views").Scan(&left); err != nil {
 		t.Fatal(err)
 	}
-	if !slices.Equal(left, []uuid.UUID{purgeID(20), purgeID(40), purgeID(50)}) {
+	if !slices.Equal(left, []uuid.UUID{numberedID(20), numberedID(40), numberedID(50)}) {
 		t.Fatalf("boundary/recent/live=%v; want 20,40,50", left)
 	}
 	for _, limit := range []int{0, 2147483648} {
