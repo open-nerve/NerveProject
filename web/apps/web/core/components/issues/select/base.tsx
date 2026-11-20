@@ -160,15 +160,19 @@ export const WorkItemLabelSelectBase = observer(function WorkItemLabelSelectBase
       finish(current);
     }
   };
+  // While a selection is out, begin() takes no other. Headless UI's options do not follow the Combobox's disabled, so
+  // each option is disabled too (aria-disabled): one that looked enabled took a click the picker then dropped.
   const option = (label: Label) => (
     <Combobox.Option
       key={label.id}
       as="li"
       value={label.id}
-      className={({ active }) =>
+      disabled={disabled || submitting}
+      className={({ active, disabled: busy }) =>
         cn(
           "flex cursor-pointer items-center justify-between gap-2 truncate rounded-sm px-1 py-1.5 text-secondary select-none",
-          active && "bg-layer-1"
+          active && "bg-layer-1",
+          busy && "cursor-not-allowed opacity-60"
         )
       }
     >

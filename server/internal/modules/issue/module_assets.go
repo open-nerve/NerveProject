@@ -15,6 +15,10 @@ type AssetHost = app.AssetHost
 type AssetParent = app.AssetParent
 type AssetIntent = app.AssetIntent
 
+// AssetProject is the value ProjectPorts' AssetProject hands over: bootstrap
+// converts project's into it by type.
+type AssetProject = app.AssetProject
+
 type ContentHost = app.ContentHost
 type ContentBindRequest = app.ContentBindRequest
 type ContentBinding = app.ContentBinding

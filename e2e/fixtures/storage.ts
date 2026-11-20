@@ -1,7 +1,7 @@
 import type { components } from "@nerve/api-client";
 import { expect } from "@playwright/test";
 
-import type { Api } from "./api";
+import { answer, type Api } from "./api";
 import { bearer } from "./auth";
 import type { Database } from "./db";
 
@@ -79,6 +79,54 @@ export async function duplicateFile(api: Api, token: string, id: string, body: D
   expect(response.status, JSON.stringify(error)).toBe(201);
   if (!data) throw new Error("duplicate returned no asset");
   return data;
+}
+
+/** The answer of POST /api/v0/assets by the caller of token: its status, or the problem's code. */
+export async function filePrepared(api: Api, token: string, body: NewAsset) {
+  const { error, response } = await api.POST("/api/v0/assets", { body, headers: bearer(token) });
+  return answer(response, error);
+}
+
+/** The answer of POST /api/v0/assets/{id}/complete by the caller of token: its status, or the problem's code. */
+export async function fileCompleted(api: Api, token: string, id: string) {
+  const { error, response } = await api.POST("/api/v0/assets/{id}/complete", {
+    params: { path: { id } },
+    body: {},
+    headers: bearer(token),
+  });
+  return answer(response, error);
+}
+
+/** The answer of DELETE /api/v0/assets/{id} by the caller of token: its status, or the problem's code. */
+export async function fileDeleted(api: Api, token: string, id: string) {
+  const { error, response } = await api.DELETE("/api/v0/assets/{id}", {
+    params: { path: { id } },
+    headers: bearer(token),
+  });
+  return answer(response, error);
+}
+
+/** The asset of id, as the caller of token reads it (getAsset). */
+export async function fileMetadata(api: Api, token: string, id: string): Promise<Asset> {
+  const { data, error, response } = await api.GET("/api/v0/assets/{id}", {
+    params: { path: { id } },
+    headers: bearer(token),
+  });
+  expect(response.status, JSON.stringify(error)).toBe(200);
+  if (!data) throw new Error("getAsset returned no asset");
+  return data;
+}
+
+/** The ids of the work item of issueId's attachments, as the caller of token lists them: one page, in its order. */
+export async function issueAttachmentIds(api: Api, token: string, issueId: string): Promise<string[]> {
+  const { data, error, response } = await api.GET("/api/v0/issues/{issue_id}/attachments", {
+    params: { path: { issue_id: issueId } },
+    headers: bearer(token),
+  });
+  expect(response.status, JSON.stringify(error)).toBe(200);
+  if (!data) throw new Error("getIssueAttachments returned no page");
+  expect(data.next_cursor, `${issueId}'s attachments fit one page`).toBeNull();
+  return data.data.map(({ id }) => id);
 }
 
 /** API preparation, actual PUT, confirmation and byte equality, without a binding fixture. */

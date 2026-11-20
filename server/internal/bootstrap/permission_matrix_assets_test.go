@@ -2,6 +2,7 @@ package bootstrap
 
 import (
 	"fmt"
+	"net/http"
 	"slices"
 	"strings"
 	"testing"
@@ -47,6 +48,16 @@ func assetMatrixRows() []matrixRow {
 		{op: "createAsset", write: true, request: func(c caller, s seeded) (string, string, string) {
 			return "POST", "/api/v0/assets", assetPrepareBody("WORKSPACE_LOGO", assetScopeBody("workspace", s.workspace(workspaceOf(c))), "logo.png", "image/png", 3)
 		}, cells: cells(cellCreated, cellForbidden, cellForbidden)},
+		// An attachment on the column's work item, which each cell's prepare
+		// put into its project's intake, pending, by its maker (inTheIntake):
+		// intake.update and its submitter rule decide (M7 P2c spec 2.2), as
+		// updateIntakeIssue's cells (bySubmitter), a host its caller does not
+		// see the asset's 404. The other writes name the column's private
+		// asset in its workspace by {id} (targetViolation), not a work item.
+		{op: "createAsset", variant: "a work item in the intake", write: true, columns: issueColumns, prepare: inTheIntake,
+			request: func(c caller, s seeded) (string, string, string) {
+				return "POST", "/api/v0/assets", assetPrepareBody("ISSUE_ATTACHMENT", assetScopeBody("issue", s.issue(projectOf(c), issueOf(c))), "notes.txt", "text/plain", 3)
+			}, cells: asAssetHost(bySubmitter(cellCreated, cellForbidden, cellCreated, cellCreated)), check: preparedOnTheWorkItem},
 		{op: "getAsset", request: own("GET", "", ""), cells: cells(cellOK, cellOK, cellOK), check: func(t *testing.T, c caller, s seeded, answer string) {
 			var got preparedAssetAnswer
 			decodeAnswer(t, answer, &got.Asset)
@@ -60,6 +71,29 @@ func assetMatrixRows() []matrixRow {
 			return "POST", duplicateAssetPath(s.asset(c)), body(c, s)
 		}, cells: cells(pending, cellForbidden, cellForbidden)},
 		{op: "deleteAsset", write: true, request: own("DELETE", "", ""), cells: cells(cellNoContent, cellForbidden, cellForbidden)},
+	}
+}
+
+// asAssetHost are cells of a row on an asset's host, each 404 the asset's:
+// a host its caller does not see is not found as the asset (assetHostError).
+func asAssetHost(cells map[caller]cell) map[caller]cell {
+	for c, answer := range cells {
+		if answer.status == http.StatusNotFound {
+			cells[c] = cell{http.StatusNotFound, "asset.not_found"}
+		}
+	}
+	return cells
+}
+
+// preparedOnTheWorkItem: the caller's pending attachment, unbound, on the
+// column's work item.
+func preparedOnTheWorkItem(t *testing.T, c caller, s seeded, answer string) {
+	var got preparedAssetAnswer
+	decodeAnswer(t, answer, &got)
+	item := s.issue(projectOf(c), issueOf(c))
+	if got.Asset.Purpose != "ISSUE_ATTACHMENT" || got.Asset.Scope.Kind != "issue" || got.Asset.Scope.ID == nil || *got.Asset.Scope.ID != item ||
+		got.Asset.State != "pending" || got.Asset.IsBound {
+		t.Errorf("%s prepares %s; want a pending, unbound attachment on %s", c, answer, item)
 	}
 }
 

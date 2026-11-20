@@ -12,15 +12,20 @@ import (
 	"uuid"
 )
 
-const assetProjectArchived = `-- name: AssetProjectArchived :one
-SELECT (archived_at IS NOT NULL)::boolean AS archived FROM projects WHERE id=$1 AND deleted_at IS NULL
+const assetProject = `-- name: AssetProject :one
+SELECT (archived_at IS NOT NULL)::boolean AS archived,intake_view FROM projects WHERE id=$1 AND deleted_at IS NULL
 `
 
-func (q *Queries) AssetProjectArchived(ctx context.Context, id uuid.UUID) (bool, error) {
-	row := q.db.QueryRow(ctx, assetProjectArchived, id)
-	var archived bool
-	err := row.Scan(&archived)
-	return archived, err
+type AssetProjectRow struct {
+	Archived   bool
+	IntakeView bool
+}
+
+func (q *Queries) AssetProject(ctx context.Context, id uuid.UUID) (AssetProjectRow, error) {
+	row := q.db.QueryRow(ctx, assetProject, id)
+	var i AssetProjectRow
+	err := row.Scan(&i.Archived, &i.IntakeView)
+	return i, err
 }
 
 const assetProjectFacts = `-- name: AssetProjectFacts :many

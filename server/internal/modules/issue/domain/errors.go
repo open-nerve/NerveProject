@@ -79,9 +79,11 @@ var (
 	// before project.archived and issue.archived.
 	ErrInTriage = shared.NewError(shared.KindConflict, "issue.in_triage",
 		"The work item is in the project's intake; triage it before changing it.")
-	// ErrIntakeDisabled answers a submission and a triage while the
-	// project's intake is turned off (M7 design 3.11, P2a spec 2.4, 2.5);
-	// reads go on, and the rows stay for when it is turned on again.
+	// ErrIntakeDisabled answers a submission, a triage, a change and a
+	// deletion of an intake work item, and an asset's write on a work item
+	// in the intake, while the project's intake is turned off (M7 design
+	// 3.11, P2a spec 2.4, 2.5, P2b spec 2.4, 2.5, P2c spec 2.2); reads go
+	// on, and the rows stay for when it is turned on again.
 	ErrIntakeDisabled = shared.NewError(shared.KindConflict, "issue.intake_disabled",
 		"Intake is turned off in this project; turn it on to submit or triage work items.")
 	// ErrIntakeNotFound answers a triage of a work item that does not
@@ -95,8 +97,10 @@ var (
 	ErrIntakeTransitionNotAllowed = shared.NewError(shared.KindConflict, "issue.intake_transition_not_allowed",
 		"The intake work item cannot move from its status to the one asked for.")
 	// ErrIntakeClosed answers a content edit of a work item whose intake
-	// row is stored accepted, declined or duplicate (M7 P2b spec 2.4, R5):
-	// it is triaged, no longer an item to edit in the intake.
+	// row is stored accepted, declined or duplicate (M7 P2b spec 2.4, R5),
+	// and an asset's write on a work item in the intake declined or a
+	// duplicate (P2c spec 2.2): it is triaged, no longer an item to edit in
+	// the intake.
 	ErrIntakeClosed = shared.NewError(shared.KindConflict, "issue.intake_closed",
 		"The intake work item has been accepted, declined or marked a duplicate; it can no longer be edited in the intake.")
 )

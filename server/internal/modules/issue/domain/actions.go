@@ -40,9 +40,11 @@ const (
 	// spec 2.3).
 	ActionReadIntake shared.Action = "intake.read"
 	// ActionUpdateIntake is changing the content of a work item of a
-	// project's intake (M7 design 3.10, P2b spec 2.4); that one who is not
-	// the project's admin submitted it, and what a guest changes, are the
-	// use case's relative rules.
+	// project's intake (M7 design 3.10, P2b spec 2.4), and writing its
+	// assets, its description's images and its attachments, while it is in
+	// the intake (M7 design 3.6, P2c spec 2.2); that one who is not the
+	// project's admin submitted it, and what a guest changes of its content,
+	// are the use cases' relative rules.
 	ActionUpdateIntake shared.Action = "intake.update"
 	// ActionDeleteIntake is deleting a work item of a project's intake, or
 	// the intake row of one accepted (M7 design 3.10, P2b spec 2.5).

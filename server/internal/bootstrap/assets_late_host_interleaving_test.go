@@ -2,6 +2,7 @@ package bootstrap
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync/atomic"
 	"testing"
@@ -9,11 +10,13 @@ import (
 
 	assetpg "github.com/open-nerve/NerveProject/server/internal/modules/asset/adapter/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/modules/asset/domain"
+	"github.com/open-nerve/NerveProject/server/internal/platform/config"
+	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
 func TestAssetLateHostInterleaving(t *testing.T) {
-	for _, change := range []string{"issue delete", "issue archive", "comment delete", "comment issue archive", "project delete", "project archive", "workspace delete", "draft delete", "draft publish", "draft ascending", "draft descending", "copy target draft move", "copy source revoke"} {
+	for _, change := range []string{"issue delete", "issue archive", "comment delete", "comment issue archive", "project delete", "project archive", "workspace delete", "draft delete", "draft publish", "draft ascending", "draft descending", "copy target draft move", "copy source revoke", "intake decline", "intake off", "intake accept"} {
 		t.Run(change, func(t *testing.T) {
 			var armed atomic.Bool
 			attempts := make(chan *assetSealAttempt, 1)
@@ -55,6 +58,23 @@ func TestAssetLateHostInterleaving(t *testing.T) {
 				w.send(t, "alice", "PATCH", "/api/v0/projects/"+w.web.String(), `{"network":0}`, 200)
 				member := queryIDs(t, w.pool, "SELECT id FROM project_members WHERE project_id=$1 AND member_id=$2 AND is_active AND deleted_at IS NULL", w.web, w.ids["bob"])[0]
 				path = "/api/v0/project-members/" + member.String()
+			case "intake decline", "intake off", "intake accept":
+				// The host is bob's submission to Web's intake (M7 P2c spec
+				// 2.2), changed by alice past the first transaction: declined;
+				// its intake turned off; accepted, when issue.update decides,
+				// which refuses bob, Web's guest who submitted it.
+				w.intakeOn(t)
+				if change == "intake accept" {
+					w.send(t, "alice", "PATCH", bobsMembership(t, w), `{"role":5}`, 200)
+				}
+				item = w.submit(t, "bob", `{"name":"Late intake host"}`).ID
+				scope, method, path, body, changeStatus, want, code = assetScopeBody("issue", item), "POST", triagePath(item), `{"status":"declined"}`, 200, 409, "issue.intake_closed"
+				if change == "intake off" {
+					method, path, body, code = "PATCH", "/api/v0/projects/"+w.web.String(), `{"intake_view":false}`, "issue.intake_disabled"
+				}
+				if change == "intake accept" {
+					body, want, code = `{"status":"accepted"}`, 403, "forbidden"
+				}
 			default:
 				initial, target := w.web, w.web
 				if change == "draft ascending" || change == "draft descending" || change == "copy target draft move" {
@@ -110,4 +130,40 @@ func TestAssetLateHostInterleaving(t *testing.T) {
 			}
 		})
 	}
+	// A real wait (M7 P2c spec 4): alice's decline of bob's submission,
+	// through the issue module's route, holds Web's row past its writes;
+	// bob's preparation of an attachment on it, through the app, past its
+	// Inspect, waits for that row at LockIssueProjects, then reads the item
+	// declined under the lock: 409 issue.intake_closed, nothing written.
+	t.Run("intake decline while the write waits", func(t *testing.T) {
+		url := pgtest.NewDatabase(t)
+		w := newIssueWorldOnRequests(t, url, openPool(t, url), func(*config.Config) {}, &requestQueries{})
+		w.intakeOn(t)
+		item := w.submit(t, "bob", `{"name":"Waits"}`).ID
+		waitForFanouts(t, w.pool)
+		before := fileAssetRows(t, w)
+		req := newRequest(t, "POST", w.base+"/api/v0/assets", w.tokens["bob"],
+			[]byte(assetPrepareBody("ISSUE_ATTACHMENT", assetScopeBody("issue", item), "x.txt", "text/plain", 3)))
+		probe := w.observe(req)
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		g, holder := newGate(), requestTx(w.pool)
+		var declined exchange
+		var prepared answer
+		_, declineErr, prepareErr := serializeWaiting(t, ctx, g,
+			triages("alice", item, `{"status":"declined"}`, discardIssueEvents{})(t, w, heldTx{holder, g}, &declined),
+			func() error { prepared = <-sendInBackground(req); return prepared.err },
+			func() {
+				requestBlocked(t, w.pool, probe, requestPID(t, holder), "projects")
+				pgtest.WaitForStatementLockWaitOn(t, w.pool, "projects", 5*time.Second, "LockIssueProjects")
+			}, nil)
+		if err := errors.Join(declineErr, prepareErr); err != nil {
+			t.Fatal(err)
+		}
+		w.answered(t, declined, 200)
+		w.contract.CheckResponse(t, req, prepared.res)
+		if prepared.res.StatusCode != 409 || problemCode(t, prepared.body) != "issue.intake_closed" || fileAssetRows(t, w) != before {
+			t.Fatalf("the waiting preparation = %d %s; want 409 issue.intake_closed, file_assets unchanged", prepared.res.StatusCode, prepared.body)
+		}
+	})
 }

@@ -290,10 +290,26 @@ func (f *fakeIssueProjects) ActiveRoles(_ context.Context, _ uuid.UUID, ids []uu
 	return f.roles, f.err
 }
 
+// assetProjectFake answers project's AssetProject with answer for the
+// project web alone, or its error, and records the context it was asked
+// in; every other question as fakeIssueProjects.
+type assetProjectFake struct {
+	*fakeIssueProjects
+	answer project.AssetProject
+	ctx    context.Context
+}
+
+func (f *assetProjectFake) AssetProject(ctx context.Context, id uuid.UUID) (project.AssetProject, bool, error) {
+	f.ctx = ctx
+	return f.answer, id == f.web, f.err
+}
+
 // issueProjects hands issue project's answers to the same questions: the
 // locked project, each state and each label converted, every field; the
 // workspace, the number and the roles as they came; found and the error as
-// they came, and no state or label with an error.
+// they came, and no state or label with an error. And the asset path's
+// project, converted, every field: its archive and its intake toggle,
+// neither dropped (M7 P2c spec 2.4), found and the error as they came.
 func TestIssueProjectsConvertsProjectsAnswers(t *testing.T) {
 	web, acme, ann, bug, ui := uuid.NewV7(), uuid.NewV7(), uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
 	backlog := project.IssueState{ID: uuid.NewV7(), Name: "Backlog", Group: "backlog", Default: true}
@@ -357,6 +373,26 @@ func TestIssueProjectsConvertsProjectsAnswers(t *testing.T) {
 			t.Errorf("%s() = %v, want %v", name, err, failure)
 		}
 	}
+
+	t.Run("the asset path's project", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		for _, answer := range []project.AssetProject{{Archived: true}, {IntakeView: true}} {
+			f := &assetProjectFake{fakeIssueProjects: &fakeIssueProjects{web: web}, answer: answer}
+			p := issueProjects{projects: f}
+			want := issue.AssetProject{Archived: answer.Archived, IntakeView: answer.IntakeView}
+			if got, found, err := p.AssetProject(ctx, web); err != nil || !found || got != want || f.ctx != ctx {
+				t.Errorf("AssetProject() = %+v, %v, %v in %v; want %+v, found", got, found, err, f.ctx, want)
+			}
+			if _, found, err := p.AssetProject(ctx, acme); err != nil || found {
+				t.Errorf("AssetProject() of another project = %v, %v; want not found", found, err)
+			}
+		}
+		f := &assetProjectFake{fakeIssueProjects: &fakeIssueProjects{web: web, err: failure}}
+		if _, _, err := (issueProjects{projects: f}).AssetProject(ctx, web); !errors.Is(err, failure) {
+			t.Errorf("AssetProject() = %v, want %v", err, failure)
+		}
+	})
 }
 
 // issueProfiles asks identity for the ids issue asks for and hands over

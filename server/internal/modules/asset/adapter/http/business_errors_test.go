@@ -82,6 +82,8 @@ func TestAssetBusinessProblemMapping(t *testing.T) {
 		{shared.ServerBusy(time.Second), "server_busy", 503, []string{"prepare", "content", "complete", "duplicate", "delete"}},
 		{shared.NewError(shared.KindForbidden, "issue.not_author", "Only the author may edit."), "issue.not_author", 403, []string{"prepare", "complete", "duplicate", "delete"}},
 		{shared.NewError(shared.KindConflict, "project.archived", "The project is archived."), "project.archived", 409, []string{"prepare", "complete", "duplicate", "delete"}},
+		{shared.NewError(shared.KindConflict, "issue.intake_disabled", "Intake is turned off in this project."), "issue.intake_disabled", 409, []string{"prepare", "complete", "duplicate", "delete"}},
+		{shared.NewError(shared.KindConflict, "issue.intake_closed", "The intake work item is closed."), "issue.intake_closed", 409, []string{"prepare", "complete", "duplicate", "delete"}},
 		{shared.NewError(shared.KindConflict, "issue.archived", "The issue is archived."), "issue.archived", 409, []string{"prepare", "complete", "duplicate", "delete"}},
 		{domain.ErrAssetObjectMissing, "asset.object_missing", 409, []string{"complete", "duplicate"}},
 		{domain.ErrAssetObjectChanged, "asset.object_changed", 409, []string{"complete", "duplicate"}},

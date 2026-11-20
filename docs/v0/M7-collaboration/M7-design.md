@@ -106,7 +106,7 @@ M7 让五件协作功能经真实接口工作：站内通知（关注工作项�
 条目就是一个处在 Triage 的工作项，所以：
 
 - **读**照常：详情、按编号取、评论、动态、表情、链接、附件，按工作项的读权限（只看自己的访客只看自己建的）。描述版本照 M4 的 `issue_description_version.read`（管理员、成员；Plane 让只看自己的访客也读收集箱条目的版本，登记差异）。详情多带一个 `intake`（状态、暂缓到、重复目标），页面据此显示分诊界面而不显示状态字段（`state_id` 是隐藏的 Triage 状态，状态接口不列它）；通知预览也凭它判断（不需要 Plane 的 `is_inbox_issue`）。M3 交接 §1.2 的分诊状态的接口与前端（store、下拉框、类型）不加回：条目的状态就是收集箱的状态，接受之后才有普通状态。
-- **评论、表情、链接、附件**按它们自己的规则照常可写（分诊时的讨论在这里）。资产（描述图片、附件）的写对 Triage 宿主按 `intake.update` 判定（管理员与提交者），不按 `issue.update`。
+- **评论、表情、链接**按它们自己的规则照常可写（分诊时的讨论在这里）。资产（描述图片、附件）的写对 Triage 宿主按 `intake.update` 判定（管理员与提交者，访客提交者也算），不按 `issue.update`，并且只在待处理、暂缓且收集箱开着时（拒绝、重复 409 `issue.intake_closed`，关着 409 `issue.intake_disabled`，管理员也一样）；资产的读照常（P2c）。
 - **内容的修改** `PATCH /intake-issues/{id}`：只在待处理、暂缓时；它就是工作项修改的核心（提及同步、描述版本、内容绑定、动态、事件照常），换了字段白名单（名字、描述、优先级、标签、负责人、截止日期；访客提交者只有名字、描述）与授权。接受之后它答 409，改工作项走普通的工作项接口与权限（访客提交者从此不能改，同 Plane）；拒绝、重复之后同样 409。
 - **工作项的改、归档、删除**对 Triage 工作项一律 409 `issue.in_triage`；它不能做父工作项、子工作项、关联的另一端或重复的目标，不能加入迭代、模块，草稿不能以它为父工作项。
 - **不出现**在项目列表、成员列表、工作区列表、搜索、关联与父工作项的选择器、迭代/模块进度、列表的计数（子工作项数等）里；自动归档只碰已完成、已取消的状态组，天然不碰它。
@@ -142,7 +142,7 @@ M7 让五件协作功能经真实接口工作：站内通知（关注工作项�
 | 关注、取消关注 | 项目 | 用 `issue.read` | 只看自己的访客只对自己建的 |
 | `notification.read`、`notification.write` | 工作区 | 管理员、成员、访客 | 只对自己的通知 |
 | `intake.submit`、`intake.read` | 项目 | 管理员、成员、访客 | 只看自己的访客只看自己提交的 |
-| `intake.update` | 项目 | 管理员、成员、访客 | 非管理员须是提交者；访客提交者只改名字、描述 |
+| `intake.update` | 项目 | 管理员、成员、访客 | 非管理员须是提交者；访客提交者只改名字、描述；收集箱里的工作项上资产的写也按它判定（P2c） |
 | `intake.triage` | 项目 | 管理员（§15 B） | — |
 | `intake.delete` | 项目 | 管理员，`AllowCreator` | — |
 | `intake.count` | 工作区 | 管理员、成员、访客 | 各项目的待处理数（P2b）；只看自己的访客只数自己的 |
@@ -156,7 +156,7 @@ M7 让五件协作功能经真实接口工作：站内通知（关注工作项�
 
 ### 3.11 项目开关与入口规则
 
-`intake_view` 关闭：提交、分诊、条目的修改与删除 409 `issue.intake_disabled`，读照常，重新打开数据都在。`issue_views_view` 关闭：项目视图的建、改、删 409 `navigation.views_disabled`，读照常。侧栏、页头标签栏与命令面板用同一个谓词决定是否给出“视图”“收集箱”入口：开关开着、是项目的有效成员（三种角色，照 Plane）；新建视图另要求管理员或成员。仿 `planningEntryOn` 写 `viewsEntryOn`、`intakeEntryOn`，侧栏与命令面板共用，单测钉住访客与成员（M6-M7-07）。
+`intake_view` 关闭：提交、分诊、条目的修改与删除、条目上资产的写 409 `issue.intake_disabled`，读照常，重新打开数据都在。`issue_views_view` 关闭：项目视图的建、改、删 409 `navigation.views_disabled`，读照常。侧栏、页头标签栏与命令面板用同一个谓词决定是否给出“视图”“收集箱”入口：开关开着、是项目的有效成员（三种角色，照 Plane）；新建视图另要求管理员或成员。仿 `planningEntryOn` 写 `viewsEntryOn`、`intakeEntryOn`，侧栏与命令面板共用，单测钉住访客与成员（M6-M7-07）。
 
 ## 4. 数据、模块归属与删除图
 
@@ -334,7 +334,8 @@ P1a 的第一个实现提交把关键词 phase 改为 `M7/P1`（P1a、P1b 共用
 | P1b 通知模块的核心 | 已完成：合入 main（noff `1a23f6f8`），main CI 44179902213 全绿；整分支审查 Ready after fixes，修复轮后限定复审 Ready to merge；spec 与 plan 经预检 [re-83](../../reviews/re-83-M7P1b预检.md) 修正后通过，基线 main `9a3a388a`（P1a 的 noff）；原 P1b 拆为 P1b、P1c；负责人 2026-11-18 决定自动归档的通知批量投递（spec R12） | [P1b spec](specs/P1b-notification-core.md) / [P1b plan](plans/P1b-notification-core.md) / [P1b 阶段记录](reviews/P1b-notification-core-review.md) |
 | P1c 通知的接口与读 | 已完成：合入 main（noff `31f38580`），main CI 44337846563 全绿；整分支审查与限定复审都是 Ready to merge；本机最终门禁的第 0 路因 M6-M8-05 失败，负责人 2026-11-18 决定服务端以分支 CI 为准；spec 与 plan 经预检 [re-84](../../reviews/re-84-M7P1c预检.md) 修正后通过，基线 main `1a23f6f8`（P1b 的 noff）；两个检查点七项全过，检查点 1 的分支 CI 全绿；阶段记录 [P1c review](reviews/P1c-notification-api-review.md) | [P1c spec](specs/P1c-notification-api.md) / [P1c plan](plans/P1c-notification-api.md) |
 | P2a 收集箱条目的生命周期 | 已完成：合入 main（noff `670399c4`；合入后 main CI 暴露的 M5 测试竞态另以 `057176e5` 修复），审查与集成见阶段记录 §9；spec 与 plan 经预检 [re-85](../../reviews/re-85-M7P2a预检.md) 修正后通过，基线 main `31f38580`（P1c 的 noff）；实施前按删除守卫与 P2b 重新划分（spec §1、R1）；阶段记录 [P2a 记录](reviews/P2a-intake-submit-triage-review.md) | [P2a spec](specs/P2a-intake-submit-triage.md) / [P2a plan](plans/P2a-intake-submit-triage.md) |
-| P2b 收集箱的列表、内容修改、删除与待处理数 | 进行中：spec 与 plan 经预检 [re-86](../../reviews/re-86-M7P2b预检.md) 修正后通过，基线 main `057176e5`；实施前把 Triage 宿主的资产判定再划到 P2c（spec §1、R1） | [P2b spec](specs/P2b-intake-list-edit-delete.md) / [P2b plan](plans/P2b-intake-list-edit-delete.md) |
+| P2b 收集箱的列表、内容修改、删除与待处理数 | 已完成：合入 main（noff `f25cccad`），审查与集成见阶段记录 §9；spec 与 plan 经预检 [re-86](../../reviews/re-86-M7P2b预检.md) 修正后通过，基线 main `057176e5`；实施前把 Triage 宿主的资产判定再划到 P2c（spec §1、R1） | [P2b spec](specs/P2b-intake-list-edit-delete.md) / [P2b plan](plans/P2b-intake-list-edit-delete.md) / [P2b 记录](reviews/P2b-intake-list-edit-delete-review.md) |
+| P2c Triage 宿主的资产判定 | 进行中：spec 与 plan 经预检 [re-87](../../reviews/re-87-M7P2c预检.md) 修正后通过，基线 main `f25cccad` | [P2c spec](specs/P2c-intake-assets.md) / [P2c plan](plans/P2c-intake-assets.md) |
 
 ## 15. 决定记录
 
