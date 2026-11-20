@@ -13,6 +13,7 @@ import (
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/asset"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue"
+	"github.com/open-nerve/NerveProject/server/internal/modules/navigation"
 	"github.com/open-nerve/NerveProject/server/internal/modules/notification"
 	"github.com/open-nerve/NerveProject/server/internal/modules/planning"
 	"github.com/open-nerve/NerveProject/server/internal/platform/config"
@@ -24,10 +25,17 @@ import (
 // Only the explicitly owned portions are asynchronous; unknown catalog tables still
 // participate in the immediate assertions rather than receiving an exemption.
 // The issue module's memberships (M6 P3a spec 2.5) are named for their targets,
-// and its intake rows (M7 P2a spec 2.10) for the intake.
+// and its intake rows (M7 P2a spec 2.10) for the intake. The saved views are
+// named for the work items they show, but are the navigation module's.
 func projectIssueTable(table string) bool {
 	return table == "draft_issues" || table == "issues" || table == "comment_reactions" || table == "cycle_issues" || table == "module_issues" ||
-		table == "intake_issues" || len(table) > 6 && table[:6] == "issue_"
+		table == "intake_issues" || len(table) > 6 && table[:6] == "issue_" && !navigationTable(table)
+}
+
+// The saved views, a project's and a workspace's, are deleted by the navigation module's own navigation.delete_rows
+// job (M7 P3b spec 2.7, R3).
+func navigationTable(table string) bool {
+	return table == "issue_views"
 }
 
 // The planning module's tables are deleted by its own planning.delete_rows job (M6 P1 spec 2.4, P2 spec 2.4, P3b
@@ -40,7 +48,7 @@ func projectPlanningTable(table string) bool {
 // The notifications are deleted by the notification module's own notification.delete_rows job once the project's work
 // items are (M7 P1b spec 2.8).
 func parentAsyncTable(table string) bool {
-	return table == "file_assets" || table == "notifications" || projectIssueTable(table) || projectPlanningTable(table)
+	return table == "file_assets" || table == "notifications" || projectIssueTable(table) || projectPlanningTable(table) || navigationTable(table)
 }
 
 type deletionJob struct {
@@ -111,6 +119,7 @@ func waitProjectDeletion(t *testing.T, pool *pgxpool.Pool, project uuid.UUID) {
 	waitDeletionJob(t, pool, job, "completed")
 	waitPlanningDeletion(t, pool, project)
 	waitNotificationDeletion(t, pool, project)
+	waitNavigationDeletion(t, pool, "project", project)
 	waitAssetScopeDeletion(t, pool, "project", project)
 }
 
@@ -244,7 +253,7 @@ func projectDeletionPublisher(t *testing.T, pool *pgxpool.Pool, observers ...sha
 		t.Fatal(err)
 	}
 	subscribers := slices.Concat(issue.Subscribers(issue.Provide(pool, nil), jobInserter{client: client}), planning.Subscribers(jobInserter{client: client}), asset.Subscribers(asset.Provide(pool), jobInserter{client: client}),
-		notification.Subscribers(notification.Provide(pool), jobInserter{client: client}))
+		notification.Subscribers(notification.Provide(pool), jobInserter{client: client}), navigation.Subscribers(jobInserter{client: client}))
 	subscribers = append(subscribers, observers...)
 	d, err := newDispatcher(eventTypes(), subscribers)
 	if err != nil {
@@ -275,7 +284,9 @@ func waitWorkspaceDeletion(t *testing.T, pool *pgxpool.Pool, workspace uuid.UUID
 		waitDeletionJob(t, pool, projectDeletionJob(t, pool, project), "completed")
 		waitPlanningDeletion(t, pool, project)
 		waitNotificationDeletion(t, pool, project)
+		waitNavigationDeletion(t, pool, "project", project)
 	}
 	waitDeletionJob(t, pool, parentDeletionJob(t, pool, "workspace_drafts", workspace), "completed")
+	waitNavigationDeletion(t, pool, "workspace", workspace)
 	waitAssetScopeDeletion(t, pool, "workspace", workspace)
 }

@@ -108,7 +108,7 @@ func (s *Store) ListProjects(ctx context.Context, workspaceID, userID uuid.UUID,
 
 // projectOf is the project a row of GetProject, or of ListProjects, holds.
 func projectOf(r gen.GetProjectRow) (domain.Project, error) {
-	var logo domain.LogoProps
+	var logo shared.LogoProps
 	if err := json.Unmarshal(r.LogoProps, &logo); err != nil {
 		return domain.Project{}, fmt.Errorf("read logo_props of project %s: %w", r.ID, err)
 	}

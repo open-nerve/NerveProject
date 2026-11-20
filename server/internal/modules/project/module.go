@@ -15,7 +15,8 @@
 // and catalogs (IssueProjects), and the notification module the names of a
 // work item's project and state (NotificationNames) and the identifiers of
 // the projects of the work items a page of notifications names
-// (NotificationIdentifiers).
+// (NotificationIdentifiers), and the navigation module a project's facts
+// and its lock (NavigationProjects).
 package project
 
 import (
@@ -214,6 +215,22 @@ type PlanningProjects interface {
 // it into planning's.
 type PlanningFacts = app.PlanningFacts
 
+// NavigationProjects is what the navigation module asks of a project (M7
+// P3b spec 2.1, 2.6): its facts without a lock, for a read and a view
+// write's checks before its locks; and the same facts under the project's
+// FOR SHARE, the project's lock of a view's write, which the write takes
+// after its workspace's FOR SHARE. found is false for a project that is not
+// there or is deleted, also one deleted while the lock waited; an archived
+// project is found.
+type NavigationProjects interface {
+	NavigationFacts(ctx context.Context, id uuid.UUID) (f NavigationFacts, found bool, err error)
+	ShareNavigation(ctx context.Context, id uuid.UUID) (f NavigationFacts, found bool, err error)
+}
+
+// NavigationFacts is the value NavigationProjects hands over: bootstrap
+// converts it into navigation's.
+type NavigationFacts = app.NavigationFacts
+
 // IssueProject, IssueState, IssueLabel, IssueProjectIdentifier and
 // AssetProject are the values IssueProjects hands over: bootstrap converts
 // them into issue's (M4 design 6.5).
@@ -242,6 +259,7 @@ type Provided struct {
 	ProjectMembershipCounts ProjectMembershipCounts
 	IssueProjects           IssueProjects
 	PlanningProjects        PlanningProjects
+	NavigationProjects      NavigationProjects
 	NotificationNames       NotificationNames
 	NotificationIdentifiers NotificationIdentifiers
 }
@@ -259,7 +277,7 @@ func Provide(pool *pgxpool.Pool, protected []postgres.ProtectedReference) Provid
 			{Table: "projects", Protected: true, Delete: store.PurgeProjects},
 		}),
 		AssetParents: store, ArchivePolicies: store, ProjectAccess: store, ProjectAccessMany: store, MemberProjectAccess: store,
-		ProjectMembershipCounts: store, IssueProjects: store, PlanningProjects: store, NotificationNames: store,
+		ProjectMembershipCounts: store, IssueProjects: store, PlanningProjects: store, NavigationProjects: store, NotificationNames: store,
 		NotificationIdentifiers: store,
 	}
 }

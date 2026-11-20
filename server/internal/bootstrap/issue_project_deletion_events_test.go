@@ -9,6 +9,7 @@ import (
 	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace"
+	"github.com/open-nerve/NerveProject/server/internal/platform/config"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
@@ -16,10 +17,14 @@ import (
 
 func TestProjectDeletionPublishesAndEnqueuesAtomically(t *testing.T) {
 	// The barriers below hold the workers across a loop over the whole catalog.
-	contract, base, pool, alice, aliceID, web, _ := twoProjectsWith(t, barriersOutlasted)
-	// They keep the issue, planning and asset deletion workers on three of the
-	// app's four connections (testConfig), leaving the requests below one. A
-	// start-time run still pending would queue on a barrier and take it too
+	// They keep the issue, planning, asset and navigation deletion workers on
+	// four of the app's five connections (testConfig's four and one), leaving
+	// the requests below one.
+	contract, base, pool, alice, aliceID, web, _ := twoProjectsWith(t, func(cfg *config.Config) {
+		barriersOutlasted(cfg)
+		cfg.Database.MaxConns++
+	})
+	// A start-time run still pending would queue on a barrier and take it too
 	// (the asset cleanup locks each asset in turn, without a lock timeout):
 	// the requests would then wait for a connection until the held workers'
 	// lock timeout gave theirs back. The runs' next ones are hours away.
@@ -34,6 +39,7 @@ func TestProjectDeletionPublishesAndEnqueuesAtomically(t *testing.T) {
 	holder := holdProjectDeletion(t, pool, web)
 	assetHolder := holdAssetScopeDeletion(t, pool, web)
 	planningHolder := holdPlanningDeletion(t, pool, web)
+	navigationHolder := holdNavigationDeletion(t, pool, web)
 	var received []shared.Event
 	events := projectDeletionPublisher(t, pool, shared.EventSubscriber{Name: "observe project transaction", Types: []string{"project.deleted"}, Handle: func(ctx context.Context, e shared.Event) error {
 		received = append(received, e)
@@ -100,6 +106,7 @@ func TestProjectDeletionPublishesAndEnqueuesAtomically(t *testing.T) {
 	requestRelease(t, holder)
 	requestRelease(t, assetHolder)
 	requestRelease(t, planningHolder)
+	requestRelease(t, navigationHolder)
 	waitProjectDeletion(t, pool, web)
 	for _, k := range keys {
 		assertProjectDeletionStamp(t, pool, k, recorded[k.String()], web, aliceID)

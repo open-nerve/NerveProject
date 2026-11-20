@@ -41,8 +41,11 @@ func ofAProjectTable(c caller) bool {
 // id, by their parameter: what each is called, and the seeded rows among
 // which it must be, keyed by their project's key; and, when set, the one
 // row of them a column's cells may name, and its name: a work item is its
-// column's (issueOf), whose maker the column's case may be about, and a
-// relation its column's (relationOf), whose other work item it may be.
+// column's (issueOf), whose maker the column's case may be about, a
+// relation its column's (relationOf), whose other work item it may be,
+// and a project's view its column's (viewOf), whose owner it may be. A
+// workspace's own view, which {view_id} names too, is no row under a
+// project: targetViolation tells it first.
 var underProject = map[string]struct {
 	what string
 	rows func(s seeded) map[string]uuid.UUID
@@ -71,6 +74,9 @@ var underProject = map[string]struct {
 	"{relation_id}": {"relation", func(s seeded) map[string]uuid.UUID { return s.relations }, func(c caller, s seeded) (string, uuid.UUID) {
 		return relationOf(c), s.relation(projectOf(c), relationOf(c))
 	}},
+	"{view_id}": {"view", func(s seeded) map[string]uuid.UUID { return s.projectViews }, func(c caller, s seeded) (string, uuid.UUID) {
+		return viewOf(c), s.projectView(projectOf(c), viewOf(c))
+	}},
 }
 
 // targetViolation is what is wrong with where path, a path of pattern that
@@ -83,7 +89,11 @@ var underProject = map[string]struct {
 // named by its identifier ({identifier} right after issues:
 // identifierOf), each from a column of a project table (projectTables): a
 // project's operation in a workspace-level row, or the only admin's, would
-// leave the project level's own columns unasked.
+// leave the project level's own columns unasked. A view ({view_id}) is of
+// either kind, and its kind chooses its level, as its operations' do (M7
+// P3b spec 2.5): a workspace's own view, told before the rows under a
+// project, must be one seeded under workspaceOf(c), from a column of the
+// workspace level; any other is a project's view, a row under a project.
 // Any other row named by its id (a parameter ending in _id) must be a row
 // of s under workspaceOf(c): a cell of the deleted workspace's column that
 // named acme would get the 404 of a workspace its caller is not in, and
@@ -112,6 +122,13 @@ func targetViolation(pattern, path string, c caller, s seeded, passOver func(par
 			}
 			if id := s.project(projectOf(c)).String(); got[i] != id {
 				return fmt.Sprintf("{project_id} %s is not its column's project %s, %s", got[i], projectOf(c), id)
+			}
+		case segment == "{view_id}" && s.workspaceOfView(got[i]) != "":
+			switch slug := s.workspaceOfView(got[i]); {
+			case !slices.Contains(workspaceColumns, c):
+				return fmt.Sprintf("{view_id} %s is a workspace's view, from a column of no workspace level: a workspace's row names its columns", got[i])
+			case slug != workspaceOf(c):
+				return fmt.Sprintf("{view_id} %s is a view of %s's own, not of its column's workspace %s", got[i], slug, workspaceOf(c))
 			}
 		case underProject[segment].rows != nil:
 			if !ofAProjectTable(c) {

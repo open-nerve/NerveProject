@@ -37,7 +37,7 @@ func TestCheckProjectPatchAcceptsValidPatches(t *testing.T) {
 		{ProjectPatch{Identifier: ptr("çay1"), ArchiveIn: ptr(0)}, ptr("ÇAY1")},
 		{ProjectPatch{Name: ptr("研发 Web"), Description: ptr("多行\n说明"), Network: ptr(NetworkPrivate), SetLead: true, LeadID: &lead,
 			SetDefaultAssignee: true, CycleView: ptr(true), ModuleView: ptr(false), IssueViewsView: ptr(true), IntakeView: ptr(true),
-			GuestViewAllFeatures: ptr(true), ArchiveIn: ptr(12), LogoProps: &LogoProps{InUse: ptr(LogoEmoji)}, Timezone: ptr("Asia/Shanghai")}, nil},
+			GuestViewAllFeatures: ptr(true), ArchiveIn: ptr(12), LogoProps: &shared.LogoProps{InUse: ptr(shared.LogoInUseEmoji)}, Timezone: ptr("Asia/Shanghai")}, nil},
 	}
 	for _, tt := range tests {
 		got, err := CheckProjectPatch(tt.p)
@@ -64,7 +64,7 @@ func TestCheckProjectPatchReportsEveryField(t *testing.T) {
 	}
 	const nul = "must not contain a NUL character"
 	all := ProjectPatch{Name: ptr(""), Identifier: ptr("web-2"), Description: ptr("\x00"), Network: ptr(Network(1)), ArchiveIn: ptr(13),
-		Timezone: ptr("Mars/Olympus"), LogoProps: &LogoProps{InUse: ptr("x")}}
+		Timezone: ptr("Mars/Olympus"), LogoProps: &shared.LogoProps{InUse: ptr("x")}}
 	want := []shared.FieldError{
 		{Field: "name", Code: "too_short", Message: "must not be empty"},
 		{Field: "identifier", Code: "invalid_format", Message: "may hold only A-Z, 0-9 and ÇŞĞİÖÜ"},
@@ -116,7 +116,7 @@ func TestThePatchChecksAsCreateDoes(t *testing.T) {
 		create.Description = d
 		pairs = append(pairs, pair{create, ProjectPatch{Description: &d}})
 	}
-	for _, l := range []LogoProps{{}, {InUse: ptr("other")}, {Emoji: &Emoji{URL: ptr("\x00")}}, {Icon: &Icon{Name: ptr("home")}}} {
+	for _, l := range []shared.LogoProps{{}, {InUse: ptr("other")}, {Emoji: &shared.LogoEmoji{URL: ptr("\x00")}}, {Icon: &shared.LogoIcon{Name: ptr("home")}}} {
 		create := valid
 		create.LogoProps = l
 		pairs = append(pairs, pair{create, ProjectPatch{LogoProps: &l}})

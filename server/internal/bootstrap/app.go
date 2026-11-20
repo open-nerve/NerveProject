@@ -19,6 +19,7 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity"
 	"github.com/open-nerve/NerveProject/server/internal/modules/instance"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue"
+	"github.com/open-nerve/NerveProject/server/internal/modules/navigation"
 	"github.com/open-nerve/NerveProject/server/internal/modules/notification"
 	"github.com/open-nerve/NerveProject/server/internal/modules/planning"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project"
@@ -139,6 +140,7 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 	issuePorts := issue.Provide(pool, protected)
 	planningPorts := planning.Provide(pool, planningProjects{projects: projectPorts.PlanningProjects})
 	notificationPorts := notification.Provide(pool)
+	navigationPorts := navigation.Provide(pool)
 	imageBindings := asset.NewImageBindings(assetPorts, businessClock)
 	imageReader := asset.NewImageReader(assetPorts, assets.store, assets.runtimeNow)
 	assetPurger := asset.NewPurger(assetPorts, assetImageReferences{identityPorts.ImageReferences, workspacePorts.ImageReferences, projectPorts.ImageReferences}, tx)
@@ -165,7 +167,7 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 	}
 	inserter := jobInserter{client: client}
 	events, err := newDispatcher(eventTypes(), slices.Concat(issue.Subscribers(issuePorts, inserter), planning.Subscribers(inserter), asset.Subscribers(assetPorts, inserter),
-		notification.Subscribers(notificationPorts, inserter)))
+		notification.Subscribers(notificationPorts, inserter), navigation.Subscribers(inserter)))
 	if err != nil {
 		a.close()
 		return nil, err
@@ -218,6 +220,11 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 		IssueRefs: notificationIssueRefs{issues: issuePorts.IssueRefs, projects: projectPorts.NotificationIdentifiers},
 		Clock:     businessClock, ReadTx: readTx, Tx: busyTx{tx: issueTx}, MarkTx: tx,
 	})
+	// A view's write enters no write gate and answers no server_busy (M7 P3b spec 2.4): tx.
+	views := navigation.New(navigation.Deps{Pool: pool, Tx: tx, ReadTx: readTx, JobTx: issueTx, RuntimeNow: time.Now, Logger: logger,
+		DeleteBatch: cfg.Navigation.DeleteBatch, DeleteBudget: cfg.Navigation.DeleteBudget, Clock: businessClock, Authorizer: authorizer,
+		Projects: navigationProjects{projects: projectPorts.NavigationProjects}, Workspaces: navigationWorkspaces{directory: workspacePorts.WorkspaceDirectory},
+		ListSettings: issuePorts.ListSettings, WorkspaceListSettings: issuePorts.WorkspaceListSettings})
 	// project before workspace: workspace's writes take its cascade.
 	proj := project.New(project.Deps{
 		Caller: identityPorts.CredentialLock, ImageGate: projectImageGate{gate: projectWrites},
@@ -278,9 +285,10 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 		a.close()
 		return nil, err
 	}
-	purge := newPurgeDeleted([]purgeModule{{"asset", forAssetPurge(assetPurger)}, {"notification", forNotificationPurge(notificationPorts.Purger)}, {"issue", forIssuePurge(issuePorts.Purger)}, {"planning", forPlanningPurge(planningPorts.Purger)}, {"project", forProjectPurge(projectPorts.Purger)}, {"workspace", forWorkspacePurge(workspacePorts.Purger)}, {"identity", forIdentityPurge(identityPorts.Purger)}}, businessClock, time.Now, cfg.Cleanup.PurgeAfter, cfg.Cleanup.PurgeBatch, cfg.Files.CleanupBudget)
-	definitions := append(slices.Concat(ident.Jobs(), issues.Jobs(), plans.Jobs(), files.Jobs(), notes.Jobs()), purgeJob(purge, cfg.Cleanup.PurgeInterval))
-	a.jobs, err = jobs.New(pool, jobs.Config{ShutdownTimeout: cfg.Jobs.ShutdownTimeout, Logger: logger, DefaultWorkers: cfg.Jobs.DefaultWorkers, PeriodicWorkers: cfg.Jobs.PeriodicWorkers}, definitions, slices.Concat(identity.EnqueuedKinds(), issue.EnqueuedKinds(), planning.EnqueuedKinds(), asset.EnqueuedKinds(), notification.EnqueuedKinds()))
+	purge := newPurgeDeleted([]purgeModule{{"asset", forAssetPurge(assetPurger)}, {"notification", forNotificationPurge(notificationPorts.Purger)}, {"navigation", forNavigationPurge(navigationPorts.Purger)}, {"issue", forIssuePurge(issuePorts.Purger)}, {"planning", forPlanningPurge(planningPorts.Purger)}, {"project", forProjectPurge(projectPorts.Purger)}, {"workspace", forWorkspacePurge(workspacePorts.Purger)}, {"identity", forIdentityPurge(identityPorts.Purger)}}, businessClock, time.Now, cfg.Cleanup.PurgeAfter, cfg.Cleanup.PurgeBatch, cfg.Files.CleanupBudget)
+	definitions := append(slices.Concat(ident.Jobs(), issues.Jobs(), plans.Jobs(), files.Jobs(), notes.Jobs(), views.Jobs()), purgeJob(purge, cfg.Cleanup.PurgeInterval))
+	a.jobs, err = jobs.New(pool, jobs.Config{ShutdownTimeout: cfg.Jobs.ShutdownTimeout, Logger: logger, DefaultWorkers: cfg.Jobs.DefaultWorkers, PeriodicWorkers: cfg.Jobs.PeriodicWorkers}, definitions, slices.Concat(identity.EnqueuedKinds(), issue.EnqueuedKinds(), planning.EnqueuedKinds(), asset.EnqueuedKinds(), notification.EnqueuedKinds(),
+		navigation.EnqueuedKinds()))
 	if err != nil {
 		a.close()
 		return nil, err
@@ -327,6 +335,7 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 	plans.Register(a.router, api)
 	files.Register(a.router, api, bucket(limiter, "file_transfer", cfg.Files.TransferRate))
 	notes.Register(a.router, api)
+	views.Register(a.router, api)
 	// The web UI takes every path no other pattern claims. It must be the
 	// method-less "/": "GET /" and the method-less "/api/" would conflict.
 	webHandler, err := webui.Handler(webFiles, webui.Options{StorageOrigin: assets.origin})

@@ -32,7 +32,7 @@ type Project struct {
 	GuestViewAllFeatures bool
 	ArchiveIn            int
 	ArchivedAt           *time.Time
-	LogoProps            LogoProps
+	LogoProps            shared.LogoProps
 	Timezone             string
 	CreatedAt            time.Time
 	UpdatedAt            time.Time
@@ -67,7 +67,7 @@ type NewProject struct {
 	Description       string
 	Network           *Network
 	LeadID            *uuid.UUID
-	LogoProps         LogoProps
+	LogoProps         shared.LogoProps
 	Timezone          *string
 }
 
@@ -107,7 +107,7 @@ func ValidIdentifier(s string) bool {
 //     | ' < > . ( ) % ! - (not_allowed);
 //   - an identifier that is 1–10 of A-Z, 0-9 and ÇŞĞİÖÜ in upper case;
 //   - a description without NUL; a network of 0 or 2; a time zone that
-//     shared.ValidTimezone accepts; logo_props by checkLogoProps.
+//     shared.ValidTimezone accepts; logo_props by shared.LogoProps.Check.
 //
 // Every field with a problem is reported at once, in one 422
 // validation_failed, with one problem per field: the first of its checks
@@ -120,10 +120,10 @@ func CheckNewProject(p NewProject) (NewProject, error) {
 		public := NetworkPublic
 		p.Network = &public
 	}
-	found := []*shared.FieldError{checkName(p.Name), checkIdentifier(p.Identifier), checkText("description", p.Description),
+	found := []*shared.FieldError{checkName(p.Name), checkIdentifier(p.Identifier), shared.CheckText("description", p.Description),
 		checkNetwork(*p.Network), checkTimezone(p.Timezone)}
 	found = append(found, checkCover(p.CoverImageAssetID, p.CoverBuiltinID)...)
-	if err := invalid(append(found, checkLogoProps(p.LogoProps)...)...); err != nil {
+	if err := invalid(append(found, p.LogoProps.Check()...)...); err != nil {
 		return NewProject{}, err
 	}
 	return p, nil
@@ -160,7 +160,7 @@ func checkName(name string) *shared.FieldError {
 		return &shared.FieldError{Field: field, Code: shared.FieldNotAllowed,
 			Message: "must not contain any of " + strings.Join(strings.Split(forbiddenNameCharacters, ""), " ")}
 	}
-	return checkText(field, name)
+	return shared.CheckText(field, name)
 }
 
 func checkIdentifier(id string) *shared.FieldError {
@@ -197,21 +197,12 @@ func checkMaxLength(field, s string, limit int) *shared.FieldError {
 
 // checkRequiredText refuses the text of field, a column of varchar(limit)
 // that may not be blank: blank or too long (checkLength), or with NUL
-// (checkText), the first of them.
+// (shared.CheckText), the first of them.
 func checkRequiredText(field, s string, limit int) *shared.FieldError {
 	if f := checkLength(field, s, limit); f != nil {
 		return f
 	}
-	return checkText(field, s)
-}
-
-// checkText refuses NUL in the text of field, which Postgres cannot store
-// in text nor in jsonb.
-func checkText(field, s string) *shared.FieldError {
-	if strings.ContainsRune(s, 0) {
-		return &shared.FieldError{Field: field, Code: shared.FieldInvalidFormat, Message: "must not contain a NUL character"}
-	}
-	return nil
+	return shared.CheckText(field, s)
 }
 
 func checkNetwork(n Network) *shared.FieldError {

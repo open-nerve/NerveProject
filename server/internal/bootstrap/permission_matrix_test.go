@@ -218,7 +218,7 @@ func decodeAnswer(t *testing.T, answer string, v any) {
 // matrixRows are the rows, each module's from its file.
 func matrixRows() []matrixRow {
 	return slices.Concat(workspaceMatrixRows(), projectMatrixRows(), memberMatrixRows(), membershipMatrixRows(), stateMatrixRows(),
-		labelMatrixRows(), draftMatrixRows(), searchMatrixRows(), issueMatrixRows(), issueUpdateMatrixRows(), issueArchiveMatrixRows(), issueListMatrixRows(), memberIssueMatrixRows(), subIssueMatrixRows(), relationMatrixRows(), intakeMatrixRows(), intakeItemMatrixRows(), collaborationMatrixRows(), subscriptionMatrixRows(), linkMatrixRows(), assetMatrixRows(), cycleMatrixRows(), transferMatrixRows(), moduleMatrixRows(), moduleLinkMatrixRows(), guestsSeeAllMatrixRows(), countMatrixRows(), notificationMatrixRows())
+		labelMatrixRows(), draftMatrixRows(), searchMatrixRows(), issueMatrixRows(), issueUpdateMatrixRows(), issueArchiveMatrixRows(), issueListMatrixRows(), memberIssueMatrixRows(), subIssueMatrixRows(), relationMatrixRows(), intakeMatrixRows(), intakeItemMatrixRows(), collaborationMatrixRows(), subscriptionMatrixRows(), linkMatrixRows(), assetMatrixRows(), cycleMatrixRows(), transferMatrixRows(), moduleMatrixRows(), moduleLinkMatrixRows(), guestsSeeAllMatrixRows(), countMatrixRows(), notificationMatrixRows(), viewMatrixRows())
 }
 
 // matrixApps is how many cells may run an app of their own at once: each
@@ -258,24 +258,28 @@ func (d matrixData) config(t *testing.T, url string, change func(*config.Config)
 // projects, project memberships, states and labels of matrixProjects,
 // matrixProjectMembers, matrixStates and matrixLabels; through the project
 // store, each project's cycles and modules turned on, and acme's public
-// and private projects' intake (intakeOn), and through the planning store, the cycles of matrixCycles, which have ended, frozen as
+// and private projects' intake (intakeOn) and acme's public project's
+// views (viewsOn), and through the planning store, the cycles of matrixCycles, which have ended, frozen as
 // the freeze job freezes them (freezeSeededCycles), and the modules of
 // matrixModules, each with its link; through the issue
 // store, the work items of seededItems, once guestViewAll shows its guests
 // every one (issueSeed), and the relations of seededRelations; through SQL,
 // the notifications of matrixNotifications (seedMatrixNotifications);
+// through the navigation store, the views of seededViews and
+// matrixWorkspaceViews (seedMatrixViews);
 // through the project store, acme's archived project archived. Through
 // both stores, the removed member's removal; then, through the workspace
 // store, the invitations of matrixInvitations. Through the project store, the
 // memberships P5b's writes end (endings); through SQL, the membership
 // states no store makes alone (partingStates). Through the API, gone
 // deleted by its admin, which soft-deletes its memberships and its
-// project, with its states, labels, work items, relation and notification,
-// with it;
+// project, with its states, labels, work items, relation, notification
+// and views, with it;
 // then the checks that the rows the cells rest on are there
 // (preconditions), the states, the labels, the work items and the
 // relations among them (seededStates, seededLabels, seededIssues,
-// seededRelationRows), and the notifications (seededNotificationRows).
+// seededRelationRows), the notifications (seededNotificationRows) and
+// the views (seededViewRows).
 // Everything that connected to the database is closed when it returns, so
 // that it can be copied. A -run that leaves out prepare fails here, not
 // with a 401 in every cell.
@@ -317,6 +321,7 @@ func prepareMatrix(t *testing.T) matrixData {
 		projects.labels(s)
 		projects.planningOn()
 		projects.intakeOn()
+		projects.viewsOn()
 		plans := planningpg.New(pool)
 		projects.cycles(s, plans)
 		freezeSeededCycles(t, pool)
@@ -340,6 +345,7 @@ func prepareMatrix(t *testing.T) matrixData {
 		}
 		seedMatrixNotifications(t, pool, s, seed.now)
 		seedMatrixAssets(t, pool, s, seed.now)
+		seedMatrixViews(t, pool, s, seed.now)
 		projects.archive("acme/archived")
 		projects.removal(s)
 		for _, i := range matrixInvitations {
@@ -364,6 +370,7 @@ func prepareMatrix(t *testing.T) matrixData {
 		issues.seededCommentRows(s)
 		issues.seededLinkRows(s)
 		seededNotificationRows(t, pool, s)
+		seededViewRows(t, pool, s)
 	})
 	if !prepared {
 		t.FailNow()

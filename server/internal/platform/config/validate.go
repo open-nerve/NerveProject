@@ -100,6 +100,7 @@ func (c Config) validate() error {
 	c.Issue.validate(c.Server.RequestTimeout, fail)
 	c.Planning.validate(fail)
 	c.Notification.validate(fail)
+	c.Navigation.validate(fail)
 	if c.Jobs.ShutdownTimeout <= 0 {
 		fail("jobs.shutdown_timeout", "must be positive, got %s", c.Jobs.ShutdownTimeout)
 	}
@@ -189,6 +190,15 @@ func (n NotificationConfig) validate(fail func(key, format string, args ...any))
 	}
 	if n.DeleteBudget <= 0 || n.DeleteBudget > math.MaxInt64-5*time.Second {
 		fail("notification.delete_budget", "must be positive and leave 5s before duration overflow, got %s", n.DeleteBudget)
+	}
+}
+
+func (n NavigationConfig) validate(fail func(key, format string, args ...any)) {
+	if n.DeleteBatch < 1 || n.DeleteBatch > math.MaxInt32 {
+		fail("navigation.delete_batch", "must be from 1 to 2147483647, got %d", n.DeleteBatch)
+	}
+	if n.DeleteBudget <= 0 || n.DeleteBudget > math.MaxInt64-5*time.Second {
+		fail("navigation.delete_budget", "must be positive and leave 5s before duration overflow, got %s", n.DeleteBudget)
 	}
 }
 

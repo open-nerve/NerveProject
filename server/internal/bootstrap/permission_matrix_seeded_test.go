@@ -131,7 +131,9 @@ func emailOf(c caller) string {
 // slug and the address; each project, by its key; each project membership,
 // by the project's key and the column; each state, each label and each
 // work item, by the project's key and its name; each relation, by the key
-// of its row's project and its name; and each account, by its name in
+// of its row's project and its name; each project's view, by the
+// project's key and its name, and each workspace's own view, by the
+// workspace's slug and whose; and each account, by its name in
 // matrixAccounts, which prepareMatrix registers. t is the test that asks
 // for them (in).
 type seeded struct {
@@ -154,20 +156,24 @@ type seeded struct {
 	links               map[string]uuid.UUID
 	descriptionVersions map[string]uuid.UUID
 	relations           map[string]uuid.UUID
+	projectViews        map[string]uuid.UUID
+	workspaceViews      map[string]uuid.UUID
 	accounts            map[caller]uuid.UUID
 }
 
 // newSeeded names an id for each workspace of matrixMemberships, each of
 // matrixMemberships, each of matrixInvitations, each of matrixProjects, each
 // of matrixProjectMembers, each of matrixStates and matrixLabels in each
-// project, each work item of seededItems and each relation of
-// seededRelations, in its order, before prepareMatrix writes them, so that
+// project, each work item of seededItems, each relation of
+// seededRelations and each view of seededViews and of
+// matrixWorkspaceViews, in its order, before prepareMatrix writes them, so that
 // matrixViolations, without a database, sees the keys and the targets the
 // cells will.
 func newSeeded() seeded {
 	s := seeded{assets: map[string]uuid.UUID{}, drafts: map[string]uuid.UUID{}, notifications: map[string]uuid.UUID{}, workspaces: map[string]uuid.UUID{}, memberships: map[string]uuid.UUID{}, invitations: map[string]uuid.UUID{},
 		projects: map[string]uuid.UUID{}, projectMembers: map[string]uuid.UUID{}, states: map[string]uuid.UUID{}, labels: map[string]uuid.UUID{}, cycles: map[string]uuid.UUID{},
-		modules: map[string]uuid.UUID{}, moduleLinks: map[string]uuid.UUID{}, issues: map[string]uuid.UUID{}, comments: map[string]uuid.UUID{}, links: map[string]uuid.UUID{}, descriptionVersions: map[string]uuid.UUID{}, relations: map[string]uuid.UUID{}, accounts: map[caller]uuid.UUID{}}
+		modules: map[string]uuid.UUID{}, moduleLinks: map[string]uuid.UUID{}, issues: map[string]uuid.UUID{}, comments: map[string]uuid.UUID{}, links: map[string]uuid.UUID{}, descriptionVersions: map[string]uuid.UUID{}, relations: map[string]uuid.UUID{},
+		projectViews: map[string]uuid.UUID{}, workspaceViews: map[string]uuid.UUID{}, accounts: map[caller]uuid.UUID{}}
 	for _, c := range workspaceColumns {
 		s.drafts[workspaceOf(c)+"/"+string(c)] = uuid.NewV7()
 		s.assets[workspaceOf(c)+"/"+string(c)] = uuid.NewV7()
@@ -212,6 +218,12 @@ func newSeeded() seeded {
 	}
 	for _, r := range seededRelations {
 		s.relations[r.fromKey+"|"+r.name] = uuid.NewV7()
+	}
+	for _, v := range seededViews() {
+		s.projectViews[v.key+"|"+v.name] = uuid.NewV7()
+	}
+	for _, v := range matrixWorkspaceViews {
+		s.workspaceViews[v.slug+"/"+v.whose] = uuid.NewV7()
 	}
 	for _, pm := range matrixProjectMembers {
 		s.projectMembers[pm.key+"|"+string(pm.c)] = uuid.NewV7()

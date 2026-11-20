@@ -8,6 +8,7 @@ import (
 
 	assetriver "github.com/open-nerve/NerveProject/server/internal/modules/asset/adapter/river"
 	issueriver "github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/river"
+	navigationriver "github.com/open-nerve/NerveProject/server/internal/modules/navigation/adapter/river"
 	notificationriver "github.com/open-nerve/NerveProject/server/internal/modules/notification/adapter/river"
 	planningriver "github.com/open-nerve/NerveProject/server/internal/modules/planning/adapter/river"
 	"github.com/open-nerve/NerveProject/server/internal/platform/jobs"
@@ -28,6 +29,7 @@ var (
 	_ planningriver.Inserter     = jobInserter{}
 	_ assetriver.Inserter        = jobInserter{}
 	_ notificationriver.Inserter = jobInserter{}
+	_ navigationriver.Inserter   = jobInserter{}
 )
 
 func (i jobInserter) InsertTx(ctx context.Context, args river.JobArgs, opts *river.InsertOpts) error {

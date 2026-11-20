@@ -20,8 +20,8 @@ var (
 	web = domain.Project{ID: webID, WorkspaceID: acmeID, Name: "Web", Description: "The app", Identifier: "WEB", Network: domain.NetworkPrivate,
 		LeadID: &bobID, DefaultAssigneeID: &aliceID, CycleView: true, ModuleView: true, IssueViewsView: true, IntakeView: true,
 		GuestViewAllFeatures: true, ArchiveIn: 3, ArchivedAt: &created,
-		LogoProps: domain.LogoProps{InUse: ptr("icon"), Emoji: &domain.Emoji{Value: ptr("128640"), URL: ptr("https://example.com/e.png")},
-			Icon: &domain.Icon{Name: ptr("home"), Color: ptr("#ffffff"), BackgroundColor: ptr("#000000")}},
+		LogoProps: shared.LogoProps{InUse: ptr("icon"), Emoji: &shared.LogoEmoji{Value: ptr("128640"), URL: ptr("https://example.com/e.png")},
+			Icon: &shared.LogoIcon{Name: ptr("home"), Color: ptr("#ffffff"), BackgroundColor: ptr("#000000")}},
 		Timezone: "Asia/Shanghai", CreatedAt: created, UpdatedAt: created.Add(time.Hour), MemberRole: ptr(shared.RoleAdmin), SortOrder: ptr(-9900.5),
 		MemberIDs: []uuid.UUID{aliceID, bobID}}
 	// bare is a project with every optional field empty, as a caller who is

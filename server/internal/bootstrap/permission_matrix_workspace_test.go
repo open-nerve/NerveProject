@@ -157,9 +157,9 @@ func workspaceMatrixRows() []matrixRow {
 		{op: "deleteWorkspaceInvitation", write: true, request: toInvitation(http.MethodDelete, "newcomer@example.com", ""),
 			cells: ofInvitation(cellNoContent, cellForbidden, cellForbidden)},
 		{op: "getWorkspacePreferences", request: toPreferences(http.MethodGet, ""), cells: inWorkspace(cellOK, cellOK, cellOK),
-			check: preferencesAre(navigation{"TABBED", 3}, navigation{"ACCORDION", 10})},
+			check: preferencesAre(navigationSettings{"TABBED", 3}, navigationSettings{"ACCORDION", 10})},
 		{op: "updateWorkspacePreferences", write: true, request: toPreferences(http.MethodPatch, `{"navigation_project_limit":5}`),
-			cells: inWorkspace(cellOK, cellOK, cellOK), check: preferencesAre(navigation{"TABBED", 5}, navigation{"ACCORDION", 5})},
+			cells: inWorkspace(cellOK, cellOK, cellOK), check: preferencesAre(navigationSettings{"TABBED", 5}, navigationSettings{"ACCORDION", 5})},
 	}
 }
 
@@ -223,17 +223,17 @@ func toPreferences(method, body string) func(caller, seeded) (string, string, st
 	}
 }
 
-// navigation is a caller's display settings as an answer holds them.
-type navigation struct {
+// navigationSettings is a caller's display settings as an answer holds them.
+type navigationSettings struct {
 	Mode  string `json:"navigation_control_preference"`
 	Limit int    `json:"navigation_project_limit"`
 }
 
 // preferencesAre: each caller reads and changes his own settings; the
 // admin's answer is admin, the member's and the guest's others.
-func preferencesAre(admin, others navigation) func(t *testing.T, c caller, s seeded, answer string) {
+func preferencesAre(admin, others navigationSettings) func(t *testing.T, c caller, s seeded, answer string) {
 	return func(t *testing.T, c caller, _ seeded, answer string) {
-		var got navigation
+		var got navigationSettings
 		decodeAnswer(t, answer, &got)
 		want := others
 		if c == callerAdmin {

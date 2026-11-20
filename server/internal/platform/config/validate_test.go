@@ -58,6 +58,7 @@ func validConfig() Config {
 			WriteLockTimeout: 3 * time.Second},
 		Planning:     PlanningConfig{DeleteBatch: 997, DeleteBudget: 43 * time.Second, FreezeInterval: 53 * time.Minute},
 		Notification: NotificationConfig{DeleteBatch: 991, DeleteBudget: 41 * time.Second},
+		Navigation:   NavigationConfig{DeleteBatch: 983, DeleteBudget: 39 * time.Second},
 		Files: FilesConfig{
 			UploadTTL: 15 * time.Minute, OperationTimeout: 10 * time.Second, CleanupInterval: time.Hour, CleanupBatch: 100, CleanupBudget: 10 * time.Second, SizeLimit: 7340032, Driver: "local", Local: LocalFilesConfig{Root: "/private/config-test-files"},
 			MinTransferBytesPerSecond: 262144, TransferGrace: 16 * time.Second, TransferIdleTimeout: 21 * time.Second,
@@ -136,6 +137,8 @@ func TestValidateReportsEveryInvalidKey(t *testing.T) {
 		"planning.freeze_interval: must be at least 1s, got 0s",
 		"notification.delete_batch: must be from 1 to 2147483647, got 0",
 		"notification.delete_budget: must be positive and leave 5s before duration overflow, got 0s",
+		"navigation.delete_batch: must be from 1 to 2147483647, got 0",
+		"navigation.delete_budget: must be positive and leave 5s before duration overflow, got 0s",
 		"jobs.shutdown_timeout: must be positive, got 0s",
 		"jobs.default_workers: must be at least 1, got 0",
 		"jobs.periodic_workers: must be at least 1, got 0",

@@ -2384,6 +2384,91 @@ export interface paths {
         patch: operations["updateNotification"];
         trace?: never;
     };
+    "/api/v0/projects/{project_id}/views": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A project's id (Project.id). */
+                project_id: components["parameters"]["ProjectID"];
+            };
+            cookie?: never;
+        };
+        /**
+         * List a project's views
+         * @description For the project's admins, members and guests, whether its views are turned on or off (Project.issue_views_view) and whether it is archived. A caller who sees only his own work items there, a guest while the project does not show its guests everything, lists only the views he owns. The project's undeleted views, the newest first by created_at, then by id, both descending. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but is not a member of, forbidden. The whole collection at once: collections are not paginated.
+         */
+        get: operations["listProjectViews"];
+        put?: never;
+        /**
+         * Create a view in a project
+         * @description For the project's admins and members, and the workspace's admins who are its guests; not its other guests. The values follow ViewCreate, the filters and the display filters as a project's list's (ViewFilters), every problem in one validation_failed, checked before the project is looked at. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but may not create a view in, forbidden; a project whose views are turned off (Project.issue_views_view), navigation.views_disabled. An archived project takes views as any other. The caller owns the new view. Everything is decided after the workspace's and the project's rows are locked, and written at one moment by the caller.
+         */
+        post: operations["createProjectView"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v0/workspaces/{slug}/views": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A workspace's slug, as in the web app's address. */
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        /**
+         * List a workspace's own views
+         * @description For the workspace's admins and members, not its guests. The workspace's undeleted views of no project, the newest first by created_at, then by id, both descending; a project's views are listed by listProjectViews. A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found; its guest, forbidden. The whole collection at once: collections are not paginated.
+         */
+        get: operations["listWorkspaceViews"];
+        put?: never;
+        /**
+         * Create a view of a workspace
+         * @description For the workspace's admins and members, not its guests: a view of no project. The values follow ViewCreate, the filters and the display filters as the workspace's list's (ViewFilters), every problem in one validation_failed, checked before the workspace is looked at. A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found; its guest, forbidden. The caller owns the new view. Everything is decided after the workspace's row is locked, and written at one moment by the caller.
+         */
+        post: operations["createWorkspaceView"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v0/views/{view_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A view's id (View.id), a project's view or a workspace's. */
+                view_id: components["parameters"]["ViewID"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Read a view
+         * @description A view of either kind, read first to tell which: a project's view for the project's admins, members and guests, whether its views are turned on or off and whether it is archived; a workspace's view for the workspace's admins and members. A view that does not exist or is deleted, one whose project or workspace is deleted or the caller does not see, and another's while he sees only his own work items in its project answer navigation.view_not_found, the same answer as an id that never was. One he sees but whose views he may not read answers forbidden.
+         */
+        get: operations["getView"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete a view
+         * @description For its owner, while his role still lets him change the views of its project or of its workspace, and for its admin: a project's view's, the project's admin, or the workspace's admin who is the project's member or guest (a guest who sees only his own work items there sees no other's view); a workspace's view's, the workspace's admin. A view getView would answer navigation.view_not_found answers it here too; then a caller who may not delete it, forbidden. The view is then read again under the locks of its workspace's row, its project's and its own, and decided again; a project whose views are turned off answers navigation.views_disabled. The view is deleted at one moment by the caller.
+         */
+        delete: operations["deleteView"];
+        options?: never;
+        head?: never;
+        /**
+         * Change a view
+         * @description For its owner alone, while his role still lets him change the views of its project, or of its workspace for a workspace's view, as createProjectView and createWorkspaceView. Each field given replaces that field whole, each left out is kept; null is no value of any. A view getView would answer navigation.view_not_found answers it here too; then a caller whose role may not change it, or who is not its owner, forbidden; then the values, every problem in one validation_failed, the filters and the display filters as its kind's (ViewFilters). The view is then read again under the locks of its workspace's row, its project's and its own, and decided again; a project whose views are turned off answers navigation.views_disabled. A change that leaves the view as it is, {} among them, writes nothing and answers the view, its updated_at kept; any other is written at one moment by the caller.
+         */
+        patch: operations["updateView"];
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2936,10 +3021,10 @@ export interface components {
             color?: string;
             background_color?: string;
         };
-        /** @description A project's icon, the web app's TLogoProps: every field optional, and {} no icon. */
+        /** @description An icon, the web app's TLogoProps: every field optional, and {} no icon. */
         LogoProps: {
             /**
-             * @description Which of the two icons the project shows.
+             * @description Which of the two icons is shown.
              * @enum {string}
              */
             in_use?: "emoji" | "icon";
@@ -4790,6 +4875,81 @@ export interface components {
              */
             snoozed_till?: string | null;
         };
+        /** @description A view's saved filters, each key its alternatives; an empty array is kept and filters nothing by its key, a key left out is not stored. The keys are those of both kinds: a project's view takes the first ten and cycle_id and module_id, with the values listIssues takes; a workspace's view the first ten and project_id, with the values listWorkspaceIssues takes. A key of the other kind, or a value that list does not take, answers validation_failed, not_allowed on filters.<key> or filters.<key>[<index>]. Whether sub-issues are shown is display_filters.sub_issue, not a filter. */
+        ViewFilters: {
+            state_id?: string[];
+            state_group?: string[];
+            priority?: string[];
+            label_id?: string[];
+            assignee_id?: string[];
+            created_by_id?: string[];
+            mention_id?: string[];
+            subscriber_id?: string[];
+            start_date?: string[];
+            target_date?: string[];
+            /** @description A project's view's alone, the project's cycles, as listIssues' cycle_id. */
+            cycle_id?: string[];
+            /** @description A project's view's alone, the project's modules, as listIssues' module_id. */
+            module_id?: string[];
+            /** @description A workspace's view's alone, the workspace's projects, as listWorkspaceIssues' project_id. */
+            project_id?: string[];
+        };
+        /** @description A saved view: a project's, or, with project_id null, a workspace's; the list settings it shows its work items with, and its owner, the account that created it, who alone changes it. */
+        View: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            workspace_id: string;
+            /**
+             * Format: uuid
+             * @description The view's project; null for a workspace's view.
+             */
+            project_id: string | null;
+            name: string;
+            /** @description Plain text; empty for none. */
+            description: string;
+            logo_props: components["schemas"]["LogoProps"];
+            filters: components["schemas"]["ViewFilters"];
+            display_filters: components["schemas"]["IssueListDisplayFilters"];
+            display_properties: components["schemas"]["IssueListDisplayProperties"];
+            /**
+             * Format: uuid
+             * @description The account that created the view and owns it.
+             */
+            owned_by_id: string;
+            /** Format: date-time */
+            created_at: string;
+            /**
+             * Format: date-time
+             * @description When the view was last changed; a change of nothing keeps it.
+             */
+            updated_at: string;
+        };
+        ViewList: {
+            data: components["schemas"]["View"][];
+        };
+        /** @description A new view. Left out, logo_props is {}, no icon; filters {}, none; display_filters the list's defaults, the list layout without grouping, the newest first; display_properties every property shown. Its display filters follow its kind's list: a project's view's, a project's list's layouts and groupings; a workspace's view's, the spreadsheet or list layout, with group_by and sub_group_by null. A value either refuses answers validation_failed, not_allowed on display_filters.<field>. */
+        ViewCreate: {
+            /** @description 1–255 characters without the surrounding white space, which is dropped; no NUL. */
+            name: string;
+            /** @description Plain text of any length without NUL; empty when left out. */
+            description?: string;
+            logo_props?: components["schemas"]["LogoProps"];
+            filters?: components["schemas"]["ViewFilters"];
+            display_filters?: components["schemas"]["IssueListDisplayFilters"];
+            display_properties?: components["schemas"]["IssueListDisplayProperties"];
+        };
+        /** @description A change of a view: each field given replaces that field whole, by ViewCreate's rules; each left out is kept. */
+        ViewUpdate: {
+            /** @description 1–255 characters without the surrounding white space, which is dropped; no NUL. */
+            name?: string;
+            /** @description Plain text of any length without NUL; empty for none. */
+            description?: string;
+            logo_props?: components["schemas"]["LogoProps"];
+            filters?: components["schemas"]["ViewFilters"];
+            display_filters?: components["schemas"]["IssueListDisplayFilters"];
+            display_properties?: components["schemas"]["IssueListDisplayProperties"];
+        };
     };
     responses: {
         /** @description Error (RFC 9457 problem details). */
@@ -4839,6 +4999,8 @@ export interface components {
         ModuleLinkID: string;
         /** @description A notification's id (Notification.id). */
         NotificationID: string;
+        /** @description A view's id (View.id), a project's view or a workspace's. */
+        ViewID: string;
     };
     requestBodies: never;
     headers: never;
@@ -5032,6 +5194,11 @@ export type NotificationType = components['schemas']['NotificationType'];
 export type NotificationMarkAllRead = components['schemas']['NotificationMarkAllRead'];
 export type NotificationsMarked = components['schemas']['NotificationsMarked'];
 export type NotificationUpdate = components['schemas']['NotificationUpdate'];
+export type ViewFilters = components['schemas']['ViewFilters'];
+export type View = components['schemas']['View'];
+export type ViewList = components['schemas']['ViewList'];
+export type ViewCreate = components['schemas']['ViewCreate'];
+export type ViewUpdate = components['schemas']['ViewUpdate'];
 export type ResponseProblem = components['responses']['Problem'];
 export type ParameterLimit = components['parameters']['Limit'];
 export type ParameterCursor = components['parameters']['Cursor'];
@@ -5050,6 +5217,7 @@ export type ParameterCycleId = components['parameters']['CycleID'];
 export type ParameterModuleId = components['parameters']['ModuleID'];
 export type ParameterModuleLinkId = components['parameters']['ModuleLinkID'];
 export type ParameterNotificationId = components['parameters']['NotificationID'];
+export type ParameterViewId = components['parameters']['ViewID'];
 export type $defs = Record<string, never>;
 export interface operations {
     listDraftAssetPreparations: {
@@ -8823,6 +8991,184 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Notification"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listProjectViews: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A project's id (Project.id). */
+                project_id: components["parameters"]["ProjectID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The project's views. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ViewList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    createProjectView: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A project's id (Project.id). */
+                project_id: components["parameters"]["ProjectID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ViewCreate"];
+            };
+        };
+        responses: {
+            /** @description The new view. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["View"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listWorkspaceViews: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A workspace's slug, as in the web app's address. */
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The workspace's own views. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ViewList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    createWorkspaceView: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A workspace's slug, as in the web app's address. */
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ViewCreate"];
+            };
+        };
+        responses: {
+            /** @description The new view. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["View"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getView: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A view's id (View.id), a project's view or a workspace's. */
+                view_id: components["parameters"]["ViewID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The view. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["View"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    deleteView: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A view's id (View.id), a project's view or a workspace's. */
+                view_id: components["parameters"]["ViewID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The view is deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateView: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A view's id (View.id), a project's view or a workspace's. */
+                view_id: components["parameters"]["ViewID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ViewUpdate"];
+            };
+        };
+        responses: {
+            /** @description The view, changed, or as it is when nothing changes. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["View"];
                 };
             };
             default: components["responses"]["Problem"];

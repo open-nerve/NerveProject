@@ -50,23 +50,26 @@ type Cascade interface {
 }
 
 // ListSettings validates saved list words without a directory or actor:
-// the filters by key, and the display filters every page shares.
+// a page's filters by key, and its display filters. Provided has two: a
+// project list's, which a project view's words are, and a workspace view's
+// (M7/P3b).
 type ListSettings interface {
 	Validate(map[string][]string, *shared.ListDisplayFilters) []shared.FieldError
 }
 
 // Provided are the adapters bootstrap builds before wiring consuming modules.
 type Provided struct {
-	attachmentChanges  app.AttachmentEventStore
-	membershipRemovals app.MembershipRemovals
-	AssetParents       AssetParents
-	IssueCascade       Cascade
-	ListSettings       ListSettings
-	IssueRefs          IssueRefs
-	NotificationIssues NotificationIssues
-	PlanningStats      PlanningStats
-	PlanningTransfer   PlanningTransfer
-	Purger             *app.Purger
+	attachmentChanges     app.AttachmentEventStore
+	membershipRemovals    app.MembershipRemovals
+	AssetParents          AssetParents
+	IssueCascade          Cascade
+	ListSettings          ListSettings
+	WorkspaceListSettings ListSettings
+	IssueRefs             IssueRefs
+	NotificationIssues    NotificationIssues
+	PlanningStats         PlanningStats
+	PlanningTransfer      PlanningTransfer
+	Purger                *app.Purger
 }
 
 // Provide builds issue's adapters for the other modules.
@@ -89,7 +92,8 @@ func Provide(pool *pgxpool.Pool, protected []postgres.ProtectedReference) Provid
 		{Table: "cycle_issues", Delete: store.PurgeCycleIssues},
 		{Table: "intake_issues", Delete: store.PurgeIntakeIssues},
 		{Table: "issues", Protected: true, Delete: store.PurgeIssues},
-	}), IssueCascade: app.NewCascade(store), ListSettings: app.ListSettings{}, IssueRefs: app.NewIssueRefs(store),
+	}), IssueCascade: app.NewCascade(store), ListSettings: app.ListSettings{},
+		WorkspaceListSettings: app.WorkspaceListSettings{}, IssueRefs: app.NewIssueRefs(store),
 		NotificationIssues: notificationIssues{store}, PlanningStats: store, PlanningTransfer: app.NewCycleTransfers(store)}
 }
 

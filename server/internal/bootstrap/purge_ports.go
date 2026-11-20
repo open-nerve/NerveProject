@@ -6,6 +6,7 @@ import (
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue"
+	"github.com/open-nerve/NerveProject/server/internal/modules/navigation"
 	"github.com/open-nerve/NerveProject/server/internal/modules/notification"
 	"github.com/open-nerve/NerveProject/server/internal/modules/planning"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project"
@@ -31,6 +32,17 @@ type issuePurge struct{ rows issuePurgeRows }
 func forIssuePurge(rows issuePurgeRows) Purger { return issuePurge{rows} }
 func (p issuePurge) Page(ctx context.Context, cutoff time.Time, batch int, cursor purgePageCursor) (purgePageProgress, error) {
 	r, err := p.rows.Page(ctx, cutoff, batch, issue.PurgeCursor{Table: cursor.Table, After: cursor.After})
+	return purgePageProgress{Cursor: purgePageCursor{Table: r.Cursor.Table, After: r.Cursor.After}, Scanned: r.Scanned, Deleted: r.Deleted, Blocked: r.Blocked, Done: r.Done}, err
+}
+
+type navigationPurgeRows interface {
+	Page(context.Context, time.Time, int, navigation.PurgeCursor) (navigation.PurgeProgress, error)
+}
+type navigationPurge struct{ rows navigationPurgeRows }
+
+func forNavigationPurge(rows navigationPurgeRows) Purger { return navigationPurge{rows} }
+func (p navigationPurge) Page(ctx context.Context, cutoff time.Time, batch int, cursor purgePageCursor) (purgePageProgress, error) {
+	r, err := p.rows.Page(ctx, cutoff, batch, navigation.PurgeCursor{Table: cursor.Table, After: cursor.After})
 	return purgePageProgress{Cursor: purgePageCursor{Table: r.Cursor.Table, After: r.Cursor.After}, Scanned: r.Scanned, Deleted: r.Deleted, Blocked: r.Blocked, Done: r.Done}, err
 }
 

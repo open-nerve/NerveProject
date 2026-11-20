@@ -70,6 +70,24 @@ func (e LinkMetadataError) Valid() bool {
 	}
 }
 
+// Defines values for LogoPropsInUse.
+const (
+	LogoPropsInUseEmoji LogoPropsInUse = "emoji"
+	LogoPropsInUseIcon  LogoPropsInUse = "icon"
+)
+
+// Valid indicates whether the value is a known member of the LogoPropsInUse enum.
+func (e LogoPropsInUse) Valid() bool {
+	switch e {
+	case LogoPropsInUseEmoji:
+		return true
+	case LogoPropsInUseIcon:
+		return true
+	default:
+		return false
+	}
+}
+
 // FieldError One invalid field of a request. Clients show text looked up by `code`; `message` is an English explanation for developers. Must match httpserver.FieldError and the field codes of internal/shared.
 type FieldError struct {
 	// Code What is wrong with the field.
@@ -135,6 +153,34 @@ type LinkMetadata struct {
 
 // LinkMetadataError defines model for LinkMetadataError.
 type LinkMetadataError string
+
+// LogoEmoji defines model for LogoEmoji.
+type LogoEmoji struct {
+	// URL The address of a custom emoji.
+	URL *string `json:"url,omitempty"`
+
+	// Value The emoji, as the web app's picker gives it.
+	Value *string `json:"value,omitempty"`
+}
+
+// LogoIcon defines model for LogoIcon.
+type LogoIcon struct {
+	BackgroundColor *string `json:"background_color,omitempty"`
+	Color           *string `json:"color,omitempty"`
+	Name            *string `json:"name,omitempty"`
+}
+
+// LogoProps An icon, the web app's TLogoProps: every field optional, and {} no icon.
+type LogoProps struct {
+	Emoji *LogoEmoji `json:"emoji,omitempty"`
+	Icon  *LogoIcon  `json:"icon,omitempty"`
+
+	// InUse Which of the two icons is shown.
+	InUse *LogoPropsInUse `json:"in_use,omitempty"`
+}
+
+// LogoPropsInUse Which of the two icons is shown.
+type LogoPropsInUse string
 
 // NextCursor The cursor of the next page; null on the last page.
 type NextCursor = string

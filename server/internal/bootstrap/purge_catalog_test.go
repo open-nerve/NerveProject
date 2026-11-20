@@ -12,6 +12,7 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/asset"
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue"
+	"github.com/open-nerve/NerveProject/server/internal/modules/navigation"
 	"github.com/open-nerve/NerveProject/server/internal/modules/notification"
 	"github.com/open-nerve/NerveProject/server/internal/modules/planning"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project"
@@ -78,6 +79,7 @@ func purgeTables(t *testing.T, pool *pgxpool.Pool) []string {
 func providedPurgeTables(pool *pgxpool.Pool) []string {
 	tables := imageReferencePurger(pool).Tables()
 	tables = append(tables, notification.Provide(pool).Purger.Tables()...)
+	tables = append(tables, navigation.Provide(pool).Purger.Tables()...)
 	tables = append(tables, issue.Provide(pool, protectedAssetReferences()).Purger.Tables()...)
 	tables = append(tables, planning.Provide(pool, nil).Purger.Tables()...)
 	tables = append(tables, project.Provide(pool, protectedAssetReferences()).Purger.Tables()...)
@@ -149,8 +151,8 @@ func purgeCatalogGaps(t *testing.T, pool *pgxpool.Pool, tables, provided []strin
 func TestPurgeCatalogCoversTablesAndIncomingKeys(t *testing.T) {
 	pool := openPool(t, pgtest.NewDatabase(t))
 	tables := purgeTables(t, pool)
-	if len(tables) != 34 {
-		t.Fatalf("deleted_at business tables=%d: %v; want 34", len(tables), tables)
+	if len(tables) != 35 {
+		t.Fatalf("deleted_at business tables=%d: %v; want 35", len(tables), tables)
 	}
 	// Check the unmodified business graph before adding the isolated non-purge probe.
 	keysTo(t, pool, "issues")

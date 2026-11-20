@@ -260,7 +260,7 @@ type ProjectRow struct {
 	Identifier        string
 	Network           domain.Network
 	LeadID            *uuid.UUID
-	LogoProps         domain.LogoProps
+	LogoProps         shared.LogoProps
 	Timezone          string
 	CreatedBy         uuid.UUID
 	Now               time.Time

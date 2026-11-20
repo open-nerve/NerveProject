@@ -41,7 +41,7 @@ func TestCreateProjectStoresTheRow(t *testing.T) {
 	newProject(t, s, beta, "Web", "WEB", bob)
 	row := app.ProjectRow{
 		ID: uuid.NewV7(), WorkspaceID: acme, Name: "研发 Web", Description: "The web app", Identifier: "WEBÇ", Network: domain.NetworkPrivate,
-		LeadID: &bob, LogoProps: domain.LogoProps{InUse: ptr("emoji"), Emoji: &domain.Emoji{Value: ptr("128640")}}, Timezone: "Asia/Shanghai",
+		LeadID: &bob, LogoProps: shared.LogoProps{InUse: ptr("emoji"), Emoji: &shared.LogoEmoji{Value: ptr("128640")}}, Timezone: "Asia/Shanghai",
 		CreatedBy: alice, Now: now,
 	}
 	others := tableRows(t, pool, "projects", row.ID)
@@ -82,13 +82,13 @@ func TestCreateProjectKeepsTheLogo(t *testing.T) {
 	s, pool := newStore(t)
 	alice := newAccount(t, pool, "alice@corp.com")
 	acme := newWorkspace(t, pool, "acme")
-	for i, logo := range []domain.LogoProps{
+	for i, logo := range []shared.LogoProps{
 		{},
-		{Emoji: &domain.Emoji{Value: ptr("128640")}},
-		{Icon: &domain.Icon{Name: ptr("home"), Color: ptr("#6d7b8a")}},
-		{InUse: ptr("icon"), Emoji: &domain.Emoji{Value: ptr("128640"), URL: ptr("https://example.com/e.png")},
-			Icon: &domain.Icon{Name: ptr("home"), Color: ptr("#6d7b8a"), BackgroundColor: ptr("#ffffff")}},
-		{InUse: ptr("emoji"), Emoji: &domain.Emoji{Value: ptr("128640")}},
+		{Emoji: &shared.LogoEmoji{Value: ptr("128640")}},
+		{Icon: &shared.LogoIcon{Name: ptr("home"), Color: ptr("#6d7b8a")}},
+		{InUse: ptr("icon"), Emoji: &shared.LogoEmoji{Value: ptr("128640"), URL: ptr("https://example.com/e.png")},
+			Icon: &shared.LogoIcon{Name: ptr("home"), Color: ptr("#6d7b8a"), BackgroundColor: ptr("#ffffff")}},
+		{InUse: ptr("emoji"), Emoji: &shared.LogoEmoji{Value: ptr("128640")}},
 	} {
 		id, name := uuid.NewV7(), "P"+string(rune('A'+i))
 		err := s.CreateProject(context.Background(), app.ProjectRow{

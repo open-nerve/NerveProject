@@ -21,6 +21,7 @@ import { createDraft, createIssue, createIssueRelations, updateIssue } from "./i
 import { createIssueLink } from "./links";
 import { changeModulePreferences, createModule, createModuleLink } from "./modules";
 import { furnishIssueFiles, storedFile } from "./storage";
+import { createProjectView, createWorkspaceView } from "./views";
 
 // The rows a deletion story furnishes a workspace or a project with first, so that its deletion has a row of each
 // table to write (expectWorkspaceDeleted, expectProjectDeleted).
@@ -104,18 +105,22 @@ export async function furnishIssueRows(
  * adminToken, an admin of it (they are off by default), and its intake, for a work item to be submitted to
  * (furnishIssueRows); a cycle he creates, the draft Sprint 1; and a module he creates, Release 1, which he leads and is
  * the member of, with a link; and his display settings on each one's page, which his first change stores (M6 P3b spec
- * 2.5). It answers the two, for work items to join (furnishIssueRows): a deletion story furnishes its planning rows
- * before its work items' rows.
+ * 2.5). Its views turned on too, a view he saves, Urgent: a row of the navigation module's issue_views under the project
+ * (M7 P3b spec 2.7), which every deletion and purge story's project has so. It answers the two, for work items to join
+ * (furnishIssueRows): a deletion story furnishes its planning rows before its work items' rows.
  */
 export async function furnishPlanningRows(api: Api, adminToken: string, projectId: string): Promise<PlanningRows> {
   const changed = await changeProject(api, adminToken, projectId, {
     cycle_view: true,
     module_view: true,
     intake_view: true,
+    issue_views_view: true,
   });
-  expect(changed.status, `turn on the cycles, modules and intake of ${projectId}: ${JSON.stringify(changed)}`).toBe(
-    200
-  );
+  expect(
+    changed.status,
+    `turn on the cycles, modules, intake and views of ${projectId}: ${JSON.stringify(changed)}`
+  ).toBe(200);
+  await createProjectView(api, adminToken, projectId, { name: "Urgent", filters: { priority: ["urgent"] } });
   const sprint = await createCycle(api, adminToken, projectId, { name: "Sprint 1" });
   const admin = await accountId(api, adminToken);
   const release = await createModule(api, adminToken, projectId, {
@@ -152,11 +157,12 @@ export async function furnishAcceptedIntake(
 /**
  * Gives the workspace of slug, as its admin of adminToken, a row of each table its deletion writes
  * (expectWorkspaceDeleted): the membership of member, by an invitation he accepts (deleted as he accepts it); a pending
- * invitation of inviteeEmail; the admin's display settings; and the project Web, with its own rows: its label Bug
- * among them, a cycle and a module with its member and link (furnishPlanningRows), and a work item assigned to the admin
- * and labelled Bug, in the two, with its own (furnishIssueRows). The member is Web's for a while: the admin adds him,
- * assigns him the second work item, which sends him its notifications, and once they are written he leaves Web, so
- * that the only active membership of his in the workspace is the one he wrote (W2).
+ * invitation of inviteeEmail; the admin's display settings; a view of the workspace's own, of no project (M7 P3b spec
+ * 2.7); and the project Web, with its own rows: its label Bug among them, a cycle and a module with its member and link,
+ * and a view (furnishPlanningRows), and a work item assigned to the admin and labelled Bug, in the two, with its own
+ * (furnishIssueRows). The member is Web's for a while: the admin adds him, assigns him the second work item, which
+ * sends him its notifications, and once they are written he leaves Web, so that the only active membership of his in
+ * the workspace is the one he wrote (W2).
  */
 export async function furnishWorkspace(
   api: Api,
@@ -169,6 +175,7 @@ export async function furnishWorkspace(
   await inviteAndAccept(api, adminToken, slug, member, 15);
   await invite(api, adminToken, slug, [{ email: inviteeEmail, role: 15 }]);
   await changeWorkspacePreferences(api, adminToken, slug, { navigation_project_limit: 3 });
+  await createWorkspaceView(api, adminToken, slug, { name: "Urgent everywhere", filters: { priority: ["urgent"] } });
   const web = await createProject(api, adminToken, slug, { name: "Web", identifier: "WEB" });
   const memberId = await accountId(api, member.token);
   await addProjectMembers(api, adminToken, web.id, [{ member_id: memberId, role: 15 }]);

@@ -36,7 +36,7 @@ func TestUpdateProjectPassesThePatch(t *testing.T) {
 	want := []domain.ProjectPatch{
 		{Name: ptr("Site"), Identifier: ptr("site"), Description: ptr("The site"), Network: &private, SetLead: true, LeadID: &bobID,
 			SetDefaultAssignee: true, CycleView: ptr(true), ModuleView: ptr(false), IssueViewsView: ptr(true), IntakeView: ptr(false),
-			GuestViewAllFeatures: ptr(true), ArchiveIn: ptr(13), LogoProps: &domain.LogoProps{InUse: ptr("emoji")}, Timezone: ptr("Asia/Shanghai")},
+			GuestViewAllFeatures: ptr(true), ArchiveIn: ptr(13), LogoProps: &shared.LogoProps{InUse: ptr("emoji")}, Timezone: ptr("Asia/Shanghai")},
 		{},
 		{SetLead: true, SetDefaultAssignee: true, DefaultAssigneeID: &aliceID},
 		{CycleView: ptr(false), IntakeView: ptr(true), GuestViewAllFeatures: ptr(true)},

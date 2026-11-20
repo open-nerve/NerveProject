@@ -45,6 +45,12 @@ var tableCells = map[shared.Action][]outcome{
 	// As issue.search: every active member of the workspace lists the work
 	// items of the projects he sees in it (M7 P3a spec 2.3, R7).
 	"workspace_issue.list": {allowed, allowed, allowed, invisible, invisible, invisible, forbidden},
+	// As issue_draft.write: the workspace's admins and members, not its
+	// guests (M7 design 3.7, 3.10, P3b spec 2.2, R1).
+	"workspace_view.read":   {allowed, allowed, forbidden, invisible, invisible, invisible, forbidden},
+	"workspace_view.create": {allowed, allowed, forbidden, invisible, invisible, invisible, forbidden},
+	"workspace_view.update": {allowed, allowed, forbidden, invisible, invisible, invisible, forbidden},
+	"workspace_view.delete": {allowed, allowed, forbidden, invisible, invisible, invisible, forbidden},
 	// PA, PM, PG, WM demoted to PG, PM+WA, WA- private, WM- public, WM- private, WG- public, WG- private, P-before,
 	// P-before public, X, workspace role outside the three public, above the three public, project role outside the
 	// three, workspace role outside the three project admin (projectIdentities)
@@ -176,6 +182,20 @@ var tableCells = map[shared.Action][]outcome{
 		forbidden, invisible, invisible, invisible, forbidden, forbidden},
 	// As cycle.preferences, on a module's page.
 	"module.preferences": {allowed, allowed, allowed, allowed, allowed, forbidden, forbidden, invisible, invisible, invisible, invisible,
+		forbidden, invisible, invisible, invisible, forbidden, forbidden},
+	// As cycle.read: every active member of the project reads its views,
+	// the guest's OwnOnly filtering the navigation module's (M7 P3b spec
+	// 2.2).
+	"view.read": {allowed, allowed, allowed, allowed, allowed, forbidden, forbidden, invisible, invisible, invisible, invisible,
+		forbidden, invisible, invisible, invisible, forbidden, forbidden},
+	// As cycle.write: the project's admins and members, not its guests;
+	// the owner's and the admin's relative rules and the toggle are the
+	// navigation module's (M7 P3b spec 2.2).
+	"view.create": {allowed, allowed, forbidden, forbidden, allowed, forbidden, forbidden, invisible, invisible, invisible, invisible,
+		forbidden, invisible, invisible, invisible, forbidden, forbidden},
+	"view.update": {allowed, allowed, forbidden, forbidden, allowed, forbidden, forbidden, invisible, invisible, invisible, invisible,
+		forbidden, invisible, invisible, invisible, forbidden, forbidden},
+	"view.delete": {allowed, allowed, forbidden, forbidden, allowed, forbidden, forbidden, invisible, invisible, invisible, invisible,
 		forbidden, invisible, invisible, invisible, forbidden, forbidden},
 }
 

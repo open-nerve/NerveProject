@@ -1,6 +1,6 @@
 # M7 / P3a：工作区跨项目列表（阶段记录）
 
-> 状态：实施完成，待整分支审查。spec 与 plan 见 [P3a spec](../specs/P3a-workspace-list.md)、[P3a plan](../plans/P3a-workspace-list.md)，预检 [re-88](../../../reviews/re-88-M7P3a预检.md)。基线 main `7dfaa8a1`，分支 `codex/m7-p3a`。台账 `.superpowers/sdd/P3a-views/progress.md`（ignored，随阶段归档）。
+> 状态：已完成，合入 main（noff `17e0b1ac`），§9 为审查与集成的记录。spec 与 plan 见 [P3a spec](../specs/P3a-workspace-list.md)、[P3a plan](../plans/P3a-workspace-list.md)，预检 [re-88](../../../reviews/re-88-M7P3a预检.md)。基线 main `7dfaa8a1`，分支 `codex/m7-p3a`。台账 `.superpowers/sdd/P3a-views/progress.md`（ignored，随阶段归档）。
 
 ## 1. 交付
 
@@ -94,4 +94,25 @@
 
 ## 9. 整分支审查与集成
 
-（待填）
+- 检查点 2（`27aa4ca0`）：本地七项一次过；分支 CI 44728347276 全绿（§6）。
+- 整分支审查（fable，只读，P3a 对 main `2083c0b7` 的差与合并的解法）：With fixes，I 1、m 4，没有发现泄露的路径、产品代码与契约不用改。I1 设计 §3.7 与实现对齐、m2 规模表注明来源、m4 plane-diff 的“已删除”与作废的换路清单——主控改文档（`3f0336fc`）；m1 子工作项数的只看自己没有 CI 上的格、m3 规模测试先播两个库再测——实施修复（`c5629ec7`：调整三条已有工作项的父、加一格，四个变异都被杀死；每种规模的 `scope`、`spread` 两个子测试各自播完即量、一时一个库）。
+- 限定复审（`3f0336fc`、`c5629ec7`）：Ready to merge；R1 本节要带最终树的规模数字（下表），R2 修复轮的回执记的是提交前的工作树，以最终七项为准。
+- 最终树的规模（`r1-scale`，head `c5629ec7`，列表 SQL 中位，ms，20k）：
+
+| 工作区场景 | 工作区 | 配对的项目列表 | 比 |
+|---|---:|---:|---:|
+| 默认 | 20.929 | 21.609 | 0.97 |
+| 负责人 | 13.178 | 13.064 | 1.01 |
+| 关注者 | 13.300 | 14.131 | 0.94 |
+| 标签名排序 | 49.142 | 45.617 | 1.08 |
+| 末页 | 16.227 | 15.852 | 1.02 |
+| 十项目·默认 | 23.507 | 21.609 | 1.09 |
+| 十项目·负责人 | 18.514 | 13.064 | 1.42 |
+| 十项目·关注者 | 18.552 | 14.131 | 1.31 |
+| 十项目·标签名排序 | 69.023 | 45.617 | 1.51 |
+| 十项目·末页 | 15.803 | 15.852 | 1.00 |
+
+  都在 M4 的 105.53 ms 之内；十项目的标签名排序负责人已裁定交 M8。泳道 10k / 20k / 100k 为 49.130 / 101.318 / 556.321 ms。
+- 最终七项 fin（`c5629ec7`）全过：bootstrap 416.6 / 638.6 秒，e2e 489 passed；最终分支 CI 44738933023 attempt 1 全绿：server (0) 作业 746 / Test 613 / bootstrap 445.9，server (1) 801 / 763 / 744.4。
+- `--no-ff` 合入 main `17e0b1ac`（树与分支相同）；main CI 44743168952 attempt 1 全绿：server (0) 作业 756 / Test 618 / bootstrap 456.4，server (1) 792 / 766 / 746.7（第 1 路的包在 `go test` 20 分钟期限的约 62%）。
+- 归档 `.superpowers/sdd/M7-P3a-integration-20261120`（10164 个文件、unknown 0，清理后复核一致）；P3a 的 worktree、本地与远端分支已删除（先核实已含在 main）。

@@ -87,6 +87,8 @@
     "planning_module_link_not_found": "The link does not exist, or you cannot see it.",
     "planning_module_link_exists": "This module already has this link.",
     "notification_not_found": "The notification does not exist, or you cannot see it.",
+    "navigation_view_not_found": "The view does not exist, or you cannot see it.",
+    "navigation_views_disabled": "Views are turned off in this project. Turn them on to change them.",
     "unreachable": "Cannot reach the server for now. Please try again.",
     "unknown": "Something went wrong. Please try again.",
     "field": {
