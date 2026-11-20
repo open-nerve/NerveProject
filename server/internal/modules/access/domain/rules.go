@@ -180,6 +180,11 @@ var rules = map[shared.Action]Rule{
 	// projects, and whose work items a guest counts, are the issue
 	// module's (M7 design 3.10, P2b spec 2.6).
 	"intake.count": {Level: LevelWorkspace, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember, shared.RoleGuest}},
+	// As issue.search: every active member of the workspace lists the work
+	// items of the projects he sees in it; which projects, and whose work
+	// items a guest sees there, are the issue module's (M7 design 3.10, P3a
+	// spec 2.3). No role of the three is refused, so the list has no 403 (R7).
+	"workspace_issue.list": {Level: LevelWorkspace, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember, shared.RoleGuest}},
 	// One's own notifications: every active member of the workspace (M7
 	// design 3.10). Which of them he sees is the notification module's, by
 	// what he reads now (M7 P1c spec 2.5).

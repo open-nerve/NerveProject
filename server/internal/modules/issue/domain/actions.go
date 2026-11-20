@@ -52,11 +52,14 @@ const (
 	// ActionCountIntake is counting, in a workspace, the pending work items
 	// of the intakes of the projects the caller sees (P2b spec 2.6).
 	ActionCountIntake shared.Action = "intake.count"
+	// ActionListWorkspaceIssues is listing, in a workspace, the work items
+	// of the projects the caller sees (M7 design 3.10, P3a spec 2.3).
+	ActionListWorkspaceIssues shared.Action = "workspace_issue.list"
 )
 
 // Actions lists the module's actions. bootstrap's test holds the union of
 // every module's Actions equal to the rule table's keys (M3 design 3.4).
 func Actions() []shared.Action {
 	return []shared.Action{ActionDraftWrite, ActionListMemberIssues, ActionReadDescriptionVersion, ActionWriteReaction, ActionCreate, ActionRead, ActionUpdate, ActionDelete, ActionArchive, ActionSearch, ActionCreateComment, ActionWriteComment,
-		ActionSubmitIntake, ActionTriageIntake, ActionReadIntake, ActionUpdateIntake, ActionDeleteIntake, ActionCountIntake}
+		ActionSubmitIntake, ActionTriageIntake, ActionReadIntake, ActionUpdateIntake, ActionDeleteIntake, ActionCountIntake, ActionListWorkspaceIssues}
 }

@@ -42,6 +42,9 @@ var tableCells = map[shared.Action][]outcome{
 	// pending work items of the intakes of the projects he sees (M7 P2b
 	// spec 2.6).
 	"intake.count": {allowed, allowed, allowed, invisible, invisible, invisible, forbidden},
+	// As issue.search: every active member of the workspace lists the work
+	// items of the projects he sees in it (M7 P3a spec 2.3, R7).
+	"workspace_issue.list": {allowed, allowed, allowed, invisible, invisible, invisible, forbidden},
 	// PA, PM, PG, WM demoted to PG, PM+WA, WA- private, WM- public, WM- private, WG- public, WG- private, P-before,
 	// P-before public, X, workspace role outside the three public, above the three public, project role outside the
 	// three, workspace role outside the three project admin (projectIdentities)
