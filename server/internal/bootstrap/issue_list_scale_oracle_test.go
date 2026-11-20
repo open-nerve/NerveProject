@@ -136,12 +136,12 @@ func (s listScaleScenario) order() string {
 	return "-created_at"
 }
 
-// scenarios are the scope's, or the sub-seed's when f is spread. The
-// workspace list's five (M7 P3a spec 2.4) are in each, paired with Web's
-// project list at the same total; assigned and subscribed are by bob's id
-// in the scope, where walt is neither (me is the caller's id once parsed:
-// the same SQL), and by me in spread, where walt is both in bob's place,
-// as the default views ask.
+// scenarios are the scope's, or the sub-seed's when f is spread. The scope's
+// are m4Scenarios and three more of Web's project list. The workspace list's
+// five (M7 P3a spec 2.4) are in each, paired with Web's project list at the
+// same total; assigned and subscribed are by bob's id in the scope, where
+// walt is neither (me is the caller's id once parsed: the same SQL), and by
+// me in spread, where walt is both in bob's place, as the default views ask.
 func (f listScaleFixture) scenarios() []listScaleScenario {
 	assigned := func(id uuid.UUID) func(listScaleRow) bool {
 		return func(r listScaleRow) bool { return slices.Contains(r.Assignees, id) }
@@ -159,6 +159,22 @@ func (f listScaleFixture) scenarios() []listScaleScenario {
 			{Name: "spread_last_page", Route: scaleWorkspaceList, Pair: "last_page", Tail: 25},
 		}
 	}
+	bob := f.w.ids["bob"]
+	return append(f.m4Scenarios(), []listScaleScenario{
+		{Name: "assigned", Query: url.Values{"assignee_id": {bob.String()}}, Accept: assigned(bob)},
+		{Name: "subscribed", Query: url.Values{"subscriber_id": {bob.String()}}, Accept: subscribed(bob)},
+		{Name: "last_page", Tail: 25},
+		{Name: "workspace_default", Route: scaleWorkspaceList, Pair: "default"},
+		{Name: "workspace_assigned", Route: scaleWorkspaceList, Pair: "assigned", Query: url.Values{"assignee_id": {bob.String()}}, Accept: assigned(bob)},
+		{Name: "workspace_subscribed", Route: scaleWorkspaceList, Pair: "subscribed", Query: url.Values{"subscriber_id": {bob.String()}}, Accept: subscribed(bob)},
+		{Name: "workspace_label_name", Route: scaleWorkspaceList, Pair: "label_name", Query: url.Values{"order_by": {"label_name"}}},
+		{Name: "workspace_last_page", Route: scaleWorkspaceList, Pair: "last_page", Tail: 25},
+	}...)
+}
+
+// m4Scenarios are the scope's 13 scenarios of the project and member lists
+// M4 P5 measured, the only ones the crowded database runs (listScaleCrowded).
+func (f listScaleFixture) m4Scenarios() []listScaleScenario {
 	a, c := f.projects[0].Labels[0], f.projects[0].Labels[1]
 	bob := f.w.ids["bob"]
 	return []listScaleScenario{
@@ -174,14 +190,6 @@ func (f listScaleFixture) scenarios() []listScaleScenario {
 		{Name: "member_assigned", Route: scaleMemberList, Query: url.Values{"relation": {"assigned"}}, Accept: func(r listScaleRow) bool { return slices.Contains(r.Assignees, bob) }},
 		{Name: "member_subscribed", Route: scaleMemberList, Query: url.Values{"relation": {"subscribed"}}, Accept: func(r listScaleRow) bool { return slices.Contains(r.Subscribers, bob) }},
 		{Name: "own_only", Project: 2},
-		{Name: "assigned", Query: url.Values{"assignee_id": {bob.String()}}, Accept: assigned(bob)},
-		{Name: "subscribed", Query: url.Values{"subscriber_id": {bob.String()}}, Accept: subscribed(bob)},
-		{Name: "last_page", Tail: 25},
-		{Name: "workspace_default", Route: scaleWorkspaceList, Pair: "default"},
-		{Name: "workspace_assigned", Route: scaleWorkspaceList, Pair: "assigned", Query: url.Values{"assignee_id": {bob.String()}}, Accept: assigned(bob)},
-		{Name: "workspace_subscribed", Route: scaleWorkspaceList, Pair: "subscribed", Query: url.Values{"subscriber_id": {bob.String()}}, Accept: subscribed(bob)},
-		{Name: "workspace_label_name", Route: scaleWorkspaceList, Pair: "label_name", Query: url.Values{"order_by": {"label_name"}}},
-		{Name: "workspace_last_page", Route: scaleWorkspaceList, Pair: "last_page", Tail: 25},
 	}
 }
 

@@ -162,6 +162,7 @@ func TestIssueListScale(t *testing.T) {
 			listEvidence(t, target, "pairs", scalePairs(t, scenarios, matched, medians))
 		})
 	}
+	t.Run("crowded", func(t *testing.T) { listScaleCrowded(t, dir) })
 }
 
 // listScaleDB is a size's seeded database: its fixture, and the runtime
