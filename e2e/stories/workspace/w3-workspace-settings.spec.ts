@@ -22,6 +22,7 @@ import { accountId, bearer, emailFor, newAccount, register, registeredPAT } from
 import { furnishIssueRows, furnishPlanningRows } from "../../fixtures/furnish";
 import { createDraft, draftRead, draftsListed } from "../../fixtures/issues";
 import { expect, test } from "../../fixtures/test";
+import { createWorkspaceView } from "../../fixtures/views";
 
 // W3, the workspace's settings (M3 design 2): the API version. The page versions, with the session switch of 7.1,
 // are in w3-workspace-settings-page.spec.ts.
@@ -39,10 +40,10 @@ test("W3 (API): the admin changes the workspace and deletes it with its members,
   const inviteeEmail = emailFor(testInfo, "invitee");
   const slug = slugFor(testInfo);
   const other = slugFor(testInfo, "other");
-  // Two workspaces alike, each with the member, a pending and a declined invitation, the member's settings and a
-  // project the admin created with the member its lead, which the member labelled; only Acme is deleted. Both exist
-  // before either is furnished, and the member is Other's admin and Acme's member: each answer, role and row must be
-  // the workspace's own, whichever row the database reads first.
+  // Two workspaces alike, each with the member, a pending and a declined invitation, the member's settings, a view of
+  // the workspace's own that the member saved, and a project the admin created with the member its lead, which the
+  // member labelled; only Acme is deleted. Both exist before either is furnished, and the member is Other's admin and
+  // Acme's member: each answer, role and row must be the workspace's own, whichever row the database reads first.
   const [adminId, memberId] = await Promise.all([accountId(api, admin), accountId(api, member)]);
   const web = { name: "Web", identifier: "WEB", description: "", network: 2, timezone: "UTC", logo_props: {} };
   const otherWorkspace = await createWorkspace(api, admin, { name: "Other", slug: other });
@@ -70,6 +71,7 @@ test("W3 (API): the admin changes the workspace and deletes it with its members,
     });
     expect(declined.response.status).toBe(204);
     await changeWorkspacePreferences(api, member, target, { navigation_project_limit: 3 });
+    await createWorkspaceView(api, member, target, { name: "Mine", filters: { priority: ["high"] } });
     // The answer is the workspace's own new project as its creator sees it, first in both admins' sidebars.
     const project = await createProject(api, admin, target, {
       name: "Web",
