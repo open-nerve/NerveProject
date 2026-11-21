@@ -14,9 +14,10 @@
 // work item or a project in a workspace, at most 20 undeleted ones (M7
 // design 3.9, P3d spec 2.3). A project's or a workspace's deletion
 // enqueues, in its transaction, the deletion of each deleted project's
-// views and favorites and of the workspace's own (P3b spec 2.7, P3c spec
-// 2.6); the 60-day purge removes the deleted ones, the favorites after the
-// views and the recent visits last (Provide).
+// views, favorites and recent visits and of the workspace's own views and
+// favorites (P3b spec 2.7, P3c spec 2.6, P3d spec 2.6); the 60-day purge
+// removes the deleted ones, the favorites after the views and the recent
+// visits last (Provide).
 package navigation
 
 import (
@@ -141,8 +142,8 @@ func New(d Deps) *Module {
 			CreateFavorite: app.NewCreateFavorite(favorites), UpdateFavorite: app.NewUpdateFavorite(favorites),
 			DeleteFavorite: app.NewDeleteFavorite(favorites),
 		},
-		deleteRows: app.NewDeleteRows(app.DeleteRowsDeps{Views: store, Favorites: store, Tx: d.JobTx, RuntimeNow: d.RuntimeNow,
-			Batch: d.DeleteBatch, Budget: d.DeleteBudget}),
+		deleteRows: app.NewDeleteRows(app.DeleteRowsDeps{Views: store, Favorites: store, RecentVisits: store, Tx: d.JobTx,
+			RuntimeNow: d.RuntimeNow, Batch: d.DeleteBatch, Budget: d.DeleteBudget}),
 		deleteBudget: d.DeleteBudget, logger: d.Logger,
 	}
 }

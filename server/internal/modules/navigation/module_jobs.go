@@ -5,8 +5,9 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/platform/jobs"
 )
 
-// Jobs declares the request-driven deletion of the views and the
-// favorites of a deleted project, or of a deleted workspace's own.
+// Jobs declares the request-driven deletion of the views, the favorites
+// and the recent visits of a deleted project, or of a deleted workspace's
+// own (P3d spec 2.6).
 func (m *Module) Jobs() []jobs.Job {
 	return []jobs.Job{riveradapter.DeleteRowsJob(m.deleteRows, m.deleteBudget, m.logger)}
 }

@@ -33,9 +33,10 @@ func projectIssueTable(table string) bool {
 }
 
 // The saved views, a project's and a workspace's, are deleted by the navigation module's own navigation.delete_rows
-// job (M7 P3b spec 2.7, R3), and so are the favorites, a project's and a workspace's own (M7 P3c spec 2.6, R11).
+// job (M7 P3b spec 2.7, R3), and so are the favorites, a project's and a workspace's own (M7 P3c spec 2.6, R11), and a
+// project's recent visits (M7 P3d spec 2.6).
 func navigationTable(table string) bool {
-	return table == "issue_views" || table == "user_favorites"
+	return table == "issue_views" || table == "user_favorites" || table == "user_recent_visits"
 }
 
 // The planning module's tables are deleted by its own planning.delete_rows job (M6 P1 spec 2.4, P2 spec 2.4, P3b

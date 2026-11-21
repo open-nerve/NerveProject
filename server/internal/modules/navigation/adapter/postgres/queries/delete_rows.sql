@@ -34,6 +34,19 @@ WHERE t.id IN (
     ORDER BY r.id LIMIT sqlc.arg(batch) FOR NO KEY UPDATE)
 RETURNING t.id;
 
+-- name: DeleteProjectRecentVisits :many
+-- The deletion of a deleted project's recent visits (P3d spec 2.6): DeleteProjectViews' batch, of every account's
+-- visits whose project is it, of the project and of its work items, locked in id order (spec 2.8). A visit deleted
+-- before, as a work item's deletion deletes its visits at its own moment by its own actor, is passed over and keeps
+-- that deletion. Every visit is in a project: a workspace's deletion deletes its visits through its projects'.
+UPDATE user_recent_visits AS t
+SET deleted_at = sqlc.arg(at)::timestamptz, updated_at = sqlc.arg(at), updated_by_id = sqlc.arg(deleted_by)::uuid
+WHERE t.id IN (
+    SELECT r.id FROM user_recent_visits r
+    WHERE r.project_id = sqlc.arg(project_id)::uuid AND r.deleted_at IS NULL AND r.id > sqlc.arg(after)::uuid
+    ORDER BY r.id LIMIT sqlc.arg(batch) FOR NO KEY UPDATE)
+RETURNING t.id;
+
 -- name: DeleteWorkspaceFavoriteFolders :many
 -- DeleteProjectFavorites' batch, of a deleted workspace's folders: the first of its own favorites, those without a
 -- project, since the total order of favorite rows has the folder rows before the item rows (spec 2.8).
