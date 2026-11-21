@@ -23,11 +23,11 @@ import (
 // it at its own lock statement; then the second, proven waiting at its
 // own, behind the first, whose PID blocks it; meanwhile neither holds a
 // lock on the rows the total order of favorites' rows takes after the one
-// it waits for (free). Then the other transaction ends: the first takes the row and
-// commits before the second takes it, and the second decides under its
-// locks on what the first left. Each wait is the request's own, its PID's,
-// and caused by the other transaction (requestBlocked), each row it holds
-// or does not its own transaction's lock (requestRowLock).
+// it waits for (free). Then the other transaction ends: the first takes
+// the row and commits before the second takes it, and the second decides
+// under its locks on what the first left. Each wait is the request's own,
+// its PID's, and caused by the other transaction (requestBlocked), each
+// row it holds or does not its own transaction's lock (requestRowLock).
 
 // TestFavoriteWritesInterleaveWithArchives races a creation, a change and a
 // deletion of a favorite, in each order, with what decides it: a project's
@@ -41,9 +41,9 @@ import (
 // app, with Web's cycles and views turned on: each cell makes its own
 // target, so that no cell sees another's; once the start-time runs have
 // run, so that none queues on a row a cell holds (03 §5), each group is a
-// subtest, and each cell one of it. No work item is made, so no fan-out is pending; a
-// project's deletion waits for its jobs, so that none takes the app's
-// connections from the next cell's writes.
+// subtest, and each cell one of it. No work item is made, so no fan-out
+// is pending; a project's deletion waits for its jobs, so that none takes
+// the app's connections from the next cell's writes.
 func TestFavoriteWritesInterleaveWithArchives(t *testing.T) {
 	dbURL := pgtest.NewDatabase(t)
 	w := newIssueWorldOnRequests(t, dbURL, openPool(t, dbURL), func(*config.Config) {}, &requestQueries{})

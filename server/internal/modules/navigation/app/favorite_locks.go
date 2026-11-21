@@ -26,13 +26,14 @@ import (
 // FOR UPDATE in id order, or, a creation's of a target, the caller's
 // undeleted favorite of it FOR SHARE, each in its own statement; and its
 // favorite, its target, the target's project and the projects the caller
-// reads, read again under them, which the write decides on. No write gate: a favorite
-// is no write of a project's work items (spec 2.4). A cycle's and a
-// module's writes, an archiving, a deletion, a change of a member or a role
-// lock the project's or the workspace's row FOR NO KEY UPDATE, a view's
-// change or deletion its row FOR UPDATE, and a folder's deletion its row
-// FOR UPDATE, so they and a write of a favorite run one after the other,
-// and what the write decides under its locks stays so until it commits.
+// reads, read again under them, which the write decides on. No write
+// gate: a favorite is no write of a project's work items (spec 2.4). A
+// cycle's and a module's writes, an archiving, a deletion, a change of a
+// member or a role lock the project's or the workspace's row FOR NO KEY
+// UPDATE, a view's change or deletion its row FOR UPDATE, and a folder's
+// deletion its row FOR UPDATE, so they and a write of a favorite run one
+// after the other, and what the write decides under its locks stays so
+// until it commits.
 type FavoriteLocks struct {
 	workspaces Workspaces
 	projects   Projects
@@ -240,7 +241,9 @@ func (l FavoriteLocks) lockRow(ctx context.Context, actor shared.Actor, w favori
 // undeleted favorite of the target a creation names, and reads it: nil
 // when he has none, as when the one he had was deleted while the lock
 // waited (spec 2.5, 2.8). Its deletion waits until the creation ends, so
-// the creation that finds it answers it as it is.
+// the creation that finds it answers it as it is. A creation refused
+// afterwards (422) takes it too: it then only reads and rolls back, so it
+// waits on nothing while it holds the row.
 func (l FavoriteLocks) shareExisting(ctx context.Context, actor shared.Actor, target entity) (*domain.Favorite, error) {
 	f, found, err := l.locker.ShareFavoriteOfTarget(ctx, actor.UserID, target.kind, target.id)
 	if err != nil || !found {
