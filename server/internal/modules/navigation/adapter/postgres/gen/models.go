@@ -27,3 +27,20 @@ type IssueView struct {
 	UpdatedAt         time.Time
 	DeletedAt         *time.Time
 }
+
+type UserFavorite struct {
+	ID               uuid.UUID
+	WorkspaceID      uuid.UUID
+	ProjectID        *uuid.UUID
+	UserID           uuid.UUID
+	EntityType       string
+	EntityIdentifier *uuid.UUID
+	Name             *string
+	ParentID         *uuid.UUID
+	Sequence         float64
+	CreatedByID      *uuid.UUID
+	UpdatedByID      *uuid.UUID
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+	DeletedAt        *time.Time
+}

@@ -4,10 +4,16 @@
 // settings it shows its work items with, and its owner. Its API
 // (api/modules/navigation.yaml) lists a project's and a workspace's views,
 // creates them, and reads, changes and deletes one by its id (P3b spec
-// 2.4, 2.5). A project's or a workspace's
-// deletion enqueues, in its transaction, the deletion of each deleted
-// project's views and of the workspace's own (P3b spec 2.7); the 60-day
-// purge removes the deleted ones (Provide).
+// 2.4, 2.5). It owns the user_favorites table too, each row one account's
+// favorite in a workspace (M7 design 3.8, P3c spec 2.3), which its API
+// lists, creates, changes and deletes for that account alone (P3c spec
+// 2.4, 2.7). A cycle's or a module's deletion or archive, a project's
+// archive and a view's deletion take, in their transactions, every
+// account's favorites of it with them (P3c spec 2.6). A project's or a
+// workspace's deletion enqueues, in its transaction, the deletion of each
+// deleted project's views and favorites and of the workspace's own (P3b
+// spec 2.7, P3c spec 2.6); the 60-day purge removes the deleted ones, the
+// favorites after the views (Provide).
 package navigation
 
 import (
@@ -27,15 +33,23 @@ import (
 // Provided are the adapters bootstrap builds before wiring the modules.
 type Provided struct {
 	Purger *app.Purger
+	store  *postgresadapter.Store
 }
 
-// Provide builds, over pool, the navigation module's purge: its one table,
-// which no other table references, so the module purges before the issue
-// module (M7 design 4.3, P3b spec 2.7).
+// Provide builds, over pool, the navigation module's purge: the views,
+// then the favorites (P3c spec 2.6). No other table references either, a
+// folder's favorites referencing the folder within its own table, so the
+// module purges before the issue module (M7 design 4.3, P3b spec 2.7).
+// And the store its subscribers write through in the publishing
+// transaction: the favorites' cascades (Subscribers).
 func Provide(pool *pgxpool.Pool) Provided {
 	store := postgresadapter.New(pool)
 	return Provided{
-		Purger: app.NewPurger([]app.PurgeStep{{Table: "issue_views", Delete: store.PurgeIssueViews}}),
+		Purger: app.NewPurger([]app.PurgeStep{
+			{Table: "issue_views", Delete: store.PurgeIssueViews},
+			{Table: "user_favorites", Delete: store.PurgeUserFavorites},
+		}),
+		store: store,
 	}
 }
 
@@ -43,11 +57,21 @@ func Provide(pool *pgxpool.Pool) Provided {
 // bootstrap converts project's NavigationFacts into them.
 type ProjectFacts = app.ProjectFacts
 
+// ProjectGrant, ProjectTarget and PlanningTarget are the values the
+// favorites' ports answer (P3c spec 2.5): bootstrap converts access's
+// grants, project's and planning's navigation targets into them.
+type (
+	ProjectGrant   = app.ProjectGrant
+	ProjectTarget  = app.ProjectTarget
+	PlanningTarget = app.PlanningTarget
+)
+
 // Deps are what the module needs.
 type Deps struct {
 	Pool *pgxpool.Pool
-	// Tx are the transactions of the views' writes, which enter no write
-	// gate and answer no server_busy (P3b spec 2.4).
+	// Tx are the transactions of the views' and the favorites' writes,
+	// which enter no write gate and answer no server_busy (P3b spec 2.4,
+	// P3c spec 2.4).
 	Tx shared.TxManager
 	// ReadTx supplies the reads' read-only snapshot transactions, each its
 	// own.
@@ -60,6 +84,13 @@ type Deps struct {
 	// Workspaces are workspace's WorkspaceDirectory, converted
 	// (bootstrap/navigation_ports.go).
 	Workspaces app.Workspaces
+	// Readable is access's ReadableProjects, ProjectTargets project's
+	// NavigationTargets and PlanningTargets planning's, each converted
+	// (bootstrap/navigation_ports.go): the projects a caller reads, and the
+	// targets favorites name (P3c spec 2.5).
+	Readable        app.Readable
+	ProjectTargets  app.ProjectTargets
+	PlanningTargets app.PlanningTargets
 	// ListSettings and WorkspaceListSettings check a project's and a
 	// workspace's views' words: the issue module's two, as issue.Provide
 	// offers them (P3b spec 2.4).
@@ -83,20 +114,30 @@ type Module struct {
 	logger       *slog.Logger
 }
 
-// New builds the module from d.
+// New builds the module from d: the views' use cases, and the favorites',
+// whose list reads in a snapshot of its own and whose writes take their
+// locks through FavoriteLocks, beside the views' Locks (P3c spec 2.8); both
+// read the favorites' targets through the one Targets.
 func New(d Deps) *Module {
 	store := postgresadapter.New(d.Pool)
 	reads := app.NewReads(d.Workspaces, d.Projects, store, d.Authorizer, d.ReadTx)
-	writes := app.WriteDeps{Locks: app.NewLocks(d.Workspaces, d.Projects, store, store, d.Authorizer, d.Tx), Views: store, Clock: d.Clock,
-		Words: app.Words{Project: d.ListSettings, Workspace: d.WorkspaceListSettings}}
+	writes := app.WriteDeps{Locks: app.NewLocks(d.Workspaces, d.Projects, store, store, d.Authorizer, d.Tx), Views: store, Favorites: store,
+		Clock: d.Clock, Words: app.Words{Project: d.ListSettings, Workspace: d.WorkspaceListSettings}}
+	targets := app.Targets{Readable: d.Readable, Projects: d.ProjectTargets, Planning: d.PlanningTargets, Views: store}
+	favorites := app.FavoriteWriteDeps{Locks: app.NewFavoriteLocks(d.Workspaces, d.Projects, store, store, targets, d.Authorizer, d.Tx),
+		Favorites: store, Clock: d.Clock}
 	return &Module{
 		uc: httpadapter.UseCases{
 			ListProjectViews: app.NewListProjectViews(reads), ListWorkspaceViews: app.NewListWorkspaceViews(reads), GetView: app.NewGetView(reads),
 			CreateProjectView: app.NewCreateProjectView(writes), CreateWorkspaceView: app.NewCreateWorkspaceView(writes),
 			UpdateView: app.NewUpdateView(writes), DeleteView: app.NewDeleteView(writes),
+			ListFavorites: app.NewListFavorites(app.ListFavoritesDeps{Workspaces: d.Workspaces, Authorizer: d.Authorizer, Favorites: store,
+				Targets: targets, Tx: d.ReadTx}),
+			CreateFavorite: app.NewCreateFavorite(favorites), UpdateFavorite: app.NewUpdateFavorite(favorites),
+			DeleteFavorite: app.NewDeleteFavorite(favorites),
 		},
-		deleteRows: app.NewDeleteRows(app.DeleteRowsDeps{Rows: store, Tx: d.JobTx, RuntimeNow: d.RuntimeNow, Batch: d.DeleteBatch,
-			Budget: d.DeleteBudget}),
+		deleteRows: app.NewDeleteRows(app.DeleteRowsDeps{Views: store, Favorites: store, Tx: d.JobTx, RuntimeNow: d.RuntimeNow,
+			Batch: d.DeleteBatch, Budget: d.DeleteBudget}),
 		deleteBudget: d.DeleteBudget, logger: d.Logger,
 	}
 }

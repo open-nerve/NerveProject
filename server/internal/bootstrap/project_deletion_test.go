@@ -33,8 +33,10 @@ import (
 // Bug, with its child, UI, two cycles of hers, a module of hers with its
 // member and link, and a work item of hers with a row of each table under
 // it, written directly (seedLabels, seedCycles, seedModules, seedIssues),
-// with a notification of its Seeded for her (seedItemNotification), and a
-// saved view of hers of it and of acme (seedViews).
+// with a notification of its Seeded for her (seedItemNotification), a
+// saved view of hers of it and of acme (seedViews), and her favorite of it
+// and her folder in acme with her favorite of a view of acme in it
+// (seedFavorites).
 func twoProjects(t *testing.T) (contract *apitest.Contract, base string, pool *pgxpool.Pool, alice string, aliceID, web, ops uuid.UUID) {
 	t.Helper()
 	return twoProjectsWith(t, func(*config.Config) {})
@@ -64,6 +66,7 @@ func twoProjectsWith(t *testing.T, configure func(*config.Config)) (contract *ap
 		seedIssues(t, pool, project, aliceID)
 		seedItemNotification(t, pool, project, "Seeded", aliceID)
 		seedViews(t, pool, project, aliceID)
+		seedFavorites(t, pool, project, aliceID)
 		for _, id := range queryIDs(t, pool, "SELECT id FROM issues WHERE project_id=$1", project) {
 			status, body := call(t, contract, http.MethodPatch, base+"/api/v0/issues/"+id.String(), alice, fmt.Sprintf(`{"description_html":%q}`, mentionHTML(aliceID)))
 			if status != http.StatusOK {
@@ -192,7 +195,9 @@ func noRowLastWrittenBy(t *testing.T, pool *pgxpool.Pool, keys []foreignKey, id,
 // The deleted project is not found any more. A work item of Web that alice
 // deleted before keeps its rows as they were, their deletion hers (M4/P1a
 // review §6: the statements pass over a row deleted before). Web is
-// archived then: an archived project is deleted as any other. Its deleter
+// archived then: an archived project is deleted as any other. Its archive
+// deleted the favorites under it (M7 P3c spec 2.6), so alice's favorite of
+// it is written again after it (seedProjectFavorite, R12). Its deleter
 // is dave, acme's admin, whom alice adds as Web's admin: no row under Web
 // is of his writing before, so a deletion that kept a row's writer would
 // show.
@@ -209,6 +214,7 @@ func TestDeletingAProjectLeavesNoUndeletedRowUnderIt(t *testing.T) {
 	if status, body := call(t, contract, http.MethodPost, base+"/api/v0/projects/"+web.String()+"/archive", alice, ""); status != http.StatusOK {
 		t.Fatalf("archiving Web = %d %s, want 200", status, body)
 	}
+	seedProjectFavorite(t, pool, web, aliceID)
 	dave := registerAccount(t, contract, base, "dave@example.com").AccessToken
 	daveID := accountID(t, contract, base, dave)
 	inWorkspaceOf(t, pool, web, daveID, aliceID, shared.RoleAdmin)

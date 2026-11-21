@@ -13,10 +13,12 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
-// moduleArchives is the lock world with its module store for an archive: what SetModuleArchived stored.
+// moduleArchives is the lock world with its module store for an archive: what SetModuleArchived stored; and its
+// publisher, which the last execute was given.
 type moduleArchives struct {
 	*lockWorld
 	stored []domain.Module
+	events *deletionEvents
 }
 
 func (w *moduleArchives) SetModuleArchived(ctx context.Context, m domain.Module) error {
@@ -42,7 +44,8 @@ func archiveWorld(status domain.ModuleStatus, archived bool) *moduleArchives {
 
 // execute archives the world's module, or unarchives it, as the editor.
 func (w *moduleArchives) execute(archive bool) (domain.Module, error) {
-	d := ArchiveModuleDeps{Locks: w.locks(), Modules: w, Clock: w}
+	w.events = &deletionEvents{lockWorld: w.lockWorld}
+	d := ArchiveModuleDeps{Locks: w.locks(), Modules: w, Clock: w, Events: w.events}
 	uc := NewUnarchiveModule(d)
 	if archive {
 		uc = NewArchiveModule(d)
@@ -52,7 +55,8 @@ func (w *moduleArchives) execute(archive bool) (domain.Module, error) {
 
 // Archiving a completed or a cancelled module takes the lock path on the module (Locks, module.write); under the lock,
 // the clock, then the write: archived at that moment, last changed by the caller at the same moment, the rest as the
-// lock read it. The answer is the module as stored.
+// lock read it; then the archive published in the write's transaction (P3c spec 2.6, R3). The answer is the module as
+// stored.
 func TestArchiveModule(t *testing.T) {
 	for _, status := range []domain.ModuleStatus{domain.ModuleCompleted, domain.ModuleCancelled} {
 		w := archiveWorld(status, false)
@@ -61,7 +65,7 @@ func TestArchiveModule(t *testing.T) {
 			t.Fatalf("%s: %v", status, err)
 		}
 		want := []string{"GetModule outside tx", "Facts outside tx", "Authorize module.write outside tx", "Enter 1 outside tx", "Begin", "Lock",
-			"GetModule", "Authorize module.write", "Now", "SetModuleArchived true", "End", "Leave"}
+			"GetModule", "Authorize module.write", "Now", "SetModuleArchived true", "Publish planning.module_archived", "End", "Leave"}
 		if !slices.Equal(w.calls, want) {
 			t.Fatalf("%s: calls\n%q\nwant\n%q", status, w.calls, want)
 		}
@@ -70,17 +74,18 @@ func TestArchiveModule(t *testing.T) {
 		if len(w.stored) != 1 || !reflect.DeepEqual(w.stored[0], stored) || !reflect.DeepEqual(got, stored) {
 			t.Fatalf("%s: stored %+v, answered %+v\nwant %+v", status, w.stored, got, stored)
 		}
+		wantArchive(t, w.events.published, "planning.module_archived", shared.EntityRef{Kind: "module", ID: lockModule}, *w.stored[0].ArchivedAt)
 	}
 }
 
 // Only a completed or a cancelled module is archived (planning.module_not_closed), refused after the decision and
 // before the clock. An archived module archived again, and one not archived unarchived, whatever their status, answer
-// as the lock read them and read no clock nor write anything (M6 P2 spec R3).
+// as the lock read them and read no clock nor write nor publish anything (M6 P2 spec R3; P3c spec 2.6).
 func TestArchiveModuleRefusesAndRepeats(t *testing.T) {
 	for _, status := range []domain.ModuleStatus{domain.ModuleBacklog, domain.ModulePlanned, domain.ModuleInProgress, domain.ModulePaused} {
 		w := archiveWorld(status, false)
 		if _, err := w.execute(true); !errors.Is(err, domain.ErrModuleNotClosed) || len(w.stored) != 0 || slices.Contains(w.calls, "Now") ||
-			!slices.Contains(w.calls, "Authorize module.write") {
+			!slices.Contains(w.calls, "Authorize module.write") || len(w.events.published) != 0 {
 			t.Errorf("%s archived: %v, stored %v, calls %q; want planning.module_not_closed after the decision", status, err, w.stored, w.calls)
 		}
 	}
@@ -90,14 +95,16 @@ func TestArchiveModuleRefusesAndRepeats(t *testing.T) {
 	}{{domain.ModuleCompleted, true}, {domain.ModulePlanned, false}, {domain.ModuleCancelled, false}} {
 		w := archiveWorld(tt.status, tt.archive)
 		got, err := w.execute(tt.archive)
-		if err != nil || len(w.stored) != 0 || slices.Contains(w.calls, "Now") || !reflect.DeepEqual(got, w.modules[lockModule]) {
-			t.Errorf("%s archive=%t again: %+v, %v, stored %v, calls %q", tt.status, tt.archive, got, err, w.stored, w.calls)
+		if err != nil || len(w.stored) != 0 || slices.Contains(w.calls, "Now") || !reflect.DeepEqual(got, w.modules[lockModule]) ||
+			len(w.events.published) != 0 {
+			t.Errorf("%s archive=%t again: %+v, %v, stored %v, calls %q, published %v", tt.status, tt.archive, got, err, w.stored, w.calls,
+				w.events.published)
 		}
 	}
 }
 
 // Unarchiving clears the archive, whatever the module's status, last changed by the caller at the moment read after
-// the lock.
+// the lock, and publishes nothing (P3c spec 2.6).
 func TestUnarchiveModule(t *testing.T) {
 	for _, status := range []domain.ModuleStatus{domain.ModuleCompleted, domain.ModuleCancelled, domain.ModulePlanned} {
 		w := archiveWorld(status, true)
@@ -108,8 +115,8 @@ func TestUnarchiveModule(t *testing.T) {
 		stored := w.modules[lockModule]
 		stored.ArchivedAt, stored.UpdatedAt, stored.UpdatedByID = nil, w.now, &lockEditor
 		if len(w.stored) != 1 || !reflect.DeepEqual(w.stored[0], stored) || !reflect.DeepEqual(got, stored) ||
-			!slices.Contains(w.calls, "SetModuleArchived false") {
-			t.Fatalf("%s: stored %+v, answered %+v, calls %q\nwant %+v", status, w.stored, got, w.calls, stored)
+			!slices.Contains(w.calls, "SetModuleArchived false") || len(w.events.published) != 0 {
+			t.Fatalf("%s: stored %+v, answered %+v, calls %q, published %v\nwant %+v", status, w.stored, got, w.calls, w.events.published, stored)
 		}
 	}
 }

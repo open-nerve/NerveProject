@@ -17,7 +17,7 @@ import (
 )
 
 // Readable is Authorize's issue.read on each project (M7 P1c spec 2.5, R1),
-// on the permission matrix's seed (prepareMatrix), each built as app.go
+// on the permission matrix's seed (prepareMatrix), each built as app_ports.go
 // builds the Authorizer, from workspace's and project's Provide: for each
 // registered account and each workspace of the seed, gone, deleted, among
 // them, Readable answers, in id order, exactly the projects of the seed,

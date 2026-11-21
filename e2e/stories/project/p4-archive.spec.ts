@@ -10,13 +10,8 @@ import {
   slugFor,
   type Api,
 } from "../../fixtures/api";
-import {
-  expectLabels,
-  expectMember,
-  expectProjectCreated,
-  expectProjectDeleted,
-  type LabelRow,
-} from "../../fixtures/assert/project";
+import { expectLabels, expectMember, expectProjectCreated, type LabelRow } from "../../fixtures/assert/project";
+import { expectProjectDeleted } from "../../fixtures/assert/project-deletion";
 import { accountId, bearer, emailFor, registeredPAT } from "../../fixtures/auth";
 import { expectQuietConsole, watchPage } from "../../fixtures/browser";
 import type { Database } from "../../fixtures/db";
@@ -185,7 +180,7 @@ test("P4 (API): the admin archives a project, which leaves the list for the arch
     headers: bearer(admin),
   });
   expect(deleted.response.status, `delete Web: ${JSON.stringify(deleted.error)}`).toBe(204);
-  await expectProjectDeleted(db, web.id, adminEmail);
+  await expectProjectDeleted(db, web.id, adminEmail, ["user_favorites"]);
   // Its labels are deleted with it; Feature, deleted before, keeps its moment.
   await expectLabels(db, web.id, [
     label("Bug", null, 65535, true),
@@ -331,7 +326,7 @@ test("P4 (page): the admin archives a project from its settings, the dialog held
   await expect(page.getByText("Project deleted successfully.")).toBeVisible();
   await expect(page.getByRole("main").getByRole("button", { name: "Restore" })).toHaveCount(0);
   expect(new URL(page.url()).pathname).toBe(archives);
-  await expectProjectDeleted(db, web.id, adminEmail);
+  await expectProjectDeleted(db, web.id, adminEmail, ["user_favorites"]);
   expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
   // Two loads: the settings, and the archived projects; the archiving's landing navigates within the app.
   await expectQuietConsole(page, watch);

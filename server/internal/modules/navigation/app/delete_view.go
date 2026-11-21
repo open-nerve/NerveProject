@@ -22,13 +22,20 @@ func NewDeleteView(d WriteDeps) *DeleteView { return &DeleteView{d: d} }
 // view, the workspace's admin for a workspace's; then the locks, the view
 // read again under them and the decision again; then 409 while its
 // project's views are turned off. The view is deleted, and last changed,
-// by the caller at the moment read after the last lock.
+// by the caller at the moment read after the last lock; and with it, in
+// its transaction, every account's favorites of it, at that moment by the
+// caller (P3c spec 2.6, P3b spec 5): a favorite's write of the view takes
+// the view's row FOR SHARE, which the deletion holds FOR UPDATE.
 func (u *DeleteView) Execute(ctx context.Context, id uuid.UUID) error {
 	actor, err := shared.RequireActor(ctx)
 	if err != nil {
 		return err
 	}
 	return u.d.Locks.run(ctx, actor, write{named: named{view: &id}, verb: domain.Delete}, func(ctx context.Context, h held) error {
-		return u.d.Views.DeleteView(ctx, h.view.ID, u.d.Clock.Now(), actor.UserID)
+		at := u.d.Clock.Now()
+		if err := u.d.Views.DeleteView(ctx, h.view.ID, at, actor.UserID); err != nil {
+			return err
+		}
+		return u.d.Favorites.DeleteFavoritesOfTarget(ctx, domain.FavoriteView, h.view.ID, at, actor.UserID)
 	})
 }

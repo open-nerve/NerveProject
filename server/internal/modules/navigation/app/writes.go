@@ -6,12 +6,14 @@ import (
 )
 
 // WriteDeps are what the writes of a view need: its creations, changes and
-// deletions (spec 2.4, 2.5).
+// deletions (spec 2.4, 2.5); and Favorites, the deletion of every
+// account's favorites of a deleted view (P3c spec 2.6).
 type WriteDeps struct {
-	Locks Locks
-	Words Words
-	Views ViewWriter
-	Clock Clock
+	Locks     Locks
+	Words     Words
+	Views     ViewWriter
+	Favorites FavoriteCascades
+	Clock     Clock
 }
 
 // Words are each kind's words (P3b spec 2.4): a project's views' are a

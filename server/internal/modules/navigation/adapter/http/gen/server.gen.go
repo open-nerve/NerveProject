@@ -19,6 +19,96 @@ import (
 	externalRef0 "github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apigen"
 )
 
+// Defines values for FavoriteKind.
+const (
+	FavoriteKindCycle   FavoriteKind = "cycle"
+	FavoriteKindFolder  FavoriteKind = "folder"
+	FavoriteKindModule  FavoriteKind = "module"
+	FavoriteKindProject FavoriteKind = "project"
+	FavoriteKindView    FavoriteKind = "view"
+)
+
+// Valid indicates whether the value is a known member of the FavoriteKind enum.
+func (e FavoriteKind) Valid() bool {
+	switch e {
+	case FavoriteKindCycle:
+		return true
+	case FavoriteKindFolder:
+		return true
+	case FavoriteKindModule:
+		return true
+	case FavoriteKindProject:
+		return true
+	case FavoriteKindView:
+		return true
+	default:
+		return false
+	}
+}
+
+// Favorite One of the caller's favorites in a workspace, which only he reads and writes: of a target, answered with the target's name now and, a project's or a view's, its icon now, logo_props {} for a cycle and a module, which have none; or a folder, answered with its own name and logo_props {}.
+type Favorite struct {
+	CreatedAt time.Time `json:"created_at"`
+
+	// EntityID The target's id; null for a folder.
+	EntityID nullable.Nullable[uuid.UUID] `json:"entity_id"`
+
+	// EntityType What a favorite is of: a project, a cycle, a module or a view, a project's or a workspace's alike; or a folder, which holds favorites of the others, one level, and no folder.
+	EntityType FavoriteKind `json:"entity_type"`
+	ID         uuid.UUID    `json:"id"`
+
+	// LogoProps An icon, the web app's TLogoProps: every field optional, and {} no icon.
+	LogoProps externalRef0.LogoProps `json:"logo_props"`
+
+	// Name A folder's own name; the target's name now for the others.
+	Name string `json:"name"`
+
+	// ParentID The folder that holds it; null for one at the top, and for a folder.
+	ParentID nullable.Nullable[uuid.UUID] `json:"parent_id"`
+
+	// ProjectID The target's project, the project itself for a project's favorite; null for a workspace's view's and for a folder.
+	ProjectID nullable.Nullable[uuid.UUID] `json:"project_id"`
+
+	// Sequence Its place among the caller's favorites in the workspace, the greatest first.
+	Sequence    float64   `json:"sequence"`
+	WorkspaceID uuid.UUID `json:"workspace_id"`
+}
+
+// FavoriteCreate A new favorite. Of a target: entity_type project, cycle, module or view, the target's entity_id, no name, and the parent_id of the caller's folder to hold it, or none. A folder: entity_type folder, its name, no entity_id and no parent_id. A field its kind takes and lacks answers validation_failed, required on it; one it does not take, not_allowed; a kind none of the five, invalid_format on entity_type. Its project is the target's, never given.
+type FavoriteCreate struct {
+	// EntityID The target's id; a folder has none.
+	EntityID *uuid.UUID `json:"entity_id,omitempty"`
+
+	// EntityType What a favorite is of: a project, a cycle, a module or a view, a project's or a workspace's alike; or a folder, which holds favorites of the others, one level, and no folder.
+	EntityType FavoriteKind `json:"entity_type"`
+
+	// Name A folder's alone, 1–255 characters without the surrounding white space, which is dropped; no NUL.
+	Name *string `json:"name,omitempty"`
+
+	// ParentID The caller's folder in the workspace that holds it; a folder has none.
+	ParentID *uuid.UUID `json:"parent_id,omitempty"`
+}
+
+// FavoriteKind What a favorite is of: a project, a cycle, a module or a view, a project's or a workspace's alike; or a folder, which holds favorites of the others, one level, and no folder.
+type FavoriteKind string
+
+// FavoriteList defines model for FavoriteList.
+type FavoriteList struct {
+	Data []Favorite `json:"data"`
+}
+
+// FavoriteUpdate A change of a favorite: each field given replaces its own, each left out is kept.
+type FavoriteUpdate struct {
+	// Name A folder's alone, 1–255 characters without the surrounding white space, which is dropped; no NUL.
+	Name *string `json:"name,omitempty"`
+
+	// ParentID The caller's folder in the workspace to hold it, or null for none, out of the folder it is in; a folder takes only null, the none it has.
+	ParentID nullable.Nullable[uuid.UUID] `json:"parent_id,omitempty"`
+
+	// Sequence Its place among the caller's favorites in the workspace, the greatest first: any finite number, the others' kept.
+	Sequence *float64 `json:"sequence,omitempty"`
+}
+
 // View A saved view: a project's, or, with project_id null, a workspace's; the list settings it shows its work items with, and its owner, the account that created it, who alone changes it.
 type View struct {
 	CreatedAt time.Time `json:"created_at"`
@@ -109,6 +199,9 @@ type ViewUpdate struct {
 	Name *string `json:"name,omitempty"`
 }
 
+// FavoriteID defines model for FavoriteID.
+type FavoriteID = uuid.UUID
+
 // ProjectID defines model for ProjectID.
 type ProjectID = uuid.UUID
 
@@ -121,17 +214,29 @@ type ViewID = uuid.UUID
 // Problem RFC 9457 problem details (v0 design 3.5). `title` is the HTTP status phrase, `detail` explains this occurrence, and clients branch on `code`. Must match httpserver.Problem; the platform's contract test checks it.
 type Problem = externalRef0.Problem
 
+// UpdateFavoriteJSONRequestBody defines body for UpdateFavorite for application/json ContentType.
+type UpdateFavoriteJSONRequestBody = FavoriteUpdate
+
 // CreateProjectViewJSONRequestBody defines body for CreateProjectView for application/json ContentType.
 type CreateProjectViewJSONRequestBody = ViewCreate
 
 // UpdateViewJSONRequestBody defines body for UpdateView for application/json ContentType.
 type UpdateViewJSONRequestBody = ViewUpdate
 
+// CreateFavoriteJSONRequestBody defines body for CreateFavorite for application/json ContentType.
+type CreateFavoriteJSONRequestBody = FavoriteCreate
+
 // CreateWorkspaceViewJSONRequestBody defines body for CreateWorkspaceView for application/json ContentType.
 type CreateWorkspaceViewJSONRequestBody = ViewCreate
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// DeleteFavorite Delete a favorite
+	// (DELETE /api/v0/favorites/{favorite_id})
+	DeleteFavorite(w http.ResponseWriter, r *http.Request, favoriteID FavoriteID)
+	// UpdateFavorite Move, place or rename a favorite
+	// (PATCH /api/v0/favorites/{favorite_id})
+	UpdateFavorite(w http.ResponseWriter, r *http.Request, favoriteID FavoriteID)
 	// ListProjectViews List a project's views
 	// (GET /api/v0/projects/{project_id}/views)
 	ListProjectViews(w http.ResponseWriter, r *http.Request, projectID ProjectID)
@@ -147,6 +252,12 @@ type ServerInterface interface {
 	// UpdateView Change a view
 	// (PATCH /api/v0/views/{view_id})
 	UpdateView(w http.ResponseWriter, r *http.Request, viewID ViewID)
+	// ListFavorites List one's favorites in a workspace
+	// (GET /api/v0/workspaces/{slug}/favorites)
+	ListFavorites(w http.ResponseWriter, r *http.Request, slug Slug)
+	// CreateFavorite Favor a target, or make a folder
+	// (POST /api/v0/workspaces/{slug}/favorites)
+	CreateFavorite(w http.ResponseWriter, r *http.Request, slug Slug)
 	// ListWorkspaceViews List a workspace's own views
 	// (GET /api/v0/workspaces/{slug}/views)
 	ListWorkspaceViews(w http.ResponseWriter, r *http.Request, slug Slug)
@@ -163,6 +274,58 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// DeleteFavorite operation middleware
+func (siw *ServerInterfaceWrapper) DeleteFavorite(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "favorite_id" -------------
+	var favoriteID FavoriteID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "favorite_id", r.PathValue("favorite_id"), &favoriteID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "favorite_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteFavorite(w, r, favoriteID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateFavorite operation middleware
+func (siw *ServerInterfaceWrapper) UpdateFavorite(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "favorite_id" -------------
+	var favoriteID FavoriteID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "favorite_id", r.PathValue("favorite_id"), &favoriteID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "favorite_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateFavorite(w, r, favoriteID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
 
 // ListProjectViews operation middleware
 func (siw *ServerInterfaceWrapper) ListProjectViews(w http.ResponseWriter, r *http.Request) {
@@ -285,6 +448,58 @@ func (siw *ServerInterfaceWrapper) UpdateView(w http.ResponseWriter, r *http.Req
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateView(w, r, viewID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListFavorites operation middleware
+func (siw *ServerInterfaceWrapper) ListFavorites(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "slug" -------------
+	var slug Slug
+
+	err = runtime.BindStyledParameterWithOptions("simple", "slug", r.PathValue("slug"), &slug, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "slug", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListFavorites(w, r, slug)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateFavorite operation middleware
+func (siw *ServerInterfaceWrapper) CreateFavorite(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "slug" -------------
+	var slug Slug
+
+	err = runtime.BindStyledParameterWithOptions("simple", "slug", r.PathValue("slug"), &slug, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "slug", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateFavorite(w, r, slug)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -473,6 +688,10 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v0/views/{view_id}", wrapper.DeleteView)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/views/{view_id}", wrapper.GetView)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/views/{view_id}", wrapper.UpdateView)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/workspaces/{slug}/favorites", wrapper.ListFavorites)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/workspaces/{slug}/favorites", wrapper.CreateFavorite)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v0/favorites/{favorite_id}", wrapper.DeleteFavorite)
+	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/favorites/{favorite_id}", wrapper.UpdateFavorite)
 
 	return m
 }
@@ -485,6 +704,93 @@ type ProblemApplicationProblemPlusJSONResponse struct {
 	Body externalRef0.Problem
 
 	Headers ProblemResponseHeaders
+}
+
+type DeleteFavoriteRequestObject struct {
+	FavoriteID FavoriteID `json:"favorite_id"`
+}
+
+type DeleteFavoriteResponseObject interface {
+	VisitDeleteFavoriteResponse(w http.ResponseWriter) error
+}
+
+type DeleteFavorite204Response struct {
+}
+
+func (response DeleteFavorite204Response) VisitDeleteFavoriteResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteFavoritedefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response DeleteFavoritedefaultApplicationProblemPlusJSONResponse) VisitDeleteFavoriteResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateFavoriteRequestObject struct {
+	FavoriteID FavoriteID `json:"favorite_id"`
+	Body       *UpdateFavoriteJSONRequestBody
+}
+
+type UpdateFavoriteResponseObject interface {
+	VisitUpdateFavoriteResponse(w http.ResponseWriter) error
+}
+
+type UpdateFavorite200JSONResponse Favorite
+
+func (response UpdateFavorite200JSONResponse) VisitUpdateFavoriteResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateFavoritedefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response UpdateFavoritedefaultApplicationProblemPlusJSONResponse) VisitUpdateFavoriteResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
 }
 
 type ListProjectViewsRequestObject struct {
@@ -713,6 +1019,113 @@ func (response UpdateViewdefaultApplicationProblemPlusJSONResponse) VisitUpdateV
 	return err
 }
 
+type ListFavoritesRequestObject struct {
+	Slug Slug `json:"slug"`
+}
+
+type ListFavoritesResponseObject interface {
+	VisitListFavoritesResponse(w http.ResponseWriter) error
+}
+
+type ListFavorites200JSONResponse FavoriteList
+
+func (response ListFavorites200JSONResponse) VisitListFavoritesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListFavoritesdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response ListFavoritesdefaultApplicationProblemPlusJSONResponse) VisitListFavoritesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateFavoriteRequestObject struct {
+	Slug Slug `json:"slug"`
+	Body *CreateFavoriteJSONRequestBody
+}
+
+type CreateFavoriteResponseObject interface {
+	VisitCreateFavoriteResponse(w http.ResponseWriter) error
+}
+
+type CreateFavorite200JSONResponse Favorite
+
+func (response CreateFavorite200JSONResponse) VisitCreateFavoriteResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateFavorite201JSONResponse Favorite
+
+func (response CreateFavorite201JSONResponse) VisitCreateFavoriteResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateFavoritedefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response CreateFavoritedefaultApplicationProblemPlusJSONResponse) VisitCreateFavoriteResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ListWorkspaceViewsRequestObject struct {
 	Slug Slug `json:"slug"`
 }
@@ -808,6 +1221,12 @@ func (response CreateWorkspaceViewdefaultApplicationProblemPlusJSONResponse) Vis
 
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
+	// DeleteFavorite Delete a favorite
+	// (DELETE /api/v0/favorites/{favorite_id})
+	DeleteFavorite(ctx context.Context, request DeleteFavoriteRequestObject) (DeleteFavoriteResponseObject, error)
+	// UpdateFavorite Move, place or rename a favorite
+	// (PATCH /api/v0/favorites/{favorite_id})
+	UpdateFavorite(ctx context.Context, request UpdateFavoriteRequestObject) (UpdateFavoriteResponseObject, error)
 	// ListProjectViews List a project's views
 	// (GET /api/v0/projects/{project_id}/views)
 	ListProjectViews(ctx context.Context, request ListProjectViewsRequestObject) (ListProjectViewsResponseObject, error)
@@ -823,6 +1242,12 @@ type StrictServerInterface interface {
 	// UpdateView Change a view
 	// (PATCH /api/v0/views/{view_id})
 	UpdateView(ctx context.Context, request UpdateViewRequestObject) (UpdateViewResponseObject, error)
+	// ListFavorites List one's favorites in a workspace
+	// (GET /api/v0/workspaces/{slug}/favorites)
+	ListFavorites(ctx context.Context, request ListFavoritesRequestObject) (ListFavoritesResponseObject, error)
+	// CreateFavorite Favor a target, or make a folder
+	// (POST /api/v0/workspaces/{slug}/favorites)
+	CreateFavorite(ctx context.Context, request CreateFavoriteRequestObject) (CreateFavoriteResponseObject, error)
 	// ListWorkspaceViews List a workspace's own views
 	// (GET /api/v0/workspaces/{slug}/views)
 	ListWorkspaceViews(ctx context.Context, request ListWorkspaceViewsRequestObject) (ListWorkspaceViewsResponseObject, error)
@@ -868,6 +1293,65 @@ type strictHandler struct {
 	ssi         StrictServerInterface
 	middlewares []StrictMiddlewareFunc
 	options     StrictHTTPServerOptions
+}
+
+// DeleteFavorite operation middleware
+func (sh *strictHandler) DeleteFavorite(w http.ResponseWriter, r *http.Request, favoriteID FavoriteID) {
+	var request DeleteFavoriteRequestObject
+
+	request.FavoriteID = favoriteID
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteFavorite(ctx, request.(DeleteFavoriteRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteFavorite")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteFavoriteResponseObject); ok {
+		if err := validResponse.VisitDeleteFavoriteResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateFavorite operation middleware
+func (sh *strictHandler) UpdateFavorite(w http.ResponseWriter, r *http.Request, favoriteID FavoriteID) {
+	var request UpdateFavoriteRequestObject
+
+	request.FavoriteID = favoriteID
+
+	var body UpdateFavoriteJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateFavorite(ctx, request.(UpdateFavoriteRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateFavorite")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateFavoriteResponseObject); ok {
+		if err := validResponse.VisitUpdateFavoriteResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
 }
 
 // ListProjectViews operation middleware
@@ -1007,6 +1491,65 @@ func (sh *strictHandler) UpdateView(w http.ResponseWriter, r *http.Request, view
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(UpdateViewResponseObject); ok {
 		if err := validResponse.VisitUpdateViewResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListFavorites operation middleware
+func (sh *strictHandler) ListFavorites(w http.ResponseWriter, r *http.Request, slug Slug) {
+	var request ListFavoritesRequestObject
+
+	request.Slug = slug
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListFavorites(ctx, request.(ListFavoritesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListFavorites")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListFavoritesResponseObject); ok {
+		if err := validResponse.VisitListFavoritesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateFavorite operation middleware
+func (sh *strictHandler) CreateFavorite(w http.ResponseWriter, r *http.Request, slug Slug) {
+	var request CreateFavoriteRequestObject
+
+	request.Slug = slug
+
+	var body CreateFavoriteJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateFavorite(ctx, request.(CreateFavoriteRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateFavorite")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateFavoriteResponseObject); ok {
+		if err := validResponse.VisitCreateFavoriteResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

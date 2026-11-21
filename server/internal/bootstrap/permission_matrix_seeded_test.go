@@ -133,11 +133,12 @@ func emailOf(c caller) string {
 // work item, by the project's key and its name; each relation, by the key
 // of its row's project and its name; each project's view, by the
 // project's key and its name, and each workspace's own view, by the
-// workspace's slug and whose; and each account, by its name in
+// workspace's slug and whose; each workspace column's own favorite, by
+// its workspace's slug and the column; and each account, by its name in
 // matrixAccounts, which prepareMatrix registers. t is the test that asks
 // for them (in).
 type seeded struct {
-	assets              map[string]uuid.UUID
+	assets, favorites   map[string]uuid.UUID
 	drafts              map[string]uuid.UUID
 	notifications       map[string]uuid.UUID
 	t                   testing.TB
@@ -166,11 +167,12 @@ type seeded struct {
 // of matrixProjectMembers, each of matrixStates and matrixLabels in each
 // project, each work item of seededItems, each relation of
 // seededRelations and each view of seededViews and of
-// matrixWorkspaceViews, in its order, before prepareMatrix writes them, so that
+// matrixWorkspaceViews, in its order, and each workspace column's own
+// favorite (matrixFavoriteIDs), before prepareMatrix writes them, so that
 // matrixViolations, without a database, sees the keys and the targets the
 // cells will.
 func newSeeded() seeded {
-	s := seeded{assets: map[string]uuid.UUID{}, drafts: map[string]uuid.UUID{}, notifications: map[string]uuid.UUID{}, workspaces: map[string]uuid.UUID{}, memberships: map[string]uuid.UUID{}, invitations: map[string]uuid.UUID{},
+	s := seeded{assets: map[string]uuid.UUID{}, favorites: matrixFavoriteIDs(), drafts: map[string]uuid.UUID{}, notifications: map[string]uuid.UUID{}, workspaces: map[string]uuid.UUID{}, memberships: map[string]uuid.UUID{}, invitations: map[string]uuid.UUID{},
 		projects: map[string]uuid.UUID{}, projectMembers: map[string]uuid.UUID{}, states: map[string]uuid.UUID{}, labels: map[string]uuid.UUID{}, cycles: map[string]uuid.UUID{},
 		modules: map[string]uuid.UUID{}, moduleLinks: map[string]uuid.UUID{}, issues: map[string]uuid.UUID{}, comments: map[string]uuid.UUID{}, links: map[string]uuid.UUID{}, descriptionVersions: map[string]uuid.UUID{}, relations: map[string]uuid.UUID{},
 		projectViews: map[string]uuid.UUID{}, workspaceViews: map[string]uuid.UUID{}, accounts: map[caller]uuid.UUID{}}
@@ -400,7 +402,7 @@ func (p *fatalProbe) Fatalf(format string, args ...any) {
 // workspaceOfRow is the slug of the workspace the seeded row id is under,
 // false for an id no seeded row has.
 func (s seeded) workspaceOfRow(id uuid.UUID) (string, bool) {
-	for _, rows := range []map[string]uuid.UUID{s.memberships, s.invitations, s.drafts, s.assets, s.notifications} {
+	for _, rows := range []map[string]uuid.UUID{s.memberships, s.invitations, s.drafts, s.assets, s.notifications, s.favorites} {
 		if key, ok := keyOfRow(rows, id); ok {
 			slug, _, _ := strings.Cut(key, "/")
 			return slug, true

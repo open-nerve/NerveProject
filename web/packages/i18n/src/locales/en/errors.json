@@ -89,6 +89,8 @@
     "notification_not_found": "The notification does not exist, or you cannot see it.",
     "navigation_view_not_found": "The view does not exist, or you cannot see it.",
     "navigation_views_disabled": "Views are turned off in this project. Turn them on to change them.",
+    "navigation_favorite_not_found": "The favorite does not exist, or you cannot see it.",
+    "navigation_favorite_folder_name_taken": "A folder of yours in this workspace already has this name, in this case or another.",
     "unreachable": "Cannot reach the server for now. Please try again.",
     "unknown": "Something went wrong. Please try again.",
     "field": {

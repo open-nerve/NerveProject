@@ -48,7 +48,8 @@ type DeleteViewUseCase interface {
 	Execute(ctx context.Context, id uuid.UUID) error
 }
 
-// UseCases are the use cases behind the module's operations.
+// UseCases are the use cases behind the module's operations: the views'
+// and the favorites' (favorites.go).
 type UseCases struct {
 	ListProjectViews    ListProjectViewsUseCase
 	ListWorkspaceViews  ListWorkspaceViewsUseCase
@@ -57,6 +58,10 @@ type UseCases struct {
 	CreateWorkspaceView CreateWorkspaceViewUseCase
 	UpdateView          UpdateViewUseCase
 	DeleteView          DeleteViewUseCase
+	ListFavorites       ListFavoritesUseCase
+	CreateFavorite      CreateFavoriteUseCase
+	UpdateFavorite      UpdateFavoriteUseCase
+	DeleteFavorite      DeleteFavoriteUseCase
 }
 
 // Register mounts the module's routes on router behind api's per-route

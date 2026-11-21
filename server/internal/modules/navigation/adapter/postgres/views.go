@@ -50,6 +50,35 @@ func (s *Store) LockView(ctx context.Context, id uuid.UUID) (domain.View, bool, 
 	return found(gen.GetViewRow(r), err, "lock", id)
 }
 
+// ViewTargets reads the undeleted views among ids, of either kind and any
+// workspace, by id, without a lock (views.sql, app.ViewTargets); a deleted
+// view and an id of none are not among them.
+func (s *Store) ViewTargets(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]domain.View, error) {
+	rows, err := s.queries(ctx).ViewTargets(ctx, ids)
+	if err != nil {
+		return nil, fmt.Errorf("read %d views for favorites: %w", len(ids), err)
+	}
+	vs, err := listed(rows, func(r gen.ViewTargetsRow) gen.GetViewRow { return gen.GetViewRow(r) })
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[uuid.UUID]domain.View, len(vs))
+	for _, v := range vs {
+		out[v.ID] = v
+	}
+	return out, nil
+}
+
+// ShareView locks the undeleted view id FOR SHARE until the transaction ctx
+// carries ends (views.sql, app.ViewTargets); a deleted view and an id of
+// none take no lock.
+func (s *Store) ShareView(ctx context.Context, id uuid.UUID) error {
+	if err := s.queries(ctx).ShareView(ctx, id); err != nil {
+		return fmt.Errorf("share view %s: %w", id, err)
+	}
+	return nil
+}
+
 // InsertView stores the new view v, made by by at its CreatedAt
 // (app.ViewWriter).
 func (s *Store) InsertView(ctx context.Context, v domain.View, by uuid.UUID) error {

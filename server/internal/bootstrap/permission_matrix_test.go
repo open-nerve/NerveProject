@@ -218,7 +218,7 @@ func decodeAnswer(t *testing.T, answer string, v any) {
 // matrixRows are the rows, each module's from its file.
 func matrixRows() []matrixRow {
 	return slices.Concat(workspaceMatrixRows(), projectMatrixRows(), memberMatrixRows(), membershipMatrixRows(), stateMatrixRows(),
-		labelMatrixRows(), draftMatrixRows(), searchMatrixRows(), issueMatrixRows(), issueUpdateMatrixRows(), issueArchiveMatrixRows(), issueListMatrixRows(), memberIssueMatrixRows(), subIssueMatrixRows(), relationMatrixRows(), intakeMatrixRows(), intakeItemMatrixRows(), collaborationMatrixRows(), subscriptionMatrixRows(), linkMatrixRows(), assetMatrixRows(), cycleMatrixRows(), transferMatrixRows(), moduleMatrixRows(), moduleLinkMatrixRows(), guestsSeeAllMatrixRows(), countMatrixRows(), notificationMatrixRows(), viewMatrixRows())
+		labelMatrixRows(), draftMatrixRows(), searchMatrixRows(), issueMatrixRows(), issueUpdateMatrixRows(), issueArchiveMatrixRows(), issueListMatrixRows(), memberIssueMatrixRows(), subIssueMatrixRows(), relationMatrixRows(), intakeMatrixRows(), intakeItemMatrixRows(), collaborationMatrixRows(), subscriptionMatrixRows(), linkMatrixRows(), assetMatrixRows(), cycleMatrixRows(), transferMatrixRows(), moduleMatrixRows(), moduleLinkMatrixRows(), guestsSeeAllMatrixRows(), countMatrixRows(), notificationMatrixRows(), viewMatrixRows(), favoriteMatrixRows())
 }
 
 // matrixApps is how many cells may run an app of their own at once: each
@@ -266,7 +266,7 @@ func (d matrixData) config(t *testing.T, url string, change func(*config.Config)
 // every one (issueSeed), and the relations of seededRelations; through SQL,
 // the notifications of matrixNotifications (seedMatrixNotifications);
 // through the navigation store, the views of seededViews and
-// matrixWorkspaceViews (seedMatrixViews);
+// matrixWorkspaceViews (seedMatrixViews); through SQL, each workspace column's own folder (seedMatrixFavorites);
 // through the project store, acme's archived project archived. Through
 // both stores, the removed member's removal; then, through the workspace
 // store, the invitations of matrixInvitations. Through the project store, the
@@ -274,7 +274,7 @@ func (d matrixData) config(t *testing.T, url string, change func(*config.Config)
 // states no store makes alone (partingStates). Through the API, gone
 // deleted by its admin, which soft-deletes its memberships and its
 // project, with its states, labels, work items, relation, notification
-// and views, with it;
+// and views, and its admin's folder, with it;
 // then the checks that the rows the cells rest on are there
 // (preconditions), the states, the labels, the work items and the
 // relations among them (seededStates, seededLabels, seededIssues,
@@ -346,6 +346,7 @@ func prepareMatrix(t *testing.T) matrixData {
 		seedMatrixNotifications(t, pool, s, seed.now)
 		seedMatrixAssets(t, pool, s, seed.now)
 		seedMatrixViews(t, pool, s, seed.now)
+		seedMatrixFavorites(t, pool, s, seed.now)
 		projects.archive("acme/archived")
 		projects.removal(s)
 		for _, i := range matrixInvitations {

@@ -16,6 +16,7 @@ import { accountId } from "./auth";
 import { createCommentReaction, createIssueComment, createIssueReaction } from "./comments";
 import { changeCyclePreferences, createCycle } from "./cycles";
 import type { Database } from "./db";
+import { createFavorite, favorViewInFolder } from "./favorites";
 import { submitIntakeIssue, triageIntakeIssue } from "./intake";
 import { createDraft, createIssue, createIssueRelations, updateIssue } from "./issues";
 import { createIssueLink } from "./links";
@@ -26,10 +27,14 @@ import { createProjectView, createWorkspaceView } from "./views";
 // The rows a deletion story furnishes a workspace or a project with first, so that its deletion has a row of each
 // table to write (expectWorkspaceDeleted, expectProjectDeleted).
 
-/** The cycle and the module furnishPlanningRows creates in a project, which furnishIssueRows puts its work item in. */
+/**
+ * The cycle, the module and the view furnishPlanningRows creates in a project: furnishIssueRows puts its work item in
+ * the first two, and favors the three.
+ */
 export interface PlanningRows {
   cycleId: string;
   moduleId: string;
+  viewId: string;
 }
 
 /**
@@ -64,7 +69,11 @@ async function notified(db: Database, receiverId: string, issueId: string): Prom
  * (notified), so that a deletion finds them written. The caller then puts the first in the cycle and the module of
  * planning, furnishPlanningRows' of the project (whose cycles, modules and intake it turned on), through its own
  * fields: a row of each of the memberships' tables (M6 P3a spec 2.5); and submits a third to the project's intake,
- * where it waits for a triage: an intake row (M7 P2a spec 2.10).
+ * where it waits for a triage: an intake row (M7 P2a spec 2.10). He favors the project, and planning's cycle, module
+ * and view (M7 P3c spec 2.4): rows of user_favorites under the project, which its archive takes away (P4; spec 2.6,
+ * R12) and its deletion, or its workspace's, deletes. So the caller is an admin or a member of the workspace of
+ * workspaceSlug, as favorites take (its guest may not), and a member of the project who is not its guest, who sees the
+ * view, which another may have saved (spec 2.5): each caller is (re-91 m7).
  */
 export async function furnishIssueRows(
   api: Api,
@@ -97,6 +106,10 @@ export async function furnishIssueRows(
   await createIssueRelations(api, token, fix.id, { relation_type: "blocking", issue_ids: [test.id] });
   await updateIssue(api, token, fix.id, { cycle_id: planning.cycleId, module_ids: [planning.moduleId] });
   await submitIntakeIssue(api, token, projectId, { name: "Support the login" });
+  await createFavorite(api, token, workspaceSlug, { entity_type: "project", entity_id: projectId });
+  await createFavorite(api, token, workspaceSlug, { entity_type: "cycle", entity_id: planning.cycleId });
+  await createFavorite(api, token, workspaceSlug, { entity_type: "module", entity_id: planning.moduleId });
+  await createFavorite(api, token, workspaceSlug, { entity_type: "view", entity_id: planning.viewId });
   await notified(db, notifiedId, test.id);
 }
 
@@ -106,8 +119,8 @@ export async function furnishIssueRows(
  * (furnishIssueRows); a cycle he creates, the draft Sprint 1; and a module he creates, Release 1, which he leads and is
  * the member of, with a link; and his display settings on each one's page, which his first change stores (M6 P3b spec
  * 2.5). Its views turned on too, a view he saves, Urgent: a row of the navigation module's issue_views under the project
- * (M7 P3b spec 2.7), which every deletion and purge story's project has so. It answers the two, for work items to join
- * (furnishIssueRows): a deletion story furnishes its planning rows before its work items' rows.
+ * (M7 P3b spec 2.7), which every deletion and purge story's project has so. It answers the three, for work items to
+ * join and to be favored (furnishIssueRows): a deletion story furnishes its planning rows before its work items' rows.
  */
 export async function furnishPlanningRows(api: Api, adminToken: string, projectId: string): Promise<PlanningRows> {
   const changed = await changeProject(api, adminToken, projectId, {
@@ -120,7 +133,10 @@ export async function furnishPlanningRows(api: Api, adminToken: string, projectI
     changed.status,
     `turn on the cycles, modules, intake and views of ${projectId}: ${JSON.stringify(changed)}`
   ).toBe(200);
-  await createProjectView(api, adminToken, projectId, { name: "Urgent", filters: { priority: ["urgent"] } });
+  const urgent = await createProjectView(api, adminToken, projectId, {
+    name: "Urgent",
+    filters: { priority: ["urgent"] },
+  });
   const sprint = await createCycle(api, adminToken, projectId, { name: "Sprint 1" });
   const admin = await accountId(api, adminToken);
   const release = await createModule(api, adminToken, projectId, {
@@ -131,7 +147,7 @@ export async function furnishPlanningRows(api: Api, adminToken: string, projectI
   await createModuleLink(api, adminToken, release.id, { url: `http://169.254.169.254/furnish/${release.id}` });
   await changeCyclePreferences(api, adminToken, sprint.id, { filters: { priority: ["high"] } });
   await changeModulePreferences(api, adminToken, release.id, { filters: { priority: ["high"] } });
-  return { cycleId: sprint.id, moduleId: release.id };
+  return { cycleId: sprint.id, moduleId: release.id, viewId: urgent.id };
 }
 
 /**
@@ -158,8 +174,10 @@ export async function furnishAcceptedIntake(
  * Gives the workspace of slug, as its admin of adminToken, a row of each table its deletion writes
  * (expectWorkspaceDeleted): the membership of member, by an invitation he accepts (deleted as he accepts it); a pending
  * invitation of inviteeEmail; the admin's display settings; a view of the workspace's own, of no project (M7 P3b spec
- * 2.7); and the project Web, with its own rows: its label Bug among them, a cycle and a module with its member and link,
- * and a view (furnishPlanningRows), and a work item assigned to the admin and labelled Bug, in the two, with its own
+ * 2.7), which the admin favors in a folder of his, Watched: two rows of user_favorites of no project, one in the other
+ * (M7 P3c spec 2.3), which the workspace's own step of its deletion deletes (spec 2.6); and the project Web, with its
+ * own rows: its label Bug among them, a cycle and a module with its member and link, and a view (furnishPlanningRows),
+ * and a work item assigned to the admin and labelled Bug, in the two, with its own, the admin's favorites among them
  * (furnishIssueRows). The member is Web's for a while: the admin adds him, assigns him the second work item, which
  * sends him its notifications, and once they are written he leaves Web, so that the only active membership of his in
  * the workspace is the one he wrote (W2).
@@ -175,7 +193,11 @@ export async function furnishWorkspace(
   await inviteAndAccept(api, adminToken, slug, member, 15);
   await invite(api, adminToken, slug, [{ email: inviteeEmail, role: 15 }]);
   await changeWorkspacePreferences(api, adminToken, slug, { navigation_project_limit: 3 });
-  await createWorkspaceView(api, adminToken, slug, { name: "Urgent everywhere", filters: { priority: ["urgent"] } });
+  const everywhere = await createWorkspaceView(api, adminToken, slug, {
+    name: "Urgent everywhere",
+    filters: { priority: ["urgent"] },
+  });
+  await favorViewInFolder(api, adminToken, slug, "Watched", everywhere.id);
   const web = await createProject(api, adminToken, slug, { name: "Web", identifier: "WEB" });
   const memberId = await accountId(api, member.token);
   await addProjectMembers(api, adminToken, web.id, [{ member_id: memberId, role: 15 }]);

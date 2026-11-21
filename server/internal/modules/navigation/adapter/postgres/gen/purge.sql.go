@@ -45,3 +45,39 @@ func (q *Queries) PurgeIssueViews(ctx context.Context, arg PurgeIssueViewsParams
 	err := row.Scan(&i.Scanned, &i.Deleted, &i.AfterID)
 	return i, err
 }
+
+const purgeUserFavorites = `-- name: PurgeUserFavorites :one
+WITH candidates AS MATERIALIZED (
+    SELECT candidate.id FROM user_favorites AS candidate
+    WHERE candidate.deleted_at < $2 AND candidate.id > $1
+    ORDER BY candidate.id LIMIT $3
+), deleted AS (
+    DELETE FROM user_favorites AS target WHERE target.deleted_at < $2 AND target.id IN (SELECT candidates.id FROM candidates) RETURNING target.id
+)
+SELECT (SELECT count(*)::integer FROM candidates) AS scanned,
+       (SELECT count(*)::integer FROM deleted) AS deleted,
+       coalesce((SELECT id FROM candidates ORDER BY id DESC LIMIT 1), $1::uuid)::uuid AS after_id
+`
+
+type PurgeUserFavoritesParams struct {
+	AfterID    uuid.UUID
+	Cutoff     *time.Time
+	BatchLimit int32
+}
+
+type PurgeUserFavoritesRow struct {
+	Scanned int32
+	Deleted int32
+	AfterID uuid.UUID
+}
+
+// One bounded page of the 60-day purge (M7 P3c spec 2.6): the favorites of every kind deleted before the cutoff after
+// the cursor, in id order, deleted in one statement; a folder's deletion takes the favorites in it with it through
+// parent_id's CASCADE (each soft deleted at the folder's instant), which the page does not count. It returns how many
+// it read and deleted and the page's greatest id.
+func (q *Queries) PurgeUserFavorites(ctx context.Context, arg PurgeUserFavoritesParams) (PurgeUserFavoritesRow, error) {
+	row := q.db.QueryRow(ctx, purgeUserFavorites, arg.AfterID, arg.Cutoff, arg.BatchLimit)
+	var i PurgeUserFavoritesRow
+	err := row.Scan(&i.Scanned, &i.Deleted, &i.AfterID)
+	return i, err
+}

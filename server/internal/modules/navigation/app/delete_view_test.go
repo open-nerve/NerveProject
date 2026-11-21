@@ -88,10 +88,10 @@ func TestDeletingAView(t *testing.T) {
 	}{
 		{"project", webView, []string{"view webView", "authorize alice view.delete acme/web",
 			"begin write", "share workspace acme", "share project web", "lock view webView", "authorize alice view.delete acme/web",
-			"now", "delete webView by alice", "end write"}},
+			"now", "delete webView by alice", "delete favorites of view webView by alice", "end write"}},
 		{"workspace", acmeView, []string{"view acmeView", "authorize alice workspace_view.delete acme/-",
 			"begin write", "share workspace acme", "lock view acmeView", "authorize alice workspace_view.delete acme/-",
-			"now", "delete acmeView by alice", "end write"}},
+			"now", "delete acmeView by alice", "delete favorites of view acmeView by alice", "end write"}},
 	} {
 		t.Run(tt.kind, func(t *testing.T) {
 			w := newWorld()

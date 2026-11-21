@@ -8,6 +8,8 @@ import (
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/asset"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue"
+	"github.com/open-nerve/NerveProject/server/internal/modules/navigation"
+	"github.com/open-nerve/NerveProject/server/internal/modules/notification"
 	"github.com/open-nerve/NerveProject/server/internal/modules/planning"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project"
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace"
@@ -158,4 +160,16 @@ func cloneEventValue[T any](value *T) *T {
 // eventTypes combines producer declarations for the full transactional dispatcher.
 func eventTypes() []string {
 	return slices.Concat(asset.EventTypes(), issue.EventTypes(), planning.EventTypes(), project.EventTypes(), workspace.EventTypes())
+}
+
+// eventSubscribers combines the modules' subscribers for the full
+// transactional dispatcher, in their registration order, which is the
+// order of their delivery (dispatcher): issue, planning, asset,
+// notification, navigation. So a cycle's or a module's deletion takes the
+// work items out of it (issue) before its favorites go (navigation, M7
+// P3c spec 2.6).
+func eventSubscribers(issuePorts issue.Provided, assetPorts asset.Provided, notificationPorts notification.Provided,
+	navigationPorts navigation.Provided, inserter jobInserter) []shared.EventSubscriber {
+	return slices.Concat(issue.Subscribers(issuePorts, inserter), planning.Subscribers(inserter), asset.Subscribers(assetPorts, inserter),
+		notification.Subscribers(notificationPorts, inserter), navigation.Subscribers(navigationPorts, inserter))
 }

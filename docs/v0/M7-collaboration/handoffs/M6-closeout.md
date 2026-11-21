@@ -26,6 +26,8 @@ created: 2026-11-10
 
 **何时验收：** M7 的收藏接通时：迭代、模块的收藏入口随之恢复，只调 `/api/v0`、SWR 键带 `loginId`；归档迭代时指向它的收藏被移除（模块照 M7 核对的 Plane 行为），以接口、数据库与页面的证据核对；看不到的项目、迭代、模块的收藏不显示。
 
+**处理结果（M7/P3c，后端）：** 迭代、模块的收藏接口在 `/api/v0`；迭代、模块的删除与归档都在原事务里移除**所有人**对它的收藏（经 `planning.cycle_deleted`、`planning.module_deleted` 与 P3c 新发布的 `planning.cycle_archived`、`planning.module_archived`），恢复不加回；本条留的一问“模块归档时 Plane 是否同样移除”答是（`apps/api/plane/app/views/module/archive.py:553-558` 按目标删所有人的）；看不到的项目、迭代、模块的收藏读时不列（[P3c spec](../specs/P3c-favorites.md) §2.5、§2.6）。收藏入口的恢复与页面的证据随 P7，保持 open。
+
 <a id="M6-M7-03"></a>
 ## M6-M7-03 工作区级的迭代与模块：列表、视图的迭代与模块词、跨项目的行、工作区范围的命令面板搜索
 

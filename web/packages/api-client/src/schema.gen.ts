@@ -2469,6 +2469,60 @@ export interface paths {
         patch: operations["updateView"];
         trace?: never;
     };
+    "/api/v0/workspaces/{slug}/favorites": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A workspace's slug, as in the web app's address. */
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        /**
+         * List one's favorites in a workspace
+         * @description For the workspace's admins and members, not its guests: the caller's own undeleted favorites in the workspace, those his folders hold too, the greatest sequence first, then by id, both descending. Each folder is listed, and each favorite of a target he sees now, with the target's name and icon as they are now. A favorite whose target he no longer sees is kept and not listed: a project he reads no work items of, or an archived one; an archived cycle or module, or one of such a project; a project's view of such a project, or another's while he sees only his own work items there; a deleted target. Whether a project's cycles, modules or views are turned on does not matter. A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found; its guest, forbidden. Read in one snapshot, without a lock. The whole collection at once: collections are not paginated.
+         */
+        get: operations["listFavorites"];
+        put?: never;
+        /**
+         * Favor a target, or make a folder
+         * @description For the workspace's admins and members, not its guests: the caller's favorite of a target, a project, a cycle, a module or a view, or a folder to hold such favorites. The fields follow its kind (FavoriteCreate), every problem in one validation_failed, checked before the workspace is looked at. A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found; its guest, forbidden. The rest is decided after the workspace's row, the target's project's, a view's and the parent's are locked: a target that is not there, is another workspace's, is one listFavorites would not list, or is archived answers validation_failed, not_allowed on entity_id, whichever it is; a parent that is none of the caller's undeleted folders in the workspace, not_allowed on parent_id; both in one answer. Whether a project's cycles, modules or views are turned on does not matter. A target the caller has an undeleted favorite of answers 200 with that favorite as it is, its folder and its sequence kept, and writes nothing. Else the new favorite is written at one moment by the caller, its project the target's (none for a workspace's view and a folder), its sequence 10000 past the greatest of his undeleted favorites in the workspace (65535 for his first), and answers 201; a folder whose name, in any case, another of his undeleted folders in the workspace has answers navigation.favorite_folder_name_taken.
+         */
+        post: operations["createFavorite"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v0/favorites/{favorite_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description One of the caller's favorites' id (Favorite.id), a folder's too. */
+                favorite_id: components["parameters"]["FavoriteID"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete a favorite
+         * @description For its owner alone, while he is the workspace's admin or member. A favorite updateFavorite would answer navigation.favorite_not_found answers it here too, in the same order; a guest of the workspace, forbidden. The favorite is then read again under the locks of its workspace's row, its target's project's, a view's and its own, a folder's then the favorites it holds, and decided again: the same navigation.favorite_not_found. It is deleted at one moment by the caller, a folder with every favorite it holds, whatever their targets.
+         */
+        delete: operations["deleteFavorite"];
+        options?: never;
+        head?: never;
+        /**
+         * Move, place or rename a favorite
+         * @description For its owner alone, while he is the workspace's admin or member. A favorite that does not exist or is deleted, another's, and one of a workspace of which he is no longer an active member answer navigation.favorite_not_found; then a guest of the workspace, forbidden; then one whose target listFavorites would not list, navigation.favorite_not_found too: each the same answer as an id that never was. Then the values, every problem in one validation_failed, as a change of a favorite of its kind (FavoriteUpdate). The favorite is then read again under the locks of its workspace's row, its target's project's, a view's, the parent's it is moved into and its own, and decided again: the same navigation.favorite_not_found; a parent that is none of the caller's undeleted folders in the workspace, validation_failed, not_allowed on parent_id. Each field given replaces its own, each left out is kept. A change that leaves the favorite as it is, {} among them, writes nothing and answers it as it is; any other is written at one moment by the caller, and a folder's name, in any case, that another of his undeleted folders in the workspace has answers navigation.favorite_folder_name_taken, its own in another case not.
+         */
+        patch: operations["updateFavorite"];
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -4950,6 +5004,72 @@ export interface components {
             display_filters?: components["schemas"]["IssueListDisplayFilters"];
             display_properties?: components["schemas"]["IssueListDisplayProperties"];
         };
+        /**
+         * @description What a favorite is of: a project, a cycle, a module or a view, a project's or a workspace's alike; or a folder, which holds favorites of the others, one level, and no folder.
+         * @enum {string}
+         */
+        FavoriteKind: "project" | "cycle" | "module" | "view" | "folder";
+        /** @description One of the caller's favorites in a workspace, which only he reads and writes: of a target, answered with the target's name now and, a project's or a view's, its icon now, logo_props {} for a cycle and a module, which have none; or a folder, answered with its own name and logo_props {}. */
+        Favorite: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            workspace_id: string;
+            /**
+             * Format: uuid
+             * @description The target's project, the project itself for a project's favorite; null for a workspace's view's and for a folder.
+             */
+            project_id: string | null;
+            entity_type: components["schemas"]["FavoriteKind"];
+            /**
+             * Format: uuid
+             * @description The target's id; null for a folder.
+             */
+            entity_id: string | null;
+            /**
+             * Format: uuid
+             * @description The folder that holds it; null for one at the top, and for a folder.
+             */
+            parent_id: string | null;
+            /** @description Its place among the caller's favorites in the workspace, the greatest first. */
+            sequence: number;
+            /** @description A folder's own name; the target's name now for the others. */
+            name: string;
+            logo_props: components["schemas"]["LogoProps"];
+            /** Format: date-time */
+            created_at: string;
+        };
+        FavoriteList: {
+            data: components["schemas"]["Favorite"][];
+        };
+        /** @description A new favorite. Of a target: entity_type project, cycle, module or view, the target's entity_id, no name, and the parent_id of the caller's folder to hold it, or none. A folder: entity_type folder, its name, no entity_id and no parent_id. A field its kind takes and lacks answers validation_failed, required on it; one it does not take, not_allowed; a kind none of the five, invalid_format on entity_type. Its project is the target's, never given. */
+        FavoriteCreate: {
+            entity_type: components["schemas"]["FavoriteKind"];
+            /**
+             * Format: uuid
+             * @description The target's id; a folder has none.
+             */
+            entity_id?: string;
+            /** @description A folder's alone, 1–255 characters without the surrounding white space, which is dropped; no NUL. */
+            name?: string;
+            /**
+             * Format: uuid
+             * @description The caller's folder in the workspace that holds it; a folder has none.
+             */
+            parent_id?: string;
+        };
+        /** @description A change of a favorite: each field given replaces its own, each left out is kept. */
+        FavoriteUpdate: {
+            /**
+             * Format: uuid
+             * @description The caller's folder in the workspace to hold it, or null for none, out of the folder it is in; a folder takes only null, the none it has.
+             */
+            parent_id?: string | null;
+            /** @description Its place among the caller's favorites in the workspace, the greatest first: any finite number, the others' kept. */
+            sequence?: number;
+            /** @description A folder's alone, 1–255 characters without the surrounding white space, which is dropped; no NUL. */
+            name?: string;
+        };
     };
     responses: {
         /** @description Error (RFC 9457 problem details). */
@@ -5001,6 +5121,8 @@ export interface components {
         NotificationID: string;
         /** @description A view's id (View.id), a project's view or a workspace's. */
         ViewID: string;
+        /** @description One of the caller's favorites' id (Favorite.id), a folder's too. */
+        FavoriteID: string;
     };
     requestBodies: never;
     headers: never;
@@ -5199,6 +5321,11 @@ export type View = components['schemas']['View'];
 export type ViewList = components['schemas']['ViewList'];
 export type ViewCreate = components['schemas']['ViewCreate'];
 export type ViewUpdate = components['schemas']['ViewUpdate'];
+export type FavoriteKind = components['schemas']['FavoriteKind'];
+export type Favorite = components['schemas']['Favorite'];
+export type FavoriteList = components['schemas']['FavoriteList'];
+export type FavoriteCreate = components['schemas']['FavoriteCreate'];
+export type FavoriteUpdate = components['schemas']['FavoriteUpdate'];
 export type ResponseProblem = components['responses']['Problem'];
 export type ParameterLimit = components['parameters']['Limit'];
 export type ParameterCursor = components['parameters']['Cursor'];
@@ -5218,6 +5345,7 @@ export type ParameterModuleId = components['parameters']['ModuleID'];
 export type ParameterModuleLinkId = components['parameters']['ModuleLinkID'];
 export type ParameterNotificationId = components['parameters']['NotificationID'];
 export type ParameterViewId = components['parameters']['ViewID'];
+export type ParameterFavoriteId = components['parameters']['FavoriteID'];
 export type $defs = Record<string, never>;
 export interface operations {
     listDraftAssetPreparations: {
@@ -9169,6 +9297,117 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["View"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listFavorites: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A workspace's slug, as in the web app's address. */
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller's favorites in the workspace. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FavoriteList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    createFavorite: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A workspace's slug, as in the web app's address. */
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FavoriteCreate"];
+            };
+        };
+        responses: {
+            /** @description The caller's favorite of the target, which he had already, as it is. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Favorite"];
+                };
+            };
+            /** @description The new favorite. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Favorite"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    deleteFavorite: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description One of the caller's favorites' id (Favorite.id), a folder's too. */
+                favorite_id: components["parameters"]["FavoriteID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The favorite is deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateFavorite: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description One of the caller's favorites' id (Favorite.id), a folder's too. */
+                favorite_id: components["parameters"]["FavoriteID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FavoriteUpdate"];
+            };
+        };
+        responses: {
+            /** @description The favorite, changed, or as it is when nothing changes. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Favorite"];
                 };
             };
             default: components["responses"]["Problem"];

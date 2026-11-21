@@ -208,6 +208,7 @@ sql:
   - engine: postgresql
     schema:
       - migrations/sql/00052_navigation_issue_views.sql
+      - migrations/sql/00053_navigation_user_favorites.sql
     queries: internal/modules/navigation/adapter/postgres/queries
     gen:
       go:

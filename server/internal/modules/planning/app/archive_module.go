@@ -14,11 +14,13 @@ type ModuleArchiver interface {
 	SetModuleArchived(ctx context.Context, m domain.Module) error
 }
 
-// ArchiveModuleDeps are ArchiveModule's ports.
+// ArchiveModuleDeps are ArchiveModule's ports: Events publishes an archive
+// in its transaction (M7 P3c spec 2.6).
 type ArchiveModuleDeps struct {
 	Locks   Locks
 	Modules ModuleArchiver
 	Clock   Clock
+	Events  shared.EventPublisher
 }
 
 // ArchiveModule answers archiveModule, or unarchiveModule (M6 P2 spec 2.3,
@@ -40,7 +42,10 @@ func NewUnarchiveModule(d ArchiveModuleDeps) *ArchiveModule { return &ArchiveMod
 // cancelled is refused (planning.module_not_closed), while one to unarchive
 // is not, whatever its status; then, at the moment read then, its
 // archived_at is that moment, or none, and its last change the caller's at
-// that moment. The answer is the module as stored.
+// that moment; an archive is then published in the write's transaction, by
+// the caller at that moment (archiveEvent, M7 P3c spec 2.6), whose failure
+// fails it, while an unarchive publishes nothing. The answer is the module
+// as stored.
 func (u *ArchiveModule) Execute(ctx context.Context, id uuid.UUID) (domain.Module, error) {
 	actor, err := shared.RequireActor(ctx)
 	if err != nil {
@@ -64,6 +69,12 @@ func (u *ArchiveModule) Execute(ctx context.Context, id uuid.UUID) (domain.Modul
 		m.UpdatedAt, m.UpdatedByID = now, &by
 		if err := u.d.Modules.SetModuleArchived(ctx, m); err != nil {
 			return err
+		}
+		if u.archive {
+			e := archiveEvent(domain.EventModuleArchived, shared.EntityRef{Kind: "module", ID: m.ID}, m.WorkspaceID, m.ProjectID, now, by)
+			if err := u.d.Events.Publish(ctx, e); err != nil {
+				return err
+			}
 		}
 		out = m
 		return nil

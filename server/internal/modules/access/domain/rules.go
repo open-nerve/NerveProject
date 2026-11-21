@@ -236,6 +236,12 @@ var rules = map[shared.Action]Rule{
 	"workspace_view.create": {Level: LevelWorkspace, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember}},
 	"workspace_view.update": {Level: LevelWorkspace, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember}},
 	"workspace_view.delete": {Level: LevelWorkspace, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember}},
+	// One's own favorites: the workspace's admins and members, not its
+	// guests (M7 design 3.8, 3.10, P3c spec 2.2; Plane's favorites API
+	// alike). That one reads and writes his own only, and which targets he
+	// sees and may favor, are the navigation module's.
+	"favorite.read":  {Level: LevelWorkspace, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember}},
+	"favorite.write": {Level: LevelWorkspace, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember}},
 }
 
 // RuleFor returns a copy of the row of action, every field of it and its

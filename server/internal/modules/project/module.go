@@ -16,7 +16,8 @@
 // work item's project and state (NotificationNames) and the identifiers of
 // the projects of the work items a page of notifications names
 // (NotificationIdentifiers), and the navigation module a project's facts
-// and its lock (NavigationProjects).
+// and its lock (NavigationProjects) and the projects favorites name
+// (NavigationTargets).
 package project
 
 import (
@@ -260,6 +261,7 @@ type Provided struct {
 	IssueProjects           IssueProjects
 	PlanningProjects        PlanningProjects
 	NavigationProjects      NavigationProjects
+	NavigationTargets       NavigationTargets
 	NotificationNames       NotificationNames
 	NotificationIdentifiers NotificationIdentifiers
 }
@@ -278,7 +280,7 @@ func Provide(pool *pgxpool.Pool, protected []postgres.ProtectedReference) Provid
 		}),
 		AssetParents: store, ArchivePolicies: store, ProjectAccess: store, ProjectAccessMany: store, MemberProjectAccess: store,
 		ProjectMembershipCounts: store, IssueProjects: store, PlanningProjects: store, NavigationProjects: store, NotificationNames: store,
-		NotificationIdentifiers: store,
+		NotificationIdentifiers: store, NavigationTargets: store,
 	}
 }
 
@@ -330,8 +332,8 @@ func New(d Deps) *Module {
 		GetProject:          app.NewGetProject(app.GetProjectDeps{Projects: store, Auth: d.Authorizer, Locks: imageLocks, Gate: d.ImageGate, Images: d.Images, Tx: d.Tx}),
 		CheckIdentifier:     app.NewCheckProjectIdentifier(d.Workspaces, store, d.Authorizer),
 		UpdateProject:       app.NewUpdateProject(app.UpdateProjectDeps{Projects: store, Locks: locks, Tx: d.Tx, Clock: d.Clock, Caller: d.Caller, Gate: d.ImageGate, Bindings: d.ImageBindings, Images: d.Images}),
-		ArchiveProject:      app.NewArchiveProject(app.ArchiveProjectDeps{Projects: store, Locks: locks, Tx: d.Tx, Clock: d.Clock, Caller: d.Caller, Images: d.Images}),
-		UnarchiveProject:    app.NewUnarchiveProject(app.ArchiveProjectDeps{Projects: store, Locks: locks, Tx: d.Tx, Clock: d.Clock, Caller: d.Caller, Images: d.Images}),
+		ArchiveProject:      app.NewArchiveProject(app.ArchiveProjectDeps{Projects: store, Locks: locks, Tx: d.Tx, Clock: d.Clock, Caller: d.Caller, Images: d.Images, Events: d.Events}),
+		UnarchiveProject:    app.NewUnarchiveProject(app.ArchiveProjectDeps{Projects: store, Locks: locks, Tx: d.Tx, Clock: d.Clock, Caller: d.Caller, Images: d.Images, Events: d.Events}),
 		DeleteProject:       app.NewDeleteProject(store, d.Events, locks, d.Tx, d.Clock),
 		GetPreferences:      app.NewGetProjectPreferences(store, d.Authorizer),
 		UpdatePreferences:   app.NewUpdateProjectPreferences(store, locks, d.Tx, d.Clock, d.ListSettings),

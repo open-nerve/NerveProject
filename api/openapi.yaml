@@ -33,7 +33,7 @@ tags:
   - name: notification
     description: The caller's own notifications of changes of work items.
   - name: navigation
-    description: Saved views of a project's or a workspace's work items.
+    description: Saved views of a project's or a workspace's work items, and the caller's own favorites in a workspace.
 paths:
   /api/v0/drafts/{draft_id}/asset-preparations:
     $ref: 'modules/asset.yaml#/paths/~1api~1v0~1drafts~1{draft_id}~1asset-preparations'
@@ -237,6 +237,10 @@ paths:
     $ref: 'modules/navigation.yaml#/paths/~1api~1v0~1workspaces~1{slug}~1views'
   /api/v0/views/{view_id}:
     $ref: 'modules/navigation.yaml#/paths/~1api~1v0~1views~1{view_id}'
+  /api/v0/workspaces/{slug}/favorites:
+    $ref: 'modules/navigation.yaml#/paths/~1api~1v0~1workspaces~1{slug}~1favorites'
+  /api/v0/favorites/{favorite_id}:
+    $ref: 'modules/navigation.yaml#/paths/~1api~1v0~1favorites~1{favorite_id}'
 components:
   # 模块文件的 securitySchemes 在打包时被丢掉，操作引用的 scheme 写在这里（M0-P3 交接 3）
   securitySchemes:

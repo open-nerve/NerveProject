@@ -23,9 +23,9 @@ var (
 )
 
 // world is the fakes of the ports of a call on the views, one value for all of them but the transactions and the
-// words: Workspaces, Projects, ViewReader, ViewLocker, ViewWriter, the Authorizer and the Clock. calls logs each call,
-// in order, with the transaction it is in (begin and end), so a test holds the whole order of a call's reads, locks,
-// decisions, clock and writes.
+// words: Workspaces, Projects, ViewReader, ViewLocker, ViewWriter, FavoriteCascades, the Authorizer and the Clock.
+// calls logs each call, in order, with the transaction it is in (begin and end), so a test holds the whole order of a
+// call's reads, locks, decisions, clock and writes.
 type world struct {
 	calls []string
 	names map[uuid.UUID]string
@@ -45,9 +45,11 @@ type world struct {
 	listed      []domain.View
 	// decide answers Authorize, told whether the call is in a transaction (under the locks, for a write).
 	decide func(action shared.Action, t shared.Target, inTx bool) (shared.Grant, error)
-	// inserted and updated are the views InsertView and UpdateView stored, deleted the views DeleteView deleted.
+	// inserted and updated are the views InsertView and UpdateView stored, deleted the views DeleteView deleted;
+	// cascaded, the favorites FavoriteCascades deleted.
 	inserted, updated []insertion
 	deleted           []deletion
+	cascaded          []cascadeCall
 }
 
 // insertion is a view InsertView or UpdateView stored and its writer.
@@ -195,6 +197,18 @@ func (w *world) DeleteView(_ context.Context, id uuid.UUID, at time.Time, by uui
 	return nil
 }
 
+func (w *world) DeleteFavoritesOfTarget(_ context.Context, kind domain.FavoriteKind, id uuid.UUID, at time.Time, by uuid.UUID) error {
+	w.log("delete favorites of %s %s by %s", kind, w.name(id), w.name(by))
+	w.cascaded = append(w.cascaded, cascadeCall{kind, id, at, by})
+	return nil
+}
+
+func (w *world) DeleteFavoritesOfProject(_ context.Context, project uuid.UUID, at time.Time, by uuid.UUID) error {
+	w.log("delete favorites of project %s by %s", w.name(project), w.name(by))
+	w.cascaded = append(w.cascaded, cascadeCall{"", project, at, by})
+	return nil
+}
+
 // tx is a fake transaction manager of the world: it logs where its transaction begins and ends, named, and marks
 // the calls in it.
 type tx struct {
@@ -237,7 +251,7 @@ func (w *world) reads() app.Reads { return app.NewReads(w, w, w, w, tx{w, "read"
 // writes are the world's writes of a view, in its "write" transactions, with the kinds' words.
 func (w *world) writes(project, workspace *words) app.WriteDeps {
 	return app.WriteDeps{Locks: app.NewLocks(w, w, w, w, w, tx{w, "write"}), Words: app.Words{Project: project, Workspace: workspace}, Views: w,
-		Clock: w}
+		Favorites: w, Clock: w}
 }
 
 // wroteNothing fails t unless the world stored, changed and deleted no view and read no clock.
