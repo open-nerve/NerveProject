@@ -195,7 +195,9 @@ func noRowLastWrittenBy(t *testing.T, pool *pgxpool.Pool, keys []foreignKey, id,
 // The deleted project is not found any more. A work item of Web that alice
 // deleted before keeps its rows as they were, their deletion hers (M4/P1a
 // review §6: the statements pass over a row deleted before). Web is
-// archived then: an archived project is deleted as any other. Its deleter
+// archived then: an archived project is deleted as any other. Its archive
+// deleted the favorites under it (M7 P3c spec 2.6), so alice's favorite of
+// it is written again after it (seedProjectFavorite, R12). Its deleter
 // is dave, acme's admin, whom alice adds as Web's admin: no row under Web
 // is of his writing before, so a deletion that kept a row's writer would
 // show.
@@ -212,6 +214,7 @@ func TestDeletingAProjectLeavesNoUndeletedRowUnderIt(t *testing.T) {
 	if status, body := call(t, contract, http.MethodPost, base+"/api/v0/projects/"+web.String()+"/archive", alice, ""); status != http.StatusOK {
 		t.Fatalf("archiving Web = %d %s, want 200", status, body)
 	}
+	seedProjectFavorite(t, pool, web, aliceID)
 	dave := registerAccount(t, contract, base, "dave@example.com").AccessToken
 	daveID := accountID(t, contract, base, dave)
 	inWorkspaceOf(t, pool, web, daveID, aliceID, shared.RoleAdmin)

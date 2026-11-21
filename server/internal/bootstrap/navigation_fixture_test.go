@@ -75,6 +75,22 @@ func seedFavorites(t *testing.T, pool *pgxpool.Pool, project, owner uuid.UUID) {
 	}
 }
 
+// seedProjectFavorite writes, directly, owner's undeleted favorite of the
+// undeleted project, as seedFavorites' first, after the project's archive
+// deleted every favorite under it (M7 P3c spec 2.6, R12): the deletion
+// guards need a live row under the project they delete. While the one
+// seedFavorites wrote is undeleted, the partial unique index of a target's
+// favorites refuses it.
+func seedProjectFavorite(t *testing.T, pool *pgxpool.Pool, project, owner uuid.UUID) {
+	t.Helper()
+	if tag, err := pool.Exec(pgtest.Soon(t), `INSERT INTO user_favorites (id, workspace_id, project_id, user_id, entity_type, entity_identifier, sequence,
+			created_by_id, updated_by_id, created_at, updated_at)
+		SELECT $1::uuid, p.workspace_id, p.id, $2::uuid, 'project', p.id, 65535, $2::uuid, $2::uuid, now(), now()
+		FROM projects AS p WHERE p.id = $3 AND p.deleted_at IS NULL`, uuid.NewV7(), owner, project); err != nil || tag.RowsAffected() != 1 {
+		t.Fatalf("seeding the favorite of %s again: %d rows, %v; want 1", project, tag.RowsAffected(), err)
+	}
+}
+
 // holdNavigationDeletion holds a row lock on one of the project's live
 // views: the first batch of the deletion of the project's views waits for
 // it, so the views stay as they were while the app and its River worker

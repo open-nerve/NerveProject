@@ -253,7 +253,7 @@ func projectDeletionPublisher(t *testing.T, pool *pgxpool.Pool, observers ...sha
 		t.Fatal(err)
 	}
 	subscribers := slices.Concat(issue.Subscribers(issue.Provide(pool, nil), jobInserter{client: client}), planning.Subscribers(jobInserter{client: client}), asset.Subscribers(asset.Provide(pool), jobInserter{client: client}),
-		notification.Subscribers(notification.Provide(pool), jobInserter{client: client}), navigation.Subscribers(jobInserter{client: client}))
+		notification.Subscribers(notification.Provide(pool), jobInserter{client: client}), navigation.Subscribers(navigation.Provide(pool), jobInserter{client: client}))
 	subscribers = append(subscribers, observers...)
 	d, err := newDispatcher(eventTypes(), subscribers)
 	if err != nil {

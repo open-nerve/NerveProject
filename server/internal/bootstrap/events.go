@@ -165,8 +165,11 @@ func eventTypes() []string {
 // eventSubscribers combines the modules' subscribers for the full
 // transactional dispatcher, in their registration order, which is the
 // order of their delivery (dispatcher): issue, planning, asset,
-// notification, navigation.
-func eventSubscribers(issuePorts issue.Provided, assetPorts asset.Provided, notificationPorts notification.Provided, inserter jobInserter) []shared.EventSubscriber {
+// notification, navigation. So a cycle's or a module's deletion takes the
+// work items out of it (issue) before its favorites go (navigation, M7
+// P3c spec 2.6).
+func eventSubscribers(issuePorts issue.Provided, assetPorts asset.Provided, notificationPorts notification.Provided,
+	navigationPorts navigation.Provided, inserter jobInserter) []shared.EventSubscriber {
 	return slices.Concat(issue.Subscribers(issuePorts, inserter), planning.Subscribers(inserter), asset.Subscribers(assetPorts, inserter),
-		notification.Subscribers(notificationPorts, inserter), navigation.Subscribers(inserter))
+		notification.Subscribers(notificationPorts, inserter), navigation.Subscribers(navigationPorts, inserter))
 }

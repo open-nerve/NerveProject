@@ -58,7 +58,7 @@ func (w *wiring) dispatchEvents() error {
 		return err
 	}
 	w.inserter = jobInserter{client: client}
-	w.events, err = newDispatcher(eventTypes(), eventSubscribers(w.issuePorts, w.assetPorts, w.notificationPorts, w.inserter))
+	w.events, err = newDispatcher(eventTypes(), eventSubscribers(w.issuePorts, w.assetPorts, w.notificationPorts, w.navigationPorts, w.inserter))
 	return err
 }
 

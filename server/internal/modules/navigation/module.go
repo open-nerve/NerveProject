@@ -7,10 +7,13 @@
 // 2.4, 2.5). It owns the user_favorites table too, each row one account's
 // favorite in a workspace (M7 design 3.8, P3c spec 2.3), which its API
 // lists, creates, changes and deletes for that account alone (P3c spec
-// 2.4, 2.7). A project's or a workspace's deletion enqueues, in its
-// transaction, the deletion of each deleted project's views and favorites
-// and of the workspace's own (P3b spec 2.7, P3c spec 2.6); the 60-day purge
-// removes the deleted ones, the favorites after the views (Provide).
+// 2.4, 2.7). A cycle's or a module's deletion or archive, a project's
+// archive and a view's deletion take, in their transactions, every
+// account's favorites of it with them (P3c spec 2.6). A project's or a
+// workspace's deletion enqueues, in its transaction, the deletion of each
+// deleted project's views and favorites and of the workspace's own (P3b
+// spec 2.7, P3c spec 2.6); the 60-day purge removes the deleted ones, the
+// favorites after the views (Provide).
 package navigation
 
 import (
@@ -30,12 +33,15 @@ import (
 // Provided are the adapters bootstrap builds before wiring the modules.
 type Provided struct {
 	Purger *app.Purger
+	store  *postgresadapter.Store
 }
 
 // Provide builds, over pool, the navigation module's purge: the views,
 // then the favorites (P3c spec 2.6). No other table references either, a
 // folder's favorites referencing the folder within its own table, so the
 // module purges before the issue module (M7 design 4.3, P3b spec 2.7).
+// And the store its subscribers write through in the publishing
+// transaction: the favorites' cascades (Subscribers).
 func Provide(pool *pgxpool.Pool) Provided {
 	store := postgresadapter.New(pool)
 	return Provided{
@@ -43,6 +49,7 @@ func Provide(pool *pgxpool.Pool) Provided {
 			{Table: "issue_views", Delete: store.PurgeIssueViews},
 			{Table: "user_favorites", Delete: store.PurgeUserFavorites},
 		}),
+		store: store,
 	}
 }
 
@@ -114,8 +121,8 @@ type Module struct {
 func New(d Deps) *Module {
 	store := postgresadapter.New(d.Pool)
 	reads := app.NewReads(d.Workspaces, d.Projects, store, d.Authorizer, d.ReadTx)
-	writes := app.WriteDeps{Locks: app.NewLocks(d.Workspaces, d.Projects, store, store, d.Authorizer, d.Tx), Views: store, Clock: d.Clock,
-		Words: app.Words{Project: d.ListSettings, Workspace: d.WorkspaceListSettings}}
+	writes := app.WriteDeps{Locks: app.NewLocks(d.Workspaces, d.Projects, store, store, d.Authorizer, d.Tx), Views: store, Favorites: store,
+		Clock: d.Clock, Words: app.Words{Project: d.ListSettings, Workspace: d.WorkspaceListSettings}}
 	targets := app.Targets{Readable: d.Readable, Projects: d.ProjectTargets, Planning: d.PlanningTargets, Views: store}
 	favorites := app.FavoriteWriteDeps{Locks: app.NewFavoriteLocks(d.Workspaces, d.Projects, store, store, targets, d.Authorizer, d.Tx),
 		Favorites: store, Clock: d.Clock}

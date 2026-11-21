@@ -5,11 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"slices"
 	"testing"
 	"time"
 	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue"
+	"github.com/open-nerve/NerveProject/server/internal/modules/navigation"
 	"github.com/open-nerve/NerveProject/server/internal/modules/planning"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project"
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace"
@@ -240,10 +242,13 @@ func TestIssueEventDirectory(t *testing.T) {
 }
 
 // planning declares its cycle's and module's deletions (M6 P3a spec R6) and archives (M7 P3c spec 2.6), and the app's
-// directory declares them, so that a deletion's publication reaches the issue module's subscriber, which the app's
-// dispatcher takes with the rest of issue's: a subscription to an undeclared type is refused at its construction. No
-// subscriber takes an archive yet, so its publication is accepted as declared (navigation's cascade, which is to take
-// all four, M7 P3c spec 2.6 and R13, is not yet among the subscribers).
+// directory declares them, so that their publication reaches the subscribers of the issue module and of the navigation
+// module, which the app's dispatcher takes with the rest of theirs: a subscription to an undeclared type is refused at
+// its construction. Both validate an event whole before any write (M7 P3c R13): a malformed deletion is refused by
+// issue's subscriber, the first to take it, or by navigation's cascade; a malformed archive, which issue does not take,
+// by navigation's cascade alone. Each event is as planning writes it but for one defect: a deletion without its name
+// before it, an archive with a change. The subscribers have no database, so one that wrote would panic: a refusal here
+// is a validation's, before any write.
 func TestPlanningEventDirectory(t *testing.T) {
 	want := []string{"planning.cycle_deleted", "planning.module_deleted", "planning.cycle_archived", "planning.module_archived"}
 	types := planning.EventTypes()
@@ -254,18 +259,32 @@ func TestPlanningEventDirectory(t *testing.T) {
 	if !reflect.DeepEqual(planning.EventTypes(), want) {
 		t.Error("caller mutation changed module directory")
 	}
-	all, err := newDispatcher(eventTypes(), issue.Subscribers(issue.Provide(nil, nil), nil))
+	all, err := newDispatcher(eventTypes(), slices.Concat(issue.Subscribers(issue.Provide(nil, nil), nil), navigation.Subscribers(navigation.Provide(nil), nil)))
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, kind := range want[:2] {
-		if err := all.Publish(t.Context(), shared.Event{Type: kind}); err == nil {
-			t.Errorf("%s: a malformed deletion was taken; want the issue subscriber's refusal", kind)
-		}
-	}
-	for _, kind := range want[2:] {
-		if err := all.Publish(t.Context(), shared.Event{Type: kind}); err != nil {
-			t.Errorf("%s: %v; want an archive of the app's directory published", kind, err)
-		}
+	actor, name := uuid.NewV7(), "Sprint"
+	renamed := []shared.Change{{Field: "name", Old: &name}}
+	for _, tt := range []struct {
+		kind, entity string
+		changes      []shared.Change // a deletion's without its one change, an archive's with one
+	}{
+		{"planning.cycle_deleted", "cycle", nil},
+		{"planning.module_deleted", "module", nil},
+		{"planning.cycle_archived", "cycle", renamed},
+		{"planning.module_archived", "module", renamed},
+	} {
+		t.Run(tt.kind, func(t *testing.T) {
+			e := shared.Event{ID: uuid.NewV7(), Type: tt.kind, OccurredAt: time.Now().UTC(), WorkspaceID: uuid.NewV7(), ProjectID: uuid.NewV7(),
+				ActorID: &actor, Entity: shared.EntityRef{Kind: tt.entity, ID: uuid.NewV7()}, Changes: tt.changes}
+			defer func() {
+				if r := recover(); r != nil {
+					t.Errorf("a malformed event reached a subscriber's write (%v); want it refused before any", r)
+				}
+			}()
+			if err := all.Publish(t.Context(), e); err == nil {
+				t.Error("a malformed event was taken; want a subscriber's refusal")
+			}
+		})
 	}
 }

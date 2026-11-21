@@ -132,3 +132,16 @@ type FavoriteWriter interface {
 	UpdateFavorite(ctx context.Context, f domain.Favorite, by uuid.UUID) error
 	DeleteFavorite(ctx context.Context, id uuid.UUID, at time.Time, by uuid.UUID) error
 }
+
+// FavoriteCascades soft-deletes, in the transaction ctx carries, which
+// holds the lock of what took them away (spec 2.6, 2.8), every account's
+// undeleted favorites of a target deleted or archived, each locked FOR NO
+// KEY UPDATE in id order, deleted and last changed by by at at; one deleted
+// before keeps its deletion. DeleteFavoritesOfTarget deletes those of the
+// target of kind with id id, a cycle, a module or a view;
+// DeleteFavoritesOfProject those whose project is project, its own and its
+// cycles', modules' and views', and no folder, which has no project.
+type FavoriteCascades interface {
+	DeleteFavoritesOfTarget(ctx context.Context, kind domain.FavoriteKind, id uuid.UUID, at time.Time, by uuid.UUID) error
+	DeleteFavoritesOfProject(ctx context.Context, project uuid.UUID, at time.Time, by uuid.UUID) error
+}
