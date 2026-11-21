@@ -273,7 +273,7 @@ M7 让五件协作功能经真实接口工作：站内通知（关注工作项�
 
 | 输入 | 条款落点 | 关闭阶段 |
 |---|---|---|
-| [M1-P2-trim-content](handoffs/M1-P2-trim-content.md) | 收藏、最近访问没有页（§3.8、§3.9）；首页最近访问只列工作项、项目，读新接口；通知没有已删功能的字段 | P4、P7 |
+| [M1-P2-trim-content](handoffs/M1-P2-trim-content.md) | 收藏、最近访问没有页（§3.8、§3.9）；首页最近访问只列工作项、项目，读新接口；通知没有已删功能的字段 | P3c、P3d、P4、P7 |
 | [M1-P3-trim-platform](handoffs/M1-P3-trim-platform.md) | 收藏的类型恰五种、前端用生成类型；通知没有工时 | P3c、P7 |
 | [M1-closeout](handoffs/M1-closeout.md) | 本领域死成员与死 prop（首个页面阶段跑基线）、改到的文件 oxlint 为零并另清一类规则（`no-shadow` 已清零，另选） | P4–P8 |
 | [M2-closeout](handoffs/M2-closeout.md) | §1 视图列表是集合型（§3.7）；§2 会话分代与两个单例（§7）；§3 下拉框的浏览器核对；§4 复制；§5 删除图与指向账户的外键（§4.2、§4.3）；§6 不嵌 iframe、不改 CSP | P1–P3（后端）、P4–P8 |
@@ -298,7 +298,8 @@ M7 让五件协作功能经真实接口工作：站内通知（关注工作项�
 | P2c | Triage 宿主的资产判定：资产的四个操作按 `intake.update` 与同一时段、资产路径读开关、先读工作项再选动作；`asset.yaml` 与资产处理器测试 | H11 里“描述的图片同此”的接口与数据库 |
 | P3a | 工作区跨项目列表：issue 列表引擎的新范围 `WorkspaceList`、`GET /workspaces/{slug}/issues` 与规模测试（实施前再划分，见 [P3a spec](specs/P3a-workspace-list.md) §1） | H13 的列表一半的接口与数据库 |
 | P3b | `navigation` 模块与视图：`issue_views`、两种视图的接口与权限、删除图与清理 | H12、H14 与 H13 的已存工作区视图的接口与数据库 |
-| P3c | 收藏与最近访问：两张表与接口、planning / project 的归档事件与连带、可见过滤 | H15–H17 的接口与数据库 |
+| P3c | 收藏：拆 `bootstrap/app.go`、planning / project 的三种归档事件、`user_favorites` 与接口、连带、可见过滤（实施前再划分，见 [P3c spec](specs/P3c-favorites.md) §1） | H15、H16 的接口与数据库 |
+| P3d | 最近访问：`user_recent_visits` 与接口、工作项删除时的连带、可见过滤 | H17 的接口与数据库 |
 | P4 | 网页的通知与关注；收起“保存为视图” | H1–H7 的页面、H20 的通知页 |
 | P5 | 网页的收集箱，通知预览里的分诊 | H8–H11 的页面、H20 的收集箱页、M5-M7-01 的证据 |
 | P6a | 网页的项目视图：列表、详情、保存与更新视图、命令面板的视图 | H12 的页面、H20 的视图页 |
@@ -340,7 +341,8 @@ P1a 的第一个实现提交把关键词 phase 改为 `M7/P1`（P1a、P1b 共用
 | P3a 工作区跨项目列表 | 已完成：合入 main（noff `17e0b1ac`），main CI 44743168952 全绿；审查与集成见阶段记录 §9；spec 与 plan 经预检 [re-88](../../reviews/re-88-M7P3a预检.md) 修正后通过；实施前把 P3 再划为 P3a（工作区列表）、P3b（视图）、P3c（收藏与最近访问）（spec §1、R1）；T7 后暂停，先做下面两个插入段，合并 main（`32ea59b8`）后继续 | [P3a spec](specs/P3a-workspace-list.md) / [P3a plan](plans/P3a-workspace-list.md) / [P3a 记录](reviews/P3a-workspace-list-review.md) |
 | 插入段：bootstrap 测试按名字的哈希分路 | 已完成：负责人 2026-11-20 批准；合入 main（noff `33a19ee1`），main CI 44720865989 全绿；p0=46 的依据与 M4 周期整理测试的修复见记录 | [分路记录](reviews/shard-hash-review.md) |
 | 插入段：M4 泳道查询的计划翻转 | 已完成：负责人 2026-11-20 裁定在 M7 里单独修；合入 main（noff `2083c0b7`），main CI 44724861021 全绿；预检 [re-89](../../reviews/re-89-M4泳道计划预检.md) | [spec 与 plan](specs/M4fix-swimlanes-plan.md) / [记录](reviews/M4fix-swimlanes-plan-review.md) |
-| P3b navigation 模块与视图 | 实施完成，待整分支审查：spec 与 plan 经预检 [re-90](../../reviews/re-90-M7P3b预检.md) 修正后通过，基线 main `17e0b1ac`；16 个 Task；两个检查点的本地七项与分支 CI 见阶段记录 §5 | [P3b spec](specs/P3b-views.md) / [P3b plan](plans/P3b-views.md) / [P3b 记录](reviews/P3b-views-review.md) |
+| P3b navigation 模块与视图 | 已完成：合入 main（noff `1168fd25`），main CI 44820762025 全绿；审查与集成见阶段记录 §9；spec 与 plan 经预检 [re-90](../../reviews/re-90-M7P3b预检.md) 修正后通过，基线 main `17e0b1ac`；16 个 Task | [P3b spec](specs/P3b-views.md) / [P3b plan](plans/P3b-views.md) / [P3b 记录](reviews/P3b-views-review.md) |
+| P3c 收藏与三种归档事件 | 实施中：spec 与 plan 经预检 [re-91](../../reviews/re-91-M7P3c预检.md) 修正后通过，基线 main `1168fd25`；实施前把 P3c 再划为 P3c（收藏）与 P3d（最近访问）（spec §1、R1）；16 个 Task | [P3c spec](specs/P3c-favorites.md) / [P3c plan](plans/P3c-favorites.md) |
 
 ## 15. 决定记录
 

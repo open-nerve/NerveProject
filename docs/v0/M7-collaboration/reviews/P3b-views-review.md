@@ -1,6 +1,6 @@
 # M7 / P3b：navigation 模块与视图（阶段记录）
 
-> 状态：实施完成，待整分支审查。spec 与 plan 见 [P3b spec](../specs/P3b-views.md)、[P3b plan](../plans/P3b-views.md)，预检 [re-90](../../../reviews/re-90-M7P3b预检.md)。基线 main `17e0b1ac`，分支 `codex/m7-p3b`。台账 `.superpowers/sdd/P3b-views/progress.md`（ignored，随阶段归档）。
+> 状态：已完成，合入 main（noff `1168fd25`），§9 为审查与集成的记录。spec 与 plan 见 [P3b spec](../specs/P3b-views.md)、[P3b plan](../plans/P3b-views.md)，预检 [re-90](../../../reviews/re-90-M7P3b预检.md)。基线 main `17e0b1ac`，分支 `codex/m7-p3b`。台账 `.superpowers/sdd/P3b-views/progress.md`（ignored，随阶段归档）。
 
 ## 1. 交付
 
@@ -99,4 +99,10 @@
 
 ## 9. 整分支审查与集成
 
-（待填）
+- 检查点 2（`39b5d501`）：本地七项一次过；分支 CI 44793862354 第 1 次只有 e2e (1) 因 runner 的 Docker 端口失败，重跑一次全绿（§5、§6）。
+- 整分支审查（fable，只读，P3b 对 main `17e0b1ac` 的差）：With fixes，I 2、m 5，产品代码不用改。I1 plane-diff 两行把 Plane 的视图删除写成物理删除（原样经 `SoftDeleteModel` 软删；工作区视图只连带删收藏）、I2 第 0 路的增量要按 spec §4 实测、m1 T8b 的提交号、m5 交 M8 的重复（§7）——主控改文档（`b44183be`）；m2 e2e 删除目录里不起作用的排除、m3 视图名 255 字的宽度钉在真实数据库上——主控改测试（`ac121cce`：列改 254、256 的两个变异都被杀死）；m4 文件大小不必现在拆，`bootstrap/app.go` 先拆写进 P3c 的约束。
+- 限定复审（`b44183be`、`ac121cce`）：Ready to merge，发现 0；三条不阻塞的说明不改：N1 当时引用的 CI 的 e2e 两路未完（§6 只引 server 的 Test 步）、N2 spec 里 e2e 谓词的措辞稍旧（最终样子见 §3）、N3 一行注释 97 列。
+- 第 0 路的实测（spec §4：每路 ≤ 90 秒）：同一份代码在 `6f062a61` 上 server (0) Test 625 秒（基线 618，+7）、server (1) 770 秒（+4）。检查点 2 的 855 秒与最终分支 CI 的 840 秒都是慢的 runner：P3b 没碰的非 bootstrap 包合计 1.57–1.59 倍。
+- 最终七项 fin（`ac121cce`）全过：bootstrap 427.3 / 642.0 秒，e2e 491 passed；最终分支 CI 44815731936 attempt 1 全绿：server (0) 作业 1021 / Test 840 / bootstrap 574.7，server (1) 934 / 902 / 877.5（慢的 runner，期限的 73%，未到八成）。
+- `--no-ff` 合入 main `1168fd25`（树与分支相同）；main CI 44820762025 attempt 1 全绿：server (0) 作业 790 / Test 650 / bootstrap 469.1，server (1) 878 / 850 / 827.9（第 1 路的包在 `go test` 20 分钟期限的 69%）。
+- 归档 `.superpowers/sdd/M7-P3b-integration-20261121`（2828 个文件、unknown 0，清理后复核一致）；P3b 的 worktree、本地与远端分支已删除（先核实已含在 main）。
