@@ -107,22 +107,29 @@ func checkContent(name, description *string, logo *shared.LogoProps) (*string, [
 	if logo != nil {
 		found = append(found, logo.Check()...)
 	}
+	return name, problemsOf(found)
+}
+
+// problemsOf is the problems found, nil ones left out, in their order; nil
+// when there is none.
+func problemsOf(found []*shared.FieldError) []shared.FieldError {
 	var problems []shared.FieldError
 	for _, f := range found {
 		if f != nil {
 			problems = append(problems, *f)
 		}
 	}
-	return name, problems
+	return problems
 }
 
-// maxName is the length of issue_views.name, in characters.
+// maxName is the length of issue_views.name and of user_favorites.name, a
+// folder's, in characters.
 const maxName = 255
 
-// cleanName is name without its surrounding white space, or the problem of
-// that: empty, longer than maxName characters, or with NUL, which Postgres
-// cannot store (spec 2.3; the column's CHECK holds only that it is not
-// empty).
+// cleanName is a view's or a folder's name without its surrounding white
+// space, or the problem of that: empty, longer than maxName characters, or
+// with NUL, which Postgres cannot store (P3b spec 2.3, P3c spec 2.5; each
+// column's CHECK holds only that it is not empty).
 func cleanName(name string) (string, *shared.FieldError) {
 	name = strings.TrimSpace(name)
 	switch {
