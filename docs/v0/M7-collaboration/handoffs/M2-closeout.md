@@ -20,6 +20,8 @@ created: 2026-09-28
 
 **处理结果（M7/P3b，视图的部分）：** 两种视图的列表都是集合型、不分页，按 `created_at` 倒序、同值按 `id`，没有游标载荷（“每种排序一个载荷”不适用，设计 §3.7）。跨模块的联表：navigation 的 SQL 不联表 `projects`、`workspaces`，项目的事实（工作区、`issue_views_view`）、项目与工作区的 `FOR SHARE` 都经端口（project 的 `navigation_ports.sql`、workspace 的 `WorkspaceDirectory`），`TestSQLCSchemaScope` 不加例外（[P3b spec](../specs/P3b-views.md) §2.1）。本条剩下收藏与最近访问的列表（P3c）。保持 open。
 
+**处理结果（M7/P3c，收藏的部分）：** 收藏的列表是集合型、不分页，按 `sequence DESC, id DESC`；目标的名字、图标与是否看得到经端口取（project 的 `NavigationTargets`、planning 的 `NavigationCycles`/`NavigationModules`、access 的 `Readable`），navigation 的 SQL 不联表别的模块的表（[P3c spec](../specs/P3c-favorites.md) §2.4、§2.5）。最近访问的部分随 P3d，保持 open。
+
 ## 2. stores 按会话分代（规则在总体设计 7.7）
 
 - **做什么**：M7 接上新接口的 stores、services 和页面照 [总体设计 7.7](../../v0-design.md) 写。M7 的范围（`d97c513` 上数出）：`git grep -n -E '^(export )?const [A-Za-z]+ = new [A-Za-z]+Service\(' -- web/apps/web` 中的 `WorkspaceNotificationService`、`IntakeWorkItemVersionService` 各 1 处，以及最近访问的 `WorkspaceService.fetchWorkspaceRecents` 1 处（`web/apps/web/core/components/home/widgets/recents/index.tsx`）。
@@ -47,6 +49,8 @@ created: 2026-09-28
 - **关闭条件**：M7 设计有延伸后的图，每条指向 `users`、工作项的外键写明去向。
 
 **处理结果（M7/P3b，`issue_views` 的部分）：** `owned_by_id → users` 照 Plane `ON DELETE CASCADE`，`created_by_id`、`updated_by_id → users` `SET NULL`；不指向工作项；`workspace_id`、`project_id` `CASCADE`，删除项目、工作区经 `navigation.delete_rows` 任务软删（设计 §4 的表与删除图，[P3b spec](../specs/P3b-views.md) §2.3、§2.7）。收藏与最近访问的两张表随 P3c。保持 open。
+
+**处理结果（M7/P3c，`user_favorites` 的部分）：** `user_id → users` 照 Plane `ON DELETE CASCADE`（v0 不物理删除账户，不触发），`created_by_id`、`updated_by_id → users` `SET NULL`；`parent_id` 自引用 `CASCADE`（清理物理删文件夹时带走与它同一时刻软删过的子行）；目标不是外键（`entity_identifier`），读时只给看得到的目标；`workspace_id`、`project_id` `CASCADE`，删除项目、工作区经 `navigation.delete_rows` 任务软删（[P3c spec](../specs/P3c-favorites.md) §2.3、§2.6）。最近访问的表随 P3d，保持 open。
 
 ## 6. CSP 的 `frame-src`
 

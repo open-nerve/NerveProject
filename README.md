@@ -140,7 +140,7 @@ M4列表专用三浏览器矩阵在当前 `make build` 之后运行 `pnpm --filt
 
   `notification.fanout`（M7/P1b）在 `default` 队列：工作项、评论、链接、关联、附件的写与自动归档有可通知的变化时，订阅者在写的同一事务里投递（一次发布的一批事件一次批量插入），参数是事件本身，描述与评论的 HTML 置空；nerve 自己的写（自动归档）的任务以最低优先级插入，几万个的积压在后台排空（每 100 毫秒至多取 `jobs.default_workers` 个）时，人的写的通知与别的任务排在它前面；别的任务持续到得比排空快时它们一直等，之后照常发出。任务先以 `FOR SHARE` 锁工作项行（已删除则什么都不写），之后只做不加锁的读，按此刻的 `issue.read` 与只看自己复核收件人，一条 `INSERT … ON CONFLICT DO NOTHING` 写出 `notifications`，重试不多写；超时30秒、最多5次，末次失败记 `notification fan-out exhausted`；等锁超过 `issue.write_lock_timeout` 时出错交River重试。工作项删除在原事务软删它的通知；项目/工作区删除为每个项目投一条 `notification.delete_rows`：先等该项目的工作项都被 `issue.delete_rows` 软删（每500毫秒snooze一次，以任务的创建时刻计满1小时仍未删完就报错交River退避），再按 `notification.delete_batch` 分批软删，超出 `notification.delete_budget` 时续跑。见 [P1b spec](docs/v0/M7-collaboration/specs/P1b-notification-core.md) §2.8、§2.9。
 
-  已存视图（M7/P3b）：项目/工作区删除在同一事务为每个本次删除项目投一条 `navigation.delete_rows`（参数为范围 `project`、项目id与原At/By），工作区另投一条范围 `workspace` 的（只删不属于项目的工作区视图，零项目也投）；任务不等工作项、不取项目或工作区的锁，按 `navigation.delete_batch` 以id升序分批加锁软删，超出 `navigation.delete_budget` 时续跑。见 [P3b spec](docs/v0/M7-collaboration/specs/P3b-views.md) §2.7。
+  已存视图与收藏（M7/P3b、P3c）：项目/工作区删除在同一事务为每个本次删除项目投一条 `navigation.delete_rows`（参数为范围 `project`、项目id与原At/By），工作区另投一条范围 `workspace` 的（只删不属于项目的行：工作区视图、文件夹与工作区视图的收藏，零项目也投）；任务按表的步骤先删视图、再删收藏（工作区那一步先文件夹、后条目），不等工作项、不取项目或工作区的锁，按 `navigation.delete_batch` 以id升序分批加锁软删，超出 `navigation.delete_budget` 时续跑。迭代、模块的删除与归档、项目的归档、视图的删除在原事务里软删所有人对目标的收藏。见 [P3b spec](docs/v0/M7-collaboration/specs/P3b-views.md) §2.7、[P3c spec](docs/v0/M7-collaboration/specs/P3c-favorites.md) §2.6。
 
   删除预算采用monotonic运行时钟；还有候选时以 `JobSnooze(0)` 继续，不消耗真实失败attempt。worker超时为预算+5s，真实错误按River默认最多25次尝试；末次失败记录 `issue row deletion exhausted`。数据库阻塞不承诺必在额外5s内结束。任务失败/耗尽后窗口仍隐藏；超过保留期的父project/workspace物理清理可通过CASCADE回收子链，迟到任务无害。迟到软删与父purge恰好交叠允许原40P01交River重试收敛，不承诺全系统无死锁。
 
@@ -198,7 +198,7 @@ M4列表专用三浏览器矩阵在当前 `make build` 之后运行 `pnpm --filt
 
 ## 链接抓取与出站安全
 
-服务端会按用户保存的URL抓取预览；P7提供链接API和真实后台抓取，详情页面接线由P11/P14完成。M6/P2 起模块的链接同样抓取（River任务 `planning.crawl_link`，`default` 队列），与工作项的链接共用一个抓取器和出站客户端（`server/internal/bootstrap/app.go` 的 `newLinkPreviews`），下面的限制同样适用。抓取只发HTTP(S) GET，不带userinfo、代理、cookie或凭证；每跳检查全部DNS候选、IANA特殊地址及启动时本机地址快照，只向已验证的IP拨号，保留Host/SNI和证书验证。接口地址采样失败会阻止构造。
+服务端会按用户保存的URL抓取预览；P7提供链接API和真实后台抓取，详情页面接线由P11/P14完成。M6/P2 起模块的链接同样抓取（River任务 `planning.crawl_link`，`default` 队列），与工作项的链接共用一个抓取器和出站客户端（`server/internal/bootstrap/link_previews.go` 的 `newLinkPreviews`，在 `app_ports.go` 接上），下面的限制同样适用。抓取只发HTTP(S) GET，不带userinfo、代理、cookie或凭证；每跳检查全部DNS候选、IANA特殊地址及启动时本机地址快照，只向已验证的IP拨号，保留Host/SNI和证书验证。接口地址采样失败会阻止构造。
 
 每次crawl最多页面和一个图标两个资源，每资源初始请求加至多5跳（至多6次GET）；两资源共享5秒预算，建连2秒。响应解压后页面至多1MiB、图标64KiB；图标只允许六类栅格MIME，拒绝SVG，以data URL返回，CSP不变。页面遵守BOM/HTTP/meta charset，保留无声明合法UTF-8。公开失败仅blocked/failed，诊断日志只记受控阶段/类别，不记原URL/query/body/error文本。
 

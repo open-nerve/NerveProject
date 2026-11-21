@@ -17,6 +17,8 @@ M1/P2 删掉了文档页、便签、仪表盘等功能。M7 设计收藏、最�
 
 M7 合并时：收藏和最近访问的接口没有 `page` 类型；首页的最近访问改用新接口；通知的实体没有已删除功能的类型。
 
+**处理结果（M7/P3c，收藏的部分）：** 收藏的 `entity_type` 只有 `project`、`cycle`、`module`、`view`、`folder`，没有 `page`（[P3c spec](../specs/P3c-favorites.md) §2.3、§2.4）。最近访问的接口随 P3d、首页随 P7，保持 open。
+
 逐项的结论写进该 M 的 review，然后 `status` 改为 `closed`。
 
 来源：[M1/P2 评审记录](../../M1-frontend-trim/reviews/P2-trim-content-review.md)第 7 节。

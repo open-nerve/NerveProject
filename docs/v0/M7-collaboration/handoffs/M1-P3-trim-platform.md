@@ -14,6 +14,8 @@ created: 2026-09-24
 
 M7 合并时：收藏的 `entity_type` 取值正好是 `project`、`view`、`cycle`、`module`、`folder`，前端的 `TFavoriteEntityType` 改用生成的类型；通知没有工时字段。
 
+**处理结果（M7/P3c，契约的部分）：** 收藏的 `entity_type` 在契约里是 `FavoriteKind`，恰为 `project`、`view`、`cycle`、`module`、`folder`（`view` 兼指项目视图与工作区视图），生成的类型在 `@nerve/api-client`（[P3c spec](../specs/P3c-favorites.md) §2.4）。前端的 `TFavoriteEntityType` 改用生成的类型随 P7，保持 open。
+
 逐项的结论写进该 M 的 review，然后 `status` 改为 `closed`。
 
 来源：[M1/P3 评审记录](../../M1-frontend-trim/reviews/P3-trim-platform-review.md)第 7 节。

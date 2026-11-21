@@ -22,7 +22,7 @@ import (
 
 // DecideMany is Authorize for each account (M7 P1b spec 2.7, R7; M7 design
 // 3.3), on the permission matrix's seed (prepareMatrix), each built as
-// app.go builds the Authorizer, from workspace's and project's Provide: for
+// app_ports.go builds the Authorizer, from workspace's and project's Provide: for
 // each workspace of the seed, gone, deleted, among them, and each project
 // of the seed, its own workspace's and every other's, one DecideMany of
 // issue.read for every registered account answers each as Authorize
