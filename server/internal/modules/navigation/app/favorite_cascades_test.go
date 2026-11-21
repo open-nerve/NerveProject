@@ -67,10 +67,10 @@ func cascadeEvents() (events map[string]shared.Event, ws, p, target uuid.UUID, a
 	}, ws, p, target, at, by
 }
 
-// One subscriber, beside the deletion of a deleted project's rows, takes the five events (spec 2.6, DP-15): a cycle's
-// or a module's deletion or archive deletes every account's favorites of it, a project's archive every account's
-// favorites whose project it is; each in the publisher's context, its transaction, at the event's moment and by its
-// actor, the target's id the event's entity's, the project's its project's.
+// One subscriber, beside the deletion of a deleted project's rows, takes the five events, those alone, sorted (spec
+// 2.6, DP-15): a cycle's or a module's deletion or archive deletes every account's favorites of it, a project's archive
+// every account's favorites whose project it is; each in the publisher's context, its transaction, at the event's
+// moment and by its actor, the target's id the event's entity's, the project's its project's.
 func TestFavoriteCascades(t *testing.T) {
 	events, _, p, target, at, by := cascadeEvents()
 	for _, tt := range []struct {
@@ -86,8 +86,8 @@ func TestFavoriteCascades(t *testing.T) {
 		t.Run(tt.kind, func(t *testing.T) {
 			log := &cascadeLog{t: t, want: t.Context()}
 			sub := app.NewFavoriteCascades(log)
-			if sub.Name != "navigation_favorite_cascades" || sub.HandleAll != nil || !reflect.DeepEqual(sub.Types, []string{"planning.cycle_deleted",
-				"planning.module_deleted", "planning.cycle_archived", "planning.module_archived", "project.archived"}) {
+			if sub.Name != "navigation_favorite_cascades" || sub.HandleAll != nil || !reflect.DeepEqual(sub.Types, []string{"planning.cycle_archived",
+				"planning.cycle_deleted", "planning.module_archived", "planning.module_deleted", "project.archived"}) {
 				t.Fatalf("subscriber %q of %v", sub.Name, sub.Types)
 			}
 			if err := sub.Handle(t.Context(), events[tt.kind]); err != nil {

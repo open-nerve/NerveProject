@@ -3,6 +3,8 @@ package app
 import (
 	"context"
 	"errors"
+	"maps"
+	"slices"
 	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/navigation/domain"
@@ -38,13 +40,13 @@ var cascades = map[string]cascade{
 // favorites of it; of a project archived, every account's favorites whose
 // project it is, its own and its cycles', modules' and views'; folders and
 // another project's stay. Each at the event's moment and by its actor, the
-// target's writer, through favorites, which locks them in id order. The
-// event is validated whole, by its type, before any write (cascadeOf); a
-// malformed one is refused, and its publisher's write with it. An
-// unarchive publishes nothing, and brings no favorite back.
+// target's writer, through favorites, which locks them in id order. It
+// takes the cascades' types, sorted. The event is validated whole, by its
+// type, before any write (cascadeOf); a malformed one is refused, and its
+// publisher's write with it. An unarchive publishes nothing, and brings no
+// favorite back.
 func NewFavoriteCascades(favorites FavoriteCascades) shared.EventSubscriber {
-	return shared.EventSubscriber{Name: "navigation_favorite_cascades", Types: []string{"planning.cycle_deleted", "planning.module_deleted",
-		"planning.cycle_archived", "planning.module_archived", "project.archived"}, Handle: func(ctx context.Context, e shared.Event) error {
+	return shared.EventSubscriber{Name: "navigation_favorite_cascades", Types: slices.Sorted(maps.Keys(cascades)), Handle: func(ctx context.Context, e shared.Event) error {
 		c, err := cascadeOf(e)
 		if err != nil {
 			return err
