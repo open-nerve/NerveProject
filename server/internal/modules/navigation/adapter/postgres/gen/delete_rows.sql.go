@@ -12,6 +12,53 @@ import (
 	"uuid"
 )
 
+const deleteProjectFavorites = `-- name: DeleteProjectFavorites :many
+UPDATE user_favorites AS t
+SET deleted_at = $1::timestamptz, updated_at = $1, updated_by_id = $2::uuid
+WHERE t.id IN (
+    SELECT r.id FROM user_favorites r
+    WHERE r.project_id = $3::uuid AND r.deleted_at IS NULL AND r.id > $4::uuid
+    ORDER BY r.id LIMIT $5 FOR NO KEY UPDATE)
+RETURNING t.id
+`
+
+type DeleteProjectFavoritesParams struct {
+	At        time.Time
+	DeletedBy uuid.UUID
+	ProjectID uuid.UUID
+	After     uuid.UUID
+	Batch     int32
+}
+
+// The deletion of a deleted project's favorites (P3c spec 2.6, R11): DeleteProjectViews' batch, of every account's
+// favorites whose project is it (the project's own, its cycles', modules' and views'). No folder has a project, so the
+// batch locks item rows alone, in id order (spec 2.8); a folder of the workspace holding one stays.
+func (q *Queries) DeleteProjectFavorites(ctx context.Context, arg DeleteProjectFavoritesParams) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, deleteProjectFavorites,
+		arg.At,
+		arg.DeletedBy,
+		arg.ProjectID,
+		arg.After,
+		arg.Batch,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const deleteProjectViews = `-- name: DeleteProjectViews :many
 UPDATE issue_views AS t
 SET deleted_at = $1::timestamptz, updated_at = $1, updated_by_id = $2::uuid
@@ -39,6 +86,100 @@ func (q *Queries) DeleteProjectViews(ctx context.Context, arg DeleteProjectViews
 		arg.At,
 		arg.DeletedBy,
 		arg.ProjectID,
+		arg.After,
+		arg.Batch,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const deleteWorkspaceFavoriteFolders = `-- name: DeleteWorkspaceFavoriteFolders :many
+UPDATE user_favorites AS t
+SET deleted_at = $1::timestamptz, updated_at = $1, updated_by_id = $2::uuid
+WHERE t.id IN (
+    SELECT r.id FROM user_favorites r
+    WHERE r.workspace_id = $3 AND r.project_id IS NULL AND r.entity_type = 'folder' AND r.deleted_at IS NULL
+        AND r.id > $4::uuid
+    ORDER BY r.id LIMIT $5 FOR NO KEY UPDATE)
+RETURNING t.id
+`
+
+type DeleteWorkspaceFavoriteFoldersParams struct {
+	At          time.Time
+	DeletedBy   uuid.UUID
+	WorkspaceID uuid.UUID
+	After       uuid.UUID
+	Batch       int32
+}
+
+// DeleteProjectFavorites' batch, of a deleted workspace's folders: the first of its own favorites, those without a
+// project, since the total order of favorite rows has the folder rows before the item rows (spec 2.8).
+func (q *Queries) DeleteWorkspaceFavoriteFolders(ctx context.Context, arg DeleteWorkspaceFavoriteFoldersParams) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, deleteWorkspaceFavoriteFolders,
+		arg.At,
+		arg.DeletedBy,
+		arg.WorkspaceID,
+		arg.After,
+		arg.Batch,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const deleteWorkspaceFavoriteItems = `-- name: DeleteWorkspaceFavoriteItems :many
+UPDATE user_favorites AS t
+SET deleted_at = $1::timestamptz, updated_at = $1, updated_by_id = $2::uuid
+WHERE t.id IN (
+    SELECT r.id FROM user_favorites r
+    WHERE r.workspace_id = $3 AND r.project_id IS NULL AND r.entity_type <> 'folder' AND r.deleted_at IS NULL
+        AND r.id > $4::uuid
+    ORDER BY r.id LIMIT $5 FOR NO KEY UPDATE)
+RETURNING t.id
+`
+
+type DeleteWorkspaceFavoriteItemsParams struct {
+	At          time.Time
+	DeletedBy   uuid.UUID
+	WorkspaceID uuid.UUID
+	After       uuid.UUID
+	Batch       int32
+}
+
+// DeleteProjectFavorites' batch, of a deleted workspace's own favorites that are no folders (its views'), after its
+// folders. Its projects' favorites are their projects' deletions', a folder's among them.
+func (q *Queries) DeleteWorkspaceFavoriteItems(ctx context.Context, arg DeleteWorkspaceFavoriteItemsParams) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, deleteWorkspaceFavoriteItems,
+		arg.At,
+		arg.DeletedBy,
+		arg.WorkspaceID,
 		arg.After,
 		arg.Batch,
 	)

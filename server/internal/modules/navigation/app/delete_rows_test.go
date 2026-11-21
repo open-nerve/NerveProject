@@ -11,48 +11,68 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/navigation/app"
 )
 
-// fakeViews holds a deleted parent's undeleted view ids under each scope; a batch soft-deletes the first Limit after
-// After, in a transaction only, and records which scope's statement it ran.
-type fakeViews struct {
-	live    map[app.DeletionScope][]uuid.UUID
+// fakeRows holds a deleted parent's undeleted row ids under each statement of either scope; a batch soft-deletes the
+// first Limit after After, in a transaction only, and records which statement it ran.
+type fakeRows struct {
+	live    map[string][]uuid.UUID
 	batches []app.RowBatch
-	scopes  []app.DeletionScope
+	ran     []string
 	inTx    bool
 	fail    error
 }
 
-func (f *fakeViews) delete(scope app.DeletionScope, b app.RowBatch) ([]uuid.UUID, error) {
+func (f *fakeRows) delete(statement string, b app.RowBatch) ([]uuid.UUID, error) {
 	if !f.inTx {
 		return nil, errors.New("batch outside a transaction")
 	}
-	f.batches, f.scopes = append(f.batches, b), append(f.scopes, scope)
+	f.batches, f.ran = append(f.batches, b), append(f.ran, statement)
 	if f.fail != nil {
 		return nil, f.fail
 	}
 	var out []uuid.UUID
-	for _, id := range f.live[scope] {
+	for _, id := range f.live[statement] {
 		if id.Compare(b.After) > 0 && len(out) < b.Limit {
 			out = append(out, id)
 		}
 	}
-	f.live[scope] = slices.DeleteFunc(f.live[scope], func(id uuid.UUID) bool { return slices.Contains(out, id) })
+	f.live[statement] = slices.DeleteFunc(f.live[statement], func(id uuid.UUID) bool { return slices.Contains(out, id) })
 	return out, nil
 }
 
-func (f *fakeViews) DeleteProjectViews(_ context.Context, b app.RowBatch) ([]uuid.UUID, error) {
-	return f.delete(app.ProjectScope, b)
+func (f *fakeRows) DeleteProjectViews(_ context.Context, b app.RowBatch) ([]uuid.UUID, error) {
+	return f.delete("project views", b)
 }
 
-func (f *fakeViews) DeleteWorkspaceViews(_ context.Context, b app.RowBatch) ([]uuid.UUID, error) {
-	return f.delete(app.WorkspaceScope, b)
+func (f *fakeRows) DeleteWorkspaceViews(_ context.Context, b app.RowBatch) ([]uuid.UUID, error) {
+	return f.delete("workspace views", b)
 }
 
-type fakeTx struct{ views *fakeViews }
+func (f *fakeRows) DeleteProjectFavorites(_ context.Context, b app.RowBatch) ([]uuid.UUID, error) {
+	return f.delete("project favorites", b)
+}
+
+func (f *fakeRows) DeleteWorkspaceFavoriteFolders(_ context.Context, b app.RowBatch) ([]uuid.UUID, error) {
+	return f.delete("workspace folders", b)
+}
+
+func (f *fakeRows) DeleteWorkspaceFavoriteItems(_ context.Context, b app.RowBatch) ([]uuid.UUID, error) {
+	return f.delete("workspace favorite items", b)
+}
+
+type fakeTx struct{ rows *fakeRows }
 
 func (f fakeTx) WithinTx(ctx context.Context, fn func(context.Context) error) error {
-	f.views.inTx = true
-	defer func() { f.views.inTx = false }()
+	f.rows.inTx = true
+	defer func() { f.rows.inTx = false }()
 	return fn(ctx)
+}
+
+// statements are each scope's statements in the deletion's order (P3c spec 2.6, R11): the views, then the favorites;
+// a workspace's own favorites its folders first, then the others without a project (the total order of favorite rows,
+// spec 2.8).
+var statements = map[app.DeletionScope][]string{
+	app.ProjectScope:   {"project views", "project favorites"},
+	app.WorkspaceScope: {"workspace views", "workspace folders", "workspace favorite items"},
 }
 
 func sortedIDs(n int) []uuid.UUID {
@@ -64,18 +84,20 @@ func sortedIDs(n int) []uuid.UUID {
 	return out
 }
 
-// viewsUnder is a deleted parent's n undeleted views under scope, and as many under the other scope, which a
-// deletion of scope must not reach.
-func viewsUnder(scope app.DeletionScope, n int) *fakeViews {
-	other := app.WorkspaceScope
-	if scope == app.WorkspaceScope {
-		other = app.ProjectScope
+// rowsUnder is a deleted parent's n undeleted rows under each statement of either scope, a later step's ids below an
+// earlier one's: a cursor carried from one step into the next would pass over them.
+func rowsUnder(n int) *fakeRows {
+	f := &fakeRows{live: map[string][]uuid.UUID{}}
+	for _, steps := range statements {
+		for _, s := range slices.Backward(steps) {
+			f.live[s] = sortedIDs(n)
+		}
 	}
-	return &fakeViews{live: map[app.DeletionScope][]uuid.UUID{scope: sortedIDs(n), other: sortedIDs(n)}}
+	return f
 }
 
-func newDeleteRows(views *fakeViews, now func() time.Time, batch int, budget time.Duration) *app.DeleteRows {
-	return app.NewDeleteRows(app.DeleteRowsDeps{Rows: views, Tx: fakeTx{views}, RuntimeNow: now, Batch: batch, Budget: budget})
+func newDeleteRows(rows *fakeRows, now func() time.Time, batch int, budget time.Duration) *app.DeleteRows {
+	return app.NewDeleteRows(app.DeleteRowsDeps{Views: rows, Favorites: rows, Tx: fakeTx{rows}, RuntimeNow: now, Batch: batch, Budget: budget})
 }
 
 var (
@@ -83,67 +105,90 @@ var (
 	at         = time.Date(2026, 11, 20, 9, 0, 0, 0, time.UTC)
 )
 
-// Without waiting for anything, each batch of the scope's views is its own transaction, carries the deletion's
-// original moment and actor and starts after the previous batch's greatest id; only an empty batch completes the work
-// (P3b spec 2.7). A project's deletion runs the project's statement alone, a workspace's the workspace's own: the
-// views of the workspace's projects are their projects' deletions'.
+// ranBatch is a batch as the fake saw it: its statement and its cursor.
+type ranBatch struct {
+	statement string
+	after     uuid.UUID
+}
+
+func ran(rows *fakeRows) []ranBatch {
+	out := make([]ranBatch, len(rows.batches))
+	for i, b := range rows.batches {
+		out[i] = ranBatch{rows.ran[i], b.After}
+	}
+	return out
+}
+
+// Without waiting for anything, the scope's steps run in order, each draining its table in batches: each batch its own
+// transaction, carrying the deletion's original moment and actor, and starting after the previous batch of its step's
+// greatest id, a step's first from the start; only an empty batch ends a step, and the last step's completes the work
+// (P3b spec 2.7, P3c spec 2.6). A project's deletion runs the project's statements alone, a workspace's the
+// workspace's own: the rows of the workspace's projects are their projects' deletions'.
 func TestDeleteRowsDrainsInBatches(t *testing.T) {
 	for _, scope := range []app.DeletionScope{app.ProjectScope, app.WorkspaceScope} {
 		t.Run(string(scope), func(t *testing.T) {
-			views := viewsUnder(scope, 5)
-			deleted := slices.Clone(views.live[scope])
-			got, err := newDeleteRows(views, time.Now, 2, time.Hour).Execute(t.Context(), scope, parent, at, by)
-			if err != nil || got != (app.DeleteRowsResult{Deleted: 5, Complete: true}) {
+			rows := rowsUnder(3)
+			var want []ranBatch
+			for _, s := range statements[scope] {
+				ids := rows.live[s]
+				want = append(want, ranBatch{s, uuid.UUID{}}, ranBatch{s, ids[1]}, ranBatch{s, ids[2]})
+			}
+			got, err := newDeleteRows(rows, time.Now, 2, time.Hour).Execute(t.Context(), scope, parent, at, by)
+			if err != nil || got != (app.DeleteRowsResult{Deleted: 3 * len(statements[scope]), Complete: true}) {
 				t.Fatalf("Execute = %+v, %v", got, err)
 			}
-			afters := []uuid.UUID{{}, deleted[1], deleted[3], deleted[4]}
-			if len(views.batches) != len(afters) || len(views.live[scope]) != 0 {
-				t.Fatalf("batches=%+v live=%v", views.batches, views.live)
+			if !slices.Equal(ran(rows), want) {
+				t.Fatalf("batches %+v; want %+v", ran(rows), want)
 			}
-			for i, b := range views.batches {
-				if views.scopes[i] != scope || b.ParentID != parent || b.Limit != 2 || !b.At.Equal(at) || b.By != by || b.After != afters[i] {
-					t.Errorf("batch %d = %s %+v; want %s after %s at %s by %s", i, views.scopes[i], b, scope, afters[i], at, by)
+			for i, b := range rows.batches {
+				if b.ParentID != parent || b.Limit != 2 || !b.At.Equal(at) || b.By != by {
+					t.Errorf("batch %d = %+v; want of %s at %s by %s", i, b, parent, at, by)
 				}
 			}
-			for s, ids := range views.live {
-				if s != scope && len(ids) != 5 {
-					t.Errorf("the %s views: %d left of 5; want none deleted", s, len(ids))
+			for s, ids := range rows.live {
+				if mine := slices.Contains(statements[scope], s); mine && len(ids) != 0 || !mine && len(ids) != 3 {
+					t.Errorf("the %s: %d left of 3; want none of the scope's, all of the other's", s, len(ids))
 				}
 			}
 		})
 	}
 	failed := errors.New("lock timeout")
-	views := viewsUnder(app.ProjectScope, 3)
-	views.fail = failed
-	if _, err := newDeleteRows(views, time.Now, 2, time.Hour).Execute(t.Context(), app.ProjectScope, parent, at, by); !errors.Is(err, failed) {
-		t.Fatalf("a failed batch = %v", err)
+	rows := rowsUnder(3)
+	rows.fail = failed
+	if _, err := newDeleteRows(rows, time.Now, 2, time.Hour).Execute(t.Context(), app.ProjectScope, parent, at, by); !errors.Is(err, failed) || len(rows.batches) != 1 {
+		t.Fatalf("a failed batch = %v after %d batches; want its failure, at once", err, len(rows.batches))
 	}
 	cancelled, cancel := context.WithCancel(t.Context())
 	cancel()
-	views = viewsUnder(app.WorkspaceScope, 3)
-	if _, err := newDeleteRows(views, time.Now, 2, time.Hour).Execute(cancelled, app.WorkspaceScope, parent, at, by); !errors.Is(err, context.Canceled) || len(views.batches) != 0 {
-		t.Fatalf("a cancelled run=%v batches=%v", err, views.batches)
+	rows = rowsUnder(3)
+	if _, err := newDeleteRows(rows, time.Now, 2, time.Hour).Execute(cancelled, app.WorkspaceScope, parent, at, by); !errors.Is(err, context.Canceled) || len(rows.batches) != 0 {
+		t.Fatalf("a cancelled run=%v batches=%v", err, rows.batches)
 	}
 }
 
-// At the budget the job stops before the next batch, incomplete, without writing: River snoozes it and a later run
-// continues.
+// The steps share one budget: at it the job stops before the next batch, incomplete, without writing, whichever step
+// it is in, and River snoozes it. A later run scans from the start: a step done before finds nothing left, and the
+// step it stopped in starts over from the start and continues with what is left.
 func TestDeleteRowsStopsAtItsBudget(t *testing.T) {
-	views := viewsUnder(app.ProjectScope, 3)
+	rows := rowsUnder(3)
 	start := time.Now()
 	calls := 0
-	// The first reading starts the budget; the second, before the first batch, is within it; the third, before the
-	// second batch, is past it.
+	// Each reading ten seconds after the one before: the first starts the 45 seconds; those before the views' three
+	// batches and the favorites' first are within them; the next, before the favorites' second batch, is past them.
 	now := func() time.Time {
 		calls++
-		if calls < 3 {
-			return start
-		}
-		return start.Add(time.Minute)
+		return start.Add(time.Duration(calls) * 10 * time.Second)
 	}
-	got, err := newDeleteRows(views, now, 2, time.Minute).Execute(t.Context(), app.ProjectScope, parent, at, by)
-	if err != nil || got != (app.DeleteRowsResult{Deleted: 2}) || len(views.live[app.ProjectScope]) != 1 {
-		t.Fatalf("Execute = %+v, %v, %d left", got, err, len(views.live[app.ProjectScope]))
+	got, err := newDeleteRows(rows, now, 2, 45*time.Second).Execute(t.Context(), app.ProjectScope, parent, at, by)
+	if err != nil || got != (app.DeleteRowsResult{Deleted: 5}) || len(rows.live["project views"]) != 0 || len(rows.live["project favorites"]) != 1 {
+		t.Fatalf("Execute = %+v, %v, %v left; want the views and two favorites deleted, one favorite left", got, err, rows.live)
+	}
+	left := rows.live["project favorites"][0]
+	rows.batches, rows.ran = nil, nil
+	got, err = newDeleteRows(rows, time.Now, 2, time.Hour).Execute(t.Context(), app.ProjectScope, parent, at, by)
+	want := []ranBatch{{"project views", uuid.UUID{}}, {"project favorites", uuid.UUID{}}, {"project favorites", left}}
+	if err != nil || got != (app.DeleteRowsResult{Deleted: 1, Complete: true}) || !slices.Equal(ran(rows), want) {
+		t.Fatalf("the later run = %+v, %v, batches %+v; want %+v", got, err, ran(rows), want)
 	}
 }
 
@@ -167,9 +212,9 @@ func TestDeleteRowsRefusesIncompleteArguments(t *testing.T) {
 			return err
 		},
 	} {
-		views := viewsUnder(app.ProjectScope, 1)
-		if err := run(newDeleteRows(views, time.Now, 2, time.Hour)); err == nil || len(views.batches) != 0 {
-			t.Errorf("%s: err=%v batches=%v; want a refusal before any write", name, err, views.batches)
+		rows := rowsUnder(1)
+		if err := run(newDeleteRows(rows, time.Now, 2, time.Hour)); err == nil || len(rows.batches) != 0 {
+			t.Errorf("%s: err=%v batches=%v; want a refusal before any write", name, err, rows.batches)
 		}
 	}
 }

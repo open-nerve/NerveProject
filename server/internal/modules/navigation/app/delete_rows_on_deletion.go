@@ -9,10 +9,11 @@ import (
 )
 
 // NewDeleteRowsOnDeletion enqueues, within the deletion's transaction, the
-// deletion of the views of each project the event deletes and, for a
-// workspace's deletion, of the workspace's own views, at the event's moment
-// and by its actor (P3b spec 2.7): a workspace's deletion publishes no
-// event of its projects, it lists them in its one event.
+// deletion of the views and the favorites of each project the event
+// deletes and, for a workspace's deletion, of the workspace's own, at the
+// event's moment and by its actor (P3b spec 2.7, P3c spec 2.6): a
+// workspace's deletion publishes no event of its projects, it lists them in
+// its one event.
 func NewDeleteRowsOnDeletion(rows RowDeletions) shared.EventSubscriber {
 	return shared.EventSubscriber{Name: "navigation_delete_rows_on_deletion", Types: []string{"project.deleted", "workspace.deleted"}, Handle: func(ctx context.Context, e shared.Event) error {
 		projects, err := deletedProjects(e)

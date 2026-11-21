@@ -12,8 +12,8 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/platform/jobs"
 )
 
-// DeleteRowsKind identifies the request-driven deletion of the views of a
-// deleted project, or of a deleted workspace's own.
+// DeleteRowsKind identifies the request-driven deletion of the views and
+// the favorites of a deleted project, or of a deleted workspace's own.
 const DeleteRowsKind = "navigation.delete_rows"
 
 // DeleteRowsArgs keeps the scope, the parent and the deletion's moment and

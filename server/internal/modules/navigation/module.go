@@ -4,12 +4,12 @@
 // settings it shows its work items with, and its owner. Its API
 // (api/modules/navigation.yaml) lists a project's and a workspace's views,
 // creates them, and reads, changes and deletes one by its id (P3b spec
-// 2.4, 2.5). A project's or a workspace's
-// deletion enqueues, in its transaction, the deletion of each deleted
-// project's views and of the workspace's own (P3b spec 2.7); the 60-day
-// purge removes the deleted ones (Provide). It owns the user_favorites
-// table too, each row one account's favorite in a workspace (M7 design
-// 3.8, P3c spec 2.3), which the purge removes after the views.
+// 2.4, 2.5). It owns the user_favorites table too, each row one account's
+// favorite in a workspace (M7 design 3.8, P3c spec 2.3). A project's or a
+// workspace's deletion enqueues, in its transaction, the deletion of each
+// deleted project's views and favorites and of the workspace's own (P3b
+// spec 2.7, P3c spec 2.6); the 60-day purge removes the deleted ones, the
+// favorites after the views (Provide).
 package navigation
 
 import (
@@ -101,8 +101,8 @@ func New(d Deps) *Module {
 			CreateProjectView: app.NewCreateProjectView(writes), CreateWorkspaceView: app.NewCreateWorkspaceView(writes),
 			UpdateView: app.NewUpdateView(writes), DeleteView: app.NewDeleteView(writes),
 		},
-		deleteRows: app.NewDeleteRows(app.DeleteRowsDeps{Rows: store, Tx: d.JobTx, RuntimeNow: d.RuntimeNow, Batch: d.DeleteBatch,
-			Budget: d.DeleteBudget}),
+		deleteRows: app.NewDeleteRows(app.DeleteRowsDeps{Views: store, Favorites: store, Tx: d.JobTx, RuntimeNow: d.RuntimeNow,
+			Batch: d.DeleteBatch, Budget: d.DeleteBudget}),
 		deleteBudget: d.DeleteBudget, logger: d.Logger,
 	}
 }

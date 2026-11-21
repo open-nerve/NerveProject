@@ -99,28 +99,30 @@ type ViewWriter interface {
 	DeleteView(ctx context.Context, id uuid.UUID, at time.Time, by uuid.UUID) error
 }
 
-// DeletionScope is whose views a deletion of the views deletes (P3b spec
-// 2.7): a deleted project's, or a deleted workspace's own, those without a
-// project; the views of a workspace's projects are their projects'.
+// DeletionScope is whose rows a deletion of the views and the favorites
+// deletes (P3b spec 2.7, P3c spec 2.6): a deleted project's, or a deleted
+// workspace's own, those without a project; the rows of a workspace's
+// projects are their projects'.
 type DeletionScope string
 
-// The scopes of a deletion of the views.
+// The scopes of a deletion of the views and the favorites.
 const (
 	ProjectScope   DeletionScope = "project"
 	WorkspaceScope DeletionScope = "workspace"
 )
 
 // RowDeletions inserts, in the publishing transaction ctx carries, the
-// deletion of the views of the scope's parent id, a deleted project or a
-// deleted workspace, at the deletion's moment at and by its actor by
-// (spec 2.7): navigation.delete_rows.
+// deletion of the views and the favorites of the scope's parent id, a
+// deleted project or a deleted workspace, at the deletion's moment at and
+// by its actor by (P3b spec 2.7, P3c spec 2.6): navigation.delete_rows.
 type RowDeletions interface {
 	Enqueue(ctx context.Context, scope DeletionScope, id uuid.UUID, at time.Time, by uuid.UUID) error
 }
 
-// RowBatch is one batch of a deletion of the views: at most Limit of the
-// undeleted views of the deleted parent ParentID whose ids are greater than
-// After, in id order, soft-deleted at At by By.
+// RowBatch is one batch of a step of a deletion of the views and the
+// favorites: at most Limit of the step's undeleted rows of the deleted
+// parent ParentID whose ids are greater than After, in id order,
+// soft-deleted at At by By.
 type RowBatch struct {
 	ParentID, After, By uuid.UUID
 	Limit               int
@@ -135,4 +137,19 @@ type RowBatch struct {
 type ViewDeletions interface {
 	DeleteProjectViews(ctx context.Context, b RowBatch) ([]uuid.UUID, error)
 	DeleteWorkspaceViews(ctx context.Context, b RowBatch) ([]uuid.UUID, error)
+}
+
+// FavoriteDeletions soft-deletes, in the transaction ctx carries, a batch
+// of every account's favorites of a deleted project, those whose project it
+// is, or of a deleted workspace's own, those without a project, each locked
+// FOR NO KEY UPDATE in id order before it writes them, and answers their
+// ids (P3c spec 2.6, R11). A project's are item rows alone, a folder having
+// no project; a workspace's own are its folders, one batch, and its other
+// favorites, its views', another, which the deletion runs after the
+// folders: the total order of favorite rows has the folder rows first
+// (spec 2.8). A favorite deleted before keeps its deletion.
+type FavoriteDeletions interface {
+	DeleteProjectFavorites(ctx context.Context, b RowBatch) ([]uuid.UUID, error)
+	DeleteWorkspaceFavoriteFolders(ctx context.Context, b RowBatch) ([]uuid.UUID, error)
+	DeleteWorkspaceFavoriteItems(ctx context.Context, b RowBatch) ([]uuid.UUID, error)
 }
