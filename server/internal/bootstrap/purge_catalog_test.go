@@ -151,8 +151,8 @@ func purgeCatalogGaps(t *testing.T, pool *pgxpool.Pool, tables, provided []strin
 func TestPurgeCatalogCoversTablesAndIncomingKeys(t *testing.T) {
 	pool := openPool(t, pgtest.NewDatabase(t))
 	tables := purgeTables(t, pool)
-	if len(tables) != 35 {
-		t.Fatalf("deleted_at business tables=%d: %v; want 35", len(tables), tables)
+	if len(tables) != 36 {
+		t.Fatalf("deleted_at business tables=%d: %v; want 36", len(tables), tables)
 	}
 	// Check the unmodified business graph before adding the isolated non-purge probe.
 	keysTo(t, pool, "issues")

@@ -43,6 +43,38 @@ func seedViews(t *testing.T, pool *pgxpool.Pool, project, owner uuid.UUID) {
 	}
 }
 
+// seedFavorites writes, directly, three favorites of owner (M7 P3c spec
+// 2.3): his favorite of project, and in its workspace his folder named for
+// the project and his favorite of a workspace's view in it, the favorite
+// older than the folder it was moved into. Each is deleted when and as its
+// parent is, as seedViews' views: the project's favorite with the project,
+// the folder and the favorite in it with the workspace (spec 2.6). The
+// purge guards see each table's rows deleted by its own statements as the
+// runtime role; a folder's purge would take younger favorites in it
+// through parent_id's CASCADE, which runs as the table's owner
+// (navigation's TestPurgeUserFavorites pins that cascade).
+func seedFavorites(t *testing.T, pool *pgxpool.Pool, project, owner uuid.UUID) {
+	t.Helper()
+	favorite, folder := uuid.NewV7(), uuid.NewV7()
+	if favorite.Compare(folder) > 0 {
+		favorite, folder = folder, favorite
+	}
+	if tag, err := pool.Exec(pgtest.Soon(t), `INSERT INTO user_favorites (id, workspace_id, project_id, user_id, entity_type, entity_identifier, name,
+			parent_id, sequence, created_by_id, updated_by_id, created_at, updated_at, deleted_at)
+		SELECT $1::uuid, p.workspace_id, p.id, $4::uuid, 'project', p.id, NULL, NULL::uuid, 65535, $4::uuid,
+			CASE WHEN p.deleted_at IS NULL THEN $4::uuid ELSE p.updated_by_id END, coalesce(p.deleted_at, now()), coalesce(p.deleted_at, now()), p.deleted_at
+		FROM projects AS p WHERE p.id = $5
+		UNION ALL SELECT $2::uuid, w.id, NULL, $4::uuid, 'folder', NULL, 'Pinned ' || p.identifier, NULL::uuid, 75535, $4::uuid,
+			CASE WHEN w.deleted_at IS NULL THEN $4::uuid ELSE w.updated_by_id END, coalesce(w.deleted_at, now()), coalesce(w.deleted_at, now()), w.deleted_at
+		FROM projects AS p JOIN workspaces AS w ON w.id = p.workspace_id WHERE p.id = $5
+		UNION ALL SELECT $3::uuid, w.id, NULL, $4::uuid, 'view', gen_random_uuid(), NULL, $2::uuid, 85535, $4::uuid,
+			CASE WHEN w.deleted_at IS NULL THEN $4::uuid ELSE w.updated_by_id END, coalesce(w.deleted_at, now()), coalesce(w.deleted_at, now()), w.deleted_at
+		FROM projects AS p JOIN workspaces AS w ON w.id = p.workspace_id WHERE p.id = $5`,
+		uuid.NewV7(), folder, favorite, owner, project); err != nil || tag.RowsAffected() != 3 {
+		t.Fatalf("seeding the favorites of %s and its workspace: %d rows, %v; want 3", project, tag.RowsAffected(), err)
+	}
+}
+
 // holdNavigationDeletion holds a row lock on one of the project's live
 // views: the first batch of the deletion of the project's views waits for
 // it, so the views stay as they were while the app and its River worker

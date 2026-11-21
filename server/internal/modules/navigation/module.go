@@ -7,7 +7,9 @@
 // 2.4, 2.5). A project's or a workspace's
 // deletion enqueues, in its transaction, the deletion of each deleted
 // project's views and of the workspace's own (P3b spec 2.7); the 60-day
-// purge removes the deleted ones (Provide).
+// purge removes the deleted ones (Provide). It owns the user_favorites
+// table too, each row one account's favorite in a workspace (M7 design
+// 3.8, P3c spec 2.3), which the purge removes after the views.
 package navigation
 
 import (
@@ -29,13 +31,17 @@ type Provided struct {
 	Purger *app.Purger
 }
 
-// Provide builds, over pool, the navigation module's purge: its one table,
-// which no other table references, so the module purges before the issue
-// module (M7 design 4.3, P3b spec 2.7).
+// Provide builds, over pool, the navigation module's purge: the views,
+// then the favorites (P3c spec 2.6). No other table references either, a
+// folder's favorites referencing the folder within its own table, so the
+// module purges before the issue module (M7 design 4.3, P3b spec 2.7).
 func Provide(pool *pgxpool.Pool) Provided {
 	store := postgresadapter.New(pool)
 	return Provided{
-		Purger: app.NewPurger([]app.PurgeStep{{Table: "issue_views", Delete: store.PurgeIssueViews}}),
+		Purger: app.NewPurger([]app.PurgeStep{
+			{Table: "issue_views", Delete: store.PurgeIssueViews},
+			{Table: "user_favorites", Delete: store.PurgeUserFavorites},
+		}),
 	}
 }
 
