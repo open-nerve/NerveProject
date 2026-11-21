@@ -16,10 +16,11 @@
 // asynchronous deletion of the deleted projects' planning rows in the
 // publishing transaction; the 60-day purge removes them. It tells the issue
 // module about the cycles and modules a work item's write names and those
-// that keep work items from automatic archival (IssueTargets), and the names
+// that keep work items from automatic archival (IssueTargets), the names
 // of the cycles and modules of the projects a list of work items ordered by
-// them reads (IssueDirectory); it asks the issue module to move the
-// unfinished work items of a cycle that has ended to another
+// them reads (IssueDirectory), and the navigation module about the cycles
+// and modules favorites name (NavigationTargets); it asks the issue module
+// to move the unfinished work items of a cycle that has ended to another
 // (IssueTransfer).
 package planning
 
@@ -109,16 +110,18 @@ type (
 
 // Provided are the adapters bootstrap builds before wiring the modules.
 type Provided struct {
-	Purger         *app.Purger
-	IssueTargets   IssueTargets
-	IssueDirectory IssueDirectory
+	Purger            *app.Purger
+	IssueTargets      IssueTargets
+	IssueDirectory    IssueDirectory
+	NavigationTargets NavigationTargets
 }
 
 // Provide builds, over pool, planning's purge: its tables, children before
 // parents, so no parent's CASCADE takes a child's rows first (M6 P2 spec
 // 2.4, P3b spec 2.5); its issue targets, which read a project's facts through projects,
-// project's PlanningProjects converted; and its issue directory. Neither
-// the purge nor the directory uses projects.
+// project's PlanningProjects converted; its issue directory; and its
+// navigation targets (M7 P3c spec 2.5). None but the issue targets uses
+// projects.
 func Provide(pool *pgxpool.Pool, projects app.FactsReader) Provided {
 	store := postgresadapter.New(pool)
 	return Provided{
@@ -130,8 +133,9 @@ func Provide(pool *pgxpool.Pool, projects app.FactsReader) Provided {
 			{Table: "cycle_user_properties", Delete: store.PurgeCycleUserProperties},
 			{Table: "cycles", Delete: store.PurgeCycles},
 		}),
-		IssueTargets:   app.NewIssueTargets(projects, store),
-		IssueDirectory: app.NewIssueDirectory(store),
+		IssueTargets:      app.NewIssueTargets(projects, store),
+		IssueDirectory:    app.NewIssueDirectory(store),
+		NavigationTargets: store,
 	}
 }
 

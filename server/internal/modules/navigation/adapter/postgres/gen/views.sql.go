@@ -293,6 +293,22 @@ func (q *Queries) LockView(ctx context.Context, id uuid.UUID) (LockViewRow, erro
 	return i, err
 }
 
+const shareView = `-- name: ShareView :exec
+SELECT id
+FROM issue_views
+WHERE id = $1 AND deleted_at IS NULL
+FOR SHARE
+`
+
+// The undeleted view a favorite names, locked FOR SHARE after its workspace's and its project's FOR SHARE (P3c spec
+// 2.8): its deletion and its change, which lock it FOR UPDATE, wait for the favorite's write, and it for them. After a
+// wait Postgres evaluates deleted_at IS NULL again on the row's newest version, so a view deleted meanwhile is not
+// locked, which the write's reads under its locks find.
+func (q *Queries) ShareView(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.Exec(ctx, shareView, id)
+	return err
+}
+
 const updateView = `-- name: UpdateView :exec
 UPDATE issue_views
 SET name               = $1,
@@ -333,4 +349,61 @@ func (q *Queries) UpdateView(ctx context.Context, arg UpdateViewParams) error {
 		arg.ID,
 	)
 	return err
+}
+
+const viewTargets = `-- name: ViewTargets :many
+SELECT id, workspace_id, project_id, name, description, logo_props, filters, display_filters, display_properties,
+       owned_by_id, created_at, updated_at
+FROM issue_views
+WHERE id = ANY($1::uuid[]) AND deleted_at IS NULL
+`
+
+type ViewTargetsRow struct {
+	ID                uuid.UUID
+	WorkspaceID       uuid.UUID
+	ProjectID         *uuid.UUID
+	Name              string
+	Description       string
+	LogoProps         []byte
+	Filters           []byte
+	DisplayFilters    []byte
+	DisplayProperties []byte
+	OwnedByID         uuid.UUID
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+}
+
+// The undeleted views among the ids asked, of either kind and any workspace, read without a lock: the views favorites
+// name (M7 P3c spec 2.4, 2.5). A deleted view and an id of none read no row. The primary key serves it.
+func (q *Queries) ViewTargets(ctx context.Context, ids []uuid.UUID) ([]ViewTargetsRow, error) {
+	rows, err := q.db.Query(ctx, viewTargets, ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ViewTargetsRow
+	for rows.Next() {
+		var i ViewTargetsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkspaceID,
+			&i.ProjectID,
+			&i.Name,
+			&i.Description,
+			&i.LogoProps,
+			&i.Filters,
+			&i.DisplayFilters,
+			&i.DisplayProperties,
+			&i.OwnedByID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

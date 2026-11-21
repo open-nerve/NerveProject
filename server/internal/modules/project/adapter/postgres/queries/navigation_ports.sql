@@ -14,3 +14,11 @@ SELECT workspace_id, issue_views_view
 FROM projects
 WHERE id = sqlc.arg(id) AND deleted_at IS NULL
 FOR SHARE;
+
+-- name: NavigationTargets :many
+-- The projects favorites name (M7 P3c spec 2.4, 2.5), read by the ids asked, without a lock: each undeleted one's
+-- workspace, name, icon and whether it is archived, another workspace's too. A deleted project and an id of none read
+-- no row. The primary key serves it.
+SELECT id, workspace_id, name, logo_props, (archived_at IS NOT NULL)::boolean AS archived
+FROM projects
+WHERE id = ANY(sqlc.arg(ids)::uuid[]) AND deleted_at IS NULL;

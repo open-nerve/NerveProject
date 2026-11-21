@@ -49,6 +49,15 @@ func Provide(pool *pgxpool.Pool) Provided {
 // bootstrap converts project's NavigationFacts into them.
 type ProjectFacts = app.ProjectFacts
 
+// ProjectGrant, ProjectTarget and PlanningTarget are the values the
+// favorites' ports answer (P3c spec 2.5): bootstrap converts access's
+// grants, project's and planning's navigation targets into them.
+type (
+	ProjectGrant   = app.ProjectGrant
+	ProjectTarget  = app.ProjectTarget
+	PlanningTarget = app.PlanningTarget
+)
+
 // Deps are what the module needs.
 type Deps struct {
 	Pool *pgxpool.Pool
@@ -66,6 +75,13 @@ type Deps struct {
 	// Workspaces are workspace's WorkspaceDirectory, converted
 	// (bootstrap/navigation_ports.go).
 	Workspaces app.Workspaces
+	// Readable is access's ReadableProjects, ProjectTargets project's
+	// NavigationTargets and PlanningTargets planning's, each converted
+	// (bootstrap/navigation_ports.go): the projects a caller reads, and the
+	// targets favorites name (P3c spec 2.5).
+	Readable        app.Readable
+	ProjectTargets  app.ProjectTargets
+	PlanningTargets app.PlanningTargets
 	// ListSettings and WorkspaceListSettings check a project's and a
 	// workspace's views' words: the issue module's two, as issue.Provide
 	// offers them (P3b spec 2.4).

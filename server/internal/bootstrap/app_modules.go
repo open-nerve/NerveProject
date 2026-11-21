@@ -95,7 +95,9 @@ func (w *wiring) navigationModule() *navigation.Module {
 	return navigation.New(navigation.Deps{Pool: w.pool, Tx: w.tx, ReadTx: w.readTx, JobTx: w.issueTx, RuntimeNow: time.Now, Logger: w.logger,
 		DeleteBatch: w.cfg.Navigation.DeleteBatch, DeleteBudget: w.cfg.Navigation.DeleteBudget, Clock: w.businessClock, Authorizer: w.authorizer,
 		Projects: navigationProjects{projects: w.projectPorts.NavigationProjects}, Workspaces: navigationWorkspaces{directory: w.workspacePorts.WorkspaceDirectory},
-		ListSettings: w.issuePorts.ListSettings, WorkspaceListSettings: w.issuePorts.WorkspaceListSettings})
+		ListSettings: w.issuePorts.ListSettings, WorkspaceListSettings: w.issuePorts.WorkspaceListSettings,
+		Readable: navigationReadable{readable: w.readable}, ProjectTargets: navigationProjectTargets{targets: w.projectPorts.NavigationTargets},
+		PlanningTargets: navigationPlanningTargets{targets: w.planningPorts.NavigationTargets}})
 }
 
 func (w *wiring) projectModule() *project.Module {

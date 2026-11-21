@@ -64,3 +64,21 @@ SET deleted_at    = sqlc.arg(at)::timestamptz,
     updated_at    = sqlc.arg(at),
     updated_by_id = sqlc.arg(by)::uuid
 WHERE id = sqlc.arg(id) AND deleted_at IS NULL;
+
+-- name: ViewTargets :many
+-- The undeleted views among the ids asked, of either kind and any workspace, read without a lock: the views favorites
+-- name (M7 P3c spec 2.4, 2.5). A deleted view and an id of none read no row. The primary key serves it.
+SELECT id, workspace_id, project_id, name, description, logo_props, filters, display_filters, display_properties,
+       owned_by_id, created_at, updated_at
+FROM issue_views
+WHERE id = ANY(sqlc.arg(ids)::uuid[]) AND deleted_at IS NULL;
+
+-- name: ShareView :exec
+-- The undeleted view a favorite names, locked FOR SHARE after its workspace's and its project's FOR SHARE (P3c spec
+-- 2.8): its deletion and its change, which lock it FOR UPDATE, wait for the favorite's write, and it for them. After a
+-- wait Postgres evaluates deleted_at IS NULL again on the row's newest version, so a view deleted meanwhile is not
+-- locked, which the write's reads under its locks find.
+SELECT id
+FROM issue_views
+WHERE id = sqlc.arg(id) AND deleted_at IS NULL
+FOR SHARE;

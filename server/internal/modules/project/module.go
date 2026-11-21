@@ -16,7 +16,8 @@
 // work item's project and state (NotificationNames) and the identifiers of
 // the projects of the work items a page of notifications names
 // (NotificationIdentifiers), and the navigation module a project's facts
-// and its lock (NavigationProjects).
+// and its lock (NavigationProjects) and the projects favorites name
+// (NavigationTargets).
 package project
 
 import (
@@ -260,6 +261,7 @@ type Provided struct {
 	IssueProjects           IssueProjects
 	PlanningProjects        PlanningProjects
 	NavigationProjects      NavigationProjects
+	NavigationTargets       NavigationTargets
 	NotificationNames       NotificationNames
 	NotificationIdentifiers NotificationIdentifiers
 }
@@ -278,7 +280,7 @@ func Provide(pool *pgxpool.Pool, protected []postgres.ProtectedReference) Provid
 		}),
 		AssetParents: store, ArchivePolicies: store, ProjectAccess: store, ProjectAccessMany: store, MemberProjectAccess: store,
 		ProjectMembershipCounts: store, IssueProjects: store, PlanningProjects: store, NavigationProjects: store, NotificationNames: store,
-		NotificationIdentifiers: store,
+		NotificationIdentifiers: store, NavigationTargets: store,
 	}
 }
 
