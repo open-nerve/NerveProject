@@ -40,3 +40,12 @@ func (s *Store) PurgeUserFavorites(ctx context.Context, b app.PurgeBatch) (app.P
 		return row.Scanned, row.Deleted, row.AfterID, err
 	})
 }
+
+// PurgeUserRecentVisits commits one bounded page of the recent visits'
+// purge.
+func (s *Store) PurgeUserRecentVisits(ctx context.Context, b app.PurgeBatch) (app.PurgePage, error) {
+	return s.purgePage(b, "user recent visits", func(q *gen.Queries, cutoff *time.Time, after uuid.UUID, limit int32) (int32, int32, uuid.UUID, error) {
+		row, err := q.PurgeUserRecentVisits(ctx, gen.PurgeUserRecentVisitsParams{Cutoff: cutoff, AfterID: after, BatchLimit: limit})
+		return row.Scanned, row.Deleted, row.AfterID, err
+	})
+}

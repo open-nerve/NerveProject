@@ -44,3 +44,18 @@ type UserFavorite struct {
 	UpdatedAt        time.Time
 	DeletedAt        *time.Time
 }
+
+type UserRecentVisit struct {
+	ID               uuid.UUID
+	WorkspaceID      uuid.UUID
+	ProjectID        uuid.UUID
+	UserID           uuid.UUID
+	EntityType       string
+	EntityIdentifier uuid.UUID
+	VisitedAt        time.Time
+	CreatedByID      *uuid.UUID
+	UpdatedByID      *uuid.UUID
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+	DeletedAt        *time.Time
+}

@@ -242,6 +242,12 @@ var rules = map[shared.Action]Rule{
 	// sees and may favor, are the navigation module's.
 	"favorite.read":  {Level: LevelWorkspace, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember}},
 	"favorite.write": {Level: LevelWorkspace, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember}},
+	// One's own recent visits: every active member of the workspace, its
+	// guests too (M7 design 3.9, 3.10, P3d spec 2.2; Plane's list alike).
+	// That one reads and records his own only, and that a target is one he
+	// sees now, are the navigation module's.
+	"recent_visit.read":  {Level: LevelWorkspace, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember, shared.RoleGuest}},
+	"recent_visit.write": {Level: LevelWorkspace, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember, shared.RoleGuest}},
 }
 
 // RuleFor returns a copy of the row of action, every field of it and its

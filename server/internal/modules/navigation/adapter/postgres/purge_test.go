@@ -106,8 +106,8 @@ func TestPurgeIssueViews(t *testing.T) {
 		t.Fatal(err)
 	}
 	purger := navigation.Provide(pool).Purger
-	if !slices.Equal(purger.Tables(), []string{"issue_views", "user_favorites"}) || len(purger.ProtectedTables()) != 0 {
-		t.Fatalf("directory=%v protected=%v; want issue_views then user_favorites, unprotected", purger.Tables(), purger.ProtectedTables())
+	if !slices.Equal(purger.Tables(), []string{"issue_views", "user_favorites", "user_recent_visits"}) || len(purger.ProtectedTables()) != 0 {
+		t.Fatalf("directory=%v protected=%v; want issue_views, user_favorites then user_recent_visits, unprotected", purger.Tables(), purger.ProtectedTables())
 	}
 	deleted := 0
 	cursor := navigation.PurgeCursor{}
@@ -222,6 +222,82 @@ func TestPurgeUserFavorites(t *testing.T) {
 	}
 	for _, limit := range []int{0, 2147483648} {
 		if _, err := postgresadapter.New(nil).PurgeUserFavorites(ctx, app.PurgeBatch{Cutoff: cutoff, Limit: limit}); err == nil {
+			t.Fatalf("accepted invalid batch %d", limit)
+		}
+	}
+}
+
+// recentVisitRow inserts the world owner's visit id of a work item of the world's project, deleted at deleted when it
+// is not nil.
+func recentVisitRow(t *testing.T, pool *pgxpool.Pool, w world, id uuid.UUID, deleted *time.Time) {
+	t.Helper()
+	created := now.Add(-90 * 24 * time.Hour)
+	exec(t, pool, `INSERT INTO user_recent_visits (id, workspace_id, project_id, user_id, entity_type, entity_identifier, visited_at,
+			created_by_id, updated_by_id, created_at, updated_at, deleted_at)
+		VALUES ($1, $2, $3, $4, 'issue', gen_random_uuid(), $5, $4, $4, $5, $5, $6)`, id, w.workspace, w.project, w.owner, created, deleted)
+}
+
+// The recent visits' purge deletes, a bounded page at a time after its cursor, the visits deleted before the cutoff,
+// each page committed on the pool whatever the caller's transaction does; the visit deleted at the cutoff, a recent
+// one and a live one stay (P3d spec 2.6). The module's purger runs it after the favorites. Dropping the cursor, the
+// limit, the pool, the step or using <= fails here.
+func TestPurgeUserRecentVisits(t *testing.T) {
+	s, pool := newStore(t)
+	ctx := context.Background()
+	w := newWorld(t, pool)
+	cutoff := now.Add(-60 * 24 * time.Hour)
+	old, older, recent := now.Add(-61*24*time.Hour), now.Add(-62*24*time.Hour), now.Add(-59*24*time.Hour)
+	for _, row := range []struct {
+		n  int
+		at *time.Time
+	}{{30, &older}, {10, &old}, {20, &cutoff}, {40, &recent}, {50, nil}, {60, &old}} {
+		recentVisitRow(t, pool, w, numberedID(row.n), row.at)
+	}
+	first, err := s.PurgeUserRecentVisits(ctx, app.PurgeBatch{Cutoff: cutoff, Limit: 1})
+	if err != nil || first.Scanned != 1 || first.Deleted != 1 || first.After != numberedID(10) {
+		t.Fatalf("first batch=%+v,%v; want the lowest eligible id only", first, err)
+	}
+	skipped, err := s.PurgeUserRecentVisits(ctx, app.PurgeBatch{Cutoff: cutoff, After: numberedID(60), Limit: 1})
+	if err != nil || skipped.Scanned != 0 || skipped.Deleted != 0 || skipped.After != numberedID(60) {
+		t.Fatalf("after the greatest=%+v,%v; want empty", skipped, err)
+	}
+	rollback := errors.New("rollback the caller")
+	err = postgres.NewTxManager(pool, time.Second).WithinTx(ctx, func(txctx context.Context) error {
+		page, err := s.PurgeUserRecentVisits(txctx, app.PurgeBatch{Cutoff: cutoff, After: numberedID(10), Limit: 1})
+		if err != nil || page.Scanned != 1 || page.Deleted != 1 || page.After != numberedID(30) {
+			t.Fatalf("page in a caller's transaction=%+v,%v; want 30", page, err)
+		}
+		return rollback
+	})
+	if !errors.Is(err, rollback) {
+		t.Fatal(err)
+	}
+	purger := navigation.Provide(pool).Purger
+	deleted := 0
+	cursor := navigation.PurgeCursor{}
+	for {
+		p, err := purger.Page(ctx, cutoff, 1, cursor)
+		if err != nil {
+			t.Fatal(err)
+		}
+		deleted += p.Deleted
+		if p.Done {
+			break
+		}
+		cursor = p.Cursor
+	}
+	if deleted != 1 {
+		t.Fatalf("module purge deleted %d; want the remaining one, 60, the caller's rollback undoing no page", deleted)
+	}
+	var left []uuid.UUID
+	if err := pool.QueryRow(ctx, "SELECT coalesce(array_agg(id ORDER BY id),'{}') FROM user_recent_visits").Scan(&left); err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(left, []uuid.UUID{numberedID(20), numberedID(40), numberedID(50)}) {
+		t.Fatalf("boundary/recent/live=%v; want 20,40,50", left)
+	}
+	for _, limit := range []int{0, 2147483648} {
+		if _, err := postgresadapter.New(nil).PurgeUserRecentVisits(ctx, app.PurgeBatch{Cutoff: cutoff, Limit: limit}); err == nil {
 			t.Fatalf("accepted invalid batch %d", limit)
 		}
 	}

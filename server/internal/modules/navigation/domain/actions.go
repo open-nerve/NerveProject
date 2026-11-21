@@ -8,16 +8,19 @@ package domain
 
 import "github.com/open-nerve/NerveProject/server/internal/shared"
 
-// The navigation module's actions (P3b spec 2.2, P3c spec 2.2). A
-// project's saved views are the project's: its admins, members and guests
-// read them, its admins and members create, change and delete them. A
-// workspace's saved views are the workspace's, for its admins and members
+// The navigation module's actions (P3b spec 2.2, P3c spec 2.2, P3d spec
+// 2.2). A project's saved views are the project's: its admins, members and
+// guests read them, its admins and members create, change and delete them.
+// A workspace's saved views are the workspace's, for its admins and members
 // alone. That only the owner changes a view, that the owner or the admin
 // deletes one, whose views an OwnOnly grant sees and the project's toggle
 // issue_views_view are the module's own rules. One's favorites in a
 // workspace are for its admins and members, a workspace-level read and
 // write; that one reads and writes his own only and which targets he sees
-// and may favor are the module's.
+// and may favor are the module's. One's recent visits in a workspace are
+// for its admins, members and guests, a workspace-level read and write;
+// that one reads and records his own only and that he sees the target now
+// are the module's.
 const (
 	ActionViewRead            shared.Action = "view.read"
 	ActionViewCreate          shared.Action = "view.create"
@@ -29,6 +32,8 @@ const (
 	ActionWorkspaceViewDelete shared.Action = "workspace_view.delete"
 	ActionFavoriteRead        shared.Action = "favorite.read"
 	ActionFavoriteWrite       shared.Action = "favorite.write"
+	ActionRecentVisitRead     shared.Action = "recent_visit.read"
+	ActionRecentVisitWrite    shared.Action = "recent_visit.write"
 )
 
 // Actions lists the module's actions. bootstrap's test holds the union of
@@ -36,7 +41,7 @@ const (
 func Actions() []shared.Action {
 	return []shared.Action{ActionViewRead, ActionViewCreate, ActionViewUpdate, ActionViewDelete,
 		ActionWorkspaceViewRead, ActionWorkspaceViewCreate, ActionWorkspaceViewUpdate, ActionWorkspaceViewDelete,
-		ActionFavoriteRead, ActionFavoriteWrite}
+		ActionFavoriteRead, ActionFavoriteWrite, ActionRecentVisitRead, ActionRecentVisitWrite}
 }
 
 // Verb is what an operation does with a view: read, create, update or
