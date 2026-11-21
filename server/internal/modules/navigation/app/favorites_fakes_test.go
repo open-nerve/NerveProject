@@ -4,6 +4,8 @@ import (
 	"context"
 	"slices"
 	"strings"
+	"testing"
+	"time"
 	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/navigation/app"
@@ -23,9 +25,10 @@ var (
 func ptr[T any](v T) *T { return &v }
 
 // shelf is the world with the fakes of the favorites' ports: Readable, ProjectTargets, PlanningTargets, ViewTargets,
-// FavoriteLocker, FavoriteReader and FavoriteWriter, each logging its calls in the world's log. meanwhile, when not
-// nil, runs once when the workspace's lock is granted: what another writer committed while the write's check ran and
-// its lock waited, which the reads under the locks find.
+// FavoriteLocker, FavoriteReader and FavoriteWriter, each logging its calls in the world's log, the favorites' reads
+// and writes mirroring the store's rules (favorites.sql). meanwhile, when not nil, runs once when the workspace's lock
+// is granted: what another writer committed while the write's check ran and its lock waited, which the reads under the
+// locks find.
 type shelf struct {
 	*world
 	meanwhile func(s *shelf)
@@ -39,8 +42,10 @@ type shelf struct {
 	stored  []domain.Favorite
 	deleted map[uuid.UUID]bool
 	listed  []domain.Favorite
-	// inserted are the favorites InsertFavorite stored, and their writers.
-	inserted []insertedFavorite
+	// inserted are the favorites InsertFavorite stored, and their writers; changed, those UpdateFavorite wrote;
+	// removals, each favorite DeleteFavorite deleted, when and by whom.
+	inserted, changed []insertedFavorite
+	removals          []deletion
 }
 
 // insertedFavorite is a favorite InsertFavorite stored and its writer.
@@ -207,10 +212,15 @@ func (s *shelf) listFavorites() *app.ListFavorites {
 	return app.NewListFavorites(app.ListFavoritesDeps{Workspaces: s, Authorizer: s, Favorites: s, Targets: s.targets(), Tx: tx{s.world, "read"}})
 }
 
-// createFavorite is the shelf's creation, in its "write" transactions.
-func (s *shelf) createFavorite() *app.CreateFavorite {
-	return app.NewCreateFavorite(app.FavoriteWriteDeps{Locks: app.NewFavoriteLocks(s, s, s, s.targets(), s, tx{s.world, "write"}), Favorites: s, Clock: s})
+// writeDeps are the shelf's writes of a favorite, in its "write" transactions.
+func (s *shelf) writeDeps() app.FavoriteWriteDeps {
+	return app.FavoriteWriteDeps{Locks: app.NewFavoriteLocks(s, s, s, s, s.targets(), s, tx{s.world, "write"}), Favorites: s, Clock: s}
 }
+
+// createFavorite, updateFavorite and deleteFavorite are the shelf's creation, change and deletion.
+func (s *shelf) createFavorite() *app.CreateFavorite { return app.NewCreateFavorite(s.writeDeps()) }
+func (s *shelf) updateFavorite() *app.UpdateFavorite { return app.NewUpdateFavorite(s.writeDeps()) }
+func (s *shelf) deleteFavorite() *app.DeleteFavorite { return app.NewDeleteFavorite(s.writeDeps()) }
 
 // favored is alice's stored favorite numbered by id, of kind, naming entity (nil for a folder), named name (a
 // folder's), in parent, at sequence, in workspace.
@@ -226,4 +236,77 @@ func favored(id uuid.UUID, workspace uuid.UUID, kind domain.FavoriteKind, entity
 		f.ProjectID = map[uuid.UUID]*uuid.UUID{mine: ptr(web), theirs: ptr(web)}[*entity]
 	}
 	return f
+}
+
+// Favorite and LockFavorite mirror the store's reads of one favorite (favorites.sql GetFavorite, LockFavorite): user's
+// undeleted favorite id; another's, a deleted one and an id of none are not found.
+func (s *shelf) Favorite(_ context.Context, user, id uuid.UUID) (domain.Favorite, bool, error) {
+	s.log("favorite %s", s.name(id))
+	return s.own(user, id)
+}
+
+func (s *shelf) LockFavorite(_ context.Context, user, id uuid.UUID) (domain.Favorite, bool, error) {
+	s.log("lock favorite %s", s.name(id))
+	return s.own(user, id)
+}
+
+func (s *shelf) own(user, id uuid.UUID) (domain.Favorite, bool, error) {
+	for _, f := range s.stored {
+		if f.ID == id && f.UserID == user && !s.deleted[id] {
+			return f, true, nil
+		}
+	}
+	return domain.Favorite{}, false, nil
+}
+
+func (s *shelf) LockFolderChildren(_ context.Context, folder uuid.UUID) error {
+	s.log("lock children %s", s.name(folder))
+	return nil
+}
+
+// UpdateFavorite mirrors the store's change (favorites.sql UpdateFavorite): the undeleted favorite f.ID as f has it; a
+// folder's name, in any case, of another of its owner's undeleted folders in the workspace is taken, its own is not
+// (the partial unique index), and nothing is written.
+func (s *shelf) UpdateFavorite(_ context.Context, f domain.Favorite, by uuid.UUID) error {
+	s.log("update favorite %s by %s", s.name(f.ID), s.name(by))
+	for _, o := range s.stored {
+		if f.Kind == domain.FavoriteFolder && o.Kind == f.Kind && o.ID != f.ID && !s.deleted[o.ID] && o.UserID == f.UserID &&
+			o.WorkspaceID == f.WorkspaceID && strings.EqualFold(o.Name, f.Name) {
+			return domain.ErrFavoriteFolderNameTaken
+		}
+	}
+	s.edit(f.ID, func(o *domain.Favorite) { *o = f })
+	s.changed = append(s.changed, insertedFavorite{f, by})
+	return nil
+}
+
+// DeleteFavorite mirrors the store's deletion (favorites.sql DeleteFavorite), one statement: the undeleted favorite id
+// and the undeleted favorites it holds, each at at by by; one deleted already keeps its deletion.
+func (s *shelf) DeleteFavorite(_ context.Context, id uuid.UUID, at time.Time, by uuid.UUID) error {
+	s.log("delete favorite %s by %s", s.name(id), s.name(by))
+	for _, f := range s.stored {
+		if (f.ID == id || f.ParentID != nil && *f.ParentID == id) && !s.deleted[f.ID] {
+			s.deleted[f.ID] = true
+			s.removals = append(s.removals, deletion{id: f.ID, by: by, at: at})
+		}
+	}
+	return nil
+}
+
+// edit changes the undeleted stored favorite id by fn: another writer's change, or the store's.
+func (s *shelf) edit(id uuid.UUID, fn func(f *domain.Favorite)) {
+	for i := range s.stored {
+		if s.stored[i].ID == id && !s.deleted[id] {
+			fn(&s.stored[i])
+		}
+	}
+}
+
+// wroteNoFavorite fails t unless the shelf stored, changed and deleted no favorite and read no clock.
+func wroteNoFavorite(t *testing.T, s *shelf) {
+	t.Helper()
+	if len(s.inserted)+len(s.changed)+len(s.removals) != 0 {
+		t.Errorf("wrote: inserted %+v, changed %+v, deleted %+v; want nothing", s.inserted, s.changed, s.removals)
+	}
+	wroteNothing(t, s.world)
 }

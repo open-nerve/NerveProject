@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"time"
 	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/navigation/domain"
@@ -78,22 +79,35 @@ type ViewTargets interface {
 
 // FavoriteLocker takes, in the transaction ctx carries, the locks a write of
 // a favorite takes on the module's own rows, after its workspace's and its
-// target's project's FOR SHARE (spec 2.8). ShareView locks FOR SHARE the
-// undeleted view a favorite names, a deleted one and an id of none not at
-// all, which the reads under the locks find. ShareFolder locks FOR SHARE
-// the parent a write names, before the favorite's own row: found is true
-// when id is user's own undeleted folder in workspace; any other id is no
-// parent, and is not locked (spec 2.5).
+// target's project's FOR SHARE (spec 2.8), the favorites' rows in their one
+// total order, a folder's before an item's, each lock its own statement.
+// ShareView locks FOR SHARE the undeleted view a favorite names, a deleted
+// one and an id of none not at all, which the reads under the locks find.
+// ShareFolder locks FOR SHARE the parent a write names, before the
+// favorite's own row: found is true when id is user's own undeleted folder
+// in workspace; any other id is no parent, and is not locked (spec 2.5).
+// LockFavorite locks FOR UPDATE user's undeleted favorite id, after its new
+// parent's FOR SHARE, and reads it: a change's or a deletion's read under
+// its locks; found is false when there is none, as when id is another's,
+// which it does not lock. LockFolderChildren locks FOR UPDATE, in id order,
+// the undeleted favorites the folder holds, after the folder's own FOR
+// UPDATE: a folder's deletion's last locks.
 type FavoriteLocker interface {
 	ShareView(ctx context.Context, id uuid.UUID) error
 	ShareFolder(ctx context.Context, user, workspace, id uuid.UUID) (found bool, err error)
+	LockFavorite(ctx context.Context, user, id uuid.UUID) (f domain.Favorite, found bool, err error)
+	LockFolderChildren(ctx context.Context, folder uuid.UUID) error
 }
 
-// FavoriteReader lists, in the transaction ctx carries or on the pool,
-// user's undeleted favorites in workspace, those in his folders too, by
-// sequence descending, then by id descending (spec 2.4).
+// FavoriteReader reads the favorites without a lock, in the transaction ctx
+// carries or on the pool. Favorites lists user's undeleted favorites in
+// workspace, those in his folders too, by sequence descending, then by id
+// descending (spec 2.4). Favorite reads user's undeleted favorite id, a
+// change's or a deletion's read before its locks; found is false when
+// there is none, as when id is another's (spec 2.7).
 type FavoriteReader interface {
 	Favorites(ctx context.Context, user, workspace uuid.UUID) ([]domain.Favorite, error)
+	Favorite(ctx context.Context, user, id uuid.UUID) (f domain.Favorite, found bool, err error)
 }
 
 // FavoriteWriter writes the favorites in the transaction ctx carries, which
@@ -104,8 +118,17 @@ type FavoriteReader interface {
 // of a target whose owner has an undeleted favorite of it, it stores
 // nothing and answers that one as it is, not created; a folder's name, in
 // any case, another of its owner's undeleted folders in the workspace has
-// is domain.ErrFavoriteFolderNameTaken.
+// is domain.ErrFavoriteFolderNameTaken. UpdateFavorite writes the parent,
+// the sequence and, a folder's, the name of the undeleted favorite f.ID as
+// f has them, last changed by by at f.UpdatedAt; a folder's name, in any
+// case, that another of its owner's undeleted folders in the workspace has
+// is domain.ErrFavoriteFolderNameTaken, its own in another case is not.
+// DeleteFavorite soft-deletes, in one statement, the undeleted favorite id
+// and, a folder, the undeleted favorites it holds, each deleted and last
+// changed by by at at; one deleted already keeps its deletion.
 type FavoriteWriter interface {
 	GreatestFavoriteSequence(ctx context.Context, user, workspace uuid.UUID) (*float64, error)
 	InsertFavorite(ctx context.Context, f domain.Favorite, by uuid.UUID) (stored domain.Favorite, created bool, err error)
+	UpdateFavorite(ctx context.Context, f domain.Favorite, by uuid.UUID) error
+	DeleteFavorite(ctx context.Context, id uuid.UUID, at time.Time, by uuid.UUID) error
 }

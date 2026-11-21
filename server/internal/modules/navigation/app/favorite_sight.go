@@ -191,22 +191,29 @@ func (s sight) eligible(t entity) (aim, bool) {
 }
 
 // visible are those of fs the caller sees, in their order, each answered
-// with what s found of its target (spec 2.4, 2.5): every folder, and each
-// favorite of a target he sees (find); one whose target he no longer sees
-// is kept, not listed (M7 design 3.8).
+// with what s found of its target (shows); one whose target he no longer
+// sees is kept, not listed (M7 design 3.8).
 func (s sight) visible(fs []domain.Favorite) []NamedFavorite {
 	out := make([]NamedFavorite, 0, len(fs))
 	for _, f := range fs {
-		t, ofTarget := entityOf(f)
-		if !ofTarget {
-			out = append(out, answered(f, aim{}))
-			continue
-		}
-		if a, found := s.find(t); found && a.visible {
-			out = append(out, answered(f, a))
+		if n, shown := s.shows(f); shown {
+			out = append(out, n)
 		}
 	}
 	return out
+}
+
+// shows is f answered with what s found of its target, and whether the
+// caller sees it (spec 2.4, 2.5, 2.7): a folder always; a favorite of a
+// target he sees (find). The list lists, and a change and a deletion
+// reach, those he sees alone: the one predicate of the three.
+func (s sight) shows(f domain.Favorite) (NamedFavorite, bool) {
+	t, ofTarget := entityOf(f)
+	if !ofTarget {
+		return answered(f, aim{}), true
+	}
+	a, found := s.find(t)
+	return answered(f, a), found && a.visible
 }
 
 // answered is f answered with what a sight found of its target, a (spec

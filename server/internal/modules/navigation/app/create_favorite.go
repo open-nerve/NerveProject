@@ -35,10 +35,11 @@ func NewCreateFavorite(d FavoriteWriteDeps) *CreateFavorite { return &CreateFavo
 // order: every problem of n's body in one 422, before any read
 // (domain.CheckNewFavorite); a slug of none and a workspace he does not see
 // workspace.not_found, a role refused the Authorizer's shared.Forbidden,
-// before any lock; then, under its locks and decision (FavoriteLocks.run),
-// one 422 with each of its target and its parent he may not have: a target
-// not there, another workspace's, one he does not see and an archived one
-// alike (sight.eligible); a parent none of his undeleted folders there.
+// before any lock (FavoriteLocks.creation); then, under its locks and
+// decision (FavoriteLocks.run), one 422 with each of its target and its
+// parent he may not have: a target not there, another workspace's, one he
+// does not see and an archived one alike (sight.eligible); a parent none of
+// his undeleted folders there.
 // Then, his undeleted favorite of the target answered as it is, not
 // created, its folder and sequence kept; else, at the moment read after
 // the last lock, his favorite of the target's project (the project itself
@@ -55,13 +56,9 @@ func (u *CreateFavorite) Execute(ctx context.Context, slug string, n domain.NewF
 	if len(problems) > 0 {
 		return NamedFavorite{}, false, shared.Invalid(problems...)
 	}
-	workspaceID, err := u.d.Locks.workspace(ctx, actor, slug)
+	w, err := u.d.Locks.creation(ctx, actor, slug, n)
 	if err != nil {
 		return NamedFavorite{}, false, err
-	}
-	w := favoriteWrite{workspaceID: workspaceID, notFound: domain.ErrWorkspaceNotFound, parentID: n.ParentID}
-	if n.Kind != domain.FavoriteFolder {
-		w.target = &entity{kind: n.Kind, id: *n.EntityID}
 	}
 	var out NamedFavorite
 	var created bool
@@ -81,11 +78,11 @@ func (u *CreateFavorite) Execute(ctx context.Context, slug string, n domain.NewF
 			return shared.Invalid(refused...)
 		}
 		now := u.d.Clock.Now()
-		greatest, err := u.d.Favorites.GreatestFavoriteSequence(ctx, actor.UserID, workspaceID)
+		greatest, err := u.d.Favorites.GreatestFavoriteSequence(ctx, actor.UserID, w.workspaceID)
 		if err != nil {
 			return err
 		}
-		f := domain.Favorite{ID: uuid.NewV7(), WorkspaceID: workspaceID, ProjectID: a.projectID, UserID: actor.UserID, Kind: n.Kind, EntityID: n.EntityID,
+		f := domain.Favorite{ID: uuid.NewV7(), WorkspaceID: w.workspaceID, ProjectID: a.projectID, UserID: actor.UserID, Kind: n.Kind, EntityID: n.EntityID,
 			ParentID: n.ParentID, Sequence: domain.SequenceAfter(greatest), CreatedAt: now, UpdatedAt: now}
 		if n.Name != nil {
 			f.Name = *n.Name
