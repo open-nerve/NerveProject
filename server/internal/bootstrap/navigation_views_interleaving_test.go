@@ -10,8 +10,10 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/open-nerve/NerveProject/server/internal/modules/access"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue"
 	"github.com/open-nerve/NerveProject/server/internal/modules/navigation"
+	"github.com/open-nerve/NerveProject/server/internal/modules/planning"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project"
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace"
 	"github.com/open-nerve/NerveProject/server/internal/platform/clock"
@@ -65,15 +67,21 @@ func TestViewWritesInterleave(t *testing.T) {
 // newNavigationRoute is the navigation module (navigation.New) on pool,
 // with tx its writes' transactions, read-only snapshots of its own for its
 // reads, the system's clock, the Authorizer on pool, and project's,
-// workspace's and issue's ports converted, as bootstrap wires them.
+// workspace's, issue's, access's and planning's ports converted, as
+// bootstrap wires them.
 func newNavigationRoute(t *testing.T, pool *pgxpool.Pool, tx shared.TxManager) moduleRoute {
 	t.Helper()
-	issues := issue.Provide(pool, nil)
+	issues, projects, workspaces := issue.Provide(pool, nil), project.Provide(pool, nil), workspace.Provide(pool, nil)
+	readable := access.NewReadableProjects(access.ReadableDeps{WorkspaceRoles: workspaces.WorkspaceRoles,
+		Projects: accessMemberProjects{projects: projects.MemberProjectAccess}})
 	return newRoute(t, navigation.New(navigation.Deps{Pool: pool, Tx: tx,
 		ReadTx: postgres.NewTxManager(pool, 2*time.Second, postgres.ReadOnlySnapshot()), Clock: clock.System{}, Authorizer: authorizerOn(pool),
-		Projects:     navigationProjects{projects: project.Provide(pool, nil).NavigationProjects},
-		Workspaces:   navigationWorkspaces{directory: workspace.Provide(pool, nil).WorkspaceDirectory},
-		ListSettings: issues.ListSettings, WorkspaceListSettings: issues.WorkspaceListSettings}).Register)
+		Projects:     navigationProjects{projects: projects.NavigationProjects},
+		Workspaces:   navigationWorkspaces{directory: workspaces.WorkspaceDirectory},
+		ListSettings: issues.ListSettings, WorkspaceListSettings: issues.WorkspaceListSettings,
+		Readable: navigationReadable{readable: readable}, ProjectTargets: navigationProjectTargets{targets: projects.NavigationTargets},
+		PlanningTargets: navigationPlanningTargets{targets: planning.Provide(pool, planningProjects{projects: projects.PlanningProjects}).NavigationTargets},
+	}).Register)
 }
 
 // writesView is the account name's method on path, a view's or a

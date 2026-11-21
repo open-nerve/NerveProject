@@ -104,6 +104,8 @@ export const PROBLEM_MESSAGES: Readonly<Record<string, string>> = {
   "notification.not_found": "errors.notification_not_found",
   "navigation.view_not_found": "errors.navigation_view_not_found",
   "navigation.views_disabled": "errors.navigation_views_disabled",
+  "navigation.favorite_not_found": "errors.navigation_favorite_not_found",
+  "navigation.favorite_folder_name_taken": "errors.navigation_favorite_folder_name_taken",
 };
 
 /** The message of every FieldError.code, shown under the field it names. */
