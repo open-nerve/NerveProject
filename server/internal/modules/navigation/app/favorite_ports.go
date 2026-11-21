@@ -86,15 +86,22 @@ type ViewTargets interface {
 // ShareFolder locks FOR SHARE the parent a write names, before the
 // favorite's own row: found is true when id is user's own undeleted folder
 // in workspace; any other id is no parent, and is not locked (spec 2.5).
-// LockFavorite locks FOR UPDATE user's undeleted favorite id, after its new
-// parent's FOR SHARE, and reads it: a change's or a deletion's read under
-// its locks; found is false when there is none, as when id is another's,
-// which it does not lock. LockFolderChildren locks FOR UPDATE, in id order,
-// the undeleted favorites the folder holds, after the folder's own FOR
-// UPDATE: a folder's deletion's last locks.
+// ShareFavoriteOfTarget locks FOR SHARE user's undeleted favorite of the
+// target of kind with id, after the parent's FOR SHARE, and reads it: a
+// creation's of a target last lock, under which it answers that favorite
+// as it is, for its deletion waits until the creation ends; found is false
+// when he has none, as when the one he had was deleted while the lock
+// waited, and another's is not locked. LockFavorite locks FOR UPDATE user's
+// undeleted favorite id, after its new parent's FOR SHARE, and reads it: a
+// change's or a deletion's read under its locks; found is false when there
+// is none, as when id is another's, which it does not lock.
+// LockFolderChildren locks FOR UPDATE, in id order, the undeleted favorites
+// the folder holds, after the folder's own FOR UPDATE: a folder's
+// deletion's last locks.
 type FavoriteLocker interface {
 	ShareView(ctx context.Context, id uuid.UUID) error
 	ShareFolder(ctx context.Context, user, workspace, id uuid.UUID) (found bool, err error)
+	ShareFavoriteOfTarget(ctx context.Context, user uuid.UUID, kind domain.FavoriteKind, id uuid.UUID) (f domain.Favorite, found bool, err error)
 	LockFavorite(ctx context.Context, user, id uuid.UUID) (f domain.Favorite, found bool, err error)
 	LockFolderChildren(ctx context.Context, folder uuid.UUID) error
 }
@@ -115,14 +122,15 @@ type FavoriteReader interface {
 // greatest sequence of user's undeleted favorites in workspace, nil when he
 // has none (domain.SequenceAfter). InsertFavorite stores the new favorite
 // f, made by by at its CreatedAt, and answers it, created; for a favorite
-// of a target whose owner has an undeleted favorite of it, it stores
-// nothing and answers that one as it is, not created; a folder's name, in
-// any case, another of its owner's undeleted folders in the workspace has
-// is domain.ErrFavoriteFolderNameTaken. UpdateFavorite writes the parent,
-// the sequence and, a folder's, the name of the undeleted favorite f.ID as
-// f has them, last changed by by at f.UpdatedAt; a folder's name, in any
-// case, that another of its owner's undeleted folders in the workspace has
-// is domain.ErrFavoriteFolderNameTaken, its own in another case is not.
+// of a target whose owner has an undeleted favorite of it, his other
+// creation's at once, it stores nothing and answers that one as it is, not
+// created; a folder's name, in any case, another of its owner's undeleted
+// folders in the workspace has is domain.ErrFavoriteFolderNameTaken.
+// UpdateFavorite writes the parent, the sequence and, a folder's, the name
+// of the undeleted favorite f.ID as f has them, last changed by by at
+// f.UpdatedAt; a folder's name, in any case, that another of its owner's
+// undeleted folders in the workspace has is
+// domain.ErrFavoriteFolderNameTaken, its own in another case is not.
 // DeleteFavorite soft-deletes, in one statement, the undeleted favorite id
 // and, a folder, the undeleted favorites it holds, each deleted and last
 // changed by by at at; one deleted already keeps its deletion.

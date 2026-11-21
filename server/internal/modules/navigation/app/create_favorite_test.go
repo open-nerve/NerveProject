@@ -28,8 +28,9 @@ var (
 // The pre-read, the locks and the reads under them of each kind, in order (spec 2.7, 2.8): the workspace's slug and
 // favorite.write's decision on it without a lock; the target read without a lock, which names its project and its
 // view; then, in the write's transaction, the workspace's FOR SHARE and the decision again, the target's project's
-// FOR SHARE, a view's FOR SHARE, the parent's FOR SHARE, the target and its project read again under them with the
-// projects she reads, and, after the last lock, the moment, the greatest sequence and the insertion.
+// FOR SHARE, a view's FOR SHARE, the parent's FOR SHARE, her favorite of the target FOR SHARE, the target and its
+// project read again under them with the projects she reads, and, after the last lock, the moment, the greatest
+// sequence and the insertion.
 var kindCalls = []struct {
 	name             string
 	n                domain.NewFavorite
@@ -52,13 +53,17 @@ var kindCalls = []struct {
 	{"a folder", domain.NewFavorite{Kind: domain.FavoriteFolder, Name: ptr("  Pinned ")}, nil, "Pinned", shared.LogoProps{}, nil, nil, nil},
 }
 
-// callsOf are a creation's calls: kc's check, locks and reads, with parent's lock when it is not "".
-func callsOf(kc []string, locks, at []string, kind domain.FavoriteKind, parent string) []string {
+// callsOf are a creation's calls: kc's check, locks and reads, with parent's lock when it is not "" and the lock of
+// her favorite of the target, when there is one, last.
+func callsOf(kc []string, locks, at []string, kind domain.FavoriteKind, parent, target string) []string {
 	calls := append([]string{"slug acme", "authorize alice favorite.write acme/-"}, kc...)
 	calls = append(calls, "begin write", "share workspace acme", "authorize alice favorite.write acme/-")
 	calls = append(calls, locks...)
 	if parent != "" {
 		calls = append(calls, "share folder "+parent)
+	}
+	if target != "" {
+		calls = append(calls, "share favorite of "+string(kind)+" "+target)
 	}
 	calls = append(calls, at...)
 	return append(calls, "now", "greatest alice acme", "insert "+string(kind)+" by alice", "end write")
@@ -105,7 +110,11 @@ func TestCreateAFavoriteOfEachKind(t *testing.T) {
 				if len(s.inserted) != 1 || s.inserted[0].favorite != f || s.inserted[0].by != alice {
 					t.Errorf("inserted %+v; want the one answered, by alice", s.inserted)
 				}
-				wantCalls(t, s.world, callsOf(kc.check, kc.locks, kc.at, n.Kind, parent)...)
+				target := ""
+				if n.EntityID != nil {
+					target = s.name(*n.EntityID)
+				}
+				wantCalls(t, s.world, callsOf(kc.check, kc.locks, kc.at, n.Kind, parent, target)...)
 			})
 		}
 	}
@@ -284,8 +293,10 @@ func TestCreateAFavoriteInAParentSheMayNot(t *testing.T) {
 }
 
 // A favorite of a target she has an undeleted favorite of is answered as it is, 200, not created (spec 2.5): its id,
-// its folder and its sequence kept though the body names none, and nothing stored. A target she may no longer favor is
-// the 422 first.
+// its folder and its sequence kept though the body names none, and nothing stored. It is the one her favorite's
+// FOR SHARE, the creation's last lock, finds (spec 2.8): the creation then reads no clock and inserts nothing. One
+// she favored while the creation's lock waited is answered so; one she deleted meanwhile is not, and a new one is
+// created. A target she may no longer favor is the 422 first.
 func TestCreateAFavoriteSheHas(t *testing.T) {
 	s := newShelf()
 	folder := favored(uuid.NewV7(), acme, domain.FavoriteFolder, nil, "Work", nil, 1)
@@ -298,8 +309,32 @@ func TestCreateAFavoriteSheHas(t *testing.T) {
 	if want := (app.NamedFavorite{Favorite: has, Name: "Web", LogoProps: icon}); !reflect.DeepEqual(got, want) {
 		t.Errorf("answered %+v\nwant %+v", got, want)
 	}
-	if len(s.inserted) != 0 || len(s.stored) != 2 {
-		t.Errorf("inserted %+v; want nothing", s.inserted)
+	wroteNoFavorite(t, s)
+	wantCalls(t, s.world, "slug acme", "authorize alice favorite.write acme/-", "project targets web", "begin write", "share workspace acme",
+		"authorize alice favorite.write acme/-", "share project web", "share favorite of project web", "project targets web", "readable alice acme",
+		"end write")
+	for _, tt := range []struct {
+		name      string
+		before    []domain.Favorite
+		meanwhile func(s *shelf)
+		created   bool
+	}{
+		{"favored while the lock waited", nil, func(s *shelf) { s.stored = append(s.stored, has) }, false},
+		{"deleted while the lock waited", []domain.Favorite{has}, func(s *shelf) { s.deleted[has.ID] = true }, true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			s := newShelf()
+			s.stored, s.meanwhile = append([]domain.Favorite{folder}, tt.before...), tt.meanwhile
+			got, created, err := s.createFavorite().Execute(as(t), "acme", favor(domain.FavoriteProject, web))
+			switch {
+			case err != nil || created != tt.created:
+				t.Fatalf("created %v, %v; want %v", created, err, tt.created)
+			case !created && (!reflect.DeepEqual(got.Favorite, has) || len(s.inserted) != 0):
+				t.Errorf("answered %+v, inserted %+v; want the one she favored meanwhile, nothing inserted", got.Favorite, s.inserted)
+			case created && (got.Favorite.ID == has.ID || len(s.inserted) != 1):
+				t.Errorf("created %+v, inserted %+v; want a new one", got.Favorite, s.inserted)
+			}
+		})
 	}
 	archive(s.projectTargets, web)
 	if _, _, err := s.createFavorite().Execute(as(t), "acme", favor(domain.FavoriteProject, web)); !reflect.DeepEqual(fieldsOf(t, err), []shared.FieldError{targetNotAllowed}) {

@@ -17,14 +17,14 @@ import (
 
 // favoriteLockWrite is a write of TestFavoriteWritesTakeTheirTargetsLocks:
 // what it is, its operation, its request and what it answers once the
-// other transaction ends; in the phase of a view's row, the view the other
-// transaction holds (waitingFor); and, while it waits, the rows it holds
-// FOR SHARE in its transaction (shared) and those it holds no lock on
-// (free).
+// other transaction ends; in the phases of a view's row and of one's
+// favorite of the target, the row the other transaction holds
+// (waitingFor); and, while it waits, the rows it holds FOR SHARE in its
+// transaction (shared) and those it holds no lock on (free).
 type favoriteLockWrite struct {
 	name, op, method, path, body string
 	want                         int
-	view                         uuid.UUID
+	held                         uuid.UUID
 	shared, free                 []lockedRow
 }
 
@@ -35,9 +35,9 @@ func (w favoriteLockWrite) holding(shared, free []lockedRow) favoriteLockWrite {
 	return w
 }
 
-// waitingFor is w, which waits for the view's row.
-func (w favoriteLockWrite) waitingFor(view uuid.UUID) favoriteLockWrite {
-	w.view = view
+// waitingFor is w, which waits for the row id: a view's or a favorite's.
+func (w favoriteLockWrite) waitingFor(id uuid.UUID) favoriteLockWrite {
+	w.held = id
 	return w
 }
 
@@ -62,10 +62,10 @@ func (r lockedRow) String() string { return strings.Fields(r.from)[0] + " " + r.
 // lock table. In acme, whose admin alice made Web (issueWorld), with Web's
 // cycles and views turned on, alice makes for each phase a folder of hers,
 // the targets its writes name, cycles and views of Web and views of acme's
-// own, and the favorites they change or delete; once the start-time jobs
-// have run (waitForStartupRuns), and with no fan-out pending
-// (waitForFanouts), another transaction holds a row and each write of the
-// phase is sent:
+// own, and the favorites they change, delete or create again; once the
+// start-time jobs have run (waitForStartupRuns), and with no fan-out
+// pending (waitForFanouts), another transaction holds a row and each write
+// of the phase is sent:
 //   - The workspace first: the other transaction holds acme's row FOR NO
 //     KEY UPDATE, as a change of a role in it or its deletion does. A
 //     creation of Web's view's favorite in her folder, a move of her
@@ -94,14 +94,24 @@ func (r lockedRow) String() string { return strings.Fields(r.from)[0] + " " + r.
 //     it (ShareFolder), not in the one that locks their own (LockFavorite),
 //     and meanwhile hold acme's row and their view's FOR SHARE, the one
 //     moved in no lock on its own row.
+//   - One's favorite of the target last: the other transaction holds her
+//     favorite of a view of Web FOR UPDATE, as its deletion does, then her
+//     favorite of a cycle of Web. A creation of a favorite of each again,
+//     the view's in her folder, waits for the one she has in the statement
+//     that shares it (ShareFavoriteOfTarget), its last lock before its
+//     write, and meanwhile holds acme's and Web's rows FOR SHARE, and the
+//     view's and the folder's when it names them; it answers the one she
+//     has as it is, 200.
 //
 // Each wait is the request's own, its PID's, and caused by the other
 // transaction (requestBlocked), in the statement of the lock the phase is
 // about; each row it holds or does not is its own transaction's lock
-// (requestRowLock). Once the other transaction ends, the write answers as
-// it would alone. Each write in each phase is a subtest, which names it
-// when it fails; the first that fails ends the test, as a write left
-// waiting could hold what the next one's probes look at.
+// (requestRowLock); and meanwhile it has written no table, a creation no
+// row of its own yet (requestWrittenTables). Once the other transaction
+// ends, the write answers as it would alone. Each write in each phase is a
+// subtest, which names it when it fails; the first that fails ends the
+// test, as a write left waiting could hold what the next one's probes look
+// at.
 func TestFavoriteWritesTakeTheirTargetsLocks(t *testing.T) {
 	dbURL := pgtest.NewDatabase(t)
 	w := newIssueWorldOnRequests(t, dbURL, openPool(t, dbURL), func(*config.Config) {}, &requestQueries{})
@@ -131,6 +141,11 @@ func TestFavoriteWritesTakeTheirTargetsLocks(t *testing.T) {
 		return favoriteLockWrite{name: name, op: "createFavorite", method: http.MethodPost, path: "/api/v0/workspaces/acme/favorites",
 			body: body, want: http.StatusCreated}
 	}
+	again := func(name, body string) favoriteLockWrite {
+		c := create(name, body)
+		c.want = http.StatusOK
+		return c
+	}
 	update := func(name string, id uuid.UUID, body string) favoriteLockWrite {
 		return favoriteLockWrite{name: name, op: "updateFavorite", method: http.MethodPatch, path: "/api/v0/favorites/" + id.String(),
 			body: body, want: http.StatusOK}
@@ -152,6 +167,8 @@ func TestFavoriteWritesTakeTheirTargetsLocks(t *testing.T) {
 	uC, dC := favor(of("view", vC2)), favor(of("view", vC3))
 	fD, wD1, wD2, wD3 := folder("D"), acmeView("D1"), acmeView("D2"), acmeView("D3")
 	xD, kD := favor(of("view", wD2)), favor(in("view", wD3, fD))
+	fE, vE, cE := folder("E"), webView("E"), cycle("E")
+	hvE, hcE := favor(of("view", vE)), favor(of("cycle", cE))
 	phases := []struct {
 		name, table, statement string
 		hold                   func(t *testing.T, write favoriteLockWrite) pgx.Tx
@@ -174,7 +191,7 @@ func TestFavoriteWritesTakeTheirTargetsLocks(t *testing.T) {
 			remove("a cycle's", dB).holding(rows(acme), rows(favoriteRow(dB))),
 		}},
 		{"its view after its project", "issue_views", "ShareView", func(t *testing.T, write favoriteLockWrite) pgx.Tx {
-			return holding(t, w.pool, "SELECT 1 FROM issue_views WHERE id = $1 FOR UPDATE", write.view)
+			return holding(t, w.pool, "SELECT 1 FROM issue_views WHERE id = $1 FOR UPDATE", write.held)
 		}, []favoriteLockWrite{
 			create("the view's in her folder", in("view", vC1, fC)).waitingFor(vC1).holding(rows(acme, web), rows(favoriteRow(fC))),
 			update("the view's into her folder", uC, into(fC)).waitingFor(vC2).holding(rows(acme, web), rows(favoriteRow(fC), favoriteRow(uC))),
@@ -193,6 +210,12 @@ func TestFavoriteWritesTakeTheirTargetsLocks(t *testing.T) {
 			update("a view's in the folder, the folder named again", kD, fmt.Sprintf(`{"parent_id":%q,"sequence":1}`, fD)).
 				holding(rows(acme, viewRow(wD3)), nil),
 		}},
+		{"one's favorite of its target last", "user_favorites", "ShareFavoriteOfTarget", func(t *testing.T, write favoriteLockWrite) pgx.Tx {
+			return holding(t, w.pool, "SELECT 1 FROM user_favorites WHERE id = $1 FOR UPDATE", write.held)
+		}, []favoriteLockWrite{
+			again("a view of Web's she has, in her folder", in("view", vE, fE)).waitingFor(hvE).holding(rows(acme, web, viewRow(vE), favoriteRow(fE)), nil),
+			again("a cycle of Web's she has", of("cycle", cE)).waitingFor(hcE).holding(rows(acme, web), nil),
+		}},
 	}
 	waitForStartupRuns(t, w.pool)
 	for _, phase := range phases {
@@ -204,7 +227,7 @@ func TestFavoriteWritesTakeTheirTargetsLocks(t *testing.T) {
 				other := phase.hold(t, write)
 				probe := w.requests.observe(req)
 				answered := sendInBackground(req)
-				requestBlocked(t, w.pool, probe, other.Conn().PgConn().PID(), phase.table)
+				pid := requestBlocked(t, w.pool, probe, other.Conn().PgConn().PID(), phase.table)
 				sample, waiting := readRequestLock(t, pgtest.Soon(t), w.pool, probe)
 				if !waiting || !strings.Contains(sample.query, "-- name: "+phase.statement+" ") {
 					t.Errorf("%s waits in %q; want its %s", write.op, strings.Join(strings.Fields(sample.query), " "), phase.statement)
@@ -218,6 +241,9 @@ func TestFavoriteWritesTakeTheirTargetsLocks(t *testing.T) {
 					if lock := requestRowLock(t, w.pool, w.pool, probe, r.from, r.id); lock != "no lock" {
 						t.Errorf("%s holds %s %s while it waits for %s; want no lock", write.op, r, lock, phase.table)
 					}
+				}
+				if written := requestWrittenTables(t, w.pool, pid); len(written) != 0 {
+					t.Errorf("%s has written %v while it waits for %s; want nothing written", write.op, written, phase.table)
 				}
 				if err := other.Rollback(context.Background()); err != nil {
 					t.Fatal(err)

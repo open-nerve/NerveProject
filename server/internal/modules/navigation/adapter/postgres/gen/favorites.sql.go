@@ -158,7 +158,8 @@ type GetFavoriteOfTargetRow struct {
 	UpdatedAt        time.Time
 }
 
-// One's undeleted favorite of a target, which a creation of another favorite of it found (spec 2.5).
+// One's undeleted favorite of a target, which the insertion of another favorite of it met (spec 2.5): one his other
+// creation of it at once made after this creation's lock found none (ShareFavoriteOfTarget).
 func (q *Queries) GetFavoriteOfTarget(ctx context.Context, arg GetFavoriteOfTargetParams) (GetFavoriteOfTargetRow, error) {
 	row := q.db.QueryRow(ctx, getFavoriteOfTarget, arg.UserID, arg.EntityType, arg.EntityIdentifier)
 	var i GetFavoriteOfTargetRow
@@ -413,6 +414,59 @@ FOR UPDATE
 func (q *Queries) LockFolderChildren(ctx context.Context, folderID uuid.UUID) error {
 	_, err := q.db.Exec(ctx, lockFolderChildren, folderID)
 	return err
+}
+
+const shareFavoriteOfTarget = `-- name: ShareFavoriteOfTarget :one
+SELECT id, workspace_id, project_id, user_id, entity_type, entity_identifier, name, parent_id, sequence, created_at, updated_at
+FROM user_favorites
+WHERE user_id = $1 AND entity_type = $2 AND entity_identifier = $3::uuid
+  AND deleted_at IS NULL
+FOR SHARE
+`
+
+type ShareFavoriteOfTargetParams struct {
+	UserID           uuid.UUID
+	EntityType       string
+	EntityIdentifier uuid.UUID
+}
+
+type ShareFavoriteOfTargetRow struct {
+	ID               uuid.UUID
+	WorkspaceID      uuid.UUID
+	ProjectID        *uuid.UUID
+	UserID           uuid.UUID
+	EntityType       string
+	EntityIdentifier *uuid.UUID
+	Name             *string
+	ParentID         *uuid.UUID
+	Sequence         float64
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+}
+
+// One's undeleted favorite of a target, locked FOR SHARE until the transaction ends: a creation's of a target last
+// lock, after its parent's, an item row after the folder rows in the total order of favorite rows (spec 2.5, 2.8).
+// Found, the creation answers it as it is, and its deletion waits until the creation ends. Not found, the creation
+// inserts: so too once a deletion that held it has committed, for the row read again is then its deleted version,
+// which this predicate leaves out. Another's favorite of the target, his deleted one and his of another target are
+// not found, nor locked. The partial unique index user_favorites_user_id_entity_type_entity_identifier_key serves it.
+func (q *Queries) ShareFavoriteOfTarget(ctx context.Context, arg ShareFavoriteOfTargetParams) (ShareFavoriteOfTargetRow, error) {
+	row := q.db.QueryRow(ctx, shareFavoriteOfTarget, arg.UserID, arg.EntityType, arg.EntityIdentifier)
+	var i ShareFavoriteOfTargetRow
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.ProjectID,
+		&i.UserID,
+		&i.EntityType,
+		&i.EntityIdentifier,
+		&i.Name,
+		&i.ParentID,
+		&i.Sequence,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
 const shareFolder = `-- name: ShareFolder :one

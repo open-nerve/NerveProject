@@ -37,7 +37,7 @@ func (s *Store) Favorites(ctx context.Context, user, workspace uuid.UUID) ([]dom
 // when there is none, as when id is another's.
 func (s *Store) Favorite(ctx context.Context, user, id uuid.UUID) (domain.Favorite, bool, error) {
 	r, err := s.queries(ctx).GetFavorite(ctx, gen.GetFavoriteParams{ID: id, UserID: user})
-	return foundFavorite(r, err, "read", id)
+	return foundFavorite(r, err, fmt.Sprintf("read favorite %s", id))
 }
 
 // LockFavorite reads user's undeleted favorite id locked FOR UPDATE until the
@@ -46,7 +46,18 @@ func (s *Store) Favorite(ctx context.Context, user, id uuid.UUID) (domain.Favori
 // another's, which it does not lock.
 func (s *Store) LockFavorite(ctx context.Context, user, id uuid.UUID) (domain.Favorite, bool, error) {
 	r, err := s.queries(ctx).LockFavorite(ctx, gen.LockFavoriteParams{ID: id, UserID: user})
-	return foundFavorite(gen.GetFavoriteRow(r), err, "lock", id)
+	return foundFavorite(gen.GetFavoriteRow(r), err, fmt.Sprintf("lock favorite %s", id))
+}
+
+// ShareFavoriteOfTarget reads user's undeleted favorite of the target of
+// kind with id locked FOR SHARE until the transaction ctx carries ends: a
+// creation's of a target last lock, after its parent's FOR SHARE (spec 2.5,
+// 2.8). found is false when he has none, as when the one he had was
+// deleted while the lock waited; another's favorite of the target is not
+// found, nor locked.
+func (s *Store) ShareFavoriteOfTarget(ctx context.Context, user uuid.UUID, kind domain.FavoriteKind, id uuid.UUID) (domain.Favorite, bool, error) {
+	r, err := s.queries(ctx).ShareFavoriteOfTarget(ctx, gen.ShareFavoriteOfTargetParams{UserID: user, EntityType: string(kind), EntityIdentifier: id})
+	return foundFavorite(gen.GetFavoriteRow(r), err, fmt.Sprintf("lock the favorite of %s %s that user %s has", kind, id, user))
 }
 
 // ShareFolder locks FOR SHARE, until the transaction ctx carries ends, the
@@ -112,9 +123,12 @@ func (s *Store) InsertFavorite(ctx context.Context, f domain.Favorite, by uuid.U
 	case inserted == 1:
 		return f, true, nil
 	}
-	// The undeleted favorite the insertion met was committed before it went
-	// on, so this statement's snapshot holds it, unless its deletion was
-	// committed in between: then the creation fails, to be retried.
+	// The creation found no undeleted favorite of the target under its
+	// FOR SHARE (ShareFavoriteOfTarget), so the one the insertion met is his
+	// other creation's of it at once, committed before the insertion went
+	// on. This statement's snapshot holds it, unless his deletion of it, at
+	// once too, was committed in between: then the creation fails, to be
+	// retried.
 	r, err := q.GetFavoriteOfTarget(ctx, gen.GetFavoriteOfTargetParams{UserID: f.UserID, EntityType: row.EntityType, EntityIdentifier: f.EntityID})
 	if err != nil {
 		return domain.Favorite{}, false, fmt.Errorf("read the favorite of %s %v that user %s has: %w", f.Kind, f.EntityID, f.UserID, err)
@@ -191,14 +205,14 @@ func nameColumn(f domain.Favorite) *string {
 	return &f.Name
 }
 
-// foundFavorite is the favorite a read of id gave, found when there was one;
-// err is the read's.
-func foundFavorite(r gen.GetFavoriteRow, err error, what string, id uuid.UUID) (domain.Favorite, bool, error) {
+// foundFavorite is the favorite a read of one gave, found when there was
+// one; err is the read's, which what names.
+func foundFavorite(r gen.GetFavoriteRow, err error, what string) (domain.Favorite, bool, error) {
 	switch {
 	case errors.Is(err, pgx.ErrNoRows):
 		return domain.Favorite{}, false, nil
 	case err != nil:
-		return domain.Favorite{}, false, fmt.Errorf("%s favorite %s: %w", what, id, err)
+		return domain.Favorite{}, false, fmt.Errorf("%s: %w", what, err)
 	}
 	return favoriteOf(r), true, nil
 }

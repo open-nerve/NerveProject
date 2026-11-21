@@ -23,9 +23,10 @@ import (
 // one total order, a folder's before an item's (spec 2.8, re-91 I2): the
 // parent a write names FOR SHARE, then the favorite it changes or deletes
 // FOR UPDATE, and, a folder's deletion's, the favorites the folder holds
-// FOR UPDATE in id order, each in its own statement; and its favorite, its
-// target, the target's project and the projects the caller reads, read
-// again under them, which the write decides on. No write gate: a favorite
+// FOR UPDATE in id order, or, a creation's of a target, the caller's
+// undeleted favorite of it FOR SHARE, each in its own statement; and its
+// favorite, its target, the target's project and the projects the caller
+// reads, read again under them, which the write decides on. No write gate: a favorite
 // is no write of a project's work items (spec 2.4). A cycle's and a
 // module's writes, an archiving, a deletion, a change of a member or a role
 // lock the project's or the workspace's row FOR NO KEY UPDATE, a view's
@@ -69,12 +70,15 @@ type favoriteWrite struct {
 
 // favoriteHeld is what a write of a favorite holds once its locks are
 // taken: what the caller sees of its target as read under them; whether
-// its parent, if it names one, is one of his folders there; and, a
-// change's or a deletion's, its favorite as read under its lock.
+// its parent, if it names one, is one of his folders there; a change's or
+// a deletion's favorite as read under its lock; and, a creation's of a
+// target, his undeleted favorite of it as read under its lock, nil when he
+// has none.
 type favoriteHeld struct {
-	sight  sight
-	parent bool
-	row    domain.Favorite
+	sight    sight
+	parent   bool
+	row      domain.Favorite
+	existing *domain.Favorite
 }
 
 // creation is the creation of the caller's favorite n in the workspace slug
@@ -150,7 +154,8 @@ func (w *favoriteWrite) aim(pre sight) {
 }
 
 // run takes, in one transaction, w's locks and the decision on its
-// workspace again, reads its favorite and its target under them, and runs
+// workspace again, reads its favorite, a creation's of a target the
+// caller's undeleted favorite of it, and its target under them, and runs
 // fn with what they hold: w's whole write, whose decision on its target and
 // its parent, a creation's, or on its parent and its change, a change's,
 // is fn's, before it reads the moment. A workspace deleted while its lock
@@ -194,6 +199,10 @@ func (l FavoriteLocks) run(ctx context.Context, actor shared.Actor, w favoriteWr
 			if h.row, err = l.lockRow(ctx, actor, w); err != nil {
 				return err
 			}
+		} else if w.target != nil {
+			if h.existing, err = l.shareExisting(ctx, actor, *w.target); err != nil {
+				return err
+			}
 		}
 		if h.sight, err = l.targets.sight(ctx, actor, w.workspaceID, read); err != nil {
 			return err
@@ -225,6 +234,19 @@ func (l FavoriteLocks) lockRow(ctx context.Context, actor shared.Actor, w favori
 		}
 	}
 	return f, nil
+}
+
+// shareExisting locks FOR SHARE, after its parent's FOR SHARE, the caller's
+// undeleted favorite of the target a creation names, and reads it: nil
+// when he has none, as when the one he had was deleted while the lock
+// waited (spec 2.5, 2.8). Its deletion waits until the creation ends, so
+// the creation that finds it answers it as it is.
+func (l FavoriteLocks) shareExisting(ctx context.Context, actor shared.Actor, target entity) (*domain.Favorite, error) {
+	f, found, err := l.locker.ShareFavoriteOfTarget(ctx, actor.UserID, target.kind, target.id)
+	if err != nil || !found {
+		return nil, err
+	}
+	return &f, nil
 }
 
 // decideWorkspace is the undeleted workspace slug names, once auth lets

@@ -179,7 +179,10 @@ func TestTheGreatestSequence(t *testing.T) {
 
 // One favors a target once (spec 2.3, 2.5): a favorite of a target he has an undeleted favorite of stores nothing,
 // and its insertion answers the one he has, unchanged, its parent and sequence too. Another account's of the target,
-// his of another kind with the same id, and his after he deleted his are new.
+// his of another kind with the same id, and his after he deleted his are new. A creation's last lock (spec 2.8) finds
+// and holds FOR SHARE the one he has, a change of it (FOR NO KEY UPDATE) waiting and another's FOR SHARE not; his
+// deleted one, another account's of the target, his of another kind with the same id and his of another target are
+// not found, nor locked.
 func TestAFavoriteOfATargetIsStoredOnce(t *testing.T) {
 	s, pool := newStore(t)
 	ctx := context.Background()
@@ -208,12 +211,37 @@ func TestAFavoriteOfATargetIsStoredOnce(t *testing.T) {
 	hers := favorite(3, domain.FavoriteCycle, w.workspace, &w.project, w.other, 100)
 	module := favorite(4, domain.FavoriteModule, w.workspace, &w.project, w.owner, 100)
 	hers.EntityID, module.EntityID = first.EntityID, first.EntityID
-	create(t, s, hers, module)
+	another := favorite(6, domain.FavoriteCycle, w.workspace, &w.project, w.owner, 100)
+	create(t, s, hers, module, another)
 	if err := s.DeleteFavorite(ctx, first.ID, now, w.owner); err != nil {
 		t.Fatal(err)
 	}
+	others := []uuid.UUID{first.ID, hers.ID, module.ID, another.ID}
+	within(t, pool, func(ctx context.Context) {
+		if got, found, err := s.ShareFavoriteOfTarget(ctx, w.owner, domain.FavoriteCycle, *first.EntityID); found || err != nil {
+			t.Fatalf("his deleted one, another's, of another kind or target: %+v, %v; want none", got, err)
+		}
+		for _, id := range others {
+			if waits(t, pool, id, "FOR UPDATE") {
+				t.Fatalf("%s locked; want none", id)
+			}
+		}
+	})
 	again.ID = numberedID(5)
 	create(t, s, again)
+	within(t, pool, func(ctx context.Context) {
+		if got, found, err := s.ShareFavoriteOfTarget(ctx, w.owner, domain.FavoriteCycle, *first.EntityID); err != nil || !found || !reflect.DeepEqual(got, again) {
+			t.Fatalf("his own: %+v, %v, %v; want %+v", got, found, err, again)
+		}
+		if !waits(t, pool, again.ID, "FOR NO KEY UPDATE") || waits(t, pool, again.ID, "FOR SHARE") {
+			t.Fatal("his own is not held FOR SHARE")
+		}
+		for _, id := range others {
+			if waits(t, pool, id, "FOR UPDATE") {
+				t.Fatalf("%s locked; want his own alone", id)
+			}
+		}
+	})
 }
 
 // One's folder names in a workspace differ in any case (spec 2.5, D41): a creation or a renaming to a name another

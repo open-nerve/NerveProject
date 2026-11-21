@@ -40,13 +40,14 @@ func NewCreateFavorite(d FavoriteWriteDeps) *CreateFavorite { return &CreateFavo
 // parent he may not have: a target not there, another workspace's, one he
 // does not see and an archived one alike (sight.eligible); a parent none of
 // his undeleted folders there.
-// Then, his undeleted favorite of the target answered as it is, not
-// created, its folder and sequence kept; else, at the moment read after
-// the last lock, his favorite of the target's project (the project itself
-// for a project's), one step past his greatest sequence there
-// (domain.SequenceAfter), made and last changed by him; a folder whose
-// name another of his folders there has is 409, from the store. It is
-// answered with its target's name and icon.
+// Then, his undeleted favorite of the target, as its lock, the last, read
+// it, answered as it is, not created, its folder and sequence kept, and
+// nothing written; else, at the moment read after the last lock, his
+// favorite of the target's project (the project itself for a project's),
+// one step past his greatest sequence there (domain.SequenceAfter), made
+// and last changed by him; a folder whose name another of his folders
+// there has is 409, from the store. It is answered with its target's name
+// and icon.
 func (u *CreateFavorite) Execute(ctx context.Context, slug string, n domain.NewFavorite) (NamedFavorite, bool, error) {
 	actor, err := shared.RequireActor(ctx)
 	if err != nil {
@@ -76,6 +77,10 @@ func (u *CreateFavorite) Execute(ctx context.Context, slug string, n domain.NewF
 		}
 		if len(refused) > 0 {
 			return shared.Invalid(refused...)
+		}
+		if h.existing != nil {
+			out = answered(*h.existing, a)
+			return nil
 		}
 		now := u.d.Clock.Now()
 		greatest, err := u.d.Favorites.GreatestFavoriteSequence(ctx, actor.UserID, w.workspaceID)

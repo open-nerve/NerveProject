@@ -259,6 +259,18 @@ func (s *shelf) own(user, id uuid.UUID) (domain.Favorite, bool, error) {
 	return domain.Favorite{}, false, nil
 }
 
+// ShareFavoriteOfTarget mirrors the store's lock of a creation (favorites.sql ShareFavoriteOfTarget): user's undeleted
+// favorite of the target of kind with id; another's and a deleted one are not found.
+func (s *shelf) ShareFavoriteOfTarget(_ context.Context, user uuid.UUID, kind domain.FavoriteKind, id uuid.UUID) (domain.Favorite, bool, error) {
+	s.log("share favorite of %s %s", kind, s.name(id))
+	for _, f := range s.stored {
+		if f.UserID == user && f.Kind == kind && f.EntityID != nil && *f.EntityID == id && !s.deleted[f.ID] {
+			return f, true, nil
+		}
+	}
+	return domain.Favorite{}, false, nil
+}
+
 func (s *shelf) LockFolderChildren(_ context.Context, folder uuid.UUID) error {
 	s.log("lock children %s", s.name(folder))
 	return nil

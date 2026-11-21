@@ -18,12 +18,12 @@ import (
 // A write of one's favorite interleaved with a write that decides it (M7
 // P3c spec 2.5, 2.6, 2.8, 4), each on the app as it runs, both through its
 // API: in each cell another transaction holds the one row both writes
-// lock, the target's project's, a view's or a folder's, with a lock each
-// waits for; the first write is sent and is proven waiting for it at its
-// own lock statement; then the second, proven waiting at its own, behind
-// the first, whose PID blocks it; meanwhile neither holds a lock on the
-// rows the total order of favorites' rows takes after the one it waits
-// for (free). Then the other transaction ends: the first takes the row and
+// lock, the target's project's, a view's, a folder's or a favorite's, with
+// a lock each waits for; the first write is sent and is proven waiting for
+// it at its own lock statement; then the second, proven waiting at its
+// own, behind the first, whose PID blocks it; meanwhile neither holds a
+// lock on the rows the total order of favorites' rows takes after the one
+// it waits for (free). Then the other transaction ends: the first takes the row and
 // commits before the second takes it, and the second decides under its
 // locks on what the first left. Each wait is the request's own, its PID's,
 // and caused by the other transaction (requestBlocked), each row it holds
@@ -35,11 +35,13 @@ import (
 // project's deletion and a member's removal (favoriteCompetitors); and a
 // folder's deletion with a move of a favorite into it, a creation of one in
 // it and a change of one in it that names it its parent again
-// (favoritesRaceAFolder). One world, issueWorld's on an observed app, with
-// Web's cycles and views turned on: each cell makes its own target, so that
-// no cell sees another's; once the start-time runs have run, so that none
-// queues on a row a cell holds (03 §5), each group is a subtest, and each
-// cell one of it. No work item is made, so no fan-out is pending; a
+// (favoritesRaceAFolder); and the deletion of a favorite, and of a folder
+// that holds it, with a creation of a favorite of its target again by the
+// same account (favoritesRaceAgain). One world, issueWorld's on an observed
+// app, with Web's cycles and views turned on: each cell makes its own
+// target, so that no cell sees another's; once the start-time runs have
+// run, so that none queues on a row a cell holds (03 §5), each group is a
+// subtest, and each cell one of it. No work item is made, so no fan-out is pending; a
 // project's deletion waits for its jobs, so that none takes the app's
 // connections from the next cell's writes.
 func TestFavoriteWritesInterleaveWithArchives(t *testing.T) {
@@ -52,6 +54,7 @@ func TestFavoriteWritesInterleaveWithArchives(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) { favoritesRaceATarget(t, w, c) })
 	}
 	t.Run("a folder's deletion", func(t *testing.T) { favoritesRaceAFolder(t, w) })
+	t.Run("one's favorite deleted and created again", func(t *testing.T) { favoritesRaceAgain(t, w) })
 }
 
 // favoriteRacer is one write of a race through the app: the account that
