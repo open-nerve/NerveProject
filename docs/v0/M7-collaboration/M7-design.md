@@ -342,7 +342,8 @@ P1a 的第一个实现提交把关键词 phase 改为 `M7/P1`（P1a、P1b 共用
 | 插入段：bootstrap 测试按名字的哈希分路 | 已完成：负责人 2026-11-20 批准；合入 main（noff `33a19ee1`），main CI 44720865989 全绿；p0=46 的依据与 M4 周期整理测试的修复见记录 | [分路记录](reviews/shard-hash-review.md) |
 | 插入段：M4 泳道查询的计划翻转 | 已完成：负责人 2026-11-20 裁定在 M7 里单独修；合入 main（noff `2083c0b7`），main CI 44724861021 全绿；预检 [re-89](../../reviews/re-89-M4泳道计划预检.md) | [spec 与 plan](specs/M4fix-swimlanes-plan.md) / [记录](reviews/M4fix-swimlanes-plan-review.md) |
 | P3b navigation 模块与视图 | 已完成：合入 main（noff `1168fd25`），main CI 44820762025 全绿；审查与集成见阶段记录 §9；spec 与 plan 经预检 [re-90](../../reviews/re-90-M7P3b预检.md) 修正后通过，基线 main `17e0b1ac`；16 个 Task | [P3b spec](specs/P3b-views.md) / [P3b plan](plans/P3b-views.md) / [P3b 记录](reviews/P3b-views-review.md) |
-| P3c 收藏与三种归档事件 | 实施完成，待整分支审查：spec 与 plan 经预检 [re-91](../../reviews/re-91-M7P3c预检.md) 修正后通过，基线 main `1168fd25`；实施前把 P3c 再划为 P3c（收藏）与 P3d（最近访问）（spec §1、R1）；16 个 Task；三个检查点的本地七项与分支 CI 见阶段记录 §5 | [P3c spec](specs/P3c-favorites.md) / [P3c plan](plans/P3c-favorites.md) / [P3c 记录](reviews/P3c-favorites-review.md) |
+| P3c 收藏与三种归档事件 | 已完成：合入 main（noff `9d26b1c3`），main CI 44947828240 全绿；审查与集成见阶段记录 §9；spec 与 plan 经预检 [re-91](../../reviews/re-91-M7P3c预检.md) 修正后通过，基线 main `1168fd25`；实施前把 P3c 再划为 P3c（收藏）与 P3d（最近访问）（spec §1、R1）；16 个 Task | [P3c spec](specs/P3c-favorites.md) / [P3c plan](plans/P3c-favorites.md) / [P3c 记录](reviews/P3c-favorites-review.md) |
+| P3d 最近访问 | 进行中：spec 与 plan 经预检 [re-92](../../reviews/re-92-M7P3d预检.md) 修正后通过，基线 main `9d26b1c3`（P3c 的 noff）；15 个 Task；第 1 路以本机检查点 0 为基线（spec §6） | [P3d spec](specs/P3d-recents.md) / [P3d plan](plans/P3d-recents.md) |
 
 ## 15. 决定记录
 

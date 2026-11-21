@@ -1,6 +1,6 @@
 # M7 / P3c：收藏与三种归档事件（阶段记录）
 
-> 状态：实施完成，待整分支审查。spec 与 plan 见 [P3c spec](../specs/P3c-favorites.md)、[P3c plan](../plans/P3c-favorites.md)，预检 [re-91](../../../reviews/re-91-M7P3c预检.md)。基线 main `1168fd25`，分支 `codex/m7-p3c`。台账 `.superpowers/sdd/P3c-favorites/progress.md`（ignored，随阶段归档）。
+> 状态：已完成，合入 main（noff `9d26b1c3`），main CI 44947828240 全绿（§9）。spec 与 plan 见 [P3c spec](../specs/P3c-favorites.md)、[P3c plan](../plans/P3c-favorites.md)，预检 [re-91](../../../reviews/re-91-M7P3c预检.md)。基线 main `1168fd25`，分支 `codex/m7-p3c`。台账 `.superpowers/sdd/P3c-favorites/progress.md`（ignored，随阶段归档）。
 
 ## 1. 交付
 
@@ -66,6 +66,8 @@
 | T3b 之后（`7d8d6215`） | Go 两路过（中间检查，e2e 在窗口 (b) 里） | — |
 | 检查点 1（`6fd1da8c`） | 七项一次过（e2e 491 passed） | 44929502521 全绿 |
 | 检查点 2（`f962f3a0`） | 七项一次过（e2e 493 passed） | 44938594594 全绿 |
+| 合并前的终检（`d2511e56`，`final.sh fin`） | 七项一次过（e2e 493 passed；test-web 全部命中缓存，16/16） | 44945103629 全绿（最终分支 CI） |
+| main `9d26b1c3`（合入之后） | — | 44947828240 全绿 |
 
 ## 6. 测试时间与两路（秒）
 
@@ -75,6 +77,8 @@
 | 检查点 0（44905363500） | 422.5 / 637.5 | 820（bootstrap 548.5，慢的 runner） | 766（bootstrap 745.2） |
 | 检查点 1（44929502521） | 417.3 / 662.2 | 835（bootstrap 555.2，慢的 runner） | 933（bootstrap 905.8） |
 | 检查点 2（44938594594） | 453.9 / 649.0 | 723（bootstrap 496.1） | 753（bootstrap 733.0） |
+| 终检（44945103629） | 453.2 / 655.4 | 650（bootstrap 465.5） | 967（bootstrap 938.8，期限的 78.2%） |
+| main `9d26b1c3`（44947828240） | | 662（bootstrap 475.1） | 773（bootstrap 752.5，62.7%） |
 
 - 新的 bootstrap 顶层名（桶 = `cksum % 100`，0–45 第 0 路）：
 
@@ -87,6 +91,7 @@
 
 - 被加重的已有测试：`TestPermissionMatrix`（桶 46，第 1 路）3631 → 3673 格；清理与删除守卫各多一张表（本机第 1 路从检查点 0 到 1 约 +25 秒）。
 - 第 0 路的 runner 在检查点 0、1 都慢：P3c 没碰的非 bootstrap 包合计 492.8（main）→ 681.9 → 687.5（1.39 倍）。第 1 路在 CI 上 61–75.5% 摆动（检查点 1 的 905.8 秒是期限的 75.5%，未到八成；检查点 2 回到 733.0 秒、61.1%）；第 1 路只有 bootstrap，量不出 runner。检查点 2 第 0 路的 runner 也慢 1.21 倍（598.1 / 492.8），bootstrap 496.1。
+- 终检与 main 是同一份代码（`9d26b1c3` 的第二个父就是 `d2511e56`），第 1 路的 bootstrap 却是 938.8 秒（78.2%，至今最高，未到八成）对 752.5 秒（62.7%），差 186 秒在 runner；本机第 1 路稳定在 649–662 秒（终检 655.4）。所以 CI 第 1 路的单次数字不足以判断增量：P3d 以本机检查点 0 的第 1 路作基线，多出 30 秒以上才停，CI 过 960 秒只报告（P3d spec §6）。
 
 ## 7. 交给 M8（M7 收官时写进 M8 的交接）
 
@@ -106,4 +111,9 @@
   - `0de46327`：建一个目标的收藏在父文件夹的 S 之后、写之前，对本人对这个目标的未删收藏取 `FOR SHARE`（`ShareFavoriteOfTarget`，全序里条目行在文件夹行之后）；找到即 200 原样、不读时钟、不写，它的删除等建结束；没有（含等到的删除已提交）就插入。`ON CONFLICT` 的回读留给同一个人同时两次建；剩下的只有同一个人同一刻建、建、删三者交叠。spec §2.5、§2.8、§4 随之改。测试：存储一条、用例两格、锁序测试新的一段（16 个写都断言等待时没有写任何表）、交错新的一组 4 格（删与文件夹删 × 两种次序：删先则 201 且只剩新的一条；建先则 200 与原 201 逐字节相同、删 204、不留活的；从不 500）。变异 3 个点名的 + 6 个皆杀。
   - `5d0a6d45`：`Types` 由 `cascades` 的键排序得出；加第六个键的变异使 `TestFavoriteCascades` 与 `TestPlanningEventDirectory` 都失败。
   - `1259cf8a`：设计 §3.8 去掉空格。
-- 修复后的复审、合并前的终检、分支 CI、合并与 main CI 在下一段 P3d 的 T1 补记。
+- 以下在 P3d 的 T1 补记，数字取自归档台账的末行：
+  - **限定复审**（fable，`2fafe043..49aa9fb2`）：没有严重、没有重要，Ready to merge；三条次要（两段注释重排、spec §2.5 的措辞、`shareExisting` 记下被拒的建也取锁）由主控当场在 `d2511e56` 修，`rr-lint-go`、`rr-keywords`、`rr-doc-links` 全过。
+  - **合并前的终检** `final.sh fin`（`d2511e56`）一次过：七项全 0；bootstrap 第 0 路 453.2 秒、第 1 路 655.4 秒；e2e 493 passed；test-web 全部命中缓存（16/16，网页的输入自上次通过未变）。
+  - **最终分支 CI** 44945103629 第一次全绿：server (0) Test 650 / bootstrap 465.5，server (1) Test 967 / bootstrap 938.8（期限的 78.2%）；web、e2e 两片绿（§5、§6）。
+  - **合并**：`--no-ff` 合入 main，`9d26b1c3`（父 `1168fd25`、`d2511e56`），推送后以 `ls-remote` 核对。**main CI** 44947828240 第一次全绿：server (0) Test 662 / bootstrap 475.1，server (1) Test 773 / bootstrap 752.5（62.7%）；web、e2e 两片绿。
+  - **归档与清理**：归档 `.superpowers/sdd/M7-P3c-integration-20261122`（清单 3507 个文件、828 个目录，分类只有可复现与证据两种、没有未知，`source_unchanged` 为真）；`cleanup.log`：worktree `m7-p3c` 已删，本地分支 `codex/m7-p3c`（在 `d2511e56`）与远端分支已删。
