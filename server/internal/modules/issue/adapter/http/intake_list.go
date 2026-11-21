@@ -5,6 +5,7 @@ import (
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/http/gen"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/domain"
+	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apigen"
 )
 
 // ListIntakeIssues serves GET /api/v0/projects/{project_id}/intake-issues
@@ -42,7 +43,7 @@ func (h handler) GetIntakeCounts(ctx context.Context, req gen.GetIntakeCountsReq
 // case gives every row it lists (app.ListIntakeIssues).
 func intakeIssueRow(i domain.Issue) gen.IntakeIssue {
 	return gen.IntakeIssue{Intake: issueIntake(*i.Intake), ID: i.ID, WorkspaceID: i.WorkspaceID, ProjectID: i.ProjectID, SequenceID: i.SequenceID,
-		Name: i.Name, StateID: i.StateID, Priority: gen.IssuePriority(i.Priority), StartDate: orNull(i.StartDate), TargetDate: orNull(i.TargetDate),
+		Name: i.Name, StateID: i.StateID, Priority: apigen.IssuePriority(i.Priority), StartDate: orNull(i.StartDate), TargetDate: orNull(i.TargetDate),
 		ParentID: orNull(i.ParentID), SortOrder: i.SortOrder,
 		CompletedAt: orNull(i.CompletedAt), ArchivedAt: orNull(i.ArchivedAt), AssigneeIds: orEmpty(i.AssigneeIDs), LabelIds: orEmpty(i.LabelIDs),
 		CycleID: orNull(i.CycleID), ModuleIds: orEmpty(i.ModuleIDs),

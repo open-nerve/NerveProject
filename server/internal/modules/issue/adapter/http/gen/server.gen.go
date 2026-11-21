@@ -183,33 +183,6 @@ func (e IssueListOrder) Valid() bool {
 	}
 }
 
-// Defines values for IssuePriority.
-const (
-	IssuePriorityHigh   IssuePriority = "high"
-	IssuePriorityLow    IssuePriority = "low"
-	IssuePriorityMedium IssuePriority = "medium"
-	IssuePriorityNone   IssuePriority = "none"
-	IssuePriorityUrgent IssuePriority = "urgent"
-)
-
-// Valid indicates whether the value is a known member of the IssuePriority enum.
-func (e IssuePriority) Valid() bool {
-	switch e {
-	case IssuePriorityHigh:
-		return true
-	case IssuePriorityLow:
-		return true
-	case IssuePriorityMedium:
-		return true
-	case IssuePriorityNone:
-		return true
-	case IssuePriorityUrgent:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for IssueRelationType.
 const (
 	IssueRelationTypeBlockedBy IssueRelationType = "blocked_by"
@@ -423,8 +396,8 @@ type IntakeIssue struct {
 	ParentID nullable.Nullable[uuid.UUID] `json:"parent_id"`
 
 	// Priority A work item's priority, from the most to the least urgent.
-	Priority  IssuePriority `json:"priority"`
-	ProjectID uuid.UUID     `json:"project_id"`
+	Priority  externalRef0.IssuePriority `json:"priority"`
+	ProjectID uuid.UUID                  `json:"project_id"`
 
 	// SequenceID Its number in its project, from 1; with the project's identifier, as in WEB-12.
 	SequenceID int `json:"sequence_id"`
@@ -463,7 +436,7 @@ type IntakeIssueCreate struct {
 	Name string `json:"name"`
 
 	// Priority A work item's priority, from the most to the least urgent.
-	Priority *IssuePriority `json:"priority,omitempty"`
+	Priority *externalRef0.IssuePriority `json:"priority,omitempty"`
 
 	// TargetDate The day it is due, as YYYY-MM-DD; left out for none.
 	TargetDate *shared.Date `json:"target_date,omitempty"`
@@ -493,7 +466,7 @@ type IntakeIssueUpdate struct {
 	Name *string `json:"name,omitempty"`
 
 	// Priority A work item's priority, from the most to the least urgent.
-	Priority *IssuePriority `json:"priority,omitempty"`
+	Priority *externalRef0.IssuePriority `json:"priority,omitempty"`
 
 	// SkipActivity Only with description_html alone; preserves audit when content identity is unchanged.
 	SkipActivity *bool `json:"skip_activity,omitempty"`
@@ -553,8 +526,8 @@ type Issue struct {
 	ParentID nullable.Nullable[uuid.UUID] `json:"parent_id"`
 
 	// Priority A work item's priority, from the most to the least urgent.
-	Priority  IssuePriority `json:"priority"`
-	ProjectID uuid.UUID     `json:"project_id"`
+	Priority  externalRef0.IssuePriority `json:"priority"`
+	ProjectID uuid.UUID                  `json:"project_id"`
 
 	// SequenceID Its number in its project, from 1; with the project's identifier, as in WEB-12.
 	SequenceID int `json:"sequence_id"`
@@ -662,7 +635,7 @@ type IssueCreate struct {
 	ParentID *uuid.UUID `json:"parent_id,omitempty"`
 
 	// Priority A work item's priority, from the most to the least urgent.
-	Priority *IssuePriority `json:"priority,omitempty"`
+	Priority *externalRef0.IssuePriority `json:"priority,omitempty"`
 
 	// StartDate The day it starts, as YYYY-MM-DD; left out for none.
 	StartDate *shared.Date `json:"start_date,omitempty"`
@@ -719,8 +692,8 @@ type IssueDetail struct {
 	ParentID nullable.Nullable[uuid.UUID] `json:"parent_id"`
 
 	// Priority A work item's priority, from the most to the least urgent.
-	Priority  IssuePriority `json:"priority"`
-	ProjectID uuid.UUID     `json:"project_id"`
+	Priority  externalRef0.IssuePriority `json:"priority"`
+	ProjectID uuid.UUID                  `json:"project_id"`
 
 	// SequenceID Its number in its project, from 1; with the project's identifier, as in WEB-12.
 	SequenceID int `json:"sequence_id"`
@@ -848,9 +821,6 @@ type IssueListTotal struct {
 	Total int64  `json:"total"`
 }
 
-// IssuePriority A work item's priority, from the most to the least urgent.
-type IssuePriority string
-
 // IssueReaction defines model for IssueReaction.
 type IssueReaction struct {
 	ActorID   uuid.UUID `json:"actor_id"`
@@ -918,7 +888,7 @@ type IssueUpdate struct {
 	ParentID nullable.Nullable[uuid.UUID] `json:"parent_id,omitempty"`
 
 	// Priority A work item's priority, from the most to the least urgent.
-	Priority *IssuePriority `json:"priority,omitempty"`
+	Priority *externalRef0.IssuePriority `json:"priority,omitempty"`
 
 	// SkipActivity Only with description_html alone; preserves audit when content identity is unchanged.
 	SkipActivity *bool `json:"skip_activity,omitempty"`

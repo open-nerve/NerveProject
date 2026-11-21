@@ -7,6 +7,7 @@ import (
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/adapter/http/gen"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue/domain"
+	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apigen"
 )
 
 // CreateIssue serves POST /api/v0/projects/{project_id}/issues: the state,
@@ -92,7 +93,7 @@ func (h handler) UnarchiveIssue(ctx context.Context, req gen.UnarchiveIssueReque
 // (issueRow) does not show.
 func issueDetail(i domain.Issue) gen.IssueDetail {
 	return gen.IssueDetail{DescriptionHTML: i.DescriptionHTML, IsSubscribed: i.Subscribed, Intake: intakeOf(i.Intake), ID: i.ID, WorkspaceID: i.WorkspaceID, ProjectID: i.ProjectID, SequenceID: i.SequenceID, Name: i.Name,
-		StateID: i.StateID, Priority: gen.IssuePriority(i.Priority), StartDate: orNull(i.StartDate), TargetDate: orNull(i.TargetDate),
+		StateID: i.StateID, Priority: apigen.IssuePriority(i.Priority), StartDate: orNull(i.StartDate), TargetDate: orNull(i.TargetDate),
 		ParentID: orNull(i.ParentID), SortOrder: i.SortOrder,
 		CompletedAt: orNull(i.CompletedAt), ArchivedAt: orNull(i.ArchivedAt), AssigneeIds: orEmpty(i.AssigneeIDs), LabelIds: orEmpty(i.LabelIDs),
 		CycleID: orNull(i.CycleID), ModuleIds: orEmpty(i.ModuleIDs),
@@ -102,7 +103,7 @@ func issueDetail(i domain.Issue) gen.IssueDetail {
 
 func issueRow(i domain.Issue) gen.Issue {
 	return gen.Issue{ID: i.ID, WorkspaceID: i.WorkspaceID, ProjectID: i.ProjectID, SequenceID: i.SequenceID, Name: i.Name,
-		StateID: i.StateID, Priority: gen.IssuePriority(i.Priority), StartDate: orNull(i.StartDate), TargetDate: orNull(i.TargetDate),
+		StateID: i.StateID, Priority: apigen.IssuePriority(i.Priority), StartDate: orNull(i.StartDate), TargetDate: orNull(i.TargetDate),
 		ParentID: orNull(i.ParentID), SortOrder: i.SortOrder,
 		CompletedAt: orNull(i.CompletedAt), ArchivedAt: orNull(i.ArchivedAt), AssigneeIds: orEmpty(i.AssigneeIDs), LabelIds: orEmpty(i.LabelIDs),
 		CycleID: orNull(i.CycleID), ModuleIds: orEmpty(i.ModuleIDs),

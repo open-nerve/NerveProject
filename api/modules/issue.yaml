@@ -2193,10 +2193,6 @@ components:
           items: {$ref: '#/components/schemas/Draft'}
         next_cursor: {$ref: '../common.yaml#/components/schemas/NextCursor'}
         total: {type: integer, format: int64}
-    IssuePriority:
-      description: A work item's priority, from the most to the least urgent.
-      type: string
-      enum: [urgent, high, medium, low, none]
     IssueDetail:
       description: A work item of a project.
       type: object
@@ -2242,7 +2238,7 @@ components:
           type: string
           format: uuid
         priority:
-          $ref: '#/components/schemas/IssuePriority'
+          $ref: '../common.yaml#/components/schemas/IssuePriority'
         start_date:
           description: The day it starts; null for none.
           type: [string, 'null']
@@ -2370,7 +2366,7 @@ components:
           description: 1–255 characters without the white space around it, which is not stored.
           type: string
         priority:
-          $ref: '#/components/schemas/IssuePriority'
+          $ref: '../common.yaml#/components/schemas/IssuePriority'
         assignee_ids:
           description: >-
             At most 100 accounts, each named once, each an active member of
@@ -2442,7 +2438,7 @@ components:
           type: string
           format: uuid
         priority:
-          $ref: '#/components/schemas/IssuePriority'
+          $ref: '../common.yaml#/components/schemas/IssuePriority'
         start_date:
           description: The day it starts; null for none.
           type: [string, 'null']
@@ -2559,7 +2555,7 @@ components:
           description: 1–255 characters without the white space around it, which is not stored.
           type: string
         priority:
-          $ref: '#/components/schemas/IssuePriority'
+          $ref: '../common.yaml#/components/schemas/IssuePriority'
         assignee_ids:
           description: >-
             The work item's new assignees, empty for none: at most 100
@@ -2635,7 +2631,7 @@ components:
           type: string
           format: uuid
         priority:
-          $ref: '#/components/schemas/IssuePriority'
+          $ref: '../common.yaml#/components/schemas/IssuePriority'
         start_date:
           description: The day it starts; null for none.
           type: [string, 'null']
@@ -2885,7 +2881,7 @@ components:
           type: string
           format: uuid
         priority:
-          $ref: '#/components/schemas/IssuePriority'
+          $ref: '../common.yaml#/components/schemas/IssuePriority'
         assignee_ids:
           description: >-
             At most 100 accounts, each named once, each an active member of
@@ -2953,7 +2949,7 @@ components:
           type: string
           format: uuid
         priority:
-          $ref: '#/components/schemas/IssuePriority'
+          $ref: '../common.yaml#/components/schemas/IssuePriority'
         assignee_ids:
           description: >-
             The work item's new assignees, empty for none: at most 100
