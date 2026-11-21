@@ -7,7 +7,6 @@ import (
 	"errors"
 	"io/fs"
 	"log/slog"
-	"slices"
 	"sync"
 	"time"
 
@@ -17,7 +16,6 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/asset"
 	assetapp "github.com/open-nerve/NerveProject/server/internal/modules/asset/app"
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity"
-	"github.com/open-nerve/NerveProject/server/internal/modules/instance"
 	"github.com/open-nerve/NerveProject/server/internal/modules/issue"
 	"github.com/open-nerve/NerveProject/server/internal/modules/navigation"
 	"github.com/open-nerve/NerveProject/server/internal/modules/notification"
@@ -25,12 +23,12 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/project"
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace"
 	"github.com/open-nerve/NerveProject/server/internal/platform/buildinfo"
+	"github.com/open-nerve/NerveProject/server/internal/platform/clock"
 	"github.com/open-nerve/NerveProject/server/internal/platform/config"
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver"
 	"github.com/open-nerve/NerveProject/server/internal/platform/jobs"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/platform/ratelimit"
-	"github.com/open-nerve/NerveProject/server/internal/platform/webui"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
@@ -80,6 +78,68 @@ type appFactories struct {
 	assets func(context.Context, config.FilesConfig, *identity.Keys, *slog.Logger) (assetComponents, error)
 }
 
+// wiring carries the values newAppWithFactories's steps hand one another.
+// newAppWithFactories fills the first group; app_ports.go's provide,
+// dispatchEvents and share the next three; app_modules.go's modules the
+// last; app_serve.go's schedule and route give the modules' jobs and routes
+// to the app.
+type wiring struct {
+	cfg           config.Config
+	logger        *slog.Logger
+	pool          *pgxpool.Pool
+	keys          *identity.Keys
+	invitations   identity.MAC
+	assets        assetComponents
+	limiter       *ratelimit.Limiter
+	businessClock clock.Offset
+	tx            *postgres.TxManager
+
+	// provide: the adapters each module offers the others, and what is
+	// built from them alone.
+	identityPorts     identity.Provided
+	assetPorts        asset.Provided
+	workspacePorts    workspace.Provided
+	projectPorts      project.Provided
+	issuePorts        issue.Provided
+	planningPorts     planning.Provided
+	notificationPorts notification.Provided
+	navigationPorts   navigation.Provided
+	imageBindings     asset.ImageBindings
+	imageReader       asset.ImageReader
+	assetPurger       *assetapp.Purger
+	authorizer        shared.Authorizer
+	decider           *access.Decider
+	readable          *access.ReadableProjects
+
+	// dispatchEvents: the job inserter and the dispatcher on it.
+	inserter jobInserter
+	events   *dispatcher
+
+	// share: what more than one module takes.
+	projectWrites writeGate
+	issueTx       shared.TxManager
+	readTx        *postgres.TxManager
+	previews      linkPreviews
+
+	// modules: the modules, in the order modules builds them.
+	issues *issue.Module
+	plans  *planning.Module
+	notes  *notification.Module
+	views  *navigation.Module
+	proj   *project.Module
+	ws     *workspace.Module
+	ident  *identity.Module
+	files  *asset.Module
+}
+
+// newAppWithFactories builds the app step by step, keeping six orders:
+// (1) every module's Provide before any module's New (provide before
+// modules); (2) project before workspace, (3) workspace before identity and
+// (4) asset after issue, project and workspace (modules); (5) the order of
+// the purge's modules, of the jobs and their kinds (schedule) and of the
+// routes (route); (6) the cleanup of each failure: none before the pool,
+// the pool's close when the migrator fails, and once the app exists its
+// close, here, as soon as a step fails, so nothing after it is built.
 func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Logger, migrationFiles, webFiles fs.FS, factories appFactories) (*app, error) {
 	signingKey, err := readSigningKey(cfg.Auth.JWT.PrivateKeyFile)
 	if err != nil {
@@ -132,218 +192,25 @@ func newAppWithFactories(ctx context.Context, cfg config.Config, logger *slog.Lo
 	// The modules in two steps (M3 design 6.6): first the adapters each
 	// offers the others, built from the pool alone; then the modules, each
 	// with every port it needs, so no construction waits on another.
-	identityPorts := identity.Provide(pool)
-	assetPorts := asset.Provide(pool)
-	protected := protectedAssetReferences()
-	workspacePorts := workspace.Provide(pool, protected)
-	projectPorts := project.Provide(pool, protected)
-	issuePorts := issue.Provide(pool, protected)
-	planningPorts := planning.Provide(pool, planningProjects{projects: projectPorts.PlanningProjects})
-	notificationPorts := notification.Provide(pool)
-	navigationPorts := navigation.Provide(pool)
-	imageBindings := asset.NewImageBindings(assetPorts, businessClock)
-	imageReader := asset.NewImageReader(assetPorts, assets.store, assets.runtimeNow)
-	assetPurger := asset.NewPurger(assetPorts, assetImageReferences{identityPorts.ImageReferences, workspacePorts.ImageReferences, projectPorts.ImageReferences}, tx)
-	authorizer := access.New(access.Deps{
-		WorkspaceRoles: workspacePorts.WorkspaceRoles,
-		ProjectAccess:  accessProjects{projects: projectPorts.ProjectAccess},
-	})
-	// The recheck of a notification's recipients, Authorize's rule for many
-	// accounts at once (M7 P1b spec 2.7).
-	decider := access.NewDecider(access.DeciderDeps{
-		WorkspaceRoles: workspacePorts.WorkspaceRolesMany,
-		ProjectAccess:  accessProjectsMany{projects: projectPorts.ProjectAccessMany},
-	})
-	// The projects a notification's reader reads now, Authorize's rule of
-	// issue.read for each (M7 P1c spec 2.5).
-	readable := access.NewReadableProjects(access.ReadableDeps{
-		WorkspaceRoles: workspacePorts.WorkspaceRoles,
-		Projects:       accessMemberProjects{projects: projectPorts.MemberProjectAccess},
-	})
-	client, err := jobs.NewInserter(pool)
-	if err != nil {
+	w := &wiring{cfg: cfg, logger: logger, pool: pool, keys: keys, invitations: invitations, assets: assets, limiter: limiter, businessClock: businessClock, tx: tx}
+	w.provide()
+	if err = w.dispatchEvents(); err != nil {
 		a.close()
 		return nil, err
 	}
-	inserter := jobInserter{client: client}
-	events, err := newDispatcher(eventTypes(), slices.Concat(issue.Subscribers(issuePorts, inserter), planning.Subscribers(inserter), asset.Subscribers(assetPorts, inserter),
-		notification.Subscribers(notificationPorts, inserter), navigation.Subscribers(inserter)))
-	if err != nil {
+	w.share(outboundClient)
+	if err = w.modules(); err != nil {
 		a.close()
 		return nil, err
 	}
-	projectWrites := newWriteGate(cfg.Issue.WriteGate)
-	issueTx := newIssueJobTx(pool, cfg)
-	// Each read-only snapshot transaction is its own (issue, planning and file reads).
-	readTx := postgres.NewTxManager(pool, cfg.Database.CommitTimeout, postgres.ReadOnlySnapshot())
-	// One link-preview crawler for the links of the work items and of the modules (M6 P2 spec R12).
-	previews := newLinkPreviews(outboundClient, logger)
-	attachmentReads := asset.NewAttachmentReads(assetPorts)
-	issueAttachmentReads := issueAttachments{reader: attachmentReads, counter: attachmentReads, catalog: attachmentReads}
-	issues := issue.New(issue.Deps{
-		AttachmentReader: issueAttachmentReads, AttachmentCounter: issueAttachmentReads, AttachmentCatalog: issueAttachmentReads,
-		ContentBindings:    issueContentBindings{bindings: asset.NewContentBindings(assetPorts, businessClock)},
-		DraftAssetTransfer: issueDraftAssetTransfer{assets: asset.NewDraftAssetTransfer(assetPorts, businessClock, events)},
-		DraftAssets:        issueDraftAssets{assets: assetPorts.DraftAssets},
-		LinkCrawler:        previews, Logger: logger,
-		Events: events, ArchiveEvents: events,
-		Pool: pool, Tx: busyTx{tx: issueTx}, JobTx: issueTx, ArchivePolicies: projectPorts.ArchivePolicies, AutoArchiveInterval: cfg.Issue.AutoArchiveInterval, TrimVersionsInterval: cfg.Issue.TrimVersionsInterval,
-		DeleteBatch: cfg.Issue.DeleteBatch, DeleteBudget: cfg.Issue.DeleteBudget, RuntimeNow: time.Now,
-		ReadTx:    readTx,
-		WriteGate: projectWrites, Clock: businessClock, Authorizer: authorizer,
-		Projects:   issueProjects{projects: projectPorts.IssueProjects},
-		Planning:   issuePlanning{targets: planningPorts.IssueTargets, directory: planningPorts.IssueDirectory},
-		Workspaces: issueWorkspaces{directory: workspacePorts.WorkspaceDirectory},
-		Members:    issueMembers{members: workspacePorts.WorkspaceMemberDirectory},
-		Profiles:   issueProfiles{profiles: identityPorts.PublicProfiles},
-	})
-	plans := planning.New(planning.Deps{
-		Pool: pool, Tx: busyTx{tx: issueTx}, ReadTx: readTx, JobTx: issueTx, RuntimeNow: time.Now, Logger: logger,
-		DeleteBatch: cfg.Planning.DeleteBatch, DeleteBudget: cfg.Planning.DeleteBudget, FreezeInterval: cfg.Planning.FreezeInterval,
-		WriteGate: projectWrites, Clock: businessClock, Authorizer: authorizer, Events: events,
-		Projects:      planningProjects{projects: projectPorts.PlanningProjects},
-		IssueStats:    planningIssues{stats: issuePorts.PlanningStats},
-		IssueTransfer: planningTransfer{transfer: issuePorts.PlanningTransfer},
-		ListSettings:  issuePorts.ListSettings,
-		LinkCrawls:    inserter, LinkCrawler: previews,
-	})
-	// A change of a notification waits for its row at most
-	// issue.write_lock_timeout, 503 past it (busyTx); mark-all-read's
-	// batches never wait for a row (SKIP LOCKED) and run in tx (M7 P1c spec
-	// 2.7, R5).
-	notes := notification.New(notification.Deps{
-		Pool: pool, Issues: notificationIssues{issues: issuePorts.NotificationIssues}, JobTx: issueTx, RuntimeNow: time.Now, Logger: logger,
-		Projects: notificationProjects{names: projectPorts.NotificationNames}, Readers: notificationReaders{decider: decider},
-		DeleteBatch: cfg.Notification.DeleteBatch, DeleteBudget: cfg.Notification.DeleteBudget,
-		Workspaces: notificationWorkspaces{directory: workspacePorts.WorkspaceDirectory}, Authorizer: authorizer,
-		Readable:  notificationReadable{readable: readable},
-		IssueRefs: notificationIssueRefs{issues: issuePorts.IssueRefs, projects: projectPorts.NotificationIdentifiers},
-		Clock:     businessClock, ReadTx: readTx, Tx: busyTx{tx: issueTx}, MarkTx: tx,
-	})
-	// A view's write enters no write gate and answers no server_busy (M7 P3b spec 2.4): tx.
-	views := navigation.New(navigation.Deps{Pool: pool, Tx: tx, ReadTx: readTx, JobTx: issueTx, RuntimeNow: time.Now, Logger: logger,
-		DeleteBatch: cfg.Navigation.DeleteBatch, DeleteBudget: cfg.Navigation.DeleteBudget, Clock: businessClock, Authorizer: authorizer,
-		Projects: navigationProjects{projects: projectPorts.NavigationProjects}, Workspaces: navigationWorkspaces{directory: workspacePorts.WorkspaceDirectory},
-		ListSettings: issuePorts.ListSettings, WorkspaceListSettings: issuePorts.WorkspaceListSettings})
-	// project before workspace: workspace's writes take its cascade.
-	proj := project.New(project.Deps{
-		Caller: identityPorts.CredentialLock, ImageGate: projectImageGate{gate: projectWrites},
-		ImageBindings: projectImageBindings{bindings: imageBindings}, Images: projectImageReader{images: imageReader},
-		Events: events,
-		Pool:   pool, Tx: tx, Clock: businessClock, Authorizer: authorizer,
-		Workspaces:   projectWorkspaces{directory: workspacePorts.WorkspaceDirectory},
-		Members:      workspacePorts.WorkspaceMembers,
-		Issues:       issuePorts.IssueCascade,
-		ListSettings: issuePorts.ListSettings,
-	})
-	ws := workspace.New(workspace.Deps{
-		ImageBindings: workspaceImageBindings{bindings: imageBindings}, Images: workspaceImageReader{images: imageReader}, MemberAvatars: memberAvatarReader{images: imageReader},
-		Events: events,
-		Pool:   pool, Tx: tx, Clock: businessClock, Logger: logger, Authorizer: authorizer,
-		Accounts:        workspaceAccounts{accounts: identityPorts.Accounts},
-		Profiles:        workspaceProfiles{profiles: identityPorts.PublicProfiles},
-		InvitationMAC:   invitations,
-		CallerLock:      identityPorts.CredentialLock,
-		Projects:        proj.Cascade(),
-		CreationEnabled: cfg.Workspace.CreationEnabled,
-	})
-	ident, err := identity.New(identity.Deps{
-		ImageBindings:   profileImageBindings{bindings: imageBindings},
-		Images:          profileImageReader{images: imageReader},
-		Pool:            pool,
-		Tx:              tx,
-		Clock:           businessClock,
-		Logger:          logger,
-		SignupPolicy:    signupPolicy{enabled: cfg.Auth.SignupEnabled, invitations: ws.SignupInvitations()},
-		Memberships:     ws.Deactivator(),
-		Keys:            keys,
-		AccessTokenTTL:  cfg.Auth.AccessTokenTTL,
-		SessionTTL:      cfg.Auth.SessionTTL,
-		RefreshDeadline: cfg.Auth.RefreshDeadline,
-		// The periodic job that deletes the expired sessions (M2 design 3.15).
-		SessionCleanupInterval: cfg.Auth.SessionCleanupInterval,
-		Password:               passwordHashing(cfg.Auth.Password),
-		RateLimits: identity.RateLimits{
-			Limiter:      limiter,
-			LoginIP:      bucket(limiter, "login_ip", cfg.RateLimit.LoginIP),
-			LoginIPEmail: bucket(limiter, "login_ip_email", cfg.RateLimit.LoginIPEmail),
-			RegisterIP:   bucket(limiter, "register_ip", cfg.RateLimit.RegisterIP),
-			PasswordUser: bucket(limiter, "password_user", cfg.RateLimit.PasswordUser),
-		},
-	})
-	if err != nil {
+	if err = a.schedule(w); err != nil {
 		a.close()
 		return nil, err
 	}
-	files, err := asset.New(asset.Deps{Events: events, Files: cfg.Files, RuntimeNow: assets.runtimeNow, Transfer: assets.transfer, Sealing: assets.sealing, Ports: assetPorts, Objects: assets.store, Inventory: assets.store, Temporary: assets.store, JobTx: tx,
-		PurgeAfter: cfg.Cleanup.PurgeAfter,
-		ReadTx:     readTx, UploadSigner: assets.store, ReadSigner: assets.store,
-		Parents: assetParentReader{workspaces: workspacePorts.AssetParents, projects: projectPorts.AssetParents, issues: issuePorts.AssetParents},
-		Access:  assetapp.AccessDeps{Hosts: assetHostAccess{workspaces: ws.AssetAccess(), projects: proj.AssetAccess(), issues: issues.AssetAccess()}, Workspaces: assetWorkspaceLocks{parents: workspacePorts.AssetParents}, Projects: assetProjectLocks{projects: projectPorts.IssueProjects}, Drafts: assetDraftLocks{parents: issuePorts.AssetParents}, Caller: identityPorts.CredentialLock, Gate: forAssetWrites(projectWrites), Tx: busyTx{tx: issueTx}, CredentialClock: businessClock, Clock: businessClock},
-	})
-	if err != nil {
+	if err = a.route(w, webFiles); err != nil {
 		a.close()
 		return nil, err
 	}
-	purge := newPurgeDeleted([]purgeModule{{"asset", forAssetPurge(assetPurger)}, {"notification", forNotificationPurge(notificationPorts.Purger)}, {"navigation", forNavigationPurge(navigationPorts.Purger)}, {"issue", forIssuePurge(issuePorts.Purger)}, {"planning", forPlanningPurge(planningPorts.Purger)}, {"project", forProjectPurge(projectPorts.Purger)}, {"workspace", forWorkspacePurge(workspacePorts.Purger)}, {"identity", forIdentityPurge(identityPorts.Purger)}}, businessClock, time.Now, cfg.Cleanup.PurgeAfter, cfg.Cleanup.PurgeBatch, cfg.Files.CleanupBudget)
-	definitions := append(slices.Concat(ident.Jobs(), issues.Jobs(), plans.Jobs(), files.Jobs(), notes.Jobs(), views.Jobs()), purgeJob(purge, cfg.Cleanup.PurgeInterval))
-	a.jobs, err = jobs.New(pool, jobs.Config{ShutdownTimeout: cfg.Jobs.ShutdownTimeout, Logger: logger, DefaultWorkers: cfg.Jobs.DefaultWorkers, PeriodicWorkers: cfg.Jobs.PeriodicWorkers}, definitions, slices.Concat(identity.EnqueuedKinds(), issue.EnqueuedKinds(), planning.EnqueuedKinds(), asset.EnqueuedKinds(), notification.EnqueuedKinds(),
-		navigation.EnqueuedKinds()))
-	if err != nil {
-		a.close()
-		return nil, err
-	}
-	inst, err := instance.New(instance.Deps{
-		SignupEnabled:            cfg.Auth.SignupEnabled,
-		WorkspaceCreationEnabled: cfg.Workspace.CreationEnabled,
-		FileSizeLimit:            cfg.Files.SizeLimit,
-		Clock:                    businessClock,
-	})
-	if err != nil {
-		a.close()
-		return nil, err
-	}
-
-	a.router = httpserver.NewRouter(logger,
-		httpserver.Check{Name: "database", Run: pool.Ping},
-		httpserver.Check{Name: "migrations", Run: migrator.CheckUpToDate},
-	)
-	a.publicOperations = slices.Concat(ident.PublicOperations(), inst.PublicOperations(), ws.PublicOperations())
-	api, err := httpserver.NewAPI(httpserver.APIConfig{
-		Logger:           logger,
-		Authenticator:    ident.Authenticator(),
-		PublicOperations: a.publicOperations,
-		MaxBodyBytes:     cfg.Server.MaxBodyBytes,
-		RequestTimeout:   cfg.Server.RequestTimeout,
-		TrustedProxies:   cfg.Server.TrustedProxies,
-		IPv6PrefixLen:    cfg.RateLimit.IPv6PrefixLen,
-		Anonymous:        bucket(limiter, "anonymous", cfg.RateLimit.Anonymous),
-		Authenticated:    bucket(limiter, "authenticated", cfg.RateLimit.Authenticated),
-		AuthFailure:      bucket(limiter, "auth_failure", cfg.RateLimit.AuthFailure),
-	})
-	if err != nil {
-		a.close()
-		return nil, err
-	}
-	// Modules mount their generated routes on this root router, next to the
-	// platform's /api/ fallback; an /api/v0/ sub-mux would shadow it.
-	ident.Register(a.router, api)
-	inst.Register(a.router, api)
-	ws.Register(a.router, api)
-	proj.Register(a.router, api)
-	issues.Register(a.router, api)
-	plans.Register(a.router, api)
-	files.Register(a.router, api, bucket(limiter, "file_transfer", cfg.Files.TransferRate))
-	notes.Register(a.router, api)
-	views.Register(a.router, api)
-	// The web UI takes every path no other pattern claims. It must be the
-	// method-less "/": "GET /" and the method-less "/api/" would conflict.
-	webHandler, err := webui.Handler(webFiles, webui.Options{StorageOrigin: assets.origin})
-	if err != nil {
-		a.close()
-		return nil, err
-	}
-	a.router.Handle("/", webHandler)
 	return a, nil
 }
 
