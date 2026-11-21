@@ -156,7 +156,8 @@ type Deps struct {
 	Authorizer shared.Authorizer
 	// Events publishes a cycle's and a module's deletion in the deleting
 	// transaction: bootstrap's dispatcher, whose issue subscriber takes the
-	// work items out of the deleted cycle or module (M6 P3a spec R6).
+	// work items out of the deleted cycle or module (M6 P3a spec R6); and
+	// their archive in the archiving one (M7 P3c spec 2.6).
 	Events shared.EventPublisher
 	// Projects are project's PlanningProjects, converted (bootstrap/ports.go).
 	Projects app.Projects
@@ -220,15 +221,15 @@ func New(d Deps) *Module {
 			CreateCycle:      app.NewCreateCycle(app.CreateCycleDeps{Locks: locks, Cycles: store, Clock: d.Clock}),
 			GetCycle:         app.NewGetCycle(app.GetCycleDeps{Reads: reads, Clock: d.Clock}),
 			UpdateCycle:      app.NewUpdateCycle(app.UpdateCycleDeps{Locks: locks, Cycles: store, Clock: d.Clock}),
-			ArchiveCycle:     app.NewArchiveCycle(app.ArchiveCycleDeps{Locks: locks, Cycles: store, Clock: d.Clock}),
-			UnarchiveCycle:   app.NewUnarchiveCycle(app.ArchiveCycleDeps{Locks: locks, Cycles: store, Clock: d.Clock}),
+			ArchiveCycle:     app.NewArchiveCycle(app.ArchiveCycleDeps{Locks: locks, Cycles: store, Clock: d.Clock, Events: d.Events}),
+			UnarchiveCycle:   app.NewUnarchiveCycle(app.ArchiveCycleDeps{Locks: locks, Cycles: store, Clock: d.Clock, Events: d.Events}),
 			DeleteCycle:      app.NewDeleteCycle(app.DeleteCycleDeps{Locks: locks, Cycles: store, Clock: d.Clock, Events: d.Events}),
 			ListModules:      app.NewListModules(app.ListModulesDeps{Reads: reads, Modules: store, Groups: d.Projects, Stats: d.IssueStats}),
 			CreateModule:     app.NewCreateModule(app.CreateModuleDeps{Locks: locks, Roles: d.Projects, Modules: store, Clock: d.Clock}),
 			GetModule:        app.NewGetModule(app.GetModuleDeps{Reads: reads}),
 			UpdateModule:     app.NewUpdateModule(app.UpdateModuleDeps{Locks: locks, Roles: d.Projects, Modules: store, Clock: d.Clock}),
-			ArchiveModule:    app.NewArchiveModule(app.ArchiveModuleDeps{Locks: locks, Modules: store, Clock: d.Clock}),
-			UnarchiveModule:  app.NewUnarchiveModule(app.ArchiveModuleDeps{Locks: locks, Modules: store, Clock: d.Clock}),
+			ArchiveModule:    app.NewArchiveModule(app.ArchiveModuleDeps{Locks: locks, Modules: store, Clock: d.Clock, Events: d.Events}),
+			UnarchiveModule:  app.NewUnarchiveModule(app.ArchiveModuleDeps{Locks: locks, Modules: store, Clock: d.Clock, Events: d.Events}),
 			DeleteModule:     app.NewDeleteModule(app.DeleteModuleDeps{Locks: locks, Modules: store, Clock: d.Clock, Events: d.Events}),
 			CreateModuleLink: app.NewCreateModuleLink(links),
 			UpdateModuleLink: app.NewUpdateModuleLink(links),

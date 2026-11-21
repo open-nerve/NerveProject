@@ -222,14 +222,14 @@ func TestIssueEventDirectory(t *testing.T) {
 			t.Fatalf("%s: %v", kind, err)
 		}
 	}
-	if !reflect.DeepEqual(project.EventTypes(), []string{"project.deleted"}) || !reflect.DeepEqual(workspace.EventTypes(), []string{"workspace.deleted"}) {
+	if !reflect.DeepEqual(project.EventTypes(), []string{"project.archived", "project.deleted"}) || !reflect.DeepEqual(workspace.EventTypes(), []string{"workspace.deleted"}) {
 		t.Fatal("deletion producer declarations")
 	}
 	all, err := newDispatcher(eventTypes(), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, kind := range []string{"project.deleted", "workspace.deleted"} {
+	for _, kind := range []string{"project.archived", "project.deleted", "workspace.deleted"} {
 		if err := all.Publish(t.Context(), shared.Event{Type: kind}); err != nil {
 			t.Fatal(err)
 		}
@@ -239,11 +239,13 @@ func TestIssueEventDirectory(t *testing.T) {
 	}
 }
 
-// planning declares its cycle's and module's deletions (M6 P3a spec R6), and the app's directory declares them, so
-// that their publication reaches the issue module's subscriber, which the app's dispatcher takes with the rest of
-// issue's: a subscription to an undeclared type is refused at its construction.
+// planning declares its cycle's and module's deletions (M6 P3a spec R6) and archives (M7 P3c spec 2.6), and the app's
+// directory declares them, so that a deletion's publication reaches the issue module's subscriber, which the app's
+// dispatcher takes with the rest of issue's: a subscription to an undeclared type is refused at its construction. No
+// subscriber takes an archive yet, so its publication is accepted as declared (navigation's cascade, which is to take
+// all four, M7 P3c spec 2.6 and R13, is not yet among the subscribers).
 func TestPlanningEventDirectory(t *testing.T) {
-	want := []string{"planning.cycle_deleted", "planning.module_deleted"}
+	want := []string{"planning.cycle_deleted", "planning.module_deleted", "planning.cycle_archived", "planning.module_archived"}
 	types := planning.EventTypes()
 	if !reflect.DeepEqual(types, want) {
 		t.Fatalf("planning event directory = %v", types)
@@ -256,9 +258,14 @@ func TestPlanningEventDirectory(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, kind := range want {
+	for _, kind := range want[:2] {
 		if err := all.Publish(t.Context(), shared.Event{Type: kind}); err == nil {
 			t.Errorf("%s: a malformed deletion was taken; want the issue subscriber's refusal", kind)
+		}
+	}
+	for _, kind := range want[2:] {
+		if err := all.Publish(t.Context(), shared.Event{Type: kind}); err != nil {
+			t.Errorf("%s: %v; want an archive of the app's directory published", kind, err)
 		}
 	}
 }

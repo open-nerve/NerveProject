@@ -8,9 +8,9 @@ import (
 )
 
 // EventTypes declares the event types the module publishes: a cycle's and a
-// module's deletion (M6 P3a spec R6).
+// module's deletion (M6 P3a spec R6), and their archive (M7 P3c spec 2.6).
 func EventTypes() []string {
-	return []string{domain.EventCycleDeleted, domain.EventModuleDeleted}
+	return []string{domain.EventCycleDeleted, domain.EventModuleDeleted, domain.EventCycleArchived, domain.EventModuleArchived}
 }
 
 // Subscribers composes the module's transactional consumers independently of

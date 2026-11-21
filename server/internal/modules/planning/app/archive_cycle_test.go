@@ -20,14 +20,18 @@ func (w *lockWorld) SetCycleArchived(ctx context.Context, c domain.Cycle) error 
 	return nil
 }
 
-func (w *lockWorld) archive(t *testing.T, archive bool) (domain.ReadCycle, error) {
+// archive archives the world's cycle, or unarchives it, as the editor; it answers what the use case answered and the
+// events it published.
+func (w *lockWorld) archive(t *testing.T, archive bool) (domain.ReadCycle, []shared.Event, error) {
 	t.Helper()
-	d := ArchiveCycleDeps{Locks: w.locks(), Cycles: w, Clock: w}
+	events := &deletionEvents{lockWorld: w}
+	d := ArchiveCycleDeps{Locks: w.locks(), Cycles: w, Clock: w, Events: events}
 	uc := NewUnarchiveCycle(d)
 	if archive {
 		uc = NewArchiveCycle(d)
 	}
-	return uc.Execute(shared.WithActor(context.Background(), shared.Actor{UserID: lockEditor}), lockCycle)
+	got, err := uc.Execute(shared.WithActor(context.Background(), shared.Actor{UserID: lockEditor}), lockCycle)
+	return got, events.published, err
 }
 
 // completedSprint makes the world's Sprint completed on its project's day: now is the 14th of November in Shanghai
@@ -38,16 +42,17 @@ func completedSprint(w *lockWorld) {
 }
 
 // Archiving takes the lock path on the cycle; under the lock, the clock, then the write: archived at that moment,
-// last changed by the caller at the same moment. The answer is the cycle as stored.
+// last changed by the caller at the same moment; then the archive published in the write's transaction (P3c spec 2.6,
+// R3). The answer is the cycle as stored.
 func TestArchiveCycle(t *testing.T) {
 	w := sprintWorld(t)
 	completedSprint(w)
-	got, err := w.archive(t, true)
+	got, published, err := w.archive(t, true)
 	if err != nil {
 		t.Fatal(err)
 	}
 	want := []string{"GetCycle outside tx", "Facts outside tx", "Authorize cycle.write outside tx", "Enter 1 outside tx", "Begin", "Lock",
-		"GetCycle", "Authorize cycle.write", "Now", "SetCycleArchived true", "End", "Leave"}
+		"GetCycle", "Authorize cycle.write", "Now", "SetCycleArchived true", "Publish planning.cycle_archived", "End", "Leave"}
 	if !slices.Equal(w.calls, want) {
 		t.Fatalf("calls\n%q\nwant\n%q", w.calls, want)
 	}
@@ -59,11 +64,13 @@ func TestArchiveCycle(t *testing.T) {
 	if got.ArchivedAt == nil || got.Status != domain.StatusCompleted {
 		t.Fatalf("answer %+v", got)
 	}
+	wantArchive(t, published, "planning.cycle_archived", shared.EntityRef{Kind: "cycle", ID: lockCycle}, *stored.ArchivedAt)
 }
 
 // Only a completed cycle is archived (planning.cycle_not_completed): not a current one, nor one that is current on
 // its project's day while completed in UTC (Los Angeles, 05:00 UTC on the 14th), nor a draft. An archived cycle
-// archived again, and one not archived unarchived, answer as read and write nothing (M6 P1 spec R3).
+// archived again, and one not archived unarchived, answer as read and write nothing (M6 P1 spec R3). None of them
+// publishes anything (P3c spec 2.6).
 func TestArchiveCycleRefusesAndRepeats(t *testing.T) {
 	losAngeles := func(w *lockWorld) {
 		w.facts[lockProject] = ProjectFacts{WorkspaceID: lockWorkspace, Timezone: "America/Los_Angeles", CycleView: true}
@@ -75,8 +82,8 @@ func TestArchiveCycleRefusesAndRepeats(t *testing.T) {
 		if change != nil {
 			change(w)
 		}
-		if _, err := w.archive(t, true); !errors.Is(err, domain.ErrCycleNotCompleted) || len(w.updated) != 0 {
-			t.Errorf("%s: %v, stored %v; want planning.cycle_not_completed", name, err, w.updated)
+		if _, published, err := w.archive(t, true); !errors.Is(err, domain.ErrCycleNotCompleted) || len(w.updated) != 0 || len(published) != 0 {
+			t.Errorf("%s: %v, stored %v, published %v; want planning.cycle_not_completed", name, err, w.updated, published)
 		}
 	}
 	archived := time.Date(2026, 11, 14, 0, 0, 0, 0, time.UTC)
@@ -88,27 +95,27 @@ func TestArchiveCycleRefusesAndRepeats(t *testing.T) {
 			c.ArchivedAt = &archived
 			w.cycles[lockCycle] = c
 		}
-		got, err := w.archive(t, archive)
-		if err != nil || len(w.updated) != 0 || (got.ArchivedAt != nil) != archive || got.Status != domain.StatusCompleted {
-			t.Errorf("archive=%t again: %+v, %v, stored %v", archive, got, err, w.updated)
+		got, published, err := w.archive(t, archive)
+		if err != nil || len(w.updated) != 0 || len(published) != 0 || (got.ArchivedAt != nil) != archive || got.Status != domain.StatusCompleted {
+			t.Errorf("archive=%t again: %+v, %v, stored %v, published %v", archive, got, err, w.updated, published)
 		}
 	}
 }
 
 // Unarchiving clears the archive, whatever the cycle's status, last changed by the caller at the moment read after
-// the lock.
+// the lock, and publishes nothing (P3c spec 2.6).
 func TestUnarchiveCycle(t *testing.T) {
 	w := sprintWorld(t)
 	archived := time.Date(2026, 11, 14, 0, 0, 0, 0, time.UTC)
 	c := w.cycles[lockCycle]
 	c.ArchivedAt = &archived
 	w.cycles[lockCycle] = c
-	got, err := w.archive(t, false)
+	got, published, err := w.archive(t, false)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if stored := w.updated[0]; stored.ArchivedAt != nil || !stored.UpdatedAt.Equal(w.now) || *stored.UpdatedByID != lockEditor ||
-		got.ArchivedAt != nil || got.Status != domain.StatusCurrent || !slices.Contains(w.calls, "SetCycleArchived false") {
-		t.Fatalf("stored %+v, answer %+v, calls %q", stored, got, w.calls)
+		got.ArchivedAt != nil || got.Status != domain.StatusCurrent || !slices.Contains(w.calls, "SetCycleArchived false") || len(published) != 0 {
+		t.Fatalf("stored %+v, answer %+v, calls %q, published %v", stored, got, w.calls, published)
 	}
 }

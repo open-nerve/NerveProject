@@ -14,11 +14,13 @@ type CycleArchiver interface {
 	SetCycleArchived(ctx context.Context, c domain.Cycle) error
 }
 
-// ArchiveCycleDeps are ArchiveCycle's ports.
+// ArchiveCycleDeps are ArchiveCycle's ports: Events publishes an archive in
+// its transaction (M7 P3c spec 2.6).
 type ArchiveCycleDeps struct {
 	Locks  Locks
 	Cycles CycleArchiver
 	Clock  Clock
+	Events shared.EventPublisher
 }
 
 // ArchiveCycle answers archiveCycle, or unarchiveCycle (M6 P1 spec 2.3, R3).
@@ -38,7 +40,10 @@ func NewUnarchiveCycle(d ArchiveCycleDeps) *ArchiveCycle { return &ArchiveCycle{
 // (R3); one to archive that is not completed on that moment's day in its
 // project's time zone is refused (planning.cycle_not_completed); then its
 // archived_at is that moment, or none, and its last change the caller's at
-// that moment. The answer is the cycle as stored, with its status.
+// that moment; an archive is then published in the write's transaction, by
+// the caller at that moment (archiveEvent, M7 P3c spec 2.6), whose failure
+// fails it, while an unarchive publishes nothing. The answer is the cycle as
+// stored, with its status.
 func (u *ArchiveCycle) Execute(ctx context.Context, id uuid.UUID) (domain.ReadCycle, error) {
 	actor, err := shared.RequireActor(ctx)
 	if err != nil {
@@ -68,6 +73,12 @@ func (u *ArchiveCycle) Execute(ctx context.Context, id uuid.UUID) (domain.ReadCy
 		c.UpdatedAt, c.UpdatedByID = now, &by
 		if err := u.d.Cycles.SetCycleArchived(ctx, c); err != nil {
 			return err
+		}
+		if u.archive {
+			e := archiveEvent(domain.EventCycleArchived, shared.EntityRef{Kind: "cycle", ID: c.ID}, c.WorkspaceID, c.ProjectID, now, by)
+			if err := u.d.Events.Publish(ctx, e); err != nil {
+				return err
+			}
 		}
 		out = domain.ReadCycle{Cycle: c, Status: status}
 		return nil
