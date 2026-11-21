@@ -10,13 +10,8 @@ import {
   slugFor,
   type Api,
 } from "../../fixtures/api";
-import {
-  expectLabels,
-  expectMember,
-  expectProjectCreated,
-  expectProjectDeleted,
-  type LabelRow,
-} from "../../fixtures/assert/project";
+import { expectLabels, expectMember, expectProjectCreated, type LabelRow } from "../../fixtures/assert/project";
+import { expectProjectDeleted } from "../../fixtures/assert/project-deletion";
 import { accountId, bearer, emailFor, registeredPAT } from "../../fixtures/auth";
 import { expectQuietConsole, watchPage } from "../../fixtures/browser";
 import type { Database } from "../../fixtures/db";

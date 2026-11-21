@@ -13,7 +13,7 @@ import {
 import { accountId, bearer, createPAT, emailFor, login, newAccount } from "../../fixtures/auth";
 import { keysBelow, projectTables, workspaceTables } from "../../fixtures/assert/catalog";
 import { expectIssueDeleted } from "../../fixtures/assert/issue";
-import { expectProjectDeleted } from "../../fixtures/assert/project";
+import { expectProjectDeleted } from "../../fixtures/assert/project-deletion";
 import { expectExpiredPreparations, expectRetainedBoundAssets } from "../../fixtures/assert/storage";
 import { expectWorkspaceDeleted } from "../../fixtures/assert/workspace";
 import { archiveWatermark, completedPeriodicJobs } from "../../fixtures/auto-archive";
