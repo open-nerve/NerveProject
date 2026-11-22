@@ -9,6 +9,7 @@
 // that tab's, and the session with a signed-in one.
 
 import { act } from "react";
+import type { ReactNode } from "react";
 import type { Root } from "react-dom/client";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { SWRConfig } from "swr";
@@ -29,8 +30,11 @@ function Read() {
   return null;
 }
 
-/** Renders the notifications page's list at acme's address, under the page's state, with the SWR cache given. */
-export const renderList = (root: Root, cache: Map<string, unknown>) =>
+/**
+ * Renders the notifications page's list at acme's address, under the page's state, with the SWR cache given; head, a
+ * part of the page's head, before it.
+ */
+export const renderList = (root: Root, cache: Map<string, unknown>, head?: ReactNode) =>
   act(async () =>
     root.render(
       <SWRConfig value={{ provider: () => cache as never }}>
@@ -41,6 +45,7 @@ export const renderList = (root: Root, cache: Map<string, unknown>) =>
               element={
                 <NotificationPageStateProvider>
                   <Read />
+                  {head}
                   <NotificationList />
                 </NotificationPageStateProvider>
               }

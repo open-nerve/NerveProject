@@ -16,11 +16,11 @@ import { cn } from "@nerve/utils";
 // hooks
 import { useNotifications } from "@/hooks/store/use-notifications";
 import { useRefusalToast } from "@/hooks/use-refusal-toast";
-import { useRouteWorkspace } from "@/hooks/use-route-workspace";
 // lib
 import { followInSession } from "@/lib/in-session";
 // local imports
 import { useNotificationPageState } from "../page-state";
+import { useNotificationList } from "../use-notification-list";
 import { NotificationTypeFilterMenu } from "./type-filter-menu";
 import { NotificationViewMenu } from "./view-menu";
 
@@ -30,13 +30,15 @@ import { NotificationViewMenu } from "./view-menu";
  * tab's senders only), out of use and turning while nerve marks; says how many nerve marked, or why it refused; either
  * way the store reads the list's first page and the count again, nerve marking in batches. Refresh reads the first page
  * the filters select, in place of every page held (R7), and the count again, out of use and turning meanwhile, saying
- * why nerve could not. What follows nerve's answer is done only in the session it was sent in (followInSession). Then
- * the type filter (all tab alone) and the view menu.
+ * why nerve could not. It refreshes the list the page shows: the store's read is given to the list's read by its key
+ * (useNotificationList, which the head shares with the list, one read as the page opens), so that the list shows the
+ * page once Refresh has it, a failure of its read gone, and SWR reads nothing more. What follows nerve's answer is done
+ * only in the session it was sent in (followInSession). Then the type filter (all tab alone) and the view menu.
  */
 export const NotificationHeaderOptions = observer(function NotificationHeaderOptions() {
   const { t } = useTranslation();
-  const workspace = useRouteWorkspace();
   const { filters } = useNotificationPageState();
+  const { workspace, read } = useNotificationList(filters);
   const { markAllRead, fetchList, fetchUnreadCount } = useNotifications();
   const refusalToast = useRefusalToast();
   const [marking, setMarking] = useState(false);
@@ -60,9 +62,8 @@ export const NotificationHeaderOptions = observer(function NotificationHeaderOpt
 
   const refresh = async () => {
     setRefreshing(true);
-    await followInSession(() => Promise.all([fetchList(workspace, filters), fetchUnreadCount(workspace)]), {
-      failed: refusalToast,
-    });
+    const list = () => read.mutate(fetchList(workspace, filters), { revalidate: false });
+    await followInSession(() => Promise.all([list(), fetchUnreadCount(workspace)]), { failed: refusalToast });
     setRefreshing(false);
   };
 

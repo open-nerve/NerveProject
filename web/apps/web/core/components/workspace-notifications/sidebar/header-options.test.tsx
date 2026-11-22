@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Call } from "@/lib/auth/fake-nerve";
 import { json, problem } from "@/lib/auth/fake-nerve";
 import { until } from "@/lib/auth/fake-time";
+import { response as listResponse } from "@/lib/fake-session-swr";
 import { toasts } from "@/lib/fake-toast";
 import { acme, countOf, notificationRequests, notificationTab, pageOf } from "@/store/notification/fake-notifications";
 import { changeHeadState, renderHeadPart } from "./fake-header-menus";
@@ -16,7 +17,9 @@ import { NotificationHeaderOptions } from "./header-options";
 // out of use while nerve marks; says how many nerve marked or why it refused; either way the list's first page and
 // the count are read again (nerve marks in batches). Refresh reads the first page and the count again, turning
 // meanwhile. What follows nerve's answer is done only in the session it was sent in (followInSession). The store and
-// HTTP are real. @nerve/i18n's text is its key, then the values it was given.
+// HTTP are real; the list's read is fake-session-swr.ts's, which reads nothing and takes Refresh's answer as it comes
+// (refresh.test.tsx renders the head over the list with SWR). @nerve/i18n's text is its key, then the values it was
+// given.
 
 const fixture = vi.hoisted(() => ({
   session: { loginId: "one" },
@@ -29,6 +32,7 @@ vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n-values"));
 vi.mock("@nerve/propel/toast", () => import("@/lib/fake-toast"));
 vi.mock("@/hooks/store/use-workspace", () => ({ useWorkspace: () => fixture.tab.workspaceRoot }));
 vi.mock("@/hooks/store/use-notifications", () => ({ useNotifications: () => fixture.tab.store }));
+vi.mock("@/lib/use-session-swr", () => import("@/lib/fake-session-swr"));
 
 let host: HTMLDivElement, root: Root;
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
@@ -38,6 +42,7 @@ beforeEach(async () => {
   toasts.length = 0;
   fixture.session.loginId = "one";
   fixture.tab = await notificationTab();
+  listResponse.current = { mutate: (answer: Promise<unknown>) => answer };
   host = document.createElement("div");
   document.body.append(host);
   root = createRoot(host);
