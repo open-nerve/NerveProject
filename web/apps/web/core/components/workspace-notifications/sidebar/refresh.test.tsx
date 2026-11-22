@@ -7,7 +7,7 @@ import { json, problem } from "@/lib/auth/fake-nerve";
 import { until } from "@/lib/auth/fake-time";
 import { toasts } from "@/lib/fake-toast";
 import { acme, countOf, notificationRequests, notificationTab, pageOf } from "@/store/notification/fake-notifications";
-import { answer, cards, listRead, noteOf, renderList, settled } from "../fake-notification-list";
+import { answer, cards, changeState, listRead, noteOf, renderList, settled } from "../fake-notification-list";
 import { NotificationHeaderOptions } from "./header-options";
 
 // The head's Refresh and mark all read over the list they read again (P4 spec 2.4, 2.6, R7, R9): the head and the list
@@ -129,5 +129,50 @@ describe("NotificationHeaderOptions' mark all read, over the list it reads again
     expect(cards(host)).toEqual(["WEB-1 One"]);
     await settled();
     expect(nerve().to(LIST)).toHaveLength(2);
+  });
+});
+
+describe("NotificationHeaderOptions' late answers, once the page shows other filters (whole-branch m2)", () => {
+  /** The list and the head at acme's address, its first page read; then, once press has sent its request, the archived view, whose read nerve refuses. */
+  async function archivedViewRefusedWhile(press: () => HTMLButtonElement | null, sent: () => boolean) {
+    await renderList(root, cache, <NotificationHeaderOptions />);
+    await answer(await listRead(nerve(), 0), pageOf([noteOf("One", 1)]));
+    await act(async () => press()?.click());
+    await act(async () => until(sent, "the head's request"));
+    await changeState((state) => state.toggleArchived());
+    const archived = nerve()
+      .to(LIST)
+      .find((call) => call.query.archived === "true");
+    archived?.answer(problem(503, "server_busy"));
+    await settled();
+    expect(failure()?.textContent).toContain("errors.server_busy");
+  }
+
+  it("mark all read reads the filters it marked again into the store alone: the archived view's failure stays", async () => {
+    await archivedViewRefusedWhile(markAll, () => nerve().to(MARK_ALL).length === 1);
+    nerve()
+      .to(MARK_ALL)[0]
+      ?.answer(json(200, { marked: 1 }));
+    await act(async () => until(() => nerve().to(LIST).length === 3, "the marked filters' first page"));
+    expect(nerve().to(LIST)[2]?.query.archived).toBe("false");
+    await answer(nerve().to(LIST)[2]!, pageOf([noteOf("One", 1, { read_at: "2026-11-20T12:00:00Z" })]));
+    nerve()
+      .to(COUNT)[0]
+      ?.answer(json(200, countOf(0, 0)));
+    await settled();
+    expect(toasts).toEqual([{ type: "success", title: "toast.success", message: "notification.toasts.all_read 1" }]);
+    expect(failure()?.textContent).toContain("errors.server_busy");
+    expect(cards(host)).toEqual([]);
+  });
+
+  it("Refresh gives its first page to the filters it was sent for: the archived view's failure stays", async () => {
+    await archivedViewRefusedWhile(refresh, () => nerve().to(LIST).length === 2);
+    await answer(nerve().to(LIST)[1]!, pageOf([noteOf("One", 1)]));
+    nerve()
+      .to(COUNT)[0]
+      ?.answer(json(200, countOf(1, 0)));
+    await settled();
+    expect(failure()?.textContent).toContain("errors.server_busy");
+    expect(cards(host)).toEqual([]);
   });
 });
