@@ -6,15 +6,22 @@
 
 import { Outlet } from "react-router";
 // components
-import { NotificationsSidebarRoot } from "@/components/workspace-notifications/sidebar";
+import { NotificationPageStateProvider, NotificationsSidebarRoot } from "@/components/workspace-notifications";
 
-export default function ProjectInboxIssuesLayout() {
+/**
+ * The notifications page's layout (M7 P4 spec 2.5, 2.6): it holds the page's state (its tab, filters and selection),
+ * which ends as the page is left or its workspace changes (the workspace's layout is keyed by the route's slug), and
+ * shows the sidebar beside the page's preview.
+ */
+export default function NotificationsLayout() {
   return (
-    <div className="relative flex h-full w-full items-center overflow-hidden">
-      <NotificationsSidebarRoot />
-      <div className="h-full w-full overflow-hidden overflow-y-auto">
-        <Outlet />
+    <NotificationPageStateProvider>
+      <div className="relative flex h-full w-full items-center overflow-hidden">
+        <NotificationsSidebarRoot />
+        <div className="h-full w-full overflow-hidden overflow-y-auto">
+          <Outlet />
+        </div>
       </div>
-    </div>
+    </NotificationPageStateProvider>
   );
 }

@@ -1,7 +1,7 @@
 import { addProjectMembers, createProject, createWorkspace, inviteAndAccept, slugFor } from "../../fixtures/api";
 import { expectIssuePage } from "../../fixtures/assert/issue";
+import { subscriptionRows } from "../../fixtures/assert/notification";
 import { login, newAccount } from "../../fixtures/auth";
-import type { Database } from "../../fixtures/db";
 import {
   createIssue,
   issueRead,
@@ -18,25 +18,6 @@ import { expect, test } from "../../fixtures/test";
 // (subscriber_id, and a member's relation=subscribed) follow. A subscription is a row of the work item's subscribers,
 // made by its subscriber; an unsubscription deletes it, by her, at its moment. The refusals, the locks and the
 // interleavings are the bootstrap tests' and the permission matrix's.
-
-/**
- * The rows of the account of accountId among the subscribers of the work item of issueId, the deleted ones too, in the
- * order they were made: whether it is live; whether it is of the work item's workspace and project, and made and last
- * written by its subscriber; and whether its moments are a subscription's, made and last written at one (live), or an
- * unsubscription's, deleted at its last write, after it was made.
- */
-async function subscriptionRows(db: Database, issueId: string, accountId: string) {
-  return db.query<{ live: boolean; hers: boolean; stamped: boolean }>(
-    `SELECT s.deleted_at IS NULL AS live,
-            s.workspace_id = i.workspace_id AND s.project_id = i.project_id
-              AND s.created_by_id = s.subscriber_id AND s.updated_by_id = s.subscriber_id AS hers,
-            CASE WHEN s.deleted_at IS NULL THEN s.updated_at = s.created_at
-                 ELSE s.deleted_at = s.updated_at AND s.updated_at > s.created_at END AS stamped
-       FROM issue_subscribers s JOIN issues i ON i.id = s.issue_id
-      WHERE s.issue_id = $1 AND s.subscriber_id = $2 ORDER BY s.created_at, s.id`,
-    [issueId, accountId]
-  );
-}
 
 test("H1 (API): a member subscribes to a work item and unsubscribes from it, each twice, alike with a personal access token and her browser session; is_subscribed, the subscriber_id list and her subscribed list follow, and each subscription is a row of hers, which her unsubscription deletes", async ({
   api,

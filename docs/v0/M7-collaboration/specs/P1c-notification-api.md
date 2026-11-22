@@ -144,7 +144,9 @@ P1c 不做：网页（P4，旧的 8 个 Plane 地址与 `TNotification` 随 P4 �
 ## 5. 后续责任
 
 - P4：通知页、卡片、未读数、关注按钮按本 spec 的形状重写；删除旧的 8 个地址与 `TNotification`，加 `old-notification-urls` 关键词规则；新通知的提示不能靠第一页的游标（§2.3）。
+  - **处理结果（M7/P4）：** 通知页、卡片、未读数与关注按钮照四个通知接口与 `is_subscribed` 重写；旧 service 的 8 个地址与 `TNotification` 随旧数据层删除，`old-notification-urls` 守着；刷新重读第一页、丢掉已加载的后续页并重取未读数，迟到的通知由刷新带来，不靠第一页的游标（[P4 spec](P4-web-notifications.md) §2.3、§2.4、§2.9、§2.10、R7）。关闭。
 - 附件通知不带附件 id（P1b 的交接）：P4 若要链到文件再议。
+  - **处理结果（M7/P4）：** 不链：附件通知的卡片只说添加或移除了附件，按下打开工作项的浮层（[P4 spec](P4-web-notifications.md) §2.6）。关闭。
 
 ## 6. 风险
 

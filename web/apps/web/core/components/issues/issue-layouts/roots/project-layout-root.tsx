@@ -82,7 +82,6 @@ export const ProjectLayoutRoot = observer(function ProjectLayoutRoot() {
   return (
     <IssuesStoreContext.Provider value={EIssuesStoreType.PROJECT}>
       <ProjectLevelWorkItemFiltersHOC
-        enableSaveView
         entityType={EIssuesStoreType.PROJECT}
         entityId={projectId}
         filtersToShowByLayout={ISSUE_DISPLAY_FILTERS_BY_PAGE.issues.filters}

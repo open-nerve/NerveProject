@@ -2,6 +2,7 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 import React, { act, useEffect, useRef } from "react";
 import { createRoot, type Root } from "react-dom/client";
+import { runInAction } from "mobx";
 import { useFormContext } from "react-hook-form";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { EIssuesStoreType } from "@nerve/types";
@@ -22,8 +23,17 @@ vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
 vi.mock("@nerve/propel/toast", () => import("@/lib/fake-toast"));
 vi.mock("react-router", () => ({ useParams: () => ({ workspaceSlug: "ws", projectId: "A" }) }));
 vi.mock("@/hooks/use-platform-os", () => ({ usePlatformOS: () => ({ isMobile: false }) }));
+// Observable like the provider's source (the workspace's project directory), so a late arrival re-renders the modal.
+const modal = await vi.hoisted(async () => {
+  const { observable } = await import("mobx");
+  return observable({ allowed: ["A", "B"] });
+});
 vi.mock("@/hooks/context/use-issue-modal", () => ({
-  useIssueModal: () => ({ allowedProjectIds: ["A", "B"], selectedParentIssue: null, setSelectedParentIssue: () => {} }),
+  useIssueModal: () => ({
+    allowedProjectIds: modal.allowed,
+    selectedParentIssue: null,
+    setSelectedParentIssue: () => {},
+  }),
 }));
 vi.mock("@/hooks/store/use-issues", () => ({ useIssues: () => ({ issues: {} }) }));
 vi.mock("@/hooks/store/use-issue-detail", () => ({
@@ -97,6 +107,7 @@ beforeEach(async () => {
   vi.useRealTimers();
   globalThis.IS_REACT_ACT_ENVIRONMENT = true;
   vi.stubGlobal("ResizeObserver", NoResize);
+  runInAction(() => (modal.allowed = ["A", "B"]));
   toasts.length = 0;
   boundary.fetch.mockReset().mockResolvedValue({ ...issueOf("source"), description_html: "<p>source</p>" });
   boundary.create.mockReset().mockResolvedValue(issueOf("created"));
@@ -153,6 +164,17 @@ it.each([
     )
   );
   expect(container.querySelector<HTMLSelectElement>("select")!.disabled).toBe(disabled);
+});
+
+it("a create opened before the allowed projects arrive appears once they do, on that project", async () => {
+  runInAction(() => (modal.allowed = []));
+  await act(async () =>
+    root.render(withStore(<CreateUpdateIssueModalBase isOpen onClose={() => {}} withDraftIssueWrapper={false} />))
+  );
+  expect(container.querySelector("form")).toBeNull();
+  await act(async () => runInAction(() => (modal.allowed = ["A"])));
+  expect(container.querySelector("form")).not.toBeNull();
+  expect(container.querySelector<HTMLSelectElement>("select")!.value).toBe("A");
 });
 
 it.each(["create", "update"] as const)(

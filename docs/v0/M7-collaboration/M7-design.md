@@ -238,7 +238,9 @@ M7 让五件协作功能经真实接口工作：站内通知（关注工作项�
 ## 7. 前端
 
 - **数据层**：五个领域的 store 与 service 重写为 v0 7.7 的形状：按会话分代、`useSessionSWR`（键带 `loginId`）、写入排队、`Reconciled`、地址只从路由参数、类型只来自 `@nerve/api-client`；删除 6 个旧 service、`intake-description-version.ts`、`TLegacyIssueUpdateRequest`、手写的 `IFavorite`、`TNotification`（连同 M3 交接 §2.4 的 17 行死成员）、`IProjectView` 等类型与两个模块级单例（M2 交接 §2）。旧地址各加一条 `old-…-urls` 关键词规则（M6 先例）。
+  - **处理结果（M7/P4，通知的部分）：** 通知的 service 与 store 照此重写（`core/services/notification.service.ts`、`core/store/notification/`），通知的旧 service（模块级单例）、store、hook、`TNotification` 等手写类型连同 17 行死成员删除，加 `old-notification-urls`（[P4 spec](specs/P4-web-notifications.md) §2.1–§2.4、§2.9、§2.10）。通知的部分关闭；收集箱、视图、收藏、最近访问的部分随 P5–P7。
 - **先收起会 404 的入口**：第一个页面阶段（P4）去掉项目页、迭代页、模块页筛选行的“保存为视图”（`enableSaveView` 的两处），P6 随视图接口接回；其余旧入口随各自的阶段接通。
+  - **处理结果（M7/P4）：** 两处 `enableSaveView` 已去掉（`project-layout-root.tsx`、`planning-page-layout-root.tsx`，单测 `roots/save-view-collapsed.test.tsx`）；HOC 的保存与更新分支到 P6a/P6b 之前没有传入者，登记在 [P4 阶段记录](reviews/P4-web-notifications-review.md) §5（[P4 spec](specs/P4-web-notifications.md) §2.8、R17）。“保存为视图”的收起关闭；接回随 P6a/P6b。
 - **通知（P4）**：通知页（页签、筛选、卡片、加载更多、预览）；卡片按新通知的字段与类型重写，动作文字全部经 `t()`；顶栏与侧栏的未读数；工作项详情、浮层与命令面板的“关注 / 取消关注”。收集箱条目的通知在 P4 以普通浮层打开，P5 再加嵌入的分诊界面与它的故事。
 - **收集箱（P5）**：页面、列表与筛选、详情（复用工作项详情的正文、评论、动态；`intake` 在时隐去状态字段）、分诊页头（先拆 470 行的 `inbox-issue-header.tsx` 与 511 行的 store）、新建弹窗（按 `requestClose` 改关闭策略，M6-M7-01）、拒绝 / 删除 / 查重 / 暂缓弹窗；动态的 `inbox.tsx` 改按状态名；侧栏的待处理数；通知预览里嵌入的分诊界面。命令面板没有收集箱的搜索结果（Plane 也没有），保留“转到收集箱”。
 - **视图（P6a、P6b）**：项目视图列表与详情（列表引擎加 `PROJECT_VIEW` 一行，照 M6 的表驱动）、“另存为新视图”“更新视图”（接上 `enableUpdateView`）；工作区视图目录、默认四个与已存视图的列表（新的 `WORKSPACE` 范围与 `IssueListCommandHost` 的对话框宿主）；命令面板的视图菜单、搜索的视图组与 `create_view`。
@@ -300,7 +302,7 @@ M7 让五件协作功能经真实接口工作：站内通知（关注工作项�
 | P3b | `navigation` 模块与视图：`issue_views`、两种视图的接口与权限、删除图与清理 | H12、H14 与 H13 的已存工作区视图的接口与数据库 |
 | P3c | 收藏：拆 `bootstrap/app.go`、planning / project 的三种归档事件、`user_favorites` 与接口、连带、可见过滤（实施前再划分，见 [P3c spec](specs/P3c-favorites.md) §1） | H15、H16 的接口与数据库 |
 | P3d | 最近访问：`user_recent_visits` 与接口、工作项删除时的连带、可见过滤（见 [P3d spec](specs/P3d-recents.md) §1） | H17 的接口与数据库 |
-| P4 | 网页的通知与关注；收起“保存为视图” | H1–H7 的页面、H20 的通知页 |
+| P4 | 网页的通知与关注；收起“保存为视图”（见 [P4 spec](specs/P4-web-notifications.md) §1） | H1–H7 的页面、H20 的通知页 |
 | P5 | 网页的收集箱，通知预览里的分诊 | H8–H11 的页面、H20 的收集箱页、M5-M7-01 的证据 |
 | P6a | 网页的项目视图：列表、详情、保存与更新视图、命令面板的视图 | H12 的页面、H20 的视图页 |
 | P6b | 网页的工作区视图与跨项目列表；工作区标签目录（M4 交接 M7-03：个人主页按标签分组与工作区列表的标签筛选，P3a R5） | H13、H14 的页面、H20 的工作区视图 |
@@ -343,7 +345,8 @@ P1a 的第一个实现提交把关键词 phase 改为 `M7/P1`（P1a、P1b 共用
 | 插入段：M4 泳道查询的计划翻转 | 已完成：负责人 2026-11-20 裁定在 M7 里单独修；合入 main（noff `2083c0b7`），main CI 44724861021 全绿；预检 [re-89](../../reviews/re-89-M4泳道计划预检.md) | [spec 与 plan](specs/M4fix-swimlanes-plan.md) / [记录](reviews/M4fix-swimlanes-plan-review.md) |
 | P3b navigation 模块与视图 | 已完成：合入 main（noff `1168fd25`），main CI 44820762025 全绿；审查与集成见阶段记录 §9；spec 与 plan 经预检 [re-90](../../reviews/re-90-M7P3b预检.md) 修正后通过，基线 main `17e0b1ac`；16 个 Task | [P3b spec](specs/P3b-views.md) / [P3b plan](plans/P3b-views.md) / [P3b 记录](reviews/P3b-views-review.md) |
 | P3c 收藏与三种归档事件 | 已完成：合入 main（noff `9d26b1c3`），main CI 44947828240 全绿；审查与集成见阶段记录 §9；spec 与 plan 经预检 [re-91](../../reviews/re-91-M7P3c预检.md) 修正后通过，基线 main `1168fd25`；实施前把 P3c 再划为 P3c（收藏）与 P3d（最近访问）（spec §1、R1）；16 个 Task | [P3c spec](specs/P3c-favorites.md) / [P3c plan](plans/P3c-favorites.md) / [P3c 记录](reviews/P3c-favorites-review.md) |
-| P3d 最近访问 | 实施完成，待整分支审查：spec 与 plan 经预检 [re-92](../../reviews/re-92-M7P3d预检.md) 修正后通过，基线 main `9d26b1c3`（P3c 的 noff）；15 个 Task；第 1 路以本机检查点 0 为基线（spec §6）；三个检查点的本地七项与分支 CI 见阶段记录 §5 | [P3d spec](specs/P3d-recents.md) / [P3d plan](plans/P3d-recents.md) / [P3d 记录](reviews/P3d-recents-review.md) |
+| P3d 最近访问 | 已完成：合入 main（noff `3d9293bd`），main CI 44989539530 全绿；审查与集成见阶段记录 §9；spec 与 plan 经预检 [re-92](../../reviews/re-92-M7P3d预检.md) 修正后通过，基线 main `9d26b1c3`（P3c 的 noff）；15 个 Task；第 1 路以本机检查点 0 为基线（spec §6）；三个检查点的本地七项与分支 CI 见阶段记录 §5 | [P3d spec](specs/P3d-recents.md) / [P3d plan](plans/P3d-recents.md) / [P3d 记录](reviews/P3d-recents-review.md) |
+| P4 网页的通知与关注 | 实施完成，待整分支审查：spec 与 plan 经预检 [re-93](../../reviews/re-93-M7P4预检.md) 修正后通过，基线 main `3d9293bd`（P3d 的 noff）；16 个 Task；M7 第一个页面阶段，页面故事进新的三引擎配置 `playwright.m7-pages.config.ts`；三个检查点在 T2、T11、T14 之后，本机七项与分支 CI 44999385236、45018858067、45033492263 皆 attempt 1 全绿（检查点 1 本机的 F11 (page) 以 M6-M8-07 的签名失败一次、只重跑该文件即过），见阶段记录 §5；R6（未读的点不在聚焦时重取）与 R25 的缺口进 M7 收官给负责人的报告（阶段记录 §4） | [P4 spec](specs/P4-web-notifications.md) / [P4 plan](plans/P4-web-notifications.md) / [P4 记录](reviews/P4-web-notifications-review.md) |
 
 ## 15. 决定记录
 

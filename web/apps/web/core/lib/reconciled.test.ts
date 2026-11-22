@@ -253,3 +253,97 @@ describe("Reconciled partial reads", () => {
     for (const read of [oldWhole, oldPart, next]) expect(read.read).toHaveBeenCalledTimes(1);
   });
 });
+
+// ReconciledByKey.fetchPart delegates to the key's own Reconciled (P4 spec 2.4, R4): each key's whole fetch, parts and
+// confirmations are its own, and a key not fetched yet has nothing a part could extend.
+describe("ReconciledByKey partial reads", () => {
+  /** Keys x and y, each fetched once. */
+  async function fetchedKeys() {
+    const held = new ReconciledByKey<Value>();
+    await held.fetch("x", async () => initial);
+    await held.fetch("y", async () => ({ ...initial, mark: "y" }));
+    return held;
+  }
+
+  it("the newest read of a key's part owns it, whichever answers first", async () => {
+    const held = await fetchedKeys();
+    const older = deferred();
+    const newer = deferred();
+    const oldRead = held.fetchPart("x", "left", older.read, mergeLeft);
+    const newRead = held.fetchPart("x", "left", newer.read, mergeLeft);
+    newer.resolve({ ...initial, left: 20 });
+    expect(await newRead).toEqual({ ...initial, left: 20 });
+    older.resolve({ ...initial, left: 10 });
+    expect(await oldRead).toBeUndefined();
+    expect(held.get("x")).toEqual({ ...initial, left: 20 });
+    expect(older.read).toHaveBeenCalledTimes(1);
+    expect(newer.read).toHaveBeenCalledTimes(1);
+  });
+
+  it("a whole fetch of the key supersedes its parts out, which then write nothing", async () => {
+    const held = await fetchedKeys();
+    const part = deferred();
+    const whole = deferred();
+    const reading = held.fetchPart("x", "left", part.read, mergeLeft);
+    const fetching = held.fetch("x", whole.read);
+    whole.resolve({ ...initial, left: 30, right: 30 });
+    expect(await fetching).toEqual({ ...initial, left: 30, right: 30 });
+    const answeredAt = held.answeredAt("x");
+    part.resolve({ ...initial, left: 10 });
+    expect(await reading).toBeUndefined();
+    expect(held.get("x")).toEqual({ ...initial, left: 30, right: 30 });
+    expect(held.answeredAt("x")).toBe(answeredAt);
+  });
+
+  it("a change confirmed to the key while its part is out is made again on the part's answer", async () => {
+    const held = await fetchedKeys();
+    const part = deferred();
+    const reading = held.fetchPart("x", "left", part.read, mergeLeft);
+    held.confirm("x", (value) => ({ ...value, left: 99 }));
+    expect(held.get("x")).toEqual({ ...initial, left: 99 });
+    // the part's answer was read before the change: the change holds on it all the same
+    part.resolve({ ...initial, left: 10 });
+    expect(await reading).toEqual({ ...initial, left: 99 });
+    expect(held.get("x")).toEqual({ ...initial, left: 99 });
+  });
+
+  it("leaves every other key as it was: its value, its parts, its fetches", async () => {
+    const held = await fetchedKeys();
+    const y = held.get("y");
+    const yAnsweredAt = held.answeredAt("y");
+    const xPart = deferred();
+    const yPart = deferred();
+    const readingX = held.fetchPart("x", "left", xPart.read, mergeLeft);
+    const readingY = held.fetchPart("y", "left", yPart.read, mergeLeft);
+    // y's whole fetch supersedes y's part alone; x's, of the same name, still writes
+    const yWhole = deferred();
+    const fetchingY = held.fetch("y", yWhole.read);
+    xPart.resolve({ ...initial, left: 10 });
+    expect(await readingX).toEqual({ ...initial, left: 10 });
+    expect(held.get("y")).toBe(y);
+    expect(held.answeredAt("y")).toBe(yAnsweredAt);
+    yPart.resolve({ ...initial, left: 99 });
+    expect(await readingY).toBeUndefined();
+    yWhole.resolve({ ...initial, mark: "y again" });
+    expect(await fetchingY).toEqual({ ...initial, mark: "y again" });
+    expect(held.get("x")).toEqual({ ...initial, left: 10 });
+  });
+
+  it("reads nothing for a key not fetched, nor one whose first fetch is out, and holds nothing for it", async () => {
+    const held = await fetchedKeys();
+    const part = deferred();
+    const reading = held.fetchPart("z", "left", part.read, mergeLeft);
+    expect(part.read).not.toHaveBeenCalled();
+    expect(await reading).toBeUndefined();
+    expect(held.get("z")).toBeUndefined();
+    expect(held.answeredAt("z")).toBe(0);
+    const whole = deferred();
+    const fetching = held.fetch("w", whole.read);
+    const early = held.fetchPart("w", "left", part.read, mergeLeft);
+    expect(part.read).not.toHaveBeenCalled();
+    expect(await early).toBeUndefined();
+    whole.resolve({ ...initial, mark: "w" });
+    expect(await fetching).toEqual({ ...initial, mark: "w" });
+    expect(held.values()).toEqual([initial, { ...initial, mark: "y" }, { ...initial, mark: "w" }]);
+  });
+});

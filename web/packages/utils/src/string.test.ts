@@ -5,29 +5,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import {
-  checkEmailValidity,
-  copyTextToClipboard,
-  isCommentEmpty,
-  isEmptyHtmlString,
-  stripAndTruncateHTML,
-} from "./string";
-
-// The HTML helpers read HTML the way the browser parses it. The notification preview shows the text of a
-// comment: entities come out decoded (sanitize-html, which these helpers used before, returned them escaped,
-// and the preview showed "Tom &amp; Jerry").
-
-describe("stripAndTruncateHTML", () => {
-  it("returns the text, with entities decoded", () => {
-    expect(stripAndTruncateHTML("<p>Tom &amp; Jerry</p>")).toBe("Tom & Jerry");
-    expect(stripAndTruncateHTML("<p>a &lt; b</p><p>c&nbsp;d</p>")).toBe("a < bc d");
-  });
-
-  it("trims the text and cuts it at the given length", () => {
-    expect(stripAndTruncateHTML("<p>  hello world  </p>", 5)).toBe("hello...");
-    expect(stripAndTruncateHTML("<p></p>")).toBe("");
-  });
-});
+import { checkEmailValidity, copyTextToClipboard, isCommentEmpty, isEmptyHtmlString } from "./string";
 
 // What the editor writes for a description that holds only an image, or only a mention. The draft modal asks
 // isEmptyHtmlString whether a new work item's description is empty (an empty one closes without asking), and

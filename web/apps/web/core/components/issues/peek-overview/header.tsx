@@ -29,6 +29,7 @@ import { useProject } from "@/hooks/store/use-project";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 import { useCopyLink } from "@/hooks/use-copy-link";
 // local imports
+import { IssueSubscriptionButton } from "../issue-detail/subscription-button";
 import { WorkItemDetailQuickActions } from "../issue-layouts/quick-action-dropdowns";
 import { NameDescriptionUpdateStatus } from "../issue-update-status";
 import { IconButton } from "@nerve/propel/icon-button";
@@ -180,6 +181,7 @@ export const IssuePeekOverviewHeader = observer(function IssuePeekOverviewHeader
       <div className="flex items-center gap-x-4">
         <NameDescriptionUpdateStatus isSubmitting={isSubmitting} />
         <div className="flex items-center gap-2">
+          <IssueSubscriptionButton workspaceSlug={workspaceSlug} projectId={projectId} issueId={issueId} />
           <Tooltip label={t("common.actions.copy_link")} disabled={isMobile}>
             <IconButton
               variant="secondary"

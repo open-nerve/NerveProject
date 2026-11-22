@@ -31,6 +31,7 @@ import { IssueReactionStore } from "./reaction.store";
 import type { IIssueReactionStore, IIssueReactionStoreActions } from "./reaction.store";
 import { IssueRelationStore } from "./relation.store";
 import type { IIssueRelationStore, IIssueRelationStoreActions } from "./relation.store";
+import { IssueSubscriptionStore } from "./subscription.store";
 import { IssueSubIssuesStore } from "./sub_issues.store";
 import type { IIssueSubIssuesStore, IIssueSubIssuesStoreActions } from "./sub_issues.store";
 
@@ -67,6 +68,7 @@ export interface IIssueDetail
   rootIssueStore: IIssueRootStore;
   issue: IIssueStore;
   reaction: IIssueReactionStore;
+  subscription: IssueSubscriptionStore;
   activity: IIssueActivityStore;
   versions: DescriptionVersionsStore;
   comment: IIssueCommentStore;
@@ -84,6 +86,7 @@ export class IssueDetail implements IIssueDetail {
   rootIssueStore: IIssueRootStore;
   issue: IIssueStore;
   reaction: IIssueReactionStore;
+  subscription: IssueSubscriptionStore;
   subIssues: IIssueSubIssuesStore;
   link: IIssueLinkStore;
   relation: IIssueRelationStore;
@@ -108,6 +111,7 @@ export class IssueDetail implements IIssueDetail {
     this.rootIssueStore = rootStore;
     this.issue = new IssueStore(this);
     this.reaction = new IssueReactionStore(this);
+    this.subscription = new IssueSubscriptionStore(this);
     this.versions = new DescriptionVersionsStore(this);
     this.activity = new IssueActivityStore(this);
     this.comment = new IssueCommentStore(this);

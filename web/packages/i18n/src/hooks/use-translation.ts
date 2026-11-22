@@ -8,6 +8,8 @@ import { useTranslation as useI18nextTranslation } from "react-i18next";
 
 type TTranslationStore = {
   t: (key: string, params?: Record<string, unknown>) => string;
+  /** The page's language, which its texts are in: for what the page formats in it itself (Intl). */
+  language: string;
 };
 
 // Crash guard: i18next-icu unconditionally returns raw objects when t() is called
@@ -30,15 +32,19 @@ function coerceToString(key: string, value: unknown): string {
   return key;
 }
 
-/** The text of a key in the page's language. The language itself is set by setLanguage alone. */
+/**
+ * The text of a key in the page's language, and that language. The language itself is set by setLanguage alone; a
+ * component that reads it renders again as it changes.
+ */
 export function useTranslation(): TTranslationStore {
   // No namespace arg — fallbackNS in the i18next config ensures all namespaces
   // are searched for any key. Passing NAMESPACES here would trigger concurrent
   // async loads per component, causing a re-render cascade.
-  const { t } = useI18nextTranslation();
+  const { t, i18n } = useI18nextTranslation();
 
   return {
     t: (key: string, params?: Record<string, unknown>) =>
       coerceToString(key, params === undefined ? t(key) : t(key, params)),
+    language: i18n.language,
   };
 }

@@ -3,10 +3,12 @@ import type { TPowerKCommandConfig } from "@/components/power-k/core/types";
 import { useWorkItemCommandContext } from "./context";
 import { useWorkItemCopyCommands } from "./copy-commands";
 import { useWorkItemMutationCommands } from "./mutation-commands";
+import { useWorkItemSubscriptionCommand } from "./subscription-command";
 
 export function usePowerKWorkItemContextBasedCommands(): TPowerKCommandConfig[] {
   const context = useWorkItemCommandContext();
   const mutations = useWorkItemMutationCommands(context);
+  const subscription = useWorkItemSubscriptionCommand(context);
   const copies = useWorkItemCopyCommands(context);
-  return [...mutations, ...copies];
+  return [...mutations, subscription, ...copies];
 }

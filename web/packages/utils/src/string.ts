@@ -68,19 +68,6 @@ export const capitalizeFirstLetter = (str: string) => str.charAt(0).toUpperCase(
 const parseHTML = (html: string) => new DOMParser().parseFromString(html, "text/html").body;
 
 /**
- * @description: This function will remove all the HTML tags from the string and truncate the string to the specified length
- * @param {string} html
- * @param {number} length
- * @return {string}
- * @example:
- * const html = "<p>Some text</p>";
- * const text = stripAndTruncateHTML(html);
- * console.log(text); // Some text
- */
-export const stripAndTruncateHTML = (html: string, length: number = 55) =>
-  truncateText((parseHTML(html).textContent ?? "").trim(), length);
-
-/**
  * @returns {boolean} true if email is valid, false otherwise
  * @description Returns true if email is valid, false otherwise
  * @param {string} email string to check if it is a valid email

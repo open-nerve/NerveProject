@@ -16,6 +16,8 @@ M7 合并时：收藏的 `entity_type` 取值正好是 `project`、`view`、`cyc
 
 **处理结果（M7/P3c，契约的部分）：** 收藏的 `entity_type` 在契约里是 `FavoriteKind`，恰为 `project`、`view`、`cycle`、`module`、`folder`（`view` 兼指项目视图与工作区视图），生成的类型在 `@nerve/api-client`（[P3c spec](../specs/P3c-favorites.md) §2.4）。前端的 `TFavoriteEntityType` 改用生成的类型随 P7，保持 open。
 
+**处理结果（M7/P4，通知的部分）：** 通知没有工时：契约的 `NotificationChange` 没有这个字段，新卡片的文案表也没有（`describeChange` 的单测以 `sort_order` 作“没有文字的字段”的一格，[P4 spec](../specs/P4-web-notifications.md) §2.6）；旧卡片（`workspace-notifications/sidebar/notification-card/content.tsx`）连同并进它的内容映射随 T5 删除。收藏的部分随 P7，保持 open。
+
 逐项的结论写进该 M 的 review，然后 `status` 改为 `closed`。
 
 来源：[M1/P3 评审记录](../../M1-frontend-trim/reviews/P3-trim-platform-review.md)第 7 节。

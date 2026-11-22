@@ -5,12 +5,14 @@
 /**
  * What a page asks nerve for as it loads, signed in, as "<method> <path>" with the query when there is one, {slug} for
  * the workspace's slug and {project} for the project's id: the app's start, on every page (M2 design 7.1, M3 design
- * 7.4); the workspace wrapper's, on every page of a workspace, whatever the role; the project's read, on every page of
- * a project; and the project's own resources, only once that read says the caller is a member of the project (M3
- * design 7.1). Of M6's and M7's addresses only a project's cycles and its modules are read (PROJECT_CYCLES, M6 P5a;
- * PROJECT_MODULES, M6 P6a), none of the others (views, the intake's triage state, favourites, the unread
- * notifications, recents; M3 design 3.1), nor one outside /api/v0 (M2 design 3.1). These lists are the record of what
- * the pages load: a phase that adds a fetch to a page adds it here (the P8b spec's appendix A.5 is a copy, as of P8b).
+ * 7.4); the workspace's, on every page of a workspace, whatever the role: its wrapper's, and the caller's unread
+ * notifications its top navigation counts (M7 P4, useUnreadNotificationCount); the project's read, on every page of a
+ * project; and the project's own resources, only once that read says the caller is a member of the project (M3 design
+ * 7.1). Of M6's and M7's addresses only a project's cycles and its modules (PROJECT_CYCLES, M6 P5a; PROJECT_MODULES, M6
+ * P6a) and the workspace's unread notifications (WORKSPACE, M7 P4) are read, none of the others (views, the intake's
+ * triage state, favourites, recents; M3 design 3.1), nor one outside /api/v0 (M2 design 3.1). These lists are the
+ * record of what the pages load: a phase that adds a fetch to a page adds it here (the P8b spec's appendix A.5 is a
+ * copy, as of P8b).
  */
 export const APP = [
   "POST /api/v0/auth/refresh",
@@ -24,6 +26,7 @@ export const WORKSPACE = [
   "GET /api/v0/workspaces/{slug}/members",
   "GET /api/v0/workspaces/{slug}/projects?archived=false",
   "GET /api/v0/workspaces/{slug}/states",
+  "GET /api/v0/workspaces/{slug}/notifications/unread-count",
 ];
 export const PROJECT = ["GET /api/v0/projects/{project}"];
 export const PROJECT_MEMBER = [

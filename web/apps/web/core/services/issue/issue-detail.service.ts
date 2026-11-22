@@ -65,4 +65,16 @@ export class IssueDetailService {
   async deleteLink(linkId: string): Promise<void> {
     return unwrap(await this.api.DELETE("/api/v0/issue-links/{link_id}", { params: { path: { link_id: linkId } } }));
   }
+
+  async subscribe(issueId: string): Promise<void> {
+    return unwrap(
+      await this.api.POST("/api/v0/issues/{issue_id}/subscribe", { params: { path: { issue_id: issueId } } })
+    );
+  }
+
+  async unsubscribe(issueId: string): Promise<void> {
+    return unwrap(
+      await this.api.POST("/api/v0/issues/{issue_id}/unsubscribe", { params: { path: { issue_id: issueId } } })
+    );
+  }
 }

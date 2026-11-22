@@ -125,8 +125,10 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
     if (allowedProjectIds && allowedProjectIds.length > 0 && !activeProjectId)
       setActiveProjectId(projectId ?? allowedProjectIds?.[0]);
 
+    // The allowed projects may arrive after the open (the workspace's project directory). A project is picked once,
+    // so only their arrival matters and their count is the key; `data` and the array itself can be new every render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data?.project_id, projectId, isOpen, activeProjectId]);
+  }, [data?.project_id, projectId, isOpen, activeProjectId, allowedProjectIds?.length]);
 
   /** Whether saving the stored draft changes its project; its content lifetime must end before that request. */
   const movesProject = (payload: IssueFormData) => {

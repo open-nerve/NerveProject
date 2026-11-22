@@ -16,7 +16,6 @@ export * from "./get-icon-for-link";
 export * from "./intake";
 export * from "./keyboard";
 export * from "./loader";
-export * from "./notification";
 export * from "./planning";
 export * from "./project-views";
 export * from "./project";

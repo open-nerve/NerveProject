@@ -1,6 +1,6 @@
 # M7 / P3d：最近访问（阶段记录）
 
-> 状态：实施完成，待整分支审查（§9）。spec 与 plan 见 [P3d spec](../specs/P3d-recents.md)、[P3d plan](../plans/P3d-recents.md)，预检 [re-92](../../../reviews/re-92-M7P3d预检.md)。基线 main `9d26b1c3`（P3c 的 noff），分支 `codex/m7-p3d`。台账 `.superpowers/sdd/P3d-recents/progress.md`（ignored，随阶段归档）。
+> 状态：已完成，合入 main（noff `3d9293bd`），main CI 44989539530 全绿（§9）。spec 与 plan 见 [P3d spec](../specs/P3d-recents.md)、[P3d plan](../plans/P3d-recents.md)，预检 [re-92](../../../reviews/re-92-M7P3d预检.md)。基线 main `9d26b1c3`（P3c 的 noff），分支 `codex/m7-p3d`。台账 `.superpowers/sdd/P3d-recents/progress.md`（ignored，随阶段归档）。
 
 ## 1. 交付
 
@@ -33,6 +33,7 @@
 | T14 | `6a4e4e51` | e2e 接口故事 H17；检查点 2 |
 | T15 | `95c8dbd3` | 文档与交接 |
 | 修复轮 | `23c89903`、`55e89c76`、`76e26e06`、`903ed9ca`、`4012cd74` | 整分支审查的 m1、m6、m3、m4、m5（§9） |
+| 限定复审的 O1 | `abe2f209` | 记录的写与裁剪失败时记录随之失败（§9） |
 
 `e938ea17`、`df50185a`、`147ddcef` 是只改说明的重提交（树不变，原为 `af1bb9f8`、`46dd61f5`、`107ae4ae`）。
 
@@ -68,6 +69,8 @@
 | T4 之后（`576a2ba3`） | Go 两路过（中间检查，e2e 在窗口 (b) 里） | — |
 | 检查点 1（`0660c696`） | cp1 第 0 路因 M6-M8-05 失败（五个各起容器的包，bootstrap 本身过，447.5 秒）；整套重跑一次（cp1b），七项一次过（e2e 493 passed） | 44973647135 attempt 1 全绿 |
 | 检查点 2（`6a4e4e51`） | 七项一次过（e2e 494 passed） | 44982376252 全绿 |
+| 合并前的终检（`abe2f209`，`final.sh fin`） | 八张收据一次过（e2e 494 passed） | 44987439140 全绿（最终分支 CI） |
+| main `3d9293bd`（合入之后） | — | 44989539530 全绿 |
 
 ## 6. 测试时间与两路（秒）
 
@@ -78,6 +81,8 @@
 | T4 之后（本机中间检查） | 446.3 / 651.3 | — | — |
 | 检查点 1（44973647135） | 459.6 / 648.8（cp1b） | 853（bootstrap 570.1，慢的 runner） | 788（bootstrap 766.7，63.9%） |
 | 检查点 2（44982376252） | 468.1 / 672.6 | 673（bootstrap 489.9） | 974（bootstrap 943.2，期限的 78.6%） |
+| 终检（44987439140） | 471.2 / 660.5 | 673（bootstrap 493.0） | 808（bootstrap 786.8，期限的 65.6%） |
+| main `3d9293bd`（44989539530） | | 692（bootstrap 498.9） | 757（bootstrap 736.3，61.4%） |
 
 - 本机两路整路（`make test-shard` 的回执）：检查点 0 595.4 / 673.0，检查点 1（cp1b）590.2 / 654.0，检查点 2 598.8 / 679.0；e2e 三次各 3.7–3.8 分钟。
 - 新的 bootstrap 顶层名（桶 = `cksum % 100`，0–45 第 0 路），本机单跑：
@@ -112,4 +117,9 @@
   - `76e26e06`（m3）：`seenByGrants`（`iss/app/issue_refs.go`）给 `IssueRefs` 与 `NavigationIssues` 共用；两个变异都使两边的测试失败。
   - `903ed9ca`（m4）：列表检查移进每格自己的删除里——项目格查 acme 不列 Dropped 与它的工作项，工作区格只留 doomed 的 `workspace.not_found`（逐值相同）；“列表不过滤”的变异使项目格失败，工作区格两层（`DirectoryWorkspace`、`ActiveRole`）一起去才失败、只去一层的对照存活。
   - `4012cd74`（m5）：`favoriteRacer` → `racedWrite`（P3c 与 P3d 的交错文件），纯改名。
-- 修复后的限定复审、合并前的终检、分支 CI、合并与 main CI 在下一段的 T1 补记。
+- 以下在 P4 的 T1 补记，数字取自归档台账的末行：
+  - **限定复审**（fable，`95c8dbd3..fd0fc6de`）：没有发现，Ready to merge。观察 O1（用例吞掉裁剪的错误测不出，早已存在）由主控当场以 `abe2f209` 补测试：记录的写与裁剪失败时记录随之失败，两个变异皆杀；O2（plan T5 的原话）照上文的修复轮记为不改。
+  - **合并前的终检** `final.sh fin`（`abe2f209`）一次过：八张收据全 0；bootstrap 第 0 路 471.2 秒、第 1 路 660.5 秒（本机基线 668.2）；e2e 494 passed。
+  - **最终分支 CI** 44987439140 第一次全绿：server (0) Test 673 / bootstrap 493.0，server (1) Test 808 / bootstrap 786.8（期限的 65.6%）；web、e2e 两片绿（§5、§6）。
+  - **合并**：`--no-ff` 合入 main，`3d9293bd`（父 `9d26b1c3`、`abe2f209`），推送后以 `ls-remote` 核对。**main CI** 44989539530 第一次全绿：server (0) Test 692 / bootstrap 498.9，server (1) Test 757 / bootstrap 736.3（61.4%）；web、e2e 两片绿。
+  - **归档与清理**：归档 `.superpowers/sdd/M7-P3d-integration-20261122`（载荷 3266 个文件，分类只有可复现与证据两种、没有未知，`source_unchanged` 为真，清理之后核过）；`cleanup.log`（2026-11-22T05:55:14Z）：worktree `m7-p3d` 已删，本地分支 `codex/m7-p3d`（在 `abe2f209`）与远端分支已删。

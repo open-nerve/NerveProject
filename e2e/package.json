@@ -20,7 +20,8 @@
     "test:m5-demo": "playwright test --config=playwright.m5-demo.config.ts",
     "test:m4-cleanup": "playwright test --config=playwright.m4-cleanup.config.ts",
     "test:m6-pages": "playwright test --config=playwright.m6-pages.config.ts",
-    "test:m6-acceptance": "playwright test --config=playwright.m6-acceptance.config.ts"
+    "test:m6-acceptance": "playwright test --config=playwright.m6-acceptance.config.ts",
+    "test:m7-pages": "playwright test --config=playwright.m7-pages.config.ts"
   },
   "devDependencies": {
     "@nerve/api-client": "workspace:*",

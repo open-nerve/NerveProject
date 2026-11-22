@@ -2,6 +2,65 @@
   "notification": {
     "label": "Inbox",
     "page_label": "{workspace} - Inbox",
+    "a11y": {
+      "preview": "Preview",
+      "unread_count": "{label}, {count} unread"
+    },
+    "card": {
+      "till": "Till {date}, {time}",
+      "unread": "Unread",
+      "created": "created the work item",
+      "renamed": "renamed the work item to {value}",
+      "priority": "set the priority to {value}",
+      "state": "set the state to {value}",
+      "start_date_set": "set the start date to {value}",
+      "start_date_removed": "removed the start date",
+      "due_date_set": "set the due date to {value}",
+      "due_date_removed": "removed the due date",
+      "label_added": "added the label {value}",
+      "label_removed": "removed the label {value}",
+      "assignee_added": "assigned {value}",
+      "assignee_removed": "unassigned {value}",
+      "parent_set": "set the parent to {ref}",
+      "parent_removed": "made the work item no longer a child of {ref}",
+      "parent_changed": "changed the parent",
+      "relates_to_added": "marked the work item as related to {ref}",
+      "relates_to_added_hidden": "marked the work item as related to another work item",
+      "relates_to_removed": "marked the work item as no longer related to {ref}",
+      "relates_to_removed_hidden": "marked the work item as no longer related to another work item",
+      "duplicate_added": "marked the work item as a duplicate of {ref}",
+      "duplicate_added_hidden": "marked the work item as a duplicate of another work item",
+      "duplicate_removed": "marked the work item as no longer a duplicate of {ref}",
+      "duplicate_removed_hidden": "marked the work item as no longer a duplicate of another work item",
+      "blocking_added": "marked the work item as blocking {ref}",
+      "blocking_added_hidden": "marked the work item as blocking another work item",
+      "blocking_removed": "marked the work item as no longer blocking {ref}",
+      "blocking_removed_hidden": "marked the work item as no longer blocking another work item",
+      "blocked_by_added": "marked the work item as blocked by {ref}",
+      "blocked_by_added_hidden": "marked the work item as blocked by another work item",
+      "blocked_by_removed": "marked the work item as no longer blocked by {ref}",
+      "blocked_by_removed_hidden": "marked the work item as no longer blocked by another work item",
+      "archived": "archived the work item",
+      "restored": "restored the work item",
+      "commented": "commented",
+      "comment_edited": "edited a comment",
+      "comment_deleted": "deleted a comment",
+      "link_added": "added the link {value}",
+      "link_updated": "changed a link to {value}",
+      "link_removed": "removed the link {value}",
+      "attachment_added": "added an attachment",
+      "attachment_removed": "removed an attachment",
+      "mentioned_description": "mentioned you in the description",
+      "mentioned_comment": "mentioned you in a comment",
+      "updated": "updated the work item",
+      "actions": {
+        "mark_read": "Mark {ref} read",
+        "mark_unread": "Mark {ref} unread",
+        "archive": "Archive {ref}",
+        "unarchive": "Unarchive {ref}",
+        "snooze": "Snooze {ref}"
+      }
+    },
     "options": {
       "mark_all_as_read": "Mark all as read",
       "mark_read": "Mark as read",
@@ -12,17 +71,17 @@
       "show_snoozed": "Show snoozed",
       "show_archived": "Show archived",
       "mark_archive": "Archive",
-      "mark_unarchive": "Un archive",
-      "mark_snooze": "Snooze",
-      "mark_unsnooze": "Un snooze"
+      "mark_unarchive": "Unarchive",
+      "mark_unsnooze": "Unsnooze"
     },
     "toasts": {
       "read": "Notification marked as read",
       "unread": "Notification marked as unread",
       "archived": "Notification marked as archived",
-      "unarchived": "Notification marked as un archived",
+      "unarchived": "Notification unarchived",
       "snoozed": "Notification snoozed",
-      "unsnoozed": "Notification un snoozed"
+      "unsnoozed": "Notification unsnoozed",
+      "all_read": "{count, plural, one {# notification marked as read} other {# notifications marked as read}}"
     },
     "tabs": {
       "all": "All",
@@ -40,6 +99,14 @@
       "1_week": "1 week",
       "2_weeks": "2 weeks",
       "custom": "Custom"
+    },
+    "snooze_modal": {
+      "title": "Customize snooze time",
+      "date": "Pick a date",
+      "time": "Pick a time",
+      "picked_time": "Time, {time}",
+      "no_time": "No time is left today",
+      "submit": "Snooze"
     }
   }
 }

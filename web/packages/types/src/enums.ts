@@ -11,10 +11,3 @@ export enum EUserPermissions {
 }
 
 export type TUserPermissions = EUserPermissions.ADMIN | EUserPermissions.MEMBER | EUserPermissions.GUEST;
-
-// workspace notifications
-export enum ENotificationFilterType {
-  CREATED = "created",
-  ASSIGNED = "assigned",
-  SUBSCRIBED = "subscribed",
-}

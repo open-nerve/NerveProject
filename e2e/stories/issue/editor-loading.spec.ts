@@ -303,10 +303,10 @@ async function pasteAndDropImageFile(editor: Locator) {
 }
 
 // M5/P7b gives an existing work item body images and attachments (their real-page stories are F8, F11 and F12); the
-// creation form still has no file host. Neither offers subscription, and a pasted document keeps only its text.
+// creation form still has no file host. M7/P4 gives the detail its one subscription action; the creation form has
+// none. A pasted document keeps only its text.
 const fileBoundary = {
-  detail:
-    "has image and attachment actions but no subscription action; a pasted document keeps its text without its image",
+  detail: "has image, attachment and subscription actions; a pasted document keeps its text without its image",
   creation: "has no image, attachment or subscription action; image paste and drop make no upload",
 } as const;
 for (const owner of ["detail", "creation"] as const) {
@@ -357,7 +357,9 @@ for (const owner of ["detail", "creation"] as const) {
     if (owner === "detail")
       await expect(page.getByRole("button", { name: "Attachments 0", exact: true })).toBeVisible();
     else await expect(page.getByText("Attachments", { exact: true })).toHaveCount(0);
-    await expect(page.getByRole("button", { name: /^(un)?subscribe$/i })).toHaveCount(0);
+    // The detail's creator is subscribed on creation (M7/P1a), so its one action is "Unsubscribe".
+    await expect(page.getByRole("button", { name: /^(un)?subscribe$/i })).toHaveCount(owner === "detail" ? 1 : 0);
+    if (owner === "detail") await expect(page.getByRole("button", { name: "Unsubscribe", exact: true })).toBeVisible();
     if (owner === "creation") {
       expect(
         (

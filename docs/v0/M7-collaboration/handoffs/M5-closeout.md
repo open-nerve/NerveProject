@@ -37,6 +37,8 @@ created: 2026-11-06
 
 **处理结果（M7/P1c）：** 通知的读按读的人此刻的权限（[P1c spec](../specs/P1c-notification-api.md) §2.5）：撤出项目、结束成员、降为只看自己的访客之后不再列出、不计数、单条修改 404；附件通知仍只带工作项与动作，不带附件 id、文件名与地址（P4 的卡片若要链到文件再议）。**本条关闭。**
 
+**处理结果（M7/P4）：** 不链：附件通知的卡片只说“added an attachment”“removed an attachment”（“添加了附件”“移除了附件”），按下打开工作项的浮层，没有指向文件的链接（`card/item.test.tsx` 的“links to no attachment, nor to anything else”；[P4 spec](../specs/P4-web-notifications.md) §2.6）。点开之后附件由工作项的浮层按当前权限读取。
+
 <a id="M5-M7-03"></a>
 ## M5-M7-03 只读显示与复制为 Markdown
 
@@ -47,6 +49,8 @@ created: 2026-11-06
 **何时验收：** 第一次在通知或视图中显示带图正文、或提供带图复制之前；三浏览器核对权限变化、到期与换账户。
 
 **处理结果（M7/P3b，视图的部分）：** 视图的说明 `description` 是纯文本（`text`，只拒 NUL），没有资产、不是资产宿主（[P3b spec](../specs/P3b-views.md) §2.3）；视图不显示带图的正文。通知的部分不变。保持 open。
+
+**处理结果（M7/P4，通知的部分）：** 只读的 `LiteTextEditor` 随旧卡片（`sidebar/notification-card/content.tsx`）在 T5 删除；新卡片把评论的摘录（P1b 存的纯文本）以纯文本至多两行显示，不经编辑器、不显示图片、不碰签名地址（`card/item.tsx`，[P4 spec](../specs/P4-web-notifications.md) §2.6）；卡片不提供复制为 Markdown（`workspace-notifications/` 里没有 `getMarkDown`、`useCopyText` 的读者）。视图的部分已由 P3b 写明。**本条关闭。**
 
 <a id="M5-04"></a>
 ## M5-04 首个投递任务的 CLI（原文转交）
