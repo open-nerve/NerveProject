@@ -21,6 +21,7 @@ import { submitIntakeIssue, triageIntakeIssue } from "./intake";
 import { createDraft, createIssue, createIssueRelations, updateIssue } from "./issues";
 import { createIssueLink } from "./links";
 import { changeModulePreferences, createModule, createModuleLink } from "./modules";
+import { recordVisit } from "./recent-visits";
 import { furnishIssueFiles, storedFile } from "./storage";
 import { createProjectView, createWorkspaceView } from "./views";
 
@@ -73,7 +74,13 @@ async function notified(db: Database, receiverId: string, issueId: string): Prom
  * and view (M7 P3c spec 2.4): rows of user_favorites under the project, which its archive takes away (P4; spec 2.6,
  * R12) and its deletion, or its workspace's, deletes. So the caller is an admin or a member of the workspace of
  * workspaceSlug, as favorites take (its guest may not), and a member of the project who is not its guest, who sees the
- * view, which another may have saved (spec 2.5): each caller is (re-91 m7).
+ * view, which another may have saved (spec 2.5): each caller is (re-91 m7). Then he visits the project and the first
+ * work item (M7 P3d spec 2.4): two rows of user_recent_visits under the project, which its archive leaves (P4; P3d
+ * spec 2.6, R5) and the deletion job's third step deletes, of the project's deletion or its workspace's. The project's
+ * row goes with the project and the workspace; the work item's shows that the step deletes the visits of the project's
+ * work items too, not only the project's own. So the caller sees the first, a member of the project who created it
+ * (P3d spec 2.5), and stays well under the 20 visits an account keeps in a workspace, past which a recording deletes
+ * his oldest for good: each caller is, with at most two calls, four visits, in a workspace.
  */
 export async function furnishIssueRows(
   api: Api,
@@ -110,6 +117,8 @@ export async function furnishIssueRows(
   await createFavorite(api, token, workspaceSlug, { entity_type: "cycle", entity_id: planning.cycleId });
   await createFavorite(api, token, workspaceSlug, { entity_type: "module", entity_id: planning.moduleId });
   await createFavorite(api, token, workspaceSlug, { entity_type: "view", entity_id: planning.viewId });
+  await recordVisit(api, token, { entity_type: "project", entity_id: projectId });
+  await recordVisit(api, token, { entity_type: "issue", entity_id: fix.id });
   await notified(db, notifiedId, test.id);
 }
 
