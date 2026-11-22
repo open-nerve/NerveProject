@@ -305,6 +305,44 @@ it("leaves it where it went meanwhile as the pressed control, having lost it to 
   expect(document.activeElement).toBe(elsewhere);
 });
 
+/** The watches of elements' disabled the page makes from now on: each with its element, and whether it was ended. */
+function watchesMade() {
+  const made: { element: Node; ended: boolean }[] = [];
+  const { observe, disconnect } = MutationObserver.prototype;
+  const of = new WeakMap<MutationObserver, (typeof made)[number]>();
+  vi.spyOn(MutationObserver.prototype, "observe").mockImplementation(
+    function (this: MutationObserver, element, options) {
+      const watch = { element, ended: false };
+      made.push(watch);
+      of.set(this, watch);
+      observe.call(this, element, options);
+    }
+  );
+  vi.spyOn(MutationObserver.prototype, "disconnect").mockImplementation(function (this: MutationObserver) {
+    const watch = of.get(this);
+    if (watch) watch.ended = true;
+    disconnect.call(this);
+  });
+  return made;
+}
+
+it("ends the watch of a card's control once the card leaves, the focus gone elsewhere before (re-review m1)", async () => {
+  await renderList(root, cache, <button type="button">elsewhere</button>);
+  await answer(await listRead(nerve(), 0), pageOf([one, two]));
+  const watches = watchesMade();
+  const archive = action("WEB-1 One", "archive");
+  await act(async () => archive.focus());
+  const elsewhere = [...host.querySelectorAll("button")].find((button) => button.textContent === "elsewhere")!;
+  await act(async () => elsewhere.focus());
+  const archiving = fixture.tab.store.update(acme, one.id, { archived: true });
+  await changed(one, json(200, { ...one, archived_at: NOW }));
+  await archiving;
+  expect(cards(host)).toEqual(["WEB-2 Two"]);
+  expect(document.activeElement).toBe(elsewhere);
+  // nothing watches the control the card took away: no detached element is kept
+  expect(watches.filter((watch) => watch.element === archive && !watch.ended)).toEqual([]);
+});
+
 it("keeps it where it is as another card leaves the list", async () => {
   await listed(pageOf([one, two, three]));
   await act(async () => main("WEB-1 One")?.focus());

@@ -59,12 +59,12 @@ export function useLeavingFocus(ids: readonly string[]): LeavingFocus {
   /** The card that holds the focus, by its notification's id. */
   const holder = useRef<string | undefined>(undefined);
   /**
-   * The watch of the control that had the focus last (controlOf), which has it back once it is enabled again while
-   * nothing has it.
+   * The control that had the focus last (controlOf), and the watch by which it has it back once it is enabled again
+   * while nothing has it.
    */
-  const returning = useRef<MutationObserver | undefined>(undefined);
+  const returning = useRef<{ control: HTMLElement; watch: MutationObserver } | undefined>(undefined);
   const stopReturning = () => {
-    returning.current?.disconnect();
+    returning.current?.watch.disconnect();
     returning.current = undefined;
   };
   useEffect(() => stopReturning, []);
@@ -75,6 +75,8 @@ export function useLeavingFocus(ids: readonly string[]): LeavingFocus {
     const before = shown.current;
     const now = order === "" ? [] : order.split(" ");
     shown.current = now;
+    // the control watched has gone with its card, whichever card holds the focus now: it is watched no more
+    if (returning.current?.control.isConnected === false) stopReturning();
     const left = holder.current;
     if (left === undefined || now.includes(left)) return;
     holder.current = undefined;
@@ -103,7 +105,7 @@ export function useLeavingFocus(ids: readonly string[]): LeavingFocus {
         if (!control.matches(":disabled") && control.isConnected && nowhere()) control.focus();
       });
       watch.observe(control, { attributes: true, attributeFilter: ["disabled"] });
-      returning.current = watch;
+      returning.current = { control, watch };
     },
     focusOut: (to) => {
       // lost to something: no card holds it; lost to nothing, the card holds it still
