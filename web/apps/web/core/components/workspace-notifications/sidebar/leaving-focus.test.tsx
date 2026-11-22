@@ -188,6 +188,22 @@ it("leaves it where it went once the card no longer held it as it left", async (
   expect(document.activeElement).toBe(elsewhere);
 });
 
+it("knows the card holds it still when a blur's listener gives it back into the card before the list hears the blur", async () => {
+  await listed(pageOf([one, two, three]));
+  const archive = action("WEB-2 Two", "archive");
+  await act(async () => archive.focus());
+  // as the dialog's keepFocusIn does in a browser, whose microtask runs between the blur's listeners (a browser's own
+  // event): the card's main button has the focus before the list's listener hears the archive button lose it
+  archive.addEventListener("focusout", () => main("WEB-2 Two")?.focus(), { once: true });
+  await act(async () => archive.blur());
+  expect(document.activeElement).toBe(main("WEB-2 Two"));
+  const archiving = fixture.tab.store.update(acme, two.id, { archived: true });
+  await changed(two, json(200, { ...two, archived_at: NOW }));
+  await archiving;
+  expect(cards(host)).toEqual(["WEB-1 One", "WEB-3 Three"]);
+  expect(document.activeElement).toBe(main("WEB-3 Three"));
+});
+
 it("keeps it where it is as another card leaves the list", async () => {
   await listed(pageOf([one, two, three]));
   await act(async () => main("WEB-1 One")?.focus());

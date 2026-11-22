@@ -68,8 +68,8 @@ export const NotificationList = observer(function NotificationList() {
           <li
             key={notification.id}
             data-notification-id={notification.id}
-            onFocus={() => focusIn(notification.id)}
-            onBlur={focusOut}
+            onFocus={(event) => focusIn(notification.id, event.target)}
+            onBlur={(event) => focusOut(event.target)}
           >
             <NotificationItem notification={notification} />
           </li>
