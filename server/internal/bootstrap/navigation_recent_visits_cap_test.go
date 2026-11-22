@@ -61,18 +61,19 @@ func capsAtTwenty(t *testing.T, w recentVisitsWorld, pending uuid.UUID) {
 // 2.7, R10, m4): a project's deletion, and a workspace's, enqueue the
 // deletion of their visits behind their views', which the test holds
 // (holdNavigationDeletion: the project's one view, its views turned on, a
-// view none of the visits names), so that the visits stay undeleted;
-// meanwhile alice, whose they are, lists none of them, and her recording
-// of each target answers as an id that never was, byte for byte, writing
-// nothing: what is deleted is not seen, whatever the job has done. The
-// list of the deleted workspace answers as a workspace that is none.
-// Released, the job deletes them at the project's deletion's moment, by its
-// deleter. The start-time runs have run first, so none queues on a lock
-// the test holds (P2a review §4).
+// view none of the visits names), so that alice's visits stay undeleted;
+// meanwhile her recording of each target answers as an id that never was,
+// byte for byte, writing nothing: what is deleted is not seen, whatever
+// the job has done. Each cell's deletion checks her list in its own
+// workspace: acme's lists neither the deleted project nor its work item;
+// the deleted workspace's answers as a workspace that is none, byte for
+// byte. Released, the job deletes them at the project's deletion's moment,
+// by its deleter. The start-time runs have run first, so none queues on a
+// lock the test holds (P2a review §4).
 func visitsDeletionWindow(t *testing.T, w recentVisitsWorld) {
 	alice := []uuid.UUID{w.ids["alice"]}
 	waitForStartupRuns(t, w.pool)
-	window := func(t *testing.T, slug, name, identifier string, deletion func(project uuid.UUID)) {
+	window := func(t *testing.T, slug, name, identifier string, deletion func(project, item uuid.UUID)) {
 		project := createdProject(t, w.contract, w.base, w.tokens["alice"], slug, name, identifier)
 		w.changeProject(t, project, `{"issue_views_view":true}`)
 		w.newView(t, "alice", projectViewsPath(project), `{"name":"Held"}`)
@@ -82,10 +83,7 @@ func visitsDeletionWindow(t *testing.T, w recentVisitsWorld) {
 		visits := liveVisits(t, w.pool, alice, project, item)
 		kept := visitsText(t, w.pool, visits...)
 		holder := holdNavigationDeletion(t, w.pool, project)
-		deletion(project)
-		if listed := w.listedTargets(t, "alice", "acme"); containsAny(listed, project, item) {
-			t.Errorf("alice lists %v; want neither %s nor its work item", listed, name)
-		}
+		deletion(project, item)
 		w.visitAnsweredAsAbsent(t, "alice", "project", project)
 		w.visitAnsweredAsAbsent(t, "alice", "issue", item)
 		if got := visitsText(t, w.pool, visits...); got != kept {
@@ -97,13 +95,16 @@ func visitsDeletionWindow(t *testing.T, w recentVisitsWorld) {
 		visitsDeletedAt(t, w.pool, at, by, visits...)
 	}
 	t.Run("project", func(t *testing.T) {
-		window(t, "acme", "Dropped", "DRP", func(project uuid.UUID) {
+		window(t, "acme", "Dropped", "DRP", func(project, item uuid.UUID) {
 			w.send(t, "alice", http.MethodDelete, "/api/v0/projects/"+project.String(), "", http.StatusNoContent)
+			if listed := w.listedTargets(t, "alice", "acme"); containsAny(listed, project, item) {
+				t.Errorf("alice lists %v in acme; want neither Dropped nor its work item", listed)
+			}
 		})
 	})
 	t.Run("workspace", func(t *testing.T) {
 		w.send(t, "alice", http.MethodPost, "/api/v0/workspaces", `{"name":"Doomed","slug":"doomed"}`, http.StatusCreated)
-		window(t, "doomed", "Gone", "GNE", func(uuid.UUID) {
+		window(t, "doomed", "Gone", "GNE", func(uuid.UUID, uuid.UUID) {
 			w.send(t, "alice", http.MethodDelete, "/api/v0/workspaces/doomed", "", http.StatusNoContent)
 			w.answeredAsAbsent(t, "alice", http.MethodGet, recentVisitsPath("doomed"), recentVisitsPath("absent"), "", "workspace.not_found")
 		})
