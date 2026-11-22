@@ -21,7 +21,18 @@ interface AppSidebarItemData {
   disabled?: boolean;
 }
 
-interface AppSidebarItemProps {
+/**
+ * What a wrapper gives the link it wraps: a tooltip's trigger (Base UI's, which Propel's Tooltip renders its child as)
+ * merges its ref, its handlers (focus, blur, pointer) and aria-describedby into it, so that the tooltip opens on hover
+ * and focus. The link's own address, name and look are the item's.
+ */
+type AppSidebarLinkWrapperProps = Omit<
+  React.ComponentPropsWithRef<"a">,
+  "href" | "aria-label" | "className" | "children"
+>;
+
+/** An item: a link, which takes what a wrapper gives it, or a button, a menu's (its menu gives it nothing). */
+interface AppSidebarItemProps extends AppSidebarLinkWrapperProps {
   variant?: "link" | "button";
   item?: AppSidebarItemData;
 }
@@ -31,7 +42,7 @@ interface AppSidebarItemIconProps {
   highlight?: boolean;
 }
 
-interface AppSidebarLinkItemProps {
+interface AppSidebarLinkItemProps extends AppSidebarLinkWrapperProps {
   href?: string;
   label?: string;
   children: React.ReactNode;
@@ -74,11 +85,11 @@ function AppSidebarItemIcon({ icon, highlight }: AppSidebarItemIconProps) {
   );
 }
 
-function AppSidebarLinkItem({ href, label, children }: AppSidebarLinkItemProps) {
+function AppSidebarLinkItem({ href, label, children, ...wrapper }: AppSidebarLinkItemProps) {
   if (!href) return null;
 
   return (
-    <Link to={href} aria-label={label} className={styles.base}>
+    <Link {...wrapper} to={href} aria-label={label} className={styles.base}>
       {children}
     </Link>
   );
@@ -92,7 +103,7 @@ function AppSidebarButtonItem({ label, children, onClick, disabled = false }: Ap
   );
 }
 
-function AppSidebarItem({ variant = "link", item }: AppSidebarItemProps) {
+function AppSidebarItem({ variant = "link", item, ...wrapper }: AppSidebarItemProps) {
   if (!item) return null;
 
   const { icon, label, isActive, href, onClick, disabled } = item;
@@ -101,7 +112,7 @@ function AppSidebarItem({ variant = "link", item }: AppSidebarItemProps) {
 
   if (variant === "link") {
     return (
-      <AppSidebarLinkItem href={href} label={label}>
+      <AppSidebarLinkItem {...wrapper} href={href} label={label}>
         {commonItems}
       </AppSidebarLinkItem>
     );
