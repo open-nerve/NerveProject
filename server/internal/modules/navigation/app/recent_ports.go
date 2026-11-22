@@ -35,10 +35,10 @@ type RecentVisitLocker interface {
 // last change stamped by by at v's VisitedAt, its id and creation kept.
 // TrimRecentVisits deletes, for good, user's undeleted visits in workspace
 // past the keep newest by visit (then by id descending), passing over one
-// another transaction holds, and answers how many it deleted.
+// another transaction holds.
 type RecentVisitWriter interface {
 	RecordRecentVisit(ctx context.Context, v domain.RecentVisit, by uuid.UUID) error
-	TrimRecentVisits(ctx context.Context, user, workspace uuid.UUID, keep int) (int, error)
+	TrimRecentVisits(ctx context.Context, user, workspace uuid.UUID, keep int) error
 }
 
 // RecentVisitCascades soft-deletes, in the transaction ctx carries, which

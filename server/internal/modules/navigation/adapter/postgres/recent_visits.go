@@ -56,18 +56,18 @@ func (s *Store) RecordRecentVisit(ctx context.Context, v domain.RecentVisit, by 
 }
 
 // TrimRecentVisits deletes, for good, user's undeleted visits in workspace
-// past the keep newest by visit, passing over one another transaction holds,
-// and answers how many it deleted (spec 2.5, 2.8). keep is the cap
-// (domain.RecentVisitCap), from 1 to 2147483647.
-func (s *Store) TrimRecentVisits(ctx context.Context, user, workspace uuid.UUID, keep int) (int, error) {
+// past the keep newest by visit, passing over one another transaction holds
+// (spec 2.5, 2.8). keep is the cap (domain.RecentVisitCap), from 1 to
+// 2147483647.
+func (s *Store) TrimRecentVisits(ctx context.Context, user, workspace uuid.UUID, keep int) error {
 	if keep < 1 || keep > math.MaxInt32 {
-		return 0, fmt.Errorf("the recent visits kept must be from 1 to 2147483647, got %d", keep)
+		return fmt.Errorf("the recent visits kept must be from 1 to 2147483647, got %d", keep)
 	}
-	n, err := s.queries(ctx).TrimRecentVisits(ctx, gen.TrimRecentVisitsParams{UserID: user, WorkspaceID: workspace, Keep: int32(keep)})
+	err := s.queries(ctx).TrimRecentVisits(ctx, gen.TrimRecentVisitsParams{UserID: user, WorkspaceID: workspace, Keep: int32(keep)})
 	if err != nil {
-		return 0, fmt.Errorf("trim the recent visits of user %s in workspace %s: %w", user, workspace, err)
+		return fmt.Errorf("trim the recent visits of user %s in workspace %s: %w", user, workspace, err)
 	}
-	return int(n), nil
+	return nil
 }
 
 // DeleteIssueRecentVisits soft-deletes, in the transaction ctx carries,

@@ -17,21 +17,17 @@ import (
 )
 
 // visit records v, made by its owner, as a recording writes it, in one transaction of tm's: his visits' advisory
-// lock, the upsert, then the trim to the cap (P3d spec 2.8). It answers how many the trim deleted.
-func visit(s *postgresadapter.Store, tm *postgres.TxManager, v domain.RecentVisit) (int, error) {
-	trimmed := 0
-	err := tm.WithinTx(context.Background(), func(ctx context.Context) error {
+// lock, the upsert, then the trim to the cap (P3d spec 2.8). What the trim deleted is read from the table.
+func visit(s *postgresadapter.Store, tm *postgres.TxManager, v domain.RecentVisit) error {
+	return tm.WithinTx(context.Background(), func(ctx context.Context) error {
 		if err := s.LockRecentVisits(ctx, v.UserID, v.WorkspaceID); err != nil {
 			return err
 		}
 		if err := s.RecordRecentVisit(ctx, v, v.UserID); err != nil {
 			return err
 		}
-		n, err := s.TrimRecentVisits(ctx, v.UserID, v.WorkspaceID, domain.RecentVisitCap)
-		trimmed = n
-		return err
+		return s.TrimRecentVisits(ctx, v.UserID, v.WorkspaceID, domain.RecentVisitCap)
 	})
-	return trimmed, err
 }
 
 // visits are n of user's visits of work items in workspace's project, numbered from first: the i-th visited i minutes
@@ -110,13 +106,13 @@ func TestTheTrimKeepsTheTwentyNewestVisits(t *testing.T) {
 				recorded.ProjectID, recorded.EntityID = mine[0].project, mine[0].target
 				kept, mine = nil, slices.Concat(mine[1:], mine[:1])
 			}
-			n, err := visit(s, postgres.NewTxManager(pool, time.Second), recorded)
-			if err != nil || n != tt.trimmed {
-				t.Fatalf("trimmed %d, %v; want %d", n, err, tt.trimmed)
+			if err := visit(s, postgres.NewTxManager(pool, time.Second), recorded); err != nil {
+				t.Fatal(err)
 			}
 			kept = sorted(kept, rowIDs(mine[tt.trimmed:]), rowIDs(gone))
 			if got := tableIDs(t, pool, w.owner, w.workspace); !slices.Equal(got, kept) {
-				t.Fatalf("his rows there %v; want %v, the oldest visits gone for good", got, kept)
+				t.Fatalf("his rows there %v; want %v: his %d oldest visits %v gone for good, no other row", got, kept, tt.trimmed,
+					rowIDs(mine[:tt.trimmed]))
 			}
 			live, err := s.RecentVisits(context.Background(), w.owner, w.workspace, nil)
 			if err != nil || len(live) != 20 {
@@ -154,24 +150,24 @@ func TestTheTrimPassesOverAHeldVisit(t *testing.T) {
 	tm := postgres.NewTxManager(pool, time.Second, postgres.LockTimeout(time.Second))
 	revisit := visitOf(mine[20])
 	revisit.VisitedAt = now
-	if n, err := visit(s, tm, revisit); err != nil || n != 0 {
-		t.Fatalf("trimmed %d, %v while the 21st is held; want none, without waiting", n, err)
+	if err := visit(s, tm, revisit); err != nil {
+		t.Fatalf("the recording while the 21st is held: %v; want it answered without waiting", err)
 	}
 	if got := tableIDs(t, pool, w.owner, w.workspace); !slices.Equal(got, rowIDs(mine)) {
-		t.Fatalf("his rows %v; want the 21, the held one among them", got)
+		t.Fatalf("his rows %v; want the 21, none deleted, the held one among them", got)
 	}
 	if err := holder.Rollback(ctx); err != nil {
 		t.Fatal(err)
 	}
 	revisit.VisitedAt = now.Add(time.Minute)
-	if n, err := visit(s, tm, revisit); err != nil || n != 1 {
-		t.Fatalf("trimmed %d, %v once it is let go; want the 21st", n, err)
+	if err := visit(s, tm, revisit); err != nil {
+		t.Fatalf("the recording once the 21st is let go: %v", err)
 	}
 	if got := tableIDs(t, pool, w.owner, w.workspace); !slices.Equal(got, rowIDs(mine[1:])) {
-		t.Fatalf("his rows %v; want the 20 newest", got)
+		t.Fatalf("his rows %v; want the 20 newest, the 21st %s alone deleted", got, mine[0].id)
 	}
 	for _, keep := range []int{0, 2147483648} {
-		if _, err := s.TrimRecentVisits(ctx, w.owner, w.workspace, keep); err == nil {
+		if err := s.TrimRecentVisits(ctx, w.owner, w.workspace, keep); err == nil {
 			t.Fatalf("accepted the trim to %d", keep)
 		}
 	}
@@ -258,8 +254,8 @@ func TestTrimAndPurgeOfRecentVisitsTakeDisjointRows(t *testing.T) {
 			}
 			seedVisit(t, pool, slices.Concat(live, old, recent)...)
 			trim := func() []uuid.UUID {
-				if n, err := s.TrimRecentVisits(ctx, w.owner, w.workspace, domain.RecentVisitCap); err != nil || n != 2 {
-					t.Fatalf("trimmed %d, %v; want 2", n, err)
+				if err := s.TrimRecentVisits(ctx, w.owner, w.workspace, domain.RecentVisitCap); err != nil {
+					t.Fatal(err)
 				}
 				return rowIDs(live[:2])
 			}

@@ -60,7 +60,6 @@ func (u *RecordRecentVisit) Execute(ctx context.Context, kind domain.RecentVisit
 		if err := u.d.Visits.RecordRecentVisit(ctx, v, actor.UserID); err != nil {
 			return err
 		}
-		_, err := u.d.Visits.TrimRecentVisits(ctx, actor.UserID, w.place.workspaceID, domain.RecentVisitCap)
-		return err
+		return u.d.Visits.TrimRecentVisits(ctx, actor.UserID, w.place.workspaceID, domain.RecentVisitCap)
 	})
 }

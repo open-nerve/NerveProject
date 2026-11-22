@@ -137,10 +137,10 @@ func (r *recents) RecordRecentVisit(_ context.Context, v domain.RecentVisit, by 
 	return nil
 }
 
-func (r *recents) TrimRecentVisits(_ context.Context, user, workspace uuid.UUID, keep int) (int, error) {
+func (r *recents) TrimRecentVisits(_ context.Context, user, workspace uuid.UUID, keep int) error {
 	r.log("trim %s %s %d", r.name(user), r.name(workspace), keep)
 	r.trims = append(r.trims, trimmed{user, workspace, keep})
-	return 0, nil
+	return nil
 }
 
 // targets are the recents' reads of targets.

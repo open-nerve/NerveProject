@@ -159,7 +159,7 @@ func (q *Queries) RecordRecentVisit(ctx context.Context, arg RecordRecentVisitPa
 	return err
 }
 
-const trimRecentVisits = `-- name: TrimRecentVisits :execrows
+const trimRecentVisits = `-- name: TrimRecentVisits :exec
 WITH kept AS MATERIALIZED (
     SELECT k.id FROM user_recent_visits k
     WHERE k.user_id = $1 AND k.workspace_id = $2 AND k.deleted_at IS NULL
@@ -184,19 +184,15 @@ type TrimRecentVisitsParams struct {
 }
 
 // The cap (spec 2.5, 2.8), after the recording under the advisory lock: one's undeleted visits in the workspace past
-// the `keep` newest by visit, then by id descending, deleted for good, as many as it answers. The newest are read
-// without a lock, a deleted visit taking no place among them: the lock keeps his other recordings out. The others are
-// locked in id order FOR UPDATE SKIP LOCKED, so the trim never waits: a row another transaction holds is one a work
-// item's or a project's deletion is soft-deleting, gone from the undeleted ones once it commits; were it rolled back,
-// the row stays until his next recording. Waiting would deadlock with a work item's deletion, which locks its
-// subtree's visits work item by work item, not in one id order, once two rows are past the cap. A row changed since
-// the statement's snapshot is read again as its lock finds it, a soft-deleted one passed over: the trim takes
-// undeleted rows alone, the purge deleted ones alone. Both sets are MATERIALIZED CTEs, read once: an IN subquery the
-// plan rescans locks again on each scan.
-func (q *Queries) TrimRecentVisits(ctx context.Context, arg TrimRecentVisitsParams) (int64, error) {
-	result, err := q.db.Exec(ctx, trimRecentVisits, arg.UserID, arg.WorkspaceID, arg.Keep)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected(), nil
+// the `keep` newest by visit, then by id descending, deleted for good. The newest are read without a lock, a deleted
+// visit taking no place among them: the lock keeps his other recordings out. The others are locked in id order FOR
+// UPDATE SKIP LOCKED, so the trim never waits: a row another transaction holds is one a work item's or a project's
+// deletion is soft-deleting, gone from the undeleted ones once it commits; were it rolled back, the row stays until his
+// next recording. Waiting would deadlock with a work item's deletion, which locks its subtree's visits work item by
+// work item, not in one id order, once two rows are past the cap. A row changed since the statement's snapshot is read
+// again as its lock finds it, a soft-deleted one passed over: the trim takes undeleted rows alone, the purge deleted
+// ones alone. Both sets are MATERIALIZED CTEs, read once: an IN subquery the plan rescans locks again on each scan.
+func (q *Queries) TrimRecentVisits(ctx context.Context, arg TrimRecentVisitsParams) error {
+	_, err := q.db.Exec(ctx, trimRecentVisits, arg.UserID, arg.WorkspaceID, arg.Keep)
+	return err
 }

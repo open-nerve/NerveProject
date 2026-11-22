@@ -32,17 +32,16 @@ VALUES (sqlc.arg(id), sqlc.arg(workspace_id), sqlc.arg(project_id), sqlc.arg(use
 ON CONFLICT (user_id, workspace_id, entity_type, entity_identifier) WHERE deleted_at IS NULL
 DO UPDATE SET visited_at = excluded.visited_at, updated_at = excluded.updated_at, updated_by_id = excluded.updated_by_id;
 
--- name: TrimRecentVisits :execrows
+-- name: TrimRecentVisits :exec
 -- The cap (spec 2.5, 2.8), after the recording under the advisory lock: one's undeleted visits in the workspace past
--- the `keep` newest by visit, then by id descending, deleted for good, as many as it answers. The newest are read
--- without a lock, a deleted visit taking no place among them: the lock keeps his other recordings out. The others are
--- locked in id order FOR UPDATE SKIP LOCKED, so the trim never waits: a row another transaction holds is one a work
--- item's or a project's deletion is soft-deleting, gone from the undeleted ones once it commits; were it rolled back,
--- the row stays until his next recording. Waiting would deadlock with a work item's deletion, which locks its
--- subtree's visits work item by work item, not in one id order, once two rows are past the cap. A row changed since
--- the statement's snapshot is read again as its lock finds it, a soft-deleted one passed over: the trim takes
--- undeleted rows alone, the purge deleted ones alone. Both sets are MATERIALIZED CTEs, read once: an IN subquery the
--- plan rescans locks again on each scan.
+-- the `keep` newest by visit, then by id descending, deleted for good. The newest are read without a lock, a deleted
+-- visit taking no place among them: the lock keeps his other recordings out. The others are locked in id order FOR
+-- UPDATE SKIP LOCKED, so the trim never waits: a row another transaction holds is one a work item's or a project's
+-- deletion is soft-deleting, gone from the undeleted ones once it commits; were it rolled back, the row stays until his
+-- next recording. Waiting would deadlock with a work item's deletion, which locks its subtree's visits work item by
+-- work item, not in one id order, once two rows are past the cap. A row changed since the statement's snapshot is read
+-- again as its lock finds it, a soft-deleted one passed over: the trim takes undeleted rows alone, the purge deleted
+-- ones alone. Both sets are MATERIALIZED CTEs, read once: an IN subquery the plan rescans locks again on each scan.
 WITH kept AS MATERIALIZED (
     SELECT k.id FROM user_recent_visits k
     WHERE k.user_id = sqlc.arg(user_id) AND k.workspace_id = sqlc.arg(workspace_id) AND k.deleted_at IS NULL
