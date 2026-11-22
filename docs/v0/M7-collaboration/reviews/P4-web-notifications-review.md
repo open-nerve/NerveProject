@@ -45,7 +45,7 @@
 | A5 页面故事 | T12、T13、T14 | 达成：三引擎 27 过，chromium `--repeat-each=3` 过；m6-pages、m6-acceptance、m4-detail 不回归（§5） |
 | A6 删除与守卫 | T2、T5、T9、T11、T15 | 达成（§5 的死成员与告警） |
 | A7 文档 | T1、T15 | 本提交（§8） |
-| A8 门禁、审查与集成 | T16 | 整分支审查、修复轮、复审与复审修复轮完成（§9）；终检与合并待填 |
+| A8 门禁、审查与集成 | T16 | 整分支审查、修复轮、复审与复审修复轮完成（§9）；终检、分支 CI 与合并在 P5 的 T1 补记 |
 
 ## 3. 实施中的裁定
 
@@ -175,4 +175,4 @@
   - `1ebb0312`（O3）：`snoozeSlots` 同时比钟点与分钟；单测 Australia/Lord_Howe 2026-10-04 47 项，“01:30” 之后是 “02:30”，47 个时刻各不相同。顺手补全 `88f0a788` 留下的半句注释。变异（只比钟点）杀。
   - 本提交：§2、§3、§5、§6、§7、本节与 plane-diff 的“卡片离开之后的焦点”一行；hook 的注释已在 `3df03b12` 改为键盘与指针两条路。
   - 复审修复轮的验证（`1ebb0312`）：`make build build-s3-fixture`（`t16r-final-build`）；m7-pages 三引擎 27 过（`t16r-m7-pages`，47.9 秒）；chromium `--repeat-each=3` 的 H20 键盘（本轮唯一改到的故事）3 过（`t16r-repeat`）；`make lint-web`、`make knip`、`make test-web`、`tools/keywords.mjs` 过（`t16r-final-*`）；改到的 6 个 web 文件 oxlint 为零，web 31 = 上限 31（`t16r-oxlint-files`）；死成员 1614（§5）。
-- （终检、最终分支 CI、`--no-ff` 合并、main CI、归档：主控填。）
+- 复审修复轮的改动（`2ef8ef8c..1ebb0312`）由主控逐项读过：指针一路照复审的建议修，`card.contains` 与 `:enabled` 删去之后弹窗里的控件也会被看，提交按钮在途停用、被拒后再启用时焦点回到它，与弹窗的意图一致；不再做第二次复审。合并前的终检、最终分支 CI、`--no-ff` 合并、main CI 与归档在 P5 的 T1 补记。
