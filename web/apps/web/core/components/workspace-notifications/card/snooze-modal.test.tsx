@@ -16,7 +16,8 @@ import { press } from "../sidebar/fake-header-menus";
 // either missing says so under it, the first refused taking the focus; it sends the moment of the day's half hour in
 // the browser's zone, closing once nerve has snoozed it, saying so; nerve's must_be_future shows under the time, any
 // other refusal in a toast, the dialog open. It cannot be closed while nerve snoozes; closed, the focus goes back to
-// the row's snooze button. What follows nerve's answer is done only in the session it was sent in. The store and HTTP
+// the row's snooze button, or, once its snooze took the card from the view, to the next card's main button (never back
+// to what had it before the dialog opened). What follows nerve's answer is done only in the session it was sent in. The store and HTTP
 // are real; SWR is, with the test's cache. @nerve/i18n's text is its key, then the values it was given; the page's
 // language is English.
 
@@ -82,8 +83,9 @@ const dialog = () => document.querySelector<HTMLElement>('[role="dialog"]');
 const inDialog = (selector: string) => dialog()?.querySelector<HTMLElement>(selector) ?? null;
 const dateButton = () => inDialog('button[aria-label="notification.snooze_modal.date"]') as HTMLButtonElement;
 const timeButton = () => inDialog('button[aria-haspopup="listbox"]') as HTMLButtonElement;
-const buttonSaying = (text: string) =>
-  [...(dialog()?.querySelectorAll("button") ?? [])].find((button) => button.textContent === text);
+const buttonIn = (within: Element | null | undefined, text: string) =>
+  [...(within?.querySelectorAll("button") ?? [])].find((button) => button.textContent === text);
+const buttonSaying = (text: string) => buttonIn(dialog(), text);
 const day = (date: string) => document.querySelector<HTMLButtonElement>(`[data-day="${date}"] button`)!;
 const options = () =>
   [...document.querySelectorAll<HTMLElement>('[role="option"]')].map((option) =>
@@ -140,6 +142,11 @@ async function opened(view: "default" | "snoozed" = "default") {
     await changeState((state) => state.toggleSnoozed());
     await answer(await listRead(nerve(), 1), pageOf([later]));
   }
+  await openCustom();
+}
+
+/** The row's snooze menu's last item, custom, chosen by the keyboard, opens the dialog. */
+async function openCustom() {
   await press(snoozeButton(), "Enter");
   const items = [...document.querySelectorAll('[role="menuitem"]')].map((item) => item.textContent);
   expect(items.at(-1)).toBe("notification.snooze.custom");
@@ -233,6 +240,21 @@ describe("NotificationSnoozeModal", () => {
     await settled();
     expect(toasts).toEqual([{ type: "success", title: "toast.success", message: "notification.toasts.snoozed" }]);
     expect(cards(host)).toEqual([]);
+  });
+
+  it("gives the focus to the next card once its snooze takes the card from the view, not back to where it was", async () => {
+    await renderList(root, cache, <button type="button">elsewhere</button>);
+    await answer(await listRead(nerve(), 0), pageOf([one, noteOf("Two", 2)]));
+    // the focus was elsewhere before the dialog opened, where the dialog gives it back as it unmounts with its card
+    await act(async () => buttonIn(host, "elsewhere")?.focus());
+    await openCustom();
+    await picked("2026-11-21", "12:30 AM");
+    await submit();
+    await answer(await patched(), { ...one, snoozed_till: new Date(2026, 10, 21, 0, 30).toISOString() });
+    await settled();
+    expect(dialog()).toBeNull();
+    expect(cards(host)).toEqual(["WEB-2 Two"]);
+    expect(document.activeElement).toBe(cardOf(host, "WEB-2 Two")?.querySelector("button"));
   });
 
   it("closes once nerve has snoozed it, saying so, the focus back on the row's snooze button", async () => {
