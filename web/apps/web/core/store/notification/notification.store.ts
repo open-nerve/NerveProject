@@ -91,9 +91,9 @@ export class NotificationStore implements INotificationStore {
 
   /**
    * @description fetches the first page of the workspace's notifications the filters select, in place of every page
-   * held of them (a refresh, R7): a next page's read out then, or sent before it answers, adds nothing (fetchMore). What
-   * it asks nerve is what the list's key names (filtersOf). Gives the page, or undefined as fetchUnreadCount; a refusal
-   * fails it, the list as it was
+   * held of them (a refresh, R7): a next page's read out then, or sent before it answers, adds nothing (fetchMore).
+   * What it asks nerve is what the list's key names (filtersOf). Gives the page, or undefined as fetchUnreadCount; a
+   * refusal fails it, the list as it was
    */
   fetchList = (workspace: WorkspaceRef, filters: NotificationFilters): Promise<NotificationPage | undefined> => {
     const key = filterKey(filters);
@@ -105,10 +105,10 @@ export class NotificationStore implements INotificationStore {
 
   /**
    * @description reads the page after the held page of the workspace's notifications the filters select, by its cursor,
-   * and adds it (followed) if the held page still ends there as it answers: a refresh answered meanwhile ends elsewhere,
-   * and the page read is not the one after it (whole-branch I1). A page of no rows that has a cursor reads on (its rows
-   * were archived or snoozed away). Asks nerve nothing past the last page or for a list not fetched; gives the list, or
-   * undefined as fetchList
+   * and adds it (followed) if the held page still ends there as it answers: a refresh answered meanwhile ends
+   * elsewhere, and the page read is not the one after it (whole-branch I1). A page of no rows that has a cursor reads
+   * on (its rows were archived or snoozed away). Asks nerve nothing past the last page or for a list not fetched; gives
+   * the list, or undefined as fetchList
    */
   fetchMore = (workspace: WorkspaceRef, filters: NotificationFilters): Promise<NotificationPage | undefined> => {
     const key = filterKey(filters);

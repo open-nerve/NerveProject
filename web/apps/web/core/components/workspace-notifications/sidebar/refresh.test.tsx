@@ -133,7 +133,10 @@ describe("NotificationHeaderOptions' mark all read, over the list it reads again
 });
 
 describe("NotificationHeaderOptions' late answers, once the page shows other filters (whole-branch m2)", () => {
-  /** The list and the head at acme's address, its first page read; then, once press has sent its request, the archived view, whose read nerve refuses. */
+  /**
+   * The list and the head at acme's address, its first page read; then, once press has sent its request, the archived
+   * view, whose read nerve refuses.
+   */
   async function archivedViewRefusedWhile(press: () => HTMLButtonElement | null, sent: () => boolean) {
     await renderList(root, cache, <NotificationHeaderOptions />);
     await answer(await listRead(nerve(), 0), pageOf([noteOf("One", 1)]));
