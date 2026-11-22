@@ -43,8 +43,6 @@ export const IssueActivityItem = observer(function IssueActivityItem(props: TIss
   // hooks
   const {
     activity: { getActivityById },
-    // oxlint-disable-next-line no-empty-pattern
-    comment: {},
   } = useIssueDetail();
   const activityRelations = getValidKeysFromObject(ISSUE_RELATION_OPTIONS);
 

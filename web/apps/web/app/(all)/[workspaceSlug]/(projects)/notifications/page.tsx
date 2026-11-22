@@ -11,26 +11,24 @@ import { useTranslation } from "@nerve/i18n";
 import { PageHead } from "@/components/core/page-title";
 import { NotificationsRoot } from "@/components/workspace-notifications";
 // hooks
-import { useWorkspace } from "@/hooks/store/use-workspace";
-import type { Route } from "./+types/page";
+import { useRouteWorkspace } from "@/hooks/use-route-workspace";
 
-function WorkspaceDashboardPage({ params }: Route.ComponentProps) {
-  const { workspaceSlug } = params;
-  // nerve hooks
+/**
+ * The notifications page (M7 P4 spec 2.6): titled the inbox of the route's workspace (useRouteWorkspace, never the
+ * router store's workspace, which follows the address a commit late), and its preview; the layout holds its sidebar
+ * and its state.
+ */
+function NotificationsPage() {
   const { t } = useTranslation();
-  // hooks
-  const { currentWorkspace } = useWorkspace();
-  // derived values
-  const pageTitle = currentWorkspace?.name
-    ? t("notification.page_label", { workspace: currentWorkspace?.name })
-    : undefined;
+  const workspace = useRouteWorkspace();
+  const pageTitle = workspace ? t("notification.page_label", { workspace: workspace.name }) : undefined;
 
   return (
     <>
       <PageHead title={pageTitle} />
-      <NotificationsRoot workspaceSlug={workspaceSlug} />
+      <NotificationsRoot />
     </>
   );
 }
 
-export default observer(WorkspaceDashboardPage);
+export default observer(NotificationsPage);

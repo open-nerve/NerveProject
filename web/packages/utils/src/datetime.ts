@@ -224,18 +224,6 @@ export const convertToISODateString = (dateString: string | undefined) => {
 };
 
 /**
- * returns the date string in Epoch regardless of the timezone in input date string
- * @param dateString
- * @returns
- */
-export const convertToEpoch = (dateString: string | undefined) => {
-  if (!dateString) return dateString;
-
-  const date = new Date(dateString);
-  return date.getTime();
-};
-
-/**
  * Processes relative date strings like "1_weeks", "2_months" etc and returns a Date
  * @param value The relative date string (e.g., "1_weeks", "2_months")
  * @returns Date object representing the calculated date

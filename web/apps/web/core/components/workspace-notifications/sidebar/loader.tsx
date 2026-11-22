@@ -5,10 +5,18 @@
  */
 
 import { range } from "lodash-es";
+// nerve imports
+import { useTranslation } from "@nerve/i18n";
 
+/**
+ * The notifications page's wait for nerve (P4 spec 2.6): its list's first page, its preview's project. A screen reader
+ * hears that it is loading.
+ */
 export function NotificationsLoader() {
+  const { t } = useTranslation();
   return (
-    <div className="animate-pulse divide-y divide-subtle overflow-hidden">
+    <div role="status" className="animate-pulse divide-y divide-subtle overflow-hidden">
+      <span className="sr-only">{t("common.loading")}</span>
       {range(8).map((i) => (
         <div key={i} className="flex w-full items-center gap-4 p-3">
           <span className="min-h-12 min-w-12 rounded-full bg-layer-1" />

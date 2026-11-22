@@ -4,34 +4,29 @@
  * See the LICENSE file for details.
  */
 
-import { observer } from "mobx-react";
 // nerve imports
-import { ENotificationTab } from "@nerve/constants";
+import type { NotificationTab } from "@nerve/api-client";
 import { useTranslation } from "@nerve/i18n";
 import { EmptyStateCompact } from "@nerve/propel/empty-state";
 
-type TNotificationEmptyStateProps = {
-  currentNotificationTab: ENotificationTab;
+type Props = {
+  /** The tab whose list has no notification. */
+  tab: NotificationTab;
 };
 
-export const NotificationEmptyState = observer(function NotificationEmptyState({
-  currentNotificationTab,
-}: TNotificationEmptyStateProps) {
-  // nerve imports
+/** That a tab of the notifications page lists no notification (P4 spec 2.6), said as that tab says it. */
+export function NotificationEmptyState({ tab }: Props) {
   const { t } = useTranslation();
-
   return (
-    <>
-      <EmptyStateCompact
-        assetKey="inbox"
-        assetClassName="size-24"
-        title={
-          currentNotificationTab === ENotificationTab.ALL
-            ? t("workspace_empty_state.inbox_sidebar_all.title")
-            : t("workspace_empty_state.inbox_sidebar_mentions.title")
-        }
-        className="max-w-56"
-      />
-    </>
+    <EmptyStateCompact
+      assetKey="inbox"
+      assetClassName="size-24"
+      title={
+        tab === "all"
+          ? t("workspace_empty_state.inbox_sidebar_all.title")
+          : t("workspace_empty_state.inbox_sidebar_mentions.title")
+      }
+      className="max-w-56"
+    />
   );
-});
+}

@@ -4,4 +4,6 @@
  * See the LICENSE file for details.
  */
 
-export * from "./root";
+export { NotificationPageStateProvider } from "./page-state";
+export { NotificationsRoot } from "./root";
+export { NotificationsSidebarRoot } from "./sidebar/root";

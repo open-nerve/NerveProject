@@ -1,30 +1,18 @@
 /**
- * Copyright (c) 2023-present Plane Software, Inc. and contributors
+ * Copyright (c) 2026-present OpenNerve
  * SPDX-License-Identifier: AGPL-3.0-only
- * See the LICENSE file for details.
  */
 
-import { observer } from "mobx-react";
 // nerve imports
-import { useTranslation } from "@nerve/i18n";
 import { InboxOutline } from "@makeplane/propel/icons";
+import { useTranslation } from "@nerve/i18n";
 import { Breadcrumbs, Header } from "@nerve/ui";
 // components
 import { BreadcrumbLink } from "@/components/common/breadcrumb-link";
-// local imports
-import { NotificationSidebarHeaderOptions } from "./options";
 
-type TNotificationSidebarHeader = {
-  workspaceSlug: string;
-};
-
-export const NotificationSidebarHeader = observer(function NotificationSidebarHeader(
-  props: TNotificationSidebarHeader
-) {
-  const { workspaceSlug } = props;
+/** The head of the notifications page's sidebar (P4 spec 2.6): its crumb, the inbox. */
+export function NotificationSidebarHeader() {
   const { t } = useTranslation();
-
-  if (!workspaceSlug) return <></>;
   return (
     <Header className="my-auto bg-surface-1">
       <Header.LeftItem>
@@ -40,9 +28,6 @@ export const NotificationSidebarHeader = observer(function NotificationSidebarHe
           />
         </Breadcrumbs>
       </Header.LeftItem>
-      <Header.RightItem>
-        <NotificationSidebarHeaderOptions workspaceSlug={workspaceSlug} />
-      </Header.RightItem>
     </Header>
   );
-});
+}

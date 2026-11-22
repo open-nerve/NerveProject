@@ -2784,9 +2784,9 @@
     {
       "id": "workspace-address-route",
       "phase": "M3/closeout",
-      "why": "工作区的页面从路由读工作区，不从 router store 读：workspace store 的 currentWorkspace 读 router store 的 workspaceSlug，工作区级的 allowPermissions 不传 slug 时也退回 router store（permissions.store.ts）。router store 由 StoreWrapper 的 effect 在渲染之后写入，换了工作区时晚一次提交，那一次页面按上一个工作区显示名称、判断权限（与 project-address-route 同理；M3 收尾，K12）。页面要的工作区是 useRouteWorkspace（web/apps/web/core/hooks/use-route-workspace.ts），工作区级的 allowPermissions 传路由的 slug。本规则只管收尾改过来的 20 个文件：工作区首页、个人主页的页头和布局、侧栏、项目列表页、工作区的常规和成员设置页、没有项目时的设置页、设置侧栏的头部；M4、M7、M8 的页面改它们的读法时，把那些文件加进本规则的 files。store 自己的 getter（如 joinedProjectIds、workspaceMemberIds）仍按 router store，同 project-address-route 留给 store 的那些。测试不算。M4/P15 将草稿 header/empty-state/root 与创建命令 command.ts 四处纳入，后缀同时覆盖 .ts/.tsx，content 不变。",
+      "why": "工作区的页面从路由读工作区，不从 router store 读：workspace store 的 currentWorkspace 读 router store 的 workspaceSlug，工作区级的 allowPermissions 不传 slug 时也退回 router store（permissions.store.ts）。router store 由 StoreWrapper 的 effect 在渲染之后写入，换了工作区时晚一次提交，那一次页面按上一个工作区显示名称、判断权限（与 project-address-route 同理；M3 收尾，K12）。页面要的工作区是 useRouteWorkspace（web/apps/web/core/hooks/use-route-workspace.ts），工作区级的 allowPermissions 传路由的 slug。本规则只管收尾改过来的 20 个文件：工作区首页、个人主页的页头和布局、侧栏、项目列表页、工作区的常规和成员设置页、没有项目时的设置页、设置侧栏的头部；M4、M7、M8 的页面改它们的读法时，把那些文件加进本规则的 files。store 自己的 getter（如 joinedProjectIds、workspaceMemberIds）仍按 router store，同 project-address-route 留给 store 的那些。测试不算。M4/P15 将草稿 header/empty-state/root 与创建命令 command.ts 四处纳入，后缀同时覆盖 .ts/.tsx，content 不变。M7/P4 将通知页 page、预览 root、列表的读 use-notification-list、卡片 card/item 与顶栏 top-navigation-root、未读数 use-unread-notification-count 纳入（M3 交接 :53 的通知两个文件，P4 spec 2.10）。",
       "files": {
-        "source": "^web/apps/web/(?:app/\\(all\\)/\\[workspaceSlug\\]/\\(projects\\)/(?:page|sidebar|extended-project-sidebar|profile/\\[userId\\]/(?:header|layout))|app/\\(all\\)/\\[workspaceSlug\\]/\\(settings\\)/settings/(?:\\(workspace\\)/(?:page|members/page)|projects/page)|core/components/(?:home/widgets/empty-states/no-projects|profile/sidebar|project/(?:card-list|header|root)|settings/workspace/sidebar/header|workspace/settings/(?:member-columns|useMemberColumns|workspace-details)|workspace/sidebar/(?:projects-list|quick-actions|workspace-menu-root))|app/\\(all\\)/\\[workspaceSlug\\]/\\(projects\\)/drafts/header|core/components/(?:issues/workspace-draft/(?:empty-state|root)|power-k/config/creation/command))\\.tsx?$",
+        "source": "^web/apps/web/(?:app/\\(all\\)/\\[workspaceSlug\\]/\\(projects\\)/(?:page|sidebar|extended-project-sidebar|notifications/page|profile/\\[userId\\]/(?:header|layout))|app/\\(all\\)/\\[workspaceSlug\\]/\\(settings\\)/settings/(?:\\(workspace\\)/(?:page|members/page)|projects/page)|core/components/(?:home/widgets/empty-states/no-projects|workspace-notifications/(?:root|use-notification-list|card/item)|navigation/top-navigation-root|profile/sidebar|project/(?:card-list|header|root)|settings/workspace/sidebar/header|workspace/settings/(?:member-columns|useMemberColumns|workspace-details)|workspace/sidebar/(?:projects-list|quick-actions|workspace-menu-root))|app/\\(all\\)/\\[workspaceSlug\\]/\\(projects\\)/drafts/header|core/components/(?:issues/workspace-draft/(?:empty-state|root)|power-k/config/creation/command)|core/hooks/use-unread-notification-count)\\.tsx?$",
         "flags": ""
       },
       "content": {
@@ -2815,10 +2815,18 @@
             "web/apps/web/app/(all)/[workspaceSlug]/(projects)/drafts/header.tsx",
             "web/apps/web/core/components/issues/workspace-draft/empty-state.tsx",
             "web/apps/web/core/components/issues/workspace-draft/root.tsx",
-            "web/apps/web/core/components/power-k/config/creation/command.ts"
+            "web/apps/web/core/components/power-k/config/creation/command.ts",
+            "web/apps/web/app/(all)/[workspaceSlug]/(projects)/notifications/page.tsx",
+            "web/apps/web/core/components/workspace-notifications/root.tsx",
+            "web/apps/web/core/components/workspace-notifications/use-notification-list.ts",
+            "web/apps/web/core/components/workspace-notifications/card/item.tsx",
+            "web/apps/web/core/components/navigation/top-navigation-root.tsx",
+            "web/apps/web/core/hooks/use-unread-notification-count.ts"
           ],
           "miss": [
             "web/apps/web/core/hooks/use-route-workspace.ts",
+            "web/apps/web/core/components/workspace-notifications/root.test.tsx",
+            "web/apps/web/app/(all)/[workspaceSlug]/(projects)/notifications/page.test.tsx",
             "web/apps/web/core/components/workspace/settings/members-list.tsx",
             "web/apps/web/core/components/power-k/config/creation/command.test.tsx",
             "web/apps/web/core/components/inbox/content/issue-root.tsx"
@@ -3074,6 +3082,54 @@
           ],
           "miss": [
             "docs/v0/M6-cycles-modules/specs/P6a-web-modules.md",
+            "tools/keywords.json",
+            "server/main.go",
+            "web/apps/web/app/assets/brand/mark.svg"
+          ]
+        }
+      }
+    },
+    {
+      "id": "old-notification-urls",
+      "phase": "M7/P4",
+      "why": "M7 的网页通知改调 /api/v0（P4 spec 2.1、2.9、2.10；设计 §7 :240“没有旧的通知 service 与地址”）：Plane 的通知地址（列表、unread/ 计数、单条、read/、archive/、mark-all-read/）nerve 都不提供，旧 service（模块级单例）与旧 store 已删除，web 的源文件（测试也算）不得再出现。无尾段的（…/users/notifications 后接引号、查询或结尾）也算，notifications 之后不接字母、数字、下划线或连字符；照 old-module-urls 以 /api/workspaces/ 前缀锚定：/api/v0 的地址（/api/v0/workspaces/{slug}/notifications、…/unread-count、…/mark-all-read、/api/v0/notifications/{notification_id}）、网页内的链接（/${workspaceSlug}/notifications）与组件目录的导入（@/components/workspace-notifications）都不碰",
+      "files": {
+        "source": "^web/.*\\.(?:[cm]?[jt]sx?|json)$",
+        "flags": ""
+      },
+      "content": {
+        "source": "/api/workspaces/(?:[^/\"'`\\s]+/)+users/notifications(?![\\w-])[^\"'`\\s]*",
+        "flags": ""
+      },
+      "samples": {
+        "hit": [
+          "/api/workspaces/${workspaceSlug}/users/notifications/unread/",
+          "/api/workspaces/${workspaceSlug}/users/notifications/",
+          "/api/workspaces/${workspaceSlug}/users/notifications/${notificationId}/",
+          "/api/workspaces/${workspaceSlug}/users/notifications/${notificationId}/read/",
+          "/api/workspaces/${workspaceSlug}/users/notifications/${notificationId}/archive/",
+          "/api/workspaces/${workspaceSlug}/users/notifications/mark-all-read/",
+          "\"/api/workspaces/ws/users/notifications/n-1/read/\"",
+          "`/api/workspaces/${workspaceSlug}/users/notifications?per_page=300`",
+          "/api/workspaces/${workspaceSlug}/users/notifications"
+        ],
+        "miss": [
+          "/api/v0/workspaces/{slug}/notifications",
+          "/api/v0/workspaces/{slug}/notifications/unread-count",
+          "/api/v0/workspaces/{slug}/notifications/mark-all-read",
+          "/api/v0/notifications/{notification_id}",
+          "`/${workspaceSlug}/notifications`",
+          "import { NotificationsRoot } from \"@/components/workspace-notifications\";",
+          "/api/workspaces/${workspaceSlug}/users/notifications-settings/",
+          "/api/workspaces/${workspaceSlug}/members/"
+        ],
+        "files": {
+          "hit": [
+            "web/apps/web/core/services/workspace-notification.service.ts",
+            "web/apps/web/core/store/notification/notification.store.ts"
+          ],
+          "miss": [
+            "docs/v0/M7-collaboration/specs/P4-web-notifications.md",
             "tools/keywords.json",
             "server/main.go",
             "web/apps/web/app/assets/brand/mark.svg"

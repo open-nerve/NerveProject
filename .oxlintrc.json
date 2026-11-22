@@ -40,6 +40,7 @@
     "valid-typeof": "error",
     "no-constant-binary-expression": "error",
     "no-unused-expressions": "error",
+    "no-empty-pattern": "error",
     "unicorn/filename-case": "off",
     "unicorn/no-null": "off",
     "unicorn/prevent-abbreviations": "off",
@@ -193,7 +194,11 @@
         "web/apps/web/core/store/notification/**",
         "web/apps/web/core/hooks/store/use-notifications.ts",
         "web/apps/web/core/hooks/use-unread-notification-count.ts",
-        "web/apps/web/core/components/navigation/top-navigation-root.tsx"
+        "web/apps/web/core/components/navigation/top-navigation-root.tsx",
+        "web/apps/web/core/components/workspace-notifications/use-notification-list.ts",
+        "web/apps/web/core/components/workspace-notifications/root.tsx",
+        "web/apps/web/core/components/workspace-notifications/sidebar/list.tsx",
+        "web/apps/web/core/components/workspace-notifications/sidebar/tabs.tsx"
       ],
       "rules": {
         "no-restricted-imports": [

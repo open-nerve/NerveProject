@@ -20,6 +20,15 @@ export type NotificationFilters = {
   snoozed: boolean;
 };
 
+/** The filters the notifications page opens with (P4 spec 2.2, 2.5): the all tab, every sender, none of the toggles. */
+export const DEFAULT_FILTERS: NotificationFilters = {
+  tab: "all",
+  types: [],
+  unread: false,
+  archived: false,
+  snoozed: false,
+};
+
 /** The toggles of the filters, in the order a key names those that are on. */
 const TOGGLES = ["unread", "archived", "snoozed"] as const;
 
