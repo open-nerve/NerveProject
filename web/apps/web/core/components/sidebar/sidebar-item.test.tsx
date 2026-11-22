@@ -10,7 +10,7 @@ import { AppSidebarItem } from "./sidebar-item";
 // An item of the app's bars as the trigger of a tooltip (the top navigation's inbox, T15's ruling): the real Propel
 // tooltip, whose Base UI trigger merges its ref and its handlers into the element it renders, so the link the item
 // renders takes them, and the tooltip opens as the link has the focus or the pointer; the link keeps its own address
-// and name.
+// and name. A wrapper's props are the link's alone: the button variant, a menu's, takes none.
 
 let host: HTMLDivElement, root: Root;
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
@@ -78,5 +78,14 @@ describe("AppSidebarItem, a link, as a tooltip's trigger", () => {
     });
     await later();
     expect(tooltip()?.textContent).toBe("Inbox");
+  });
+});
+
+describe("AppSidebarItem's props", () => {
+  it("take a wrapper's on the link alone: the button, a menu's, has no place for them (re-review m2)", () => {
+    const linkItem = <AppSidebarItem variant="link" item={{ href: "/acme/notifications" }} onFocus={() => {}} />;
+    // @ts-expect-error a button item takes no wrapper's handler, which it would drop
+    const buttonItem = <AppSidebarItem variant="button" item={{ label: "Help" }} onFocus={() => {}} />;
+    expect([linkItem.props.variant, buttonItem.props.variant]).toEqual(["link", "button"]);
   });
 });

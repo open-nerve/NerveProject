@@ -31,11 +31,13 @@ type AppSidebarLinkWrapperProps = Omit<
   "href" | "aria-label" | "className" | "children"
 >;
 
-/** An item: a link, which takes what a wrapper gives it, or a button, a menu's (its menu gives it nothing). */
-interface AppSidebarItemProps extends AppSidebarLinkWrapperProps {
-  variant?: "link" | "button";
-  item?: AppSidebarItemData;
-}
+/**
+ * An item: a link, which takes what a wrapper gives it, or a button, a menu's, which takes nothing more (its menu gives
+ * it nothing, and a wrapper's props would be lost on it).
+ */
+type AppSidebarItemProps =
+  | ({ variant?: "link"; item?: AppSidebarItemData } & AppSidebarLinkWrapperProps)
+  | { variant: "button"; item?: AppSidebarItemData };
 
 interface AppSidebarItemIconProps {
   icon?: React.ReactNode;
@@ -103,25 +105,26 @@ function AppSidebarButtonItem({ label, children, onClick, disabled = false }: Ap
   );
 }
 
-function AppSidebarItem({ variant = "link", item, ...wrapper }: AppSidebarItemProps) {
-  if (!item) return null;
+function AppSidebarItem(props: AppSidebarItemProps) {
+  if (!props.item) return null;
 
-  const { icon, label, isActive, href, onClick, disabled } = item;
+  const { icon, label, isActive, href, onClick, disabled } = props.item;
 
   const commonItems = <AppSidebarItemIcon icon={icon} highlight={isActive} />;
 
-  if (variant === "link") {
+  if (props.variant === "button") {
     return (
-      <AppSidebarLinkItem {...wrapper} href={href} label={label}>
+      <AppSidebarButtonItem label={label} onClick={onClick} disabled={disabled}>
         {commonItems}
-      </AppSidebarLinkItem>
+      </AppSidebarButtonItem>
     );
   }
 
+  const { variant: _variant, item: _item, ...wrapper } = props;
   return (
-    <AppSidebarButtonItem label={label} onClick={onClick} disabled={disabled}>
+    <AppSidebarLinkItem {...wrapper} href={href} label={label}>
       {commonItems}
-    </AppSidebarButtonItem>
+    </AppSidebarLinkItem>
   );
 }
 
