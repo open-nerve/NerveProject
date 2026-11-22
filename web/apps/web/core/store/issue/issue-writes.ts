@@ -14,6 +14,7 @@ import type { IssueChange } from "@nerve/types";
 import { inIntake } from "./intake/status";
 import { changeBody, createBody, intakeUpdateBody, updateBody } from "./issue-write-fields";
 import { IssueWriteConfirmation, type WritesRoot } from "./issue-write-confirm";
+import { IssueWriteIntake } from "./issue-write-intake";
 import type { IssueWriteScope } from "./root.store";
 
 export type IssueDrop = NonNullable<ConfirmedIssueChange["drop"]> & { binding?: IssueListBinding };
@@ -23,14 +24,17 @@ class Unread extends Error {}
 /**
  * A change sent to nerve and, once nerve confirms it, written into every held copy: one queue per issue and the seven
  * commands with their request bodies (P6b R1); the writes in flight and the confirmation are its confirmation's
- * (issue-write-confirm.ts), whose two public members it forwards.
+ * (issue-write-confirm.ts), whose two public members it forwards, and those of a work item of an intake its intake
+ * route's (issue-write-intake.ts).
  */
 export class IssueWrites {
   private readonly queues = new Map<string, Promise<void>>();
   private readonly dragQueue = oneAtATime();
   private readonly confirmation: IssueWriteConfirmation;
+  private readonly intakeRoute: IssueWriteIntake;
   constructor(private readonly root: WritesRoot) {
     this.confirmation = new IssueWriteConfirmation(root);
+    this.intakeRoute = new IssueWriteIntake(root);
   }
   get pendingIDs(): ReadonlySet<string> {
     return this.confirmation.pendingIDs;
@@ -115,7 +119,7 @@ export class IssueWrites {
         if (!heldNow) throw new Error("Issue has not been read");
         // Where it goes is decided by the work item held in its turn: one accepted while this waited goes to /issues.
         if (inIntake(root.issues.getIssueDetailById(id)))
-          return this.confirmation.edit(id, operationScope, () =>
+          return this.intakeRoute.edit(id, operationScope, () =>
             root.intakeApi.update(id, intakeUpdateBody(updateBody(makeBody(heldNow))))
           );
         return (await this.confirmation.write(
@@ -172,8 +176,8 @@ export class IssueWrites {
    * again after the work item.
    */
   triageIntake(id: string, body: IntakeTriage, scope: IssueWriteScope): Promise<void> {
-    const { root, confirmation } = this;
-    const send = () => confirmation.triage(id, scope, () => root.intakeApi.triage(id, body));
+    const { root, intakeRoute } = this;
+    const send = () => intakeRoute.triage(id, scope, () => root.intakeApi.triage(id, body));
     const accept = () =>
       this.confirmCreation(scope, async () => {
         const read = await send();
@@ -200,6 +204,6 @@ export class IssueWrites {
       await this.root.intakeApi.delete(id);
       return null;
     };
-    return this.enqueueIssueChanges([id], () => this.confirmation.delete(id, scope, request), scope);
+    return this.enqueueIssueChanges([id], () => this.intakeRoute.delete(id, scope, request), scope);
   }
 }
