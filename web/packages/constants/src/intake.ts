@@ -4,8 +4,22 @@
  * See the LICENSE file for details.
  */
 
+import type { IntakeStatus } from "@nerve/api-client";
 import type { TInboxIssueStatus } from "@nerve/types";
 import { EInboxIssueStatus } from "@nerve/types";
+
+/**
+ * The label of each status of a work item in a project's intake, by the status's name as nerve gives it (IntakeStatus;
+ * M7 P5a spec 2.2, 2.7): the key of its title, each key whole, so that tools/i18n-keys.mjs reads it. A snooze shows
+ * the days it has to go instead (inbox_issue.status.snoozed.description).
+ */
+export const INTAKE_STATUS_LABELS: Readonly<Record<IntakeStatus, string>> = {
+  pending: "inbox_issue.status.pending.title",
+  snoozed: "inbox_issue.status.snoozed.title",
+  accepted: "inbox_issue.status.accepted.title",
+  declined: "inbox_issue.status.declined.title",
+  duplicate: "inbox_issue.status.duplicate.title",
+};
 
 export const INBOX_STATUS: {
   key: string;

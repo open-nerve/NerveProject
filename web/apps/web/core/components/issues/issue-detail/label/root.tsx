@@ -14,7 +14,6 @@ import { useDetailScope } from "../../issue-detail-widgets/use-detail-scope";
 
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
-import { useProjectInbox } from "@/hooks/store/use-project-inbox";
 // types
 import { LabelList, IssueLabelSelectRoot } from "./";
 // TODO: Fix this import statement, as core should not import from ee
@@ -24,7 +23,6 @@ export type TIssueLabel = {
   projectId: string;
   issueId: string;
   disabled: boolean;
-  isInboxIssue?: boolean;
   onLabelUpdate?: (labelIds: string[]) => void | Promise<void>;
 };
 
@@ -37,7 +35,7 @@ export function IssueLabel(props: TIssueLabel) {
   return <IssueLabelContent key={JSON.stringify([props.workspaceSlug, props.projectId, props.issueId])} {...props} />;
 }
 const IssueLabelContent = observer(function IssueLabelContent(props: TIssueLabel) {
-  const { workspaceSlug, projectId, issueId, disabled = false, isInboxIssue = false, onLabelUpdate } = props;
+  const { workspaceSlug, projectId, issueId, disabled = false, onLabelUpdate } = props;
   const pending = useRef(false);
   const [submitting, setSubmitting] = useState(false);
   const capture = useDetailScope(workspaceSlug, projectId, issueId, true);
@@ -48,9 +46,8 @@ const IssueLabelContent = observer(function IssueLabelContent(props: TIssueLabel
   const {
     issue: { getIssueById },
   } = useIssueDetail();
-  const { getIssueInboxByIssueId } = useProjectInbox();
 
-  const issue = isInboxIssue ? getIssueInboxByIssueId(issueId)?.issue : getIssueById(issueId);
+  const issue = getIssueById(issueId);
 
   const labelOperations: TLabelOperations = useMemo(
     () => ({
@@ -90,7 +87,6 @@ const IssueLabelContent = observer(function IssueLabelContent(props: TIssueLabel
           projectId={projectId}
           issueId={issueId}
           disabled={submitting}
-          showCreationToast={!isInboxIssue}
           values={issue?.label_ids || []}
           labelOperations={labelOperations}
         />

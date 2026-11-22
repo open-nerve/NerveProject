@@ -15,7 +15,6 @@ import { WorkItemLabelSelectBase } from "@/components/issues/select/base";
 
 export interface IIssueLabelSelect {
   disabled?: boolean;
-  showCreationToast?: boolean;
   workspaceSlug: string;
   projectId: string;
   issueId: string;
@@ -25,16 +24,7 @@ export interface IIssueLabelSelect {
 }
 
 export const IssueLabelSelect = observer(function IssueLabelSelect(props: IIssueLabelSelect) {
-  const {
-    showCreationToast = false,
-    disabled,
-    workspaceSlug,
-    projectId,
-    issueId,
-    values,
-    onSelect,
-    onAddLabel,
-  } = props;
+  const { disabled, workspaceSlug, projectId, issueId, values, onSelect, onAddLabel } = props;
   const { t } = useTranslation();
   const { fetchProjectLabels, getProjectLabels, getLabelById } = useLabel();
   const {
@@ -57,10 +47,8 @@ export const IssueLabelSelect = observer(function IssueLabelSelect(props: IIssue
       value={values}
       onChange={onSelect}
       onCreateLabel={onAddLabel}
-      onCreated={
-        showCreationToast
-          ? () => setToast({ title: t("toast.success"), type: TOAST_TYPE.SUCCESS, message: t("label.create.success") })
-          : undefined
+      onCreated={() =>
+        setToast({ title: t("toast.success"), type: TOAST_TYPE.SUCCESS, message: t("label.create.success") })
       }
       createLabelEnabled={canCreate}
       getLabelById={getLabelById}

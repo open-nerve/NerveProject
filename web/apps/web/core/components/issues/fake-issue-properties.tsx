@@ -27,9 +27,6 @@ vi.mock("@/hooks/store/use-issue-detail", () => ({ useIssueDetail: () => tab.app
 vi.mock("@/hooks/store/use-label", () => ({ useLabel: () => tab.app.label }));
 vi.mock("@/hooks/store/use-project", () => ({ useProject: () => tab.app.projectRoot.project }));
 vi.mock("@/hooks/store/use-workspace", () => ({ useWorkspace: () => tab.app.workspaceRoot }));
-vi.mock("@/hooks/store/use-project-inbox", () => ({
-  useProjectInbox: () => ({ getIssueInboxByIssueId: () => undefined }),
-}));
 vi.mock("@/hooks/store/user", () => ({
   useUser: () => tab.app.user,
   useUserPermissions: () => tab.app.user.permission,

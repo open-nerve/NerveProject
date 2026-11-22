@@ -31,15 +31,11 @@
         "success": "工作项删除成功"
       }
     },
-    "errors": {
-      "snooze_permission": "只有项目管理员可以暂停/取消暂停工作项",
-      "accept_permission": "只有项目管理员可以接受工作项",
-      "decline_permission": "只有项目管理员可以拒绝工作项"
-    },
     "actions": {
       "accept": "接受",
       "decline": "拒绝",
       "snooze": "暂停",
+      "resnooze": "更改暂停日期",
       "unsnooze": "取消暂停",
       "copy": "复制工作项链接",
       "delete": "删除",
@@ -57,6 +53,8 @@
       "title": "创建收集工作项"
     },
     "a11y": {
+      "detail": "收集箱条目",
+      "list_toggle": "收集箱列表",
       "pending_count": "{label}，{count} 条待处理"
     },
     "tabs": {
