@@ -4,44 +4,34 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { IntakeCounts, IntakeIssuePage, Workspace } from "@nerve/api-client";
 import { ApiError } from "@/lib/api-error";
 import { FakeNerve, answered, json, problem } from "@/lib/auth/fake-nerve";
 import { settle, track, until } from "@/lib/auth/fake-time";
-import { countsOf, intakeIssueOf, pageOf } from "@/store/issue/intake/fake-intake";
-import type { IntakeFilters } from "@/store/issue/intake/filters";
+import {
+  acme,
+  beta,
+  countsOf,
+  countsPath,
+  intakeIssueOf,
+  intakeTab,
+  listPath,
+  loadCounts,
+  loadList,
+  open,
+  pageOf,
+  snoozedToo,
+} from "@/store/issue/intake/fake-intake";
 import type { IIntakeStore } from "@/store/issue/intake/intake.store";
 import { loadWorkspaces, workspaceOf } from "@/store/workspace/fake-workspaces";
 
 vi.mock("@/lib/auth/api-client", () => ({ tokenManager: {}, publicClient: {} }));
 vi.mock("@/lib/store-context", () => ({ rootStore: {} }));
 
-const { RootStore } = await import("@/store/root.store");
-
 // The pending work items of the caller's intakes in each of his workspaces (P5a spec 2.3, R7), and the lists of each
 // project's intake (2.3, R6), as the intake store of a session's issue root holds them, against a fake nerve that
 // answers each request when the test says. The tab's caller has acme and beta; the store keeps each workspace's counts
 // by its id, and its readers name the workspace by the address's slug, as the caller's workspaces list it now (v0
 // design 7.7); it keeps each project's lists by the project's id and the filters' key.
-
-const acme = workspaceOf("acme");
-const beta = workspaceOf("beta");
-const countsPath = (workspace: Pick<Workspace, "slug">) => `/api/v0/workspaces/${workspace.slug}/intake-counts`;
-
-/** The intake store of a session whose caller's workspaces nerve listed as acme and beta; the requests so far forgotten. */
-async function intakeTab() {
-  const nerve = new FakeNerve();
-  const api = nerve.client();
-  const app = new RootStore(api);
-  await loadWorkspaces(nerve, app.workspaceRoot, [acme, beta]);
-  nerve.calls.length = 0;
-  return { nerve, api, app, store: app.issue.intake };
-}
-
-/** The store fetches the workspace's counts, and nerve gives counts. */
-function loadCounts(nerve: FakeNerve, store: IIntakeStore, workspace: Workspace, counts: IntakeCounts) {
-  return answered(nerve, () => store.fetchCounts(workspace), ["GET", countsPath(workspace)], counts, "the counts");
-}
 
 beforeEach(() => {
   vi.useFakeTimers({ now: 1_000_000 });
@@ -140,31 +130,7 @@ describe("IntakeStore, the pending counts", () => {
   });
 });
 
-/** The open tab as the intake page opens it: the pending, newest first. */
-const open: IntakeFilters = {
-  tab: "open",
-  statuses: ["pending"],
-  priorities: [],
-  assignees: [],
-  creators: [],
-  labels: [],
-  order: "-created_at",
-};
-const snoozedToo: IntakeFilters = { ...open, statuses: ["pending", "snoozed"] };
 const [one, two, three, four, five] = ["one", "two", "three", "four", "five"].map((name) => intakeIssueOf(name));
-const listPath = (projectId: string) => `/api/v0/projects/${projectId}/intake-issues`;
-
-/** The store fetches the first page of the project's intake the filters select, in acme, and nerve gives page. */
-function loadList(
-  nerve: FakeNerve,
-  store: IIntakeStore,
-  projectId: string,
-  filters: IntakeFilters,
-  page: IntakeIssuePage
-) {
-  const fetch = () => store.fetchList(acme, projectId, filters);
-  return answered(nerve, fetch, ["GET", listPath(projectId)], page, "the list");
-}
 
 describe("IntakeStore, the lists", () => {
   it("keeps each first page by the project's id and the filters' key, whatever the order of their values", async () => {

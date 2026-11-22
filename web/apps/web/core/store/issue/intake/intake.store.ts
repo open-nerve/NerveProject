@@ -3,15 +3,18 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { runInAction } from "mobx";
 import { computedFn } from "mobx-utils";
 // nerve imports
-import type { IntakeCounts, IntakeIssuePage, Workspace } from "@nerve/api-client";
+import type { IntakeCounts, IntakeIssue, IntakeIssuePage, IssueDetail, Workspace } from "@nerve/api-client";
 // lib
-import { ReconciledByKey } from "@/lib/reconciled";
+import type { Change } from "@/lib/reconciled";
+import { ReconciledByKey, dropped, replaced } from "@/lib/reconciled";
 // store
 import type { IssueRootStore } from "@/store/issue/root.store";
 import type { IntakeFilters } from "./filters";
-import { filterKey, listQuery } from "./filters";
+import { filterKey, listQuery, matches } from "./filters";
+import { rowOf } from "./status";
 
 /** A workspace as the store fetches its counts: by its slug, kept under its id. */
 type WorkspaceRef = Pick<Workspace, "id" | "slug">;
@@ -36,6 +39,22 @@ function followed(held: IntakeIssuePage, next: IntakeIssuePage): IntakeIssuePage
   };
 }
 
+/** The page with the row nerve answered in its place, if it holds it; the number its filters select as it was (R31). */
+const rewritten =
+  (row: IntakeIssue): Change<IntakeIssuePage> =>
+  (page) => ({ ...page, data: replaced(row)(page.data) });
+
+/**
+ * The page without the work item issueId names, the number its filters select one less if it held it (R31): a page
+ * that lacks it, nerve's answer read after it left too, keeps nerve's number.
+ */
+const without =
+  (issueId: string): Change<IntakeIssuePage> =>
+  (page) => {
+    const data = dropped<IntakeIssue>(issueId)(page.data);
+    return { ...page, data, total: page.total - (page.data.length - data.length) };
+  };
+
 export interface IIntakeStore {
   // computed actions
   pendingCount: (slug: string, projectId: string) => number | undefined;
@@ -48,6 +67,10 @@ export interface IIntakeStore {
     filters: IntakeFilters
   ) => Promise<IntakeIssuePage | undefined>;
   fetchMore: (projectId: string, filters: IntakeFilters) => Promise<IntakeIssuePage | undefined>;
+  // confirmations (the write seam's, P5a spec 2.4)
+  confirm: (answer: IssueDetail) => void;
+  drop: (projectId: string, issueId: string) => void;
+  countAgain: (workspace: WorkspaceRef) => void;
 }
 
 /**
@@ -57,7 +80,9 @@ export interface IIntakeStore {
  * store never does. Its readers name the workspace by the address's slug, as the caller's workspaces list it now,
  * never by the router store: a workspace no longer his gives nothing (v0 design 7.7). It holds each project's lists of
  * the work items some filters select, by the project's id and the filters' key, the pages read so far as one page: its
- * own copy of nerve's rows, which a fetch of the first page replaces. Fetches do not queue.
+ * own copy of nerve's rows, which a fetch of the first page replaces and nerve's answers to the writes of its work
+ * items are confirmed into (confirm, drop: the write seam queues the writes, P5a spec 2.4); a fetch out meanwhile gets
+ * each confirmation again on its answer (reconciled.ts). Fetches do not queue.
  */
 export class IntakeStore implements IIntakeStore {
   /** Each workspace's pending counts, by its id, reconciled between fetches (reconciled.ts). */
@@ -129,4 +154,52 @@ export class IntakeStore implements IIntakeStore {
       held.next_cursor === cursor ? followed(held, next) : held;
     return this.lists.fetchPart(list, cursor, read, merge);
   };
+
+  /**
+   * @description confirms nerve's answer to a write of a work item of an intake (an edit, a triage, a re-read) to every
+   * list held of its project in its workspace, as a row (rowOf): in its place where the list's filters still select it
+   * at now, for the caller (matches); out of each list that no longer does, its total one less; into none that lacks
+   * it, which its next fetch brings (R31). A work item no longer of an intake leaves every list. Another project's
+   * lists are not written
+   */
+  confirm = (answer: IssueDetail): void => {
+    const row = rowOf(answer);
+    const now = new Date();
+    const me = this.root.currentUserId;
+    this.confirmTo(
+      (list) => list.workspaceId === answer.workspace_id && list.projectId === answer.project_id,
+      (filters) => (row !== undefined && matches(row, filters, now, me) ? rewritten(row) : without(answer.id))
+    );
+  };
+
+  /**
+   * @description takes the work item out of every list held of its project, the total of each that held it one less
+   * (R31): nerve deleted it, or gives it the caller no more
+   */
+  drop = (projectId: string, issueId: string): void =>
+    this.confirmTo(
+      (list) => list.projectId === projectId,
+      () => without(issueId)
+    );
+
+  /**
+   * @description fetches the workspace's pending counts again after a write that changes them (a triage, a delete, a
+   * submission, R8) if this generation holds them: only the counts' gate starts a read of them (R7), never a write.
+   * It holds up no caller, a write's turn included: it gives nothing to wait for; a failure leaves the counts as they
+   * were
+   */
+  countAgain = (workspace: WorkspaceRef): void => {
+    if (this.counts.get(workspace.id) === undefined) return;
+    void Promise.allSettled([this.fetchCounts(workspace)]);
+  };
+
+  /** Confirms to each list held that is of the work item's project the change made of its filters (Reconciled.confirm). */
+  private confirmTo(
+    ofProject: (list: FetchedList) => boolean,
+    change: (filters: IntakeFilters) => Change<IntakeIssuePage>
+  ): void {
+    runInAction(() => {
+      for (const [key, list] of this.fetched) if (ofProject(list)) this.lists.confirm(key, change(list.filters));
+    });
+  }
 }

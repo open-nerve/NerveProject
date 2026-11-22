@@ -4,9 +4,11 @@
  */
 
 // nerve imports
-import type { IntakeStatus, IssuePriority } from "@nerve/api-client";
+import type { IntakeIssue, IntakeStatus, IssuePriority } from "@nerve/api-client";
 // services
 import type { IntakeListQuery } from "@/services/issue/intake.service";
+// local
+import { effectiveStatus } from "./status";
 
 /**
  * A range of days, each a day string (YYYY-MM-DD) of the caller's local calendar (R10): from the first to the last,
@@ -101,4 +103,47 @@ export function listQuery(filters: IntakeFilters, cursor?: string): IntakeListQu
     limit: PAGE_SIZE,
     ...(cursor === undefined ? {} : { cursor }),
   };
+}
+
+/**
+ * Whether a filter of ids selects a work item of the ids given, as nerve takes it: any of the filter's values does
+ * (OR), me the caller (none when he is not known), none a work item of no id; a filter of no value selects every one.
+ * The creators' filter never names none, nor the labels' me: nerve refuses either.
+ */
+function selects(filter: readonly string[], ids: readonly string[], me: string | undefined): boolean {
+  return (
+    filter.length === 0 ||
+    filter.some((value) => {
+      if (value === "none") return ids.length === 0;
+      const id = value === "me" ? me : value;
+      return id !== undefined && ids.includes(id);
+    })
+  );
+}
+
+/**
+ * Whether the moment falls on a day of the range, as nerve takes it (C3): its UTC day, from the first day's midnight
+ * UTC, in it, to the midnight after the last, out of it; an end left out is open, and no range takes every moment.
+ */
+function within(moment: string, range: DayRange | undefined): boolean {
+  const day = new Date(moment).toISOString().slice(0, 10);
+  return (range?.from === undefined || range.from <= day) && (range?.to === undefined || day <= range.to);
+}
+
+/**
+ * @description whether a list of the filters lists the work item at now, for the caller me names, as nerve would
+ * (P5a spec 2.2): its status at now among the statuses (effectiveStatus, C7); its priority, its assignees, its creator
+ * and its labels among those each filter names (selects); the UTC days of its creation and of its last change in the
+ * ranges (within, C3). The filters AND. Never the tab, which the statuses select, nor the order
+ */
+export function matches(row: IntakeIssue, filters: IntakeFilters, now: Date, me: string | undefined): boolean {
+  return (
+    filters.statuses.includes(effectiveStatus(row.intake, now)) &&
+    (filters.priorities.length === 0 || filters.priorities.includes(row.priority)) &&
+    selects(filters.assignees, row.assignee_ids, me) &&
+    selects(filters.creators, row.created_by_id === null ? [] : [row.created_by_id], me) &&
+    selects(filters.labels, row.label_ids, me) &&
+    within(row.created_at, filters.created) &&
+    within(row.updated_at, filters.updated)
+  );
 }
