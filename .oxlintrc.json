@@ -199,7 +199,11 @@
         "web/apps/web/core/components/workspace-notifications/root.tsx",
         "web/apps/web/core/components/workspace-notifications/sidebar/list.tsx",
         "web/apps/web/core/components/workspace-notifications/sidebar/tabs.tsx",
-        "web/apps/web/core/components/workspace-notifications/sidebar/header-options.tsx"
+        "web/apps/web/core/components/workspace-notifications/sidebar/header-options.tsx",
+        "web/apps/web/core/store/issue/intake/**",
+        "web/apps/web/core/hooks/store/use-intake.ts",
+        "web/apps/web/core/hooks/use-intake-counts.ts",
+        "web/apps/web/core/components/workspace/sidebar/projects-list.tsx"
       ],
       "rules": {
         "no-restricted-imports": [

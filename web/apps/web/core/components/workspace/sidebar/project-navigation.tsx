@@ -15,9 +15,12 @@ import type { EUserProjectRoles } from "@nerve/types";
 import { SidebarNavItem } from "@/components/sidebar/sidebar-navigation";
 // hooks
 import { useAppTheme } from "@/hooks/store/use-app-theme";
+import { useIntake } from "@/hooks/store/use-intake";
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { useProject } from "@/hooks/store/use-project";
 import { useUserPermissions } from "@/hooks/store/user";
+// lib
+import { intakeEntryOn } from "@/lib/intake-entry";
 
 export type TNavigationItem = {
   name: string;
@@ -42,7 +45,8 @@ export const ProjectNavigation = observer(function ProjectNavigation(props: TPro
   const { t } = useTranslation();
   const { isExtendedProjectSidebarOpened, toggleExtendedProjectSidebar, toggleSidebar } = useAppTheme();
   const { getProjectById } = useProject();
-  const { allowPermissions } = useUserPermissions();
+  const { allowPermissions, getProjectRoleByWorkspaceSlugAndProjectId } = useUserPermissions();
+  const { pendingCount } = useIntake();
   const {
     issue: { getIssueIdByIdentifier, getIssueById },
   } = useIssueDetail();
@@ -52,6 +56,7 @@ export const ProjectNavigation = observer(function ProjectNavigation(props: TPro
   const workItemId = workItemIdentifierFromRoute ? getIssueIdByIdentifier(workItemIdentifierFromRoute) : undefined;
   const workItem = workItemId ? getIssueById(workItemId) : undefined;
   const project = getProjectById(projectId);
+  const role = getProjectRoleByWorkspaceSlugAndProjectId(workspaceSlug, projectId);
   // handlers
   const handleProjectClick = () => {
     if (window.innerWidth < 768) {
@@ -112,11 +117,11 @@ export const ProjectNavigation = observer(function ProjectNavigation(props: TPro
         href: `/${workspaceSlug}/projects/${projectId}/intake`,
         icon: IntakeOutline,
         access: [EUserPermissions.ADMIN, EUserPermissions.MEMBER, EUserPermissions.GUEST],
-        shouldRender: project?.intake_view ?? false,
+        shouldRender: intakeEntryOn(project, role),
         sortOrder: 6,
       },
     ],
-    [project, workspaceSlug, projectId]
+    [project, role, workspaceSlug, projectId]
   );
 
   // memoized navigation items, sorted by sortOrder
@@ -149,8 +154,22 @@ export const ProjectNavigation = observer(function ProjectNavigation(props: TPro
         const hasAccess = allowPermissions(item.access, EUserPermissionsLevel.PROJECT, workspaceSlug, project.id);
         if (!hasAccess) return null;
 
+        // the intake's pending work items as nerve counted them, beside its name and in it, while there are some (P5a
+        // spec R7): the projects list fetches them (useIntakeCounts)
+        const pending = item.key === "intake" ? (pendingCount(workspaceSlug, project.id) ?? 0) : 0;
+        const shownPending = pending > 0 ? pending : undefined;
+
         return (
-          <Link key={item.key} to={item.href} onClick={handleProjectClick}>
+          <Link
+            key={item.key}
+            to={item.href}
+            onClick={handleProjectClick}
+            aria-label={
+              shownPending === undefined
+                ? undefined
+                : t("inbox_issue.a11y.pending_count", { label: t(item.i18n_key), count: shownPending })
+            }
+          >
             <SidebarNavItem isActive={!!isActive(item)}>
               <div className="flex w-full items-center justify-between gap-1.5 py-[1px]">
                 <div className="flex items-center gap-1.5">
@@ -159,6 +178,9 @@ export const ProjectNavigation = observer(function ProjectNavigation(props: TPro
                   />
                   <span className="text-11 font-medium">{t(item.i18n_key)}</span>
                 </div>
+                {shownPending !== undefined && (
+                  <span className="text-11 font-medium text-tertiary">{shownPending}</span>
+                )}
               </div>
             </SidebarNavItem>
           </Link>

@@ -56,6 +56,9 @@
     "modal": {
       "title": "创建收集工作项"
     },
+    "a11y": {
+      "pending_count": "{label}，{count} 条待处理"
+    },
     "tabs": {
       "open": "未处理",
       "closed": "已处理"

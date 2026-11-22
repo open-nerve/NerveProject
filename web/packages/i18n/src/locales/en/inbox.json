@@ -56,6 +56,9 @@
     "modal": {
       "title": "Create intake work item"
     },
+    "a11y": {
+      "pending_count": "{label}, {count} pending"
+    },
     "tabs": {
       "open": "Open",
       "closed": "Closed"

@@ -26,6 +26,7 @@ import { useCommandPalette } from "@/hooks/store/use-command-palette";
 import { useProject } from "@/hooks/store/use-project";
 import { useUserPermissions } from "@/hooks/store/user";
 import { useCopyProjectLink } from "@/hooks/use-copy-link";
+import { useIntakeCounts } from "@/hooks/use-intake-counts";
 import { useProjectNavigationPreferences } from "@/hooks/use-navigation-preferences";
 // local imports
 import { SidebarProjectsListItem } from "./projects-list-item";
@@ -47,6 +48,8 @@ export const SidebarProjectsList = observer(function SidebarProjectsList() {
 
   const { loader, joinedProjectIds: joinedProjects } = useProject();
   const handleOnProjectDrop = useProjectDrop();
+  // the pending work items of the caller's intakes, read once for every project's intake item (P5a spec R7)
+  useIntakeCounts();
   // router params
   const { workspaceSlug } = useParams();
   const { pathname } = useLocation();

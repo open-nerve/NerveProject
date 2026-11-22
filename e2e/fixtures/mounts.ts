@@ -9,10 +9,15 @@
  * notifications its top navigation counts (M7 P4, useUnreadNotificationCount); the project's read, on every page of a
  * project; and the project's own resources, only once that read says the caller is a member of the project (M3 design
  * 7.1). Of M6's and M7's addresses only a project's cycles and its modules (PROJECT_CYCLES, M6 P5a; PROJECT_MODULES, M6
- * P6a) and the workspace's unread notifications (WORKSPACE, M7 P4) are read, none of the others (views, the intake's
- * triage state, favourites, recents; M3 design 3.1), nor one outside /api/v0 (M2 design 3.1). These lists are the
- * record of what the pages load: a phase that adds a fetch to a page adds it here (the P8b spec's appendix A.5 is a
- * copy, as of P8b).
+ * P6a), the workspace's unread notifications (WORKSPACE, M7 P4) and the pending work items of its intakes are read,
+ * none of the others (views, the intake's triage state, favourites, recents; M3 design 3.1), nor one outside /api/v0
+ * (M2 design 3.1). The pending work items are read where the app's sidebar lists the projects (a workspace's pages but
+ * its settings and its notifications), and only while the caller is a member of one of its projects that is not
+ * archived and has its intake turned on: "GET /api/v0/workspaces/{slug}/intake-counts" (M7 P5a spec 2.5, R7;
+ * useIntakeCounts). A new project's intake is off, so the lists here leave that read out, and no story that checks a
+ * page's requests by these lists turns one on yet; the first that does lists the read here, as INTAKE_COUNTS, where it
+ * reads it (P5a T10, H9). These lists are the record of what the pages load: a phase that adds a fetch to a page adds
+ * it here (the P8b spec's appendix A.5 is a copy, as of P8b).
  */
 export const APP = [
   "POST /api/v0/auth/refresh",
