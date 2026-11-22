@@ -170,6 +170,29 @@ describe("NotificationsRoot, the preview", () => {
     expect(placeholder()).toBeNull();
   });
 
+  it("judges the project by the read it makes: a refusal an earlier preview had is not this one's (whole-branch m1)", async () => {
+    await render();
+    await select(archived);
+    (await projectRead("p-old")).reject(refusal(503, "service.unavailable"));
+    await settled();
+    expect(toasts).toHaveLength(1);
+    expect(held.state?.selected).toBeUndefined();
+
+    // nerve is reached again: selected once more, the preview waits for its own read, which gives the project
+    await select(archived);
+    await act(async () => until(() => fixture.reads.length === 2, "the second read of the project"));
+    expect(toasts).toHaveLength(1);
+    expect(placeholder()?.textContent).toContain("common.loading");
+    fixture.roles.add("p-old");
+    fixture.reads[1]?.resolve({ id: "p-old" });
+    await settled();
+    expect(toasts).toHaveLength(1);
+    expect(held.state?.selected).toEqual(archived);
+    expect(peek()?.getAttribute("aria-label")).toBe(scopeOf(archived));
+    // one read of the project for each preview
+    expect(fixture.reads).toHaveLength(2);
+  });
+
   it("clears the selection and says why once nerve gives the project but no role in it (one the caller has left)", async () => {
     await render();
     await select(archived);

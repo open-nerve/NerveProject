@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { observer } from "mobx-react";
 // nerve imports
 import { useTranslation } from "@nerve/i18n";
@@ -50,9 +50,10 @@ type PreviewProps = { workspaceSlug: string; selected: NotificationSelection };
  * The selected notification's work item, the peek embedded in the page and scoped to the notification, which closes by
  * clearing the selection; an intake item's as any other's (its triage is P5's). The peek shows only once the caller's
  * role in the work item's project is known (IssuePeekOverview): a project he holds no role in (an archived one's, which
- * the workspace's list leaves out) is read first (useProjectRead), and the preview says it is loading meanwhile. Once
- * that read settles and he still has no role (nerve refuses it: he has left the project, or nerve was not reached; or
- * it gives the project but no role in it), the selection is cleared and a toast says why: never a blank pane (re-93 I4).
+ * the workspace's list leaves out) is read first (useProjectRead), and the preview says it is loading meanwhile; each
+ * preview judges by its own read, never by an answer SWR keeps from an earlier one (whole-branch m1). Once that read
+ * settles and he still has no role (nerve refuses it: he has left the project, or nerve was not reached; or it gives
+ * the project but no role in it), the selection is cleared and a toast says why: never a blank pane (re-93 I4).
  */
 const NotificationPreview = observer(function NotificationPreview({ workspaceSlug, selected }: PreviewProps) {
   const { t } = useTranslation();
@@ -62,9 +63,24 @@ const NotificationPreview = observer(function NotificationPreview({ workspaceSlu
   const refusalToast = useRefusalToast();
   const { notificationId, issueId, projectId } = selected;
   const readable = getProjectRoleByWorkspaceSlugAndProjectId(workspaceSlug, projectId) !== undefined;
-  const read = useProjectRead(readable ? undefined : projectId);
-  // the read settled and the caller has no role still: refused, or answered without one
-  const unreadable = !readable && (read.error !== undefined || read.data !== undefined);
+  const read = useProjectRead(readable ? undefined : projectId, { revalidateOnMount: false });
+  const { mutate } = read;
+  // whether this preview's own read of the project has answered: what SWR keeps of an earlier preview's is not its own
+  const [answered, setAnswered] = useState(false);
+  useEffect(() => {
+    if (readable) return;
+    let previewing = true;
+    // mutate reads the project anew, never joining an earlier read, and settles once SWR holds its answer
+    void mutate().finally(() => {
+      if (previewing) setAnswered(true);
+    });
+    return () => {
+      previewing = false;
+    };
+  }, [readable, mutate]);
+  // this preview's read settled and the caller has no role still: refused, or answered without one
+  const unreadable =
+    !readable && answered && !read.isValidating && (read.error !== undefined || read.data !== undefined);
   // whether the preview has said why it cannot show the work item, which it says once
   const said = useRef(false);
 
