@@ -131,7 +131,7 @@ M7 让五件协作功能经真实接口工作：站内通知（关注工作项�
 
 - 页面显式记录：`POST /me/recent-visits`（`entity_type` 为 `issue` 或 `project`，`entity_id`），看得到才记录，否则 404；所有 GET 都没有副作用（总体设计 §3.2）。只记工作项与项目：Plane 记六种、只读出三种（D37），页面已在 M1 删除。
 - 同一人、同一工作区、同一目标只有一行，重访只更新访问时间；按访问时间倒序（Plane 按建立时间，D35）；每人每工作区最多 20 条：写入时以这个人、这个工作区的事务级咨询锁串行，在同一事务里物理删除第 20 条之后的行（Plane 的 `== 20` 在并发下失守，D36）。
-- 读 `GET /workspaces/{slug}/recent-visits?entity_type=`：集合型，每行带目标的摘要（工作项：名字、状态、优先级、负责人、编号、项目标识；项目：名字、图标、标识）；他现在看不到的不列（Plane 不过滤，D39）。工作项删除时，指向它的最近访问在原事务里软删（M4 交接 M7-04，Plane 相同）。
+- 读 `GET /workspaces/{slug}/recent-visits?entity_type=`：集合型，每行带目标的摘要（工作项：名字、状态、优先级、负责人、编号、项目标识；项目：名字、图标、标识）；他现在看不到的不列（Plane 不过滤，D39）。工作项删除时，指向它的最近访问在原事务里软删（M4 交接 M7-04；Plane 单个删除时硬删所有人的行、批量删除不清，D44）。实现见 [P3d spec](specs/P3d-recents.md)：`project_id` 非空；记录 204（新记与重访同），重访同一行、`visited_at` 与审计的 `updated_at`、`updated_by_id` 同一时刻；看不到答目标自己的 404、与不存在的逐值相同；工作区访客能记能列；已归档的能记、照列，收集箱里的条目能记、接受之前不列；上限数未删的全部行、先过滤后取 20；记录的锁序是工作区 S → 项目 S → 咨询锁，裁剪 `SKIP LOCKED`；连带的订阅者 `navigation_forget_deleted_issue_visits`，项目、工作区删除经 `navigation.delete_rows` 的第三步。
 
 ### 3.10 权限
 
@@ -178,7 +178,7 @@ M7 让五件协作功能经真实接口工作：站内通知（关注工作项�
 | `notifications` | notification | `workspace_id`、`project_id`（`CASCADE`）、`receiver_id`（`CASCADE`，Plane 相同）、`triggered_by_id`（`SET NULL`，空 = nerve 自己）、`issue_id` 与 `issue_created_by_id`（不是外键，M4 设计 4.16）、`sender`、`data`（快照 JSON，形状由 CHECK 钉住）、`read_at`、`archived_at`、`snoozed_till`、`event_id`、`change_seq`；部分唯一 `(event_id, change_seq, receiver_id)`（任务重试幂等）；索引 `(receiver_id, workspace_id, created_at, id)`、`(workspace_id, issue_id)`、未读未归档的部分索引。删去 Plane 的 `title`、`message`、`message_html`、`message_stripped`、`entity_name`（前端不读，只有工作项一种） |
 | `issue_views` | navigation | 见 §3.7；`workspace_id`、`project_id`（`CASCADE`，可空）、`owned_by_id`（`CASCADE`，Plane 相同）、`created_by_id`、`updated_by_id`（`SET NULL`）；不指向工作项 |
 | `user_favorites` | navigation | `workspace_id`、`project_id`（`CASCADE`，可空）、`user_id`（`CASCADE`）、`entity_type` CHECK 五值、`entity_identifier`（不是外键）、`name`（文件夹）、`parent_id`（自引用 `CASCADE`）、`sequence`；部分唯一 `(user_id, entity_type, entity_identifier)` 与 `(user_id, workspace_id, lower(name)) WHERE entity_type = 'folder'`，两条都带 `deleted_at IS NULL`（软删之后能重建）；`sequence double precision`；`created_by_id`、`updated_by_id` `SET NULL`（P3c） |
-| `user_recent_visits` | navigation | `workspace_id`、`project_id`（`CASCADE`）、`user_id`（`CASCADE`）、`entity_type` CHECK 两值、`entity_identifier`（不是外键）、`visited_at`；部分唯一 `(user_id, workspace_id, entity_type, entity_identifier)` |
+| `user_recent_visits` | navigation | `workspace_id`、`project_id`（`CASCADE`，非空：两种目标都在项目里）、`user_id`（`CASCADE`）、`entity_type` CHECK 两值、`entity_identifier`（不是外键）、`visited_at`；CHECK 项目的访问 `project_id = entity_identifier`；三条部分索引都带 `deleted_at IS NULL`：唯一 `(user_id, workspace_id, entity_type, entity_identifier)`（软删之后能重建）、连带 `(workspace_id, entity_identifier)`、列表与裁剪 `(user_id, workspace_id, visited_at DESC, id DESC)`；`created_by_id`、`updated_by_id` `SET NULL`（P3d） |
 
 每条指向 `workspaces`、`projects`、`issues` 的外键有不带条件的索引。plane-diff 逐表登记。
 
@@ -187,7 +187,7 @@ M7 让五件协作功能经真实接口工作：站内通知（关注工作项�
 - **工作项删除**（每个 `issue.deleted`）：它的 `intake_issues` 随工作项在原事务里软删（issue 自己的表）；notification 的订阅者在原事务里软删它的通知，navigation 的订阅者在原事务里软删指向它的最近访问（同 asset 的先例，按 `(workspace_id, issue_id)`、`(workspace_id, entity_identifier)` 索引）。别的条目里指向它的 `duplicate_to_id` 不动：读时只给看得到的目标，看不到或已删的不显示。
 - **项目、工作区删除**：notification 与 navigation 各加一个订阅者，在原事务里投递自己的分批任务（`notification.delete_rows`、`navigation.delete_rows`，M6 `planning.delete_rows` 的先例：保留原请求的时刻与删除者，提交后立即不可见）；navigation 另有工作区范围的一步，处理没有项目的行（工作区视图、文件夹，issue 的 `workspace_drafts` 先例）；`intake_issues` 随 issue 的分批任务。
 - **删除目录守卫**：五张表都在 `keysTo` 的范围内按原有机制核对，没有新的豁免（`duplicate_to_id` 不是外键）。
-- **60 天清理**：每张新的带 `deleted_at` 的表恰有一个清理者，`TestPurgeCatalogCoversTablesAndIncomingKeys` 的表数由 32 改为 37（P3b 之后 35，P3c 之后 36，P3d 之后 37）；清理顺序在 asset → issue → planning → project → workspace → identity 中插入 notification、navigation（在 issue 之前，它们不被别的表指向）。`TestPurgeScale` 与删除规模测试在 M7 代码上重跑。
+- **60 天清理**：每张新的带 `deleted_at` 的表恰有一个清理者，`TestPurgeCatalogCoversTablesAndIncomingKeys` 的表数由 32 改为 37（P3b 之后 35，P3c 之后 36，P3d 之后 37，已到）；清理顺序在 asset → issue → planning → project → workspace → identity 中插入 notification、navigation（在 issue 之前，它们不被别的表指向）。`TestPurgeScale` 与删除规模测试在 M7 代码上重跑。
 
 ## 5. 接口
 
@@ -206,7 +206,7 @@ M7 让五件协作功能经真实接口工作：站内通知（关注工作项�
 | `GET /workspaces/{slug}/issues` | 工作区跨项目列表（`IssueListPage`） |
 | `GET/POST /projects/{id}/views`、`GET/POST /workspaces/{slug}/views`、`GET/PATCH/DELETE /views/{id}` | 视图；列表集合型 |
 | `GET/POST /workspaces/{slug}/favorites`、`PATCH/DELETE /favorites/{favorite_id}` | 收藏（P3c）：建新 201、已有 200；改只接受 `parent_id`、`sequence`、文件夹的 `name` |
-| `POST /me/recent-visits`、`GET /workspaces/{slug}/recent-visits` | 最近访问 |
+| `POST /me/recent-visits`、`GET /workspaces/{slug}/recent-visits` | 最近访问（P3d）：记录 204（新记与重访同）；列表集合型，`entity_type` 可选 |
 
 错误按 RFC 9457、模块前缀的问题码，每个操作写明 `x-problem-codes`，每个新码进 `error-messages.ts` 与两份 `errors.json`。新码至少有：issue 的 `issue.in_triage`、`issue.intake_disabled`、`issue.intake_not_found`、`issue.intake_transition_not_allowed`（409）、`duplicate_to_id` 不合格（422 `not_allowed`，字段错误）；notification 的 `notification.not_found`；navigation 的 `navigation.view_not_found`、`navigation.views_disabled`、`navigation.favorite_not_found`、`navigation.favorite_folder_name_taken`（409）、目标不合格（422 `not_allowed`）。P 阶段的 spec 定全集。
 
@@ -299,7 +299,7 @@ M7 让五件协作功能经真实接口工作：站内通知（关注工作项�
 | P3a | 工作区跨项目列表：issue 列表引擎的新范围 `WorkspaceList`、`GET /workspaces/{slug}/issues` 与规模测试（实施前再划分，见 [P3a spec](specs/P3a-workspace-list.md) §1） | H13 的列表一半的接口与数据库 |
 | P3b | `navigation` 模块与视图：`issue_views`、两种视图的接口与权限、删除图与清理 | H12、H14 与 H13 的已存工作区视图的接口与数据库 |
 | P3c | 收藏：拆 `bootstrap/app.go`、planning / project 的三种归档事件、`user_favorites` 与接口、连带、可见过滤（实施前再划分，见 [P3c spec](specs/P3c-favorites.md) §1） | H15、H16 的接口与数据库 |
-| P3d | 最近访问：`user_recent_visits` 与接口、工作项删除时的连带、可见过滤 | H17 的接口与数据库 |
+| P3d | 最近访问：`user_recent_visits` 与接口、工作项删除时的连带、可见过滤（见 [P3d spec](specs/P3d-recents.md) §1） | H17 的接口与数据库 |
 | P4 | 网页的通知与关注；收起“保存为视图” | H1–H7 的页面、H20 的通知页 |
 | P5 | 网页的收集箱，通知预览里的分诊 | H8–H11 的页面、H20 的收集箱页、M5-M7-01 的证据 |
 | P6a | 网页的项目视图：列表、详情、保存与更新视图、命令面板的视图 | H12 的页面、H20 的视图页 |
@@ -343,7 +343,7 @@ P1a 的第一个实现提交把关键词 phase 改为 `M7/P1`（P1a、P1b 共用
 | 插入段：M4 泳道查询的计划翻转 | 已完成：负责人 2026-11-20 裁定在 M7 里单独修；合入 main（noff `2083c0b7`），main CI 44724861021 全绿；预检 [re-89](../../reviews/re-89-M4泳道计划预检.md) | [spec 与 plan](specs/M4fix-swimlanes-plan.md) / [记录](reviews/M4fix-swimlanes-plan-review.md) |
 | P3b navigation 模块与视图 | 已完成：合入 main（noff `1168fd25`），main CI 44820762025 全绿；审查与集成见阶段记录 §9；spec 与 plan 经预检 [re-90](../../reviews/re-90-M7P3b预检.md) 修正后通过，基线 main `17e0b1ac`；16 个 Task | [P3b spec](specs/P3b-views.md) / [P3b plan](plans/P3b-views.md) / [P3b 记录](reviews/P3b-views-review.md) |
 | P3c 收藏与三种归档事件 | 已完成：合入 main（noff `9d26b1c3`），main CI 44947828240 全绿；审查与集成见阶段记录 §9；spec 与 plan 经预检 [re-91](../../reviews/re-91-M7P3c预检.md) 修正后通过，基线 main `1168fd25`；实施前把 P3c 再划为 P3c（收藏）与 P3d（最近访问）（spec §1、R1）；16 个 Task | [P3c spec](specs/P3c-favorites.md) / [P3c plan](plans/P3c-favorites.md) / [P3c 记录](reviews/P3c-favorites-review.md) |
-| P3d 最近访问 | 进行中：spec 与 plan 经预检 [re-92](../../reviews/re-92-M7P3d预检.md) 修正后通过，基线 main `9d26b1c3`（P3c 的 noff）；15 个 Task；第 1 路以本机检查点 0 为基线（spec §6） | [P3d spec](specs/P3d-recents.md) / [P3d plan](plans/P3d-recents.md) |
+| P3d 最近访问 | 实施完成，待整分支审查：spec 与 plan 经预检 [re-92](../../reviews/re-92-M7P3d预检.md) 修正后通过，基线 main `9d26b1c3`（P3c 的 noff）；15 个 Task；第 1 路以本机检查点 0 为基线（spec §6）；三个检查点的本地七项与分支 CI 见阶段记录 §5 | [P3d spec](specs/P3d-recents.md) / [P3d plan](plans/P3d-recents.md) / [P3d 记录](reviews/P3d-recents-review.md) |
 
 ## 15. 决定记录
 

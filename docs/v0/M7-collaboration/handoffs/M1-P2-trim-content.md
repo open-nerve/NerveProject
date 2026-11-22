@@ -19,6 +19,8 @@ M7 合并时：收藏和最近访问的接口没有 `page` 类型；首页的最
 
 **处理结果（M7/P3c，收藏的部分）：** 收藏的 `entity_type` 只有 `project`、`cycle`、`module`、`view`、`folder`，没有 `page`（[P3c spec](../specs/P3c-favorites.md) §2.3、§2.4）。最近访问的接口随 P3d、首页随 P7，保持 open。
 
+**处理结果（M7/P3d，最近访问的接口）：** 最近访问的 `entity_type`（`RecentVisitKind`）只有 `issue`、`project`，没有 `page`（[P3d spec](../specs/P3d-recents.md) §2.4）。“首页的最近访问目前读取 Plane 的 `…/recent-visits/`”已过时：首页小部件随 M3/P8a 的 `5c128973` 删除，首页今天只有空状态（`web/apps/web/core/components/home/home-body.tsx`），没有最近访问的读者；首页的“最近”随 P7 读新接口 `GET /workspaces/{slug}/recent-visits`。保持 open。
+
 逐项的结论写进该 M 的 review，然后 `status` 改为 `closed`。
 
 来源：[M1/P2 评审记录](../../M1-frontend-trim/reviews/P2-trim-content-review.md)第 7 节。

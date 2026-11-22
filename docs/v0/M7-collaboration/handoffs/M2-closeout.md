@@ -22,11 +22,15 @@ created: 2026-09-28
 
 **处理结果（M7/P3c，收藏的部分）：** 收藏的列表是集合型、不分页，按 `sequence DESC, id DESC`；目标的名字、图标与是否看得到经端口取（project 的 `NavigationTargets`、planning 的 `NavigationCycles`/`NavigationModules`、access 的 `Readable`），navigation 的 SQL 不联表别的模块的表（[P3c spec](../specs/P3c-favorites.md) §2.4、§2.5）。最近访问的部分随 P3d，保持 open。
 
+**处理结果（M7/P3d，最近访问的部分）：** 最近访问的列表是集合型、不分页，至多 20 条，按 `visited_at DESC, id DESC`，没有游标载荷；目标的摘要与是否看得到经端口取（issue 的 `NavigationIssues`、project 的 `NavigationTargets`、access 的 `Readable`），navigation 的 SQL 不联表别的模块的表，`TestSQLCSchemaScope` 不加例外（[P3d spec](../specs/P3d-recents.md) §2.4、§2.5）。M7 的列表至此都有了结论；照设计 §11 保持 open 至收尾关闭。
+
 ## 2. stores 按会话分代（规则在总体设计 7.7）
 
 - **做什么**：M7 接上新接口的 stores、services 和页面照 [总体设计 7.7](../../v0-design.md) 写。M7 的范围（`d97c513` 上数出）：`git grep -n -E '^(export )?const [A-Za-z]+ = new [A-Za-z]+Service\(' -- web/apps/web` 中的 `WorkspaceNotificationService`、`IntakeWorkItemVersionService` 各 1 处，以及最近访问的 `WorkspaceService.fetchWorkspaceRecents` 1 处（`web/apps/web/core/components/home/widgets/recents/index.tsx`）。
 - **最近访问的接口**：`/me/recent-visits` 这样的路径属于最近访问自己的模块文件，不放进 `api/modules/identity.yaml`（M2 设计 3.12 的组织规则：一个路径只属于一个模块文件）。
 - **关闭条件**：这 3 处都已消失；M7 新加的 SWR 键带 `loginId`；最近访问的操作在它自己的模块文件里。
+
+**处理结果（M7/P3d，最近访问的部分）：** `recordRecentVisit`（`/me/recent-visits`）与 `listRecentVisits` 都在 `api/modules/navigation.yaml`、标签 `navigation`，不在 `identity.yaml`（[P3d spec](../specs/P3d-recents.md) §2.4）。`WorkspaceService.fetchWorkspaceRecents` 已随 M3/P8a 的 `5c128973` 消失（`git grep 'fetchWorkspaceRecents' -- web` 为空）；另两处 `WorkspaceNotificationService`、`IntakeWorkItemVersionService` 仍在，随 P4、P5；最近访问新的 SWR 键随 P7。保持 open。
 
 ## 3. 下拉框（M7 的部分）
 
@@ -51,6 +55,8 @@ created: 2026-09-28
 **处理结果（M7/P3b，`issue_views` 的部分）：** `owned_by_id → users` 照 Plane `ON DELETE CASCADE`，`created_by_id`、`updated_by_id → users` `SET NULL`；不指向工作项；`workspace_id`、`project_id` `CASCADE`，删除项目、工作区经 `navigation.delete_rows` 任务软删（设计 §4 的表与删除图，[P3b spec](../specs/P3b-views.md) §2.3、§2.7）。收藏与最近访问的两张表随 P3c。保持 open。
 
 **处理结果（M7/P3c，`user_favorites` 的部分）：** `user_id → users` 照 Plane `ON DELETE CASCADE`（v0 不物理删除账户，不触发），`created_by_id`、`updated_by_id → users` `SET NULL`；`parent_id` 自引用 `CASCADE`（清理物理删文件夹时带走与它同一时刻软删过的子行）；目标不是外键（`entity_identifier`），读时只给看得到的目标；`workspace_id`、`project_id` `CASCADE`，删除项目、工作区经 `navigation.delete_rows` 任务软删（[P3c spec](../specs/P3c-favorites.md) §2.3、§2.6）。最近访问的表随 P3d，保持 open。
+
+**处理结果（M7/P3d，`user_recent_visits` 的部分）：** `user_id → users` 照 Plane `ON DELETE CASCADE`（v0 不物理删除账户，不触发），`created_by_id`、`updated_by_id → users` `SET NULL`；不指向工作项：目标不是外键（`entity_identifier`），工作项删除时 navigation 的订阅者在删除的事务里软删所有人指向它的行；`workspace_id`、`project_id`（非空）`CASCADE`，删除项目、工作区经 `navigation.delete_rows` 任务的第三步软删（[P3d spec](../specs/P3d-recents.md) §2.3、§2.6）。navigation 的三张表至此都写明了去向；照设计 §11 保持 open 至收尾关闭。
 
 ## 6. CSP 的 `frame-src`
 
