@@ -198,7 +198,8 @@
         "web/apps/web/core/components/workspace-notifications/use-notification-list.ts",
         "web/apps/web/core/components/workspace-notifications/root.tsx",
         "web/apps/web/core/components/workspace-notifications/sidebar/list.tsx",
-        "web/apps/web/core/components/workspace-notifications/sidebar/tabs.tsx"
+        "web/apps/web/core/components/workspace-notifications/sidebar/tabs.tsx",
+        "web/apps/web/core/components/workspace-notifications/sidebar/header-options.tsx"
       ],
       "rules": {
         "no-restricted-imports": [

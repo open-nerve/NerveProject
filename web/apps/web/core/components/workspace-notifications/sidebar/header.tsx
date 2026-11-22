@@ -9,8 +9,13 @@ import { useTranslation } from "@nerve/i18n";
 import { Breadcrumbs, Header } from "@nerve/ui";
 // components
 import { BreadcrumbLink } from "@/components/common/breadcrumb-link";
+// local imports
+import { NotificationHeaderOptions } from "./header-options";
 
-/** The head of the notifications page's sidebar (P4 spec 2.6): its crumb, the inbox. */
+/**
+ * The head of the notifications page's sidebar (P4 spec 2.6): its crumb, the inbox; then mark all read, refresh, the
+ * type filter and the view menu (NotificationHeaderOptions).
+ */
 export function NotificationSidebarHeader() {
   const { t } = useTranslation();
   return (
@@ -28,6 +33,9 @@ export function NotificationSidebarHeader() {
           />
         </Breadcrumbs>
       </Header.LeftItem>
+      <Header.RightItem>
+        <NotificationHeaderOptions />
+      </Header.RightItem>
     </Header>
   );
 }

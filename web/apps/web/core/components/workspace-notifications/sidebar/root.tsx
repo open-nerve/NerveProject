@@ -12,13 +12,15 @@ import { cn } from "@nerve/utils";
 import { filterKey } from "@/store/notification/filters";
 // local imports
 import { useNotificationPageState } from "../page-state";
+import { NotificationAppliedFilters } from "./applied-filters";
 import { NotificationSidebarHeader } from "./header";
 import { NotificationList } from "./list";
 import { NotificationTabs } from "./tabs";
 
 /**
- * The notifications page's sidebar (P4 spec 2.6): its head, its tabs and the chosen tab's list, one list for each set
- * of filters. On a narrow screen it gives way to the preview once a notification is selected.
+ * The notifications page's sidebar (P4 spec 2.6): its head, its tabs, the senders the all tab is filtered by, and the
+ * chosen tab's list, one list for each set of filters. On a narrow screen it gives way to the preview once a
+ * notification is selected.
  */
 export const NotificationsSidebarRoot = observer(function NotificationsSidebarRoot() {
   const { filters, selected } = useNotificationPageState();
@@ -34,6 +36,7 @@ export const NotificationsSidebarRoot = observer(function NotificationsSidebarRo
           <NotificationSidebarHeader />
         </Row>
         <NotificationTabs>
+          <NotificationAppliedFilters />
           <NotificationList key={filterKey(filters)} />
         </NotificationTabs>
       </div>

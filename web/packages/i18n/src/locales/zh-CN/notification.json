@@ -73,7 +73,8 @@
       "archived": "通知已标记为已归档",
       "unarchived": "通知已标记为未归档",
       "snoozed": "通知已暂停",
-      "unsnoozed": "通知已取消暂停"
+      "unsnoozed": "通知已取消暂停",
+      "all_read": "已将 {count} 条通知标为已读"
     },
     "tabs": {
       "all": "全部",

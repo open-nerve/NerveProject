@@ -73,7 +73,8 @@
       "archived": "Notification marked as archived",
       "unarchived": "Notification marked as un archived",
       "snoozed": "Notification snoozed",
-      "unsnoozed": "Notification un snoozed"
+      "unsnoozed": "Notification un snoozed",
+      "all_read": "{count, plural, one {# notification marked as read} other {# notifications marked as read}}"
     },
     "tabs": {
       "all": "All",
