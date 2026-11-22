@@ -1,6 +1,6 @@
 # M7 / P4：网页的通知与关注（阶段记录）
 
-> 状态：整分支审查、修复轮、复审与复审修复轮完成，待终检与集成（§9）。spec 与 plan 见 [P4 spec](../specs/P4-web-notifications.md)、[P4 plan](../plans/P4-web-notifications.md)，预检 [re-93](../../../reviews/re-93-M7P4预检.md)。基线 main `3d9293bd`（P3d 的 noff），分支 `codex/m7-p4`。台账 `.superpowers/sdd/P4-web-notifications/progress.md`（ignored，随阶段归档）。
+> 状态：已完成，合入 main（noff `89be91e5`），main CI 45051719903 全绿（§9）。spec 与 plan 见 [P4 spec](../specs/P4-web-notifications.md)、[P4 plan](../plans/P4-web-notifications.md)，预检 [re-93](../../../reviews/re-93-M7P4预检.md)。基线 main `3d9293bd`（P3d 的 noff），分支 `codex/m7-p4`。台账 `.superpowers/sdd/P4-web-notifications/progress.md`（ignored，随阶段归档）。
 
 ## 1. 方法与范围
 
@@ -45,7 +45,7 @@
 | A5 页面故事 | T12、T13、T14 | 达成：三引擎 27 过，chromium `--repeat-each=3` 过；m6-pages、m6-acceptance、m4-detail 不回归（§5） |
 | A6 删除与守卫 | T2、T5、T9、T11、T15 | 达成（§5 的死成员与告警） |
 | A7 文档 | T1、T15 | 本提交（§8） |
-| A8 门禁、审查与集成 | T16 | 整分支审查、修复轮、复审与复审修复轮完成（§9）；终检、分支 CI 与合并在 P5 的 T1 补记 |
+| A8 门禁、审查与集成 | T16 | 已完成：整分支审查、修复轮、复审与复审修复轮，终检、最终分支 CI、合并与 main CI 皆一次过（§9） |
 
 ## 3. 实施中的裁定
 
@@ -93,6 +93,8 @@
 | 检查点 0（44999385236） | 663 / 474.5 | 757 / 735.8（61.3%） | 913（94 / 770 / 19） | 663 | 736 |
 | 检查点 1（45018858067） | 675 / 488.8 | 914 / 886.6（73.9%） | 618（60 / 511 / 10） | 697 | 729 |
 | 检查点 2（45033492263） | 668 / 483.7 | 771 / 750.0（62.5%） | 607（61 / 509 / 10） | 791 | 745 |
+| 终检（45048776015） | 879 / 597.5 | 890 / 864.6（72.1%） | 956（96 / 807 / 19） | 697 | 749 |
+| main 45051719903（合并后） | 869 / 585.2 | 1002 / 970.9（80.9%） | 604（60 / 508 / 12） | 817 | 719 |
 
 - 检查点 0 的 CI bootstrap 与检查点 1、2 的 web Build 由主控在 T15 以作业日志与 jobs 接口补记。
 - **web 作业**（20 分钟期限、16 分钟即 960 秒的报告线）：检查点 0 的 913 秒比 main 的 607 慢约 1.5 倍且各步同比，T2 只加了几个毫秒级的测试，是慢的 runner；检查点 1、2 回到 618、607，没到报告线。
@@ -176,3 +178,8 @@
   - 本提交：§2、§3、§5、§6、§7、本节与 plane-diff 的“卡片离开之后的焦点”一行；hook 的注释已在 `3df03b12` 改为键盘与指针两条路。
   - 复审修复轮的验证（`1ebb0312`）：`make build build-s3-fixture`（`t16r-final-build`）；m7-pages 三引擎 27 过（`t16r-m7-pages`，47.9 秒）；chromium `--repeat-each=3` 的 H20 键盘（本轮唯一改到的故事）3 过（`t16r-repeat`）；`make lint-web`、`make knip`、`make test-web`、`tools/keywords.mjs` 过（`t16r-final-*`）；改到的 6 个 web 文件 oxlint 为零，web 31 = 上限 31（`t16r-oxlint-files`）；死成员 1614（§5）。
 - 复审修复轮的改动（`2ef8ef8c..1ebb0312`）由主控逐项读过：指针一路照复审的建议修，`card.contains` 与 `:enabled` 删去之后弹窗里的控件也会被看，提交按钮在途停用、被拒后再启用时焦点回到它，与弹窗的意图一致；不再做第二次复审。合并前的终检、最终分支 CI、`--no-ff` 合并、main CI 与归档在 P5 的 T1 补记。
+- 以下在 P5a 的 T1 补记，数字取自归档台账的末行（main CI 两路 server 的 Test 时长取自 jobs 接口的步骤时刻，预检 re-94 O4）：
+  - **合并前的终检** `final.sh fin`（`3280e48e`，复审修复轮之后补的文档提交）一次过、没有重跑：七项收据全 0（bootstrap 第 0 路 470.6 秒、第 1 路 654.0 秒，比本机基线 644.7 多 9.3，线内；e2e 503 passed）；m7-pages 三引擎 27 过（47.5 秒），m6-pages 135 过，m6-acceptance 33 过。
+  - **最终分支 CI** 45048776015 第一次全绿：server (0) Test 879 / bootstrap 597.5，server (1) Test 890 / bootstrap 864.6（期限的 72.1%）；web 956 秒（Lint 96 / Unit 807 / Build 19，各步对 main 同比慢约 1.6 倍，同一运行第 0 路的 bootstrap 也慢：慢 runner，贴着 960 秒的报告线、在 20 分钟期限之内）；e2e 两片 697、749 秒。
+  - **合并**：`--no-ff` 合入 main，`89be91e5`（父 `3d9293bd`、`3280e48e`），推送后以 `ls-remote` 核对。**main CI** 45051719903 第一次全绿：server (0) Test 869 / bootstrap 585.2，server (1) Test 1002 / bootstrap 970.9（80.9%，第一次越过八成的报告线）；web 604 秒（60 / 508 / 12），e2e 两片 817、719 秒。P4 不改 Go，同一份 Go 在 main 44989539530 为 736.3 秒；这次两路的 bootstrap 同比慢 1.2–1.3 倍而同一运行的 web 正常，是两台 server runner 慢。已报告负责人，建议只调 `tools/go-test-shard.sh` 的分界、把第 1 路的一部分测试移到第 0 路（不加作业、不改期限），等负责人定。
+  - **归档与清理**：归档 `.superpowers/sdd/M7-P4-integration-20261123`（载荷 3562 个文件，分类只有可复现与证据两种、没有未知，`source_unchanged` 为真，清理之后核过）；`cleanup.log`（2026-11-22T18:23:33Z）：worktree `m7-p4` 已删，本地分支 `codex/m7-p4`（在 `3280e48e`）与远端分支已删。
