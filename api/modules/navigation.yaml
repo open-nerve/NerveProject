@@ -5,6 +5,8 @@
 # 显示的两项与图标引 ../common.yaml（M6/P3b R5、P3b R5）；没有 PUT（D24）。
 # 收藏（P3c spec §2.4）：本人在工作区的收藏，五种（FavoriteKind，view 兼指两种视图）；
 # 回答平铺目标此刻的名字与图标（R8）；建在已有时答 200 原样、新建答 201；不声明 server_busy。
+# 最近访问（P3d spec §2.4）：本人在工作区的最近访问，两种（RecentVisitKind），工作区与项目由目标推出；记录答 204
+# （新记与重访同），列表先过滤后取 20、带目标此刻的摘要（项目的行 issue 为 null）；三种角色都能用，不声明 forbidden、server_busy。
 openapi: 3.1.0
 info:
   title: Nerve navigation API
@@ -367,6 +369,85 @@ paths:
           description: The favorite is deleted.
         default:
           $ref: '#/components/responses/Problem'
+  /api/v0/me/recent-visits:
+    post:
+      operationId: recordRecentVisit
+      tags: [navigation]
+      summary: Record one's visit of a work item or a project
+      description: >-
+        For the admins, members and guests of the target's workspace: the
+        caller's visit of a work item or a project (RecentVisitCreate), in
+        the target's workspace and project, which the target gives. A kind
+        none of the two answers validation_failed, invalid_format on
+        entity_type, before the target is looked at. Then a target that is
+        not there, is deleted, is of a workspace of which the caller is not
+        an active member, or that he does not see answers its own
+        issue.not_found or project.not_found, the same answer as an id that
+        never was: a project he is not a member of, a workspace's admin
+        among them; a work item of such a project, or another's while he
+        sees only his own work items there. An archived target, a work item
+        of an archived project and one in its project's intake are
+        recorded. The same is decided again after the workspace's row and
+        the target's project's are locked, and then his visits in the
+        workspace are locked, so that his recordings there run one after
+        another. His visit of the target is written at one moment by him, a
+        new one or his visit of it revisited, its id and its creation kept;
+        either answers 204. Then those of his visits in the workspace past
+        the 20 latest, whether he sees their targets or not, are deleted
+        for good.
+      security: [{bearer: []}]
+      x-problem-codes: [validation_failed, issue.not_found, project.not_found]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecentVisitCreate'
+      responses:
+        '204':
+          description: The visit is recorded, a new one or the caller's visit of the target revisited.
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/workspaces/{slug}/recent-visits:
+    parameters:
+      - $ref: '#/components/parameters/Slug'
+    get:
+      operationId: listRecentVisits
+      tags: [navigation]
+      summary: List one's recent visits in a workspace
+      description: >-
+        For the workspace's admins, members and guests: the caller's own
+        recent visits in the workspace, of entity_type alone when it is
+        given, the latest visit first, then by id, both descending; at most
+        20. Each of a target he sees now, as recordRecentVisit decides,
+        answered with its project and, a work item's, the work item as they
+        are now; an archived target is listed. A visit whose target he no
+        longer sees is kept and not listed, nor one of a work item in its
+        project's intake until it is accepted; those not listed are left
+        out before the 20 are taken. A kind none of the two answers
+        validation_failed, invalid_format on entity_type, before the
+        workspace is looked at; a workspace that does not exist, is
+        deleted, or of which the caller is not an active member,
+        workspace.not_found. Read in one snapshot, without a lock; it
+        writes nothing. The whole collection at once: collections are not
+        paginated.
+      security: [{bearer: []}]
+      x-problem-codes: [validation_failed, workspace.not_found]
+      parameters:
+        - name: entity_type
+          in: query
+          description: The kind of the visits listed; both when left out.
+          schema:
+            $ref: '#/components/schemas/RecentVisitKind'
+      responses:
+        '200':
+          description: The caller's recent visits in the workspace.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecentVisitList'
+        default:
+          $ref: '#/components/responses/Problem'
 components:
   # 与 api/openapi.yaml 的相同：打包时丢掉模块文件的 securitySchemes，oapi-codegen 读这一份（M0-P3 交接 3）
   securitySchemes:
@@ -708,3 +789,105 @@ components:
         name:
           description: A folder's alone, 1–255 characters without the surrounding white space, which is dropped; no NUL.
           type: string
+    RecentVisitKind:
+      description: What a recent visit is of, a work item or a project.
+      type: string
+      enum: [issue, project]
+    RecentVisitCreate:
+      description: >-
+        A visit to record: its target's kind and id. Its workspace and its
+        project are the target's, never given. A kind none of the two
+        answers validation_failed, invalid_format on entity_type.
+      type: object
+      additionalProperties: false
+      required: [entity_type, entity_id]
+      properties:
+        entity_type:
+          $ref: '#/components/schemas/RecentVisitKind'
+        entity_id:
+          description: The work item's or the project's id.
+          type: string
+          format: uuid
+    RecentVisit:
+      description: >-
+        One of the caller's recent visits in a workspace, which only he
+        records and lists: his latest visit of a target, answered with the
+        target as it is now.
+      type: object
+      additionalProperties: false
+      required: [id, entity_type, entity_id, visited_at, project, issue]
+      properties:
+        id:
+          type: string
+          format: uuid
+        entity_type:
+          $ref: '#/components/schemas/RecentVisitKind'
+        entity_id:
+          description: The target's id.
+          type: string
+          format: uuid
+        visited_at:
+          description: When he last visited the target.
+          type: string
+          format: date-time
+        project:
+          $ref: '#/components/schemas/RecentVisitProject'
+        issue:
+          description: The work item now, a work item's visit's; null for a project's.
+          oneOf:
+            - $ref: '#/components/schemas/RecentVisitIssue'
+            - type: 'null'
+    RecentVisitProject:
+      description: >-
+        A recent visit's project as it is now: the project itself, a
+        project's visit's; the work item's project, a work item's.
+      type: object
+      additionalProperties: false
+      required: [id, name, identifier, logo_props]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        identifier:
+          description: The prefix of its work items' numbers, as in WEB-12.
+          type: string
+        logo_props:
+          $ref: '../common.yaml#/components/schemas/LogoProps'
+    RecentVisitIssue:
+      description: >-
+        A recent visit's work item as it is now; its number is its
+        project's identifier and its sequence_id, as in WEB-12.
+      type: object
+      additionalProperties: false
+      required: [id, sequence_id, name, state_id, priority, assignee_ids]
+      properties:
+        id:
+          type: string
+          format: uuid
+        sequence_id:
+          description: Its number in its project, from 1.
+          type: integer
+        name:
+          type: string
+        state_id:
+          type: string
+          format: uuid
+        priority:
+          $ref: '../common.yaml#/components/schemas/IssuePriority'
+        assignee_ids:
+          description: The accounts it is assigned to now, by id; empty for none.
+          type: array
+          items:
+            type: string
+            format: uuid
+    RecentVisitList:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/RecentVisit'

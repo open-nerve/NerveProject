@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -40,6 +41,24 @@ func (e FavoriteKind) Valid() bool {
 	case FavoriteKindProject:
 		return true
 	case FavoriteKindView:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RecentVisitKind.
+const (
+	RecentVisitKindIssue   RecentVisitKind = "issue"
+	RecentVisitKindProject RecentVisitKind = "project"
+)
+
+// Valid indicates whether the value is a known member of the RecentVisitKind enum.
+func (e RecentVisitKind) Valid() bool {
+	switch e {
+	case RecentVisitKindIssue:
+		return true
+	case RecentVisitKindProject:
 		return true
 	default:
 		return false
@@ -107,6 +126,69 @@ type FavoriteUpdate struct {
 
 	// Sequence Its place among the caller's favorites in the workspace, the greatest first: any finite number, the others' kept.
 	Sequence *float64 `json:"sequence,omitempty"`
+}
+
+// RecentVisit One of the caller's recent visits in a workspace, which only he records and lists: his latest visit of a target, answered with the target as it is now.
+type RecentVisit struct {
+	// EntityID The target's id.
+	EntityID uuid.UUID `json:"entity_id"`
+
+	// EntityType What a recent visit is of, a work item or a project.
+	EntityType RecentVisitKind `json:"entity_type"`
+	ID         uuid.UUID       `json:"id"`
+
+	// Issue The work item now, a work item's visit's; null for a project's.
+	Issue nullable.Nullable[RecentVisitIssue] `json:"issue"`
+
+	// Project A recent visit's project as it is now: the project itself, a project's visit's; the work item's project, a work item's.
+	Project RecentVisitProject `json:"project"`
+
+	// VisitedAt When he last visited the target.
+	VisitedAt time.Time `json:"visited_at"`
+}
+
+// RecentVisitCreate A visit to record: its target's kind and id. Its workspace and its project are the target's, never given. A kind none of the two answers validation_failed, invalid_format on entity_type.
+type RecentVisitCreate struct {
+	// EntityID The work item's or the project's id.
+	EntityID uuid.UUID `json:"entity_id"`
+
+	// EntityType What a recent visit is of, a work item or a project.
+	EntityType RecentVisitKind `json:"entity_type"`
+}
+
+// RecentVisitIssue A recent visit's work item as it is now; its number is its project's identifier and its sequence_id, as in WEB-12.
+type RecentVisitIssue struct {
+	// AssigneeIds The accounts it is assigned to now, by id; empty for none.
+	AssigneeIds []uuid.UUID `json:"assignee_ids"`
+	ID          uuid.UUID   `json:"id"`
+	Name        string      `json:"name"`
+
+	// Priority A work item's priority, from the most to the least urgent.
+	Priority externalRef0.IssuePriority `json:"priority"`
+
+	// SequenceID Its number in its project, from 1.
+	SequenceID int       `json:"sequence_id"`
+	StateID    uuid.UUID `json:"state_id"`
+}
+
+// RecentVisitKind What a recent visit is of, a work item or a project.
+type RecentVisitKind string
+
+// RecentVisitList defines model for RecentVisitList.
+type RecentVisitList struct {
+	Data []RecentVisit `json:"data"`
+}
+
+// RecentVisitProject A recent visit's project as it is now: the project itself, a project's visit's; the work item's project, a work item's.
+type RecentVisitProject struct {
+	ID uuid.UUID `json:"id"`
+
+	// Identifier The prefix of its work items' numbers, as in WEB-12.
+	Identifier string `json:"identifier"`
+
+	// LogoProps An icon, the web app's TLogoProps: every field optional, and {} no icon.
+	LogoProps externalRef0.LogoProps `json:"logo_props"`
+	Name      string                 `json:"name"`
 }
 
 // View A saved view: a project's, or, with project_id null, a workspace's; the list settings it shows its work items with, and its owner, the account that created it, who alone changes it.
@@ -214,8 +296,17 @@ type ViewID = uuid.UUID
 // Problem RFC 9457 problem details (v0 design 3.5). `title` is the HTTP status phrase, `detail` explains this occurrence, and clients branch on `code`. Must match httpserver.Problem; the platform's contract test checks it.
 type Problem = externalRef0.Problem
 
+// ListRecentVisitsParams defines parameters for ListRecentVisits.
+type ListRecentVisitsParams struct {
+	// EntityType The kind of the visits listed; both when left out.
+	EntityType *RecentVisitKind `form:"entity_type,omitempty" json:"entity_type,omitempty"`
+}
+
 // UpdateFavoriteJSONRequestBody defines body for UpdateFavorite for application/json ContentType.
 type UpdateFavoriteJSONRequestBody = FavoriteUpdate
+
+// RecordRecentVisitJSONRequestBody defines body for RecordRecentVisit for application/json ContentType.
+type RecordRecentVisitJSONRequestBody = RecentVisitCreate
 
 // CreateProjectViewJSONRequestBody defines body for CreateProjectView for application/json ContentType.
 type CreateProjectViewJSONRequestBody = ViewCreate
@@ -237,6 +328,9 @@ type ServerInterface interface {
 	// UpdateFavorite Move, place or rename a favorite
 	// (PATCH /api/v0/favorites/{favorite_id})
 	UpdateFavorite(w http.ResponseWriter, r *http.Request, favoriteID FavoriteID)
+	// RecordRecentVisit Record one's visit of a work item or a project
+	// (POST /api/v0/me/recent-visits)
+	RecordRecentVisit(w http.ResponseWriter, r *http.Request)
 	// ListProjectViews List a project's views
 	// (GET /api/v0/projects/{project_id}/views)
 	ListProjectViews(w http.ResponseWriter, r *http.Request, projectID ProjectID)
@@ -258,6 +352,9 @@ type ServerInterface interface {
 	// CreateFavorite Favor a target, or make a folder
 	// (POST /api/v0/workspaces/{slug}/favorites)
 	CreateFavorite(w http.ResponseWriter, r *http.Request, slug Slug)
+	// ListRecentVisits List one's recent visits in a workspace
+	// (GET /api/v0/workspaces/{slug}/recent-visits)
+	ListRecentVisits(w http.ResponseWriter, r *http.Request, slug Slug, params ListRecentVisitsParams)
 	// ListWorkspaceViews List a workspace's own views
 	// (GET /api/v0/workspaces/{slug}/views)
 	ListWorkspaceViews(w http.ResponseWriter, r *http.Request, slug Slug)
@@ -318,6 +415,20 @@ func (siw *ServerInterfaceWrapper) UpdateFavorite(w http.ResponseWriter, r *http
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateFavorite(w, r, favoriteID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RecordRecentVisit operation middleware
+func (siw *ServerInterfaceWrapper) RecordRecentVisit(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RecordRecentVisit(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -500,6 +611,48 @@ func (siw *ServerInterfaceWrapper) CreateFavorite(w http.ResponseWriter, r *http
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.CreateFavorite(w, r, slug)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListRecentVisits operation middleware
+func (siw *ServerInterfaceWrapper) ListRecentVisits(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "slug" -------------
+	var slug Slug
+
+	err = runtime.BindStyledParameterWithOptions("simple", "slug", r.PathValue("slug"), &slug, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "slug", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListRecentVisitsParams
+
+	// ------------- Optional query parameter "entity_type" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "entity_type", r.URL.Query(), &params.EntityType, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "entity_type"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "entity_type", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListRecentVisits(w, r, slug, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -692,6 +845,8 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/workspaces/{slug}/favorites", wrapper.CreateFavorite)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v0/favorites/{favorite_id}", wrapper.DeleteFavorite)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/favorites/{favorite_id}", wrapper.UpdateFavorite)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/me/recent-visits", wrapper.RecordRecentVisit)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/workspaces/{slug}/recent-visits", wrapper.ListRecentVisits)
 
 	return m
 }
@@ -776,6 +931,46 @@ type UpdateFavoritedefaultApplicationProblemPlusJSONResponse struct {
 }
 
 func (response UpdateFavoritedefaultApplicationProblemPlusJSONResponse) VisitUpdateFavoriteResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RecordRecentVisitRequestObject struct {
+	Body *RecordRecentVisitJSONRequestBody
+}
+
+type RecordRecentVisitResponseObject interface {
+	VisitRecordRecentVisitResponse(w http.ResponseWriter) error
+}
+
+type RecordRecentVisit204Response struct {
+}
+
+func (response RecordRecentVisit204Response) VisitRecordRecentVisitResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type RecordRecentVisitdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response RecordRecentVisitdefaultApplicationProblemPlusJSONResponse) VisitRecordRecentVisitResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -1126,6 +1321,53 @@ func (response CreateFavoritedefaultApplicationProblemPlusJSONResponse) VisitCre
 	return err
 }
 
+type ListRecentVisitsRequestObject struct {
+	Slug   Slug `json:"slug"`
+	Params ListRecentVisitsParams
+}
+
+type ListRecentVisitsResponseObject interface {
+	VisitListRecentVisitsResponse(w http.ResponseWriter) error
+}
+
+type ListRecentVisits200JSONResponse RecentVisitList
+
+func (response ListRecentVisits200JSONResponse) VisitListRecentVisitsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListRecentVisitsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response ListRecentVisitsdefaultApplicationProblemPlusJSONResponse) VisitListRecentVisitsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ListWorkspaceViewsRequestObject struct {
 	Slug Slug `json:"slug"`
 }
@@ -1227,6 +1469,9 @@ type StrictServerInterface interface {
 	// UpdateFavorite Move, place or rename a favorite
 	// (PATCH /api/v0/favorites/{favorite_id})
 	UpdateFavorite(ctx context.Context, request UpdateFavoriteRequestObject) (UpdateFavoriteResponseObject, error)
+	// RecordRecentVisit Record one's visit of a work item or a project
+	// (POST /api/v0/me/recent-visits)
+	RecordRecentVisit(ctx context.Context, request RecordRecentVisitRequestObject) (RecordRecentVisitResponseObject, error)
 	// ListProjectViews List a project's views
 	// (GET /api/v0/projects/{project_id}/views)
 	ListProjectViews(ctx context.Context, request ListProjectViewsRequestObject) (ListProjectViewsResponseObject, error)
@@ -1248,6 +1493,9 @@ type StrictServerInterface interface {
 	// CreateFavorite Favor a target, or make a folder
 	// (POST /api/v0/workspaces/{slug}/favorites)
 	CreateFavorite(ctx context.Context, request CreateFavoriteRequestObject) (CreateFavoriteResponseObject, error)
+	// ListRecentVisits List one's recent visits in a workspace
+	// (GET /api/v0/workspaces/{slug}/recent-visits)
+	ListRecentVisits(ctx context.Context, request ListRecentVisitsRequestObject) (ListRecentVisitsResponseObject, error)
 	// ListWorkspaceViews List a workspace's own views
 	// (GET /api/v0/workspaces/{slug}/views)
 	ListWorkspaceViews(ctx context.Context, request ListWorkspaceViewsRequestObject) (ListWorkspaceViewsResponseObject, error)
@@ -1347,6 +1595,37 @@ func (sh *strictHandler) UpdateFavorite(w http.ResponseWriter, r *http.Request, 
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(UpdateFavoriteResponseObject); ok {
 		if err := validResponse.VisitUpdateFavoriteResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RecordRecentVisit operation middleware
+func (sh *strictHandler) RecordRecentVisit(w http.ResponseWriter, r *http.Request) {
+	var request RecordRecentVisitRequestObject
+
+	var body RecordRecentVisitJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RecordRecentVisit(ctx, request.(RecordRecentVisitRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RecordRecentVisit")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RecordRecentVisitResponseObject); ok {
+		if err := validResponse.VisitRecordRecentVisitResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -1550,6 +1829,33 @@ func (sh *strictHandler) CreateFavorite(w http.ResponseWriter, r *http.Request, 
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(CreateFavoriteResponseObject); ok {
 		if err := validResponse.VisitCreateFavoriteResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListRecentVisits operation middleware
+func (sh *strictHandler) ListRecentVisits(w http.ResponseWriter, r *http.Request, slug Slug, params ListRecentVisitsParams) {
+	var request ListRecentVisitsRequestObject
+
+	request.Slug = slug
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListRecentVisits(ctx, request.(ListRecentVisitsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListRecentVisits")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListRecentVisitsResponseObject); ok {
+		if err := validResponse.VisitListRecentVisitsResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

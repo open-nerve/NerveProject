@@ -12,7 +12,8 @@
 // account's favorites of it with them (P3c spec 2.6). It owns the
 // user_recent_visits table too, each row one account's latest visit of a
 // work item or a project in a workspace, at most 20 undeleted ones (M7
-// design 3.9, P3d spec 2.3). A project's or a workspace's deletion
+// design 3.9, P3d spec 2.3), which its API records and lists for that
+// account alone (P3d spec 2.4, 2.7). A project's or a workspace's deletion
 // enqueues, in its transaction, the deletion of each deleted project's
 // views, favorites and recent visits and of the workspace's own views and
 // favorites (P3b spec 2.7, P3c spec 2.6, P3d spec 2.6); the 60-day purge
@@ -83,9 +84,9 @@ type (
 // Deps are what the module needs.
 type Deps struct {
 	Pool *pgxpool.Pool
-	// Tx are the transactions of the views' and the favorites' writes,
-	// which enter no write gate and answer no server_busy (P3b spec 2.4,
-	// P3c spec 2.4).
+	// Tx are the transactions of the views' and the favorites' writes and
+	// of the recent visits' recordings, which enter no write gate and
+	// answer no server_busy (P3b spec 2.4, P3c spec 2.4, P3d spec 2.4).
 	Tx shared.TxManager
 	// ReadTx supplies the reads' read-only snapshot transactions, each its
 	// own.
@@ -135,7 +136,10 @@ type Module struct {
 // New builds the module from d: the views' use cases, and the favorites',
 // whose list reads in a snapshot of its own and whose writes take their
 // locks through FavoriteLocks, beside the views' Locks (P3c spec 2.8); both
-// read the favorites' targets through the one Targets.
+// read the favorites' targets through the one Targets. And the recent
+// visits', whose list reads in a snapshot of its own and whose recording
+// takes its locks through RecentVisitLocks (P3d spec 2.8); both read the
+// visits' targets through the one RecentTargets.
 func New(d Deps) *Module {
 	store := postgresadapter.New(d.Pool)
 	reads := app.NewReads(d.Workspaces, d.Projects, store, d.Authorizer, d.ReadTx)
@@ -144,6 +148,7 @@ func New(d Deps) *Module {
 	targets := app.Targets{Readable: d.Readable, Projects: d.ProjectTargets, Planning: d.PlanningTargets, Views: store}
 	favorites := app.FavoriteWriteDeps{Locks: app.NewFavoriteLocks(d.Workspaces, d.Projects, store, store, targets, d.Authorizer, d.Tx),
 		Favorites: store, Clock: d.Clock}
+	recent := app.RecentTargets{Readable: d.Readable, Projects: d.ProjectTargets, Issues: d.Issues}
 	return &Module{
 		uc: httpadapter.UseCases{
 			ListProjectViews: app.NewListProjectViews(reads), ListWorkspaceViews: app.NewListWorkspaceViews(reads), GetView: app.NewGetView(reads),
@@ -153,6 +158,10 @@ func New(d Deps) *Module {
 				Targets: targets, Tx: d.ReadTx}),
 			CreateFavorite: app.NewCreateFavorite(favorites), UpdateFavorite: app.NewUpdateFavorite(favorites),
 			DeleteFavorite: app.NewDeleteFavorite(favorites),
+			RecordRecentVisit: app.NewRecordRecentVisit(app.RecordRecentVisitDeps{
+				Locks: app.NewRecentVisitLocks(d.Workspaces, d.Projects, recent, store, d.Authorizer, d.Tx), Visits: store, Clock: d.Clock}),
+			ListRecentVisits: app.NewListRecentVisits(app.ListRecentVisitsDeps{Workspaces: d.Workspaces, Authorizer: d.Authorizer, Visits: store,
+				Targets: recent, Tx: d.ReadTx}),
 		},
 		deleteRows: app.NewDeleteRows(app.DeleteRowsDeps{Views: store, Favorites: store, RecentVisits: store, Tx: d.JobTx,
 			RuntimeNow: d.RuntimeNow, Batch: d.DeleteBatch, Budget: d.DeleteBudget}),
