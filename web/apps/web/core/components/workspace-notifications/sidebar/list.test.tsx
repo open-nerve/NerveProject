@@ -89,6 +89,21 @@ describe("NotificationList", () => {
     });
   });
 
+  it("reads a list it held again as soon as its filters name it once more, so that what a change moved into it shows", async () => {
+    await renderList(root, cache);
+    await answer(await listRead(nerve(), 0), pageOf([one]));
+    await changeState((state) => state.toggleSnoozed());
+    await answer(await listRead(nerve(), 1), pageOf([]));
+    // back to the default view, then the snoozed again at once, well within SWR's default deduping interval
+    await changeState((state) => state.toggleSnoozed());
+    await answer(await listRead(nerve(), 2), pageOf([one]));
+    await changeState((state) => state.toggleSnoozed());
+    const again = await listRead(nerve(), 3);
+    expect(again.query).toMatchObject({ archived: "false", snoozed: "true" });
+    await answer(again, pageOf([two]));
+    expect(cards(host)).toEqual(["WEB-2 Two"]);
+  });
+
   it("waits for nerve's first page, saying it is loading", async () => {
     await renderList(root, cache);
     const first = await listRead(nerve(), 0);

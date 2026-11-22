@@ -26,7 +26,8 @@ type NotificationList = {
  * the fetcher is given the key's strings alone and reads the filters they name (filtersOf), never the filters of the
  * render that made it (use-session-swr.ts: what it fetches is what the key names). For every role of the workspace;
  * none for a route that names no workspace of the caller's. SWR reads it as the page mounts and as the key changes,
- * and again as the browser reconnects, which is a refresh: the first page in place of every page held (R7). Gives the
+ * a key it holds an answer of too, however soon after its last read (no deduping interval, as the issue lists'), and
+ * again as the browser reconnects, which is a refresh: the first page in place of every page held (R7). Gives the
  * workspace, the list as the store holds it (getList: the pages read so far as one, undefined until read), and SWR's
  * read, whose error is why nerve could not read it.
  */
@@ -35,7 +36,10 @@ export function useNotificationList(filters: NotificationFilters): NotificationL
   const { fetchList, getList } = useNotifications();
   const read = useSessionSWR(
     workspace && ["NOTIFICATIONS", workspace.id, workspace.slug, filterKey(filters)],
-    (id, slug, key) => fetchList({ id, slug }, filtersOf(key))
+    (id, slug, key) => fetchList({ id, slug }, filtersOf(key)),
+    // read again however soon the filters return: a confirmed change leaves a list it no longer matches (R8) and
+    // joins none it now matches, which only this read shows; the head and the list share a read still in flight
+    { dedupingInterval: 0 }
   );
   return { workspace, page: workspace ? getList(workspace.slug, filters) : undefined, read };
 }
