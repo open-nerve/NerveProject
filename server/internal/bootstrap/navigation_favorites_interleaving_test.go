@@ -57,11 +57,11 @@ func TestFavoriteWritesInterleaveWithArchives(t *testing.T) {
 	t.Run("one's favorite deleted and created again", func(t *testing.T) { favoritesRaceAgain(t, w) })
 }
 
-// favoriteRacer is one write of a race through the app: the account that
+// racedWrite is one write of a race through the app: the account that
 // sends it, its method, its path and its body; the statement, its sqlc
 // query's name, at which it waits for the row held; and the rows it holds
 // no lock on meanwhile (free).
-type favoriteRacer struct {
+type racedWrite struct {
 	actor, method, path, body, statement string
 	free                                 []lockedRow
 }
@@ -82,10 +82,10 @@ type racedAnswer struct {
 // within 10 seconds, checked against the contract. A cell that fails
 // before ends the other transaction and collects both answers once it is
 // over, so that no write of it is left to run into the next cell.
-func (w issueWorld) race(t *testing.T, table, lock string, id uuid.UUID, first, second favoriteRacer) (racedAnswer, racedAnswer) {
+func (w issueWorld) race(t *testing.T, table, lock string, id uuid.UUID, first, second racedWrite) (racedAnswer, racedAnswer) {
 	t.Helper()
 	waitForFanouts(t, w.pool)
-	racers := []favoriteRacer{first, second}
+	racers := []racedWrite{first, second}
 	pending := make([]<-chan answer, len(racers))
 	t.Cleanup(func() {
 		for _, ch := range pending {

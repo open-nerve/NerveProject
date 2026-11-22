@@ -107,7 +107,7 @@ const (
 type visitRace struct {
 	target, project, held uuid.UUID
 	free                  []lockedRow
-	competitor            favoriteRacer
+	competitor            racedWrite
 }
 
 // visitCompetitor is a write that decides a recording's target, raced with
@@ -150,8 +150,8 @@ func visitCompetitors(w visitRaceWorld) []visitCompetitor {
 		w.makeMember(t, "bob", p, shared.RoleMember)
 		return p
 	}
-	alices := func(method, path, statement string) favoriteRacer {
-		return favoriteRacer{actor: "alice", method: method, path: path, statement: statement}
+	alices := func(method, path, statement string) racedWrite {
+		return racedWrite{actor: "alice", method: method, path: path, statement: statement}
 	}
 	row := func(table string, id uuid.UUID) lockedRow { return lockedRow{table + " WHERE id = $1", id} }
 	left := func(column string, id func(visitRace) uuid.UUID) func(t *testing.T, r visitRace) []visitRow {
@@ -257,7 +257,7 @@ func visitsRaceATarget(t *testing.T, w visitRaceWorld, c visitCompetitor) {
 // have run.
 func raceAVisit(t *testing.T, w visitRaceWorld, c visitCompetitor, n int, ours bool) {
 	r := c.make(t, n)
-	recording := favoriteRacer{actor: c.recorder, method: http.MethodPost, path: recordVisitPath, body: visitBody(c.kind, r.target),
+	recording := racedWrite{actor: c.recorder, method: http.MethodPost, path: recordVisitPath, body: visitBody(c.kind, r.target),
 		statement: c.waits, free: r.free}
 	var mine, theirs racedAnswer
 	if ours {
