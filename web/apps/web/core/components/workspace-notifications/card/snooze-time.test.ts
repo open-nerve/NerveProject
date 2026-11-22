@@ -71,6 +71,29 @@ describe("snoozeSlots", () => {
     expect(snoozeSlots(today, new Date(2026, 10, 20, 15, 30))[0]).toBe("16:00");
     expect(snoozeSlots(today, new Date(2026, 10, 20, 23, 45))).toEqual([]);
   });
+
+  describe("in a zone whose clocks change (America/Los_Angeles, whole-branch m4)", () => {
+    beforeAll(() => {
+      vi.stubEnv("TZ", "America/Los_Angeles");
+    });
+    afterAll(() => {
+      vi.unstubAllEnvs();
+    });
+
+    it("leave out the half hours the start of daylight time skips (14 March 2027): 46, 02:00 and 02:30 none", () => {
+      const slots = snoozeSlots(new Date(2027, 2, 14), new Date(2027, 2, 13, 12, 0));
+      expect(slots).toHaveLength(46);
+      expect(slots.slice(3, 5)).toEqual(["01:30", "03:00"]);
+      // each half hour offered is its own moment
+      expect(new Set(slots.map((slot) => slotMoment(new Date(2027, 2, 14), slot))).size).toBe(46);
+    });
+
+    it("offer the 48 of the day daylight time ends (7 November 2027), 01:00 and 01:30 the first of each", () => {
+      const slots = snoozeSlots(new Date(2027, 10, 7), new Date(2027, 10, 6, 12, 0));
+      expect(slots).toHaveLength(48);
+      expect(slotMoment(new Date(2027, 10, 7), "01:30")).toBe("2027-11-07T08:30:00.000Z");
+    });
+  });
 });
 
 describe("slotMoment", () => {

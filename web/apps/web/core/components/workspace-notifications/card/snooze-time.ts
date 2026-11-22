@@ -42,10 +42,16 @@ export function slotMoment(day: Date, slot: string): string {
 /**
  * @description the half hours of the day a snooze may end at, as of now (R15): those whose moment (slotMoment) is
  * after now, so every one of a day after today, today's after now alone, none of a day past; every one while no day
- * is chosen
+ * is chosen. A half hour the clocks skip that day is none (the start of daylight time: 02:00 and 02:30, whose moments
+ * Date moves on to 03:00 and 03:30, whole-branch m4); of the hour the end of daylight time repeats, its first is
  */
 export const snoozeSlots = (day: Date | null, now: Date): string[] =>
-  day === null ? [...SLOTS] : SLOTS.filter((slot) => new Date(slotMoment(day, slot)).getTime() > now.getTime());
+  day === null
+    ? [...SLOTS]
+    : SLOTS.filter((slot) => {
+        const moment = new Date(slotMoment(day, slot));
+        return moment.getHours() === timeOf(slot).hours && moment.getTime() > now.getTime();
+      });
 
 /**
  * @description a moment's time of day in the browser's zone as the locale says it (Intl): in 12 hours in English, in 24
