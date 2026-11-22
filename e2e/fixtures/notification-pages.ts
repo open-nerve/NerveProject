@@ -2,6 +2,7 @@ import { expect, type Locator, type Page, type TestInfo } from "@playwright/test
 
 import { addProjectMembers, createProject, createWorkspace, inviteAndAccept, slugFor, type Api } from "./api";
 import { accountId, emailFor, login, named, type AuthTokens } from "./auth";
+import { unreadNotifications } from "./notifications";
 import { registerOnboarded } from "./settings-pages";
 
 // The notifications page and the subscription's places (M7 P4 spec 2.6, 2.11), as a person uses them: their
@@ -61,8 +62,28 @@ export function detailPath(slug: string, identifier: string, sequence: number): 
   return `/${slug}/browse/${identifier}-${sequence}`;
 }
 
+/**
+ * The request of the notifications page's list of the workspace of slug as recordApi records it, its query as the page
+ * sends it (P4 spec 2.2's listQuery: tab, type, read, archived, snoozed, limit, cursor, in that order).
+ */
+export function listRead(slug: string, query: string): string {
+  return `GET /api/v0/workspaces/${slug}/notifications?${query}`;
+}
+
+/** The request of the unread counts of the workspace of slug, as recordApi records it. */
+export function countRead(slug: string): string {
+  return `GET /api/v0/workspaces/${slug}/notifications/unread-count`;
+}
+
+/** Waits, a bounded while, until the caller of token's unread counts in the workspace of slug are counts. */
+export async function unreadReach(api: Api, token: string, slug: string, counts: { all: number; mentions: number }) {
+  await expect
+    .poll(() => unreadNotifications(api, token, slug), { timeout: 10_000, intervals: [50, 100], message: "the counts" })
+    .toEqual(counts);
+}
+
 /** The cards of the notifications page's list, in its order. */
-function cardItems(page: Page): Locator {
+export function cardItems(page: Page): Locator {
   return page.locator("li[data-notification-id]");
 }
 
@@ -106,4 +127,37 @@ export async function expectNothingSelected(page: Page): Promise<void> {
   await expect(pane.getByRole("button")).toHaveCount(0);
   await expect(pane.getByRole("status")).toHaveCount(0);
   await expect(pane).toHaveText("");
+}
+
+/** The moment at as the clocks of the time zone zone show it: its year, month, day, hour and minute, as if in UTC. */
+function wallOf(at: number, zone: string): number {
+  const shown = new Intl.DateTimeFormat("en-US", {
+    timeZone: zone,
+    hourCycle: "h23",
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+    hour: "numeric",
+    minute: "numeric",
+  }).formatToParts(at);
+  const part = (type: Intl.DateTimeFormatPartTypes) => Number(shown.find((each) => each.type === type)?.value);
+  return Date.UTC(part("year"), part("month") - 1, part("day"), part("hour"), part("minute"));
+}
+
+/** The calendar day, YYYY-MM-DD, days after today in the time zone zone (before it when negative). */
+export function zonedDay(days: number, zone: string): string {
+  const today = new Date(wallOf(Date.now(), zone));
+  return new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate() + days))
+    .toISOString()
+    .slice(0, 10);
+}
+
+/** The moment (ISO) of the day, YYYY-MM-DD, at time, HH:MM of 24 hours, on the clocks of the time zone zone. */
+export function zonedMoment(day: string, time: string, zone: string): string {
+  const [year = 0, month = 1, date = 1] = day.split("-").map(Number);
+  const [hours = 0, minutes = 0] = time.split(":").map(Number);
+  const wall = Date.UTC(year, month - 1, date, hours, minutes);
+  // the zone's offset at a first guess of the moment, then at the moment it gives (a change of the clocks between)
+  const guess = wall - (wallOf(wall, zone) - wall);
+  return new Date(wall - (wallOf(guess, zone) - guess)).toISOString();
 }

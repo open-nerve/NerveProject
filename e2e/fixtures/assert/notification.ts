@@ -40,3 +40,12 @@ export async function notificationStates(db: Database, ids: readonly string[]) {
     return { read, archived, snoozed, by_receiver };
   });
 }
+
+/** The moment the notification of id is snoozed till as its row holds it (ISO), null when it is not snoozed. */
+export async function snoozedTill(db: Database, id: string): Promise<string | null> {
+  const [row] = await db.query<{ snoozed_till: Date | null }>(`SELECT snoozed_till FROM notifications WHERE id = $1`, [
+    id,
+  ]);
+  if (!row) throw new Error(`no notification ${id}`);
+  return row.snoozed_till?.toISOString() ?? null;
+}
