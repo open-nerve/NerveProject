@@ -17,6 +17,7 @@ import { chooseByKeyboard } from "../../fixtures/menus";
 import {
   cardItems,
   cardSaying,
+  expectActionsShown,
   listRead,
   notificationWorld,
   notificationsPath,
@@ -42,11 +43,6 @@ import { expect, test } from "../../fixtures/test";
 // refuses. Late answers are h20-notification-late-pages.spec.ts's.
 
 test.use({ timezoneId: "America/Los_Angeles" });
-
-/** The actions of card, beside its main button: shown as it is hovered or holds the focus. */
-function actionsOf(card: Locator): Locator {
-  return card.locator('[class*="group-focus-within:opacity-100"]');
-}
 
 /** The main button of card: what it shows, which opens it. */
 function mainOf(card: Locator): Locator {
@@ -110,7 +106,7 @@ test("H20 (page): bob's notifications page by the keyboard: tabs that say their 
   // A card: its main button, then its actions, each named by its row, shown as the card holds the focus; then the
   // next card's main button.
   await mainOf(priority).focus();
-  await expect(actionsOf(priority)).toHaveCSS("opacity", "1");
+  await expectActionsShown(priority, `Mark ${ref} read`, true);
   expect(await tabStops(page, page.getByRole("tabpanel"), key, 4)).toEqual([
     `Mark ${ref} read`,
     `Archive ${ref}`,

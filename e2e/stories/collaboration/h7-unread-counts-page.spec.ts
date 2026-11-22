@@ -43,7 +43,7 @@ function inbox(page: Page, unread: number): Locator {
 
 /** The dot of the inbox's link, shown while there is an unread notification. */
 function dotOf(link: Locator): Locator {
-  return link.locator('[class*="bg-danger-primary"]');
+  return link.locator("[data-unread-dot]");
 }
 
 test("H7 (page): bob's inbox dot and the notifications page's tabs say his unread in Acme, the archived and the snoozed left out, read once as a page opens and again as the notifications page mounts, after each of his changes, Refresh and Mark all read, never as the browser's tab regains focus; Beta has its own; gus, a guest, sees his", async ({

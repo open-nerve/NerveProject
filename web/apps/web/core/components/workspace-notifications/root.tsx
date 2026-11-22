@@ -26,22 +26,28 @@ import { useNotificationPageState } from "./page-state";
 import { NotificationsLoader } from "./sidebar/loader";
 
 /**
- * The notifications page's preview (P4 spec 2.6, R12): that nothing is selected, or the selected notification's work
- * item (NotificationPreview), one notification's at a time. The page leaving clears the peek it set (W6).
+ * The notifications page's preview (P4 spec 2.6, R12), a region named so beside the list: that nothing is selected, or
+ * the selected notification's work item (NotificationPreview), one notification's at a time. The page leaving clears
+ * the peek it set (W6).
  */
 export const NotificationsRoot = observer(function NotificationsRoot() {
+  const { t } = useTranslation();
   const workspace = useRouteWorkspace();
   const { selected } = useNotificationPageState();
   const { setPeekIssue } = useIssueDetail();
   useEffect(() => () => setPeekIssue(undefined), [setPeekIssue]);
 
-  if (!workspace || !selected)
-    return (
-      <div className="flex size-full items-center justify-center">
-        <EmptyStateCompact assetKey="unknown" assetClassName="size-20" />
-      </div>
-    );
-  return <NotificationPreview key={selected.notificationId} workspaceSlug={workspace.slug} selected={selected} />;
+  return (
+    <section aria-label={t("notification.a11y.preview")} className="size-full">
+      {!workspace || !selected ? (
+        <div className="flex size-full items-center justify-center">
+          <EmptyStateCompact assetKey="unknown" assetClassName="size-20" />
+        </div>
+      ) : (
+        <NotificationPreview key={selected.notificationId} workspaceSlug={workspace.slug} selected={selected} />
+      )}
+    </section>
+  );
 });
 
 type PreviewProps = { workspaceSlug: string; selected: NotificationSelection };

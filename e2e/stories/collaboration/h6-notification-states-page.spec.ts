@@ -9,6 +9,7 @@ import { createIssue, updateIssue } from "../../fixtures/issues";
 import { chooseByKeyboard } from "../../fixtures/menus";
 import {
   cardSaying,
+  expectActionsShown,
   notificationWorld,
   notificationsPath,
   unreadReach,
@@ -36,11 +37,6 @@ import { expect, test } from "../../fixtures/test";
 test.use({ timezoneId: "America/Los_Angeles" });
 
 const ZONE = "America/Los_Angeles";
-
-/** The actions of card, beside its main button: shown as it is hovered or holds the focus. */
-function actionsOf(card: Locator): Locator {
-  return card.locator('[class*="group-focus-within:opacity-100"]');
-}
 
 /** The id of the notification of notes whose change is of field. */
 function idOf(notes: Notification[], field: string): string {
@@ -108,9 +104,9 @@ test("H6 (page): bob reads and unreads, archives and unarchives, snoozes for 3 d
 
   // Read, by the pointer, its actions shown as the card is hovered: in place, read; unread, by the keyboard, the
   // focus on its main button, then Tab to its first action, shown as the card holds it.
-  await expect(actionsOf(priority)).toHaveCSS("opacity", "0");
+  await expectActionsShown(priority, `Mark ${ref} read`, false);
   await priority.hover();
-  await expect(actionsOf(priority)).toHaveCSS("opacity", "1");
+  await expectActionsShown(priority, `Mark ${ref} read`, true);
   await priority.getByRole("button", { name: `Mark ${ref} read`, exact: true }).click();
   await expect(toast(page, "Notification marked as read")).toBeVisible();
   await expect(priority.getByText("Unread", { exact: true })).toHaveCount(0);
@@ -121,7 +117,7 @@ test("H6 (page): bob reads and unreads, archives and unarchives, snoozes for 3 d
   await page.keyboard.press(key);
   const unread = priority.getByRole("button", { name: `Mark ${ref} unread`, exact: true });
   await expect(unread).toBeFocused();
-  await expect(actionsOf(priority)).toHaveCSS("opacity", "1");
+  await expectActionsShown(priority, `Mark ${ref} unread`, true);
   await page.keyboard.press("Enter");
   await expect(toast(page, "Notification marked as unread")).toBeVisible();
   await expect(priority.getByText("Unread", { exact: true })).toHaveCount(1);

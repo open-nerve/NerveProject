@@ -3,6 +3,7 @@
     "label": "Inbox",
     "page_label": "{workspace} - Inbox",
     "a11y": {
+      "preview": "Preview",
       "unread_count": "{label}, {count} unread"
     },
     "card": {

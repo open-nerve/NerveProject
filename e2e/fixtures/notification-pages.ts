@@ -109,12 +109,23 @@ export function cardSaying(page: Page, text: string): Locator {
   return cardItems(page).filter({ has: page.getByRole("button").filter({ hasText: text }) });
 }
 
-/**
- * The notifications page's preview, beside its sidebar: the layout's outlet, the sidebar's next sibling (the sidebar
- * is the one of a quarter of the page's width from md up).
- */
+/** The notifications page's preview, beside its list: the region named so. */
 function previewPane(page: Page): Locator {
-  return page.locator('div[class*="md:w-3/12"] + div');
+  return page.getByRole("region", { name: "Preview", exact: true });
+}
+
+/**
+ * Checks whether the actions of a card of the notifications page's list show, by the one named name: they show as the
+ * card is hovered or holds the focus, transparent else (opacity 0, its own or an ancestor's); on their way to showing
+ * they show.
+ */
+export async function expectActionsShown(card: Locator, name: string, shown: boolean): Promise<void> {
+  const action = card.getByRole("button", { name, exact: true });
+  await expect
+    .poll(() => action.evaluate((button) => button.checkVisibility({ opacityProperty: true })), {
+      message: `${name} ${shown ? "shown" : "hidden"}`,
+    })
+    .toBe(shown);
 }
 
 /**

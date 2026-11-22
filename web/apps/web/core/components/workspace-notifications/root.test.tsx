@@ -96,7 +96,8 @@ const render = () =>
     )
   );
 const select = (selection: NotificationSelection) => act(async () => held.state?.select(selection));
-const peek = () => host.querySelector("section");
+/** The peek's stand-in, inside the preview's region. */
+const peek = () => host.querySelector<HTMLElement>("section[data-embed]");
 const placeholder = () => host.querySelector('[role="status"]');
 const emptyState = () => host.querySelector("[data-empty-state]");
 const scopeOf = (selection: NotificationSelection) =>
@@ -118,6 +119,14 @@ const two: NotificationSelection = { notificationId: "n-two", issueId: "i-web-2"
 const archived: NotificationSelection = { notificationId: "n-old", issueId: "i-old-1", projectId: "p-old" };
 
 describe("NotificationsRoot, the preview", () => {
+  it("is a region named the preview, whatever it shows: that nothing is selected, or the selected one's work item", async () => {
+    await render();
+    const region = () => host.querySelector('section[aria-label="notification.a11y.preview"]');
+    expect(region()?.contains(emptyState())).toBe(true);
+    await select(one);
+    expect(region()?.contains(peek())).toBe(true);
+  });
+
   it("says nothing is selected, and peeks at nothing", async () => {
     await render();
     expect(emptyState()).not.toBeNull();

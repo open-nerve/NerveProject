@@ -58,7 +58,8 @@ const render = (path: string) =>
     )
   );
 const link = () => host.querySelector("a");
-const dot = () => link()?.querySelector(".bg-danger-primary") ?? null;
+/** The link's dot, which says it by its data attribute, not by its look. */
+const dot = () => link()?.querySelector("[data-unread-dot]") ?? null;
 const tooltip = () => host.querySelector("[data-tooltip]")?.textContent;
 /** The fetches the page handed useSessionSWR, as it rendered. */
 const keys = () => handed.map(([fetch]) => fetch);

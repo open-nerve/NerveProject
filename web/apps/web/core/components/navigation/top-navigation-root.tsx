@@ -20,8 +20,8 @@ import { useUnreadNotificationCount } from "@/hooks/use-unread-notification-coun
 /**
  * The bar above every page of a workspace: its menu, the search, the inbox, the help and the caller's menu. The inbox
  * link fetches the caller's unread notifications in the route's workspace (useUnreadNotificationCount, P4 spec R5) and
- * shows a dot while either tab has one: nerve's all counts every one but the mentions, so the two are added; the
- * link's name says how many.
+ * shows a dot while either tab has one (data-unread-dot): nerve's all counts every one but the mentions, so the two
+ * are added; the link's name says how many.
  */
 export const TopNavigationRoot = observer(function TopNavigationRoot() {
   // router
@@ -57,7 +57,9 @@ export const TopNavigationRoot = observer(function TopNavigationRoot() {
               icon: (
                 <div className="relative">
                   <InboxOutline className="size-5" />
-                  {unreadCount > 0 && <span className="absolute top-0 right-0 size-2 rounded-full bg-danger-primary" />}
+                  {unreadCount > 0 && (
+                    <span data-unread-dot className="absolute top-0 right-0 size-2 rounded-full bg-danger-primary" />
+                  )}
                 </div>
               ),
               isActive: isNotificationsPath,

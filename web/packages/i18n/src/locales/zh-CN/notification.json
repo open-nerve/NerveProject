@@ -3,6 +3,7 @@
     "label": "收件箱",
     "page_label": "{workspace} - 收件箱",
     "a11y": {
+      "preview": "预览",
       "unread_count": "{label}，{count} 条未读"
     },
     "card": {
