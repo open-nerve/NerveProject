@@ -9,11 +9,18 @@
 // lists, creates, changes and deletes for that account alone (P3c spec
 // 2.4, 2.7). A cycle's or a module's deletion or archive, a project's
 // archive and a view's deletion take, in their transactions, every
-// account's favorites of it with them (P3c spec 2.6). A project's or a
-// workspace's deletion enqueues, in its transaction, the deletion of each
-// deleted project's views and favorites and of the workspace's own (P3b
-// spec 2.7, P3c spec 2.6); the 60-day purge removes the deleted ones, the
-// favorites after the views (Provide).
+// account's favorites of it with them (P3c spec 2.6). It owns the
+// user_recent_visits table too, each row one account's latest visit of a
+// work item or a project in a workspace, at most 20 undeleted ones (M7
+// design 3.9, P3d spec 2.3), which its API records and lists for that
+// account alone (P3d spec 2.4, 2.7); a work item's deletion takes, in its
+// transaction, every account's recent visits of it with it (P3d spec 2.6).
+// A project's or a workspace's deletion
+// enqueues, in its transaction, the deletion of each deleted project's
+// views, favorites and recent visits and of the workspace's own views and
+// favorites (P3b spec 2.7, P3c spec 2.6, P3d spec 2.6); the 60-day purge
+// removes the deleted ones, the favorites after the views and the recent
+// visits last (Provide).
 package navigation
 
 import (
@@ -37,17 +44,20 @@ type Provided struct {
 }
 
 // Provide builds, over pool, the navigation module's purge: the views,
-// then the favorites (P3c spec 2.6). No other table references either, a
-// folder's favorites referencing the folder within its own table, so the
-// module purges before the issue module (M7 design 4.3, P3b spec 2.7).
+// then the favorites (P3c spec 2.6), then the recent visits (P3d spec
+// 2.6). No other table references any of them, a folder's favorites
+// referencing the folder within its own table, so the module purges before
+// the issue module (M7 design 4.3, P3b spec 2.7).
 // And the store its subscribers write through in the publishing
-// transaction: the favorites' cascades (Subscribers).
+// transaction: the favorites' cascades and the forgetting of a deleted work
+// item's recent visits (Subscribers).
 func Provide(pool *pgxpool.Pool) Provided {
 	store := postgresadapter.New(pool)
 	return Provided{
 		Purger: app.NewPurger([]app.PurgeStep{
 			{Table: "issue_views", Delete: store.PurgeIssueViews},
 			{Table: "user_favorites", Delete: store.PurgeUserFavorites},
+			{Table: "user_recent_visits", Delete: store.PurgeUserRecentVisits},
 		}),
 		store: store,
 	}
@@ -66,12 +76,20 @@ type (
 	PlanningTarget = app.PlanningTarget
 )
 
+// IssuePlace and IssueSummary are the values the recent visits' Issues
+// answer (P3d spec 2.5, R3): bootstrap converts issue's
+// NavigationIssuePlace and NavigationIssue into them.
+type (
+	IssuePlace   = app.IssuePlace
+	IssueSummary = app.IssueSummary
+)
+
 // Deps are what the module needs.
 type Deps struct {
 	Pool *pgxpool.Pool
-	// Tx are the transactions of the views' and the favorites' writes,
-	// which enter no write gate and answer no server_busy (P3b spec 2.4,
-	// P3c spec 2.4).
+	// Tx are the transactions of the views' and the favorites' writes and
+	// of the recent visits' recordings, which enter no write gate and
+	// answer no server_busy (P3b spec 2.4, P3c spec 2.4, P3d spec 2.4).
 	Tx shared.TxManager
 	// ReadTx supplies the reads' read-only snapshot transactions, each its
 	// own.
@@ -91,6 +109,10 @@ type Deps struct {
 	Readable        app.Readable
 	ProjectTargets  app.ProjectTargets
 	PlanningTargets app.PlanningTargets
+	// Issues are issue's NavigationIssues, converted
+	// (bootstrap/navigation_ports.go): where the work items recent visits
+	// name are, and what a caller sees of them now (P3d spec 2.5, R3).
+	Issues app.Issues
 	// ListSettings and WorkspaceListSettings check a project's and a
 	// workspace's views' words: the issue module's two, as issue.Provide
 	// offers them (P3b spec 2.4).
@@ -117,7 +139,10 @@ type Module struct {
 // New builds the module from d: the views' use cases, and the favorites',
 // whose list reads in a snapshot of its own and whose writes take their
 // locks through FavoriteLocks, beside the views' Locks (P3c spec 2.8); both
-// read the favorites' targets through the one Targets.
+// read the favorites' targets through the one Targets. And the recent
+// visits', whose list reads in a snapshot of its own and whose recording
+// takes its locks through RecentVisitLocks (P3d spec 2.8); both read the
+// visits' targets through the one RecentTargets.
 func New(d Deps) *Module {
 	store := postgresadapter.New(d.Pool)
 	reads := app.NewReads(d.Workspaces, d.Projects, store, d.Authorizer, d.ReadTx)
@@ -126,6 +151,7 @@ func New(d Deps) *Module {
 	targets := app.Targets{Readable: d.Readable, Projects: d.ProjectTargets, Planning: d.PlanningTargets, Views: store}
 	favorites := app.FavoriteWriteDeps{Locks: app.NewFavoriteLocks(d.Workspaces, d.Projects, store, store, targets, d.Authorizer, d.Tx),
 		Favorites: store, Clock: d.Clock}
+	recent := app.RecentTargets{Readable: d.Readable, Projects: d.ProjectTargets, Issues: d.Issues}
 	return &Module{
 		uc: httpadapter.UseCases{
 			ListProjectViews: app.NewListProjectViews(reads), ListWorkspaceViews: app.NewListWorkspaceViews(reads), GetView: app.NewGetView(reads),
@@ -135,9 +161,13 @@ func New(d Deps) *Module {
 				Targets: targets, Tx: d.ReadTx}),
 			CreateFavorite: app.NewCreateFavorite(favorites), UpdateFavorite: app.NewUpdateFavorite(favorites),
 			DeleteFavorite: app.NewDeleteFavorite(favorites),
+			RecordRecentVisit: app.NewRecordRecentVisit(app.RecordRecentVisitDeps{
+				Locks: app.NewRecentVisitLocks(d.Workspaces, d.Projects, recent, store, d.Authorizer, d.Tx), Visits: store, Clock: d.Clock}),
+			ListRecentVisits: app.NewListRecentVisits(app.ListRecentVisitsDeps{Workspaces: d.Workspaces, Authorizer: d.Authorizer, Visits: store,
+				Targets: recent, Tx: d.ReadTx}),
 		},
-		deleteRows: app.NewDeleteRows(app.DeleteRowsDeps{Views: store, Favorites: store, Tx: d.JobTx, RuntimeNow: d.RuntimeNow,
-			Batch: d.DeleteBatch, Budget: d.DeleteBudget}),
+		deleteRows: app.NewDeleteRows(app.DeleteRowsDeps{Views: store, Favorites: store, RecentVisits: store, Tx: d.JobTx,
+			RuntimeNow: d.RuntimeNow, Batch: d.DeleteBatch, Budget: d.DeleteBudget}),
 		deleteBudget: d.DeleteBudget, logger: d.Logger,
 	}
 }

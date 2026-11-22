@@ -68,6 +68,8 @@ M4 的最终 C12、准确分支 CI 和未来 main 集成分别由[验收台账](
 
 **何时验收：** 相应 API/页面首次接通前；旧接口最后读者清除时同步类型、关键词、测试和本交接。
 
+**处理结果（M7/P3d，删除工作项时清掉最近访问）：** 已实现（[P3d spec](../specs/P3d-recents.md) §2.6、R10）：navigation 的订阅者 `navigation_forget_deleted_issue_visits` 订 `issue.deleted`，在删除的事务里软删**所有人**指向这个工作项的最近访问，时刻与删除者取事件的，`visited_at` 不动；`deleteIssue` 的子树与 `deleteIntakeIssue` 删未接受的条目都经删除核心、每个工作项一个 `issue.deleted`，所以逐个盖住；已接受的条目的删除只删条目行，工作项与它的访问照旧。项目、工作区删除经 `navigation.delete_rows` 的第三步。证据：`TestRecentVisitsFollowDeletedWorkItems`、`TestRecentVisitWritesInterleave` 的记录 × 删除各格、e2e H17 的删除一步。旧 DTO 与版本、命令面板与页面的各项仍随 P5–P7；保持 open。
+
 <a id="M7-05"></a>
 ## M7-05 最后读者与全应用收口
 

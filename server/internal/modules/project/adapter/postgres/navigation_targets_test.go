@@ -12,9 +12,10 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
-// The projects favorites name (M7 P3c spec 2.4, 2.5), read by the ids asked, in one statement and without a lock: each
-// undeleted project's workspace, name, icon and whether it is archived, another workspace's too, each once though asked
-// twice; none for a deleted project, an id of no project or no ids. A FOR UPDATE of a project read does not wait.
+// The projects favorites and recent visits name (M7 P3c spec 2.4, 2.5, P3d spec 2.4, R4), read by the ids asked, in one
+// statement and without a lock: each undeleted project's workspace, name, identifier, icon and whether it is archived,
+// another workspace's too, each once though asked twice; none for a deleted project, an id of no project or no ids. A
+// FOR UPDATE of a project read does not wait.
 func TestNavigationTargets(t *testing.T) {
 	s, pool := newStore(t)
 	maker := newAccount(t, pool, "maker@corp.com")
@@ -26,9 +27,9 @@ func TestNavigationTargets(t *testing.T) {
 	exec(t, pool, "UPDATE projects SET deleted_at = $2 WHERE id = $1", gone, now)
 	emoji, smile := shared.LogoInUseEmoji, "128512"
 	all := map[uuid.UUID]app.NavigationTarget{
-		web:  {WorkspaceID: acme, Name: "Web", LogoProps: shared.LogoProps{InUse: &emoji, Emoji: &shared.LogoEmoji{Value: &smile}}},
-		old:  {WorkspaceID: acme, Name: "Old", Archived: true},
-		site: {WorkspaceID: beta, Name: "Site"},
+		web:  {WorkspaceID: acme, Name: "Web", Identifier: "WEB", LogoProps: shared.LogoProps{InUse: &emoji, Emoji: &shared.LogoEmoji{Value: &smile}}},
+		old:  {WorkspaceID: acme, Name: "Old", Identifier: "OLD", Archived: true},
+		site: {WorkspaceID: beta, Name: "Site", Identifier: "SITE"},
 	}
 	for _, tt := range []struct {
 		name string

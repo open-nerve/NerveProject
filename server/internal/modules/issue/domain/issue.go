@@ -97,11 +97,11 @@ type Issue struct {
 	// Uploaded, bound, live ordinary attachments, projected by their owner.
 	AttachmentCount int64
 	// Its undeleted intake row, nil when it has none (M7 P2a spec 2.3,
-	// R2). Only the rows of GetIssue, GetIssues and SubIssues carry it; a
-	// list's rows and a search's do not, and leave it nil whatever the
-	// work item's intake row: InTriage must not be asked of them. They are
-	// safe without it, holding no work item in triage (the invariant of
-	// spec 2.3).
+	// R2). Only the rows of GetIssue, GetIssues and SubIssues carry it, and
+	// NavigationIssueRows its status (M7 P3d R3); a list's rows and a
+	// search's do not, and leave it nil whatever the work item's intake
+	// row: InTriage must not be asked of them. They are safe without it,
+	// holding no work item in triage (the invariant of spec 2.3).
 	Intake *IntakeFacts
 }
 

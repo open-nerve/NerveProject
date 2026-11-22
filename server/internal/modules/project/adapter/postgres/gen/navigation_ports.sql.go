@@ -32,7 +32,7 @@ func (q *Queries) NavigationProjectFacts(ctx context.Context, id uuid.UUID) (Nav
 }
 
 const navigationTargets = `-- name: NavigationTargets :many
-SELECT id, workspace_id, name, logo_props, (archived_at IS NOT NULL)::boolean AS archived
+SELECT id, workspace_id, name, identifier, logo_props, (archived_at IS NOT NULL)::boolean AS archived
 FROM projects
 WHERE id = ANY($1::uuid[]) AND deleted_at IS NULL
 `
@@ -41,13 +41,14 @@ type NavigationTargetsRow struct {
 	ID          uuid.UUID
 	WorkspaceID uuid.UUID
 	Name        string
+	Identifier  string
 	LogoProps   []byte
 	Archived    bool
 }
 
-// The projects favorites name (M7 P3c spec 2.4, 2.5), read by the ids asked, without a lock: each undeleted one's
-// workspace, name, icon and whether it is archived, another workspace's too. A deleted project and an id of none read
-// no row. The primary key serves it.
+// The projects favorites and recent visits name (M7 P3c spec 2.4, 2.5, P3d spec 2.4, R4), read by the ids asked,
+// without a lock: each undeleted one's workspace, name, identifier, icon and whether it is archived, another
+// workspace's too. A deleted project and an id of none read no row. The primary key serves it.
 func (q *Queries) NavigationTargets(ctx context.Context, ids []uuid.UUID) ([]NavigationTargetsRow, error) {
 	rows, err := q.db.Query(ctx, navigationTargets, ids)
 	if err != nil {
@@ -61,6 +62,7 @@ func (q *Queries) NavigationTargets(ctx context.Context, ids []uuid.UUID) ([]Nav
 			&i.ID,
 			&i.WorkspaceID,
 			&i.Name,
+			&i.Identifier,
 			&i.LogoProps,
 			&i.Archived,
 		); err != nil {

@@ -52,6 +52,21 @@ func (s *Store) DeleteProjectFavorites(ctx context.Context, b app.RowBatch) ([]u
 	return ids, nil
 }
 
+// DeleteProjectRecentVisits soft-deletes a batch of a deleted project's
+// recent visits, every account's, in the transaction ctx carries and
+// answers their ids (app.RecentVisitDeletions).
+func (s *Store) DeleteProjectRecentVisits(ctx context.Context, b app.RowBatch) ([]uuid.UUID, error) {
+	if err := checkBatch(b); err != nil {
+		return nil, err
+	}
+	ids, err := s.queries(ctx).DeleteProjectRecentVisits(ctx, gen.DeleteProjectRecentVisitsParams{At: b.At, DeletedBy: b.By, ProjectID: b.ParentID, After: b.After,
+		Batch: int32(b.Limit)})
+	if err != nil {
+		return nil, fmt.Errorf("delete a batch of the project's recent visits: %w", err)
+	}
+	return ids, nil
+}
+
 // DeleteWorkspaceFavoriteFolders soft-deletes a batch of a deleted
 // workspace's folders in the transaction ctx carries and answers their ids.
 func (s *Store) DeleteWorkspaceFavoriteFolders(ctx context.Context, b app.RowBatch) ([]uuid.UUID, error) {

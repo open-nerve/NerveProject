@@ -29,22 +29,26 @@ type Readable interface {
 	Readable(ctx context.Context, actor shared.Actor, workspaceID uuid.UUID) ([]ProjectGrant, error)
 }
 
-// ProjectTarget is a project as a favorite reads it (spec 2.4, 2.5): its
-// workspace, its name and its icon, which the favorite is answered with,
-// and whether it is archived, which hides it.
+// ProjectTarget is a project as a favorite or a recent visit reads it (P3c
+// spec 2.4, 2.5, P3d spec 2.4, R4): its workspace; its name and its icon,
+// which the favorite is answered with, and its identifier too, which a
+// recent visit is; and whether it is archived, which hides it from the
+// favorites alone (P3d R5). Its fields are project's NavigationTarget's,
+// which bootstrap converts into it.
 type ProjectTarget struct {
 	WorkspaceID uuid.UUID
 	Name        string
+	Identifier  string
 	LogoProps   shared.LogoProps
 	Archived    bool
 }
 
-// ProjectTargets reads the projects favorites name, a project's favorites
-// and the projects of their other targets (spec 2.5): project's
-// NavigationTargets, which bootstrap converts. It reads the undeleted
-// projects among ids, archived or not, of any workspace, by id, without a
-// lock, in the transaction ctx carries or on the pool; a deleted project
-// and an id of none are not among them.
+// ProjectTargets reads the projects favorites and recent visits name, a
+// project's and the projects of their other targets (P3c spec 2.5, P3d
+// spec 2.5): project's NavigationTargets, which bootstrap converts. It
+// reads the undeleted projects among ids, archived or not, of any
+// workspace, by id, without a lock, in the transaction ctx carries or on
+// the pool; a deleted project and an id of none are not among them.
 type ProjectTargets interface {
 	ProjectTargets(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]ProjectTarget, error)
 }

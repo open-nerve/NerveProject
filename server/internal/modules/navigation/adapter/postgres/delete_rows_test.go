@@ -206,9 +206,9 @@ func TestDeleteFavoritesOfADeletedParent(t *testing.T) {
 	}
 }
 
-// Each deletion locks its rows in id order before it writes them (M3 design 3.6, convention 5; P3c spec 2.8): with
-// the rows written in the reverse of their id order and the middle one held, each waits on it holding the lower one
-// and not yet the higher one. A statement that locked in its scan's order would hold the higher one.
+// Each deletion locks its rows in id order before it writes them (M3 design 3.6, convention 5; P3c spec 2.8, P3d spec
+// 2.8): with the rows written in the reverse of their id order and the middle one held, each waits on it holding the
+// lower one and not yet the higher one. A statement that locked in its scan's order would hold the higher one.
 func TestDeletionsLockInIDOrder(t *testing.T) {
 	view := func(project bool) func(*testing.T, *pgxpool.Pool, world, uuid.UUID) {
 		return func(t *testing.T, pool *pgxpool.Pool, w world, id uuid.UUID) { viewRow(t, pool, w, id, project, nil) }
@@ -233,6 +233,9 @@ func TestDeletionsLockInIDOrder(t *testing.T) {
 		{"project favorites", "user_favorites", true, favorite("module"), (*postgresadapter.Store).DeleteProjectFavorites},
 		{"workspace folders", "user_favorites", false, favorite("folder"), (*postgresadapter.Store).DeleteWorkspaceFavoriteFolders},
 		{"workspace favorite items", "user_favorites", false, favorite("view"), (*postgresadapter.Store).DeleteWorkspaceFavoriteItems},
+		{"project recent visits", "user_recent_visits", true, func(t *testing.T, pool *pgxpool.Pool, w world, id uuid.UUID) {
+			liveVisit(t, pool, "issue", id, w.workspace, w.project, w.owner)
+		}, (*postgresadapter.Store).DeleteProjectRecentVisits},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			s, pool := newStore(t)

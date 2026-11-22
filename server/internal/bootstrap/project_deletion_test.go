@@ -34,9 +34,10 @@ import (
 // member and link, and a work item of hers with a row of each table under
 // it, written directly (seedLabels, seedCycles, seedModules, seedIssues),
 // with a notification of its Seeded for her (seedItemNotification), a
-// saved view of hers of it and of acme (seedViews), and her favorite of it
+// saved view of hers of it and of acme (seedViews), her favorite of it
 // and her folder in acme with her favorite of a view of acme in it
-// (seedFavorites).
+// (seedFavorites), and her recent visits of it and of a work item of it
+// (seedRecentVisits).
 func twoProjects(t *testing.T) (contract *apitest.Contract, base string, pool *pgxpool.Pool, alice string, aliceID, web, ops uuid.UUID) {
 	t.Helper()
 	return twoProjectsWith(t, func(*config.Config) {})
@@ -67,6 +68,7 @@ func twoProjectsWith(t *testing.T, configure func(*config.Config)) (contract *ap
 		seedItemNotification(t, pool, project, "Seeded", aliceID)
 		seedViews(t, pool, project, aliceID)
 		seedFavorites(t, pool, project, aliceID)
+		seedRecentVisits(t, pool, project, aliceID)
 		for _, id := range queryIDs(t, pool, "SELECT id FROM issues WHERE project_id=$1", project) {
 			status, body := call(t, contract, http.MethodPatch, base+"/api/v0/issues/"+id.String(), alice, fmt.Sprintf(`{"description_html":%q}`, mentionHTML(aliceID)))
 			if status != http.StatusOK {

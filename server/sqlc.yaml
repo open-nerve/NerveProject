@@ -209,6 +209,7 @@ sql:
     schema:
       - migrations/sql/00052_navigation_issue_views.sql
       - migrations/sql/00053_navigation_user_favorites.sql
+      - migrations/sql/00054_navigation_user_recent_visits.sql
     queries: internal/modules/navigation/adapter/postgres/queries
     gen:
       go:

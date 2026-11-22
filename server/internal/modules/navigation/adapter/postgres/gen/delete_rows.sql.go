@@ -59,6 +59,54 @@ func (q *Queries) DeleteProjectFavorites(ctx context.Context, arg DeleteProjectF
 	return items, nil
 }
 
+const deleteProjectRecentVisits = `-- name: DeleteProjectRecentVisits :many
+UPDATE user_recent_visits AS t
+SET deleted_at = $1::timestamptz, updated_at = $1, updated_by_id = $2::uuid
+WHERE t.id IN (
+    SELECT r.id FROM user_recent_visits r
+    WHERE r.project_id = $3::uuid AND r.deleted_at IS NULL AND r.id > $4::uuid
+    ORDER BY r.id LIMIT $5 FOR NO KEY UPDATE)
+RETURNING t.id
+`
+
+type DeleteProjectRecentVisitsParams struct {
+	At        time.Time
+	DeletedBy uuid.UUID
+	ProjectID uuid.UUID
+	After     uuid.UUID
+	Batch     int32
+}
+
+// The deletion of a deleted project's recent visits (P3d spec 2.6): DeleteProjectViews' batch, of every account's
+// visits whose project is it, of the project and of its work items, locked in id order (spec 2.8). A visit deleted
+// before, as a work item's deletion deletes its visits at its own moment by its own actor, is passed over and keeps
+// that deletion. Every visit is in a project: a workspace's deletion deletes its visits through its projects'.
+func (q *Queries) DeleteProjectRecentVisits(ctx context.Context, arg DeleteProjectRecentVisitsParams) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, deleteProjectRecentVisits,
+		arg.At,
+		arg.DeletedBy,
+		arg.ProjectID,
+		arg.After,
+		arg.Batch,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const deleteProjectViews = `-- name: DeleteProjectViews :many
 UPDATE issue_views AS t
 SET deleted_at = $1::timestamptz, updated_at = $1, updated_by_id = $2::uuid

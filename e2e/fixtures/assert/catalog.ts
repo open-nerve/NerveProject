@@ -93,7 +93,7 @@ export async function keysBelow(db: Database, table: string): Promise<ForeignKey
 /**
  * The explicitly asynchronous issue/asset/planning/notification/navigation owners wait for their committed jobs; unknown
  * tables remain immediate. The saved views are named for the work items they show, but are the navigation module's, as
- * are the favorites, whose name carries no module prefix (M7 P3c spec 2.3).
+ * are the favorites and the recent visits, whose names carry no module prefix (M7 P3c spec 2.3, P3d spec 2.3).
  */
 export function asynchronousDeletionTable(name: string): boolean {
   return (
@@ -101,6 +101,7 @@ export function asynchronousDeletionTable(name: string): boolean {
     name === "notifications" ||
     name === "issue_views" ||
     name === "user_favorites" ||
+    name === "user_recent_visits" ||
     name === "cycles" ||
     name === "modules" ||
     name === "module_members" ||

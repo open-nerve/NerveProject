@@ -50,11 +50,11 @@ func raceAgain(t *testing.T, w issueWorld, n int, inFolder, ours bool) {
 		parent = []uuid.UUID{folder}
 	}
 	had, created := w.favor(t, "alice", "acme", favoriteBody("view", view.ID, parent...), http.StatusCreated)
-	deleted, deletion := had.ID, favoriteRacer{actor: "alice", method: http.MethodDelete, path: favoritePath(had.ID), statement: "LockFavorite"}
+	deleted, deletion := had.ID, racedWrite{actor: "alice", method: http.MethodDelete, path: favoritePath(had.ID), statement: "LockFavorite"}
 	if inFolder {
 		deleted, deletion.path, deletion.statement = folder, favoritePath(folder), "LockFolderChildren"
 	}
-	creation := favoriteRacer{actor: "alice", method: http.MethodPost, path: favoritesPath("acme"), body: favoriteBody("view", view.ID),
+	creation := racedWrite{actor: "alice", method: http.MethodPost, path: favoritesPath("acme"), body: favoriteBody("view", view.ID),
 		statement: "ShareFavoriteOfTarget"}
 	var mine, theirs racedAnswer
 	if ours {

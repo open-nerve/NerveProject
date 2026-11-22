@@ -2523,6 +2523,49 @@ export interface paths {
         patch: operations["updateFavorite"];
         trace?: never;
     };
+    "/api/v0/me/recent-visits": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record one's visit of a work item or a project
+         * @description For the admins, members and guests of the target's workspace: the caller's visit of a work item or a project (RecentVisitCreate), in the target's workspace and project, which the target gives. A kind none of the two answers validation_failed, invalid_format on entity_type, before the target is looked at. Then a target that is not there, is deleted, is of a workspace of which the caller is not an active member, or that he does not see answers its own issue.not_found or project.not_found, the same answer as an id that never was: a project he is not a member of, a workspace's admin among them; a work item of such a project, or another's while he sees only his own work items there. An archived target, a work item of an archived project and one in its project's intake are recorded. The same is decided again after the workspace's row and the target's project's are locked, and then his visits in the workspace are locked, so that his recordings there run one after another. His visit of the target is written at one moment by him, a new one or his visit of it revisited, its id and its creation kept; either answers 204. Then those of his visits in the workspace past the 20 latest, whether he sees their targets or not, are deleted for good.
+         */
+        post: operations["recordRecentVisit"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v0/workspaces/{slug}/recent-visits": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A workspace's slug, as in the web app's address. */
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        /**
+         * List one's recent visits in a workspace
+         * @description For the workspace's admins, members and guests: the caller's own recent visits in the workspace, of entity_type alone when it is given, the latest visit first, then by id, both descending; at most 20. Each of a target he sees now, as recordRecentVisit decides, answered with its project and, a work item's, the work item as they are now; an archived target is listed. A visit whose target he no longer sees is kept and not listed, nor one of a work item in its project's intake until it is accepted; those not listed are left out before the 20 are taken. A kind none of the two answers validation_failed, invalid_format on entity_type, before the workspace is looked at; a workspace that does not exist, is deleted, or of which the caller is not an active member, workspace.not_found. Read in one snapshot, without a lock; it writes nothing. The whole collection at once: collections are not paginated.
+         */
+        get: operations["listRecentVisits"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -5070,6 +5113,64 @@ export interface components {
             /** @description A folder's alone, 1–255 characters without the surrounding white space, which is dropped; no NUL. */
             name?: string;
         };
+        /**
+         * @description What a recent visit is of, a work item or a project.
+         * @enum {string}
+         */
+        RecentVisitKind: "issue" | "project";
+        /** @description A visit to record: its target's kind and id. Its workspace and its project are the target's, never given. A kind none of the two answers validation_failed, invalid_format on entity_type. */
+        RecentVisitCreate: {
+            entity_type: components["schemas"]["RecentVisitKind"];
+            /**
+             * Format: uuid
+             * @description The work item's or the project's id.
+             */
+            entity_id: string;
+        };
+        /** @description A recent visit's project as it is now: the project itself, a project's visit's; the work item's project, a work item's. */
+        RecentVisitProject: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** @description The prefix of its work items' numbers, as in WEB-12. */
+            identifier: string;
+            logo_props: components["schemas"]["LogoProps"];
+        };
+        /** @description A recent visit's work item as it is now; its number is its project's identifier and its sequence_id, as in WEB-12. */
+        RecentVisitIssue: {
+            /** Format: uuid */
+            id: string;
+            /** @description Its number in its project, from 1. */
+            sequence_id: number;
+            name: string;
+            /** Format: uuid */
+            state_id: string;
+            priority: components["schemas"]["IssuePriority"];
+            /** @description The accounts it is assigned to now, by id; empty for none. */
+            assignee_ids: string[];
+        };
+        /** @description One of the caller's recent visits in a workspace, which only he records and lists: his latest visit of a target, answered with the target as it is now. */
+        RecentVisit: {
+            /** Format: uuid */
+            id: string;
+            entity_type: components["schemas"]["RecentVisitKind"];
+            /**
+             * Format: uuid
+             * @description The target's id.
+             */
+            entity_id: string;
+            /**
+             * Format: date-time
+             * @description When he last visited the target.
+             */
+            visited_at: string;
+            project: components["schemas"]["RecentVisitProject"];
+            /** @description The work item now, a work item's visit's; null for a project's. */
+            issue: components["schemas"]["RecentVisitIssue"] | null;
+        };
+        RecentVisitList: {
+            data: components["schemas"]["RecentVisit"][];
+        };
     };
     responses: {
         /** @description Error (RFC 9457 problem details). */
@@ -5326,6 +5427,12 @@ export type Favorite = components['schemas']['Favorite'];
 export type FavoriteList = components['schemas']['FavoriteList'];
 export type FavoriteCreate = components['schemas']['FavoriteCreate'];
 export type FavoriteUpdate = components['schemas']['FavoriteUpdate'];
+export type RecentVisitKind = components['schemas']['RecentVisitKind'];
+export type RecentVisitCreate = components['schemas']['RecentVisitCreate'];
+export type RecentVisitProject = components['schemas']['RecentVisitProject'];
+export type RecentVisitIssue = components['schemas']['RecentVisitIssue'];
+export type RecentVisit = components['schemas']['RecentVisit'];
+export type RecentVisitList = components['schemas']['RecentVisitList'];
 export type ResponseProblem = components['responses']['Problem'];
 export type ParameterLimit = components['parameters']['Limit'];
 export type ParameterCursor = components['parameters']['Cursor'];
@@ -9408,6 +9515,56 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Favorite"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    recordRecentVisit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecentVisitCreate"];
+            };
+        };
+        responses: {
+            /** @description The visit is recorded, a new one or the caller's visit of the target revisited. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listRecentVisits: {
+        parameters: {
+            query?: {
+                /** @description The kind of the visits listed; both when left out. */
+                entity_type?: components["schemas"]["RecentVisitKind"];
+            };
+            header?: never;
+            path: {
+                /** @description A workspace's slug, as in the web app's address. */
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller's recent visits in the workspace. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecentVisitList"];
                 };
             };
             default: components["responses"]["Problem"];

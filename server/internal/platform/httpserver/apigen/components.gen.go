@@ -52,6 +52,33 @@ func (e FieldErrorCode) Valid() bool {
 	}
 }
 
+// Defines values for IssuePriority.
+const (
+	IssuePriorityHigh   IssuePriority = "high"
+	IssuePriorityLow    IssuePriority = "low"
+	IssuePriorityMedium IssuePriority = "medium"
+	IssuePriorityNone   IssuePriority = "none"
+	IssuePriorityUrgent IssuePriority = "urgent"
+)
+
+// Valid indicates whether the value is a known member of the IssuePriority enum.
+func (e IssuePriority) Valid() bool {
+	switch e {
+	case IssuePriorityHigh:
+		return true
+	case IssuePriorityLow:
+		return true
+	case IssuePriorityMedium:
+		return true
+	case IssuePriorityNone:
+		return true
+	case IssuePriorityUrgent:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for LinkMetadataError.
 const (
 	LinkMetadataErrorBlocked LinkMetadataError = "blocked"
@@ -141,6 +168,9 @@ type IssueListDisplayProperties struct {
 	SubIssueCount bool `json:"sub_issue_count"`
 	UpdatedOn     bool `json:"updated_on"`
 }
+
+// IssuePriority A work item's priority, from the most to the least urgent.
+type IssuePriority string
 
 // LinkMetadata defines model for LinkMetadata.
 type LinkMetadata struct {

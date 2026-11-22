@@ -55,6 +55,10 @@ var tableCells = map[shared.Action][]outcome{
 	// and members, not its guests (M7 design 3.8, 3.10, P3c spec 2.2).
 	"favorite.read":  {allowed, allowed, forbidden, invisible, invisible, invisible, forbidden},
 	"favorite.write": {allowed, allowed, forbidden, invisible, invisible, invisible, forbidden},
+	// As notification.read: one's own recent visits, every active member of
+	// the workspace (M7 design 3.9, 3.10, P3d spec 2.2).
+	"recent_visit.read":  {allowed, allowed, allowed, invisible, invisible, invisible, forbidden},
+	"recent_visit.write": {allowed, allowed, allowed, invisible, invisible, invisible, forbidden},
 	// PA, PM, PG, WM demoted to PG, PM+WA, WA- private, WM- public, WM- private, WG- public, WG- private, P-before,
 	// P-before public, X, workspace role outside the three public, above the three public, project role outside the
 	// three, workspace role outside the three project admin (projectIdentities)

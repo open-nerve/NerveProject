@@ -20,17 +20,19 @@ type DeleteRowsResult struct {
 // DeleteRowsDeps supplies the tables' batches, short job transactions and a
 // monotonic runtime clock.
 type DeleteRowsDeps struct {
-	Views      ViewDeletions
-	Favorites  FavoriteDeletions
-	Tx         shared.TxManager
-	RuntimeNow func() time.Time
-	Batch      int
-	Budget     time.Duration
+	Views        ViewDeletions
+	Favorites    FavoriteDeletions
+	RecentVisits RecentVisitDeletions
+	Tx           shared.TxManager
+	RuntimeNow   func() time.Time
+	Batch        int
+	Budget       time.Duration
 }
 
-// DeleteRows soft-deletes the views and the favorites of a deleted project,
-// or of a deleted workspace's own, within a budget (P3b spec 2.7, P3c spec
-// 2.6, R11). It waits for nothing, the work items' deletion least of all,
+// DeleteRows soft-deletes the views, the favorites and the recent visits of
+// a deleted project, or the views and the favorites of a deleted
+// workspace's own, within a budget (P3b spec 2.7, P3c spec 2.6, R11, P3d
+// spec 2.6). It waits for nothing, the work items' deletion least of all,
 // and takes no lock of the project or the workspace: the parent is
 // deleted, so no write reaches its rows any more (each authorizes on the
 // parent first).
@@ -44,12 +46,14 @@ func NewDeleteRows(d DeleteRowsDeps) *DeleteRows { return &DeleteRows{d: d} }
 type rowStep func(context.Context, RowBatch) ([]uuid.UUID, error)
 
 // steps are scope's steps in order, none for an unknown scope: the views,
-// then the favorites; a workspace's own favorites its folders first, then
-// its others, the total order of favorite rows (P3c spec 2.8).
+// then the favorites, then a project's recent visits; a workspace's own
+// favorites its folders first, then its others, the total order of
+// favorite rows (P3c spec 2.8), and no recent visit, each in a project
+// (P3d spec 2.6).
 func (u *DeleteRows) steps(scope DeletionScope) []rowStep {
 	switch scope {
 	case ProjectScope:
-		return []rowStep{u.d.Views.DeleteProjectViews, u.d.Favorites.DeleteProjectFavorites}
+		return []rowStep{u.d.Views.DeleteProjectViews, u.d.Favorites.DeleteProjectFavorites, u.d.RecentVisits.DeleteProjectRecentVisits}
 	case WorkspaceScope:
 		return []rowStep{u.d.Views.DeleteWorkspaceViews, u.d.Favorites.DeleteWorkspaceFavoriteFolders, u.d.Favorites.DeleteWorkspaceFavoriteItems}
 	}

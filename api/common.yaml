@@ -219,3 +219,8 @@ components:
         modules:
           description: Whether lists show a work item's modules.
           type: boolean
+    # 工作项的优先级（M4）：issue 与 navigation 共用（M7/P3d spec R8）
+    IssuePriority:
+      description: A work item's priority, from the most to the least urgent.
+      type: string
+      enum: [urgent, high, medium, low, none]

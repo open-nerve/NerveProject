@@ -75,6 +75,27 @@ func seedFavorites(t *testing.T, pool *pgxpool.Pool, project, owner uuid.UUID) {
 	}
 }
 
+// seedRecentVisits writes, directly, two recent visits of owner (M7 P3d
+// spec 2.3): his visit of project and his visit of a work item of it, the
+// work item's id any, entity_identifier being no foreign key. Each is
+// deleted when and as the project is, as seedViews' view of the project:
+// the project's deletion deletes every visit under it, of it and of its
+// work items, and so does its workspace's through it (spec 2.6). Two
+// visits a project keep an account far within the cap of 20 in a
+// workspace, which a trim would enforce with DELETEs the purge guards
+// would count.
+func seedRecentVisits(t *testing.T, pool *pgxpool.Pool, project, owner uuid.UUID) {
+	t.Helper()
+	if tag, err := pool.Exec(pgtest.Soon(t), `INSERT INTO user_recent_visits (id, workspace_id, project_id, user_id, entity_type, entity_identifier,
+			visited_at, created_by_id, updated_by_id, created_at, updated_at, deleted_at)
+		SELECT v.id, p.workspace_id, p.id, $3::uuid, v.kind, coalesce(v.target, p.id), coalesce(p.deleted_at, now()), $3::uuid,
+			CASE WHEN p.deleted_at IS NULL THEN $3::uuid ELSE p.updated_by_id END, coalesce(p.deleted_at, now()), coalesce(p.deleted_at, now()), p.deleted_at
+		FROM projects AS p, (VALUES ($1::uuid, 'project', NULL::uuid), ($2::uuid, 'issue', gen_random_uuid())) AS v (id, kind, target)
+		WHERE p.id = $4`, uuid.NewV7(), uuid.NewV7(), owner, project); err != nil || tag.RowsAffected() != 2 {
+		t.Fatalf("seeding the recent visits of %s: %d rows, %v; want 2", project, tag.RowsAffected(), err)
+	}
+}
+
 // seedProjectFavorite writes, directly, owner's undeleted favorite of the
 // undeleted project, as seedFavorites' first, after the project's archive
 // deleted every favorite under it (M7 P3c spec 2.6, R12): the deletion

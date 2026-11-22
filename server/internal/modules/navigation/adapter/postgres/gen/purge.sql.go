@@ -81,3 +81,38 @@ func (q *Queries) PurgeUserFavorites(ctx context.Context, arg PurgeUserFavorites
 	err := row.Scan(&i.Scanned, &i.Deleted, &i.AfterID)
 	return i, err
 }
+
+const purgeUserRecentVisits = `-- name: PurgeUserRecentVisits :one
+WITH candidates AS MATERIALIZED (
+    SELECT candidate.id FROM user_recent_visits AS candidate
+    WHERE candidate.deleted_at < $2 AND candidate.id > $1
+    ORDER BY candidate.id LIMIT $3
+), deleted AS (
+    DELETE FROM user_recent_visits AS target WHERE target.deleted_at < $2 AND target.id IN (SELECT candidates.id FROM candidates) RETURNING target.id
+)
+SELECT (SELECT count(*)::integer FROM candidates) AS scanned,
+       (SELECT count(*)::integer FROM deleted) AS deleted,
+       coalesce((SELECT id FROM candidates ORDER BY id DESC LIMIT 1), $1::uuid)::uuid AS after_id
+`
+
+type PurgeUserRecentVisitsParams struct {
+	AfterID    uuid.UUID
+	Cutoff     *time.Time
+	BatchLimit int32
+}
+
+type PurgeUserRecentVisitsRow struct {
+	Scanned int32
+	Deleted int32
+	AfterID uuid.UUID
+}
+
+// One bounded page of the 60-day purge (M7 P3d spec 2.6): the recent visits of either kind deleted before the cutoff
+// after the cursor, in id order, deleted in one statement; it returns how many it read and deleted and the page's
+// greatest id. It takes deleted rows alone, the cap's trim undeleted ones alone (spec 2.6).
+func (q *Queries) PurgeUserRecentVisits(ctx context.Context, arg PurgeUserRecentVisitsParams) (PurgeUserRecentVisitsRow, error) {
+	row := q.db.QueryRow(ctx, purgeUserRecentVisits, arg.AfterID, arg.Cutoff, arg.BatchLimit)
+	var i PurgeUserRecentVisitsRow
+	err := row.Scan(&i.Scanned, &i.Deleted, &i.AfterID)
+	return i, err
+}

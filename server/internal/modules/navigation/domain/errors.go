@@ -2,7 +2,8 @@ package domain
 
 import "github.com/open-nerve/NerveProject/server/internal/shared"
 
-// The navigation module's errors (P3b spec 2.4, 2.5; P3c spec 2.4).
+// The navigation module's errors (P3b spec 2.4, 2.5; P3c spec 2.4; P3d
+// spec 2.4).
 var (
 	// ErrViewNotFound answers, all with this one value, every view that
 	// /views/{view_id} cannot answer (spec 2.5): one that does not exist,
@@ -18,6 +19,13 @@ var (
 	// project's id, when the project is not there, is deleted, or the
 	// caller does not see it (spec 2.2).
 	ErrProjectNotFound = shared.NewError(shared.KindNotFound, "project.not_found", "The project does not exist, or you cannot see it.")
+	// ErrIssueNotFound answers, all with this one value, a recording of a
+	// recent visit of a work item that is not there, is deleted, is of a
+	// workspace or a project the caller does not see or is deleted, or
+	// that the guest rule hides from him (P3d spec 2.7): the issue
+	// module's code and words, so its answer is the one /issues/{issue_id}
+	// gives, and never tells which.
+	ErrIssueNotFound = shared.NewError(shared.KindNotFound, "issue.not_found", "The work item does not exist, or you cannot see it.")
 	// ErrWorkspaceNotFound answers a call on a workspace's views, by the
 	// workspace's slug, when the slug names no undeleted workspace or the
 	// caller is not its active member (spec 2.2).

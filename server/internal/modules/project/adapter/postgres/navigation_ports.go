@@ -42,17 +42,17 @@ func navigationFacts(r gen.ShareNavigationProjectRow, err error, what string, id
 // NavigationTargets reads, in one statement and without a lock, the
 // undeleted projects among ids, archived or not, of any workspace, by
 // project (navigation_ports.sql): what project.Provide offers the
-// navigation module's favorites (M7 P3c spec 2.4, 2.5). A deleted project
-// and an id of none are not among them. It reads in the transaction ctx
-// carries or on the pool.
+// navigation module's favorites and recent visits (M7 P3c spec 2.4, 2.5,
+// P3d spec 2.4). A deleted project and an id of none are not among them.
+// It reads in the transaction ctx carries or on the pool.
 func (s *Store) NavigationTargets(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]app.NavigationTarget, error) {
 	rows, err := s.queries(ctx).NavigationTargets(ctx, ids)
 	if err != nil {
-		return nil, fmt.Errorf("read %d projects for favorites: %w", len(ids), err)
+		return nil, fmt.Errorf("read %d projects for the navigation module: %w", len(ids), err)
 	}
 	targets := make(map[uuid.UUID]app.NavigationTarget, len(rows))
 	for _, r := range rows {
-		t := app.NavigationTarget{WorkspaceID: r.WorkspaceID, Name: r.Name, Archived: r.Archived}
+		t := app.NavigationTarget{WorkspaceID: r.WorkspaceID, Name: r.Name, Identifier: r.Identifier, Archived: r.Archived}
 		if err := json.Unmarshal(r.LogoProps, &t.LogoProps); err != nil {
 			return nil, fmt.Errorf("read logo_props of project %s: %w", r.ID, err)
 		}

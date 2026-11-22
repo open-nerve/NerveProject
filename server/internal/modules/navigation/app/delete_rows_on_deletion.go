@@ -9,9 +9,10 @@ import (
 )
 
 // NewDeleteRowsOnDeletion enqueues, within the deletion's transaction, the
-// deletion of the views and the favorites of each project the event
-// deletes and, for a workspace's deletion, of the workspace's own, at the
-// event's moment and by its actor (P3b spec 2.7, P3c spec 2.6): a
+// deletion of the views, the favorites and the recent visits of each
+// project the event deletes and, for a workspace's deletion, of the
+// workspace's own, at the event's moment and by its actor (P3b spec 2.7,
+// P3c spec 2.6, P3d spec 2.6): a
 // workspace's deletion publishes no event of its projects, it lists them in
 // its one event.
 func NewDeleteRowsOnDeletion(rows RowDeletions) shared.EventSubscriber {

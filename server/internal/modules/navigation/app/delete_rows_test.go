@@ -51,6 +51,10 @@ func (f *fakeRows) DeleteProjectFavorites(_ context.Context, b app.RowBatch) ([]
 	return f.delete("project favorites", b)
 }
 
+func (f *fakeRows) DeleteProjectRecentVisits(_ context.Context, b app.RowBatch) ([]uuid.UUID, error) {
+	return f.delete("project recent visits", b)
+}
+
 func (f *fakeRows) DeleteWorkspaceFavoriteFolders(_ context.Context, b app.RowBatch) ([]uuid.UUID, error) {
 	return f.delete("workspace folders", b)
 }
@@ -67,11 +71,11 @@ func (f fakeTx) WithinTx(ctx context.Context, fn func(context.Context) error) er
 	return fn(ctx)
 }
 
-// statements are each scope's statements in the deletion's order (P3c spec 2.6, R11): the views, then the favorites;
-// a workspace's own favorites its folders first, then the others without a project (the total order of favorite rows,
-// spec 2.8).
+// statements are each scope's statements in the deletion's order (P3c spec 2.6, R11, P3d spec 2.6): the views, then
+// the favorites, then a project's recent visits; a workspace's own favorites its folders first, then the others without
+// a project (the total order of favorite rows, P3c spec 2.8), and no recent visit, each in a project.
 var statements = map[app.DeletionScope][]string{
-	app.ProjectScope:   {"project views", "project favorites"},
+	app.ProjectScope:   {"project views", "project favorites", "project recent visits"},
 	app.WorkspaceScope: {"workspace views", "workspace folders", "workspace favorite items"},
 }
 
@@ -97,7 +101,8 @@ func rowsUnder(n int) *fakeRows {
 }
 
 func newDeleteRows(rows *fakeRows, now func() time.Time, batch int, budget time.Duration) *app.DeleteRows {
-	return app.NewDeleteRows(app.DeleteRowsDeps{Views: rows, Favorites: rows, Tx: fakeTx{rows}, RuntimeNow: now, Batch: batch, Budget: budget})
+	return app.NewDeleteRows(app.DeleteRowsDeps{Views: rows, Favorites: rows, RecentVisits: rows, Tx: fakeTx{rows}, RuntimeNow: now, Batch: batch,
+		Budget: budget})
 }
 
 var (
@@ -122,8 +127,8 @@ func ran(rows *fakeRows) []ranBatch {
 // Without waiting for anything, the scope's steps run in order, each draining its table in batches: each batch its own
 // transaction, carrying the deletion's original moment and actor, and starting after the previous batch of its step's
 // greatest id, a step's first from the start; only an empty batch ends a step, and the last step's completes the work
-// (P3b spec 2.7, P3c spec 2.6). A project's deletion runs the project's statements alone, a workspace's the
-// workspace's own: the rows of the workspace's projects are their projects' deletions'.
+// (P3b spec 2.7, P3c spec 2.6, P3d spec 2.6). A project's deletion runs the project's statements alone, a workspace's
+// the workspace's own: the rows of the workspace's projects are their projects' deletions'.
 func TestDeleteRowsDrainsInBatches(t *testing.T) {
 	for _, scope := range []app.DeletionScope{app.ProjectScope, app.WorkspaceScope} {
 		t.Run(string(scope), func(t *testing.T) {
@@ -167,8 +172,9 @@ func TestDeleteRowsDrainsInBatches(t *testing.T) {
 }
 
 // The steps share one budget: at it the job stops before the next batch, incomplete, without writing, whichever step
-// it is in, and River snoozes it. A later run scans from the start: a step done before finds nothing left, and the
-// step it stopped in starts over from the start and continues with what is left.
+// it is in, and River snoozes it, a later step not begun. A later run scans from the start: a step done before finds
+// nothing left, the step it stopped in starts over from the start and continues with what is left, and the steps after
+// it run.
 func TestDeleteRowsStopsAtItsBudget(t *testing.T) {
 	rows := rowsUnder(3)
 	start := time.Now()
@@ -180,14 +186,16 @@ func TestDeleteRowsStopsAtItsBudget(t *testing.T) {
 		return start.Add(time.Duration(calls) * 10 * time.Second)
 	}
 	got, err := newDeleteRows(rows, now, 2, 45*time.Second).Execute(t.Context(), app.ProjectScope, parent, at, by)
-	if err != nil || got != (app.DeleteRowsResult{Deleted: 5}) || len(rows.live["project views"]) != 0 || len(rows.live["project favorites"]) != 1 {
-		t.Fatalf("Execute = %+v, %v, %v left; want the views and two favorites deleted, one favorite left", got, err, rows.live)
+	if err != nil || got != (app.DeleteRowsResult{Deleted: 5}) || len(rows.live["project views"]) != 0 || len(rows.live["project favorites"]) != 1 ||
+		len(rows.live["project recent visits"]) != 3 {
+		t.Fatalf("Execute = %+v, %v, %v left; want the views and two favorites deleted, one favorite and the recent visits left", got, err, rows.live)
 	}
-	left := rows.live["project favorites"][0]
+	left, visits := rows.live["project favorites"][0], slices.Clone(rows.live["project recent visits"])
 	rows.batches, rows.ran = nil, nil
 	got, err = newDeleteRows(rows, time.Now, 2, time.Hour).Execute(t.Context(), app.ProjectScope, parent, at, by)
-	want := []ranBatch{{"project views", uuid.UUID{}}, {"project favorites", uuid.UUID{}}, {"project favorites", left}}
-	if err != nil || got != (app.DeleteRowsResult{Deleted: 1, Complete: true}) || !slices.Equal(ran(rows), want) {
+	want := []ranBatch{{"project views", uuid.UUID{}}, {"project favorites", uuid.UUID{}}, {"project favorites", left},
+		{"project recent visits", uuid.UUID{}}, {"project recent visits", visits[1]}, {"project recent visits", visits[2]}}
+	if err != nil || got != (app.DeleteRowsResult{Deleted: 4, Complete: true}) || !slices.Equal(ran(rows), want) {
 		t.Fatalf("the later run = %+v, %v, batches %+v; want %+v", got, err, ran(rows), want)
 	}
 }

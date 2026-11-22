@@ -45,7 +45,7 @@ type favoriteCompetitor struct {
 	table, lock, waits       string
 	answers                  int
 	fate                     favoriteFate
-	make                     func(t *testing.T, n int) (target, held uuid.UUID, competitor favoriteRacer)
+	make                     func(t *testing.T, n int) (target, held uuid.UUID, competitor racedWrite)
 	stamp                    func(t *testing.T, target uuid.UUID) (time.Time, uuid.UUID)
 }
 
@@ -67,8 +67,8 @@ func favoriteCompetitors(w issueWorld) []favoriteCompetitor {
 	project := func(t *testing.T, name, identifier string) uuid.UUID {
 		return createdProject(t, w.contract, w.base, w.tokens["alice"], "acme", name, identifier)
 	}
-	alices := func(method, path, statement string) favoriteRacer {
-		return favoriteRacer{actor: "alice", method: method, path: path, statement: statement}
+	alices := func(method, path, statement string) racedWrite {
+		return racedWrite{actor: "alice", method: method, path: path, statement: statement}
 	}
 	stamped := func(table, column string) func(t *testing.T, target uuid.UUID) (time.Time, uuid.UUID) {
 		return func(t *testing.T, target uuid.UUID) (time.Time, uuid.UUID) {
@@ -79,25 +79,25 @@ func favoriteCompetitors(w issueWorld) []favoriteCompetitor {
 	return []favoriteCompetitor{
 		{name: "a project's archive", verb: "the archive", writer: "alice", kind: "project", table: "projects", lock: "FOR NO KEY UPDATE",
 			waits: "ShareNavigationProject", answers: http.StatusOK, fate: deletedWithIt, stamp: stamped("projects", "archived_at"),
-			make: func(t *testing.T, n int) (uuid.UUID, uuid.UUID, favoriteRacer) {
+			make: func(t *testing.T, n int) (uuid.UUID, uuid.UUID, racedWrite) {
 				p := project(t, fmt.Sprintf("Archived %d", n), fmt.Sprintf("ARC%d", n))
 				return p, p, alices(http.MethodPost, "/api/v0/projects/"+p.String()+"/archive", "LockProject")
 			}},
 		{name: "a cycle's archive", verb: "the archive", writer: "alice", kind: "cycle", table: "projects", lock: "FOR NO KEY UPDATE",
 			waits: "ShareNavigationProject", answers: http.StatusOK, fate: deletedWithIt, stamp: stamped("cycles", "archived_at"),
-			make: func(t *testing.T, n int) (uuid.UUID, uuid.UUID, favoriteRacer) {
+			make: func(t *testing.T, n int) (uuid.UUID, uuid.UUID, racedWrite) {
 				c := w.newCycle(t, "alice", datesBody(fmt.Sprintf("Ended %d", n), shanghaiDay(t, now, 10*n-400), shanghaiDay(t, now, 10*n-397)))
 				return c, w.web, alices(http.MethodPost, "/api/v0/cycles/"+c.String()+"/archive", "LockPlanningProject")
 			}},
 		{name: "a cycle's deletion", verb: "the deletion", writer: "alice", kind: "cycle", table: "projects", lock: "FOR NO KEY UPDATE",
 			waits: "ShareNavigationProject", answers: http.StatusNoContent, fate: deletedWithIt, stamp: stamped("cycles", "deleted_at"),
-			make: func(t *testing.T, n int) (uuid.UUID, uuid.UUID, favoriteRacer) {
+			make: func(t *testing.T, n int) (uuid.UUID, uuid.UUID, racedWrite) {
 				c := w.newCycle(t, "alice", fmt.Sprintf(`{"name":"Deleted %d"}`, n))
 				return c, w.web, alices(http.MethodDelete, "/api/v0/cycles/"+c.String(), "LockPlanningProject")
 			}},
 		{name: "a view's deletion", verb: "the deletion", writer: "alice", kind: "view", table: "issue_views", lock: "FOR UPDATE",
 			waits: "ShareView", answers: http.StatusNoContent, fate: deletedWithIt, stamp: stamped("issue_views", "deleted_at"),
-			make: func(t *testing.T, n int) (uuid.UUID, uuid.UUID, favoriteRacer) {
+			make: func(t *testing.T, n int) (uuid.UUID, uuid.UUID, racedWrite) {
 				v, _ := w.newView(t, "alice", projectViewsPath(w.web), fmt.Sprintf(`{"name":"Deleted %d"}`, n))
 				return v.ID, v.ID, alices(http.MethodDelete, viewPath(v.ID), "LockView")
 			}},
@@ -107,13 +107,13 @@ func favoriteCompetitors(w issueWorld) []favoriteCompetitor {
 				waitProjectDeletion(t, w.pool, target)
 				return stampOf(t, w.pool, "projects", "deleted_at", target)
 			},
-			make: func(t *testing.T, n int) (uuid.UUID, uuid.UUID, favoriteRacer) {
+			make: func(t *testing.T, n int) (uuid.UUID, uuid.UUID, racedWrite) {
 				p := project(t, fmt.Sprintf("Deleted %d", n), fmt.Sprintf("DEL%d", n))
 				return p, p, alices(http.MethodDelete, "/api/v0/projects/"+p.String(), "LockProject")
 			}},
 		{name: "a member's removal", verb: "the removal", writer: "bob", kind: "project", table: "projects", lock: "FOR NO KEY UPDATE",
 			waits: "ShareNavigationProject", answers: http.StatusNoContent, fate: keptHidden,
-			make: func(t *testing.T, n int) (uuid.UUID, uuid.UUID, favoriteRacer) {
+			make: func(t *testing.T, n int) (uuid.UUID, uuid.UUID, racedWrite) {
 				p := project(t, fmt.Sprintf("Left %d", n), fmt.Sprintf("LFT%d", n))
 				w.makeMember(t, "bob", p, shared.RoleMember)
 				return p, p, alices(http.MethodDelete, "/api/v0/project-members/"+projectMemberships(t, w.pool, w.ids["bob"], p)[0].String(), "LockProject")
@@ -158,7 +158,7 @@ func favoritesRaceATarget(t *testing.T, w issueWorld, c favoriteCompetitor) {
 // shows neither. A creation refused left no favorite of the target.
 func raceAFavorite(t *testing.T, w issueWorld, c favoriteCompetitor, n int, write string, ours bool) {
 	target, held, competitor := c.make(t, n)
-	racer := favoriteRacer{actor: c.writer, statement: c.waits}
+	racer := racedWrite{actor: c.writer, statement: c.waits}
 	var favorite uuid.UUID
 	before := ""
 	if write == "created" {

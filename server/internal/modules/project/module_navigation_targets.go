@@ -7,11 +7,12 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/project/app"
 )
 
-// NavigationTargets are the projects a page of favorites names, the
-// navigation module's targets and their projects (M7 P3c spec 2.4, 2.5),
-// read by project ids, in one statement, without a lock, in the
-// transaction ctx carries or on the pool. project.Provide builds them over
-// the pool; bootstrap converts them into navigation's ProjectTargets.
+// NavigationTargets are the projects a page of favorites or of recent
+// visits names, the navigation module's targets and their projects (M7
+// P3c spec 2.4, 2.5, P3d spec 2.4, 2.5), read by project ids, in one
+// statement, without a lock, in the transaction ctx carries or on the
+// pool. project.Provide builds them over the pool; bootstrap converts them
+// into navigation's ProjectTargets.
 type NavigationTargets interface {
 	// NavigationTargets reads the undeleted projects among ids, archived or
 	// not, of any workspace, by project; a deleted project and an id of

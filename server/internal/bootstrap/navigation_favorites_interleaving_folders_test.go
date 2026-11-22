@@ -50,7 +50,7 @@ func favoritesRaceAFolder(t *testing.T, w issueWorld) {
 // foreign key would delete such a one with the folder.
 func raceAFolder(t *testing.T, w issueWorld, n int, write string, ours bool) {
 	view, _ := w.newView(t, "alice", workspaceViewsPath("acme"), fmt.Sprintf(`{"name":"Filed %d"}`, n))
-	racer := favoriteRacer{actor: "alice", statement: "ShareFolder"}
+	racer := racedWrite{actor: "alice", statement: "ShareFolder"}
 	var folder, item uuid.UUID
 	if write == "created in it" {
 		folder = w.favorID(t, "alice", "acme", folderBody(fmt.Sprintf("Folder %d", n)))
@@ -72,7 +72,7 @@ func raceAFolder(t *testing.T, w issueWorld, n int, write string, ours bool) {
 	if item != (uuid.UUID{}) {
 		before = favoriteRows(t, w.pool, item)
 	}
-	deletion := favoriteRacer{actor: "alice", method: http.MethodDelete, path: favoritePath(folder), statement: "LockFavorite"}
+	deletion := racedWrite{actor: "alice", method: http.MethodDelete, path: favoritePath(folder), statement: "LockFavorite"}
 	var mine, theirs racedAnswer
 	if ours {
 		mine, theirs = w.race(t, "user_favorites", "FOR UPDATE", folder, racer, deletion)
