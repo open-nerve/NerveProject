@@ -84,3 +84,5 @@ M4 的最终 C12、准确分支 CI 和未来 main 集成分别由[验收台账](
 `getTabIndex` 共余 7 文件、4 组：M6 cycles/form、modules/form；M7 views/form 与 inbox create-root / issue-properties / issue-title / issue-description。M6/M7 最后消费者改完删除函数、两份 `tab-indices.ts`、barrel/枚举/映射；保留菜单正常 -1。对应责任与日期/项目共用件验收见 [M6-04](../../M6-cycles-modules/handoffs/M4-closeout.md#M6-04)。
 
 **何时验收：** 最后一个消费者的阶段，不等无期限收尾；结果双向回写 M6/M7。新页面同时遵循 ModalTitle、FieldError/useRefusedFocus、嵌套两级 Escape、带行名控件、按钮/菜单角色和翻译文字；M8 只做全应用最后核验。
+
+**处理结果（M7/P4，通知页的部分）：** 通知页照这些规则写（[P4 spec](../specs/P4-web-notifications.md) §2.6、§2.7、R16）：自定义暂缓弹窗的标题经 `ModalTitle`；它的两个字段的提示是 `FieldError`，控件以它为描述并带 `aria-invalid`，第一个被拒的经 `useRefusedFocus` 取得焦点；卡片的动作以那一行命名（“Mark WEB-12 Fix login read”“Archive …”“Snooze …”）；页签是 Headless `Tab`，类型筛选与视图是 `PopoverMenu` 里的 `<button aria-pressed>`，暂缓的预设是菜单项，“加载更多”是按钮；文字全部经 `t()`，en 与 zh-CN 同加。Escape 关上两个菜单、暂缓菜单与弹窗并把焦点还给按钮，在途时弹窗关不掉（H20 (page) 三种引擎、`snooze-modal.test.tsx`、`snooze-menu.test.tsx`）；弹窗里的日历或时间列表开着时的两级 Escape 没有单独的故事。`projectMemberIds` 的三个读者与 `getTabIndex` 的七个文件 P4 都没有改到，随 P5、P6a。保持 open。

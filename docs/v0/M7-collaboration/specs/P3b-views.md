@@ -8,6 +8,8 @@
 
 不做：收藏与最近访问（P3c；删除视图时收藏的连带随 P3c，DP-26）；页面与 store（P6a、P6b；旧 `view.service.ts`、`WorkspaceService` 的四个方法随页面删）；“保存为视图”入口的收起（P4）。
 
+**处理结果（M7/P4）：** 项目页、迭代页、模块页筛选行的 `enableSaveView` 两处已去掉，HOC 的保存与更新分支留给 P6a/P6b 接回（[P4 spec](P4-web-notifications.md) §2.8、R17）。收起关闭。
+
 **P3b 合入后 main 的样子**：视图接口可用，网页仍打旧地址（P6a/P6b 接）；用户看不到变化。
 
 ## 2. 交付合同

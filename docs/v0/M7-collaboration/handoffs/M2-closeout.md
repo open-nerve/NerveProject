@@ -32,6 +32,8 @@ created: 2026-09-28
 
 **处理结果（M7/P3d，最近访问的部分）：** `recordRecentVisit`（`/me/recent-visits`）与 `listRecentVisits` 都在 `api/modules/navigation.yaml`、标签 `navigation`，不在 `identity.yaml`（[P3d spec](../specs/P3d-recents.md) §2.4）。`WorkspaceService.fetchWorkspaceRecents` 已随 M3/P8a 的 `5c128973` 消失（`git grep 'fetchWorkspaceRecents' -- web` 为空）；另两处 `WorkspaceNotificationService`、`IntakeWorkItemVersionService` 仍在，随 P4、P5；最近访问新的 SWR 键随 P7。保持 open。
 
+**处理结果（M7/P4，通知的部分）：** 模块级单例 `WorkspaceNotificationService`（`core/services/workspace-notification.service.ts`）随旧数据层在 T5 删除；新的 `NotificationService` 每一代以自己的客户端构造（`RootStore.notification`），取数只经 `useSessionSWR`，两个新键 `NOTIFICATION_UNREAD_COUNT`、`NOTIFICATIONS` 都带 `loginId`（以及工作区 id 与 slug）（[P4 spec](../specs/P4-web-notifications.md) §2.1、§2.3、§2.4）。上面那条 `git grep` 今天在 `web/apps/web` 只剩 `IntakeWorkItemVersionService`（`inbox/content/issue-root.tsx:36`，随 P5）与 M7 之外的 `TimezoneService`。保持 open。
+
 ## 3. 下拉框（M7 的部分）
 
 路径在 `web/apps/web/core/components/` 下，另写明的除外。根因和修法见 M2/P5 spec 2.3。
@@ -40,6 +42,8 @@ created: 2026-09-28
 - **P5 重建的 `CustomSelect`**（`Listbox`：按钮上的 Enter 提交所在的表单，输入字母跳到对应的选项，列表开着时页面其余部分 inert）在 M7 的调用方：`workspace-notifications/sidebar/notification-card/options/snooze/modal.tsx`。
 - **`BreadcrumbNavigationSearchDropdown`**（`web/packages/ui/src/breadcrumbs/navigation-search-dropdown.tsx`，`onOpen` 每次打开调一次）在视图的页头上。
 - **关闭条件**：M7 的 review 逐项写明：两个下拉框的列表在按钮旁展开；列出的调用方在浏览器中核对过。
+
+**处理结果（M7/P4，`CustomSelect` 在暂缓弹窗里）：** 旧的 `snooze/modal.tsx` 随 T5 删除，M7 的这个调用方换成自定义暂缓弹窗的时间选择（`workspace-notifications/card/snooze-modal.tsx`，[P4 spec](../specs/P4-web-notifications.md) §2.7）。浏览器核对在 H20 (page)（`e2e/stories/collaboration/h20-notification-pages.spec.ts`，chromium、firefox、webkit）：按钮上 Enter 打开列表，列表在按钮旁（`expectListBesideButton`），方向键与 Enter 选中，列表关上、焦点回到按钮，按钮的名字是 “Time, 12:30 AM”；弹窗开着时后面的页面隐藏。收集箱的 `intake-state` 下拉框随 P5，视图的 `Dropdown` 与 `BreadcrumbNavigationSearchDropdown` 随 P6a/P6b，保持 open。
 
 ## 4. 复制到剪贴板（M7 的 4 处）
 
@@ -62,5 +66,7 @@ created: 2026-09-28
 
 - 见 [M4 的交接](../../M4-issue-core/handoffs/M2-closeout.md)第 8 节：页面的 CSP 没有 `frame-src`，落回 `default-src 'self'`。
 - **关闭条件**：M7 的 review 写明收集箱或视图是否嵌入 iframe；嵌入的话，`server/internal/platform/webui/csp.go` 只为它加那个来源，有测试。
+
+**处理结果（M7/P4，通知页）：** 通知页不嵌 iframe：新的 `workspace-notifications/` 与它嵌入的工作项浮层里都没有（`git grep -i iframe -- web/apps/web/core web/apps/web/app web/packages/editor/src` 为空），CSP 不改（[P4 阶段记录](../reviews/P4-web-notifications-review.md) §8）。收集箱随 P5、视图随 P6a/P6b 写明，保持 open。
 
 来源：[M2 设计](../../M2-auth/M2-design.md) 13.2 中接收者含 M7 的各行、3.12、3.14；[M2/P4 评审](../../M2-auth/reviews/P4-web-auth-review.md)第 4 节；[M2 收尾 spec](../../M2-auth/specs/closeout.md) 第 3 节。

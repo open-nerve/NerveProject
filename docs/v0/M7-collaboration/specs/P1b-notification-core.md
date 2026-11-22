@@ -118,6 +118,7 @@ access 加 `DecideMany(ctx, action, workspace, project, accounts)`：workspace �
 - **R4 变化序号**：订阅者在事件的原始列表上算出，参数保留全部位置；创建本身 `-1`；幂等键 `(event_id, change_seq, receiver_id)`。
 - **R5 草稿发布带附件**：照事件，每个附件一条通知；登记差异。
 - **R6 评论摘录**：存着的纯文本，提及不显示名字；P4 若要显示名字，读时再解析，不在发送时存。
+  - **处理结果（M7/P4）：** 卡片把 `excerpt` 原样以纯文本至多两行显示，不解析提及的名字、不经编辑器、不显示图片（[P4 spec](P4-web-notifications.md) §2.6）。关闭。
 - **R7 批量判定与 `Authorize` 同一个函数**：等价测试钉住。
 - **R8 锁端口**：`IssueRowLock` 由 `IssueReader` 内嵌，`NewLocks` 的签名不变（它有 29 处调用）。
 - **R9 写入基准**：M4 记录的 PATCH 数字来自 6 个 66 万行项目的删除规模测试，太重，不拿来做前后对比。另写一个轻量的选择性运行的基准（一个项目、探针工作项带若干关注者、M4 的 `scaleSamples` 20 次 PATCH 的 p50、p95、最大），只用基线已有的辅助函数，记两组：每次 PATCH 之前等队列空（`InsertTx` 的成本）与不等（含分发持行锁时的等待）；在基线 `9a3a388a` 的临时 worktree 里（复制这个测试文件）与分支上各跑一次，同一台机器。自动归档一轮另加一个选择性运行的计时（仿 `TestTheFreezeAtTheScaleTarget`），同一次运行里比较带与不带通知订阅者的发布者。
@@ -140,6 +141,7 @@ access 加 `DecideMany(ctx, action, workspace, project, accounts)`：workspace �
 
 - P1c：接口、读时的可见过滤（新的含已归档项目的可见集合）、另一端的解析、未读数、全部已读（多行的写每批按 id 升序加锁或 `SKIP LOCKED`，与 §2.8 的软删同一锁序，语句头写不变式）、权限矩阵、H2–H7 的接口证据与 e2e。
 - P4：卡片按 §2.5 的字段与动词重写；`issue.updated` 的加入与移出由新旧值区分。
+  - **处理结果（M7/P4）：** 纯函数 `describeChange(change, format)` 按 `(field, verb)` 给 `notification.card.*` 的键与参数，加入与移出由新旧值区分（“有新值”是非空串：移除时 `new_value` 是 `""`），父工作项与关联的另一端读 `new_issue` / `old_issue`，表的每一行有单测（[P4 spec](P4-web-notifications.md) §2.6、R11）。关闭。
 
 ## 6. 风险
 
