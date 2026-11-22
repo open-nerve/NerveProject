@@ -111,6 +111,18 @@ const operations: {
     run: (s) => s.deleteLink("link-72"),
     status: 204,
   },
+  {
+    name: "subscribe",
+    endpoint: ["POST", "/api/v0/issues/source-11/subscribe"],
+    run: (s) => s.subscribe("source-11"),
+    status: 204,
+  },
+  {
+    name: "unsubscribe",
+    endpoint: ["POST", "/api/v0/issues/source-11/unsubscribe"],
+    run: (s) => s.unsubscribe("source-11"),
+    status: 204,
+  },
 ];
 
 it("accepts the generated closed request bodies", () => {
