@@ -5,7 +5,7 @@ import type { operations } from "@nerve/api-client";
 import { ApiError } from "@/lib/api-error";
 import { FakeNerve, json, problem } from "@/lib/auth/fake-nerve";
 import { settle } from "@/lib/auth/fake-time";
-import { countsOf, intakeIssueOf, pageOf } from "@/store/issue/intake/fake-intake";
+import { countsOf, detailOf, intakeIssueOf, pageOf } from "@/store/issue/intake/fake-intake";
 import { type IntakeListQuery, IntakeService } from "./intake.service";
 
 beforeEach(() => vi.useFakeTimers());
@@ -79,4 +79,56 @@ it("hands nerve's refusal of a list to the caller", async () => {
   const read = await settle(service.list("p-web", { status: ["pending"], limit: 50 }), "the list");
   expect(read.error).toBeInstanceOf(ApiError);
   expect(read.error).toMatchObject({ status: 422, problem: { code: "not_allowed" } });
+});
+
+/** A service whose nerve answers each request with answer, and the requests it got. */
+function answering(answer: Response) {
+  const nerve = new FakeNerve();
+  nerve.respond = (call) => call.answer(answer.clone());
+  const sent = () => nerve.calls.map(({ method, path, query, body }) => ({ method, path, query, body }));
+  return { service: new IntakeService(nerve.client()), sent };
+}
+
+it("triages a work item by its id, the body as it is, and gives nerve's answer as it is", async () => {
+  const triaged = detailOf("one", {
+    intake: { status: "snoozed", snoozed_till: "2026-11-11T08:00:00Z", duplicate_to_id: null },
+  });
+  const { service, sent } = answering(json(200, triaged));
+  const body = { status: "snoozed" as const, snoozed_till: "2026-11-11T08:00:00.000Z" };
+  expect((await settle(service.triage("i-one", body), "the triage")).value).toEqual(triaged);
+  expect(sent()).toEqual([{ method: "POST", path: "/api/v0/intake-issues/i-one/triage", query: {}, body }]);
+});
+
+it("changes the content of a work item of an intake by its id, the body as it is, and gives nerve's answer", async () => {
+  const changed = detailOf("one", { name: "Renamed", priority: "high" });
+  const { service, sent } = answering(json(200, changed));
+  const body = { name: "Renamed", priority: "high" as const };
+  expect((await settle(service.update("i-one", body), "the change")).value).toEqual(changed);
+  expect(sent()).toEqual([{ method: "PATCH", path: "/api/v0/intake-issues/i-one", query: {}, body }]);
+});
+
+it("deletes a work item of an intake by its id", async () => {
+  const { service, sent } = answering(new Response(null, { status: 204 }));
+  const deleted = await settle(service.delete("i-one"), "the deletion");
+  expect(deleted.error).toBeUndefined();
+  expect(sent()).toEqual([{ method: "DELETE", path: "/api/v0/intake-issues/i-one", query: {}, body: undefined }]);
+});
+
+it.each([
+  [
+    "triage",
+    (service: IntakeService): Promise<unknown> => service.triage("i-one", { status: "declined" }),
+    "issue.intake_transition_not_allowed",
+  ],
+  [
+    "update",
+    (service: IntakeService): Promise<unknown> => service.update("i-one", { name: "x" }),
+    "issue.intake_closed",
+  ],
+  ["delete", (service: IntakeService): Promise<unknown> => service.delete("i-one"), "issue.intake_not_found"],
+] as const)("hands nerve's refusal of a %s to the caller", async (_, send, code) => {
+  const { service } = answering(problem(409, code));
+  const refused = await settle(send(service), "the refusal");
+  expect(refused.error).toBeInstanceOf(ApiError);
+  expect(refused.error).toMatchObject({ status: 409, problem: { code } });
 });

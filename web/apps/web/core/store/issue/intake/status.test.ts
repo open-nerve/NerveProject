@@ -6,12 +6,13 @@
 import { describe, expect, it } from "vitest";
 import type { IntakeStatus, IssueIntake } from "@nerve/api-client";
 import { detailOf, intakeIssueOf } from "./fake-intake";
-import { effectiveStatus, rowOf } from "./status";
+import { effectiveStatus, inIntake, rowOf } from "./status";
 
 // The status of a work item of an intake and the row the intake list shows of it (P5a spec 2.2; the contract's trap
 // C7): nerve answers, lists and counts each status at the moment of the request, a snooze whose time has come as
 // pending (its snoozed_till not after the moment); a list's row is the work item without its HTML and the caller's
-// subscription, and a work item never submitted has none.
+// subscription, and a work item never submitted has none. A work item is in its intake while its detail's intake row is
+// not accepted; one held as a list's row alone is not (lists list none in an intake).
 
 const NOW = new Date("2026-11-10T09:00:00Z");
 const intake = (status: IntakeStatus, snoozedTill: string | null = null): IssueIntake => ({
@@ -62,5 +63,20 @@ describe("rowOf", () => {
 
   it("is none for a work item never submitted to its project's intake (intake null): no intake lists it", () => {
     expect(rowOf(detailOf("three", { intake: null }))).toBeUndefined();
+  });
+});
+
+describe("inIntake", () => {
+  it.each<IntakeStatus>(["pending", "snoozed", "declined", "duplicate"])(
+    "is true for a detail whose intake row is %s: its changes go to its intake",
+    (status) => {
+      expect(inIntake(detailOf("one", { intake: intake(status) }))).toBe(true);
+    }
+  );
+
+  it("is false for an accepted detail, one never submitted (intake null), and a work item not held as a detail", () => {
+    expect(inIntake(detailOf("one", { intake: intake("accepted") }))).toBe(false);
+    expect(inIntake(detailOf("one", { intake: null }))).toBe(false);
+    expect(inIntake(undefined)).toBe(false);
   });
 });

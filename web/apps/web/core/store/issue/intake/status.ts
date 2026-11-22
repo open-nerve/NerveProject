@@ -26,3 +26,12 @@ export function rowOf(detail: IssueDetail): IntakeIssue | undefined {
   const { description_html, is_subscribed, intake, ...row } = detail;
   return intake === null ? undefined : { ...row, intake };
 }
+
+/**
+ * @description whether the work item is in its project's intake as held (P5a spec 2.2, 2.4): its detail's intake row
+ * there and not accepted; not for one held as a list's row alone (undefined here), as lists list none in an intake
+ */
+export function inIntake(detail: IssueDetail | undefined): boolean {
+  const intake = detail?.intake;
+  return !!intake && intake.status !== "accepted";
+}

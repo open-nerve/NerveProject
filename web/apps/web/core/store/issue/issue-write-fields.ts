@@ -1,5 +1,5 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
-import type { Issue, IssueCreate, IssueUpdate } from "@nerve/api-client";
+import type { IntakeIssueUpdate, Issue, IssueCreate, IssueUpdate } from "@nerve/api-client";
 import type { IssueChange } from "@nerve/types";
 import { modulesAfter } from "@/lib/planning-directory";
 
@@ -49,6 +49,20 @@ export function updateBody(input: IssueUpdate): IssueUpdate {
   )
     throw new Error("skip_activity requires description_html alone");
   return body;
+}
+
+/**
+ * The content change of a work item in its project's intake, from an update's request (updateBody, whose skip_activity
+ * rule holds): the seven fields nerve takes of one (IntakeIssueUpdate, C9); any other field given fails it before it
+ * is sent, as nerve would refuse it.
+ */
+export function intakeUpdateBody(body: IssueUpdate): IntakeIssueUpdate {
+  const { name, description_html, priority, assignee_ids, label_ids, target_date, skip_activity, ...other } = body;
+  if (Object.values(other).some((value) => value !== undefined))
+    throw new Error(
+      "An intake's change takes its name, description, priority, assignees, labels and target date alone"
+    );
+  return { name, description_html, priority, assignee_ids, label_ids, target_date, skip_activity };
 }
 
 /**

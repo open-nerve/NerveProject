@@ -1,15 +1,24 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
-import type { Issue, IssueCreate, IssueDetail as IssueDetailAnswer, IssueUpdate } from "@nerve/api-client";
+import type {
+  IntakeTriage,
+  Issue,
+  IssueCreate,
+  IssueDetail as IssueDetailAnswer,
+  IssueUpdate,
+} from "@nerve/api-client";
 import { SessionChangedError } from "@/lib/auth/token-manager";
 import { oneAtATime } from "@/lib/one-at-a-time";
 import type { ConfirmedIssueChange } from "@/lib/paged-groups";
 import type { IssueListBinding } from "./helpers/issue-list-binding";
 import type { IssueChange } from "@nerve/types";
-import { changeBody, createBody, updateBody } from "./issue-write-fields";
+import { inIntake } from "./intake/status";
+import { changeBody, createBody, intakeUpdateBody, updateBody } from "./issue-write-fields";
 import { IssueWriteConfirmation, type WritesRoot } from "./issue-write-confirm";
 import type { IssueWriteScope } from "./root.store";
 
 export type IssueDrop = NonNullable<ConfirmedIssueChange["drop"]> & { binding?: IssueListBinding };
+/** An acceptance whose read again gave nothing (R34): nothing for a project list to confirm, and no refusal. */
+class Unread extends Error {}
 
 /**
  * A change sent to nerve and, once nerve confirms it, written into every held copy: one queue per issue and the seven
@@ -102,7 +111,13 @@ export class IssueWrites {
           !root.permissionReads.current(dragPermission, operationScope.workspaceID, [operationScope.projectID], true)
         )
           throw new SessionChangedError();
-        if (!root.issues.getIssueById(id)) throw new Error("Issue has not been read");
+        const heldNow = root.issues.getIssueById(id);
+        if (!heldNow) throw new Error("Issue has not been read");
+        // Where it goes is decided by the work item held in its turn: one accepted while this waited goes to /issues.
+        if (inIntake(root.issues.getIssueDetailById(id)))
+          return this.confirmation.edit(id, operationScope, () =>
+            root.intakeApi.update(id, intakeUpdateBody(updateBody(makeBody(heldNow))))
+          );
         return (await this.confirmation.write(
           id,
           operationScope,
@@ -148,5 +163,43 @@ export class IssueWrites {
       async () => (await this.confirmation.write(id, scope, () => this.root.api.unarchive(id)))!,
       scope
     );
+  }
+  /**
+   * Triages the work item of an intake in its turn (P5a spec 2.4, R34): its intake lists take nerve's answer, the work
+   * item is read again from after it, the counts are fetched again. An acceptance is confirmed as a creation (R4): each
+   * held list's evidence frozen before it is sent, the read again goes into every project list held, once; one that
+   * gave nothing leaves them as they are and fails nothing. Any other triage reads its detail's activity and comments
+   * again after the work item.
+   */
+  triageIntake(id: string, body: IntakeTriage, scope: IssueWriteScope): Promise<void> {
+    const { root, confirmation } = this;
+    const send = () => confirmation.triage(id, scope, () => root.intakeApi.triage(id, body));
+    const accept = () =>
+      this.confirmCreation(scope, async () => {
+        const read = await send();
+        if (!read) throw new Unread();
+        return read;
+      }).then(
+        () => undefined,
+        (error: unknown) => {
+          if (!(error instanceof Unread)) throw error;
+        }
+      );
+    return this.enqueueIssueChanges(
+      [id],
+      async () => {
+        if (body.status === "accepted") await accept();
+        else if (await send()) await root.issueDetail.refreshAfterChange(scope.workspaceSlug, scope.projectID, id);
+      },
+      scope
+    );
+  }
+  /** Deletes the work item of an intake in its turn, on the intake's route (P5a spec 2.4). */
+  deleteIntake(id: string, scope: IssueWriteScope): Promise<void> {
+    const request = async () => {
+      await this.root.intakeApi.delete(id);
+      return null;
+    };
+    return this.enqueueIssueChanges([id], () => this.confirmation.delete(id, scope, request), scope);
   }
 }

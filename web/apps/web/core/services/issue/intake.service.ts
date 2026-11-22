@@ -3,7 +3,15 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { ApiClient, IntakeCounts, IntakeIssuePage, operations } from "@nerve/api-client";
+import type {
+  ApiClient,
+  IntakeCounts,
+  IntakeIssuePage,
+  IntakeIssueUpdate,
+  IntakeTriage,
+  IssueDetail,
+  operations,
+} from "@nerve/api-client";
 import { unwrap } from "@/lib/api-error";
 
 /**
@@ -39,6 +47,33 @@ export class IntakeService {
       await this.api.GET("/api/v0/projects/{project_id}/intake-issues", {
         params: { path: { project_id: projectId }, query },
       })
+    );
+  }
+
+  /**
+   * Triages the work item of a project's intake: a status, with the time of a snooze or the work item it duplicates
+   * alone (C8); nerve's answer, the work item triaged (triageIntakeIssue).
+   */
+  async triage(issueId: string, body: IntakeTriage): Promise<IssueDetail> {
+    return unwrap(
+      await this.api.POST("/api/v0/intake-issues/{issue_id}/triage", { params: { path: { issue_id: issueId } }, body })
+    );
+  }
+
+  /**
+   * Changes the content of the work item of a project's intake, the seven fields it takes (C9); nerve's answer, the
+   * work item as changed (updateIntakeIssue).
+   */
+  async update(issueId: string, body: IntakeIssueUpdate): Promise<IssueDetail> {
+    return unwrap(
+      await this.api.PATCH("/api/v0/intake-issues/{issue_id}", { params: { path: { issue_id: issueId } }, body })
+    );
+  }
+
+  /** Deletes the work item of a project's intake, or an accepted one's intake row alone (deleteIntakeIssue). */
+  async delete(issueId: string): Promise<void> {
+    return unwrap(
+      await this.api.DELETE("/api/v0/intake-issues/{issue_id}", { params: { path: { issue_id: issueId } } })
     );
   }
 }
