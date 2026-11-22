@@ -13,7 +13,9 @@
 // user_recent_visits table too, each row one account's latest visit of a
 // work item or a project in a workspace, at most 20 undeleted ones (M7
 // design 3.9, P3d spec 2.3), which its API records and lists for that
-// account alone (P3d spec 2.4, 2.7). A project's or a workspace's deletion
+// account alone (P3d spec 2.4, 2.7); a work item's deletion takes, in its
+// transaction, every account's recent visits of it with it (P3d spec 2.6).
+// A project's or a workspace's deletion
 // enqueues, in its transaction, the deletion of each deleted project's
 // views, favorites and recent visits and of the workspace's own views and
 // favorites (P3b spec 2.7, P3c spec 2.6, P3d spec 2.6); the 60-day purge
@@ -47,7 +49,8 @@ type Provided struct {
 // referencing the folder within its own table, so the module purges before
 // the issue module (M7 design 4.3, P3b spec 2.7).
 // And the store its subscribers write through in the publishing
-// transaction: the favorites' cascades (Subscribers).
+// transaction: the favorites' cascades and the forgetting of a deleted work
+// item's recent visits (Subscribers).
 func Provide(pool *pgxpool.Pool) Provided {
 	store := postgresadapter.New(pool)
 	return Provided{
