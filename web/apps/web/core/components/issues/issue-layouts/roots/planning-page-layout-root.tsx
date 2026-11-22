@@ -97,7 +97,6 @@ export const PlanningPageLayoutRoot = observer(function PlanningPageLayoutRoot({
   return (
     <IssuesStoreContext.Provider value={storeType}>
       <ProjectLevelWorkItemFiltersHOC
-        enableSaveView
         entityType={storeType}
         entityId={entityId}
         filtersToShowByLayout={filters}
