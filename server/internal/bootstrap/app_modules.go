@@ -97,7 +97,8 @@ func (w *wiring) navigationModule() *navigation.Module {
 		Projects: navigationProjects{projects: w.projectPorts.NavigationProjects}, Workspaces: navigationWorkspaces{directory: w.workspacePorts.WorkspaceDirectory},
 		ListSettings: w.issuePorts.ListSettings, WorkspaceListSettings: w.issuePorts.WorkspaceListSettings,
 		Readable: navigationReadable{readable: w.readable}, ProjectTargets: navigationProjectTargets{targets: w.projectPorts.NavigationTargets},
-		PlanningTargets: navigationPlanningTargets{targets: w.planningPorts.NavigationTargets}})
+		PlanningTargets: navigationPlanningTargets{targets: w.planningPorts.NavigationTargets},
+		Issues:          navigationIssues{issues: w.issuePorts.NavigationIssues}})
 }
 
 func (w *wiring) projectModule() *project.Module {

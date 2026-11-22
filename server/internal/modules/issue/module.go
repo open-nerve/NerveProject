@@ -14,7 +14,9 @@
 // NotificationIssues locks a work item's row, reads what the notification
 // module's fan-out and deletions need of work items and hands over the
 // guest rule the fan-out's recheck applies; its IssueRefs answers which of
-// the work items a notification names a reader sees now.
+// the work items a notification names a reader sees now, and its
+// NavigationIssues where the work items a recent visit names are and which
+// of them a caller sees now.
 package issue
 
 import (
@@ -66,6 +68,7 @@ type Provided struct {
 	ListSettings          ListSettings
 	WorkspaceListSettings ListSettings
 	IssueRefs             IssueRefs
+	NavigationIssues      NavigationIssues
 	NotificationIssues    NotificationIssues
 	PlanningStats         PlanningStats
 	PlanningTransfer      PlanningTransfer
@@ -93,7 +96,7 @@ func Provide(pool *pgxpool.Pool, protected []postgres.ProtectedReference) Provid
 		{Table: "intake_issues", Delete: store.PurgeIntakeIssues},
 		{Table: "issues", Protected: true, Delete: store.PurgeIssues},
 	}), IssueCascade: app.NewCascade(store), ListSettings: app.ListSettings{},
-		WorkspaceListSettings: app.WorkspaceListSettings{}, IssueRefs: app.NewIssueRefs(store),
+		WorkspaceListSettings: app.WorkspaceListSettings{}, IssueRefs: app.NewIssueRefs(store), NavigationIssues: app.NewNavigationIssues(store),
 		NotificationIssues: notificationIssues{store}, PlanningStats: store, PlanningTransfer: app.NewCycleTransfers(store)}
 }
 

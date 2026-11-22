@@ -72,6 +72,14 @@ type (
 	PlanningTarget = app.PlanningTarget
 )
 
+// IssuePlace and IssueSummary are the values the recent visits' Issues
+// answer (P3d spec 2.5, R3): bootstrap converts issue's
+// NavigationIssuePlace and NavigationIssue into them.
+type (
+	IssuePlace   = app.IssuePlace
+	IssueSummary = app.IssueSummary
+)
+
 // Deps are what the module needs.
 type Deps struct {
 	Pool *pgxpool.Pool
@@ -97,6 +105,10 @@ type Deps struct {
 	Readable        app.Readable
 	ProjectTargets  app.ProjectTargets
 	PlanningTargets app.PlanningTargets
+	// Issues are issue's NavigationIssues, converted
+	// (bootstrap/navigation_ports.go): where the work items recent visits
+	// name are, and what a caller sees of them now (P3d spec 2.5, R3).
+	Issues app.Issues
 	// ListSettings and WorkspaceListSettings check a project's and a
 	// workspace's views' words: the issue module's two, as issue.Provide
 	// offers them (P3b spec 2.4).

@@ -50,3 +50,44 @@ type RecentVisitWriter interface {
 type RecentVisitCascades interface {
 	DeleteIssueRecentVisits(ctx context.Context, workspace, issue uuid.UUID, at time.Time, by *uuid.UUID) error
 }
+
+// IssuePlace is where a work item is (P3d spec 2.7, R3): its workspace,
+// which a recording decides on, and its project, which it locks FOR SHARE.
+// Its fields are issue's NavigationIssuePlace's, which bootstrap converts
+// into it.
+type IssuePlace struct {
+	WorkspaceID, ProjectID uuid.UUID
+}
+
+// IssueSummary is a work item as a recent visit is answered with it now
+// (spec 2.4, 2.5, R3): its id, its project, its number, its name, its
+// state, its priority as written, the accounts of its undeleted assignees'
+// rows in id order, and whether it is in its project's intake, which keeps
+// it out of the list until it is accepted (R6). Its fields are issue's
+// NavigationIssue's, which bootstrap converts into it.
+type IssueSummary struct {
+	ID, ProjectID uuid.UUID
+	SequenceID    int
+	Name          string
+	StateID       uuid.UUID
+	Priority      string
+	AssigneeIDs   []uuid.UUID
+	InTriage      bool
+}
+
+// Issues are the work items recent visits name (spec 2.5, 2.7, R3): issue's
+// NavigationIssues, which bootstrap converts. Each reads once, without a
+// lock, in the transaction ctx carries or on the pool, and not at all for
+// no ids. IssuePlaces answers, by id, where each of the undeleted work
+// items among ids is, archived or not, of any workspace; it decides
+// nothing. IssueSummaries answers, by id, those of the work items ids that
+// reader sees now by grants, the projects he reads in a workspace
+// (Readable): undeleted, archived or not, in a project among grants, and
+// not hidden from him by the guest rule, the issue module's one
+// HiddenFrom, by his grant there; another workspace's work item is in no
+// project of grants. A deleted work item and an id of none are among
+// neither.
+type Issues interface {
+	IssuePlaces(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]IssuePlace, error)
+	IssueSummaries(ctx context.Context, reader uuid.UUID, grants []ProjectGrant, ids []uuid.UUID) (map[uuid.UUID]IssueSummary, error)
+}

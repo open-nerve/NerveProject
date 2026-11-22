@@ -5,6 +5,7 @@ import (
 	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/access"
+	"github.com/open-nerve/NerveProject/server/internal/modules/issue"
 	"github.com/open-nerve/NerveProject/server/internal/modules/navigation"
 	"github.com/open-nerve/NerveProject/server/internal/modules/planning"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project"
@@ -98,6 +99,28 @@ func (p navigationPlanningTargets) Modules(ctx context.Context, ids []uuid.UUID)
 
 func planningTarget(t planning.NavigationTarget) navigation.PlanningTarget {
 	return navigation.PlanningTarget(t)
+}
+
+// navigationIssues is issue's NavigationIssues as navigation's Issues (M7
+// P3d spec 2.5, R3): the same reads, the grants handed over and the
+// answers each converted.
+type navigationIssues struct {
+	issues issue.NavigationIssues
+}
+
+func (i navigationIssues) IssuePlaces(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]navigation.IssuePlace, error) {
+	places, err := i.issues.NavigationIssuePlaces(ctx, ids)
+	return convertedTargets(places, err, func(p issue.NavigationIssuePlace) navigation.IssuePlace { return navigation.IssuePlace(p) })
+}
+
+func (i navigationIssues) IssueSummaries(ctx context.Context, reader uuid.UUID, grants []navigation.ProjectGrant,
+	ids []uuid.UUID) (map[uuid.UUID]navigation.IssueSummary, error) {
+	issueGrants := make([]issue.ProjectGrant, len(grants))
+	for n, g := range grants {
+		issueGrants[n] = issue.ProjectGrant(g)
+	}
+	summaries, err := i.issues.NavigationIssues(ctx, reader, issueGrants, ids)
+	return convertedTargets(summaries, err, func(s issue.NavigationIssue) navigation.IssueSummary { return navigation.IssueSummary(s) })
 }
 
 // convertedTargets are targets, a read's answer by id, each converted by
