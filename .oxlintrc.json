@@ -189,7 +189,11 @@
         "web/apps/web/core/components/modules/module-peek-overview.tsx",
         "web/apps/web/core/components/modules/archived-modules/root.tsx",
         "web/apps/web/core/components/modules/links/use-metadata-refresh.ts",
-        "web/apps/web/core/hooks/use-planning-names.ts"
+        "web/apps/web/core/hooks/use-planning-names.ts",
+        "web/apps/web/core/store/notification/**",
+        "web/apps/web/core/hooks/store/use-notifications.ts",
+        "web/apps/web/core/hooks/use-unread-notification-count.ts",
+        "web/apps/web/core/components/navigation/top-navigation-root.tsx"
       ],
       "rules": {
         "no-restricted-imports": [

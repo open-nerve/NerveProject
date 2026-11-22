@@ -34,6 +34,8 @@ import type { ILabelStore } from "./label.store";
 import { LabelStore } from "./label.store";
 import type { IMemberRootStore } from "./member";
 import { MemberRootStore } from "./member";
+import type { INotificationStore } from "./notification/notification.store";
+import { NotificationStore } from "./notification/notification.store";
 import type { IWorkspaceNotificationStore } from "./notifications/workspace-notifications.store";
 import { WorkspaceNotificationStore } from "./notifications/workspace-notifications.store";
 import type { IPlanningStore } from "./planning";
@@ -69,6 +71,7 @@ export class RootStore {
   instance: IInstanceStore;
   user: IUserStore;
   projectInbox: IProjectInboxStore;
+  notification: INotificationStore;
   workspaceNotification: IWorkspaceNotificationStore;
   favorite: IFavoriteStore;
   workItemFilters: IWorkItemFilterStore;
@@ -103,6 +106,7 @@ export class RootStore {
     this.state = new StateStore(this, api);
     this.label = new LabelStore(this, api);
     this.projectInbox = new ProjectInboxStore(this);
+    this.notification = new NotificationStore(this, api);
     this.workspaceNotification = new WorkspaceNotificationStore(this);
     this.favorite = new FavoriteStore(this);
     this.workItemFilters = new WorkItemFilterStore();

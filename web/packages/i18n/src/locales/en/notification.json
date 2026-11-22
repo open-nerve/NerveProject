@@ -2,6 +2,9 @@
   "notification": {
     "label": "Inbox",
     "page_label": "{workspace} - Inbox",
+    "a11y": {
+      "unread_count": "{label}, {count} unread"
+    },
     "options": {
       "mark_all_as_read": "Mark all as read",
       "mark_read": "Mark as read",

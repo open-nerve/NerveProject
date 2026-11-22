@@ -13,6 +13,8 @@ import { cn } from "@nerve/utils";
 
 interface AppSidebarItemData {
   href?: string;
+  /** The link's or the button's name, where its icon alone says nothing. */
+  label?: string;
   icon?: React.ReactNode;
   isActive?: boolean;
   onClick?: () => void;
@@ -31,15 +33,15 @@ interface AppSidebarItemIconProps {
 
 interface AppSidebarLinkItemProps {
   href?: string;
+  label?: string;
   children: React.ReactNode;
-  className?: string;
 }
 
 interface AppSidebarButtonItemProps {
+  label?: string;
   children: React.ReactNode;
   onClick?: () => void;
   disabled?: boolean;
-  className?: string;
 }
 
 // ============================================================================
@@ -72,19 +74,19 @@ function AppSidebarItemIcon({ icon, highlight }: AppSidebarItemIconProps) {
   );
 }
 
-function AppSidebarLinkItem({ href, children, className }: AppSidebarLinkItemProps) {
+function AppSidebarLinkItem({ href, label, children }: AppSidebarLinkItemProps) {
   if (!href) return null;
 
   return (
-    <Link to={href} className={cn(styles.base, className)}>
+    <Link to={href} aria-label={label} className={styles.base}>
       {children}
     </Link>
   );
 }
 
-function AppSidebarButtonItem({ children, onClick, disabled = false, className }: AppSidebarButtonItemProps) {
+function AppSidebarButtonItem({ label, children, onClick, disabled = false }: AppSidebarButtonItemProps) {
   return (
-    <button className={cn(styles.base, className)} onClick={onClick} disabled={disabled} type="button">
+    <button aria-label={label} className={styles.base} onClick={onClick} disabled={disabled} type="button">
       {children}
     </button>
   );
@@ -93,16 +95,20 @@ function AppSidebarButtonItem({ children, onClick, disabled = false, className }
 function AppSidebarItem({ variant = "link", item }: AppSidebarItemProps) {
   if (!item) return null;
 
-  const { icon, isActive, href, onClick, disabled } = item;
+  const { icon, label, isActive, href, onClick, disabled } = item;
 
   const commonItems = <AppSidebarItemIcon icon={icon} highlight={isActive} />;
 
   if (variant === "link") {
-    return <AppSidebarLinkItem href={href}>{commonItems}</AppSidebarLinkItem>;
+    return (
+      <AppSidebarLinkItem href={href} label={label}>
+        {commonItems}
+      </AppSidebarLinkItem>
+    );
   }
 
   return (
-    <AppSidebarButtonItem onClick={onClick} disabled={disabled}>
+    <AppSidebarButtonItem label={label} onClick={onClick} disabled={disabled}>
       {commonItems}
     </AppSidebarButtonItem>
   );

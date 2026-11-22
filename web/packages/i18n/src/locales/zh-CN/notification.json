@@ -2,6 +2,9 @@
   "notification": {
     "label": "收件箱",
     "page_label": "{workspace} - 收件箱",
+    "a11y": {
+      "unread_count": "{label}，{count} 条未读"
+    },
     "options": {
       "mark_all_as_read": "全部标记为已读",
       "mark_read": "标记为已读",
