@@ -1,10 +1,10 @@
 # M7 / P4：网页的通知与关注（阶段记录）
 
-> 状态：实施完成，待整分支审查（§9）。spec 与 plan 见 [P4 spec](../specs/P4-web-notifications.md)、[P4 plan](../plans/P4-web-notifications.md)，预检 [re-93](../../../reviews/re-93-M7P4预检.md)。基线 main `3d9293bd`（P3d 的 noff），分支 `codex/m7-p4`。台账 `.superpowers/sdd/P4-web-notifications/progress.md`（ignored，随阶段归档）。
+> 状态：整分支审查与修复轮完成，待复审与集成（§9）。spec 与 plan 见 [P4 spec](../specs/P4-web-notifications.md)、[P4 plan](../plans/P4-web-notifications.md)，预检 [re-93](../../../reviews/re-93-M7P4预检.md)。基线 main `3d9293bd`（P3d 的 noff），分支 `codex/m7-p4`。台账 `.superpowers/sdd/P4-web-notifications/progress.md`（ignored，随阶段归档）。
 
 ## 1. 方法与范围
 
-- **范围**（spec §1）：通知的数据层（service、store、纯函数照 v0 §7.7 重写，Plane 的旧数据层、手写类型、常量与工具整套删除）；通知页（两个页签与计数、类型筛选、未读 / 已归档 / 已暂缓、卡片、加载更多、刷新、全部已读、卡片的已读 / 归档 / 预设与自定义的暂缓、嵌入的工作项浮层）；顶栏的未读数；详情页头、浮层页头与命令面板的“关注 / 取消关注”；收起筛选行的“保存为视图”；守卫与告警；新的三引擎页面配置 `e2e/playwright.m7-pages.config.ts` 与七个页面故事文件。M7 的第一个页面阶段，不改 Go 与契约。
+- **范围**（spec §1）：通知的数据层（service、store、纯函数照 v0 §7.7 重写，Plane 的旧数据层、手写类型、常量与工具整套删除）；通知页（两个页签与计数、类型筛选、未读 / 已归档 / 已暂缓、卡片、加载更多、刷新、全部已读、卡片的已读 / 归档 / 预设与自定义的暂缓、嵌入的工作项浮层）；顶栏的未读数；详情页头、浮层页头与命令面板的“关注 / 取消关注”；收起筛选行的“保存为视图”；守卫与告警；新的三引擎页面配置 `e2e/playwright.m7-pages.config.ts` 与八个页面故事文件（H20 在 T14 按关注点拆成两个）。M7 的第一个页面阶段，不改 Go 与契约。
 - **不做**：收集箱的嵌入分诊（P5，收集箱条目的通知以普通浮层打开）；视图（P6a/P6b）；收藏与最近访问（P7）；应用侧栏的未读数（Plane 的那一项从不渲染）；`archived=true` 是否也列暂缓中的（P1c 合同的语义，§4）。
 - **做法**：主控派实施者逐个 Task 实施（T1、T15、T16 主控），每个 Task 之后主控审；先写失败的测试（RED 在断言处失败），每个性质至少一个能让测试失败的变异（`mutate.py`，`restored=yes`）；每条命令经 `run-check.py` 留回执、输入前后的哈希与日志，标签不重用；三个检查点在 T2、T11、T14 之后（本机七项、页面配置、分支 CI）。
 - **规模**：24 个提交（T1–T14 与修复），150 个文件 +11172 −3083；新增 74、删除 32、修改 43、改名 1（`sidebar/header/root.tsx` → `sidebar/header.tsx`）。
@@ -33,7 +33,8 @@
 | T13 | `3b1c4bdb` | H5、H6、H7 (page) |
 | 修复 | `7aa8fe92`、`ee14f2fb`、`2a112d81` | 两个真实引擎里的焦点缺陷与简化（§3） |
 | T14 | `1325790c` | H20 (page) 的通知页；**检查点 2** |
-| T15 | 本提交 | 文档与交接 |
+| T15 | `da255dd9` | 文档与交接 |
+| 修复轮 | `3f4c3ba8`、`6ffa9bcf`、`58eb9dd3`、`5a2d3b7e`、`88f0a788`、`afb642cd`、`03a6acf1`、`48c5cc52`、`e5a2e818`、`82287ef1`、本提交 | 整分支审查的 I1、m1、m2、m3、m4（连同 m7 的注释）、T15 裁定的顶栏 Tooltip、O4、m6、m5、本轮注释的折行、文档（m7 的其余，§9） |
 
 | 验收（spec §4） | Task | 状态 |
 |---|---|---|
@@ -44,7 +45,7 @@
 | A5 页面故事 | T12、T13、T14 | 达成：三引擎 27 过，chromium `--repeat-each=3` 过；m6-pages、m6-acceptance、m4-detail 不回归（§5） |
 | A6 删除与守卫 | T2、T5、T9、T11、T15 | 达成（§5 的死成员与告警） |
 | A7 文档 | T1、T15 | 本提交（§8） |
-| A8 门禁、审查与集成 | T16 | 待填（§9） |
+| A8 门禁、审查与集成 | T16 | 整分支审查与修复轮完成（§9）；复审、终检与合并待填 |
 
 ## 3. 实施中的裁定
 
@@ -69,6 +70,7 @@
   - H6 的 `must_be_future` 让浏览器的钟落后 nerve 一天（`page.clock`，服务端的钟不动）。
   - H7 的“不在聚焦时重取”以 `page.clock.fastForward` 越过去重窗口再发 focus 与 `visibilitychange`，e2e 变异 `t13-emut-h7-focus-refetch` 证明这一格抓得到聚焦重取。
 - **T14 与焦点的两个修复**：真实引擎里查出两个焦点缺陷——自定义暂缓的提交按钮在途停用时被浏览器失焦（`keepFocusIn` 先把焦点给弹窗，之后迟到的 blur 结束了卡片的持有），以及卡片的控件在途停用时失焦到 body。按根因修：`7aa8fe92`（持有不被焦点回到卡片之后才到的 blur 结束）、`ee14f2fb`（失焦到无处时卡片仍持有；离开后焦点给下一张，留下则控件再启用时回到它）、`2a112d81`（元素判断在 `ee14f2fb` 之后没有测试需要、变异存活，删去，持有回到 id）。jsdom 由脚本派发事件、监听器之间不跑微任务，单测抓不到，H20 (page) 三种引擎抓得到。H20 按关注点拆成两个文件（键盘与读屏、迟到的回答），标题同为 “H20 (page)”。接受：控件再启用时焦点回到它，若用户其间点了空白处也一样（`ModalCore` 的 `keepFocusIn` 同此）。
+- **T16 修复轮的裁定**（细节与提交见 §9）：m1 不照审查建议的 `!isValidating`（不够，SWR 新挂载的第一次渲染就带着旧的失败），照 browse 详情的先例每个预览自己读一次；m2 只有全部已读受影响（SWR 的 `mutate` 在调用时定键，刷新在发出时就调），回答到达时键已变就只经 store 重读；O4 属实，回焦改为看卡片自己的、能被停用的控件（菜单与弹窗的打开者）；m6 三处各取其宜：预览是有名字的区域、卡片动作看按钮本身是否画出、顶栏的点带 `data-unread-dot`；Tooltip 让 `AppSidebarItem` 的链接收下触发器的 ref 与事件。
 - **故事时长超过 8 秒的先例**（主控接受，都在 R24 的 30 秒之下）：H1 (page)（T12 时 firefox 9.8、webkit 11.5，两条测试、第二条开三个浏览器）；H5（T14 时 firefox 17.0：100 个标签约 1.9 秒与页内 100 次归档）；H20 迟到（firefox 18.8：100 张卡片的“加载更多”、Beta 工作区与第二个账号）。检查点 2 的数字见 §6：H6 与 H20 键盘在 firefox、webkit 也过 8 秒，同样在 30 秒之下。
 
 ## 4. 向负责人说明
@@ -105,6 +107,7 @@
     - `work-item-filters/filters-hoc/shared.ts:26` `enableSaveView`（prop，T11 去掉两个传入者；同一文件的 `saveViewOptions`、`enableUpdateView`、`updateViewOptions`（`:27`、`:31`、`:32`）在基线里就没有传入者）——P6a/P6b 接回或删除，读它们的是 `filters-hoc/project-level.tsx`、`workspace-level.tsx` 与 `rich-filters/filters-row.tsx` 的保存与更新分支。
     - `notification.service.test.ts:39-44` 六个字面量（T3 的 `expectTypeOf` 查询形状），以及 `page-state.test.tsx:15`、`root.test.tsx:25`、`:47-49`、`:60`、`sidebar/list.test.tsx:31` 测试替身的 prop 与字面量：读者只有测试本身（基线已有 706 行同类）。
   - **M7 其余领域的 98 行**（`rows-M7-t15.tsv`）：P5 收集箱 39 行（`intake-description-version.ts` 15、`project-inbox.store.ts` 9、`types/inbox.ts` 3、`inbox-issue.store.ts` 1、`inbox-issue-status.tsx` 1、上面两个 prop，测试 `create-root.files.test.tsx` 5、`create-root.request.test.tsx` 3）；P6 视图 30 行（`types/workspace-views.ts` 12、`types/view-props.ts` 10、`global-view.store.ts`、`views.helper.ts`、`constants/views.ts`、`default-view-quick-action.tsx` 各 1，测试 4）；P7 收藏与首页 14 行（`new-fav-folder.tsx` 4、`favorite.store.ts` 2、`ui/favorite-star.tsx` 2、`types/favorite/favorite.ts` 1，首页测试 5）；路径正则收进来的 M4 列表测试的替身 9 行（`list/view.test.tsx` 4、`spreadsheet/view.test.tsx` 5）；P4 自己的测试字面量 6 行。随各自的阶段处理。
+- **T16 修复轮之后**（`t16-dead`）1612 行，比 T15 终表多一行：`core/hooks/use-project-read.ts` 的 `revalidateOnMount`（m1 给 `useProjectRead` 加的可选参数的类型字面量成员，只经展开 `...config` 交给 `useSessionSWR` 读，工具不把展开算作读；它的读者是 `useSessionSWR` 的 `config?.revalidateOnMount`）。其余去掉行号之后逐行相同，只有 `root.test.tsx` 替身的三行读数随新格变化。oxlint 在本轮改到的 19 个 web 文件里为零，web 仍是 31 = 上限 31（`t16-oxlint-files`）。
 - oxlint（`t15-oxlint-p4-files`，只读）：P4 改到与新建的 118 个文件里警告为零；web 31 = 上限 31，`@nerve/utils` 2 = 2，`@nerve/constants`、`@nerve/i18n`、`@nerve/types`、e2e 都是 0 = 0。web 的上限在 T5 同一提交 40 → 31（9 条全在删掉的三个旧通知文件里）；`no-empty-pattern` 升为 error，`activity-list.tsx` 被行内 disable 压住的空解构删掉。
 - 关键词：`old-notification-urls`（新），`workspace-address-route` 收入通知的文件，各有命中与不命中的样例；T15 的 `t15-keywords` 过。
 
@@ -126,13 +129,15 @@
 - chromium 重复三次（`cp2-m7-repeat`，27 过 38.2 秒）：H1 每条 4.1–4.4，H2–H4 卡片 4.1–4.5、自动归档 1.7–5.5，H5 9.2–9.8，H6 8.0–8.3，H7 4.3–6.6，H20 键盘 7.2–8.5、迟到 9.9–10.4。
 - T14 时的同一配置 27 过 48.9 秒，各文件与上表相差都在 2 秒以内（H5 firefox 17.0、H20 迟到 firefox 18.8 是主控引用的数）。
 - 长的原因：H5 造 101 条通知要 100 个标签（约 1.9 秒）与页内 100 次归档；H6 一个故事里读、归档、预设、自定义、过去的时刻、到期、全部已读、移出共八段；H20 迟到要 100 张卡片的“加载更多”、Beta 工作区与第二个账号。都低于 30 秒。
+- **T16 修复轮**（`t16-m7-pages`，三引擎整配置 27 过 49.7 秒，chromium / firefox / webkit）：H1 每条 4.0–7.7，H2–H4 卡片 4.1 / 5.8 / 4.7，自动归档 2.7 / 4.9 / 3.2，H5 9.2 / 18.5 / 16.7，H6 11.2 / 14.3 / 14.3（m5 的窗口放到 5 秒，多约 3 秒），H7 5.5 / 9.5 / 6.1，H20 键盘 8.1 / 11.2 / 10.8（O4 一段），H20 迟到 10.2 / 19.3 / 13.0；chromium `--repeat-each=3`（`t16-repeat`，本轮改到的与夹具牵动的五个文件 15 过 34.3 秒）：H2–H4 卡片 3.2–4.2，H6 10.7–11.0，H7 5.0–5.7，H20 键盘 7.1–8.3，H20 迟到 10.1–10.2。都在 30 秒之下。
 - 新的 vitest 文件多在毫秒级；较慢的是 `snooze-modal.test.tsx`（15 例约 1.2 秒，每格约 80 毫秒：弹窗的过渡、日历与列表的弹出）与 `subscription.store.test.ts`（8 例约 0.95 秒，首格动态载入 RootStore），`save-view-collapsed.test.tsx`（3 例约 0.39 秒）。
 
 ## 7. 交给 M8（M7 收官时写进 M8 的交接）
 
 - **通知的快照在扇出任务运行时读**（P1b §2.6 的设计）：写入之后、任务运行之前关注的人也会收到那一次写的通知（H5 的造法因此先等前一条再关注，T13 的 `t13-explore-h5-timing` 抓到过 104 条）。观察，不改。
 - **被拒的迟到回答在同一会话的新页面提示**：`followInSession` 按会话守、不按页面，离开通知页（或后退）之后到达的拒绝仍会提示；成功的回答本来就不提示。M4 起所有写的共同行为，页面级的守卫是横切的改动，记为观察。
-- **顶栏收件箱的 Tooltip 打不开**（T2 时记下、T15 核实）：`top-navigation-root.tsx` 以 `<Tooltip label={inboxLabel} side="bottom">` 包 `AppSidebarItem`；Propel 0.3.0 的 `Tooltip` 把 children 交给 Base UI `Tooltip.Trigger` 的 `render`，Base UI 1.7.0 以 `cloneElement` 把合并的 props 与 `ref`（`[forwardedRef, registerTrigger, triggerElementRef]`）和 `onFocus`、`onPointerEnter` 等交给这个元素；`AppSidebarItem`（`core/components/sidebar/sidebar-item.tsx:95-115`）只收 `variant` 与 `item`，不转发 ref 与别的 props，`AppSidebarLinkItem`（`:77-85`）只渲染 `<Link to aria-label className>`。于是触发器从不登记、处理函数到不了 `<a>`，提示在悬停与聚焦时都不出现。Plane 同形（`apps/web/core/components/sidebar/sidebar-item.tsx:129`、`apps/web/core/components/navigation/top-navigation-root.tsx:63-79`）。它是唯一一个包着 `AppSidebarItem` 的 Tooltip；单测 `top-navigation-root.test.tsx` 用 `@/lib/fake-controls` 替掉 Tooltip，抓不到。链接的名字来自 `aria-label`（“Inbox, 5 unread”），不靠提示。修法是让 `AppSidebarItem` 转发 ref 与 props，或去掉这个 Tooltip——全应用的最后核验时定。 **主控裁定（T15）：不交 M8，在 T16 的修复轮修**——包它的是 P4 重写的顶栏，提示既是 Plane 原意又对只有图标的入口有用：让 `AppSidebarItem` 的链接转发 ref 与 Base UI 合并的 props，悬停与聚焦时提示打开，附单测（用真的 Tooltip）与变异，修好之后本条与 frontend-changes、`HO/M3-closeout.md` 的说法随之改。
+- **顶栏收件箱的 Tooltip 打不开**（T2 时记下、T15 核实）：`top-navigation-root.tsx` 以 `<Tooltip label={inboxLabel} side="bottom">` 包 `AppSidebarItem`；Propel 0.3.0 的 `Tooltip` 把 children 交给 Base UI `Tooltip.Trigger` 的 `render`，Base UI 1.7.0 以 `cloneElement` 把合并的 props 与 `ref`（`[forwardedRef, registerTrigger, triggerElementRef]`）和 `onFocus`、`onPointerEnter` 等交给这个元素；`AppSidebarItem`（`core/components/sidebar/sidebar-item.tsx:95-115`）只收 `variant` 与 `item`，不转发 ref 与别的 props，`AppSidebarLinkItem`（`:77-85`）只渲染 `<Link to aria-label className>`。于是触发器从不登记、处理函数到不了 `<a>`，提示在悬停与聚焦时都不出现。Plane 同形（`apps/web/core/components/sidebar/sidebar-item.tsx:129`、`apps/web/core/components/navigation/top-navigation-root.tsx:63-79`）。它是唯一一个包着 `AppSidebarItem` 的 Tooltip；单测 `top-navigation-root.test.tsx` 用 `@/lib/fake-controls` 替掉 Tooltip，抓不到。链接的名字来自 `aria-label`（“Inbox, 5 unread”），不靠提示。修法是让 `AppSidebarItem` 转发 ref 与 props，或去掉这个 Tooltip——全应用的最后核验时定。 **主控裁定（T15）：不交 M8，在 T16 的修复轮修**——包它的是 P4 重写的顶栏，提示既是 Plane 原意又对只有图标的入口有用：让 `AppSidebarItem` 的链接转发 ref 与 Base UI 合并的 props，悬停与聚焦时提示打开，附单测（用真的 Tooltip）与变异，修好之后本条与 frontend-changes、`HO/M3-closeout.md` 的说法随之改。 **已修（`afb642cd`，§9）**：`AppSidebarItem` 的链接收下触发器给的 ref 与事件，悬停与聚焦时提示打开；单测 `core/components/sidebar/sidebar-item.test.tsx` 用真的 Propel Tooltip，两个变异皆杀；frontend-changes 与 `HO/M3-closeout.md` 的说法已改。本条不再交给 M8。
+- **拨慢那天重复的半点**（m4 记下的已知限制）：夏令时结束那天（如洛杉矶 11 月第一个周日）01:00 与 01:30 各出现两次，自定义暂缓的时段以 `new Date(y, m, d, h, mm)` 取浏览器时区的那一刻，只能选到第一次（夏令时的那一个），第二次够不着；拨快那天跳过的 02:00、02:30 已不给（`88f0a788`）。要选到第二次得让时段带上时区偏移，不在 P4 做；观察，不改。
 - **共用的 `DateDropdown` 的名字不带所选的日子**（T9 修复 ③ 记下的疑点，台账没有主控的裁定）：按钮的 `aria-label` 恒为 placeholder（`core/components/dropdowns/date.tsx:102`），选了日子之后名字仍只是 “Pick a date”；暂缓弹窗里日期与时间两个控件的名字因此不对称（时间是 “Time, 12:30 AM”）。整个网页的 `DateDropdown` 都如此。 **主控裁定（T15）：交 M8**——`DateDropdown` 是 M4 起的共用控件（14 个产品文件），改名字牵动各页的读屏名与既有故事的定位，不在 P4 的末段单改暂缓弹窗一处（只改一处是补丁）；M8 以“所有带字段名的选择控件读作‘字段，值’”统一处理，时间选择的 “Time, 12:30 AM” 是参照。
 - **交给 P5**（不是 M8）：收集箱条目以普通浮层打开时，属性里的 “State” 一栏显示占位文字 “State”（Triage 状态不在项目的状态列表里，按钮名 “State: State”），没有接受与拒绝；P5 接回分诊时处理。
 
@@ -145,4 +150,17 @@
 
 ## 9. 整分支审查与集成
 
-（T16 填：整分支审查与修复复审、终检、最终分支 CI、`--no-ff` 合并、main CI、归档。）
+- **整分支审查**（fable，只读，`3d9293bd..da255dd9`，台账旁的 `review-whole-branch.md`）：修复后可合并；严重 0、重要 1、次要 7、观察 7。I1 刷新在途时点“加载更多”，列表静默漏掉一段（`fetchMore` 的合并不认游标）；m1 预览被上一次留下的项目读失败立刻再拒；m2 页头的全部已读或刷新在途时换筛选，迟到的重读写进新筛选的 SWR 键；m3 卡片的“暂缓至”在中文里是英文的 12 小时制；m4 拨快那天的时段有重复与够不着的时刻；m5 H6 (page) 的“暂缓到两秒之后”只有两秒余量；m6 三个 e2e 定位器认样式类；m7 文档与注释三处。观察 O1–O7（O4：预设的暂缓被拒时焦点可能停在 body，未核实）。
+- **修复轮**（主控裁定：I1、m1–m7 全修；T15 裁定的顶栏 Tooltip 同轮修；O4 在真实引擎核实、属实即修；O1–O3、O5–O7 不改）。每个产品修复都先有失败的单测格（RED）与一个能让它失败的变异（`mutate.py`，`restored=yes`），`make lint-web`、`make knip`、`make test-web` 过：
+  - `3f4c3ba8`（I1）：`fetchMore` 的合并只在持有页的 `next_cursor` 仍是这一页发出时的游标时接上，否则留持有页（游标即位置：只加载过一页、刷新答回同一个游标时照常接上）；`Reconciled` 不改。单测与原有一格次序相反（刷新的读在外 → `fetchMore` → 第一页先答 → 后续页后答），变异“合并不比游标”杀。
+  - `6ffa9bcf`（m1）：审查建议的“另要 `!isValidating`”不够（`t16-m1-try-validating` 新格仍失败）：读失败之后 SWR 2.4.2 的缓存是 `{error, isValidating: false}`，新挂载的第一次渲染返回的正是它，挂载读在 layout effect 里才置 `isValidating`，离散事件的提交先冲刷 passive effect。照 browse 详情的先例，预览关掉 SWR 的挂载读、挂载时自己 `mutate()` 一次，这次落定之后才判定；`useProjectRead` 加可选的 `{ revalidateOnMount?: false }`，另两个读者不传、不变。两个变异（不看 `answered`；不关挂载读，一个预览两个读）皆杀。
+  - `58eb9dd3`（m2）：SWR 的绑定 `mutate` 在调用时读 `keyRef.current` 定键——刷新在发出时就调，写进发出时的键，不受影响（加一个守门格）；全部已读在回答之后才调。页头以 ref 记页面此刻的筛选，回答到达时键已不是发出时的就只经 store 的 `fetchList` 重读旧筛选（R9 不变）。不选“按键 mutate”：要从 `swr` 直接取全局 `mutate`，或给 `use-session-swr` 加接口。
+  - `5a2d3b7e`（m3）：`card/snooze-time.ts` 的 `timeLabel(moment, locale)`（`Intl.DateTimeFormat(locale, { hour: "numeric", minute: "2-digit" })`），弹窗的 `slotLabel` 与卡片的“暂缓至”共用；日期一半仍是 `renderFormattedDate`。英文的时间随之从 “08:30 PM” 变为 “8:30 PM”。
+  - `88f0a788`（m4，连同 m7 的 `snooze-modal.tsx:48` 注释重排）：`snoozeSlots` 滤掉换算回来不是这个钟点的时段，拨快那天 46 项；拨慢那天的第二个 01:00、01:30 记为已知限制（§7）。
+  - `afb642cd`（顶栏 Tooltip，T15 裁定）：`AppSidebarItem` 的链接收下包它的元件给的 props（`ComponentPropsWithRef<"a">` 去掉地址、名字、样式与 children），经 `AppSidebarLinkItem` 展开到 `Link`，自己的地址、名字与样式优先；React 19 的 ref 是普通 prop。按钮变体与它的两个调用者不变。jsdom 可用真的 Propel Tooltip：键盘聚焦与鼠标停留（Base UI 以 `restMs` 开，要 `mousemove`）都打开；Base UI 的触发器不设 `aria-describedby`。
+  - `03a6acf1`（O4）：真实引擎属实——拒绝扣住 800 ms 时三种引擎的焦点都停在 body；立即拒绝时才碰巧回到按钮（早于 Headless UI 还焦点）。根因：旧 hook 只看“失焦到无处的那个元素”再启用，而预设从菜单选出时失焦的是菜单面板（随菜单卸载、永不再启用），暂缓按钮在途停用，Headless UI 还焦点落空。`useLeavingFocus` 改为在取得焦点时看卡片自己的、能被停用的控件（`:enabled`，不是菜单面板、也不是弹窗），它再启用、焦点无处时回到它——焦点进了它打开的菜单或弹窗，看的仍是打开者。H20 (page) 键盘故事加一段：评论的卡片以键盘选“1 day”，PATCH 被代理的 503 拒（不经 nerve），菜单走、两帧之后 body 有焦点再放行，卡片留下、焦点回到暂缓按钮；修复前的构建三种引擎都在这一步失败（`t16-o4-e2e-red-3`）。watch 里“卡片仍持有”的判断变异存活，按不过度设计删去（`nowhere()` 已保证不抢有焦点的元素）；“再启用时焦点已去别处”另加守门格。
+  - `48c5cc52`（m6）：预览区成为名为 “Preview”（zh-CN “预览”，`notification.a11y.preview`）的区域，夹具按角色与名字找；卡片的动作不改产品，夹具新的 `expectActionsShown` 看动作按钮本身是否画出（`checkVisibility({ opacityProperty: true })`），H6、H20 各自的 `actionsOf` 删去；顶栏的点是装饰（链接名已说未读数），按 `data-notification-id` 的先例带 `data-unread-dot`。三条期望错误的版本各在被改的断言处失败。
+  - `e5a2e818`（m5）：H6 的暂缓窗口 2 → 5 秒（`unreadReach` 的 10 秒上限仍够），chromium 多约 3 秒；e2e 变异（不暂缓）在刷新后的 `toHaveCount(0)` 处失败。
+  - `82287ef1`：本轮三处超过 120 列的注释折行（只改注释）。本提交（m7 的文档一半）：§1 的“八个页面故事文件”；plane-diff 依赖 I1 的“刷新”“分页与工作区”两行与“卡片离开之后的焦点”“自定义暂缓”两行；frontend-changes 与 `HO/M3-closeout.md` 的 Tooltip 说法；§2、§3、§5、§6、§7 与本节。
+  - 修复轮的验证：`make build build-s3-fixture`；m7-pages 三引擎 27 过（`t16-m7-pages`，49.7 秒）；chromium `--repeat-each=3` 改到的与夹具牵动的五个文件 15 过（`t16-repeat`）；`make lint-web`、`make knip`、`make test-web`、`tools/keywords.mjs` 过（`t16-final-*`）；死成员 1612（§5）。
+- （复审、终检、最终分支 CI、`--no-ff` 合并、main CI、归档：主控填。）
