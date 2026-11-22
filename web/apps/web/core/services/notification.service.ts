@@ -3,7 +3,16 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { ApiClient, NotificationPage, NotificationUnreadCount, operations } from "@nerve/api-client";
+import type {
+  ApiClient,
+  Notification,
+  NotificationMarkAllRead,
+  NotificationPage,
+  NotificationsMarked,
+  NotificationUnreadCount,
+  NotificationUpdate,
+  operations,
+} from "@nerve/api-client";
 import { unwrap } from "@/lib/api-error";
 
 /**
@@ -25,6 +34,29 @@ export class NotificationService {
    */
   async list(slug: string, query: NotificationListQuery): Promise<NotificationPage> {
     return unwrap(await this.api.GET("/api/v0/workspaces/{slug}/notifications", { params: { path: { slug }, query } }));
+  }
+
+  /**
+   * Changes the states of the caller's notification body names, each on its own: read, archived, and snoozed_till (a
+   * moment after now snoozes it till then, null ends its snooze); the answer is the notification as nerve lists it.
+   */
+  async update(notificationId: string, body: NotificationUpdate): Promise<Notification> {
+    return unwrap(
+      await this.api.PATCH("/api/v0/notifications/{notification_id}", {
+        params: { path: { notification_id: notificationId } },
+        body,
+      })
+    );
+  }
+
+  /**
+   * Marks read the caller's unread notifications in the workspace slug names that body's filters select; the answer is
+   * how many it marked. nerve marks them in batches: when one fails, those before it stay marked.
+   */
+  async markAllRead(slug: string, body: NotificationMarkAllRead): Promise<NotificationsMarked> {
+    return unwrap(
+      await this.api.POST("/api/v0/workspaces/{slug}/notifications/mark-all-read", { params: { path: { slug } }, body })
+    );
   }
 
   /**

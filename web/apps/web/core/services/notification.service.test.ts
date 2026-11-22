@@ -1,7 +1,7 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 // The caller's notifications (P4 spec 2.1), against a fake nerve: one method per operation, nerve's answer as it is.
 import { afterEach, beforeEach, expect, expectTypeOf, it, vi } from "vitest";
-import type { operations } from "@nerve/api-client";
+import type { NotificationMarkAllRead, operations } from "@nerve/api-client";
 import { ApiError } from "@/lib/api-error";
 import { FakeNerve, json, problem } from "@/lib/auth/fake-nerve";
 import { settle } from "@/lib/auth/fake-time";
@@ -82,4 +82,51 @@ it("hands nerve's refusal of a list to the caller", async () => {
   const read = await settle(service.list("acme", { tab: "mentions", type: "assigned" }), "the list");
   expect(read.error).toBeInstanceOf(ApiError);
   expect(read.error).toMatchObject({ status: 422, problem: { code: "validation_failed" } });
+});
+
+it("changes the caller's notification with the body as it is: null ends its snooze (T1); gives nerve's answer", async () => {
+  const nerve = new FakeNerve();
+  const changed = notificationOf("one", { read_at: "2026-11-10T09:00:00Z" });
+  nerve.respond = (call) => call.answer(json(200, changed));
+  const service = new NotificationService(nerve.client());
+  const change = await settle(service.update("n-one", { read: true, snoozed_till: null }), "the change");
+  expect(change.value).toEqual(changed);
+  expect(nerve.calls.map(({ method, path, query, body }) => ({ method, path, query, body }))).toEqual([
+    { method: "PATCH", path: "/api/v0/notifications/n-one", query: {}, body: { read: true, snoozed_till: null } },
+  ]);
+});
+
+it("marks the caller's unread notifications in a workspace read, the type an array as given; gives how many", async () => {
+  const nerve = new FakeNerve();
+  nerve.respond = (call) => call.answer(json(200, { marked: 4 }));
+  const service = new NotificationService(nerve.client());
+  const filters: NotificationMarkAllRead = {
+    tab: "all",
+    type: ["assigned", "created"],
+    archived: false,
+    snoozed: false,
+  };
+  const marking = await settle(service.markAllRead("acme", filters), "the marking");
+  expect(marking.value).toEqual({ marked: 4 });
+  expect(nerve.calls.map(({ method, path, query, body }) => ({ method, path, query, body }))).toEqual([
+    {
+      method: "POST",
+      path: "/api/v0/workspaces/acme/notifications/mark-all-read",
+      query: {},
+      body: { tab: "all", type: ["assigned", "created"], archived: false, snoozed: false },
+    },
+  ]);
+});
+
+it("hands nerve's refusals of the changes to the caller", async () => {
+  const nerve = new FakeNerve();
+  nerve.respond = (call) =>
+    call.answer(call.method === "PATCH" ? problem(404, "notification.not_found") : problem(500, "internal_error"));
+  const service = new NotificationService(nerve.client());
+  const change = await settle(service.update("n-gone", { archived: true }), "the change");
+  expect(change.error).toBeInstanceOf(ApiError);
+  expect(change.error).toMatchObject({ status: 404, problem: { code: "notification.not_found" } });
+  const marking = await settle(service.markAllRead("acme", {}), "the marking");
+  expect(marking.error).toBeInstanceOf(ApiError);
+  expect(marking.error).toMatchObject({ status: 500, problem: { code: "internal_error" } });
 });

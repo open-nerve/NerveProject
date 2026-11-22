@@ -14,9 +14,8 @@ import { NotificationService } from "@/services/notification.service";
 import type { RootStore } from "@/store/root.store";
 import type { NotificationFilters } from "./filters";
 import { filterKey, filtersOf, listQuery } from "./filters";
-
-/** A workspace as the store fetches its notifications: by its slug, kept under its id. */
-type WorkspaceRef = Pick<Workspace, "id" | "slug">;
+import type { FetchedList, INotificationChanges, WorkspaceRef } from "./notification-changes";
+import { NotificationChanges } from "./notification-changes";
 
 /** The key of a workspace's list of the notifications some filters select: its id, and the filters' key (filterKey). */
 const listKey = (workspaceId: string, key: string) => `${workspaceId}|${key}`;
@@ -30,7 +29,7 @@ const followed = (held: NotificationPage, next: NotificationPage): NotificationP
   next_cursor: next.next_cursor,
 });
 
-export interface INotificationStore {
+export interface INotificationStore extends INotificationChanges {
   // computed actions
   getList: (slug: string, filters: NotificationFilters) => NotificationPage | undefined;
   getUnreadCount: (slug: string) => NotificationUnreadCount | undefined;
@@ -46,7 +45,8 @@ export interface INotificationStore {
  * answered them; only nerve counts them (by tab, archived, snoozed and what he sees), so the store never does. Its
  * readers name the workspace by the address's slug, as the caller's workspaces list it now, never by the router store;
  * a workspace no longer his gives nothing (v0 design 7.7). Its service sends with the session's client; fetches do not
- * queue.
+ * queue. Its changes go one at a time and write nerve's answers into every list the store holds of the workspace, then
+ * fetch the count again (notification-changes.ts).
  */
 export class NotificationStore implements INotificationStore {
   /** Each workspace's unread counts, by its id, reconciled between fetches (reconciled.ts). */
@@ -56,15 +56,27 @@ export class NotificationStore implements INotificationStore {
    * with the cursor of the next, reconciled between its fetches, the next pages' reads and the changes (reconciled.ts).
    */
   private readonly lists = new ReconciledByKey<NotificationPage>();
+  /**
+   * The lists fetched, by their keys: whose workspace each is, and the filters it names, for the changes to write
+   * nerve's answers into every list a workspace holds (notification-changes.ts).
+   */
+  private readonly fetched = new Map<string, FetchedList>();
   // services
   private readonly service: NotificationService;
   // stores
   /** The caller's workspace the slug names, by his workspaces now (WorkspaceRootStore.getWorkspaceBySlug). */
   private readonly workspaceOf: (slug: string) => Workspace | null;
 
+  /** The changes of the notifications, which write nerve's answers into the lists above and fetch again. */
+  private readonly changes: NotificationChanges;
+
   constructor(rootStore: RootStore, api: ApiClient) {
     this.service = new NotificationService(api);
     this.workspaceOf = rootStore.workspaceRoot.getWorkspaceBySlug;
+    this.changes = new NotificationChanges(
+      { lists: this.lists, fetched: this.fetched, fetchList: this.fetchList, fetchUnreadCount: this.fetchUnreadCount },
+      this.service
+    );
   }
 
   /**
@@ -84,9 +96,10 @@ export class NotificationStore implements INotificationStore {
    */
   fetchList = (workspace: WorkspaceRef, filters: NotificationFilters): Promise<NotificationPage | undefined> => {
     const key = filterKey(filters);
-    return this.lists.fetch(listKey(workspace.id, key), () =>
-      this.service.list(workspace.slug, listQuery(filtersOf(key)))
-    );
+    const list = listKey(workspace.id, key);
+    const named = filtersOf(key);
+    this.fetched.set(list, { workspaceId: workspace.id, filters: named });
+    return this.lists.fetch(list, () => this.service.list(workspace.slug, listQuery(named)));
   };
 
   /**
@@ -118,4 +131,9 @@ export class NotificationStore implements INotificationStore {
    */
   fetchUnreadCount = (workspace: WorkspaceRef): Promise<NotificationUnreadCount | undefined> =>
     this.counts.fetch(workspace.id, () => this.service.unreadCount(workspace.slug));
+
+  // changes (notification-changes.ts)
+  update: INotificationStore["update"] = (workspace, notificationId, patch) =>
+    this.changes.update(workspace, notificationId, patch);
+  markAllRead: INotificationStore["markAllRead"] = (workspace, filters) => this.changes.markAllRead(workspace, filters);
 }

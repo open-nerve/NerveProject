@@ -4,7 +4,7 @@
  */
 
 // nerve imports
-import type { NotificationTab, NotificationType } from "@nerve/api-client";
+import type { Notification, NotificationMarkAllRead, NotificationTab, NotificationType } from "@nerve/api-client";
 // services
 import type { NotificationListQuery } from "@/services/notification.service";
 
@@ -70,5 +70,42 @@ export function listQuery(filters: NotificationFilters, cursor?: string): Notifi
     snoozed: String(filters.snoozed),
     limit: PAGE_SIZE,
     ...(cursor === undefined ? {} : { cursor }),
+  };
+}
+
+/**
+ * @description whether the notification is snoozed at now: its snoozed_till is after now; one whose snooze is over is
+ * an ordinary notification again, listed and counted as any other (the contract's T6)
+ */
+export const snoozedNow = (notification: Pick<Notification, "snoozed_till">, now: Date): boolean =>
+  notification.snoozed_till !== null && new Date(notification.snoozed_till).getTime() > now.getTime();
+
+/**
+ * @description whether a list of the filters lists the notification at now, as nerve would: its tab (the mentions are
+ * those sent as mentioned), the senders its types select, archived, and snoozed now (snoozedNow); never its read state,
+ * so that one read where the unread are listed stays in place (R8)
+ */
+export function matches(notification: Notification, filters: NotificationFilters, now: Date): boolean {
+  const types = typesOf(filters);
+  return (
+    (filters.tab === "mentions") === (notification.sender === "mentioned") &&
+    (types.length === 0 || types.some((type) => type === notification.sender)) &&
+    (notification.archived_at !== null) === filters.archived &&
+    snoozedNow(notification, now) === filters.snoozed
+  );
+}
+
+/**
+ * @description the body of mark all read for the filters (P4 spec 2.2, R9): the tab, archived and snoozed as the list
+ * selects them; the all tab's types as an array only when there are some (T2; T8: type is one or more senders); no
+ * read, as it marks the unread ones whether the list shows them alone or not
+ */
+export function markAllBody(filters: NotificationFilters): NotificationMarkAllRead {
+  const types = typesOf(filters);
+  return {
+    tab: filters.tab,
+    ...(types.length > 0 ? { type: types } : {}),
+    archived: filters.archived,
+    snoozed: filters.snoozed,
   };
 }

@@ -4,12 +4,15 @@
  */
 
 import { describe, expect, it } from "vitest";
+import { notificationOf } from "./fake-notifications";
 import type { NotificationFilters } from "./filters";
-import { filterKey, filtersOf, listQuery } from "./filters";
+import { filterKey, filtersOf, listQuery, markAllBody, matches, snoozedNow } from "./filters";
 
 // The filters of the caller's notifications, as the page holds them, and what nerve is asked with them (P4 spec 2.2,
-// R10, R21; the contract's traps T2–T5, T7, T8): the key of a list names exactly what it fetches, and turns back into
-// the filters it names (re-93 m5); the list's query never sends what nerve refuses.
+// R8–R10, R21; the contract's traps T2–T8): the key of a list names exactly what it fetches, and turns back into the
+// filters it names (re-93 m5); the list's query and mark all's body never send what nerve refuses; whether a list
+// still lists a notification nerve answered is decided by the filters it was fetched with, at a moment, never by
+// whether it is read.
 
 /** The page's first filters: all, no type, none of the three toggles. */
 const all: NotificationFilters = { tab: "all", types: [], unread: false, archived: false, snoozed: false };
@@ -138,5 +141,95 @@ describe("listQuery", () => {
     expect(limit).toBe(100);
     expect(Object.values(strings).every((value) => typeof value === "string")).toBe(true);
     expect(Object.keys(strings).toSorted()).toEqual(["archived", "cursor", "read", "snoozed", "tab", "type"]);
+  });
+});
+
+describe("markAllBody", () => {
+  it("marks the tab's notifications that the toggles archived and snoozed select, as booleans", () => {
+    expect(markAllBody(all)).toEqual({ tab: "all", archived: false, snoozed: false });
+    expect(markAllBody(withFilters({ archived: true }))).toEqual({ tab: "all", archived: true, snoozed: false });
+    expect(markAllBody(withFilters({ tab: "mentions", snoozed: true }))).toEqual({
+      tab: "mentions",
+      archived: false,
+      snoozed: true,
+    });
+  });
+
+  it("sends the all tab's types as an array, in order and each once", () => {
+    expect(markAllBody(withFilters({ types: ["subscribed", "assigned", "subscribed"] }))).toEqual({
+      tab: "all",
+      type: ["assigned", "subscribed"],
+      archived: false,
+      snoozed: false,
+    });
+  });
+
+  it("never sends type in the mentions tab, nor an empty one (T2, T8: type is one or more senders)", () => {
+    expect(markAllBody(withFilters({ tab: "mentions", types: ["assigned"] }))).toEqual({
+      tab: "mentions",
+      archived: false,
+      snoozed: false,
+    });
+    expect(Object.keys(markAllBody(all))).not.toContain("type");
+  });
+
+  it("never sends read: it marks the unread ones, whether the list shows the unread alone or not", () => {
+    expect(markAllBody(withFilters({ unread: true }))).toEqual(markAllBody(all));
+    expect(Object.keys(markAllBody(withFilters({ unread: true })))).not.toContain("read");
+  });
+});
+
+/** A moment of the tests: the notifications' snoozes are reckoned at it. */
+const now = new Date("2026-11-10T09:00:00Z");
+
+describe("snoozedNow", () => {
+  it.each<[string, string | null, boolean]>([
+    ["never snoozed, or its snooze ended", null, false],
+    ["snoozed till a moment after now", "2026-11-10T09:00:01Z", true],
+    ["snoozed till now: its snooze is over", "2026-11-10T09:00:00Z", false],
+    ["snoozed till a moment past: an ordinary notification again (T6)", "2026-11-09T09:00:00Z", false],
+  ])("%s", (_, till, snoozed) => {
+    expect(snoozedNow({ snoozed_till: till }, now)).toBe(snoozed);
+  });
+});
+
+describe("matches", () => {
+  /** Unread, neither archived nor snoozed, sent to its subscriber. */
+  const subscribed = notificationOf("subscribed");
+  const mentioned = notificationOf("mentioned", { sender: "mentioned" });
+
+  it("lists a mention in the mentions tab alone, and every other notification in the all tab alone", () => {
+    expect(matches(subscribed, all, now)).toBe(true);
+    expect(matches(subscribed, withFilters({ tab: "mentions" }), now)).toBe(false);
+    expect(matches(mentioned, withFilters({ tab: "mentions" }), now)).toBe(true);
+    expect(matches(mentioned, all, now)).toBe(false);
+  });
+
+  it("lists in the all tab the senders its types select, every sender with none; the mentions tab has no types", () => {
+    expect(matches(subscribed, withFilters({ types: ["assigned", "subscribed"] }), now)).toBe(true);
+    expect(matches(subscribed, withFilters({ types: ["assigned", "created"] }), now)).toBe(false);
+    expect(matches(mentioned, withFilters({ tab: "mentions", types: ["assigned"] }), now)).toBe(true);
+  });
+
+  it("lists the archived alone with archived, and only those not archived without", () => {
+    const archived = notificationOf("archived", { archived_at: "2026-11-09T10:00:00Z" });
+    expect(matches(archived, withFilters({ archived: true }), now)).toBe(true);
+    expect(matches(archived, all, now)).toBe(false);
+    expect(matches(subscribed, withFilters({ archived: true }), now)).toBe(false);
+  });
+
+  it("lists those snoozed now alone with snoozed, and the others without: a snooze past among them (T6)", () => {
+    const snoozed = notificationOf("snoozed", { snoozed_till: "2026-11-11T09:00:00Z" });
+    const over = notificationOf("over", { snoozed_till: "2026-11-09T09:00:00Z" });
+    expect(matches(snoozed, withFilters({ snoozed: true }), now)).toBe(true);
+    expect(matches(snoozed, all, now)).toBe(false);
+    expect(matches(over, all, now)).toBe(true);
+    expect(matches(over, withFilters({ snoozed: true }), now)).toBe(false);
+  });
+
+  it("never looks at its read state: a read notification stays in the list of the unread (R8)", () => {
+    const read = notificationOf("read", { read_at: "2026-11-10T08:00:00Z" });
+    expect(matches(read, withFilters({ unread: true }), now)).toBe(true);
+    expect(matches(subscribed, withFilters({ unread: true }), now)).toBe(true);
   });
 });

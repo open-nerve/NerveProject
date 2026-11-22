@@ -71,11 +71,17 @@ export const pageOf = (data: Notification[], nextCursor: string | null = null): 
 /** The caller's unread notifications in a workspace as nerve counts them: all is every one but the mentions. */
 export const countOf = (all: number, mentions: number): NotificationUnreadCount => ({ all, mentions });
 
-/** The requests of the notifications: a workspace's list and unread counts, by its slug. */
+/**
+ * The requests of the notifications: a workspace's list, unread counts and mark all read, by its slug; a notification,
+ * which is changed there.
+ */
 export const notificationRequests = {
   list: (workspace: Pick<Workspace, "slug">) => `/api/v0/workspaces/${workspace.slug}/notifications`,
   unreadCount: (workspace: Pick<Workspace, "slug">) =>
     `/api/v0/workspaces/${workspace.slug}/notifications/unread-count`,
+  markAllRead: (workspace: Pick<Workspace, "slug">) =>
+    `/api/v0/workspaces/${workspace.slug}/notifications/mark-all-read`,
+  at: (notification: Pick<Notification, "id">) => `/api/v0/notifications/${notification.id}`,
 };
 
 /**
