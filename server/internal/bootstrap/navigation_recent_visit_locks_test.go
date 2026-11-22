@@ -222,7 +222,7 @@ func (w issueWorld) undeletedVisits(t *testing.T, owner uuid.UUID) int {
 // deletes the two.
 func (w issueWorld) pastTheCap(t *testing.T, owner uuid.UUID) []uuid.UUID {
 	t.Helper()
-	seedPastVisits(t, w.pool, w.web, owner, navigationdomain.RecentVisitCap+2-w.undeletedVisits(t, owner))
+	seedPastVisits(t, w.pool, w.web, owner, freshIDs(navigationdomain.RecentVisitCap+2-w.undeletedVisits(t, owner)))
 	past := queryIDs(t, w.pool, `SELECT id FROM user_recent_visits WHERE user_id = $1 AND workspace_id = $2 AND deleted_at IS NULL
 		ORDER BY visited_at DESC, id DESC OFFSET $3`, owner, w.acme, navigationdomain.RecentVisitCap)
 	if len(past) != 2 {
@@ -231,24 +231,39 @@ func (w issueWorld) pastTheCap(t *testing.T, owner uuid.UUID) []uuid.UUID {
 	return past
 }
 
-// seedPastVisits writes, directly, n recent visits of owner's of work items
-// of project whose ids are none (entity_identifier being no foreign key),
-// each visited, made and last changed by him a day and some seconds ago,
-// before every visit a test records. n may be 0.
-func seedPastVisits(t *testing.T, pool *pgxpool.Pool, project, owner uuid.UUID, n int) {
+// seedPastVisits writes, directly, owner's recent visits of the work items
+// items of project, items[0] visited a day and a second ago and each next
+// one a second before the last, before every visit a test records, each
+// made and last changed by him at its visit. entity_identifier being no
+// foreign key, an id no work item has will do (freshIDs). The visit of
+// items[n] is of the id ids[n] when ids are given, else of a new one.
+// items may be empty.
+func seedPastVisits(t *testing.T, pool *pgxpool.Pool, project, owner uuid.UUID, items []uuid.UUID, ids ...uuid.UUID) {
 	t.Helper()
+	if len(ids) == 0 {
+		ids = freshIDs(len(items))
+	}
+	if len(ids) != len(items) {
+		t.Fatalf("seeding past visits of %s: %d ids for %d work items", owner, len(ids), len(items))
+	}
+	if tag, err := pool.Exec(pgtest.Soon(t), `INSERT INTO user_recent_visits (id, workspace_id, project_id, user_id, entity_type, entity_identifier,
+			visited_at, created_by_id, updated_by_id, created_at, updated_at)
+		SELECT v.id, p.workspace_id, p.id, $3::uuid, 'issue', v.item, v.at, $3::uuid, $3::uuid, v.at, v.at
+		FROM projects AS p,
+			(SELECT id, item, now() - interval '1 day' - n::float8 * interval '1 second' AS at
+				FROM unnest($1::uuid[], $2::uuid[]) WITH ORDINALITY AS u (id, item, n)) AS v
+		WHERE p.id = $4`, ids, items, owner, project); err != nil || tag.RowsAffected() != int64(len(items)) {
+		t.Fatalf("seeding %d past visits of %s: %d rows, %v", len(items), owner, tag.RowsAffected(), err)
+	}
+}
+
+// freshIDs is n new ids, in increasing order, of no row.
+func freshIDs(n int) []uuid.UUID {
 	ids := make([]uuid.UUID, n)
 	for i := range ids {
 		ids[i] = uuid.NewV7()
 	}
-	if tag, err := pool.Exec(pgtest.Soon(t), `INSERT INTO user_recent_visits (id, workspace_id, project_id, user_id, entity_type, entity_identifier,
-			visited_at, created_by_id, updated_by_id, created_at, updated_at)
-		SELECT v.id, p.workspace_id, p.id, $2::uuid, 'issue', gen_random_uuid(), v.at, $2::uuid, $2::uuid, v.at, v.at
-		FROM projects AS p,
-			(SELECT id, now() - interval '1 day' - n::float8 * interval '1 second' AS at FROM unnest($1::uuid[]) WITH ORDINALITY AS u (id, n)) AS v
-		WHERE p.id = $3`, ids, owner, project); err != nil || tag.RowsAffected() != int64(n) {
-		t.Fatalf("seeding %d past visits of %s: %d rows, %v", n, owner, tag.RowsAffected(), err)
-	}
+	return ids
 }
 
 // requestAdvisoryLocks is how many advisory locks the backend pid holds.
