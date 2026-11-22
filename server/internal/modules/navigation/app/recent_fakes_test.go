@@ -51,9 +51,12 @@ type recents struct {
 	// issues are the undeleted work items, of any workspace; visits, what RecentVisits answers.
 	issues map[uuid.UUID]recentIssue
 	visits []domain.RecentVisit
-	// recorded are the visits RecordRecentVisit stored; trims, the trims run.
-	recorded []recordedVisit
-	trims    []trimmed
+	// recorded are the visits RecordRecentVisit stored; trims, the trims run; recordErr and trimErr, what the write and
+	// the trim fail with, nil unless a test sets them.
+	recorded  []recordedVisit
+	trims     []trimmed
+	recordErr error
+	trimErr   error
 }
 
 // newRecents is newShelf with attic, archived, and lobby, projects of acme, and the work items: alice reads web, ops and
@@ -134,13 +137,13 @@ func (r *recents) LockRecentVisits(_ context.Context, user, workspace uuid.UUID)
 func (r *recents) RecordRecentVisit(_ context.Context, v domain.RecentVisit, by uuid.UUID) error {
 	r.log("record %s %s by %s", v.Kind, r.name(v.EntityID), r.name(by))
 	r.recorded = append(r.recorded, recordedVisit{v, by})
-	return nil
+	return r.recordErr
 }
 
 func (r *recents) TrimRecentVisits(_ context.Context, user, workspace uuid.UUID, keep int) error {
 	r.log("trim %s %s %d", r.name(user), r.name(workspace), keep)
 	r.trims = append(r.trims, trimmed{user, workspace, keep})
-	return nil
+	return r.trimErr
 }
 
 // targets are the recents' reads of targets.

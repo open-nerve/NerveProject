@@ -1,6 +1,7 @@
 package app_test
 
 import (
+	"errors"
 	"reflect"
 	"testing"
 	"uuid"
@@ -56,6 +57,31 @@ func TestRecordARecentVisitOfEachKind(t *testing.T) {
 				t.Errorf("trimmed %+v; want alice's in acme past 20", r.trims)
 			}
 			wantCalls(t, r.world, recordCalls(tt.place, tt.see, tt.kind, r.name(tt.id))...)
+		})
+	}
+}
+
+// A write or a trim that fails fails the recording, with its error, so that its transaction rolls back: a trim's
+// error is not passed over for a write that went through.
+func TestARecordingFailsWithItsWritesError(t *testing.T) {
+	failure := errors.New("the store failed")
+	for _, tt := range []struct {
+		name  string
+		fail  func(*recents)
+		trims int
+	}{
+		{"the write", func(r *recents) { r.recordErr = failure }, 0},
+		{"the trim", func(r *recents) { r.trimErr = failure }, 1},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			r := newRecents()
+			tt.fail(r)
+			if err := r.recordVisit().Execute(as(t), domain.RecentVisitProject, web); !errors.Is(err, failure) {
+				t.Fatalf("recording = %v; want %v", err, failure)
+			}
+			if len(r.trims) != tt.trims {
+				t.Errorf("trims %+v after the failing %s; want %d", r.trims, tt.name, tt.trims)
+			}
 		})
 	}
 }
