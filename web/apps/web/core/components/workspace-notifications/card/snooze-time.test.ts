@@ -94,6 +94,23 @@ describe("snoozeSlots", () => {
       expect(slotMoment(new Date(2027, 10, 7), "01:30")).toBe("2027-11-07T08:30:00.000Z");
     });
   });
+
+  describe("in a zone whose clocks move by half an hour (Australia/Lord_Howe, re-review O3)", () => {
+    beforeAll(() => {
+      vi.stubEnv("TZ", "Australia/Lord_Howe");
+    });
+    afterAll(() => {
+      vi.unstubAllEnvs();
+    });
+
+    it("leave out the half hour the start of daylight time skips (4 October 2026): 47, 02:00 none", () => {
+      const slots = snoozeSlots(new Date(2026, 9, 4), new Date(2026, 9, 3, 12, 0));
+      expect(slots).toHaveLength(47);
+      expect(slots.slice(3, 5)).toEqual(["01:30", "02:30"]);
+      // each half hour offered is its own moment
+      expect(new Set(slots.map((slot) => slotMoment(new Date(2026, 9, 4), slot))).size).toBe(47);
+    });
+  });
 });
 
 describe("slotMoment", () => {

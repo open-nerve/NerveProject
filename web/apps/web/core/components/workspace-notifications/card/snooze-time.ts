@@ -42,15 +42,18 @@ export function slotMoment(day: Date, slot: string): string {
 /**
  * @description the half hours of the day a snooze may end at, as of now (R15): those whose moment (slotMoment) is
  * after now, so every one of a day after today, today's after now alone, none of a day past; every one while no day
- * is chosen. A half hour the clocks skip that day is none (the start of daylight time: 02:00 and 02:30, whose moments
- * Date moves on to 03:00 and 03:30, whole-branch m4); of the hour the end of daylight time repeats, its first is
+ * is chosen. A half hour the clocks skip that day is none: its moment, which Date moves on, is not that half hour (the
+ * start of daylight time: 02:00 and 02:30 become 03:00 and 03:30, whole-branch m4; where the clocks move by half an
+ * hour, 02:00 becomes 02:30, re-review O3); of the hour the end of daylight time repeats, its first is offered
+ * (Date takes the earlier moment), its second none.
  */
 export const snoozeSlots = (day: Date | null, now: Date): string[] =>
   day === null
     ? [...SLOTS]
     : SLOTS.filter((slot) => {
         const moment = new Date(slotMoment(day, slot));
-        return moment.getHours() === timeOf(slot).hours && moment.getTime() > now.getTime();
+        const { hours, minutes } = timeOf(slot);
+        return moment.getHours() === hours && moment.getMinutes() === minutes && moment.getTime() > now.getTime();
       });
 
 /**
