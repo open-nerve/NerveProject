@@ -42,9 +42,10 @@ type Props = {
  * The custom snooze dialog of a card (P4 spec 2.7, R15), which the card holds open (actions.tsx), never the menu it
  * opens from, so that no timer waits for the menu to close: named by its title (ModalTitle). A day (today at the
  * earliest) and one of its half hours (snoozeSlots: today's after now alone, "no time" when none is left), each said in
- * the page's language (slotLabel), 24 hours as nerve is sent them, so that no AM/PM of its own is chosen (W1). Either
- * missing says so under it, the control described by it and refused (aria-invalid), the first refused taking the
- * focus (useRefusedFocus). It sends the moment of the day's half hour in the browser's zone (slotMoment) through the
+ * the page's language (slotLabel), 24 hours as nerve is sent them, so that no AM/PM of its own is chosen (W1); the time
+ * is named by its field, and once one is picked by its field and the half hour, which it shows (a select's button is
+ * named by its content, else by the half hour alone). Either missing says so under it, the control described by it and
+ * refused (aria-invalid), the first refused taking the focus (useRefusedFocus). It sends the moment of the day's half hour in the browser's zone (slotMoment) through the
  * store; once nerve has snoozed it, says so and closes; nerve's refusal of the moment (must_be_future) shows under the
  * time, any other in a toast (useNotificationRefusal), the dialog open. It cannot be closed while nerve snoozes (no
  * Escape, no click outside, Cancel out of use). Closed, the focus goes back to what had it before it opened, the row's
@@ -145,7 +146,13 @@ export function NotificationSnoozeModal({ notification, onClose }: Props) {
                       value === null ? (
                         <span className="text-placeholder">{t("notification.snooze_modal.time")}</span>
                       ) : (
-                        slotLabel(value, language)
+                        // named by its field and the half hour picked; seen as the half hour alone
+                        <>
+                          <span className="sr-only">
+                            {t("notification.snooze_modal.picked_time", { time: slotLabel(value, language) })}
+                          </span>
+                          <span aria-hidden="true">{slotLabel(value, language)}</span>
+                        </>
                       )
                     }
                     input

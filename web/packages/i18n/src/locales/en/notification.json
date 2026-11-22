@@ -103,6 +103,7 @@
       "title": "Customize snooze time",
       "date": "Pick a date",
       "time": "Pick a time",
+      "picked_time": "Time, {time}",
       "no_time": "No time is left today",
       "submit": "Snooze"
     }

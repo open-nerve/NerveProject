@@ -12,7 +12,8 @@ import { answer, cardOf, cards, changeState, listRead, noteOf, renderList } from
 import { press } from "../sidebar/fake-header-menus";
 
 // The custom snooze dialog (P4 spec 2.7, R15), which a card's snooze menu opens and the card holds: named by its title;
-// a day, today at the earliest, and one of its half hours, today's after now alone, each said in the page's language;
+// a day, today at the earliest, and one of its half hours, today's after now alone, each said in the page's language,
+// the time named by its field and, once picked, the half hour;
 // either missing says so under it, the first refused taking the focus; it sends the moment of the day's half hour in
 // the browser's zone, closing once nerve has snoozed it, saying so; nerve's must_be_future shows under the time, any
 // other refusal in a toast, the dialog open. It cannot be closed while nerve snoozes; closed, the focus goes back to
@@ -83,6 +84,18 @@ const dialog = () => document.querySelector<HTMLElement>('[role="dialog"]');
 const inDialog = (selector: string) => dialog()?.querySelector<HTMLElement>(selector) ?? null;
 const dateButton = () => inDialog('button[aria-label="notification.snooze_modal.date"]') as HTMLButtonElement;
 const timeButton = () => inDialog('button[aria-haspopup="listbox"]') as HTMLButtonElement;
+/** What the element says to a screen reader by its content: its text but what is hidden from it (aria-hidden). */
+const nameOf = (element: HTMLElement) => {
+  const read = element.cloneNode(true) as HTMLElement;
+  for (const hidden of read.querySelectorAll('[aria-hidden="true"]')) hidden.remove();
+  return read.textContent?.replace(/\s/g, " ");
+};
+/** What the element shows: its text but what only a screen reader reads (sr-only). */
+const shownOf = (element: HTMLElement) => {
+  const seen = element.cloneNode(true) as HTMLElement;
+  for (const unseen of seen.querySelectorAll(".sr-only")) unseen.remove();
+  return seen.textContent?.replace(/\s/g, " ");
+};
 const buttonIn = (within: Element | null | undefined, text: string) =>
   [...(within?.querySelectorAll("button") ?? [])].find((button) => button.textContent === text);
 const buttonSaying = (text: string) => buttonIn(dialog(), text);
@@ -210,15 +223,23 @@ describe("NotificationSnoozeModal", () => {
     expect(options()[24]).toBe("12:00 PM");
   });
 
+  it("names the time by its field, and once one is picked by its field and the half hour, which it shows", async () => {
+    await opened();
+    expect(nameOf(timeButton())).toBe("notification.snooze_modal.time");
+    await picked("2026-11-21", "12:30 AM");
+    expect(nameOf(timeButton())).toBe("notification.snooze_modal.picked_time 12:30 AM");
+    expect(shownOf(timeButton())).toBe("12:30 AM");
+  });
+
   it("no longer holds a half hour the day then picked does not offer", async () => {
     await opened();
     await picked("2026-11-21", "12:30 AM");
-    expect(timeButton().textContent?.replace(/\s/g, " ")).toBe("12:30 AM");
+    expect(shownOf(timeButton())).toBe("12:30 AM");
     await picked("2026-11-20");
     expect(timeButton().textContent).toBe("notification.snooze_modal.time");
     await picked("2026-11-21", "11:30 PM");
     await picked("2026-11-20");
-    expect(timeButton().textContent?.replace(/\s/g, " ")).toBe("11:30 PM");
+    expect(shownOf(timeButton())).toBe("11:30 PM");
   });
 
   it("says no half hour is left today when none is", async () => {

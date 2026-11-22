@@ -103,6 +103,7 @@
       "title": "自定义暂缓时间",
       "date": "选择日期",
       "time": "选择时间",
+      "picked_time": "时间，{time}",
       "no_time": "今天已没有可选的时间",
       "submit": "暂缓"
     }
