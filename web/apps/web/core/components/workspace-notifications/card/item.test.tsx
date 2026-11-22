@@ -12,9 +12,10 @@ import { answer, cardOf, cards, listRead, noteOf, pageState, renderList, settled
 // A card of the notifications page's list (P4 spec 2.6, R16, R23): one button, which selects its notification and
 // opens its preview at once (the selection is the preview's, root.tsx) and, for an unread one, queues marking it read,
 // which the preview never waits for; a refusal of that says why, the preview open still, but for
-// notification.not_found, after which the card is gone and its selection with it. The button says the work item, as
-// it was when the notification was sent, and when: till when it is snoozed, while it is (snoozedNow), else how long
-// ago; an unread one's dot says so to a screen reader. The store and HTTP are real; SWR is, with the test's cache.
+// notification.not_found, after which the card is gone and its selection with it. The button says who made the change
+// and what (sentence.tsx), a comment's excerpt as plain text, the work item, as it was when the notification was sent,
+// and when: till when it is snoozed, while it is (snoozedNow), else how long ago; an unread one's dot says so to a
+// screen reader. The store and HTTP are real; SWR is, with the test's cache; the members are a stand-in's (Ann).
 
 const fixture = vi.hoisted(() => ({
   session: { loginId: "one" },
@@ -30,6 +31,10 @@ vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n-values"));
 vi.mock("@nerve/propel/toast", () => import("@/lib/fake-toast"));
 vi.mock("@/hooks/store/use-workspace", () => ({ useWorkspace: () => fixture.tab.workspaceRoot }));
 vi.mock("@/hooks/store/use-notifications", () => ({ useNotifications: () => fixture.tab.store }));
+vi.mock("@/hooks/store/use-member", () => ({
+  useMember: () => ({ getUserDetails: (id: string) => (id === "u-ann" ? { id, display_name: "ann" } : undefined) }),
+}));
+vi.mock("@/hooks/use-profile-image", () => import("@/lib/fake-profile-image"));
 
 const NOW = new Date("2026-11-20T12:00:00Z");
 let host: HTMLDivElement, root: Root, cache: Map<string, unknown>;
@@ -151,5 +156,58 @@ describe("NotificationItem", () => {
     await listed(one, two);
     expect(cardOf(host, "WEB-1 One")?.querySelector(".sr-only")?.textContent).toBe("notification.card.unread");
     expect(cardOf(host, "WEB-2 Two")?.querySelector(".sr-only")).toBeNull();
+  });
+});
+
+describe("NotificationItem's words", () => {
+  const changed = (name: string, sequence: number, change: Partial<typeof one.data.change>) =>
+    noteOf(name, sequence, { data: { ...noteOf(name, sequence).data, change: { ...one.data.change, ...change } } });
+
+  it("says who made the change and what, before the work item", async () => {
+    await listed(one);
+    expect(cardOf(host, "WEB-1 One")?.textContent).toMatch(/ann notification\.card\.renamed Sign-in.*WEB-1 One/);
+  });
+
+  it("shows a comment's excerpt as plain text, in two lines at most, nothing of it rendered as markup", async () => {
+    const commented = changed("Talk", 3, {
+      field: "comment",
+      verb: "created",
+      comment_id: "c-1",
+      excerpt: "Ship it <img src=x> <b>now</b> @Bob",
+      old_value: null,
+      new_value: null,
+    });
+    await listed(commented);
+    const card = cardOf(host, "WEB-3 Talk");
+    const excerpt = [...(card?.querySelectorAll(".line-clamp-2") ?? [])].find((shown) =>
+      shown.textContent?.startsWith("Ship it")
+    );
+    expect(excerpt?.textContent).toBe("Ship it <img src=x> <b>now</b> @Bob");
+    expect(card?.querySelector("img, b")).toBeNull();
+    expect(card?.textContent).toContain("ann notification.card.commented");
+  });
+
+  it("says a mention in a comment, with the comment's excerpt", async () => {
+    const mentioned = changed("Ping", 4, {
+      field: "comment",
+      verb: "mentioned",
+      comment_id: "c-2",
+      excerpt: "@ann have a look",
+      old_value: null,
+      new_value: null,
+    });
+    await listed({ ...mentioned, sender: "mentioned" });
+    const card = cardOf(host, "WEB-4 Ping");
+    expect(card?.textContent).toContain("ann notification.card.mentioned_comment");
+    expect(card?.textContent).toContain("@ann have a look");
+  });
+
+  it("links to no attachment, nor to anything else: the card is its one button", async () => {
+    const attached = changed("File", 5, { field: "attachment", verb: "created", old_value: null, new_value: null });
+    await listed(attached);
+    const card = cardOf(host, "WEB-5 File");
+    expect(card?.textContent).toContain("ann notification.card.attachment_added");
+    expect(card?.querySelector("a")).toBeNull();
+    expect(card?.querySelectorAll("button")).toHaveLength(1);
   });
 });

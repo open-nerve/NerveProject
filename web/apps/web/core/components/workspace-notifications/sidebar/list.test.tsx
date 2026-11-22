@@ -32,6 +32,8 @@ vi.mock("@nerve/propel/empty-state", () => ({
 }));
 vi.mock("@/hooks/store/use-workspace", () => ({ useWorkspace: () => fixture.tab.workspaceRoot }));
 vi.mock("@/hooks/store/use-notifications", () => ({ useNotifications: () => fixture.tab.store }));
+vi.mock("@/hooks/store/use-member", () => ({ useMember: () => ({ getUserDetails: () => undefined }) }));
+vi.mock("@/hooks/use-profile-image", () => import("@/lib/fake-profile-image"));
 
 let host: HTMLDivElement, root: Root, cache: Map<string, unknown>;
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;

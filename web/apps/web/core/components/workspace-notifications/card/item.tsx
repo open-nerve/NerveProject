@@ -4,13 +4,17 @@
  */
 
 import { observer } from "mobx-react";
+import { Avatar } from "@makeplane/propel/components/avatar";
 import { ClockOutline } from "@makeplane/propel/icons";
 // nerve imports
 import type { Notification } from "@nerve/api-client";
 import { useTranslation } from "@nerve/i18n";
 import { calculateTimeAgo, cn, renderFormattedDate, renderFormattedTime } from "@nerve/utils";
+// components
+import { ProfileAvatar } from "@/components/assets/profile-image";
 // hooks
 import { useNotifications } from "@/hooks/store/use-notifications";
+import { useActorName } from "@/hooks/use-actor-name";
 import { useRefusalToast } from "@/hooks/use-refusal-toast";
 import { useRouteWorkspace } from "@/hooks/use-route-workspace";
 // lib
@@ -20,6 +24,7 @@ import { followInSession } from "@/lib/in-session";
 import { snoozedNow } from "@/store/notification/filters";
 // local imports
 import { useNotificationPageState } from "../page-state";
+import { NotificationSentence } from "./sentence";
 
 type Props = {
   /** The notification the card shows, as nerve last gave it. */
@@ -31,9 +36,12 @@ type Props = {
  * opens the preview at once, and, for an unread one, queues marking it read (the store's update, one change at a time),
  * which the preview never waits for: nerve's refusal of that is said in a toast, the preview open still, but for
  * notification.not_found, after which the notification has left every list and its selection is cleared. The button
- * says the work item, as it was when the notification was sent, and when: till when it is snoozed, while it is
- * (snoozedNow: a snooze over is an ordinary notification's), else how long ago; an unread one's dot says so to a screen
- * reader too. What follows nerve's answer is done only in the session the change was sent in (followInSession).
+ * shows who made the change, his picture for a member (useActorName), and says what (sentence.tsx); a comment's excerpt,
+ * as the plain text nerve keeps of it, two lines at most (no editor, no picture, no mention's name: M5-M7-03); the work
+ * item, as it was when the notification was sent; and when: till when it is snoozed, while it is (snoozedNow: a snooze
+ * over is an ordinary notification's), else how long ago. An unread one's dot says so to a screen reader too. Nothing
+ * in it is a link, an attachment's either (M5-M7-02). What follows nerve's answer is done only in the session the
+ * change was sent in (followInSession).
  */
 export const NotificationItem = observer(function NotificationItem({ notification }: Props) {
   const { t } = useTranslation();
@@ -41,8 +49,11 @@ export const NotificationItem = observer(function NotificationItem({ notificatio
   const { selected, select, clearSelection } = useNotificationPageState();
   const { update } = useNotifications();
   const refusalToast = useRefusalToast();
+  const actor = useActorName(notification.triggered_by_id);
   // derived values
-  const { id, issue_id: issueId, project_id: projectId } = notification;
+  const { id, issue_id: issueId, project_id: projectId, triggered_by_id: actorId } = notification;
+  const { excerpt } = notification.data.change;
+  const initial = actor.name.charAt(0).toUpperCase();
   const issue = notification.data.issue;
   const unread = notification.read_at === null;
   const till = snoozedNow(notification, new Date()) ? notification.snoozed_till : null;
@@ -67,7 +78,7 @@ export const NotificationItem = observer(function NotificationItem({ notificatio
     >
       <button
         type="button"
-        className="flex w-full flex-col gap-1 px-6 py-4 text-left focus-visible:outline-1 focus-visible:-outline-offset-1 focus-visible:outline-accent-strong"
+        className="flex w-full gap-3 px-6 py-4 text-left focus-visible:outline-1 focus-visible:-outline-offset-1 focus-visible:outline-accent-strong"
         onClick={open}
       >
         {unread && (
@@ -75,21 +86,36 @@ export const NotificationItem = observer(function NotificationItem({ notificatio
             <span className="sr-only">{t("notification.card.unread")}</span>
           </span>
         )}
-        <span className="flex w-full items-center gap-3 text-caption-sm-regular text-secondary">
-          <span className="line-clamp-1 w-full break-words">
-            {`${issue.identifier}-${issue.sequence_id} ${issue.name}`}
-          </span>
-          {till !== null ? (
-            <span className="flex flex-shrink-0 items-center gap-x-1 text-tertiary">
-              <ClockOutline className="h-4 w-4" />
-              {t("notification.card.till", {
-                date: renderFormattedDate(new Date(till)),
-                time: renderFormattedTime(new Date(till), "12-hour"),
-              })}
-            </span>
-          ) : (
-            <span className="flex-shrink-0 text-tertiary">{calculateTimeAgo(notification.created_at)}</span>
+        {actor.member && actorId !== null && workspace ? (
+          <ProfileAvatar
+            size="lg"
+            fallback={initial}
+            source={{ kind: "member", workspaceID: workspace.id, memberID: actorId }}
+          />
+        ) : (
+          <Avatar size="lg" fallback={initial} />
+        )}
+        <span className="flex min-w-0 flex-1 flex-col gap-1">
+          <NotificationSentence notification={notification} />
+          {excerpt !== null && (
+            <span className="line-clamp-2 text-caption-sm-regular break-words text-secondary">{excerpt}</span>
           )}
+          <span className="flex w-full items-center gap-3 text-caption-sm-regular text-secondary">
+            <span className="line-clamp-1 w-full break-words">
+              {`${issue.identifier}-${issue.sequence_id} ${issue.name}`}
+            </span>
+            {till !== null ? (
+              <span className="flex flex-shrink-0 items-center gap-x-1 text-tertiary">
+                <ClockOutline className="h-4 w-4" />
+                {t("notification.card.till", {
+                  date: renderFormattedDate(new Date(till)),
+                  time: renderFormattedTime(new Date(till), "12-hour"),
+                })}
+              </span>
+            ) : (
+              <span className="flex-shrink-0 text-tertiary">{calculateTimeAgo(notification.created_at)}</span>
+            )}
+          </span>
         </span>
       </button>
     </div>
