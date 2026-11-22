@@ -204,6 +204,52 @@ it("knows the card holds it still when a blur's listener gives it back into the 
   expect(document.activeElement).toBe(main("WEB-3 Three"));
 });
 
+/**
+ * A browser's blur of a control that holds the focus as it is disabled (Chromium, Firefox): to nothing, the document's
+ * body having it. jsdom blurs no disabled control, so the control is let go of for the blur.
+ */
+const disabledBlur = (button: HTMLButtonElement) =>
+  act(async () => {
+    expect(button.disabled).toBe(true);
+    button.disabled = false;
+    button.blur();
+    button.disabled = true;
+  });
+
+it("gives it to the next card once the card leaves though its pressed archive, disabled while out, lost it to nothing", async () => {
+  await listed(pageOf([one, two, three]));
+  const archive = action("WEB-2 Two", "archive");
+  await pressed(archive);
+  await disabledBlur(archive);
+  await changed(two, json(200, { ...two, archived_at: NOW }));
+  expect(cards(host)).toEqual(["WEB-1 One", "WEB-3 Three"]);
+  expect(document.activeElement).toBe(main("WEB-3 Three"));
+});
+
+it("gives it back to the pressed control once it is enabled again, the card in its place, having lost it to nothing", async () => {
+  await listed(pageOf([one, two]), (state) => state.toggleUnread());
+  const mark = action("WEB-1 One", "mark_read");
+  await pressed(mark);
+  await disabledBlur(mark);
+  expect(document.activeElement).toBe(document.body);
+  await changed(one, json(200, { ...one, read_at: NOW }));
+  expect(document.activeElement).toBe(mark);
+  expect(mark.disabled).toBe(false);
+});
+
+it("leaves it where it went meanwhile, the pressed control having lost it to nothing", async () => {
+  await renderList(root, cache, <button type="button">elsewhere</button>);
+  await answer(await listRead(nerve(), 0), pageOf([one, two, three]));
+  const archive = action("WEB-2 Two", "archive");
+  await pressed(archive);
+  await disabledBlur(archive);
+  const elsewhere = [...host.querySelectorAll("button")].find((button) => button.textContent === "elsewhere")!;
+  await act(async () => elsewhere.focus());
+  await changed(two, json(200, { ...two, archived_at: NOW }));
+  expect(cards(host)).toEqual(["WEB-1 One", "WEB-3 Three"]);
+  expect(document.activeElement).toBe(elsewhere);
+});
+
 it("keeps it where it is as another card leaves the list", async () => {
   await listed(pageOf([one, two, three]));
   await act(async () => main("WEB-1 One")?.focus());

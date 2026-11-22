@@ -12,12 +12,18 @@ type LeavingFocus = {
   region: RefObject<HTMLDivElement | null>;
   /** Says the card of the notification id names holds the focus, element in it taking it: its element's onFocus. */
   focusIn: (id: string, element: EventTarget) => void;
-  /** Says element lost the focus: a card's element's onBlur, which ends the card's holding it if element held it. */
-  focusOut: (element: EventTarget) => void;
+  /**
+   * Says element lost the focus to to (null: to nothing): a card's element's onBlur, which ends the card's holding it
+   * if element held it and to is something.
+   */
+  focusOut: (element: EventTarget, to: EventTarget | null) => void;
 };
 
 /** The card that holds the focus: its notification's id, and the element in it that took the focus last. */
 type Holder = { id: string; element: EventTarget };
+
+/** Whether nothing has the focus: the document's body has it. */
+const nowhere = () => document.activeElement === null || document.activeElement === document.body;
 
 /**
  * Where the focus goes as a card that holds it leaves the notifications page's list (P4 spec 2.6, R16, R25): by the
@@ -29,14 +35,24 @@ type Holder = { id: string; element: EventTarget };
  * reaches the list (between an event's listeners), jsdom after. Once the card has left, the next card's main button
  * has the focus, else the previous card's, else the list's region: never the page's body, nor what had it before the
  * card's dialog opened, to which the dialog gives it back as it unmounts with its card (Headless UI, a microtask after
- * that unmount's effects: this comes after them).
- * A card that stays (a read change, R8) keeps it; another card leaving moves it not. ids are the cards shown, in order;
- * the list names each card's element by its notification (data-notification-id), its main button its first.
+ * that unmount's effects: this comes after them). A control of the card that loses the focus to nothing does not end
+ * its holding it either: a control disabled while its change is out (a browser blurs it: Chromium and Firefox, WebKit
+ * when it was pressed from the keyboard). The card has it back, while nothing else has it: the next card, as above,
+ * once the card has left; the control, once it is enabled again and the card has stayed (a read change, R8). A card
+ * that stays keeps it; another card leaving moves it not. ids are the cards shown, in order; the list names each
+ * card's element by its notification (data-notification-id), its main button its first.
  */
 export function useLeavingFocus(ids: readonly string[]): LeavingFocus {
   const region = useRef<HTMLDivElement>(null);
   /** The card that holds the focus. */
   const holder = useRef<Holder | undefined>(undefined);
+  /** The watch of the control that lost the focus to nothing, which has it back once it is enabled again. */
+  const returning = useRef<MutationObserver | undefined>(undefined);
+  const stopReturning = () => {
+    returning.current?.disconnect();
+    returning.current = undefined;
+  };
+  useEffect(() => stopReturning, []);
   /** The cards as the list last showed them. */
   const shown = useRef<readonly string[]>(ids);
   const order = ids.join(" ");
@@ -47,6 +63,9 @@ export function useLeavingFocus(ids: readonly string[]): LeavingFocus {
     const left = holder.current?.id;
     if (left === undefined || now.includes(left)) return;
     holder.current = undefined;
+    stopReturning();
+    // the focus went elsewhere after the card's control lost it to nothing: it stays there
+    if (!nowhere()) return;
     const at = before.indexOf(left);
     const staying = (id: string) => now.includes(id);
     const next = before.slice(at + 1).find(staying) ?? before.slice(0, Math.max(at, 0)).toReversed().find(staying);
@@ -61,11 +80,26 @@ export function useLeavingFocus(ids: readonly string[]): LeavingFocus {
   return {
     region,
     focusIn: (id, element) => {
+      stopReturning();
       holder.current = { id, element };
     },
-    focusOut: (element) => {
+    focusOut: (element, to) => {
       // a blur heard once the focus has come back into a card ends nothing: only the element that holds it does
-      if (holder.current?.element === element) holder.current = undefined;
+      const held = holder.current;
+      if (held?.element !== element) return;
+      stopReturning();
+      if (to !== null || !(element instanceof HTMLElement)) {
+        holder.current = undefined;
+        return;
+      }
+      // lost to nothing: the card holds it still, and the control has it back once enabled again
+      const watch = new MutationObserver(() => {
+        if (element.matches(":disabled")) return;
+        stopReturning();
+        if (holder.current?.element === element && element.isConnected && nowhere()) element.focus();
+      });
+      watch.observe(element, { attributes: true, attributeFilter: ["disabled"] });
+      returning.current = watch;
     },
   };
 }
