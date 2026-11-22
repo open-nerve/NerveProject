@@ -11,6 +11,7 @@ import (
 
 	postgresadapter "github.com/open-nerve/NerveProject/server/internal/modules/navigation/adapter/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/modules/navigation/app"
+	"github.com/open-nerve/NerveProject/server/internal/modules/navigation/domain"
 )
 
 var _ app.RecentVisitDeletions = (*postgresadapter.Store)(nil)
@@ -24,9 +25,7 @@ func liveVisit(t *testing.T, pool *pgxpool.Pool, kind string, id, workspace, pro
 		target = project
 	}
 	visited := now.Add(-time.Hour)
-	exec(t, pool, `INSERT INTO user_recent_visits (id, workspace_id, project_id, user_id, entity_type, entity_identifier, visited_at,
-			created_by_id, updated_by_id, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $4, $4, $7, $7)`, id, workspace, project, user, kind, target, visited)
+	seedVisit(t, pool, visitRow{id, workspace, project, user, domain.RecentVisitKind(kind), target, visited, visited, nil})
 }
 
 // The deletion of a deleted project's recent visits soft-deletes every account's under it, of the project and of its

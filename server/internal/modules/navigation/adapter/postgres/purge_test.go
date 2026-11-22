@@ -14,6 +14,7 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/navigation"
 	postgresadapter "github.com/open-nerve/NerveProject/server/internal/modules/navigation/adapter/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/modules/navigation/app"
+	"github.com/open-nerve/NerveProject/server/internal/modules/navigation/domain"
 	"github.com/open-nerve/NerveProject/server/internal/platform/config"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
@@ -232,9 +233,7 @@ func TestPurgeUserFavorites(t *testing.T) {
 func recentVisitRow(t *testing.T, pool *pgxpool.Pool, w world, id uuid.UUID, deleted *time.Time) {
 	t.Helper()
 	created := now.Add(-90 * 24 * time.Hour)
-	exec(t, pool, `INSERT INTO user_recent_visits (id, workspace_id, project_id, user_id, entity_type, entity_identifier, visited_at,
-			created_by_id, updated_by_id, created_at, updated_at, deleted_at)
-		VALUES ($1, $2, $3, $4, 'issue', gen_random_uuid(), $5, $4, $4, $5, $5, $6)`, id, w.workspace, w.project, w.owner, created, deleted)
+	seedVisit(t, pool, visitRow{id, w.workspace, w.project, w.owner, domain.RecentVisitIssue, uuid.NewV7(), created, created, deleted})
 }
 
 // The recent visits' purge deletes, a bounded page at a time after its cursor, the visits deleted before the cutoff,
