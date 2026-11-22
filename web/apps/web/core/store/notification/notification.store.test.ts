@@ -233,6 +233,28 @@ describe("NotificationStore, the lists", () => {
     expect(store.getList(acme.slug, first)).toEqual(refreshed);
   });
 
+  it("a next page sent while a refresh is out follows nothing once the refresh ends elsewhere (whole-branch I1)", async () => {
+    const { nerve, store } = await notificationTab();
+    const path = notificationRequests.list(acme);
+    await loadList(nerve, store, acme, first, pageOf([one, two], "c-1"));
+    await answered(nerve, () => store.fetchMore(acme, first), ["GET", path], pageOf([three], "c-2"), "the next page");
+
+    // the refresh is out as the caller asks for more: that read names the cursor of the pages the refresh replaces
+    const refresh = track(store.fetchList(acme, first));
+    await until(() => nerve.calls.length === 3, "the refresh");
+    const more = track(store.fetchMore(acme, first));
+    await until(() => nerve.calls.length === 4, "the page after the held pages");
+    expect(nerve.calls[3]?.query.cursor).toBe("c-2");
+
+    const refreshed = pageOf([four, one], "c-9");
+    nerve.calls[2]?.answer(json(200, refreshed));
+    await until(() => refresh.settled, "the refresh");
+    nerve.calls[3]?.answer(json(200, pageOf([notificationOf("five")], "c-3")));
+    await until(() => more.settled, "the page after the pages the refresh replaced");
+    // the refreshed first page ends at c-9: the page after c-2 is not its next, so the list skips nothing
+    expect(store.getList(acme.slug, first)).toEqual(refreshed);
+  });
+
   it("writes a workspace's late answers into its own list alone: another's rows and cursor stay (W5)", async () => {
     const { nerve, store } = await notificationTab();
     const theirs = pageOf([notificationOf("b-one", { workspace_id: beta.id })], "cb-1");
