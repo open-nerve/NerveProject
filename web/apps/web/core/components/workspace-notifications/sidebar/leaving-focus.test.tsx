@@ -251,6 +251,33 @@ it("gives it back to the snooze menu's button once nerve refuses its preset, the
   expect(document.activeElement).toBe(snooze);
 });
 
+it("gives it back to the snooze menu's button once nerve refuses its preset chosen by the pointer, which focused the item (O4)", async () => {
+  await listed(pageOf([one, two]));
+  const snooze = action("WEB-1 One", "snooze");
+  // the pointer opens the menu: its button takes no focus, the menu does
+  await act(async () => {
+    snooze.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true, cancelable: true }));
+    snooze.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true }));
+    snooze.click();
+  });
+  await act(async () => vi.advanceTimersByTimeAsync(200));
+  expect(document.activeElement?.getAttribute("role")).toBe("menu");
+  const day = [...document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')].find(
+    (item) => item.textContent === "notification.snooze.1_day"
+  )!;
+  // as a browser's press of a button does, the item's button has the focus before its click chooses it
+  await act(async () => {
+    day.focus();
+    day.click();
+  });
+  await act(async () => vi.advanceTimersByTimeAsync(200));
+  expect(snooze.disabled).toBe(true);
+  expect(document.activeElement).toBe(document.body);
+  await changed(one, problem(503, "server_busy"));
+  expect(cards(host)).toEqual(["WEB-1 One", "WEB-2 Two"]);
+  expect(document.activeElement).toBe(snooze);
+});
+
 it("leaves it where it went meanwhile, the pressed control having lost it to nothing", async () => {
   await renderList(root, cache, <button type="button">elsewhere</button>);
   await answer(await listRead(nerve(), 0), pageOf([one, two, three]));

@@ -11,8 +11,8 @@ type LeavingFocus = {
   /** The element of the list there whatever it shows, cards or none: the focus's place once no card is left. */
   region: RefObject<HTMLDivElement | null>;
   /**
-   * Says the card of the notification id names holds the focus, which element has: its element's onFocus. A control of
-   * the card's own (one its change disables: not its menu's panel, nor its dialog's portal) has the focus back.
+   * Says the card of the notification id names holds the focus, which element has: its element's onFocus. The control
+   * it is, or the button of the menu it is in (controlOf), has the focus back.
    */
   focusIn: (id: string, element: EventTarget) => void;
   /**
@@ -24,6 +24,16 @@ type LeavingFocus = {
 
 /** Whether nothing has the focus: the document's body has it. */
 const nowhere = () => document.activeElement === null || document.activeElement === document.body;
+
+/**
+ * The control that element, in a card and having the focus, gives it back to: element itself; for anything in a menu
+ * (its panel, or one of its items, which the pointer's press focuses), which the menu takes away as it closes, the
+ * menu's button, which the menu names (aria-labelledby).
+ */
+function controlOf(element: HTMLElement): HTMLElement | null {
+  const menu = element.closest('[role="menu"]');
+  return menu === null ? element : document.getElementById(menu.getAttribute("aria-labelledby") ?? "");
+}
 
 /**
  * Where the focus goes as a card that holds it leaves the notifications page's list (P4 spec 2.6, R16, R25): by the
@@ -38,18 +48,19 @@ const nowhere = () => document.activeElement === null || document.activeElement 
  * left, the next card's main button has the focus, else the previous card's, else the list's region; never the page's
  * body, nor what had it before the card's dialog opened, to which the dialog gives it back as it unmounts with its card
  * (Headless UI, a microtask after that unmount's effects: this comes after them). The card having stayed (a read
- * change, R8; a refusal), the control of its own that had the focus last, the one that opened its menu or its dialog
- * too, has it back once it is enabled again while nothing has it (O4). A card that stays keeps it; another card
- * leaving moves it not. ids are the cards shown, in order; the list names each card's element by its notification
- * (data-notification-id), its main button its first.
+ * change, R8; a refusal), the control that had the focus last, or the button of the menu it was in, has it back once
+ * it is enabled again while nothing has it (O4): a preset chosen by the keyboard or by the pointer (whose press
+ * focuses the item, never the menu's button) gives it back to the snooze menu's button. A card that stays keeps it;
+ * another card leaving moves it not. ids are the cards shown, in order; the list names each card's element by its
+ * notification (data-notification-id), its main button its first.
  */
 export function useLeavingFocus(ids: readonly string[]): LeavingFocus {
   const region = useRef<HTMLDivElement>(null);
   /** The card that holds the focus, by its notification's id. */
   const holder = useRef<string | undefined>(undefined);
   /**
-   * The watch of the control of a card's own that had the focus last (the opener of what has it since, its menu or its
-   * dialog), which has it back once it is enabled again while nothing has it.
+   * The watch of the control that had the focus last (controlOf), which has it back once it is enabled again while
+   * nothing has it.
    */
   const returning = useRef<MutationObserver | undefined>(undefined);
   const stopReturning = () => {
@@ -85,14 +96,13 @@ export function useLeavingFocus(ids: readonly string[]): LeavingFocus {
     region,
     focusIn: (id, element) => {
       holder.current = id;
-      // what the card opened has it (its menu's panel, its dialog): the control of its own that opened it stays watched
-      const card = region.current?.querySelector(`[data-notification-id="${id}"]`);
-      if (!(element instanceof HTMLElement) || !element.matches(":enabled") || !card?.contains(element)) return;
+      const control = element instanceof HTMLElement ? controlOf(element) : null;
+      if (control === null) return;
       stopReturning();
       const watch = new MutationObserver(() => {
-        if (!element.matches(":disabled") && element.isConnected && nowhere()) element.focus();
+        if (!control.matches(":disabled") && control.isConnected && nowhere()) control.focus();
       });
-      watch.observe(element, { attributes: true, attributeFilter: ["disabled"] });
+      watch.observe(control, { attributes: true, attributeFilter: ["disabled"] });
       returning.current = watch;
     },
     focusOut: (to) => {
