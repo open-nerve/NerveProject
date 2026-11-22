@@ -218,7 +218,7 @@ func decodeAnswer(t *testing.T, answer string, v any) {
 // matrixRows are the rows, each module's from its file.
 func matrixRows() []matrixRow {
 	return slices.Concat(workspaceMatrixRows(), projectMatrixRows(), memberMatrixRows(), membershipMatrixRows(), stateMatrixRows(),
-		labelMatrixRows(), draftMatrixRows(), searchMatrixRows(), issueMatrixRows(), issueUpdateMatrixRows(), issueArchiveMatrixRows(), issueListMatrixRows(), memberIssueMatrixRows(), subIssueMatrixRows(), relationMatrixRows(), intakeMatrixRows(), intakeItemMatrixRows(), collaborationMatrixRows(), subscriptionMatrixRows(), linkMatrixRows(), assetMatrixRows(), cycleMatrixRows(), transferMatrixRows(), moduleMatrixRows(), moduleLinkMatrixRows(), guestsSeeAllMatrixRows(), countMatrixRows(), notificationMatrixRows(), viewMatrixRows(), favoriteMatrixRows())
+		labelMatrixRows(), draftMatrixRows(), searchMatrixRows(), issueMatrixRows(), issueUpdateMatrixRows(), issueArchiveMatrixRows(), issueListMatrixRows(), memberIssueMatrixRows(), subIssueMatrixRows(), relationMatrixRows(), intakeMatrixRows(), intakeItemMatrixRows(), collaborationMatrixRows(), subscriptionMatrixRows(), linkMatrixRows(), assetMatrixRows(), cycleMatrixRows(), transferMatrixRows(), moduleMatrixRows(), moduleLinkMatrixRows(), guestsSeeAllMatrixRows(), countMatrixRows(), notificationMatrixRows(), viewMatrixRows(), favoriteMatrixRows(), recentVisitMatrixRows())
 }
 
 // matrixApps is how many cells may run an app of their own at once: each
