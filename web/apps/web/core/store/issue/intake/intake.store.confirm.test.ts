@@ -77,7 +77,7 @@ async function heldLists() {
   await loadList(nerve, store, "p-web", closed, pageOf([done]));
   await loadList(nerve, store, "p-web", assignedToMe, pageOf([mine]));
   await loadList(nerve, store, "p-api", open, theirs);
-  await answered(nerve, () => store.fetchList(beta, "p-docs", open), ["GET", listPath("p-docs")], docs, "beta's list");
+  await answered(nerve, () => store.fetchList("p-docs", open), ["GET", listPath("p-docs")], docs, "beta's list");
   return tab;
 }
 
@@ -191,7 +191,7 @@ describe("IntakeStore, the confirmations", () => {
     const { nerve, store } = await heldLists();
     // a refresh is out, read before two is snoozed: nerve lists four, new, and two still
     const k = nerve.calls.length;
-    const refresh = track(store.fetchList(acme, "p-web", open));
+    const refresh = track(store.fetchList("p-web", open));
     await until(() => nerve.calls.length === k + 1, "the refresh");
     store.confirm(detailOf("two", { intake: snoozed }));
     expect(store.getList("p-web", open)).toEqual(pageOf([one, three, woke], "c-1", 5));
@@ -200,7 +200,7 @@ describe("IntakeStore, the confirmations", () => {
     expect(store.getList("p-web", open)).toEqual(pageOf([four, one, three, woke], "c-2", 6));
 
     // another, read after three is accepted: it lacks three, and its total is nerve's
-    const again = track(store.fetchList(acme, "p-web", open));
+    const again = track(store.fetchList("p-web", open));
     await until(() => nerve.calls.length === k + 2, "the refresh again");
     store.confirm(detailOf("three", { intake: accepted }));
     nerve.calls[k + 1]?.answer(json(200, pageOf([four, one, woke], "c-2", 5)));
@@ -209,7 +209,7 @@ describe("IntakeStore, the confirmations", () => {
 
     // a first fetch is out, read before one is renamed: the rename is made on its answer
     const recent: IntakeFilters = { ...open, order: "-updated_at" };
-    const first = track(store.fetchList(acme, "p-web", recent));
+    const first = track(store.fetchList("p-web", recent));
     await until(() => nerve.calls.length === k + 3, "the first fetch");
     store.confirm(detailOf("one", { name: "Renamed", updated_at: LATER }));
     nerve.calls[k + 2]?.answer(json(200, pageOf([one, four, woke], "c-r")));

@@ -104,7 +104,7 @@ export function loadCounts(nerve: FakeNerve, store: IIntakeStore, workspace: Wor
   return answered(nerve, () => store.fetchCounts(workspace), ["GET", countsPath(workspace)], counts, "the counts");
 }
 
-/** The store fetches the first page of the project's intake the filters select, in acme, and nerve gives page. */
+/** The store fetches the first page of the project's intake the filters select, and nerve gives page. */
 export function loadList(
   nerve: FakeNerve,
   store: IIntakeStore,
@@ -112,6 +112,6 @@ export function loadList(
   filters: IntakeFilters,
   page: IntakeIssuePage
 ) {
-  const fetch = () => store.fetchList(acme, projectId, filters);
+  const fetch = () => store.fetchList(projectId, filters);
   return answered(nerve, fetch, ["GET", listPath(projectId)], page, "the list");
 }

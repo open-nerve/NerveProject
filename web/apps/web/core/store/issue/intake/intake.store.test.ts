@@ -207,7 +207,7 @@ describe("IntakeStore, the lists", () => {
 
     // two and three were triaged in another tab: the refresh lists neither, nor any row of the pages after the first
     const refreshed = pageOf([four, one], "c-9", 3);
-    const refresh = track(store.fetchList(acme, "p-web", open));
+    const refresh = track(store.fetchList("p-web", open));
     await until(() => nerve.calls.length === 4, "the refresh");
     expect(Object.keys(nerve.calls[3]?.query ?? {})).not.toContain("cursor");
     nerve.calls[3]?.answer(json(200, refreshed));
@@ -226,7 +226,7 @@ describe("IntakeStore, the lists", () => {
     await answered(nerve, () => store.fetchMore("p-web", open), ["GET", path], pageOf([three], "c-2", 5), "page two");
 
     // the refresh is out as the caller scrolls on: that read names the cursor of the pages the refresh replaces
-    const refresh = track(store.fetchList(acme, "p-web", open));
+    const refresh = track(store.fetchList("p-web", open));
     await until(() => nerve.calls.length === 3, "the refresh");
     const more = track(store.fetchMore("p-web", open));
     await until(() => nerve.calls.length === 4, "the page after the held pages");
@@ -246,7 +246,7 @@ describe("IntakeStore, the lists", () => {
     const theirs = pageOf([intakeIssueOf("api-one", { project_id: "p-api" })], "ca-1", 2);
     const ours = pageOf([one], "cw-1", 2);
     // p-web's first page is out as the caller moves to p-api, whose page nerve answers first
-    const webList = track(store.fetchList(acme, "p-web", open));
+    const webList = track(store.fetchList("p-web", open));
     await until(() => nerve.calls.length === 1, "p-web's list");
     await loadList(nerve, store, "p-api", open, theirs);
     nerve.calls[0]?.answer(json(200, ours));
@@ -265,7 +265,7 @@ describe("IntakeStore, the lists", () => {
   });
 
   it.each<[string, (store: IIntakeStore) => Promise<unknown>]>([
-    ["the first page", (store) => store.fetchList(acme, "p-web", open)],
+    ["the first page", (store) => store.fetchList("p-web", open)],
     ["the next page", (store) => store.fetchMore("p-web", open)],
   ])(
     "hands nerve's refusal of %s to the caller, the list as it was; nothing once the session changed",

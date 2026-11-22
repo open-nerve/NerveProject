@@ -96,15 +96,15 @@ problem 码已在 `PROBLEM_MESSAGES`（`C/lib/error-messages.ts:87-91` 收集箱
 `C/store/issue/intake/intake.store.ts`（新）：issue 根 store 的子 store `root.intake`（Q32，设计 §15 A `D:356`），经它找兄弟（`root.writes`、`root.issues`、`root.rootStore`），不另建 `RootStore` 的成员（`C/store/root.store.test.ts:106` 的数在 T2 不变）。
 
 - **计数**：`ReconciledByKey<IntakeCounts>`，按工作区的 id 存；`fetchCounts(workspace: WorkspaceRef)`；`pendingCount(slug, projectId)` 经调用者此刻的工作区列表把 slug 换成 id，回答里没有那个项目时是 `undefined`（v0 §7.7“按工作区的 id 存”）。
-- **列表**：`ReconciledByKey<IntakeIssuePage>`，键 `${projectId}|${filterKey}`；`fetched` 记每个键的项目、工作区与筛选。
-  - `getList(projectId, filters)`；`fetchList(workspace, projectId, filters)` 以 `fetch` 换第一页（之后的页丢掉）；
+- **列表**：`ReconciledByKey<IntakeIssuePage>`，键 `${projectId}|${filterKey}`；`fetched` 记每个键的项目与筛选。
+  - `getList(projectId, filters)`；`fetchList(projectId, filters)` 以 `fetch` 换第一页（之后的页丢掉）；
   - `fetchMore(…)` 经 `ReconciledByKey.fetchPart`（`C/lib/reconciled.ts:167-175`）取下一页：以持有页的 `next_cursor` 发；回答到时持有页的 `next_cursor` 仍等于发出的游标才接上（去重、`next_cursor` 与 `total` 取回答的），否则什么都不写（P4 `3f4c3ba8` 的认游标合并，先例 `C/store/notification/notification.store.ts:113-122`）；没有 `next_cursor` 不发。
   - 列表的行是这个 store 自己的副本：只随写的确认与冲突之后的重读变（下一条），别人改了要等列表重读（同 P4 的通知列表，主控裁定，§7 登记）。
 - **确认**（写的接缝调用，§2.4）：
   - `confirm(answer: IssueDetail)`：写进这个项目持有的每一份列表：`matches` 则原地替换，否则移出；**不往列表里插行**（新相符的行由下一次取数带来，代价同 P4 R8）；移出一行时那一份的 `total` 减一，替换不变（R31）。
   - `drop(projectId, issueId)`：从每一份移出，`total` 同上。
   - `countAgain(workspace)`：只重取这一代已经取过的那个工作区的计数（Q10 的门开着时才有），从不越过门自己起一个读；不占队列；失败留着原值。
-  - 迟到的确认只写它的项目的列表：别的项目、别的工作区的列表不动。
+  - 迟到的确认只写它的项目的列表，别的项目的列表不动（项目的 id 全局唯一，列表的读也只认项目，所以不另比工作区）。
 - **提交**：`submit(scope, body)` 经 `IntakeService.submit`；成功之后重取这个项目持有的每一份列表的第一页，`countAgain`（不在本地插行，R30），把回答交给调用者（新建弹窗以它的 `id` 跳转，§2.10）；被拒时值不变、交出拒绝。
 - **会话**：`SessionChangedError` 时什么都不写；较旧的取数被较新的超过时不写（`Reconciled` 的既有性质，`C/lib/reconciled.ts:58`、`:85-107`）。
 

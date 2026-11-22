@@ -19,8 +19,11 @@ import { rowOf } from "./status";
 /** A workspace as the store fetches its counts: by its slug, kept under its id. */
 type WorkspaceRef = Pick<Workspace, "id" | "slug">;
 
-/** A list the store fetched: the project and the workspace it is of, and the filters it names (P5a spec 2.3). */
-type FetchedList = { workspaceId: string; projectId: string; filters: IntakeFilters };
+/**
+ * A list the store fetched: the project it is of, and the filters it names (P5a spec 2.3). A project's id names it in
+ * any workspace, as it names its intake to nerve (listIntakeIssues).
+ */
+type FetchedList = { projectId: string; filters: IntakeFilters };
 
 /** The key of a project's list of the intake's work items some filters select: its id, and the filters' key. */
 const listKey = (projectId: string, filters: IntakeFilters) => `${projectId}|${filterKey(filters)}`;
@@ -61,11 +64,7 @@ export interface IIntakeStore {
   getList: (projectId: string, filters: IntakeFilters) => IntakeIssuePage | undefined;
   // fetch actions
   fetchCounts: (workspace: WorkspaceRef) => Promise<IntakeCounts | undefined>;
-  fetchList: (
-    workspace: WorkspaceRef,
-    projectId: string,
-    filters: IntakeFilters
-  ) => Promise<IntakeIssuePage | undefined>;
+  fetchList: (projectId: string, filters: IntakeFilters) => Promise<IntakeIssuePage | undefined>;
   fetchMore: (projectId: string, filters: IntakeFilters) => Promise<IntakeIssuePage | undefined>;
   // confirmations (the write seam's, P5a spec 2.4)
   confirm: (answer: IssueDetail) => void;
@@ -93,7 +92,7 @@ export class IntakeStore implements IIntakeStore {
    * reads (reconciled.ts).
    */
   private readonly lists = new ReconciledByKey<IntakeIssuePage>();
-  /** The lists fetched, by their keys: whose project and workspace each is, and the filters it names. */
+  /** The lists fetched, by their keys: whose project each is, and the filters it names. */
   private readonly fetched = new Map<string, FetchedList>();
 
   constructor(private readonly root: IssueRootStore) {}
@@ -129,13 +128,9 @@ export class IntakeStore implements IIntakeStore {
    * them (a refresh): a next page's read out then, or sent before it answers, adds nothing (fetchMore). Gives the page,
    * or undefined as fetchCounts; a refusal fails it, the list as it was
    */
-  fetchList = (
-    workspace: WorkspaceRef,
-    projectId: string,
-    filters: IntakeFilters
-  ): Promise<IntakeIssuePage | undefined> => {
+  fetchList = (projectId: string, filters: IntakeFilters): Promise<IntakeIssuePage | undefined> => {
     const list = listKey(projectId, filters);
-    this.fetched.set(list, { workspaceId: workspace.id, projectId, filters });
+    this.fetched.set(list, { projectId, filters });
     return this.lists.fetch(list, () => this.root.intakeApi.list(projectId, listQuery(filters)));
   };
 
@@ -157,18 +152,16 @@ export class IntakeStore implements IIntakeStore {
 
   /**
    * @description confirms nerve's answer to a write of a work item of an intake (an edit, a triage, a re-read) to every
-   * list held of its project in its workspace, as a row (rowOf): in its place where the list's filters still select it
-   * at now, for the caller (matches); out of each list that no longer does, its total one less; into none that lacks
-   * it, which its next fetch brings (R31). A work item no longer of an intake leaves every list. Another project's
-   * lists are not written
+   * list held of its project, as a row (rowOf): in its place where the list's filters still select it at now, for the
+   * caller (matches); out of each list that no longer does, its total one less; into none that lacks it, which its next
+   * fetch brings (R31). A work item no longer of an intake leaves every list. Another project's lists are not written
    */
   confirm = (answer: IssueDetail): void => {
     const row = rowOf(answer);
     const now = new Date();
     const me = this.root.currentUserId;
-    this.confirmTo(
-      (list) => list.workspaceId === answer.workspace_id && list.projectId === answer.project_id,
-      (filters) => (row !== undefined && matches(row, filters, now, me) ? rewritten(row) : without(answer.id))
+    this.confirmTo(answer.project_id, (filters) =>
+      row !== undefined && matches(row, filters, now, me) ? rewritten(row) : without(answer.id)
     );
   };
 
@@ -176,11 +169,7 @@ export class IntakeStore implements IIntakeStore {
    * @description takes the work item out of every list held of its project, the total of each that held it one less
    * (R31): nerve deleted it, or gives it the caller no more
    */
-  drop = (projectId: string, issueId: string): void =>
-    this.confirmTo(
-      (list) => list.projectId === projectId,
-      () => without(issueId)
-    );
+  drop = (projectId: string, issueId: string): void => this.confirmTo(projectId, () => without(issueId));
 
   /**
    * @description fetches the workspace's pending counts again after a write that changes them (a triage, a delete, a
@@ -193,13 +182,11 @@ export class IntakeStore implements IIntakeStore {
     void Promise.allSettled([this.fetchCounts(workspace)]);
   };
 
-  /** Confirms to each list held that is of the work item's project the change made of its filters (Reconciled.confirm). */
-  private confirmTo(
-    ofProject: (list: FetchedList) => boolean,
-    change: (filters: IntakeFilters) => Change<IntakeIssuePage>
-  ): void {
+  /** Confirms to each list held of the project the change made of the list's filters (Reconciled.confirm). */
+  private confirmTo(projectId: string, change: (filters: IntakeFilters) => Change<IntakeIssuePage>): void {
     runInAction(() => {
-      for (const [key, list] of this.fetched) if (ofProject(list)) this.lists.confirm(key, change(list.filters));
+      for (const [key, list] of this.fetched)
+        if (list.projectId === projectId) this.lists.confirm(key, change(list.filters));
     });
   }
 }
