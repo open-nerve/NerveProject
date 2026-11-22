@@ -70,17 +70,16 @@
       "show_snoozed": "Show snoozed",
       "show_archived": "Show archived",
       "mark_archive": "Archive",
-      "mark_unarchive": "Un archive",
-      "mark_snooze": "Snooze",
-      "mark_unsnooze": "Un snooze"
+      "mark_unarchive": "Unarchive",
+      "mark_unsnooze": "Unsnooze"
     },
     "toasts": {
       "read": "Notification marked as read",
       "unread": "Notification marked as unread",
       "archived": "Notification marked as archived",
-      "unarchived": "Notification marked as un archived",
+      "unarchived": "Notification unarchived",
       "snoozed": "Notification snoozed",
-      "unsnoozed": "Notification un snoozed",
+      "unsnoozed": "Notification unsnoozed",
       "all_read": "{count, plural, one {# notification marked as read} other {# notifications marked as read}}"
     },
     "tabs": {
@@ -99,6 +98,13 @@
       "1_week": "1 week",
       "2_weeks": "2 weeks",
       "custom": "Custom"
+    },
+    "snooze_modal": {
+      "title": "Customize snooze time",
+      "date": "Pick a date",
+      "time": "Pick a time",
+      "no_time": "No time is left today",
+      "submit": "Snooze"
     }
   }
 }

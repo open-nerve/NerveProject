@@ -20,3 +20,37 @@ export const SNOOZE_PRESETS = [
  * hours, never counted from the day's start nor by the calendar's days, which a change of the clocks lengthens
  */
 export const presetMoment = (days: number, now: Date): string => new Date(now.getTime() + days * DAY).toISOString();
+
+/** The half hours of a day: "HH:MM" of 24 hours, 00:00 to 23:30. */
+const SLOTS: readonly string[] = Array.from(
+  { length: 48 },
+  (_, half) => `${String(Math.floor(half / 2)).padStart(2, "0")}:${half % 2 === 0 ? "00" : "30"}`
+);
+
+/** The hours and the minutes of a half hour ("HH:MM"). */
+const timeOf = (slot: string) => ({ hours: Number(slot.slice(0, 2)), minutes: Number(slot.slice(3, 5)) });
+
+/**
+ * @description the moment of the day's half hour slot in the browser's zone, as nerve takes it (ISO): slot is "HH:MM"
+ * of 24 hours, so that 00:30 is half past midnight and 12:30 half past noon, never the other way round (W1)
+ */
+export function slotMoment(day: Date, slot: string): string {
+  const { hours, minutes } = timeOf(slot);
+  return new Date(day.getFullYear(), day.getMonth(), day.getDate(), hours, minutes).toISOString();
+}
+
+/**
+ * @description the half hours of the day a snooze may end at, as of now (R15): those whose moment (slotMoment) is
+ * after now, so every one of a day after today, today's after now alone, none of a day past; every one while no day
+ * is chosen
+ */
+export const snoozeSlots = (day: Date | null, now: Date): string[] =>
+  day === null ? [...SLOTS] : SLOTS.filter((slot) => new Date(slotMoment(day, slot)).getTime() > now.getTime());
+
+/** @description a half hour as the locale says it (Intl): in 12 hours in English, in 24 in Chinese */
+export function slotLabel(slot: string, locale: string): string {
+  const { hours, minutes } = timeOf(slot);
+  return new Intl.DateTimeFormat(locale, { hour: "numeric", minute: "2-digit" }).format(
+    new Date(2000, 0, 1, hours, minutes)
+  );
+}

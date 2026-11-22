@@ -14,8 +14,9 @@ import { press } from "../sidebar/fake-header-menus";
 // A card's snooze menu (P4 spec 2.6, R15, R16): a menu (CustomMenu) the keyboard opens from its button, moves in by
 // the arrows and chooses in by Enter, Escape closing it and giving the focus back to its button. Its presets snooze
 // the notification for 1, 3, 5, 7 or 14 days from the moment one is chosen (presetMoment); a snoozed one's menu first
-// ends its snooze, which is snoozed_till null (the contract's T1: a field left out changes nothing). No custom time
-// yet: the dialog comes with it (T9). The store and HTTP are real; SWR is, with the test's cache.
+// ends its snooze, which is snoozed_till null (the contract's T1: a field left out changes nothing); custom, last,
+// opens the dialog of a time of one's own (snooze-modal.test.tsx). The store and HTTP are real; SWR is, with the
+// test's cache.
 
 const fixture = vi.hoisted(() => ({
   session: { loginId: "one" },
@@ -33,6 +34,8 @@ vi.mock("@/hooks/store/use-workspace", () => ({ useWorkspace: () => fixture.tab.
 vi.mock("@/hooks/store/use-notifications", () => ({ useNotifications: () => fixture.tab.store }));
 vi.mock("@/hooks/store/use-member", () => ({ useMember: () => ({ getUserDetails: () => undefined }) }));
 vi.mock("@/hooks/use-profile-image", () => import("@/lib/fake-profile-image"));
+// the card's custom snooze dialog reads the profile (DateDropdown); it is never opened here
+vi.mock("@/hooks/store/user", () => ({ useUserProfile: () => ({ data: undefined }) }));
 
 let host: HTMLDivElement, root: Root, cache: Map<string, unknown>;
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
@@ -93,7 +96,7 @@ describe("NotificationSnoozeMenu", () => {
     await renderList(root, cache);
     await answer(await listRead(nerve(), 0), pageOf([one]));
     await press(menuButton("WEB-1 One"), "Enter");
-    expect(items().map((item) => item.textContent)).toEqual(PRESETS);
+    expect(items().map((item) => item.textContent)).toEqual([...PRESETS, "notification.snooze.custom"]);
     expect(menu()?.getAttribute("aria-activedescendant")).toBe(items()[0]?.id);
     await press(menu()!, "ArrowDown");
     expect(menu()?.getAttribute("aria-activedescendant")).toBe(items()[1]?.id);
@@ -123,7 +126,11 @@ describe("NotificationSnoozeMenu", () => {
     await changeState((state) => state.toggleSnoozed());
     await answer(await listRead(nerve(), 1), pageOf([snoozed]));
     await press(menuButton("WEB-3 Later"), "Enter");
-    expect(items().map((item) => item.textContent)).toEqual(["notification.options.mark_unsnooze", ...PRESETS]);
+    expect(items().map((item) => item.textContent)).toEqual([
+      "notification.options.mark_unsnooze",
+      ...PRESETS,
+      "notification.snooze.custom",
+    ]);
     await act(async () => items()[0]?.click());
     const waking = await patched(snoozed);
     expect(waking.body).toEqual({ snoozed_till: null });

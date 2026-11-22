@@ -23,6 +23,8 @@ type Props = {
   disabled: boolean;
   /** Sends the snooze: till, a moment, or null to end it; done, the toast's key that says nerve made it. */
   onSnooze: (till: string | null, done: string) => void;
+  /** Opens the dialog of a time of one's own (snooze-modal.tsx), which the card holds. */
+  onCustom: () => void;
 };
 
 /**
@@ -30,9 +32,9 @@ type Props = {
  * the pointer or the keyboard, the arrow keys moving among its items, Enter choosing one, Escape closing it and giving
  * the focus back to its button. A snoozed one (snoozedNow) first ends its snooze, which is snoozed_till null (the
  * contract's T1: a field left out changes nothing); then the presets, each from the moment it is chosen
- * (presetMoment).
+ * (presetMoment); last, custom, which opens the card's dialog of a time of one's own.
  */
-export function NotificationSnoozeMenu({ notification, label, disabled, onSnooze }: Props) {
+export function NotificationSnoozeMenu({ notification, label, disabled, onSnooze, onCustom }: Props) {
   const { t } = useTranslation();
   return (
     <CustomMenu
@@ -55,6 +57,7 @@ export function NotificationSnoozeMenu({ notification, label, disabled, onSnooze
           {t(preset.i18n_label)}
         </CustomMenu.MenuItem>
       ))}
+      <CustomMenu.MenuItem onClick={onCustom}>{t("notification.snooze.custom")}</CustomMenu.MenuItem>
     </CustomMenu>
   );
 }

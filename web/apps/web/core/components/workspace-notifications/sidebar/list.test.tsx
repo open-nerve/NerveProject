@@ -34,6 +34,8 @@ vi.mock("@/hooks/store/use-workspace", () => ({ useWorkspace: () => fixture.tab.
 vi.mock("@/hooks/store/use-notifications", () => ({ useNotifications: () => fixture.tab.store }));
 vi.mock("@/hooks/store/use-member", () => ({ useMember: () => ({ getUserDetails: () => undefined }) }));
 vi.mock("@/hooks/use-profile-image", () => import("@/lib/fake-profile-image"));
+// the card's custom snooze dialog reads the profile (DateDropdown); it is never opened here
+vi.mock("@/hooks/store/user", () => ({ useUserProfile: () => ({ data: undefined }) }));
 
 let host: HTMLDivElement, root: Root, cache: Map<string, unknown>;
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;

@@ -22,6 +22,7 @@ import { viewOffers } from "@/store/notification/filters";
 // local imports
 import { useNotificationPageState } from "../page-state";
 import { NotificationSnoozeMenu } from "./snooze-menu";
+import { NotificationSnoozeModal } from "./snooze-modal";
 import { useNotificationRefusal } from "./use-notification-refusal";
 
 type Props = {
@@ -32,7 +33,8 @@ type Props = {
 /**
  * A card's actions (P4 spec 2.6, R16, R25), beside its main button: mark read or unread; archive or unarchive, unless
  * the snoozed are listed; the snooze menu (snooze-menu.tsx), unless the archived are (viewOffers: the page never makes
- * a notification both archived and snoozed, which nerve lists in no view). Each is a button named by its row, its work
+ * a notification both archived and snoozed, which nerve lists in no view), whose custom time opens the dialog the card
+ * holds open (snooze-modal.tsx) while it is open. Each is a button named by its row, its work
  * item's reference and name, in the Tab order after the main button; they show as the card is hovered or holds the
  * focus, never hidden from the keyboard until then. Each sends its change through the store (update: one change at a
  * time, nerve's answer written into every list held), all of them out of use meanwhile; says it once nerve has made
@@ -46,6 +48,8 @@ export const NotificationActions = observer(function NotificationActions({ notif
   const { update } = useNotifications();
   const refused = useNotificationRefusal(notification.id);
   const [sending, setSending] = useState(false);
+  // the custom snooze dialog, which the card holds open, not the menu it opens from
+  const [customOpen, setCustomOpen] = useState(false);
 
   if (!workspace) return null;
 
@@ -110,8 +114,10 @@ export const NotificationActions = observer(function NotificationActions({ notif
           label={t("notification.card.actions.snooze", { ref: row })}
           disabled={sending}
           onSnooze={(till, done) => void send({ snoozed_till: till }, done)}
+          onCustom={() => setCustomOpen(true)}
         />
       )}
+      {customOpen && <NotificationSnoozeModal notification={notification} onClose={() => setCustomOpen(false)} />}
     </div>
   );
 });

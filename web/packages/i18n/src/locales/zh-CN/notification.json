@@ -67,20 +67,19 @@
       "refresh": "刷新",
       "filters": "收件箱筛选",
       "show_unread": "显示未读",
-      "show_snoozed": "显示已暂停",
+      "show_snoozed": "显示已暂缓",
       "show_archived": "显示已归档",
       "mark_archive": "归档",
       "mark_unarchive": "取消归档",
-      "mark_snooze": "暂停",
-      "mark_unsnooze": "取消暂停"
+      "mark_unsnooze": "取消暂缓"
     },
     "toasts": {
       "read": "通知已标记为已读",
       "unread": "通知已标记为未读",
       "archived": "通知已标记为已归档",
       "unarchived": "通知已标记为未归档",
-      "snoozed": "通知已暂停",
-      "unsnoozed": "通知已取消暂停",
+      "snoozed": "通知已暂缓",
+      "unsnoozed": "通知已取消暂缓",
       "all_read": "已将 {count} 条通知标为已读"
     },
     "tabs": {
@@ -99,6 +98,13 @@
       "1_week": "1 周",
       "2_weeks": "2 周",
       "custom": "自定义"
+    },
+    "snooze_modal": {
+      "title": "自定义暂缓时间",
+      "date": "选择日期",
+      "time": "选择时间",
+      "no_time": "今天已没有可选的时间",
+      "submit": "暂缓"
     }
   }
 }
