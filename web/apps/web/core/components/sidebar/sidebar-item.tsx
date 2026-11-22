@@ -23,8 +23,8 @@ interface AppSidebarItemData {
 
 /**
  * What a wrapper gives the link it wraps: a tooltip's trigger (Base UI's, which Propel's Tooltip renders its child as)
- * merges its ref, its handlers (focus, blur, pointer) and aria-describedby into it, so that the tooltip opens on hover
- * and focus. The link's own address, name and look are the item's.
+ * merges its ref and its handlers (focus, blur, pointer) into it, so that the tooltip opens on hover and focus. The
+ * link's own address, name and look are the item's.
  */
 type AppSidebarLinkWrapperProps = Omit<
   React.ComponentPropsWithRef<"a">,
