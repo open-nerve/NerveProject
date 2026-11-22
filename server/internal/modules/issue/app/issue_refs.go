@@ -15,6 +15,22 @@ type ProjectGrant struct {
 	OwnOnly   bool
 }
 
+// seenByGrants tells which work items reader sees by grants (M7 P1c spec
+// 2.5, P3d spec 2.5): one in a project among grants, archived or not, that
+// the guest rule, domain.Issue.HiddenFrom, does not hide from him by his
+// grant there, its creator nil when not known; another workspace's work
+// item is in no project of grants.
+func seenByGrants(reader uuid.UUID, grants []ProjectGrant) func(project uuid.UUID, creator *uuid.UUID) bool {
+	ownOnly := make(map[uuid.UUID]bool, len(grants))
+	for _, g := range grants {
+		ownOnly[g.ProjectID] = g.OwnOnly
+	}
+	return func(project uuid.UUID, creator *uuid.UUID) bool {
+		own, readable := ownOnly[project]
+		return readable && !(domain.Issue{CreatedByID: creator}).HiddenFrom(reader, own)
+	}
+}
+
 // IssueRef is a work item as another names it (M7 P1c spec 2.6): its id,
 // its project, its number and its name.
 type IssueRef struct {
@@ -50,14 +66,10 @@ func (r *IssueRefs) IssueRefs(ctx context.Context, reader uuid.UUID, grants []Pr
 	if err != nil {
 		return nil, err
 	}
-	ownOnly := make(map[uuid.UUID]bool, len(grants))
-	for _, g := range grants {
-		ownOnly[g.ProjectID] = g.OwnOnly
-	}
+	sees := seenByGrants(reader, grants)
 	refs := make(map[uuid.UUID]IssueRef, len(rows))
 	for _, row := range rows {
-		own, readable := ownOnly[row.ProjectID]
-		if readable && !(domain.Issue{CreatedByID: row.CreatedByID}).HiddenFrom(reader, own) {
+		if sees(row.ProjectID, row.CreatedByID) {
 			refs[row.ID] = row.IssueRef
 		}
 	}

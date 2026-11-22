@@ -95,16 +95,12 @@ func (n *NavigationIssues) NavigationIssues(ctx context.Context, reader uuid.UUI
 	if err != nil {
 		return nil, err
 	}
-	ownOnly := make(map[uuid.UUID]bool, len(grants))
-	for _, g := range grants {
-		ownOnly[g.ProjectID] = g.OwnOnly
-	}
+	sees := seenByGrants(reader, grants)
 	seen := make(map[uuid.UUID]NavigationIssue, len(rows))
 	for _, row := range rows {
-		i := domain.Issue{CreatedByID: row.CreatedByID, Intake: row.Intake}
-		if own, readable := ownOnly[row.ProjectID]; readable && !i.HiddenFrom(reader, own) {
+		if sees(row.ProjectID, row.CreatedByID) {
 			seen[row.ID] = NavigationIssue{ID: row.ID, ProjectID: row.ProjectID, SequenceID: row.SequenceID, Name: row.Name, StateID: row.StateID,
-				Priority: string(row.Priority), AssigneeIDs: row.AssigneeIDs, InTriage: i.InTriage()}
+				Priority: string(row.Priority), AssigneeIDs: row.AssigneeIDs, InTriage: domain.Issue{Intake: row.Intake}.InTriage()}
 		}
 	}
 	return seen, nil
