@@ -74,7 +74,7 @@ export class NotificationStore implements INotificationStore {
     this.service = new NotificationService(api);
     this.workspaceOf = rootStore.workspaceRoot.getWorkspaceBySlug;
     this.changes = new NotificationChanges(
-      { lists: this.lists, fetched: this.fetched, fetchList: this.fetchList, fetchUnreadCount: this.fetchUnreadCount },
+      { lists: this.lists, fetched: this.fetched, fetchUnreadCount: this.fetchUnreadCount },
       this.service
     );
   }

@@ -29,8 +29,9 @@ import type { INotificationStore } from "@/store/notification/notification.store
 // nerve that answers each request when the test says. They go one at a time. Once nerve confirms a change, its answer
 // is written into every list the store holds of the workspace: in its place where the list still lists it (its read
 // state never moves it), out of a list it no longer matches, into none it newly would; then the workspace's unread
-// count is fetched again, as only nerve counts it. Mark all read changes no row here: the filters' first page and the
-// count are fetched again, whether nerve marked them or refused.
+// count is fetched again, as only nerve counts it. Mark all read changes no row here: the count is fetched again,
+// whether nerve marked them or refused; the filters' first page is the page's to read again, through the list's own
+// read (header-options.test.tsx, refresh.test.tsx).
 
 const { list, unreadCount, markAllRead, at } = notificationRequests;
 
@@ -237,61 +238,48 @@ describe("NotificationStore, the changes", () => {
     expect(marking.value).toEqual({ marked: 1 });
   });
 
-  it("marks all read with the page's filters and changes no row here; their first page and the count come again (R9)", async () => {
+  it("marks all read with the page's filters and changes no row here; the count comes again, no page (R9)", async () => {
     const { nerve, store } = await heldLists();
     const typed: NotificationFilters = { ...first, types: ["subscribed", "assigned"] };
     await loadList(nerve, store, acme, typed, pageOf([one, two]));
     const before = held(store);
     const k = nerve.calls.length;
+    const reads = nerve.to(list(acme)).length;
     const marking = track(store.markAllRead(acme, typed));
     await inTurn(nerve, k, ["POST", markAllRead(acme)], json(200, { marked: 2 }));
     const body = { tab: "all", type: ["assigned", "subscribed"], archived: false, snoozed: false };
     expect(nerve.calls[k]?.body).toEqual(body);
-    await until(() => marking.settled && nerve.calls.length === k + 3, "the marking and what it fetches again");
+    await until(() => marking.settled && nerve.calls.length === k + 2, "the marking and what it fetches again");
     expect(marking.value).toEqual({ marked: 2 });
     // no row is marked read here, nor any count zeroed: each stays as nerve gave it until nerve gives it again
     expect(held(store)).toEqual(before);
     expect(store.getList(acme.slug, typed)).toEqual(pageOf([one, two]));
 
     const again = nerve.calls.slice(k + 1);
-    const page = again.find((call) => call.path === list(acme));
-    expect(page?.query).toEqual({
-      tab: "all",
-      type: "assigned,subscribed",
-      archived: "false",
-      snoozed: "false",
-      limit: "100",
-    });
-    const marked = pageOf([
-      { ...one, read_at: LATER },
-      { ...two, read_at: LATER },
-    ]);
-    page?.answer(json(200, marked));
-    again.find((call) => call.path === unreadCount(acme))?.answer(json(200, countOf(1, 0)));
+    expect(again.map((call) => call.path)).toEqual([unreadCount(acme)]);
+    again[0]?.answer(json(200, countOf(1, 0)));
     await until(counted(store, countOf(1, 0)), "the count again");
-    await until(() => store.getList(acme.slug, typed)?.data[0]?.read_at === LATER, "the page again");
-    expect(store.getList(acme.slug, typed)).toEqual(marked);
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(nerve.to(list(acme))).toHaveLength(reads);
+    expect(store.getList(acme.slug, typed)).toEqual(pageOf([one, two]));
   });
 
-  it("fetches the first page and the count again when nerve refuses too: the batches before stay marked (re-93 m2)", async () => {
+  it("fetches the count again when nerve refuses too: the batches before stay marked (re-93 m2)", async () => {
     const { nerve, store } = await heldLists();
     const before = held(store);
     const k = nerve.calls.length;
     const marking = track(store.markAllRead(acme, first));
     await inTurn(nerve, k, ["POST", markAllRead(acme)], problem(500, "internal_error"));
-    await until(() => marking.settled && nerve.calls.length === k + 3, "the refusal and what it fetches again");
+    await until(() => marking.settled && nerve.calls.length === k + 2, "the refusal and what it fetches again");
     expect(marking.error).toBeInstanceOf(ApiError);
     expect(marking.error).toMatchObject({ status: 500, problem: { code: "internal_error" } });
     expect(held(store)).toEqual(before);
 
-    // nerve marked a batch before the one that failed: the page and the count, fetched again, show it
-    const partly = pageOf([{ ...one, read_at: LATER }, two, three], "c-1");
+    // nerve marked a batch before the one that failed: the count, fetched again, shows it
     const again = nerve.calls.slice(k + 1);
-    again.find((call) => call.path === list(acme))?.answer(json(200, partly));
-    again.find((call) => call.path === unreadCount(acme))?.answer(json(200, countOf(2, 0)));
+    expect(again.map((call) => call.path)).toEqual([unreadCount(acme)]);
+    again[0]?.answer(json(200, countOf(2, 0)));
     await until(counted(store, countOf(2, 0)), "the count again");
-    await until(() => store.getList(acme.slug, first)?.data[0]?.read_at === LATER, "the page again");
-    expect(store.getList(acme.slug, first)).toEqual(partly);
   });
 
   it("makes a change confirmed while a fetch is out again on its answer: a refresh's, a next page's (v0 7.7)", async () => {

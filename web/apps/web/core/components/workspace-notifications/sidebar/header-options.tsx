@@ -28,12 +28,13 @@ import { NotificationViewMenu } from "./view-menu";
  * The head's buttons of the notifications page (P4 spec 2.6, R7, R9, R10), for the route's workspace. Mark all read
  * marks the unread notifications the page's filters select (the store's markAllRead, its body made of them: the all
  * tab's senders only), out of use and turning while nerve marks; says how many nerve marked, or why it refused; either
- * way the store reads the list's first page and the count again, nerve marking in batches. Refresh reads the first page
- * the filters select, in place of every page held (R7), and the count again, out of use and turning meanwhile, saying
- * why nerve could not. It refreshes the list the page shows: the store's read is given to the list's read by its key
- * (useNotificationList, which the head shares with the list, one read as the page opens), so that the list shows the
- * page once Refresh has it, a failure of its read gone, and SWR reads nothing more. What follows nerve's answer is done
- * only in the session it was sent in (followInSession). Then the type filter (all tab alone) and the view menu.
+ * way the list's first page is read again (as Refresh reads it, nerve marking in batches) and the store reads the count
+ * again. Refresh reads the first page the filters select, in place of every page held (R7), and the count again, out of
+ * use and turning meanwhile, saying why nerve could not. Both read the list the page shows: the store's read is given
+ * to the list's read by its key (useNotificationList, which the head shares with the list, one read as the page opens),
+ * so that the list shows the page once it is read, a failure of its read gone, and SWR reads nothing more. What
+ * follows nerve's answer is done only in the session it was sent in (followInSession). Then the type filter (all tab
+ * alone) and the view menu.
  */
 export const NotificationHeaderOptions = observer(function NotificationHeaderOptions() {
   const { t } = useTranslation();
@@ -46,16 +47,24 @@ export const NotificationHeaderOptions = observer(function NotificationHeaderOpt
 
   if (!workspace) return null;
 
+  /** The list's first page read again and given to its key, as Refresh does; a failure leaves the list as it was. */
+  const readAgain = () => void Promise.allSettled([read.mutate(fetchList(workspace, filters), { revalidate: false })]);
+
   const markAll = async () => {
     setMarking(true);
     await followInSession(() => markAllRead(workspace, filters), {
-      done: ({ marked }) =>
+      done: ({ marked }) => {
+        readAgain();
         setToast({
           type: TOAST_TYPE.SUCCESS,
           title: t("toast.success"),
           message: t("notification.toasts.all_read", { count: marked }),
-        }),
-      failed: refusalToast,
+        });
+      },
+      failed: (error) => {
+        readAgain();
+        refusalToast(error);
+      },
     });
     setMarking(false);
   };

@@ -10,10 +10,11 @@ import { acme, countOf, notificationRequests, notificationTab, pageOf } from "@/
 import { answer, cards, listRead, noteOf, renderList, settled } from "../fake-notification-list";
 import { NotificationHeaderOptions } from "./header-options";
 
-// The head's Refresh over the list it refreshes (P4 spec 2.4, 2.6, R7): the head and the list read the list by one
-// key, one read as the page opens; Refresh reads the first page again through the store and gives the key that answer,
-// so that a list whose read nerve refused shows the page once Refresh has it, the failure gone, with no read more; a
-// refused Refresh says why and leaves the list as it was. The store and HTTP are real; SWR is, with the test's cache.
+// The head's Refresh and mark all read over the list they read again (P4 spec 2.4, 2.6, R7, R9): the head and the list
+// read the list by one key, one read as the page opens; each reads the first page again through the store and gives
+// the key that answer, so that a list whose read nerve refused shows the page once it has it, the failure gone, with
+// no read more; a refused Refresh says why and leaves the list as it was; mark all read reads it again whether nerve
+// marked or refused, saying which. The store and HTTP are real; SWR is, with the test's cache.
 
 const fixture = vi.hoisted(() => ({
   session: { loginId: "one" },
@@ -59,6 +60,9 @@ const LIST = notificationRequests.list(acme);
 const COUNT = notificationRequests.unreadCount(acme);
 const failure = () => host.querySelector('[role="alert"]');
 const refresh = () => host.querySelector<HTMLButtonElement>('button[aria-label="notification.options.refresh"]');
+const markAll = () =>
+  host.querySelector<HTMLButtonElement>('button[aria-label="notification.options.mark_all_as_read"]');
+const MARK_ALL = notificationRequests.markAllRead(acme);
 
 /** The list and the head's buttons at acme's address; nerve refuses the list's first read. */
 async function refusedFirstRead() {
@@ -94,5 +98,36 @@ describe("NotificationHeaderOptions' refresh, over the list it refreshes", () =>
     expect(toasts).toEqual([{ type: "error", title: "toast.error", message: "errors.server_busy" }]);
     expect(failure()?.textContent).toContain("errors.server_busy");
     expect(cards(host)).toEqual([]);
+  });
+});
+
+describe("NotificationHeaderOptions' mark all read, over the list it reads again", () => {
+  it.each([
+    [
+      "marked",
+      () => json(200, { marked: 0 }),
+      { type: "success", title: "toast.success", message: "notification.toasts.all_read 0" },
+    ],
+    [
+      "refused",
+      () => problem(503, "server_busy"),
+      { type: "error", title: "toast.error", message: "errors.server_busy" },
+    ],
+  ])("shows the first page it reads again once nerve has %s, the list's read failure gone", async (_, reply, toast) => {
+    await refusedFirstRead();
+    await act(async () => markAll()?.click());
+    await act(async () => until(() => nerve().to(MARK_ALL).length === 1, "mark all read"));
+    nerve().to(MARK_ALL)[0]?.answer(reply());
+    const again = await listRead(nerve(), 1);
+    await act(async () => until(() => nerve().to(COUNT).length === 1, "the count"));
+    nerve()
+      .to(COUNT)[0]
+      ?.answer(json(200, countOf(0, 0)));
+    await answer(again, pageOf([noteOf("One", 1, { read_at: "2026-11-20T12:00:00Z" })]));
+    expect(toasts).toEqual([toast]);
+    expect(failure()).toBeNull();
+    expect(cards(host)).toEqual(["WEB-1 One"]);
+    await settled();
+    expect(nerve().to(LIST)).toHaveLength(2);
   });
 });

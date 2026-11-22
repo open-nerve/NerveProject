@@ -42,7 +42,6 @@ type HeldNotifications = {
   readonly lists: ReconciledByKey<NotificationPage>;
   /** The lists the store fetched, by their keys. */
   readonly fetched: ReadonlyMap<string, FetchedList>;
-  fetchList: (workspace: WorkspaceRef, filters: NotificationFilters) => Promise<NotificationPage | undefined>;
   fetchUnreadCount: (workspace: WorkspaceRef) => Promise<NotificationUnreadCount | undefined>;
 };
 
@@ -69,10 +68,10 @@ const without =
  * The changes of the caller's notifications (P4 spec 2.3, R6, R8, R9), one at a time (v0 design 7.7). Once nerve
  * confirms a change, its answer is written into every list the store holds of the workspace (written); a notification
  * nerve no longer gives him (notification.not_found) leaves each of them. Then the workspace's unread count is fetched
- * again: only nerve counts it. Mark all read writes nothing here: the list's first page and the count are fetched
- * again, whether nerve marked them or refused (it marks in batches, and those before a failed one stay marked). The
- * fetches again do not hold the queue; one that fails leaves what the store had. A refusal fails the change, the values
- * as they were but for notification.not_found, and goes to the caller.
+ * again: only nerve counts it. Mark all read writes nothing here: the count is fetched again, whether nerve marked or
+ * refused (it marks in batches, and those before a failed one stay marked), and the page reads the list's first page
+ * again through the list's own read. The fetches again do not hold the queue; one that fails leaves what the store
+ * had. A refusal fails the change, the values as they were but for notification.not_found, and goes to the caller.
  */
 export class NotificationChanges implements INotificationChanges {
   /** The changes of the caller's notifications, sent one at a time. */
@@ -106,15 +105,16 @@ export class NotificationChanges implements INotificationChanges {
 
   /**
    * @description marks read the workspace's unread notifications the filters select (markAllBody, in its turn); gives
-   * how many nerve marked. No row is marked here, nor any count zeroed: the filters' first page and the count are
-   * fetched again, whether nerve marked them or refused, and a refusal then fails it.
+   * how many nerve marked. No row is marked here, nor any count zeroed: the count is fetched again, whether nerve
+   * marked them or refused, and a refusal then fails it. The filters' first page is the page's to read again, either
+   * way, through the list's own read (the notifications page's head), so that the list it shows has it.
    */
   markAllRead = (workspace: WorkspaceRef, filters: NotificationFilters): Promise<NotificationsMarked> =>
     this.queue(async () => {
       try {
         return await this.service.markAllRead(workspace.slug, markAllBody(filters));
       } finally {
-        void Promise.allSettled([this.held.fetchList(workspace, filters), this.held.fetchUnreadCount(workspace)]);
+        this.countAgain(workspace);
       }
     });
 
