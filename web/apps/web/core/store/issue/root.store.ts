@@ -124,7 +124,7 @@ export class IssueRootStore {
   issueKanBanView: IIssueKanBanViewStore;
   issueCalendarView: ICalendarStore;
 
-  /** The intakes of this generation's projects: the pending counts of each workspace (P5a spec 2.3). */
+  /** The intakes of this generation's projects: each workspace's pending counts and each project's lists (P5a 2.3). */
   intake: IIntakeStore;
 
   readonly owner = Symbol("issue-root");
