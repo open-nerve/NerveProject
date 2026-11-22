@@ -3,6 +3,7 @@ import type { Locator, Page } from "@playwright/test";
 import { expectOutlinesWhole, expectQuietConsole, watchPage } from "../../fixtures/browser";
 import { createIssueComment } from "../../fixtures/comments";
 import { recordApi, tabKey, tabStops, toast } from "../../fixtures/cycle-pages";
+import { deferred } from "../../fixtures/deferred";
 import {
   closedByBackdropClick,
   closedByEscape,
@@ -36,8 +37,9 @@ import { expect, test } from "../../fixtures/test";
 // by it, the first taking the focus; its time is a select of the keyboard, its list beside it, named by its field and
 // the half hour picked; Escape and Cancel close it, the focus back on the row's snooze button, but not while nerve
 // snoozes. A card that leaves the list by its own action gives the focus to the next card, else the previous, else the
-// list; one that stays has it back on the action, once nerve has answered. Each control's focus outline shows whole. Every request is /api/v0's. Late answers are
-// h20-notification-late-pages.spec.ts's.
+// list; one that stays has it back on the action once nerve has answered, a refused preset snooze's on the menu's
+// button. Each control's focus outline shows whole. Every request is /api/v0's; none fails but the one a proxy
+// refuses. Late answers are h20-notification-late-pages.spec.ts's.
 
 test.use({ timezoneId: "America/Los_Angeles" });
 
@@ -262,6 +264,39 @@ test("H20 (page): bob's notifications page by the keyboard: tabs that say their 
   await expect(priority).toHaveCount(0);
   await expect(mainOf(commented)).toBeFocused();
 
+  // The comment's card snoozed for a day by the keyboard, nerve out of reach meanwhile (a proxy's 503, held): the menu
+  // gone, its button disabled while the snooze is out; refused, the card stays, the focus back on its snooze button
+  // once it is enabled again, never on the page's body (whole-branch O4).
+  const commentNote = (await notificationsSent(api, bob.token, slug, 3)).find((n) => n.data.change.field === "comment");
+  const commentPath = `/api/v0/notifications/${commentNote?.id}`;
+  const unreachable = deferred();
+  await page.route(
+    (url) => url.pathname === commentPath,
+    async (route) => {
+      if (route.request().method() !== "PATCH") return route.fallback();
+      await unreachable.promise;
+      await route.fulfill({
+        status: 503,
+        contentType: "application/problem+json",
+        body: JSON.stringify({ type: "about:blank", title: "Busy", status: 503, code: "server_busy" }),
+      });
+    },
+    { times: 1 }
+  );
+  const snoozeComment = commented.getByRole("button", { name: `Snooze ${ref}`, exact: true });
+  await snoozeComment.focus();
+  await chooseByKeyboard(page, snoozeComment, "1 day");
+  await expect(snoozeComment).toBeDisabled();
+  await expect(page.getByRole("menu")).toHaveCount(0);
+  // two frames on, Headless UI has tried to give the focus back to the menu's button, disabled: nothing has it
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  await expect(page.locator("body")).toBeFocused();
+  unreachable.resolve();
+  await expect(toast(page, "The server is busy. Please try again later.")).toBeVisible();
+  await expect(snoozeComment).toBeEnabled();
+  await expect(commented).toHaveCount(1);
+  await expect(snoozeComment).toBeFocused();
+
   // The comment's card marked read by the keyboard: its button, disabled while nerve marks it, has the focus back,
   // named for the way back. Archived by the keyboard, the card gives the focus to the next, the assignment's; the
   // last, the creation's, to the one before it; the one left, to the list.
@@ -290,6 +325,11 @@ test("H20 (page): bob's notifications page by the keyboard: tabs that say their 
   await page.keyboard.press("Enter");
   await expect(page.getByRole("button", { name: "Close the peek view", exact: true })).toBeVisible();
 
-  expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
-  await expectQuietConsole(page, watch);
+  expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[`503 PATCH ${commentPath}`], [], []]);
+  await expectQuietConsole(page, watch, {
+    errors:
+      browserName === "firefox"
+        ? []
+        : ["Failed to load resource: the server responded with a status of 503 (Service Unavailable)"],
+  });
 });

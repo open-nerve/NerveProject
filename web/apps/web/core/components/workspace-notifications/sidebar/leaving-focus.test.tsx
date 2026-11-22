@@ -237,6 +237,20 @@ it("gives it back to the pressed control once it is enabled again, the card in i
   expect(mark.disabled).toBe(false);
 });
 
+it("gives it back to the snooze menu's button once nerve refuses its preset, the card in its place, the menu gone (O4)", async () => {
+  await listed(pageOf([one, two]));
+  const snooze = action("WEB-1 One", "snooze");
+  await press(snooze, "Enter");
+  await press(document.querySelector<HTMLElement>('[role="menu"]')!, "Enter");
+  // the menu went with the focus, its button disabled while the snooze is out: the focus has nowhere to go back to
+  expect(snooze.disabled).toBe(true);
+  expect(document.activeElement).toBe(document.body);
+  await changed(one, problem(503, "server_busy"));
+  expect(cards(host)).toEqual(["WEB-1 One", "WEB-2 Two"]);
+  expect(snooze.disabled).toBe(false);
+  expect(document.activeElement).toBe(snooze);
+});
+
 it("leaves it where it went meanwhile, the pressed control having lost it to nothing", async () => {
   await renderList(root, cache, <button type="button">elsewhere</button>);
   await answer(await listRead(nerve(), 0), pageOf([one, two, three]));
@@ -247,6 +261,20 @@ it("leaves it where it went meanwhile, the pressed control having lost it to not
   await act(async () => elsewhere.focus());
   await changed(two, json(200, { ...two, archived_at: NOW }));
   expect(cards(host)).toEqual(["WEB-1 One", "WEB-3 Three"]);
+  expect(document.activeElement).toBe(elsewhere);
+});
+
+it("leaves it where it went meanwhile as the pressed control, having lost it to nothing, is enabled again in its card", async () => {
+  await renderList(root, cache, <button type="button">elsewhere</button>);
+  await answer(await listRead(nerve(), 0), pageOf([one, two]));
+  const mark = action("WEB-1 One", "mark_read");
+  await pressed(mark);
+  await disabledBlur(mark);
+  const elsewhere = [...host.querySelectorAll("button")].find((button) => button.textContent === "elsewhere")!;
+  await act(async () => elsewhere.focus());
+  await changed(one, json(200, { ...one, read_at: NOW }));
+  expect(cards(host)).toEqual(["WEB-1 One", "WEB-2 Two"]);
+  expect(mark.disabled).toBe(false);
   expect(document.activeElement).toBe(elsewhere);
 });
 
