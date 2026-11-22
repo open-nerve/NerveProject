@@ -9,7 +9,7 @@ import { ClockOutline } from "@makeplane/propel/icons";
 // nerve imports
 import type { Notification } from "@nerve/api-client";
 import { useTranslation } from "@nerve/i18n";
-import { calculateTimeAgo, cn, renderFormattedDate, renderFormattedTime } from "@nerve/utils";
+import { calculateTimeAgo, cn, renderFormattedDate } from "@nerve/utils";
 // components
 import { ProfileAvatar } from "@/components/assets/profile-image";
 // hooks
@@ -24,6 +24,7 @@ import { snoozedNow } from "@/store/notification/filters";
 import { useNotificationPageState } from "../page-state";
 import { NotificationActions } from "./actions";
 import { NotificationSentence } from "./sentence";
+import { timeLabel } from "./snooze-time";
 import { useNotificationRefusal } from "./use-notification-refusal";
 
 type Props = {
@@ -40,12 +41,12 @@ type Props = {
  * shows who made the change, his picture for a member (useActorName), and says what (sentence.tsx); a comment's excerpt,
  * as the plain text nerve keeps of it, two lines at most (no editor, no picture, no mention's name: M5-M7-03); the work
  * item, as it was when the notification was sent; and when: till when it is snoozed, while it is (snoozedNow: a snooze
- * over is an ordinary notification's), else how long ago. An unread one's dot says so to a screen reader too. Nothing
- * in it is a link, an attachment's either (M5-M7-02). What follows nerve's answer is done only in the session the
- * change was sent in (followInSession).
+ * over is an ordinary notification's), its time of day in the page's language (timeLabel), else how long ago. An
+ * unread one's dot says so to a screen reader too. Nothing in it is a link, an attachment's either (M5-M7-02). What
+ * follows nerve's answer is done only in the session the change was sent in (followInSession).
  */
 export const NotificationItem = observer(function NotificationItem({ notification }: Props) {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const workspace = useRouteWorkspace();
   const { selected, select } = useNotificationPageState();
   const { update } = useNotifications();
@@ -105,7 +106,7 @@ export const NotificationItem = observer(function NotificationItem({ notificatio
                 <ClockOutline className="h-4 w-4" />
                 {t("notification.card.till", {
                   date: renderFormattedDate(new Date(till)),
-                  time: renderFormattedTime(new Date(till), "12-hour"),
+                  time: timeLabel(new Date(till), language),
                 })}
               </span>
             ) : (

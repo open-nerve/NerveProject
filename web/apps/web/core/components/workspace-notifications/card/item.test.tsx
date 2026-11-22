@@ -2,7 +2,7 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { problem } from "@/lib/auth/fake-nerve";
 import { until } from "@/lib/auth/fake-time";
 import { toasts } from "@/lib/fake-toast";
@@ -14,11 +14,13 @@ import { answer, cardOf, cards, listRead, noteOf, pageState, renderList, settled
 // which the preview never waits for; a refusal of that says why, the preview open still, but for
 // notification.not_found, after which the card is gone and its selection with it. The button says who made the change
 // and what (sentence.tsx), a comment's excerpt as plain text, the work item, as it was when the notification was sent,
-// and when: till when it is snoozed, while it is (snoozedNow), else how long ago; an unread one's dot says so to a
-// screen reader. The store and HTTP are real; SWR is, with the test's cache; the members are a stand-in's (Ann).
+// and when: till when it is snoozed, while it is (snoozedNow), its time of day in the page's language, else how long
+// ago; an unread one's dot says so to a screen reader. The store and HTTP are real; SWR is, with the test's cache; the
+// members are a stand-in's (Ann); the page's language is English unless a test says otherwise.
 
 const fixture = vi.hoisted(() => ({
   session: { loginId: "one" },
+  language: "en",
   tab: undefined as unknown as Awaited<
     ReturnType<typeof import("@/store/notification/fake-notifications").notificationTab>
   >,
@@ -27,7 +29,10 @@ vi.mock("@/lib/auth/api-client", () => ({ tokenManager: { state: fixture.session
 vi.mock("@/lib/auth/use-session", () => ({
   useSession: () => ({ status: "signed-in", loginId: fixture.session.loginId }),
 }));
-vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n-values"));
+vi.mock("@nerve/i18n", async () => {
+  const { useTranslation } = await import("@/lib/fake-i18n-values");
+  return { useTranslation: () => ({ ...useTranslation(), language: fixture.language }) };
+});
 vi.mock("@nerve/propel/toast", () => import("@/lib/fake-toast"));
 vi.mock("@/hooks/store/use-workspace", () => ({ useWorkspace: () => fixture.tab.workspaceRoot }));
 vi.mock("@/hooks/store/use-notifications", () => ({ useNotifications: () => fixture.tab.store }));
@@ -213,5 +218,32 @@ describe("NotificationItem's words", () => {
     expect(card?.textContent).toContain("ann notification.card.attachment_added");
     expect(card?.querySelector("a")).toBeNull();
     expect(card?.querySelector("button")?.querySelector("button, a")).toBeNull();
+  });
+});
+
+describe("NotificationItem, in a zone and a language of the page's (whole-branch m3)", () => {
+  // UTC, so that the time of day a test reads is the moment's
+  beforeAll(() => {
+    vi.stubEnv("TZ", "UTC");
+  });
+  afterAll(() => {
+    vi.unstubAllEnvs();
+  });
+  afterEach(() => {
+    fixture.language = "en";
+  });
+  const snoozed = noteOf("Later", 3, { snoozed_till: "2026-11-21T20:30:00Z" });
+  /** The card's text, its spaces plain (Intl puts a narrow one before AM and PM). */
+  const said = () => cardOf(host, "WEB-3 Later")?.textContent?.replace(/\s/g, " ");
+
+  it("says the time it is snoozed till in 12 hours in English", async () => {
+    await listed(snoozed);
+    expect(said()).toContain("notification.card.till Nov 21, 2026 8:30 PM");
+  });
+
+  it("says the time it is snoozed till in 24 hours in Chinese, as the custom snooze's half hours (slotLabel)", async () => {
+    fixture.language = "zh-CN";
+    await listed(snoozed);
+    expect(said()).toContain("notification.card.till Nov 21, 2026 20:30");
   });
 });

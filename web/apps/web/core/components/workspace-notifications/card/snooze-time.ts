@@ -47,10 +47,15 @@ export function slotMoment(day: Date, slot: string): string {
 export const snoozeSlots = (day: Date | null, now: Date): string[] =>
   day === null ? [...SLOTS] : SLOTS.filter((slot) => new Date(slotMoment(day, slot)).getTime() > now.getTime());
 
-/** @description a half hour as the locale says it (Intl): in 12 hours in English, in 24 in Chinese */
+/**
+ * @description a moment's time of day in the browser's zone as the locale says it (Intl): in 12 hours in English, in 24
+ * in Chinese; a half hour of the custom snooze's (slotLabel) and the time a card is snoozed till alike (R15)
+ */
+export const timeLabel = (moment: Date, locale: string): string =>
+  new Intl.DateTimeFormat(locale, { hour: "numeric", minute: "2-digit" }).format(moment);
+
+/** @description a half hour as the locale says it (timeLabel) */
 export function slotLabel(slot: string, locale: string): string {
   const { hours, minutes } = timeOf(slot);
-  return new Intl.DateTimeFormat(locale, { hour: "numeric", minute: "2-digit" }).format(
-    new Date(2000, 0, 1, hours, minutes)
-  );
+  return timeLabel(new Date(2000, 0, 1, hours, minutes), locale);
 }
