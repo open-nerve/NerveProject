@@ -51,7 +51,14 @@
       "attachment_removed": "removed an attachment",
       "mentioned_description": "mentioned you in the description",
       "mentioned_comment": "mentioned you in a comment",
-      "updated": "updated the work item"
+      "updated": "updated the work item",
+      "actions": {
+        "mark_read": "Mark {ref} read",
+        "mark_unread": "Mark {ref} unread",
+        "archive": "Archive {ref}",
+        "unarchive": "Unarchive {ref}",
+        "snooze": "Snooze {ref}"
+      }
     },
     "options": {
       "mark_all_as_read": "Mark all as read",

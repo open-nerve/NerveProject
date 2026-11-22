@@ -9,7 +9,7 @@ import { toasts } from "@/lib/fake-toast";
 import { notificationRequests, notificationTab, pageOf } from "@/store/notification/fake-notifications";
 import { answer, cardOf, cards, listRead, noteOf, pageState, renderList, settled } from "../fake-notification-list";
 
-// A card of the notifications page's list (P4 spec 2.6, R16, R23): one button, which selects its notification and
+// A card of the notifications page's list (P4 spec 2.6, R16, R23): one main button, which selects its notification and
 // opens its preview at once (the selection is the preview's, root.tsx) and, for an unread one, queues marking it read,
 // which the preview never waits for; a refusal of that says why, the preview open still, but for
 // notification.not_found, after which the card is gone and its selection with it. The button says who made the change
@@ -73,9 +73,11 @@ async function listed(...notifications: (typeof one)[]) {
 }
 
 describe("NotificationItem", () => {
-  it("is one button that says the work item, selecting the notification and opening its preview at once", async () => {
+  it("is one main button that says the work item, selecting the notification and opening its preview at once", async () => {
     await listed(one, two);
-    expect(cardOf(host, "WEB-1 One")?.querySelectorAll("button")).toHaveLength(1);
+    const main = cardOf(host, "WEB-1 One")?.querySelector("button");
+    expect(main?.textContent).toContain("WEB-1 One");
+    expect(main?.querySelector("button, a")).toBeNull();
     await open("WEB-1 One");
     expect(pageState.current.selected).toEqual(selectionOf(one));
     await open("WEB-2 Two");
@@ -202,12 +204,12 @@ describe("NotificationItem's words", () => {
     expect(card?.textContent).toContain("@ann have a look");
   });
 
-  it("links to no attachment, nor to anything else: the card is its one button", async () => {
+  it("links to no attachment, nor to anything else: its main button holds no other control", async () => {
     const attached = changed("File", 5, { field: "attachment", verb: "created", old_value: null, new_value: null });
     await listed(attached);
     const card = cardOf(host, "WEB-5 File");
     expect(card?.textContent).toContain("ann notification.card.attachment_added");
     expect(card?.querySelector("a")).toBeNull();
-    expect(card?.querySelectorAll("button")).toHaveLength(1);
+    expect(card?.querySelector("button")?.querySelector("button, a")).toBeNull();
   });
 });

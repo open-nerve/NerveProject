@@ -15,16 +15,16 @@ import { ProfileAvatar } from "@/components/assets/profile-image";
 // hooks
 import { useNotifications } from "@/hooks/store/use-notifications";
 import { useActorName } from "@/hooks/use-actor-name";
-import { useRefusalToast } from "@/hooks/use-refusal-toast";
 import { useRouteWorkspace } from "@/hooks/use-route-workspace";
 // lib
-import { problemCode } from "@/lib/api-error";
 import { followInSession } from "@/lib/in-session";
 // store
 import { snoozedNow } from "@/store/notification/filters";
 // local imports
 import { useNotificationPageState } from "../page-state";
+import { NotificationActions } from "./actions";
 import { NotificationSentence } from "./sentence";
+import { useNotificationRefusal } from "./use-notification-refusal";
 
 type Props = {
   /** The notification the card shows, as nerve last gave it. */
@@ -32,10 +32,11 @@ type Props = {
 };
 
 /**
- * A card of the notifications page's list (P4 spec 2.6, R16, R23): its one button selects its notification, which
+ * A card of the notifications page's list (P4 spec 2.6, R16, R23): its main button selects its notification, which
  * opens the preview at once, and, for an unread one, queues marking it read (the store's update, one change at a time),
  * which the preview never waits for: nerve's refusal of that is said in a toast, the preview open still, but for
- * notification.not_found, after which the notification has left every list and its selection is cleared. The button
+ * notification.not_found, after which the notification has left every list and its selection is cleared
+ * (useNotificationRefusal). Beside the main button, never in it, its actions (actions.tsx). The main button
  * shows who made the change, his picture for a member (useActorName), and says what (sentence.tsx); a comment's excerpt,
  * as the plain text nerve keeps of it, two lines at most (no editor, no picture, no mention's name: M5-M7-03); the work
  * item, as it was when the notification was sent; and when: till when it is snoozed, while it is (snoozedNow: a snooze
@@ -46,9 +47,9 @@ type Props = {
 export const NotificationItem = observer(function NotificationItem({ notification }: Props) {
   const { t } = useTranslation();
   const workspace = useRouteWorkspace();
-  const { selected, select, clearSelection } = useNotificationPageState();
+  const { selected, select } = useNotificationPageState();
   const { update } = useNotifications();
-  const refusalToast = useRefusalToast();
+  const refused = useNotificationRefusal(notification.id);
   const actor = useActorName(notification.triggered_by_id);
   // derived values
   const { id, issue_id: issueId, project_id: projectId, triggered_by_id: actorId } = notification;
@@ -61,12 +62,7 @@ export const NotificationItem = observer(function NotificationItem({ notificatio
   const open = () => {
     select({ notificationId: id, issueId, projectId });
     if (!unread || !workspace) return;
-    void followInSession(() => update(workspace, id, { read: true }), {
-      failed: (error) => {
-        refusalToast(error);
-        if (problemCode(error) === "notification.not_found") clearSelection(id);
-      },
-    });
+    void followInSession(() => update(workspace, id, { read: true }), { failed: refused });
   };
 
   return (
@@ -118,6 +114,7 @@ export const NotificationItem = observer(function NotificationItem({ notificatio
           </span>
         </span>
       </button>
+      <NotificationActions notification={notification} />
     </div>
   );
 });

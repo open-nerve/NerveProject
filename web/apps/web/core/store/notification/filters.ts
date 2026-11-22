@@ -118,3 +118,14 @@ export function markAllBody(filters: NotificationFilters): NotificationMarkAllRe
     snoozed: filters.snoozed,
   };
 }
+
+/**
+ * @description the changes a card offers in a list of the filters (R25): archive (or unarchive) unless the snoozed are
+ * listed, snooze (its menu) unless the archived are. nerve takes archived and snoozed as equalities, ANDed, and the two
+ * toggles exclude each other, so that a notification both archived and snoozed is listed in no view: the page never
+ * makes one
+ */
+export const viewOffers = (filters: NotificationFilters): { archive: boolean; snooze: boolean } => ({
+  archive: !filters.snoozed,
+  snooze: !filters.archived,
+});

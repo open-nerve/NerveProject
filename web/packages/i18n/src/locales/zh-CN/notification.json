@@ -51,7 +51,14 @@
       "attachment_removed": "移除了附件",
       "mentioned_description": "在描述中提及了你",
       "mentioned_comment": "在评论中提及了你",
-      "updated": "更新了工作项"
+      "updated": "更新了工作项",
+      "actions": {
+        "mark_read": "将 {ref} 标为已读",
+        "mark_unread": "将 {ref} 标为未读",
+        "archive": "归档 {ref}",
+        "unarchive": "取消归档 {ref}",
+        "snooze": "暂缓 {ref}"
+      }
     },
     "options": {
       "mark_all_as_read": "全部标记为已读",

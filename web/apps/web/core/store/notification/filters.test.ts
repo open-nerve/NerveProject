@@ -6,7 +6,7 @@
 import { describe, expect, it } from "vitest";
 import { notificationOf } from "./fake-notifications";
 import type { NotificationFilters } from "./filters";
-import { filterKey, filtersOf, listQuery, markAllBody, matches, snoozedNow } from "./filters";
+import { filterKey, filtersOf, listQuery, markAllBody, matches, snoozedNow, viewOffers } from "./filters";
 
 // The filters of the caller's notifications, as the page holds them, and what nerve is asked with them (P4 spec 2.2,
 // R8–R10, R21; the contract's traps T2–T8): the key of a list names exactly what it fetches, and turns back into the
@@ -231,5 +231,22 @@ describe("matches", () => {
     const read = notificationOf("read", { read_at: "2026-11-10T08:00:00Z" });
     expect(matches(read, withFilters({ unread: true }), now)).toBe(true);
     expect(matches(subscribed, withFilters({ unread: true }), now)).toBe(true);
+  });
+});
+
+describe("viewOffers", () => {
+  it("offers both archive and snooze in a view of neither the archived nor the snoozed, whatever the tab or unread", () => {
+    expect(viewOffers(all)).toEqual({ archive: true, snooze: true });
+    expect(viewOffers(withFilters({ tab: "mentions", unread: true }))).toEqual({ archive: true, snooze: true });
+  });
+
+  it("offers no archive where the snoozed are listed, nor snooze where the archived are (R25)", () => {
+    // nerve takes archived and snoozed as equalities, ANDed: one both archived and snoozed is listed in no view
+    expect(viewOffers(withFilters({ snoozed: true }))).toEqual({ archive: false, snooze: true });
+    expect(viewOffers(withFilters({ archived: true }))).toEqual({ archive: true, snooze: false });
+    expect(viewOffers(withFilters({ tab: "mentions", unread: true, snoozed: true }))).toEqual({
+      archive: false,
+      snooze: true,
+    });
   });
 });
