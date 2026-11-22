@@ -226,9 +226,9 @@ test("H6 (page): bob reads and unreads, archives and unarchives, snoozes for 3 d
   // nerve wrote nothing of it: its row as it was sent
   expect(await states("created")).toEqual([{ read: false, archived: false, snoozed: false, by_receiver: false }]);
 
-  // Snoozed till two seconds on (through the API): gone at the refresh, and listed and counted again at the refresh
-  // after its end.
-  const soon = new Date(Date.now() + 2000).toISOString();
+  // Snoozed till five seconds on (through the API), time enough for the refresh to land before its end on a slow
+  // runner: gone at the refresh, and listed and counted again at the refresh after its end (unreadReach waits for it).
+  const soon = new Date(Date.now() + 5000).toISOString();
   expect((await notificationUpdated(api, bob.token, ids.created, { snoozed_till: soon })).status).toBe(200);
   await page.getByRole("button", { name: "Refresh", exact: true }).click();
   await expect(created).toHaveCount(0);
