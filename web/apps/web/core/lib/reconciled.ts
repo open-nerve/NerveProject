@@ -160,6 +160,20 @@ export class ReconciledByKey<V> {
     return this.entry(key).fetch(read);
   }
 
+  /**
+   * Reads one part of the key's value, once fetched, with read, and merges it in (Reconciled.fetchPart); for a key not
+   * fetched yet there is nothing a part could extend: it gives undefined, reads nothing and holds no entry for it.
+   */
+  fetchPart(
+    key: string,
+    part: string,
+    read: () => Promise<V>,
+    merge: (held: V, answer: V) => V
+  ): Promise<V | undefined> {
+    const entry = this.entries.get(key);
+    return entry ? entry.fetchPart(part, read, merge) : Promise.resolve(undefined);
+  }
+
   receive(key: string, answer: V, choose: (held: V | undefined, answer: V) => V): V {
     return this.entry(key).receive(answer, choose);
   }
