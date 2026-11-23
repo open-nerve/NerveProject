@@ -110,6 +110,9 @@ describe("the selection after a triage (R14)", () => {
   it("moves to the row after, by a replace, once nerve has declined it, the focus with it; Back never returns", async () => {
     await opened([x, y, z], detailOf("x"));
     await pressByKeyboard(buttonSaying("inbox_issue.actions.decline", detailRegion()!));
+    expect(dialogNamed("inbox_issue.modals.decline.title")?.textContent).toContain(
+      "inbox_issue.modals.decline.content"
+    );
     await decline();
     expect((await callTo("POST", TRIAGE("i-x"))).body).toEqual({ status: "declined" });
     expect(selected()).toBe("i-x");
@@ -223,7 +226,8 @@ describe("the selection after a triage (R14)", () => {
   it("is cleared once nerve has deleted it, by a replace, the focus on the list", async () => {
     await opened([x, y], detailOf("x"));
     await chooseFromMenu("wide", "inbox_issue.actions.delete");
-    await act(async () => buttonSaying("Delete", dialogNamed("inbox_issue.modals.delete.title"))!.click());
+    expect(dialogNamed("inbox_issue.modals.delete.title")?.textContent).toContain("inbox_issue.modals.delete.content");
+    await act(async () => buttonSaying("delete", dialogNamed("inbox_issue.modals.delete.title"))!.click());
     await answer(callTo("DELETE", "/api/v0/intake-issues/i-x"), noContent());
     await answer(callTo("GET", ISSUE("i-x")), problem(404, "issue.not_found"));
     await settled();
@@ -250,7 +254,7 @@ describe("the focus after a triage that stays, a refusal and a cancel (R35)", ()
     const opener = buttonSaying("inbox_issue.actions.decline", detailRegion()!);
     await pressByPointer(opener);
     await settled();
-    await act(async () => buttonSaying("Cancel", dialogNamed("inbox_issue.modals.decline.title"))!.click());
+    await act(async () => buttonSaying("common.cancel", dialogNamed("inbox_issue.modals.decline.title"))!.click());
     await settled();
     expect(document.activeElement).toBe(opener);
   });
@@ -267,7 +271,7 @@ describe("the focus after a triage that stays, a refusal and a cancel (R35)", ()
     await answer(callTo("GET", ISSUE("i-x")), json(200, detailOf("x", { intake: intakeOf("accepted") })));
     await act(async () => void (await again));
     expect(buttonSaying("inbox_issue.actions.decline", detailRegion()!)).toBeUndefined();
-    await act(async () => buttonSaying("Cancel", dialogNamed("inbox_issue.modals.decline.title"))!.click());
+    await act(async () => buttonSaying("common.cancel", dialogNamed("inbox_issue.modals.decline.title"))!.click());
     await settled();
     expect(selected()).toBe("i-x");
     expect(document.activeElement).toBe(detailRegion());

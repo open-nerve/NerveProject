@@ -156,7 +156,7 @@ test("H20 (page): alice's decline of a Web work item, answered after a move to O
   expect(await shownWithin(anyToast(page))).toBe(false);
   expect(await shownRows(page)).toEqual(opsRows);
   await expect(page).toHaveURL(selecting(o1));
-  await expect(page.getByRole("tab", { name: "Open, 1 work items", exact: true })).toHaveAttribute(
+  await expect(page.getByRole("tab", { name: "Open, 1 work item", exact: true })).toHaveAttribute(
     "aria-selected",
     "true"
   );
@@ -192,7 +192,7 @@ test("H20 (page): alice's decline of a Web work item, answered after a move to O
     );
   await moveWithinApp(page, intakePath(beta.slug, core.id));
   const coreRows = [`CORE-${c1.sequence_id} C1`];
-  const coreTab = page.getByRole("tab", { name: "Open, 1 work items", exact: true });
+  const coreTab = page.getByRole("tab", { name: "Open, 1 work item", exact: true });
   await expect.poll(() => shownRows(page)).toEqual(coreRows);
   await expect(page).toHaveURL(selecting(c1));
   await expect(coreTab).toHaveAttribute("aria-selected", "true");

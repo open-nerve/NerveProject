@@ -240,6 +240,7 @@ test("H11 (page): bob, a member of Web, changes the name and the priority of the
   await detail.getByRole("button", { name: "Options", exact: true }).click();
   await page.getByRole("menuitem", { name: "Delete", exact: true }).click();
   const deleting = page.getByRole("dialog", { name: "Delete work item", exact: true });
+  await expect(deleting).toContainText("The work item itself is deleted, not only its place in the intake.");
   const confirm = deleting.getByRole("button", { name: "Delete", exact: true });
   expect(await wrote(page, writes, "DELETE", edit, () => confirm.click())).toEqual([null, 204]);
   await expect(page.getByRole("region", { name: "Intake work items", exact: true })).toBeFocused();

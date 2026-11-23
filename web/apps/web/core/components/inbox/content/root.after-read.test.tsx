@@ -123,7 +123,7 @@ describe("the detail region once its read has answered", () => {
   it("closes the delete modal once nerve says the work item is gone from the intake, said once, the selection cleared", async () => {
     await opened([x, y], detailOf("x"));
     await chooseFromMenu("wide", "inbox_issue.actions.delete");
-    await act(async () => buttonSaying("Delete", dialogNamed("inbox_issue.modals.delete.title"))!.click());
+    await act(async () => buttonSaying("delete", dialogNamed("inbox_issue.modals.delete.title"))!.click());
     await answer(callTo("DELETE", INTAKE), problem(404, "issue.intake_not_found"));
     await answer(callTo("GET", ISSUE), problem(404, "issue.not_found"));
     await settled();
@@ -137,7 +137,7 @@ describe("the detail region once its read has answered", () => {
   it("says nothing it cannot show of a work item deleted whose read again finds it out of the intake (accepted meanwhile)", async () => {
     await opened([x, y], detailOf("x"));
     await chooseFromMenu("wide", "inbox_issue.actions.delete");
-    await act(async () => buttonSaying("Delete", dialogNamed("inbox_issue.modals.delete.title"))!.click());
+    await act(async () => buttonSaying("delete", dialogNamed("inbox_issue.modals.delete.title"))!.click());
     // nerve deletes the intake row alone of a work item accepted meanwhile: the work item stays, out of the intake
     await answer(callTo("DELETE", INTAKE), noContent());
     await answer(callTo("GET", ISSUE), json(200, detailOf("x", { intake: null })));

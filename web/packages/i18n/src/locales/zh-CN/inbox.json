@@ -20,11 +20,13 @@
     },
     "modals": {
       "decline": {
-        "title": "拒绝工作项"
+        "title": "拒绝工作项",
+        "content": "确定要拒绝工作项 {identifier} 吗？此操作无法撤销。"
       },
       "delete": {
         "title": "删除工作项",
-        "success": "工作项删除成功"
+        "success": "工作项删除成功",
+        "content": "确定要删除工作项 {identifier} 吗？删除的是工作项本身，不只是它在收集箱中的位置。此操作无法撤销。"
       },
       "snooze": {
         "title": "暂缓工作项",
@@ -69,7 +71,7 @@
       "pending_count": "{label}，{count} 条待处理",
       "previous": "上一条工作项",
       "next": "下一条工作项",
-      "tab_total": "{label}，{count} 个工作项",
+      "tab_total": "{label}，{count, plural, one{# 个工作项} other{# 个工作项}}",
       "order_by": "按{field}排序，{direction}",
       "list": "收集箱的工作项"
     },

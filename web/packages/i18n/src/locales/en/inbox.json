@@ -20,11 +20,13 @@
     },
     "modals": {
       "decline": {
-        "title": "Decline work item"
+        "title": "Decline work item",
+        "content": "Are you sure you want to decline work item {identifier}? This action cannot be undone."
       },
       "delete": {
         "title": "Delete work item",
-        "success": "Work item deleted successfully"
+        "success": "Work item deleted successfully",
+        "content": "Are you sure you want to delete work item {identifier}? The work item itself is deleted, not only its place in the intake. This action cannot be undone."
       },
       "snooze": {
         "title": "Snooze work item",
@@ -69,7 +71,7 @@
       "pending_count": "{label}, {count} pending",
       "previous": "Previous work item",
       "next": "Next work item",
-      "tab_total": "{label}, {count} work items",
+      "tab_total": "{label}, {count, plural, one{# work item} other{# work items}}",
       "order_by": "Order by {field}, {direction}",
       "list": "Intake work items"
     },

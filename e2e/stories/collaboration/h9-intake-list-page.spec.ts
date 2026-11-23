@@ -379,7 +379,7 @@ test("H9 (page): odo, made Web's guest once he had submitted, sees his own work 
   const loaded = recordApi(page);
   await page.goto(intakePath(slug, web.id));
   await expect.poll(() => shownRows(page)).toEqual([rowOf(made(report))]);
-  await expectTabs(page, "Open, 1 work items", "open");
+  await expectTabs(page, "Open, 1 work item", "open");
   await expect(intakeEntry(page, slug, web.id, 1)).toBeVisible();
   await expect(intakeDetail(page).getByText("created the work item.")).toBeVisible();
   await expect.poll(() => loaded().pending).toBe(0);
