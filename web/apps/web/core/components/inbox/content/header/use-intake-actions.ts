@@ -24,6 +24,7 @@ import { sessionGuard } from "@/lib/in-session";
 // store
 import { inIntake } from "@/store/issue/intake/status";
 // local imports
+import { intakeAddress } from "../../address";
 import type { IntakeSelectionPort } from "../selection-port";
 import { useDetailFocus } from "./detail-focus";
 import { offeredOn, type IntakeAction, type IntakeActions, type OpenModal } from "./intake-actions";
@@ -35,19 +36,20 @@ import { offeredOn, type IntakeAction, type IntakeActions, type OpenModal } from
  * deleteIntake), one out at a time (busy), each followed only in the detail's scope (the same selection, session and
  * permissions): a refusal changes nothing and is said; nerve's conflict closes the modal, the selection kept, read
  * again (issue.intake_transition_not_allowed), or left for none (issue.intake_not_found: gone from the intake). Once
- * nerve confirms a triage, the selection leaves the work item (selection.leave) for the row its selection gave as the
- * triage began (selection.neighbour; the intake page's, the row after it in the list the page shows, else the row
+ * nerve confirms a triage on the intake page, the selection leaves the work item (selection.leave) for the row its
+ * selection gave as the triage began (selection.neighbour; the row after it in the list the page shows, else the row
  * before), a duplicate aside, which stays; the acceptance's, once its modal closes, its update confirmed or cancelled.
- * Deleting leaves the work item gone, which the detail region is told (leaving) before the delete is sent; once nerve
- * confirms, the selection leaves it for none. The focus lands as each ends (useDetailFocus, and the landing of what
- * shows the selection as it leaves). It reads the selection through its port alone (P5b R18), never a page's state.
+ * Embedded in the notifications page (P5b R17), it stays on every triage, which shows in its header. Deleting leaves
+ * the work item gone, which the detail region is told (leaving) before the delete is sent; once nerve confirms, the
+ * selection leaves it for none. The focus lands as each ends (useDetailFocus, and the landing of what shows the
+ * selection as it leaves). It reads the selection through its port alone (P5b R18), never a page's state.
  */
 export function useIntakeActions(
   workspaceSlug: string,
   projectId: string,
   issueId: string,
   // the selection's port, and whether the detail region is deleting the work item (the region's own)
-  selection: Pick<IntakeSelectionPort, "leave" | "neighbour" | "region"> & { leaving: RefObject<boolean> }
+  selection: IntakeSelectionPort & { leaving: RefObject<boolean> }
 ): IntakeActions {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -72,7 +74,7 @@ export function useIntakeActions(
   const detail = getIssueDetailById(issueId);
   const project = getProjectById(projectId);
   const role = getProjectRoleByWorkspaceSlugAndProjectId(workspaceSlug, projectId);
-  const offered = offeredOn(detail, role, currentUser?.id, !!project?.archived_at);
+  const offered = offeredOn(detail, role, currentUser?.id, !!project?.archived_at, selection.kind);
   const link = generateWorkItemLink({
     workspaceSlug,
     projectId,
@@ -80,7 +82,21 @@ export function useIntakeActions(
     projectIdentifier: project?.identifier,
     sequenceId: detail?.sequence_id,
   });
+  const openLink =
+    selection.kind === "embed" && inIntake(detail)
+      ? intakeAddress(workspaceSlug, projectId, issueId, detail?.intake ?? null)
+      : link;
   const scope = () => root.scope(workspaceSlug, projectId);
+  // the row the page's selection leaves the work item for once nerve confirms a triage, asked as the triage begins
+  const neighbour = () => (selection.kind === "page" ? selection.neighbour(issueId) : undefined);
+  /**
+   * A triage's end, once nerve confirmed it (R14, R17): the page's selection leaves the work item for to; the embed's
+   * stays, the focus on the new header's primary action, else on the region.
+   */
+  const triaged = (to: string | undefined) => {
+    if (selection.kind === "page") selection.leave(issueId, to);
+    else focus.land("primary");
+  };
   const show = (next: OpenModal | undefined) => {
     open.current = next;
     setModal(next);
@@ -122,7 +138,7 @@ export function useIntakeActions(
     setBusy(false);
   };
   const triage = async (body: IntakeTriage, underField?: (error: unknown) => boolean) => {
-    const to = selection.neighbour(issueId);
+    const to = neighbour();
     await command(
       () => root.writes.triageIntake(issueId, body, scope()),
       (error) => {
@@ -133,13 +149,13 @@ export function useIntakeActions(
     );
     show(undefined);
     if (body.status === "duplicate") focus.land("primary");
-    else selection.leave(issueId, to);
+    else triaged(to);
   };
   const take = (action: IntakeAction, opener?: HTMLElement | null) => {
     if (!offered.includes(action)) return;
     focus.remember(opener);
     if (action === "copy") void copyLink(link, t("common.link_copied_to_clipboard"));
-    else if (action === "open") void navigate(link);
+    else if (action === "open") void navigate(openLink);
     else if (action === "unsnooze") void triage({ status: "pending" }).catch(() => undefined);
     else if (detail) {
       acceptedFor.current = undefined;
@@ -149,7 +165,7 @@ export function useIntakeActions(
   return {
     offered,
     primary: offered.includes("accept") ? "accept" : undefined,
-    link,
+    openLink,
     modal,
     busy,
     take,
@@ -157,7 +173,7 @@ export function useIntakeActions(
       const closing = open.current;
       if (!closing) return;
       show(undefined);
-      if (closing.accepted) selection.leave(issueId, acceptedFor.current);
+      if (closing.accepted) triaged(acceptedFor.current);
       else focus.land("opener");
     },
     accept: async () => {
@@ -165,9 +181,9 @@ export function useIntakeActions(
       // again; one not held, a write's read again out, is triaged: nerve refuses it as a conflict if another accepted it
       const held = getIssueDetailById(issueId);
       if (!open.current?.accepted && (held === undefined || inIntake(held))) {
-        acceptedFor.current = selection.neighbour(issueId);
+        acceptedFor.current = neighbour();
         await command(() => root.writes.triageIntake(issueId, { status: "accepted" }, scope()), sayAndFollow);
-      } else acceptedFor.current ??= selection.neighbour(issueId);
+      } else acceptedFor.current ??= neighbour();
       if (open.current) show({ ...open.current, accepted: true });
     },
     triage,

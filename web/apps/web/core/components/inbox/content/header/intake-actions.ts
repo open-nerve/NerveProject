@@ -8,6 +8,8 @@ import type { IntakeTriage, IssueDetail } from "@nerve/api-client";
 import { EUserPermissions } from "@nerve/constants";
 // store
 import { effectiveStatus } from "@/store/issue/intake/status";
+// local imports
+import type { IntakeSelectionPort } from "../selection-port";
 
 /** What the caller may do with a work item of a project's intake, from its header (P5a spec 2.8). */
 export type IntakeAction =
@@ -46,8 +48,11 @@ export type IntakeActions = {
   offered: readonly IntakeAction[];
   /** The status's primary action (R35): accepting, for an admin on a pending or snoozed work item; none otherwise. */
   primary: IntakeAction | undefined;
-  /** The work item's address, by its project's identifier: what copy copies and open opens. */
-  link: string;
+  /**
+   * What open opens (P5b R30): the work item's address, by its project's identifier (the browse page's, which copy
+   * copies); embedded, for one in the intake (not accepted), the intake page's, selecting it in the tab that lists it.
+   */
+  openLink: string;
   /** The modal open. */
   modal: OpenModal | undefined;
   /** Whether a triage or a deletion of the work item is out: the headers' controls wait meanwhile. */
@@ -82,22 +87,24 @@ export type IntakeActions = {
 };
 
 /**
- * What the caller is offered on a work item of a project's intake (P5a spec 2.8, R11, R15, R20, R27; P5b R15): an
- * archived project's, or one triaged already, only its copy, and its opening once accepted (else the browse page sends
- * it back here); else an admin (a workspace admin who is the project's member too, as the permission store gives it)
- * triages it, a snooze offering its end and another day instead of a snooze, and deletes it; a member who submitted it
- * deletes it; anyone else, a guest who submitted it too, only copies it. A snooze whose day has come is pending.
+ * What the caller is offered on a work item of a project's intake (P5a spec 2.8, R11, R15, R20, R27; P5b R15, R25):
+ * an archived project's, or one triaged already, only its copy; else an admin (a workspace admin who is the project's
+ * member too, as the permission store gives it) triages it, a snooze offering its end and another day instead of a
+ * snooze, and deletes it; a member who submitted it deletes it; anyone else, a guest who submitted it too, only copies
+ * it. Its opening, after its copy, once accepted on the intake page (else the browse page sends it back there), on
+ * every status embedded in the notifications page (kind, its selection's). A snooze whose day has come is pending.
  */
 export function offeredOn(
   detail: IssueDetail | undefined,
   role: EUserPermissions | undefined,
   me: string | undefined,
-  archived: boolean
+  archived: boolean,
+  kind: IntakeSelectionPort["kind"]
 ): IntakeAction[] {
   if (!detail) return [];
   const status = detail.intake ? effectiveStatus(detail.intake, new Date()) : undefined;
-  if (archived || (status !== "pending" && status !== "snoozed"))
-    return status === "accepted" ? ["copy", "open"] : ["copy"];
+  const open = kind === "embed" || status === "accepted" ? (["open"] as const) : [];
+  if (archived || (status !== "pending" && status !== "snoozed")) return ["copy", ...open];
   if (role === EUserPermissions.ADMIN)
     return [
       "accept",
@@ -105,8 +112,10 @@ export function offeredOn(
       ...(status === "snoozed" ? (["unsnooze", "resnooze"] as const) : (["snooze"] as const)),
       "duplicate",
       "copy",
+      ...open,
       "delete",
     ];
-  if (role === EUserPermissions.MEMBER && me !== undefined && detail.created_by_id === me) return ["copy", "delete"];
-  return ["copy"];
+  if (role === EUserPermissions.MEMBER && me !== undefined && detail.created_by_id === me)
+    return ["copy", ...open, "delete"];
+  return ["copy", ...open];
 }

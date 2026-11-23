@@ -16,6 +16,7 @@ import { NameDescriptionUpdateStatus } from "@/components/issues/issue-update-st
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 // local imports
 import type { IntakeSelectionPort } from "../selection-port";
+import { IntakeEmbedClose } from "./embed-close";
 import { INTAKE_ACTION_LABELS, type IntakeActions } from "./intake-actions";
 import { IntakeStatusChip } from "./status-chip";
 
@@ -23,17 +24,17 @@ type Props = {
   issueId: string;
   actions: IntakeActions;
   isSubmitting: TNameDescriptionLoader;
-  /** The selection, as what shows it gives it: the narrow screen's navigation (R18). */
+  /** The selection, as what shows it gives it: the narrow screen's navigation (R18), or the embed's close (R17). */
   selection: IntakeSelectionPort;
 };
 
 /**
  * The header of the selected work item of a project's intake, on a narrow screen (P5a spec 2.7, 2.8): the navigation
  * its selection gives (the intake page's: the button that shows or hides the list beside it, the previous and the next
- * work items of the list), the work item's status, whether its name and description are saved, and one menu of every
- * action the action model offers, as the wide header's (IntakeHeader): it holds the status's primary action, its
- * button where the focus lands for it (data-intake-primary, R35), and waits while a triage is out (busy). Drawn only
- * while the work item is held.
+ * work items of the list; embedded in the notifications page, a button named Close, P5b R17), the work item's status,
+ * whether its name and description are saved, and one menu of every action the action model offers, as the wide
+ * header's (IntakeHeader): it holds the status's primary action, its button where the focus lands for it
+ * (data-intake-primary, R35), and waits while a triage is out (busy). Drawn only while the work item is held.
  */
 export const IntakeMobileHeader = observer(function IntakeMobileHeader(props: Props) {
   const { issueId, actions, isSubmitting, selection } = props;
@@ -46,7 +47,11 @@ export const IntakeMobileHeader = observer(function IntakeMobileHeader(props: Pr
   return (
     <div className="lg:hidden">
       <Header variant={EHeaderVariant.SECONDARY} className="justify-start gap-2">
-        {selection.navigation("narrow")}
+        {selection.kind === "embed" ? (
+          <IntakeEmbedClose onClose={selection.close} className="my-auto" />
+        ) : (
+          selection.navigation("narrow")
+        )}
         <IntakeStatusChip intake={detail.intake} />
         <NameDescriptionUpdateStatus isSubmitting={isSubmitting} />
         <div className="ml-auto" data-intake-primary={actions.primary === undefined ? undefined : true}>

@@ -92,6 +92,7 @@ export const InboxIssueRoot = observer(function InboxIssueRoot(props: TInboxIssu
 
   /** The selection of the work item selected, as the detail region is given it (R18). */
   const selectionOf = (selected: string): IntakeSelectionPort => ({
+    kind: "page",
     leave: landing.leave,
     neighbour: (id) => {
       const ids = getList(projectId, filters)?.data.map((row) => row.id) ?? [];

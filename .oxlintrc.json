@@ -160,6 +160,7 @@
         "web/apps/web/core/components/issues/issue-detail/parent/siblings.tsx",
         "web/apps/web/core/components/issues/issue-detail/description-versions.tsx",
         "web/apps/web/core/components/issues/peek-overview/root.tsx",
+        "web/apps/web/core/components/issues/peek-overview/use-peek-issue-read.ts",
         "web/apps/web/core/components/issues/workspace-draft/root.tsx",
         "web/apps/web/core/components/core/description-versions/root.tsx",
         "web/apps/web/app/(all)/\\[workspaceSlug\\]/(projects)/browse/\\[workItem\\]/page.tsx",

@@ -12,6 +12,7 @@ import { commentDeleted, commentUpdated, createIssueComment } from "../../fixtur
 import { failedLoads, recordApi, toast, turnCycles } from "../../fixtures/cycle-pages";
 import { createCycle } from "../../fixtures/cycles";
 import { submitIntakeIssue } from "../../fixtures/intake";
+import { expectHeaderOf, shownStatus } from "../../fixtures/intake-pages";
 import {
   createIssue,
   createIssueRelations,
@@ -46,7 +47,7 @@ import { expect, test } from "../../fixtures/test";
 // arrives as ""), with the work item's reference and name as they were when it was sent, and how long ago. A
 // description's change, a cycle's and a module's have no card; a mention is in the mentions tab alone, instead of its
 // comment's card; the other end of a relation is named only to whom it shows (H4); a deleted work item's cards are no
-// longer listed; an excerpt is plain text. An intake item's notification opens a plain peek, without triage (P5's).
+// longer listed; an excerpt is plain text. An intake item's notification embeds its intake detail (P5b), closed by Close.
 // Who has left a project, before the page's refresh, opens one of its cards: nerve answers that notification as not
 // found, the toast says so, the card leaves and the preview shows nothing selected, never a blank pane; the refresh
 // lists none of the project's. The API version is h2-h4-notifications.spec.ts; the parent's change whose two ends he
@@ -159,7 +160,7 @@ async function alicesWrites(
   return { fix, parent, docs, tests, deploy };
 }
 
-test("H2–H4 (page): bob's notifications page lists a card for each of Alice's changes of Fix, by her name and her picture's letter, in words of the change and its values, with Fix's reference and name as they were, and none of its description, cycle and module; the mentions in the mentions tab alone; another end named only where he sees it; none of a deleted work item; an intake item's card opens a plain peek; once he has left Web, the card he opens is not found, said once, gone, the preview back to nothing selected, and the refresh lists none of Web's", async ({
+test("H2–H4 (page): bob's notifications page lists a card for each of Alice's changes of Fix, by her name and her picture's letter, in words of the change and its values, with Fix's reference and name as they were, and none of its description, cycle and module; the mentions in the mentions tab alone; another end named only where he sees it; none of a deleted work item; an intake item's card embeds its intake detail, without triage; once he has left Web, the card he opens is not found, said once, gone, the preview back to nothing selected, and the refresh lists none of Web's", async ({
   api,
   browserName,
   db,
@@ -254,13 +255,30 @@ test("H2–H4 (page): bob's notifications page lists a card for each of Alice's 
     .poll(() => shownCards(page))
     .toEqual([alices("mentioned you in a comment", login, "Hello"), alices("mentioned you in the description", login)]);
 
-  // Crash on save's card, in the intake, opened: bob's notification read, its work item in a plain peek, no triage.
+  // Crash on save's card, in the intake, opened: bob's notification read, its intake detail embedded in the preview,
+  // pending, with its copy and its opening and the embed's Close (the toast's close is named so too: the preview's),
+  // no plain peek; bob, a member who did not submit it, has no triage. The embed reads the work item after the
+  // preview's read: its fetch, whose GET of the work item comes twice (the third and the fourth here: the fetch reads
+  // it again as its sub-work items' parent), and its description's versions; bob leaves Web below once they and the
+  // rest have answered (re-95 m12).
   await page.getByRole("tab", { name: "All, 37 unread", exact: true }).click();
   const crashNote = all.find((n) => n.issue_id === crash.id && n.data.change.field === "assignees");
+  const crashPath = `/api/v0/issues/${crash.id}`;
+  let crashReads = 0;
+  const embedReads = [
+    page.waitForResponse(
+      (r) => r.request().method() === "GET" && new URL(r.url()).pathname === crashPath && ++crashReads === 4
+    ),
+    page.waitForResponse((r) => crashReads >= 3 && new URL(r.url()).pathname === `${crashPath}/description-versions`),
+  ];
   await cardSaying(page, "Alice assigned Bob").filter({ hasText: "Crash on save" }).getByRole("button").first().click();
-  const peek = page.getByRole("button", { name: "Close the peek view", exact: true });
-  await expect(peek).toBeVisible();
-  await expect(page.getByText("Crash on save", { exact: true }).last()).toBeVisible();
+  const preview = page.getByRole("region", { name: "Preview", exact: true });
+  await expect(preview.getByRole("button", { name: "Close", exact: true })).toBeVisible();
+  await expectHeaderOf(page, crash);
+  await expect(shownStatus(page, "Pending")).toBeVisible();
+  await expect(preview.getByRole("button", { name: "Copy work item link", exact: true })).toBeVisible();
+  await expect(preview.getByRole("link", { name: "Open work item", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Close the peek view", exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: /^(Accept|Decline)$/ })).toHaveCount(0);
   await expect
     .poll(() => notificationStates(db, [crashNote?.id ?? ""]))
@@ -269,6 +287,8 @@ test("H2–H4 (page): bob's notifications page lists a card for each of Alice's 
     .poll(() => shownCards(page))
     .toContain(alices("assigned Bob", ref(crash, "Crash on save"), undefined, false));
 
+  await Promise.all(embedReads);
+  await expect.poll(() => requests().pending).toBe(0);
   // bob leaves Web (in another sign-in of his) and opens its card of the priority, before the page's refresh: the
   // preview reads its work item, not found, and says so, with a retry, while nerve's answer to marking the
   // notification read is held; then that answer, not found too, is said in a toast, once, the card leaves and the

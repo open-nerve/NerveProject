@@ -90,12 +90,14 @@ beforeEach(() => {
 const leaving = { current: false };
 
 /** A port of the test's: its moves recorded, the row it gives i-z, the page's list giving i-y; navigation as given. */
-const portOf = (navigation: IntakeSelectionPort["navigation"] = () => null) => ({
-  leave: vi.fn<IntakeSelectionPort["leave"]>(),
-  neighbour: vi.fn<IntakeSelectionPort["neighbour"]>(() => "i-z"),
-  region: { current: null },
-  navigation,
-});
+const portOf = (navigation: (screen: "wide" | "narrow") => ReactNode = () => null) =>
+  ({
+    kind: "page",
+    leave: vi.fn<IntakeSelectionPort["leave"]>(),
+    neighbour: vi.fn<(id: string) => string | undefined>(() => "i-z"),
+    region: { current: null },
+    navigation,
+  }) satisfies IntakeSelectionPort;
 
 /** The action model of i-x in p-web, given port; the headers, wide and narrow, given it too. */
 const Detail = observer(function Detail({ port, headers }: { port: IntakeSelectionPort; headers: boolean }) {

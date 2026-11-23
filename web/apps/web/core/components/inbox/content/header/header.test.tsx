@@ -105,6 +105,7 @@ async function given(
 
 /** The selection the action model is given: its moves and the detail's region are the page's, not this test's. */
 const selection = {
+  kind: "page" as const,
   leave: () => {},
   neighbour: () => undefined,
   leaving: { current: false },

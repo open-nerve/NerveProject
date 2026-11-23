@@ -7,7 +7,6 @@
 import { useLayoutEffect, useMemo, useState } from "react";
 import { observer } from "mobx-react";
 // Nerve imports
-import { useSessionSWR } from "@/lib/use-session-swr";
 import { SessionChangedError } from "@/lib/auth/token-manager";
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import type { IWorkItemPeekOverview } from "@nerve/types";
@@ -18,6 +17,7 @@ import { useUserPermissions } from "@/hooks/store/user";
 import { useIssueOperations } from "../issue-detail/use-issue-operations";
 import { IssueDetailHost } from "../detail-host";
 import type { IIssueDetail, TPeekIssue } from "@/store/issue/issue-details/root.store";
+import { usePeekIssueRead } from "./use-peek-issue-read";
 import { IssueView } from "./view";
 
 type PeekOwner = {
@@ -86,14 +86,8 @@ const PeekContent = observer(function PeekContent({
   embedRemoveCurrentNotification,
 }: IWorkItemPeekOverview & { selection: TPeekIssue }) {
   const { allowPermissions } = useUserPermissions();
-  const { rootIssueStore: root } = useIssueDetail();
-  const workspace = root.rootStore.workspaceRoot.getWorkspaceBySlug(peekIssue.workspaceSlug);
-  const identity = root.permissionReads.identity(workspace?.id, [peekIssue.projectId]);
   const issueOperations = useIssueOperations(peekIssue.workspaceSlug, peekIssue.projectId, peekIssue.issueId);
-  const { isLoading, error, mutate } = useSessionSWR(
-    ["peek-issue", identity, peekIssue.workspaceSlug, peekIssue.projectId, peekIssue.issueId],
-    (_identity, ws, project, id) => issueOperations.fetch(ws, project, id)
-  );
+  const { isLoading, error, mutate } = usePeekIssueRead(peekIssue, issueOperations.fetch);
 
   // Check if issue is editable, based on user role
   const isEditable = allowPermissions(

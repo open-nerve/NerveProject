@@ -26,6 +26,7 @@ import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { useProject } from "@/hooks/store/use-project";
 // local imports
 import type { IntakeSelectionPort } from "../selection-port";
+import { IntakeEmbedClose } from "./embed-close";
 import { INTAKE_ACTION_LABELS, type IntakeAction, type IntakeActions } from "./intake-actions";
 import { IntakeStatusChip } from "./status-chip";
 
@@ -37,18 +38,19 @@ type Props = {
   issueId: string;
   actions: IntakeActions;
   isSubmitting: TNameDescriptionLoader;
-  /** The selection, as what shows it gives it: the wide screen's navigation (R18). */
+  /** The selection, as what shows it gives it: the wide screen's navigation (R18), or the embed's close (R17). */
   selection: IntakeSelectionPort;
 };
 
 /**
  * The header of the selected work item of a project's intake, on a wide screen (P5a spec 2.7, 2.8): its identifier in
  * the route's project, its status, whether its name and description are saved, the navigation its selection gives (the
- * intake page's: the previous and the next work items of its list), and the actions the action model offers: accepting
- * and declining, copying its link and opening it as buttons, the others in a menu; accepting is the status's primary
- * action (data-intake-primary, R35). Each control gives the action model itself, where the focus goes back once the
- * action ends; the triages and the menu wait while one is out (busy). Drawn only while the work item is held, so that
- * a triage's read again withdraws it (R34).
+ * intake page's: the previous and the next work items of its list; embedded in the notifications page, a button named
+ * Close before the rest, P5b R17), and the actions the action model offers: accepting and declining, copying its link
+ * and opening it (at the action model's openLink, R30) as buttons, the others in a menu; accepting is the status's
+ * primary action (data-intake-primary, R35). Each control gives the action model itself, where the focus goes back
+ * once the action ends; the triages and the menu wait while one is out (busy). Drawn only while the work item is held,
+ * so that a triage's read again withdraws it (R34).
  */
 export const IntakeHeader = observer(function IntakeHeader(props: Props) {
   const { projectId, issueId, actions, isSubmitting, selection } = props;
@@ -60,11 +62,12 @@ export const IntakeHeader = observer(function IntakeHeader(props: Props) {
   const { getProjectById } = useProject();
   const detail = getIssueDetailById(issueId);
   if (!detail?.intake) return null;
-  const { offered, take, link, busy } = actions;
+  const { offered, take, openLink, busy } = actions;
   const inMenu = MENU_ACTIONS.filter((action) => offered.includes(action));
   return (
     <Row className="relative z-15 hidden h-full w-full items-center justify-between gap-2 border-b border-subtle bg-surface-1 lg:flex">
       <div className="flex items-center gap-4">
+        {selection.kind === "embed" && <IntakeEmbedClose onClose={selection.close} />}
         <h3 className="flex-shrink-0 text-14 font-medium text-tertiary">
           {getProjectById(projectId)?.identifier}-{detail.sequence_id}
         </h3>
@@ -72,7 +75,7 @@ export const IntakeHeader = observer(function IntakeHeader(props: Props) {
         <NameDescriptionUpdateStatus isSubmitting={isSubmitting} />
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        {selection.navigation("wide")}
+        {selection.kind === "page" && selection.navigation("wide")}
         {offered.includes("accept") && (
           <Button
             variant="secondary"
@@ -106,8 +109,8 @@ export const IntakeHeader = observer(function IntakeHeader(props: Props) {
         </Button>
         {offered.includes("open") && (
           <ControlLink
-            href={link}
-            onClick={() => void navigate(link)}
+            href={openLink}
+            onClick={() => void navigate(openLink)}
             target="_self"
             className={cn(getButtonStyling("secondary", "lg"), "gap-1.5")}
           >

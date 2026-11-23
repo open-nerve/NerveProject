@@ -162,12 +162,13 @@ function Page() {
   held.navigate = useNavigate();
   const landing = useIntakeLanding({ list: true, first: undefined });
   const selected = params.get("inboxIssueId");
+  const port = { kind: "page", neighbour: () => undefined, navigation: () => null } as const;
   return selected ? (
     <InboxContentRoot
       workspaceSlug="acme"
       projectId="p-web"
       inboxIssueId={selected}
-      selection={{ leave: landing.leave, neighbour: () => undefined, region: landing.detail, navigation: () => null }}
+      selection={{ ...port, leave: landing.leave, region: landing.detail }}
     />
   ) : (
     <p data-nothing />

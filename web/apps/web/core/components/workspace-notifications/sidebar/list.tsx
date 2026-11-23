@@ -34,7 +34,8 @@ const REGION = "focus-visible:outline-1 focus-visible:-outline-offset-1 focus-vi
  * while nerve gives a cursor, even over a page of no rows (its rows archived or snoozed away, re-93 m6), out of use
  * while it reads the next page, a toast saying why nerve could not. As a card that holds the focus leaves it (its own
  * archive or snooze), the focus goes to the next card, else the previous, else the list itself, focusable from script
- * whatever it shows (useLeavingFocus). No region is named "Notifications": that is the toasts' (the e2e's toast).
+ * whatever it shows (useLeavingFocus), and marked (data-notification-list) for the preview's landing as it leaves its
+ * notification (useNotificationLanding). No region is named "Notifications": that is the toasts' (the e2e's toast).
  */
 export const NotificationList = observer(function NotificationList() {
   const { t } = useTranslation();
@@ -50,7 +51,12 @@ export const NotificationList = observer(function NotificationList() {
   if (page === undefined) return <NotificationsLoader />;
   if (page.data.length === 0 && page.next_cursor === null)
     return (
-      <div ref={region} tabIndex={-1} className={cn("flex size-full items-center justify-center", REGION)}>
+      <div
+        ref={region}
+        tabIndex={-1}
+        data-notification-list
+        className={cn("flex size-full items-center justify-center", REGION)}
+      >
         <NotificationEmptyState tab={filters.tab} />
       </div>
     );
@@ -62,7 +68,7 @@ export const NotificationList = observer(function NotificationList() {
   };
 
   return (
-    <div ref={region} tabIndex={-1} className={REGION}>
+    <div ref={region} tabIndex={-1} data-notification-list className={REGION}>
       <ul>
         {page.data.map((notification) => (
           <li

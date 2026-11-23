@@ -43,7 +43,8 @@ type TInboxContentRoot = {
   inboxIssueId: string;
   /**
    * The selection, as what shows it gives it (R18): where it leaves the work item for as an action on it ends or the
-   * region cannot show it, the row a triage leaves it for, the region's element, and the navigation the headers draw.
+   * region cannot show it, the region's element; the intake page's, the row a triage leaves it for and the navigation
+   * the headers draw; the notifications page's embed (R17), the close its headers draw.
    */
   selection: IntakeSelectionPort;
 };
@@ -52,9 +53,10 @@ type TInboxContentRoot = {
 const UNREADABLE = new Set([401, 403, 404]);
 
 /**
- * The detail region of a project's intake page (P5a spec 2.6, 2.7): a region named so and focusable, around the
- * selected work item, one selection's at a time: each selection of a work item, in this session and by the caller's
- * permissions now, is a detail of its own, with its own read, inputs, modals and writes in flight.
+ * The detail region of a project's intake page (P5a spec 2.6, 2.7), or of the notifications page's preview that
+ * embeds it (P5b spec 2.5, R17): a region named so and focusable, around the selected work item, one selection's at a
+ * time: each selection of a work item, in this session and by the caller's permissions now, is a detail of its own,
+ * with its own read, inputs, modals and writes in flight.
  */
 export const InboxContentRoot = observer(function InboxContentRoot(props: TInboxContentRoot) {
   const { workspaceSlug, projectId, inboxIssueId, selection } = props;
@@ -94,7 +96,7 @@ export const InboxContentRoot = observer(function InboxContentRoot(props: TInbox
  */
 const IntakeSelection = observer(function IntakeSelection(props: TInboxContentRoot & { identity: string }) {
   const { workspaceSlug, projectId, inboxIssueId: issueId, identity, selection } = props;
-  const { leave, neighbour, region } = selection;
+  const { leave } = selection;
   const { t } = useTranslation();
   const { rootIssueStore: root } = useIssueDetail();
   const refusalToast = useRefusalToast();
@@ -120,7 +122,7 @@ const IntakeSelection = observer(function IntakeSelection(props: TInboxContentRo
   }, [mutate]);
   // whether the caller is deleting the work item, whose absence is then the delete's to follow
   const leaving = useRef(false);
-  const actions = useIntakeActions(workspaceSlug, projectId, issueId, { leave, neighbour, region, leaving });
+  const actions = useIntakeActions(workspaceSlug, projectId, issueId, { ...selection, leaving });
 
   const settled = answered && !read.isValidating;
   const error = settled && !(read.error instanceof SessionChangedError) ? read.error : undefined;
