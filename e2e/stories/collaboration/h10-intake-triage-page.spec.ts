@@ -5,6 +5,7 @@ import { expectQuietConsole, watchPage } from "../../fixtures/browser";
 import { seenBy, shownDay } from "../../fixtures/cycle-pages";
 import { submitIntakeIssue } from "../../fixtures/intake";
 import {
+  browserDay,
   expectHeaderOf,
   filterOption,
   identifierOf,
@@ -21,7 +22,7 @@ import {
   triagePath,
 } from "../../fixtures/intake-pages";
 import { createIssue } from "../../fixtures/issues";
-import { zonedDay, zonedMoment } from "../../fixtures/notification-pages";
+import { zonedMoment } from "../../fixtures/notification-pages";
 import { sentTo } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 
@@ -80,7 +81,7 @@ test("H10 (page): in Los Angeles, alice snoozes the work item selected from the 
 
   // Snoozed till tomorrow, the modal's day at first: its first moment in Los Angeles; Slow search focused, as the
   // triage ends, and selected.
-  const tomorrow = zonedDay(1, ZONE);
+  const tomorrow = await browserDay(page, 1);
   await fromMenu(page, "Snooze");
   const snoozing = page.getByRole("dialog", { name: "Snooze work item", exact: true });
   const day = snoozing.getByRole("button", { name: "Snooze until", exact: true });
@@ -106,7 +107,7 @@ test("H10 (page): in Los Angeles, alice snoozes the work item selected from the 
   await expectHeaderOf(page, crash);
   await fromMenu(page, "Change snooze date");
   await expect(day).toHaveText(shownDay(tomorrow));
-  const later = zonedDay(3, ZONE);
+  const later = await browserDay(page, 3);
   await day.click();
   const calendar = page.getByRole("dialog", { name: "Snooze until", exact: true });
   const [year = "", month = ""] = later.split("-");

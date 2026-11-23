@@ -96,6 +96,19 @@ export async function submitNamed<const Names extends readonly string[]>(
   return issues as { readonly [K in keyof Names]: Issue };
 }
 
+/**
+ * The calendar day, YYYY-MM-DD, days after the one the browser's clock shows (before it when negative), in the browser's
+ * time zone (the story's timezoneId), asked of the browser as the story is about to act: the page's today then, not the
+ * test process's, which a story reads seconds before the page does (zonedDay), across a midnight of the zone at times.
+ */
+export function browserDay(page: Page, days: number): Promise<string> {
+  return page.evaluate((after) => {
+    const now = new Date();
+    const day = new Date(now.getFullYear(), now.getMonth(), now.getDate() + after);
+    return [day.getFullYear(), day.getMonth() + 1, day.getDate()].map((n) => String(n).padStart(2, "0")).join("-");
+  }, days);
+}
+
 /** The address of the intake page of the project of projectId in the workspace of slug. */
 export function intakePath(slug: string, projectId: string): string {
   return `/${slug}/projects/${projectId}/intake`;

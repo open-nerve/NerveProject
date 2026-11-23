@@ -4,6 +4,7 @@ import { expectQuietConsole, watchPage } from "../../fixtures/browser";
 import { recordApi, seenBy } from "../../fixtures/cycle-pages";
 import { submitIntakeIssue, triageIntakeIssue } from "../../fixtures/intake";
 import {
+  browserDay,
   chooseOrder,
   demoteToGuest,
   detailReads,
@@ -22,7 +23,6 @@ import {
   submitInOrder,
 } from "../../fixtures/intake-pages";
 import { APP, INTAKE_COUNTS, PROJECT, PROJECT_MEMBER, WORKSPACE, valued } from "../../fixtures/mounts";
-import { zonedDay } from "../../fixtures/notification-pages";
 import { moveWithinApp, sentTo } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 
@@ -315,12 +315,13 @@ test("H9 (page): alice filters Web's intake by status, priority, assignee, creat
     slowRow,
     crashRow,
   ]);
-  const week = `created_at=${zonedDay(-7, ZONE)}..${zonedDay(0, ZONE)}`;
+  const week = `created_at=${await browserDay(page, -7)}..${await browserDay(page, 0)}`;
   await asked(() => pick("Created date", "Last 7 days"), `${statuses}&${week}&order_by=-created_at&limit=50`, [
     typoRow,
     slowRow,
     crashRow,
   ]);
+  const today = await browserDay(page, 0);
   await asked(
     async () => {
       const panel = await openFilters(page);
@@ -333,7 +334,7 @@ test("H9 (page): alice filters Web's intake by status, priority, assignee, creat
       await page.keyboard.press("Escape");
       await expect(panel).toBeHidden();
     },
-    `${statuses}&${week}&updated_at=..${zonedDay(0, ZONE)}&order_by=-created_at&limit=50`,
+    `${statuses}&${week}&updated_at=..${today}&order_by=-created_at&limit=50`,
     [typoRow, slowRow, crashRow]
   );
 

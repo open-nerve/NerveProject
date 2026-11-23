@@ -24,6 +24,7 @@ import {
   type MenuPath,
 } from "../../fixtures/intake-focus";
 import {
+  browserDay,
   expectHeaderOf,
   filterOption,
   identifierOf,
@@ -194,11 +195,11 @@ test("H20 (page): alice snoozes three work items from the header's menu, by the 
   await expect(page).toHaveURL(selecting(crash));
   const key = tabKey(browserName);
   const snoozing = dialogNamed(page, "Snooze work item");
-  const tomorrow = zonedMoment(zonedDay(1, ZONE), "00:00", ZONE);
   const cancel = () => closedByCancel(page, "Snooze work item");
 
   // By the keyboard: Crash snoozed, the Snooze button reached by Tab; Slow, the next row, selected and focused.
   await openAndCancel(page, "keyboard", "Snooze", "Snooze work item", cancel);
+  const tomorrow = zonedMoment(await browserDay(page, 1), "00:00", ZONE);
   await fromMenu(page, "keyboard", "Snooze");
   const byKeyboard = await sentLocked(
     page,
