@@ -150,7 +150,7 @@ problem 码已在 `PROBLEM_MESSAGES`（`C/lib/error-messages.ts:87-91` 收集箱
 - `issue-changes.test.ts` 的 `"inbox"` 一格（`:605`、`:651-662`）改为 `triageIntake(…, { status: "accepted" })`，三条 `it.each`（`:663-684` 写后的第二个 `GET`、写之前发出的读到达时不被采纳；`:685-695` 被拒时不发写后的读；`:696-712` 写后的读在途时换代即停）的断言都照旧成立：接受做成之后有写后的重读；被拒（通用的拒绝，不是 R28 的两个冲突码）不重读；重读在途时换代，`send` 里的 `assertActive` 抛 `SessionChangedError`、`refreshAfterChange` 不执行。
 
 **拒绝**：值不变，交出拒绝，调用方经 `followInSession` 与 `useRefusalToast` 提示。另外：
-- `issue.intake_not_found`：从收集箱的每份列表移出、`countAgain`，再交出（页面清选中）。
+- `issue.intake_not_found`：从收集箱的每份列表移出、`countAgain`，再交出（页面清选中）；落在内容修改、版本恢复与删除上时，另在被拒那次的轮次里重读（同 `issue.intake_transition_not_allowed`、`issue.intake_closed`），页面按重读的结果清选中——读不到按 `gone`，读到不在收集箱的详情按 `outOfIntake`（整分支审查 m2 之后改，`f21b094a`）；分诊被拒为这个码时不重读。
 - `issue.intake_transition_not_allowed`、`issue.intake_closed`（别人先分诊了）：**在被拒那次写的轮次里、交出拒绝之前**以 `refreshAuthoritative(id, { afterWrite: true })` 重读（re-94 m1，同既有的写后重读都在轮次里：关注、评论、表情、链接）；重读的回答确认进收集箱的列表（P4 对 `notification.not_found` 的同一做法），给 `undefined` 时从收集箱的每份列表移出；`countAgain`；再交出（R28）。排在后面的同一条目的写等这次重读落定，不会在重读在途时读到 `undefined`（`issue-writes.ts:255` 的 `Issue has not been read`）。
 
 **行盖在详情上**（R33，re-94 m2）：今天列表的行落在所持的详情上时，canonical 保留详情的 `intake`（`issue.store.ts:27-35` 的 `choose`）。别人接受了一个本人此前在收集箱读过详情的条目，之后它的行从项目列表落下，`inIntake` 仍为真，下一次修改会发到收集箱的端点。规则：`choose` 合并一个不带 `intake` 的行（`Issue`）与一个 `intake` 未被接受的详情时，合并结果的 `intake` 取已接受的形 `{ status: "accepted", snoozed_till: null, duplicate_to_id: null }`：列表不列 Triage 的工作项（`IY:293`、`:396`、`:526`），行的出现就说明它已被接受，这正是服务端此刻的值（`IssueIntake` 的两个字段只随暂缓与重复，`IY:2332-2352`）；`intake` 为 `null` 或已接受时照旧。收集箱的列表行（`IntakeIssue`）不进 canonical，不受此影响。

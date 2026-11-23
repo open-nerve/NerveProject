@@ -151,7 +151,7 @@
   - P4 的 H6 (page) 的竞态已在本段修好（`68160da2`），不交。
   - **提交之后重取这一代取过的每一份筛选**（整分支审查 O3）：`intake.store.ts` 的 `fetched` 只增不减，试过十几种筛选之后的一次提交发十几个列表读；照 spec §2.3 的字面。条目多的项目里可以只重取当前显示的那一份、其余标成待读。观察。
   - **下一页的读失败之后没有专门的重试入口**（整分支审查 O4）：骨架留在列表底部，下一次渲染或滚动再试；列表的 IntersectionObserver 随 `useRefusalToast` 每次渲染给的新函数重建（没有循环）。观察。
-  - **内容修改被拒为“不在收集箱”时可能提示两次**（修复轮实施者读代码的推断，页面上未核）：M4 的 `useDetailCommand` 提示拒绝，详情区域清选中时再说一次；去掉一处要改 M4 共用的 hook。只在别人刚删了这一条、你正在改它时出现。观察。
+  - **内容修改被拒为“不在收集箱”之后的提示**（修复轮实施者的推断，限定复审读代码核过、页面上未核）：重读答 404（别人删了这一条，常见的情形）时只提示一次——详情宿主在条目消失时重挂子树，M4 的详情范围在拒绝到达 `useDetailCommand` 之前已失效，只剩详情区域的 `errors.issue_not_found`；重读读到 `intake` 为 `null` 的详情（接受之后再经接口删掉收集箱的行，网页造不出）时提示两次相同的 `errors.issue_intake_not_found`。不在本段改；可选的修法（未核）是 `content/root.tsx:162` 宿主的条件加 `&& !outOfIntake`、配一格先经 `useIssueOperations().update` 的页面测试，不必改 M4 的 hook。观察。
   - 本机 PostgreSQL 容器 10 秒内没绑定端口（§5 的环境，M6-M8-05 一类），观察。
 
 ## 8. 文档
@@ -175,4 +175,5 @@
   - `b7cd8583`（m5，故事）：夹具 `browserDay(page, days)` 在动作之前向浏览器取那一刻的日；H10 ③、H20 ②、H9 ③ 用它。探针 `t15-m5-red-probe`（`page.clock.setSystemTime` 把浏览器的钟拨到 ZONE 的下一个午夜之后、用旧的 `zonedDay`）三处都在日子那一步失败，同一探针下新故事过。H20 `:257` 不改：那是故事经接口先设的暂缓日，页面只显示、回传它持有的。
   - 本提交（m6 与文档）：§2 的修复轮一行，§4 的浏览页一句、§7、§8 的 `HO/M3-closeout.md:21` 一句与本节；plan `:18`、spec §1 `:37`、spec §2.5 的两句、frontend-changes 的收集箱页一行（详情不随网络恢复重读）；`api-error.ts` 注释里的出处改为 M6/P7b。
   - 修复轮的验证（`b7cd8583`）：`make lint-web`、`make knip`、`make test-web`（93 秒）、`make build build-s3-fixture`、e2e 的类型、lint 与格式检查都过；m7-pages 三引擎 93 过（`t15-m7pages`，1.6 分）；改到的五个故事文件 chromium `--repeat-each=3` 51 过（`t15-repeat3`）；m4-detail 三引擎 132 过（`t15-m4-detail`）；P5a 的 127 个文件 oxlint 为零、web 18 = 上限 18（`t15-oxlint-files`）；死成员仍 1598 行、`--rows M7` 仍 88（`t15-dead`，与 T14 只差一个读数）。`use-intake-actions.ts` 300 行、`issue-write-intake.ts` 149 行。改到的共用文件：M2 的 `core/lib/api-error.ts`（一个类与 `problemCode` 的一支）、M3 的 `core/lib/use-session-swr.ts`（只改注释）。
-- 限定复审、终检与集成见下。
+- **限定复审**（fable，只读，`8fd736c2..d22258ad`，台账旁的 `re-review-fix-round.md`）：可合并；严重 0、重要 0、次要 2、观察 5。六个修复都在根上、测试与变异钉得住；`ForeseenRefusal` 核过 15 个 `problemCode` 的读者、14 处 `instanceof ApiError` 与 `errorMessageKey` 的读者，除了提示的一句没有调用者另眼看它；实施者超出裁定的四处（m1 的守卫、m2 删除经 `conflicted` 与分诊不重读、m4 的按钮、m5 不改 H20 `:258`）都对。R-m1：§7 那条“提示两次”说错了情形（404 只提示一次，`intake: null` 时两次），已照复审改写；R-m2：spec §2.4 `:153`、frontend-changes、plane-diff 三处没跟上 m2，本提交补上。观察：R-O1 m5 把午夜的窗口从几秒缩到几百毫秒、没有消除（H9 两次 `page.evaluate`）；R-O2 m3 的测试比两个 `errorMessageKey`，`issue.in_triage` 离开表时会空过（表的测试与两个变异兜着）；R-O3 m2 之后在轮次里的重读本身失败时焦点停在 body（与 R28 的内容修改同类，R35 的表之外）；R-O4 I1 的代价：离线时首读失败的详情不随重连恢复，要按重试（同 browse）；R-O5 台账记的行数差 5 行。主控裁定：两条次要只改文档（本提交），观察不改。
+- 终检与集成见下。
