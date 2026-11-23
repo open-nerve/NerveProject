@@ -17,7 +17,7 @@ export class ApiError extends Error {
 }
 
 /**
- * A refusal the web foresees and so does not send: nerve's problem code of the refusal it would answer (P7b spec 2.4,
+ * A refusal the web foresees and so does not send: nerve's problem code of the refusal it would answer (M6/P7b spec
  * R4), which problemCode gives, so that it is said, and followed, as nerve's refusal by that code.
  */
 export class ForeseenRefusal extends Error {

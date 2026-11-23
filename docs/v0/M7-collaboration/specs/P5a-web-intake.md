@@ -34,7 +34,7 @@
 - 新建弹窗经新的接口提交，成功之后照旧跳到新条目；关闭策略仍是 Plane 的（main 现状：文档级 Escape、编辑器未就绪时的关闭）。
 - 收集箱详情没有图片上传，也没有附件与链接一栏（main 现状，`IN/content/issue-root.tsx:191` 是空的 `div`）。
 - 收集箱条目的通知仍以普通浮层打开，属性里 “State” 一栏是占位（P4 R12、P4 阶段记录 §7 `reviews/P4-web-notifications-review.md:147`）。
-- 浏览页仍把收集箱条目显示成普通详情，它的写答 409 `issue.in_triage`。
+- 浏览页仍把收集箱条目显示成普通详情；它的写按所持详情选端点（R3）：名字、描述、优先级、负责人、标签、截止日经收集箱的端点，其余字段的修改在本地以 `issue.in_triage` 拒绝、说 nerve 的同一句（整分支审查 m3 之后改，`f26492f0`），归档、删除等别的写由 nerve 答 409 `issue.in_triage`。
 
 这些在 main 上本来就是这样，P5a 不让它们变坏；不算不安全：只有显式打开开关的项目有收集箱，写都在服务端按合同判定。阶段记录向负责人说明。
 
@@ -159,14 +159,14 @@ problem 码已在 `PROBLEM_MESSAGES`（`C/lib/error-messages.ts:87-91` 收集箱
 
 ### 2.5 取数、键与门
 
-会话的取数都经 `useSessionSWR`（`C/lib/use-session-swr.ts`）。它只有一套配置（`:25`），选项只有 `dedupingInterval`、`revalidateOnMount: false`、`revalidateOnReconnect: false`（`:37`），后者只给能力的属主（`:20-21`）；fetcher 只收键里的字符串（`:28-32`）。
+会话的取数都经 `useSessionSWR`（`C/lib/use-session-swr.ts`）。它只有一套配置（`:25`），选项只有 `dedupingInterval`、`revalidateOnMount: false`、`revalidateOnReconnect: false`（`:37`），后者只给能力的属主（`:20-21`）与拥有详情宿主的读（M5 设计 §9：选中条目的详情传它，整分支审查 I1 之后改）；fetcher 只收键里的字符串（`:28-32`）。
 
 | 取数 | 键 | 门（为 `null` 时不取） | 调用处 |
 |---|---|---|---|
 | 待处理数 | `["INTAKE_COUNTS", workspaceId, slug, projectIds]`，`projectIds` 是过门的项目 id 排序后以逗号连成的一个串 | `useRouteWorkspace()`（`C/hooks/use-route-workspace.ts:16`）不为 `null`，且调用者在这个工作区里至少有一个项目：未归档、`intake_view` 开着、`member_role` 不为 `null`（取自 project store 的 `knownProjectIds(workspace.id)`，`C/store/project/project.store.ts:64`、`:244-251`）（Q10，R7） | `C/hooks/use-intake-counts.ts`，只在 `C/components/workspace/sidebar/projects-list.tsx`（240 行）调一次 |
 | 列表的第一页 | `["INTAKE_ISSUES", identity, workspaceId, slug, projectId, filterKey]`，`identity` 是 `root.permissionReads.identity(workspaceId, [projectId])` | 路由的工作区与项目在手，调用者有项目角色，项目的 `intake_view` 开着（Q31） | `IN/use-intake-list.ts` |
 | 列表的下一页 | 不经 SWR：滚到哨兵时 `fetchMore`（`C/hooks/use-intersection-observer.ts:10`，Plane `pw/core/components/inbox/sidebar/root.tsx:73`） | 有 `next_cursor`、没有在途的 `fetchMore` | 侧栏的列表 |
-| 选中条目的详情 | `["intake-issue", identity, slug, projectId, issueId]`，在 `IssueDetailHost`（`C/components/issues/detail-host.tsx:13`）之内，fetcher 是 `useIssueOperations(…).fetch`；`revalidateOnMount: false`，每次挂载以 `mutate()` 读一次自己的（P4 m1，`C/components/workspace-notifications/root.tsx:72-86`、`C/hooks/use-project-read.ts:8`） | 有选中 | `IN/content/root.tsx` |
+| 选中条目的详情 | `["intake-issue", identity, slug, projectId, issueId]`，在 `IssueDetailHost`（`C/components/issues/detail-host.tsx:13`）之内，fetcher 是 `useIssueOperations(…).fetch`；`revalidateOnMount: false` 与 `revalidateOnReconnect: false`，每次挂载以 `mutate()` 读一次自己的、此后只经重试（P4 m1，`C/components/workspace-notifications/root.tsx:72-86`、`C/hooks/use-project-read.ts:8`） | 有选中 | `IN/content/root.tsx` |
 | “重复于”的目标 | `["intake-duplicate", identity, slug, projectId, duplicateToId]`，fetcher 是 `root.issueDetail.issue.fetchIssueCore(slug, projectId, duplicateToId)`（`C/store/issue/issue-details/issue.store.ts:56-70`；读另一个工作项来显示的先例是父工作项，`:81`），一次 `getIssue`（Q17） | 详情的 `intake.duplicate_to_id` 不为 `null` | `IN/content/duplicate-of.tsx` |
 
 - 列表与计数保留 SWR 的重连重读（不传 `revalidateOnReconnect: false`）；列表的重连重读即换第一页。

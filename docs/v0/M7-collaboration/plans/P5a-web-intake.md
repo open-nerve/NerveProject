@@ -15,7 +15,7 @@
 **代码规则**（总体设计 §7.2、§7.7）
 - 手写文件约 400 行以内，新代码进新文件，按关注点分（spec §2.13 的表）。新文件的版权头 `Copyright (c) 2026-present OpenNerve`，改写的 Plane 文件保留原头。
 - 类型只来自 `@nerve/api-client`；只给界面用的形状在 `C/store/issue/intake/filters.ts`，选项在 `@nerve/constants` 的 `intake.ts`。
-- service 每代以自己的客户端构造、不转换；没有模块级的带令牌 service；store 只经自己的根找兄弟；SWR 只经 `useSessionSWR`，只用它的三个选项（`C/lib/use-session-swr.ts:37`），不传 `revalidateOnReconnect: false`；新代码不读 router store 的地址（路由参数或 `useRouteWorkspace()`）。
+- service 每代以自己的客户端构造、不转换；没有模块级的带令牌 service；store 只经自己的根找兄弟；SWR 只经 `useSessionSWR`，只用它的三个选项（`C/lib/use-session-swr.ts:37`）；列表、计数与“重复于”不传 `revalidateOnReconnect: false`，拥有详情宿主的详情读照 M5 设计 §9 传（整分支审查 I1 之后改，`d673c9f3`）；新代码不读 router store 的地址（路由参数或 `useRouteWorkspace()`）。
 - 修改一个接一个；请求体轮到时才算；确认写进持有的每一份；取数与修改的应答对齐（`Reconciled`）。收集箱条目的写只经 M4 的逐工作项写队列（spec R3），不另开队列；收集箱的去处不经 `write()` 的两段目录准备（spec §2.4，re-94 S1）。
 - 页签与选中在地址（用户点行 `push`，动作引起的变化 `replace`），筛选与排序在 `IN/page-state.tsx`，不进 store（spec R5、R14）。
 - `await` 之后的提示、导航与跟进一律经 `followInSession`（`C/lib/in-session.ts:40`）；拒绝经 `useRefusalToast`；不 `console.error`；焦点照 spec R35，不落到 `body`。

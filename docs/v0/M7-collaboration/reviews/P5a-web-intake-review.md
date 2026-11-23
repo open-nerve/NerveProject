@@ -34,7 +34,8 @@
 | 修复 | `67b34153`、`40eb2d66` | T13 停下的 D1（窄屏列表藏起时的落点）、D2（有焦点的行离开列表）（§3） |
 | T13 | `4612b2ce` | H20 (page) 的收集箱页（三个文件）；**检查点 2** |
 | 修复 | `68160da2` | P4 的 H6 (page) 移出项目之前等 All 页签的列表读答完（§3） |
-| T14 | 本提交 | 文档与交接 |
+| T14 | `8fd736c2` | 文档与交接 |
+| 修复轮 | `d673c9f3`、`4b3f4198`、`f21b094a`、`f26492f0`、`101418d8`、`b7cd8583`、本提交 | 整分支审查的 I1、m1、m2、m3、m4、m5 与文档（m6，§9） |
 
 | 验收（spec §4） | Task | 状态 |
 |---|---|---|
@@ -81,7 +82,7 @@
   - 新建弹窗经新的接口提交，成功之后照旧跳到新条目；关闭政策仍是 Plane 的（文档级 Escape、编辑器未就绪时拒绝关闭，M6-M7-01）。
   - 收集箱详情没有图片上传，也没有附件与链接一栏：新的详情 `IN/content/detail.tsx` 不给描述编辑器 `images`，没有这两栏（spec 原引的 `IN/content/issue-root.tsx:191` 随 T6a 删除）。
   - 收集箱条目的通知仍以普通浮层打开，属性里 “State” 一栏是占位（P4 记录 §7）。
-  - 浏览页仍把收集箱条目显示成普通详情，它的写答 409 `issue.in_triage`。
+  - 浏览页仍把收集箱条目显示成普通详情；它的写按所持详情选端点（R3）：内容的六个字段（名字、描述、优先级、负责人、标签、截止日）经收集箱的端点，其余字段的修改在本地以 `issue.in_triage` 拒绝、说 nerve 的同一句（修复轮 m3），归档、删除等别的写由 nerve 答 409 `issue.in_triage`。P5b 的 Q12 把未被接受的条目重定向到收集箱页。
 
   这些在 main 上本来就是这样，P5a 没有让它们变坏；只有显式打开开关的项目有收集箱，写都在服务端按合同判定。
 
@@ -148,17 +149,30 @@
   - **M4 的工作项列表每次挂载同一个 GET 发两次**（T11 的观察）：`GET /api/v0/projects/{id}/issues?order_by=-created_at&sub_issue=true&limit=100`，不分诊、只在列表与收集箱之间来回也是两次（`t11-explore-4`、`-5`）。
   - **M4 描述编辑器的自动保存窗口里工作项被重读**（T12 的观察）：块 id 的迁移还在 1.5 秒的去抖里未发出时，若有一个在轮次里重读工作项的写（如评论的 `refreshAfterChange` → `refreshAuthoritative({ afterWrite: true })`），重读在途时 canonical 不定、详情的正文撤下，编辑器卸下时按“canonical 的主人消失即挂起输入”不冲刷（`use-confirmed-autosave.tsx:93-109`），重挂之后显示 “Your unsaved input has been preserved. Save it when you are ready.”、页头一直 “Saving”，之后换行被离开确认挡住。M4 的工作项详情同样（I13 的故事也先等迁移落定）；用户在打开或恢复版本之后 1.5 秒内评论就会遇到。
   - P4 的 H6 (page) 的竞态已在本段修好（`68160da2`），不交。
+  - **提交之后重取这一代取过的每一份筛选**（整分支审查 O3）：`intake.store.ts` 的 `fetched` 只增不减，试过十几种筛选之后的一次提交发十几个列表读；照 spec §2.3 的字面。条目多的项目里可以只重取当前显示的那一份、其余标成待读。观察。
+  - **下一页的读失败之后没有专门的重试入口**（整分支审查 O4）：骨架留在列表底部，下一次渲染或滚动再试；列表的 IntersectionObserver 随 `useRefusalToast` 每次渲染给的新函数重建（没有循环）。观察。
+  - **内容修改被拒为“不在收集箱”时可能提示两次**（修复轮实施者读代码的推断，页面上未核）：M4 的 `useDetailCommand` 提示拒绝，详情区域清选中时再说一次；去掉一处要改 M4 共用的 hook。只在别人刚删了这一条、你正在改它时出现。观察。
   - 本机 PostgreSQL 容器 10 秒内没绑定端口（§5 的环境，M6-M8-05 一类），观察。
 
 ## 8. 文档
 
 - **plane-diff**（四、行为差异，收集箱一节）：spec §7 逐条登记——筛选与排序的寿命（R5）、列表的行是页面自己的副本、分诊之后的选中（R14）、每页 50（R6）、侧栏的待处理数（R7、R8，P2b 的计数行之后另加网页一行）、只有管理员看到分诊（R11）、接受弹窗（R12、R29、G3）、暂缓到某日（R13）、访客提交者（R15）、“重复于”与选择器（R17、G1）、动态按状态名（R18）、入口规则与已归档的项目（R21、R27）、冲突之后重读（R28）；“没有 FORMS 来源”改写在 P2a 的“收集箱的来源”一行。另加 spec §7 之外、与 Plane 不同的三行：分诊之后的焦点（R35 与 D1、D2）、上一条下一条与 ↑↓、分诊与删除的弹窗在途与被拒。T10 的浮层修复让收集箱页回到 Plane 的样子（浮层在按钮旁），不登记。Plane 的行号都对过 `plane/` 的源码。
 - **frontend-changes**：3.1 的 M7 一行写 P5a（收集箱的范围、P5b 余下的）；“挂载时的取数”一行补“侧栏的待处理数由 M7/P5a 加回”；3.2 加收集箱的数据层、写的接缝、收集箱页、入口规则、旧收集箱层的删除五行。
-- **交接的处理结果**（spec §5 的表，逐行）：`HO/M4-closeout.md` 的 M7-01、M7-04（旧 DTO、`TLegacyIssueUpdateRequest`、版本 DTO 与 service、`inbox/content/description-versions` 的过渡删除；命令面板的收集箱结果按 R24 关闭；`frame-src` 写明不嵌 iframe；关闭政策随 P5b）、M7-05；`HO/M6-closeout.md` 的 M6-M7-07（收集箱的一半关闭）；`HO/M3-closeout.md` 的 `:14`（侧栏的待处理数，收集箱的部分关闭）、`:33`（收集箱的部分关闭）、`:40-41`（拒绝、删除、暂缓、重复四个弹窗关闭）、`:47`（**不关闭**：spec 表写“详情的一个关闭”，但页面故事没有打开详情的负责人下拉框，H11 (page) 只断言它停用，只有单测 `issue-properties.test.tsx:194`）、`:48`（收集箱一个调用方关闭）、`:52`（关闭）、`:61`（收集箱的 4 个文件关闭）、`:63`（收集箱一处关闭）、`:64-65`（收集箱的部分关闭）、`:68` 与 §7（收集箱读者去掉，getter 随 P6a）；`HO/M2-closeout.md` 的 §2（M7 的 3 处单例都已消失，最近访问的键随 P7）、§3（`intake-state` 一半按不适用关闭）、§4（收集箱一处关闭）、§6（写明不嵌 iframe）；`HO/M1-closeout.md` 的死成员与 oxlint 两节；P4 记录 §5 的 `:112` 与 §7 的 `:147`、P4 spec §5 的 P5 一条；P2a、P2b、P2c spec 的 P5 一条与 P2c 记录的忙时守卫一条。没写关闭的保持 open。表里本段不涉及的四行（M6-M7-05、`HO/M3-closeout.md:55-56`、M5-M7-01、M6-M7-01）不写；表外的 `HO/M3-closeout.md:21`（查重改用 M4 的搜索，M4 已做，P5a 在 H10 (page) 走了真实页面）也没写，交主控定。
+- **交接的处理结果**（spec §5 的表，逐行）：`HO/M4-closeout.md` 的 M7-01、M7-04（旧 DTO、`TLegacyIssueUpdateRequest`、版本 DTO 与 service、`inbox/content/description-versions` 的过渡删除；命令面板的收集箱结果按 R24 关闭；`frame-src` 写明不嵌 iframe；关闭政策随 P5b）、M7-05；`HO/M6-closeout.md` 的 M6-M7-07（收集箱的一半关闭）；`HO/M3-closeout.md` 的 `:14`（侧栏的待处理数，收集箱的部分关闭）、`:33`（收集箱的部分关闭）、`:40-41`（拒绝、删除、暂缓、重复四个弹窗关闭）、`:47`（**不关闭**：spec 表写“详情的一个关闭”，但页面故事没有打开详情的负责人下拉框，H11 (page) 只断言它停用，只有单测 `issue-properties.test.tsx:194`）、`:48`（收集箱一个调用方关闭）、`:52`（关闭）、`:61`（收集箱的 4 个文件关闭）、`:63`（收集箱一处关闭）、`:64-65`（收集箱的部分关闭）、`:68` 与 §7（收集箱读者去掉，getter 随 P6a）；`HO/M2-closeout.md` 的 §2（M7 的 3 处单例都已消失，最近访问的键随 P7）、§3（`intake-state` 一半按不适用关闭）、§4（收集箱一处关闭）、§6（写明不嵌 iframe）；`HO/M1-closeout.md` 的死成员与 oxlint 两节；P4 记录 §5 的 `:112` 与 §7 的 `:147`、P4 spec §5 的 P5 一条；P2a、P2b、P2c spec 的 P5 一条与 P2c 记录的忙时守卫一条。没写关闭的保持 open。表里本段不涉及的四行（M6-M7-05、`HO/M3-closeout.md:55-56`、M5-M7-01、M6-M7-01）不写；表外的 `HO/M3-closeout.md:21`（查重改用 M4 的搜索）由主控补写处理结果、关闭（M4/P14 已接 M4 的搜索，P5a 以 prop 收 id，H10 (page) 走了真实页面）。
 - **spec**：§3 末尾补记四条（非接受的分诊之后读详情的动态与评论；删除在轮次里重读；R12 的落地；R27 在页面上）。
 - **关键词**：`project-address-route` 的 `why` 里 `currentProjectDetails` 一句照今天的代码改写（getter 已在 T6c 删去）。
 - **设计**：§12 的 P5a 一行已在 T1 链上 spec；§14 的 P5a 一行改为实施完成、待整分支审查。
 
 ## 9. 审查与集成
 
-整分支审查、修复轮、终检与集成见下（T15 写）。
+- **整分支审查**（fable，只读，`89be91e5..8fd736c2`，台账旁的 `review-whole-branch.md`）：修复后可合并；严重 0、重要 1、次要 6、观察 6。重点一（写的接缝）没有发现会坏 M4 的写的问题：两次拆分逐行是纯搬移，既有测试的改动只有允许清单的两处。I1 网络恢复时收集箱详情被整个撤下重挂，没发出的评论被清掉（详情的读没有关重连重读，`settled` 看 `isValidating`；M5 设计 §9 与 browse 路由的先例是关）；m1 接受弹窗提交的那一刻详情不定（同一条目的评论或表情的写在轮次里重读）被当成“已不在收集箱”，没分诊就记成已接受；m2 `issue.intake_not_found` 落在内容修改或删除上时不清选中；m3 通用详情上收集箱条目的写已按所持详情改道，七个字段之外的修改提示成了通用的一句，spec §1 与本记录 §4 的一句不再属实；m4 拒绝、删除两个确认弹窗的正文是写死的英文、删除的一句与合同相反，页签的数没有单复数；m5 三个故事的“明天”“今天”取自测试进程的时钟；m6 本记录 §8 的一句与交接不符。观察 O1–O6（O1 R34 的新鲜度下限只在重读在途时有效，唯一的来源是 I1 的重连重读）。
+- **修复轮**（主控裁定：I1、m1–m6 全修，m1 升为重要——接受是核心流程、结局是静默的错误状态；O1 随 I1 关上，O3、O4 记进 §7，O2、O5、O6 不改）。每个产品修复先有失败的单测（RED）与能让它失败的变异（`restored=yes`）：
+  - `d673c9f3`（I1）：详情的读加 `revalidateOnReconnect: false`；新 `content/root.after-read.test.tsx` 以整页的替身挂上宿主里的评论框，写字、越过去重窗口、发 `online`：列表照样重读（证明重连发生了），工作项不再读，评论框是同一个元素、字还在；变异 `t15-i1-mut`、`t15-i1-mut-host` 皆杀。plan `:18` 与 spec §2.5 的那一句随之改（本提交）。
+  - `4b3f4198`（m1）：`accept` 在不持有详情时照样分诊（真被别人接受了则 nerve 答 `issue.intake_transition_not_allowed`，走既有的冲突一支）；另加审查建议的 `!open.current?.accepted`（否则另一写的重读在途时重试会再分诊一次、被拒为冲突、关弹窗丢掉修改）；两格、变异 `t15-m1-mut-undefined`、`t15-m1-mut-guard` 皆杀。
+  - `f21b094a`（m2）：内容修改（含版本恢复）与删除被拒为 `issue.intake_not_found` 时，接缝照 R28 在被拒那次的轮次里重读（`CHANGED_ELSEWHERE`）；页面的 `outOfIntake` 看所持的详情（同 `gone` 带 `!leaving.current`，否则删除一条刚被别人接受的条目时成功的删除会报错）；删除的拒绝经 `conflicted`（否则提示两次，且路由在 `startTransition` 里导航、晚于 `setBusy`）。分诊被拒为这个码时照旧不重读（页面已清选中；重读会多一次提示）。六个变异皆杀。
+  - `f26492f0`（m3）：`core/lib/api-error.ts` 加 `ForeseenRefusal(code)`，`problemCode` 认它；`intakeUpdateBody` 对七个字段之外的修改抛 `ForeseenRefusal("issue.in_triage")`，提示与 nerve 的 409 同一句（先例 M6/P7b R4 的拒收列：说 nerve 拒绝的同一句）；不造假的 `ApiError(409)`（什么也没发）。M2 的 `api-error.test.ts` 不改；变异两个皆杀。
+  - `101418d8`（m4）：两个弹窗的正文进 `inbox_issue.modals.{decline,delete}.content`（en、zh-CN，带条目的标识），删除照合同（`issue.yaml:1041-1047`）说连工作项一起删；按钮也改走已有的键（`delete`、`deleting`、`common.cancel`，英文不变——审查说按钮已翻译，实际是 `AlertModalCore` 的英文默认）；`tab_total` 用复数式。H20 ⑨ 与 H9 的 “Open, 1 work item” 跟随，H11 加一条删除正文的断言。**TDD 的疏漏**：实现先于测试，RED 以临时改回弹窗取得（`t15-m4-red`，六格），e2e 的期望错误版本 `t15-m4-red-e2e` 三处各在被改处失败；主控记为过程备注（同 T6a）。
+  - `b7cd8583`（m5，故事）：夹具 `browserDay(page, days)` 在动作之前向浏览器取那一刻的日；H10 ③、H20 ②、H9 ③ 用它。探针 `t15-m5-red-probe`（`page.clock.setSystemTime` 把浏览器的钟拨到 ZONE 的下一个午夜之后、用旧的 `zonedDay`）三处都在日子那一步失败，同一探针下新故事过。H20 `:257` 不改：那是故事经接口先设的暂缓日，页面只显示、回传它持有的。
+  - 本提交（m6 与文档）：§2 的修复轮一行，§4 的浏览页一句、§7、§8 的 `HO/M3-closeout.md:21` 一句与本节；plan `:18`、spec §1 `:37`、spec §2.5 的两句、frontend-changes 的收集箱页一行（详情不随网络恢复重读）；`api-error.ts` 注释里的出处改为 M6/P7b。
+  - 修复轮的验证（`b7cd8583`）：`make lint-web`、`make knip`、`make test-web`（93 秒）、`make build build-s3-fixture`、e2e 的类型、lint 与格式检查都过；m7-pages 三引擎 93 过（`t15-m7pages`，1.6 分）；改到的五个故事文件 chromium `--repeat-each=3` 51 过（`t15-repeat3`）；m4-detail 三引擎 132 过（`t15-m4-detail`）；P5a 的 127 个文件 oxlint 为零、web 18 = 上限 18（`t15-oxlint-files`）；死成员仍 1598 行、`--rows M7` 仍 88（`t15-dead`，与 T14 只差一个读数）。`use-intake-actions.ts` 300 行、`issue-write-intake.ts` 149 行。改到的共用文件：M2 的 `core/lib/api-error.ts`（一个类与 `problemCode` 的一支）、M3 的 `core/lib/use-session-swr.ts`（只改注释）。
+- 限定复审、终检与集成见下。
