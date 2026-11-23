@@ -104,25 +104,22 @@ async function given(
 }
 
 /** The selection the action model is given: its moves and the detail's region are the page's, not this test's. */
-const selection = { leave: () => {}, leaving: { current: false }, region: { current: null } };
+const selection = {
+  leave: () => {},
+  neighbour: () => undefined,
+  leaving: { current: false },
+  region: { current: null },
+  navigation: () => null,
+};
 const Wide = observer(function Wide() {
   const actions = useIntakeActions("acme", "p-web", "i-x", selection);
   held.actions = actions;
-  return <IntakeHeader projectId="p-web" issueId="i-x" actions={actions} isSubmitting="saved" />;
+  return <IntakeHeader projectId="p-web" issueId="i-x" actions={actions} isSubmitting="saved" selection={selection} />;
 });
 const Narrow = observer(function Narrow() {
   const actions = useIntakeActions("acme", "p-web", "i-x", selection);
   held.actions = actions;
-  return (
-    <IntakeMobileHeader
-      projectId="p-web"
-      issueId="i-x"
-      actions={actions}
-      isSubmitting="saved"
-      isMobileSidebar={false}
-      setIsMobileSidebar={() => {}}
-    />
-  );
+  return <IntakeMobileHeader issueId="i-x" actions={actions} isSubmitting="saved" selection={selection} />;
 });
 const draw = (view: "wide" | "narrow") =>
   act(async () =>

@@ -4,40 +4,39 @@
  */
 
 import { observer } from "mobx-react";
-import { LeftSidePaneOutline, MoreHorizontalOutline } from "@makeplane/propel/icons";
+import { MoreHorizontalOutline } from "@makeplane/propel/icons";
 // nerve imports
 import { useTranslation } from "@nerve/i18n";
 import { getIconButtonStyling } from "@nerve/propel/icon-button";
 import type { TNameDescriptionLoader } from "@nerve/types";
 import { CustomMenu, EHeaderVariant, Header } from "@nerve/ui";
-import { cn } from "@nerve/utils";
 // components
 import { NameDescriptionUpdateStatus } from "@/components/issues/issue-update-status";
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 // local imports
+import type { IntakeSelectionPort } from "../selection-port";
 import { INTAKE_ACTION_LABELS, type IntakeActions } from "./intake-actions";
-import { IntakeNavigation } from "./navigation";
 import { IntakeStatusChip } from "./status-chip";
 
 type Props = {
-  projectId: string;
   issueId: string;
   actions: IntakeActions;
   isSubmitting: TNameDescriptionLoader;
-  isMobileSidebar: boolean;
-  setIsMobileSidebar: (value: boolean) => void;
+  /** The selection, as what shows it gives it: the narrow screen's navigation (R18). */
+  selection: IntakeSelectionPort;
 };
 
 /**
- * The header of the selected work item of a project's intake, on a narrow screen (P5a spec 2.7, 2.8): the button that
- * shows or hides the list beside it, the previous and the next work items of the list (IntakeNavigation), the work
- * item's status, whether its name and description are saved, and one menu of every action the action model offers, as
- * the wide header's (IntakeHeader): it holds the status's primary action, its button where the focus lands for it
- * (data-intake-primary, R35), and waits while a triage is out (busy). Drawn only while the work item is held.
+ * The header of the selected work item of a project's intake, on a narrow screen (P5a spec 2.7, 2.8): the navigation
+ * its selection gives (the intake page's: the button that shows or hides the list beside it, the previous and the next
+ * work items of the list), the work item's status, whether its name and description are saved, and one menu of every
+ * action the action model offers, as the wide header's (IntakeHeader): it holds the status's primary action, its
+ * button where the focus lands for it (data-intake-primary, R35), and waits while a triage is out (busy). Drawn only
+ * while the work item is held.
  */
 export const IntakeMobileHeader = observer(function IntakeMobileHeader(props: Props) {
-  const { projectId, issueId, actions, isSubmitting, isMobileSidebar, setIsMobileSidebar } = props;
+  const { issueId, actions, isSubmitting, selection } = props;
   const { t } = useTranslation();
   const {
     issue: { getIssueDetailById },
@@ -47,16 +46,7 @@ export const IntakeMobileHeader = observer(function IntakeMobileHeader(props: Pr
   return (
     <div className="lg:hidden">
       <Header variant={EHeaderVariant.SECONDARY} className="justify-start gap-2">
-        <button
-          type="button"
-          aria-label={t("inbox_issue.a11y.list_toggle")}
-          aria-expanded={isMobileSidebar}
-          onClick={() => setIsMobileSidebar(!isMobileSidebar)}
-          className="my-auto flex-shrink-0"
-        >
-          <LeftSidePaneOutline className={cn("h-4 w-4", isMobileSidebar ? "text-accent-primary" : "text-secondary")} />
-        </button>
-        <IntakeNavigation projectId={projectId} issueId={issueId} />
+        {selection.navigation("narrow")}
         <IntakeStatusChip intake={detail.intake} />
         <NameDescriptionUpdateStatus isSubmitting={isSubmitting} />
         <div className="ml-auto" data-intake-primary={actions.primary === undefined ? undefined : true}>

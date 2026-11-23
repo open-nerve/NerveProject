@@ -24,8 +24,7 @@ import { sessionGuard } from "@/lib/in-session";
 // store
 import { inIntake } from "@/store/issue/intake/status";
 // local imports
-import type { IntakeLanding } from "../../landing";
-import { useIntakePageState } from "../../page-state";
+import type { IntakeSelectionPort } from "../selection-port";
 import { useDetailFocus } from "./detail-focus";
 import { offeredOn, type IntakeAction, type IntakeActions, type OpenModal } from "./intake-actions";
 
@@ -36,21 +35,19 @@ import { offeredOn, type IntakeAction, type IntakeActions, type OpenModal } from
  * deleteIntake), one out at a time (busy), each followed only in the detail's scope (the same selection, session and
  * permissions): a refusal changes nothing and is said; nerve's conflict closes the modal, the selection kept, read
  * again (issue.intake_transition_not_allowed), or left for none (issue.intake_not_found: gone from the intake). Once
- * nerve confirms a triage, the selection leaves the work item (selection.leave) for the row after it in the list the
- * page shows, else the row before, as the triage began (a duplicate aside, which stays); the acceptance's, once its
- * modal closes, its update confirmed or cancelled. Deleting leaves the work item gone, which the detail region is told
- * (leaving) before the delete is sent; once nerve confirms, the selection leaves it for none. The focus lands as each
- * ends (useDetailFocus, and the page's landing as the selection leaves).
+ * nerve confirms a triage, the selection leaves the work item (selection.leave) for the row its selection gave as the
+ * triage began (selection.neighbour; the intake page's, the row after it in the list the page shows, else the row
+ * before), a duplicate aside, which stays; the acceptance's, once its modal closes, its update confirmed or cancelled.
+ * Deleting leaves the work item gone, which the detail region is told (leaving) before the delete is sent; once nerve
+ * confirms, the selection leaves it for none. The focus lands as each ends (useDetailFocus, and the landing of what
+ * shows the selection as it leaves). It reads the selection through its port alone (P5b R18), never a page's state.
  */
 export function useIntakeActions(
   workspaceSlug: string,
   projectId: string,
   issueId: string,
-  selection: {
-    leave: IntakeLanding["leave"];
-    leaving: RefObject<boolean>;
-    region: RefObject<HTMLElement | null>;
-  }
+  // the selection's port, and whether the detail region is deleting the work item (the region's own)
+  selection: Pick<IntakeSelectionPort, "leave" | "neighbour" | "region"> & { leaving: RefObject<boolean> }
 ): IntakeActions {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -61,7 +58,6 @@ export function useIntakeActions(
     rootIssueStore: root,
     issue: { getIssueDetailById },
   } = useIssueDetail();
-  const { filters } = useIntakePageState();
   const { data: currentUser } = useUser();
   const { getProjectRoleByWorkspaceSlugAndProjectId } = useUserPermissions();
   const { getProjectById } = useProject();
@@ -88,12 +84,6 @@ export function useIntakeActions(
   const show = (next: OpenModal | undefined) => {
     open.current = next;
     setModal(next);
-  };
-  /** The row after the work item in the list the page shows, else the row before; none for the only one (R14). */
-  const neighbour = (): string | undefined => {
-    const ids = root.intake.getList(projectId, filters)?.data.map((row) => row.id) ?? [];
-    const at = ids.indexOf(issueId);
-    return at === -1 ? undefined : (ids[at + 1] ?? ids[at - 1]);
   };
   /** nerve's conflict (R28): the modal closes, the selection kept, or left for none for a work item gone. */
   const conflicted = (error: unknown): boolean => {
@@ -132,7 +122,7 @@ export function useIntakeActions(
     setBusy(false);
   };
   const triage = async (body: IntakeTriage, underField?: (error: unknown) => boolean) => {
-    const to = neighbour();
+    const to = selection.neighbour(issueId);
     await command(
       () => root.writes.triageIntake(issueId, body, scope()),
       (error) => {
@@ -175,9 +165,9 @@ export function useIntakeActions(
       // again; one not held, a write's read again out, is triaged: nerve refuses it as a conflict if another accepted it
       const held = getIssueDetailById(issueId);
       if (!open.current?.accepted && (held === undefined || inIntake(held))) {
-        acceptedFor.current = neighbour();
+        acceptedFor.current = selection.neighbour(issueId);
         await command(() => root.writes.triageIntake(issueId, { status: "accepted" }, scope()), sayAndFollow);
-      } else acceptedFor.current ??= neighbour();
+      } else acceptedFor.current ??= selection.neighbour(issueId);
       if (open.current) show({ ...open.current, accepted: true });
     },
     triage,

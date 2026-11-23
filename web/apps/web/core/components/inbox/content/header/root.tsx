@@ -25,8 +25,8 @@ import { NameDescriptionUpdateStatus } from "@/components/issues/issue-update-st
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { useProject } from "@/hooks/store/use-project";
 // local imports
+import type { IntakeSelectionPort } from "../selection-port";
 import { INTAKE_ACTION_LABELS, type IntakeAction, type IntakeActions } from "./intake-actions";
-import { IntakeNavigation } from "./navigation";
 import { IntakeStatusChip } from "./status-chip";
 
 /** The actions the wide header offers in its menu, in its order: the others are buttons. */
@@ -37,18 +37,21 @@ type Props = {
   issueId: string;
   actions: IntakeActions;
   isSubmitting: TNameDescriptionLoader;
+  /** The selection, as what shows it gives it: the wide screen's navigation (R18). */
+  selection: IntakeSelectionPort;
 };
 
 /**
  * The header of the selected work item of a project's intake, on a wide screen (P5a spec 2.7, 2.8): its identifier in
- * the route's project, its status, whether its name and description are saved, the previous and the next work items of
- * the list (IntakeNavigation), and the actions the action model offers: accepting and declining, copying its link and
- * opening it as buttons, the others in a menu; accepting is the status's primary action (data-intake-primary, R35).
- * Each control gives the action model itself, where the focus goes back once the action ends; the triages and the menu
- * wait while one is out (busy). Drawn only while the work item is held, so that a triage's read again withdraws it
- * (R34).
+ * the route's project, its status, whether its name and description are saved, the navigation its selection gives (the
+ * intake page's: the previous and the next work items of its list), and the actions the action model offers: accepting
+ * and declining, copying its link and opening it as buttons, the others in a menu; accepting is the status's primary
+ * action (data-intake-primary, R35). Each control gives the action model itself, where the focus goes back once the
+ * action ends; the triages and the menu wait while one is out (busy). Drawn only while the work item is held, so that
+ * a triage's read again withdraws it (R34).
  */
-export const IntakeHeader = observer(function IntakeHeader({ projectId, issueId, actions, isSubmitting }: Props) {
+export const IntakeHeader = observer(function IntakeHeader(props: Props) {
+  const { projectId, issueId, actions, isSubmitting, selection } = props;
   const { t } = useTranslation();
   const navigate = useNavigate();
   const {
@@ -69,7 +72,7 @@ export const IntakeHeader = observer(function IntakeHeader({ projectId, issueId,
         <NameDescriptionUpdateStatus isSubmitting={isSubmitting} />
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        <IntakeNavigation projectId={projectId} issueId={issueId} />
+        {selection.navigation("wide")}
         {offered.includes("accept") && (
           <Button
             variant="secondary"

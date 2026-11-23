@@ -25,7 +25,6 @@ import { useSession } from "@/lib/auth/use-session";
 import { problemMessageKey } from "@/lib/error-messages";
 import { useSessionSWR } from "@/lib/use-session-swr";
 // local imports
-import type { IntakeLanding } from "../landing";
 import { IntakeAcceptModal } from "../modals/accept";
 import { DeclineIssueModal } from "../modals/decline-issue-modal";
 import { DeleteInboxIssueModal } from "../modals/delete-issue-modal";
@@ -36,20 +35,17 @@ import type { IntakeActions } from "./header/intake-actions";
 import { IntakeMobileHeader } from "./header/mobile";
 import { IntakeHeader } from "./header/root";
 import { useIntakeActions } from "./header/use-intake-actions";
+import type { IntakeSelectionPort } from "./selection-port";
 
 type TInboxContentRoot = {
   workspaceSlug: string;
   projectId: string;
   inboxIssueId: string;
-  isMobileSidebar: boolean;
-  setIsMobileSidebar: (value: boolean) => void;
   /**
-   * Leaves the selected work item for another, or none, as an action on it ends or the page cannot show it: the page's
-   * selection, by a replace, the focus going with it (useIntakeLanding).
+   * The selection, as what shows it gives it (R18): where it leaves the work item for as an action on it ends or the
+   * region cannot show it, the row a triage leaves it for, the region's element, and the navigation the headers draw.
    */
-  onLeave: IntakeLanding["leave"];
-  /** The region's element, the page's: where the page's landing gives the focus for the work item selected. */
-  region: IntakeLanding["detail"];
+  selection: IntakeSelectionPort;
 };
 
 /** Refusals of a read that say the caller cannot read the work item. */
@@ -61,7 +57,7 @@ const UNREADABLE = new Set([401, 403, 404]);
  * permissions now, is a detail of its own, with its own read, inputs, modals and writes in flight.
  */
 export const InboxContentRoot = observer(function InboxContentRoot(props: TInboxContentRoot) {
-  const { workspaceSlug, projectId, inboxIssueId, region } = props;
+  const { workspaceSlug, projectId, inboxIssueId, selection } = props;
   const { t } = useTranslation();
   const { rootIssueStore: root } = useIssueDetail();
   const { loginId } = useSession();
@@ -69,7 +65,7 @@ export const InboxContentRoot = observer(function InboxContentRoot(props: TInbox
   const identity = root.permissionReads.identity(workspace?.id, [projectId], true);
   return (
     <section
-      ref={region}
+      ref={selection.region}
       aria-label={t("inbox_issue.a11y.detail")}
       tabIndex={-1}
       className="relative flex h-full w-full flex-col overflow-hidden outline-none"
@@ -97,8 +93,8 @@ export const InboxContentRoot = observer(function InboxContentRoot(props: TInbox
  * again; the modals, outside it, stay.
  */
 const IntakeSelection = observer(function IntakeSelection(props: TInboxContentRoot & { identity: string }) {
-  const { workspaceSlug, projectId, inboxIssueId: issueId, identity, isMobileSidebar, setIsMobileSidebar } = props;
-  const { onLeave, region } = props;
+  const { workspaceSlug, projectId, inboxIssueId: issueId, identity, selection } = props;
+  const { leave, neighbour, region } = selection;
   const { t } = useTranslation();
   const { rootIssueStore: root } = useIssueDetail();
   const refusalToast = useRefusalToast();
@@ -124,7 +120,7 @@ const IntakeSelection = observer(function IntakeSelection(props: TInboxContentRo
   }, [mutate]);
   // whether the caller is deleting the work item, whose absence is then the delete's to follow
   const leaving = useRef(false);
-  const actions = useIntakeActions(workspaceSlug, projectId, issueId, { leave: onLeave, leaving, region });
+  const actions = useIntakeActions(workspaceSlug, projectId, issueId, { leave, neighbour, region, leaving });
 
   const settled = answered && !read.isValidating;
   const error = settled && !(read.error instanceof SessionChangedError) ? read.error : undefined;
@@ -155,8 +151,8 @@ const IntakeSelection = observer(function IntakeSelection(props: TInboxContentRo
         message: t(problemMessageKey(outOfIntake ? "issue.intake_not_found" : "issue.not_found")),
       });
     root.intake.drop(projectId, issueId);
-    onLeave(issueId, undefined);
-  }, [refused, outOfIntake, gone, error, later, refusalToast, t, onLeave, root, projectId, issueId]);
+    leave(issueId, undefined);
+  }, [refused, outOfIntake, gone, error, later, refusalToast, t, leave, root, projectId, issueId]);
 
   return (
     <>
@@ -164,15 +160,14 @@ const IntakeSelection = observer(function IntakeSelection(props: TInboxContentRo
         <IssueDetailHost workspaceSlug={workspaceSlug} projectId={projectId} issueId={issueId}>
           <ConfirmedContentNotice />
           <div className="z-[11] min-h-[52px] flex-shrink-0">
-            <IntakeHeader projectId={projectId} issueId={issueId} actions={actions} isSubmitting={isSubmitting} />
-            <IntakeMobileHeader
+            <IntakeHeader
               projectId={projectId}
               issueId={issueId}
               actions={actions}
               isSubmitting={isSubmitting}
-              isMobileSidebar={isMobileSidebar}
-              setIsMobileSidebar={setIsMobileSidebar}
+              selection={selection}
             />
+            <IntakeMobileHeader issueId={issueId} actions={actions} isSubmitting={isSubmitting} selection={selection} />
           </div>
           <ContentWrapper className="divide-y-2 divide-subtle-1">
             <IntakeDetail

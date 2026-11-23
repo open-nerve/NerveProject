@@ -167,10 +167,7 @@ function Page() {
       workspaceSlug="acme"
       projectId="p-web"
       inboxIssueId={selected}
-      isMobileSidebar={false}
-      setIsMobileSidebar={() => {}}
-      onLeave={landing.leave}
-      region={landing.detail}
+      selection={{ leave: landing.leave, neighbour: () => undefined, region: landing.detail, navigation: () => null }}
     />
   ) : (
     <p data-nothing />
