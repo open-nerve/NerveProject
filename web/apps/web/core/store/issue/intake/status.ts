@@ -4,7 +4,8 @@
  */
 
 // nerve imports
-import type { IntakeIssue, IntakeStatus, IssueDetail, IssueIntake } from "@nerve/api-client";
+import type { IntakeIssue, IntakeStatus, IssueDetail, IssueIntake, Project } from "@nerve/api-client";
+import { EUserPermissions } from "@nerve/constants";
 
 /**
  * @description the status of the intake row at now, as nerve answers, lists and counts it (C7): a snooze whose time
@@ -34,6 +35,30 @@ export function rowOf(detail: IssueDetail): IntakeIssue | undefined {
 export function inIntake(detail: IssueDetail | undefined): boolean {
   const intake = detail?.intake;
   return !!intake && intake.status !== "accepted";
+}
+
+/**
+ * @description whether the caller may write the work item of a project's intake, its content and its files (P5a spec
+ * 2.7, R15, R27; P5b spec 2.2, R9, R25): the project not archived and its intake on; the work item pending or snoozed
+ * as stored, as nerve's CheckOpen reads it (a snooze whose time has come is written still; triaged, it is read-only);
+ * and the caller with a role in the project (intake.update's three) who is its admin (a workspace admin among its
+ * members too, as the permission store gives him) or submitted it, a guest among them. The one rule the intake's
+ * detail and a content view of the work item in the intake read
+ */
+export function intakeEditableBy(
+  issue: IssueDetail,
+  project: Project | undefined,
+  role: EUserPermissions | undefined,
+  me: string | undefined
+): boolean {
+  const status = issue.intake?.status;
+  return (
+    !!project?.intake_view &&
+    !project.archived_at &&
+    (status === "pending" || status === "snoozed") &&
+    role !== undefined &&
+    (role === EUserPermissions.ADMIN || (me !== undefined && issue.created_by_id === me))
+  );
 }
 
 /**

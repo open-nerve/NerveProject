@@ -11,7 +11,7 @@ import { useTranslation } from "@nerve/i18n";
 import { setToast, TOAST_TYPE } from "@nerve/propel/toast";
 import { ContentWrapper } from "@nerve/ui";
 // components
-import { IssueDetailHost } from "@/components/issues/detail-host";
+import { ConfirmedContentNotice, IssueDetailHost } from "@/components/issues/detail-host";
 import { useIssueOperations } from "@/components/issues/issue-detail/use-issue-operations";
 import { useIssueSaveStatus } from "@/components/issues/use-issue-save-status";
 import { PlanningReadFailure } from "@/components/planning/read-failure";
@@ -161,6 +161,7 @@ const IntakeSelection = observer(function IntakeSelection(props: TInboxContentRo
     <>
       {settled && error === undefined ? (
         <IssueDetailHost workspaceSlug={workspaceSlug} projectId={projectId} issueId={issueId}>
+          <ConfirmedContentNotice />
           <div className="z-[11] min-h-[52px] flex-shrink-0">
             <IntakeHeader projectId={projectId} issueId={issueId} actions={actions} isSubmitting={isSubmitting} />
             <IntakeMobileHeader

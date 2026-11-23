@@ -6,7 +6,6 @@
 import { useEffect, useRef } from "react";
 import { observer } from "mobx-react";
 // nerve imports
-import type { IssueDetail, Project } from "@nerve/api-client";
 import { EUserPermissions } from "@nerve/constants";
 import type { EditorRefApi } from "@nerve/editor";
 import { useTranslation } from "@nerve/i18n";
@@ -20,10 +19,13 @@ import { useIssueOperations } from "@/components/issues/issue-detail/use-issue-o
 import { DetailResourceError } from "@/components/issues/issue-detail-widgets/resource-error";
 import { IssueTitleInput } from "@/components/issues/title-input";
 // hooks
+import { useIssueImages } from "@/hooks/editor/use-issue-images";
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { useProject } from "@/hooks/store/use-project";
 import { useUser, useUserPermissions } from "@/hooks/store/user";
 import useReloadConfirmations from "@/hooks/use-reload-confirmation";
+// store
+import { intakeEditableBy } from "@/store/issue/intake/status";
 // local imports
 import { InboxIssueContentProperties } from "./issue-properties";
 
@@ -37,32 +39,13 @@ type Props = {
 };
 
 /**
- * Whether the caller may change the work item of a project's intake (P5a spec 2.7, R15, R27): the project is not
- * archived and its intake is on, the work item is still in the intake, pending or snoozed (triaged already, it is
- * read-only), and the caller is the project's admin or submitted it.
- */
-function editableBy(
-  issue: IssueDetail,
-  project: Project | undefined,
-  role: EUserPermissions | undefined,
-  me: string | undefined
-): boolean {
-  const status = issue.intake?.status;
-  return (
-    !!project?.intake_view &&
-    !project.archived_at &&
-    (status === "pending" || status === "snoozed") &&
-    (role === EUserPermissions.ADMIN || (me !== undefined && issue.created_by_id === me))
-  );
-}
-
-/**
  * The selected work item of a project's intake, drawn inside the detail host (P5a spec 2.7): its name and description,
  * its reactions and description versions (shown to admins and members alone, IssueDescriptionVersions), its
  * properties, and its activity and comments. Each is the work item detail's own control, writing through the work
- * item's queue (useIssueOperations), which sends a work item in the intake to its intake (R3). A guest who submitted
- * it changes its name and description alone. While the work item is not held, as a triage reads it again (R34), it says
- * that it is loading, or why the read again failed with its retry.
+ * item's queue (useIssueOperations), which sends a work item in the intake to its intake (R3). Who changes it is the
+ * intake's rule (intakeEditableBy), which its description's images (useIssueImages, the issue host) take uploads by
+ * too (P5b spec 2.2). A guest who submitted it changes its name and description alone. While the work item is not
+ * held, as a triage reads it again (R34), it says that it is loading, or why the read again failed with its retry.
  */
 export const IntakeDetail = observer(function IntakeDetail(props: Props) {
   const { workspaceSlug, projectId, issueId, isSubmitting, setTitleStatus, setDescriptionStatus } = props;
@@ -74,6 +57,7 @@ export const IntakeDetail = observer(function IntakeDetail(props: Props) {
   const { getProjectById } = useProject();
   const { getProjectRoleByWorkspaceSlugAndProjectId } = useUserPermissions();
   const issueOperations = useIssueOperations(workspaceSlug, projectId, issueId);
+  const { images } = useIssueImages(workspaceSlug, projectId, issueId);
   const { setShowAlert } = useReloadConfirmations(isSubmitting === "submitting" || isSubmitting === "failed");
   useEffect(() => {
     setShowAlert(isSubmitting === "submitting" || isSubmitting === "failed");
@@ -97,7 +81,7 @@ export const IntakeDetail = observer(function IntakeDetail(props: Props) {
   }
   const project = getProjectById(projectId);
   const role = getProjectRoleByWorkspaceSlugAndProjectId(workspaceSlug, projectId);
-  const editable = editableBy(issue, project, role, currentUser?.id);
+  const editable = intakeEditableBy(issue, project, role, currentUser?.id);
   const archived = !!project?.archived_at;
 
   return (
@@ -114,6 +98,7 @@ export const IntakeDetail = observer(function IntakeDetail(props: Props) {
         />
         <DescriptionInput
           autosaveRef={descriptionInputRef}
+          images={images}
           prepareSubmit={
             issueOperations.prepareUpdate
               ? () => {

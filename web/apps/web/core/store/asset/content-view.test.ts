@@ -1,5 +1,6 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import type { IntakeStatus, IssueIntake, Project } from "@nerve/api-client";
 import { SessionChangedError } from "@/lib/auth/token-manager";
 import { loadProject, loadProjects, projectOf } from "@/store/project/fake-projects";
 import { loadWorkspaces, workspaceOf } from "@/store/workspace/fake-workspaces";
@@ -194,4 +195,101 @@ it("freezes the host identity and retires every view on root disposal", async ()
   tab.app.dispose();
   expect(view.current).toBe(false);
   expect(view.signal.aborted).toBe(true);
+});
+
+// A work item held in its project's intake (P5b spec 2.2, R9): its issue host is written by the intake's rule, the one
+// predicate the intake detail reads (intakeEditableBy), for an image of its description and an attachment alike; once
+// accepted, or never submitted (intake null), by the project's roles as before. The comment hosts keep their own rule,
+// and removing an attachment follows canWrite. The caller is u-actor; the project's intake is on unless said. A caller
+// without a role in the project holds no work item of it to write (nerve's read is a member's).
+const INTAKE_AT = "2026-11-05T00:00:00Z";
+const ROLES = { admin: 20, member: 15, guest: 5 } as const;
+/** The tab holding issue-1 as its detail, in the intake as intake says, submitted by creator, the caller's role as who. */
+async function heldInIntake(
+  who: keyof typeof ROLES,
+  intake: IssueIntake | null,
+  creator = "u-other",
+  project: Partial<Project> = {}
+) {
+  const tab = await fixture();
+  const role = ROLES[who];
+  await loadWorkspaces(tab.nerve, tab.app.workspaceRoot, [{ ...tab.workspace, role }]);
+  await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, [
+    { ...tab.project, intake_view: true, member_role: role, ...project },
+  ]);
+  await tab.readIssue({ ...tab.issue, intake, created_by_id: creator, updated_at: INTAKE_AT });
+  return tab;
+}
+const intakeOf = (status: IntakeStatus, snoozedTill: string | null = null): IssueIntake => ({
+  status,
+  snoozed_till: snoozedTill,
+  duplicate_to_id: null,
+});
+/** What the issue host, current, may write: an image of the description, an attachment. */
+const writes = (tab: Awaited<ReturnType<typeof fixture>>) => {
+  const view = tab.app.asset.openContent(tab.hosts.issue);
+  expect(view.current).toBe(true);
+  return [view.canWrite("description"), view.canWrite("attachment")];
+};
+/** Whether the issue host may remove an attachment. */
+const removes = (tab: Awaited<ReturnType<typeof fixture>>) =>
+  tab.app.asset.openContent(tab.hosts.issue).canRemoveAttachment();
+
+it.each([
+  { who: "admin", status: "pending", writes: true },
+  { who: "admin", status: "snoozed", writes: true },
+  { who: "member", mine: true, status: "pending", writes: true },
+  { who: "member", mine: true, status: "snoozed", writes: true },
+  { who: "guest", mine: true, status: "pending", writes: true },
+  { who: "guest", mine: true, status: "snoozed", writes: true },
+  { who: "member", status: "pending", writes: false },
+  { who: "guest", status: "pending", writes: false },
+  { who: "admin", status: "declined", writes: false },
+  { who: "admin", status: "duplicate", writes: false },
+  { who: "member", mine: true, status: "declined", writes: false },
+] as const)("an issue in the intake, $status, takes the files of the $who (his: $mine): $writes", async (cell) => {
+  const tab = await heldInIntake(
+    cell.who,
+    intakeOf(cell.status, cell.status === "snoozed" ? "2099-01-01T00:00:00Z" : null),
+    "mine" in cell ? "u-actor" : "u-other"
+  );
+  expect(writes(tab)).toEqual([cell.writes, cell.writes]);
+});
+
+it("an issue in the intake takes no files while the intake is off or the project archived, an admin's neither", async () => {
+  const off = await heldInIntake("admin", intakeOf("pending"), "u-actor", { intake_view: false });
+  expect(writes(off)).toEqual([false, false]);
+  const archived = await heldInIntake("admin", intakeOf("pending"), "u-actor");
+  await loadProject(archived.nerve, archived.app.projectRoot.project, {
+    ...archived.project,
+    intake_view: true,
+    archived_at: INTAKE_AT,
+    updated_at: INTAKE_AT,
+  });
+  expect(writes(archived)).toEqual([false, false]);
+});
+
+it("an issue snoozed as stored takes its submitter's files once its time has come, as nerve's CheckOpen reads it", async () => {
+  const tab = await heldInIntake("member", intakeOf("snoozed", "2026-11-01T00:00:00Z"), "u-actor");
+  expect(writes(tab)).toEqual([true, true]);
+});
+
+it("an accepted issue, or one never submitted, takes files by the project's roles as before", async () => {
+  expect(writes(await heldInIntake("member", intakeOf("accepted")))).toEqual([true, true]);
+  expect(writes(await heldInIntake("guest", intakeOf("accepted"), "u-actor"))).toEqual([false, false]);
+  expect(writes(await heldInIntake("member", null))).toEqual([true, true]);
+  expect(writes(await heldInIntake("guest", null, "u-actor"))).toEqual([false, false]);
+});
+
+it("the comment hosts of an issue declined in the intake keep their own rule", async () => {
+  const tab = await heldInIntake("member", intakeOf("declined"));
+  await tab.readComments();
+  expect(tab.app.asset.openContent(tab.hosts.new_comment).canWrite("attachment")).toBe(true);
+  expect(tab.app.asset.openContent(tab.hosts.comment).canWrite("description")).toBe(true);
+  expect(tab.app.asset.openContent(tab.hosts.comment).canWrite("attachment")).toBe(true);
+});
+
+it("removing an attachment follows canWrite: an admin removes none of an issue declined in the intake", async () => {
+  expect(removes(await heldInIntake("admin", intakeOf("pending")))).toBe(true);
+  expect(removes(await heldInIntake("admin", intakeOf("declined")))).toBe(false);
 });
