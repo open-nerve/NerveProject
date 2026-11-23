@@ -10,7 +10,6 @@ export * from "./common";
 export * from "./de-dupe";
 export * from "./enums";
 export * from "./favorite";
-export * from "./inbox";
 export * from "./issues";
 export * from "./issues/base"; // TODO: Remove this after development and the refactor/mobx-store-issue branch is stable
 export * from "./issues/issue-identifier";

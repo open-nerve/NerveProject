@@ -11,6 +11,10 @@ import { CyclesOutline, IntakeOutline, ModuleOutline, ViewsOutline, WorkItemsOut
 import type { Project } from "@nerve/api-client";
 import type { EUserProjectRoles } from "@nerve/types";
 import type { TNavigationItem } from "@/components/navigation/tab-navigation-root";
+// hooks
+import { useUserPermissions } from "@/hooks/store/user";
+// lib
+import { intakeEntryOn } from "@/lib/intake-entry";
 
 type UseNavigationItemsProps = {
   workspaceSlug: string;
@@ -30,6 +34,9 @@ export const useNavigationItems = ({
   project,
   allowPermissions,
 }: UseNavigationItemsProps): TNavigationItem[] => {
+  // the caller's role in the project, for the intake's entry rule (P5a spec R21)
+  const { getProjectRoleByWorkspaceSlugAndProjectId } = useUserPermissions();
+  const role = getProjectRoleByWorkspaceSlugAndProjectId(workspaceSlug, projectId);
   // Base navigation items
   const baseNavigation = useCallback(
     (targetWorkspaceSlug: string, targetProjectId: string): TNavigationItem[] => [
@@ -80,11 +87,11 @@ export const useNavigationItems = ({
         href: `/${targetWorkspaceSlug}/projects/${targetProjectId}/intake`,
         icon: IntakeOutline,
         access: [EUserPermissions.ADMIN, EUserPermissions.MEMBER, EUserPermissions.GUEST],
-        shouldRender: !!project?.intake_view,
+        shouldRender: intakeEntryOn(project, role),
         sortOrder: 6,
       },
     ],
-    [project]
+    [project, role]
   );
 
   // Combine, filter, and sort navigation items

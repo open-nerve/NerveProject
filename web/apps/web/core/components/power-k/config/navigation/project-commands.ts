@@ -24,6 +24,7 @@ import { handlePowerKNavigate } from "@/components/power-k/utils/navigation";
 import { useProject } from "@/hooks/store/use-project";
 import { useUser } from "@/hooks/store/user";
 // lib
+import { intakeEntryOn } from "@/lib/intake-entry";
 import { planningEntryOn, type PlanningDomain } from "@/lib/planning-switch";
 
 type TPowerKProjectNavigationCommandKeys =
@@ -62,13 +63,17 @@ export const usePowerKProjectNavigationCommandsRecord = (): Record<
       ctx.params.projectId
     );
   const getContextProject = (ctx: TPowerKContext) => getProjectById(ctx.params.projectId);
+  /** The caller's role in the address's project, by its workspace and project (never the router's). */
+  const getContextRole = (ctx: TPowerKContext) => {
+    const { workspaceSlug, projectId } = ctx.params;
+    return workspaceSlug ? getProjectRoleByWorkspaceSlugAndProjectId(workspaceSlug, projectId) : undefined;
+  };
   // the ways into the project's cycles and modules: the planning entry rule, by the caller's role in the address's
   // project (P7c spec 2.2, R2)
-  const hasPlanningEntry = (ctx: TPowerKContext, domain: PlanningDomain) => {
-    const { workspaceSlug, projectId } = ctx.params;
-    const role = workspaceSlug ? getProjectRoleByWorkspaceSlugAndProjectId(workspaceSlug, projectId) : undefined;
-    return planningEntryOn(getContextProject(ctx), role, domain);
-  };
+  const hasPlanningEntry = (ctx: TPowerKContext, domain: PlanningDomain) =>
+    planningEntryOn(getContextProject(ctx), getContextRole(ctx), domain);
+  // the way into the project's intake: the intake entry rule, as the sidebar and the tab bar offer it (P5a spec R21)
+  const hasIntakeEntry = (ctx: TPowerKContext) => intakeEntryOn(getContextProject(ctx), getContextRole(ctx));
 
   return {
     nav_project_work_items: {
@@ -197,8 +202,8 @@ export const usePowerKProjectNavigationCommandsRecord = (): Record<
       keySequence: "gk",
       action: (ctx) =>
         handlePowerKNavigate(ctx, [ctx.params.workspaceSlug, "projects", ctx.params.projectId, "intake"]),
-      isEnabled: (ctx) => baseProjectConditions(ctx) && !!getContextProject(ctx)?.intake_view,
-      isVisible: (ctx) => baseProjectConditions(ctx) && !!getContextProject(ctx)?.intake_view,
+      isEnabled: (ctx) => baseProjectConditions(ctx) && hasIntakeEntry(ctx),
+      isVisible: (ctx) => baseProjectConditions(ctx) && hasIntakeEntry(ctx),
       closeOnSelect: true,
     },
     nav_project_archives: {

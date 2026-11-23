@@ -34,6 +34,8 @@ created: 2026-09-28
 
 **处理结果（M7/P4，通知的部分）：** 模块级单例 `WorkspaceNotificationService`（`core/services/workspace-notification.service.ts`）随旧数据层在 T5 删除；新的 `NotificationService` 每一代以自己的客户端构造（`RootStore.notification`），取数只经 `useSessionSWR`，两个新键 `NOTIFICATION_UNREAD_COUNT`、`NOTIFICATIONS` 都带 `loginId`（以及工作区 id 与 slug）（[P4 spec](../specs/P4-web-notifications.md) §2.1、§2.3、§2.4）。上面那条 `git grep` 今天在 `web/apps/web` 只剩 `IntakeWorkItemVersionService`（`inbox/content/issue-root.tsx:36`，随 P5）与 M7 之外的 `TimezoneService`。保持 open。
 
+**处理结果（M7/P5a，收集箱的部分）：** 模块级单例 `IntakeWorkItemVersionService`（`inbox/content/issue-root.tsx:36`）随旧详情树在 T6a 删除，旧 store 里的 `InboxIssueService` 实例（`store/inbox/project-inbox.store.ts:127`）随旧数据层在 T6c 删除；新的 `IntakeService` 每一代以自己的客户端构造（issue 根 store 的 `intakeApi`），取数只经 `useSessionSWR`，新键 `INTAKE_COUNTS`、`INTAKE_ISSUES` 与详情的读都带 `loginId`（[P5a spec](../specs/P5a-web-intake.md) §2.1、§2.3）。上面那条 `git grep` 今天在 `web/apps/web` 只剩 M7 之外的 `TimezoneService`（`core/hooks/use-timezone.tsx:12`），M7 的 3 处都已消失；最近访问新的 SWR 键随 P7，保持 open。
+
 ## 3. 下拉框（M7 的部分）
 
 路径在 `web/apps/web/core/components/` 下，另写明的除外。根因和修法见 M2/P5 spec 2.3。
@@ -45,10 +47,14 @@ created: 2026-09-28
 
 **处理结果（M7/P4，`CustomSelect` 在暂缓弹窗里）：** 旧的 `snooze/modal.tsx` 随 T5 删除，M7 的这个调用方换成自定义暂缓弹窗的时间选择（`workspace-notifications/card/snooze-modal.tsx`，[P4 spec](../specs/P4-web-notifications.md) §2.7）。浏览器核对在 H20 (page)（`e2e/stories/collaboration/h20-notification-pages.spec.ts`，chromium、firefox、webkit）：按钮上 Enter 打开列表，列表在按钮旁（`expectListBesideButton`），方向键与 Enter 选中，列表关上、焦点回到按钮，按钮的名字是 “Time, 12:30 AM”；弹窗开着时后面的页面隐藏。收集箱的 `intake-state` 下拉框随 P5，视图的 `Dropdown` 与 `BreadcrumbNavigationSearchDropdown` 随 P6a/P6b，保持 open。
 
+**处理结果（M7/P5a，`dropdowns/intake-state/base.tsx`）：** 这个下拉框已在 M3/P8b 删除（`ba8cb1f4`，连同 `dropdown.tsx`），P5a 不加回收集箱的分诊状态的前端（P2a 不开分诊状态的接口），收集箱的一半按不适用关闭（[P5a spec](../specs/P5a-web-intake.md) R24）。`Dropdown`（`single-select.tsx`）在视图的表单里，随 P6a；`BreadcrumbNavigationSearchDropdown` 随视图的页头。保持 open。
+
 ## 4. 复制到剪贴板（M7 的 4 处）
 
 - P5 起 `copyTextToClipboard`（`web/packages/utils/src/string.ts`）复制失败时拒绝，纯 http 下也是。M7 的 4 处没有处理拒绝，失败时没有提示，只有一个未处理的 Promise 拒绝（路径在 `web/apps/web/core/components/` 下）：`inbox/content/inbox-issue-header.tsx`、`views/quick-actions.tsx`、`workspace/views/{quick-action,default-view-quick-action}.tsx`。
 - **关闭条件**：4 处都改经 `useCopyLink`（`web/apps/web/core/hooks/use-copy-link.ts`，M3/P10；复制文字的是同一文件的 `useCopyText`，M3 收尾），失败时经 `t()` 提示；关键词规则 `copy-hook` 中它们的例外随之删除（M3 收尾，[M3 的交接](M3-closeout.md)）。
+
+**处理结果（M7/P5a，收集箱的页头）：** `inbox/content/inbox-issue-header.tsx` 在 T6a 删除，新的动作模型的“复制链接”经 `useCopyLink`（`inbox/content/header/use-intake-actions.ts:157`），失败时经 `t()` 提示，`copy-hook` 的这个例外同一提交删除（[P5a spec](../specs/P5a-web-intake.md) §2.7）。收集箱的一处关闭；视图的三处随 P6a/P6b，保持 open。
 
 ## 5. 物理删除与跨模块外键的关系图（M7 的部分）
 
@@ -68,5 +74,7 @@ created: 2026-09-28
 - **关闭条件**：M7 的 review 写明收集箱或视图是否嵌入 iframe；嵌入的话，`server/internal/platform/webui/csp.go` 只为它加那个来源，有测试。
 
 **处理结果（M7/P4，通知页）：** 通知页不嵌 iframe：新的 `workspace-notifications/` 与它嵌入的工作项浮层里都没有（`git grep -i iframe -- web/apps/web/core web/apps/web/app web/packages/editor/src` 为空），CSP 不改（[P4 阶段记录](../reviews/P4-web-notifications-review.md) §8）。收集箱随 P5、视图随 P6a/P6b 写明，保持 open。
+
+**处理结果（M7/P5a，收集箱）：** 收集箱页不嵌 iframe：新的 `inbox/` 与它的详情里都没有（`git grep -i iframe -- web/apps/web/core web/apps/web/app web/packages/editor/src` 为空），CSP 不改（[P5a 阶段记录](../reviews/P5a-web-intake-review.md) §8）。视图随 P6a/P6b 写明，保持 open。
 
 来源：[M2 设计](../../M2-auth/M2-design.md) 13.2 中接收者含 M7 的各行、3.12、3.14；[M2/P4 评审](../../M2-auth/reviews/P4-web-auth-review.md)第 4 节；[M2 收尾 spec](../../M2-auth/specs/closeout.md) 第 3 节。

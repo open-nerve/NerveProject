@@ -9,7 +9,6 @@ import type { IssueDetail } from "@nerve/api-client";
 import React, { useState } from "react";
 import { observer } from "mobx-react";
 // types
-import { PROJECT_ERROR_MESSAGES } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 
@@ -38,35 +37,25 @@ export const DeleteInboxIssueModal = observer(function DeleteInboxIssueModal({
   const { t } = useTranslation();
   // derived values
   const projectDetails = data.project_id ? getProjectById(data?.project_id) : undefined;
+  const identifier = `${projectDetails?.identifier ?? ""}-${data.sequence_id ?? ""}`;
 
   const handleClose = () => {
     setIsDeleting(false);
     onClose();
   };
 
+  // Once nerve has deleted the work item, the selection leaves it and the modal goes with it; a refusal, said by
+  // onSubmit through the refusal toast, leaves the modal open, the focus in it, to try again or cancel, but for one
+  // saying the work item is gone from the intake, on which the selection leaves it, the modal with it.
   const handleDelete = async () => {
     setIsDeleting(true);
-    await onSubmit()
-      .then(() => {
-        setToast({
-          type: TOAST_TYPE.SUCCESS,
-          title: `${t("success")}`,
-          message: `${t("inbox_issue.modals.delete.success")}`,
-        });
-        return;
-      })
-      .catch((errors) => {
-        const isPermissionError = errors?.error === "Only admin or creator can delete the work item";
-        const currentError = isPermissionError
-          ? PROJECT_ERROR_MESSAGES.permissionError
-          : PROJECT_ERROR_MESSAGES.issueDeleteError;
-        setToast({
-          title: t(currentError.i18n_title),
-          type: TOAST_TYPE.ERROR,
-          message: currentError.i18n_message && t(currentError.i18n_message),
-        });
-      })
-      .finally(() => handleClose());
+    try {
+      await onSubmit();
+    } catch {
+      setIsDeleting(false);
+      return;
+    }
+    setToast({ type: TOAST_TYPE.SUCCESS, title: t("success"), message: t("inbox_issue.modals.delete.success") });
   };
 
   return (
@@ -76,16 +65,10 @@ export const DeleteInboxIssueModal = observer(function DeleteInboxIssueModal({
       isSubmitting={isDeleting}
       isOpen={isOpen}
       title={t("inbox_issue.modals.delete.title")}
-      // TODO: Need to translate the confirmation message
-      content={
-        <>
-          Are you sure you want to delete work item{" "}
-          <span className="font-medium break-words text-primary">
-            {projectDetails?.identifier}-{data?.sequence_id}
-          </span>
-          {""}? The work item will only be deleted from the intake and this action cannot be undone.
-        </>
-      }
+      // the pending and snoozed work items the page offers to delete are deleted, their intake rows with them
+      content={t("inbox_issue.modals.delete.content", { identifier })}
+      primaryButtonText={{ loading: t("deleting"), default: t("delete") }}
+      secondaryButtonText={t("common.cancel")}
     />
   );
 });

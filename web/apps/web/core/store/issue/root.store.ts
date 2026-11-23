@@ -34,6 +34,8 @@ import type { IWorkspaceDraftIssues } from "./workspace-draft";
 import { WorkspaceDraftIssues } from "./workspace-draft";
 import { IssueWrites } from "./issue-writes";
 import { membershipFields } from "./issue-write-fields";
+import type { IIntakeStore } from "./intake/intake.store";
+import { IntakeStore } from "./intake/intake.store";
 
 import { IssueApiService } from "@/services/issue/issue-api.service";
 import { IssueListService } from "@/services/issue/issue-list.service";
@@ -51,6 +53,7 @@ import { WorkspaceDraftService } from "@/services/issue/workspace_draft.service"
 import { WorkItemVersionService } from "@/services/issue/work_item_version.service";
 import { IssueActivityService } from "@/services/issue/issue_activity.service";
 import { IssueReactionService } from "@/services/issue/issue_reaction.service";
+import { IntakeService } from "@/services/issue/intake.service";
 
 export type IIssueRootStore = IssueRootStore;
 export type IssueWriteScope = Readonly<{ workspaceSlug: string; projectID: string; workspaceID: string }>;
@@ -121,6 +124,9 @@ export class IssueRootStore {
   issueKanBanView: IIssueKanBanViewStore;
   issueCalendarView: ICalendarStore;
 
+  /** The intakes of this generation's projects: each workspace's pending counts and each project's lists (P5a 2.3). */
+  intake: IIntakeStore;
+
   readonly owner = Symbol("issue-root");
   active = true;
   readonly api: IssueApiService;
@@ -132,6 +138,7 @@ export class IssueRootStore {
   readonly reactionApi: IssueReactionService;
   readonly listApi: IssueListService;
   readonly searchApi: IssueSearchService;
+  readonly intakeApi: IntakeService;
   private serial = 0;
   get readSerial(): number {
     return this.serial;
@@ -158,6 +165,7 @@ export class IssueRootStore {
     this.reactionApi = new IssueReactionService(api);
     this.listApi = new IssueListService(api);
     this.searchApi = new IssueSearchService(api);
+    this.intakeApi = new IntakeService(api);
     makeObservable(this, {
       active: observable,
       currentUserId: computed,
@@ -208,6 +216,8 @@ export class IssueRootStore {
 
     this.issueKanBanView = new IssueKanBanViewStore();
     this.issueCalendarView = new CalendarStore(this);
+
+    this.intake = new IntakeStore(this);
   }
   assertActive(): void {
     if (!this.active) throw new SessionChangedError();

@@ -55,8 +55,11 @@
     },
     "intake_sidebar": {
       "title": "记录接收请求",
-      "description": "提交新请求以在项目工作流程中进行审查、优先排序和跟踪。",
-      "cta_primary": "创建接收请求"
+      "description": "提交新请求以在项目工作流程中进行审查、优先排序和跟踪。"
+    },
+    "intake_closed": {
+      "title": "还没有已处理的请求",
+      "description": "已接受、已拒绝或标为重复的工作项都在这里。"
     },
     "intake_main": {
       "title": "选择一个接收工作项以查看其详细信息"

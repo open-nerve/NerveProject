@@ -58,7 +58,6 @@ export interface IProjectStore {
   filteredProjectIds: string[] | undefined;
   /** The current workspace's projects the caller is a member of, not archived, by their place in his sidebar. */
   joinedProjectIds: string[];
-  currentProjectDetails: Project | undefined;
   // computed actions
   getProjectById: (projectId: string | undefined | null) => Project | undefined;
   knownProjectIds: (workspaceId: string) => string[];
@@ -127,7 +126,6 @@ export class ProjectStore implements IProjectStore {
       totalProjectIds: computed,
       filteredProjectIds: computed,
       joinedProjectIds: computed,
-      currentProjectDetails: computed,
       // actions
       fetchProjects: action,
       fetchArchivedProjects: action,
@@ -201,10 +199,6 @@ export class ProjectStore implements IProjectStore {
 
   get joinedProjectIds() {
     return this.joinedIn(this.rootStore.workspaceRoot.currentWorkspace?.id).map((project) => project.id);
-  }
-
-  get currentProjectDetails() {
-    return this.getProjectById(this.rootStore.router.projectId);
   }
 
   /**

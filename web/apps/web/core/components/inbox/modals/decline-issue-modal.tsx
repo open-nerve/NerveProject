@@ -31,6 +31,7 @@ export function DeclineIssueModal(props: Props) {
   const { t } = useTranslation();
   // derived values
   const projectDetails = data.project_id ? getProjectById(data?.project_id) : undefined;
+  const identifier = `${projectDetails?.identifier ?? ""}-${data.sequence_id ?? ""}`;
 
   const handleClose = () => {
     setIsDeclining(false);
@@ -39,7 +40,9 @@ export function DeclineIssueModal(props: Props) {
 
   const handleDecline = async () => {
     setIsDeclining(true);
-    await onSubmit().finally(() => setIsDeclining(false));
+    // nerve's refusal is said by onSubmit, the modal open to try again or cancel
+    await onSubmit().catch(() => undefined);
+    setIsDeclining(false);
   };
 
   return (
@@ -49,20 +52,12 @@ export function DeclineIssueModal(props: Props) {
       isSubmitting={isDeclining}
       isOpen={isOpen}
       title={t("inbox_issue.modals.decline.title")}
-      // TODO: Need to translate the confirmation message
-      content={
-        <>
-          Are you sure you want to decline work item{" "}
-          <span className="font-medium break-words text-primary">
-            {projectDetails?.identifier}-{data?.sequence_id}
-          </span>
-          {""}? This action cannot be undone.
-        </>
-      }
+      content={t("inbox_issue.modals.decline.content", { identifier })}
       primaryButtonText={{
         loading: t("declining"),
         default: t("decline"),
       }}
+      secondaryButtonText={t("common.cancel")}
     />
   );
 }

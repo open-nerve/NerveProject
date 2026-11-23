@@ -45,7 +45,6 @@ describe("LabelStore, the labels", () => {
     expect(fetched.value).toEqual([backend, frontend, bug, tied, feature]);
     const ordered = [bug, feature, frontend, tied, backend];
     expect(store.getProjectLabels(web.id)).toEqual(ordered);
-    expect(store.projectLabels).toEqual(ordered);
     expect(store.getProjectLabelIds(web.id)).toEqual(ids(ordered));
     expect(store.getProjectLabelsTree(web.id)).toEqual([
       { ...bug, children: [] },

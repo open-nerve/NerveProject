@@ -1,4 +1,4 @@
-import type { IssueDetail } from "@nerve/api-client";
+import type { IntakeIssueCreate, IssueDetail } from "@nerve/api-client";
 // oxlint-disable jsx_a11y/prefer-tag-over-role
 // oxlint-disable jsx_a11y/click-events-have-key-events
 /**
@@ -20,11 +20,14 @@ import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { Switch } from "@makeplane/propel/components/switch";
 import { renderFormattedPayloadDate, getTabIndex } from "@nerve/utils";
 // hooks
-import { useProjectInbox } from "@/hooks/store/use-project-inbox";
+import { useIntake } from "@/hooks/store/use-intake";
 import { useWorkspace } from "@/hooks/store/use-workspace";
 import { useNavigate } from "react-router";
 import useKeypress from "@/hooks/use-keypress";
 import { usePlatformOS } from "@/hooks/use-platform-os";
+import { useRefusalToast } from "@/hooks/use-refusal-toast";
+// lib
+import { followInSession } from "@/lib/in-session";
 // local imports
 import { InboxIssueDescription } from "./issue-description";
 import { InboxIssueProperties } from "./issue-properties";
@@ -58,7 +61,8 @@ export const InboxIssueCreateRoot = observer(function InboxIssueCreateRoot(props
   const formRef = useRef<HTMLFormElement | null>(null);
   const modalContainerRef = useRef<HTMLDivElement | null>(null);
   // hooks
-  const { createInboxIssue } = useProjectInbox();
+  const { submit } = useIntake();
+  const refusalToast = useRefusalToast();
   const { getWorkspaceBySlug } = useWorkspace();
   const workspaceId = getWorkspaceBySlug(workspaceSlug)?.id;
   const { isMobile } = usePlatformOS();
@@ -113,6 +117,7 @@ export const InboxIssueCreateRoot = observer(function InboxIssueCreateRoot(props
 
   const handleFormSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!workspaceId) return;
 
     if (!descriptionEditorRef.current?.isEditorReadyToDiscard()) {
       setToast({
@@ -123,21 +128,22 @@ export const InboxIssueCreateRoot = observer(function InboxIssueCreateRoot(props
       return;
     }
 
-    const payload: Partial<IssueDetail> = {
+    // nerve takes a day due, or no key for none (IntakeIssueCreate, C10)
+    const body: IntakeIssueCreate = {
       name: formData.name || "",
       description_html: formData.description_html || "<p></p>",
       priority: formData.priority || "none",
       label_ids: formData.label_ids || [],
       assignee_ids: formData.assignee_ids || [],
-      target_date: formData.target_date || null,
+      ...(formData.target_date ? { target_date: formData.target_date } : {}),
     };
+    const scope = { workspaceSlug, projectID: projectId, workspaceID: workspaceId };
     setFormSubmitting(true);
 
-    await createInboxIssue(workspaceSlug, projectId, payload)
-      // oxlint-disable-next-line promise/always-return
-      .then((res) => {
+    await followInSession(() => submit(scope, body), {
+      done: (submitted) => {
         if (!createMore) {
-          navigate(`/${workspaceSlug}/projects/${projectId}/intake?currentTab=open&inboxIssueId=${res?.issue?.id}`);
+          navigate(`/${workspaceSlug}/projects/${projectId}/intake?currentTab=open&inboxIssueId=${submitted.id}`);
           handleModalClose();
         } else {
           descriptionEditorRef?.current?.clearEditor();
@@ -148,15 +154,9 @@ export const InboxIssueCreateRoot = observer(function InboxIssueCreateRoot(props
           title: `Success!`,
           message: "Work item created successfully.",
         });
-      })
-      .catch((error) => {
-        console.error(error);
-        setToast({
-          type: TOAST_TYPE.ERROR,
-          title: `Error!`,
-          message: "Some error occurred. Please try again.",
-        });
-      });
+      },
+      failed: refusalToast,
+    });
     setFormSubmitting(false);
   };
 

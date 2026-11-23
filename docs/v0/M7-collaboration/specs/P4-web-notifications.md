@@ -476,6 +476,7 @@ API 故事 `h1-subscription.spec.ts`、`h2-h4-notifications.spec.ts`、`h5-h7-no
 
 **后续**：
 - **P5**：收集箱的嵌入分诊（通知预览里，以 `IssueDetail.intake` 或快照的 `state_group === "triage"` 判断，设计 §3.6 `:108`）；收集箱组件上通知的两个 prop 接回；收集箱的单例。
+  - **处理结果（M7/P5a）：** 收集箱的单例删除：`inbox/content/issue-root.tsx:36` 的版本 service 在 T6a，`store/inbox/project-inbox.store.ts:127` 的 `InboxIssueService` 在 T6c（[P5a spec](P5a-web-intake.md) §2.10）。嵌入分诊与两个 prop 随 P5b（R32、Q13）。
 - **P6a/P6b**：`enableSaveView`、`enableUpdateView` 与工作区 HOC 的分支接回或删除；`rich-filters/filters-row.tsx` 的字面量；视图的嵌套按钮与复制。
 - **P7**：通知页不记最近访问（打开卡片不是访问工作项详情页）。
 - **P8**：`PlanningReadFailure` 已是通知与规划共用的件，名字的去留随最终的收敛；顶栏未读数是否聚焦重取若负责人选 (c)，在 P8 之前任一页面阶段改 `useSessionSWR` 与 v0 §7.7。

@@ -17,7 +17,6 @@ import { ReconciledByKey, replaced, upserted } from "@/lib/reconciled";
 import { LabelsService } from "@/services/project/labels.service";
 // store
 import type { RootStore } from "@/store/root.store";
-import type { IRouterStore } from "@/store/router.store";
 
 /** A label at the top with the labels under it, in their project's order: labels have two levels (M3 design 3.16). */
 type LabelTree = Label & { children: Label[] };
@@ -28,8 +27,6 @@ export interface ILabelStore {
   // computed
   /** Every label the store shows, by id, which the work items' stores look up. */
   labelMap: Record<string, Label>;
-  /** The address's project's labels, by sort order, then id; undefined until fetched. */
-  projectLabels: Label[] | undefined;
   // computed actions
   getLabelById: (labelId: string | null | undefined) => Label | undefined;
   getProjectLabels: (projectId: string | null | undefined) => Label[] | undefined;
@@ -81,7 +78,6 @@ export class LabelStore implements ILabelStore {
   /** The changes of the labels, sent one at a time. */
   private readonly changes = oneAtATime();
   // stores
-  private readonly router: IRouterStore;
   /** The project as the caller sees it, by the project store (ProjectStore.getProjectById). */
   private readonly projectOf: (projectId: string | undefined | null) => Project | undefined;
 
@@ -89,7 +85,6 @@ export class LabelStore implements ILabelStore {
     makeObservable(this, {
       // computed
       labelMap: computed,
-      projectLabels: computed,
       // actions
       fetchProjectLabels: action,
       createLabel: action,
@@ -98,7 +93,6 @@ export class LabelStore implements ILabelStore {
       deleteLabel: action,
     });
     this.service = new LabelsService(api);
-    this.router = _rootStore.router;
     this.projectOf = _rootStore.projectRoot.project.getProjectById;
   }
 
@@ -108,10 +102,6 @@ export class LabelStore implements ILabelStore {
       .flat()
       .filter((label) => this.projectOf(label.project_id));
     return Object.fromEntries(shown.map((label) => [label.id, label]));
-  }
-
-  get projectLabels() {
-    return this.getProjectLabels(this.router.projectId);
   }
 
   /** @description the label, of a project the caller sees, as the store last had it from nerve */

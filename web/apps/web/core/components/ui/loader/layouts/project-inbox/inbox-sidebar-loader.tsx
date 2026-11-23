@@ -6,10 +6,15 @@
 
 import React from "react";
 import { range } from "lodash-es";
+// nerve imports
+import { useTranslation } from "@nerve/i18n";
 
+/** The intake page's list while nerve has not given its first page: a status a screen reader says is loading. */
 export function InboxSidebarLoader() {
+  const { t } = useTranslation();
   return (
-    <div className="flex flex-col">
+    <div role="status" className="flex flex-col">
+      <span className="sr-only">{t("common.loading")}</span>
       {range(6).map((index) => (
         <div key={index} className="flex h-[105px] flex-col gap-2.5 space-y-3 border-b border-subtle p-4">
           <div className="flex flex-col gap-2">

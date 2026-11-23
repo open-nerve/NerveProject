@@ -1,6 +1,6 @@
 # M7 / P4：网页的通知与关注（阶段记录）
 
-> 状态：整分支审查、修复轮、复审与复审修复轮完成，待终检与集成（§9）。spec 与 plan 见 [P4 spec](../specs/P4-web-notifications.md)、[P4 plan](../plans/P4-web-notifications.md)，预检 [re-93](../../../reviews/re-93-M7P4预检.md)。基线 main `3d9293bd`（P3d 的 noff），分支 `codex/m7-p4`。台账 `.superpowers/sdd/P4-web-notifications/progress.md`（ignored，随阶段归档）。
+> 状态：已完成，合入 main（noff `89be91e5`），main CI 45051719903 全绿（§9）。spec 与 plan 见 [P4 spec](../specs/P4-web-notifications.md)、[P4 plan](../plans/P4-web-notifications.md)，预检 [re-93](../../../reviews/re-93-M7P4预检.md)。基线 main `3d9293bd`（P3d 的 noff），分支 `codex/m7-p4`。台账 `.superpowers/sdd/P4-web-notifications/progress.md`（ignored，随阶段归档）。
 
 ## 1. 方法与范围
 
@@ -45,7 +45,7 @@
 | A5 页面故事 | T12、T13、T14 | 达成：三引擎 27 过，chromium `--repeat-each=3` 过；m6-pages、m6-acceptance、m4-detail 不回归（§5） |
 | A6 删除与守卫 | T2、T5、T9、T11、T15 | 达成（§5 的死成员与告警） |
 | A7 文档 | T1、T15 | 本提交（§8） |
-| A8 门禁、审查与集成 | T16 | 整分支审查、修复轮、复审与复审修复轮完成（§9）；终检、分支 CI 与合并在 P5 的 T1 补记 |
+| A8 门禁、审查与集成 | T16 | 已完成：整分支审查、修复轮、复审与复审修复轮，终检、最终分支 CI、合并与 main CI 皆一次过（§9） |
 
 ## 3. 实施中的裁定
 
@@ -93,6 +93,8 @@
 | 检查点 0（44999385236） | 663 / 474.5 | 757 / 735.8（61.3%） | 913（94 / 770 / 19） | 663 | 736 |
 | 检查点 1（45018858067） | 675 / 488.8 | 914 / 886.6（73.9%） | 618（60 / 511 / 10） | 697 | 729 |
 | 检查点 2（45033492263） | 668 / 483.7 | 771 / 750.0（62.5%） | 607（61 / 509 / 10） | 791 | 745 |
+| 终检（45048776015） | 879 / 597.5 | 890 / 864.6（72.1%） | 956（96 / 807 / 19） | 697 | 749 |
+| main 45051719903（合并后） | 869 / 585.2 | 1002 / 970.9（80.9%） | 604（60 / 508 / 12） | 817 | 719 |
 
 - 检查点 0 的 CI bootstrap 与检查点 1、2 的 web Build 由主控在 T15 以作业日志与 jobs 接口补记。
 - **web 作业**（20 分钟期限、16 分钟即 960 秒的报告线）：检查点 0 的 913 秒比 main 的 607 慢约 1.5 倍且各步同比，T2 只加了几个毫秒级的测试，是慢的 runner；检查点 1、2 回到 618、607，没到报告线。
@@ -108,6 +110,7 @@
     - `work-item-filters/filters-hoc/shared.ts:26` `enableSaveView`（prop，T11 去掉两个传入者；同一文件的 `saveViewOptions`、`enableUpdateView`、`updateViewOptions`（`:27`、`:31`、`:32`）在基线里就没有传入者）——P6a/P6b 接回或删除，读它们的是 `filters-hoc/project-level.tsx`、`workspace-level.tsx` 与 `rich-filters/filters-row.tsx` 的保存与更新分支。
     - `notification.service.test.ts:39-44` 六个字面量（T3 的 `expectTypeOf` 查询形状），以及 `page-state.test.tsx:15`、`root.test.tsx:25`、`:47-49`、`:60`、`sidebar/list.test.tsx:31` 测试替身的 prop 与字面量：读者只有测试本身（基线已有 706 行同类）。
   - **M7 其余领域的 98 行**（`rows-M7-t15.tsv`）：P5 收集箱 39 行（`intake-description-version.ts` 15、`project-inbox.store.ts` 9、`types/inbox.ts` 3、`inbox-issue.store.ts` 1、`inbox-issue-status.tsx` 1、上面两个 prop，测试 `create-root.files.test.tsx` 5、`create-root.request.test.tsx` 3）；P6 视图 30 行（`types/workspace-views.ts` 12、`types/view-props.ts` 10、`global-view.store.ts`、`views.helper.ts`、`constants/views.ts`、`default-view-quick-action.tsx` 各 1，测试 4）；P7 收藏与首页 14 行（`new-fav-folder.tsx` 4、`favorite.store.ts` 2、`ui/favorite-star.tsx` 2、`types/favorite/favorite.ts` 1，首页测试 5）；路径正则收进来的 M4 列表测试的替身 9 行（`list/view.test.tsx` 4、`spreadsheet/view.test.tsx` 5）；P4 自己的测试字面量 6 行。随各自的阶段处理。
+    - **处理结果（M7/P5a）：** P5 收集箱的 39 行：33 行随旧代码在 T6a–T6c 消失，上面 `inbox/content/root.tsx:28-29` 的两个 prop 在 T6a 不再收（R32，P5b 随通知预览里嵌入的分诊加回），留下 6 行是两份新建弹窗测试里 `ResizeObserver` 替身的成员（新建弹窗随 P5b）；逐条去处见 [P5a 阶段记录](P5a-web-intake-review.md) §5。
 - **T16 修复轮之后**（`t16-dead`）1612 行，比 T15 终表多一行：`core/hooks/use-project-read.ts` 的 `revalidateOnMount`（m1 给 `useProjectRead` 加的可选参数的类型字面量成员，只经展开 `...config` 交给 `useSessionSWR` 读，工具不把展开算作读；它的读者是 `useSessionSWR` 的 `config?.revalidateOnMount`）。其余去掉行号之后逐行相同，只有 `root.test.tsx` 替身的三行读数随新格变化。oxlint 在本轮改到的 19 个 web 文件里为零，web 仍是 31 = 上限 31（`t16-oxlint-files`）。
 - **T16 复审修复轮之后**（`t16r-dead`）1614 行，比 `t16-dead` 多两行：`leaving-focus.test.tsx` 的 `watchesMade` 记下的字面量成员 `element`、`ended`（m1 的单测，读者只有测试本身，与基线的同类一样）。另有 30 行的标记多了 `str`：15 个测试文件替身 observer 的 `observe`、`disconnect`，因为 m1 的单测以字符串 `"observe"`、`"disconnect"` spy `MutationObserver.prototype`，工具把同名字符串记作可能的读；行数不变。其余去掉行号之后逐行相同。oxlint 在本轮改到的 6 个 web 文件里为零，web 仍是 31 = 上限 31（`t16r-oxlint-files`）。
 - oxlint（`t15-oxlint-p4-files`，只读）：P4 改到与新建的 118 个文件里警告为零；web 31 = 上限 31，`@nerve/utils` 2 = 2，`@nerve/constants`、`@nerve/i18n`、`@nerve/types`、e2e 都是 0 = 0。web 的上限在 T5 同一提交 40 → 31（9 条全在删掉的三个旧通知文件里）；`no-empty-pattern` 升为 error，`activity-list.tsx` 被行内 disable 压住的空解构删掉。
@@ -143,6 +146,7 @@
 - **拨慢那天重复的半点**（m4 记下的已知限制）：夏令时结束那天（如洛杉矶 11 月第一个周日）01:00 与 01:30 各出现两次，自定义暂缓的时段以 `new Date(y, m, d, h, mm)` 取浏览器时区的那一刻，只能选到第一次（夏令时的那一个），第二次够不着；拨快那天跳过的 02:00、02:30 已不给（`88f0a788`），半小时拨快的时区（Australia/Lord_Howe）跳过的 02:00 也不给（`1ebb0312`，复审 O3）。要选到第二次得让时段带上时区偏移，不在 P4 做；观察，不改。
 - **共用的 `DateDropdown` 的名字不带所选的日子**（T9 修复 ③ 记下的疑点，台账没有主控的裁定）：按钮的 `aria-label` 恒为 placeholder（`core/components/dropdowns/date.tsx:102`），选了日子之后名字仍只是 “Pick a date”；暂缓弹窗里日期与时间两个控件的名字因此不对称（时间是 “Time, 12:30 AM”）。整个网页的 `DateDropdown` 都如此。 **主控裁定（T15）：交 M8**——`DateDropdown` 是 M4 起的共用控件（14 个产品文件），改名字牵动各页的读屏名与既有故事的定位，不在 P4 的末段单改暂缓弹窗一处（只改一处是补丁）；M8 以“所有带字段名的选择控件读作‘字段，值’”统一处理，时间选择的 “Time, 12:30 AM” 是参照。
 - **交给 P5**（不是 M8）：收集箱条目以普通浮层打开时，属性里的 “State” 一栏显示占位文字 “State”（Triage 状态不在项目的状态列表里，按钮名 “State: State”），没有接受与拒绝；P5 接回分诊时处理。
+  - **处理结果（M7/P5a）：** 随 P5b：通用详情与浮层在条目未被接受时隐去状态（Q12），通知预览里嵌入收集箱的分诊（Q13，[P5a spec](../specs/P5a-web-intake.md) §1、R32）。P5a 在收集箱页里接回分诊，浮层不变。
 
 ## 8. 文档
 
@@ -176,3 +180,8 @@
   - 本提交：§2、§3、§5、§6、§7、本节与 plane-diff 的“卡片离开之后的焦点”一行；hook 的注释已在 `3df03b12` 改为键盘与指针两条路。
   - 复审修复轮的验证（`1ebb0312`）：`make build build-s3-fixture`（`t16r-final-build`）；m7-pages 三引擎 27 过（`t16r-m7-pages`，47.9 秒）；chromium `--repeat-each=3` 的 H20 键盘（本轮唯一改到的故事）3 过（`t16r-repeat`）；`make lint-web`、`make knip`、`make test-web`、`tools/keywords.mjs` 过（`t16r-final-*`）；改到的 6 个 web 文件 oxlint 为零，web 31 = 上限 31（`t16r-oxlint-files`）；死成员 1614（§5）。
 - 复审修复轮的改动（`2ef8ef8c..1ebb0312`）由主控逐项读过：指针一路照复审的建议修，`card.contains` 与 `:enabled` 删去之后弹窗里的控件也会被看，提交按钮在途停用、被拒后再启用时焦点回到它，与弹窗的意图一致；不再做第二次复审。合并前的终检、最终分支 CI、`--no-ff` 合并、main CI 与归档在 P5 的 T1 补记。
+- 以下在 P5a 的 T1 补记，数字取自归档台账的末行（main CI 两路 server 的 Test 时长取自 jobs 接口的步骤时刻，预检 re-94 O4）：
+  - **合并前的终检** `final.sh fin`（`3280e48e`，复审修复轮之后补的文档提交）一次过、没有重跑：七项收据全 0（bootstrap 第 0 路 470.6 秒、第 1 路 654.0 秒，比本机基线 644.7 多 9.3，线内；e2e 503 passed）；m7-pages 三引擎 27 过（47.5 秒），m6-pages 135 过，m6-acceptance 33 过。
+  - **最终分支 CI** 45048776015 第一次全绿：server (0) Test 879 / bootstrap 597.5，server (1) Test 890 / bootstrap 864.6（期限的 72.1%）；web 956 秒（Lint 96 / Unit 807 / Build 19，各步对 main 同比慢约 1.6 倍，同一运行第 0 路的 bootstrap 也慢：慢 runner，贴着 960 秒的报告线、在 20 分钟期限之内）；e2e 两片 697、749 秒。
+  - **合并**：`--no-ff` 合入 main，`89be91e5`（父 `3d9293bd`、`3280e48e`），推送后以 `ls-remote` 核对。**main CI** 45051719903 第一次全绿：server (0) Test 869 / bootstrap 585.2，server (1) Test 1002 / bootstrap 970.9（80.9%，第一次越过八成的报告线）；web 604 秒（60 / 508 / 12），e2e 两片 817、719 秒。P4 不改 Go，同一份 Go 在 main 44989539530 为 736.3 秒；这次两路的 bootstrap 同比慢 1.2–1.3 倍而同一运行的 web 正常，是两台 server runner 慢。已报告负责人，建议只调 `tools/go-test-shard.sh` 的分界、把第 1 路的一部分测试移到第 0 路（不加作业、不改期限），等负责人定。
+  - **归档与清理**：归档 `.superpowers/sdd/M7-P4-integration-20261123`（载荷 3562 个文件，分类只有可复现与证据两种、没有未知，`source_unchanged` 为真，清理之后核过）；`cleanup.log`（2026-11-22T18:23:33Z）：worktree `m7-p4` 已删，本地分支 `codex/m7-p4`（在 `3280e48e`）与远端分支已删。

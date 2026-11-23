@@ -83,7 +83,6 @@ export const IssueActivityItem = observer(function IssueActivityItem(props: TIss
     case "archived_at":
       return <IssueArchivedAtActivity {...componentDefaultProps} />;
     case "intake":
-    case "inbox":
       return <IssueInboxActivity {...componentDefaultProps} />;
     default:
       return null;

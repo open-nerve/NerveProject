@@ -3,15 +3,13 @@
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { runInAction } from "mobx";
-import { AxiosHeaders, type AxiosResponse } from "axios";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import type { TInboxIssue } from "@nerve/types";
-import { EInboxIssueSource, EInboxIssueStatus } from "@nerve/types";
-import { FakeNerve } from "@/lib/auth/fake-nerve";
+import type { IntakeIssueCreate } from "@nerve/api-client";
+import { FakeNerve, json } from "@/lib/auth/fake-nerve";
 import { until } from "@/lib/auth/fake-time";
 import { StoreContext } from "@/lib/store-context";
 import { APIService } from "@/services/api.service";
-import { issueOf } from "@/store/issue/fake-issues";
+import { detailOf } from "@/store/issue/intake/fake-intake";
 import { loadProjects, projectOf } from "@/store/project/fake-projects";
 import { loadWorkspaces, workspaceOf } from "@/store/workspace/fake-workspaces";
 import type { RootStore } from "@/store/root.store";
@@ -37,7 +35,7 @@ vi.mock("react-router", async (original) => ({
   ...(await original<typeof import("react-router")>()),
   useNavigate: () => () => undefined,
 }));
-vi.mock("@/hooks/store/use-project-inbox", () => ({ useProjectInbox: () => binding.app!.projectInbox }));
+vi.mock("@/hooks/store/use-intake", () => ({ useIntake: () => binding.app!.issue.intake }));
 vi.mock("@/hooks/store/use-workspace", () => ({ useWorkspace: () => binding.app!.workspaceRoot }));
 class NoResize {
   observe() {}
@@ -82,9 +80,6 @@ afterEach(async () => {
   vi.unstubAllGlobals();
   vi.useRealTimers();
 });
-function reply(data: TInboxIssue): AxiosResponse<TInboxIssue> {
-  return { data, status: 200, statusText: "OK", headers: {}, config: { headers: new AxiosHeaders() } };
-}
 async function pasteImage() {
   const file = new File([new Uint8Array([137, 80, 78, 71])], "diagram.png", { type: "image/png" });
   const event = new Event("paste", { bubbles: true, cancelable: true });
@@ -103,18 +98,6 @@ async function pasteImage() {
 it("the unopened intake form keeps a pasted image out and sends no file request of any kind", async () => {
   const calls = (["get", "post", "put", "patch", "delete", "request"] as const).map((method) =>
     vi.spyOn(APIService.prototype, method)
-  );
-  const post = calls[1]!.mockResolvedValue(
-    reply({
-      id: "inbox-row",
-      status: EInboxIssueStatus.PENDING,
-      snoozed_till: null,
-      duplicate_to: undefined,
-      source: EInboxIssueSource.IN_APP,
-      issue: issueOf("R1", project.id, project.workspace_id),
-      created_by: "actor",
-      duplicate_issue_detail: undefined,
-    })
   );
   await act(async () =>
     root.render(
@@ -140,15 +123,21 @@ it("the unopened intake form keeps a pasted image out and sends no file request 
   await act(async () => {
     host.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
   });
-  await act(async () => until(() => post.mock.calls.length === 1, "intake POST"));
-  expect(post).toHaveBeenCalledExactlyOnceWith(
-    `/api/workspaces/${ws.slug}/projects/${project.id}/inbox-issues/`,
-    expect.objectContaining({ issue: expect.objectContaining({ name: "New intake" }) })
-  );
-  const sent = (post.mock.calls[0]![1] as { issue: { description_html: string } }).issue.description_html;
+  await act(async () => until(() => nerve.calls.length === 1, "intake POST"));
+  const submission = `/api/v0/projects/${project.id}/intake-issues`;
+  expect(nerve.calls[0]).toMatchObject({
+    method: "POST",
+    path: submission,
+    body: expect.objectContaining({ name: "New intake" }),
+  });
+  const sent = (nerve.calls[0]!.body as IntakeIssueCreate).description_html;
   expect(sent).not.toMatch(/image-component|<img/);
-  // No other old-service call, no generated-client request and no raw transfer happened at any point.
-  for (const spy of calls) if (spy !== post) expect(spy).not.toHaveBeenCalled();
-  expect(nerve.calls.map((call) => `${call.method} ${call.path}`)).toEqual([]);
+  await act(async () => {
+    nerve.calls[0]!.answer(json(201, detailOf("new", { project_id: project.id, workspace_id: ws.id })));
+    await vi.advanceTimersByTimeAsync(1_000);
+  });
+  // No old-service call, no generated-client request but the submission and no raw transfer happened at any point.
+  for (const spy of calls) expect(spy).not.toHaveBeenCalled();
+  expect(nerve.calls.map((call) => `${call.method} ${call.path}`)).toEqual([`POST ${submission}`]);
   expect(raw).toEqual([]);
 });

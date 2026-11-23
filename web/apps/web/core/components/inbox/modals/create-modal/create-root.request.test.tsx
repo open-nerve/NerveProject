@@ -1,28 +1,20 @@
 // @vitest-environment jsdom
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { configure, runInAction } from "mobx";
-// MobX actions remain real; configurable descriptors allow call-through observations.
-configure({ safeDescriptors: false });
+import { runInAction } from "mobx";
 import React, { act, useEffect } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { InboxIssueCreateRoot } from "./create-root";
 import type { InboxIssueDescription } from "./issue-description";
-import type { TInboxIssue } from "@nerve/types";
-import { EInboxIssueStatus, EInboxIssueSource } from "@nerve/types";
-import { AxiosHeaders, type AxiosResponse } from "axios";
-import { heldChange } from "@/lib/auth/fake-tab";
-import { InboxIssueService } from "@/services/inbox";
-import { FakeNerve } from "@/lib/auth/fake-nerve";
-import { issueOf } from "@/store/issue/fake-issues";
+import type { InboxIssueProperties } from "./issue-properties";
+import { FakeNerve, json, problem } from "@/lib/auth/fake-nerve";
+import { until } from "@/lib/auth/fake-time";
+import { toasts } from "@/lib/fake-toast";
+import { detailOf, listPath, loadList, open, pageOf } from "@/store/issue/intake/fake-intake";
 import { workspaceOf, loadWorkspaces } from "@/store/workspace/fake-workspaces";
 import { projectOf, loadProjects } from "@/store/project/fake-projects";
-// Public APIService replies include Axios metadata; entity data remains the complete real response fixture.
-function reply<T>(data: T): AxiosResponse<T> {
-  return { data, status: 200, statusText: "OK", headers: {}, config: { headers: new AxiosHeaders() } };
-}
 vi.stubGlobal("localStorage", { getItem: () => null, setItem: () => {}, removeItem: () => {} });
-vi.mock("@/lib/auth/api-client", () => ({ tokenManager: {}, publicClient: {} }));
+vi.mock("@/lib/auth/api-client", () => ({ tokenManager: { state: { loginId: "intake" } }, publicClient: {} }));
 const binding = vi.hoisted(() => ({ app: undefined as unknown }));
 vi.mock("@/lib/store-context", () => ({
   get rootStore() {
@@ -31,13 +23,16 @@ vi.mock("@/lib/store-context", () => ({
 }));
 const { RootStore } = await import("@/store/root.store");
 let app: InstanceType<typeof RootStore>;
+let nerve: FakeNerve;
 const ws = workspaceOf("ws");
 const project = projectOf("A", ws.id);
+/** nerve's answer to the submission: the new work item, its intake pending. */
+const submitted = detailOf("new", { project_id: project.id, workspace_id: ws.id });
 
 beforeEach(async () => {
   vi.restoreAllMocks();
   vi.useFakeTimers();
-  const nerve = new FakeNerve();
+  nerve = new FakeNerve();
   app = new RootStore(nerve.client());
   binding.app = app;
   runInAction(() => {
@@ -45,7 +40,8 @@ beforeEach(async () => {
   });
   await loadWorkspaces(nerve, app.workspaceRoot, [ws]);
   await loadProjects(nerve, app.projectRoot.project, ws, [project]);
-  vi.useRealTimers();
+  nerve.calls.length = 0;
+  toasts.length = 0;
 });
 afterEach(() => {
   app.dispose();
@@ -57,9 +53,13 @@ vi.mock("@nerve/propel/toast", () => import("@/lib/fake-toast"));
 vi.mock("@/hooks/use-platform-os", () => ({ usePlatformOS: () => ({ isMobile: false }) }));
 const ui = vi.hoisted(() => ({ navigate: vi.fn(), close: vi.fn(), clear: vi.fn() }));
 vi.mock("react-router", () => ({ useNavigate: () => ui.navigate }));
-vi.mock("@/hooks/store/use-project-inbox", () => ({ useProjectInbox: () => app.projectInbox }));
+vi.mock("@/hooks/store/use-intake", () => ({ useIntake: () => app.issue.intake }));
 vi.mock("@/hooks/store/use-workspace", () => ({ useWorkspace: () => app.workspaceRoot }));
-vi.mock("./issue-properties", () => ({ InboxIssueProperties: () => null }));
+vi.mock("./issue-properties", () => ({
+  InboxIssueProperties: (props: React.ComponentProps<typeof InboxIssueProperties>) => (
+    <button type="button" aria-label="due date" onClick={() => props.handleData("target_date", "2026-12-01")} />
+  ),
+}));
 vi.mock("./issue-description", () => ({
   InboxIssueDescription: (props: React.ComponentProps<typeof InboxIssueDescription>) => {
     useEffect(() => {
@@ -118,61 +118,71 @@ async function fill(html: string) {
     description.dispatchEvent(new Event("input", { bubbles: true }));
   });
 }
-function envelope(): TInboxIssue {
-  return {
-    id: "inbox-row",
-    status: EInboxIssueStatus.PENDING,
-    snoozed_till: null,
-    duplicate_to: undefined,
-    source: EInboxIssueSource.IN_APP,
-    issue: issueOf("R1", project.id, project.workspace_id),
-    created_by: "actor",
-    duplicate_issue_detail: undefined,
-  };
+/** Submits the form; waits till its request is out. */
+async function submit() {
+  await act(async () => {
+    container.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    await until(() => nerve.calls.length === 1, "the submission");
+  });
+}
+/** nerve gives the submission response; waits till the form has followed it (the done condition). */
+async function answer(response: Response, done: () => boolean) {
+  await act(async () => {
+    nerve.calls[0]!.answer(response);
+    await until(done, "the form's follow-up");
+    await vi.advanceTimersByTimeAsync(100);
+  });
 }
 it.each(["<p>create</p>", ""])(
-  "sends form HTML through the real store/service POST with no provisional entity (%s)",
+  "submits the form through the generated client as the intake's body, no date key without a date, and opens the answer (%s)",
   async (html) => {
+    await loadList(nerve, app.issue.intake, project.id, open, pageOf([]));
+    nerve.calls.length = 0;
     await fill(html);
-    const http = heldChange<AxiosResponse<TInboxIssue>>();
-    const post = vi.spyOn(InboxIssueService.prototype, "post").mockReturnValue(http.sent);
-    await act(async () => {
-      container.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    await submit();
+    expect(nerve.calls[0]).toMatchObject({ method: "POST", path: listPath(project.id) });
+    expect(nerve.calls[0]?.body).toStrictEqual({
+      name: "New intake",
+      description_html: html || "<p></p>",
+      priority: "none",
+      label_ids: [],
+      assignee_ids: [],
     });
-    expect(post).toHaveBeenCalledExactlyOnceWith(`/api/workspaces/${ws.slug}/projects/${project.id}/inbox-issues/`, {
-      source: EInboxIssueSource.IN_APP,
-      issue: {
-        name: "New intake",
-        description_html: html || "<p></p>",
-        priority: "none",
-        label_ids: [],
-        assignee_ids: [],
-        target_date: null,
-      },
-    });
-    expect(app.issue.issues.getIssueById("R1")).toBeUndefined();
+    expect(app.issue.issues.getIssueById(submitted.id)).toBeUndefined();
     expect(ui.navigate).not.toHaveBeenCalled();
     expect(ui.close).not.toHaveBeenCalled();
-    await act(async () => {
-      http.answer(reply(envelope()));
-    });
-    expect(app.issue.issues.getIssueById("R1")).toBeUndefined();
-    expect(app.projectInbox.getIssueInboxByIssueId("R1")).toBeDefined();
-    expect(app.projectInbox.inboxIssueIds).toEqual(["R1"]);
-    expect(app.projectInbox.inboxIssuePaginationInfo?.total_results).toBe(1);
-    expect(ui.navigate).toHaveBeenCalledTimes(1);
+    await answer(json(201, submitted), () => ui.close.mock.calls.length > 0);
+    expect(app.issue.issues.getIssueById(submitted.id)).toBeUndefined();
+    // the intake list held reads its first page again
+    expect(nerve.calls.slice(1)).toMatchObject([
+      { method: "GET", path: listPath(project.id), query: { status: "pending" } },
+    ]);
+    expect(ui.navigate).toHaveBeenCalledExactlyOnceWith(
+      `/${ws.slug}/projects/${project.id}/intake?currentTab=open&inboxIssueId=${submitted.id}`
+    );
     expect(ui.close).toHaveBeenCalledTimes(1);
   }
 );
-it("real HTTP rejection is extracted and consumed by the component without success actions", async () => {
-  await fill("<p>retry</p>");
-  const error = { code: "create-refused" };
-  const log = vi.spyOn(console, "error").mockImplementation(() => {});
-  vi.spyOn(InboxIssueService.prototype, "post").mockRejectedValue({ response: { data: error } });
-  await act(async () => {
-    container.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+it("sends the day chosen as a date string", async () => {
+  await fill("<p>due</p>");
+  await act(async () => container.querySelector<HTMLButtonElement>("button[aria-label='due date']")!.click());
+  await submit();
+  expect(nerve.calls[0]?.body).toStrictEqual({
+    name: "New intake",
+    description_html: "<p>due</p>",
+    priority: "none",
+    label_ids: [],
+    assignee_ids: [],
+    target_date: "2026-12-01",
   });
-  expect(log).toHaveBeenCalledWith(error);
+});
+it("says nerve's refusal through the refusal toast, without console.error and without a success's actions", async () => {
+  await fill("<p>retry</p>");
+  const log = vi.spyOn(console, "error");
+  await submit();
+  await answer(problem(409, "issue.intake_disabled"), () => toasts.length > 0);
+  expect(toasts).toEqual([{ type: "error", title: "toast.error", message: "errors.issue_intake_disabled" }]);
+  expect(log).not.toHaveBeenCalled();
   expect(ui.navigate).not.toHaveBeenCalled();
   expect(ui.close).not.toHaveBeenCalled();
   expect(ui.clear).not.toHaveBeenCalled();

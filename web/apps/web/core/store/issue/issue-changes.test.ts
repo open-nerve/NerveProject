@@ -602,7 +602,14 @@ it("post-write callers before actual dispatch share one future evidence token", 
   await Promise.all([first, second]);
   expect(tab.nerve.to("/api/v0/issues/x")).toHaveLength(1);
 });
-const resources = ["createLink", "removeLink", "createSubIssues", "removeSubIssue", "deleteSubIssue", "inbox"] as const;
+const resources = [
+  "createLink",
+  "removeLink",
+  "createSubIssues",
+  "removeSubIssue",
+  "deleteSubIssue",
+  "triage",
+] as const;
 async function resourceOperation(kind: (typeof resources)[number], refuse = false): Promise<() => Promise<unknown>> {
   const root = tab.app.issue;
   const detail = root.issueDetail;
@@ -648,18 +655,10 @@ async function resourceOperation(kind: (typeof resources)[number], refuse = fals
         ? detail.subIssues.removeSubIssue("ws", "A", "x", "child")
         : detail.subIssues.deleteSubIssue("ws", "A", "x", "child");
   }
-  const { InboxIssueStore } = await import("@/store/inbox/inbox-issue.store");
-  const { EInboxIssueStatus } = await import("@nerve/types");
-  const inbox = new InboxIssueStore(
-    "ws",
-    "A",
-    { issue: issueOf("x"), status: EInboxIssueStatus.PENDING } as never,
-    tab.app
+  vi.spyOn(root.intakeApi, "triage").mockImplementation(() =>
+    response({ ...issueDetailOf("x"), intake: { status: "accepted", snoozed_till: null, duplicate_to_id: null } })
   );
-  vi.spyOn(inbox.inboxIssueService, "update").mockImplementation(() =>
-    response({ status: EInboxIssueStatus.ACCEPTED } as never)
-  );
-  return () => inbox.updateInboxIssueStatus(EInboxIssueStatus.ACCEPTED);
+  return () => root.writes.triageIntake("x", { status: "accepted" }, root.scope("ws", "A"));
 }
 it.each(resources)("resource %s success takes new evidence after a pre-write GET", async (kind) => {
   const root = tab.app.issue;

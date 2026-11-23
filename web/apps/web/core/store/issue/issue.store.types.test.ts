@@ -52,7 +52,7 @@ it("keeps_is_subscribed_when_a_list_row_arrives", () => {
 it("keeps_intake_when_a_list_row_arrives", () => {
   const store = tab.app.issue.issues;
   const row: Issue = issueOf("R1");
-  const intake = { status: "snoozed", snoozed_till: "2026-10-20T09:00:00Z", duplicate_to_id: null } as const;
+  const intake = { status: "accepted", snoozed_till: null, duplicate_to_id: null } as const;
   accept([{ ...row, description_html: "<p>kept</p>", is_subscribed: false, intake }]);
   accept([{ ...row, name: "latest list name" }]);
   expect(store.getIssueById(row.id)?.name).toBe("latest list name");

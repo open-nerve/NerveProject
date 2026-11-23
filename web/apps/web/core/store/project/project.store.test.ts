@@ -50,7 +50,7 @@ afterEach(() => {
 
 describe("ProjectStore, the lists and the reads", () => {
   it("lists the address's projects as nerve gives them, and finds them by id and identifier", async () => {
-    const { nerve, router, store } = await unloaded();
+    const { nerve, store } = await unloaded();
     expect(store.workspaceProjectIds).toBeUndefined();
     expect(store.loader).toBe("init-loader");
 
@@ -64,8 +64,6 @@ describe("ProjectStore, the lists and the reads", () => {
     expect(store.getProjectById(ops.id)).toEqual(ops);
     expect(store.getProjectIdentifierById(web.id)).toBe("WEB");
     expect(store.getProjectByIdentifier("DOCS")).toEqual(docs);
-    router.setQuery({ workspaceSlug: "acme", projectId: web.id });
-    expect(store.currentProjectDetails).toEqual(web);
 
     // another of his workspaces: its projects are found by id, not by the address's identifiers
     await loadProjects(nerve, store, beta, [lab]);

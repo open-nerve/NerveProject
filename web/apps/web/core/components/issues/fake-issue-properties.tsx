@@ -27,9 +27,6 @@ vi.mock("@/hooks/store/use-issue-detail", () => ({ useIssueDetail: () => tab.app
 vi.mock("@/hooks/store/use-label", () => ({ useLabel: () => tab.app.label }));
 vi.mock("@/hooks/store/use-project", () => ({ useProject: () => tab.app.projectRoot.project }));
 vi.mock("@/hooks/store/use-workspace", () => ({ useWorkspace: () => tab.app.workspaceRoot }));
-vi.mock("@/hooks/store/use-project-inbox", () => ({
-  useProjectInbox: () => ({ getIssueInboxByIssueId: () => undefined }),
-}));
 vi.mock("@/hooks/store/user", () => ({
   useUser: () => tab.app.user,
   useUserPermissions: () => tab.app.user.permission,
@@ -46,9 +43,13 @@ export const choices = [
   },
   {
     name: "detail",
-    view: (project = "A") => (
-      <IssueLabel workspaceSlug="ws" projectId={project} issueId="x" disabled={false} onLabelUpdate={changed} />
-    ),
+    view: (project = "A") => {
+      // the detail's labels change by its own write (useIssueDetail().updateIssue), changed's here as the others' are
+      vi.spyOn(tab.app.issue.issueDetail, "updateIssue").mockImplementation(async (_slug, _project, _issue, data) =>
+        changed(data.label_ids ?? [])
+      );
+      return <IssueLabel workspaceSlug="ws" projectId={project} issueId="x" disabled={false} />;
+    },
   },
 ];
 beforeEach(async () => {

@@ -162,7 +162,6 @@
         "web/apps/web/core/components/issues/peek-overview/root.tsx",
         "web/apps/web/core/components/issues/workspace-draft/root.tsx",
         "web/apps/web/core/components/core/description-versions/root.tsx",
-        "web/apps/web/core/components/inbox/content/description-versions.tsx",
         "web/apps/web/app/(all)/\\[workspaceSlug\\]/(projects)/browse/\\[workItem\\]/page.tsx",
         "web/apps/web/app/(all)/\\[workspaceSlug\\]/(projects)/browse/\\[workItem\\]/layout.tsx",
         "web/apps/web/app/(all)/\\[workspaceSlug\\]/(projects)/projects/(detail)/\\[projectId\\]/issues/(detail)/\\[issueId\\]/page.tsx",
@@ -199,7 +198,16 @@
         "web/apps/web/core/components/workspace-notifications/root.tsx",
         "web/apps/web/core/components/workspace-notifications/sidebar/list.tsx",
         "web/apps/web/core/components/workspace-notifications/sidebar/tabs.tsx",
-        "web/apps/web/core/components/workspace-notifications/sidebar/header-options.tsx"
+        "web/apps/web/core/components/workspace-notifications/sidebar/header-options.tsx",
+        "web/apps/web/core/store/issue/intake/**",
+        "web/apps/web/core/hooks/store/use-intake.ts",
+        "web/apps/web/core/hooks/use-intake-counts.ts",
+        "web/apps/web/core/components/workspace/sidebar/projects-list.tsx",
+        "web/apps/web/core/components/inbox/content/root.tsx",
+        "web/apps/web/core/components/inbox/content/duplicate-of.tsx",
+        "web/apps/web/core/components/inbox/use-intake-list.ts",
+        "web/apps/web/core/components/inbox/root.tsx",
+        "web/apps/web/core/components/inbox/sidebar/list.tsx"
       ],
       "rules": {
         "no-restricted-imports": [
