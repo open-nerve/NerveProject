@@ -40,7 +40,7 @@ function Page() {
     <>
       <section ref={landing.list} tabIndex={-1} aria-label="list">
         {["i-a", "i-b", "i-c"].map((id) => (
-          <a key={id} href={`#${id}`} aria-label={id} aria-current={id === selected ? "true" : undefined}>
+          <a key={id} href={`#${id}`} aria-label={id} data-intake-row={id}>
             {id}
           </a>
         ))}

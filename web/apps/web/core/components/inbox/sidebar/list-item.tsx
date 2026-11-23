@@ -40,7 +40,8 @@ type Props = {
  * move (a push), named by its identifier, in the route's project, and its name; the one the page shows is current, and
  * pressing it again goes nowhere. It shows its identifier, its status by its name (a snooze the days it has to go,
  * IntakeStatusChip), which describes the link too, its name, when it was submitted, its priority, its labels (how many,
- * past three) and who submitted it, all as nerve listed it (IntakeIssue).
+ * past three) and who submitted it, all as nerve listed it (IntakeIssue). It is marked by its work item
+ * (data-intake-row), by which the page's landing of the focus finds it (useIntakeLanding, useLeavingRow).
  */
 export const IntakeListItem = observer(function IntakeListItem(props: Props) {
   const { workspaceSlug, projectId, row, selected, onOpen } = props;
@@ -58,6 +59,7 @@ export const IntakeListItem = observer(function IntakeListItem(props: Props) {
       aria-label={`${identifier} ${row.name}`}
       aria-describedby={status}
       aria-current={selected ? "true" : undefined}
+      data-intake-row={row.id}
       onClick={(event) => {
         if (selected) event.preventDefault();
         onOpen();

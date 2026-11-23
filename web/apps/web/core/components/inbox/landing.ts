@@ -20,6 +20,12 @@ export type IntakeLanding = {
    * the page shows instead (useIntakeLanding).
    */
   leave: (from: string, to: string | undefined) => void;
+  /**
+   * Gives the focus to the list's row of the work item id (its data-intake-row), else (none, or no such row) to the
+   * list's region, while the page shows the list; while it hides it, to the detail's region around the work item
+   * selected, else to the list's toggle: never to what the screen does not show.
+   */
+  land: (id: string | undefined) => void;
 };
 
 /**
@@ -34,8 +40,8 @@ export type IntakeShown = { list: boolean; first: string | undefined };
  * (to none). Each is the page's own doing, not the user's: a replace, so that Back never returns to a work item the tab
  * no longer lists; and only while the address still selects the work item left, never over a selection the user
  * changed meanwhile. The focus goes with the selection, never to the page's body nor to anything the screen does not
- * show: once the page shows the selection, while the list is on the screen, to its row (the list's link the address
- * selects, aria-current), else to the list's region; while the list is hidden (a narrow screen, a row pressed), its row
+ * show: once the page shows the selection, while the list is on the screen, to its row (the list's link of the work
+ * item selected), else to the list's region (land); while the list is hidden (a narrow screen, a row pressed), its row
  * and its region off the screen, to the detail's region around the work item selected, else, nothing selected nor to
  * be, to the list's toggle; nothing selected but a first row the page selects next, to that one's detail once shown,
  * never to the toggle that selection removes. It lands a microtask after the commit that shows it, after Headless UI
@@ -55,6 +61,13 @@ export function useIntakeLanding(shown: IntakeShown): IntakeLanding {
     addressed.current = selected;
     page.current = shown;
   });
+  const land = useCallback((id: string | undefined) => {
+    const place = page.current.list
+      ? ((id === undefined ? null : list.current?.querySelector<HTMLElement>(`[data-intake-row="${id}"]`)) ??
+        list.current)
+      : (detail.current ?? toggle.current);
+    place?.focus();
+  }, []);
   useEffect(() => {
     const awaited = landing.current;
     if (!awaited || awaited.to !== selected) return;
@@ -65,14 +78,8 @@ export function useIntakeLanding(shown: IntakeShown): IntakeLanding {
       return;
     }
     landing.current = undefined;
-    queueMicrotask(() => {
-      const place = listed
-        ? ((selected === undefined ? null : list.current?.querySelector<HTMLElement>('[aria-current="true"]')) ??
-          list.current)
-        : (detail.current ?? toggle.current);
-      place?.focus();
-    });
-  }, [selected]);
+    queueMicrotask(() => land(selected));
+  }, [selected, land]);
   const leave = useCallback(
     (from: string, to: string | undefined) => {
       if (addressed.current !== from) return;
@@ -89,5 +96,5 @@ export function useIntakeLanding(shown: IntakeShown): IntakeLanding {
     },
     [setParams]
   );
-  return { list, detail, toggle, leave };
+  return { list, detail, toggle, leave, land };
 }

@@ -23,6 +23,7 @@ import { useIntakeLanding } from "./landing";
 import { useIntakePageState } from "./page-state";
 import { IntakeSidebar } from "./sidebar/root";
 import { useIntakeList } from "./use-intake-list";
+import { useLeavingRow } from "./use-leaving-row";
 
 /** The window's width from which the list stands beside the detail: Tailwind's lg (64rem), the layout's classes'. */
 const BESIDE = 1024;
@@ -41,7 +42,8 @@ type TInboxIssueRoot = {
  * ↑ and ↓ step through the list (useIntakeArrowKeys). On a narrow screen, the list lies over the detail until a row is
  * pressed; with nothing selected, a named button shows or hides it (the detail's header has its own). The landing of
  * the focus as an action moves the selection (useIntakeLanding) is told whether the list is on the screen, and the
- * list's first row, so that the focus never lands on what the screen does not show (P5a R35).
+ * list's first row, so that the focus never lands on what the screen does not show (P5a R35); a row that has the focus
+ * and leaves the list gives it to the next row, else the previous, else the list (useLeavingRow).
  */
 export const InboxIssueRoot = observer(function InboxIssueRoot(props: TInboxIssueRoot) {
   const { workspaceSlug, projectId } = props;
@@ -63,6 +65,7 @@ export const InboxIssueRoot = observer(function InboxIssueRoot(props: TInboxIssu
   const answered = list.page !== undefined || list.read.error !== undefined;
   const first = list.page?.data[0]?.id;
   const landing = useIntakeLanding({ list: isMobileSidebar || width >= BESIDE, first });
+  const leaving = useLeavingRow(list.page?.data.map((row) => row.id) ?? [], landing.land);
 
   useEffect(() => {
     if (answered) setOpened(true);
@@ -107,6 +110,8 @@ export const InboxIssueRoot = observer(function InboxIssueRoot(props: TInboxIssu
       )}
       <div className="flex h-full w-full overflow-hidden bg-surface-1">
         <div
+          onFocus={leaving.onFocus}
+          onBlur={leaving.onBlur}
           className={cn(
             "absolute top-[50px] bottom-0 z-10 w-full flex-shrink-0 bg-surface-1 transition-all lg:!relative lg:!top-0 lg:w-2/6",
             // translated only while hidden on a narrow screen: an element translated at all, even by 0, is the
