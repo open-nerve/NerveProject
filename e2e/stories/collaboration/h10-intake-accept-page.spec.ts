@@ -52,6 +52,10 @@ test("H10 (page): alice, Web's admin, goes from its work items to its intake by 
   await intakeEntry(page, slug, web.id, 3).click();
   await expect.poll(() => shownRows(page)).toEqual([crash, slow, dark].map(rowName));
   await expect(page).toHaveURL(selecting(crash));
+  // Its detail drawn before any request is read on its way: a route set while the page still loads the detail's code
+  // makes WebKit fetch that code again, its preloads unused, and warn (as in h20-intake-late-pages.spec.ts;
+  // cp0fix-red-h10-load, under load)
+  await expectHeaderOf(page, crash);
 
   // Accepted through the modal, its state Web's default, its priority changed: the triage, then, held, the update
   // carrying the priority alone with the description the form always sends; meanwhile the modal says the work item is
