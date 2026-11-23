@@ -26,6 +26,8 @@ M4 的最终 C12、准确分支 CI 和未来 main 集成分别由[验收台账](
 
 **处理结果（M7/P2a）：** 接口一侧已定（[P2a spec](../specs/P2a-intake-submit-triage.md) §1、§2.2、§2.4）：只有应用内提交，`intake_issues` 不建来源列与外部来源三列，`FORMS`、`EMAIL` 不保留；提交者是条目与工作项共同的创建者（真实的调用者），没有系统代建；动态动词的 CHECK 只为 `field = 'intake'` 放开五个状态名（`00051`）；自动归档按状态组判定，在收集箱里的工作项在 Triage 状态组，按构造不会被自动归档，不另加条件。**仍待 P5**（收集箱的页面接通）：删除网页的 `FORMS` 分支（“Intake Form user”）与旧的 `inbox-issue` 服务、项目功能设置的说明按“只有应用内提交”改写、`select-duplicate.tsx` 的真实页面、窄屏；本条在 P5 关闭。
 
+**处理结果（M7/P5a）：** 网页的 `FORMS` 分支（“Intake Form user”）随旧详情树 `inbox/content/issue-root.tsx` 在 T6a 删除（`3ea45cd4`），旧的 `inbox-issue` 服务随旧数据层在 T6c 删除（`bd1802fd`）；项目功能设置的说明按设计不改：只有应用内提交，“在将工作项加入项目之前，先进行审议和讨论”照旧准确（M7 设计 `:97`，[P5a spec](../specs/P5a-web-intake.md) R24），该子项关闭。`select-duplicate.tsx` 的真实页面在 H10 (page)（`e2e/stories/collaboration/h10-intake-triage-page.spec.ts:152`：经选择器标重复，选择器不列条目自己与收集箱里别的条目）与 H20 (page) 三种引擎走过；窄屏在 H20 (page)（`h20-intake-pages.spec.ts:308`，800 宽：列表盖在详情上，按一行之后藏起，窄页头的菜单拒绝、接受、删除）。新建弹窗的其余随 P5b，本条在 P5b 关闭；保持 open。
+
 <a id="M7-02"></a>
 ## M7-02 通知发送时重新判权
 
@@ -70,6 +72,8 @@ M4 的最终 C12、准确分支 CI 和未来 main 集成分别由[验收台账](
 
 **处理结果（M7/P3d，删除工作项时清掉最近访问）：** 已实现（[P3d spec](../specs/P3d-recents.md) §2.6、R10）：navigation 的订阅者 `navigation_forget_deleted_issue_visits` 订 `issue.deleted`，在删除的事务里软删**所有人**指向这个工作项的最近访问，时刻与删除者取事件的，`visited_at` 不动；`deleteIssue` 的子树与 `deleteIntakeIssue` 删未接受的条目都经删除核心、每个工作项一个 `issue.deleted`，所以逐个盖住；已接受的条目的删除只删条目行，工作项与它的访问照旧。项目、工作区删除经 `navigation.delete_rows` 的第三步。证据：`TestRecentVisitsFollowDeletedWorkItems`、`TestRecentVisitWritesInterleave` 的记录 × 删除各格、e2e H17 的删除一步。旧 DTO 与版本、命令面板与页面的各项仍随 P5–P7；保持 open。
 
+**处理结果（M7/P5a，旧 DTO、版本与命令面板）：** 收集箱的过渡都已删除，没有给 M4 新接口加兼容层（[P5a spec](../specs/P5a-web-intake.md) §2.10）：旧的 `services/inbox/inbox-issue.service.ts`（旧地址与它的 DTO）、`@nerve/types` 的 `inbox.ts` 与最后的旧请求类型 `TLegacyIssueUpdateRequest` 随旧数据层在 T6c 删除（`bd1802fd`）；版本的 service `services/inbox/intake-work_item_version.service.ts`、DTO `intake-description-version.ts` 与 `inbox/content/description-versions.tsx` 在 T6a 删除（`3ea45cd4`），描述版本改经 M4 的版本接口（收集箱条目在工作项的写队列上恢复，§2.4）；关键词 `copy-hook` 的收集箱例外在 T6a 删除，新规则 `old-intake-urls` 拦住 Plane 的收集箱地址（T6c）。命令面板的收集箱结果：Plane 也没有收集箱的搜索结果，设计保留“转到收集箱”（M7 设计 `:245`），按 R24 关闭该项；“转到收集箱”改经入口规则 `intakeEntryOn`（M6-M7-07）。`frame-src`：收集箱页不嵌 iframe（`git grep -i iframe -- web/apps/web/core web/apps/web/app web/packages/editor/src` 为空），CSP 不改。新建弹窗的关闭政策随 P5b；迭代、视图的命令面板结果随 P6a/P6b。保持 open。
+
 <a id="M7-05"></a>
 ## M7-05 最后读者与全应用收口
 
@@ -86,3 +90,5 @@ M4 的最终 C12、准确分支 CI 和未来 main 集成分别由[验收台账](
 **何时验收：** 最后一个消费者的阶段，不等无期限收尾；结果双向回写 M6/M7。新页面同时遵循 ModalTitle、FieldError/useRefusedFocus、嵌套两级 Escape、带行名控件、按钮/菜单角色和翻译文字；M8 只做全应用最后核验。
 
 **处理结果（M7/P4，通知页的部分）：** 通知页照这些规则写（[P4 spec](../specs/P4-web-notifications.md) §2.6、§2.7、R16）：自定义暂缓弹窗的标题经 `ModalTitle`；它的两个字段的提示是 `FieldError`，控件以它为描述并带 `aria-invalid`，第一个被拒的经 `useRefusedFocus` 取得焦点；卡片的动作以那一行命名（“Mark WEB-12 Fix login read”“Archive …”“Snooze …”）；页签是 Headless `Tab`，类型筛选与视图是 `PopoverMenu` 里的 `<button aria-pressed>`，暂缓的预设是菜单项，“加载更多”是按钮；文字全部经 `t()`，en 与 zh-CN 同加。Escape 关上两个菜单、暂缓菜单与弹窗并把焦点还给按钮，在途时弹窗关不掉（H20 (page) 三种引擎、`snooze-modal.test.tsx`、`snooze-menu.test.tsx`）；弹窗里的日历或时间列表开着时的两级 Escape 没有单独的故事。`projectMemberIds` 的三个读者与 `getTabIndex` 的七个文件 P4 都没有改到，随 P5、P6a。保持 open。
+
+**处理结果（M7/P5a，收集箱的部分）：** `projectMemberIds` 的收集箱读者 `inbox/inbox-filter/filters/filter-selection.tsx` 随旧筛选树在 T6b 删除（`2ac1928c`），新的负责人与创建者筛选读路由项目的显式 id（`getProjectMemberIds(projectId, true)`，`inbox/filters/menu.tsx:106`，T7）；现余的两个读者都是视图的（上面 1、2），getter 的删除随 P6a（[P5a spec](../specs/P5a-web-intake.md) R23）。`getTabIndex` 的四个收集箱文件都在新建弹窗里，随 P5b。收集箱页照这些规则写（spec §2.7–§2.9、R35）：暂缓与选择器的弹窗标题经 `ModalTitle`（`inbox/modals/snooze-issue-modal.tsx:82`、`select-duplicate.tsx:98`），拒绝与删除是 `AlertModalCore`；暂缓的日子被拒时提示是 `FieldError`（`:104`），经 `useRefusedFocus` 取得焦点（`:59`）；列表的一行以“编号 名字”为名（`inbox/sidebar/list-item.tsx:59`）；页签是 Headless `Tab`；面包屑、上一条与下一条的名字经 `t()`，en 与 zh-CN 同加。H20 (page) 三种引擎核对：每个分诊弹窗以标题为名、焦点在里面、后面的页面隐藏，Escape 或取消关上之后焦点回打开它的按钮，在途时 Escape、点外面与取消都关不掉。保持 open。

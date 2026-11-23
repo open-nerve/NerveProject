@@ -148,6 +148,7 @@ P2a 不做：网页（P5）；Plane 的 `source`、`source_email`、`external_*`
 
 - P2b：列表、内容修改（经 §2.7 的接缝）、删除接口、待处理数（含到期暂缓）、Triage 宿主的资产、`intake.read`、`intake.update`、`intake.delete`、它们的矩阵与 H9、H11 的其余证据。
 - P5：网页的收集箱改用新接口与状态名，删除旧的 `inbox-issue` 服务与 `FORMS` 分支，`intake` 的动态渲染。
+  - **处理结果（M7/P5a）：** 网页的收集箱改用新接口（`IntakeService`、issue 根 store 的子 store `root.intake`，T2–T5）与状态名（`effectiveStatus`、`inbox_issue.*` 按状态名的文案）；旧的 `inbox-issue` 服务在 T6c、`FORMS` 分支在 T6a 删除；`intake` 的动态按状态名渲染（T9）（[P5a spec](P5a-web-intake.md) §2.1–§2.10）。
 
 ## 6. 风险
 

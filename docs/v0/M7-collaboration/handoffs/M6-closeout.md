@@ -82,6 +82,8 @@ created: 2026-11-10
 
 **何时验收：** M7 接通视图、收集箱的页面时，按 M7 的权限定这三个命令给谁（访客能否读这些页面），命令面板与侧栏同一规则，以单测钉住访客与成员两种角色。
 
+**处理结果（M7/P5a，收集箱的一半）：** 收集箱的页面给项目的管理员、成员与访客（访客能读收集箱），所以“转到收集箱”`nav_project_intake` 给有项目角色、收集箱开着的人：侧栏（`workspace/sidebar/project-navigation.tsx:120`）、页签栏（`navigation/use-navigation-items.ts:90`）与命令面板（`power-k/config/navigation/project-commands.ts:76`）共用一条规则 `intakeEntryOn`（`core/lib/intake-entry.ts:18-24`，不排除已归档的项目）（[P5a spec](../specs/P5a-web-intake.md) §2.5、R21）。单测钉住：规则本身六格（管理员、成员、访客、没有角色、关着、已归档，`core/lib/intake-entry.test.ts`）；命令面板与页签栏各给成员与访客、不给在项目里没有角色的工作区管理员，页签栏另有收集箱关着的一格（`project-commands.test.tsx:49`、`:54`，`use-navigation-items.test.tsx:41`、`:45`、`:49`）；侧栏给访客、不给没有角色的工作区管理员（`project-navigation.test.tsx:107`、`:113`）。收集箱的一半关闭；视图的两个命令随 P6a，保持 open。
+
 <a id="M6-M7-08"></a>
 ## M6-M7-08 首个投递任务的 CLI（原文转交）
 
