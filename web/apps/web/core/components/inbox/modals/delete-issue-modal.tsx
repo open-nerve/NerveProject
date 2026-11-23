@@ -44,7 +44,8 @@ export const DeleteInboxIssueModal = observer(function DeleteInboxIssueModal({
   };
 
   // Once nerve has deleted the work item, the selection leaves it and the modal goes with it; a refusal, said by
-  // onSubmit through the refusal toast, leaves the modal open, the focus in it, to try again or cancel.
+  // onSubmit through the refusal toast, leaves the modal open, the focus in it, to try again or cancel, but for one
+  // saying the work item is gone from the intake, on which the selection leaves it, the modal with it.
   const handleDelete = async () => {
     setIsDeleting(true);
     try {

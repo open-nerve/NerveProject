@@ -94,7 +94,10 @@ export type IntakeActions = {
    * it (R14), but for a duplicate; a refusal rejects, said unless underField shows it under the modal's field.
    */
   triage: (body: IntakeTriage, underField?: (error: unknown) => boolean) => Promise<void>;
-  /** Deletes the work item: once nerve confirms, the selection leaves it for none; rejects on a refusal, which is said. */
+  /**
+   * Deletes the work item: once nerve confirms, the selection leaves it for none; rejects on a refusal, which is said,
+   * one saying it is gone from the intake closing the modal, the selection left for none (nerve's conflict).
+   */
   remove: () => Promise<void>;
 };
 
@@ -204,6 +207,11 @@ export function useIntakeActions(
     else focus.land("primary");
     return true;
   };
+  /** A refusal of an acceptance or a deletion: said, nerve's conflict followed (conflicted). */
+  const sayAndFollow = (error: unknown) => {
+    refusalToast(error);
+    conflicted(error);
+  };
   /**
    * Sends a write of the work item, one out at a time (busy), followed in the detail's scope only: once nerve
    * confirms, resolves; a refusal, refused, then rejects; out of the scope, rejects as a change of session.
@@ -271,13 +279,7 @@ export function useIntakeActions(
       const held = getIssueDetailById(issueId);
       if (!open.current?.accepted && (held === undefined || inIntake(held))) {
         acceptedFor.current = neighbour();
-        await command(
-          () => root.writes.triageIntake(issueId, { status: "accepted" }, scope()),
-          (error) => {
-            refusalToast(error);
-            conflicted(error);
-          }
-        );
+        await command(() => root.writes.triageIntake(issueId, { status: "accepted" }, scope()), sayAndFollow);
       } else acceptedFor.current ??= neighbour();
       if (open.current) show({ ...open.current, accepted: true });
     },
@@ -285,9 +287,10 @@ export function useIntakeActions(
     remove: async () => {
       selection.leaving.current = true;
       try {
-        await command(() => root.writes.deleteIntake(issueId, scope()), refusalToast);
+        await command(() => root.writes.deleteIntake(issueId, scope()), sayAndFollow);
       } catch (error) {
-        selection.leaving.current = false;
+        // the work item gone from the intake, the refusal leaves it (conflicted): its absence is still the delete's
+        if (problemCode(error) !== "issue.intake_not_found") selection.leaving.current = false;
         throw error;
       }
       show(undefined);

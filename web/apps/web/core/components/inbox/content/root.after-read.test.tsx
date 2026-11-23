@@ -4,16 +4,22 @@ import { act, type ComponentProps } from "react";
 import { describe, expect, it, vi } from "vitest";
 import type { EmptyStateCompact, EmptyStateDetailed } from "@nerve/propel/empty-state";
 import { useCommentInput } from "@/components/comments/use-comment-input";
-import { json } from "@/lib/auth/fake-nerve";
+import { json, noContent, problem } from "@/lib/auth/fake-nerve";
+import { toasts } from "@/lib/fake-toast";
 import type { RootStore } from "@/store/root.store";
 import { detailOf, intakeIssueOf, listPath, pageOf } from "@/store/issue/intake/fake-intake";
 import {
   answer,
+  buttonSaying,
   callTo,
   callsTo,
+  chooseFromMenu,
   detailRegion,
+  dialogNamed,
+  listRegion,
   opened,
   page,
+  selected,
   settled,
   useIntakePageFixture,
 } from "../fake-intake-page";
@@ -21,7 +27,10 @@ import {
 // The detail region of a project's intake page once its selection's own read has answered (P5a spec 2.5–2.7; M5
 // design §9): that read owns the detail host and the input the host keeps, so the browser's reconnecting reads the
 // work item not again, nor withdraws the host with what the caller was writing; the list reads again, its read its
-// own. The page is the fixture's (fake-intake-page.tsx); the detail's body is a comment's box, its text kept by the host.
+// own. A content change or a deletion nerve refuses as gone from the intake (issue.intake_not_found) reads the work
+// item again in its turn (P5a spec 2.4), and the page follows: the selection cleared (replace) and why said once, the
+// delete modal gone with it. The page is the fixture's (fake-intake-page.tsx); the detail's body is a comment's box,
+// its text kept by the host.
 
 vi.mock("@/lib/auth/api-client", () => ({ tokenManager: { state: { loginId: "one" } }, publicClient: {} }));
 vi.mock("@/lib/store-context", async () => ({
@@ -68,6 +77,9 @@ function CommentBox() {
 useIntakePageFixture();
 
 const [x, y] = ["x", "y"].map((name) => intakeIssueOf(name));
+const ISSUE = "/api/v0/issues/i-x";
+const INTAKE = "/api/v0/intake-issues/i-x";
+const gone = { type: "error", title: "toast.error", message: "errors.issue_intake_not_found" };
 const comment = () => detailRegion()?.querySelector("textarea") ?? null;
 /** Writes text into the comment's box, as the browser's input does. */
 const write = (text: string) =>
@@ -90,8 +102,48 @@ describe("the detail region once its read has answered", () => {
     // the list reads again, its reconnect read its own (spec 2.5); the work item does not
     await answer(callTo("GET", listPath("p-web"), 2), json(200, pageOf([x, y])));
     expect(page.reads.map((read) => read.id)).toEqual(["i-x"]);
-    expect(callsTo("GET", "/api/v0/issues/i-x")).toEqual([]);
+    expect(callsTo("GET", ISSUE)).toEqual([]);
     expect(comment()).toBe(box);
     expect(comment()?.value).toBe("Seen twice");
+  });
+
+  it("clears the selection (replace) and says why once a change refused as gone from the intake reads it out of it", async () => {
+    await opened([x, y], detailOf("x"));
+    const app = page.tab.app.issue;
+    const renamed = app.issueDetail.updateIssue("acme", "p-web", "i-x", { name: "renamed" }).catch((error) => error);
+    await answer(callTo("PATCH", INTAKE), problem(404, "issue.intake_not_found"));
+    await answer(callTo("GET", ISSUE), json(200, detailOf("x", { intake: null })));
+    expect(await renamed).toMatchObject({ problem: { code: "issue.intake_not_found" } });
+    await settled();
+    expect(toasts).toEqual([gone]);
+    expect(page.where?.type).toBe("REPLACE");
+    expect(selected()).not.toBe("i-x");
+  });
+
+  it("closes the delete modal once nerve says the work item is gone from the intake, said once, the selection cleared", async () => {
+    await opened([x, y], detailOf("x"));
+    await chooseFromMenu("wide", "inbox_issue.actions.delete");
+    await act(async () => buttonSaying("Delete", dialogNamed("inbox_issue.modals.delete.title"))!.click());
+    await answer(callTo("DELETE", INTAKE), problem(404, "issue.intake_not_found"));
+    await answer(callTo("GET", ISSUE), problem(404, "issue.not_found"));
+    await settled();
+    expect(dialogNamed("inbox_issue.modals.delete.title")).toBeUndefined();
+    expect(toasts).toEqual([gone]);
+    expect(page.where?.type).toBe("REPLACE");
+    expect(selected()).not.toBe("i-x");
+    expect(document.activeElement).toBe(listRegion());
+  });
+
+  it("says nothing it cannot show of a work item deleted whose read again finds it out of the intake (accepted meanwhile)", async () => {
+    await opened([x, y], detailOf("x"));
+    await chooseFromMenu("wide", "inbox_issue.actions.delete");
+    await act(async () => buttonSaying("Delete", dialogNamed("inbox_issue.modals.delete.title"))!.click());
+    // nerve deletes the intake row alone of a work item accepted meanwhile: the work item stays, out of the intake
+    await answer(callTo("DELETE", INTAKE), noContent());
+    await answer(callTo("GET", ISSUE), json(200, detailOf("x", { intake: null })));
+    await settled();
+    expect(toasts).toEqual([{ type: "success", title: "success", message: "inbox_issue.modals.delete.success" }]);
+    expect(page.where?.type).toBe("REPLACE");
+    expect(selected()).not.toBe("i-x");
   });
 });

@@ -231,10 +231,36 @@ it.each<Kind>(["edit", "decline", "delete"])(
     await intakeHeld();
     await loadList(tab.nerve, tab.store, "p-web", { ...open, statuses: ["pending", "snoozed"] }, pageOf([x]));
     tab.nerve.calls.length = 0;
+    tab.nerve.respond = (call) => {
+      if (call.method === "GET" && call.path === ISSUE) call.answer(problem(404, "issue.not_found"));
+    };
     const change = await sent(tab.nerve, send(kind), request(kind), problem(404, "issue.intake_not_found"));
     expect(change.error).toMatchObject({ problem: { code: "issue.intake_not_found" } });
     expect(tab.store.getList("p-web", open)).toEqual(pageOf([y], null, 1));
     expect(tab.store.getList("p-web", { ...open, statuses: ["pending", "snoozed"] })).toEqual(pageOf([], null, 0));
+    await until(() => tab.nerve.to(countsPath(acme)).length === 1, "the counts again");
+    // a triage's page leaves the work item itself (the action model's conflict); a content change's or a deletion's
+    // follows canonical, which the work item read again in the refused write's turn tells
+    expect(tab.nerve.to(ISSUE)).toHaveLength(kind === "decline" ? 0 : 1);
+  }
+);
+
+it.each([
+  ["edit", json(200, detailOf("x", { intake: null, updated_at: at(1) })), null],
+  ["delete", problem(404, "issue.not_found"), undefined],
+] as const)(
+  "a %s refused as out of its intake reads the work item again in its turn: canonical then holds nerve's read",
+  async (kind, read, intake) => {
+    held();
+    await intakeHeld();
+    const refused = track(send(kind)());
+    await inTurn(tab.nerve, 0, request(kind), problem(404, "issue.intake_not_found"));
+    await inTurn(tab.nerve, 1, ["GET", ISSUE], read);
+    await until(() => refused.settled, "the refusal");
+    expect(refused.error).toMatchObject({ problem: { code: "issue.intake_not_found" } });
+    expect(tab.root.verification.isMissing("i-x")).toBe(intake === undefined);
+    expect(tab.root.issues.getIssueDetailById("i-x")?.intake).toBe(intake);
+    expect(tab.store.getList("p-web", open)).toEqual(pageOf([y], null, 1));
     await until(() => tab.nerve.to(countsPath(acme)).length === 1, "the counts again");
   }
 );

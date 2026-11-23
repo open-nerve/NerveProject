@@ -86,14 +86,14 @@ export const InboxContentRoot = observer(function InboxContentRoot(props: TInbox
  * The selected work item of a project's intake: read as the selection begins, by a read of its own (P4 m1), never by
  * an answer SWR keeps from an earlier one, and again only by a retry, not as the browser reconnects: the selection owns
  * the detail host and the input the host keeps, as the browse detail's route does (M5 design §9). Until that read
- * settles it says it is loading.
- * Once it settles, nerve refusing it (the work item is gone, or the caller may not read it), or answering a work item
- * not in the intake, clears the selection (replace) and says why, once (re-94 m4); any other failure is shown with
- * its retry, the selection kept. A later read that finds the work item gone, a triage's read again (R34), clears it
- * too, unless the caller is deleting it, whose clearing is the delete's. A work item it cannot show leaves the
- * intake's lists as well (drop), so that the page, which selects a list's first row once nothing is selected, selects
- * another row rather than it again. The header and the detail are drawn inside
- * the detail host, which withdraws them while a triage reads the work item again; the modals, outside it, stay.
+ * settles it says it is loading. Once it settles, nerve refusing it (the work item is gone, or the caller may not read
+ * it), or the work item held out of the intake, clears the selection (replace) and says why, once (re-94 m4); any
+ * other failure is shown with its retry, the selection kept. A later read that finds the work item gone or out of the
+ * intake, a triage's read again (R34) or a refused write's (spec 2.4), clears it too, unless the caller is deleting
+ * it, whose clearing is the delete's. A work item it cannot show leaves the intake's lists as well (drop), so that the
+ * page, which selects a list's first row once nothing is selected, selects another row rather than it again. The
+ * header and the detail are drawn inside the detail host, which withdraws them while a triage reads the work item
+ * again; the modals, outside it, stay.
  */
 const IntakeSelection = observer(function IntakeSelection(props: TInboxContentRoot & { identity: string }) {
   const { workspaceSlug, projectId, inboxIssueId: issueId, identity, isMobileSidebar, setIsMobileSidebar } = props;
@@ -105,10 +105,7 @@ const IntakeSelection = observer(function IntakeSelection(props: TInboxContentRo
   const { status: isSubmitting, setTitleStatus, setDescriptionStatus } = useIssueSaveStatus();
   const read = useSessionSWR(
     ["intake-issue", identity, workspaceSlug, projectId, issueId],
-    async (_identity, ws, project, id) => {
-      await operations.fetch(ws, project, id);
-      return root.issues.getIssueDetailById(id) ?? null;
-    },
+    (_identity, ws, project, id) => operations.fetch(ws, project, id),
     { revalidateOnMount: false, revalidateOnReconnect: false }
   );
   const { mutate } = read;
@@ -131,7 +128,9 @@ const IntakeSelection = observer(function IntakeSelection(props: TInboxContentRo
   const settled = answered && !read.isValidating;
   const error = settled && !(read.error instanceof SessionChangedError) ? read.error : undefined;
   const refused = error instanceof ApiError && UNREADABLE.has(error.status);
-  const outOfIntake = settled && error === undefined && read.data?.intake === null;
+  // the work item as held, by its read or a later one (a write refused as gone from the intake reads it again)
+  const outOfIntake =
+    settled && error === undefined && !leaving.current && root.issues.getIssueDetailById(issueId)?.intake === null;
   // a later read's conclusion, as the detail host draws it: not there, nor being read again
   const later = root.verification.getError(issueId);
   const gone =

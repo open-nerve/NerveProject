@@ -6,7 +6,13 @@ import type { WritesRoot } from "./issue-write-confirm";
 import type { IssueWriteScope } from "./root.store";
 
 /** nerve's refusals of a write of a work item another triaged first (R28): it is read again in the refused write's turn. */
-const TRIAGED_ELSEWHERE = new Set(["issue.intake_transition_not_allowed", "issue.intake_closed"]);
+const TRIAGED_ELSEWHERE: ReadonlySet<string> = new Set(["issue.intake_transition_not_allowed", "issue.intake_closed"]);
+/**
+ * nerve's refusals of a content change or a deletion that read the work item again in the refused write's turn: those
+ * of one triaged first, and of one gone from its intake (deleted, or its intake row), whose page follows canonical's
+ * read (P5a spec 2.4). A triage refused as gone is not read again: its page leaves the work item on that refusal.
+ */
+const CHANGED_ELSEWHERE: ReadonlySet<string> = new Set([...TRIAGED_ELSEWHERE, "issue.intake_not_found"]);
 
 /**
  * The writes of a work item of an intake (P5a spec 2.4, R3, R28, R34; re-94 S1), beside write()
@@ -21,7 +27,7 @@ export class IssueWriteIntake {
    * counts stay as they are.
    */
   edit(id: string, scope: IssueWriteScope, request: () => Promise<IssueDetailAnswer>): Promise<IssueDetailAnswer> {
-    return this.intake(id, scope, request, async (answer, permission) => {
+    return this.intake(id, scope, request, CHANGED_ELSEWHERE, async (answer, permission) => {
       this.root.issues.confirmChange({ id, beforeSnapshot: { kind: "unknown" }, after: answer }, permission);
       this.root.intake.confirm(answer);
       await this.root.issueDetail.refreshAfterChange(scope.workspaceSlug, scope.projectID, id);
@@ -39,7 +45,7 @@ export class IssueWriteIntake {
     request: () => Promise<IssueDetailAnswer>
   ): Promise<IssueDetailAnswer | undefined> {
     let read: IssueDetailAnswer | undefined;
-    await this.intake(id, scope, request, async (answer) => {
+    await this.intake(id, scope, request, TRIAGED_ELSEWHERE, async (answer) => {
       this.root.intake.confirm(answer);
       read = await this.readAgain(id, scope);
       this.countAgain(scope);
@@ -55,7 +61,7 @@ export class IssueWriteIntake {
    * (M7 design), so none goes with it.
    */
   async delete(id: string, scope: IssueWriteScope, request: () => Promise<null>): Promise<void> {
-    await this.intake(id, scope, request, async (_, permission) => {
+    await this.intake(id, scope, request, CHANGED_ELSEWHERE, async (_, permission) => {
       this.root.intake.drop(scope.projectID, id);
       if (!(await this.readAgain(id, scope)) && this.root.verification.isMissing(id))
         this.root.issues.confirmChange({ id, beforeSnapshot: { kind: "unknown" }, after: null }, permission);
@@ -68,12 +74,14 @@ export class IssueWriteIntake {
    * item is in its project's triage state, which no directory lists, so a list that needs the states would fail it),
    * confirms no project list, makes none unavailable or read again (issueMembership does not read intake: one could
    * take it for a row), and keeps no pending write (only project lists read one). nerve's answer, from the permission
-   * scope it was sent from, is confirmed by confirm; a refusal is followed (refused) and handed on. Gives the answer.
+   * scope it was sent from, is confirmed by confirm; a refusal is followed (refused, reading the work item again on the
+   * codes readAgainOn names) and handed on. Gives the answer.
    */
   private async intake<T extends IssueDetailAnswer | null>(
     id: string,
     scope: IssueWriteScope,
     request: () => Promise<T>,
+    readAgainOn: ReadonlySet<string>,
     confirm: (answer: T, permission: number) => Promise<void> | void
   ): Promise<T> {
     const root = this.root;
@@ -83,7 +91,7 @@ export class IssueWriteIntake {
     try {
       answer = await request();
     } catch (error) {
-      await this.refused(id, scope, error);
+      await this.refused(id, scope, error, readAgainOn);
       throw error;
     }
     root.assertActive();
@@ -95,18 +103,25 @@ export class IssueWriteIntake {
   }
   /**
    * What a refusal of a write of a work item of an intake changes, in the write's turn, before it is handed on (P5a
-   * spec 2.4, R28; re-94 m1): a work item gone from its intake (issue.intake_not_found) leaves every intake list; one
-   * another triaged first is read again (readAgain), its read confirmed to its intake lists; the counts are fetched
-   * again after either. Any other refusal leaves every value as it was.
+   * spec 2.4, R28; re-94 m1): a work item gone from its intake (issue.intake_not_found) leaves every intake list; on a
+   * code readAgainOn names it is read again (readAgain), its read confirmed to its intake lists, so that canonical
+   * holds nerve's read (one gone missing, one out of the intake without its intake row); the counts are fetched again
+   * after either. Any other refusal leaves every value as it was.
    */
-  private async refused(id: string, scope: IssueWriteScope, error: unknown): Promise<void> {
+  private async refused(
+    id: string,
+    scope: IssueWriteScope,
+    error: unknown,
+    readAgainOn: ReadonlySet<string>
+  ): Promise<void> {
     this.root.assertActive();
     const code = problemCode(error);
-    if (code === "issue.intake_not_found") this.root.intake.drop(scope.projectID, id);
-    else if (code !== undefined && TRIAGED_ELSEWHERE.has(code)) {
+    const gone = code === "issue.intake_not_found";
+    if (gone) this.root.intake.drop(scope.projectID, id);
+    if (code !== undefined && readAgainOn.has(code)) {
       const read = await this.readAgain(id, scope);
       if (read) this.root.intake.confirm(read);
-    } else return;
+    } else if (!gone) return;
     this.countAgain(scope);
   }
   /**
