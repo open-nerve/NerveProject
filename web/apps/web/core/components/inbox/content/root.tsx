@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import { useEffect, useRef, useState, type RefObject } from "react";
+import { useEffect, useRef, useState } from "react";
 import { observer } from "mobx-react";
 // nerve imports
 import { useTranslation } from "@nerve/i18n";
@@ -47,6 +47,8 @@ type TInboxContentRoot = {
    * selection, by a replace, the focus going with it (useIntakeLanding).
    */
   onLeave: IntakeLanding["leave"];
+  /** The region's element, the page's: where the page's landing gives the focus for the work item selected. */
+  region: IntakeLanding["detail"];
 };
 
 /** Refusals of a read that say the caller cannot read the work item. */
@@ -58,13 +60,12 @@ const UNREADABLE = new Set([401, 403, 404]);
  * permissions now, is a detail of its own, with its own read, inputs, modals and writes in flight.
  */
 export const InboxContentRoot = observer(function InboxContentRoot(props: TInboxContentRoot) {
-  const { workspaceSlug, projectId, inboxIssueId } = props;
+  const { workspaceSlug, projectId, inboxIssueId, region } = props;
   const { t } = useTranslation();
   const { rootIssueStore: root } = useIssueDetail();
   const { loginId } = useSession();
   const workspace = root.rootStore.workspaceRoot.getWorkspaceBySlug(workspaceSlug);
   const identity = root.permissionReads.identity(workspace?.id, [projectId], true);
-  const region = useRef<HTMLElement>(null);
   return (
     <section
       ref={region}
@@ -75,7 +76,6 @@ export const InboxContentRoot = observer(function InboxContentRoot(props: TInbox
       <IntakeSelection
         key={JSON.stringify([workspaceSlug, projectId, inboxIssueId, identity, loginId])}
         identity={identity}
-        region={region}
         {...props}
       />
     </section>
@@ -93,9 +93,7 @@ export const InboxContentRoot = observer(function InboxContentRoot(props: TInbox
  * another row rather than it again. The header and the detail are drawn inside
  * the detail host, which withdraws them while a triage reads the work item again; the modals, outside it, stay.
  */
-const IntakeSelection = observer(function IntakeSelection(
-  props: TInboxContentRoot & { identity: string; region: RefObject<HTMLElement | null> }
-) {
+const IntakeSelection = observer(function IntakeSelection(props: TInboxContentRoot & { identity: string }) {
   const { workspaceSlug, projectId, inboxIssueId: issueId, identity, isMobileSidebar, setIsMobileSidebar } = props;
   const { onLeave, region } = props;
   const { t } = useTranslation();

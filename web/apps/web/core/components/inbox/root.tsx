@@ -14,6 +14,8 @@ import { EmptyStateCompact } from "@nerve/propel/empty-state";
 import { cn } from "@nerve/utils";
 // components
 import { InboxLayoutLoader } from "@/components/ui/loader/layouts/project-inbox/inbox-layout-loader";
+// hooks
+import useSize from "@/hooks/use-window-size";
 // local imports
 import { InboxContentRoot } from "./content";
 import { useIntakeArrowKeys } from "./content/header/navigation";
@@ -21,6 +23,9 @@ import { useIntakeLanding } from "./landing";
 import { useIntakePageState } from "./page-state";
 import { IntakeSidebar } from "./sidebar/root";
 import { useIntakeList } from "./use-intake-list";
+
+/** The window's width from which the list stands beside the detail: Tailwind's lg (64rem), the layout's classes'. */
+const BESIDE = 1024;
 
 type TInboxIssueRoot = {
   workspaceSlug: string;
@@ -34,7 +39,9 @@ type TInboxIssueRoot = {
  * row by a replace, its own doing, as after an action cleared the selection. The whole layout waits for the page's
  * first read (InboxLayoutLoader); a later one, of another tab or other filters, waits in the list alone, the tabs kept.
  * ↑ and ↓ step through the list (useIntakeArrowKeys). On a narrow screen, the list lies over the detail until a row is
- * pressed; with nothing selected, a named button shows or hides it (the detail's header has its own).
+ * pressed; with nothing selected, a named button shows or hides it (the detail's header has its own). The landing of
+ * the focus as an action moves the selection (useIntakeLanding) is told whether the list is on the screen, and the
+ * list's first row, so that the focus never lands on what the screen does not show (P5a R35).
  */
 export const InboxIssueRoot = observer(function InboxIssueRoot(props: TInboxIssueRoot) {
   const { workspaceSlug, projectId } = props;
@@ -51,10 +58,11 @@ export const InboxIssueRoot = observer(function InboxIssueRoot(props: TInboxIssu
   const { filters } = useIntakePageState();
   const list = useIntakeList(projectId, filters);
   useIntakeArrowKeys(projectId, selectedId);
-  const landing = useIntakeLanding();
+  const [width] = useSize();
   // derived values
   const answered = list.page !== undefined || list.read.error !== undefined;
   const first = list.page?.data[0]?.id;
+  const landing = useIntakeLanding({ list: isMobileSidebar || width >= BESIDE, first });
 
   useEffect(() => {
     if (answered) setOpened(true);
@@ -85,6 +93,7 @@ export const InboxIssueRoot = observer(function InboxIssueRoot(props: TInboxIssu
       {!selectedId && (
         <div className="flex h-12 w-full items-center border-b border-subtle px-4 lg:hidden">
           <button
+            ref={landing.toggle}
             type="button"
             aria-label={t("inbox_issue.a11y.list_toggle")}
             aria-expanded={isMobileSidebar}
@@ -124,6 +133,7 @@ export const InboxIssueRoot = observer(function InboxIssueRoot(props: TInboxIssu
             projectId={projectId}
             inboxIssueId={selectedId}
             onLeave={landing.leave}
+            region={landing.detail}
           />
         ) : (
           <EmptyStateCompact

@@ -160,7 +160,7 @@ function Page() {
   const location = useLocation();
   held.where = { search: location.search, type: useNavigationType() };
   held.navigate = useNavigate();
-  const landing = useIntakeLanding();
+  const landing = useIntakeLanding({ list: true, first: undefined });
   const selected = params.get("inboxIssueId");
   return selected ? (
     <InboxContentRoot
@@ -170,6 +170,7 @@ function Page() {
       isMobileSidebar={false}
       setIsMobileSidebar={() => {}}
       onLeave={landing.leave}
+      region={landing.detail}
     />
   ) : (
     <p data-nothing />
