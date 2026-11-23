@@ -55,8 +55,7 @@
     },
     "intake_sidebar": {
       "title": "Log Intake requests",
-      "description": "Submit new requests to be reviewed, prioritized, and tracked within your project's workflow.",
-      "cta_primary": "Create Intake request"
+      "description": "Submit new requests to be reviewed, prioritized, and tracked within your project's workflow."
     },
     "intake_closed": {
       "title": "No request closed yet",

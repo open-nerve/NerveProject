@@ -2,24 +2,20 @@
   "inbox_issue": {
     "status": {
       "pending": {
-        "title": "Pending",
-        "description": "Pending"
+        "title": "Pending"
       },
       "declined": {
-        "title": "Declined",
-        "description": "Declined"
+        "title": "Declined"
       },
       "snoozed": {
         "title": "Snoozed",
         "description": "{days, plural, one{# day} other{# days}} to go"
       },
       "accepted": {
-        "title": "Accepted",
-        "description": "Accepted"
+        "title": "Accepted"
       },
       "duplicate": {
-        "title": "Duplicate",
-        "description": "Duplicate"
+        "title": "Duplicate"
       }
     },
     "modals": {
@@ -49,6 +45,14 @@
       "open": "Open work item",
       "mark_as_duplicate": "Mark as duplicate",
       "move": "Move {value} to project work items"
+    },
+    "activity": {
+      "pending": "ended the snooze of this work item.",
+      "snoozed": "snoozed this work item.",
+      "accepted": "accepted this work item from intake.",
+      "declined": "declined this work item from intake.",
+      "duplicate": "marked this work item as a duplicate.",
+      "updated": "updated the intake status of this work item."
     },
     "order_by": {
       "created_at": "Created at",

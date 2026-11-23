@@ -2,24 +2,20 @@
   "inbox_issue": {
     "status": {
       "pending": {
-        "title": "待处理",
-        "description": "待处理"
+        "title": "待处理"
       },
       "declined": {
-        "title": "已拒绝",
-        "description": "已拒绝"
+        "title": "已拒绝"
       },
       "snoozed": {
         "title": "已暂停",
         "description": "还剩{days, plural, one{# 天} other{# 天}}"
       },
       "accepted": {
-        "title": "已接受",
-        "description": "已接受"
+        "title": "已接受"
       },
       "duplicate": {
-        "title": "重复",
-        "description": "重复"
+        "title": "重复"
       }
     },
     "modals": {
@@ -49,6 +45,14 @@
       "open": "打开工作项",
       "mark_as_duplicate": "标记为重复",
       "move": "将 {value} 移至项目工作项"
+    },
+    "activity": {
+      "pending": "结束了这个工作项的暂缓。",
+      "snoozed": "暂缓了这个工作项。",
+      "accepted": "从收集箱接受了这个工作项。",
+      "declined": "从收集箱拒绝了这个工作项。",
+      "duplicate": "将这个工作项标为重复。",
+      "updated": "更新了这个工作项在收集箱中的状态。"
     },
     "order_by": {
       "created_at": "创建时间",

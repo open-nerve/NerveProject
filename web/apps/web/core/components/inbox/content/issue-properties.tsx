@@ -19,6 +19,8 @@ import type { TIssueOperations } from "@/components/issues/issue-detail";
 import { IssueLabel } from "@/components/issues/issue-detail/label";
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
+// local imports
+import { IntakeDuplicateOf } from "./duplicate-of";
 
 type Props = {
   workspaceSlug: string;
@@ -31,7 +33,7 @@ type Props = {
 /**
  * The properties of the selected work item of a project's intake, as held (P5a spec 2.9): its assignees, priority, due
  * date and labels, each changed through the work item's queue of writes; its state only once it is accepted, as a work
- * item in the intake is in a state no catalog lists.
+ * item in the intake is in a state no catalog lists; and the work item it duplicates, if any.
  */
 export const InboxIssueContentProperties = observer(function InboxIssueContentProperties(props: Props) {
   const { workspaceSlug, projectId, issueId, issueOperations, isEditable } = props;
@@ -141,6 +143,12 @@ export const InboxIssueContentProperties = observer(function InboxIssueContentPr
             </div>
           </div>
         </div>
+        {/* a link, not a control: never dimmed as the read-only properties are */}
+        <IntakeDuplicateOf
+          workspaceSlug={workspaceSlug}
+          projectId={projectId}
+          duplicateToId={issue.intake?.duplicate_to_id ?? null}
+        />
       </div>
     </div>
   );
