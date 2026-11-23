@@ -23,6 +23,28 @@ export async function intakeRowOf(db: Database, issueId: string) {
 }
 
 /**
+ * The live notifications of the account of receiverId about the work item of issueId, in the order they were made:
+ * each why he is sent it (sender), who made the change, by id, and the change it tells: its field, its verb and the
+ * values it moved from and to.
+ */
+export async function notificationRowsOf(db: Database, issueId: string, receiverId: string) {
+  return db.query<{
+    sender: string;
+    by: string | null;
+    field: string | null;
+    verb: string | null;
+    old_value: string | null;
+    new_value: string | null;
+  }>(
+    `SELECT sender, triggered_by_id::text AS by, data->'change'->>'field' AS field, data->'change'->>'verb' AS verb,
+            data->'change'->>'old_value' AS old_value, data->'change'->>'new_value' AS new_value
+       FROM notifications WHERE issue_id = $1 AND receiver_id = $2 AND deleted_at IS NULL
+      ORDER BY created_at, change_seq, id`,
+    [issueId, receiverId]
+  );
+}
+
+/**
  * The triage activities of the work item of issueId, in the order they were made: each its verb, the new status's
  * name, the statuses it moved from and to, and its actor, by id.
  */

@@ -77,9 +77,55 @@ export async function submitInOrder(
   );
 }
 
+/**
+ * Submits work items named names to the intake of the project of projectId as the caller of token, one after another
+ * (submitInOrder), and gives them in that order, one for each name.
+ */
+export async function submitNamed<const Names extends readonly string[]>(
+  api: Api,
+  token: string,
+  projectId: string,
+  names: Names
+): Promise<{ readonly [K in keyof Names]: Issue }> {
+  const issues = await submitInOrder(
+    api,
+    token,
+    projectId,
+    names.map((name) => ({ name }))
+  );
+  return issues as { readonly [K in keyof Names]: Issue };
+}
+
 /** The address of the intake page of the project of projectId in the workspace of slug. */
 export function intakePath(slug: string, projectId: string): string {
   return `/${slug}/projects/${projectId}/intake`;
+}
+
+/** An address of the intake page while it selects the work item issue (its query's inboxIssueId). */
+export function selecting(issue: Issue): RegExp {
+  return new RegExp(`[?&]inboxIssueId=${issue.id}(&|$)`);
+}
+
+/** The address of the triage of the work item issue. */
+export function triagePath(issue: Issue): string {
+  return `/api/v0/intake-issues/${issue.id}/triage`;
+}
+
+/** The identifier of the work item issue of Web, the world's project ("WEB-3"). */
+export function identifierOf(issue: Issue): string {
+  return `WEB-${issue.sequence_id}`;
+}
+
+/** The name of the row of the intake's list that shows the work item issue of Web: its identifier, and its name. */
+export function rowName(issue: Issue): string {
+  return `${identifierOf(issue)} ${issue.name}`;
+}
+
+/** The row of the list of the intake page's tab that shows the work item issue of Web, a link. */
+export function intakeRow(page: Page, issue: Issue): Locator {
+  return page
+    .getByRole("region", { name: "Intake work items", exact: true })
+    .getByRole("link", { name: rowName(issue), exact: true });
 }
 
 /**
@@ -147,6 +193,19 @@ export function readsOf(requests: readonly string[], issueId: string): string[] 
 /** The intake page's detail: the region around the work item it selects. */
 export function intakeDetail(page: Page): Locator {
   return page.getByRole("region", { name: "Intake work item", exact: true });
+}
+
+/** Waits for the header of the intake page's detail of the work item issue of Web: its identifier, its heading. */
+export async function expectHeaderOf(page: Page, issue: Issue): Promise<void> {
+  await expect(intakeDetail(page).getByRole("heading", { name: identifierOf(issue), exact: true })).toBeVisible();
+}
+
+/**
+ * The status named name that the header of the intake page's detail shows: of its wide and its narrow headers, the
+ * one the screen's width shows.
+ */
+export function shownStatus(page: Page, name: string): Locator {
+  return intakeDetail(page).getByText(name, { exact: true }).filter({ visible: true });
 }
 
 /**
