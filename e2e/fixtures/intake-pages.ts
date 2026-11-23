@@ -15,7 +15,7 @@ import {
 import { submitIntakeIssue } from "./intake";
 import type { Issue } from "./issues";
 import { person } from "./notification-pages";
-import { expectPopupBesideButton } from "./settings-pages";
+import { answerTo, expectPopupBesideButton } from "./settings-pages";
 
 // A project's intake page (M7 P5a spec 2.5–2.8, 2.12), as a person uses it: its address and its list's reads, what a
 // story finds on it by role and name, and the world of its stories. What its stories share with the cycle and the
@@ -251,4 +251,81 @@ export async function chooseOrder(page: Page, item: string): Promise<void> {
   await expectPopupBesideButton(menu, button);
   await menu.getByRole("menuitem", { name: item, exact: true }).click();
   await expect(menu).toHaveCount(0);
+}
+
+/** The address of the change and the deletion of the work item issue while it is in the intake (P5a spec 2.4, R3). */
+export function intakeEditPath(issue: Issue): string {
+  return `/api/v0/intake-issues/${issue.id}`;
+}
+
+/** The description of the work item issue on the intake page's detail: its editor, editable or not. */
+export function intakeDescription(page: Page, issue: Issue): Locator {
+  return intakeDetail(page).locator(`[id="editor-container-${issue.id}"] [contenteditable]`);
+}
+
+/** The field of a new comment on the work item issue, on the intake page's detail: its editor. */
+export function commentField(page: Page, issue: Issue): Locator {
+  return intakeDetail(page).locator(`[id^="editor-container-add_comment_${issue.id}_"] [contenteditable="true"]`);
+}
+
+/** A write of the API that a page sent: "<method> <path>", and its body, as JSON (null for none). */
+export type ApiWrite = { write: string; body: unknown };
+
+/**
+ * The writes of the API that page sends from now on, in the order they leave it (the array grows as they do), its
+ * session's refreshes aside: each read as it leaves, never stopped. Chromium shows a fetch's body only to a route, so
+ * there a route lets each request through; WebKit, its requests routed before the app's code loads, fetches what the
+ * app preloaded anew and warns that it went unused (I2), so there, and in Firefox, nothing is routed.
+ */
+export async function writesSeen(page: Page, browserName: string): Promise<ApiWrite[]> {
+  const writes: ApiWrite[] = [];
+  if (browserName === "chromium")
+    await page.route(
+      (url) => url.pathname.startsWith("/api/"),
+      (route) => route.fallback()
+    );
+  page.on("request", (request) => {
+    const { pathname } = new URL(request.url());
+    if (request.method() !== "GET" && pathname.startsWith("/api/v0/") && !pathname.startsWith("/api/v0/auth/"))
+      writes.push({ write: `${request.method()} ${pathname}`, body: request.postDataJSON() });
+  });
+  return writes;
+}
+
+/**
+ * Resolves, once nerve has answered it, with the body of the write of method to path that act makes page send, as
+ * writes (writesSeen's) saw it leave, and the answer's status.
+ */
+export async function wrote(
+  page: Page,
+  writes: readonly ApiWrite[],
+  method: string,
+  path: string,
+  act: () => Promise<unknown>
+): Promise<[unknown, number]> {
+  const at = writes.length;
+  const answer = await answerTo(page, method, path, async () => void (await act()));
+  return [writes[at]?.body, answer.status()];
+}
+
+/**
+ * Checks the save, after act, by which the editable description of the work item issue gives its blocks their ids (M4's
+ * migration, I2): the intake's change while the work item is in it (R3), of the description alone, its text text, and
+ * of no activity, as writes (writesSeen's) saw it leave; confirmed. The editor sends it 1.5 s after it shows the
+ * description, or after a version restored it: until then the description is unsaved, and a write that reads the work
+ * item again meanwhile (a comment's) withdraws the editor, which then holds the save back for its user, so a story
+ * waits for it before anything else.
+ */
+export async function expectBlocksIdentified(
+  page: Page,
+  writes: readonly ApiWrite[],
+  issue: Issue,
+  text: string,
+  act: () => Promise<unknown>
+) {
+  const html = new RegExp(`^<p class="editor-paragraph-block" data-id="[^"]+">${text}</p>$`);
+  expect(await wrote(page, writes, "PATCH", intakeEditPath(issue), act)).toEqual([
+    { description_html: expect.stringMatching(html), skip_activity: true },
+    200,
+  ]);
 }

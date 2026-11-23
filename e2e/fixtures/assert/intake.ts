@@ -23,6 +23,26 @@ export async function intakeRowOf(db: Database, issueId: string) {
 }
 
 /**
+ * The content of the work item of issueId as nerve keeps it: its name, its description, its priority, who wrote it
+ * last, by id, and whether it is deleted.
+ */
+export async function contentOf(db: Database, issueId: string) {
+  const [row] = await db.query<{
+    name: string;
+    description_html: string;
+    priority: string;
+    written_by: string | null;
+    deleted: boolean;
+  }>(
+    `SELECT name, description_html, priority, updated_by_id::text AS written_by, deleted_at IS NOT NULL AS deleted
+       FROM issues WHERE id = $1`,
+    [issueId]
+  );
+  if (!row) throw new Error(`no work item ${issueId}`);
+  return row;
+}
+
+/**
  * The live notifications of the account of receiverId about the work item of issueId, in the order they were made:
  * each why he is sent it (sender), who made the change, by id, and the change it tells: its field, its verb and the
  * values it moved from and to.
