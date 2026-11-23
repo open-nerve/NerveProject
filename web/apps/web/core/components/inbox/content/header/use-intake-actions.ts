@@ -102,11 +102,11 @@ export type IntakeActions = {
 };
 
 /**
- * What the caller is offered on a work item of a project's intake (P5a spec 2.8, R11, R15, R20, R27): an archived
- * project's, or one triaged already (accepted, declined, a duplicate), only its copy and its opening; else an admin
- * (a workspace admin who is the project's member too, as the permission store gives it) triages it, a snooze offering
- * its end and another day instead of a snooze, and deletes it; a member who submitted it deletes it; anyone else, a
- * guest who submitted it too, only copies and opens it. A snooze whose day has come is pending (effectiveStatus).
+ * What the caller is offered on a work item of a project's intake (P5a spec 2.8, R11, R15, R20, R27; P5b R15): an
+ * archived project's, or one triaged already, only its copy, and its opening once accepted (else the browse page sends
+ * it back here); else an admin (a workspace admin who is the project's member too, as the permission store gives it)
+ * triages it, a snooze offering its end and another day instead of a snooze, and deletes it; a member who submitted it
+ * deletes it; anyone else, a guest who submitted it too, only copies it. A snooze whose day has come is pending.
  */
 function offeredOn(
   detail: IssueDetail | undefined,
@@ -116,7 +116,8 @@ function offeredOn(
 ): IntakeAction[] {
   if (!detail) return [];
   const status = detail.intake ? effectiveStatus(detail.intake, new Date()) : undefined;
-  if (archived || (status !== "pending" && status !== "snoozed")) return ["copy", "open"];
+  if (archived || (status !== "pending" && status !== "snoozed"))
+    return status === "accepted" ? ["copy", "open"] : ["copy"];
   if (role === EUserPermissions.ADMIN)
     return [
       "accept",
@@ -124,12 +125,10 @@ function offeredOn(
       ...(status === "snoozed" ? (["unsnooze", "resnooze"] as const) : (["snooze"] as const)),
       "duplicate",
       "copy",
-      "open",
       "delete",
     ];
-  if (role === EUserPermissions.MEMBER && me !== undefined && detail.created_by_id === me)
-    return ["copy", "open", "delete"];
-  return ["copy", "open"];
+  if (role === EUserPermissions.MEMBER && me !== undefined && detail.created_by_id === me) return ["copy", "delete"];
+  return ["copy"];
 }
 
 /**

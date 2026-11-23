@@ -148,8 +148,10 @@ async function offeredIn(view: "wide" | "narrow") {
     .map((text) => text.slice("inbox_issue.actions.".length))
     .toSorted();
 }
-const TRIAGE = ["accept", "decline", "mark_as_duplicate", "copy", "open", "delete"];
-const READ = ["copy", "open"];
+const TRIAGE = ["accept", "decline", "mark_as_duplicate", "copy", "delete"];
+// opening the work item is offered on one accepted alone (P5b spec 2.4, R15)
+const READ_ACCEPTED = ["copy", "open"];
+const READ = ["copy"];
 
 describe("the header's action model (spec 2.8)", () => {
   it.each([
@@ -157,7 +159,7 @@ describe("the header's action model (spec 2.8)", () => {
     { who: "an admin", role: ADMIN, status: "snoozed", till: "later", offers: [...TRIAGE, "unsnooze", "resnooze"] },
     // a snooze whose day has come is pending
     { who: "an admin", role: ADMIN, status: "snoozed", till: "earlier", offers: [...TRIAGE, "snooze"] },
-    { who: "an admin", role: ADMIN, status: "accepted", offers: READ },
+    { who: "an admin", role: ADMIN, status: "accepted", offers: READ_ACCEPTED },
     { who: "an admin", role: ADMIN, status: "declined", offers: READ },
     { who: "an admin", role: ADMIN, status: "duplicate", offers: READ },
     { who: "a member who submitted it", role: MEMBER, mine: true, status: "pending", offers: [...READ, "delete"] },

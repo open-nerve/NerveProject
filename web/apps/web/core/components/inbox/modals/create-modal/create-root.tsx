@@ -25,6 +25,7 @@ import { useFormRefusal } from "@/lib/form-refusal";
 import { followInSession } from "@/lib/in-session";
 import { useRefusedFocus } from "@/lib/refused-focus";
 // local imports
+import { intakeAddress } from "../../address";
 import { InboxIssueDescription } from "./issue-description";
 import { InboxIssueProperties } from "./issue-properties";
 import { InboxIssueTitle } from "./issue-title";
@@ -178,7 +179,7 @@ export const InboxIssueCreateRoot = observer(function InboxIssueCreateRoot(props
       done: (submitted) => {
         if (!mounted.current) return;
         if (!createMore) {
-          navigate(`/${workspaceSlug}/projects/${projectId}/intake?currentTab=open&inboxIssueId=${submitted.id}`);
+          navigate(intakeAddress(workspaceSlug, projectId, submitted.id, submitted.intake));
           handleModalClose();
         } else {
           descriptionEditorRef?.current?.clearEditor();

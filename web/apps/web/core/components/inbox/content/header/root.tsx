@@ -101,15 +101,17 @@ export const IntakeHeader = observer(function IntakeHeader({ projectId, issueId,
         >
           {t(INTAKE_ACTION_LABELS.copy)}
         </Button>
-        <ControlLink
-          href={link}
-          onClick={() => void navigate(link)}
-          target="_self"
-          className={cn(getButtonStyling("secondary", "lg"), "gap-1.5")}
-        >
-          <NewTabOutline className="h-2.5 w-2.5" />
-          {t(INTAKE_ACTION_LABELS.open)}
-        </ControlLink>
+        {offered.includes("open") && (
+          <ControlLink
+            href={link}
+            onClick={() => void navigate(link)}
+            target="_self"
+            className={cn(getButtonStyling("secondary", "lg"), "gap-1.5")}
+          >
+            <NewTabOutline className="h-2.5 w-2.5" />
+            {t(INTAKE_ACTION_LABELS.open)}
+          </ControlLink>
+        )}
         {inMenu.length > 0 && (
           <CustomMenu
             ariaLabel={t("common.options")}

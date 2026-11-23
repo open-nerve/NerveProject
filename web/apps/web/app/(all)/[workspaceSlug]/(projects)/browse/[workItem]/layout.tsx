@@ -8,11 +8,13 @@ import { Fragment, useEffect, useState } from "react";
 import { observer } from "mobx-react";
 import type { IssueDetail } from "@nerve/api-client";
 import type { SWRResponse } from "swr";
-import { Outlet } from "react-router";
+import { Outlet, useNavigate } from "react-router";
 import { ContentWrapper } from "@/components/core/content-wrapper";
+import { intakeAddress } from "@/components/inbox/address";
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { useSession } from "@/lib/auth/use-session";
 import { useSessionSWR } from "@/lib/use-session-swr";
+import { inIntake } from "@/store/issue/intake/status";
 import { ProjectWorkItemDetailsHeader } from "./header";
 import type { Route } from "./+types/layout";
 
@@ -45,7 +47,9 @@ const ProjectIssueDetailsLayout = observer(function ProjectIssueDetailsLayout({
  * One visit of the route, whose lookup is its own: sent as the visit begins, and again only by an explicit retry. An
  * answer SWR keeps from an earlier visit of the route is not this visit's read, so nothing interactive mounts until
  * the visit's lookup has answered. The proven route owns the detail host and the input that host preserves, so a
- * reconnect alone does not read it again, as for the shared host reads (M5 design §226).
+ * reconnect alone does not read it again, as for the shared host reads (M5 design §226). A work item the lookup
+ * answers in its project's intake has no detail here: the intake page selects it instead, in place of this entry,
+ * whether the intake is on or off, and neither the header nor the detail mounts for it (P5b spec 2.4, R14).
  */
 const IssueRouteVisit = observer(function IssueRouteVisit({
   workspaceSlug,
@@ -56,6 +60,7 @@ const IssueRouteVisit = observer(function IssueRouteVisit({
   workItem: string;
   identity: string;
 }) {
+  const navigate = useNavigate();
   const { fetchIssueWithIdentifier } = useIssueDetail();
   const { data, error, isValidating, mutate } = useSessionSWR(
     ["issue-by-identifier", workspaceSlug, workItem, identity],
@@ -74,6 +79,14 @@ const IssueRouteVisit = observer(function IssueRouteVisit({
     };
   }, [mutate]);
   const pending = !answered || isValidating;
+  const toIntake =
+    !pending && !error && data && inIntake(data)
+      ? intakeAddress(workspaceSlug, data.project_id, data.id, data.intake)
+      : undefined;
+  useEffect(() => {
+    if (toIntake) void navigate(toIntake, { replace: true });
+  }, [toIntake, navigate]);
+  if (toIntake) return null;
   // One proven lookup supplies both halves; a cached identifier map is not a route read.
   const scope = JSON.stringify([data?.project_id, data?.id]);
   return (
