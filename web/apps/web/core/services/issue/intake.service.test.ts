@@ -114,6 +114,20 @@ it("deletes a work item of an intake by its id", async () => {
   expect(sent()).toEqual([{ method: "DELETE", path: "/api/v0/intake-issues/i-one", query: {}, body: undefined }]);
 });
 
+it("submits a work item to a project's intake by its id, the body as it is, and gives nerve's answer (201)", async () => {
+  const submitted = detailOf("new");
+  const { service, sent } = answering(json(201, submitted));
+  const body = {
+    name: "new",
+    description_html: "<p>new</p>",
+    priority: "high" as const,
+    label_ids: [],
+    assignee_ids: [],
+  };
+  expect((await settle(service.submit("p-web", body), "the submission")).value).toEqual(submitted);
+  expect(sent()).toEqual([{ method: "POST", path: "/api/v0/projects/p-web/intake-issues", query: {}, body }]);
+});
+
 it.each([
   [
     "triage",
@@ -126,6 +140,11 @@ it.each([
     "issue.intake_closed",
   ],
   ["delete", (service: IntakeService): Promise<unknown> => service.delete("i-one"), "issue.intake_not_found"],
+  [
+    "submission",
+    (service: IntakeService): Promise<unknown> => service.submit("p-web", { name: "x" }),
+    "issue.intake_disabled",
+  ],
 ] as const)("hands nerve's refusal of a %s to the caller", async (_, send, code) => {
   const { service } = answering(problem(409, code));
   const refused = await settle(send(service), "the refusal");

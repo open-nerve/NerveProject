@@ -24,8 +24,6 @@ import type { IFavoriteStore } from "./favorite.store";
 import { FavoriteStore } from "./favorite.store";
 import type { IGlobalViewStore } from "./global-view.store";
 import { GlobalViewStore } from "./global-view.store";
-import type { IProjectInboxStore } from "./inbox/project-inbox.store";
-import { ProjectInboxStore } from "./inbox/project-inbox.store";
 import type { IInstanceStore } from "./instance.store";
 import { InstanceStore } from "./instance.store";
 import type { IIssueRootStore } from "./issue/root.store";
@@ -68,7 +66,6 @@ export class RootStore {
   theme: IThemeStore;
   instance: IInstanceStore;
   user: IUserStore;
-  projectInbox: IProjectInboxStore;
   notification: INotificationStore;
   favorite: IFavoriteStore;
   workItemFilters: IWorkItemFilterStore;
@@ -102,7 +99,6 @@ export class RootStore {
     this.asset = new RootAssetStore(this, api);
     this.state = new StateStore(this, api);
     this.label = new LabelStore(this, api);
-    this.projectInbox = new ProjectInboxStore(this);
     this.notification = new NotificationStore(this, api);
     this.favorite = new FavoriteStore(this);
     this.workItemFilters = new WorkItemFilterStore();

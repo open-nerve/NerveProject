@@ -6,12 +6,19 @@
 import { runInAction } from "mobx";
 import { computedFn } from "mobx-utils";
 // nerve imports
-import type { IntakeCounts, IntakeIssue, IntakeIssuePage, IssueDetail, Workspace } from "@nerve/api-client";
+import type {
+  IntakeCounts,
+  IntakeIssue,
+  IntakeIssueCreate,
+  IntakeIssuePage,
+  IssueDetail,
+  Workspace,
+} from "@nerve/api-client";
 // lib
 import type { Change } from "@/lib/reconciled";
 import { ReconciledByKey, dropped, replaced } from "@/lib/reconciled";
 // store
-import type { IssueRootStore } from "@/store/issue/root.store";
+import type { IssueRootStore, IssueWriteScope } from "@/store/issue/root.store";
 import type { IntakeFilters } from "./filters";
 import { filterKey, listQuery, matches } from "./filters";
 import { rowOf } from "./status";
@@ -70,6 +77,8 @@ export interface IIntakeStore {
   confirm: (answer: IssueDetail) => void;
   drop: (projectId: string, issueId: string) => void;
   countAgain: (workspace: WorkspaceRef) => void;
+  // submissions (R30)
+  submit: (scope: IssueWriteScope, body: IntakeIssueCreate) => Promise<IssueDetail>;
 }
 
 /**
@@ -81,7 +90,8 @@ export interface IIntakeStore {
  * the work items some filters select, by the project's id and the filters' key, the pages read so far as one page: its
  * own copy of nerve's rows, which a fetch of the first page replaces and nerve's answers to the writes of its work
  * items are confirmed into (confirm, drop: the write seam queues the writes, P5a spec 2.4); a fetch out meanwhile gets
- * each confirmation again on its answer (reconciled.ts). Fetches do not queue.
+ * each confirmation again on its answer (reconciled.ts). Fetches do not queue, nor does a submission to a project's
+ * intake (submit), after which its lists and the counts are read again.
  */
 export class IntakeStore implements IIntakeStore {
   /** Each workspace's pending counts, by its id, reconciled between fetches (reconciled.ts). */
@@ -181,6 +191,27 @@ export class IntakeStore implements IIntakeStore {
     if (this.counts.get(workspace.id) === undefined) return;
     void Promise.allSettled([this.fetchCounts(workspace)]);
   };
+
+  /**
+   * @description submits a work item to the project's intake (R30): no creation of a work item of the project's lists
+   * (it is in the project's triage state, out of them) and no write of a work item held, so it queues behind none.
+   * Gives nerve's answer, the new work item, for the caller to open. No list takes it in a place of its own (R31):
+   * each list held of the project reads its first page again (fetchList), and the workspace's counts are fetched again
+   * (countAgain); neither holds the caller up, nor fails the submission, which nerve made. A refusal fails it, every
+   * value as it was
+   */
+  submit = async (scope: IssueWriteScope, body: IntakeIssueCreate): Promise<IssueDetail> => {
+    const answer = await this.root.intakeApi.submit(scope.projectID, body);
+    this.readAgain(scope.projectID);
+    this.countAgain({ id: scope.workspaceID, slug: scope.workspaceSlug });
+    return answer;
+  };
+
+  /** Reads the first page of each list held of the project again, in place of its pages (fetchList); waits for none. */
+  private readAgain(projectId: string): void {
+    const lists = [...this.fetched.values()].filter((list) => list.projectId === projectId);
+    void Promise.allSettled(lists.map((list) => this.fetchList(projectId, list.filters)));
+  }
 
   /** Confirms to each list held of the project the change made of the list's filters (Reconciled.confirm). */
   private confirmTo(projectId: string, change: (filters: IntakeFilters) => Change<IntakeIssuePage>): void {

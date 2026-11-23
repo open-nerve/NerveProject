@@ -6,6 +6,7 @@
 import type {
   ApiClient,
   IntakeCounts,
+  IntakeIssueCreate,
   IntakeIssuePage,
   IntakeIssueUpdate,
   IntakeTriage,
@@ -74,6 +75,20 @@ export class IntakeService {
   async delete(issueId: string): Promise<void> {
     return unwrap(
       await this.api.DELETE("/api/v0/intake-issues/{issue_id}", { params: { path: { issue_id: issueId } } })
+    );
+  }
+
+  /**
+   * Submits a work item to a project's intake: createIssue's body but for what a triage's acceptance leaves to the
+   * project, a day due left out for none (C10); nerve's answer, the new work item, its intake pending
+   * (submitIntakeIssue).
+   */
+  async submit(projectId: string, body: IntakeIssueCreate): Promise<IssueDetail> {
+    return unwrap(
+      await this.api.POST("/api/v0/projects/{project_id}/intake-issues", {
+        params: { path: { project_id: projectId } },
+        body,
+      })
     );
   }
 }

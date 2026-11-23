@@ -4,8 +4,6 @@
  * See the LICENSE file for details.
  */
 
-import type { IssueDetail } from "@nerve/api-client";
-
 export enum EIssueLayoutTypes {
   LIST = "list",
   KANBAN = "kanban",
@@ -29,6 +27,3 @@ export interface IWorkItemPeekOverview {
   embedIssue?: boolean;
   embedRemoveCurrentNotification?: () => void;
 }
-
-/** Legacy update request context; skip_activity must never enter an issue entity. */
-export type TLegacyIssueUpdateRequest = Partial<IssueDetail> & { skip_activity?: string };

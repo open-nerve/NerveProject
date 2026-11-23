@@ -3170,6 +3170,53 @@
       }
     },
     {
+      "id": "old-intake-urls",
+      "phase": "M7/P5",
+      "why": "M7 的网页收集箱改调 /api/v0（P5a spec 2.1、2.10、2.11；设计 §15 A：收集箱放进 issue 模块）：Plane 的收集箱地址（inbox-issues 的列表、单条、新建、修改与删除，intake-issues，intake-work-items 的描述版本，inboxes）nerve 都不提供，旧 service、旧 store 与它们的 hook 已删除，web 的源文件（测试也算）不得再出现。无尾段的（…/inbox-issues 后接引号、查询或结尾）也算，这四个名字之后不接字母、数字、下划线或连字符；照 old-notification-urls 以 /api/workspaces/ 前缀锚定：/api/v0 的地址（/api/v0/projects/{project_id}/intake-issues、/api/v0/intake-issues/{issue_id} 与它的 /triage、/api/v0/workspaces/{slug}/intake-counts）、网页内的链接（/${workspaceSlug}/projects/${projectId}/intake）与组件目录的导入（@/components/inbox）都不碰；项目的分诊状态（…/intake-state/）是 plane-workspace-urls 的",
+      "files": {
+        "source": "^web/.*\\.(?:[cm]?[jt]sx?|json)$",
+        "flags": ""
+      },
+      "content": {
+        "source": "/api/workspaces/(?:[^/\"'`\\s]+/)+(?:inbox-issues|intake-issues|intake-work-items|inboxes)(?![\\w-])[^\"'`\\s]*",
+        "flags": ""
+      },
+      "samples": {
+        "hit": [
+          "/api/workspaces/${workspaceSlug}/projects/${projectId}/inbox-issues/",
+          "`/api/workspaces/${workspaceSlug}/projects/${projectId}/inbox-issues/${inboxIssueId}/?expand=issue_inbox`",
+          "/api/workspaces/${workspaceSlug}/projects/${projectId}/inbox-issues/${inboxIssueId}/",
+          "/api/workspaces/${workspaceSlug}/projects/${projectId}/intake-work-items/${intakeWorkItemId}/description-versions/",
+          "/api/workspaces/${workspaceSlug}/projects/${projectId}/intake-work-items/${intakeWorkItemId}/description-versions/${versionId}/",
+          "/api/workspaces/${workspaceSlug}/projects/${projectId}/intake-issues/",
+          "/api/workspaces/${workspaceSlug}/projects/${projectId}/inboxes/",
+          "\"/api/workspaces/ws/projects/p-1/inbox-issues\""
+        ],
+        "miss": [
+          "/api/v0/projects/{project_id}/intake-issues",
+          "/api/v0/intake-issues/{issue_id}",
+          "/api/v0/intake-issues/{issue_id}/triage",
+          "/api/v0/workspaces/{slug}/intake-counts",
+          "`/${workspaceSlug}/projects/${projectId}/intake`",
+          "import { InboxContentRoot } from \"@/components/inbox/content\";",
+          "/api/workspaces/${workspaceSlug}/projects/${projectId}/intake-state/",
+          "/api/workspaces/${workspaceSlug}/projects/${projectId}/inbox-issues-archive/"
+        ],
+        "files": {
+          "hit": [
+            "web/apps/web/core/services/inbox/inbox-issue.service.ts",
+            "web/apps/web/core/components/inbox/modals/create-modal/create-root.request.test.tsx"
+          ],
+          "miss": [
+            "docs/v0/M7-collaboration/specs/P5a-web-intake.md",
+            "tools/keywords.json",
+            "server/main.go",
+            "web/apps/web/app/assets/brand/mark.svg"
+          ]
+        }
+      }
+    },
+    {
       "id": "negation-filters",
       "phase": "M4/P10",
       "why": "M4/P10b 列表只支持正向 AND；删除否定 API、恒等显示别名和占位 hook，防止重新引入。",

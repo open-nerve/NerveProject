@@ -13,12 +13,10 @@ import { ETabIndices } from "@nerve/constants";
 import type { EditorRefApi } from "@nerve/editor";
 import { useTranslation } from "@nerve/i18n";
 
-import { Loader } from "@nerve/ui";
 import { getDescriptionPlaceholderI18n, getTabIndex } from "@nerve/utils";
 // components
 import { RichTextEditor } from "@/components/editor/rich-text/editor";
 // hooks
-import { useProjectInbox } from "@/hooks/store/use-project-inbox";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 type TInboxIssueDescription = {
   containerClassName?: string;
@@ -39,18 +37,10 @@ export const InboxIssueDescription = observer(function InboxIssueDescription(pro
     props;
   // i18n
   const { t } = useTranslation();
-  // store hooks
-  const { loader } = useProjectInbox();
+  // hooks
   const { isMobile } = usePlatformOS();
 
   const { getIndex } = getTabIndex(ETabIndices.INTAKE_ISSUE_FORM, isMobile);
-
-  if (loader === "issue-loading")
-    return (
-      <Loader className="min-h-[6rem] rounded-md border border-subtle">
-        <Loader.Item width="100%" height="140px" />
-      </Loader>
-    );
 
   return (
     <RichTextEditor
