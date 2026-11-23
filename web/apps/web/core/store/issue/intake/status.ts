@@ -35,3 +35,29 @@ export function inIntake(detail: IssueDetail | undefined): boolean {
   const intake = detail?.intake;
   return !!intake && intake.status !== "accepted";
 }
+
+/**
+ * @description the first moment of date's day in the browser's zone: the first that exists, for a day that skips its
+ * midnight
+ */
+const startOf = (date: Date): Date => new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+/**
+ * @description the day the snooze modal starts at (P5a spec 2.8, R13), at its first moment: the held snooze's day while
+ * it is tomorrow or later, else tomorrow, the earliest day a snooze is till (nerve refuses a moment not after the
+ * request, must_be_future, and any moment of today may be gone by as it is sent); tomorrow alone for a snooze not held
+ */
+export function snoozeDay(now: Date, held?: string | null): Date {
+  const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+  const day = held ? startOf(new Date(held)) : undefined;
+  return day && day.getTime() >= tomorrow.getTime() ? day : tomorrow;
+}
+
+/**
+ * @description the moment a snooze till day ends, as nerve takes it (R13): the day's first moment in the browser's
+ * zone, whatever moment of it the calendar gives; midnight, or, in a zone whose clocks skip it that day, the moment
+ * they skip to (the Date of a local time skipped is the moment after the gap, ECMAScript's rule)
+ */
+export function snoozeInstant(day: Date): string {
+  return startOf(day).toISOString();
+}

@@ -102,13 +102,15 @@ async function given(
   );
 }
 
+/** The selection the action model is given: its moves and the detail's region are the page's, not this test's. */
+const selection = { leave: () => {}, leaving: { current: false }, region: { current: null } };
 const Wide = observer(function Wide() {
-  const actions = useIntakeActions("acme", "p-web", "i-x", { clearSelection: () => {}, leaving: { current: false } });
+  const actions = useIntakeActions("acme", "p-web", "i-x", selection);
   held.actions = actions;
   return <IntakeHeader projectId="p-web" issueId="i-x" actions={actions} isSubmitting="saved" />;
 });
 const Narrow = observer(function Narrow() {
-  const actions = useIntakeActions("acme", "p-web", "i-x", { clearSelection: () => {}, leaving: { current: false } });
+  const actions = useIntakeActions("acme", "p-web", "i-x", selection);
   held.actions = actions;
   return (
     <IntakeMobileHeader

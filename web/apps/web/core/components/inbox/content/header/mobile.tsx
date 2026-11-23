@@ -33,7 +33,8 @@ type Props = {
  * The header of the selected work item of a project's intake, on a narrow screen (P5a spec 2.7, 2.8): the button that
  * shows or hides the list beside it, the previous and the next work items of the list (IntakeNavigation), the work
  * item's status, whether its name and description are saved, and one menu of every action the action model offers, as
- * the wide header's (IntakeHeader). Drawn only while the work item is held.
+ * the wide header's (IntakeHeader): it holds the status's primary action, its button where the focus lands for it
+ * (data-intake-primary, R35), and waits while a triage is out (busy). Drawn only while the work item is held.
  */
 export const IntakeMobileHeader = observer(function IntakeMobileHeader(props: Props) {
   const { projectId, issueId, actions, isSubmitting, isMobileSidebar, setIsMobileSidebar } = props;
@@ -58,15 +59,16 @@ export const IntakeMobileHeader = observer(function IntakeMobileHeader(props: Pr
         <IntakeNavigation projectId={projectId} issueId={issueId} />
         <IntakeStatusChip intake={detail.intake} />
         <NameDescriptionUpdateStatus isSubmitting={isSubmitting} />
-        <div className="ml-auto">
+        <div className="ml-auto" data-intake-primary={actions.primary === undefined ? undefined : true}>
           <CustomMenu
             ariaLabel={t("common.options")}
             customButton={<MoreHorizontalOutline className="size-4" />}
             customButtonClassName={getIconButtonStyling("secondary", "lg")}
             placement="bottom-end"
+            disabled={actions.busy}
           >
             {actions.offered.map((action) => (
-              <CustomMenu.MenuItem key={action} onClick={() => actions.take(action)}>
+              <CustomMenu.MenuItem key={action} onClick={(event) => actions.take(action, event.currentTarget)}>
                 {t(INTAKE_ACTION_LABELS[action])}
               </CustomMenu.MenuItem>
             ))}

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
-import { act, type ComponentProps } from "react";
+import { act, useRef, type ComponentProps } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { observer } from "mobx-react";
 import { MemoryRouter, Route, Routes, useLocation, useNavigationType, useSearchParams } from "react-router";
@@ -58,11 +58,13 @@ const Page = observer(function Page() {
   const location = useLocation();
   held.where = { search: location.search, type: useNavigationType() };
   held.setFilters = setFilters;
+  const listRef = useRef<HTMLElement>(null);
   return (
     <IntakeSidebar
       workspaceSlug="acme"
       projectId="p-web"
       list={list}
+      listRef={listRef}
       selectedId={params.get("inboxIssueId") ?? undefined}
       onOpen={() => held.opened++}
     />

@@ -4,23 +4,19 @@
  * See the LICENSE file for details.
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import { observer } from "mobx-react";
-import { useSearchParams } from "react-router";
 // nerve imports
-import type { IssueDetail } from "@nerve/api-client";
 import { useTranslation } from "@nerve/i18n";
 import { setToast, TOAST_TYPE } from "@nerve/propel/toast";
 import { ContentWrapper } from "@nerve/ui";
 // components
 import { IssueDetailHost } from "@/components/issues/detail-host";
 import { useIssueOperations } from "@/components/issues/issue-detail/use-issue-operations";
-import { CreateUpdateIssueModal } from "@/components/issues/issue-modal/modal";
 import { useIssueSaveStatus } from "@/components/issues/use-issue-save-status";
 import { PlanningReadFailure } from "@/components/planning/read-failure";
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
-import { useProject } from "@/hooks/store/use-project";
 import { useRefusalToast } from "@/hooks/use-refusal-toast";
 // lib
 import { ApiError } from "@/lib/api-error";
@@ -29,6 +25,8 @@ import { useSession } from "@/lib/auth/use-session";
 import { problemMessageKey } from "@/lib/error-messages";
 import { useSessionSWR } from "@/lib/use-session-swr";
 // local imports
+import type { IntakeLanding } from "../landing";
+import { IntakeAcceptModal } from "../modals/accept";
 import { DeclineIssueModal } from "../modals/decline-issue-modal";
 import { DeleteInboxIssueModal } from "../modals/delete-issue-modal";
 import { SelectDuplicateInboxIssueModal } from "../modals/select-duplicate";
@@ -44,6 +42,11 @@ type TInboxContentRoot = {
   inboxIssueId: string;
   isMobileSidebar: boolean;
   setIsMobileSidebar: (value: boolean) => void;
+  /**
+   * Leaves the selected work item for another, or none, as an action on it ends or the page cannot show it: the page's
+   * selection, by a replace, the focus going with it (useIntakeLanding).
+   */
+  onLeave: IntakeLanding["leave"];
 };
 
 /** Refusals of a read that say the caller cannot read the work item. */
@@ -61,8 +64,10 @@ export const InboxContentRoot = observer(function InboxContentRoot(props: TInbox
   const { loginId } = useSession();
   const workspace = root.rootStore.workspaceRoot.getWorkspaceBySlug(workspaceSlug);
   const identity = root.permissionReads.identity(workspace?.id, [projectId], true);
+  const region = useRef<HTMLElement>(null);
   return (
     <section
+      ref={region}
       aria-label={t("inbox_issue.a11y.detail")}
       tabIndex={-1}
       className="relative flex h-full w-full flex-col overflow-hidden outline-none"
@@ -70,6 +75,7 @@ export const InboxContentRoot = observer(function InboxContentRoot(props: TInbox
       <IntakeSelection
         key={JSON.stringify([workspaceSlug, projectId, inboxIssueId, identity, loginId])}
         identity={identity}
+        region={region}
         {...props}
       />
     </section>
@@ -87,12 +93,14 @@ export const InboxContentRoot = observer(function InboxContentRoot(props: TInbox
  * another row rather than it again. The header and the detail are drawn inside
  * the detail host, which withdraws them while a triage reads the work item again; the modals, outside it, stay.
  */
-const IntakeSelection = observer(function IntakeSelection(props: TInboxContentRoot & { identity: string }) {
+const IntakeSelection = observer(function IntakeSelection(
+  props: TInboxContentRoot & { identity: string; region: RefObject<HTMLElement | null> }
+) {
   const { workspaceSlug, projectId, inboxIssueId: issueId, identity, isMobileSidebar, setIsMobileSidebar } = props;
+  const { onLeave, region } = props;
   const { t } = useTranslation();
   const { rootIssueStore: root } = useIssueDetail();
   const refusalToast = useRefusalToast();
-  const [, setSearchParams] = useSearchParams();
   const operations = useIssueOperations(workspaceSlug, projectId, issueId);
   const { status: isSubmitting, setTitleStatus, setDescriptionStatus } = useIssueSaveStatus();
   const read = useSessionSWR(
@@ -116,21 +124,9 @@ const IntakeSelection = observer(function IntakeSelection(props: TInboxContentRo
       selected = false;
     };
   }, [mutate]);
-  const clearSelection = useCallback(
-    () =>
-      setSearchParams(
-        (params) => {
-          const next = new URLSearchParams(params);
-          next.delete("inboxIssueId");
-          return next;
-        },
-        { replace: true }
-      ),
-    [setSearchParams]
-  );
   // whether the caller is deleting the work item, whose absence is then the delete's to follow
   const leaving = useRef(false);
-  const actions = useIntakeActions(workspaceSlug, projectId, issueId, { clearSelection, leaving });
+  const actions = useIntakeActions(workspaceSlug, projectId, issueId, { leave: onLeave, leaving, region });
 
   const settled = answered && !read.isValidating;
   const error = settled && !(read.error instanceof SessionChangedError) ? read.error : undefined;
@@ -159,8 +155,8 @@ const IntakeSelection = observer(function IntakeSelection(props: TInboxContentRo
         message: t(problemMessageKey(outOfIntake ? "issue.intake_not_found" : "issue.not_found")),
       });
     root.intake.drop(projectId, issueId);
-    clearSelection();
-  }, [refused, outOfIntake, gone, error, later, refusalToast, t, clearSelection, root, projectId, issueId]);
+    onLeave(issueId, undefined);
+  }, [refused, outOfIntake, gone, error, later, refusalToast, t, onLeave, root, projectId, issueId]);
 
   return (
     <>
@@ -195,7 +191,7 @@ const IntakeSelection = observer(function IntakeSelection(props: TInboxContentRo
           {t("common.loading")}
         </div>
       )}
-      <IntakeModals projectId={projectId} actions={actions} />
+      <IntakeModals workspaceSlug={workspaceSlug} projectId={projectId} issueId={issueId} actions={actions} />
     </>
   );
 });
@@ -204,32 +200,24 @@ const IntakeSelection = observer(function IntakeSelection(props: TInboxContentRo
  * The modals of the selected work item's actions (P5a spec 2.8), outside the detail host, so that a triage's read
  * again does not withdraw them; each is given the work item as held when it opened.
  */
-const IntakeModals = observer(function IntakeModals({
-  projectId,
-  actions,
-}: {
+const IntakeModals = observer(function IntakeModals(props: {
+  workspaceSlug: string;
   projectId: string;
+  issueId: string;
   actions: IntakeActions;
 }) {
-  const { t } = useTranslation();
-  const { getProjectById } = useProject();
+  const { workspaceSlug, projectId, issueId, actions } = props;
   const { modal, close } = actions;
   if (!modal) return null;
-  const detail: IssueDetail = modal.detail;
+  const { detail } = modal;
   if (modal.name === "accept")
     return (
-      <CreateUpdateIssueModal
-        data={detail}
-        isOpen
+      <IntakeAcceptModal
+        projectId={projectId}
+        detail={detail}
+        accepted={!!modal.accepted}
+        onAccept={actions.accept}
         onClose={close}
-        beforeFormSubmit={actions.accept}
-        withDraftIssueWrapper={false}
-        fetchIssueDetails={false}
-        showActionItemsOnUpdate
-        modalTitle={t("inbox_issue.actions.move", {
-          value: `${getProjectById(projectId)?.identifier}-${detail.sequence_id}`,
-        })}
-        primaryButtonText={{ default: t("add_to_project"), loading: t("adding") }}
       />
     );
   if (modal.name === "decline")
@@ -239,19 +227,23 @@ const IntakeModals = observer(function IntakeModals({
   if (modal.name === "snooze")
     return (
       <InboxIssueSnoozeModal
-        isOpen
-        handleClose={close}
-        value={detail.intake?.snoozed_till ? new Date(detail.intake.snoozed_till) : undefined}
-        onConfirm={(date) => void actions.triage({ status: "snoozed", snoozed_till: date.toISOString() })}
+        value={detail.intake?.snoozed_till ?? null}
+        onClose={close}
+        onSubmit={(snoozedTill, underField) =>
+          actions.triage({ status: "snoozed", snoozed_till: snoozedTill }, underField)
+        }
       />
     );
   if (modal.name === "duplicate")
     return (
       <SelectDuplicateInboxIssueModal
+        workspaceSlug={workspaceSlug}
+        projectId={projectId}
+        issueId={issueId}
         isOpen
         onClose={close}
         value={detail.intake?.duplicate_to_id}
-        onSubmit={(duplicateToId) => void actions.triage({ status: "duplicate", duplicate_to_id: duplicateToId })}
+        onSubmit={(duplicateToId) => actions.triage({ status: "duplicate", duplicate_to_id: duplicateToId })}
       />
     );
   return <DeleteInboxIssueModal data={detail} isOpen onClose={close} onSubmit={actions.remove} />;

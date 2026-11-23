@@ -20,6 +20,8 @@ import { until } from "@/lib/auth/fake-time";
 import { refusal } from "@/lib/fake-refusal";
 import { toasts } from "@/lib/fake-toast";
 import { useIssueDetailInput } from "@/hooks/use-issue-detail-input";
+import { useIntakeLanding } from "../landing";
+import { IntakePageStateProvider } from "../page-state";
 import { acme, detailOf, intakeIssueOf, intakeTab, loadList, open, pageOf } from "@/store/issue/intake/fake-intake";
 import { loadProjects, projectOf } from "@/store/project/fake-projects";
 import type { DeclineIssueModal } from "../modals/decline-issue-modal";
@@ -158,6 +160,7 @@ function Page() {
   const location = useLocation();
   held.where = { search: location.search, type: useNavigationType() };
   held.navigate = useNavigate();
+  const landing = useIntakeLanding();
   const selected = params.get("inboxIssueId");
   return selected ? (
     <InboxContentRoot
@@ -166,6 +169,7 @@ function Page() {
       inboxIssueId={selected}
       isMobileSidebar={false}
       setIsMobileSidebar={() => {}}
+      onLeave={landing.leave}
     />
   ) : (
     <p data-nothing />
@@ -192,7 +196,14 @@ beforeEach(async () => {
       <SWRConfig value={{ provider: () => cache as never }}>
         <MemoryRouter initialEntries={[address("i-x")]}>
           <Routes>
-            <Route path="/:workspaceSlug/projects/:projectId/intake" element={<Page />} />
+            <Route
+              path="/:workspaceSlug/projects/:projectId/intake"
+              element={
+                <IntakePageStateProvider>
+                  <Page />
+                </IntakePageStateProvider>
+              }
+            />
           </Routes>
         </MemoryRouter>
       </SWRConfig>

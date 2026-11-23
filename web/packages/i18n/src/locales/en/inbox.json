@@ -29,6 +29,13 @@
       "delete": {
         "title": "Delete work item",
         "success": "Work item deleted successfully"
+      },
+      "snooze": {
+        "title": "Snooze work item",
+        "day": "Snooze until"
+      },
+      "accept": {
+        "accepted": "{value} is accepted; your changes to it are not saved yet"
       }
     },
     "actions": {
@@ -59,7 +66,8 @@
       "previous": "Previous work item",
       "next": "Next work item",
       "tab_total": "{label}, {count} work items",
-      "order_by": "Order by {field}, {direction}"
+      "order_by": "Order by {field}, {direction}",
+      "list": "Intake work items"
     },
     "tabs": {
       "open": "Open",

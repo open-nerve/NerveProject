@@ -29,6 +29,13 @@
       "delete": {
         "title": "删除工作项",
         "success": "工作项删除成功"
+      },
+      "snooze": {
+        "title": "暂缓工作项",
+        "day": "暂缓到"
+      },
+      "accept": {
+        "accepted": "{value} 已被接受，你对它的修改尚未保存"
       }
     },
     "actions": {
@@ -59,7 +66,8 @@
       "previous": "上一条工作项",
       "next": "下一条工作项",
       "tab_total": "{label}，{count} 个工作项",
-      "order_by": "按{field}排序，{direction}"
+      "order_by": "按{field}排序，{direction}",
+      "list": "收集箱的工作项"
     },
     "tabs": {
       "open": "未处理",

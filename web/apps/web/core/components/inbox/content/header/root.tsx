@@ -43,8 +43,10 @@ type Props = {
  * The header of the selected work item of a project's intake, on a wide screen (P5a spec 2.7, 2.8): its identifier in
  * the route's project, its status, whether its name and description are saved, the previous and the next work items of
  * the list (IntakeNavigation), and the actions the action model offers: accepting and declining, copying its link and
- * opening it as buttons, the others in a menu. Drawn only while the work item is held, so that a triage's read again
- * withdraws it (R34).
+ * opening it as buttons, the others in a menu; accepting is the status's primary action (data-intake-primary, R35).
+ * Each control gives the action model itself, where the focus goes back once the action ends; the triages and the menu
+ * wait while one is out (busy). Drawn only while the work item is held, so that a triage's read again withdraws it
+ * (R34).
  */
 export const IntakeHeader = observer(function IntakeHeader({ projectId, issueId, actions, isSubmitting }: Props) {
   const { t } = useTranslation();
@@ -55,7 +57,7 @@ export const IntakeHeader = observer(function IntakeHeader({ projectId, issueId,
   const { getProjectById } = useProject();
   const detail = getIssueDetailById(issueId);
   if (!detail?.intake) return null;
-  const { offered, take, link } = actions;
+  const { offered, take, link, busy } = actions;
   const inMenu = MENU_ACTIONS.filter((action) => offered.includes(action));
   return (
     <Row className="relative z-15 hidden h-full w-full items-center justify-between gap-2 border-b border-subtle bg-surface-1 lg:flex">
@@ -69,13 +71,24 @@ export const IntakeHeader = observer(function IntakeHeader({ projectId, issueId,
       <div className="flex flex-wrap items-center gap-2">
         <IntakeNavigation projectId={projectId} issueId={issueId} />
         {offered.includes("accept") && (
-          <Button variant="secondary" size="lg" onClick={() => take("accept")}>
+          <Button
+            variant="secondary"
+            size="lg"
+            disabled={busy}
+            data-intake-primary
+            onClick={(event) => take("accept", event.currentTarget)}
+          >
             <TickCircleFilled className="size-4 shrink-0 text-success-secondary" />
             {t(INTAKE_ACTION_LABELS.accept)}
           </Button>
         )}
         {offered.includes("decline") && (
-          <Button variant="secondary" size="lg" onClick={() => take("decline")}>
+          <Button
+            variant="secondary"
+            size="lg"
+            disabled={busy}
+            onClick={(event) => take("decline", event.currentTarget)}
+          >
             <CloseCircleFilled className="size-4 shrink-0 text-danger-secondary" />
             {t(INTAKE_ACTION_LABELS.decline)}
           </Button>
@@ -84,7 +97,7 @@ export const IntakeHeader = observer(function IntakeHeader({ projectId, issueId,
           variant="secondary"
           size="lg"
           prependIcon={<LinkOutline className="h-2.5 w-2.5" />}
-          onClick={() => take("copy")}
+          onClick={(event) => take("copy", event.currentTarget)}
         >
           {t(INTAKE_ACTION_LABELS.copy)}
         </Button>
@@ -103,9 +116,10 @@ export const IntakeHeader = observer(function IntakeHeader({ projectId, issueId,
             customButton={<MoreHorizontalOutline className="size-4" />}
             customButtonClassName={getIconButtonStyling("secondary", "lg")}
             placement="bottom-end"
+            disabled={busy}
           >
             {inMenu.map((action) => (
-              <CustomMenu.MenuItem key={action} onClick={() => take(action)}>
+              <CustomMenu.MenuItem key={action} onClick={(event) => take(action, event.currentTarget)}>
                 {t(INTAKE_ACTION_LABELS[action])}
               </CustomMenu.MenuItem>
             ))}

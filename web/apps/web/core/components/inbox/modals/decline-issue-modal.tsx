@@ -39,7 +39,9 @@ export function DeclineIssueModal(props: Props) {
 
   const handleDecline = async () => {
     setIsDeclining(true);
-    await onSubmit().finally(() => setIsDeclining(false));
+    // nerve's refusal is said by onSubmit, the modal open to try again or cancel
+    await onSubmit().catch(() => undefined);
+    setIsDeclining(false);
   };
 
   return (

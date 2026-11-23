@@ -17,6 +17,7 @@ import { InboxLayoutLoader } from "@/components/ui/loader/layouts/project-inbox/
 // local imports
 import { InboxContentRoot } from "./content";
 import { useIntakeArrowKeys } from "./content/header/navigation";
+import { useIntakeLanding } from "./landing";
 import { useIntakePageState } from "./page-state";
 import { IntakeSidebar } from "./sidebar/root";
 import { useIntakeList } from "./use-intake-list";
@@ -50,6 +51,7 @@ export const InboxIssueRoot = observer(function InboxIssueRoot(props: TInboxIssu
   const { filters } = useIntakePageState();
   const list = useIntakeList(projectId, filters);
   useIntakeArrowKeys(projectId, selectedId);
+  const landing = useIntakeLanding();
   // derived values
   const answered = list.page !== undefined || list.read.error !== undefined;
   const first = list.page?.data[0]?.id;
@@ -105,6 +107,7 @@ export const InboxIssueRoot = observer(function InboxIssueRoot(props: TInboxIssu
             workspaceSlug={workspaceSlug}
             projectId={projectId}
             list={list}
+            listRef={landing.list}
             selectedId={selectedId}
             onOpen={() => setIsMobileSidebar(false)}
           />
@@ -117,6 +120,7 @@ export const InboxIssueRoot = observer(function InboxIssueRoot(props: TInboxIssu
             workspaceSlug={workspaceSlug}
             projectId={projectId}
             inboxIssueId={selectedId}
+            onLeave={landing.leave}
           />
         ) : (
           <EmptyStateCompact

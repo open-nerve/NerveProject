@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
-import { act, createContext, useContext } from "react";
+import { act } from "react";
+import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { RootStore } from "@/store/root.store";
 import { issueOf } from "@/store/issue/fake-issues";
@@ -13,9 +14,8 @@ import {
 } from "@/components/core/modals/fake-issue-selection";
 import { SelectDuplicateInboxIssueModal } from "./select-duplicate";
 
+// the work item and its project, as the intake's detail gives them (P5a spec 2.8: by prop, never the address's)
 let route = { workspaceSlug: "ws", projectId: "A", issueId: "inbox-source" };
-const Params = createContext(route);
-vi.mock("react-router", () => ({ useParams: () => useContext(Params) }));
 vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
 vi.mock("@nerve/propel/toast", () => import("@/lib/fake-toast"));
 vi.mock("@/lib/auth/api-client", () => ({ tokenManager: { state: { loginId: "duplicate" } }, publicClient: {} }));
@@ -34,11 +34,7 @@ beforeEach(async () => {
 });
 afterEach(async () => tab.close());
 const render = (open = true) => {
-  return tab.render(
-    <Params.Provider value={route}>
-      <SelectDuplicateInboxIssueModal isOpen={open} onClose={close} onSubmit={submit} />
-    </Params.Provider>
-  );
+  return tab.render(<SelectDuplicateInboxIssueModal {...route} isOpen={open} onClose={close} onSubmit={submit} />);
 };
 const answer = async (name: string, index = tab.searches().length - 1) => {
   await act(async () => tab.searches()[index]!.answer(json(200, { data: [issueOf(name), issueOf(route.issueId)] })));
@@ -122,5 +118,32 @@ it("names the dialog, shows a read refusal and retries only the read", async () 
   expect(dialog.querySelector("input")?.getAttribute("aria-label")).toBe("common.search.placeholder");
   expect(dialog.querySelector('[role="option"] a, [role="option"] button')).toBeNull();
   expect(tab.searches()).toHaveLength(2);
+  expect(submit).not.toHaveBeenCalled();
+});
+it("reads and excludes by the ids it is given, never the address's, which names another project and work item", async () => {
+  await tab.render(
+    <MemoryRouter initialEntries={["/ws/projects/B/issues/address-item"]}>
+      <Routes>
+        <Route
+          path="/:workspaceSlug/projects/:projectId/issues/:issueId"
+          element={<SelectDuplicateInboxIssueModal {...route} isOpen onClose={close} onSubmit={submit} />}
+        />
+      </Routes>
+    </MemoryRouter>
+  );
+  expect(tab.searches()).toHaveLength(1);
+  expect(tab.searches()[0]!.query).toEqual({ project_id: "A" });
+  await act(async () =>
+    tab.searches()[0]!.answer(json(200, { data: [issueOf("address-item"), issueOf(route.issueId)] }))
+  );
+  expect([...document.querySelectorAll('[role="option"]')].map((option) => option.textContent)).toEqual([
+    expect.stringContaining("address-item"),
+  ]);
+});
+it("never lists the work item itself, though the project's search finds it: it is no duplicate of its own", async () => {
+  await opened();
+  await act(async () => tab.searches()[0]!.answer(json(200, { data: [issueOf(route.issueId)] })));
+  expect(document.querySelectorAll('[role="option"]')).toHaveLength(0);
+  expect(document.body.textContent).not.toContain(route.issueId);
   expect(submit).not.toHaveBeenCalled();
 });
