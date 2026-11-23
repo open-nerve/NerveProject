@@ -139,61 +139,26 @@ const NotificationPreview = observer(function NotificationPreview(props: Preview
 type Judgement = "peek" | "embed";
 
 /**
- * The selected notification's work item, once its preview has judged how to show it by its own read (P5b spec 2.5,
- * R16, R17, R27, O-1 乙): the peek's read (usePeekIssueRead), its mount and reconnect reads off, made by mutate as the
- * preview mounts, so that an answer SWR keeps from an earlier read is never taken for its own; until it settles, the
- * preview says it is loading. Once it settles, the work item as the stores hold it: one in the intake (pending,
- * snoozed, declined, a duplicate) embeds its intake's detail (InboxContentRoot, the embed's port: its leave and its
- * close the page's landing's), never setting the peek; any other (accepted, never submitted) is peeked at (embedded in
- * the page, scoped to the notification; its close the landing's too), which joins the preview's read (one read, as SWR
- * dedupes, re-95 O2). The judgement is made at the read's first success and latched: neither the key's validating
- * again (the peek's reconnect read, its retry through the preview's hook) nor its error, nor the work item's change
- * (accepted in the embed) is looked at after, so that nothing withdraws the peek or the embed with its unsent input.
- * A read that fails shows the preview's own failure (IssuePeekOverviewError), its close the landing's, its retry
- * reading again, judged once settled. An answer of another session or other permissions (SessionChangedError) is no
- * failure: the work item as held is judged, the generation that follows judging it anew.
+ * The selected notification's work item (P5b spec 2.5, R16, R17, R27): until its preview has judged how to show it,
+ * the judging (NotificationJudgement); then, one in the intake embeds its intake's detail (InboxContentRoot, the
+ * embed's port: its leave and its close the page's landing's), never setting the peek; any other is peeked at
+ * (embedded in the page, scoped to the notification; its close the landing's too). The judgement is held here alone:
+ * the judging unmounts as it is made, its read leaving the work item's key, so that nothing judges again (the work
+ * item accepted in the embed stays embedded, with its unsent input) and the peek's hook, the key's only one, reads it
+ * as on every other page (as the browser reconnects, and by its retry). A new generation, NotificationPreview's key
+ * for it, judges anew.
  */
 const NotificationWorkItem = observer(function NotificationWorkItem(props: PreviewProps) {
   const { workspace, selected, leave } = props;
   const { notificationId, issueId, projectId } = selected;
-  const { rootIssueStore: root, setPeekIssue } = useIssueDetail();
-  const { fetch } = useIssueOperations(workspace.slug, projectId, issueId);
-  const read = usePeekIssueRead({ workspaceSlug: workspace.slug, projectId, issueId }, fetch, {
-    revalidateOnMount: false,
-    revalidateOnReconnect: false,
-  });
-  const { mutate } = read;
+  const { setPeekIssue } = useIssueDetail();
   const region = useRef<HTMLElement>(null);
-  // whether this preview's own read has answered, and the judgement once made
-  const [answered, setAnswered] = useState(false);
   const [judged, setJudged] = useState<Judgement>();
   useEffect(() => {
-    let previewing = true;
-    void mutate().finally(() => {
-      if (previewing) setAnswered(true);
-    });
-    return () => {
-      previewing = false;
-    };
-  }, [mutate]);
-  // until judged, this preview's read settled: answered, the key no longer validating
-  const settled = judged === undefined && answered && !read.isValidating;
-  const failure = settled && !(read.error instanceof SessionChangedError) ? read.error : undefined;
-  const judgement =
-    judged ??
-    (settled && failure === undefined
-      ? inIntake(root.issues.getIssueDetailById(issueId))
-        ? "embed"
-        : "peek"
-      : undefined);
-  useEffect(() => {
-    if (judgement !== undefined) setJudged(judgement);
-  }, [judgement]);
-  useEffect(() => {
-    if (judgement === "peek") setPeekIssue({ workspaceSlug: workspace.slug, projectId, issueId });
-  }, [judgement, workspace.slug, projectId, issueId, setPeekIssue]);
+    if (judged === "peek") setPeekIssue({ workspaceSlug: workspace.slug, projectId, issueId });
+  }, [judged, workspace.slug, projectId, issueId, setPeekIssue]);
 
-  if (judgement === "embed")
+  if (judged === "embed")
     return (
       <InboxContentRoot
         workspaceSlug={workspace.slug}
@@ -202,7 +167,7 @@ const NotificationWorkItem = observer(function NotificationWorkItem(props: Previ
         selection={{ kind: "embed", leave, region, close: leave }}
       />
     );
-  if (judgement === "peek")
+  if (judged === "peek")
     return (
       <IssuePeekOverview
         hostScope={JSON.stringify(["notification", workspace.slug, notificationId])}
@@ -210,6 +175,56 @@ const NotificationWorkItem = observer(function NotificationWorkItem(props: Previ
         embedRemoveCurrentNotification={leave}
       />
     );
+  return <NotificationJudgement {...props} judge={setJudged} />;
+});
+
+/**
+ * How the preview shows the selected notification's work item, judged by a read of its own (P5b R16, R27; O-1 乙):
+ * the peek's read (usePeekIssueRead, the same key, so that a peek mounting right after joins it: one read, as SWR
+ * dedupes, re-95 O2), its mount and reconnect reads off, made by mutate as it mounts, so that an answer SWR keeps from
+ * an earlier read is never taken for its own; until it settles, it says it is loading. At its first success, the work
+ * item as the stores hold it is judged (judge): one in the intake (pending, snoozed, declined, a duplicate) embedded,
+ * any other (accepted, never submitted) peeked at. A read that fails shows its own failure (IssuePeekOverviewError),
+ * its close the landing's, its retry reading again, judged once settled. An answer of another session or other
+ * permissions (SessionChangedError) is no failure: the work item as held is judged, the generation that follows
+ * judging it anew.
+ */
+const NotificationJudgement = observer(function NotificationJudgement(
+  props: PreviewProps & { judge: (judgement: Judgement) => void }
+) {
+  const { workspace, selected, leave, judge } = props;
+  const { issueId, projectId } = selected;
+  const { rootIssueStore: root } = useIssueDetail();
+  const { fetch } = useIssueOperations(workspace.slug, projectId, issueId);
+  const read = usePeekIssueRead({ workspaceSlug: workspace.slug, projectId, issueId }, fetch, {
+    revalidateOnMount: false,
+    revalidateOnReconnect: false,
+  });
+  const { mutate } = read;
+  // whether this judging's own read has answered
+  const [answered, setAnswered] = useState(false);
+  useEffect(() => {
+    let judging = true;
+    void mutate().finally(() => {
+      if (judging) setAnswered(true);
+    });
+    return () => {
+      judging = false;
+    };
+  }, [mutate]);
+  // its read settled: answered, the key no longer validating
+  const settled = answered && !read.isValidating;
+  const failure = settled && !(read.error instanceof SessionChangedError) ? read.error : undefined;
+  const judgement =
+    settled && failure === undefined
+      ? inIntake(root.issues.getIssueDetailById(issueId))
+        ? "embed"
+        : "peek"
+      : undefined;
+  useEffect(() => {
+    if (judgement !== undefined) judge(judgement);
+  }, [judgement, judge]);
+
   if (failure !== undefined)
     return (
       <IssuePeekOverviewError

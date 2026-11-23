@@ -19,7 +19,8 @@ import type { TIssueOperations } from "../issue-detail/root";
  * operations') makes. The peek reads with the session's defaults: as it mounts, and again as the browser reconnects.
  * The notifications page's preview, which judges by this read whether to peek at the work item or embed its intake
  * detail, reads with the same key, so that a peek mounting right after joins that read: its mount read and its
- * reconnect read off (config), made with mutate, each mount's own.
+ * reconnect read off (config), made with mutate, each mount's own; judged, it leaves the key, the peek's hook then its
+ * only one (SWR tells a reconnect to a key's first hook alone).
  */
 export function usePeekIssueRead(
   peek: Pick<TPeekIssue, "workspaceSlug" | "projectId" | "issueId">,

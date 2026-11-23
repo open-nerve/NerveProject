@@ -3,7 +3,7 @@
 import { act, type ComponentProps } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { observable, runInAction } from "mobx";
-import { SWRConfig } from "swr";
+import { SWRConfig, useSWRConfig } from "swr";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { IssueDetail, IssueIntake } from "@nerve/api-client";
 import { until } from "@/lib/auth/fake-time";
@@ -19,14 +19,13 @@ import { NotificationPageStateProvider, useNotificationPageState } from "./page-
 import { NotificationsRoot } from "./root";
 
 // The notifications page's preview of a work item (P5b spec 2.5, R16, R17, R26, R27; re-95 I3, I4, m10, m11, O2, O7):
-// it reads the work item by a read of its own (usePeekIssueRead, its mount and reconnect reads off), loading meanwhile,
-// and judges once that read settles, by the work item as held: one in the intake (pending, snoozed, declined, a
-// duplicate) embeds the intake's detail (the embed's port), never setting the peek; any other is peeked at, the peek
-// joining the preview's read. The judgement is latched: neither a read again of its key (a reconnect, the peek's retry)
-// nor the work item's change undoes it; a new generation (permissions, login) reads and judges anew. A failed read is
-// the preview's own failure, with a retry; its close, the embed's and the peek's go through the page's landing. The
-// page's state, the preview, the read hook and SWR are real; the stores, the fetch (held until a test answers it), the
-// peek (reading through the real hook), the embed and the list (its region and cards) are stand-ins.
+// it reads the work item by a read of its own (its mount and reconnect reads off), loading meanwhile, and judges once
+// that read settles: one in the intake (pending, snoozed, declined, a duplicate) embeds the intake's detail, never
+// setting the peek; any other is peeked at, the peek joining that read. Once judged, the read leaves the key: the peek's
+// hook, its only one, reads again as the browser reconnects; nothing reads an embedded one's; nothing judges again but a
+// new generation. A failed read is the preview's own failure; every close goes through the page's landing. The page's
+// state, the preview, the read hook and SWR are real; the stores, the fetch (held until a test answers it), the peek
+// (reading through the real hook), the embed and the list (its region and cards) are stand-ins.
 
 const fixture = vi.hoisted(() => ({
   reads: [] as ReturnType<typeof heldRead>[],
@@ -100,9 +99,10 @@ function PeekContent({ peek, ...props }: PeekProps & { peek: TPeekIssue }) {
 
 /** The work items the stores hold, by id, as the fetch's answers write them. */
 const canonical = observable.map<string, IssueDetail>();
-/** The peeks the preview set, in order; the page's state, as the list last read it. */
+/** The peeks the preview set, in order; the page's state and its SWR (its cache's), as the list last read them. */
 let peeks: (TPeekIssue | undefined)[];
 let pageState: ReturnType<typeof useNotificationPageState> | undefined;
+let swr: ReturnType<typeof useSWRConfig>;
 /** A read of the work item id, held until a test answers it (its intake row, written into the stores) or fails it. */
 const heldRead = (id: string, resolve: () => void, fail: (error: unknown) => void) => ({
   id,
@@ -143,6 +143,7 @@ const CARDS: NotificationSelection[] = [
 function List() {
   const state = useNotificationPageState();
   pageState = state;
+  swr = useSWRConfig();
   return (
     <div data-notification-list tabIndex={-1} aria-label="list">
       <ul>
@@ -195,6 +196,12 @@ async function open(notificationId: string) {
   await act(async () => cardOf(notificationId)!.click());
   await settled();
 }
+/** Past SWR's dedupe window, the browser reconnects: SWR revalidates a timer's turn later, by each key's first hook. */
+async function reconnect() {
+  await act(async () => void (await vi.advanceTimersByTimeAsync(2500)));
+  await act(async () => void window.dispatchEvent(new Event("online")));
+  await settled();
+}
 const cardOf = (notificationId: string) =>
   host.querySelector<HTMLElement>(`[data-notification-id="${notificationId}"] button`);
 /** The n-th read of the work item id, once it is out. */
@@ -220,12 +227,8 @@ const alert = () => preview()?.querySelector('[role="alert"]') ?? null;
 const press = (text: string) =>
   act(async () => [...host.querySelectorAll("button")].find((button) => button.textContent?.trim() === text)!.click());
 /** Types text into the input named name, as a user's unsent comment. */
-const typeInto = (name: string, text: string) => {
-  const input = host.querySelector<HTMLInputElement>(`input[aria-label="${name}"]`)!;
-  input.value = text;
-  return input;
-};
-const peekOf = (issueId: string) => ({ workspaceSlug: "acme", projectId: "p-web", issueId });
+const typeInto = (name: string, text: string) =>
+  Object.assign(host.querySelector<HTMLInputElement>(`input[aria-label="${name}"]`)!, { value: text });
 
 describe("the preview's judgement, by its own read of the work item (R16)", () => {
   it("says it is loading while its read is out: neither a peek nor an embed", async () => {
@@ -258,7 +261,7 @@ describe("the preview's judgement, by its own read of the work item (R16)", () =
     await open("n-plain");
     await answered("i-y", intake);
     expect(peek()?.getAttribute("aria-label")).toBe(JSON.stringify(["notification", "acme", "n-plain"]));
-    expect(peeks).toEqual([peekOf("i-y")]);
+    expect(peeks).toEqual([{ workspaceSlug: "acme", projectId: "p-web", issueId: "i-y" }]);
     expect(embed()).toBeNull();
   });
 
@@ -285,10 +288,8 @@ describe("the preview's judgement, by its own read of the work item (R16)", () =
     expect(embed()).toBe(embedded);
     expect([peek(), peeks]).toEqual([null, []]);
   });
-});
 
-describe("one read of a work item not in the intake (R16; re-95 O2)", () => {
-  it("is the preview's: the peek mounting after it joins it", async () => {
+  it("reads a work item not in the intake once: the peek mounting after the preview's read joins it (re-95 O2)", async () => {
     await open("n-plain");
     await answered("i-y", null);
     expect(peek()).not.toBeNull();
@@ -297,27 +298,31 @@ describe("one read of a work item not in the intake (R16; re-95 O2)", () => {
   });
 });
 
-describe("the judgement latched (R27; re-95 I4)", () => {
-  it.each<[string, string, IssueIntake | null, () => HTMLElement | null]>([
-    ["embed", "n-pending", intakeOf("pending"), embed],
-    ["peek", "n-plain", null, peek],
-  ])(
-    "past the dedupe window, the browser reconnecting: nothing reads again, the %s and its input stay",
-    async (name, note, intake, shown) => {
-      await open(note);
-      await answered(note === "n-plain" ? "i-y" : "i-x", intake);
-      const element = shown();
-      expect(element).not.toBeNull();
-      const input = typeInto(`${name} input`, "unsent");
-      await act(async () => void (await vi.advanceTimersByTimeAsync(2500)));
-      await act(async () => void window.dispatchEvent(new Event("online")));
-      // SWR revalidates a timer's turn later, and tells a key's first hook alone (swr@2.4.2): the preview's
-      await settled();
-      expect(fixture.reads).toHaveLength(1);
-      expect(shown()).toBe(element);
-      expect(input.isConnected && input.value).toBe("unsent");
-    }
-  );
+describe("once judged, the preview's read leaves the key (R27; re-95 I4)", () => {
+  it("peeked at, the key is the peek's hook's: the browser reconnecting, it reads again, the peek and its input stay", async () => {
+    await open("n-plain");
+    await answered("i-y", null);
+    const peeked = peek();
+    const input = typeInto("peek input", "unsent");
+    await reconnect();
+    expect(fixture.reads.map((read) => read.id)).toEqual(["i-y", "i-y"]);
+    await answered("i-y", null, 2);
+    expect([peek(), loading()]).toEqual([peeked, null]);
+    expect(input.isConnected && input.value).toBe("unsent");
+  });
+
+  it("embedded, nothing reads the key: neither the browser reconnecting nor the key revalidated; the embed stays", async () => {
+    await open("n-pending");
+    await answered("i-x", intakeOf("pending"));
+    const embedded = embed();
+    const input = typeInto("embed input", "unsent");
+    await reconnect();
+    await act(async () => void swr.mutate((key) => Array.isArray(key) && key.includes("i-x")));
+    await settled();
+    expect(fixture.reads).toHaveLength(1);
+    expect(embed()).toBe(embedded);
+    expect(input.isConnected && input.value).toBe("unsent");
+  });
 
   it("the peek's retry, by its hook's mutate: the peek and its input stay", async () => {
     await open("n-plain");
@@ -350,12 +355,15 @@ describe("the judgement's generation (R27; re-95 m10)", () => {
 });
 
 describe("a read that fails (O-1 乙)", () => {
-  it("shows the preview's own failure, the peek never mounted; its retry reads again and judges once settled", async () => {
+  it("shows the preview's own failure, kept as the browser reconnects; its retry reads again, judging once settled", async () => {
     await open("n-plain");
     (await readOf("i-y")).fail(refusal(503, "service.unavailable"));
     await settled();
     expect(preview()?.contains(alert())).toBe(true);
     expect([peek(), embed(), peeks]).toEqual([null, null, []]);
+    await reconnect();
+    expect(fixture.reads).toHaveLength(1);
+    expect(preview()?.contains(alert())).toBe(true);
     await press("common.retry");
     await answered("i-y", null, 2);
     expect(alert()).toBeNull();
