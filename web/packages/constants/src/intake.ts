@@ -21,6 +21,16 @@ export const INTAKE_STATUS_LABELS: Readonly<Record<IntakeStatus, string>> = {
   duplicate: "inbox_issue.status.duplicate.title",
 };
 
+/**
+ * The tabs of a project's intake page, in their order (M7 P5a spec 2.6, 2.7): the work items still to triage, then
+ * those triaged, each with its label's key, whole (tools/i18n-keys.mjs reads it). The value is the address's
+ * ?currentTab.
+ */
+export const INTAKE_TABS: readonly { value: "open" | "closed"; i18n_label: string }[] = [
+  { value: "open", i18n_label: "inbox_issue.tabs.open" },
+  { value: "closed", i18n_label: "inbox_issue.tabs.closed" },
+];
+
 export const INBOX_STATUS: {
   key: string;
   status: TInboxIssueStatus;

@@ -58,6 +58,10 @@
       "description": "Submit new requests to be reviewed, prioritized, and tracked within your project's workflow.",
       "cta_primary": "Create Intake request"
     },
+    "intake_closed": {
+      "title": "No request closed yet",
+      "description": "All the work items whether accepted or declined can be found here."
+    },
     "intake_main": {
       "title": "Select an Intake work item to view its details"
     }

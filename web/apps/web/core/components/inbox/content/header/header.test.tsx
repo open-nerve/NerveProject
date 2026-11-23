@@ -11,6 +11,7 @@ import { toasts } from "@/lib/fake-toast";
 import { acme, beta, detailOf, intakeTab } from "@/store/issue/intake/fake-intake";
 import { loadArchivedProjects, loadProjects, projectOf } from "@/store/project/fake-projects";
 import { loadWorkspaces } from "@/store/workspace/fake-workspaces";
+import { IntakePageStateProvider } from "../../page-state";
 import { IntakeMobileHeader } from "./mobile";
 import { IntakeHeader } from "./root";
 import { useIntakeActions, type IntakeActions } from "./use-intake-actions";
@@ -34,6 +35,7 @@ vi.mock("@/hooks/store/use-issue-detail", async (original) => ({
   useIssueDetail: () => tab.app.issue.issueDetail,
 }));
 vi.mock("@/hooks/store/use-project", () => ({ useProject: () => tab.app.projectRoot.project }));
+vi.mock("@/hooks/store/use-intake", () => ({ useIntake: () => tab.store }));
 vi.mock("@/hooks/store/user", () => ({
   useUser: () => tab.app.user,
   useUserPermissions: () => tab.app.user.permission,
@@ -110,6 +112,7 @@ const Narrow = observer(function Narrow() {
   held.actions = actions;
   return (
     <IntakeMobileHeader
+      projectId="p-web"
       issueId="i-x"
       actions={actions}
       isSubmitting="saved"
@@ -119,7 +122,13 @@ const Narrow = observer(function Narrow() {
   );
 });
 const draw = (view: "wide" | "narrow") =>
-  act(async () => root.render(<MemoryRouter>{view === "wide" ? <Wide /> : <Narrow />}</MemoryRouter>));
+  act(async () =>
+    root.render(
+      <MemoryRouter>
+        <IntakePageStateProvider>{view === "wide" ? <Wide /> : <Narrow />}</IntakePageStateProvider>
+      </MemoryRouter>
+    )
+  );
 
 /** What the header offers, its buttons' and its menu's: the actions' labels, in order. */
 async function offeredIn(view: "wide" | "narrow") {

@@ -16,6 +16,9 @@ import { effectiveStatus } from "./status";
  */
 type DayRange = { from?: string; to?: string };
 
+/** A tab of the intake page: the work items still to triage (open), or those triaged (closed). */
+export type IntakeTab = "open" | "closed";
+
 /**
  * The filters of a project's intake, as the intake page holds them (P5a spec 2.2): a tab, open or closed; the statuses
  * it lists, one at least (C1, R9); the priorities, assignees (ids, me, none), creators (ids, me) and labels (ids, none)
@@ -23,7 +26,7 @@ type DayRange = { from?: string; to?: string };
  * nerve's six (C4).
  */
 export type IntakeFilters = {
-  tab: "open" | "closed";
+  tab: IntakeTab;
   statuses: readonly [IntakeStatus, ...IntakeStatus[]];
   priorities: readonly IssuePriority[];
   assignees: readonly string[];
@@ -33,6 +36,21 @@ export type IntakeFilters = {
   updated?: DayRange;
   order: NonNullable<IntakeListQuery["order_by"]>;
 };
+
+/**
+ * @description the filters a tab of the intake page opens with (P5a spec 2.2, R9): the open tab lists the pending work
+ * items, the closed tab those accepted, declined or marked duplicates (C1: always one status at least); no other
+ * filter; the newest first
+ */
+export const defaultFilters = (tab: IntakeTab): IntakeFilters => ({
+  tab,
+  statuses: tab === "open" ? ["pending"] : ["accepted", "declined", "duplicate"],
+  priorities: [],
+  assignees: [],
+  creators: [],
+  labels: [],
+  order: "-created_at",
+});
 
 /** A page of a project's intake holds 50 work items: nerve's default, sent all the same (C5, R6). */
 const PAGE_SIZE = 50;
@@ -69,6 +87,12 @@ const named = (filters: IntakeFilters) => ({
  * spec 2.3, 2.5)
  */
 export const filterKey = (filters: IntakeFilters): string => JSON.stringify(named(filters));
+
+/**
+ * @description the filters a key of filterKey names, in their one form (named): what a list's read fetches is what
+ * its key names, never the filters of the render that keyed it (P5a spec 2.5; P4 re-93 m5)
+ */
+export const filtersOf = (key: string): IntakeFilters => JSON.parse(key) as IntakeFilters;
 
 /**
  * A range of days as nerve takes it (C3): one day when both ends are the same, a..b, a.. or ..b; nothing for no range.

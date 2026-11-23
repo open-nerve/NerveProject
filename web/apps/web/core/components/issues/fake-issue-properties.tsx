@@ -43,9 +43,13 @@ export const choices = [
   },
   {
     name: "detail",
-    view: (project = "A") => (
-      <IssueLabel workspaceSlug="ws" projectId={project} issueId="x" disabled={false} onLabelUpdate={changed} />
-    ),
+    view: (project = "A") => {
+      // the detail's labels change by its own write (useIssueDetail().updateIssue), changed's here as the others' are
+      vi.spyOn(tab.app.issue.issueDetail, "updateIssue").mockImplementation(async (_slug, _project, _issue, data) =>
+        changed(data.label_ids ?? [])
+      );
+      return <IssueLabel workspaceSlug="ws" projectId={project} issueId="x" disabled={false} />;
+    },
   },
 ];
 beforeEach(async () => {

@@ -16,10 +16,12 @@ import { NameDescriptionUpdateStatus } from "@/components/issues/issue-update-st
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 // local imports
+import { IntakeNavigation } from "./navigation";
 import { IntakeStatusChip } from "./status-chip";
 import { INTAKE_ACTION_LABELS, type IntakeActions } from "./use-intake-actions";
 
 type Props = {
+  projectId: string;
   issueId: string;
   actions: IntakeActions;
   isSubmitting: TNameDescriptionLoader;
@@ -29,11 +31,12 @@ type Props = {
 
 /**
  * The header of the selected work item of a project's intake, on a narrow screen (P5a spec 2.7, 2.8): the button that
- * shows or hides the list beside it, the work item's status, whether its name and description are saved, and one menu
- * of every action the action model offers, as the wide header's (IntakeHeader). Drawn only while the work item is held.
+ * shows or hides the list beside it, the previous and the next work items of the list (IntakeNavigation), the work
+ * item's status, whether its name and description are saved, and one menu of every action the action model offers, as
+ * the wide header's (IntakeHeader). Drawn only while the work item is held.
  */
 export const IntakeMobileHeader = observer(function IntakeMobileHeader(props: Props) {
-  const { issueId, actions, isSubmitting, isMobileSidebar, setIsMobileSidebar } = props;
+  const { projectId, issueId, actions, isSubmitting, isMobileSidebar, setIsMobileSidebar } = props;
   const { t } = useTranslation();
   const {
     issue: { getIssueDetailById },
@@ -52,6 +55,7 @@ export const IntakeMobileHeader = observer(function IntakeMobileHeader(props: Pr
         >
           <LeftSidePaneOutline className={cn("h-4 w-4", isMobileSidebar ? "text-accent-primary" : "text-secondary")} />
         </button>
+        <IntakeNavigation projectId={projectId} issueId={issueId} />
         <IntakeStatusChip intake={detail.intake} />
         <NameDescriptionUpdateStatus isSubmitting={isSubmitting} />
         <div className="ml-auto">

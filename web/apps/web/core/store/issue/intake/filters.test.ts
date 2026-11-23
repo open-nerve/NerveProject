@@ -6,14 +6,16 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
 import { intakeIssueOf } from "./fake-intake";
 import type { IntakeFilters } from "./filters";
-import { filterKey, listQuery, matches } from "./filters";
+import { defaultFilters, filterKey, filtersOf, listQuery, matches } from "./filters";
 
 // The filters of a project's intake, as the intake page holds them, and what nerve is asked with them (P5a spec 2.2,
 // R6, R9, R10; the contract's traps C1–C6): the key of a list is the same for any filters that list the same work
 // items, and tells any others apart; the list's query never sends what nerve refuses (an empty or a repeated
 // parameter, a date of more than one range, an order not of its six) nor leaves out what nerve reads as every value
 // (the statuses). Whether a list of the filters lists a work item is what nerve would answer: its status at the moment,
-// each filter's values ORed, the filters ANDed, me the caller, none no value, each day a UTC day.
+// each filter's values ORed, the filters ANDed, me the caller, none no value, each day a UTC day. Each tab opens on its
+// own filters (defaultFilters), and a key turns back into the filters it names (filtersOf), so that a list's read
+// fetches what its key names (P4 re-93 m5).
 
 /** The open tab as the page opens it: the pending, newest first, no other filter. */
 const open: IntakeFilters = {
@@ -81,6 +83,46 @@ describe("filterKey", () => {
       withFilters({ order: "-sequence_id" }),
     ];
     expect(new Set(filters.map(filterKey)).size).toBe(filters.length);
+  });
+});
+
+describe("defaultFilters", () => {
+  it("opens the open tab on the pending, the closed tab on the three final statuses, no other filter, newest first", () => {
+    expect(defaultFilters("open")).toEqual(open);
+    expect(defaultFilters("closed")).toEqual(closed);
+  });
+});
+
+describe("filtersOf", () => {
+  it.each<[string, IntakeFilters]>([
+    ["the open tab's first filters", open],
+    ["the closed tab's first filters", closed],
+    ["the statuses", withFilters({ statuses: ["pending", "snoozed"] })],
+    ["the priorities", withFilters({ priorities: ["high", "none"] })],
+    ["the assignees", withFilters({ assignees: ["me", "none", "u-bob"] })],
+    ["the creators", withFilters({ creators: ["me", "u-ann"] })],
+    ["the labels", withFilters({ labels: ["l-bug", "none"] })],
+    ["a day of creation", withFilters({ created: { from: "2026-11-01", to: "2026-11-01" } })],
+    ["the days of creation from one", withFilters({ created: { from: "2026-11-01" } })],
+    ["the days of the last change up to one", withFilters({ updated: { to: "2026-11-07" } })],
+    [
+      "the days of the last change from one to another",
+      withFilters({ updated: { from: "2026-11-01", to: "2026-11-07" } }),
+    ],
+    ["the order", withFilters({ order: "-sequence_id" })],
+  ])("gives back the filters their key names: %s", (_, filters) => {
+    expect(filtersOf(filterKey(filters))).toEqual(filters);
+  });
+
+  it("gives back the filters as their key names them: each filter's values sorted, each once, a range of no end none", () => {
+    const shuffled = withFilters({
+      statuses: ["snoozed", "pending", "snoozed"],
+      labels: ["none", "l-bug", "none"],
+      created: {},
+    });
+    expect(filtersOf(filterKey(shuffled))).toEqual(
+      withFilters({ statuses: ["pending", "snoozed"], labels: ["l-bug", "none"] })
+    );
   });
 });
 

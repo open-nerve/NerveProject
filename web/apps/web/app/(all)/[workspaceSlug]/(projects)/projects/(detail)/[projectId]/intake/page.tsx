@@ -5,12 +5,11 @@
  */
 
 import { observer } from "mobx-react";
-import { useNavigate, useSearchParams } from "react-router";
+import { useNavigate } from "react-router";
 import { useTheme } from "next-themes";
 // nerve imports
-import { EUserPermissionsLevel, SITE_NAME } from "@nerve/constants";
+import { EUserPermissions, SITE_NAME } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
-import { EUserProjectRoles, EInboxIssueCurrentTab } from "@nerve/types";
 // assets
 import darkIntakeAsset from "@/app/assets/empty-state/disabled-feature/intake-dark.webp?url";
 import lightIntakeAsset from "@/app/assets/empty-state/disabled-feature/intake-light.webp?url";
@@ -23,26 +22,31 @@ import { useProject } from "@/hooks/store/use-project";
 import { useUserPermissions } from "@/hooks/store/user";
 import type { Route } from "./+types/page";
 
+/**
+ * A project's intake page (P5a spec 2.5, 2.7, R19): by the route's project and the caller's role in it, never the
+ * router store's. Its intake turned off: the disabled page, its way to turning it on the project admin's, and no
+ * intake, so no read of its list; else the intake, titled by the project's name. The tab and the selection are the
+ * address's (the intake reads them), the filters the layout's.
+ */
 function ProjectInboxPage({ params }: Route.ComponentProps) {
   /// router
   const navigate = useNavigate();
   const { workspaceSlug, projectId } = params;
-  const [searchParams] = useSearchParams();
-  const navigationTab = searchParams.get("currentTab");
-  const inboxIssueId = searchParams.get("inboxIssueId");
   // theme hook
   const { resolvedTheme } = useTheme();
   // nerve hooks
   const { t } = useTranslation();
   // hooks
-  const { currentProjectDetails } = useProject();
-  const { allowPermissions } = useUserPermissions();
+  const { getProjectById } = useProject();
+  const { getProjectRoleByWorkspaceSlugAndProjectId } = useUserPermissions();
   // derived values
-  const canPerformEmptyStateActions = allowPermissions([EUserProjectRoles.ADMIN], EUserPermissionsLevel.PROJECT);
+  const project = getProjectById(projectId);
+  const canPerformEmptyStateActions =
+    getProjectRoleByWorkspaceSlugAndProjectId(workspaceSlug, projectId) === EUserPermissions.ADMIN;
   const resolvedPath = resolvedTheme === "light" ? lightIntakeAsset : darkIntakeAsset;
 
   // No access to inbox
-  if (currentProjectDetails?.intake_view === false)
+  if (project?.intake_view === false)
     return (
       <div className="flex h-full w-full items-center justify-center">
         <DetailedEmptyState
@@ -61,25 +65,13 @@ function ProjectInboxPage({ params }: Route.ComponentProps) {
     );
 
   // derived values
-  const pageTitle = t("inbox_issue.page_label", { workspace: currentProjectDetails?.name || SITE_NAME });
-
-  const currentNavigationTab = navigationTab
-    ? navigationTab === "open"
-      ? EInboxIssueCurrentTab.OPEN
-      : EInboxIssueCurrentTab.CLOSED
-    : undefined;
+  const pageTitle = t("inbox_issue.page_label", { workspace: project?.name || SITE_NAME });
 
   return (
     <div className="flex h-full flex-col">
       <PageHead title={pageTitle} />
       <div className="h-full w-full overflow-hidden">
-        <InboxIssueRoot
-          workspaceSlug={workspaceSlug}
-          projectId={projectId}
-          inboxIssueId={inboxIssueId || undefined}
-          inboxAccessible={currentProjectDetails?.intake_view || false}
-          navigationTab={currentNavigationTab}
-        />
+        <InboxIssueRoot workspaceSlug={workspaceSlug} projectId={projectId} />
       </div>
     </div>
   );

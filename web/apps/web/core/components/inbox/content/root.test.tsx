@@ -20,7 +20,7 @@ import { until } from "@/lib/auth/fake-time";
 import { refusal } from "@/lib/fake-refusal";
 import { toasts } from "@/lib/fake-toast";
 import { useIssueDetailInput } from "@/hooks/use-issue-detail-input";
-import { acme, detailOf, intakeTab } from "@/store/issue/intake/fake-intake";
+import { acme, detailOf, intakeIssueOf, intakeTab, loadList, open, pageOf } from "@/store/issue/intake/fake-intake";
 import { loadProjects, projectOf } from "@/store/project/fake-projects";
 import type { DeclineIssueModal } from "../modals/decline-issue-modal";
 import type { DeleteInboxIssueModal } from "../modals/delete-issue-modal";
@@ -275,6 +275,23 @@ describe("InboxContentRoot, the detail region", () => {
     expect(toasts).toHaveLength(1);
     expect(held.where?.type).toBe("PUSH");
   });
+
+  it.each<[string, (read: Read) => void]>([
+    ["is refused as not found", (read) => read.fail(refusal(404, "issue.not_found"))],
+    ["answers it out of the intake", (read) => read.answer(detailOf("x", { intake: null }))],
+  ])(
+    "takes the work item out of the intake's lists once its read %s, so that the page selects another row",
+    async (_, settle) => {
+      await act(
+        async () =>
+          void (await loadList(tab.nerve, tab.store, "p-web", open, pageOf([intakeIssueOf("x"), intakeIssueOf("y")])))
+      );
+      settle(await readOf("i-x"));
+      await settled();
+      expect(held.where).toEqual({ search: "?currentTab=open", type: "REPLACE" });
+      expect(tab.store.getList("p-web", open)).toEqual(pageOf([intakeIssueOf("y")], null, 1));
+    }
+  );
 
   it("clears the selection (replace) and says why once its read answers a work item not in the intake", async () => {
     (await readOf("i-x")).answer(detailOf("x", { intake: null }));

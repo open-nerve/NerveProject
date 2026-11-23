@@ -25,6 +25,7 @@ import { NameDescriptionUpdateStatus } from "@/components/issues/issue-update-st
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { useProject } from "@/hooks/store/use-project";
 // local imports
+import { IntakeNavigation } from "./navigation";
 import { IntakeStatusChip } from "./status-chip";
 import { INTAKE_ACTION_LABELS, type IntakeAction, type IntakeActions } from "./use-intake-actions";
 
@@ -40,9 +41,10 @@ type Props = {
 
 /**
  * The header of the selected work item of a project's intake, on a wide screen (P5a spec 2.7, 2.8): its identifier in
- * the route's project, its status, whether its name and description are saved, and the actions the action model
- * offers: accepting and declining, copying its link and opening it as buttons, the others in a menu. Drawn only while
- * the work item is held, so that a triage's read again withdraws it (R34).
+ * the route's project, its status, whether its name and description are saved, the previous and the next work items of
+ * the list (IntakeNavigation), and the actions the action model offers: accepting and declining, copying its link and
+ * opening it as buttons, the others in a menu. Drawn only while the work item is held, so that a triage's read again
+ * withdraws it (R34).
  */
 export const IntakeHeader = observer(function IntakeHeader({ projectId, issueId, actions, isSubmitting }: Props) {
   const { t } = useTranslation();
@@ -65,6 +67,7 @@ export const IntakeHeader = observer(function IntakeHeader({ projectId, issueId,
         <NameDescriptionUpdateStatus isSubmitting={isSubmitting} />
       </div>
       <div className="flex flex-wrap items-center gap-2">
+        <IntakeNavigation projectId={projectId} issueId={issueId} />
         {offered.includes("accept") && (
           <Button variant="secondary" size="lg" onClick={() => take("accept")}>
             <TickCircleFilled className="size-4 shrink-0 text-success-secondary" />

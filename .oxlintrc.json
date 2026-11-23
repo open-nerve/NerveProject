@@ -203,7 +203,10 @@
         "web/apps/web/core/hooks/store/use-intake.ts",
         "web/apps/web/core/hooks/use-intake-counts.ts",
         "web/apps/web/core/components/workspace/sidebar/projects-list.tsx",
-        "web/apps/web/core/components/inbox/content/root.tsx"
+        "web/apps/web/core/components/inbox/content/root.tsx",
+        "web/apps/web/core/components/inbox/use-intake-list.ts",
+        "web/apps/web/core/components/inbox/root.tsx",
+        "web/apps/web/core/components/inbox/sidebar/list.tsx"
       ],
       "rules": {
         "no-restricted-imports": [

@@ -82,7 +82,9 @@ export const InboxContentRoot = observer(function InboxContentRoot(props: TInbox
  * Once it settles, nerve refusing it (the work item is gone, or the caller may not read it), or answering a work item
  * not in the intake, clears the selection (replace) and says why, once (re-94 m4); any other failure is shown with
  * its retry, the selection kept. A later read that finds the work item gone, a triage's read again (R34), clears it
- * too, unless the caller is deleting it, whose clearing is the delete's. The header and the detail are drawn inside
+ * too, unless the caller is deleting it, whose clearing is the delete's. A work item it cannot show leaves the
+ * intake's lists as well (drop), so that the page, which selects a list's first row once nothing is selected, selects
+ * another row rather than it again. The header and the detail are drawn inside
  * the detail host, which withdraws them while a triage reads the work item again; the modals, outside it, stay.
  */
 const IntakeSelection = observer(function IntakeSelection(props: TInboxContentRoot & { identity: string }) {
@@ -156,8 +158,9 @@ const IntakeSelection = observer(function IntakeSelection(props: TInboxContentRo
         title: t("toast.error"),
         message: t(problemMessageKey(outOfIntake ? "issue.intake_not_found" : "issue.not_found")),
       });
+    root.intake.drop(projectId, issueId);
     clearSelection();
-  }, [refused, outOfIntake, gone, error, later, refusalToast, t, clearSelection]);
+  }, [refused, outOfIntake, gone, error, later, refusalToast, t, clearSelection, root, projectId, issueId]);
 
   return (
     <>
@@ -166,6 +169,7 @@ const IntakeSelection = observer(function IntakeSelection(props: TInboxContentRo
           <div className="z-[11] min-h-[52px] flex-shrink-0">
             <IntakeHeader projectId={projectId} issueId={issueId} actions={actions} isSubmitting={isSubmitting} />
             <IntakeMobileHeader
+              projectId={projectId}
               issueId={issueId}
               actions={actions}
               isSubmitting={isSubmitting}

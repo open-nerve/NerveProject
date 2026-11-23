@@ -55,11 +55,17 @@
     "a11y": {
       "detail": "Intake work item",
       "list_toggle": "Intake list",
-      "pending_count": "{label}, {count} pending"
+      "pending_count": "{label}, {count} pending",
+      "previous": "Previous work item",
+      "next": "Next work item",
+      "tab_total": "{label}, {count} work items"
     },
     "tabs": {
       "open": "Open",
       "closed": "Closed"
+    },
+    "list": {
+      "labels": "{count, plural, one{# label} other{# labels}}"
     }
   }
 }
