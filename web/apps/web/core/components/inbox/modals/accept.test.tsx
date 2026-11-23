@@ -10,6 +10,7 @@ import type { IssueFormValues } from "@/components/issues/issue-modal/types";
 import { json, problem } from "@/lib/auth/fake-nerve";
 import { toasts } from "@/lib/fake-toast";
 import type { RootStore } from "@/store/root.store";
+import { issueCommentOf } from "@/store/issue/fake-issues";
 import { detailOf, intakeIssueOf } from "@/store/issue/intake/fake-intake";
 import { stateOf } from "@/store/project/fake-projects";
 import {
@@ -106,6 +107,8 @@ useIntakePageFixture();
 
 const TRIAGE = "/api/v0/intake-issues/i-x/triage";
 const ISSUE = "/api/v0/issues/i-x";
+const COMMENTS = `${ISSUE}/comments`;
+const comments = json(200, { data: [issueCommentOf("c-1", "i-x")], next_cursor: null });
 const accepted: IssueIntake = { status: "accepted", snoozed_till: null, duplicate_to_id: null };
 const [x, y] = ["x", "y"].map((name) => intakeIssueOf(name));
 const MOVE = "inbox_issue.actions.move";
@@ -140,6 +143,22 @@ async function acceptedAs(detail: IssueDetail) {
   await answer(callTo("POST", TRIAGE), json(200, detail));
   await answer(callTo("GET", ISSUE), json(200, detail));
   await settled();
+}
+/**
+ * A comment written on x, its creation answered: its read again of x in its turn (the n-th read of x) is out, x not
+ * held meanwhile; gives what answers that read and the comments' read, then waits for the comment's write to end.
+ */
+async function commenting(n = 1) {
+  const app = page.tab.app.issue;
+  const written = app.issueDetail.comment.createComment("acme", "p-web", "i-x", { comment_html: "<p>c</p>" });
+  await answer(callTo("POST", COMMENTS), json(201, issueCommentOf("c-1", "i-x")));
+  await callTo("GET", ISSUE, n);
+  expect(app.issues.getIssueDetailById("i-x")).toBeUndefined();
+  return async (detail: IssueDetail) => {
+    await answer(callTo("GET", ISSUE, n), json(200, detail));
+    await answer(callTo("GET", COMMENTS), comments);
+    await act(async () => void (await written));
+  };
 }
 const refusedUnder = (field: string) =>
   json(422, { status: 422, code: "validation_failed", title: "", errors: [{ field, code: "required", message: "" }] });
@@ -231,6 +250,31 @@ describe("the accept modal (R12, re-94 I2)", () => {
     await answer(callTo("PATCH", ISSUE), json(200, detailOf("x", { intake: accepted, priority: "urgent" })));
     await settled();
     expect(page.where).toEqual({ search: "?currentTab=open&inboxIssueId=i-y", type: "REPLACE" });
+  });
+
+  it("accepts by a triage a work item not held as it is submitted, a comment's read again out (R29 is for one held)", async () => {
+    await accepting();
+    const commented = await commenting();
+    await submit();
+    await commented(detailOf("x", { state_id: "s-triage" }));
+    expect((await callTo("POST", TRIAGE)).body).toEqual({ status: "accepted" });
+    await acceptedAs(detailOf("x", { intake: accepted, state_id: "s-todo" }));
+  });
+
+  it("sends a retry's update alone, though a comment's read again is out as it is submitted: it accepted the work item", async () => {
+    await accepting();
+    await pickUrgent();
+    await submit();
+    await acceptedAs(detailOf("x", { intake: accepted, state_id: "s-todo" }));
+    await answer(callTo("PATCH", ISSUE), problem(503, "server_busy"));
+    const commented = await commenting(2);
+    await submit();
+    await commented(detailOf("x", { intake: accepted, state_id: "s-todo" }));
+    expect(callsTo("POST", TRIAGE)).toHaveLength(1);
+    await answer(callTo("PATCH", ISSUE, 2), json(200, detailOf("x", { intake: accepted, priority: "urgent" })));
+    // the update reads the comments again in its turn, then the modal closes
+    await answer(callTo("GET", COMMENTS, 2), comments);
+    expect(modal()).toBeUndefined();
   });
 
   it("closes on a conflict, which is said, the selection kept, the focus on the detail its read again redrew", async () => {

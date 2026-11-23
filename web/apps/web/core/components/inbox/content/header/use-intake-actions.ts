@@ -84,9 +84,9 @@ export type IntakeActions = {
    */
   close: () => void;
   /**
-   * Accepts the work item, the accept modal's beforeFormSubmit, and nothing else: one held out of the intake (accepted
-   * already, by this modal or by another, R29) is not triaged again; a refusal is said and rejects, so that no update
-   * follows, a conflict closing the modal.
+   * Accepts the work item, the accept modal's beforeFormSubmit, and nothing else: one this modal accepted, or one held
+   * out of the intake (another accepted it, R29), is not triaged again, one not held (a read again out) is; a refusal
+   * is said and rejects, so that no update follows, a conflict closing the modal.
    */
   accept: () => Promise<void>;
   /**
@@ -266,8 +266,10 @@ export function useIntakeActions(
       else focus.land("opener");
     },
     accept: async () => {
-      // R29: held out of the intake, accepted by an earlier submit of this modal or by another, it is not triaged again
-      if (inIntake(getIssueDetailById(issueId))) {
+      // R29: accepted by an earlier submit of this modal, or held out of the intake (by another's), it is not triaged
+      // again; one not held, a write's read again out, is triaged: nerve refuses it as a conflict if another accepted it
+      const held = getIssueDetailById(issueId);
+      if (!open.current?.accepted && (held === undefined || inIntake(held))) {
         acceptedFor.current = neighbour();
         await command(
           () => root.writes.triageIntake(issueId, { status: "accepted" }, scope()),
