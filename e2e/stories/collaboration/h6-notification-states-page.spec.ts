@@ -269,10 +269,24 @@ test("H6 (page): bob reads and unreads, archives and unarchives, snoozes for 3 d
     .toEqual([{ read: true, archived: false, snoozed: false, by_receiver: true }]);
 
   // Removed from API, the page open: his archive of Rate limit's card is refused as not found, said, the card gone.
+  // The all tab reads its list again as it shows (no deduping interval): he is removed only once nerve answered that
+  // read, or nerve, reading it after the removal, lists no card of API's, and Rate limit's leaves before he acts on it.
+  const allRead = page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return (
+      response.request().method() === "GET" &&
+      url.pathname === `/api/v0/workspaces/${slug}/notifications` &&
+      url.searchParams.get("tab") === "all" &&
+      url.searchParams.get("archived") === "false" &&
+      url.searchParams.get("snoozed") === "false"
+    );
+  });
   await tabs.nth(0).click();
+  expect((await allRead).status()).toBe(200);
   const membership = await projectMembershipOf(api, alice.token, apiProject.id, bob.id);
   expect(await projectMemberWrites(api, apiProject.id).remove(alice.token, membership)).toEqual({ status: 204 });
   const rate = cardSaying(page, "Alice assigned Bob").filter({ hasText: "Rate limit" });
+  await expect(rate).toBeVisible();
   await rate.hover();
   await rate.getByRole("button", { name: "Archive API-1 Rate limit", exact: true }).click();
   await expect(toast(page, "The notification does not exist, or you cannot see it.")).toBeVisible();
