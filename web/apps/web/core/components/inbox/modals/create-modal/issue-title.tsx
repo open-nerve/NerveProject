@@ -8,14 +8,9 @@ import type { IssueDetail } from "@nerve/api-client";
 
 import { observer } from "mobx-react";
 // nerve imports
+import { Field, FieldError } from "@makeplane/propel/components/field";
 import { Input, InputGroup } from "@makeplane/propel/components/input";
-import { ETabIndices } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
-
-// helpers
-import { getTabIndex } from "@nerve/utils";
-// hooks
-import { usePlatformOS } from "@/hooks/use-platform-os";
 
 type TInboxIssueTitle = {
   data: Partial<IssueDetail>;
@@ -23,34 +18,34 @@ type TInboxIssueTitle = {
     issueKey: keyof Partial<IssueDetail>,
     issueValue: Partial<IssueDetail>[keyof Partial<IssueDetail>]
   ) => void;
-  isTitleLengthMoreThan255Character?: boolean;
+  /** The name's hint (P5b spec 2.1, R5): the field is invalid, and described by it, exactly while it shows. */
+  error: string | undefined;
 };
 
 export const InboxIssueTitle = observer(function InboxIssueTitle(props: TInboxIssueTitle) {
-  const { data, handleData, isTitleLengthMoreThan255Character } = props;
-  // hooks
-  const { isMobile } = usePlatformOS();
-
-  const { getIndex } = getTabIndex(ETabIndices.INTAKE_ISSUE_FORM, isMobile);
+  const { data, handleData, error } = props;
   const { t } = useTranslation();
   return (
     <div className="space-y-1">
-      <InputGroup size="2xl">
-        <Input
-          size="2xl"
-          id="name"
-          name="name"
-          type="text"
-          value={data?.name}
-          onChange={(e) => handleData("name", e.target.value)}
-          placeholder={t("title")}
-          tabIndex={getIndex("name")}
-          required
-        />
-      </InputGroup>
-      {isTitleLengthMoreThan255Character && (
-        <span className="text-11 text-danger-primary">{t("title_should_be_less_than_255_characters")}</span>
-      )}
+      <Field name="name" invalid={error !== undefined}>
+        <InputGroup size="2xl">
+          <Input
+            size="2xl"
+            id="name"
+            name="name"
+            type="text"
+            value={data?.name}
+            onChange={(e) => handleData("name", e.target.value)}
+            placeholder={t("title")}
+            aria-label={t("title")}
+          />
+        </InputGroup>
+        {error !== undefined && (
+          <FieldError size="2xl" match>
+            {error}
+          </FieldError>
+        )}
+      </Field>
     </div>
   );
 });

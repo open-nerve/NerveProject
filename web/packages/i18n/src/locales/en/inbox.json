@@ -34,6 +34,10 @@
       },
       "accept": {
         "accepted": "{value} is accepted; your changes to it are not saved yet"
+      },
+      "discard": {
+        "title": "Discard this work item?",
+        "content": "What you entered is not saved. Once discarded, it cannot be recovered."
       }
     },
     "actions": {
