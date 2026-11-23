@@ -1,6 +1,7 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 import type { IntakeIssueUpdate, Issue, IssueCreate, IssueUpdate } from "@nerve/api-client";
 import type { IssueChange } from "@nerve/types";
+import { ForeseenRefusal } from "@/lib/api-error";
 import { modulesAfter } from "@/lib/planning-directory";
 
 /** The fields of a creation the web sends; whatever else the caller passed stays out of the request. */
@@ -54,14 +55,11 @@ export function updateBody(input: IssueUpdate): IssueUpdate {
 /**
  * The content change of a work item in its project's intake, from an update's request (updateBody, whose skip_activity
  * rule holds): the seven fields nerve takes of one (IntakeIssueUpdate, C9); any other field given fails it before it
- * is sent, as nerve would refuse it.
+ * is sent, refused as nerve refuses a change of a work item in triage (issue.in_triage), so said in its sentence.
  */
 export function intakeUpdateBody(body: IssueUpdate): IntakeIssueUpdate {
   const { name, description_html, priority, assignee_ids, label_ids, target_date, skip_activity, ...other } = body;
-  if (Object.values(other).some((value) => value !== undefined))
-    throw new Error(
-      "An intake's change takes its name, description, priority, assignees, labels and target date alone"
-    );
+  if (Object.values(other).some((value) => value !== undefined)) throw new ForeseenRefusal("issue.in_triage");
   return { name, description_html, priority, assignee_ids, label_ids, target_date, skip_activity };
 }
 

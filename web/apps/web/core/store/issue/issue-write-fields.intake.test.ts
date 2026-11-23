@@ -1,11 +1,24 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 import { expect, it } from "vitest";
 import type { IssueUpdate } from "@nerve/api-client";
+import { ApiError } from "@/lib/api-error";
+import { errorMessageKey } from "@/lib/error-messages";
 import { intakeUpdateBody, updateBody } from "./issue-write-fields";
 
 // The content change of a work item in its project's intake (P5a spec 2.2, the contract's trap C9): nerve takes seven
 // fields of one (IntakeIssueUpdate, additionalProperties false), so any other field a caller gives fails the change
-// before anything is sent; the fields come from an update's request (updateBody), whose skip_activity rule holds.
+// before anything is sent, refused as nerve refuses a change of a work item in triage (issue.in_triage), in the same
+// sentence (P7b spec 2.4, R4); the fields come from an update's request (updateBody), whose skip_activity rule holds.
+
+/** What intakeUpdateBody throws for body, or nothing. */
+function refusalOf(body: IssueUpdate): unknown {
+  try {
+    intakeUpdateBody(updateBody(body));
+  } catch (error) {
+    return error;
+  }
+  return undefined;
+}
 
 it("sends the seven fields of an intake's change as given", () => {
   const body: IssueUpdate = {
@@ -31,9 +44,13 @@ it.each<[keyof IssueUpdate, IssueUpdate]>([
   ["parent_id", { parent_id: null }],
   ["cycle_id", { cycle_id: "c-1" }],
   ["module_ids", { module_ids: [] }],
-])("refuses an intake's change that gives %s, a field nerve does not take of one", (_, body) => {
-  expect(() => intakeUpdateBody(updateBody(body))).toThrow();
-});
+])(
+  "refuses an intake's change that gives %s, a field nerve does not take of one, as nerve's 409 says it",
+  (_, body) => {
+    const triage = new ApiError(409, { status: 409, code: "issue.in_triage", title: "Conflict" });
+    expect(errorMessageKey(refusalOf(body))).toBe(errorMessageKey(triage));
+  }
+);
 
 it("keeps updateBody's rule: skip_activity goes with description_html alone", () => {
   expect(() => intakeUpdateBody(updateBody({ name: "x", description_html: "<p>x</p>", skip_activity: true }))).toThrow(

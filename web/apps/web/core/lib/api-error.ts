@@ -16,8 +16,23 @@ export class ApiError extends Error {
   }
 }
 
-/** nerve's problem code of an error of a call to nerve ("workspace.slug_taken"), or undefined: no answer, no problem. */
+/**
+ * A refusal the web foresees and so does not send: nerve's problem code of the refusal it would answer (P7b spec 2.4,
+ * R4), which problemCode gives, so that it is said, and followed, as nerve's refusal by that code.
+ */
+export class ForeseenRefusal extends Error {
+  constructor(readonly code: string) {
+    super(code);
+    this.name = "ForeseenRefusal";
+  }
+}
+
+/**
+ * nerve's problem code of an error of a call to nerve ("workspace.slug_taken"), or of a refusal the web foresees
+ * (ForeseenRefusal), or undefined: no answer, no problem.
+ */
 export function problemCode(error: unknown): string | undefined {
+  if (error instanceof ForeseenRefusal) return error.code;
   return error instanceof ApiError ? error.problem?.code : undefined;
 }
 
