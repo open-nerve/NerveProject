@@ -18,9 +18,10 @@ export type SessionFetch = readonly [name: string, ...args: (string | undefined)
  * answer of), not when the tab regains focus, and a refusal is not retried: the page shows it, with its own retry
  * where it has one. A list may shorten only the deduping interval: a restored permission needs a new read even
  * immediately after an invalidated one, while requests still in flight remain deduplicated. Capability owners may
- * disable SWR's reconnect read: their image lifetime refreshes on expiry, preserving the explicit retry budget. A route
- * each of whose visits makes its own read (the browse detail, which owns the detail host) disables SWR's mount read as
- * well and makes that read with mutate, so that an answer SWR keeps from an earlier visit is never taken for its own.
+ * disable SWR's reconnect read: their image lifetime refreshes on expiry, preserving the explicit retry budget. A read
+ * each of whose mounts makes its own (the browse detail's route, the intake's selection: each owns the detail host and
+ * the input it keeps, M5 design §9) disables it too, and SWR's mount read as well, and makes that read with mutate, so
+ * that an answer SWR keeps from an earlier mount is never taken for its own.
  */
 const SESSION_FETCH: SWRConfiguration = { revalidateOnFocus: false, shouldRetryOnError: false };
 

@@ -252,14 +252,14 @@ describe("InboxContentRoot, the detail region", () => {
     expect(status()).toBeNull();
   });
 
-  it("reads the selected work item by its own key, its mount read off, once each time it is selected", async () => {
+  it("reads the selected work item by its own key, its mount and reconnect reads off, once each time it is selected", async () => {
     await shown();
     const identity = tab.app.issue.permissionReads.identity(acme.id, ["p-web"], true);
     const reads = fixture.swr.filter(([fetch]) => (fetch as string[] | null)?.[0] === "intake-issue");
     expect(reads.length).toBeGreaterThan(0);
     for (const [fetch, config] of reads) {
       expect(fetch).toEqual(["intake-issue", identity, "acme", "p-web", "i-x"]);
-      expect(config).toEqual({ revalidateOnMount: false });
+      expect(config).toEqual({ revalidateOnMount: false, revalidateOnReconnect: false });
     }
     await select("i-y");
     await shown("i-y");

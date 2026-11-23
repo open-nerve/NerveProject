@@ -84,7 +84,9 @@ export const InboxContentRoot = observer(function InboxContentRoot(props: TInbox
 
 /**
  * The selected work item of a project's intake: read as the selection begins, by a read of its own (P4 m1), never by
- * an answer SWR keeps from an earlier one, and again only by a retry. Until that read settles it says it is loading.
+ * an answer SWR keeps from an earlier one, and again only by a retry, not as the browser reconnects: the selection owns
+ * the detail host and the input the host keeps, as the browse detail's route does (M5 design §9). Until that read
+ * settles it says it is loading.
  * Once it settles, nerve refusing it (the work item is gone, or the caller may not read it), or answering a work item
  * not in the intake, clears the selection (replace) and says why, once (re-94 m4); any other failure is shown with
  * its retry, the selection kept. A later read that finds the work item gone, a triage's read again (R34), clears it
@@ -107,7 +109,7 @@ const IntakeSelection = observer(function IntakeSelection(props: TInboxContentRo
       await operations.fetch(ws, project, id);
       return root.issues.getIssueDetailById(id) ?? null;
     },
-    { revalidateOnMount: false }
+    { revalidateOnMount: false, revalidateOnReconnect: false }
   );
   const { mutate } = read;
   // whether this selection's own read has answered: what SWR keeps of an earlier selection's is not its own
