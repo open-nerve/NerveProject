@@ -176,6 +176,16 @@ describe("IntakeSidebar's tabs", () => {
     expect(tabNames()).toEqual(["inbox_issue.tabs.open", "inbox_issue.tabs.closed"]);
   });
 
+  it("hold the filters' menu and the order beside the tab list, not in it: a tab list holds tabs alone", async () => {
+    await render();
+    const tablist = host.querySelector('[role="tablist"]')!;
+    expect([...tablist.children].map((child) => child.getAttribute("role"))).toEqual(["tab", "tab"]);
+    const filters = host.querySelector('button[aria-label="common.filters"]');
+    const order = host.querySelector('button[aria-label^="inbox_issue.a11y.order_by"]');
+    expect([filters !== null, order !== null]).toEqual([true, true]);
+    expect([tablist.contains(filters), tablist.contains(order)]).toEqual([false, false]);
+  });
+
   it("go to the chosen tab's address, a push, the selection left behind", async () => {
     await render("?currentTab=open&inboxIssueId=i-One");
     await act(async () => tabs()[1]!.click());
@@ -231,6 +241,14 @@ describe("IntakeSidebar's list", () => {
     await answer(await listRead(2), pageOf([]));
     expect(emptyState()).toBe("project_empty_state.intake_closed.title");
     expect(rows()).toEqual([]);
+  });
+
+  it("says the tab's own empty state for an order of the user's own: an order lists the same work items", async () => {
+    await render();
+    await answer(await listRead(0), pageOf([]));
+    await act(async () => held.setFilters!((filters) => ({ ...filters, order: "sequence_id" })));
+    await answer(await listRead(1), pageOf([]));
+    expect(emptyState()).toBe("project_empty_state.intake_sidebar.title");
   });
 
   it("reads the next page as the list's end comes into view, by nerve's cursor, one at a time, none past the last", async () => {

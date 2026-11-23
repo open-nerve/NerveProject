@@ -28,3 +28,32 @@ export const INTAKE_TABS: readonly { value: "open" | "closed"; i18n_label: strin
   { value: "open", i18n_label: "inbox_issue.tabs.open" },
   { value: "closed", i18n_label: "inbox_issue.tabs.closed" },
 ];
+
+/**
+ * The fields a project's intake list is ordered by, in the order menu's order (M7 P5a spec 2.2 C4, 2.7): when a work
+ * item was submitted, when it last changed, its number; each with its label's key, whole (tools/i18n-keys.mjs reads
+ * it). With a direction, the lowest first or, behind a "-", the highest first, each is one of nerve's six orders.
+ */
+export const INTAKE_ORDER_FIELDS: readonly {
+  value: "created_at" | "updated_at" | "sequence_id";
+  i18n_label: string;
+}[] = [
+  { value: "created_at", i18n_label: "inbox_issue.order_by.created_at" },
+  { value: "updated_at", i18n_label: "inbox_issue.order_by.updated_at" },
+  { value: "sequence_id", i18n_label: "inbox_issue.order_by.id" },
+];
+
+/**
+ * The days a project's intake list is filtered by in a press, by when its work items were submitted or last changed
+ * (M7 P5a spec 2.2 C3, R10): today, yesterday, the last 7 or 30 days, each with its label's key, whole. The page turns
+ * each into days of the caller's calendar as it is chosen.
+ */
+export const INTAKE_DATE_PRESETS: readonly {
+  value: "today" | "yesterday" | "last_7_days" | "last_30_days";
+  i18n_label: string;
+}[] = [
+  { value: "today", i18n_label: "inbox_issue.filters.presets.today" },
+  { value: "yesterday", i18n_label: "inbox_issue.filters.presets.yesterday" },
+  { value: "last_7_days", i18n_label: "inbox_issue.filters.presets.last_7_days" },
+  { value: "last_30_days", i18n_label: "inbox_issue.filters.presets.last_30_days" },
+];

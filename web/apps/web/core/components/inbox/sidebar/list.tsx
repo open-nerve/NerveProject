@@ -19,7 +19,7 @@ import { useRefusalToast } from "@/hooks/use-refusal-toast";
 // lib
 import { followInSession } from "@/lib/in-session";
 // store
-import { defaultFilters, filterKey } from "@/store/issue/intake/filters";
+import { customized } from "@/store/issue/intake/filters";
 // local imports
 import { useIntakePageState } from "../page-state";
 import type { IntakeList as IntakeListRead } from "../use-intake-list";
@@ -90,7 +90,7 @@ export const IntakeList = observer(function IntakeList(props: Props) {
   if (read.error !== undefined) return <PlanningReadFailure error={read.error} onRetry={() => void read.mutate()} />;
   if (page === undefined) return <InboxSidebarLoader />;
   if (page.data.length === 0 && !cursor) {
-    const empty = EMPTY[filterKey(filters) === filterKey(defaultFilters(filters.tab)) ? filters.tab : "filtered"];
+    const empty = EMPTY[customized(filters) ? "filtered" : filters.tab];
     return (
       <div className="flex h-full w-full items-center justify-center">
         <EmptyStateDetailed

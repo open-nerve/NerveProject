@@ -58,7 +58,8 @@
       "pending_count": "{label}，{count} 条待处理",
       "previous": "上一条工作项",
       "next": "下一条工作项",
-      "tab_total": "{label}，{count} 个工作项"
+      "tab_total": "{label}，{count} 个工作项",
+      "order_by": "按{field}排序，{direction}"
     },
     "tabs": {
       "open": "未处理",
@@ -66,6 +67,20 @@
     },
     "list": {
       "labels": "{count} 个标签"
+    },
+    "filters": {
+      "status": "状态",
+      "created_at": "创建日期",
+      "updated_at": "最后更新日期",
+      "presets": {
+        "today": "今天",
+        "yesterday": "昨天",
+        "last_7_days": "过去 7 天",
+        "last_30_days": "过去 30 天"
+      },
+      "after": "{date} 之后",
+      "before": "{date} 之前",
+      "between": "{from} 至 {to}"
     }
   }
 }

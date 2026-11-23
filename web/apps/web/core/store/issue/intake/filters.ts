@@ -3,8 +3,11 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { format, subDays } from "date-fns";
 // nerve imports
 import type { IntakeIssue, IntakeStatus, IssuePriority } from "@nerve/api-client";
+import type { INTAKE_DATE_PRESETS } from "@nerve/constants";
+import { toggledOptions } from "@nerve/utils";
 // services
 import type { IntakeListQuery } from "@/services/issue/intake.service";
 // local
@@ -14,7 +17,7 @@ import { effectiveStatus } from "./status";
  * A range of days, each a day string (YYYY-MM-DD) of the caller's local calendar (R10): from the first to the last,
  * both in it; an end left out is open. nerve reads each day as a UTC day (C3).
  */
-type DayRange = { from?: string; to?: string };
+export type DayRange = { from?: string; to?: string };
 
 /** A tab of the intake page: the work items still to triage (open), or those triaged (closed). */
 export type IntakeTab = "open" | "closed";
@@ -170,4 +173,91 @@ export function matches(row: IntakeIssue, filters: IntakeFilters, now: Date, me:
     within(row.created_at, filters.created) &&
     within(row.updated_at, filters.updated)
   );
+}
+
+/**
+ * @description the statuses a tab of the intake page can list (C1): the open tab those still to triage, pending and
+ * snoozed; the closed tab those triaged, accepted, declined and marked duplicates
+ */
+export const tabStatuses = (tab: IntakeTab): readonly IntakeStatus[] =>
+  tab === "open" ? ["pending", "snoozed"] : ["accepted", "declined", "duplicate"];
+
+/** Whether the values name one at least. */
+const isNonEmpty = <T>(values: T[]): values is [T, ...T[]] => values.length > 0;
+
+/**
+ * @description the statuses with status turned on, after those held, or off if held: the one rule of the filters'
+ * menu and of the filters applied (R9). None when status is the last one on, which stays: a list names a status always
+ * (C1: none named, nerve lists every status)
+ */
+export function toggledStatuses(
+  statuses: IntakeFilters["statuses"],
+  status: IntakeStatus
+): IntakeFilters["statuses"] | undefined {
+  const next = toggledOptions(statuses, [status]);
+  return isNonEmpty(next) ? next : undefined;
+}
+
+/**
+ * @description whether the filters list other work items than the tab's first ones (defaultFilters): a filter of the
+ * user's own, the order aside, as an order lists the same work items. The filters applied show then, and a list of no
+ * work item says that none matches them rather than the tab's own empty state
+ */
+export function customized(filters: IntakeFilters): boolean {
+  const first = defaultFilters(filters.tab);
+  return filterKey({ ...filters, order: first.order }) !== filterKey(first);
+}
+
+/** A preset of the days a list is filtered by (INTAKE_DATE_PRESETS). */
+type DatePreset = (typeof INTAKE_DATE_PRESETS)[number]["value"];
+
+/**
+ * Each preset's first and last day, as days before today: today, yesterday, and the last 7 or 30 days from that many
+ * days before today to today, as the intake's presets were before (getCustomDates).
+ */
+const PRESET_DAYS: Readonly<Record<DatePreset, readonly [number, number]>> = {
+  today: [0, 0],
+  yesterday: [1, 1],
+  last_7_days: [7, 0],
+  last_30_days: [30, 0],
+};
+
+/** The day of the caller's calendar so many days before now's, as a day string (YYYY-MM-DD). */
+const localDay = (now: Date, daysBefore: number): string => format(subDays(now, daysBefore), "yyyy-MM-dd");
+
+/**
+ * @description the days a preset names at now, each a day of the caller's calendar, the first and the last in (R10):
+ * nerve reads each as a UTC day (P2b R8, registered). Today and yesterday are one day each (a), the last 7 and 30 days
+ * a range of them (a..b, C3)
+ */
+export function presetRange(preset: DatePreset, now: Date): DayRange {
+  const [first, last] = PRESET_DAYS[preset];
+  return { from: localDay(now, first), to: localDay(now, last) };
+}
+
+/**
+ * @description the preset whose days the range is at now, if any: the menu marks it chosen, and the filters applied
+ * name the range by it. A preset chosen on another day keeps the days it named then: now another preset's, or none
+ */
+export function presetOf(range: DayRange | undefined, now: Date): DatePreset | undefined {
+  if (range === undefined) return undefined;
+  return (Object.keys(PRESET_DAYS) as DatePreset[]).find((preset) => {
+    const days = presetRange(preset, now);
+    return days.from === range.from && days.to === range.to;
+  });
+}
+
+/**
+ * @description the days the custom dates' dialog chose (DateFilterModal's "<day>;after", "<day>;before", or both,
+ * days of the caller's calendar): from the day after which, to the day before which, each in, as the dialog's other
+ * readers take them; nerve's a.., ..b and a..b (C3), one range
+ */
+export function customRange(values: readonly string[]): DayRange {
+  const range: DayRange = {};
+  for (const value of values) {
+    const [day, side] = value.split(";");
+    if (side === "after") range.from = day;
+    if (side === "before") range.to = day;
+  }
+  return range;
 }
