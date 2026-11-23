@@ -51,6 +51,7 @@ vi.mock("@/components/issues/issue-detail/reactions", () => ({ IssueReaction: ()
 vi.mock("@/components/issues/issue-detail/issue-activity", () => ({
   IssueActivity: (props: ComponentProps<typeof IssueActivity>) => <div data-activity={String(!!props.isIntakeIssue)} />,
 }));
+vi.mock("./widgets", () => ({ IntakeWidgets: () => null }));
 vi.mock("./issue-properties", () => ({
   InboxIssueContentProperties: (props: ComponentProps<typeof InboxIssueContentProperties>) => (
     <div data-properties={String(props.isEditable)} />

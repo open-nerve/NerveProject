@@ -46,6 +46,7 @@ vi.mock("@/hooks/store/user", () => ({
   useUserPermissions: () => tab.app.user.permission,
   useUserProfile: () => tab.app.user.userProfile,
 }));
+vi.mock("./widgets", () => ({ IntakeWidgets: () => null }));
 vi.mock("@/hooks/editor/use-issue-images", () => ({ useIssueImages: () => ({ images: undefined }) }));
 vi.mock("@/components/issues/title-input", () => ({
   IssueTitleInput: (props: ComponentProps<typeof IssueTitleInput>) => (

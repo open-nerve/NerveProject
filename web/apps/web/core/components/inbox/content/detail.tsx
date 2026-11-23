@@ -28,6 +28,7 @@ import useReloadConfirmations from "@/hooks/use-reload-confirmation";
 import { intakeEditableBy } from "@/store/issue/intake/status";
 // local imports
 import { InboxIssueContentProperties } from "./issue-properties";
+import { IntakeWidgets } from "./widgets";
 
 type Props = {
   workspaceSlug: string;
@@ -44,8 +45,9 @@ type Props = {
  * properties, and its activity and comments. Each is the work item detail's own control, writing through the work
  * item's queue (useIssueOperations), which sends a work item in the intake to its intake (R3). Who changes it is the
  * intake's rule (intakeEditableBy), which its description's images (useIssueImages, the issue host) take uploads by
- * too (P5b spec 2.2). A guest who submitted it changes its name and description alone. While the work item is not
- * held, as a triage reads it again (R34), it says that it is loading, or why the read again failed with its retry.
+ * too (P5b spec 2.2), and its attachments (IntakeWidgets, with its links, which follow the contract's issue.update,
+ * P5b spec 2.3). A guest who submitted it changes its name and description alone. While the work item is not held,
+ * as a triage reads it again (R34), it says that it is loading, or why the read again failed with its retry.
  */
 export const IntakeDetail = observer(function IntakeDetail(props: Props) {
   const { workspaceSlug, projectId, issueId, isSubmitting, setTitleStatus, setDescriptionStatus } = props;
@@ -155,6 +157,9 @@ export const IntakeDetail = observer(function IntakeDetail(props: Props) {
           issueOperations={issueOperations}
           isEditable={editable && role !== EUserPermissions.GUEST}
         />
+      </div>
+      <div className="py-4">
+        <IntakeWidgets workspaceSlug={workspaceSlug} projectId={projectId} issueId={issueId} editable={editable} />
       </div>
       <div className="pt-4">
         <IssueActivity

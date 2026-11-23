@@ -52,6 +52,7 @@ vi.mock("@/components/issues/issue-detail/reactions", () => ({ IssueReaction: ()
 vi.mock("@/components/issues/issue-detail/description-versions", () => ({ IssueDescriptionVersions: () => null }));
 vi.mock("@/components/issues/issue-detail/issue-activity", () => ({ IssueActivity: () => null }));
 vi.mock("./issue-properties", () => ({ InboxIssueContentProperties: () => null }));
+vi.mock("./widgets", () => ({ IntakeWidgets: () => null }));
 
 let tab: Awaited<ReturnType<typeof intakeTab>>;
 let host: HTMLDivElement, root: Root;
