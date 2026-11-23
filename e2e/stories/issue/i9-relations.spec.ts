@@ -99,6 +99,18 @@ test("I9 (page): native candidates create Blocking and cross-project Relates to;
     issue_id: source.id,
   });
   await modal.getByRole("option").filter({ hasText: cross.name }).click();
+  // A relation to another project's work item ends its turn by reading that project's directories and the workspace's
+  // states (relation.store.ts directories), after the row shows: the page leaves only once nerve answered them, or the
+  // navigation aborts them.
+  const directories = [
+    `/api/v0/workspaces/${seed.slug}/states`,
+    `/api/v0/projects/${ops.id}/members`,
+    `/api/v0/projects/${ops.id}/labels`,
+  ].map((path) =>
+    page.waitForResponse(
+      (response) => response.request().method() === "GET" && new URL(response.url()).pathname === path
+    )
+  );
   expect(
     (
       await answerTo(page, "POST", `/api/v0/issues/${source.id}/relations`, () =>
@@ -140,6 +152,8 @@ test("I9 (page): native candidates create Blocking and cross-project Relates to;
     activity: crossActivity,
     wrote: 1,
   });
+  const answered = await Promise.all(directories);
+  expect(await Promise.all(answered.map((answer) => answer.finished()))).toEqual([null, null, null]);
   await page.goto(`/${seed.slug}/browse/WEB-${target.sequence_id}`);
   await expect(page.locator(`[id="editor-container-${target.id}"] [contenteditable]`)).toBeVisible();
   await page.getByRole("button", { name: "Relations 1", exact: true }).click();
