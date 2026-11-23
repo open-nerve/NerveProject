@@ -14,7 +14,8 @@ import { loadWorkspaces } from "@/store/workspace/fake-workspaces";
 import { IntakePageStateProvider } from "../../page-state";
 import { IntakeMobileHeader } from "./mobile";
 import { IntakeHeader } from "./root";
-import { useIntakeActions, type IntakeActions } from "./use-intake-actions";
+import type { IntakeActions } from "./intake-actions";
+import { useIntakeActions } from "./use-intake-actions";
 
 // The header of the selected work item of a project's intake, wide and narrow, and the action model both read (P5a
 // spec 2.7, 2.8, R11, R15, R20, R27): what the caller is offered, by his role in the route's project (the permission

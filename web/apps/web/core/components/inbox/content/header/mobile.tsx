@@ -16,9 +16,9 @@ import { NameDescriptionUpdateStatus } from "@/components/issues/issue-update-st
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 // local imports
+import { INTAKE_ACTION_LABELS, type IntakeActions } from "./intake-actions";
 import { IntakeNavigation } from "./navigation";
 import { IntakeStatusChip } from "./status-chip";
-import { INTAKE_ACTION_LABELS, type IntakeActions } from "./use-intake-actions";
 
 type Props = {
   projectId: string;

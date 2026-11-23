@@ -32,9 +32,10 @@ import { DeleteInboxIssueModal } from "../modals/delete-issue-modal";
 import { SelectDuplicateInboxIssueModal } from "../modals/select-duplicate";
 import { InboxIssueSnoozeModal } from "../modals/snooze-issue-modal";
 import { IntakeDetail } from "./detail";
+import type { IntakeActions } from "./header/intake-actions";
 import { IntakeMobileHeader } from "./header/mobile";
 import { IntakeHeader } from "./header/root";
-import { useIntakeActions, type IntakeActions } from "./header/use-intake-actions";
+import { useIntakeActions } from "./header/use-intake-actions";
 
 type TInboxContentRoot = {
   workspaceSlug: string;

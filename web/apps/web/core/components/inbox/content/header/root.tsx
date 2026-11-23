@@ -25,9 +25,9 @@ import { NameDescriptionUpdateStatus } from "@/components/issues/issue-update-st
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { useProject } from "@/hooks/store/use-project";
 // local imports
+import { INTAKE_ACTION_LABELS, type IntakeAction, type IntakeActions } from "./intake-actions";
 import { IntakeNavigation } from "./navigation";
 import { IntakeStatusChip } from "./status-chip";
-import { INTAKE_ACTION_LABELS, type IntakeAction, type IntakeActions } from "./use-intake-actions";
 
 /** The actions the wide header offers in its menu, in its order: the others are buttons. */
 const MENU_ACTIONS: readonly IntakeAction[] = ["snooze", "unsnooze", "resnooze", "duplicate", "delete"];

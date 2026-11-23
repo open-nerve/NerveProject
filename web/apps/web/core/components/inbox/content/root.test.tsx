@@ -29,7 +29,7 @@ import type { DeleteInboxIssueModal } from "../modals/delete-issue-modal";
 import type { IntakeDetail } from "./detail";
 import type { IntakeMobileHeader } from "./header/mobile";
 import type { IntakeHeader } from "./header/root";
-import type { IntakeActions } from "./header/use-intake-actions";
+import type { IntakeActions } from "./header/intake-actions";
 import { InboxContentRoot } from "./root";
 
 // The detail region of a project's intake page (P5a spec 2.5–2.8; re-94 m4): a region named so and focusable, around
