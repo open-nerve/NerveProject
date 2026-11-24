@@ -109,3 +109,38 @@ export async function intakeNamesOf(db: Database, projectId: string): Promise<st
   );
   return rows.map(({ name }) => name);
 }
+
+/**
+ * The file of id as nerve keeps it, a work item's in an intake or once out of it: the key of its object in the storage
+ * and its bytes' digest (SHA-256, hexadecimal), who uploaded it, by id, whether it is uploaded (confirmed) and bound to
+ * its work item (an attachment as it is confirmed, an image as the description that holds it is saved), and whether it
+ * is deleted and by whom.
+ */
+export async function intakeFileOf(db: Database, id: string) {
+  const [row] = await db.query<{
+    key: string;
+    sha: string;
+    by: string;
+    uploaded: boolean;
+    bound: boolean;
+    deleted: boolean;
+    deleted_by: string | null;
+  }>(
+    `SELECT storage_metadata->'final'->>'key' AS key, storage_metadata->'final'->>'sha256' AS sha,
+            created_by_id::text AS by, is_uploaded AS uploaded, bound_at IS NOT NULL AS bound, is_deleted AS deleted,
+            deleted_by_id::text AS deleted_by
+       FROM file_assets WHERE id = $1`,
+    [id]
+  );
+  if (!row) throw new Error(`no file ${id}`);
+  return row;
+}
+
+/** Whether each file named name of the work item of issueId is uploaded (confirmed), in no particular order. */
+export async function uploadsNamed(db: Database, issueId: string, name: string): Promise<boolean[]> {
+  const rows = await db.query<{ uploaded: boolean }>(
+    `SELECT is_uploaded AS uploaded FROM file_assets WHERE issue_id = $1 AND attributes->>'name' = $2`,
+    [issueId, name]
+  );
+  return rows.map(({ uploaded }) => uploaded);
+}
