@@ -142,6 +142,12 @@ it("orders the views as chosen, the last changed first as the page opens", async
   expect(rows()).toEqual(["Bugs", "Mine", "Triage"]);
 });
 
+/** The names of the filters applied above the list, as it shows them. */
+const appliedNames = () =>
+  [
+    ...(named("common.clear_all")?.closest(".flex-wrap")?.querySelectorAll(":scope > div > span:first-child") ?? []),
+  ].map((name) => name.textContent);
+
 it("filters the views by their owners, the project's guests among them, applied above the list where they clear", async () => {
   await listed(three);
   await click(named("common.filters", header()));
@@ -163,9 +169,9 @@ it("filters the views by their owners, the project's guests among them, applied 
   ]);
   await click(option("Gus"));
   expect(rows()).toEqual(["Triage"]);
-  // the list's filters applied, above it: the owners', Gus
-  const applied = named("common.clear_all")?.closest(".flex-wrap");
-  expect(applied?.textContent).toContain("owned byGus");
+  // the list's filters applied, above it, by the name the panel gives them: the owners', Gus
+  expect(appliedNames()).toEqual(["common.created_by"]);
+  expect(named("common.clear_all")?.closest(".flex-wrap")?.textContent).toContain("Gus");
   await click(named("common.clear_all"));
   expect(rows()).toEqual(["Mine", "Triage", "Bugs"]);
   expect(named("common.clear_all")).toBeUndefined();
@@ -176,6 +182,7 @@ it("filters the views by the dates of their creation", async () => {
   await click(named("common.filters", header()));
   await click(option("1 week ago"));
   expect(rows()).toEqual(["Mine", "Bugs"]);
+  expect(appliedNames()).toEqual(["inbox_issue.filters.created_at"]);
 });
 
 it("speaks the page's language in the filters' panel", async () => {

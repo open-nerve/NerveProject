@@ -7,8 +7,6 @@
 import { useTranslation } from "@nerve/i18n";
 import { PillButton } from "@makeplane/propel/components/pill";
 import { CloseOutline } from "@makeplane/propel/icons";
-// nerve imports
-import { replaceUnderscoreIfSnakeCase } from "@nerve/utils";
 // components
 import { AppliedDateFilters } from "@/components/common/applied-filters/date";
 import { AppliedMembersFilters } from "@/components/common/applied-filters/members";
@@ -23,8 +21,11 @@ type Props = {
   onChange: (filters: ViewListFilters) => void;
 };
 
-/** The filters of the list, in the order they show. */
-const FILTERS: (keyof ViewListFilters)[] = ["owned_by", "created_at"];
+/** The filters of the list, in the order they show, each by the name its panel gives it (ViewFiltersSelection). */
+const FILTERS = [
+  { key: "owned_by", i18n_title: "common.created_by" },
+  { key: "created_at", i18n_title: "inbox_issue.filters.created_at" },
+] as const satisfies { key: keyof ViewListFilters; i18n_title: string }[];
 
 /**
  * The filters applied to a project's views list (P6a spec 2.3): each filter applied, with its values, each of which
@@ -34,7 +35,7 @@ export function ViewAppliedFiltersList(props: Props) {
   const { filters, onChange } = props;
   const { t } = useTranslation();
 
-  const applied = FILTERS.filter((key) => filters[key].length > 0);
+  const applied = FILTERS.filter(({ key }) => filters[key].length > 0);
   if (applied.length === 0) return null;
 
   /** The filters without value of the filter of key, or without the filter whole. */
@@ -43,12 +44,12 @@ export function ViewAppliedFiltersList(props: Props) {
 
   return (
     <div className="flex flex-wrap items-stretch gap-2 bg-surface-1">
-      {applied.map((key) => (
+      {applied.map(({ key, i18n_title }) => (
         <div
           key={key}
-          className="my-auto flex min-h-9 cursor-pointer flex-wrap items-center gap-1.5 rounded-md border border-subtle p-1.5 text-11 text-tertiary capitalize hover:text-secondary"
+          className="my-auto flex min-h-9 cursor-pointer flex-wrap items-center gap-1.5 rounded-md border border-subtle p-1.5 text-11 text-tertiary hover:text-secondary"
         >
-          <span className="text-11 text-tertiary">{replaceUnderscoreIfSnakeCase(key)}</span>
+          <span className="text-11 text-tertiary">{t(i18n_title)}</span>
           {key === "created_at" ? (
             <AppliedDateFilters editable handleRemove={(value) => remove(key, value)} values={filters[key]} />
           ) : (

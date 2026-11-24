@@ -5,15 +5,6 @@
  */
 
 /**
- * @description Replaces underscores with spaces in snake_case strings
- * @param {string} str - String to replace underscores in
- * @returns {string} String with underscores replaced by spaces
- * @example
- * replaceUnderscoreIfSnakeCase("snake_case") // returns "snake case"
- */
-export const replaceUnderscoreIfSnakeCase = (str: string) => str.replace(/_/g, " ");
-
-/**
  * @description Truncates text to specified length and adds ellipsis
  * @param {string} str - String to truncate
  * @param {number} length - Maximum length before truncation
