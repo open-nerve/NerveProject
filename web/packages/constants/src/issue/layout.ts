@@ -15,7 +15,7 @@ type TIssueLayoutMap = Record<
   }
 >;
 
-export const ISSUE_LAYOUT_MAP: TIssueLayoutMap = {
+const ISSUE_LAYOUT_MAP: TIssueLayoutMap = {
   [EIssueLayoutTypes.LIST]: {
     key: EIssueLayoutTypes.LIST,
     i18n_title: "issue.layouts.title.list",
