@@ -117,3 +117,20 @@ describe("ProjectNavigation, the intake", () => {
     expect(intake()).toBeNull();
   });
 });
+
+// The views (P6a spec 2.2, R14; M6-M7-07): offered by the views entry rule (viewEntryOn), as the tab bar and the
+// command palette offer them, so to the project's member and its guest, and to none who has no role in it; web's views
+// are on (fake-projects.ts).
+const views = () => host.querySelector<HTMLAnchorElement>('a[href="/acme/projects/p-web/views"]');
+
+describe("ProjectNavigation, the views", () => {
+  it.each([its.member, its.guest])("offers the views to $who", async (caller) => {
+    await render(caller);
+    expect(views()?.textContent).toBe("sidebar.views");
+  });
+
+  it("offers no views to the workspace's admin who has no role in the project, though its views are on", async () => {
+    await render(its.outsider);
+    expect(views()).toBeNull();
+  });
+});

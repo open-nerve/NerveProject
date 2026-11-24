@@ -17,6 +17,8 @@ import { useProject } from "@/hooks/store/use-project";
 import { useUser } from "@/hooks/store/user";
 import { useWorkspace } from "@/hooks/store/use-workspace";
 import { useInstance } from "@/hooks/store/use-instance";
+// lib
+import { viewsCreatableBy } from "@/lib/views-entry";
 
 export type TPowerKCreationCommandKeys =
   | "create_work_item"
@@ -33,7 +35,13 @@ export const usePowerKCreationCommandsRecord = (): Record<TPowerKCreationCommand
   // store
   const { config } = useInstance();
   const {
-    permission: { allowPermissions, canCreateProject, canWriteCycles, canWriteModules },
+    permission: {
+      allowPermissions,
+      canCreateProject,
+      canWriteCycles,
+      canWriteModules,
+      getProjectRoleByWorkspaceSlugAndProjectId,
+    },
   } = useUser();
   const { knownProjectIds, getProjectById } = useProject();
   const { getWorkspaceBySlug } = useWorkspace();
@@ -63,13 +71,6 @@ export const usePowerKCreationCommandsRecord = (): Record<TPowerKCreationCommand
     });
   };
   const canCreateWorkItem = (ctx: TPowerKContext) => creatableProjects(ctx).length > 0;
-  const hasProjectMemberLevelPermissions = (ctx: TPowerKContext) =>
-    allowPermissions(
-      [EUserProjectRoles.ADMIN, EUserProjectRoles.MEMBER],
-      EUserPermissionsLevel.PROJECT,
-      ctx.params.workspaceSlug,
-      ctx.params.projectId
-    );
   // nerve's rule for the route's project's cycles (canWriteCycles), not the member check: nerve refuses every planning
   // write of one it shows only his own work items, and every write of a project's cycles while they are turned off
   const canCreateCycle = (ctx: TPowerKContext) => canWriteCycles(ctx.params.workspaceSlug ?? "", ctx.params.projectId);
@@ -81,6 +82,13 @@ export const usePowerKCreationCommandsRecord = (): Record<TPowerKCreationCommand
 
   const getProjectDetails = (ctx: TPowerKContext) =>
     ctx.params.projectId ? getProjectById(ctx.params.projectId) : undefined;
+  // a new view of the address's project, as nerve's view.create decides (P6a spec 2.2, R4, R13): the views entry rule
+  // and an admin's or a member's role, by the caller's role in it as the address's workspace and project give it
+  const canCreateView = (ctx: TPowerKContext) => {
+    const { workspaceSlug, projectId } = ctx.params;
+    const role = workspaceSlug ? getProjectRoleByWorkspaceSlugAndProjectId(workspaceSlug, projectId) : undefined;
+    return viewsCreatableBy(getProjectDetails(ctx), role);
+  };
 
   return {
     create_work_item: {
@@ -107,11 +115,8 @@ export const usePowerKCreationCommandsRecord = (): Record<TPowerKCreationCommand
       icon: WorkItemsOutline,
       keySequence: "nv",
       action: () => toggleCreateViewModal(true),
-      isEnabled: (ctx) => Boolean(getProjectDetails(ctx)?.issue_views_view && hasProjectMemberLevelPermissions(ctx)),
-      isVisible: (ctx) =>
-        Boolean(
-          ctx.params.projectId && getProjectDetails(ctx)?.issue_views_view && hasProjectMemberLevelPermissions(ctx)
-        ),
+      isEnabled: canCreateView,
+      isVisible: canCreateView,
       closeOnSelect: true,
     },
     create_cycle: {

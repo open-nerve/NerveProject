@@ -26,6 +26,7 @@ import { useUser } from "@/hooks/store/user";
 // lib
 import { intakeEntryOn } from "@/lib/intake-entry";
 import { planningEntryOn, type PlanningDomain } from "@/lib/planning-switch";
+import { viewEntryOn } from "@/lib/views-entry";
 
 type TPowerKProjectNavigationCommandKeys =
   | "nav_project_work_items"
@@ -74,6 +75,8 @@ export const usePowerKProjectNavigationCommandsRecord = (): Record<
     planningEntryOn(getContextProject(ctx), getContextRole(ctx), domain);
   // the way into the project's intake: the intake entry rule, as the sidebar and the tab bar offer it (P5a spec R21)
   const hasIntakeEntry = (ctx: TPowerKContext) => intakeEntryOn(getContextProject(ctx), getContextRole(ctx));
+  // the ways into the project's views: the views entry rule, as the sidebar and the tab bar offer them (P6a spec R14)
+  const hasViewEntry = (ctx: TPowerKContext) => viewEntryOn(getContextProject(ctx), getContextRole(ctx));
 
   return {
     nav_project_work_items: {
@@ -177,8 +180,8 @@ export const usePowerKProjectNavigationCommandsRecord = (): Record<
           viewDetails.id,
         ]);
       },
-      isEnabled: (ctx) => baseProjectConditions(ctx) && !!getContextProject(ctx)?.issue_views_view,
-      isVisible: (ctx) => baseProjectConditions(ctx) && !!getContextProject(ctx)?.issue_views_view,
+      isEnabled: (ctx) => baseProjectConditions(ctx) && hasViewEntry(ctx),
+      isVisible: (ctx) => baseProjectConditions(ctx) && hasViewEntry(ctx),
       closeOnSelect: true,
     },
     nav_project_views: {
@@ -189,8 +192,8 @@ export const usePowerKProjectNavigationCommandsRecord = (): Record<
       icon: WorkItemsOutline,
       keySequence: "gv",
       action: (ctx) => handlePowerKNavigate(ctx, [ctx.params.workspaceSlug, "projects", ctx.params.projectId, "views"]),
-      isEnabled: (ctx) => baseProjectConditions(ctx) && !!getContextProject(ctx)?.issue_views_view,
-      isVisible: (ctx) => baseProjectConditions(ctx) && !!getContextProject(ctx)?.issue_views_view,
+      isEnabled: (ctx) => baseProjectConditions(ctx) && hasViewEntry(ctx),
+      isVisible: (ctx) => baseProjectConditions(ctx) && hasViewEntry(ctx),
       closeOnSelect: true,
     },
     nav_project_intake: {
