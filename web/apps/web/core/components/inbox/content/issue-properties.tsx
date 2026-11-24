@@ -19,6 +19,7 @@ import type { TIssueOperations } from "@/components/issues/issue-detail";
 import { IssueLabel } from "@/components/issues/issue-detail/label";
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
+import { assigneeSetChange } from "@/lib/assignee-set";
 // local imports
 import { IntakeDuplicateOf } from "./duplicate-of";
 
@@ -80,7 +81,7 @@ export const InboxIssueContentProperties = observer(function InboxIssueContentPr
             </div>
             <MemberDropdown
               value={issue.assignee_ids}
-              onChange={(assignee_ids) => void update({ assignee_ids })}
+              onChange={(ids) => void update({ assignees: assigneeSetChange(issue.assignee_ids, ids) })}
               disabled={!isEditable}
               projectId={projectId}
               placeholder={t("issue.add.assignee")}

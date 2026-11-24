@@ -13,6 +13,7 @@ import { PriorityDropdown } from "@/components/dropdowns/priority";
 import { StateDropdown } from "@/components/dropdowns/state/dropdown";
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
+import { assigneeSetChange } from "@/lib/assignee-set";
 // types
 import type { TRelationIssueOperations } from "../issue-detail-widgets/relations/helper";
 
@@ -52,7 +53,7 @@ export const RelationIssueProperty = observer(function RelationIssueProperty(pro
   const handleAssigneeChange = (val: string[]) =>
     issue.project_id &&
     issueOperations.update(workspaceSlug, issue.project_id, issueId, {
-      assignee_ids: val,
+      assignees: assigneeSetChange(issue.assignee_ids, val),
     });
 
   return (

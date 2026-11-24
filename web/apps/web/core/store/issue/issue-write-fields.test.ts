@@ -124,7 +124,8 @@ it("an update sends the whole set of modules it is given, empty for none, and le
 // replaces from the set the work item holds when its turn comes; ids the page does not know stay as they are held.
 it("a change of the modules removes and adds to the set held, keeping its order and the ids it does not name", () => {
   const held = ["A", "G"];
-  const modulesAfter = (from: readonly string[], modules: ModuleSetChange) => changeBody({ modules }, from).module_ids;
+  const modulesAfter = (from: readonly string[], modules: ModuleSetChange) =>
+    changeBody({ modules }, { module_ids: from, assignee_ids: [] }).module_ids;
   expect(modulesAfter(held, { add: ["B"] })).toEqual(["A", "G", "B"]);
   expect(modulesAfter(held, { remove: ["A"] })).toEqual(["G"]);
   expect(modulesAfter(held, { add: ["A"] }), "adding one it is in").toEqual(["A", "G"]);
@@ -147,22 +148,32 @@ it("a change's request names each field it sends: its fields as given, the modul
     parent_id: "P",
     cycle_id: null,
   };
-  expect(sent(changeBody(withHeld(fields), held))).toStrictEqual(fields);
-  expect(sent(changeBody({ name: "Write the notes", modules: { add: ["B"] } }, held))).toStrictEqual({
+  expect(sent(changeBody(withHeld(fields), { module_ids: held, assignee_ids: [] }))).toStrictEqual(fields);
+  expect(
+    sent(changeBody({ name: "Write the notes", modules: { add: ["B"] } }, { module_ids: held, assignee_ids: [] }))
+  ).toStrictEqual({
     name: "Write the notes",
     module_ids: ["A", "G", "B"],
   });
-  expect(sent(changeBody({ modules: { remove: ["A", "G"] } }, held))).toStrictEqual({ module_ids: [] });
-  expect(sent(changeBody({ description_html: "<p>same</p>", skip_activity: true }, held))).toStrictEqual({
+  expect(sent(changeBody({ modules: { remove: ["A", "G"] } }, { module_ids: held, assignee_ids: [] }))).toStrictEqual({
+    module_ids: [],
+  });
+  expect(
+    sent(changeBody({ description_html: "<p>same</p>", skip_activity: true }, { module_ids: held, assignee_ids: [] }))
+  ).toStrictEqual({
     description_html: "<p>same</p>",
     skip_activity: true,
   });
 });
 it("a change's request leaves out whatever else a caller slipped into it, a whole set of modules too", () => {
   const slipped = { ...withHeld({ name: "Write the notes" }), module_ids: ["Z"] } as unknown as IssueChange;
-  expect(sent(changeBody(slipped, ["A", "G"]))).toStrictEqual({ name: "Write the notes" });
+  expect(sent(changeBody(slipped, { module_ids: ["A", "G"], assignee_ids: [] }))).toStrictEqual({
+    name: "Write the notes",
+  });
   const both = { module_ids: ["Z"], modules: { add: ["B"] } } as unknown as IssueChange;
-  expect(sent(changeBody(both, ["A", "G"]))).toStrictEqual({ module_ids: ["A", "G", "B"] });
+  expect(sent(changeBody(both, { module_ids: ["A", "G"], assignee_ids: [] }))).toStrictEqual({
+    module_ids: ["A", "G", "B"],
+  });
 });
 it("a change cannot carry a whole set of modules, from a literal or from a work item's fields", () => {
   const detail: Partial<IssueDetail> = { name: "Write the notes", module_ids: ["A"] };

@@ -13,6 +13,7 @@ import { observer } from "mobx-react";
 
 // components
 import { MemberDropdown } from "@/components/dropdowns/member/dropdown";
+import { assigneeSetChange } from "@/lib/assignee-set";
 
 type Props = {
   issue: Issue;
@@ -29,7 +30,7 @@ export const SpreadsheetAssigneeColumn = observer(function SpreadsheetAssigneeCo
       <MemberDropdown
         value={issue?.assignee_ids ?? []}
         onChange={(data) => {
-          onChange(issue, { assignee_ids: data });
+          onChange(issue, { assignees: assigneeSetChange(issue.assignee_ids, data) });
         }}
         projectId={issue?.project_id ?? undefined}
         disabled={disabled}

@@ -1,7 +1,7 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 import type { Locator, Page, Response } from "@playwright/test";
 
-import { intakeLinksOf, intakeRowOf } from "../../fixtures/assert/intake";
+import { intakeLinksOf, intakeRowOf, submittedOf } from "../../fixtures/assert/intake";
 import { expectQuietConsole, watchPage } from "../../fixtures/browser";
 import { dismissToasts, recordApi, seenBy, toast } from "../../fixtures/cycle-pages";
 import { submitIntakeIssue, triageIntakeIssue } from "../../fixtures/intake";
@@ -9,6 +9,7 @@ import {
   expectHeaderOf,
   intakeDescription,
   intakeDetail,
+  intakeEditPath,
   intakePath,
   intakeWorld,
   selecting,
@@ -17,15 +18,17 @@ import {
 } from "../../fixtures/intake-pages";
 import type { Issue } from "../../fixtures/issues";
 import { completedLinkCrawl, createIssueLink, listIssueLinks } from "../../fixtures/links";
-import { expectPopupBesideButton } from "../../fixtures/settings-pages";
+import { expectPopupBesideButton, holdAnswer } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 
 // H11's page version, the links and the assignees of a work item of a project's intake (M7 design 2, 3.6; P5b spec
 // 2.3, 2.6, 2.8, R10, R19, R21). Its links are the work item's own, the contract's issue.update: an admin or a member
 // adds, changes and deletes them whatever the work item's status, a declined one's too, which the rest of its detail
 // shows him for reading alone; a guest reads them, offered nothing to change. Its assignees' dropdown on the detail
-// opens by the keyboard beside its button, its search focused, and Escape gives the focus back to the button. The
-// addresses the links lead to are link-local: nerve's crawl refuses them, so nothing leaves the machine.
+// opens by the keyboard beside its button, its search focused, and Escape gives the focus back to the button; two of
+// its members picked one after the other, the first one's change still unanswered, are both assigned (Q34: a change of
+// the set is worked out in its turn from the set then held, v0 design 7.7). The addresses the links lead to are
+// link-local: nerve's crawl refuses them, so nothing leaves the machine.
 
 /**
  * The link of the work item that region shows to url, titled title: its anchor, named by its title (the activity's
@@ -161,12 +164,13 @@ test("H11 (page): bob, a member of Web who did not submit it, adds a link to the
   await expectQuietConsole(page, watch);
 });
 
-test("H11 (page): alice, Web's admin, opens the assignees of a pending work item of its intake on its detail by the keyboard: Enter opens their list beside the button, its search focused, and Escape closes it, the focus back on the button", async ({
+test("H11 (page): alice, Web's admin, opens the assignees of a pending work item of its intake on its detail by the keyboard: Enter opens their list beside the button, its search focused, and Escape closes it, the focus back on the button; she picks Bob, and Odo while nerve's answer to Bob's change is held: the second change carries both, and nerve keeps both", async ({
   api,
   browserName,
+  db,
   signedInPage,
 }, testInfo) => {
-  const { alice, bob, slug, web } = await intakeWorld(api, testInfo);
+  const { alice, bob, odo, slug, web } = await intakeWorld(api, testInfo);
   const crash = await submitIntakeIssue(api, bob.token, web.id, { name: "Crash on save" });
 
   // Crash on save selected, its description's editor built (a route set up after it holds none of WebKit's preloads).
@@ -191,6 +195,32 @@ test("H11 (page): alice, Web's admin, opens the assignees of a pending work item
   await expect(list).toHaveCount(0);
   await expect(assignees).toBeFocused();
   expect(writes).toEqual([]);
+
+  // Picked one after the other (Q34, T8c): Bob, the answer to his change held once nerve has applied it; Odo meanwhile,
+  // his change waiting its turn behind Bob's. Let through, the second change carries both, and nerve keeps both.
+  const edit = intakeEditPath(crash);
+  const answers: number[] = [];
+  page.on("response", (response) => {
+    if (response.request().method() === "PATCH" && new URL(response.url()).pathname === edit)
+      answers.push(response.status());
+  });
+  let applied = false;
+  const release = await holdAnswer(page, "PATCH", edit, 1, () => {
+    applied = true;
+  });
+  await assignees.click();
+  await list.getByRole("option", { name: "Bob Bob", exact: true }).click();
+  await expect.poll(() => applied).toBe(true);
+  await list.getByRole("option", { name: "Odo Odo", exact: true }).click();
+  expect(writes.map(({ write }) => write)).toEqual([`PATCH ${edit}`]);
+  await release();
+  await expect.poll(() => answers).toEqual([200, 200]);
+  await expect.poll(() => reads().pending).toBe(0);
+  expect(writes).toEqual([
+    { write: `PATCH ${edit}`, body: { assignee_ids: [bob.id] } },
+    { write: `PATCH ${edit}`, body: { assignee_ids: [bob.id, odo.id] } },
+  ]);
+  expect((await submittedOf(db, crash.id)).assignee_ids).toEqual([bob.id, odo.id].toSorted());
 
   expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
   await expectQuietConsole(page, watch);

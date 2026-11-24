@@ -39,9 +39,9 @@ export function useWorkItemWrites({ root, read, capture }: WorkItemCommandContex
   };
   /**
    * A change of the work item as its dropdowns send one (IssueChange, P7a spec 2.2, R3), through the guards above: its
-   * request made in the work item's turn (changeBody), its modules' additions and removals applied to the set it then
-   * holds; the type takes no whole set (P7c spec 2.5).
+   * request made in the work item's turn (changeBody), its modules' and assignees' additions and removals applied to the
+   * sets it then holds (P5b R20); the type takes no whole set of modules (P7c spec 2.5).
    */
-  const change = (requested: IssueChange) => update((held) => changeBody(requested, held.module_ids));
+  const change = (requested: IssueChange) => update((held) => changeBody(requested, held));
   return { update, change };
 }

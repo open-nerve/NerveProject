@@ -29,6 +29,7 @@ import { StateDropdown } from "@/components/dropdowns/state/dropdown";
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { useMember } from "@/hooks/store/use-member";
 import { useProjectState } from "@/hooks/store/use-project-state";
+import { assigneeSetChange } from "@/lib/assignee-set";
 import { inIntake } from "@/store/issue/intake/status";
 // components
 import { IssueParentSelectRoot } from "@/components/issues/parent-select-root";
@@ -98,7 +99,11 @@ export const IssueDetailsSidebar = observer(function IssueDetailsSidebar(props: 
             <SidebarPropertyListItem icon={MembersOutline} label={t("common.assignees")}>
               <MemberDropdown
                 value={issue?.assignee_ids ?? undefined}
-                onChange={(val) => updateProperty(workspaceSlug, projectId, issueId, { assignee_ids: val })}
+                onChange={(val) =>
+                  updateProperty(workspaceSlug, projectId, issueId, {
+                    assignees: assigneeSetChange(issue.assignee_ids, val),
+                  })
+                }
                 disabled={!isEditable}
                 projectId={projectId}
                 placeholder={t("issue.add.assignee")}
