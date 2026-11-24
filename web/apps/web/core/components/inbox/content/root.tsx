@@ -31,6 +31,7 @@ import { DeleteInboxIssueModal } from "../modals/delete-issue-modal";
 import { SelectDuplicateInboxIssueModal } from "../modals/select-duplicate";
 import { InboxIssueSnoozeModal } from "../modals/snooze-issue-modal";
 import { IntakeDetail } from "./detail";
+import { IntakeEmbedClose } from "./header/embed-close";
 import type { IntakeActions } from "./header/intake-actions";
 import { IntakeMobileHeader } from "./header/mobile";
 import { IntakeHeader } from "./header/root";
@@ -92,7 +93,8 @@ export const InboxContentRoot = observer(function InboxContentRoot(props: TInbox
  * it, whose clearing is the delete's. A work item it cannot show leaves the intake's lists as well (drop), so that the
  * page, which selects a list's first row once nothing is selected, selects another row rather than it again. The
  * header and the detail are drawn inside the detail host, which withdraws them while a triage reads the work item
- * again; the modals, outside it, stay.
+ * again; the modals, outside it, stay. Embedded in the notifications page, its Close is drawn above its loading and
+ * its failure too, where no header is (T11 m1): the embed closes in every state.
  */
 const IntakeSelection = observer(function IntakeSelection(props: TInboxContentRoot & { identity: string }) {
   const { workspaceSlug, projectId, inboxIssueId: issueId, identity, selection } = props;
@@ -182,12 +184,17 @@ const IntakeSelection = observer(function IntakeSelection(props: TInboxContentRo
             />
           </ContentWrapper>
         </IssueDetailHost>
-      ) : error !== undefined && !refused ? (
-        <PlanningReadFailure error={error} onRetry={() => void mutate()} />
       ) : (
-        <div role="status" className="p-4 text-13 text-secondary">
-          {t("common.loading")}
-        </div>
+        <>
+          {selection.kind === "embed" && <IntakeEmbedClose onClose={selection.close} className="m-4 self-start" />}
+          {error !== undefined && !refused ? (
+            <PlanningReadFailure error={error} onRetry={() => void mutate()} />
+          ) : (
+            <div role="status" className="p-4 text-13 text-secondary">
+              {t("common.loading")}
+            </div>
+          )}
+        </>
       )}
       <IntakeModals workspaceSlug={workspaceSlug} projectId={projectId} issueId={issueId} actions={actions} />
     </>

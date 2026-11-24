@@ -7,6 +7,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { IssueIntake } from "@nerve/api-client";
 import type { EmptyStateCompact, EmptyStateDetailed } from "@nerve/propel/empty-state";
 import { json, noContent, problem } from "@/lib/auth/fake-nerve";
+import { until } from "@/lib/auth/fake-time";
+import { refusal } from "@/lib/fake-refusal";
 import { StoreContext } from "@/lib/store-context";
 import type { RootStore } from "@/store/root.store";
 import { detailOf } from "@/store/issue/intake/fake-intake";
@@ -31,10 +33,12 @@ import type { IntakeSelectionPort } from "./selection-port";
 // toggle) but a button named Close, its port's close; a triage nerve confirmed leaves the selection where it is, the
 // focus on the new header's primary action, else on the embed's region; a deletion leaves it (the port's leave). Open
 // is offered on every status: an item not accepted opens in the intake page, selected in the tab that lists it, one
-// accepted in the browse page; copy copies the browse page's address still. The stores, the headers, the action model
-// and the modals are real (the accept modal's form a stand-in), nerve a fake; the session is fake-intake-page.tsx's.
+// accepted in the browse page; copy copies the browse page's address still. Before its detail shows, its read loading
+// or failed, it draws its Close too (T11 m1); the intake page's selection none. The stores, the headers, the action
+// model and the modals are real (the accept modal's form a stand-in), nerve a fake; the session is
+// fake-intake-page.tsx's.
 
-const held = vi.hoisted(() => ({ copy: vi.fn(), where: "" }));
+const held = vi.hoisted(() => ({ copy: vi.fn(), where: "", fails: [] as ((error: unknown) => void)[] }));
 vi.mock("@/lib/auth/api-client", () => ({ tokenManager: { state: { loginId: "one" } }, publicClient: {} }));
 vi.mock("@/lib/store-context", async () => ({
   rootStore: {},
@@ -59,15 +63,16 @@ vi.mock("@/components/issues/issue-detail/use-issue-operations", async (original
   ...(await original<typeof import("@/components/issues/issue-detail/use-issue-operations")>()),
   useIssueOperations: () => ({
     fetch: (_ws: string, _project: string, id: string) =>
-      new Promise<void>((resolve) =>
+      new Promise<void>((resolve, reject) => {
+        held.fails.push(reject);
         page.reads.push({
           id,
           answer: (detail) => {
             page.tab.app.issue.issues.acceptRead(detail, page.tab.app.issue.captureRead());
             resolve();
           },
-        })
-      ),
+        });
+      }),
   }),
 }));
 vi.mock("@/components/inbox/content/detail", () => ({ IntakeDetail: () => <p data-body /> }));
@@ -113,6 +118,7 @@ let port: ReturnType<typeof portOf>;
 beforeEach(() => {
   held.copy.mockReset();
   held.copy.mockResolvedValue(undefined);
+  held.fails = [];
   port = portOf();
 });
 
@@ -122,20 +128,23 @@ function Where() {
   return null;
 }
 
-/** Embeds i-x of p-web (its project WEB) in the notifications page, its read answering intake. */
-async function embedded(intake: IssueIntake = intakeOf("pending")) {
-  await act(async () =>
+/** Draws the detail region of i-x of p-web (its project WEB) in the notifications page, given selection. */
+const drawn = (selection: IntakeSelectionPort = port) =>
+  act(async () =>
     page.root.render(
       <StoreContext.Provider value={page.tab.app}>
         <SWRConfig value={{ provider: () => new Map() }}>
           <MemoryRouter initialEntries={["/acme/notifications"]}>
             <Where />
-            <InboxContentRoot workspaceSlug="acme" projectId="p-web" inboxIssueId="i-x" selection={port} />
+            <InboxContentRoot workspaceSlug="acme" projectId="p-web" inboxIssueId="i-x" selection={selection} />
           </MemoryRouter>
         </SWRConfig>
       </StoreContext.Provider>
     )
   );
+/** Embeds i-x in the notifications page, its read answering intake. */
+async function embedded(intake: IssueIntake = intakeOf("pending")) {
+  await drawn();
   await shown(detailOf("x", { intake, sequence_id: 7 }));
 }
 
@@ -245,5 +254,54 @@ describe("opening and copying from the embed (R30)", () => {
     await act(async () => buttonSaying("inbox_issue.actions.copy", detailRegion()!)!.click());
     await settled();
     expect(held.copy).toHaveBeenCalledExactlyOnceWith(BROWSE);
+  });
+});
+
+describe("the embed's close before its detail shows (T11 m1)", () => {
+  /** The region's buttons named Close. */
+  const closes = () => [...detailRegion()!.querySelectorAll<HTMLButtonElement>('button[aria-label="close"]')];
+  /** The region's read, once it is out, fails as nerve is busy (no refusal of the work item: kept, with its retry). */
+  const failed = async () => {
+    await act(async () => until(() => held.fails.length === 1, "the region's read"));
+    await act(async () => held.fails[0]!(refusal(503, "service.unavailable")));
+    await settled();
+    expect(detailRegion()!.querySelector('[role="alert"]')).toBeTruthy();
+  };
+
+  it("is drawn above the loading while the embed's read is out: pressed, the port's close", async () => {
+    await drawn();
+    await act(async () => until(() => page.reads.length === 1, "the embed's read"));
+    expect(detailRegion()!.querySelector('[role="status"]')?.textContent).toBe("common.loading");
+    expect(closes()).toHaveLength(1);
+    await act(async () => closes()[0]!.click());
+    expect(port.close).toHaveBeenCalledOnce();
+    expect(port.leave).not.toHaveBeenCalled();
+  });
+
+  it("is drawn above the read's failure and its retry: pressed, the port's close", async () => {
+    await drawn();
+    await failed();
+    expect(buttonSaying("common.retry", detailRegion()!)).toBeTruthy();
+    expect(closes()).toHaveLength(1);
+    await act(async () => closes()[0]!.click());
+    expect(port.close).toHaveBeenCalledOnce();
+    expect(port.leave).not.toHaveBeenCalled();
+  });
+
+  it("is not drawn on the intake page (its selection's kind page), its read out or failed: its list is beside it", async () => {
+    const onPage = {
+      kind: "page",
+      leave: vi.fn<IntakeSelectionPort["leave"]>(),
+      neighbour: () => undefined,
+      region: createRef<HTMLElement>(),
+      navigation: () => null,
+    } satisfies IntakeSelectionPort;
+    await drawn(onPage);
+    await act(async () => until(() => page.reads.length === 1, "the page's read"));
+    expect(detailRegion()!.querySelector('[role="status"]')).toBeTruthy();
+    expect(closes()).toEqual([]);
+    await failed();
+    expect(closes()).toEqual([]);
+    expect(onPage.leave).not.toHaveBeenCalled();
   });
 });

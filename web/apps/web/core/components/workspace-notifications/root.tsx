@@ -12,6 +12,7 @@ import { EmptyStateCompact } from "@nerve/propel/empty-state";
 import { setToast, TOAST_TYPE } from "@nerve/propel/toast";
 // components
 import { InboxContentRoot } from "@/components/inbox/content";
+import { IntakeEmbedClose } from "@/components/inbox/content/header/embed-close";
 import { useIssueOperations } from "@/components/issues/issue-detail/use-issue-operations";
 import { IssuePeekOverview } from "@/components/issues/peek-overview";
 import { IssuePeekOverviewError } from "@/components/issues/peek-overview/error";
@@ -85,11 +86,12 @@ type PreviewProps = {
 /**
  * The selected notification's work item, scoped to the notification. It shows only once the caller's role in the work
  * item's project is known: a project he holds no role in (an archived one's, which the workspace's list leaves out) is
- * read first (useProjectRead), and the preview says it is loading meanwhile; each preview judges by its own read,
- * never by an answer SWR keeps from an earlier one (whole-branch m1). Once that read settles and he still has no role
- * (nerve refuses it: he has left the project, or nerve was not reached; or it gives the project but no role in it), the
- * selection is cleared and a toast says why: never a blank pane (re-93 I4). With his role, the work item is the
- * generation's (P5b R27): his permissions in the project and his login, a new one judging it anew (NotificationWorkItem).
+ * read first (useProjectRead), and the preview says it is loading meanwhile, its Close drawn (PreviewLoading); each
+ * preview judges by its own read, never by an answer SWR keeps from an earlier one (whole-branch m1). Once that read
+ * settles and he still has no role (nerve refuses it: he has left the project, or nerve was not reached; or it gives
+ * the project but no role in it), the selection is cleared and a toast says why: never a blank pane (re-93 I4). With
+ * his role, the work item is the generation's (P5b R27): his permissions in the project and his login, a new one
+ * judging it anew (NotificationWorkItem).
  */
 const NotificationPreview = observer(function NotificationPreview(props: PreviewProps) {
   const { workspace, selected } = props;
@@ -131,7 +133,7 @@ const NotificationPreview = observer(function NotificationPreview(props: Preview
     clearSelection(notificationId);
   }, [unreadable, read.error, refusalToast, t, clearSelection, notificationId]);
 
-  if (!readable) return <NotificationsLoader />;
+  if (!readable) return <PreviewLoading leave={props.leave} />;
   const identity = root.permissionReads.identity(workspace.id, [projectId]);
   return <NotificationWorkItem key={JSON.stringify([identity, loginId])} {...props} />;
 });
@@ -185,12 +187,12 @@ const NotificationWorkItem = observer(function NotificationWorkItem(props: Previ
  * How the preview shows the selected notification's work item, judged by a read of its own (P5b R16, R27; O-1 乙):
  * the peek's read (usePeekIssueRead, the same key, so that a peek mounting right after joins it: one read, as SWR
  * dedupes, re-95 O2), its mount and reconnect reads off, made by mutate as it mounts, so that an answer SWR keeps from
- * an earlier read is never taken for its own; until it settles, it says it is loading. At its first success, the work
- * item as the stores hold it is judged (judge): one in the intake (pending, snoozed, declined, a duplicate) embedded,
- * any other (accepted, never submitted) peeked at. A read that fails shows its own failure (IssuePeekOverviewError),
- * its close the landing's, its retry reading again, judged once settled. An answer of another session or other
- * permissions (SessionChangedError) is no failure: the work item as held is judged, the generation that follows
- * judging it anew.
+ * an earlier read is never taken for its own; until it settles, it says it is loading, its Close drawn (PreviewLoading,
+ * the landing's leave). At its first success, the work item as the stores hold it is judged (judge): one in the intake
+ * (pending, snoozed, declined, a duplicate) embedded, any other (accepted, never submitted) peeked at. A read that
+ * fails shows its own failure (IssuePeekOverviewError), its close the landing's, its retry reading again, judged once
+ * settled. An answer of another session or other permissions (SessionChangedError) is no failure: the work item as
+ * held is judged, the generation that follows judging it anew.
  */
 const NotificationJudgement = observer(function NotificationJudgement(
   props: PreviewProps & { judge: (judgement: Judgement) => void }
@@ -239,5 +241,19 @@ const NotificationJudgement = observer(function NotificationJudgement(
         issueId={issueId}
       />
     );
-  return <NotificationsLoader />;
+  return <PreviewLoading leave={leave} />;
 });
+
+/**
+ * The preview while it reads, the project or the work item (P4 spec 2.6; P5b R16): it says it is loading, beside its
+ * Close (the embed's, R17), which leaves the notification through the page's landing (R26), as every state of the
+ * preview closes (T11 m1): below 768 px the list has no width while a notification is selected.
+ */
+function PreviewLoading({ leave }: { leave: () => void }) {
+  return (
+    <div className="flex size-full flex-col">
+      <IntakeEmbedClose onClose={leave} className="m-4 self-start" />
+      <NotificationsLoader />
+    </div>
+  );
+}
