@@ -77,10 +77,10 @@ M4 的最终 C12、准确分支 CI 和未来 main 集成分别由[验收台账](
 **处理结果（M7/P5a，旧 DTO、版本与命令面板）：** 收集箱的过渡都已删除，没有给 M4 新接口加兼容层（[P5a spec](../specs/P5a-web-intake.md) §2.10）：旧的 `services/inbox/inbox-issue.service.ts`（旧地址与它的 DTO）、`@nerve/types` 的 `inbox.ts` 与最后的旧请求类型 `TLegacyIssueUpdateRequest` 随旧数据层在 T6c 删除（`bd1802fd`）；版本的 service `services/inbox/intake-work_item_version.service.ts`、DTO `intake-description-version.ts` 与 `inbox/content/description-versions.tsx` 在 T6a 删除（`3ea45cd4`），描述版本改经 M4 的版本接口（收集箱条目在工作项的写队列上恢复，§2.4）；关键词 `copy-hook` 的收集箱例外在 T6a 删除，新规则 `old-intake-urls` 拦住 Plane 的收集箱地址（T6c）。命令面板的收集箱结果：Plane 也没有收集箱的搜索结果，设计保留“转到收集箱”（M7 设计 `:245`），按 R24 关闭该项；“转到收集箱”改经入口规则 `intakeEntryOn`（M6-M7-07）。`frame-src`：收集箱页不嵌 iframe（`git grep -i iframe -- web/apps/web/core web/apps/web/app web/packages/editor/src` 为空），CSP 不改。新建弹窗的关闭政策随 P5b；迭代、视图的命令面板结果随 P6a/P6b。保持 open。
 
 **处理结果（M7/P5b，收集箱的关闭政策）：** 上面第五条（lazy editor 就绪期间的关闭政策等）的收集箱部分逐项（[P5b spec](../specs/P5b-web-intake-files-embed.md) §2.1、§5；`fa78bb11`）：
-- discard 与文档 Escape 的关闭政策：两个文档级的 Escape 删去，Escape、点背景与 Discard 走 `requestClose` 一条规则，编辑器没建成可关（单测 `create-root.close.test.tsx`；H8 (page) `h8-intake-close-page.spec.ts:96` 在扣住编辑器代码块时核，Chromium、Firefox）。
-- dirty/pending/busy：有改动先确认放弃、没有改动直接关；提交在途时弹窗不给 `handleClose`、`requestClose` 也不关，Discard 与 “Create more” 停用（R28；H8 (page) `:155` 三引擎断言 Escape、点背景与被拒之后焦点都在弹窗里）。
+- discard 与文档 Escape 的关闭政策：两个文档级的 Escape 删去，Escape、点背景与 Discard 走 `requestClose` 一条规则，编辑器没建成可关（单测 `create-root.close.test.tsx`；H8 (page) `h8-intake-close-page.spec.ts:97` 在扣住编辑器代码块时核，Chromium、Firefox）。
+- dirty/pending/busy：有改动先确认放弃、没有改动直接关；提交在途时弹窗不给 `handleClose`、`requestClose` 也不关，Discard 与 “Create more” 停用（R28；H8 (page) `:156` 三引擎断言 Escape、点背景与被拒之后焦点都在弹窗里）。
 - 输入保留：确认框的取消与 Escape 留住表单与输入（H8 (page) 两个测试）。
-- 嵌套 Escape：负责人（Combobox）与截止日（Popover）开着时 Escape 只关它们（R7，H8 (page) `:155` 三引擎）。
+- 嵌套 Escape：负责人（Combobox）与截止日（Popover）开着时 Escape 只关它们（R7，H8 (page) `:156` 三引擎）。
 - IME：组字时的 Escape 由 `ModalCore` 阻止，不关、不弹确认框（`create-root.close.test.tsx` 一格，变异 `t2-mut-ime-escape-closes-r2`）。
 - 拒绝：名字在本地被拒与 nerve 点名 `name` 的拒绝都放到名字下、焦点给它，别的拒绝经提示、表单留着（R5；`create-root.name.test.tsx`；H8 (page) `h8-intake-submit-page.spec.ts` 的超长、空的、只有空格的三次与收集箱关掉之后的 409）。
 - 换宿主迟到答：成功与被拒的跟进只在表单还挂着时做（R29；`create-root.form.test.tsx` 两格，变异 `t2-mut-follow-unmounted-r3`）。
