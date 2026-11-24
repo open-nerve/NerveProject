@@ -1,5 +1,5 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
-import { createLabel } from "../../fixtures/api";
+import { changeProject, createLabel } from "../../fixtures/api";
 import { intakeRowOf } from "../../fixtures/assert/intake";
 import { expectQuietConsole, watchPage } from "../../fixtures/browser";
 import { createIssueComment } from "../../fixtures/comments";
@@ -31,13 +31,13 @@ import { expect, test } from "../../fixtures/test";
 // embeds the intake's detail in the preview, its header the intake's (its status, copy, open, the triages its caller is
 // offered) and a Close, never previous or next, ↑ and ↓ stepping nowhere; its labels and assignees show, and the accept
 // modal's state has its default, the embed outside any project's pages. Triaged there, the selection stays, the list
-// does not change, and the embed shows the new status, the focus on its primary action, else on its region. One
-// accepted is peeked at. Every leaving of the notification (the embed's Close, its deletion, the peek's close) clears
-// the selection, the focus on the card's main button, or, the card no longer listed, on the list. The embed reads the
-// work item twice over (the preview's read that judges it, then its own: P5b R16, re-95 O1), the peek once; each fetch
-// reads it twice, its sub-work items' read checking the parent again (sub_issues.store.ts:99, since M4). H20 (page):
-// the browse page of a work item in the intake gives way to the intake page selecting it, in its tab (R14), Back
-// never returning to it.
+// does not change, and the embed shows the new status, the focus on its primary action, else on its region; the
+// project's intake turned off, it offers copy and its Close alone (T11 m2). One accepted is peeked at. Every leaving
+// of the notification (the embed's Close, its deletion, the peek's close) clears the selection, the focus on the
+// card's main button, or, the card no longer listed, on the list. The embed reads the work item twice over (the
+// preview's read that judges it, then its own: P5b R16, re-95 O1), the peek once; each fetch reads it twice, its
+// sub-work items' read checking the parent again (sub_issues.store.ts:99, since M4). H20 (page): the browse page of a
+// work item in the intake gives way to the intake page selecting it, in its tab (R14), Back never returning to it.
 
 /** The text of a notification of a work item's assignment to Alice by Bob. */
 const BOB_ASSIGNED_ALICE = "Bob assigned Alice";
@@ -233,6 +233,7 @@ test("H10 (page): bob, Web's member, opens the notifications of a pending, a dec
     await expectHeaderOf(other, idea);
     await expect(shownStatus(other, "Pending")).toBeVisible();
     await expect(embedClose(other)).toBeVisible();
+    await expect(intakeDetail(other).getByRole("button", { name: "Copy work item link", exact: true })).toBeVisible();
     await expect(intakeDetail(other).getByRole("link", { name: "Open work item", exact: true })).toBeVisible();
     await expect(intakeDetail(other).getByRole("button", { name: /^(Accept|Decline|Options)$/ })).toHaveCount(0);
   });
@@ -310,6 +311,31 @@ test("H10 (page): alice leaves embedded work items: Close, by the keyboard, clea
     [],
   ]);
   await expectQuietConsole(page, watch, { errors: failedLoads(browserName, 404) });
+});
+
+test("H10 (page): Web's intake turned off, alice, its admin, opens the notification of a pending work item of it: embedded, offered copy and Close alone, no triage, deletion or Open (nerve refuses each, issue.intake_disabled, and the intake page is its disabled page)", async ({
+  api,
+  signedInPage,
+}, testInfo) => {
+  const { alice, bob, slug, web } = await intakeWorld(api, testInfo);
+  const crash = await submitIntakeIssue(api, bob.token, web.id, { name: "Crash on save", assignee_ids: [alice.id] });
+  await notificationsSent(api, alice.token, slug, 2);
+  expect((await changeProject(api, alice.token, web.id, { intake_view: false })).status).toBe(200);
+
+  const page = await signedInPage(alice.tokens);
+  const watch = await watchPage(page);
+  await page.goto(notificationsPath(slug));
+  const detail = intakeDetail(page);
+  expect(await opened(page, cardButton(page, BOB_ASSIGNED_ALICE, crash), crash, { gets: 4, versions: true })).toBe(4);
+  await expectHeaderOf(page, crash);
+  await expect(shownStatus(page, "Pending")).toBeVisible();
+  await expect(embedClose(page)).toBeVisible();
+  await expect(detail.getByRole("button", { name: "Copy work item link", exact: true })).toBeVisible();
+  await expect(detail.getByRole("button", { name: /^(Accept|Decline|Options)$/ })).toHaveCount(0);
+  await expect(detail.getByRole("link", { name: "Open work item", exact: true })).toHaveCount(0);
+
+  expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
+  await expectQuietConsole(page, watch);
 });
 
 test("H20 (page): alice opens the browse page of a pending work item of Web's intake: once its read answers, the intake page takes its place, its open tab selecting it; moved to a declined one's, the closed tab selects it; Back returns to the pending one's intake page, never to a browse page", async ({

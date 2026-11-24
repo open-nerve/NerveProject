@@ -238,3 +238,60 @@ describe("copying the work item's link", () => {
     expect(toasts).toEqual([{ type: "error", title: "toast.error", message: "something_went_wrong_please_try_again" }]);
   });
 });
+
+describe("the project's intake turned off (P5b T11 m2)", () => {
+  // nerve refuses every triage and every deletion then (issue.intake_disabled), and the intake page is its disabled
+  // page (P5a R19): the work item is closed, as an archived project's, on the intake page and embedded in the
+  // notifications page alike: its copy, and its opening once accepted (the browse page), nothing else
+  const embed = {
+    kind: "embed" as const,
+    leave: () => {},
+    close: () => {},
+    leaving: { current: false },
+    region: { current: null },
+  };
+  /** The selection's port the action model is under, the page's or the embed's, as each cell sets it. */
+  let under: typeof selection | typeof embed = selection;
+  /** The action model, as the headers read it. */
+  const Model = observer(function Model() {
+    held.actions = useIntakeActions("acme", "p-web", "i-x", under);
+    return null;
+  });
+  const offeredUnder = async (kind: "page" | "embed") => {
+    under = kind === "page" ? selection : embed;
+    await act(async () =>
+      root.render(
+        <MemoryRouter>
+          <Model />
+        </MemoryRouter>
+      )
+    );
+    return held.actions?.offered;
+  };
+
+  it.each([
+    { who: "an admin", role: ADMIN, status: "pending", kind: "page", offers: ["copy"] },
+    { who: "an admin", role: ADMIN, status: "pending", kind: "embed", offers: ["copy"] },
+    { who: "an admin", role: ADMIN, status: "snoozed", kind: "embed", offers: ["copy"] },
+    { who: "an admin", role: ADMIN, status: "accepted", kind: "page", offers: ["copy", "open"] },
+    { who: "an admin", role: ADMIN, status: "accepted", kind: "embed", offers: ["copy", "open"] },
+    { who: "a member who submitted it", role: MEMBER, status: "pending", kind: "page", offers: ["copy"] },
+    { who: "a member who submitted it", role: MEMBER, status: "pending", kind: "embed", offers: ["copy"] },
+    { who: "a member who submitted it", role: MEMBER, status: "accepted", kind: "page", offers: ["copy", "open"] },
+    { who: "a member who submitted it", role: MEMBER, status: "accepted", kind: "embed", offers: ["copy", "open"] },
+  ] as const)("offers $who, on the $kind, a work item $status, the intake off: $offers", async (cell) => {
+    const till = cell.status === "snoozed" ? later() : null;
+    await given(cell.role, intakeOf(cell.status, till), "u-me", { intake_view: false });
+    expect(await offeredUnder(cell.kind)).toEqual(cell.offers);
+    expect(held.actions?.primary).toBeUndefined();
+  });
+
+  it.each([
+    // the intake on, embedded: the triages and the deletion, and its opening in the intake page (R25 (4)), as before
+    { who: "an admin", role: ADMIN, offers: ["accept", "decline", "snooze", "duplicate", "copy", "open", "delete"] },
+    { who: "a member who submitted it", role: MEMBER, offers: ["copy", "open", "delete"] },
+  ] as const)("offers $who, on the embed, a pending one, the intake on: $offers", async (cell) => {
+    await given(cell.role, intakeOf("pending"), "u-me");
+    expect(await offeredUnder("embed")).toEqual(cell.offers);
+  });
+});

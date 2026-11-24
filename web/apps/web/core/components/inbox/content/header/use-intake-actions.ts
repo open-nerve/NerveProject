@@ -74,7 +74,7 @@ export function useIntakeActions(
   const detail = getIssueDetailById(issueId);
   const project = getProjectById(projectId);
   const role = getProjectRoleByWorkspaceSlugAndProjectId(workspaceSlug, projectId);
-  const offered = offeredOn(detail, role, currentUser?.id, !!project?.archived_at, selection.kind);
+  const offered = offeredOn(detail, project, role, currentUser?.id, selection.kind);
   const link = generateWorkItemLink({
     workspaceSlug,
     projectId,

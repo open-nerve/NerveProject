@@ -4,7 +4,7 @@
  */
 
 // nerve imports
-import type { IntakeTriage, IssueDetail } from "@nerve/api-client";
+import type { IntakeTriage, IssueDetail, Project } from "@nerve/api-client";
 import { EUserPermissions } from "@nerve/constants";
 // store
 import { effectiveStatus } from "@/store/issue/intake/status";
@@ -87,24 +87,29 @@ export type IntakeActions = {
 };
 
 /**
- * What the caller is offered on a work item of a project's intake (P5a spec 2.8, R11, R15, R20, R27; P5b R15, R25):
- * an archived project's, or one triaged already, only its copy; else an admin (a workspace admin who is the project's
- * member too, as the permission store gives it) triages it, a snooze offering its end and another day instead of a
- * snooze, and deletes it; a member who submitted it deletes it; anyone else, a guest who submitted it too, only copies
- * it. Its opening, after its copy, once accepted on the intake page (else the browse page sends it back there), on
- * every status embedded in the notifications page (kind, its selection's). A snooze whose day has come is pending.
+ * What the caller is offered on a work item of a project's intake (P5a spec 2.8, R11, R15, R20, R27; P5b R15, R25;
+ * T11 m2), by the project as held: one whose project is archived or has its intake turned off (nerve refuses every
+ * triage and deletion then, project.archived, issue.intake_disabled; a project not held is not known to have it on, as
+ * intakeEditableBy takes it), or one triaged already, only its copy; else an admin (a workspace admin who is the
+ * project's member too, as the permission store gives it) triages it, a snooze offering its end and another day
+ * instead of a snooze, and deletes it; a member who submitted it deletes it; anyone else, a guest who submitted it
+ * too, only copies it. Its opening, after its copy, once accepted (the browse page; on the intake page, else the
+ * browse page sends it back there), and on every status embedded in the notifications page (kind, its selection's)
+ * while the intake is on (the intake page selecting it; turned off, that page is its disabled page, P5a R19). A snooze
+ * whose day has come is pending.
  */
 export function offeredOn(
   detail: IssueDetail | undefined,
+  project: Project | undefined,
   role: EUserPermissions | undefined,
   me: string | undefined,
-  archived: boolean,
   kind: IntakeSelectionPort["kind"]
 ): IntakeAction[] {
   if (!detail) return [];
   const status = detail.intake ? effectiveStatus(detail.intake, new Date()) : undefined;
-  const open = kind === "embed" || status === "accepted" ? (["open"] as const) : [];
-  if (archived || (status !== "pending" && status !== "snoozed")) return ["copy", ...open];
+  const on = !!project?.intake_view;
+  const open = status === "accepted" || (kind === "embed" && on) ? (["open"] as const) : [];
+  if (!on || project?.archived_at || (status !== "pending" && status !== "snoozed")) return ["copy", ...open];
   if (role === EUserPermissions.ADMIN)
     return [
       "accept",
