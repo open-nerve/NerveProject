@@ -28,6 +28,8 @@ M4 的最终 C12、准确分支 CI 和未来 main 集成分别由[验收台账](
 
 **处理结果（M7/P5a）：** 网页的 `FORMS` 分支（“Intake Form user”）随旧详情树 `inbox/content/issue-root.tsx` 在 T6a 删除（`3ea45cd4`），旧的 `inbox-issue` 服务随旧数据层在 T6c 删除（`bd1802fd`）；项目功能设置的说明按设计不改：只有应用内提交，“在将工作项加入项目之前，先进行审议和讨论”照旧准确（M7 设计 `:97`，[P5a spec](../specs/P5a-web-intake.md) R24），该子项关闭。`select-duplicate.tsx` 的真实页面在 H10 (page)（`e2e/stories/collaboration/h10-intake-triage-page.spec.ts:152`：经选择器标重复，选择器不列条目自己与收集箱里别的条目）与 H20 (page) 三种引擎走过；窄屏在 H20 (page)（`h20-intake-pages.spec.ts:308`，800 宽：列表盖在详情上，按一行之后藏起，窄页头的菜单拒绝、接受、删除）。新建弹窗的其余随 P5b，本条在 P5b 关闭；保持 open。
 
+**处理结果（M7/P5b）：** 新建弹窗的其余在 P5b 做完（[P5b spec](../specs/P5b-web-intake-files-embed.md) §2.1；`fa78bb11`、`ec6b91a5`）：关闭政策、名字的提示与被拒、`ModalTitle`、“Create more” 是开关本身、离开 `getTabIndex`、英文改键、死代码删除。H8 (page) 两份故事（`e2e/stories/collaboration/h8-intake-submit-page.spec.ts`、`h8-intake-close-page.spec.ts`）三引擎核：管理员、成员、访客经弹窗提交（请求体、条目行、选中新条目、列表与侧栏的数），名字的三种被拒，收集箱在弹窗开着时被关掉之后提交答 409 的提示，关闭政策与在途的焦点。**本条关闭。**
+
 <a id="M7-02"></a>
 ## M7-02 通知发送时重新判权
 
@@ -74,6 +76,17 @@ M4 的最终 C12、准确分支 CI 和未来 main 集成分别由[验收台账](
 
 **处理结果（M7/P5a，旧 DTO、版本与命令面板）：** 收集箱的过渡都已删除，没有给 M4 新接口加兼容层（[P5a spec](../specs/P5a-web-intake.md) §2.10）：旧的 `services/inbox/inbox-issue.service.ts`（旧地址与它的 DTO）、`@nerve/types` 的 `inbox.ts` 与最后的旧请求类型 `TLegacyIssueUpdateRequest` 随旧数据层在 T6c 删除（`bd1802fd`）；版本的 service `services/inbox/intake-work_item_version.service.ts`、DTO `intake-description-version.ts` 与 `inbox/content/description-versions.tsx` 在 T6a 删除（`3ea45cd4`），描述版本改经 M4 的版本接口（收集箱条目在工作项的写队列上恢复，§2.4）；关键词 `copy-hook` 的收集箱例外在 T6a 删除，新规则 `old-intake-urls` 拦住 Plane 的收集箱地址（T6c）。命令面板的收集箱结果：Plane 也没有收集箱的搜索结果，设计保留“转到收集箱”（M7 设计 `:245`），按 R24 关闭该项；“转到收集箱”改经入口规则 `intakeEntryOn`（M6-M7-07）。`frame-src`：收集箱页不嵌 iframe（`git grep -i iframe -- web/apps/web/core web/apps/web/app web/packages/editor/src` 为空），CSP 不改。新建弹窗的关闭政策随 P5b；迭代、视图的命令面板结果随 P6a/P6b。保持 open。
 
+**处理结果（M7/P5b，收集箱的关闭政策）：** 上面第五条（lazy editor 就绪期间的关闭政策等）的收集箱部分逐项（[P5b spec](../specs/P5b-web-intake-files-embed.md) §2.1、§5；`fa78bb11`）：
+- discard 与文档 Escape 的关闭政策：两个文档级的 Escape 删去，Escape、点背景与 Discard 走 `requestClose` 一条规则，编辑器没建成可关（单测 `create-root.close.test.tsx`；H8 (page) `h8-intake-close-page.spec.ts:96` 在扣住编辑器代码块时核，Chromium、Firefox）。
+- dirty/pending/busy：有改动先确认放弃、没有改动直接关；提交在途时弹窗不给 `handleClose`、`requestClose` 也不关，Discard 与 “Create more” 停用（R28；H8 (page) `:155` 三引擎断言 Escape、点背景与被拒之后焦点都在弹窗里）。
+- 输入保留：确认框的取消与 Escape 留住表单与输入（H8 (page) 两个测试）。
+- 嵌套 Escape：负责人（Combobox）与截止日（Popover）开着时 Escape 只关它们（R7，H8 (page) `:155` 三引擎）。
+- IME：组字时的 Escape 由 `ModalCore` 阻止，不关、不弹确认框（`create-root.close.test.tsx` 一格，变异 `t2-mut-ime-escape-closes-r2`）。
+- 拒绝：名字在本地被拒与 nerve 点名 `name` 的拒绝都放到名字下、焦点给它，别的拒绝经提示、表单留着（R5；`create-root.name.test.tsx`；H8 (page) `h8-intake-submit-page.spec.ts` 的超长、空的、只有空格的三次与收集箱关掉之后的 409）。
+- 换宿主迟到答：成功与被拒的跟进只在表单还挂着时做（R29；`create-root.form.test.tsx` 两格，变异 `t2-mut-follow-unmounted-r3`）。
+
+收集箱部分关闭。留下：第三条里迭代、视图的命令面板结果与第五条里筛选、视图写后关闭，随 P6a/P6b。保持 open。
+
 <a id="M7-05"></a>
 ## M7-05 最后读者与全应用收口
 
@@ -92,3 +105,5 @@ M4 的最终 C12、准确分支 CI 和未来 main 集成分别由[验收台账](
 **处理结果（M7/P4，通知页的部分）：** 通知页照这些规则写（[P4 spec](../specs/P4-web-notifications.md) §2.6、§2.7、R16）：自定义暂缓弹窗的标题经 `ModalTitle`；它的两个字段的提示是 `FieldError`，控件以它为描述并带 `aria-invalid`，第一个被拒的经 `useRefusedFocus` 取得焦点；卡片的动作以那一行命名（“Mark WEB-12 Fix login read”“Archive …”“Snooze …”）；页签是 Headless `Tab`，类型筛选与视图是 `PopoverMenu` 里的 `<button aria-pressed>`，暂缓的预设是菜单项，“加载更多”是按钮；文字全部经 `t()`，en 与 zh-CN 同加。Escape 关上两个菜单、暂缓菜单与弹窗并把焦点还给按钮，在途时弹窗关不掉（H20 (page) 三种引擎、`snooze-modal.test.tsx`、`snooze-menu.test.tsx`）；弹窗里的日历或时间列表开着时的两级 Escape 没有单独的故事。`projectMemberIds` 的三个读者与 `getTabIndex` 的七个文件 P4 都没有改到，随 P5、P6a。保持 open。
 
 **处理结果（M7/P5a，收集箱的部分）：** `projectMemberIds` 的收集箱读者 `inbox/inbox-filter/filters/filter-selection.tsx` 随旧筛选树在 T6b 删除（`2ac1928c`），新的负责人与创建者筛选读路由项目的显式 id（`getProjectMemberIds(projectId, true)`，`inbox/filters/menu.tsx:106`，T7）；现余的两个读者都是视图的（上面 1、2），getter 的删除随 P6a（[P5a spec](../specs/P5a-web-intake.md) R23）。`getTabIndex` 的四个收集箱文件都在新建弹窗里，随 P5b。收集箱页照这些规则写（spec §2.7–§2.9、R35）：暂缓与选择器的弹窗标题经 `ModalTitle`（`inbox/modals/snooze-issue-modal.tsx:82`、`select-duplicate.tsx:98`），拒绝与删除是 `AlertModalCore`；暂缓的日子被拒时提示是 `FieldError`（`:104`），经 `useRefusedFocus` 取得焦点（`:59`）；列表的一行以“编号 名字”为名（`inbox/sidebar/list-item.tsx:59`）；页签是 Headless `Tab`；面包屑、上一条与下一条的名字经 `t()`，en 与 zh-CN 同加。H20 (page) 三种引擎核对：每个分诊弹窗以标题为名、焦点在里面、后面的页面隐藏，Escape 或取消关上之后焦点回打开它的按钮，在途时 Escape、点外面与取消都关不掉。保持 open。
+
+**处理结果（M7/P5b，收集箱的新建弹窗）：** `getTabIndex` 的四个收集箱文件离开它（`fa78bb11`），它只剩视图的 `views/form.tsx`，函数、两份 `tab-indices.ts` 与桶文件的导出随 P6a。新建弹窗照这些规则写（[P5b spec](../specs/P5b-web-intake-files-embed.md) §2.1）：标题经 `ModalTitle`（弹窗以 “Create intake work item” 为名）；名字的提示是 `FieldError`、控件 `aria-invalid`，被拒经 `useRefusedFocus` 取得焦点；确认放弃是 `AlertModalCore`（以标题为名，按钮的文字经 `t()`）；“Create more” 是开关本身，按钮里不再套开关；英文改走已有的键，新键只有确认框的两个（en、zh-CN）；两级 Escape 在 H8 (page) 三引擎核（负责人列表、截止日的日历与确认框开着时 Escape 只关它们）。`projectMemberIds` 的两个读者仍都是视图的。保持 open。

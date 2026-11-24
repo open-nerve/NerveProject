@@ -71,7 +71,7 @@
   断言一条不改（成功之后 `ui.close` 一次照旧：成功直接关，spec §2.1）。
 - T2 `IN/modals/create-modal/create-root.files.test.tsx`（143）：删 `:28` 的 `use-platform-os` 替身、`:40-44` 的 `NoResize` 与 `:56` 的 `stubGlobal`、`:109-110` 两个 prop；加 `onSubmittingChange={() => {}}` 与上面同一段 `@nerve/ui` 的部分替身；断言不改。删去 `stubGlobal` 之后若有格因 jsdom 没有 `ResizeObserver` 失败，先停下报告（R3 的前提不成立）。
 - T3 `C/store/asset/content-view.test.ts`（197）、`C/store/issue/intake/status.test.ts`（144）、`IN/content/detail.test.tsx`（181）：只追加格；`detail.test.tsx:39` 的 `useIssueImages` 替身的回答可改为一个可辨的 `images`（只为图片的那一格），别的不改。
-- T4 `IN/content/detail.test.tsx`：加一行 `vi.mock("./widgets", …)`（`widgets.tsx` 的格在它自己的测试里）。渲染真实 `IntakeDetail` 的只有这一份（`root.test.tsx`、`root.after-read.test.tsx`、`triage.test.tsx`、`accept.test.tsx` 都替身了它）。
+- T4 `IN/content/detail.test.tsx`：加一行 `vi.mock("./widgets", …)`（`widgets.tsx` 的格在它自己的测试里）。渲染真实 `IntakeDetail` 的只有这一份（`root.test.tsx`、`root.after-read.test.tsx`、`triage.test.tsx`、`accept.test.tsx` 都替身了它）。**实施中改**（T4，主控同意）：不止这一份——P5a 的 `IN/content/issue-properties.test.tsx` 与 T3 新加的 `IN/content/detail.images.test.tsx` 也画真实的 `IntakeDetail`（不在宿主里），`t4-green-1` 里它们 31 格败在 “Issue detail modals require their detail or peek host”；两份各加同一行 `vi.mock("./widgets", () => ({ IntakeWidgets: () => null }))`，断言不改（编译跟随的替身）。
 - T5 `IN/content/header/header.test.tsx`（239）：`:151-152` 的 `TRIAGE` 去掉 `open`，`READ` 拆成已接受的 `["copy","open"]` 与其余的 `["copy"]`；`:155-177` 矩阵的期望照 spec §2.4（待处理、暂缓、拒绝、重复、已归档只有 `copy`，已接受有 `copy`、`open`）；`:187-192` 一格随 `TRIAGE`。理由：R15。
 - T5 `E/stories/collaboration/h10-intake-triage-page.spec.ts`：`expectNoTriage` 的注释（`:52-54`）与 `:58` 改为断言 “Open work item” 不在（它的三个读者 `:217`、`:220`、`:226` 看的都是待处理的条目）。理由：R15。
 - T6a `IN/content/header/header.test.tsx:105-123`（`:105` 的 `selection` 加上 `neighbour`，窄页头的 `isMobileSidebar`、`setIsMobileSidebar` 换成端口）、`IN/content/root.test.tsx:160-175`（`InboxContentRoot` 的 props）：只为端口的形状编译跟随；导入路径随纯搬移跟随（`header.test.tsx:17`）。断言不改。
@@ -82,7 +82,7 @@
   - `:45-57` 浮层组件的替身照旧（`IssuePeekOverview` 一个；读的 hook 在它自己的文件里，不经这个桶文件）；
   - `:215-221` 一格改为“未被接受的收集箱条目嵌入收集箱的内容（`[data-triage]` 在、没有浮层）”。
   - 别的断言不改。
-- T6b `E/stories/collaboration/h2-h4-notification-cards-page.spec.ts`：`:257-264` 改为断言嵌入（spec §2.8 的表），“Close” 限在名为 “Preview” 的区域里定位（toast 的关闭也叫 “Close”，`web/apps/web/app/provider.tsx:35`）；文件头注释 `:49` 与测试标题 `:162` 里 “an intake item's card opens a plain peek” 一句随之改写（标题仍带 `H2–H4 (page)`）；点卡片之前登记嵌入自己那一包读（第二个 `GET /api/v0/issues/{id}` 与它之后的 `/activities`、`/comments`、`/description-versions`）的 `waitForResponse`，离开项目（`:270`）之前等它们答完（预检 m12：末尾对 `watch.apiFailures` 是精确比对，`:292-296`）；`:272-297` 的 404 一步不改（O-1 乙：失败界面是预览自己的、同一个 `DetailResourceError`）。**这一步在 T6b 与产品改动同一提交**（O-4 甲）。
+- T6b `E/stories/collaboration/h2-h4-notification-cards-page.spec.ts`：`:257-264` 改为断言嵌入（spec §2.8 的表），“Close” 限在名为 “Preview” 的区域里定位（toast 的关闭也叫 “Close”，`web/apps/web/app/provider.tsx:35`）；文件头注释 `:49` 与测试标题 `:162` 里 “an intake item's card opens a plain peek” 一句随之改写（标题仍带 `H2–H4 (page)`）；点卡片之前登记嵌入自己那一包读（第二个 `GET /api/v0/issues/{id}` 与它之后的 `/activities`、`/comments`、`/description-versions`）的 `waitForResponse`（**实施中改**，T6b：一次取数有两个这样的 `GET`，子工作项的读核对父项再读一次，`C/store/issue/issue-details/sub_issues.store.ts:99`；嵌入的那一包是第三、第四个，故事等第四个与 `/description-versions`，其余的读以 `recordApi` 的在途归零兜住），离开项目（`:270`）之前等它们答完（预检 m12：末尾对 `watch.apiFailures` 是精确比对，`:292-296`）；`:272-297` 的 404 一步不改（O-1 乙：失败界面是预览自己的、同一个 `DetailResourceError`）。**这一步在 T6b 与产品改动同一提交**（O-4 甲）。
 - T6b P4 的其余通知测试（`WN/page-state.test.tsx`、`WN/sidebar/*.test.tsx`）：`WN/sidebar/list.tsx` 只加一个 `data-notification-list` 标记，预期不受影响；有断言要改先停下报告。
 - T7 `E/stories/issue/editor-loading.spec.ts`（398）：`:14-53` 的 `editorChunks`、`holdEditorImplementation` 搬到 `E/fixtures/editor-chunks.ts`，导入跟随；断言不改。“逐字”之外只许两处（预检 m8）：`editorChunks` 一起导出（故事里另有两个读者，`:160`、`:215`）；构建产物的相对路径从 `../../../web/…`（`:17`）改为 `../../web/…`。
 - T8c `C/store/issue/issue-write-fields.test.ts`：`changeBody` 的第二个参数由所持的模块集合改为所持的工作项，`:127`、`:150`、`:151`、`:155`、`:156`、`:163`、`:165` 的实参照此改写（`{ module_ids: [...], assignee_ids: [] }`），断言不改；负责人增删的格追加在新文件。别的既有测试预期不改：请求体仍是整集（读请求体的测试与故事照旧），组件测试里没有断言下拉框交出整集的格（预检之后 `git grep` 核过：`peek-overview/properties.test.tsx`、`issue-detail/sidebar.test.tsx`、`IN/content/issue-properties.test.tsx` 只核负责人下拉框打开、列出成员）；有断言要改先停下报告。
@@ -260,7 +260,7 @@
 
 **Steps**：
 - [ ] Step 1（纯搬移，`refactor`）：类型、文案表与 `offeredOn` 逐字搬进 `intake-actions.ts`，只改导入；“逐字”之外只许给 hook 要导入的 `OpenModal`（`:61`）、`offeredOn`（`:111`）与 `IntakeModal`（`:58`，hook 读到时）加 `export`（预检 m8）。收据：搬移前后逐行相同、只差这几处 `export`（`t6a-move-identical`）、`make lint-web`、`IN/` 全部测试一行未改且全绿（`t6a-move-tests-untouched`）、`make test-web`、`wc -l`（`t6a-move-wc`）。若搬出的文件读项目，收入 `project-address-route`。提交 `refactor(M7/P5b): use-intake-actions.ts 按关注点纯搬移——动作的种类、文案表与 offeredOn 搬到 intake-actions.ts，hook 留下`。
-- [ ] Step 2（端口，`refactor`，行为不变）：先写测试，看到失败：动作模型在没有 `IntakePageStateProvider` 的树里不抛错；邻行来自端口的 `neighbour`（端口给的邻行与页面状态不同的一格）；页面的端口下页头照旧有上一条、下一条与窄屏开关。实现：`InboxContentRoot` 收 `selection`；页面建 `{ kind: "page", leave: landing.leave, neighbour, region: landing.detail, navigation }`；动作模型的 `neighbour` 只读端口。既有测试只为形状编译跟随（允许清单），断言不改，全绿。变异照上表 T6a。门禁同 T3；死成员整份比对（`t6a-dead-after`）。提交 `refactor(M7/P5b): 收集箱的详情区域收一个选中的端口——邻行、落点与导航由页面给，动作模型不再读页面状态`。
+- [ ] Step 2（端口，`refactor`，行为不变）：先写测试，看到失败：动作模型在没有 `IntakePageStateProvider` 的树里不抛错；邻行来自端口的 `neighbour`（端口给的邻行与页面状态不同的一格）；页面的端口下页头照旧有上一条、下一条与窄屏开关。实现：`InboxContentRoot` 收 `selection`；页面建 `{ kind: "page", leave: landing.leave, neighbour, region: landing.detail, navigation }`；（**实施中改**，T6a 的裁定：T6a 的端口不含 `kind`，它与嵌入的一种在 T6b 随读者一起加；`neighbour(id)` 收工作项的 id，`navigation(screen)` 是页面给的函数，spec §3 的补记）动作模型的 `neighbour` 只读端口。既有测试只为形状编译跟随（允许清单），断言不改，全绿。变异照上表 T6a。门禁同 T3；死成员整份比对（`t6a-dead-after`）。提交 `refactor(M7/P5b): 收集箱的详情区域收一个选中的端口——邻行、落点与导航由页面给，动作模型不再读页面状态`。
 
 ### T6b 通知嵌入与通知页的落点 → **检查点 1**（spec §2.5，R16、R17、R26、R27、R30）
 
@@ -277,14 +277,14 @@
 - [ ] Step B（通知一侧）：先写测试，看到失败（收据 `t6b-red-notifications`）。`WN/root.embed.test.tsx` 用真实的读 hook 与真实的 SWR（`SWRConfig` 的缓存，同 `WN/root.test.tsx:21` 的写法），只替身取数与浮层组件：
   - 判定：调用者有角色、预览的读扣住时说在加载、没有浮层也没有嵌入；读落定为待处理、暂缓、拒绝、重复 → 嵌入（`InboxContentRoot` 收到 `kind: "embed"` 的端口），`setPeekIssue` 没被调；不在收集箱、`intake` 为 `null`、已接受 → `setPeekIssue` 与浮层；SWR 对这个键留着较早的回答（拒绝的）而这次的读答已接受 → 浮层；嵌入之后 canonical 变成已接受 → 仍是嵌入。
   - 只一个读：非收集箱的预览，浮层的替身调真实的读 hook，取数恰一次。
-  - 锁定（预检 I4）：越过去重窗口（推进假时钟 2 秒以上）之后发 `online`，预览不再取数，浮层（或嵌入）是同一个元素、替身里输入的字还在；浮层的重试（替身调读 hook 的 `mutate()`）不卸下浮层。
+  - 锁定（预检 I4）：越过去重窗口（推进假时钟 2 秒以上）之后发 `online`，预览不再取数，浮层（或嵌入）是同一个元素、替身里输入的字还在；浮层的重试（替身调读 hook 的 `mutate()`）不卸下浮层。（**实施中改**，T6b 的修正 `791c29ce`：判定之后判定的组件卸下、读离开这个键，越过去重窗口之后发 `online`，普通浮层的 hook 照别的页面再读、浮层与输入还在，嵌入不读；spec §2.5 的修正）
   - 代（预检 m10）：换了权限身份（或 `loginId`）之后有新的读、以它重新判定。
   - 读失败（O-1 乙）：预览画 `IssuePeekOverviewError`、浮层没有挂上；重试再读，落定之后判定；失败界面的“关闭”经落点清选中。
   - `WN/landing.test.tsx`（R26）：`leave` 清选中，焦点在那次提交之后一个微任务里落：卡片在 → 它的主按钮；卡片不在、列表在 → 列表的区域；列表没画出来（读失败、读着）→ 预览的区域；从不落到 `document.body`；选中已换成别的通知时 `leave` 不动。
   - 普通浮层的关闭（O7）：浮层的 `embedRemoveCurrentNotification` 经落点，焦点到那张卡片的主按钮。
   实现到通过；`WN/root.test.tsx` 与 H2–H4 (page) 照允许清单改（同一提交）；`make build` 之后在 chromium 跑 H2–H4（`t6b-h2-h4-follow`）。
 - [ ] Step C：变异照上表 T6b 各行（收集箱一侧与通知一侧分开记）。门禁同 T3；死成员整份比对（`t6b-dead-after`：R32 的两个 prop 以端口回来，不新出死行）。提交 `feat(M7/P5b): 通知预览读完工作项之后嵌入收集箱的内容——未被接受的（含拒绝）在嵌入里分诊，已接受的仍是浮层；判定锁定，不随共用键的再验证撤下；关掉嵌入、失败界面或浮层之后焦点回到那张卡片`。
-- [ ] Step 4（**检查点 1**：除 T8c 之外的产品代码完成）：`final.sh cp1`；页面上核实非收集箱的通知只一个 `GET /api/v0/issues/{id}`（以 chromium 聚焦跑 P4 的 `h2-h4-notification-cards-page.spec.ts` 并读请求，收据 `cp1-peek-reads`）：多了一个先看 spec §2.5 的时间窗，再报主控（B-16）；主控推送、核分支 CI，记 web 作业三步与 e2e 两片的时长。
+- [ ] Step 4（**检查点 1**：除 T8c 之外的产品代码完成）：`final.sh cp1`；页面上核实非收集箱的通知只一个 `GET /api/v0/issues/{id}`（以 chromium 聚焦跑 P4 的 `h2-h4-notification-cards-page.spec.ts` 并读请求，收据 `cp1-peek-reads`）：多了一个先看 spec §2.5 的时间窗，再报主控（B-16）；（**实施中改**：一次取数有两个 `GET`，普通浮层 2 个、收集箱条目 4 个，T6b 的 `t6b-peek-reads-probe-h20-2` 与修正之后的 `t6b-fix-peek-reads-probe-h20` 核过；判定的读被浮层的挂载读并入，没有多出；spec §2.5 的修正）主控推送、核分支 CI，记 web 作业三步与 e2e 两片的时长。
 
 ### T7 H8 (page)（spec §2.8，R7、R8）
 
@@ -294,7 +294,7 @@
 - [ ] Step 1（搬移，`test` 提交）：`editorChunks` 与 `holdEditorImplementation` 搬进 `editor-chunks.ts`，两者都导出，构建产物的相对路径少一层（`../../web/…`），别的逐字（预检 m8）；M4 的故事改为导入、断言不改；`make build`，以 m4-detail 配置三引擎跑 `editor-loading.spec.ts`（`t7-move-editor-loading`）；e2e 的类型与 lint 过。提交 `test(M7/P5b): 编辑器代码块的扣住从 M4 的故事搬到夹具`。
 - [ ] Step 2：写故事（spec §2.8 的两行），标题都带 `H8 (page)`：
   - 提交：管理员、成员、访客各一次，断言请求体精确、数据库的条目行（`E/fixtures/assert/intake.ts`）、地址选中新条目、列表与侧栏的数随之（`expect.poll` 内容，不数计数的请求）；名字的被拒（超长、空的、只有空格的：不发请求、焦点在名字、`aria-invalid`）；收集箱关掉之后提交 → 提示、表单留着；“Create more”。
-  - 关闭（预检 I2）：**页面载入之前**登记 `holdEditorImplementation`，收集箱是空的（详情不挂编辑器）；每个关闭与提交的步骤之前 `expect.poll(() => held.length).toBeGreaterThan(0)` 且弹窗里没有 `[contenteditable="true"]`。Escape 关空表单；再开、Discard 关；有字时 Escape → 确认框（`toHaveAccessibleName`）→ 取消、字还在 → Escape → 确认 → 关、焦点回 “Add work item”，再开是空的；扣住时提交 → 提示、没有 `POST`；放开代码块之后点背景（没有改动）关；`holdAnswer` 扣住 `POST` 时 Escape 与点背景关不掉、Discard 停用，Escape 之后、点背景之后、被拒之后焦点都在弹窗里（`dialog.evaluate((d) => d.contains(document.activeElement))`，R28；每个引擎落在哪个控件记台账）；负责人与截止日的浮层开着时 Escape 只关浮层；负责人下拉框以键盘：Enter 打开、`expectPopupBesideButton`、搜索取得焦点、Escape 回到按钮；Tab 的自然次序（`tabStops` 从名字到提交，编辑器是否多出停点照实记）。三引擎各有的差异写在台账。
+  - 关闭（预检 I2）：**页面载入之前**登记 `holdEditorImplementation`，收集箱是空的（详情不挂编辑器）；每个关闭与提交的步骤之前 `expect.poll(() => held.length).toBeGreaterThan(0)` 且弹窗里没有 `[contenteditable="true"]`。Escape 关空表单；再开、Discard 关；有字时 Escape → 确认框（`toHaveAccessibleName`）→ 取消、字还在 → Escape → 确认 → 关、焦点回 “Add work item”，再开是空的；扣住时提交 → 提示、没有 `POST`；放开代码块之后点背景（没有改动）关；`holdAnswer` 扣住 `POST` 时 Escape 与点背景关不掉、Discard 停用，Escape 之后、点背景之后、被拒之后焦点都在弹窗里（`dialog.evaluate((d) => d.contains(document.activeElement))`，R28；每个引擎落在哪个控件记台账）；负责人与截止日的浮层开着时 Escape 只关浮层；负责人下拉框以键盘：Enter 打开、`expectPopupBesideButton`、搜索取得焦点、Escape 回到按钮；Tab 的自然次序（`tabStops` 从名字到提交，编辑器是否多出停点照实记）。三引擎各有的差异写在台账。（**实施中改**，T7 的主控裁定：页面载入之前扣住代码块的测试只在 Chromium、Firefox 跑，WebKit 以写明原因的 `test.skip` 跳过，有改动时的确认放进编辑器已建成的测试、三引擎核；Tab 的次序多一个 “Continue writing”，描述带 `tabIndex={-1}`，作为故事之前的一个 `fix` 提交 `ec6b91a5`；spec §2.1、§2.8 的修正）
   - 截止日按浏览器的“今天”（`browserDay`）选。
   红色版本：关闭的故事去掉扣住之后跑一次，“提交被拒、没有 `POST`”一步失败（`t7-red-page-hold`）；提交的故事先跑一个期望错误的版本（`t7-red-page-submit`）。再改正。
 - [ ] Step 3：`make build build-s3-fixture`；聚焦 chromium（`cd e2e && NERVE_VERSION=0.1.0-dev pnpm exec playwright test --project=chromium stories/collaboration/h8-intake-*.spec.ts`）；`--config=playwright.m7-pages.config.ts` 三引擎；`--repeat-each=3`（chromium）；台账记每个 `test()` 各引擎的时长；`make lint-web`。提交 `test(M7/P5b): H8 的页面故事——三种角色经新建弹窗提交，关闭政策在编辑器代码块扣住时与有改动时、在途的焦点，嵌套 Escape 与下拉框的键盘`。
@@ -306,8 +306,8 @@
 **Steps**：
 - [ ] Step 1：写故事（spec §2.8 的两行），标题带 `H11 (page)`：
   - 图片：访客提交者加图片（`pasteInto` 或选文件），`PATCH /api/v0/intake-issues/{id}` 的描述带资产 id，字节相同；非提交者的成员只读、没有上传；在途被拒（预检 m7）：扣住 `POST /api/v0/assets` 的回答，另一会话经接口拒绝条目，放开之后 `POST /api/v0/assets/{id}/complete` 答 409 `issue.intake_closed` 并提示，这个 409 写进 `watch.apiFailures` 的期望；经接口接受之后**在浏览页上**（`/browse/…`）访客提交者只读、成员可传（预检 m5）。
-  - 附件：访客提交者加附件、`ConfirmedContentNotice` 说出、下载字节相同（`downloadedExactly`）；非提交者的成员没有选择器；扣住 `createAsset` 的回答、经接口关掉收集箱、放开之后 `completeAsset` 答 409 `issue.intake_disabled` 并提示（写进期望）；传输中取消；传输在途时换选中（另一行），放开之后迟到的结局不写进新条目（新条目的附件数与列表不变）；删除附件，本机文件或桶里的对象没了；清理任务触发不了时在故事的注释与台账写明由 `E/stories/files/f15-cleanup.spec.ts` 覆盖。
-  - 每个“在途”都以扣住回答造出（`holdAnswer`），不靠时序。
+  - 附件：访客提交者加附件、`ConfirmedContentNotice` 说出、下载字节相同（`downloadedExactly`）；非提交者的成员没有选择器；扣住 `createAsset` 的回答、经接口关掉收集箱、放开之后 `completeAsset` 答 409 `issue.intake_disabled` 并提示（写进期望）；传输中取消；传输在途时换选中（另一行），放开之后迟到的结局不写进新条目（新条目的附件数与列表不变）；删除附件，本机文件或桶里的对象没了；清理任务触发不了时在故事的注释与台账写明由 `E/stories/files/f15-cleanup.spec.ts` 覆盖。（**实施中改**，T8a：删除之后本机文件与桶里的对象留到清理任务，M5 F14 的合同，物理清除由 F15 覆盖；故事断言文件行软删、读答 404、对象还在；spec §2.8 的修正）
+  - 每个“在途”都以扣住回答造出（`holdAnswer`），不靠时序。（**实施中改**，T8a 的主控裁定：传输中取消与换选中扣的是上传字节的 `PUT`（新夹具 `holdUploads`），仍是扣住、不靠时序；两处被拒照旧以 `holdAnswer` 扣 `createAsset` 的回答；数据库的读追加在 `E/fixtures/assert/intake.ts`，提交多一个文件；spec §2.8 的修正）
   先跑期望错误的版本（`t8a-red-page`）。
 - [ ] Step 2：同 T7 的跑法；`[s3]` 在 Firefox 或 WebKit 里若因 M5 的上传件失败，停下报告（跨模块的发现，spec R12）。台账记各引擎、各变体每个 `test()` 的时长。提交 `test(M7/P5b): H11 的页面故事（收集箱宿主上的图片与附件，local 与 S3，三种引擎）`。
 
@@ -340,7 +340,7 @@
 
 **Steps**：
 - [ ] Step 1：写故事（spec §2.8 的嵌入一行），标题带 `H10 (page)`，重定向一步带 `H20 (page)`：
-  - 点开卡片之前登记判定的读与嵌入自己的读的 `waitForResponse`，两个都答完再动作；断言收集箱条目恰两个 `GET /api/v0/issues/{id}`，普通工作项的通知恰一个。
+  - 点开卡片之前登记判定的读与嵌入自己的读的 `waitForResponse`，两个都答完再动作；断言收集箱条目恰两个 `GET /api/v0/issues/{id}`，普通工作项的通知恰一个。（**实施中改**：4 个与 2 个，删除之后多一个 404；spec §2.5 的修正）
   - 嵌入里已有的标签与负责人显示出来；接受弹窗的状态有默认值（预检 O5）。
   - 管理员在嵌入里拒绝、暂缓、接受各一次（三个条目）：选中不移、通知列表不变、嵌入显示新的状态；焦点的落点（键盘一次、指针一次）；800 宽一次。
   - 成员与访客只读的页头；已拒绝的也嵌入；已接受的开浮层（“Close the peek view”），关上之后焦点在那张卡片的主按钮（O7）。
