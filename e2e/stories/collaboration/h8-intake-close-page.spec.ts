@@ -36,6 +36,7 @@ import { expect, test } from "../../fixtures/test";
 
 /** Checks that the description editor's chunk, held, was asked for and that the modal shows no editor: it is not built. */
 async function expectEditorHeld(page: Page, held: readonly string[]): Promise<void> {
+  // held never empties once asked: the hold's evidence is this together with no [contenteditable="true"] below
   await expect.poll(() => held.length, { message: "the editor's chunk asked for, and held" }).toBeGreaterThan(0);
   await expect(descriptionEditor(page)).toHaveCount(0);
 }

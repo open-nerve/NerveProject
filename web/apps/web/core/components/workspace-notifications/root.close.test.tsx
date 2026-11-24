@@ -19,8 +19,10 @@ import { NotificationsRoot } from "./root";
 // list (its region and cards) are stand-ins.
 
 const fixture = vi.hoisted(() => ({
-  projectReads: [] as { id: string; resolve: (project: unknown) => void }[],
-  issueReads: [] as { id: string; resolve: () => void }[],
+  /** The projects read, by their ids: each read held, never answered here. */
+  projectReads: [] as string[],
+  /** The work item's reads, each answered by its resolve. */
+  issueReads: [] as (() => void)[],
   /** The work item store's stand-in (useIssueDetail's), one object, as the page's own. */
   detail: {
     setPeekIssue: (_: unknown) => {},
@@ -46,15 +48,14 @@ vi.mock("@/hooks/store/user", () => ({
 }));
 vi.mock("@/hooks/store/use-project", () => ({
   useProject: () => ({
-    fetchProject: (id: string) => new Promise((resolve) => fixture.projectReads.push({ id, resolve })),
+    fetchProject: (id: string) => new Promise(() => void fixture.projectReads.push(id)),
   }),
 }));
 vi.mock("@/hooks/store/use-issue-detail", () => ({ useIssueDetail: () => fixture.detail }));
 vi.mock("@/hooks/use-project-labels-read", () => ({ useProjectLabelsRead: () => undefined }));
 vi.mock("@/components/issues/issue-detail/use-issue-operations", () => ({
   useIssueOperations: () => ({
-    fetch: (_ws: string, _project: string, id: string) =>
-      new Promise<void>((resolve) => fixture.issueReads.push({ id, resolve })),
+    fetch: () => new Promise<void>((resolve) => void fixture.issueReads.push(resolve)),
   }),
 }));
 vi.mock("@/components/issues/peek-overview", () => ({ IssuePeekOverview: () => <section data-peek /> }));
@@ -134,7 +135,7 @@ describe("the preview's close while it reads (T11 m1)", () => {
     expect(pageState?.selected).toBeUndefined();
     expect(document.activeElement).toBe(cardOf("n-web"));
     // its read answering later shows nothing: nothing is selected
-    await act(async () => fixture.issueReads[0]!.resolve());
+    await act(async () => fixture.issueReads[0]!());
     await settled();
     expect(host.querySelector("[data-peek], [data-triage]")).toBeNull();
     expect(preview()?.querySelector("[data-empty-state]")).toBeTruthy();
@@ -143,6 +144,7 @@ describe("the preview's close while it reads (T11 m1)", () => {
   it("is drawn while it reads the project of one the caller holds no role in (an archived one's): pressed, the same", async () => {
     await act(async () => cardOf("n-old")!.click());
     await act(async () => until(() => fixture.projectReads.length === 1, "the project's read"));
+    expect(fixture.projectReads).toEqual(["p-old"]);
     expect(preview()?.querySelector('[role="status"]')).toBeTruthy();
     expect(closes()).toHaveLength(1);
     await pressClose();
