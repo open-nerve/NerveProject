@@ -27,6 +27,7 @@ import { useProject } from "@/hooks/store/use-project";
 import { useProjectState } from "@/hooks/store/use-project-state";
 import { Link, useParams } from "react-router";
 import { usePlatformOS } from "@/hooks/use-platform-os";
+import { assigneeSetChange } from "@/lib/assignee-set";
 // local components
 import { IssuePropertyLabels } from "./labels";
 import { useDetailCommand } from "../../issue-detail/use-issue-operations";
@@ -70,7 +71,7 @@ export const IssueProperties = observer(function IssueProperties(props: IIssuePr
   const handleLabel = async (ids: string[]) => {
     if (updateIssue) await updateIssue(issue.project_id, issue.id, { label_ids: ids });
   };
-  const handleAssignee = (ids: string[]) => change({ assignee_ids: ids });
+  const handleAssignee = (ids: string[]) => change({ assignees: assigneeSetChange(issue.assignee_ids, ids) });
   const handleStartDate = (date: Date | null) => change({ start_date: date ? renderFormattedPayloadDate(date) : null });
   const handleTargetDate = (date: Date | null) =>
     change({ target_date: date ? renderFormattedPayloadDate(date) : null });

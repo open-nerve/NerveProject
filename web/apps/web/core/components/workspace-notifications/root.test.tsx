@@ -2,7 +2,7 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { SWRConfig } from "swr";
+import { SWRConfig, unstable_serialize } from "swr";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { until } from "@/lib/auth/fake-time";
 import { refusal } from "@/lib/fake-refusal";
@@ -17,14 +17,33 @@ import { NotificationsRoot } from "./root";
 // closes by clearing the selection), once the caller's role in its project is known. A project he does not hold (an
 // archived one's) is read first (useProjectRead), the preview saying it is loading meanwhile; once nerve refuses that
 // read, or gives no role in it, the selection is cleared and a toast says why: never a blank pane. An intake work item
-// opens as any other. The page leaving clears the peek (W6). The caller's roles, the project's read and the peek are
-// stand-ins'; SWR is real.
+// not accepted embeds the intake's detail (a stand-in; P5b's root.embed.test.tsx). Once the role is known, the preview
+// reads the project's labels, which no project's pages around it read (P5b T9): the labels a work item holds show by
+// their catalog. The page leaving clears the peek (W6). The caller's roles, the project's read, the labels' fetch, the
+// work item's fetch, the peek and the embed are stand-ins'; SWR is real.
 
-const fixture = vi.hoisted(() => ({
-  roles: new Set<string>(),
-  reads: [] as { id: string; resolve: (project: unknown) => void; reject: (error: unknown) => void }[],
-  detail: { peekIssue: undefined as TPeekIssue | undefined, setPeekIssue: (_: TPeekIssue | undefined) => {} },
-}));
+const fixture = vi.hoisted(() => {
+  // the work items the stores hold, as the reads of the work item wrote them
+  const canonical = new Map<string, unknown>();
+  return {
+    roles: new Set<string>(),
+    reads: [] as { id: string; resolve: (project: unknown) => void; reject: (error: unknown) => void }[],
+    // the projects whose labels were fetched, in order
+    labelReads: [] as string[],
+    // the intake row nerve answers for a work item, by its id: none (not in the intake) unless set
+    intakes: new Map<string, unknown>(),
+    canonical,
+    detail: {
+      peekIssue: undefined as TPeekIssue | undefined,
+      setPeekIssue: (_: TPeekIssue | undefined) => {},
+      rootIssueStore: {
+        rootStore: { workspaceRoot: { getWorkspaceBySlug: (slug: string) => ({ id: "id-acme", slug }) } },
+        permissionReads: { identity: () => "identity-1" },
+        issues: { getIssueDetailById: (id: string) => canonical.get(id) },
+      },
+    },
+  };
+});
 vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n-values"));
 vi.mock("@nerve/propel/toast", () => import("@/lib/fake-toast"));
 vi.mock("@nerve/propel/empty-state", () => ({ EmptyStateCompact: () => <p data-empty-state /> }));
@@ -41,7 +60,16 @@ vi.mock("@/hooks/store/use-project", () => ({
     fetchProject: (id: string) => new Promise((resolve, reject) => fixture.reads.push({ id, resolve, reject })),
   }),
 }));
+vi.mock("@/hooks/store/use-label", () => ({
+  useLabel: () => ({ fetchProjectLabels: async (id: string) => void fixture.labelReads.push(id) }),
+}));
 vi.mock("@/hooks/store/use-issue-detail", () => ({ useIssueDetail: () => fixture.detail }));
+vi.mock("@/components/issues/issue-detail/use-issue-operations", () => ({
+  useIssueOperations: () => ({
+    fetch: async (_ws: string, _project: string, id: string) =>
+      void fixture.canonical.set(id, { id, intake: fixture.intakes.get(id) ?? null }),
+  }),
+}));
 vi.mock("@/components/issues/peek-overview", () => ({
   IssuePeekOverview: (props: {
     hostScope: string;
@@ -70,6 +98,9 @@ beforeEach(() => {
   toasts.length = 0;
   fixture.roles = new Set(["p-web"]);
   fixture.reads = [];
+  fixture.labelReads = [];
+  fixture.intakes.clear();
+  fixture.canonical.clear();
   const detail = fixture.detail;
   detail.peekIssue = undefined;
   detail.setPeekIssue = (peek) => (detail.peekIssue = peek);
@@ -202,6 +233,20 @@ describe("NotificationsRoot, the preview", () => {
     expect(fixture.reads).toHaveLength(2);
   });
 
+  it("reads the labels of the work item's project once the caller's role in it is known, by the project pages' key (P5b T9)", async () => {
+    await render();
+    await select(archived);
+    const read = await projectRead("p-old");
+    await settled();
+    expect(fixture.labelReads).toEqual([]);
+    fixture.roles.add("p-old");
+    read.resolve({ id: "p-old" });
+    await settled();
+    expect(fixture.labelReads).toEqual(["p-old"]);
+    // the key the project's pages read them by (use-project-fetch.ts), the session's login in it
+    expect(cache.has(unstable_serialize(["PROJECT_LABELS", "one", "p-old"]))).toBe(true);
+  });
+
   it("clears the selection and says why once nerve gives the project but no role in it (one the caller has left)", async () => {
     await render();
     await select(archived);
@@ -212,12 +257,14 @@ describe("NotificationsRoot, the preview", () => {
     expect(emptyState()).not.toBeNull();
   });
 
-  it("opens an intake work item's notification as a plain peek, no triage", async () => {
+  it("embeds an intake work item's notification not accepted: the intake's detail, no peek", async () => {
     await render();
     const intake: NotificationSelection = { notificationId: "n-intake", issueId: "i-web-9", projectId: "p-web" };
+    fixture.intakes.set("i-web-9", { status: "pending", snoozed_till: null, duplicate_to_id: null });
     await select(intake);
-    expect(peek()?.getAttribute("aria-label")).toBe(scopeOf(intake));
-    expect(host.querySelector("[data-triage]")).toBeNull();
+    await settled();
+    expect(host.querySelector("[data-triage]")).not.toBeNull();
+    expect(peek()).toBeNull();
   });
 
   it("clears the selection as the peek closes", async () => {

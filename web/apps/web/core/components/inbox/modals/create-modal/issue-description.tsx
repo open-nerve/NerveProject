@@ -9,15 +9,12 @@ import type { IssueDetail } from "@nerve/api-client";
 import type { RefObject } from "react";
 import { observer } from "mobx-react";
 // nerve imports
-import { ETabIndices } from "@nerve/constants";
 import type { EditorRefApi } from "@nerve/editor";
 import { useTranslation } from "@nerve/i18n";
 
-import { getDescriptionPlaceholderI18n, getTabIndex } from "@nerve/utils";
+import { getDescriptionPlaceholderI18n } from "@nerve/utils";
 // components
 import { RichTextEditor } from "@/components/editor/rich-text/editor";
-// hooks
-import { usePlatformOS } from "@/hooks/use-platform-os";
 type TInboxIssueDescription = {
   containerClassName?: string;
   workspaceSlug: string;
@@ -37,10 +34,6 @@ export const InboxIssueDescription = observer(function InboxIssueDescription(pro
     props;
   // i18n
   const { t } = useTranslation();
-  // hooks
-  const { isMobile } = usePlatformOS();
-
-  const { getIndex } = getTabIndex(ETabIndices.INTAKE_ISSUE_FORM, isMobile);
 
   return (
     <RichTextEditor
@@ -56,7 +49,9 @@ export const InboxIssueDescription = observer(function InboxIssueDescription(pro
       placeholder={(isFocused, description) => t(getDescriptionPlaceholderI18n(isFocused, description))}
       containerClassName={containerClassName}
       onEnterKeyPress={onEnterKeyPress}
-      tabIndex={getIndex("description_html")}
+      // A field of the form: its wrapper is no Tab stop of its own (-1; the editor itself is the description's stop),
+      // and the editor lets Tab and Shift+Tab move on outside lists (list-keymap.ts), where it would swallow them
+      tabIndex={-1}
     />
   );
 });

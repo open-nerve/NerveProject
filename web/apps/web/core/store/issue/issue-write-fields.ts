@@ -2,6 +2,7 @@
 import type { IntakeIssueUpdate, Issue, IssueCreate, IssueUpdate } from "@nerve/api-client";
 import type { IssueChange } from "@nerve/types";
 import { ForeseenRefusal } from "@/lib/api-error";
+import { assigneesAfter } from "@/lib/assignee-set";
 import { modulesAfter } from "@/lib/planning-directory";
 
 /** The fields of a creation the web sends; whatever else the caller passed stays out of the request. */
@@ -64,22 +65,26 @@ export function intakeUpdateBody(body: IssueUpdate): IntakeIssueUpdate {
 }
 
 /**
- * A change's request, worked out in its turn from the modules the work item then holds: each field named, the modules
- * as the whole set they make, whatever else a caller slipped into the change left out.
+ * A change's request, worked out in its turn from the work item then held: each field named, the modules and the
+ * assignees' additions and removals as the whole sets they make of the sets it holds (P5b spec 2.6, R20), a whole set
+ * of assignees as given, whatever else a caller slipped into the change left out.
  */
-export const changeBody = (change: IssueChange, heldModules: readonly string[]): IssueUpdate => ({
+export const changeBody = (
+  change: IssueChange,
+  held: { readonly assignee_ids: readonly string[]; readonly module_ids: readonly string[] }
+): IssueUpdate => ({
   name: change.name,
   description_html: change.description_html,
   state_id: change.state_id,
   priority: change.priority,
-  assignee_ids: change.assignee_ids,
+  assignee_ids: change.assignees ? assigneesAfter(held.assignee_ids, change.assignees) : change.assignee_ids,
   label_ids: change.label_ids,
   sort_order: change.sort_order,
   start_date: change.start_date,
   target_date: change.target_date,
   parent_id: change.parent_id,
   cycle_id: change.cycle_id,
-  module_ids: change.modules ? modulesAfter(heldModules, change.modules) : undefined,
+  module_ids: change.modules ? modulesAfter(held.module_ids, change.modules) : undefined,
   skip_activity: change.skip_activity,
 });
 

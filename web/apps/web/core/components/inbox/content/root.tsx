@@ -11,7 +11,7 @@ import { useTranslation } from "@nerve/i18n";
 import { setToast, TOAST_TYPE } from "@nerve/propel/toast";
 import { ContentWrapper } from "@nerve/ui";
 // components
-import { IssueDetailHost } from "@/components/issues/detail-host";
+import { ConfirmedContentNotice, IssueDetailHost } from "@/components/issues/detail-host";
 import { useIssueOperations } from "@/components/issues/issue-detail/use-issue-operations";
 import { useIssueSaveStatus } from "@/components/issues/use-issue-save-status";
 import { PlanningReadFailure } from "@/components/planning/read-failure";
@@ -25,42 +25,42 @@ import { useSession } from "@/lib/auth/use-session";
 import { problemMessageKey } from "@/lib/error-messages";
 import { useSessionSWR } from "@/lib/use-session-swr";
 // local imports
-import type { IntakeLanding } from "../landing";
 import { IntakeAcceptModal } from "../modals/accept";
 import { DeclineIssueModal } from "../modals/decline-issue-modal";
 import { DeleteInboxIssueModal } from "../modals/delete-issue-modal";
 import { SelectDuplicateInboxIssueModal } from "../modals/select-duplicate";
 import { InboxIssueSnoozeModal } from "../modals/snooze-issue-modal";
 import { IntakeDetail } from "./detail";
+import { IntakeEmbedClose } from "./header/embed-close";
+import type { IntakeActions } from "./header/intake-actions";
 import { IntakeMobileHeader } from "./header/mobile";
 import { IntakeHeader } from "./header/root";
-import { useIntakeActions, type IntakeActions } from "./header/use-intake-actions";
+import { useIntakeActions } from "./header/use-intake-actions";
+import type { IntakeSelectionPort } from "./selection-port";
 
 type TInboxContentRoot = {
   workspaceSlug: string;
   projectId: string;
   inboxIssueId: string;
-  isMobileSidebar: boolean;
-  setIsMobileSidebar: (value: boolean) => void;
   /**
-   * Leaves the selected work item for another, or none, as an action on it ends or the page cannot show it: the page's
-   * selection, by a replace, the focus going with it (useIntakeLanding).
+   * The selection, as what shows it gives it (R18): where it leaves the work item for as an action on it ends or the
+   * region cannot show it, the region's element; the intake page's, the row a triage leaves it for and the navigation
+   * the headers draw; the notifications page's embed (R17), the close its headers draw.
    */
-  onLeave: IntakeLanding["leave"];
-  /** The region's element, the page's: where the page's landing gives the focus for the work item selected. */
-  region: IntakeLanding["detail"];
+  selection: IntakeSelectionPort;
 };
 
 /** Refusals of a read that say the caller cannot read the work item. */
 const UNREADABLE = new Set([401, 403, 404]);
 
 /**
- * The detail region of a project's intake page (P5a spec 2.6, 2.7): a region named so and focusable, around the
- * selected work item, one selection's at a time: each selection of a work item, in this session and by the caller's
- * permissions now, is a detail of its own, with its own read, inputs, modals and writes in flight.
+ * The detail region of a project's intake page (P5a spec 2.6, 2.7), or of the notifications page's preview that
+ * embeds it (P5b spec 2.5, R17): a region named so and focusable, around the selected work item, one selection's at a
+ * time: each selection of a work item, in this session and by the caller's permissions now, is a detail of its own,
+ * with its own read, inputs, modals and writes in flight.
  */
 export const InboxContentRoot = observer(function InboxContentRoot(props: TInboxContentRoot) {
-  const { workspaceSlug, projectId, inboxIssueId, region } = props;
+  const { workspaceSlug, projectId, inboxIssueId, selection } = props;
   const { t } = useTranslation();
   const { rootIssueStore: root } = useIssueDetail();
   const { loginId } = useSession();
@@ -68,7 +68,7 @@ export const InboxContentRoot = observer(function InboxContentRoot(props: TInbox
   const identity = root.permissionReads.identity(workspace?.id, [projectId], true);
   return (
     <section
-      ref={region}
+      ref={selection.region}
       aria-label={t("inbox_issue.a11y.detail")}
       tabIndex={-1}
       className="relative flex h-full w-full flex-col overflow-hidden outline-none"
@@ -93,11 +93,13 @@ export const InboxContentRoot = observer(function InboxContentRoot(props: TInbox
  * it, whose clearing is the delete's. A work item it cannot show leaves the intake's lists as well (drop), so that the
  * page, which selects a list's first row once nothing is selected, selects another row rather than it again. The
  * header and the detail are drawn inside the detail host, which withdraws them while a triage reads the work item
- * again; the modals, outside it, stay.
+ * again; the modals, outside it, stay. Embedded in the notifications page, its Close is drawn above its read in
+ * flight or failed too, where no header is (T11 m1); not while a write's read again is out or failed, the work item
+ * not held and the headers drawing nothing (left to M8).
  */
 const IntakeSelection = observer(function IntakeSelection(props: TInboxContentRoot & { identity: string }) {
-  const { workspaceSlug, projectId, inboxIssueId: issueId, identity, isMobileSidebar, setIsMobileSidebar } = props;
-  const { onLeave, region } = props;
+  const { workspaceSlug, projectId, inboxIssueId: issueId, identity, selection } = props;
+  const { leave } = selection;
   const { t } = useTranslation();
   const { rootIssueStore: root } = useIssueDetail();
   const refusalToast = useRefusalToast();
@@ -123,7 +125,7 @@ const IntakeSelection = observer(function IntakeSelection(props: TInboxContentRo
   }, [mutate]);
   // whether the caller is deleting the work item, whose absence is then the delete's to follow
   const leaving = useRef(false);
-  const actions = useIntakeActions(workspaceSlug, projectId, issueId, { leave: onLeave, leaving, region });
+  const actions = useIntakeActions(workspaceSlug, projectId, issueId, { ...selection, leaving });
 
   const settled = answered && !read.isValidating;
   const error = settled && !(read.error instanceof SessionChangedError) ? read.error : undefined;
@@ -154,23 +156,23 @@ const IntakeSelection = observer(function IntakeSelection(props: TInboxContentRo
         message: t(problemMessageKey(outOfIntake ? "issue.intake_not_found" : "issue.not_found")),
       });
     root.intake.drop(projectId, issueId);
-    onLeave(issueId, undefined);
-  }, [refused, outOfIntake, gone, error, later, refusalToast, t, onLeave, root, projectId, issueId]);
+    leave(issueId, undefined);
+  }, [refused, outOfIntake, gone, error, later, refusalToast, t, leave, root, projectId, issueId]);
 
   return (
     <>
       {settled && error === undefined ? (
         <IssueDetailHost workspaceSlug={workspaceSlug} projectId={projectId} issueId={issueId}>
+          <ConfirmedContentNotice />
           <div className="z-[11] min-h-[52px] flex-shrink-0">
-            <IntakeHeader projectId={projectId} issueId={issueId} actions={actions} isSubmitting={isSubmitting} />
-            <IntakeMobileHeader
+            <IntakeHeader
               projectId={projectId}
               issueId={issueId}
               actions={actions}
               isSubmitting={isSubmitting}
-              isMobileSidebar={isMobileSidebar}
-              setIsMobileSidebar={setIsMobileSidebar}
+              selection={selection}
             />
+            <IntakeMobileHeader issueId={issueId} actions={actions} isSubmitting={isSubmitting} selection={selection} />
           </div>
           <ContentWrapper className="divide-y-2 divide-subtle-1">
             <IntakeDetail
@@ -183,12 +185,17 @@ const IntakeSelection = observer(function IntakeSelection(props: TInboxContentRo
             />
           </ContentWrapper>
         </IssueDetailHost>
-      ) : error !== undefined && !refused ? (
-        <PlanningReadFailure error={error} onRetry={() => void mutate()} />
       ) : (
-        <div role="status" className="p-4 text-13 text-secondary">
-          {t("common.loading")}
-        </div>
+        <>
+          {selection.kind === "embed" && <IntakeEmbedClose onClose={selection.close} className="m-4 self-start" />}
+          {error !== undefined && !refused ? (
+            <PlanningReadFailure error={error} onRetry={() => void mutate()} />
+          ) : (
+            <div role="status" className="p-4 text-13 text-secondary">
+              {t("common.loading")}
+            </div>
+          )}
+        </>
       )}
       <IntakeModals workspaceSlug={workspaceSlug} projectId={projectId} issueId={issueId} actions={actions} />
     </>

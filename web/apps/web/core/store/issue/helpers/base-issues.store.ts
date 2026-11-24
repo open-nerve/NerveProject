@@ -91,7 +91,7 @@ export class BaseIssuesStore<TFilter = IBaseIssueFilterStore> {
       id,
       (held) => {
         if (!binding.value) throw new Error("Drop source requires a current list read");
-        const body = changeBody(makeChange(held), held.module_ids);
+        const body = changeBody(makeChange(held), held);
         // Calendar uses its date query; a day move does not reorder the issue.
         if (binding.scope.query.group_by === "target_date") return body;
         const group = binding.group(location.group, location.subgroup);

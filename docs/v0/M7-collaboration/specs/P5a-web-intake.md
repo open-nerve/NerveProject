@@ -384,7 +384,7 @@ problem 码已在 `PROBLEM_MESSAGES`（`C/lib/error-messages.ts:87-91` 收集箱
 - [ ] **A6 侧栏与入口**：待处理数按 §2.5 的门与键读一次，大于 0 时显示，名字含数；`intakeEntryOn` 一处定义、三处使用，六格单测；已归档的项目没有“Add work item”。
 - [ ] **A7 删除干净与守卫**：§2.10 全部（三个 Task 各自全绿）；新建弹窗经新接口提交、没有日期不带键、成功跳到新条目；`RootStore` 20；`old-intake-urls`；地址规则收入新文件；`copy-hook` 例外删除；swr 名单；oxlint 等于上限；死成员整份比对（P5 的 39 行各有去处）；文案键 en 与 zh-CN、三个权限键删除。
 - [ ] **A8 e2e**：§2.12 的四个页面故事三引擎各一次、`--repeat-each=3`；`INTAKE_COUNTS`；既有故事不回归（检查点的 `m6-pages`、`m6-acceptance`、`m4-detail` 与整套默认 e2e）。
-- [ ] **A9 收尾**：终检、最终分支 CI、合并、main CI 与归档，在 P5b 的 T1 补记（同 P4 A8 在 P5 的 T1 补记）。
+- [x] **A9 收尾**：终检、最终分支 CI、合并、main CI 与归档，在 P5b 的 T1 补记（同 P4 A8 在 P5 的 T1 补记）。
 
 ## 5. 交接与后续责任
 

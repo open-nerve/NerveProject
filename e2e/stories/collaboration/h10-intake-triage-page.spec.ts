@@ -49,13 +49,14 @@ async function fromMenu(page: Page, item: string): Promise<void> {
 }
 
 /**
- * Checks that the header of the intake page's detail, drawn, offers no triage: copying and opening the work item, and
- * in its menu menu alone, no menu when menu is empty.
+ * Checks that the header of the intake page's detail, drawn, offers no triage: copying the work item, not opening it
+ * (the page offers that on one accepted alone, P5b R15, and its readers here look at pending ones), and in its menu
+ * menu alone, no menu when menu is empty.
  */
 async function expectNoTriage(page: Page, menu: string[]): Promise<void> {
   const detail = intakeDetail(page);
   await expect(detail.getByRole("button", { name: "Copy work item link", exact: true })).toBeVisible();
-  await expect(detail.getByRole("link", { name: "Open work item", exact: true })).toBeVisible();
+  await expect(detail.getByRole("link", { name: "Open work item", exact: true })).toHaveCount(0);
   await expect(detail.getByRole("button", { name: /^(Accept|Decline)$/ })).toHaveCount(0);
   const options = detail.getByRole("button", { name: "Options", exact: true });
   await expect(options).toHaveCount(menu.length === 0 ? 0 : 1);

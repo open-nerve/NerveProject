@@ -7,6 +7,7 @@ import { runInAction } from "mobx";
 import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { IssueIntake, Project } from "@nerve/api-client";
+import { EUserPermissions } from "@nerve/constants";
 import { toasts } from "@/lib/fake-toast";
 import { acme, beta, detailOf, intakeTab } from "@/store/issue/intake/fake-intake";
 import { loadArchivedProjects, loadProjects, projectOf } from "@/store/project/fake-projects";
@@ -14,7 +15,8 @@ import { loadWorkspaces } from "@/store/workspace/fake-workspaces";
 import { IntakePageStateProvider } from "../../page-state";
 import { IntakeMobileHeader } from "./mobile";
 import { IntakeHeader } from "./root";
-import { useIntakeActions, type IntakeActions } from "./use-intake-actions";
+import { offeredOn, type IntakeActions } from "./intake-actions";
+import { useIntakeActions } from "./use-intake-actions";
 
 // The header of the selected work item of a project's intake, wide and narrow, and the action model both read (P5a
 // spec 2.7, 2.8, R11, R15, R20, R27): what the caller is offered, by his role in the route's project (the permission
@@ -103,25 +105,23 @@ async function given(
 }
 
 /** The selection the action model is given: its moves and the detail's region are the page's, not this test's. */
-const selection = { leave: () => {}, leaving: { current: false }, region: { current: null } };
+const selection = {
+  kind: "page" as const,
+  leave: () => {},
+  neighbour: () => undefined,
+  leaving: { current: false },
+  region: { current: null },
+  navigation: () => null,
+};
 const Wide = observer(function Wide() {
   const actions = useIntakeActions("acme", "p-web", "i-x", selection);
   held.actions = actions;
-  return <IntakeHeader projectId="p-web" issueId="i-x" actions={actions} isSubmitting="saved" />;
+  return <IntakeHeader projectId="p-web" issueId="i-x" actions={actions} isSubmitting="saved" selection={selection} />;
 });
 const Narrow = observer(function Narrow() {
   const actions = useIntakeActions("acme", "p-web", "i-x", selection);
   held.actions = actions;
-  return (
-    <IntakeMobileHeader
-      projectId="p-web"
-      issueId="i-x"
-      actions={actions}
-      isSubmitting="saved"
-      isMobileSidebar={false}
-      setIsMobileSidebar={() => {}}
-    />
-  );
+  return <IntakeMobileHeader issueId="i-x" actions={actions} isSubmitting="saved" selection={selection} />;
 });
 const draw = (view: "wide" | "narrow") =>
   act(async () =>
@@ -148,8 +148,10 @@ async function offeredIn(view: "wide" | "narrow") {
     .map((text) => text.slice("inbox_issue.actions.".length))
     .toSorted();
 }
-const TRIAGE = ["accept", "decline", "mark_as_duplicate", "copy", "open", "delete"];
-const READ = ["copy", "open"];
+const TRIAGE = ["accept", "decline", "mark_as_duplicate", "copy", "delete"];
+// opening the work item is offered on one accepted alone (P5b spec 2.4, R15)
+const READ_ACCEPTED = ["copy", "open"];
+const READ = ["copy"];
 
 describe("the header's action model (spec 2.8)", () => {
   it.each([
@@ -157,7 +159,7 @@ describe("the header's action model (spec 2.8)", () => {
     { who: "an admin", role: ADMIN, status: "snoozed", till: "later", offers: [...TRIAGE, "unsnooze", "resnooze"] },
     // a snooze whose day has come is pending
     { who: "an admin", role: ADMIN, status: "snoozed", till: "earlier", offers: [...TRIAGE, "snooze"] },
-    { who: "an admin", role: ADMIN, status: "accepted", offers: READ },
+    { who: "an admin", role: ADMIN, status: "accepted", offers: READ_ACCEPTED },
     { who: "an admin", role: ADMIN, status: "declined", offers: READ },
     { who: "an admin", role: ADMIN, status: "duplicate", offers: READ },
     { who: "a member who submitted it", role: MEMBER, mine: true, status: "pending", offers: [...READ, "delete"] },
@@ -235,5 +237,68 @@ describe("copying the work item's link", () => {
     );
     await settle();
     expect(toasts).toEqual([{ type: "error", title: "toast.error", message: "something_went_wrong_please_try_again" }]);
+  });
+});
+
+describe("the project's intake turned off (P5b T11 m2)", () => {
+  // nerve refuses every triage and every deletion then (issue.intake_disabled), and the intake page is its disabled
+  // page (P5a R19): the work item is closed, as an archived project's, on the intake page and embedded in the
+  // notifications page alike: its copy, and its opening once accepted (the browse page), nothing else
+  const embed = {
+    kind: "embed" as const,
+    leave: () => {},
+    close: () => {},
+    leaving: { current: false },
+    region: { current: null },
+  };
+  /** The selection's port the action model is under, the page's or the embed's, as each cell sets it. */
+  let under: typeof selection | typeof embed = selection;
+  /** The action model, as the headers read it. */
+  const Model = observer(function Model() {
+    held.actions = useIntakeActions("acme", "p-web", "i-x", under);
+    return null;
+  });
+  const offeredUnder = async (kind: "page" | "embed") => {
+    under = kind === "page" ? selection : embed;
+    await act(async () =>
+      root.render(
+        <MemoryRouter>
+          <Model />
+        </MemoryRouter>
+      )
+    );
+    return held.actions?.offered;
+  };
+
+  it.each([
+    { who: "an admin", role: ADMIN, status: "pending", kind: "page", offers: ["copy"] },
+    { who: "an admin", role: ADMIN, status: "pending", kind: "embed", offers: ["copy"] },
+    { who: "an admin", role: ADMIN, status: "snoozed", kind: "embed", offers: ["copy"] },
+    { who: "an admin", role: ADMIN, status: "accepted", kind: "page", offers: ["copy", "open"] },
+    { who: "an admin", role: ADMIN, status: "accepted", kind: "embed", offers: ["copy", "open"] },
+    { who: "a member who submitted it", role: MEMBER, status: "pending", kind: "page", offers: ["copy"] },
+    { who: "a member who submitted it", role: MEMBER, status: "pending", kind: "embed", offers: ["copy"] },
+    { who: "a member who submitted it", role: MEMBER, status: "accepted", kind: "page", offers: ["copy", "open"] },
+    { who: "a member who submitted it", role: MEMBER, status: "accepted", kind: "embed", offers: ["copy", "open"] },
+  ] as const)("offers $who, on the $kind, a work item $status, the intake off: $offers", async (cell) => {
+    const till = cell.status === "snoozed" ? later() : null;
+    await given(cell.role, intakeOf(cell.status, till), "u-me", { intake_view: false });
+    expect(await offeredUnder(cell.kind)).toEqual(cell.offers);
+    expect(held.actions?.primary).toBeUndefined();
+  });
+
+  it.each([
+    // the intake on, embedded: the triages and the deletion, and its opening in the intake page (R25 (4)), as before
+    { who: "an admin", role: ADMIN, offers: ["accept", "decline", "snooze", "duplicate", "copy", "open", "delete"] },
+    { who: "a member who submitted it", role: MEMBER, offers: ["copy", "open", "delete"] },
+  ] as const)("offers $who, on the embed, a pending one, the intake on: $offers", async (cell) => {
+    await given(cell.role, intakeOf("pending"), "u-me");
+    expect(await offeredUnder("embed")).toEqual(cell.offers);
+  });
+
+  it("offers an admin, on the embed, a pending one of a project not held, its intake not known to be on: copy alone", () => {
+    // offeredOn itself (T11 O4): no page gets here, the permission store giving no role in a project it does not hold
+    const detail = detailOf("x", { intake: intakeOf("pending"), created_by_id: "u-me", sequence_id: 7 });
+    expect(offeredOn(detail, undefined, EUserPermissions.ADMIN, "u-me", "embed")).toEqual(["copy"]);
   });
 });

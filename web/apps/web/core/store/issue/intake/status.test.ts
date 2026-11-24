@@ -5,8 +5,10 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { IntakeStatus, IssueIntake } from "@nerve/api-client";
-import { detailOf, intakeIssueOf } from "./fake-intake";
-import { effectiveStatus, inIntake, rowOf, snoozeDay, snoozeInstant } from "./status";
+import { EUserPermissions } from "@nerve/constants";
+import { projectOf } from "@/store/project/fake-projects";
+import { acme, detailOf, intakeIssueOf } from "./fake-intake";
+import { effectiveStatus, inIntake, intakeEditableBy, rowOf, snoozeDay, snoozeInstant } from "./status";
 
 // The status of a work item of an intake and the row the intake list shows of it (P5a spec 2.2; the contract's trap
 // C7): nerve answers, lists and counts each status at the moment of the request, a snooze whose time has come as
@@ -140,5 +142,57 @@ describe("snoozeInstant", () => {
       expect(santiago.format(new Date(snoozeInstant(new Date(2026, 8, 5, 12, 0))))).toBe("2026-09-05, 00:00");
       expect(santiago.format(new Date(snoozeInstant(new Date(2026, 8, 7, 12, 0))))).toBe("2026-09-07, 00:00");
     });
+  });
+});
+
+// Who may write a work item while it is in its project's intake (P5b spec 2.2, R9, R25; P2c spec 2.2): the project not
+// archived and its intake on; the work item pending or snoozed as stored (nerve's CheckOpen reads the stored status, so
+// a snooze whose time has come is still written); the caller with a role in the project (intake.update's three) who
+// is its admin or submitted it, a guest among them. The one rule both the intake detail and a content view of the work
+// item read.
+describe("intakeEditableBy", () => {
+  const web = projectOf("WEB", acme.id, { intake_view: true });
+  const item = (status: IntakeStatus, creator = "u-other", snoozedTill: string | null = null) =>
+    detailOf("x", { intake: intake(status, snoozedTill), created_by_id: creator });
+  const { ADMIN, MEMBER, GUEST } = EUserPermissions;
+
+  it.each([
+    { who: "an admin", role: ADMIN, creator: "u-other" },
+    { who: "a member who submitted it", role: MEMBER, creator: "u-me" },
+    { who: "a guest who submitted it", role: GUEST, creator: "u-me" },
+  ])("lets $who write it, pending or snoozed", ({ role, creator }) => {
+    expect(intakeEditableBy(item("pending", creator), web, role, "u-me")).toBe(true);
+    expect(intakeEditableBy(item("snoozed", creator, "2099-01-01T00:00:00Z"), web, role, "u-me")).toBe(true);
+  });
+
+  it("lets no member or guest write one he did not submit, nor one who submitted it without a role in the project", () => {
+    expect(intakeEditableBy(item("pending"), web, MEMBER, "u-me")).toBe(false);
+    expect(intakeEditableBy(item("pending"), web, GUEST, "u-me")).toBe(false);
+    expect(intakeEditableBy(item("pending", "u-me"), web, undefined, "u-me")).toBe(false);
+    // no caller known is no submitter
+    expect(intakeEditableBy(item("pending", "u-me"), web, MEMBER, undefined)).toBe(false);
+  });
+
+  it.each<IntakeStatus>(["declined", "duplicate", "accepted"])(
+    "lets no one write one %s, an admin and its submitter neither: it is out of the open intake",
+    (status) => {
+      expect(intakeEditableBy(item(status), web, ADMIN, "u-me")).toBe(false);
+      expect(intakeEditableBy(item(status, "u-me"), web, MEMBER, "u-me")).toBe(false);
+    }
+  );
+
+  it("lets no one write it in a project whose intake is off, or archived, or not held", () => {
+    expect(intakeEditableBy(item("pending"), { ...web, intake_view: false }, ADMIN, "u-me")).toBe(false);
+    expect(intakeEditableBy(item("pending"), { ...web, archived_at: "2026-11-01T00:00:00Z" }, ADMIN, "u-me")).toBe(
+      false
+    );
+    expect(intakeEditableBy(item("pending"), undefined, ADMIN, "u-me")).toBe(false);
+  });
+
+  it("lets its writers write a snooze whose time has come: snoozed as stored, as nerve's CheckOpen reads it", () => {
+    const due = item("snoozed", "u-me", "2026-11-01T00:00:00Z");
+    expect(effectiveStatus(due.intake!, NOW)).toBe("pending");
+    expect(intakeEditableBy(due, web, MEMBER, "u-me")).toBe(true);
+    expect(intakeEditableBy(due, web, ADMIN, "u-me")).toBe(true);
   });
 });

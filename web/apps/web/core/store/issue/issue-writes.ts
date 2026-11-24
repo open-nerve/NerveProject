@@ -135,12 +135,13 @@ export class IssueWrites {
     return drop ? this.dragQueue(update) : update();
   }
   /**
-   * Sends a change of the work item (P7a spec 2.2, R3): its modules' additions and removals made, in its turn, into the
-   * whole set from the set it then holds, so after a change still out it is that change's answer, and after a refusal
-   * the set as it was; ids no page knows, archived modules too, stay. Its other fields go as given.
+   * Sends a change of the work item (P7a spec 2.2, R3; P5b R20): its modules' and assignees' additions and removals
+   * made, in its turn, into the whole sets from the sets it then holds, so after a change still out it is that change's
+   * answer, and after a refusal the set as it was; ids no page knows, archived modules too, stay. Its other fields go as
+   * given.
    */
   changeIssue(id: string, change: IssueChange, scope: IssueWriteScope): Promise<IssueDetailAnswer> {
-    return this.updateIssue(id, (held) => changeBody(change, held.module_ids), undefined, scope);
+    return this.updateIssue(id, (held) => changeBody(change, held), undefined, scope);
   }
   deleteIssue(id: string, scope: IssueWriteScope): Promise<void> {
     return this.enqueueIssueChanges(

@@ -23,6 +23,7 @@ import { StateDropdown } from "@/components/dropdowns/state/dropdown";
 // hooks
 import { WithDisplayPropertiesHOC } from "@/components/issues/issue-layouts/properties/with-display-properties-HOC";
 import { useProjectState } from "@/hooks/store/use-project-state";
+import { assigneeSetChange } from "@/lib/assignee-set";
 
 type Props = {
   workspaceSlug: string;
@@ -215,7 +216,7 @@ export const SubIssuesListItemProperties = observer(function SubIssuesListItemPr
             onChange={(val) =>
               issue.project_id &&
               updateSubIssue(workspaceSlug, issue.project_id, parentIssueId, issueId, {
-                assignee_ids: val,
+                assignees: assigneeSetChange(issue.assignee_ids, val),
               })
             }
             disabled={!canEdit}

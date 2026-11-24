@@ -50,7 +50,10 @@ afterEach(() => {
 
 vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
 vi.mock("@nerve/propel/toast", () => import("@/lib/fake-toast"));
-vi.mock("@/hooks/use-platform-os", () => ({ usePlatformOS: () => ({ isMobile: false }) }));
+vi.mock("@nerve/ui", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@nerve/ui")>()),
+  ModalTitle: ({ children }: { children: React.ReactNode }) => <h3>{children}</h3>,
+}));
 const ui = vi.hoisted(() => ({ navigate: vi.fn(), close: vi.fn(), clear: vi.fn() }));
 vi.mock("react-router", () => ({ useNavigate: () => ui.navigate }));
 vi.mock("@/hooks/store/use-intake", () => ({ useIntake: () => app.issue.intake }));
@@ -74,16 +77,10 @@ vi.mock("./issue-description", () => ({
     );
   },
 }));
-class NoResize {
-  observe() {}
-  unobserve() {}
-  disconnect() {}
-}
 let root: Root;
 let container: HTMLElement;
 beforeEach(async () => {
   globalThis.IS_REACT_ACT_ENVIRONMENT = true;
-  vi.stubGlobal("ResizeObserver", NoResize);
   ui.navigate.mockReset();
   ui.close.mockReset();
   ui.clear.mockReset();
@@ -96,8 +93,7 @@ beforeEach(async () => {
         workspaceSlug={ws.slug}
         projectId={project.id}
         handleModalClose={ui.close}
-        isDuplicateModalOpen={false}
-        handleDuplicateIssueModal={() => {}}
+        onSubmittingChange={() => {}}
       />
     )
   );

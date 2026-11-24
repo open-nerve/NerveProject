@@ -96,6 +96,7 @@
 
 - P5：网页的收集箱详情按状态开放图片与附件的编辑（Plane 网页只对管理员与提交者、待处理与暂缓开放）。
   - **处理结果（M7/P5a）：** 随 P5b（Q21）：P5a 的新详情（`inbox/content/detail.tsx`）不给描述编辑器 `images`，没有附件一栏（[P5a spec](P5a-web-intake.md) §1）。
+  - **处理结果（M7/P5b）：** 收集箱详情照收集箱的规则开放图片与附件的编辑：管理员与提交者（访客提交者也算），只在待处理、暂缓且收集箱开着时；前端的规则写在 `intakeEditableBy` 一处，`ContentView.canWrite` 的 `issue` 宿主与收集箱的详情都读它（[P5b spec](P5b-web-intake-files-embed.md) §2.2、§2.3、R9）；H11 (page) 的两份文件故事 `[local]`、`[s3]` 三种引擎。本条关闭。
 
 ## 6. 风险
 

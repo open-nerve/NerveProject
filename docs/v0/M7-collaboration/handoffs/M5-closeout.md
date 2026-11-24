@@ -21,6 +21,8 @@ created: 2026-11-06
 
 **何时验收：** 收集箱的图片或附件第一次开放前。上传、拒绝、取消、换宿主与迟到结果、权限与访客、删除与清理，需与 M5 的 F8–F12、F16 页面故事同等的证据（三浏览器，local 与 S3）。
 
+**处理结果（M7/P5b）：** 网页的写权限照收集箱的规则（R9，[P5b spec](../specs/P5b-web-intake-files-embed.md) §2.2；`f1214bce`）：谓词 `intakeEditableBy` 只写在 `web/apps/web/core/store/issue/intake/status.ts:48`，`ContentView.canWrite` 的 `issue` 宿主在工作项在收集箱里时读它（`web/apps/web/core/store/asset/content-view.ts:77`），没有新宿主；收集箱详情的描述有图片能力（`useIssueImages`，绑定经 `PATCH /intake-issues/{id}`），附件在新的 `inbox/content/widgets.tsx`（`5be8f7e2`）。页面证据按 R12 的范围在两份文件，都经 `pageFileStory` 的 `[local]` 与 `[s3]`、三种引擎（`a4caaf2d`）：`e2e/stories/collaboration/h11-intake-images-page.spec.ts`——访客提交者粘贴图片，准备、传输、确认、经收集箱的修改绑定，存下的字节相同；不是提交者的成员只读、不上传；扣住 `createAsset` 的回答、经接口拒绝条目、放开之后 `completeAsset` 答 409 `issue.intake_closed`，图片说出；接受之后在浏览页上访客只读、成员可传。`h11-intake-attachments-page.spec.ts`——访客提交者加附件（“File uploaded.”）、下载的字节相同；不是提交者的成员没有选择器与删除；扣住 `createAsset` 的回答、经接口关掉收集箱、`completeAsset` 答 409 `issue.intake_disabled`，选择器说出；传输中取消、传输在途时换选中（扣住上传字节的 `PUT`，迟到的结局两个条目都不确认）；删除附件之后列表与 nerve 的读都没有它，本机文件与桶里的对象留到清理任务（M5 F14 的合同，物理清除由 `e2e/stories/files/f15-cleanup.spec.ts` 覆盖）。`[s3]` 在 Firefox、WebKit 第一次跑，三引擎都过。检查点的 m5-content 三引擎保住 M5 自己的证据（检查点 2 的一次 Firefox 偶发见 [P5b 阶段记录](../reviews/P5b-web-intake-files-embed-review.md) §5）。**本条关闭。**
+
 <a id="M5-M7-02"></a>
 ## M5-M7-02 附件事件与通知
 

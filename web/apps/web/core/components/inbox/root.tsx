@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type Ref } from "react";
 import { observer } from "mobx-react";
 import { useSearchParams } from "react-router";
 import { LeftSidePaneOutline } from "@makeplane/propel/icons";
@@ -15,10 +15,12 @@ import { cn } from "@nerve/utils";
 // components
 import { InboxLayoutLoader } from "@/components/ui/loader/layouts/project-inbox/inbox-layout-loader";
 // hooks
+import { useIntake } from "@/hooks/store/use-intake";
 import useSize from "@/hooks/use-window-size";
 // local imports
 import { InboxContentRoot } from "./content";
-import { useIntakeArrowKeys } from "./content/header/navigation";
+import { IntakeNavigation, useIntakeArrowKeys } from "./content/header/navigation";
+import type { IntakeSelectionPort } from "./content/selection-port";
 import { useIntakeLanding } from "./landing";
 import { useIntakePageState } from "./page-state";
 import { IntakeSidebar } from "./sidebar/root";
@@ -40,10 +42,13 @@ type TInboxIssueRoot = {
  * row by a replace, its own doing, as after an action cleared the selection. The whole layout waits for the page's
  * first read (InboxLayoutLoader); a later one, of another tab or other filters, waits in the list alone, the tabs kept.
  * ↑ and ↓ step through the list (useIntakeArrowKeys). On a narrow screen, the list lies over the detail until a row is
- * pressed; with nothing selected, a named button shows or hides it (the detail's header has its own). The landing of
- * the focus as an action moves the selection (useIntakeLanding) is told whether the list is on the screen, and the
- * list's first row, so that the focus never lands on what the screen does not show (P5a R35); a row that has the focus
- * and leaves the list gives it to the next row, else the previous, else the list (useLeavingRow).
+ * pressed; a named button shows or hides it (IntakeListToggle): the page's bar's with nothing selected, else the
+ * detail's narrow header's, which the page gives it through the selection's navigation. The landing of the focus as
+ * an action moves the selection (useIntakeLanding) is told whether the list is on the screen, and the list's first
+ * row, so that the focus never lands on what the screen does not show (P5a R35); a row that has the focus and leaves
+ * the list gives it to the next row, else the previous, else the list (useLeavingRow). The detail region is given the
+ * selection through its port (P5b R18): the landing's leave and region, the row after the work item in the list the
+ * page shows (else the row before), and the page's navigation, the steps and, on a narrow screen, the toggle.
  */
 export const InboxIssueRoot = observer(function InboxIssueRoot(props: TInboxIssueRoot) {
   const { workspaceSlug, projectId } = props;
@@ -58,6 +63,7 @@ export const InboxIssueRoot = observer(function InboxIssueRoot(props: TInboxIssu
   const selectedId = params.get("inboxIssueId") ?? undefined;
   // hooks
   const { filters } = useIntakePageState();
+  const { getList } = useIntake();
   const list = useIntakeList(projectId, filters);
   useIntakeArrowKeys(projectId, selectedId);
   const [width] = useSize();
@@ -84,6 +90,26 @@ export const InboxIssueRoot = observer(function InboxIssueRoot(props: TInboxIssu
     );
   }, [selectedId, first, filters.tab, setParams]);
 
+  /** The selection of the work item selected, as the detail region is given it (R18). */
+  const selectionOf = (selected: string): IntakeSelectionPort => ({
+    kind: "page",
+    leave: landing.leave,
+    neighbour: (id) => {
+      const ids = getList(projectId, filters)?.data.map((row) => row.id) ?? [];
+      const at = ids.indexOf(id);
+      return at === -1 ? undefined : (ids[at + 1] ?? ids[at - 1]);
+    },
+    region: landing.detail,
+    navigation: (screen) => (
+      <>
+        {screen === "narrow" && (
+          <IntakeListToggle shown={isMobileSidebar} onToggle={setIsMobileSidebar} className="my-auto flex-shrink-0" />
+        )}
+        <IntakeNavigation projectId={projectId} issueId={selected} />
+      </>
+    ),
+  });
+
   if (!opened && !answered)
     return (
       <div className="relative flex h-full w-full flex-col">
@@ -95,17 +121,7 @@ export const InboxIssueRoot = observer(function InboxIssueRoot(props: TInboxIssu
     <>
       {!selectedId && (
         <div className="flex h-12 w-full items-center border-b border-subtle px-4 lg:hidden">
-          <button
-            ref={landing.toggle}
-            type="button"
-            aria-label={t("inbox_issue.a11y.list_toggle")}
-            aria-expanded={isMobileSidebar}
-            onClick={() => setIsMobileSidebar(!isMobileSidebar)}
-          >
-            <LeftSidePaneOutline
-              className={cn("h-4 w-4", isMobileSidebar ? "text-accent-primary" : "text-secondary")}
-            />
-          </button>
+          <IntakeListToggle ref={landing.toggle} shown={isMobileSidebar} onToggle={setIsMobileSidebar} />
         </div>
       )}
       <div className="flex h-full w-full overflow-hidden bg-surface-1">
@@ -132,13 +148,10 @@ export const InboxIssueRoot = observer(function InboxIssueRoot(props: TInboxIssu
 
         {selectedId ? (
           <InboxContentRoot
-            setIsMobileSidebar={setIsMobileSidebar}
-            isMobileSidebar={isMobileSidebar}
             workspaceSlug={workspaceSlug}
             projectId={projectId}
             inboxIssueId={selectedId}
-            onLeave={landing.leave}
-            region={landing.detail}
+            selection={selectionOf(selectedId)}
           />
         ) : (
           <EmptyStateCompact
@@ -151,3 +164,29 @@ export const InboxIssueRoot = observer(function InboxIssueRoot(props: TInboxIssu
     </>
   );
 });
+
+/**
+ * The narrow screen's button that shows or hides the intake page's list over the detail, saying which (aria-expanded):
+ * the page's own while nothing is selected, else the narrow header's, through the selection's navigation.
+ */
+function IntakeListToggle(props: {
+  shown: boolean;
+  onToggle: (shown: boolean) => void;
+  className?: string;
+  ref?: Ref<HTMLButtonElement>;
+}) {
+  const { shown, onToggle, className, ref } = props;
+  const { t } = useTranslation();
+  return (
+    <button
+      ref={ref}
+      type="button"
+      aria-label={t("inbox_issue.a11y.list_toggle")}
+      aria-expanded={shown}
+      onClick={() => onToggle(!shown)}
+      className={className}
+    >
+      <LeftSidePaneOutline className={cn("h-4 w-4", shown ? "text-accent-primary" : "text-secondary")} />
+    </button>
+  );
+}

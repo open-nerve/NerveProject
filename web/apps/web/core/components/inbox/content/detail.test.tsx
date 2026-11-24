@@ -51,6 +51,7 @@ vi.mock("@/components/issues/issue-detail/reactions", () => ({ IssueReaction: ()
 vi.mock("@/components/issues/issue-detail/issue-activity", () => ({
   IssueActivity: (props: ComponentProps<typeof IssueActivity>) => <div data-activity={String(!!props.isIntakeIssue)} />,
 }));
+vi.mock("./widgets", () => ({ IntakeWidgets: () => null }));
 vi.mock("./issue-properties", () => ({
   InboxIssueContentProperties: (props: ComponentProps<typeof InboxIssueContentProperties>) => (
     <div data-properties={String(props.isEditable)} />
@@ -177,5 +178,46 @@ describe("IntakeDetail, who changes the work item (spec 2.7)", () => {
     tab.nerve.calls[0]!.answer(problem(503, "service.unavailable"));
     await act(async () => void (await again));
     expect(host.querySelector('[role="alert"]')?.textContent).toContain("common.retry");
+  });
+});
+
+// The detail and a content view of the work item answer alike while it is in the intake (P5b spec 2.2, R9; re-95 m5):
+// one predicate (intakeEditableBy) says whether the caller changes its description and whether its issue host takes
+// files, an image of the description or an attachment. Once accepted the two differ by design: the intake's detail is
+// read-only, the content view goes by the project's roles (the browse detail's).
+describe("IntakeDetail and the work item's content view (P5b spec 2.2)", () => {
+  /** What the content view of i-x lets the caller write: an image of its description, an attachment. */
+  const files = () => {
+    const view = tab.app.asset.openContent({ kind: "issue", workspaceID: acme.id, projectID: "p-web", issueID: "i-x" });
+    expect(view.current).toBe(true);
+    return { image: view.canWrite("description"), attachment: view.canWrite("attachment") };
+  };
+  const answers = () => ({ description: changes().description, ...files() });
+
+  it.each([
+    ...(["pending", "snoozed", "declined", "duplicate"] as const).flatMap((status) => {
+      const open = status === "pending" || status === "snoozed";
+      return [
+        { who: "an admin", role: ADMIN, status, writes: open },
+        { who: "a member who submitted it", role: MEMBER, mine: true, status, writes: open },
+        { who: "a guest who submitted it", role: GUEST, mine: true, status, writes: open },
+        { who: "a member", role: MEMBER, status, writes: false },
+      ];
+    }),
+    { who: "an admin of an archived project", role: ADMIN, archived: true, status: "pending", writes: false },
+    { who: "an admin of a project whose intake is off", role: ADMIN, off: true, status: "pending", writes: false },
+  ] as const)("answer alike for $who, of a work item $status: $writes", async (cell) => {
+    const project = {
+      ...("archived" in cell ? { archived_at: "2026-11-01T00:00:00Z" } : {}),
+      ...("off" in cell ? { intake_view: false } : {}),
+    };
+    await shown(cell.role, cell.status, "mine" in cell ? "u-me" : "u-other", project);
+    expect(answers()).toEqual({ description: cell.writes, image: cell.writes, attachment: cell.writes });
+  });
+
+  it("differ once it is accepted: the detail read-only, the content view by the project's roles", async () => {
+    await shown(MEMBER, "accepted");
+    expect(changes()).toEqual(NONE);
+    expect(files()).toEqual({ image: true, attachment: true });
   });
 });

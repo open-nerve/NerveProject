@@ -25,9 +25,10 @@ import { NameDescriptionUpdateStatus } from "@/components/issues/issue-update-st
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { useProject } from "@/hooks/store/use-project";
 // local imports
-import { IntakeNavigation } from "./navigation";
+import type { IntakeSelectionPort } from "../selection-port";
+import { IntakeEmbedClose } from "./embed-close";
+import { INTAKE_ACTION_LABELS, type IntakeAction, type IntakeActions } from "./intake-actions";
 import { IntakeStatusChip } from "./status-chip";
-import { INTAKE_ACTION_LABELS, type IntakeAction, type IntakeActions } from "./use-intake-actions";
 
 /** The actions the wide header offers in its menu, in its order: the others are buttons. */
 const MENU_ACTIONS: readonly IntakeAction[] = ["snooze", "unsnooze", "resnooze", "duplicate", "delete"];
@@ -37,18 +38,22 @@ type Props = {
   issueId: string;
   actions: IntakeActions;
   isSubmitting: TNameDescriptionLoader;
+  /** The selection, as what shows it gives it: the wide screen's navigation (R18), or the embed's close (R17). */
+  selection: IntakeSelectionPort;
 };
 
 /**
  * The header of the selected work item of a project's intake, on a wide screen (P5a spec 2.7, 2.8): its identifier in
- * the route's project, its status, whether its name and description are saved, the previous and the next work items of
- * the list (IntakeNavigation), and the actions the action model offers: accepting and declining, copying its link and
- * opening it as buttons, the others in a menu; accepting is the status's primary action (data-intake-primary, R35).
- * Each control gives the action model itself, where the focus goes back once the action ends; the triages and the menu
- * wait while one is out (busy). Drawn only while the work item is held, so that a triage's read again withdraws it
- * (R34).
+ * the route's project, its status, whether its name and description are saved, the navigation its selection gives (the
+ * intake page's: the previous and the next work items of its list; embedded in the notifications page, a button named
+ * Close before the rest, P5b R17), and the actions the action model offers: accepting and declining, copying its link
+ * and opening it (at the action model's openLink, R30) as buttons, the others in a menu; accepting is the status's
+ * primary action (data-intake-primary, R35). Each control gives the action model itself, where the focus goes back
+ * once the action ends; the triages and the menu wait while one is out (busy). Drawn only while the work item is held,
+ * so that a triage's read again withdraws it (R34).
  */
-export const IntakeHeader = observer(function IntakeHeader({ projectId, issueId, actions, isSubmitting }: Props) {
+export const IntakeHeader = observer(function IntakeHeader(props: Props) {
+  const { projectId, issueId, actions, isSubmitting, selection } = props;
   const { t } = useTranslation();
   const navigate = useNavigate();
   const {
@@ -57,11 +62,12 @@ export const IntakeHeader = observer(function IntakeHeader({ projectId, issueId,
   const { getProjectById } = useProject();
   const detail = getIssueDetailById(issueId);
   if (!detail?.intake) return null;
-  const { offered, take, link, busy } = actions;
+  const { offered, take, openLink, busy } = actions;
   const inMenu = MENU_ACTIONS.filter((action) => offered.includes(action));
   return (
     <Row className="relative z-15 hidden h-full w-full items-center justify-between gap-2 border-b border-subtle bg-surface-1 lg:flex">
       <div className="flex items-center gap-4">
+        {selection.kind === "embed" && <IntakeEmbedClose onClose={selection.close} />}
         <h3 className="flex-shrink-0 text-14 font-medium text-tertiary">
           {getProjectById(projectId)?.identifier}-{detail.sequence_id}
         </h3>
@@ -69,7 +75,7 @@ export const IntakeHeader = observer(function IntakeHeader({ projectId, issueId,
         <NameDescriptionUpdateStatus isSubmitting={isSubmitting} />
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        <IntakeNavigation projectId={projectId} issueId={issueId} />
+        {selection.kind === "page" && selection.navigation("wide")}
         {offered.includes("accept") && (
           <Button
             variant="secondary"
@@ -101,15 +107,17 @@ export const IntakeHeader = observer(function IntakeHeader({ projectId, issueId,
         >
           {t(INTAKE_ACTION_LABELS.copy)}
         </Button>
-        <ControlLink
-          href={link}
-          onClick={() => void navigate(link)}
-          target="_self"
-          className={cn(getButtonStyling("secondary", "lg"), "gap-1.5")}
-        >
-          <NewTabOutline className="h-2.5 w-2.5" />
-          {t(INTAKE_ACTION_LABELS.open)}
-        </ControlLink>
+        {offered.includes("open") && (
+          <ControlLink
+            href={openLink}
+            onClick={() => void navigate(openLink)}
+            target="_self"
+            className={cn(getButtonStyling("secondary", "lg"), "gap-1.5")}
+          >
+            <NewTabOutline className="h-2.5 w-2.5" />
+            {t(INTAKE_ACTION_LABELS.open)}
+          </ControlLink>
+        )}
         {inMenu.length > 0 && (
           <CustomMenu
             ariaLabel={t("common.options")}

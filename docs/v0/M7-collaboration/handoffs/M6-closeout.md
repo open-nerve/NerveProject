@@ -18,6 +18,8 @@ created: 2026-11-10
 
 **何时验收：** 收集箱页面首次接通的阶段。弹窗一打开就按 Escape 或 Cancel 能关闭空表单（可仿 M4/P14 的 C10 编辑器加载故事扣住编辑器代码块），有未完成图片时仍拒绝。
 
+**处理结果（M7/P5b）：** 收集箱新建弹窗的关闭照 `draft-issue-layout.tsx` 的 `requestClose` 去掉草稿改写（[P5b spec](../specs/P5b-web-intake-files-embed.md) §2.1、R4、R28；`fa78bb11`）：Escape、点背景与 Discard 走同一条规则 `requestClose`（`create-modal/create-root.tsx`）——编辑器的引用为 `null`（还没建成）时可以关；已建成而 `isEditorReadyToDiscard()` 为假时提示、不关（这个表单不收图片，按代码建成之后恒为真，规则照 M4 留着，单测以替身的引用造出它）；有改动先确认放弃；提交在途不关；提交仍要求编辑器就绪；文档级的 Escape 删去。单测 `create-root.close.test.tsx` 17 格，变异 `t2-mut-null-ref-refuses-r2`（回到“引用为 `null` 即拒绝”：空表单的 Discard 不关）、`t2-mut-unready-closes-r2` 等都杀。页面照 C10 的次序（H8 (page) `e2e/stories/collaboration/h8-intake-close-page.spec.ts:97`）：页面载入之前扣住编辑器的代码块、收集箱是空的，每一步之前断言扣住仍在、弹窗里没有可编辑的编辑器；Escape 关空表单，再开、Discard 关空表单，提交被拒且没有 `POST`；放开代码块之后点背景关空表单。去掉扣住的红色版本 `t7-red-page-hold` 在“提交被拒、没有 `POST`”一步失败。这个测试在 Chromium 与 Firefox 跑，WebKit 以写明原因的 `test.skip` 跳过（WebKit 在动态 import 时只要有 `page.route` 生效就不用预载、再取一次，约 3 秒后告警，安静控制台过不了，[P5b 阶段记录](../reviews/P5b-web-intake-files-embed-review.md) §3）；WebKit 的关闭政策由编辑器已建成的 `:156` 一格三引擎核。“有未完成图片时仍拒绝”对这个不收图片的表单不适用。**本条关闭。**
+
 <a id="M6-M7-02"></a>
 ## M6-M7-02 迭代与模块的收藏，归档时移除收藏
 
@@ -66,6 +68,8 @@ created: 2026-11-10
 - **来源**：[M6 设计](../../M6-cycles-modules/M6-design.md) §8 `:199`、§11；[M3 → M6 交接](../../M6-cycles-modules/handoffs/M3-closeout.md)第 5 节与 P6a、P8 的回执；[M4 → M6 交接](../../M6-cycles-modules/handoffs/M4-closeout.md#M6-04)的 M6-04（“同步另一份交接”即本条）；同一条件也在 M7 自己的 [M3-closeout](M3-closeout.md)、[M4-closeout](M4-closeout.md)。
 
 **何时验收：** M7 把视图表单与收集箱新建弹窗迁到自然的 Tab 次序（同 M6 的 `cycles/form.tsx`、`modules/form.tsx`），完成各自弹窗、portal 与回焦的回归之后，删除 `getTabIndex`、两份 `tab-indices.ts`、两个桶文件里的导出与 `ETabIndices`；全仓再没有正的 `tabIndex` 传给共享控件时，`IDropdownProps.tabIndex` 随之收口。菜单的非正 `-1`（如 M4 表格列头的 `customButtonTabIndex={-1}`）独立核实后保留，不以“没有正索引”等同全部焦点属性可删（M3 → M6 交接 §5 的 M4/P16 回执）。
+
+**处理结果（M7/P5b）：** 收集箱新建弹窗的四个文件（`create-root`、`issue-description`、`issue-properties`、`issue-title`）离开 `getTabIndex` 与只为它读的 `usePlatformOS`，走 DOM 的自然次序；`web/packages/constants/src/tab-indices.ts` 删去收集箱一组（`INTAKE_ISSUE_CREATE_FORM_TAB_INDICES`、枚举成员 `INTAKE_ISSUE_FORM` 与映射一行）（`fa78bb11`，[P5b spec](../specs/P5b-web-intake-files-embed.md) §2.1）。描述编辑器改带非正的 `tabIndex={-1}`（`ec6b91a5`：共用编辑器没有 `tabIndex` 时吞掉列表之外的 Tab，[P5b 阶段记录](../reviews/P5b-web-intake-files-embed-review.md) §3）。`git grep getTabIndex -- web` 只剩视图表单 `web/apps/web/core/components/views/form.tsx:26`、`:75` 与函数本身；`getTabIndex`、`ETabIndices`、两份 `tab-indices.ts` 与桶文件的导出随 P6a 删除。保持 open。
 
 <a id="M6-M7-06"></a>
 ## M6-M7-06 迭代的转移不发布 `issue.updated`

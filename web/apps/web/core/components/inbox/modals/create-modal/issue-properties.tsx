@@ -7,15 +7,13 @@
 import type { IssueDetail } from "@nerve/api-client";
 
 import { observer } from "mobx-react";
-import { ETabIndices } from "@nerve/constants";
-import { renderFormattedPayloadDate, getDate, getTabIndex } from "@nerve/utils";
+import { useTranslation } from "@nerve/i18n";
+import { renderFormattedPayloadDate, getDate } from "@nerve/utils";
 // components
 import { DateDropdown } from "@/components/dropdowns/date";
 import { MemberDropdown } from "@/components/dropdowns/member/dropdown";
 import { PriorityDropdown } from "@/components/dropdowns/priority";
 import { IssueLabelSelect } from "@/components/issues/select";
-// hooks
-import { usePlatformOS } from "@/hooks/use-platform-os";
 
 type TInboxIssueProperties = {
   projectId: string;
@@ -28,9 +26,7 @@ type TInboxIssueProperties = {
 
 export const InboxIssueProperties = observer(function InboxIssueProperties(props: TInboxIssueProperties) {
   const { projectId, data, handleData } = props;
-  // hooks
-  const { isMobile } = usePlatformOS();
-  const { getIndex } = getTabIndex(ETabIndices.INTAKE_ISSUE_FORM, isMobile);
+  const { t } = useTranslation();
 
   const startDate = data?.start_date;
 
@@ -45,7 +41,6 @@ export const InboxIssueProperties = observer(function InboxIssueProperties(props
           value={data?.priority}
           onChange={(priority) => handleData("priority", priority)}
           buttonVariant="border-with-text"
-          tabIndex={getIndex("priority")}
         />
       </div>
 
@@ -57,9 +52,8 @@ export const InboxIssueProperties = observer(function InboxIssueProperties(props
           onChange={(assigneeIds) => handleData("assignee_ids", assigneeIds)}
           buttonVariant={(data?.assignee_ids || [])?.length > 0 ? "transparent-without-text" : "border-with-text"}
           buttonClassName={(data?.assignee_ids || [])?.length > 0 ? "hover:bg-transparent" : ""}
-          placeholder="Assignees"
+          placeholder={t("issue.add.assignee")}
           multiple
-          tabIndex={getIndex("assignee_ids")}
         />
       </div>
 
@@ -70,7 +64,6 @@ export const InboxIssueProperties = observer(function InboxIssueProperties(props
           value={data?.label_ids || []}
           onChange={(labelIds) => handleData("label_ids", labelIds)}
           projectId={projectId}
-          tabIndex={getIndex("label_ids")}
         />
       </div>
 
@@ -81,8 +74,7 @@ export const InboxIssueProperties = observer(function InboxIssueProperties(props
           onChange={(date) => handleData("target_date", date ? renderFormattedPayloadDate(date) : "")}
           buttonVariant="border-with-text"
           minDate={minDate ?? undefined}
-          placeholder="Due date"
-          tabIndex={getIndex("target_date")}
+          placeholder={t("issue.add.due_date")}
         />
       </div>
     </div>

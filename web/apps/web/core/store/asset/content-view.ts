@@ -2,6 +2,7 @@
 import { makeObservable, observable, reaction, runInAction } from "mobx";
 import type { RootStore } from "@/store/root.store";
 import type { DetailRegistration } from "@/store/issue/issue-details/resource";
+import { inIntake, intakeEditableBy } from "@/store/issue/intake/status";
 export type ContentHost =
   | { kind: "issue" | "new_comment"; workspaceID: string; projectID: string; issueID: string }
   | { kind: "comment"; workspaceID: string; projectID: string; issueID: string; commentID: string }
@@ -72,6 +73,8 @@ export class ContentView implements DetailRegistration {
     const workspace = this.workspace();
     const role =
       workspace && this.root.user.permission.getProjectRoleByWorkspaceSlugAndProjectId(workspace.slug, host.projectID);
+    // A work item held in its project's intake takes files by the intake's rule, the intake detail's (P5b spec 2.2).
+    if (inIntake(issue)) return intakeEditableBy(issue, project, role, this.actor);
     return role === 15 || role === 20;
   }
   canRemoveAttachment(): boolean {

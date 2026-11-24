@@ -1,6 +1,6 @@
 # M7 / P5a：网页的收集箱——数据层、列表、详情与分诊（阶段记录）
 
-> 状态：实施完成，待整分支审查，未合并（§9）。spec 与 plan 见 [P5a spec](../specs/P5a-web-intake.md)、[P5a plan](../plans/P5a-web-intake.md)，预检 [re-94](../../../reviews/re-94-M7P5a预检.md)。基线 main `89be91e5`（P4 的 noff），分支 `codex/m7-p5a`。台账 `.superpowers/sdd/P5a-web-intake/progress.md`（ignored，随阶段归档），主控裁定 `rulings.md`。
+> 状态：已完成，合入 main（noff `ab86965f`），main CI 45197451256 全绿（§9）。spec 与 plan 见 [P5a spec](../specs/P5a-web-intake.md)、[P5a plan](../plans/P5a-web-intake.md)，预检 [re-94](../../../reviews/re-94-M7P5a预检.md)。基线 main `89be91e5`（P4 的 noff），分支 `codex/m7-p5a`。台账 `.superpowers/sdd/P5a-web-intake/progress.md`（ignored，随阶段归档），主控裁定 `rulings.md`。
 
 ## 1. 方法与范围
 
@@ -47,7 +47,7 @@
 | A6 侧栏与入口 | T2、T6b | 达成：待处理数按门与键读一次，大于 0 时显示，名字含数；`intakeEntryOn` 一处定义，读者是三处入口（侧栏 `project-navigation.tsx:120`、页签栏 `use-navigation-items.ts:90`、命令面板 `project-commands.ts:76`），另有页头的 “Add work item”（`IN/page-header.tsx:46-48`）与列表读的门（`IN/use-intake-list.ts:47`）；六格单测（`intake-entry.test.ts`）；已归档的项目没有 “Add work item” |
 | A7 删除干净与守卫 | T2、T6a、T6b、T6c、T9、T14 | 达成：spec §2.10 的三组各一个提交、各自全绿；新建弹窗经新接口提交、没有日期不带键、成功跳到新条目；`RootStore` 20；`old-intake-urls`；地址规则收入新文件；`copy-hook` 例外删除；swr 名单；oxlint 等于上限；死成员整份比对，P5 的 39 行各有去处；三个权限键删除，T9 清掉五个没有读者的旧键（§5） |
 | A8 e2e | T10–T13；修复 `30ccb25a`、`68160da2` | 达成：四个故事（七个文件、22 个测试）三引擎 66 过，chromium `--repeat-each=3` 66 过；`INTAKE_COUNTS` 在 T10 随第一个读者 H9 加（偏离 plan 的 T2，§3）；m6-pages、m6-acceptance、m4-detail 与整套默认 e2e 不回归（检查点 1 的 I9 是 M4 故事的竞态，按根因修了故事，§5） |
-| A9 收尾 | — | 待 P5b 的 T1 补记（终检、最终分支 CI、合并、main CI 与归档，§9） |
+| A9 收尾 | T15 | 已完成：终检、最终分支 CI、合并、main CI 皆一次过，归档与清理（§9，P5b 的 T1 补记） |
 
 ## 3. 实施中的裁定
 
@@ -176,4 +176,9 @@
   - 本提交（m6 与文档）：§2 的修复轮一行，§4 的浏览页一句、§7、§8 的 `HO/M3-closeout.md:21` 一句与本节；plan `:18`、spec §1 `:37`、spec §2.5 的两句、frontend-changes 的收集箱页一行（详情不随网络恢复重读）；`api-error.ts` 注释里的出处改为 M6/P7b。
   - 修复轮的验证（`b7cd8583`）：`make lint-web`、`make knip`、`make test-web`（93 秒）、`make build build-s3-fixture`、e2e 的类型、lint 与格式检查都过；m7-pages 三引擎 93 过（`t15-m7pages`，1.6 分）；改到的五个故事文件 chromium `--repeat-each=3` 51 过（`t15-repeat3`）；m4-detail 三引擎 132 过（`t15-m4-detail`）；P5a 的 127 个文件 oxlint 为零、web 18 = 上限 18（`t15-oxlint-files`）；死成员仍 1598 行、`--rows M7` 仍 88（`t15-dead`，与 T14 只差一个读数）。`use-intake-actions.ts` 300 行、`issue-write-intake.ts` 149 行。改到的共用文件：M2 的 `core/lib/api-error.ts`（一个类与 `problemCode` 的一支）、M3 的 `core/lib/use-session-swr.ts`（只改注释）。
 - **限定复审**（fable，只读，`8fd736c2..d22258ad`，台账旁的 `re-review-fix-round.md`）：可合并；严重 0、重要 0、次要 2、观察 5。六个修复都在根上、测试与变异钉得住；`ForeseenRefusal` 核过 15 个 `problemCode` 的读者、14 处 `instanceof ApiError` 与 `errorMessageKey` 的读者，除了提示的一句没有调用者另眼看它；实施者超出裁定的四处（m1 的守卫、m2 删除经 `conflicted` 与分诊不重读、m4 的按钮、m5 不改 H20 `:258`）都对。R-m1：§7 那条“提示两次”说错了情形（404 只提示一次，`intake: null` 时两次），已照复审改写；R-m2：spec §2.4 `:153`、frontend-changes、plane-diff 三处没跟上 m2，本提交补上。观察：R-O1 m5 把午夜的窗口从几秒缩到几百毫秒、没有消除（H9 两次 `page.evaluate`）；R-O2 m3 的测试比两个 `errorMessageKey`，`issue.in_triage` 离开表时会空过（表的测试与两个变异兜着）；R-O3 m2 之后在轮次里的重读本身失败时焦点停在 body（与 R28 的内容修改同类，R35 的表之外）；R-O4 I1 的代价：离线时首读失败的详情不随重连恢复，要按重试（同 browse）；R-O5 台账记的行数差 5 行。主控裁定：两条次要只改文档（本提交），观察不改。
-- 终检与集成见下。
+- 以下在 P5b 的 T1 补记，数字取自归档台账的末行（`.superpowers/sdd/M7-P5a-integration-20261123`）：
+  - **推送之前的估算**：检查点 2 之后没有新增测试，以 45147321651 为底估终检两片的作业约 650–1010 秒，离 30 分钟的报告线很远。
+  - **合并前的终检** `final.sh fin`（`9983ed46`，限定复审之后补的文档提交）一次过、没有重跑：七项收据全 0、`inputs_unchanged`（bootstrap 第 0 路 465.0 秒、第 1 路 642.5 秒，比本机基线 643.7 少 1.2；e2e 525 passed）；m7-pages 三引擎 93 过，m6-pages 135 过，m6-acceptance 33 过，m4-detail 132 过。
+  - **最终分支 CI** 45189969560 第一次全绿：server (0) Test 677 / bootstrap 493.5（映像 `.133`），server (1) Test 1000 / bootstrap 968.9（期限的 80.7%，映像 `.376`：越过八成的报告线，只报告；同一份 Go 在三个检查点的 `.133` 上为 754.8–764.0，P4 的 main CI 在 `.376` 上为 970.9）；web 740 秒（70 / 626 / 13）；e2e 两片 1331、1171 秒（装浏览器 682、389 秒是下载慢，E2E 步 563、706，与估算的底相符），在 30 分钟的报告线之内。
+  - **合并**：`--no-ff` 合入 main，`ab86965f`（父 `89be91e5`、`9983ed46`），推送后以 `ls-remote` 核对。**main CI** 45197451256 第一次全绿：server (0) Test 776 / bootstrap 539.1（`.376`），server (1) Test 771 / bootstrap 750.3（62.5%，`.133`）；web 959 秒（93 / 818 / 17，`.376`；对 main 45051719903 的三步各慢 1.55、1.61、1.42 倍，同比例：慢 runner，贴着 960 秒的报告线、在 20 分钟期限之内）；e2e 两片 909、1085 秒。第 1 路分界的调整（只改 `tools/go-test-shard.sh` 的分界，不加作业、不改期限）仍待负责人定。
+  - **归档与清理**：归档 `.superpowers/sdd/M7-P5a-integration-20261123`（载荷 6512 个文件，分类没有未知，`source_unchanged` 为真，清理之后核过）；`cleanup.log`（2026-11-23T15:20:49Z）：worktree `m7-p5a` 已删，本地分支 `codex/m7-p5a`（在 `9983ed46`，包含于 main）与远端分支已删。

@@ -34,7 +34,7 @@ type PlanningPageDomain = {
    * cycle at most, which it leaves for the page's; it may be in many modules, the page's added to those it holds when
    * its write's turn comes.
    */
-  join: (page: PlanningPage) => IssueChange;
+  join: (page: PlanningPage) => Pick<IssueChange, "cycle_id" | "modules">;
   /** Sends the work item's removal from the page's cycle or module; nerve's answer or refusal is the caller's. */
   remove: (root: RootStore, slug: string, page: PlanningPage, id: string) => Promise<unknown>;
 };

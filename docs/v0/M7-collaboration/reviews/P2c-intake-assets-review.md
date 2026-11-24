@@ -64,6 +64,7 @@ P2c 只加了一个 bootstrap 顶层名（T7 的 `TestIntakeItemAssetsThroughThe
 - `server/internal/bootstrap/ports_test.go` 522 行（基线 486，P2c 加 36），超过约 400 行，下次动它之前先拆。
 - 负责人的多选（`MemberDropdown` → `CustomSearchSelect`）没有忙的守卫，下一个集合从渲染出的值算：PATCH 的回答到了、页面还没 `confirmChange` 的那几个微任务里再点，会发出旧的集合（错的请求体，不是超时）；没有观察到，没有改，交 P5/M8 看。
   - **处理结果（M7/P5a）：** 随 P5b（Q34：故事里快速连点，重现即在共用控件按根因修，否则写“未重现”交 M8，[P5a spec](../specs/P5a-web-intake.md) §1）。
+  - **处理结果（M7/P5b）：** 按代码必然重现（预检 I5），在没修的构建上以扣住第一次 `PATCH` 的回答重现（`t8c-red-page-q34`：第二次的请求体只有第二位，最终的集合丢了第一位）；修在写的层（R20，`fb6fe584`），比 Q34 字面的“修在共用控件”更进一步：七个负责人下拉框交出相对被点时显示的值的增删，写的层在轮到时把它并到所持的集合上，请求体仍是整集；连点的一步（`e2e/stories/collaboration/h11-intake-links-assignees-page.spec.ts:167`）修好之后三种引擎绿（[P5b spec](../specs/P5b-web-intake-files-embed.md) §2.6）。本条关闭。
 - `writesOnAProject` 按标签排除工作项（issue）、计划（planning）与资产（asset）的写；资产的写有自己的锁序与锁序测试。以后加别的按宿主授权、自有锁序的写，照这一条。
 
 ## 8. 文档与交接（T10）

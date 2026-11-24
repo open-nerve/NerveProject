@@ -25,7 +25,10 @@ vi.mock("@/lib/store-context", async () => ({
 vi.mock("@/lib/auth/api-client", () => ({ tokenManager: { state: { loginId: "inbox" } }, publicClient: {} }));
 vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
 vi.mock("@nerve/propel/toast", () => import("@/lib/fake-toast"));
-vi.mock("@/hooks/use-platform-os", () => ({ usePlatformOS: () => ({ isMobile: false }) }));
+vi.mock("@nerve/ui", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@nerve/ui")>()),
+  ModalTitle: ({ children }: { children: React.ReactNode }) => <h3>{children}</h3>,
+}));
 // The real editor, without the lazy boundary the intake form loads it through.
 vi.mock("@/components/editor/rich-text/editor", async () => ({
   RichTextEditor: (await import("@/components/editor/rich-text/editor-implementation")).RichTextEditor,
@@ -37,11 +40,6 @@ vi.mock("react-router", async (original) => ({
 }));
 vi.mock("@/hooks/store/use-intake", () => ({ useIntake: () => binding.app!.issue.intake }));
 vi.mock("@/hooks/store/use-workspace", () => ({ useWorkspace: () => binding.app!.workspaceRoot }));
-class NoResize {
-  observe() {}
-  unobserve() {}
-  disconnect() {}
-}
 const ws = workspaceOf("ws");
 const project = projectOf("A", ws.id);
 let nerve: FakeNerve;
@@ -53,7 +51,6 @@ const editor = () => host.querySelector<HTMLElement>('.tiptap[contenteditable="t
 beforeEach(async () => {
   globalThis.IS_REACT_ACT_ENVIRONMENT = true;
   vi.useFakeTimers();
-  vi.stubGlobal("ResizeObserver", NoResize);
   vi.stubGlobal("localStorage", { getItem: () => null, setItem: () => {}, removeItem: () => {} });
   raw.length = 0;
   vi.stubGlobal("fetch", (...args: unknown[]) => {
@@ -106,8 +103,7 @@ it("the unopened intake form keeps a pasted image out and sends no file request 
           workspaceSlug={ws.slug}
           projectId={project.id}
           handleModalClose={() => undefined}
-          isDuplicateModalOpen={false}
-          handleDuplicateIssueModal={() => undefined}
+          onSubmittingChange={() => {}}
         />
       </StoreContext.Provider>
     )

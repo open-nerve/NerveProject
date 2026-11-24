@@ -29,7 +29,7 @@ import type { DeleteInboxIssueModal } from "../modals/delete-issue-modal";
 import type { IntakeDetail } from "./detail";
 import type { IntakeMobileHeader } from "./header/mobile";
 import type { IntakeHeader } from "./header/root";
-import type { IntakeActions } from "./header/use-intake-actions";
+import type { IntakeActions } from "./header/intake-actions";
 import { InboxContentRoot } from "./root";
 
 // The detail region of a project's intake page (P5a spec 2.5–2.8; re-94 m4): a region named so and focusable, around
@@ -162,15 +162,13 @@ function Page() {
   held.navigate = useNavigate();
   const landing = useIntakeLanding({ list: true, first: undefined });
   const selected = params.get("inboxIssueId");
+  const port = { kind: "page", neighbour: () => undefined, navigation: () => null } as const;
   return selected ? (
     <InboxContentRoot
       workspaceSlug="acme"
       projectId="p-web"
       inboxIssueId={selected}
-      isMobileSidebar={false}
-      setIsMobileSidebar={() => {}}
-      onLeave={landing.leave}
-      region={landing.detail}
+      selection={{ ...port, leave: landing.leave, region: landing.detail }}
     />
   ) : (
     <p data-nothing />

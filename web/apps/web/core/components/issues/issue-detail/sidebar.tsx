@@ -29,6 +29,8 @@ import { StateDropdown } from "@/components/dropdowns/state/dropdown";
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { useMember } from "@/hooks/store/use-member";
 import { useProjectState } from "@/hooks/store/use-project-state";
+import { assigneeSetChange } from "@/lib/assignee-set";
+import { inIntake } from "@/store/issue/intake/status";
 // components
 import { IssueParentSelectRoot } from "@/components/issues/parent-select-root";
 import { SidebarPropertyListItem } from "@/components/common/layout/sidebar/property-list-item";
@@ -52,7 +54,7 @@ export const IssueDetailsSidebar = observer(function IssueDetailsSidebar(props: 
     issueOperations.update(...args).catch(() => undefined);
   // store hooks
   const {
-    issue: { getIssueById },
+    issue: { getIssueById, getIssueDetailById },
   } = useIssueDetail();
   const { getUserDetails } = useMember();
   const { getStateById } = useProjectState();
@@ -76,25 +78,32 @@ export const IssueDetailsSidebar = observer(function IssueDetailsSidebar(props: 
         <div className="h-full w-full overflow-y-auto px-6">
           <h5 className="mt-5 text-body-xs-medium">{t("common.properties")}</h5>
           <div className={`mt-4 mb-2 space-y-2.5 truncate ${!isEditable ? "opacity-60" : ""}`}>
-            <SidebarPropertyListItem icon={StateOutline} label={t("common.state")}>
-              <StateDropdown
-                value={issue?.state_id}
-                onChange={(val) => updateProperty(workspaceSlug, projectId, issueId, { state_id: val })}
-                projectId={projectId}
-                disabled={!isEditable}
-                buttonVariant="transparent-with-text"
-                className="group w-full grow"
-                buttonContainerClassName="w-full text-left h-7.5"
-                buttonClassName="text-body-xs-regular"
-                dropdownArrow
-                dropdownArrowClassName="h-3.5 w-3.5 hidden group-hover:inline"
-              />
-            </SidebarPropertyListItem>
+            {/* none for a work item in its project's intake, in the project's hidden Triage state (P5b spec R13) */}
+            {!inIntake(getIssueDetailById(issueId)) && (
+              <SidebarPropertyListItem icon={StateOutline} label={t("common.state")}>
+                <StateDropdown
+                  value={issue?.state_id}
+                  onChange={(val) => updateProperty(workspaceSlug, projectId, issueId, { state_id: val })}
+                  projectId={projectId}
+                  disabled={!isEditable}
+                  buttonVariant="transparent-with-text"
+                  className="group w-full grow"
+                  buttonContainerClassName="w-full text-left h-7.5"
+                  buttonClassName="text-body-xs-regular"
+                  dropdownArrow
+                  dropdownArrowClassName="h-3.5 w-3.5 hidden group-hover:inline"
+                />
+              </SidebarPropertyListItem>
+            )}
 
             <SidebarPropertyListItem icon={MembersOutline} label={t("common.assignees")}>
               <MemberDropdown
                 value={issue?.assignee_ids ?? undefined}
-                onChange={(val) => updateProperty(workspaceSlug, projectId, issueId, { assignee_ids: val })}
+                onChange={(val) =>
+                  updateProperty(workspaceSlug, projectId, issueId, {
+                    assignees: assigneeSetChange(issue.assignee_ids, val),
+                  })
+                }
                 disabled={!isEditable}
                 projectId={projectId}
                 placeholder={t("issue.add.assignee")}

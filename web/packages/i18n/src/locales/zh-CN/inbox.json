@@ -34,6 +34,10 @@
       },
       "accept": {
         "accepted": "{value} 已被接受，你对它的修改尚未保存"
+      },
+      "discard": {
+        "title": "放弃这个工作项？",
+        "content": "你填写的内容尚未保存，放弃之后无法恢复。"
       }
     },
     "actions": {
