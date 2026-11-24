@@ -11,10 +11,11 @@ import { observer } from "mobx-react";
 import { EUserPermissionsLevel } from "@nerve/constants";
 import { setToast, TOAST_TYPE } from "@nerve/propel/toast";
 import type { IProjectView, TWorkItemFilterExpression } from "@nerve/types";
-import { EUserProjectRoles, EViewAccess } from "@nerve/types";
+import { EUserProjectRoles } from "@nerve/types";
 // components
 import { removeNillKeys } from "@/components/issues/issue-layouts/utils";
 import { CreateUpdateProjectViewModal } from "@/components/views/modal";
+import type { ViewContent } from "@/components/views/view-content";
 // hooks
 import { useLabel } from "@/hooks/store/use-label";
 import { useMember } from "@/hooks/store/use-member";
@@ -22,6 +23,8 @@ import { useProject } from "@/hooks/store/use-project";
 import { useProjectState } from "@/hooks/store/use-project-state";
 import { useProjectView } from "@/hooks/store/use-project-view";
 import { useUser, useUserPermissions } from "@/hooks/store/user";
+// lib
+import { toProjectFilters } from "@/lib/issue-filters";
 // local imports
 import { WorkItemFiltersHOC } from "./base";
 import type { TEnableSaveViewProps, TEnableUpdateViewProps, TSharedWorkItemFiltersHOCProps } from "./shared";
@@ -39,7 +42,7 @@ export const ProjectLevelWorkItemFiltersHOC = observer(function ProjectLevelWork
     props;
   // states
   const [isCreateViewModalOpen, setIsCreateViewModalOpen] = useState(false);
-  const [createViewPayload, setCreateViewPayload] = useState<Partial<IProjectView> | null>(null);
+  const [createViewPayload, setCreateViewPayload] = useState<ViewContent | null>(null);
   // hooks
   const { getProjectById } = useProject();
   const { getViewById, updateView } = useProjectView();
@@ -101,16 +104,6 @@ export const ProjectLevelWorkItemFiltersHOC = observer(function ProjectLevelWork
     [initialWorkItemFilters, viewDetails]
   );
 
-  const getDefaultViewDetailPayload: () => Partial<IProjectView> = useCallback(
-    () => ({
-      name: viewDetails ? `${viewDetails?.name} 2` : "Untitled",
-      description: viewDetails ? viewDetails.description : "",
-      logo_props: viewDetails ? viewDetails.logo_props : undefined,
-      access: viewDetails ? viewDetails.access : EViewAccess.PUBLIC,
-    }),
-    [viewDetails]
-  );
-
   const getViewFilterPayload: (filterExpression: TWorkItemFilterExpression) => Partial<IProjectView> = useCallback(
     (filterExpression: TWorkItemFilterExpression) => ({
       rich_filters: cloneDeep(filterExpression),
@@ -120,16 +113,10 @@ export const ProjectLevelWorkItemFiltersHOC = observer(function ProjectLevelWork
     [initialWorkItemFilters]
   );
 
-  const handleViewSave = useCallback(
-    (expression: TWorkItemFilterExpression) => {
-      setCreateViewPayload({
-        ...getDefaultViewDetailPayload(),
-        ...getViewFilterPayload(expression),
-      });
-      setIsCreateViewModalOpen(true);
-    },
-    [getDefaultViewDetailPayload, getViewFilterPayload]
-  );
+  const handleViewSave = useCallback((expression: TWorkItemFilterExpression) => {
+    setCreateViewPayload({ filters: toProjectFilters(expression) });
+    setIsCreateViewModalOpen(true);
+  }, []);
 
   const handleViewUpdate = useCallback(
     (filterExpression: TWorkItemFilterExpression) => {
@@ -189,9 +176,9 @@ export const ProjectLevelWorkItemFiltersHOC = observer(function ProjectLevelWork
       <CreateUpdateProjectViewModal
         workspaceSlug={workspaceSlug}
         projectId={projectId}
-        preLoadedData={createViewPayload}
+        content={createViewPayload ?? undefined}
         isOpen={isCreateViewModalOpen}
-        onClose={() => {
+        handleClose={() => {
           setCreateViewPayload(null);
           setIsCreateViewModalOpen(false);
         }}

@@ -4,7 +4,7 @@ import { act, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { Project } from "@nerve/api-client";
-import { settle, where } from "@/components/common/fake-quick-actions";
+import { dialog, settle, where } from "@/components/common/fake-quick-actions";
 import { listViews } from "@/components/views/fake-view-pages";
 import { problem, type FakeNerve } from "@/lib/auth/fake-nerve";
 import type { ProjectStore } from "@/store/project/project.store";
@@ -17,10 +17,11 @@ import { ListPages, standInMembers } from "./fake-list-page";
 // A project's views list page (P6a spec 2.2, 2.3, R4, R5, R20): its layout, its header and its body, at the route's
 // address. Turned off, it says so and reads nothing, whose way to the project's features is its admin's; else it reads
 // nerve's list of the project's views, waits for it, says why nerve could not give it with a retry, or how to make the
-// first view, which only those who may create one may, as "Add view" in its header; and its search, filters and order
-// are the page's, which end as the project changes. The caller's role is the permission store's own
-// (fake-permissions.ts); the views a views' store's over a fake nerve (fake-view-pages.tsx); the dialogs' host of the
-// project (toggleCreateViewModal) a stand-in that keeps what it was asked.
+// first view, which only those who may create one may, as "Add view" in its header, each by the page's own dialog of a
+// new view (ViewActionsHost); and its search, filters and order are the page's, which end as the project changes. The
+// caller's role is the permission store's own (fake-permissions.ts); the views a views' store's over a fake nerve
+// (fake-view-pages.tsx); the project's dialogs' host (toggleCreateViewModal) a stand-in that keeps what it was asked,
+// which the page asks nothing.
 
 const held = vi.hoisted(() => ({
   views: undefined as unknown as ViewStore,
@@ -93,6 +94,11 @@ const buttons = (within = "") => [...host.querySelectorAll<HTMLButtonElement>(`$
 const button = (name: string, within = "") =>
   buttons(within).find((one) => (one.getAttribute("aria-label") ?? one.textContent) === name);
 const loading = () => host.querySelector('[role="status"]')?.textContent;
+/** The open dialog's title and its name field's value. */
+const dialogShown = () => [
+  document.getElementById(dialog()?.getAttribute("aria-labelledby") ?? "")?.textContent,
+  dialog()?.querySelector<HTMLInputElement>('[name="name"]')?.value,
+];
 /** The names of the views the list shows, in its order. */
 const rows = () => [...host.querySelectorAll("a[href*='/views/v-']")].map((link) => link.textContent);
 /** What the caller asked nerve: each request's method and path. */
@@ -177,7 +183,9 @@ it.each([
     const first = button("project_empty_state.views.cta_primary");
     expect(first?.disabled).toBe(!may);
     await act(async () => first?.click());
-    expect(held.toggle.mock.calls).toEqual(may ? [[true]] : []);
+    await settle();
+    expect(dialogShown()).toEqual(may ? ["view.create.label", ""] : [undefined, undefined]);
+    expect(held.toggle).not.toHaveBeenCalled();
   }
 );
 
@@ -196,7 +204,9 @@ it.each([
   const add = button("project_views.add_view", "header");
   expect(add !== undefined).toBe(each.may);
   await act(async () => add?.click());
-  expect(held.toggle.mock.calls).toEqual(each.may ? [[true]] : []);
+  await settle();
+  expect(dialogShown()).toEqual(each.may ? ["view.create.label", ""] : [undefined, undefined]);
+  expect(held.toggle).not.toHaveBeenCalled();
 });
 
 it("says no view matches the search, the project having views", async () => {

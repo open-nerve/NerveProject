@@ -2804,7 +2804,6 @@
             "web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/views/(list)/layout.test.tsx",
             "web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/views/(list)/fake-list-page.tsx",
             "web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/views/(detail)/[viewId]/page.tsx",
-            "web/apps/web/core/components/views/follow-ups.test.tsx",
             "web/apps/web/core/components/views/quick-actions.test.tsx",
             "web/apps/web/core/components/views/view-list-order.ts",
             "web/apps/web/core/components/views/form.tsx",

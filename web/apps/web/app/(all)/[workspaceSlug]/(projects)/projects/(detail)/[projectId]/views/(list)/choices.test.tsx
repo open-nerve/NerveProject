@@ -39,7 +39,6 @@ vi.mock("@/hooks/store/user", () => ({
   useUserPermissions: () => held.permissions,
   useUser: () => ({ data: { id: "u-me" } }),
 }));
-vi.mock("@/hooks/store/use-command-palette", () => ({ useCommandPalette: () => ({ toggleCreateViewModal: vi.fn() }) }));
 vi.mock("@/hooks/use-route-workspace", () => ({ useRouteWorkspace: () => null }));
 vi.mock("@/components/assets/profile-image", () => ({ ProfileAvatar: () => null }));
 vi.mock("@/components/breadcrumbs/common", () => ({ CommonProjectBreadcrumbs: () => null }));

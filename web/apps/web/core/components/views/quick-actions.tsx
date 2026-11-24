@@ -31,9 +31,9 @@ type Props = {
 };
 
 /**
- * A view's quick actions (P6a spec 2.3, R17): its menu, by its button, named by the view, and by a right-click on its
- * row (parentRef); none while the store does not give the view. Its dialogs are its page's (ViewActionsHost), and what
- * follows a deletion is the page's while it is mounted, though the deletion takes the row away.
+ * A view's quick actions (P6a spec 2.3, 2.4, R17): its menu, by its button, named by the view, and by a right-click on
+ * its row (parentRef); none while the store does not give the view. Its dialogs, which change it and delete it, are its
+ * page's (ViewActionsHost), and what follows them is the page's while it is mounted, though they take the row away.
  */
 export const ViewQuickActions = observer(function ViewQuickActions(props: Props) {
   const { getViewById } = useViews();
@@ -65,7 +65,7 @@ const ViewMenu = observer(function ViewMenu(props: Props & { view: View }) {
   const MENU_ITEMS = useViewMenuItems({
     isOwner,
     isAdmin,
-    handleEdit: () => {},
+    handleEdit: () => openDialog("edit", view),
     handleDelete: () => openDialog("delete", view),
     handleCopyLink: () => void copyLink(link, t("common.link_copied_to_clipboard")),
     handleOpenInNewTab: () => window.open(link, "_blank", "noopener,noreferrer"),

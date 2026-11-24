@@ -5,19 +5,21 @@ import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { View } from "@nerve/api-client";
 import { choose, dialog, dialogButton, row, settle, where } from "@/components/common/fake-quick-actions";
-import { type FakeNerve, noContent, problem } from "@/lib/auth/fake-nerve";
+import { type FakeNerve, json, noContent, problem } from "@/lib/auth/fake-nerve";
 import { signedIn, switchAccount } from "@/lib/auth/fake-tab";
 import { toasts } from "@/lib/fake-toast";
 import { its } from "@/store/user/fake-permissions";
 import type { IUserPermissionStore } from "@/store/user/permissions.store";
 import type { ViewStore } from "@/store/views/view.store";
 import { ME, loadViews, viewOf, viewRequests, viewsTab } from "@/store/views/fake-views";
+import { fill, submit } from "./fake-view-dialog";
 import { ViewPages } from "./fake-view-pages";
 
-// The host of a page of a project's views (P6a spec 2.3, R17): a view's quick actions open its page's dialog that
-// deletes the view (useViewsPage), which follows nerve's answer though the row has gone first, and only while the page
-// is mounted and the tab in the session it was sent in. The dialog is real (AlertModalCore); the views a views' store's
-// over a fake nerve that answers when the test says; the caller web's admin (fake-permissions.ts).
+// The host of a page of a project's views (P6a spec 2.3, 2.4, R17): a view's quick actions open its page's dialogs
+// (useViewsPage), the one that changes the view and the one that deletes it, which follows nerve's answer though the
+// row has gone first, and only while the page is mounted and the tab in the session it was sent in. The dialogs are
+// real (the view's dialog, AlertModalCore); the views a views' store's over a fake nerve that answers when the test
+// says; the caller web's admin (fake-permissions.ts).
 
 const held = vi.hoisted(() => ({
   views: undefined as unknown as ViewStore,
@@ -178,3 +180,27 @@ it.each([
     expect(address()).toBe(`${list}/${bugs.id}`);
   }
 );
+
+it("opens the page's dialog that changes the view from its row's Edit, its name the view's; the row shows nerve's answer", async () => {
+  const { nerve, mine } = await at("views");
+  await choose(mine.id, "edit");
+  expect([title(), dialog()?.querySelector<HTMLInputElement>('[name="name"]')?.value]).toEqual([
+    "view.update.label",
+    "Mine",
+  ]);
+  await fill("name", "Mine v2");
+  await submit();
+  expect(nerve.to(viewRequests.at(mine)).map(({ method, body }) => [method, body])).toEqual([
+    ["PATCH", { name: "Mine v2" }],
+  ]);
+  await act(async () =>
+    nerve
+      .to(viewRequests.at(mine))
+      .at(-1)
+      ?.answer(json(200, { ...mine, name: "Mine v2" }))
+  );
+  await settle();
+  expect(toasts).toEqual([{ type: "success", title: "toast.success", message: "project_views.action.update.success" }]);
+  expect(dialog()).toBeNull();
+  expect(row(mine.id)?.textContent).toContain("Mine v2");
+});

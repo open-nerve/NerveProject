@@ -12,12 +12,12 @@ import { EmptyStateDetailed } from "@nerve/propel/empty-state";
 // components
 import { ListLayout } from "@/components/core/list";
 // hooks
-import { useCommandPalette } from "@/hooks/store/use-command-palette";
 import { useProject } from "@/hooks/store/use-project";
 import { useUserPermissions } from "@/hooks/store/user";
 // lib
 import { viewsCreatableBy } from "@/lib/views-entry";
 // local imports
+import { useViewsPage } from "./actions-host";
 import { useViewsPageState } from "./page-state";
 import { ProjectViewListItem } from "./view-list-item";
 import { viewsShown } from "./view-list-order";
@@ -31,16 +31,16 @@ type Props = {
 
 /**
  * The views of the project of projectId, at its page's address (its route's params, M3 handoff §4), as nerve lists them
- * (P6a spec 2.3, R4): none, how to make the first, which only those who may create a view may (viewsCreatableBy);
- * else the views the page's search and filters keep, in the order chosen (useViewsPageState, viewsShown), or, keeping
- * none, that none matches.
+ * (P6a spec 2.3, R4): none, how to make the first, by the page's dialog of a new view (ViewActionsHost), which only
+ * those who may create a view may (viewsCreatableBy); else the views the page's search and filters keep, in the order
+ * chosen (useViewsPageState, viewsShown), or, keeping none, that none matches.
  */
 export const ProjectViewsList = observer(function ProjectViewsList(props: Props) {
   const { workspaceSlug, projectId, views } = props;
   // nerve hooks
   const { t } = useTranslation();
   // store hooks
-  const { toggleCreateViewModal } = useCommandPalette();
+  const { openCreate } = useViewsPage();
   const { getProjectById } = useProject();
   const { getProjectRoleByWorkspaceSlugAndProjectId } = useUserPermissions();
   const { choices } = useViewsPageState();
@@ -59,7 +59,7 @@ export const ProjectViewsList = observer(function ProjectViewsList(props: Props)
         actions={[
           {
             label: t("project_empty_state.views.cta_primary"),
-            onClick: () => toggleCreateViewModal(true),
+            onClick: openCreate,
             disabled: !creatable,
             variant: "primary",
           },

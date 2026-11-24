@@ -119,6 +119,12 @@
   "project_views": {
     "add_view": "Add view",
     "action": {
+      "create": {
+        "success": "View created successfully."
+      },
+      "update": {
+        "success": "View updated successfully."
+      },
       "delete": {
         "success": "View deleted successfully."
       }

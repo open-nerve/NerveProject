@@ -13,9 +13,9 @@ import { Breadcrumbs, Header } from "@nerve/ui";
 // components
 import { CommonProjectBreadcrumbs } from "@/components/breadcrumbs/common";
 import { BreadcrumbLink } from "@/components/common/breadcrumb-link";
+import { useViewsPage } from "@/components/views/actions-host";
 import { ViewListHeader } from "@/components/views/view-list-header";
 // hooks
-import { useCommandPalette } from "@/hooks/store/use-command-palette";
 import { useProject } from "@/hooks/store/use-project";
 import { useUserPermissions } from "@/hooks/store/user";
 // lib
@@ -29,15 +29,15 @@ type TProps = {
 /**
  * The header of a project's views list (P6a spec 2.2, 2.3), of the route's project: its crumbs; the view of the list
  * (its search, order and filters) for everyone the ways into the project's views are offered to (viewEntryOn); and a
- * new view, by the project's dialogs' host (ProjectLevelModals), for those who may create one (viewsCreatableBy: its
- * admins and members, while its views are turned on).
+ * new view, by the page's dialog of one (ViewActionsHost), for those who may create one (viewsCreatableBy: its admins
+ * and members, while its views are turned on).
  */
 export const ProjectViewsHeader = observer(function ProjectViewsHeader(props: TProps) {
   const { workspaceSlug, projectId } = props;
   // nerve hooks
   const { t } = useTranslation();
   // store hooks
-  const { toggleCreateViewModal } = useCommandPalette();
+  const { openCreate } = useViewsPage();
   const { loader, getProjectById } = useProject();
   const { getProjectRoleByWorkspaceSlugAndProjectId } = useUserPermissions();
   // derived values
@@ -65,7 +65,7 @@ export const ProjectViewsHeader = observer(function ProjectViewsHeader(props: TP
       <Header.RightItem>
         {viewEntryOn(project, role) && <ViewListHeader projectId={projectId} />}
         {viewsCreatableBy(project, role) && (
-          <Button variant="primary" size="lg" onClick={() => toggleCreateViewModal(true)}>
+          <Button variant="primary" size="lg" onClick={openCreate}>
             {t("project_views.add_view")}
           </Button>
         )}
