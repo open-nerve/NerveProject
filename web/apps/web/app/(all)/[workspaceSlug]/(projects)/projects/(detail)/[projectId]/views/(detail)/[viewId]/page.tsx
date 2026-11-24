@@ -6,22 +6,18 @@
 
 import { observer } from "mobx-react";
 import { useNavigate } from "react-router";
-import { useTheme } from "next-themes";
 // nerve imports
-import { EUserPermissions } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { Loader } from "@nerve/ui";
 // assets
-import darkViewsAsset from "@/app/assets/empty-state/disabled-feature/views-dark.webp?url";
-import lightViewsAsset from "@/app/assets/empty-state/disabled-feature/views-light.webp?url";
 import emptyView from "@/app/assets/empty-state/view.svg?url";
 // components
 import { EmptyState } from "@/components/common/empty-state";
 import { PageHead } from "@/components/core/page-title";
-import { DetailedEmptyState } from "@/components/empty-state/detailed-empty-state-root";
 import { ProjectViewLayoutRoot } from "@/components/issues/issue-layouts/roots/project-view-layout-root";
 import { PlanningReadFailure } from "@/components/planning/read-failure";
 import { useViewPageRead } from "@/components/views/use-view-page-read";
+import { ViewsDisabled } from "@/components/views/views-disabled";
 // hooks
 import { useProject } from "@/hooks/store/use-project";
 import { useViews } from "@/hooks/store/use-views";
@@ -33,17 +29,12 @@ import type { Route } from "./+types/page";
 
 /**
  * A project's view's page (P6a spec 2.2, 2.6, R6), of the route's project and view (its layout is keyed by the view).
- * Its views turned off, it says so, reads nothing, and only its admins may go to its features to turn them on. Else,
+ * Its views turned off, it says so and reads nothing (ViewsDisabled). Else,
  * for those the ways into the project's views are offered to (viewEntryOn), the view's visit: each session's its own.
  */
 function ProjectViewIssuesPage({ params }: Route.ComponentProps) {
   const { workspaceSlug, projectId, viewId } = params;
-  // router
-  const navigate = useNavigate();
-  // theme hook
-  const { resolvedTheme } = useTheme();
   // nerve hooks
-  const { t } = useTranslation();
   const { loginId } = useSession();
   // store hooks
   const { getProjectById } = useProject();
@@ -54,21 +45,7 @@ function ProjectViewIssuesPage({ params }: Route.ComponentProps) {
 
   if (!project) return null;
 
-  if (!project.issue_views_view)
-    return (
-      <div className="flex h-full w-full items-center justify-center">
-        <DetailedEmptyState
-          title={t("disabled_project.empty_state.view.title")}
-          description={t("disabled_project.empty_state.view.description")}
-          assetPath={resolvedTheme === "light" ? lightViewsAsset : darkViewsAsset}
-          primaryButton={{
-            text: t("disabled_project.empty_state.view.primary_button.text"),
-            onClick: () => navigate(`/${workspaceSlug}/settings/projects/${projectId}/features/views`),
-            disabled: role !== EUserPermissions.ADMIN,
-          }}
-        />
-      </div>
-    );
+  if (!project.issue_views_view) return <ViewsDisabled workspaceSlug={workspaceSlug} projectId={projectId} />;
 
   if (!viewEntryOn(project, role)) return null;
 

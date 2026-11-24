@@ -5,39 +5,45 @@
 // under the view's filters and display; it says that nerve finds no such view, or why it could not read it, with a
 // retry, and reads nothing while the project's views are off; the header draws its crumbs in each of those states. The
 // switcher reads the project's views once opened; a new work item is offered to admins and members; deleting the view
-// goes to the project's views. The stores, the layouts, SWR and HTTP are real (fake-view-page.tsx); the work item's
-// preview is a stand-in, and the app's header a frame that shows the header and the small screen's header.
-import { act, type ComponentType, type ReactNode } from "react";
+// goes to the project's views; a new session's stores make a new visit, which reads the view once and never says
+// nerve has none. The stores, the layouts, SWR and HTTP are real (fake-view-page.tsx); the work item's preview is a
+// marker, and the app's header a frame that shows the header and the small screen's header.
+import { act, Profiler, type ComponentType, type ReactNode } from "react";
 import { MemoryRouter, Route, Routes, useParams } from "react-router";
 import { SWRConfig } from "swr";
-import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, onTestFinished, vi } from "vitest";
 import type { View } from "@nerve/api-client";
 import { Where, dialogButton, settle, where } from "@/components/common/fake-quick-actions";
 import { viewPageTab } from "@/components/views/fake-view-page";
-import { json, noContent, problem } from "@/lib/auth/fake-nerve";
+import { FakeNerve, json, noContent, problem } from "@/lib/auth/fake-nerve";
 import { until } from "@/lib/auth/fake-time";
 import { toasts } from "@/lib/fake-toast";
-import { loadProjects, projectOf } from "@/store/project/fake-projects";
-import type { RootStore } from "@/store/root.store";
+import { StoreContext } from "@/lib/store-context";
+import { issueOf, issuePageOf } from "@/store/issue/fake-issues";
+import { loadProjects, projectOf, stateOf } from "@/store/project/fake-projects";
+import { RootStore } from "@/store/root.store";
+import { loadWorkspaces } from "@/store/workspace/fake-workspaces";
 import Layout from "../layout";
 import Page from "./page";
 
-const bound = vi.hoisted(() => ({ app: undefined as RootStore | undefined }));
+const bound = vi.hoisted(() => ({ app: undefined as RootStore | undefined, session: { loginId: "one" } }));
 vi.mock("@/lib/store-context", async () => ({
   get rootStore() {
     return bound.app;
   },
   StoreContext: (await import("react")).createContext<RootStore | undefined>(undefined),
 }));
-vi.mock("@/lib/auth/api-client", () => ({ tokenManager: { state: { loginId: "one" } }, publicClient: {} }));
-vi.mock("@/lib/auth/use-session", () => ({ useSession: () => ({ status: "signed-in", loginId: "one" }) }));
+vi.mock("@/lib/auth/api-client", () => ({ tokenManager: { state: bound.session }, publicClient: {} }));
+vi.mock("@/lib/auth/use-session", () => ({
+  useSession: () => ({ status: "signed-in", loginId: bound.session.loginId }),
+}));
 vi.mock("@nerve/i18n", () => import("@/lib/fake-i18n"));
 vi.mock("@nerve/propel/toast", () => import("@/lib/fake-toast"));
 vi.mock("@atlaskit/pragmatic-drag-and-drop-auto-scroll/element", () => ({ autoScrollForElements: () => () => {} }));
 vi.mock("@/components/core/render-if-visible-HOC", () => ({
   default: ({ children }: { children: ReactNode }) => children,
 }));
-vi.mock("@/components/issues/peek-overview", () => ({ IssuePeekOverview: () => null }));
+vi.mock("@/components/issues/peek-overview", () => ({ IssuePeekOverview: () => <i data-peek="" /> }));
 vi.mock("@/components/breadcrumbs/common", () => ({ CommonProjectBreadcrumbs: () => <span>the project</span> }));
 vi.mock("@/components/core/app-header", () => ({
   AppHeader: (props: { header: ReactNode; mobileHeader?: ReactNode }) => (
@@ -58,6 +64,7 @@ let page: Awaited<ReturnType<typeof viewPageTab>>;
 let first: View, second: View;
 const consoleErrors = () => vi.mocked(console.error).mock.calls;
 beforeEach(() => {
+  bound.session.loginId = "one";
   toasts.length = 0;
   vi.spyOn(console, "error");
 });
@@ -67,22 +74,72 @@ afterEach(async () => page.close());
 async function opened(fields: Parameters<typeof viewPageTab>[0] = {}) {
   page = await viewPageTab(fields);
   bound.app = page.app;
+  drawn.length = 0;
   first = page.view("First", { filters: { priority: ["high"] } });
   first.display_filters = { ...first.display_filters, order_by: "-updated_at" };
   second = page.view("Second");
-  await page.render(
-    <SWRConfig value={{ provider: () => new Map() }}>
-      <MemoryRouter initialEntries={[`/ws/projects/A/views/${first.id}`]}>
-        <Routes>
-          <Route path=":workspaceSlug/projects/:projectId/views/:viewId" element={<RouteOf Component={Layout} />}>
-            <Route index element={<RouteOf Component={Page} />} />
-          </Route>
-          <Route path=":workspaceSlug/projects/:projectId/views" element={<p>the list</p>} />
-        </Routes>
-        <Where />
-      </MemoryRouter>
-    </SWRConfig>
-  );
+  await page.render(tab());
+}
+/** The tab, at the page of the view First, in its session now: bound's stores and loginId (StoreProvider, useSession). */
+const tab = () => (
+  <StoreContext.Provider value={bound.app!}>
+    <Profiler id="the page" onRender={drawing}>
+      <SWRConfig value={{ provider: () => new Map() }}>
+        <MemoryRouter initialEntries={[`/ws/projects/A/views/${first.id}`]}>
+          <Routes>
+            <Route path=":workspaceSlug/projects/:projectId/views/:viewId" element={<RouteOf Component={Layout} />}>
+              <Route index element={<RouteOf Component={Page} />} />
+            </Route>
+            <Route path=":workspaceSlug/projects/:projectId/views" element={<p>the list</p>} />
+          </Routes>
+          <Where />
+        </MemoryRouter>
+      </SWRConfig>
+    </Profiler>
+  </StoreContext.Provider>
+);
+/**
+ * What the page's body has drawn, in order, as React commits it: its read's wait, nerve's having no such view, why
+ * nerve could not read it, the view's work items (whose preview is the marker), or none of those (the view's frame
+ * while its filters' HOC makes the filter, as an effect does).
+ */
+const drawn: string[] = [];
+function drawing() {
+  const now = text().includes("project_views.not_found.title")
+    ? "not found"
+    : text().includes("common.retry")
+      ? "failed"
+      : document.querySelector("[data-peek]")
+        ? "the view"
+        : document.querySelector('[role="status"].p-5')
+          ? "reading"
+          : "blank";
+  if (drawn.at(-1) !== now) drawn.push(now);
+}
+/**
+ * A new session of the tab, as startSession starts one (store-context.tsx): a RootStore of its own, over a nerve of its
+ * own, that knows project A with the caller a member, as the project's layout reads it; the old session's client fails
+ * each request it still makes. The tab draws the page again in it, as the account "two"; what it draws is new.
+ */
+async function anotherSession() {
+  const later = new FakeNerve();
+  later.respond = (call) => {
+    if (call.path.endsWith("/states"))
+      call.answer(json(200, { data: [stateOf(page.project, "Todo", "unstarted", 1, { id: "state" })] }));
+  };
+  const next = new RootStore(later.client(), page.app);
+  onTestFinished(() => next.dispose());
+  await loadWorkspaces(later, next.workspaceRoot, [page.workspace]);
+  await loadProjects(later, next.projectRoot.project, page.workspace, [page.project]);
+  next.projectRoot.project.confirmProject(page.project, (project) => ({ ...project, member_role: 15 }));
+  await next.state.fetchProjectStates("A");
+  later.calls.length = 0;
+  FakeNerve.replaceSession(page.api);
+  bound.session.loginId = "two";
+  bound.app = next;
+  drawn.length = 0;
+  await page.render(tab());
+  return later;
 }
 /** What the page shows: all of it, its header's, and its small screen's header's (the app's header frames them). */
 const text = () => document.body.textContent ?? "";
@@ -151,6 +208,29 @@ it("reads the project's views only once its switcher opens, and another view mou
   await until(() => page.lists().length === 3, "the first view's list again");
   expect(page.lists()[2]!.query).toMatchObject({ priority: "low" });
   expect(page.viewLists()).toHaveLength(1);
+});
+
+it("is a new visit in a new session: it reads the view once more, and never says that nerve has no such view", async () => {
+  await opened();
+  await page.answerRead(first);
+  await page.answerList();
+  const opening = [...drawn];
+  expect(opening, "what the page drew as it opened").toEqual(["reading", "blank", "the view"]);
+  const later = await anotherSession();
+  const gets = (path: string) => later.to(path).filter((call) => call.method === "GET");
+  const reads = () => gets(`/api/v0/views/${first.id}`);
+  await until(() => reads().length > 0, "the new session's read of the view");
+  await settle();
+  expect(reads(), "one read of the view as the session changed").toHaveLength(1);
+  expect(drawn, "what the page drew as the session changed: it reads").toEqual(["reading"]);
+  await act(async () => reads()[0]!.answer(json(200, first)));
+  await until(() => gets("/api/v0/projects/A/issues").length > 0, "the new session's list");
+  await act(async () => gets("/api/v0/projects/A/issues")[0]!.answer(json(200, issuePageOf([issueOf("one")]))));
+  await settle();
+  expect(reads(), "one read of the view in the new session").toHaveLength(1);
+  expect(gets("/api/v0/projects/A/issues")[0]!.query).toMatchObject({ priority: "high", order_by: "-updated_at" });
+  expect(drawn, "what the page drew since the session changed: as it opened").toEqual(opening);
+  expect(header()).toContain("common.display");
 });
 
 it("draws the crumbs to the project's views while it reads the view, then the view's own header", async () => {
