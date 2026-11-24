@@ -17,6 +17,8 @@ import type { IPagePreferencesFilter } from "@/store/issue/helpers/page-preferen
 import type { IModuleIssues } from "@/store/issue/module/issue.store";
 import type { IProfileIssues, IProfileIssuesFilter } from "@/store/issue/profile";
 import type { IProjectIssues, IProjectIssuesFilter } from "@/store/issue/project";
+import type { ProjectViewIssues } from "@/store/issue/project-view/issue.store";
+import type { ProjectViewIssuesFilter } from "@/store/issue/project-view/filter.store";
 import type { IWorkspaceDraftIssues } from "@/store/issue/workspace-draft";
 
 type defaultIssueStore = {
@@ -49,6 +51,11 @@ export type TStoreIssues = {
     issues: IModuleIssues;
     issuesFilter: IPagePreferencesFilter;
   };
+  /** A project's view's page's list and draft of the view, by the view each call names; neither follows the route. */
+  [EIssuesStoreType.PROJECT_VIEW]: defaultIssueStore & {
+    issues: ProjectViewIssues;
+    issuesFilter: ProjectViewIssuesFilter;
+  };
   [EIssuesStoreType.DEFAULT]: defaultIssueStore & {
     issues: IProjectIssues;
     issuesFilter: IProjectIssuesFilter;
@@ -63,7 +70,8 @@ export const useIssues = <T extends EIssuesStoreType>(storeType?: T): TStoreIssu
     issueMap: context.issue.issues.issuesMap,
   };
 
-  switch (storeType) {
+  const type: EIssuesStoreType | undefined = storeType;
+  switch (type) {
     case EIssuesStoreType.WORKSPACE_DRAFT:
       return merge(defaultStore, {
         issues: context.issue.workspaceDraftIssues,
@@ -93,6 +101,11 @@ export const useIssues = <T extends EIssuesStoreType>(storeType?: T): TStoreIssu
         issues: context.issue.moduleIssues,
         issuesFilter: context.issue.moduleIssuesFilter,
       }) as TStoreIssues[T];
+    case EIssuesStoreType.PROJECT_VIEW:
+      return merge(defaultStore, {
+        issues: context.issue.projectViewIssues,
+        issuesFilter: context.issue.projectViewIssuesFilter,
+      }) as TStoreIssues[T];
     case undefined:
     case EIssuesStoreType.DEFAULT:
       return merge(defaultStore, {
@@ -100,6 +113,6 @@ export const useIssues = <T extends EIssuesStoreType>(storeType?: T): TStoreIssu
         issuesFilter: context.issue.projectIssuesFilter,
       }) as TStoreIssues[T];
     default:
-      throw new Error(`Unsupported issue store: ${storeType}`);
+      throw new Error(`Unsupported issue store: ${String(type satisfies never)}`);
   }
 };

@@ -22,9 +22,12 @@ export const useIssueStoreType = () => {
   if (cycleId) return EIssuesStoreType.CYCLE;
   if (moduleId) return EIssuesStoreType.MODULE;
 
-  // These domain routes no longer own a work item list. Shared creation and peek commands
+  // A project's view's page lists its project's work items under its draft of the view (P6a spec 2.5).
+  if (viewId) return EIssuesStoreType.PROJECT_VIEW;
+
+  // The workspace's views no longer own a work item list. Shared creation and peek commands
   // still use DEFAULT with the selected work item/project.
-  if (globalViewId || viewId) return EIssuesStoreType.DEFAULT;
+  if (globalViewId) return EIssuesStoreType.DEFAULT;
 
   if (userId) return EIssuesStoreType.PROFILE;
 

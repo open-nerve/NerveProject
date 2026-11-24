@@ -18,11 +18,11 @@ import { PLANNING_PAGE_LAYOUTS } from "./planning-page-layouts";
 
 /**
  * What an entry of "add existing" asks of the layout's command host (P7b spec 2.9, R11): the page whose actions add the
- * work items (the project's, a cycle's or a module's), what each change carries beside the page's own (a calendar's
- * day), and the entry's own search and hiding.
+ * work items (the project's, a project's view's as the project's, P6a spec 2.5; a cycle's or a module's), what each
+ * change carries beside the page's own (a calendar's day), and the entry's own search and hiding.
  */
 export type AddExistingRequest = {
-  storeType: EIssuesStoreType.PROJECT | PlanningPageStoreType;
+  storeType: EIssuesStoreType.PROJECT | EIssuesStoreType.PROJECT_VIEW | PlanningPageStoreType;
   extra?: IssueChange;
   searchParams?: Omit<IssueSearchQuery, "project_id" | "q">;
   hide?: (issue: Issue) => boolean;

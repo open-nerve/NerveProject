@@ -32,7 +32,11 @@ import { CalendarChart } from "./calendar";
 import type { TUpdateCalendarDisplay } from "./dropdowns";
 import { handleDragDrop } from "./utils";
 
-export type CalendarStoreType = EIssuesStoreType.PROJECT | EIssuesStoreType.CYCLE | EIssuesStoreType.MODULE;
+export type CalendarStoreType =
+  | EIssuesStoreType.PROJECT
+  | EIssuesStoreType.CYCLE
+  | EIssuesStoreType.MODULE
+  | EIssuesStoreType.PROJECT_VIEW;
 
 interface IBaseCalendarRoot {
   QuickActions: FC<IQuickActionProps>;

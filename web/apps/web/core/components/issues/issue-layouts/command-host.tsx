@@ -24,13 +24,14 @@ type RequestCommand = (issue: Issue, submit: () => Promise<void>) => Promise<voi
 type RequestRemoval = (issue: Issue, submit: () => Promise<void>, success: string) => Promise<void>;
 /**
  * The pages whose list a dialog the host holds writes through: a row's edit and copy, the project's, a cycle's (re-66
- * L4) or a module's (P6b spec 2.7); a group's new work item, each page whose groups offer one (its store's
- * viewFlags.enableIssueCreation): those and a person's page (P7a spec 2.7, re-72 F4).
+ * L4), a module's (P6b spec 2.7) or a project's view's (P6a spec 2.5); a group's new work item, each page whose groups
+ * offer one (its store's viewFlags.enableIssueCreation): those and a person's page (P7a spec 2.7, re-72 F4).
  */
 const DIALOG_STORES = [
   EIssuesStoreType.PROJECT,
   EIssuesStoreType.CYCLE,
   EIssuesStoreType.MODULE,
+  EIssuesStoreType.PROJECT_VIEW,
   EIssuesStoreType.PROFILE,
 ] as const;
 type DialogStore = (typeof DIALOG_STORES)[number];

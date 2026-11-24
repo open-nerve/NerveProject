@@ -4,6 +4,7 @@
  * See the LICENSE file for details.
  */
 
+import { useContext } from "react";
 import { useTranslation } from "@nerve/i18n";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
@@ -17,6 +18,7 @@ import { cn } from "@nerve/utils";
 import { useProject } from "@/hooks/store/use-project";
 import { useProjectState } from "@/hooks/store/use-project-state";
 import { useUserPermissions } from "@/hooks/store/user";
+import { IssuesStoreContext } from "@/hooks/use-issue-layout-store";
 // helper
 import { useArchiveRequest, useDeleteRequest, useWorkItemDialogRequest } from "../command-host";
 import type { IQuickActionProps } from "../list/list-view-types";
@@ -32,7 +34,11 @@ import { useProjectIssueMenuItems } from "./helper";
  */
 export const WorkItemQuickActions = observer(function WorkItemQuickActions(
   props: IQuickActionProps & {
-    storeType: EIssuesStoreType.PROJECT | EIssuesStoreType.CYCLE | EIssuesStoreType.MODULE;
+    storeType:
+      | EIssuesStoreType.PROJECT
+      | EIssuesStoreType.CYCLE
+      | EIssuesStoreType.MODULE
+      | EIssuesStoreType.PROJECT_VIEW;
     /** The removal of the work item from the page's cycle or module, by its domain's label; offered while given. */
     removeFromView?: MenuItemFactoryProps["removeFromView"];
   }
@@ -165,7 +171,13 @@ export const WorkItemQuickActions = observer(function WorkItemQuickActions(
   );
 });
 
-/** A row's quick actions on the project's page. */
+/**
+ * A row's quick actions on the project's page, and on a project's view's page, whose layouts' store type it reads (P6a
+ * spec 2.5, re-96 I3): the edit and copy dialogs then write through the view's page; a person's page's rows keep the
+ * project's page's.
+ */
 export const ProjectIssueQuickActions = observer(function ProjectIssueQuickActions(props: IQuickActionProps) {
-  return <WorkItemQuickActions {...props} storeType={EIssuesStoreType.PROJECT} />;
+  const page = useContext(IssuesStoreContext);
+  const storeType = page === EIssuesStoreType.PROJECT_VIEW ? page : EIssuesStoreType.PROJECT;
+  return <WorkItemQuickActions {...props} storeType={storeType} />;
 });

@@ -16,7 +16,16 @@ import { useCommandPalette } from "@/hooks/store/use-command-palette";
 import { useUserPermissions } from "@/hooks/store/user";
 import { useWorkItemFilterInstance } from "@/hooks/store/work-item-filters/use-work-item-filter-instance";
 
-export const ProjectEmptyState = observer(function ProjectEmptyState() {
+/**
+ * A list page of the project's work items with none to show, by the store type and id of the page's work item filter:
+ * the project's page's, by the project; a project's view's page's, by the view (P6a spec 2.5). While the page's filter
+ * applies any, the clearing of it; else a new work item, of the page, for the project's admins and members.
+ */
+export const ProjectListEmptyState = observer(function ProjectListEmptyState(props: {
+  storeType: EIssuesStoreType.PROJECT | EIssuesStoreType.PROJECT_VIEW;
+  filterId: string | undefined;
+}) {
+  const { storeType, filterId } = props;
   // router
   const { workspaceSlug, projectId } = useParams();
   // nerve imports
@@ -25,7 +34,7 @@ export const ProjectEmptyState = observer(function ProjectEmptyState() {
   const { toggleCreateIssueModal } = useCommandPalette();
   const { allowPermissions, getProjectRoleByWorkspaceSlugAndProjectId } = useUserPermissions();
   // derived values
-  const projectWorkItemFilter = useWorkItemFilterInstance(EIssuesStoreType.PROJECT, projectId);
+  const projectWorkItemFilter = useWorkItemFilterInstance(storeType, filterId);
   const canReadProject =
     !!workspaceSlug && !!projectId && getProjectRoleByWorkspaceSlugAndProjectId(workspaceSlug, projectId) !== undefined;
 
@@ -64,7 +73,7 @@ export const ProjectEmptyState = observer(function ProjectEmptyState() {
             {
               label: t("project_empty_state.work_items.cta_primary"),
               onClick: () => {
-                toggleCreateIssueModal(true, EIssuesStoreType.PROJECT);
+                toggleCreateIssueModal(true, storeType);
               },
               disabled: !canPerformEmptyStateActions,
               variant: "primary",
@@ -75,3 +84,9 @@ export const ProjectEmptyState = observer(function ProjectEmptyState() {
     </div>
   );
 });
+
+/** The project's page's, by the route's project. */
+export function ProjectEmptyState() {
+  const { projectId } = useParams();
+  return <ProjectListEmptyState storeType={EIssuesStoreType.PROJECT} filterId={projectId} />;
+}
