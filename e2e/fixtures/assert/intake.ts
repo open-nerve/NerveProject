@@ -144,3 +144,15 @@ export async function uploadsNamed(db: Database, issueId: string, name: string):
   );
   return rows.map(({ uploaded }) => uploaded);
 }
+
+/**
+ * The links of the work item of issueId as nerve keeps them, deleted ones too, in the order they were added: each its
+ * address, its title, who added it and who wrote it last, by id, and whether it is deleted.
+ */
+export async function intakeLinksOf(db: Database, issueId: string) {
+  return db.query<{ url: string; title: string | null; adder: string | null; by: string | null; deleted: boolean }>(
+    `SELECT url, title, created_by_id::text AS adder, updated_by_id::text AS by, deleted_at IS NOT NULL AS deleted
+       FROM issue_links WHERE issue_id = $1 ORDER BY created_at, id`,
+    [issueId]
+  );
+}
