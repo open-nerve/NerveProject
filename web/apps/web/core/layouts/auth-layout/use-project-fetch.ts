@@ -6,10 +6,10 @@
 import type { Project } from "@nerve/api-client";
 // hooks
 import { useCycles } from "@/hooks/store/use-cycles";
-import { useLabel } from "@/hooks/store/use-label";
 import { useMember } from "@/hooks/store/use-member";
 import { useModules } from "@/hooks/store/use-modules";
 import { useProject } from "@/hooks/store/use-project";
+import { useProjectLabelsRead } from "@/hooks/use-project-labels-read";
 import { useProjectRead } from "@/hooks/use-project-read";
 import { useProjectPreferences } from "@/hooks/store/use-project-preferences";
 import { useProjectState } from "@/hooks/store/use-project-state";
@@ -48,7 +48,6 @@ export function useProjectFetch(workspaceSlug: string | undefined, projectId: st
   const { getWorkspaceBySlug } = useWorkspace();
   const { getProjectById } = useProject();
   const { fetchNavigation } = useProjectPreferences();
-  const { fetchProjectLabels } = useLabel();
   const {
     project: { fetchProjectMembers },
   } = useMember();
@@ -63,7 +62,7 @@ export function useProjectFetch(workspaceSlug: string | undefined, projectId: st
   // the project's own reads, a member's alone, of a project not archived: for anything else they are nothing to fetch
   const member = access.kind === "member" ? access.project.id : undefined;
   useSessionSWR(member ? ["PROJECT_PREFERENCES", member] : null, (id) => fetchNavigation(id));
-  useSessionSWR(member ? ["PROJECT_LABELS", member] : null, (id) => fetchProjectLabels(id));
+  useProjectLabelsRead(member);
   useSessionSWR(member ? ["PROJECT_MEMBERS", member] : null, (id) => fetchProjectMembers(id));
   useSessionSWR(member ? ["PROJECT_STATES", member] : null, (id) => fetchProjectStates(id));
   const cycles = access.kind === "member" && planningOn(access.project, "cycles") ? access.project.id : undefined;

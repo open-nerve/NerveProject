@@ -19,6 +19,7 @@ import { usePeekIssueRead } from "@/components/issues/peek-overview/use-peek-iss
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { useUserPermissions } from "@/hooks/store/user";
+import { useProjectLabelsRead } from "@/hooks/use-project-labels-read";
 import { useProjectRead } from "@/hooks/use-project-read";
 import { useRefusalToast } from "@/hooks/use-refusal-toast";
 import { useRouteWorkspace } from "@/hooks/use-route-workspace";
@@ -142,11 +143,12 @@ type Judgement = "peek" | "embed";
  * The selected notification's work item (P5b spec 2.5, R16, R17, R27): until its preview has judged how to show it,
  * the judging (NotificationJudgement); then, one in the intake embeds its intake's detail (InboxContentRoot, the
  * embed's port: its leave and its close the page's landing's), never setting the peek; any other is peeked at
- * (embedded in the page, scoped to the notification; its close the landing's too). The judgement is held here alone:
- * the judging unmounts as it is made, its read leaving the work item's key, so that nothing judges again (the work
- * item accepted in the embed stays embedded, with its unsent input) and the peek's hook, the key's only one, reads it
- * as on every other page (as the browser reconnects, and by its retry). A new generation, NotificationPreview's key
- * for it, judges anew.
+ * (embedded in the page, scoped to the notification; its close the landing's too). Either way it reads the project's
+ * labels, which no project's pages around the preview read, for the work item's labels to show (useProjectLabelsRead,
+ * P5b T9). The judgement is held here alone: the judging unmounts as it is made, its read leaving the work item's key,
+ * so that nothing judges again (the work item accepted in the embed stays embedded, with its unsent input) and the
+ * peek's hook, the key's only one, reads it as on every other page (as the browser reconnects, and by its retry). A
+ * new generation, NotificationPreview's key for it, judges anew.
  */
 const NotificationWorkItem = observer(function NotificationWorkItem(props: PreviewProps) {
   const { workspace, selected, leave } = props;
@@ -154,6 +156,7 @@ const NotificationWorkItem = observer(function NotificationWorkItem(props: Previ
   const { setPeekIssue } = useIssueDetail();
   const region = useRef<HTMLElement>(null);
   const [judged, setJudged] = useState<Judgement>();
+  useProjectLabelsRead(projectId);
   useEffect(() => {
     if (judged === "peek") setPeekIssue({ workspaceSlug: workspace.slug, projectId, issueId });
   }, [judged, workspace.slug, projectId, issueId, setPeekIssue]);

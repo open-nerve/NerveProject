@@ -9,7 +9,6 @@ import type { IssueDetail, IssueIntake } from "@nerve/api-client";
 import { until } from "@/lib/auth/fake-time";
 import { refusal } from "@/lib/fake-refusal";
 import type { InboxContentRoot } from "@/components/inbox/content";
-import type { IntakeSelectionPort } from "@/components/inbox/content/selection-port";
 import { useIssueOperations } from "@/components/issues/issue-detail/use-issue-operations";
 import { usePeekIssueRead } from "@/components/issues/peek-overview/use-peek-issue-read";
 import { issueOf } from "@/store/issue/fake-issues";
@@ -32,7 +31,7 @@ const fixture = vi.hoisted(() => ({
   /** The work item store's stand-in (useIssueDetail's), set before each test. */
   detail: undefined as unknown as ReturnType<typeof storeOf>,
   /** The selection InboxContentRoot was last given. */
-  port: undefined as IntakeSelectionPort | undefined,
+  port: undefined as ComponentProps<typeof InboxContentRoot>["selection"] | undefined,
   /** The caller's login and his permissions' identity, which a test changes (observable, set before each test). */
   session: undefined as unknown as ReturnType<typeof sessionOf>,
 }));
@@ -49,6 +48,7 @@ vi.mock("@/hooks/store/user", () => ({
 }));
 vi.mock("@/hooks/store/use-project", () => ({ useProject: () => ({ fetchProject: () => new Promise(() => {}) }) }));
 vi.mock("@/hooks/store/use-issue-detail", () => ({ useIssueDetail: () => fixture.detail }));
+vi.mock("@/hooks/use-project-labels-read", () => ({ useProjectLabelsRead: () => undefined }));
 vi.mock("@/components/issues/issue-detail/use-issue-operations", () => ({
   useIssueOperations: () => ({
     fetch: (_ws: string, _project: string, id: string) =>
