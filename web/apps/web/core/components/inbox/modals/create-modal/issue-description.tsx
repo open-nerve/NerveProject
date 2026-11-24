@@ -49,6 +49,9 @@ export const InboxIssueDescription = observer(function InboxIssueDescription(pro
       placeholder={(isFocused, description) => t(getDescriptionPlaceholderI18n(isFocused, description))}
       containerClassName={containerClassName}
       onEnterKeyPress={onEnterKeyPress}
+      // A field of the form: its wrapper is no Tab stop of its own (-1; the editor itself is the description's stop),
+      // and the editor lets Tab and Shift+Tab move on outside lists (list-keymap.ts), where it would swallow them
+      tabIndex={-1}
     />
   );
 });
