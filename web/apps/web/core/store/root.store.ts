@@ -46,6 +46,8 @@ import type { IThemeStore } from "./theme.store";
 import { ThemeStore } from "./theme.store";
 import type { IUserStore } from "./user";
 import { UserStore } from "./user";
+import type { IViewStore } from "./views/view.store";
+import { ViewStore } from "./views/view.store";
 import type { IWorkspaceRootStore } from "./workspace";
 
 enableStaticRendering(typeof window === "undefined");
@@ -56,6 +58,7 @@ export class RootStore {
   memberRoot: IMemberRootStore;
   planning: IPlanningStore;
   projectView: IProjectViewStore;
+  views: IViewStore;
   globalView: IGlobalViewStore;
   issue: IIssueRootStore;
   asset: RootAssetStore;
@@ -94,6 +97,7 @@ export class RootStore {
     this.memberRoot = new MemberRootStore(this, api);
     this.planning = new PlanningStore(this, api);
     this.projectView = new ProjectViewStore(this);
+    this.views = new ViewStore(this, api);
     this.globalView = new GlobalViewStore(this);
     this.issue = new IssueRootStore(this, api);
     this.asset = new RootAssetStore(this, api);
