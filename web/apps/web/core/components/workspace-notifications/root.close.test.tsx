@@ -9,14 +9,15 @@ import type { NotificationSelection } from "./page-state";
 import { NotificationPageStateProvider, useNotificationPageState } from "./page-state";
 import { NotificationsRoot } from "./root";
 
-// The notifications page's preview closes in every state of it (P5b spec 2.5, R26; T11 m1): while it reads the
-// project of a work item whose project the caller holds no role in (an archived one's), and while it reads the work
-// item to judge how to show it, it says it is loading beside a button named Close, which leaves the notification
-// through the page's landing: the selection cleared, the focus on the card's main button; the read answering later
-// shows nothing. Below 768 px the list has no width while a notification is selected (sidebar/root.tsx): the close is
-// the way back to it. The page's state, its landing, the preview, the read hooks and SWR are real; the caller's roles,
-// the project's and the work item's fetches (held until a test answers them), the stores, the peek, the embed and the
-// list (its region and cards) are stand-ins.
+// The notifications page's preview closes while it reads (P5b spec 2.5, R26; T11 m1): while it reads the project of a
+// work item whose project the caller holds no role in (an archived one's), and while it reads the work item to judge
+// how to show it, it says it is loading beside a button named Close, which leaves the notification through the page's
+// landing: the selection cleared, the focus on the card's main button; the read answering later shows nothing. Below
+// 768 px the list has no width while a notification is selected (sidebar/root.tsx): the close is the way back to it.
+// The page's state, its landing, the preview, the read hooks and SWR are real; the caller's roles, the project's and
+// the work item's fetches (held until a test answers them), the stores, the peek, the embed and the list (its region
+// and cards) are stand-ins. The embed's own read in flight or failed draws its Close too
+// (inbox/content/root.embed.test.tsx); a write's read again of the embedded work item draws none (left to M8).
 
 const fixture = vi.hoisted(() => ({
   /** The projects read, by their ids: each read held, never answered here. */

@@ -7,6 +7,7 @@ import { runInAction } from "mobx";
 import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { IssueIntake, Project } from "@nerve/api-client";
+import { EUserPermissions } from "@nerve/constants";
 import { toasts } from "@/lib/fake-toast";
 import { acme, beta, detailOf, intakeTab } from "@/store/issue/intake/fake-intake";
 import { loadArchivedProjects, loadProjects, projectOf } from "@/store/project/fake-projects";
@@ -14,7 +15,7 @@ import { loadWorkspaces } from "@/store/workspace/fake-workspaces";
 import { IntakePageStateProvider } from "../../page-state";
 import { IntakeMobileHeader } from "./mobile";
 import { IntakeHeader } from "./root";
-import type { IntakeActions } from "./intake-actions";
+import { offeredOn, type IntakeActions } from "./intake-actions";
 import { useIntakeActions } from "./use-intake-actions";
 
 // The header of the selected work item of a project's intake, wide and narrow, and the action model both read (P5a
@@ -293,5 +294,11 @@ describe("the project's intake turned off (P5b T11 m2)", () => {
   ] as const)("offers $who, on the embed, a pending one, the intake on: $offers", async (cell) => {
     await given(cell.role, intakeOf("pending"), "u-me");
     expect(await offeredUnder("embed")).toEqual(cell.offers);
+  });
+
+  it("offers an admin, on the embed, a pending one of a project not held, its intake not known to be on: copy alone", () => {
+    // offeredOn itself (T11 O4): no page gets here, the permission store giving no role in a project it does not hold
+    const detail = detailOf("x", { intake: intakeOf("pending"), created_by_id: "u-me", sequence_id: 7 });
+    expect(offeredOn(detail, undefined, EUserPermissions.ADMIN, "u-me", "embed")).toEqual(["copy"]);
   });
 });

@@ -32,11 +32,11 @@ import type { IntakeSelectionPort } from "./selection-port";
 // R17, R30): its port the embed's, no intake page around it. Its headers draw no navigation (no previous, next or list
 // toggle) but a button named Close, its port's close; a triage nerve confirmed leaves the selection where it is, the
 // focus on the new header's primary action, else on the embed's region; a deletion leaves it (the port's leave). Open
-// is offered on every status: an item not accepted opens in the intake page, selected in the tab that lists it, one
-// accepted in the browse page; copy copies the browse page's address still. Before its detail shows, its read loading
-// or failed, it draws its Close too (T11 m1); the intake page's selection none. The stores, the headers, the action
-// model and the modals are real (the accept modal's form a stand-in), nerve a fake; the session is
-// fake-intake-page.tsx's.
+// is offered on every status while the project's intake is on (off, header.test.tsx): an item not accepted opens in the
+// intake page, selected in the tab that lists it, one accepted in the browse page; copy copies the browse page's
+// address still. Before its detail shows, its read in flight or failed, it draws its Close too (T11 m1); the intake
+// page's selection none; a write's read again draws none (left to M8). The stores, the headers, the action model and
+// the modals are real (the accept modal's form a stand-in), nerve a fake; the session is fake-intake-page.tsx's.
 
 const held = vi.hoisted(() => ({ copy: vi.fn(), where: "", fails: [] as ((error: unknown) => void)[] }));
 vi.mock("@/lib/auth/api-client", () => ({ tokenManager: { state: { loginId: "one" } }, publicClient: {} }));

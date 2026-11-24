@@ -93,8 +93,9 @@ export const InboxContentRoot = observer(function InboxContentRoot(props: TInbox
  * it, whose clearing is the delete's. A work item it cannot show leaves the intake's lists as well (drop), so that the
  * page, which selects a list's first row once nothing is selected, selects another row rather than it again. The
  * header and the detail are drawn inside the detail host, which withdraws them while a triage reads the work item
- * again; the modals, outside it, stay. Embedded in the notifications page, its Close is drawn above its loading and
- * its failure too, where no header is (T11 m1): the embed closes in every state.
+ * again; the modals, outside it, stay. Embedded in the notifications page, its Close is drawn above its read in
+ * flight or failed too, where no header is (T11 m1); not while a write's read again is out or failed, the work item
+ * not held and the headers drawing nothing (left to M8).
  */
 const IntakeSelection = observer(function IntakeSelection(props: TInboxContentRoot & { identity: string }) {
   const { workspaceSlug, projectId, inboxIssueId: issueId, identity, selection } = props;

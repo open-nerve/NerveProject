@@ -246,8 +246,10 @@ const NotificationJudgement = observer(function NotificationJudgement(
 
 /**
  * The preview while it reads, the project or the work item (P4 spec 2.6; P5b R16): it says it is loading, beside its
- * Close (the embed's, R17), which leaves the notification through the page's landing (R26), as every state of the
- * preview closes (T11 m1): below 768 px the list has no width while a notification is selected.
+ * Close (the embed's, R17), which leaves the notification through the page's landing (R26; T11 m1): below 768 px the
+ * list has no width while a notification is selected. With the embed's own read in flight or failed (InboxContentRoot),
+ * these are the states the preview's Close covers before a work item shows; a write's read again of the embedded work
+ * item is not one of them (left to M8).
  */
 function PreviewLoading({ leave }: { leave: () => void }) {
   return (
