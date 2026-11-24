@@ -1,7 +1,5 @@
 import { c12Evidence } from "../../fixtures/c12-evidence";
-import { createHash } from "node:crypto";
-import { readdir, readFile } from "node:fs/promises";
-import type { Locator, Page } from "@playwright/test";
+import type { Locator } from "@playwright/test";
 import { expect, test } from "../../fixtures/test";
 import { issueListProject, openIssueList } from "../../fixtures/issue-list-page";
 import { openIssueDetail } from "../../fixtures/issue-detail-page";
@@ -10,47 +8,7 @@ import { password } from "../../fixtures/auth";
 import { signInPath, submitSignIn } from "../../fixtures/auth-pages";
 import { answerTo, expectPopupBesideButton, transitionsEnded } from "../../fixtures/settings-pages";
 import { expectQuietConsole, requestsElsewhere, watchPage } from "../../fixtures/browser";
-
-// Identify the actual build by production code in it, not an assumed bundler filename.
-// These are the editor's own suggestion plugin and ProseMirror's state implementation.
-async function editorChunks() {
-  const assets = new URL("../../../web/apps/web/build/client/assets/", import.meta.url);
-  const files = (await readdir(assets)).filter((file) => file.endsWith(".js"));
-  const chunks = await Promise.all(
-    files.map(async (file) => {
-      const code = await readFile(new URL(file, assets), "utf8");
-      const markers = ["emojiSuggestion", "Adding different instances of a keyed plugin"].filter((marker) =>
-        code.includes(marker)
-      );
-      return { file, markers, sha256: createHash("sha256").update(code).digest("hex") };
-    })
-  );
-  const editor = chunks.filter(({ markers }) => markers.length > 0);
-  expect(editor.flatMap(({ markers }) => markers)).toEqual(
-    expect.arrayContaining(["emojiSuggestion", "Adding different instances of a keyed plugin"])
-  );
-  return editor;
-}
-
-async function holdEditorImplementation(page: Page) {
-  const chunks = (await editorChunks()).filter(({ markers }) =>
-    markers.includes("Adding different instances of a keyed plugin")
-  );
-  let release!: () => void;
-  const loaded = new Promise<void>((resolve) => {
-    release = resolve;
-  });
-  const held: string[] = [];
-  await page.route("**/assets/*.js", async (route) => {
-    const file = new URL(route.request().url()).pathname.split("/").at(-1);
-    if (chunks.some((chunk) => chunk.file === file)) {
-      held.push(file!);
-      await loaded;
-    }
-    await route.continue();
-  });
-  return { held, release };
-}
+import { editorChunks, holdEditorImplementation } from "../../fixtures/editor-chunks";
 
 test("C10 (page): an open peek display panel follows its button when the editor finishes loading", async ({
   api,
