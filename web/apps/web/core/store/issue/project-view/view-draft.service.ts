@@ -11,8 +11,11 @@ const draftOf = (view: View): Draft => ({
   display_properties: view.display_properties,
 });
 
-/** The draft service's refusal of a read of a view that made no draft (P6a spec 2.6). */
-class NoViewDraftError extends Error {
+/**
+ * The draft service's refusal of a read of a view that made no draft (P6a spec 2.6): its page left before nerve
+ * answered, or the read gave no view. The page that awaits it is gone: it shows nothing of it (use-view-page-read.ts).
+ */
+export class NoViewDraftError extends Error {
   constructor(viewId: string, why: string) {
     super(`No draft of view ${viewId}: ${why}`);
     this.name = "NoViewDraftError";

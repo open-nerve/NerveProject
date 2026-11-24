@@ -118,6 +118,11 @@
   },
   "project_views": {
     "add_view": "添加视图",
+    "not_found": {
+      "title": "视图不存在",
+      "description": "你要找的视图不存在，或你看不到它。",
+      "action": "查看其他视图"
+    },
     "action": {
       "create": {
         "success": "视图创建成功。"

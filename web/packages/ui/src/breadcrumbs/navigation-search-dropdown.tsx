@@ -21,6 +21,8 @@ type TBreadcrumbNavigationSearchDropdownProps = {
   navigationDisabled?: boolean;
   isLast?: boolean;
   handleOnClick?: () => void;
+  /** Called each time the list opens: a caller that reads its items only once asked for them reads them then. */
+  onOpen?: () => void;
   disableRootHover?: boolean;
   shouldTruncate?: boolean;
 };
@@ -35,6 +37,7 @@ export function BreadcrumbNavigationSearchDropdown(props: TBreadcrumbNavigationS
     navigationDisabled = false,
     isLast = false,
     handleOnClick,
+    onOpen,
     shouldTruncate = false,
   } = props;
   // state
@@ -63,6 +66,7 @@ export function BreadcrumbNavigationSearchDropdown(props: TBreadcrumbNavigationS
     <CustomSearchSelect
       onOpen={() => {
         setIsDropdownOpen(true);
+        onOpen?.();
       }}
       onClose={() => {
         setIsDropdownOpen(false);

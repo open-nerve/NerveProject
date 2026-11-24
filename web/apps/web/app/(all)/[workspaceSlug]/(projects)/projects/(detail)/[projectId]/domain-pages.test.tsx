@@ -2,12 +2,10 @@ import { IssueListService } from "@/services/issue/issue-list.service";
 // @vitest-environment jsdom
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 import { act, type ComponentProps } from "react";
-import { runInAction } from "mobx";
 import { createRoot } from "react-dom/client";
 import { MemoryRouter } from "react-router";
 import { SWRConfig } from "swr";
 import { afterEach, expect, it, vi } from "vitest";
-import { EViewAccess, type IProjectView } from "@nerve/types";
 import { tokenManager } from "@/lib/auth/api-client";
 import { FakeNerve } from "@/lib/auth/fake-nerve";
 import { StoreContext } from "@/lib/store-context";
@@ -15,7 +13,6 @@ import { RootStore } from "@/store/root.store";
 import { RouterStore } from "@/store/router.store";
 import { InstanceStore } from "@/store/instance.store";
 import { ThemeStore } from "@/store/theme.store";
-import { ProjectViewStore } from "@/store/project-view.store";
 import { ModulePreferencesService } from "@/services/planning/module-preferences.service";
 import { ModulesService } from "@/services/planning/modules.service";
 import { moduleRowOf } from "@/store/planning/fake-modules";
@@ -24,8 +21,6 @@ import { loadWorkspaces, workspaceOf } from "@/store/workspace/fake-workspaces";
 import { loadProjects, moduleOf, preferencesOf, projectOf } from "@/store/project/fake-projects";
 import ModulePage from "./modules/(detail)/[moduleId]/page";
 import { ModuleIssuesHeader } from "./modules/(detail)/header";
-import { ProjectViewIssuesHeader } from "./views/(detail)/[viewId]/header";
-import ViewPage from "./views/(detail)/[viewId]/page";
 
 // the route's params, a module's page's naming its module
 const route = vi.hoisted(() => ({ params: { workspaceSlug: "ws", projectId: "p-proj" } as Record<string, string> }));
@@ -108,57 +103,5 @@ it("module details and its own loader, then the module's work items under the pa
   expect(container.textContent).toContain("common.display");
   expect(container.textContent).toContain("issue.add.label");
   expect(container.textContent).toContain("Module details retained");
-  store.dispose();
-});
-
-it("preserves_domain_loading_without_issue_lists: project view has one detail reader", async () => {
-  const store = await fixture();
-  const view: IProjectView = {
-    id: "v",
-    name: "Release view",
-    access: EViewAccess.PUBLIC,
-    created_at: new Date(),
-    updated_at: new Date(),
-    is_favorite: false,
-    created_by: "u",
-    updated_by: "u",
-    description: "",
-    rich_filters: {},
-    display_filters: {},
-    display_properties: {},
-    query: {},
-    query_data: {},
-    project: "p-proj",
-    workspace: "id-ws",
-    logo_props: undefined,
-    is_locked: false,
-    owned_by: "u",
-  };
-  runInAction(() => {
-    store.projectView.viewMap.v = view;
-  });
-  const fetch = vi
-    .spyOn((store.projectView as ProjectViewStore).viewService, "getViewDetails")
-    .mockReturnValue(new Promise<never>(() => {}));
-  const issues = vi.spyOn(IssueListService.prototype, "listProject");
-  const params = { workspaceSlug: "ws", projectId: "p-proj", viewId: "v" };
-  await act(async () =>
-    root.render(
-      <MemoryRouter>
-        <StoreContext.Provider value={store}>
-          <SWRConfig value={{ provider: () => new Map() }}>
-            <ProjectViewIssuesHeader {...params} />
-            <ViewPage {...({ params } as ComponentProps<typeof ViewPage>)} />
-          </SWRConfig>
-        </StoreContext.Provider>
-      </MemoryRouter>
-    )
-  );
-  expect(fetch).toHaveBeenCalledExactlyOnceWith("ws", "p-proj", "v");
-  expect(issues).not.toHaveBeenCalled();
-  expect(document.title).toBe("PROJ - Release view");
-  expect(container.textContent).toContain("Release view");
-  expect(container.textContent).not.toContain("Add work item");
-  expect(container.textContent).not.toContain("Display");
   store.dispose();
 });

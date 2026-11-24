@@ -3,19 +3,16 @@ import { writeFile } from "node:fs/promises";
 import { createProject, createWorkspace, slugFor } from "../../fixtures/api";
 import { emailFor } from "../../fixtures/auth";
 import { expectQuietConsole, requestsElsewhere, watchPage } from "../../fixtures/browser";
-import { APP, PROJECT, PROJECT_MEMBER, WORKSPACE, valued } from "../../fixtures/mounts";
+import { APP, WORKSPACE, valued } from "../../fixtures/mounts";
 import { registerOnboarded } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 
-const missing = "0199f1c2-7a1b-7c3d-8e4f-5a6b7c8d9e0f";
 // The cycle pages left this list in M6/P5a: they read nerve's /api/v0 cycles, and their missing-cycle and empty-archive
 // pages are covered by the G3 and G8 page stories (stories/planning/). The module pages left it in M6/P6a: a module's
 // page reads nerve's /api/v0 module, and the archive of modules nerve's archived modules; the missing-module page and
-// the empty archive go to the G13 page story. The rest still mount without nerve's domain API.
-const entries = [
-  { name: "project view", path: `views/${missing}`, domain: `views/${missing}/`, empty: "View does not exist" },
-  { name: "workspace view", path: "workspace-views/all-issues", domain: "views/" },
-] as const;
+// the empty archive go to the G13 page story. The project's view page left it in M7/P6a: it reads nerve's /api/v0
+// view, its missing-view page goes to the H12 page story. The rest still mount without nerve's domain API.
+const entries = [{ name: "workspace view", path: "workspace-views/all-issues", domain: "views/" }] as const;
 
 /** A separate observation of the original events: watchPage's arrays are never filtered or reset. */
 function observe(page: Page) {
@@ -77,13 +74,9 @@ for (const entry of entries) {
     const watch = await watchPage(page);
     const observed = observe(page);
     let beforeProbe: unknown;
-    const workspaceView = entry.name === "workspace view";
-    const detail = "empty" in entry;
-    const path = workspaceView ? `/${slug}/${entry.path}` : `/${slug}/projects/${project.id}/${entry.path}`;
-    const domain = workspaceView
-      ? `/api/workspaces/${slug}/${entry.domain}`
-      : `/api/workspaces/${slug}/projects/${project.id}/${entry.domain}`;
-    const expected = [...APP, ...WORKSPACE, ...(detail ? [...PROJECT, ...PROJECT_MEMBER] : [])].map((request) =>
+    const path = `/${slug}/${entry.path}`;
+    const domain = `/api/workspaces/${slug}/${entry.domain}`;
+    const expected = [...APP, ...WORKSPACE].map((request) =>
       valued(request, { [slug]: "{slug}", [project.id]: "{project}" })
     );
     expected.push(`GET ${domain}`);
@@ -100,12 +93,9 @@ for (const entry of entries) {
     try {
       await page.goto(path);
       await expect(page).toHaveURL(path);
-      if (detail) await expect(page.getByText(entry.empty, { exact: true })).toBeVisible();
-      else if (workspaceView) {
-        // The title comes from the actual child page, whereas the switcher belongs to its parent layout.
-        await expect(page).toHaveTitle("Removal workspace - All Views");
-        await expect(page.getByRole("button", { name: "All work items" })).toBeVisible();
-      }
+      // The title comes from the actual child page, whereas the switcher belongs to its parent layout.
+      await expect(page).toHaveTitle("Removal workspace - All Views");
+      await expect(page.getByRole("button", { name: "All work items" })).toBeVisible();
       await expect(page.getByRole("button", { name: "Join project", exact: true })).toHaveCount(0);
       await expect(
         page.getByRole("button", { name: /^(Add work item|Add existing work item|Display|Transfer issues)$/i })
