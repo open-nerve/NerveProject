@@ -4,16 +4,6 @@
  * See the LICENSE file for details.
  */
 
-import { EViewAccess } from "@nerve/types";
-
-export const VIEW_ACCESS_SPECIFIERS: {
-  key: EViewAccess;
-  i18n_label: string;
-}[] = [
-  { key: EViewAccess.PUBLIC, i18n_label: "common.access.public" },
-  { key: EViewAccess.PRIVATE, i18n_label: "common.access.private" },
-];
-
 export const VIEW_SORTING_KEY_OPTIONS = [
   { key: "name", i18n_label: "project_view.sort_by.name" },
   { key: "created_at", i18n_label: "project_view.sort_by.created_at" },

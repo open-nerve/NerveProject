@@ -7,6 +7,8 @@
 import { useMemo, useState } from "react";
 import { sortBy } from "lodash-es";
 import { observer } from "mobx-react";
+// nerve imports
+import { useTranslation } from "@nerve/i18n";
 // ui
 import { ProfileAvatar } from "@/components/assets/profile-image";
 import { useRouteWorkspace } from "@/hooks/use-route-workspace";
@@ -27,6 +29,7 @@ type Props = {
 export const FilterCreatedBy = observer(function FilterCreatedBy(props: Props) {
   const { appliedFilters, handleUpdate, memberIds, searchQuery } = props;
   const imageWorkspace = useRouteWorkspace();
+  const { t } = useTranslation();
   // states
   const [itemsToRender, setItemsToRender] = useState(5);
   const [previewEnabled, setPreviewEnabled] = useState(true);
@@ -46,8 +49,7 @@ export const FilterCreatedBy = observer(function FilterCreatedBy(props: Props) {
       (memberId) => memberId !== currentUser?.id,
       (memberId) => getUserDetails(memberId)?.display_name.toLowerCase(),
     ]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery]);
+  }, [memberIds, appliedFilters, currentUser?.id, getUserDetails, searchQuery]);
 
   const handleViewToggle = () => {
     if (!sortedOptions) return;
@@ -59,7 +61,7 @@ export const FilterCreatedBy = observer(function FilterCreatedBy(props: Props) {
   return (
     <>
       <FilterHeader
-        title={`Created by${appliedFiltersCount > 0 ? ` (${appliedFiltersCount})` : ""}`}
+        title={`${t("common.created_by")}${appliedFiltersCount > 0 ? ` (${appliedFiltersCount})` : ""}`}
         isPreviewEnabled={previewEnabled}
         handleIsPreviewEnabled={() => setPreviewEnabled(!previewEnabled)}
       />
@@ -85,7 +87,7 @@ export const FilterCreatedBy = observer(function FilterCreatedBy(props: Props) {
                           size="xs"
                         />
                       }
-                      title={currentUser?.id === member.id ? "You" : member?.display_name}
+                      title={currentUser?.id === member.id ? t("you") : member?.display_name}
                     />
                   );
                 })}
@@ -95,12 +97,12 @@ export const FilterCreatedBy = observer(function FilterCreatedBy(props: Props) {
                     className="ml-8 text-11 font-medium text-accent-primary"
                     onClick={handleViewToggle}
                   >
-                    {itemsToRender === sortedOptions.length ? "View less" : "View all"}
+                    {itemsToRender === sortedOptions.length ? t("common.view_less") : t("common.view_all")}
                   </button>
                 )}
               </>
             ) : (
-              <p className="text-11 text-placeholder italic">No matches found</p>
+              <p className="text-11 text-placeholder italic">{t("common.search.no_matches_found")}</p>
             )
           ) : (
             <Loader className="space-y-2">

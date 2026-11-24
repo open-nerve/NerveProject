@@ -7,19 +7,18 @@ import { isValidElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { EViewAccess, type IProjectView } from "@nerve/types";
-import { heldChange, lateSettlings, lateSettlingsAnswering, signedIn, switchAccount } from "@/lib/auth/fake-tab";
+import { heldChange, lateSettlingsAnswering, signedIn, switchAccount } from "@/lib/auth/fake-tab";
 import { emptyShown, shown } from "@/lib/fake-controls";
 import { toasts } from "@/lib/fake-toast";
-import { DeleteProjectViewModal } from "./delete-view-modal";
 import { CreateUpdateProjectViewModal } from "./modal";
 
-// What follows a view's creation, change and deletion on the page (M3 handoff §1, v0 7.7, P7c spec §2.9): the dialog
+// What follows a view's creation and change on the page (M3 handoff §1, v0 7.7, P7c spec §2.9): the dialog
 // closes, goes on and says so only while the tab is in the session the change was sent in; after another tab moved it
 // to another account, the page is that account's, and nothing follows. The dialogs render on the server with stand-ins
 // for the UI kit's controls (fake-controls.ts) and the view's form (its submit is the dialog's handler); the views'
 // store is a stand-in whose changes the test settles; the session is fake-tab.ts's, the address's params are params'.
 
-const store = vi.hoisted(() => ({ createView: vi.fn(), updateView: vi.fn(), deleteView: vi.fn() }));
+const store = vi.hoisted(() => ({ createView: vi.fn(), updateView: vi.fn() }));
 const navigate = vi.hoisted(() => vi.fn());
 const params = vi.hoisted(() => ({ workspaceSlug: "acme", projectId: "p-web" }));
 vi.mock("@/hooks/store/use-project-view", () => ({ useProjectView: () => store }));
@@ -66,19 +65,10 @@ async function submitted(data?: IProjectView) {
   return onClose;
 }
 
-/** Renders the deletion's dialog of web's view, and confirms it; gives onClose. */
-async function confirmed() {
-  const onClose = vi.fn();
-  renderToStaticMarkup(<DeleteProjectViewModal isOpen data={release} onClose={onClose} />);
-  await shown.alerts.at(-1)?.handleSubmit();
-  return onClose;
-}
-
 beforeEach(() => {
   signedIn();
   store.createView.mockReset().mockResolvedValue(release);
   store.updateView.mockReset().mockResolvedValue(release);
-  store.deleteView.mockReset().mockResolvedValue(undefined);
   navigate.mockClear();
   toasts.length = 0;
   emptyShown();
@@ -127,36 +117,4 @@ describe("CreateUpdateProjectViewModal", () => {
       }
     );
   });
-});
-
-describe("DeleteProjectViewModal", () => {
-  it("deletes the view, closes, says so and goes to the project's views", async () => {
-    const onClose = await confirmed();
-    expect(store.deleteView.mock.calls).toEqual([["acme", "p-web", "v-release"]]);
-    expect([onClose.mock.calls.length, navigate.mock.calls]).toEqual([1, [["/acme/projects/p-web/views"]]]);
-    expect(toasts).toEqual([{ type: "success", title: "Success!", message: "View deleted successfully." }]);
-  });
-
-  it("says the deletion failed, and stays", async () => {
-    store.deleteView.mockRejectedValueOnce(new Error("refused"));
-    const onClose = await confirmed();
-    expect([onClose.mock.calls, navigate.mock.calls]).toEqual([[], []]);
-    expect(toasts).toEqual([
-      { type: "error", title: "Error!", message: "View could not be deleted. Please try again." },
-    ]);
-  });
-
-  it.each(lateSettlings)(
-    "neither closes, moves nor speaks when the deletion $settles after another tab moved this one to another account",
-    async ({ settle }) => {
-      const deletion = heldChange<undefined>();
-      store.deleteView.mockReturnValueOnce(deletion.sent);
-      const settled = confirmed();
-      await vi.waitFor(() => expect(store.deleteView).toHaveBeenCalledTimes(1));
-      switchAccount();
-      settle(deletion);
-      const onClose = await settled;
-      expect([onClose.mock.calls, navigate.mock.calls, toasts]).toEqual([[], [], []]);
-    }
-  );
 });

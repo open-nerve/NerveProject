@@ -106,7 +106,7 @@ export const ProjectViewIssuesHeader = observer(function ProjectViewIssuesHeader
             parentRef={parentRef}
             customClassName="flex-shrink-0 flex items-center justify-center size-[26px] bg-layer-1/70 rounded-sm"
             projectId={projectId}
-            view={viewDetails}
+            viewId={viewId}
             workspaceSlug={workspaceSlug}
           />
         </div>

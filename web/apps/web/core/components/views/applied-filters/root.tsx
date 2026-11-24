@@ -8,91 +8,69 @@ import { useTranslation } from "@nerve/i18n";
 import { PillButton } from "@makeplane/propel/components/pill";
 import { CloseOutline } from "@makeplane/propel/icons";
 // nerve imports
-import type { EViewAccess, TViewFilterProps } from "@nerve/types";
 import { replaceUnderscoreIfSnakeCase } from "@nerve/utils";
 // components
 import { AppliedDateFilters } from "@/components/common/applied-filters/date";
 import { AppliedMembersFilters } from "@/components/common/applied-filters/members";
 // local imports
-import { AppliedAccessFilters } from "./access";
+import type { ViewListFilters } from "../view-list-order";
+import { NO_VIEW_FILTERS } from "../view-list-order";
 
 type Props = {
-  appliedFilters: TViewFilterProps;
-  handleClearAllFilters: () => void;
-  handleRemoveFilter: (key: keyof TViewFilterProps, value: string | EViewAccess | null) => void;
-  alwaysAllowEditing?: boolean;
+  /** The filters applied to the list. */
+  filters: ViewListFilters;
+  /** Applies these filters instead. */
+  onChange: (filters: ViewListFilters) => void;
 };
 
-const MEMBERS_FILTERS = ["owned_by"];
-const DATE_FILTERS = ["created_at"];
-const VIEW_ACCESS_FILTERS = ["view_type"];
+/** The filters of the list, in the order they show. */
+const FILTERS: (keyof ViewListFilters)[] = ["owned_by", "created_at"];
 
+/**
+ * The filters applied to a project's views list (P6a spec 2.3): each filter applied, with its values, each of which
+ * the person removes, or the filter whole; and a clear of them all. None applied, it shows nothing.
+ */
 export function ViewAppliedFiltersList(props: Props) {
-  const { appliedFilters, handleClearAllFilters, handleRemoveFilter, alwaysAllowEditing } = props;
+  const { filters, onChange } = props;
   const { t } = useTranslation();
 
-  if (!appliedFilters) return null;
-  if (Object.keys(appliedFilters).length === 0) return null;
+  const applied = FILTERS.filter((key) => filters[key].length > 0);
+  if (applied.length === 0) return null;
 
-  const isEditingAllowed = alwaysAllowEditing;
+  /** The filters without value of the filter of key, or without the filter whole. */
+  const remove = (key: keyof ViewListFilters, value: string | null) =>
+    onChange({ ...filters, [key]: value === null ? [] : filters[key].filter((each) => each !== value) });
 
   return (
     <div className="flex flex-wrap items-stretch gap-2 bg-surface-1">
-      {Object.entries(appliedFilters).map(([key, value]) => {
-        const filterKey = key as keyof TViewFilterProps;
-
-        if (!value) return;
-        if (Array.isArray(value) && value.length === 0) return;
-
-        return (
-          <div
-            key={filterKey}
-            className="my-auto flex min-h-9 cursor-pointer flex-wrap items-center gap-1.5 rounded-md border border-subtle p-1.5 text-11 text-tertiary capitalize hover:text-secondary"
+      {applied.map((key) => (
+        <div
+          key={key}
+          className="my-auto flex min-h-9 cursor-pointer flex-wrap items-center gap-1.5 rounded-md border border-subtle p-1.5 text-11 text-tertiary capitalize hover:text-secondary"
+        >
+          <span className="text-11 text-tertiary">{replaceUnderscoreIfSnakeCase(key)}</span>
+          {key === "created_at" ? (
+            <AppliedDateFilters editable handleRemove={(value) => remove(key, value)} values={filters[key]} />
+          ) : (
+            <AppliedMembersFilters editable handleRemove={(value) => remove(key, value)} values={filters[key]} />
+          )}
+          <button
+            type="button"
+            className="grid place-items-center text-tertiary hover:text-secondary"
+            onClick={() => remove(key, null)}
           >
-            <span className="text-11 text-tertiary">{replaceUnderscoreIfSnakeCase(filterKey)}</span>
-            {VIEW_ACCESS_FILTERS.includes(filterKey) && (
-              <AppliedAccessFilters
-                editable={isEditingAllowed}
-                handleRemove={(val) => handleRemoveFilter(filterKey, val)}
-                values={Array.isArray(value) ? (value as EViewAccess[]) : []}
-              />
-            )}
-            {DATE_FILTERS.includes(filterKey) && (
-              <AppliedDateFilters
-                editable={isEditingAllowed}
-                handleRemove={(val) => handleRemoveFilter(filterKey, val)}
-                values={Array.isArray(value) ? (value as string[]) : []}
-              />
-            )}
-            {MEMBERS_FILTERS.includes(filterKey) && (
-              <AppliedMembersFilters
-                editable={isEditingAllowed}
-                handleRemove={(val) => handleRemoveFilter(filterKey, val)}
-                values={Array.isArray(value) ? (value as string[]) : []}
-              />
-            )}
-            {isEditingAllowed && (
-              <button
-                type="button"
-                className="grid place-items-center text-tertiary hover:text-secondary"
-                onClick={() => handleRemoveFilter(filterKey, null)}
-              >
-                <CloseOutline height={12} width={12} />
-              </button>
-            )}
-          </div>
-        );
-      })}
-      {isEditingAllowed && (
-        <PillButton
-          type="button"
-          size="md"
-          variant="outline"
-          label={t("common.clear_all")}
-          endIcon={<CloseOutline height={12} width={12} />}
-          onClick={handleClearAllFilters}
-        />
-      )}
+            <CloseOutline height={12} width={12} />
+          </button>
+        </div>
+      ))}
+      <PillButton
+        type="button"
+        size="md"
+        variant="outline"
+        label={t("common.clear_all")}
+        endIcon={<CloseOutline height={12} width={12} />}
+        onClick={() => onChange(NO_VIEW_FILTERS)}
+      />
     </div>
   );
 }

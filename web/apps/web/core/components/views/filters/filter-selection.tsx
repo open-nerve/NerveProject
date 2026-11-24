@@ -6,52 +6,45 @@
 
 import { useState } from "react";
 import { observer } from "mobx-react";
-
 import { CloseOutline, SearchOutline } from "@makeplane/propel/icons";
-import type { TViewFilterProps, TViewFilters } from "@nerve/types";
-import { EViewAccess } from "@nerve/types";
+// nerve imports
+import { useTranslation } from "@nerve/i18n";
 // components
 import { FilterCreatedDate } from "@/components/common/filters/created-at";
 import { FilterCreatedBy } from "@/components/common/filters/created-by";
-import { FilterOption } from "@/components/issues/issue-layouts/filters";
 // hooks
 import { usePlatformOS } from "@/hooks/use-platform-os";
+// local imports
+import type { ViewListFilters } from "../view-list-order";
 
 type Props = {
-  filters: TViewFilters;
-  handleFiltersUpdate: <T extends keyof TViewFilters>(filterKey: T, filterValue: TViewFilters[T]) => void;
-  memberIds?: string[] | undefined;
+  /** The filters applied to the list. */
+  filters: ViewListFilters;
+  /** Applies these filters instead. */
+  onChange: (filters: ViewListFilters) => void;
+  /** Those whose views the list may be filtered by: the project's members. */
+  memberIds: string[] | undefined;
 };
 
+/**
+ * The panel of a project's views list's filters (P6a spec 2.3): the dates of their creation and their owners, which a
+ * search narrows; each option chosen is applied, chosen again, it is not.
+ */
 export const ViewFiltersSelection = observer(function ViewFiltersSelection(props: Props) {
-  const { filters, handleFiltersUpdate, memberIds } = props;
+  const { filters, onChange, memberIds } = props;
+  // nerve hooks
+  const { t } = useTranslation();
   // states
   const [filtersSearchQuery, setFiltersSearchQuery] = useState("");
   // store
   const { isMobile } = usePlatformOS();
 
-  // handles filter update
-  const handleFilters = (key: keyof TViewFilterProps, value: boolean | string | EViewAccess | string[]) => {
-    const currValues = (filters.filters?.[key] ?? []) as (string | EViewAccess)[];
-
-    if (typeof currValues === "boolean" && typeof value === "boolean") return;
-
-    if (Array.isArray(currValues)) {
-      if (Array.isArray(value)) {
-        value.forEach((val) => {
-          if (!currValues.includes(val)) currValues.push(val);
-          else currValues.splice(currValues.indexOf(val), 1);
-        });
-      } else if (typeof value !== "boolean") {
-        if (currValues?.includes(value)) currValues.splice(currValues.indexOf(value), 1);
-        else currValues.push(value);
-      }
-    }
-
-    handleFiltersUpdate("filters", {
-      ...filters.filters,
-      [key]: currValues,
-    });
+  /** Applies the filter of key with value, or each of values, if it did not, and without it if it did. */
+  const toggle = (key: keyof ViewListFilters, value: string | string[]) => {
+    const values = Array.isArray(value) ? value : [value];
+    const kept = filters[key].filter((each) => !values.includes(each));
+    const added = values.filter((each) => !filters[key].includes(each));
+    onChange({ ...filters, [key]: [...kept, ...added] });
   };
 
   return (
@@ -62,7 +55,7 @@ export const ViewFiltersSelection = observer(function ViewFiltersSelection(props
           <input
             type="text"
             className="w-full bg-surface-2 outline-none placeholder:text-placeholder"
-            placeholder="Search"
+            placeholder={t("common.search.label")}
             value={filtersSearchQuery}
             onChange={(e) => setFiltersSearchQuery(e.target.value)}
             // oxlint-disable-next-line jsx_a11y/no-autofocus
@@ -76,24 +69,11 @@ export const ViewFiltersSelection = observer(function ViewFiltersSelection(props
         </div>
       </div>
       <div className="vertical-scrollbar scrollbar-sm h-full w-full divide-y divide-subtle-1 overflow-y-auto px-2.5">
-        <div className="py-2">
-          <FilterOption
-            isChecked={!!filters.filters?.favorites}
-            onClick={() =>
-              handleFiltersUpdate("filters", {
-                ...filters.filters,
-                favorites: !filters.filters?.favorites,
-              })
-            }
-            title="Favorites"
-          />
-        </div>
-
         {/* created date */}
         <div className="py-2">
           <FilterCreatedDate
-            appliedFilters={filters.filters?.created_at ?? null}
-            handleUpdate={(val: string | string[]) => handleFilters("created_at", val)}
+            appliedFilters={filters.created_at}
+            handleUpdate={(value) => toggle("created_at", value)}
             searchQuery={filtersSearchQuery}
           />
         </div>
@@ -101,8 +81,8 @@ export const ViewFiltersSelection = observer(function ViewFiltersSelection(props
         {/* created by */}
         <div className="py-2">
           <FilterCreatedBy
-            appliedFilters={filters.filters?.owned_by ?? null}
-            handleUpdate={(val) => handleFilters("owned_by", val)}
+            appliedFilters={filters.owned_by}
+            handleUpdate={(value) => toggle("owned_by", value)}
             searchQuery={filtersSearchQuery}
             memberIds={memberIds}
           />
