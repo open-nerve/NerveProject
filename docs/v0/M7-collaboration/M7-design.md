@@ -156,7 +156,7 @@ M7 让五件协作功能经真实接口工作：站内通知（关注工作项�
 
 ### 3.11 项目开关与入口规则
 
-`intake_view` 关闭：提交、分诊、条目的修改与删除、条目上资产的写 409 `issue.intake_disabled`，读照常，重新打开数据都在。`issue_views_view` 关闭：项目视图的建、改、删 409 `navigation.views_disabled`，读照常。侧栏、页头标签栏与命令面板用同一个谓词决定是否给出“视图”“收集箱”入口：开关开着、是项目的有效成员（三种角色，照 Plane）；新建视图另要求管理员或成员。仿 `planningEntryOn` 写 `viewsEntryOn`、`intakeEntryOn`，侧栏与命令面板共用，单测钉住访客与成员（M6-M7-07）。
+`intake_view` 关闭：提交、分诊、条目的修改与删除、条目上资产的写 409 `issue.intake_disabled`，读照常，重新打开数据都在。`issue_views_view` 关闭：项目视图的建、改、删 409 `navigation.views_disabled`，读照常。侧栏、页头标签栏与命令面板用同一个谓词决定是否给出“视图”“收集箱”入口：开关开着、是项目的有效成员（三种角色，照 Plane）；新建视图另要求管理员或成员。仿 `planningEntryOn` 写 `viewEntryOn`、`intakeEntryOn`，侧栏与命令面板共用，单测钉住访客与成员（M6-M7-07）。
 
 ## 4. 数据、模块归属与删除图
 

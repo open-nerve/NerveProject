@@ -9,7 +9,7 @@
 P6 在设计 §12 分两段：P6a 项目视图、P6b 工作区视图（`D:308`）。P6a 交付：
 
 - **数据层**（§2.1）：视图的 service 与 store 照 v0 §7.7 重写（`useSessionSWR`、`ReconciledByKey`、`oneAtATime`、`followInSession`），类型只来自 `@nerve/api-client` 的 `View`、`ViewCreate`、`ViewUpdate`；视图只在用到的地方读，不进项目的外壳（R20）。
-- **入口与控件**（§2.2）：`viewsEntryOn` 一条规则给侧栏、页签栏、两条导航命令；每个控件给谁照一张表，每格对到服务端的一条规则（R4、R14）。
+- **入口与控件**（§2.2）：`viewEntryOn` 一条规则给侧栏、页签栏、两条导航命令；每个控件给谁照一张表，每格对到服务端的一条规则（R4、R14）。
 - **列表页**（§2.3）：Plane 的列表去掉访问、锁、收藏与发布；页面状态按项目；行的菜单、右键菜单与复制照 M6；弹窗在页面的宿主（R5、R17）。
 - **视图的弹窗**（§2.4）：只管视图的身份——名字、说明、图标；筛选、布局与显示都在视图页改、以“更新视图”存；关闭政策同 M6 的迭代、模块弹窗；`ModalTitle`、`FieldError`、自然 Tab（R11、R12、R28）。
 - **列表引擎的 `PROJECT_VIEW`**（§2.5）：新枚举值，作为“项目列表页的一种”接进各分派点，穷尽的分派让漏一处是编译错（R1，**L!**）。
@@ -41,12 +41,12 @@ P6 在设计 §12 分两段：P6a 项目视图、P6b 工作区视图（`D:308`�
   - 读：`fetchProjectViews(projectId)`、`fetchView(id)`；取值：`getProjectViews(projectId)`、`getViewById(id)`（详情没有时取列表里的那一行）。读不排队；只经 `RootStore` 找兄弟（项目经 `projectRoot.project.getProjectById`，项目不在了不显示它的视图，同模块 store）。
 - **写**：新 `C/store/views/view-changes.ts`，每个视图一个 `oneAtATime`（`C/lib/one-at-a-time.ts:14`），新建一个项目一个；请求体在轮到时算（“更新视图”的体在轮到时读草稿，§2.7）。回答经 `Reconciled` 写进详情与项目的列表：建 → `prepended`、改 → `replaced`、删 → `dropped` 且详情为 `null`（`C/lib/reconciled.ts:201`、`:206`、`:218`）。canonical 只在 nerve 确认时变，页面不先在本地改（旧 store 的乐观改 `C/store/project-view.store.ts:196-211` 不保留）。nerve 对没有改动的 `PATCH` 答 200 不写（`D:118`），store 照样写回答。`isUpdating(viewId)`：可观察，这个视图有改在队列里或在途时为真（视图页的在途停用读它，R29；随第一个读者在 T8 建）。
 - **hook**：`C/hooks/store/use-views.ts` 的 `useViews()`；页面跟进（提示、跳转、关弹窗）一律经 `followInSession`（`C/lib/in-session.ts:40`）。
-- **读的位置**（R20）：键 `["PROJECT_VIEWS", projectId]`，门是 `viewsEntryOn`（§2.2）；读者：列表页、视图页页头的切换器（打开时）、命令面板的视图菜单与搜索（打开时）。视图页自己的读是草稿的播种（§2.6）。项目的外壳（`C/layouts/auth-layout/use-project-fetch.ts:60-72`）不加读。`.oxlintrc.json` 的 swr 名单（`:121-215`）收入每个新的取数文件。
+- **读的位置**（R20）：键 `["PROJECT_VIEWS", projectId]`，门是 `viewEntryOn`（§2.2）；读者：列表页、视图页页头的切换器（打开时）、命令面板的视图菜单与搜索（打开时）。视图页自己的读是草稿的播种（§2.6）。项目的外壳（`C/layouts/auth-layout/use-project-fetch.ts:60-72`）不加读。`.oxlintrc.json` 的 swr 名单（`:121-215`）收入每个新的取数文件。
 
 ### 2.2 入口规则与控件矩阵（R4、R14）
 
-- **`viewsEntryOn(project, role)`**：新 `C/lib/views-entry.ts`，照 `intakeEntryOn`（`C/lib/intake-entry.ts:18-24`）：`project !== undefined && project.issue_views_view && role ∈ {ADMIN, MEMBER, GUEST}`，不看归档（已归档项目的页面由外壳挡住，`use-project-fetch.ts:83-92` 的 `archived`）。同文件 `viewsCreatableBy(project, role)` = `viewsEntryOn` 且 `role ∈ {ADMIN, MEMBER}`。角色一律 `getProjectRoleByWorkspaceSlugAndProjectId(slug, projectId)`（路由参数；工作区管理员即项目管理员，`C/store/user/permissions.store.ts:68-75`）。
-- **读者**：侧栏（`C/components/workspace/sidebar/project-navigation.tsx:103-111`）、页签栏（`C/components/navigation/use-navigation-items.ts:73-82`）、“打开视图”“转到视图”两条命令（`C/components/power-k/config/navigation/project-commands.ts:180-181`、`:192-193`）读 `viewsEntryOn`；`create_view`（`C/components/power-k/config/creation/command.ts:110-111`）、列表页的 “Add view” 与空态的“新建”、四个页面的“另存”读 `viewsCreatableBy`。命令的单测表两行（`commands.test.tsx:120`、`:138`，工作区、管理员、访客、关着、已归档 `[F, T, T, F, T]`）不变，另加角色的格：成员 T、访客 T、没有角色 F；`create_view` 访客 F。关闭 M6-M7-07 的视图一半。
+- **`viewEntryOn(project, role)`**：新 `C/lib/views-entry.ts`，照 `intakeEntryOn`（`C/lib/intake-entry.ts:18-24`）：`project !== undefined && project.issue_views_view && role ∈ {ADMIN, MEMBER, GUEST}`，不看归档（已归档项目的页面由外壳挡住，`use-project-fetch.ts:83-92` 的 `archived`）。同文件 `viewsCreatableBy(project, role)` = `viewEntryOn` 且 `role ∈ {ADMIN, MEMBER}`。角色一律 `getProjectRoleByWorkspaceSlugAndProjectId(slug, projectId)`（路由参数；工作区管理员即项目管理员，`C/store/user/permissions.store.ts:68-75`）。
+- **读者**：侧栏（`C/components/workspace/sidebar/project-navigation.tsx:103-111`）、页签栏（`C/components/navigation/use-navigation-items.ts:73-82`）、“打开视图”“转到视图”两条命令（`C/components/power-k/config/navigation/project-commands.ts:180-181`、`:192-193`）读 `viewEntryOn`；`create_view`（`C/components/power-k/config/creation/command.ts:110-111`）、列表页的 “Add view” 与空态的“新建”、四个页面的“另存”读 `viewsCreatableBy`。命令的单测表两行（`commands.test.tsx:120`、`:138`，工作区、管理员、访客、关着、已归档 `[F, T, T, F, T]`）不变，另加角色的格：成员 T、访客 T、没有角色 F；`create_view` 访客 F。关闭 M6-M7-07 的视图一半。
 - **控件矩阵**（“—”＝不给；每个控件都不给会被 nerve 拒的人）：
 
 | 控件 | 管理员 | 成员 | 访客 | 服务端的规则 |
@@ -117,7 +117,7 @@ P6 在设计 §12 分两段：P6a 项目视图、P6b 工作区视图（`D:308`�
 ### 2.6 视图页（R2、R6、R18 的视图页一半）
 
 - **布局**：`V/(detail)/layout.tsx` 以 `viewId` 为 key（`<Fragment key={viewId}>`，先例 `P/cycles/(detail)/layout.tsx:26-27`；`HO/M3-closeout.md:38`），`ViewActionsHost` 在 key 之内；后退、前进换视图时整棵重挂。
-- **门**：`viewsEntryOn`；开关关着 → 同列表页的停用页（不读）。
+- **门**：`viewEntryOn`；开关关着 → 同列表页的停用页（不读）。
 - **读与草稿**（R2）：新 `C/store/issue/project-view/view-draft.service.ts` 的 `ViewDraftService implements PagePreferencesService<ProjectIssueFilters>`（端口 `page-preferences-filter.store.ts:33-36`），线上词：
   - 草稿按视图带一个代（“页面还在不在”，草稿服务自己的；基类 `PagePreferencesFilter` 不碰，它的读序号与 `values` 是私有的，`page-preferences-filter.store.ts:127-130`、`:175-190`）。
   - `get(viewId)`：有草稿给草稿；没有就记下代、`views.fetchView(viewId)`（一个 `GET /api/v0/views/{id}`，回答进 `ViewStore.details`），回答到时代没变才以它的 `filters`、`display_filters`、`display_properties` 播种；代变了（期间 `discard` 过）就以草稿服务自己的错误拒绝：迟到的回答只进 `ViewStore.details`，不建草稿，基类也不写 `filters[viewId]`（它只在 `get` 答到值时写）。
@@ -139,7 +139,7 @@ P6 在设计 §12 分两段：P6a 项目视图、P6b 工作区视图（`D:308`�
 - **另存存什么**：`filters` = 页面的富筛选当前表达式经 `toProjectFilters`，迭代页另加 `cycle_id: [该迭代]`、模块页 `module_id: [该模块]`（M6 的表 `PLANNING_PAGE_DOMAINS` 加一列 `viewTerms`，共用的根不分支；迭代页、模块页的筛选类型本来就排除自己的词，`C/lib/issue-filters.ts:198-209`）；`display_filters`、`display_properties` = 页面已确认的线上值（R8）。弹窗只给名字、说明、图标（§2.4），在 HOC 里（`project-level.tsx:189-198`）。
 - **已确认的线上值**（R8，L!）：`PagePreferencesFilter` 加只读的 `confirmed(id): PagePreferences<F> | undefined`（私有 `values` `:127` 的拷贝），`IPagePreferencesFilter` 随之加；四个页面一条路（视图页的就是草稿）。它读的是不可观察的私有 `Map`，不是响应式的：读者跟着同时变的、可观察的 `issuesFilter.filters[id]` 重算（HOC 的 `hasAdditionalChanges` 的依赖挂在 `filters[id]` 的显示与属性上，不只挂 `confirmed`）。
 - **“更新视图”**（R9，L!）：
-  - 给谁：HOC 的 `isDisabled` = 不是（`enableUpdateView`、所有者 `owned_by_id === 当前用户`、角色管理员或成员、`viewsEntryOn`）；不看 `is_locked`。出现照 shared-state：`canUpdateView = updateViewOptions && (hasChanges || hasAdditionalChanges) && !isDisabled`（`filter.ts:279-285`，不改）。
+  - 给谁：HOC 的 `isDisabled` = 不是（`enableUpdateView`、所有者 `owned_by_id === 当前用户`、角色管理员或成员、`viewEntryOn`）；不看 `is_locked`。出现照 shared-state：`canUpdateView = updateViewOptions && (hasChanges || hasAdditionalChanges) && !isDisabled`（`filter.ts:279-285`，不改）。
   - `hasAdditionalChanges` 比线上值：`confirmed(viewId)` 的 `display_filters`、`display_properties` 与视图存着的（今天拿控件词比线上词，`project-level.tsx:94-102`）。
   - `onViewUpdate(expression)` 返回 Promise：经视图的队列发 `PATCH /api/v0/views/{id}`，体在轮到时算 = `{ filters: toProjectFilters(expression), display_filters, display_properties }`，后两项读那一刻的草稿；成功 → 提示（`project_views.action.update.success`）、`adopt` 回答再 `fetchFilters`（草稿与显示换成回答）、富筛选的当前表达式不等于回答的筛选时 `resetExpression(toFilterExpression(回答的筛选))`（等价时不动，保住焦点；同 `use-page-filter-expression.ts:47-52` 的做法），然后 resolve——shared-state 的 `updateView` 随之把基线设为当前表达式（`filter.ts:499-506`），即回答；失败 → 按码提示（`navigation.views_disabled`、`navigation.view_not_found` 与别的拒绝经 `useRefusalToast`），然后 reject，草稿与基线都不动，按钮留着。
   - `followInSession` 从不 reject：HOC 在 `failed` 里记下错误、在它之后自己 throw；换了会话两个跟进都不调、Promise resolve（页面已不在，基线的重置无害）。
@@ -159,7 +159,7 @@ P6 在设计 §12 分两段：P6a 项目视图、P6b 工作区视图（`D:308`�
 
 ### 2.8 命令面板（R13，L!）
 
-- **菜单**：`C/components/power-k/ui/pages/open-entity/project-views-menu.tsx` 以 `useSessionSWR(viewsEntryOn ? ["PROJECT_VIEWS", projectId] : null, …)` 读（与列表页同一个键），在途给加载、被拒给 `PowerKMenuEmptyState` 的拒绝文字、空给 `power_k.menus.no_views`；`C/components/power-k/menus/views.tsx:11` 与 `C/components/power-k/config/navigation/project-commands.ts:18`、`:171`（`data as IProjectView`）的 `IProjectView` 换成 `View`（同一提交）；删 `fetchedMap` 的永远转圈（`:25-31`）。菜单开着就读（每次挂上都再验证，这是对的）；它与列表页同时挂着时共用一次在途的读（同一个键）。
+- **菜单**：`C/components/power-k/ui/pages/open-entity/project-views-menu.tsx` 以 `useSessionSWR(viewEntryOn ? ["PROJECT_VIEWS", projectId] : null, …)` 读（与列表页同一个键），在途给加载、被拒给 `PowerKMenuEmptyState` 的拒绝文字、空给 `power_k.menus.no_views`；`C/components/power-k/menus/views.tsx:11` 与 `C/components/power-k/config/navigation/project-commands.ts:18`、`:171`（`data as IProjectView`）的 `IProjectView` 换成 `View`（同一提交）；删 `fetchedMap` 的永远转圈（`:25-31`）。菜单开着就读（每次挂上都再验证，这是对的）；它与列表页同时挂着时共用一次在途的读（同一个键）。
 - **搜索**：只在项目范围（路由的项目，或 `/browse/:workItem` 所在工作项的项目），加 “Views” 组（标题读已有的键 `views`，`PKG/i18n/src/locales/en/common.json:231`；没有 `common.views`）；新 `C/components/power-k/ui/modal/use-view-search.ts`（不推广 `use-planning-search.ts`：入口规则不同，视图给访客），读的时机：面板开着、在项目范围、store 里还没有这个项目的视图列表时，以列表页的键读一次（先例 `C/components/power-k/ui/modal/use-planning-search.ts:45-46` 的“store 里没有才读”）；有了就用 store 的（本会话的写经 `Reconciled` 已在里面）。代价（R20 的）：没去过列表页时，每开一次面板一个 `GET /api/v0/projects/{id}/views`，不搜索也发。在读到的列表里按名字不分大小写的子串本地过滤，组内照 nerve 的次序；读被拒或在途时这一组不显示、不挡别的组；“没有结果”在所有组都空时才给；行是项目标识加名字，选中关面板并转到视图页（`ui/modal/search-menu.tsx:43-48`、`:97-102`，`search-results.tsx:72-96` 的形状）。工作区范围不给（R13 (b) 要新接口，负责人的事）。
 - **`create_view`**：`viewsCreatableBy`（§2.2）；打开 `ProjectLevelModals` 的新建弹窗（`C/components/modals/project-level.tsx:59-64`，卸下时关，`:36-43`）。
 
@@ -257,8 +257,8 @@ P6 在设计 §12 分两段：P6a 项目视图、P6b 工作区视图（`D:308`�
 - **R10 视图页的筛选不推进基线**（C-10 的 (a)，**L!**）：§2.5。代价：视图页的根多约 10 行，不碰 M6 的共用 hook；T7 的单测钉“视图页改了筛选之后 `hasChanges` 为真（基线没被推进）、没有 `PATCH`”，“`canUpdateView` 为真”在 T8 随 HOC 的新读者钉（预检 re-96 I5 ②）。
 - **R11 弹窗的关闭政策同 M6**（C-11 的 (a)）：§2.4。理由：同类的短表单（迭代、模块）已经是这样，P6b 的工作区视图弹窗也照它；没有确认放弃（表单丢了不贵）。代价：约 60 行；嵌套 Escape 随 R28 只剩图标选择器，在页面上核（H20 (page)）。
 - **R12 弹窗里没有筛选**（C-12 的 (a)）：§2.4。理由：在视图页改筛选是主路径（列表就在下面）；弹窗里的临时筛选实例的寿命、嵌套弹层与两级 Escape 代价高。代价：登记 plane-diff（Plane 有，M4/P10a 删了）。
-- **R13 命令面板**（C-13 的 (a)，**L!**）：§2.8。菜单与列表页同一个键、门是 `viewsEntryOn`；搜索只在项目范围、本地过滤、新 `use-view-search.ts`；`create_view` 要 `viewsCreatableBy`。代价：动 M6 的命令面板文件；登记 plane-diff（同 M6/P7c 的迭代、模块）。工作区范围的搜索要新接口，是负责人的事，不做。
-- **R14 `viewsEntryOn`**（C-14 的 (a)，**L!**）：§2.2。照 `intakeEntryOn`：开关加三种角色、不排除已归档；侧栏、页签栏、两条导航命令共用；单测表加角色的格。理由：两条入口规则一致更好读，已归档项目的页面由外壳挡住（P5a R27 已接受）。代价：新文件约 25 行、五个调用方；关闭 M6-M7-07 的视图一半。
+- **R13 命令面板**（C-13 的 (a)，**L!**）：§2.8。菜单与列表页同一个键、门是 `viewEntryOn`；搜索只在项目范围、本地过滤、新 `use-view-search.ts`；`create_view` 要 `viewsCreatableBy`。代价：动 M6 的命令面板文件；登记 plane-diff（同 M6/P7c 的迭代、模块）。工作区范围的搜索要新接口，是负责人的事，不做。
+- **R14 `viewEntryOn`**（C-14 的 (a)，**L!**）：§2.2。名字（实施中改，T3）：调研、裁定与设计原写 `viewsEntryOn`，其中的 “sEntry” 撞上关键词 `unsplash-telemetry` 不分大小写的 “sentry”（该规则只为 `webkitGetAsEntry` 开了例外，规则的说明要求其余前后缀都命中）；不放宽规则，改名为 `viewEntryOn`（`viewsCreatableBy` 与文件名 `views-entry.ts` 不命中，不改）。照 `intakeEntryOn`：开关加三种角色、不排除已归档；侧栏、页签栏、两条导航命令共用；单测表加角色的格。理由：两条入口规则一致更好读，已归档项目的页面由外壳挡住（P5a R27 已接受）。代价：新文件约 25 行、五个调用方；关闭 M6-M7-07 的视图一半。
 - **R15 `getTabIndex` 全套删除**（C-15 的 (a)）：§2.9。共用控件非正的 `tabIndex?` 保留、核过的读者写进阶段记录。代价：删约 35 行；H20 (page) 核弹窗的自然 Tab 次序；关闭 M6-M7-05。
 - **R16 `projectMemberIds` 删除**（C-16 的 (a)，**L!**）：§2.9。理由：P6a 是最后的迁移者（`HO/M3-closeout.md:121`）。代价：动 M3/M4 的成员 store 与测试、P5a 的收集箱测试替身（只删一个字段）；关闭 M3 交接 §7。
 - **R17 行的菜单与宿主**（C-17 的 (a)）：§2.3。理由：删除成功的提示与跳转不能靠已卸下的行（M6 换宿主的原因，`C/components/modules/actions-host.tsx:40-48` 的注释）。代价：宿主约 90 行，行与菜单约 60 行；`useViewMenuItems` 收布尔值不收整个视图（P6b 照用）；右键菜单在页面上以右键打开核（`HO/M3-closeout.md:53`）。
@@ -302,7 +302,7 @@ P6 在设计 §12 分两段：P6a 项目视图、P6b 工作区视图（`D:308`�
 ## 4. 验收标准
 
 - [ ] **A1 数据层**：类型只来自 `@nerve/api-client`；service 不转换；读不排队、写一个视图一个队列、体在轮到时算；回答经 `Reconciled` 写进列表与详情（建、改、删各有格）；没有乐观改；换会话之后旧的回答不写进新的 store；swr 名单收入新文件。
-- [ ] **A2 入口与矩阵**：`viewsEntryOn` 一处、五个读者；单测表两行不变、加角色的格；§2.2 矩阵逐格有单测，H12 (page) 三种角色核过；三处偏差改正。
+- [ ] **A2 入口与矩阵**：`viewEntryOn` 一处、五个读者；单测表两行不变、加角色的格；§2.2 矩阵逐格有单测，H12 (page) 三种角色核过；三处偏差改正。
 - [ ] **A3 列表页**：按项目的页面状态（换项目即丢）；搜索、筛选、排序本地；一行一个快捷操作、菜单名为 “{name} options”、右键菜单；复制经 `useCopyLink`、`copy-hook` 的视图例外删去；弹窗在宿主；删除之后提示与行消失；停用页不读；英文改键。
 - [ ] **A4 弹窗**：在途不关、Cancel 停用；不在途 Escape、点背景、Cancel 关；没有文档级 Escape；`ModalTitle`；名字的 `FieldError`、`aria-invalid`、被拒取得焦点；自然 Tab；只有名字、说明、图标（没有布局与显示），编辑只发改了的字段；“Add view” 的体带合同默认的显示与属性（H12 (page) 钉住）；新建与另存的名字初值为空；图标选择器开着时 Escape 只关它（三引擎）；`LayoutDropDown` 与它的测试删去。
 - [ ] **A5 引擎**：`PROJECT_VIEW` 在每个分派点（§2.5 的清单，含列表挂载的键、日历的“添加已有”、行的快捷操作，每处单测一格、变异一行；H12 (page) 的四种布局与翻页）；命令清单写全；穷尽的 `switch`；两份钉 `DEFAULT` 的测试照 §2.5 改；视图页的筛选不推进基线、不发 `PATCH`；项目页、迭代页、模块页的行为不变（m4-list、m4-filters、m4-detail、m6-pages 不回归）。
@@ -381,7 +381,7 @@ P6 在设计 §12 分两段：P6a 项目视图、P6b 工作区视图（`D:308`�
 3. 迭代页、模块页的“另存”带该迭代、模块的条件；Plane 只存页面的筛选（`PW/core/components/issues/issue-layouts/roots/cycle-layout-root.tsx:89-97`）（R7）。
 4. 视图的弹窗没有筛选（Plane `PW/core/components/views/form.tsx:264-289`；M4/P10a 已删）；Escape、点背景、Cancel 不在途时直接关，在途不关；名字的提示在字段下、被拒取得焦点；Plane 是文档级 Escape、点背景不关（R11、R12）。弹窗只有名字、说明、图标：Plane 的表单另有布局与显示（`PW/core/components/views/form.tsx:219`、`:233-257`），nerve 的布局与显示在视图页改、以“更新视图”存；“Add view” 的体带合同默认的显示与属性（R28）：新建的视图不分组，Plane 的表单默认按状态分组（`PW/core/components/views/form.tsx:52`；fork 里同在 `VC/form.tsx:46`，T5 随布局与显示删去）。新建与另存的名字初值为空；Plane 另存时是“{视图名} 2”或 “Untitled”（`PW/core/components/work-item-filters/filters-hoc/project-level.tsx:110`）（R30）。
 5. 命令面板搜索视图只在项目范围、在已读到的列表里本地过滤；Plane 在服务端、工作区与项目两种范围（`plane/apps/api/plane/app/views/search/base.py:210-232`）（R13）。
-6. 入口照 `viewsEntryOn`：开关开着、三种角色，不排除已归档的项目（外壳挡住）；“新建”“另存”与 `create_view` 只给管理员与成员（Plane 的空态给访客）（R4、R14）。
+6. 入口照 `viewEntryOn`：开关开着、三种角色，不排除已归档的项目（外壳挡住）；“新建”“另存”与 `create_view` 只给管理员与成员（Plane 的空态给访客）（R4、R14）。
 7. 一行一个右键菜单、菜单按钮以视图的名字为名、复制失败有提示（R17）。
 8. 视图只在用到的页面读，不在项目的外壳读（Plane `PW/core/layouts/auth-layout/project-wrapper.tsx:134`）（R20）。
 

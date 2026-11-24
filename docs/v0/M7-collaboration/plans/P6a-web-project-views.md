@@ -24,7 +24,7 @@
 
 **knip 与第一个读者**（新文件、新导出在它第一个读者出现的 Task 里建立；测试数据的导出以第一个读它的测试为准）：
 - T2：`ViewsService`（读者：`ViewStore`）；`ViewStore`、`ViewChanges`（读者：`RootStore`）；`useViews`（读者：T2 自己的 hook 测试不算——第一个产品读者在 T4，所以 `use-views.ts` 在 T4 建）。
-- T3：`viewsEntryOn`、`viewsCreatableBy`（读者：侧栏、页签栏、命令）。
+- T3：`viewEntryOn`、`viewsCreatableBy`（读者：侧栏、页签栏、命令）。
 - T4：`use-views.ts`（列表页）；`VC/page-state.tsx`、`VC/actions-host.tsx`（列表布局；T4 的宿主只有删除，预检 re-96 I5 ①）；列表的排序与筛选的纯函数（读者：`page-state.tsx`）。
 - T5：“Add view” 的合同默认显示与属性的常量（读者：新建的弹窗）；宿主的新建与编辑（读者：行的“编辑”、“Add view”、空态的“新建”）。
 - T6：`ProjectViewIssues`、`ProjectViewIssuesFilter`、`ViewDraftService`（读者：`IssueRootStore`）；`use-project-view-issue-actions.ts`（读者：`use-issues-actions.tsx`）；`use-project-view-preferences-follow.ts`（读者：上一个）。
@@ -228,9 +228,9 @@
 **Files**：新 `C/lib/views-entry.ts` 与 `views-entry.test.ts`；改 `C/components/workspace/sidebar/project-navigation.tsx`（191，`:103-111`）、`C/components/navigation/use-navigation-items.ts`（113，`:73-82`）、`C/components/power-k/config/navigation/project-commands.ts`（258，`:180-181`、`:192-193`）、`C/components/power-k/config/creation/command.ts`（165，`:110-111`）；测试照允许清单追加。
 
 **Steps**：
-- [ ] Step 1：先写测试，看到失败（收据 `t3-red`）：`viewsEntryOn` 的表（开关开着与关着 × 管理员、成员、访客、没有角色 × 已归档与否；先例 `C/lib/intake-entry.test.ts`）；`viewsCreatableBy`（访客 F）；侧栏、页签栏、两条命令、`create_view` 各一格（没有角色 F、访客：导航 T、`create_view` F）。
+- [ ] Step 1：先写测试，看到失败（收据 `t3-red`）：`viewEntryOn` 的表（开关开着与关着 × 管理员、成员、访客、没有角色 × 已归档与否；先例 `C/lib/intake-entry.test.ts`）；`viewsCreatableBy`（访客 F）；侧栏、页签栏、两条命令、`create_view` 各一格（没有角色 F、访客：导航 T、`create_view` F）。
 - [ ] Step 2：实现到通过（spec §2.2）。角色取 `getProjectRoleByWorkspaceSlugAndProjectId`（路由参数）。新文件若读项目，收入 `project-address-route`。
-- [ ] Step 3：变异照上表 T3 各行。门禁同 T2。提交 `feat(M7/P6a): 视图的入口规则 viewsEntryOn——开关开着、三种角色，不排除已归档；侧栏、页签栏、两条导航命令共用，新建与 create_view 另要管理员或成员`。
+- [ ] Step 3：变异照上表 T3 各行。门禁同 T2。提交 `feat(M7/P6a): 视图的入口规则 viewEntryOn——开关开着、三种角色，不排除已归档；侧栏、页签栏、两条导航命令共用，新建与 create_view 另要管理员或成员`。
 
 ### T4 列表页、行与宿主、`projectMemberIds`
 
@@ -354,7 +354,7 @@
 ### T13 文档与交接（主控）
 
 - **plane-diff**：spec §7 的八行进 `docs/v0/plane-diff.md` 行为差异一节（与 M7/P5a、P5b 的行同处）；Plane 的行号对照主目录的只读 `plane/` 逐一核过。
-- **frontend-changes**：3.1 的 M7 一行写 P6a；3.2 加行：视图的数据层、`viewsEntryOn`、列表页与宿主、弹窗、`PROJECT_VIEW` 与草稿、视图页、另存与更新视图（R7–R10）、命令面板、删除（旧层、`getTabIndex`、`projectMemberIds`）。
+- **frontend-changes**：3.1 的 M7 一行写 P6a；3.2 加行：视图的数据层、`viewEntryOn`、列表页与宿主、弹窗、`PROJECT_VIEW` 与草稿、视图页、另存与更新视图（R7–R10）、命令面板、删除（旧层、`getTabIndex`、`projectMemberIds`）。
 - **交接**：spec §5 的表，每条写“处理结果（M7/P6a）”（M7-04 `:71` 照 spec §5 的逐项写，`HO/M3-closeout.md:60` 写项目视图一半）；M2 交接 §3 的 `Dropdown` 一半写“不适用”（`single-select.tsx` 在 M4/P16 删、`LayoutDropDown` 在 T5 删，T12 在视图页的布局切换上的键盘证据）。
 - **死成员**：重跑脚本（`t13-dead-final`），剩下的行写进阶段记录。
 - **告警**：核对本段改到与新建的文件 oxlint 为零、计数等于上限（`t13-oxlint-files`）。
@@ -378,7 +378,7 @@
 1. **R1 引擎（L!）**：`PROJECT_VIEW` 在每个分派点（spec §2.5 的清单：列表挂载的键带 `viewId`、日历的“添加已有”、`ProjectIssueQuickActions` 读上下文、静默的几处各有格与变异）；命令清单写全；两个 `switch` 穷尽、漏一处是编译错；没有进 M6 的两张表；视图页的列表与项目页的分开；项目页、迭代页、模块页不回归（m4-list、m4-filters、m4-detail、m6-pages）；`root.store.ts` 只加构造。
 2. **R9、R10、R29 “更新视图”、基线与在途停用（L!）**：视图页不用 `usePageFilterExpression`；`onViewUpdate` 返回 Promise、失败 reject（`followInSession` 不 reject，HOC 自己 throw）；成功时不等价才 `resetExpression`、草稿换成回答；体的显示在轮到时读；`hasAdditionalChanges` 比线上值；不看 `is_locked`；筛选行的 `catch`；在途时视图页上每个改草稿的入口（筛选行、页头的布局与显示、表格列头的排序、日历的选项下拉、空态的清除筛选；以写者的 `git grep` 核全）都停用、落定之后恢复，来源只有 `isUpdating(viewId)`，项目页、迭代页、模块页不受影响；没有复用 `disabledAllOperations`；跟进只在 HOC 挂着时；成功之后的焦点；`confirmed` 的读者跟着 `filters[id]` 重算。
 3. **R7、R8、R28、R30 另存与弹窗（L!）**：四个页面给、给谁；迭代、模块的词经表的新列、共用的根不分支；显示取 `confirmed` 的拷贝；P4 的测试翻过来；弹窗只有名字、说明、图标，“Add view” 的默认显示与属性是合同的、编辑不发显示；名字初值为空；M4/M6 的换算没有被导出；`LayoutDropDown` 删干净。
-4. **R13、R14 命令面板与入口（L!）**：`viewsEntryOn` 一处、五个读者；单测表两行不变、角色的格；菜单与列表页同键；搜索只在项目范围、不挡别的组；`create_view` 的门。
+4. **R13、R14 命令面板与入口（L!）**：`viewEntryOn` 一处、五个读者；单测表两行不变、角色的格；菜单与列表页同键；搜索只在项目范围、不挡别的组；`create_view` 的门。
 5. **R16、R21（L!）**：`projectMemberIds` 的读者重新核过再删、只删专属断言；筛选行与 HOC 的字面量改键、en 文字不变、新键只在清单里。
 6. **会话分代与草稿（v0 §7.7）**：读的键带 `loginId`；写一个视图一个队列、体在轮到时算、只在确认时写；`await` 之后都经 `followInSession`；草稿卸下即丢（含 `filters[viewId]`）、迟到的播种不建回（草稿服务的代）、换会话随根重建；视图页的读每次挂载读自己的、重连不读；以 `viewId`、项目 id 为 key 的布局。
 7. **矩阵与可访问**：§2.2 的每一格；弹窗的关闭、名字、`FieldError`、被拒的焦点、自然 Tab、嵌套 Escape；行菜单的名字与右键菜单；复制的失败；每个失败都提示、不 `console.error`。
