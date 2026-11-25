@@ -8,13 +8,13 @@ import React from "react";
 import { observer } from "mobx-react";
 import { WorkItemsOutline } from "@makeplane/propel/icons";
 // nerve imports
-import type { IProjectView } from "@nerve/types";
+import type { View } from "@nerve/api-client";
 // local imports
 import { PowerKMenuBuilder } from "./builder";
 
 type Props = {
-  views: IProjectView[];
-  onSelect: (view: IProjectView) => void;
+  views: View[];
+  onSelect: (view: View) => void;
 };
 
 export const PowerKViewsMenu = observer(function PowerKViewsMenu({ views, onSelect }: Props) {
