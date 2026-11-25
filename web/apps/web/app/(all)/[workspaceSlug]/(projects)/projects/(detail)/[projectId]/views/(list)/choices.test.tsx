@@ -205,3 +205,36 @@ it("lists the project's members in the panel once they arrive", async () => {
   await settle();
   expect(option("Ann")).toBeDefined();
 });
+
+/** The name of each button of region that shows no text, an icon alone: its aria-label, or null for none. */
+const iconButtonNames = (region: Element | null | undefined) =>
+  [...(region?.querySelectorAll("button") ?? [])]
+    .filter((one) => !one.textContent?.trim())
+    .map((one) => one.getAttribute("aria-label"));
+
+it("names each button of its search, its filters' panel and its applied filters that shows an icon alone, and each search field (review O5)", async () => {
+  await listed(three);
+  await click(named("common.search.label", header()));
+  const search = header()?.querySelector<HTMLInputElement>("input") ?? null;
+  await type(search, "bug");
+  expect(iconButtonNames(search?.parentElement)).toEqual(["common.search.clear"]);
+  await click(named("common.filters", header()));
+  const panel = header()?.querySelector<HTMLInputElement>("input[type='text']") ?? null;
+  await type(panel, "1");
+  expect(iconButtonNames(panel?.parentElement)).toEqual(["common.search.clear"]);
+  await type(panel, "");
+  await click(option("Ann"));
+  await click(option("1 week ago"));
+  // the filters applied above the list: each value's removal, then its filter's, the owners' and the dates'
+  expect(iconButtonNames(named("common.clear_all")?.closest(".flex-wrap"))).toEqual([
+    "common.remove_item Ann",
+    "common.remove_item common.created_by",
+    "common.remove_item 1 week ago",
+    "common.remove_item inbox_issue.filters.created_at",
+  ]);
+  // the search fields, by the page's language, not by their placeholders alone
+  expect([search, panel].map((field) => field?.getAttribute("aria-label"))).toEqual([
+    "common.search.label",
+    "common.search.label",
+  ]);
+});

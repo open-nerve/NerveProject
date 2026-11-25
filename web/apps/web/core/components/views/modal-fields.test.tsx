@@ -121,6 +121,15 @@ it("holds a view's icon, name and description alone, no layout nor display, in t
   expect(document.activeElement).toBe(field("name"));
 });
 
+it("names its name and its description by the page's language, not by their placeholders alone (review O5)", async () => {
+  await open(root);
+  const fields = [...dialog()!.querySelectorAll<HTMLElement>("input[type='text'], textarea")];
+  expect(fields.map((one) => [one.getAttribute("name"), one.getAttribute("aria-label")])).toEqual([
+    ["name", "title"],
+    ["description", "description"],
+  ]);
+});
+
 it("makes a view of 'Add view' with its name, description and icon and the display nerve gives one made without, no filters", async () => {
   await open(root);
   expect([field("name").value, field("description").value]).toEqual(["", ""]);

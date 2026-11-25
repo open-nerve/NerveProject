@@ -58,9 +58,10 @@ export function ViewAppliedFiltersList(props: Props) {
           <button
             type="button"
             className="grid place-items-center text-tertiary hover:text-secondary"
+            aria-label={t("common.remove_item", { name: t(i18n_title) })}
             onClick={() => remove(key, null)}
           >
-            <CloseOutline height={12} width={12} />
+            <CloseOutline height={12} width={12} aria-hidden="true" />
           </button>
         </div>
       ))}

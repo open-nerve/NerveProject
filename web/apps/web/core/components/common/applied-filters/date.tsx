@@ -7,6 +7,7 @@
 import { observer } from "mobx-react";
 // icons
 import { DATE_BEFORE_FILTER_OPTIONS } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
 import { CloseOutline } from "@makeplane/propel/icons";
 // nerve constants
 import { renderFormattedDate, capitalizeFirstLetter } from "@nerve/utils";
@@ -19,6 +20,7 @@ type Props = {
 
 export const AppliedDateFilters = observer(function AppliedDateFilters(props: Props) {
   const { editable, handleRemove, values } = props;
+  const { t } = useTranslation();
 
   const getDateLabel = (value: string): string => {
     let dateLabel = "";
@@ -48,9 +50,10 @@ export const AppliedDateFilters = observer(function AppliedDateFilters(props: Pr
             <button
               type="button"
               className="grid place-items-center text-tertiary hover:text-secondary"
+              aria-label={t("common.remove_item", { name: getDateLabel(date) })}
               onClick={() => handleRemove(date)}
             >
-              <CloseOutline height={10} width={10} />
+              <CloseOutline height={10} width={10} aria-hidden="true" />
             </button>
           )}
         </div>

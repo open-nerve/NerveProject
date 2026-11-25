@@ -160,6 +160,7 @@ export function ProjectViewForm(props: Props) {
                     maxRows={8}
                     name="description"
                     placeholder={t("description")}
+                    aria-label={t("description")}
                     value={value}
                     onChange={onChange}
                   />

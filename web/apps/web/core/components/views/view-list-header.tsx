@@ -89,11 +89,12 @@ export const ViewListHeader = observer(function ViewListHeader(props: Props) {
             }
           )}
         >
-          <SearchOutline className="h-3.5 w-3.5" />
+          <SearchOutline className="h-3.5 w-3.5" aria-hidden="true" />
           <input
             ref={inputRef}
             className="w-full max-w-[234px] border-none bg-transparent text-13 text-primary placeholder:text-placeholder focus:outline-none"
             placeholder={t("common.search.label")}
+            aria-label={t("common.search.label")}
             value={choices.search}
             onChange={(e) => search(e.target.value)}
             onKeyDown={handleInputKeyDown}
@@ -102,12 +103,13 @@ export const ViewListHeader = observer(function ViewListHeader(props: Props) {
             <button
               type="button"
               className="grid place-items-center"
+              aria-label={t("common.search.clear")}
               onClick={() => {
                 search("");
                 setIsSearchOpen(false);
               }}
             >
-              <CloseOutline className="h-3 w-3" />
+              <CloseOutline className="h-3 w-3" aria-hidden="true" />
             </button>
           )}
         </div>

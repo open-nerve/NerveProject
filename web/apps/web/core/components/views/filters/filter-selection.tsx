@@ -51,19 +51,25 @@ export const ViewFiltersSelection = observer(function ViewFiltersSelection(props
     <div className="flex h-full w-full flex-col overflow-hidden">
       <div className="bg-surface-1 p-2.5 pb-0">
         <div className="flex items-center gap-1.5 rounded-sm border-[0.5px] border-subtle bg-surface-2 px-1.5 py-1 text-11">
-          <SearchOutline className="text-placeholder" width={12} height={12} />
+          <SearchOutline className="text-placeholder" width={12} height={12} aria-hidden="true" />
           <input
             type="text"
             className="w-full bg-surface-2 outline-none placeholder:text-placeholder"
             placeholder={t("common.search.label")}
+            aria-label={t("common.search.label")}
             value={filtersSearchQuery}
             onChange={(e) => setFiltersSearchQuery(e.target.value)}
             // oxlint-disable-next-line jsx_a11y/no-autofocus
             autoFocus={!isMobile}
           />
           {filtersSearchQuery !== "" && (
-            <button type="button" className="grid place-items-center" onClick={() => setFiltersSearchQuery("")}>
-              <CloseOutline className="text-tertiary" height={12} width={12} />
+            <button
+              type="button"
+              className="grid place-items-center"
+              aria-label={t("common.search.clear")}
+              onClick={() => setFiltersSearchQuery("")}
+            >
+              <CloseOutline className="text-tertiary" height={12} width={12} aria-hidden="true" />
             </button>
           )}
         </div>
