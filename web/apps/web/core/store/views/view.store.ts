@@ -95,6 +95,7 @@ export class ViewStore implements IViewStore {
   create: IViewStore["create"] = (projectId, body) => this.changes.create(projectId, body);
   update: IViewStore["update"] = (viewId, body) => this.changes.update(viewId, body);
   remove: IViewStore["remove"] = (viewId) => this.changes.remove(viewId);
+  isUpdating: IViewStore["isUpdating"] = (viewId) => this.changes.isUpdating(viewId);
 
   /**
    * The view's rows in the projects' views the store holds, each with when nerve answered that list, which is its

@@ -21,6 +21,11 @@ import { FilterItem } from "./filter-item/root";
 
 export type TFiltersRowProps<K extends TFilterProperty, E extends TExternalFilter> = {
   buttonConfig?: TAddFilterButtonProps<K, E>["buttonConfig"];
+  /**
+   * The page's draft is being saved (a view's page's Update view out, P6a spec 2.7, R29): the conditions, Add filter
+   * (gone meanwhile), Clear all and Save view stop; Update view says itself out, as ever. Off unless given.
+   */
+  disabled?: boolean;
   disabledAllOperations?: boolean;
   filter: IFilterInstance<K, E>;
   variant?: "modal" | "header";
@@ -44,19 +49,26 @@ function landAfterUpdate(update: HTMLElement, addFilter: HTMLElement | null) {
 export const FiltersRow = observer(function FiltersRow<K extends TFilterProperty, E extends TExternalFilter>(
   props: TFiltersRowProps<K, E>
 ) {
-  const { buttonConfig, disabledAllOperations: disabledAllOperationsProp = false, filter, variant = "header" } = props;
+  const {
+    buttonConfig,
+    disabled = false,
+    disabledAllOperations: disabledAllOperationsProp = false,
+    filter,
+    variant = "header",
+  } = props;
   const { t } = useTranslation();
   // states
   const [isUpdating, setIsUpdating] = useState(false);
   // Update view confirmed: where the focus lands, once the row is drawn again (its Add filter's place)
   const addFilter = useRef<HTMLSpanElement>(null);
   const [landing, setLanding] = useState<{ from: HTMLElement }>();
-  const landed = useRef<{ from: HTMLElement }>(undefined);
+  const landed = useRef<typeof landing>(undefined);
   useLayoutEffect(() => {
-    if (!landing || landed.current === landing) return;
+    // once the row works again: its Add filter, gone while the draft was being saved, drawn again
+    if (!landing || disabled || landed.current === landing) return;
     landed.current = landing;
     queueMicrotask(() => landAfterUpdate(landing.from, addFilter.current));
-  }, [landing]);
+  }, [landing, disabled]);
   // derived values
   const disabledAllOperations = disabledAllOperationsProp || !filter.configManager.areConfigsReady;
   const hasAnyConditions = filter.allConditions.length > 0;
@@ -90,7 +102,12 @@ export const FiltersRow = observer(function FiltersRow<K extends TFilterProperty
   const leftContent = (
     <>
       {filter.allConditions.map((condition) => (
-        <FilterItem key={condition.id} filter={filter} condition={condition} isDisabled={disabledAllOperations} />
+        <FilterItem
+          key={condition.id}
+          filter={filter}
+          condition={condition}
+          isDisabled={disabledAllOperations || disabled}
+        />
       ))}
       <span ref={addFilter} className="contents">
         <AddFilterButton
@@ -104,7 +121,7 @@ export const FiltersRow = observer(function FiltersRow<K extends TFilterProperty
               iconComponent: AddFilterOutline,
             },
             ...buttonConfig,
-            isDisabled: disabledAllOperations,
+            isDisabled: disabledAllOperations || disabled,
           }}
         />
       </span>
@@ -114,12 +131,22 @@ export const FiltersRow = observer(function FiltersRow<K extends TFilterProperty
   const rightContent = !disabledAllOperations && (
     <>
       <ElementTransition show={filter.canClearFilters}>
-        <Button variant="secondary" className={COMMON_OPERATION_BUTTON_CLASSNAME} onClick={filter.clearFilters}>
+        <Button
+          variant="secondary"
+          className={COMMON_OPERATION_BUTTON_CLASSNAME}
+          onClick={filter.clearFilters}
+          disabled={disabled}
+        >
           {filter.clearFilterOptions?.label ?? t("common.clear_all")}
         </Button>
       </ElementTransition>
       <ElementTransition show={filter.canSaveView}>
-        <Button variant="secondary" className={COMMON_OPERATION_BUTTON_CLASSNAME} onClick={filter.saveView}>
+        <Button
+          variant="secondary"
+          className={COMMON_OPERATION_BUTTON_CLASSNAME}
+          onClick={filter.saveView}
+          disabled={disabled}
+        >
           {filter.saveViewOptions?.label ?? t("common.filter_options.save_view")}
         </Button>
       </ElementTransition>

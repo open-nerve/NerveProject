@@ -11,11 +11,13 @@ import { ProjectLevelWorkItemFiltersHOC } from "@/components/work-item-filters/f
 import { WorkItemFiltersRow } from "@/components/work-item-filters/filters-row";
 // hooks
 import { useIssues } from "@/hooks/store/use-issues";
+import { useViews } from "@/hooks/store/use-views";
 import { IssuesStoreContext } from "@/hooks/use-issue-layout-store";
 import { useProjectViewPreferencesFollow } from "@/hooks/use-project-view-preferences-follow";
 // local imports
 import { IssuePeekOverview } from "../../peek-overview";
 import { CalendarLayout } from "../calendar/roots/project-root";
+import { DraftBusyContext } from "../draft-busy";
 import { KanBanLayout } from "../kanban/roots/project-root";
 import { ListLayout } from "../list/roots/project-root";
 import { ProjectSpreadsheetLayout } from "../spreadsheet/roots/project-root";
@@ -50,12 +52,14 @@ type Props = {
  * followed as the project page's (the list read again under it): nothing is sent, and the filters' saved baseline
  * stays the view's, so the page holds a change of the view (usePageFilterExpression, which advances it to what nerve
  * confirmed, is the pages' whose preferences are saved, not this one's), which Update view saves, or Save view as a
- * new view (P6a spec 2.7, R9).
+ * new view (P6a spec 2.7, R9). While a change of the view is out (Update view's, ViewStore.isUpdating), the row and
+ * the layouts' ways that change the draft stop (DraftBusyContext, R29), so that nothing is lost under nerve's answer.
  */
 export const ProjectViewLayoutRoot = observer(function ProjectViewLayoutRoot(props: Props) {
   const { workspaceSlug, projectId, viewId } = props;
   // store hooks
   const { issues, issuesFilter } = useIssues(EIssuesStoreType.PROJECT_VIEW);
+  const { isUpdating } = useViews();
   // hooks
   const follow = useProjectViewPreferencesFollow();
   const updateFilters = useCallback(
@@ -65,6 +69,7 @@ export const ProjectViewLayoutRoot = observer(function ProjectViewLayoutRoot(pro
   );
   // derived values
   const workItemFilters = issuesFilter.getIssueFilters(viewId);
+  const busy = isUpdating(viewId);
 
   if (!workItemFilters) return null;
 
@@ -83,19 +88,21 @@ export const ProjectViewLayoutRoot = observer(function ProjectViewLayoutRoot(pro
         preferences={issuesFilter}
       >
         {({ filter: viewWorkItemsFilter }) => (
-          <div className="relative flex h-full w-full flex-col overflow-hidden">
-            {viewWorkItemsFilter && <WorkItemFiltersRow filter={viewWorkItemsFilter} />}
-            <div className="relative h-full w-full overflow-auto bg-surface-1">
-              {/* mutation loader */}
-              {issues.getIssueLoader() === "mutation" && (
-                <div className="shadow-sm fixed top-[70px] right-[20px] z-20 flex h-[40px] w-[40px] items-center justify-center rounded-sm bg-layer-1">
-                  <Spinner className="h-4 w-4" />
-                </div>
-              )}
-              <ProjectViewIssueLayout activeLayout={workItemFilters.displayFilters?.layout} />
+          <DraftBusyContext.Provider value={busy}>
+            <div className="relative flex h-full w-full flex-col overflow-hidden">
+              {viewWorkItemsFilter && <WorkItemFiltersRow filter={viewWorkItemsFilter} disabled={busy} />}
+              <div className="relative h-full w-full overflow-auto bg-surface-1">
+                {/* mutation loader */}
+                {issues.getIssueLoader() === "mutation" && (
+                  <div className="shadow-sm fixed top-[70px] right-[20px] z-20 flex h-[40px] w-[40px] items-center justify-center rounded-sm bg-layer-1">
+                    <Spinner className="h-4 w-4" />
+                  </div>
+                )}
+                <ProjectViewIssueLayout activeLayout={workItemFilters.displayFilters?.layout} />
+              </div>
+              <IssuePeekOverview hostScope={JSON.stringify(["project-view", workspaceSlug, projectId, viewId])} />
             </div>
-            <IssuePeekOverview hostScope={JSON.stringify(["project-view", workspaceSlug, projectId, viewId])} />
-          </div>
+          </DraftBusyContext.Provider>
         )}
       </ProjectLevelWorkItemFiltersHOC>
     </IssuesStoreContext.Provider>

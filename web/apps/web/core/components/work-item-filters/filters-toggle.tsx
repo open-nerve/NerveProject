@@ -15,14 +15,16 @@ import { useWorkItemFilters } from "@/hooks/store/work-item-filters/use-work-ite
 type TWorkItemFiltersToggleProps = {
   entityType: EIssuesStoreType;
   entityId: string;
+  /** The page's draft is being saved (FiltersToggle's). */
+  disabled?: boolean;
 };
 
 export const WorkItemFiltersToggle = observer(function WorkItemFiltersToggle(props: TWorkItemFiltersToggleProps) {
-  const { entityType, entityId } = props;
+  const { entityType, entityId, disabled } = props;
   // store hooks
   const { getFilter } = useWorkItemFilters();
   // derived values
   const filter = getFilter(entityType, entityId);
 
-  return <FiltersToggle filter={filter} />;
+  return <FiltersToggle filter={filter} disabled={disabled} />;
 });

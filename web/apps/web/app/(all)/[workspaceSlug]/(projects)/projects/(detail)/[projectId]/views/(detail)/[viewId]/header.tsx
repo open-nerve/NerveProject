@@ -41,7 +41,8 @@ type TProps = {
  * crumbs to the project's views in every state of the page; and while the page shows the view (useShownView), the
  * view's crumb, whose switcher goes to another of the project's views (read once it has opened: the views list's read,
  * gated by viewEntryOn; until it answers it offers the view alone), the layouts and display of the page's draft of the
- * view, a new work item of the page for the project's admins and members (nerve's rule for work items, as the project
+ * view (stopped while a change of the view is out, R29), a new work item of the page for the project's admins and
+ * members (nerve's rule for work items, as the project
  * page's), and the view's quick actions, under the host of its page (the layout's ViewActionsHost): deleting the view
  * goes to the project's views. The list's controls and the new work item show from a medium width, the quick actions at
  * any width; the small screen's row of the page's layouts and display is the layout's (ProjectViewMobileHeader).
@@ -57,7 +58,7 @@ export const ProjectViewIssuesHeader = observer(function ProjectViewIssuesHeader
   // store hooks
   const { loader } = useProject();
   const { getProjectRoleByWorkspaceSlugAndProjectId } = useUserPermissions();
-  const { getProjectViews, fetchProjectViews } = useViews();
+  const { getProjectViews, fetchProjectViews, isUpdating } = useViews();
   const { toggleCreateIssueModal } = useCommandPalette();
   // derived values
   const { entry, view } = useShownView(workspaceSlug, projectId, viewId);
@@ -117,7 +118,7 @@ export const ProjectViewIssuesHeader = observer(function ProjectViewIssuesHeader
       {view && (
         <Header.RightItem className="items-center">
           <div className="hidden items-center gap-2 md:flex">
-            <HeaderFilters storeType={EIssuesStoreType.PROJECT_VIEW} entityId={viewId} />
+            <HeaderFilters storeType={EIssuesStoreType.PROJECT_VIEW} entityId={viewId} disabled={isUpdating(viewId)} />
             {canCreateWorkItem && (
               <Button
                 variant="primary"

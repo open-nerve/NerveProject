@@ -16,15 +16,19 @@ export function MobileLayoutSelection({
   layouts,
   onChange,
   activeLayout,
+  disabled = false,
 }: {
   layouts: EIssueLayoutTypes[];
   onChange: (layout: EIssueLayoutTypes) => void;
   activeLayout?: EIssueLayoutTypes;
+  /** Stops the layouts (a view's page's draft being saved, P6a spec 2.7, R29); off unless given. */
+  disabled?: boolean;
 }) {
   const { t } = useTranslation();
   return (
     <CustomMenu
       ariaLabel={t("common.layout")}
+      disabled={disabled}
       maxHeight="md"
       className="flex flex-grow justify-center text-13 text-secondary"
       placement="bottom-start"

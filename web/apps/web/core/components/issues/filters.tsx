@@ -25,6 +25,11 @@ type Props = {
   storeType: PageDisplayStoreType;
   /** The page's id, as the route gives it: the project's, the cycle's or the module's. */
   entityId: string;
+  /**
+   * Stops the controls that change the page's draft: the layouts, the toggle's Add filter and the display (a view's
+   * page's Update view out, P6a spec 2.7, R29). Off unless given: the other pages never give it.
+   */
+  disabled?: boolean;
 };
 const LAYOUTS = [
   EIssueLayoutTypes.LIST,
@@ -40,7 +45,7 @@ const LAYOUTS = [
  * (usePageDisplay, MobileHeaderFilters).
  */
 export const HeaderFilters = observer(function HeaderFilters(props: Props) {
-  const { storeType, entityId } = props;
+  const { storeType, entityId, disabled = false } = props;
   // i18n
   const { t } = useTranslation();
   // the page's preferences
@@ -49,16 +54,17 @@ export const HeaderFilters = observer(function HeaderFilters(props: Props) {
   return (
     <>
       <div className="hidden @4xl:flex">
-        <LayoutSelection layouts={LAYOUTS} onChange={changeLayout} selectedLayout={layout} />
+        <LayoutSelection layouts={LAYOUTS} onChange={changeLayout} selectedLayout={layout} disabled={disabled} />
       </div>
       <div className="flex @4xl:hidden">
-        <MobileLayoutSelection layouts={LAYOUTS} onChange={changeLayout} activeLayout={layout} />
+        <MobileLayoutSelection layouts={LAYOUTS} onChange={changeLayout} activeLayout={layout} disabled={disabled} />
       </div>
-      <WorkItemFiltersToggle entityType={storeType} entityId={entityId} />
+      <WorkItemFiltersToggle entityType={storeType} entityId={entityId} disabled={disabled} />
       <FiltersDropdown
         miniIcon={<PreferencesOutline className="size-3.5" />}
         title={t("common.display")}
         placement="bottom-end"
+        disabled={disabled}
       >
         <DisplayFiltersSelection {...display} />
       </FiltersDropdown>

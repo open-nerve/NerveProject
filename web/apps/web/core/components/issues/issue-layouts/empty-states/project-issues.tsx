@@ -4,6 +4,7 @@
  * See the LICENSE file for details.
  */
 
+import { useContext } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
 // nerve imports
@@ -15,11 +16,13 @@ import { EIssuesStoreType, EUserProjectRoles } from "@nerve/types";
 import { useCommandPalette } from "@/hooks/store/use-command-palette";
 import { useUserPermissions } from "@/hooks/store/user";
 import { useWorkItemFilterInstance } from "@/hooks/store/work-item-filters/use-work-item-filter-instance";
+import { DraftBusyContext } from "../draft-busy";
 
 /**
  * A list page of the project's work items with none to show, by the store type and id of the page's work item filter:
  * the project's page's, by the project; a project's view's page's, by the view (P6a spec 2.5). While the page's filter
- * applies any, the clearing of it; else a new work item, of the page, for the project's admins and members.
+ * applies any, the clearing of it (none while the page's draft is being saved, R29); else a new work item, of the page,
+ * for the project's admins and members.
  */
 export const ProjectListEmptyState = observer(function ProjectListEmptyState(props: {
   storeType: EIssuesStoreType.PROJECT | EIssuesStoreType.PROJECT_VIEW;
@@ -32,6 +35,7 @@ export const ProjectListEmptyState = observer(function ProjectListEmptyState(pro
   const { t } = useTranslation();
   // store hooks
   const { toggleCreateIssueModal } = useCommandPalette();
+  const busy = useContext(DraftBusyContext);
   const { allowPermissions, getProjectRoleByWorkspaceSlugAndProjectId } = useUserPermissions();
   // derived values
   const projectWorkItemFilter = useWorkItemFilterInstance(storeType, filterId);
@@ -59,7 +63,7 @@ export const ProjectListEmptyState = observer(function ProjectListEmptyState(pro
             {
               label: t("project_issues.empty_state.issues_empty_filter.secondary_button.text"),
               onClick: projectWorkItemFilter?.clearFilters,
-              disabled: !canReadProject || !projectWorkItemFilter,
+              disabled: !canReadProject || !projectWorkItemFilter || busy,
               variant: "secondary",
             },
           ]}

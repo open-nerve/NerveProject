@@ -2,7 +2,8 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 // The filters row's own words are the page's language's (P6a spec 2.7, R21): a modal's row says "Filters" on its Add
 // filter while it holds no condition; a page's row says Clear all, Save view, Update view, and Confirming while the
-// update is out (fake-i18n: a text is its key; en's words are unchanged). The row and the filter are real, over a
+// update is out (fake-i18n: a text is its key; en's words are unchanged). While the page says its draft is being saved
+// (R29), the row stops its ways of changing it; unless it says so, they work. The row and the filter are real, over a
 // session's stores; what Save view and Update view do is the filter's options (the test's).
 import { act } from "react";
 import { createRoot } from "react-dom/client";
@@ -95,4 +96,23 @@ it("says Clear all, Save view and Update view in the page's language, and Confir
   await act(async () => vi.advanceTimersByTimeAsync(500));
   // the update done, the display still the page's change (hasAdditionalChanges): Update view again
   expect(buttonOf("common.filter_options.update_view")?.disabled).toBe(false);
+});
+
+it.each([
+  ["stops its conditions, Add filter, Clear all and Save view while the page's draft is being saved", true],
+  ["leaves them working unless the page says so", undefined],
+] as const)("%s", async (_, disabled) => {
+  const { filter } = filterOf("v-busy", true);
+  await act(async () => root.render(<FiltersRow filter={filter} disabled={disabled} />));
+  await act(async () => vi.advanceTimersByTimeAsync(500));
+  const busy = disabled === true;
+  expect(host.querySelector("button[aria-label='Remove filter']") === null, "a condition's controls").toBe(busy);
+  expect(
+    buttons().some((text) => text?.includes("common.filter_options.add")),
+    "Add filter"
+  ).toBe(!busy);
+  expect(buttonOf("common.clear_all")?.disabled, "Clear all").toBe(busy);
+  expect(buttonOf("common.filter_options.save_view")?.disabled, "Save view").toBe(busy);
+  // Update view is the update's own: it says itself out, as ever
+  expect(buttonOf("common.filter_options.update_view")?.disabled, "Update view").toBe(false);
 });

@@ -19,10 +19,12 @@ type Props = {
   layouts: EIssueLayoutTypes[];
   onChange: (layout: EIssueLayoutTypes) => void;
   selectedLayout: EIssueLayoutTypes | undefined;
+  /** Stops the layouts (a view's page's draft being saved, P6a spec 2.7, R29); off unless given. */
+  disabled?: boolean;
 };
 
 export function LayoutSelection(props: Props) {
-  const { layouts, onChange, selectedLayout } = props;
+  const { layouts, onChange, selectedLayout, disabled = false } = props;
   const { isMobile } = usePlatformOS();
   const { t } = useTranslation();
   const handleOnChange = (layoutKey: EIssueLayoutTypes) => {
@@ -41,6 +43,7 @@ export function LayoutSelection(props: Props) {
               type="button"
               aria-label={t(layout.i18n_title)}
               aria-pressed={selectedLayout === layout.key}
+              disabled={disabled}
               className={cn(
                 "group grid h-5.5 w-7 place-items-center overflow-hidden rounded-sm transition-all hover:bg-layer-transparent-hover",
                 {

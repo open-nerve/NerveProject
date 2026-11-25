@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { runInAction } from "mobx";
+import { observable, runInAction } from "mobx";
 // nerve imports
 import type { View, ViewCreate, ViewUpdate } from "@nerve/api-client";
 // lib
@@ -18,6 +18,8 @@ export interface IViewChanges {
   create: (projectId: string, body: ViewCreate) => Promise<View>;
   update: (viewId: string, body: () => ViewUpdate) => Promise<View>;
   remove: (viewId: string) => Promise<void>;
+  /** Whether the view has a change of its own queued or out (observable; P6a spec 2.7, R29). */
+  isUpdating: (viewId: string) => boolean;
 }
 
 /** What the changes write nerve's answers into and find their view in: the view store's (ViewStore). */
@@ -40,10 +42,14 @@ const reread =
  * its project's views and the view's own read; the page changes nothing before (no change of its own). nerve answers a
  * change of nothing with the view as it holds it, which is written as any answer. A refusal fails the change and writes
  * nothing; so does a change of a session the tab has left, which fails before it is sent (the session's client).
+ * Whether a view has a change of its own (a change, a deletion) queued or out is observable, from its sending to its
+ * answer or refusal: the view's page stops what changes its draft meanwhile (R29).
  */
 export class ViewChanges implements IViewChanges {
   /** The queues of the changes, one for each view's, by its id, and one for each project's creations. */
   private readonly queues = new Map<string, ReturnType<typeof oneAtATime>>();
+  /** How many changes of each view are queued or out, by its id; none, no entry. */
+  private readonly pending = observable.map<string, number>();
 
   constructor(
     private readonly views: HeldViews,
@@ -66,7 +72,7 @@ export class ViewChanges implements IViewChanges {
    * before it are answered; the store then shows nerve's answer. Fails, changing nothing, when refused.
    */
   update = (viewId: string, body: () => ViewUpdate): Promise<View> =>
-    this.queueOf(viewId)(async () => {
+    this.ofView(viewId, async () => {
       const view = await this.service.updateView(viewId, body());
       runInAction(() => {
         this.views.lists.confirm(view.project_id ?? undefined, replaced(view));
@@ -81,7 +87,7 @@ export class ViewChanges implements IViewChanges {
    * turn (one deleted before it).
    */
   remove = (viewId: string): Promise<void> =>
-    this.queueOf(viewId)(async () => {
+    this.ofView(viewId, async () => {
       const view = this.views.getViewById(viewId);
       if (!view) throw new Error("View not found");
       await this.service.deleteView(view.id);
@@ -90,6 +96,31 @@ export class ViewChanges implements IViewChanges {
         this.views.details.confirm(view.id, () => null);
       });
     });
+
+  /** @description whether the view has a change of its own queued or out; observable */
+  isUpdating = (viewId: string): boolean => (this.pending.get(viewId) ?? 0) > 0;
+
+  /**
+   * Queues a change of the view, counted from now until it settles: answered or refused (its count drops before
+   * the caller's own follow-up runs, which waits on the same settling).
+   */
+  private ofView<T>(viewId: string, task: () => Promise<T>): Promise<T> {
+    this.count(viewId, 1);
+    const run = this.queueOf(viewId)(task);
+    void run.then(
+      () => this.count(viewId, -1),
+      () => this.count(viewId, -1)
+    );
+    return run;
+  }
+
+  private count(viewId: string, step: 1 | -1): void {
+    runInAction(() => {
+      const left = (this.pending.get(viewId) ?? 0) + step;
+      if (left > 0) this.pending.set(viewId, left);
+      else this.pending.delete(viewId);
+    });
+  }
 
   /** The queue of the changes of key, a view's id or a project's creations. */
   private queueOf(key: string): ReturnType<typeof oneAtATime> {

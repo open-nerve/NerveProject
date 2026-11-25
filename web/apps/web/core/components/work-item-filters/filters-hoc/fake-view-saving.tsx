@@ -46,8 +46,11 @@ export async function viewSavingTab(opened: Opened = {}) {
     draft: () => tab.app.issue.projectViewIssuesFilter.confirmed(view.id),
     /** The changes of First sent to nerve. */
     patches: () => tab.nerve.to(`/api/v0/views/${view.id}`).filter((call) => call.method === "PATCH"),
-    /** Opens First's page: nerve answers its read as First and its list; the page's filter is then made. */
-    open: async () => {
+    /**
+     * Opens First's page: nerve answers its read as First and its list, of the work item "one" unless empty; the page's
+     * filter is then made.
+     */
+    open: async (empty = false) => {
       await tab.render(
         <SWRConfig value={{ provider: () => new Map() }}>
           <MemoryRouter initialEntries={[`/ws/projects/A/views/${view.id}`]}>
@@ -62,7 +65,10 @@ export async function viewSavingTab(opened: Opened = {}) {
         </SWRConfig>
       );
       await tab.answerRead(view);
-      await tab.answerList();
+      if (empty) {
+        await until(() => tab.lists().length === 1, "the project's list");
+        await act(async () => tab.lists()[0]!.answer(json(200, issuePageOf([]))));
+      } else await tab.answerList();
       await settle();
       await until(
         () => tab.app.workItemFilters.getFilter(EIssuesStoreType.PROJECT_VIEW, view.id) !== undefined,
