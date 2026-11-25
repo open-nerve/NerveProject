@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
-// "Save view" collapsed (P4 spec 2.8, R17): the filters row of the project's work items page, a cycle's and a module's
-// offers no "Save view", even with conditions in it, the project's views on and an admin to save it: nerve has no
-// views until P6a, which brings it back with them. The row's other operations stay. The pages' work items, the stores
-// and HTTP are real; the preview is left out.
+// "Save view" offered (P6a spec 2.2, 2.7, R7; P4 spec 2.8, R17 collapsed it until nerve had views): the filters row of
+// the project's work items page, a cycle's and a module's offers "Save view" with conditions in it to whom nerve lets
+// make a view (viewsCreatableBy): an admin or a member, the project's views on; never a guest, nor with the views off.
+// The row's other operations stay. Its words are keys (fake-i18n). The pages' work items, the stores and HTTP are
+// real; the preview is left out.
 import { act } from "react";
 import { MemoryRouter } from "react-router";
 import { SWRConfig } from "swr";
@@ -48,6 +49,11 @@ vi.mock("../../peek-overview", () => ({ IssuePeekOverview: () => null }));
 const CONDITIONS = { priority: ["high"] };
 /** The project A as an admin holds it, its views on. */
 const ADMIN = { role: 20, project: { issue_views_view: true } } as const;
+/** The project A as a guest holds it, its views on. */
+const GUEST = { role: 5, project: { issue_views_view: true } } as const;
+/** The project A as an admin holds it, its views off. */
+const VIEWS_OFF = { role: 20, project: { issue_views_view: false } } as const;
+type Caller = typeof ADMIN | typeof GUEST | typeof VIEWS_OFF;
 
 let close: (() => Promise<void>) | undefined;
 afterEach(async () => {
@@ -55,9 +61,9 @@ afterEach(async () => {
   close = undefined;
 });
 
-/** A cycle's or a module's page of A, shown with the page's conditions. */
-async function planningPage(type: EIssuesStoreType.CYCLE | EIssuesStoreType.MODULE) {
-  const page = await planningPageTab(type, ADMIN);
+/** A cycle's or a module's page of A, shown with the page's conditions to caller (an admin unless given). */
+async function planningPage(type: EIssuesStoreType.CYCLE | EIssuesStoreType.MODULE, caller: Caller = ADMIN) {
+  const page = await planningPageTab(type, caller);
   bound.app = page.app;
   close = page.close;
   const cycle = type === EIssuesStoreType.CYCLE;
@@ -66,16 +72,16 @@ async function planningPage(type: EIssuesStoreType.CYCLE | EIssuesStoreType.MODU
   await page.show(preferences, page.listOf("list"));
 }
 
-/** The project A's work items page, shown with the page's conditions. */
-async function projectPage() {
+/** The project A's work items page, shown with the page's conditions to caller (an admin unless given). */
+async function projectPage(caller: Caller = ADMIN) {
   const tab = await issueSelectionTab();
   bound.app = tab.app;
   close = tab.close;
   bound.params = { workspaceSlug: "ws", projectId: "A" };
   tab.app.projectRoot.project.confirmProject(tab.project, (project) => ({
     ...project,
-    member_role: ADMIN.role,
-    ...ADMIN.project,
+    member_role: caller.role,
+    ...caller.project,
   }));
   await tab.app.state.fetchProjectStates("A");
   tab.nerve.calls.length = 0;
@@ -97,12 +103,26 @@ async function projectPage() {
 }
 
 it.each([
-  ["the project's page", projectPage],
+  ["the project's page", () => projectPage()],
   ["a cycle's page", () => planningPage(EIssuesStoreType.CYCLE)],
   ["a module's page", () => planningPage(EIssuesStoreType.MODULE)],
-])("offers no Save view on %s, its conditions shown to an admin, its project's views on", async (_, open) => {
+])("offers Save view on %s, its conditions shown to an admin, its project's views on", async (_, open) => {
   await open();
   await act(async () => vi.advanceTimersByTimeAsync(500));
-  expect(buttonOf("Clear all"), "the row of the page's conditions").toBeDefined();
-  expect(buttonOf("Save view")).toBeUndefined();
+  expect(buttonOf("common.clear_all"), "the row of the page's conditions").toBeDefined();
+  expect(buttonOf("common.filter_options.save_view")).toBeDefined();
+});
+
+it.each([
+  ["to a guest, its project's views on", () => projectPage(GUEST)],
+  ["with its project's views off, to an admin", () => projectPage(VIEWS_OFF)],
+  [
+    "of a cycle's page with its project's views off, to an admin",
+    () => planningPage(EIssuesStoreType.CYCLE, VIEWS_OFF),
+  ],
+])("offers no Save view %s, the page's conditions shown", async (_, open) => {
+  await open();
+  await act(async () => vi.advanceTimersByTimeAsync(500));
+  expect(buttonOf("common.clear_all"), "the row of the page's conditions").toBeDefined();
+  expect(buttonOf("common.filter_options.save_view")).toBeUndefined();
 });

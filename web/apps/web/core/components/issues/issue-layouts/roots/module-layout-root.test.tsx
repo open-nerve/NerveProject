@@ -89,7 +89,7 @@ it("shows the conditions of the page's filters, and opens its preview in the pag
   await opened();
   await page.show(modulePreferencesOf({}, { priority: ["high"] }), page.listOf("list"));
   expect(page.lists()[0]!.query).toMatchObject({ module_id: M1, priority: "high" });
-  expect(buttonOf("Clear all"), "the row of the page's conditions").toBeDefined();
+  expect(buttonOf("common.clear_all"), "the row of the page's conditions").toBeDefined();
   expect(JSON.parse(bound.peek!.hostScope)).toEqual(["module", "ws", "A", M1]);
 });
 

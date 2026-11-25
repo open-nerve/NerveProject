@@ -64,30 +64,33 @@ export const FiltersToggle = observer(function FiltersToggle<P extends TFilterPr
     "text-accent-primary [&_path]:fill-current": showFilterRowChangesPill,
   });
 
-  // Show the add filter button when there are no active conditions, the filter row is hidden, and no unsaved changes exist
-  if (filter && showAddFilterButton) {
-    return (
-      <AddFilterButton
-        filter={filter}
-        buttonConfig={{
-          variant: "secondary",
-          className: COMMON_CLASSNAME,
-          label: null,
-        }}
-        onFilterSelect={() => filter?.toggleVisibility(true)}
-      />
-    );
-  }
-
+  // The page's filters toggle is marked: the focus lands on it once Update view went with the filters row gone
+  // (FiltersRow, P6a spec 2.7).
   return (
-    <IconButton
-      size="lg"
-      variant="secondary"
-      icon={showFilterRowChangesPill ? SelectedFilterOutline : FilterOutline}
-      aria-label={t("common.filters")}
-      onClick={handleToggleFilter}
-      className={buttonClassName}
-      iconClassName={iconClassName}
-    />
+    <span data-filters-toggle="" className="contents">
+      {/* Show the add filter button when there are no active conditions, the filter row is hidden, and no unsaved
+      changes exist */}
+      {filter && showAddFilterButton ? (
+        <AddFilterButton
+          filter={filter}
+          buttonConfig={{
+            variant: "secondary",
+            className: COMMON_CLASSNAME,
+            label: null,
+          }}
+          onFilterSelect={() => filter?.toggleVisibility(true)}
+        />
+      ) : (
+        <IconButton
+          size="lg"
+          variant="secondary"
+          icon={showFilterRowChangesPill ? SelectedFilterOutline : FilterOutline}
+          aria-label={t("common.filters")}
+          onClick={handleToggleFilter}
+          className={buttonClassName}
+          iconClassName={iconClassName}
+        />
+      )}
+    </span>
   );
 });

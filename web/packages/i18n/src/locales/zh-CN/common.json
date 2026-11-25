@@ -585,6 +585,9 @@
       "all_applied": "已应用所有筛选条件",
       "config_error": "筛选配置错误",
       "config_error_description": "无法应用该筛选条件，请刷新后重试。",
+      "save_view": "保存为视图",
+      "update_view": "更新视图",
+      "confirming": "正在确认",
       "fields": {
         "state_group": "状态组",
         "state_id": "状态",

@@ -88,7 +88,7 @@ it("shows the conditions of the page's filters, and opens its preview in the pag
   await opened();
   await page.show(cyclePreferencesOf({}, { priority: ["high"] }), layouts.list.page());
   expect(page.lists()[0]!.query).toMatchObject({ cycle_id: C1, priority: "high" });
-  expect(buttonOf("Clear all"), "the row of the page's conditions").toBeDefined();
+  expect(buttonOf("common.clear_all"), "the row of the page's conditions").toBeDefined();
   expect(JSON.parse(bound.peek!.hostScope)).toEqual(["cycle", "ws", "A", C1]);
 });
 

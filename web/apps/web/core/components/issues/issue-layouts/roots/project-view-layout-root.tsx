@@ -49,7 +49,8 @@ type Props = {
  * and rows, and the page's own preview, whose host is the page's. A change of the filters is the draft's alone,
  * followed as the project page's (the list read again under it): nothing is sent, and the filters' saved baseline
  * stays the view's, so the page holds a change of the view (usePageFilterExpression, which advances it to what nerve
- * confirmed, is the pages' whose preferences are saved, not this one's).
+ * confirmed, is the pages' whose preferences are saved, not this one's), which Update view saves, or Save view as a
+ * new view (P6a spec 2.7, R9).
  */
 export const ProjectViewLayoutRoot = observer(function ProjectViewLayoutRoot(props: Props) {
   const { workspaceSlug, projectId, viewId } = props;
@@ -77,6 +78,9 @@ export const ProjectViewLayoutRoot = observer(function ProjectViewLayoutRoot(pro
         updateFilters={updateFilters}
         projectId={projectId}
         workspaceSlug={workspaceSlug}
+        enableSaveView
+        enableUpdateView
+        preferences={issuesFilter}
       >
         {({ filter: viewWorkItemsFilter }) => (
           <div className="relative flex h-full w-full flex-col overflow-hidden">

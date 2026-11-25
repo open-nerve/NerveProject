@@ -1,5 +1,5 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
-import type { Issue, IssueDetail } from "@nerve/api-client";
+import type { Issue, IssueDetail, ViewFilters } from "@nerve/api-client";
 import { EIssuesStoreType, type IssueChange } from "@nerve/types";
 import type { PlanningPage } from "@/store/issue/helpers/planning-page-issues.store";
 import type { RootStore } from "@/store/root.store";
@@ -37,6 +37,11 @@ type PlanningPageDomain = {
   join: (page: PlanningPage) => Pick<IssueChange, "cycle_id" | "modules">;
   /** Sends the work item's removal from the page's cycle or module; nerve's answer or refusal is the caller's. */
   remove: (root: RootStore, slug: string, page: PlanningPage, id: string) => Promise<unknown>;
+  /**
+   * What a view saved from the page keeps besides the page's filters (P6a spec 2.7, R7): the page's cycle or module,
+   * by its id, so that the view lists what the page does; the page's filters never hold it (issue-filters.ts).
+   */
+  viewTerms: (id: string) => Pick<ViewFilters, "cycle_id" | "module_id">;
 };
 
 /** Each domain's row; the store type picks it. */
@@ -53,6 +58,7 @@ export const PLANNING_PAGE_DOMAINS: Record<PlanningPageStoreType, PlanningPageDo
     join: (page) => ({ cycle_id: page.entityID }),
     // A work item is in one cycle at most: it leaves it for none (P5b spec 2.5).
     remove: ({ issue }, slug, page, id) => issue.cycleIssues.updateIssue(slug, page.projectID, id, { cycle_id: null }),
+    viewTerms: (id) => ({ cycle_id: [id] }),
   },
   [EIssuesStoreType.MODULE]: {
     param: "moduleId",
@@ -66,6 +72,7 @@ export const PLANNING_PAGE_DOMAINS: Record<PlanningPageStoreType, PlanningPageDo
     join: (page) => ({ modules: { add: [page.entityID] } }),
     // A work item is in a set of modules, which nerve replaces whole: it is worked out in its turn (P6b spec 2.5, R5).
     remove: ({ issue }, slug, page, id) => issue.moduleIssues.removeIssueFromModule(slug, page, id),
+    viewTerms: (id) => ({ module_id: [id] }),
   },
 };
 

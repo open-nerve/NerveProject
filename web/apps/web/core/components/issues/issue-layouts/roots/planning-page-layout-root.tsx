@@ -64,14 +64,15 @@ type Props = {
  * preferences first, with a retry; once given, a read of them again that fails leaves the list under the preferences
  * read, with a line above it that says so, with a retry (P6b spec 2.8, R4). Then the page's filters (their conditions
  * saved as its preferences, followed as the project page's), the row of their conditions, the layout they choose, and
- * the page's own preview, whose host is the page's (re-66 L4), with what the page puts beside it. Each difference of a
- * domain is a row of the tables, never a branch here.
+ * the page's own preview, whose host is the page's (re-66 L4), with what the page puts beside it. The page's Save view
+ * keeps its cycle or module besides its filters (P6a spec 2.7, R7). Each difference of a domain is a row of the
+ * tables, never a branch here.
  */
 export const PlanningPageLayoutRoot = observer(function PlanningPageLayoutRoot({ storeType, children }: Props) {
   // router
   const params = useParams();
   const { workspaceSlug, projectId } = params;
-  const { param, name } = PLANNING_PAGE_DOMAINS[storeType];
+  const { param, name, viewTerms } = PLANNING_PAGE_DOMAINS[storeType];
   const { domain, preferences: preferencesKey, filters } = PLANNING_PAGE_LAYOUTS[storeType];
   const entityId = params[param];
   // store hooks
@@ -104,6 +105,9 @@ export const PlanningPageLayoutRoot = observer(function PlanningPageLayoutRoot({
         updateFilters={updateExpression}
         projectId={projectId}
         workspaceSlug={workspaceSlug}
+        enableSaveView
+        preferences={issuesFilter}
+        viewTerms={viewTerms}
       >
         {({ filter: pageWorkItemsFilter }) => (
           <div className="relative flex h-full w-full flex-col overflow-hidden">

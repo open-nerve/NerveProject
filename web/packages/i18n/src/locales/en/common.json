@@ -585,6 +585,9 @@
       "all_applied": "All filters applied",
       "config_error": "Filter configuration error",
       "config_error_description": "This filter could not be applied. Please reload and try again.",
+      "save_view": "Save view",
+      "update_view": "Update view",
+      "confirming": "Confirming",
       "fields": {
         "state_group": "State Group",
         "state_id": "State",

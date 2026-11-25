@@ -3,9 +3,9 @@
 // A project's view's page's work items (P6a spec 2.5, 2.6, R10, R18): the project's list under the page's draft of the
 // view, by the view's store type, with the page's own preview host. A change of the page's filters is the draft's
 // alone: the list is read again under it, nothing is sent to nerve, and the filters' saved baseline stays the view's
-// (so that Update view, T8, has a change to save); neither Save view nor Update view is offered yet (T8 gives them). A
-// condition on something nerve no longer has is sent as the view holds it. The stores, the layouts, SWR and HTTP are
-// real (fake-view-page.tsx); the preview a stand-in that says its host and its store type.
+// (so that Update view has a change to save): the page's own view, of a member, offers Save view and Update view
+// (R10's T8 half, P6a spec 2.7). A condition on something nerve no longer has is sent as the view holds it. The stores,
+// the layouts, SWR and HTTP are real (fake-view-page.tsx); the preview a stand-in that says its host and its store type.
 import { act, type ReactNode } from "react";
 import { MemoryRouter } from "react-router";
 import { SWRConfig } from "swr";
@@ -15,7 +15,9 @@ import { EIssuesStoreType } from "@nerve/types";
 import { viewPageTab } from "@/components/views/fake-view-page";
 import { until } from "@/lib/auth/fake-time";
 import { toProjectFilters } from "@/lib/issue-filters";
+import { accountOf } from "@/store/member/fake-users";
 import type { RootStore } from "@/store/root.store";
+import { seedAccount } from "@/store/user/fake-account";
 import { ProjectViewLayoutRoot } from "./project-view-layout-root";
 
 const bound = vi.hoisted(() => ({
@@ -58,6 +60,8 @@ let view: View;
 beforeEach(async () => {
   page = await viewPageTab();
   bound.app = page.app;
+  // the caller, u-me, the view's owner
+  await seedAccount(page.nerve, page.app.user, accountOf("me"));
   // the view's conditions: a priority, and a label nerve no longer has
   view = page.view("First", { filters: { priority: ["high"], label_id: [GONE] } });
   bound.params = { workspaceSlug: "ws", projectId: "A", viewId: view.id };
@@ -105,7 +109,7 @@ it("changes only its draft as its filters change: the list again under it, nothi
   expect(page.writes()).toEqual([]);
   // the saved baseline is still the view's: the page holds a change of it
   expect(filter().hasChanges).toBe(true);
-  // neither Save view nor Update view is the page's yet (T8)
+  // the change is the page's to save: as a new view, or as the view, the member's own (R10's T8 half)
   expect(filter().hasActiveFilters).toBe(true);
-  expect([filter().canSaveView, filter().canUpdateView]).toEqual([false, false]);
+  expect([filter().canSaveView, filter().canUpdateView]).toEqual([true, true]);
 });

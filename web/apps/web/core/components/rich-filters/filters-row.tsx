@@ -4,11 +4,12 @@
  * See the LICENSE file for details.
  */
 
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useLayoutEffect, useRef, useState } from "react";
 import { observer } from "mobx-react";
 import { AddFilterOutline } from "@makeplane/propel/icons";
 import { Transition } from "@headlessui/react";
 // nerve imports
+import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 import type { IFilterInstance } from "@nerve/shared-state";
 import type { TExternalFilter, TFilterProperty } from "@nerve/types";
@@ -25,12 +26,37 @@ export type TFiltersRowProps<K extends TFilterProperty, E extends TExternalFilte
   variant?: "modal" | "header";
 };
 
+/**
+ * Gives the focus, lost as Update view's button went (P6a spec 2.7; re-96 m6), to the row's Add filter, or else, the
+ * row gone, to the page's filters toggle (FiltersToggle's mark): to the first of them that takes it. Not when the focus
+ * is elsewhere: where the person put it while nerve answered.
+ */
+function landAfterUpdate(update: HTMLElement, addFilter: HTMLElement | null) {
+  const focused = document.activeElement;
+  if (focused !== null && focused !== document.body && focused !== update) return;
+  const toggles = document.querySelectorAll<HTMLElement>("[data-filters-toggle] button");
+  for (const target of [addFilter?.querySelector<HTMLElement>("button"), ...toggles]) {
+    target?.focus();
+    if (target && document.activeElement === target) return;
+  }
+}
+
 export const FiltersRow = observer(function FiltersRow<K extends TFilterProperty, E extends TExternalFilter>(
   props: TFiltersRowProps<K, E>
 ) {
   const { buttonConfig, disabledAllOperations: disabledAllOperationsProp = false, filter, variant = "header" } = props;
+  const { t } = useTranslation();
   // states
   const [isUpdating, setIsUpdating] = useState(false);
+  // Update view confirmed: where the focus lands, once the row is drawn again (its Add filter's place)
+  const addFilter = useRef<HTMLSpanElement>(null);
+  const [landing, setLanding] = useState<{ from: HTMLElement }>();
+  const landed = useRef<{ from: HTMLElement }>(undefined);
+  useLayoutEffect(() => {
+    if (!landing || landed.current === landing) return;
+    landed.current = landing;
+    queueMicrotask(() => landAfterUpdate(landing.from, addFilter.current));
+  }, [landing]);
   // derived values
   const disabledAllOperations = disabledAllOperationsProp || !filter.configManager.areConfigsReady;
   const hasAnyConditions = filter.allConditions.length > 0;
@@ -42,37 +68,46 @@ export const FiltersRow = observer(function FiltersRow<K extends TFilterProperty
   };
 
   const modalButtonConfig: Partial<TAddFilterButtonProps<K, E>["buttonConfig"]> = {
-    label: !hasAnyConditions ? "Filters" : null,
+    label: !hasAnyConditions ? t("common.filters") : null,
   };
 
-  const handleUpdate = useCallback(async () => {
-    setIsUpdating(true);
-    try {
-      await filter.updateView();
-    } finally {
-      setTimeout(() => setIsUpdating(false), 240); // To avoid flickering
-    }
-  }, [filter]);
+  const handleUpdate = useCallback(
+    async (event: React.MouseEvent<HTMLButtonElement>) => {
+      const update = event.currentTarget;
+      setIsUpdating(true);
+      try {
+        await filter.updateView();
+        setLanding({ from: update });
+      } catch {
+        // refused: the page said why; the change stays the row's, and so does its button
+      } finally {
+        setTimeout(() => setIsUpdating(false), 240); // To avoid flickering
+      }
+    },
+    [filter]
+  );
 
   const leftContent = (
     <>
       {filter.allConditions.map((condition) => (
         <FilterItem key={condition.id} filter={filter} condition={condition} isDisabled={disabledAllOperations} />
       ))}
-      <AddFilterButton
-        filter={filter}
-        buttonConfig={{
-          label: null,
-          ...(variant === "modal" ? modalButtonConfig : headerButtonConfig),
-          size: "lg",
-          iconConfig: {
-            shouldShowIcon: true,
-            iconComponent: AddFilterOutline,
-          },
-          ...buttonConfig,
-          isDisabled: disabledAllOperations,
-        }}
-      />
+      <span ref={addFilter} className="contents">
+        <AddFilterButton
+          filter={filter}
+          buttonConfig={{
+            label: null,
+            ...(variant === "modal" ? modalButtonConfig : headerButtonConfig),
+            size: "lg",
+            iconConfig: {
+              shouldShowIcon: true,
+              iconComponent: AddFilterOutline,
+            },
+            ...buttonConfig,
+            isDisabled: disabledAllOperations,
+          }}
+        />
+      </span>
     </>
   );
 
@@ -80,12 +115,12 @@ export const FiltersRow = observer(function FiltersRow<K extends TFilterProperty
     <>
       <ElementTransition show={filter.canClearFilters}>
         <Button variant="secondary" className={COMMON_OPERATION_BUTTON_CLASSNAME} onClick={filter.clearFilters}>
-          {filter.clearFilterOptions?.label ?? "Clear all"}
+          {filter.clearFilterOptions?.label ?? t("common.clear_all")}
         </Button>
       </ElementTransition>
       <ElementTransition show={filter.canSaveView}>
         <Button variant="secondary" className={COMMON_OPERATION_BUTTON_CLASSNAME} onClick={filter.saveView}>
-          {filter.saveViewOptions?.label ?? "Save view"}
+          {filter.saveViewOptions?.label ?? t("common.filter_options.save_view")}
         </Button>
       </ElementTransition>
       <ElementTransition show={filter.canUpdateView}>
@@ -96,7 +131,9 @@ export const FiltersRow = observer(function FiltersRow<K extends TFilterProperty
           loading={isUpdating}
           disabled={isUpdating}
         >
-          {isUpdating ? "Confirming" : (filter.updateViewOptions?.label ?? "Update view")}
+          {isUpdating
+            ? t("common.filter_options.confirming")
+            : (filter.updateViewOptions?.label ?? t("common.filter_options.update_view"))}
         </Button>
       </ElementTransition>
     </>
