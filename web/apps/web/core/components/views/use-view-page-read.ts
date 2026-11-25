@@ -17,7 +17,8 @@ import { NoViewDraftError } from "@/store/issue/project-view/view-draft.service"
 
 /**
  * Where a view's page is with its own read of the view: reading it; nerve finds no such view; why nerve could not read
- * it, with a retry; read: the page's draft seeded, unless the view was deleted here meanwhile (ViewVisit).
+ * it, with a retry; read: the page's draft seeded, or none for a view deleted meanwhile, which ViewVisit shows as
+ * not found unless its own page sent the deletion and is leaving.
  */
 export type ViewPageRead =
   | { state: "reading" }
@@ -65,10 +66,10 @@ export function useViewPageRead(workspaceSlug: string, viewId: string): ViewPage
 
 /**
  * The end of a read of the view that made no draft (NoViewDraftError, view-draft.service.ts): its page left before
- * nerve answered, or the view was deleted here meanwhile, which the page shows (ViewVisit). Either is no failure of the
- * read. As SWR's error it would reach not the page that asked but the mount that holds the read's key then: the same
- * view entered again, whose own read, sent later, nerve may answer first (review m1). Ended so, a read SWR finds
- * overtaken by a later one writes nothing. Any other failure is the read's.
+ * nerve answered, or the view was deleted meanwhile, which ViewVisit shows as not found unless its own page sent the
+ * deletion. Either is no failure of the read. As SWR's error it would reach not the page that asked but the mount that
+ * holds the read's key then: the same view entered again, whose own read, sent later, nerve may answer first (review
+ * m1). Ended so, a read SWR finds overtaken by a later one writes nothing. Any other failure is the read's.
  */
 function noDraftIsNoFailure(error: unknown): void {
   if (!(error instanceof NoViewDraftError)) throw error;

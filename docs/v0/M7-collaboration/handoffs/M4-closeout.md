@@ -61,7 +61,7 @@ M4 的最终 C12、准确分支 CI 和未来 main 集成分别由[验收台账](
 
 **处理结果（M7/P3b，视图的接口一支）：** 项目视图与工作区视图的接口已接通（`listProjectViews`、`createProjectView`、`listWorkspaceViews`、`createWorkspaceView`、`getView`、`updateView`、`deleteView`，[P3b spec](../specs/P3b-views.md) §2.4）；已存的词原样作为查询发给项目列表与工作区跨项目列表都被接受（组合测试 `TestWorkspaceViewsThroughTheApp` 的往返与 e2e `h14-workspace-views.spec.ts`）。页面（两个布局根、`PROJECT_VIEW`/`GLOBAL` 的 store、视图详情的列表部分）与旧 `WorkspaceService` 四个方法、旧 `view.service.ts` 的删除仍随 P6a/P6b。保持 open。
 
-**处理结果（M7/P6a，项目视图一支）：** `EIssuesStoreType.PROJECT_VIEW` 在新引擎上恢复（[P6a spec](../specs/P6a-web-project-views.md) §2.5、§2.6、R1、R6）：它是项目列表页的一种（`core/store/issue/project-view/` 的 `ProjectViewIssues`、`ProjectViewIssuesFilter`，查询来自内存里的草稿 `ViewDraftService`），没有恢复旧列表引擎或空壳；每个分派点都接上，两个 `switch` 以 `satisfies never` 穷尽；视图页的根 `core/components/issues/issue-layouts/roots/project-view-layout-root.tsx` 与视图页 `[projectId]/views/(detail)/[viewId]/page.tsx`（以 `viewId` 为 key，读中、不存在、失败重试、停用四种状态）。旧 `core/services/view.service.ts` 连同旧 store 与 hook 在 T10 删除（`6ea2f0c9`），关键词 `old-view-urls` 拦它的地址。整页以真实有效的视图验收（H12 (page) 四份、H20 (page) 两份，三种引擎）：详情与它的列表、四种布局与翻页、筛选与“更新视图”、读失败与重试（Chromium）、管理员、成员与只看自己的访客、换会话（`e2e/stories/collaboration/h20-view-pages.spec.ts:187`）、迟到的回答；`t12-m7-pages` 200 过 1 跳（跳过的是 P5b H8 的 WebKit 一格），整页没有非预期的失败。项目视图一支关闭；`GLOBAL`、工作区视图的页面与布局根、旧 `WorkspaceService` 的四个方法与完整的工作区标签目录随 P6b。保持 open。
+**处理结果（M7/P6a，项目视图一支）：** `EIssuesStoreType.PROJECT_VIEW` 在新引擎上恢复（[P6a spec](../specs/P6a-web-project-views.md) §2.5、§2.6、R1、R6）：它是项目列表页的一种（`core/store/issue/project-view/` 的 `ProjectViewIssues`、`ProjectViewIssuesFilter`，查询来自内存里的草稿 `ViewDraftService`），没有恢复旧列表引擎或空壳；每个分派点都接上，两个 `switch` 以 `satisfies never` 穷尽；视图页的根 `core/components/issues/issue-layouts/roots/project-view-layout-root.tsx` 与视图页 `[projectId]/views/(detail)/[viewId]/page.tsx`（以 `viewId` 为 key，读中、不存在、失败重试、停用四种状态）。旧 `core/services/view.service.ts` 连同旧 store 与 hook 在 T10 删除（`6ea2f0c9`），关键词 `old-view-urls` 拦它的地址。整页以真实有效的视图验收（H12 (page) 四份、H20 (page) 两份，三种引擎）：详情与它的列表、四种布局与翻页、筛选与“更新视图”、读失败与重试（Chromium）、管理员、成员与只看自己的访客、换会话（`e2e/stories/collaboration/h20-view-pages.spec.ts:214`）、迟到的回答；`t12-m7-pages` 200 过 1 跳（跳过的是 P5b H8 的 WebKit 一格），整页没有非预期的失败。项目视图一支关闭；`GLOBAL`、工作区视图的页面与布局根、旧 `WorkspaceService` 的四个方法与完整的工作区标签目录随 P6b。保持 open。
 
 <a id="M7-04"></a>
 ## M7-04 收集箱旧 DTO、版本与命令面板
@@ -92,13 +92,13 @@ M4 的最终 C12、准确分支 CI 和未来 main 集成分别由[验收台账](
 **处理结果（M7/P6a，命令面板的视图与视图的关闭政策）：** 上面第三条的视图结果与第五条的项目视图部分逐项（[P6a spec](../specs/P6a-web-project-views.md) §2.4、§2.7、§2.8、§5）：
 - 命令面板的视图（第三条）：按真实接口恢复——“打开视图”的菜单以列表页的键读（`power-k/ui/pages/open-entity/project-views-menu.tsx`），在途、被拒、空、门关着各有交代；搜索的 Views 组只在项目范围、store 里没有这个项目的视图才读、本地过滤（`power-k/ui/modal/use-view-search.ts`）；命令面板不再读 `IProjectView`（R13；单测 `project-views-menu.test.tsx` 7 格、`use-view-search.test.tsx` 10 格；H20 (page) `e2e/stories/collaboration/h20-views-palette-pages.spec.ts:32`、`:130` 三引擎）。
 - discard 与文档 Escape：视图弹窗的文档级 Escape 删去，Escape、点背景、Cancel 在不在途时一条规则（T5，变异 `t5-mut-document-escape`；H12 (page) `e2e/stories/collaboration/h12-project-views-list-page.spec.ts:196`）。
-- dirty/pending/busy：视图弹窗没有编辑器、没有放弃确认（同 M6 的迭代、模块弹窗），在途不关、Cancel 停用（T5，`t5-mut-close-in-flight`）；“更新视图”在途时视图页上改草稿的入口停用（R29，T8；H12 (page) `h12-project-view-page.spec.ts:236`）。
+- dirty/pending/busy：视图弹窗没有编辑器、没有放弃确认（同 M6 的迭代、模块弹窗），在途不关、Cancel 停用（T5，`t5-mut-close-in-flight`）；“更新视图”在途时视图页上改草稿的入口停用（R29，T8；H12 (page) `h12-project-view-page.spec.ts:233`）。
 - 输入保留：被拒时表单与输入留着（T5，`views/modal.test.tsx`）。
-- 嵌套 Escape：图标选择器开着时 Escape 只关它（T5；H20 (page) `e2e/stories/collaboration/h20-view-pages.spec.ts:255` 三引擎）。
+- 嵌套 Escape：图标选择器开着时 Escape 只关它（T5；H20 (page) `e2e/stories/collaboration/h20-view-pages.spec.ts:282` 三引擎）。
 - IME：组字时的 Escape 由 `ModalCore` 阻止（T5 一格，变异 `t5-mut-ime-escape-closes`）；Enter 不另写。
 - 拒绝：名字的 `FieldError`、`aria-invalid` 与焦点，nerve 点名 `name` 时放到名字下，别的拒绝经提示（T5，变异 `t5-mut-no-refused-focus`、`t5-mut-invalid-off`、`t5-mut-name-refusal-toast`；H12 (page) `:196`）。
-- 换宿主迟到答：弹窗与宿主的跟进只在还挂着时做（T4、T5，`t5-mut-follow-unmounted`）；“更新视图”的跟进只在 HOC 还挂着时做（T8，`t8-mut-update-follow-unmounted`；H20 (page) `:76`、`:187`）。
-- 未等待的筛选与视图写后关闭：“更新视图”等 nerve 的回答，失败时按钮留着、草稿与基线不动（R9，T8，`t8-mut-update-resolves-on-failure`；H12 (page) `:236`）。
+- 换宿主迟到答：弹窗与宿主的跟进只在还挂着时做（T4、T5，`t5-mut-follow-unmounted`）；“更新视图”的跟进只在 HOC 还挂着时做（T8，`t8-mut-update-follow-unmounted`；H20 (page) `:76`、`:214`）。
+- 未等待的筛选与视图写后关闭：“更新视图”等 nerve 的回答，失败时按钮留着、草稿与基线不动（R9，T8，`t8-mut-update-resolves-on-failure`；H12 (page) `:233`）。
 
 项目视图的部分关闭。留下：工作区视图的部分（工作区 HOC 的写后关闭、工作区视图的弹窗）随 P6b。保持 open。
 
