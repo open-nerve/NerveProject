@@ -16,13 +16,11 @@ import { viewEntryOn } from "@/lib/views-entry";
 import { NoViewDraftError } from "@/store/issue/project-view/view-draft.service";
 
 /**
- * Where a view's page is with its own read of the view: reading it; gone (the read made no draft: the page left, or
- * nerve's answer gave no view, one deleted here meanwhile); nerve finds no such view; why nerve could not read it, with
- * a retry; read, the page's draft seeded.
+ * Where a view's page is with its own read of the view: reading it; nerve finds no such view; why nerve could not read
+ * it, with a retry; read: the page's draft seeded, unless the view was deleted here meanwhile (ViewVisit).
  */
 export type ViewPageRead =
   | { state: "reading" }
-  | { state: "gone" }
   | { state: "not-found" }
   | { state: "failed"; error: unknown; retry: () => void }
   | { state: "read" };
@@ -34,13 +32,13 @@ export type ViewPageRead =
  * dedupe window it would be taken for one, and the page, whose draft the earlier mount ended, would wait for nothing
  * (use-session-swr.ts). It ends the page's draft as the page unmounts (a leave, another view, another project), any
  * read of it still out with it: entering again shows nothing of the old draft until nerve answers anew. The draft
- * service's refusal (NoViewDraftError) says the page that asked is gone: the page shows nothing of it.
+ * service's refusal (NoViewDraftError) is no failure of the read (noDraftIsNoFailure).
  */
 export function useViewPageRead(workspaceSlug: string, viewId: string): ViewPageRead {
   const { issuesFilter } = useIssues(EIssuesStoreType.PROJECT_VIEW);
   const read = useSessionSWR(
     ["PROJECT_VIEW_PAGE", workspaceSlug, viewId],
-    (slug, id) => issuesFilter.fetchFilters(slug, id),
+    (slug, id) => issuesFilter.fetchFilters(slug, id).catch(noDraftIsNoFailure),
     { revalidateOnMount: false, revalidateOnReconnect: false }
   );
   const { mutate } = read;
@@ -61,9 +59,19 @@ export function useViewPageRead(workspaceSlug: string, viewId: string): ViewPage
   if (!answered || read.isValidating) return { state: "reading" };
   const { error } = read;
   if (error === undefined) return { state: "read" };
-  if (error instanceof NoViewDraftError) return { state: "gone" };
   if (problemCode(error) === "navigation.view_not_found") return { state: "not-found" };
   return { state: "failed", error, retry: () => void mutate() };
+}
+
+/**
+ * The end of a read of the view that made no draft (NoViewDraftError, view-draft.service.ts): its page left before
+ * nerve answered, or the view was deleted here meanwhile, which the page shows (ViewVisit). Either is no failure of the
+ * read. As SWR's error it would reach not the page that asked but the mount that holds the read's key then: the same
+ * view entered again, whose own read, sent later, nerve may answer first (review m1). Ended so, a read SWR finds
+ * overtaken by a later one writes nothing. Any other failure is the read's.
+ */
+function noDraftIsNoFailure(error: unknown): void {
+  if (!(error instanceof NoViewDraftError)) throw error;
 }
 
 /**

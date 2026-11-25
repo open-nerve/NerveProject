@@ -3,13 +3,15 @@
 // A view's page's read of its view (P6a spec 2.6, R2; re-96 I1, I2): each mount makes its own, as it mounts, though SWR
 // still holds an earlier mount's answer within its dedupe window; it ends the page's draft as it unmounts, so that
 // nothing of the draft shows before the next mount's read answers; a read nerve answers after the page left writes
-// nothing; a reconnect reads nothing. The hook, the session's stores, SWR (one cache, as the app's) and HTTP are real.
+// nothing, even after the next mount's own answered (review m1); a reconnect reads nothing. The hook, the session's
+// stores, SWR (one cache, as the app's) and HTTP are real.
 import { act } from "react";
 import { observer } from "mobx-react";
 import { SWRConfig } from "swr";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { View } from "@nerve/api-client";
 import { viewReadTab } from "@/components/views/fake-view-page";
+import { json } from "@/lib/auth/fake-nerve";
 import { until } from "@/lib/auth/fake-time";
 import { toProjectFilters } from "@/lib/issue-filters";
 import { toasts } from "@/lib/fake-toast";
@@ -109,6 +111,29 @@ it("reads nothing as the tab reconnects: the page stays as it is, its draft its 
     "a read again, of the draft"
   ).toEqual([]);
   expect(state()).toBe("read");
+});
+
+it("stays as it is when nerve answers an earlier mount's read after this mount's own, which answered first", async () => {
+  await mount();
+  await until(() => page.reads(view).length === 1, "the first mount's read");
+  await unmount();
+  await mount();
+  await until(() => page.reads(view).length === 2, "this mount's read");
+  // nerve answers this mount's read, then the earlier mount's (two reads need not be answered in the order sent)
+  await act(async () => page.reads(view)[1]!.answer(json(200, view)));
+  expect(state()).toBe("read");
+  rendered = [];
+  await act(async () => page.reads(view)[0]!.answer(json(200, view)));
+  await act(async () => vi.advanceTimersByTimeAsync(100));
+  expect(state()).toBe("read");
+  expect(
+    rendered.filter((one) => one !== "read"),
+    "what the page drew of the earlier mount's answer"
+  ).toEqual([]);
+  expect(conditions()).toEqual({ priority: ["high"] });
+  expect(page.reads(view)).toHaveLength(2);
+  expect(toasts).toEqual([]);
+  expect(vi.mocked(console.error).mock.calls).toEqual([]);
 });
 
 it("writes nothing of a read nerve answers after the page left, and the next mount reads anew", async () => {

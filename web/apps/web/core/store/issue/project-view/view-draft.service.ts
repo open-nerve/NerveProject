@@ -13,7 +13,7 @@ const draftOf = (view: View): Draft => ({
 
 /**
  * The draft service's refusal of a read of a view that made no draft (P6a spec 2.6): its page left before nerve
- * answered, or the read gave no view. The page that awaits it is gone: it shows nothing of it (use-view-page-read.ts).
+ * answered, or the read gave no view. The page's read takes it as no failure (use-view-page-read.ts).
  */
 export class NoViewDraftError extends Error {
   constructor(viewId: string, why: string) {

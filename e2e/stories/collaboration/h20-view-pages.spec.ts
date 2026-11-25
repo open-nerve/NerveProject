@@ -4,7 +4,7 @@ import { anotherTabSignsIn } from "../../fixtures/auth";
 import { expectQuietConsole, watchPage } from "../../fixtures/browser";
 import { deferred } from "../../fixtures/deferred";
 import { itemMenu, menuEntries, recordApi, tabKey, tabStops, toast } from "../../fixtures/cycle-pages";
-import { closedByEscape, focusInDialog, modalDialog, shownWithin } from "../../fixtures/dialogs";
+import { closedByEscape, focusInDialog, hiddenWithin, modalDialog, shownWithin } from "../../fixtures/dialogs";
 import { expectLanded, focusedName, tabTo } from "../../fixtures/intake-focus";
 import { addCondition } from "../../fixtures/issue-filters-page";
 import { createIssue } from "../../fixtures/issues";
@@ -27,13 +27,13 @@ import { viewCalls, viewDefaults, viewOf, viewRow } from "../../fixtures/views";
 
 // H20's page version for a project's views pages (M7 design 2, H20; P6a spec 2.4, 2.6–2.8, 2.11; R2, R9, R11, R26,
 // R28; re-96 I2, m6; v0 design 7.7): what a page sent or read belongs to its page and its session. A list of views
-// answered after a move to another project's, a view's read answered after the page left it, an Update view and a
-// deletion answered after their page went, and an Update view answered after another tab signed another account in,
-// each write and say nothing on the page shown then; back on the view, its page reads it anew and lists what nerve
-// holds now. The keyboard works the row's menu, the view's dialog (its Tab order, the icon picker's own Escape), the
-// header's switcher and its layouts (the wide buttons and the narrow menu: M2 handoff 3's Dropdown half), and Update
-// view, after which the focus is on the filters row's Add filter. The command palette's views are
-// h20-views-palette-pages.spec.ts's.
+// answered after a move to another project's, a view's read answered after the page left it (also once the page,
+// entered again, had its own read answered), an Update view and a deletion answered after their page went, and an
+// Update view answered after another tab signed another account in, each write and say nothing on the page shown then;
+// back on the view, its page reads it anew and lists what nerve holds now. The keyboard works the row's menu, the
+// view's dialog (its Tab order, the icon picker's own Escape), the header's switcher and its layouts (the wide buttons
+// and the narrow menu: M2 handoff 3's Dropdown half), and Update view, after which the focus is on the filters row's
+// Add filter. The command palette's views are h20-views-palette-pages.spec.ts's.
 
 /** A toast on page: the page said something. */
 const anyToast = (page: Page) => page.getByLabel("Notifications", { exact: true }).getByRole("dialog");
@@ -73,7 +73,7 @@ async function noteFocus(page: Page, testInfo: TestInfo, step: string): Promise<
   testInfo.annotations.push({ type: "focus", description: `${step}: ${await focusedName(page)}` });
 }
 
-test("H20 (page): Web's views read, answered after a move to Ops' views, lists nothing there; Hot's read, answered after Cold's switcher opened Hot by the keyboard and Back came to Cold, writes nothing into Cold's page, and Hot opened again reads it anew, as alice changed it meanwhile; Update view of Hot, answered after Back came to Cold, says nothing there, and Forward reads Hot anew too", async ({
+test("H20 (page): Web's views read, answered after a move to Ops' views, lists nothing there; Hot's read, answered after Cold's switcher opened Hot by the keyboard and Back came to Cold, writes nothing into Cold's page, and Hot opened again reads it anew, as alice changed it meanwhile; Update view of Hot, answered after Back came to Cold, says nothing there, and Forward reads Hot anew too; Hot's read, held as Back and Forward entered Hot again, answered after that entry's own, leaves Hot's page as it is", async ({
   api,
   signedInPage,
 }, testInfo) => {
@@ -179,6 +179,33 @@ test("H20 (page): Web's views read, answered after a move to Ops' views, lists n
   expect(forward().requests.filter((request) => request === viewRead(hot.id))).toHaveLength(1);
   await expect(pageMain(page).getByRole("button", { name: "Remove filter", exact: true })).toHaveCount(1);
   await expect(rowButton(page, "Update view")).toHaveCount(0);
+
+  // Back to Cold; Forward enters Hot, its read held; Back to Cold again, and Forward enters Hot again, whose own read
+  // nerve answers. Then the held one: Hot's page as it was, Crash under its header, nothing read (review m1).
+  await answerTo(page, "GET", issues, async () => {
+    await page.goBack();
+  });
+  await expect.poll(() => shownItems(page)).toEqual(["Typo"]);
+  await settled(page, recorded);
+  const releaseFirst = await holdAnswer(page, "GET", hotPath);
+  await page.goForward();
+  await expect(page).toHaveURL(viewPath(w.slug, w.web.id, hot.id));
+  await settled(page, recorded, 1);
+  await answerTo(page, "GET", issues, async () => {
+    await page.goBack();
+  });
+  await expect.poll(() => shownItems(page)).toEqual(["Typo"]);
+  await answerTo(page, "GET", issues, async () => {
+    await page.goForward();
+  });
+  await expect.poll(() => shownItems(page)).toEqual(["Crash"]);
+  await settled(page, recorded, 1);
+  const lateFirst = recordApi(page);
+  expect((await answerTo(page, "GET", hotPath, releaseFirst)).status()).toBe(200);
+  expect(await hiddenWithin(rowOptions(page, "Crash")), "Hot's Crash, as its first read answered").toBe(false);
+  await expect(pageMain(page).getByRole("button", { name: "Hot", exact: true })).toBeVisible();
+  await settled(page, lateFirst);
+  expect(lateFirst().requests, "what Hot's first read's late answer read").toEqual([]);
 
   expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
   await expectQuietConsole(page, watch);

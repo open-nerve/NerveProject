@@ -300,6 +300,28 @@ it("shows nothing of a view that the page's read found deleted here meanwhile: n
   expect(page.lists()).toEqual([]);
 });
 
+it("shows nothing of the view it shows once nerve deletes it here, before the page goes: never that nerve has none", async () => {
+  await opened({ role: 20 });
+  await page.answerRead(first);
+  await page.answerList();
+  expect(drawn.at(-1)).toBe("the view");
+  // nerve deletes the view, as the page's quick actions ask, the page still here (its follow-up not yet run)
+  let deleted: Promise<void> | undefined;
+  await act(async () => void (deleted = page.app.views.remove(first.id)));
+  await until(() => page.writes().length === 1, "the deletion");
+  await act(async () => page.writes()[0]!.answer(noContent()));
+  await act(async () => deleted);
+  await settle();
+  expect(where.location?.pathname).toBe(`/ws/projects/A/views/${first.id}`);
+  expect(drawn, "what the page drew as nerve deleted the view").not.toContain("not found");
+  expect(drawn.at(-1)).toBe("blank");
+  expect(text()).not.toContain("project_views.not_found.title");
+  expect(text()).not.toContain("common.retry");
+  expect(crumbs()).toBe(true);
+  expect(toasts).toEqual([]);
+  expect(consoleErrors()).toEqual([]);
+});
+
 it("says that nerve finds no such view here when nerve gives a view of another project, under the crumbs", async () => {
   await opened();
   // the caller sees project B too
@@ -342,8 +364,14 @@ it("goes to the project's views once nerve deletes the view from the header's qu
   await act(async () => dialogButton("delete")?.click());
   await until(() => page.writes().length === 1, "the deletion");
   expect(page.writes()[0]).toMatchObject({ method: "DELETE", path: `/api/v0/views/${first.id}` });
+  drawn.length = 0;
   await act(async () => page.writes()[0]!.answer(noContent()));
   await settle();
   expect(where.location?.pathname).toBe("/ws/projects/A/views");
   expect(text()).toContain("the list");
+  expect(drawn, "what the page drew before it went").not.toContain("not found");
+  // Back: the view's page again reads the view, which nerve no longer has, and says so
+  await act(async () => void where.navigate?.(-1));
+  await page.answerRead(first, problem(404, "navigation.view_not_found"));
+  expect(text()).toContain("project_views.not_found.title");
 });

@@ -66,8 +66,9 @@ type VisitProps = { workspaceSlug: string; projectId: string; viewId: string; pr
  * One visit of the view's page, in one session (a new session's stores are new: its visit is a new one), whose read of
  * the view is its own (useViewPageRead): it waits for nerve's answer; says that nerve finds no such view in the project
  * (deleted, hidden from the caller, never there, or of another project), with the way back to the project's views; why
- * nerve could not read it, with a retry; shows nothing once the read says the page is gone; and else the project's work
- * items under the page's draft of the view (ProjectViewLayoutRoot).
+ * nerve could not read it, with a retry; shows nothing of a view deleted here once read (the page that deleted it goes
+ * on to the project's views); and else the project's work items under the page's draft of the view
+ * (ProjectViewLayoutRoot).
  */
 const ViewVisit = observer(function ViewVisit(props: VisitProps) {
   const { workspaceSlug, projectId, viewId, projectName } = props;
@@ -76,7 +77,7 @@ const ViewVisit = observer(function ViewVisit(props: VisitProps) {
   // nerve hooks
   const { t } = useTranslation();
   // store hooks
-  const { getViewById } = useViews();
+  const { getViewById, isDeleted } = useViews();
   const read = useViewPageRead(workspaceSlug, viewId);
   // the route's project's view alone: one of another project is not found here
   const held = getViewById(viewId);
@@ -89,8 +90,10 @@ const ViewVisit = observer(function ViewVisit(props: VisitProps) {
         <Loader.Item height="30px" width="100%" />
       </Loader>
     );
-  if (read.state === "gone") return null;
   if (read.state === "failed") return <PlanningReadFailure error={read.error} onRetry={read.retry} />;
+  // nerve deleted the view here once the page read it, or while it did: the page is gone, its quick actions' deletion
+  // going on to the project's views; it is not that nerve has none (review O3)
+  if (read.state === "read" && isDeleted(viewId)) return null;
   // nerve has no such view in the project: it said so, or gave one of another project
   if (read.state === "not-found" || !view)
     return (
