@@ -1,6 +1,6 @@
 # M7 / P6a plan：网页的项目视图——列表、视图页、另存与更新视图、命令面板的视图
 
-> spec：[P6a spec](../specs/P6a-web-project-views.md)（§2 是合同，§3 的 R1–R27 是裁定、逐条对应台账 `rulings.md` 的 C-1–C-27，**L!** 是 R1、R7、R8、R9、R10、R13、R14、R16、R21 与 R29；R28–R30 是主控对起草者 O-1、O-2 与另存默认名的补充裁定，R29 经主控确认为 L!；§8 是补充裁定（O-1 取 (b)、O-2 改为在途停用、O-3–O-5 同意、O-6 两处也停用）；本 plan 已照补充裁定与预检 [re-96](../../../reviews/re-96-M7P6a预检.md) §6 的处理修正）。基线 main `47bd860b`（`47bd860ba104145a37a66687c12d6db7b49658b4`）。worktree `/Users/xiaoruan/project/nerve-project/.codex/worktress/codex/m7-p6a`，分支 `codex/m7-p6a`，台账 `L` = `.superpowers/sdd/P6a-web-project-views/`。缩写同 spec（`C`、`P`、`V`、`VC`、`PKG`、`E`、`K`、`HO`、`D`）。
+> spec：[P6a spec](../specs/P6a-web-project-views.md)（§2 是合同，§3 的 R1–R27 是裁定、逐条对应台账 `rulings.md` 的 C-1–C-27，**L!** 是 R1、R7、R8、R9、R10、R13、R14、R16、R21 与 R29；R28–R30 是主控对起草者 O-1、O-2 与另存默认名的补充裁定，R29 经主控确认为 L!；§8 是补充裁定（O-1 取 (b)、O-2 改为在途停用、O-3–O-5 同意、O-6 两处也停用）；本 plan 已照补充裁定与预检 [re-96](../../../reviews/re-96-M7P6a预检.md) §6 的处理修正）。基线 main `47bd860b`（`47bd860ba104145a37a66687c12d6db7b49658b4`）。worktree `/Users/xiaoruan/project/nerve-project/.codex/worktress/codex/m7-p6a`，分支 `codex/m7-p6a`，台账 `L` = `.superpowers/sdd/P6a-web-project-views/`。缩写同 spec（`C`、`P`、`V`、`VC`、`PKG`、`E`、`K`、`HO`、`D`）。T1–T12 已实施，实施中的改动就地标“实施中改（T…）”，经过见[阶段记录](../reviews/P6a-web-project-views-review.md)。
 
 **与调研草案（`research/scope.md` §7）的对照**：T1–T14 同草案；检查点 0 从 T3 之后移到 T5 之后（引擎改动之前，spec R25、O-5）；检查点 2 在 T10 之后（命令面板与删除完成，产品代码完成，C-25）；`projectMemberIds` 的删除并进 T4（两个读者都在列表页）；`getTabIndex` 的删除并进 T5（最后的读者是表单）；`create_view` 的门并进 T3（入口规则）。
 
@@ -33,7 +33,7 @@
 - T9：`use-view-search.ts`（读者：`search-menu.tsx`）。
 - 没有“成员先于读者”的例外。删掉某个导出最后一个读者的 Task 同一提交删去它（T4 的 `projectMemberIds`，T5 的 `getTabIndex` 全套，T10 的旧层）。knip 查不出只被测试读的产品导出与包的桶文件导出：逐 Task 的审查与死成员的整份比对兜底。
 
-**告警上限**：`lint-cap` 要求 oxlint 的告警数恰好等于上限（web `web/apps/web/package.json:10` 现为 18；e2e、`@nerve/constants` 为 0）。新文件不得新增告警；删掉的文件若带告警，同一提交照实改上限并留收据（`t<N>-oxlint-count`）；T14 只核对。
+**告警上限**：`lint-cap` 要求 oxlint 的告警数恰好等于上限（web `web/apps/web/package.json:10` 现为 18；e2e、`@nerve/constants` 为 0）。（实施中改，T4：18 → 14；去掉的四条之中三条在改写的 `VC/applied-filters/root.tsx` 上，所以下一句的“删掉的文件”也包括改写掉带告警的写法，见 spec §2.10。）新文件不得新增告警；删掉的文件若带告警，同一提交照实改上限并留收据（`t<N>-oxlint-count`）；T14 只核对。
 
 **文案**：新键只有 spec §8 O-3 的清单（主控已同意：`project_views.add_view`、`project_views.not_found.{title,description,action}`、`project_views.action.{create,update,delete}.success`、`common.filter_options.{save_view,update_view,confirming}`）；en 与 zh-CN 同一提交；文案键写完整的字面量（`tools/i18n-keys.mjs` 才认得），不许一个键是另一个键的前缀。别的一律用已有的键（`views`、`common.filters`、`common.clear_all`、`common.item_options`、`common.search.label`、`common.filter_options.custom`、`common.filter_options.unavailable`、`common.display`、`common.cancel`、`common.creating`、`common.updating`、`common.retry`、`copy_link`、`common.link_copied`、`toast.success`、`toast.error`、`view.create.label`、`view.update.label`、`project_views.delete_view.*`、`project_view.sort_by.*`、`project_empty_state.views.*`、`disabled_project.empty_state.view.*`、`power_k.creation_actions.create_view`、`power_k.menus.no_views`、`inbox_issue.filters.created_at`、`errors.navigation_view_not_found`、`errors.navigation_views_disabled`）；实现中觉得要新键先记台账并报主控。
 
@@ -68,7 +68,7 @@
 - **1（T7 之后：引擎与视图页完成）**：`final.sh cp1`；主控推送、核分支 CI。
 - **2（T10 之后：命令面板与删除完成，产品代码完成）**：`final.sh cp2`；推送之前照 P4 spec §2.11（`specs/P4-web-notifications.md:270`）估出 e2e 两片（以最近一次分支 CI 的两片为底，加新文件的 chromium 时长 × CI 与本机之比），超过 30 分钟先报告、不推送；主控推送、核分支 CI，记两片与 web 作业三步。
 - **终检（T14）**：`final.sh fin`（同六个配置）。
-- **另跑的单配置**（动了别的 M 的共用件，先 `make build`）：T6 之后 chromium 的 m4-list、m4-filters、m4-detail（`t6-m4-list`、`t6-m4-filters`、`t6-m4-detail`）；T8 之后 chromium 的 m4-filters、m4-list 与 m6-pages（`t8-m4-filters`、`t8-m4-list`、`t8-m6-pages`：筛选行与页头的布局、显示是这些页面共用的）；T4 之后 chromium 的 P8 故事（`t4-p8-follow`）；T7 之后 S2 与默认配置的 chromium（`t7-s2`，S2 随视图页改，预检 re-96 I6 ①）；T9 之后 chromium 单跑打开命令面板的三份故事（`t9-palette`：`E/stories/issue/i18-search.spec.ts`、`E/stories/planning/g19-work-item-side-page.spec.ts`、`E/stories/collaboration/h1-subscription-page.spec.ts`；它们多数不在六个页面配置里，预检 re-96 m4 ③）。
+- **另跑的单配置**（动了别的 M 的共用件，先 `make build`；实施中改，T4、T7：先 `make build build-s3-fixture`——全局准备的 S3 探测经 `bin/nerve-s3-fixture`（`E/fixtures/s3-process.ts:85`），`make build` 不建它，`Makefile:157-165`——再 `pnpm --filter web exec react-router typegen`——`make build` 清掉 `.react-router` 的路由类型，之后的 `tsc` 与变异的命令在路由文件上报错）：T6 之后 chromium 的 m4-list、m4-filters、m4-detail（`t6-m4-list`、`t6-m4-filters`、`t6-m4-detail`）；T8 之后 chromium 的 m4-filters、m4-list 与 m6-pages（`t8-m4-filters`、`t8-m4-list`、`t8-m6-pages`：筛选行与页头的布局、显示是这些页面共用的；实施中：这三次跑的是三引擎的整配置，66、42、135 过，与检查点 1 的测试集一一对应）；T4 之后 chromium 的 P8 故事（`t4-p8-follow`）；T7 之后 S2 与默认配置的 chromium（`t7-s2`，S2 随视图页改，预检 re-96 I6 ①）；T9 之后 chromium 单跑打开命令面板的三份故事（`t9-palette`：`E/stories/issue/i18-search.spec.ts`、`E/stories/planning/g19-work-item-side-page.spec.ts`、`E/stories/collaboration/h1-subscription-page.spec.ts`；它们多数不在六个页面配置里，预检 re-96 m4 ③）。
 - 第 1 路：本机超过 CP0 基线 +30 秒先停下查；CI 的 bootstrap 过期限的八成只报告（P5b 的最终分支 CI 是 82.6%，`.376`）。本机 Go 两路因 M6-M8-05 失败且重跑一次仍不过时，以分支 CI 的服务端两路为准并记录（负责人的规则）。
 
 **证据**
@@ -122,7 +122,7 @@
 | 所有者的选项含访客 | `getProjectMemberIds(projectId, false)`（`t4-mut-members-no-guests`） | T4 |
 | 在途不关（两层） | 在途也给 `handleClose` 且 Cancel 不停用（`t5-mut-close-in-flight`）；只改一层的对照 `t5-ctl-close-in-flight-one-layer` | T5 |
 | 不在途时 Escape、点背景、Cancel 关 | 一律不给 `handleClose`（`t5-mut-no-handleclose`，不在途 Escape 的一格失败） | T5 |
-| 没有文档级 Escape | 加回 `useKeypress("Escape")`（`t5-mut-document-escape`，图标选择器开着时按 Escape 外层也关的一格失败） | T5 |
+| 没有文档级 Escape | 加回 `useKeypress("Escape")`（`t5-mut-document-escape`，图标选择器开着时按 Escape 外层也关的一格失败；实施中改，T5：图标选择器开着时第一个 Escape 被 base-ui 的 Popover 接住、文档级的收不到，那一格在变异下也过；变异由“不在途 Escape 关两次”“在途 Escape 也关”与图标选择器一格的第二个 Escape 杀） | T5 |
 | 组字时的 Escape 不关（IME） | 去掉 `ModalCore` 的 `isComposing` 一项（`t5-mut-ime-escape-closes`，`PKG/ui` 的源码，变异之后核 dist 已还原；先例 P5b 的 `t2-mut-ime-escape-closes-r2`） | T5 |
 | 弹窗以 `ModalTitle` 为名 | 回到 `h3`（`t5-mut-plain-title`） | T5 |
 | 名字按字符、去空白 | 按 `name.length`（`t5-mut-length-units`）；不去空白（`t5-mut-no-trim`） | T5 |
@@ -137,7 +137,7 @@
 | 弹窗只有名字、说明、图标（R28） | 加回布局的控件（`t5-mut-modal-layout`，“弹窗里没有布局与显示”的一格失败） | T5 |
 | “Add view” 的体带合同默认的显示与属性 | 常量里的 `group_by` 改为 `"state_id"`（`t5-mut-default-grouped`）；不带显示与属性（`t5-mut-add-no-defaults`），请求体的格失败 | T5 |
 | 编辑不发显示 | 编辑也带显示（`t5-mut-edit-sends-display`，“只发改了的名字”的一格失败） | T5 |
-| 名字的初值为空（R30） | 另存在视图页预填“{视图名} 2”（`t5-mut-saveas-name-default`） | T5 |
+| 名字的初值为空（R30） | 另存在视图页预填“{视图名} 2”（`t5-mut-saveas-name-default`；实施中改，T5：HOC 那时还没有新的读者，变异改写在弹窗一层——给了 `content` 时以名字 “Untitled” 打开——杀“另存打开时名字为空”一格） | T5 |
 | 视图页的列表与项目页的分开 | `use-issues.ts` 的 `PROJECT_VIEW` 回项目的 store（`t6-mut-view-uses-project`） | T6 |
 | 视图的路由是 `PROJECT_VIEW` | `viewId` 回到 `DEFAULT`（`t6-mut-viewid-default`） | T6 |
 | 草稿只替换给出的字段 | `update` 整份替换（`t6-mut-update-replaces-all`） | T6 |
@@ -151,10 +151,10 @@
 | “显示”有选项（I3） | `ISSUE_STORE_TO_FILTERS_MAP` 去掉 `PROJECT_VIEW`（`t6-mut-filters-map-missing`） | T6 |
 | 看板与列表的本地筛选（I3） | `use-page-issue-filters.ts` 去掉 `PROJECT_VIEW` 的 `case`（`t6-mut-page-filters-missing`） | T6 |
 | 空态的分派（I3） | `empty-states/index.tsx` 去掉 `PROJECT_VIEW` 的 `case`（`t6-mut-empty-state-null`，视图页没有空态的一格失败） | T6 |
-| 分组头的“+”（I3） | `DIALOG_STORES` 去掉 `PROJECT_VIEW`（`t6-mut-dialog-store-missing`，点“+”抛错的一格失败） | T6 |
+| 分组头的“+”（I3） | `DIALOG_STORES` 去掉 `PROJECT_VIEW`（`t6-mut-dialog-store-missing`，点“+”抛错的一格失败；实施中改，T6：照字面编译不过，TSC_EXIT=2 不计，以守卫 `isDialogStore` 上的等价变异 `t6-mut-dialog-store-missing-2` 杀，constants 的 dist 重建之后以 `-r2` 重跑） | T6 |
 | 行的编辑与复制写进视图页的列表（I3 (c)） | `ProjectIssueQuickActions` 恒传 `PROJECT`（`t6-mut-quick-actions-project`） | T6 |
 | 日历某一天的“添加已有”（I3 (b)） | 视图页的命令不给 `addIssuesToView`（`t6-mut-no-add-existing`，宿主找不到命令的一格失败） | T6 |
-| 拖放（I3） | `use-group-dragndrop.ts` 的联合与分支去掉 `PROJECT_VIEW`（`t6-mut-dragdrop-missing`） | T6 |
+| 拖放（I3） | `use-group-dragndrop.ts` 的联合与分支去掉 `PROJECT_VIEW`（`t6-mut-dragdrop-missing`；实施中改，T6：同上编译不过，以拖放的 `useIssuesActions` 分支上的等价变异 `t6-mut-dragdrop-missing-2` 杀，`-r2` 重跑） | T6 |
 | `updateFilters` 不看给的 id（m11 ①） | 用调用方给的 id（`t6-mut-update-filters-given-id`，表格与日历传项目 id 的两格把草稿写到项目 id 名下而失败） | T6 |
 | 以 `viewId` 为 key | 去掉 key（`t7-mut-no-key`，换视图之后 A 的草稿还在的一格失败） | T7 |
 | 不存在与失败分开 | 一律算失败（`t7-mut-not-found-as-failure`） | T7 |
@@ -243,12 +243,12 @@
 - [ ] Step 0：读 T1 的死成员基线（收据 `t1-dead-before`）。`git grep -n projectMemberIds -- web tools` 核读者只有两处视图与 store 自己、测试与替身，与 `C/components/issues/issue-detail-widgets/sub-issues/title-actions.tsx:45`、`:94` 的同名局部变量、`K` 的规则文字（`K:2336` 的说明、`:2342` 的正则、`:2348` 的 hit 样例）（收据 `t4-member-readers-before`）。
 - [ ] Step 1：先写测试，看到失败（收据 `t4-red`）：列表页的状态（加载、失败与重试、空、有行、没有匹配、开关关着不读）；按项目的页面状态（换项目即丢）；搜索、所有者与创建日期筛选、排序；矩阵的列表一半，只测给不给（“Add view”、空态的“新建”、行菜单的编辑与删除按所有者与角色、访客只有复制与新标签页；打开新建与编辑的格在 T5）；一行一个右键菜单、菜单按钮名为 “{name} options”、不嵌按钮；复制成功与失败的提示（`useCopyLink`）；宿主：删除经 `openDialog`，删除确认之后提示、转到列表、行消失，离开页面之后答到不提示；所有者的选项含访客（`getProjectMemberIds(projectId, true)`），成员晚到时面板跟上（`created-by.tsx` 的依赖）；筛选面板与页面标题的英文经 `t()`。
 - [ ] Step 2：实现到通过（spec §2.3）；删 `quickActionElement`、没人打开的那对弹窗、公开私有与收藏星、`applied-filters/access.tsx`；`useViewMenuItems` 的参数照 spec；`copy-hook` 的视图例外删；英文改键。两个 `projectMemberIds` 读者改显式取，重新 `git grep`（收据 `t4-member-readers-after`：只剩 store 的定义、`title-actions.tsx` 的同名局部变量与 `K` 的规则文字），删接口、`computed`、getter、专属断言与替身字段（允许清单）；`K:2336` 的说明照同一句里 `currentProjectDetails` 的写法改为“P6a 删去、模式里的这一式只防它回来”，正则与样例留着。新文件收入 swr 名单与 `project-address-route`；跑 `node tools/keywords.mjs`。
-- [ ] Step 3：变异照上表 T4 各行。门禁同 T2；死成员整份比对（`t4-dead-after`）；oxlint 计数（`t4-oxlint-count`）；`make build` 之后 chromium 跑 P8 的故事（`t4-p8-follow`；红了照允许清单加等待，再跑 `t4-p8-follow-2`）。提交分两个：`feat(M7/P6a): 视图列表页——按项目的搜索、筛选与排序，矩阵给控件，一行一个菜单以视图名为名、复制经 useCopyLink，删除的弹窗在页面的宿主（新建与编辑随 T5 的弹窗接上）` 与 `refactor(M7/P6a): 删除成员 store 的 projectMemberIds——最后两个读者（视图列表页）改为显式取项目的成员`。
+- [ ] Step 3：变异照上表 T4 各行。门禁同 T2；死成员整份比对（`t4-dead-after`）；oxlint 计数（`t4-oxlint-count`）；`make build build-s3-fixture` 与 typegen（实施中改，见 Global Constraints 的“另跑的单配置”）之后 chromium 跑 P8 的故事（`t4-p8-follow`；红了照允许清单加等待，再跑 `t4-p8-follow-2`）。提交分两个：`feat(M7/P6a): 视图列表页——按项目的搜索、筛选与排序，矩阵给控件，一行一个菜单以视图名为名、复制经 useCopyLink，删除的弹窗在页面的宿主（新建与编辑随 T5 的弹窗接上）` 与 `refactor(M7/P6a): 删除成员 store 的 projectMemberIds——最后两个读者（视图列表页）改为显式取项目的成员`。
 
 ### T5 视图的弹窗、`LayoutDropDown` 与 `getTabIndex` → **检查点 0**
 
 **Files**：
-- 改：`VC/modal.tsx`（94）、`VC/form.tsx`（265；删 `:197-246` 的布局与显示、`:41-47` 里的 `access` 与显示的初值）；`VC/actions-host.tsx`（T4 新建；加新建与编辑两个弹窗）、`VC/quick-actions.tsx`（“编辑”接 `openDialog`）、`V/(list)/header.tsx` 与 `VC/views-list.tsx`（“Add view” 与空态的“新建”接宿主的新建，今天 `header.tsx:54`、`views-list.tsx:82` 的 `toggleCreateViewModal(true)`；窄屏页头没有 “Add view”）；`C/components/modals/project-level.tsx`（67，`create_view` 的新建，只换 props 的形状）；en、zh-CN 的 `project.json`（`project_views.action.*`）。
+- 改：`VC/modal.tsx`（94）、`VC/form.tsx`（265；删 `:197-246` 的布局与显示、`:41-47` 里的 `access` 与显示的初值）；`VC/actions-host.tsx`（T4 新建；加新建与编辑两个弹窗）、`VC/quick-actions.tsx`（“编辑”接 `openDialog`）、`V/(list)/header.tsx` 与 `VC/views-list.tsx`（“Add view” 与空态的“新建”接宿主的新建，今天 `header.tsx:54`、`views-list.tsx:82` 的 `toggleCreateViewModal(true)`；窄屏页头没有 “Add view”）；`C/components/modals/project-level.tsx`（67，`create_view` 的新建，只换 props 的形状）；en、zh-CN 的 `project.json`（`project_views.action.*`）。（实施中改，T5 的接缝，主控取 (A)：HOC `filters-hoc/project-level.tsx` 也画视图弹窗，T5 给弹窗最终的接口——`content?: ViewContent`，新 `VC/view-content.ts`——之后 HOC 只改另存的预填，212 → 199 行；显示取 `confirmed` 与迭代、模块的词仍在 T8。）
 - 删：`C/components/dropdowns/layout.tsx`（49）与 `layout.test.tsx`（110，允许清单）；`PKG/utils/src/tab-indices.ts`（18）、`PKG/constants/src/tab-indices.ts`（15）、桶导出 `PKG/utils/src/index.ts:23`、`PKG/constants/src/index.ts:29`；`VC/follow-ups.test.tsx`（允许清单）。
 - 新：“Add view” 的合同默认显示与属性的常量（弹窗旁，线上词）；弹窗的测试（关闭、名字、字段与体，按关注点拆，每份不过 400 行；要真实 `ModalCore` 的格经弹窗渲染、从 `document` 查，先例 `C/components/cycles/` 的弹窗测试）。
 - 不碰：`C/store/issue/helpers/page-preferences-filter.store.ts`（显示的换算不导出，R28）。
@@ -277,7 +277,7 @@
   - `useIssues(PROJECT_VIEW)`、`useIssuesActions(PROJECT_VIEW)` 给视图页的 store 与命令（`fetchIssues`、`fetchNextIssues`、`createIssue`、`createIssueAsGiven`、`updateIssue`、`removeIssue`、`addIssuesToView`、`archiveIssue`、`dropIssue`、`updateFilters` 都在；建、改、删与项目页同、写进视图页的列表，取数是视图页的）；`updateFilters` 不看给的 id（传项目 id 也写这个视图的草稿）、写草稿、跟进重取；`viewId` 的路由是 `PROJECT_VIEW`；
   - 分派点各一格（预检 re-96 I3）：列表挂载的键带 `viewId`（扣住 A 的列表读、换到 B，B 发自己的读）；“显示”有选项；看板与列表的本地筛选；空态（读视图页的筛选）；分组头的“+”；行的编辑与复制写进视图页的列表（`ProjectIssueQuickActions` 在 `PROJECT_VIEW` 的上下文里、个人页的 `PROFILE` 上下文仍是 `PROJECT`）；日历某一天的“添加已有”经视图页的 `addIssuesToView`；拖放。
 - [ ] Step 2：实现到通过（spec §2.5）；`use-issues.ts`、`use-issues-actions.tsx` 的 `switch` 穷尽（`default` 里 `satisfies never`；`use-issues-actions.tsx` 显式列出 `WORKSPACE_DRAFT` 并照旧抛错），故意漏一个值编译失败（收据 `t6-exhaustive-probe`：在临时副本上删一个 `case`、`tsc` 报错，不提交）；两份钉 `DEFAULT` 的测试照允许清单改。`root.store.ts` 不超过 340、`use-issues-actions.tsx` 只多一个导入、一行调用、两个 `case`（`t6-wc`）。
-- [ ] Step 3：变异照上表 T6 各行。门禁同 T2；死成员整份比对（`t6-dead-after`）；`make build` 之后 chromium 的 m4-list、m4-filters、m4-detail（`t6-m4-list`、`t6-m4-filters`、`t6-m4-detail`），与检查点 0 的同名配置比对。提交 `feat(M7/P6a): 列表引擎加 PROJECT_VIEW——项目列表页的一种，查询来自视图页的草稿；草稿在内存、只替换给出的字段、卸下即丢、迟到的播种不建回；分派点逐个接上（挂载的键、行的快捷操作、添加已有），两个 switch 穷尽`。
+- [ ] Step 3：变异照上表 T6 各行。门禁同 T2；死成员整份比对（`t6-dead-after`）；`make build build-s3-fixture` 与 typegen（实施中改，见 Global Constraints 的“另跑的单配置”）之后 chromium 的 m4-list、m4-filters、m4-detail（`t6-m4-list`、`t6-m4-filters`、`t6-m4-detail`），与检查点 0 的同名配置比对。提交 `feat(M7/P6a): 列表引擎加 PROJECT_VIEW——项目列表页的一种，查询来自视图页的草稿；草稿在内存、只替换给出的字段、卸下即丢、迟到的播种不建回；分派点逐个接上（挂载的键、行的快捷操作、添加已有），两个 switch 穷尽`。
 
 ### T7 视图页 → **检查点 1**
 
@@ -288,15 +288,15 @@
   - 以 `viewId` 为 key（换视图之后 A 的草稿不在 B 上；后退回到 A 是新读到的）；四种状态（加载、`navigation.view_not_found` 的不存在与回到列表、别的失败与重试、开关关着不读），每种状态下页头画面包屑（项目、视图列表）；窄屏页头在视图在时画 `MobileHeaderFilters`；
   - 读（预检 re-96 I1）：进页面恰一个 `GET /api/v0/views/{id}`、列表的查询来自视图存着的；真的 `useViewPageRead` 与真的 SWR（同一个缓存 provider，不替身）：A 答到之后立刻卸下再挂上，恰再一个 `GET`、页面离开加载；重连不读；
   - 改了筛选之后 `hasChanges` 为真（基线没被推进）、没有 `PATCH`（R10；根不传 `enableSaveView`、`enableUpdateView`，“`canUpdateView` 为真”在 T8，预检 re-96 I5 ②）；卸下时丢草稿、再进来读答到之前不显示旧草稿；
-  - “Add work item” 与快速添加给管理员与成员；页头的切换器打开时才读列表；删除之后转到列表；“不可用”的条件原样在查询里。
+  - “Add work item” 与快速添加给管理员与成员；页头的切换器打开时才读列表；删除之后转到列表；“不可用”的条件原样在查询里。（实施中改，T7：切换器“打开”经 `@nerve/ui` 的 `BreadcrumbNavigationSearchDropdown` 新加的可选 `onOpen`——允许清单之外，主控准；`NoViewDraftError` 导出；别的项目的视图同“不存在”；T7 跟进：停用页收成一处 `VC/views-disabled.tsx`，`ViewVisit` 以会话为 key 的一格。）
 - [ ] Step 2：实现到通过（spec §2.6）；`domain-pages.test.tsx:114-163` 与 S2 的 `project view` 一行照允许清单删去（同一提交，预检 re-96 I6 ①）。新取数文件收入 swr 名单，读项目的收入 `project-address-route`。
-- [ ] Step 3：变异照上表 T7 各行。门禁同 T2；`make build` 之后 S2 与默认配置的 chromium（`t7-s2`）。提交 `feat(M7/P6a): 视图页——以 viewId 为 key，读中、不存在、失败重试、停用四种状态与各自的页头，窄屏页头；每次挂载读自己的视图，列表照视图存着的筛选与显示，改动只进页面里的草稿；S2 去掉项目视图一格`。
+- [ ] Step 3：变异照上表 T7 各行。门禁同 T2；`make build build-s3-fixture` 与 typegen（实施中改，见 Global Constraints 的“另跑的单配置”）之后 S2 与默认配置的 chromium（`t7-s2`）。提交 `feat(M7/P6a): 视图页——以 viewId 为 key，读中、不存在、失败重试、停用四种状态与各自的页头，窄屏页头；每次挂载读自己的视图，列表照视图存着的筛选与显示，改动只进页面里的草稿；S2 去掉项目视图一格`。
 - [ ] Step 4（**检查点 1**）：`final.sh cp1`；主控推送、核分支 CI，记 web 作业三步与 e2e 两片。
 
 ### T8 另存、更新视图与在途停用
 
 **Files**：
-- 改：`C/components/work-item-filters/filters-hoc/{project-level.tsx,shared.ts}`（212、33）、`C/components/rich-filters/filters-row.tsx`（185）、`C/components/issues/issue-layouts/roots/{project-layout-root,planning-page-layout-root}.tsx`（113、128）、`project-view-layout-root.tsx`（T7 新建；传 `enableSaveView`、`enableUpdateView`）、`C/hooks/planning-page-domains.ts`（74）、`C/store/issue/helpers/page-preferences-filter.store.ts`（`confirmed`）、`save-view-collapsed.test.tsx` → `save-view-offered.test.tsx`、`IL/roots/cycle-layout-root.test.tsx:91`（132）、`IL/roots/module-layout-root.test.tsx:92`（133）（三份照允许清单）；en、zh-CN（`common.filter_options.{save_view,update_view,confirming}`）。`IL` = `C/components/issues/issue-layouts`。
+- 改：`C/components/work-item-filters/filters-hoc/{project-level.tsx,shared.ts}`（212、33）、`C/components/rich-filters/filters-row.tsx`（185）、`C/components/issues/issue-layouts/roots/{project-layout-root,planning-page-layout-root}.tsx`（113、128）、`project-view-layout-root.tsx`（T7 新建；传 `enableSaveView`、`enableUpdateView`）、`C/hooks/planning-page-domains.ts`（74）、`C/store/issue/helpers/page-preferences-filter.store.ts`（`confirmed`）、`C/store/issue/project-view/filter.store.ts`（实施中改，T8：加 `adopt(viewID, view)`，转给私有的草稿服务，主控准）、`save-view-collapsed.test.tsx` → `save-view-offered.test.tsx`、`IL/roots/cycle-layout-root.test.tsx:91`（132）、`IL/roots/module-layout-root.test.tsx:92`（133）（三份照允许清单）；en、zh-CN（`common.filter_options.{save_view,update_view,confirming}`）。`IL` = `C/components/issues/issue-layouts`。
 - 改（R29 的在途停用，L!）：`C/store/views/{view.store,view-changes}.ts`（`isUpdating(viewId)`）；`C/components/issues/filters.tsx`（67）、`C/components/issues/mobile-header-filters.tsx`（56）、`C/components/issues/issue-layouts/filters/header/layout-selection.tsx`（64）、`mobile-layout-selection.tsx`（56）、`C/components/work-item-filters/filters-toggle.tsx`（28）与 `C/components/rich-filters/filters-toggle.tsx`（93）、`C/components/rich-filters/filters-row.tsx`（185）（各加一个可选的 `disabled`，默认不停用）；`IL/spreadsheet/columns/header-column.tsx`（112，`:42` 的 `CustomMenu` 读 `DraftBusyContext` 停用）、`IL/calendar/dropdowns/options-dropdown.tsx`（146，`:53-69` 的月 / 周与显示周末读它停用，预检 re-96 I4）、`IL/empty-states/project-issues.tsx`（77，`:51-53` 的清除读它）；`C/components/issues/issue-layouts/roots/project-view-layout-root.tsx`（T7 新建；提供 `DraftBusyContext`、给筛选行传 `disabled`）；`V/(detail)/[viewId]/{header,mobile-header}.tsx`（116 与 T7 新建；传 `isUpdating(viewId)`）。新 `IL/draft-busy.ts`（`DraftBusyContext`，约 10 行）。
 - 新：可能 `filters-hoc/use-project-view-saving.ts`；HOC、筛选行与页头停用的新测试。
 
@@ -305,10 +305,10 @@
   - `confirmed(id)` 返回拷贝；HOC 的 `hasAdditionalChanges` 在改了显示之后重算（依赖挂在 `issuesFilter.filters[id]` 上，`confirmed` 不是响应式的）；
   - 四个页面给“Save view”（管理员、成员；访客与开关关着不给）；迭代页、模块页另存的体带 `cycle_id`、`module_id`；显示与属性是已确认的线上值；名字的初值为空（R30）；
   - “更新视图”：只给所有者（被降为访客的所有者不给）、不看锁；视图页改了筛选之后出现（`canUpdateView` 为真，R10 的 T8 一半）；没有改动时不出现（`hasAdditionalChanges` 比线上值）；扣住回答时按钮是 “Confirming”；成功之后提示、按钮消失、焦点落在筛选行的添加筛选（筛选行不在时落在筛选开关）、基线是回答（回答整理过筛选的一格）、草稿是回答；失败之后提示、按钮留着、焦点不动、草稿与基线不动（`navigation.views_disabled`、`navigation.view_not_found` 各一格）；体的显示在轮到时读（HOC 加假队列的那一层：扣住前一次写、点击、改草稿的显示、放开，预检 re-96 O1）；换会话之后答到不提示；离开页面（HOC 卸下）之后答到：不提示、不 `adopt`、不 `fetchFilters`、没有草稿（预检 re-96 I2）；
-  - 在途停用（R29）：扣住回答时筛选行的条件、添加筛选、“Clear all”、“Save view” 停用，视图页头的布局（宽屏与窄屏）、显示、筛选开关里的添加筛选停用，表格列头的排序菜单停用（一格），日历的选项下拉停用（一格，预检 re-96 I4；页面故事不另加，单测承担），有筛选时空态的“清除筛选”停用（一格）；放开之后（成功与被拒各一次）都恢复；项目页的页头、筛选行、列头、日历的选项与空态在同样的操作下不停用；
+  - 在途停用（R29）：扣住回答时筛选行的条件、添加筛选、“Clear all”、“Save view” 停用，视图页头的布局（宽屏与窄屏）、显示、筛选开关里的添加筛选停用（实施中改，T8：两处添加筛选经共用的 `AddFilterButton` 的 `isDisabled` 隐去、不是停用，格断言它不在），表格列头的排序菜单停用（一格），日历的选项下拉停用（一格，预检 re-96 I4；页面故事不另加，单测承担），有筛选时空态的“清除筛选”停用（一格）；放开之后（成功与被拒各一次）都恢复；项目页的页头、筛选行、列头、日历的选项与空态在同样的操作下不停用；
   - 筛选行的五个字面量与 HOC 的提示经 `t()`（`@/lib/fake-i18n` 的键），en 的文字不变；按字面找 “Clear all”“Save view” 的三份既有单测照允许清单改键。
 - [ ] Step 2：实现到通过（spec §2.7）；`save-view-collapsed.test.tsx` 照允许清单 `git mv` 并翻过来，两份 M6 根测试改键。HOC 不超过 220（`t8-wc`）。
-- [ ] Step 3：变异照上表 T8 各行（两层的：HOC 的 `isDisabled` 与 shared-state 的 `canUpdateView` 一起改，留只改一层的对照 `t8-ctl-update-one-layer`；shared-state 的变异之后核 dist 已还原）。门禁同 T2；死成员整份比对（`t8-dead-after`）；`make build` 之后 chromium 的 m4-filters、m4-list 与 m6-pages（`t8-m4-filters`、`t8-m4-list`、`t8-m6-pages`）。提交分两个（预检 re-96 O7，整审照此分范围）：
+- [ ] Step 3：变异照上表 T8 各行（两层的：HOC 的 `isDisabled` 与 shared-state 的 `canUpdateView` 一起改，留只改一层的对照 `t8-ctl-update-one-layer`；shared-state 的变异之后核 dist 已还原）。门禁同 T2；死成员整份比对（`t8-dead-after`）；`make build build-s3-fixture` 与 typegen（实施中改，见 Global Constraints 的“另跑的单配置”）之后 m4-filters、m4-list 与 m6-pages（`t8-m4-filters`、`t8-m4-list`、`t8-m6-pages`；实施中跑的是三引擎的整配置）。提交分两个（预检 re-96 O7，整审照此分范围）：
   - **提交 A** `feat(M7/P6a): 四个列表页的另存与视图页的更新视图——另存取页面已确认的线上值、迭代与模块带自己的词；更新视图等 nerve 的回答，失败留着按钮，成功之后基线是回答、焦点落在添加筛选，离开页面之后答到不跟进；筛选行与 HOC 的英文改键`。文件：`filters-hoc/{project-level.tsx,shared.ts,use-project-view-saving.ts}`、`rich-filters/filters-row.tsx`（`catch`、`t()`、添加筛选的 ref）、`roots/{project-layout-root,planning-page-layout-root,project-view-layout-root}.tsx`（`enableSaveView`、`enableUpdateView`）、`planning-page-domains.ts`、`page-preferences-filter.store.ts`（`confirmed`）、`save-view-offered.test.tsx`、两份 M6 根测试、en 与 zh-CN、HOC 与筛选行的新测试。变异：`t8-mut-saveas-guest`、`t8-mut-saveas-collapsed-cycle`、`t8-mut-root-no-update`、`t8-mut-no-view-terms`、`t8-mut-saveas-control-words`、`t8-mut-confirmed-live`、`t8-mut-update-non-owner`、`t8-mut-update-guest-owner`、`t8-mut-additional-control-words`、`t8-mut-additional-confirmed-only`、`t8-mut-update-resolves-on-failure`、`t8-mut-baseline-current`、`t8-mut-no-adopt`、`t8-mut-body-at-click`、`t8-mut-update-follow-unmounted`、`t8-mut-update-other-session-toast`、`t8-mut-update-focus-lost`、`t8-mut-no-catch`、`t8-mut-literal-update`，两层的对照 `t8-ctl-update-one-layer`。
   - **提交 B** `feat(M7/P6a): 更新视图在途时，视图页上改草稿的入口停用——筛选行、页头的布局与显示、表格列头的排序、日历的选项、空态的清除，落定之后恢复`。文件：`C/store/views/{view.store,view-changes}.ts`（`isUpdating`）、`C/components/issues/{filters,mobile-header-filters}.tsx`、`IL/filters/header/{layout-selection,mobile-layout-selection}.tsx`、两份 `filters-toggle.tsx`、`rich-filters/filters-row.tsx`（`disabled`）、`IL/draft-busy.ts`、`IL/spreadsheet/columns/header-column.tsx`、`IL/calendar/dropdowns/options-dropdown.tsx`、`IL/empty-states/project-issues.tsx`、`roots/project-view-layout-root.tsx`（提供 `DraftBusyContext`、传 `disabled`）、`V/(detail)/[viewId]/{header,mobile-header}.tsx`、在途停用的新测试。变异：`t8-mut-row-busy-enabled`、`t8-mut-root-no-busy`、`t8-mut-sort-busy-enabled`、`t8-mut-calendar-options-busy-enabled`、`t8-mut-empty-clear-busy-enabled`、`t8-mut-header-busy-enabled`、`t8-mut-busy-stuck`、`t8-mut-header-default-disabled`。
   - 两个提交各自过门禁（提交 A 之后视图页已有“更新视图”、还没有在途停用：分支内的窗口，不进 main）。
@@ -320,11 +320,11 @@
 **Steps**：
 - [ ] Step 1：先写测试，看到失败（收据 `t9-red`）：菜单以 `["PROJECT_VIEWS", projectId]` 读（与列表页同时挂着时共用一次在途的读，先例 `search-menu.test.tsx:335-345`）、门是入口规则、在途、被拒、空三种；搜索在 store 里没有这个项目的视图时开面板读一次、有了不读（R20 的代价，spec §2.8）；行的类型是 `View`；搜索只在项目范围给 “Views” 组（标题读 `views`），不分大小写的子串、nerve 的次序，被拒或在途时这组不显示、不挡别的组，“没有结果”在所有组都空时才给；选中关面板并转到视图页。
 - [ ] Step 2：实现到通过（spec §2.8）。
-- [ ] Step 3：变异照上表 T9 各行。门禁同 T2；`make build` 之后 chromium 单跑 `t9-palette`（Global Constraints）。提交 `feat(M7/P6a): 命令面板的视图——菜单与列表页同一个键，搜索的 Views 组只在项目范围、store 里没有才读、本地过滤；命令面板不再读 IProjectView`。
+- [ ] Step 3：变异照上表 T9 各行。门禁同 T2；`make build build-s3-fixture` 与 typegen（实施中改，见 Global Constraints 的“另跑的单配置”）之后 chromium 单跑 `t9-palette`（Global Constraints）。提交 `feat(M7/P6a): 命令面板的视图——菜单与列表页同一个键，搜索的 Views 组只在项目范围、store 里没有才读、本地过滤；命令面板不再读 IProjectView`。
 
 ### T10 删除与 `old-view-urls` → **检查点 2**
 
-**Files**：删 `C/services/view.service.ts`（42）、`C/store/project-view.store.ts`（278）、`C/hooks/store/use-project-view.ts`（17）、`web/apps/web/helpers/views.helper.ts`（26）、`PKG/utils/src/project-views.ts`（97）与桶导出 `:19`；改 `C/store/root.store.ts`（去掉 `projectView`）、`root.store.test.ts:106`（允许清单）、`PKG/types/src/views.ts`（58）、`PKG/constants/src/views.ts`（26）与桶导出 `PKG/constants/src/index.ts:32`（文件空了时）、`PKG/types/src/index.ts:25`（文件空了时）、`C/store/favorite.store.ts`（391）、`C/hooks/use-favorite-item-details.tsx`（62）；`K`（`old-view-urls`）。
+**Files**：删 `C/services/view.service.ts`（42）、`C/store/project-view.store.ts`（278）、`C/hooks/store/use-project-view.ts`（17）、`web/apps/web/helpers/views.helper.ts`（26；实施中改，T4：随最后的读者 `VC/applied-filters/access.tsx` 在 T4 删，连同 `VIEW_ACCESS_SPECIFIERS` 与 `@nerve/ui` 的 `FavoriteStar`）、`PKG/utils/src/project-views.ts`（97）与桶导出 `:19`；改 `C/store/root.store.ts`（去掉 `projectView`）、`root.store.test.ts:106`（允许清单）、`PKG/types/src/views.ts`（58）、`PKG/constants/src/views.ts`（26）与桶导出 `PKG/constants/src/index.ts:32`（文件空了时）、`PKG/types/src/index.ts:25`（文件空了时；实施中：两个文件都没空——排序的类型与常量仍被新列表页读，`EViewAccess` 留给 P6b——桶导出不改）、`C/store/favorite.store.ts`（391）、`C/hooks/use-favorite-item-details.tsx`（62）；`K`（`old-view-urls`）。
 
 **Steps**：
 - [ ] Step 1：读者表（收据 `t10-readers-before`）：spec §2.9 的每一项 `git grep`，写进台账（还被 P6b 的文件读的留下并写明）。
@@ -340,7 +340,7 @@
 **Steps**：
 - [ ] Step 1：先跑期望错误的版本（收据 `t11-red-page-list`、`t11-red-page-view`、`t11-red-page-layouts`，拆出另存时加 `t11-red-page-saving`），看到断言在被改处失败。
 - [ ] Step 2：写故事（spec §2.11 的表），其中：“Add view” 的请求体钉住合同默认的显示与属性（等于 `viewDefaults`、没有 `filters`，R28）；弹窗里没有布局与显示；新建与另存的名字初值为空（R30）；“更新视图”扣住回答的一步断言筛选行的条件与添加筛选、“Clear all”、“Save view”、页头的布局与显示都停用，放开之后（成功一次、被拒一次）恢复（R29）；读表照实数（回答整理过筛选时成功之后多一次列表的读，预检 re-96 O3）；离开再进来（两秒之内）恰再一个 `GET /api/v0/views/{id}`（I1）；列表的查询包含 `savedQuery` 的各项（`E/fixtures/views.ts:184`，不是相等）；列表页的 “Filters” 与视图页的 “Display”（`FiltersDropdown`）各一步：名字、`aria-expanded`、Escape 之后焦点回到按钮（`HO/M3-closeout.md:56`）；页头在四种状态下的面包屑与窄屏页头；迭代页、模块页的另存先加一个条件（没有条件不给 “Save view”，预检 re-96 O4）；四种布局各存一个视图、各打开一次（请求的查询与列出的行）、翻页一次、分组头的“+”与日历的“添加已有”。前置条件只经接口；视图的内容经接口读回（`viewCalls(api).read`，`E/fixtures/views.ts:119-125`）与请求体、回答比较，数据库只经 `viewRow`（`:158`，软删与所有者）；扣住回答经 `holdAnswer`；读失败的一步只在 Chromium、只在视图页的代码载入之后装路由；换页、关开关、删视图之前先等在途的读答完。
-- [ ] Step 3：跑法：`make build`；chromium 聚焦；`--config=playwright.m7-pages.config.ts` 三引擎；新文件 chromium `--repeat-each=3`（`t11-repeat`）。记每个 `test()` 三引擎的时长；每份不过 400 行。提交 `test(M7/P6a): H12 的页面故事——视图列表页的矩阵、弹窗与菜单，视图页的四种状态、另存与更新视图、四种布局与翻页；mounts 加视图的读`。
+- [ ] Step 3：跑法：`make build build-s3-fixture` 与 typegen（实施中改，见 Global Constraints 的“另跑的单配置”）；chromium 聚焦；`--config=playwright.m7-pages.config.ts` 三引擎；新文件 chromium `--repeat-each=3`（`t11-repeat`）。记每个 `test()` 三引擎的时长；每份不过 400 行。提交 `test(M7/P6a): H12 的页面故事——视图列表页的矩阵、弹窗与菜单，视图页的四种状态、另存与更新视图、四种布局与翻页；mounts 加视图的读`。
 
 ### T12 H20 (page)
 

@@ -479,6 +479,7 @@ API 故事 `h1-subscription.spec.ts`、`h2-h4-notifications.spec.ts`、`h5-h7-no
   - **处理结果（M7/P5a）：** 收集箱的单例删除：`inbox/content/issue-root.tsx:36` 的版本 service 在 T6a，`store/inbox/project-inbox.store.ts:127` 的 `InboxIssueService` 在 T6c（[P5a spec](P5a-web-intake.md) §2.10）。嵌入分诊与两个 prop 随 P5b（R32、Q13）。
   - **处理结果（M7/P5b）：** 嵌入分诊已做：预览读工作项之后按它的 `intake` 判定（不读通知的字段或快照的 `state_group`），未被接受的嵌入收集箱的详情与页头，已接受的开浮层；两个 prop 以选中的端口回来，`isNotificationEmbed` ↔ `selection.kind === "embed"`，`embedRemoveCurrentNotification` ↔ `selection.close`（[P5b spec](P5b-web-intake-files-embed.md) §2.5、R18）。本条的收集箱部分关闭。
 - **P6a/P6b**：`enableSaveView`、`enableUpdateView` 与工作区 HOC 的分支接回或删除；`rich-filters/filters-row.tsx` 的字面量；视图的嵌套按钮与复制。
+  - **处理结果（M7/P6a）：** 项目一侧接回（[P6a spec](P6a-web-project-views.md) §2.7、R7、R9、R21）：项目页、迭代页、模块页与视图页给“另存”（`enableSaveView`，P4 的 `save-view-collapsed.test.tsx` 翻过来、改名 `save-view-offered.test.tsx`），视图页给“更新视图”（`enableUpdateView`，等 nerve 的回答）；`ProjectLevelWorkItemFiltersHOC` 照生成的 `View` 重写（`filters-hoc/project-level.tsx` 212 → 73 行，逻辑进 `use-project-view-saving.ts`），不再收 `label`、`isDisabled` 的覆盖；`rich-filters/filters-row.tsx` 的 “Filters”“Clear all”“Save view”“Confirming”“Update view” 经 `t()`（en 的文字不变）；视图行的菜单按钮不再嵌 `IconButton`，复制经 `useCopyLink`（§2.3）。R17 的项目一侧关闭；工作区 HOC 的分支（`workspace-level.tsx` 仍读 `shared.ts` 的 `enableSaveView`、`saveViewOptions`、`enableUpdateView`、`updateViewOptions`）与工作区视图的嵌套按钮、复制随 P6b。
 - **P7**：通知页不记最近访问（打开卡片不是访问工作项详情页）。
 - **P8**：`PlanningReadFailure` 已是通知与规划共用的件，名字的去留随最终的收敛；顶栏未读数是否聚焦重取若负责人选 (c)，在 P8 之前任一页面阶段改 `useSessionSWR` 与 v0 §7.7。
 

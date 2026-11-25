@@ -251,6 +251,8 @@ M6/P5b 的 T16（2026-11-12）在 `8b11bc6381623717663ba986da74710668719494` 上
 - 守卫：M8 收紧规则的内容式，让它认任何接收者的 router store（例如任何 `.router` 的成员，加解构出的 `router`），样例里加一条命中（如 `store.router.projectId`）与一条不命中（如 `import { useNavigate } from "react-router";`），`node tools/keywords.mjs` 对那时的文件表无命中（有命中的先改读路由参数）；或维持现状（以命名的约定与审查防）。
 - 列表的正文：上面 5 个读者在项目页（与归档页）上按地址的项目读本页的偏好（照 P7c F3 的 `usePageDisplay`：`getIssueFilters(<地址的项目>)`，不经 router store），`usePageIssueFilters` 经 router store 的两支随之去掉（hook 没有读者时删去）；单测钉住“router store 的项目是 A、地址的是 B、两者的偏好都在时，列表照 B 的显示”，并有一个改回经 router store 读即失败的变异。
 
+**处理结果（M7/P6a，补证据，不关闭）：** 守卫一件：P6a 给 `project-address-route` 的文件表加入视图的路由页与页头、视图的组件、`use-view-page-read.ts`、`use-project-view-saving.ts`、命令面板的视图菜单与搜索、列表引擎的 `project-view` 一组（T4、T6、T7、T7 的跟进、T8，各带命中的样例；`tools/keywords.json:2334`），没有改规则的内容式；P6a 新建与改名的文件经任何接收者都不读 `.router`、也不解构 `router`（HEAD `91c628a2` 以 `git grep` 核过）。列表的正文一件：`usePageIssueFilters` 加 `PROJECT_VIEW` 一支，按路由的 `viewId` 读这个视图的草稿（`web/apps/web/core/hooks/store/use-page-issue-filters.ts:39-40`，同迭代、模块两支），视图页上上面 5 个读者不经 router store；项目页与归档页的两支照旧（[P6a spec](../../M7-collaboration/specs/P6a-web-project-views.md) §2.5）。两件都还在，保持 open。
+
 <a id="M6-M8-16"></a>
 ## M6-M8-16 G2 页面故事在上海午夜前后的几秒会失败
 
@@ -310,3 +312,5 @@ M6 的页面在三种引擎上的对等、矩阵专用的核对与规模，持�
 观察（M6/P8 的 T11）：富筛选条件的移除按钮 `web/apps/web/core/components/rich-filters/filter-item/close-button.tsx:35` 的 `aria-label="Remove filter"` 是写死的英文（Plane 原样，M4 的件），中文界面下读屏也读出英文；与 P8 改为键的三处英文字面量（[P8 spec](../../M6-cycles-modules/specs/P8-final-acceptance.md) §2.3）同一类。P8 只把它的 `focus:outline-none` 换成内缩的焦点环（`ea7580d6`），文字没改。
 
 **何时验收：** M8 的文案收尾把它改读键（en 与 zh-CN 在同一提交，过 `check:sync`），以单测钉住；或负责人决定维持现状，并在此写明理由。
+
+**处理结果（M7/P6a，同一类的补充，不关闭）：** P6a 把同一组件树里筛选行的英文字面量改为键（`web/apps/web/core/components/rich-filters/filters-row.tsx` 的 “Filters”“Clear all”“Save view”“Confirming”“Update view”，en 的文字不变；新键 `common.filter_options.{save_view,update_view,confirming}`，[P6a spec](../../M7-collaboration/specs/P6a-web-project-views.md) §2.7、R21），本条的 `close-button.tsx:35` 未改。同一类另有两处，P6a 交 M8 一并处理：`web/apps/web/core/components/rich-filters/filter-item/invalid.tsx:29` 的提示（“This filter condition is no longer valid. …”）与 `:35` 的 “Invalid filter” 是写死的英文（Plane 原样；P6a spec R21）。验收照本条。保持 open。

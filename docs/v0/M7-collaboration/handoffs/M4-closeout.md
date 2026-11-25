@@ -61,6 +61,8 @@ M4 的最终 C12、准确分支 CI 和未来 main 集成分别由[验收台账](
 
 **处理结果（M7/P3b，视图的接口一支）：** 项目视图与工作区视图的接口已接通（`listProjectViews`、`createProjectView`、`listWorkspaceViews`、`createWorkspaceView`、`getView`、`updateView`、`deleteView`，[P3b spec](../specs/P3b-views.md) §2.4）；已存的词原样作为查询发给项目列表与工作区跨项目列表都被接受（组合测试 `TestWorkspaceViewsThroughTheApp` 的往返与 e2e `h14-workspace-views.spec.ts`）。页面（两个布局根、`PROJECT_VIEW`/`GLOBAL` 的 store、视图详情的列表部分）与旧 `WorkspaceService` 四个方法、旧 `view.service.ts` 的删除仍随 P6a/P6b。保持 open。
 
+**处理结果（M7/P6a，项目视图一支）：** `EIssuesStoreType.PROJECT_VIEW` 在新引擎上恢复（[P6a spec](../specs/P6a-web-project-views.md) §2.5、§2.6、R1、R6）：它是项目列表页的一种（`core/store/issue/project-view/` 的 `ProjectViewIssues`、`ProjectViewIssuesFilter`，查询来自内存里的草稿 `ViewDraftService`），没有恢复旧列表引擎或空壳；每个分派点都接上，两个 `switch` 以 `satisfies never` 穷尽；视图页的根 `core/components/issues/issue-layouts/roots/project-view-layout-root.tsx` 与视图页 `[projectId]/views/(detail)/[viewId]/page.tsx`（以 `viewId` 为 key，读中、不存在、失败重试、停用四种状态）。旧 `core/services/view.service.ts` 连同旧 store 与 hook 在 T10 删除（`6ea2f0c9`），关键词 `old-view-urls` 拦它的地址。整页以真实有效的视图验收（H12 (page) 四份、H20 (page) 两份，三种引擎）：详情与它的列表、四种布局与翻页、筛选与“更新视图”、读失败与重试（Chromium）、管理员、成员与只看自己的访客、换会话（`e2e/stories/collaboration/h20-view-pages.spec.ts:187`）、迟到的回答；`t12-m7-pages` 200 过 1 跳（跳过的是 P5b H8 的 WebKit 一格），整页没有非预期的失败。项目视图一支关闭；`GLOBAL`、工作区视图的页面与布局根、旧 `WorkspaceService` 的四个方法与完整的工作区标签目录随 P6b。保持 open。
+
 <a id="M7-04"></a>
 ## M7-04 收集箱旧 DTO、版本与命令面板
 
@@ -87,6 +89,19 @@ M4 的最终 C12、准确分支 CI 和未来 main 集成分别由[验收台账](
 
 收集箱部分关闭。留下：第三条里迭代、视图的命令面板结果与第五条里筛选、视图写后关闭，随 P6a/P6b。保持 open。
 
+**处理结果（M7/P6a，命令面板的视图与视图的关闭政策）：** 上面第三条的视图结果与第五条的项目视图部分逐项（[P6a spec](../specs/P6a-web-project-views.md) §2.4、§2.7、§2.8、§5）：
+- 命令面板的视图（第三条）：按真实接口恢复——“打开视图”的菜单以列表页的键读（`power-k/ui/pages/open-entity/project-views-menu.tsx`），在途、被拒、空、门关着各有交代；搜索的 Views 组只在项目范围、store 里没有这个项目的视图才读、本地过滤（`power-k/ui/modal/use-view-search.ts`）；命令面板不再读 `IProjectView`（R13；单测 `project-views-menu.test.tsx` 7 格、`use-view-search.test.tsx` 10 格；H20 (page) `e2e/stories/collaboration/h20-views-palette-pages.spec.ts:32`、`:130` 三引擎）。
+- discard 与文档 Escape：视图弹窗的文档级 Escape 删去，Escape、点背景、Cancel 在不在途时一条规则（T5，变异 `t5-mut-document-escape`；H12 (page) `e2e/stories/collaboration/h12-project-views-list-page.spec.ts:196`）。
+- dirty/pending/busy：视图弹窗没有编辑器、没有放弃确认（同 M6 的迭代、模块弹窗），在途不关、Cancel 停用（T5，`t5-mut-close-in-flight`）；“更新视图”在途时视图页上改草稿的入口停用（R29，T8；H12 (page) `h12-project-view-page.spec.ts:236`）。
+- 输入保留：被拒时表单与输入留着（T5，`views/modal.test.tsx`）。
+- 嵌套 Escape：图标选择器开着时 Escape 只关它（T5；H20 (page) `e2e/stories/collaboration/h20-view-pages.spec.ts:255` 三引擎）。
+- IME：组字时的 Escape 由 `ModalCore` 阻止（T5 一格，变异 `t5-mut-ime-escape-closes`）；Enter 不另写。
+- 拒绝：名字的 `FieldError`、`aria-invalid` 与焦点，nerve 点名 `name` 时放到名字下，别的拒绝经提示（T5，变异 `t5-mut-no-refused-focus`、`t5-mut-invalid-off`、`t5-mut-name-refusal-toast`；H12 (page) `:196`）。
+- 换宿主迟到答：弹窗与宿主的跟进只在还挂着时做（T4、T5，`t5-mut-follow-unmounted`）；“更新视图”的跟进只在 HOC 还挂着时做（T8，`t8-mut-update-follow-unmounted`；H20 (page) `:76`、`:187`）。
+- 未等待的筛选与视图写后关闭：“更新视图”等 nerve 的回答，失败时按钮留着、草稿与基线不动（R9，T8，`t8-mut-update-resolves-on-failure`；H12 (page) `:236`）。
+
+项目视图的部分关闭。留下：工作区视图的部分（工作区 HOC 的写后关闭、工作区视图的弹窗）随 P6b。保持 open。
+
 <a id="M7-05"></a>
 ## M7-05 最后读者与全应用收口
 
@@ -107,3 +122,5 @@ M4 的最终 C12、准确分支 CI 和未来 main 集成分别由[验收台账](
 **处理结果（M7/P5a，收集箱的部分）：** `projectMemberIds` 的收集箱读者 `inbox/inbox-filter/filters/filter-selection.tsx` 随旧筛选树在 T6b 删除（`2ac1928c`），新的负责人与创建者筛选读路由项目的显式 id（`getProjectMemberIds(projectId, true)`，`inbox/filters/menu.tsx:106`，T7）；现余的两个读者都是视图的（上面 1、2），getter 的删除随 P6a（[P5a spec](../specs/P5a-web-intake.md) R23）。`getTabIndex` 的四个收集箱文件都在新建弹窗里，随 P5b。收集箱页照这些规则写（spec §2.7–§2.9、R35）：暂缓与选择器的弹窗标题经 `ModalTitle`（`inbox/modals/snooze-issue-modal.tsx:82`、`select-duplicate.tsx:98`），拒绝与删除是 `AlertModalCore`；暂缓的日子被拒时提示是 `FieldError`（`:104`），经 `useRefusedFocus` 取得焦点（`:59`）；列表的一行以“编号 名字”为名（`inbox/sidebar/list-item.tsx:59`）；页签是 Headless `Tab`；面包屑、上一条与下一条的名字经 `t()`，en 与 zh-CN 同加。H20 (page) 三种引擎核对：每个分诊弹窗以标题为名、焦点在里面、后面的页面隐藏，Escape 或取消关上之后焦点回打开它的按钮，在途时 Escape、点外面与取消都关不掉。保持 open。
 
 **处理结果（M7/P5b，收集箱的新建弹窗）：** `getTabIndex` 的四个收集箱文件离开它（`fa78bb11`），它只剩视图的 `views/form.tsx`，函数、两份 `tab-indices.ts` 与桶文件的导出随 P6a。新建弹窗照这些规则写（[P5b spec](../specs/P5b-web-intake-files-embed.md) §2.1）：标题经 `ModalTitle`（弹窗以 “Create intake work item” 为名）；名字的提示是 `FieldError`、控件 `aria-invalid`，被拒经 `useRefusedFocus` 取得焦点；确认放弃是 `AlertModalCore`（以标题为名，按钮的文字经 `t()`）；“Create more” 是开关本身，按钮里不再套开关；英文改走已有的键，新键只有确认框的两个（en、zh-CN）；两级 Escape 在 H8 (page) 三引擎核（负责人列表、截止日的日历与确认框开着时 Escape 只关它们）。`projectMemberIds` 的两个读者仍都是视图的。保持 open。
+
+**处理结果（M7/P6a，两项都关闭）：** `projectMemberIds`：视图的两个读者（上面 1、2）改读 `getProjectMemberIds(projectId, true)`（T4 `bd2cfff0`），重新核过读者之后删除 `IProjectMemberStore` 的声明、`computed` 注解、类的 getter 与只为它的 `routerStore`，专属的旧测试断言随之改；显式的 `getProjectMemberIds` 保留（[P6a spec](../specs/P6a-web-project-views.md) §2.9、R16；[M3 交接](M3-closeout.md) §7）。`getTabIndex`：视图表单离开它时是最后的读者，函数、`ETabIndices`、`TAB_INDEX_MAP`、两份 `tab-indices.ts` 与桶导出删去（T5 `5a58db86`，R15；[M3 交接](M3-closeout.md) §6）；菜单正常的 `-1`（`issues/issue-layouts/spreadsheet/columns/header-column.tsx:48` 的 `customButtonTabIndex={-1}`）与共用控件非正的 `tabIndex?` 保留。视图的页面照这些规则写（§2.3、§2.4）：弹窗标题经 `ModalTitle`；名字的提示是 `FieldError`、控件 `aria-invalid`，被拒经 `useRefusedFocus` 取得焦点；图标选择器开着时 Escape 只关它；一行的菜单按钮以视图的名字为名；按钮与菜单是各自的角色；文字经 `t()`。M6 一侧的 M6-04 已在 M6 关闭（M6 的迭代、模块表单在 M6 离开 `getTabIndex`），这里回写 M7 一侧。
