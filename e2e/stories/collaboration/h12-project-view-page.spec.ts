@@ -41,7 +41,7 @@ async function settled(page: Page, recorded: () => { pending: number }): Promise
   await expect.poll(() => recorded().pending, "the reads out answered").toBe(0);
 }
 
-test("H12 (page): alice's view Hot, opened anew, reads the app's start, the workspace's, the project's, the view once and Web's work items under its words, listing Crash alone; its Display button says whether it is open, and Escape gives the focus back to it; its switcher reads Web's views only once it opens; her filters' change sends nothing and offers Update view; left for Web's views and entered again, twice, the second time within two seconds, the draft gone, it reads the view once more each time and lists Crash alone again; on a narrow screen its own row gives the layouts and the display", async ({
+test("H12 (page): alice's view Hot, opened anew, reads the app's start, the workspace's, the project's, the view once and Web's work items under its words, listing Crash alone; its Display button says whether it is open, and Escape gives the focus back to it; its switcher reads Web's views only once it opens; her filters' change sends nothing and offers Update view; left for Web's views and entered again, twice, the draft gone, it reads the view once more each time and lists Crash alone again; on a narrow screen its own row gives the layouts and the display", async ({
   api,
   signedInPage,
 }, testInfo) => {
@@ -96,8 +96,9 @@ test("H12 (page): alice's view Hot, opened anew, reads the app's start, the work
   expect(switched().requests).toEqual([viewsRead(w.web.id)]);
 
   // The filters' change is the draft's: the list read again, nothing sent, Update view offered. Left for Web's views
-  // and entered again, the draft is gone: the view read once more, Crash alone. Then again, within two seconds of that
-  // read of the view (SWR's dedupe window, in which a mount's plain read would not read it again): read once more.
+  // and entered again, the draft is gone: the view read once more, Crash alone; then again: read once more. Whether an
+  // entry falls within SWR's dedupe window of the read before (in which a mount's plain read would not read it again)
+  // is the real time's, not the story's: use-view-page-read.test.tsx pins an entry within it (review m2).
   const change = async () => {
     await answerTo(page, "GET", `/api/v0/projects/${w.web.id}/issues`, () =>
       pageMain(page).getByRole("button", { name: "Remove filter", exact: true }).click()
@@ -111,20 +112,16 @@ test("H12 (page): alice's view Hot, opened anew, reads the app's start, the work
     const link = page.getByRole("link", { name: "Hot", exact: true });
     await expect(link).toBeVisible();
     await settled(page, again);
-    const entered = Date.now();
     await answerTo(page, "GET", `/api/v0/views/${hot.id}`, () => link.click());
-    const read = Date.now();
     await expect.poll(() => shownItems(page)).toEqual(["Crash"]);
     await settled(page, again);
     expect(again().requests.filter((request) => request === viewRead(hot.id))).toHaveLength(1);
     await expect(pageMain(page).getByRole("button", { name: "Remove filter", exact: true })).toHaveCount(1);
     await expect(rowButton(page, "Update view")).toHaveCount(0);
-    return { entered, read };
   };
   await change();
-  const first = await reenter();
-  const second = await reenter();
-  expect(second.entered - first.read, "entered again within SWR's dedupe window").toBeLessThan(2_000);
+  await reenter();
+  await reenter();
   expect(watch.apiRequests.filter((request) => !request.startsWith("GET ")).toSorted()).toEqual([
     "POST /api/v0/auth/refresh",
   ]);
