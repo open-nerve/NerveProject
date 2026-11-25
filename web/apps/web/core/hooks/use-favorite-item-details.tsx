@@ -13,7 +13,7 @@ import {
 } from "@/components/workspace/sidebar/favorites/favorite-items/common";
 // hooks
 import { useProject } from "@/hooks/store/use-project";
-import { useProjectView } from "@/hooks/store/use-project-view";
+import { useViews } from "@/hooks/store/use-views";
 
 export const useFavoriteItemDetails = (workspaceSlug: string, favorite: IFavorite) => {
   const {
@@ -23,10 +23,10 @@ export const useFavoriteItemDetails = (workspaceSlug: string, favorite: IFavorit
   } = favorite;
   const favoriteItemName = favorite?.entity_data?.name || favorite?.name;
   // store hooks
-  const { getViewById } = useProjectView();
+  const { getViewById } = useViews();
   const { getProjectById } = useProject();
   // derived values
-  const viewDetails = getViewById(favoriteItemId ?? "");
+  const viewDetails = getViewById(favoriteItemId);
   const currentProjectDetails = getProjectById(favorite.project_id ?? "");
 
   let itemIcon;
@@ -39,6 +39,7 @@ export const useFavoriteItemDetails = (workspaceSlug: string, favorite: IFavorit
       itemIcon = <FavoriteItemIcon type="project" logo={currentProjectDetails?.logo_props || favoriteItemLogoProps} />;
       break;
     case "view":
+      // the view as the views' store holds it (P6a spec 2.9), else the favorite's own name and icon
       itemTitle = viewDetails?.name ?? favoriteItemName;
       itemIcon = <FavoriteItemIcon type="view" logo={viewDetails?.logo_props || favoriteItemLogoProps} />;
       break;

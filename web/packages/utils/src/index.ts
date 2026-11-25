@@ -16,7 +16,6 @@ export * from "./get-icon-for-link";
 export * from "./keyboard";
 export * from "./loader";
 export * from "./planning";
-export * from "./project-views";
 export * from "./project";
 export * from "./rich-filters";
 export * from "./string";
