@@ -17,9 +17,6 @@ export interface IFavoriteStore {
   favoriteMap: {
     [favoriteId: string]: IFavorite;
   };
-  entityMap: {
-    [entityId: string]: IFavorite;
-  };
   // computed actions
   existingFolders: string[];
   groupedFavorites: { [favoriteId: string]: IFavorite };
@@ -29,7 +26,6 @@ export interface IFavoriteStore {
   deleteFavorite: (workspaceSlug: string, favoriteId: string) => Promise<void>;
   fetchGroupedFavorites: (workspaceSlug: string, favoriteId: string) => Promise<IFavorite[]>;
   moveFavoriteToFolder: (workspaceSlug: string, favoriteId: string, data: Partial<IFavorite>) => Promise<void>;
-  removeFavoriteEntity: (workspaceSlug: string, entityId: string) => Promise<void>;
   reOrderFavorite: (
     workspaceSlug: string,
     favoriteId: string,
@@ -37,7 +33,6 @@ export interface IFavoriteStore {
     edge: string | undefined
   ) => Promise<void>;
   removeFromFavoriteFolder: (workspaceSlug: string, favoriteId: string) => Promise<void>;
-  removeFavoriteFromStore: (entity_identifier: string) => void;
 }
 
 export class FavoriteStore implements IFavoriteStore {
@@ -67,7 +62,6 @@ export class FavoriteStore implements IFavoriteStore {
       addFavorite: action,
       fetchGroupedFavorites: action,
       moveFavoriteToFolder: action,
-      removeFavoriteEntity: action,
       reOrderFavorite: action,
       removeFromFavoriteFolder: action,
     });
@@ -286,51 +280,6 @@ export class FavoriteStore implements IFavoriteStore {
     }
   };
 
-  /**
-   * Removes a favorite entity from the workspace and updates the store
-   * @param workspaceSlug
-   * @param entityId
-   * @returns Promise<void>
-   */
-  removeFavoriteEntity = async (workspaceSlug: string, entityId: string) => {
-    const initialState = this.entityMap[entityId];
-    try {
-      const favoriteId = this.entityMap[entityId].id;
-      await this.deleteFavorite(workspaceSlug, favoriteId);
-    } catch (error) {
-      console.error("Failed to remove favorite entity from favorite store", error);
-      runInAction(() => {
-        set(this.entityMap, [entityId], initialState);
-      });
-      throw error;
-    }
-  };
-
-  removeFavoriteFromStore = (entity_identifier: string) => {
-    try {
-      const favoriteId = this.entityMap[entity_identifier]?.id;
-      const projectData = Object.values(this.favoriteMap).filter(
-        (fav) => fav.project_id === entity_identifier && fav.entity_type !== "project"
-      );
-      runInAction(() => {
-        if (projectData) {
-          projectData.forEach(async (fav) => {
-            if (fav.entity_identifier) {
-              this.removeFavoriteFromStore(fav.entity_identifier);
-            }
-          });
-        }
-
-        if (!favoriteId) return;
-        delete this.favoriteMap[favoriteId];
-        delete this.entityMap[entity_identifier];
-        this.favoriteIds = this.favoriteIds.filter((id) => id !== favoriteId);
-      });
-    } catch (error) {
-      console.error("Failed to remove favorite from favorite store", error);
-      throw error;
-    }
-  };
   /**
    * get Grouped Favorites
    * @param workspaceSlug
