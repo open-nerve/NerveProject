@@ -7,12 +7,13 @@ import { Where, settle } from "@/components/common/fake-quick-actions";
 import { useViews } from "@/hooks/store/use-views";
 import { type FakeNerve, json } from "@/lib/auth/fake-nerve";
 import { viewRequests } from "@/store/views/fake-views";
-import { ViewActionsHost } from "./actions-host";
+import { ViewActionsHost, useViewsPage } from "./actions-host";
 import { ProjectViewListItem } from "./view-list-item";
 
 // The pages of a project's views as a view's quick actions are on them (P6a spec 2.3), for their tests: its list, a
 // view's own page, each the page of its ViewActionsHost with a row (ProjectViewListItem) for each view it shows, and
-// another page, elsewhere; and nerve's answer to a page's read of a project's views. The views are a views' store's
+// another page, elsewhere, and what the host of the page shown gives it (hostPage); and nerve's answer to a page's
+// read of a project's views. The views are a views' store's
 // (fake-views.ts), which a test file gives the pages by mocking @/hooks/store/use-views with it.
 
 /** nerve answers the page's last read of the project's views with these. */
@@ -53,10 +54,18 @@ const OwnPage = observer(function OwnPage() {
   return view ? <Row view={view} /> : <p>no view</p>;
 });
 
+/** What the host of the page shown last gives its page (useViewsPage). */
+export const hostPage: { current?: ReturnType<typeof useViewsPage> } = {};
+function HostPage() {
+  hostPage.current = useViewsPage();
+  return null;
+}
+
 function Page({ children }: { children: ReactNode }) {
   const { workspaceSlug = "", projectId = "" } = useParams();
   return (
     <ViewActionsHost workspaceSlug={workspaceSlug} projectId={projectId}>
+      <HostPage />
       {children}
     </ViewActionsHost>
   );

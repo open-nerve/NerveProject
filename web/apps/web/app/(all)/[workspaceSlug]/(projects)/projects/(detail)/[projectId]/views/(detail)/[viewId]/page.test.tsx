@@ -5,8 +5,8 @@
 // under the view's filters and display; it says that nerve finds no such view, or why it could not read it, with a
 // retry, and reads nothing while the project's views are off; the header draws its crumbs in each of those states. The
 // switcher reads the project's views once opened; a new work item is offered to admins and members; deleting the view
-// goes to the project's views; a new session's stores make a new visit, which reads the view once and never says
-// nerve has none. The stores, the layouts, SWR and HTTP are real (fake-view-page.tsx); the work item's preview is a
+// goes to the project's views, saying nothing of it before, while a view deleted by other than the page is one nerve
+// has none of; a new session's stores make a new visit, which reads the view once and never says nerve has none. The stores, the layouts, SWR and HTTP are real (fake-view-page.tsx); the work item's preview is a
 // marker, and the app's header a frame that shows the header and the small screen's header.
 import { act, Profiler, type ComponentType, type ReactNode } from "react";
 import { MemoryRouter, Route, Routes, useParams } from "react-router";
@@ -273,9 +273,9 @@ it("is the views' turned-off state while the project's views are off, under the 
   expect(page.nerve.calls).toEqual([]);
 });
 
-it("shows nothing of a view that the page's read found deleted here meanwhile: no failure, no retry, no toast", async () => {
+it("says that nerve has no such view once it is deleted elsewhere in the tab while the page reads it: no failure, no toast", async () => {
   await opened({ role: 20 });
-  // the project's views list the view, which the caller deletes while the page's read is out
+  // the project's views list the view, which the tab deletes while the page's read is out, not by the page's own host
   const listed = page.app.views.fetchProjectViews("A");
   await until(() => page.viewLists().length > 0, "the project's views");
   await act(async () =>
@@ -293,19 +293,19 @@ it("shows nothing of a view that the page's read found deleted here meanwhile: n
   await settle();
   expect(document.querySelector('[role="alert"]')).toBeNull();
   expect(text()).not.toContain("common.retry");
-  expect(text()).not.toContain("project_views.not_found.title");
+  expect(text()).toContain("project_views.not_found.title");
   expect(crumbs()).toBe(true);
   expect(toasts).toEqual([]);
   expect(consoleErrors()).toEqual([]);
   expect(page.lists()).toEqual([]);
 });
 
-it("shows nothing of the view it shows once nerve deletes it here, before the page goes: never that nerve has none", async () => {
+it("says that nerve has no such view, with the way back, once it is deleted by other than this page (re-review n1)", async () => {
   await opened({ role: 20 });
   await page.answerRead(first);
   await page.answerList();
   expect(drawn.at(-1)).toBe("the view");
-  // nerve deletes the view, as the page's quick actions ask, the page still here (its follow-up not yet run)
+  // nerve deletes the view, as another mount of its page asked (one left by a Back): not this page, which stays
   let deleted: Promise<void> | undefined;
   await act(async () => void (deleted = page.app.views.remove(first.id)));
   await until(() => page.writes().length === 1, "the deletion");
@@ -313,13 +313,13 @@ it("shows nothing of the view it shows once nerve deletes it here, before the pa
   await act(async () => deleted);
   await settle();
   expect(where.location?.pathname).toBe(`/ws/projects/A/views/${first.id}`);
-  expect(drawn, "what the page drew as nerve deleted the view").not.toContain("not found");
-  expect(drawn.at(-1)).toBe("blank");
-  expect(text()).not.toContain("project_views.not_found.title");
+  expect(drawn.at(-1), "what the page drew as nerve deleted the view").toBe("not found");
   expect(text()).not.toContain("common.retry");
   expect(crumbs()).toBe(true);
   expect(toasts).toEqual([]);
   expect(consoleErrors()).toEqual([]);
+  await act(async () => buttonIn("body", "project_views.not_found.action")?.click());
+  expect(where.location?.pathname).toBe("/ws/projects/A/views");
 });
 
 it("says that nerve finds no such view here when nerve gives a view of another project, under the crumbs", async () => {

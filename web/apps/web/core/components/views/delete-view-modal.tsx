@@ -33,7 +33,8 @@ type Props = {
  * the page shows the view (its own page), goes to the project's views; refused, it stays and says nerve's reason. While
  * the deletion is out nothing closes it (Escape, the backdrop, Cancel). Its follow-ups are those of the session it was
  * sent in (followInSession) and of its page (ViewActionsHost): once the page has gone (a Back, another project), nerve's
- * late answer reaches the store alone.
+ * late answer reaches the store alone. The view's own page is leaving from the deletion's sending (pageLeaving), until
+ * nerve refuses it: it shows nothing of the view gone before it goes (re-review n1).
  */
 export function DeleteProjectViewModal(props: Props) {
   const { isOpen, handleClose, view, workspaceSlug, projectId } = props;
@@ -45,7 +46,7 @@ export function DeleteProjectViewModal(props: Props) {
   // store hooks
   const { remove } = useViews();
   const toastRefusal = useRefusalToast();
-  const { pageMounted } = useViewsPage();
+  const { pageMounted, pageLeaving } = useViewsPage();
   // states
   const [busy, setBusy] = useState(false);
   const out = useRef(false);
@@ -55,6 +56,7 @@ export function DeleteProjectViewModal(props: Props) {
     out.current = true;
     setBusy(true);
     const shownByPage = pageViewId === view.id;
+    if (shownByPage) pageLeaving.current = true;
     await followInSession(() => remove(view.id), {
       done: () => {
         if (!pageMounted.current) return;
@@ -67,6 +69,7 @@ export function DeleteProjectViewModal(props: Props) {
         if (shownByPage) return navigate(`/${workspaceSlug}/projects/${projectId}/views`);
       },
       failed: (error) => {
+        pageLeaving.current = false;
         if (pageMounted.current) toastRefusal(error);
       },
     });

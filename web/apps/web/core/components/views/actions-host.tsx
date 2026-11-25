@@ -21,6 +21,12 @@ type ViewsPage = {
   openDialog: (dialog: ViewDialog, view: View) => void;
   /** Whether the page is still mounted: a change sent from it is followed while it is, though its row has gone. */
   pageMounted: { readonly current: boolean };
+  /**
+   * Whether the page is leaving, its own view's deletion sent from it (DeleteProjectViewModal): from its sending until
+   * nerve refuses it, or the page goes to the project's views. The view's page shows nothing of the view gone meanwhile
+   * (ViewVisit); another mount of the page has a host of its own, which is not leaving.
+   */
+  pageLeaving: { current: boolean };
 };
 
 const ViewsPageContext = createContext<ViewsPage | undefined>(undefined);
@@ -52,6 +58,7 @@ export function ViewActionsHost(props: Props) {
   // states
   const [shown, setShown] = useState<{ dialog: "create" | ViewDialog; view?: View; open: boolean }>();
   const mounted = useRef(false);
+  const leaving = useRef(false);
   useLayoutEffect(() => {
     mounted.current = true;
     return () => {
@@ -65,6 +72,7 @@ export function ViewActionsHost(props: Props) {
       openCreate: () => setShown({ dialog: "create", open: true }),
       openDialog: (dialog, view) => setShown({ dialog, view, open: true }),
       pageMounted: mounted,
+      pageLeaving: leaving,
     }),
     []
   );

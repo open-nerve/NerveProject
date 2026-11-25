@@ -23,7 +23,6 @@ export interface IViewStore extends IViewChanges {
   // computed actions
   getProjectViews: (projectId: string | null | undefined) => View[] | undefined;
   getViewById: (viewId: string | null | undefined) => View | undefined;
-  isDeleted: (viewId: string) => boolean;
   // fetch actions
   fetchProjectViews: (projectId: string) => Promise<View[] | undefined>;
   fetchView: (viewId: string) => Promise<View | null | undefined>;
@@ -80,12 +79,6 @@ export class ViewStore implements IViewStore {
     const newest = maxBy(copies, "answeredAt")?.view;
     return newest && this.projectOf(newest.project_id) ? newest : undefined;
   });
-
-  /**
-   * @description whether nerve deleted the view here, in this session (its own read null): the store gives it no more,
-   * nerve's deletion confirmed (view-changes.ts), as its page knows (ViewVisit); observable
-   */
-  isDeleted = (viewId: string): boolean => this.details.get(viewId) === null;
 
   /**
    * @description fetches the project's views and shows them with the changes nerve confirmed meanwhile; gives what it

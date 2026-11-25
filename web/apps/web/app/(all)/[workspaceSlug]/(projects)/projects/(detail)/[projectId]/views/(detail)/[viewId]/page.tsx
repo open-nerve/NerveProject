@@ -16,6 +16,7 @@ import { EmptyState } from "@/components/common/empty-state";
 import { PageHead } from "@/components/core/page-title";
 import { ProjectViewLayoutRoot } from "@/components/issues/issue-layouts/roots/project-view-layout-root";
 import { PlanningReadFailure } from "@/components/planning/read-failure";
+import { useViewsPage } from "@/components/views/actions-host";
 import { useViewPageRead } from "@/components/views/use-view-page-read";
 import { ViewsDisabled } from "@/components/views/views-disabled";
 // hooks
@@ -66,8 +67,8 @@ type VisitProps = { workspaceSlug: string; projectId: string; viewId: string; pr
  * One visit of the view's page, in one session (a new session's stores are new: its visit is a new one), whose read of
  * the view is its own (useViewPageRead): it waits for nerve's answer; says that nerve finds no such view in the project
  * (deleted, hidden from the caller, never there, or of another project), with the way back to the project's views; why
- * nerve could not read it, with a retry; shows nothing of a view deleted here once read (the page that deleted it goes
- * on to the project's views); and else the project's work items under the page's draft of the view
+ * nerve could not read it, with a retry; shows nothing of the view its own deletion took (its host leaving: it goes on
+ * to the project's views); and else the project's work items under the page's draft of the view
  * (ProjectViewLayoutRoot).
  */
 const ViewVisit = observer(function ViewVisit(props: VisitProps) {
@@ -77,7 +78,8 @@ const ViewVisit = observer(function ViewVisit(props: VisitProps) {
   // nerve hooks
   const { t } = useTranslation();
   // store hooks
-  const { getViewById, isDeleted } = useViews();
+  const { getViewById } = useViews();
+  const { pageLeaving } = useViewsPage();
   const read = useViewPageRead(workspaceSlug, viewId);
   // the route's project's view alone: one of another project is not found here
   const held = getViewById(viewId);
@@ -91,9 +93,9 @@ const ViewVisit = observer(function ViewVisit(props: VisitProps) {
       </Loader>
     );
   if (read.state === "failed") return <PlanningReadFailure error={read.error} onRetry={read.retry} />;
-  // nerve deleted the view here once the page read it, or while it did: the page is gone, its quick actions' deletion
-  // going on to the project's views; it is not that nerve has none (review O3)
-  if (read.state === "read" && isDeleted(viewId)) return null;
+  // the page's own deletion took the view: it is leaving for the project's views, and nerve's having none is not news
+  // (review O3); a view deleted by other than this page (another mount's, left by a Back) is not found (re-review n1)
+  if (read.state === "read" && !view && pageLeaving.current) return null;
   // nerve has no such view in the project: it said so, or gave one of another project
   if (read.state === "not-found" || !view)
     return (

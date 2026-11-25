@@ -13,13 +13,14 @@ import type { IUserPermissionStore } from "@/store/user/permissions.store";
 import type { ViewStore } from "@/store/views/view.store";
 import { ME, loadViews, viewOf, viewRequests, viewsTab } from "@/store/views/fake-views";
 import { fill, submit } from "./fake-view-dialog";
-import { ViewPages } from "./fake-view-pages";
+import { ViewPages, hostPage } from "./fake-view-pages";
 
 // The host of a page of a project's views (P6a spec 2.3, 2.4, R17): a view's quick actions open its page's dialogs
 // (useViewsPage), the one that changes the view and the one that deletes it, which follows nerve's answer though the
-// row has gone first, and only while the page is mounted and the tab in the session it was sent in. The dialogs are
-// real (the view's dialog, AlertModalCore); the views a views' store's over a fake nerve that answers when the test
-// says; the caller web's admin (fake-permissions.ts).
+// row has gone first, and only while the page is mounted and the tab in the session it was sent in; the page whose own
+// view it deletes is leaving from its sending until nerve refuses it. The dialogs are real (the view's dialog,
+// AlertModalCore); the views a views' store's over a fake nerve that answers when the test says; the caller web's
+// admin (fake-permissions.ts).
 
 const held = vi.hoisted(() => ({
   views: undefined as unknown as ViewStore,
@@ -127,6 +128,22 @@ it.each([
     expect(row(bugs.id)).toBeNull();
     // the view it was on is gone from the list too, the other there
     expect(row(mine.id)).not.toBeNull();
+  }
+);
+
+it.each([
+  { page: "views/<id>", shown: "the view it shows", leaving: true },
+  { page: "views", shown: "a view of its list", leaving: false },
+])(
+  "is leaving once its dialog sends the deletion of $shown ($leaving) until nerve refuses it (re-review n1)",
+  async ({ page, leaving }) => {
+    const { nerve, bugs } = await at(page);
+    const shown = hostPage.current;
+    expect(shown?.pageLeaving.current, "before the deletion").toBe(false);
+    await deleting(nerve, bugs);
+    expect(shown?.pageLeaving.current, "the deletion out").toBe(leaving);
+    await answerDeletion(nerve, bugs, problem(409, "navigation.views_disabled"));
+    expect(shown?.pageLeaving.current, "nerve refused it").toBe(false);
   }
 );
 
