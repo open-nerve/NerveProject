@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import React, { useState } from "react";
+import React, { useContext, useState } from "react";
 import { observer } from "mobx-react";
 import { usePopper } from "react-popper";
 import { ChevronUpOutline, MoreVerticalOutline, TickOutline } from "@makeplane/propel/icons";
@@ -17,6 +17,7 @@ import { Switch } from "@makeplane/propel/components/switch";
 import { CALENDAR_LAYOUTS } from "@nerve/constants";
 import { useCalendarView } from "@/hooks/store/use-calendar-view";
 import useSize from "@/hooks/use-window-size";
+import { DraftBusyContext } from "../../draft-busy";
 
 /** Changes the page's calendar display (P5b spec 2.5): the fields given replace the page's, the others stay. */
 export type TUpdateCalendarDisplay = (change: NonNullable<IIssueDisplayFilterOptions["calendar"]>) => void;
@@ -31,6 +32,8 @@ export const CalendarOptionsDropdown = observer(function CalendarOptionsDropdown
   const { calendarLayout, showWeekends, updateCalendar } = props;
 
   const { t } = useTranslation();
+  // month or week and the weekends change the page's draft: none while it is being saved (P6a spec 2.7, R29)
+  const busy = useContext(DraftBusyContext);
 
   const issueCalendarView = useCalendarView();
   const [windowWidth] = useSize();
@@ -74,7 +77,7 @@ export const CalendarOptionsDropdown = observer(function CalendarOptionsDropdown
       {({ open, close: closePopover }) => (
         <>
           <Popover.Button as={React.Fragment}>
-            <button type="button" ref={setReferenceElement}>
+            <button type="button" ref={setReferenceElement} disabled={busy}>
               <div
                 className={`hidden items-center gap-1.5 rounded-sm bg-layer-1 px-2.5 py-1 text-11 outline-none hover:bg-layer-1 md:flex ${
                   open ? "text-primary" : "text-secondary"

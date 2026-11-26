@@ -38,7 +38,8 @@ type KanbanStoreType =
   | EIssuesStoreType.PROJECT
   | EIssuesStoreType.PROFILE
   | EIssuesStoreType.CYCLE
-  | EIssuesStoreType.MODULE;
+  | EIssuesStoreType.MODULE
+  | EIssuesStoreType.PROJECT_VIEW;
 
 export interface IBaseKanBanLayout {
   QuickActions: FC<IQuickActionProps>;

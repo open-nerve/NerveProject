@@ -8,6 +8,7 @@ import React, { useState } from "react";
 import { observer } from "mobx-react";
 // nerve imports
 import { DATE_BEFORE_FILTER_OPTIONS } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
 import { isInDateFormat } from "@nerve/utils";
 // components
 import { DateFilterModal } from "@/components/core/filters/date-filter-modal";
@@ -21,6 +22,7 @@ type Props = {
 
 export const FilterCreatedDate = observer(function FilterCreatedDate(props: Props) {
   const { appliedFilters, handleUpdate, searchQuery } = props;
+  const { t } = useTranslation();
 
   const [previewEnabled, setPreviewEnabled] = useState(true);
   const [isDateFilterModalOpen, setIsDateFilterModalOpen] = useState(false);
@@ -49,11 +51,11 @@ export const FilterCreatedDate = observer(function FilterCreatedDate(props: Prop
           handleClose={() => setIsDateFilterModalOpen(false)}
           isOpen={isDateFilterModalOpen}
           onSelect={(val) => handleUpdate(val)}
-          title="Created date"
+          title={t("inbox_issue.filters.created_at")}
         />
       )}
       <FilterHeader
-        title={`Created date${appliedFiltersCount > 0 ? ` (${appliedFiltersCount})` : ""}`}
+        title={`${t("inbox_issue.filters.created_at")}${appliedFiltersCount > 0 ? ` (${appliedFiltersCount})` : ""}`}
         isPreviewEnabled={previewEnabled}
         handleIsPreviewEnabled={() => setPreviewEnabled(!previewEnabled)}
       />
@@ -70,10 +72,15 @@ export const FilterCreatedDate = observer(function FilterCreatedDate(props: Prop
                   multiple
                 />
               ))}
-              <FilterOption isChecked={isCustomDateSelected()} onClick={handleCustomDate} title="Custom" multiple />
+              <FilterOption
+                isChecked={isCustomDateSelected()}
+                onClick={handleCustomDate}
+                title={t("common.filter_options.custom")}
+                multiple
+              />
             </>
           ) : (
-            <p className="text-11 text-placeholder italic">No matches found</p>
+            <p className="text-11 text-placeholder italic">{t("common.search.no_matches_found")}</p>
           )}
         </div>
       )}

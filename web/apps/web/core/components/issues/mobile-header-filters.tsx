@@ -19,6 +19,8 @@ type Props = {
   storeType: PageDisplayStoreType;
   /** The page's id, as the route gives it: the project's, the cycle's or the module's. */
   entityId: string;
+  /** Stops the layouts and the display (a view's page's Update view out, P6a spec 2.7, R29); off unless given. */
+  disabled?: boolean;
 };
 const LAYOUTS = [EIssueLayoutTypes.LIST, EIssueLayoutTypes.KANBAN, EIssueLayoutTypes.CALENDAR];
 
@@ -28,7 +30,7 @@ const LAYOUTS = [EIssueLayoutTypes.LIST, EIssueLayoutTypes.KANBAN, EIssueLayoutT
  * a wider width give them (HeaderFilters, by usePageDisplay); no filters. Whether the page shows the row is its caller's:
  * each page's wrapper gives it once nerve has given the page's preferences.
  */
-export const MobileHeaderFilters = observer(function MobileHeaderFilters({ storeType, entityId }: Props) {
+export const MobileHeaderFilters = observer(function MobileHeaderFilters({ storeType, entityId, disabled }: Props) {
   // i18n
   const { t } = useTranslation();
   // the page's preferences
@@ -36,11 +38,12 @@ export const MobileHeaderFilters = observer(function MobileHeaderFilters({ store
 
   return (
     <div className="z-[13] flex justify-evenly border-b border-subtle bg-surface-1 py-2 md:hidden">
-      <MobileLayoutSelection layouts={LAYOUTS} onChange={changeLayout} activeLayout={layout} />
+      <MobileLayoutSelection layouts={LAYOUTS} onChange={changeLayout} activeLayout={layout} disabled={disabled} />
       <div className="flex flex-grow items-center justify-center border-l border-subtle text-13 text-secondary">
         <FiltersDropdown
           title={t("common.display")}
           placement="bottom-end"
+          disabled={disabled}
           menuButton={
             <span className="flex items-center text-13 text-secondary">
               {t("common.display")}

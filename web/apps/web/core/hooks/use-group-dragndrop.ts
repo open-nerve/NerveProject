@@ -24,6 +24,7 @@ type DNDStoreType =
   | EIssuesStoreType.ARCHIVED
   | EIssuesStoreType.CYCLE
   | EIssuesStoreType.MODULE
+  | EIssuesStoreType.PROJECT_VIEW
   | EIssuesStoreType.WORKSPACE_DRAFT;
 
 export const useGroupIssuesDragNDrop = (

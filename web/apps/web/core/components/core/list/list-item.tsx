@@ -25,7 +25,6 @@ interface IListItemProps {
   className?: string;
   actionItemContainerClassName?: string;
   isSidebarOpen?: boolean;
-  quickActionElement?: React.ReactNode;
   leftElementClassName?: string;
   rightElementClassName?: string;
 }
@@ -43,7 +42,6 @@ export function ListItem(props: IListItemProps) {
     className = "",
     actionItemContainerClassName = "",
     isSidebarOpen = false,
-    quickActionElement,
     leftElementClassName = "",
     rightElementClassName = "",
   } = props;
@@ -84,7 +82,6 @@ export function ListItem(props: IListItemProps) {
               <span className={cn("flex flex-shrink-0 items-center", rightElementClassName)}>{appendTitleElement}</span>
             )}
           </ControlLink>
-          {quickActionElement}
         </div>
         {actionableItems && (
           <div

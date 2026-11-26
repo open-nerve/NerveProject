@@ -7,7 +7,6 @@
 // types
 import type { Cycle, Module } from "@nerve/api-client";
 import { useTranslation } from "@nerve/i18n";
-import type { IProjectView, IWorkspaceView } from "@nerve/types";
 import type { TContextMenuItem } from "@nerve/ui";
 // hooks
 import { useQuickActionsFactory } from "@/components/common/quick-actions-factory";
@@ -46,11 +45,10 @@ interface UseModuleMenuItemsProps {
 }
 
 interface UseViewMenuItemsProps {
+  /** The caller owns the view and may change it: its owner, of a role that writes its views (P6a spec 2.2). */
   isOwner: boolean;
+  /** The caller is an admin of the view's project or workspace, who deletes any of its views. */
   isAdmin: boolean;
-  workspaceSlug: string;
-  projectId?: string;
-  view: IProjectView | IWorkspaceView;
   handleEdit: () => void;
   handleDelete: () => void;
   handleCopyLink: () => void;
@@ -127,11 +125,14 @@ export const useModuleMenuItems = (props: UseModuleMenuItemsProps): TContextMenu
   return items;
 };
 
+/**
+ * A view's menu (P6a spec 2.2, 2.3, R17): changing it, to its owner (isOwner); opening it in a new tab and copying its
+ * link, to anyone who sees it; deleting it, to its owner and to the admins (isAdmin). Its callers say who the caller is
+ * of the view, by the view's owner and the caller's role.
+ */
 export const useViewMenuItems = (props: UseViewMenuItemsProps): TContextMenuItem[] => {
   const factory = useQuickActionsFactory();
-  const { workspaceSlug, isOwner, isAdmin, projectId, view, ...handlers } = props;
-
-  if (!view) return [];
+  const { isOwner, isAdmin, ...handlers } = props;
 
   // Assemble final menu items - order defined here
   const items = [

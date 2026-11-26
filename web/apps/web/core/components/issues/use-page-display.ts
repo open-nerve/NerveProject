@@ -15,8 +15,15 @@ import { useIssuesActions } from "@/hooks/use-issues-actions";
 // local imports
 import type { DisplayFiltersSelection } from "./issue-layouts/filters";
 
-/** A list page whose header's controls show and change its own preferences: the project's, a cycle's or a module's. */
-export type PageDisplayStoreType = EIssuesStoreType.PROJECT | EIssuesStoreType.CYCLE | EIssuesStoreType.MODULE;
+/**
+ * A list page whose header's controls show and change its own preferences: the project's, a cycle's or a module's; or
+ * its draft of its view, a project's view's (P6a spec 2.5).
+ */
+export type PageDisplayStoreType =
+  | EIssuesStoreType.PROJECT
+  | EIssuesStoreType.CYCLE
+  | EIssuesStoreType.MODULE
+  | EIssuesStoreType.PROJECT_VIEW;
 
 /** What a list page's header's controls show of the page's preferences, and their changes. */
 type PageDisplay = {

@@ -26,7 +26,6 @@ export * from "./sidebar-favorites";
 export * from "./sidebar";
 export * from "./state";
 export * from "./swr";
-export * from "./tab-indices";
 export * from "./themes";
 export * from "./user";
 export * from "./views";

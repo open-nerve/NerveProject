@@ -117,6 +117,23 @@
     }
   },
   "project_views": {
+    "add_view": "添加视图",
+    "not_found": {
+      "title": "视图不存在",
+      "description": "你要找的视图不存在，或你看不到它。",
+      "action": "查看其他视图"
+    },
+    "action": {
+      "create": {
+        "success": "视图创建成功。"
+      },
+      "update": {
+        "success": "视图更新成功。"
+      },
+      "delete": {
+        "success": "视图删除成功。"
+      }
+    },
     "delete_view": {
       "title": "您确定要删除此视图吗？",
       "content": "如果您确认，您为此视图选择的所有排序、筛选和显示选项 + 布局将被永久删除，无法恢复。"

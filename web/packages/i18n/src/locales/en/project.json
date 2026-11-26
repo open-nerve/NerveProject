@@ -117,6 +117,23 @@
     }
   },
   "project_views": {
+    "add_view": "Add view",
+    "not_found": {
+      "title": "View does not exist",
+      "description": "The view you are looking for does not exist, or you may not see it.",
+      "action": "View other views"
+    },
+    "action": {
+      "create": {
+        "success": "View created successfully."
+      },
+      "update": {
+        "success": "View updated successfully."
+      },
+      "delete": {
+        "success": "View deleted successfully."
+      }
+    },
     "delete_view": {
       "title": "Are you sure you want to delete this view?",
       "content": "If you confirm, all the sort, filter, and display options + the layout you have chosen for this view will be permanently deleted without any way to restore them."

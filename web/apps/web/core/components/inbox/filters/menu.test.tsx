@@ -60,8 +60,6 @@ vi.mock("@/hooks/store/use-member", () => ({
         held.memberIdsOf.push([projectId, includeGuestUsers]);
         return projectId === "p-web" ? ["u-ann", "u-bob", "u-cat"] : ["u-router"];
       },
-      // the address's project, as the router store names it: another one
-      projectMemberIds: ["u-router"],
     },
   }),
 }));

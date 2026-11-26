@@ -5,6 +5,7 @@
  */
 
 import { observer } from "mobx-react";
+import { useTranslation } from "@nerve/i18n";
 import { CloseOutline } from "@makeplane/propel/icons";
 // nerve ui
 import { ProfileAvatar } from "@/components/assets/profile-image";
@@ -21,6 +22,7 @@ type Props = {
 
 export const AppliedMembersFilters = observer(function AppliedMembersFilters(props: Props) {
   const { handleRemove, values, editable } = props;
+  const { t } = useTranslation();
   const imageWorkspace = useRouteWorkspace();
   // store hooks
   const {
@@ -47,9 +49,10 @@ export const AppliedMembersFilters = observer(function AppliedMembersFilters(pro
               <button
                 type="button"
                 className="grid place-items-center text-tertiary hover:text-secondary"
+                aria-label={t("common.remove_item", { name: memberDetails.display_name })}
                 onClick={() => handleRemove(memberId)}
               >
-                <CloseOutline height={10} width={10} />
+                <CloseOutline height={10} width={10} aria-hidden="true" />
               </button>
             )}
           </div>

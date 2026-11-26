@@ -15,6 +15,7 @@ import type { TNavigationItem } from "@/components/navigation/tab-navigation-roo
 import { useUserPermissions } from "@/hooks/store/user";
 // lib
 import { intakeEntryOn } from "@/lib/intake-entry";
+import { viewEntryOn } from "@/lib/views-entry";
 
 type UseNavigationItemsProps = {
   workspaceSlug: string;
@@ -34,7 +35,7 @@ export const useNavigationItems = ({
   project,
   allowPermissions,
 }: UseNavigationItemsProps): TNavigationItem[] => {
-  // the caller's role in the project, for the intake's entry rule (P5a spec R21)
+  // the caller's role in the project, for the intake's and the views' entry rules (P5a spec R21; P6a spec R14)
   const { getProjectRoleByWorkspaceSlugAndProjectId } = useUserPermissions();
   const role = getProjectRoleByWorkspaceSlugAndProjectId(workspaceSlug, projectId);
   // Base navigation items
@@ -77,7 +78,7 @@ export const useNavigationItems = ({
         href: `/${targetWorkspaceSlug}/projects/${targetProjectId}/views`,
         icon: ViewsOutline,
         access: [EUserPermissions.ADMIN, EUserPermissions.MEMBER, EUserPermissions.GUEST],
-        shouldRender: !!project?.issue_views_view,
+        shouldRender: viewEntryOn(project, role),
         sortOrder: 4,
       },
       {

@@ -5,7 +5,7 @@
  */
 
 import { omit, sortBy, union, without } from "lodash-es";
-import { action, computed, makeObservable } from "mobx";
+import { action, makeObservable } from "mobx";
 import { computedFn } from "mobx-utils";
 // nerve imports
 import { EUserPermissions } from "@nerve/constants";
@@ -19,7 +19,6 @@ import { ProjectMembersService } from "@/services/project/project-members.servic
 // store
 import type { IProjectStore } from "@/store/project/project.store";
 import type { RootStore } from "@/store/root.store";
-import type { IRouterStore } from "@/store/router.store";
 import type { IUserStore } from "@/store/user";
 // local imports
 import type { IMemberRootStore } from "../index";
@@ -36,8 +35,6 @@ export type IProjectMemberDetails = ProjectMember & { member: MemberUser };
 export interface IProjectMemberStore {
   // filters store
   filters: IProjectMemberFiltersStore;
-  // computed
-  projectMemberIds: string[] | null;
   // computed actions
   getProjectMemberDetails: (userId: string, projectId: string) => IProjectMemberDetails | null;
   getProjectMemberIds: (projectId: string, includeGuestUsers: boolean) => string[] | null;
@@ -68,7 +65,6 @@ export class ProjectMemberStore implements IProjectMemberStore {
   // filters store
   filters: IProjectMemberFiltersStore;
   // stores
-  private readonly routerStore: IRouterStore;
   private readonly userStore: IUserStore;
   /** The users the stores read, which the workspace's members' profiles fill. */
   private readonly memberRoot: Pick<IMemberRootStore, "memberMap">;
@@ -81,15 +77,12 @@ export class ProjectMemberStore implements IProjectMemberStore {
 
   constructor(_memberRoot: Pick<IMemberRootStore, "memberMap">, _rootStore: RootStore, api: ApiClient) {
     makeObservable(this, {
-      // computed
-      projectMemberIds: computed,
       // actions
       fetchProjectMembers: action,
       bulkAddMembersToProject: action,
       updateMemberRole: action,
       removeMemberFromProject: action,
     });
-    this.routerStore = _rootStore.router;
     this.userStore = _rootStore.user;
     this.memberRoot = _memberRoot;
     this.projects = _rootStore.projectRoot.project;
@@ -100,12 +93,6 @@ export class ProjectMemberStore implements IProjectMemberStore {
   /** The project's memberships, once fetched, while the project store gives the project. */
   private membershipsOf(projectId: string): Memberships | undefined {
     return this.projects.getProjectById(projectId) ? this.members.get(projectId) : undefined;
-  }
-
-  /** @description as getFilteredProjectMemberIds, for the address's project (the router store's) */
-  get projectMemberIds() {
-    const projectId = this.routerStore.projectId;
-    return projectId ? this.getFilteredProjectMemberIds(projectId) : null;
   }
 
   /** @description a member's membership of the project with his profile; null without either */

@@ -6,54 +6,51 @@
 
 import { useRef } from "react";
 import { observer } from "mobx-react";
-import { useParams } from "react-router";
 import { Logo } from "@nerve/propel/emoji-icon-picker";
 import { ViewsOutline } from "@makeplane/propel/icons";
-// types
-import type { IProjectView } from "@nerve/types";
+// nerve imports
+import type { View } from "@nerve/api-client";
 // components
 import { ListItem } from "@/components/core/list";
 // hooks
 import { usePlatformOS } from "@/hooks/use-platform-os";
 // local imports
-import { ViewQuickActions } from "./quick-actions";
 import { ViewListItemAction } from "./view-list-item-action";
 
 type Props = {
-  view: IProjectView;
+  view: View;
+  workspaceSlug: string;
+  projectId: string;
 };
 
+/**
+ * A view's row in its project's views list (P6a spec 2.3, R17): its icon, its name, a link to its page, and its
+ * description; then its owner and its quick actions (ViewListItemAction).
+ */
 export const ProjectViewListItem = observer(function ProjectViewListItem(props: Props) {
-  const { view } = props;
+  const { view, workspaceSlug, projectId } = props;
   // refs
-  const parentRef = useRef(null);
-  // router
-  const { workspaceSlug, projectId } = useParams();
+  const parentRef = useRef<HTMLDivElement>(null);
   // store hooks
   const { isMobile } = usePlatformOS();
-
-  if (!workspaceSlug || !projectId) return null;
 
   return (
     <ListItem
       prependTitleElement={
-        <>
-          {view?.logo_props?.in_use ? (
-            <Logo logo={view?.logo_props} size={16} type="lucide" />
-          ) : (
-            <ViewsOutline className="h-4 w-4 text-tertiary" />
-          )}
-        </>
+        view.logo_props.in_use ? (
+          <Logo logo={view.logo_props} size={16} type="lucide" />
+        ) : (
+          <ViewsOutline className="h-4 w-4 text-tertiary" />
+        )
       }
       title={view.name}
+      appendTitleElement={
+        view.description ? <span className="truncate text-12 text-tertiary">{view.description}</span> : undefined
+      }
+      rightElementClassName="min-w-0 flex-shrink"
       itemLink={`/${workspaceSlug}/projects/${projectId}/views/${view.id}`}
       actionableItems={
         <ViewListItemAction parentRef={parentRef} view={view} workspaceSlug={workspaceSlug} projectId={projectId} />
-      }
-      quickActionElement={
-        <div className="block md:hidden">
-          <ViewQuickActions parentRef={parentRef} projectId={projectId} view={view} workspaceSlug={workspaceSlug} />
-        </div>
       }
       isMobile={isMobile}
       parentRef={parentRef}

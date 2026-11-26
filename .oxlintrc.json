@@ -182,8 +182,10 @@
         "web/apps/web/core/components/cycles/active-cycle/priority-issues.tsx",
         "web/apps/web/core/components/power-k/ui/pages/open-entity/project-cycles-menu.tsx",
         "web/apps/web/core/components/power-k/ui/pages/open-entity/project-modules-menu.tsx",
+        "web/apps/web/core/components/power-k/ui/pages/open-entity/project-views-menu.tsx",
         "web/apps/web/core/components/power-k/ui/modal/search-menu.tsx",
         "web/apps/web/core/components/power-k/ui/modal/use-planning-search.ts",
+        "web/apps/web/core/components/power-k/ui/modal/use-view-search.ts",
         "web/apps/web/core/components/power-k/ui/pages/context-based/work-item/cycles-menu.tsx",
         "web/apps/web/core/components/power-k/ui/pages/context-based/work-item/modules-menu.tsx",
         "web/apps/web/app/(all)/\\[workspaceSlug\\]/(projects)/projects/(detail)/\\[projectId\\]/modules/(detail)/\\[moduleId\\]/page.tsx",
@@ -209,7 +211,12 @@
         "web/apps/web/core/components/inbox/content/duplicate-of.tsx",
         "web/apps/web/core/components/inbox/use-intake-list.ts",
         "web/apps/web/core/components/inbox/root.tsx",
-        "web/apps/web/core/components/inbox/sidebar/list.tsx"
+        "web/apps/web/core/components/inbox/sidebar/list.tsx",
+        "web/apps/web/core/store/views/**",
+        "web/apps/web/core/hooks/store/use-views.ts",
+        "web/apps/web/app/(all)/\\[workspaceSlug\\]/(projects)/projects/(detail)/\\[projectId\\]/views/(list)/page.tsx",
+        "web/apps/web/app/(all)/\\[workspaceSlug\\]/(projects)/projects/(detail)/\\[projectId\\]/views/(detail)/\\[viewId\\]/header.tsx",
+        "web/apps/web/core/components/views/use-view-page-read.ts"
       ],
       "rules": {
         "no-restricted-imports": [

@@ -241,6 +241,8 @@ export const ISSUE_STORE_TO_FILTERS_MAP: Partial<Record<EIssuesStoreType, TFilte
   [EIssuesStoreType.PROJECT]: ISSUE_DISPLAY_FILTERS_BY_PAGE.issues,
   [EIssuesStoreType.CYCLE]: ISSUE_DISPLAY_FILTERS_BY_PAGE.cycle_issues,
   [EIssuesStoreType.MODULE]: ISSUE_DISPLAY_FILTERS_BY_PAGE.module_issues,
+  // a project's view's page lists its project's work items as the project's page does (P6a spec 2.5)
+  [EIssuesStoreType.PROJECT_VIEW]: ISSUE_DISPLAY_FILTERS_BY_PAGE.issues,
 };
 
 export const SUB_WORK_ITEM_AVAILABLE_FILTERS_FOR_WORK_ITEM_PAGE: (keyof IIssueFilterOptions)[] = [

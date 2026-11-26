@@ -56,8 +56,6 @@ export const WorkspaceViewQuickActions = observer(function WorkspaceViewQuickAct
     handleEdit: () => setUpdateViewModal(true),
     handleOpenInNewTab,
     handleCopyLink: handleCopyText,
-    workspaceSlug,
-    view,
   });
 
   return (

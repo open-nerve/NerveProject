@@ -9,6 +9,7 @@ import type { TPowerKContext, TPowerKPageType } from "../../core/types";
 import { PowerKModalNoSearchResultsCommand } from "./no-results-command";
 import { PowerKModalSearchResults } from "./search-results";
 import { usePlanningSearch } from "./use-planning-search";
+import { useViewSearch } from "./use-view-search";
 
 type Props = {
   activePage: TPowerKPageType | null;
@@ -47,6 +48,8 @@ export const PowerKModalSearchMenu = observer(function PowerKModalSearchMenu(pro
     needle,
     open
   );
+  // the views of the search's project, at a project's scope alone (P6a spec 2.8)
+  const views = useViewSearch(root.rootStore, workspaceSlug, isWorkspaceLevel ? undefined : projectId, needle, open);
   if (!searching || !workspace) return null;
 
   const projects = directory.knownProjectIds(workspace.id).flatMap((id) => {
@@ -91,7 +94,7 @@ export const PowerKModalSearchMenu = observer(function PowerKModalSearchMenu(pro
 
   return (
     <>
-      {issues.length + projects.length + planning.cycles.length + planning.modules.length === 0 && (
+      {issues.length + projects.length + planning.cycles.length + planning.modules.length + views.length === 0 && (
         <PowerKModalNoSearchResultsCommand updateSearchTerm={updateSearchTerm} />
       )}
       <PowerKModalSearchResults
@@ -100,6 +103,7 @@ export const PowerKModalSearchMenu = observer(function PowerKModalSearchMenu(pro
         projects={projects}
         cycles={planning.cycles}
         modules={planning.modules}
+        views={views}
         closePalette={context.closePalette}
       />
     </>

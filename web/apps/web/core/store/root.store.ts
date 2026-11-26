@@ -38,14 +38,14 @@ import type { IPlanningStore } from "./planning";
 import { PlanningStore } from "./planning";
 import type { IProjectRootStore } from "./project";
 import { ProjectRootStore } from "./project";
-import type { IProjectViewStore } from "./project-view.store";
-import { ProjectViewStore } from "./project-view.store";
 import type { IRouterStore } from "./router.store";
 import { RouterStore } from "./router.store";
 import type { IThemeStore } from "./theme.store";
 import { ThemeStore } from "./theme.store";
 import type { IUserStore } from "./user";
 import { UserStore } from "./user";
+import type { IViewStore } from "./views/view.store";
+import { ViewStore } from "./views/view.store";
 import type { IWorkspaceRootStore } from "./workspace";
 
 enableStaticRendering(typeof window === "undefined");
@@ -55,7 +55,7 @@ export class RootStore {
   projectRoot: IProjectRootStore;
   memberRoot: IMemberRootStore;
   planning: IPlanningStore;
-  projectView: IProjectViewStore;
+  views: IViewStore;
   globalView: IGlobalViewStore;
   issue: IIssueRootStore;
   asset: RootAssetStore;
@@ -93,7 +93,7 @@ export class RootStore {
     this.projectRoot = new ProjectRootStore(this, api);
     this.memberRoot = new MemberRootStore(this, api);
     this.planning = new PlanningStore(this, api);
-    this.projectView = new ProjectViewStore(this);
+    this.views = new ViewStore(this, api);
     this.globalView = new GlobalViewStore(this);
     this.issue = new IssueRootStore(this, api);
     this.asset = new RootAssetStore(this, api);

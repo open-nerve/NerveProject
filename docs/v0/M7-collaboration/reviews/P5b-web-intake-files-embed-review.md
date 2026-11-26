@@ -1,6 +1,6 @@
 # M7 / P5b：网页的收集箱——新建弹窗、文件与嵌入（阶段记录）
 
-> 状态：实施（T1–T9）、文档与交接（T10）、整分支审查、修复轮与限定复审（T11）都已完成（§9）；合并前的终检、最终分支 CI、合并与 main CI 由 P6a 的 T1 补记（同 P5a 的先例）。spec 与 plan 见 [P5b spec](../specs/P5b-web-intake-files-embed.md)、[P5b plan](../plans/P5b-web-intake-files-embed.md)，预检 [re-95](../../../reviews/re-95-M7P5b预检.md)。基线 main `ab86965f`（P5a 的 noff），分支 `codex/m7-p5b`。台账 `.superpowers/sdd/P5b-web-intake-files-embed/progress.md`（ignored，随阶段归档），主控裁定 `rulings.md`（B-1–B-23、O-1–O-4）。
+> 状态：已完成，合入 main（noff `47bd860b`），main CI 45375109166 全绿（§9）。spec 与 plan 见 [P5b spec](../specs/P5b-web-intake-files-embed.md)、[P5b plan](../plans/P5b-web-intake-files-embed.md)，预检 [re-95](../../../reviews/re-95-M7P5b预检.md)。基线 main `ab86965f`（P5a 的 noff），分支 `codex/m7-p5b`。台账 `.superpowers/sdd/P5b-web-intake-files-embed/progress.md`（ignored，随阶段归档），主控裁定 `rulings.md`（B-1–B-23、O-1–O-4）。
 
 ## 1. 方法与范围
 
@@ -45,7 +45,7 @@
 | A7 Q34 与下拉框 | T7、T8b、T8c | 达成：没修的构建上以扣住重现（`t8c-red-page-q34`）；单测 23 格与类型 15 处先红；七个调用方送增删；变异 13 条与页面一条全杀；连点的一步三引擎、chromium 与 WebKit 各 `--repeat-each=3` 过；chromium 的 m4-detail 44、m4-list 14、m6-pages 45 过；两个负责人下拉框以键盘核过（H8 `:156`、H11 `:167`，三引擎） |
 | A8 e2e | T7–T9 | 达成：六份新故事文件三引擎（检查点 2 的 m7-pages 146 过 1 跳过，跳过的是 H8 扣住代码块的 WebKit 一格），chromium `--repeat-each=3` 54 过（`cp2-repeat`）；`[s3]` 三引擎；H2–H4 (page) 的一步等嵌入的读答完再离开；检查点的六个页面配置与默认 e2e（543 过）不回归，例外见 §5 |
 | A9 守卫与文档 | T1、T2–T9、T10 | 达成：oxlint 等于上限、P5b 的 81 个文件为零；knip 与第一个读者；swr 名单收入两个读的 hook；`project-address-route` 收入 `widgets.tsx` 与 `use-peek-issue-read.ts`；死成员整份比对（§5）；plane-diff 的十一处、frontend-changes、交接（§8）；P5a 的 A9 与设计 §14 的回填在 T1 |
-| A10 收尾 | T11 | 待终检：整分支审查、修复轮与限定复审已完成（§9）；合并前的终检、最终分支 CI、合并与 main CI 由 P6a 的 T1 补记 |
+| A10 收尾 | T11 | 已完成：终检、最终分支 CI、合并、main CI 皆一次过，归档与清理（§9，P6a 的 T1 补记） |
 
 ## 3. 实施中的裁定
 
@@ -225,4 +225,9 @@
   - **O1** 加载时的 Close 持有焦点时读一落定焦点无处可去、**O2** H2–H4 (page) 的 Close 断言今可由加载时的 Close 满足、**O5** m1 只有单测、窄于 768 像素的页面没有核，以及预览里关闭有 “Close” 与 “Close the peek view” 两个名字：并入 §7“嵌入的关闭收成容器一处、任何状态都画”一条，交 M8。
 - **跟进**（`f50b6526`，6 个文件 +34 −22，台账 “T11 follow:” 各行）：限定复审 O3 的措辞（三个产品文件只改注释行）与 O4 的一格（`header.test.tsx` 297 → 304 行）。`t11-follow-cell`（30 格过）；变异 `t11-follow-mut-missing-project-on` 恰让这一格败、`restored=yes`；`t11-follow-lint-web`、`t11-follow-oxlint-count`（18）、`t11-follow-knip`、`t11-follow-test-web`（76 秒）；`t11-follow-dead` 与 T10 终表逐字相同。没有页面运行（留给合并前的终检）。
 - **T11 的文档**（限定复审 n1）：见 §8；`t11-doc-links`、`t11-keywords` 过。
-- 终检、最终分支 CI、合并与 main CI 由 P6a 的 T1 补记。
+- 以下在 P6a 的 T1 补记，数字取自归档台账的末行（`.superpowers/sdd/M7-P5b-integration-20261124`）：
+  - **推送之前的估算**：检查点 2 之后只多 H10 (page) 一个约 1 秒的测试，E2E 一步约同检查点 2 的 619、719 秒；两片的总时长取决于装浏览器的下载，最坏约同检查点 2 的 1471、1554 秒，在 30 分钟之内。
+  - **合并前的终检** `final.sh fin`（`54889d42`，T11 的文档提交）一次过、没有重跑：七项收据全 0、`inputs_unchanged`（bootstrap 第 0 路 469.2 秒、第 1 路 657.6 秒，比本机基线 660.9 少 3.3；build+e2e 544 passed）；m7-pages 149 过 1 跳，m6-pages 135、m6-acceptance 33、m4-detail 132、m5-content 63、m4-list 42 都过。
+  - **最终分支 CI** 45369650152 第一次全绿：web 1075 秒（Lint 103 / Unit 915 / Build 20，映像 `.376`），越过 960 秒的报告线（20 分钟期限的 89.6%）；三步对 main 45197451256 在 `.376` 上的同名步（93 / 818 / 17）是 1.11、1.12、1.18 倍，比值相近，同比例是 runner（P5b 加的单测让 Unit 多约百秒，但三步同涨），只报告。server (0) 839 秒（Test 698 / bootstrap 506.4，`.133`）；server (1) 1051 秒（Test 1022 / bootstrap 990.9 即 82.6%，`.376`），越过八成的报告线，同一份 Go 在三个检查点（`.133`）为 735.6–778.8，P5a 的终检在 `.376` 上也是 968.9（80.7%），只报告。e2e 两片 726、835 秒（装浏览器 48、46 / E2E 592、714，`.133`）。
+  - **合并**：`--no-ff` 合入 main，`47bd860b`（父 `ab86965f`、`54889d42`），推送后以 `ls-remote` 核对。**main CI** 45375109166 第一次全绿，五个作业都在 `.133`：web 705 秒（Lint 66 / Unit 596），server (0) 823 秒（Test 692 / bootstrap 501.1），server (1) 775 秒（Test 749 / bootstrap 729.2 即 60.8%），e2e 两片 735、856 秒（装浏览器 44、44 / E2E 606、727），都没到报告线。web 作业与第 1 路在慢 runner 上越线、第 1 路分界的调整（只改 `tools/go-test-shard.sh` 的分界，不加作业、不改期限）进 M7 收官给负责人的报告。
+  - **归档与清理**：归档 `.superpowers/sdd/M7-P5b-integration-20261124`（10965 个文件，分类没有未知，`source_unchanged` 为真，清理之后核过）；`cleanup.log`（2026-11-24T10:57:56Z）：worktree `m7-p5b` 已删，本地分支 `codex/m7-p5b`（在 `54889d42`，包含于 main）与远端分支已删。

@@ -5,6 +5,7 @@
  */
 
 //ui
+import { useContext } from "react";
 import { Eraser } from "lucide-react";
 import {
   ArrowNarrowRightOutline,
@@ -19,6 +20,7 @@ import { useTranslation } from "@nerve/i18n";
 // types
 import type { IIssueDisplayFilterOptions, IIssueDisplayProperties, TIssueOrderByOptions } from "@nerve/types";
 import { CustomMenu, Row } from "@nerve/ui";
+import { DraftBusyContext } from "../../draft-busy";
 import { spreadsheetSort } from "../spreadsheet-sort";
 import { SpreadSheetPropertyIcon } from "../spreadsheet-columns";
 
@@ -33,6 +35,8 @@ export function HeaderColumn(props: Props) {
   const { displayFilters, handleDisplayFilterUpdate, property, onClose } = props;
   // i18n
   const { t } = useTranslation();
+  // the sort changes the page's draft: none while it is being saved (P6a spec 2.7, R29)
+  const busy = useContext(DraftBusyContext);
   const { propertyDetails, selectedOrder, direction } = spreadsheetSort(property, displayFilters);
   const handleOrderBy = (order: TIssueOrderByOptions) => handleDisplayFilterUpdate({ order_by: order });
 
@@ -43,6 +47,7 @@ export function HeaderColumn(props: Props) {
       customButtonClassName="clickable !w-full"
       customButtonTabIndex={-1}
       className="!w-full"
+      disabled={busy}
       customButton={
         <Row className="flex w-full cursor-pointer items-center justify-between gap-1.5 py-2 text-13 text-secondary hover:text-primary">
           <div className="flex items-center gap-1.5">

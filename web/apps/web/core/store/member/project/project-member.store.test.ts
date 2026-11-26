@@ -96,10 +96,10 @@ describe("ProjectMemberStore, the members", () => {
     expect(store.getProjectMemberIds(web.id, true)).toEqual(["u-ann", "u-bob", "u-cat"]);
     expect(store.getProjectMemberIds(web.id, false)).toEqual(["u-ann", "u-bob"]);
     expect(store.getProjectMemberIds(ops.id, true)).toBeNull();
-    // a project's, and the address's project's, by the members page's order and filters
+    // a project's, by the members page's order and filters
     store.filters.updateFilters(web.id, { order_by: "-display_name" });
     const byPage = ["u-cat", "u-bob", "u-ann"];
-    expect([store.getFilteredProjectMemberIds(web.id), store.projectMemberIds]).toEqual([byPage, byPage]);
+    expect(store.getFilteredProjectMemberIds(web.id)).toEqual(byPage);
     store.filters.updateFilters(web.id, { roles: ["5"] });
     expect(store.getFilteredProjectMemberDetails("u-cat", web.id)).toEqual({ ...cat, member: userOf("cat") });
     expect(store.getFilteredProjectMemberDetails("u-bob", web.id)).toBeNull();
@@ -110,7 +110,6 @@ describe("ProjectMemberStore, the members", () => {
     await sent(nerve, () => projects.leaveProject(web), ["POST", `/api/v0/projects/${web.id}/leave`], noContent());
     expect(store.getProjectMemberIds(web.id, true)).toBeNull();
     expect(store.getProjectMemberDetails("u-bob", web.id)).toBeNull();
-    expect(store.projectMemberIds).toBeNull();
   });
 
   it("fails when nerve refuses them, keeping none, and again, keeping the members it had", async () => {

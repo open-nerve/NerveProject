@@ -207,3 +207,31 @@ it.each(order)("offers on the %s page the commands the table says, shown as enab
     table.map(([id, , , , , offered]) => [id, offered[index], offered[index]])
   );
 });
+
+// The two ways into web's views by the views entry rule (P6a spec 2.2, R14; M6-M7-07), as the sidebar and the tab bar
+// offer them: to its member and its guest, and to none who has no role in it (the workspace's admin who is not its
+// member). The table has neither a member's page nor one with no role.
+/** The caller on web's page, web's four switches on: the palette's context there, the commands read. */
+async function inWeb(caller: Caller) {
+  const acme = workspaceOf("acme", { role: caller.workspaceRole });
+  const web = projectOf("WEB", acme.id, { member_role: caller.projectRole, ...switchesOn });
+  const { router, projects, permissions } = await permissionsOver([acme], [web]);
+  const params = { workspaceSlug: acme.slug, projectId: web.id };
+  router.setQuery(params);
+  Object.assign(held, { permissions, projects });
+  renderToStaticMarkup(<Consumer />);
+  return ctx(params);
+}
+const viewWays = ["open_project_view", "nav_project_views"];
+
+it.each([
+  { caller: its.member, offered: T },
+  { caller: its.guest, offered: T },
+  { caller: its.outsider, offered: F },
+])("offers the two ways into web's views to $caller.who as the views entry rule says: $offered", async (cell) => {
+  const context = await inWeb(cell.caller);
+  const ways = commands.filter((command) => viewWays.includes(command.id));
+  expect(ways.map((command) => [command.id, command.isVisible(context), command.isEnabled(context)])).toEqual(
+    viewWays.map((id) => [id, cell.offered, cell.offered])
+  );
+});

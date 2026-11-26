@@ -1,5 +1,5 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
-import { isEmpty, set } from "lodash-es";
+import { cloneDeep, isEmpty, set } from "lodash-es";
 import { action, makeObservable, observable, runInAction } from "mobx";
 import type { IssueListDisplayFilters, ProjectIssueFilters, ProjectPreferences } from "@nerve/api-client";
 import type { TSupportedFilterTypeForUpdate } from "@nerve/constants";
@@ -38,6 +38,7 @@ export interface PagePreferencesService<F extends ProjectIssueFilters> {
 export interface IPagePreferencesFilter {
   filters: Record<string, IIssueFilters>;
   getIssueFilters(id: string): IIssueFilters | undefined;
+  confirmed(id: string): PagePreferences<ProjectIssueFilters> | undefined;
   fetchFilters: (workspaceSlug: string, id: string) => Promise<void>;
   updateFilterExpression: (workspaceSlug: string, id: string, filters: TWorkItemFilterExpression) => Promise<void>;
   updateFilters: (
@@ -149,6 +150,11 @@ export class PagePreferencesFilter<F extends ProjectIssueFilters>
     if (isEmpty(displayFilters)) return undefined;
 
     return this.computedIssueFilters(displayFilters);
+  }
+
+  /** A copy of the page's preferences nerve last confirmed (P6a R8), in its words; not observable: follow filters[id]. */
+  confirmed(id: string): PagePreferences<F> | undefined {
+    return cloneDeep(this.values.get(id));
   }
 
   private show(id: string, value: PagePreferences<F>) {

@@ -24,9 +24,14 @@ export function useIssueListMount(
   const permission = useUserPermissions();
   const profile = type === EIssuesStoreType.PROFILE;
   const target = profile ? userId : projectId;
-  // A cycle's or a module's page lists its project with the cycle or module (P5b spec 2.1; P6b spec 2.3): each cycle
-  // and each module is its own list, none until the route names it.
-  const page = isPlanningPageStoreType(type) ? params[PLANNING_PAGE_DOMAINS[type].param] : "";
+  // A cycle's or a module's page lists its project with the cycle or module (P5b spec 2.1; P6b spec 2.3), a project's
+  // view's page with its draft of the view (P6a spec 2.5, re-96 I3): each cycle, each module and each view is its own
+  // list, none until the route names it.
+  const page = isPlanningPageStoreType(type)
+    ? params[PLANNING_PAGE_DOMAINS[type].param]
+    : type === EIssuesStoreType.PROJECT_VIEW
+      ? params.viewId
+      : "";
   const role = workspaceSlug
     ? profile
       ? permission.getWorkspaceRoleByWorkspaceSlug(workspaceSlug)

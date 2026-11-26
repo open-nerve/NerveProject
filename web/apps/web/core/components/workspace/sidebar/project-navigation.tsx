@@ -21,6 +21,7 @@ import { useProject } from "@/hooks/store/use-project";
 import { useUserPermissions } from "@/hooks/store/user";
 // lib
 import { intakeEntryOn } from "@/lib/intake-entry";
+import { viewEntryOn } from "@/lib/views-entry";
 
 export type TNavigationItem = {
   name: string;
@@ -107,7 +108,7 @@ export const ProjectNavigation = observer(function ProjectNavigation(props: TPro
         href: `/${workspaceSlug}/projects/${projectId}/views`,
         icon: ViewsOutline,
         access: [EUserPermissions.ADMIN, EUserPermissions.MEMBER, EUserPermissions.GUEST],
-        shouldRender: project?.issue_views_view ?? false,
+        shouldRender: viewEntryOn(project, role),
         sortOrder: 4,
       },
       {

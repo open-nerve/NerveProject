@@ -44,6 +44,8 @@ created: 2026-11-10
 
 **处理结果（M7/P3b）：** 项目视图存迭代、模块词（`cycle_id`、`module_id` 是项目视图的已存筛选键，经项目列表的 `ListSettings` 校验，与项目页同规则）；工作区视图不收（422，D4）（[P3b spec](../specs/P3b-views.md) §2.3、§2.4）。视图页上的词表随 P6a/P6b。其余照上。保持 open。
 
+**处理结果（M7/P6a，项目视图的词）：** 视图页是项目列表页的一种，词表与项目页相同（`web/packages/constants/src/issue/filter.ts:245` 的 `[EIssuesStoreType.PROJECT_VIEW]: ISSUE_DISPLAY_FILTERS_BY_PAGE.issues`），筛选与分组照项目页给迭代、模块词；迭代页、模块页另存的视图带该迭代、模块的条件（`web/apps/web/core/hooks/planning-page-domains.ts:44` 的新列 `viewTerms`，迭代 `:61` 给 `cycle_id`、模块 `:75` 给 `module_id`），另存出来的与页面上看到的是同一批工作项（[P6a spec](../specs/P6a-web-project-views.md) §2.7、R7；变异 `t8-mut-no-view-terms`；H12 (page) `e2e/stories/collaboration/h12-project-view-saving-page.spec.ts:141`）。项目视图的部分关闭；工作区视图（D4 不收）、工作区级的迭代、模块列表、跨项目的行与工作区范围的命令面板搜索照上，M7 收官时定去向。保持 open。
+
 <a id="M6-M7-04"></a>
 ## M6-M7-04 视图的 store、读与页面，M3 的视图遗留
 
@@ -61,6 +63,18 @@ created: 2026-11-10
 
 **处理结果（M7/P3b，只到接口）：** 视图的接口在 `/api/v0`（[P3b spec](../specs/P3b-views.md) §2.4），两个新码 `navigation.view_not_found`、`navigation.views_disabled` 有网页的文案（`error-messages.ts` 与 `errors.json`）。store、读、页面、getter、命令面板的视图菜单、嵌套的按钮与 M3 第 3 节视图的三项都还在 P6a/P6b。保持 open。
 
+**处理结果（M7/P6a，项目视图一半）：** 逐项（[P6a spec](../specs/P6a-web-project-views.md) §2.1–§2.8）：
+- 视图的 store 与读：`ViewStore`、`ViewChanges`（`web/apps/web/core/store/views/`）只调 `/api/v0`（`core/services/views/views.service.ts`），按会话分代、类型来自 `@nerve/api-client`；读只在用到的页面（R20）；视图页与它的列表、另存与“更新视图”接通（T2、T6–T8）。
+- `projectViewIds`：视图页头改写，切换器的选项来自列表页的键的读、第一次打开时才读（`web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/views/(detail)/[viewId]/header.tsx:100`），不再经 store 的 getter 读路由；旧 store 连同 getter 在 T10 删除。
+- `projectMemberIds`：两个读者改读 `getProjectMemberIds(projectId, true)`（`web/apps/web/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/views/(list)/mobile-header.tsx:78`、`core/components/views/view-list-header.tsx:129`），getter 删除（R16，T4）。
+- 视图的文案：拒绝经 `useRefusalToast` 按 nerve 的问题码说（`navigation.view_not_found`、`navigation.views_disabled` 的文案 P3b 已有），页面、页头、弹窗与筛选行的英文经 `t()`（R21）。
+- 嵌套的按钮：`core/components/views/quick-actions.tsx` 的菜单按钮是 `CustomMenu` 自己的按钮，不再套 `IconButton`（T4）。
+- 命令面板的视图菜单：`power-k/menus/views.tsx` 改读 `View`（`@nerve/api-client`），命令面板不再读 `IProjectView`（R13，T9）。
+- 改过与新写的视图文件读路由参数，收入关键词规则 `project-address-route`（T4、T6、T7、T8）。
+- M3 第 3 节视图的三项：弹窗与右键菜单见 [M3-closeout §3](M3-closeout.md#3-键盘弹窗和下拉框) 的 P6a 处理结果；视图页头的 `CustomSearchSelect`（`@nerve/ui` 的 `BreadcrumbNavigationSearchDropdown`）以键盘核过，三种引擎：焦点在切换器上按 Enter 打开，搜索框取得焦点，打字、下箭头选中（`aria-activedescendant`）、Enter 换到另一个视图（`e2e/stories/collaboration/h20-view-pages.spec.ts:52-69` 的 `switchByKeyboard`，在 `:125`、`:146` 用）。
+
+项目视图一半关闭；工作区视图的 store、页面与 M3 交给它的项随 P6b。保持 open。
+
 <a id="M6-M7-05"></a>
 ## M6-M7-05 `getTabIndex` 与两份 `tab-indices.ts` 的最后删除
 
@@ -70,6 +84,8 @@ created: 2026-11-10
 **何时验收：** M7 把视图表单与收集箱新建弹窗迁到自然的 Tab 次序（同 M6 的 `cycles/form.tsx`、`modules/form.tsx`），完成各自弹窗、portal 与回焦的回归之后，删除 `getTabIndex`、两份 `tab-indices.ts`、两个桶文件里的导出与 `ETabIndices`；全仓再没有正的 `tabIndex` 传给共享控件时，`IDropdownProps.tabIndex` 随之收口。菜单的非正 `-1`（如 M4 表格列头的 `customButtonTabIndex={-1}`）独立核实后保留，不以“没有正索引”等同全部焦点属性可删（M3 → M6 交接 §5 的 M4/P16 回执）。
 
 **处理结果（M7/P5b）：** 收集箱新建弹窗的四个文件（`create-root`、`issue-description`、`issue-properties`、`issue-title`）离开 `getTabIndex` 与只为它读的 `usePlatformOS`，走 DOM 的自然次序；`web/packages/constants/src/tab-indices.ts` 删去收集箱一组（`INTAKE_ISSUE_CREATE_FORM_TAB_INDICES`、枚举成员 `INTAKE_ISSUE_FORM` 与映射一行）（`fa78bb11`，[P5b spec](../specs/P5b-web-intake-files-embed.md) §2.1）。描述编辑器改带非正的 `tabIndex={-1}`（`ec6b91a5`：共用编辑器没有 `tabIndex` 时吞掉列表之外的 Tab，[P5b 阶段记录](../reviews/P5b-web-intake-files-embed-review.md) §3）。`git grep getTabIndex -- web` 只剩视图表单 `web/apps/web/core/components/views/form.tsx:26`、`:75` 与函数本身；`getTabIndex`、`ETabIndices`、两份 `tab-indices.ts` 与桶文件的导出随 P6a 删除。保持 open。
+
+**处理结果（M7/P6a）：** 视图表单在 T5 离开 `getTabIndex`、走自然的 Tab 次序（图标 → 名字 → 说明 → Cancel → 提交），弹窗、portal 与回焦的回归在 H12 (page)、H20 (page) 三种引擎（`e2e/stories/collaboration/h20-view-pages.spec.ts:318`、`:282`；`h12-project-views-list-page.spec.ts:196`）；同一提交删除 `getTabIndex`、`ETabIndices`、`TAB_INDEX_MAP`、两份 `tab-indices.ts` 与两个桶文件里的导出（`5a58db86`，[P6a spec](../specs/P6a-web-project-views.md) §2.9、R15）。核过：之后 `git grep -n "getTabIndex\|ETabIndices\|TAB_INDEX_MAP\|PROJECT_VIEW_TAB_INDICES\|tab-indices" -- web` 为空、三个包的 dist 里也没有（`t5-tabindex-gone`）；测试之外全 web 没有正的 `tabIndex`。`IDropdownProps.tabIndex`（`web/packages/ui/src/dropdowns/helper.tsx:25`）与 `dropdowns/types.d.ts:21`、`date-range.tsx:50` 的非正 `tabIndex?` 保留：各下拉框原样转给按钮，应用里传显式值的只有 M4 表格列头的 `customButtonTabIndex={-1}`（`web/apps/web/core/components/issues/issue-layouts/spreadsheet/columns/header-column.tsx:48`），独立核过、不是正索引的残留（`t5-tabindex-readers`）。**本条关闭。**
 
 <a id="M6-M7-06"></a>
 ## M6-M7-06 迭代的转移不发布 `issue.updated`
@@ -87,6 +103,8 @@ created: 2026-11-10
 **何时验收：** M7 接通视图、收集箱的页面时，按 M7 的权限定这三个命令给谁（访客能否读这些页面），命令面板与侧栏同一规则，以单测钉住访客与成员两种角色。
 
 **处理结果（M7/P5a，收集箱的一半）：** 收集箱的页面给项目的管理员、成员与访客（访客能读收集箱），所以“转到收集箱”`nav_project_intake` 给有项目角色、收集箱开着的人：侧栏（`workspace/sidebar/project-navigation.tsx:120`）、页签栏（`navigation/use-navigation-items.ts:90`）与命令面板（`power-k/config/navigation/project-commands.ts:76`）共用一条规则 `intakeEntryOn`（`core/lib/intake-entry.ts:18-24`，不排除已归档的项目）（[P5a spec](../specs/P5a-web-intake.md) §2.5、R21）。单测钉住：规则本身六格（管理员、成员、访客、没有角色、关着、已归档，`core/lib/intake-entry.test.ts`）；命令面板与页签栏各给成员与访客、不给在项目里没有角色的工作区管理员，页签栏另有收集箱关着的一格（`project-commands.test.tsx:49`、`:54`，`use-navigation-items.test.tsx:41`、`:45`、`:49`）；侧栏给访客、不给没有角色的工作区管理员（`project-navigation.test.tsx:107`、`:113`）。收集箱的一半关闭；视图的两个命令随 P6a，保持 open。
+
+**处理结果（M7/P6a，视图的一半）：** 视图的页面给项目的管理员、成员与访客（访客能读视图），所以“打开视图”`open_project_view` 与“转到视图”`nav_project_views` 给有项目角色、开关开着的人：侧栏、页签栏与命令面板共用一条规则 `viewEntryOn`（`web/apps/web/core/lib/views-entry.ts:18`，不排除已归档的项目），命令 `create_view` 读 `viewsCreatableBy`（`:31`，另要管理员或成员）（[P6a spec](../specs/P6a-web-project-views.md) §2.2、R4、R14）。单测钉住：规则本身 34 格（`core/lib/views-entry.test.ts`）、`create_view` 8 格（`power-k/config/creation/create-view.test.tsx`）；命令面板的表 `power-k/config/navigation/commands.test.tsx:120`、`:138` 两行不变，文件末追加两条视图命令的角色格（成员、访客给，没有角色的不给）；变异 `t3-mut-entry-no-role` 等。视图的一半关闭，两半都已关闭。**本条关闭。**
 
 <a id="M6-M7-08"></a>
 ## M6-M7-08 首个投递任务的 CLI（原文转交）

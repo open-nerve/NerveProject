@@ -4,106 +4,81 @@
  * See the LICENSE file for details.
  */
 
-import { useCallback } from "react";
 import { observer } from "mobx-react";
-import { useTheme } from "next-themes";
 // nerve imports
-import { EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
-import type { EViewAccess, TViewFilterProps } from "@nerve/types";
-import { EUserProjectRoles } from "@nerve/types";
-import { Header, EHeaderVariant } from "@nerve/ui";
-import { calculateTotalFilters } from "@nerve/utils";
-// assets
-import darkViewsAsset from "@/app/assets/empty-state/disabled-feature/views-dark.webp?url";
-import lightViewsAsset from "@/app/assets/empty-state/disabled-feature/views-light.webp?url";
+import { EHeaderVariant, Header } from "@nerve/ui";
 // components
 import { PageHead } from "@/components/core/page-title";
-import { DetailedEmptyState } from "@/components/empty-state/detailed-empty-state-root";
+import { PlanningReadFailure } from "@/components/planning/read-failure";
+import { ViewListLoader } from "@/components/ui/loader/view-list-loader";
 import { ViewAppliedFiltersList } from "@/components/views/applied-filters";
+import { useViewsPageState } from "@/components/views/page-state";
 import { ProjectViewsList } from "@/components/views/views-list";
+import { ViewsDisabled } from "@/components/views/views-disabled";
 // hooks
 import { useProject } from "@/hooks/store/use-project";
-import { useProjectView } from "@/hooks/store/use-project-view";
+import { useViews } from "@/hooks/store/use-views";
 import { useUserPermissions } from "@/hooks/store/user";
-import { useNavigate } from "react-router";
+// lib
+import { useSessionSWR } from "@/lib/use-session-swr";
+import { viewEntryOn } from "@/lib/views-entry";
 import type { Route } from "./+types/page";
 
+/**
+ * A project's views list (P6a spec 2.2, 2.3, R4, R20), of the route's project. Its views turned off, it says so and reads
+ * none (ViewsDisabled). Else, for those the ways into its views are offered
+ * to (viewEntryOn), it reads nerve's list of them (the one read of a project's views, ["PROJECT_VIEWS", projectId],
+ * which the views store keeps): it waits for nerve's first answer, says why nerve could not give it, with a retry; else
+ * the filters applied to the list (the page's, useViewsPageState) and the views (ProjectViewsList).
+ */
 function ProjectViewsPage({ params }: Route.ComponentProps) {
-  // router
-  const navigate = useNavigate();
   const { workspaceSlug, projectId } = params;
-  // theme hook
-  const { resolvedTheme } = useTheme();
   // nerve hooks
   const { t } = useTranslation();
-  // store
+  // store hooks
   const { getProjectById } = useProject();
-  const { filters, updateFilters, clearAllFilters } = useProjectView();
-  const { allowPermissions } = useUserPermissions();
+  const { getProjectRoleByWorkspaceSlugAndProjectId } = useUserPermissions();
+  const { getProjectViews, fetchProjectViews } = useViews();
+  const { choices, setChoices } = useViewsPageState();
   // derived values: of the address's project, never the router store's (M3 handoff §4)
   const project = getProjectById(projectId);
-  const pageTitle = project?.name ? `${project?.name} - Views` : undefined;
-  const canPerformEmptyStateActions = allowPermissions(
-    [EUserProjectRoles.ADMIN],
-    EUserPermissionsLevel.PROJECT,
-    workspaceSlug,
-    projectId
-  );
-  const resolvedPath = resolvedTheme === "light" ? lightViewsAsset : darkViewsAsset;
+  const role = getProjectRoleByWorkspaceSlugAndProjectId(workspaceSlug, projectId);
+  const entry = viewEntryOn(project, role);
+  const views = useSessionSWR(entry ? ["PROJECT_VIEWS", projectId] : null, (id) => fetchProjectViews(id));
+  const listed = getProjectViews(projectId);
 
-  const handleRemoveFilter = useCallback(
-    (key: keyof TViewFilterProps, value: string | EViewAccess | null) => {
-      let newValues = filters.filters?.[key];
+  if (!project) return null;
 
-      if (key === "favorites") {
-        newValues = !!value;
-      }
-      if (Array.isArray(newValues)) {
-        if (!value) newValues = [];
-        else newValues = newValues.filter((val) => val !== value) as string[];
-      }
+  const pageHead = <PageHead title={`${project.name} - ${t("views")}`} />;
 
-      updateFilters("filters", { [key]: newValues });
-    },
-    [filters.filters, updateFilters]
-  );
-
-  const isFiltersApplied = calculateTotalFilters(filters?.filters ?? {}) !== 0;
-
-  // No access to
-  if (project?.issue_views_view === false)
+  if (!project.issue_views_view)
     return (
-      <div className="flex h-full w-full items-center justify-center">
-        <DetailedEmptyState
-          title={t("disabled_project.empty_state.view.title")}
-          description={t("disabled_project.empty_state.view.description")}
-          assetPath={resolvedPath}
-          primaryButton={{
-            text: t("disabled_project.empty_state.view.primary_button.text"),
-            onClick: () => {
-              navigate(`/${workspaceSlug}/settings/projects/${projectId}/features/views`);
-            },
-            disabled: !canPerformEmptyStateActions,
-          }}
-        />
-      </div>
+      <>
+        {pageHead}
+        <ViewsDisabled workspaceSlug={workspaceSlug} projectId={projectId} />
+      </>
     );
 
+  if (!entry) return null;
+
+  if (views.error !== undefined) return <PlanningReadFailure error={views.error} onRetry={() => void views.mutate()} />;
+
+  if (listed === undefined) return <ViewListLoader />;
+
+  const filtered = choices.filters.owned_by.length > 0 || choices.filters.created_at.length > 0;
   return (
     <>
-      <PageHead title={pageTitle} />
-      {isFiltersApplied && (
+      {pageHead}
+      {listed.length > 0 && filtered && (
         <Header variant={EHeaderVariant.TERNARY}>
           <ViewAppliedFiltersList
-            appliedFilters={filters.filters ?? {}}
-            handleClearAllFilters={clearAllFilters}
-            handleRemoveFilter={handleRemoveFilter}
-            alwaysAllowEditing
+            filters={choices.filters}
+            onChange={(filters) => setChoices((current) => ({ ...current, filters }))}
           />
         </Header>
       )}
-      <ProjectViewsList workspaceSlug={workspaceSlug} projectId={projectId} />
+      <ProjectViewsList workspaceSlug={workspaceSlug} projectId={projectId} views={listed} />
     </>
   );
 }

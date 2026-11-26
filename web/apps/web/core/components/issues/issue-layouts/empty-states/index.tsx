@@ -4,22 +4,26 @@
  * See the LICENSE file for details.
  */
 
+import { useParams } from "react-router";
 // nerve imports
 import { EIssuesStoreType } from "@nerve/types";
 // components
 import { ProjectArchivedEmptyState } from "./archived-issues";
 import { PlanningPageEmptyState } from "./planning-page";
 import { ProfileViewEmptyState } from "./profile-view";
-import { ProjectEmptyState } from "./project-issues";
+import { ProjectEmptyState, ProjectListEmptyState } from "./project-issues";
 
 interface Props {
   storeType: EIssuesStoreType;
 }
 
 export function IssueLayoutEmptyState(props: Props) {
+  const { viewId } = useParams();
   switch (props.storeType) {
     case EIssuesStoreType.PROJECT:
       return <ProjectEmptyState />;
+    case EIssuesStoreType.PROJECT_VIEW:
+      return <ProjectListEmptyState storeType={EIssuesStoreType.PROJECT_VIEW} filterId={viewId} />;
     case EIssuesStoreType.ARCHIVED:
       return <ProjectArchivedEmptyState />;
     case EIssuesStoreType.PROFILE:

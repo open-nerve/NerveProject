@@ -89,6 +89,8 @@ export const ProjectLayoutRoot = observer(function ProjectLayoutRoot() {
         updateFilters={updateExpression}
         projectId={projectId}
         workspaceSlug={workspaceSlug}
+        enableSaveView
+        preferences={issuesFilter}
       >
         {({ filter: projectWorkItemsFilter }) => (
           <div className="relative flex h-full w-full flex-col overflow-hidden">

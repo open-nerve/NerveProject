@@ -26,7 +26,11 @@ import type { IQuickActionProps, TRenderQuickActions } from "../list/list-view-t
 import { SpreadsheetView } from "./spreadsheet-view";
 import { RowExpansionProvider } from "../row-expansion";
 
-type SpreadsheetStoreType = EIssuesStoreType.PROJECT | EIssuesStoreType.CYCLE | EIssuesStoreType.MODULE;
+type SpreadsheetStoreType =
+  | EIssuesStoreType.PROJECT
+  | EIssuesStoreType.CYCLE
+  | EIssuesStoreType.MODULE
+  | EIssuesStoreType.PROJECT_VIEW;
 
 interface IBaseSpreadsheetRoot {
   QuickActions: FC<IQuickActionProps>;

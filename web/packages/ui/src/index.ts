@@ -11,7 +11,6 @@ export * from "./control-link";
 export * from "./drag-handle";
 export * from "./drop-indicator";
 export * from "./dropdowns";
-export * from "./favorite-star";
 export * from "./form-fields";
 export * from "./header";
 export * from "./loader";

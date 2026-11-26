@@ -29,6 +29,9 @@ import { ProjectIssuesFilter, ProjectIssues } from "./project";
 import { CycleIssues, type ICycleIssues } from "./cycle/issue.store";
 import { CyclePriorityIssues } from "./cycle/priority-issues.store";
 import { ModuleIssues, type IModuleIssues } from "./module/issue.store";
+import { ProjectViewIssues } from "./project-view/issue.store";
+import { ProjectViewIssuesFilter } from "./project-view/filter.store";
+import { ViewDraftService } from "./project-view/view-draft.service";
 import { PagePreferencesFilter, type IPagePreferencesFilter } from "./helpers/page-preferences-filter.store";
 import type { IWorkspaceDraftIssues } from "./workspace-draft";
 import { WorkspaceDraftIssues } from "./workspace-draft";
@@ -117,6 +120,9 @@ export class IssueRootStore {
   moduleIssuesFilter: IPagePreferencesFilter;
   /** The module page's list, one binding per module, with the module's creation and removal (P6b spec 2.5). */
   moduleIssues: IModuleIssues;
+  /** A project's view's page's draft of the view, by view id, and its list (P6a spec 2.5, 2.6); no route followed. */
+  projectViewIssuesFilter: ProjectViewIssuesFilter;
+  projectViewIssues: ProjectViewIssues;
 
   archivedIssuesFilter: IArchivedIssuesFilter;
   archivedIssues: IArchivedIssues;
@@ -210,6 +216,9 @@ export class IssueRootStore {
     const moduleService = new ModulePreferencesService(api);
     this.moduleIssuesFilter = new PagePreferencesFilter(this, moduleService, toModuleFilters, EIssuesStoreType.MODULE);
     this.moduleIssues = new ModuleIssues(this, this.moduleIssuesFilter);
+
+    this.projectViewIssuesFilter = new ProjectViewIssuesFilter(this, new ViewDraftService(rootStore.views.fetchView));
+    this.projectViewIssues = new ProjectViewIssues(this, this.projectViewIssuesFilter);
 
     this.archivedIssuesFilter = new ArchivedIssuesFilter(this);
     this.archivedIssues = new ArchivedIssues(this, this.archivedIssuesFilter);

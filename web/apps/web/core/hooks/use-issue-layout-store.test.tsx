@@ -92,7 +92,9 @@ it.each(["globalViewId", "viewId", "cycleId", "moduleId"])(
             ? EIssuesStoreType.CYCLE
             : route === "moduleId"
               ? EIssuesStoreType.MODULE
-              : EIssuesStoreType.DEFAULT
+              : route === "viewId"
+                ? EIssuesStoreType.PROJECT_VIEW
+                : EIssuesStoreType.DEFAULT
         );
         actions = useIssuesActions(selectedType);
       },
@@ -122,14 +124,11 @@ it("keeps project/profile route selection, explicit context and a generic route 
   fixture.params = { globalViewId: "view" };
   await mount(() => expect(useIssueStoreType()).toBe(EIssuesStoreType.ARCHIVED), EIssuesStoreType.ARCHIVED);
 });
-it.each(["GLOBAL", "PROJECT_VIEW", "unknown"])(
-  "rejects %s actions instead of silently dispatching project commands",
-  async (kind) => {
-    // Deliberately invalid runtime input verifies the dispatch guard.
-    await mount(() => expect(() => useIssuesActions(kind as EIssuesStoreType)).toThrow("Unsupported issue store"));
-    expect(tab.nerve.calls).toEqual([]);
-  }
-);
+it.each(["GLOBAL", "unknown"])("rejects %s actions instead of silently dispatching project commands", async (kind) => {
+  // Deliberately invalid runtime input verifies the dispatch guard.
+  await mount(() => expect(() => useIssuesActions(kind as EIssuesStoreType)).toThrow("Unsupported issue store"));
+  expect(tab.nerve.calls).toEqual([]);
+});
 const C1 = "019a0000-0000-7000-8000-0000000000c1";
 const C2 = "019a0000-0000-7000-8000-0000000000c2";
 // P5b spec 2.5: the cycle page's commands act for the cycle in its route params; the router store is never read.

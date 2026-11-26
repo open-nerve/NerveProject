@@ -4,75 +4,89 @@
  * See the LICENSE file for details.
  */
 
-import { useState } from "react";
-import { observer } from "mobx-react";
-import { useParams, useNavigate } from "react-router";
-// types
+import { useRef, useState } from "react";
+import { useNavigate, useParams } from "react-router";
+// nerve imports
+import type { View } from "@nerve/api-client";
 import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { IProjectView } from "@nerve/types";
-// ui
 import { AlertModalCore } from "@nerve/ui";
 // hooks
-import { useProjectView } from "@/hooks/store/use-project-view";
+import { useViews } from "@/hooks/store/use-views";
+import { useRefusalToast } from "@/hooks/use-refusal-toast";
 // lib
 import { followInSession } from "@/lib/in-session";
+// local imports
+import { useViewsPage } from "./actions-host";
 
 type Props = {
-  data: IProjectView;
   isOpen: boolean;
-  onClose: () => void;
+  handleClose: () => void;
+  /** The view to delete, as it was when the dialog was asked for. */
+  view: View | undefined;
+  workspaceSlug: string;
+  projectId: string;
 };
 
-export const DeleteProjectViewModal = observer(function DeleteProjectViewModal(props: Props) {
-  const { data, isOpen, onClose } = props;
-  // states
-  const [isDeleteLoading, setIsDeleteLoading] = useState(false);
+/**
+ * The dialog that deletes a view (P6a spec 2.3, R17). It closes only once nerve has deleted the view, says so and, when
+ * the page shows the view (its own page), goes to the project's views; refused, it stays and says nerve's reason. While
+ * the deletion is out nothing closes it (Escape, the backdrop, Cancel). Its follow-ups are those of the session it was
+ * sent in (followInSession) and of its page (ViewActionsHost): once the page has gone (a Back, another project), nerve's
+ * late answer reaches the store alone. The view's own page is leaving from the deletion's sending (pageLeaving), until
+ * nerve refuses it: it shows nothing of the view gone before it goes (re-review n1).
+ */
+export function DeleteProjectViewModal(props: Props) {
+  const { isOpen, handleClose, view, workspaceSlug, projectId } = props;
   // router
-  const { workspaceSlug, projectId } = useParams();
   const navigate = useNavigate();
-  // store hooks
-  const { deleteView } = useProjectView();
+  const { viewId: pageViewId } = useParams();
+  // nerve hooks
   const { t } = useTranslation();
-  const handleClose = () => {
-    onClose();
-    setIsDeleteLoading(false);
-  };
+  // store hooks
+  const { remove } = useViews();
+  const toastRefusal = useRefusalToast();
+  const { pageMounted, pageLeaving } = useViewsPage();
+  // states
+  const [busy, setBusy] = useState(false);
+  const out = useRef(false);
 
-  // What follows the deletion (closing, going to the project's views, saying so) follows it only while the tab is in
-  // the session it was sent in (followInSession, M3 handoff §1): after another tab moved this one to another account,
-  // the page is that account's.
-  const handleDeleteView = async () => {
-    if (!workspaceSlug || !projectId) return;
-    setIsDeleteLoading(true);
-    await followInSession(() => deleteView(workspaceSlug, projectId, data.id), {
+  const submit = async () => {
+    if (!view || out.current) return;
+    out.current = true;
+    setBusy(true);
+    const shownByPage = pageViewId === view.id;
+    if (shownByPage) pageLeaving.current = true;
+    await followInSession(() => remove(view.id), {
       done: () => {
-        handleClose();
+        if (!pageMounted.current) return;
         setToast({
           type: TOAST_TYPE.SUCCESS,
-          title: "Success!",
-          message: "View deleted successfully.",
+          title: t("toast.success"),
+          message: t("project_views.action.delete.success"),
         });
-        return navigate(`/${workspaceSlug}/projects/${projectId}/views`);
+        handleClose();
+        if (shownByPage) return navigate(`/${workspaceSlug}/projects/${projectId}/views`);
       },
-      failed: () =>
-        setToast({
-          type: TOAST_TYPE.ERROR,
-          title: "Error!",
-          message: "View could not be deleted. Please try again.",
-        }),
+      failed: (error) => {
+        pageLeaving.current = false;
+        if (pageMounted.current) toastRefusal(error);
+      },
     });
-    setIsDeleteLoading(false);
+    out.current = false;
+    if (pageMounted.current) setBusy(false);
   };
 
   return (
     <AlertModalCore
       handleClose={handleClose}
-      handleSubmit={handleDeleteView}
-      isSubmitting={isDeleteLoading}
+      handleSubmit={() => void submit()}
+      isSubmitting={busy}
       isOpen={isOpen}
       title={t("project_views.delete_view.title")}
-      content={<>{t("project_views.delete_view.content")}</>}
+      primaryButtonText={{ default: t("delete"), loading: t("deleting") }}
+      secondaryButtonText={t("cancel")}
+      content={t("project_views.delete_view.content")}
     />
   );
-});
+}

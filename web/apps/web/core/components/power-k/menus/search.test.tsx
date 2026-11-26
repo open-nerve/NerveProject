@@ -10,8 +10,8 @@ import { act, type ReactElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { Command } from "cmdk";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { EViewAccess, type IProjectView } from "@nerve/types";
-import { cycleOf, projectOf } from "@/store/project/fake-projects";
+import type { View } from "@nerve/api-client";
+import { cycleOf, preferencesOf, projectOf } from "@/store/project/fake-projects";
 import { workspaceOf } from "@/store/workspace/fake-workspaces";
 import { powerKFilter } from "../ui/modal/filter";
 import { PowerKMenuBuilder } from "./builder";
@@ -30,26 +30,20 @@ type Menu = (rows: Row[], pick: (id: string) => void) => ReactElement;
 
 const none = () => {};
 const project = projectOf("A", "id-ws");
-const viewOf = ({ id, name }: Row): IProjectView => ({
+const { display_filters, display_properties } = preferencesOf();
+const viewOf = ({ id, name }: Row): View => ({
   id,
+  workspace_id: project.workspace_id,
+  project_id: project.id,
   name,
-  access: EViewAccess.PUBLIC,
-  created_at: new Date(),
-  updated_at: new Date(),
-  is_favorite: false,
-  created_by: "u",
-  updated_by: "u",
   description: "",
-  rich_filters: {},
-  display_filters: {},
-  display_properties: {},
-  query: {},
-  query_data: {},
-  project: project.id,
-  workspace: project.workspace_id,
-  logo_props: undefined,
-  is_locked: false,
-  owned_by: "u",
+  logo_props: {},
+  filters: {},
+  display_filters,
+  display_properties,
+  owned_by_id: "u",
+  created_at: "2026-11-01T09:00:00Z",
+  updated_at: "2026-11-01T09:00:00Z",
 });
 const menus: [string, Menu][] = [
   [
