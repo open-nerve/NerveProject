@@ -9,7 +9,6 @@ import { observer } from "mobx-react";
 import { MoreHorizontalOutline } from "@makeplane/propel/icons";
 // nerve imports
 import type { View } from "@nerve/api-client";
-import { EUserPermissions } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { getIconButtonStyling } from "@nerve/propel/icon-button";
 import { ContextMenu, CustomMenu } from "@nerve/ui";
@@ -17,23 +16,28 @@ import { cn } from "@nerve/utils";
 // hooks
 import { useViewMenuItems } from "@/components/common/quick-actions-helper";
 import { useViews } from "@/hooks/store/use-views";
-import { useUser, useUserPermissions } from "@/hooks/store/user";
 import { useCopyLink } from "@/hooks/use-copy-link";
+// store
+import type { ViewContainer } from "@/store/views/view-container";
 // local imports
 import { useViewsPage } from "./actions-host";
+import { useViewRights } from "./use-view-rights";
+import { viewPath } from "./view-paths";
 
 type Props = {
   parentRef: RefObject<HTMLElement | null>;
   viewId: string;
-  projectId: string;
+  /** The view's container, a project or the workspace, whose views the page shows. */
+  container: ViewContainer;
   workspaceSlug: string;
   customClassName?: string;
 };
 
 /**
- * A view's quick actions (P6a spec 2.3, 2.4, R17): its menu, by its button, named by the view, and by a right-click on
- * its row (parentRef); none while the store does not give the view. Its dialogs, which change it and delete it, are its
- * page's (ViewActionsHost), and what follows them is the page's while it is mounted, though they take the row away.
+ * A view's quick actions (P6a spec 2.3, 2.4, R17; M7/P6b spec 2.11, R15), a project's or a workspace's own: its menu,
+ * by its button, named by the view, and by a right-click on its row (parentRef); none while the store does not give
+ * the view. Its dialogs, which change it and delete it, are its page's (ViewActionsHost), and what follows them is the
+ * page's while it is mounted, though they take the row away.
  */
 export const ViewQuickActions = observer(function ViewQuickActions(props: Props) {
   const { getViewById } = useViews();
@@ -42,28 +46,24 @@ export const ViewQuickActions = observer(function ViewQuickActions(props: Props)
 });
 
 /**
- * The menu of the view of the project of projectId (useViewMenuItems): what the caller may do with it, as nerve decides
- * it (P6a spec 2.2): its owner changes it while the project's admin or member (View.UpdatableBy, view.update); the
- * project's admins delete it, and so does its owner while the project's admin or member (View.DeletableBy,
- * view.delete); anyone who sees it copies its link and opens it in a new tab.
+ * The menu of the view of the container (useViewMenuItems): what the caller may do with it, as nerve decides it by his
+ * role in the container (useViewRights; P6a spec 2.2, M7/P6b spec 2.7): its owner changes it while the container's
+ * admin or member (View.UpdatableBy); the container's admins delete it, and so does its owner while its admin or member
+ * (View.DeletableBy); anyone who sees it copies the link of its page and opens it in a new tab.
  */
 const ViewMenu = observer(function ViewMenu(props: Props & { view: View }) {
-  const { parentRef, view, projectId, workspaceSlug, customClassName } = props;
+  const { parentRef, view, container, workspaceSlug, customClassName } = props;
   // nerve hooks
   const { t } = useTranslation();
   // store hooks
-  const { getProjectRoleByWorkspaceSlugAndProjectId } = useUserPermissions();
-  const { data: currentUser } = useUser();
   const { openDialog } = useViewsPage();
   const copyLink = useCopyLink();
   // auth
-  const role = getProjectRoleByWorkspaceSlugAndProjectId(workspaceSlug, projectId);
-  const isAdmin = role === EUserPermissions.ADMIN;
-  const isOwner = (isAdmin || role === EUserPermissions.MEMBER) && view.owned_by_id === currentUser?.id;
+  const { isAdmin, isOwner } = useViewRights(workspaceSlug, container);
 
-  const link = `/${workspaceSlug}/projects/${projectId}/views/${view.id}`;
+  const link = viewPath(workspaceSlug, container, view.id);
   const MENU_ITEMS = useViewMenuItems({
-    isOwner,
+    isOwner: isOwner(view),
     isAdmin,
     handleEdit: () => openDialog("edit", view),
     handleDelete: () => openDialog("delete", view),

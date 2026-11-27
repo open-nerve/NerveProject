@@ -9,7 +9,7 @@ import { observer } from "mobx-react";
 // components
 import { CycleCreateUpdateModal } from "@/components/cycles/modal";
 import { CreateUpdateModuleModal } from "@/components/modules/modal";
-import { CreateUpdateProjectViewModal } from "@/components/views/modal";
+import { CreateUpdateViewModal } from "@/components/views/modal";
 // hooks
 import { useCommandPalette } from "@/hooks/store/use-command-palette";
 
@@ -56,11 +56,11 @@ export const ProjectLevelModals = observer(function ProjectLevelModals(props: TP
         workspaceSlug={workspaceSlug}
         projectId={projectId}
       />
-      <CreateUpdateProjectViewModal
+      <CreateUpdateViewModal
         isOpen={isCreateViewModalOpen}
         handleClose={() => toggleCreateViewModal(false)}
         workspaceSlug={workspaceSlug}
-        projectId={projectId}
+        container={{ kind: "project", projectId }}
       />
     </>
   );

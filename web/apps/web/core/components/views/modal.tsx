@@ -18,14 +18,30 @@ import { useViews } from "@/hooks/store/use-views";
 // lib
 import { useFormRefusal } from "@/lib/form-refusal";
 import { followInSession } from "@/lib/in-session";
+// store
+import type { ViewContainer } from "@/store/views/view-container";
 // local imports
-import { ProjectViewForm, type ViewFormField, type ViewFormValues, type ViewUnderField } from "./form";
-import { NEW_VIEW_CONTENT, type ViewContent } from "./view-content";
+import { ViewForm, type ViewFormField, type ViewFormValues, type ViewUnderField } from "./form";
+import { NEW_VIEW_CONTENT, WORKSPACE_VIEW_CONTENT, type ViewContent } from "./view-content";
+import { viewPath } from "./view-paths";
 
 /** The fields of the form under which nerve's refusals show (422 validation_failed); others show in a toast. */
 const FIELDS: readonly ViewFormField[] = ["name"];
 /** No code of nerve's names a field's value as another view's: views' names need not differ. */
 const TAKEN: Readonly<Record<string, ViewFormField>> = {};
+/**
+ * What "Add view" makes a view of each container with (M7/P6b spec 2.11): a project's in the list layout, a
+ * workspace's own in the spreadsheet's.
+ */
+const NEW_CONTENT = { project: NEW_VIEW_CONTENT, workspace: WORKSPACE_VIEW_CONTENT } as const;
+/**
+ * What the dialog says once nerve has made a view of each container or changed one (M7/P6b spec 2.11, R29), its keys
+ * whole.
+ */
+const SAYS = {
+  project: { create: "project_views.action.create.success", update: "project_views.action.update.success" },
+  workspace: { create: "workspace_views.action.create.success", update: "workspace_views.action.update.success" },
+} as const;
 
 /** A new view as nerve takes it (ViewCreate): who it is, as the form holds it, and what it keeps besides. */
 function creation({ name, description, logo_props }: ViewFormValues, content: ViewContent): ViewCreate {
@@ -47,29 +63,30 @@ function changes(initial: ViewFormValues, values: ViewFormValues): ViewUpdate {
 type Props = {
   isOpen: boolean;
   handleClose: () => void;
-  /** The workspace of the project, the route's. */
+  /** The route's workspace. */
   workspaceSlug: string;
-  /** The project a new view goes to, the route's. */
-  projectId: string;
+  /** Where a new view goes, the route's: a project, or the workspace (one of its own, of no project). */
+  container: ViewContainer;
   /** The view to change; none, to make a new one. */
   viewId?: string;
-  /** What a new view keeps besides who it is (Save as: its page's); none, what "Add view" gives (NEW_VIEW_CONTENT). */
+  /** What a new view keeps besides who it is (Save as: its page's); none, what "Add view" gives (NEW_CONTENT). */
   content?: ViewContent;
 };
 
 /**
- * The dialog that makes a view of the project ("Add view", the empty list's New, create_view, Save as) or changes the
- * view of viewId (P6a spec 2.4, R11, R28, R30), as M6's dialogs of a cycle and a module: it holds who the view is (its
- * icon, name and description) and nothing else; a new view keeps the content it was given, or "Add view"'s. It closes
- * only once nerve has made the view or the change, and says so, a new view's page then shown; refused, it stays with
- * what it holds, nerve's reason under the name (422) or in a toast. While what it sent is out, nothing closes it
- * (Escape, the backdrop, Cancel); else each does at once, through its handleClose (ModalCore), and an Escape the icon
- * picker or an input method takes is theirs. Its follow-ups are those of the session and the page it was sent from
+ * The dialog that makes a view of the container, a project's or a workspace's own ("Add view", the empty list's New,
+ * create_view, Save as), or changes the view of viewId (P6a spec 2.4, R11, R28, R30; M7/P6b spec 2.11, R14), as M6's
+ * dialogs of a cycle and a module: it holds who the view is (its icon, name and description) and nothing else; a new
+ * view keeps the content it was given, or "Add view"'s, the container's. It closes only once nerve has made the view or
+ * the change, and says so in the container's words, a new view's page then shown; refused, it stays with what it
+ * holds, nerve's reason under the name (422) or in a toast. While what it sent is out, nothing closes it (Escape, the
+ * backdrop, Cancel); else each does at once, through its handleClose (ModalCore), and an Escape the icon picker or an
+ * input method takes is theirs. Its follow-ups are those of the session and the page it was sent from
  * (followInSession): once the dialog has gone with its page (its host's, ViewActionsHost, ProjectLevelModals or the
  * filters' HOC), nerve's late answer reaches the store alone. Closed, the dialog gives the focus back to what opened it.
  */
-export const CreateUpdateProjectViewModal = observer(function CreateUpdateProjectViewModal(props: Props) {
-  const { isOpen, handleClose, workspaceSlug, projectId, viewId, content = NEW_VIEW_CONTENT } = props;
+export const CreateUpdateViewModal = observer(function CreateUpdateViewModal(props: Props) {
+  const { isOpen, handleClose, workspaceSlug, container, viewId, content = NEW_CONTENT[container.kind] } = props;
   // router
   const navigate = useNavigate();
   // nerve hooks
@@ -98,7 +115,7 @@ export const CreateUpdateProjectViewModal = observer(function CreateUpdateProjec
     await followInSession(
       () =>
         viewId === undefined
-          ? create({ kind: "project", projectId }, creation(values, content))
+          ? create(container, creation(values, content))
           : update(viewId, () => changes(initial, values)),
       {
         done: (answer) => {
@@ -106,10 +123,10 @@ export const CreateUpdateProjectViewModal = observer(function CreateUpdateProjec
           setToast({
             type: TOAST_TYPE.SUCCESS,
             title: t("toast.success"),
-            message: editing ? t("project_views.action.update.success") : t("project_views.action.create.success"),
+            message: t(editing ? SAYS[container.kind].update : SAYS[container.kind].create),
           });
           handleClose();
-          if (!editing) return navigate(`/${workspaceSlug}/projects/${projectId}/views/${answer.id}`);
+          if (!editing) return navigate(viewPath(workspaceSlug, container, answer.id));
         },
         failed: (error) => {
           if (mounted.current) showRefusal(error, underField);
@@ -127,7 +144,7 @@ export const CreateUpdateProjectViewModal = observer(function CreateUpdateProjec
       position={EModalPosition.TOP}
       width={EModalWidth.XXL}
     >
-      <ProjectViewForm view={view} editing={editing} busy={busy} onSubmit={submit} onCancel={handleClose} />
+      <ViewForm view={view} editing={editing} busy={busy} onSubmit={submit} onCancel={handleClose} />
     </ModalCore>
   );
 });

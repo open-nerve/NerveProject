@@ -19,7 +19,7 @@ import { viewsCreatableBy } from "@/lib/views-entry";
 // local imports
 import { useViewsPage } from "./actions-host";
 import { useViewsPageState } from "./page-state";
-import { ProjectViewListItem } from "./view-list-item";
+import { ViewListItem } from "./view-list-item";
 import { viewsShown } from "./view-list-order";
 
 type Props = {
@@ -81,7 +81,12 @@ export const ProjectViewsList = observer(function ProjectViewsList(props: Props)
     <div className="flex h-full w-full flex-col">
       <ListLayout>
         {shown.map((view) => (
-          <ProjectViewListItem key={view.id} view={view} workspaceSlug={workspaceSlug} projectId={projectId} />
+          <ViewListItem
+            key={view.id}
+            view={view}
+            workspaceSlug={workspaceSlug}
+            container={{ kind: "project", projectId }}
+          />
         ))}
       </ListLayout>
     </div>

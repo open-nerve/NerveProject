@@ -8,7 +8,7 @@
 // (fake-permissions.ts), with a views' store over a fake nerve, which answers each request when the test says. The
 // caller is u-me.
 
-import type { Project, View, Workspace } from "@nerve/api-client";
+import type { Project, View, Workspace, WorkspaceRole } from "@nerve/api-client";
 import { FakeNerve, answered } from "@/lib/auth/fake-nerve";
 import { preferencesOf, projectOf } from "@/store/project/fake-projects";
 import type { RootStore } from "@/store/root.store";
@@ -73,3 +73,19 @@ export const loadViews = (nerve: FakeNerve, store: ViewStore, project: Project, 
     { data: views },
     "views"
   );
+
+/**
+ * The caller of role in acme (M7/P6b spec 2.7), who is a member of none of its projects: his permissions, and a views'
+ * store over a fake nerve of its own that holds acme's own views as nerve listed them (held), each shown by his role in
+ * acme (workspaceViewsOn). Nerve answers the lists in fake time: the test runs under vitest's fake timers.
+ */
+export async function workspaceViewsTab(role: WorkspaceRole, held: View[]) {
+  const acme = workspaceOf("acme", { role });
+  const { nerve, workspaceRoot, projects, permissions } = await permissionsOver([acme], []);
+  const views = new ViewStore(
+    { projectRoot: { project: projects }, workspaceRoot } as unknown as RootStore,
+    nerve.client()
+  );
+  views.lists.receive(acme.id, held, (_held, answer) => answer);
+  return { acme, nerve, permissions, views };
+}

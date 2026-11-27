@@ -132,7 +132,7 @@ export const ProjectViewIssuesHeader = observer(function ProjectViewIssuesHeader
           <ViewQuickActions
             parentRef={parentRef}
             customClassName="flex-shrink-0 flex items-center justify-center size-[26px] bg-layer-1/70 rounded-sm"
-            projectId={projectId}
+            container={{ kind: "project", projectId }}
             viewId={viewId}
             workspaceSlug={workspaceSlug}
           />

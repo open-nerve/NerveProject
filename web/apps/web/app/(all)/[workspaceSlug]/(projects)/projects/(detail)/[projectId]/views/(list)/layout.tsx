@@ -28,7 +28,7 @@ export default function ProjectViewsListLayout({ params }: Route.ComponentProps)
   return (
     <Fragment key={projectId}>
       <ViewsPageStateProvider>
-        <ViewActionsHost workspaceSlug={workspaceSlug} projectId={projectId}>
+        <ViewActionsHost workspaceSlug={workspaceSlug} container={{ kind: "project", projectId }}>
           <AppHeader
             header={<ProjectViewsHeader workspaceSlug={workspaceSlug} projectId={projectId} />}
             mobileHeader={<ViewMobileHeader workspaceSlug={workspaceSlug} projectId={projectId} />}

@@ -44,3 +44,13 @@ export function viewsCreatableBy(project: Project | undefined, role: EUserPermis
 export function workspaceViewsOn(role: WorkspaceRole | undefined): boolean {
   return role === EUserWorkspaceRoles.ADMIN || role === EUserWorkspaceRoles.MEMBER;
 }
+
+/**
+ * Whether the caller writes a workspace's own views (M7/P6b spec 2.7): makes a new one ("Add view", Save as), and
+ * changes and deletes his own (Update view, the edit and the deletion of the views he owns). His role in the workspace
+ * is an admin's or a member's, as nerve's workspace_view.create, workspace_view.update and workspace_view.delete
+ * decide: as workspaceViewsOn today, kept apart so that a change of who writes is made here alone.
+ */
+export function workspaceViewsCreatableBy(role: WorkspaceRole | undefined): boolean {
+  return role === EUserWorkspaceRoles.ADMIN || role === EUserWorkspaceRoles.MEMBER;
+}

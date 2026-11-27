@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { EUserPermissions } from "@nerve/constants";
 import { EUserWorkspaceRoles } from "@nerve/types";
 import { projectOf } from "@/store/project/fake-projects";
-import { viewEntryOn, viewsCreatableBy, workspaceViewsOn } from "./views-entry";
+import { viewEntryOn, viewsCreatableBy, workspaceViewsCreatableBy, workspaceViewsOn } from "./views-entry";
 
 // The one rule of the ways into a project's views (P6a spec 2.2, R14; M7 design 3.11; M6-M7-07): its switch is on and
 // the caller has a role in the project, an admin's, a member's or a guest's; an archived project is no exception, as
@@ -73,5 +73,13 @@ const workspaceRoles = [
 describe("workspaceViewsOn", () => {
   it.each(workspaceRoles)("offers a workspace's views to %s (role %s): %s", (_who, role, on) => {
     expect(workspaceViewsOn(role)).toBe(on);
+  });
+});
+
+// A new view of the workspace's own is offered as nerve's workspace_view.create decides (M7/P6b spec 2.7): to its
+// admins and members, as their reading; not to its guests, nor to one with no role in it.
+describe("workspaceViewsCreatableBy", () => {
+  it.each(workspaceRoles)("offers a new workspace's view to %s (role %s): %s", (_who, role, offered) => {
+    expect(workspaceViewsCreatableBy(role)).toBe(offered);
   });
 });

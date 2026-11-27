@@ -4,7 +4,7 @@ import type { Root } from "react-dom/client";
 import { MemoryRouter } from "react-router";
 import { expect, vi, type Mock } from "vitest";
 import { Where, dialog, settle } from "@/components/common/fake-quick-actions";
-import { CreateUpdateProjectViewModal } from "./modal";
+import { CreateUpdateViewModal } from "./modal";
 import type { ViewContent } from "./view-content";
 
 // The view's dialog as a person uses it (P6a spec 2.4), for its tests: a page of web's views with the control that
@@ -28,14 +28,14 @@ function Page(props: Opened) {
       <button type="button" onClick={() => setShown(true)}>
         opener
       </button>
-      <CreateUpdateProjectViewModal
+      <CreateUpdateViewModal
         isOpen={shown}
         handleClose={() => {
           closed();
           setShown(false);
         }}
         workspaceSlug="acme"
-        projectId={WEB}
+        container={{ kind: "project", projectId: WEB }}
         {...props}
       />
     </>

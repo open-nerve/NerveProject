@@ -16,7 +16,10 @@ vi.mock("@/lib/auth/api-client", () => ({ tokenManager: { state: { loginId: "hos
 vi.mock("@/hooks/store/use-command-palette", () => ({ useCommandPalette: () => palette.store }));
 vi.mock("@/components/cycles/modal", () => ({ CycleCreateUpdateModal: (props: Dialog) => shown(props, "cycle") }));
 vi.mock("@/components/modules/modal", () => ({ CreateUpdateModuleModal: (props: Dialog) => shown(props, "module") }));
-vi.mock("@/components/views/modal", () => ({ CreateUpdateProjectViewModal: (props: Dialog) => shown(props, "view") }));
+vi.mock("@/components/views/modal", () => ({
+  CreateUpdateViewModal: ({ isOpen, container }: { isOpen: boolean; container: { projectId: string } }) =>
+    shown({ isOpen, projectId: container.projectId }, "view"),
+}));
 
 let host: HTMLDivElement, root: ReturnType<typeof createRoot>;
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
