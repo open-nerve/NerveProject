@@ -98,7 +98,7 @@ export const CreateUpdateProjectViewModal = observer(function CreateUpdateProjec
     await followInSession(
       () =>
         viewId === undefined
-          ? create(projectId, creation(values, content))
+          ? create({ kind: "project", projectId }, creation(values, content))
           : update(viewId, () => changes(initial, values)),
       {
         done: (answer) => {

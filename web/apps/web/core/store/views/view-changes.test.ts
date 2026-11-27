@@ -81,7 +81,12 @@ describe("ViewStore, the changes", () => {
   it("creates a view: first of its project's views, as nerve lists them, the newest first", async () => {
     const { nerve, store } = await loadedViews();
     const body: ViewCreate = { name: "Release", display_filters, display_properties };
-    const creating = await sent(nerve, () => store.create(web.id, body), ["POST", list(web)], json(201, release));
+    const creating = await sent(
+      nerve,
+      () => store.create({ kind: "project", projectId: web.id }, body),
+      ["POST", list(web)],
+      json(201, release)
+    );
     expect(nerve.calls.at(-1)?.body).toEqual(body);
     expect(creating.value).toEqual(release);
     expect(store.lists.get(web.id)).toEqual([release, ...webViews]);
@@ -89,7 +94,12 @@ describe("ViewStore, the changes", () => {
 
     // of a project whose views the store has not listed: nothing is written, its fetch brings them
     const infra = viewOf(ops, "Infra");
-    await sent(nerve, () => store.create(ops.id, { name: "Infra" }), ["POST", list(ops)], json(201, infra));
+    await sent(
+      nerve,
+      () => store.create({ kind: "project", projectId: ops.id }, { name: "Infra" }),
+      ["POST", list(ops)],
+      json(201, infra)
+    );
     expect(store.getProjectViews(ops.id)).toBeUndefined();
   });
 
@@ -192,7 +202,10 @@ describe("ViewStore, a change in its turn", () => {
     const { nerve, store } = await loadedViews();
     const k = nerve.calls.length;
     const notes = viewOf(web, "Notes", { created_at: LATEST, updated_at: LATEST });
-    const creating = [track(store.create(web.id, { name: "Release" })), track(store.create(web.id, { name: "Notes" }))];
+    const creating = [
+      track(store.create({ kind: "project", projectId: web.id }, { name: "Release" })),
+      track(store.create({ kind: "project", projectId: web.id }, { name: "Notes" })),
+    ];
     await inTurn(nerve, k, ["POST", list(web)], json(201, release));
     await inTurn(nerve, k + 1, ["POST", list(web)], json(201, notes));
     await until(() => creating.every((change) => change.settled), "the two creations");
@@ -225,7 +238,7 @@ type Change = {
 const changes: Change[] = [
   {
     change: "a view created",
-    send: (store) => store.create(web.id, { name: "Release" }),
+    send: (store) => store.create({ kind: "project", projectId: web.id }, { name: "Release" }),
     request: ["POST", list(web)],
     answer: () => json(201, release),
     refusal: [409, "navigation.views_disabled"],

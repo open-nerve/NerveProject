@@ -136,7 +136,10 @@ it("makes a view of 'Add view' with its name, description and icon and the displ
   await fill("name", "Mine");
   await submit();
   expect(ui.create.mock.calls).toStrictEqual([
-    [WEB, { name: "Mine", description: "", logo_props: {}, ...CONTRACT_DISPLAY }],
+    [
+      { kind: "project", projectId: WEB },
+      { name: "Mine", description: "", logo_props: {}, ...CONTRACT_DISPLAY },
+    ],
   ]);
 });
 
@@ -148,7 +151,10 @@ it("makes a view of Save as with the content it was given, its name empty to sta
   await fill("description", "The urgent ones");
   await submit();
   expect(ui.create.mock.calls).toStrictEqual([
-    [WEB, { name: "High", description: "The urgent ones", logo_props: {}, ...content }],
+    [
+      { kind: "project", projectId: WEB },
+      { name: "High", description: "The urgent ones", logo_props: {}, ...content },
+    ],
   ]);
 });
 

@@ -7,8 +7,9 @@ import type { ApiClient, View, ViewCreate, ViewUpdate } from "@nerve/api-client"
 import { unwrap } from "@/lib/api-error";
 
 /**
- * A project's views (M7 design 3.7, P6a spec 2.1): a query of the project's work items saved with its display, owned
- * by the account that created it, who alone changes it. Its answers are nerve's, as nerve gives them.
+ * A project's views (M7 design 3.7, P6a spec 2.1) and a workspace's own (M7/P6b spec 2.6): a query of the project's,
+ * or of the workspace's, work items saved with its display, owned by the account that created it, who alone changes
+ * it. Its answers are nerve's, as nerve gives them.
  */
 export class ViewsService {
   /** api: the client bound to the session of the stores that build this service (RootStore). */
@@ -32,6 +33,14 @@ export class ViewsService {
         body,
       })
     );
+  }
+
+  /**
+   * Creates a view of the workspace, of no project, owned by the caller (its admin or member); what body leaves out
+   * takes the contract's defaults.
+   */
+  async createWorkspaceView(slug: string, body: ViewCreate): Promise<View> {
+    return unwrap(await this.api.POST("/api/v0/workspaces/{slug}/views", { params: { path: { slug } }, body }));
   }
 
   /** The view as nerve holds it, while the project's views are turned off too. */

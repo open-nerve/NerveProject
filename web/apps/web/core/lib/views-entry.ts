@@ -3,8 +3,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { Project } from "@nerve/api-client";
+import type { Project, WorkspaceRole } from "@nerve/api-client";
 import { EUserPermissions } from "@nerve/constants";
+import { EUserWorkspaceRoles } from "@nerve/types";
 
 /**
  * Whether the caller is offered the ways into the project's views (M7 design 3.11; P6a spec 2.2, R14; M6-M7-07): the
@@ -30,4 +31,16 @@ export function viewEntryOn(project: Project | undefined, role: EUserPermissions
  */
 export function viewsCreatableBy(project: Project | undefined, role: EUserPermissions | undefined): boolean {
   return viewEntryOn(project, role) && (role === EUserPermissions.ADMIN || role === EUserPermissions.MEMBER);
+}
+
+/**
+ * Whether the caller is offered a workspace's own views (M7/P6b spec 2.7, R13; M7 design 3.7): those of no project,
+ * listed and read, on the views list page, the view page's switcher and a saved view's page. His role in the workspace
+ * is an admin's or a member's, as nerve's workspace_view.read decides; a guest's is refused (forbidden), and one with
+ * no role there (not its member, or its workspaces not yet fetched) has none. A workspace's views have no switch. The
+ * role is the permission store's by the route's workspace (getWorkspaceRoleByWorkspaceSlug), or the workspace store's
+ * workspace's (Workspace.role): the same.
+ */
+export function workspaceViewsOn(role: WorkspaceRole | undefined): boolean {
+  return role === EUserWorkspaceRoles.ADMIN || role === EUserWorkspaceRoles.MEMBER;
 }

@@ -6,9 +6,10 @@
 import { maxBy } from "lodash-es";
 import { computedFn } from "mobx-utils";
 // nerve imports
-import type { ApiClient, Project, View } from "@nerve/api-client";
+import type { ApiClient, Project, View, Workspace } from "@nerve/api-client";
 // lib
 import { ReconciledByKey } from "@/lib/reconciled";
+import { workspaceViewsOn } from "@/lib/views-entry";
 // services
 import { ViewsService } from "@/services/views/views.service";
 // store
@@ -29,16 +30,22 @@ export interface IViewStore extends IViewChanges {
 }
 
 /**
- * The views of the projects of a session (M7 design 3.7, P6a spec 2.1): each project's views, by its id, in nerve's
- * order, the newest first; each view's own read, by its id. A view shows as nerve last answered it, of the copies the
- * store holds (v0 design 7.7). Every reader takes its project or view from its caller (the route's), never from the
- * address in the router store; the views of a project the project store no longer gives (deleted, left, or of a
- * workspace no longer the caller's) do not show. The store reads only where a page uses the views (R20): it holds what
- * its readers fetched. Its service sends with the session's client; fetches do not queue. Its changes go one at a
- * time for each view and write nerve's answers into every copy that holds the view (view-changes.ts, v0 design 7.7).
+ * The views of a session (M7 design 3.7, P6a spec 2.1; M7/P6b spec 2.6, R9): each project's views, by its id, and each
+ * workspace's own (of no project), by its id, in nerve's order, the newest first; each view's own read, by its id. A
+ * view shows as nerve last answered it, of the copies the store holds (v0 design 7.7). Every reader takes its project,
+ * workspace or view from its caller (the route's), never from the address in the router store. A project's views do
+ * not show once the project store no longer gives the project (deleted, left, or of a workspace no longer the
+ * caller's); a workspace's own show only while the workspace store gives the workspace and the caller's role there is
+ * an admin's or a member's (workspaceViewsOn): never to its guest. The store reads only where a page uses the views
+ * (R20): it holds what its readers fetched. Its service sends with the session's client; fetches do not queue. Its
+ * changes go one at a time for each view and write nerve's answers into every copy that holds the view
+ * (view-changes.ts, v0 design 7.7).
  */
 export class ViewStore implements IViewStore {
-  /** Each project's views, in nerve's order, reconciled between fetches and changes. */
+  /**
+   * Each container's views, a project's or a workspace's own, by its id, in nerve's order, reconciled between fetches
+   * and changes.
+   */
   readonly lists = new ReconciledByKey<View[]>();
   /** Each view as nerve last answered it alone; null once deleted here (a fetch out meanwhile answers null too). */
   readonly details = new ReconciledByKey<View | null>();
@@ -49,10 +56,14 @@ export class ViewStore implements IViewStore {
   // stores
   /** The project as the caller sees it, by the project store (ProjectStore.getProjectById). */
   private readonly projectOf: (projectId: string | undefined | null) => Project | undefined;
+  /** The caller's workspace of the id, with his role there, by the workspace store (it has no getter by id). */
+  private readonly workspaceOf: (workspaceId: string) => Workspace | undefined;
 
   constructor(rootStore: RootStore, api: ApiClient) {
     this.service = new ViewsService(api);
     this.projectOf = rootStore.projectRoot.project.getProjectById;
+    this.workspaceOf = (workspaceId) =>
+      rootStore.workspaceRoot.workspaces?.find((workspace) => workspace.id === workspaceId);
     this.changes = new ViewChanges(this, this.service);
   }
 
@@ -66,8 +77,8 @@ export class ViewStore implements IViewStore {
   });
 
   /**
-   * @description the view as nerve last answered it, of its own read and its project's views; nothing until one of
-   * them has it, once it is deleted here, or once the project store no longer gives its project
+   * @description the view as nerve last answered it, of its own read and its container's views; nothing until one of
+   * them has it, once it is deleted here, or once the caller no longer sees it (shown)
    */
   getViewById = computedFn((viewId: string | null | undefined): View | undefined => {
     if (!viewId) return undefined;
@@ -77,7 +88,7 @@ export class ViewStore implements IViewStore {
       ...(read ? [{ view: read, answeredAt: this.details.answeredAt(viewId) }] : []),
     ];
     const newest = maxBy(copies, "answeredAt")?.view;
-    return newest && this.projectOf(newest.project_id) ? newest : undefined;
+    return newest && this.shown(newest) ? newest : undefined;
   });
 
   /**
@@ -92,19 +103,29 @@ export class ViewStore implements IViewStore {
     this.details.fetch(viewId, () => this.service.getView(viewId));
 
   // changes (view-changes.ts)
-  create: IViewStore["create"] = (projectId, body) => this.changes.create(projectId, body);
+  create: IViewStore["create"] = (container, body) => this.changes.create(container, body);
   update: IViewStore["update"] = (viewId, body) => this.changes.update(viewId, body);
   remove: IViewStore["remove"] = (viewId) => this.changes.remove(viewId);
   isUpdating: IViewStore["isUpdating"] = (viewId) => this.changes.isUpdating(viewId);
 
   /**
-   * The view's rows in the projects' views the store holds, each with when nerve answered that list, which is its
-   * project's: a project's view has its project's id (only a workspace's view has none, which no project lists).
+   * Whether the caller sees the view, by its kind: a project's while the project store gives its project; a
+   * workspace's own (of no project) while the workspace store gives its workspace, of which his role is an admin's or a
+   * member's (workspaceViewsOn): never its guest's.
+   */
+  private shown(view: View): boolean {
+    if (view.project_id !== null) return this.projectOf(view.project_id) !== undefined;
+    return workspaceViewsOn(this.workspaceOf(view.workspace_id)?.role);
+  }
+
+  /**
+   * The view's rows in the containers' views the store holds, each with when nerve answered that list, which is its
+   * container's: its project's, else its workspace's (a workspace's own view, of no project).
    */
   private rowsOf(viewId: string): Copy[] {
     return this.lists
       .values()
       .flatMap((rows) => rows.filter((row) => row.id === viewId))
-      .flatMap((row) => (row.project_id ? [{ view: row, answeredAt: this.lists.answeredAt(row.project_id) }] : []));
+      .map((row) => ({ view: row, answeredAt: this.lists.answeredAt(row.project_id ?? row.workspace_id) }));
   }
 }

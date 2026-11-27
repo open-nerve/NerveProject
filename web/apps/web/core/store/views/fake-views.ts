@@ -8,7 +8,7 @@
 // (fake-permissions.ts), with a views' store over a fake nerve, which answers each request when the test says. The
 // caller is u-me.
 
-import type { Project, View } from "@nerve/api-client";
+import type { Project, View, Workspace } from "@nerve/api-client";
 import { FakeNerve, answered } from "@/lib/auth/fake-nerve";
 import { preferencesOf, projectOf } from "@/store/project/fake-projects";
 import type { RootStore } from "@/store/root.store";
@@ -37,6 +37,10 @@ export const viewOf = (project: Project, name: string, owner: string, fields: Pa
   updated_at: "2026-11-01T09:00:00Z",
   ...fields,
 });
+
+/** A workspace's own view as nerve gives it, of no project (M7/P6b spec 2.6): as viewOf's, its id of the slug. */
+export const workspaceViewOf = (workspace: Workspace, name: string, owner: string, fields: Partial<View> = {}): View =>
+  viewOf(projectOf(workspace.slug.toUpperCase(), workspace.id), name, owner, { project_id: null, ...fields });
 
 /** The requests of the views: a project's, where it lists them; a view's, where it is deleted. */
 export const viewRequests = {
