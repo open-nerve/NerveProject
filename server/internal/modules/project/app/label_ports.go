@@ -20,6 +20,14 @@ type LabelLister interface {
 	ListLabels(ctx context.Context, projectID uuid.UUID) ([]domain.Label, error)
 }
 
+// WorkspaceLabelLister is listWorkspaceLabels' repository.
+type WorkspaceLabelLister interface {
+	// ListWorkspaceLabels lists the undeleted labels, parents and children
+	// alike, of workspaceID's undeleted, unarchived projects that userID is
+	// an active member of, by project id, then sort order, then id.
+	ListWorkspaceLabels(ctx context.Context, workspaceID, userID uuid.UUID) ([]domain.Label, error)
+}
+
 // LabelRow is a label to insert: its values as the use case decided them,
 // its parent checked and its sort order given.
 type LabelRow struct {

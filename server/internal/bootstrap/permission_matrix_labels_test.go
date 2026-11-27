@@ -139,6 +139,10 @@ func labelMatrixRows() []matrixRow {
 			cells: labelRows.of(cellNoContent, cellForbidden, cellForbidden, cellNoContent, cellForbidden, cellForbidden)},
 		{op: "deleteLabel", variant: "archived", write: true, columns: archivedColumns, request: labelRows.to(http.MethodDelete, "", "Bug", ""),
 			cells: labelRows.ofArchived(cellNoContent, cellForbidden)},
+		// Every active member of the workspace (M7/P6b spec 2.1), each the
+		// labels of the projects he is a member of, as listWorkspaceStates.
+		{op: "listWorkspaceLabels", request: toWorkspace(http.MethodGet, "/labels", ""), cells: inWorkspace(cellOK, cellOK, cellOK),
+			check: listsTheWorkspaceLabels},
 	}
 }
 
@@ -171,6 +175,45 @@ func listsTheLabels(t *testing.T, c caller, s seeded, answer string) {
 			parent = s.label(projectOf(c), l.parent).String()
 		}
 		want = append(want, l.name+" "+s.label(projectOf(c), l.name).String()+" under "+parent)
+	}
+	if !slices.Equal(got, want) {
+		t.Errorf("%s lists %q, want %q", c, got, want)
+	}
+}
+
+// listsTheWorkspaceLabels: the labels of acme's unarchived projects that
+// the column's account is an active member of, by project id, then sort
+// order, each as seeded, in its project, UI under its project's Bug: none
+// for the admin and the member, members of none of them, and the public and
+// the private project's for the guest, PG's account, who is no member of
+// the archived one.
+func listsTheWorkspaceLabels(t *testing.T, c caller, s seeded, answer string) {
+	var list struct {
+		Data []struct {
+			ID        uuid.UUID  `json:"id"`
+			ProjectID uuid.UUID  `json:"project_id"`
+			ParentID  *uuid.UUID `json:"parent_id"`
+		} `json:"data"`
+	}
+	decodeAnswer(t, answer, &list)
+	var got, want []string
+	for _, l := range list.Data {
+		parent := "the top"
+		if l.ParentID != nil {
+			parent = l.ParentID.String()
+		}
+		got = append(got, l.ID.String()+" in "+l.ProjectID.String()+" under "+parent)
+	}
+	if c == callerGuest {
+		for _, key := range byProjectID(s, "acme/public", "acme/private") {
+			for _, l := range matrixLabels {
+				parent := "the top"
+				if l.parent != "" {
+					parent = s.label(key, l.parent).String()
+				}
+				want = append(want, s.label(key, l.name).String()+" in "+s.project(key).String()+" under "+parent)
+			}
+		}
 	}
 	if !slices.Equal(got, want) {
 		t.Errorf("%s lists %q, want %q", c, got, want)

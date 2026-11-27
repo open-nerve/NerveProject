@@ -1553,6 +1553,28 @@ paths:
                 $ref: '#/components/schemas/StateList'
         default:
           $ref: '#/components/responses/Problem'
+  /api/v0/workspaces/{slug}/labels:
+    parameters:
+      - $ref: '#/components/parameters/Slug'
+    get:
+      operationId: listWorkspaceLabels
+      tags:
+        - project
+      summary: List the labels of the projects the caller is a member of
+      description: 'For the workspace''s active members: the labels of its projects that the caller is an active member of, the archived ones left out, those at the top and those under them alike, by project id, then by sort order, the lowest first, then by id; each project''s as listLabels lists them. A project the caller sees but is not a member of adds none. A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found. The whole collection at once: collections are not paginated.'
+      security:
+        - bearer: []
+      x-problem-codes:
+        - workspace.not_found
+      responses:
+        '200':
+          description: The labels.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LabelList'
+        default:
+          $ref: '#/components/responses/Problem'
   /api/v0/projects/{project_id}/labels:
     parameters:
       - $ref: '#/components/parameters/ProjectID'

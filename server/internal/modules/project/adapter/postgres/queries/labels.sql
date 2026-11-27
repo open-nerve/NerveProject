@@ -22,6 +22,18 @@ FROM labels
 WHERE project_id = sqlc.arg(project_id) AND deleted_at IS NULL
 ORDER BY sort_order, id;
 
+-- name: ListWorkspaceLabels :many
+-- listWorkspaceLabels (M7/P6b spec 2.1): the undeleted labels, parents and children alike, of the workspace's undeleted,
+-- unarchived projects the account is an active member of, by project id, then sort order, then id.
+SELECT l.id, l.workspace_id, l.project_id, l.parent_id, l.name, l.color, l.sort_order, l.created_at, l.updated_at
+FROM labels l
+         JOIN projects p ON p.id = l.project_id
+         JOIN project_members m ON m.project_id = p.id
+WHERE p.workspace_id = sqlc.arg(workspace_id) AND p.deleted_at IS NULL AND p.archived_at IS NULL
+  AND m.member_id = sqlc.arg(user_id) AND m.is_active AND m.deleted_at IS NULL
+  AND l.deleted_at IS NULL
+ORDER BY l.project_id, l.sort_order, l.id;
+
 -- name: GreatestSortOrder :one
 -- createLabel, under the project's FOR NO KEY UPDATE (M3 design 4.10): the greatest sort order of the project's
 -- undeleted labels, parents and children alike, as Plane's Label.save() reads it; no row when it has none.

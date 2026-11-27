@@ -35,6 +35,7 @@ var tableCells = map[shared.Action][]outcome{
 	"project.create":               {allowed, allowed, forbidden, invisible, invisible, invisible, forbidden},
 	"project_identifier.check":     {allowed, allowed, forbidden, invisible, invisible, invisible, forbidden},
 	"workspace_state.list":         {allowed, allowed, allowed, invisible, invisible, invisible, forbidden},
+	"workspace_label.list":         {allowed, allowed, allowed, invisible, invisible, invisible, forbidden},
 	"issue.search":                 {allowed, allowed, allowed, invisible, invisible, invisible, forbidden},
 	"notification.read":            {allowed, allowed, allowed, invisible, invisible, invisible, forbidden},
 	"notification.write":           {allowed, allowed, allowed, invisible, invisible, invisible, forbidden},

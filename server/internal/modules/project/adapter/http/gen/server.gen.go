@@ -589,6 +589,9 @@ type ServerInterface interface {
 	// MarkDefaultState Make a state its project's default
 	// (POST /api/v0/states/{state_id}/mark-default)
 	MarkDefaultState(w http.ResponseWriter, r *http.Request, stateID StateID)
+	// ListWorkspaceLabels List the labels of the projects the caller is a member of
+	// (GET /api/v0/workspaces/{slug}/labels)
+	ListWorkspaceLabels(w http.ResponseWriter, r *http.Request, slug Slug)
 	// CheckProjectIdentifier Check whether a project identifier is available in a workspace
 	// (GET /api/v0/workspaces/{slug}/project-identifiers/{identifier})
 	CheckProjectIdentifier(w http.ResponseWriter, r *http.Request, slug Slug, identifier string)
@@ -1184,6 +1187,32 @@ func (siw *ServerInterfaceWrapper) MarkDefaultState(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r)
 }
 
+// ListWorkspaceLabels operation middleware
+func (siw *ServerInterfaceWrapper) ListWorkspaceLabels(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "slug" -------------
+	var slug Slug
+
+	err = runtime.BindStyledParameterWithOptions("simple", "slug", r.PathValue("slug"), &slug, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "slug", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListWorkspaceLabels(w, r, slug)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // CheckProjectIdentifier operation middleware
 func (siw *ServerInterfaceWrapper) CheckProjectIdentifier(w http.ResponseWriter, r *http.Request) {
 
@@ -1453,6 +1482,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/states/{state_id}", wrapper.UpdateState)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/states/{state_id}/mark-default", wrapper.MarkDefaultState)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/workspaces/{slug}/states", wrapper.ListWorkspaceStates)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/workspaces/{slug}/labels", wrapper.ListWorkspaceLabels)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/projects/{project_id}/labels", wrapper.ListLabels)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/projects/{project_id}/labels", wrapper.CreateLabel)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v0/labels/{label_id}", wrapper.DeleteLabel)
@@ -2457,6 +2487,52 @@ func (response MarkDefaultStatedefaultApplicationProblemPlusJSONResponse) VisitM
 	return err
 }
 
+type ListWorkspaceLabelsRequestObject struct {
+	Slug Slug `json:"slug"`
+}
+
+type ListWorkspaceLabelsResponseObject interface {
+	VisitListWorkspaceLabelsResponse(w http.ResponseWriter) error
+}
+
+type ListWorkspaceLabels200JSONResponse LabelList
+
+func (response ListWorkspaceLabels200JSONResponse) VisitListWorkspaceLabelsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListWorkspaceLabelsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response ListWorkspaceLabelsdefaultApplicationProblemPlusJSONResponse) VisitListWorkspaceLabelsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type CheckProjectIdentifierRequestObject struct {
 	Slug       Slug   `json:"slug"`
 	Identifier string `json:"identifier"`
@@ -2712,6 +2788,9 @@ type StrictServerInterface interface {
 	// MarkDefaultState Make a state its project's default
 	// (POST /api/v0/states/{state_id}/mark-default)
 	MarkDefaultState(ctx context.Context, request MarkDefaultStateRequestObject) (MarkDefaultStateResponseObject, error)
+	// ListWorkspaceLabels List the labels of the projects the caller is a member of
+	// (GET /api/v0/workspaces/{slug}/labels)
+	ListWorkspaceLabels(ctx context.Context, request ListWorkspaceLabelsRequestObject) (ListWorkspaceLabelsResponseObject, error)
 	// CheckProjectIdentifier Check whether a project identifier is available in a workspace
 	// (GET /api/v0/workspaces/{slug}/project-identifiers/{identifier})
 	CheckProjectIdentifier(ctx context.Context, request CheckProjectIdentifierRequestObject) (CheckProjectIdentifierResponseObject, error)
@@ -3386,6 +3465,32 @@ func (sh *strictHandler) MarkDefaultState(w http.ResponseWriter, r *http.Request
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(MarkDefaultStateResponseObject); ok {
 		if err := validResponse.VisitMarkDefaultStateResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListWorkspaceLabels operation middleware
+func (sh *strictHandler) ListWorkspaceLabels(w http.ResponseWriter, r *http.Request, slug Slug) {
+	var request ListWorkspaceLabelsRequestObject
+
+	request.Slug = slug
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListWorkspaceLabels(ctx, request.(ListWorkspaceLabelsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListWorkspaceLabels")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListWorkspaceLabelsResponseObject); ok {
+		if err := validResponse.VisitListWorkspaceLabelsResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
