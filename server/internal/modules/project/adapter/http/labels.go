@@ -14,11 +14,7 @@ func (h handler) ListLabels(ctx context.Context, req gen.ListLabelsRequestObject
 	if err != nil {
 		return nil, err
 	}
-	out := gen.LabelList{Data: make([]gen.Label, len(list))}
-	for i, l := range list {
-		out.Data[i] = label(l)
-	}
-	return gen.ListLabels200JSONResponse(out), nil
+	return gen.ListLabels200JSONResponse(labelList(list)), nil
 }
 
 // CreateLabel serves POST /api/v0/projects/{project_id}/labels: the color
@@ -53,6 +49,15 @@ func (h handler) DeleteLabel(ctx context.Context, req gen.DeleteLabelRequestObje
 		return nil, err
 	}
 	return gen.DeleteLabel204Response{}, nil
+}
+
+// labelList is list as the API shows it: data an array, never null.
+func labelList(list []domain.Label) gen.LabelList {
+	out := gen.LabelList{Data: make([]gen.Label, len(list))}
+	for i, l := range list {
+		out.Data[i] = label(l)
+	}
+	return out
 }
 
 // label is l as the API shows it: its parent null at the top.

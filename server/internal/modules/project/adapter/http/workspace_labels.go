@@ -13,9 +13,5 @@ func (h handler) ListWorkspaceLabels(ctx context.Context, req gen.ListWorkspaceL
 	if err != nil {
 		return nil, err
 	}
-	out := gen.LabelList{Data: make([]gen.Label, len(list))}
-	for i, l := range list {
-		out.Data[i] = label(l)
-	}
-	return gen.ListWorkspaceLabels200JSONResponse(out), nil
+	return gen.ListWorkspaceLabels200JSONResponse(labelList(list)), nil
 }
