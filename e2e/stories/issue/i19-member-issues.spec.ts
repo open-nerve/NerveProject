@@ -465,7 +465,7 @@ test("I19 (page): a label selected from a visible detail remains a real restrict
   const path = memberPath(seed.slug, seed.b.id);
   const queries = profileReads(page, path);
   const { watch } = await openIssueList(page, { ...seed, path: `/${seed.slug}/profile/${seed.b.id}/assigned` });
-  await page.locator(`#issue-${seed.assigned.id}`).click();
+  await page.locator(`#issue-${seed.assigned.id}`).getByText(seed.assigned.name, { exact: true }).click();
   const peek = page.locator("#full-screen-portal");
   // This story seeds the label directory after detail loading; C10 owns interactions during editor loading.
   await expect(peek.locator(`[id="editor-container-${seed.assigned.id}"] [contenteditable]`)).toBeVisible();

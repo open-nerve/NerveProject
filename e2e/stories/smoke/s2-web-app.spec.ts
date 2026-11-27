@@ -126,15 +126,13 @@ test("S2: a user opens a deep link directly", async ({ page, request }) => {
 const ACCOUNTS = ["admin", "member", "guest", "project non-member"] as const;
 type Account = (typeof ACCOUNTS)[number];
 
-/** These local profile filters add one native relation read, with no preference or label-catalog fetch. */
+/** These local profile filters add one native relation read and the label catalog, with no preference fetch. */
 const profileVisits = (member: "admin" | "member"): [path: string, requests: string[]][] =>
   ["assigned", "created", "subscribed"].map((relation) => [
     `/{slug}/profile/{${member}}/${relation}`,
-    [
-      ...APP,
-      ...WORKSPACE,
-      `GET /api/v0/workspaces/{slug}/members/{${member}}/issues?relation=${relation}&order_by=sort_order&sub_issue=false&limit=100`,
-    ],
+    [...APP, ...WORKSPACE, ...WORKSPACE_LABELS].concat(
+      `GET /api/v0/workspaces/{slug}/members/{${member}}/issues?relation=${relation}&order_by=sort_order&sub_issue=false&limit=100`
+    ),
   ]);
 
 const archivedIssuesVisit: [path: string, requests: string[]] = [
