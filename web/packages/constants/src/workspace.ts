@@ -5,7 +5,6 @@
  */
 
 import type { OrganizationSize } from "@nerve/api-client";
-import type { TStaticViewTypes } from "@nerve/types";
 import { EUserWorkspaceRoles } from "@nerve/types";
 
 export const ORGANIZATION_SIZE: OrganizationSize[] = ["Just myself", "2-10", "11-50", "51-200", "201-500", "500+"];
@@ -32,9 +31,18 @@ export const ROLE_DETAILS = {
   },
 };
 
+/** The workspace's default views, by the key its address names (M7/P6b spec 2.5). */
+export type DefaultWorkspaceViewKey = "all-issues" | "assigned" | "created" | "subscribed";
+
+/**
+ * The workspace's four default views (M7/P6b spec 2.5, R4): each one's own term, `me` in it, is fixed in its query and
+ * left out of the words its page filters by, so that the page never sends that key twice (nerve refuses it) and no
+ * filter of the page replaces it.
+ */
 export const DEFAULT_GLOBAL_VIEWS_LIST: {
-  key: TStaticViewTypes;
+  key: DefaultWorkspaceViewKey;
   i18n_label: string;
+  own?: "assignee_id" | "created_by_id" | "subscriber_id";
 }[] = [
   {
     key: "all-issues",
@@ -43,14 +51,17 @@ export const DEFAULT_GLOBAL_VIEWS_LIST: {
   {
     key: "assigned",
     i18n_label: "default_global_view.assigned",
+    own: "assignee_id",
   },
   {
     key: "created",
     i18n_label: "default_global_view.created",
+    own: "created_by_id",
   },
   {
     key: "subscribed",
     i18n_label: "default_global_view.subscribed",
+    own: "subscriber_id",
   },
 ];
 

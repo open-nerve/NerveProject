@@ -5,13 +5,13 @@
 // seed then out makes neither. The stores and HTTP are real; the test holds its own draft service, to adopt nerve's
 // answer as Update view does.
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import type { View } from "@nerve/api-client";
+import type { ProjectIssueFilters, View } from "@nerve/api-client";
 import { json } from "@/lib/auth/fake-nerve";
 import { track, until } from "@/lib/auth/fake-time";
 import { viewOf } from "@/store/views/fake-views";
 import { issueStoreTab, requestedIssue } from "../fake-issues";
 import { ProjectViewIssuesFilter } from "./filter.store";
-import { ViewDraftService } from "./view-draft.service";
+import { ViewDraftService } from "../helpers/view-draft.service";
 
 vi.mock("@/lib/auth/api-client", () => ({ tokenManager: {}, publicClient: {} }));
 const binding = vi.hoisted(() => ({ app: undefined as unknown }));
@@ -46,7 +46,7 @@ const answer = (view: View): View => ({
 const readOf = (view: View): [string, string] => ["GET", `/api/v0/views/${view.id}`];
 /** The view page's preferences over a draft service of the test's own. */
 function page() {
-  const drafts = new ViewDraftService(tab.app.views.fetchView);
+  const drafts = new ViewDraftService<ProjectIssueFilters>(tab.app.views.fetchView, (filters) => filters);
   return { drafts, filter: new ProjectViewIssuesFilter(tab.app.issue, drafts) };
 }
 /** The page reads its preferences: the view is read and nerve answers it with view. */

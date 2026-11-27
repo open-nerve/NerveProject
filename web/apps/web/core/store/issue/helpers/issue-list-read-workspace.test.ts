@@ -6,6 +6,7 @@
 // membership of the workspace, as a member's list does. The stores and HTTP are real.
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { json } from "@/lib/auth/fake-nerve";
+import type { WorkspaceIssueQuery } from "@/services/issue/issue-list.service";
 import { loadProjects, projectOf } from "@/store/project/fake-projects";
 import { loadWorkspaces, workspaceOf } from "@/store/workspace/fake-workspaces";
 import { issueOf, issuePageOf, issueStoreTab, requestedIssue } from "../fake-issues";
@@ -30,7 +31,7 @@ afterEach(() => {
 });
 
 const at = { workspaceSlug: "ws", workspaceID: "id-ws" };
-const workspaceList = (query: Extract<IssueListScope, { scope: "workspace" }>["query"] = {}) =>
+const workspaceList = (query: WorkspaceIssueQuery = {}) =>
   new IssueListBinding(tab.app.issue, { ...at, scope: "workspace", query: { order_by: "-created_at", ...query } });
 const LIST: [string, string] = ["GET", "/api/v0/workspaces/ws/issues"];
 /** A work item of project, created at the hour given: the newest first is the lists' order here. */

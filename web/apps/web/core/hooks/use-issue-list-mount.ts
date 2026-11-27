@@ -3,8 +3,9 @@ import type { TProfileViews } from "@nerve/types";
 import { useParams } from "react-router";
 import { EUserPermissions } from "@nerve/constants";
 import { EIssuesStoreType } from "@nerve/types";
-import { toMemberFilters, type IssueListOptions } from "@/lib/issue-filters";
+import { toMemberFilters, toWorkspaceFilters, type IssueListOptions } from "@/lib/issue-filters";
 import type { IssueRootStore } from "@/store/issue/root.store";
+import { workspacePageId } from "@/store/issue/workspace/page-id";
 import type { IssueActions } from "@/hooks/use-issues-actions";
 import { useUserPermissions } from "@/hooks/store/user";
 import { useSessionSWR } from "@/lib/use-session-swr";
@@ -20,20 +21,24 @@ export function useIssueListMount(
   variant = ""
 ) {
   const params = useParams();
-  const { workspaceSlug, projectId, userId } = params;
+  const { workspaceSlug, projectId, userId, globalViewId } = params;
   const permission = useUserPermissions();
   const profile = type === EIssuesStoreType.PROFILE;
-  const target = profile ? userId : projectId;
+  // a workspace's view's page lists the workspace's, of no one project, for any role of it (M7/P6b spec 2.3)
+  const workspace = type === EIssuesStoreType.GLOBAL;
+  const target = profile ? userId : workspace ? "" : projectId;
   // A cycle's or a module's page lists its project with the cycle or module (P5b spec 2.1; P6b spec 2.3), a project's
   // view's page with its draft of the view (P6a spec 2.5, re-96 I3): each cycle, each module and each view is its own
-  // list, none until the route names it.
+  // list, none until the route names it; a workspace's view's page by its globalViewId (M7/P6b spec 2.3).
   const page = isPlanningPageStoreType(type)
     ? params[PLANNING_PAGE_DOMAINS[type].param]
     : type === EIssuesStoreType.PROJECT_VIEW
       ? params.viewId
-      : "";
+      : workspace
+        ? globalViewId
+        : "";
   const role = workspaceSlug
-    ? profile
+    ? profile || workspace
       ? permission.getWorkspaceRoleByWorkspaceSlug(workspaceSlug)
       : permission.getProjectRoleByWorkspaceSlugAndProjectId(workspaceSlug, projectId)
     : undefined;
@@ -46,9 +51,15 @@ export function useIssueListMount(
     ? (toMemberFilters(
         userId ? (root.profileIssuesFilter.getIssueFilters(userId, workspaceSlug)?.richFilters ?? {}) : {}
       ).project_id ?? [])
-    : projectId
-      ? [projectId]
-      : [];
+    : workspace
+      ? (toWorkspaceFilters(
+          workspaceSlug && globalViewId
+            ? (root.globalIssuesFilter.getIssueFilters(workspacePageId(workspaceSlug, globalViewId))?.richFilters ?? {})
+            : {}
+        ).project_id ?? [])
+      : projectId
+        ? [projectId]
+        : [];
   const identity = root.permissionReads.identity(workspaceID, projectIDs, profile);
   const key =
     options && allowed && (!profile || viewId)

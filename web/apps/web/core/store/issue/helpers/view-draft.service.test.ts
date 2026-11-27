@@ -31,7 +31,8 @@ const settled = () => new Promise((resolve) => setTimeout(resolve, 0));
 function drafts() {
   const reads: { id: string; answer: (view: View | null | undefined) => void }[] = [];
   const service = new ViewDraftService(
-    (id) => new Promise<View | null | undefined>((resolve) => reads.push({ id, answer: resolve }))
+    (id) => new Promise<View | null | undefined>((resolve) => reads.push({ id, answer: resolve })),
+    (filters) => filters
   );
   /** The view's draft as get gives it once what is out settled, without waiting for a read nobody answers. */
   const got = async () => {

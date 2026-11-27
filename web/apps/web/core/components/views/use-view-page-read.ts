@@ -13,7 +13,7 @@ import { problemCode } from "@/lib/api-error";
 import { useSessionSWR } from "@/lib/use-session-swr";
 import { viewEntryOn } from "@/lib/views-entry";
 // store
-import { NoViewDraftError } from "@/store/issue/project-view/view-draft.service";
+import { NoViewDraftError } from "@/store/issue/helpers/view-draft.service";
 
 /**
  * Where a view's page is with its own read of the view: reading it; nerve finds no such view; why nerve could not read

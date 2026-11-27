@@ -19,6 +19,8 @@ import type { IProfileIssues, IProfileIssuesFilter } from "@/store/issue/profile
 import type { IProjectIssues, IProjectIssuesFilter } from "@/store/issue/project";
 import type { ProjectViewIssues } from "@/store/issue/project-view/issue.store";
 import type { ProjectViewIssuesFilter } from "@/store/issue/project-view/filter.store";
+import type { GlobalIssues } from "@/store/issue/workspace/issue.store";
+import type { GlobalIssuesFilter } from "@/store/issue/workspace/filter.store";
 import type { IWorkspaceDraftIssues } from "@/store/issue/workspace-draft";
 
 type defaultIssueStore = {
@@ -55,6 +57,11 @@ export type TStoreIssues = {
   [EIssuesStoreType.PROJECT_VIEW]: defaultIssueStore & {
     issues: ProjectViewIssues;
     issuesFilter: ProjectViewIssuesFilter;
+  };
+  /** A workspace's view's page's list and preferences, by the page each call names; neither follows the route. */
+  [EIssuesStoreType.GLOBAL]: defaultIssueStore & {
+    issues: GlobalIssues;
+    issuesFilter: GlobalIssuesFilter;
   };
   [EIssuesStoreType.DEFAULT]: defaultIssueStore & {
     issues: IProjectIssues;
@@ -105,6 +112,11 @@ export const useIssues = <T extends EIssuesStoreType>(storeType?: T): TStoreIssu
       return merge(defaultStore, {
         issues: context.issue.projectViewIssues,
         issuesFilter: context.issue.projectViewIssuesFilter,
+      }) as TStoreIssues[T];
+    case EIssuesStoreType.GLOBAL:
+      return merge(defaultStore, {
+        issues: context.issue.globalIssues,
+        issuesFilter: context.issue.globalIssuesFilter,
       }) as TStoreIssues[T];
     case undefined:
     case EIssuesStoreType.DEFAULT:

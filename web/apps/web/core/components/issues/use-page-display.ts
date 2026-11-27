@@ -8,7 +8,7 @@ import type { ComponentProps } from "react";
 // nerve imports
 import type { TSupportedFilterTypeForUpdate } from "@nerve/constants";
 import { EIssueFilterType, ISSUE_STORE_TO_FILTERS_MAP } from "@nerve/constants";
-import type { EIssueLayoutTypes, EIssuesStoreType, TSupportedFilterForUpdate } from "@nerve/types";
+import { EIssueLayoutTypes, EIssuesStoreType, type TSupportedFilterForUpdate } from "@nerve/types";
 // hooks
 import { useIssues } from "@/hooks/store/use-issues";
 import { useIssuesActions } from "@/hooks/use-issues-actions";
@@ -17,13 +17,14 @@ import type { DisplayFiltersSelection } from "./issue-layouts/filters";
 
 /**
  * A list page whose header's controls show and change its own preferences: the project's, a cycle's or a module's; or
- * its draft of its view, a project's view's (P6a spec 2.5).
+ * its draft of its view, a project's view's (P6a spec 2.5); or a workspace's view's page's (M7/P6b spec 2.3).
  */
 export type PageDisplayStoreType =
   | EIssuesStoreType.PROJECT
   | EIssuesStoreType.CYCLE
   | EIssuesStoreType.MODULE
-  | EIssuesStoreType.PROJECT_VIEW;
+  | EIssuesStoreType.PROJECT_VIEW
+  | EIssuesStoreType.GLOBAL;
 
 /** What a list page's header's controls show of the page's preferences, and their changes. */
 type PageDisplay = {
@@ -45,6 +46,8 @@ export function usePageDisplay(storeType: PageDisplayStoreType, entityId: string
   const issueFilters = useIssues(storeType).issuesFilter.getIssueFilters(entityId);
   const { updateFilters } = useIssuesActions(storeType);
   const layout = issueFilters?.displayFilters?.layout;
+  // a workspace's view's page draws the spreadsheet whatever layout a view holds (M7/P6b spec 2.8, R8)
+  const shown = storeType === EIssuesStoreType.GLOBAL ? EIssueLayoutTypes.SPREADSHEET : layout;
   const update = (filterType: TSupportedFilterTypeForUpdate, filters: TSupportedFilterForUpdate) =>
     void updateFilters(entityId, filterType, filters);
 
@@ -52,7 +55,7 @@ export function usePageDisplay(storeType: PageDisplayStoreType, entityId: string
     layout,
     changeLayout: (next) => update(EIssueFilterType.DISPLAY_FILTERS, { layout: next }),
     display: {
-      layoutDisplayFiltersOptions: layout ? ISSUE_STORE_TO_FILTERS_MAP[storeType]?.layoutOptions[layout] : undefined,
+      layoutDisplayFiltersOptions: shown ? ISSUE_STORE_TO_FILTERS_MAP[storeType]?.layoutOptions[shown] : undefined,
       displayFilters: issueFilters?.displayFilters ?? {},
       handleDisplayFiltersUpdate: (change) => update(EIssueFilterType.DISPLAY_FILTERS, change),
       displayProperties: issueFilters?.displayProperties ?? {},

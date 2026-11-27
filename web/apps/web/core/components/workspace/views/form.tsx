@@ -134,7 +134,9 @@ export const WorkspaceViewForm = observer(function WorkspaceViewForm(props: Prop
                   render={({ field: { onChange: onDisplayPropertiesChange, value: displayProperties } }) => (
                     <FiltersDropdown title={t("common.display")}>
                       <DisplayFiltersSelection
-                        layoutDisplayFiltersOptions={ISSUE_DISPLAY_FILTERS_BY_PAGE.my_issues.layoutOptions.spreadsheet}
+                        layoutDisplayFiltersOptions={
+                          ISSUE_DISPLAY_FILTERS_BY_PAGE.workspace_issues.layoutOptions.spreadsheet
+                        }
                         displayFilters={displayFilters ?? {}}
                         handleDisplayFiltersUpdate={(updatedDisplayFilter: Partial<IIssueDisplayFilterOptions>) => {
                           onDisplayFiltersChange({

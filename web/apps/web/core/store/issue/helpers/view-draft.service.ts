@@ -1,15 +1,10 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
-import type { ProjectIssueFilters, View } from "@nerve/api-client";
-import type { PagePreferences, PagePreferencesService } from "../helpers/page-preferences-filter.store";
+import type { View, ViewFilters } from "@nerve/api-client";
+import type { ListPageFilters } from "@/lib/issue-filters";
+import type { PagePreferences, PagePreferencesService } from "./page-preferences-filter.store";
 
-/** A view's page's draft of the view: what the view lists and how, in nerve's words. */
-type Draft = PagePreferences<ProjectIssueFilters>;
-
-const draftOf = (view: View): Draft => ({
-  filters: view.filters,
-  display_filters: view.display_filters,
-  display_properties: view.display_properties,
-});
+/** A view's page's draft of the view: what the view lists and how, in nerve's words, the page's filters `F`. */
+type Draft<F extends ListPageFilters> = PagePreferences<F>;
 
 /**
  * The draft service's refusal of a read of a view that made no draft (P6a spec 2.6): its page left before nerve
@@ -28,13 +23,25 @@ export class NoViewDraftError extends Error {
  * that its answer is the store's too) seeds it; while it lasts nothing is read again. The page ends it as it leaves
  * (discard): each view's drafts have a generation of their own (re-96 I2), so that a seed answered after the page left
  * makes no draft, and nerve's answer to Update view replaces only a draft still held. The page-preferences base is
- * untouched: it writes the page's filters only from a draft this gives.
+ * untouched: it writes the page's filters only from a draft this gives. A project's view's page and a workspace's
+ * view's page each hold their own (M7/P6b spec 2.4): filtersOf gives the view's filters as the page holds them.
  */
-export class ViewDraftService implements PagePreferencesService<ProjectIssueFilters> {
-  private readonly drafts = new Map<string, Draft>();
+export class ViewDraftService<F extends ListPageFilters> implements PagePreferencesService<F> {
+  private readonly drafts = new Map<string, Draft<F>>();
   private readonly generations = new Map<string, number>();
 
-  constructor(private readonly read: (viewId: string) => Promise<View | null | undefined>) {}
+  constructor(
+    private readonly read: (viewId: string) => Promise<View | null | undefined>,
+    private readonly filtersOf: (filters: ViewFilters) => F
+  ) {}
+
+  private draftOf(view: View): Draft<F> {
+    return {
+      filters: this.filtersOf(view.filters),
+      display_filters: view.display_filters,
+      display_properties: view.display_properties,
+    };
+  }
 
   private generation(viewId: string): number {
     return this.generations.get(viewId) ?? 0;
@@ -44,7 +51,7 @@ export class ViewDraftService implements PagePreferencesService<ProjectIssueFilt
    * The view's draft, a copy of it: the one held, or else one seeded by a read of the view, unless the page ended the
    * draft while the read was out, or the read gave no view (one deleted here meanwhile, or a read a newer one overtook).
    */
-  async get(viewId: string): Promise<Draft> {
+  async get(viewId: string): Promise<Draft<F>> {
     const held = this.drafts.get(viewId);
     if (held) return { ...held };
     const generation = this.generation(viewId);
@@ -52,13 +59,13 @@ export class ViewDraftService implements PagePreferencesService<ProjectIssueFilt
     if (this.generation(viewId) !== generation)
       throw new NoViewDraftError(viewId, "its page left before nerve answered");
     if (!view) throw new NoViewDraftError(viewId, "the read gave no view");
-    const draft = draftOf(view);
+    const draft = this.draftOf(view);
     this.drafts.set(viewId, draft);
     return { ...draft };
   }
 
   /** Replaces each field the change names, whole, in the draft held, and gives the whole draft; sends nothing. */
-  update = async (viewId: string, body: Partial<Draft>): Promise<Draft> => {
+  update = async (viewId: string, body: Partial<Draft<F>>): Promise<Draft<F>> => {
     const held = this.drafts.get(viewId);
     if (!held) throw new NoViewDraftError(viewId, "none is held");
     const draft = { ...held, ...body };
@@ -68,7 +75,7 @@ export class ViewDraftService implements PagePreferencesService<ProjectIssueFilt
 
   /** Replaces the draft held with nerve's answer to Update view (§2.7); a draft the page ended stays ended. */
   adopt(viewId: string, view: View): void {
-    if (this.drafts.has(viewId)) this.drafts.set(viewId, draftOf(view));
+    if (this.drafts.has(viewId)) this.drafts.set(viewId, this.draftOf(view));
   }
 
   /** Ends the view's draft, and any seed of it out: the next get reads the view again. */
