@@ -37,6 +37,21 @@ function groupKeys(issue: Issue, field: IssueListGroupField | undefined, context
       return [issue[field] ?? "none"];
   }
 }
+/**
+ * A list's own terms of a work item's state, assignees and creator, `me` the caller: a project's list's and the
+ * workspace's alike (M7/P6b spec 2.3, re-97 I1).
+ */
+function ownTerms(
+  issue: Issue,
+  terms: { state_id?: string[]; assignee_id?: string[]; created_by_id?: string[] },
+  me: string
+): boolean {
+  return (
+    alternatives(terms.state_id, [issue.state_id], me) &&
+    alternatives(terms.assignee_id, issue.assignee_ids.length ? issue.assignee_ids : ["none"], me) &&
+    alternatives(terms.created_by_id, issue.created_by_id ? [issue.created_by_id] : [], me)
+  );
+}
 export function subgroupField(context: ListContext): IssueListGroupField | undefined {
   return "sub_group_by" in context.query ? context.query.sub_group_by : undefined;
 }
@@ -56,22 +71,30 @@ export function issueMembership(
     if (issue.project_id !== context.projectID || (issue.archived_at !== null) !== (p.archived === "true"))
       return false;
     if (
-      !alternatives(p.state_id, [issue.state_id], context.currentUserID) ||
-      !alternatives(p.assignee_id, issue.assignee_ids.length ? issue.assignee_ids : ["none"], context.currentUserID) ||
-      !alternatives(p.created_by_id, issue.created_by_id ? [issue.created_by_id] : [], context.currentUserID) ||
+      !ownTerms(issue, p, context.currentUserID) ||
       !alternatives(p.cycle_id, [issue.cycle_id ?? "none"], context.currentUserID) ||
       !alternatives(p.module_id, issue.module_ids.length ? issue.module_ids : ["none"], context.currentUserID)
     )
       return false;
     unknown = !!(p.mention_id?.length || p.subscriber_id?.length);
   } else {
-    const p = context.query;
     if (issue.workspace_id !== context.workspaceID) return false;
-    if (issue.archived_at !== null || !alternatives(p.project_id, [issue.project_id], context.currentUserID))
+    if (
+      issue.archived_at !== null ||
+      !alternatives(context.query.project_id, [issue.project_id], context.currentUserID)
+    )
       return false;
-    if (p.relation === "assigned" && !issue.assignee_ids.includes(context.userID)) return false;
-    if (p.relation === "created" && issue.created_by_id !== context.userID) return false;
-    unknown = p.relation === "subscribed";
+    if (context.scope === "member") {
+      const p = context.query;
+      if (p.relation === "assigned" && !issue.assignee_ids.includes(context.userID)) return false;
+      if (p.relation === "created" && issue.created_by_id !== context.userID) return false;
+      unknown = p.relation === "subscribed";
+    } else {
+      // The workspace's list: its own terms as a project's list's, a default view's own `me` among them; no relation.
+      const p = context.query;
+      if (!ownTerms(issue, p, context.currentUserID)) return false;
+      unknown = !!(p.mention_id?.length || p.subscriber_id?.length);
+    }
   }
   if (
     !alternatives(q.priority, [issue.priority], context.currentUserID) ||

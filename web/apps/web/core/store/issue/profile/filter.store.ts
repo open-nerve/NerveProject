@@ -24,12 +24,8 @@ import { IssueFilterHelperStore } from "../helpers/issue-filter-helper.store";
 // types
 import type { IIssueRootStore } from "../root.store";
 
-const cleanExpression = (expression: TWorkItemFilterExpression): TWorkItemFilterExpression => {
-  const { project_id, ...filters } = toMemberFilters(expression);
-  const clean = toFilterExpression(filters);
-  if (!project_id) return clean;
-  return { and: [...("and" in clean ? clean.and : []), { project_id__in: project_id.join(",") }] };
-};
+const cleanExpression = (expression: TWorkItemFilterExpression): TWorkItemFilterExpression =>
+  toFilterExpression(toMemberFilters(expression));
 
 export interface IProfileIssuesFilter extends IBaseIssueFilterStore {
   //helper actions

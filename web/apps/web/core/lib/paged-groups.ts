@@ -1,6 +1,6 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 import type { Issue, IssueListPage } from "@nerve/api-client";
-import type { MemberIssueQuery, ProjectIssueQuery } from "@/services/issue/issue-list.service";
+import type { MemberIssueQuery, ProjectIssueQuery, WorkspaceIssueQuery } from "@/services/issue/issue-list.service";
 import { compareIssueTime, compareRows, issueSortKey, type IssueCatalog } from "./issue-order";
 
 import { beforeIssue, issueMembership, issueParts, subgroupField, type Membership } from "./issue-membership";
@@ -53,6 +53,7 @@ export type PageAnswer = PagedGroups & { read: PageReadMeta };
 export type ListContext = (
   | { scope: "project"; projectID: string; query: ProjectIssueQuery; empty?: boolean }
   | { scope: "member"; userID: string; workspaceSlug: string; workspaceID: string; query: MemberIssueQuery }
+  | { scope: "workspace"; workspaceSlug: string; workspaceID: string; query: WorkspaceIssueQuery }
 ) & { catalog: IssueCatalog; currentUserID: string; pendingIDs: ReadonlySet<string> };
 
 /** Stable identity for a group or cell; cannot collide on delimiter characters. */
@@ -327,9 +328,9 @@ export function applyGroupChange(
   if (context.scope === "project" && context.empty) return { value, verifyIds: [] };
   const before = beforeIssue(change.beforeSnapshot);
   // Workspace is immutable on an issue. A foreign confirmation cannot affect
-  // this member scope even when its frozen before snapshot was unavailable.
+  // this cross-project scope even when its frozen before snapshot was unavailable.
   const scopedIssue = change.after ?? before;
-  if (context.scope === "member" && scopedIssue && scopedIssue.workspace_id !== context.workspaceID)
+  if (context.scope !== "project" && scopedIssue && scopedIssue.workspace_id !== context.workspaceID)
     return { value, verifyIds: [] };
   const superseded = (ref: CounterRef) =>
     !options && counterSupersedes(value.counterEvidence?.get(counterKey(ref)) ?? counterSource(value, ref), change);

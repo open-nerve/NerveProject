@@ -206,3 +206,16 @@ export const draftOf = (id: string, workspaceId = "id-ws"): Draft => ({
   created_at: "2026-10-30T00:00:00.000000001Z",
   updated_at: "2026-10-30T00:00:00.000000001Z",
 });
+
+/** A workspace list's pure context (M7/P6b spec 2.3): workspace ws's flat list, as the caller reads it. */
+export const workspaceListContext = (
+  query: import("@/services/issue/issue-list.service").WorkspaceIssueQuery = {}
+): import("@/lib/paged-groups").ListContext => ({
+  scope: "workspace",
+  workspaceSlug: "ws",
+  workspaceID: "id-ws",
+  query: { order_by: "sort_order", ...query },
+  currentUserID: "actor",
+  catalog: { states: new Map(), labels: new Map(), members: new Map(), cycles: new Map(), modules: new Map() },
+  pendingIDs: new Set(),
+});
