@@ -101,32 +101,34 @@ it.each([5, 15] as const)(
 it("personal pagination uses response total, keeps its rows on refusal and retries only a list read", async () => {
   await roles(15);
   await render();
-  await act(async () => until(() => tab.nerve.calls.length === 1, "route draft list"));
-  expect(tab.nerve.calls[0]).toMatchObject({ method: "GET", path: "/api/v0/workspaces/other/drafts", query: {} });
+  // the drafts' reads: the page reads the workspace's label catalog besides, once (catalog.test.tsx)
+  const reads = () => tab.nerve.calls.filter((call) => call.path !== "/api/v0/workspaces/other/labels");
+  await act(async () => until(() => reads().length === 1, "route draft list"));
+  expect(reads()[0]).toMatchObject({ method: "GET", path: "/api/v0/workspaces/other/drafts", query: {} });
   const first = { ...draftOf("first", "id-other"), project_id: null };
   const second = { ...draftOf("second", "id-other"), project_id: null };
-  await act(async () => tab.nerve.calls[0]!.answer(json(200, { data: [first], total: 123, next_cursor: "opaque" })));
+  await act(async () => reads()[0]!.answer(json(200, { data: [first], total: 123, next_cursor: "opaque" })));
   expect(container.querySelector('[aria-label="draft header"]')!.textContent).toContain("123");
   expect(container.textContent).toContain("other:first");
   await act(async () => button("common.load_more ↓").click());
-  await act(async () => until(() => tab.nerve.calls.length === 2, "next draft page"));
-  expect(tab.nerve.calls[1]).toMatchObject({
+  await act(async () => until(() => reads().length === 2, "next draft page"));
+  expect(reads()[1]).toMatchObject({
     method: "GET",
     path: "/api/v0/workspaces/other/drafts",
     query: { cursor: "opaque" },
   });
   expect(button("common.load_more ↓").disabled).toBe(true);
-  await act(async () => tab.nerve.calls[1]!.answer(problem(500, "unavailable")));
+  await act(async () => reads()[1]!.answer(problem(500, "unavailable")));
   expect(container.querySelector('[role="alert"]')).not.toBeNull();
   expect(container.textContent).toContain("other:first");
   await act(async () => container.querySelector<HTMLButtonElement>('[role="alert"] button')!.click());
-  await act(async () => until(() => tab.nerve.calls.length === 3, "retry read"));
-  expect(tab.nerve.calls[2]).toMatchObject({ method: "GET", path: "/api/v0/workspaces/other/drafts", query: {} });
-  await act(async () => tab.nerve.calls[2]!.answer(json(200, { data: [second], total: 1, next_cursor: null })));
+  await act(async () => until(() => reads().length === 3, "retry read"));
+  expect(reads()[2]).toMatchObject({ method: "GET", path: "/api/v0/workspaces/other/drafts", query: {} });
+  await act(async () => reads()[2]!.answer(json(200, { data: [second], total: 1, next_cursor: null })));
   expect(container.textContent).toContain("other:second");
   expect(container.textContent).not.toContain("other:first");
   expect(container.querySelector('[role="alert"]')).toBeNull();
-  expect(tab.nerve.calls.every((call) => call.method === "GET" && call.path.endsWith("/drafts"))).toBe(true);
+  expect(reads().every((call) => call.method === "GET" && call.path.endsWith("/drafts"))).toBe(true);
 });
 it("workspace guests do not fetch personal drafts even while the router still names a member workspace", async () => {
   await roles(5);

@@ -56,15 +56,17 @@ it("renders unassigned native drafts with no project directory and no preference
         </SWRConfig>
       );
     });
-    await act(async () => until(() => nerve.calls.length === 1, "native drafts"));
-    expect(nerve.calls[0]!.path).toBe("/api/v0/workspaces/ws/drafts");
-    expect(nerve.calls[0]!.query).toEqual({});
-    await act(async () => nerve.calls[0]!.answer(problem(500, "unavailable")));
+    // the drafts' reads: the page reads the workspace's label catalog besides, once (catalog.test.tsx)
+    const reads = () => nerve.calls.filter((call) => call.path !== "/api/v0/workspaces/ws/labels");
+    await act(async () => until(() => reads().length === 1, "native drafts"));
+    expect(reads()[0]!.path).toBe("/api/v0/workspaces/ws/drafts");
+    expect(reads()[0]!.query).toEqual({});
+    await act(async () => reads()[0]!.answer(problem(500, "unavailable")));
     expect(container.querySelector('[role="alert"]')).not.toBeNull();
     await act(async () => container.querySelector<HTMLButtonElement>('[role="alert"] button')!.click());
-    await act(async () => until(() => nerve.calls.length === 2, "read-only retry"));
+    await act(async () => until(() => reads().length === 2, "read-only retry"));
     await act(async () =>
-      nerve.calls[1]!.answer(
+      reads()[1]!.answer(
         json(200, { data: [{ ...draftOf("unassigned"), project_id: null }], next_cursor: null, total: 1 })
       )
     );
@@ -72,7 +74,7 @@ it("renders unassigned native drafts with no project directory and no preference
     expect(container.querySelector('[role="alert"]')).toBeNull();
     expect(read.mock.calls.filter(([key]) => key === "issue_local_filters")).toEqual([]);
     expect(write.mock.calls.filter(([key]) => key === "issue_local_filters")).toEqual([]);
-    expect(nerve.calls).toHaveLength(2);
+    expect(reads()).toHaveLength(2);
   } finally {
     await act(async () => root.unmount());
     app.dispose();

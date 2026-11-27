@@ -3,6 +3,7 @@ import { observer } from "mobx-react";
 import { useTranslation } from "@nerve/i18n";
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { useWorkspaceDraftIssues } from "@/hooks/store/workspace-draft";
+import { useWorkspaceLabelCatalog } from "@/hooks/use-workspace-label-catalog";
 import { useSessionSWR } from "@/lib/use-session-swr";
 import { DetailResourceError } from "../issue-detail-widgets/resource-error";
 import { DraftIssueBlock } from "./draft-issue-block";
@@ -24,6 +25,7 @@ export const WorkspaceDraftIssuesRoot = observer(function WorkspaceDraftIssuesRo
     (_identity, slug) => drafts.fetchIssues(slug),
     { dedupingInterval: 0 }
   );
+  useWorkspaceLabelCatalog(ws, drafts.canRead(ws));
   if (!drafts.canRead(ws))
     return workspace?.role === 5 ? (
       <div className="grid h-full place-items-center text-secondary">

@@ -216,7 +216,8 @@
         "web/apps/web/core/hooks/store/use-views.ts",
         "web/apps/web/app/(all)/\\[workspaceSlug\\]/(projects)/projects/(detail)/\\[projectId\\]/views/(list)/page.tsx",
         "web/apps/web/app/(all)/\\[workspaceSlug\\]/(projects)/projects/(detail)/\\[projectId\\]/views/(detail)/\\[viewId\\]/header.tsx",
-        "web/apps/web/core/components/views/use-view-page-read.ts"
+        "web/apps/web/core/components/views/use-view-page-read.ts",
+        "web/apps/web/core/hooks/use-workspace-label-catalog.ts"
       ],
       "rules": {
         "no-restricted-imports": [

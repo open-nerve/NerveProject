@@ -18,6 +18,15 @@ export class LabelsService {
     ).data;
   }
 
+  /**
+   * The labels of the workspace's projects the caller is a member of, unarchived, those at the top and those under them
+   * alike: by project id, then sort order, then id (M7/P6b spec 2.1).
+   */
+  async listInWorkspace(workspaceSlug: string): Promise<Label[]> {
+    return unwrap(await this.api.GET("/api/v0/workspaces/{slug}/labels", { params: { path: { slug: workspaceSlug } } }))
+      .data;
+  }
+
   /** Creates a label after the project's others; data names a parent only for a label under one. */
   async create(projectId: string, data: LabelCreate): Promise<Label> {
     return unwrap(

@@ -23,6 +23,7 @@ import {
   PROJECT,
   PROJECT_MEMBER,
   WORKSPACE,
+  WORKSPACE_LABELS,
   WORKSPACE_MENU,
   valued,
 } from "../../fixtures/mounts";
@@ -147,7 +148,7 @@ const archivedIssuesVisit: [path: string, requests: string[]] = [
 ];
 const draftsVisit: [path: string, requests: string[]] = [
   "/{slug}/drafts",
-  [...APP, ...WORKSPACE, "GET /api/v0/workspaces/{slug}/drafts"],
+  [...APP, ...WORKSPACE, ...WORKSPACE_LABELS, "GET /api/v0/workspaces/{slug}/drafts"],
 ];
 
 /**
