@@ -25,7 +25,8 @@ import { useViewRights } from "./use-view-rights";
 import { viewPath } from "./view-paths";
 
 type Props = {
-  parentRef: RefObject<HTMLElement | null>;
+  /** The view's row, whose right-click opens the menu too; none in a header. */
+  parentRef?: RefObject<HTMLElement | null>;
   viewId: string;
   /** The view's container, a project or the workspace, whose views the page shows. */
   container: ViewContainer;
@@ -35,9 +36,9 @@ type Props = {
 
 /**
  * A view's quick actions (P6a spec 2.3, 2.4, R17; M7/P6b spec 2.11, R15), a project's or a workspace's own: its menu,
- * by its button, named by the view, and by a right-click on its row (parentRef); none while the store does not give
- * the view. Its dialogs, which change it and delete it, are its page's (ViewActionsHost), and what follows them is the
- * page's while it is mounted, though they take the row away.
+ * by its button, named by the view, and in a list by a right-click on its row (parentRef); none while the store does
+ * not give the view. Its dialogs, which change it and delete it, are its page's (ViewActionsHost), and what follows
+ * them is the page's while it is mounted, though they take the row away.
  */
 export const ViewQuickActions = observer(function ViewQuickActions(props: Props) {
   const { getViewById } = useViews();
@@ -73,7 +74,7 @@ const ViewMenu = observer(function ViewMenu(props: Props & { view: View }) {
 
   return (
     <>
-      <ContextMenu parentRef={parentRef} items={MENU_ITEMS} />
+      {parentRef && <ContextMenu parentRef={parentRef} items={MENU_ITEMS} />}
       <CustomMenu
         ariaLabel={t("common.item_options", { name: view.name })}
         customButton={<MoreHorizontalOutline className="size-4" aria-hidden="true" />}

@@ -30,7 +30,8 @@ type TWorkspaceLevelWorkItemFiltersHOCProps = TSharedWorkItemFiltersHOCProps & {
  * the workspace's options: its members; its projects the caller is a member of, unarchived; their labels, as the label
  * store holds them (all of them once the page has read the workspace's catalog); their states, each project's as the
  * state store gives them. Save view and Update view as the page offers them (useWorkspaceViewSaving): Save view opens
- * the view's dialog here, a view of the workspace's own, with what the new view keeps. The profile offers neither.
+ * the view's dialog here, a view of the workspace's own, with what the new view keeps; a page that offers no Save view
+ * has no such dialog. The profile offers neither.
  */
 export const WorkspaceLevelWorkItemFiltersHOC = observer(function WorkspaceLevelWorkItemFiltersHOC(
   props: TWorkspaceLevelWorkItemFiltersHOCProps
@@ -67,7 +68,7 @@ export const WorkspaceLevelWorkItemFiltersHOC = observer(function WorkspaceLevel
 
   return (
     <>
-      {workspace && (
+      {enableSaveView && workspace && (
         <CreateUpdateViewModal
           workspaceSlug={workspaceSlug}
           container={{ kind: "workspace", workspaceId: workspace.id, workspaceSlug }}

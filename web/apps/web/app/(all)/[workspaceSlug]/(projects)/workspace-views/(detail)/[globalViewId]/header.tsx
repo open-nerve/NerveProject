@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { observer } from "mobx-react";
 import { useNavigate } from "react-router";
 // nerve imports
@@ -56,8 +56,6 @@ type TProps = {
  */
 export const WorkspaceViewHeader = observer(function WorkspaceViewHeader(props: TProps) {
   const { workspaceSlug, globalViewId } = props;
-  // refs
-  const parentRef = useRef<HTMLDivElement>(null);
   // router
   const navigate = useNavigate();
   // nerve hooks
@@ -161,7 +159,6 @@ export const WorkspaceViewHeader = observer(function WorkspaceViewHeader(props: 
           ) : (
             workspace && (
               <ViewQuickActions
-                parentRef={parentRef}
                 customClassName="flex-shrink-0 flex items-center justify-center size-[26px] bg-layer-1/70 rounded-sm"
                 container={{ kind: "workspace", workspaceId: workspace.id, workspaceSlug }}
                 viewId={globalViewId}
