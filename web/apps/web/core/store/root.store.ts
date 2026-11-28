@@ -20,8 +20,11 @@ import { CommandPaletteStore } from "@/store/command-palette.store";
 import { WorkspaceRootStore } from "@/store/workspace";
 import { RootAssetStore } from "@/store/asset/root.store";
 // stores
-import type { IFavoriteStore } from "./favorite.store";
-import { FavoriteStore } from "./favorite.store";
+// The old favorites layer, under these names until M7/P7 T3 deletes it; the new store has theirs (M7/P7 spec 2.11)
+import type { IFavoriteStore as IOldFavoriteStore } from "./favorite.store";
+import { FavoriteStore as OldFavoriteStore } from "./favorite.store";
+import type { IFavoriteStore } from "./favorites/favorite.store";
+import { FavoriteStore } from "./favorites/favorite.store";
 import type { IInstanceStore } from "./instance.store";
 import { InstanceStore } from "./instance.store";
 import type { IIssueRootStore } from "./issue/root.store";
@@ -64,7 +67,8 @@ export class RootStore {
   instance: IInstanceStore;
   user: IUserStore;
   notification: INotificationStore;
-  favorite: IFavoriteStore;
+  favorite: IOldFavoriteStore;
+  favorites: IFavoriteStore;
   workItemFilters: IWorkItemFilterStore;
   powerK: IPowerKStore;
 
@@ -96,7 +100,8 @@ export class RootStore {
     this.state = new StateStore(this, api);
     this.label = new LabelStore(this, api);
     this.notification = new NotificationStore(this, api);
-    this.favorite = new FavoriteStore(this);
+    this.favorite = new OldFavoriteStore(this);
+    this.favorites = new FavoriteStore(api);
     this.workItemFilters = new WorkItemFilterStore();
     this.powerK = new PowerKStore();
   }
