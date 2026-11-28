@@ -10,11 +10,12 @@
  * project; and the project's own resources, only once that read says the caller is a member of the project (M3 design
  * 7.1). Of M6's and M7's addresses only a project's cycles and its modules (PROJECT_CYCLES, M6 P5a; PROJECT_MODULES, M6
  * P6a), the workspace's unread notifications (WORKSPACE, M7 P4) and the pending work items of its intakes
- * (INTAKE_COUNTS, M7 P5a) are read as every page of a project loads; a project's views are read only on the pages that
- * use them (PROJECT_VIEWS, M7 P6a), the workspace's label catalog only on the pages that list work items across its
- * projects, each behind its gate (WORKSPACE_LABELS, M7 P6b), and none of the others (the intake's triage state,
- * favourites, recents; M3 design 3.1), nor one outside /api/v0 (M2 design 3.1). These lists are the record of what the
- * pages load: a phase that adds a fetch to a page adds it here (the P8b spec's appendix A.5 is a copy, as of P8b).
+ * (INTAKE_COUNTS, M7 P5a) are read as every page of a project loads; a project's views and the workspace's own are read
+ * only on the pages that use them (PROJECT_VIEWS, M7 P6a; WORKSPACE_VIEWS, M7 P6b), the workspace's label catalog only
+ * on the pages that list work items across its projects, each behind its gate (WORKSPACE_LABELS, M7 P6b), and none of
+ * the others (the intake's triage state, favourites, recents; M3 design 3.1), nor one outside /api/v0 (M2 design 3.1).
+ * These lists are the record of what the pages load: a phase that adds a fetch to a page adds it here (the P8b spec's
+ * appendix A.5 is a copy, as of P8b).
  */
 export const APP = [
   "POST /api/v0/auth/refresh",
@@ -69,6 +70,13 @@ export const PROJECT_VIEWS = ["GET /api/v0/projects/{project}/views"];
  * lists above leave it out.
  */
 export const WORKSPACE_LABELS = ["GET /api/v0/workspaces/{slug}/labels"];
+/**
+ * The workspace's own views, to a caller the ways into them are offered to (its admins and members): its views list
+ * reads them as it loads, and a workspace view's page once its switcher opens (M7/P6b spec 2.6, 2.8, 2.10; the key
+ * ["WORKSPACE_VIEWS", workspace]); its guests never. The workspace's shell does not read them, so the lists above leave
+ * it out; a workspace view's page reads its view instead ("GET /api/v0/views/{id}"), a default view's none.
+ */
+export const WORKSPACE_VIEWS = ["GET /api/v0/workspaces/{slug}/views"];
 /**
  * A general settings page lists the time zones (M2 design 5.3): the project's, for its members; the workspace's, for
  * its admins and members (the workspace's settings show a guest no general page, M3 design 9.2).
