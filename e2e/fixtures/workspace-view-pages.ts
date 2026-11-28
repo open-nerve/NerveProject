@@ -20,7 +20,7 @@ import { createIssue, issueSubscribed } from "./issues";
 import { WORKSPACE_LABELS, WORKSPACE_VIEWS, valued } from "./mounts";
 import { person } from "./notification-pages";
 import { pageMain, rowButton } from "./view-pages";
-import { viewDefaults } from "./views";
+import { createWorkspaceView, viewDefaults } from "./views";
 
 // A workspace's views pages (M7/P6b spec 2.5, 2.7–2.10, 2.15), as a person uses them: their addresses and reads, what a
 // story finds on them by role and name, the controls Update view stops, and the world of their stories. What they share
@@ -96,6 +96,61 @@ export async function workspaceViewWorld(api: Api, testInfo: TestInfo) {
   await changeRole(api, alice.token, slug, gus.id, 5);
   await archiveProject(api, alice.token, shelf.id);
   return { alice, bob, gus, slug, acme, web, ops, lab, bug, infra, crash, typo, note, deploy };
+}
+
+/**
+ * The smaller world of the stories of the workspace's views list and of its views' pages' keys and late answers (H14,
+ * H20): alice's workspace Acme, of which bob is a member and gus a guest; each named. Its project Web, alice's and
+ * bob's, holds Crash, urgent, and Typo, low. view makes a view of Acme's own as the one of token, in the spreadsheet
+ * as the web app makes one (workspaceViewContent) unless body says otherwise.
+ */
+export async function workspaceViewsWorld(api: Api, testInfo: TestInfo) {
+  const [alice, bob, gus] = await Promise.all([
+    person(api, testInfo, "alice", "Alice"),
+    person(api, testInfo, "bob", "Bob"),
+    person(api, testInfo, "gus", "Gus"),
+  ]);
+  const slug = slugFor(testInfo);
+  const acme = await createWorkspace(api, alice.token, { name: "Acme", slug });
+  await inviteAndAccept(api, alice.token, slug, { email: bob.email, token: bob.token }, 15);
+  await inviteAndAccept(api, alice.token, slug, { email: gus.email, token: gus.token }, 5);
+  const web = await createProject(api, alice.token, slug, { name: "Web", identifier: "WEB" });
+  await addProjectMembers(api, alice.token, web.id, [{ member_id: bob.id, role: 15 }]);
+  await Promise.all([
+    createIssue(api, alice.token, web.id, { name: "Crash", priority: "urgent" }),
+    createIssue(api, alice.token, web.id, { name: "Typo", priority: "low" }),
+  ]);
+  return {
+    alice,
+    bob,
+    gus,
+    slug,
+    acme,
+    web,
+    view: (who: { token: string }, body: ViewCreate, of = slug) =>
+      createWorkspaceView(api, who.token, of, { ...workspaceViewContent, ...body }),
+  };
+}
+
+/**
+ * Records whether page's document shows text at any moment from now on, even for one the page takes away at once (a
+ * view's page that would say its view does not exist on its way elsewhere), where a look made later would miss it:
+ * the function returned tells.
+ */
+export async function recordShown(page: Page, text: string): Promise<() => Promise<boolean>> {
+  const record = await page.evaluateHandle((wanted) => {
+    const seen = { shown: document.body.textContent?.includes(wanted) ?? false };
+    new MutationObserver((mutations) => {
+      const shown = mutations.some((mutation) =>
+        mutation.type === "characterData"
+          ? (mutation.target.textContent?.includes(wanted) ?? false)
+          : Array.from(mutation.addedNodes).some((node) => node.textContent?.includes(wanted))
+      );
+      if (shown) seen.shown = true;
+    }).observe(document.body, { subtree: true, childList: true, characterData: true });
+    return seen;
+  }, text);
+  return async () => (await record.jsonValue()).shown;
 }
 
 /** Waits for the reads page has out to be answered (recordApi's), as a story does before it moves or changes nerve. */
