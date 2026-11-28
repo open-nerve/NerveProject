@@ -283,6 +283,7 @@ async function profileGroup(page: Page, name: string, path: string) {
   expect(answer.status()).toBe(200);
   return answer;
 }
+const isLabelRead = (request: string) => /^GET \/api\/v0\/(workspaces|projects)\/[^/]+\/labels$/.test(request);
 
 test("I19 (page): three real relation tabs and both layouts group only the caller's visible scope, including an admin's own-only project", async ({
   api,
@@ -333,7 +334,7 @@ test("I19 (page): three real relation tabs and both layouts group only the calle
   expect(
     watch.apiRequests.filter((request) => request.startsWith("PATCH ") && request.endsWith("/preferences"))
   ).toEqual([]);
-  expect(watch.apiRequests.filter((request) => /GET \/api\/v0\/projects\/[^/]+\/labels$/.test(request))).toEqual([]);
+  expect([...new Set(watch.apiRequests.filter(isLabelRead))]).toEqual([`GET /api/v0/workspaces/${slug}/labels`]);
   await expectListPageQuiet(page, watch);
 });
 
@@ -457,7 +458,7 @@ test("I19 (page): view and target navigation end the old display panel and late 
   await expectListPageQuiet(page, watch);
 });
 
-test("I19 (page): a label selected from a visible detail remains a real restriction after a cold profile reload without fetching label directories", async ({
+test("I19 (page): a label selected from a visible detail remains a real restriction after a cold profile reload, its option still named there, the workspace's label catalog read once before the reload and once after", async ({
   api,
   page,
 }, info) => {
@@ -482,15 +483,14 @@ test("I19 (page): a label selected from a visible detail remains a real restrict
   ).toBe(200);
   await page.keyboard.press("Escape");
   await profileRows(page, [seed.assigned.id]);
-  const labelReads = watch.apiRequests.filter((request) => /GET \/api\/v0\/projects\/[^/]+\/labels$/.test(request));
-  expect(labelReads).toEqual([`GET /api/v0/projects/${seed.project.id}/labels`]);
+  const before = [`GET /api/v0/workspaces/${seed.slug}/labels`, `GET /api/v0/projects/${seed.project.id}/labels`];
+  expect(watch.apiRequests.filter(isLabelRead)).toEqual(before);
   await page.reload();
   await profileRows(page, [seed.assigned.id]);
   expect(Object.fromEntries(queries.at(-1)!)).toMatchObject({ relation: "assigned", label_id: seed.label.id });
   await expect(page.getByRole("button", { name: "Remove filter", exact: true })).toHaveCount(1);
-  expect(watch.apiRequests.filter((request) => /GET \/api\/v0\/projects\/[^/]+\/labels$/.test(request))).toEqual(
-    labelReads
-  );
+  await expect(page.getByRole("button", { name: seed.label.name, exact: true })).toBeVisible();
+  await expect.poll(() => watch.apiRequests.filter(isLabelRead)).toEqual([...before, before[0]]);
   await expectListPageQuiet(page, watch);
 });
 

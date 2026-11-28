@@ -153,9 +153,12 @@ export async function recordShown(page: Page, text: string): Promise<() => Promi
   return async () => (await record.jsonValue()).shown;
 }
 
-/** Waits for the reads page has out to be answered (recordApi's), as a story does before it moves or changes nerve. */
-export async function settled(page: Page, recorded: () => { pending: number }): Promise<void> {
-  await expect.poll(() => recorded().pending, "the reads out answered").toBe(0);
+/**
+ * Waits for the reads page has out to be answered (recordApi's), as a story does before it moves or changes nerve: all
+ * of them, or all but held, those whose answers the story holds.
+ */
+export async function settled(page: Page, recorded: () => { pending: number }, held = 0): Promise<void> {
+  await expect.poll(() => recorded().pending, "the reads out answered").toBe(held);
 }
 
 /** The address of the workspace's views list of slug. */
