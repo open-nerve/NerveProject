@@ -25,6 +25,14 @@ export class ViewsService {
     ).data;
   }
 
+  /**
+   * The workspace's own views (of no project), the newest first, all at once, to its admins and members; nerve refuses
+   * its guests (forbidden).
+   */
+  async listWorkspaceViews(slug: string): Promise<View[]> {
+    return unwrap(await this.api.GET("/api/v0/workspaces/{slug}/views", { params: { path: { slug } } })).data;
+  }
+
   /** Creates a view in the project, owned by the caller; what body leaves out takes the contract's defaults. */
   async createProjectView(projectId: string, body: ViewCreate): Promise<View> {
     return unwrap(

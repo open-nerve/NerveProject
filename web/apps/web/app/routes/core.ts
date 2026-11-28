@@ -72,13 +72,17 @@ export const coreRoutes: RouteConfigEntry[] = [
           ),
         ]),
 
-        // Workspace Views
-        layout("./(all)/[workspaceSlug]/(projects)/workspace-views/layout.tsx", [
-          route(":workspaceSlug/workspace-views", "./(all)/[workspaceSlug]/(projects)/workspace-views/page.tsx"),
+        // Workspace View Detail
+        layout("./(all)/[workspaceSlug]/(projects)/workspace-views/(detail)/layout.tsx", [
           route(
             ":workspaceSlug/workspace-views/:globalViewId",
-            "./(all)/[workspaceSlug]/(projects)/workspace-views/[globalViewId]/page.tsx"
+            "./(all)/[workspaceSlug]/(projects)/workspace-views/(detail)/[globalViewId]/page.tsx"
           ),
+        ]),
+
+        // Workspace Views List
+        layout("./(all)/[workspaceSlug]/(projects)/workspace-views/(list)/layout.tsx", [
+          route(":workspaceSlug/workspace-views", "./(all)/[workspaceSlug]/(projects)/workspace-views/(list)/page.tsx"),
         ]),
 
         // Archived Projects

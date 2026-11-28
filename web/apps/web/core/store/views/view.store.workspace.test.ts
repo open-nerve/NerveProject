@@ -184,3 +184,37 @@ describe("ViewStore, the changes of a workspace's own views", () => {
     expect(store.lists.get(beta.id)?.map((view) => view.name)).toEqual(["Later", "Plans"]);
   });
 });
+
+describe("ViewStore, a workspace's own views as its pages list them", () => {
+  it.each([
+    ["admin", ADMIN],
+    ["member", MEMBER],
+  ])(
+    "reads them by the workspace's slug, holds them by its id, and gives its %s each as nerve last answered it",
+    async (_, role) => {
+      const tab = await workspaceTab(role);
+      const { nerve, store } = tab;
+      const listed = await answered(
+        nerve,
+        () => store.fetchWorkspaceViews({ id: acme.id, slug: acme.slug }),
+        ["GET", list("acme")],
+        { data: [release, ...acmeViews] },
+        "acme's views"
+      );
+      expect(listed.value).toEqual([release, ...acmeViews]);
+      expect(store.getWorkspaceViews("acme")).toEqual([release, ...acmeViews]);
+      expect(store.getWorkspaceViews("beta")).toEqual([plans]);
+      // a read of one view answered after the list shows in the list
+      const renamed: View = { ...triage, name: "Inbox", updated_at: LATER };
+      await loadView(tab, renamed);
+      expect(store.getWorkspaceViews("acme")?.map((view) => view.name)).toEqual(["Release", "Roadmap", "Inbox"]);
+    }
+  );
+
+  it("gives its guest none, held or not, nor one who has no role in the workspace", async () => {
+    const { store } = await workspaceTab(GUEST);
+    expect(store.lists.get(acme.id), "acme's views as nerve listed them before").toEqual(acmeViews);
+    expect(store.getWorkspaceViews("acme")).toBeUndefined();
+    expect(store.getWorkspaceViews("gamma")).toBeUndefined();
+  });
+});

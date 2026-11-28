@@ -19,13 +19,17 @@ import { ViewChanges } from "./view-changes";
 
 /** A copy of a view the store holds, and when nerve answered it (Reconciled.answeredAt). */
 type Copy = { view: View; answeredAt: number };
+/** A workspace as the caller's list gives it: its id holds its views, its slug names it to nerve. */
+type WorkspaceRef = Pick<Workspace, "id" | "slug">;
 
 export interface IViewStore extends IViewChanges {
   // computed actions
   getProjectViews: (projectId: string | null | undefined) => View[] | undefined;
+  getWorkspaceViews: (workspaceSlug: string) => View[] | undefined;
   getViewById: (viewId: string | null | undefined) => View | undefined;
   // fetch actions
   fetchProjectViews: (projectId: string) => Promise<View[] | undefined>;
+  fetchWorkspaceViews: (workspace: WorkspaceRef) => Promise<View[] | undefined>;
   fetchView: (viewId: string) => Promise<View | null | undefined>;
 }
 
@@ -58,12 +62,15 @@ export class ViewStore implements IViewStore {
   private readonly projectOf: (projectId: string | undefined | null) => Project | undefined;
   /** The caller's workspace of the id, with his role there, by the workspace store (it has no getter by id). */
   private readonly workspaceOf: (workspaceId: string) => Workspace | undefined;
+  /** The caller's workspace of the slug, with his role there, by the workspace store. */
+  private readonly workspaceBySlug: (workspaceSlug: string) => Workspace | null;
 
   constructor(rootStore: RootStore, api: ApiClient) {
     this.service = new ViewsService(api);
     this.projectOf = rootStore.projectRoot.project.getProjectById;
     this.workspaceOf = (workspaceId) =>
       rootStore.workspaceRoot.workspaces?.find((workspace) => workspace.id === workspaceId);
+    this.workspaceBySlug = (workspaceSlug) => rootStore.workspaceRoot.getWorkspaceBySlug(workspaceSlug);
     this.changes = new ViewChanges(this, this.service);
   }
 
@@ -74,6 +81,17 @@ export class ViewStore implements IViewStore {
   getProjectViews = computedFn((projectId: string | null | undefined): View[] | undefined => {
     const project = this.projectOf(projectId);
     return project && this.lists.get(project.id)?.map((row) => this.getViewById(row.id) ?? row);
+  });
+
+  /**
+   * @description the workspace's own views, of no project, in nerve's order, each as nerve last answered it
+   * (getViewById); undefined until fetched, or while the workspace store does not give the workspace, or the caller's
+   * role there is not an admin's or a member's (workspaceViewsOn): never to its guest
+   */
+  getWorkspaceViews = computedFn((workspaceSlug: string): View[] | undefined => {
+    const workspace = this.workspaceBySlug(workspaceSlug);
+    if (!workspace || !workspaceViewsOn(workspace.role)) return undefined;
+    return this.lists.get(workspace.id)?.map((row) => this.getViewById(row.id) ?? row);
   });
 
   /**
@@ -97,6 +115,13 @@ export class ViewStore implements IViewStore {
    */
   fetchProjectViews = (projectId: string): Promise<View[] | undefined> =>
     this.lists.fetch(projectId, () => this.service.listProjectViews(projectId));
+
+  /**
+   * @description fetches the workspace's own views, by its slug, held by its id, as fetchProjectViews does a project's
+   * (M7/P6b spec 2.6)
+   */
+  fetchWorkspaceViews = (workspace: WorkspaceRef): Promise<View[] | undefined> =>
+    this.lists.fetch(workspace.id, () => this.service.listWorkspaceViews(workspace.slug));
 
   /** @description reads the view alone, as fetchProjectViews; null for one deleted here meanwhile */
   fetchView = (viewId: string): Promise<View | null | undefined> =>

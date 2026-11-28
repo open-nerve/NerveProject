@@ -7,6 +7,7 @@ import { EIssuesStoreType } from "@nerve/types";
 import { useIssues } from "@/hooks/store/use-issues";
 import { useProject } from "@/hooks/store/use-project";
 import { useViews } from "@/hooks/store/use-views";
+import { useWorkspace } from "@/hooks/store/use-workspace";
 import { useUserPermissions } from "@/hooks/store/user";
 // lib
 import { problemCode } from "@/lib/api-error";
@@ -26,6 +27,15 @@ export type ViewPageRead =
   | { state: "failed"; error: unknown; retry: () => void }
   | { state: "read" };
 
+/** The pages of a view: a project's view's, and a workspace's own view's (M7/P6b spec 2.8). */
+type ViewPageStoreType = EIssuesStoreType.PROJECT_VIEW | EIssuesStoreType.GLOBAL;
+
+/** The key of each page's read of its view in SWR's cache, with the workspace and the view (a project's as P6a's). */
+const READ_KEY = {
+  [EIssuesStoreType.PROJECT_VIEW]: "PROJECT_VIEW_PAGE",
+  [EIssuesStoreType.GLOBAL]: "WORKSPACE_VIEW_PAGE",
+} as const;
+
 /**
  * A view's page's read of its view (P6a spec 2.6, R2; re-96 I1, I2), which seeds the page's draft of it: each mount of
  * the page makes its own as it mounts (mutate, which never joins an earlier read), and only an explicit retry reads
@@ -33,12 +43,15 @@ export type ViewPageRead =
  * dedupe window it would be taken for one, and the page, whose draft the earlier mount ended, would wait for nothing
  * (use-session-swr.ts). It ends the page's draft as the page unmounts (a leave, another view, another project), any
  * read of it still out with it: entering again shows nothing of the old draft until nerve answers anew. The draft
- * service's refusal (NoViewDraftError) is no failure of the read (noDraftIsNoFailure).
+ * service's refusal (NoViewDraftError) is no failure of the read (noDraftIsNoFailure). The page is a project's view's
+ * or a workspace's own view's (storeType), each with its own draft of the view; a workspace's view's page takes nerve's
+ * refusal (forbidden: its owner made the workspace's guest meanwhile) as no such view to the caller (M7/P6b spec 2.8,
+ * R11), a project's view's page the missing view alone.
  */
-export function useViewPageRead(workspaceSlug: string, viewId: string): ViewPageRead {
-  const { issuesFilter } = useIssues(EIssuesStoreType.PROJECT_VIEW);
+export function useViewPageRead(storeType: ViewPageStoreType, workspaceSlug: string, viewId: string): ViewPageRead {
+  const { issuesFilter } = useIssues(storeType);
   const read = useSessionSWR(
-    ["PROJECT_VIEW_PAGE", workspaceSlug, viewId],
+    [READ_KEY[storeType], workspaceSlug, viewId],
     (slug, id) => issuesFilter.fetchFilters(slug, id).catch(noDraftIsNoFailure),
     { revalidateOnMount: false, revalidateOnReconnect: false }
   );
@@ -60,7 +73,9 @@ export function useViewPageRead(workspaceSlug: string, viewId: string): ViewPage
   if (!answered || read.isValidating) return { state: "reading" };
   const { error } = read;
   if (error === undefined) return { state: "read" };
-  if (problemCode(error) === "navigation.view_not_found") return { state: "not-found" };
+  const code = problemCode(error);
+  if (code === "navigation.view_not_found" || (storeType === EIssuesStoreType.GLOBAL && code === "forbidden"))
+    return { state: "not-found" };
   return { state: "failed", error, retry: () => void mutate() };
 }
 
@@ -99,4 +114,25 @@ export function useShownView(
   const shown =
     entry && view?.project_id === projectId && issuesFilter.getIssueFilters(viewId) !== undefined ? view : undefined;
   return { entry, view: shown };
+}
+
+/**
+ * The view a workspace's own view's page shows (M7/P6b spec 2.8, R11): once the page's read of it has seeded the page's
+ * draft, one of no project, of the route's workspace; none while the page reads it, finds none, could not read it, or
+ * for a project's view of the id (nerve gives one of that id there too), which the page says does not exist. The view
+ * store gives a workspace's own views to its admins and members alone. The page's header shows the view's controls
+ * while there is one, and else only its crumb of the workspace's views.
+ */
+export function useShownWorkspaceView(workspaceSlug: string, viewId: string): View | undefined {
+  const { getWorkspaceBySlug } = useWorkspace();
+  const { getViewById } = useViews();
+  const { issuesFilter } = useIssues(EIssuesStoreType.GLOBAL);
+  const workspace = getWorkspaceBySlug(workspaceSlug);
+  const view = getViewById(viewId);
+  return workspace &&
+    view?.project_id === null &&
+    view.workspace_id === workspace.id &&
+    issuesFilter.getIssueFilters(viewId) !== undefined
+    ? view
+    : undefined;
 }

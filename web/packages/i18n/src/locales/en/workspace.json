@@ -134,6 +134,11 @@
   },
   "workspace_views": {
     "add_view": "Add view",
+    "not_found": {
+      "title": "View does not exist",
+      "description": "The view you are looking for does not exist, or you may not see it.",
+      "action": "Go to views"
+    },
     "action": {
       "create": {
         "success": "View created successfully."
