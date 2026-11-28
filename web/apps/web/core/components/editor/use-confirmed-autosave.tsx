@@ -152,6 +152,7 @@ export function useConfirmedAutosave<T>({
       if (!owner.active) return;
       // The answer saved `input`. Edits made while it was out leave the value unsaved, unless they brought it back to
       // `input` and no other write is out (a later one would still overwrite it): their timer would only resend it.
+      // This assumes one work item's writes answer in the order sent (FIFO: IssueWrites.enqueueIssueChanges).
       if (revision === owner.revision || (owner.inFlight === 1 && latest.current.same(owner.value, input))) {
         owner.confirmed = input;
         owner.dirty = false;
