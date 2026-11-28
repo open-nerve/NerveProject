@@ -353,7 +353,7 @@ it("goes to the project's views once nerve deletes the view from the header's qu
   await opened({ role: 20 });
   await page.answerRead(first);
   await page.answerList();
-  const menu = document.querySelector<HTMLButtonElement>('header button[aria-haspopup="menu"]');
+  const menu = document.querySelector<HTMLButtonElement>('header button[aria-label="common.item_options"]');
   await act(async () => menu?.click());
   await settle();
   const item = [...document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')].find(
