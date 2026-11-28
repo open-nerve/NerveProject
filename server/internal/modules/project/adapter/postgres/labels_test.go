@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"slices"
+	"strings"
 	"testing"
 	"uuid"
 
@@ -164,6 +165,64 @@ func TestListLabels(t *testing.T) {
 	}
 	if got, err := w.s.ListLabels(context.Background(), w.site); err != nil || got == nil || len(got) != 0 {
 		t.Errorf("ListLabels(Site) = %+v, %v; want an empty list", got, err)
+	}
+}
+
+// ListWorkspaceLabels lists the undeleted labels of the workspace's
+// undeleted, unarchived projects alice is an active member of, parents and
+// children alike, by project id, then sort order, then id: Web's, then
+// Ops's Runbook, though its sort order is below every one of Web's; in Web,
+// Wiki, added last at UI's sort order with an id below its, before UI,
+// which the order the rows lie in does not give; not the deleted Old; not
+// the label of Docs, where her membership ended, of Arch, archived, of
+// Gone, deleted though its rows were left as no deletion leaves them, of
+// Lab, where her only membership is deleted, nor of Team, where bob is a
+// member and she is not; nor beta's Site's, where she is a member. Each
+// label is listed whole, as CreateLabel answered it. bob, whose only
+// project is Team, lists Team's. Every membership was made and last written
+// by maker, who is no member: a query reading created_by_id or
+// updated_by_id where it means member_id lists nothing.
+func TestListWorkspaceLabels(t *testing.T) {
+	w := newStateWorld(t)
+	bob := newAccount(t, w.pool, "bob@corp.com")
+	bug := w.addLabel(t, w.web, uuid.NewV7(), "Bug", nil, 3)
+	ui := w.addLabel(t, w.web, uuid.NewV7(), "UI", &bug.ID, 2)
+	wiki := w.addLabel(t, w.web, w.early, "Wiki", nil, 2)
+	old := w.addLabel(t, w.web, uuid.NewV7(), "Old", nil, 1)
+	exec(t, w.pool, "UPDATE labels SET deleted_at = $2 WHERE id = $1", old.ID, earlier)
+	runbook := w.addLabel(t, w.ops, uuid.NewV7(), "Runbook", nil, 1)
+	w.addLabel(t, w.site, uuid.NewV7(), "Site", nil, 1)
+	var heap []string
+	if err := w.pool.QueryRow(context.Background(), "SELECT array_agg(name ORDER BY ctid) FROM labels WHERE project_id = $1 AND sort_order = 2",
+		w.web).Scan(&heap); err != nil || !slices.Equal(heap, []string{"UI", "Wiki"}) {
+		t.Fatalf("the rows of sort order 2 lie as %q, %v; the test needs UI first", heap, err)
+	}
+	more, labels := map[string]uuid.UUID{}, map[string]domain.Label{}
+	for _, name := range []string{"Docs", "Arch", "Gone", "Lab", "Team"} {
+		more[name] = newProject(t, w.s, w.acme, name, strings.ToUpper(name), w.maker)
+		labels[name] = w.addLabel(t, more[name], uuid.NewV7(), name, nil, 1)
+	}
+	for _, p := range []uuid.UUID{w.web, w.ops, more["Arch"], more["Gone"]} {
+		seedMember(t, w.pool, w.acme, p, w.alice, 15, true)
+	}
+	seedMember(t, w.pool, w.beta, w.site, w.alice, 15, true)
+	seedMember(t, w.pool, w.acme, more["Docs"], w.alice, 20, false)
+	seedDeleted(t, w.pool, w.acme, more["Lab"], w.alice, 20)
+	seedMember(t, w.pool, w.acme, more["Team"], bob, 15, true)
+	exec(t, w.pool, "UPDATE project_members SET created_by_id = $1, updated_by_id = $1", w.maker)
+	exec(t, w.pool, "UPDATE projects SET archived_at = $2 WHERE id = $1", more["Arch"], now)
+	exec(t, w.pool, "UPDATE projects SET deleted_at = $2 WHERE id = $1", more["Gone"], now)
+
+	got, err := w.s.ListWorkspaceLabels(context.Background(), w.acme, w.alice)
+	if want := []domain.Label{wiki, ui, bug, runbook}; err != nil || jsonOf(t, got) != jsonOf(t, want) {
+		t.Errorf("ListWorkspaceLabels(acme, alice) = %s, %v; want Web's, then Ops's, %s", jsonOf(t, got), err, jsonOf(t, want))
+	}
+	got, err = w.s.ListWorkspaceLabels(context.Background(), w.acme, bob)
+	if want := []domain.Label{labels["Team"]}; err != nil || jsonOf(t, got) != jsonOf(t, want) {
+		t.Errorf("ListWorkspaceLabels(acme, bob) = %s, %v; want Team's, %s", jsonOf(t, got), err, jsonOf(t, want))
+	}
+	if got, err := w.s.ListWorkspaceLabels(context.Background(), w.beta, bob); err != nil || got == nil || len(got) != 0 {
+		t.Errorf("ListWorkspaceLabels(beta, bob) = %+v, %v; want an empty list", got, err)
 	}
 }
 

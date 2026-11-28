@@ -249,15 +249,14 @@ it.each([
   ["archived", <ArchivedIssueLayoutRoot key="archived" />, "/api/v0/projects/A/issues"],
   ["profile", <ProfileIssuesPage key="profile" type="assigned" />, "/api/v0/workspaces/ws/members/actor/issues"],
 ] as const)("member mounts the %s list", async (_name, child, path) => {
+  const reads = () => tab.nerve.calls.filter((call) => call.path !== "/api/v0/workspaces/ws/labels");
   await act(async () => mount(child));
-  await act(async () => until(() => tab.nerve.calls.length === 1, "list"));
-  expect(tab.nerve.calls[0]).toMatchObject({
-    method: "GET",
-    path,
-    query: _name === "archived" ? { archived: "true" } : { relation: "assigned" },
-  });
+  await act(async () => until(() => reads().length === 1, "list"));
+  expect(reads()).toMatchObject([
+    { method: "GET", path, query: _name === "archived" ? { archived: "true" } : { relation: "assigned" } },
+  ]);
   await act(async () => {
-    tab.nerve.calls[0]!.answer(json(200, issuePageOf([])));
+    reads()[0]!.answer(json(200, issuePageOf([])));
   });
 });
 

@@ -250,7 +250,7 @@ it.each(["desktop", "mobile"])(
     expect(tab.nerve.calls.every((call) => call.method === "GET")).toBe(true);
   }
 );
-it("keeps a cold legal label and project constraint when another filter changes, without prefetching directories", async () => {
+it("keeps a cold legal label and project constraint when another filter changes, prefetching only the label catalog", async () => {
   saved("u-bob", { rich_filters: { and: [{ label_id__in: lid }, { project_id__in: pid }, { priority__in: "high" }] } });
   respondList = (call) => call.answer(json(200, issuePageOf([])));
   await mount();
@@ -259,20 +259,18 @@ it("keeps a cold legal label and project constraint when another filter changes,
   const priority = filter.allConditions.find((condition) => condition.property === "priority")!;
   await act(async () => filter.updateConditionValue(priority.id, ["low"]));
   expect(reads().at(-1)?.query).toMatchObject({ label_id: lid, project_id: pid, priority: "low" });
-  expect(tab.nerve.calls.filter((call) => !/\/members(?:\/[^/]+\/issues)?$/.test(call.path))).toHaveLength(0);
+  // the workspace's label catalog, read once as the page mounts (M7/P6b spec 2.12), is left unanswered: lid stays cold
+  const catalog = tab.nerve.to("/api/v0/workspaces/ws/labels");
+  expect(catalog).toHaveLength(1);
+  const others = tab.nerve.calls.filter(
+    (call) => !catalog.includes(call) && !/\/members(?:\/[^/]+\/issues)?$/.test(call.path)
+  );
+  expect(others).toHaveLength(0);
 });
-it("offers only already held labels from visible joined unarchived projects in the route workspace", async () => {
+it("offers the label catalog's labels, of joined unarchived projects in the route workspace, never another held one", async () => {
   const visible = tab.project;
   const left = projectOf("left", tab.workspace.id, { id: "left", member_role: null });
   await loadProjects(tab.nerve, tab.app.projectRoot.project, tab.workspace, [visible, left]);
-  const shown = labelOf(visible, "Visible label", 1, { id: lid });
-  await answered(
-    tab.nerve,
-    () => tab.app.label.fetchProjectLabels(visible.id),
-    ["GET", "/api/v0/projects/A/labels"],
-    { data: [shown] },
-    "visible labels"
-  );
   await answered(
     tab.nerve,
     () => tab.app.label.fetchProjectLabels(left.id),
@@ -284,17 +282,21 @@ it("offers only already held labels from visible joined unarchived projects in t
   saved();
   respondList = (call) => call.answer(json(200, issuePageOf([])));
   await mount();
+  const catalog = () => tab.nerve.to("/api/v0/workspaces/ws/labels");
+  const shown = [labelOf(visible, "Visible label", 1, { id: lid }), labelOf(visible, "Nested", 2, { parent_id: lid })];
+  await act(async () => catalog()[0]?.answer(json(200, { data: shown })));
   const filter = tab.app.workItemFilters.getFilter(EIssuesStoreType.PROFILE, "u-bob")!;
   const config = filter.configManager.getConfigByProperty("label_id")!.getOperatorConfig(COLLECTION_OPERATOR.IN);
   expect(config?.type).toBe(FILTER_FIELD_TYPE.MULTI_SELECT);
   if (config?.type !== FILTER_FIELD_TYPE.MULTI_SELECT) throw new Error("missing label picker");
   const options = typeof config.getOptions === "function" ? await config.getOptions() : config.getOptions;
-  expect(options.map((option) => option.value).toSorted()).toEqual([lid, "none"]);
-  expect(tab.nerve.calls.some((call) => call.path.endsWith("/labels"))).toBe(false);
+  expect(options.map((option) => option.value).toSorted()).toEqual([lid, shown[1]!.id, "none"].toSorted());
+  expect(catalog()).toHaveLength(1);
+  expect(tab.nerve.calls.some((call) => /\/projects\/[^/]+\/labels$/.test(call.path))).toBe(false);
 });
 
 it.each(["list", "kanban"] as const)(
-  "%s shows label-group rows and true totals even while the label catalog is cold",
+  "%s shows label-group rows and true totals before the label catalog answers, and the group's name after",
   async (layout) => {
     saved("u-bob", { display_filters: { layout, group_by: "labels" } });
     respondList = (call) =>
@@ -310,16 +312,11 @@ it.each(["list", "kanban"] as const)(
     expect(document.body.textContent).toContain(issueOf("labelled").name);
     expect(tab.app.issue.profileIssues.groups?.get(lid)?.total).toBe(3);
     expect(button("common.load_more ↓")).toBeDefined();
-    expect(tab.nerve.calls.some((call) => call.path.endsWith("/labels"))).toBe(false);
-    await act(async () =>
-      answered(
-        tab.nerve,
-        () => tab.app.label.fetchProjectLabels("A"),
-        ["GET", "/api/v0/projects/A/labels"],
-        { data: [labelOf(tab.project, "Now known", 1, { id: lid })] },
-        "later label directory"
-      )
-    );
+    const catalog = () => tab.nerve.to("/api/v0/workspaces/ws/labels");
+    expect(catalog()).toHaveLength(1);
+    expect(tab.nerve.calls.some((call) => /\/projects\/[^/]+\/labels$/.test(call.path))).toBe(false);
+    const known = labelOf(tab.project, "Now known", 1, { id: lid });
+    await act(async () => catalog()[0]?.answer(json(200, { data: [known] })));
     expect(document.body.textContent).toContain("Now known");
     expect(document.body.textContent).toContain(issueOf("labelled").name);
   }

@@ -307,5 +307,8 @@ it("the member view shows counts of rows from several projects and reads no row"
   const other = { ...many, id: "other", name: "other", project_id: "B" };
   await act(async () => member()[0]!.answer(json(200, pageOf("list", [zero, single, other]))));
   expect(chips()).toEqual(["content_files.title1", "content_files.title51"]);
-  expect(reads()).toEqual(["GET /api/v0/workspaces/ws/members/actor/issues"]);
+  // every read but the workspace's label catalog, which the profile's work items read as they mount (M7/P6b spec 2.12)
+  expect(reads().filter((read) => read !== "GET /api/v0/workspaces/ws/labels")).toEqual([
+    "GET /api/v0/workspaces/ws/members/actor/issues",
+  ]);
 });

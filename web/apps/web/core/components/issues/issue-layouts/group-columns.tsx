@@ -274,7 +274,8 @@ function labelColumns({ isWorkspaceLevel, projectId, workspaceSlug, groupIds }: 
       })
     : (rootStore.label.getProjectLabels(projectId) ?? []);
   const held = new Map(labels.map((label) => [label.id, label]));
-  // The server owns group membership/counts. A cold catalog may withhold a name, never a returned group.
+  // The server owns group membership/counts. The workspace's label catalog names its groups (M7/P6b spec 2.12): only a
+  // label deleted after its read, or a page that holds none yet, leaves a returned group without a name.
   const ids = new Set([...held.keys(), ...(isWorkspaceLevel ? (groupIds ?? []) : []), "none"]);
   return [...ids].map((id) => ({
     id,

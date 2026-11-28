@@ -37,30 +37,6 @@ export type TIssueOrderByOptions =
 
 export type TIssueExtraOptions = "show_empty_groups" | "sub_issue";
 
-export type TIssueParams =
-  | "priority"
-  | "state_group"
-  | "state"
-  | "assignees"
-  | "mentions"
-  | "created_by"
-  | "subscriber"
-  | "labels"
-  | "start_date"
-  | "target_date"
-  | "project"
-  | "group_by"
-  | "sub_group_by"
-  | "order_by"
-  | "type"
-  | "sub_issue"
-  | "show_empty_groups"
-  | "cursor"
-  | "per_page"
-  | "layout"
-  | "expand"
-  | "filters";
-
 export type TCalendarLayouts = "month" | "week";
 
 /**
@@ -164,12 +140,6 @@ export interface ISubWorkItemFilters extends Omit<IIssueFilters, "richFilters"> 
 export interface IIssueFiltersResponse {
   rich_filters: TWorkItemFilterExpression;
   display_filters: IIssueDisplayFilterOptions;
-  display_properties: IIssueDisplayProperties;
-}
-
-export interface IWorkspaceViewProps {
-  rich_filters: TWorkItemFilterExpression;
-  display_filters: IIssueDisplayFilterOptions | undefined;
   display_properties: IIssueDisplayProperties;
 }
 

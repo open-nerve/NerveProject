@@ -24,7 +24,7 @@ export default function ProjectViewIssuesLayout({ params }: Route.ComponentProps
   // screen's header says itself when it shows: it is an observer, this layout is not (re-76 F1).
   return (
     <Fragment key={viewId}>
-      <ViewActionsHost workspaceSlug={workspaceSlug} projectId={projectId}>
+      <ViewActionsHost workspaceSlug={workspaceSlug} container={{ kind: "project", projectId }}>
         <AppHeader
           header={<ProjectViewIssuesHeader workspaceSlug={workspaceSlug} projectId={projectId} viewId={viewId} />}
           mobileHeader={<ProjectViewMobileHeader workspaceSlug={workspaceSlug} projectId={projectId} viewId={viewId} />}

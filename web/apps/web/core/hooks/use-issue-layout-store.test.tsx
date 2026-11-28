@@ -94,7 +94,7 @@ it.each(["globalViewId", "viewId", "cycleId", "moduleId"])(
               ? EIssuesStoreType.MODULE
               : route === "viewId"
                 ? EIssuesStoreType.PROJECT_VIEW
-                : EIssuesStoreType.DEFAULT
+                : EIssuesStoreType.GLOBAL
         );
         actions = useIssuesActions(selectedType);
       },
@@ -124,7 +124,7 @@ it("keeps project/profile route selection, explicit context and a generic route 
   fixture.params = { globalViewId: "view" };
   await mount(() => expect(useIssueStoreType()).toBe(EIssuesStoreType.ARCHIVED), EIssuesStoreType.ARCHIVED);
 });
-it.each(["GLOBAL", "unknown"])("rejects %s actions instead of silently dispatching project commands", async (kind) => {
+it.each(["unknown"])("rejects %s actions instead of silently dispatching project commands", async (kind) => {
   // Deliberately invalid runtime input verifies the dispatch guard.
   await mount(() => expect(() => useIssuesActions(kind as EIssuesStoreType)).toThrow("Unsupported issue store"));
   expect(tab.nerve.calls).toEqual([]);

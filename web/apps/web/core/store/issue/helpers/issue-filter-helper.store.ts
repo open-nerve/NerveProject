@@ -14,8 +14,6 @@ import type {
   IIssueFilters,
   IIssueFiltersResponse,
   TIssueKanbanFilters,
-  TIssueParams,
-  TStaticViewTypes,
 } from "@nerve/types";
 // helpers
 import { getComputedDisplayFilters, getComputedDisplayProperties } from "@nerve/utils";
@@ -129,20 +127,7 @@ export interface IBaseIssueFilterStore {
   issueFilters: IIssueFilters | undefined;
 }
 
-export interface IIssueFilterHelperStore {
-  computedIssueFilters(filters: IIssueFilters): IIssueFilters;
-  getFilterConditionBasedOnViews: (
-    currentUserId: string | undefined,
-    type: TStaticViewTypes
-  ) => Partial<Record<TIssueParams, string>> | undefined;
-  computedDisplayFilters(
-    displayFilters: IIssueDisplayFilterOptions,
-    defaultValues?: IIssueDisplayFilterOptions
-  ): IIssueDisplayFilterOptions;
-  computedDisplayProperties(filters: IIssueDisplayProperties): IIssueDisplayProperties;
-}
-
-export class IssueFilterHelperStore implements IIssueFilterHelperStore {
+export class IssueFilterHelperStore {
   /**
    * @description This method is used to apply the display filters on the issues
    * @param {IIssueFilters} filters
@@ -154,33 +139,6 @@ export class IssueFilterHelperStore implements IIssueFilterHelperStore {
     displayProperties: isEmpty(filters?.displayProperties) ? undefined : filters?.displayProperties,
     kanbanFilters: isEmpty(filters?.kanbanFilters) ? undefined : filters?.kanbanFilters,
   });
-
-  /**
-   * @description This method is used to get the filter conditions based on the views
-   * @param currentUserId
-   * @param type
-   * @returns
-   */
-  getFilterConditionBasedOnViews: IIssueFilterHelperStore["getFilterConditionBasedOnViews"] = (currentUserId, type) => {
-    if (!currentUserId) return undefined;
-    switch (type) {
-      case "assigned":
-        return {
-          assignees: currentUserId,
-        };
-      case "created":
-        return {
-          created_by: currentUserId,
-        };
-      case "subscribed":
-        return {
-          subscriber: currentUserId,
-        };
-      case "all-issues":
-      default:
-        return undefined;
-    }
-  };
 
   /**
    * @description This method is used to apply the display filters on the issues

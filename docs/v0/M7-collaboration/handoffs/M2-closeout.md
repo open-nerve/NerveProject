@@ -51,6 +51,8 @@ created: 2026-09-28
 
 **处理结果（M7/P6a，`Dropdown` 与视图页头的切换器）：** `Dropdown` 一半不适用：`web/packages/ui/src/dropdown/single-select.tsx` 已在 M4/P16 删除（`a3af031b8`），它在视图里唯一的调用方 `dropdowns/layout.tsx`（`LayoutDropDown`）随视图表单不再有布局，在 T5 删除（`5a58db86`，[P6a spec](../specs/P6a-web-project-views.md) R28）；视图页的布局切换在 H20 (page) 三种引擎以键盘核过：宽屏页头的 `LayoutSelection` 以 Tab 与 Enter 选 Table，窄屏一行的 `MobileLayoutSelection` 菜单以键盘选 Calendar，只改草稿、不发请求（`e2e/stories/collaboration/h20-view-pages.spec.ts:331-348`）。`BreadcrumbNavigationSearchDropdown`（视图页的切换器）：P6a 给它加可选的 `onOpen`，在已有的打开回调里调（`web/packages/ui/src/breadcrumbs/navigation-search-dropdown.tsx:25`、`:67-69`），视图页以“打开过”为第一次读列表的门（R20）；三种引擎以键盘核过：焦点在切换器上 Enter 打开，搜索框取得焦点，打字、下箭头选中、Enter 换到另一个视图（`e2e/stories/collaboration/h20-view-pages.spec.ts:52-69`，在 `:125`、`:146` 用）。项目视图的部分关闭；工作区视图的页头（`app/(all)/[workspaceSlug]/(projects)/workspace-views/header.tsx`）随 P6b，保持 open。
 
+**处理结果（M7/P6b，工作区视图页头的切换器）：** 工作区视图页的切换器同样是 `BreadcrumbNavigationSearchDropdown`，用 P6a 加的 `onOpen`，第一次打开时才读已存视图，访客只列默认四个、不读（`web/apps/web/app/(all)/[workspaceSlug]/(projects)/workspace-views/(detail)/[globalViewId]/header.tsx`，旧的 `workspace-views/header.tsx` 在 T9 删去；[P6b spec](../specs/P6b-web-workspace-views.md) §2.8）。三种引擎以键盘核过：焦点在切换器上按 Enter 打开，搜索框取得焦点，打字、下箭头选中、Enter 换到另一个视图（`e2e/stories/collaboration/h20-workspace-view-pages.spec.ts:60-72` 的 `switchByKeyboard`，在 `:126`、`:147` 用）。列出的调用方都已在浏览器中核对，**这一条关闭。**
+
 ## 4. 复制到剪贴板（M7 的 4 处）
 
 - P5 起 `copyTextToClipboard`（`web/packages/utils/src/string.ts`）复制失败时拒绝，纯 http 下也是。M7 的 4 处没有处理拒绝，失败时没有提示，只有一个未处理的 Promise 拒绝（路径在 `web/apps/web/core/components/` 下）：`inbox/content/inbox-issue-header.tsx`、`views/quick-actions.tsx`、`workspace/views/{quick-action,default-view-quick-action}.tsx`。
@@ -59,6 +61,8 @@ created: 2026-09-28
 **处理结果（M7/P5a，收集箱的页头）：** `inbox/content/inbox-issue-header.tsx` 在 T6a 删除，新的动作模型的“复制链接”经 `useCopyLink`（`inbox/content/header/use-intake-actions.ts:157`），失败时经 `t()` 提示，`copy-hook` 的这个例外同一提交删除（[P5a spec](../specs/P5a-web-intake.md) §2.7）。收集箱的一处关闭；视图的三处随 P6a/P6b，保持 open。
 
 **处理结果（M7/P6a，项目视图的一处）：** `views/quick-actions.tsx` 的“复制链接”经 `useCopyLink`（`:58`），成功与失败各经 `t()` 提示，`copy-hook` 的这个例外同一提交删除（`e2a8ba42`，[P6a spec](../specs/P6a-web-project-views.md) §2.3）；H12 (page) 三种引擎核成功与浏览器拒绝剪贴板两种（`e2e/stories/collaboration/h12-project-views-list-page.spec.ts:351-362`）。项目视图的一处关闭；工作区视图的两处（`workspace/views/{quick-action,default-view-quick-action}.tsx`）随 P6b，保持 open。
+
+**处理结果（M7/P6b，工作区视图的两处）：** `workspace/views/{quick-action,default-view-quick-action}.tsx` 在 T9 删去，`copy-hook` 的两个例外同一提交删除（`6a5aae94`）；工作区视图的复制经 `useCopyLink`（P6a 的 `views/quick-actions.tsx` 与新的 `workspace/views/default-view-menu.tsx`），成功与失败各经 `t()` 提示（[P6b spec](../specs/P6b-web-workspace-views.md) §2.10、§2.11）；H14 (page) 三种引擎核成功与浏览器拒绝剪贴板两种（`e2e/stories/collaboration/h14-workspace-views-list-page.spec.ts:213`）。四处都已改经 `useCopyLink`、例外都已删除，**这一条关闭。**
 
 ## 5. 物理删除与跨模块外键的关系图（M7 的部分）
 
@@ -82,5 +86,7 @@ created: 2026-09-28
 **处理结果（M7/P5a，收集箱）：** 收集箱页不嵌 iframe：新的 `inbox/` 与它的详情里都没有（`git grep -i iframe -- web/apps/web/core web/apps/web/app web/packages/editor/src` 为空），CSP 不改（[P5a 阶段记录](../reviews/P5a-web-intake-review.md) §8）。视图随 P6a/P6b 写明，保持 open。
 
 **处理结果（M7/P6a，项目视图）：** 项目视图的页面不嵌 iframe：视图列表页、视图页与它们的组件里都没有（`git grep -i iframe -- web/apps/web/core web/apps/web/app web/packages/editor/src` 为空），CSP 不改（[P6a 阶段记录](../reviews/P6a-web-project-views-review.md) §8）。工作区视图随 P6b 写明，保持 open。
+
+**处理结果（M7/P6b，工作区视图）：** 工作区视图的页面不嵌 iframe：列表页、视图页与它们的组件里都没有（`git grep -i iframe -- web/apps/web/core web/apps/web/app web/packages/editor/src` 为空，台账 `t11-iframe`、`t15-iframe`），CSP 不改（[P6b 阶段记录](../reviews/P6b-web-workspace-views-review.md) §3 的 T11）。收集箱与视图两侧都已写明，**这一条关闭。**
 
 来源：[M2 设计](../../M2-auth/M2-design.md) 13.2 中接收者含 M7 的各行、3.12、3.14；[M2/P4 评审](../../M2-auth/reviews/P4-web-auth-review.md)第 4 节；[M2 收尾 spec](../../M2-auth/specs/closeout.md) 第 3 节。

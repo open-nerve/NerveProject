@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { observer } from "mobx-react";
 import { useNavigate } from "react-router";
 // nerve imports
@@ -49,8 +49,6 @@ type TProps = {
  */
 export const ProjectViewIssuesHeader = observer(function ProjectViewIssuesHeader(props: TProps) {
   const { workspaceSlug, projectId, viewId } = props;
-  // refs
-  const parentRef = useRef<HTMLDivElement>(null);
   // router
   const navigate = useNavigate();
   // nerve hooks
@@ -130,9 +128,8 @@ export const ProjectViewIssuesHeader = observer(function ProjectViewIssuesHeader
             )}
           </div>
           <ViewQuickActions
-            parentRef={parentRef}
             customClassName="flex-shrink-0 flex items-center justify-center size-[26px] bg-layer-1/70 rounded-sm"
-            projectId={projectId}
+            container={{ kind: "project", projectId }}
             viewId={viewId}
             workspaceSlug={workspaceSlug}
           />

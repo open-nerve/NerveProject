@@ -5,7 +5,7 @@ import { EIssuesStoreType } from "@nerve/types";
 import { toProjectFilters } from "@/lib/issue-filters";
 import { PagePreferencesFilter } from "../helpers/page-preferences-filter.store";
 import type { IIssueRootStore } from "../root.store";
-import type { ViewDraftService } from "./view-draft.service";
+import type { ViewDraftService } from "../helpers/view-draft.service";
 
 /**
  * A project's view's page's preferences (P6a spec 2.5, 2.6, R1, R2): the page's draft of the view, by the view's id,
@@ -15,7 +15,7 @@ import type { ViewDraftService } from "./view-draft.service";
 export class ProjectViewIssuesFilter extends PagePreferencesFilter<ProjectIssueFilters> {
   constructor(
     rootIssueStore: IIssueRootStore,
-    private readonly drafts: ViewDraftService
+    private readonly drafts: ViewDraftService<ProjectIssueFilters>
   ) {
     super(rootIssueStore, drafts, toProjectFilters, EIssuesStoreType.PROJECT_VIEW);
   }

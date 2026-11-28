@@ -74,6 +74,21 @@ func (s *Store) ListLabels(ctx context.Context, projectID uuid.UUID) ([]domain.L
 	return out, nil
 }
 
+// ListWorkspaceLabels lists the undeleted labels of workspaceID's
+// undeleted, unarchived projects that userID is an active member of, by
+// project id, then sort order, then id (app.WorkspaceLabelLister).
+func (s *Store) ListWorkspaceLabels(ctx context.Context, workspaceID, userID uuid.UUID) ([]domain.Label, error) {
+	rows, err := s.queries(ctx).ListWorkspaceLabels(ctx, gen.ListWorkspaceLabelsParams{WorkspaceID: workspaceID, UserID: userID})
+	if err != nil {
+		return nil, fmt.Errorf("list the labels of workspace %s: %w", workspaceID, err)
+	}
+	out := make([]domain.Label, len(rows))
+	for i, r := range rows {
+		out[i] = labelOf(gen.LabelByIDRow(r))
+	}
+	return out, nil
+}
+
 // GreatestSortOrder is the greatest sort order of projectID's undeleted
 // labels, nil when it has none (app.LabelCreator).
 func (s *Store) GreatestSortOrder(ctx context.Context, projectID uuid.UUID) (*float64, error) {

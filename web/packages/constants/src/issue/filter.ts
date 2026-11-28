@@ -184,34 +184,31 @@ export const ISSUE_DISPLAY_FILTERS_BY_PAGE: TIssueFiltersToDisplayByPageType = {
       },
     },
   },
-  my_issues: {
+  // A workspace's pages (M7/P6b spec 2.4, R5, R8): the contract's 11 words, the spreadsheet alone, whose columns on a
+  // page of no project never show a cycle or the modules, so neither is offered (re-97 m1).
+  workspace_issues: {
     filters: [
       "priority",
       "state_group",
+      "state_id",
       "label_id",
       "assignee_id",
       "created_by_id",
+      "mention_id",
+      "subscriber_id",
       "project_id",
       "start_date",
       "target_date",
     ],
     layoutOptions: {
       spreadsheet: {
-        display_properties: ISSUE_DISPLAY_PROPERTIES_KEYS,
+        display_properties: ISSUE_DISPLAY_PROPERTIES_KEYS.filter((key) => key !== "cycle" && key !== "modules"),
         display_filters: {
           order_by: [],
         },
         extra_options: {
           access: true,
           values: ["sub_issue"],
-        },
-      },
-      list: {
-        display_properties: ISSUE_DISPLAY_PROPERTIES_KEYS,
-        display_filters: {},
-        extra_options: {
-          access: false,
-          values: [],
         },
       },
     },
@@ -243,6 +240,8 @@ export const ISSUE_STORE_TO_FILTERS_MAP: Partial<Record<EIssuesStoreType, TFilte
   [EIssuesStoreType.MODULE]: ISSUE_DISPLAY_FILTERS_BY_PAGE.module_issues,
   // a project's view's page lists its project's work items as the project's page does (P6a spec 2.5)
   [EIssuesStoreType.PROJECT_VIEW]: ISSUE_DISPLAY_FILTERS_BY_PAGE.issues,
+  // a workspace's view's page (M7/P6b spec 2.3, 2.4)
+  [EIssuesStoreType.GLOBAL]: ISSUE_DISPLAY_FILTERS_BY_PAGE.workspace_issues,
 };
 
 export const SUB_WORK_ITEM_AVAILABLE_FILTERS_FOR_WORK_ITEM_PAGE: (keyof IIssueFilterOptions)[] = [

@@ -102,6 +102,7 @@ export function useProjectPreferences() {
 export function useLabel() {
   return {
     fetchProjectLabels: (projectId: string) => fetching(`the labels of ${projectId}`),
+    fetchWorkspaceLabels: (workspace: Pick<Workspace, "id" | "slug">) => fetching(`the labels of ${named(workspace)}`),
   };
 }
 

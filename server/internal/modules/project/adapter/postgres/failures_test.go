@@ -39,7 +39,8 @@ func failed(err error) bool {
 // state's, nor an empty group, which a deletion or a move would answer as
 // project.state_last_in_group; not "no such label", which a write on it
 // would answer as project.label_not_found, nor no labels, which listLabels
-// would answer as none, nor "no sort order", which createLabel would take
+// and listWorkspaceLabels would answer as none, nor "no sort order", which
+// createLabel would take
 // for the first label's, nor "no children", which updateLabel would take
 // for a label free to take a parent; not "no such project" from the issue
 // module's lock, which createIssue would answer as project.not_found, nor
@@ -140,6 +141,9 @@ func TestAFailedReadIsAnErrorNotAnAnswer(t *testing.T) {
 	}
 	if list, err := s.ListLabels(cancelled, web); !failed(err) || list != nil {
 		t.Errorf("ListLabels() = %+v, %v; want context.Canceled, not none", list, err)
+	}
+	if list, err := s.ListWorkspaceLabels(cancelled, acme, alice); !failed(err) || list != nil {
+		t.Errorf("ListWorkspaceLabels() = %+v, %v; want context.Canceled, not none", list, err)
 	}
 	if greatest, err := s.GreatestSortOrder(cancelled, web); !failed(err) || greatest != nil {
 		t.Errorf("GreatestSortOrder() = %s, %v; want context.Canceled, not none", jsonOf(t, greatest), err)

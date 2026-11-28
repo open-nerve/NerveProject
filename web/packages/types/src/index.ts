@@ -25,4 +25,3 @@ export * from "./view-props";
 export * from "./views";
 export * from "./webhook";
 export * from "./workspace";
-export * from "./workspace-views";

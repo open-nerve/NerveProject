@@ -10,6 +10,7 @@ import { observer } from "mobx-react";
 import { SWRConfig } from "swr";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { View } from "@nerve/api-client";
+import { EIssuesStoreType } from "@nerve/types";
 import { viewReadTab } from "@/components/views/fake-view-page";
 import { json } from "@/lib/auth/fake-nerve";
 import { until } from "@/lib/auth/fake-time";
@@ -49,7 +50,7 @@ afterEach(async () => page.close());
 let rendered: string[] = [];
 /** The page's read of the view: where the page is with it, as an observer page renders it. */
 const Probe = observer(function Probe() {
-  const { state } = useViewPageRead("ws", view.id);
+  const { state } = useViewPageRead(EIssuesStoreType.PROJECT_VIEW, "ws", view.id);
   rendered.push(state);
   return <p>{state}</p>;
 });

@@ -23,7 +23,7 @@ vi.mock("react", () => ({ useContext: () => store }));
 vi.mock("@/lib/store-context", () => ({ StoreContext: {} }));
 
 describe("issue store selection", () => {
-  it.each(["GLOBAL", "unknown"])("rejects the retired %s list instead of selecting project state", (kind) => {
+  it.each(["unknown"])("rejects the retired %s list instead of selecting project state", (kind) => {
     expect(() => useIssues(kind as EIssuesStoreType)).toThrow("Unsupported issue store");
   });
   it("keeps default, project, profile, archived and workspace draft selection", () => {

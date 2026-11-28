@@ -9,6 +9,7 @@ import { useParams } from "react-router";
 import { EIssuesStoreType } from "@nerve/types";
 // components
 import { ProjectArchivedEmptyState } from "./archived-issues";
+import { GlobalViewEmptyState } from "./global-view";
 import { PlanningPageEmptyState } from "./planning-page";
 import { ProfileViewEmptyState } from "./profile-view";
 import { ProjectEmptyState, ProjectListEmptyState } from "./project-issues";
@@ -32,6 +33,8 @@ export function IssueLayoutEmptyState(props: Props) {
       return <PlanningPageEmptyState storeType={EIssuesStoreType.CYCLE} />;
     case EIssuesStoreType.MODULE:
       return <PlanningPageEmptyState storeType={EIssuesStoreType.MODULE} />;
+    case EIssuesStoreType.GLOBAL:
+      return <GlobalViewEmptyState />;
     default:
       return null;
   }

@@ -30,7 +30,8 @@ type SpreadsheetStoreType =
   | EIssuesStoreType.PROJECT
   | EIssuesStoreType.CYCLE
   | EIssuesStoreType.MODULE
-  | EIssuesStoreType.PROJECT_VIEW;
+  | EIssuesStoreType.PROJECT_VIEW
+  | EIssuesStoreType.GLOBAL;
 
 interface IBaseSpreadsheetRoot {
   QuickActions: FC<IQuickActionProps>;

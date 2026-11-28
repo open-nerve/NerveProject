@@ -21,6 +21,7 @@ import type { SelectionSubmitResult } from "@/components/core/modals/existing-is
 import { SessionChangedError } from "@/lib/auth/token-manager";
 import { settleEach, WRITES_PER_PROJECT } from "@/lib/settle-each";
 import { useIssues } from "./store/use-issues";
+import { useGlobalIssueActions } from "./use-global-issue-actions";
 import { usePlanningPageIssueActions } from "./use-planning-page-issue-actions";
 import { useProjectViewIssueActions } from "./use-project-view-issue-actions";
 import { useProjectPreferencesFollow } from "./use-project-preferences-follow";
@@ -72,6 +73,7 @@ export function useIssuesActions(storeType: EIssuesStoreType | undefined): Issue
   const cycleIssueActions = usePlanningPageIssueActions(EIssuesStoreType.CYCLE);
   const moduleIssueActions = usePlanningPageIssueActions(EIssuesStoreType.MODULE);
   const projectViewIssueActions = useProjectViewIssueActions();
+  const globalIssueActions = useGlobalIssueActions();
 
   switch (storeType) {
     case undefined:
@@ -89,6 +91,8 @@ export function useIssuesActions(storeType: EIssuesStoreType | undefined): Issue
       return projectIssueActions;
     case EIssuesStoreType.PROJECT_VIEW:
       return projectViewIssueActions;
+    case EIssuesStoreType.GLOBAL:
+      return globalIssueActions;
     case EIssuesStoreType.WORKSPACE_DRAFT:
       throw new Error(`Unsupported issue store: ${storeType}`);
     default:

@@ -63,6 +63,8 @@ M4 的最终 C12、准确分支 CI 和未来 main 集成分别由[验收台账](
 
 **处理结果（M7/P6a，项目视图一支）：** `EIssuesStoreType.PROJECT_VIEW` 在新引擎上恢复（[P6a spec](../specs/P6a-web-project-views.md) §2.5、§2.6、R1、R6）：它是项目列表页的一种（`core/store/issue/project-view/` 的 `ProjectViewIssues`、`ProjectViewIssuesFilter`，查询来自内存里的草稿 `ViewDraftService`），没有恢复旧列表引擎或空壳；每个分派点都接上，两个 `switch` 以 `satisfies never` 穷尽；视图页的根 `core/components/issues/issue-layouts/roots/project-view-layout-root.tsx` 与视图页 `[projectId]/views/(detail)/[viewId]/page.tsx`（以 `viewId` 为 key，读中、不存在、失败重试、停用四种状态）。旧 `core/services/view.service.ts` 连同旧 store 与 hook 在 T10 删除（`6ea2f0c9`），关键词 `old-view-urls` 拦它的地址。整页以真实有效的视图验收（H12 (page) 四份、H20 (page) 两份，三种引擎）：详情与它的列表、四种布局与翻页、筛选与“更新视图”、读失败与重试（Chromium）、管理员、成员与只看自己的访客、换会话（`e2e/stories/collaboration/h20-view-pages.spec.ts:214`）、迟到的回答；`t12-m7-pages` 200 过 1 跳（跳过的是 P5b H8 的 WebKit 一格），整页没有非预期的失败。项目视图一支关闭；`GLOBAL`、工作区视图的页面与布局根、旧 `WorkspaceService` 的四个方法与完整的工作区标签目录随 P6b。保持 open。
 
+**处理结果（M7/P6b，工作区一支）：** `EIssuesStoreType.GLOBAL` 在新引擎上恢复（[P6b spec](../specs/P6b-web-workspace-views.md) §2.3、§2.8、R1）：新的范围臂 `"workspace"`（`core/store/issue/helpers/issue-list-read.ts`；只读快照、逐项目权限与只看自己在服务端，客户端核对行的范围）与列表 store `GlobalIssues`（`core/store/issue/workspace/`），没有恢复旧列表引擎或空壳；每个分派点都接上，两个 `switch` 穷尽；工作区视图页的根 `core/components/issues/issue-layouts/roots/workspace-view-layout-root.tsx` 与视图页 `workspace-views/(detail)/[globalViewId]/page.tsx`（以 `globalViewId` 为 key）。个人主页按标签分组与工作区列表的标签筛选两个使用者经新的完整工作区标签目录（`GET /api/v0/workspaces/{slug}/labels`，R16、R17）。旧 `WorkspaceService` 的四个方法（`core/services/workspace.service.ts` 连同它的测试）在 T11 删除（`7ddc1d4b`），关键词 `old-view-urls` 拦它的地址。整页以真实有效的视图验收，`:58` 的验收词逐个的去处：详情——H13 (page) 的已存视图页（`e2e/stories/collaboration/h13-workspace-view-page.spec.ts:73`）；列表——四个默认视图（`h13-workspace-list-page.spec.ts:39`）；筛选——含项目与标签的条件（同 `:39`）；跨项目访客——只看自己的访客在只看自己的项目里只见自己的、在另一个项目里见全部（`:250`）；无权项计数——接口故事 `h13-workspace-list.spec.ts:101`（总数按数据库逐条），页面只核行（不是成员的项目、已归档的项目的行不出，`:39`）；失败重试——列表读（`:250`）与视图读（`h13-workspace-view-page.spec.ts:247`），只在 Chromium；会话切换——H20 (page) 另一个标签页换账号（`h20-workspace-view-pages.spec.ts:203`）。新故事三引擎（`t14-m7-pages` 两引擎 162 过、WebKit 单独 80 过 1 跳，跳过的是 P5b H8 的 WebKit 一格），整页没有非预期的失败（每个故事以 `apiFailures`、`oldApiRequests`、`pageErrors` 为空与 `expectQuietConsole` 结束）。两支都已关闭，**这一条关闭。**
+
 <a id="M7-04"></a>
 ## M7-04 收集箱旧 DTO、版本与命令面板
 
@@ -101,6 +103,13 @@ M4 的最终 C12、准确分支 CI 和未来 main 集成分别由[验收台账](
 - 未等待的筛选与视图写后关闭：“更新视图”等 nerve 的回答，失败时按钮留着、草稿与基线不动（R9，T8，`t8-mut-update-resolves-on-failure`；H12 (page) `:233`）。
 
 项目视图的部分关闭。留下：工作区视图的部分（工作区 HOC 的写后关闭、工作区视图的弹窗）随 P6b。保持 open。
+
+**处理结果（M7/P6b，工作区视图的部分）：** 第五条的工作区一半与第三条的工作区视图（[P6b spec](../specs/P6b-web-workspace-views.md) §2.9、§2.11、R10、R14、R19）：
+- 工作区 HOC 的写后关闭：`filters-hoc/workspace-level.tsx` 去掉 Plane 的分支（`useGlobalView`、锁、所有者、`rich_filters` 的体与英文提示，208 → 90 行），“更新视图”经共用的 `use-view-update.ts` 等 nerve 的回答，失败时提示、按钮留着、草稿与基线不动，请求体在轮到时从草稿算；跟进只在 HOC 还挂着时做（`t10-mut-update-unmounted`；H20 (page) `e2e/stories/collaboration/h20-workspace-view-pages.spec.ts:203` 的离开之后与换账号之后答到）；在途时改草稿的入口停用（`t10-mut-busy-not-passed`；H13 (page) `h13-workspace-view-page.spec.ts:73` 扣住回答的一步）。
+- 工作区视图的弹窗：用 P6a 的弹窗（按容器），discard 与文档 Escape、dirty/pending/busy、输入保留、嵌套 Escape、IME、拒绝、换宿主迟到答都同上面 P6a 的那一组，工作区的格在 `views/modal-workspace.test.tsx`、`actions-host-workspace.test.tsx`；H14 (page) `e2e/stories/collaboration/h14-workspace-views-list-page.spec.ts:129`（空白与超长被拒、焦点）、H20 (page) `:299`（Tab 次序、嵌套 Escape）。
+- 第三条的视图结果：工作区视图照 R19 不进命令面板（四条导航命令照旧，不加工作区视图的菜单、搜索与新建命令；Plane 的搜索有工作区范围，见 plane-diff 的“命令面板的视图（网页，M7/P6a）”一行）。
+
+工作区视图的部分关闭。第三条里迭代的命令面板结果不在 P6b 的范围，M7 收官时逐条核对。保持 open。
 
 <a id="M7-05"></a>
 ## M7-05 最后读者与全应用收口

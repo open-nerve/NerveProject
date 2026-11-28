@@ -7,10 +7,11 @@
 import { action, computed, makeObservable } from "mobx";
 import { computedFn } from "mobx-utils";
 // nerve imports
-import type { ApiClient, Label, LabelCreate, LabelUpdate, Project } from "@nerve/api-client";
+import type { ApiClient, Label, LabelCreate, LabelUpdate, Project, Workspace } from "@nerve/api-client";
 // lib
 import { oneAtATime } from "@/lib/one-at-a-time";
 import { placeAt } from "@/lib/place-between";
+import { joinedAndUnarchived } from "@/lib/project-scope";
 import type { Change } from "@/lib/reconciled";
 import { ReconciledByKey, replaced, upserted } from "@/lib/reconciled";
 // services
@@ -18,6 +19,8 @@ import { LabelsService } from "@/services/project/labels.service";
 // store
 import type { RootStore } from "@/store/root.store";
 
+/** A workspace as the store fetches its label catalog: by its slug, kept under its id. */
+type WorkspaceRef = Pick<Workspace, "id" | "slug">;
 /** A label at the top with the labels under it, in their project's order: labels have two levels (M3 design 3.16). */
 type LabelTree = Label & { children: Label[] };
 /** nerve's gap between a project's last label and a new one (M3 design 4.10). */
@@ -34,6 +37,7 @@ export interface ILabelStore {
   getProjectLabelIds: (projectId: string | null | undefined) => string[] | undefined;
   // fetch actions
   fetchProjectLabels: (projectId: string) => Promise<Label[] | undefined>;
+  fetchWorkspaceLabels: (workspace: WorkspaceRef) => Promise<Label[] | undefined>;
   // changes
   createLabel: (projectId: string, data: LabelCreate) => Promise<Label>;
   updateLabel: (labelId: string, data: LabelUpdate) => Promise<Label>;
@@ -64,15 +68,20 @@ const deleted =
 
 /**
  * The labels of the projects of a session (M3 design 3.16, 7.3): each project's list, by its id, which its pages
- * fetch; labels are a project's only, the workspace's across its projects are M7's. Their order is nerve's (sort
- * order, then id), and the labels under a label at the top come from parent_id. The labels of a project the project
- * store no longer gives (deleted, left, or of a workspace no longer the caller's) do not show. Its service sends with
- * the session's client; changes go one at a time and the store writes nerve's answers (v0 design 7.7); fetches do
- * not queue.
+ * fetch, and each workspace's catalog, by its id, the labels of its projects the caller is a member of, unarchived,
+ * which the pages listing work items across them fetch (M7/P6b spec 2.2). A project's labels are its own list, else
+ * its part of its workspace's catalog when the catalog lists it (joinedAndUnarchived: the catalog leaves out any other
+ * project, which has labels all the same). Their order is nerve's (sort order, then id), and the labels under a label
+ * at the top come from parent_id. The labels of a project the project store no longer gives (deleted, left, or of a
+ * workspace no longer the caller's) do not show. Its service sends with the session's client; changes go one at a
+ * time and the store writes nerve's answers on the project's list and its workspace's catalog (v0 design 7.7); fetches
+ * do not queue.
  */
 export class LabelStore implements ILabelStore {
   /** Each project's labels, reconciled between fetches and changes (reconciled.ts). */
   private readonly projects = new ReconciledByKey<Label[]>();
+  /** Each workspace's catalog. */
+  private readonly workspaces = new ReconciledByKey<Label[]>();
   // services
   private readonly service: LabelsService;
   /** The changes of the labels, sent one at a time. */
@@ -87,6 +96,7 @@ export class LabelStore implements ILabelStore {
       labelMap: computed,
       // actions
       fetchProjectLabels: action,
+      fetchWorkspaceLabels: action,
       createLabel: action,
       updateLabel: action,
       updateLabelPosition: action,
@@ -97,11 +107,11 @@ export class LabelStore implements ILabelStore {
   }
 
   get labelMap() {
-    const shown = this.projects
-      .values()
-      .flat()
-      .filter((label) => this.projectOf(label.project_id));
-    return Object.fromEntries(shown.map((label) => [label.id, label]));
+    // the projects' lists last: a label in both shows as its project's list has it, as getProjectLabels gives it
+    const held = [...this.workspaces.values(), ...this.projects.values()].flat();
+    return Object.fromEntries(
+      held.filter((label) => this.projectOf(label.project_id)).map((label) => [label.id, label])
+    );
   }
 
   /** @description the label, of a project the caller sees, as the store last had it from nerve */
@@ -110,12 +120,17 @@ export class LabelStore implements ILabelStore {
   );
 
   /**
-   * @description the project's labels, by sort order, then id; undefined until fetched, or once the project store
-   * no longer gives the project
+   * @description the project's labels, by sort order, then id: its own list, else its part of its workspace's catalog
+   * when the catalog lists it; undefined until fetched, or once the project store no longer gives the project
    */
   getProjectLabels = computedFn((projectId: string | null | undefined): Label[] | undefined => {
     const project = this.projectOf(projectId);
-    const labels = project && this.projects.get(project.id);
+    if (!project) return undefined;
+    const labels =
+      this.projects.get(project.id) ??
+      (joinedAndUnarchived(project)
+        ? this.workspaces.get(project.workspace_id)?.filter((label) => label.project_id === project.id)
+        : undefined);
     return labels && inOrder(labels);
   });
 
@@ -138,13 +153,20 @@ export class LabelStore implements ILabelStore {
     this.projects.fetch(projectId, () => this.service.list(projectId));
 
   /**
+   * @description fetches the workspace's catalog, the labels of its projects the caller is a member of, unarchived, as
+   * fetchProjectLabels fetches a project's
+   */
+  fetchWorkspaceLabels = (workspace: WorkspaceRef): Promise<Label[] | undefined> =>
+    this.workspaces.fetch(workspace.id, () => this.service.listInWorkspace(workspace.slug));
+
+  /**
    * @description creates a label, last of its project's: at the top unless data names a parent; fails, changing
    * nothing, when nerve refuses
    */
   createLabel = (projectId: string, data: LabelCreate): Promise<Label> =>
     this.changes(async () => {
       const label = await this.service.create(projectId, data);
-      this.projects.confirm(label.project_id, upserted(label));
+      this.confirm(label, upserted(label));
       return label;
     });
 
@@ -189,13 +211,13 @@ export class LabelStore implements ILabelStore {
     this.changes(async () => {
       const label = this.held(labelId);
       await this.service.delete(label.id);
-      this.projects.confirm(label.project_id, deleted(label.id));
+      this.confirm(label, deleted(label.id));
     });
 
-  /** Sends a change of a label, its turn come, and makes nerve's answer on its project's list. */
+  /** Sends a change of a label, its turn come, and makes nerve's answer on its project's list and its workspace's. */
   private async send(labelId: string, data: LabelUpdate): Promise<Label> {
     const label = await this.service.update(labelId, data);
-    this.projects.confirm(label.project_id, replaced(label));
+    this.confirm(label, replaced(label));
     return label;
   }
 
@@ -204,5 +226,11 @@ export class LabelStore implements ILabelStore {
     const label = this.getLabelById(labelId);
     if (!label) throw new Error("Label not found");
     return label;
+  }
+
+  /** A change nerve confirmed to a label's project: made on its project's list and on its workspace's catalog. */
+  private confirm(label: Pick<Label, "project_id" | "workspace_id">, change: Change<Label[]>): void {
+    this.projects.confirm(label.project_id, change);
+    this.workspaces.confirm(label.workspace_id, change);
   }
 }

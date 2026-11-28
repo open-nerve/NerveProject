@@ -81,6 +81,7 @@ type fakes struct {
 	deleteState         *fakeDelete
 	markDefault         *fakeDelete
 	listWorkspaceStates *fakeListWorkspaceStates
+	listWorkspaceLabels *fakeListWorkspaceLabels
 	listLabels          *fakeListLabels
 	createLabel         *fakeCreateLabel
 	updateLabel         *fakeUpdateLabel
@@ -260,6 +261,9 @@ func newServer(t *testing.T, f fakes) http.Handler {
 	if f.listWorkspaceStates == nil {
 		f.listWorkspaceStates = &fakeListWorkspaceStates{}
 	}
+	if f.listWorkspaceLabels == nil {
+		f.listWorkspaceLabels = &fakeListWorkspaceLabels{}
+	}
 	if f.listLabels == nil {
 		f.listLabels = &fakeListLabels{}
 	}
@@ -277,8 +281,8 @@ func newServer(t *testing.T, f fakes) http.Handler {
 		GetPreferences: f.prefs, UpdatePreferences: fakeUpdatePreferences{f.prefs}, ListMembers: f.members, AddMembers: f.add,
 		JoinProject: f.join, UpdateMember: f.updateMember, RemoveMember: f.removeMember, LeaveProject: f.leave, ListStates: f.listStates,
 		CreateState: f.createState, UpdateState: f.updateState, DeleteState: f.deleteState,
-		MarkDefaultState: f.markDefault, ListWorkspaceStates: f.listWorkspaceStates, ListLabels: f.listLabels, CreateLabel: f.createLabel,
-		UpdateLabel: f.updateLabel, DeleteLabel: f.deleteLabel})
+		MarkDefaultState: f.markDefault, ListWorkspaceStates: f.listWorkspaceStates, ListWorkspaceLabels: f.listWorkspaceLabels,
+		ListLabels: f.listLabels, CreateLabel: f.createLabel, UpdateLabel: f.updateLabel, DeleteLabel: f.deleteLabel})
 	return router
 }
 

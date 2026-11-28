@@ -50,7 +50,7 @@ type Props = {
  * without the white space around it, an emoji one character as nerve counts; it has the focus as the dialog opens. Every control is in the natural Tab order (icon, name, description, Cancel, submit). A name the rules refuse,
  * or one nerve refuses, shows its message under it and takes the focus (useRefusedFocus); a refusal resets nothing.
  */
-export function ProjectViewForm(props: Props) {
+export function ViewForm(props: Props) {
   const { view, editing, busy, onSubmit, onCancel } = props;
   // nerve hooks
   const { t } = useTranslation();

@@ -18,6 +18,8 @@ export enum EIssuesStoreType {
   MODULE = "MODULE",
   /** A project's view's page: its project's list under the page's draft of the view (P6a spec 2.5). */
   PROJECT_VIEW = "PROJECT_VIEW",
+  /** A workspace's view's page: the workspace's list under the page's preferences (M7/P6b spec 2.3). */
+  GLOBAL = "GLOBAL",
   ARCHIVED = "ARCHIVED",
   DEFAULT = "DEFAULT",
   WORKSPACE_DRAFT = "WORKSPACE_DRAFT",

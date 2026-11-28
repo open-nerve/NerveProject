@@ -84,6 +84,10 @@ var rules = map[shared.Action]Rule{
 	// Every active member; the list holds the states of the projects he is
 	// an active member of, those state.list lets him list (M3 design 3.4).
 	"workspace_state.list": {Level: LevelWorkspace, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember, shared.RoleGuest}},
+	// Every active member; the list holds the labels of the unarchived
+	// projects he is an active member of, which label.list lets him list
+	// (M7/P6b spec 2.1).
+	"workspace_label.list": {Level: LevelWorkspace, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember, shared.RoleGuest}},
 	// The project's admins, and its members who are the workspace's admins
 	// (M3 design 3.4: a project-level rule, which Plane's pages hold).
 	"project.update": {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin}},

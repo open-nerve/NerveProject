@@ -6,7 +6,7 @@
 
 import { observer } from "mobx-react";
 // components
-import { CreateUpdateProjectViewModal } from "@/components/views/modal";
+import { CreateUpdateViewModal } from "@/components/views/modal";
 // hooks
 import { useLabel } from "@/hooks/store/use-label";
 import { useMember } from "@/hooks/store/use-member";
@@ -51,9 +51,9 @@ export const ProjectLevelWorkItemFiltersHOC = observer(function ProjectLevelWork
 
   return (
     <>
-      <CreateUpdateProjectViewModal
+      <CreateUpdateViewModal
         workspaceSlug={workspaceSlug}
-        projectId={projectId}
+        container={{ kind: "project", projectId }}
         content={saving.saveAs ?? undefined}
         isOpen={saving.saveAs !== null}
         handleClose={saving.closeSaveAs}

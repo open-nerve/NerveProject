@@ -1,7 +1,7 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
-import type { Issue, IssueListGroupField, IssueListOrder, ProjectIssueFilters } from "@nerve/api-client";
+import type { Issue, IssueListGroupField, IssueListOrder, ProjectIssueFilters, ViewFilters } from "@nerve/api-client";
 import type { TWorkItemFilterExpression, TWorkItemFilterConditionData } from "@nerve/types";
-import type { MemberIssueQuery, ProjectIssueQuery } from "@/services/issue/issue-list.service";
+import type { MemberIssueQuery, ProjectIssueQuery, WorkspaceIssueQuery } from "@/services/issue/issue-list.service";
 
 const fields = [
   "state_id",
@@ -210,11 +210,16 @@ export function toModuleFilters(expression: TWorkItemFilterExpression): ModulePa
   return filters;
 }
 
-/** Member views additionally accept one validated project condition. */
-export function toMemberFilters(
-  expression: TWorkItemFilterExpression
-): ProjectIssueFilters & Pick<MemberIssueQuery, "project_id"> {
-  const result = cleanMemberFields(toProjectFilters(expression));
+/** A list page's filters in nerve's words: the project page's, and a workspace's projects (M7/P6b spec 2.4). */
+export type ListPageFilters = ProjectIssueFilters & Pick<ViewFilters, "project_id">;
+/** The workspace's pages' filters: the contract's 11 words, neither a cycle nor a module (M7/P6b spec 2.4, R5). */
+export type WorkspacePageFilters = Omit<ListPageFilters, "cycle_id" | "module_id"> & {
+  cycle_id?: never;
+  module_id?: never;
+};
+
+/** The one validated project condition of an expression; none when it holds no project condition, or more than one. */
+function projectIdsOf(expression: TWorkItemFilterExpression): string[] | undefined {
   const nodes = isRecord(expression) ? ("and" in expression ? expression.and : [expression]) : [];
   const projects = Array.isArray(nodes)
     ? nodes.flatMap((node) =>
@@ -230,11 +235,27 @@ export function toMemberFilters(
           ? [value]
           : undefined
       : undefined;
-  const projectIds = cleanValues("project_id", ids);
+  return cleanValues("project_id", ids);
+}
+
+/** Member views additionally accept one validated project condition. */
+export function toMemberFilters(
+  expression: TWorkItemFilterExpression
+): ProjectIssueFilters & Pick<MemberIssueQuery, "project_id"> {
+  const result = cleanMemberFields(toProjectFilters(expression));
+  const projectIds = projectIdsOf(expression);
   return { ...result, ...(projectIds ? { project_id: projectIds } : {}) };
 }
 
-export function toFilterExpression(filters: ProjectIssueFilters): TWorkItemFilterExpression {
+/** A workspace's page's filters: the project page's ten words besides a cycle and a module, and its projects. */
+export function toWorkspaceFilters(expression: TWorkItemFilterExpression): WorkspacePageFilters {
+  const { cycle_id: _cycle, module_id: _module, ...filters } = toProjectFilters(expression);
+  const projectIds = projectIdsOf(expression);
+  return { ...filters, ...(projectIds ? { project_id: projectIds } : {}) };
+}
+
+/** A list page's filters in the controls' words, a workspace's projects last (M7/P6b spec 2.4). */
+export function toFilterExpression(filters: ListPageFilters): TWorkItemFilterExpression {
   const and: TWorkItemFilterConditionData[] = [];
   const cleaned = cleanFilters(filters);
   for (const field of fields) {
@@ -248,6 +269,8 @@ export function toFilterExpression(filters: ProjectIssueFilters): TWorkItemFilte
       }
     else and.push({ [`${field}__in`]: values.join(",") });
   }
+  const projectIds = cleanValues("project_id", filters?.project_id);
+  if (projectIds) and.push({ project_id__in: projectIds.join(",") });
   return and.length ? { and } : {};
 }
 
@@ -299,6 +322,19 @@ export function memberListQuery(
     ...(groupBy && !["state_id", "assignee_id", "created_by_id", "cycle_id", "module_id"].includes(groupBy)
       ? { group_by: groupBy }
       : {}),
+  };
+}
+
+/** The workspace's list's query (M7/P6b spec 2.4): its projects, its ten other words and order; flat, never grouped. */
+export function workspaceListQuery(filters: WorkspacePageFilters, display: Display = {}): WorkspaceIssueQuery {
+  display ??= {};
+  const projectIds = cleanValues("project_id", filters?.project_id);
+  const { cycle_id: _cycle, module_id: _module, ...words } = cleanFilters(filters);
+  return {
+    ...(projectIds ? { project_id: projectIds } : {}),
+    ...words,
+    order_by: order(display.order_by),
+    sub_issue: display.sub_issue === false ? "false" : "true",
   };
 }
 

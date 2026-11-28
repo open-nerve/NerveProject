@@ -72,7 +72,7 @@ function operate(kind: Kind, source?: IssueListBinding): Promise<unknown> {
 }
 const endpointOf = (binding: IssueListBinding): ["GET", string] => [
   "GET",
-  binding.scope.scope === "member"
+  binding.scope.scope !== "project"
     ? "/api/v0/workspaces/ws/members/actor/issues"
     : `/api/v0/projects/${binding.scope.projectID}/issues`,
 ];

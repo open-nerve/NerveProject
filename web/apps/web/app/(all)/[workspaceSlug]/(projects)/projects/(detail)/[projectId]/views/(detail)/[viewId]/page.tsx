@@ -8,6 +8,7 @@ import { observer } from "mobx-react";
 import { useNavigate } from "react-router";
 // nerve imports
 import { useTranslation } from "@nerve/i18n";
+import { EIssuesStoreType } from "@nerve/types";
 import { Loader } from "@nerve/ui";
 // assets
 import emptyView from "@/app/assets/empty-state/view.svg?url";
@@ -80,7 +81,7 @@ const ViewVisit = observer(function ViewVisit(props: VisitProps) {
   // store hooks
   const { getViewById } = useViews();
   const { pageLeaving } = useViewsPage();
-  const read = useViewPageRead(workspaceSlug, viewId);
+  const read = useViewPageRead(EIssuesStoreType.PROJECT_VIEW, workspaceSlug, viewId);
   // the route's project's view alone: one of another project is not found here
   const held = getViewById(viewId);
   const view = held?.project_id === projectId ? held : undefined;

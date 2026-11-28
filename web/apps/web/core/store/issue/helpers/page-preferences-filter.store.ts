@@ -1,7 +1,7 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 import { cloneDeep, isEmpty, set } from "lodash-es";
 import { action, makeObservable, observable, runInAction } from "mobx";
-import type { IssueListDisplayFilters, ProjectIssueFilters, ProjectPreferences } from "@nerve/api-client";
+import type { IssueListDisplayFilters, ProjectPreferences } from "@nerve/api-client";
 import type { TSupportedFilterTypeForUpdate } from "@nerve/constants";
 import { EIssueFilterType } from "@nerve/constants";
 import type {
@@ -13,14 +13,14 @@ import type {
   TWorkItemFilterExpression,
 } from "@nerve/types";
 import { oneAtATime } from "@/lib/one-at-a-time";
-import { projectListQuery, toFilterExpression } from "@/lib/issue-filters";
+import { projectListQuery, toFilterExpression, type ListPageFilters } from "@/lib/issue-filters";
 import type { IIssueRootStore } from "../root.store";
 import { IssueFilterHelperStore } from "./issue-filter-helper.store";
 
 /** The fields every list page's own preferences hold on nerve: the project's page and a cycle's page alike. */
 type PagePreferenceField = "filters" | "display_filters" | "display_properties";
 /** A page's preferences with the page's own filters `F`: the project page's, or a cycle's or module's page's. */
-export type PagePreferences<F extends ProjectIssueFilters> = Pick<
+export type PagePreferences<F extends ListPageFilters> = Pick<
   ProjectPreferences,
   "display_filters" | "display_properties"
 > & { filters: F };
@@ -30,7 +30,7 @@ export type PagePreferences<F extends ProjectIssueFilters> = Pick<
  * is a property, not a method, so that its body is checked strictly: a service taking another page's filters does
  * not fit (P7b R18).
  */
-export interface PagePreferencesService<F extends ProjectIssueFilters> {
+export interface PagePreferencesService<F extends ListPageFilters> {
   get(id: string): Promise<PagePreferences<F>>;
   update: (id: string, body: Partial<PagePreferences<F>>) => Promise<PagePreferences<F>>;
 }
@@ -38,7 +38,7 @@ export interface PagePreferencesService<F extends ProjectIssueFilters> {
 export interface IPagePreferencesFilter {
   filters: Record<string, IIssueFilters>;
   getIssueFilters(id: string): IIssueFilters | undefined;
-  confirmed(id: string): PagePreferences<ProjectIssueFilters> | undefined;
+  confirmed(id: string): PagePreferences<ListPageFilters> | undefined;
   fetchFilters: (workspaceSlug: string, id: string) => Promise<void>;
   updateFilterExpression: (workspaceSlug: string, id: string, filters: TWorkItemFilterExpression) => Promise<void>;
   updateFilters: (
@@ -120,7 +120,7 @@ function controlOrder(value: string): string {
  * store type. A page gives its service, its filters' converter and its store type and passes its id on each call; the
  * base reads no route. The page's filters `F` are its converter's; its service must take them.
  */
-export class PagePreferencesFilter<F extends ProjectIssueFilters>
+export class PagePreferencesFilter<F extends ListPageFilters>
   extends IssueFilterHelperStore
   implements IPagePreferencesFilter
 {
@@ -289,7 +289,7 @@ export class PagePreferencesFilter<F extends ProjectIssueFilters>
   };
 }
 
-function keep<F extends ProjectIssueFilters, K extends PagePreferenceField>(
+function keep<F extends ListPageFilters, K extends PagePreferenceField>(
   held: PagePreferences<F>,
   value: PagePreferences<F>,
   field: K

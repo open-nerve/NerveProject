@@ -25,6 +25,7 @@ import { WorkItemFiltersRow } from "@/components/work-item-filters/filters-row";
 import { useIssues } from "@/hooks/store/use-issues";
 import { IssuesStoreContext } from "@/hooks/use-issue-layout-store";
 import { useLocalIssueFilterUpdate } from "@/hooks/use-local-issue-filter-update";
+import { useWorkspaceLabelCatalog } from "@/hooks/use-workspace-label-catalog";
 
 type Props = {
   type: TProfileViews;
@@ -49,6 +50,8 @@ export const ProfileIssuesPage = observer(function ProfileIssuesPage(props: Prop
   const { error } = useSessionSWR(allowed ? ["PROFILE_ISSUE_FILTERS", workspaceSlug, userId] : null, (slug, user) =>
     fetchFilters(slug, user)
   );
+  // the label groups' names and the label filter's options come from the workspace's catalog (M7/P6b spec 2.12)
+  useWorkspaceLabelCatalog(workspaceSlug ?? "", allowed);
   if (error) return <div role="alert">{t(errorMessageKey(error))}</div>;
   if (!allowed) return null;
 

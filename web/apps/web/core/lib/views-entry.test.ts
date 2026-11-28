@@ -1,8 +1,9 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 import { describe, expect, it } from "vitest";
 import { EUserPermissions } from "@nerve/constants";
+import { EUserWorkspaceRoles } from "@nerve/types";
 import { projectOf } from "@/store/project/fake-projects";
-import { viewEntryOn, viewsCreatableBy } from "./views-entry";
+import { viewEntryOn, viewsCreatableBy, workspaceViewsCreatableBy, workspaceViewsOn } from "./views-entry";
 
 // The one rule of the ways into a project's views (P6a spec 2.2, R14; M7 design 3.11; M6-M7-07): its switch is on and
 // the caller has a role in the project, an admin's, a member's or a guest's; an archived project is no exception, as
@@ -57,5 +58,28 @@ describe("viewsCreatableBy", () => {
 
   it("offers none for a project not held, whatever the role", () => {
     for (const [, role] of roles) expect(viewsCreatableBy(undefined, role)).toBe(false);
+  });
+});
+
+// A workspace's own views (M7/P6b spec 2.7, R13): no switch; its admins and members read them, as nerve's
+// workspace_view.read decides; its guests are refused, and one with no role in it (not its member) has none.
+const workspaceRoles = [
+  ["an admin", EUserWorkspaceRoles.ADMIN, true],
+  ["a member", EUserWorkspaceRoles.MEMBER, true],
+  ["a guest", EUserWorkspaceRoles.GUEST, false],
+  ["one with no role", undefined, false],
+] as const;
+
+describe("workspaceViewsOn", () => {
+  it.each(workspaceRoles)("offers a workspace's views to %s (role %s): %s", (_who, role, on) => {
+    expect(workspaceViewsOn(role)).toBe(on);
+  });
+});
+
+// A new view of the workspace's own is offered as nerve's workspace_view.create decides (M7/P6b spec 2.7): to its
+// admins and members, as their reading; not to its guests, nor to one with no role in it.
+describe("workspaceViewsCreatableBy", () => {
+  it.each(workspaceRoles)("offers a new workspace's view to %s (role %s): %s", (_who, role, offered) => {
+    expect(workspaceViewsCreatableBy(role)).toBe(offered);
   });
 });

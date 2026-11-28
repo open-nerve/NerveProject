@@ -29,6 +29,13 @@ export type IssueListScope =
       workspaceID: string;
       userID: string;
       query: import("@/services/issue/issue-list.service").MemberIssueQuery;
+    }
+  | {
+      /** The workspace's list (M7/P6b spec 2.3, R1): the work items of the projects the caller is a member of; flat. */
+      scope: "workspace";
+      workspaceSlug: string;
+      workspaceID: string;
+      query: import("@/services/issue/issue-list.service").WorkspaceIssueQuery;
     };
 
 export type ReadRequest = Readonly<{
@@ -48,9 +55,12 @@ export function scopeRole(root: IIssueRootStore, scope: IssueListScope): number 
     : permission.getWorkspaceRoleByWorkspaceSlug(scope.workspaceSlug);
 }
 
-/** Archived and member lists need a member or an admin; any role reads a project's open list. */
+/**
+ * Archived and member lists need a member or an admin; any role reads a project's open list, and the workspace's list
+ * (its guests too, M7/P6b spec 2.3).
+ */
 export function allowsRole(scope: IssueListScope, role: number | undefined): boolean {
-  return scope.scope === "member" || scope.query.archived === "true"
+  return scope.scope === "member" || (scope.scope === "project" && scope.query.archived === "true")
     ? role === EUserPermissions.ADMIN || role === EUserPermissions.MEMBER
     : role !== undefined;
 }
@@ -79,13 +89,20 @@ export async function readPage(
         }
       : {}),
   };
+  const scope = list.scope;
   const page =
-    list.scope.scope === "project"
-      ? await list.root.listApi.listProject(list.scope.projectID, query)
-      : await list.root.listApi.listMember(list.scope.workspaceSlug, list.scope.userID, {
-          ...query,
-          relation: list.scope.query.relation,
-        });
+    scope.scope === "project"
+      ? await list.root.listApi.listProject(scope.projectID, query)
+      : scope.scope === "member"
+        ? await list.root.listApi.listMember(scope.workspaceSlug, scope.userID, {
+            ...query,
+            relation: scope.query.relation,
+          })
+        : // flat: a later page names its cursor alone
+          await list.root.listApi.listWorkspace(scope.workspaceSlug, {
+            ...scope.query,
+            ...(part && !first && cursor ? { cursor } : {}),
+          });
   const projects = list.scope.scope === "project" ? [list.scope.projectID] : (list.scope.query.project_id ?? []);
   if (!currentScope() || !list.root.isReadCurrent(token, projects, list.scope.workspaceID))
     throw new SessionChangedError();
@@ -99,7 +116,7 @@ export async function readPage(
       (issue) =>
         issue.workspace_id !== list.scope.workspaceID ||
         (list.scope.scope === "project" && issue.project_id !== list.scope.projectID) ||
-        (list.scope.scope === "member" &&
+        (list.scope.scope !== "project" &&
           !!list.scope.query.project_id?.length &&
           !list.scope.query.project_id.includes(issue.project_id))
     )

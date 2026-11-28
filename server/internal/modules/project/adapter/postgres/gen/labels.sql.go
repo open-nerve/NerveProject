@@ -228,6 +228,66 @@ func (q *Queries) ListLabels(ctx context.Context, projectID uuid.UUID) ([]ListLa
 	return items, nil
 }
 
+const listWorkspaceLabels = `-- name: ListWorkspaceLabels :many
+SELECT l.id, l.workspace_id, l.project_id, l.parent_id, l.name, l.color, l.sort_order, l.created_at, l.updated_at
+FROM labels l
+         JOIN projects p ON p.id = l.project_id
+         JOIN project_members m ON m.project_id = p.id
+WHERE p.workspace_id = $1 AND p.deleted_at IS NULL AND p.archived_at IS NULL
+  AND m.member_id = $2 AND m.is_active AND m.deleted_at IS NULL
+  AND l.deleted_at IS NULL
+ORDER BY l.project_id, l.sort_order, l.id
+`
+
+type ListWorkspaceLabelsParams struct {
+	WorkspaceID uuid.UUID
+	UserID      uuid.UUID
+}
+
+type ListWorkspaceLabelsRow struct {
+	ID          uuid.UUID
+	WorkspaceID uuid.UUID
+	ProjectID   uuid.UUID
+	ParentID    *uuid.UUID
+	Name        string
+	Color       string
+	SortOrder   float64
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+}
+
+// listWorkspaceLabels (M7/P6b spec 2.1): the undeleted labels, parents and children alike, of the workspace's undeleted,
+// unarchived projects the account is an active member of, by project id, then sort order, then id.
+func (q *Queries) ListWorkspaceLabels(ctx context.Context, arg ListWorkspaceLabelsParams) ([]ListWorkspaceLabelsRow, error) {
+	rows, err := q.db.Query(ctx, listWorkspaceLabels, arg.WorkspaceID, arg.UserID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListWorkspaceLabelsRow
+	for rows.Next() {
+		var i ListWorkspaceLabelsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkspaceID,
+			&i.ProjectID,
+			&i.ParentID,
+			&i.Name,
+			&i.Color,
+			&i.SortOrder,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateLabel = `-- name: UpdateLabel :one
 UPDATE labels l
 SET name          = coalesce($1::text, l.name),

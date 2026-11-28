@@ -57,7 +57,8 @@ export type TCreateModalStoreTypes =
   | EIssuesStoreType.PROFILE
   | EIssuesStoreType.CYCLE
   | EIssuesStoreType.MODULE
-  | EIssuesStoreType.PROJECT_VIEW;
+  | EIssuesStoreType.PROJECT_VIEW
+  | EIssuesStoreType.GLOBAL;
 
 export const ISSUE_GROUP_BY_OPTIONS: {
   key: TIssueGroupByOptions;

@@ -6,7 +6,7 @@
 
 import { computed, makeObservable, observable, runInAction } from "mobx";
 // types
-import type { ApiClient, MemberUser, State, Label, Issue } from "@nerve/api-client";
+import type { ApiClient, MemberUser, State, Label, Issue, ProjectIssueFilters } from "@nerve/api-client";
 import { EIssuesStoreType } from "@nerve/types";
 // store
 import type { IIssueDetail } from "@/store/issue/issue-details/root.store";
@@ -31,8 +31,10 @@ import { CyclePriorityIssues } from "./cycle/priority-issues.store";
 import { ModuleIssues, type IModuleIssues } from "./module/issue.store";
 import { ProjectViewIssues } from "./project-view/issue.store";
 import { ProjectViewIssuesFilter } from "./project-view/filter.store";
-import { ViewDraftService } from "./project-view/view-draft.service";
+import { ViewDraftService } from "./helpers/view-draft.service";
 import { PagePreferencesFilter, type IPagePreferencesFilter } from "./helpers/page-preferences-filter.store";
+import { GlobalIssues } from "./workspace/issue.store";
+import { GlobalIssuesFilter } from "./workspace/filter.store";
 import type { IWorkspaceDraftIssues } from "./workspace-draft";
 import { WorkspaceDraftIssues } from "./workspace-draft";
 import { IssueWrites } from "./issue-writes";
@@ -123,6 +125,9 @@ export class IssueRootStore {
   /** A project's view's page's draft of the view, by view id, and its list (P6a spec 2.5, 2.6); no route followed. */
   projectViewIssuesFilter: ProjectViewIssuesFilter;
   projectViewIssues: ProjectViewIssues;
+  /** A workspace's view's page's preferences, by page id, and its list (M7/P6b spec 2.3, 2.4); no route followed. */
+  globalIssuesFilter: GlobalIssuesFilter;
+  globalIssues: GlobalIssues;
 
   archivedIssuesFilter: IArchivedIssuesFilter;
   archivedIssues: IArchivedIssues;
@@ -217,8 +222,11 @@ export class IssueRootStore {
     this.moduleIssuesFilter = new PagePreferencesFilter(this, moduleService, toModuleFilters, EIssuesStoreType.MODULE);
     this.moduleIssues = new ModuleIssues(this, this.moduleIssuesFilter);
 
-    this.projectViewIssuesFilter = new ProjectViewIssuesFilter(this, new ViewDraftService(rootStore.views.fetchView));
+    const drafts = new ViewDraftService<ProjectIssueFilters>(rootStore.views.fetchView, (filters) => filters);
+    this.projectViewIssuesFilter = new ProjectViewIssuesFilter(this, drafts);
     this.projectViewIssues = new ProjectViewIssues(this, this.projectViewIssuesFilter);
+    this.globalIssuesFilter = new GlobalIssuesFilter(this, rootStore.views.fetchView);
+    this.globalIssues = new GlobalIssues(this, this.globalIssuesFilter);
 
     this.archivedIssuesFilter = new ArchivedIssuesFilter(this);
     this.archivedIssues = new ArchivedIssues(this, this.archivedIssuesFilter);

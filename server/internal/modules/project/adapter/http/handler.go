@@ -120,6 +120,11 @@ type ListWorkspaceStatesUseCase interface {
 	Execute(ctx context.Context, slug string) ([]domain.State, error)
 }
 
+// ListWorkspaceLabelsUseCase is app.ListWorkspaceLabels.
+type ListWorkspaceLabelsUseCase interface {
+	Execute(ctx context.Context, slug string) ([]domain.Label, error)
+}
+
 // ListLabelsUseCase is app.ListLabels.
 type ListLabelsUseCase interface {
 	Execute(ctx context.Context, projectID uuid.UUID) ([]domain.Label, error)
@@ -164,6 +169,7 @@ type UseCases struct {
 	DeleteState         DeleteStateUseCase
 	MarkDefaultState    MarkDefaultStateUseCase
 	ListWorkspaceStates ListWorkspaceStatesUseCase
+	ListWorkspaceLabels ListWorkspaceLabelsUseCase
 	ListLabels          ListLabelsUseCase
 	CreateLabel         CreateLabelUseCase
 	UpdateLabel         UpdateLabelUseCase

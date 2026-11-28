@@ -46,6 +46,8 @@ created: 2026-11-10
 
 **处理结果（M7/P6a，项目视图的词）：** 视图页是项目列表页的一种，词表与项目页相同（`web/packages/constants/src/issue/filter.ts:245` 的 `[EIssuesStoreType.PROJECT_VIEW]: ISSUE_DISPLAY_FILTERS_BY_PAGE.issues`），筛选与分组照项目页给迭代、模块词；迭代页、模块页另存的视图带该迭代、模块的条件（`web/apps/web/core/hooks/planning-page-domains.ts:44` 的新列 `viewTerms`，迭代 `:61` 给 `cycle_id`、模块 `:75` 给 `module_id`），另存出来的与页面上看到的是同一批工作项（[P6a spec](../specs/P6a-web-project-views.md) §2.7、R7；变异 `t8-mut-no-view-terms`；H12 (page) `e2e/stories/collaboration/h12-project-view-saving-page.spec.ts:141`）。项目视图的部分关闭；工作区视图（D4 不收）、工作区级的迭代、模块列表、跨项目的行与工作区范围的命令面板搜索照上，M7 收官时定去向。保持 open。
 
+**处理结果（M7/P6b，工作区视图的词）：** 工作区视图页照 D4（[P6b spec](../specs/P6b-web-workspace-views.md) §2.4、R5，预检 m1）：词表是契约的 11 个（`web/packages/constants/src/issue/filter.ts` 的 `ISSUE_DISPLAY_FILTERS_BY_PAGE.workspace_issues`，改名自 `my_issues`），不给迭代、模块词；Display 的属性去掉 `cycle`、`modules`（工作区的路由上表格不出这两列）；工作区页的筛选类型 `WorkspacePageFilters` 以 `cycle_id?: never`、`module_id?: never` 守住（`web/apps/web/core/lib/issue-filters.ts`），已存视图的草稿丢掉这两个键（`ViewDraftService` 的 `filtersOf`）。变异 `t8-mut-display-planning-offered`；H13 (page) 核 Display 没有 Cycle、Modules（`e2e/stories/collaboration/h13-workspace-list-page.spec.ts:136`）。视图的迭代、模块词两侧都已处理；工作区级的迭代、模块列表、跨项目的行改读它、工作区范围的命令面板搜索仍未做，M7 收官时定去向。保持 open。
+
 <a id="M6-M7-04"></a>
 ## M6-M7-04 视图的 store、读与页面，M3 的视图遗留
 
@@ -74,6 +76,16 @@ created: 2026-11-10
 - M3 第 3 节视图的三项：弹窗与右键菜单见 [M3-closeout §3](M3-closeout.md#3-键盘弹窗和下拉框) 的 P6a 处理结果；视图页头的 `CustomSearchSelect`（`@nerve/ui` 的 `BreadcrumbNavigationSearchDropdown`）以键盘核过，三种引擎：焦点在切换器上按 Enter 打开，搜索框取得焦点，打字、下箭头选中（`aria-activedescendant`）、Enter 换到另一个视图（`e2e/stories/collaboration/h20-view-pages.spec.ts:52-69` 的 `switchByKeyboard`，在 `:125`、`:146` 用）。
 
 项目视图一半关闭；工作区视图的 store、页面与 M3 交给它的项随 P6b。保持 open。
+
+**处理结果（M7/P6b，工作区视图一半）：** 逐项（[P6b spec](../specs/P6b-web-workspace-views.md) §2.6–§2.11）：
+- 视图的 store 与读：P6a 的 `ViewStore`、`ViewChanges` 按容器扩到工作区视图（`web/apps/web/core/store/views/view-container.ts`），只调 `/api/v0`（`listWorkspaceViews`、`createWorkspaceView` 与单个视图的取、改、删），类型来自 `@nerve/api-client`；Plane 的 `GlobalViewStore`（`RootStore.globalView`）、`useGlobalView`、旧 `WorkspaceService` 与 `IWorkspaceView` 删去（T11）；读只在用到的页面（列表页、切换器、视图页）。
+- 页面：工作区视图列表页与视图页重写（`workspace-views/(list)`、`(detail)`），视图页的列表经 `GLOBAL` 接通（T8、T9、T11）。
+- 视图的文案：页面、页头、弹窗与提示经 `t()`，新键六个（R29）；拒绝按 nerve 的问题码说（弹窗经 `useFormRefusal` 放到名字下或提示，删除与“更新视图”经 `useRefusalToast`）。
+- 嵌套的按钮：工作区视图的旧菜单随旧组件删去，行与页头用 P6a 的 `core/components/views/quick-actions.tsx` 与新的 `core/components/workspace/views/default-view-menu.tsx`。
+- 改过与新写的工作区视图文件读路由参数，收入关键词规则 `workspace-address-route`；按容器取角色一律走 `getWorkspaceRoleByWorkspaceSlug`、`getProjectRoleByWorkspaceSlugAndProjectId`（不换成 `allowPermissions`，`project-address-route` 不放宽）。
+- M3 第 3 节视图的三项：工作区视图的弹窗与右键菜单见 [M3-closeout §3](M3-closeout.md#3-键盘弹窗和下拉框) 的 P6b 处理结果；工作区视图页头的切换器（`BreadcrumbNavigationSearchDropdown`）以键盘核过，三种引擎（`e2e/stories/collaboration/h20-workspace-view-pages.spec.ts:60-72` 的 `switchByKeyboard`，在 `:126`、`:147` 用）。
+
+工作区视图一半关闭；两半都已关闭，**这一条关闭。**
 
 <a id="M6-M7-05"></a>
 ## M6-M7-05 `getTabIndex` 与两份 `tab-indices.ts` 的最后删除
