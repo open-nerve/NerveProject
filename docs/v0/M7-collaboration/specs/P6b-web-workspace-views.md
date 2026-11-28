@@ -1,6 +1,6 @@
 # M7 / P6b：网页的工作区视图与跨项目列表——工作区标签目录、视图页、列表页、另存与更新视图
 
-> 状态：草稿，已照主控对起草时 §8 四件待定的裁定（D-29–D-32）与补记的照收修正；预检 [re-97](../../../reviews/re-97-M7P6b预检.md)（修正后通过：重要 5、次要 9）主控全部采纳，I1–I5、m1–m9 已照它的修法并入（另并入观察 o1、o3、o4、o6 的建议），待主控核对。基线 main `6dead17d`（P6a 的 noff，`6dead17d7aa199f8d124cfdb403eacc64aedb1e5`）。设计见 [M7 设计](../M7-design.md) §2（H13 `:40`、H14 `:41`、H20 `:47`）、§3.7（`:118-121`）、§5（`:192-211`）、§7（`:240`、`:242-243`、`:246`、`:248`）、§12（P6b 一行 `:309`）、§14；网页的长期规则见[总体设计 §7.2、§7.7](../../v0-design.md#77-stores-按会话分代长期有效m2-起)（请求体轮到时才算 `:638`）。调研与裁定在台账 `.superpowers/sdd/P6b-web-workspace-views/`：`research/scope.md`、`research/questions.md`（Q1–Q26）、`rulings.md`（D-1–D-32，本 spec 的 R1–R32 逐条对应；D-29–D-32 是主控 2026-11-27 对起草时 §8 四件待定的裁定，已并入）。负责人 2026-11-27 批了两件：D-16 加接口 `listWorkspaceLabels`（P6b 唯一的合同改动），D-8 不改合同（工作区视图的合同默认布局仍是 `list`）。P4–P6a 的裁定照旧约束 P6b。新写的代码注释一律写 “M7/P6b spec”（代码里已有 76 处 “P6b spec” 指 M6/P6b）。
+> 状态：草稿，已照主控对起草时 §8 四件待定的裁定（D-29–D-32）与补记的照收修正；预检 [re-97](../../../reviews/re-97-M7P6b预检.md)（修正后通过：重要 5、次要 9）主控全部采纳，I1–I5、m1–m9 已照它的修法并入（另并入观察 o1、o3、o4、o6 的建议）；已实现（T1–T14 与 I2 的修复，T15 写文档），实施中的改动就地标“实施中改（T…）”，经过与实施中的裁定见[阶段记录](../reviews/P6b-web-workspace-views-review.md) §3；整分支审查、修复轮与终检在 T16，合并与集成由 P7 的 T1 补记。基线 main `6dead17d`（P6a 的 noff，`6dead17d7aa199f8d124cfdb403eacc64aedb1e5`）。设计见 [M7 设计](../M7-design.md) §2（H13 `:40`、H14 `:41`、H20 `:47`）、§3.7（`:118-121`）、§5（`:192-211`）、§7（`:240`、`:242-243`、`:246`、`:248`）、§12（P6b 一行 `:309`）、§14；网页的长期规则见[总体设计 §7.2、§7.7](../../v0-design.md#77-stores-按会话分代长期有效m2-起)（请求体轮到时才算 `:638`）。调研与裁定在台账 `.superpowers/sdd/P6b-web-workspace-views/`：`research/scope.md`、`research/questions.md`（Q1–Q26）、`rulings.md`（D-1–D-32，本 spec 的 R1–R32 逐条对应；D-29–D-32 是主控 2026-11-27 对起草时 §8 四件待定的裁定，已并入）。负责人 2026-11-27 批了两件：D-16 加接口 `listWorkspaceLabels`（P6b 唯一的合同改动），D-8 不改合同（工作区视图的合同默认布局仍是 `list`）。P4–P6a 的裁定照旧约束 P6b。新写的代码注释一律写 “M7/P6b spec”（代码里已有 76 处 “P6b spec” 指 M6/P6b）。
 
 缩写：`C` = `web/apps/web/core`；`W` = `web/apps/web`；`P` = `W/app/(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]`（同 P6a）；`WV` = `W/app/(all)/[workspaceSlug]/(projects)/workspace-views`；`WC` = `C/components/workspace/views`；`VC` = `C/components/views`；`IL` = `C/components/issues/issue-layouts`；`PKG` = `web/packages`；`E` = `e2e`；`K` = `tools/keywords.json`；`HO` = `docs/v0/M7-collaboration/handoffs`；`D` = M7 设计；`NAV` = `api/modules/navigation.yaml`；`PRJ` = `api/modules/project.yaml`；`ISS` = `api/modules/issue.yaml`；`SV` = `server/internal/modules/project`；`BS` = `server/internal/bootstrap`；`PW` = 只读的 `plane/apps/web`；`P6aS` = [P6a spec](P6a-web-project-views.md)；`P6aR` = [P6a 阶段记录](../reviews/P6a-web-project-views-review.md)；`L` = 台账目录。
 
@@ -64,7 +64,7 @@ P6 在设计 §12 分两段，P6b 是工作区一半（`D:309`）。P6b 交付�
   - 草稿页 `C/components/issues/workspace-draft/root.tsx`（门是 `drafts.canRead(ws)`，`:23`、`:27`）。
   不进工作区外壳（`use-workspace-fetch.ts`），通知的预览照旧按项目读（P5b T9）。`.oxlintrc.json` 的 swr 名单（`:205-219` 那一组）收入这个文件。
 - **挂载清单**：`E/fixtures/mounts.ts` 加 `WORKSPACE_LABELS = ["GET /api/v0/workspaces/{slug}/labels"]`（注释：工作区视图页、个人页的工作项、草稿页各在挂载时读一次，按各页的门），头注释 `:5-16` 的已读、不读清单照实补一句 M7 P6b。
-- **S2**（`E/stories/smoke/s2-web-app.spec.ts`）：管理员与成员的 `profileVisits`（`:128-137`）与 `draftsVisit`（`:148-151`）各加 `...WORKSPACE_LABELS`，`:128` 的注释（“no preference or label-catalog fetch”）照实改；访客的行（`:208-219`，个人页与草稿页都不读）不变。
+- **S2**（`E/stories/smoke/s2-web-app.spec.ts`）：管理员与成员的 `profileVisits`（`:128-137`）与 `draftsVisit`（`:148-151`）各加 `...WORKSPACE_LABELS`，`:128` 的注释（“no preference or label-catalog fetch”）照实改；访客的行（`:208-219`，个人页与草稿页都不读）不变。（实施中改（T4、T5）：`draftsVisit` 的导入是多行的列表，加一个名字多一行，文件 582 → 583，主控接受；个人页一组在允许清单之内以 `.concat` 改写，583 → 581。）
 
 ### 2.3 列表引擎的 `GLOBAL` 与 `"workspace"` 范围（R1，L!）
 
@@ -93,7 +93,7 @@ P6 在设计 §12 分两段，P6b 是工作区一半（`D:309`）。P6b 交付�
   7. `PKG/constants/src/issue/common.ts:55-60` 的 `TCreateModalStoreTypes` 加 `GLOBAL`（空态的新建以它打开，§2.8）。
   8. `IL/spreadsheet/base-spreadsheet-root.tsx:29-33` 的联合加 `GLOBAL`。
   9. `IL/empty-states/index.tsx:22-37` 加 `case GLOBAL`（§2.8 的空态）。这个 `switch` 有 `default: return null`（`:35-36`），加枚举不动它也编译，漏了就什么都不画：所以它在 T9（空态的组件同一提交），单测一格、变异一行（去掉 `case`）。
-  10. `C/hooks/use-issue-list-mount.ts`（68）：对 `GLOBAL`，`page` 一段取路由的 `globalViewId`（同一工作区两个页面不共用一个键）；角色取工作区角色（`getWorkspaceRoleByWorkspaceSlug`）；`allowed` 为有角色；项目集取这一页筛选的 `toWorkspaceFilters(…).project_id ?? []`；`identity(workspaceID, projectIDs, false)`。
+  10. `C/hooks/use-issue-list-mount.ts`（68）：对 `GLOBAL`，`page` 一段取路由的 `globalViewId`（同一工作区两个页面不共用一个键）；角色取工作区角色（`getWorkspaceRoleByWorkspaceSlug`）；`allowed` 为有角色；项目集取这一页筛选的 `toWorkspaceFilters(…).project_id ?? []`；`identity(workspaceID, projectIDs, false)`；挂载的目标对 `GLOBAL` 是 `""`（实施中改（T8）：工作区的路由没有 `projectId`，`sessionKey` 遇 `undefined` 给 `null`、整页不读，GREEN 时发现）。
   11. 行的快捷操作 `ProjectIssueQuickActions`（`IL/quick-action-dropdowns/project-issue.tsx:178-182`）：**不改**。工作区的行照个人页走 `PROJECT`（编辑与复制经项目页的对话框写，写入经 `covers` 进工作区列表）；单测一格钉住“在工作区页上编辑一行，工作区列表里那一行跟着变”。
   - **不接**（各写一句理由，不是遗漏）：`IL/command-host.tsx:30-36` 的 `DIALOG_STORES`（只管分组头的“+”，`IL/list/headers/group-by-card.tsx:95`、`IL/kanban/headers/group-by-card.tsx:110`；表格不分组）；`C/hooks/use-group-dragndrop.ts`（表格不拖）；列表、看板、日历三个根的联合（只渲染表格）；`IL/utils.tsx:24-25` 的 `isWorkspaceLevel`（表格的路径上没有读者）；M6 的两张表；`usePageFilterExpression` 的联合（同 P6a R10，§2.4）。
 - **命令**：新 `C/hooks/use-global-issue-actions.ts`，成员写全：`fetchIssues`、`fetchNextIssues`、`createIssue`、`createIssueAsGiven`、`updateIssue`、`removeIssue`、`archiveIssue`、`updateFilters`。建、改、删、归档同个人页（在给定的项目里，写进每一个显示它的列表）；`updateFilters` 不看调用方给的 id（表格传的是路由的项目 id，`base-spreadsheet-root.tsx:97-104`，工作区路由上是 `""`），用路由算出的页面 id，经新 `C/hooks/use-global-preferences-follow.ts` 跟进（`usePagePreferencesFollow` 的 `capture`、`listed`、`relist`，先例 `C/hooks/use-project-view-preferences-follow.ts`）。故意不给：`addIssuesToView`（没有日历的某一天）、`dropIssue`（表格不拖）。
@@ -109,7 +109,7 @@ P6 在设计 §12 分两段，P6b 是工作区一半（`D:309`）。P6b 交付�
   - `toFilterExpression(filters: ListPageFilters)`（`:237-252`）收 `project_id`（`project_id__in`）；个人页的绕行随之删去：`C/store/issue/profile/filter.store.ts:27-32` 的 `cleanExpression` 变为 `toFilterExpression(toMemberFilters(expression))`，个人页的行为不变（它的单测不改）。
 - **`PagePreferencesFilter` 的类型界**（`C/store/issue/helpers/page-preferences-filter.store.ts`，298，不过 300）：`F extends ProjectIssueFilters` 放宽为 `F extends ListPageFilters`（`:23`、`:33`、`:41`、`:123`、`:292`），不加方法、不改行为、显示的换算仍不导出（P6a R28）。项目页、迭代页、模块页、项目视图页的既有测试不改全过。
 - **`GlobalIssuesFilter`**（`C/store/issue/workspace/filter.store.ts`）：`extends PagePreferencesFilter<WorkspacePageFilters>`，转换器 `toWorkspaceFilters`，store 类型 `GLOBAL`，服务是按页面 id 分路的 `WorkspacePagePreferences`（同文件，私有）：默认视图的页面 id → `DefaultViewPreferences`，其余（已存视图的 id）→ 泛化的 `ViewDraftService<WorkspacePageFilters>`。只多两个方法：`discard(pageId)`（转给那一路的 `discard`，并删 `filters[pageId]`，同 `C/store/issue/project-view/filter.store.ts` 的 `discard`）与 `adopt(viewId, view)`（转给草稿）。
-- **页面 id**（新 `C/store/issue/workspace/page-id.ts`）：`workspacePageId(slug, globalViewId)`：默认视图的键是 `JSON.stringify([slug, key])`（同 `profile/filter.store.ts` 的范围键写法），已存视图是视图 id；`defaultViewOfPage(pageId)` 反过来给 `{ slug, key }` 或 `undefined`。理由：`PagePreferencesService.get(id)` 只收 id（`page-preferences-filter.store.ts:33-36`），默认视图的四个键在每个工作区都一样，浏览器里的显示要按工作区分。
+- **页面 id**（新 `C/store/issue/workspace/page-id.ts`）：`workspacePageId(slug, globalViewId)`：默认视图的键是 `JSON.stringify([slug, key])`（同 `profile/filter.store.ts` 的范围键写法），已存视图是视图 id；`defaultViewOfPage(pageId)` 反过来给默认视图的键（`DefaultWorkspaceViewKey`）或 `undefined`（实施中改（T8）：原写 `{ slug, key }`，产品只当真假用、没有人读 `slug`，回字面量的两个字段是死成员）。理由：`PagePreferencesService.get(id)` 只收 id（`page-preferences-filter.store.ts:33-36`），默认视图的四个键在每个工作区都一样，浏览器里的显示要按工作区分。
 - **默认视图的偏好**（新 `C/store/issue/workspace/default-view-preferences.ts`，`DefaultViewPreferences implements PagePreferencesService<WorkspacePageFilters>`，线上词，R3）：
   - `get(pageId)`：`filters` 是这次进入在内存里持有的（没有即 `{}`）；`display_filters`、`display_properties` 是浏览器里存的（没有即默认：`WORKSPACE_VIEW_CONTENT` 的显示与属性，§2.11）。
   - 存储：`@/lib/local-storage` 的 `storage`，键 `workspace_view_display`，条目按（账户 id、页面 id）；账户 id 取 `rootIssueStore.currentUserId`，没有就不读不写。读回逐字段校验：布局一律 `spreadsheet`、`group_by`/`sub_group_by` 一律 `null`、`order_by` 是字符串（否则默认；不合法的词由 `show` 与 `workspaceListQuery` 各自回到 `-created_at`）、`sub_issue`/`show_empty_groups` 是布尔、`calendar` 用默认；属性按 14 个键取布尔，缺的用默认。解析失败或存储不可用一律用默认；写失败吞掉（值仍在内存）。不复用 `handleIssuesLocalFilters`（`C/store/issue/helpers/issue-filter-helper.store.ts:206-305`）：它按控件词校验显示（`localDisplayFilters`），线上词会被丢。
@@ -193,11 +193,11 @@ P6 在设计 §12 分两段，P6b 是工作区一半（`D:309`）。P6b 交付�
 ### 2.9 另存与更新视图（R10，L!）
 
 - **拆分**：`C/components/work-item-filters/filters-hoc/use-project-view-saving.ts`（170）拆成：新 `use-view-update.ts`（容器无关的“更新视图”，下面）与按容器的另存——`use-project-view-saving.ts` 只剩项目页的另存并组合 `useViewUpdate`（名字与导出不变，P6a 的 HOC 不改），新 `use-workspace-view-saving.ts` 是工作区的另存加 `useViewUpdate`。每份不过 150 行。
-- **“更新视图”（共用）**：`useViewUpdate({ storeType, workspaceSlug, viewId, canUpdate })`，`storeType` 是 `PROJECT_VIEW` 或 `GLOBAL`（取那一页的筛选 store：`confirmed`、`adopt`、`fetchFilters`，与富筛选实例）。
+- **“更新视图”（共用）**：`useViewUpdate({ storeType, workspaceSlug, viewId, enabled, writes, shown })`（实施中改（T10）：原写 `canUpdate`；`enabled` 是这一页是视图页，`writes` 是调用者按容器的写权，由两份另存各自给，`shown` 是页面显示的筛选，下面 `canUpdate` 的另两条容器无关、在共用的 hook 里算），`storeType` 是 `PROJECT_VIEW` 或 `GLOBAL`（取那一页的筛选 store：`confirmed`、`adopt`、`fetchFilters`，与富筛选实例）。
   - **请求体整个在轮到时从草稿算**（O1 的结构守护，选定这一种）：`body = () => { const draft = drafts.confirmed(viewId); return { filters: draft.filters, display_filters: draft.display_filters, display_properties: draft.display_properties } }`；点击交进来的表达式（`PKG/shared-state/src/store/rich-filters/filter.ts:501`）不用。不变量：草稿是这一页列出什么的唯一来源（列表的查询、富筛选的显示都由它来，`page-preferences-filter.store.ts:160-172`），发出去的就是轮到那一刻页面列出的；成功之后草稿、页面的筛选与基线都是 nerve 的回答。从轮到到回答之间草稿不变，仍由在途停用（P6a R29）守着；回答 `adopt` 进草稿，与当前表达式不等价时 `resetExpression`（P6a 的做法），所以在途中漏进来的改动不会被记成已存。
   - **两句边界**（预检 m3）：① `confirmed(viewId)` 的类型可以是 `undefined`：为空时体抛错、不发请求（同 `remove` 在轮到时找不到视图的写法，`C/store/views/view-changes.ts:91-92`），HOC 的 `failed` 一支照失败处理（提示、按钮留着）。它在这条路上不会为空：基类的 `values` 只增不删（`page-preferences-filter.store.ts:128`、`:195`、`:229`，没有删除），而“更新视图”只在布局根画出之后可点，布局根要 `getIssueFilters(viewId)`，它与 `values` 在同一次 `fetchFilters` 里写（`:195-196`）；一格钉住（下一句的那一格同时证它不为空）。② 页面在轮到之前离开：子类的 `discard` 不清基类的 `values`（`:155-157`，`C/store/issue/project-view/filter.store.ts:27-28`），所以离开之后才轮到的体是离开前的草稿，发出去的仍是用户点击时看到的；离开又进来（重新播种）之后才轮到，体是视图读回的内容，等于一次空改。单测一格：扣住前一笔、点击、卸下页面、放开，体等于卸下之前的草稿。
   - 其余同 P6a R9：等 nerve 的回答；成功 → 提示（按容器的键：`project_views.action.update.success` / `workspace_views.action.update.success`）、`adopt`、`fetchFilters`、必要时 `resetExpression`，然后 resolve；失败 → 按码提示、reject，草稿与基线不动、按钮留着；跟进只在 HOC 还挂着时、经 `followInSession`；成功之后焦点落在筛选行的添加筛选。`hasAdditionalChanges` 比 `confirmed(viewId)` 的显示与属性和视图存着的（线上词）。
-  - `canUpdate`：视图在、所有者是当前用户、项目视图过 `viewsCreatableBy(project, role)` / 工作区视图过 `workspaceViewsCreatableBy(role)`。不看 `is_locked`。
+  - 给不给（`canUpdate`）：视图在、所有者是当前用户（这两条在 `useViewUpdate` 里），项目视图过 `viewsCreatableBy(project, role)` / 工作区视图过 `workspaceViewsCreatableBy(role)`（这一条是 `writes`，由两份另存给；实施中改（T10））。不看 `is_locked`。`onViewUpdate` 不收参数（点击的表达式在结构上用不到，实施中改（T10））。
 - **另存（工作区）**：五种工作区页（四个默认视图与已存视图页）都给，给谁照 `workspaceViewsCreatableBy`，按钮在富筛选有条件时出现（shared-state 的 `canSaveView`，`filter.ts:271-273`；所以“分配给我”先加一个条件才有“Save as”）。弹窗（容器为工作区，§2.11）预填 `{ filters: { ...toWorkspaceFilters(expression), ...自己的词 }, display_filters: { ...confirmed.display_filters, layout: "spreadsheet" }, display_properties: confirmed.display_properties }`，名字为空（P6a R30）；成功之后转到新视图的页面。项目页的另存不变（P6a R7、R8）。
 - **工作区 HOC**（`filters-hoc/workspace-level.tsx`，208，改后不过 150）：去掉 Plane 的分支（`useGlobalView`、`is_locked`、`owned_by`、`access`、“{name} 2”/“Untitled” 的预填、`rich_filters` 的体、英文提示，`:39-160`）；只剩筛选行的宿主：选项（§2.4）、`useWorkspaceViewSaving`、另存的弹窗。个人页照旧不给保存（行为不变）。`shared.ts`（33）里只给 HOC 覆盖标签与 `isDisabled` 的类型若随之没有读者，同一提交删去（核读者写进台账）。P4 R17 的工作区一半关闭（`specs/P4-web-notifications.md:379-381`）。
 - **在途停用**：工作区已存视图页照 P6a R29：来源只有 `ViewStore.isUpdating(viewId)`；筛选行、页头的筛选开关与 Display、表格列头的排序、空态的清除筛选都停用（后两处经 `DraftBusyContext`）。默认视图没有“更新视图”，不停用。
@@ -207,7 +207,7 @@ P6 在设计 §12 分两段，P6b 是工作区一半（`D:309`）。P6b 交付�
 - **布局**：`WV/(list)/layout.tsx` 以 `workspaceSlug` 为 key，提供页面状态（只有搜索词，新 `WC/page-state.tsx`，先例 `VC/page-state.tsx`），宿主 `ViewActionsHost`（容器为工作区）在 key 之内；离开页面、换工作区即丢。布局在 T9 建（key 与宿主），页面状态在 T11 加。
 - **页面**（`WV/(list)/page.tsx`）：搜索框（`InputGroup`，以 `t("common.search.label")` 为名）；默认四行（按名字的译文不分大小写的子串过滤）；`workspaceViewsOn` 时另列已存行（读在途 → 加载；失败 → 失败与重试；没有已存视图时只有默认四行；搜索筛掉全部时给“没有匹配”，`common.search.no_matches_found`）。访客只见默认四行、不读。没有排序与筛选（Plane 相同）。
 - **页头**（`WV/(list)/header.tsx`）：面包屑（`t("views")`，不是链接）与 “Add view”（`workspaceViewsCreatableBy`，打开宿主的新建）。
-- **行**：已存行用 P6a 的 `VC/view-list-item.tsx`、`view-list-item-action.tsx` 按容器泛化（§2.11），链到 `/{slug}/workspace-views/{id}`；默认行是新 `WC/default-view-row.tsx`（T11），链到 `/{slug}/workspace-views/{key}`，菜单只有复制链接与新标签页打开：`WC/default-view-menu.tsx`（T9 为视图页页头建，§2.8；以同一工厂的两项组成，`C/components/common/quick-actions-helper.tsx`；复制经 `useCopyLink`，成功与失败各自提示；菜单按钮以 `t("common.item_options", { name })` 为名、一行一个右键菜单）。
+- **行**：已存行用 P6a 的 `VC/view-list-item.tsx`、`view-list-item-action.tsx` 按容器泛化（§2.11），链到 `/{slug}/workspace-views/{id}`；默认行是新 `WC/default-view-row.tsx`（T11），链到 `/{slug}/workspace-views/{key}`，菜单只有复制链接与新标签页打开：`WC/default-view-menu.tsx`（T9 为视图页页头建，§2.8；以同一工厂的两项组成，`C/components/common/quick-actions-helper.tsx`；复制经 `useCopyLink`，成功与失败各自提示；菜单按钮以 `t("common.item_options", { name })` 为名、一行一个右键菜单；实施中改（T11）：`default-view-menu.tsx` 加可选的 `parentRef`，给了就同时渲染右键菜单，视图页的页头不传）。
 
 ### 2.11 弹窗、宿主、行菜单与删除按容器（R14、R15，L!）
 
@@ -216,12 +216,13 @@ P6 在设计 §12 分两段，P6b 是工作区一半（`D:309`）。P6b 交付�
 - **行菜单**（`VC/quick-actions.tsx`，106）：角色按容器（项目角色 / 工作区角色），`isAdmin` 是那一级的管理员，`isOwner` 是所有者且那一级的角色是管理员或成员；链接按容器；复制经 `useCopyLink`（`C/hooks/use-copy-link.ts:42`）。容器的角色与写权限收成一个 hook（新 `VC/use-view-rights.ts`，读者是行菜单与两份另存）；地址收成新 `VC/view-paths.ts`（`viewPath`、`viewsPath`，与路由的形状同一处的 `pageViewParam`，下一条），读者是弹窗、行、菜单、删除。
 - **删除**（`VC/delete-view-modal.tsx`，92）：确认之后，删的是这一页显示的视图时转到 `viewsPath(container)`（工作区：列表页 `/{slug}/workspace-views`）；文案按容器（工作区用已有的 `workspace_views.delete_view.{title,content}`、`workspace_views.action.delete.success`）；`pageLeaving` 的规则照旧。“这一页显示的视图”的 id 按容器从路由取（预检 I5）：今天弹窗读 `useParams().viewId`（`:43`），以它判 `shownByPage`、设 `pageLeaving`（`:58-59`）、决定跳不跳（`:69`），而工作区的路由参数叫 `globalViewId`（`W/app/routes/core.ts:78-81`）。`VC/view-paths.ts` 给 `pageViewParam(container)`（项目 `"viewId"`、工作区 `"globalViewId"`），弹窗读 `useParams()[pageViewParam(container)]`，不直接读 `viewId`（`VC/` 的产品文件里读路由参数的只有这一处）。默认视图的键永远不等于视图 id，所以默认视图页上不会误判。
 - **行**（`VC/view-list-item.tsx`、`view-list-item-action.tsx`）：`projectId` 换成 `container`。
+- **组件的名字**（实施中改（T7），主控裁定）：服务两种容器的组件去掉名字里的 “Project”——`CreateUpdateViewModal`、`DeleteViewModal`、`ViewForm`、`ViewListItem`（`ProjectViewsList` 仍只是项目的列表页，留着）；P5a 的 `C/components/modals/project-level.test.tsx` 对弹窗的替身照新 props 改（读 `container.projectId`），断言不改。
 - **删去**（在最后的读者走掉的 Task 里）：`WC/quick-action.tsx`、`WC/default-view-quick-action.tsx` 只被 T9 删掉的 `WV/header.tsx`（`:19`、`:21`）导入，另有 `WV/layout.test.tsx:29-30` 的两个替身（同在 T9 删）：在 T9 删，`K` 的两个 `copy-hook` 例外（`K:3424-3437`，路径在 `:3426`、`:3433`）同一提交删（文件没了例外即成 stale，`tools/keywords.mjs:182-211` 报错）；`WC/{modal,form,delete-view-modal,view-list-item,default-view-list-item,views-list}.tsx` 的最后读者在 T11 走掉（`modal.tsx` 还被工作区 HOC 读到 T10、被 `view-list-item.tsx` 读到 T11），在 T11 删。
 
 ### 2.12 个人页的按标签分组与标签筛选（R18，L!）
 
 - 个人页挂载时读目录（§2.2，门是 `allowed`）；分组的列（`IL/group-columns.tsx:266-284`）与筛选的选项（工作区 HOC 的 `labelIds`）都经 `labelMap` 拿到目录里的标签，组名齐全、空组齐全，“—”只剩真的不认识的 id（服务端答了、目录里没有：读之后被删的）。`group-columns.tsx` 不改（它读 `labelMap` 的写法本来就对），`:277` 的注释照实改；HOC 的注释（`workspace-level.tsx:55` 的 “a cold profile does not fetch a catalog”）随 §2.9 的改写删去。
-- I19（`E/stories/issue/i19-member-issues.spec.ts`，528，M4 的故事）两处改写（允许清单，不让文件变长）：`:336` 改为“这一路恰一个目录的读、没有项目标签的读”；`:460` 的标题与 `:485-493` 改为“重载前后各一个目录的读（`[目录, 项目标签, 目录]`，项目标签那一次是详情的标签下拉打开时读的），筛选的标签选项在冷的重载之后仍在”。三处的正则（`:336`、`:485`、`:491`，今天只认 `/projects/{id}/labels`，目录的读匹配不上）收成文件里的一个常量。
+- I19（`E/stories/issue/i19-member-issues.spec.ts`，528，M4 的故事）两处改写（允许清单，不让文件变长）：`:337`（原 `:336`）改为“这一路每个标签的读都是工作区的目录，至少一个，从不读项目的标签；次数是 SWR 的（挂载时读、2 秒去重）”（实施中改（T14）：原写“这一路恰一个目录的读”——个人页的布局以 `[workspaceSlug, userId, profileViewId]` 为 key，每换一个页签整个重挂、挂载时再读，三个页签一路是 1 到 3 次，由墙上时钟与 2 秒的去重窗定；§2.2 的“挂载时读”本来如此，主控取 (A)，只改故事）；`:461`（原 `:460`）的标题与 `:486-493`（原 `:485-493`）改为“重载前后各一个目录的读（`[目录, 项目标签, 目录]`，项目标签那一次是详情的标签下拉打开时读的），筛选的标签选项在冷的重载之后仍在”。三处的正则（原 `:336`、`:485`、`:491`，只认 `/projects/{id}/labels`，目录的读匹配不上）收成文件里的一个常量 `isLabelRead`（`:286`）。另 `:468` 改为点行里的名字打开浮层（实施中改（T5）：个人页读目录之后，行上的标签显示名字、属性一栏变宽，点行的正中落到状态的下拉上；主控加进 T5 的允许清单，文件仍 528 行）。
 
 ### 2.13 删除与读者（R20、R21）
 
@@ -230,12 +231,14 @@ P6 在设计 §12 分两段，P6b 是工作区一半（`D:309`）。P6b 交付�
 | 删除 | 最后的读者（基线） | 何时 |
 |---|---|---|
 | `getFilterConditionBasedOnViews`（`C/store/issue/helpers/issue-filter-helper.store.ts:134-137`、`:164-183`） | 没有调用者 | T8 |
+| `TIssueParams`（`PKG/types/src/view-props.ts:40-62`）与 `IIssueFilterHelperStore`（实施中改（T8）） | `getFilterConditionBasedOnViews` 的签名；接口只被自己的类 `implements` | T8（随帮手） |
 | `WV/layout.tsx`、`WV/header.tsx`、`WV/layout.test.tsx`（`WV/page.tsx`、`WV/[globalViewId]/page.tsx` 移进新布局） | 路由 | T9（两个新布局；列表页的正文在 T11 换） |
 | `E/stories/smoke/s2-issue-list-removal.spec.ts`（整份，R22） | — | T9（它唯一的一行钉着今天的视图页，T9 重写之后必红） |
 | `ISSUE_DISPLAY_FILTERS_BY_PAGE.my_issues`（改名，§2.4） | `WC/form.tsx:137` | T8 改名、读者按 `git grep` 跟随（索引签名，编译查不出，§2.4）；T11 随旧表单 |
 | 工作区 HOC 的旧分支（`workspace-level.tsx:39-160`） | 个人页 | T10 |
+| `removeNillKeys`（`IL/utils.tsx:42`）与只为它的 `isNil` 导入（实施中改（T10）） | 工作区 HOC 的旧分支的 `hasAdditionalChanges` | T10（随旧分支） |
 | `WC/quick-action.tsx`（107）、`WC/default-view-quick-action.tsx`（103）与 `K` 的两个 `copy-hook` 例外（`K:3424-3437`） | `WV/header.tsx:19`、`:21`（另有 `WV/layout.test.tsx:29-30` 的替身），都在 T9 删 | T9（预检 I4） |
-| `WC/{modal,form,delete-view-modal,view-list-item,default-view-list-item,views-list}.tsx` 六个旧组件 | `WV/page.tsx:17-18`（列表页，T11 换）、`filters-hoc/workspace-level.tsx:17`（T10 换） | T11 |
+| `WC/{modal,form,delete-view-modal,view-list-item,default-view-list-item,views-list}.tsx` 六个旧组件 | `WV/page.tsx:17-18`（列表页，T11 换）、`filters-hoc/workspace-level.tsx:17`（T10 换） | T11（实施中改：与 `useGlobalView` 在列表页重写的提交 ① 删，它们在那里失去最后的读者；store、service、类型在提交 ②） |
 | `C/store/global-view.store.ts`（179）、`C/hooks/store/use-global-view.ts`（17）、`RootStore.globalView`、`C/services/workspace.service.ts`（43）与 `workspace.service.test.ts`（53） | `WC/` 的旧组件、`WV` 的旧页头与布局、工作区 HOC | T11 |
 | `STATIC_VIEW_TYPES`/`TStaticViewTypes`（`PKG/types/src/workspace-views.ts:41-43`） | `WC/default-view-quick-action.tsx:14`、`:22`（另两处 T8 已去，§2.5） | T9 |
 | `PKG/types/src/workspace-views.ts` 的其余（`IWorkspaceView` `:15-39`，T11 删整份）与桶导出；`IWorkspaceViewProps`（`PKG/types/src/view-props.ts:170-174`）；`EViewAccess`（`PKG/types/src/views.ts:7-10`；`TViewFiltersSortKey`、`TViewFiltersSortBy` 被 P6a 的列表页读，留） | 旧 store、旧组件、旧 HOC（`WV/layout.test.tsx` 在 T9 已去） | T11 |
@@ -348,23 +351,23 @@ P6 在设计 §12 分两段，P6b 是工作区一半（`D:309`）。P6b 交付�
 7. **页面 id 是复合的**：服务的 `get(id)` 收不到 slug（§2.4）。
 8. **`usePageDisplay` 要按表格取选项**：它按持有的布局取（读布局 `use-page-display.ts:47`、取选项 `:55`），`list` 视图会没有 Display 的选项（§2.3 第 5 点）。
 9. **状态的选项**（调研 Q5 写“工作区状态目录已在外壳”）：状态 store 没有工作区级的 getter（`state.store.ts:32-49`），选项取各项目的 `getProjectStateIds`（回落到外壳读的目录）；同名状态各是一项（§7）。
-10. **I19 的正则匹配不到目录的读**（`:336`、`:485`、`:491` 只认 `/projects/{id}/labels`）：T4、T5 之后它们照旧过，只是 `:460` 的标题不再是真的；改写按 R18 放在 T14（不是红的提交）。
+10. **I19 的正则匹配不到目录的读**（`:336`、`:485`、`:491` 只认 `/projects/{id}/labels`；实施中改（T5）：读表上成立，布局上不成立，`:460` 在 T5 之后败在行变宽，见 §2.12 的 `:468`）：T4、T5 之后它们照旧过，只是 `:460` 的标题不再是真的；改写按 R18 放在 T14（不是红的提交）。
 11. **`common/applied-filters` 有读者**（`VC/applied-filters/root.tsx:11-12`）：R20 的条件不成立，不删。
 12. **`WV/layout.tsx` 直接用 `swr`**（`:22-26`），不在 swr 名单里：v0 7.7 的偏差，随 T9 删除了结。
 
 ## 4. 验收标准
 
-- [ ] **A1 接口**：契约、生成物、`gen-check`；用例、查询、处理器各有单测；规则表与 `Actions()` 一致（bootstrap 的并集测试）；权限矩阵一行三格；可见性两个测试在第 0 路（桶号写进台账）；H13 (API) 一份；设计 §5 一行。
-- [ ] **A2 目录**：标签 store 按工作区持有、按项目给出、写入两处都写；三页挂载时各读一次（各自的门），外壳不读；S2 与 `mounts.ts` 照实；swr 名单。
-- [ ] **A3 引擎**：`GLOBAL` 在 §2.3 的每个分派点（每处单测一格、变异一行）；范围臂的 `allowsRole`、`readPage`、`covers`、身份；`ListContext` 的工作区臂与 `issueMembership` 的工作区支（“分配给我”改负责人行离开、“我关注的”走重读、别的工作区的确认不动这张表）；命令写全、不给的两个写明；两个 `switch` 穷尽；钉退役的测试（两份文件三处）照 §2.3 改；项目页、迭代页、模块页、项目视图页、个人页不回归（m4-list、m4-filters、m4-detail、m6-pages、m7-pages）。
-- [ ] **A4 筛选与偏好**：11 个词；`toFilterExpression` 收 `project_id`、个人页的绕行删去；`PagePreferencesFilter` 只改类型；默认视图的显示存浏览器（按账户、工作区、视图）、筛选只在这次进入、读回的校验、每次挂载读自己的（不经 SWR，卸下立刻再挂上照常画出）；Display 没有 `cycle`、`modules`；已存视图的草稿卸下即丢、迟到的播种不建回。
-- [ ] **A5 默认视图**：四行的表；自己的词在查询里、不在词表里；死帮手与旧类型删去。
-- [ ] **A6 数据层**：工作区视图的列与建；按容器的列表；`getViewById` 按种类判可见；改删写进工作区的列表；`globalView` 删去，`root.store.test.ts` 19、`store-context.test.ts` 换例子。
-- [ ] **A7 入口与矩阵**：§2.7 的每一格有单测，H13、H14 (page) 三种角色核过；名字不含 “sentry”。
-- [ ] **A8 视图页**：以 `globalViewId` 为 key；默认视图不读视图；已存视图的四种状态、访客不发请求、项目视图的 id 算不存在、每次挂载读自己的；只渲染表格、按行判可编辑、不给快速新建；`list` 视图照表格画、原样存回；页头与面包屑链接；空态。
-- [ ] **A9 另存与更新视图**：五种工作区页给另存，默认视图另存带它的词、明写表格；“更新视图”的请求体整个在轮到时从草稿算（单测一格、变异一行；两句边界各一格）；P6a 的“更新视图”不回归（m7-pages 的 H12）；在途停用照 P6a；工作区 HOC 去掉 Plane 的分支。
-- [ ] **A10 列表页、弹窗、宿主、菜单、删除**：按容器泛化、项目一侧不回归；只有搜索；默认行的菜单；复制经 `useCopyLink`、两个 `copy-hook` 例外随旧组件在 T9 删去；删除弹窗按容器取页面的视图 id，在工作区视图自己的页头删除之后转到列表页、不闪“不存在”。
-- [ ] **A11 个人页与删除**：分组的组名与筛选的选项来自目录；I19 两处改写不变长；§2.13 的表逐项删去、读者写进阶段记录；`old-view-urls` 有样例；`workspace-address-route` 的名单；oxlint 等于上限、新文件零告警；knip；死成员 19 行清零；plane-diff；前端改动清单；交接的处理结果（§5）。
+- [x] **A1 接口**：契约、生成物、`gen-check`；用例、查询、处理器各有单测；规则表与 `Actions()` 一致（bootstrap 的并集测试）；权限矩阵一行三格；可见性两个测试在第 0 路（桶号写进台账）；H13 (API) 一份；设计 §5 一行。
+- [x] **A2 目录**：标签 store 按工作区持有、按项目给出、写入两处都写；三页挂载时各读一次（各自的门），外壳不读；S2 与 `mounts.ts` 照实；swr 名单。
+- [x] **A3 引擎**：`GLOBAL` 在 §2.3 的每个分派点（每处单测一格、变异一行）；范围臂的 `allowsRole`、`readPage`、`covers`、身份；`ListContext` 的工作区臂与 `issueMembership` 的工作区支（“分配给我”改负责人行离开、“我关注的”走重读、别的工作区的确认不动这张表）；命令写全、不给的两个写明；两个 `switch` 穷尽；钉退役的测试（两份文件三处）照 §2.3 改；项目页、迭代页、模块页、项目视图页、个人页不回归（m4-list、m4-filters、m4-detail、m6-pages、m7-pages）。
+- [x] **A4 筛选与偏好**：11 个词；`toFilterExpression` 收 `project_id`、个人页的绕行删去；`PagePreferencesFilter` 只改类型；默认视图的显示存浏览器（按账户、工作区、视图）、筛选只在这次进入、读回的校验、每次挂载读自己的（不经 SWR，卸下立刻再挂上照常画出）；Display 没有 `cycle`、`modules`；已存视图的草稿卸下即丢、迟到的播种不建回。
+- [x] **A5 默认视图**：四行的表；自己的词在查询里、不在词表里；死帮手与旧类型删去。
+- [x] **A6 数据层**：工作区视图的列与建；按容器的列表；`getViewById` 按种类判可见；改删写进工作区的列表；`globalView` 删去，`root.store.test.ts` 19、`store-context.test.ts` 换例子。
+- [x] **A7 入口与矩阵**：§2.7 的每一格有单测，H13、H14 (page) 三种角色核过；名字不含 “sentry”。
+- [x] **A8 视图页**：以 `globalViewId` 为 key；默认视图不读视图；已存视图的四种状态、访客不发请求、项目视图的 id 算不存在、每次挂载读自己的；只渲染表格、按行判可编辑、不给快速新建；`list` 视图照表格画、原样存回；页头与面包屑链接；空态。
+- [x] **A9 另存与更新视图**：五种工作区页给另存，默认视图另存带它的词、明写表格；“更新视图”的请求体整个在轮到时从草稿算（单测一格、变异一行；两句边界各一格）；P6a 的“更新视图”不回归（m7-pages 的 H12）；在途停用照 P6a；工作区 HOC 去掉 Plane 的分支。
+- [x] **A10 列表页、弹窗、宿主、菜单、删除**：按容器泛化、项目一侧不回归；只有搜索；默认行的菜单；复制经 `useCopyLink`、两个 `copy-hook` 例外随旧组件在 T9 删去；删除弹窗按容器取页面的视图 id，在工作区视图自己的页头删除之后转到列表页、不闪“不存在”。
+- [x] **A11 个人页与删除**：分组的组名与筛选的选项来自目录；I19 两处改写不变长；§2.13 的表逐项删去、读者写进阶段记录；`old-view-urls` 有样例；`workspace-address-route` 的名单；oxlint 等于上限、新文件零告警；knip；死成员 19 行清零；plane-diff；前端改动清单；交接的处理结果（§5）。
 - [ ] **A12 e2e 与收尾**：§2.15 的新故事三引擎各一次、chromium `--repeat-each=3`；六个页面配置与整套默认 e2e 不回归；S2 移除冒烟删去；终检、最终分支 CI、合并、main CI 与归档（由下一段的 T1 补记）。
 
 ## 5. 交接与后续责任
@@ -416,7 +419,7 @@ P6 在设计 §12 分两段，P6b 是工作区一半（`D:309`）。P6b 交付�
 1. 工作区视图页只渲染表格：存着 `list` 布局的视图照表格画、原样存回，网页新建与另存写 `spreadsheet`；接口不给显示时默认 `list`（负责人：不改合同）；Plane 对非表格布局什么都不画（`PW/core/components/views/helper.tsx:25-56`）（R8）。
 2. 默认视图自己的条件固定在查询里、不在筛选词表里；Plane 以它覆盖同名的筛选（`PW/core/store/issue/workspace/filter.store.ts:139-145`）（R4）。
 3. 从默认视图“另存”带它的 `me` 条件；Plane 只存页面的筛选（`PW/core/components/issues/issue-layouts/roots/all-issue-layout-root.tsx:135-147`）（R10）。
-4. 工作区页的筛选词是契约的 11 个（含 `state_id`、`mention_id`、`subscriber_id`）；Plane 9 个（R5）。不同项目的同名状态各是一个选项、不带项目标识（R31，交 M8）。
+4. 工作区页的筛选词是契约的 11 个；Plane 9 个（`plane/packages/constants/src/issue/filter.ts:171-181`，没有 `state_id`、`mention_id`；实施中改（T15）：原写的括号把 `subscriber_id` 也算成 nerve 多的，Plane 有它）（R5）。不同项目的同名状态各是一个选项、不带项目标识（R31，交 M8）。
 5. 访客只有四个默认视图，不读已存视图，打开已存视图的地址看到“不存在”、不发请求；“Add view”、编辑、删除照矩阵；Plane 都给（R11、R12）。
 6. 面包屑 “Views” 链到列表页；Plane 不链（R6）。
 7. 工作区标签目录在工作区视图页、个人页的工作项、草稿页挂载时读，一个接口；Plane 在工作区视图、草稿、通知页读，个人页不读（`PW/core/hooks/use-workspace-issue-properties.ts:40-45`）（R16、R17）。
@@ -425,7 +428,7 @@ P6 在设计 §12 分两段，P6b 是工作区一半（`D:309`）。P6b 交付�
 10. 视图的弹窗只管名字、说明、图标；行一个右键菜单、菜单按钮以视图名为名、复制失败有提示（P6a 的第 4、7 条扩到工作区视图）（R14、R15）。
 11. 已存视图不存在（含访客打开、项目视图的 id）时，动作回到工作区视图的列表页；Plane 回所有工作项（`PW/core/components/issues/issue-layouts/roots/all-issue-layout-root.tsx:115-130`）（R30）。
 
-（Plane 的行号由 T15 对照主目录的只读 `plane/` 逐一核过。）
+（T15 已对照主目录的只读 `plane/` 逐一核过：上面引的行号都对；第 3 条另补 Plane 另存的体 `PW/core/components/work-item-filters/filters-hoc/workspace-level.tsx:101-119`，第 4 条照实改，其余各条的 Plane 行号见 plane-diff 的十一行。）
 
 ## 8. 起草时的待定（已裁定）
 
