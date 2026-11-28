@@ -51,7 +51,8 @@ type TProps = {
  * answer it offers the view shown), the toggle of the page's filters and its display (the spreadsheet's options, no
  * layouts), a new view, by the page's dialog of one, for those who may make one (workspaceViewsCreatableBy), and the
  * view's quick actions: a default view's open and copy its page's link, a view of the workspace's own's are its row's,
- * under the host of its page (the layout's ViewActionsHost).
+ * under the host of its page (the layout's ViewActionsHost). While the page's draft is being saved (Update view out,
+ * ViewStore.isUpdating; spec 2.9, as P6a R29), the toggle offers no Add filter and the display stops.
  */
 export const WorkspaceViewHeader = observer(function WorkspaceViewHeader(props: TProps) {
   const { workspaceSlug, globalViewId } = props;
@@ -65,7 +66,7 @@ export const WorkspaceViewHeader = observer(function WorkspaceViewHeader(props: 
   const { openCreate } = useViewsPage();
   const { getWorkspaceBySlug } = useWorkspace();
   const { getWorkspaceRoleByWorkspaceSlug } = useUserPermissions();
-  const { getWorkspaceViews, fetchWorkspaceViews } = useViews();
+  const { getWorkspaceViews, fetchWorkspaceViews, isUpdating } = useViews();
   const { issuesFilter } = useIssues(EIssuesStoreType.GLOBAL);
   // derived values
   const workspace = getWorkspaceBySlug(workspaceSlug);
@@ -73,6 +74,7 @@ export const WorkspaceViewHeader = observer(function WorkspaceViewHeader(props: 
   const entry = workspaceViewsOn(role);
   const page = workspacePageId(workspaceSlug, globalViewId);
   const { display } = usePageDisplay(EIssuesStoreType.GLOBAL, page);
+  const busy = isUpdating(page);
   const defaultView = DEFAULT_GLOBAL_VIEWS_LIST.find((view) => view.key === globalViewId);
   const saved = useShownWorkspaceView(workspaceSlug, globalViewId);
   const title = defaultView ? issuesFilter.getIssueFilters(page) && t(defaultView.i18n_label) : saved?.name;
@@ -136,11 +138,12 @@ export const WorkspaceViewHeader = observer(function WorkspaceViewHeader(props: 
       </Header.LeftItem>
       {title && (
         <Header.RightItem className="items-center">
-          <WorkItemFiltersToggle entityType={EIssuesStoreType.GLOBAL} entityId={page} />
+          <WorkItemFiltersToggle entityType={EIssuesStoreType.GLOBAL} entityId={page} disabled={busy} />
           <FiltersDropdown
             miniIcon={<PreferencesOutline className="size-3.5" />}
             title={t("common.display")}
             placement="bottom-end"
+            disabled={busy}
           >
             <DisplayFiltersSelection {...display} />
           </FiltersDropdown>

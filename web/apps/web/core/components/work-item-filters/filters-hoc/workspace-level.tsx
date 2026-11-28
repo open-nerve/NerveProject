@@ -4,47 +4,53 @@
  * See the LICENSE file for details.
  */
 
-import { useCallback, useMemo, useState } from "react";
-import { isEqual, cloneDeep } from "lodash-es";
 import { observer } from "mobx-react";
-// nerve imports
-import { DEFAULT_GLOBAL_VIEWS_LIST, EUserPermissionsLevel } from "@nerve/constants";
-import { setToast, TOAST_TYPE } from "@nerve/propel/toast";
-import type { IWorkspaceView, TWorkItemFilterExpression } from "@nerve/types";
-import { EUserProjectRoles, EViewAccess } from "@nerve/types";
 // components
-import { removeNillKeys } from "@/components/issues/issue-layouts/utils";
-import { CreateUpdateWorkspaceViewModal } from "@/components/workspace/views/modal";
+import { CreateUpdateViewModal } from "@/components/views/modal";
 // hooks
-import { useGlobalView } from "@/hooks/store/use-global-view";
+import { useLabel } from "@/hooks/store/use-label";
 import { useMember } from "@/hooks/store/use-member";
 import { useProject } from "@/hooks/store/use-project";
+import { useProjectState } from "@/hooks/store/use-project-state";
 import { useWorkspace } from "@/hooks/store/use-workspace";
-import { useLabel } from "@/hooks/store/use-label";
-import { useUser, useUserPermissions } from "@/hooks/store/user";
 // local imports
 import { WorkItemFiltersHOC } from "./base";
-import type { TEnableSaveViewProps, TEnableUpdateViewProps, TSharedWorkItemFiltersHOCProps } from "./shared";
+import type { TSharedWorkItemFiltersHOCProps } from "./shared";
+import type { TWorkspaceViewSavingProps } from "./use-workspace-view-saving";
+import { useWorkspaceViewSaving } from "./use-workspace-view-saving";
 
 type TWorkspaceLevelWorkItemFiltersHOCProps = TSharedWorkItemFiltersHOCProps & {
   workspaceSlug: string;
-} & TEnableSaveViewProps &
-  TEnableUpdateViewProps;
+} & TWorkspaceViewSavingProps;
 
+/**
+ * The filters of a workspace's list page (a workspace's view's, the profile's work items; M7/P6b spec 2.4, 2.9), with
+ * the workspace's options: its members; its projects the caller is a member of, unarchived; their labels, as the label
+ * store holds them (all of them once the page has read the workspace's catalog); their states, each project's as the
+ * state store gives them. Save view and Update view as the page offers them (useWorkspaceViewSaving): Save view opens
+ * the view's dialog here, a view of the workspace's own, with what the new view keeps. The profile offers neither.
+ */
 export const WorkspaceLevelWorkItemFiltersHOC = observer(function WorkspaceLevelWorkItemFiltersHOC(
   props: TWorkspaceLevelWorkItemFiltersHOCProps
 ) {
-  const { children, enableSaveView, enableUpdateView, entityId, initialWorkItemFilters, workspaceSlug } = props;
-  // states
-  const [isCreateViewModalOpen, setIsCreateViewModalOpen] = useState(false);
-  const [createViewPayload, setCreateViewPayload] = useState<Partial<IWorkspaceView> | undefined>(undefined);
+  const { enableSaveView, enableUpdateView, ...filters } = props;
+  const { children, entityId, initialWorkItemFilters, workspaceSlug } = filters;
   // hooks
-  const { getViewDetailsById, updateGlobalView } = useGlobalView();
-  const { data: currentUser } = useUser();
-  const { allowPermissions } = useUserPermissions();
   const { knownProjectIds, getProjectById } = useProject();
   const { getWorkspaceBySlug } = useWorkspace();
   const { labelMap } = useLabel();
+  const { getProjectStateIds } = useProjectState();
+  const {
+    workspace: { getWorkspaceMemberIds },
+  } = useMember();
+  const saving = useWorkspaceViewSaving({
+    workspaceSlug,
+    entityId: entityId ?? "",
+    shown: initialWorkItemFilters,
+    enableSaveView,
+    enableUpdateView,
+  });
+  // derived values: the route's workspace, and the caller's projects of it
   const workspace = getWorkspaceBySlug(workspaceSlug);
   const projectIds = workspace
     ? knownProjectIds(workspace.id).filter((id) => {
@@ -52,154 +58,30 @@ export const WorkspaceLevelWorkItemFiltersHOC = observer(function WorkspaceLevel
         return project && project.workspace_id === workspace.id && project.member_role !== null && !project.archived_at;
       })
     : [];
-  // Only project labels already held by this session; a cold profile does not fetch a catalog.
   const labelIds = Object.values(labelMap)
     .filter((label) => projectIds.includes(label.project_id))
     .map((label) => label.id);
-  const {
-    workspace: { getWorkspaceMemberIds },
-  } = useMember();
-  // derived values
-  const hasWorkspaceMemberLevelPermissions = allowPermissions(
-    [EUserProjectRoles.ADMIN, EUserProjectRoles.MEMBER],
-    EUserPermissionsLevel.WORKSPACE,
-    workspaceSlug
-  );
-  const viewDetails = entityId ? getViewDetailsById(entityId) : null;
-  const isDefaultView = typeof entityId === "string" && DEFAULT_GLOBAL_VIEWS_LIST.some((view) => view.key === entityId);
-  const isViewLocked = viewDetails ? viewDetails?.is_locked : false;
-  const isCurrentUserOwner = viewDetails ? viewDetails.owned_by === currentUser?.id : false;
-  const canCreateView = useMemo(
-    () => enableSaveView && !props.saveViewOptions?.isDisabled && hasWorkspaceMemberLevelPermissions,
-    [enableSaveView, props.saveViewOptions?.isDisabled, hasWorkspaceMemberLevelPermissions]
-  );
-  const canUpdateView = useMemo(
-    () =>
-      enableUpdateView &&
-      !isDefaultView &&
-      !props.updateViewOptions?.isDisabled &&
-      !isViewLocked &&
-      hasWorkspaceMemberLevelPermissions &&
-      isCurrentUserOwner,
-    [
-      enableUpdateView,
-      props.updateViewOptions?.isDisabled,
-      isDefaultView,
-      isViewLocked,
-      hasWorkspaceMemberLevelPermissions,
-      isCurrentUserOwner,
-    ]
-  );
-  const createViewLabel = useMemo(() => props.saveViewOptions?.label, [props.saveViewOptions?.label]);
-  const updateViewLabel = useMemo(() => props.updateViewOptions?.label, [props.updateViewOptions?.label]);
-  const hasAdditionalChanges = useMemo(
-    () =>
-      !isEqual(initialWorkItemFilters?.displayFilters, viewDetails?.display_filters) ||
-      !isEqual(
-        removeNillKeys(initialWorkItemFilters?.displayProperties),
-        removeNillKeys(viewDetails?.display_properties)
-      ),
-    [initialWorkItemFilters, viewDetails]
-  );
-
-  const getDefaultViewDetailPayload: () => Partial<IWorkspaceView> = useCallback(
-    () => ({
-      name: viewDetails ? `${viewDetails?.name} 2` : "Untitled",
-      description: viewDetails ? viewDetails.description : "",
-      access: viewDetails ? viewDetails.access : EViewAccess.PUBLIC,
-    }),
-    [viewDetails]
-  );
-
-  const getViewFilterPayload: (filterExpression: TWorkItemFilterExpression) => Partial<IWorkspaceView> = useCallback(
-    (filterExpression: TWorkItemFilterExpression) => ({
-      rich_filters: cloneDeep(filterExpression),
-      display_filters: cloneDeep(initialWorkItemFilters?.displayFilters),
-      display_properties: cloneDeep(initialWorkItemFilters?.displayProperties),
-    }),
-    [initialWorkItemFilters]
-  );
-
-  const handleViewSave = useCallback(
-    (expression: TWorkItemFilterExpression) => {
-      setCreateViewPayload({
-        ...getDefaultViewDetailPayload(),
-        ...getViewFilterPayload(expression),
-      });
-      setIsCreateViewModalOpen(true);
-    },
-    [getDefaultViewDetailPayload, getViewFilterPayload]
-  );
-
-  const handleViewUpdate = useCallback(
-    (filterExpression: TWorkItemFilterExpression) => {
-      if (!viewDetails) {
-        setToast({
-          type: TOAST_TYPE.ERROR,
-          title: "We couldn't find the view",
-          message: "The view you're trying to update doesn't exist.",
-        });
-
-        return;
-      }
-
-      updateGlobalView(workspaceSlug, viewDetails.id, {
-        ...getViewFilterPayload(filterExpression),
-      })
-        .then(() =>
-          setToast({
-            type: TOAST_TYPE.SUCCESS,
-            title: "Success!",
-            message: "Your view has been updated successfully.",
-          })
-        )
-        .catch(() => {
-          setToast({
-            type: TOAST_TYPE.ERROR,
-            title: "Error!",
-            message: "Your view could not be updated. Please try again.",
-          });
-        });
-    },
-    [viewDetails, updateGlobalView, workspaceSlug, getViewFilterPayload]
-  );
-
-  const saveViewOptions = useMemo(
-    () => ({
-      label: createViewLabel,
-      isDisabled: !canCreateView,
-      onViewSave: handleViewSave,
-    }),
-    [createViewLabel, canCreateView, handleViewSave]
-  );
-
-  const updateViewOptions = useMemo(
-    () => ({
-      label: updateViewLabel,
-      isDisabled: !canUpdateView,
-      hasAdditionalChanges,
-      onViewUpdate: handleViewUpdate,
-    }),
-    [updateViewLabel, canUpdateView, hasAdditionalChanges, handleViewUpdate]
-  );
+  const stateIds = projectIds.flatMap((id) => getProjectStateIds(id) ?? []);
 
   return (
     <>
-      <CreateUpdateWorkspaceViewModal
-        preLoadedData={createViewPayload}
-        isOpen={isCreateViewModalOpen}
-        onClose={() => {
-          setCreateViewPayload(undefined);
-          setIsCreateViewModalOpen(false);
-        }}
-      />
+      {workspace && (
+        <CreateUpdateViewModal
+          workspaceSlug={workspaceSlug}
+          container={{ kind: "workspace", workspaceId: workspace.id, workspaceSlug }}
+          content={saving.saveAs ?? undefined}
+          isOpen={saving.saveAs !== null}
+          handleClose={saving.closeSaveAs}
+        />
+      )}
       <WorkItemFiltersHOC
-        {...props}
+        {...filters}
         memberIds={getWorkspaceMemberIds(workspaceSlug)}
         projectIds={projectIds}
         labelIds={labelIds}
-        saveViewOptions={saveViewOptions}
-        updateViewOptions={updateViewOptions}
+        stateIds={stateIds}
+        saveViewOptions={saving.saveViewOptions}
+        updateViewOptions={saving.updateViewOptions}
       >
         {children}
       </WorkItemFiltersHOC>

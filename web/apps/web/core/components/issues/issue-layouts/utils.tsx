@@ -6,7 +6,7 @@
 
 import type { Issue } from "@nerve/api-client";
 
-import { clone, isNil } from "lodash-es";
+import { clone } from "lodash-es";
 // nerve types
 import type {
   IIssueDisplayProperties,
@@ -33,14 +33,6 @@ export const isWorkspaceLevel = (type: EIssuesStoreType) =>
  */
 export const getIssueBlockId = (issueId: string | undefined, groupId: string | undefined, subGroupId?: string) =>
   `issue_${issueId}_${groupId}_${subGroupId}`;
-
-/**
- * method that removes Null or undefined Keys from object
- * @param obj
- * @returns
- */
-export const removeNillKeys = <T,>(obj: T) =>
-  Object.fromEntries(Object.entries(obj ?? {}).filter(([key, value]) => key && !isNil(value)));
 
 /**
  * This Method returns if the issue is new or not
