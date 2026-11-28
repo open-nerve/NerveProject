@@ -27,9 +27,9 @@ export function useGlobalIssueActions() {
   const role = workspaceSlug ? permission.getWorkspaceRoleByWorkspaceSlug(workspaceSlug) : undefined;
 
   const fetchIssues = useCallback(
-    async (loadType: TLoader, options: IssueListOptions) => {
+    async (_loadType: TLoader, options: IssueListOptions) => {
       if (!workspaceSlug || !globalViewId || role === undefined) return;
-      return issues.fetchIssues(workspaceSlug, globalViewId, loadType, options);
+      return issues.fetchIssues(workspaceSlug, globalViewId, options);
     },
     [issues, workspaceSlug, globalViewId, role]
   );

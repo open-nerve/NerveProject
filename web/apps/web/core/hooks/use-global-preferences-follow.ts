@@ -38,7 +38,7 @@ export function useGlobalPreferencesFollow() {
   );
   const relist = useCallback(
     async (slug: string) => {
-      if (globalViewId) await issues.fetchIssuesWithExistingPagination(slug, globalViewId, "mutation");
+      if (globalViewId) await issues.fetchIssuesWithExistingPagination(slug, globalViewId);
     },
     [issues, globalViewId]
   );

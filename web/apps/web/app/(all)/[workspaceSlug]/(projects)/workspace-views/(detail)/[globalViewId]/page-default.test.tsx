@@ -12,7 +12,9 @@ import type { WorkspaceRole } from "@nerve/api-client";
 import { EIssueFilterType } from "@nerve/constants";
 import { settle, where } from "@/components/common/fake-quick-actions";
 import { WorkspaceViewRoutes, shownNow, workspaceViewPageTab } from "@/components/workspace/views/fake-view-page";
+import { json } from "@/lib/auth/fake-nerve";
 import { until } from "@/lib/auth/fake-time";
+import { issueOf, issuePageOf } from "@/store/issue/fake-issues";
 import type { RootStore } from "@/store/root.store";
 import { workspacePageId } from "@/store/issue/workspace/page-id";
 import Layout from "../layout";
@@ -113,6 +115,21 @@ it("draws its list again with the browser's display when entered again at once, 
   expect(page.lists()[1]!.query).toMatchObject({ assignee_id: "me", order_by: "priority" });
   expect(shownNow()).toBe("the view");
   expect(held()?.displayFilters?.order_by).toBe("priority");
+});
+
+it("lists its own rows when entered again while its list's first read is still out, another view's page between", async () => {
+  await opened("all-issues");
+  await until(() => page.lists().length === 1, "All work items' list");
+  // Assigned, its list answered: none of its own; Back to All work items, whose read SWR joins, sending none again
+  await act(async () => void where.navigate?.("/ws/workspace-views/assigned"));
+  await until(() => page.lists().length === 2, "Assigned's list");
+  await act(async () => page.lists()[1]!.answer(json(200, issuePageOf([]))));
+  await act(async () => void where.navigate?.(-1));
+  expect(header()).toContain("default_global_view.all_issues");
+  await act(async () => page.lists()[0]!.answer(json(200, issuePageOf([issueOf("in-a")]))));
+  await settle();
+  expect(page.lists(), "the first read, joined").toHaveLength(2);
+  expect(document.getElementById("issue-in-a"), "All work items' row, on its page").not.toBeNull();
 });
 
 it.each([

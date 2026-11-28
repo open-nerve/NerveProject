@@ -1,10 +1,9 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
-import { useCallback } from "react";
+import { useCallback, useLayoutEffect } from "react";
 import { observer } from "mobx-react";
 // nerve imports
 import type { TWorkItemFilterExpression } from "@nerve/types";
 import { EIssuesStoreType } from "@nerve/types";
-import { Spinner } from "@nerve/ui";
 // components
 import { WorkspaceLevelWorkItemFiltersHOC } from "@/components/work-item-filters/filters-hoc/workspace-level";
 import { WorkItemFiltersRow } from "@/components/work-item-filters/filters-row";
@@ -54,7 +53,13 @@ export const WorkspaceViewLayoutRoot = observer(function WorkspaceViewLayoutRoot
     [follow, issuesFilter, workspaceSlug, page]
   );
   const workItemFilters = issuesFilter.getIssueFilters(page);
+  const held = workItemFilters !== undefined;
   const busy = isUpdating(page);
+  // The page's own list once its preferences are held, as it mounts (M7/P6b review m1): mounted again while its list's
+  // read is out, the table's mount joins that read and calls no fetch, which would leave the page between's list shown.
+  useLayoutEffect(() => {
+    if (held) issues.selectIssues(workspaceSlug, globalViewId);
+  }, [issues, workspaceSlug, globalViewId, held]);
 
   if (!workItemFilters) return null;
 
@@ -75,12 +80,6 @@ export const WorkspaceViewLayoutRoot = observer(function WorkspaceViewLayoutRoot
             <div className="relative flex h-full w-full flex-col overflow-hidden">
               {pageFilter && <WorkItemFiltersRow filter={pageFilter} disabled={busy} />}
               <div className="relative h-full w-full overflow-auto bg-surface-1">
-                {/* mutation loader */}
-                {issues.getIssueLoader() === "mutation" && (
-                  <div className="shadow-sm fixed top-[70px] right-[20px] z-20 flex h-[40px] w-[40px] items-center justify-center rounded-sm bg-layer-1">
-                    <Spinner className="h-4 w-4" />
-                  </div>
-                )}
                 <WorkspaceSpreadsheetRoot workspaceSlug={workspaceSlug} />
               </div>
               <IssuePeekOverview hostScope={JSON.stringify(["workspace-view", workspaceSlug, globalViewId])} />

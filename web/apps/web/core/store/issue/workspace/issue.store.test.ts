@@ -42,11 +42,7 @@ async function page(key: string) {
   return id;
 }
 async function listed(globalViewId: string, rows = [issueOf("x")]) {
-  const read = await requestedIssue(
-    tab.nerve,
-    () => issues().fetchIssues("ws", globalViewId, "init-loader", { limit: 50 }),
-    LIST
-  );
+  const read = await requestedIssue(tab.nerve, () => issues().fetchIssues("ws", globalViewId, { limit: 50 }), LIST);
   read.call.answer(json(200, issuePageOf(rows)));
   await read.promise;
   return read.call;
@@ -80,18 +76,14 @@ it("reads a saved view's page with its draft's words and no term of its own", as
 });
 
 it("reads nothing for a workspace the store does not give", async () => {
-  await expect(issues().fetchIssues("gone", "all-issues", "init-loader", { limit: 50 })).resolves.toBeUndefined();
+  await expect(issues().fetchIssues("gone", "all-issues", { limit: 50 })).resolves.toBeUndefined();
   expect(tab.nerve.calls).toEqual([]);
 });
 
 it("says whether its list was read with the page's preferences as they are now, its next page by cursor", async () => {
   const id = await page("created");
   expect(issues().isPreferenceQueryCurrent("ws", "created")).toBe(false);
-  const read = await requestedIssue(
-    tab.nerve,
-    () => issues().fetchIssues("ws", "created", "init-loader", { limit: 1 }),
-    LIST
-  );
+  const read = await requestedIssue(tab.nerve, () => issues().fetchIssues("ws", "created", { limit: 1 }), LIST);
   read.call.answer(json(200, issuePageOf([issueOf("x")], "c1")));
   await read.promise;
   expect(issues().isPreferenceQueryCurrent("ws", "created")).toBe(true);

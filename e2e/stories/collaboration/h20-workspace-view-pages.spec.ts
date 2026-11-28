@@ -31,7 +31,8 @@ import {
 // views read, answered after a move to another workspace's list; a view's read, answered after the page left it; an
 // Update view and a deletion answered after their page went; an Update view answered after another tab signed another
 // account in: each writes and says nothing on the page shown then, and back on the view, its page reads it anew. A
-// view's page is keyed by its view: Back and Forward leave its draft and its open dialog behind. The keyboard works a
+// view's page is keyed by its view: Back and Forward leave its draft and its open dialog behind; a default view's page
+// mounted again while its list's read is out shows its own list once answered (M7/P6b review m1). The keyboard works a
 // row's menu, the view's dialog (its Tab order, the icon picker's own Escape), the header's switcher and its Display,
 // and Update view, after which the focus is on the filters row's Add filter; a narrow screen keeps the header's
 // controls. The project's views pages are h20-view-pages.spec.ts's.
@@ -70,7 +71,7 @@ async function switchByKeyboard(page: Page, recorded: () => { pending: number },
   await page.keyboard.press("Enter");
 }
 
-test("H20 (page): Acme's views read, answered after a move to Beta's views, lists nothing there; Hot's read, answered after Cold's switcher opened Hot by the keyboard and Back came to Cold, writes nothing into Cold's page, and Hot opened again reads it anew, once, as alice changed it meanwhile; Back to Cold leaves Hot's draft and its open dialog behind, Cold's page its own, and Forward reads Hot anew, neither back", async ({
+test("H20 (page): Acme's views read, answered after a move to Beta's views, lists nothing there; Hot's read, answered after Cold's switcher opened Hot by the keyboard and Back came to Cold, writes nothing into Cold's page, and Hot opened again reads it anew, once, as alice changed it meanwhile; Back to Cold leaves Hot's draft and its open dialog behind, Cold's page its own, and Forward reads Hot anew, neither back; All work items' list read, answered after its switcher opened Assigned and Back came to it, lists All work items' rows", async ({
   api,
   signedInPage,
 }, testInfo) => {
@@ -179,6 +180,21 @@ test("H20 (page): Acme's views read, answered after a move to Beta's views, list
   await expect(modalDialog(page)).toHaveCount(0);
   await expect(pageMain(page).getByRole("button", { name: "Remove filter", exact: true })).toHaveCount(0);
   await expect(rowButton(page, "Update view")).toHaveCount(0);
+
+  // All work items by the switcher, its list's read held; Assigned by the switcher, its list answered, none of alice's;
+  // Back to All work items, whose read is still out: let through, its own rows on its page.
+  const releaseAll = await holdAnswer(page, "GET", issues);
+  await switcher(page, "Hot").click();
+  await page.getByRole("option", { name: "All work items", exact: true }).click();
+  await settled(page, recorded, 1);
+  await switcher(page, "All work items").click();
+  await answerTo(page, "GET", issues, () => page.getByRole("option", { name: "Assigned", exact: true }).click());
+  await expect(switcher(page, "Assigned")).toBeVisible();
+  await page.goBack();
+  await expect(switcher(page, "All work items")).toBeVisible();
+  await settled(page, recorded, 1);
+  expect((await answerTo(page, "GET", issues, releaseAll)).status()).toBe(200);
+  await expect.poll(() => shownItems(page)).toEqual(["Crash", "Typo"]);
 
   expect([watch.apiFailures, watch.oldApiRequests, watch.pageErrors]).toEqual([[], [], []]);
   await expectQuietConsole(page, watch);

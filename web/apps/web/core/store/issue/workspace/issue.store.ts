@@ -1,5 +1,4 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
-import type { TLoader } from "@nerve/types";
 import { toWorkspaceFilters, workspaceListQuery, type IssueListOptions } from "@/lib/issue-filters";
 import type { WorkspaceIssueQuery } from "@/services/issue/issue-list.service";
 import { BaseIssuesStore } from "../helpers/base-issues.store";
@@ -40,17 +39,29 @@ export class GlobalIssues extends BaseIssuesStore<GlobalIssuesFilter> {
     );
   }
 
-  /** Reads the first page of the workspace's list for the page; a workspace the store does not give, none. */
-  fetchIssues = (slug: string, globalViewId: string, _loader: TLoader, options: IssueListOptions) => {
+  /** Selects the workspace's list under the page's preferences as they are now; a workspace the store lacks, none. */
+  private selectPage(slug: string, globalViewId: string, options: IssueListOptions): IssueListBinding | undefined {
     const workspaceID = this.rootIssueStore.rootStore.workspaceRoot.getWorkspaceBySlug(slug)?.id;
-    if (!workspaceID) return Promise.resolve(undefined);
+    if (!workspaceID) return undefined;
     const preferenceQuery = this.preferenceQuery(slug, globalViewId);
     this.selectedPreferenceQuery = JSON.stringify(preferenceQuery);
     const query = { ...preferenceQuery, limit: options.limit };
-    return this.select({ scope: "workspace", workspaceSlug: slug, workspaceID, query }, options).fetchFirst();
+    return this.select({ scope: "workspace", workspaceSlug: slug, workspaceID, query }, options);
+  }
+
+  /**
+   * Shows the page's list, reading nothing (M7/P6b review m1): a page mounted again while its list's read is still out
+   * joins that read, whose fetch is not called again, and shows its own list, not the list of the page between, as it
+   * answers. Before any read, nothing: the page's first read selects its list.
+   */
+  selectIssues = (slug: string, globalViewId: string): void => {
+    if (this.options) this.selectPage(slug, globalViewId, this.options);
   };
+  /** Reads the first page of the workspace's list for the page; a workspace the store does not give, none. */
+  fetchIssues = (slug: string, globalViewId: string, options: IssueListOptions) =>
+    this.selectPage(slug, globalViewId, options)?.fetchFirst() ?? Promise.resolve(undefined);
   fetchNextIssues = (slug: string, group?: string) =>
     this.pageList(slug)?.fetchNext(group) ?? Promise.resolve(undefined);
-  fetchIssuesWithExistingPagination = (slug: string, globalViewId: string, loader: TLoader = "mutation") =>
-    this.options ? this.fetchIssues(slug, globalViewId, loader, this.options) : Promise.resolve(undefined);
+  fetchIssuesWithExistingPagination = (slug: string, globalViewId: string) =>
+    this.options ? this.fetchIssues(slug, globalViewId, this.options) : Promise.resolve(undefined);
 }
