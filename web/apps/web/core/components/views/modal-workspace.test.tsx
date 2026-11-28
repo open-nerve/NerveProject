@@ -10,10 +10,10 @@ import { heldChange, signedIn, type HeldChange } from "@/lib/auth/fake-tab";
 import { toasts } from "@/lib/fake-toast";
 import { workspaceViewOf } from "@/store/views/fake-views";
 import type { ViewContainer } from "@/store/views/view-container";
+import type { ViewContent } from "@/store/views/view-content";
 import { workspaceOf } from "@/store/workspace/fake-workspaces";
 import { closed, field, fill, submit, title } from "./fake-view-dialog";
 import { CreateUpdateViewModal } from "./modal";
-import type { ViewContent } from "./view-content";
 
 // The view's dialog in a workspace (M7/P6b spec 2.11, R14, R29): a new view of the workspace's own, of no project,
 // goes to the workspace with its name, description and icon and the spreadsheet's display nerve gives a view made

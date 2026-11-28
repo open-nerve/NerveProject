@@ -1,8 +1,8 @@
 /** Copyright (c) 2026-present OpenNerve. SPDX-License-Identifier: AGPL-3.0-only */
 import type { IssueListDisplayProperties } from "@nerve/api-client";
-import { WORKSPACE_VIEW_CONTENT } from "@/components/views/view-content";
 import type { WorkspacePageFilters } from "@/lib/issue-filters";
 import { storage } from "@/lib/local-storage";
+import { WORKSPACE_VIEW_CONTENT } from "@/store/views/view-content";
 import type { PagePreferences, PagePreferencesService } from "../helpers/page-preferences-filter.store";
 
 type Preferences = PagePreferences<WorkspacePageFilters>;

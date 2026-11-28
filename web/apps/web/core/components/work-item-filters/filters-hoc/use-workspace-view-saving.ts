@@ -8,8 +8,6 @@ import { useCallback, useMemo, useState } from "react";
 import type { TSaveViewOptions } from "@nerve/constants";
 import type { IIssueFilters, TWorkItemFilterExpression } from "@nerve/types";
 import { EIssuesStoreType } from "@nerve/types";
-// components
-import type { ViewContent } from "@/components/views/view-content";
 // hooks
 import { useIssues } from "@/hooks/store/use-issues";
 import { useUserPermissions } from "@/hooks/store/user";
@@ -18,6 +16,7 @@ import { toWorkspaceFilters } from "@/lib/issue-filters";
 import { workspaceViewsCreatableBy } from "@/lib/views-entry";
 // store
 import { defaultViewOfPage, ownTerm } from "@/store/issue/workspace/page-id";
+import type { ViewContent } from "@/store/views/view-content";
 // local imports
 import { useViewUpdate } from "./use-view-update";
 

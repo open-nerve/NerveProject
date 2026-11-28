@@ -9,8 +9,6 @@ import type { ViewFilters } from "@nerve/api-client";
 import type { TSaveViewOptions } from "@nerve/constants";
 import type { IIssueFilters, TWorkItemFilterExpression } from "@nerve/types";
 import { EIssuesStoreType } from "@nerve/types";
-// components
-import type { ViewContent } from "@/components/views/view-content";
 // hooks
 import { useProject } from "@/hooks/store/use-project";
 import { useUserPermissions } from "@/hooks/store/user";
@@ -19,6 +17,7 @@ import { toProjectFilters } from "@/lib/issue-filters";
 import { viewsCreatableBy } from "@/lib/views-entry";
 // store
 import type { IPagePreferencesFilter } from "@/store/issue/helpers/page-preferences-filter.store";
+import type { ViewContent } from "@/store/views/view-content";
 // local imports
 import { useViewUpdate } from "./use-view-update";
 

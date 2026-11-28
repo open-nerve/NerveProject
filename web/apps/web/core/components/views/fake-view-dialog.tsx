@@ -4,8 +4,8 @@ import type { Root } from "react-dom/client";
 import { MemoryRouter } from "react-router";
 import { expect, vi, type Mock } from "vitest";
 import { Where, dialog, settle } from "@/components/common/fake-quick-actions";
+import type { ViewContent } from "@/store/views/view-content";
 import { CreateUpdateViewModal } from "./modal";
-import type { ViewContent } from "./view-content";
 
 // The view's dialog as a person uses it (P6a spec 2.4), for its tests: a page of web's views with the control that
 // opens it, as a new view's ("Add view"), a Save as's with the content it was given, or the change of the view of

@@ -20,9 +20,9 @@ import { useFormRefusal } from "@/lib/form-refusal";
 import { followInSession } from "@/lib/in-session";
 // store
 import type { ViewContainer } from "@/store/views/view-container";
+import { NEW_VIEW_CONTENT, WORKSPACE_VIEW_CONTENT, type ViewContent } from "@/store/views/view-content";
 // local imports
 import { ViewForm, type ViewFormField, type ViewFormValues, type ViewUnderField } from "./form";
-import { NEW_VIEW_CONTENT, WORKSPACE_VIEW_CONTENT, type ViewContent } from "./view-content";
 import { viewPath } from "./view-paths";
 
 /** The fields of the form under which nerve's refusals show (422 validation_failed); others show in a toast. */
