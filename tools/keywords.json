@@ -3284,13 +3284,13 @@
     {
       "id": "old-view-urls",
       "phase": "M7/P6",
-      "why": "M7 的网页项目视图改调 /api/v0（P6a spec 2.1、2.9、R24；设计 §7 :240“旧地址各加一条 old-…-urls”）：Plane 的项目视图地址（项目的视图列表与新建，单个视图的读、改、删，视图的工作项，项目视图的收藏）nerve 都不提供，旧 service、旧 store 与它们的 hook 已删除，web 的源文件（测试也算）不得再出现。无尾段的（…/views 后接引号、查询或结尾）也算，views、user-favorite-views 之后不接字母、数字、下划线或连字符；只匹配项目一级（/api/workspaces/{slug}/projects/{project}/ 之后），照 old-intake-urls 以 /api/workspaces/ 前缀锚定：/api/v0 的地址（/api/v0/projects/{project_id}/views、/api/v0/views/{view_id}）、网页内的链接（/${workspaceSlug}/projects/${projectId}/views、…/views/${viewId}）与组件目录的导入（@/components/views/actions-host）都不碰；工作区视图的旧地址（/api/workspaces/{slug}/views/，在 workspace.service 里）是 P6b 的，P6b 删工作区视图的旧层时扩本规则",
+      "why": "M7 的网页视图改调 /api/v0（P6a spec 2.1、2.9、R24；M7/P6b spec 2.13、R20、R21；设计 §7 :240“旧地址各加一条 old-…-urls”）：Plane 的项目视图地址（项目的视图列表与新建，单个视图的读、改、删，视图的工作项，项目视图的收藏）与工作区视图地址（工作区的视图列表与新建，单个视图的改、删）nerve 都不提供，旧 service（view.service、workspace.service）、旧 store（project-view.store、global-view.store）与它们的 hook 已删除，web 的源文件（测试也算）不得再出现。无尾段的（…/views 后接引号、查询或结尾）也算，views、user-favorite-views 之后不接字母、数字、下划线或连字符；匹配工作区一级与项目一级（/api/workspaces/{slug}/ 之后，项目一段 projects/{project}/ 可有可无），照 old-intake-urls 以 /api/workspaces/ 前缀锚定：/api/v0 的地址（/api/v0/projects/{project_id}/views、/api/v0/workspaces/{slug}/views、/api/v0/views/{view_id}）、网页内的链接（/${workspaceSlug}/projects/${projectId}/views、…/views/${viewId}、/${workspaceSlug}/workspace-views/${viewId}）与组件目录的导入（@/components/views/actions-host）都不碰。P6a 只管项目一级；M7/P6b 的 T11 删工作区视图的旧层（workspace.service 与它的测试同一提交），扩到工作区一级",
       "files": {
         "source": "^web/.*\\.(?:[cm]?[jt]sx?|json)$",
         "flags": ""
       },
       "content": {
-        "source": "/api/workspaces/[^/\"'`\\s]+/projects/[^/\"'`\\s]+/(?:views|user-favorite-views)(?![\\w-])[^\"'`\\s]*",
+        "source": "/api/workspaces/[^/\"'`\\s]+/(?:projects/[^/\"'`\\s]+/)?(?:views|user-favorite-views)(?![\\w-])[^\"'`\\s]*",
         "flags": ""
       },
       "samples": {
@@ -3302,16 +3302,21 @@
           "/api/workspaces/${workspaceSlug}/projects/${projectId}/user-favorite-views/${viewId}/",
           "\"/api/workspaces/ws/projects/p-1/views/v-1/\"",
           "/api/workspaces/${workspaceSlug}/projects/${projectId}/views",
-          "`/api/workspaces/${workspaceSlug}/projects/${projectId}/views?per_page=100`"
+          "`/api/workspaces/${workspaceSlug}/projects/${projectId}/views?per_page=100`",
+          "/api/workspaces/${workspaceSlug}/views/",
+          "/api/workspaces/${workspaceSlug}/views/${viewId}/",
+          "    return this.get(`/api/workspaces/${workspaceSlug}/views/`)",
+          "{ method: \"patch\", url: \"/api/workspaces/ws/views/view/\", data: JSON.stringify({ name: \"Renamed\" }) },"
         ],
         "miss": [
           "/api/v0/projects/{project_id}/views",
+          "/api/v0/workspaces/{slug}/views",
           "/api/v0/views/{view_id}",
           "`/${workspaceSlug}/projects/${projectId}/views`",
           "`/${workspaceSlug}/projects/${projectId}/views/${viewId}`",
+          "`/${workspaceSlug}/workspace-views/${viewId}`",
           "import { ViewActionsHost } from \"@/components/views/actions-host\";",
-          "/api/workspaces/${workspaceSlug}/views/",
-          "/api/workspaces/${workspaceSlug}/views/${viewId}/",
+          "/api/workspaces/${workspaceSlug}/views-overview/",
           "/api/workspaces/${workspaceSlug}/projects/${projectId}/views-overview/",
           "/api/workspaces/${workspaceSlug}/projects/${projectId}/modules/"
         ],
@@ -3319,7 +3324,8 @@
           "hit": [
             "web/apps/web/core/services/view.service.ts",
             "web/apps/web/core/store/project-view.store.ts",
-            "web/apps/web/core/services/views/views.service.ts"
+            "web/apps/web/core/services/views/views.service.ts",
+            "web/apps/web/core/services/workspace.service.ts"
           ],
           "miss": [
             "docs/v0/M7-collaboration/specs/P6a-web-project-views.md",

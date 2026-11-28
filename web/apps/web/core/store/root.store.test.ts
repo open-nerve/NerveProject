@@ -11,7 +11,6 @@ import { FakeNerve, answered, json, noContent } from "@/lib/auth/fake-nerve";
 import { track, until } from "@/lib/auth/fake-time";
 import { AUTH_KEY, SessionChangedError, TokenManager } from "@/lib/auth/token-manager";
 import { inTurn } from "@/store/fake-queue";
-import type { GlobalViewStore } from "@/store/global-view.store";
 
 // A RootStore holds the stores of one session (M2 design 7.1: a tab never writes as the wrong account): it hands
 // the client it is built with, bound to that session, to the stores that send requests with the session's
@@ -103,14 +102,13 @@ describe("RootStore", () => {
     const x = new RootStore(nerve.client());
     const y = new RootStore(nerve.client(), x);
     const stores = Object.keys(x) as (keyof typeof x)[];
-    expect(stores).toHaveLength(20);
+    expect(stores).toHaveLength(19);
     for (const name of stores) {
       if (PAGE_STORES.includes(name)) expect(y[name], name).toBe(x[name]);
       else expect(y[name], name).not.toBe(x[name]);
     }
     // The page's stores hold nothing of the RootStore before; the new stores reach their siblings through y.
     for (const name of PAGE_STORES) expect(Object.values(x[name as keyof typeof x])).not.toContain(x);
-    expect((y.globalView as GlobalViewStore).rootStore).toBe(y);
     expect(y.issue.rootStore).toBe(y);
   });
 

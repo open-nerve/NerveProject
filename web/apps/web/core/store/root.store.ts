@@ -22,8 +22,6 @@ import { RootAssetStore } from "@/store/asset/root.store";
 // stores
 import type { IFavoriteStore } from "./favorite.store";
 import { FavoriteStore } from "./favorite.store";
-import type { IGlobalViewStore } from "./global-view.store";
-import { GlobalViewStore } from "./global-view.store";
 import type { IInstanceStore } from "./instance.store";
 import { InstanceStore } from "./instance.store";
 import type { IIssueRootStore } from "./issue/root.store";
@@ -56,7 +54,6 @@ export class RootStore {
   memberRoot: IMemberRootStore;
   planning: IPlanningStore;
   views: IViewStore;
-  globalView: IGlobalViewStore;
   issue: IIssueRootStore;
   asset: RootAssetStore;
   state: IStateStore;
@@ -94,7 +91,6 @@ export class RootStore {
     this.memberRoot = new MemberRootStore(this, api);
     this.planning = new PlanningStore(this, api);
     this.views = new ViewStore(this, api);
-    this.globalView = new GlobalViewStore(this);
     this.issue = new IssueRootStore(this, api);
     this.asset = new RootAssetStore(this, api);
     this.state = new StateStore(this, api);

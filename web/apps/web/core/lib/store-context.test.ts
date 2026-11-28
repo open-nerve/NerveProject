@@ -8,7 +8,6 @@ import { SharedStorage } from "@/lib/auth/fake-browser";
 import { FakeNerve, json, noContent, problem, answered } from "@/lib/auth/fake-nerve";
 import { track, until } from "@/lib/auth/fake-time";
 import { issueOf, issueDetailOf, issuePageOf, requestedIssue } from "@/store/issue/fake-issues";
-import type { GlobalViewStore } from "@/store/global-view.store";
 import type { RootStore } from "@/store/root.store";
 import { projectOf, loadProjects } from "@/store/project/fake-projects";
 import { loadWorkspaces, workspaceOf } from "@/store/workspace/fake-workspaces";
@@ -311,11 +310,11 @@ describe("store-context", () => {
     await signedIn();
     const x = context.rootStore;
     // A store of X's that reaches its siblings through its RootStore, as the stores do after an await
-    // (global-view.store.ts, updateGlobalView).
-    const globalView = x.globalView as GlobalViewStore;
+    // (the issue store's root, IssueRootStore.rootStore, issue/root.store.ts).
+    const issue = x.issue;
     await follow(Y);
 
-    const named = track(globalView.rootStore.user.updateCurrentUser({ first_name: "Xavier" }));
+    const named = track(issue.rootStore.user.updateCurrentUser({ first_name: "Xavier" }));
     await until(() => named.settled || nerve.calls.length > 0, "the answer, or a request");
     // Not sent with Y's token, nor as Y's refresh.
     expect(named.error).toBeInstanceOf(SessionChangedError);

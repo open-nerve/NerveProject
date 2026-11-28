@@ -143,12 +143,6 @@ export interface IIssueFiltersResponse {
   display_properties: IIssueDisplayProperties;
 }
 
-export interface IWorkspaceViewProps {
-  rich_filters: TWorkItemFilterExpression;
-  display_filters: IIssueDisplayFilterOptions | undefined;
-  display_properties: IIssueDisplayProperties;
-}
-
 export type TSpreadsheetColumn = FC<{
   issue: Issue;
   onClose: () => void;
