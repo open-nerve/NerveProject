@@ -83,7 +83,7 @@ created: 2026-11-10
 - 视图的文案：页面、页头、弹窗与提示经 `t()`，新键六个（R29）；拒绝按 nerve 的问题码说（弹窗经 `useFormRefusal` 放到名字下或提示，删除与“更新视图”经 `useRefusalToast`）。
 - 嵌套的按钮：工作区视图的旧菜单随旧组件删去，行与页头用 P6a 的 `core/components/views/quick-actions.tsx` 与新的 `core/components/workspace/views/default-view-menu.tsx`。
 - 改过与新写的工作区视图文件读路由参数，收入关键词规则 `workspace-address-route`；按容器取角色一律走 `getWorkspaceRoleByWorkspaceSlug`、`getProjectRoleByWorkspaceSlugAndProjectId`（不换成 `allowPermissions`，`project-address-route` 不放宽）。
-- M3 第 3 节视图的三项：工作区视图的弹窗与右键菜单见 [M3-closeout §3](M3-closeout.md#3-键盘弹窗和下拉框) 的 P6b 处理结果；工作区视图页头的切换器（`BreadcrumbNavigationSearchDropdown`）以键盘核过，三种引擎（`e2e/stories/collaboration/h20-workspace-view-pages.spec.ts:59-71` 的 `switchByKeyboard`，在 `:125`、`:146` 用）。
+- M3 第 3 节视图的三项：工作区视图的弹窗与右键菜单见 [M3-closeout §3](M3-closeout.md#3-键盘弹窗和下拉框) 的 P6b 处理结果；工作区视图页头的切换器（`BreadcrumbNavigationSearchDropdown`）以键盘核过，三种引擎（`e2e/stories/collaboration/h20-workspace-view-pages.spec.ts:60-72` 的 `switchByKeyboard`，在 `:126`、`:147` 用）。
 
 工作区视图一半关闭；两半都已关闭，**这一条关闭。**
 
