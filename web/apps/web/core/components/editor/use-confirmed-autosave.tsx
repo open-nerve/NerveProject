@@ -150,7 +150,9 @@ export function useConfirmedAutosave<T>({
     try {
       await (owner.prepared ?? latest.current.save)(input);
       if (!owner.active) return;
-      if (revision === owner.revision) {
+      // The answer saved `input`. Edits made while it was out leave the value unsaved, unless they brought it back to
+      // `input` and no other write is out (a later one would still overwrite it): their timer would only resend it.
+      if (revision === owner.revision || (owner.inFlight === 1 && latest.current.same(owner.value, input))) {
         owner.confirmed = input;
         owner.dirty = false;
         pause(false);

@@ -222,6 +222,32 @@ for (const kind of ["title", "description"] as const) {
     expect(save.mock.calls.map(([value]) => value)).toEqual(["first", "original"]);
     await act(async () => requests[1]!.answer());
   });
+  it(`${kind} takes edits that came back to the value in flight as saved by its answer`, async () => {
+    await render(kind);
+    await type("first");
+    await debounce();
+    // nerve answered and the store took it; the write's own reads that follow are still out.
+    await render(kind, "first");
+    await type("undo");
+    await type("first");
+    await act(async () => requests[0]!.answer());
+    await debounce();
+    expect(save.mock.calls.map(([value]) => value)).toEqual(["first"]);
+    expect(host.querySelector("output")!.textContent).toBe("submitted");
+  });
+  it(`${kind} keeps an edit back to an answered value unsaved while a later different write is out`, async () => {
+    await render(kind);
+    await type("first");
+    await debounce();
+    await type("second");
+    await debounce();
+    await type("first");
+    await act(async () => requests[0]!.answer());
+    await act(async () => requests[1]!.answer());
+    await debounce();
+    expect(save.mock.calls.map(([value]) => value)).toEqual(["first", "second", "first"]);
+    await act(async () => requests[2]!.answer());
+  });
   it(`${kind} flushes a never-attempted last edit once on unmount`, async () => {
     await render(kind);
     await type("last edit");
