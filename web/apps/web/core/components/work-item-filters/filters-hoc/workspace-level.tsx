@@ -13,6 +13,8 @@ import { useMember } from "@/hooks/store/use-member";
 import { useProject } from "@/hooks/store/use-project";
 import { useProjectState } from "@/hooks/store/use-project-state";
 import { useWorkspace } from "@/hooks/store/use-workspace";
+// lib
+import { joinedAndUnarchived } from "@/lib/project-scope";
 // local imports
 import { WorkItemFiltersHOC } from "./base";
 import type { TSharedWorkItemFiltersHOCProps } from "./shared";
@@ -55,7 +57,7 @@ export const WorkspaceLevelWorkItemFiltersHOC = observer(function WorkspaceLevel
   const projectIds = workspace
     ? knownProjectIds(workspace.id).filter((id) => {
         const project = getProjectById(id);
-        return project && project.workspace_id === workspace.id && project.member_role !== null && !project.archived_at;
+        return !!project && project.workspace_id === workspace.id && joinedAndUnarchived(project);
       })
     : [];
   const labelIds = Object.values(labelMap)

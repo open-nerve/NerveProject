@@ -11,6 +11,7 @@ import type { ApiClient, Label, LabelCreate, LabelUpdate, Project, Workspace } f
 // lib
 import { oneAtATime } from "@/lib/one-at-a-time";
 import { placeAt } from "@/lib/place-between";
+import { joinedAndUnarchived } from "@/lib/project-scope";
 import type { Change } from "@/lib/reconciled";
 import { ReconciledByKey, replaced, upserted } from "@/lib/reconciled";
 // services
@@ -53,12 +54,6 @@ export interface ILabelStore {
 const inOrder = (labels: Label[]): Label[] =>
   labels.toSorted((a, b) => a.sort_order - b.sort_order || Number(a.id > b.id) - Number(a.id < b.id));
 
-/**
- * Whether the workspace's catalog lists the project's labels (M7/P6b spec 2.2): the caller is its member and it is not
- * archived. The catalog leaves out any other project, which has labels all the same.
- */
-const inCatalog = (project: Project): boolean => project.member_role !== null && project.archived_at === null;
-
 /** A label at the top, a copy, with the labels of the list under it, in the list's order. */
 const treeOf = (top: Label, labels: Label[]): LabelTree => ({
   ...top,
@@ -75,11 +70,12 @@ const deleted =
  * The labels of the projects of a session (M3 design 3.16, 7.3): each project's list, by its id, which its pages
  * fetch, and each workspace's catalog, by its id, the labels of its projects the caller is a member of, unarchived,
  * which the pages listing work items across them fetch (M7/P6b spec 2.2). A project's labels are its own list, else
- * its part of its workspace's catalog when the catalog lists it (inCatalog). Their order is nerve's (sort order, then
- * id), and the labels under a label at the top come from parent_id. The labels of a project the project store no
- * longer gives (deleted, left, or of a workspace no longer the caller's) do not show. Its service sends with the
- * session's client; changes go one at a time and the store writes nerve's answers on the project's list and its
- * workspace's catalog (v0 design 7.7); fetches do not queue.
+ * its part of its workspace's catalog when the catalog lists it (joinedAndUnarchived: the catalog leaves out any other
+ * project, which has labels all the same). Their order is nerve's (sort order, then id), and the labels under a label
+ * at the top come from parent_id. The labels of a project the project store no longer gives (deleted, left, or of a
+ * workspace no longer the caller's) do not show. Its service sends with the session's client; changes go one at a
+ * time and the store writes nerve's answers on the project's list and its workspace's catalog (v0 design 7.7); fetches
+ * do not queue.
  */
 export class LabelStore implements ILabelStore {
   /** Each project's labels, reconciled between fetches and changes (reconciled.ts). */
@@ -132,7 +128,7 @@ export class LabelStore implements ILabelStore {
     if (!project) return undefined;
     const labels =
       this.projects.get(project.id) ??
-      (inCatalog(project)
+      (joinedAndUnarchived(project)
         ? this.workspaces.get(project.workspace_id)?.filter((label) => label.project_id === project.id)
         : undefined);
     return labels && inOrder(labels);

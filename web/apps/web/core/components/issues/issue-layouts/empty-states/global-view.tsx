@@ -18,6 +18,7 @@ import { useWorkspace } from "@/hooks/store/use-workspace";
 import { useUserPermissions } from "@/hooks/store/user";
 import { useWorkItemFilterInstance } from "@/hooks/store/work-item-filters/use-work-item-filter-instance";
 // lib
+import { joinedAndUnarchived } from "@/lib/project-scope";
 import { workspaceViewsCreatableBy } from "@/lib/views-entry";
 // store
 import { workspacePageId } from "@/store/issue/workspace/page-id";
@@ -53,7 +54,7 @@ export const GlobalViewEmptyState = observer(function GlobalViewEmptyState() {
     !!workspace &&
     knownProjectIds(workspace.id).some((id) => {
       const project = getProjectById(id);
-      return project?.member_role != null && !project.archived_at;
+      return !!project && joinedAndUnarchived(project);
     });
 
   if (pageFilter?.hasActiveFilters)
